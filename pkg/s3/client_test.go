@@ -17,7 +17,7 @@ limitations under the License.
 package s3
 
 import (
-	"net/http"
+	"errors"
 	"os"
 	"reflect"
 	"strings"
@@ -26,15 +26,14 @@ import (
 
 var tc *Client
 
-func getTestClient(t *testing.T) bool {
+func getTestClient(t *testing.T) error {
 	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 	secret := os.Getenv("AWS_ACCESS_KEY_SECRET")
 	if accessKey == "" || secret == "" {
-		t.Logf("Skipping test; no AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_SECRET set in environment")
-		return false
+		return errors.New("no AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_SECRET set in environment")
 	}
-	tc = &Client{&Auth{AccessKey: accessKey, SecretAccessKey: secret}, http.DefaultTransport}
-	return true
+	tc = NewS3Client(accessKey, secret)
+	return nil
 }
 
 func dumpBuckets(t *testing.T, v []*Bucket) {
@@ -44,10 +43,13 @@ func dumpBuckets(t *testing.T, v []*Bucket) {
 }
 
 func TestBuckets(t *testing.T) {
-	if !getTestClient(t) {
-		return
+	var err error
+	err = getTestClient(t)
+	if err != nil {
+		t.Fatal(err)
 	}
-	buckets, err := tc.Buckets()
+	var buckets []*Bucket
+	buckets, err = tc.Buckets()
 	if err != nil {
 		t.Fatal(err)
 	}
