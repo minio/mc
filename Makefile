@@ -9,3 +9,6 @@ getdeps: checkdeps
 
 install:
 	@godep go install github.com/minio-io/mc/new-cmd && echo "Installed new-cmd"
+
+s3:
+	@godep go test -race -coverprofile=cover.out github.com/minio-io/mc/pkg/s3
