@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package s3 implements a generic Amazon S3 client, not specific
-// to Camlistore.
+// Package s3 implements a generic Amazon S3 client
 package s3
 
 import (

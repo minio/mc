@@ -25,7 +25,8 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "mc"
-	app.Usage = ""
+	app.Usage = "unified command line interface for Minio Object Storage"
+	app.Version = "0.0.1"
 	app.Commands = Options
 	app.Author = "Minio"
 	app.Run(os.Args)
