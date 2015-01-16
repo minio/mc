@@ -17,16 +17,42 @@
 package main
 
 import (
-	"os"
-
 	"github.com/codegangsta/cli"
+	//	"github.com/minio-io/mc/pkg/s3"
 )
 
-func main() {
-	app := cli.NewApp()
-	app.Name = "mc"
-	app.Usage = ""
-	app.Commands = Options
-	app.Author = "Minio"
-	app.Run(os.Args)
+var Options = []cli.Command{
+	Get,
+	Put,
+	List,
+}
+
+var Get = cli.Command{
+	Name:        "get",
+	Usage:       "",
+	Description: "",
+	Action:      doGet,
+}
+
+var Put = cli.Command{
+	Name:        "put",
+	Usage:       "",
+	Description: "",
+	Action:      doPut,
+}
+
+var List = cli.Command{
+	Name:        "list",
+	Usage:       "",
+	Description: "",
+	Action:      doList,
+}
+
+func doGet(c *cli.Context) {
+}
+
+func doPut(c *cli.Context) {
+}
+
+func doList(c *cli.Context) {
 }

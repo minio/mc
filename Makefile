@@ -8,7 +8,7 @@ getdeps: checkdeps
 	@go get golang.org/x/tools/cmd/cover && echo "Installed cover"
 
 install:
-	@godep go install github.com/minio-io/mc/new-cmd && echo "Installed new-cmd"
+	@godep go install github.com/minio-io/mc && echo "Installed mc"
 
 s3:
 	@godep go test -race -coverprofile=cover.out github.com/minio-io/mc/pkg/s3
