@@ -7,19 +7,17 @@ mc - unified command line interface for Minio Object Storage
 ```
 # go get github.com/minio-io/mc
 # mc --help
-NAME:
-   mc - unified command line interface for Minio Object Storage
-
-USAGE:
-   mc [global options] command [command options] [arguments...]
-
-VERSION:
-   0.0.0
-
-AUTHOR:
-  Minio
-
+...
+...
+...
 COMMANDS:
+   cp
+   ls
+   mb
+   mv
+   rb
+   rm
+   sync
    get-object
    put-object
    list-objects
