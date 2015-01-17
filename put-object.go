@@ -72,7 +72,7 @@ func doPutObject(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s3c := s3.NewS3Client(accessKey, secretKey)
+	s3c := s3.NewS3Client(accessKey, secretKey, "s3.amazonaws.com")
 	var bodyFile *os.File
 	bodyFile, err = os.Open(body)
 	if err != nil {

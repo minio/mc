@@ -30,7 +30,7 @@ func doListObjects(c *cli.Context) {
 	}
 
 	var items []*s3.Item
-	s3c := s3.NewS3Client(accessKey, secretKey)
+	s3c := s3.NewS3Client(accessKey, secretKey, "s3.amazonaws.com")
 	// Gets 1000 maxkeys supported with GET Bucket API
 	items, err = s3c.GetBucket(bucket, "", s3.MAX_OBJECT_LIST)
 	if err != nil {
