@@ -17,7 +17,6 @@ limitations under the License.
 package s3
 
 import (
-	"errors"
 	"os"
 	"reflect"
 	"strings"
@@ -28,9 +27,10 @@ var tc *Client
 
 func getTestClient(t *testing.T) error {
 	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secret := os.Getenv("AWS_ACCESS_KEY_SECRET")
+	secret := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	if accessKey == "" || secret == "" {
-		return errors.New("no AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_SECRET set in environment")
+		// skip the test if no AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY
+		return nil
 	}
 	tc = NewS3Client(accessKey, secret)
 	return nil

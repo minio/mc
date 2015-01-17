@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
-	"strings"
+	"errors"
+	"os"
 
 	"github.com/codegangsta/cli"
 )
@@ -32,22 +32,22 @@ var Options = []cli.Command{
 	Configure,
 }
 
-func parseInput(c *cli.Context) string {
-	var commandName string
-	switch len(c.Args()) {
-	case 1:
-		commandName = c.Args()[0]
-	default:
-		log.Fatal("command name must not be blank\n")
+func getAWSEnvironment() (accessKey, secretKey string, err error) {
+	accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+	if accessKey == "" && secretKey == "" {
+		errstr := `You can configure your credentials by running "mc configure"`
+		return "", "", errors.New(errstr)
+	}
+	if accessKey == "" {
+		errstr := `Partial credentials found in the env, missing : AWS_ACCESS_KEY_ID`
+		return "", "", errors.New(errstr)
 	}
 
-	var inputOptions []string
-	if c.String("bucket") != "" {
-		inputOptions = strings.Split(c.String("options"), ",")
+	if secretKey == "" {
+		errstr := `Partial credentials found in the env, missing : AWS_SECRET_ACCESS_KEY`
+		return "", "", errors.New(errstr)
 	}
 
-	if inputOptions[0] == "" {
-		log.Fatal("options cannot be empty with a command name")
-	}
-	return commandName
+	return accessKey, secretKey, nil
 }
