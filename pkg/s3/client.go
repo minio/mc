@@ -36,7 +36,9 @@ import (
 	"time"
 )
 
-const maxList = 1000
+const (
+	MAX_OBJECT_LIST = 1000
+)
 
 // Client is an Amazon S3 client.
 type Client struct {
@@ -189,20 +191,19 @@ func (c *Client) BucketLocation(bucket string) (location string, err error) {
 	return "s3-" + xres.Location + ".amazonaws.com", nil
 }
 
-// ListBucket returns 0 to maxKeys (inclusive) items from the provided
-// bucket. Keys before startAt will be skipped. (This is the S3
+// GetBucket (List Objects) returns 0 to maxKeys (inclusive) items from the
+// provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
-// maxKeys, there is no indication whether or not the returned list is
-// truncated.
-func (c *Client) ListBucket(bucket string, startAt string, maxKeys int) (items []*Item, err error) {
+// maxKeys, there is no indication whether or not the returned list is truncated.
+func (c *Client) GetBucket(bucket string, startAt string, maxKeys int) (items []*Item, err error) {
 	if maxKeys < 0 {
 		return nil, errors.New("invalid negative maxKeys")
 	}
 	marker := startAt
 	for len(items) < maxKeys {
 		fetchN := maxKeys - len(items)
-		if fetchN > maxList {
-			fetchN = maxList
+		if fetchN > MAX_OBJECT_LIST {
+			fetchN = MAX_OBJECT_LIST
 		}
 		var bres listBucketResults
 
@@ -390,8 +391,6 @@ func IsValidBucket(bucket string) bool {
 }
 
 // Error is the type returned by some API operations.
-//
-// TODO: it should be more/all of them.
 type Error struct {
 	Op     string
 	Code   int         // HTTP status code
