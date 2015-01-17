@@ -39,7 +39,7 @@ func getPutMetadata(reader io.Reader) (md5hash hash.Hash, bodyBuf io.Reader, siz
 	return md5hash, &bodyBuffer, int64(bodyBuffer.Len()), nil
 }
 
-func parsePutObject(c *cli.Context) (bucket, key, body string, err error) {
+func parsePutObjectInput(c *cli.Context) (bucket, key, body string, err error) {
 	bucket = c.String("bucket")
 	key = c.String("key")
 	body = c.String("body")
@@ -68,7 +68,7 @@ func doPutObject(c *cli.Context) {
 		log.Fatal(err)
 	}
 
-	bucket, key, body, err = parsePutObject(c)
+	bucket, key, body, err = parsePutObjectInput(c)
 	if err != nil {
 		log.Fatal(err)
 	}
