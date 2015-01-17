@@ -58,7 +58,7 @@ var PutObject = cli.Command{
 		cli.StringFlag{
 			Name:  "body",
 			Value: "",
-			Usage: "Object blobx",
+			Usage: "Object blob",
 		},
 	},
 }
@@ -68,6 +68,13 @@ var ListObjects = cli.Command{
 	Usage:       "",
 	Description: "",
 	Action:      doListObjects,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "bucket",
+			Value: "",
+			Usage: "Bucket name",
+		},
+	},
 }
 
 var ListBuckets = cli.Command{
@@ -85,9 +92,6 @@ var Configure = cli.Command{
 }
 
 func doListObject(c *cli.Context) {
-}
-
-func doListObjects(c *cli.Context) {
 }
 
 func doListBuckets(c *cli.Context) {
