@@ -1,6 +1,6 @@
 # Minio Client
 
-mc - unified command line interface for Minio Object Storage
+mc - unified command line interface for Minio Object Storage released under [Apache license v2](./LICENSE).
 
 # Install
 
