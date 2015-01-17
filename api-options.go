@@ -17,11 +17,7 @@
 package main
 
 import (
-	"log"
-	"os"
-
 	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/s3"
 )
 
 var GetObject = cli.Command{
@@ -29,6 +25,18 @@ var GetObject = cli.Command{
 	Usage:       "",
 	Description: "",
 	Action:      doGetObject,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "bucket",
+			Value: "",
+			Usage: "bucket name",
+		},
+		cli.StringFlag{
+			Name:  "key",
+			Value: "",
+			Usage: "path to Object",
+		},
+	},
 }
 
 var PutObject = cli.Command{
@@ -36,6 +44,23 @@ var PutObject = cli.Command{
 	Usage:       "",
 	Description: "",
 	Action:      doPutObject,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "bucket",
+			Value: "",
+			Usage: "bucket name",
+		},
+		cli.StringFlag{
+			Name:  "key",
+			Value: "",
+			Usage: "Object name",
+		},
+		cli.StringFlag{
+			Name:  "body",
+			Value: "",
+			Usage: "Object blobx",
+		},
+	},
 }
 
 var ListObjects = cli.Command{
@@ -57,34 +82,6 @@ var Configure = cli.Command{
 	Usage:       "",
 	Description: "",
 	Action:      doConfigure,
-}
-
-func doGetObject(c *cli.Context) {
-	var bucket, key string
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if accessKey == "" && secretKey == "" {
-		errstr := `You can configure your credentials by running "mc configure"`
-		log.Fatal(errstr)
-	}
-	if accessKey == "" {
-		errstr := `Partial credentials found in the env, missing : AWS_ACCESS_KEY_ID`
-		log.Fatal(errstr)
-	}
-
-	if secretKey == "" {
-		errstr := `Partial credentials found in the env, missing : AWS_SECRET_ACCESS_KEY`
-		log.Fatal(errstr)
-	}
-
-	s3c := s3.NewS3Client(accessKey, secretKey)
-	_, _, err := s3c.Get(bucket, key)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func doPutObject(c *cli.Context) {
 }
 
 func doListObject(c *cli.Context) {

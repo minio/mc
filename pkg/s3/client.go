@@ -125,7 +125,7 @@ func (c *Client) Stat(key, bucket string) (size int64, reterr error) {
 	return 0, fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
 }
 
-func (c *Client) PutObject(key, bucket string, md5 hash.Hash, size int64, body io.Reader) error {
+func (c *Client) Put(bucket, key string, md5 hash.Hash, size int64, body io.Reader) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
 	req.ContentLength = size
