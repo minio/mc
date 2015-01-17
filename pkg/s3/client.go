@@ -347,8 +347,14 @@ func (c *Client) Delete(bucket, key string) error {
 	return fmt.Errorf("Amazon HTTP error on DELETE: %d", res.StatusCode)
 }
 
-func NewS3Client(accessKey, secretKey string) *Client {
-	return &Client{&Auth{AccessKey: accessKey, SecretAccessKey: secretKey}, http.DefaultTransport}
+func NewS3Client(accessKey, secretKey, hostname string) (client *Client) {
+	client = &Client{
+		&Auth{
+			AccessKey:       accessKey,
+			SecretAccessKey: secretKey,
+			Hostname:        hostname},
+		http.DefaultTransport}
+	return
 }
 
 // IsValid reports whether bucket is a valid bucket name, per Amazon's naming restrictions.

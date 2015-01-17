@@ -40,7 +40,7 @@ func doGetObject(c *cli.Context) {
 		log.Fatal(err)
 	}
 
-	s3c := s3.NewS3Client(accessKey, secretKey)
+	s3c := s3.NewS3Client(accessKey, secretKey, "s3.amazonaws.com")
 	objectReader, objectSize, err = s3c.Get(bucket, key)
 	if err != nil {
 		log.Fatal(err)
