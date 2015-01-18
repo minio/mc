@@ -17,44 +17,12 @@ limitations under the License.
 package s3
 
 import (
-	"os"
 	"reflect"
 	"strings"
 	"testing"
 )
 
 var tc *Client
-
-func getTestClient(t *testing.T) error {
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secret := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if accessKey == "" || secret == "" {
-		// skip the test if no AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY
-		return nil
-	}
-	tc = NewS3Client(accessKey, secret)
-	return nil
-}
-
-func dumpBuckets(t *testing.T, v []*Bucket) {
-	for i, b := range v {
-		t.Logf("Bucket #%d: %#v", i, b)
-	}
-}
-
-func TestBuckets(t *testing.T) {
-	var err error
-	err = getTestClient(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var buckets []*Bucket
-	buckets, err = tc.Buckets()
-	if err != nil {
-		t.Fatal(err)
-	}
-	dumpBuckets(t, buckets)
-}
 
 func TestParseBuckets(t *testing.T) {
 	res := "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListAllMyBucketsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Owner><ID>ownerIDField</ID><DisplayName>bobDisplayName</DisplayName></Owner><Buckets><Bucket><Name>bucketOne</Name><CreationDate>2006-06-21T07:04:31.000Z</CreationDate></Bucket><Bucket><Name>bucketTwo</Name><CreationDate>2006-06-21T07:04:32.000Z</CreationDate></Bucket></Buckets></ListAllMyBucketsResult>"
