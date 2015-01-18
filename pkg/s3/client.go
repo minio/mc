@@ -347,13 +347,17 @@ func (c *Client) Delete(bucket, key string) error {
 	return fmt.Errorf("Amazon HTTP error on DELETE: %d", res.StatusCode)
 }
 
+func NewAuth(accessKey, secretKey, hostname string) (auth *Auth) {
+	auth = &Auth{
+		AccessKey:       accessKey,
+		SecretAccessKey: secretKey,
+		Hostname:        hostname}
+	return
+}
+
 func NewS3Client(accessKey, secretKey, hostname string) (client *Client) {
-	client = &Client{
-		&Auth{
-			AccessKey:       accessKey,
-			SecretAccessKey: secretKey,
-			Hostname:        hostname},
-		http.DefaultTransport}
+	auth := NewAuth(accessKey, secretKey, hostname)
+	client = &Client{auth, http.DefaultTransport}
 	return
 }
 
