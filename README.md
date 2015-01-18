@@ -29,3 +29,7 @@ GLOBAL OPTIONS:
    --help, -h           show help
    --version, -v        print the version
 ```
+
+# Contribute
+
+[Contribute to mc](./CONTRIBUTING.md)
