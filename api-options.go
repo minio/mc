@@ -91,11 +91,5 @@ var Configure = cli.Command{
 	Action:      doConfigure,
 }
 
-func doListObject(c *cli.Context) {
-}
-
-func doListBuckets(c *cli.Context) {
-}
-
 func doConfigure(c *cli.Context) {
 }
