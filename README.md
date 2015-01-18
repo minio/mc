@@ -1,6 +1,6 @@
 # Minio Client
 
-mc - unified command line interface for Minio Object Storage released under [Apache license v2](./LICENSE).
+mc - unified command line interface for Minio Object Storage compatible with Amazon S3 API released under [Apache license v2](./LICENSE).
 
 # Install
 

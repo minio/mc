@@ -23,7 +23,7 @@ import (
 var GetObject = cli.Command{
 	Name:        "get-object",
 	Usage:       "",
-	Description: "",
+	Description: "Retrieves objects from Amazon S3.",
 	Action:      doGetObject,
 	Flags: []cli.Flag{
 		cli.StringFlag{
@@ -42,7 +42,7 @@ var GetObject = cli.Command{
 var PutObject = cli.Command{
 	Name:        "put-object",
 	Usage:       "",
-	Description: "",
+	Description: "Adds an object to a bucket.",
 	Action:      doPutObject,
 	Flags: []cli.Flag{
 		cli.StringFlag{
@@ -64,10 +64,12 @@ var PutObject = cli.Command{
 }
 
 var ListObjects = cli.Command{
-	Name:        "list-objects",
-	Usage:       "",
-	Description: "",
-	Action:      doListObjects,
+	Name:  "list-objects",
+	Usage: "",
+	Description: `Returns some or all (up to 1000) of the objects in a bucket.
+   You can use the request parameters as selection criteria to
+   return a subset of the objects in a bucket.`,
+	Action: doListObjects,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "bucket",
@@ -78,18 +80,36 @@ var ListObjects = cli.Command{
 }
 
 var ListBuckets = cli.Command{
-	Name:        "list-buckets",
-	Usage:       "",
-	Description: "",
-	Action:      doListBuckets,
+	Name:  "list-buckets",
+	Usage: "",
+	Description: `Returns a list of all buckets owned by the authenticated
+   sender of the request.`,
+	Action: doListBuckets,
 }
 
 var Configure = cli.Command{
-	Name:        "configure",
-	Usage:       "",
-	Description: "",
-	Action:      doConfigure,
+	Name:  "configure",
+	Usage: "",
+	Description: `Configure minio client configuration data. If your config
+   file does not exist (the default location is ~/.s3auth), it will be
+   automatically created for you. Note that the configure command only writes
+   values to the config file. It does not use any configuration values from
+   the environment variables.`,
+	Action: doConfigure,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "accesskey",
+			Value: "",
+			Usage: "AWS access key id",
+		},
+		cli.StringFlag{
+			Name:  "secretkey",
+			Value: "",
+			Usage: "AWS secret key id",
+		},
+	},
 }
 
-func doConfigure(c *cli.Context) {
-}
+const (
+	S3_AUTH = ".s3auth"
+)
