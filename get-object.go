@@ -45,8 +45,8 @@ func doGetObject(c *cli.Context) {
 	var objectReader io.ReadCloser
 	var objectSize int64
 
-	var accessKey, secretKey string
-	accessKey, secretKey, err = getAWSEnvironment()
+	var auth *s3.Auth
+	auth, err = getAWSEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func doGetObject(c *cli.Context) {
 		log.Fatal(err)
 	}
 
-	s3c := s3.NewS3Client(accessKey, secretKey, "s3.amazonaws.com")
+	s3c := s3.NewS3Client(auth)
 	objectReader, objectSize, err = s3c.Get(bucket, key)
 	if err != nil {
 		log.Fatal(err)

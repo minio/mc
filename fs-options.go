@@ -21,71 +21,39 @@ import (
 )
 
 var Cp = cli.Command{
-	Name:        "cp",
-	Usage:       "",
-	Description: "",
-	Action:      doCopy,
+	Name:  "cp",
+	Usage: "",
+	Description: `Copies a local file or Object to another location locally
+   or in S3.`,
+	Action: doFsCopy,
 }
 
 var Ls = cli.Command{
 	Name:        "ls",
 	Usage:       "",
-	Description: "",
-	Action:      doList,
+	Description: `List Objects and common prefixes under a prefix or all Buckets`,
+	Action:      doFsList,
 }
 
 var Mb = cli.Command{
-	Name:        "mb",
+	Name:        "mkdir",
 	Usage:       "",
-	Description: "",
-	Action:      doMakeBucket,
-}
-
-var Mv = cli.Command{
-	Name:        "mv",
-	Usage:       "",
-	Description: "",
-	Action:      doMoveObject,
-}
-
-var Rb = cli.Command{
-	Name:        "rb",
-	Usage:       "",
-	Description: "",
-	Action:      doRemoveBucket,
-}
-
-var Rm = cli.Command{
-	Name:        "rm",
-	Usage:       "",
-	Description: "",
-	Action:      doRemoveObject,
+	Description: "Creates an S3 bucket",
+	Action:      doFsMkdir,
 }
 
 var Sync = cli.Command{
 	Name:        "sync",
 	Usage:       "",
-	Description: "",
-	Action:      doSync,
+	Description: "Syncs directories and S3 prefixes",
+	Action:      doFsSync,
 }
 
-func doCopy(c *cli.Context) {
+func doFsList(c *cli.Context) {
 }
 
-func doList(c *cli.Context) {
+func doFsMkdir(c *cli.Context) {
 }
 
-func doMakeBucket(c *cli.Context) {
-}
-
-func doMoveObject(c *cli.Context) {
-}
-
-func doRemoveBucket(c *cli.Context) {
-}
-
-func doRemoveObject(c *cli.Context) {
-}
-
-func doSync(c *cli.Context) {
+func doFsSync(c *cli.Context) {
 }

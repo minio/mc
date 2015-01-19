@@ -14,15 +14,15 @@ func dumpBuckets(v []*s3.Bucket) {
 }
 
 func doListBuckets(c *cli.Context) {
-	var accessKey, secretKey string
 	var err error
-	accessKey, secretKey, err = getAWSEnvironment()
+	var auth *s3.Auth
+	auth, err = getAWSEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var buckets []*s3.Bucket
-	s3c := s3.NewS3Client(accessKey, secretKey, "s3.amazonaws.com")
+	s3c := s3.NewS3Client(auth)
 	buckets, err = s3c.Buckets()
 	if err != nil {
 		log.Fatal(err)
