@@ -78,8 +78,9 @@ func parsePutObjectInput(c *cli.Context) (bucket, key, body string, err error) {
 func doPutObject(c *cli.Context) {
 	var err error
 	var md5hash hash.Hash
-	var accessKey, secretKey, bucket, key, body string
-	accessKey, secretKey, err = getAWSEnvironment()
+	var bucket, key, body string
+	var auth *s3.Auth
+	auth, err = getAWSEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -88,7 +89,7 @@ func doPutObject(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s3c := s3.NewS3Client(accessKey, secretKey, "s3.amazonaws.com")
+	s3c := s3.NewS3Client(auth)
 	var bodyFile *os.File
 	bodyFile, err = os.Open(body)
 	if err != nil {

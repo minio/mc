@@ -355,8 +355,7 @@ func NewAuth(accessKey, secretKey, hostname string) (auth *Auth) {
 	return
 }
 
-func NewS3Client(accessKey, secretKey, hostname string) (client *Client) {
-	auth := NewAuth(accessKey, secretKey, hostname)
+func NewS3Client(auth *Auth) (client *Client) {
 	client = &Client{auth, http.DefaultTransport}
 	return
 }

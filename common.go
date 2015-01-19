@@ -30,9 +30,6 @@ var Options = []cli.Command{
 	Cp,
 	Ls,
 	Mb,
-	Mv,
-	Rb,
-	Rm,
 	Sync,
 	GetObject,
 	PutObject,
@@ -46,9 +43,9 @@ func getAuthFilePath() string {
 	return path.Join(home, S3_AUTH)
 }
 
-func getAWSEnvironment() (accessKey, secretKey string, err error) {
+func getAWSEnvironment() (auth *s3.Auth, err error) {
 	var s3Auth *os.File
-	var auth s3.Auth
+	var accessKey, secretKey string
 	s3Auth, err = os.OpenFile(getAuthFilePath(), os.O_RDWR, 0666)
 	defer s3Auth.Close()
 	if err != nil {
@@ -56,16 +53,21 @@ func getAWSEnvironment() (accessKey, secretKey string, err error) {
 		secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
 		if accessKey == "" && secretKey == "" {
 			errstr := `You can configure your credentials by running "mc configure"`
-			return "", "", errors.New(errstr)
+			return nil, errors.New(errstr)
 		}
 		if accessKey == "" {
 			errstr := `Partial credentials found in the env, missing : AWS_ACCESS_KEY_ID`
-			return "", "", errors.New(errstr)
+			return nil, errors.New(errstr)
 		}
 
 		if secretKey == "" {
 			errstr := `Partial credentials found in the env, missing : AWS_SECRET_ACCESS_KEY`
-			return "", "", errors.New(errstr)
+			return nil, errors.New(errstr)
+		}
+		auth = &s3.Auth{
+			AccessKey:       accessKey,
+			SecretAccessKey: secretKey,
+			Hostname:        "s3.amazonaws.com",
 		}
 	} else {
 		var n int
@@ -73,11 +75,8 @@ func getAWSEnvironment() (accessKey, secretKey string, err error) {
 		n, err = s3Auth.Read(s3Authbytes)
 		err = json.Unmarshal(s3Authbytes[:n], &auth)
 		if err != nil {
-			return "", "", err
+			return nil, err
 		}
-		accessKey = auth.AccessKey
-		secretKey = auth.SecretAccessKey
 	}
-
-	return accessKey, secretKey, nil
+	return auth, nil
 }

@@ -34,8 +34,10 @@ func parseListObjectsInput(c *cli.Context) (bucket string, err error) {
 
 func doListObjects(c *cli.Context) {
 	var err error
-	var accessKey, secretKey, bucket string
-	accessKey, secretKey, err = getAWSEnvironment()
+	var auth *s3.Auth
+	var bucket string
+
+	auth, err = getAWSEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +48,7 @@ func doListObjects(c *cli.Context) {
 	}
 
 	var items []*s3.Item
-	s3c := s3.NewS3Client(accessKey, secretKey, "s3.amazonaws.com")
+	s3c := s3.NewS3Client(auth)
 	// Gets 1000 maxkeys supported with GET Bucket API
 	items, err = s3c.GetBucket(bucket, "", s3.MAX_OBJECT_LIST)
 	if err != nil {
