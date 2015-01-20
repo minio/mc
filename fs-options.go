@@ -1,5 +1,5 @@
 /*
- * Mini Object Storage, (C) 2014 Minio, Inc.
+ * Mini Object Storage, (C) 2014,2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,10 @@ import (
 )
 
 var Cp = cli.Command{
-	Name:  "cp",
-	Usage: "",
-	Description: `Copies a local file or Object to another location locally
-   or in S3.`,
-	Action: doFsCopy,
+	Name:        "cp",
+	Usage:       "",
+	Description: `Copies a local file or Object to another location locally or in S3.`,
+	Action:      doFsCopy,
 }
 
 var Ls = cli.Command{
@@ -47,6 +46,14 @@ var Sync = cli.Command{
 	Usage:       "",
 	Description: "Syncs directories and S3 prefixes",
 	Action:      doFsSync,
+}
+
+type fsOptions struct {
+	bucket string
+	body   string
+	key    string
+	isget  bool
+	isput  bool
 }
 
 func doFsList(c *cli.Context) {

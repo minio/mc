@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-package main
+package uri
 
 import (
-	"os"
-
-	"github.com/codegangsta/cli"
+	"testing"
 )
 
-func main() {
-	app := cli.NewApp()
-	app.Name = "mc"
-	app.Usage = "Unified command line interface for Minio Object Storage"
-	app.Version = "0.1.0"
-	app.Commands = Options
-	app.Author = "Minio Community"
-	app.Run(os.Args)
+func TestValidScheme(t *testing.T) {
+	uri := ParseURI("s3://mybucket/your_key/location")
+	if uri.Scheme == "" {
+		t.Fatal()
+	}
+}
+
+func TestInvalidScheme(t *testing.T) {
+	uri := ParseURI("s3/mybucket/your_key/location")
+	if uri.Scheme != "" {
+		t.Fatal()
+	}
 }
