@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"os"
 	"path"
@@ -15,10 +14,10 @@ func parseConfigureInput(c *cli.Context) (accessKey, secretKey string, err error
 	accessKey = c.String("accesskey")
 	secretKey = c.String("secretkey")
 	if accessKey == "" {
-		return "", "", errors.New("accesskey is mandatory")
+		return "", "", configAccessErr
 	}
 	if secretKey == "" {
-		return "", "", errors.New("secretkey is mandatory")
+		return "", "", configSecretErr
 	}
 	return accessKey, secretKey, nil
 }

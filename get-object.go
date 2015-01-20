@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"io"
 	"log"
 	"os"
@@ -30,10 +29,10 @@ func parseGetObjectInput(c *cli.Context) (bucket, key string, err error) {
 	bucket = c.String("bucket")
 	key = c.String("key")
 	if bucket == "" {
-		return "", "", errors.New("bucket name is mandatory")
+		return "", "", bucketNameErr
 	}
 	if key == "" {
-		return "", "", errors.New("object name is mandatory")
+		return "", "", objectNameErr
 	}
 
 	return bucket, key, nil
