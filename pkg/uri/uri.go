@@ -14,20 +14,33 @@
  * limitations under the License.
  */
 
-package main
+package uri
 
-import (
-	"os"
+// #include <stdlib.h>
+// #include "uri.h"
+import "C"
+import "unsafe"
 
-	"github.com/codegangsta/cli"
-)
+type URI struct {
+	Scheme string
+	Server string
+	Path   string
+}
 
-func main() {
-	app := cli.NewApp()
-	app.Name = "mc"
-	app.Usage = "Unified command line interface for Minio Object Storage"
-	app.Version = "0.1.0"
-	app.Commands = Options
-	app.Author = "Minio Community"
-	app.Run(os.Args)
+func ParseURI(url string) (uri *URI) {
+	var buri *C.bURI
+	ret := C.minio_uri_parse(C.CString(url), &buri)
+	defer C.free(unsafe.Pointer(buri))
+
+	uri = &URI{Scheme: "", Server: "", Path: ""}
+	if int(ret) == -1 {
+		// URI cannot be parsed
+		return
+	}
+
+	uri.Scheme = C.GoString(buri.scheme)
+	uri.Server = C.GoString(buri.server)
+	uri.Path = C.GoString(buri.path)
+
+	return
 }

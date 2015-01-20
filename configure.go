@@ -40,7 +40,7 @@ func doConfigure(c *cli.Context) {
 
 	var s3File *os.File
 	home := os.Getenv("HOME")
-	s3File, err = os.OpenFile(path.Join(home, S3_AUTH), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	s3File, err = os.OpenFile(path.Join(home, AUTH), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	defer s3File.Close()
 	if err != nil {
 		log.Fatal(err)

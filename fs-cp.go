@@ -10,68 +10,64 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
+	"github.com/minio-io/mc/pkg/uri"
 )
 
-type fsMeta struct {
-	bucket string
-	body   string
-	key    string
-	get    bool
-	put    bool
-}
-
-func parseCpOptions(c *cli.Context) (fsmeta fsMeta, err error) {
-	var localPath, s3Path string
-	var get, put bool
+func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 	switch len(c.Args()) {
 	case 1:
-		return fsMeta{}, errors.New("Missing <S3Path> or <LocalPath>")
+		return fsOptions{}, errors.New("Missing <S3Path> or <LocalPath>")
 	case 2:
 		if strings.HasPrefix(c.Args().Get(0), "s3://") {
-			s3Path = c.Args().Get(0)
-			localPath = c.Args().Get(1)
-			get = true
-			put = false
+			uri := uri.ParseURI(c.Args().Get(0))
+			if uri.Scheme == "" {
+				return fsOptions{}, errors.New("Invalid URI scheme")
+			}
+			fsoptions.bucket = uri.Server
+			fsoptions.key = uri.Path
+			fsoptions.body = c.Args().Get(1)
+			fsoptions.isget = true
+			fsoptions.isput = false
 		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
-			s3Path = c.Args().Get(1)
-			localPath = c.Args().Get(0)
-			get = false
-			put = true
+			uri := uri.ParseURI(c.Args().Get(1))
+			if uri.Scheme == "" {
+				return fsOptions{}, errors.New("Invalid URI scheme")
+			}
+			fsoptions.bucket = uri.Server
+			fsoptions.key = c.Args().Get(0)
+			fsoptions.body = c.Args().Get(0)
+			fsoptions.isget = false
+			fsoptions.isput = true
 		}
 	default:
-		return fsMeta{}, errors.New("Arguments missing <S3Path> or <LocalPath>")
+		return fsOptions{}, errors.New("Arguments missing <S3Path> or <LocalPath>")
 	}
-	fsmeta.bucket = strings.Split(s3Path, "s3://")[1]
-	fsmeta.body = localPath
-	fsmeta.key = localPath
-	fsmeta.get = get
-	fsmeta.put = put
-
-	return fsmeta, nil
+	return
 }
 
 func doFsCopy(c *cli.Context) {
 	var auth *s3.Auth
 	var err error
+	var bodyFile *os.File
 	auth, err = getAWSEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
 	s3c := s3.NewS3Client(auth)
 
-	var fsmeta fsMeta
-	fsmeta, err = parseCpOptions(c)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var bodyFile *os.File
-	bodyFile, err = os.Open(fsmeta.body)
-	defer bodyFile.Close()
+	var fsoptions fsOptions
+	fsoptions, err = parseCpOptions(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if fsmeta.put {
+	if fsoptions.isput {
+		bodyFile, err = os.Open(fsoptions.body)
+		defer bodyFile.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var bodyBuffer io.Reader
 		var size int64
 		var md5hash hash.Hash
@@ -80,14 +76,17 @@ func doFsCopy(c *cli.Context) {
 			log.Fatal(err)
 		}
 
-		err = s3c.Put(fsmeta.bucket, fsmeta.key, md5hash, size, bodyBuffer)
+		err = s3c.Put(fsoptions.bucket, fsoptions.key, md5hash, size, bodyBuffer)
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else if fsmeta.get {
+	} else if fsoptions.isget {
 		var objectReader io.ReadCloser
 		var objectSize int64
-		objectReader, objectSize, err = s3c.Get(fsmeta.bucket, fsmeta.key)
+		bodyFile, err = os.OpenFile(fsoptions.body, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+		defer bodyFile.Close()
+
+		objectReader, objectSize, err = s3c.Get(fsoptions.bucket, fsoptions.key)
 		if err != nil {
 			log.Fatal(err)
 		}

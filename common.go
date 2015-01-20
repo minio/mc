@@ -1,5 +1,5 @@
 /*
- * Mini Object Storage, (C) 2014 Minio, Inc.
+ * Mini Object Storage, (C) 2014,2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ var Options = []cli.Command{
 
 func getAuthFilePath() string {
 	home := os.Getenv("HOME")
-	return path.Join(home, S3_AUTH)
+	return path.Join(home, AUTH)
 }
 
 func getAWSEnvironment() (auth *s3.Auth, err error) {
