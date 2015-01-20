@@ -127,6 +127,26 @@ func (c *Client) Stat(key, bucket string) (size int64, reterr error) {
 	return 0, fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
 }
 
+func (c *Client) PutBucket(bucket string) error {
+	req := newReq(c.bucketURL(bucket))
+	req.Method = "PUT"
+	c.Auth.SignRequest(req)
+	res, err := c.transport().RoundTrip(req)
+	if res != nil && res.Body != nil {
+		defer res.Body.Close()
+	}
+
+	if err != nil {
+		return err
+	}
+	if res.StatusCode != http.StatusOK {
+		// res.Write(os.Stderr)
+		return fmt.Errorf("Got response code %d from s3", res.StatusCode)
+	}
+	return nil
+
+}
+
 func (c *Client) Put(bucket, key string, md5 hash.Hash, size int64, body io.Reader) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
