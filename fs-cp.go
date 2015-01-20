@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"hash"
 	"io"
 	"log"
@@ -13,15 +12,20 @@ import (
 	"github.com/minio-io/mc/pkg/uri"
 )
 
+// TODO
+//   - <S3Path> <S3Path>
+//   - <S3Path> <S3Bucket>
+//   - <LocalDir> <S3Bucket>
+
 func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 	switch len(c.Args()) {
 	case 1:
-		return fsOptions{}, errors.New("Missing <S3Path> or <LocalPath>")
+		return fsOptions{}, fsPathErr
 	case 2:
 		if strings.HasPrefix(c.Args().Get(0), "s3://") {
 			uri := uri.ParseURI(c.Args().Get(0))
 			if uri.Scheme == "" {
-				return fsOptions{}, errors.New("Invalid URI scheme")
+				return fsOptions{}, fsUriErr
 			}
 			fsoptions.bucket = uri.Server
 			fsoptions.key = uri.Path
@@ -31,7 +35,7 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
 			uri := uri.ParseURI(c.Args().Get(1))
 			if uri.Scheme == "" {
-				return fsOptions{}, errors.New("Invalid URI scheme")
+				return fsOptions{}, fsUriErr
 			}
 			fsoptions.bucket = uri.Server
 			fsoptions.key = c.Args().Get(0)
@@ -40,7 +44,7 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 			fsoptions.isput = true
 		}
 	default:
-		return fsOptions{}, errors.New("Arguments missing <S3Path> or <LocalPath>")
+		return fsOptions{}, fsPathErr
 	}
 	return
 }

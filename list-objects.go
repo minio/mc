@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 
 	"github.com/codegangsta/cli"
@@ -27,7 +26,7 @@ import (
 func parseListObjectsInput(c *cli.Context) (bucket string, err error) {
 	bucket = c.String("bucket")
 	if bucket == "" {
-		return "", errors.New("bucket name is mandatory")
+		return "", bucketNameErr
 	}
 	return bucket, nil
 }

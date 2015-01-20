@@ -19,7 +19,6 @@ package main
 import (
 	"bytes"
 	"crypto/md5"
-	"errors"
 	"hash"
 	"io"
 	"log"
@@ -61,15 +60,15 @@ func parsePutObjectInput(c *cli.Context) (bucket, key, body string, err error) {
 	body = c.String("body")
 
 	if bucket == "" {
-		return "", "", "", errors.New("bucket name is mandatory")
+		return "", "", "", bucketNameErr
 	}
 
 	if key == "" {
-		return "", "", "", errors.New("object name is mandatory")
+		return "", "", "", objectNameErr
 	}
 
 	if body == "" {
-		return "", "", "", errors.New("object blob is mandatory")
+		return "", "", "", objectBlobErr
 	}
 
 	return bucket, key, body, nil

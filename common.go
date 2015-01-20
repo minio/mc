@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path"
 
@@ -52,17 +51,14 @@ func getAWSEnvironment() (auth *s3.Auth, err error) {
 		accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
 		secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
 		if accessKey == "" && secretKey == "" {
-			errstr := `You can configure your credentials by running "mc configure"`
-			return nil, errors.New(errstr)
+			return nil, missingAccessSecretErr
 		}
 		if accessKey == "" {
-			errstr := `Partial credentials found in the env, missing : AWS_ACCESS_KEY_ID`
-			return nil, errors.New(errstr)
+			return nil, missingAccessErr
 		}
 
 		if secretKey == "" {
-			errstr := `Partial credentials found in the env, missing : AWS_SECRET_ACCESS_KEY`
-			return nil, errors.New(errstr)
+			return nil, missingSecretErr
 		}
 		auth = &s3.Auth{
 			AccessKey:       accessKey,
