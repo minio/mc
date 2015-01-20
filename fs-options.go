@@ -56,8 +56,5 @@ type fsOptions struct {
 	isput  bool
 }
 
-func doFsMkdir(c *cli.Context) {
-}
-
 func doFsSync(c *cli.Context) {
 }
