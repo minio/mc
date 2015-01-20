@@ -17,12 +17,46 @@
 package main
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/codegangsta/cli"
-	//	"github.com/minio-io/mc/pkg/s3"
+	"github.com/minio-io/mc/pkg/s3"
 )
 
-func parseFsList(c *cli.Context) {
+func printBuckets(v []*s3.Bucket) {
+	for _, b := range v {
+		fmt.Printf("%s %s\n", b.CreationDate, b.Name)
+	}
+}
+
+func printObjects(v []*s3.Item) {
+	for _, b := range v {
+		fmt.Printf("%s %s\n", b.LastModified, b.Key)
+	}
 }
 
 func doFsList(c *cli.Context) {
+	var err error
+	var auth *s3.Auth
+	var items []*s3.Item
+	auth, err = getAWSEnvironment()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var buckets []*s3.Bucket
+	s3c := s3.NewS3Client(auth)
+
+	switch len(c.Args()) {
+	case 1:
+		items, err = s3c.GetBucket(c.Args().Get(0), "", s3.MAX_OBJECT_LIST)
+		if err != nil {
+			log.Fatal(err)
+		}
+		printObjects(items)
+	default:
+		buckets, err = s3c.Buckets()
+		printBuckets(buckets)
+	}
 }
