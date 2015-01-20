@@ -157,8 +157,9 @@ func (c *Client) Put(bucket, key string, md5 hash.Hash, size int64, body io.Read
 }
 
 type Item struct {
-	Key  string
-	Size int64
+	Key          string
+	LastModified string
+	Size         int64
 }
 
 type listBucketResults struct {
@@ -329,6 +330,7 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (rc io.Rea
 	}
 }
 
+/* Not supporting Delete's
 func (c *Client) Delete(bucket, key string) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "DELETE"
@@ -346,6 +348,7 @@ func (c *Client) Delete(bucket, key string) error {
 	}
 	return fmt.Errorf("Amazon HTTP error on DELETE: %d", res.StatusCode)
 }
+*/
 
 func NewAuth(accessKey, secretKey, hostname string) (auth *Auth) {
 	auth = &Auth{
