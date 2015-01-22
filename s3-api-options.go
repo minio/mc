@@ -95,7 +95,7 @@ var Configure = cli.Command{
    automatically created for you. Note that the configure command only writes
    values to the config file. It does not use any configuration values from
    the environment variables.`,
-	Action: doConfigure,
+	Action: doS3Configure,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "accesskey",
@@ -111,5 +111,5 @@ var Configure = cli.Command{
 }
 
 const (
-	AUTH = ".auth"
+	S3_AUTH = ".auth"
 )

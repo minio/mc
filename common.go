@@ -22,6 +22,7 @@ import (
 	"path"
 
 	"github.com/codegangsta/cli"
+	"github.com/minio-io/mc/pkg/minio"
 	"github.com/minio-io/mc/pkg/s3"
 )
 
@@ -35,6 +36,11 @@ var Options = []cli.Command{
 		Name:        "s3api",
 		Usage:       "",
 		Subcommands: subS3APIOptions,
+	},
+	{
+		Name:        "minio",
+		Usage:       "",
+		Subcommands: subMinioApiOptions,
 	},
 }
 
@@ -53,15 +59,43 @@ var subS3APIOptions = []cli.Command{
 	Configure,
 }
 
-func getAuthFilePath() string {
+var subMinioApiOptions = []cli.Command{
+	MinioGetObject,
+	MinioPutObject,
+	MinioListObjects,
+	MinioListBuckets,
+	MinioConfigure,
+}
+
+func getAWSAuthFilePath() string {
 	home := os.Getenv("HOME")
-	return path.Join(home, AUTH)
+	return path.Join(home, S3_AUTH)
+}
+
+func getMinioAuthFilePath() string {
+	home := os.Getenv("HOME")
+	return path.Join(home, MINIO_AUTH)
+}
+
+// TODO reply full json
+func getMinioEnvironment() (hostname string, err error) {
+	var auth *minio.Auth
+	minioAuth, err := os.OpenFile(getMinioAuthFilePath(), os.O_RDWR, 0666)
+	defer minioAuth.Close()
+	var n int
+	minioAuthbytes := make([]byte, 256)
+	n, err = minioAuth.Read(minioAuthbytes)
+	err = json.Unmarshal(minioAuthbytes[:n], &auth)
+	if err != nil {
+		return "", err
+	}
+	return auth.Hostname, nil
 }
 
 func getAWSEnvironment() (auth *s3.Auth, err error) {
 	var s3Auth *os.File
 	var accessKey, secretKey string
-	s3Auth, err = os.OpenFile(getAuthFilePath(), os.O_RDWR, 0666)
+	s3Auth, err = os.OpenFile(getAWSAuthFilePath(), os.O_RDWR, 0666)
 	defer s3Auth.Close()
 	if err != nil {
 		accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
