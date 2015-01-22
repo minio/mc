@@ -67,7 +67,7 @@ func (c *Client) hostname() string {
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
 func (c *Client) bucketURL(bucket string) string {
-	return fmt.Sprintf("https://%s/%s/", c.hostname(), bucket)
+	return fmt.Sprintf("http://%s/%s/", c.hostname(), bucket)
 }
 
 func (c *Client) keyURL(bucket, key string) string {
@@ -79,12 +79,12 @@ func newReq(url_ string) *http.Request {
 	if err != nil {
 		panic(fmt.Sprintf("minio client; invalid URL: %v", err))
 	}
-	req.Header.Set("User-Agent", "minio-minio")
+	req.Header.Set("User-Agent", "minio")
 	return req
 }
 
 func (c *Client) Buckets() ([]*Bucket, error) {
-	req := newReq("https://" + c.hostname() + "/")
+	req := newReq("http://" + c.hostname() + "/")
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ type listBucketResults struct {
 
 // BucketLocation returns the Minio hostname to be used with the given bucket.
 func (c *Client) BucketLocation(bucket string, hostname string) (location string, err error) {
-	url_ := fmt.Sprintf("https://%s/%s/?location", hostname, url.QueryEscape(bucket))
+	url_ := fmt.Sprintf("http://%s/%s/?location", hostname, url.QueryEscape(bucket))
 	req := newReq(url_)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
@@ -227,7 +227,7 @@ func (c *Client) GetBucket(bucket string, startAt string, maxKeys int) (items []
 		url_ := fmt.Sprintf("%s?marker=%s&max-keys=%d",
 			c.bucketURL(bucket), url.QueryEscape(marker), fetchN)
 
-		// Try the enumerate three times, since Minio likes to close
+		// Try the enumerate three times, since s3 likes to close
 		// https connections a lot, and Go sucks at dealing with it:
 		// https://code.google.com/p/go/issues/detail?id=3514
 		const maxTries = 5
