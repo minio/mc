@@ -109,14 +109,6 @@ const (
 	MINIO_AUTH = ".minioauth"
 )
 
-func minioPutObject(c *cli.Context) {
-	//TODO
-}
-
-func minioListBuckets(c *cli.Context) {
-	//TODO
-}
-
 func minioListObjects(c *cli.Context) {
 	//TODO
 }
