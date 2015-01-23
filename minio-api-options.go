@@ -108,7 +108,3 @@ var MinioConfigure = cli.Command{
 const (
 	MINIO_AUTH = ".minioauth"
 )
-
-func minioListObjects(c *cli.Context) {
-	//TODO
-}
