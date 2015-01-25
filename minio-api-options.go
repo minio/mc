@@ -39,7 +39,7 @@ var MinioGetObject = cli.Command{
 	},
 }
 
-var MinioPutObject = cli.Command{
+var MinioPutBucket = cli.Command{
 	Name:        "put-object",
 	Usage:       "",
 	Description: "Adds an object to a bucket.",
@@ -59,6 +59,20 @@ var MinioPutObject = cli.Command{
 			Name:  "body",
 			Value: "",
 			Usage: "Object blob",
+		},
+	},
+}
+
+var MinioPutObject = cli.Command{
+	Name:        "put-bucket",
+	Usage:       "",
+	Description: "Creates a new bucket.",
+	Action:      minioPutBucket,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "bucket",
+			Value: "",
+			Usage: "bucket name",
 		},
 	},
 }
