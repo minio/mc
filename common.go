@@ -62,6 +62,7 @@ var subS3APIOptions = []cli.Command{
 var subMinioApiOptions = []cli.Command{
 	MinioGetObject,
 	MinioPutObject,
+	MinioPutBucket,
 	MinioListObjects,
 	MinioListBuckets,
 	MinioConfigure,
