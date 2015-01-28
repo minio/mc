@@ -79,7 +79,7 @@ func newReq(url_ string) *http.Request {
 	if err != nil {
 		panic(fmt.Sprintf("minio client; invalid URL: %v", err))
 	}
-	req.Header.Set("User-Agent", "minio")
+	req.Header.Set("User-Agent", "Minio")
 	return req
 }
 
@@ -188,24 +188,6 @@ type listBucketResults struct {
 	MaxKeys     int
 	Name        string // bucket name
 	Marker      string
-}
-
-// BucketLocation returns the Minio hostname to be used with the given bucket.
-func (c *Client) BucketLocation(bucket string, hostname string) (location string, err error) {
-	url_ := fmt.Sprintf("http://%s/%s/?location", hostname, url.QueryEscape(bucket))
-	req := newReq(url_)
-	res, err := c.transport().RoundTrip(req)
-	if err != nil {
-		return
-	}
-	var xres xmlLocationConstraint
-	if err := xml.NewDecoder(res.Body).Decode(&xres); err != nil {
-		return "", err
-	}
-	if xres.Location == "" {
-		return "localhost", nil
-	}
-	return "minio-" + xres.Location + "." + hostname, nil
 }
 
 // GetBucket (List Objects) returns 0 to maxKeys (inclusive) items from the
@@ -377,7 +359,7 @@ func (e *Error) parseXML() {
 	}
 	if xe.Code == "SignatureDoesNotMatch" {
 		want, _ := hex.DecodeString(strings.Replace(xe.StringToSignBytes, " ", "", -1))
-		log.Printf("MINIO SignatureDoesNotMatch. StringToSign should be %d bytes: %q (%x)", len(want), want, want)
+		log.Printf("Minio SignatureDoesNotMatch. StringToSign should be %d bytes: %q (%x)", len(want), want, want)
 	}
 
 }
@@ -391,10 +373,4 @@ type xmlError struct {
 	Bucket            string
 	Endpoint          string
 	StringToSignBytes string
-}
-
-// xmlLocationConstraint is the LocationConstraint returned from BucketLocation.
-type xmlLocationConstraint struct {
-	XMLName  xml.Name `xml:"LocationConstraint"`
-	Location string   `xml:",chardata"`
 }
