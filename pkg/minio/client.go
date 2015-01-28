@@ -79,7 +79,7 @@ func newReq(url_ string) *http.Request {
 	if err != nil {
 		panic(fmt.Sprintf("minio client; invalid URL: %v", err))
 	}
-	req.Header.Set("User-Agent", "minio")
+	req.Header.Set("User-Agent", "Minio")
 	return req
 }
 
@@ -359,7 +359,7 @@ func (e *Error) parseXML() {
 	}
 	if xe.Code == "SignatureDoesNotMatch" {
 		want, _ := hex.DecodeString(strings.Replace(xe.StringToSignBytes, " ", "", -1))
-		log.Printf("MINIO SignatureDoesNotMatch. StringToSign should be %d bytes: %q (%x)", len(want), want, want)
+		log.Printf("Minio SignatureDoesNotMatch. StringToSign should be %d bytes: %q (%x)", len(want), want, want)
 	}
 
 }
