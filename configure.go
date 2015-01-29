@@ -28,7 +28,39 @@ func doMinioConfigure(c *cli.Context) {
 	if hostname == "" {
 		log.Fatal("Invalid hostname")
 	}
-	auth := &minio.Auth{"", "", hostname}
+
+	caFile := c.String("cacert")
+	if caFile == "" {
+		log.Fatal("invalid CA file")
+	}
+
+	certFile := c.String("cert")
+	if certFile == "" {
+		log.Fatal("invalid certificate")
+	}
+
+	keyFile := c.String("key")
+	if keyFile == "" {
+		log.Fatal("invalid key")
+	}
+
+	/*
+		var accessKey, secretKey string
+		var err error
+		accessKey, secretKey, err = parseConfigureInput(c)
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
+	auth := &minio.Auth{
+		//		AccessKey:       accessKey,
+		//		SecretAccessKey: secretKey,
+		Hostname: hostname,
+		CACert:   caFile,
+		CertPEM:  certFile,
+		KeyPEM:   keyFile,
+	}
+
 	jAuth, err := json.Marshal(auth)
 	if err != nil {
 		log.Fatal(err)

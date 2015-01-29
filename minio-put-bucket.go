@@ -24,10 +24,11 @@ import (
 )
 
 func minioPutBucket(c *cli.Context) {
-	var bucket, hostname string
+	var bucket string
+	var auth *minio.Auth
 	var err error
 
-	hostname, err = getMinioEnvironment()
+	auth, err = getMinioEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +38,7 @@ func minioPutBucket(c *cli.Context) {
 		log.Fatal(bucketNameErr)
 	}
 
-	mc := minio.NewMinioClient(hostname)
+	mc, _ := minio.NewMinioClient(auth)
 	err = mc.PutBucket(bucket)
 	if err != nil {
 		log.Fatal(err)

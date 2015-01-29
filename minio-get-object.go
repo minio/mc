@@ -26,12 +26,13 @@ import (
 )
 
 func minioGetObject(c *cli.Context) {
-	var bucket, key, hostname string
+	var bucket, key string
 	var err error
 	var objectReader io.ReadCloser
 	var objectSize int64
+	var auth *minio.Auth
 
-	hostname, err = getMinioEnvironment()
+	auth, err = getMinioEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,7 +46,7 @@ func minioGetObject(c *cli.Context) {
 		log.Fatal(objectNameErr)
 	}
 
-	minio := minio.NewMinioClient(hostname)
+	minio, _ := minio.NewMinioClient(auth)
 	objectReader, objectSize, err = minio.Get(bucket, key)
 	if err != nil {
 		log.Fatal(err)

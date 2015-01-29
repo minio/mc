@@ -72,8 +72,9 @@ func minioParsePutObjectInput(c *cli.Context) (bucket, key, body string, err err
 
 func minioPutObject(c *cli.Context) {
 	var err error
-	var bucket, key, body, hostname string
-	hostname, err = getMinioEnvironment()
+	var bucket, key, body string
+	var auth *minio.Auth
+	auth, err = getMinioEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,7 +83,7 @@ func minioPutObject(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	mc := minio.NewMinioClient(hostname)
+	mc, _ := minio.NewMinioClient(auth)
 	var bodyFile *os.File
 	bodyFile, err = os.Open(body)
 	if err != nil {
