@@ -33,9 +33,10 @@ func minioParseListObjectsInput(c *cli.Context) (bucket string, err error) {
 
 func minioListObjects(c *cli.Context) {
 	var err error
-	var bucket, hostname string
+	var bucket string
+	var auth *minio.Auth
 
-	hostname, err = getMinioEnvironment()
+	auth, err = getMinioEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +47,7 @@ func minioListObjects(c *cli.Context) {
 	}
 
 	var items []*minio.Item
-	mc := minio.NewMinioClient(hostname)
+	mc, _ := minio.NewMinioClient(auth)
 	// Gets 1000 maxkeys supported with GET Bucket API
 	items, err = mc.GetBucket(bucket, "", minio.MAX_OBJECT_LIST)
 	if err != nil {

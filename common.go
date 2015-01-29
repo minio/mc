@@ -78,19 +78,38 @@ func getMinioAuthFilePath() string {
 	return path.Join(home, MINIO_AUTH)
 }
 
-// TODO reply full json
-func getMinioEnvironment() (hostname string, err error) {
-	var auth *minio.Auth
+func getMinioEnvironment() (auth *minio.Auth, err error) {
+	var accessKey, secretKey string
 	minioAuth, err := os.OpenFile(getMinioAuthFilePath(), os.O_RDWR, 0666)
 	defer minioAuth.Close()
-	var n int
-	minioAuthbytes := make([]byte, 256)
-	n, err = minioAuth.Read(minioAuthbytes)
-	err = json.Unmarshal(minioAuthbytes[:n], &auth)
 	if err != nil {
-		return "", err
+		accessKey = os.Getenv("MINIO_ACCESS_KEY_ID")
+		secretKey = os.Getenv("MINIO_SECRET_ACCESS_KEY")
+		if accessKey == "" && secretKey == "" {
+			return nil, missingAccessSecretErr
+		}
+		if accessKey == "" {
+			return nil, missingAccessErr
+		}
+
+		if secretKey == "" {
+			return nil, missingSecretErr
+		}
+		auth = &minio.Auth{
+			AccessKey:       accessKey,
+			SecretAccessKey: secretKey,
+			Hostname:        "127.0.0.1:8080",
+		}
+	} else {
+		var n int
+		minioAuthbytes := make([]byte, 1024)
+		n, err = minioAuth.Read(minioAuthbytes)
+		err = json.Unmarshal(minioAuthbytes[:n], &auth)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return auth.Hostname, nil
+	return auth, nil
 }
 
 func getAWSEnvironment() (auth *s3.Auth, err error) {

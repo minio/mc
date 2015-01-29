@@ -14,13 +14,13 @@ func minioDumpBuckets(v []*minio.Bucket) {
 }
 
 func minioListBuckets(c *cli.Context) {
-	hostname, err := getMinioEnvironment()
+	auth, err := getMinioEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var buckets []*minio.Bucket
-	mc := minio.NewMinioClient(hostname)
+	mc, _ := minio.NewMinioClient(auth)
 	buckets, err = mc.Buckets()
 	if err != nil {
 		log.Fatal(err)

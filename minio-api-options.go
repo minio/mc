@@ -116,6 +116,31 @@ var MinioConfigure = cli.Command{
 			Value: "127.0.0.1:8080",
 			Usage: "Minio object server",
 		},
+		cli.StringFlag{
+			Name:  "accesskey",
+			Value: "",
+			Usage: "Minio access key",
+		},
+		cli.StringFlag{
+			Name:  "SecretKey",
+			Value: "",
+			Usage: "Minio secret key",
+		},
+		cli.StringFlag{
+			Name:  "cacert",
+			Value: "",
+			Usage: "CA authority cert",
+		},
+		cli.StringFlag{
+			Name:  "cert",
+			Value: "",
+			Usage: "Minio server certificate",
+		},
+		cli.StringFlag{
+			Name:  "key",
+			Value: "",
+			Usage: "Minio server private key",
+		},
 	},
 }
 

@@ -67,7 +67,7 @@ func (c *Client) hostname() string {
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
 func (c *Client) bucketURL(bucket string) string {
-	return fmt.Sprintf("http://%s/%s/", c.hostname(), bucket)
+	return fmt.Sprintf("https://%s/%s/", c.hostname(), bucket)
 }
 
 func (c *Client) keyURL(bucket, key string) string {
@@ -84,7 +84,7 @@ func newReq(url_ string) *http.Request {
 }
 
 func (c *Client) Buckets() ([]*Bucket, error) {
-	req := newReq("http://" + c.hostname() + "/")
+	req := newReq("https://" + c.hostname() + "/")
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return nil, err
@@ -325,9 +325,13 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (rc io.Rea
 	}
 }
 
-func NewMinioClient(hostname string) (client *Client) {
-	client = &Client{hostname, http.DefaultTransport}
-	return
+func NewMinioClient(auth *Auth) (client *Client, err error) {
+	transport, err := auth.getTlsTransport()
+	if err != nil {
+		return nil, err
+	}
+	client = &Client{auth.Hostname, transport}
+	return client, nil
 }
 
 // Error is the type returned by some API operations.
