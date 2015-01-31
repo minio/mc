@@ -29,11 +29,6 @@ func doMinioConfigure(c *cli.Context) {
 		log.Fatal("Invalid hostname")
 	}
 
-	caFile := c.String("cacert")
-	if caFile == "" {
-		log.Fatal("invalid CA file")
-	}
-
 	certFile := c.String("cert")
 	if certFile == "" {
 		log.Fatal("invalid certificate")
@@ -56,7 +51,6 @@ func doMinioConfigure(c *cli.Context) {
 		//		AccessKey:       accessKey,
 		//		SecretAccessKey: secretKey,
 		Hostname: hostname,
-		CACert:   caFile,
 		CertPEM:  certFile,
 		KeyPEM:   keyFile,
 	}

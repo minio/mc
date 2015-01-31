@@ -122,7 +122,7 @@ var MinioConfigure = cli.Command{
 			Usage: "Minio access key",
 		},
 		cli.StringFlag{
-			Name:  "SecretKey",
+			Name:  "secretKey",
 			Value: "",
 			Usage: "Minio secret key",
 		},
