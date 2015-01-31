@@ -2,7 +2,6 @@ package minio
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"io/ioutil"
 	"net/http"
 )
@@ -11,19 +10,17 @@ type Auth struct {
 	AccessKey       string
 	SecretAccessKey string
 	Hostname        string
-	CACert          string
 	CertPEM         string
 	KeyPEM          string
 }
 
 type TlsConfig struct {
-	CABlock      []byte
 	CertPEMBlock []byte
 	KeyPEMBlock  []byte
 }
 
 func (a *Auth) loadKeys(cert string, key string) (*TlsConfig, error) {
-	caBlock, err := ioutil.ReadFile(cert)
+	certBlock, err := ioutil.ReadFile(cert)
 	if err != nil {
 		return nil, err
 	}
@@ -32,14 +29,13 @@ func (a *Auth) loadKeys(cert string, key string) (*TlsConfig, error) {
 		return nil, err
 	}
 	t := &TlsConfig{}
-	t.CABlock = caBlock
-	t.CertPEMBlock = caBlock
+	t.CertPEMBlock = certBlock
 	t.KeyPEMBlock = keyBlock
 	return t, nil
 }
 
 func (a *Auth) getTlsTransport() (*http.Transport, error) {
-	tlsconfig, err := a.loadKeys(a.CACert, a.KeyPEM)
+	tlsconfig, err := a.loadKeys(a.CertPEM, a.KeyPEM)
 	if err != nil {
 		return nil, err
 	}
@@ -49,13 +45,10 @@ func (a *Auth) getTlsTransport() (*http.Transport, error) {
 		return nil, err
 	}
 
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(tlsconfig.CABlock)
-
 	// Setup HTTPS client
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
+		Certificates:       []tls.Certificate{cert},
+		InsecureSkipVerify: true,
 	}
 
 	tlsConfig.BuildNameToCertificate()
