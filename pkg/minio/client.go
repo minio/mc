@@ -67,7 +67,7 @@ func (c *Client) hostname() string {
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
 func (c *Client) bucketURL(bucket string) string {
-	return fmt.Sprintf("https://%s/%s/", c.hostname(), bucket)
+	return fmt.Sprintf("http://%s/%s/", c.hostname(), bucket)
 }
 
 func (c *Client) keyURL(bucket, key string) string {
@@ -84,7 +84,7 @@ func newReq(url_ string) *http.Request {
 }
 
 func (c *Client) Buckets() ([]*Bucket, error) {
-	req := newReq("https://" + c.hostname() + "/")
+	req := newReq("http://" + c.hostname() + "/")
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return nil, err
