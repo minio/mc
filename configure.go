@@ -48,8 +48,8 @@ func doMinioConfigure(c *cli.Context) {
 		}
 	*/
 	auth := &minio.Auth{
-		//		AccessKey:       accessKey,
-		//		SecretAccessKey: secretKey,
+		//AccessKey:       accessKey,
+		//SecretKey: secretKey,
 		Hostname: hostname,
 		//		CertPEM:  certFile,
 		//		KeyPEM:   keyFile,
