@@ -60,13 +60,16 @@ func (c *Client) transport() http.RoundTripper {
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
 func (c *Client) bucketURL(bucket string) string {
-	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
-		return fmt.Sprintf("https://%s.%s/", bucket, c.hostname())
+	if strings.HasSuffix(c.hostname(), "amazonaws.com") {
+		if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
+			return fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.hostname(), "https://"))
+		}
 	}
-	return fmt.Sprintf("https://%s/%s/", c.hostname(), bucket)
+	return fmt.Sprintf("%s/%s/", c.hostname(), bucket)
 }
 
 func (c *Client) keyURL(bucket, key string) string {
+
 	return c.bucketURL(bucket) + key
 }
 
@@ -75,12 +78,12 @@ func newReq(url_ string) *http.Request {
 	if err != nil {
 		panic(fmt.Sprintf("s3 client; invalid URL: %v", err))
 	}
-	req.Header.Set("User-Agent", "minio-s3")
+	req.Header.Set("User-Agent", "Minio Client")
 	return req
 }
 
 func (c *Client) Buckets() ([]*Bucket, error) {
-	req := newReq("https://" + c.hostname() + "/")
+	req := newReq(c.hostname() + "/")
 	c.Auth.SignRequest(req)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
@@ -195,7 +198,7 @@ func (c *Client) BucketLocation(bucket string) (location string, err error) {
 	if !strings.HasSuffix(c.hostname(), "amazonaws.com") {
 		return "", errors.New("BucketLocation not implemented for non-Amazon S3 hostnames")
 	}
-	url_ := fmt.Sprintf("https://s3.amazonaws.com/%s/?location", url.QueryEscape(bucket))
+	url_ := fmt.Sprintf("%s/%s/?location", c.hostname(), url.QueryEscape(bucket))
 	req := newReq(url_)
 	c.Auth.SignRequest(req)
 	res, err := c.transport().RoundTrip(req)
@@ -207,7 +210,7 @@ func (c *Client) BucketLocation(bucket string) (location string, err error) {
 		return "", err
 	}
 	if xres.Location == "" {
-		return "s3.amazonaws.com", nil
+		return strings.TrimPrefix(c.hostname(), "https://"), nil
 	}
 	return "s3-" + xres.Location + ".amazonaws.com", nil
 }

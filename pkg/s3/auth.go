@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	//"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -42,11 +43,16 @@ type Auth struct {
 	Hostname string
 }
 
-const standardUSRegionAWS = "s3.amazonaws.com"
+const standardUSRegionAWS = "https://s3.amazonaws.com"
 
 func (a *Auth) hostname() string {
+	// Prefix with https for Amazon hostnames
 	if a.Hostname != "" {
-		return a.Hostname
+		if strings.HasSuffix(a.Hostname, "amazonaws.com") {
+			return "https://" + a.Hostname
+		} else {
+			return "http://" + a.Hostname
+		}
 	}
 	return standardUSRegionAWS
 }
@@ -57,7 +63,7 @@ func (a *Auth) SignRequest(req *http.Request) {
 	}
 	hm := hmac.New(sha1.New, []byte(a.SecretAccessKey))
 	ss := a.stringToSign(req)
-	// log.Printf("String to sign: %q (%x)", ss, ss)
+	//log.Printf("String to sign: %q (%x)", ss, ss)
 	io.WriteString(hm, ss)
 
 	authHeader := new(bytes.Buffer)
@@ -193,14 +199,22 @@ func (a *Auth) bucketFromHostname(req *http.Request) string {
 	if host == "" {
 		host = req.URL.Host
 	}
-	if host == a.hostname() {
+
+	if host == strings.TrimPrefix(a.hostname(), "http://") {
 		return ""
 	}
-	if hostSuffix := a.hostname(); hasDotSuffix(host, hostSuffix) {
+
+	if host == strings.TrimPrefix(a.hostname(), "https://") {
+		return ""
+	}
+
+	if hostSuffix := strings.TrimPrefix(a.hostname(), "https://"); hasDotSuffix(host, hostSuffix) {
 		return host[:len(host)-len(hostSuffix)-1]
 	}
+
 	if lastColon := strings.LastIndex(host, ":"); lastColon != -1 {
 		return host[:lastColon]
 	}
+
 	return host
 }
