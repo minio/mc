@@ -114,7 +114,7 @@ func TestBucketFromHostname(t *testing.T) {
 
 func TestSignRequest(t *testing.T) {
 	r := req("GET /foo HTTP/1.1\n\n")
-	auth := &Auth{AccessKey: "key", SecretAccessKey: "secretkey"}
+	auth := &Auth{AccessKey: "key", SecretKey: "secretkey"}
 	auth.SignRequest(r)
 	if r.Header.Get("Date") == "" {
 		t.Error("expected a Date set")

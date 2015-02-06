@@ -9,11 +9,11 @@ import (
 )
 
 type Auth struct {
-	AccessKey       string
-	SecretAccessKey string
-	Hostname        string
-	CertPEM         string
-	KeyPEM          string
+	AccessKey string
+	SecretKey string
+	Hostname  string
+	CertPEM   string
+	KeyPEM    string
 }
 
 type TlsConfig struct {

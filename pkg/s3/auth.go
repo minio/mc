@@ -34,8 +34,8 @@ import (
 // See http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 
 type Auth struct {
-	AccessKey       string
-	SecretAccessKey string
+	AccessKey string
+	SecretKey string
 
 	// Hostname is the S3 hostname to use.
 	// If empty, the standard US region of "s3.amazonaws.com" is
@@ -61,7 +61,7 @@ func (a *Auth) SignRequest(req *http.Request) {
 	if date := req.Header.Get("Date"); date == "" {
 		req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	}
-	hm := hmac.New(sha1.New, []byte(a.SecretAccessKey))
+	hm := hmac.New(sha1.New, []byte(a.SecretKey))
 	ss := a.stringToSign(req)
 	//log.Printf("String to sign: %q (%x)", ss, ss)
 	io.WriteString(hm, ss)
