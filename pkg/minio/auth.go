@@ -3,7 +3,9 @@ package minio
 import (
 	"crypto/tls"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"time"
 )
 
 type Auth struct {
@@ -35,6 +37,16 @@ func (a *Auth) loadKeys(cert string, key string) (*TlsConfig, error) {
 }
 
 func (a *Auth) getTlsTransport() (*http.Transport, error) {
+	if a.CertPEM == "" || a.KeyPEM == "" {
+		return &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+		}, nil
+	}
+
 	tlsconfig, err := a.loadKeys(a.CertPEM, a.KeyPEM)
 	if err != nil {
 		return nil, err
