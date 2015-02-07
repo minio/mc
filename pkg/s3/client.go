@@ -65,12 +65,12 @@ func (c *Client) bucketURL(bucket string) string {
 			return fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.hostname(), "https://"))
 		}
 	}
-	return fmt.Sprintf("%s/%s/", c.hostname(), bucket)
+	return fmt.Sprintf("%s/%s", c.hostname(), bucket)
 }
 
 func (c *Client) keyURL(bucket, key string) string {
 
-	return c.bucketURL(bucket) + key
+	return c.bucketURL(bucket) + "/" + key
 }
 
 func newReq(url_ string) *http.Request {
