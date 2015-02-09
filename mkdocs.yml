@@ -1,1 +1,5 @@
-site_name: My Docs
+site_name: Minio Client Documentation
+pages:
+- ['index.md', 'Index']
+- ['contributing.md', 'Contributing']
+theme: readthedocs
