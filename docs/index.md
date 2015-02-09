@@ -38,7 +38,7 @@ USAGE:
 COMMANDS:
    cp
    ls
-   mkdir
+   mb
    sync
    help, h      Shows a list of commands or help for one command
 
