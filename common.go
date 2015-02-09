@@ -48,6 +48,7 @@ var subS3Options = []cli.Command{
 var subS3APIOptions = []cli.Command{
 	GetObject,
 	PutObject,
+	PutBucket,
 	ListObjects,
 	ListBuckets,
 	Configure,
