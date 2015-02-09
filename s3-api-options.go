@@ -111,5 +111,5 @@ var Configure = cli.Command{
 }
 
 const (
-	S3_AUTH = ".auth"
+	AUTH = ".auth"
 )
