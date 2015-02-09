@@ -7,7 +7,6 @@ import (
 	"path"
 
 	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/minio"
 	"github.com/minio-io/mc/pkg/s3"
 )
 
@@ -21,58 +20,6 @@ func parseConfigureInput(c *cli.Context) (accessKey, secretKey string, err error
 		return "", "", configSecretErr
 	}
 	return accessKey, secretKey, nil
-}
-
-func doMinioConfigure(c *cli.Context) {
-	hostname := c.String("hostname")
-	if hostname == "" {
-		log.Fatal("Invalid hostname")
-	}
-
-	/*
-		certFile := c.String("cert")
-		if certFile == "" {
-			log.Fatal("invalid certificate")
-		}
-
-		keyFile := c.String("key")
-		if keyFile == "" {
-			log.Fatal("invalid key")
-		}
-
-		var accessKey, secretKey string
-		var err error
-		accessKey, secretKey, err = parseConfigureInput(c)
-		if err != nil {
-			log.Fatal(err)
-		}
-	*/
-	auth := &minio.Auth{
-		//AccessKey:       accessKey,
-		//SecretKey: secretKey,
-		Hostname: hostname,
-		//		CertPEM:  certFile,
-		//		KeyPEM:   keyFile,
-	}
-
-	jAuth, err := json.Marshal(auth)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var minioFile *os.File
-	home := os.Getenv("HOME")
-	minioFile, err = os.OpenFile(path.Join(home, MINIO_AUTH), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-	defer minioFile.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = minioFile.Write(jAuth)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 }
 
 func doS3Configure(c *cli.Context) {
@@ -92,7 +39,7 @@ func doS3Configure(c *cli.Context) {
 
 	var s3File *os.File
 	home := os.Getenv("HOME")
-	s3File, err = os.OpenFile(path.Join(home, S3_AUTH), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	s3File, err = os.OpenFile(path.Join(home, AUTH), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	defer s3File.Close()
 	if err != nil {
 		log.Fatal(err)
