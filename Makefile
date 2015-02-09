@@ -20,5 +20,8 @@ test-all: build-all
 	@echo "Running Test Suites:"
 	@godep go test -race ./...
 
+docs-deploy:
+	@mkdocs gh-deploy --clean
+
 install: test-all
 	@godep go install github.com/minio-io/mc && echo "Installed mc"
