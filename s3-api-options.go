@@ -63,6 +63,20 @@ var PutObject = cli.Command{
 	},
 }
 
+var PutBucket = cli.Command{
+	Name:        "put-bucket",
+	Usage:       "",
+	Description: "Adds an object to a bucket.",
+	Action:      doPutBucket,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "bucket",
+			Value: "",
+			Usage: "bucket name",
+		},
+	},
+}
+
 var ListObjects = cli.Command{
 	Name:  "list-objects",
 	Usage: "",
