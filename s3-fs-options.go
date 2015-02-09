@@ -35,10 +35,10 @@ var Ls = cli.Command{
 }
 
 var Mb = cli.Command{
-	Name:        "mkdir",
+	Name:        "mb",
 	Usage:       "",
 	Description: "Creates an S3 bucket",
-	Action:      doFsMkdir,
+	Action:      doFsMb,
 }
 
 var Sync = cli.Command{

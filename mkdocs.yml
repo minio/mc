@@ -1,5 +1,6 @@
 site_name: Minio Client Documentation
 pages:
 - ['index.md', Index]
+- ['sdks/js/javascript.md', 'SDKs', 'Javascript']
 - ['contributing.md', 'Contributing', 'Overview']
 theme: readthedocs

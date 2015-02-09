@@ -23,7 +23,7 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-func doFsMkdir(c *cli.Context) {
+func doFsMb(c *cli.Context) {
 	switch len(c.Args()) {
 	case 1:
 		if !s3.IsValidBucket(c.Args().Get(0)) {
