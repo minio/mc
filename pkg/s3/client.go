@@ -375,9 +375,9 @@ func (c *Client) Delete(bucket, key string) error {
 
 func NewAuth(accessKey, secretKey, hostname string) (auth *Auth) {
 	auth = &Auth{
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		Hostname:  hostname}
+		AccessKey:       accessKey,
+		SecretAccessKey: secretKey,
+		Hostname:        hostname}
 	return
 }
 

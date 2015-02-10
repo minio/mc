@@ -57,9 +57,9 @@ func getAWSEnvironment() (auth *s3.Auth, err error) {
 			return nil, missingSecretErr
 		}
 		auth = &s3.Auth{
-			AccessKey: accessKey,
-			SecretKey: secretKey,
-			Hostname:  "s3.amazonaws.com",
+			AccessKey:       accessKey,
+			SecretAccessKey: secretKey,
+			Hostname:        "s3.amazonaws.com",
 		}
 	} else {
 		var n int
