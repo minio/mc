@@ -1,4 +1,4 @@
-# AWS SDK for Python
+# Using AWS SDK for Python
 
 ## Install
 

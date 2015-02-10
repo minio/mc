@@ -1,4 +1,4 @@
-# AWS SDK for Javascript
+# Using AWS SDK for Javascript
 
 ## Install
 
