@@ -33,4 +33,4 @@ s3.listBuckets(function(err, data) {
 });
 ```
 
-Grab it here (example-list-buckets.js)[https://github.com/Minio-io/mc/blob/master/docs/sdks/js/example-list-buckets.js]
+Grab it here [example-list-buckets.js](https://github.com/Minio-io/mc/blob/master/docs/sdks/js/example-list-buckets.js)
