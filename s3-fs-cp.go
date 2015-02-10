@@ -17,6 +17,8 @@
 package main
 
 import (
+	"bytes"
+	"crypto/md5"
 	"hash"
 	"io"
 	"log"
@@ -32,6 +34,32 @@ import (
 //   - <S3Path> <S3Path>
 //   - <S3Path> <S3Bucket>
 //   - <LocalDir> <S3Bucket>
+
+func getPutMetadata(reader io.Reader) (md5hash hash.Hash, bodyBuf io.Reader, size int64, err error) {
+	md5hash = md5.New()
+	var length int
+	var bodyBuffer bytes.Buffer
+
+	for err == nil {
+		byteBuffer := make([]byte, 1024*1024)
+		length, err = reader.Read(byteBuffer)
+		// While hash.Write() wouldn't mind a Nil byteBuffer
+		// It is necessary for us to verify this and break
+		if length == 0 {
+			break
+		}
+		byteBuffer = byteBuffer[0:length]
+		_, err = bodyBuffer.Write(byteBuffer)
+		if err != nil {
+			break
+		}
+		md5hash.Write(byteBuffer)
+	}
+	if err != io.EOF {
+		return nil, nil, 0, err
+	}
+	return md5hash, &bodyBuffer, int64(bodyBuffer.Len()), nil
+}
 
 func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 	switch len(c.Args()) {

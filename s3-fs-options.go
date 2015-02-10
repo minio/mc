@@ -48,6 +48,29 @@ var Sync = cli.Command{
 	Action:      doFsSync,
 }
 
+var Configure = cli.Command{
+	Name:  "configure",
+	Usage: "",
+	Description: `Configure minio client configuration data. If your config
+   file does not exist (the default location is ~/.s3auth), it will be
+   automatically created for you. Note that the configure command only writes
+   values to the config file. It does not use any configuration values from
+   the environment variables.`,
+	Action: doConfigure,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "accesskey",
+			Value: "",
+			Usage: "AWS access key id",
+		},
+		cli.StringFlag{
+			Name:  "secretkey",
+			Value: "",
+			Usage: "AWS secret key id",
+		},
+	},
+}
+
 type fsOptions struct {
 	bucket string
 	body   string
@@ -55,6 +78,10 @@ type fsOptions struct {
 	isget  bool
 	isput  bool
 }
+
+const (
+	AUTH = ".auth"
+)
 
 func doFsSync(c *cli.Context) {
 }

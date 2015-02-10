@@ -25,32 +25,11 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-var Options = []cli.Command{
-	{
-		Name:        "s3",
-		Usage:       "",
-		Subcommands: subS3Options,
-	},
-	{
-		Name:        "s3api",
-		Usage:       "",
-		Subcommands: subS3APIOptions,
-	},
-}
-
-var subS3Options = []cli.Command{
+var options = []cli.Command{
 	Cp,
 	Ls,
 	Mb,
 	Sync,
-}
-
-var subS3APIOptions = []cli.Command{
-	GetObject,
-	PutObject,
-	PutBucket,
-	ListObjects,
-	ListBuckets,
 	Configure,
 }
 
