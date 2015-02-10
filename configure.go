@@ -22,7 +22,7 @@ func parseConfigureInput(c *cli.Context) (accessKey, secretKey string, err error
 	return accessKey, secretKey, nil
 }
 
-func doS3Configure(c *cli.Context) {
+func doConfigure(c *cli.Context) {
 	var err error
 	var jAuth []byte
 	var accessKey, secretKey string
