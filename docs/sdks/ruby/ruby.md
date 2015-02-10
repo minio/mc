@@ -29,9 +29,9 @@ resp.buckets.each do |bucket|
 end
 ```
 
-NOTE:
+#### NOTE:
 
-    ruby ``aws-sdk`` requires region name should be set, please use any name which
-    makes sense. Specifically for this example we choose ``minio``
+ruby ``aws-sdk`` requires region name should be set, please use any name which
+makes sense. Specifically for this example we choose ``minio``
 
 Grab it here [example-list-buckets.rb](https://github.com/Minio-io/mc/blob/master/docs/sdks/ruby/example-list-buckets.rb)
