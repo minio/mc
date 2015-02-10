@@ -3,5 +3,6 @@ pages:
 - ['index.md', Index]
 - ['sdks/js/javascript.md', 'SDKs', 'Javascript']
 - ['sdks/python/python.md', 'SDKs', 'Python']
+- ['sdks/ruby/ruby.md', 'SDKs', 'Ruby']
 - ['contributing.md', 'Contributing', 'Overview']
 theme: readthedocs
