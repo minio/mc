@@ -72,8 +72,15 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 				return fsOptions{}, fsUriErr
 			}
 			fsoptions.bucket = uri.Server
+			if uri.Path == "" {
+				return fsOptions{}, fsKeyErr
+			}
 			fsoptions.key = strings.Trim(uri.Path, "/")
-			fsoptions.body = c.Args().Get(1)
+			if c.Args().Get(1) == "." {
+				fsoptions.body = fsoptions.key
+			} else {
+				fsoptions.body = c.Args().Get(1)
+			}
 			fsoptions.isget = true
 			fsoptions.isput = false
 		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
@@ -82,7 +89,11 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 				return fsOptions{}, fsUriErr
 			}
 			fsoptions.bucket = uri.Server
-			fsoptions.key = strings.Trim(uri.Path, "/")
+			if uri.Path == "" {
+				fsoptions.key = c.Args().Get(0)
+			} else {
+				fsoptions.key = strings.Trim(uri.Path, "/")
+			}
 			fsoptions.body = c.Args().Get(0)
 			fsoptions.isget = false
 			fsoptions.isput = true
