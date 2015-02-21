@@ -26,6 +26,7 @@ var bucketNameErr = errors.New("bucket name is mandatory")
 // fs
 var fsPathErr = errors.New("Arguments missing <S3Path> or <LocalPath>")
 var fsUriErr = errors.New("Invalid URI scheme")
+var fsKeyErr = errors.New("Key is needed to get the file")
 
 // configure
 var configAccessErr = errors.New("accesskey is mandatory")
