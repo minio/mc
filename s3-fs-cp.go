@@ -72,7 +72,7 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 				return fsOptions{}, fsUriErr
 			}
 			fsoptions.bucket = uri.Server
-			fsoptions.key = uri.Path
+			fsoptions.key = strings.Trim(uri.Path, "/")
 			fsoptions.body = c.Args().Get(1)
 			fsoptions.isget = true
 			fsoptions.isput = false
@@ -82,7 +82,7 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 				return fsOptions{}, fsUriErr
 			}
 			fsoptions.bucket = uri.Server
-			fsoptions.key = c.Args().Get(0)
+			fsoptions.key = strings.Trim(uri.Path, "/")
 			fsoptions.body = c.Args().Get(0)
 			fsoptions.isget = false
 			fsoptions.isput = true
