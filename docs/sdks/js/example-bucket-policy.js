@@ -1,43 +1,5 @@
-# Using AWS SDK for Javascript
+'use strict'
 
-## Install
-
-### In Node.js
-
-```
-npm install aws-sdk
-```
-
-### Example ``GetService``
-
-```
-var AWS = require('aws-sdk');
-
-var config = {
-  accessKeyId: "YOUR_MINIO_ACCESS_ID",
-  secretAccessKey: "YOUR_MINIO_SECRET_KEY",
-  endpoint: "localhost:9000",
-  region: "",
-  sslEnabled: false
-};
-
-AWS.config.update(config);
-
-var s3 = new AWS.S3();
-s3.listBuckets(function(err, data) {
-  if (err) {
-    console.log(err); // an error occurred
-  } else {
-    console.log(data); // successful response
-  }
-});
-```
-
-Grab it here [example-list-buckets.js](https://github.com/Minio-io/mc/blob/master/docs/sdks/js/example-list-buckets.js)
-
-### Example ``BucketPolicy``
-
-```
 var AWS = require('aws-sdk');
 
 var config = {
@@ -98,7 +60,3 @@ s3.getBucketPolicy(params, function(err, data) {
     console.log(data);
   }
 });
-
-```
-
-Grab it here [example-bucket-policy.js](https://github.com/Minio-io/mc/blob/master/docs/sdks/js/example-bucket-policy.js)
