@@ -3,12 +3,11 @@
 var AWS = require('aws-sdk');
 
 var config = {
-  accessKeyId: "MINIO_ACCESS_ID",
-  secretAccessKey: "MINIO_SECRET_ID",
+  accessKeyId: "AC5NH40NQLTL4D2W92PM",
+  secretAccessKey: "H+AVh8q5G7hEH2r3WxFP135+Q19Aw8yXWel8IGh/HrEjZyTNx/n4Xw==",
   endpoint: "localhost:9000",
   region: "",
   sslEnabled: false,
-  s3ForcePathStyle: true
 };
 
 AWS.config.update(config);
@@ -19,12 +18,12 @@ var statement = {
   Sid: "ExampleStatemenent1",
   Effect: "Allow",
   Principal: {
-    AWS: "minio::Account-Id:user/Dave"
+    AWS: "minio::1111111:murphy"
   },
   Action: [
-    "s3.ListBucket",
-    "s3.GetObject",
-    "s3.PutObject",
+    "s3:ListBucket",
+    "s3:GetObject",
+    "s3:PutObject",
   ],
   Resource: [
     "minio:::examplebucket"
@@ -37,7 +36,7 @@ var policy = {
 }
 
 var params = {
-  Bucket: 'new-bucket',
+  Bucket: 'newbucket',
   Policy: JSON.stringify(policy),
 }
 
@@ -50,7 +49,7 @@ s3.putBucketPolicy(params, function(err, data) {
 });
 
 var params = {
-  Bucket: 'new-bucket'
+  Bucket: 'newbucket'
 };
 
 s3.getBucketPolicy(params, function(err, data) {
