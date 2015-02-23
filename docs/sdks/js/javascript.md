@@ -8,17 +8,19 @@
 npm install aws-sdk
 ```
 
-### Example ``GetService``
+### Example ``GetService`` and ``ListObjects``
 
 ```
+'use strict'
+
 var AWS = require('aws-sdk');
 
 var config = {
-  accessKeyId: "YOUR_MINIO_ACCESS_ID",
-  secretAccessKey: "YOUR_MINIO_SECRET_KEY",
+  accessKeyId: "MINIO_ACCESS_ID",
+  secretAccessKey: "MINIO_SECRET_ID",
   endpoint: "localhost:9000",
   region: "",
-  sslEnabled: false
+  sslEnabled: false,
 };
 
 AWS.config.update(config);
@@ -31,13 +33,25 @@ s3.listBuckets(function(err, data) {
     console.log(data); // successful response
   }
 });
+
+
+var params = {
+  Bucket: "your-bucket"
+};
+
+s3.listObjects(params, function(err, data) {
+  if (err) console.log(err);
+  else console.log(data);
+});
 ```
 
-Grab it here [example-list-buckets.js](https://github.com/Minio-io/mc/blob/master/docs/sdks/js/example-list-buckets.js)
+Grab it here [example-list.js](https://github.com/Minio-io/mc/blob/master/docs/sdks/js/example-list.js)
 
-### Example ``BucketPolicy``
+### Example ``GetBucketPolicy`` and ``PutBucketPolicy``
 
 ```
+'use strict'
+
 var AWS = require('aws-sdk');
 
 var config = {
@@ -46,7 +60,6 @@ var config = {
   endpoint: "localhost:9000",
   region: "",
   sslEnabled: false,
-  s3ForcePathStyle: true
 };
 
 AWS.config.update(config);
@@ -57,12 +70,12 @@ var statement = {
   Sid: "ExampleStatemenent1",
   Effect: "Allow",
   Principal: {
-    AWS: "minio::Account-Id:user/Dave"
+    AWS: "minio::1111111:murphy"
   },
   Action: [
-    "s3.ListBucket",
-    "s3.GetObject",
-    "s3.PutObject",
+    "s3:ListBucket",
+    "s3:GetObject",
+    "s3:PutObject",
   ],
   Resource: [
     "minio:::examplebucket"
@@ -75,7 +88,7 @@ var policy = {
 }
 
 var params = {
-  Bucket: 'new-bucket',
+  Bucket: 'newbucket',
   Policy: JSON.stringify(policy),
 }
 
@@ -88,7 +101,7 @@ s3.putBucketPolicy(params, function(err, data) {
 });
 
 var params = {
-  Bucket: 'new-bucket'
+  Bucket: 'newbucket'
 };
 
 s3.getBucketPolicy(params, function(err, data) {
@@ -98,7 +111,6 @@ s3.getBucketPolicy(params, function(err, data) {
     console.log(data);
   }
 });
-
 ```
 
 Grab it here [example-bucket-policy.js](https://github.com/Minio-io/mc/blob/master/docs/sdks/js/example-bucket-policy.js)
