@@ -46,6 +46,9 @@ type Auth struct {
 	// Used for SSL transport layer
 	CertPEM string
 	KeyPEM  string
+
+	// Force path style
+	S3ForcePathStyle bool
 }
 
 type TlsConfig struct {

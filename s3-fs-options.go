@@ -73,6 +73,10 @@ var Configure = cli.Command{
 			Value: "s3.amazonaws.com",
 			Usage: "S3 Endpoint URL default is 's3.amazonaws.com'",
 		},
+		cli.BoolFlag{
+			Name:  "pathstyle",
+			Usage: "Force path style API requests",
+		},
 	},
 }
 
