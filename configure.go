@@ -10,32 +10,35 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-func parseConfigureInput(c *cli.Context) (accessKey, secretKey, endpoint string, err error) {
-	accessKey = c.String("accesskey")
-	secretKey = c.String("secretkey")
-	endpoint = c.String("endpoint")
+func parseConfigureInput(c *cli.Context) (auth *s3.Auth, err error) {
+	accessKey := c.String("accesskey")
+	secretKey := c.String("secretkey")
+	endpoint := c.String("endpoint")
+	pathstyle := c.Bool("pathstyle")
+
 	if accessKey == "" {
-		return "", "", "", configAccessErr
+		return nil, configAccessErr
 	}
 	if secretKey == "" {
-		return "", "", "", configSecretErr
+		return nil, configSecretErr
 	}
 	if endpoint == "" {
-		return "", "", "", configEndpointErr
+		return nil, configEndpointErr
 	}
-	return accessKey, secretKey, endpoint, nil
+
+	auth = s3.NewAuth(accessKey, secretKey, endpoint, pathstyle)
+	return auth, nil
 }
 
 func doConfigure(c *cli.Context) {
 	var err error
 	var jAuth []byte
-	var accessKey, secretKey, endpoint string
-	accessKey, secretKey, endpoint, err = parseConfigureInput(c)
+	var auth *s3.Auth
+	auth, err = parseConfigureInput(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	auth := s3.NewAuth(accessKey, secretKey, endpoint)
 	jAuth, err = json.Marshal(auth)
 	if err != nil {
 		log.Fatal(err)
@@ -43,7 +46,7 @@ func doConfigure(c *cli.Context) {
 
 	var s3File *os.File
 	home := os.Getenv("HOME")
-	s3File, err = os.OpenFile(path.Join(home, AUTH), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	s3File, err = os.OpenFile(path.Join(home, AUTH), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	defer s3File.Close()
 	if err != nil {
 		log.Fatal(err)

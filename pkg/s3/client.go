@@ -373,11 +373,12 @@ func (c *Client) Delete(bucket, key string) error {
 }
 */
 
-func NewAuth(accessKey, secretKey, hostname string) (auth *Auth) {
+func NewAuth(accessKey, secretKey, hostname string, style bool) (auth *Auth) {
 	auth = &Auth{
-		AccessKey:       accessKey,
-		SecretAccessKey: secretKey,
-		Endpoint:        hostname,
+		AccessKey:        accessKey,
+		SecretAccessKey:  secretKey,
+		Endpoint:         hostname,
+		S3ForcePathStyle: style,
 	}
 	return
 }
