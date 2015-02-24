@@ -31,6 +31,7 @@ var fsKeyErr = errors.New("Key is needed to get the file")
 // configure
 var configAccessErr = errors.New("accesskey is mandatory")
 var configSecretErr = errors.New("secretkey is mandatory")
+var configEndpointErr = errors.New("endpoint is missing")
 
 // common
 var missingAccessSecretErr = errors.New("You can configure your credentials by running `mc configure`")

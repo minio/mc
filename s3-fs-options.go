@@ -52,7 +52,7 @@ var Configure = cli.Command{
 	Name:  "configure",
 	Usage: "",
 	Description: `Configure minio client configuration data. If your config
-   file does not exist (the default location is ~/.s3auth), it will be
+   file does not exist (the default location is ~/.auth), it will be
    automatically created for you. Note that the configure command only writes
    values to the config file. It does not use any configuration values from
    the environment variables.`,
@@ -67,6 +67,11 @@ var Configure = cli.Command{
 			Name:  "secretkey",
 			Value: "",
 			Usage: "AWS secret key id",
+		},
+		cli.StringFlag{
+			Name:  "endpoint",
+			Value: "s3.amazonaws.com",
+			Usage: "S3 Endpoint URL default is 's3.amazonaws.com'",
 		},
 	},
 }

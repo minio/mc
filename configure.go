@@ -10,28 +10,32 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-func parseConfigureInput(c *cli.Context) (accessKey, secretKey string, err error) {
+func parseConfigureInput(c *cli.Context) (accessKey, secretKey, endpoint string, err error) {
 	accessKey = c.String("accesskey")
 	secretKey = c.String("secretkey")
+	endpoint = c.String("endpoint")
 	if accessKey == "" {
-		return "", "", configAccessErr
+		return "", "", "", configAccessErr
 	}
 	if secretKey == "" {
-		return "", "", configSecretErr
+		return "", "", "", configSecretErr
 	}
-	return accessKey, secretKey, nil
+	if endpoint == "" {
+		return "", "", "", configEndpointErr
+	}
+	return accessKey, secretKey, endpoint, nil
 }
 
 func doConfigure(c *cli.Context) {
 	var err error
 	var jAuth []byte
-	var accessKey, secretKey string
-	accessKey, secretKey, err = parseConfigureInput(c)
+	var accessKey, secretKey, endpoint string
+	accessKey, secretKey, endpoint, err = parseConfigureInput(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	auth := s3.NewAuth(accessKey, secretKey, "s3.amazonaws.com")
+	auth := s3.NewAuth(accessKey, secretKey, endpoint)
 	jAuth, err = json.Marshal(auth)
 	if err != nil {
 		log.Fatal(err)

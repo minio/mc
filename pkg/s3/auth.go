@@ -41,7 +41,7 @@ type Auth struct {
 	SecretAccessKey string
 
 	// If empty, the standard US region of "s3.amazonaws.com" is used.
-	Hostname string
+	Endpoint string
 
 	// Used for SSL transport layer
 	CertPEM string
@@ -57,11 +57,11 @@ const standardUSRegionAWS = "s3.amazonaws.com"
 
 func (a *Auth) hostname() string {
 	// Prefix with https for Amazon hostnames
-	if a.Hostname != "" {
-		if strings.HasSuffix(a.Hostname, "amazonaws.com") {
-			return "https://" + a.Hostname
+	if a.Endpoint != "" {
+		if strings.HasSuffix(a.Endpoint, "amazonaws.com") {
+			return "https://" + a.Endpoint
 		} else {
-			return "http://" + a.Hostname
+			return "http://" + a.Endpoint
 		}
 	}
 	return "https://" + standardUSRegionAWS
@@ -219,7 +219,7 @@ var subResList = []string{"acl", "lifecycle", "location", "logging", "notificati
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
 func (a *Auth) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request) {
-	bucket := a.bucketFromHostname(req)
+	bucket := a.bucketFromEndpoint(req)
 	if bucket != "" {
 		buf.WriteByte('/')
 		buf.WriteString(bucket)
@@ -251,7 +251,7 @@ func hasDotSuffix(s string, suffix string) bool {
 	return len(s) >= len(suffix)+1 && strings.HasSuffix(s, suffix) && s[len(s)-len(suffix)-1] == '.'
 }
 
-func (a *Auth) bucketFromHostname(req *http.Request) string {
+func (a *Auth) bucketFromEndpoint(req *http.Request) string {
 	host := req.Host
 	if host == "" {
 		host = req.URL.Host
