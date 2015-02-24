@@ -17,9 +17,6 @@
 package main
 
 import (
-	"bytes"
-	"crypto/md5"
-	"hash"
 	"io"
 	"log"
 	"os"
@@ -34,32 +31,6 @@ import (
 //   - <S3Path> <S3Path>
 //   - <S3Path> <S3Bucket>
 //   - <LocalDir> <S3Bucket>
-
-func getPutMetadata(reader io.Reader) (md5hash hash.Hash, bodyBuf io.Reader, size int64, err error) {
-	md5hash = md5.New()
-	var length int
-	var bodyBuffer bytes.Buffer
-
-	for err == nil {
-		byteBuffer := make([]byte, 1024*1024)
-		length, err = reader.Read(byteBuffer)
-		// While hash.Write() wouldn't mind a Nil byteBuffer
-		// It is necessary for us to verify this and break
-		if length == 0 {
-			break
-		}
-		byteBuffer = byteBuffer[0:length]
-		_, err = bodyBuffer.Write(byteBuffer)
-		if err != nil {
-			break
-		}
-		md5hash.Write(byteBuffer)
-	}
-	if err != io.EOF {
-		return nil, nil, 0, err
-	}
-	return md5hash, &bodyBuffer, int64(bodyBuffer.Len()), nil
-}
 
 func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 	switch len(c.Args()) {
@@ -121,21 +92,21 @@ func doFsCopy(c *cli.Context) {
 	}
 
 	if fsoptions.isput {
+		stat, err := os.Stat(fsoptions.body)
+		if os.IsNotExist(err) {
+			log.Fatal(err)
+		}
+		if stat.IsDir() {
+			log.Fatal("Is a directory")
+		}
+		size := stat.Size()
 		bodyFile, err = os.Open(fsoptions.body)
 		defer bodyFile.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		var bodyBuffer io.Reader
-		var size int64
-		var md5hash hash.Hash
-		md5hash, bodyBuffer, size, err = getPutMetadata(bodyFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = s3c.Put(fsoptions.bucket, fsoptions.key, md5hash, size, bodyBuffer)
+		err = s3c.Put(fsoptions.bucket, fsoptions.key, nil, size, bodyFile)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -377,7 +377,8 @@ func NewAuth(accessKey, secretKey, hostname string) (auth *Auth) {
 	auth = &Auth{
 		AccessKey:       accessKey,
 		SecretAccessKey: secretKey,
-		Hostname:        hostname}
+		Endpoint:        hostname,
+	}
 	return
 }
 
