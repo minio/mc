@@ -30,7 +30,6 @@ import (
 // TODO
 //   - <S3Path> <S3Path>
 //   - <S3Path> <S3Bucket>
-//   - <LocalDir> <S3Bucket>
 
 func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 	switch len(c.Args()) {
