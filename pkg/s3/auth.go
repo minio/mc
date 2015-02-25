@@ -58,8 +58,8 @@ type TlsConfig struct {
 
 const standardUSRegionAWS = "s3.amazonaws.com"
 
-func (a *Auth) hostname() string {
-	// Prefix with https for Amazon hostnames
+func (a *Auth) endpoint() string {
+	// Prefix with https for Amazon endpoints
 	if a.Endpoint != "" {
 		if strings.HasSuffix(a.Endpoint, "amazonaws.com") {
 			return "https://" + a.Endpoint
@@ -260,15 +260,15 @@ func (a *Auth) bucketFromEndpoint(req *http.Request) string {
 		host = req.URL.Host
 	}
 
-	if host == strings.TrimPrefix(a.hostname(), "http://") {
+	if host == strings.TrimPrefix(a.endpoint(), "http://") {
 		return ""
 	}
 
-	if host == strings.TrimPrefix(a.hostname(), "https://") {
+	if host == strings.TrimPrefix(a.endpoint(), "https://") {
 		return ""
 	}
 
-	if hostSuffix := strings.TrimPrefix(a.hostname(), "https://"); hasDotSuffix(host, hostSuffix) {
+	if hostSuffix := strings.TrimPrefix(a.endpoint(), "https://"); hasDotSuffix(host, hostSuffix) {
 		return host[:len(host)-len(hostSuffix)-1]
 	}
 
