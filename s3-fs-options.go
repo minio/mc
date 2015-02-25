@@ -91,6 +91,3 @@ type fsOptions struct {
 const (
 	AUTH = ".auth"
 )
-
-func doFsSync(c *cli.Context) {
-}
