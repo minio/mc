@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -60,16 +61,15 @@ func (c *Client) transport() http.RoundTripper {
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
 func (c *Client) bucketURL(bucket string) string {
-	if strings.HasSuffix(c.hostname(), "amazonaws.com") {
+	if !c.S3ForcePathStyle {
 		if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
-			return fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.hostname(), "https://"))
+			return fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "https://"))
 		}
 	}
-	return fmt.Sprintf("%s/%s", c.hostname(), bucket)
+	return fmt.Sprintf("%s/%s", c.endpoint(), bucket)
 }
 
 func (c *Client) keyURL(bucket, key string) string {
-
 	return c.bucketURL(bucket) + "/" + key
 }
 
@@ -83,7 +83,7 @@ func newReq(url_ string) *http.Request {
 }
 
 func (c *Client) Buckets() ([]*Bucket, error) {
-	req := newReq(c.hostname() + "/")
+	req := newReq(c.endpoint() + "/")
 	c.Auth.SignRequest(req)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
@@ -109,25 +109,30 @@ func parseListAllMyBuckets(r io.Reader) ([]*Bucket, error) {
 	return res.Buckets.Bucket, nil
 }
 
-// Returns 0, os.ErrNotExist if not on S3, otherwise reterr is real.
-func (c *Client) Stat(key, bucket string) (size int64, reterr error) {
+// Returns 0, "", os.ErrNotExist if not on S3, otherwise reterr is real.
+func (c *Client) Stat(key, bucket string) (size int64, date string, reterr error) {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
 	c.Auth.SignRequest(req)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	if res.Body != nil {
 		defer res.Body.Close()
 	}
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return 0, os.ErrNotExist
+		return 0, "", os.ErrNotExist
 	case http.StatusOK:
-		return strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
+		size, err = strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
+		if err != nil {
+			return 0, "", err
+		}
+		date = res.Header.Get("Last-Modified")
+		return size, date, nil
 	}
-	return 0, fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
+	return 0, "", fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
 }
 
 func (c *Client) PutBucket(bucket string) error {
@@ -135,13 +140,14 @@ func (c *Client) PutBucket(bucket string) error {
 	req.Method = "PUT"
 	c.Auth.SignRequest(req)
 	res, err := c.transport().RoundTrip(req)
+	if err != nil {
+		return err
+	}
+
 	if res != nil && res.Body != nil {
 		defer res.Body.Close()
 	}
 
-	if err != nil {
-		return err
-	}
 	if res.StatusCode != http.StatusOK {
 		// res.Write(os.Stderr)
 		return fmt.Errorf("Got response code %d from s3", res.StatusCode)
@@ -185,6 +191,14 @@ type Item struct {
 	Size         int64
 }
 
+// BySize implements sort.Interface for []Item based on
+// the Size field.
+type BySize []*Item
+
+func (a BySize) Len() int           { return len(a) }
+func (a BySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a BySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
+
 type listBucketResults struct {
 	Contents    []*Item
 	IsTruncated bool
@@ -193,12 +207,12 @@ type listBucketResults struct {
 	Marker      string
 }
 
-// BucketLocation returns the S3 hostname to be used with the given bucket.
+// BucketLocation returns the S3 endpoint to be used with the given bucket.
 func (c *Client) BucketLocation(bucket string) (location string, err error) {
-	if !strings.HasSuffix(c.hostname(), "amazonaws.com") {
-		return "", errors.New("BucketLocation not implemented for non-Amazon S3 hostnames")
+	if !strings.HasSuffix(c.endpoint(), "amazonaws.com") {
+		return "", errors.New("BucketLocation not implemented for non-Amazon S3 endpoints")
 	}
-	url_ := fmt.Sprintf("%s/%s/?location", c.hostname(), url.QueryEscape(bucket))
+	url_ := fmt.Sprintf("%s/%s/?location", c.endpoint(), url.QueryEscape(bucket))
 	req := newReq(url_)
 	c.Auth.SignRequest(req)
 	res, err := c.transport().RoundTrip(req)
@@ -210,7 +224,7 @@ func (c *Client) BucketLocation(bucket string) (location string, err error) {
 		return "", err
 	}
 	if xres.Location == "" {
-		return strings.TrimPrefix(c.hostname(), "https://"), nil
+		return strings.TrimPrefix(c.endpoint(), "https://"), nil
 	}
 	return "s3-" + xres.Location + ".amazonaws.com", nil
 }
@@ -373,11 +387,11 @@ func (c *Client) Delete(bucket, key string) error {
 }
 */
 
-func NewAuth(accessKey, secretKey, hostname string, style bool) (auth *Auth) {
+func NewAuth(accessKey, secretKey, endpoint string, style bool) (auth *Auth) {
 	auth = &Auth{
 		AccessKey:        accessKey,
 		SecretAccessKey:  secretKey,
-		Endpoint:         hostname,
+		Endpoint:         endpoint,
 		S3ForcePathStyle: style,
 	}
 	return
@@ -392,39 +406,18 @@ func NewS3Client(auth *Auth) (client *Client) {
 //
 // See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
 func IsValidBucket(bucket string) bool {
-	l := len(bucket)
-	if l < 3 || l > 63 {
+	if len(bucket) < 3 || len(bucket) > 63 {
 		return false
 	}
-
-	valid := false
-	prev := byte('.')
-	for i := 0; i < len(bucket); i++ {
-		c := bucket[i]
-		switch {
-		default:
-			return false
-		case 'a' <= c && c <= 'z':
-			valid = true
-		case '0' <= c && c <= '9':
-			// Is allowed, but bucketname can't be just numbers.
-			// Therefore, don't set valid to true
-		case c == '-':
-			if prev == '.' {
-				return false
-			}
-		case c == '.':
-			if prev == '.' || prev == '-' {
-				return false
-			}
-		}
-		prev = c
-	}
-
-	if prev == '-' || prev == '.' {
+	if bucket[0] == '.' || bucket[len(bucket)-1] == '.' {
 		return false
 	}
-	return valid
+	if match, _ := regexp.MatchString("\\.\\.", bucket); match == true {
+		return false
+	}
+	// We don't support buckets with '.' in them
+	match, _ := regexp.MatchString("^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", bucket)
+	return match
 }
 
 // Error is the type returned by some API operations.
@@ -436,7 +429,7 @@ type Error struct {
 
 	// UsedEndpoint and AmazonCode are the XML response's Endpoint and
 	// Code fields, respectively.
-	UseEndpoint string // if a temporary redirect (wrong hostname)
+	UseEndpoint string // if a temporary redirect (wrong endpoint)
 	AmazonCode  string
 }
 

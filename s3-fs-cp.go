@@ -113,7 +113,7 @@ func doFsCopy(c *cli.Context) {
 	} else if fsoptions.isget {
 		var objectReader io.ReadCloser
 		var objectSize int64
-		bodyFile, err = os.OpenFile(fsoptions.body, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+		bodyFile, err = os.Create(fsoptions.body)
 		defer bodyFile.Close()
 
 		objectReader, objectSize, err = s3c.Get(fsoptions.bucket, fsoptions.key)
