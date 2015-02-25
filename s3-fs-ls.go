@@ -113,6 +113,9 @@ func doFsList(c *cli.Context) {
 		}
 	default:
 		buckets, err = s3c.Buckets()
+		if err != nil {
+			log.Fatal(err)
+		}
 		printBuckets(buckets)
 	}
 }
