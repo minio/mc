@@ -105,7 +105,7 @@ func TestBucketFromHostname(t *testing.T) {
 		{"GET / HTTP/1.0\nHost: bar.com\n\n", "bar.com"},
 	}
 	for idx, test := range tests {
-		got := a.bucketFromHostname(req(test.req))
+		got := a.bucketFromEndpoint(req(test.req))
 		if got != test.expected {
 			t.Errorf("test %d: expected %q; got %q", idx, test.expected, got)
 		}
