@@ -56,9 +56,11 @@ func TestValidBucketNames(t *testing.T) {
 		want bool
 	}{
 		{"myawsbucket", true},
-		{"my.aws.bucket", true},
-		{"my-aws-bucket.1", true},
-		{"my---bucket.1", true},
+		{"myaws-bucket", true},
+		{"my-aws-bucket", true},
+		{"my.aws.bucket", false},
+		{"my-aws-bucket.1", false},
+		{"my---bucket.1", false},
 		{".myawsbucket", false},
 		{"-myawsbucket", false},
 		{"myawsbucket.", false},
