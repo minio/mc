@@ -40,26 +40,29 @@ func getAuthFilePath() string {
 
 func getAWSEnvironment() (auth *s3.Auth, err error) {
 	var s3Auth *os.File
-	var accessKey, secretKey string
-	s3Auth, err = os.OpenFile(getAuthFilePath(), os.O_RDWR, 0666)
+	var accessKey, secretKey, endpoint string
+	s3Auth, err = os.Open(getAuthFilePath())
 	defer s3Auth.Close()
 	if err != nil {
 		accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
 		secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+		endpoint = os.Getenv("S3_ENDPOINT")
 		if accessKey == "" && secretKey == "" {
 			return nil, missingAccessSecretErr
 		}
 		if accessKey == "" {
 			return nil, missingAccessErr
 		}
-
 		if secretKey == "" {
 			return nil, missingSecretErr
+		}
+		if endpoint == "" {
+			endpoint = "s3.amazonaws.com"
 		}
 		auth = &s3.Auth{
 			AccessKey:       accessKey,
 			SecretAccessKey: secretKey,
-			Endpoint:        "s3.amazonaws.com",
+			Endpoint:        endpoint,
 		}
 	} else {
 		var n int
