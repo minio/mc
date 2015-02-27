@@ -222,11 +222,16 @@ func (a BySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a BySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 
 type listBucketResults struct {
-	Contents    []*Item
-	IsTruncated bool
-	MaxKeys     int
-	Name        string // bucket name
-	Marker      string
+	Contents       []*Item
+	IsTruncated    bool
+	MaxKeys        int
+	Name           string // bucket name
+	Marker         string
+	Delimiter      string
+	Prefix         string
+	CommonPrefixes struct {
+		Prefix string
+	}
 }
 
 // BucketLocation returns the S3 endpoint to be used with the given bucket.
@@ -255,10 +260,14 @@ func (c *Client) BucketLocation(bucket string) (location string, err error) {
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
-func (c *Client) GetBucket(bucket string, startAt string, maxKeys int) (items []*Item, err error) {
+func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*Item, err error) {
+	var url_ string
+	var buffer bytes.Buffer
+
 	if maxKeys < 0 {
 		return nil, errors.New("invalid negative maxKeys")
 	}
+
 	marker := startAt
 	for len(items) < maxKeys {
 		fetchN := maxKeys - len(items)
@@ -266,10 +275,19 @@ func (c *Client) GetBucket(bucket string, startAt string, maxKeys int) (items []
 			fetchN = MAX_OBJECT_LIST
 		}
 		var bres listBucketResults
+		buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.bucketURL(bucket), fetchN))
+		switch true {
+		case marker != "":
+			buffer.WriteString(fmt.Sprintf("&marker=%s", url.QueryEscape(marker)))
+			fallthrough
+		case prefix != "":
+			buffer.WriteString(fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix)))
+			fallthrough
+		case delimiter != "":
+			buffer.WriteString(fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter)))
+		}
 
-		url_ := fmt.Sprintf("%s?marker=%s&max-keys=%d",
-			c.bucketURL(bucket), url.QueryEscape(marker), fetchN)
-
+		url_ = buffer.String()
 		// Try the enumerate three times, since Amazon likes to close
 		// https connections a lot, and Go sucks at dealing with it:
 		// https://code.google.com/p/go/issues/detail?id=3514
@@ -333,6 +351,9 @@ func (c *Client) GetBucket(bucket string, startAt string, maxKeys int) (items []
 		if !bres.IsTruncated {
 			// log.Printf("Not truncated. so breaking. items = %d; len Contents = %d, url = %s", len(items), len(bres.Contents), url_)
 			break
+		}
+		if len(items) == 0 {
+			return nil, errors.New("No items replied")
 		}
 	}
 	return items, nil
