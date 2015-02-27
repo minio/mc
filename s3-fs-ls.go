@@ -33,6 +33,10 @@ const (
 	printFormat = "2006-01-02 15:04:05"
 )
 
+const (
+	delimiter = "/"
+)
+
 func parseTime(t string) string {
 	ti, _ := time.Parse(recvFormat, t)
 	return ti.Format(printFormat)
@@ -61,18 +65,14 @@ func printObject(v int64, date, key string) {
 }
 
 func getBucketAndObject(p string) (bucket, object string) {
-	parts := strings.Split(path.Clean(p), "/")
-	switch true {
-	case len(parts) == 2:
-		bucket = parts[0]
-		object = parts[1]
-	case len(parts) < 2:
-		bucket = parts[0]
-		object = ""
-	case len(parts) > 2:
-		bucket = parts[0]
-		for _, v := range parts[1 : len(parts)-1] {
-			object = object + "/" + v
+	i := strings.Index(p, delimiter)
+	if i == -1 {
+		bucket = p
+	} else if i != -1 {
+		bucket = p[:i]
+		object = path.Base(p)
+		if bucket == object {
+			object = ""
 		}
 	}
 	return
@@ -97,7 +97,7 @@ func doFsList(c *cli.Context) {
 		}
 		bucket, object := getBucketAndObject(input)
 		if object == "" {
-			items, err = s3c.GetBucket(bucket, "", s3.MAX_OBJECT_LIST)
+			items, err = s3c.GetBucket(bucket, "", "", "", s3.MAX_OBJECT_LIST)
 			if err != nil {
 				log.Fatal(err)
 			}
