@@ -213,6 +213,10 @@ type Item struct {
 	Size         int64
 }
 
+type Prefix struct {
+	Prefix string
+}
+
 // BySize implements sort.Interface for []Item based on
 // the Size field.
 type BySize []*Item
@@ -229,9 +233,7 @@ type listBucketResults struct {
 	Marker         string
 	Delimiter      string
 	Prefix         string
-	CommonPrefixes struct {
-		Prefix string
-	}
+	CommonPrefixes []*Prefix
 }
 
 // BucketLocation returns the S3 endpoint to be used with the given bucket.
@@ -260,12 +262,12 @@ func (c *Client) BucketLocation(bucket string) (location string, err error) {
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
-func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*Item, err error) {
+func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*Item, prefixes []*Prefix, err error) {
 	var url_ string
 	var buffer bytes.Buffer
 
-	if maxKeys < 0 {
-		return nil, errors.New("invalid negative maxKeys")
+	if maxKeys <= 0 {
+		return nil, nil, errors.New("invalid negative maxKeys")
 	}
 
 	marker := startAt
@@ -301,7 +303,7 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 				if try < maxTries {
 					continue
 				}
-				return nil, err
+				return nil, nil, err
 			}
 			if res.StatusCode != http.StatusOK {
 				if res.StatusCode < 500 {
@@ -314,7 +316,7 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 					}
 					aerr.parseXML()
 					res.Body.Close()
-					return nil, aerr
+					return nil, nil, aerr
 				}
 			} else {
 				bres = listBucketResults{}
@@ -333,7 +335,7 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 					continue
 				}
 				log.Print(err)
-				return nil, err
+				return nil, nil, err
 			}
 			break
 		}
@@ -343,20 +345,27 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 				continue
 			}
 			if it.Key < startAt {
-				return nil, fmt.Errorf("Unexpected response from Amazon: item key %q but wanted greater than %q", it.Key, startAt)
+				return nil, nil, fmt.Errorf("Unexpected response from Amazon: item key %q but wanted greater than %q", it.Key, startAt)
 			}
 			items = append(items, it)
 			marker = it.Key
 		}
+
+		for _, pre := range bres.CommonPrefixes {
+			if pre.Prefix != "" {
+				prefixes = append(prefixes, pre)
+			}
+		}
+
 		if !bres.IsTruncated {
 			// log.Printf("Not truncated. so breaking. items = %d; len Contents = %d, url = %s", len(items), len(bres.Contents), url_)
 			break
 		}
 		if len(items) == 0 {
-			return nil, errors.New("No items replied")
+			return nil, nil, errors.New("No items replied")
 		}
 	}
-	return items, nil
+	return items, prefixes, nil
 }
 
 func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err error) {

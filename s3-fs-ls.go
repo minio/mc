@@ -60,6 +60,12 @@ func printObjects(v []*s3.Item) {
 	}
 }
 
+func printPrefixes(v []*s3.Prefix) {
+	for _, b := range v {
+		fmt.Printf("                      PRE %s\n", b.Prefix)
+	}
+}
+
 func printObject(v int64, date, key string) {
 	fmt.Printf("%s   %d %s\n", parseLastModified(date), v, key)
 }
@@ -82,6 +88,8 @@ func doFsList(c *cli.Context) {
 	var err error
 	var auth *s3.Auth
 	var items []*s3.Item
+	var prefixes []*s3.Prefix
+
 	auth, err = getAWSEnvironment()
 	if err != nil {
 		log.Fatal(err)
@@ -97,10 +105,11 @@ func doFsList(c *cli.Context) {
 		}
 		bucket, object := getBucketAndObject(input)
 		if object == "" {
-			items, err = s3c.GetBucket(bucket, "", "", "", s3.MAX_OBJECT_LIST)
+			items, prefixes, err = s3c.GetBucket(bucket, "", "", "/", s3.MAX_OBJECT_LIST)
 			if err != nil {
 				log.Fatal(err)
 			}
+			printPrefixes(prefixes)
 			printObjects(items)
 		} else {
 			var date string
