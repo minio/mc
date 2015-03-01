@@ -49,20 +49,24 @@ func parseLastModified(t string) string {
 
 func printBuckets(v []*s3.Bucket) {
 	for _, b := range v {
-		fmt.Printf("%s %s\n", parseTime(b.CreationDate), b.Name)
+		fmt.Printf("%s   %s\n", parseTime(b.CreationDate), b.Name)
 	}
 }
 
 func printObjects(v []*s3.Item) {
-	sort.Sort(s3.BySize(v))
-	for _, b := range v {
-		fmt.Printf("%s   %d %s\n", parseTime(b.LastModified), b.Size, b.Key)
+	if len(v) > 0 {
+		sort.Sort(s3.BySize(v))
+		for _, b := range v {
+			fmt.Printf("%s   %d %s\n", parseTime(b.LastModified), b.Size, b.Key)
+		}
 	}
 }
 
 func printPrefixes(v []*s3.Prefix) {
-	for _, b := range v {
-		fmt.Printf("                      PRE %s\n", b.Prefix)
+	if len(v) > 0 {
+		for _, b := range v {
+			fmt.Printf("                      PRE %s\n", b.Prefix)
+		}
 	}
 }
 
@@ -116,9 +120,15 @@ func doFsList(c *cli.Context) {
 			var size int64
 			size, date, err = s3c.Stat(object, bucket)
 			if err != nil {
-				log.Fatal(err)
+				items, prefixes, err = s3c.GetBucket(bucket, "", object, "/", s3.MAX_OBJECT_LIST)
+				if err != nil {
+					log.Fatal(err)
+				}
+				printPrefixes(prefixes)
+				printObjects(items)
+			} else {
+				printObject(size, date, object)
 			}
-			printObject(size, date, object)
 		}
 	default:
 		buckets, err = s3c.Buckets()
