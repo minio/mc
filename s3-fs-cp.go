@@ -21,7 +21,9 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
 	"github.com/minio-io/mc/pkg/uri"
@@ -74,6 +76,14 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 	return
 }
 
+func startBar(size int64) *pb.ProgressBar {
+	bar := pb.StartNew(int(size))
+	bar.SetUnits(pb.U_BYTES)
+	bar.SetRefreshRate(time.Millisecond * 10)
+	bar.ShowSpeed = true
+	return bar
+}
+
 func doFsCopy(c *cli.Context) {
 	var auth *s3.Auth
 	var err error
@@ -120,9 +130,17 @@ func doFsCopy(c *cli.Context) {
 			log.Fatal(err)
 		}
 
-		_, err = io.CopyN(bodyFile, objectReader, objectSize)
+		// start progress bar
+		bar := startBar(objectSize)
+
+		// create multi writer to feed data
+		writer := io.MultiWriter(bodyFile, bar)
+
+		_, err = io.CopyN(writer, objectReader, objectSize)
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		bar.FinishPrint("Done!")
 	}
 }
