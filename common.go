@@ -19,43 +19,35 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"os/user"
 	"path"
 
-	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-var options = []cli.Command{
-	Cp,
-	Ls,
-	Mb,
-	Sync,
-	Configure,
-}
-
-func getAuthFilePath() string {
-	home := os.Getenv("HOME")
-	return path.Join(home, AUTH)
+func getAuthFilePath() (string, error) {
+	u, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(u.HomeDir, Auth), nil
 }
 
 func getAWSEnvironment() (auth *s3.Auth, err error) {
 	var s3Auth *os.File
 	var accessKey, secretKey, endpoint string
-	s3Auth, err = os.Open(getAuthFilePath())
+
+	authFile, err := getAuthFilePath()
+	if err != nil {
+		return nil, err
+	}
+	s3Auth, err = os.Open(authFile)
 	defer s3Auth.Close()
+
 	if err != nil {
 		accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
 		secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
 		endpoint = os.Getenv("S3_ENDPOINT")
-		if accessKey == "" && secretKey == "" {
-			return nil, missingAccessSecretErr
-		}
-		if accessKey == "" {
-			return nil, missingAccessErr
-		}
-		if secretKey == "" {
-			return nil, missingSecretErr
-		}
 		if endpoint == "" {
 			endpoint = "s3.amazonaws.com"
 		}

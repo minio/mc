@@ -93,7 +93,6 @@ func doFsCopy(c *cli.Context) {
 		log.Fatal(err)
 	}
 	s3c := s3.NewS3Client(auth)
-
 	var fsoptions fsOptions
 	fsoptions, err = parseCpOptions(c)
 	if err != nil {
