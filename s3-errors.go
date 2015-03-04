@@ -18,11 +18,6 @@ package main
 
 import "errors"
 
-// api
-var objectBlobErr = errors.New("object blob is mandatory")
-var objectNameErr = errors.New("object name is mandatory")
-var bucketNameErr = errors.New("bucket name is mandatory")
-
 // fs
 var fsPathErr = errors.New("Arguments missing <S3Path> or <LocalPath>")
 var fsUriErr = errors.New("Invalid URI scheme")

@@ -46,7 +46,7 @@ func doConfigure(c *cli.Context) {
 
 	var s3File *os.File
 	home := os.Getenv("HOME")
-	s3File, err = os.OpenFile(path.Join(home, AUTH), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	s3File, err = os.OpenFile(path.Join(home, Auth), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	defer s3File.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -56,4 +56,6 @@ func doConfigure(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Written!", path.Join(home, Auth))
+	log.Println("Now run ``mc --help`` to read on other options")
 }

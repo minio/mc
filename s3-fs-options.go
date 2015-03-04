@@ -89,5 +89,13 @@ type fsOptions struct {
 }
 
 const (
-	AUTH = ".auth"
+	Auth = ".auth"
 )
+
+var options = []cli.Command{
+	Cp,
+	Ls,
+	Mb,
+	Sync,
+	Configure,
+}
