@@ -51,7 +51,7 @@ func isValidBucketName(p string) {
 	}
 }
 
-func printWalk(p string, info os.FileInfo, err error) error {
+func putWalk(p string, info os.FileInfo, err error) error {
 	if info.IsDir() {
 		return nil
 	}
@@ -68,11 +68,11 @@ func printWalk(p string, info os.FileInfo, err error) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("%s uploaded -- to bucket:%s", key, bucketname)
 	return nil
 }
 
 func doFsSync(c *cli.Context) {
-
 	switch len(c.Args()) {
 	case 1:
 		input := path.Clean(c.Args().Get(0))
@@ -90,8 +90,10 @@ func doFsSync(c *cli.Context) {
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		filepath.Walk(input, printWalk)
+		err = filepath.Walk(input, putWalk)
+		if err != nil {
+			log.Fatal(err)
+		}
 	default:
 		log.Fatal("Requires a directory name <Directory>")
 	}

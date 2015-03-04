@@ -83,24 +83,33 @@ func (c *Client) transport() http.RoundTripper {
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
 func (c *Client) bucketURL(bucket string) string {
-	if !c.S3ForcePathStyle {
-		if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
-			var url_ string
-			// if localhost forcePathStyle
-			if strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") {
-				url_ = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
-			} else if strings.Contains(c.endpoint(), "amazonaws.com") {
+	var url_ string
+	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
+		// if localhost forcePathStyle
+		if strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") {
+			url_ = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+			goto ret
+		}
+		if !c.S3ForcePathStyle {
+			if strings.Contains(c.endpoint(), "amazonaws.com") {
 				url_ = fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "https://"))
 			} else {
 				url_ = fmt.Sprintf("http://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "http://"))
 			}
-			return url_
+		} else {
+			url_ = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
 		}
 	}
-	return fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+
+ret:
+	return url_
 }
 
 func (c *Client) keyURL(bucket, key string) string {
+	// if localhost forcePathStyle
+	if strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") || c.S3ForcePathStyle {
+		return c.bucketURL(bucket) + "/" + key
+	}
 	return c.bucketURL(bucket) + key
 }
 
