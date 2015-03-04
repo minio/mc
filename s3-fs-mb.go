@@ -27,10 +27,10 @@ func doFsMb(c *cli.Context) {
 	switch len(c.Args()) {
 	case 1:
 		if !s3.IsValidBucket(c.Args().Get(0)) {
-			log.Fatal(invalidBucketErr)
+			log.Fatalf("%s: (%s)", invalidBucketErr, c.Args().Get(0))
 		}
 	default:
-		log.Fatal()
+		log.Fatal("Needs an argument <BucketName>")
 	}
 	bucketName := c.Args().Get(0)
 	var err error
