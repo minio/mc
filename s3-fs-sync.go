@@ -78,14 +78,21 @@ func doFsSync(c *cli.Context) {
 		input := path.Clean(c.Args().Get(0))
 		isValidBucketName(input) // exit here if invalid
 
+		fl, err := os.Stat(input)
+		if os.IsNotExist(err) {
+			log.Fatal(err)
+		}
+		if !fl.IsDir() {
+			log.Fatal("Should be a directory")
+		}
 		// Create bucketname, before uploading files
-		err := s3c.PutBucket(input)
+		err = s3c.PutBucket(input)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		filepath.Walk(input, printWalk)
 	default:
-		log.Fatal("Shouldn't be here")
+		log.Fatal("Requires a directory name <Directory>")
 	}
 }
