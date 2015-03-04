@@ -158,7 +158,11 @@ func (c *Client) Stat(key, bucket string) (size int64, date string, reterr error
 }
 
 func (c *Client) PutBucket(bucket string) error {
-	req := newReq(c.bucketURL(bucket))
+	var url_ string
+	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
+		url_ = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+	}
+	req := newReq(url_)
 	req.Method = "PUT"
 	c.Auth.SignRequest(req)
 	res, err := c.transport().RoundTrip(req)
