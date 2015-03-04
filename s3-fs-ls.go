@@ -17,6 +17,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"path"
@@ -34,7 +36,7 @@ const (
 )
 
 const (
-	delimiter = "/"
+	delimiter = '/'
 )
 
 func parseTime(t string) string {
@@ -75,15 +77,15 @@ func printObject(v int64, date, key string) {
 }
 
 func getBucketAndObject(p string) (bucket, object string) {
-	i := strings.Index(p, delimiter)
-	if i == -1 {
-		bucket = p
-	} else if i != -1 {
-		bucket = p[:i]
-		object = path.Base(p)
-		if bucket == object {
-			object = ""
-		}
+	readBuffer := bytes.NewBufferString(p)
+	reader := bufio.NewReader(readBuffer)
+	pathPrefix, _ := reader.ReadString(byte(delimiter))
+	bucket = path.Clean(pathPrefix)
+	object = strings.TrimPrefix(p, pathPrefix)
+	// if object is equal to bucket, set object to be empty
+	if path.Clean(object) == bucket {
+		object = ""
+		return
 	}
 	return
 }
@@ -109,7 +111,7 @@ func doFsList(c *cli.Context) {
 		}
 		bucket, object := getBucketAndObject(input)
 		if object == "" {
-			items, prefixes, err = s3c.GetBucket(bucket, "", "", "/", s3.MAX_OBJECT_LIST)
+			items, prefixes, err = s3c.GetBucket(bucket, "", "", string(delimiter), s3.MAX_OBJECT_LIST)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -120,7 +122,7 @@ func doFsList(c *cli.Context) {
 			var size int64
 			size, date, err = s3c.Stat(object, bucket)
 			if err != nil {
-				items, prefixes, err = s3c.GetBucket(bucket, "", object, "/", s3.MAX_OBJECT_LIST)
+				items, prefixes, err = s3c.GetBucket(bucket, "", object, string(delimiter), s3.MAX_OBJECT_LIST)
 				if err != nil {
 					log.Fatal(err)
 				}
