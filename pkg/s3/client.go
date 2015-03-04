@@ -86,12 +86,13 @@ func (c *Client) bucketURL(bucket string) string {
 	if !c.S3ForcePathStyle {
 		if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
 			var url_ string
-			if strings.Contains(c.endpoint(), "amazonaws.com") {
-				url_ = fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "https://"))
-			} else if strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") {
+			// if localhost forcePathStyle
+			if strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") {
 				url_ = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+			} else if strings.Contains(c.endpoint(), "amazonaws.com") {
+				url_ = fmt.Sprintf("https://%s.%s", bucket, strings.TrimPrefix(c.endpoint(), "https://"))
 			} else {
-				url_ = fmt.Sprintf("http://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "http://"))
+				url_ = fmt.Sprintf("http://%s.%s", bucket, strings.TrimPrefix(c.endpoint(), "http://"))
 			}
 			return url_
 		}

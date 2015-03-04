@@ -121,13 +121,13 @@ func doFsCopy(c *cli.Context) {
 	} else if fsoptions.isget {
 		var objectReader io.ReadCloser
 		var objectSize int64
-		bodyFile, err = os.Create(fsoptions.body)
-		defer bodyFile.Close()
 
 		objectReader, objectSize, err = s3c.Get(fsoptions.bucket, fsoptions.key)
 		if err != nil {
 			log.Fatal(err)
 		}
+		bodyFile, err = os.Create(fsoptions.body)
+		defer bodyFile.Close()
 
 		// start progress bar
 		bar := startBar(objectSize)
