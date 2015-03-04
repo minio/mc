@@ -20,6 +20,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -47,9 +48,9 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 			if uri.Path == "" {
 				return fsOptions{}, fsKeyErr
 			}
-			fsoptions.key = strings.Trim(uri.Path, "/")
+			fsoptions.key = strings.TrimPrefix(uri.Path, "/")
 			if c.Args().Get(1) == "." {
-				fsoptions.body = fsoptions.key
+				fsoptions.body = path.Base(fsoptions.key)
 			} else {
 				fsoptions.body = c.Args().Get(1)
 			}
@@ -64,7 +65,7 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 			if uri.Path == "" {
 				fsoptions.key = c.Args().Get(0)
 			} else {
-				fsoptions.key = strings.Trim(uri.Path, "/")
+				fsoptions.key = strings.TrimPrefix(uri.Path, "/")
 			}
 			fsoptions.body = c.Args().Get(0)
 			fsoptions.isget = false
