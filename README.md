@@ -1,6 +1,6 @@
 # Minio Client
 
-mc - unified command line interface for Minio Object Storage compatible with Amazon S3 API released under [Apache license v2](./LICENSE).
+mc - unified command line interface for Minio and S3 released under [Apache license v2](./LICENSE).
 
 ## Install
 
@@ -13,7 +13,7 @@ mc - unified command line interface for Minio Object Storage compatible with Ama
 ### Commands
 ```
 NAME:
-   mc - Unified command line interface for Minio Object Storage
+   mc - unified command line interface for Minio and S3
 
 USAGE:
    mc [global options] command [command options] [arguments...]
@@ -40,3 +40,7 @@ GLOBAL OPTIONS:
 ## Contribute
 
 [Contribute to mc](./CONTRIBUTING.md)
+
+### Bash Completion
+
+[Enable bash completion](./command-completion/README.md)

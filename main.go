@@ -25,9 +25,10 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "mc"
-	app.Usage = "Unified command line interface for Minio Object Storage"
+	app.Usage = "unified command line interface for Minio and S3"
 	app.Version = "0.1.0"
 	app.Commands = options
 	app.Author = "Minio Community"
+	app.EnableBashCompletion = true
 	app.Run(os.Args)
 }
