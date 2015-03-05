@@ -43,11 +43,14 @@ GLOBAL OPTIONS:
 
 ### Enable bash completion
 
-Edit your ``${HOME}/.bashrc`` file
+Bash completion for mc is always installed at ``${HOME}/.minio/mc/mc.completion``, to enable bash completion for ``mc`` cli please follow these steps.
 
 ```
-source ${HOME}/.minio/mc/mc.completion
+$ source ${HOME}/.minio/mc/mc.completion
+$ echo "source ${HOME}/.minio/mc/mc.completion" >> ${HOME}/.bashrc
+```
 
+```
 $ mc <TAB><TAB>
 configure  cp         h          help       ls         mb         sync
 ```
