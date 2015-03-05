@@ -26,12 +26,18 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
+// Common authentication file
+const (
+	auth  = "auth.json"
+	mcDir = "/.minio/mc/"
+)
+
 func getAuthFilePath() (string, error) {
 	u, err := user.Current()
 	if err != nil {
 		return "", err
 	}
-	return path.Join(u.HomeDir, Auth), nil
+	return path.Join(u.HomeDir+mcDir, auth), nil
 }
 
 func getNewClient(auth *s3.Auth) (*s3.Client, error) {
@@ -41,7 +47,7 @@ func getNewClient(auth *s3.Auth) (*s3.Client, error) {
 	}, nil
 }
 
-func getAWSEnvironment() (auth *s3.Auth, err error) {
+func getEnvironment() (auth *s3.Auth, err error) {
 	var s3Auth *os.File
 	var accessKey, secretKey, endpoint string
 

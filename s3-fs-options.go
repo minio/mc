@@ -95,8 +95,3 @@ var options = []cli.Command{
 	sync,
 	configure,
 }
-
-// Common authentication file
-const (
-	Auth = ".minio/auth.json"
-)

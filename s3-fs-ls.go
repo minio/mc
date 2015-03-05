@@ -97,7 +97,7 @@ func doFsList(c *cli.Context) {
 	var items []*s3.Item
 	var prefixes []*s3.Prefix
 
-	auth, err = getAWSEnvironment()
+	auth, err = getEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}

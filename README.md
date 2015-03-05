@@ -41,6 +41,13 @@ GLOBAL OPTIONS:
 
 [Contribute to mc](./CONTRIBUTING.md)
 
-### Bash Completion
+### Enable bash completion
 
-[Enable bash completion](./command-completion/README.md)
+Edit your ``${HOME}/.bashrc`` file
+
+```
+source ${HOME}/.minio/mc/mc.completion
+
+$ mc <TAB><TAB>
+configure  cp         h          help       ls         mb         sync
+```

@@ -69,7 +69,7 @@ func doFsSync(c *cli.Context) {
 	var auth *s3.Auth
 	var s3c *s3.Client
 	var err error
-	auth, err = getAWSEnvironment()
+	auth, err = getEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}

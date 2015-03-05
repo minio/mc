@@ -36,7 +36,7 @@ func doFsMb(c *cli.Context) {
 	var err error
 	var auth *s3.Auth
 	var s3c *s3.Client
-	auth, err = getAWSEnvironment()
+	auth, err = getEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
