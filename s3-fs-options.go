@@ -59,22 +59,22 @@ var configure = cli.Command{
 	Action: doConfigure,
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:  "accesskey",
+			Name:  "accesskey, a",
 			Value: "",
 			Usage: "AWS access key id",
 		},
 		cli.StringFlag{
-			Name:  "secretkey",
+			Name:  "secretkey, s",
 			Value: "",
 			Usage: "AWS secret key id",
 		},
 		cli.StringFlag{
-			Name:  "endpoint",
+			Name:  "endpoint, e",
 			Value: "s3.amazonaws.com",
 			Usage: "S3 Endpoint URL default is 's3.amazonaws.com'",
 		},
 		cli.BoolFlag{
-			Name:  "pathstyle",
+			Name:  "pathstyle, p",
 			Usage: "Force path style API requests",
 		},
 	},
