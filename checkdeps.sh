@@ -48,6 +48,11 @@ if [ $? -ne 0 ]; then
     MISSING="${MISSING} build-essential"
 fi
 
+env mkdocs > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  MISSING="${MISSING} mkdocs"
+fi
+
 ## If dependencies are missing, warn the user and abort
 if [ "x${MISSING}" != "x" ]; then
   echo "ERROR"
