@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/user"
 	"path"
 
 	"github.com/codegangsta/cli"
@@ -52,8 +53,17 @@ func doConfigure(c *cli.Context) {
 	}
 
 	var s3File *os.File
-	home := os.Getenv("HOME")
-	s3File, err = os.OpenFile(path.Join(home, Auth), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	u, _ := user.Current()
+	err = os.MkdirAll(path.Join(u.HomeDir, mcDir), 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var authFile string
+	authFile, err = getAuthFilePath()
+	if err != nil {
+		log.Fatal(err)
+	}
+	s3File, err = os.OpenFile(authFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	defer s3File.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -63,5 +73,5 @@ func doConfigure(c *cli.Context) {
 		log.Fatal(err)
 	}
 	fmt.Println("")
-	fmt.Println("Configuration written to", path.Join(home, Auth))
+	fmt.Println("Configuration written to", authFile)
 }

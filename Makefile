@@ -9,7 +9,6 @@ createsymlink:
 
 getdeps: checkdeps
 	@go get github.com/tools/godep && echo "Installed godep"
-	@go get golang.org/x/tools/cmd/cover && echo "Installed cover"
 
 build-all: getdeps createsymlink
 	@echo "Building Libraries"
@@ -25,3 +24,8 @@ docs-deploy:
 
 install: test-all
 	@godep go install github.com/minio-io/mc && echo "Installed mc"
+	@mkdir -p $(HOME)/.minio/mc
+	@cp mc.completion $(HOME)/.minio/mc && echo "Installing mc bash completion"
+
+uninstall:
+	@echo "Uninstalling mc bash completion" && rm -f $(HOME)/.minio/mc/mc.completion

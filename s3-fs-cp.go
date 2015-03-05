@@ -91,7 +91,7 @@ func doFsCopy(c *cli.Context) {
 	var s3c *s3.Client
 	var err error
 	var bodyFile *os.File
-	auth, err = getAWSEnvironment()
+	auth, err = getEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
