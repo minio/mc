@@ -59,8 +59,9 @@ import (
 	"time"
 )
 
+// Total max object list
 const (
-	MAX_OBJECT_LIST = 1000
+	MaxKeys = 1000
 )
 
 // Client is an Amazon S3 client.
@@ -69,6 +70,7 @@ type Client struct {
 	Transport http.RoundTripper // or nil for the default
 }
 
+// Bucket - carries s3 bucket reply header
 type Bucket struct {
 	Name         string
 	CreationDate string // 2006-02-03T16:45:09.000Z
@@ -83,26 +85,26 @@ func (c *Client) transport() http.RoundTripper {
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
 func (c *Client) bucketURL(bucket string) string {
-	var url_ string
+	var url string
 	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
 		// if localhost forcePathStyle
 		if strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") {
-			url_ = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+			url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
 			goto ret
 		}
 		if !c.S3ForcePathStyle {
 			if strings.Contains(c.endpoint(), "amazonaws.com") {
-				url_ = fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "https://"))
+				url = fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "https://"))
 			} else {
-				url_ = fmt.Sprintf("http://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "http://"))
+				url = fmt.Sprintf("http://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "http://"))
 			}
 		} else {
-			url_ = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+			url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
 		}
 	}
 
 ret:
-	return url_
+	return url
 }
 
 func (c *Client) keyURL(bucket, key string) string {
@@ -113,27 +115,13 @@ func (c *Client) keyURL(bucket, key string) string {
 	return c.bucketURL(bucket) + key
 }
 
-func newReq(url_ string) *http.Request {
-	req, err := http.NewRequest("GET", url_, nil)
+func newReq(url string) *http.Request {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		panic(fmt.Sprintf("s3 client; invalid URL: %v", err))
 	}
 	req.Header.Set("User-Agent", "Minio Client")
 	return req
-}
-
-func (c *Client) Buckets() ([]*Bucket, error) {
-	req := newReq(c.endpoint() + "/")
-	c.Auth.SignRequest(req)
-	res, err := c.transport().RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("s3: Unexpected status code %d fetching bucket list", res.StatusCode)
-	}
-	return parseListAllMyBuckets(res.Body)
 }
 
 func parseListAllMyBuckets(r io.Reader) ([]*Bucket, error) {
@@ -149,11 +137,28 @@ func parseListAllMyBuckets(r io.Reader) ([]*Bucket, error) {
 	return res.Buckets.Bucket, nil
 }
 
-// Returns 0, "", os.ErrNotExist if not on S3, otherwise reterr is real.
+/// Object API operations
+
+// Buckets - Get list of buckets
+func (c *Client) Buckets() ([]*Bucket, error) {
+	req := newReq(c.endpoint() + "/")
+	c.Auth.signRequest(req)
+	res, err := c.transport().RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("s3: Unexpected status code %d fetching bucket list", res.StatusCode)
+	}
+	return parseListAllMyBuckets(res.Body)
+}
+
+// Stat - returns 0, "", os.ErrNotExist if not on S3
 func (c *Client) Stat(key, bucket string) (size int64, date string, reterr error) {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
-	c.Auth.SignRequest(req)
+	c.Auth.signRequest(req)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return 0, "", err
@@ -175,14 +180,15 @@ func (c *Client) Stat(key, bucket string) (size int64, date string, reterr error
 	return 0, "", fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
 }
 
+// PutBucket - create new bucket
 func (c *Client) PutBucket(bucket string) error {
-	var url_ string
+	var url string
 	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
-		url_ = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+		url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
 	}
-	req := newReq(url_)
+	req := newReq(url)
 	req.Method = "PUT"
-	c.Auth.SignRequest(req)
+	c.Auth.signRequest(req)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return err
@@ -193,13 +199,13 @@ func (c *Client) PutBucket(bucket string) error {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		// res.Write(os.Stderr)
 		return fmt.Errorf("Got response code %d from s3", res.StatusCode)
 	}
 	return nil
 
 }
 
+// Put - upload new object to bucket
 func (c *Client) Put(bucket, key string, md5 hash.Hash, size int64, body io.Reader) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
@@ -211,7 +217,7 @@ func (c *Client) Put(bucket, key string, md5 hash.Hash, size int64, body io.Read
 		encoder.Close()
 		req.Header.Set("Content-MD5", b64.String())
 	}
-	c.Auth.SignRequest(req)
+	c.Auth.signRequest(req)
 	req.Body = ioutil.NopCloser(body)
 
 	res, err := c.transport().RoundTrip(req)
@@ -229,12 +235,14 @@ func (c *Client) Put(bucket, key string, md5 hash.Hash, size int64, body io.Read
 	return nil
 }
 
+// Item - object item list
 type Item struct {
 	Key          string
 	LastModified string
 	Size         int64
 }
 
+// Prefix - common prefix
 type Prefix struct {
 	Prefix string
 }
@@ -258,14 +266,14 @@ type listBucketResults struct {
 	CommonPrefixes []*Prefix
 }
 
-// BucketLocation returns the S3 endpoint to be used with the given bucket.
+// BucketLocation - returns the S3 endpoint to be used with the given bucket.
 func (c *Client) BucketLocation(bucket string) (location string, err error) {
 	if !strings.HasSuffix(c.endpoint(), "amazonaws.com") {
 		return "", errors.New("BucketLocation not implemented for non-Amazon S3 endpoints")
 	}
-	url_ := fmt.Sprintf("%s/%s/?location", c.endpoint(), url.QueryEscape(bucket))
-	req := newReq(url_)
-	c.Auth.SignRequest(req)
+	urlReq := fmt.Sprintf("%s/%s/?location", c.endpoint(), url.QueryEscape(bucket))
+	req := newReq(urlReq)
+	c.Auth.signRequest(req)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return
@@ -285,7 +293,7 @@ func (c *Client) BucketLocation(bucket string) (location string, err error) {
 // 'marker' value). If the length of the returned items is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
 func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*Item, prefixes []*Prefix, err error) {
-	var url_ string
+	var urlReq string
 	var buffer bytes.Buffer
 
 	if maxKeys <= 0 {
@@ -295,8 +303,8 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 	marker := startAt
 	for len(items) < maxKeys {
 		fetchN := maxKeys - len(items)
-		if fetchN > MAX_OBJECT_LIST {
-			fetchN = MAX_OBJECT_LIST
+		if fetchN > MaxKeys {
+			fetchN = MaxKeys
 		}
 		var bres listBucketResults
 		buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.bucketURL(bucket), fetchN))
@@ -311,15 +319,15 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 			buffer.WriteString(fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter)))
 		}
 
-		url_ = buffer.String()
+		urlReq = buffer.String()
 		// Try the enumerate three times, since Amazon likes to close
 		// https connections a lot, and Go sucks at dealing with it:
 		// https://code.google.com/p/go/issues/detail?id=3514
 		const maxTries = 5
 		for try := 1; try <= maxTries; try++ {
 			time.Sleep(time.Duration(try-1) * 100 * time.Millisecond)
-			req := newReq(url_)
-			c.Auth.SignRequest(req)
+			req := newReq(urlReq)
+			c.Auth.signRequest(req)
 			res, err := c.transport().RoundTrip(req)
 			if err != nil {
 				if try < maxTries {
@@ -380,7 +388,6 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 		}
 
 		if !bres.IsTruncated {
-			// log.Printf("Not truncated. so breaking. items = %d; len Contents = %d, url = %s", len(items), len(bres.Contents), url_)
 			break
 		}
 		if len(items) == 0 {
@@ -390,9 +397,10 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 	return items, prefixes, nil
 }
 
+// Get - download a requested object from a given bucket
 func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err error) {
 	req := newReq(c.keyURL(bucket, key))
-	c.Auth.SignRequest(req)
+	c.Auth.signRequest(req)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return
@@ -423,7 +431,7 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (rc io.Rea
 	} else {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 	}
-	c.Auth.SignRequest(req)
+	c.Auth.signRequest(req)
 
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
@@ -445,7 +453,7 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (rc io.Rea
 func (c *Client) Delete(bucket, key string) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "DELETE"
-	c.Auth.SignRequest(req)
+	c.Auth.signRequest(req)
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return err
@@ -461,23 +469,13 @@ func (c *Client) Delete(bucket, key string) error {
 }
 */
 
-func NewAuth(accessKey, secretKey, endpoint string, style bool) (auth *Auth) {
-	auth = &Auth{
-		AccessKey:        accessKey,
-		SecretAccessKey:  secretKey,
-		Endpoint:         endpoint,
-		S3ForcePathStyle: style,
-	}
-	return
-}
-
-func NewS3Client(auth *Auth) (client *Client) {
+// NewClient - get new client
+func NewClient(auth *Auth) (client *Client) {
 	client = &Client{auth, http.DefaultTransport}
 	return
 }
 
-// IsValid reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
-//
+// IsValidBucket reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
 // See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
 func IsValidBucket(bucket string) bool {
 	if len(bucket) < 3 || len(bucket) > 63 {
@@ -533,7 +531,7 @@ type xmlError struct {
 	XMLName           xml.Name `xml:"Error"`
 	Code              string
 	Message           string
-	RequestId         string
+	RequestID         string
 	Bucket            string
 	Endpoint          string
 	StringToSignBytes string

@@ -19,17 +19,16 @@ package main
 import "errors"
 
 // fs
-var fsPathErr = errors.New("Arguments missing <S3Path> or <LocalPath>")
-var fsUriErr = errors.New("Invalid URI scheme")
-var fsKeyErr = errors.New("Key is needed to get the file")
+var errFspath = errors.New("Arguments missing <S3Path> or <LocalPath>")
+var errFsuri = errors.New("Invalid uri scheme")
+var errFskey = errors.New("Key is needed to get the file")
 
 // configure
-var configAccessErr = errors.New("accesskey is mandatory")
-var configSecretErr = errors.New("secretkey is mandatory")
-var configEndpointErr = errors.New("endpoint is missing")
+var errAccess = errors.New("accesskey is mandatory")
+var errSecret = errors.New("secretkey is mandatory")
+var errEndpoint = errors.New("endpoint is mandatory")
 
 // common
-var missingAccessSecretErr = errors.New("You can configure your credentials by running `mc configure`")
-var missingAccessErr = errors.New("Partial credentials found in the env, missing : AWS_ACCESS_KEY_ID")
-var missingSecretErr = errors.New("Partial credentials found in the env, missing : AWS_SECRET_ACCESS_KEY")
-var invalidBucketErr = errors.New("Invalid bucket name")
+var errMissingaccess = errors.New("Partial credentials found in the env, missing : AWS_ACCESS_KEY_ID")
+var errMissingsecret = errors.New("Partial credentials found in the env, missing : AWS_SECRET_ACCESS_KEY")
+var errInvalidbucket = errors.New("Invalid bucket name")
