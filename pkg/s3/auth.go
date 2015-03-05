@@ -56,8 +56,7 @@ import (
 	"time"
 )
 
-// See http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
-
+// Auth - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Auth struct {
 	AccessKey       string
 	SecretAccessKey string
@@ -73,7 +72,8 @@ type Auth struct {
 	S3ForcePathStyle bool
 }
 
-type TlsConfig struct {
+// TLSConfig - TLS cert and key configuration
+type TLSConfig struct {
 	CertPEMBlock []byte
 	KeyPEMBlock  []byte
 }
@@ -85,14 +85,13 @@ func (a *Auth) endpoint() string {
 	if a.Endpoint != "" {
 		if strings.HasSuffix(a.Endpoint, "amazonaws.com") {
 			return "https://" + a.Endpoint
-		} else {
-			return "http://" + a.Endpoint
 		}
+		return "http://" + a.Endpoint
 	}
 	return "https://" + standardUSRegionAWS
 }
 
-func (a *Auth) loadKeys(cert string, key string) (*TlsConfig, error) {
+func (a *Auth) loadKeys(cert string, key string) (*TLSConfig, error) {
 	certBlock, err := ioutil.ReadFile(cert)
 	if err != nil {
 		return nil, err
@@ -101,13 +100,13 @@ func (a *Auth) loadKeys(cert string, key string) (*TlsConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := &TlsConfig{}
+	t := &TLSConfig{}
 	t.CertPEMBlock = certBlock
 	t.KeyPEMBlock = keyBlock
 	return t, nil
 }
 
-func (a *Auth) getTlsTransport() (*http.Transport, error) {
+func (a *Auth) getTLSTransport() (*http.Transport, error) {
 	if a.CertPEM == "" || a.KeyPEM == "" {
 		return &http.Transport{
 			Dial: (&net.Dialer{
@@ -139,7 +138,7 @@ func (a *Auth) getTlsTransport() (*http.Transport, error) {
 	return transport, nil
 }
 
-func (a *Auth) SignRequest(req *http.Request) {
+func (a *Auth) signRequest(req *http.Request) {
 	if date := req.Header.Get("Date"); date == "" {
 		req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	}
@@ -203,7 +202,7 @@ func hasPrefixCaseInsensitive(s, pfx string) bool {
 }
 
 func (a *Auth) writeCanonicalizedAmzHeaders(buf *bytes.Buffer, req *http.Request) {
-	amzHeaders := make([]string, 0)
+	var amzHeaders []string
 	vals := make(map[string][]string)
 	for k, vv := range req.Header {
 		if hasPrefixCaseInsensitive(k, "x-amz-") {

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -37,16 +38,16 @@ import (
 func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 	switch len(c.Args()) {
 	case 1:
-		return fsOptions{}, fsPathErr
+		return fsOptions{}, errFspath
 	case 2:
 		if strings.HasPrefix(c.Args().Get(0), "s3://") {
 			uri := uri.ParseURI(c.Args().Get(0))
 			if uri.Scheme == "" {
-				return fsOptions{}, fsUriErr
+				return fsOptions{}, errFsuri
 			}
 			fsoptions.bucket = uri.Server
 			if uri.Path == "" {
-				return fsOptions{}, fsKeyErr
+				return fsOptions{}, errFskey
 			}
 			fsoptions.key = strings.TrimPrefix(uri.Path, "/")
 			if c.Args().Get(1) == "." {
@@ -59,7 +60,7 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
 			uri := uri.ParseURI(c.Args().Get(1))
 			if uri.Scheme == "" {
-				return fsOptions{}, fsUriErr
+				return fsOptions{}, errFsuri
 			}
 			fsoptions.bucket = uri.Server
 			if uri.Path == "" {
@@ -72,7 +73,7 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 			fsoptions.isput = true
 		}
 	default:
-		return fsOptions{}, fsPathErr
+		return fsOptions{}, errFspath
 	}
 	return
 }
@@ -87,13 +88,18 @@ func startBar(size int64) *pb.ProgressBar {
 
 func doFsCopy(c *cli.Context) {
 	var auth *s3.Auth
+	var s3c *s3.Client
 	var err error
 	var bodyFile *os.File
 	auth, err = getAWSEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
-	s3c := s3.NewS3Client(auth)
+	s3c, err = getNewClient(auth)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	var fsoptions fsOptions
 	fsoptions, err = parseCpOptions(c)
 	if err != nil {
@@ -119,6 +125,7 @@ func doFsCopy(c *cli.Context) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		fmt.Printf("%s uploaded -- to bucket:%s", fsoptions.key, fsoptions.bucket)
 	} else if fsoptions.isget {
 		var objectReader io.ReadCloser
 		var objectSize int64

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -17,16 +18,22 @@ func parseConfigureInput(c *cli.Context) (auth *s3.Auth, err error) {
 	pathstyle := c.Bool("pathstyle")
 
 	if accessKey == "" {
-		return nil, configAccessErr
+		return nil, errAccess
 	}
 	if secretKey == "" {
-		return nil, configSecretErr
+		return nil, errSecret
 	}
 	if endpoint == "" {
-		return nil, configEndpointErr
+		return nil, errEndpoint
 	}
 
-	auth = s3.NewAuth(accessKey, secretKey, endpoint, pathstyle)
+	auth = &s3.Auth{
+		AccessKey:        accessKey,
+		SecretAccessKey:  secretKey,
+		Endpoint:         endpoint,
+		S3ForcePathStyle: pathstyle,
+	}
+
 	return auth, nil
 }
 
@@ -39,7 +46,7 @@ func doConfigure(c *cli.Context) {
 		log.Fatal(err)
 	}
 
-	jAuth, err = json.Marshal(auth)
+	jAuth, err = json.MarshalIndent(auth, "", "  ")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,11 +58,10 @@ func doConfigure(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	_, err = s3File.Write(jAuth)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Written!", path.Join(home, Auth))
-	log.Println("Now run ``mc --help`` to read on other options")
+	fmt.Println("")
+	fmt.Println("Configuration written to", path.Join(home, Auth))
 }

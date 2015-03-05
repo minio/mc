@@ -93,6 +93,7 @@ func getBucketAndObject(p string) (bucket, object string) {
 func doFsList(c *cli.Context) {
 	var err error
 	var auth *s3.Auth
+	var s3c *s3.Client
 	var items []*s3.Item
 	var prefixes []*s3.Prefix
 
@@ -102,7 +103,10 @@ func doFsList(c *cli.Context) {
 	}
 
 	var buckets []*s3.Bucket
-	s3c := s3.NewS3Client(auth)
+	s3c, err = getNewClient(auth)
+	if err != nil {
+		log.Fatal(err)
+	}
 	switch len(c.Args()) {
 	case 1:
 		input := c.Args().Get(0)
@@ -111,7 +115,7 @@ func doFsList(c *cli.Context) {
 		}
 		bucket, object := getBucketAndObject(input)
 		if object == "" {
-			items, prefixes, err = s3c.GetBucket(bucket, "", "", string(delimiter), s3.MAX_OBJECT_LIST)
+			items, prefixes, err = s3c.GetBucket(bucket, "", "", string(delimiter), s3.MaxKeys)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -122,7 +126,7 @@ func doFsList(c *cli.Context) {
 			var size int64
 			size, date, err = s3c.Stat(object, bucket)
 			if err != nil {
-				items, prefixes, err = s3c.GetBucket(bucket, "", object, string(delimiter), s3.MAX_OBJECT_LIST)
+				items, prefixes, err = s3c.GetBucket(bucket, "", object, string(delimiter), s3.MaxKeys)
 				if err != nil {
 					log.Fatal(err)
 				}

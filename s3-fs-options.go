@@ -20,35 +20,35 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var Cp = cli.Command{
+var cp = cli.Command{
 	Name:        "cp",
 	Usage:       "",
 	Description: `Copies a local file or Object to another location locally or in S3.`,
 	Action:      doFsCopy,
 }
 
-var Ls = cli.Command{
+var ls = cli.Command{
 	Name:        "ls",
 	Usage:       "",
 	Description: `List Objects and common prefixes under a prefix or all Buckets`,
 	Action:      doFsList,
 }
 
-var Mb = cli.Command{
+var mb = cli.Command{
 	Name:        "mb",
 	Usage:       "",
 	Description: "Creates an S3 bucket",
 	Action:      doFsMb,
 }
 
-var Sync = cli.Command{
+var sync = cli.Command{
 	Name:        "sync",
 	Usage:       "",
 	Description: "Syncs directories and S3 prefixes",
 	Action:      doFsSync,
 }
 
-var Configure = cli.Command{
+var configure = cli.Command{
 	Name:  "configure",
 	Usage: "",
 	Description: `Configure minio client configuration data. If your config
@@ -88,14 +88,15 @@ type fsOptions struct {
 	isput  bool
 }
 
-const (
-	Auth = ".auth"
-)
-
 var options = []cli.Command{
-	Cp,
-	Ls,
-	Mb,
-	Sync,
-	Configure,
+	cp,
+	ls,
+	mb,
+	sync,
+	configure,
 }
+
+// Common authentication file
+const (
+	Auth = ".minio/auth.json"
+)

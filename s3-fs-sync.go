@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -27,18 +28,6 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-var s3c *s3.Client
-
-func init() {
-	var auth *s3.Auth
-	var err error
-	auth, err = getAWSEnvironment()
-	if err != nil {
-		log.Fatal(err)
-	}
-	s3c = s3.NewS3Client(auth)
-}
-
 func isValidBucketName(p string) {
 	if path.IsAbs(p) {
 		log.Fatal("directory bucketname cannot be absolute")
@@ -47,11 +36,15 @@ func isValidBucketName(p string) {
 		log.Fatal("Relative directory references not supported")
 	}
 	if !s3.IsValidBucket(p) {
-		log.Fatal(invalidBucketErr)
+		log.Fatal(errInvalidbucket)
 	}
 }
 
-func putWalk(p string, info os.FileInfo, err error) error {
+type walk struct {
+	s3 *s3.Client
+}
+
+func (w *walk) putWalk(p string, info os.FileInfo, err error) error {
 	if info.IsDir() {
 		return nil
 	}
@@ -64,15 +57,28 @@ func putWalk(p string, info os.FileInfo, err error) error {
 
 	bodyFile, err := os.Open(p)
 	defer bodyFile.Close()
-	err = s3c.Put(bucketname, key, nil, info.Size(), bodyFile)
+	err = w.s3.Put(bucketname, key, nil, info.Size(), bodyFile)
 	if err != nil {
 		return err
 	}
-	log.Printf("%s uploaded -- to bucket:%s", key, bucketname)
+	fmt.Printf("%s uploaded -- to bucket:%s\n", key, bucketname)
 	return nil
 }
 
 func doFsSync(c *cli.Context) {
+	var auth *s3.Auth
+	var s3c *s3.Client
+	var err error
+	auth, err = getAWSEnvironment()
+	if err != nil {
+		log.Fatal(err)
+	}
+	s3c, err = getNewClient(auth)
+	if err != nil {
+		log.Fatal(err)
+	}
+	p := &walk{s3c}
+
 	switch len(c.Args()) {
 	case 1:
 		input := path.Clean(c.Args().Get(0))
@@ -90,7 +96,7 @@ func doFsSync(c *cli.Context) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = filepath.Walk(input, putWalk)
+		err = filepath.Walk(input, p.putWalk)
 		if err != nil {
 			log.Fatal(err)
 		}

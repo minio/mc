@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"os"
 	"os/user"
 	"path"
@@ -31,6 +32,13 @@ func getAuthFilePath() (string, error) {
 		return "", err
 	}
 	return path.Join(u.HomeDir, Auth), nil
+}
+
+func getNewClient(auth *s3.Auth) (*s3.Client, error) {
+	return &s3.Client{
+		Auth:      auth,
+		Transport: http.DefaultTransport,
+	}, nil
 }
 
 func getAWSEnvironment() (auth *s3.Auth, err error) {

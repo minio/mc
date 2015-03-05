@@ -27,7 +27,7 @@ func doFsMb(c *cli.Context) {
 	switch len(c.Args()) {
 	case 1:
 		if !s3.IsValidBucket(c.Args().Get(0)) {
-			log.Fatalf("%s: (%s)", invalidBucketErr, c.Args().Get(0))
+			log.Fatalf("%s: (%s)", errInvalidbucket, c.Args().Get(0))
 		}
 	default:
 		log.Fatal("Needs an argument <BucketName>")
@@ -35,11 +35,12 @@ func doFsMb(c *cli.Context) {
 	bucketName := c.Args().Get(0)
 	var err error
 	var auth *s3.Auth
+	var s3c *s3.Client
 	auth, err = getAWSEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
-	s3c := s3.NewS3Client(auth)
+	s3c, err = getNewClient(auth)
 	err = s3c.PutBucket(bucketName)
 	if err != nil {
 		log.Fatal(err)
