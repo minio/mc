@@ -40,3 +40,7 @@ GLOBAL OPTIONS:
 ## Contribute
 
 [Contribute to mc](./CONTRIBUTING.md)
+
+### Bash Completion
+
+[Enable bash completion](./command-completion/README.md)
