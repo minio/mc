@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -28,7 +29,6 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
-	"github.com/minio-io/mc/pkg/uri"
 )
 
 // TODO
@@ -41,11 +41,11 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 		return fsOptions{}, errFspath
 	case 2:
 		if strings.HasPrefix(c.Args().Get(0), "s3://") {
-			uri := uri.ParseURI(c.Args().Get(0))
-			if uri.Scheme == "" {
-				return fsOptions{}, errFsuri
+			uri, err := url.Parse(c.Args().Get(0))
+			if err != nil {
+				return fsOptions{}, err
 			}
-			fsoptions.bucket = uri.Server
+			fsoptions.bucket = uri.Host
 			if uri.Path == "" {
 				return fsOptions{}, errFskey
 			}
@@ -58,11 +58,11 @@ func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
 			fsoptions.isget = true
 			fsoptions.isput = false
 		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
-			uri := uri.ParseURI(c.Args().Get(1))
-			if uri.Scheme == "" {
-				return fsOptions{}, errFsuri
+			uri, err := url.Parse(c.Args().Get(1))
+			if err != nil {
+				return fsOptions{}, err
 			}
-			fsoptions.bucket = uri.Server
+			fsoptions.bucket = uri.Host
 			if uri.Path == "" {
 				fsoptions.key = c.Args().Get(0)
 			} else {

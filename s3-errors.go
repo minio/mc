@@ -20,7 +20,6 @@ import "errors"
 
 // fs
 var errFspath = errors.New("Arguments missing <S3Path> or <LocalPath>")
-var errFsuri = errors.New("Invalid uri scheme")
 var errFskey = errors.New("Key is needed to get the file")
 
 // configure
