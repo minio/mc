@@ -28,7 +28,6 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/s3"
 )
 
 // TODO
@@ -87,15 +86,11 @@ func startBar(size int64) *pb.ProgressBar {
 }
 
 func doFsCopy(c *cli.Context) {
-	var auth *s3.Auth
-	var s3c *s3.Client
-	var err error
-	var bodyFile *os.File
-	auth, err = getEnvironment()
+	mcConfig, err := getMcConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	s3c, err = getNewClient(auth)
+	s3c, err := getNewClient(mcConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,7 +110,7 @@ func doFsCopy(c *cli.Context) {
 			log.Fatal("Is a directory")
 		}
 		size := stat.Size()
-		bodyFile, err = os.Open(fsoptions.body)
+		bodyFile, err := os.Open(fsoptions.body)
 		defer bodyFile.Close()
 		if err != nil {
 			log.Fatal(err)
@@ -134,7 +129,7 @@ func doFsCopy(c *cli.Context) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		bodyFile, err = os.Create(fsoptions.body)
+		bodyFile, err := os.Create(fsoptions.body)
 		defer bodyFile.Close()
 
 		// start progress bar

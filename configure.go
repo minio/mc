@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/user"
 	"path"
@@ -12,66 +13,107 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-func parseConfigureInput(c *cli.Context) (auth *s3.Auth, err error) {
+const (
+	mcConfigDir      = ".minio/mc"
+	mcConfigFilename = "config.json"
+)
+
+type s3Config struct {
+	Auth s3.Auth
+}
+type mcConfig struct {
+	Version string
+	S3      s3Config
+}
+
+func getMcConfigDir() string {
+	u, err := user.Current()
+	if err != nil {
+		log.Fatalf("mc: Unable to obtain user's home directory. \nERROR[%v]\n", err)
+	}
+
+	return path.Join(u.HomeDir + "/" + mcConfigDir)
+}
+
+func getMcConfigFilename() string {
+	return path.Join(getMcConfigDir() + "/" + mcConfigFilename)
+}
+
+func getMcConfig() (config *mcConfig, err error) {
+	configFile, err := os.Open(getMcConfigFilename())
+	defer configFile.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	var n int
+	configBytes := make([]byte, 512)
+	n, err = configFile.Read(configBytes)
+	err = json.Unmarshal(configBytes[:n], &config)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.S3.Auth.Endpoint == "" {
+		config.S3.Auth.Endpoint = "s3.amazonaws.com"
+	}
+
+	return config, nil
+}
+
+func parseConfigureInput(c *cli.Context) (config *mcConfig, err error) {
 	accessKey := c.String("accesskey")
 	secretKey := c.String("secretkey")
 	endpoint := c.String("endpoint")
 	pathstyle := c.Bool("pathstyle")
 
-	if accessKey == "" {
-		return nil, errAccess
-	}
-	if secretKey == "" {
-		return nil, errSecret
-	}
-	if endpoint == "" {
-		return nil, errEndpoint
-	}
-
-	auth = &s3.Auth{
-		AccessKey:        accessKey,
-		SecretAccessKey:  secretKey,
-		Endpoint:         endpoint,
-		S3ForcePathStyle: pathstyle,
+	config = &mcConfig{
+		Version: "0.1.0",
+		S3: s3Config{
+			Auth: s3.Auth{
+				AccessKey:        accessKey,
+				SecretAccessKey:  secretKey,
+				Endpoint:         endpoint,
+				S3ForcePathStyle: pathstyle,
+			},
+		},
 	}
 
-	return auth, nil
+	return config, nil
 }
 
 func doConfigure(c *cli.Context) {
-	var err error
-	var jAuth []byte
-	var auth *s3.Auth
-	auth, err = parseConfigureInput(c)
+	configData, err := parseConfigureInput(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	jAuth, err = json.MarshalIndent(auth, "", "  ")
+	jsonConfig, err := json.MarshalIndent(configData, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var s3File *os.File
-	u, _ := user.Current()
-	err = os.MkdirAll(path.Join(u.HomeDir, mcDir), 0755)
+	err = os.MkdirAll(getMcConfigDir(), 0755)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var authFile string
-	authFile, err = getAuthFilePath()
+
+	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	defer configFile.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
-	s3File, err = os.OpenFile(authFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	defer s3File.Close()
+
+	_, err = configFile.Write(jsonConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = s3File.Write(jAuth)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("")
-	fmt.Println("Configuration written to", authFile)
+	fmt.Println("\nConfiguration written to ", getMcConfigFilename())
+}
+
+func getNewClient(config *mcConfig) (*s3.Client, error) {
+	return &s3.Client{
+		Auth:      &config.S3.Auth,
+		Transport: http.DefaultTransport,
+	}, nil
 }

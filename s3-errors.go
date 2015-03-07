@@ -22,11 +22,6 @@ import "errors"
 var errFspath = errors.New("Arguments missing <S3Path> or <LocalPath>")
 var errFskey = errors.New("Key is needed to get the file")
 
-// configure
-var errAccess = errors.New("accesskey is mandatory")
-var errSecret = errors.New("secretkey is mandatory")
-var errEndpoint = errors.New("endpoint is mandatory")
-
 // common
 var errMissingaccess = errors.New("Partial credentials found in the env, missing : AWS_ACCESS_KEY_ID")
 var errMissingsecret = errors.New("Partial credentials found in the env, missing : AWS_SECRET_ACCESS_KEY")

@@ -17,18 +17,35 @@
 package main
 
 import (
+	"log"
 	"os"
+	"os/user"
 
 	"github.com/codegangsta/cli"
 )
 
+func init() {
+	// Check for the environment early on and gracefuly report.
+	_, err := user.Current()
+	if err != nil {
+		log.Fatalf("mc: Unable to obtain user's home directory. \nERROR[%v]\n", err)
+	}
+}
+
 func main() {
 	app := cli.NewApp()
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "quiet, q",
+			Usage: "disable progress bar and other chatty console output",
+		},
+	}
+
 	app.Name = "mc"
-	app.Usage = "unified command line interface for Minio and S3"
+	app.Usage = "Minio Client for S3 Compatible Object Storage"
 	app.Version = "0.1.0"
 	app.Commands = options
-	app.Author = "Minio Community"
+	app.Author = "Minio.io"
 	app.EnableBashCompletion = true
 	app.Run(os.Args)
 }

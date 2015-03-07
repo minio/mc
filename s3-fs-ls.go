@@ -91,19 +91,15 @@ func getBucketAndObject(p string) (bucket, object string) {
 }
 
 func doFsList(c *cli.Context) {
-	var err error
-	var auth *s3.Auth
-	var s3c *s3.Client
 	var items []*s3.Item
 	var prefixes []*s3.Prefix
 
-	auth, err = getEnvironment()
+	config, err := getMcConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var buckets []*s3.Bucket
-	s3c, err = getNewClient(auth)
+	s3c, err := getNewClient(config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -137,7 +133,7 @@ func doFsList(c *cli.Context) {
 			}
 		}
 	default:
-		buckets, err = s3c.Buckets()
+		buckets, err := s3c.Buckets()
 		if err != nil {
 			log.Fatal(err)
 		}
