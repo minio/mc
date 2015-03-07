@@ -41,12 +41,12 @@ package s3
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"io/ioutil"
 	"log"
@@ -214,19 +214,29 @@ func (c *Client) PutBucket(bucket string) error {
 }
 
 // Put - upload new object to bucket
-func (c *Client) Put(bucket, key string, md5 hash.Hash, size int64, body io.Reader) error {
+func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
 	req.ContentLength = size
-	if md5 != nil {
-		b64 := new(bytes.Buffer)
-		encoder := base64.NewEncoder(base64.StdEncoding, b64)
-		encoder.Write(md5.Sum(nil))
-		encoder.Close()
-		req.Header.Set("Content-MD5", b64.String())
+
+	h := md5.New()
+	// Memory where data is present
+	sink := new(bytes.Buffer)
+	mw := io.MultiWriter(h, sink)
+	written, err := io.Copy(mw, contents)
+	if written != size {
+		return fmt.Errorf("Data read mismatch")
 	}
+	if err != nil {
+		return err
+	}
+	req.Body = ioutil.NopCloser(sink)
+
+	b64 := new(bytes.Buffer)
+	encoder := base64.NewEncoder(base64.StdEncoding, b64)
+	encoder.Write(h.Sum(nil))
+	req.Header.Set("Content-MD5", b64.String())
 	c.Auth.signRequest(req)
-	req.Body = ioutil.NopCloser(body)
 
 	res, err := c.transport().RoundTrip(req)
 	if res != nil && res.Body != nil {

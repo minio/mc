@@ -57,7 +57,7 @@ func (w *walk) putWalk(p string, info os.FileInfo, err error) error {
 
 	bodyFile, err := os.Open(p)
 	defer bodyFile.Close()
-	err = w.s3.Put(bucketname, key, nil, info.Size(), bodyFile)
+	err = w.s3.Put(bucketname, key, info.Size(), bodyFile)
 	if err != nil {
 		return err
 	}
