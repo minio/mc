@@ -46,7 +46,7 @@ func getMcConfig() (config *mcConfig, err error) {
 		return nil, err
 	}
 
-	err = json.Unmarshal(configBytes, config)
+	err = json.Unmarshal(configBytes, &config)
 	if err != nil {
 		return nil, err
 	}
