@@ -50,6 +50,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -88,7 +89,12 @@ func (c *Client) bucketURL(bucket string) string {
 	var url string
 	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
 		// if localhost forcePathStyle
-		if strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") {
+		if strings.Contains(c.endpoint(), "localhost") || strings.Contains(c.endpoint(), "127.0.0.1") {
+			url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+			goto ret
+		}
+		host, _, _ := net.SplitHostPort(c.Endpoint)
+		if net.ParseIP(host) != nil {
 			url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
 			goto ret
 		}
@@ -109,7 +115,9 @@ ret:
 
 func (c *Client) keyURL(bucket, key string) string {
 	// if localhost forcePathStyle
-	if strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") || c.S3ForcePathStyle {
+	host, _, _ := net.SplitHostPort(c.Endpoint)
+	ok := (strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") || c.S3ForcePathStyle || net.ParseIP(host) != nil)
+	if ok {
 		return c.bucketURL(bucket) + "/" + key
 	}
 	return c.bucketURL(bucket) + key
