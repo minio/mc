@@ -34,13 +34,11 @@ func doFsMb(c *cli.Context) {
 	}
 	bucketName := c.Args().Get(0)
 	var err error
-	var auth *s3.Auth
-	var s3c *s3.Client
-	auth, err = getEnvironment()
+	auth, err := getMcConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	s3c, err = getNewClient(auth)
+	s3c, err := getNewClient(auth)
 	err = s3c.PutBucket(bucketName)
 	if err != nil {
 		log.Fatal(err)

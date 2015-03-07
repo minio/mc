@@ -66,14 +66,13 @@ func (w *walk) putWalk(p string, info os.FileInfo, err error) error {
 }
 
 func doFsSync(c *cli.Context) {
-	var auth *s3.Auth
 	var s3c *s3.Client
 	var err error
-	auth, err = getEnvironment()
+	config, err := getMcConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	s3c, err = getNewClient(auth)
+	s3c, err = getNewClient(config)
 	if err != nil {
 		log.Fatal(err)
 	}
