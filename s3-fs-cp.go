@@ -116,7 +116,7 @@ func doFsCopy(c *cli.Context) {
 			log.Fatal(err)
 		}
 
-		err = s3c.Put(fsoptions.bucket, fsoptions.key, nil, size, bodyFile)
+		err = s3c.Put(fsoptions.bucket, fsoptions.key, size, bodyFile)
 		if err != nil {
 			log.Fatal(err)
 		}
