@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -40,16 +41,12 @@ func getMcConfigFilename() string {
 }
 
 func getMcConfig() (config *mcConfig, err error) {
-	configFile, err := os.Open(getMcConfigFilename())
-	defer configFile.Close()
+	configBytes, err := ioutil.ReadFile(getMcConfigFilename())
 	if err != nil {
 		return nil, err
 	}
 
-	var n int
-	configBytes := make([]byte, 512)
-	n, err = configFile.Read(configBytes)
-	err = json.Unmarshal(configBytes[:n], &config)
+	err = json.Unmarshal(configBytes, config)
 	if err != nil {
 		return nil, err
 	}
