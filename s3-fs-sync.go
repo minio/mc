@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -30,13 +29,13 @@ import (
 
 func isValidBucketName(p string) {
 	if path.IsAbs(p) {
-		log.Fatal("directory bucketname cannot be absolute")
+		fatal("directory bucketname cannot be absolute")
 	}
 	if strings.HasPrefix(p, "..") {
-		log.Fatal("Relative directory references not supported")
+		fatal("Relative directory references not supported")
 	}
 	if !s3.IsValidBucket(p) {
-		log.Fatal(errInvalidbucket)
+		fatal(errInvalidbucket.Error())
 	}
 }
 
@@ -44,11 +43,11 @@ type walk struct {
 	s3 *s3.Client
 }
 
-func (w *walk) putWalk(p string, info os.FileInfo, err error) error {
-	if info.IsDir() {
+func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
+	if i.IsDir() {
 		return nil
 	}
-	if !info.Mode().IsRegular() {
+	if !i.Mode().IsRegular() {
 		return nil
 	}
 	parts := strings.SplitN(p, "/", 2)
@@ -57,11 +56,13 @@ func (w *walk) putWalk(p string, info os.FileInfo, err error) error {
 
 	bodyFile, err := os.Open(p)
 	defer bodyFile.Close()
-	err = w.s3.Put(bucketname, key, info.Size(), bodyFile)
+	err = w.s3.Put(bucketname, key, i.Size(), bodyFile)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s uploaded -- to bucket:%s\n", key, bucketname)
+	msg := fmt.Sprintf("%s uploaded -- to bucket:%s", key, bucketname)
+	info(msg)
+
 	return nil
 }
 
@@ -70,11 +71,11 @@ func doFsSync(c *cli.Context) {
 	var err error
 	config, err := getMcConfig()
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 	s3c, err = getNewClient(config)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 	p := &walk{s3c}
 
@@ -85,21 +86,21 @@ func doFsSync(c *cli.Context) {
 
 		fl, err := os.Stat(input)
 		if os.IsNotExist(err) {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 		if !fl.IsDir() {
-			log.Fatal("Should be a directory")
+			fatal("Should be a directory")
 		}
 		// Create bucketname, before uploading files
 		err = s3c.PutBucket(input)
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 		err = filepath.Walk(input, p.putWalk)
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 	default:
-		log.Fatal("Requires a directory name <Directory>")
+		fatal("Requires a directory name <Directory>")
 	}
 }

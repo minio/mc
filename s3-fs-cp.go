@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"time"
 
@@ -35,6 +34,7 @@ func startBar(size int64) *pb.ProgressBar {
 	bar := pb.StartNew(int(size))
 	bar.SetUnits(pb.U_BYTES)
 	bar.SetRefreshRate(time.Millisecond * 10)
+	bar.NotPrint = true
 	bar.ShowSpeed = true
 	return bar
 }
@@ -42,32 +42,32 @@ func startBar(size int64) *pb.ProgressBar {
 func doFsCopy(c *cli.Context) {
 	mcConfig, err := getMcConfig()
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 	s3c, err := getNewClient(mcConfig)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 
 	var fsoptions *fsOptions
 	fsoptions, err = parseOptions(c)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 
 	if fsoptions.isput {
 		stat, err := os.Stat(fsoptions.body)
 		if os.IsNotExist(err) {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 		if stat.IsDir() {
-			log.Fatal("Is a directory")
+			fatal("Is a directory")
 		}
 		size := stat.Size()
 		bodyFile, err := os.Open(fsoptions.body)
 		defer bodyFile.Close()
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 
 		// s3://<bucket> is specified without key
@@ -77,31 +77,35 @@ func doFsCopy(c *cli.Context) {
 
 		err = s3c.Put(fsoptions.bucket, fsoptions.key, size, bodyFile)
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
-		fmt.Printf("%s uploaded -- to bucket:%s\n", fsoptions.key, fsoptions.bucket)
+		msg := fmt.Sprintf("%s uploaded -- to bucket:(%s)", fsoptions.key, fsoptions.bucket)
+		info(msg)
 	} else if fsoptions.isget {
 		var objectReader io.ReadCloser
 		var objectSize int64
 
 		objectReader, objectSize, err = s3c.Get(fsoptions.bucket, fsoptions.key)
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 		bodyFile, err := os.Create(fsoptions.body)
 		defer bodyFile.Close()
 
 		// start progress bar
 		bar := startBar(objectSize)
+		bar.Callback = func(s string) {
+			infoCallback(s)
+		}
 
 		// create multi writer to feed data
 		writer := io.MultiWriter(bodyFile, bar)
-
 		_, err = io.CopyN(writer, objectReader, objectSize)
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 
-		bar.FinishPrint(fsoptions.body + " downloaded!")
+		bar.Finish()
+		info("Success!")
 	}
 }

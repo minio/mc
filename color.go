@@ -1,5 +1,5 @@
 /*
- * Mini Object Storage, (C) 2014,2015 Minio, Inc.
+ * Mini Object Storage, (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,28 +17,30 @@
 package main
 
 import (
-	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/s3"
+	"fmt"
+	"os"
+
+	"github.com/mgutz/ansi"
 )
 
-func doFsMb(c *cli.Context) {
-	switch len(c.Args()) {
-	case 1:
-		if !s3.IsValidBucket(c.Args().Get(0)) {
-			fatal(errInvalidbucket.Error())
-		}
-	default:
-		fatal("Needs an argument <BucketName>")
-	}
-	bucketName := c.Args().Get(0)
-	var err error
-	auth, err := getMcConfig()
-	if err != nil {
-		fatal(err.Error())
-	}
-	s3c, err := getNewClient(auth)
-	err = s3c.PutBucket(bucketName)
-	if err != nil {
-		fatal(err.Error())
-	}
+// Color coding format "foregroundColor+attributes:backgroundColor+attributes"
+func fatal(msg string) {
+	red := ansi.ColorFunc("red+B")
+	fmt.Println(red(msg))
+	os.Exit(1)
+}
+
+func warning(msg string) {
+	yellow := ansi.ColorFunc("yellow")
+	fmt.Println(yellow(msg))
+}
+
+func info(msg string) {
+	green := ansi.ColorFunc("green")
+	fmt.Println(green(msg))
+}
+
+func infoCallback(msg string) {
+	green := ansi.ColorFunc("green")
+	fmt.Print("\r" + green(msg))
 }

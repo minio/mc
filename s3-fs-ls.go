@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"time"
 
@@ -47,7 +46,8 @@ func parseLastModified(t string) string {
 
 func printBuckets(v []*s3.Bucket) {
 	for _, b := range v {
-		fmt.Printf("%s   %s\n", parseTime(b.CreationDate), b.Name)
+		msg := fmt.Sprintf("%s   %s", parseTime(b.CreationDate), b.Name)
+		info(msg)
 	}
 }
 
@@ -55,7 +55,8 @@ func printObjects(v []*s3.Item) {
 	if len(v) > 0 {
 		sort.Sort(s3.BySize(v))
 		for _, b := range v {
-			fmt.Printf("%s   %d %s\n", parseTime(b.LastModified), b.Size, b.Key)
+			msg := fmt.Sprintf("%s   %d %s", parseTime(b.LastModified), b.Size, b.Key)
+			info(msg)
 		}
 	}
 }
@@ -63,13 +64,15 @@ func printObjects(v []*s3.Item) {
 func printPrefixes(v []*s3.Prefix) {
 	if len(v) > 0 {
 		for _, b := range v {
-			fmt.Printf("                      DIR %s\n", b.Prefix)
+			msg := fmt.Sprintf("                      DIR %s", b.Prefix)
+			info(msg)
 		}
 	}
 }
 
 func printObject(v int64, date, key string) {
-	fmt.Printf("%s   %d %s\n", parseLastModified(date), v, key)
+	msg := fmt.Sprintf("%s   %d %s", parseLastModified(date), v, key)
+	info(msg)
 }
 
 func doFsList(c *cli.Context) {
@@ -78,28 +81,28 @@ func doFsList(c *cli.Context) {
 
 	config, err := getMcConfig()
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 
 	s3c, err := getNewClient(config)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 	fsoptions, err := parseOptions(c)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 	switch true {
 	case fsoptions.bucket == "":
 		buckets, err := s3c.Buckets()
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 		printBuckets(buckets)
 	case fsoptions.key == "":
 		items, prefixes, err = s3c.GetBucket(fsoptions.bucket, "", "", "", s3.MaxKeys)
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 		printPrefixes(prefixes)
 		printObjects(items)
@@ -110,7 +113,7 @@ func doFsList(c *cli.Context) {
 		if err != nil {
 			items, prefixes, err = s3c.GetBucket(fsoptions.bucket, "", fsoptions.key, string(delimiter), s3.MaxKeys)
 			if err != nil {
-				log.Fatal(err)
+				fatal(err.Error())
 			}
 			printPrefixes(prefixes)
 			printObjects(items)
