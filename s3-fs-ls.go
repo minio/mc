@@ -21,6 +21,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
 )
@@ -46,7 +47,7 @@ func parseLastModified(t string) string {
 
 func printBuckets(v []*s3.Bucket) {
 	for _, b := range v {
-		msg := fmt.Sprintf("%s   %s", parseTime(b.CreationDate), b.Name)
+		msg := fmt.Sprintf("%s %13s %s", parseTime(b.CreationDate), "", b.Name)
 		info(msg)
 	}
 }
@@ -55,10 +56,14 @@ func printObjects(v []*s3.Item) {
 	if len(v) > 0 {
 		sort.Sort(s3.BySize(v))
 		for _, b := range v {
-			msg := fmt.Sprintf("%s   %d %s", parseTime(b.LastModified), b.Size, b.Key)
-			info(msg)
+			printObject(b.Key, b.LastModified, b.Size)
 		}
 	}
+}
+
+func printObject(key, lastModified string, size int64) {
+	msg := fmt.Sprintf("%s %13s %s", parseTime(lastModified), pb.FormatBytes(size), key)
+	info(msg)
 }
 
 func printPrefixes(v []*s3.Prefix) {
@@ -68,11 +73,6 @@ func printPrefixes(v []*s3.Prefix) {
 			info(msg)
 		}
 	}
-}
-
-func printObject(v int64, date, key string) {
-	msg := fmt.Sprintf("%s   %d %s", parseLastModified(date), v, key)
-	info(msg)
 }
 
 func doFsList(c *cli.Context) {
@@ -109,16 +109,18 @@ func doFsList(c *cli.Context) {
 	case fsoptions.key != "":
 		var date string
 		var size int64
+		//Check for a single object
 		size, date, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
-		if err != nil {
+		if err == nil {
+			printObject(fsoptions.key, date, size)
+		} else { //Must be a prefix, Get list of objects instead.
 			items, prefixes, err = s3c.GetBucket(fsoptions.bucket, "", fsoptions.key, string(delimiter), s3.MaxKeys)
 			if err != nil {
 				fatal(err.Error())
 			}
 			printPrefixes(prefixes)
 			printObjects(items)
-		} else {
-			printObject(size, date, fsoptions.key)
 		}
+
 	}
 }
