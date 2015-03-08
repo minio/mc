@@ -80,42 +80,41 @@ func doFsList(c *cli.Context) {
 		fatal(err.Error())
 	}
 	switch true {
-	case fsoptions.bucket == "":
+	case fsoptions.bucket == "": // List all buckets
 		buckets, err := s3c.Buckets()
 		if err != nil {
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
-	case fsoptions.key == "":
+	case fsoptions.key == "": // List the objects in a bucket
 		items, _, err = s3c.GetBucket(fsoptions.bucket, "", "", "", s3.MaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
-	case fsoptions.key != "":
+	case fsoptions.key != "": // List objects matching the key prefix
 		var date string
 		var size int64
 
 		size, date, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
-		switch true {
-		case err == os.ErrNotExist:
-			// Try sending a GetBucket
+		switch err {
+		case nil: // List a single object. Exact key prefix match
+			printObject(date, size, fsoptions.key)
+		case os.ErrNotExist:
+			// List all objects matching the key prefix
 			items, _, err = s3c.GetBucket(fsoptions.bucket, "", fsoptions.key, "", s3.MaxKeys)
 			if err != nil {
 				fatal(err.Error())
 			}
-			// If items null list, send HEAD request again
-			if len(items) == 0 {
-				_, _, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
-				if err == os.ErrNotExist {
-					fatal(err.Error())
-				}
+			if len(items) > 0 {
+				printObjects(items)
+			} else {
+				fatal(os.ErrNotExist.Error())
 			}
-			printObjects(items)
-		case err == nil:
-			printObject(date, size, fsoptions.key)
-		default:
+		default: // Error
 			fatal(err.Error())
 		}
+	default:
+		fatal(err.Error())
 	}
 }
