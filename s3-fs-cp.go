@@ -120,7 +120,7 @@ func doFsCopy(c *cli.Context) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%s uploaded -- to bucket:%s", fsoptions.key, fsoptions.bucket)
+		fmt.Printf("%s uploaded -- to bucket:%s\n", fsoptions.key, fsoptions.bucket)
 	} else if fsoptions.isget {
 		var objectReader io.ReadCloser
 		var objectSize int64
