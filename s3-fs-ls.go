@@ -21,6 +21,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
 )
@@ -51,14 +52,14 @@ func printObjects(v []*s3.Item) {
 	if len(v) > 0 {
 		sort.Sort(s3.BySize(v))
 		for _, b := range v {
-			msg := fmt.Sprintf("%s   %d %s", parseTime(b.LastModified), b.Size, b.Key)
+			msg := fmt.Sprintf("%s %13s %s", parseTime(b.LastModified), pb.FormatBytes(b.Size), b.Key)
 			info(msg)
 		}
 	}
 }
 
 func printObject(v int64, date, key string) {
-	msg := fmt.Sprintf("%s   %d %s", parseLastModified(date), v, key)
+	msg := fmt.Sprintf("%s  %13s %s", parseLastModified(date), pb.FormatBytes(v), key)
 	info(msg)
 }
 
