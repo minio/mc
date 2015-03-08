@@ -162,18 +162,23 @@ func (c *Client) Buckets() ([]*Bucket, error) {
 	return parseListAllMyBuckets(res.Body)
 }
 
+const (
+	recvFormat = "2006-01-02T15:04:05.000Z"
+)
+
 // Stat - returns 0, "", os.ErrNotExist if not on S3
 func (c *Client) Stat(key, bucket string) (size int64, date string, reterr error) {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
 	c.Auth.signRequest(req)
 	res, err := c.transport().RoundTrip(req)
+	if res != nil && res.Body != nil {
+		defer res.Body.Close()
+	}
 	if err != nil {
 		return 0, "", err
 	}
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
+
 	switch res.StatusCode {
 	case http.StatusNotFound:
 		return 0, "", os.ErrNotExist
@@ -182,10 +187,18 @@ func (c *Client) Stat(key, bucket string) (size int64, date string, reterr error
 		if err != nil {
 			return 0, "", err
 		}
-		date = res.Header.Get("Last-Modified")
-		return size, date, nil
+		if date := res.Header.Get("Last-Modified"); date != "" {
+			ti, err := time.Parse(time.RFC1123, date)
+			if err != nil {
+				return 0, "", err
+			}
+			date = ti.Format(recvFormat)
+			return size, date, nil
+		}
+	default:
+		return 0, "", fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
 	}
-	return 0, "", fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
+	return
 }
 
 // PutBucket - create new bucket
@@ -312,7 +325,7 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 	var buffer bytes.Buffer
 
 	if maxKeys <= 0 {
-		return nil, nil, errors.New("invalid negative maxKeys")
+		return nil, nil, errors.New("negative maxKeys are invalid")
 	}
 
 	marker := startAt
@@ -405,6 +418,7 @@ func (c *Client) GetBucket(bucket string, startAt, prefix, delimiter string, max
 		if !bres.IsTruncated {
 			break
 		}
+
 		if len(items) == 0 {
 			return nil, nil, errors.New("No items replied")
 		}

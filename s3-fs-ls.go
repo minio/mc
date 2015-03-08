@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -52,14 +53,13 @@ func printObjects(v []*s3.Item) {
 	if len(v) > 0 {
 		sort.Sort(s3.BySize(v))
 		for _, b := range v {
-			msg := fmt.Sprintf("%s %13s %s", parseTime(b.LastModified), pb.FormatBytes(b.Size), b.Key)
-			info(msg)
+			printObject(b.LastModified, b.Size, b.Key)
 		}
 	}
 }
 
-func printObject(v int64, date, key string) {
-	msg := fmt.Sprintf("%s  %13s %s", parseLastModified(date), pb.FormatBytes(v), key)
+func printObject(date string, v int64, key string) {
+	msg := fmt.Sprintf("%s  %13s %s", parseTime(date), pb.FormatBytes(v), key)
 	info(msg)
 }
 
@@ -95,15 +95,27 @@ func doFsList(c *cli.Context) {
 	case fsoptions.key != "":
 		var date string
 		var size int64
+
 		size, date, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
-		if err != nil {
+		switch true {
+		case err == os.ErrNotExist:
+			// Try sending a GetBucket
 			items, _, err = s3c.GetBucket(fsoptions.bucket, "", fsoptions.key, "", s3.MaxKeys)
 			if err != nil {
 				fatal(err.Error())
 			}
+			// If items null list, send HEAD request again
+			if len(items) == 0 {
+				_, _, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
+				if err == os.ErrNotExist {
+					fatal(err.Error())
+				}
+			}
 			printObjects(items)
-		} else {
-			printObject(size, date, fsoptions.key)
+		case err == nil:
+			printObject(date, size, fsoptions.key)
+		default:
+			fatal(err.Error())
 		}
 	}
 }
