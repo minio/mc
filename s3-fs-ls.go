@@ -30,10 +30,6 @@ const (
 	printFormat = "2006-01-02 15:04:05"
 )
 
-const (
-	delimiter = '/'
-)
-
 func parseTime(t string) string {
 	ti, _ := time.Parse(recvFormat, t)
 	return ti.Format(printFormat)
@@ -61,15 +57,6 @@ func printObjects(v []*s3.Item) {
 	}
 }
 
-func printPrefixes(v []*s3.Prefix) {
-	if len(v) > 0 {
-		for _, b := range v {
-			msg := fmt.Sprintf("                      DIR %s", b.Prefix)
-			info(msg)
-		}
-	}
-}
-
 func printObject(v int64, date, key string) {
 	msg := fmt.Sprintf("%s   %d %s", parseLastModified(date), v, key)
 	info(msg)
@@ -77,7 +64,6 @@ func printObject(v int64, date, key string) {
 
 func doFsList(c *cli.Context) {
 	var items []*s3.Item
-	var prefixes []*s3.Prefix
 
 	config, err := getMcConfig()
 	if err != nil {
@@ -100,22 +86,20 @@ func doFsList(c *cli.Context) {
 		}
 		printBuckets(buckets)
 	case fsoptions.key == "":
-		items, prefixes, err = s3c.GetBucket(fsoptions.bucket, "", "", "", s3.MaxKeys)
+		items, _, err = s3c.GetBucket(fsoptions.bucket, "", "", "", s3.MaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
-		printPrefixes(prefixes)
 		printObjects(items)
 	case fsoptions.key != "":
 		var date string
 		var size int64
 		size, date, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
 		if err != nil {
-			items, prefixes, err = s3c.GetBucket(fsoptions.bucket, "", fsoptions.key, string(delimiter), s3.MaxKeys)
+			items, _, err = s3c.GetBucket(fsoptions.bucket, "", fsoptions.key, "", s3.MaxKeys)
 			if err != nil {
 				fatal(err.Error())
 			}
-			printPrefixes(prefixes)
 			printObjects(items)
 		} else {
 			printObject(size, date, fsoptions.key)
