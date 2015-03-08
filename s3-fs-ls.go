@@ -56,7 +56,9 @@ func printObjects(v []*s3.Item) {
 	if len(v) > 0 {
 		sort.Sort(s3.BySize(v))
 		for _, b := range v {
-			printObject(b.Key, b.LastModified, b.Size)
+			// different from the S3 output for single object listing
+			msg := fmt.Sprintf("%s %13s %s", parseTime(b.LastModified), pb.FormatBytes(b.Size), b.Key)
+			info(msg)
 		}
 	}
 }
