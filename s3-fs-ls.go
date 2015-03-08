@@ -67,7 +67,7 @@ func printObjects(v []*s3.Item) {
 func printPrefixes(v []*s3.Prefix) {
 	if len(v) > 0 {
 		for _, b := range v {
-			fmt.Printf("                      PRE %s\n", b.Prefix)
+			fmt.Printf("                      DIR %s\n", b.Prefix)
 		}
 	}
 }
@@ -111,7 +111,7 @@ func doFsList(c *cli.Context) {
 		}
 		bucket, object := getBucketAndObject(input)
 		if object == "" {
-			items, prefixes, err = s3c.GetBucket(bucket, "", "", string(delimiter), s3.MaxKeys)
+			items, prefixes, err = s3c.GetBucket(bucket, "", "", "", s3.MaxKeys)
 			if err != nil {
 				log.Fatal(err)
 			}
