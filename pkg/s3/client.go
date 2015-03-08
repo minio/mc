@@ -231,11 +231,8 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 		return err
 	}
 	req.Body = ioutil.NopCloser(sink)
-
-	b64 := new(bytes.Buffer)
-	encoder := base64.NewEncoder(base64.StdEncoding, b64)
-	encoder.Write(h.Sum(nil))
-	req.Header.Set("Content-MD5", b64.String())
+	b64 := base64.StdEncoding.EncodeToString(h.Sum(nil))
+	req.Header.Set("Content-MD5", b64)
 	c.Auth.signRequest(req)
 
 	res, err := c.transport().RoundTrip(req)

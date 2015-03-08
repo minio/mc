@@ -144,7 +144,7 @@ func (a *Auth) signRequest(req *http.Request) {
 	}
 	hm := hmac.New(sha1.New, []byte(a.SecretAccessKey))
 	ss := a.stringToSign(req)
-	//log.Printf("String to sign: %q (%x)", ss, ss)
+	//fmt.Printf("String to sign: %q (%x)\n", ss, ss)
 	io.WriteString(hm, ss)
 
 	authHeader := new(bytes.Buffer)
