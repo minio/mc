@@ -17,13 +17,9 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"log"
-	"path"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/codegangsta/cli"
@@ -67,27 +63,13 @@ func printObjects(v []*s3.Item) {
 func printPrefixes(v []*s3.Prefix) {
 	if len(v) > 0 {
 		for _, b := range v {
-			fmt.Printf("                      PRE %s\n", b.Prefix)
+			fmt.Printf("                      DIR %s\n", b.Prefix)
 		}
 	}
 }
 
 func printObject(v int64, date, key string) {
 	fmt.Printf("%s   %d %s\n", parseLastModified(date), v, key)
-}
-
-func getBucketAndObject(p string) (bucket, object string) {
-	readBuffer := bytes.NewBufferString(p)
-	reader := bufio.NewReader(readBuffer)
-	pathPrefix, _ := reader.ReadString(byte(delimiter))
-	bucket = path.Clean(pathPrefix)
-	object = strings.TrimPrefix(p, pathPrefix)
-	// if object is equal to bucket, set object to be empty
-	if path.Clean(object) == bucket {
-		object = ""
-		return
-	}
-	return
 }
 
 func doFsList(c *cli.Context) {
@@ -103,40 +85,37 @@ func doFsList(c *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	switch len(c.Args()) {
-	case 1:
-		input := c.Args().Get(0)
-		if path.IsAbs(input) {
-			log.Fatal("Invalid bucket style")
+	fsoptions, err := parseOptions(c)
+	if err != nil {
+		log.Fatal(err)
+	}
+	switch true {
+	case fsoptions.bucket == "":
+		buckets, err := s3c.Buckets()
+		if err != nil {
+			log.Fatal(err)
 		}
-		bucket, object := getBucketAndObject(input)
-		if object == "" {
-			items, prefixes, err = s3c.GetBucket(bucket, "", "", string(delimiter), s3.MaxKeys)
+		printBuckets(buckets)
+	case fsoptions.key == "":
+		items, prefixes, err = s3c.GetBucket(fsoptions.bucket, "", "", "", s3.MaxKeys)
+		if err != nil {
+			log.Fatal(err)
+		}
+		printPrefixes(prefixes)
+		printObjects(items)
+	case fsoptions.key != "":
+		var date string
+		var size int64
+		size, date, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
+		if err != nil {
+			items, prefixes, err = s3c.GetBucket(fsoptions.bucket, "", fsoptions.key, string(delimiter), s3.MaxKeys)
 			if err != nil {
 				log.Fatal(err)
 			}
 			printPrefixes(prefixes)
 			printObjects(items)
 		} else {
-			var date string
-			var size int64
-			size, date, err = s3c.Stat(object, bucket)
-			if err != nil {
-				items, prefixes, err = s3c.GetBucket(bucket, "", object, string(delimiter), s3.MaxKeys)
-				if err != nil {
-					log.Fatal(err)
-				}
-				printPrefixes(prefixes)
-				printObjects(items)
-			} else {
-				printObject(size, date, object)
-			}
+			printObject(size, date, fsoptions.key)
 		}
-	default:
-		buckets, err := s3c.Buckets()
-		if err != nil {
-			log.Fatal(err)
-		}
-		printBuckets(buckets)
 	}
 }

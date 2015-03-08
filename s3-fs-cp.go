@@ -20,10 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"os"
-	"path"
-	"strings"
 	"time"
 
 	"github.com/cheggaaa/pb"
@@ -33,49 +30,6 @@ import (
 // TODO
 //   - <S3Path> <S3Path>
 //   - <S3Path> <S3Bucket>
-
-func parseCpOptions(c *cli.Context) (fsoptions fsOptions, err error) {
-	switch len(c.Args()) {
-	case 1:
-		return fsOptions{}, errFspath
-	case 2:
-		if strings.HasPrefix(c.Args().Get(0), "s3://") {
-			uri, err := url.Parse(c.Args().Get(0))
-			if err != nil {
-				return fsOptions{}, err
-			}
-			fsoptions.bucket = uri.Host
-			if uri.Path == "" {
-				return fsOptions{}, errFskey
-			}
-			fsoptions.key = strings.TrimPrefix(uri.Path, "/")
-			if c.Args().Get(1) == "." {
-				fsoptions.body = path.Base(fsoptions.key)
-			} else {
-				fsoptions.body = c.Args().Get(1)
-			}
-			fsoptions.isget = true
-			fsoptions.isput = false
-		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
-			uri, err := url.Parse(c.Args().Get(1))
-			if err != nil {
-				return fsOptions{}, err
-			}
-			fsoptions.bucket = uri.Host
-			if uri.Path == "" {
-				fsoptions.key = c.Args().Get(0)
-			} else {
-				fsoptions.key = strings.TrimPrefix(uri.Path, "/")
-			}
-			fsoptions.body = c.Args().Get(0)
-			fsoptions.isget = false
-			fsoptions.isput = true
-		}
-	default:
-		return fsOptions{}, errFspath
-	}
-	return
-}
 
 func startBar(size int64) *pb.ProgressBar {
 	bar := pb.StartNew(int(size))
@@ -95,8 +49,8 @@ func doFsCopy(c *cli.Context) {
 		log.Fatal(err)
 	}
 
-	var fsoptions fsOptions
-	fsoptions, err = parseCpOptions(c)
+	var fsoptions *fsOptions
+	fsoptions, err = parseOptions(c)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,6 +68,11 @@ func doFsCopy(c *cli.Context) {
 		defer bodyFile.Close()
 		if err != nil {
 			log.Fatal(err)
+		}
+
+		// s3://<bucket> is specified without key
+		if fsoptions.key == "" {
+			fsoptions.key = fsoptions.body
 		}
 
 		err = s3c.Put(fsoptions.bucket, fsoptions.key, size, bodyFile)
@@ -143,6 +102,6 @@ func doFsCopy(c *cli.Context) {
 			log.Fatal(err)
 		}
 
-		bar.FinishPrint("Done!")
+		bar.FinishPrint(fsoptions.body + " downloaded!")
 	}
 }

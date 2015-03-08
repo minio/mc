@@ -15,3 +15,67 @@
  */
 
 package main
+
+import (
+	"net/url"
+	"path"
+	"strings"
+
+	"github.com/codegangsta/cli"
+)
+
+func parseOptions(c *cli.Context) (fsoptions *fsOptions, err error) {
+	fsoptions = new(fsOptions)
+	switch len(c.Args()) {
+	case 1:
+		if strings.HasPrefix(c.Args().Get(0), "s3://") {
+			uri, err := url.Parse(c.Args().Get(0))
+			if err != nil {
+				return nil, err
+			}
+			if uri.Scheme != "s3" {
+				return nil, errInvalidScheme
+			}
+			fsoptions.bucket = uri.Host
+			fsoptions.key = strings.TrimPrefix(uri.Path, "/")
+		} else {
+			return nil, errInvalidScheme
+		}
+	case 2:
+		if strings.HasPrefix(c.Args().Get(0), "s3://") {
+			uri, err := url.Parse(c.Args().Get(0))
+			if err != nil {
+				return nil, err
+			}
+			fsoptions.bucket = uri.Host
+			if uri.Path == "" {
+				return nil, errFskey
+			}
+			fsoptions.key = strings.TrimPrefix(uri.Path, "/")
+			if c.Args().Get(1) == "." {
+				fsoptions.body = path.Base(fsoptions.key)
+			} else {
+				fsoptions.body = c.Args().Get(1)
+			}
+			fsoptions.isget = true
+			fsoptions.isput = false
+		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
+			uri, err := url.Parse(c.Args().Get(1))
+			if err != nil {
+				return nil, err
+			}
+			fsoptions.bucket = uri.Host
+			if uri.Path == "" {
+				fsoptions.key = c.Args().Get(0)
+			} else {
+				fsoptions.key = strings.TrimPrefix(uri.Path, "/")
+			}
+			fsoptions.body = c.Args().Get(0)
+			fsoptions.isget = false
+			fsoptions.isput = true
+		}
+	default:
+		return nil, errInvalidScheme
+	}
+	return
+}
