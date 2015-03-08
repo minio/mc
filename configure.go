@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/user"
@@ -30,7 +29,8 @@ type mcConfig struct {
 func getMcConfigDir() string {
 	u, err := user.Current()
 	if err != nil {
-		log.Fatalf("mc: Unable to obtain user's home directory. \nERROR[%v]\n", err)
+		msg := fmt.Sprintf("mc: Unable to obtain user's home directory. \nERROR[%v]", err)
+		fatal(msg)
 	}
 
 	return path.Join(u.HomeDir + "/" + mcConfigDir)
@@ -75,37 +75,37 @@ func parseConfigureInput(c *cli.Context) (config *mcConfig, err error) {
 			},
 		},
 	}
-
 	return config, nil
 }
 
 func doConfigure(c *cli.Context) {
 	configData, err := parseConfigureInput(c)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 
 	jsonConfig, err := json.MarshalIndent(configData, "", "\t")
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 
 	err = os.MkdirAll(getMcConfigDir(), 0755)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 
 	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	defer configFile.Close()
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 
 	_, err = configFile.Write(jsonConfig)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
-	fmt.Println("\nConfiguration written to ", getMcConfigFilename())
+	msg := "\nConfiguration written to " + getMcConfigFilename()
+	info(msg)
 }
 
 func getNewClient(config *mcConfig) (*s3.Client, error) {
