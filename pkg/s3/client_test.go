@@ -42,6 +42,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 var tc *Client
@@ -55,9 +56,12 @@ func TestParseBuckets(t *testing.T) {
 	if g, w := len(buckets), 2; g != w {
 		t.Errorf("num parsed buckets = %d; want %d", g, w)
 	}
+
+	t1, err := time.Parse(xmlTimeFormat, "2006-06-21T07:04:31.000Z")
+	t2, err := time.Parse(xmlTimeFormat, "2006-06-21T07:04:32.000Z")
 	want := []*Bucket{
-		{Name: "bucketOne", CreationDate: "2006-06-21T07:04:31.000Z"},
-		{Name: "bucketTwo", CreationDate: "2006-06-21T07:04:32.000Z"},
+		{Name: "bucketOne", CreationDate: xmlTime{t1}},
+		{Name: "bucketTwo", CreationDate: xmlTime{t2}},
 	}
 	dump := func(v []*Bucket) {
 		for i, b := range v {
