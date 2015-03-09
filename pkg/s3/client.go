@@ -85,10 +85,6 @@ func (c *xmlTime) UnmarshalXMLAttr(attr xml.Attr) error {
 	return nil
 }
 
-func (c *xmlTime) format() string {
-	return c.Time.Format(xmlTimeFormat)
-}
-
 // Total max object list
 const (
 	MaxKeys = 1000
@@ -103,7 +99,7 @@ type Client struct {
 // Bucket - carries s3 bucket reply header
 type Bucket struct {
 	Name         string
-	CreationDate string // 2006-02-03T16:45:09.000Z
+	CreationDate xmlTime
 }
 
 func (c *Client) transport() http.RoundTripper {
@@ -190,10 +186,6 @@ func (c *Client) Buckets() ([]*Bucket, error) {
 	}
 	return parseListAllMyBuckets(res.Body)
 }
-
-const (
-	recvFormat = "2006-01-02T15:04:05.000Z"
-)
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3
 func (c *Client) Stat(key, bucket string) (size int64, date time.Time, reterr error) {

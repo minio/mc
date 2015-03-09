@@ -29,7 +29,7 @@ import (
 
 func printBuckets(v []*s3.Bucket) {
 	for _, b := range v {
-		msg := fmt.Sprintf("%v %13s %s", b.CreationDate, "", b.Name)
+		msg := fmt.Sprintf("%v %13s %s", b.CreationDate.Local(), "", b.Name)
 		info(msg)
 	}
 }
