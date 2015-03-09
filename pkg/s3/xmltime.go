@@ -38,56 +38,34 @@ limitations under the License.
 package s3
 
 import (
-	"bytes"
-	"fmt"
-	"strings"
+	"time"
 
-	"encoding/hex"
 	"encoding/xml"
-	"net/http"
 )
 
-// Error is the type returned by some API operations.
-type Error struct {
-	Op     string
-	Code   int         // HTTP status code
-	Body   []byte      // response body
-	Header http.Header // response headers
+// Date format
+const (
+	xmlTimeFormat = "2006-01-02T15:04:05.000Z"
+)
 
-	// UsedEndpoint and AmazonCode are the XML response's Endpoint and
-	// Code fields, respectively.
-	UseEndpoint string // if a temporary redirect (wrong endpoint)
-	AmazonCode  string
+type xmlTime struct {
+	time.Time
 }
 
-// xmlError is the Error response from Amazon.
-type xmlError struct {
-	XMLName           xml.Name `xml:"Error"`
-	Code              string
-	Message           string
-	RequestID         string
-	Bucket            string
-	Endpoint          string
-	StringToSignBytes string
+func (c *xmlTime) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var v string
+	d.DecodeElement(&v, &start)
+	parse, _ := time.Parse(xmlTimeFormat, v)
+	*c = xmlTime{parse}
+	return nil
 }
 
-func (e *Error) Error() string {
-	if bytes.Contains(e.Body, []byte("<Error>")) {
-		return fmt.Sprintf("s3.%s: status %d: %s", e.Op, e.Code, e.Body)
-	}
-	return fmt.Sprintf("s3.%s: status %d", e.Op, e.Code)
+func (c *xmlTime) UnmarshalXMLAttr(attr xml.Attr) error {
+	t, _ := time.Parse(xmlTimeFormat, attr.Value)
+	*c = xmlTime{t}
+	return nil
 }
 
-func (e *Error) parseXML() {
-	var xe xmlError
-	_ = xml.NewDecoder(bytes.NewReader(e.Body)).Decode(&xe)
-	e.AmazonCode = xe.Code
-	if xe.Code == "TemporaryRedirect" {
-		e.UseEndpoint = xe.Endpoint
-	}
-	if xe.Code == "SignatureDoesNotMatch" {
-		want, _ := hex.DecodeString(strings.Replace(xe.StringToSignBytes, " ", "", -1))
-		fmt.Printf("S3 SignatureDoesNotMatch. StringToSign should be %d bytes: %q (%x)", len(want), want, want)
-	}
-
+func (c *xmlTime) format() string {
+	return c.Time.Format(xmlTimeFormat)
 }

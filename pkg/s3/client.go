@@ -46,24 +46,14 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"encoding/xml"
-)
-
-// Date format
-const (
-	xmlTimeFormat = "2006-01-02T15:04:05.000Z"
 )
 
 // Total max object list
 const (
 	MaxKeys = 1000
 )
-
-type xmlTime struct {
-	time.Time
-}
 
 // Client is an Amazon S3 client.
 type Client struct {
@@ -98,24 +88,6 @@ type listBucketResults struct {
 	Delimiter      string
 	Prefix         string
 	CommonPrefixes []*Prefix
-}
-
-func (c *xmlTime) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	var v string
-	d.DecodeElement(&v, &start)
-	parse, _ := time.Parse(xmlTimeFormat, v)
-	*c = xmlTime{parse}
-	return nil
-}
-
-func (c *xmlTime) UnmarshalXMLAttr(attr xml.Attr) error {
-	t, _ := time.Parse(xmlTimeFormat, attr.Value)
-	*c = xmlTime{t}
-	return nil
-}
-
-func (c *xmlTime) format() string {
-	return c.Time.Format(xmlTimeFormat)
 }
 
 func (c *Client) transport() http.RoundTripper {
