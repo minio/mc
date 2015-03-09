@@ -48,7 +48,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
-	//"log"
 	"net/http"
 	"net/url"
 	"sort"
