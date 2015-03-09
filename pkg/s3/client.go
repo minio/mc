@@ -60,6 +60,35 @@ import (
 	"time"
 )
 
+const xmlTimeFormat = "2006-01-02T15:04:05.000Z"
+
+type xmlTime struct {
+	time.Time
+}
+
+func parseTime(t string) time.Time {
+	ti, _ := time.Parse(xmlTimeFormat, t)
+	return ti
+}
+
+func (c *xmlTime) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var v string
+	d.DecodeElement(&v, &start)
+	parse, _ := time.Parse(xmlTimeFormat, v)
+	*c = xmlTime{parse}
+	return nil
+}
+
+func (c *xmlTime) UnmarshalXMLAttr(attr xml.Attr) error {
+	t, _ := time.Parse(xmlTimeFormat, attr.Value)
+	*c = xmlTime{t}
+	return nil
+}
+
+func (c *xmlTime) format() string {
+	return c.Time.Format(xmlTimeFormat)
+}
+
 // Total max object list
 const (
 	MaxKeys = 1000
@@ -167,7 +196,7 @@ const (
 )
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3
-func (c *Client) Stat(key, bucket string) (size int64, date string, reterr error) {
+func (c *Client) Stat(key, bucket string) (size int64, date time.Time, reterr error) {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
 	c.Auth.signRequest(req)
@@ -176,27 +205,27 @@ func (c *Client) Stat(key, bucket string) (size int64, date string, reterr error
 		defer res.Body.Close()
 	}
 	if err != nil {
-		return 0, "", err
+		return 0, date, err
 	}
 
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return 0, "", os.ErrNotExist
+		return 0, date, os.ErrNotExist
 	case http.StatusOK:
 		size, err = strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
 		if err != nil {
-			return 0, "", err
+			return 0, date, err
 		}
-		if date := res.Header.Get("Last-Modified"); date != "" {
-			ti, err := time.Parse(time.RFC1123, date)
+		if dateStr := res.Header.Get("Last-Modified"); dateStr != "" {
+			// AWS S3 uses RFC1123 standard for Date in HTTP header, unlike XML content
+			date, err := time.Parse(time.RFC1123, dateStr)
 			if err != nil {
-				return 0, "", err
+				return 0, date, err
 			}
-			date = ti.Format(recvFormat)
 			return size, date, nil
 		}
 	default:
-		return 0, "", fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
+		return 0, date, fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
 	}
 	return
 }
@@ -266,7 +295,7 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 // Item - object item list
 type Item struct {
 	Key          string
-	LastModified string
+	LastModified xmlTime
 	Size         int64
 }
 

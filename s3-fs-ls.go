@@ -27,24 +27,9 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-const (
-	recvFormat  = "2006-01-02T15:04:05.000Z"
-	printFormat = "2006-01-02 15:04:05"
-)
-
-func parseTime(t string) string {
-	ti, _ := time.Parse(recvFormat, t)
-	return ti.Format(printFormat)
-}
-
-func parseLastModified(t string) string {
-	ti, _ := time.Parse(time.RFC1123, t)
-	return ti.Format(printFormat)
-}
-
 func printBuckets(v []*s3.Bucket) {
 	for _, b := range v {
-		msg := fmt.Sprintf("%s   %s", parseTime(b.CreationDate), b.Name)
+		msg := fmt.Sprintf("%v %13s %s", b.CreationDate, "", b.Name)
 		info(msg)
 	}
 }
@@ -53,13 +38,13 @@ func printObjects(v []*s3.Item) {
 	if len(v) > 0 {
 		sort.Sort(s3.BySize(v))
 		for _, b := range v {
-			printObject(b.LastModified, b.Size, b.Key)
+			printObject(b.LastModified.Time, b.Size, b.Key)
 		}
 	}
 }
 
-func printObject(date string, v int64, key string) {
-	msg := fmt.Sprintf("%s  %13s %s", parseTime(date), pb.FormatBytes(v), key)
+func printObject(date time.Time, v int64, key string) {
+	msg := fmt.Sprintf("%v  %13s %s", date.Local(), pb.FormatBytes(v), key)
 	info(msg)
 }
 
@@ -93,7 +78,7 @@ func doFsList(c *cli.Context) {
 		}
 		printObjects(items)
 	case fsoptions.key != "": // List objects matching the key prefix
-		var date string
+		var date time.Time
 		var size int64
 
 		size, date, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
