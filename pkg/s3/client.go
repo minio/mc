@@ -43,7 +43,6 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -59,31 +58,6 @@ import (
 	"strings"
 	"time"
 )
-
-const xmlTimeFormat = "2006-01-02T15:04:05.000Z"
-
-type xmlTime struct {
-	time.Time
-}
-
-func parseTime(t string) time.Time {
-	ti, _ := time.Parse(xmlTimeFormat, t)
-	return ti
-}
-
-func (c *xmlTime) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	var v string
-	d.DecodeElement(&v, &start)
-	parse, _ := time.Parse(xmlTimeFormat, v)
-	*c = xmlTime{parse}
-	return nil
-}
-
-func (c *xmlTime) UnmarshalXMLAttr(attr xml.Attr) error {
-	t, _ := time.Parse(xmlTimeFormat, attr.Value)
-	*c = xmlTime{t}
-	return nil
-}
 
 // Total max object list
 const (
@@ -540,55 +514,4 @@ func IsValidBucket(bucket string) bool {
 	// We don't support buckets with '.' in them
 	match, _ := regexp.MatchString("^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", bucket)
 	return match
-}
-
-// Error is the type returned by some API operations.
-type Error struct {
-	Op     string
-	Code   int         // HTTP status code
-	Body   []byte      // response body
-	Header http.Header // response headers
-
-	// UsedEndpoint and AmazonCode are the XML response's Endpoint and
-	// Code fields, respectively.
-	UseEndpoint string // if a temporary redirect (wrong endpoint)
-	AmazonCode  string
-}
-
-func (e *Error) Error() string {
-	if bytes.Contains(e.Body, []byte("<Error>")) {
-		return fmt.Sprintf("s3.%s: status %d: %s", e.Op, e.Code, e.Body)
-	}
-	return fmt.Sprintf("s3.%s: status %d", e.Op, e.Code)
-}
-
-func (e *Error) parseXML() {
-	var xe xmlError
-	_ = xml.NewDecoder(bytes.NewReader(e.Body)).Decode(&xe)
-	e.AmazonCode = xe.Code
-	if xe.Code == "TemporaryRedirect" {
-		e.UseEndpoint = xe.Endpoint
-	}
-	if xe.Code == "SignatureDoesNotMatch" {
-		want, _ := hex.DecodeString(strings.Replace(xe.StringToSignBytes, " ", "", -1))
-		log.Printf("S3 SignatureDoesNotMatch. StringToSign should be %d bytes: %q (%x)", len(want), want, want)
-	}
-
-}
-
-// xmlError is the Error response from Amazon.
-type xmlError struct {
-	XMLName           xml.Name `xml:"Error"`
-	Code              string
-	Message           string
-	RequestID         string
-	Bucket            string
-	Endpoint          string
-	StringToSignBytes string
-}
-
-// xmlLocationConstraint is the LocationConstraint returned from BucketLocation.
-type xmlLocationConstraint struct {
-	XMLName  xml.Name `xml:"LocationConstraint"`
-	Location string   `xml:",chardata"`
 }
