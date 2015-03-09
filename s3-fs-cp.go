@@ -85,6 +85,11 @@ func doFsCopy(c *cli.Context) {
 		var objectReader io.ReadCloser
 		var objectSize int64
 
+		// Send HEAD request to validate if file exists.
+		if _, _, err := s3c.Stat(fsoptions.key, fsoptions.bucket); err != nil {
+			fatal(err.Error())
+		}
+
 		objectReader, objectSize, err = s3c.Get(fsoptions.bucket, fsoptions.key)
 		if err != nil {
 			fatal(err.Error())

@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"sort"
 	"time"
 
 	"github.com/cheggaaa/pb"
@@ -27,16 +26,20 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
+const (
+	humanReadableFormat = "2006-01-02 15:04:05"
+)
+
 func printBuckets(v []*s3.Bucket) {
 	for _, b := range v {
-		msg := fmt.Sprintf("%v %13s %s", b.CreationDate.Local(), "", b.Name)
+		msg := fmt.Sprintf("%v %9s %s", b.CreationDate.Format(humanReadableFormat), "", b.Name)
 		info(msg)
 	}
 }
 
 func printObjects(v []*s3.Item) {
 	if len(v) > 0 {
-		sort.Sort(s3.BySize(v))
+		// Items are already sorted
 		for _, b := range v {
 			printObject(b.LastModified.Time, b.Size, b.Key)
 		}
@@ -44,7 +47,7 @@ func printObjects(v []*s3.Item) {
 }
 
 func printObject(date time.Time, v int64, key string) {
-	msg := fmt.Sprintf("%v  %13s %s", date.Local(), pb.FormatBytes(v), key)
+	msg := fmt.Sprintf("%v  %9s %s", date.Format(humanReadableFormat), pb.FormatBytes(v), key)
 	info(msg)
 }
 
@@ -66,13 +69,13 @@ func doFsList(c *cli.Context) {
 	}
 	switch true {
 	case fsoptions.bucket == "": // List all buckets
-		buckets, err := s3c.Buckets()
+		buckets, err := s3c.ListBuckets()
 		if err != nil {
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
-	case fsoptions.key == "": // List the objects in a bucket
-		items, _, err = s3c.GetBucket(fsoptions.bucket, "", "", "", s3.MaxKeys)
+	case fsoptions.key == "": // List objects in a bucket
+		items, _, err = s3c.ListObjects(fsoptions.bucket, "", "", "", s3.MaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
@@ -83,11 +86,11 @@ func doFsList(c *cli.Context) {
 
 		size, date, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
 		switch err {
-		case nil: // List a single object. Exact key prefix match
+		case nil: // List a single object. Exact key
 			printObject(date, size, fsoptions.key)
 		case os.ErrNotExist:
 			// List all objects matching the key prefix
-			items, _, err = s3c.GetBucket(fsoptions.bucket, "", fsoptions.key, "", s3.MaxKeys)
+			items, _, err = s3c.ListObjects(fsoptions.bucket, "", fsoptions.key, "", s3.MaxKeys)
 			if err != nil {
 				fatal(err.Error())
 			}

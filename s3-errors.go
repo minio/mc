@@ -18,14 +18,13 @@ package main
 
 import "errors"
 
-// fs
-var errFspath = errors.New("Arguments missing <S3Path> or <LocalPath>")
-var errFskey = errors.New("Key is needed to get the file")
+var (
+	// fs
+	errFskey = errors.New("Key is needed to get the file")
 
-// uri
-var errInvalidScheme = errors.New("Invalid URI scheme only s3:// supported")
+	// uri
+	errInvalidScheme = errors.New("Invalid URI scheme only s3:// supported")
 
-// common
-var errMissingaccess = errors.New("Partial credentials found in the env, missing : AWS_ACCESS_KEY_ID")
-var errMissingsecret = errors.New("Partial credentials found in the env, missing : AWS_SECRET_ACCESS_KEY")
-var errInvalidbucket = errors.New("Invalid bucket name")
+	// common
+	errInvalidbucket = errors.New("Invalid bucket name")
+)
