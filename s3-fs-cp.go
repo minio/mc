@@ -31,11 +31,15 @@ import (
 //   - <S3Path> <S3Bucket>
 
 func startBar(size int64) *pb.ProgressBar {
-	bar := pb.StartNew(int(size))
+	bar := pb.New(int(size))
 	bar.SetUnits(pb.U_BYTES)
 	bar.SetRefreshRate(time.Millisecond * 10)
 	bar.NotPrint = true
 	bar.ShowSpeed = true
+	bar.Callback = func(s string) {
+		// Colorize
+		infoCallback(s)
+	}
 	return bar
 }
 
@@ -49,13 +53,18 @@ func doFsCopy(c *cli.Context) {
 		fatal(err.Error())
 	}
 
+	if len(c.Args()) != 2 {
+		fatal("Invalid number of args")
+	}
+
 	var fsoptions *fsOptions
 	fsoptions, err = parseOptions(c)
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	if fsoptions.isput {
+	switch true {
+	case fsoptions.isput == true:
 		stat, err := os.Stat(fsoptions.body)
 		if os.IsNotExist(err) {
 			fatal(err.Error())
@@ -81,27 +90,64 @@ func doFsCopy(c *cli.Context) {
 		}
 		msg := fmt.Sprintf("%s uploaded -- to bucket:(%s)", fsoptions.key, fsoptions.bucket)
 		info(msg)
-	} else if fsoptions.isget {
+	case fsoptions.isget == true:
 		var objectReader io.ReadCloser
-		var objectSize int64
+		var objectSize, downloadedSize int64
+		var bodyFile *os.File
+		var err error
+		var st os.FileInfo
 
 		// Send HEAD request to validate if file exists.
-		if _, _, err := s3c.Stat(fsoptions.key, fsoptions.bucket); err != nil {
-			fatal(err.Error())
-		}
-
-		objectReader, objectSize, err = s3c.Get(fsoptions.bucket, fsoptions.key)
+		objectSize, _, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
 		if err != nil {
 			fatal(err.Error())
 		}
-		bodyFile, err := os.Create(fsoptions.body)
-		defer bodyFile.Close()
-
-		// start progress bar
+		// get progress bar
 		bar := startBar(objectSize)
-		bar.Callback = func(s string) {
-			infoCallback(s)
+
+		// Check if the object already exists
+		st, err = os.Stat(fsoptions.body)
+		switch os.IsNotExist(err) {
+		case true:
+			// Create if it doesn't exist
+			bodyFile, err = os.Create(fsoptions.body)
+			defer bodyFile.Close()
+			if err != nil {
+				fatal(err.Error())
+			}
+			objectReader, _, err = s3c.Get(fsoptions.bucket, fsoptions.key)
+			if err != nil {
+				fatal(err.Error())
+			}
+		case false:
+			downloadedSize = st.Size()
+			// Verify if file is already downloaded
+			if downloadedSize == objectSize {
+				msg := fmt.Sprintf("%s object has been already downloaded", fsoptions.body)
+				fatal(msg)
+			}
+
+			bodyFile, err = os.OpenFile(fsoptions.body, os.O_RDWR, 0600)
+			defer bodyFile.Close()
+
+			if err != nil {
+				fatal(err.Error())
+			}
+
+			_, err := bodyFile.Seek(downloadedSize, os.SEEK_SET)
+			if err != nil {
+				fatal(err.Error())
+			}
+
+			remainingSize := objectSize - downloadedSize
+			objectReader, objectSize, err = s3c.GetPartial(fsoptions.bucket, fsoptions.key, downloadedSize, remainingSize)
+			if err != nil {
+				fatal(err.Error())
+			}
+			bar.Add(int(downloadedSize))
 		}
+		// Start the bar now
+		bar.Start()
 
 		// create multi writer to feed data
 		writer := io.MultiWriter(bodyFile, bar)
