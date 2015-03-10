@@ -45,7 +45,7 @@ import (
 
 // Date format
 const (
-	xmlTimeFormat = "2006-01-02T15:04:05.000Z"
+	iso8601Format = "2006-01-02T15:04:05.000Z"
 )
 
 type xmlTime struct {
@@ -55,17 +55,17 @@ type xmlTime struct {
 func (c *xmlTime) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	var v string
 	d.DecodeElement(&v, &start)
-	parse, _ := time.Parse(xmlTimeFormat, v)
+	parse, _ := time.Parse(iso8601Format, v)
 	*c = xmlTime{parse}
 	return nil
 }
 
 func (c *xmlTime) UnmarshalXMLAttr(attr xml.Attr) error {
-	t, _ := time.Parse(xmlTimeFormat, attr.Value)
+	t, _ := time.Parse(iso8601Format, attr.Value)
 	*c = xmlTime{t}
 	return nil
 }
 
 func (c *xmlTime) format() string {
-	return c.Time.Format(xmlTimeFormat)
+	return c.Time.Format(iso8601Format)
 }
