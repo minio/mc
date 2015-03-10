@@ -67,6 +67,6 @@ func (c *xmlTime) UnmarshalXMLAttr(attr xml.Attr) error {
 	return nil
 }
 
-func (c *xmlTime) format() string {
+func (c *xmlTime) String() string {
 	return c.Time.Format(iso8601Format)
 }

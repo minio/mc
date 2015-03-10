@@ -108,9 +108,9 @@ func doConfigure(c *cli.Context) {
 	info(msg)
 }
 
+// NewClient - get new client
 func getNewClient(config *mcConfig) (*s3.Client, error) {
-	return &s3.Client{
-		Auth:      &config.S3.Auth,
-		Transport: http.DefaultTransport,
-	}, nil
+	var trace s3Trace
+	s3client := s3.NewClient(&config.S3.Auth, http.DefaultTransport, trace)
+	return s3client, nil
 }
