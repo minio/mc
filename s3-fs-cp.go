@@ -40,6 +40,8 @@ func startBar(size int64) *pb.ProgressBar {
 		// Colorize
 		infoCallback(s)
 	}
+	// Feels like wget
+	bar.Format("[=> ]")
 	return bar
 }
 
@@ -144,7 +146,7 @@ func doFsCopy(c *cli.Context) {
 			if err != nil {
 				fatal(err.Error())
 			}
-			bar.Add(int(downloadedSize))
+			bar.Set(int(downloadedSize))
 		}
 		// Start the bar now
 		bar.Start()
