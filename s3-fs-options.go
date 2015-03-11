@@ -98,9 +98,12 @@ var options = []cli.Command{
 }
 
 var flags = []cli.Flag{
-	cli.StringFlag{
-		Name:  "verbose, V",
-		Value: "trace, quiet",
-		Usage: "[trace] enables HTTP tracing. [quiet] disables progress bar.",
+	cli.BoolFlag{
+		Name:  "debug",
+		Usage: "enable HTTP tracing",
+	},
+	cli.BoolFlag{
+		Name:  "quiet, q",
+		Usage: "disable chatty output, such as the progress bar",
 	},
 }

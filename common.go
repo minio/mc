@@ -17,10 +17,8 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 
@@ -30,26 +28,12 @@ import (
 
 // NewClient - get new client
 func getNewClient(c *cli.Context) (*s3.Client, error) {
-
-	switch c.GlobalString("verbose") {
-	case "trace":
-	case "quiet":
-	case "":
-		if c.GlobalBool("verbose") {
-			fmt.Printf("Error: No value specified for --verbose=[quiet|trace]\n")
-			os.Exit(1)
-		}
-	default:
-		fmt.Printf("Error: Invalid value specified for --verbose=[%s]\n", c.GlobalString("verbose"))
-		os.Exit(1)
-	}
-
 	config, err := getMcConfig()
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	if c.GlobalString("verbose") == "trace" {
+	if c.GlobalBool("debug") {
 		traceTransport := s3.RoundTripTrace{
 			Trace:     s3Trace{BodyTraceFlag: false, RequestTransportFlag: true, Writer: nil},
 			Transport: http.DefaultTransport,
