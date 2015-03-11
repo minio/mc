@@ -43,11 +43,16 @@ GLOBAL OPTIONS:
 
 ### Enable bash completion
 
-Bash completion for mc is always installed at ``${HOME}/.minio/mc/mc.completion``, to enable bash completion for ``mc`` cli please follow these steps.
+To generate bash completion for ``mc`` all you have to do is
 
 ```
-$ source ${HOME}/.minio/mc/mc.completion
-$ echo "source ${HOME}/.minio/mc/mc.completion" >> ${HOME}/.bashrc
+$ mc --get-bash-completion
+
+Configuration written to /home/user/.minio/mc/mc.bash_completion
+
+$ source ${HOME}/.minio/mc/mc.bash_completion
+$ echo 'source ${HOME}/.minio/mc/mc.bash_completion' >> ${HOME}/.bashrc
+
 ```
 
 ```

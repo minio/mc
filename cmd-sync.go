@@ -27,18 +27,6 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-func isValidBucketName(p string) {
-	if path.IsAbs(p) {
-		fatal("directory bucketname cannot be absolute")
-	}
-	if strings.HasPrefix(p, "..") {
-		fatal("Relative directory references not supported")
-	}
-	if !s3.IsValidBucket(p) {
-		fatal(errInvalidbucket.Error())
-	}
-}
-
 type walk struct {
 	s3 *s3.Client
 }
@@ -64,6 +52,18 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 	info(msg)
 
 	return nil
+}
+
+func isValidBucketName(p string) {
+	if path.IsAbs(p) {
+		fatal("directory bucketname cannot be absolute")
+	}
+	if strings.HasPrefix(p, "..") {
+		fatal("Relative directory references not supported")
+	}
+	if !s3.IsValidBucket(p) {
+		fatal(errInvalidbucket.Error())
+	}
 }
 
 func doFsSync(c *cli.Context) {

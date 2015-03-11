@@ -81,7 +81,7 @@ var configure = cli.Command{
 	},
 }
 
-type fsOptions struct {
+type cmdOptions struct {
 	bucket string
 	body   string
 	key    string
@@ -106,4 +106,23 @@ var flags = []cli.Flag{
 		Name:  "quiet, q",
 		Usage: "disable chatty output, such as the progress bar",
 	},
+	cli.BoolFlag{
+		Name:  "get-bash-completion",
+		Usage: "Generate bash completion \"" + getMcBashCompletionFilename() + "\" file.",
+	},
 }
+
+var mcBashCompletion = `#!/bin/bash
+
+_mc_completion() {
+    local cur prev opts base
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts=$( ${COMP_WORDS[@]:0:$COMP_CWORD} --generate-bash-completion )
+    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    return 0
+}
+
+complete -F _mc_completion mc
+`

@@ -1,6 +1,6 @@
 # Minio Client
 
-mc - unified command line interface for Minio Object Storage compatible with Amazon S3 API released under [Apache license v2](http://www.apache.org/licenses/LICENSE-2.0).
+mc - unified command line interface for Minio and S3 released under [Apache license v2](./LICENSE).
 
 ## Install
 
@@ -13,7 +13,7 @@ mc - unified command line interface for Minio Object Storage compatible with Ama
 ### Commands
 ```
 NAME:
-   mc - Unified command line interface for Minio Object Storage
+   mc - unified command line interface for Minio and S3
 
 USAGE:
    mc [global options] command [command options] [arguments...]
@@ -35,4 +35,27 @@ COMMANDS:
 GLOBAL OPTIONS:
    --help, -h           show help
    --version, -v        print the version
+```
+
+## Contribute
+
+[Contribute to mc](./CONTRIBUTING.md)
+
+### Enable bash completion
+
+To generate bash completion for ``mc`` all you have to do is
+
+```
+$ mc --get-bash-completion
+
+Configuration written to /home/user/.minio/mc/mc.bash_completion
+
+$ source ${HOME}/.minio/mc/mc.bash_completion
+$ echo 'source ${HOME}/.minio/mc/mc.bash_completion' >> ${HOME}/.bashrc
+
+```
+
+```
+$ mc <TAB><TAB>
+configure  cp         h          help       ls         mb         sync
 ```
