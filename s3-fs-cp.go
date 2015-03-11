@@ -100,8 +100,12 @@ func doFsCopy(c *cli.Context) {
 		if err != nil {
 			fatal(err.Error())
 		}
-		// get progress bar
-		bar := startBar(objectSize)
+
+		var bar *pb.ProgressBar
+		if !c.GlobalBool("quiet") {
+			// get progress bar
+			bar = startBar(objectSize)
+		}
 
 		// Check if the object already exists
 		st, err = os.Stat(fsoptions.body)
@@ -142,13 +146,19 @@ func doFsCopy(c *cli.Context) {
 			if err != nil {
 				fatal(err.Error())
 			}
-			bar.Set(int(downloadedSize))
-		}
-		// Start the bar now
-		bar.Start()
 
-		// create multi writer to feed data
-		writer := io.MultiWriter(bodyFile, bar)
+			if !c.GlobalBool("quiet") {
+				bar.Set(int(downloadedSize))
+			}
+		}
+
+		writer := io.Writer(bodyFile)
+		if !c.GlobalBool("quiet") {
+			// Start the bar now
+			bar.Start()
+			// create multi writer to feed data
+			writer = io.MultiWriter(bodyFile, bar)
+		}
 		_, err = io.CopyN(writer, objectReader, objectSize)
 		if err != nil {
 			fatal(err.Error())
