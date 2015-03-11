@@ -69,11 +69,8 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 func doFsSync(c *cli.Context) {
 	var s3c *s3.Client
 	var err error
-	config, err := getMcConfig()
-	if err != nil {
-		fatal(err.Error())
-	}
-	s3c, err = getNewClient(config)
+
+	s3c, err = getNewClient(c)
 	if err != nil {
 		fatal(err.Error())
 	}

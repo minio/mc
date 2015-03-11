@@ -46,11 +46,7 @@ func startBar(size int64) *pb.ProgressBar {
 }
 
 func doFsCopy(c *cli.Context) {
-	mcConfig, err := getMcConfig()
-	if err != nil {
-		fatal(err.Error())
-	}
-	s3c, err := getNewClient(mcConfig)
+	s3c, err := getNewClient(c)
 	if err != nil {
 		fatal(err.Error())
 	}

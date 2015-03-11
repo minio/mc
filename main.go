@@ -34,17 +34,11 @@ func init() {
 
 func main() {
 	app := cli.NewApp()
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "quiet, q",
-			Usage: "disable progress bar and other chatty console output",
-		},
-	}
-
 	app.Name = "mc"
 	app.Usage = "Minio Client for S3 Compatible Object Storage"
 	app.Version = "0.1.0"
 	app.Commands = options
+	app.Flags = flags
 	app.Author = "Minio.io"
 	app.EnableBashCompletion = true
 	app.Run(os.Args)

@@ -31,12 +31,8 @@ func doFsMb(c *cli.Context) {
 		fatal("Needs an argument <BucketName>")
 	}
 	bucketName := c.Args().Get(0)
-	var err error
-	auth, err := getMcConfig()
-	if err != nil {
-		fatal(err.Error())
-	}
-	s3c, err := getNewClient(auth)
+
+	s3c, err := getNewClient(c)
 	err = s3c.PutBucket(bucketName)
 	if err != nil {
 		fatal(err.Error())

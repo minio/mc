@@ -17,12 +17,45 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/minio-io/mc/pkg/s3"
 )
+
+// NewClient - get new client
+func getNewClient(c *cli.Context) (*s3.Client, error) {
+	switch c.GlobalString("verbose") {
+	case "trace":
+	case "quiet":
+	case "":
+		fmt.Printf("Error: No value specified for --verbose=[quiet|trace]\n")
+		os.Exit(1)
+	default:
+		fmt.Printf("Error: Invalid value specified for --verbose=[%s]\n", c.GlobalString("verbose"))
+		os.Exit(1)
+	}
+
+	config, err := getMcConfig()
+	if err != nil {
+		fatal(err.Error())
+	}
+
+	var trace s3Trace
+	if c.GlobalString("verbose") == "trace" {
+		traceTransport := s3.RoundTripTrace{trace, http.DefaultTransport}
+		s3client := s3.GetNewClient(&config.S3.Auth, traceTransport)
+		return s3client, nil
+	} else {
+		s3client := s3.GetNewClient(&config.S3.Auth, nil)
+		return s3client, nil
+	}
+}
 
 func parseOptions(c *cli.Context) (fsoptions *fsOptions, err error) {
 	fsoptions = new(fsOptions)

@@ -31,32 +31,38 @@ type s3Trace struct {
 
 // Trace HTTP Request
 func (t s3Trace) Request(req *http.Request) {
+	origAuthKey := req.Header.Get("Authorization")
+	req.Header.Set("Authorization", "AWS **PASSWORD**STRIPPED**")
+
 	if t.RequestTransportFlag {
 		reqTrace, err := httputil.DumpRequestOut(req, t.BodyTraceFlag)
 		if err == nil {
-			t.trace(reqTrace)
+			t.print(reqTrace)
 		}
 	} else {
 		reqTrace, err := httputil.DumpRequest(req, t.BodyTraceFlag)
 		if err == nil {
-			t.trace(reqTrace)
+			t.print(reqTrace)
 		}
 	}
+
+	req.Header.Set("Authorization", origAuthKey)
 }
 
 // Trace HTTP Response
 func (t s3Trace) Response(res *http.Response) {
+
 	resTrace, err := httputil.DumpResponse(res, t.BodyTraceFlag)
 	if err == nil {
-		t.trace(resTrace)
+		t.print(resTrace)
 	}
 }
 
 // Trace HTTP Response
-func (t s3Trace) trace(data []byte) {
+func (t s3Trace) print(data []byte) {
 	if t.Writer != nil {
-		fmt.Fprintf(t.Writer, "%s\n", data)
+		fmt.Fprintf(t.Writer, "%s", data)
 	} else {
-		fmt.Printf("%s\n", data)
+		fmt.Printf("%s", data)
 	}
 }

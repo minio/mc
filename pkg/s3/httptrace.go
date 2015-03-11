@@ -17,10 +17,32 @@
 package s3
 
 import (
+	"errors"
 	"net/http"
 )
 
 type HttpTracer interface {
 	Request(req *http.Request)
 	Response(res *http.Response)
+}
+
+type RoundTripTrace struct {
+	Trace     HttpTracer
+	Transport http.RoundTripper
+}
+
+func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err error) {
+	if t.Trace != nil {
+		t.Trace.Request(req)
+	}
+	if t.Transport != nil {
+		res, err = t.Transport.RoundTrip(req)
+	} else {
+		return nil, errors.New("TraceRoundTrip.Transport is nil")
+	}
+
+	if t.Trace != nil {
+		t.Trace.Response(res)
+	}
+	return res, err
 }

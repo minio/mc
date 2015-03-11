@@ -88,14 +88,12 @@ type listBucketResults struct {
 type Client struct {
 	*Auth
 	Transport http.RoundTripper // or nil for the default
-	Trace     HttpTracer        // if not nil, Tracing will be enabled
 }
 
-func NewClient(auth *Auth, transport http.RoundTripper, trace HttpTracer) *Client {
+func GetNewClient(auth *Auth, transport http.RoundTripper) *Client {
 	return &Client{
 		Auth:      auth,
 		Transport: transport,
-		Trace:     trace,
 	}
 }
 

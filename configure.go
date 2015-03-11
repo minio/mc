@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/user"
 	"path"
@@ -106,11 +105,4 @@ func doConfigure(c *cli.Context) {
 	}
 	msg := "\nConfiguration written to " + getMcConfigFilename()
 	info(msg)
-}
-
-// NewClient - get new client
-func getNewClient(config *mcConfig) (*s3.Client, error) {
-	var trace s3Trace
-	s3client := s3.NewClient(&config.S3.Auth, http.DefaultTransport, trace)
-	return s3client, nil
 }
