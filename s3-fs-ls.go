@@ -50,12 +50,7 @@ func printObject(date time.Time, v int64, key string) {
 func doFsList(c *cli.Context) {
 	var items []*s3.Item
 
-	config, err := getMcConfig()
-	if err != nil {
-		fatal(err.Error())
-	}
-
-	s3c, err := getNewClient(config)
+	s3c, err := getNewClient(c)
 	if err != nil {
 		fatal(err.Error())
 	}

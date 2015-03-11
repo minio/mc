@@ -55,12 +55,6 @@ const (
 	MaxKeys = 1000
 )
 
-// Client is an Amazon S3 client.
-type Client struct {
-	*Auth
-	Transport http.RoundTripper // or nil for the default
-}
-
 // Bucket - carries s3 bucket reply header
 type Bucket struct {
 	Name         string
@@ -88,6 +82,20 @@ type listBucketResults struct {
 	Delimiter      string
 	Prefix         string
 	CommonPrefixes []*Prefix
+}
+
+// Client holds Amazon S3 client credentials and flags.
+type Client struct {
+	*Auth                       // AWS auth credentials
+	Transport http.RoundTripper // or nil for the default behavior
+}
+
+// GetNewClient returns an initialized S3.Client structure.
+func GetNewClient(auth *Auth, transport http.RoundTripper) *Client {
+	return &Client{
+		Auth:      auth,
+		Transport: transport,
+	}
 }
 
 func (c *Client) transport() http.RoundTripper {
@@ -156,12 +164,6 @@ func parseListAllMyBuckets(r io.Reader) ([]*Bucket, error) {
 		return nil, err
 	}
 	return res.Buckets.Bucket, nil
-}
-
-// NewClient - get new client
-func NewClient(auth *Auth) (client *Client) {
-	client = &Client{auth, http.DefaultTransport}
-	return
 }
 
 // IsValidBucket reports whether bucket is a valid bucket name, per Amazon's naming restrictions.

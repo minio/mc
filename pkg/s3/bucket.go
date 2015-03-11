@@ -65,11 +65,13 @@ func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 func (c *Client) ListBuckets() ([]*Bucket, error) {
 	req := newReq(c.endpoint() + "/")
 	c.Auth.signRequest(req)
+
 	res, err := c.transport().RoundTrip(req)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
+
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("s3: Unexpected status code %d fetching bucket list", res.StatusCode)
 	}

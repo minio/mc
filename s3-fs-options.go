@@ -96,3 +96,11 @@ var options = []cli.Command{
 	sync,
 	configure,
 }
+
+var flags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "verbose, V",
+		Value: "trace, quiet",
+		Usage: "[trace] enables HTTP tracing. [quiet] disables progress bar.",
+	},
+}

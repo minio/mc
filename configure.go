@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/user"
 	"path"
@@ -106,11 +105,4 @@ func doConfigure(c *cli.Context) {
 	}
 	msg := "\nConfiguration written to " + getMcConfigFilename()
 	info(msg)
-}
-
-func getNewClient(config *mcConfig) (*s3.Client, error) {
-	return &s3.Client{
-		Auth:      &config.S3.Auth,
-		Transport: http.DefaultTransport,
-	}, nil
 }
