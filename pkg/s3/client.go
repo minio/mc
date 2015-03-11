@@ -84,12 +84,13 @@ type listBucketResults struct {
 	CommonPrefixes []*Prefix
 }
 
-// Client is an Amazon S3 client.
+// Client holds Amazon S3 client credentials and flags.
 type Client struct {
-	*Auth
-	Transport http.RoundTripper // or nil for the default
+	*Auth                       // AWS auth credentials
+	Transport http.RoundTripper // or nil for the default behavior
 }
 
+// GetNewClient returns an initialized S3.Client structure.
 func GetNewClient(auth *Auth, transport http.RoundTripper) *Client {
 	return &Client{
 		Auth:      auth,

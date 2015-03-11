@@ -30,12 +30,15 @@ import (
 
 // NewClient - get new client
 func getNewClient(c *cli.Context) (*s3.Client, error) {
+
 	switch c.GlobalString("verbose") {
 	case "trace":
 	case "quiet":
 	case "":
-		fmt.Printf("Error: No value specified for --verbose=[quiet|trace]\n")
-		os.Exit(1)
+		if c.GlobalBool("verbose") {
+			fmt.Printf("Error: No value specified for --verbose=[quiet|trace]\n")
+			os.Exit(1)
+		}
 	default:
 		fmt.Printf("Error: Invalid value specified for --verbose=[%s]\n", c.GlobalString("verbose"))
 		os.Exit(1)
@@ -46,15 +49,17 @@ func getNewClient(c *cli.Context) (*s3.Client, error) {
 		fatal(err.Error())
 	}
 
-	var trace s3Trace
 	if c.GlobalString("verbose") == "trace" {
-		traceTransport := s3.RoundTripTrace{trace, http.DefaultTransport}
+		traceTransport := s3.RoundTripTrace{
+			Trace:     s3Trace{BodyTraceFlag: false, RequestTransportFlag: true, Writer: nil},
+			Transport: http.DefaultTransport,
+		}
 		s3client := s3.GetNewClient(&config.S3.Auth, traceTransport)
 		return s3client, nil
-	} else {
-		s3client := s3.GetNewClient(&config.S3.Auth, nil)
-		return s3client, nil
 	}
+
+	s3client := s3.GetNewClient(&config.S3.Auth, nil)
+	return s3client, nil
 }
 
 func parseOptions(c *cli.Context) (fsoptions *fsOptions, err error) {
