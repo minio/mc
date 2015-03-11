@@ -148,10 +148,9 @@ func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err er
 
 // GetPartial fetches part of the s3 key object in bucket.
 // If length is negative, the rest of the object is returned.
-// The caller must close rc.
-func (c *Client) GetPartial(bucket, key string, offset, length int64) (rc io.ReadCloser, err error) {
+func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, err error) {
 	if offset < 0 {
-		return nil, fmt.Errorf("invalid negative length")
+		return nil, 0, fmt.Errorf("invalid negative length")
 	}
 
 	req := newReq(c.keyURL(bucket, key))
@@ -166,14 +165,15 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (rc io.Rea
 	if err != nil {
 		return
 	}
+
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusPartialContent:
-		return res.Body, nil
+		return res.Body, res.ContentLength, nil
 	case http.StatusNotFound:
 		res.Body.Close()
-		return nil, os.ErrNotExist
+		return nil, 0, os.ErrNotExist
 	default:
 		res.Body.Close()
-		return nil, fmt.Errorf("Amazon HTTP error on GET: %d", res.StatusCode)
+		return nil, 0, fmt.Errorf("Amazon HTTP error on GET: %d", res.StatusCode)
 	}
 }
