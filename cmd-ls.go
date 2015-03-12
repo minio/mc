@@ -54,34 +54,34 @@ func doFsList(c *cli.Context) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	fsoptions, err := parseOptions(c)
+	cmdoptions, err := parseOptions(c)
 	if err != nil {
 		fatal(err.Error())
 	}
 	switch true {
-	case fsoptions.bucket == "": // List all buckets
+	case cmdoptions.bucket == "": // List all buckets
 		buckets, err := s3c.ListBuckets()
 		if err != nil {
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
-	case fsoptions.key == "": // List objects in a bucket
-		items, _, err = s3c.ListObjects(fsoptions.bucket, "", "", "", s3.MaxKeys)
+	case cmdoptions.key == "": // List objects in a bucket
+		items, _, err = s3c.ListObjects(cmdoptions.bucket, "", "", "", s3.MaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
-	case fsoptions.key != "": // List objects matching the key prefix
+	case cmdoptions.key != "": // List objects matching the key prefix
 		var date time.Time
 		var size int64
 
-		size, date, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
+		size, date, err = s3c.Stat(cmdoptions.key, cmdoptions.bucket)
 		switch err {
 		case nil: // List a single object. Exact key
-			printObject(date, size, fsoptions.key)
+			printObject(date, size, cmdoptions.key)
 		case os.ErrNotExist:
 			// List all objects matching the key prefix
-			items, _, err = s3c.ListObjects(fsoptions.bucket, "", fsoptions.key, "", s3.MaxKeys)
+			items, _, err = s3c.ListObjects(cmdoptions.bucket, "", cmdoptions.key, "", s3.MaxKeys)
 			if err != nil {
 				fatal(err.Error())
 			}

@@ -32,11 +32,11 @@ func getMcConfigDir() string {
 		fatal(msg)
 	}
 
-	return path.Join(u.HomeDir + "/" + mcConfigDir)
+	return path.Join(u.HomeDir, mcConfigDir)
 }
 
 func getMcConfigFilename() string {
-	return path.Join(getMcConfigDir() + "/" + mcConfigFilename)
+	return path.Join(getMcConfigDir(), mcConfigFilename)
 }
 
 func getMcConfig() (config *mcConfig, err error) {

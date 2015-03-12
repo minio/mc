@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
@@ -29,21 +28,6 @@ import (
 // TODO
 //   - <S3Path> <S3Path>
 //   - <S3Path> <S3Bucket>
-
-func startBar(size int64) *pb.ProgressBar {
-	bar := pb.New(int(size))
-	bar.SetUnits(pb.U_BYTES)
-	bar.SetRefreshRate(time.Millisecond * 10)
-	bar.NotPrint = true
-	bar.ShowSpeed = true
-	bar.Callback = func(s string) {
-		// Colorize
-		infoCallback(s)
-	}
-	// Feels like wget
-	bar.Format("[=> ]")
-	return bar
-}
 
 func doFsCopy(c *cli.Context) {
 	s3c, err := getNewClient(c)
@@ -55,15 +39,15 @@ func doFsCopy(c *cli.Context) {
 		fatal("Invalid number of args")
 	}
 
-	var fsoptions *fsOptions
-	fsoptions, err = parseOptions(c)
+	var cmdoptions *cmdOptions
+	cmdoptions, err = parseOptions(c)
 	if err != nil {
 		fatal(err.Error())
 	}
 
 	switch true {
-	case fsoptions.isput == true:
-		stat, err := os.Stat(fsoptions.body)
+	case cmdoptions.isput == true:
+		stat, err := os.Stat(cmdoptions.body)
 		if os.IsNotExist(err) {
 			fatal(err.Error())
 		}
@@ -71,24 +55,24 @@ func doFsCopy(c *cli.Context) {
 			fatal("Is a directory")
 		}
 		size := stat.Size()
-		bodyFile, err := os.Open(fsoptions.body)
+		bodyFile, err := os.Open(cmdoptions.body)
 		defer bodyFile.Close()
 		if err != nil {
 			fatal(err.Error())
 		}
 
 		// s3://<bucket> is specified without key
-		if fsoptions.key == "" {
-			fsoptions.key = fsoptions.body
+		if cmdoptions.key == "" {
+			cmdoptions.key = cmdoptions.body
 		}
 
-		err = s3c.Put(fsoptions.bucket, fsoptions.key, size, bodyFile)
+		err = s3c.Put(cmdoptions.bucket, cmdoptions.key, size, bodyFile)
 		if err != nil {
 			fatal(err.Error())
 		}
-		msg := fmt.Sprintf("%s uploaded -- to bucket:(%s)", fsoptions.key, fsoptions.bucket)
+		msg := fmt.Sprintf("%s uploaded -- to bucket:(%s)", cmdoptions.key, cmdoptions.bucket)
 		info(msg)
-	case fsoptions.isget == true:
+	case cmdoptions.isget == true:
 		var objectReader io.ReadCloser
 		var objectSize, downloadedSize int64
 		var bodyFile *os.File
@@ -96,7 +80,7 @@ func doFsCopy(c *cli.Context) {
 		var st os.FileInfo
 
 		// Send HEAD request to validate if file exists.
-		objectSize, _, err = s3c.Stat(fsoptions.key, fsoptions.bucket)
+		objectSize, _, err = s3c.Stat(cmdoptions.key, cmdoptions.bucket)
 		if err != nil {
 			fatal(err.Error())
 		}
@@ -108,16 +92,16 @@ func doFsCopy(c *cli.Context) {
 		}
 
 		// Check if the object already exists
-		st, err = os.Stat(fsoptions.body)
+		st, err = os.Stat(cmdoptions.body)
 		switch os.IsNotExist(err) {
 		case true:
 			// Create if it doesn't exist
-			bodyFile, err = os.Create(fsoptions.body)
+			bodyFile, err = os.Create(cmdoptions.body)
 			defer bodyFile.Close()
 			if err != nil {
 				fatal(err.Error())
 			}
-			objectReader, _, err = s3c.Get(fsoptions.bucket, fsoptions.key)
+			objectReader, _, err = s3c.Get(cmdoptions.bucket, cmdoptions.key)
 			if err != nil {
 				fatal(err.Error())
 			}
@@ -125,11 +109,11 @@ func doFsCopy(c *cli.Context) {
 			downloadedSize = st.Size()
 			// Verify if file is already downloaded
 			if downloadedSize == objectSize {
-				msg := fmt.Sprintf("%s object has been already downloaded", fsoptions.body)
+				msg := fmt.Sprintf("%s object has been already downloaded", cmdoptions.body)
 				fatal(msg)
 			}
 
-			bodyFile, err = os.OpenFile(fsoptions.body, os.O_RDWR, 0600)
+			bodyFile, err = os.OpenFile(cmdoptions.body, os.O_RDWR, 0600)
 			defer bodyFile.Close()
 
 			if err != nil {
@@ -142,7 +126,7 @@ func doFsCopy(c *cli.Context) {
 			}
 
 			remainingSize := objectSize - downloadedSize
-			objectReader, objectSize, err = s3c.GetPartial(fsoptions.bucket, fsoptions.key, downloadedSize, remainingSize)
+			objectReader, objectSize, err = s3c.GetPartial(cmdoptions.bucket, cmdoptions.key, downloadedSize, remainingSize)
 			if err != nil {
 				fatal(err.Error())
 			}

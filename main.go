@@ -41,5 +41,6 @@ func main() {
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.EnableBashCompletion = true
+	app.Action = parseGlobalOptions
 	app.Run(os.Args)
 }

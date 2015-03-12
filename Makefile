@@ -43,7 +43,3 @@ docs-deploy:
 install: test-all
 	@godep go install github.com/minio-io/mc && echo "Installed mc"
 	@mkdir -p $(HOME)/.minio/mc
-	@cp mc.completion $(HOME)/.minio/mc && echo "Installing mc bash completion"
-
-uninstall:
-	@echo "Uninstalling mc bash completion" && rm -f $(HOME)/.minio/mc/mc.completion

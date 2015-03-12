@@ -17,37 +17,87 @@
 package main
 
 import (
-	"net/http"
-	"net/url"
+	"bytes"
+	"os"
 	"path"
 	"strings"
+	"time"
 
+	"net/http"
+	"net/url"
+
+	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-// NewClient - get new client
-func getNewClient(c *cli.Context) (*s3.Client, error) {
-	config, err := getMcConfig()
+// StartBar -- instantiate a progressbar
+func startBar(size int64) *pb.ProgressBar {
+	bar := pb.New(int(size))
+	bar.SetUnits(pb.U_BYTES)
+	bar.SetRefreshRate(time.Millisecond * 10)
+	bar.NotPrint = true
+	bar.ShowSpeed = true
+	bar.Callback = func(s string) {
+		// Colorize
+		infoCallback(s)
+	}
+	// Feels like wget
+	bar.Format("[=> ]")
+	return bar
+}
+
+// getBashCompletion -
+func getBashCompletion() {
+	var b bytes.Buffer
+	b.WriteString(mcBashCompletion)
+	f := getMcBashCompletionFilename()
+	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	defer fl.Close()
+	_, err = fl.Write(b.Bytes())
 	if err != nil {
 		fatal(err.Error())
 	}
+	msg := "\nConfiguration written to " + f
+	msg = msg + "\n\n$ source ${HOME}/.minio/mc/mc.bash_completion\n"
+	msg = msg + "$ echo 'source ${HOME}/.minio/mc/mc.bash_completion' >> ${HOME}/.bashrc\n"
+	info(msg)
+}
 
-	if c.GlobalBool("debug") {
+// NewClient - get new client
+func getNewClient(c *cli.Context) (*s3.Client, error) {
+	var s3client *s3.Client
+
+	config, err := getMcConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	switch c.GlobalBool("debug") {
+	case true:
 		traceTransport := s3.RoundTripTrace{
 			Trace:     s3Trace{BodyTraceFlag: false, RequestTransportFlag: true, Writer: nil},
 			Transport: http.DefaultTransport,
 		}
-		s3client := s3.GetNewClient(&config.S3.Auth, traceTransport)
-		return s3client, nil
+		s3client = s3.GetNewClient(&config.S3.Auth, traceTransport)
+	case false:
+		s3client = s3.GetNewClient(&config.S3.Auth, nil)
 	}
 
-	s3client := s3.GetNewClient(&config.S3.Auth, nil)
 	return s3client, nil
 }
 
-func parseOptions(c *cli.Context) (fsoptions *fsOptions, err error) {
-	fsoptions = new(fsOptions)
+// Parse global options
+func parseGlobalOptions(c *cli.Context) {
+	switch true {
+	case c.Bool("get-bash-completion") == true:
+		getBashCompletion()
+	}
+}
+
+// Parse subcommand options
+func parseOptions(c *cli.Context) (cmdoptions *cmdOptions, err error) {
+	cmdoptions = new(cmdOptions)
 	switch len(c.Args()) {
 	case 1:
 		if strings.HasPrefix(c.Args().Get(0), "s3://") {
@@ -58,8 +108,8 @@ func parseOptions(c *cli.Context) (fsoptions *fsOptions, err error) {
 			if uri.Scheme != "s3" {
 				return nil, errInvalidScheme
 			}
-			fsoptions.bucket = uri.Host
-			fsoptions.key = strings.TrimPrefix(uri.Path, "/")
+			cmdoptions.bucket = uri.Host
+			cmdoptions.key = strings.TrimPrefix(uri.Path, "/")
 		} else {
 			return nil, errInvalidScheme
 		}
@@ -69,35 +119,39 @@ func parseOptions(c *cli.Context) (fsoptions *fsOptions, err error) {
 			if err != nil {
 				return nil, err
 			}
-			fsoptions.bucket = uri.Host
+			cmdoptions.bucket = uri.Host
 			if uri.Path == "" {
 				return nil, errFskey
 			}
-			fsoptions.key = strings.TrimPrefix(uri.Path, "/")
+			cmdoptions.key = strings.TrimPrefix(uri.Path, "/")
 			if c.Args().Get(1) == "." {
-				fsoptions.body = path.Base(fsoptions.key)
+				cmdoptions.body = path.Base(cmdoptions.key)
 			} else {
-				fsoptions.body = c.Args().Get(1)
+				cmdoptions.body = c.Args().Get(1)
 			}
-			fsoptions.isget = true
-			fsoptions.isput = false
+			cmdoptions.isget = true
+			cmdoptions.isput = false
 		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
 			uri, err := url.Parse(c.Args().Get(1))
 			if err != nil {
 				return nil, err
 			}
-			fsoptions.bucket = uri.Host
+			cmdoptions.bucket = uri.Host
 			if uri.Path == "" {
-				fsoptions.key = c.Args().Get(0)
+				cmdoptions.key = c.Args().Get(0)
 			} else {
-				fsoptions.key = strings.TrimPrefix(uri.Path, "/")
+				cmdoptions.key = strings.TrimPrefix(uri.Path, "/")
 			}
-			fsoptions.body = c.Args().Get(0)
-			fsoptions.isget = false
-			fsoptions.isput = true
+			cmdoptions.body = c.Args().Get(0)
+			cmdoptions.isget = false
+			cmdoptions.isput = true
 		}
 	default:
 		return nil, errInvalidScheme
 	}
 	return
+}
+
+func getMcBashCompletionFilename() string {
+	return path.Join(getMcConfigDir(), "mc.bash_completion")
 }
