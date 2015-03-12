@@ -39,7 +39,7 @@ GLOBAL OPTIONS:
 
 ## Contribute
 
-[Contribute to mc](./CONTRIBUTING.md)
+[Contribute to mc](./contributing.md)
 
 ### Enable bash completion
 
