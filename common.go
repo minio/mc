@@ -87,18 +87,21 @@ func getNewClient(c *cli.Context) (*s3.Client, error) {
 
 // Parse global options
 func parseGlobalOptions(c *cli.Context) {
-	switch true {
+	switch {
 	case c.Bool("get-bash-completion") == true:
 		getBashCompletion()
+	default:
+		cli.ShowAppHelp(c)
 	}
 }
 
 // Parse subcommand options
-func parseOptions(c *cli.Context) (cmdoptions *cmdOptions, err error) {
-	cmdoptions = new(cmdOptions)
-	cmdoptions.quiet = c.GlobalBool("quiet")
-
+func parseOptions(c *cli.Context) (cmdopts *cmdOptions, err error) {
+	cmdopts = new(cmdOptions)
+	cmdopts.quiet = c.GlobalBool("quiet")
 	switch len(c.Args()) {
+	case 0:
+		return cmdopts, nil
 	case 1:
 		if strings.HasPrefix(c.Args().Get(0), "s3://") {
 			uri, err := url.Parse(c.Args().Get(0))
@@ -108,8 +111,8 @@ func parseOptions(c *cli.Context) (cmdoptions *cmdOptions, err error) {
 			if uri.Scheme != "s3" {
 				return nil, errInvalidScheme
 			}
-			cmdoptions.source.bucket = uri.Host
-			cmdoptions.source.key = strings.TrimPrefix(uri.Path, "/")
+			cmdopts.source.bucket = uri.Host
+			cmdopts.source.key = strings.TrimPrefix(uri.Path, "/")
 		} else {
 			return nil, errInvalidScheme
 		}
@@ -128,8 +131,8 @@ func parseOptions(c *cli.Context) (cmdoptions *cmdOptions, err error) {
 					}
 					return nil, errInvalidScheme
 				}
-				cmdoptions.source.bucket = uri.Host
-				cmdoptions.source.key = strings.TrimPrefix(uri.Path, "/")
+				cmdopts.source.bucket = uri.Host
+				cmdopts.source.key = strings.TrimPrefix(uri.Path, "/")
 			case uri.Scheme == "":
 				if uri.Host != "" {
 					return nil, errInvalidScheme
@@ -140,8 +143,8 @@ func parseOptions(c *cli.Context) (cmdoptions *cmdOptions, err error) {
 				if uri.Path == "." {
 					return nil, errFskey
 				}
-				cmdoptions.source.bucket = uri.Host
-				cmdoptions.source.key = strings.TrimPrefix(uri.Path, "/")
+				cmdopts.source.bucket = uri.Host
+				cmdopts.source.key = strings.TrimPrefix(uri.Path, "/")
 			case uri.Scheme != "s3":
 				return nil, errInvalidScheme
 			}
@@ -159,18 +162,18 @@ func parseOptions(c *cli.Context) (cmdoptions *cmdOptions, err error) {
 					}
 					return nil, errInvalidScheme
 				}
-				cmdoptions.destination.bucket = uri.Host
-				cmdoptions.destination.key = strings.TrimPrefix(uri.Path, "/")
+				cmdopts.destination.bucket = uri.Host
+				cmdopts.destination.key = strings.TrimPrefix(uri.Path, "/")
 			case uri.Scheme == "":
 				if uri.Host != "" {
 					return nil, errInvalidScheme
 				}
 				if uri.Path == "." {
-					cmdoptions.destination.key = cmdoptions.source.key
+					cmdopts.destination.key = cmdopts.source.key
 				} else {
-					cmdoptions.destination.key = strings.TrimPrefix(uri.Path, "/")
+					cmdopts.destination.key = strings.TrimPrefix(uri.Path, "/")
 				}
-				cmdoptions.destination.bucket = uri.Host
+				cmdopts.destination.bucket = uri.Host
 			case uri.Scheme != "s3":
 				return nil, errInvalidScheme
 			}
