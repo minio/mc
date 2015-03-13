@@ -26,9 +26,13 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
+const (
+	printDate = "2006-01-02 15:04:05 -0700 MST"
+)
+
 func printBuckets(v []*s3.Bucket) {
 	for _, b := range v {
-		msg := fmt.Sprintf("%v %9s %s", b.CreationDate.Local(), "", b.Name)
+		msg := fmt.Sprintf("%29s %13s %s", b.CreationDate.Local().Format(printDate), "", b.Name)
 		info(msg)
 	}
 }
@@ -43,7 +47,7 @@ func printObjects(v []*s3.Item) {
 }
 
 func printObject(date time.Time, v int64, key string) {
-	msg := fmt.Sprintf("%v  %9s %s", date.Local(), pb.FormatBytes(v), key)
+	msg := fmt.Sprintf("%29s %13s %s", date.Local().Format(printDate), pb.FormatBytes(v), key)
 	info(msg)
 }
 
