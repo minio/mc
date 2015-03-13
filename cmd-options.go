@@ -49,9 +49,8 @@ var sync = cli.Command{
 }
 
 var configure = cli.Command{
-	Name:      "configure",
-	ShortName: "config",
-	Usage:     "Generate configuration \"" + getMcConfigFilename() + "\" file.",
+	Name:  "config",
+	Usage: "Generate configuration \"" + getMcConfigFilename() + "\" file.",
 	Description: `Configure minio client configuration data. If your config
    file does not exist (the default location is ~/.auth), it will be
    automatically created for you. Note that the configure command only writes
