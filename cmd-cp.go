@@ -53,7 +53,7 @@ func getMode(recursive bool, args *cmdArgs) int {
 	case true:
 		switch true {
 		// <Dir> <S3Bucket> or <S3Bucket> <Dir> or <Dir> <S3Uri>
-		case (args.source.bucket != "" && args.destination.key != "") || args.source.key != "":
+		case args.source.bucket != "" || args.source.key != "":
 			return fourth
 		}
 	}
@@ -106,10 +106,6 @@ func secondMode(s3c *s3.Client, args *cmdArgs) error {
 	objectSize, _, err = s3c.Stat(args.source.bucket, args.source.key)
 	if err != nil {
 		return err
-	}
-
-	if args.destination.key == "." {
-		args.destination.key = args.source.key
 	}
 
 	var bar *pb.ProgressBar
@@ -228,6 +224,9 @@ func fourthMode(s3c *s3.Client, args *cmdArgs) error {
 			args.destination.bucket = args.source.key
 		}
 	} else {
+		if args.destination.key == "" {
+			args.destination.key = args.source.bucket
+		}
 		_, err := os.Stat(args.destination.key)
 		if os.IsNotExist(err) {
 			os.MkdirAll(args.destination.key, 0755)
