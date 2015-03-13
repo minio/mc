@@ -25,6 +25,12 @@ var cp = cli.Command{
 	Usage:       "",
 	Description: `Copies a local file or Object to another location locally or in S3.`,
 	Action:      doFsCopy,
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "recursive cp",
+		},
+	},
 }
 
 var ls = cli.Command{
@@ -39,13 +45,6 @@ var mb = cli.Command{
 	Usage:       "",
 	Description: "Creates an S3 bucket",
 	Action:      doFsMb,
-}
-
-var sync = cli.Command{
-	Name:        "sync",
-	Usage:       "",
-	Description: "Syncs directories and S3 prefixes",
-	Action:      doFsSync,
 }
 
 var configure = cli.Command{
@@ -85,7 +84,7 @@ type object struct {
 	key    string
 }
 
-type cmdOptions struct {
+type cmdArgs struct {
 	quiet       bool
 	source      object
 	destination object
@@ -95,7 +94,6 @@ var options = []cli.Command{
 	cp,
 	ls,
 	mb,
-	sync,
 	configure,
 }
 

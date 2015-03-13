@@ -28,64 +28,74 @@ import (
 
 // Different modes of cp operation
 const (
-	first  = iota // <Path> <S3Path> or <Path> <S3Bucket>
-	second        // <S3Path> <Path> or <S3Path> .
-	third         // <S3Path> <S3Path> or <S3Path> <S3Bucket>
-	fourth        // <S3Bucket> <S3Bucket> - TODO
+	first  = iota // <Object> <S3Object> or <Object> <S3Bucket>
+	second        // <S3Object> <Object> or <S3Object> .
+	third         // <S3Object> <S3Object> or <S3Object> <S3Bucket>
+	fourth        // <Dir> <S3Bucket> or <S3Bucket> <Dir> or <Dir> <S3Uri>
 	invalid
 )
 
-func getMode(options *cmdOptions) int {
-	switch true {
-	// <Path> <S3Path> or <Path> <S3Bucket>
-	case options.source.bucket == "" && options.destination.bucket != "":
-		return first
-	// <S3Path> <Path> or <S3Path> .
-	case options.source.bucket != "" && options.destination.bucket == "":
-		return second
-	// <S3Path> <S3Path> or <S3Path> <S3Bucket>
-	case options.source.bucket != "" && options.destination.bucket != "" && options.source.key != "":
-		return third
+// Get current mode of operation from available arguments and options
+func getMode(recursive bool, args *cmdArgs) int {
+	switch recursive {
+	case false:
+		switch true {
+		// <Object> <S3Object> or <Object> <S3Bucket>
+		case args.source.bucket == "" && args.destination.bucket != "":
+			return first
+		// <S3Object> <Object> or <S3Object> .
+		case args.source.bucket != "" && args.source.key != "" && args.destination.bucket == "":
+			return second
+		// <S3Object> <S3Object> or <S3Object> <S3Bucket>
+		case args.source.bucket != "" && args.destination.bucket != "" && args.source.key != "":
+			return third
+		}
+	case true:
+		switch true {
+		// <Dir> <S3Bucket> or <S3Bucket> <Dir> or <Dir> <S3Uri>
+		case (args.source.bucket != "" && args.destination.key != "") || args.source.key != "":
+			return fourth
+		}
 	}
 	return invalid
 }
 
-// First mode <Path> <S3Path> or <Path> <S3Bucket>
-func firstMode(s3c *s3.Client, options *cmdOptions) error {
-	if options.source.key == "" {
-		return fmt.Errorf("invalid")
+// First mode <Object> <S3Object> or <Object> <S3Bucket>
+func firstMode(s3c *s3.Client, args *cmdArgs) error {
+	if args.source.key == "" {
+		return fmt.Errorf("invalid args")
 	}
-	st, err := os.Stat(options.source.key)
+	st, err := os.Stat(args.source.key)
 	if os.IsNotExist(err) {
 		return err
 	}
 	if st.IsDir() {
-		fmt.Errorf("Is a directory")
+		return fmt.Errorf("omitting directory '%s'", st.Name())
 	}
 	size := st.Size()
-	source, err := os.Open(options.source.key)
+	source, err := os.Open(args.source.key)
 	defer source.Close()
 	if err != nil {
 		return err
 	}
 
 	// s3://<bucket> is specified without key
-	if options.destination.key == "" {
-		options.destination.key = options.source.key
+	if args.destination.key == "" {
+		args.destination.key = args.source.key
 	}
 
-	err = s3c.Put(options.destination.bucket, options.destination.key, size, source)
+	err = s3c.Put(args.destination.bucket, args.destination.key, size, source)
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("%s uploaded -- to bucket:(s3://%s/%s)", options.source.key,
-		options.destination.bucket, options.destination.key)
+	msg := fmt.Sprintf("%s uploaded -- to bucket:(s3://%s/%s)", args.source.key,
+		args.destination.bucket, args.destination.key)
 	info(msg)
 	return nil
 }
 
-// Second mode <S3Path> <Path> or <S3Path> .
-func secondMode(s3c *s3.Client, options *cmdOptions) error {
+// Second mode <S3Object> <Object> or <S3Object> .
+func secondMode(s3c *s3.Client, args *cmdArgs) error {
 	var objectReader io.ReadCloser
 	var objectSize, downloadedSize int64
 	var destination *os.File
@@ -93,32 +103,32 @@ func secondMode(s3c *s3.Client, options *cmdOptions) error {
 	var st os.FileInfo
 
 	// Send HEAD request to validate if file exists.
-	objectSize, _, err = s3c.Stat(options.source.bucket, options.source.key)
+	objectSize, _, err = s3c.Stat(args.source.bucket, args.source.key)
 	if err != nil {
 		return err
 	}
 
-	if options.destination.key == "." {
-		options.destination.key = options.source.key
+	if args.destination.key == "." {
+		args.destination.key = args.source.key
 	}
 
 	var bar *pb.ProgressBar
-	if !options.quiet {
+	if !args.quiet {
 		// get progress bar
 		bar = startBar(objectSize)
 	}
 
 	// Check if the object already exists
-	st, err = os.Stat(options.destination.key)
+	st, err = os.Stat(args.destination.key)
 	switch os.IsNotExist(err) {
 	case true:
 		// Create if it doesn't exist
-		destination, err = os.Create(options.destination.key)
+		destination, err = os.Create(args.destination.key)
 		defer destination.Close()
 		if err != nil {
 			return err
 		}
-		objectReader, _, err = s3c.Get(options.source.bucket, options.source.key)
+		objectReader, _, err = s3c.Get(args.source.bucket, args.source.key)
 		if err != nil {
 			return err
 		}
@@ -126,10 +136,10 @@ func secondMode(s3c *s3.Client, options *cmdOptions) error {
 		downloadedSize = st.Size()
 		// Verify if file is already downloaded
 		if downloadedSize == objectSize {
-			return fmt.Errorf("%s object has been already downloaded", options.destination.key)
+			return fmt.Errorf("%s object has been already downloaded", args.destination.key)
 		}
 
-		destination, err = os.OpenFile(options.destination.key, os.O_RDWR, 0600)
+		destination, err = os.OpenFile(args.destination.key, os.O_RDWR, 0600)
 		defer destination.Close()
 		if err != nil {
 			return err
@@ -141,19 +151,19 @@ func secondMode(s3c *s3.Client, options *cmdOptions) error {
 		}
 
 		remainingSize := objectSize - downloadedSize
-		objectReader, objectSize, err = s3c.GetPartial(options.source.bucket,
-			options.source.key, downloadedSize, remainingSize)
+		objectReader, objectSize, err = s3c.GetPartial(args.source.bucket,
+			args.source.key, downloadedSize, remainingSize)
 		if err != nil {
 			return err
 		}
 
-		if !options.quiet {
+		if !args.quiet {
 			bar.Set(int(downloadedSize))
 		}
 	}
 
 	writer := io.Writer(destination)
-	if !options.quiet {
+	if !args.quiet {
 		// Start the bar now
 		bar.Start()
 		// create multi writer to feed data
@@ -170,31 +180,31 @@ func secondMode(s3c *s3.Client, options *cmdOptions) error {
 	return nil
 }
 
-// <S3Path> <S3Path> or <S3Path> <S3Bucket>
-func thirdMode(s3c *s3.Client, options *cmdOptions) error {
+// <S3Object> <S3Object> or <S3Object> <S3Bucket>
+func thirdMode(s3c *s3.Client, args *cmdArgs) error {
 	var objectReader io.ReadCloser
 	var objectSize int64
 	var err error
 
 	// Send HEAD request to validate if file exists.
-	objectSize, _, err = s3c.Stat(options.source.bucket, options.source.key)
+	objectSize, _, err = s3c.Stat(args.source.bucket, args.source.key)
 	if err != nil {
 		return err
 	}
 
-	if options.destination.key == "" {
-		options.destination.key = options.source.key
+	if args.destination.key == "" {
+		args.destination.key = args.source.key
 	}
 
 	// Check if the object already exists
-	_, _, err = s3c.Stat(options.destination.bucket, options.destination.key)
+	_, _, err = s3c.Stat(args.destination.bucket, args.destination.key)
 	switch os.IsNotExist(err) {
 	case true:
-		objectReader, _, err = s3c.Get(options.source.bucket, options.source.key)
+		objectReader, _, err = s3c.Get(args.source.bucket, args.source.key)
 		if err != nil {
 			return err
 		}
-		err = s3c.Put(options.destination.bucket, options.destination.key, objectSize, objectReader)
+		err = s3c.Put(args.destination.bucket, args.destination.key, objectSize, objectReader)
 		if err != nil {
 			return err
 		}
@@ -202,10 +212,28 @@ func thirdMode(s3c *s3.Client, options *cmdOptions) error {
 		return fmt.Errorf("Ranges not supported")
 	}
 
-	msg := fmt.Sprintf("s3://%s/%s uploaded -- to bucket:(s3://%s/%s)", options.source.bucket, options.source.key,
-		options.destination.bucket, options.destination.key)
+	msg := fmt.Sprintf("s3://%s/%s uploaded -- to bucket:(s3://%s/%s)", args.source.bucket, args.source.key,
+		args.destination.bucket, args.destination.key)
 	info(msg)
 	return nil
+}
+
+func fourthMode(s3c *s3.Client, args *cmdArgs) error {
+	if args.source.bucket == "" {
+		_, err := os.Stat(args.source.key)
+		if os.IsNotExist(err) {
+			return err
+		}
+		if args.destination.bucket == "" {
+			args.destination.bucket = args.source.key
+		}
+	} else {
+		_, err := os.Stat(args.destination.key)
+		if os.IsNotExist(err) {
+			os.MkdirAll(args.destination.key, 0755)
+		}
+	}
+	return doRecursiveCp(s3c, args)
 }
 
 func doFsCopy(c *cli.Context) {
@@ -218,29 +246,34 @@ func doFsCopy(c *cli.Context) {
 		fatal("Invalid number of args")
 	}
 
-	var cmdoptions *cmdOptions
-	cmdoptions, err = parseOptions(c)
+	var cmdargs *cmdArgs
+	cmdargs, err = parseArgs(c)
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	switch getMode(cmdoptions) {
+	switch getMode(c.Bool("recursive"), cmdargs) {
 	case first:
-		err := firstMode(s3c, cmdoptions)
+		err := firstMode(s3c, cmdargs)
 		if err != nil {
 			fatal(err.Error())
 		}
 	case second:
-		err := secondMode(s3c, cmdoptions)
+		err := secondMode(s3c, cmdargs)
 		if err != nil {
 			fatal(err.Error())
 		}
 	case third:
-		err := thirdMode(s3c, cmdoptions)
+		err := thirdMode(s3c, cmdargs)
+		if err != nil {
+			fatal(err.Error())
+		}
+	case fourth:
+		err := fourthMode(s3c, cmdargs)
 		if err != nil {
 			fatal(err.Error())
 		}
 	default:
-		fatal("Invalid request")
+		fatal("invalid args")
 	}
 }

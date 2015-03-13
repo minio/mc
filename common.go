@@ -96,12 +96,13 @@ func parseGlobalOptions(c *cli.Context) {
 }
 
 // Parse subcommand options
-func parseOptions(c *cli.Context) (cmdopts *cmdOptions, err error) {
-	cmdopts = new(cmdOptions)
-	cmdopts.quiet = c.GlobalBool("quiet")
+func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
+	args = new(cmdArgs)
+	args.quiet = c.GlobalBool("quiet")
+
 	switch len(c.Args()) {
 	case 0:
-		return cmdopts, nil
+		return args, nil
 	case 1:
 		if strings.HasPrefix(c.Args().Get(0), "s3://") {
 			uri, err := url.Parse(c.Args().Get(0))
@@ -111,8 +112,8 @@ func parseOptions(c *cli.Context) (cmdopts *cmdOptions, err error) {
 			if uri.Scheme != "s3" {
 				return nil, errInvalidScheme
 			}
-			cmdopts.source.bucket = uri.Host
-			cmdopts.source.key = strings.TrimPrefix(uri.Path, "/")
+			args.source.bucket = uri.Host
+			args.source.key = strings.TrimPrefix(uri.Path, "/")
 		} else {
 			return nil, errInvalidScheme
 		}
@@ -131,8 +132,8 @@ func parseOptions(c *cli.Context) (cmdopts *cmdOptions, err error) {
 					}
 					return nil, errInvalidScheme
 				}
-				cmdopts.source.bucket = uri.Host
-				cmdopts.source.key = strings.TrimPrefix(uri.Path, "/")
+				args.source.bucket = uri.Host
+				args.source.key = strings.TrimPrefix(uri.Path, "/")
 			case uri.Scheme == "":
 				if uri.Host != "" {
 					return nil, errInvalidScheme
@@ -143,8 +144,8 @@ func parseOptions(c *cli.Context) (cmdopts *cmdOptions, err error) {
 				if uri.Path == "." {
 					return nil, errFskey
 				}
-				cmdopts.source.bucket = uri.Host
-				cmdopts.source.key = strings.TrimPrefix(uri.Path, "/")
+				args.source.bucket = uri.Host
+				args.source.key = strings.TrimPrefix(uri.Path, "/")
 			case uri.Scheme != "s3":
 				return nil, errInvalidScheme
 			}
@@ -162,18 +163,18 @@ func parseOptions(c *cli.Context) (cmdopts *cmdOptions, err error) {
 					}
 					return nil, errInvalidScheme
 				}
-				cmdopts.destination.bucket = uri.Host
-				cmdopts.destination.key = strings.TrimPrefix(uri.Path, "/")
+				args.destination.bucket = uri.Host
+				args.destination.key = strings.TrimPrefix(uri.Path, "/")
 			case uri.Scheme == "":
 				if uri.Host != "" {
 					return nil, errInvalidScheme
 				}
 				if uri.Path == "." {
-					cmdopts.destination.key = cmdopts.source.key
+					args.destination.key = args.source.key
 				} else {
-					cmdopts.destination.key = strings.TrimPrefix(uri.Path, "/")
+					args.destination.key = strings.TrimPrefix(uri.Path, "/")
 				}
-				cmdopts.destination.bucket = uri.Host
+				args.destination.bucket = uri.Host
 			case uri.Scheme != "s3":
 				return nil, errInvalidScheme
 			}
