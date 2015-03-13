@@ -66,7 +66,7 @@ func getBashCompletion() {
 
 // NewClient - get new client
 func getNewClient(c *cli.Context) (*s3.Client, error) {
-	var s3client *s3.Client
+	var client *s3.Client
 
 	config, err := getMcConfig()
 	if err != nil {
@@ -75,16 +75,14 @@ func getNewClient(c *cli.Context) (*s3.Client, error) {
 
 	switch c.GlobalBool("debug") {
 	case true:
-		traceTransport := s3.RoundTripTrace{
-			Trace:     s3Trace{BodyTraceFlag: false, RequestTransportFlag: true, Writer: nil},
-			Transport: http.DefaultTransport,
-		}
-		s3client = s3.GetNewClient(&config.S3.Auth, traceTransport)
+		trace := s3Trace{BodyTraceFlag: false, RequestTransportFlag: true, Writer: nil}
+		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
+		client = s3.GetNewClient(&config.S3.Auth, traceTransport)
 	case false:
-		s3client = s3.GetNewClient(&config.S3.Auth, nil)
+		client = s3.GetNewClient(&config.S3.Auth, nil)
 	}
 
-	return s3client, nil
+	return client, nil
 }
 
 // Parse global options

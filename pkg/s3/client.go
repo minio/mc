@@ -94,7 +94,8 @@ type Client struct {
 func GetNewClient(auth *Auth, transport http.RoundTripper) *Client {
 	return &Client{
 		Auth:      auth,
-		Transport: transport,
+		Transport: GetNewTraceTransport(s3Verify{}, transport),
+		// Transport: transport,
 	}
 }
 
