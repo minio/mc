@@ -92,7 +92,7 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 }
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3
-func (c *Client) Stat(key, bucket string) (size int64, date time.Time, reterr error) {
+func (c *Client) Stat(bucket, key string) (size int64, date time.Time, reterr error) {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
 	c.Auth.signRequest(req)

@@ -96,6 +96,8 @@ func parseGlobalOptions(c *cli.Context) {
 // Parse subcommand options
 func parseOptions(c *cli.Context) (cmdoptions *cmdOptions, err error) {
 	cmdoptions = new(cmdOptions)
+	cmdoptions.quiet = c.GlobalBool("quiet")
+
 	switch len(c.Args()) {
 	case 1:
 		if strings.HasPrefix(c.Args().Get(0), "s3://") {
@@ -106,43 +108,72 @@ func parseOptions(c *cli.Context) (cmdoptions *cmdOptions, err error) {
 			if uri.Scheme != "s3" {
 				return nil, errInvalidScheme
 			}
-			cmdoptions.bucket = uri.Host
-			cmdoptions.key = strings.TrimPrefix(uri.Path, "/")
+			cmdoptions.source.bucket = uri.Host
+			cmdoptions.source.key = strings.TrimPrefix(uri.Path, "/")
 		} else {
 			return nil, errInvalidScheme
 		}
 	case 2:
-		if strings.HasPrefix(c.Args().Get(0), "s3://") {
+		switch true {
+		case c.Args().Get(0) != "":
 			uri, err := url.Parse(c.Args().Get(0))
 			if err != nil {
 				return nil, err
 			}
-			cmdoptions.bucket = uri.Host
-			if uri.Path == "" {
-				return nil, errFskey
+			switch true {
+			case uri.Scheme == "s3":
+				if uri.Host == "" {
+					if uri.Path == "" {
+						return nil, errInvalidScheme
+					}
+					return nil, errInvalidScheme
+				}
+				cmdoptions.source.bucket = uri.Host
+				cmdoptions.source.key = strings.TrimPrefix(uri.Path, "/")
+			case uri.Scheme == "":
+				if uri.Host != "" {
+					return nil, errInvalidScheme
+				}
+				if uri.Path != c.Args().Get(0) {
+					return nil, errInvalidScheme
+				}
+				if uri.Path == "." {
+					return nil, errFskey
+				}
+				cmdoptions.source.bucket = uri.Host
+				cmdoptions.source.key = strings.TrimPrefix(uri.Path, "/")
+			case uri.Scheme != "s3":
+				return nil, errInvalidScheme
 			}
-			cmdoptions.key = strings.TrimPrefix(uri.Path, "/")
-			if c.Args().Get(1) == "." {
-				cmdoptions.body = path.Base(cmdoptions.key)
-			} else {
-				cmdoptions.body = c.Args().Get(1)
-			}
-			cmdoptions.isget = true
-			cmdoptions.isput = false
-		} else if strings.HasPrefix(c.Args().Get(1), "s3://") {
+			fallthrough
+		case c.Args().Get(1) != "":
 			uri, err := url.Parse(c.Args().Get(1))
 			if err != nil {
 				return nil, err
 			}
-			cmdoptions.bucket = uri.Host
-			if uri.Path == "" {
-				cmdoptions.key = c.Args().Get(0)
-			} else {
-				cmdoptions.key = strings.TrimPrefix(uri.Path, "/")
+			switch true {
+			case uri.Scheme == "s3":
+				if uri.Host == "" {
+					if uri.Path == "" {
+						return nil, errInvalidScheme
+					}
+					return nil, errInvalidScheme
+				}
+				cmdoptions.destination.bucket = uri.Host
+				cmdoptions.destination.key = strings.TrimPrefix(uri.Path, "/")
+			case uri.Scheme == "":
+				if uri.Host != "" {
+					return nil, errInvalidScheme
+				}
+				if uri.Path == "." {
+					cmdoptions.destination.key = cmdoptions.source.key
+				} else {
+					cmdoptions.destination.key = strings.TrimPrefix(uri.Path, "/")
+				}
+				cmdoptions.destination.bucket = uri.Host
+			case uri.Scheme != "s3":
+				return nil, errInvalidScheme
 			}
-			cmdoptions.body = c.Args().Get(0)
-			cmdoptions.isget = false
-			cmdoptions.isput = true
 		}
 	default:
 		return nil, errInvalidScheme

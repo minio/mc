@@ -59,29 +59,29 @@ func doFsList(c *cli.Context) {
 		fatal(err.Error())
 	}
 	switch true {
-	case cmdoptions.bucket == "": // List all buckets
+	case cmdoptions.source.bucket == "": // List all buckets
 		buckets, err := s3c.ListBuckets()
 		if err != nil {
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
-	case cmdoptions.key == "": // List objects in a bucket
-		items, _, err = s3c.ListObjects(cmdoptions.bucket, "", "", "", s3.MaxKeys)
+	case cmdoptions.source.key == "": // List objects in a bucket
+		items, _, err = s3c.ListObjects(cmdoptions.source.bucket, "", "", "", s3.MaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
-	case cmdoptions.key != "": // List objects matching the key prefix
+	case cmdoptions.source.key != "": // List objects matching the key prefix
 		var date time.Time
 		var size int64
 
-		size, date, err = s3c.Stat(cmdoptions.key, cmdoptions.bucket)
+		size, date, err = s3c.Stat(cmdoptions.source.bucket, cmdoptions.source.key)
 		switch err {
 		case nil: // List a single object. Exact key
-			printObject(date, size, cmdoptions.key)
+			printObject(date, size, cmdoptions.source.key)
 		case os.ErrNotExist:
 			// List all objects matching the key prefix
-			items, _, err = s3c.ListObjects(cmdoptions.bucket, "", cmdoptions.key, "", s3.MaxKeys)
+			items, _, err = s3c.ListObjects(cmdoptions.source.bucket, "", cmdoptions.source.key, "", s3.MaxKeys)
 			if err != nil {
 				fatal(err.Error())
 			}

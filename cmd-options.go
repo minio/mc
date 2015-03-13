@@ -81,12 +81,15 @@ var configure = cli.Command{
 	},
 }
 
-type cmdOptions struct {
+type object struct {
 	bucket string
-	body   string
 	key    string
-	isget  bool
-	isput  bool
+}
+
+type cmdOptions struct {
+	quiet       bool
+	source      object
+	destination object
 }
 
 var options = []cli.Command{
