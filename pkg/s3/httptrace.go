@@ -23,8 +23,8 @@ import (
 
 // HTTPTracer provides callback hook mechanism for HTTP transport.
 type HTTPTracer interface {
-	Request(req *http.Request)
-	Response(res *http.Response)
+	Request(req *http.Request) error
+	Response(res *http.Response) error
 }
 
 // RoundTripTrace interposes HTTP transport requests and respsonses using HTTPTracer hooks
@@ -36,16 +36,30 @@ type RoundTripTrace struct {
 // RoundTrip executes user provided request and response hooks for each HTTP call.
 func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err error) {
 	if t.Trace != nil {
-		t.Trace.Request(req)
+		err = t.Trace.Request(req)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if t.Transport != nil {
-		res, err = t.Transport.RoundTrip(req)
-	} else {
+
+	if t.Transport == nil {
 		return nil, errors.New("TraceRoundTrip.Transport is nil")
+	}
+
+	res, err = t.Transport.RoundTrip(req)
+	if err != nil {
+		return res, err
 	}
 
 	if t.Trace != nil {
 		t.Trace.Response(res)
 	}
+
 	return res, err
+}
+
+// GetNewTraceTransport returns a traceable transport
+func GetNewTraceTransport(trace HTTPTracer, transport http.RoundTripper) RoundTripTrace {
+	return RoundTripTrace{Trace: trace,
+		Transport: transport}
 }

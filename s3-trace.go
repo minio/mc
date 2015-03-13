@@ -30,7 +30,7 @@ type s3Trace struct {
 }
 
 // Trace HTTP Request
-func (t s3Trace) Request(req *http.Request) {
+func (t s3Trace) Request(req *http.Request) (err error) {
 	origAuthKey := req.Header.Get("Authorization")
 	req.Header.Set("Authorization", "AWS **PASSWORD**STRIPPED**")
 
@@ -47,15 +47,16 @@ func (t s3Trace) Request(req *http.Request) {
 	}
 
 	req.Header.Set("Authorization", origAuthKey)
+	return err
 }
 
 // Trace HTTP Response
-func (t s3Trace) Response(res *http.Response) {
-
+func (t s3Trace) Response(res *http.Response) (err error) {
 	resTrace, err := httputil.DumpResponse(res, t.BodyTraceFlag)
 	if err == nil {
 		t.print(resTrace)
 	}
+	return err
 }
 
 // Trace HTTP Response
