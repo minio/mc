@@ -22,27 +22,27 @@ import (
 
 var cp = cli.Command{
 	Name:        "cp",
-	Usage:       "",
-	Description: `Copies a local file or Object to another location locally or in S3.`,
+	Usage:       "copy objects",
+	Description: `Copies a local file or dir or object or bucket to another location locally or in S3.`,
 	Action:      doFsCopy,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "recursive cp",
+			Usage: "recursively crawls given directory uploads to given bucket",
 		},
 	},
 }
 
 var ls = cli.Command{
 	Name:        "ls",
-	Usage:       "",
+	Usage:       "get list of objects",
 	Description: `List Objects and common prefixes under a prefix or all Buckets`,
 	Action:      doFsList,
 }
 
 var mb = cli.Command{
 	Name:        "mb",
-	Usage:       "",
+	Usage:       "makes a bucket",
 	Description: "Creates an S3 bucket",
 	Action:      doFsMb,
 }

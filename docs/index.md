@@ -1,6 +1,6 @@
 # Minio Client
 
-mc - unified command line interface for Minio and S3 released under [Apache license v2](./LICENSE).
+mc - Minio Client for S3 Compatible Object Storage released under [Apache license v2](./LICENSE).
 
 ## Install
 
@@ -13,7 +13,7 @@ mc - unified command line interface for Minio and S3 released under [Apache lice
 ### Commands
 ```
 NAME:
-   mc - unified command line interface for Minio and S3
+   mc - Minio Client for S3 Compatible Object Storage
 
 USAGE:
    mc [global options] command [command options] [arguments...]
@@ -22,19 +22,22 @@ VERSION:
    0.1.0
 
 AUTHOR:
-  Minio Community
+  Minio.io
 
 COMMANDS:
-   cp
-   ls
-   mb
-   sync
-   configure
+   cp           copy objects
+   ls           get list of objects
+   mb           makes a bucket
+   config       Generate configuration "/home/harsha/.minio/mc/config.json" file.
    help, h      Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --help, -h           show help
-   --version, -v        print the version
+   --debug                      enable HTTP tracing
+   --quiet, -q                  disable chatty output, such as the progress bar
+   --get-bash-completion        Generate bash completion "/home/harsha/.minio/mc/mc.bash_completion" file.
+   --help, -h                   show help
+   --generate-bash-completion
+   --version, -v                print the version
 ```
 
 ## Contribute
@@ -57,5 +60,5 @@ $ echo 'source ${HOME}/.minio/mc/mc.bash_completion' >> ${HOME}/.bashrc
 
 ```
 $ mc <TAB><TAB>
-configure  cp         h          help       ls         mb         sync
+config  cp         h          help       ls         mb         sync
 ```
