@@ -79,7 +79,7 @@ func getNewClient(c *cli.Context) (*s3.Client, error) {
 		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
 		client = s3.GetNewClient(&config.S3.Auth, traceTransport)
 	case false:
-		client = s3.GetNewClient(&config.S3.Auth, nil)
+		client = s3.GetNewClient(&config.S3.Auth, http.DefaultTransport)
 	}
 
 	return client, nil
