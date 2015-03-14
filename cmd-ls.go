@@ -54,14 +54,18 @@ func printObject(date time.Time, v int64, key string) {
 func doFsList(c *cli.Context) {
 	var items []*s3.Item
 
-	s3c, err := getNewClient(c)
-	if err != nil {
-		fatal(err.Error())
-	}
 	args, err := parseArgs(c)
 	if err != nil {
 		fatal(err.Error())
 	}
+
+	s3c, err := getNewClient(c)
+	if err != nil {
+		fatal(err.Error())
+	}
+	s3c.Host = args.source.host
+	s3c.Scheme = args.source.scheme
+
 	switch true {
 	case args.source.bucket == "": // List all buckets
 		buckets, err := s3c.ListBuckets()

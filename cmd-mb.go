@@ -22,18 +22,20 @@ import (
 )
 
 func doFsMb(c *cli.Context) {
-	switch len(c.Args()) {
-	case 1:
-		if !s3.IsValidBucket(c.Args().Get(0)) {
-			fatal(errInvalidbucket.Error())
-		}
-	default:
-		fatal("Needs an argument <BucketName>")
+	args, err := parseArgs(c)
+	if err != nil {
+		fatal(err.Error())
 	}
-	bucketName := c.Args().Get(0)
 
 	s3c, err := getNewClient(c)
-	err = s3c.PutBucket(bucketName)
+
+	if !s3.IsValidBucket(args.source.bucket) {
+		fatal(errInvalidbucket.Error())
+	}
+	s3c.Host = args.source.host
+	s3c.Scheme = args.source.scheme
+
+	err = s3c.PutBucket(args.source.bucket)
 	if err != nil {
 		fatal(err.Error())
 	}

@@ -23,7 +23,10 @@ var (
 	errFskey = errors.New("Key is needed to get the file")
 
 	// uri
-	errInvalidScheme = errors.New("Invalid URI scheme only s3:// supported")
+	errInvalidScheme = errors.New("Invalid URI scheme only http{s}:// supported")
+
+	// host
+	errHostname = errors.New("No hostname specified")
 
 	// common
 	errInvalidbucket = errors.New("Invalid bucket name")

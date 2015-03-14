@@ -75,7 +75,11 @@ func getNewClient(c *cli.Context) (*s3.Client, error) {
 
 	switch c.GlobalBool("debug") {
 	case true:
-		trace := s3Trace{BodyTraceFlag: false, RequestTransportFlag: true, Writer: nil}
+		trace := s3.Trace{
+			BodyTraceFlag:        false,
+			RequestTransportFlag: true,
+			Writer:               nil,
+		}
 		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
 		client = s3.GetNewClient(&config.S3.Auth, traceTransport)
 	case false:
@@ -101,19 +105,27 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 	args.quiet = c.GlobalBool("quiet")
 
 	switch len(c.Args()) {
-	case 0:
-		return args, nil
 	case 1:
-		if strings.HasPrefix(c.Args().Get(0), "s3://") {
+		if strings.HasPrefix(c.Args().Get(0), "http") || strings.HasPrefix(c.Args().Get(0), "https") {
 			uri, err := url.Parse(c.Args().Get(0))
 			if err != nil {
 				return nil, err
 			}
-			if uri.Scheme != "s3" {
+			if !strings.HasPrefix(uri.Scheme, "http") && !strings.HasPrefix(uri.Scheme, "https") {
 				return nil, errInvalidScheme
 			}
-			args.source.bucket = uri.Host
-			args.source.key = strings.TrimPrefix(uri.Path, "/")
+			args.source.scheme = uri.Scheme
+			if uri.Scheme != "" {
+				if uri.Host == "" {
+					return nil, errHostname
+				}
+			}
+			args.source.host = uri.Host
+			uriSplits := strings.Split(uri.Path, "/")
+			if len(uriSplits) > 1 {
+				args.source.bucket = uriSplits[1]
+				args.source.key = path.Join(uriSplits[2:]...)
+			}
 		} else {
 			return nil, errInvalidScheme
 		}
@@ -125,15 +137,20 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				return nil, err
 			}
 			switch true {
-			case uri.Scheme == "s3":
+			case uri.Scheme == "http" || uri.Scheme == "https":
 				if uri.Host == "" {
 					if uri.Path == "" {
 						return nil, errInvalidScheme
 					}
 					return nil, errInvalidScheme
 				}
-				args.source.bucket = uri.Host
-				args.source.key = strings.TrimPrefix(uri.Path, "/")
+				args.source.scheme = uri.Scheme
+				args.source.host = uri.Host
+				uriSplits := strings.Split(uri.Path, "/")
+				if len(uriSplits) > 1 {
+					args.source.bucket = uriSplits[1]
+					args.source.key = path.Join(uriSplits[2:]...)
+				}
 			case uri.Scheme == "":
 				if uri.Host != "" {
 					return nil, errInvalidScheme
@@ -144,9 +161,8 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				if uri.Path == "." {
 					return nil, errFskey
 				}
-				args.source.bucket = uri.Host
 				args.source.key = strings.TrimPrefix(uri.Path, "/")
-			case uri.Scheme != "s3":
+			case uri.Scheme != "http" && uri.Scheme != "https":
 				return nil, errInvalidScheme
 			}
 			fallthrough
@@ -156,15 +172,20 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				return nil, err
 			}
 			switch true {
-			case uri.Scheme == "s3":
+			case uri.Scheme == "http" || uri.Scheme == "https":
 				if uri.Host == "" {
 					if uri.Path == "" {
 						return nil, errInvalidScheme
 					}
 					return nil, errInvalidScheme
 				}
-				args.destination.bucket = uri.Host
-				args.destination.key = strings.TrimPrefix(uri.Path, "/")
+				args.destination.host = uri.Host
+				args.destination.scheme = uri.Scheme
+				uriSplits := strings.Split(uri.Path, "/")
+				if len(uriSplits) > 1 {
+					args.destination.bucket = uriSplits[1]
+					args.destination.key = path.Join(uriSplits[2:]...)
+				}
 			case uri.Scheme == "":
 				if uri.Host != "" {
 					return nil, errInvalidScheme
@@ -175,7 +196,7 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 					args.destination.key = strings.TrimPrefix(uri.Path, "/")
 				}
 				args.destination.bucket = uri.Host
-			case uri.Scheme != "s3":
+			case uri.Scheme != "http" && uri.Scheme != "https":
 				return nil, errInvalidScheme
 			}
 		}

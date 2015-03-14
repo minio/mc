@@ -49,7 +49,7 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("%s uploaded -- to bucket:s3://%s/%s", key, bucketname, key)
+	msg := fmt.Sprintf("%s uploaded -- to bucket:http://%s/%s", key, bucketname, key)
 	info(msg)
 	return nil
 }
@@ -81,8 +81,6 @@ func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 	var st os.FileInfo
 	var buckets []*s3.Bucket
 
-	p := &walk{s3c, args}
-
 	switch true {
 	case args.source.bucket == "":
 		input := path.Clean(args.source.key)
@@ -97,6 +95,9 @@ func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 			return fmt.Errorf("Should be a directory")
 		}
 
+		s3c.Host = args.destination.host
+		s3c.Scheme = args.destination.scheme
+		p := &walk{s3c, args}
 		buckets, err = s3c.ListBuckets()
 		if !isBucketExists(args.destination.bucket, buckets) {
 			// Create bucketname, before uploading files

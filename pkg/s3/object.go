@@ -74,9 +74,9 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 	req.Body = ioutil.NopCloser(sink)
 	b64 := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	req.Header.Set("Content-MD5", b64)
-	c.Auth.signRequest(req)
+	c.Auth.signRequest(req, c.Host)
 
-	res, err := c.transport().RoundTrip(req)
+	res, err := c.Transport.RoundTrip(req)
 	if res != nil && res.Body != nil {
 		defer res.Body.Close()
 	}
@@ -95,8 +95,8 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 func (c *Client) Stat(bucket, key string) (size int64, date time.Time, reterr error) {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
-	c.Auth.signRequest(req)
-	res, err := c.transport().RoundTrip(req)
+	c.Auth.signRequest(req, c.Host)
+	res, err := c.Transport.RoundTrip(req)
 	if res != nil && res.Body != nil {
 		defer res.Body.Close()
 	}
@@ -129,8 +129,8 @@ func (c *Client) Stat(bucket, key string) (size int64, date time.Time, reterr er
 // Get - download a requested object from a given bucket
 func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err error) {
 	req := newReq(c.keyURL(bucket, key))
-	c.Auth.signRequest(req)
-	res, err := c.transport().RoundTrip(req)
+	c.Auth.signRequest(req, c.Host)
+	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return
 	}
@@ -159,9 +159,9 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.R
 	} else {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 	}
-	c.Auth.signRequest(req)
+	c.Auth.signRequest(req, c.Host)
 
-	res, err := c.transport().RoundTrip(req)
+	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return
 	}

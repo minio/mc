@@ -88,6 +88,12 @@ type listBucketResults struct {
 type Client struct {
 	*Auth                       // AWS auth credentials
 	Transport http.RoundTripper // or nil for the default behavior
+
+	// Supports URL in following formats
+	//  - http://<ipaddress>/<bucketname>/<object>
+	//  - http://<bucketname>.<domain>/<object>
+	Host   string
+	Scheme string
 }
 
 // GetNewClient returns an initialized S3.Client structure.
@@ -95,54 +101,30 @@ func GetNewClient(auth *Auth, transport http.RoundTripper) *Client {
 	return &Client{
 		Auth:      auth,
 		Transport: GetNewTraceTransport(s3Verify{}, transport),
-		// Transport: transport,
 	}
-}
-
-func (c *Client) transport() http.RoundTripper {
-	if c.Transport != nil {
-		return c.Transport
-	}
-	return http.DefaultTransport
 }
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
 func (c *Client) bucketURL(bucket string) string {
 	var url string
 	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
-		// if localhost forcePathStyle
-		if strings.Contains(c.endpoint(), "localhost") || strings.Contains(c.endpoint(), "127.0.0.1") {
-			url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
-			goto ret
+		// if localhost use PathStyle
+		if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
+			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 		}
-		host, _, _ := net.SplitHostPort(c.Endpoint)
+		// Verify if its ip address, use PathStyle
+		host, _, _ := net.SplitHostPort(c.Host)
 		if net.ParseIP(host) != nil {
-			url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
-			goto ret
+			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 		}
-		if !c.S3ForcePathStyle {
-			if strings.Contains(c.endpoint(), "amazonaws.com") {
-				url = fmt.Sprintf("https://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "https://"))
-			} else {
-				url = fmt.Sprintf("http://%s.%s/", bucket, strings.TrimPrefix(c.endpoint(), "http://"))
-			}
-		} else {
-			url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
-		}
+		// For DNS hostname or amazonaws.com use subdomain style
+		url = fmt.Sprintf("%s://%s.%s/", c.Scheme, bucket, c.Host)
 	}
-
-ret:
 	return url
 }
 
 func (c *Client) keyURL(bucket, key string) string {
-	// if localhost forcePathStyle
-	host, _, _ := net.SplitHostPort(c.Endpoint)
-	ok := (strings.Contains(c.endpoint(), "localhost") || strings.Contains(bucket, "127.0.0.1") || c.S3ForcePathStyle || net.ParseIP(host) != nil)
-	if ok {
-		return c.bucketURL(bucket) + "/" + key
-	}
-	return c.bucketURL(bucket) + key
+	return c.bucketURL(bucket) + "/" + key
 }
 
 func newReq(url string) *http.Request {
