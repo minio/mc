@@ -79,7 +79,7 @@ func firstMode(s3c *s3.Client, args *cmdArgs) error {
 		return err
 	}
 
-	// s3://<bucket> is specified without key
+	// http://<bucket>.<hostname> is specified without key
 	if args.destination.key == "" {
 		args.destination.key = args.source.key
 	}
@@ -88,7 +88,7 @@ func firstMode(s3c *s3.Client, args *cmdArgs) error {
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("%s uploaded -- to bucket:(s3://%s/%s)", args.source.key,
+	msg := fmt.Sprintf("%s uploaded -- to bucket:(http://%s/%s)", args.source.key,
 		args.destination.bucket, args.destination.key)
 	info(msg)
 	return nil
@@ -208,7 +208,7 @@ func thirdMode(s3c *s3.Client, args *cmdArgs) error {
 		return fmt.Errorf("Ranges not supported")
 	}
 
-	msg := fmt.Sprintf("s3://%s/%s uploaded -- to bucket:(s3://%s/%s)", args.source.bucket, args.source.key,
+	msg := fmt.Sprintf("http://%s/%s uploaded -- to bucket:(http://%s/%s)", args.source.bucket, args.source.key,
 		args.destination.bucket, args.destination.key)
 	info(msg)
 	return nil

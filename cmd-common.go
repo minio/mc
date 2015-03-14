@@ -77,9 +77,9 @@ func getNewClient(c *cli.Context) (*s3.Client, error) {
 	case true:
 		trace := s3Trace{BodyTraceFlag: false, RequestTransportFlag: true, Writer: nil}
 		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
-		client = s3.GetNewClient(&config.S3.Auth, traceTransport)
+		client = s3.GetNewClient(&config.S3.Auth, traceTransport, "")
 	case false:
-		client = s3.GetNewClient(&config.S3.Auth, http.DefaultTransport)
+		client = s3.GetNewClient(&config.S3.Auth, http.DefaultTransport, "")
 	}
 
 	return client, nil
@@ -104,15 +104,16 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 	case 0:
 		return args, nil
 	case 1:
-		if strings.HasPrefix(c.Args().Get(0), "s3://") {
+		if strings.HasPrefix(c.Args().Get(0), "http") {
 			uri, err := url.Parse(c.Args().Get(0))
 			if err != nil {
 				return nil, err
 			}
-			if uri.Scheme != "s3" {
+			if !strings.HasPrefix(uri.Scheme, "http") {
 				return nil, errInvalidScheme
 			}
-			args.source.bucket = uri.Host
+			args.source.host = uri.Host
+			args.source.bucket = uri.Path
 			args.source.key = strings.TrimPrefix(uri.Path, "/")
 		} else {
 			return nil, errInvalidScheme
@@ -125,7 +126,7 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				return nil, err
 			}
 			switch true {
-			case uri.Scheme == "s3":
+			case uri.Scheme == "http":
 				if uri.Host == "" {
 					if uri.Path == "" {
 						return nil, errInvalidScheme
@@ -146,7 +147,7 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				}
 				args.source.bucket = uri.Host
 				args.source.key = strings.TrimPrefix(uri.Path, "/")
-			case uri.Scheme != "s3":
+			case uri.Scheme != "http":
 				return nil, errInvalidScheme
 			}
 			fallthrough

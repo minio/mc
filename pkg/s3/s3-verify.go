@@ -31,7 +31,7 @@ type s3Verify struct {
 /*
 Example AWS S3 Request / Response
 =================================
-  $ mc --debug ls s3://zek
+  $ mc --debug ls https://zek.s3.amazonaws.com
   GET /?max-keys=1000 HTTP/1.1
   Host: zek.s3.amazonaws.com
   User-Agent: Minio Client
