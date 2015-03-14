@@ -63,10 +63,10 @@ func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 
 // ListBuckets - Get list of buckets
 func (c *Client) ListBuckets() ([]*Bucket, error) {
-	req := newReq(c.endpoint() + "/")
-	c.Auth.signRequest(req)
+	req := newReq(c.Host + "/")
+	c.Auth.signRequest(req, c.Host)
 
-	res, err := c.transport().RoundTrip(req)
+	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return nil, err
 	}
@@ -82,12 +82,12 @@ func (c *Client) ListBuckets() ([]*Bucket, error) {
 func (c *Client) PutBucket(bucket string) error {
 	var url string
 	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
-		url = fmt.Sprintf("%s/%s", c.endpoint(), bucket)
+		url = fmt.Sprintf("%s/%s", c.Host, bucket)
 	}
 	req := newReq(url)
 	req.Method = "PUT"
-	c.Auth.signRequest(req)
-	res, err := c.transport().RoundTrip(req)
+	c.Auth.signRequest(req, c.Host)
+	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return err
 	}
@@ -142,8 +142,8 @@ func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, m
 		for try := 1; try <= maxTries; try++ {
 			time.Sleep(time.Duration(try-1) * 100 * time.Millisecond)
 			req := newReq(urlReq)
-			c.Auth.signRequest(req)
-			res, err := c.transport().RoundTrip(req)
+			c.Auth.signRequest(req, c.Host)
+			res, err := c.Transport.RoundTrip(req)
 			if err != nil {
 				if try < maxTries {
 					continue

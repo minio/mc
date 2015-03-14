@@ -67,21 +67,13 @@ var configure = cli.Command{
 			Value: "",
 			Usage: "AWS secret key id",
 		},
-		cli.StringFlag{
-			Name:  "endpoint, e",
-			Value: "s3.amazonaws.com",
-			Usage: "S3 Endpoint URL default is 's3.amazonaws.com'",
-		},
-		cli.BoolFlag{
-			Name:  "pathstyle, p",
-			Usage: "Force path style API requests",
-		},
 	},
 }
 
 type object struct {
 	bucket string
 	key    string
+	host   string
 }
 
 type cmdArgs struct {

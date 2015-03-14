@@ -60,34 +60,15 @@ type Auth struct {
 	AccessKey       string
 	SecretAccessKey string
 
-	// If empty, the standard US region of "s3.amazonaws.com" is used.
-	Endpoint string
-
 	// Used for SSL transport layer
 	CertPEM string
 	KeyPEM  string
-
-	// Force path style
-	S3ForcePathStyle bool
 }
 
 // TLSConfig - TLS cert and key configuration
 type TLSConfig struct {
 	CertPEMBlock []byte
 	KeyPEMBlock  []byte
-}
-
-const standardUSRegionAWS = "s3.amazonaws.com"
-
-func (a *Auth) endpoint() string {
-	// Prefix with https for Amazon endpoints
-	if a.Endpoint != "" {
-		if strings.HasSuffix(a.Endpoint, "amazonaws.com") {
-			return "https://" + a.Endpoint
-		}
-		return "http://" + a.Endpoint
-	}
-	return "https://" + standardUSRegionAWS
 }
 
 func (a *Auth) loadKeys(cert string, key string) (*TLSConfig, error) {
@@ -137,12 +118,12 @@ func (a *Auth) getTLSTransport() (*http.Transport, error) {
 	return transport, nil
 }
 
-func (a *Auth) signRequest(req *http.Request) {
+func (a *Auth) signRequest(req *http.Request, host string) {
 	if date := req.Header.Get("Date"); date == "" {
 		req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	}
 	hm := hmac.New(sha1.New, []byte(a.SecretAccessKey))
-	ss := a.stringToSign(req)
+	ss := a.stringToSign(req, host)
 	//fmt.Printf("String to sign: %q (%x)\n", ss, ss)
 	io.WriteString(hm, ss)
 
@@ -171,7 +152,7 @@ func firstNonEmptyString(strs ...string) string {
 //	 Date + "\n" +
 //	 CanonicalizedAmzHeaders +
 //	 CanonicalizedResource;
-func (a *Auth) stringToSign(req *http.Request) string {
+func (a *Auth) stringToSign(req *http.Request, host string) string {
 	buf := new(bytes.Buffer)
 	buf.WriteString(req.Method)
 	buf.WriteByte('\n')
@@ -184,7 +165,7 @@ func (a *Auth) stringToSign(req *http.Request) string {
 	}
 	buf.WriteByte('\n')
 	a.writeCanonicalizedAmzHeaders(buf, req)
-	a.writeCanonicalizedResource(buf, req)
+	a.writeCanonicalizedResource(buf, req, host)
 	return buf.String()
 }
 
@@ -241,8 +222,8 @@ var subResList = []string{"acl", "lifecycle", "location", "logging", "notificati
 // CanonicalizedResource = [ "/" + Bucket ] +
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
-func (a *Auth) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request) {
-	bucket := a.bucketFromEndpoint(req)
+func (a *Auth) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request, host string) {
+	bucket := a.bucketFromEndpoint(req, host)
 	if bucket != "" {
 		buf.WriteByte('/')
 		buf.WriteString(bucket)
@@ -274,27 +255,25 @@ func hasDotSuffix(s string, suffix string) bool {
 	return len(s) >= len(suffix)+1 && strings.HasSuffix(s, suffix) && s[len(s)-len(suffix)-1] == '.'
 }
 
-func (a *Auth) bucketFromEndpoint(req *http.Request) string {
-	host := req.Host
-	if host == "" {
+func (a *Auth) bucketFromEndpoint(req *http.Request, host string) string {
+	reqHost := req.Host
+	if reqHost == "" {
 		host = req.URL.Host
 	}
 
-	if host == strings.TrimPrefix(a.endpoint(), "http://") {
+	if reqHost == strings.TrimPrefix(host, "http://") {
 		return ""
 	}
 
-	if host == strings.TrimPrefix(a.endpoint(), "https://") {
+	if reqHost == strings.TrimPrefix(host, "https://") {
 		return ""
 	}
 
-	if hostSuffix := strings.TrimPrefix(a.endpoint(), "https://"); hasDotSuffix(host, hostSuffix) {
-		return host[:len(host)-len(hostSuffix)-1]
+	if reqHostSuffix := strings.TrimPrefix(host, "https://"); hasDotSuffix(reqHost, reqHostSuffix) {
+		return reqHost[:len(reqHost)-len(reqHostSuffix)-1]
 	}
 
-	if lastColon := strings.LastIndex(host, ":"); lastColon != -1 {
-		return host[:lastColon]
-	}
+	reqHost, _, _ = net.SplitHostPort(reqHost)
 
-	return host
+	return reqHost
 }

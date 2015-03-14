@@ -49,7 +49,7 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("%s uploaded -- to bucket:s3://%s/%s", key, bucketname, key)
+	msg := fmt.Sprintf("%s uploaded -- to bucket:http://%s/%s", key, bucketname, key)
 	info(msg)
 	return nil
 }
