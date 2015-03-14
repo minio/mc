@@ -104,15 +104,23 @@ func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 			if err != nil {
 				return err
 			}
-			err = filepath.Walk(input, p.putWalk)
+		} else {
+			items, _, err := s3c.ListObjects(args.destination.bucket, "", "", "", s3.MaxKeys)
 			if err != nil {
 				return err
 			}
+			if len(items) != 0 {
+				return fmt.Errorf("destination bucket not empty")
+			}
+		}
+		err = filepath.Walk(input, p.putWalk)
+		if err != nil {
+			return err
 		}
 	case args.destination.bucket == "":
 		items, _, err := s3c.ListObjects(args.source.bucket, "", "", "", s3.MaxKeys)
 		if err != nil {
-			fatal(err.Error())
+			return err
 		}
 		root := args.destination.key
 		writeObjects := func(v []*s3.Item) error {
@@ -132,7 +140,7 @@ func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 		}
 		err = writeObjects(items)
 		if err != nil {
-			fatal(err.Error())
+			return err
 		}
 	}
 	return nil
