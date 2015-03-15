@@ -37,6 +37,15 @@ test-all: build-all
 	@echo "Running Test Suites:"
 	@godep go test -race ./...
 
+save: restore
+	@godep save ./...
+
+restore:
+	@godep restore
+
+env:
+	@godep go env
+
 docs-deploy:
 	@mkdocs gh-deploy --clean
 

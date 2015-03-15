@@ -47,9 +47,10 @@ import (
 	"time"
 
 	"encoding/xml"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/minio-io/mc/pkg/s3errors"
 )
 
 // bySize implements sort.Interface for []Item based on the Size field.
@@ -74,8 +75,9 @@ func (c *Client) ListBuckets() ([]*Bucket, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("s3: Unexpected status code %d fetching bucket list", res.StatusCode)
+		return nil, s3errors.New(res)
 	}
+
 	return parseListAllMyBuckets(res.Body)
 }
 
@@ -92,16 +94,13 @@ func (c *Client) PutBucket(bucket string) error {
 	if err != nil {
 		return err
 	}
-
-	if res != nil && res.Body != nil {
-		defer res.Body.Close()
-	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("Got response code %d from s3", res.StatusCode)
+		return s3errors.New(res)
 	}
-	return nil
 
+	return nil
 }
 
 // ListObjects returns 0 to maxKeys (inclusive) items from the
@@ -151,31 +150,21 @@ func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, m
 				}
 				return nil, nil, err
 			}
+			defer res.Body.Close()
+
 			if res.StatusCode != http.StatusOK {
-				if res.StatusCode < 500 {
-					body, _ := ioutil.ReadAll(io.LimitReader(res.Body, 1<<20))
-					aerr := &Error{
-						Op:     "ListBucket",
-						Code:   res.StatusCode,
-						Body:   body,
-						Header: res.Header,
-					}
-					aerr.parseXML()
-					res.Body.Close()
-					return nil, nil, aerr
-				}
-			} else {
-				bres = listBucketResults{}
-				var logbuf bytes.Buffer
-				err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(&bres)
-				if err != nil {
-					fmt.Printf("Error parsing s3 XML response: %v for %q", err, logbuf.Bytes())
-				} else if bres.MaxKeys != fetchN || bres.Name != bucket || bres.Marker != marker {
-					err = fmt.Errorf("Unexpected parse from server: %#v from: %s", bres, logbuf.Bytes())
-					fmt.Print(err)
-				}
+				return nil, nil, s3errors.New(res)
 			}
-			res.Body.Close()
+
+			bres = listBucketResults{}
+			var logbuf bytes.Buffer
+			err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(&bres)
+			if err != nil {
+				fmt.Printf("Error parsing s3 XML response: %v for %q", err, logbuf.Bytes())
+			} else if bres.MaxKeys != fetchN || bres.Name != bucket || bres.Marker != marker {
+				err = fmt.Errorf("Unexpected parse from server: %#v from: %s", bres, logbuf.Bytes())
+				fmt.Print(err)
+			}
 			if err != nil {
 				if try < maxTries-1 {
 					continue
