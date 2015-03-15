@@ -21,6 +21,9 @@ type Command struct {
 	// An action to execute before any sub-subcommands are run, but after the context is ready
 	// If a non-nil error is returned, no sub-subcommands are run
 	Before func(context *Context) error
+	// An action to execute after any subcommands are run, but after the subcommand has finished
+	// It is run even if Action() panics
+	After func(context *Context) error
 	// The function to call when this command is invoked
 	Action func(context *Context)
 	// List of child commands
@@ -36,11 +39,11 @@ type Command struct {
 // Invokes the command given the context, parses ctx.Args() to generate command-specific flags
 func (c Command) Run(ctx *Context) error {
 
-	if len(c.Subcommands) > 0 || c.Before != nil {
+	if len(c.Subcommands) > 0 || c.Before != nil || c.After != nil {
 		return c.startApp(ctx)
 	}
 
-	if !c.HideHelp {
+	if !c.HideHelp && (HelpFlag != BoolFlag{}) {
 		// append help to flags
 		c.Flags = append(
 			c.Flags,
@@ -56,36 +59,48 @@ func (c Command) Run(ctx *Context) error {
 	set.SetOutput(ioutil.Discard)
 
 	firstFlagIndex := -1
+	terminatorIndex := -1
 	for index, arg := range ctx.Args() {
-		if strings.HasPrefix(arg, "-") {
-			firstFlagIndex = index
+		if arg == "--" {
+			terminatorIndex = index
 			break
+		} else if strings.HasPrefix(arg, "-") && firstFlagIndex == -1 {
+			firstFlagIndex = index
 		}
 	}
 
 	var err error
 	if firstFlagIndex > -1 && !c.SkipFlagParsing {
 		args := ctx.Args()
-		regularArgs := args[1:firstFlagIndex]
-		flagArgs := args[firstFlagIndex:]
+		regularArgs := make([]string, len(args[1:firstFlagIndex]))
+		copy(regularArgs, args[1:firstFlagIndex])
+
+		var flagArgs []string
+		if terminatorIndex > -1 {
+			flagArgs = args[firstFlagIndex:terminatorIndex]
+			regularArgs = append(regularArgs, args[terminatorIndex:]...)
+		} else {
+			flagArgs = args[firstFlagIndex:]
+		}
+
 		err = set.Parse(append(flagArgs, regularArgs...))
 	} else {
 		err = set.Parse(ctx.Args().Tail())
 	}
 
 	if err != nil {
-		fmt.Printf("Incorrect Usage.\n\n")
+		fmt.Fprint(ctx.App.Writer, "Incorrect Usage.\n\n")
 		ShowCommandHelp(ctx, c.Name)
-		fmt.Println("")
+		fmt.Fprintln(ctx.App.Writer)
 		return err
 	}
 
 	nerr := normalizeFlags(c.Flags, set)
 	if nerr != nil {
-		fmt.Println(nerr)
-		fmt.Println("")
+		fmt.Fprintln(ctx.App.Writer, nerr)
+		fmt.Fprintln(ctx.App.Writer)
 		ShowCommandHelp(ctx, c.Name)
-		fmt.Println("")
+		fmt.Fprintln(ctx.App.Writer)
 		return nerr
 	}
 	context := NewContext(ctx.App, set, ctx.globalSet)
@@ -104,7 +119,7 @@ func (c Command) Run(ctx *Context) error {
 
 // Returns true if Command.Name or Command.ShortName matches given name
 func (c Command) HasName(name string) bool {
-	return c.Name == name || c.ShortName == name
+	return c.Name == name || (c.ShortName != "" && c.ShortName == name)
 }
 
 func (c Command) startApp(ctx *Context) error {
@@ -134,6 +149,7 @@ func (c Command) startApp(ctx *Context) error {
 
 	// set the actions
 	app.Before = c.Before
+	app.After = c.After
 	if c.Action != nil {
 		app.Action = c.Action
 	} else {

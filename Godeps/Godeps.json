@@ -8,8 +8,8 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-42-gfbda1ce",
-			"Rev": "fbda1ce02d5dabcee952040e5f4025753b6c9ce0"
+			"Comment": "1.2.0-87-g8ce64f1",
+			"Rev": "8ce64f19ff08029a69d11b7615c9b591245450ad"
 		},
 		{
 			"ImportPath": "github.com/mgutz/ansi",
