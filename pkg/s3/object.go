@@ -50,6 +50,8 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/minio-io/mc/pkg/s3errors"
 )
 
 /// Object API operations
@@ -77,16 +79,13 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 	c.Auth.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)
-	if res != nil && res.Body != nil {
-		defer res.Body.Close()
-	}
-
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
+
 	if res.StatusCode != http.StatusOK {
-		// res.Write(os.Stderr)
-		return fmt.Errorf("Got response code %d from s3", res.StatusCode)
+		return s3errors.New(res)
 	}
 	return nil
 }
@@ -97,12 +96,10 @@ func (c *Client) Stat(bucket, key string) (size int64, date time.Time, reterr er
 	req.Method = "HEAD"
 	c.Auth.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
-	if res != nil && res.Body != nil {
-		defer res.Body.Close()
-	}
 	if err != nil {
 		return 0, date, err
 	}
+	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusNotFound:
@@ -121,7 +118,7 @@ func (c *Client) Stat(bucket, key string) (size int64, date time.Time, reterr er
 			return size, date, nil
 		}
 	default:
-		return 0, date, fmt.Errorf("s3: Unexpected status code %d statting object %v", res.StatusCode, key)
+		return 0, date, s3errors.New(res)
 	}
 	return
 }
@@ -132,18 +129,15 @@ func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err er
 	c.Auth.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return
+		return nil, 0, err
 	}
-	switch res.StatusCode {
-	case http.StatusOK:
-		return res.Body, res.ContentLength, nil
-	case http.StatusNotFound:
-		res.Body.Close()
-		return nil, 0, os.ErrNotExist
-	default:
-		res.Body.Close()
-		return nil, 0, fmt.Errorf("Amazon HTTP error on GET: %d", res.StatusCode)
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, 0, s3errors.New(res)
 	}
+
+	return res.Body, res.ContentLength, nil
 }
 
 // GetPartial fetches part of the s3 key object in bucket.
@@ -165,15 +159,12 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.R
 	if err != nil {
 		return
 	}
+	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusPartialContent:
 		return res.Body, res.ContentLength, nil
-	case http.StatusNotFound:
-		res.Body.Close()
-		return nil, 0, os.ErrNotExist
 	default:
-		res.Body.Close()
-		return nil, 0, fmt.Errorf("Amazon HTTP error on GET: %d", res.StatusCode)
+		return nil, 0, s3errors.New(res)
 	}
 }

@@ -1,10 +1,17 @@
 {
 	"ImportPath": "github.com/minio-io/mc",
-	"GoVersion": "go1.4",
+	"GoVersion": "go1.4.1",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/cheggaaa/pb",
 			"Rev": "0464652af750701d218b6dd035f0217e407caf2d"
+		},
+		{
+			"ImportPath": "github.com/clbanning/x2j",
+			"Rev": "0e45c2228aab9921ef50cc7d0bf7186082cc51a4"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
