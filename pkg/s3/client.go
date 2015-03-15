@@ -124,7 +124,15 @@ func (c *Client) bucketURL(bucket string) string {
 }
 
 func (c *Client) keyURL(bucket, key string) string {
-	return c.bucketURL(bucket) + "/" + key
+	url := c.bucketURL(bucket)
+	if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
+		return url + "/" + key
+	}
+	host, _, _ := net.SplitHostPort(c.Host)
+	if net.ParseIP(host) != nil {
+		return url + "/" + key
+	}
+	return url + key
 }
 
 func newReq(url string) *http.Request {
