@@ -34,7 +34,6 @@ func init() {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "mc"
 	app.Usage = "Minio Client for S3 Compatible Object Storage"
 	app.Version = "0.1.0"
 	app.Commands = options
