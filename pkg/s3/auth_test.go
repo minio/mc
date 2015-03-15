@@ -47,7 +47,7 @@ import (
 )
 
 type reqAndExpected struct {
-	req, expected string
+	req, expected, host string
 }
 
 func req(s string) *http.Request {
@@ -66,7 +66,7 @@ Host: johnsmith.s3.amazonaws.com
 Date: Tue, 27 Mar 2007 19:36:42 +0000
 
 `,
-			"GET\n\n\nTue, 27 Mar 2007 19:36:42 +0000\n/johnsmith/photos/puppy.jpg"},
+			"GET\n\n\nTue, 27 Mar 2007 19:36:42 +0000\n/johnsmith/photos/puppy.jpg", "s3.amazonaws.com"},
 		{`PUT /photos/puppy.jpg HTTP/1.1
 Content-Type: image/jpeg
 Content-Length: 94328
@@ -74,14 +74,14 @@ Host: johnsmith.s3.amazonaws.com
 Date: Tue, 27 Mar 2007 21:15:45 +0000
 
 `,
-			"PUT\n\nimage/jpeg\nTue, 27 Mar 2007 21:15:45 +0000\n/johnsmith/photos/puppy.jpg"},
+			"PUT\n\nimage/jpeg\nTue, 27 Mar 2007 21:15:45 +0000\n/johnsmith/photos/puppy.jpg", "s3.amazonaws.com"},
 		{`GET /?prefix=photos&max-keys=50&marker=puppy HTTP/1.1
 User-Agent: Mozilla/5.0
 Host: johnsmith.s3.amazonaws.com
 Date: Tue, 27 Mar 2007 19:42:41 +0000
 
 `,
-			"GET\n\n\nTue, 27 Mar 2007 19:42:41 +0000\n/johnsmith/"},
+			"GET\n\n\nTue, 27 Mar 2007 19:42:41 +0000\n/johnsmith/", "s3.amazonaws.com"},
 		{`DELETE /johnsmith/photos/puppy.jpg HTTP/1.1
 User-Agent: dotnet
 Host: s3.amazonaws.com
@@ -89,7 +89,7 @@ Date: Tue, 27 Mar 2007 21:20:27 +0000
 x-amz-date: Tue, 27 Mar 2007 21:20:26 +0000
 
 `,
-			"DELETE\n\n\n\nx-amz-date:Tue, 27 Mar 2007 21:20:26 +0000\n/johnsmith/photos/puppy.jpg"},
+			"DELETE\n\n\n\nx-amz-date:Tue, 27 Mar 2007 21:20:26 +0000\n/johnsmith/photos/puppy.jpg", "s3.amazonaws.com"},
 		{`PUT /db-backup.dat.gz HTTP/1.1
 User-Agent: curl/7.15.5
 Host: static.johnsmith.net:8080
@@ -106,10 +106,10 @@ Content-Encoding: gzip
 Content-Length: 5913339
 
 `,
-			"PUT\n4gJE4saaMU4BqNR0kLY+lw==\napplication/x-download\nTue, 27 Mar 2007 21:06:08 +0000\nx-amz-acl:public-read\nx-amz-meta-checksumalgorithm:crc32\nx-amz-meta-filechecksum:0x02661779\nx-amz-meta-reviewedby:joe@johnsmith.net,jane@johnsmith.net\n/static.johnsmith.net/db-backup.dat.gz"},
+			"PUT\n4gJE4saaMU4BqNR0kLY+lw==\napplication/x-download\nTue, 27 Mar 2007 21:06:08 +0000\nx-amz-acl:public-read\nx-amz-meta-checksumalgorithm:crc32\nx-amz-meta-filechecksum:0x02661779\nx-amz-meta-reviewedby:joe@johnsmith.net,jane@johnsmith.net\n/db-backup.dat.gz", "static.johnsmith.net:8080"},
 	}
 	for idx, test := range tests {
-		got := a.stringToSign(req(test.req))
+		got := a.stringToSign(req(test.req), test.host)
 		if got != test.expected {
 			t.Errorf("test %d: expected %q", idx, test.expected)
 			t.Errorf("test %d:      got %q", idx, got)
@@ -120,14 +120,14 @@ Content-Length: 5913339
 func TestBucketFromHostname(t *testing.T) {
 	var a Auth
 	tests := []reqAndExpected{
-		{"GET / HTTP/1.0\n\n", ""},
-		{"GET / HTTP/1.0\nHost: s3.amazonaws.com\n\n", ""},
-		{"GET / HTTP/1.0\nHost: foo.s3.amazonaws.com\n\n", "foo"},
-		{"GET / HTTP/1.0\nHost: foo.com:123\n\n", "foo.com"},
-		{"GET / HTTP/1.0\nHost: bar.com\n\n", "bar.com"},
+		{"GET / HTTP/1.0\n\n", "", ""},
+		{"GET / HTTP/1.0\nHost: s3.amazonaws.com\n\n", "", "s3.amazonaws.com"},
+		{"GET / HTTP/1.0\nHost: foo.s3.amazonaws.com\n\n", "foo", "s3.amazonaws.com"},
+		{"GET / HTTP/1.0\nHost: foo.com:123\n\n", "foo.com", "foo.com"},
+		{"GET / HTTP/1.0\nHost: bar.com\n\n", "", "bar.com"},
 	}
 	for idx, test := range tests {
-		got := a.bucketFromEndpoint(req(test.req))
+		got := a.bucketFromEndpoint(req(test.req), test.host)
 		if got != test.expected {
 			t.Errorf("test %d: expected %q; got %q", idx, test.expected, got)
 		}
@@ -137,12 +137,12 @@ func TestBucketFromHostname(t *testing.T) {
 func TestsignRequest(t *testing.T) {
 	r := req("GET /foo HTTP/1.1\n\n")
 	auth := &Auth{AccessKey: "key", SecretAccessKey: "secretkey"}
-	auth.signRequest(r)
+	auth.signRequest(r, "localhost:9000")
 	if r.Header.Get("Date") == "" {
 		t.Error("expected a Date set")
 	}
 	r.Header.Set("Date", "Sat, 02 Apr 2011 04:23:52 GMT")
-	auth.signRequest(r)
+	auth.signRequest(r, "localhost:9000")
 	if e, g := r.Header.Get("Authorization"), "AWS key:kHpCR/N7Rw3PwRlDd8+5X40CFVc="; e != g {
 		t.Errorf("got header %q; expected %q", g, e)
 	}

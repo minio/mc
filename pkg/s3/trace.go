@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package s3
 
 import (
 	"fmt"
@@ -23,14 +23,15 @@ import (
 	"net/http/httputil"
 )
 
-type s3Trace struct {
+// Trace - tracing structure
+type Trace struct {
 	BodyTraceFlag        bool      // Include Body
 	RequestTransportFlag bool      // Include additional http.Transport adds such as User-Agent
-	Writer               io.Writer // Console device to write to
+	Writer               io.Writer // Console device to write
 }
 
-// Trace HTTP Request
-func (t s3Trace) Request(req *http.Request) (err error) {
+// Request - Trace HTTP Request
+func (t Trace) Request(req *http.Request) (err error) {
 	origAuthKey := req.Header.Get("Authorization")
 	req.Header.Set("Authorization", "AWS **PASSWORD**STRIPPED**")
 
@@ -50,8 +51,8 @@ func (t s3Trace) Request(req *http.Request) (err error) {
 	return err
 }
 
-// Trace HTTP Response
-func (t s3Trace) Response(res *http.Response) (err error) {
+// Response - Trace HTTP Response
+func (t Trace) Response(res *http.Response) (err error) {
 	resTrace, err := httputil.DumpResponse(res, t.BodyTraceFlag)
 	if err == nil {
 		t.print(resTrace)
@@ -59,8 +60,8 @@ func (t s3Trace) Response(res *http.Response) (err error) {
 	return err
 }
 
-// Trace HTTP Response
-func (t s3Trace) print(data []byte) {
+// print HTTP Response
+func (t Trace) print(data []byte) {
 	if t.Writer != nil {
 		fmt.Fprintf(t.Writer, "%s", data)
 	} else {

@@ -50,27 +50,18 @@ func getMcConfig() (config *mcConfig, err error) {
 		return nil, err
 	}
 
-	if config.S3.Auth.Endpoint == "" {
-		config.S3.Auth.Endpoint = "s3.amazonaws.com"
-	}
-
 	return config, nil
 }
 
 func parseConfigureInput(c *cli.Context) (config *mcConfig, err error) {
 	accessKey := c.String("accesskey")
 	secretKey := c.String("secretkey")
-	endpoint := c.String("endpoint")
-	pathstyle := c.Bool("pathstyle")
-
 	config = &mcConfig{
 		Version: "0.1.0",
 		S3: s3Config{
 			Auth: s3.Auth{
-				AccessKey:        accessKey,
-				SecretAccessKey:  secretKey,
-				Endpoint:         endpoint,
-				S3ForcePathStyle: pathstyle,
+				AccessKey:       accessKey,
+				SecretAccessKey: secretKey,
 			},
 		},
 	}
