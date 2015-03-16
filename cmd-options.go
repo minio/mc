@@ -47,7 +47,7 @@ var mb = cli.Command{
 	Action:      doFsMb,
 }
 
-var configure = cli.Command{
+var config = cli.Command{
 	Name:  "config",
 	Usage: "Generate configuration \"" + getMcConfigFilename() + "\" file.",
 	Description: `Configure minio client configuration data. If your config
@@ -55,7 +55,7 @@ var configure = cli.Command{
    automatically created for you. Note that the configure command only writes
    values to the config file. It does not use any configuration values from
    the environment variables.`,
-	Action: doConfigure,
+	Action: doConfig,
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "accesskey, a",
@@ -66,6 +66,10 @@ var configure = cli.Command{
 			Name:  "secretkey, s",
 			Value: "",
 			Usage: "AWS secret key id",
+		},
+		cli.BoolFlag{
+			Name:  "completion",
+			Usage: "Generate bash completion \"" + getMcBashCompletionFilename() + "\" file.",
 		},
 	},
 }
@@ -87,7 +91,7 @@ var options = []cli.Command{
 	cp,
 	ls,
 	mb,
-	configure,
+	config,
 }
 
 var flags = []cli.Flag{
@@ -98,10 +102,6 @@ var flags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "quiet, q",
 		Usage: "disable chatty output, such as the progress bar",
-	},
-	cli.BoolFlag{
-		Name:  "get-bash-completion",
-		Usage: "Generate bash completion \"" + getMcBashCompletionFilename() + "\" file.",
 	},
 }
 
