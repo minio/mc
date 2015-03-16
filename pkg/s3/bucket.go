@@ -40,6 +40,7 @@ package s3
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -112,7 +113,7 @@ func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, m
 	var buffer bytes.Buffer
 
 	if maxKeys <= 0 {
-		return nil, nil, fmt.Errorf("negative maxKeys are invalid")
+		return nil, nil, errors.New("negative maxKeys are invalid")
 	}
 
 	marker := startAt
@@ -162,7 +163,8 @@ func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, m
 			if err != nil {
 				fmt.Printf("Error parsing s3 XML response: %v for %q", err, logbuf.Bytes())
 			} else if bres.MaxKeys != fetchN || bres.Name != bucket || bres.Marker != marker {
-				err = fmt.Errorf("Unexpected parse from server: %#v from: %s", bres, logbuf.Bytes())
+				msg := fmt.Sprintf("Unexpected parse from server: %#v from: %s", bres, logbuf.Bytes())
+				err = errors.New(msg)
 				fmt.Print(err)
 			}
 			if err != nil {
@@ -180,7 +182,8 @@ func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, m
 				continue
 			}
 			if it.Key < startAt {
-				return nil, nil, fmt.Errorf("Unexpected response from Amazon: item key %q but wanted greater than %q", it.Key, startAt)
+				msg := fmt.Sprintf("Unexpected response from Amazon: item key %q but wanted greater than %q", it.Key, startAt)
+				return nil, nil, errors.New(msg)
 			}
 			items = append(items, it)
 			marker = it.Key
@@ -197,7 +200,7 @@ func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, m
 		}
 
 		if len(items) == 0 {
-			return nil, nil, fmt.Errorf("No items replied")
+			return nil, nil, errors.New("No items replied")
 		}
 	}
 	sort.Sort(bySize(items))

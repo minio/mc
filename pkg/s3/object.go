@@ -40,6 +40,7 @@ package s3
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -68,7 +69,7 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 	mw := io.MultiWriter(h, sink)
 	written, err := io.Copy(mw, contents)
 	if written != size {
-		return fmt.Errorf("Data read mismatch")
+		return errors.New("Data read mismatch")
 	}
 	if err != nil {
 		return err
@@ -143,7 +144,7 @@ func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err er
 // If length is negative, the rest of the object is returned.
 func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, err error) {
 	if offset < 0 {
-		return nil, 0, fmt.Errorf("invalid negative length")
+		return nil, 0, errors.New("invalid negative length")
 	}
 
 	req := newReq(c.keyURL(bucket, key))

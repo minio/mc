@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -63,14 +64,15 @@ func getMode(recursive bool, args *cmdArgs) int {
 // First mode <Object> <S3Object> or <Object> <S3Bucket>
 func firstMode(s3c *s3.Client, args *cmdArgs) error {
 	if args.source.key == "" {
-		return fmt.Errorf("invalid args")
+		return errors.New("invalid args")
 	}
 	st, err := os.Stat(args.source.key)
 	if os.IsNotExist(err) {
 		return err
 	}
 	if st.IsDir() {
-		return fmt.Errorf("omitting directory '%s'", st.Name())
+		msg := fmt.Sprintf("omitting directory '%s'", st.Name())
+		return errors.New(msg)
 	}
 	size := st.Size()
 	source, err := os.Open(args.source.key)
@@ -133,7 +135,8 @@ func secondMode(s3c *s3.Client, args *cmdArgs) error {
 		downloadedSize = st.Size()
 		// Verify if file is already downloaded
 		if downloadedSize == objectSize {
-			return fmt.Errorf("%s object has been already downloaded", args.destination.key)
+			msg := fmt.Sprintf("%s object has been already downloaded", args.destination.key)
+			return errors.New(msg)
 		}
 
 		destination, err = os.OpenFile(args.destination.key, os.O_RDWR, 0600)
@@ -214,7 +217,7 @@ func thirdMode(s3c *s3.Client, args *cmdArgs) error {
 			return err
 		}
 	case false:
-		return fmt.Errorf("Ranges not supported")
+		return errors.New("Ranges not supported")
 	}
 
 	msg := fmt.Sprintf("http://%s/%s uploaded -- to bucket:(http://%s/%s)", args.source.bucket, args.source.key,
