@@ -17,8 +17,6 @@
 package main
 
 import (
-	"bytes"
-	"os"
 	"path"
 	"strings"
 	"time"
@@ -47,23 +45,6 @@ func startBar(size int64) *pb.ProgressBar {
 	return bar
 }
 
-// getBashCompletion -
-func getBashCompletion() {
-	var b bytes.Buffer
-	b.WriteString(mcBashCompletion)
-	f := getMcBashCompletionFilename()
-	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	defer fl.Close()
-	_, err = fl.Write(b.Bytes())
-	if err != nil {
-		fatal(err.Error())
-	}
-	msg := "\nConfiguration written to " + f
-	msg = msg + "\n\n$ source ${HOME}/.minio/mc/mc.bash_completion\n"
-	msg = msg + "$ echo 'source ${HOME}/.minio/mc/mc.bash_completion' >> ${HOME}/.bashrc\n"
-	info(msg)
-}
-
 // NewClient - get new client
 func getNewClient(c *cli.Context) (*s3.Client, error) {
 	var client *s3.Client
@@ -87,16 +68,6 @@ func getNewClient(c *cli.Context) (*s3.Client, error) {
 	}
 
 	return client, nil
-}
-
-// Parse global options
-func parseGlobalOptions(c *cli.Context) {
-	switch {
-	case c.Bool("get-bash-completion") == true:
-		getBashCompletion()
-	default:
-		cli.ShowAppHelp(c)
-	}
 }
 
 // Parse subcommand options

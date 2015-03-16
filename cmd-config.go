@@ -1,12 +1,14 @@
 package main
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"os/user"
 	"path"
+
+	"encoding/json"
+	"io/ioutil"
+	"os/user"
 
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
@@ -53,7 +55,27 @@ func getMcConfig() (config *mcConfig, err error) {
 	return config, nil
 }
 
-func parseConfigureInput(c *cli.Context) (config *mcConfig, err error) {
+// getBashCompletion -
+func getBashCompletion() {
+	var b bytes.Buffer
+	if os.Getenv("SHELL") != "/bin/bash" {
+		fatal("Unsupported shell for bash completion detected.. exiting")
+	}
+	b.WriteString(mcBashCompletion)
+	f := getMcBashCompletionFilename()
+	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	defer fl.Close()
+	_, err = fl.Write(b.Bytes())
+	if err != nil {
+		fatal(err.Error())
+	}
+	msg := "\nConfiguration written to " + f
+	msg = msg + "\n\n$ source ${HOME}/.minio/mc/mc.bash_completion\n"
+	msg = msg + "$ echo 'source ${HOME}/.minio/mc/mc.bash_completion' >> ${HOME}/.bashrc\n"
+	info(msg)
+}
+
+func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	accessKey := c.String("accesskey")
 	secretKey := c.String("secretkey")
 	config = &mcConfig{
@@ -65,11 +87,14 @@ func parseConfigureInput(c *cli.Context) (config *mcConfig, err error) {
 			},
 		},
 	}
+	if c.Bool("completion") {
+		getBashCompletion()
+	}
 	return config, nil
 }
 
-func doConfigure(c *cli.Context) {
-	configData, err := parseConfigureInput(c)
+func doConfig(c *cli.Context) {
+	configData, err := parseConfigInput(c)
 	if err != nil {
 		fatal(err.Error())
 	}
