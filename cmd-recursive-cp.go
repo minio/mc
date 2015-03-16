@@ -45,11 +45,20 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 	bodyFile, err := os.Open(p)
 	defer bodyFile.Close()
 
+	var size int64
+	size, _, err = w.s3.Stat(bucketname, key)
+	if os.IsExist(err) || size != 0 {
+		msg := fmt.Sprintf("%s is already uploaded -- to bucket:%s://%s/%s/%s",
+			key, w.s3.Scheme, w.s3.Host, bucketname, key)
+		info(msg)
+		return nil
+	}
 	err = w.s3.Put(bucketname, key, i.Size(), bodyFile)
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("%s uploaded -- to bucket:http://%s/%s", key, bucketname, key)
+	msg := fmt.Sprintf("%s uploaded -- to bucket:%s://%s/%s/%s",
+		key, w.s3.Scheme, w.s3.Host, bucketname, key)
 	info(msg)
 	return nil
 }
@@ -104,14 +113,6 @@ func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 			err = s3c.PutBucket(args.destination.bucket)
 			if err != nil {
 				return err
-			}
-		} else {
-			items, _, err := s3c.ListObjects(args.destination.bucket, "", "", "", s3.MaxKeys)
-			if err != nil {
-				return err
-			}
-			if len(items) != 0 {
-				return fmt.Errorf("destination bucket not empty")
 			}
 		}
 		err = filepath.Walk(input, p.putWalk)
