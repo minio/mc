@@ -48,8 +48,6 @@ func New(res *http.Response) error {
 	var s3Err Error
 
 	s3Err.res = res
-	s3Err.resMsg = mxj.New()
-
 	s3Err.resMsg, err = mxj.NewMapXmlReader(res.Body)
 	if err != nil {
 		return err
