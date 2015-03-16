@@ -131,7 +131,6 @@ func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err er
 	if err != nil {
 		return nil, 0, err
 	}
-	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return nil, 0, s3errors.New(res)
@@ -159,7 +158,6 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.R
 	if err != nil {
 		return
 	}
-	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusPartialContent:
