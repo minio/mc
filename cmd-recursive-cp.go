@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -65,10 +66,10 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 
 func isValidBucketName(p string) error {
 	if path.IsAbs(p) {
-		return fmt.Errorf("directory bucketname cannot be absolute")
+		return errors.New("directory bucketname cannot be absolute")
 	}
 	if strings.HasPrefix(p, "..") {
-		return fmt.Errorf("Relative directory references not supported")
+		return errors.New("Relative directory references not supported")
 	}
 	if !s3.IsValidBucket(p) {
 		return errInvalidbucket
@@ -101,7 +102,7 @@ func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 			return err
 		}
 		if !st.IsDir() {
-			return fmt.Errorf("Should be a directory")
+			return errors.New("Should be a directory")
 		}
 
 		s3c.Host = args.destination.host
