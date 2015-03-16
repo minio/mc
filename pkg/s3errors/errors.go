@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-//Package s3errors implements client side error handling for S3 protocol
+// Package s3errors implements client side error handling for S3 protocol
 package s3errors
 
 import (
 	"fmt"
-
-	"io/ioutil"
 	"net/http"
 
-	"github.com/clbanning/x2j"
+	"github.com/clbanning/mxj"
 )
 
 /* **** SAMPLE ERROR RESPONSE ****
@@ -32,6 +30,7 @@ s3.ListBucket: status 403:
 <Error>
 	<Code>AccessDenied</Code>
 	<Message>Access Denied</Message>
+    <Resource>/mybucket/myphoto.jpg</Resource>
 	<RequestId>F19772218238A85A</RequestId>
 	<HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId>
 </Error>
@@ -39,21 +38,19 @@ s3.ListBucket: status 403:
 
 // Error is the type returned by some API operations.
 type Error struct {
-	res    *http.Response         // response headers
-	resMsg map[string]interface{} //Keys: Status, Message, RequestID, Bucket, Endpoint
+	res    *http.Response // response headers
+	resMsg mxj.Map        // Keys: Code, Message, Resource, RequestId, HostId
 }
 
 // New returns a new initialized S3.Error structure
 func New(res *http.Response) error {
+	var err error
 	var s3Err Error
+
 	s3Err.res = res
+	s3Err.resMsg = mxj.New()
 
-	xmlBody, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	s3Err.resMsg, err = x2j.DocToMap(string(xmlBody))
+	s3Err.resMsg, err = mxj.NewMapXmlReader(res.Body)
 	if err != nil {
 		return err
 	}
@@ -62,11 +59,5 @@ func New(res *http.Response) error {
 
 // Error formats HTTP error string
 func (e Error) Error() string {
-	/*
-		if bytes.Contains(e.Body, []byte("<Error>")) {
-			return fmt.Sprintf("s3.%s: status %d: %s", e.Op, e.Code, e.Body)
-		}
-		return fmt.Sprintf("%s: status %d", e.Op, e.Code)
-	*/
 	return fmt.Sprintf("%s", e.res.Status)
 }

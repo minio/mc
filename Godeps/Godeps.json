@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/minio-io/mc",
-	"GoVersion": "go1.4.1",
+	"GoVersion": "go1.4",
 	"Packages": [
 		"./..."
 	],
@@ -10,13 +10,17 @@
 			"Rev": "0464652af750701d218b6dd035f0217e407caf2d"
 		},
 		{
-			"ImportPath": "github.com/clbanning/x2j",
-			"Rev": "0e45c2228aab9921ef50cc7d0bf7186082cc51a4"
+			"ImportPath": "github.com/clbanning/mxj",
+			"Rev": "e11b85050263aff26728fb9863bf2ebaf6591279"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
 			"Comment": "1.2.0-87-g8ce64f1",
 			"Rev": "8ce64f19ff08029a69d11b7615c9b591245450ad"
+		},
+		{
+			"ImportPath": "github.com/fatih/structs",
+			"Rev": "c00d27128bb88e9c1adab1a53cda9c72c6d1ff9b"
 		},
 		{
 			"ImportPath": "github.com/mgutz/ansi",
