@@ -87,13 +87,10 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 			},
 		},
 	}
-	if c.Bool("completion") {
-		getBashCompletion()
-	}
 	return config, nil
 }
 
-func doConfig(c *cli.Context) {
+func getConfig(c *cli.Context) {
 	configData, err := parseConfigInput(c)
 	if err != nil {
 		fatal(err.Error())
@@ -119,6 +116,15 @@ func doConfig(c *cli.Context) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	msg := "\nConfiguration written to " + getMcConfigFilename()
+	msg := "\nConfiguration written to " + getMcConfigFilename() + "\n"
 	info(msg)
+}
+
+func doConfig(c *cli.Context) {
+	switch true {
+	case c.Bool("completion") == true:
+		getBashCompletion()
+	case c.Bool("completion") == false:
+		getConfig(c)
+	}
 }
