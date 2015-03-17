@@ -30,6 +30,9 @@ func init() {
 	if err != nil {
 		log.Fatalf("mc: Unable to obtain user's home directory. \nERROR[%v]\n", err)
 	}
+
+	// Ensures config file is sane and cached to __config private variable.
+	_ = getMcConfig()
 }
 
 func main() {
