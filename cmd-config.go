@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"path"
 
@@ -22,10 +23,16 @@ const (
 type s3Config struct {
 	Auth s3.Auth
 }
+
 type mcConfig struct {
 	Version string
 	S3      s3Config
+	Aliases []mcAlias
 }
+
+// Global config data loaded from json config file durlng init(). This variable should only
+// be accessed via getMcConfig()
+var _Config *mcConfig
 
 func getMcConfigDir() string {
 	u, err := user.Current()
@@ -41,7 +48,20 @@ func getMcConfigFilename() string {
 	return path.Join(getMcConfigDir(), mcConfigFilename)
 }
 
-func getMcConfig() (config *mcConfig, err error) {
+func getMcConfig() (cfg *mcConfig) {
+	if _Config != nil {
+		return _Config
+	}
+
+	_Config, err := loadMcConfig()
+	if err != nil {
+		log.Fatalf("mc: Unable to load config file %s. \nERROR[%v]\n", getMcConfigFilename(), err)
+	}
+
+	return _Config
+}
+
+func loadMcConfig() (config *mcConfig, err error) {
 	configBytes, err := ioutil.ReadFile(getMcConfigFilename())
 	if err != nil {
 		return nil, err
@@ -86,6 +106,16 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 				SecretAccessKey: secretKey,
 			},
 		},
+		Aliases: []mcAlias{
+			{
+				Name: "s3",
+				URL:  "https://s3.amazonaws.com/",
+			},
+			{
+				Name: "localhost",
+				URL:  "http://localhost:9000/",
+			},
+		},
 	}
 	return config, nil
 }
@@ -106,7 +136,7 @@ func getConfig(c *cli.Context) {
 		fatal(err.Error())
 	}
 
-	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	defer configFile.Close()
 	if err != nil {
 		fatal(err.Error())
@@ -116,7 +146,8 @@ func getConfig(c *cli.Context) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	msg := "\nConfiguration written to " + getMcConfigFilename() + "\n"
+
+	msg := "Configuration written to " + getMcConfigFilename() + "\n"
 	info(msg)
 }
 
