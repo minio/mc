@@ -22,8 +22,8 @@ var (
 	// fs
 	errFskey = errors.New("Key is needed to get the file")
 
-	// uri
-	errInvalidScheme = errors.New("Invalid URI scheme only http{s}:// supported")
+	// url
+	errInvalidScheme = errors.New("Invalid URL scheme only http{s}:// supported")
 
 	// host
 	errHostname = errors.New("No hostname specified")

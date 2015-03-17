@@ -20,7 +20,7 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var cp = cli.Command{
+var cpCmd = cli.Command{
 	Name:        "cp",
 	Usage:       "copy objects",
 	Description: `Copies a local file or dir or object or bucket to another location locally or in S3.`,
@@ -33,21 +33,21 @@ var cp = cli.Command{
 	},
 }
 
-var ls = cli.Command{
+var lsCmd = cli.Command{
 	Name:        "ls",
 	Usage:       "get list of objects",
 	Description: `List Objects and common prefixes under a prefix or all Buckets`,
 	Action:      doFsList,
 }
 
-var mb = cli.Command{
+var mbCmd = cli.Command{
 	Name:        "mb",
 	Usage:       "makes a bucket",
 	Description: "Creates an S3 bucket",
 	Action:      doFsMb,
 }
 
-var config = cli.Command{
+var configCmd = cli.Command{
 	Name:  "config",
 	Usage: "Generate configuration \"" + getMcConfigFilename() + "\" file.",
 	Description: `Configure minio client configuration data. If your config
@@ -88,10 +88,10 @@ type cmdArgs struct {
 }
 
 var options = []cli.Command{
-	cp,
-	ls,
-	mb,
-	config,
+	cpCmd,
+	lsCmd,
+	mbCmd,
+	configCmd,
 }
 
 var flags = []cli.Flag{
