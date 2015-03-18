@@ -51,7 +51,7 @@ func printObject(date time.Time, v int64, key string) {
 	info(msg)
 }
 
-func doFsList(c *cli.Context) {
+func doList(c *cli.Context) {
 	var items []*s3.Item
 
 	args, err := parseArgs(c)

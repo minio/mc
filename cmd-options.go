@@ -24,7 +24,7 @@ var cp = cli.Command{
 	Name:        "cp",
 	Usage:       "copy objects",
 	Description: `Copies a local file or dir or object or bucket to another location locally or in S3.`,
-	Action:      doFsCopy,
+	Action:      doCopy,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
@@ -37,14 +37,14 @@ var ls = cli.Command{
 	Name:        "ls",
 	Usage:       "get list of objects",
 	Description: `List Objects and common prefixes under a prefix or all Buckets`,
-	Action:      doFsList,
+	Action:      doList,
 }
 
 var mb = cli.Command{
 	Name:        "mb",
 	Usage:       "makes a bucket",
 	Description: "Creates an S3 bucket",
-	Action:      doFsMb,
+	Action:      doMakebucket,
 }
 
 var config = cli.Command{
@@ -74,6 +74,13 @@ var config = cli.Command{
 	},
 }
 
+var donut = cli.Command{
+	Name:        "donut",
+	Usage:       "donut admin",
+	Description: "",
+	Subcommands: donutOptions,
+}
+
 type object struct {
 	bucket string
 	key    string
@@ -91,6 +98,7 @@ var options = []cli.Command{
 	cp,
 	ls,
 	mb,
+	donut,
 	config,
 }
 
