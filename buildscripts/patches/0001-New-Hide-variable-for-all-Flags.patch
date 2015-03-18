@@ -1,0 +1,249 @@
+diff -pruN cli-h/flag.go cli/flag.go
+--- cli-h/flag.go	2015-03-18 10:57:04.100914754 -0700
++++ cli/flag.go	2015-03-18 10:54:31.284907675 -0700
+@@ -12,6 +12,7 @@ import (
+ // This flag enables bash-completion for all commands and subcommands
+ var BashCompletionFlag = BoolFlag{
+ 	Name: "generate-bash-completion",
++	Hide: true,
+ }
+ 
+ // This flag prints the version for the application
+@@ -36,6 +37,7 @@ type Flag interface {
+ 	// Apply Flag settings to the given flag set
+ 	Apply(*flag.FlagSet)
+ 	getName() string
++	isNotHidden() bool
+ }
+ 
+ func flagSet(name string, flags []Flag) *flag.FlagSet {
+@@ -67,6 +69,7 @@ type GenericFlag struct {
+ 	Value  Generic
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ // String returns the string representation of the generic flag to display the
+@@ -99,6 +102,10 @@ func (f GenericFlag) getName() string {
+ 	return f.Name
+ }
+ 
++func (f GenericFlag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ type StringSlice []string
+ 
+ func (f *StringSlice) Set(value string) error {
+@@ -119,6 +126,7 @@ type StringSliceFlag struct {
+ 	Value  *StringSlice
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ func (f StringSliceFlag) String() string {
+@@ -152,6 +160,10 @@ func (f StringSliceFlag) getName() strin
+ 	return f.Name
+ }
+ 
++func (f StringSliceFlag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ type IntSlice []int
+ 
+ func (f *IntSlice) Set(value string) error {
+@@ -178,6 +190,7 @@ type IntSliceFlag struct {
+ 	Value  *IntSlice
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ func (f IntSliceFlag) String() string {
+@@ -214,10 +227,15 @@ func (f IntSliceFlag) getName() string {
+ 	return f.Name
+ }
+ 
++func (f IntSliceFlag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ type BoolFlag struct {
+ 	Name   string
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ func (f BoolFlag) String() string {
+@@ -248,10 +266,15 @@ func (f BoolFlag) getName() string {
+ 	return f.Name
+ }
+ 
++func (f BoolFlag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ type BoolTFlag struct {
+ 	Name   string
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ func (f BoolTFlag) String() string {
+@@ -282,11 +305,16 @@ func (f BoolTFlag) getName() string {
+ 	return f.Name
+ }
+ 
++func (f BoolTFlag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ type StringFlag struct {
+ 	Name   string
+ 	Value  string
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ func (f StringFlag) String() string {
+@@ -298,7 +326,6 @@ func (f StringFlag) String() string {
+ 	} else {
+ 		fmtString = "%s %v\t%v"
+ 	}
+-
+ 	return withEnvHint(f.EnvVar, fmt.Sprintf(fmtString, prefixedNames(f.Name), f.Value, f.Usage))
+ }
+ 
+@@ -322,11 +349,16 @@ func (f StringFlag) getName() string {
+ 	return f.Name
+ }
+ 
++func (f StringFlag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ type IntFlag struct {
+ 	Name   string
+ 	Value  int
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ func (f IntFlag) String() string {
+@@ -356,11 +388,16 @@ func (f IntFlag) getName() string {
+ 	return f.Name
+ }
+ 
++func (f IntFlag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ type DurationFlag struct {
+ 	Name   string
+ 	Value  time.Duration
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ func (f DurationFlag) String() string {
+@@ -390,11 +427,16 @@ func (f DurationFlag) getName() string {
+ 	return f.Name
+ }
+ 
++func (f DurationFlag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ type Float64Flag struct {
+ 	Name   string
+ 	Value  float64
+ 	Usage  string
+ 	EnvVar string
++	Hide   bool
+ }
+ 
+ func (f Float64Flag) String() string {
+@@ -423,6 +465,10 @@ func (f Float64Flag) getName() string {
+ 	return f.Name
+ }
+ 
++func (f Float64Flag) isNotHidden() bool {
++	return !f.Hide
++}
++
+ func prefixFor(name string) (prefix string) {
+ 	if len(name) == 1 {
+ 		prefix = "-"
+diff -pruN cli-h/help.go cli/help.go
+--- cli-h/help.go	2015-03-18 10:57:04.100914754 -0700
++++ cli/help.go	2015-03-18 10:54:31.284907675 -0700
+@@ -14,9 +14,9 @@ USAGE:
+ VERSION:
+    {{.Version}}
+ 
+-AUTHOR(S): 
+-   {{range .Authors}}{{ . }}
+-   {{end}}
++AUTHOR(S):
++   {{range .Authors}}{{ . }} {{end}}
++
+ COMMANDS:
+    {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+    {{end}}{{if .Flags}}
+@@ -96,7 +96,15 @@ var HelpPrinter helpPrinter = nil
+ var VersionPrinter = printVersion
+ 
+ func ShowAppHelp(c *Context) {
+-	HelpPrinter(AppHelpTemplate, c.App)
++	// Make a copy of c.App context
++	app := *c.App
++	app.Flags = make([]Flag, 0)
++	for _, flag := range c.App.Flags {
++		if flag.isNotHidden() {
++			app.Flags = append(app.Flags, flag)
++		}
++	}
++	HelpPrinter(AppHelpTemplate, app)
+ }
+ 
+ // Prints the list of subcommands as the default app completion method
+@@ -112,13 +120,29 @@ func DefaultAppComplete(c *Context) {
+ func ShowCommandHelp(c *Context, command string) {
+ 	// show the subcommand help for a command with subcommands
+ 	if command == "" {
+-		HelpPrinter(SubcommandHelpTemplate, c.App)
++		// Make a copy of c.App context
++		app := *c.App
++		app.Flags = make([]Flag, 0)
++		for _, flag := range c.App.Flags {
++			if flag.isNotHidden() {
++				app.Flags = append(app.Flags, flag)
++			}
++		}
++		HelpPrinter(SubcommandHelpTemplate, app)
+ 		return
+ 	}
+ 
+ 	for _, c := range c.App.Commands {
+ 		if c.HasName(command) {
+-			HelpPrinter(CommandHelpTemplate, c)
++			// Make a copy of command context
++			c0 := c
++			c0.Flags = make([]Flag, 0)
++			for _, flag := range c.Flags {
++				if flag.isNotHidden() {
++					c0.Flags = append(c0.Flags, flag)
++				}
++			}
++			HelpPrinter(CommandHelpTemplate, c0)
+ 			return
+ 		}
+ 	}
