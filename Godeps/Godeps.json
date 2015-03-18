@@ -15,8 +15,8 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-87-g8ce64f1",
-			"Rev": "8ce64f19ff08029a69d11b7615c9b591245450ad"
+			"Comment": "1.2.0-94-gb4702e8",
+			"Rev": "b4702e8cbcd6f002454a0c69ebf54afd039e576b"
 		},
 		{
 			"ImportPath": "github.com/fatih/structs",
