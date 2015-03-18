@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"path"
 
 	"encoding/json"
 	"io/ioutil"
+	"net/url"
 	"os/user"
 
 	"github.com/codegangsta/cli"
@@ -22,15 +24,25 @@ const (
 type s3Config struct {
 	Auth s3.Auth
 }
+
 type mcConfig struct {
-	Version string
+	Version uint
 	S3      s3Config
+	Aliases []mcAlias
 }
+
+const (
+	currentConfigVersion = 1
+)
+
+// Global config data loaded from json config file durlng init(). This variable should only
+// be accessed via getMcConfig()
+var _Config *mcConfig
 
 func getMcConfigDir() string {
 	u, err := user.Current()
 	if err != nil {
-		msg := fmt.Sprintf("mc: Unable to obtain user's home directory. \nERROR[%v]", err)
+		msg := fmt.Sprintf("Unable to obtain user's home directory. \nError: %s", err)
 		fatal(msg)
 	}
 
@@ -41,7 +53,51 @@ func getMcConfigFilename() string {
 	return path.Join(getMcConfigDir(), mcConfigFilename)
 }
 
-func getMcConfig() (config *mcConfig, err error) {
+func getMcConfig() (cfg *mcConfig) {
+	if _Config != nil {
+		return _Config
+	}
+
+	_Config, err := loadMcConfig()
+	if err != nil {
+		log.Fatalf("Unable to load config file %s. \nError: %s", getMcConfigFilename(), err)
+	}
+
+	return _Config
+}
+
+// chechMcConfig checks for errors in config file
+func checkMcConfig(config *mcConfig) (err error) {
+	// check for version
+	switch {
+	case (config.Version != currentConfigVersion):
+		return fmt.Errorf("Unsupported version [%d]. Current operating version is [%d]",
+			config.Version, currentConfigVersion)
+
+	case config.S3.Auth.AccessKey == "":
+		return fmt.Errorf("Missing S3.Auth.AccessKey")
+
+	case config.S3.Auth.SecretAccessKey == "":
+		return fmt.Errorf("Missing S3.Auth.SecretAccessKey")
+
+	case len(config.Aliases) > 0:
+		for _, alias := range config.Aliases {
+			_, err := url.Parse(alias.URL)
+			if err != nil {
+				return fmt.Errorf("Unable to parse URL [%s] for alias [%s]",
+					alias.URL, alias.Name)
+			}
+			if !isValidAiasName(alias.Name) {
+				return fmt.Errorf("Not a valid alias name [%s]. Valid examples are: Area51, Grand-Nagus..",
+					alias.Name)
+			}
+		}
+	}
+	return nil
+}
+
+// loadMcConfig decodes json configuration file to mcConfig structure
+func loadMcConfig() (config *mcConfig, err error) {
 	configBytes, err := ioutil.ReadFile(getMcConfigFilename())
 	if err != nil {
 		return nil, err
@@ -79,11 +135,21 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	accessKey := c.String("accesskey")
 	secretKey := c.String("secretkey")
 	config = &mcConfig{
-		Version: "0.1.0",
+		Version: currentConfigVersion,
 		S3: s3Config{
 			Auth: s3.Auth{
 				AccessKey:       accessKey,
 				SecretAccessKey: secretKey,
+			},
+		},
+		Aliases: []mcAlias{
+			{
+				Name: "s3",
+				URL:  "https://s3.amazonaws.com/",
+			},
+			{
+				Name: "localhost",
+				URL:  "http://localhost:9000/",
 			},
 		},
 	}
@@ -106,7 +172,7 @@ func getConfig(c *cli.Context) {
 		fatal(err.Error())
 	}
 
-	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	defer configFile.Close()
 	if err != nil {
 		fatal(err.Error())
@@ -116,7 +182,8 @@ func getConfig(c *cli.Context) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	msg := "\nConfiguration written to " + getMcConfigFilename() + "\n"
+
+	msg := "Configuration written to " + getMcConfigFilename() + "\n"
 	info(msg)
 }
 
