@@ -21,7 +21,7 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-func doFsMb(c *cli.Context) {
+func doMakebucket(c *cli.Context) {
 	args, err := parseArgs(c)
 	if err != nil {
 		fatal(err.Error())
