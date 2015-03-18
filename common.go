@@ -77,13 +77,10 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 			return nil, err
 		}
 
-		if strings.HasPrefix(URL, "http") || strings.HasPrefix(URL, "https") {
+		if strings.HasPrefix(URL, "http") {
 			url, err := url.Parse(URL)
 			if err != nil {
 				return nil, err
-			}
-			if !strings.HasPrefix(url.Scheme, "http") && !strings.HasPrefix(url.Scheme, "https") {
-				return nil, errInvalidScheme
 			}
 			args.source.scheme = url.Scheme
 			if url.Scheme != "" {
@@ -101,9 +98,13 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 			return nil, errInvalidScheme
 		}
 	case 2: // one URL and one path||URL
+		URL, err := aliasExpand(c.Args().Get(0))
+		if err != nil {
+			return nil, err
+		}
 		switch true {
-		case c.Args().Get(0) != "":
-			url, err := url.Parse(c.Args().Get(0))
+		case URL != "":
+			url, err := url.Parse(URL)
 			if err != nil {
 				return nil, err
 			}

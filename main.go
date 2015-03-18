@@ -28,11 +28,17 @@ func init() {
 	// Check for the environment early on and gracefuly report.
 	_, err := user.Current()
 	if err != nil {
-		log.Fatalf("mc: Unable to obtain user's home directory. \nERROR[%v]\n", err)
+		log.Fatalf("mc: Unable to obtain user's home directory. \nError: %s\n", err)
 	}
 
 	// Ensures config file is sane and cached to __config private variable.
-	_ = getMcConfig()
+	config := getMcConfig()
+
+	err = checkMcConfig(config)
+	if err != nil {
+		log.Fatalf("mc: Error in config file [%s], Error: %s\n", getMcConfigFilename(), err)
+	}
+
 }
 
 func main() {

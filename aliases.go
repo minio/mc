@@ -17,32 +17,48 @@
 package main
 
 import (
-	"fmt"
+	"net/url"
+	"regexp"
 	"strings"
 )
 
 // Alias for S3 hosts, saved in mc json configuration file
 type mcAlias struct {
-	Name string // Any alphanumeric string [a-zA-Z_][0-9a-zA-Z_]
+	Name string // Any alphanumeric string /^[a-zA-Z0-9-_]+$/
 	URL  string // Eg.: https://s3.amazonaws.com/
 }
 
-// aliasExpand expands aliased (name:/path) URL to normal (http(s)://host:port/path) URL
-func aliasExpand(URL string) (newURL string, err error) {
-	if strings.HasPrefix(URL, "http") || strings.HasPrefix(URL, "https") {
-		//Not an alias. Return the original URL
-		return URL, nil
+// validAliasURL: use net/url.Parse to validate
+var validAliasName = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$")
+
+// Check if it is an aliased URL
+func isValidAiasName(aliasName string) bool {
+	return validAliasName.MatchString(aliasName)
+}
+
+// aliasExpand expands aliased (name:/path) to full URL
+func aliasExpand(aliasedURL string) (newURL string, err error) {
+	url, err := url.Parse(aliasedURL)
+	if err != nil {
+		// Not a valid URL. Return error
+		return aliasedURL, err
 	}
+
+	// Not an aliased URL
+	if url.Scheme == "" {
+		return aliasedURL, nil
+	}
+
+	// load from json config file
 	config := getMcConfig()
 
 	for _, alias := range config.Aliases {
-		if strings.HasPrefix(URL, alias.Name) {
-			newURL = strings.Replace(URL, alias.Name+":", alias.URL, 1)
-			break
+		if strings.HasPrefix(aliasedURL, alias.Name) {
+			// Match found. Expand it.
+			return strings.Replace(aliasedURL, alias.Name+":", alias.URL, 1), nil
 		}
 	}
-	if newURL == "" {
-		return URL, fmt.Errorf("No matching alias for URL [%s]", URL)
-	}
-	return newURL, nil
+
+	// No matching alias. Return the original
+	return aliasedURL, nil
 }

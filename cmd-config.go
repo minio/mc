@@ -9,6 +9,7 @@ import (
 
 	"encoding/json"
 	"io/ioutil"
+	"net/url"
 	"os/user"
 
 	"github.com/codegangsta/cli"
@@ -25,10 +26,14 @@ type s3Config struct {
 }
 
 type mcConfig struct {
-	Version string
+	Version uint
 	S3      s3Config
 	Aliases []mcAlias
 }
+
+const (
+	currentConfigVersion = 1
+)
 
 // Global config data loaded from json config file durlng init(). This variable should only
 // be accessed via getMcConfig()
@@ -37,7 +42,7 @@ var _Config *mcConfig
 func getMcConfigDir() string {
 	u, err := user.Current()
 	if err != nil {
-		msg := fmt.Sprintf("mc: Unable to obtain user's home directory. \nERROR[%v]", err)
+		msg := fmt.Sprintf("Unable to obtain user's home directory. \nError: %s", err)
 		fatal(msg)
 	}
 
@@ -55,12 +60,43 @@ func getMcConfig() (cfg *mcConfig) {
 
 	_Config, err := loadMcConfig()
 	if err != nil {
-		log.Fatalf("mc: Unable to load config file %s. \nERROR[%v]\n", getMcConfigFilename(), err)
+		log.Fatalf("Unable to load config file %s. \nError: %s", getMcConfigFilename(), err)
 	}
 
 	return _Config
 }
 
+// chechMcConfig checks for errors in config file
+func checkMcConfig(config *mcConfig) (err error) {
+	// check for version
+	switch {
+	case (config.Version != currentConfigVersion):
+		return fmt.Errorf("Unsupported version [%d]. Current operating version is [%d]",
+			config.Version, currentConfigVersion)
+
+	case config.S3.Auth.AccessKey == "":
+		return fmt.Errorf("Missing S3.Auth.AccessKey")
+
+	case config.S3.Auth.SecretAccessKey == "":
+		return fmt.Errorf("Missing S3.Auth.SecretAccessKey")
+
+	case len(config.Aliases) > 0:
+		for _, alias := range config.Aliases {
+			_, err := url.Parse(alias.URL)
+			if err != nil {
+				return fmt.Errorf("Unable to parse URL [%s] for alias [%s]",
+					alias.URL, alias.Name)
+			}
+			if !isValidAiasName(alias.Name) {
+				return fmt.Errorf("Not a valid alias name [%s]. Valid examples are: Area51, Grand-Nagus..",
+					alias.Name)
+			}
+		}
+	}
+	return nil
+}
+
+// loadMcConfig decodes json configuration file to mcConfig structure
 func loadMcConfig() (config *mcConfig, err error) {
 	configBytes, err := ioutil.ReadFile(getMcConfigFilename())
 	if err != nil {
@@ -99,7 +135,7 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	accessKey := c.String("accesskey")
 	secretKey := c.String("secretkey")
 	config = &mcConfig{
-		Version: "0.1.0",
+		Version: currentConfigVersion,
 		S3: s3Config{
 			Auth: s3.Auth{
 				AccessKey:       accessKey,
