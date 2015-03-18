@@ -14,11 +14,11 @@ USAGE:
 VERSION:
    {{.Version}}
 
-AUTHOR(S): 
-	{{range .Authors}}{{ . }} {{end}}
+AUTHOR(S):
+   {{range .Authors}}{{ . }} {{end}}
 
 COMMANDS:
-   {{range .Commands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
+   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}{{if .Flags}}
 GLOBAL OPTIONS:
    {{range .Flags}}{{.}}
@@ -52,7 +52,7 @@ USAGE:
    {{.Name}} command{{if .Flags}} [command options]{{end}} [arguments...]
 
 COMMANDS:
-   {{range .Commands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
+   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}{{if .Flags}}
 OPTIONS:
    {{range .Flags}}{{.}}
@@ -60,9 +60,9 @@ OPTIONS:
 `
 
 var helpCommand = Command{
-	Name:      "help",
-	ShortName: "h",
-	Usage:     "Shows a list of commands or help for one command",
+	Name:    "help",
+	Aliases: []string{"h"},
+	Usage:   "Shows a list of commands or help for one command",
 	Action: func(c *Context) {
 		args := c.Args()
 		if args.Present() {
@@ -74,9 +74,9 @@ var helpCommand = Command{
 }
 
 var helpSubcommand = Command{
-	Name:      "help",
-	ShortName: "h",
-	Usage:     "Shows a list of commands or help for one command",
+	Name:    "help",
+	Aliases: []string{"h"},
+	Usage:   "Shows a list of commands or help for one command",
 	Action: func(c *Context) {
 		args := c.Args()
 		if args.Present() {
@@ -96,15 +96,22 @@ var HelpPrinter helpPrinter = nil
 var VersionPrinter = printVersion
 
 func ShowAppHelp(c *Context) {
-	HelpPrinter(AppHelpTemplate, c.App)
+	// Make a copy of c.App context
+	app := *c.App
+	app.Flags = make([]Flag, 0)
+	for _, flag := range c.App.Flags {
+		if flag.isNotHidden() {
+			app.Flags = append(app.Flags, flag)
+		}
+	}
+	HelpPrinter(AppHelpTemplate, app)
 }
 
 // Prints the list of subcommands as the default app completion method
 func DefaultAppComplete(c *Context) {
 	for _, command := range c.App.Commands {
-		fmt.Fprintln(c.App.Writer, command.Name)
-		if command.ShortName != "" {
-			fmt.Fprintln(c.App.Writer, command.ShortName)
+		for _, name := range command.Names() {
+			fmt.Fprintln(c.App.Writer, name)
 		}
 	}
 }
@@ -113,13 +120,29 @@ func DefaultAppComplete(c *Context) {
 func ShowCommandHelp(c *Context, command string) {
 	// show the subcommand help for a command with subcommands
 	if command == "" {
-		HelpPrinter(SubcommandHelpTemplate, c.App)
+		// Make a copy of c.App context
+		app := *c.App
+		app.Flags = make([]Flag, 0)
+		for _, flag := range c.App.Flags {
+			if flag.isNotHidden() {
+				app.Flags = append(app.Flags, flag)
+			}
+		}
+		HelpPrinter(SubcommandHelpTemplate, app)
 		return
 	}
 
 	for _, c := range c.App.Commands {
 		if c.HasName(command) {
-			HelpPrinter(CommandHelpTemplate, c)
+			// Make a copy of command context
+			c0 := c
+			c0.Flags = make([]Flag, 0)
+			for _, flag := range c.Flags {
+				if flag.isNotHidden() {
+					c0.Flags = append(c0.Flags, flag)
+				}
+			}
+			HelpPrinter(CommandHelpTemplate, c0)
 			return
 		}
 	}
