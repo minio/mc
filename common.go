@@ -75,103 +75,109 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 
 	switch len(c.Args()) {
 	case 1: // only one URL
-		URL, err := aliasExpand(c.Args().Get(0))
+		urlString, err := aliasExpand(c.Args().Get(0))
 		if err != nil {
 			return nil, err
 		}
 
-		if strings.HasPrefix(URL, "http") {
-			url, err := url.Parse(URL)
+		if strings.HasPrefix(urlString, "http") {
+			urlParsed, err := url.Parse(urlString)
 			if err != nil {
 				return nil, err
 			}
-			args.source.scheme = url.Scheme
-			if url.Scheme != "" {
-				if url.Host == "" {
+			args.source.scheme = urlParsed.Scheme
+			if urlParsed.Scheme != "" {
+				if urlParsed.Host == "" {
 					return nil, errHostname
 				}
 			}
-			args.source.host = url.Host
-			URLSplits := strings.Split(url.Path, "/")
-			if len(URLSplits) > 1 {
-				args.source.bucket = URLSplits[1]
-				args.source.key = path.Join(URLSplits[2:]...)
+			args.source.host = urlParsed.Host
+			urlSplits := strings.Split(urlParsed.Path, "/")
+			if len(urlSplits) > 1 {
+				args.source.bucket = urlSplits[1]
+				args.source.key = path.Join(urlSplits[2:]...)
 			}
 		} else {
 			return nil, errInvalidScheme
 		}
 	case 2: // one URL and one path||URL
-		URL, err := aliasExpand(c.Args().Get(0))
-		if err != nil {
-			return nil, err
-		}
 		switch true {
-		case URL != "":
-			url, err := url.Parse(URL)
+		case c.Args().Get(0) != "":
+			urlString, err := aliasExpand(c.Args().Get(0))
+			if err != nil {
+				return nil, err
+			}
+			urlParsed, err := url.Parse(urlString)
 			if err != nil {
 				return nil, err
 			}
 			switch true {
-			case url.Scheme == "http" || url.Scheme == "https":
-				if url.Host == "" {
-					if url.Path == "" {
+			case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
+				if urlParsed.Host == "" {
+					if urlParsed.Path == "" {
 						return nil, errInvalidScheme
 					}
 					return nil, errInvalidScheme
 				}
-				args.source.scheme = url.Scheme
-				args.source.host = url.Host
-				URLSplits := strings.Split(url.Path, "/")
-				if len(URLSplits) > 1 {
-					args.source.bucket = URLSplits[1]
-					args.source.key = path.Join(URLSplits[2:]...)
+				args.source.scheme = urlParsed.Scheme
+				args.source.host = urlParsed.Host
+				urlSplits := strings.Split(urlParsed.Path, "/")
+				if len(urlSplits) > 1 {
+					args.source.bucket = urlSplits[1]
+					args.source.key = path.Join(urlSplits[2:]...)
 				}
-			case url.Scheme == "":
-				if url.Host != "" {
+			case urlParsed.Scheme == "":
+				if urlParsed.Host != "" {
 					return nil, errInvalidScheme
 				}
-				if url.Path != c.Args().Get(0) {
+				if urlParsed.Path != c.Args().Get(0) {
 					return nil, errInvalidScheme
 				}
-				if url.Path == "." {
+				if urlParsed.Path == "." {
 					return nil, errFskey
 				}
-				args.source.key = strings.TrimPrefix(url.Path, "/")
-			case url.Scheme != "http" && url.Scheme != "https":
+				args.source.key = strings.TrimPrefix(urlParsed.Path, "/")
+			case urlParsed.Scheme != "http" && urlParsed.Scheme != "https":
 				return nil, errInvalidScheme
 			}
 			fallthrough
 		case c.Args().Get(1) != "":
-			url, err := url.Parse(c.Args().Get(1))
+			urlString, err := aliasExpand(c.Args().Get(1))
 			if err != nil {
 				return nil, err
 			}
+
+			urlParsed, err := url.Parse(urlString)
+			if err != nil {
+				return nil, err
+			}
+
 			switch true {
-			case url.Scheme == "http" || url.Scheme == "https":
-				if url.Host == "" {
-					if url.Path == "" {
+			case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
+				if urlParsed.Host == "" {
+					if urlParsed.Path == "" {
 						return nil, errInvalidScheme
 					}
 					return nil, errInvalidScheme
 				}
-				args.destination.host = url.Host
-				args.destination.scheme = url.Scheme
-				URLSplits := strings.Split(url.Path, "/")
-				if len(URLSplits) > 1 {
-					args.destination.bucket = URLSplits[1]
-					args.destination.key = path.Join(URLSplits[2:]...)
+				args.destination.host = urlParsed.Host
+				args.destination.scheme = urlParsed.Scheme
+				urlSplits := strings.Split(urlParsed.Path, "/")
+				if len(urlSplits) > 1 {
+					args.destination.bucket = urlSplits[1]
+					args.destination.key = path.Join(urlSplits[2:]...)
 				}
-			case url.Scheme == "":
-				if url.Host != "" {
+			case urlParsed.Scheme == "":
+				if urlParsed.Host != "" {
 					return nil, errInvalidScheme
 				}
-				if url.Path == "." {
+				if urlParsed.Path == "." {
 					args.destination.key = args.source.key
 				} else {
-					args.destination.key = strings.TrimPrefix(url.Path, "/")
+					args.destination.key = strings.TrimPrefix(urlParsed.Path, "/")
 				}
-				args.destination.bucket = url.Host
-			case url.Scheme != "http" && url.Scheme != "https":
+				args.destination.bucket = urlParsed.Host
+			case urlParsed.Scheme != "http" && urlParsed.Scheme != "https":
 				return nil, errInvalidScheme
 			}
 		}
