@@ -32,7 +32,7 @@ type mcAlias struct {
 var validAliasName = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$")
 
 // Check if it is an aliased URL
-func isValidAiasName(aliasName string) bool {
+func isValidAliasName(aliasName string) bool {
 	return validAliasName.MatchString(aliasName)
 }
 
@@ -50,7 +50,10 @@ func aliasExpand(aliasedURL string) (newURL string, err error) {
 	}
 
 	// load from json config file
-	config := getMcConfig()
+	config, err := getMcConfig()
+	if err != nil {
+		return "", err
+	}
 
 	for _, alias := range config.Aliases {
 		if strings.HasPrefix(aliasedURL, alias.Name) {

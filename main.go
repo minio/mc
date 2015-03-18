@@ -32,7 +32,13 @@ func init() {
 	}
 
 	// Ensures config file is sane and cached to __config private variable.
-	config := getMcConfig()
+	config, err := getMcConfig()
+	if os.IsNotExist(err) {
+		return
+	}
+	if err != nil {
+		log.Fatalf("mc: Unable %s\n", err)
+	}
 
 	err = checkMcConfig(config)
 	if err != nil {

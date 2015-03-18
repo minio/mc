@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"path"
 
@@ -37,7 +36,7 @@ const (
 
 // Global config data loaded from json config file durlng init(). This variable should only
 // be accessed via getMcConfig()
-var _Config *mcConfig
+var _config *mcConfig
 
 func getMcConfigDir() string {
 	u, err := user.Current()
@@ -53,17 +52,17 @@ func getMcConfigFilename() string {
 	return path.Join(getMcConfigDir(), mcConfigFilename)
 }
 
-func getMcConfig() (cfg *mcConfig) {
-	if _Config != nil {
-		return _Config
+func getMcConfig() (cfg *mcConfig, err error) {
+	if _config != nil {
+		return _config, nil
 	}
 
-	_Config, err := loadMcConfig()
+	_config, err = loadMcConfig()
 	if err != nil {
-		log.Fatalf("Unable to load config file %s. \nError: %s", getMcConfigFilename(), err)
+		return nil, err
 	}
 
-	return _Config
+	return _config, nil
 }
 
 // chechMcConfig checks for errors in config file
@@ -87,7 +86,7 @@ func checkMcConfig(config *mcConfig) (err error) {
 				return fmt.Errorf("Unable to parse URL [%s] for alias [%s]",
 					alias.URL, alias.Name)
 			}
-			if !isValidAiasName(alias.Name) {
+			if !isValidAliasName(alias.Name) {
 				return fmt.Errorf("Not a valid alias name [%s]. Valid examples are: Area51, Grand-Nagus..",
 					alias.Name)
 			}
@@ -98,7 +97,13 @@ func checkMcConfig(config *mcConfig) (err error) {
 
 // loadMcConfig decodes json configuration file to mcConfig structure
 func loadMcConfig() (config *mcConfig, err error) {
-	configBytes, err := ioutil.ReadFile(getMcConfigFilename())
+	configFile := getMcConfigFilename()
+	_, err = os.Stat(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	configBytes, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return nil, err
 	}

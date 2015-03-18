@@ -47,7 +47,10 @@ func startBar(size int64) *pb.ProgressBar {
 
 // NewClient - get new client
 func getNewClient(c *cli.Context) (client *s3.Client, err error) {
-	config := getMcConfig()
+	config, err := getMcConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	switch c.GlobalBool("debug") {
 	case true:
