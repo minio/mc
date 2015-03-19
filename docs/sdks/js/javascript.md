@@ -16,11 +16,12 @@ npm install aws-sdk
 var AWS = require('aws-sdk');
 
 var config = {
-  accessKeyId: "MINIO_ACCESS_ID",
-  secretAccessKey: "MINIO_SECRET_ID",
+  accessKeyId: "ECHB22VEKH5I0X4K2T7P",
+  secretAccessKey: "IiqhtimkamPZJtV4J8jztm74LpdTSbn7RUASyPzjje2+pfhLJ7nFRg==",
   endpoint: "localhost:9000",
   region: "",
   sslEnabled: false,
+  s3ForcePathStyle: true,
 };
 
 AWS.config.update(config);
@@ -36,7 +37,7 @@ s3.listBuckets(function(err, data) {
 
 
 var params = {
-  Bucket: "your-bucket"
+  Bucket: "docs"
 };
 
 s3.listObjects(params, function(err, data) {
@@ -55,11 +56,12 @@ Grab it here [example-list.js](https://github.com/Minio-io/mc/blob/master/docs/s
 var AWS = require('aws-sdk');
 
 var config = {
-  accessKeyId: "MINIO_ACCESS_ID",
-  secretAccessKey: "MINIO_SECRET_ID",
+  accessKeyId: "ECHB22VEKH5I0X4K2T7P",
+  secretAccessKey: "IiqhtimkamPZJtV4J8jztm74LpdTSbn7RUASyPzjje2+pfhLJ7nFRg==",
   endpoint: "localhost:9000",
   region: "",
   sslEnabled: false,
+  s3ForcePathStyle: true,
 };
 
 AWS.config.update(config);
@@ -73,9 +75,9 @@ var statement = {
     AWS: "minio::1111111:murphy"
   },
   Action: [
-    "s3:ListBucket",
-    "s3:GetObject",
-    "s3:PutObject",
+    "minio:ListBucket",
+    "minio:GetObject",
+    "minio:PutObject",
   ],
   Resource: [
     "minio:::examplebucket"
@@ -88,7 +90,7 @@ var policy = {
 }
 
 var params = {
-  Bucket: 'newbucket',
+  Bucket: 'docs',
   Policy: JSON.stringify(policy),
 }
 
@@ -101,7 +103,7 @@ s3.putBucketPolicy(params, function(err, data) {
 });
 
 var params = {
-  Bucket: 'newbucket'
+  Bucket: 'docs'
 };
 
 s3.getBucketPolicy(params, function(err, data) {
