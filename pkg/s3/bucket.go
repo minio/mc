@@ -50,8 +50,6 @@ import (
 	"encoding/xml"
 	"net/http"
 	"net/url"
-
-	"github.com/minio-io/mc/pkg/s3errors"
 )
 
 // bySize implements sort.Interface for []Item based on the Size field.
@@ -76,7 +74,7 @@ func (c *Client) ListBuckets() ([]*Bucket, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, s3errors.New(res)
+		return nil, NewError(res)
 	}
 
 	return parseListAllMyBuckets(res.Body)
@@ -98,7 +96,7 @@ func (c *Client) PutBucket(bucket string) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return s3errors.New(res)
+		return NewError(res)
 	}
 
 	return nil
@@ -154,7 +152,7 @@ func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, m
 			defer res.Body.Close()
 
 			if res.StatusCode != http.StatusOK {
-				return nil, nil, s3errors.New(res)
+				return nil, nil, NewError(res)
 			}
 
 			bres = listBucketResults{}

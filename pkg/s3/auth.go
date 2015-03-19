@@ -215,7 +215,28 @@ func (a *Auth) writeCanonicalizedAmzHeaders(buf *bytes.Buffer, req *http.Request
 }
 
 // Must be sorted:
-var subResList = []string{"acl", "lifecycle", "location", "logging", "notification", "partNumber", "policy", "requestPayment", "torrent", "uploadId", "uploads", "versionId", "versioning", "versions", "website"}
+var subResList = []string{
+	"acl",
+	"location",
+	"logging",
+	"notification",
+	"partNumber",
+	"policy",
+	"requestPayment",
+	"torrent",
+	"uploadId",
+	"uploads",
+	"versionId",
+	"versioning",
+	"versions",
+	"response-content-type",
+	"response-content-language",
+	"response-expires",
+	"response-cache-control",
+	"response-content-disposition",
+	"response-content-encoding",
+	"website",
+}
 
 // From the Amazon docs:
 //
@@ -229,6 +250,7 @@ func (a *Auth) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request, 
 		buf.WriteString(bucket)
 	}
 	buf.WriteString(req.URL.Path)
+	sort.Strings(subResList)
 	if req.URL.RawQuery != "" {
 		n := 0
 		vals, _ := url.ParseQuery(req.URL.RawQuery)

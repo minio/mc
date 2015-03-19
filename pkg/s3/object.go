@@ -51,8 +51,6 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/minio-io/mc/pkg/s3errors"
 )
 
 /// Object API operations
@@ -86,7 +84,7 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return s3errors.New(res)
+		return NewError(res)
 	}
 	return nil
 }
@@ -119,7 +117,7 @@ func (c *Client) Stat(bucket, key string) (size int64, date time.Time, reterr er
 			return size, date, nil
 		}
 	default:
-		return 0, date, s3errors.New(res)
+		return 0, date, NewError(res)
 	}
 	return
 }
@@ -134,7 +132,7 @@ func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err er
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, 0, s3errors.New(res)
+		return nil, 0, NewError(res)
 	}
 
 	return res.Body, res.ContentLength, nil
@@ -164,6 +162,6 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.R
 	case http.StatusOK, http.StatusPartialContent:
 		return res.Body, res.ContentLength, nil
 	default:
-		return nil, 0, s3errors.New(res)
+		return nil, 0, NewError(res)
 	}
 }
