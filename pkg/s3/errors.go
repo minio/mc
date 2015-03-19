@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-// Package s3errors implements client side error handling for S3 protocol
-package s3errors
+package s3
 
 import (
 	"fmt"
@@ -42,8 +41,8 @@ type Error struct {
 	resMsg mxj.Map        // Keys: Code, Message, Resource, RequestId, HostId
 }
 
-// New returns a new initialized S3.Error structure
-func New(res *http.Response) error {
+// NewError returns a new initialized S3.Error structure
+func NewError(res *http.Response) error {
 	var err error
 	var s3Err Error
 
