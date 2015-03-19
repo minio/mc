@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"encoding/json"
 	"io/ioutil"
@@ -139,6 +141,23 @@ func getBashCompletion() {
 func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	accessKey := c.String("accesskey")
 	secretKey := c.String("secretkey")
+
+	alias := strings.Fields(c.String("alias"))
+	if len(alias) == 0 {
+		// valid case throw help
+		return nil, nil
+	}
+	if len(alias) != 2 {
+		return nil, errors.New("invalid number of arguments for --alias, requires exact 2")
+	}
+	aliasName := alias[0]
+	url := alias[1]
+	if strings.HasPrefix(aliasName, "http") {
+		return nil, errors.New("invalid alias cannot use http{s}")
+	}
+	if !strings.HasPrefix(url, "http") {
+		return nil, errors.New("invalid url type only supports http{s}")
+	}
 	config = &mcConfig{
 		Version: currentConfigVersion,
 		S3: s3Config{
@@ -155,6 +174,10 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 			{
 				Name: "localhost",
 				URL:  "http://localhost:9000/",
+			},
+			{
+				Name: aliasName,
+				URL:  url,
 			},
 		},
 	}

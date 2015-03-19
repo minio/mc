@@ -58,7 +58,7 @@ var configCmd = cli.Command{
 	Action: doConfig,
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:  "accesskey, a",
+			Name:  "accesskey, k",
 			Value: "",
 			Usage: "AWS access key id",
 		},
@@ -66,6 +66,11 @@ var configCmd = cli.Command{
 			Name:  "secretkey, s",
 			Value: "",
 			Usage: "AWS secret key id",
+		},
+		cli.StringFlag{
+			Name:  "alias",
+			Value: "",
+			Usage: "Add aliases into config",
 		},
 		cli.BoolFlag{
 			Name:  "completion",
