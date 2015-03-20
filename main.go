@@ -31,7 +31,7 @@ func init() {
 		log.Fatalf("mc: Unable to obtain user's home directory. \nError: %s\n", err)
 	}
 
-	// Ensures config file is sane and cached to __config private variable.
+	// Ensures config file is sane and cached to _config private variable.
 	config, err := getMcConfig()
 	if os.IsNotExist(err) {
 		return

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -22,14 +23,15 @@ const (
 	mcConfigFilename = "config.json"
 )
 
-type s3Config struct {
+type hostConfig struct {
 	Auth s3.Auth
 }
 
 type mcConfig struct {
-	Version uint
-	S3      s3Config
-	Aliases []mcAlias
+	Version     uint
+	DefaultHost string
+	Hosts       map[string]hostConfig
+	Aliases     map[string]string
 }
 
 const (
@@ -75,22 +77,28 @@ func checkMcConfig(config *mcConfig) (err error) {
 		return fmt.Errorf("Unsupported version [%d]. Current operating version is [%d]",
 			config.Version, currentConfigVersion)
 
-	case config.S3.Auth.AccessKey == "":
-		return fmt.Errorf("Missing S3.Auth.AccessKey")
-
-	case config.S3.Auth.SecretAccessKey == "":
-		return fmt.Errorf("Missing S3.Auth.SecretAccessKey")
-
+	case len(config.Hosts) > 1:
+		for host, hostCfg := range config.Hosts {
+			if host == "" {
+				return fmt.Errorf("Empty host URL")
+			}
+			if hostCfg.Auth.AccessKeyID == "" {
+				return fmt.Errorf("AccessKeyID is empty for Host [%s]", host)
+			}
+			if hostCfg.Auth.SecretAccessKey == "" {
+				return fmt.Errorf("SecretAccessKey is empty for Host [%s]", host)
+			}
+		}
 	case len(config.Aliases) > 0:
-		for _, alias := range config.Aliases {
-			_, err := url.Parse(alias.URL)
+		for aliasName, aliasURL := range config.Aliases {
+			_, err := url.Parse(aliasURL)
 			if err != nil {
 				return fmt.Errorf("Unable to parse URL [%s] for alias [%s]",
-					alias.URL, alias.Name)
+					aliasURL, aliasName)
 			}
-			if !isValidAliasName(alias.Name) {
+			if !isValidAliasName(aliasName) {
 				return fmt.Errorf("Not a valid alias name [%s]. Valid examples are: Area51, Grand-Nagus..",
-					alias.Name)
+					aliasName)
 			}
 		}
 	}
@@ -139,8 +147,16 @@ func getBashCompletion() {
 }
 
 func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
-	accessKey := c.String("accesskey")
-	secretKey := c.String("secretkey")
+	accessKeyID := c.String("accesskeyid")
+	secretAccesskey := c.String("secretkey")
+
+	if accessKeyID == "" {
+		accessKeyID = "YOUR-ACCESS-KEY-ID-HERE"
+	}
+
+	if secretAccesskey == "" {
+		secretAccesskey = "YOUR-SECRET-ACCESS-KEY-HERE"
+	}
 
 	alias := strings.Fields(c.String("alias"))
 	if len(alias) == 0 {
@@ -158,68 +174,85 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	if !strings.HasPrefix(url, "http") {
 		return nil, errors.New("invalid url type only supports http{s}")
 	}
+
 	config = &mcConfig{
-		Version: currentConfigVersion,
-		S3: s3Config{
-			Auth: s3.Auth{
-				AccessKey:       accessKey,
-				SecretAccessKey: secretKey,
-			},
+		Version:     currentConfigVersion,
+		DefaultHost: "https://s3.amazonaws.com",
+		Hosts: map[string]hostConfig{
+			"https://s3.amazonaws.com": {
+				Auth: s3.Auth{
+					AccessKeyID:     accessKeyID,
+					SecretAccessKey: secretAccesskey,
+				}},
 		},
-		Aliases: []mcAlias{
-			{
-				Name: "s3",
-				URL:  "https://s3.amazonaws.com/",
-			},
-			{
-				Name: "localhost",
-				URL:  "http://localhost:9000/",
-			},
-			{
-				Name: aliasName,
-				URL:  url,
-			},
+		Aliases: map[string]string{
+			"s3":        "https://s3.amazonaws.com/",
+			"localhost": "http://localhost:9000/",
+			aliasName:   url,
 		},
 	}
+	//config.Aliases[aliasName] = url
 	return config, nil
 }
 
-func getConfig(c *cli.Context) {
+// getHostConfig retrieves host specific configuration such as access keys, certs.
+func getHostConfig(host string) (hostCfg *hostConfig, err error) {
+	_, err = url.Parse(host)
+	if err != nil {
+		return nil, err
+
+	}
+	config, err := getMcConfig()
+	hostCfg.Auth.AccessKeyID = config.Hosts[host].Auth.AccessKeyID
+	hostCfg.Auth.SecretAccessKey = config.Hosts[host].Auth.SecretAccessKey
+	return hostCfg, nil
+}
+
+// saveConfig writes configuration data in json format to config file.
+func saveConfig(c *cli.Context) error {
 	configData, err := parseConfigInput(c)
 	if err != nil {
-		fatal(err.Error())
+		return err
 	}
 
 	jsonConfig, err := json.MarshalIndent(configData, "", "\t")
 	if err != nil {
-		fatal(err.Error())
+		return err
 	}
 
 	err = os.MkdirAll(getMcConfigDir(), 0755)
-	if err != nil {
-		fatal(err.Error())
+	if !os.IsExist(err) && err != nil {
+		return err
 	}
 
 	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-	defer configFile.Close()
 	if err != nil {
-		fatal(err.Error())
+		return err
 	}
+	defer configFile.Close()
 
 	_, err = configFile.Write(jsonConfig)
 	if err != nil {
-		fatal(err.Error())
+		return err
 	}
-
-	msg := "Configuration written to " + getMcConfigFilename() + "\n"
-	info(msg)
+	return nil
 }
 
-func doConfig(c *cli.Context) {
+// doConfigCmd is the handler for "mc config" sub-command.
+func doConfigCmd(c *cli.Context) {
 	switch true {
 	case c.Bool("completion") == true:
 		getBashCompletion()
-	case c.Bool("completion") == false:
-		getConfig(c)
+	default:
+		err := saveConfig(c)
+		if os.IsExist(err) {
+			log.Fatalf("mc: Please rename your current configuration file [%s]\n", getMcConfigFilename())
+		}
+
+		if err != nil {
+			log.Fatalf("mc: Unable to generate config file [%s]. \nError: %v\n", getMcConfigFilename(), err)
+		}
+		info("Configuration written to " + getMcConfigFilename() + "\n")
+
 	}
 }

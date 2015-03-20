@@ -4,60 +4,60 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var format = cli.Command{
+var formatCmd = cli.Command{
 	Name:        "format",
 	Usage:       "format disk",
 	Description: "format a given disk",
-	Action:      doFormat,
+	Action:      doFormatCmd,
 }
 
-var heal = cli.Command{
+var healCmd = cli.Command{
 	Name:        "heal",
 	Usage:       "heal donut",
 	Description: "",
-	Action:      doHeal,
+	Action:      doHealCmd,
 }
 
-var attach = cli.Command{
+var attachCmd = cli.Command{
 	Name:        "attach",
 	Usage:       "attach disk",
 	Description: "",
-	Action:      doAttach,
+	Action:      doAttachCmd,
 }
 
-var detach = cli.Command{
+var detachCmd = cli.Command{
 	Name:        "detach",
 	Usage:       "detach disk",
 	Description: "",
-	Action:      doDetach,
+	Action:      doDetachCmd,
 }
 
-var rebalance = cli.Command{
+var rebalanceCmd = cli.Command{
 	Name:        "rebalance",
 	Usage:       "rebalance ",
 	Description: "",
-	Action:      doRebalance,
+	Action:      doRebalanceCmd,
 }
 
 var donutOptions = []cli.Command{
-	format,
-	heal,
-	attach,
-	detach,
-	rebalance,
+	formatCmd,
+	healCmd,
+	attachCmd,
+	detachCmd,
+	rebalanceCmd,
 }
 
-func doFormat(c *cli.Context) {
+func doFormatCmd(c *cli.Context) {
 }
 
-func doHeal(c *cli.Context) {
+func doHealCmd(c *cli.Context) {
 }
 
-func doAttach(c *cli.Context) {
+func doAttachCmd(c *cli.Context) {
 }
 
-func doDetach(c *cli.Context) {
+func doDetachCmd(c *cli.Context) {
 }
 
-func doRebalance(c *cli.Context) {
+func doRebalanceCmd(c *cli.Context) {
 }

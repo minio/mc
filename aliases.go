@@ -55,10 +55,10 @@ func aliasExpand(aliasedURL string) (newURL string, err error) {
 		return "", err
 	}
 
-	for _, alias := range config.Aliases {
-		if strings.HasPrefix(aliasedURL, alias.Name) {
+	for aliasName, expandedURL := range config.Aliases {
+		if strings.HasPrefix(aliasedURL, aliasName) {
 			// Match found. Expand it.
-			return strings.Replace(aliasedURL, alias.Name+":", alias.URL, 1), nil
+			return strings.Replace(aliasedURL, aliasName+":", expandedURL, 1), nil
 		}
 	}
 

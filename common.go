@@ -52,17 +52,20 @@ func getNewClient(c *cli.Context) (client *s3.Client, err error) {
 		return nil, err
 	}
 
-	switch c.GlobalBool("debug") {
-	case true:
+	var auth s3.Auth
+	auth.AccessKeyID = config.Hosts[config.DefaultHost].Auth.AccessKeyID
+	auth.SecretAccessKey = config.Hosts[config.DefaultHost].Auth.SecretAccessKey
+
+	if c.GlobalBool("debug") {
 		trace := s3.Trace{
 			BodyTraceFlag:        false,
 			RequestTransportFlag: true,
 			Writer:               nil,
 		}
 		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
-		client = s3.GetNewClient(&config.S3.Auth, traceTransport)
-	case false:
-		client = s3.GetNewClient(&config.S3.Auth, http.DefaultTransport)
+		client = s3.GetNewClient(&auth, traceTransport)
+	} else {
+		client = s3.GetNewClient(&auth, http.DefaultTransport)
 	}
 
 	return client, nil
