@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os/user"
+	"path/filepath"
 
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
@@ -126,6 +127,36 @@ func loadMcConfig() (config *mcConfig, err error) {
 	return config, nil
 }
 
+// saveConfig writes configuration data in json format to config file.
+func saveConfig(c *cli.Context) error {
+	configData, err := parseConfigInput(c)
+	if err != nil {
+		return err
+	}
+
+	jsonConfig, err := json.MarshalIndent(configData, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(getMcConfigDir(), 0755)
+	if !os.IsExist(err) && err != nil {
+		return err
+	}
+
+	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return err
+	}
+	defer configFile.Close()
+
+	_, err = configFile.Write(jsonConfig)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // getBashCompletion -
 func getBashCompletion() {
 	var b bytes.Buffer
@@ -179,7 +210,7 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 		Version:     currentConfigVersion,
 		DefaultHost: "https://s3.amazonaws.com",
 		Hosts: map[string]hostConfig{
-			"https://s3.amazonaws.com": {
+			"http*://s3*.amazonaws.com": {
 				Auth: s3.Auth{
 					AccessKeyID:     accessKeyID,
 					SecretAccessKey: secretAccesskey,
@@ -196,46 +227,31 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(host string) (hostCfg *hostConfig, err error) {
-	_, err = url.Parse(host)
+func getHostConfig(hostURL string) (*hostConfig, error) {
+	_, err := url.Parse(hostURL)
 	if err != nil {
 		return nil, err
 
 	}
+
 	config, err := getMcConfig()
-	hostCfg.Auth.AccessKeyID = config.Hosts[host].Auth.AccessKeyID
-	hostCfg.Auth.SecretAccessKey = config.Hosts[host].Auth.SecretAccessKey
-	return hostCfg, nil
-}
-
-// saveConfig writes configuration data in json format to config file.
-func saveConfig(c *cli.Context) error {
-	configData, err := parseConfigInput(c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	jsonConfig, err := json.MarshalIndent(configData, "", "\t")
-	if err != nil {
-		return err
+	for globURL, cfg := range config.Hosts {
+		match, err := filepath.Match(globURL, hostURL)
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing glob'ed URL while comparing [%s] [%s]", globURL, hostURL)
+		}
+		if match {
+			var hostCfg hostConfig
+			hostCfg.Auth.AccessKeyID = cfg.Auth.AccessKeyID
+			hostCfg.Auth.SecretAccessKey = cfg.Auth.SecretAccessKey
+			return &hostCfg, nil
+		}
 	}
-
-	err = os.MkdirAll(getMcConfigDir(), 0755)
-	if !os.IsExist(err) && err != nil {
-		return err
-	}
-
-	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-	if err != nil {
-		return err
-	}
-	defer configFile.Close()
-
-	_, err = configFile.Write(jsonConfig)
-	if err != nil {
-		return err
-	}
-	return nil
+	return nil, errors.New("No matching host config found")
 }
 
 // doConfigCmd is the handler for "mc config" sub-command.
