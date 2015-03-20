@@ -57,7 +57,7 @@ import (
 
 // Auth - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Auth struct {
-	AccessKey       string
+	AccessKeyID     string
 	SecretAccessKey string
 
 	// Used for SSL transport layer
@@ -128,7 +128,7 @@ func (a *Auth) signRequest(req *http.Request, host string) {
 	io.WriteString(hm, ss)
 
 	authHeader := new(bytes.Buffer)
-	fmt.Fprintf(authHeader, "AWS %s:", a.AccessKey)
+	fmt.Fprintf(authHeader, "AWS %s:", a.AccessKeyID)
 	encoder := base64.NewEncoder(base64.StdEncoding, authHeader)
 	encoder.Write(hm.Sum(nil))
 	encoder.Close()

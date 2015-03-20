@@ -30,6 +30,7 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
+// printBuckets lists buckets and its meta-dat
 func printBuckets(v []*s3.Bucket) {
 	for _, b := range v {
 		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Local().Format(printDate), "", b.Name)
@@ -37,6 +38,7 @@ func printBuckets(v []*s3.Bucket) {
 	}
 }
 
+// printObjects prints a meta-data of a list of objects
 func printObjects(v []*s3.Item) {
 	if len(v) > 0 {
 		// Items are already sorted
@@ -46,12 +48,14 @@ func printObjects(v []*s3.Item) {
 	}
 }
 
+// printObject prints object meta-data
 func printObject(date time.Time, v int64, key string) {
 	msg := fmt.Sprintf("%23s %13s %s", date.Local().Format(printDate), pb.FormatBytes(v), key)
 	info(msg)
 }
 
-func doList(c *cli.Context) {
+// doListCmd lists objects inside a bucket
+func doListCmd(c *cli.Context) {
 	var items []*s3.Item
 
 	args, err := parseArgs(c)

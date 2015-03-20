@@ -64,6 +64,7 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 	return nil
 }
 
+// isValidBucketName checks for valid bucket naming convention. Remember, bucket name is also used a DNS hostname.
 func isValidBucketName(p string) error {
 	if path.IsAbs(p) {
 		return errors.New("directory bucketname cannot be absolute")
@@ -77,6 +78,7 @@ func isValidBucketName(p string) error {
 	return nil
 }
 
+// isBucketExists checks if a bucket exists
 func isBucketExists(name string, v []*s3.Bucket) bool {
 	for _, b := range v {
 		if name == b.Name {
@@ -86,6 +88,7 @@ func isBucketExists(name string, v []*s3.Bucket) bool {
 	return false
 }
 
+// doRecursiveCP recursively copies objects from source to destination
 func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 	var err error
 	var st os.FileInfo

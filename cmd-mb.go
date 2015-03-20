@@ -21,7 +21,8 @@ import (
 	"github.com/minio-io/mc/pkg/s3"
 )
 
-func doMakebucket(c *cli.Context) {
+// doMakeBucketCmd creates a new bucket
+func doMakeBucketCmd(c *cli.Context) {
 	args, err := parseArgs(c)
 	if err != nil {
 		fatal(err.Error())

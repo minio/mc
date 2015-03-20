@@ -247,7 +247,8 @@ func fourthMode(s3c *s3.Client, args *cmdArgs) error {
 	return doRecursiveCp(s3c, args)
 }
 
-func doCopy(c *cli.Context) {
+// doCopyCmd copies objects into and from a bucket or between buckets
+func doCopyCmd(c *cli.Context) {
 	var args *cmdArgs
 	var err error
 	var s3c *s3.Client

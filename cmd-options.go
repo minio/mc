@@ -24,7 +24,7 @@ var cpCmd = cli.Command{
 	Name:        "cp",
 	Usage:       "copy objects",
 	Description: `Copies a local file or dir or object or bucket to another location locally or in S3.`,
-	Action:      doCopy,
+	Action:      doCopyCmd,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
@@ -37,14 +37,14 @@ var lsCmd = cli.Command{
 	Name:        "ls",
 	Usage:       "get list of objects",
 	Description: `List Objects and common prefixes under a prefix or all Buckets`,
-	Action:      doList,
+	Action:      doListCmd,
 }
 
 var mbCmd = cli.Command{
 	Name:        "mb",
 	Usage:       "makes a bucket",
 	Description: "Creates an S3 bucket",
-	Action:      doMakebucket,
+	Action:      doMakeBucketCmd,
 }
 
 var configCmd = cli.Command{
@@ -55,17 +55,17 @@ var configCmd = cli.Command{
    automatically created for you. Note that the configure command only writes
    values to the config file. It does not use any configuration values from
    the environment variables.`,
-	Action: doConfig,
+	Action: doConfigCmd,
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:  "accesskey, k",
+			Name:  "accesskeyid, a",
 			Value: "",
-			Usage: "AWS access key id",
+			Usage: "AWS access key ID",
 		},
 		cli.StringFlag{
 			Name:  "secretkey, s",
 			Value: "",
-			Usage: "AWS secret key id",
+			Usage: "AWS secret access key",
 		},
 		cli.StringFlag{
 			Name:  "alias",
