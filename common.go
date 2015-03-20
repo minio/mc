@@ -47,14 +47,20 @@ func startBar(size int64) *pb.ProgressBar {
 
 // NewClient - get new client
 func getNewClient(c *cli.Context) (client *s3.Client, err error) {
+
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, err
 	}
 
+	hostCfg, err := getHostConfig(config.DefaultHost)
+	if err != nil {
+		return nil, err
+	}
+
 	var auth s3.Auth
-	auth.AccessKeyID = config.Hosts[config.DefaultHost].Auth.AccessKeyID
-	auth.SecretAccessKey = config.Hosts[config.DefaultHost].Auth.SecretAccessKey
+	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
+	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 
 	if c.GlobalBool("debug") {
 		trace := s3.Trace{
