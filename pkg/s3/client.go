@@ -92,7 +92,7 @@ type Client struct {
 	// Supports URL in following formats
 	//  - http://<ipaddress>/<bucketname>/<object>
 	//  - http://<bucketname>.<domain>/<object>
-	Host   string
+	Host   string // host:port
 	Scheme string
 }
 
@@ -104,10 +104,14 @@ func GetNewClient(auth *Auth, transport http.RoundTripper) *Client {
 	}
 }
 
-// bucketURL returns the URL prefix of the bucket, with trailing slash
+// bucketURL constructs a URL (with a trailing slash) for a given
+// bucket. URL is appropriately encoded based on the host's object
+// storage implementation.
 func (c *Client) bucketURL(bucket string) string {
 	var url string
-	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
+
+	// TODO: Bucket names can contain ".".  This second check should be removed.
+	if IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
 		// if localhost use PathStyle
 		if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
 			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
@@ -123,6 +127,7 @@ func (c *Client) bucketURL(bucket string) string {
 	return url
 }
 
+// keyURL constructs a URL using bucket and object key
 func (c *Client) keyURL(bucket, key string) string {
 	url := c.bucketURL(bucket)
 	if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
@@ -138,6 +143,8 @@ func (c *Client) keyURL(bucket, key string) string {
 func newReq(url string) *http.Request {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		// TODO: never exit from inside a package. Let the
+		// caller handle errors gracefully.
 		panic(fmt.Sprintf("s3 client; invalid URL: %v", err))
 	}
 	req.Header.Set("User-Agent", "Minio Client")
@@ -157,9 +164,9 @@ func parseListAllMyBuckets(r io.Reader) ([]*Bucket, error) {
 	return res.Buckets.Bucket, nil
 }
 
-// IsValidBucket reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
+// IsValidBucketName reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
 // See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
-func IsValidBucket(bucket string) bool {
+func IsValidBucketName(bucket string) bool {
 	if len(bucket) < 3 || len(bucket) > 63 {
 		return false
 	}
