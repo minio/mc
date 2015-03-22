@@ -29,7 +29,7 @@ func doMakeBucketCmd(c *cli.Context) {
 	}
 
 	s3c, err := getNewClient(c, args.source.url)
-	if !s3.IsValidBucket(args.source.bucket) {
+	if !s3.IsValidBucketName(args.source.bucket) {
 		fatal(errInvalidbucket.Error())
 	}
 

@@ -85,7 +85,7 @@ func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
 // PutBucket - create new bucket
 func (c *s3Client) PutBucket(bucket string) error {
 	var url string
-	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
+	if IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
 		url = fmt.Sprintf("%s://%s/%s", c.URL.Scheme, c.URL.Host, bucket)
 	}
 	req := newReq(url)
