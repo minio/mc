@@ -19,8 +19,10 @@
 package scsi
 
 import (
-	//	"fmt"
+	"bufio"
+	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 )
@@ -28,9 +30,17 @@ import (
 // NOTE : supporting virtio based scsi devices
 //        is out of scope for this implementation
 
+var optFields = []string{
+	"shared:",
+	"master:",
+	"propagate_from:",
+	"unbindable",
+}
+
 // Devices - list of all scsi disks
 type Devices struct {
-	List []Disk
+	List      []Disk
+	Mountinfo []map[string]string
 }
 
 // Disk - struct which carries per disk name, scsi and disk attributes
@@ -154,6 +164,51 @@ func (d *Disk) getDiskAttrs(disk string) error {
 	return nil
 }
 
+// getMountInfo - populates all mount points on the disk
+func (d *Devices) getMountInfo() error {
+	fl, err := os.Open(Mountinfo)
+	defer fl.Close()
+	if err != nil {
+		return err
+	}
+	reader := bufio.NewReader(fl)
+	for err == nil {
+		var line string
+		line, err = reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		splits := strings.Fields(line)
+		if len(splits) > 11 {
+			return CorruptedMountInfo{}
+		}
+		mount := make(map[string]string)
+		mount["mountID"] = splits[0]
+		mount["parentID"] = splits[1]
+		mount["majorminor"] = splits[2]
+		mount["root"] = splits[3]
+		mount["mountPoint"] = splits[4]
+		mount["mountOptions"] = splits[5]
+		if len(splits) <= 10 {
+			mount["separator"] = splits[6]
+			mount["fsType"] = splits[7]
+			mount["mountSource"] = splits[8]
+			mount["superBlockOptions"] = splits[9]
+		} else if len(splits) == 11 {
+			mount["optFields"] = splits[6]
+			mount["separator"] = splits[7]
+			mount["fsType"] = splits[8]
+			mount["mountSource"] = splits[9]
+			mount["superBlockOptions"] = splits[10]
+		}
+		d.Mountinfo = append(d.Mountinfo, mount)
+	}
+	if err != io.EOF {
+		return err
+	}
+	return nil
+}
+
 // Get - get queries local system and populates all the attributes
 func (d *Devices) Get() error {
 	var scsidevices []string
@@ -169,6 +224,9 @@ func (d *Devices) Get() error {
 		return NoDevicesFoundOnSystem{}
 	}
 
+	if err := d.getMountInfo(); err != nil {
+		return err
+	}
 	for _, scsi := range scsidevices {
 		var _scsi Disk
 		scsiAttrPath := path.Join(SysfsScsiDevices, scsi, "/")

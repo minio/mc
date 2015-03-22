@@ -57,3 +57,10 @@ type NoAttributesFound struct{}
 func (e NoAttributesFound) Error() string {
 	return "No Scsi Attributes Found"
 }
+
+// CorruptedMountInfo - mount info corrupted
+type CorruptedMountInfo struct{}
+
+func (e CorruptedMountInfo) Error() string {
+	return "mount info corrupted"
+}
