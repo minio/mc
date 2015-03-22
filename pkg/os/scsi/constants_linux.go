@@ -25,6 +25,7 @@ var (
 	SysfsClassBlock       = "/sys/class/block/"
 	SysfsClassScsiDevices = "/sys/class/scsi_device/"
 	Udev                  = "/dev/"
+	Mountinfo             = "/proc/self/mountinfo"
 	DevDiskByIDDir        = "/dev/disk/by-id"
 )
 
