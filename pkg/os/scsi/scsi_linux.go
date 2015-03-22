@@ -19,8 +19,10 @@
 package scsi
 
 import (
+	//	"fmt"
 	"io/ioutil"
 	"path"
+	"strings"
 )
 
 // NOTE : supporting virtio based scsi devices
@@ -34,12 +36,48 @@ type Devices struct {
 // Disk - struct which carries per disk name, scsi and disk attributes
 type Disk struct {
 	Name        string
+	Partitions  []Partition
 	Scsiattrmap map[string][]byte
 	Diskattrmap map[string][]byte
 }
 
-// getDisk - populates all the disk related attributes
-func (d *Devices) getDisk(disk string) (map[string][]byte, error) {
+// Partitions - struct which carries per partition name, and its attributes
+type Partition struct {
+	Name             string
+	Partitionattrmap map[string][]byte
+}
+
+// getPartitionAttrs - populates all the partition related attributes
+func (p *Partition) getPartitionAttrs(part string) error {
+	var partitionAttrsList []string
+	p.Name = path.Join(Udev, part)
+	sysfsBlockClassDev := path.Join(SysfsClassBlock, part)
+	partitionFiles, err := ioutil.ReadDir(sysfsBlockClassDev)
+	if err != nil {
+		return err
+	}
+	for _, f := range partitionFiles {
+		if f.IsDir() {
+			continue
+		}
+		if !f.Mode().IsRegular() {
+			continue
+		}
+		// Skip, not readable, write-only
+		if f.Mode().Perm() == 128 {
+			continue
+		}
+		partitionAttrsList = append(partitionAttrsList, f.Name())
+		if len(partitionAttrsList) == 0 {
+			return NoPartitionAttributesFound{}
+		}
+	}
+	p.Partitionattrmap = getattrs(sysfsBlockClassDev, partitionAttrsList)
+	return nil
+}
+
+// getDiskAttrs - populates all the disk related attributes
+func (d *Disk) getDiskAttrs(disk string) error {
 	var diskAttrsList []string
 	var diskQueueAttrs []string
 	aggrAttrMap := make(map[string][]byte)
@@ -49,16 +87,23 @@ func (d *Devices) getDisk(disk string) (map[string][]byte, error) {
 
 	scsiFiles, err := ioutil.ReadDir(sysfsBlockDev)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	scsiQueueFiles, err := ioutil.ReadDir(sysfsBlockDevQueue)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, sf := range scsiFiles {
 		if sf.IsDir() {
+			if strings.Contains(sf.Name(), disk) {
+				var p = Partition{}
+				if err := p.getPartitionAttrs(sf.Name()); err != nil {
+					return err
+				}
+				d.Partitions = append(d.Partitions, p)
+			}
 			continue
 		}
 		// Skip symlinks
@@ -88,11 +133,11 @@ func (d *Devices) getDisk(disk string) (map[string][]byte, error) {
 	}
 
 	if len(diskAttrsList) == 0 {
-		return nil, NoDiskAttributesFound{}
+		return NoDiskAttributesFound{}
 	}
 
 	if len(diskQueueAttrs) == 0 {
-		return nil, NoDiskQueueAttributesFound{}
+		return NoDiskQueueAttributesFound{}
 	}
 
 	diskAttrMap := getattrs(sysfsBlockDev, diskAttrsList)
@@ -105,8 +150,8 @@ func (d *Devices) getDisk(disk string) (map[string][]byte, error) {
 	for k, v := range diskQueueAttrMap {
 		aggrAttrMap[k] = v
 	}
-
-	return aggrAttrMap, nil
+	d.Diskattrmap = aggrAttrMap
+	return nil
 }
 
 // Get - get queries local system and populates all the attributes
@@ -161,9 +206,8 @@ func (d *Devices) Get() error {
 		if len(scsiAttrList) == 0 {
 			return NoAttributesFound{}
 		}
-		attrMap := getattrs(scsiAttrPath, scsiAttrList)
-		_scsi.Scsiattrmap = attrMap
-		_scsi.Diskattrmap, err = d.getDisk(scsidevList[0].Name())
+		_scsi.Scsiattrmap = getattrs(scsiAttrPath, scsiAttrList)
+		err = _scsi.getDiskAttrs(scsidevList[0].Name())
 		if err != nil {
 			return err
 		}

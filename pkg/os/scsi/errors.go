@@ -16,6 +16,13 @@
 
 package scsi
 
+// NoPartitionAttributesFound - no partition attributes found
+type NoPartitionAttributesFound struct{}
+
+func (e NoPartitionAttributesFound) Error() string {
+	return "No Partition Attributes Found"
+}
+
 // NoDiskAttributesFound - no disk attributes found
 type NoDiskAttributesFound struct{}
 

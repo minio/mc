@@ -22,6 +22,7 @@ package scsi
 var (
 	SysfsScsiDevices      = "/sys/bus/scsi/devices/"
 	SysfsBlock            = "/sys/block/"
+	SysfsClassBlock       = "/sys/class/block/"
 	SysfsClassScsiDevices = "/sys/class/scsi_device/"
 	Udev                  = "/dev/"
 	DevDiskByIDDir        = "/dev/disk/by-id"
