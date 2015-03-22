@@ -23,6 +23,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/s3"
 )
 
@@ -31,7 +32,7 @@ const (
 )
 
 // printBuckets lists buckets and its meta-dat
-func printBuckets(v []*s3.Bucket) {
+func printBuckets(v []*client.Bucket) {
 	for _, b := range v {
 		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Local().Format(printDate), "", b.Name)
 		info(msg)
@@ -39,7 +40,7 @@ func printBuckets(v []*s3.Bucket) {
 }
 
 // printObjects prints a meta-data of a list of objects
-func printObjects(v []*s3.Item) {
+func printObjects(v []*client.Item) {
 	if len(v) > 0 {
 		// Items are already sorted
 		for _, b := range v {
@@ -56,20 +57,17 @@ func printObject(date time.Time, v int64, key string) {
 
 // doListCmd lists objects inside a bucket
 func doListCmd(c *cli.Context) {
-	var items []*s3.Item
+	var items []*client.Item
 
 	args, err := parseArgs(c)
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	s3c, err := getNewClient(c)
+	s3c, err := getNewClient(c, args.source.url)
 	if err != nil {
 		fatal(err.Error())
 	}
-	s3c.Host = args.source.host
-	s3c.Scheme = args.source.scheme
-
 	switch true {
 	case args.source.bucket == "": // List all buckets
 		buckets, err := s3c.ListBuckets()

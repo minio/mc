@@ -42,8 +42,11 @@ import (
 	"bufio"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/minio-io/mc/pkg/client"
 )
 
 type reqAndExpected struct {
@@ -59,7 +62,7 @@ func req(s string) *http.Request {
 }
 
 func TestStringToSign(t *testing.T) {
-	var a Auth
+	var a s3Client
 	tests := []reqAndExpected{
 		{`GET /photos/puppy.jpg HTTP/1.1
 Host: johnsmith.s3.amazonaws.com
@@ -118,7 +121,7 @@ Content-Length: 5913339
 }
 
 func TestBucketFromHostname(t *testing.T) {
-	var a Auth
+	var a s3Client
 	tests := []reqAndExpected{
 		{"GET / HTTP/1.0\n\n", "", ""},
 		{"GET / HTTP/1.0\nHost: s3.amazonaws.com\n\n", "", "s3.amazonaws.com"},
@@ -136,13 +139,19 @@ func TestBucketFromHostname(t *testing.T) {
 
 func TestsignRequest(t *testing.T) {
 	r := req("GET /foo HTTP/1.1\n\n")
-	auth := &Auth{AccessKeyID: "key", SecretAccessKey: "secretkey"}
-	auth.signRequest(r, "localhost:9000")
+	auth := &client.Auth{AccessKeyID: "key", SecretAccessKey: "secretkey"}
+	url, _ := url.Parse("localhost:9000")
+	cl := &s3Client{&client.Meta{
+		Auth:      auth,
+		Transport: http.DefaultTransport,
+		URL:       url,
+	}}
+	cl.signRequest(r, "localhost:9000")
 	if r.Header.Get("Date") == "" {
 		t.Error("expected a Date set")
 	}
 	r.Header.Set("Date", "Sat, 02 Apr 2011 04:23:52 GMT")
-	auth.signRequest(r, "localhost:9000")
+	cl.signRequest(r, "localhost:9000")
 	if e, g := r.Header.Get("Authorization"), "AWS key:kHpCR/N7Rw3PwRlDd8+5X40CFVc="; e != g {
 		t.Errorf("got header %q; expected %q", g, e)
 	}

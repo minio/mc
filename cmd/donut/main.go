@@ -17,24 +17,42 @@
 package main
 
 import (
+	"log"
+	"os"
+	"os/user"
+
 	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/s3"
 )
 
-// doMakeBucketCmd creates a new bucket
-func doMakeBucketCmd(c *cli.Context) {
-	args, err := parseArgs(c)
+func init() {
+	// Check for the environment early on and gracefuly report.
+	_, err := user.Current()
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalf("mc: Unable to obtain user's home directory. \nError: %s\n", err)
 	}
+}
 
-	s3c, err := getNewClient(c, args.source.url)
-	if !s3.IsValidBucket(args.source.bucket) {
-		fatal(errInvalidbucket.Error())
-	}
+var cp = cli.Command{
+	Name:   "cp",
+	Action: doDonutCp,
+}
 
-	err = s3c.PutBucket(args.source.bucket)
-	if err != nil {
-		fatal(err.Error())
-	}
+var mb = cli.Command{
+	Name:   "mb",
+	Action: doMakeBucketCmd,
+}
+
+var options = []cli.Command{
+	cp,
+	mb,
+}
+
+func main() {
+	app := cli.NewApp()
+	app.Usage = "Minio Client for S3 Compatible Object Storage"
+	app.Version = "0.1.0"
+	app.Commands = options
+	app.Author = "Minio.io"
+	app.EnableBashCompletion = true
+	app.Run(os.Args)
 }

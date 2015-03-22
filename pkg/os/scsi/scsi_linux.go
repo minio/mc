@@ -41,7 +41,7 @@ type Disk struct {
 	Diskattrmap map[string][]byte
 }
 
-// Partitions - struct which carries per partition name, and its attributes
+// Partition - struct which carries per partition name, and its attributes
 type Partition struct {
 	Name             string
 	Partitionattrmap map[string][]byte

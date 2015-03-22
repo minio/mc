@@ -24,7 +24,6 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/s3"
 )
 
 // Different modes of cp operation
@@ -62,7 +61,7 @@ func getMode(recursive bool, args *cmdArgs) int {
 }
 
 // First mode <Object> <S3Object> or <Object> <S3Bucket>
-func firstMode(s3c *s3.Client, args *cmdArgs) error {
+func firstMode(c *cli.Context, args *cmdArgs) error {
 	if args.source.key == "" {
 		return errors.New("invalid args")
 	}
@@ -80,13 +79,14 @@ func firstMode(s3c *s3.Client, args *cmdArgs) error {
 	if err != nil {
 		return err
 	}
-
 	// http://<bucket>.<hostname> is specified without key
 	if args.destination.key == "" {
 		args.destination.key = args.source.key
 	}
-	s3c.Host = args.destination.host
-	s3c.Scheme = args.destination.scheme
+	s3c, err := getNewClient(c, args.destination.url)
+	if err != nil {
+		return err
+	}
 	err = s3c.Put(args.destination.bucket, args.destination.key, size, source)
 	if err != nil {
 		return err
@@ -98,13 +98,17 @@ func firstMode(s3c *s3.Client, args *cmdArgs) error {
 }
 
 // Second mode <S3Object> <Object> or <S3Object> .
-func secondMode(s3c *s3.Client, args *cmdArgs) error {
+func secondMode(c *cli.Context, args *cmdArgs) error {
 	var objectReader io.ReadCloser
 	var objectSize, downloadedSize int64
 	var destination *os.File
 	var err error
 	var st os.FileInfo
 
+	s3c, err := getNewClient(c, args.source.url)
+	if err != nil {
+		return err
+	}
 	// Send HEAD request to validate if file exists.
 	objectSize, _, err = s3c.Stat(args.source.bucket, args.source.key)
 	if err != nil {
@@ -181,15 +185,17 @@ func secondMode(s3c *s3.Client, args *cmdArgs) error {
 }
 
 // <S3Object> <S3Object> or <S3Object> <S3Bucket>
-func thirdMode(s3c *s3.Client, args *cmdArgs) error {
+func thirdMode(c *cli.Context, args *cmdArgs) error {
 	var objectReader io.ReadCloser
 	var objectSize int64
 	var err error
 
-	s3c.Host = args.source.host
-	s3c.Scheme = args.source.scheme
+	s3cSource, err := getNewClient(c, args.source.url)
+	if err != nil {
+		return err
+	}
 	// Send HEAD request to validate if file exists.
-	objectSize, _, err = s3c.Stat(args.source.bucket, args.source.key)
+	objectSize, _, err = s3cSource.Stat(args.source.bucket, args.source.key)
 	if err != nil {
 		return err
 	}
@@ -199,20 +205,18 @@ func thirdMode(s3c *s3.Client, args *cmdArgs) error {
 	}
 
 	// Check if the object already exists
-	s3c.Host = args.destination.host
-	s3c.Scheme = args.destination.scheme
-	_, _, err = s3c.Stat(args.destination.bucket, args.destination.key)
+	s3cDest, err := getNewClient(c, args.destination.url)
+	if err != nil {
+		return err
+	}
+	_, _, err = s3cDest.Stat(args.destination.bucket, args.destination.key)
 	switch os.IsNotExist(err) {
 	case true:
-		s3c.Host = args.source.host
-		s3c.Scheme = args.source.scheme
-		objectReader, _, err = s3c.Get(args.source.bucket, args.source.key)
+		objectReader, _, err = s3cSource.Get(args.source.bucket, args.source.key)
 		if err != nil {
 			return err
 		}
-		s3c.Host = args.destination.host
-		s3c.Scheme = args.destination.scheme
-		err = s3c.Put(args.destination.bucket, args.destination.key, objectSize, objectReader)
+		err = s3cDest.Put(args.destination.bucket, args.destination.key, objectSize, objectReader)
 		if err != nil {
 			return err
 		}
@@ -220,13 +224,13 @@ func thirdMode(s3c *s3.Client, args *cmdArgs) error {
 		return errors.New("Ranges not supported")
 	}
 
-	msg := fmt.Sprintf("http://%s/%s uploaded -- to bucket:(http://%s/%s)", args.source.bucket, args.source.key,
-		args.destination.bucket, args.destination.key)
+	msg := fmt.Sprintf("%s/%s/%s uploaded -- to bucket:(%s/%s/%s)", args.source.host, args.source.bucket, args.source.key,
+		args.destination.host, args.destination.bucket, args.destination.key)
 	info(msg)
 	return nil
 }
 
-func fourthMode(s3c *s3.Client, args *cmdArgs) error {
+func fourthMode(c *cli.Context, args *cmdArgs) error {
 	if args.source.bucket == "" {
 		_, err := os.Stat(args.source.key)
 		if os.IsNotExist(err) {
@@ -244,21 +248,15 @@ func fourthMode(s3c *s3.Client, args *cmdArgs) error {
 			os.MkdirAll(args.destination.key, 0755)
 		}
 	}
-	return doRecursiveCp(s3c, args)
+	return doRecursiveCP(c, args)
 }
 
 // doCopyCmd copies objects into and from a bucket or between buckets
 func doCopyCmd(c *cli.Context) {
 	var args *cmdArgs
 	var err error
-	var s3c *s3.Client
 
 	args, err = parseArgs(c)
-	if err != nil {
-		fatal(err.Error())
-	}
-
-	s3c, err = getNewClient(c)
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -266,26 +264,24 @@ func doCopyCmd(c *cli.Context) {
 	if len(c.Args()) != 2 {
 		fatal("Invalid number of args")
 	}
-	s3c.Host = args.source.host
-	s3c.Scheme = args.source.scheme
 	switch getMode(c.Bool("recursive"), args) {
 	case first:
-		err := firstMode(s3c, args)
+		err := firstMode(c, args)
 		if err != nil {
 			fatal(err.Error())
 		}
 	case second:
-		err := secondMode(s3c, args)
+		err := secondMode(c, args)
 		if err != nil {
 			fatal(err.Error())
 		}
 	case third:
-		err := thirdMode(s3c, args)
+		err := thirdMode(c, args)
 		if err != nil {
 			fatal(err.Error())
 		}
 	case fourth:
-		err := fourthMode(s3c, args)
+		err := fourthMode(c, args)
 		if err != nil {
 			fatal(err.Error())
 		}

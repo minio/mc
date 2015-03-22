@@ -44,10 +44,13 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
 	"encoding/xml"
+
+	"github.com/minio-io/mc/pkg/client"
 )
 
 // Total max object list
@@ -55,80 +58,55 @@ const (
 	MaxKeys = 1000
 )
 
-// Bucket - carries s3 bucket reply header
-type Bucket struct {
-	Name         string
-	CreationDate xmlTime // 2006-02-03T16:45:09.000Z
-}
-
-// Item - object item list
-type Item struct {
-	Key          string
-	LastModified xmlTime
-	Size         int64
-}
-
-// Prefix - common prefix
-type Prefix struct {
-	Prefix string
-}
-
 type listBucketResults struct {
-	Contents       []*Item
+	Contents       []*client.Item
 	IsTruncated    bool
 	MaxKeys        int
 	Name           string // bucket name
 	Marker         string
 	Delimiter      string
 	Prefix         string
-	CommonPrefixes []*Prefix
+	CommonPrefixes []*client.Prefix
 }
 
-// Client holds Amazon S3 client credentials and flags.
-type Client struct {
-	*Auth                       // AWS auth credentials
-	Transport http.RoundTripper // or nil for the default behavior
-
-	// Supports URL in following formats
-	//  - http://<ipaddress>/<bucketname>/<object>
-	//  - http://<bucketname>.<domain>/<object>
-	Host   string
-	Scheme string
+type s3Client struct {
+	*client.Meta
 }
 
-// GetNewClient returns an initialized S3.Client structure.
-func GetNewClient(auth *Auth, transport http.RoundTripper) *Client {
-	return &Client{
+// GetNewClient returns an initialized s3Client structure.
+func GetNewClient(auth *client.Auth, u *url.URL, transport http.RoundTripper) client.Client {
+	return &s3Client{&client.Meta{
 		Auth:      auth,
 		Transport: GetNewTraceTransport(s3Verify{}, transport),
-	}
+		URL:       u,
+	}}
 }
 
 // bucketURL returns the URL prefix of the bucket, with trailing slash
-func (c *Client) bucketURL(bucket string) string {
+func (c *s3Client) bucketURL(bucket string) string {
 	var url string
 	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
 		// if localhost use PathStyle
-		if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
-			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
+		if strings.Contains(c.URL.Host, "localhost") || strings.Contains(c.URL.Host, "127.0.0.1") {
+			return fmt.Sprintf("%s://%s/%s", c.URL.Scheme, c.URL.Host, bucket)
 		}
 		// Verify if its ip address, use PathStyle
-		host, _, _ := net.SplitHostPort(c.Host)
+		host, _, _ := net.SplitHostPort(c.URL.Host)
 		if net.ParseIP(host) != nil {
-			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
+			return fmt.Sprintf("%s://%s/%s", c.URL.Scheme, c.URL.Host, bucket)
 		}
 		// For DNS hostname or amazonaws.com use subdomain style
-		url = fmt.Sprintf("%s://%s.%s/", c.Scheme, bucket, c.Host)
+		url = fmt.Sprintf("%s://%s.%s/", c.URL.Scheme, bucket, c.URL.Host)
 	}
 	return url
 }
 
-func (c *Client) keyURL(bucket, key string) string {
+func (c *s3Client) keyURL(bucket, key string) string {
 	url := c.bucketURL(bucket)
-	if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
+	if strings.Contains(c.URL.Host, "localhost") || strings.Contains(c.URL.Host, "127.0.0.1") {
 		return url + "/" + key
 	}
-	host, _, _ := net.SplitHostPort(c.Host)
+	host, _, _ := net.SplitHostPort(c.URL.Host)
 	if net.ParseIP(host) != nil {
 		return url + "/" + key
 	}
@@ -140,14 +118,14 @@ func newReq(url string) *http.Request {
 	if err != nil {
 		panic(fmt.Sprintf("s3 client; invalid URL: %v", err))
 	}
-	req.Header.Set("User-Agent", "Minio Client")
+	req.Header.Set("User-Agent", "Minio s3Client")
 	return req
 }
 
-func parseListAllMyBuckets(r io.Reader) ([]*Bucket, error) {
+func parseListAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
 	type allMyBuckets struct {
 		Buckets struct {
-			Bucket []*Bucket
+			Bucket []*client.Bucket
 		}
 	}
 	var res allMyBuckets

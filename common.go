@@ -26,6 +26,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/s3"
 )
 
@@ -46,8 +47,7 @@ func startBar(size int64) *pb.ProgressBar {
 }
 
 // NewClient - get new client
-func getNewClient(c *cli.Context) (client *s3.Client, err error) {
-
+func getNewClient(c *cli.Context, url *url.URL) (cl client.Client, err error) {
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func getNewClient(c *cli.Context) (client *s3.Client, err error) {
 		return nil, err
 	}
 
-	var auth s3.Auth
+	var auth client.Auth
 	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 
@@ -69,12 +69,12 @@ func getNewClient(c *cli.Context) (client *s3.Client, err error) {
 			Writer:               nil,
 		}
 		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
-		client = s3.GetNewClient(&auth, traceTransport)
+		cl = s3.GetNewClient(&auth, url, traceTransport)
 	} else {
-		client = s3.GetNewClient(&auth, http.DefaultTransport)
+		cl = s3.GetNewClient(&auth, url, http.DefaultTransport)
 	}
 
-	return client, nil
+	return cl, nil
 }
 
 // Parse subcommand options
@@ -95,6 +95,7 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				return nil, err
 			}
 			args.source.scheme = urlParsed.Scheme
+			args.source.url = urlParsed
 			if urlParsed.Scheme != "" {
 				if urlParsed.Host == "" {
 					return nil, errHostname
@@ -130,6 +131,7 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				}
 				args.source.scheme = urlParsed.Scheme
 				args.source.host = urlParsed.Host
+				args.source.url = urlParsed
 				urlSplits := strings.Split(urlParsed.Path, "/")
 				if len(urlSplits) > 1 {
 					args.source.bucket = urlSplits[1]
@@ -171,6 +173,7 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				}
 				args.destination.host = urlParsed.Host
 				args.destination.scheme = urlParsed.Scheme
+				args.destination.url = urlParsed
 				urlSplits := strings.Split(urlParsed.Path, "/")
 				if len(urlSplits) > 1 {
 					args.destination.bucket = urlSplits[1]

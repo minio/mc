@@ -23,6 +23,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -81,12 +82,12 @@ func splitStreamGoRoutine(reader io.Reader, chunkSize uint64, ch chan Message) {
 		bytesWriter.Flush()
 		// if we have data available, send it over the channel
 		if bytesBuffer.Len() != 0 {
-			ch <- Message{bytesBuffer.Bytes(), nil}
+			ch <- Message{Data: bytesBuffer.Bytes(), Err: nil}
 		}
 	}
 	// if we have an error other than an EOF, send it over the channel
 	if readError != io.EOF {
-		ch <- Message{nil, readError}
+		ch <- Message{Data: nil, Err: readError}
 	}
 	// close the channel, signaling the channel reader that the stream is complete
 	close(ch)
@@ -103,14 +104,13 @@ func splitStreamGoRoutine(reader io.Reader, chunkSize uint64, ch chan Message) {
 //     fmt.Println(buf)
 // }
 //
-func JoinFiles(dirname string, inputPrefix string) (io.Reader, error) {
+func JoinFiles(dirname string, inputPrefix string) (reader io.Reader, err error) {
 	reader, writer := io.Pipe()
 	fileInfos, readError := ioutil.ReadDir(dirname)
 	if readError != nil {
 		writer.CloseWithError(readError)
 		return nil, readError
 	}
-
 	var newfileInfos []os.FileInfo
 	for _, fi := range fileInfos {
 		if strings.Contains(fi.Name(), inputPrefix) == true {
@@ -124,25 +124,20 @@ func JoinFiles(dirname string, inputPrefix string) (io.Reader, error) {
 		return nil, nofilesError
 	}
 
-	go joinFilesGoRoutine(newfileInfos, writer)
-	return reader, nil
-}
-
-func joinFilesGoRoutine(fileInfos []os.FileInfo, writer *io.PipeWriter) {
-	for _, fileInfo := range fileInfos {
-		file, err := os.Open(fileInfo.Name())
+	for _, fileInfo := range newfileInfos {
+		file, err := os.Open(path.Join(dirname, fileInfo.Name()))
 		defer file.Close()
 		for err != nil {
 			writer.CloseWithError(err)
-			return
+			return nil, err
 		}
 		_, err = io.Copy(writer, file)
 		if err != nil {
 			writer.CloseWithError(err)
-			return
+			return nil, err
 		}
 	}
-	writer.Close()
+	return reader, nil
 }
 
 // FileWithPrefix - Takes a file and splits it into chunks with size chunkSize. The output
