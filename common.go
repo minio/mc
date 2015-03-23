@@ -47,7 +47,7 @@ func startBar(size int64) *pb.ProgressBar {
 }
 
 // NewClient - get new client
-func getNewClient(c *cli.Context, url *url.URL) (cl client.Client, err error) {
+func getNewClient(debug bool, url *url.URL) (cl client.Client, err error) {
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func getNewClient(c *cli.Context, url *url.URL) (cl client.Client, err error) {
 	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 
-	if c.GlobalBool("debug") {
+	if debug {
 		trace := s3.Trace{
 			BodyTraceFlag:        false,
 			RequestTransportFlag: true,

@@ -23,8 +23,8 @@ import (
 	"github.com/minio-io/mc/pkg/donut"
 )
 
-// doMakeBucketCmd creates a new bucket
-func doMakeBucketCmd(c *cli.Context) {
+// doMakeDonutBucketCmd creates a new bucket
+func doMakeDonutBucketCmd(c *cli.Context) {
 	urlArg1, err := url.Parse(c.Args().Get(0))
 	if err != nil {
 		panic(err)

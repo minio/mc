@@ -4,13 +4,6 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var formatCmd = cli.Command{
-	Name:        "format",
-	Usage:       "format disk",
-	Description: "format a given disk",
-	Action:      doFormatCmd,
-}
-
 var healCmd = cli.Command{
 	Name:        "heal",
 	Usage:       "heal donut",
@@ -39,15 +32,27 @@ var rebalanceCmd = cli.Command{
 	Action:      doRebalanceCmd,
 }
 
+var cpDonutCmd = cli.Command{
+	Name:        "cp",
+	Usage:       "cp",
+	Description: "",
+	Action:      doDonutCPCmd,
+}
+
+var mbDonutCmd = cli.Command{
+	Name:        "mb",
+	Usage:       "mb",
+	Description: "",
+	Action:      doMakeDonutBucketCmd,
+}
+
 var donutOptions = []cli.Command{
-	formatCmd,
 	healCmd,
 	attachCmd,
 	detachCmd,
 	rebalanceCmd,
-}
-
-func doFormatCmd(c *cli.Context) {
+	cpDonutCmd,
+	mbDonutCmd,
 }
 
 func doHealCmd(c *cli.Context) {

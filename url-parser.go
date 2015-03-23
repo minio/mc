@@ -24,18 +24,17 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-// url2Bucket converts URL to bucket name and object name
-func url2Object(urlStr string) (bucketName, objectName string, err error) {
-	url, err := url.Parse(urlStr)
-	if err != nil {
-		return "", "", err
-	}
+type URLParser struct {
+	*url.URL
+}
 
-	if url.Path == "" {
+// Object converts URL to bucket and objectname
+func (u *URLParser) Object() (bucketName, objectName string, err error) {
+	if u.Path == "" {
 		// No bucket name passed. It is a valid case.
 		return "", "", nil
 	}
-	splits := strings.SplitN(url.Path, "/", 3)
+	splits := strings.SplitN(u.Path, "/", 3)
 	switch len(splits) {
 	case 0, 1:
 		bucketName = ""
@@ -50,34 +49,14 @@ func url2Object(urlStr string) (bucketName, objectName string, err error) {
 	return bucketName, objectName, nil
 }
 
-// url2Bucket converts URL to bucket name
-func url2Bucket(urlStr string) (bucketName string, err error) {
-	bucketName, _, err = url2Object(urlStr)
+// Bucket converts URL to bucket name
+func (u *URLParser) Bucket() (bucketName string, err error) {
+	bucketName, _, err = u.Object()
 	return bucketName, err
 }
 
-//url2Scheme converts URL to protocol scheme (http|https|donut..)
-func url2Scheme(urlStr string) (protoScheme string, err error) {
-	url, err := url.Parse(urlStr)
-	if err != nil {
-		return "", err
-	}
-	protoScheme = url.Scheme
-	return protoScheme, nil
-}
-
-//url2Host converts URL to host:port
-func url2Host(urlStr string) (hostName string, err error) {
-	url, err := url.Parse(urlStr)
-	if err != nil {
-		return "", err
-	}
-	hostName = url.Host
-	return hostName, err
-}
-
-// argParseURL extracts URL string from a single cmd-line argument
-func argParseURL(c *cli.Context) (urlStr string, err error) {
+// parseURL extracts URL string from a single cmd-line argument
+func parseURL(c *cli.Context) (urlStr string, err error) {
 	urlStr = c.Args().First()
 	// Use default host if no argument is passed
 	if urlStr == "" {
@@ -88,7 +67,6 @@ func argParseURL(c *cli.Context) (urlStr string, err error) {
 		}
 		urlStr = config.DefaultHost
 	}
-
 	// Check and expand Alias
 	urlStr, err = aliasExpand(urlStr)
 
