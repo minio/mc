@@ -89,10 +89,12 @@ var donutCmd = cli.Command{
 }
 
 type object struct {
+	scheme string // protocol type: possible values are http, https, donut, nil
+	host   string
+	// Bucket name can also be a DNS name. "." is allowed, with certain restrictions.
+	// Read more at http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
 	bucket string
 	key    string
-	host   string
-	scheme string
 	url    *url.URL
 }
 

@@ -66,24 +66,10 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 	return nil
 }
 
-// isValidBucketName checks for valid bucket naming convention. Remember, bucket name is also used a DNS hostname.
-func isValidBucketName(p string) error {
-	if path.IsAbs(p) {
-		return errors.New("directory bucketname cannot be absolute")
-	}
-	if strings.HasPrefix(p, "..") {
-		return errors.New("Relative directory references not supported")
-	}
-	if !s3.IsValidBucket(p) {
-		return errInvalidbucket
-	}
-	return nil
-}
-
-// isBucketExists checks if a bucket exists
-func isBucketExists(name string, v []*client.Bucket) bool {
+// isBucketExist checks if a bucket exists
+func isBucketExist(bucketName string, v []*client.Bucket) bool {
 	for _, b := range v {
-		if name == b.Name {
+		if bucketName == b.Name {
 			return true
 		}
 	}
@@ -99,8 +85,8 @@ func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
 	switch true {
 	case args.source.bucket == "":
 		input := path.Clean(args.source.key)
-		if err := isValidBucketName(input); err != nil {
-			return err
+		if s3.IsValidBucketName(input) {
+			return fmt.Errorf("Invalid input bucket name [%s]", input)
 		}
 		st, err = os.Stat(input)
 		if os.IsNotExist(err) {
@@ -115,7 +101,7 @@ func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
 		}
 		p := &walk{s3c, args}
 		buckets, err = s3c.ListBuckets()
-		if !isBucketExists(args.destination.bucket, buckets) {
+		if !isBucketExist(args.destination.bucket, buckets) {
 			// Create bucketname, before uploading files
 			err = s3c.PutBucket(args.destination.bucket)
 			if err != nil {
