@@ -69,7 +69,7 @@ func (d donutFileWriter) GetMetadata() (map[string]string, error) {
 	return metadata, nil
 }
 
-func (d donutFileWriter) SetDonutDriverMetadata(metadata map[string]string) error {
+func (d donutFileWriter) SetDonutMetadata(metadata map[string]string) error {
 	for k := range d.donutMetadata {
 		delete(d.donutMetadata, k)
 	}
@@ -79,7 +79,7 @@ func (d donutFileWriter) SetDonutDriverMetadata(metadata map[string]string) erro
 	return nil
 }
 
-func (d donutFileWriter) GetDonutDriverMetadata() (map[string]string, error) {
+func (d donutFileWriter) GetDonutMetadata() (map[string]string, error) {
 	donutMetadata := make(map[string]string)
 	for k, v := range d.donutMetadata {
 		donutMetadata[k] = v

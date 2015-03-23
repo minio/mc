@@ -39,7 +39,7 @@ const (
 )
 
 const (
-	SimdAlign = 32
+	SIMDAlign = 32
 )
 
 // EncoderParams is a configuration set for building an encoder. It is created using ValidateParams.
@@ -51,9 +51,7 @@ type EncoderParams struct {
 
 // Encoder is an object used to encode and decode data.
 type Encoder struct {
-	p *EncoderParams
-	k,
-	m C.int
+	params *EncoderParams
 	encode_matrix,
 	encode_tbls,
 	decode_matrix,
@@ -96,19 +94,17 @@ func ParseEncoderParams(k, m uint8, technique Technique) (*EncoderParams, error)
 
 // NewEncoder creates an encoder object with a given set of parameters.
 func NewEncoder(ep *EncoderParams) *Encoder {
-	var k = C.int(ep.K)
-	var m = C.int(ep.M)
-
 	var encode_matrix *C.uint8_t
 	var encode_tbls *C.uint8_t
+
+	k := C.int(ep.K)
+	m := C.int(ep.M)
 
 	C.minio_init_encoder(C.int(ep.Technique), k, m, &encode_matrix,
 		&encode_tbls)
 
 	return &Encoder{
-		p:             ep,
-		k:             k,
-		m:             m,
+		params:        ep,
 		encode_matrix: encode_matrix,
 		encode_tbls:   encode_tbls,
 		decode_matrix: nil,
@@ -116,59 +112,68 @@ func NewEncoder(ep *EncoderParams) *Encoder {
 	}
 }
 
-func getChunkSize(k, split_len int) int {
-	var alignment, remainder, padded_len int
+func GetEncodedLen(inputLen int, k, m uint8) (outputLen int) {
+	outputLen = GetEncodedChunkLen(inputLen, k) * int(k+m)
+	return outputLen
+}
 
-	alignment = k * SimdAlign
-	remainder = split_len % alignment
+func GetEncodedChunkLen(inputLen int, k uint8) (outputChunkLen int) {
+	alignment := int(k) * SIMDAlign
+	remainder := inputLen % alignment
 
-	padded_len = split_len
+	paddedInputLen := inputLen
 	if remainder != 0 {
-		padded_len = split_len + (alignment - remainder)
+		paddedInputLen = inputLen + (alignment - remainder)
 	}
-	return padded_len / k
+	outputChunkLen = paddedInputLen / int(k)
+	return outputChunkLen
 }
 
 // Encode encodes a block of data. The input is the original data. The output
 // is a 2 tuple containing (k + m) chunks of erasure encoded data and the
 // length of the original object.
-func (e *Encoder) Encode(block []byte) ([][]byte, int) {
-	var block_len = len(block)
+func (e *Encoder) Encode(input []byte) ([][]byte, error) {
+	inputLen := len(input)
+	k := C.int(e.params.K)
+	m := C.int(e.params.M)
+	n := k + m
 
-	chunk_size := getChunkSize(int(e.k), block_len)
-	chunk_len := chunk_size * int(e.k)
-	pad_len := int(chunk_len) - block_len
+	chunkLen := GetEncodedChunkLen(inputLen, e.params.K)
+	encodedDataLen := chunkLen * int(k)
+	paddedDataLen := int(encodedDataLen) - inputLen
 
-	if pad_len > 0 {
-		s := make([]byte, pad_len)
+	if paddedDataLen > 0 {
+		s := make([]byte, paddedDataLen)
 		// Expand with new padded blocks to the byte array
-		block = append(block, s...)
+		input = append(input, s...)
 	}
 
-	coded_len := chunk_size * int(e.p.M)
-	c := make([]byte, coded_len)
-	block = append(block, c...)
+	encodedParityLen := chunkLen * int(e.params.M)
+	c := make([]byte, encodedParityLen)
+	input = append(input, c...)
+
+	// encodedOutLen := encodedDataLen + encodedParityLen
 
 	// Allocate chunks
-	chunks := make([][]byte, e.p.K+e.p.M)
-	pointers := make([]*byte, e.p.K+e.p.M)
+	chunks := make([][]byte, k+m)
+	pointers := make([]*byte, k+m)
 
 	var i int
 	// Add data blocks to chunks
-	for i = 0; i < int(e.p.K); i++ {
-		chunks[i] = block[i*chunk_size : (i+1)*chunk_size]
+	for i = 0; i < int(k); i++ {
+		chunks[i] = input[i*chunkLen : (i+1)*chunkLen]
 		pointers[i] = &chunks[i][0]
 	}
 
-	for i = int(e.p.K); i < int(e.p.K+e.p.M); i++ {
-		chunks[i] = make([]byte, chunk_size)
+	for i = int(k); i < int(n); i++ {
+		chunks[i] = make([]byte, chunkLen)
 		pointers[i] = &chunks[i][0]
 	}
 
-	data := (**C.uint8_t)(unsafe.Pointer(&pointers[:e.p.K][0]))
-	coding := (**C.uint8_t)(unsafe.Pointer(&pointers[e.p.K:][0]))
+	data := (**C.uint8_t)(unsafe.Pointer(&pointers[:k][0]))
+	coding := (**C.uint8_t)(unsafe.Pointer(&pointers[k:][0]))
 
-	C.ec_encode_data(C.int(chunk_size), e.k, e.m, e.encode_tbls, data,
+	C.ec_encode_data(C.int(chunkLen), k, m, e.encode_tbls, data,
 		coding)
-	return chunks, block_len
+	return chunks, nil
 }
