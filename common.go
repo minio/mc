@@ -1,5 +1,5 @@
 /*
- * Minimalist Object Storage, (C) 2014,2015 Minio, Inc.
+ * Minimalist Object Storage, (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 
 	switch len(c.Args()) {
 	case 1: // only one URL
-		urlString, err := aliasExpand(c.Args().Get(0))
+		urlString, err := aliasExpand(c.Args().First())
 		if err != nil {
 			return nil, err
 		}
@@ -112,8 +112,8 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 		}
 	case 2: // one URL and one path||URL
 		switch true {
-		case c.Args().Get(0) != "":
-			urlString, err := aliasExpand(c.Args().Get(0))
+		case c.Args().First() != "":
+			urlString, err := aliasExpand(c.Args().First())
 			if err != nil {
 				return nil, err
 			}
@@ -141,7 +141,7 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 				if urlParsed.Host != "" {
 					return nil, errInvalidScheme
 				}
-				if urlParsed.Path != c.Args().Get(0) {
+				if urlParsed.Path != c.Args().First() {
 					return nil, errInvalidScheme
 				}
 				if urlParsed.Path == "." {
