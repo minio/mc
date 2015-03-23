@@ -6,10 +6,10 @@ import "io"
 
 // Donut interface
 type Donut interface {
-	PutBucket(bucket string) error
-	Get(bucket, object string) (io.ReadCloser, int64, error)
-	Put(bucket, object string) (ObjectWriter, error)
-	Stat(bucket, object string) (map[string]string, error)
+	CreateBucket(bucket string) error
+	GetObject(bucket, object string) (io.ReadCloser, error)
+	GetObjectMetadata(bucket, object string) (map[string]string, error)
+	GetObjectWriter(bucket, object string) (ObjectWriter, error)
 	ListBuckets() ([]string, error)
 	ListObjects(bucket string) ([]string, error)
 }
@@ -22,7 +22,7 @@ type Bucket interface {
 // Node interface
 type Node interface {
 	GetBuckets() ([]string, error)
-	GetDonutDriverMetadata(bucket, object string) (map[string]string, error)
+	GetDonutMetadata(bucket, object string) (map[string]string, error)
 	GetMetadata(bucket, object string) (map[string]string, error)
 	GetReader(bucket, object string) (io.ReadCloser, error)
 	GetWriter(bucket, object string) (Writer, error)
