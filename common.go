@@ -47,7 +47,7 @@ func startBar(size int64) *pb.ProgressBar {
 }
 
 // NewClient - get new client
-func getNewClient(debug bool, url *url.URL) (cl client.Client, err error) {
+func getNewClient(debug bool, url string) (cl client.Client, err error) {
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, err
@@ -201,4 +201,14 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 
 func getMcBashCompletionFilename() string {
 	return path.Join(getMcConfigDir(), "mc.bash_completion")
+}
+
+func isValidURL(s string) bool {
+	var r = "http.*://*"
+	ok, err := regexp.MatchString(r, s)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	return ok
 }

@@ -65,9 +65,9 @@ func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 
 // ListBuckets - Get list of buckets
 func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
-	url := fmt.Sprintf("%s://%s/", c.URL.Scheme, c.URL.Host)
+	url := fmt.Sprintf("%s://%s/", c.Scheme, c.Host)
 	req := newReq(url)
-	c.signRequest(req, c.URL.Host)
+	c.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
@@ -86,11 +86,11 @@ func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
 func (c *s3Client) PutBucket(bucket string) error {
 	var url string
 	if IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
-		url = fmt.Sprintf("%s://%s/%s", c.URL.Scheme, c.URL.Host, bucket)
+		url = fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 	}
 	req := newReq(url)
 	req.Method = "PUT"
-	c.signRequest(req, c.URL.Host)
+	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return err
@@ -143,7 +143,7 @@ func (c *s3Client) ListObjects(bucket string, startAt, prefix, delimiter string,
 		for try := 1; try <= maxTries; try++ {
 			time.Sleep(time.Duration(try-1) * 100 * time.Millisecond)
 			req := newReq(urlReq)
-			c.signRequest(req, c.URL.Host)
+			c.signRequest(req, c.Host)
 			res, err := c.Transport.RoundTrip(req)
 			if err != nil {
 				if try < maxTries {

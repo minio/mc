@@ -75,7 +75,7 @@ func (c *s3Client) Put(bucket, key string, size int64, contents io.Reader) error
 	req.Body = ioutil.NopCloser(sink)
 	b64 := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	req.Header.Set("Content-MD5", b64)
-	c.signRequest(req, c.URL.Host)
+	c.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
@@ -93,7 +93,7 @@ func (c *s3Client) Put(bucket, key string, size int64, contents io.Reader) error
 func (c *s3Client) Stat(bucket, key string) (size int64, date time.Time, reterr error) {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
-	c.signRequest(req, c.URL.Host)
+	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return 0, date, err
@@ -125,7 +125,7 @@ func (c *s3Client) Stat(bucket, key string) (size int64, date time.Time, reterr 
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, err error) {
 	req := newReq(c.keyURL(bucket, key))
-	c.signRequest(req, c.URL.Host)
+	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return nil, 0, err
@@ -151,7 +151,7 @@ func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io
 	} else {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 	}
-	c.signRequest(req, c.URL.Host)
+	c.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {

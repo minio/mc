@@ -83,7 +83,7 @@ func firstMode(c *cli.Context, args *cmdArgs) error {
 	if args.destination.key == "" {
 		args.destination.key = args.source.key
 	}
-	s3c, err := getNewClient(c.GlobalBool("debug"), args.destination.url)
+	s3c, err := getNewClient(c.GlobalBool("debug"), args.destination.url.String())
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func secondMode(c *cli.Context, args *cmdArgs) error {
 	var err error
 	var st os.FileInfo
 
-	s3c, err := getNewClient(c.GlobalBool("debug"), args.source.url)
+	s3c, err := getNewClient(c.GlobalBool("debug"), args.source.url.String())
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func thirdMode(c *cli.Context, args *cmdArgs) error {
 	var objectSize int64
 	var err error
 
-	s3cSource, err := getNewClient(c.GlobalBool("debug"), args.source.url)
+	s3cSource, err := getNewClient(c.GlobalBool("debug"), args.source.url.String())
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func thirdMode(c *cli.Context, args *cmdArgs) error {
 	}
 
 	// Check if the object already exists
-	s3cDest, err := getNewClient(c.GlobalBool("debug"), args.destination.url)
+	s3cDest, err := getNewClient(c.GlobalBool("debug"), args.destination.url.String())
 	if err != nil {
 		return err
 	}
