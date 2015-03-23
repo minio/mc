@@ -21,6 +21,8 @@ import (
 	"os"
 	"time"
 
+	"net/url"
+
 	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/client"
@@ -59,39 +61,52 @@ func printObject(date time.Time, v int64, key string) {
 func doListCmd(c *cli.Context) {
 	var items []*client.Item
 
-	args, err := parseArgs(c)
+	// quiet := c.GlobalBool("quiet")
+
+	urlStr, err := argParseURL(c)
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	s3c, err := getNewClient(c, args.source.url)
+	bucketName, objectName, err := url2Object(urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
+
+	URL, err := url.Parse(urlStr)
+	if err != nil {
+		fatal(err.Error())
+	}
+
+	s3c, err := getNewClient(c, URL)
+	if err != nil {
+		fatal(err.Error())
+	}
+
 	switch true {
-	case args.source.bucket == "": // List all buckets
+	case bucketName == "": // List all buckets
 		buckets, err := s3c.ListBuckets()
 		if err != nil {
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
-	case args.source.key == "": // List objects in a bucket
-		items, _, err = s3c.ListObjects(args.source.bucket, "", "", "", s3.MaxKeys)
+	case objectName == "": // List objects in a bucket
+		items, _, err = s3c.ListObjects(bucketName, "", "", "", s3.MaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
-	case args.source.key != "": // List objects matching the key prefix
+	case objectName != "": // List objects matching the key prefix
 		var date time.Time
 		var size int64
 
-		size, date, err = s3c.Stat(args.source.bucket, args.source.key)
+		size, date, err = s3c.Stat(bucketName, objectName)
 		switch err {
 		case nil: // List a single object. Exact key
-			printObject(date, size, args.source.key)
+			printObject(date, size, objectName)
 		case os.ErrNotExist:
 			// List all objects matching the key prefix
-			items, _, err = s3c.ListObjects(args.source.bucket, "", args.source.key, "", s3.MaxKeys)
+			items, _, err = s3c.ListObjects(bucketName, "", objectName, "", s3.MaxKeys)
 			if err != nil {
 				fatal(err.Error())
 			}
