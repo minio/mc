@@ -42,6 +42,6 @@ type ObjectWriter interface {
 type Writer interface {
 	ObjectWriter
 
-	GetDonutDriverMetadata() (map[string]string, error)
-	SetDonutDriverMetadata(map[string]string) error
+	GetDonutMetadata() (map[string]string, error)
+	SetDonutMetadata(map[string]string) error
 }
