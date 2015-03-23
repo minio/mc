@@ -20,7 +20,7 @@ func (s *MySuite) TestEmptyBucket(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
+	donut := NewDonutDriver(root)
 
 	// check buckets are empty
 	buckets, err := donut.ListBuckets()
@@ -32,22 +32,22 @@ func (s *MySuite) TestBucketWithoutNameFails(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
+	donut := NewDonutDriver(root)
 	// fail to create new bucket without a name
-	err = donut.PutBucket("")
+	err = donut.CreateBucket("")
 	c.Assert(err, Not(IsNil))
 
-	err = donut.PutBucket(" ")
+	err = donut.CreateBucket(" ")
 	c.Assert(err, Not(IsNil))
 }
 
-func (s *MySuite) TestPutBucketAndList(c *C) {
+func (s *MySuite) TestCreateBucketAndList(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
+	donut := NewDonutDriver(root)
 	// create bucket
-	err = donut.PutBucket("foo")
+	err = donut.CreateBucket("foo")
 	c.Assert(err, IsNil)
 
 	// check bucket exists
@@ -56,15 +56,15 @@ func (s *MySuite) TestPutBucketAndList(c *C) {
 	c.Assert(buckets, DeepEquals, []string{"foo"})
 }
 
-func (s *MySuite) TestPutBucketWithSameNameFails(c *C) {
+func (s *MySuite) TestCreateBucketWithSameNameFails(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
-	err = donut.PutBucket("foo")
+	donut := NewDonutDriver(root)
+	err = donut.CreateBucket("foo")
 	c.Assert(err, IsNil)
 
-	err = donut.PutBucket("foo")
+	err = donut.CreateBucket("foo")
 	c.Assert(err, Not(IsNil))
 }
 
@@ -72,19 +72,19 @@ func (s *MySuite) TestCreateMultipleBucketsAndList(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
+	donut := NewDonutDriver(root)
 	// add a second bucket
-	err = donut.PutBucket("foo")
+	err = donut.CreateBucket("foo")
 	c.Assert(err, IsNil)
 
-	err = donut.PutBucket("bar")
+	err = donut.CreateBucket("bar")
 	c.Assert(err, IsNil)
 
 	buckets, err := donut.ListBuckets()
 	c.Assert(err, IsNil)
 	c.Assert(buckets, DeepEquals, []string{"bar", "foo"})
 
-	err = donut.PutBucket("foobar")
+	err = donut.CreateBucket("foobar")
 	c.Assert(err, IsNil)
 
 	buckets, err = donut.ListBuckets()
@@ -96,9 +96,9 @@ func (s *MySuite) TestNewObjectFailsWithoutBucket(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
+	donut := NewDonutDriver(root)
 
-	writer, err := donut.Put("foo", "obj")
+	writer, err := donut.GetObjectWriter("foo", "obj")
 	c.Assert(err, Not(IsNil))
 	c.Assert(writer, IsNil)
 }
@@ -107,13 +107,13 @@ func (s *MySuite) TestNewObjectFailsWithEmptyName(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
+	donut := NewDonutDriver(root)
 
-	writer, err := donut.Put("foo", "")
+	writer, err := donut.GetObjectWriter("foo", "")
 	c.Assert(err, Not(IsNil))
 	c.Assert(writer, IsNil)
 
-	writer, err = donut.Put("foo", " ")
+	writer, err = donut.GetObjectWriter("foo", " ")
 	c.Assert(err, Not(IsNil))
 	c.Assert(writer, IsNil)
 }
@@ -122,12 +122,12 @@ func (s *MySuite) TestNewObjectCanBeWritten(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
+	donut := NewDonutDriver(root)
 
-	err = donut.PutBucket("foo")
+	err = donut.CreateBucket("foo")
 	c.Assert(err, IsNil)
 
-	writer, err := donut.Put("foo", "obj")
+	writer, err := donut.GetObjectWriter("foo", "obj")
 	c.Assert(err, IsNil)
 
 	data := "Hello World"
@@ -152,7 +152,7 @@ func (s *MySuite) TestNewObjectCanBeWritten(c *C) {
 
 	c.Assert(err, IsNil)
 
-	reader, _, err := donut.Get("foo", "obj")
+	reader, err := donut.GetObject("foo", "obj")
 	c.Assert(err, IsNil)
 
 	var actualData bytes.Buffer
@@ -160,7 +160,7 @@ func (s *MySuite) TestNewObjectCanBeWritten(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(actualData.Bytes(), DeepEquals, []byte(data))
 
-	actualMetadata, err := donut.Stat("foo", "obj")
+	actualMetadata, err := donut.GetObjectMetadata("foo", "obj")
 	c.Assert(err, IsNil)
 	c.Assert(actualMetadata, DeepEquals, expectedMetadata)
 }
@@ -169,22 +169,22 @@ func (s *MySuite) TestMultipleNewObjects(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	donut := NewDriver(root)
+	donut := NewDonutDriver(root)
 
-	c.Assert(donut.PutBucket("foo"), IsNil)
-	writer, err := donut.Put("foo", "obj1")
+	c.Assert(donut.CreateBucket("foo"), IsNil)
+	writer, err := donut.GetObjectWriter("foo", "obj1")
 	c.Assert(err, IsNil)
 	writer.Write([]byte("one"))
 	writer.Close()
 
-	writer, err = donut.Put("foo", "obj2")
+	writer, err = donut.GetObjectWriter("foo", "obj2")
 	c.Assert(err, IsNil)
 	writer.Write([]byte("two"))
 	writer.Close()
 
 	//	c.Skip("not complete")
 
-	reader, _, err := donut.Get("foo", "obj1")
+	reader, err := donut.GetObject("foo", "obj1")
 	c.Assert(err, IsNil)
 	var readerBuffer1 bytes.Buffer
 	_, err = io.Copy(&readerBuffer1, reader)
@@ -192,7 +192,7 @@ func (s *MySuite) TestMultipleNewObjects(c *C) {
 	//	c.Skip("Not Implemented")
 	c.Assert(readerBuffer1.Bytes(), DeepEquals, []byte("one"))
 
-	reader, _, err = donut.Get("foo", "obj2")
+	reader, err = donut.GetObject("foo", "obj2")
 	c.Assert(err, IsNil)
 	var readerBuffer2 bytes.Buffer
 	_, err = io.Copy(&readerBuffer2, reader)

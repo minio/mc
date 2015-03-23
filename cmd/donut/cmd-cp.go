@@ -13,7 +13,7 @@ import (
 
 func doDonutCp(c *cli.Context) {
 	var e donut.Donut
-	e = donut.NewDriver("testdir")
+	e = donut.NewDonutDriver("testdir")
 	switch len(c.Args()) {
 	case 2:
 		urlArg1, errArg1 := url.Parse(c.Args().Get(0))
@@ -32,7 +32,8 @@ func doDonutCp(c *cli.Context) {
 				panic(err)
 			}
 			if urlArg1.Scheme == "donut" {
-				reader, _, err := e.Get(urlArg1.Host, strings.TrimPrefix(urlArg1.Path, "/"))
+				e.CreateBucket(urlArg1.Host)
+				reader, err := e.GetObject(urlArg1.Host, strings.TrimPrefix(urlArg1.Path, "/"))
 				if err != nil {
 					panic(err)
 				}
@@ -55,8 +56,8 @@ func doDonutCp(c *cli.Context) {
 				panic(err)
 			}
 			if urlArg2.Scheme == "donut" {
-				e.PutBucket(urlArg2.Host)
-				writer, err := e.Put(urlArg2.Host, strings.TrimPrefix(urlArg2.Path, "/"))
+				e.CreateBucket(urlArg2.Host)
+				writer, err := e.GetObjectWriter(urlArg2.Host, strings.TrimPrefix(urlArg2.Path, "/"))
 				if err != nil {
 					panic(err)
 				}

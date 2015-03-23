@@ -30,9 +30,9 @@ func doMakeBucketCmd(c *cli.Context) {
 		panic(err)
 	}
 	var e donut.Donut
-	e = donut.NewDriver("testdir")
+	e = donut.NewDonutDriver("testdir")
 
-	err = e.PutBucket(urlArg1.Path)
+	err = e.CreateBucket(urlArg1.Path)
 	if err != nil {
 		panic(err)
 	}

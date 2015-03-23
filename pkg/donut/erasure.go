@@ -113,6 +113,7 @@ func erasureGoroutine(r *io.PipeReader, eWriter erasureWriter, isClosed chan<- b
 		if nodeWriter != nil {
 			nodeWriter.SetMetadata(eWriter.metadata)
 			nodeWriter.SetDonutMetadata(metadata)
+			println("I am here")
 			nodeWriter.Close()
 		}
 	}

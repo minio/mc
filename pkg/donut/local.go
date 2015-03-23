@@ -36,7 +36,7 @@ func (d localDirectoryNode) GetReader(bucket, object string) (io.ReadCloser, err
 func (d localDirectoryNode) GetMetadata(bucket, object string) (map[string]string, error) {
 	return d.getMetadata(bucket, object, "metadata.json")
 }
-func (d localDirectoryNode) GetDonutDriverMetadata(bucket, object string) (map[string]string, error) {
+func (d localDirectoryNode) GetDonutMetadata(bucket, object string) (map[string]string, error) {
 	return d.getMetadata(bucket, object, "donutMetadata.json")
 }
 

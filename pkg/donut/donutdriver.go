@@ -13,8 +13,8 @@ type donutDriver struct {
 	nodes   map[string]Node
 }
 
-// NewDriver - instantiate new donut driver
-func NewDriver(root string) Donut {
+// NewDonutDriver - instantiate new donut driver
+func NewDonutDriver(root string) Donut {
 	nodes := make(map[string]Node)
 	nodes["localhost"] = localDirectoryNode{root: root}
 	driver := donutDriver{
@@ -24,7 +24,7 @@ func NewDriver(root string) Donut {
 	return driver
 }
 
-func (driver donutDriver) PutBucket(bucketName string) error {
+func (driver donutDriver) CreateBucket(bucketName string) error {
 	if _, ok := driver.buckets[bucketName]; ok == false {
 		bucketName = strings.TrimSpace(bucketName)
 		if bucketName == "" {
@@ -54,7 +54,7 @@ func (driver donutDriver) ListBuckets() ([]string, error) {
 	return buckets, nil
 }
 
-func (driver donutDriver) Put(bucketName, objectName string) (ObjectWriter, error) {
+func (driver donutDriver) GetObjectWriter(bucketName, objectName string) (ObjectWriter, error) {
 	if bucket, ok := driver.buckets[bucketName]; ok == true {
 		writers := make([]Writer, 16)
 		nodes, err := bucket.GetNodes()
@@ -72,13 +72,13 @@ func (driver donutDriver) Put(bucketName, objectName string) (ObjectWriter, erro
 	return nil, errors.New("Bucket not found")
 }
 
-func (driver donutDriver) Get(bucketName, objectName string) (io.ReadCloser, int64, error) {
+func (driver donutDriver) GetObject(bucketName, objectName string) (io.ReadCloser, error) {
 	r, w := io.Pipe()
 	if bucket, ok := driver.buckets[bucketName]; ok == true {
 		readers := make([]io.ReadCloser, 16)
 		nodes, err := bucket.GetNodes()
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 		var metadata map[string]string
 		for i, nodeID := range nodes {
@@ -86,26 +86,25 @@ func (driver donutDriver) Get(bucketName, objectName string) (io.ReadCloser, int
 				bucketID := bucketName + ":0:" + strconv.Itoa(i)
 				reader, err := node.GetReader(bucketID, objectName)
 				if err != nil {
-					return nil, 0, err
+					return nil, err
 				}
 				readers[i] = reader
 				if metadata == nil {
-					metadata, err = node.GetDonutDriverMetadata(bucketID, objectName)
+					metadata, err = node.GetDonutMetadata(bucketID, objectName)
 					if err != nil {
-						return nil, 0, err
+						return nil, err
 					}
 				}
 			}
 		}
 		go erasureReader(readers, metadata, w)
-		totalLength, _ := strconv.ParseInt(metadata["totalLength"], 10, 64)
-		return r, totalLength, nil
+		return r, nil
 	}
-	return nil, 0, errors.New("Bucket not found")
+	return nil, errors.New("Bucket not found")
 }
 
-// Stat returns metadata for a given object in a bucket
-func (driver donutDriver) Stat(bucketName, object string) (map[string]string, error) {
+// GetObjectMetadata returns metadata for a given object in a bucket
+func (driver donutDriver) GetObjectMetadata(bucketName, object string) (map[string]string, error) {
 	if bucket, ok := driver.buckets[bucketName]; ok {
 		nodes, err := bucket.GetNodes()
 		if err != nil {
