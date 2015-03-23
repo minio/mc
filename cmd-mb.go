@@ -17,8 +17,6 @@
 package main
 
 import (
-	"net/url"
-
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
 )
@@ -29,18 +27,13 @@ func doMakeBucketCmd(c *cli.Context) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	URL, err := url.Parse(urlStr)
-	if err != nil {
-		fatal(err.Error())
-	}
-	u := &URLParser{URL}
 
-	s3c, err := getNewClient(c.GlobalBool("debug"), URL)
+	bucket, err := url2Bucket(urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	bucket, err := u.Bucket()
+	s3c, err := getNewClient(c.GlobalBool("debug"), urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}

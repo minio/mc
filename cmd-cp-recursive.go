@@ -95,7 +95,7 @@ func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
 		if !st.IsDir() {
 			return errors.New("Should be a directory")
 		}
-		s3c, err := getNewClient(c.GlobalBool("debug"), args.destination.url)
+		s3c, err := getNewClient(c.GlobalBool("debug"), args.destination.url.String())
 		if err != nil {
 			return err
 		}
@@ -113,7 +113,7 @@ func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
 			return err
 		}
 	case args.destination.bucket == "":
-		s3c, err := getNewClient(c.GlobalBool("debug"), args.source.url)
+		s3c, err := getNewClient(c.GlobalBool("debug"), args.source.url.String())
 		if err != nil {
 			return err
 		}

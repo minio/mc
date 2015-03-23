@@ -3,7 +3,6 @@ package client
 import (
 	"io"
 	"net/http"
-	"net/url"
 	"time"
 )
 
@@ -40,11 +39,6 @@ type Prefix struct {
 type Meta struct {
 	*Auth                       // AWS auth credentials
 	Transport http.RoundTripper // or nil for the default behavior
-
-	// Supports URL in following formats
-	//  - http://<ipaddress>/<bucketname>/<object>
-	//  - http://<bucketname>.<domain>/<object>
-	URL *url.URL
 }
 
 // Auth - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html

@@ -24,17 +24,14 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-type URLParser struct {
-	*url.URL
-}
-
-// Object converts URL to bucket and objectname
-func (u *URLParser) Object() (bucketName, objectName string, err error) {
-	if u.Path == "" {
+// url2Object converts URL to bucket and objectname
+func url2Object(urlStr string) (bucketName, objectName string, err error) {
+	url, err := url.Parse(urlStr)
+	if url.Path == "" {
 		// No bucket name passed. It is a valid case.
 		return "", "", nil
 	}
-	splits := strings.SplitN(u.Path, "/", 3)
+	splits := strings.SplitN(url.Path, "/", 3)
 	switch len(splits) {
 	case 0, 1:
 		bucketName = ""
@@ -49,9 +46,9 @@ func (u *URLParser) Object() (bucketName, objectName string, err error) {
 	return bucketName, objectName, nil
 }
 
-// Bucket converts URL to bucket name
-func (u *URLParser) Bucket() (bucketName string, err error) {
-	bucketName, _, err = u.Object()
+// url2Bucket converts URL to bucket name
+func url2Bucket(urlStr string) (bucketName string, err error) {
+	bucketName, _, err = url2Object(urlStr)
 	return bucketName, err
 }
 

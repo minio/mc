@@ -19,10 +19,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
+	"regexp"
 	"time"
-
-	"net/url"
 
 	"github.com/cheggaaa/pb"
 	"github.com/codegangsta/cli"
@@ -58,10 +56,6 @@ func printObject(date time.Time, v int64, key string) {
 	info(msg)
 }
 
-func validURL(urlStr string) bool {
-	return strings.Contains(urlStr, "http")
-}
-
 // doListCmd lists objects inside a bucket
 func doListCmd(c *cli.Context) {
 	var items []*client.Item
@@ -73,22 +67,16 @@ func doListCmd(c *cli.Context) {
 		fatal(err.Error())
 	}
 
-	if !validURL(urlStr) {
+	if !isValidURL(urlStr) {
 		fatal(errInvalidScheme.Error())
 	}
 
-	URL, err := url.Parse(urlStr)
-	if err != nil {
-		fatal(err.Error())
-	}
-	u := &URLParser{URL}
-
-	bucketName, objectName, err := u.Object()
+	bucketName, objectName, err := url2Object(urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	s3c, err := getNewClient(c.GlobalBool("debug"), URL)
+	s3c, err := getNewClient(c.GlobalBool("debug"), urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}

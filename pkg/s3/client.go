@@ -71,15 +71,27 @@ type listBucketResults struct {
 
 type s3Client struct {
 	*client.Meta
+
+	// Supports URL in following formats
+	//  - http://<ipaddress>/<bucketname>/<object>
+	//  - http://<bucketname>.<domain>/<object>
+	*url.URL
 }
 
 // GetNewClient returns an initialized s3Client structure.
-func GetNewClient(auth *client.Auth, u *url.URL, transport http.RoundTripper) client.Client {
-	return &s3Client{&client.Meta{
-		Auth:      auth,
-		Transport: GetNewTraceTransport(s3Verify{}, transport),
-		URL:       u,
-	}}
+func GetNewClient(auth *client.Auth, urlStr string, transport http.RoundTripper) client.Client {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return nil
+	}
+	s3c := &s3Client{
+		&client.Meta{
+			Auth:      auth,
+			Transport: GetNewTraceTransport(s3Verify{}, transport),
+		},
+		u,
+	}
+	return s3c
 }
 
 // bucketURL constructs a URL (with a trailing slash) for a given
@@ -91,16 +103,16 @@ func (c *s3Client) bucketURL(bucket string) string {
 	// TODO: Bucket names can contain ".".  This second check should be removed.
 	if IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
 		// if localhost use PathStyle
-		if strings.Contains(c.URL.Host, "localhost") || strings.Contains(c.URL.Host, "127.0.0.1") {
-			return fmt.Sprintf("%s://%s/%s", c.URL.Scheme, c.URL.Host, bucket)
+		if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
+			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 		}
 		// Verify if its ip address, use PathStyle
-		host, _, _ := net.SplitHostPort(c.URL.Host)
+		host, _, _ := net.SplitHostPort(c.Host)
 		if net.ParseIP(host) != nil {
-			return fmt.Sprintf("%s://%s/%s", c.URL.Scheme, c.URL.Host, bucket)
+			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 		}
 		// For DNS hostname or amazonaws.com use subdomain style
-		url = fmt.Sprintf("%s://%s.%s/", c.URL.Scheme, bucket, c.URL.Host)
+		url = fmt.Sprintf("%s://%s.%s/", c.Scheme, bucket, c.Host)
 	}
 	return url
 }
@@ -108,10 +120,10 @@ func (c *s3Client) bucketURL(bucket string) string {
 // keyURL constructs a URL using bucket and object key
 func (c *s3Client) keyURL(bucket, key string) string {
 	url := c.bucketURL(bucket)
-	if strings.Contains(c.URL.Host, "localhost") || strings.Contains(c.URL.Host, "127.0.0.1") {
+	if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
 		return url + "/" + key
 	}
-	host, _, _ := net.SplitHostPort(c.URL.Host)
+	host, _, _ := net.SplitHostPort(c.Host)
 	if net.ParseIP(host) != nil {
 		return url + "/" + key
 	}
