@@ -29,7 +29,7 @@ const (
 
 // XMLTime - time wrapper
 type XMLTime struct {
-	time.Time
+	Time time.Time
 }
 
 // UnmarshalXML - unmarshal incoming xml

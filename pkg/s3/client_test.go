@@ -64,14 +64,11 @@ func TestParseBuckets(t *testing.T) {
 		t.Errorf("num parsed buckets = %d; want %d", g, w)
 	}
 
-	t1, err := time.Parse(iso8601Format, "2006-06-21T07:04:31.000Z")
-	t2, err := time.Parse(iso8601Format, "2006-06-21T07:04:32.000Z")
-	xmlT1 := client.XMLTime{t1}
-	xmlT2 := client.XMLTime{t2}
-
+	t1, _ := time.Parse(iso8601Format, "2006-06-21T07:04:31.000Z")
+	t2, _ := time.Parse(iso8601Format, "2006-06-21T07:04:32.000Z")
 	want := []*client.Bucket{
-		{Name: "bucketOne", CreationDate: xmlT1},
-		{Name: "bucketTwo", CreationDate: xmlT2},
+		{Name: "bucketOne", CreationDate: client.XMLTime{Time: t1}},
+		{Name: "bucketTwo", CreationDate: client.XMLTime{Time: t2}},
 	}
 	dump := func(v []*client.Bucket) {
 		for i, b := range v {
