@@ -17,23 +17,39 @@
 package main
 
 import (
+	"net/url"
+
 	"github.com/codegangsta/cli"
 	"github.com/minio-io/mc/pkg/s3"
 )
 
 // doMakeBucketCmd creates a new bucket
 func doMakeBucketCmd(c *cli.Context) {
-	args, err := parseArgs(c)
+	urlStr, err := parseURL(c)
+	if err != nil {
+		fatal(err.Error())
+	}
+	URL, err := url.Parse(urlStr)
+	if err != nil {
+		fatal(err.Error())
+	}
+	u := &URLParser{URL}
+
+	s3c, err := getNewClient(c.GlobalBool("debug"), URL)
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	s3c, err := getNewClient(c, args.source.url)
-	if !s3.IsValidBucketName(args.source.bucket) {
+	bucket, err := u.Bucket()
+	if err != nil {
+		fatal(err.Error())
+	}
+
+	if !s3.IsValidBucketName(bucket) {
 		fatal(errInvalidbucket.Error())
 	}
 
-	err = s3c.PutBucket(args.source.bucket)
+	err = s3c.PutBucket(bucket)
 	if err != nil {
 		fatal(err.Error())
 	}

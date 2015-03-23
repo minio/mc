@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"net/url"
@@ -57,28 +58,37 @@ func printObject(date time.Time, v int64, key string) {
 	info(msg)
 }
 
+func validURL(urlStr string) bool {
+	return strings.Contains(urlStr, "http")
+}
+
 // doListCmd lists objects inside a bucket
 func doListCmd(c *cli.Context) {
 	var items []*client.Item
 
 	// quiet := c.GlobalBool("quiet")
 
-	urlStr, err := argParseURL(c)
+	urlStr, err := parseURL(c)
 	if err != nil {
 		fatal(err.Error())
 	}
 
-	bucketName, objectName, err := url2Object(urlStr)
-	if err != nil {
-		fatal(err.Error())
+	if !validURL(urlStr) {
+		fatal(errInvalidScheme.Error())
 	}
 
 	URL, err := url.Parse(urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
+	u := &URLParser{URL}
 
-	s3c, err := getNewClient(c, URL)
+	bucketName, objectName, err := u.Object()
+	if err != nil {
+		fatal(err.Error())
+	}
+
+	s3c, err := getNewClient(c.GlobalBool("debug"), URL)
 	if err != nil {
 		fatal(err.Error())
 	}
