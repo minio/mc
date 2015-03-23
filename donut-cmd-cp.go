@@ -11,7 +11,7 @@ import (
 	"github.com/minio-io/mc/pkg/donut"
 )
 
-func doDonutCp(c *cli.Context) {
+func doDonutCPCmd(c *cli.Context) {
 	var e donut.Donut
 	e = donut.NewDonutDriver("testdir")
 	switch len(c.Args()) {
