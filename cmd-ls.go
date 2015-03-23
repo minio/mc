@@ -34,7 +34,7 @@ const (
 // printBuckets lists buckets and its meta-dat
 func printBuckets(v []*client.Bucket) {
 	for _, b := range v {
-		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Local().Format(printDate), "", b.Name)
+		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Time.Local().Format(printDate), "", b.Name)
 		info(msg)
 	}
 }
