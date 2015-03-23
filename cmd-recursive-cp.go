@@ -24,11 +24,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/codegangsta/cli"
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/s3"
 )
 
 type walk struct {
-	s3   *s3.Client
+	s3   client.Client
 	args *cmdArgs
 }
 
@@ -49,8 +51,8 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 	var size int64
 	size, _, err = w.s3.Stat(bucketname, key)
 	if os.IsExist(err) || size != 0 {
-		msg := fmt.Sprintf("%s is already uploaded -- to bucket:%s://%s/%s/%s",
-			key, w.s3.Scheme, w.s3.Host, bucketname, key)
+		msg := fmt.Sprintf("%s is already uploaded -- to bucket:%s/%s/%s",
+			key, w.args.destination.host, bucketname, key)
 		info(msg)
 		return nil
 	}
@@ -58,8 +60,8 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("%s uploaded -- to bucket:%s://%s/%s/%s",
-		key, w.s3.Scheme, w.s3.Host, bucketname, key)
+	msg := fmt.Sprintf("%s uploaded -- to bucket:%s/%s/%s",
+		key, w.args.destination.host, bucketname, key)
 	info(msg)
 	return nil
 }
@@ -79,7 +81,7 @@ func isValidBucketName(p string) error {
 }
 
 // isBucketExists checks if a bucket exists
-func isBucketExists(name string, v []*s3.Bucket) bool {
+func isBucketExists(name string, v []*client.Bucket) bool {
 	for _, b := range v {
 		if name == b.Name {
 			return true
@@ -89,10 +91,10 @@ func isBucketExists(name string, v []*s3.Bucket) bool {
 }
 
 // doRecursiveCP recursively copies objects from source to destination
-func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
+func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
 	var err error
 	var st os.FileInfo
-	var buckets []*s3.Bucket
+	var buckets []*client.Bucket
 
 	switch true {
 	case args.source.bucket == "":
@@ -107,9 +109,10 @@ func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 		if !st.IsDir() {
 			return errors.New("Should be a directory")
 		}
-
-		s3c.Host = args.destination.host
-		s3c.Scheme = args.destination.scheme
+		s3c, err := getNewClient(c, args.destination.url)
+		if err != nil {
+			return err
+		}
 		p := &walk{s3c, args}
 		buckets, err = s3c.ListBuckets()
 		if !isBucketExists(args.destination.bucket, buckets) {
@@ -124,19 +127,23 @@ func doRecursiveCp(s3c *s3.Client, args *cmdArgs) error {
 			return err
 		}
 	case args.destination.bucket == "":
+		s3c, err := getNewClient(c, args.source.url)
+		if err != nil {
+			return err
+		}
 		items, _, err := s3c.ListObjects(args.source.bucket, "", "", "", s3.MaxKeys)
 		if err != nil {
 			return err
 		}
 		root := args.destination.key
-		writeObjects := func(v []*s3.Item) error {
+		writeObjects := func(v []*client.Item) error {
 			if len(v) > 0 {
 				// Items are already sorted
 				for _, b := range v {
 					args.source.key = b.Key
 					os.MkdirAll(path.Join(root, path.Dir(b.Key)), 0755)
 					args.destination.key = path.Join(root, b.Key)
-					err := secondMode(s3c, args)
+					err := secondMode(c, args)
 					if err != nil {
 						return err
 					}

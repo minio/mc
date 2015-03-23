@@ -17,24 +17,23 @@
 package main
 
 import (
+	"net/url"
+
 	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/s3"
+	"github.com/minio-io/mc/pkg/donut"
 )
 
 // doMakeBucketCmd creates a new bucket
 func doMakeBucketCmd(c *cli.Context) {
-	args, err := parseArgs(c)
+	urlArg1, err := url.Parse(c.Args().Get(0))
 	if err != nil {
-		fatal(err.Error())
+		panic(err)
 	}
+	var e donut.Donut
+	e = donut.NewDriver("testdir")
 
-	s3c, err := getNewClient(c, args.source.url)
-	if !s3.IsValidBucket(args.source.bucket) {
-		fatal(errInvalidbucket.Error())
-	}
-
-	err = s3c.PutBucket(args.source.bucket)
+	err = e.PutBucket(urlArg1.Path)
 	if err != nil {
-		fatal(err.Error())
+		panic(err)
 	}
 }

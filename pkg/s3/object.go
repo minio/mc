@@ -56,7 +56,7 @@ import (
 /// Object API operations
 
 // Put - upload new object to bucket
-func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
+func (c *s3Client) Put(bucket, key string, size int64, contents io.Reader) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
 	req.ContentLength = size
@@ -75,7 +75,7 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 	req.Body = ioutil.NopCloser(sink)
 	b64 := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	req.Header.Set("Content-MD5", b64)
-	c.Auth.signRequest(req, c.Host)
+	c.signRequest(req, c.URL.Host)
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
@@ -90,10 +90,10 @@ func (c *Client) Put(bucket, key string, size int64, contents io.Reader) error {
 }
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3
-func (c *Client) Stat(bucket, key string) (size int64, date time.Time, reterr error) {
+func (c *s3Client) Stat(bucket, key string) (size int64, date time.Time, reterr error) {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
-	c.Auth.signRequest(req, c.Host)
+	c.signRequest(req, c.URL.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return 0, date, err
@@ -123,9 +123,9 @@ func (c *Client) Stat(bucket, key string) (size int64, date time.Time, reterr er
 }
 
 // Get - download a requested object from a given bucket
-func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err error) {
+func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, err error) {
 	req := newReq(c.keyURL(bucket, key))
-	c.Auth.signRequest(req, c.Host)
+	c.signRequest(req, c.URL.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return nil, 0, err
@@ -140,7 +140,7 @@ func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, err er
 
 // GetPartial fetches part of the s3 key object in bucket.
 // If length is negative, the rest of the object is returned.
-func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, err error) {
+func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, err error) {
 	if offset < 0 {
 		return nil, 0, errors.New("invalid negative length")
 	}
@@ -151,7 +151,7 @@ func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.R
 	} else {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 	}
-	c.Auth.signRequest(req, c.Host)
+	c.signRequest(req, c.URL.Host)
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {

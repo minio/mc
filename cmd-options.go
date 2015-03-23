@@ -17,6 +17,8 @@
 package main
 
 import (
+	"net/url"
+
 	"github.com/codegangsta/cli"
 )
 
@@ -91,6 +93,7 @@ type object struct {
 	key    string
 	host   string
 	scheme string
+	url    *url.URL
 }
 
 type cmdArgs struct {

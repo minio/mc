@@ -16,7 +16,6 @@ import (
 	"path/filepath"
 
 	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/s3"
 )
 
 const (
@@ -24,8 +23,13 @@ const (
 	mcConfigFilename = "config.json"
 )
 
+type auth struct {
+	AccessKeyID     string
+	SecretAccessKey string
+}
+
 type hostConfig struct {
-	Auth s3.Auth
+	Auth auth
 }
 
 type mcConfig struct {
@@ -190,40 +194,53 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	}
 
 	alias := strings.Fields(c.String("alias"))
-	if len(alias) == 0 {
-		// valid case throw help
-		return nil, nil
-	}
-	if len(alias) != 2 {
+	switch true {
+	case len(alias) == 0:
+		config = &mcConfig{
+			Version:     currentConfigVersion,
+			DefaultHost: "https://s3.amazonaws.com",
+			Hosts: map[string]hostConfig{
+				"http*://s3*.amazonaws.com": {
+					Auth: auth{
+						AccessKeyID:     accessKeyID,
+						SecretAccessKey: secretAccesskey,
+					}},
+			},
+			Aliases: map[string]string{
+				"s3":        "https://s3.amazonaws.com/",
+				"localhost": "http://localhost:9000/",
+			},
+		}
+		return config, nil
+	case len(alias) == 2:
+		aliasName := alias[0]
+		url := alias[1]
+		if strings.HasPrefix(aliasName, "http") {
+			return nil, errors.New("invalid alias cannot use http{s}")
+		}
+		if !strings.HasPrefix(url, "http") {
+			return nil, errors.New("invalid url type only supports http{s}")
+		}
+		config = &mcConfig{
+			Version:     currentConfigVersion,
+			DefaultHost: "https://s3.amazonaws.com",
+			Hosts: map[string]hostConfig{
+				"http*://s3*.amazonaws.com": {
+					Auth: auth{
+						AccessKeyID:     accessKeyID,
+						SecretAccessKey: secretAccesskey,
+					}},
+			},
+			Aliases: map[string]string{
+				"s3":        "https://s3.amazonaws.com/",
+				"localhost": "http://localhost:9000/",
+				aliasName:   url,
+			},
+		}
+		return config, nil
+	default:
 		return nil, errors.New("invalid number of arguments for --alias, requires exact 2")
 	}
-	aliasName := alias[0]
-	url := alias[1]
-	if strings.HasPrefix(aliasName, "http") {
-		return nil, errors.New("invalid alias cannot use http{s}")
-	}
-	if !strings.HasPrefix(url, "http") {
-		return nil, errors.New("invalid url type only supports http{s}")
-	}
-
-	config = &mcConfig{
-		Version:     currentConfigVersion,
-		DefaultHost: "https://s3.amazonaws.com",
-		Hosts: map[string]hostConfig{
-			"http*://s3*.amazonaws.com": {
-				Auth: s3.Auth{
-					AccessKeyID:     accessKeyID,
-					SecretAccessKey: secretAccesskey,
-				}},
-		},
-		Aliases: map[string]string{
-			"s3":        "https://s3.amazonaws.com/",
-			"localhost": "http://localhost:9000/",
-			aliasName:   url,
-		},
-	}
-	//config.Aliases[aliasName] = url
-	return config, nil
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.

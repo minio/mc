@@ -50,10 +50,12 @@ import (
 	"encoding/xml"
 	"net/http"
 	"net/url"
+
+	"github.com/minio-io/mc/pkg/client"
 )
 
 // bySize implements sort.Interface for []Item based on the Size field.
-type bySize []*Item
+type bySize []*client.Item
 
 func (a bySize) Len() int           { return len(a) }
 func (a bySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -62,10 +64,10 @@ func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 /// Bucket API operations
 
 // ListBuckets - Get list of buckets
-func (c *Client) ListBuckets() ([]*Bucket, error) {
-	url := fmt.Sprintf("%s://%s/", c.Scheme, c.Host)
+func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
+	url := fmt.Sprintf("%s://%s/", c.URL.Scheme, c.URL.Host)
 	req := newReq(url)
-	c.Auth.signRequest(req, c.Host)
+	c.signRequest(req, c.URL.Host)
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
@@ -81,14 +83,14 @@ func (c *Client) ListBuckets() ([]*Bucket, error) {
 }
 
 // PutBucket - create new bucket
-func (c *Client) PutBucket(bucket string) error {
+func (c *s3Client) PutBucket(bucket string) error {
 	var url string
 	if IsValidBucket(bucket) && !strings.Contains(bucket, ".") {
-		url = fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
+		url = fmt.Sprintf("%s://%s/%s", c.URL.Scheme, c.URL.Host, bucket)
 	}
 	req := newReq(url)
 	req.Method = "PUT"
-	c.Auth.signRequest(req, c.Host)
+	c.signRequest(req, c.URL.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return err
@@ -106,7 +108,7 @@ func (c *Client) PutBucket(bucket string) error {
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
-func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*Item, prefixes []*Prefix, err error) {
+func (c *s3Client) ListObjects(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
 	var urlReq string
 	var buffer bytes.Buffer
 
@@ -141,7 +143,7 @@ func (c *Client) ListObjects(bucket string, startAt, prefix, delimiter string, m
 		for try := 1; try <= maxTries; try++ {
 			time.Sleep(time.Duration(try-1) * 100 * time.Millisecond)
 			req := newReq(urlReq)
-			c.Auth.signRequest(req, c.Host)
+			c.signRequest(req, c.URL.Host)
 			res, err := c.Transport.RoundTrip(req)
 			if err != nil {
 				if try < maxTries {

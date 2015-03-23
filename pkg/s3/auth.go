@@ -53,25 +53,11 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/minio-io/mc/pkg/client"
 )
 
-// Auth - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
-type Auth struct {
-	AccessKeyID     string
-	SecretAccessKey string
-
-	// Used for SSL transport layer
-	CertPEM string
-	KeyPEM  string
-}
-
-// TLSConfig - TLS cert and key configuration
-type TLSConfig struct {
-	CertPEMBlock []byte
-	KeyPEMBlock  []byte
-}
-
-func (a *Auth) loadKeys(cert string, key string) (*TLSConfig, error) {
+func (a *s3Client) loadKeys(cert string, key string) (*client.TLSConfig, error) {
 	certBlock, err := ioutil.ReadFile(cert)
 	if err != nil {
 		return nil, err
@@ -80,13 +66,13 @@ func (a *Auth) loadKeys(cert string, key string) (*TLSConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := &TLSConfig{}
+	t := &client.TLSConfig{}
 	t.CertPEMBlock = certBlock
 	t.KeyPEMBlock = keyBlock
 	return t, nil
 }
 
-func (a *Auth) getTLSTransport() (*http.Transport, error) {
+func (a *s3Client) getTLSTransport() (*http.Transport, error) {
 	if a.CertPEM == "" || a.KeyPEM == "" {
 		return &http.Transport{
 			Dial: (&net.Dialer{
@@ -118,7 +104,7 @@ func (a *Auth) getTLSTransport() (*http.Transport, error) {
 	return transport, nil
 }
 
-func (a *Auth) signRequest(req *http.Request, host string) {
+func (a *s3Client) signRequest(req *http.Request, host string) {
 	if date := req.Header.Get("Date"); date == "" {
 		req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	}
@@ -152,7 +138,7 @@ func firstNonEmptyString(strs ...string) string {
 //	 Date + "\n" +
 //	 CanonicalizedAmzHeaders +
 //	 CanonicalizedResource;
-func (a *Auth) stringToSign(req *http.Request, host string) string {
+func (a *s3Client) stringToSign(req *http.Request, host string) string {
 	buf := new(bytes.Buffer)
 	buf.WriteString(req.Method)
 	buf.WriteByte('\n')
@@ -181,7 +167,7 @@ func hasPrefixCaseInsensitive(s, pfx string) bool {
 	return shead == pfx || shead == strings.ToLower(pfx)
 }
 
-func (a *Auth) writeCanonicalizedAmzHeaders(buf *bytes.Buffer, req *http.Request) {
+func (a *s3Client) writeCanonicalizedAmzHeaders(buf *bytes.Buffer, req *http.Request) {
 	var amzHeaders []string
 	vals := make(map[string][]string)
 	for k, vv := range req.Header {
@@ -243,7 +229,7 @@ var subResList = []string{
 // CanonicalizedResource = [ "/" + Bucket ] +
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
-func (a *Auth) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request, host string) {
+func (a *s3Client) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request, host string) {
 	bucket := a.bucketFromHost(req, host)
 	if bucket != "" {
 		buf.WriteByte('/')
@@ -277,7 +263,7 @@ func hasDotSuffix(s string, suffix string) bool {
 	return len(s) >= len(suffix)+1 && strings.HasSuffix(s, suffix) && s[len(s)-len(suffix)-1] == '.'
 }
 
-func (a *Auth) bucketFromHost(req *http.Request, host string) string {
+func (a *s3Client) bucketFromHost(req *http.Request, host string) string {
 	reqHost := req.Host
 	if reqHost == "" {
 		host = req.URL.Host
