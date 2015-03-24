@@ -36,7 +36,6 @@ func (d donutFileWriter) Close() error {
 	if d.err != nil {
 		return d.err
 	}
-	println("i am here")
 	metadata, _ := json.Marshal(d.metadata)
 	ioutil.WriteFile(path.Join(d.root, "metadata.json"), metadata, 0600)
 	donutMetadata, _ := json.Marshal(d.donutMetadata)
