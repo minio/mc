@@ -2,12 +2,13 @@ package donut
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"strconv"
 	"time"
 
 	"encoding/hex"
-	"errors"
+
 	"github.com/minio-io/minio/pkg/encoding/erasure"
 	"github.com/minio-io/minio/pkg/utils/crypto/sha512"
 	"github.com/minio-io/minio/pkg/utils/split"
@@ -113,7 +114,6 @@ func erasureGoroutine(r *io.PipeReader, eWriter erasureWriter, isClosed chan<- b
 		if nodeWriter != nil {
 			nodeWriter.SetMetadata(eWriter.metadata)
 			nodeWriter.SetDonutMetadata(metadata)
-			println("I am here")
 			nodeWriter.Close()
 		}
 	}

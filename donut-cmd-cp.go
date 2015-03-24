@@ -41,6 +41,7 @@ func doDonutCPCmd(c *cli.Context) {
 				if err != nil {
 					panic(err)
 				}
+				reader.Close()
 			}
 		case urlArg1.Scheme == "" && urlArg2.Scheme != "":
 			st, stErr := os.Stat(urlArg1.Path)
@@ -62,6 +63,7 @@ func doDonutCPCmd(c *cli.Context) {
 					panic(err)
 				}
 				io.Copy(writer, reader)
+				writer.Close()
 			}
 		}
 	}
