@@ -18,6 +18,7 @@ package main
 
 import (
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -207,7 +208,6 @@ func isValidURL(s string) bool {
 	var r = "http.*://*"
 	ok, err := regexp.MatchString(r, s)
 	if err != nil {
-		fmt.Println(err)
 		return false
 	}
 	return ok

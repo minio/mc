@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/cheggaaa/pb"
