@@ -20,7 +20,7 @@ import (
 	"net/url"
 
 	"github.com/codegangsta/cli"
-	"github.com/minio-io/mc/pkg/donut"
+	"github.com/minio-io/mc/pkg/storage/donut"
 )
 
 // doMakeDonutBucketCmd creates a new bucket
