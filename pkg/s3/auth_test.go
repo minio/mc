@@ -141,11 +141,13 @@ func TestsignRequest(t *testing.T) {
 	r := req("GET /foo HTTP/1.1\n\n")
 	auth := &client.Auth{AccessKeyID: "key", SecretAccessKey: "secretkey"}
 	url, _ := url.Parse("localhost:9000")
-	cl := &s3Client{&client.Meta{
-		Auth:      auth,
-		Transport: http.DefaultTransport,
-		URL:       url,
-	}}
+	cl := &s3Client{
+		&client.Meta{
+			Auth:      auth,
+			Transport: http.DefaultTransport,
+		},
+		url,
+	}
 	cl.signRequest(r, "localhost:9000")
 	if r.Header.Get("Date") == "" {
 		t.Error("expected a Date set")
