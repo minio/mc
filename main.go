@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/codegangsta/cli"
+	"github.com/minio-io/cli"
 )
 
 func init() {

@@ -7,7 +7,7 @@ import (
 
 	"net/url"
 
-	"github.com/codegangsta/cli"
+	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/storage/donut"
 )
 

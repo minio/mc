@@ -21,7 +21,7 @@ import (
 
 	"net/url"
 
-	"github.com/codegangsta/cli"
+	"github.com/minio-io/cli"
 )
 
 // url2Object converts URL to bucket and objectname
