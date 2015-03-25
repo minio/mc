@@ -19,7 +19,6 @@ package donut
 import (
 	"errors"
 	"io"
-	"log"
 	"regexp"
 	"sort"
 	"strconv"
@@ -58,13 +57,8 @@ func IsValidBucketName(bucket string) bool {
 
 // GetNewClient returns an initialized donut driver
 func GetNewClient(path string) client.Client {
-	var err error
 	d := new(donutDriver)
-
-	d.donut, err = donut.NewDonut(path)
-	if err != nil {
-		log.Println(err)
-	}
+	d.donut, _ = donut.NewDonut(path)
 	return d
 }
 

@@ -12,6 +12,7 @@ import (
 )
 
 func doDonutCPCmd(c *cli.Context) {
+	os.MkdirAll("testdir", 0755)
 	d := donut.GetNewClient("testdir")
 	switch len(c.Args()) {
 	case 2:

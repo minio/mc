@@ -17,6 +17,8 @@
 package main
 
 import (
+	"os"
+
 	"net/url"
 
 	"github.com/minio-io/cli"
@@ -25,6 +27,7 @@ import (
 
 // doMakeDonutBucketCmd creates a new bucket
 func doMakeDonutBucketCmd(c *cli.Context) {
+	os.MkdirAll("testdir", 0755)
 	urlArg1, err := url.Parse(c.Args().Get(0))
 	if err != nil {
 		panic(err)
