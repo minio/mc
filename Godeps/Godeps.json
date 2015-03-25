@@ -27,6 +27,10 @@
 			"Rev": "fcc23e23a705c0d95fce2a446c364ac31a1c73a5"
 		},
 		{
+			"ImportPath": "github.com/minio-io/iodine",
+			"Rev": "f92ca01c8671d9565c7aa58e3427364c5e187ccf"
+		},
+		{
 			"ImportPath": "github.com/minio-io/minio/pkg/utils/split",
 			"Rev": "4c7a61a68d526105ce57328bbc9156eb00b245b6"
 		},
