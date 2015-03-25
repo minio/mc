@@ -8,12 +8,11 @@ import (
 	"net/url"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/storage/donut"
+	"github.com/minio-io/mc/pkg/client/donut"
 )
 
 func doDonutCPCmd(c *cli.Context) {
-	var e donut.Donut
-	e = donut.NewDonut("testdir")
+	d := donut.GetNewClient("testdir")
 	switch len(c.Args()) {
 	case 2:
 		urlArg1, errArg1 := url.Parse(c.Args().Get(0))
@@ -32,12 +31,11 @@ func doDonutCPCmd(c *cli.Context) {
 				panic(err)
 			}
 			if urlArg1.Scheme == "donut" {
-				e.CreateBucket(urlArg1.Host)
-				reader, err := e.GetObjectReader(urlArg1.Host, strings.TrimPrefix(urlArg1.Path, "/"))
+				reader, size, err := d.Get(urlArg1.Host, strings.TrimPrefix(urlArg1.Path, "/"))
 				if err != nil {
 					panic(err)
 				}
-				_, err = io.Copy(writer, reader)
+				_, err = io.CopyN(writer, reader, size)
 				if err != nil {
 					panic(err)
 				}
@@ -57,13 +55,10 @@ func doDonutCPCmd(c *cli.Context) {
 				panic(err)
 			}
 			if urlArg2.Scheme == "donut" {
-				e.CreateBucket(urlArg2.Host)
-				writer, err := e.GetObjectWriter(urlArg2.Host, strings.TrimPrefix(urlArg2.Path, "/"))
+				err := d.Put(urlArg2.Host, strings.TrimPrefix(urlArg2.Path, "/"), st.Size(), reader)
 				if err != nil {
 					panic(err)
 				}
-				io.Copy(writer, reader)
-				writer.Close()
 			}
 		}
 	}

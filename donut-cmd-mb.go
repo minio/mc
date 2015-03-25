@@ -20,7 +20,7 @@ import (
 	"net/url"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/storage/donut"
+	"github.com/minio-io/mc/pkg/client/donut"
 )
 
 // doMakeDonutBucketCmd creates a new bucket
@@ -29,10 +29,8 @@ func doMakeDonutBucketCmd(c *cli.Context) {
 	if err != nil {
 		panic(err)
 	}
-	var e donut.Donut
-	e = donut.NewDonut("testdir")
-
-	err = e.CreateBucket(urlArg1.Path)
+	d := donut.GetNewClient("testdir")
+	err = d.PutBucket(urlArg1.Path)
 	if err != nil {
 		panic(err)
 	}

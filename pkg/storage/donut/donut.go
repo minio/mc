@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/minio-io/iodine"
 )
 
 type donut struct {
@@ -13,15 +15,34 @@ type donut struct {
 	nodes   map[string]Node
 }
 
-// NewDonut - instantiate new donut
-func NewDonut(root string) Donut {
+// NewDonut - instantiate new donut driver
+func NewDonut(root string) (Donut, *iodine.Error) {
 	nodes := make(map[string]Node)
-	nodes["localhost"] = localDirectoryNode{root: root}
-	d := donut{
+	nodes["localhost"] = &localDirectoryNode{root: root}
+	driver := &donut{
 		buckets: make(map[string]Bucket),
 		nodes:   nodes,
 	}
-	return d
+	for nodeID, node := range nodes {
+		bucketIDs, err := node.GetBuckets()
+		if err != nil {
+			return nil, iodine.New(err, map[string]string{"root": root})
+		}
+		for _, bucketID := range bucketIDs {
+			tokens := strings.Split(bucketID, ":")
+			if _, ok := driver.buckets[tokens[0]]; !ok {
+				bucket := donutBucket{
+					nodes: make([]string, 16),
+				}
+				// TODO catch errors
+				driver.buckets[tokens[0]] = bucket
+			}
+			if err = driver.buckets[tokens[0]].AddNode(nodeID, bucketID); err != nil {
+				return nil, iodine.New(err, map[string]string{"root": root})
+			}
+		}
+	}
+	return driver, nil
 }
 
 // CreateBucket - create a new bucket
