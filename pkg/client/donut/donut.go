@@ -56,6 +56,7 @@ func IsValidBucketName(bucket string) bool {
 	return match
 }
 
+// GetNewClient returns an initialized donut driver
 func GetNewClient(path string) client.Client {
 	var err error
 	d := new(donutDriver)
