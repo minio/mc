@@ -23,7 +23,7 @@ func getErasureTechnique(technique string) (erasure.Technique, error) {
 	case technique == "Vandermonde":
 		return erasure.Cauchy, nil
 	default:
-		return -1, errors.New("Invalid erasure technique")
+		return erasure.None, errors.New("Invalid erasure technique")
 	}
 }
 
@@ -75,7 +75,9 @@ func erasureReader(readers []io.ReadCloser, donutMetadata map[string]string, wri
 		if blockSize < totalLeft {
 			curBlockSize = blockSize
 		}
-		curChunkSize := erasure.GetEncodedChunkLen(curBlockSize, uint8(k))
+
+		curChunkSize := erasure.GetEncodedBlockLen(curBlockSize, uint8(k))
+
 		encodedBytes := make([][]byte, 16)
 		for i, reader := range readers {
 			var bytesBuffer bytes.Buffer
