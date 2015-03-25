@@ -15,7 +15,7 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"github.com/codegangsta/cli"
+	"github.com/minio-io/cli"
 )
 
 const (

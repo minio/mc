@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/codegangsta/cli"
+	"github.com/minio-io/cli"
 )
 
 var healCmd = cli.Command{

@@ -23,7 +23,7 @@ import (
 	"os"
 
 	"github.com/cheggaaa/pb"
-	"github.com/codegangsta/cli"
+	"github.com/minio-io/cli"
 )
 
 // Different modes of cp operation

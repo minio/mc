@@ -19,7 +19,7 @@ package main
 import (
 	"net/url"
 
-	"github.com/codegangsta/cli"
+	"github.com/minio-io/cli"
 )
 
 var cpCmd = cli.Command{

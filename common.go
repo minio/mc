@@ -26,7 +26,7 @@ import (
 	"net/url"
 
 	"github.com/cheggaaa/pb"
-	"github.com/codegangsta/cli"
+	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/s3"
 )
