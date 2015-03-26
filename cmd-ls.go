@@ -55,12 +55,37 @@ func printObject(date time.Time, v int64, key string) {
 	info(msg)
 }
 
+// listObjectPrefix prints matching key prefix
+func listObjectPrefix(s3c client.Client, bucketName, objectName string, maxkeys int) {
+	var date time.Time
+	var size int64
+	var err error
+
+	size, date, err = s3c.Stat(bucketName, objectName)
+	var items []*client.Item
+	switch err {
+	case nil: // List a single object. Exact key
+		printObject(date, size, objectName)
+	case os.ErrNotExist:
+		// List all objects matching the key prefix
+		items, _, err = s3c.ListObjects(bucketName, "", objectName, "", maxkeys)
+		if err != nil {
+			fatal(err.Error())
+		}
+		if len(items) > 0 {
+			printObjects(items)
+		} else {
+			fatal(os.ErrNotExist.Error())
+		}
+	default: // Error
+		fatal(err.Error())
+	}
+}
+
 // doListCmd lists objects inside a bucket
 func doListCmd(c *cli.Context) {
 	var items []*client.Item
-
 	// quiet := c.GlobalBool("quiet")
-
 	urlStr, err := parseURL(c)
 	if err != nil {
 		fatal(err.Error())
@@ -94,27 +119,7 @@ func doListCmd(c *cli.Context) {
 		}
 		printObjects(items)
 	case objectName != "": // List objects matching the key prefix
-		var date time.Time
-		var size int64
-
-		size, date, err = s3c.Stat(bucketName, objectName)
-		switch err {
-		case nil: // List a single object. Exact key
-			printObject(date, size, objectName)
-		case os.ErrNotExist:
-			// List all objects matching the key prefix
-			items, _, err = s3c.ListObjects(bucketName, "", objectName, "", s3.MaxKeys)
-			if err != nil {
-				fatal(err.Error())
-			}
-			if len(items) > 0 {
-				printObjects(items)
-			} else {
-				fatal(os.ErrNotExist.Error())
-			}
-		default: // Error
-			fatal(err.Error())
-		}
+		listObjectPrefix(s3c, bucketName, objectName, s3.MaxKeys)
 	default:
 		fatal(err.Error())
 	}
