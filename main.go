@@ -24,10 +24,6 @@ import (
 	"github.com/minio-io/cli"
 )
 
-// commitID is automatically set by git. Settings are controlled
-// through .gitattributes
-const commitID = "$Id$"
-
 func init() {
 	// Check for the environment early on and gracefuly report.
 	_, err := user.Current()
@@ -54,7 +50,7 @@ func init() {
 func main() {
 	app := cli.NewApp()
 	app.Usage = "Minio Client for S3 Compatible Object Storage"
-	app.Version = commitID
+	app.Version = gitCommitHash
 	app.Commands = options
 	app.Flags = flags
 	app.Author = "Minio.io"
