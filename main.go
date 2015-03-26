@@ -26,7 +26,7 @@ import (
 
 // commitID is automatically set by git. Settings are controlled
 // through .gitattributes
-const commitID = "$Id$"
+const commitID = "$Format:%H$"
 
 func init() {
 	// Check for the environment early on and gracefuly report.
