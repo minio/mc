@@ -30,11 +30,11 @@ func doMakeDonutBucketCmd(c *cli.Context) {
 	os.MkdirAll("testdir", 0755)
 	urlArg1, err := url.Parse(c.Args().Get(0))
 	if err != nil {
-		panic(err)
+		fatal(err.Error())
 	}
-	d := donut.GetNewClient("testdir")
+	d := donut.GetNewClient(urlArg1.Host)
 	err = d.PutBucket(urlArg1.Path)
 	if err != nil {
-		panic(err)
+		fatal(err.Error())
 	}
 }

@@ -56,9 +56,14 @@ func IsValidBucketName(bucket string) bool {
 }
 
 // GetNewClient returns an initialized donut driver
-func GetNewClient(path string) client.Client {
+func GetNewClient(donutName string) client.Client {
 	d := new(donutDriver)
-	d.donut, _ = donut.NewDonut(path)
+
+	nodes := make(map[string]donut.Node)
+	node, _ := donut.NewLocalNode()
+	nodes["localhost"] = node
+
+	d.donut, _ = donut.NewDonut(donutName, nodes)
 	return d
 }
 
@@ -68,12 +73,12 @@ func (d *donutDriver) ListBuckets() (results []*client.Bucket, err error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, bucket := range buckets {
+	for name := range buckets {
 		t := client.XMLTime{
 			Time: time.Now(),
 		}
 		result := &client.Bucket{
-			Name: bucket,
+			Name: name,
 			// TODO Add real created date
 			CreationDate: t,
 		}
@@ -85,22 +90,30 @@ func (d *donutDriver) ListBuckets() (results []*client.Bucket, err error) {
 // PutBucket creates a new bucket
 func (d *donutDriver) PutBucket(bucketName string) error {
 	if IsValidBucketName(bucketName) && !strings.Contains(bucketName, ".") {
-		return d.donut.CreateBucket(bucketName)
+		return d.donut.MakeBucket(bucketName)
 	}
 	return errors.New("Invalid bucket")
 }
 
 // Get retrieves an object and writes it to a writer
 func (d *donutDriver) Get(bucketName, objectKey string) (body io.ReadCloser, size int64, err error) {
-	reader, err := d.donut.GetObjectReader(bucketName, objectKey)
+	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return nil, 0, err
 	}
-	metadata, err := d.donut.GetObjectMetadata(bucketName, objectKey)
+	object, err := buckets[bucketName].GetObject(objectKey)
+	if err != nil {
+		return nil, 0, err
+	}
+	metadata, err := buckets[bucketName].GetObjectMetadata(objectKey)
 	if err != nil {
 		return nil, 0, err
 	}
 	size, err = strconv.ParseInt(metadata["sys.size"], 10, 64)
+	if err != nil {
+		return nil, 0, err
+	}
+	reader, err := object.GetReader()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -119,9 +132,17 @@ func (d *donutDriver) Stat(bucket, object string) (size int64, date time.Time, e
 
 // ListObjects - returns list of objects
 func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
-	objects, err := d.donut.ListObjects(bucketName)
+	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return nil, nil, err
+	}
+	objectList, err := buckets[bucketName].ListObjects()
+	if err != nil {
+		return nil, nil, err
+	}
+	var objects []string
+	for key := range objectList {
+		objects = append(objects, key)
 	}
 	sort.Strings(objects)
 	if prefix != "" {
@@ -146,7 +167,7 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 		prefixes = append(prefixes, &client.Prefix{Prefix: prefix})
 	}
 	for _, object := range actualObjects {
-		metadata, err := d.donut.GetObjectMetadata(bucketName, object)
+		metadata, err := buckets[bucketName].GetObjectMetadata(object)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -173,7 +194,15 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 
 // Put creates a new object
 func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.Reader) error {
-	writer, err := d.donut.GetObjectWriter(bucketName, objectKey)
+	buckets, err := d.donut.ListBuckets()
+	if err != nil {
+		return err
+	}
+	object, err := buckets[bucketName].GetObject(objectKey)
+	if err != nil {
+		return err
+	}
+	writer, err := object.GetWriter()
 	if err != nil {
 		return err
 	}
@@ -184,7 +213,7 @@ func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.
 	metadata["bucket"] = bucketName
 	metadata["object"] = objectKey
 	metadata["contentType"] = "application/octet-stream"
-	if err = writer.SetMetadata(metadata); err != nil {
+	if err = object.SetMetadata(metadata); err != nil {
 		return err
 	}
 	return writer.Close()
