@@ -104,6 +104,69 @@ func (c *s3Client) PutBucket(bucket string) error {
 	return nil
 }
 
+// Try the enumerate 5 times, since Amazon likes to close
+// https connections a lot, and Go sucks at dealing with it:
+// https://code.google.com/p/go/issues/detail?id=3514
+func (c *s3Client) retry(urlReq string) (listBucketResults, error) {
+	const maxTries = 5
+	bres := listBucketResults{}
+	for try := 1; try <= maxTries; try++ {
+		time.Sleep(time.Duration(try-1) * 100 * time.Millisecond)
+		req := newReq(urlReq)
+		c.signRequest(req, c.Host)
+		res, err := c.Transport.RoundTrip(req)
+		if err != nil {
+			if try < maxTries {
+				continue
+			}
+			return listBucketResults{}, err
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			return listBucketResults{}, NewError(res)
+		}
+
+		var logbuf bytes.Buffer
+		err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(&bres)
+		if err != nil {
+			fmt.Printf("Error parsing s3 XML response: %v for %q\n", err, logbuf.Bytes())
+			if try < maxTries-1 {
+				fmt.Printf("Reconnecting...\n")
+				continue
+			}
+			return listBucketResults{}, err
+		}
+		break
+	}
+	return bres, nil
+}
+
+func (c *s3Client) getItems(s, m string, contents []*client.Item) (items []*client.Item, marker string, err error) {
+	for _, it := range contents {
+		if it.Key == m && it.Key != s {
+			// Skip first dup on pages 2 and higher.
+			continue
+		}
+		if it.Key < s {
+			msg := fmt.Sprintf("Unexpected response from Amazon: item key %q but wanted greater than %q", it.Key, s)
+			return nil, m, errors.New(msg)
+		}
+		items = append(items, it)
+		marker = it.Key
+	}
+	return items, marker, nil
+}
+
+func (c *s3Client) getPrefixes(commonPrefixes []*client.Prefix) (prefixes []*client.Prefix, err error) {
+	for _, pre := range commonPrefixes {
+		if pre.Prefix != "" {
+			prefixes = append(prefixes, pre)
+		}
+	}
+	return prefixes, nil
+}
+
 // ListObjects returns 0 to maxKeys (inclusive) items from the
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
@@ -136,63 +199,22 @@ func (c *s3Client) ListObjects(bucket string, startAt, prefix, delimiter string,
 		}
 
 		urlReq = buffer.String()
-		// Try the enumerate three times, since Amazon likes to close
-		// https connections a lot, and Go sucks at dealing with it:
-		// https://code.google.com/p/go/issues/detail?id=3514
-		const maxTries = 5
-		for try := 1; try <= maxTries; try++ {
-			time.Sleep(time.Duration(try-1) * 100 * time.Millisecond)
-			req := newReq(urlReq)
-			c.signRequest(req, c.Host)
-			res, err := c.Transport.RoundTrip(req)
-			if err != nil {
-				if try < maxTries {
-					continue
-				}
-				return nil, nil, err
-			}
-			defer res.Body.Close()
-
-			if res.StatusCode != http.StatusOK {
-				return nil, nil, NewError(res)
-			}
-
-			bres = listBucketResults{}
-			var logbuf bytes.Buffer
-			err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(&bres)
-			if err != nil {
-				fmt.Printf("Error parsing s3 XML response: %v for %q", err, logbuf.Bytes())
-			} else if bres.MaxKeys != fetchN || bres.Name != bucket || bres.Marker != marker {
-				msg := fmt.Sprintf("Unexpected parse from server: %#v from: %s", bres, logbuf.Bytes())
-				err = errors.New(msg)
-				fmt.Print(err)
-			}
-			if err != nil {
-				if try < maxTries-1 {
-					continue
-				}
-				fmt.Print(err)
-				return nil, nil, err
-			}
-			break
+		bres, err = c.retry(urlReq)
+		if err != nil {
+			return nil, nil, err
 		}
-		for _, it := range bres.Contents {
-			if it.Key == marker && it.Key != startAt {
-				// Skip first dup on pages 2 and higher.
-				continue
-			}
-			if it.Key < startAt {
-				msg := fmt.Sprintf("Unexpected response from Amazon: item key %q but wanted greater than %q", it.Key, startAt)
-				return nil, nil, errors.New(msg)
-			}
-			items = append(items, it)
-			marker = it.Key
+		if bres.MaxKeys != fetchN || bres.Name != bucket || bres.Marker != marker {
+			msg := fmt.Sprintf("Unexpected parse from server: %#v", bres)
+			err = errors.New(msg)
+			return nil, nil, err
 		}
-
-		for _, pre := range bres.CommonPrefixes {
-			if pre.Prefix != "" {
-				prefixes = append(prefixes, pre)
-			}
+		items, marker, err = c.getItems(startAt, marker, bres.Contents)
+		if err != nil {
+			return nil, nil, err
+		}
+		prefixes, err = c.getPrefixes(bres.CommonPrefixes)
+		if err != nil {
+			return nil, nil, err
 		}
 
 		if !bres.IsTruncated {

@@ -86,31 +86,13 @@ func (p *Partition) getPartitionAttrs(part string) error {
 	return nil
 }
 
-// getDiskAttrs - populates all the disk related attributes
-func (d *Disk) getDiskAttrs(disk string) error {
-	var diskAttrsList []string
-	var diskQueueAttrs []string
-	aggrAttrMap := make(map[string][]byte)
-
-	sysfsBlockDev := path.Join(SysfsBlock, disk)
-	sysfsBlockDevQueue := path.Join(sysfsBlockDev, "/queue")
-
-	scsiFiles, err := ioutil.ReadDir(sysfsBlockDev)
-	if err != nil {
-		return err
-	}
-
-	scsiQueueFiles, err := ioutil.ReadDir(sysfsBlockDevQueue)
-	if err != nil {
-		return err
-	}
-
+func (d *Disk) getDiskAttrList(scsiFiles []os.FileInfo, disk string) (diskAttrsList []string, err error) {
 	for _, sf := range scsiFiles {
 		if sf.IsDir() {
 			if strings.Contains(sf.Name(), disk) {
 				var p = Partition{}
 				if err := p.getPartitionAttrs(sf.Name()); err != nil {
-					return err
+					return nil, err
 				}
 				d.Partitions = append(d.Partitions, p)
 			}
@@ -126,7 +108,10 @@ func (d *Disk) getDiskAttrs(disk string) error {
 		}
 		diskAttrsList = append(diskAttrsList, sf.Name())
 	}
+	return diskAttrsList, nil
+}
 
+func (d *Disk) getDiskQueueAttrsList(scsiQueueFiles []os.FileInfo) (diskQueueAttrsList []string, err error) {
 	for _, sf := range scsiQueueFiles {
 		if sf.IsDir() {
 			continue
@@ -139,19 +124,50 @@ func (d *Disk) getDiskAttrs(disk string) error {
 		if sf.Mode().Perm() == 128 {
 			continue
 		}
-		diskQueueAttrs = append(diskQueueAttrs, sf.Name())
+		diskQueueAttrsList = append(diskQueueAttrsList, sf.Name())
+	}
+	return diskQueueAttrsList, nil
+}
+
+// getDiskAttrs - populates all the disk related attributes
+func (d *Disk) getDiskAttrs(disk string) error {
+	var diskAttrsList []string
+	var diskQueueAttrsList []string
+	aggrAttrMap := make(map[string][]byte)
+
+	sysfsBlockDev := path.Join(SysfsBlock, disk)
+	sysfsBlockDevQueue := path.Join(sysfsBlockDev, "/queue")
+
+	scsiFiles, err := ioutil.ReadDir(sysfsBlockDev)
+	if err != nil {
+		return err
+	}
+
+	scsiQueueFiles, err := ioutil.ReadDir(sysfsBlockDevQueue)
+	if err != nil {
+		return err
+	}
+
+	diskAttrsList, err = d.getDiskAttrList(scsiFiles, disk)
+	if err != nil {
+		return err
+	}
+
+	diskQueueAttrsList, err = d.getDiskQueueAttrsList(scsiQueueFiles)
+	if err != nil {
+		return err
 	}
 
 	if len(diskAttrsList) == 0 {
 		return NoDiskAttributesFound{}
 	}
 
-	if len(diskQueueAttrs) == 0 {
+	if len(diskQueueAttrsList) == 0 {
 		return NoDiskQueueAttributesFound{}
 	}
 
 	diskAttrMap := getattrs(sysfsBlockDev, diskAttrsList)
-	diskQueueAttrMap := getattrs(sysfsBlockDevQueue, diskQueueAttrs)
+	diskQueueAttrMap := getattrs(sysfsBlockDevQueue, diskQueueAttrsList)
 
 	for k, v := range diskAttrMap {
 		aggrAttrMap[k] = v

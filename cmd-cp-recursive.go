@@ -76,24 +76,28 @@ func isBucketExist(bucketName string, v []*client.Bucket) bool {
 	return false
 }
 
+func sourceValidate(input string) error {
+	if s3.IsValidBucketName(input) {
+		return fmt.Errorf("Invalid input bucket name [%s]", input)
+	}
+	st, err := os.Stat(input)
+	if os.IsNotExist(err) {
+		return err
+	}
+	if !st.IsDir() {
+		return errors.New("Should be a directory")
+	}
+	return nil
+}
+
 // doRecursiveCP recursively copies objects from source to destination
 func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
-	var err error
-	var st os.FileInfo
 	var buckets []*client.Bucket
-
 	switch true {
 	case args.source.bucket == "":
 		input := path.Clean(args.source.key)
-		if s3.IsValidBucketName(input) {
-			return fmt.Errorf("Invalid input bucket name [%s]", input)
-		}
-		st, err = os.Stat(input)
-		if os.IsNotExist(err) {
+		if err := sourceValidate(input); err != nil {
 			return err
-		}
-		if !st.IsDir() {
-			return errors.New("Should be a directory")
 		}
 		s3c, err := getNewClient(c.GlobalBool("debug"), args.destination.url.String())
 		if err != nil {
