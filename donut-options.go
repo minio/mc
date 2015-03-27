@@ -1,35 +1,58 @@
+/*
+ * Minimalist Object Storage, (C) 2015 Minio, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package main
 
 import (
 	"github.com/minio-io/cli"
 )
 
-var healCmd = cli.Command{
-	Name:        "heal",
-	Usage:       "heal donut",
+var makeDonutCmd = cli.Command{
+	Name:        "make",
+	Usage:       "make",
 	Description: "",
-	Action:      doHealCmd,
+	Action:      doMakeDonutCmd,
 }
 
-var attachCmd = cli.Command{
+var attachDiskCmd = cli.Command{
 	Name:        "attach",
 	Usage:       "attach disk",
 	Description: "",
-	Action:      doAttachCmd,
+	Action:      doAttachDiskCmd,
 }
 
-var detachCmd = cli.Command{
+var detachDiskCmd = cli.Command{
 	Name:        "detach",
 	Usage:       "detach disk",
 	Description: "",
-	Action:      doDetachCmd,
+	Action:      doDetachDiskCmd,
 }
 
-var rebalanceCmd = cli.Command{
+var healDonutCmd = cli.Command{
+	Name:        "heal",
+	Usage:       "heal donut",
+	Description: "",
+	Action:      doHealDonutCmd,
+}
+
+var rebalanceDonutCmd = cli.Command{
 	Name:        "rebalance",
 	Usage:       "rebalance ",
 	Description: "",
-	Action:      doRebalanceCmd,
+	Action:      doRebalanceDonutCmd,
 }
 
 var cpDonutCmd = cli.Command{
@@ -46,31 +69,18 @@ var mbDonutCmd = cli.Command{
 	Action:      doMakeDonutBucketCmd,
 }
 
-var makeDonutCmd = cli.Command{
-	Name:        "make",
-	Usage:       "make",
-	Description: "",
-	Action:      doMakeDonutCmd,
-}
-
 var donutOptions = []cli.Command{
-	healCmd,
-	attachCmd,
-	detachCmd,
-	rebalanceCmd,
-	cpDonutCmd,
-	mbDonutCmd,
 	makeDonutCmd,
+	attachDiskCmd,
+	detachDiskCmd,
+	healDonutCmd,
+	rebalanceDonutCmd,
+	mbDonutCmd,
+	cpDonutCmd,
 }
 
-func doHealCmd(c *cli.Context) {
+func doHealDonutCmd(c *cli.Context) {
 }
 
-func doAttachCmd(c *cli.Context) {
-}
-
-func doDetachCmd(c *cli.Context) {
-}
-
-func doRebalanceCmd(c *cli.Context) {
+func doRebalanceDonutCmd(c *cli.Context) {
 }
