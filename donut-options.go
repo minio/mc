@@ -46,6 +46,13 @@ var mbDonutCmd = cli.Command{
 	Action:      doMakeDonutBucketCmd,
 }
 
+var makeDonutCmd = cli.Command{
+	Name:        "make",
+	Usage:       "make",
+	Description: "",
+	Action:      doMakeDonutCmd,
+}
+
 var donutOptions = []cli.Command{
 	healCmd,
 	attachCmd,
@@ -53,6 +60,7 @@ var donutOptions = []cli.Command{
 	rebalanceCmd,
 	cpDonutCmd,
 	mbDonutCmd,
+	makeDonutCmd,
 }
 
 func doHealCmd(c *cli.Context) {
