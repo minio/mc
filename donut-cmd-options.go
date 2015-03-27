@@ -22,15 +22,15 @@ import (
 
 var makeDonutCmd = cli.Command{
 	Name:        "make",
-	Usage:       "make",
-	Description: "",
+	Usage:       "make donut",
+	Description: "Make a new donut",
 	Action:      doMakeDonutCmd,
 }
 
 var attachDiskCmd = cli.Command{
 	Name:        "attach",
 	Usage:       "attach disk",
-	Description: "",
+	Description: "Attach disk to an existing donut",
 	Action:      doAttachDiskCmd,
 	Flags: []cli.Flag{
 		cli.StringFlag{
@@ -43,7 +43,7 @@ var attachDiskCmd = cli.Command{
 var detachDiskCmd = cli.Command{
 	Name:        "detach",
 	Usage:       "detach disk",
-	Description: "",
+	Description: "Detach disk from an existing donut",
 	Action:      doDetachDiskCmd,
 	Flags: []cli.Flag{
 		cli.StringFlag{
@@ -56,28 +56,28 @@ var detachDiskCmd = cli.Command{
 var healDonutCmd = cli.Command{
 	Name:        "heal",
 	Usage:       "heal donut",
-	Description: "",
+	Description: "Heal donut with any errors",
 	Action:      doHealDonutCmd,
 }
 
 var rebalanceDonutCmd = cli.Command{
 	Name:        "rebalance",
-	Usage:       "rebalance ",
-	Description: "",
+	Usage:       "rebalance donut",
+	Description: "Rebalance data on donut after adding disks",
 	Action:      doRebalanceDonutCmd,
 }
 
 var cpDonutCmd = cli.Command{
 	Name:        "cp",
 	Usage:       "cp",
-	Description: "",
+	Description: "Copies a local file or dir or object or bucket to another location locally or to Donut or to S3.",
 	Action:      doDonutCPCmd,
 }
 
 var mbDonutCmd = cli.Command{
 	Name:        "mb",
-	Usage:       "mb",
-	Description: "",
+	Usage:       "make bucket",
+	Description: "Make a new bucket",
 	Action:      doMakeDonutBucketCmd,
 }
 
