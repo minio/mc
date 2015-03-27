@@ -60,7 +60,8 @@ docs-deploy:
 	@mkdocs gh-deploy --clean
 
 install: test-all
-	@godep go install github.com/minio-io/mc && echo "Installed mc:"
+	@echo "Installing mc:"
+	@godep go install github.com/minio-io/mc 
 	@mkdir -p $(HOME)/.minio/mc
 
 clean:

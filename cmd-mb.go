@@ -23,7 +23,7 @@ import (
 
 // doMakeBucketCmd creates a new bucket
 func doMakeBucketCmd(c *cli.Context) {
-	urlStr, err := parseURL(c)
+	urlStr, err := parseURL(c.Args().First())
 	if err != nil {
 		fatal(err.Error())
 	}

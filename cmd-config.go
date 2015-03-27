@@ -152,12 +152,24 @@ func saveConfig(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	defer configFile.Close()
 
 	_, err = configFile.Write(jsonConfig)
 	if err != nil {
+		configFile.Close()
 		return err
 	}
+
+	configFile.Close()
+
+	// Invalidate cached config
+	_config = nil
+
+	// Reload and cache new config
+	_, err = getMcConfig()
+	if os.IsNotExist(err) {
+		return err
+	}
+
 	return nil
 }
 

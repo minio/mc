@@ -86,13 +86,10 @@ func listObjectPrefix(s3c client.Client, bucketName, objectName string, maxkeys 
 func doListCmd(c *cli.Context) {
 	var items []*client.Item
 	// quiet := c.GlobalBool("quiet")
-	urlStr, err := parseURL(c)
+
+	urlStr, err := parseURL(c.Args().First())
 	if err != nil {
 		fatal(err.Error())
-	}
-
-	if !isValidURL(urlStr) {
-		fatal(errInvalidScheme.Error())
 	}
 
 	bucketName, objectName, err := url2Object(urlStr)

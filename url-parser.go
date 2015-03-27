@@ -24,11 +24,99 @@ import (
 	"github.com/minio-io/cli"
 )
 
+// URLType defines supported storage protocols
+type urlType int
+
+const (
+	urlUnknown urlType = iota // Minio and S3 compatible object storage
+	urlS3                     // Minio and S3 compatible object storage
+	urlDonut                  // Donut object storage
+	urlFile                   // POSIX compatible file systems
+)
+
+// urlType detects the type of URL
+func getURLType(urlStr string) (uType urlType, err error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return urlUnknown, err
+	}
+
+	switch u.Scheme {
+	case "http":
+		fallthrough
+	case "https":
+		return urlS3, nil
+	case "donut":
+		return urlDonut, nil
+	case "file":
+		fallthrough
+	case "":
+		return urlFile, nil
+	default:
+		return urlUnknown, nil
+	}
+}
+
+// isValidURL checks the validity of supported URL types
+func isValidURL(urlStr string) bool {
+	u, e := getURLType(urlStr)
+	if e != nil || u == urlUnknown {
+		return false
+	}
+	return true
+}
+
+// isValidURL checks the validity of supported URL types
+func isValidFileURL(urlStr string) bool {
+	u, e := getURLType(urlStr)
+	if e != nil {
+		return false
+	}
+	if u != urlFile {
+		return false
+	}
+
+	return true
+}
+
+// fixFileURL rewrites file URL to proper file:///path/to/ form.
+func fixFileURL(urlStr string) (fixedURL string, err error) {
+	ut, e := getURLType(urlStr)
+	if e != nil || ut != urlFile {
+		return "", e
+	}
+
+	if urlStr == "" {
+		return "", errEmptyURL
+	}
+
+	u, e := url.Parse(urlStr)
+	if e != nil {
+		return "", e
+	}
+
+	// file:///path should always have empty host
+	if u.Host != "" {
+		// Not really a file URL. Host is not empty.
+		return "", errInvalidURL
+	}
+
+	// fill missing scheme
+	if u.Scheme == "" {
+		// Set it to file
+		u.Scheme = "file"
+	}
+
+	fixedURL = u.String()
+	return fixedURL, nil
+
+}
+
 // url2Object converts URL to bucket and objectname
 func url2Object(urlStr string) (bucketName, objectName string, err error) {
 	url, err := url.Parse(urlStr)
 	if url.Path == "" {
-		// No bucket name passed. It is a valid case.
+		// No bucket name passed. It is a valid case
 		return "", "", nil
 	}
 	splits := strings.SplitN(url.Path, "/", 3)
@@ -53,8 +141,9 @@ func url2Bucket(urlStr string) (bucketName string, err error) {
 }
 
 // parseURL extracts URL string from a single cmd-line argument
-func parseURL(c *cli.Context) (urlStr string, err error) {
-	urlStr = c.Args().First()
+func parseURL(arg string) (urlStr string, err error) {
+	urlStr = arg
+
 	// Use default host if no argument is passed
 	if urlStr == "" {
 		// Load config file
@@ -64,12 +153,34 @@ func parseURL(c *cli.Context) (urlStr string, err error) {
 		}
 		urlStr = config.DefaultHost
 	}
+
 	// Check and expand Alias
 	urlStr, err = aliasExpand(urlStr)
-
 	if err != nil {
 		return "", err
 	}
 
+	if !isValidURL(urlStr) {
+		return "", errInvalidScheme
+	}
+
+	// If it is a file URL, rewrite to file:///path/to form
+	if isValidFileURL(urlStr) {
+		urlStr, err = fixFileURL(urlStr)
+		return urlStr, err
+	}
+
+	return urlStr, err
+}
+
+// parseURL extracts multiple URL strings from a single cmd-line argument
+func parseURLs(c *cli.Context) (urlStr []string, err error) {
+	for _, arg := range c.Args() {
+		u, err := parseURL(arg)
+		if err != nil {
+			return nil, err
+		}
+		urlStr = append(urlStr, u)
+	}
 	return urlStr, err
 }
