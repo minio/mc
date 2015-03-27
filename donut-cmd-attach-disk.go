@@ -36,11 +36,11 @@ func doAttachDiskCmd(c *cli.Context) {
 		fatal("Invalid --donut <name> is needed for attach")
 	}
 	if _, ok := mcDonutConfigData.Donuts[donutName]; !ok {
-		msg := fmt.Sprintf("Requested donut name %s does not exist, please use ``mc donut make`` first\n", donutName)
+		msg := fmt.Sprintf("Requested donut name %s does not exist, please use ``mc donut make`` first", donutName)
 		fatal(msg)
 	}
 	if _, ok := mcDonutConfigData.Donuts[donutName].Node["localhost"]; !ok {
-		msg := fmt.Sprintf("Corrupted donut config, please consult donut experts\n")
+		msg := fmt.Sprintf("Corrupted donut config, please consult donut experts")
 		fatal(msg)
 	}
 	activeDisks := mcDonutConfigData.Donuts[donutName].Node["localhost"].ActiveDisks

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/minio-io/cli"
@@ -56,17 +57,23 @@ func doMakeDonutCmd(c *cli.Context) {
 		if err := saveDonutConfig(mcDonutConfigData); err != nil {
 			fatal(err.Error())
 		}
+		return
 	} else if err != nil {
 		fatal(err.Error())
 	}
-	mcDonutConfigData.Donuts[donutName] = donutConfig{
-		Node: make(map[string]nodeConfig),
-	}
-	mcDonutConfigData.Donuts[donutName].Node["localhost"] = nodeConfig{
-		ActiveDisks:   make([]string, 0),
-		InactiveDisks: make([]string, 0),
-	}
-	if err := saveDonutConfig(mcDonutConfigData); err != nil {
-		fatal(err.Error())
+	if _, ok := mcDonutConfigData.Donuts[donutName]; !ok {
+		mcDonutConfigData.Donuts[donutName] = donutConfig{
+			Node: make(map[string]nodeConfig),
+		}
+		mcDonutConfigData.Donuts[donutName].Node["localhost"] = nodeConfig{
+			ActiveDisks:   make([]string, 0),
+			InactiveDisks: make([]string, 0),
+		}
+		if err := saveDonutConfig(mcDonutConfigData); err != nil {
+			fatal(err.Error())
+		}
+	} else {
+		msg := fmt.Sprintf("donut: %s already exists", donutName)
+		info(msg)
 	}
 }
