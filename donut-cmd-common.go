@@ -16,6 +16,15 @@
 
 package main
 
+func isStringInSlice(items []string, item string) bool {
+	for _, s := range items {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
 func deleteFromSlice(items []string, item string) []string {
 	var newitems []string
 	for _, s := range items {
