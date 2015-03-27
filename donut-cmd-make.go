@@ -18,102 +18,9 @@ package main
 
 import (
 	"os"
-	"path"
-
-	"encoding/json"
-	"io/ioutil"
 
 	"github.com/minio-io/cli"
 )
-
-type nodeConfig struct {
-	ActiveDisks   []string
-	InactiveDisks []string
-}
-
-type donutConfig struct {
-	Node map[string]nodeConfig
-}
-
-type mcDonutConfig struct {
-	Donuts map[string]donutConfig
-}
-
-// Is alphanumeric?
-func isalnum(c rune) bool {
-	return '0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z'
-}
-
-// isValidDonutName - verify donutName to be valid
-func isValidDonutName(donutName string) bool {
-	if len(donutName) > 1024 || len(donutName) == 0 {
-		return false
-	}
-	for _, char := range donutName {
-		if isalnum(char) {
-			continue
-		}
-		switch char {
-		case '-':
-		case '.':
-		case '_':
-		case '~':
-			continue
-		default:
-			return false
-		}
-	}
-	return true
-}
-
-func getDonutConfigFilename() string {
-	return path.Join(getMcConfigDir(), "donuts.json")
-}
-
-// saveDonutConfig writes configuration data in json format to donut config file.
-func saveDonutConfig(donutConfigData *mcDonutConfig) error {
-	jsonConfig, err := json.MarshalIndent(donutConfigData, "", "\t")
-	if err != nil {
-		return err
-	}
-
-	err = os.MkdirAll(getMcConfigDir(), 0755)
-	if !os.IsExist(err) && err != nil {
-		return err
-	}
-
-	configFile, err := os.OpenFile(getDonutConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	defer configFile.Close()
-
-	_, err = configFile.Write(jsonConfig)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func loadDonutConfig() (donutConfigData *mcDonutConfig, err error) {
-	configFile := getDonutConfigFilename()
-	_, err = os.Stat(configFile)
-	if err != nil {
-		return nil, err
-	}
-
-	configBytes, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(configBytes, &donutConfigData)
-	if err != nil {
-		return nil, err
-	}
-
-	return donutConfigData, nil
-}
 
 func newDonutConfig(donutName string) (*mcDonutConfig, error) {
 	mcDonutConfigData := new(mcDonutConfig)
@@ -130,8 +37,11 @@ func newDonutConfig(donutName string) (*mcDonutConfig, error) {
 
 // doMakeDonutCmd creates a new donut
 func doMakeDonutCmd(c *cli.Context) {
+	if !c.Args().Present() {
+		fatal("no args?")
+	}
 	if len(c.Args()) != 1 {
-		fatal("Invalid args")
+		fatal("invalid number of args")
 	}
 	donutName := c.Args().First()
 	if !isValidDonutName(donutName) {

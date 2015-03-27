@@ -32,6 +32,12 @@ var attachDiskCmd = cli.Command{
 	Usage:       "attach disk",
 	Description: "",
 	Action:      doAttachDiskCmd,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "Donut name",
+		},
+	},
 }
 
 var detachDiskCmd = cli.Command{
@@ -39,6 +45,12 @@ var detachDiskCmd = cli.Command{
 	Usage:       "detach disk",
 	Description: "",
 	Action:      doDetachDiskCmd,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "Donut name",
+		},
+	},
 }
 
 var healDonutCmd = cli.Command{
