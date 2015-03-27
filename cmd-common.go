@@ -18,7 +18,6 @@ package main
 
 import (
 	"path"
-	"regexp"
 	"strings"
 	"time"
 
@@ -226,13 +225,4 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 
 func getMcBashCompletionFilename() string {
 	return path.Join(getMcConfigDir(), "mc.bash_completion")
-}
-
-func isValidURL(s string) bool {
-	var r = "http.*://*"
-	ok, err := regexp.MatchString(r, s)
-	if err != nil {
-		return false
-	}
-	return ok
 }

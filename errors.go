@@ -23,7 +23,13 @@ var (
 	errFskey = errors.New("Key is needed to get the file")
 
 	// url
+	errEmptyURL = errors.New("URL is empty")
+
+	// url
 	errInvalidScheme = errors.New("Invalid URL scheme only http{s}:// supported")
+
+	// url
+	errInvalidURL = errors.New("Invalid URL")
 
 	// host
 	errHostname = errors.New("No hostname specified")
