@@ -2,50 +2,67 @@ package donut
 
 import (
 	"io"
+	"os"
 )
 
 // Collection of Donut specification interfaces
 
 // Donut interface
 type Donut interface {
-	CreateBucket(bucket string) error
-	GetObjectReader(bucket, object string) (io.ReadCloser, error)
-	GetObjectWriter(bucket, object string) (ObjectWriter, error)
-	GetObjectMetadata(bucket, object string) (map[string]string, error)
-	ListBuckets() ([]string, error)
-	ListObjects(bucket string) ([]string, error)
+	MakeBucket(bucket string) error
+	ListBuckets() (map[string]Bucket, error)
+
+	Heal() error
+	Rebalance() error
+	Info() error
+
+	AttachNode(node Node) error
+	DetachNode(node Node) error
+
+	SaveConfig() ([]byte, error)
+	LoadConfig([]byte) error
+}
+
+// Encoder interface
+type Encoder interface {
+	Encode(data []byte, k, m uint8) (encodedData [][]byte, err error)
+	Decode(encodedData [][]byte, dataLength int) (data []byte, err error)
 }
 
 // Bucket interface
 type Bucket interface {
-	GetNodes() ([]string, error)
-	AddNode(nodeID, bucketID string) error
+	ListObjects() (map[string]Object, error)
+	GetObject(object string) (Object, error)
+	GetObjectMetadata(object string) (map[string]string, error)
+}
+
+// Object interface
+type Object interface {
+	GetReader() (io.ReadCloser, error)
+	GetWriter() (io.WriteCloser, error)
+	SetMetadata(map[string]string) error
 }
 
 // Node interface
 type Node interface {
-	CreateBucket(bucket string) error
-	GetBuckets() ([]string, error)
-	GetDonutMetadata(bucket, object string) (map[string]string, error)
-	GetMetadata(bucket, object string) (map[string]string, error)
-	GetReader(bucket, object string) (io.ReadCloser, error)
-	GetWriter(bucket, object string) (Writer, error)
-	ListObjects(bucket string) ([]string, error)
+	ListDisks() (map[string]Disk, error)
+	AttachDisk(disk Disk) error
+	DetachDisk(disk Disk) error
+
+	SaveConfig() ([]byte, error)
+	LoadConfig([]byte) error
 }
 
-// ObjectWriter interface
-type ObjectWriter interface {
-	Close() error
-	CloseWithError(error) error
-	GetMetadata() (map[string]string, error)
-	SetMetadata(map[string]string) error
-	Write([]byte) (int, error)
-}
+// Disk interface
+type Disk interface {
+	MakeDir(dirname string) error
+	ListDir() error
 
-// Writer interface
-type Writer interface {
-	ObjectWriter
+	ListFiles(dirname string) error
 
-	GetDonutMetadata() (map[string]string, error)
-	SetDonutMetadata(map[string]string) error
+	MakeFile(path string) (*os.File, error)
+	OpenFile(path string) (*os.File, error)
+
+	SaveConfig() ([]byte, error)
+	LoadConfig([]byte) error
 }
