@@ -2,17 +2,38 @@ package donut
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path"
+	"syscall"
+
+	"io/ioutil"
 )
 
 type disk struct {
 	path   string
+	order  string
 	fsType string
 }
 
 // NewDisk - instantiate new disk
-func NewDisk(path string) (Disk, error) {
-	return nil, errors.New("Not Implemented")
+func NewDisk(diskPath, diskOrder string) (Disk, error) {
+	if diskPath == "" || diskOrder == "" {
+		return nil, errors.New("invalid argument")
+	}
+	st, err := os.Stat(diskPath)
+	if err != nil {
+		return nil, err
+	}
+	if !st.IsDir() {
+		return nil, syscall.ENOTDIR
+	}
+	d := disk{
+		path:   diskPath,
+		order:  diskOrder,
+		fsType: "",
+	}
+	return d, nil
 }
 
 func (d disk) GetDiskName() string {
@@ -20,15 +41,38 @@ func (d disk) GetDiskName() string {
 }
 
 func (d disk) MakeDir(dirname string) error {
-	return errors.New("Not Implemented")
+	orderedDirname := fmt.Sprintf("%s%s", dirname, d.order)
+	return os.MkdirAll(path.Join(d.path, orderedDirname), 0700)
 }
 
-func (d disk) ListDir() error {
-	return errors.New("Not Implemented")
+func (d disk) ListDir(dirname string) ([]os.FileInfo, error) {
+	contents, err := ioutil.ReadDir(path.Join(d.path, dirname))
+	if err != nil {
+		return nil, err
+	}
+	var directories []os.FileInfo
+	for _, content := range contents {
+		// Include only directories, ignore everything else
+		if content.IsDir() {
+			directories = append(directories, content)
+		}
+	}
+	return directories, nil
 }
 
-func (d disk) ListFiles(dirname string) error {
-	return errors.New("Not Implemented")
+func (d disk) ListFiles(dirname string) ([]os.FileInfo, error) {
+	contents, err := ioutil.ReadDir(path.Join(d.path, dirname))
+	if err != nil {
+		return nil, err
+	}
+	var files []os.FileInfo
+	for _, content := range contents {
+		// Include only regular files, ignore everything else
+		if content.Mode().IsRegular() {
+			files = append(files, content)
+		}
+	}
+	return files, nil
 }
 
 func (d disk) MakeFile(path string) (*os.File, error) {

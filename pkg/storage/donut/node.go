@@ -4,33 +4,33 @@ import (
 	"errors"
 )
 
-type localNode struct {
+type node struct {
 	hostname string
 	disks    map[string]Disk
 }
 
-// NewLocalNode - instantiates a new local node
-func NewLocalNode(hostname string) (Node, error) {
+// NewNode - instantiates a new node
+func NewNode(hostname string) (Node, error) {
 	if hostname == "" {
 		return nil, errors.New("invalid argument")
 	}
 	disks := make(map[string]Disk)
-	n := localNode{
+	n := node{
 		hostname: hostname,
 		disks:    disks,
 	}
 	return n, nil
 }
 
-func (n localNode) GetNodeName() string {
+func (n node) GetNodeName() string {
 	return n.hostname
 }
 
-func (n localNode) ListDisks() (map[string]Disk, error) {
+func (n node) ListDisks() (map[string]Disk, error) {
 	return n.disks, nil
 }
 
-func (n localNode) AttachDisk(disk Disk) error {
+func (n node) AttachDisk(disk Disk) error {
 	if disk == nil {
 		return errors.New("Invalid argument")
 	}
@@ -38,15 +38,15 @@ func (n localNode) AttachDisk(disk Disk) error {
 	return nil
 }
 
-func (n localNode) DetachDisk(disk Disk) error {
+func (n node) DetachDisk(disk Disk) error {
 	delete(n.disks, disk.GetDiskName())
 	return nil
 }
 
-func (n localNode) SaveConfig() ([]byte, error) {
+func (n node) SaveConfig() ([]byte, error) {
 	return nil, errors.New("Not Implemented")
 }
 
-func (n localNode) LoadConfig([]byte) error {
+func (n node) LoadConfig([]byte) error {
 	return errors.New("Not Implemented")
 }

@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"net/url"
 
@@ -26,8 +25,8 @@ import (
 	"github.com/minio-io/mc/pkg/client/donut"
 )
 
-// doMakeDonutBucketCmd creates a new bucket
-func doMakeDonutBucketCmd(c *cli.Context) {
+// doDonutListCmd - list buckets and objects
+func doDonutListCmd(c *cli.Context) {
 	if !c.Args().Present() {
 		fatal("no args?")
 	}
@@ -51,8 +50,9 @@ func doMakeDonutBucketCmd(c *cli.Context) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	err = d.PutBucket(strings.TrimPrefix(urlArg1.Path, "/"))
+	buckets, err := d.ListBuckets()
 	if err != nil {
 		fatal(err.Error())
 	}
+	printBuckets(buckets)
 }

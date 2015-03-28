@@ -61,9 +61,9 @@ type Node interface {
 // Disk interface
 type Disk interface {
 	MakeDir(dirname string) error
-	ListDir() error
 
-	ListFiles(dirname string) error
+	ListDir(dirname string) ([]os.FileInfo, error)
+	ListFiles(dirname string) ([]os.FileInfo, error)
 
 	MakeFile(path string) (*os.File, error)
 	OpenFile(path string) (*os.File, error)
