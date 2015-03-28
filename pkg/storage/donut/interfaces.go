@@ -49,6 +49,7 @@ type Node interface {
 	AttachDisk(disk Disk) error
 	DetachDisk(disk Disk) error
 
+	GetNodeName() string
 	SaveConfig() ([]byte, error)
 	LoadConfig([]byte) error
 }
@@ -63,6 +64,7 @@ type Disk interface {
 	MakeFile(path string) (*os.File, error)
 	OpenFile(path string) (*os.File, error)
 
+	GetDiskName() string
 	SaveConfig() ([]byte, error)
 	LoadConfig([]byte) error
 }

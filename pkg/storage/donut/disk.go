@@ -15,6 +15,10 @@ func NewDisk(path string) (Disk, error) {
 	return nil, errors.New("Not Implemented")
 }
 
+func (d disk) GetDiskName() string {
+	return d.path
+}
+
 func (d disk) MakeDir(dirname string) error {
 	return errors.New("Not Implemented")
 }

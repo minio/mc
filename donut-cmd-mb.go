@@ -17,7 +17,7 @@
 package main
 
 import (
-	"os"
+	"fmt"
 
 	"net/url"
 
@@ -27,12 +27,29 @@ import (
 
 // doMakeDonutBucketCmd creates a new bucket
 func doMakeDonutBucketCmd(c *cli.Context) {
-	os.MkdirAll("testdir", 0755)
-	urlArg1, err := url.Parse(c.Args().Get(0))
+	if !c.Args().Present() {
+		fatal("no args?")
+	}
+	urlArg1, err := url.Parse(c.Args().First())
 	if err != nil {
 		fatal(err.Error())
 	}
-	d := donut.GetNewClient(urlArg1.Host)
+	mcDonutConfigData, err := loadDonutConfig()
+	if err != nil {
+		fatal(err.Error())
+	}
+	if _, ok := mcDonutConfigData.Donuts[urlArg1.Host]; !ok {
+		msg := fmt.Sprintf("requested donut: <%s> does not exist", urlArg1.Host)
+		fatal(msg)
+	}
+	nodes := make(map[string][]string)
+	for k, v := range mcDonutConfigData.Donuts[urlArg1.Host].Node {
+		nodes[k] = v.ActiveDisks
+	}
+	d, err := donut.GetNewClient(urlArg1.Host, nodes)
+	if err != nil {
+		fatal(err.Error())
+	}
 	err = d.PutBucket(urlArg1.Path)
 	if err != nil {
 		fatal(err.Error())

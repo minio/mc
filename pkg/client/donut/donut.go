@@ -31,11 +31,18 @@ import (
 
 // donutDriver - creates a new single disk drivers driver using donut
 type donutDriver struct {
-	donut donut.Donut
+	donut     donut.Donut
+	donutName string
 }
 
+// Object split blockSize defaulted at 10MB
 const (
 	blockSize = 10 * 1024 * 1024
+)
+
+// Total allowed disks per node
+const (
+	disksPerNode = 16
 )
 
 // IsValidBucketName reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
@@ -56,15 +63,45 @@ func IsValidBucketName(bucket string) bool {
 }
 
 // GetNewClient returns an initialized donut driver
-func GetNewClient(donutName string) client.Client {
+func GetNewClient(donutName string, nodeDiskMap map[string][]string) (client.Client, error) {
+	if donutName == "" || len(nodeDiskMap) == 0 {
+		return nil, errors.New("invalid arguments")
+	}
+
 	d := new(donutDriver)
+	d.donutName = donutName
+	d.donut, _ = donut.NewDonut(donutName)
+	for k, v := range nodeDiskMap {
+		if len(v) > disksPerNode || len(v) == 0 {
+			return nil, errors.New("invalid number of disks per node")
+		}
+		// If localhost, always use NewLocalNode()
+		if k == "localhost" || k == "127.0.0.1" {
+			node, _ := donut.NewLocalNode()
+			for _, disk := range v {
+				newDisk, _ := donut.NewDisk(disk)
+				if err := node.AttachDisk(newDisk); err != nil {
+					return nil, err
+				}
+			}
+			if err := d.donut.AttachNode(node); err != nil {
+				return nil, err
+			}
+		} else {
+			node, _ := donut.NewRemoteNode(k)
+			for _, disk := range v {
+				newDisk, _ := donut.NewDisk(disk)
+				if err := node.AttachDisk(newDisk); err != nil {
+					return nil, err
+				}
+			}
+			if err := d.donut.AttachNode(node); err != nil {
+				return nil, err
+			}
+		}
+	}
 
-	nodes := make(map[string]donut.Node)
-	node, _ := donut.NewLocalNode()
-	nodes["localhost"] = node
-
-	d.donut, _ = donut.NewDonut(donutName, nodes)
-	return d
+	return d, nil
 }
 
 // ListBuckets returns a list of buckets
