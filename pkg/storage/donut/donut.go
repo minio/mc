@@ -22,12 +22,17 @@ func NewDonut(donutName string) (Donut, error) {
 	return d, nil
 }
 
-func (d donut) MakeBucket(bucket string) error {
-	return errors.New("Not Implemented")
+func (d donut) MakeBucket(bucketName string) error {
+	bucket, err := NewBucket(bucketName)
+	if err != nil {
+		return err
+	}
+	d.buckets[bucketName] = bucket
+	return nil
 }
 
 func (d donut) ListBuckets() (map[string]Bucket, error) {
-	return nil, errors.New("Not Implemented")
+	return d.buckets, nil
 }
 
 func (d donut) Heal() error {
