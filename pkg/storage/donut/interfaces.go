@@ -31,16 +31,20 @@ type Encoder interface {
 
 // Bucket interface
 type Bucket interface {
+	GetBucketName() string
+
 	ListObjects() (map[string]Object, error)
 	GetObject(object string) (Object, error)
-	GetObjectMetadata(object string) (map[string]string, error)
 }
 
 // Object interface
 type Object interface {
 	GetReader() (io.ReadCloser, error)
 	GetWriter() (io.WriteCloser, error)
+
+	GetObjectName() string
 	SetMetadata(map[string]string) error
+	GetMetadata() (map[string]string, error)
 }
 
 // Node interface

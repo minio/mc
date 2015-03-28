@@ -77,7 +77,7 @@ func GetNewClient(donutName string, nodeDiskMap map[string][]string) (client.Cli
 		}
 		// If localhost, always use NewLocalNode()
 		if k == "localhost" || k == "127.0.0.1" {
-			node, _ := donut.NewLocalNode()
+			node, _ := donut.NewLocalNode(k)
 			for _, disk := range v {
 				newDisk, _ := donut.NewDisk(disk)
 				if err := node.AttachDisk(newDisk); err != nil {
@@ -138,19 +138,19 @@ func (d *donutDriver) Get(bucketName, objectKey string) (body io.ReadCloser, siz
 	if err != nil {
 		return nil, 0, err
 	}
-	object, err := buckets[bucketName].GetObject(objectKey)
+	objects, err := buckets[bucketName].ListObjects()
 	if err != nil {
 		return nil, 0, err
 	}
-	metadata, err := buckets[bucketName].GetObjectMetadata(objectKey)
+	reader, err := objects[objectKey].GetReader()
+	if err != nil {
+		return nil, 0, err
+	}
+	metadata, err := objects[objectKey].GetMetadata()
 	if err != nil {
 		return nil, 0, err
 	}
 	size, err = strconv.ParseInt(metadata["sys.size"], 10, 64)
-	if err != nil {
-		return nil, 0, err
-	}
-	reader, err := object.GetReader()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -204,7 +204,7 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 		prefixes = append(prefixes, &client.Prefix{Prefix: prefix})
 	}
 	for _, object := range actualObjects {
-		metadata, err := buckets[bucketName].GetObjectMetadata(object)
+		metadata, err := objectList[object].GetMetadata()
 		if err != nil {
 			return nil, nil, err
 		}

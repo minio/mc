@@ -10,8 +10,16 @@ type localNode struct {
 }
 
 // NewLocalNode - instantiates a new local node
-func NewLocalNode() (Node, error) {
-	return nil, errors.New("Not Implemented")
+func NewLocalNode(hostname string) (Node, error) {
+	if hostname == "" {
+		return nil, errors.New("invalid argument")
+	}
+	disks := make(map[string]Disk)
+	n := localNode{
+		hostname: hostname,
+		disks:    disks,
+	}
+	return n, nil
 }
 
 func (n localNode) GetNodeName() string {
@@ -19,7 +27,7 @@ func (n localNode) GetNodeName() string {
 }
 
 func (n localNode) ListDisks() (map[string]Disk, error) {
-	return nil, errors.New("Not Implemented")
+	return n.disks, nil
 }
 
 func (n localNode) AttachDisk(disk Disk) error {
@@ -31,7 +39,8 @@ func (n localNode) AttachDisk(disk Disk) error {
 }
 
 func (n localNode) DetachDisk(disk Disk) error {
-	return errors.New("Not Implemented")
+	delete(n.disks, disk.GetDiskName())
+	return nil
 }
 
 func (n localNode) SaveConfig() ([]byte, error) {

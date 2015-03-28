@@ -19,6 +19,10 @@ func (o object) GetWriter() (io.WriteCloser, error) {
 	return nil, errors.New("Not Implemented")
 }
 
+func (b bucket) GetMetadata() (map[string]string, error) {
+	return nil, errors.New("Not Implemented")
+}
+
 func (o object) SetMetadata(metadata map[string]string) error {
 	return errors.New("Not Implemented")
 }
