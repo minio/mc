@@ -81,6 +81,13 @@ var mbDonutCmd = cli.Command{
 	Action:      doMakeDonutBucketCmd,
 }
 
+var lsDonutCmd = cli.Command{
+	Name:        "ls",
+	Usage:       "get list of objects",
+	Description: `List Objects and common prefixes under a prefix or all Buckets`,
+	Action:      doDonutListCmd,
+}
+
 var donutOptions = []cli.Command{
 	makeDonutCmd,
 	attachDiskCmd,
@@ -88,6 +95,7 @@ var donutOptions = []cli.Command{
 	healDonutCmd,
 	rebalanceDonutCmd,
 	mbDonutCmd,
+	lsDonutCmd,
 	cpDonutCmd,
 }
 

@@ -62,42 +62,48 @@ func IsValidBucketName(bucket string) bool {
 	return match
 }
 
+// setDonutNode - wrapper function to instantiate a new donut node based on the configuration
+func setDonutNode(d donut.Donut, hostname string, disks []string) (donut.Donut, error) {
+	node, err := donut.NewNode(hostname)
+	if err != nil {
+		return nil, err
+	}
+	for i, disk := range disks {
+		// Order is necessary for maps, keep order number separately
+		newDisk, err := donut.NewDisk(disk, strconv.Itoa(i))
+		if err != nil {
+			return nil, err
+		}
+		if err := node.AttachDisk(newDisk); err != nil {
+			return nil, err
+		}
+	}
+	if err := d.AttachNode(node); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
 // GetNewClient returns an initialized donut driver
 func GetNewClient(donutName string, nodeDiskMap map[string][]string) (client.Client, error) {
+	var err error
 	if donutName == "" || len(nodeDiskMap) == 0 {
 		return nil, errors.New("invalid arguments")
 	}
 
 	d := new(donutDriver)
 	d.donutName = donutName
-	d.donut, _ = donut.NewDonut(donutName)
+	d.donut, err = donut.NewDonut(donutName)
+	if err != nil {
+		return nil, err
+	}
 	for k, v := range nodeDiskMap {
 		if len(v) > disksPerNode || len(v) == 0 {
 			return nil, errors.New("invalid number of disks per node")
 		}
-		// If localhost, always use NewLocalNode()
-		if k == "localhost" || k == "127.0.0.1" {
-			node, _ := donut.NewLocalNode(k)
-			for _, disk := range v {
-				newDisk, _ := donut.NewDisk(disk)
-				if err := node.AttachDisk(newDisk); err != nil {
-					return nil, err
-				}
-			}
-			if err := d.donut.AttachNode(node); err != nil {
-				return nil, err
-			}
-		} else {
-			node, _ := donut.NewRemoteNode(k)
-			for _, disk := range v {
-				newDisk, _ := donut.NewDisk(disk)
-				if err := node.AttachDisk(newDisk); err != nil {
-					return nil, err
-				}
-			}
-			if err := d.donut.AttachNode(node); err != nil {
-				return nil, err
-			}
+		d.donut, err = setDonutNode(d.donut, k, v)
+		if err != nil {
+			return nil, err
 		}
 	}
 

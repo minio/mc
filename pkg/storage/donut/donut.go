@@ -2,6 +2,8 @@ package donut
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 )
 
 type donut struct {
@@ -27,11 +29,49 @@ func (d donut) MakeBucket(bucketName string) error {
 	if err != nil {
 		return err
 	}
+	i := 0
 	d.buckets[bucketName] = bucket
+	for _, node := range d.nodes {
+		disks, err := node.ListDisks()
+		if err != nil {
+			return err
+		}
+		for _, disk := range disks {
+			bucketSlice := fmt.Sprintf("%s/%s$%d$", d.name, bucketName, i)
+			err := disk.MakeDir(bucketSlice)
+			if err != nil {
+				return err
+			}
+		}
+		i = i + 1
+	}
 	return nil
 }
 
 func (d donut) ListBuckets() (map[string]Bucket, error) {
+	for _, node := range d.nodes {
+		disks, err := node.ListDisks()
+		if err != nil {
+			return nil, err
+		}
+		for _, disk := range disks {
+			dirs, err := disk.ListDir(d.name)
+			if err != nil {
+				return nil, err
+			}
+			for _, dir := range dirs {
+				splitDir := strings.Split(dir.Name(), "$")
+				if len(splitDir) < 3 {
+					return nil, errors.New("Corrupted backend")
+				}
+				bucket, err := NewBucket(splitDir[0])
+				if err != nil {
+					return nil, err
+				}
+				d.buckets[bucket.GetBucketName()] = bucket
+			}
+		}
+	}
 	return d.buckets, nil
 }
 
