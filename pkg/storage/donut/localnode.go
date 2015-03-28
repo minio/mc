@@ -14,12 +14,20 @@ func NewLocalNode() (Node, error) {
 	return nil, errors.New("Not Implemented")
 }
 
+func (n localNode) GetNodeName() string {
+	return n.hostname
+}
+
 func (n localNode) ListDisks() (map[string]Disk, error) {
 	return nil, errors.New("Not Implemented")
 }
 
 func (n localNode) AttachDisk(disk Disk) error {
-	return errors.New("Not Implemented")
+	if disk == nil {
+		return errors.New("Invalid argument")
+	}
+	n.disks[disk.GetDiskName()] = disk
+	return nil
 }
 
 func (n localNode) DetachDisk(disk Disk) error {
