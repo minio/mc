@@ -25,7 +25,7 @@ type Donut interface {
 
 // Encoder interface
 type Encoder interface {
-	Encode(data []byte, k, m uint8) (encodedData [][]byte, err error)
+	Encode(data []byte) (encodedData [][]byte, err error)
 	Decode(encodedData [][]byte, dataLength int) (data []byte, err error)
 }
 
