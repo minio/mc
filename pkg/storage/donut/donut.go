@@ -3,7 +3,13 @@ package donut
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+)
+
+// Total allowed disks per node
+const (
+	disksPerNode = 16
 )
 
 type donut struct {
@@ -12,8 +18,31 @@ type donut struct {
 	nodes   map[string]Node
 }
 
+// setDonutNode - wrapper function to instantiate a new donut node based on the configuration
+func setDonutNode(hostname string, disks []string) (Node, error) {
+	node, err := NewNode(hostname)
+	if err != nil {
+		return nil, err
+	}
+	for i, disk := range disks {
+		// Order is necessary for maps, keep order number separately
+		newDisk, err := NewDisk(disk, strconv.Itoa(i))
+		if err != nil {
+			return nil, err
+		}
+		if err := node.AttachDisk(newDisk); err != nil {
+			return nil, err
+		}
+	}
+	return node, nil
+}
+
 // NewDonut - instantiate a new donut
-func NewDonut(donutName string) (Donut, error) {
+func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) {
+	if donutName == "" || len(nodeDiskMap) == 0 {
+		return nil, errors.New("invalid arguments")
+	}
+
 	nodes := make(map[string]Node)
 	buckets := make(map[string]Bucket)
 	d := donut{
@@ -21,6 +50,20 @@ func NewDonut(donutName string) (Donut, error) {
 		nodes:   nodes,
 		buckets: buckets,
 	}
+
+	for k, v := range nodeDiskMap {
+		if len(v) > disksPerNode || len(v) == 0 {
+			return nil, errors.New("invalid number of disks per node")
+		}
+		n, err := setDonutNode(k, v)
+		if err != nil {
+			return nil, err
+		}
+		if err := d.AttachNode(n); err != nil {
+			return nil, err
+		}
+	}
+
 	return d, nil
 }
 
