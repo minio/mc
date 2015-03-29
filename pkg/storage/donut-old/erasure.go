@@ -11,19 +11,19 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 
-	"github.com/minio-io/mc/pkg/encoding/erasure"
+	encoding "github.com/minio-io/mc/pkg/encoding/erasure"
 	"github.com/minio-io/minio/pkg/utils/split"
 )
 
 // getErasureTechnique - convert technique string into Technique type
-func getErasureTechnique(technique string) (erasure.Technique, error) {
+func getErasureTechnique(technique string) (encoding.Technique, error) {
 	switch true {
 	case technique == "Cauchy":
-		return erasure.Cauchy, nil
+		return encoding.Cauchy, nil
 	case technique == "Vandermonde":
-		return erasure.Cauchy, nil
+		return encoding.Cauchy, nil
 	default:
-		return erasure.None, errors.New("Invalid erasure technique")
+		return encoding.None, errors.New("Invalid erasure technique")
 	}
 }
 
@@ -65,15 +65,15 @@ func erasureReader(readers []io.ReadCloser, donutMetadata map[string]string, wri
 		return
 	}
 	summer := md5.New()
-	params, _ := erasure.ParseEncoderParams(uint8(k), uint8(m), technique)
-	encoder := erasure.NewEncoder(params)
+	params, _ := encoding.ValidateParams(uint8(k), uint8(m), technique)
+	encoder := encoding.NewErasure(params)
 	for i := 0; i < totalChunks; i++ {
 		curBlockSize := totalLeft
 		if blockSize < totalLeft {
 			curBlockSize = blockSize
 		}
 
-		curChunkSize := erasure.GetEncodedBlockLen(curBlockSize, uint8(k))
+		curChunkSize := encoding.GetEncodedBlockLen(curBlockSize, uint8(k))
 		encodedBytes := make([][]byte, 16)
 		for i, reader := range readers {
 			defer reader.Close()
@@ -133,8 +133,8 @@ func newErasureWriter(writers []Writer) ObjectWriter {
 
 func erasureGoroutine(r *io.PipeReader, eWriter erasureWriter, isClosed chan<- bool) {
 	chunks := split.Stream(r, 10*1024*1024)
-	params, _ := erasure.ParseEncoderParams(8, 8, erasure.Cauchy)
-	encoder := erasure.NewEncoder(params)
+	params, _ := encoding.ValidateParams(8, 8, encoding.Cauchy)
+	encoder := encoding.NewErasure(params)
 	chunkCount := 0
 	totalLength := 0
 	summer := md5.New()
