@@ -24,6 +24,7 @@ func getErasureTechnique(technique string) (erasure.Technique, error) {
 	}
 }
 
+// NewEncoder - instantiate a new encoder
 func NewEncoder(k, m uint8, technique string) (Encoder, error) {
 	e := encoder{}
 	t, err := getErasureTechnique(technique)
