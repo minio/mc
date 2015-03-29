@@ -7,8 +7,8 @@ import (
 
 type object struct {
 	name    string
-	readers io.ReadCloser
-	writers io.WriteCloser
+	readers []io.ReadCloser
+	writers []io.WriteCloser
 }
 
 func (o object) GetReader() (io.ReadCloser, error) {
