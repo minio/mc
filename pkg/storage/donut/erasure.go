@@ -3,24 +3,24 @@ package donut
 import (
 	"errors"
 
-	"github.com/minio-io/mc/pkg/encoding/erasure"
+	encoding "github.com/minio-io/mc/pkg/encoding/erasure"
 )
 
 type encoder struct {
-	encoder   *erasure.Encoder
+	encoder   *encoding.Erasure
 	k, m      uint8
-	technique erasure.Technique
+	technique encoding.Technique
 }
 
 // getErasureTechnique - convert technique string into Technique type
-func getErasureTechnique(technique string) (erasure.Technique, error) {
+func getErasureTechnique(technique string) (encoding.Technique, error) {
 	switch true {
 	case technique == "Cauchy":
-		return erasure.Cauchy, nil
+		return encoding.Cauchy, nil
 	case technique == "Vandermonde":
-		return erasure.Cauchy, nil
+		return encoding.Cauchy, nil
 	default:
-		return erasure.None, errors.New("Invalid erasure technique")
+		return encoding.None, errors.New("Invalid erasure technique")
 	}
 }
 
@@ -31,11 +31,11 @@ func NewEncoder(k, m uint8, technique string) (Encoder, error) {
 	if err != nil {
 		return nil, err
 	}
-	params, err := erasure.ParseEncoderParams(k, m, t)
+	params, err := encoding.ValidateParams(k, m, t)
 	if err != nil {
 		return nil, err
 	}
-	e.encoder = erasure.NewEncoder(params)
+	e.encoder = encoding.NewErasure(params)
 	return e, nil
 }
 func (e encoder) Encode(data []byte) (encodedData [][]byte, err error) {
