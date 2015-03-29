@@ -76,11 +76,25 @@ func (d disk) ListFiles(dirname string) ([]os.FileInfo, error) {
 }
 
 func (d disk) MakeFile(path string) (*os.File, error) {
-	return nil, errors.New("Not Implemented")
+	if path == "" {
+		return nil, errors.New("Invalid argument")
+	}
+	dataFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return nil, err
+	}
+	return dataFile, nil
 }
 
 func (d disk) OpenFile(path string) (*os.File, error) {
-	return nil, errors.New("Not Implemented")
+	if path == "" {
+		return nil, errors.New("Invalid argument")
+	}
+	dataFile, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return dataFile, nil
 }
 
 func (d disk) SaveConfig() ([]byte, error) {

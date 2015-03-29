@@ -63,7 +63,6 @@ func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) 
 			return nil, err
 		}
 	}
-
 	return d, nil
 }
 
@@ -107,6 +106,7 @@ func (d donut) ListBuckets() (map[string]Bucket, error) {
 				if len(splitDir) < 3 {
 					return nil, errors.New("Corrupted backend")
 				}
+				// we dont need this NewBucket once we cache these
 				bucket, err := NewBucket(splitDir[0])
 				if err != nil {
 					return nil, err
@@ -138,7 +138,8 @@ func (d donut) AttachNode(node Node) error {
 	return nil
 }
 func (d donut) DetachNode(node Node) error {
-	return errors.New("Not Implemented")
+	delete(d.nodes, node.GetNodeName())
+	return nil
 }
 
 func (d donut) SaveConfig() ([]byte, error) {
