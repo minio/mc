@@ -40,7 +40,6 @@ func getURLType(urlStr string) (uType urlType, err error) {
 	if err != nil {
 		return urlUnknown, err
 	}
-
 	switch u.Scheme {
 	case "http":
 		fallthrough
@@ -68,26 +67,22 @@ func isValidURL(urlStr string) bool {
 
 // isValidURL checks the validity of supported URL types
 func isValidFileURL(urlStr string) bool {
-	u, e := getURLType(urlStr)
-	if e != nil {
+	utype, e := getURLType(urlStr)
+	if e != nil || utype != urlFile {
 		return false
 	}
-	if u != urlFile {
-		return false
-	}
-
 	return true
 }
 
 // fixFileURL rewrites file URL to proper file:///path/to/ form.
 func fixFileURL(urlStr string) (fixedURL string, err error) {
-	ut, e := getURLType(urlStr)
-	if e != nil || ut != urlFile {
-		return "", e
-	}
-
 	if urlStr == "" {
 		return "", errEmptyURL
+	}
+
+	utype, e := getURLType(urlStr)
+	if e != nil || utype != urlFile {
+		return "", e
 	}
 
 	u, e := url.Parse(urlStr)
@@ -114,12 +109,12 @@ func fixFileURL(urlStr string) (fixedURL string, err error) {
 
 // url2Object converts URL to bucket and objectname
 func url2Object(urlStr string) (bucketName, objectName string, err error) {
-	url, err := url.Parse(urlStr)
-	if url.Path == "" {
+	u, err := url.Parse(urlStr)
+	if u.Path == "" {
 		// No bucket name passed. It is a valid case
 		return "", "", nil
 	}
-	splits := strings.SplitN(url.Path, "/", 3)
+	splits := strings.SplitN(u.Path, "/", 3)
 	switch len(splits) {
 	case 0, 1:
 		bucketName = ""
@@ -143,7 +138,6 @@ func url2Bucket(urlStr string) (bucketName string, err error) {
 // parseURL extracts URL string from a single cmd-line argument
 func parseURL(arg string) (urlStr string, err error) {
 	urlStr = arg
-
 	// Use default host if no argument is passed
 	if urlStr == "" {
 		// Load config file
@@ -166,11 +160,9 @@ func parseURL(arg string) (urlStr string, err error) {
 
 	// If it is a file URL, rewrite to file:///path/to form
 	if isValidFileURL(urlStr) {
-		urlStr, err = fixFileURL(urlStr)
-		return urlStr, err
+		return fixFileURL(urlStr)
 	}
-
-	return urlStr, err
+	return urlStr, nil
 }
 
 // parseURL extracts multiple URL strings from a single cmd-line argument
