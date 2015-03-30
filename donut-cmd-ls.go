@@ -30,7 +30,11 @@ func doDonutListCmd(c *cli.Context) {
 	if !c.Args().Present() {
 		fatal("no args?")
 	}
-	urlArg1, err := url.Parse(c.Args().First())
+	urlStr, err := parseURL(c.Args().First())
+	if err != nil {
+		fatal(err.Error())
+	}
+	u, err := url.Parse(urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -38,15 +42,15 @@ func doDonutListCmd(c *cli.Context) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	if _, ok := mcDonutConfigData.Donuts[urlArg1.Host]; !ok {
-		msg := fmt.Sprintf("requested donut: <%s> does not exist", urlArg1.Host)
+	if _, ok := mcDonutConfigData.Donuts[u.Host]; !ok {
+		msg := fmt.Sprintf("requested donut: <%s> does not exist", u.Host)
 		fatal(msg)
 	}
 	nodes := make(map[string][]string)
-	for k, v := range mcDonutConfigData.Donuts[urlArg1.Host].Node {
+	for k, v := range mcDonutConfigData.Donuts[u.Host].Node {
 		nodes[k] = v.ActiveDisks
 	}
-	d, err := donut.GetNewClient(urlArg1.Host, nodes)
+	d, err := donut.GetNewClient(u.Host, nodes)
 	if err != nil {
 		fatal(err.Error())
 	}

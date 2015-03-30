@@ -20,53 +20,6 @@ import (
 	"github.com/minio-io/cli"
 )
 
-var makeDonutCmd = cli.Command{
-	Name:        "make",
-	Usage:       "make donut",
-	Description: "Make a new donut",
-	Action:      doMakeDonutCmd,
-}
-
-var attachDiskCmd = cli.Command{
-	Name:        "attach",
-	Usage:       "attach disk",
-	Description: "Attach disk to an existing donut",
-	Action:      doAttachDiskCmd,
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "name",
-			Usage: "Donut name",
-		},
-	},
-}
-
-var detachDiskCmd = cli.Command{
-	Name:        "detach",
-	Usage:       "detach disk",
-	Description: "Detach disk from an existing donut",
-	Action:      doDetachDiskCmd,
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "name",
-			Usage: "Donut name",
-		},
-	},
-}
-
-var healDonutCmd = cli.Command{
-	Name:        "heal",
-	Usage:       "heal donut",
-	Description: "Heal donut with any errors",
-	Action:      doHealDonutCmd,
-}
-
-var rebalanceDonutCmd = cli.Command{
-	Name:        "rebalance",
-	Usage:       "rebalance donut",
-	Description: "Rebalance data on donut after adding disks",
-	Action:      doRebalanceDonutCmd,
-}
-
 var cpDonutCmd = cli.Command{
 	Name:        "cp",
 	Usage:       "cp",
@@ -89,18 +42,7 @@ var lsDonutCmd = cli.Command{
 }
 
 var donutOptions = []cli.Command{
-	makeDonutCmd,
-	attachDiskCmd,
-	detachDiskCmd,
-	healDonutCmd,
-	rebalanceDonutCmd,
 	mbDonutCmd,
 	lsDonutCmd,
 	cpDonutCmd,
-}
-
-func doHealDonutCmd(c *cli.Context) {
-}
-
-func doRebalanceDonutCmd(c *cli.Context) {
 }
