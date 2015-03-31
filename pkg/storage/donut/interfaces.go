@@ -38,10 +38,10 @@ type Bucket interface {
 	ListObjects() (map[string]Object, error)
 
 	GetObject(object string, writer *io.PipeWriter, donutObjectMetadata map[string]string)
-	PutObject(object string, contents io.ReadCloser) error
+	PutObject(object string, contents io.Reader) error
 
-	SetDonutObjectMetadata(object string, donutMetadata map[string]string) error
-	SetObjectMetadata(object string, objectMetadata map[string]string) error
+	WriteDonutObjectMetadata(object string, donutMetadata map[string]string) error
+	WriteObjectMetadata(object string, objectMetadata map[string]string) error
 }
 
 // Object interface

@@ -45,8 +45,6 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-
-	"github.com/minio-io/mc/pkg/client"
 )
 
 type reqAndExpected struct {
@@ -139,10 +137,10 @@ func TestBucketFromHostname(t *testing.T) {
 
 func TestsignRequest(t *testing.T) {
 	r := req("GET /foo HTTP/1.1\n\n")
-	auth := &client.Auth{AccessKeyID: "key", SecretAccessKey: "secretkey"}
+	auth := &Auth{AccessKeyID: "key", SecretAccessKey: "secretkey"}
 	url, _ := url.Parse("localhost:9000")
 	cl := &s3Client{
-		&client.Meta{
+		&Meta{
 			Auth:      auth,
 			Transport: http.DefaultTransport,
 		},

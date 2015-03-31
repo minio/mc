@@ -40,10 +40,6 @@ package s3
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha1"
-	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -54,10 +50,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio-io/mc/pkg/client"
+	"crypto/hmac"
+	"crypto/sha1"
+	"crypto/tls"
+	"encoding/base64"
 )
 
-func (a *s3Client) loadKeys(cert string, key string) (*client.TLSConfig, error) {
+func (a *s3Client) loadKeys(cert string, key string) (*TLSConfig, error) {
 	certBlock, err := ioutil.ReadFile(cert)
 	if err != nil {
 		return nil, err
@@ -66,7 +65,7 @@ func (a *s3Client) loadKeys(cert string, key string) (*client.TLSConfig, error) 
 	if err != nil {
 		return nil, err
 	}
-	t := &client.TLSConfig{}
+	t := &TLSConfig{}
 	t.CertPEMBlock = certBlock
 	t.KeyPEMBlock = keyBlock
 	return t, nil
