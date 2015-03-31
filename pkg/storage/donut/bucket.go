@@ -45,12 +45,34 @@ func (b bucket) GetBucketName() string {
 }
 
 func (b bucket) ListObjects() (map[string]Object, error) {
+	nodeSlice := 0
+	for _, node := range b.nodes {
+		disks, err := node.ListDisks()
+		if err != nil {
+			return nil, err
+		}
+		for _, disk := range disks {
+			bucketSlice := fmt.Sprintf("%s$%d$%d", b.name, nodeSlice, disk.GetOrder())
+			bucketPath := path.Join(b.donutName, bucketSlice)
+			objects, err := disk.ListDir(bucketPath)
+			if err != nil {
+				return nil, err
+			}
+			for _, object := range objects {
+				b.objects[object.Name()], err = NewObject(object.Name(), path.Join(disk.GetName(), bucketPath))
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+		nodeSlice = nodeSlice + 1
+	}
 	return b.objects, nil
 }
 
 func (b bucket) GetObject(object string) (io.ReadCloser, error) {
 	var err error
-	b.objects[object], err = NewObject(object)
+	b.objects[object], err = NewObject(object, "")
 	if err != nil {
 		return nil, err
 	}
@@ -120,12 +142,6 @@ func (b bucket) getDiskWriters(objectName, objectMeta string) ([]io.WriteCloser,
 }
 
 func (b bucket) PutObject(objectName string, contents io.ReadCloser) error {
-	var err error
-	b.objects[objectName], err = NewObject(objectName)
-	if err != nil {
-		return err
-	}
-
 	writers, err := b.getDiskWriters(objectName, "data")
 	if err != nil {
 		return err

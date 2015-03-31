@@ -107,7 +107,7 @@ func (d *donutDriver) Get(bucketName, objectKey string) (body io.ReadCloser, siz
 		return nil, 0, err
 	}
 	var reader io.ReadCloser
-	metadata, err := objects[objectKey].GetMetadata()
+	metadata, err := objects[objectKey].GetDonutObjectMetadata()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -182,7 +182,7 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 		prefixes = append(prefixes, &client.Prefix{Prefix: prefix})
 	}
 	for _, object := range actualObjects {
-		metadata, err := objectList[object].GetMetadata()
+		metadata, err := objectList[object].GetDonutObjectMetadata()
 		if err != nil {
 			return nil, nil, err
 		}
