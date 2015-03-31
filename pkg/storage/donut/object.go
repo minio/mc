@@ -53,9 +53,5 @@ func (o object) GetDonutObjectMetadata() (map[string]string, error) {
 		return nil, err
 	}
 	o.donutObjectMetadata = donutObjectMetadata
-	metadata := make(map[string]string)
-	metadata["sys.created"] = o.donutObjectMetadata["created"]
-	metadata["sys.md5"] = o.donutObjectMetadata["md5"]
-	metadata["sys.size"] = o.donutObjectMetadata["size"]
-	return metadata, nil
+	return donutObjectMetadata, nil
 }

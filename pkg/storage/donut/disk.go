@@ -101,7 +101,7 @@ func (d disk) OpenFile(filename string) (*os.File, error) {
 	if filename == "" {
 		return nil, errors.New("Invalid argument")
 	}
-	dataFile, err := os.Open(filename)
+	dataFile, err := os.Open(path.Join(d.root, filename))
 	if err != nil {
 		return nil, err
 	}
