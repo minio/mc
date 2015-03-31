@@ -2,27 +2,28 @@ package donut
 
 import (
 	"errors"
-	"io"
 )
 
 type object struct {
-	name    string
-	readers []io.ReadCloser
-	writers []io.WriteCloser
+	name     string
+	metadata map[string]string
 }
 
-func (o object) GetReader() (io.ReadCloser, error) {
+// NewObject - instantiate a new object
+func NewObject(objectName string) (Object, error) {
+	if objectName == "" {
+		return nil, errors.New("invalid argument")
+	}
+	o := object{}
+	o.name = objectName
+	o.metadata = make(map[string]string)
+	return o, nil
+}
+
+func (o object) GetObjectName() string {
+	return o.name
+}
+
+func (o object) GetMetadata() (map[string]string, error) {
 	return nil, errors.New("Not Implemented")
-}
-
-func (o object) GetWriter() (io.WriteCloser, error) {
-	return nil, errors.New("Not Implemented")
-}
-
-func (b bucket) GetMetadata() (map[string]string, error) {
-	return nil, errors.New("Not Implemented")
-}
-
-func (o object) SetMetadata(metadata map[string]string) error {
-	return errors.New("Not Implemented")
 }

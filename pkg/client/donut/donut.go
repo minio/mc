@@ -106,10 +106,7 @@ func (d *donutDriver) Get(bucketName, objectKey string) (body io.ReadCloser, siz
 	if err != nil {
 		return nil, 0, err
 	}
-	reader, err := objects[objectKey].GetReader()
-	if err != nil {
-		return nil, 0, err
-	}
+	var reader io.ReadCloser
 	metadata, err := objects[objectKey].GetMetadata()
 	if err != nil {
 		return nil, 0, err
@@ -119,6 +116,23 @@ func (d *donutDriver) Get(bucketName, objectKey string) (body io.ReadCloser, siz
 		return nil, 0, err
 	}
 	return reader, size, nil
+}
+
+// Put creates a new object
+func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.ReadCloser) error {
+	buckets, err := d.donut.ListBuckets()
+	if err != nil {
+		return err
+	}
+	objects, err := buckets[bucketName].ListObjects()
+	if _, ok := objects[objectKey]; ok {
+		return errors.New("Object exists")
+	}
+	err = buckets[bucketName].PutObject(objectKey, contents)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetPartial retrieves an object range and writes it to a writer
@@ -191,31 +205,4 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 		items = append(items, item)
 	}
 	return items, prefixes, nil
-}
-
-// Put creates a new object
-func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.Reader) error {
-	buckets, err := d.donut.ListBuckets()
-	if err != nil {
-		return err
-	}
-	object, err := buckets[bucketName].GetObject(objectKey)
-	if err != nil {
-		return err
-	}
-	writer, err := object.GetWriter()
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(writer, contents); err != nil {
-		return err
-	}
-	metadata := make(map[string]string)
-	metadata["bucket"] = bucketName
-	metadata["object"] = objectKey
-	metadata["contentType"] = "application/octet-stream"
-	if err = object.SetMetadata(metadata); err != nil {
-		return err
-	}
-	return writer.Close()
 }

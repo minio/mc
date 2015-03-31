@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client/donut"
@@ -41,7 +40,11 @@ func upload(urlArg1, urlArg2 *url.URL) {
 		if err != nil {
 			fatal(err.Error())
 		}
-		if err := d.Put(urlArg2.Host, strings.TrimPrefix(urlArg2.Path, "/"), st.Size(), reader); err != nil {
+		bucketName, objectName, err := url2Object(urlArg2.String())
+		if err != nil {
+			fatal(err.Error())
+		}
+		if err := d.Put(bucketName, objectName, st.Size(), reader); err != nil {
 			fatal(err.Error())
 		}
 	}
@@ -70,7 +73,11 @@ func download(urlArg1, urlArg2 *url.URL) {
 		if err != nil {
 			fatal(err.Error())
 		}
-		reader, size, err := d.Get(urlArg1.Host, strings.TrimPrefix(urlArg1.Path, "/"))
+		bucketName, objectName, err := url2Object(urlArg1.String())
+		if err != nil {
+			fatal(err.Error())
+		}
+		reader, size, err := d.Get(bucketName, objectName)
 		if err != nil {
 			fatal(err.Error())
 		}

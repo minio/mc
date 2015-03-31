@@ -56,7 +56,7 @@ import (
 /// Object API operations
 
 // Put - upload new object to bucket
-func (c *s3Client) Put(bucket, key string, size int64, contents io.Reader) error {
+func (c *s3Client) Put(bucket, key string, size int64, contents io.ReadCloser) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
 	req.ContentLength = size

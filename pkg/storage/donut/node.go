@@ -34,12 +34,12 @@ func (n node) AttachDisk(disk Disk) error {
 	if disk == nil {
 		return errors.New("Invalid argument")
 	}
-	n.disks[disk.GetDiskName()] = disk
+	n.disks[disk.GetName()] = disk
 	return nil
 }
 
 func (n node) DetachDisk(disk Disk) error {
-	delete(n.disks, disk.GetDiskName())
+	delete(n.disks, disk.GetName())
 	return nil
 }
 

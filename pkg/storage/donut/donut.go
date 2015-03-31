@@ -3,7 +3,7 @@ package donut
 import (
 	"errors"
 	"fmt"
-	"strconv"
+	"path"
 	"strings"
 )
 
@@ -26,7 +26,7 @@ func setDonutNode(hostname string, disks []string) (Node, error) {
 	}
 	for i, disk := range disks {
 		// Order is necessary for maps, keep order number separately
-		newDisk, err := NewDisk(disk, strconv.Itoa(i))
+		newDisk, err := NewDisk(disk, i)
 		if err != nil {
 			return nil, err
 		}
@@ -67,11 +67,11 @@ func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) 
 }
 
 func (d donut) MakeBucket(bucketName string) error {
-	bucket, err := NewBucket(bucketName)
+	bucket, err := NewBucket(bucketName, d.name, d.nodes)
 	if err != nil {
 		return err
 	}
-	i := 0
+	nodeNumber := 0
 	d.buckets[bucketName] = bucket
 	for _, node := range d.nodes {
 		disks, err := node.ListDisks()
@@ -79,13 +79,13 @@ func (d donut) MakeBucket(bucketName string) error {
 			return err
 		}
 		for _, disk := range disks {
-			bucketSlice := fmt.Sprintf("%s/%s$%d$", d.name, bucketName, i)
-			err := disk.MakeDir(bucketSlice)
+			bucketSlice := fmt.Sprintf("%s$%d$%d", bucketName, nodeNumber, disk.GetOrder())
+			err := disk.MakeDir(path.Join(d.name, bucketSlice))
 			if err != nil {
 				return err
 			}
 		}
-		i = i + 1
+		nodeNumber = nodeNumber + 1
 	}
 	return nil
 }
@@ -104,10 +104,10 @@ func (d donut) ListBuckets() (map[string]Bucket, error) {
 			for _, dir := range dirs {
 				splitDir := strings.Split(dir.Name(), "$")
 				if len(splitDir) < 3 {
-					return nil, errors.New("Corrupted backend")
+					return nil, errors.New("corrupted backend")
 				}
 				// we dont need this NewBucket once we cache these
-				bucket, err := NewBucket(splitDir[0])
+				bucket, err := NewBucket(splitDir[0], d.name, d.nodes)
 				if err != nil {
 					return nil, err
 				}
