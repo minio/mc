@@ -3,7 +3,7 @@ package donut
 import (
 	"errors"
 
-	encoding "github.com/minio-io/mc/pkg/encoding/erasure"
+	encoding "github.com/minio-io/donut/erasure"
 )
 
 type encoder struct {

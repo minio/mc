@@ -33,17 +33,19 @@ type Encoder interface {
 type Bucket interface {
 	GetBucketName() string
 
+	ListNodes() (map[string]Node, error)
 	ListObjects() (map[string]Object, error)
-	GetObject(object string) (Object, error)
+
+	GetObject(object string) (io.ReadCloser, error)
+	PutObject(object string, contents io.ReadCloser) error
+
+	SetDonutObjectMetadata(object string, donutMetadata map[string]string) error
+	SetObjectMetadata(object string, objectMetadata map[string]string) error
 }
 
 // Object interface
 type Object interface {
-	GetReader() (io.ReadCloser, error)
-	GetWriter() (io.WriteCloser, error)
-
 	GetObjectName() string
-	SetMetadata(map[string]string) error
 	GetMetadata() (map[string]string, error)
 }
 
@@ -68,7 +70,9 @@ type Disk interface {
 	MakeFile(path string) (*os.File, error)
 	OpenFile(path string) (*os.File, error)
 
-	GetDiskName() string
+	GetName() string
+	GetOrder() int
+	GetFileSystemType() string
 	SaveConfig() ([]byte, error)
 	LoadConfig([]byte) error
 }
