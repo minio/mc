@@ -182,8 +182,8 @@ func (c *s3Client) ListObjects(bucket string, startAt, prefix, delimiter string,
 	marker := startAt
 	for len(items) < maxKeys {
 		fetchN := maxKeys - len(items)
-		if fetchN > MaxKeys {
-			fetchN = MaxKeys
+		if fetchN > client.Maxkeys {
+			fetchN = client.Maxkeys
 		}
 		var bres listBucketResults
 		buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.bucketURL(bucket), fetchN))

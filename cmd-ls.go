@@ -24,7 +24,6 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/mc/pkg/client/s3"
 )
 
 const (
@@ -110,13 +109,13 @@ func doListCmd(c *cli.Context) {
 		}
 		printBuckets(buckets)
 	case objectName == "": // List objects in a bucket
-		items, _, err = s3c.ListObjects(bucketName, "", "", "", s3.MaxKeys)
+		items, _, err = s3c.ListObjects(bucketName, "", "", "", client.Maxkeys)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
 	case objectName != "": // List objects matching the key prefix
-		listObjectPrefix(s3c, bucketName, objectName, s3.MaxKeys)
+		listObjectPrefix(s3c, bucketName, objectName, client.Maxkeys)
 	default:
 		fatal(err.Error())
 	}

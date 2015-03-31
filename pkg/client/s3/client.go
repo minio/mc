@@ -53,11 +53,6 @@ import (
 	"github.com/minio-io/mc/pkg/client"
 )
 
-// Total max object list
-const (
-	MaxKeys = 1000
-)
-
 type listBucketResults struct {
 	Contents       []*client.Item
 	IsTruncated    bool
