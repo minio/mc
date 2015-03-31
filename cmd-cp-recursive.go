@@ -121,7 +121,7 @@ func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
 		if err != nil {
 			return err
 		}
-		items, _, err := s3c.ListObjects(args.source.bucket, "", "", "", s3.MaxKeys)
+		items, _, err := s3c.ListObjects(args.source.bucket, "", "", "", client.Maxkeys)
 		if err != nil {
 			return err
 		}
