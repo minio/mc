@@ -25,6 +25,7 @@ type Donut interface {
 
 // Encoder interface
 type Encoder interface {
+	GetEncodedBlockLen(dataLength int) (int, error)
 	Encode(data []byte) (encodedData [][]byte, err error)
 	Decode(encodedData [][]byte, dataLength int) (data []byte, err error)
 }
@@ -36,7 +37,7 @@ type Bucket interface {
 	ListNodes() (map[string]Node, error)
 	ListObjects() (map[string]Object, error)
 
-	GetObject(object string) (io.ReadCloser, error)
+	GetObject(object string, writer *io.PipeWriter, donutObjectMetadata map[string]string)
 	PutObject(object string, contents io.ReadCloser) error
 
 	SetDonutObjectMetadata(object string, donutMetadata map[string]string) error

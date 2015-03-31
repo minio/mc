@@ -97,24 +97,28 @@ func (d *donutDriver) PutBucket(bucketName string) error {
 }
 
 // Get retrieves an object and writes it to a writer
-func (d *donutDriver) Get(bucketName, objectKey string) (body io.ReadCloser, size int64, err error) {
+func (d *donutDriver) Get(bucketName, objectName string) (body io.ReadCloser, size int64, err error) {
+	reader, writer := io.Pipe()
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return nil, 0, err
 	}
+	if _, ok := buckets[bucketName]; !ok {
+		return nil, 0, errors.New("bucket does not exist")
+	}
 	objects, err := buckets[bucketName].ListObjects()
+	if _, ok := objects[objectName]; !ok {
+		return nil, 0, errors.New("object does not exist")
+	}
+	donutObjectMetadata, err := objects[objectName].GetDonutObjectMetadata()
 	if err != nil {
 		return nil, 0, err
 	}
-	var reader io.ReadCloser
-	metadata, err := objects[objectKey].GetDonutObjectMetadata()
+	size, err = strconv.ParseInt(donutObjectMetadata["size"], 10, 64)
 	if err != nil {
 		return nil, 0, err
 	}
-	size, err = strconv.ParseInt(metadata["sys.size"], 10, 64)
-	if err != nil {
-		return nil, 0, err
-	}
+	go buckets[bucketName].GetObject(objectName, writer, donutObjectMetadata)
 	return reader, size, nil
 }
 
@@ -186,14 +190,14 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 		if err != nil {
 			return nil, nil, err
 		}
-		t1, err := time.Parse(time.RFC3339Nano, metadata["sys.created"])
+		t1, err := time.Parse(time.RFC3339Nano, metadata["created"])
 		if err != nil {
 			return nil, nil, err
 		}
 		t := client.XMLTime{
 			Time: t1,
 		}
-		size, err := strconv.ParseInt(metadata["sys.size"], 10, 64)
+		size, err := strconv.ParseInt(metadata["size"], 10, 64)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -36,8 +36,19 @@ func NewEncoder(k, m uint8, technique string) (Encoder, error) {
 		return nil, err
 	}
 	e.encoder = encoding.NewErasure(params)
+	e.k = k
+	e.m = m
+	e.technique = t
 	return e, nil
 }
+
+func (e encoder) GetEncodedBlockLen(dataLength int) (int, error) {
+	if dataLength == 0 {
+		return 0, errors.New("invalid argument")
+	}
+	return encoding.GetEncodedBlockLen(dataLength, e.k), nil
+}
+
 func (e encoder) Encode(data []byte) (encodedData [][]byte, err error) {
 	if data == nil {
 		return nil, errors.New("invalid argument")
