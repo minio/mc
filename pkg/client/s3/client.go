@@ -141,7 +141,7 @@ func newReq(url string) *http.Request {
 	return req
 }
 
-func parseListAllMyBuckets(r io.ReadCloser) ([]*client.Bucket, error) {
+func parseListAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
 	type allMyBuckets struct {
 		Buckets struct {
 			Bucket []*client.Bucket
