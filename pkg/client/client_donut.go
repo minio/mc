@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package donut
+package client
 
 import (
 	"errors"
@@ -25,8 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/mc/pkg/storage/donut"
+	"github.com/minio-io/donut"
 )
 
 // donutDriver - creates a new single disk drivers driver using donut
@@ -57,7 +56,7 @@ func IsValidBucketName(bucket string) bool {
 }
 
 // GetNewClient returns an initialized donut driver
-func GetNewClient(donutName string, nodeDiskMap map[string][]string) (client.Client, error) {
+func GetNewClient(donutName string, nodeDiskMap map[string][]string) (Client, error) {
 	var err error
 
 	d := new(donutDriver)
@@ -68,23 +67,31 @@ func GetNewClient(donutName string, nodeDiskMap map[string][]string) (client.Cli
 	return d, nil
 }
 
+// byBucketName is a type for sorting bucket metadata by bucket name
+type byBucketName []*Bucket
+
+func (b byBucketName) Len() int           { return len(b) }
+func (b byBucketName) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b byBucketName) Less(i, j int) bool { return b[i].Name < b[j].Name }
+
 // ListBuckets returns a list of buckets
-func (d *donutDriver) ListBuckets() (results []*client.Bucket, err error) {
+func (d *donutDriver) ListBuckets() (results []*Bucket, err error) {
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return nil, err
 	}
 	for name := range buckets {
-		t := client.XMLTime{
+		t := XMLTime{
 			Time: time.Now(),
 		}
-		result := &client.Bucket{
+		result := &Bucket{
 			Name: name,
 			// TODO Add real created date
 			CreationDate: t,
 		}
 		results = append(results, result)
 	}
+	sort.Sort(byBucketName(results))
 	return results, nil
 }
 
@@ -98,6 +105,12 @@ func (d *donutDriver) PutBucket(bucketName string) error {
 
 // Get retrieves an object and writes it to a writer
 func (d *donutDriver) Get(bucketName, objectName string) (body io.ReadCloser, size int64, err error) {
+	if bucketName == "" || strings.TrimSpace(bucketName) == "" {
+		return nil, 0, errors.New("invalid argument")
+	}
+	if objectName == "" || strings.TrimSpace(objectName) == "" {
+		return nil, 0, errors.New("invalid argument")
+	}
 	reader, writer := io.Pipe()
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
@@ -123,7 +136,7 @@ func (d *donutDriver) Get(bucketName, objectName string) (body io.ReadCloser, si
 }
 
 // Put creates a new object
-func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.ReadCloser) error {
+func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.Reader) error {
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return err
@@ -149,8 +162,15 @@ func (d *donutDriver) Stat(bucket, object string) (size int64, date time.Time, e
 	return 0, time.Time{}, errors.New("Not Implemented")
 }
 
+// bySize implements sort.Interface for []Item based on the Size field.
+type bySize []*Item
+
+func (a bySize) Len() int           { return len(a) }
+func (a bySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
+
 // ListObjects - returns list of objects
-func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
+func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string, maxKeys int) (items []*Item, prefixes []*Prefix, err error) {
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return nil, nil, err
@@ -183,7 +203,7 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 	}
 
 	for _, prefix := range commonPrefixes {
-		prefixes = append(prefixes, &client.Prefix{Prefix: prefix})
+		prefixes = append(prefixes, &Prefix{Prefix: prefix})
 	}
 	for _, object := range actualObjects {
 		metadata, err := objectList[object].GetDonutObjectMetadata()
@@ -194,19 +214,20 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 		if err != nil {
 			return nil, nil, err
 		}
-		t := client.XMLTime{
+		t := XMLTime{
 			Time: t1,
 		}
 		size, err := strconv.ParseInt(metadata["size"], 10, 64)
 		if err != nil {
 			return nil, nil, err
 		}
-		item := &client.Item{
+		item := &Item{
 			Key:          object,
 			LastModified: t,
 			Size:         size,
 		}
 		items = append(items, item)
 	}
+	sort.Sort(bySize(items))
 	return items, prefixes, nil
 }

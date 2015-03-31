@@ -64,8 +64,29 @@ type listBucketResults struct {
 	CommonPrefixes []*client.Prefix
 }
 
+// Meta holds Amazon S3 client credentials and flags.
+type Meta struct {
+	*Auth
+	Transport http.RoundTripper // or nil for the default behavior
+}
+
+// Auth - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
+type Auth struct {
+	AccessKeyID     string
+	SecretAccessKey string
+	// Used for SSL transport layer
+	CertPEM string
+	KeyPEM  string
+}
+
+// TLSConfig - TLS cert and key configuration
+type TLSConfig struct {
+	CertPEMBlock []byte
+	KeyPEMBlock  []byte
+}
+
 type s3Client struct {
-	*client.Meta
+	*Meta
 
 	// Supports URL in following formats
 	//  - http://<ipaddress>/<bucketname>/<object>
@@ -74,17 +95,16 @@ type s3Client struct {
 }
 
 // GetNewClient returns an initialized s3Client structure.
-func GetNewClient(auth *client.Auth, urlStr string, transport http.RoundTripper) client.Client {
+func GetNewClient(auth *Auth, urlStr string, transport http.RoundTripper) client.Client {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil
 	}
 	s3c := &s3Client{
-		&client.Meta{
+		&Meta{
 			Auth:      auth,
 			Transport: GetNewTraceTransport(s3Verify{}, transport),
-		},
-		u,
+		}, u,
 	}
 	return s3c
 }

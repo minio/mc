@@ -18,23 +18,30 @@ type donut struct {
 	nodes   map[string]Node
 }
 
-// setDonutNode - wrapper function to instantiate a new donut node based on the configuration
-func setDonutNode(hostname string, disks []string) (Node, error) {
+// attachDonutNode - wrapper function to instantiate a new node for associated donut
+// based on the configuration
+func (d donut) attachDonutNode(hostname string, disks []string) error {
 	node, err := NewNode(hostname)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for i, disk := range disks {
 		// Order is necessary for maps, keep order number separately
 		newDisk, err := NewDisk(disk, i)
 		if err != nil {
-			return nil, err
+			return err
+		}
+		if err := newDisk.MakeDir(d.name); err != nil {
+			return err
 		}
 		if err := node.AttachDisk(newDisk); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return node, nil
+	if err := d.AttachNode(node); err != nil {
+		return err
+	}
+	return nil
 }
 
 // NewDonut - instantiate a new donut
@@ -42,7 +49,6 @@ func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) 
 	if donutName == "" || len(nodeDiskMap) == 0 {
 		return nil, errors.New("invalid arguments")
 	}
-
 	nodes := make(map[string]Node)
 	buckets := make(map[string]Bucket)
 	d := donut{
@@ -50,16 +56,12 @@ func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) 
 		nodes:   nodes,
 		buckets: buckets,
 	}
-
 	for k, v := range nodeDiskMap {
 		if len(v) > disksPerNode || len(v) == 0 {
 			return nil, errors.New("invalid number of disks per node")
 		}
-		n, err := setDonutNode(k, v)
+		err := d.attachDonutNode(k, v)
 		if err != nil {
-			return nil, err
-		}
-		if err := d.AttachNode(n); err != nil {
 			return nil, err
 		}
 	}
@@ -67,6 +69,12 @@ func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) 
 }
 
 func (d donut) MakeBucket(bucketName string) error {
+	if bucketName == "" || strings.TrimSpace(bucketName) == "" {
+		return errors.New("invalid argument")
+	}
+	if _, ok := d.buckets[bucketName]; ok {
+		return errors.New("bucket exists")
+	}
 	bucket, err := NewBucket(bucketName, d.name, d.nodes)
 	if err != nil {
 		return err

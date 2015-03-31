@@ -58,7 +58,7 @@ func getNewClient(debug bool, url string) (cl client.Client, err error) {
 		return nil, err
 	}
 
-	var auth client.Auth
+	var auth s3.Auth
 	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 
