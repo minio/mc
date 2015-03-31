@@ -22,6 +22,7 @@ import (
 	"net/url"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/donut"
 )
 
@@ -30,33 +31,43 @@ func doDonutListCmd(c *cli.Context) {
 	if !c.Args().Present() {
 		fatal("no args?")
 	}
-	urlStr, err := parseURL(c.Args().First())
+	urlArg1, err := url.Parse(c.Args().First())
 	if err != nil {
 		fatal(err.Error())
 	}
-	u, err := url.Parse(urlStr)
+	donutConfigData, err := loadDonutConfig()
 	if err != nil {
 		fatal(err.Error())
 	}
-	mcDonutConfigData, err := loadDonutConfig()
-	if err != nil {
-		fatal(err.Error())
-	}
-	if _, ok := mcDonutConfigData.Donuts[u.Host]; !ok {
-		msg := fmt.Sprintf("requested donut: <%s> does not exist", u.Host)
+	if _, ok := donutConfigData.Donuts[urlArg1.Host]; !ok {
+		msg := fmt.Sprintf("requested donut: <%s> does not exist", urlArg1.Host)
 		fatal(msg)
 	}
 	nodes := make(map[string][]string)
-	for k, v := range mcDonutConfigData.Donuts[u.Host].Node {
+	for k, v := range donutConfigData.Donuts[urlArg1.Host].Node {
 		nodes[k] = v.ActiveDisks
 	}
-	d, err := donut.GetNewClient(u.Host, nodes)
+	d, err := donut.GetNewClient(urlArg1.Host, nodes)
 	if err != nil {
 		fatal(err.Error())
 	}
-	buckets, err := d.ListBuckets()
+	bucketName, objectName, err := url2Object(urlArg1.String())
 	if err != nil {
 		fatal(err.Error())
 	}
-	printBuckets(buckets)
+
+	switch true {
+	case bucketName == "":
+		buckets, err := d.ListBuckets()
+		if err != nil {
+			fatal(err.Error())
+		}
+		printBuckets(buckets)
+	case objectName == "": // List objects in a bucket
+		items, _, err := d.ListObjects(bucketName, "", "", "", client.Maxkeys)
+		if err != nil {
+			fatal(err.Error())
+		}
+		printObjects(items)
+	}
 }

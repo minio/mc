@@ -56,3 +56,8 @@ type TLSConfig struct {
 	CertPEMBlock []byte
 	KeyPEMBlock  []byte
 }
+
+// Maxkeys listed per ListObjects()
+const (
+	Maxkeys = 1000
+)
