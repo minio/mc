@@ -1,4 +1,4 @@
-MINIOPATH=$(GOPATH)/src/github.com/minio-io/mc
+MINIOPATH=$(GOPATH)/src/github.com/minio-io/donut
 
 all: getdeps install
 
@@ -61,10 +61,11 @@ docs-deploy:
 	@mkdocs gh-deploy --clean
 
 install: test-all
-	@echo "Installing mc:"
-	@godep go install github.com/minio-io/mc
-	@mkdir -p $(HOME)/.minio/mc
+	@echo "Installing donut-cli:"
+	@godep go install github.com/minio-io/donut/cmd/donut-cli
+	@mkdir -p $(HOME)/.minio/donut
 
 clean:
 	@rm -fv cover.out
+	@rm -fv erasure/*.syso
 	@rm -fv build-constants.go

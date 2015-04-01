@@ -27,8 +27,12 @@
 			"Rev": "1ee5c115af7856a16f133e2f2d3d9f91895c2ddb"
 		},
 		{
-			"ImportPath": "github.com/minio-io/iodine",
-			"Rev": "8c8985d5a45e388dccb5ca280c897672abb18278"
+			"ImportPath": "github.com/minio-io/donut",
+			"Rev": "6590e6727612b90b4373e4f42b898ee159251cde"
+		},
+		{
+			"ImportPath": "github.com/minio-io/erasure",
+			"Rev": "6e3a142ee5ce194be6339cdde8e89c094b2ec7fd"
 		},
 		{
 			"ImportPath": "github.com/minio-io/minio/pkg/utils/split",
