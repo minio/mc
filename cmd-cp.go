@@ -79,6 +79,11 @@ func firstMode(c *cli.Context, args *cmdArgs) error {
 	if err != nil {
 		return err
 	}
+	var bar *pb.ProgressBar
+	if !args.quiet {
+		// get progress bar
+		bar = startBar(size)
+	}
 	// http://<bucket>.<hostname> is specified without key
 	if args.destination.key == "" {
 		args.destination.key = args.source.key
@@ -87,13 +92,19 @@ func firstMode(c *cli.Context, args *cmdArgs) error {
 	if err != nil {
 		return err
 	}
-	err = s3c.Put(args.destination.bucket, args.destination.key, size, source)
+	newreader := io.Reader(source)
+	if !args.quiet {
+		bar.Start()
+		newreader = io.TeeReader(source, bar)
+	}
+	err = s3c.Put(args.destination.bucket, args.destination.key, size, newreader)
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("%s uploaded -- to bucket:(http://%s/%s)", args.source.key,
-		args.destination.bucket, args.destination.key)
-	info(msg)
+	if !args.quiet {
+		bar.Finish()
+		info("Success!")
+	}
 	return nil
 }
 
