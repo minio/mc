@@ -19,11 +19,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
@@ -56,13 +58,24 @@ func (w *walk) putWalk(p string, i os.FileInfo, err error) error {
 		info(msg)
 		return nil
 	}
-	err = w.s3.Put(bucketname, key, i.Size(), bodyFile)
+	var bar *pb.ProgressBar
+	if !w.args.quiet {
+		// get progress bar
+		bar = startBar(i.Size())
+	}
+	newreader := io.Reader(bodyFile)
+	if !w.args.quiet {
+		bar.Start()
+		newreader = io.TeeReader(bodyFile, bar)
+	}
+	err = w.s3.Put(bucketname, key, i.Size(), newreader)
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("%s uploaded -- to bucket:%s/%s/%s",
-		key, w.args.destination.host, bucketname, key)
-	info(msg)
+	if !w.args.quiet {
+		bar.Finish()
+		info("Success!")
+	}
 	return nil
 }
 
@@ -77,7 +90,7 @@ func isBucketExist(bucketName string, v []*client.Bucket) bool {
 }
 
 func sourceValidate(input string) error {
-	if s3.IsValidBucketName(input) {
+	if !s3.IsValidBucketName(input) {
 		return fmt.Errorf("Invalid input bucket name [%s]", input)
 	}
 	st, err := os.Stat(input)
