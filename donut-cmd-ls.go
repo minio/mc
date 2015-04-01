@@ -68,5 +68,7 @@ func doDonutListCmd(c *cli.Context) {
 			fatal(err.Error())
 		}
 		printObjects(items)
+	case objectName != "":
+		listObjectPrefix(d, bucketName, objectName, client.Maxkeys)
 	}
 }
