@@ -18,8 +18,8 @@ package erasure
 
 // #cgo CFLAGS: -O0
 // #include <stdlib.h>
-// #include "ec-code.h"
-// #include "ec-common.h"
+// #include "ec_isal-l.h"
+// #include "ec_minio_common.h"
 import "C"
 import (
 	"errors"
@@ -37,7 +37,7 @@ import (
 //    blocks.
 // "dataLen" is the length of original source data
 func (e *Erasure) Decode(encodedDataBlocks [][]byte, dataLen int) (decodedData []byte, err error) {
-	var source, target **C.uint8_t
+	var source, target **C.uchar
 
 	k := int(e.params.K)
 	m := int(e.params.M)
@@ -82,7 +82,7 @@ func (e *Erasure) Decode(encodedDataBlocks [][]byte, dataLen int) (decodedData [
 
 	// If not already initialized, recompute and cache
 	if e.decodeMatrix == nil || e.decodeTbls == nil || e.decodeIndex == nil {
-		var decodeMatrix, decodeTbls *C.uint8_t
+		var decodeMatrix, decodeTbls *C.uchar
 		var decodeIndex *C.uint32_t
 
 		C.minio_init_decoder(missingEncodedBlocksC, C.int(k), C.int(n), C.int(missingEncodedBlocksCount-1),
@@ -102,7 +102,7 @@ func (e *Erasure) Decode(encodedDataBlocks [][]byte, dataLen int) (decodedData [
 
 	// Get pointers to source "data" and target "parity" blocks from the output byte array.
 	ret := C.minio_get_source_target(C.int(missingEncodedBlocksCount-1), C.int(k), C.int(m), missingEncodedBlocksC,
-		e.decodeIndex, (**C.uint8_t)(unsafe.Pointer(&pointers[0])), &source, &target)
+		e.decodeIndex, (**C.uchar)(unsafe.Pointer(&pointers[0])), &source, &target)
 	if int(ret) == -1 {
 		return nil, errors.New("Unable to decode data")
 	}
