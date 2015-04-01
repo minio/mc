@@ -18,8 +18,8 @@ package erasure
 
 // #cgo CFLAGS: -O0
 // #include <stdlib.h>
-// #include "ec-code.h"
-// #include "ec-common.h"
+// #include "ec_isal-l.h"
+// #include "ec_minio_common.h"
 import "C"
 import (
 	"errors"
@@ -57,8 +57,8 @@ type ErasureParams struct {
 // Erasure is an object used to encode and decode data.
 type Erasure struct {
 	params                   *ErasureParams
-	encodeMatrix, encodeTbls *C.uint8_t
-	decodeMatrix, decodeTbls *C.uint8_t
+	encodeMatrix, encodeTbls *C.uchar
+	decodeMatrix, decodeTbls *C.uchar
 	decodeIndex              *C.uint32_t
 }
 
@@ -101,8 +101,8 @@ func NewErasure(ep *ErasureParams) *Erasure {
 	var k = C.int(ep.K)
 	var m = C.int(ep.M)
 
-	var encodeMatrix *C.uint8_t
-	var encodeTbls *C.uint8_t
+	var encodeMatrix *C.uchar
+	var encodeTbls *C.uchar
 
 	C.minio_init_encoder(C.int(ep.Technique), k, m, &encodeMatrix,
 		&encodeTbls)
@@ -190,8 +190,8 @@ func (e *Erasure) Encode(inputData []byte) (encodedBlocks [][]byte, err error) {
 	// blocks. Only the parity blocks are filled. Data blocks remain
 	// intact.
 	C.ec_encode_data(C.int(encodedBlockLen), C.int(k), C.int(m), e.encodeTbls,
-		(**C.uint8_t)(unsafe.Pointer(&pointersToEncodedBlock[:k][0])), // Pointers to data blocks
-		(**C.uint8_t)(unsafe.Pointer(&pointersToEncodedBlock[k:][0]))) // Pointers to parity blocks
+		(**C.uchar)(unsafe.Pointer(&pointersToEncodedBlock[:k][0])), // Pointers to data blocks
+		(**C.uchar)(unsafe.Pointer(&pointersToEncodedBlock[k:][0]))) // Pointers to parity blocks
 
 	return encodedBlocks, nil
 }
