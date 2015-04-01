@@ -19,6 +19,7 @@ package client
 import (
 	"errors"
 	"io"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -158,8 +159,31 @@ func (d *donutDriver) GetPartial(bucket, object string, start, length int64) (bo
 }
 
 // Stat - gets metadata information about the object
-func (d *donutDriver) Stat(bucket, object string) (size int64, date time.Time, err error) {
-	return 0, time.Time{}, errors.New("Not Implemented")
+func (d *donutDriver) Stat(bucketName, objectName string) (size int64, date time.Time, err error) {
+	buckets, err := d.donut.ListBuckets()
+	if err != nil {
+		return 0, time.Time{}, err
+	}
+	objectList, err := buckets[bucketName].ListObjects()
+	if err != nil {
+		return 0, time.Time{}, err
+	}
+	if _, ok := objectList[objectName]; !ok {
+		return 0, time.Time{}, os.ErrNotExist
+	}
+	metadata, err := objectList[objectName].GetDonutObjectMetadata()
+	if err != nil {
+		return 0, time.Time{}, err
+	}
+	t1, err := time.Parse(time.RFC3339Nano, metadata["created"])
+	if err != nil {
+		return 0, time.Time{}, err
+	}
+	s, err := strconv.ParseInt(metadata["size"], 10, 64)
+	if err != nil {
+		return 0, time.Time{}, err
+	}
+	return s, t1, nil
 }
 
 // bySize implements sort.Interface for []Item based on the Size field.
@@ -186,7 +210,6 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 	sort.Strings(objects)
 	if prefix != "" {
 		objects = filterPrefix(objects, prefix)
-		objects = removePrefix(objects, prefix)
 	}
 	if maxKeys <= 0 || maxKeys > 1000 {
 		maxKeys = 1000
