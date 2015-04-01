@@ -19,8 +19,6 @@ package client
 import (
 	"io"
 	"time"
-
-	"encoding/xml"
 )
 
 // Client - client interface
@@ -37,13 +35,13 @@ type Client interface {
 // Bucket - carries s3 bucket reply header
 type Bucket struct {
 	Name         string
-	CreationDate XMLTime // 2006-02-03T16:45:09.000Z
+	CreationDate time.Time // 2006-02-03T16:45:09.000Z
 }
 
 // Item - object item list
 type Item struct {
 	Key          string
-	LastModified XMLTime
+	LastModified time.Time
 	Size         int64
 }
 
@@ -56,34 +54,3 @@ type Prefix struct {
 const (
 	Maxkeys = 1000
 )
-
-// Date format
-const (
-	iso8601Format = "2006-01-02T15:04:05.000Z"
-)
-
-// XMLTime - time wrapper
-type XMLTime struct {
-	Time time.Time
-}
-
-// UnmarshalXML - unmarshal incoming xml
-func (c *XMLTime) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	var v string
-	d.DecodeElement(&v, &start)
-	parse, _ := time.Parse(iso8601Format, v)
-	*c = XMLTime{parse}
-	return nil
-}
-
-// UnmarshalXMLAttr - unmarshal specific attr
-func (c *XMLTime) UnmarshalXMLAttr(attr xml.Attr) error {
-	t, _ := time.Parse(iso8601Format, attr.Value)
-	*c = XMLTime{t}
-	return nil
-}
-
-// String - xml to string
-func (c *XMLTime) String() string {
-	return c.Time.Format(iso8601Format)
-}

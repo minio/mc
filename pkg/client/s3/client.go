@@ -49,7 +49,6 @@ import (
 	"strings"
 
 	"encoding/xml"
-
 	"github.com/minio-io/mc/pkg/client"
 )
 

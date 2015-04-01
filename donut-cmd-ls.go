@@ -23,6 +23,7 @@ import (
 
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/mc/pkg/client/donut"
 )
 
 // doDonutListCmd - list buckets and objects
@@ -46,7 +47,7 @@ func doDonutListCmd(c *cli.Context) {
 	for k, v := range donutConfigData.Donuts[urlArg1.Host].Node {
 		nodes[k] = v.ActiveDisks
 	}
-	d, err := client.GetNewClient(urlArg1.Host, nodes)
+	d, err := donut.GetNewClient(urlArg1.Host, nodes)
 	if err != nil {
 		fatal(err.Error())
 	}

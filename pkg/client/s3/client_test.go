@@ -67,8 +67,8 @@ func TestParseBuckets(t *testing.T) {
 	t1, _ := time.Parse(iso8601Format, "2006-06-21T07:04:31.000Z")
 	t2, _ := time.Parse(iso8601Format, "2006-06-21T07:04:32.000Z")
 	want := []*client.Bucket{
-		{Name: "bucketOne", CreationDate: client.XMLTime{Time: t1}},
-		{Name: "bucketTwo", CreationDate: client.XMLTime{Time: t2}},
+		{Name: "bucketOne", CreationDate: t1},
+		{Name: "bucketTwo", CreationDate: t2},
 	}
 	dump := func(v []*client.Bucket) {
 		for i, b := range v {

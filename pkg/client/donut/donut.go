@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package client
+package donut
 
 import (
 	"errors"
@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/minio-io/donut"
+	"github.com/minio-io/mc/pkg/client"
 )
 
 // donutDriver - creates a new single disk drivers driver using donut
@@ -57,7 +58,7 @@ func IsValidBucketName(bucket string) bool {
 }
 
 // GetNewClient returns an initialized donut driver
-func GetNewClient(donutName string, nodeDiskMap map[string][]string) (Client, error) {
+func GetNewClient(donutName string, nodeDiskMap map[string][]string) (client.Client, error) {
 	var err error
 
 	d := new(donutDriver)
@@ -69,26 +70,23 @@ func GetNewClient(donutName string, nodeDiskMap map[string][]string) (Client, er
 }
 
 // byBucketName is a type for sorting bucket metadata by bucket name
-type byBucketName []*Bucket
+type byBucketName []*client.Bucket
 
 func (b byBucketName) Len() int           { return len(b) }
 func (b byBucketName) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b byBucketName) Less(i, j int) bool { return b[i].Name < b[j].Name }
 
 // ListBuckets returns a list of buckets
-func (d *donutDriver) ListBuckets() (results []*Bucket, err error) {
+func (d *donutDriver) ListBuckets() (results []*client.Bucket, err error) {
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return nil, err
 	}
 	for name := range buckets {
-		t := XMLTime{
-			Time: time.Now(),
-		}
-		result := &Bucket{
+		result := &client.Bucket{
 			Name: name,
 			// TODO Add real created date
-			CreationDate: t,
+			CreationDate: time.Now(),
 		}
 		results = append(results, result)
 	}
@@ -187,14 +185,14 @@ func (d *donutDriver) Stat(bucketName, objectName string) (size int64, date time
 }
 
 // bySize implements sort.Interface for []Item based on the Size field.
-type bySize []*Item
+type bySize []*client.Item
 
 func (a bySize) Len() int           { return len(a) }
 func (a bySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 
 // ListObjects - returns list of objects
-func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string, maxKeys int) (items []*Item, prefixes []*Prefix, err error) {
+func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return nil, nil, err
@@ -226,25 +224,22 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 	}
 
 	for _, prefix := range commonPrefixes {
-		prefixes = append(prefixes, &Prefix{Prefix: prefix})
+		prefixes = append(prefixes, &client.Prefix{Prefix: prefix})
 	}
 	for _, object := range actualObjects {
 		metadata, err := objectList[object].GetDonutObjectMetadata()
 		if err != nil {
 			return nil, nil, err
 		}
-		t1, err := time.Parse(time.RFC3339Nano, metadata["created"])
+		t, err := time.Parse(time.RFC3339Nano, metadata["created"])
 		if err != nil {
 			return nil, nil, err
-		}
-		t := XMLTime{
-			Time: t1,
 		}
 		size, err := strconv.ParseInt(metadata["size"], 10, 64)
 		if err != nil {
 			return nil, nil, err
 		}
-		item := &Item{
+		item := &client.Item{
 			Key:          object,
 			LastModified: t,
 			Size:         size,
