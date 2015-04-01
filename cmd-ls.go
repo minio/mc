@@ -33,7 +33,7 @@ const (
 // printBuckets lists buckets and its meta-dat
 func printBuckets(v []*client.Bucket) {
 	for _, b := range v {
-		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Time.Local().Format(printDate), "", b.Name)
+		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Local().Format(printDate), "", b.Name)
 		info(msg)
 	}
 }
@@ -43,7 +43,7 @@ func printObjects(v []*client.Item) {
 	if len(v) > 0 {
 		// Items are already sorted
 		for _, b := range v {
-			printObject(b.LastModified.Time, b.Size, b.Key)
+			printObject(b.LastModified, b.Size, b.Key)
 		}
 	}
 }

@@ -1,4 +1,20 @@
-package client
+/*
+ * Minimalist Object Storage, (C) 2015 Minio, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package donut
 
 import (
 	"bytes"
@@ -6,9 +22,10 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	//	"time"
 
 	. "gopkg.in/check.v1"
+
+	"github.com/minio-io/mc/pkg/client"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -94,7 +111,7 @@ func (s *MySuite) TestCreateBucketWithSameNameFails(c *C) {
 	c.Assert(err, Not(IsNil))
 }
 
-func getBucketNames(buckets []*Bucket) []string {
+func getBucketNames(buckets []*client.Bucket) []string {
 	var bucketNames []string
 	for _, bucket := range buckets {
 		bucketNames = append(bucketNames, bucket.Name)
@@ -177,7 +194,7 @@ func (s *MySuite) TestNewObjectCanBeWritten(c *C) {
 	c.Assert(int64(actualData.Len()), Equals, size)
 }
 
-func getObjectNames(objects []*Item) []string {
+func getObjectNames(objects []*client.Item) []string {
 	var objectNames []string
 	for _, object := range objects {
 		objectNames = append(objectNames, object.Key)
@@ -215,7 +232,7 @@ func (s *MySuite) TestMultipleNewObjects(c *C) {
 	c.Assert(readerBuffer2.Bytes(), DeepEquals, []byte("two"))
 
 	// test list objects
-	listObjects, _, err := donut.ListObjects("foo", "", "", "", Maxkeys)
+	listObjects, _, err := donut.ListObjects("foo", "", "", "", client.Maxkeys)
 	c.Assert(err, IsNil)
 
 	receivedObjectNames := getObjectNames(listObjects)

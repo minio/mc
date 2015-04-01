@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/mc/pkg/client/donut"
 )
 
 func upload(urlArg1, urlArg2 *url.URL) {
@@ -36,7 +36,7 @@ func upload(urlArg1, urlArg2 *url.URL) {
 		for k, v := range mcDonutConfigData.Donuts[urlArg2.Host].Node {
 			nodes[k] = v.ActiveDisks
 		}
-		d, err := client.GetNewClient(urlArg2.Host, nodes)
+		d, err := donut.GetNewClient(urlArg2.Host, nodes)
 		if err != nil {
 			fatal(err.Error())
 		}
@@ -69,7 +69,7 @@ func download(urlArg1, urlArg2 *url.URL) {
 		for k, v := range mcDonutConfigData.Donuts[urlArg1.Host].Node {
 			nodes[k] = v.ActiveDisks
 		}
-		d, err := client.GetNewClient(urlArg1.Host, nodes)
+		d, err := donut.GetNewClient(urlArg1.Host, nodes)
 		if err != nil {
 			fatal(err.Error())
 		}
