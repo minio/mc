@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// This package contains all s3 client specific global variables and constants
+// Package s3 contains all client specific global variables and constants
 package s3
 
 const (
