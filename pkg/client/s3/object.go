@@ -142,9 +142,8 @@ func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, err 
 // If length is negative, the rest of the object is returned.
 func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, err error) {
 	if offset < 0 {
-		return nil, 0, errors.New("invalid negative length")
+		return nil, 0, errors.New("invalid negative offset")
 	}
-
 	req := newReq(c.keyURL(bucket, key))
 	if length >= 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))

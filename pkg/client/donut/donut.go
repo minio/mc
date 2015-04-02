@@ -19,6 +19,7 @@ package donut
 import (
 	"errors"
 	"io"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
@@ -152,8 +153,45 @@ func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.
 }
 
 // GetPartial retrieves an object range and writes it to a writer
-func (d *donutDriver) GetPartial(bucket, object string, start, length int64) (body io.ReadCloser, size int64, err error) {
-	return nil, 0, errors.New("Not Implemented")
+func (d *donutDriver) GetPartial(bucketName, objectName string, offset, length int64) (body io.ReadCloser, size int64, err error) {
+	if bucketName == "" || strings.TrimSpace(bucketName) == "" {
+		return nil, 0, errors.New("invalid argument")
+	}
+	if objectName == "" || strings.TrimSpace(objectName) == "" {
+		return nil, 0, errors.New("invalid argument")
+	}
+	if offset < 0 {
+		return nil, 0, errors.New("invalid argument")
+	}
+	reader, writer := io.Pipe()
+	buckets, err := d.donut.ListBuckets()
+	if err != nil {
+		return nil, 0, err
+	}
+	if _, ok := buckets[bucketName]; !ok {
+		return nil, 0, errors.New("bucket does not exist")
+	}
+	objects, err := buckets[bucketName].ListObjects()
+	if _, ok := objects[objectName]; !ok {
+		return nil, 0, errors.New("object does not exist")
+	}
+	donutObjectMetadata, err := objects[objectName].GetDonutObjectMetadata()
+	if err != nil {
+		return nil, 0, err
+	}
+	size, err = strconv.ParseInt(donutObjectMetadata["size"], 10, 64)
+	if err != nil {
+		return nil, 0, err
+	}
+	if offset > size || (offset+length-1) > size {
+		return nil, 0, errors.New("invalid range")
+	}
+	go buckets[bucketName].GetObject(objectName, writer, donutObjectMetadata)
+	n, err := io.CopyN(ioutil.Discard, reader, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	return reader, (size - n), nil
 }
 
 // Stat - gets metadata information about the object
