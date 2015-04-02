@@ -28,6 +28,10 @@ import (
 	"github.com/minio-io/mc/pkg/client"
 )
 
+const (
+	globalMaxKeys = 1000 // Maximum number of keys to fetch per request
+)
+
 func Test(t *testing.T) { TestingT(t) }
 
 type MySuite struct{}
