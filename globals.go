@@ -14,37 +14,14 @@
  * limitations under the License.
  */
 
+// This package contains all the global variables and constants
 package main
 
-import (
-	"fmt"
-	"os"
-
-	"github.com/mgutz/ansi"
+var (
+	globalQuietFlag = false // Quiet flag set via command line
+	globalDebugFlag = false // Debug flag set via command line
 )
 
-// Color coding format "foregroundColor+attributes:backgroundColor+attributes"
-func fatal(msg string) {
-	red := ansi.ColorFunc("red+B")
-	fmt.Println(red(msg))
-	os.Exit(1)
-}
-
-func warning(msg string) {
-	yellow := ansi.ColorFunc("yellow")
-	fmt.Println(yellow(msg))
-}
-
-func info(msg string) {
-	if !globalQuietFlag {
-		green := ansi.ColorFunc("green")
-		fmt.Println(green(msg))
-	}
-}
-
-func infoCallback(msg string) {
-	if !globalQuietFlag {
-		green := ansi.ColorFunc("green")
-		fmt.Print("\r" + green(msg))
-	}
-}
+const (
+	globalMaxKeys = 1000 // Maximum number of keys to fetch per request
+)

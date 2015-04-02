@@ -176,7 +176,7 @@ func urlAliasExpander(arg string) (*url.URL, error) {
 // Parse subcommand options
 func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 	args = new(cmdArgs)
-	args.quiet = c.GlobalBool("quiet")
+	args.quiet = globalQuietFlag
 	switch len(c.Args()) {
 	case 1: // only one URL
 		urlString, err := aliasExpand(c.Args().First())

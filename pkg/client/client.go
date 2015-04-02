@@ -49,8 +49,3 @@ type Item struct {
 type Prefix struct {
 	Prefix string
 }
-
-// Maxkeys listed per ListObjects()
-const (
-	Maxkeys = 1000
-)

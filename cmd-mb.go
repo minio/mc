@@ -33,7 +33,7 @@ func doMakeBucketCmd(c *cli.Context) {
 		fatal(err.Error())
 	}
 
-	s3c, err := getNewClient(c.GlobalBool("debug"), urlStr)
+	s3c, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
