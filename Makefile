@@ -42,7 +42,7 @@ build-all: getdeps verifiers
 	@echo "Building Libraries:"
 	@godep go generate github.com/minio-io/erasure
 	@godep go generate ./...
-	@godep go build ./...
+	@godep go build -a ./... # have no stale packages
 
 test-all: pre-build build-all
 	@echo "Running Test Suites:"
