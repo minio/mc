@@ -84,7 +84,7 @@ func listObjectPrefix(s3c client.Client, bucketName, objectName string, maxkeys 
 // doListCmd lists objects inside a bucket
 func doListCmd(c *cli.Context) {
 	var items []*client.Item
-	// quiet := c.GlobalBool("quiet")
+	// quiet := globalQuietFlag
 
 	urlStr, err := parseURL(c.Args().First())
 	if err != nil {
@@ -96,7 +96,7 @@ func doListCmd(c *cli.Context) {
 		fatal(err.Error())
 	}
 
-	s3c, err := getNewClient(c.GlobalBool("debug"), urlStr)
+	s3c, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -109,13 +109,13 @@ func doListCmd(c *cli.Context) {
 		}
 		printBuckets(buckets)
 	case objectName == "": // List objects in a bucket
-		items, _, err = s3c.ListObjects(bucketName, "", "", "", client.Maxkeys)
+		items, _, err = s3c.ListObjects(bucketName, "", "", "", globalMaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
 	case objectName != "": // List objects matching the key prefix
-		listObjectPrefix(s3c, bucketName, objectName, client.Maxkeys)
+		listObjectPrefix(s3c, bucketName, objectName, globalMaxKeys)
 	default:
 		fatal(err.Error())
 	}

@@ -112,7 +112,7 @@ func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
 		if err := sourceValidate(input); err != nil {
 			return err
 		}
-		s3c, err := getNewClient(c.GlobalBool("debug"), args.destination.url.String())
+		s3c, err := getNewClient(globalDebugFlag, args.destination.url.String())
 		if err != nil {
 			return err
 		}
@@ -130,11 +130,11 @@ func doRecursiveCP(c *cli.Context, args *cmdArgs) error {
 			return err
 		}
 	case args.destination.bucket == "":
-		s3c, err := getNewClient(c.GlobalBool("debug"), args.source.url.String())
+		s3c, err := getNewClient(globalDebugFlag, args.source.url.String())
 		if err != nil {
 			return err
 		}
-		items, _, err := s3c.ListObjects(args.source.bucket, "", "", "", client.Maxkeys)
+		items, _, err := s3c.ListObjects(args.source.bucket, "", "", "", globalMaxKeys)
 		if err != nil {
 			return err
 		}

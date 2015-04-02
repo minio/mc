@@ -232,7 +232,7 @@ func (s *MySuite) TestMultipleNewObjects(c *C) {
 	c.Assert(readerBuffer2.Bytes(), DeepEquals, []byte("two"))
 
 	// test list objects
-	listObjects, _, err := donut.ListObjects("foo", "", "", "", client.Maxkeys)
+	listObjects, _, err := donut.ListObjects("foo", "", "", "", globalMaxKeys)
 	c.Assert(err, IsNil)
 
 	receivedObjectNames := getObjectNames(listObjects)

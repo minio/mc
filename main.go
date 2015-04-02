@@ -1,5 +1,5 @@
 /*
- * Minimalist Object Storage, (C) 2014,2015 Minio, Inc.
+ * Minimalist Object Storage, (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,5 +55,10 @@ func main() {
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.EnableBashCompletion = true
+	app.Before = func(c *cli.Context) error {
+		globalQuietFlag = c.GlobalBool("quiet")
+		globalDebugFlag = c.GlobalBool("debug")
+		return nil
+	}
 	app.Run(os.Args)
 }

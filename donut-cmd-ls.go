@@ -22,7 +22,6 @@ import (
 	"net/url"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/donut"
 )
 
@@ -64,12 +63,12 @@ func doDonutListCmd(c *cli.Context) {
 		}
 		printBuckets(buckets)
 	case objectName == "": // List objects in a bucket
-		items, _, err := d.ListObjects(bucketName, "", "", "", client.Maxkeys)
+		items, _, err := d.ListObjects(bucketName, "", "", "", globalMaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
 	case objectName != "":
-		listObjectPrefix(d, bucketName, objectName, client.Maxkeys)
+		listObjectPrefix(d, bucketName, objectName, globalMaxKeys)
 	}
 }
