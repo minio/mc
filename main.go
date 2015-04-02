@@ -17,10 +17,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/user"
+	"runtime"
+	"strconv"
 
+	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 )
 
@@ -47,10 +51,36 @@ func init() {
 
 }
 
+// Tries to get os/arch/platform specific information
+// Returns a map of current os/arch/platform/memstats
+func getSystemData() map[string]string {
+	host, err := os.Hostname()
+	if err != nil {
+		host = ""
+	}
+	memstats := &runtime.MemStats{}
+	runtime.ReadMemStats(memstats)
+	mem := fmt.Sprintf("Used: %s | Allocated: %s | Used-Heap: %s | Allocated-Heap: %s",
+		pb.FormatBytes(int64(memstats.Alloc)),
+		pb.FormatBytes(int64(memstats.TotalAlloc)),
+		pb.FormatBytes(int64(memstats.HeapAlloc)),
+		pb.FormatBytes(int64(memstats.HeapSys)))
+	platform := fmt.Sprintf("Host: %s | OS: %s | Arch: %s",
+		host,
+		runtime.GOOS,
+		runtime.GOARCH)
+	goruntime := fmt.Sprintf("Version: %s | CPUs: %s", runtime.Version(), strconv.Itoa(runtime.NumCPU()))
+	return map[string]string{
+		"PLATFORM": platform,
+		"RUNTIME":  goruntime,
+		"MEM":      mem,
+	}
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Usage = "Minio Client for S3 Compatible Object Storage"
-	app.Version = gitCommitHash
+	app.Version = mcGitCommitHash
 	app.Commands = options
 	app.Flags = flags
 	app.Author = "Minio.io"
@@ -58,6 +88,9 @@ func main() {
 	app.Before = func(c *cli.Context) error {
 		globalQuietFlag = c.GlobalBool("quiet")
 		globalDebugFlag = c.GlobalBool("debug")
+		if globalDebugFlag {
+			app.ExtraInfo = getSystemData()
+		}
 		return nil
 	}
 	app.Run(os.Args)
