@@ -62,7 +62,7 @@ docs-deploy:
 
 install: test-all
 	@echo "Installing mc:"
-	@godep go install github.com/minio-io/mc
+	@godep go install -a github.com/minio-io/mc
 	@mkdir -p $(HOME)/.minio/mc
 
 clean:
