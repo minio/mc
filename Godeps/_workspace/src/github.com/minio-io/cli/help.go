@@ -31,7 +31,7 @@ GLOBAL OPTIONS:
 // The text template for the command help topic.
 // cli.go uses text/template to render templates. You can
 // render custom help text by setting this variable.
-var CommandHelpTemplate = `NAME:
+var DefaultCommandHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -48,7 +48,7 @@ OPTIONS:
 // The text template for the subcommand help topic.
 // cli.go uses text/template to render templates. You can
 // render custom help text by setting this variable.
-var SubcommandHelpTemplate = `NAME:
+var DefaultSubcommandHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -147,7 +147,7 @@ func ShowCommandHelp(c *Context, command string) {
 				app.Commands = append(app.Commands, command)
 			}
 		}
-		HelpPrinter(SubcommandHelpTemplate, app)
+		HelpPrinter(DefaultSubcommandHelpTemplate, app)
 		return
 	}
 
@@ -161,7 +161,11 @@ func ShowCommandHelp(c *Context, command string) {
 					c0.Flags = append(c0.Flags, flag)
 				}
 			}
-			HelpPrinter(CommandHelpTemplate, c0)
+			if c0.CustomHelpTemplate != "" {
+				HelpPrinter(c0.CustomHelpTemplate, c0)
+			} else {
+				HelpPrinter(DefaultCommandHelpTemplate, c0)
+			}
 			return
 		}
 	}

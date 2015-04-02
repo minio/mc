@@ -38,6 +38,10 @@ type Command struct {
 	HideHelp bool
 	// Boolean to hide this command from help or completion
 	Hide bool
+	// CustomHelpTemplate the text template for the command help topic.
+	// cli.go uses text/template to render templates. You can
+	// render custom help text by setting this variable.
+	CustomHelpTemplate string
 }
 
 // Invokes the command given the context, parses ctx.Args() to generate command-specific flags

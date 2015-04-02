@@ -24,22 +24,70 @@ import (
 
 var cpCmd = cli.Command{
 	Name:        "cp",
-	Usage:       "copy objects",
-	Description: `Copies a local file or dir or object or bucket to another location locally or in S3.`,
+	Usage:       "copy objects and files",
+	Description: "Copy files and objects recursively between Amazon S3, Donut and Filesystem",
 	Action:      doCopyCmd,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "recursively crawls given directory uploads to given bucket",
+			Usage: "recursively crawls a given directory or bucket",
 		},
 	},
+	CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE TARGET [TARGET...] {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+OPTIONS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+EXAMPLES:
+   1. Copy an object from Amazon S3 object storage to local fileystem.
+      $ mc {{.Name}} https://s3.amazonaws.com/jukebox/klingon_opera_aktuh_maylotah.ogg wakeup.ogg
+
+   2. Copy a bucket recursive from Donut to Amazon S3 object storage
+      $ mc {{.Name}} --recursive donut://home/photos/burningman2011 https://s3.amazonaws.com/burningman/
+
+   3. Copy a local folder to Donut and Amazon S3 object storage
+      $ mc {{.Name}} --recursive backup/ donut://archive/backup/ https://s3.amazonaws.com/backup/
+
+`,
 }
 
 var lsCmd = cli.Command{
 	Name:        "ls",
-	Usage:       "get list of objects",
-	Description: `List Objects and common prefixes under a prefix or all Buckets`,
+	Usage:       "list files and objects",
+	Description: `List files and objects recursively between Amazon S3, Donut and Filesystem`,
 	Action:      doListCmd,
+	CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}} TARGET {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+OPTIONS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+   1. List objects on Donut storage
+      $ mc {{.Name}} donut://archive/backup/
+      2015-03-28 12:47:50 PDT      51.00 MB 2006-Jan-1/backup.tar.gz
+      2015-03-31 14:46:33 PDT      55.00 MB 2006-Mar-1/backup.tar.gz
+
+   2. List buckets on Amazon S3 object storage
+      $ mc {{.Name}} https://s3.amazonaws.com/
+      2015-01-20 15:42:00 PST               rom
+      2015-01-15 00:05:40 PST               zek
+
+`,
 }
 
 var mbCmd = cli.Command{
