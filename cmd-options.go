@@ -22,18 +22,20 @@ import (
 	"github.com/minio-io/cli"
 )
 
-var cpCmd = cli.Command{
-	Name:        "cp",
-	Usage:       "copy objects and files",
-	Description: "Copy files and objects recursively between Amazon S3, Donut and Filesystem",
-	Action:      doCopyCmd,
-	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "recursive, r",
-			Usage: "recursively crawls a given directory or bucket",
+// List of commands
+var (
+	cpCmd = cli.Command{
+		Name:        "cp",
+		Usage:       "copy objects and files",
+		Description: "Copy files and objects recursively between Amazon S3, Donut and Filesystem",
+		Action:      doCopyCmd,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "recursive, r",
+				Usage: "recursively crawls a given directory or bucket",
+			},
 		},
-	},
-	CustomHelpTemplate: `NAME:
+		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -56,14 +58,14 @@ EXAMPLES:
       $ mc {{.Name}} --recursive backup/ donut://archive/backup/ https://s3.amazonaws.com/backup/
 
 `,
-}
+	}
 
-var lsCmd = cli.Command{
-	Name:        "ls",
-	Usage:       "list files and objects",
-	Description: `List files and objects recursively between Amazon S3, Donut and Filesystem`,
-	Action:      doListCmd,
-	CustomHelpTemplate: `NAME:
+	lsCmd = cli.Command{
+		Name:        "ls",
+		Usage:       "list files and objects",
+		Description: `List files and objects recursively between Amazon S3, Donut and Filesystem`,
+		Action:      doListCmd,
+		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -88,53 +90,54 @@ EXAMPLES:
       2015-01-15 00:05:40 PST               zek
 
 `,
-}
+	}
 
-var mbCmd = cli.Command{
-	Name:        "mb",
-	Usage:       "makes a bucket",
-	Description: "Creates an S3 bucket",
-	Action:      doMakeBucketCmd,
-}
+	mbCmd = cli.Command{
+		Name:        "mb",
+		Usage:       "makes a bucket",
+		Description: "Creates an S3 bucket",
+		Action:      doMakeBucketCmd,
+	}
 
-var configCmd = cli.Command{
-	Name:  "config",
-	Usage: "Generate configuration \"" + getMcConfigFilename() + "\" file.",
-	Description: `Configure minio client configuration data. If your config
+	configCmd = cli.Command{
+		Name:  "config",
+		Usage: "Generate configuration \"" + getMcConfigFilename() + "\" file.",
+		Description: `Configure minio client configuration data. If your config
    file does not exist (the default location is ~/.auth), it will be
    automatically created for you. Note that the configure command only writes
    values to the config file. It does not use any configuration values from
    the environment variables.`,
-	Action: doConfigCmd,
-	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "accesskeyid, a",
-			Value: "",
-			Usage: "AWS access key ID",
+		Action: doConfigCmd,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "accesskeyid, a",
+				Value: "",
+				Usage: "AWS access key ID",
+			},
+			cli.StringFlag{
+				Name:  "secretkey, s",
+				Value: "",
+				Usage: "AWS secret access key",
+			},
+			cli.StringFlag{
+				Name:  "alias",
+				Value: "",
+				Usage: "Add aliases into config",
+			},
+			cli.BoolFlag{
+				Name:  "completion",
+				Usage: "Generate bash completion \"" + getMcBashCompletionFilename() + "\" file.",
+			},
 		},
-		cli.StringFlag{
-			Name:  "secretkey, s",
-			Value: "",
-			Usage: "AWS secret access key",
-		},
-		cli.StringFlag{
-			Name:  "alias",
-			Value: "",
-			Usage: "Add aliases into config",
-		},
-		cli.BoolFlag{
-			Name:  "completion",
-			Usage: "Generate bash completion \"" + getMcBashCompletionFilename() + "\" file.",
-		},
-	},
-}
+	}
 
-var donutCmd = cli.Command{
-	Name:        "donut",
-	Usage:       "donut admin",
-	Description: "",
-	Subcommands: donutOptions,
-}
+	donutCmd = cli.Command{
+		Name:        "donut",
+		Usage:       "donut admin",
+		Description: "",
+		Subcommands: donutOptions,
+	}
+)
 
 type object struct {
 	scheme string // protocol type: possible values are http, https, donut, nil
@@ -160,18 +163,21 @@ var options = []cli.Command{
 	configCmd,
 }
 
-var flags = []cli.Flag{
-	cli.BoolFlag{
-		Name:  "debug",
-		Usage: "enable HTTP tracing",
-	},
-	cli.BoolFlag{
-		Name:  "quiet, q",
-		Usage: "disable chatty output, such as the progress bar",
-	},
-}
+var (
+	flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "debug",
+			Usage: "enable HTTP tracing",
+		},
+		cli.BoolFlag{
+			Name:  "quiet, q",
+			Usage: "disable chatty output, such as the progress bar",
+		},
+	}
+)
 
-var mcBashCompletion = `#!/bin/bash
+var (
+	mcBashCompletion = `#!/bin/bash
 
 _mc_completion() {
     local cur prev opts base
@@ -185,3 +191,4 @@ _mc_completion() {
 
 complete -F _mc_completion mc
 `
+)

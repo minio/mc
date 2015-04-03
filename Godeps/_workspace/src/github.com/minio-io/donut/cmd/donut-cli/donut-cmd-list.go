@@ -19,41 +19,18 @@ package main
 import (
 	"fmt"
 	"log"
-	"strings"
-
-	"net/url"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/donut"
 )
 
-// doMakeDonutBucketCmd creates a new bucket
-func doMakeDonutBucketCmd(c *cli.Context) {
-	if !c.Args().Present() {
-		log.Fatalln("no args?")
-	}
-	urlArg1, err := url.Parse(c.Args().First())
-	if err != nil {
-		log.Fatalln(err)
-	}
+// doListDonutCmd creates a new bucket
+func doListDonutCmd(c *cli.Context) {
 	mcDonutConfigData, err := loadDonutConfig()
 	if err != nil {
 		log.Fatalln(err)
 	}
-	if _, ok := mcDonutConfigData.Donuts[urlArg1.Host]; !ok {
-		msg := fmt.Sprintf("requested donut: <%s> does not exist", urlArg1.Host)
-		log.Fatalln(msg)
-	}
-	nodes := make(map[string][]string)
-	for k, v := range mcDonutConfigData.Donuts[urlArg1.Host].Node {
-		nodes[k] = v.ActiveDisks
-	}
-	d, err := donut.NewDonut(urlArg1.Host, nodes)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	err = d.MakeBucket(strings.TrimPrefix(urlArg1.Path, "/"))
-	if err != nil {
-		log.Fatalln(err)
+
+	for k := range mcDonutConfigData.Donuts {
+		fmt.Println(k)
 	}
 }

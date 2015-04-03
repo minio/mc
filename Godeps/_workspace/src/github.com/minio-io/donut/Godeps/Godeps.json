@@ -7,8 +7,8 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/minio-io/cli",
-			"Comment": "1.2.0-100-g6d6f8d3",
-			"Rev": "6d6f8d3cc162bfcb60379888e2f37d73ff6a6253"
+			"Comment": "1.2.0-101-g1a25bbd",
+			"Rev": "1a25bbdce2344b0063ea0476bceb4a4adbe4492a"
 		},
 		{
 			"ImportPath": "github.com/minio-io/erasure",

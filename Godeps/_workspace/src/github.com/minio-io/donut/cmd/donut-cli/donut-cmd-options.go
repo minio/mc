@@ -27,6 +27,13 @@ var makeDonutCmd = cli.Command{
 	Action:      doMakeDonutCmd,
 }
 
+var listDonutCmd = cli.Command{
+	Name:        "list",
+	Usage:       "list donuts",
+	Description: "list all donuts locally or remote",
+	Action:      doListDonutCmd,
+}
+
 var attachDiskCmd = cli.Command{
 	Name:        "attach",
 	Usage:       "attach disk",
@@ -67,12 +74,21 @@ var rebalanceDonutCmd = cli.Command{
 	Action:      doRebalanceDonutCmd,
 }
 
+var infoDonutCmd = cli.Command{
+	Name:        "info",
+	Usage:       "information about donut",
+	Description: "Pretty print donut information",
+	Action:      doInfoDonutCmd,
+}
+
 var donutOptions = []cli.Command{
 	makeDonutCmd,
+	listDonutCmd,
 	attachDiskCmd,
 	detachDiskCmd,
 	healDonutCmd,
 	rebalanceDonutCmd,
+	infoDonutCmd,
 }
 
 func doHealDonutCmd(c *cli.Context) {

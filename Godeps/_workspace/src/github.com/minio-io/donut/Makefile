@@ -61,7 +61,7 @@ docs-deploy:
 
 install: test-all
 	@echo "Installing donut-cli:"
-	@godep go install github.com/minio-io/donut/cmd/donut-cli
+	@godep go install -a github.com/minio-io/donut/cmd/donut-cli
 	@mkdir -p $(HOME)/.minio/donut
 
 clean:
