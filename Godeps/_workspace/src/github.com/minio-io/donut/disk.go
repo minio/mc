@@ -1,3 +1,19 @@
+/*
+ * Minimalist Object Storage, (C) 2015 Minio, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package donut
 
 import (
@@ -10,15 +26,20 @@ import (
 )
 
 type disk struct {
-	root   string
-	order  int
-	fsType string
+	root       string
+	order      int
+	filesystem map[string]string
 }
 
 // NewDisk - instantiate new disk
 func NewDisk(diskPath string, diskOrder int) (Disk, error) {
 	if diskPath == "" || diskOrder < 0 {
 		return nil, errors.New("invalid argument")
+	}
+	s := syscall.Statfs_t{}
+	err := syscall.Statfs(diskPath, &s)
+	if err != nil {
+		return nil, err
 	}
 	st, err := os.Stat(diskPath)
 	if err != nil {
@@ -28,14 +49,19 @@ func NewDisk(diskPath string, diskOrder int) (Disk, error) {
 		return nil, syscall.ENOTDIR
 	}
 	d := disk{
-		root:   diskPath,
-		order:  diskOrder,
-		fsType: "",
+		root:       diskPath,
+		order:      diskOrder,
+		filesystem: make(map[string]string),
 	}
-	return d, nil
+	if fsType := d.getFSType(s.Type); fsType != "UNKNOWN" {
+		d.filesystem["FSType"] = fsType
+		d.filesystem["MountPoint"] = d.root
+		return d, nil
+	}
+	return nil, errors.New("unsupported filesystem")
 }
 
-func (d disk) GetName() string {
+func (d disk) GetPath() string {
 	return d.root
 }
 
@@ -43,8 +69,15 @@ func (d disk) GetOrder() int {
 	return d.order
 }
 
-func (d disk) GetFileSystemType() string {
-	return d.fsType
+func (d disk) GetFSInfo() map[string]string {
+	s := syscall.Statfs_t{}
+	err := syscall.Statfs(d.root, &s)
+	if err != nil {
+		return nil
+	}
+	d.filesystem["Total"] = d.formatBytes(s.Bsize * int64(s.Blocks))
+	d.filesystem["Free"] = d.formatBytes(s.Bsize * int64(s.Bfree))
+	return d.filesystem
 }
 
 func (d disk) MakeDir(dirname string) error {

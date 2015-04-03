@@ -1,12 +1,106 @@
+/*
+ * Minimalist Object Storage, (C) 2015 Minio, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package donut
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"path"
 	"strconv"
 )
+
+func (b bucket) getDataAndParity(totalWriters int) (k uint8, m uint8, err error) {
+	if totalWriters <= 1 {
+		return 0, 0, errors.New("invalid argument")
+	}
+	quotient := totalWriters / 2 // not using float or abs to let integer round off to lower value
+	// quotient cannot be bigger than (255 / 2) = 127
+	if quotient > 127 {
+		return 0, 0, errors.New("parity over flow")
+	}
+	remainder := totalWriters % 2 // will be 1 for odd and 0 for even numbers
+	k = uint8(quotient + remainder)
+	m = uint8(quotient)
+	return k, m, nil
+}
+
+func (b bucket) getObject(objectName string, writer *io.PipeWriter, donutObjectMetadata map[string]string) {
+	readers, err := b.getDiskReaders(objectName, "data")
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	hasher := md5.New()
+	mwriter := io.MultiWriter(writer, hasher)
+	switch len(readers) == 1 {
+	case false:
+		totalChunks, totalLeft, blockSize, k, m, err := b.metadata2Values(donutObjectMetadata)
+		if err != nil {
+			writer.CloseWithError(err)
+			return
+		}
+		technique, ok := donutObjectMetadata["erasureTechnique"]
+		if !ok {
+			writer.CloseWithError(errors.New("missing erasure Technique"))
+			return
+		}
+		encoder, err := NewEncoder(uint8(k), uint8(m), technique)
+		if err != nil {
+			writer.CloseWithError(err)
+			return
+		}
+		for i := 0; i < totalChunks; i++ {
+			decodedData, err := b.decodeData(totalLeft, blockSize, readers, encoder, writer)
+			if err != nil {
+				writer.CloseWithError(err)
+				return
+			}
+			_, err = io.Copy(mwriter, bytes.NewBuffer(decodedData))
+			if err != nil {
+				writer.CloseWithError(err)
+				return
+			}
+			totalLeft = totalLeft - int64(blockSize)
+		}
+	case true:
+		_, err := io.Copy(writer, readers[0])
+		if err != nil {
+			writer.CloseWithError(err)
+			return
+		}
+	}
+	expectedMd5sum, err := hex.DecodeString(donutObjectMetadata["md5"])
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+
+	actualMd5sum := hasher.Sum(nil)
+	if bytes.Compare(expectedMd5sum, actualMd5sum) != 0 {
+		writer.CloseWithError(errors.New("checksum mismatch"))
+		return
+	}
+	writer.Close()
+	return
+}
 
 func (b bucket) decodeData(totalLeft, blockSize int64, readers []io.ReadCloser, encoder Encoder, writer *io.PipeWriter) ([]byte, error) {
 	var curBlockSize int64
