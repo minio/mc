@@ -132,8 +132,8 @@ func loadMcConfig() (config *mcConfig, err error) {
 }
 
 // saveConfig writes configuration data in json format to config file.
-func saveConfig(c *cli.Context) error {
-	configData, err := parseConfigInput(c)
+func saveConfig(ctx *cli.Context) error {
+	configData, err := parseConfigInput(ctx)
 	if err != nil {
 		return err
 	}
@@ -284,12 +284,12 @@ func getHostConfig(hostURL string) (*hostConfig, error) {
 }
 
 // doConfigCmd is the handler for "mc config" sub-command.
-func doConfigCmd(c *cli.Context) {
+func doConfigCmd(ctx *cli.Context) {
 	switch true {
-	case c.Bool("completion") == true:
+	case ctx.Bool("completion") == true:
 		getBashCompletion()
 	default:
-		err := saveConfig(c)
+		err := saveConfig(ctx)
 		if os.IsExist(err) {
 			log.Fatalf("mc: Please rename your current configuration file [%s]\n", getMcConfigFilename())
 		}
@@ -298,6 +298,5 @@ func doConfigCmd(c *cli.Context) {
 			log.Fatalf("mc: Unable to generate config file [%s]. \nError: %v\n", getMcConfigFilename(), err)
 		}
 		info("Configuration written to " + getMcConfigFilename() + "\n")
-
 	}
 }

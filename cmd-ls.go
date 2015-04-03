@@ -55,19 +55,19 @@ func printObject(date time.Time, v int64, key string) {
 }
 
 // listObjectPrefix prints matching key prefix
-func listObjectPrefix(s3c client.Client, bucketName, objectName string, maxkeys int) {
+func listObjectPrefix(clnt client.Client, bucketName, objectName string, maxkeys int) {
 	var date time.Time
 	var size int64
 	var err error
 
-	size, date, err = s3c.Stat(bucketName, objectName)
+	size, date, err = clnt.Stat(bucketName, objectName)
 	var items []*client.Item
 	switch err {
 	case nil: // List a single object. Exact key
 		printObject(date, size, objectName)
 	case os.ErrNotExist:
 		// List all objects matching the key prefix
-		items, _, err = s3c.ListObjects(bucketName, "", objectName, "", maxkeys)
+		items, _, err = clnt.ListObjects(bucketName, "", objectName, "", maxkeys)
 		if err != nil {
 			fatal(err.Error())
 		}
@@ -82,11 +82,10 @@ func listObjectPrefix(s3c client.Client, bucketName, objectName string, maxkeys 
 }
 
 // doListCmd lists objects inside a bucket
-func doListCmd(c *cli.Context) {
+func doListCmd(ctx *cli.Context) {
 	var items []*client.Item
-	// quiet := globalQuietFlag
 
-	urlStr, err := parseURL(c.Args().First())
+	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -96,26 +95,26 @@ func doListCmd(c *cli.Context) {
 		fatal(err.Error())
 	}
 
-	s3c, err := getNewClient(globalDebugFlag, urlStr)
+	client, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
 
 	switch true {
 	case bucketName == "": // List all buckets
-		buckets, err := s3c.ListBuckets()
+		buckets, err := client.ListBuckets()
 		if err != nil {
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
 	case objectName == "": // List objects in a bucket
-		items, _, err = s3c.ListObjects(bucketName, "", "", "", globalMaxKeys)
+		items, _, err = client.ListObjects(bucketName, "", "", "", globalMaxKeys)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
 	case objectName != "": // List objects matching the key prefix
-		listObjectPrefix(s3c, bucketName, objectName, globalMaxKeys)
+		listObjectPrefix(client, bucketName, objectName, globalMaxKeys)
 	default:
 		fatal(err.Error())
 	}
