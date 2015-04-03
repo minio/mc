@@ -1,3 +1,19 @@
+/*
+ * Minimalist Object Storage, (C) 2015 Minio, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package donut
 
 import (
@@ -59,7 +75,7 @@ func (b bucket) ListObjects() (map[string]Object, error) {
 				return nil, err
 			}
 			for _, object := range objects {
-				b.objects[object.Name()], err = NewObject(object.Name(), path.Join(disk.GetName(), bucketPath))
+				b.objects[object.Name()], err = NewObject(object.Name(), path.Join(disk.GetPath(), bucketPath))
 				if err != nil {
 					return nil, err
 				}
@@ -70,58 +86,31 @@ func (b bucket) ListObjects() (map[string]Object, error) {
 	return b.objects, nil
 }
 
-func (b bucket) GetObject(objectName string, writer *io.PipeWriter, donutObjectMetadata map[string]string) {
-	if objectName == "" || writer == nil || len(donutObjectMetadata) == 0 {
-		writer.CloseWithError(errors.New("invalid argument"))
-		return
-	}
-	expectedMd5sum, err := hex.DecodeString(donutObjectMetadata["md5"])
+func (b bucket) GetObject(objectName string) (reader io.ReadCloser, size int64, err error) {
+	reader, writer := io.Pipe()
+	// get list of objects
+	objects, err := b.ListObjects()
 	if err != nil {
-		writer.CloseWithError(err)
-		return
+		return nil, 0, err
 	}
-	totalChunks, totalLeft, blockSize, k, m, err := b.metadata2Values(donutObjectMetadata)
-	if err != nil {
-		writer.CloseWithError(err)
-		return
-	}
-	technique, ok := donutObjectMetadata["erasureTechnique"]
+	// check if object exists
+	object, ok := objects[objectName]
 	if !ok {
-		writer.CloseWithError(errors.New("missing erasure Technique"))
-		return
+		return nil, 0, errors.New("object does not exist")
 	}
-	hasher := md5.New()
-	mwriter := io.MultiWriter(writer, hasher)
-	encoder, err := NewEncoder(uint8(k), uint8(m), technique)
+	donutObjectMetadata, err := object.GetDonutObjectMetadata()
 	if err != nil {
-		writer.CloseWithError(err)
-		return
+		return nil, 0, err
 	}
-	readers, err := b.getDiskReaders(objectName, "data")
+	if objectName == "" || writer == nil || len(donutObjectMetadata) == 0 {
+		return nil, 0, errors.New("invalid argument")
+	}
+	size, err = strconv.ParseInt(donutObjectMetadata["size"], 10, 64)
 	if err != nil {
-		writer.CloseWithError(err)
-		return
+		return nil, 0, err
 	}
-	for i := 0; i < totalChunks; i++ {
-		decodedData, err := b.decodeData(totalLeft, blockSize, readers, encoder, writer)
-		if err != nil {
-			writer.CloseWithError(err)
-			return
-		}
-		_, err = io.Copy(mwriter, bytes.NewBuffer(decodedData))
-		if err != nil {
-			writer.CloseWithError(err)
-			return
-		}
-		totalLeft = totalLeft - int64(blockSize)
-	}
-	actualMd5sum := hasher.Sum(nil)
-	if bytes.Compare(expectedMd5sum, actualMd5sum) != 0 {
-		writer.CloseWithError(errors.New("checksum mismatch"))
-		return
-	}
-	writer.Close()
-	return
+	go b.getObject(objectName, writer, donutObjectMetadata)
+	return reader, size, nil
 }
 
 func (b bucket) WriteObjectMetadata(objectName string, objectMetadata map[string]string) error {
@@ -178,37 +167,49 @@ func (b bucket) PutObject(objectName string, objectData io.Reader) error {
 	for _, writer := range writers {
 		defer writer.Close()
 	}
-
-	chunks := split.Stream(objectData, 10*1024*1024)
-	encoder, err := NewEncoder(8, 8, "Cauchy")
-	if err != nil {
-		return err
-	}
-	chunkCount := 0
-	totalLength := 0
 	summer := md5.New()
-	for chunk := range chunks {
-		if chunk.Err == nil {
-			totalLength = totalLength + len(chunk.Data)
-			encodedBlocks, _ := encoder.Encode(chunk.Data)
-			summer.Write(chunk.Data)
-			for blockIndex, block := range encodedBlocks {
-				io.Copy(writers[blockIndex], bytes.NewBuffer(block))
-			}
-		}
-		chunkCount = chunkCount + 1
-	}
-
-	dataMd5sum := summer.Sum(nil)
 	donutObjectMetadata := make(map[string]string)
-	donutObjectMetadata["blockSize"] = strconv.Itoa(10 * 1024 * 1024)
-	donutObjectMetadata["chunkCount"] = strconv.Itoa(chunkCount)
+	switch len(writers) == 1 {
+	case true:
+		mw := io.MultiWriter(writers[0], summer)
+		totalLength, err := io.Copy(mw, objectData)
+		if err != nil {
+			return err
+		}
+		donutObjectMetadata["size"] = strconv.FormatInt(totalLength, 10)
+	case false:
+		k, m, err := b.getDataAndParity(len(writers))
+		if err != nil {
+			return err
+		}
+		chunks := split.Stream(objectData, 10*1024*1024)
+		encoder, err := NewEncoder(k, m, "Cauchy")
+		if err != nil {
+			return err
+		}
+		chunkCount := 0
+		totalLength := 0
+		for chunk := range chunks {
+			if chunk.Err == nil {
+				totalLength = totalLength + len(chunk.Data)
+				encodedBlocks, _ := encoder.Encode(chunk.Data)
+				summer.Write(chunk.Data)
+				for blockIndex, block := range encodedBlocks {
+					io.Copy(writers[blockIndex], bytes.NewBuffer(block))
+				}
+			}
+			chunkCount = chunkCount + 1
+		}
+		donutObjectMetadata["blockSize"] = strconv.Itoa(10 * 1024 * 1024)
+		donutObjectMetadata["chunkCount"] = strconv.Itoa(chunkCount)
+		donutObjectMetadata["erasureK"] = strconv.FormatUint(uint64(k), 10)
+		donutObjectMetadata["erasureM"] = strconv.FormatUint(uint64(m), 10)
+		donutObjectMetadata["erasureTechnique"] = "Cauchy"
+		donutObjectMetadata["size"] = strconv.Itoa(totalLength)
+	}
+	dataMd5sum := summer.Sum(nil)
 	donutObjectMetadata["created"] = time.Now().Format(time.RFC3339Nano)
-	donutObjectMetadata["erasureK"] = "8"
-	donutObjectMetadata["erasureM"] = "8"
-	donutObjectMetadata["erasureTechnique"] = "Cauchy"
 	donutObjectMetadata["md5"] = hex.EncodeToString(dataMd5sum)
-	donutObjectMetadata["size"] = strconv.Itoa(totalLength)
 	if err := b.WriteDonutObjectMetadata(objectName, donutObjectMetadata); err != nil {
 		return err
 	}
