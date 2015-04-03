@@ -14,7 +14,7 @@ type Donut interface {
 
 	Heal() error
 	Rebalance() error
-	Info() error
+	Info() (map[string][]string, error)
 
 	AttachNode(node Node) error
 	DetachNode(node Node) error

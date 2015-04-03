@@ -19,7 +19,7 @@ func (b bucket) decodeData(totalLeft, blockSize int64, readers []io.ReadCloser, 
 	if err != nil {
 		return nil, err
 	}
-	encodedBytes := make([][]byte, 16)
+	encodedBytes := make([][]byte, len(readers))
 	for i, reader := range readers {
 		var bytesBuffer bytes.Buffer
 		_, err := io.CopyN(&bytesBuffer, reader, int64(curChunkSize))
@@ -45,13 +45,14 @@ func (b bucket) metadata2Values(donutObjectMetadata map[string]string) (totalChu
 }
 
 func (b bucket) getDiskReaders(objectName, objectMeta string) ([]io.ReadCloser, error) {
-	readers := make([]io.ReadCloser, 16)
+	var readers []io.ReadCloser
 	nodeSlice := 0
 	for _, node := range b.nodes {
 		disks, err := node.ListDisks()
 		if err != nil {
 			return nil, err
 		}
+		readers = make([]io.ReadCloser, len(disks))
 		for _, disk := range disks {
 			bucketSlice := fmt.Sprintf("%s$%d$%d", b.name, nodeSlice, disk.GetOrder())
 			objectPath := path.Join(b.donutName, bucketSlice, objectName, objectMeta)
@@ -67,13 +68,14 @@ func (b bucket) getDiskReaders(objectName, objectMeta string) ([]io.ReadCloser, 
 }
 
 func (b bucket) getDiskWriters(objectName, objectMeta string) ([]io.WriteCloser, error) {
-	writers := make([]io.WriteCloser, 16)
+	var writers []io.WriteCloser
 	nodeSlice := 0
 	for _, node := range b.nodes {
 		disks, err := node.ListDisks()
 		if err != nil {
 			return nil, err
 		}
+		writers = make([]io.WriteCloser, len(disks))
 		for _, disk := range disks {
 			bucketSlice := fmt.Sprintf("%s$%d$%d", b.name, nodeSlice, disk.GetOrder())
 			objectPath := path.Join(b.donutName, bucketSlice, objectName, objectMeta)

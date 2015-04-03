@@ -134,8 +134,20 @@ func (d donut) Rebalance() error {
 	return errors.New("Not Implemented")
 }
 
-func (d donut) Info() error {
-	return errors.New("Not Implemented")
+func (d donut) Info() (nodeDiskMap map[string][]string, err error) {
+	nodeDiskMap = make(map[string][]string)
+	for nodeName, node := range d.nodes {
+		disks, err := node.ListDisks()
+		if err != nil {
+			return nil, err
+		}
+		diskList := make([]string, len(disks))
+		for diskName, disk := range disks {
+			diskList[disk.GetOrder()] = diskName
+		}
+		nodeDiskMap[nodeName] = diskList
+	}
+	return nodeDiskMap, nil
 }
 
 func (d donut) AttachNode(node Node) error {
