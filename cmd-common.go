@@ -46,37 +46,6 @@ func startBar(size int64) *pb.ProgressBar {
 	return bar
 }
 
-// NewClient - get new client
-func getNewClient(debug bool, url string) (cl client.Client, err error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	hostCfg, err := getHostConfig(config.DefaultHost)
-	if err != nil {
-		return nil, err
-	}
-
-	var auth s3.Auth
-	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
-	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
-
-	if debug {
-		trace := s3.Trace{
-			BodyTraceFlag:        false,
-			RequestTransportFlag: true,
-			Writer:               nil,
-		}
-		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
-		cl = s3.GetNewClient(&auth, url, traceTransport)
-	} else {
-		cl = s3.GetNewClient(&auth, url, http.DefaultTransport)
-	}
-
-	return cl, nil
-}
-
 func parseDestinationArgs(urlParsed *url.URL, destination, source object) (object, error) {
 	switch true {
 	case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
@@ -225,4 +194,35 @@ func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
 
 func getMcBashCompletionFilename() string {
 	return path.Join(getMcConfigDir(), "mc.bash_completion")
+}
+
+// NewClient - get new client
+func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
+	config, err := getMcConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	hostCfg, err := getHostConfig(config.DefaultHost)
+	if err != nil {
+		return nil, err
+	}
+
+	var auth s3.Auth
+	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
+	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
+
+	if debug {
+		trace := s3.Trace{
+			BodyTraceFlag:        false,
+			RequestTransportFlag: true,
+			Writer:               nil,
+		}
+		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
+		clnt = s3.GetNewClient(&auth, urlStr, traceTransport)
+	} else {
+		clnt = s3.GetNewClient(&auth, urlStr, http.DefaultTransport)
+	}
+
+	return clnt, nil
 }

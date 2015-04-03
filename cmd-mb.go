@@ -22,8 +22,8 @@ import (
 )
 
 // doMakeBucketCmd creates a new bucket
-func doMakeBucketCmd(c *cli.Context) {
-	urlStr, err := parseURL(c.Args().First())
+func doMakeBucketCmd(ctx *cli.Context) {
+	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -33,7 +33,7 @@ func doMakeBucketCmd(c *cli.Context) {
 		fatal(err.Error())
 	}
 
-	s3c, err := getNewClient(globalDebugFlag, urlStr)
+	clnt, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
 		fatal(err.Error())
 	}
@@ -42,7 +42,7 @@ func doMakeBucketCmd(c *cli.Context) {
 		fatal(errInvalidbucket.Error())
 	}
 
-	err = s3c.PutBucket(bucket)
+	err = clnt.PutBucket(bucket)
 	if err != nil {
 		fatal(err.Error())
 	}
