@@ -65,7 +65,7 @@ func (c *s3Client) Put(bucket, key string, size int64, contents io.Reader) error
 	// Memory where data is present
 	sink := new(bytes.Buffer)
 	mw := io.MultiWriter(h, sink)
-	written, err := io.Copy(mw, contents)
+	written, err := io.CopyN(mw, contents, size)
 	if written != size {
 		return errors.New("Data read mismatch")
 	}

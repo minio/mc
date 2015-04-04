@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -26,70 +27,107 @@ import (
 )
 
 // doCopyCmd copies objects into and from a bucket or between buckets
+func multiCopy(targetURLs []string, sourceURL string) (err error) {
+	numTargets := len(targetURLs)
+
+	// Parse URL to bucket and object names
+	sourceBucket, sourceObject, err := url2Object(sourceURL)
+	if err != nil {
+		return err
+	}
+
+	// Initialize a new client object for the source
+	sourceClnt, err := getNewClient(globalDebugFlag, sourceURL)
+	if err != nil {
+		return err
+	}
+
+	// Get a reader for the source object
+	sourceReader, sourceSize, err := sourceClnt.Get(sourceBucket, sourceObject)
+	if err != nil {
+		return err
+	}
+
+	targetReaders := make([]io.Reader, numTargets)
+	targetWriters := make([]io.Writer, numTargets)
+	doneCh := make(chan int)
+
+	for i := 0; i < numTargets; i++ {
+		targetReaders[i], targetWriters[i] = io.Pipe()
+	}
+
+	go func() {
+		var bar *pb.ProgressBar
+		if !globalQuietFlag {
+			bar = startBar(sourceSize)
+			bar.Start()
+			sourceReader = ioutil.NopCloser(io.TeeReader(sourceReader, bar))
+		}
+
+		io.CopyN(io.MultiWriter(targetWriters...), sourceReader, sourceSize)
+		if !globalQuietFlag {
+			bar.Finish()
+		}
+	}()
+
+	var routineCount int
+	for i := 0; i < numTargets; i++ {
+		targetBucket, targetObject, err := url2Object(targetURLs[i])
+
+		if err != nil {
+			return err
+		}
+
+		targetClnt, err := getNewClient(globalDebugFlag, targetURLs[i])
+		if err != nil {
+			return err
+		}
+
+		routineCount = i // Keep track of which routine
+		go func(index int) {
+			// return err via external variable
+			err = targetClnt.Put(targetBucket, targetObject, sourceSize, targetReaders[index])
+
+			doneCh <- index // Let the caller know that we are done
+		}(i)
+
+		if err != nil { // err is set inside go routine
+			break
+		}
+	}
+
+	for i := routineCount; i >= 0; i-- {
+		chIndex := <-doneCh
+		if err != nil {
+			info(fmt.Sprintf("%s: Failed Error: %v", targetURLs[chIndex], err))
+		} else {
+			info(fmt.Sprintf("%s: Done", targetURLs[chIndex]))
+		}
+	}
+
+	return nil
+}
+
+// doCopyCmd copies objects into and from a bucket or between buckets
 func doCopyCmd(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 {
+	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelp(ctx, "cp")
 		os.Exit(1)
 	}
 
-	// var recursiveMode = ctx.Bool("recursive")
-	sourceURL, err := parseURL(ctx.Args().First())
+	// Convert arguments to URLs: expand alias, fix format...
+	urlList, err := parseURLs(ctx)
 	if err != nil {
 		fatal(err.Error())
 		return
 	}
+	sourceURL := urlList[0]   // First arg is source
+	targetURLs := urlList[1:] // 1 or more targets
 
-	targetURL, err := parseURL(ctx.Args()[1])
+	err = multiCopy(targetURLs, sourceURL)
 	if err != nil {
 		fatal(err.Error())
 		return
-	}
-
-	sourceBucket, sourceObject, err := url2Object(sourceURL)
-	if err != nil {
-		fatal(err.Error())
-		return
-	}
-
-	targetBucket, targetObject, err := url2Object(targetURL)
-	if err != nil {
-		fatal(err.Error())
-		return
-	}
-
-	sourceClnt, err := getNewClient(globalDebugFlag, sourceURL)
-	if err != nil {
-		fatal(err.Error())
-		return
-	}
-
-	targetClnt, err := getNewClient(globalDebugFlag, targetURL)
-	if err != nil {
-		fatal(err.Error())
-		return
-	}
-
-	sourceReader, sourceSize, err := sourceClnt.Get(sourceBucket, sourceObject)
-	if err != nil {
-		fatal(err.Error())
-		return
-	}
-
-	var bar *pb.ProgressBar
-	if !globalQuietFlag {
-		bar = startBar(sourceSize)
-		bar.Start()
-		sourceReader = ioutil.NopCloser(io.TeeReader(sourceReader, bar))
-	}
-
-	if err = targetClnt.Put(targetBucket, targetObject, sourceSize, sourceReader); err != nil {
-		fatal(err.Error())
-		return
-	}
-
-	if !globalQuietFlag {
-		bar.Finish()
-		info("Success!")
 	}
 
 	return
