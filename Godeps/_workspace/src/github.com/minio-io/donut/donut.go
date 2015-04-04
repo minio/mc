@@ -146,10 +146,6 @@ func (d donut) Heal() error {
 	return errors.New("Not Implemented")
 }
 
-func (d donut) Rebalance() error {
-	return errors.New("Not Implemented")
-}
-
 func (d donut) Info() (nodeDiskMap map[string][]string, err error) {
 	nodeDiskMap = make(map[string][]string)
 	for nodeName, node := range d.nodes {
