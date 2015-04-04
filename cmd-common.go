@@ -25,7 +25,6 @@ import (
 	"net/url"
 
 	"github.com/cheggaaa/pb"
-	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
 )
@@ -140,56 +139,6 @@ func urlAliasExpander(arg string) (*url.URL, error) {
 		return nil, err
 	}
 	return urlParsed, nil
-}
-
-// Parse subcommand options
-func parseArgs(c *cli.Context) (args *cmdArgs, err error) {
-	args = new(cmdArgs)
-	args.quiet = globalQuietFlag
-	switch len(c.Args()) {
-	case 1: // only one URL
-		urlString, err := aliasExpand(c.Args().First())
-		if err != nil {
-			return nil, err
-		}
-		if strings.HasPrefix(urlString, "http") {
-			urlParsed, err := url.Parse(urlString)
-			if err != nil {
-				return nil, err
-			}
-			args.source, err = parseSingleArg(urlParsed, args.source)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, errInvalidScheme
-		}
-	case 2: // one URL and one path||URL
-		switch true {
-		case c.Args().First() != "":
-			urlParsed, err := urlAliasExpander(c.Args().First())
-			if err != nil {
-				return nil, err
-			}
-			args.source, err = parseSourceArgs(urlParsed, c.Args().First(), args.source)
-			if err != nil {
-				return nil, err
-			}
-			fallthrough
-		case c.Args().Get(1) != "":
-			urlParsed, err := urlAliasExpander(c.Args().Get(1))
-			if err != nil {
-				return nil, err
-			}
-			args.destination, err = parseDestinationArgs(urlParsed, args.destination, args.source)
-			if err != nil {
-				return nil, err
-			}
-		}
-	default:
-		return nil, errInvalidScheme
-	}
-	return
 }
 
 func getMcBashCompletionFilename() string {
