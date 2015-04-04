@@ -43,6 +43,11 @@ func (b bucket) getDataAndParity(totalWriters int) (k uint8, m uint8, err error)
 }
 
 func (b bucket) getObject(objectName string, writer *io.PipeWriter, donutObjectMetadata map[string]string) {
+	expectedMd5sum, err := hex.DecodeString(donutObjectMetadata["md5"])
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
 	readers, err := b.getDiskReaders(objectName, "data")
 	if err != nil {
 		writer.CloseWithError(err)
@@ -87,14 +92,8 @@ func (b bucket) getObject(objectName string, writer *io.PipeWriter, donutObjectM
 			return
 		}
 	}
-	expectedMd5sum, err := hex.DecodeString(donutObjectMetadata["md5"])
-	if err != nil {
-		writer.CloseWithError(err)
-		return
-	}
-
-	actualMd5sum := hasher.Sum(nil)
-	if bytes.Compare(expectedMd5sum, actualMd5sum) != 0 {
+	// check if decodedData md5sum matches
+	if !bytes.Equal(expectedMd5sum, hasher.Sum(nil)) {
 		writer.CloseWithError(errors.New("checksum mismatch"))
 		return
 	}
