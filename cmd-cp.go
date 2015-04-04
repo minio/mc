@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
@@ -111,10 +110,8 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 // doCopyCmd copies objects into and from a bucket or between buckets
 func doCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
-		cli.ShowCommandHelp(ctx, "cp")
-		os.Exit(1)
+		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
-
 	// Convert arguments to URLs: expand alias, fix format...
 	urlList, err := parseURLs(ctx)
 	if err != nil {
