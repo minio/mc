@@ -93,5 +93,5 @@ func main() {
 		}
 		return nil
 	}
-	app.Run(os.Args)
+	app.RunAndExitOnError()
 }
