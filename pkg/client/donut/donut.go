@@ -164,11 +164,11 @@ func (d *donutDriver) GetPartial(bucketName, objectName string, offset, length i
 	if offset > size || (offset+length-1) > size {
 		return nil, 0, "", errors.New("invalid range")
 	}
-	n, err := io.CopyN(ioutil.Discard, reader, offset)
+	_, err = io.CopyN(ioutil.Discard, reader, offset)
 	if err != nil {
 		return nil, 0, "", err
 	}
-	return reader, (size - n), "", nil
+	return reader, length, "", nil
 }
 
 // Stat - gets metadata information about the object
@@ -241,25 +241,28 @@ func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string,
 	for _, prefix := range commonPrefixes {
 		prefixes = append(prefixes, &client.Prefix{Prefix: prefix})
 	}
+
 	for _, object := range actualObjects {
-		metadata, err := objectList[object].GetDonutObjectMetadata()
-		if err != nil {
-			return nil, nil, err
+		if len(items) < maxKeys {
+			metadata, err := objectList[object].GetDonutObjectMetadata()
+			if err != nil {
+				return nil, nil, err
+			}
+			t, err := time.Parse(time.RFC3339Nano, metadata["created"])
+			if err != nil {
+				return nil, nil, err
+			}
+			size, err := strconv.ParseInt(metadata["size"], 10, 64)
+			if err != nil {
+				return nil, nil, err
+			}
+			item := &client.Item{
+				Key:          object,
+				LastModified: t,
+				Size:         size,
+			}
+			items = append(items, item)
 		}
-		t, err := time.Parse(time.RFC3339Nano, metadata["created"])
-		if err != nil {
-			return nil, nil, err
-		}
-		size, err := strconv.ParseInt(metadata["size"], 10, 64)
-		if err != nil {
-			return nil, nil, err
-		}
-		item := &client.Item{
-			Key:          object,
-			LastModified: t,
-			Size:         size,
-		}
-		items = append(items, item)
 	}
 	sort.Sort(bySize(items))
 	return items, prefixes, nil
