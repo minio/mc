@@ -17,6 +17,7 @@
 package main
 
 import (
+	"github.com/minio-io/iodine"
 	"net/url"
 	"regexp"
 	"strings"
@@ -41,7 +42,7 @@ func aliasExpand(aliasedURL string) (newURL string, err error) {
 	url, err := url.Parse(aliasedURL)
 	if err != nil {
 		// Not a valid URL. Return error
-		return aliasedURL, err
+		return aliasedURL, iodine.New(err, nil)
 	}
 
 	// Not an aliased URL
@@ -52,7 +53,7 @@ func aliasExpand(aliasedURL string) (newURL string, err error) {
 	// load from json config file
 	config, err := getMcConfig()
 	if err != nil {
-		return "", err
+		return "", iodine.New(err, nil)
 	}
 
 	for aliasName, expandedURL := range config.Aliases {
