@@ -17,15 +17,11 @@
 package donut
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
 	"strings"
-)
-
-// Total allowed disks per node
-const (
-	disksPerNode = 16
 )
 
 type donut struct {
@@ -63,7 +59,7 @@ func (d donut) attachDonutNode(hostname string, disks []string) error {
 // NewDonut - instantiate a new donut
 func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) {
 	if donutName == "" || len(nodeDiskMap) == 0 {
-		return nil, errors.New("invalid arguments")
+		return nil, errors.New("invalid argument")
 	}
 	nodes := make(map[string]Node)
 	buckets := make(map[string]Bucket)
@@ -73,7 +69,7 @@ func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) 
 		buckets: buckets,
 	}
 	for k, v := range nodeDiskMap {
-		if len(v) > disksPerNode || len(v) == 0 {
+		if len(v) == 0 {
 			return nil, errors.New("invalid number of disks per node")
 		}
 		err := d.attachDonutNode(k, v)
@@ -130,12 +126,13 @@ func (d donut) ListBuckets() (map[string]Bucket, error) {
 				if len(splitDir) < 3 {
 					return nil, errors.New("corrupted backend")
 				}
+				bucketName := splitDir[0]
 				// we dont need this NewBucket once we cache these
-				bucket, err := NewBucket(splitDir[0], d.name, d.nodes)
+				bucket, err := NewBucket(bucketName, d.name, d.nodes)
 				if err != nil {
 					return nil, err
 				}
-				d.buckets[bucket.GetBucketName()] = bucket
+				d.buckets[bucketName] = bucket
 			}
 		}
 	}
@@ -174,10 +171,30 @@ func (d donut) DetachNode(node Node) error {
 	return nil
 }
 
-func (d donut) SaveConfig() ([]byte, error) {
-	return nil, errors.New("Not Implemented")
+func (d donut) SaveConfig() error {
+	nodeDiskMap := make(map[string][]string)
+	for hostname, node := range d.nodes {
+		disks, err := node.ListDisks()
+		if err != nil {
+			return err
+		}
+		for _, disk := range disks {
+			donutConfigPath := path.Join(d.name, donutConfig)
+			donutConfigWriter, err := disk.MakeFile(donutConfigPath)
+			defer donutConfigWriter.Close()
+			if err != nil {
+				return err
+			}
+			nodeDiskMap[hostname][disk.GetOrder()] = disk.GetPath()
+			jenc := json.NewEncoder(donutConfigWriter)
+			if err := jenc.Encode(nodeDiskMap); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
-func (d donut) LoadConfig([]byte) error {
+func (d donut) LoadConfig() error {
 	return errors.New("Not Implemented")
 }

@@ -71,11 +71,7 @@ func doInfoDonutCmd(c *cli.Context) {
 	if _, ok := mcDonutConfigData.Donuts[donutName]; !ok {
 		log.Fatalln("donut does not exist")
 	}
-	nodes := make(map[string][]string)
-	for k, v := range mcDonutConfigData.Donuts[donutName].Node {
-		nodes[k] = v.ActiveDisks
-	}
-	d, err := donut.NewDonut(donutName, nodes)
+	d, err := donut.NewDonut(donutName, getNodeMap(mcDonutConfigData.Donuts[donutName].Node))
 	if err != nil {
 		log.Fatalln(err)
 	}

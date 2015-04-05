@@ -56,10 +56,6 @@ func (b bucket) ListNodes() (map[string]Node, error) {
 	return b.nodes, nil
 }
 
-func (b bucket) GetBucketName() string {
-	return b.name
-}
-
 func (b bucket) ListObjects() (map[string]Object, error) {
 	nodeSlice := 0
 	for _, node := range b.nodes {
@@ -117,7 +113,7 @@ func (b bucket) WriteObjectMetadata(objectName string, objectMetadata map[string
 	if len(objectMetadata) == 0 {
 		return errors.New("invalid argument")
 	}
-	objectMetadataWriters, err := b.getDiskWriters(objectName, "objectMetadata.json")
+	objectMetadataWriters, err := b.getDiskWriters(objectName, objectMetadataConfig)
 	if err != nil {
 		return err
 	}
@@ -137,7 +133,7 @@ func (b bucket) WriteDonutObjectMetadata(objectName string, donutObjectMetadata 
 	if len(donutObjectMetadata) == 0 {
 		return errors.New("invalid argument")
 	}
-	donutObjectMetadataWriters, err := b.getDiskWriters(objectName, "donutObjectMetadata.json")
+	donutObjectMetadataWriters, err := b.getDiskWriters(objectName, donutObjectMetadataConfig)
 	if err != nil {
 		return err
 	}

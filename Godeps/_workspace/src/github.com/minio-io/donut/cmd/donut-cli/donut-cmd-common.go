@@ -99,3 +99,12 @@ func isValidDonutName(donutName string) bool {
 	}
 	return true
 }
+
+// getNodeMap - get a node and disk map through nodeConfig struct
+func getNodeMap(node map[string]nodeConfig) map[string][]string {
+	nodes := make(map[string][]string)
+	for k, v := range node {
+		nodes[k] = v.ActiveDisks
+	}
+	return nodes
+}

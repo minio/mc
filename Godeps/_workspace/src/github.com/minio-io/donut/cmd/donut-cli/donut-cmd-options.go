@@ -93,6 +93,3 @@ var donutOptions = []cli.Command{
 
 func doHealDonutCmd(c *cli.Context) {
 }
-
-func doRebalanceDonutCmd(c *cli.Context) {
-}

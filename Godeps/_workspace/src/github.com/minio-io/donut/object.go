@@ -42,13 +42,9 @@ func NewObject(objectName, p string) (Object, error) {
 	return o, nil
 }
 
-func (o object) GetObjectName() string {
-	return o.name
-}
-
 func (o object) GetObjectMetadata() (map[string]string, error) {
 	objectMetadata := make(map[string]string)
-	objectMetadataBytes, err := ioutil.ReadFile(path.Join(o.objectPath, "objectMetadata.json"))
+	objectMetadataBytes, err := ioutil.ReadFile(path.Join(o.objectPath, objectMetadataConfig))
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +57,7 @@ func (o object) GetObjectMetadata() (map[string]string, error) {
 
 func (o object) GetDonutObjectMetadata() (map[string]string, error) {
 	donutObjectMetadata := make(map[string]string)
-	donutObjectMetadataBytes, err := ioutil.ReadFile(path.Join(o.objectPath, "donutObjectMetadata.json"))
+	donutObjectMetadataBytes, err := ioutil.ReadFile(path.Join(o.objectPath, donutObjectMetadataConfig))
 	if err != nil {
 		return nil, err
 	}
