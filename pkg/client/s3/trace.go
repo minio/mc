@@ -30,6 +30,16 @@ type Trace struct {
 	Writer               io.Writer // Console device to write
 }
 
+// NewTrace - initialize Trace structure
+func NewTrace(bodyTraceFlag, requestTransportFlag bool, writer io.Writer) HTTPTracer {
+	t := Trace{
+		BodyTraceFlag:        bodyTraceFlag,
+		RequestTransportFlag: requestTransportFlag,
+		Writer:               writer,
+	}
+	return t
+}
+
 // Request - Trace HTTP Request
 func (t Trace) Request(req *http.Request) (err error) {
 	origAuthKey := req.Header.Get("Authorization")

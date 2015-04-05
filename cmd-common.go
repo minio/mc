@@ -145,6 +145,15 @@ func getMcBashCompletionFilename() string {
 	return path.Join(getMcConfigDir(), "mc.bash_completion")
 }
 
+// getTraceTransport -
+func getTraceTransport() s3.RoundTripTrace {
+	trace := s3.NewTrace(false, true, nil)
+	if trace == nil {
+		return s3.RoundTripTrace{}
+	}
+	return s3.GetNewTraceTransport(trace, http.DefaultTransport)
+}
+
 // NewClient - get new client
 func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	config, err := getMcConfig()
@@ -161,13 +170,8 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 
+	traceTransport := getTraceTransport()
 	if debug {
-		trace := s3.Trace{
-			BodyTraceFlag:        false,
-			RequestTransportFlag: true,
-			Writer:               nil,
-		}
-		traceTransport := s3.GetNewTraceTransport(trace, http.DefaultTransport)
 		clnt = s3.GetNewClient(&auth, urlStr, traceTransport)
 	} else {
 		clnt = s3.GetNewClient(&auth, urlStr, http.DefaultTransport)
