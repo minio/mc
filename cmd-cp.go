@@ -26,6 +26,7 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
+	"sync"
 )
 
 // doCopyCmd copies objects into and from a bucket or between buckets
@@ -58,7 +59,7 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 
 	targetReaders := make([]io.Reader, numTargets)
 	targetWriters := make([]io.Writer, numTargets)
-	doneCh := make(chan int)
+	doneCh := make(chan error)
 
 	for i := 0; i < numTargets; i++ {
 		targetReaders[i], targetWriters[i] = io.Pipe()
@@ -78,7 +79,7 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 		}
 	}()
 
-	var routineCount int
+	var wg sync.WaitGroup
 	for i := 0; i < numTargets; i++ {
 		targetBucket, targetObject, err := url2Object(targetURLs[i])
 
@@ -91,25 +92,20 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 			return iodine.New(err, errParams)
 		}
 
-		routineCount = i // Keep track of which routine
+		wg.Add(1)
 		go func(index int) {
+			defer wg.Done()
 			// return err via external variable
-			err = targetClnt.Put(targetBucket, targetObject, sourceSize, targetReaders[index])
-
-			doneCh <- index // Let the caller know that we are done
+			doneCh <- targetClnt.Put(targetBucket, targetObject, sourceSize, targetReaders[index])
+			fmt.Println("Done:", targetReaders[index])
 		}(i)
-
-		if err != nil { // err is set inside go routine
-			break
-		}
 	}
+	wg.Wait()
+	go close(doneCh)
 
-	for i := routineCount; i >= 0; i-- {
-		chIndex := <-doneCh
+	for err := range doneCh {
 		if err != nil {
-			info(fmt.Sprintf("%s: Failed Error: %v", targetURLs[chIndex], err))
-		} else {
-			info(fmt.Sprintf("%s: Done", targetURLs[chIndex]))
+			log.Println("Failed error:", iodine.New(err, nil))
 		}
 	}
 
