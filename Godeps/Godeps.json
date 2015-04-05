@@ -28,7 +28,7 @@
 		},
 		{
 			"ImportPath": "github.com/minio-io/donut",
-			"Rev": "f1350882976ab553b241d86cdb8b992e7c9d9c63"
+			"Rev": "5647e1e6c6a95caec431610a497b15f8298d56cf"
 		},
 		{
 			"ImportPath": "github.com/minio-io/erasure",

@@ -61,7 +61,7 @@ type Bucket interface {
 	ListObjects() (map[string]Object, error)
 
 	GetObject(object string) (io.ReadCloser, int64, error)
-	PutObject(object string, contents io.Reader) error
+	PutObject(object, contentType string, contents io.Reader) error
 
 	WriteDonutObjectMetadata(object string, donutMetadata map[string]string) error
 	WriteObjectMetadata(object string, objectMetadata map[string]string) error
@@ -80,8 +80,8 @@ type Node interface {
 	DetachDisk(disk Disk) error
 
 	GetNodeName() string
-	SaveConfig() ([]byte, error)
-	LoadConfig([]byte) error
+	SaveConfig() error
+	LoadConfig() error
 }
 
 // Disk interface
@@ -97,8 +97,6 @@ type Disk interface {
 	GetPath() string
 	GetOrder() int
 	GetFSInfo() map[string]string
-	SaveConfig() ([]byte, error)
-	LoadConfig([]byte) error
 }
 
 const (
