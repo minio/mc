@@ -43,6 +43,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -167,11 +168,32 @@ func (c *s3Client) getPrefixes(commonPrefixes []*client.Prefix) (prefixes []*cli
 	return prefixes, nil
 }
 
-// ListObjects returns 0 to maxKeys (inclusive) items from the
+func (c *s3Client) ListObjects(bucket, objectPrefix string) (items []*client.Item, err error) {
+	size, date, err := c.Stat(bucket, objectPrefix)
+	switch err {
+	case nil: // List a single object. Exact key
+		items = append(items, &client.Item{Key: objectPrefix, LastModified: date, Size: size})
+		return items, nil
+	case os.ErrNotExist:
+		// List all objects matching the key prefix
+		items, _, err = c.queryObjects(bucket, "", objectPrefix, "", globalMaxKeys)
+		if err != nil {
+			return nil, err
+		}
+		if len(items) > 0 {
+			return items, nil
+		}
+		return nil, os.ErrNotExist
+	default: // Error
+		return nil, err
+	}
+}
+
+// queryObjects returns 0 to maxKeys (inclusive) items from the
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
-func (c *s3Client) ListObjects(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
+func (c *s3Client) queryObjects(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
 	var urlReq string
 	var buffer bytes.Buffer
 

@@ -30,10 +30,6 @@ import (
 	"github.com/minio-io/mc/pkg/client"
 )
 
-const (
-	globalMaxKeys = 1000 // Maximum number of keys to fetch per request
-)
-
 func Test(t *testing.T) { TestingT(t) }
 
 type MySuite struct{}
@@ -248,7 +244,7 @@ func (s *MySuite) TestMultipleNewObjects(c *C) {
 	c.Assert(readerBuffer2.Bytes(), DeepEquals, []byte("two"))
 
 	// test list objects
-	listObjects, _, err := donut.ListObjects("foo", "", "", "", globalMaxKeys)
+	listObjects, err := donut.ListObjects("foo", "")
 	c.Assert(err, IsNil)
 
 	receivedObjectNames := getObjectNames(listObjects)

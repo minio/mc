@@ -83,6 +83,9 @@ func (c *s3Client) Put(bucket, key, md5HexString string, size int64, contents io
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3
 func (c *s3Client) Stat(bucket, key string) (size int64, date time.Time, reterr error) {
+	if bucket == "" || key == "" {
+		return 0, date, os.ErrNotExist
+	}
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)

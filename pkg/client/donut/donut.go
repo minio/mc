@@ -38,7 +38,8 @@ type donutDriver struct {
 
 // Object split blockSize defaulted at 10MB
 const (
-	blockSize = 10 * 1024 * 1024
+	blockSize     = 10 * 1024 * 1024
+	globalMaxKeys = 1000
 )
 
 // IsValidBucketName reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
@@ -207,7 +208,29 @@ func (a bySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 
 // ListObjects - returns list of objects
-func (d *donutDriver) ListObjects(bucketName, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
+func (d *donutDriver) ListObjects(bucketName, objectPrefix string) (items []*client.Item, err error) {
+	size, date, err := d.Stat(bucketName, objectPrefix)
+	switch err {
+	case nil: // List a single object. Exact key
+		items = append(items, &client.Item{Key: objectPrefix, LastModified: date, Size: size})
+		return items, nil
+	case os.ErrNotExist:
+		// List all objects matching the key prefix
+		items, _, err = d.queryObjects(bucketName, "", objectPrefix, "", globalMaxKeys)
+		if err != nil {
+			return nil, err
+		}
+		if len(items) > 0 {
+			return items, nil
+		}
+		return nil, os.ErrNotExist
+	default: // Error
+		return nil, err
+	}
+}
+
+// queryObjects - returns list of objects
+func (d *donutDriver) queryObjects(bucketName, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return nil, nil, err
