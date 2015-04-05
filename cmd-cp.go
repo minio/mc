@@ -22,11 +22,12 @@ import (
 	"io/ioutil"
 
 	"bytes"
+	"sync"
+
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
-	"sync"
 )
 
 // doCopyCmd copies objects into and from a bucket or between buckets
@@ -59,7 +60,6 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 
 	targetReaders := make([]io.Reader, numTargets)
 	targetWriters := make([]io.Writer, numTargets)
-	doneCh := make(chan error)
 
 	for i := 0; i < numTargets; i++ {
 		targetReaders[i], targetWriters[i] = io.Pipe()
@@ -95,20 +95,13 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			// return err via external variable
-			doneCh <- targetClnt.Put(targetBucket, targetObject, sourceSize, targetReaders[index])
-			fmt.Println("Done:", targetReaders[index])
+			if err := targetClnt.Put(targetBucket, targetObject, sourceSize, targetReaders[index]); err != nil {
+				fatal(iodine.New(err, nil).Error())
+			}
+			info(fmt.Sprintf("Done: %s", targetURLs[index]))
 		}(i)
 	}
 	wg.Wait()
-	go close(doneCh)
-
-	for err := range doneCh {
-		if err != nil {
-			log.Println("Failed error:", iodine.New(err, nil))
-		}
-	}
-
 	return nil
 }
 
