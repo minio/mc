@@ -18,6 +18,8 @@ package donut
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"io"
 	"io/ioutil"
 	"os"
@@ -158,7 +160,7 @@ func (s *MySuite) TestNewObjectFailsWithoutBucket(c *C) {
 	defer removeDisks(c, nodeDiskMap["localhost"])
 	c.Assert(err, IsNil)
 
-	_, _, err = donut.Get("foo", "obj")
+	_, _, _, err = donut.Get("foo", "obj")
 	c.Assert(err, Not(IsNil))
 }
 
@@ -168,10 +170,10 @@ func (s *MySuite) TestNewObjectFailsWithEmptyName(c *C) {
 	defer removeDisks(c, nodeDiskMap["localhost"])
 	c.Assert(err, IsNil)
 
-	_, _, err = donut.Get("foo", "")
+	_, _, _, err = donut.Get("foo", "")
 	c.Assert(err, Not(IsNil))
 
-	_, _, err = donut.Get("foo", " ")
+	_, _, _, err = donut.Get("foo", " ")
 	c.Assert(err, Not(IsNil))
 }
 
@@ -184,11 +186,13 @@ func (s *MySuite) TestNewObjectCanBeWritten(c *C) {
 	err = donut.PutBucket("foo")
 	c.Assert(err, IsNil)
 
+	m := md5.New()
 	data := "Hello World"
-	err = donut.Put("foo", "obj", int64(len(data)), bytes.NewBuffer([]byte(data)))
+	io.WriteString(m, data)
+	err = donut.Put("foo", "obj", hex.EncodeToString(m.Sum(nil)), int64(len(data)), bytes.NewBuffer([]byte(data)))
 	c.Assert(err, IsNil)
 
-	reader, size, err := donut.Get("foo", "obj")
+	reader, size, _, err := donut.Get("foo", "obj")
 	c.Assert(err, IsNil)
 
 	var actualData bytes.Buffer
@@ -213,13 +217,21 @@ func (s *MySuite) TestMultipleNewObjects(c *C) {
 	c.Assert(err, IsNil)
 
 	c.Assert(donut.PutBucket("foo"), IsNil)
-	err = donut.Put("foo", "obj1", int64(len([]byte("one"))), bytes.NewBuffer([]byte("one")))
+
+	m1 := md5.New()
+	m2 := md5.New()
+	io.WriteString(m1, "one")
+	io.WriteString(m2, "two")
+
+	err = donut.Put("foo", "obj1",
+		hex.EncodeToString(m1.Sum(nil)), int64(len([]byte("one"))), bytes.NewBuffer([]byte("one")))
 	c.Assert(err, IsNil)
 
-	err = donut.Put("foo", "obj2", int64(len([]byte("two"))), bytes.NewBuffer([]byte("two")))
+	err = donut.Put("foo", "obj2",
+		hex.EncodeToString(m2.Sum(nil)), int64(len([]byte("two"))), bytes.NewBuffer([]byte("two")))
 	c.Assert(err, IsNil)
 
-	reader, _, err := donut.Get("foo", "obj1")
+	reader, _, _, err := donut.Get("foo", "obj1")
 	c.Assert(err, IsNil)
 
 	var readerBuffer1 bytes.Buffer
@@ -227,7 +239,7 @@ func (s *MySuite) TestMultipleNewObjects(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(readerBuffer1.Bytes(), DeepEquals, []byte("one"))
 
-	reader, _, err = donut.Get("foo", "obj2")
+	reader, _, _, err = donut.Get("foo", "obj2")
 	c.Assert(err, IsNil)
 
 	var readerBuffer2 bytes.Buffer
