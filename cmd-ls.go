@@ -67,7 +67,7 @@ func listObjectPrefix(clnt client.Client, bucketName, objectName string, maxkeys
 		printObject(date, size, objectName)
 	case os.ErrNotExist:
 		// List all objects matching the key prefix
-		items, _, err = clnt.ListObjects(bucketName, "", objectName, "", maxkeys)
+		items, err = clnt.ListObjects(bucketName, objectName)
 		if err != nil {
 			fatal(err.Error())
 		}
@@ -108,7 +108,7 @@ func doListCmd(ctx *cli.Context) {
 		}
 		printBuckets(buckets)
 	case objectName == "": // List objects in a bucket
-		items, _, err = client.ListObjects(bucketName, "", "", "", globalMaxKeys)
+		items, err = client.ListObjects(bucketName, "")
 		if err != nil {
 			fatal(err.Error())
 		}

@@ -29,7 +29,7 @@ type Client interface {
 	Stat(bucket, object string) (size int64, date time.Time, err error)
 	PutBucket(bucket string) error
 	ListBuckets() ([]*Bucket, error)
-	ListObjects(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*Item, prefixes []*Prefix, err error)
+	ListObjects(bucket, keyPrefix string) (items []*Item, err error)
 }
 
 // Bucket - carries s3 bucket reply header
