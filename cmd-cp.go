@@ -21,35 +21,45 @@ import (
 	"io"
 	"io/ioutil"
 
+	"bytes"
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
+	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/utils/log"
+	"sync"
 )
 
 // doCopyCmd copies objects into and from a bucket or between buckets
 func multiCopy(targetURLs []string, sourceURL string) (err error) {
+	var targetBuffer bytes.Buffer
+	fmt.Fprint(&targetBuffer, targetURLs)
+	errParams := map[string]string{
+		"targetURLs": targetBuffer.String(),
+		"sourceURL":  sourceURL,
+	}
 	numTargets := len(targetURLs)
 
 	// Parse URL to bucket and object names
 	sourceBucket, sourceObject, err := url2Object(sourceURL)
 	if err != nil {
-		return err
+		return iodine.New(err, errParams)
 	}
 
 	// Initialize a new client object for the source
 	sourceClnt, err := getNewClient(globalDebugFlag, sourceURL)
 	if err != nil {
-		return err
+		return iodine.New(err, errParams)
 	}
 
 	// Get a reader for the source object
 	sourceReader, sourceSize, err := sourceClnt.Get(sourceBucket, sourceObject)
 	if err != nil {
-		return err
+		return iodine.New(err, errParams)
 	}
 
 	targetReaders := make([]io.Reader, numTargets)
 	targetWriters := make([]io.Writer, numTargets)
-	doneCh := make(chan int)
+	doneCh := make(chan error)
 
 	for i := 0; i < numTargets; i++ {
 		targetReaders[i], targetWriters[i] = io.Pipe()
@@ -69,38 +79,33 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 		}
 	}()
 
-	var routineCount int
+	var wg sync.WaitGroup
 	for i := 0; i < numTargets; i++ {
 		targetBucket, targetObject, err := url2Object(targetURLs[i])
 
 		if err != nil {
-			return err
+			return iodine.New(err, errParams)
 		}
 
 		targetClnt, err := getNewClient(globalDebugFlag, targetURLs[i])
 		if err != nil {
-			return err
+			return iodine.New(err, errParams)
 		}
 
-		routineCount = i // Keep track of which routine
+		wg.Add(1)
 		go func(index int) {
+			defer wg.Done()
 			// return err via external variable
-			err = targetClnt.Put(targetBucket, targetObject, sourceSize, targetReaders[index])
-
-			doneCh <- index // Let the caller know that we are done
+			doneCh <- targetClnt.Put(targetBucket, targetObject, sourceSize, targetReaders[index])
+			fmt.Println("Done:", targetReaders[index])
 		}(i)
-
-		if err != nil { // err is set inside go routine
-			break
-		}
 	}
+	wg.Wait()
+	go close(doneCh)
 
-	for i := routineCount; i >= 0; i-- {
-		chIndex := <-doneCh
+	for err := range doneCh {
 		if err != nil {
-			info(fmt.Sprintf("%s: Failed Error: %v", targetURLs[chIndex], err))
-		} else {
-			info(fmt.Sprintf("%s: Done", targetURLs[chIndex]))
+			log.Println("Failed error:", iodine.New(err, nil))
 		}
 	}
 
@@ -115,7 +120,7 @@ func doCopyCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
 	urlList, err := parseURLs(ctx)
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(iodine.New(err, nil))
 		return
 	}
 	sourceURL := urlList[0]   // First arg is source
@@ -123,7 +128,7 @@ func doCopyCmd(ctx *cli.Context) {
 
 	err = multiCopy(targetURLs, sourceURL)
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(iodine.New(err, nil))
 		return
 	}
 

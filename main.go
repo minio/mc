@@ -26,13 +26,14 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
+	"github.com/minio-io/iodine"
 )
 
 func init() {
 	// Check for the environment early on and gracefuly report.
 	_, err := user.Current()
 	if err != nil {
-		log.Fatalf("mc: Unable to obtain user's home directory. \nError: %s\n", err)
+		log.Println("mc: Unable to obtain user's home directory\n", iodine.New(err, nil))
 	}
 
 	// Ensures config file is sane and cached to _config private variable.
@@ -41,14 +42,13 @@ func init() {
 		return
 	}
 	if err != nil {
-		log.Fatalf("mc: Unable %s\n", err)
+		log.Fatalln("Unable to read config\n", iodine.New(err, nil))
 	}
 
 	err = checkMcConfig(config)
 	if err != nil {
-		log.Fatalf("mc: Error in config file [%s], Error: %s\n", getMcConfigFilename(), err)
+		log.Fatalln("Error in config file:", getMcConfigFilename(), "\n", iodine.New(err, nil))
 	}
-
 }
 
 // Tries to get os/arch/platform specific information
