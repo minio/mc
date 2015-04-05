@@ -21,30 +21,39 @@ import (
 	"io"
 	"io/ioutil"
 
+	"bytes"
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
+	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // doCopyCmd copies objects into and from a bucket or between buckets
 func multiCopy(targetURLs []string, sourceURL string) (err error) {
+	var targetBuffer bytes.Buffer
+	fmt.Fprint(&targetBuffer, targetURLs)
+	errParams := map[string]string{
+		"targetURLs": targetBuffer.String(),
+		"sourceURL":  sourceURL,
+	}
 	numTargets := len(targetURLs)
 
 	// Parse URL to bucket and object names
 	sourceBucket, sourceObject, err := url2Object(sourceURL)
 	if err != nil {
-		return err
+		return iodine.New(err, errParams)
 	}
 
 	// Initialize a new client object for the source
 	sourceClnt, err := getNewClient(globalDebugFlag, sourceURL)
 	if err != nil {
-		return err
+		return iodine.New(err, errParams)
 	}
 
 	// Get a reader for the source object
 	sourceReader, sourceSize, err := sourceClnt.Get(sourceBucket, sourceObject)
 	if err != nil {
-		return err
+		return iodine.New(err, errParams)
 	}
 
 	targetReaders := make([]io.Reader, numTargets)
@@ -74,12 +83,12 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 		targetBucket, targetObject, err := url2Object(targetURLs[i])
 
 		if err != nil {
-			return err
+			return iodine.New(err, errParams)
 		}
 
 		targetClnt, err := getNewClient(globalDebugFlag, targetURLs[i])
 		if err != nil {
-			return err
+			return iodine.New(err, errParams)
 		}
 
 		routineCount = i // Keep track of which routine
@@ -115,7 +124,7 @@ func doCopyCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
 	urlList, err := parseURLs(ctx)
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(iodine.New(err, nil))
 		return
 	}
 	sourceURL := urlList[0]   // First arg is source
@@ -123,7 +132,7 @@ func doCopyCmd(ctx *cli.Context) {
 
 	err = multiCopy(targetURLs, sourceURL)
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(iodine.New(err, nil))
 		return
 	}
 
