@@ -28,7 +28,7 @@ import (
 type urlType int
 
 const (
-	urlUnknown urlType = iota // Minio and S3 compatible object storage
+	urlUnknown urlType = iota // Unknown type
 	urlS3                     // Minio and S3 compatible object storage
 	urlDonut                  // Donut object storage
 	urlFile                   // POSIX compatible file systems
@@ -107,6 +107,25 @@ func fixFileURL(urlStr string) (fixedURL string, err error) {
 
 }
 
+// url2Host extracts hostname from the URL.
+func url2Host(urlStr string) (host string, err error) {
+	if urlStr == "" {
+		return "", errEmptyURL
+	}
+
+	utype, e := getURLType(urlStr)
+	if e != nil || utype != urlFile {
+		return "", e
+	}
+
+	u, e := url.Parse(urlStr)
+	if e != nil {
+		return "", e
+	}
+
+	return u.Host, nil
+}
+
 // url2Object converts URL to bucket and objectname
 func url2Object(urlStr string) (bucketName, objectName string, err error) {
 	u, err := url.Parse(urlStr)
@@ -155,7 +174,7 @@ func parseURL(arg string) (urlStr string, err error) {
 	}
 
 	if !isValidURL(urlStr) {
-		return "", errInvalidScheme
+		return "", errUnsupportedScheme
 	}
 
 	// If it is a file URL, rewrite to file:///path/to form

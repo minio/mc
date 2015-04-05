@@ -50,9 +50,9 @@ func parseDestinationArgs(urlParsed *url.URL, destination, source object) (objec
 	case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
 		if urlParsed.Host == "" {
 			if urlParsed.Path == "" {
-				return object{}, errInvalidScheme
+				return object{}, errUnsupportedScheme
 			}
-			return object{}, errInvalidScheme
+			return object{}, errUnsupportedScheme
 		}
 		destination.host = urlParsed.Host
 		destination.scheme = urlParsed.Scheme
@@ -64,7 +64,7 @@ func parseDestinationArgs(urlParsed *url.URL, destination, source object) (objec
 		}
 	case urlParsed.Scheme == "":
 		if urlParsed.Host != "" {
-			return object{}, errInvalidScheme
+			return object{}, errUnsupportedScheme
 		}
 		if urlParsed.Path == "." {
 			destination.key = source.key
@@ -73,7 +73,7 @@ func parseDestinationArgs(urlParsed *url.URL, destination, source object) (objec
 		}
 		destination.bucket = urlParsed.Host
 	case urlParsed.Scheme != "http" && urlParsed.Scheme != "https":
-		return object{}, errInvalidScheme
+		return object{}, errUnsupportedScheme
 	}
 	return destination, nil
 }
@@ -83,9 +83,9 @@ func parseSourceArgs(urlParsed *url.URL, firstArg string, source object) (object
 	case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
 		if urlParsed.Host == "" {
 			if urlParsed.Path == "" {
-				return object{}, errInvalidScheme
+				return object{}, errUnsupportedScheme
 			}
-			return object{}, errInvalidScheme
+			return object{}, errUnsupportedScheme
 		}
 		source.scheme = urlParsed.Scheme
 		source.host = urlParsed.Host
@@ -97,17 +97,17 @@ func parseSourceArgs(urlParsed *url.URL, firstArg string, source object) (object
 		}
 	case urlParsed.Scheme == "":
 		if urlParsed.Host != "" {
-			return object{}, errInvalidScheme
+			return object{}, errUnsupportedScheme
 		}
 		if urlParsed.Path != firstArg {
-			return object{}, errInvalidScheme
+			return object{}, errUnsupportedScheme
 		}
 		if urlParsed.Path == "." {
 			return object{}, errFskey
 		}
 		source.key = strings.TrimPrefix(urlParsed.Path, "/")
 	case urlParsed.Scheme != "http" && urlParsed.Scheme != "https":
-		return object{}, errInvalidScheme
+		return object{}, errUnsupportedScheme
 	}
 	return source, nil
 }
@@ -170,12 +170,42 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 
-	traceTransport := getTraceTransport()
-	if debug {
-		clnt = s3.GetNewClient(&auth, urlStr, traceTransport)
-	} else {
-		clnt = s3.GetNewClient(&auth, urlStr, http.DefaultTransport)
+	uType, err := getURLType(urlStr)
+	if err != nil {
+		return nil, err
 	}
 
-	return clnt, nil
+	switch uType {
+	case urlS3: // Minio and S3 compatible object storage
+		traceTransport := getTraceTransport()
+		if debug {
+			clnt = s3.GetNewClient(&auth, urlStr, traceTransport)
+		} else {
+			clnt = s3.GetNewClient(&auth, urlStr, http.DefaultTransport)
+		}
+		return clnt, nil
+
+	// TODO: donut.GetNewClient should only take donutName as input. Rest it should read from its own config file.
+	/*
+		case urlDonut: // Donut object storage
+
+				host, err := url2Host(urlStr)
+				if err != nil {
+					return nil, err
+				}
+
+				clnt, err := donut.GetNewClient(host, nodeDiskMap)
+				if err != nil {
+					return nil, err
+				}
+
+				return clnt, nil */
+	case urlFile: // POSIX compatible file systems
+		fallthrough
+	case urlUnknown: // Unknown type
+		fallthrough
+	default:
+		return nil, errUnsupportedScheme
+	}
+
 }
