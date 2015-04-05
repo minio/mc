@@ -104,25 +104,26 @@ func (d *donutDriver) PutBucket(bucketName string) error {
 }
 
 // Get retrieves an object and writes it to a writer
-func (d *donutDriver) Get(bucketName, objectName string) (body io.ReadCloser, size int64, err error) {
+func (d *donutDriver) Get(bucketName, objectName string) (body io.ReadCloser, size int64, md5 string, err error) {
 	if bucketName == "" || strings.TrimSpace(bucketName) == "" {
-		return nil, 0, errors.New("invalid argument")
+		return nil, 0, "", errors.New("invalid argument")
 	}
 	if objectName == "" || strings.TrimSpace(objectName) == "" {
-		return nil, 0, errors.New("invalid argument")
+		return nil, 0, "", errors.New("invalid argument")
 	}
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 	if _, ok := buckets[bucketName]; !ok {
-		return nil, 0, errors.New("bucket does not exist")
+		return nil, 0, "", errors.New("bucket does not exist")
 	}
-	return buckets[bucketName].GetObject(objectName)
+	body, size, err = buckets[bucketName].GetObject(objectName)
+	return body, size, "", err
 }
 
 // Put creates a new object
-func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.Reader) error {
+func (d *donutDriver) Put(bucketName, objectKey, md5String string, size int64, contents io.Reader) error {
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
 		return err
@@ -139,35 +140,35 @@ func (d *donutDriver) Put(bucketName, objectKey string, size int64, contents io.
 }
 
 // GetPartial retrieves an object range and writes it to a writer
-func (d *donutDriver) GetPartial(bucketName, objectName string, offset, length int64) (body io.ReadCloser, size int64, err error) {
+func (d *donutDriver) GetPartial(bucketName, objectName string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	if bucketName == "" || strings.TrimSpace(bucketName) == "" {
-		return nil, 0, errors.New("invalid argument")
+		return nil, 0, "", errors.New("invalid argument")
 	}
 	if objectName == "" || strings.TrimSpace(objectName) == "" {
-		return nil, 0, errors.New("invalid argument")
+		return nil, 0, "", errors.New("invalid argument")
 	}
 	if offset < 0 {
-		return nil, 0, errors.New("invalid argument")
+		return nil, 0, "", errors.New("invalid argument")
 	}
 	buckets, err := d.donut.ListBuckets()
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 	if _, ok := buckets[bucketName]; !ok {
-		return nil, 0, errors.New("bucket does not exist")
+		return nil, 0, "", errors.New("bucket does not exist")
 	}
 	reader, size, err := buckets[bucketName].GetObject(objectName)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 	if offset > size || (offset+length-1) > size {
-		return nil, 0, errors.New("invalid range")
+		return nil, 0, "", errors.New("invalid range")
 	}
 	n, err := io.CopyN(ioutil.Discard, reader, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
-	return reader, (size - n), nil
+	return reader, (size - n), "", nil
 }
 
 // Stat - gets metadata information about the object

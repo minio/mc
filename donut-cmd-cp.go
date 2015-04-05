@@ -35,7 +35,7 @@ func upload(urlArg1, urlArg2 *url.URL, mcDonutConfigData *mcDonutConfig) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	if err := d.Put(bucketName, objectName, st.Size(), reader); err != nil {
+	if err := d.Put(bucketName, objectName, "", st.Size(), reader); err != nil {
 		fatal(err.Error())
 	}
 }
@@ -68,7 +68,7 @@ func download(urlArg1, urlArg2 *url.URL, mcDonutConfigData *mcDonutConfig) {
 		if err != nil {
 			fatal(err.Error())
 		}
-		reader, size, err := d.Get(bucketName, objectName)
+		reader, size, _, err := d.Get(bucketName, objectName)
 		if err != nil {
 			fatal(err.Error())
 		}
@@ -94,7 +94,7 @@ func download(urlArg1, urlArg2 *url.URL, mcDonutConfigData *mcDonutConfig) {
 			fatal(err.Error())
 		}
 		remainingSize := objectSize - downloadedSize
-		reader, size, err := d.GetPartial(bucketName, objectName, downloadedSize, remainingSize)
+		reader, size, _, err := d.GetPartial(bucketName, objectName, downloadedSize, remainingSize)
 		if err != nil {
 			fatal(err.Error())
 		}

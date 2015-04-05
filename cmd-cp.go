@@ -53,7 +53,7 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 	}
 
 	// Get a reader for the source object
-	sourceReader, sourceSize, err := sourceClnt.Get(sourceBucket, sourceObject)
+	sourceReader, sourceSize, md5Hex, err := sourceClnt.Get(sourceBucket, sourceObject)
 	if err != nil {
 		return iodine.New(err, errParams)
 	}
@@ -82,20 +82,17 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 	var wg sync.WaitGroup
 	for i := 0; i < numTargets; i++ {
 		targetBucket, targetObject, err := url2Object(targetURLs[i])
-
 		if err != nil {
 			return iodine.New(err, errParams)
 		}
-
 		targetClnt, err := getNewClient(globalDebugFlag, targetURLs[i])
 		if err != nil {
 			return iodine.New(err, errParams)
 		}
-
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			if err := targetClnt.Put(targetBucket, targetObject, sourceSize, targetReaders[index]); err != nil {
+			if err := targetClnt.Put(targetBucket, targetObject, md5Hex, sourceSize, targetReaders[index]); err != nil {
 				fatal(iodine.New(err, nil).Error())
 			}
 			info(fmt.Sprintf("Done: %s", targetURLs[index]))

@@ -39,16 +39,16 @@ limitations under the License.
 package s3
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
-	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"io/ioutil"
 	"net/http"
 )
@@ -56,25 +56,17 @@ import (
 /// Object API operations
 
 // Put - upload new object to bucket
-func (c *s3Client) Put(bucket, key string, size int64, contents io.Reader) error {
+func (c *s3Client) Put(bucket, key, md5HexString string, size int64, contents io.Reader) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
 	req.ContentLength = size
 
-	h := md5.New()
-	// Memory where data is present
-	sink := new(bytes.Buffer)
-	mw := io.MultiWriter(h, sink)
-	written, err := io.CopyN(mw, contents, size)
-	if written != size {
-		return errors.New("Data read mismatch")
-	}
+	req.Body = ioutil.NopCloser(contents)
+	md5, err := hex.DecodeString(md5HexString)
 	if err != nil {
 		return err
 	}
-	req.Body = ioutil.NopCloser(sink)
-	b64 := base64.StdEncoding.EncodeToString(h.Sum(nil))
-	req.Header.Set("Content-MD5", b64)
+	req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
 	c.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)
@@ -123,26 +115,26 @@ func (c *s3Client) Stat(bucket, key string) (size int64, date time.Time, reterr 
 }
 
 // Get - download a requested object from a given bucket
-func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, err error) {
+func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 string, err error) {
 	req := newReq(c.keyURL(bucket, key))
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, 0, NewError(res)
+		return nil, 0, "", NewError(res)
 	}
-
-	return res.Body, res.ContentLength, nil
+	md5sum := strings.Trim(res.Header.Get("ETag"), "\"") // trim off the erroneous double quotes
+	return res.Body, res.ContentLength, md5sum, nil
 }
 
 // GetPartial fetches part of the s3 key object in bucket.
 // If length is negative, the rest of the object is returned.
-func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, err error) {
+func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	if offset < 0 {
-		return nil, 0, errors.New("invalid negative offset")
+		return nil, 0, "", errors.New("invalid negative offset")
 	}
 	req := newReq(c.keyURL(bucket, key))
 	if length >= 0 {
@@ -154,13 +146,13 @@ func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return
+		return nil, 0, "", err
 	}
 
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusPartialContent:
-		return res.Body, res.ContentLength, nil
+		return res.Body, res.ContentLength, res.Header.Get("ETag"), nil
 	default:
-		return nil, 0, NewError(res)
+		return nil, 0, "", NewError(res)
 	}
 }
