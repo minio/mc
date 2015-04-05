@@ -35,8 +35,6 @@ cyclo:
 
 pre-build:
 	@echo "Running pre-build:"
-	@(env bash $(PWD)/buildscripts/git-commit-id.sh)
-
 
 build-all: getdeps verifiers
 	@echo "Building Libraries:"
@@ -67,4 +65,3 @@ install: test-all
 
 clean:
 	@rm -fv cover.out
-	@rm -fv build-constants.go
