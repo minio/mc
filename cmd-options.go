@@ -130,13 +130,6 @@ EXAMPLES:
 			},
 		},
 	}
-
-	donutCmd = cli.Command{
-		Name:        "donut",
-		Usage:       "donut admin",
-		Description: "",
-		Subcommands: donutOptions,
-	}
 )
 
 type object struct {
@@ -159,7 +152,6 @@ var options = []cli.Command{
 	cpCmd,
 	lsCmd,
 	mbCmd,
-	donutCmd,
 	configCmd,
 }
 

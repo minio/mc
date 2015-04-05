@@ -26,7 +26,7 @@ var (
 	errEmptyURL = errors.New("URL is empty")
 
 	// url
-	errInvalidScheme = errors.New("Invalid URL scheme only http{s}:// supported")
+	errUnsupportedScheme = errors.New("Unsupported URL scheme")
 
 	// url
 	errInvalidURL = errors.New("Invalid URL")
