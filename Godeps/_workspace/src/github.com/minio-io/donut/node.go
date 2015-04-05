@@ -59,10 +59,10 @@ func (n node) DetachDisk(disk Disk) error {
 	return nil
 }
 
-func (n node) SaveConfig() ([]byte, error) {
-	return nil, errors.New("Not Implemented")
+func (n node) SaveConfig() error {
+	return errors.New("Not Implemented")
 }
 
-func (n node) LoadConfig([]byte) error {
+func (n node) LoadConfig() error {
 	return errors.New("Not Implemented")
 }

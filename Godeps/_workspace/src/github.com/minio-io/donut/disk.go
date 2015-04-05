@@ -141,10 +141,10 @@ func (d disk) OpenFile(filename string) (*os.File, error) {
 	return dataFile, nil
 }
 
-func (d disk) SaveConfig() ([]byte, error) {
-	return nil, errors.New("Not Implemented")
+func (d disk) SaveConfig() error {
+	return errors.New("Not Implemented")
 }
 
-func (d disk) LoadConfig([]byte) error {
+func (d disk) LoadConfig() error {
 	return errors.New("Not Implemented")
 }

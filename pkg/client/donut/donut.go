@@ -133,7 +133,7 @@ func (d *donutDriver) Put(bucketName, objectKey, md5String string, size int64, c
 	if _, ok := objects[objectKey]; ok {
 		return errors.New("Object exists")
 	}
-	err = buckets[bucketName].PutObject(objectKey, contents)
+	err = buckets[bucketName].PutObject(objectKey, "application/octet-stream", contents)
 	if err != nil {
 		return err
 	}

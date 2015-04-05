@@ -21,8 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"crypto/md5"
@@ -71,10 +73,19 @@ func (b bucket) ListObjects() (map[string]Object, error) {
 				return nil, err
 			}
 			for _, object := range objects {
-				b.objects[object.Name()], err = NewObject(object.Name(), path.Join(disk.GetPath(), bucketPath))
+				newObject, err := NewObject(object.Name(), path.Join(disk.GetPath(), bucketPath))
 				if err != nil {
 					return nil, err
 				}
+				newObjectMetadata, err := newObject.GetObjectMetadata()
+				if err != nil {
+					return nil, err
+				}
+				objectName, ok := newObjectMetadata["object"]
+				if !ok {
+					return nil, errors.New("object corrupted")
+				}
+				b.objects[objectName] = newObject
 			}
 		}
 		nodeSlice = nodeSlice + 1
@@ -92,7 +103,7 @@ func (b bucket) GetObject(objectName string) (reader io.ReadCloser, size int64, 
 	// check if object exists
 	object, ok := objects[objectName]
 	if !ok {
-		return nil, 0, errors.New("object does not exist")
+		return nil, 0, os.ErrNotExist
 	}
 	donutObjectMetadata, err := object.GetDonutObjectMetadata()
 	if err != nil {
@@ -105,7 +116,7 @@ func (b bucket) GetObject(objectName string) (reader io.ReadCloser, size int64, 
 	if err != nil {
 		return nil, 0, err
 	}
-	go b.getObject(objectName, writer, donutObjectMetadata)
+	go b.getObject(b.normalizeObjectName(objectName), writer, donutObjectMetadata)
 	return reader, size, nil
 }
 
@@ -149,14 +160,23 @@ func (b bucket) WriteDonutObjectMetadata(objectName string, donutObjectMetadata 
 	return nil
 }
 
-func (b bucket) PutObject(objectName string, objectData io.Reader) error {
+// This a temporary normalization of object path, need to find a better way
+func (b bucket) normalizeObjectName(objectName string) string {
+	// replace every '/' with '-'
+	return strings.Replace(objectName, "/", "-", -1)
+}
+
+func (b bucket) PutObject(objectName, contentType string, objectData io.Reader) error {
 	if objectName == "" {
 		return errors.New("invalid argument")
 	}
 	if objectData == nil {
 		return errors.New("invalid argument")
 	}
-	writers, err := b.getDiskWriters(objectName, "data")
+	if contentType == "" || strings.TrimSpace(contentType) == "" {
+		contentType = "application/octet-stream"
+	}
+	writers, err := b.getDiskWriters(b.normalizeObjectName(objectName), "data")
 	if err != nil {
 		return err
 	}
@@ -206,14 +226,14 @@ func (b bucket) PutObject(objectName string, objectData io.Reader) error {
 	dataMd5sum := summer.Sum(nil)
 	donutObjectMetadata["created"] = time.Now().Format(time.RFC3339Nano)
 	donutObjectMetadata["md5"] = hex.EncodeToString(dataMd5sum)
-	if err := b.WriteDonutObjectMetadata(objectName, donutObjectMetadata); err != nil {
+	if err := b.WriteDonutObjectMetadata(b.normalizeObjectName(objectName), donutObjectMetadata); err != nil {
 		return err
 	}
 	objectMetadata := make(map[string]string)
 	objectMetadata["bucket"] = b.name
 	objectMetadata["object"] = objectName
-	objectMetadata["contentType"] = "application/octet-stream"
-	if err := b.WriteObjectMetadata(objectName, objectMetadata); err != nil {
+	objectMetadata["contentType"] = strings.TrimSpace(contentType)
+	if err := b.WriteObjectMetadata(b.normalizeObjectName(objectName), objectMetadata); err != nil {
 		return err
 	}
 	return nil
