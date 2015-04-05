@@ -55,20 +55,17 @@ func doDonutListCmd(c *cli.Context) {
 		fatal(err.Error())
 	}
 
-	switch true {
-	case bucketName == "":
+	if bucketName == "" { // List Buckets
 		buckets, err := d.ListBuckets()
 		if err != nil {
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
-	case objectName == "": // List objects in a bucket
-		items, err := d.ListObjects(bucketName, "")
+	} else { // List objects in a bucket
+		items, err := d.ListObjects(bucketName, objectName)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
-	case objectName != "":
-		listObjectPrefix(d, bucketName, objectName, globalMaxKeys)
 	}
 }

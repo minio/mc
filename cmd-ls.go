@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/cheggaaa/pb"
@@ -54,33 +53,6 @@ func printObject(date time.Time, v int64, key string) {
 	info(msg)
 }
 
-// listObjectPrefix prints matching key prefix
-func listObjectPrefix(clnt client.Client, bucketName, objectName string, maxkeys int) {
-	var date time.Time
-	var size int64
-	var err error
-
-	size, date, err = clnt.Stat(bucketName, objectName)
-	var items []*client.Item
-	switch err {
-	case nil: // List a single object. Exact key
-		printObject(date, size, objectName)
-	case os.ErrNotExist:
-		// List all objects matching the key prefix
-		items, err = clnt.ListObjects(bucketName, objectName)
-		if err != nil {
-			fatal(err.Error())
-		}
-		if len(items) > 0 {
-			printObjects(items)
-		} else {
-			fatal(os.ErrNotExist.Error())
-		}
-	default: // Error
-		fatal(err.Error())
-	}
-}
-
 // doListCmd lists objects inside a bucket
 func doListCmd(ctx *cli.Context) {
 	var items []*client.Item
@@ -100,22 +72,17 @@ func doListCmd(ctx *cli.Context) {
 		fatal(err.Error())
 	}
 
-	switch true {
-	case bucketName == "": // List all buckets
+	if bucketName == "" { // List all buckets
 		buckets, err := client.ListBuckets()
 		if err != nil {
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
-	case objectName == "": // List objects in a bucket
-		items, err = client.ListObjects(bucketName, "")
+	} else {
+		items, err = client.ListObjects(bucketName, objectName)
 		if err != nil {
 			fatal(err.Error())
 		}
 		printObjects(items)
-	case objectName != "": // List objects matching the key prefix
-		listObjectPrefix(client, bucketName, objectName, globalMaxKeys)
-	default:
-		fatal(err.Error())
 	}
 }
