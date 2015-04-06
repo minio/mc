@@ -22,7 +22,9 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
+	"github.com/minio-io/iodine"
 	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 const (
@@ -59,28 +61,33 @@ func doListCmd(ctx *cli.Context) {
 
 	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err.Error())
 	}
 
 	bucketName, objectName, err := url2Object(urlStr)
 	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err.Error())
 	}
 
 	client, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err.Error())
 	}
 
 	if bucketName == "" { // List all buckets
 		buckets, err := client.ListBuckets()
 		if err != nil {
+			log.Debug.Println(err)
 			fatal(err.Error())
 		}
 		printBuckets(buckets)
 	} else {
 		items, err = client.ListObjects(bucketName, objectName)
 		if err != nil {
+			log.Debug.Println(err)
 			fatal(err.Error())
 		}
 		printObjects(items)
