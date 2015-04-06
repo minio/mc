@@ -26,13 +26,17 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 func init() {
 	// Check for the environment early on and gracefuly report.
 	_, err := user.Current()
 	if err != nil {
-		msg := fmt.Sprintf("mc: Unable to obtain user's home directory %s\n", iodine.New(err, nil))
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		msg := fmt.Sprintf("mc: Unable to obtain user's home directory %s\n", err)
 		fatal(msg)
 	}
 
@@ -42,13 +46,19 @@ func init() {
 		return
 	}
 	if err != nil {
-		msg := fmt.Sprintf("Unable to read config %s\n", iodine.New(err, nil))
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		msg := fmt.Sprintf("Unable to read config %s\n", err)
 		fatal(msg)
 	}
 
 	err = checkMcConfig(config)
 	if err != nil {
-		msg := fmt.Sprintf("Error in config file: %s\n%s", getMcConfigFilename(), iodine.New(err, nil))
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		msg := fmt.Sprintf("Error in config file: %s\n%s", getMcConfigFilename(), err)
 		fatal(msg)
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 type message struct {
@@ -116,6 +117,9 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 
 	for msg := range doPutMultiTarget(targetURLs, md5Hex, sourceSize, targetReaders) {
 		if msg.err != nil {
+			if globalDebugFlag {
+				log.Debug.Println(msg.err)
+			}
 			fatal(msg.err)
 		}
 		info("Done")
@@ -131,7 +135,10 @@ func doCopyCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
 	urlList, err := parseURLs(ctx)
 	if err != nil {
-		fatal(iodine.New(err, nil))
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		fatal(err)
 		return
 	}
 	sourceURL := urlList[0]   // First arg is source
@@ -139,9 +146,11 @@ func doCopyCmd(ctx *cli.Context) {
 
 	err = multiCopy(targetURLs, sourceURL)
 	if err != nil {
-		fatal(iodine.New(err, nil))
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		fatal(err)
 		return
 	}
-
 	return
 }
