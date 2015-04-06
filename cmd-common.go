@@ -25,6 +25,7 @@ import (
 	"net/url"
 
 	"github.com/cheggaaa/pb"
+	"github.com/minio-io/iodine"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
 )
@@ -49,10 +50,10 @@ func parseDestinationArgs(urlParsed *url.URL, destination, source object) (objec
 	switch true {
 	case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
 		if urlParsed.Host == "" {
-			if urlParsed.Path == "" {
-				return object{}, errUnsupportedScheme
-			}
-			return object{}, errUnsupportedScheme
+			//			if urlParsed.Path == "" {
+			//				return object{}, errUnsupportedScheme
+			//			}
+			return object{}, iodine.New(errUnsupportedScheme, nil)
 		}
 		destination.host = urlParsed.Host
 		destination.scheme = urlParsed.Scheme
@@ -64,7 +65,7 @@ func parseDestinationArgs(urlParsed *url.URL, destination, source object) (objec
 		}
 	case urlParsed.Scheme == "":
 		if urlParsed.Host != "" {
-			return object{}, errUnsupportedScheme
+			return object{}, iodine.New(errUnsupportedScheme, nil)
 		}
 		if urlParsed.Path == "." {
 			destination.key = source.key
@@ -73,7 +74,7 @@ func parseDestinationArgs(urlParsed *url.URL, destination, source object) (objec
 		}
 		destination.bucket = urlParsed.Host
 	case urlParsed.Scheme != "http" && urlParsed.Scheme != "https":
-		return object{}, errUnsupportedScheme
+		return object{}, iodine.New(errUnsupportedScheme, nil)
 	}
 	return destination, nil
 }
@@ -82,10 +83,10 @@ func parseSourceArgs(urlParsed *url.URL, firstArg string, source object) (object
 	switch true {
 	case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
 		if urlParsed.Host == "" {
-			if urlParsed.Path == "" {
-				return object{}, errUnsupportedScheme
-			}
-			return object{}, errUnsupportedScheme
+			//			if urlParsed.Path == "" {
+			//				return object{}, errUnsupportedScheme
+			//			}
+			return object{}, iodine.New(errUnsupportedScheme, nil)
 		}
 		source.scheme = urlParsed.Scheme
 		source.host = urlParsed.Host
@@ -97,17 +98,17 @@ func parseSourceArgs(urlParsed *url.URL, firstArg string, source object) (object
 		}
 	case urlParsed.Scheme == "":
 		if urlParsed.Host != "" {
-			return object{}, errUnsupportedScheme
+			return object{}, iodine.New(errUnsupportedScheme, nil)
 		}
 		if urlParsed.Path != firstArg {
-			return object{}, errUnsupportedScheme
+			return object{}, iodine.New(errUnsupportedScheme, nil)
 		}
 		if urlParsed.Path == "." {
-			return object{}, errFskey
+			return object{}, iodine.New(errFskey, nil)
 		}
 		source.key = strings.TrimPrefix(urlParsed.Path, "/")
 	case urlParsed.Scheme != "http" && urlParsed.Scheme != "https":
-		return object{}, errUnsupportedScheme
+		return object{}, iodine.New(errUnsupportedScheme, nil)
 	}
 	return source, nil
 }
