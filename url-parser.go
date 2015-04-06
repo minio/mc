@@ -39,7 +39,7 @@ const (
 func getURLType(urlStr string) (uType urlType, err error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
-		return urlUnknown, err
+		return urlUnknown, iodine.New(err, nil)
 	}
 	switch u.Scheme {
 	case "http":
@@ -78,23 +78,23 @@ func isValidFileURL(urlStr string) bool {
 // fixFileURL rewrites file URL to proper file:///path/to/ form.
 func fixFileURL(urlStr string) (fixedURL string, err error) {
 	if urlStr == "" {
-		return "", errEmptyURL
+		return "", iodine.New(errEmptyURL, nil)
 	}
 
 	utype, e := getURLType(urlStr)
 	if e != nil || utype != urlFile {
-		return "", e
+		return "", iodine.New(e, nil)
 	}
 
 	u, e := url.Parse(urlStr)
 	if e != nil {
-		return "", e
+		return "", iodine.New(e, nil)
 	}
 
 	// file:///path should always have empty host
 	if u.Host != "" {
 		// Not really a file URL. Host is not empty.
-		return "", errInvalidURL
+		return "", iodine.New(errInvalidURL, nil)
 	}
 
 	// fill missing scheme
@@ -111,17 +111,17 @@ func fixFileURL(urlStr string) (fixedURL string, err error) {
 // url2Host extracts hostname from the URL.
 func url2Host(urlStr string) (host string, err error) {
 	if urlStr == "" {
-		return "", errEmptyURL
+		return "", iodine.New(errEmptyURL, nil)
 	}
 
 	utype, e := getURLType(urlStr)
 	if e != nil || utype != urlFile {
-		return "", e
+		return "", iodine.New(e, nil)
 	}
 
 	u, e := url.Parse(urlStr)
 	if e != nil {
-		return "", e
+		return "", iodine.New(e, nil)
 	}
 
 	return u.Host, nil
@@ -132,7 +132,7 @@ func url2Object(urlStr string) (bucketName, objectName string, err error) {
 	u, err := url.Parse(urlStr)
 	if u.Path == "" {
 		// No bucket name passed. It is a valid case
-		return "", "", nil
+		return "", "", iodine.New(errInvalidbucket, nil)
 	}
 	splits := strings.SplitN(u.Path, "/", 3)
 	switch len(splits) {
