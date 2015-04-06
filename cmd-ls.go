@@ -24,7 +24,6 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
 	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 const (
@@ -61,34 +60,29 @@ func doListCmd(ctx *cli.Context) {
 
 	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		fatal(err.Error())
+		fatal(iodine.New(err, nil))
 	}
 
 	bucketName, objectName, err := url2Object(urlStr)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		fatal(err.Error())
+		fatal(iodine.New(err, nil))
 	}
 
 	client, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		fatal(err.Error())
+		fatal(iodine.New(err, nil))
 	}
 
 	if bucketName == "" { // List all buckets
 		buckets, err := client.ListBuckets()
 		if err != nil {
-			log.Debug.Println(err)
-			fatal(err.Error())
+			fatal(iodine.New(err, nil))
 		}
 		printBuckets(buckets)
 	} else {
 		items, err = client.ListObjects(bucketName, objectName)
 		if err != nil {
-			log.Debug.Println(err)
-			fatal(err.Error())
+			fatal(iodine.New(err, nil))
 		}
 		printObjects(items)
 	}
