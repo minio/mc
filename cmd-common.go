@@ -118,7 +118,7 @@ func parseSingleArg(urlParsed *url.URL, source object) (object, error) {
 	source.url = urlParsed
 	if urlParsed.Scheme != "" {
 		if urlParsed.Host == "" {
-			return object{}, errHostname
+			return object{}, iodine.New(errHostname, nil)
 		}
 	}
 	source.host = urlParsed.Host
@@ -133,11 +133,11 @@ func parseSingleArg(urlParsed *url.URL, source object) (object, error) {
 func urlAliasExpander(arg string) (*url.URL, error) {
 	urlString, err := aliasExpand(arg)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 	urlParsed, err := url.Parse(urlString)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 	return urlParsed, nil
 }
@@ -159,12 +159,12 @@ func getTraceTransport() s3.RoundTripTrace {
 func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	config, err := getMcConfig()
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 
 	hostCfg, err := getHostConfig(config.DefaultHost)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 
 	var auth s3.Auth
@@ -173,7 +173,7 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 
 	uType, err := getURLType(urlStr)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 
 	switch uType {
@@ -206,7 +206,7 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	case urlUnknown: // Unknown type
 		fallthrough
 	default:
-		return nil, errUnsupportedScheme
+		return nil, iodine.New(errUnsupportedScheme, nil)
 	}
 
 }
