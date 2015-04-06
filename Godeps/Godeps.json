@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/minio-io/mc",
-	"GoVersion": "go1.4",
+	"GoVersion": "go1.4.2",
 	"Packages": [
 		"./..."
 	],
@@ -44,11 +44,11 @@
 		},
 		{
 			"ImportPath": "github.com/minio-io/minio/pkg/utils/log",
-			"Rev": "183df976f3036f9ea4cb2bddce468c9d16e047bc"
+			"Rev": "1ebc692ea24cbcb373b9a26837460f0e5efd4780"
 		},
 		{
 			"ImportPath": "github.com/minio-io/minio/pkg/utils/split",
-			"Rev": "183df976f3036f9ea4cb2bddce468c9d16e047bc"
+			"Rev": "1ebc692ea24cbcb373b9a26837460f0e5efd4780"
 		},
 		{
 			"ImportPath": "github.com/shiena/ansicolor",
