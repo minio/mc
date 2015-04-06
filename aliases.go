@@ -17,10 +17,11 @@
 package main
 
 import (
-	"github.com/minio-io/iodine"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/minio-io/iodine"
 )
 
 // Alias for S3 hosts, saved in mc json configuration file
