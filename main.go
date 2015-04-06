@@ -32,7 +32,7 @@ func init() {
 	// Check for the environment early on and gracefuly report.
 	_, err := user.Current()
 	if err != nil {
-		msg := fmt.Sprintf("mc: Unable to obtain user's home directory\n", iodine.New(err, nil))
+		msg := fmt.Sprintf("mc: Unable to obtain user's home directory %s\n", iodine.New(err, nil))
 		fatal(msg)
 	}
 
@@ -42,13 +42,13 @@ func init() {
 		return
 	}
 	if err != nil {
-		msg := fmt.Sprintf("Unable to read config\n", iodine.New(err, nil))
+		msg := fmt.Sprintf("Unable to read config %s\n", iodine.New(err, nil))
 		fatal(msg)
 	}
 
 	err = checkMcConfig(config)
 	if err != nil {
-		msg := fmt.Sprintf("Error in config file:", getMcConfigFilename(), "\n", iodine.New(err, nil))
+		msg := fmt.Sprintf("Error in config file: %s\n%s", getMcConfigFilename(), iodine.New(err, nil))
 		fatal(msg)
 	}
 }
