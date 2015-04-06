@@ -16,6 +16,7 @@ import (
 
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 const (
@@ -50,6 +51,9 @@ var _config *mcConfig
 func getMcConfigDir() string {
 	u, err := user.Current()
 	if err != nil {
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
 		msg := fmt.Sprintf("Unable to obtain user's home directory. \nError: %s", err)
 		fatal(msg)
 	}
@@ -79,7 +83,8 @@ func checkMcConfig(config *mcConfig) (err error) {
 	// check for version
 	switch {
 	case (config.Version != currentConfigVersion):
-		return iodine.New(fmt.Errorf("Unsupported version [%d]. Current operating version is [%d]", config.Version, currentConfigVersion), nil)
+		err := fmt.Errorf("Unsupported version [%d]. Current operating version is [%d]", config.Version, currentConfigVersion)
+		return iodine.New(err, nil)
 
 	case len(config.Hosts) > 1:
 		for host, hostCfg := range config.Hosts {
@@ -180,9 +185,18 @@ func getBashCompletion() {
 	f := getMcBashCompletionFilename()
 	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	defer fl.Close()
+	if err != nil {
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		fatal(err)
+	}
 	_, err = fl.Write(b.Bytes())
 	if err != nil {
-		fatal(iodine.New(err, nil))
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		fatal(err)
 	}
 	msg := "\nConfiguration written to " + f
 	msg = msg + "\n\n$ source ${HOME}/.minio/mc/mc.bash_completion\n"
@@ -288,15 +302,19 @@ func doConfigCmd(ctx *cli.Context) {
 	default:
 		err := saveConfig(ctx)
 		if os.IsExist(err) {
+			if globalDebugFlag {
+				log.Debug.Println(iodine.New(err, nil))
+			}
 			msg := fmt.Sprintf("mc: Please rename your current configuration file [%s]\n", getMcConfigFilename())
-			warning(msg)
-			fatal(iodine.New(err, nil))
+			fatal(msg)
 		}
 
 		if err != nil {
+			if globalDebugFlag {
+				log.Debug.Println(iodine.New(err, nil))
+			}
 			msg := fmt.Sprintf("mc: Unable to generate config file [%s]. \nError: %v\n", getMcConfigFilename(), err)
-			warning(msg)
-			fatal(iodine.New(err, nil))
+			fatal(msg)
 		}
 		info("Configuration written to " + getMcConfigFilename() + "\n")
 	}

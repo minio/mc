@@ -22,6 +22,7 @@ import (
 	"net/url"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/iodine"
 )
 
 // URLType defines supported storage protocols
@@ -151,7 +152,7 @@ func url2Object(urlStr string) (bucketName, objectName string, err error) {
 // url2Bucket converts URL to bucket name
 func url2Bucket(urlStr string) (bucketName string, err error) {
 	bucketName, _, err = url2Object(urlStr)
-	return bucketName, err
+	return bucketName, iodine.New(err, nil)
 }
 
 // parseURL extracts URL string from a single cmd-line argument
@@ -162,7 +163,7 @@ func parseURL(arg string) (urlStr string, err error) {
 		// Load config file
 		config, err := getMcConfig()
 		if err != nil {
-			return "", err
+			return "", iodine.New(err, nil)
 		}
 		urlStr = config.DefaultHost
 	}
@@ -170,11 +171,11 @@ func parseURL(arg string) (urlStr string, err error) {
 	// Check and expand Alias
 	urlStr, err = aliasExpand(urlStr)
 	if err != nil {
-		return "", err
+		return "", iodine.New(err, nil)
 	}
 
 	if !isValidURL(urlStr) {
-		return "", errUnsupportedScheme
+		return "", iodine.New(errUnsupportedScheme, nil)
 	}
 
 	// If it is a file URL, rewrite to file:///path/to form
@@ -189,9 +190,9 @@ func parseURLs(c *cli.Context) (urlStr []string, err error) {
 	for _, arg := range c.Args() {
 		u, err := parseURL(arg)
 		if err != nil {
-			return nil, err
+			return nil, iodine.New(err, nil)
 		}
 		urlStr = append(urlStr, u)
 	}
-	return urlStr, err
+	return urlStr, iodine.New(err, nil)
 }
