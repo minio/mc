@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -16,6 +15,8 @@ import (
 	"path/filepath"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 const (
@@ -68,7 +69,7 @@ func getMcConfig() (cfg *mcConfig, err error) {
 
 	_config, err = loadMcConfig()
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 
 	return _config, nil
@@ -79,31 +80,28 @@ func checkMcConfig(config *mcConfig) (err error) {
 	// check for version
 	switch {
 	case (config.Version != currentConfigVersion):
-		return fmt.Errorf("Unsupported version [%d]. Current operating version is [%d]",
-			config.Version, currentConfigVersion)
+		return iodine.New(fmt.Errorf("Unsupported version [%d]. Current operating version is [%d]", config.Version, currentConfigVersion), nil)
 
 	case len(config.Hosts) > 1:
 		for host, hostCfg := range config.Hosts {
 			if host == "" {
-				return fmt.Errorf("Empty host URL")
+				return iodine.New(fmt.Errorf("Empty host URL"), nil)
 			}
 			if hostCfg.Auth.AccessKeyID == "" {
-				return fmt.Errorf("AccessKeyID is empty for Host [%s]", host)
+				return iodine.New(fmt.Errorf("AccessKeyID is empty for Host [%s]", host), nil)
 			}
 			if hostCfg.Auth.SecretAccessKey == "" {
-				return fmt.Errorf("SecretAccessKey is empty for Host [%s]", host)
+				return iodine.New(fmt.Errorf("SecretAccessKey is empty for Host [%s]", host), nil)
 			}
 		}
 	case len(config.Aliases) > 0:
 		for aliasName, aliasURL := range config.Aliases {
 			_, err := url.Parse(aliasURL)
 			if err != nil {
-				return fmt.Errorf("Unable to parse URL [%s] for alias [%s]",
-					aliasURL, aliasName)
+				return iodine.New(fmt.Errorf("Unable to parse URL [%s] for alias [%s]", aliasURL, aliasName), nil)
 			}
 			if !isValidAliasName(aliasName) {
-				return fmt.Errorf("Not a valid alias name [%s]. Valid examples are: Area51, Grand-Nagus..",
-					aliasName)
+				return iodine.New(fmt.Errorf("Not a valid alias name [%s]. Valid examples are: Area51, Grand-Nagus..", aliasName), nil)
 			}
 		}
 	}
@@ -115,17 +113,17 @@ func loadMcConfig() (config *mcConfig, err error) {
 	configFile := getMcConfigFilename()
 	_, err = os.Stat(configFile)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 
 	configBytes, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 
 	err = json.Unmarshal(configBytes, &config)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 
 	return config, nil
@@ -135,28 +133,28 @@ func loadMcConfig() (config *mcConfig, err error) {
 func saveConfig(ctx *cli.Context) error {
 	configData, err := parseConfigInput(ctx)
 	if err != nil {
-		return err
+		return iodine.New(err, nil)
 	}
 
 	jsonConfig, err := json.MarshalIndent(configData, "", "\t")
 	if err != nil {
-		return err
+		return iodine.New(err, nil)
 	}
 
 	err = os.MkdirAll(getMcConfigDir(), 0755)
 	if !os.IsExist(err) && err != nil {
-		return err
+		return iodine.New(err, nil)
 	}
 
 	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
-		return err
+		return iodine.New(err, nil)
 	}
 
 	_, err = configFile.Write(jsonConfig)
 	if err != nil {
 		configFile.Close()
-		return err
+		return iodine.New(err, nil)
 	}
 
 	configFile.Close()
@@ -167,7 +165,7 @@ func saveConfig(ctx *cli.Context) error {
 	// Reload and cache new config
 	_, err = getMcConfig()
 	if os.IsNotExist(err) {
-		return err
+		return iodine.New(err, nil)
 	}
 
 	return nil
@@ -185,7 +183,7 @@ func getBashCompletion() {
 	defer fl.Close()
 	_, err = fl.Write(b.Bytes())
 	if err != nil {
-		fatal(err.Error())
+		log.Error.Panicln(iodine.New(err, nil))
 	}
 	msg := "\nConfiguration written to " + f
 	msg = msg + "\n\n$ source ${HOME}/.minio/mc/mc.bash_completion\n"
@@ -228,10 +226,10 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 		aliasName := alias[0]
 		url := alias[1]
 		if strings.HasPrefix(aliasName, "http") {
-			return nil, errors.New("invalid alias cannot use http{s}")
+			return nil, iodine.New(errors.New("invalid alias cannot use http{s}"), nil)
 		}
 		if !strings.HasPrefix(url, "http") {
-			return nil, errors.New("invalid url type only supports http{s}")
+			return nil, iodine.New(errors.New("invalid url type only supports http{s}"), nil)
 		}
 		config = &mcConfig{
 			Version:     currentConfigVersion,
@@ -251,7 +249,7 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 		}
 		return config, nil
 	default:
-		return nil, errors.New("invalid number of arguments for --alias, requires exact 2")
+		return nil, iodine.New(errors.New("invalid number of arguments for --alias, requires exact 2"), nil)
 	}
 }
 
@@ -259,13 +257,13 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 func getHostConfig(hostURL string) (*hostConfig, error) {
 	_, err := url.Parse(hostURL)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 
 	}
 
 	config, err := getMcConfig()
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 
 	for globURL, cfg := range config.Hosts {
@@ -280,7 +278,7 @@ func getHostConfig(hostURL string) (*hostConfig, error) {
 			return &hostCfg, nil
 		}
 	}
-	return nil, errors.New("No matching host config found")
+	return nil, iodine.New(errors.New("No matching host config found"), nil)
 }
 
 // doConfigCmd is the handler for "mc config" sub-command.
@@ -291,11 +289,13 @@ func doConfigCmd(ctx *cli.Context) {
 	default:
 		err := saveConfig(ctx)
 		if os.IsExist(err) {
-			log.Fatalf("mc: Please rename your current configuration file [%s]\n", getMcConfigFilename())
+			log.Error.Fatalln("mc: Please rename your current configuration file", getMcConfigFilename())
+			log.Fatal(iodine.New(err, nil))
 		}
 
 		if err != nil {
-			log.Fatalf("mc: Unable to generate config file [%s]. \nError: %v\n", getMcConfigFilename(), err)
+			log.Error.Fatalln("mc: Unable to generate config file", getMcConfigFilename())
+			log.Fatal(iodine.New(err, nil))
 		}
 		info("Configuration written to " + getMcConfigFilename() + "\n")
 	}
