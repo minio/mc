@@ -87,6 +87,7 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 	if err != nil {
 		return iodine.New(err, errParams)
 	}
+	defer sourceReader.Close()
 
 	targetReaders := make([]io.Reader, numTargets)
 	targetWriters := make([]io.WriteCloser, numTargets)
