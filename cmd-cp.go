@@ -22,13 +22,43 @@ import (
 	"io/ioutil"
 
 	"bytes"
-	"sync"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
+
+type message struct {
+	err error
+}
+
+func multiTargetGoroutine(targetURL string, md5Hex string, sourceSize int64, targetReader io.Reader, ch chan message) {
+	errParams := map[string]string{
+		"url": targetURL,
+	}
+	targetBucket, targetObject, err := url2Object(targetURL)
+	if err != nil {
+		ch <- message{err: iodine.New(err, errParams)}
+	}
+	targetClnt, err := getNewClient(globalDebugFlag, targetURL)
+	if err != nil {
+		ch <- message{err: iodine.New(err, errParams)}
+	}
+	if err := targetClnt.Put(targetBucket, targetObject, md5Hex, sourceSize, targetReader); err != nil {
+		ch <- message{err: iodine.New(err, errParams)}
+	}
+	ch <- message{err: nil}
+	close(ch)
+}
+
+func doPutMultiTarget(targetURLs []string, md5Hex string, sourceSize int64, targetReaders []io.Reader) <-chan message {
+	ch := make(chan message)
+	for i := 0; i < len(targetURLs); i++ {
+		go multiTargetGoroutine(targetURLs[i], md5Hex, sourceSize, targetReaders[i], ch)
+	}
+	return ch
+}
 
 // doCopyCmd copies objects into and from a bucket or between buckets
 func multiCopy(targetURLs []string, sourceURL string) (err error) {
@@ -59,7 +89,7 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 	}
 
 	targetReaders := make([]io.Reader, numTargets)
-	targetWriters := make([]io.Writer, numTargets)
+	targetWriters := make([]io.WriteCloser, numTargets)
 
 	for i := 0; i < numTargets; i++ {
 		targetReaders[i], targetWriters[i] = io.Pipe()
@@ -72,33 +102,24 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 			bar.Start()
 			sourceReader = ioutil.NopCloser(io.TeeReader(sourceReader, bar))
 		}
-
-		io.CopyN(io.MultiWriter(targetWriters...), sourceReader, sourceSize)
+		// convert targetWriters to []io.Writer
+		multiWriters := make([]io.Writer, numTargets)
+		for i, writeCloser := range targetWriters {
+			defer writeCloser.Close()
+			multiWriters[i] = io.Writer(writeCloser)
+		}
+		io.CopyN(io.MultiWriter(multiWriters...), sourceReader, sourceSize)
 		if !globalQuietFlag {
 			bar.Finish()
 		}
 	}()
 
-	var wg sync.WaitGroup
-	for i := 0; i < numTargets; i++ {
-		targetBucket, targetObject, err := url2Object(targetURLs[i])
-		if err != nil {
-			return iodine.New(err, errParams)
+	for msg := range doPutMultiTarget(targetURLs, md5Hex, sourceSize, targetReaders) {
+		if msg.err != nil {
+			fatal(msg.err.Error())
 		}
-		targetClnt, err := getNewClient(globalDebugFlag, targetURLs[i])
-		if err != nil {
-			return iodine.New(err, errParams)
-		}
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			if err := targetClnt.Put(targetBucket, targetObject, md5Hex, sourceSize, targetReaders[index]); err != nil {
-				fatal(iodine.New(err, nil).Error())
-			}
-			info(fmt.Sprintf("Done: %s", targetURLs[index]))
-		}(i)
+		info("Done")
 	}
-	wg.Wait()
 	return nil
 }
 
