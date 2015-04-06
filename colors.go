@@ -17,34 +17,35 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/mgutz/ansi"
+	"github.com/fatih/color"
 )
 
-// Color coding format "foregroundColor+attributes:backgroundColor+attributes"
-func fatal(msg string) {
-	red := ansi.ColorFunc("red+B")
-	fmt.Println(red(msg))
+func fatal(msg interface{}) {
+	red := color.New(color.FgRed)
+	boldRed := red.Add(color.Bold)
+	boldRed.Println(msg)
 	os.Exit(1)
 }
 
-func warning(msg string) {
-	yellow := ansi.ColorFunc("yellow")
-	fmt.Println(yellow(msg))
+func warning(msg interface{}) {
+	yellow := color.New(color.FgYellow)
+	yellow.Println(msg)
 }
 
-func info(msg string) {
+func info(msg interface{}) {
 	if !globalQuietFlag {
-		green := ansi.ColorFunc("green")
-		fmt.Println(green(msg))
+		green := color.New(color.FgGreen)
+		boldGreen := green.Add(color.Bold)
+		boldGreen.Println(msg)
 	}
 }
 
 func infoCallback(msg string) {
 	if !globalQuietFlag {
-		green := ansi.ColorFunc("green")
-		fmt.Print("\r" + green(msg))
+		green := color.New(color.FgGreen)
+		boldGreen := green.Add(color.Bold)
+		boldGreen.Print("\r" + msg)
 	}
 }

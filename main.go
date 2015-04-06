@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/user"
 	"runtime"
@@ -33,7 +32,8 @@ func init() {
 	// Check for the environment early on and gracefuly report.
 	_, err := user.Current()
 	if err != nil {
-		log.Println("mc: Unable to obtain user's home directory\n", iodine.New(err, nil))
+		msg := fmt.Sprintf("mc: Unable to obtain user's home directory\n", iodine.New(err, nil))
+		fatal(msg)
 	}
 
 	// Ensures config file is sane and cached to _config private variable.
@@ -42,12 +42,14 @@ func init() {
 		return
 	}
 	if err != nil {
-		log.Fatalln("Unable to read config\n", iodine.New(err, nil))
+		msg := fmt.Sprintf("Unable to read config\n", iodine.New(err, nil))
+		fatal(msg)
 	}
 
 	err = checkMcConfig(config)
 	if err != nil {
-		log.Fatalln("Error in config file:", getMcConfigFilename(), "\n", iodine.New(err, nil))
+		msg := fmt.Sprintf("Error in config file:", getMcConfigFilename(), "\n", iodine.New(err, nil))
+		fatal(msg)
 	}
 }
 

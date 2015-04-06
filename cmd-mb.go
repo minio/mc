@@ -18,6 +18,7 @@ package main
 
 import (
 	"github.com/minio-io/cli"
+	"github.com/minio-io/iodine"
 	"github.com/minio-io/mc/pkg/client/s3"
 )
 
@@ -25,25 +26,25 @@ import (
 func doMakeBucketCmd(ctx *cli.Context) {
 	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
-		fatal(err.Error())
+		fatal(iodine.New(err, nil))
 	}
 
 	bucket, err := url2Bucket(urlStr)
 	if err != nil {
-		fatal(err.Error())
+		fatal(iodine.New(err, nil))
 	}
 
 	clnt, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
-		fatal(err.Error())
+		fatal(iodine.New(err, nil))
 	}
 
 	if !s3.IsValidBucketName(bucket) {
-		fatal(errInvalidbucket.Error())
+		fatal(iodine.New(errInvalidbucket, nil))
 	}
 
 	err = clnt.PutBucket(bucket)
 	if err != nil {
-		fatal(err.Error())
+		fatal(iodine.New(err, nil))
 	}
 }

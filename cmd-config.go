@@ -16,7 +16,6 @@ import (
 
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 const (
@@ -183,7 +182,7 @@ func getBashCompletion() {
 	defer fl.Close()
 	_, err = fl.Write(b.Bytes())
 	if err != nil {
-		log.Error.Panicln(iodine.New(err, nil))
+		fatal(iodine.New(err, nil))
 	}
 	msg := "\nConfiguration written to " + f
 	msg = msg + "\n\n$ source ${HOME}/.minio/mc/mc.bash_completion\n"
@@ -289,13 +288,15 @@ func doConfigCmd(ctx *cli.Context) {
 	default:
 		err := saveConfig(ctx)
 		if os.IsExist(err) {
-			log.Error.Fatalln("mc: Please rename your current configuration file", getMcConfigFilename())
-			log.Fatal(iodine.New(err, nil))
+			msg := fmt.Sprintf("mc: Please rename your current configuration file [%s]\n", getMcConfigFilename())
+			warning(msg)
+			fatal(iodine.New(err, nil))
 		}
 
 		if err != nil {
-			log.Error.Fatalln("mc: Unable to generate config file", getMcConfigFilename())
-			log.Fatal(iodine.New(err, nil))
+			msg := fmt.Sprintf("mc: Unable to generate config file [%s]. \nError: %v\n", getMcConfigFilename(), err)
+			warning(msg)
+			fatal(iodine.New(err, nil))
 		}
 		info("Configuration written to " + getMcConfigFilename() + "\n")
 	}
