@@ -180,10 +180,8 @@ func (c *s3Client) ListObjects(bucket, objectPrefix string) (items []*client.Ite
 		if err != nil {
 			return nil, err
 		}
-		if len(items) > 0 {
-			return items, nil
-		}
-		return nil, os.ErrNotExist
+		// even if items are equal to '0' is valid case
+		return items, nil
 	default: // Error
 		return nil, err
 	}
