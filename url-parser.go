@@ -29,10 +29,9 @@ import (
 type urlType int
 
 const (
-	urlUnknown urlType = iota // Unknown type
-	urlS3                     // Minio and S3 compatible object storage
-	urlDonut                  // Donut object storage
-	urlFile                   // POSIX compatible file systems
+	urlUnknown       urlType = iota // Unknown type
+	urlObjectStorage                // Minio and S3 compatible object storage
+	urlFile                         // POSIX compatible file systems
 )
 
 // urlType detects the type of URL
@@ -45,9 +44,7 @@ func getURLType(urlStr string) (uType urlType, err error) {
 	case "http":
 		fallthrough
 	case "https":
-		return urlS3, nil
-	case "donut":
-		return urlDonut, nil
+		return urlObjectStorage, nil
 	case "file":
 		fallthrough
 	case "":

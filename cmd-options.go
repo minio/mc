@@ -27,7 +27,7 @@ var (
 	cpCmd = cli.Command{
 		Name:        "cp",
 		Usage:       "copy objects and files",
-		Description: "Copy files and objects recursively between Amazon S3, Donut and Filesystem",
+		Description: "Copy files and objects recursively between Amazon S3, Minio Object Storage and Filesystem",
 		Action:      doCopyCmd,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
@@ -63,7 +63,7 @@ EXAMPLES:
 	lsCmd = cli.Command{
 		Name:        "ls",
 		Usage:       "list files and objects",
-		Description: `List files and objects recursively between Amazon S3, Donut and Filesystem`,
+		Description: `List files and objects recursively between Amazon S3, Minio Object Storage and Filesystem`,
 		Action:      doListCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -154,7 +154,7 @@ EXAMPLES:
 )
 
 type object struct {
-	scheme string // protocol type: possible values are http, https, donut, nil
+	scheme string // protocol type: possible values are http, https, nil
 	host   string
 	// Bucket name can also be a DNS name. "." is allowed, with certain restrictions.
 	// Read more at http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html

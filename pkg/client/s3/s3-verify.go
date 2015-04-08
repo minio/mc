@@ -50,7 +50,6 @@ Example AWS S3 Request / Response
   X-Amz-Request-Id: 5E9A737908F886D0
 
   2015-03-11 01:28:03 -0700 PDT    1.10 KB color.go
-  2015-03-07 15:53:44 -0800 PST    2.58 KB donut.go
   2015-03-08 03:31:50 -0700 PDT   11.09 KB apache/license.txt
 */
 
