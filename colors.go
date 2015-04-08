@@ -22,23 +22,23 @@ import (
 	"github.com/fatih/color"
 )
 
-func fatal(msg interface{}) {
+func fatal(msgs ...interface{}) {
 	red := color.New(color.FgRed)
 	boldRed := red.Add(color.Bold)
-	boldRed.Println(msg)
+	colorPrintln(boldRed, msgs)
 	os.Exit(1)
 }
 
-func warning(msg interface{}) {
+func warning(msgs ...interface{}) {
 	yellow := color.New(color.FgYellow)
-	yellow.Println(msg)
+	colorPrintln(yellow, msgs)
 }
 
-func info(msg interface{}) {
+func info(msgs ...interface{}) {
 	if !globalQuietFlag {
 		green := color.New(color.FgGreen)
 		boldGreen := green.Add(color.Bold)
-		boldGreen.Println(msg)
+		colorPrintln(boldGreen, msgs)
 	}
 }
 
@@ -48,4 +48,18 @@ func infoCallback(msg string) {
 		boldGreen := green.Add(color.Bold)
 		boldGreen.Print("\r" + msg)
 	}
+}
+
+func colorPrint(c *color.Color, msgs []interface{}) {
+	for i, msg := range msgs {
+		if i != 0 {
+			c.Print(" ")
+		}
+		c.Print(msg)
+	}
+}
+
+func colorPrintln(c *color.Color, msgs []interface{}) {
+	colorPrint(c, msgs)
+	c.Println()
 }
