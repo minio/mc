@@ -58,7 +58,7 @@ import (
 /// Object API operations
 
 // Put - upload new object to bucket
-func (c *Client) Put(bucket, key, md5HexString string, size int64, contents io.Reader) error {
+func (c *s3Client) Put(bucket, key, md5HexString string, size int64, contents io.Reader) error {
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
 	req.ContentLength = size
@@ -83,8 +83,8 @@ func (c *Client) Put(bucket, key, md5HexString string, size int64, contents io.R
 	return nil
 }
 
-// StatObject - returns 0, "", os.ErrNotExist if not available
-func (c *Client) StatObject(bucket, key string) (size int64, date time.Time, reterr error) {
+// Stat - returns 0, "", os.ErrNotExist if not on S3
+func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, reterr error) {
 	if bucket == "" || key == "" {
 		return 0, date, iodine.New(os.ErrNotExist, nil)
 	}
@@ -120,7 +120,7 @@ func (c *Client) StatObject(bucket, key string) (size int64, date time.Time, ret
 }
 
 // Get - download a requested object from a given bucket
-func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 string, err error) {
+func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 string, err error) {
 	req := newReq(c.keyURL(bucket, key))
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
@@ -137,7 +137,7 @@ func (c *Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 st
 
 // GetPartial fetches part of the s3 key object in bucket.
 // If length is negative, the rest of the object is returned.
-func (c *Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
+func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	if offset < 0 {
 		return nil, 0, "", iodine.New(errors.New("invalid negative offset"), nil)
 	}

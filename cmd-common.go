@@ -26,7 +26,8 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/iodine"
-	"github.com/minio-io/mc/pkg/s3"
+	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/mc/pkg/client/s3"
 )
 
 // StartBar -- instantiate a progressbar
@@ -155,7 +156,7 @@ func getTraceTransport() s3.RoundTripTrace {
 }
 
 // NewClient - get new client
-func getNewClient(debug bool, urlStr string) (clnt *s3.Client, err error) {
+func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, iodine.New(err, nil)

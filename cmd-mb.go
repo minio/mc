@@ -19,7 +19,7 @@ package main
 import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/iodine"
-	"github.com/minio-io/mc/pkg/s3"
+	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
