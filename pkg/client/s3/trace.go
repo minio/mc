@@ -21,6 +21,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+
+	"github.com/minio-io/iodine"
 )
 
 // Trace - tracing structure
@@ -58,7 +60,7 @@ func (t Trace) Request(req *http.Request) (err error) {
 	}
 
 	req.Header.Set("Authorization", origAuthKey)
-	return err
+	return iodine.New(err, nil)
 }
 
 // Response - Trace HTTP Response
@@ -67,7 +69,7 @@ func (t Trace) Response(res *http.Response) (err error) {
 	if err == nil {
 		t.print(resTrace)
 	}
-	return err
+	return iodine.New(err, nil)
 }
 
 // print HTTP Response

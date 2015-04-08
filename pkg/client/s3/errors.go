@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/clbanning/mxj"
+	"github.com/minio-io/iodine"
 )
 
 /* **** SAMPLE ERROR RESPONSE ****
@@ -49,7 +50,7 @@ func NewError(res *http.Response) error {
 	s3Err.res = res
 	s3Err.resMsg, err = mxj.NewMapXmlReader(res.Body)
 	if err != nil {
-		return err
+		return iodine.New(err, nil)
 	}
 	return s3Err
 }

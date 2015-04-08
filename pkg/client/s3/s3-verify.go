@@ -20,6 +20,8 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/minio-io/iodine"
 )
 
 // Only generic HTTP S3 fields are validated using this mechanism. S3
@@ -54,12 +56,11 @@ Example AWS S3 Request / Response
 
 // HTTP S3 request validator.
 func (t s3Verify) Request(req *http.Request) error {
-
 	if req.Header.Get("Authorization") == "" {
-		return errors.New("Client request header has authorization key")
+		return iodine.New(errors.New("Client request header has authorization key"), nil)
 	}
 	if !strings.HasPrefix(req.Header.Get("Authorization"), "AWS") {
-		return errors.New("Client request header has malformed authorization key")
+		return iodine.New(errors.New("Client request header has malformed authorization key"), nil)
 	}
 	return nil
 }
