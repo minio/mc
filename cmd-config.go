@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 
 	"encoding/json"
@@ -20,8 +21,9 @@ import (
 )
 
 const (
-	mcConfigDir      = ".minio/mc"
-	mcConfigFilename = "config.json"
+	mcConfigDir        = ".mc/"
+	mcConfigWindowsDir = "mc/"
+	configFile         = "config.json"
 )
 
 type auth struct {
@@ -57,12 +59,20 @@ func getMcConfigDir() string {
 		msg := fmt.Sprintf("Unable to obtain user's home directory. \nError: %s", err)
 		fatal(msg)
 	}
-
-	return path.Join(u.HomeDir, mcConfigDir)
+	var p string
+	// For windows the path is slightly differently
+	if runtime.GOOS == "windows" {
+		p = path.Join(u.HomeDir, mcConfigWindowsDir)
+	} else {
+		p = path.Join(u.HomeDir, mcConfigDir)
+	}
+	// create the directory if it doesn't exist
+	os.MkdirAll(p, 0700)
+	return p
 }
 
 func getMcConfigFilename() string {
-	return path.Join(getMcConfigDir(), mcConfigFilename)
+	return path.Join(getMcConfigDir(), configFile)
 }
 
 func getMcConfig() (cfg *mcConfig, err error) {
