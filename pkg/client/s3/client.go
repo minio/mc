@@ -47,27 +47,21 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"encoding/xml"
+
+	"github.com/minio-io/mc/pkg/client"
 )
 
-// Bucket - carries s3 bucket reply header
-type Bucket struct {
-	Name         string
-	CreationDate time.Time // 2006-02-03T16:45:09.000Z
-}
-
-// Item - object item list
-type Item struct {
-	Key          string
-	LastModified time.Time
-	Size         int64
-}
-
-// Prefix - common prefix
-type Prefix struct {
-	Prefix string
+type listBucketResults struct {
+	Contents       []*client.Item
+	IsTruncated    bool
+	MaxKeys        int
+	Name           string // bucket name
+	Marker         string
+	Delimiter      string
+	Prefix         string
+	CommonPrefixes []*client.Prefix
 }
 
 // Meta holds Amazon S3 client credentials and flags.
@@ -91,8 +85,7 @@ type TLSConfig struct {
 	KeyPEMBlock  []byte
 }
 
-// Client -
-type Client struct {
+type s3Client struct {
 	*Meta
 
 	// Supports URL in following formats
@@ -101,13 +94,13 @@ type Client struct {
 	*url.URL
 }
 
-// GetNewClient returns an initialized Client structure.
-func GetNewClient(auth *Auth, urlStr string, transport http.RoundTripper) *Client {
+// GetNewClient returns an initialized s3Client structure.
+func GetNewClient(auth *Auth, urlStr string, transport http.RoundTripper) client.Client {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil
 	}
-	s3c := &Client{
+	s3c := &s3Client{
 		&Meta{
 			Auth:      auth,
 			Transport: GetNewTraceTransport(s3Verify{}, transport),
@@ -119,7 +112,7 @@ func GetNewClient(auth *Auth, urlStr string, transport http.RoundTripper) *Clien
 // bucketURL constructs a URL (with a trailing slash) for a given
 // bucket. URL is appropriately encoded based on the host's object
 // storage implementation.
-func (c *Client) bucketURL(bucket string) string {
+func (c *s3Client) bucketURL(bucket string) string {
 	var url string
 	// TODO: Bucket names can contain ".".  This second check should be removed.
 	// when minio server supports buckets with "."
@@ -140,7 +133,7 @@ func (c *Client) bucketURL(bucket string) string {
 }
 
 // keyURL constructs a URL using bucket and object key
-func (c *Client) keyURL(bucket, key string) string {
+func (c *s3Client) keyURL(bucket, key string) string {
 	url := c.bucketURL(bucket)
 	if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
 		return url + "/" + key
@@ -159,14 +152,14 @@ func newReq(url string) *http.Request {
 		// caller handle errors gracefully.
 		panic(fmt.Sprintf("s3 client; invalid URL: %v", err))
 	}
-	req.Header.Set("User-Agent", "Minio Client")
+	req.Header.Set("User-Agent", "Minio s3Client")
 	return req
 }
 
-func listAllMyBuckets(r io.Reader) ([]*Bucket, error) {
+func listAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
 	type allMyBuckets struct {
 		Buckets struct {
-			Bucket []*Bucket
+			Bucket []*client.Bucket
 		}
 	}
 	var res allMyBuckets

@@ -51,11 +51,11 @@ EXAMPLES:
    1. Copy an object from Amazon S3 object storage to local fileystem.
       $ mc {{.Name}} https://s3.amazonaws.com/jukebox/klingon_opera_aktuh_maylotah.ogg wakeup.ogg
 
-   2. Copy a bucket recursive from Donut to Amazon S3 object storage
-      $ mc {{.Name}} --recursive donut://home/photos/burningman2011 https://s3.amazonaws.com/burningman/
+   2. Copy a bucket recursive from Minio object storage to Amazon S3 object storage
+      $ mc {{.Name}} --recursive http://localhost:9000/photos/burningman2011 https://s3.amazonaws.com/burningman/
 
-   3. Copy a local folder to Donut and Amazon S3 object storage
-      $ mc {{.Name}} --recursive backup/ donut://archive/backup/ https://s3.amazonaws.com/backup/
+   3. Copy a local folder to Minio object storage and Amazon S3 object storage
+      $ mc {{.Name}} --recursive backup/ http://localhost:9000/archive/ https://s3.amazonaws.com/archive/
 
 `,
 	}
@@ -79,8 +79,8 @@ OPTIONS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. List objects on Donut storage
-      $ mc {{.Name}} donut://archive/backup/
+   1. List objects on Minio object storage
+      $ mc {{.Name}} http://localhost:9000/backup/
       2015-03-28 12:47:50 PDT      51.00 MB 2006-Jan-1/backup.tar.gz
       2015-03-31 14:46:33 PDT      55.00 MB 2006-Mar-1/backup.tar.gz
 
@@ -97,6 +97,27 @@ EXAMPLES:
 		Usage:       "makes a bucket",
 		Description: "Creates an S3 bucket",
 		Action:      doMakeBucketCmd,
+		CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}} TARGET {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+OPTIONS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+   1. Create a bucket on Amazon S3 object storage
+      $ mc {{.Name}} https://s3.amazonaws.com/public-photo-store
+
+   2. Create a bucket on Minio object storage
+      $ mc {{.Name}} http://localhost:9000/mongodb-backup
+
+`,
 	}
 
 	configCmd = cli.Command{

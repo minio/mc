@@ -132,7 +132,7 @@ func url2Object(urlStr string) (bucketName, objectName string, err error) {
 	u, err := url.Parse(urlStr)
 	if u.Path == "" {
 		// No bucket name passed. It is a valid case
-		return "", "", iodine.New(errInvalidbucket, nil)
+		return "", "", nil
 	}
 	splits := strings.SplitN(u.Path, "/", 3)
 	switch len(splits) {

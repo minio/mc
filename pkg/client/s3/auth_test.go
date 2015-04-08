@@ -60,7 +60,7 @@ func req(s string) *http.Request {
 }
 
 func TestStringToSign(t *testing.T) {
-	var a Client
+	var a s3Client
 	tests := []reqAndExpected{
 		{`GET /photos/puppy.jpg HTTP/1.1
 Host: johnsmith.s3.amazonaws.com
@@ -119,7 +119,7 @@ Content-Length: 5913339
 }
 
 func TestBucketFromHostname(t *testing.T) {
-	var a Client
+	var a s3Client
 	tests := []reqAndExpected{
 		{"GET / HTTP/1.0\n\n", "", ""},
 		{"GET / HTTP/1.0\nHost: s3.amazonaws.com\n\n", "", "s3.amazonaws.com"},
@@ -139,7 +139,7 @@ func TestsignRequest(t *testing.T) {
 	r := req("GET /foo HTTP/1.1\n\n")
 	auth := &Auth{AccessKeyID: "key", SecretAccessKey: "secretkey"}
 	url, _ := url.Parse("localhost:9000")
-	cl := &Client{
+	cl := &s3Client{
 		&Meta{
 			Auth:      auth,
 			Transport: http.DefaultTransport,
