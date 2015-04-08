@@ -114,8 +114,8 @@ func GetNewClient(auth *Auth, urlStr string, transport http.RoundTripper) client
 // storage implementation.
 func (c *s3Client) bucketURL(bucket string) string {
 	var url string
-
 	// TODO: Bucket names can contain ".".  This second check should be removed.
+	// when minio server supports buckets with "."
 	if IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
 		// if localhost use PathStyle
 		if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
@@ -156,7 +156,7 @@ func newReq(url string) *http.Request {
 	return req
 }
 
-func parseListAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
+func listAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
 	type allMyBuckets struct {
 		Buckets struct {
 			Bucket []*client.Bucket

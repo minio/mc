@@ -23,13 +23,17 @@ import (
 
 // Client - client interface
 type Client interface {
+	// Bucket operations
+	PutBucket(bucket string) error
+	StatBucket(bucket string) error
+	ListBuckets() ([]*Bucket, error)
+	ListObjects(bucket, keyPrefix string) (items []*Item, err error)
+
+	// Object operations
 	Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error)
 	GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
 	Put(bucket, object, md5 string, size int64, body io.Reader) error
-	Stat(bucket, object string) (size int64, date time.Time, err error)
-	PutBucket(bucket string) error
-	ListBuckets() ([]*Bucket, error)
-	ListObjects(bucket, keyPrefix string) (items []*Item, err error)
+	StatObject(bucket, object string) (size int64, date time.Time, err error)
 }
 
 // Bucket - carries s3 bucket reply header

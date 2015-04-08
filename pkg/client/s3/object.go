@@ -51,6 +51,8 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/minio-io/iodine"
 )
 
 /// Object API operations
@@ -64,55 +66,55 @@ func (c *s3Client) Put(bucket, key, md5HexString string, size int64, contents io
 	req.Body = ioutil.NopCloser(contents)
 	md5, err := hex.DecodeString(md5HexString)
 	if err != nil {
-		return err
+		return iodine.New(err, nil)
 	}
 	req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
 	c.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return err
+		return iodine.New(err, nil)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return NewError(res)
+		return iodine.New(NewError(res), nil)
 	}
 	return nil
 }
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3
-func (c *s3Client) Stat(bucket, key string) (size int64, date time.Time, reterr error) {
+func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, reterr error) {
 	if bucket == "" || key == "" {
-		return 0, date, os.ErrNotExist
+		return 0, date, iodine.New(os.ErrNotExist, nil)
 	}
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return 0, date, err
+		return 0, date, iodine.New(err, nil)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return 0, date, os.ErrNotExist
+		return 0, date, iodine.New(os.ErrNotExist, nil)
 	case http.StatusOK:
 		size, err = strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
 		if err != nil {
-			return 0, date, err
+			return 0, date, iodine.New(err, nil)
 		}
 		if dateStr := res.Header.Get("Last-Modified"); dateStr != "" {
 			// AWS S3 uses RFC1123 standard for Date in HTTP header, unlike XML content
 			date, err := time.Parse(time.RFC1123, dateStr)
 			if err != nil {
-				return 0, date, err
+				return 0, date, iodine.New(err, nil)
 			}
 			return size, date, nil
 		}
 	default:
-		return 0, date, NewError(res)
+		return 0, date, iodine.New(NewError(res), nil)
 	}
 	return
 }
@@ -123,11 +125,11 @@ func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", iodine.New(err, nil)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, 0, "", NewError(res)
+		return nil, 0, "", iodine.New(NewError(res), nil)
 	}
 	md5sum := strings.Trim(res.Header.Get("ETag"), "\"") // trim off the erroneous double quotes
 	return res.Body, res.ContentLength, md5sum, nil
@@ -137,7 +139,7 @@ func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 
 // If length is negative, the rest of the object is returned.
 func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	if offset < 0 {
-		return nil, 0, "", errors.New("invalid negative offset")
+		return nil, 0, "", iodine.New(errors.New("invalid negative offset"), nil)
 	}
 	req := newReq(c.keyURL(bucket, key))
 	if length >= 0 {
@@ -149,13 +151,13 @@ func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return nil, 0, "", err
+		return nil, 0, "", iodine.New(err, nil)
 	}
 
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusPartialContent:
 		return res.Body, res.ContentLength, res.Header.Get("ETag"), nil
 	default:
-		return nil, 0, "", NewError(res)
+		return nil, 0, "", iodine.New(NewError(res), nil)
 	}
 }
