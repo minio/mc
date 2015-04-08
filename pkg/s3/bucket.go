@@ -47,11 +47,10 @@ import (
 	"net/http"
 
 	"github.com/minio-io/iodine"
-	"github.com/minio-io/mc/pkg/client"
 )
 
 // bySize implements sort.Interface for []Item based on the Size field.
-type bySize []*client.Item
+type bySize []*Item
 
 func (a bySize) Len() int           { return len(a) }
 func (a bySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -60,7 +59,7 @@ func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 /// Bucket API operations
 
 // ListBuckets - Get list of buckets
-func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
+func (c *Client) ListBuckets() ([]*Bucket, error) {
 	u := fmt.Sprintf("%s://%s/", c.Scheme, c.Host)
 	req := newReq(u)
 	c.signRequest(req, c.Host)
@@ -79,7 +78,7 @@ func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
 }
 
 // PutBucket - create new bucket
-func (c *s3Client) PutBucket(bucket string) error {
+func (c *Client) PutBucket(bucket string) error {
 	if !IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return errors.New("invalid bucket")
 	}
@@ -100,7 +99,8 @@ func (c *s3Client) PutBucket(bucket string) error {
 	return nil
 }
 
-func (c *s3Client) StatBucket(bucket string) error {
+// StatBucket - check if bucket can be accessed
+func (c *Client) StatBucket(bucket string) error {
 	if bucket == "" {
 		return iodine.New(errors.New("invalid argument"), nil)
 	}
@@ -127,11 +127,12 @@ func (c *s3Client) StatBucket(bucket string) error {
 	}
 }
 
-func (c *s3Client) ListObjects(bucket, objectPrefix string) (items []*client.Item, err error) {
+// ListObjects - list objects
+func (c *Client) ListObjects(bucket, objectPrefix string) (items []*Item, err error) {
 	size, date, err := c.StatObject(bucket, objectPrefix)
 	switch err {
 	case nil: // List a single object. Exact key
-		items = append(items, &client.Item{Key: objectPrefix, LastModified: date, Size: size})
+		items = append(items, &Item{Key: objectPrefix, LastModified: date, Size: size})
 		return items, nil
 	default:
 		// List all objects matching the key prefix

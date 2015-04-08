@@ -12,13 +12,23 @@ import (
 	"time"
 
 	"github.com/minio-io/iodine"
-	"github.com/minio-io/mc/pkg/client"
 )
+
+type listBucketResults struct {
+	Contents       []*Item
+	IsTruncated    bool
+	MaxKeys        int
+	Name           string // bucket name
+	Marker         string
+	Delimiter      string
+	Prefix         string
+	CommonPrefixes []*Prefix
+}
 
 // Try the enumerate 5 times, since Amazon likes to close
 // https connections a lot, and Go sucks at dealing with it:
 // https://code.google.com/p/go/issues/detail?id=3514
-func (c *s3Client) retryRequest(urlReq string) (listBucketResults, error) {
+func (c *Client) retryRequest(urlReq string) (listBucketResults, error) {
 	const maxTries = 5
 	bres := listBucketResults{}
 	for try := 1; try <= maxTries; try++ {
@@ -54,7 +64,7 @@ func (c *s3Client) retryRequest(urlReq string) (listBucketResults, error) {
 }
 
 // get items out of content and provide marker for future request
-func (c *s3Client) getItems(s, m string, contents []*client.Item) (items []*client.Item, marker string, err error) {
+func (c *Client) getItems(s, m string, contents []*Item) (items []*Item, marker string, err error) {
 	for _, it := range contents {
 		if it.Key == m && it.Key != s {
 			// Skip first dup on pages 2 and higher.
@@ -74,7 +84,7 @@ func (c *s3Client) getItems(s, m string, contents []*client.Item) (items []*clie
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
-func (c *s3Client) queryObjects(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
+func (c *Client) queryObjects(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*Item, prefixes []*Prefix, err error) {
 	var urlReq string
 	var buffer bytes.Buffer
 
