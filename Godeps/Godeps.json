@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/minio-io/mc",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.4",
 	"Packages": [
 		"./..."
 	],
@@ -22,21 +22,9 @@
 			"Rev": "c00d27128bb88e9c1adab1a53cda9c72c6d1ff9b"
 		},
 		{
-			"ImportPath": "github.com/minio-io/check",
-			"Rev": "bc4e66da8cd7ff58a4b9b84301f906352b8f2c94"
-		},
-		{
 			"ImportPath": "github.com/minio-io/cli",
 			"Comment": "1.2.0-102-gecb385c",
 			"Rev": "ecb385c3fefd53678e3b6beba6a608fb7c8dfac1"
-		},
-		{
-			"ImportPath": "github.com/minio-io/donut",
-			"Rev": "1cb5d3239ed989c4dd153af9931bcfb8ec4f0b87"
-		},
-		{
-			"ImportPath": "github.com/minio-io/erasure",
-			"Rev": "8a72b14991a6835b4d30403e7cb201f373b7cb3a"
 		},
 		{
 			"ImportPath": "github.com/minio-io/iodine",
@@ -44,10 +32,6 @@
 		},
 		{
 			"ImportPath": "github.com/minio-io/minio/pkg/utils/log",
-			"Rev": "1ebc692ea24cbcb373b9a26837460f0e5efd4780"
-		},
-		{
-			"ImportPath": "github.com/minio-io/minio/pkg/utils/split",
 			"Rev": "1ebc692ea24cbcb373b9a26837460f0e5efd4780"
 		},
 		{
