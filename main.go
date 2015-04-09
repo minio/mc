@@ -27,38 +27,32 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
+	"io/ioutil"
 )
 
-func init() {
+func checkConfig() {
 	// Check for the environment early on and gracefuly report.
 	_, err := user.Current()
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
-		msg := fmt.Sprintf("mc: Unable to obtain user's home directory %s\n", err)
-		fatal(msg)
+		log.Debug.Println(iodine.New(err, nil))
+		panic("Unable to obtain user's home directory")
 	}
 
 	// Ensures config file is sane and cached to _config private variable.
 	config, err := getMcConfig()
+	err = iodine.New(err, nil)
 	if os.IsNotExist(err) {
 		return
 	}
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
-		msg := fmt.Sprintf("Unable to read config %s\n", err)
-		fatal(msg)
+		log.Debug.Println(iodine.New(err, nil))
+		fatal("Unable to read config file")
 	}
 
 	err = checkMcConfig(config)
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
-		msg := fmt.Sprintf("Error in config file: %s\n%s", getMcConfigFilename(), err)
+		log.Debug.Println(iodine.New(err, nil))
+		msg := fmt.Sprintf("Error in config file: %s\n%s", getMcConfigFilename())
 		fatal(msg)
 	}
 }
@@ -100,9 +94,13 @@ func main() {
 	app.Before = func(c *cli.Context) error {
 		globalQuietFlag = c.GlobalBool("quiet")
 		globalDebugFlag = c.GlobalBool("debug")
+		log.Println(globalDebugFlag)
 		if globalDebugFlag {
 			app.ExtraInfo = getSystemData()
+		} else {
+			log.Debug = log.New(ioutil.Discard, "", 0)
 		}
+		checkConfig()
 		return nil
 	}
 	app.RunAndExitOnError()
