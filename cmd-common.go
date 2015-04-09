@@ -177,7 +177,7 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	}
 
 	switch uType {
-	case urlS3: // Minio and S3 compatible object storage
+	case urlObjectStorage: // Minio and S3 compatible object storage
 		traceTransport := getTraceTransport()
 		if debug {
 			clnt = s3.GetNewClient(&auth, urlStr, traceTransport)
@@ -185,22 +185,6 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 			clnt = s3.GetNewClient(&auth, urlStr, http.DefaultTransport)
 		}
 		return clnt, nil
-
-	// TODO: donut.GetNewClient should only take donutName as input. Rest it should read from its own config file.
-	/*
-		case urlDonut: // Donut object storage
-
-				host, err := url2Host(urlStr)
-				if err != nil {
-					return nil, err
-				}
-
-				clnt, err := donut.GetNewClient(host, nodeDiskMap)
-				if err != nil {
-					return nil, err
-				}
-
-				return clnt, nil */
 	case urlFile: // POSIX compatible file systems
 		fallthrough
 	case urlUnknown: // Unknown type

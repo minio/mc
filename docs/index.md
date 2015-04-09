@@ -12,6 +12,8 @@ mc - Minio Client for S3 Compatible Object Storage released under [Apache licens
 
 ### Commands
 ```
+$ mc help
+
 NAME:
    mc - Minio Client for S3 Compatible Object Storage
 
@@ -19,46 +21,59 @@ USAGE:
    mc [global options] command [command options] [arguments...]
 
 VERSION:
-   0.1.0
+   <---- GIT COMMIT ID ---->
 
-AUTHOR:
-  Minio.io
+BUILD:
+   <---- BUILD TIME ---->
 
 COMMANDS:
-   cp           copy objects
-   ls           get list of objects
-   mb           makes a bucket
-   config       Generate configuration "/home/harsha/.minio/mc/config.json" file.
-   help, h      Shows a list of commands or help for one command
+   cp	         copy objects and files
+   ls	         list files and objects
+   mb	         makes a bucket
+   config        Generate configuration "/home/alexa/.mc/config.json" file.
 
 GLOBAL OPTIONS:
-   --debug                      enable HTTP tracing
-   --quiet, -q                  disable chatty output, such as the progress bar
-   --get-bash-completion        Generate bash completion "/home/harsha/.minio/mc/mc.bash_completion" file.
-   --help, -h                   show help
-   --generate-bash-completion
-   --version, -v                print the version
+   --debug       enable HTTP tracing
+   --quiet, -q	 disable chatty output, such as the progress bar
+   --version, -v print the version
+
 ```
 
 ## Contribute
 
 [Contribute to mc](./contributing.md)
 
+### Supported platforms
+
+| Name  | Supported |
+| ------------- | ------------- |
+| Linux  | Yes  |
+| Windows | Yes |
+| Mac OSX | Yes |
+
+### Supported architectures
+
+| Arch | Supported |
+| ------------- | ------------- |
+| x86-64 | Yes |
+| arm64 | Not yet|
+| i386 | Not yet |
+
 ### Enable bash completion
 
 To generate bash completion for ``mc`` all you have to do is
 
 ```
-$ mc --get-bash-completion
+$ mc config --completion
 
-Configuration written to /home/user/.minio/mc/mc.bash_completion
+Configuration written to /home/user/.mc/mc.bash_completion
 
-$ source ${HOME}/.minio/mc/mc.bash_completion
-$ echo 'source ${HOME}/.minio/mc/mc.bash_completion' >> ${HOME}/.bashrc
+$ source ${HOME}/.mc/mc.bash_completion
+$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc
 
 ```
 
 ```
 $ mc <TAB><TAB>
-config  cp         h          help       ls         mb         sync
+config  cp         h          help       ls         mb
 ```

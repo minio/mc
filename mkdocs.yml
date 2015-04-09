@@ -1,8 +1,13 @@
 site_name: Minio Client Documentation
 pages:
 - ['index.md', Index]
-- ['sdks/js/javascript.md', 'SDKs', 'Javascript']
-- ['sdks/python/python.md', 'SDKs', 'Python']
-- ['sdks/ruby/ruby.md', 'SDKs', 'Ruby']
-- ['contributing.md', 'Contributing', 'Overview']
+- ['commands/config.md', 'Commands', 'config']
+- ['commands/ls.md', 'Commands', 'ls']
+- ['commands/cp.md', 'Commands', 'cp']
+- ['commands/mb.md', 'Commands', 'mb']
+- ['sdks/js/javascript.md', 'SDKs']
+- ['sdks/python/python.md', 'SDKs']
+- ['sdks/ruby/ruby.md', 'SDKs']
+- ['contributing.md', 'Contributing']
+- ['debugging.md', 'Debugging']
 theme: readthedocs

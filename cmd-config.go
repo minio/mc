@@ -209,8 +209,8 @@ func getBashCompletion() {
 		fatal(err)
 	}
 	msg := "\nConfiguration written to " + f
-	msg = msg + "\n\n$ source ${HOME}/.minio/mc/mc.bash_completion\n"
-	msg = msg + "$ echo 'source ${HOME}/.minio/mc/mc.bash_completion' >> ${HOME}/.bashrc\n"
+	msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
+	msg = msg + "$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc\n"
 	info(msg)
 }
 
