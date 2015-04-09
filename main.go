@@ -52,7 +52,7 @@ func checkConfig() {
 	err = checkMcConfig(config)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		msg := fmt.Sprintf("Error in config file: %s\n%s", getMcConfigFilename())
+		msg := fmt.Sprintf("Error in config file: %s", getMcConfigFilename())
 		fatal(msg)
 	}
 }
