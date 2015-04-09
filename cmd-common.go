@@ -25,9 +25,9 @@ import (
 	"net/url"
 
 	"github.com/cheggaaa/pb"
-	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 // StartBar -- instantiate a progressbar

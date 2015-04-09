@@ -11,8 +11,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 // Try the enumerate 5 times, since Amazon likes to close

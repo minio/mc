@@ -46,8 +46,8 @@ import (
 
 	"net/http"
 
-	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 // bySize implements sort.Interface for []Item based on the Size field.
