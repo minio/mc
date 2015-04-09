@@ -51,6 +51,7 @@ import (
 	"encoding/xml"
 
 	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 type listBucketResults struct {
@@ -164,7 +165,7 @@ func listAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
 	}
 	var res allMyBuckets
 	if err := xml.NewDecoder(r).Decode(&res); err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
 	}
 	return res.Buckets.Bucket, nil
 }

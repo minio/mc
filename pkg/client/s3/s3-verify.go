@@ -17,10 +17,10 @@
 package s3
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -56,10 +56,10 @@ Example AWS S3 Request / Response
 // HTTP S3 request validator.
 func (t s3Verify) Request(req *http.Request) error {
 	if req.Header.Get("Authorization") == "" {
-		return iodine.New(errors.New("Client request header has authorization key"), nil)
+		return iodine.New(client.AuthorizationKeyEmpty{}, nil)
 	}
 	if !strings.HasPrefix(req.Header.Get("Authorization"), "AWS") {
-		return iodine.New(errors.New("Client request header has malformed authorization key"), nil)
+		return iodine.New(client.InvalidAuthorizationKey{}, nil)
 	}
 	return nil
 }

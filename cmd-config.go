@@ -54,9 +54,7 @@ var _config *mcConfig
 func getMcConfigDir() string {
 	u, err := user.Current()
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		msg := fmt.Sprintf("Unable to obtain user's home directory. \nError: %s", err)
 		fatal(msg)
 	}
@@ -179,6 +177,7 @@ func saveConfig(ctx *cli.Context) error {
 
 	// Reload and cache new config
 	_, err = getMcConfig()
+	err = iodine.ToError(err)
 	if os.IsNotExist(err) {
 		return iodine.New(err, nil)
 	}
@@ -197,16 +196,12 @@ func getBashCompletion() {
 	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	defer fl.Close()
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 	_, err = fl.Write(b.Bytes())
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 	msg := "\nConfiguration written to " + f
@@ -314,17 +309,13 @@ func doConfigCmd(ctx *cli.Context) {
 	default:
 		err := saveConfig(ctx)
 		if os.IsExist(err) {
-			if globalDebugFlag {
-				log.Debug.Println(iodine.New(err, nil))
-			}
+			log.Debug.Println(iodine.New(err, nil))
 			msg := fmt.Sprintf("mc: Please rename your current configuration file [%s]\n", getMcConfigFilename())
 			fatal(msg)
 		}
 
 		if err != nil {
-			if globalDebugFlag {
-				log.Debug.Println(iodine.New(err, nil))
-			}
+			log.Debug.Println(iodine.New(err, nil))
 			msg := fmt.Sprintf("mc: Unable to generate config file [%s]. \nError: %v\n", getMcConfigFilename(), err)
 			fatal(msg)
 		}

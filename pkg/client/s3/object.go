@@ -39,10 +39,8 @@ limitations under the License.
 package s3
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -52,6 +50,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -86,7 +85,7 @@ func (c *s3Client) Put(bucket, key, md5HexString string, size int64, contents io
 // Stat - returns 0, "", os.ErrNotExist if not on S3
 func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, reterr error) {
 	if bucket == "" || key == "" {
-		return 0, date, iodine.New(os.ErrNotExist, nil)
+		return 0, date, iodine.New(client.InvalidArgument{}, nil)
 	}
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "HEAD"
@@ -99,7 +98,7 @@ func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, r
 
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return 0, date, iodine.New(os.ErrNotExist, nil)
+		return 0, date, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: key}, nil)
 	case http.StatusOK:
 		size, err = strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
 		if err != nil {
@@ -139,7 +138,7 @@ func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 
 // If length is negative, the rest of the object is returned.
 func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	if offset < 0 {
-		return nil, 0, "", iodine.New(errors.New("invalid negative offset"), nil)
+		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
 	req := newReq(c.keyURL(bucket, key))
 	if length >= 0 {
