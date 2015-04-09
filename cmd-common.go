@@ -86,12 +86,7 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 			clnt = s3.GetNewClient(&auth, urlStr, http.DefaultTransport)
 		}
 		return clnt, nil
-	case urlFile: // POSIX compatible file systems
-		fallthrough
-	case urlUnknown: // Unknown type
-		fallthrough
 	default:
 		return nil, iodine.New(errUnsupportedScheme, nil)
 	}
-
 }
