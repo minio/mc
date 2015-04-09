@@ -36,10 +36,9 @@ type hostConfig struct {
 }
 
 type mcConfig struct {
-	Version   uint
-	MCVersion string
-	Hosts     map[string]hostConfig
-	Aliases   map[string]string
+	Version uint
+	Hosts   map[string]hostConfig
+	Aliases map[string]string
 }
 
 const (
@@ -237,10 +236,14 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	switch true {
 	case len(alias) == 0:
 		config = &mcConfig{
-			Version:   currentConfigVersion,
-			MCVersion: "0.9",
+			Version: currentConfigVersion,
 			Hosts: map[string]hostConfig{
 				"http*://s3*.amazonaws.com": {
+					Auth: auth{
+						AccessKeyID:     accessKeyID,
+						SecretAccessKey: secretAccesskey,
+					}},
+				"http*://localhost:*": {
 					Auth: auth{
 						AccessKeyID:     accessKeyID,
 						SecretAccessKey: secretAccesskey,
@@ -262,8 +265,7 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 			return nil, iodine.New(errors.New("invalid url type only supports http{s}"), nil)
 		}
 		config = &mcConfig{
-			Version:   currentConfigVersion,
-			MCVersion: "0.9",
+			Version: currentConfigVersion,
 			Hosts: map[string]hostConfig{
 				"http*://s3*.amazonaws.com": {
 					Auth: auth{
@@ -283,23 +285,31 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	}
 }
 
+// getHostURL -
+func getHostURL(u *url.URL) string {
+	return u.Scheme + "://" + u.Host
+}
+
 // getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(hostURL string) (*hostConfig, error) {
-	_, err := url.Parse(hostURL)
+func getHostConfig(requestURL string) (*hostConfig, error) {
+	u, err := url.Parse(requestURL)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 
 	}
-
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
 
 	for globURL, cfg := range config.Hosts {
-		match, err := filepath.Match(globURL, hostURL)
+		match, err := filepath.Match(globURL, getHostURL(u))
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing glob'ed URL while comparing [%s] [%s]", globURL, hostURL)
+			msg := fmt.Errorf("Error parsing glob'ed URL while comparing [%s] [%s]", globURL, requestURL)
+			return nil, iodine.New(msg, map[string]string{
+				"globURL": globURL,
+				"hostURL": requestURL,
+			})
 		}
 		if match {
 			var hostCfg hostConfig
