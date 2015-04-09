@@ -59,6 +59,10 @@ func printObject(date time.Time, v int64, key string) {
 func doListCmd(ctx *cli.Context) {
 	var items []*client.Item
 
+	if len(ctx.Args()) < 1 {
+		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
+	}
+
 	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
