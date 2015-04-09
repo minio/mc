@@ -151,6 +151,18 @@ EXAMPLES:
 			},
 		},
 	}
+	updateCmd = cli.Command{
+		Name:        "update",
+		Usage:       "Check if new updates are available at http://minio.io",
+		Description: "",
+		Action:      doUpdateCmd,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "yes, y",
+				Usage: "download and update local binary",
+			},
+		},
+	}
 )
 
 type object struct {
@@ -174,6 +186,7 @@ var options = []cli.Command{
 	lsCmd,
 	mbCmd,
 	configCmd,
+	updateCmd,
 }
 
 var (
