@@ -18,16 +18,13 @@ package main
 
 import (
 	"path"
-	"strings"
 	"time"
-
-	"net/http"
-	"net/url"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/minio/pkg/iodine"
+	"net/http"
 )
 
 // StartBar -- instantiate a progressbar
@@ -44,102 +41,6 @@ func startBar(size int64) *pb.ProgressBar {
 	// Feels like wget
 	bar.Format("[=> ]")
 	return bar
-}
-
-func parseDestinationArgs(urlParsed *url.URL, destination, source object) (object, error) {
-	switch true {
-	case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
-		if urlParsed.Host == "" {
-			//			if urlParsed.Path == "" {
-			//				return object{}, errUnsupportedScheme
-			//			}
-			return object{}, iodine.New(errUnsupportedScheme, nil)
-		}
-		destination.host = urlParsed.Host
-		destination.scheme = urlParsed.Scheme
-		destination.url = urlParsed
-		urlSplits := strings.Split(urlParsed.Path, "/")
-		if len(urlSplits) > 1 {
-			destination.bucket = urlSplits[1]
-			destination.key = path.Join(urlSplits[2:]...)
-		}
-	case urlParsed.Scheme == "":
-		if urlParsed.Host != "" {
-			return object{}, iodine.New(errUnsupportedScheme, nil)
-		}
-		if urlParsed.Path == "." {
-			destination.key = source.key
-		} else {
-			destination.key = strings.TrimPrefix(urlParsed.Path, "/")
-		}
-		destination.bucket = urlParsed.Host
-	case urlParsed.Scheme != "http" && urlParsed.Scheme != "https":
-		return object{}, iodine.New(errUnsupportedScheme, nil)
-	}
-	return destination, nil
-}
-
-func parseSourceArgs(urlParsed *url.URL, firstArg string, source object) (object, error) {
-	switch true {
-	case urlParsed.Scheme == "http" || urlParsed.Scheme == "https":
-		if urlParsed.Host == "" {
-			//			if urlParsed.Path == "" {
-			//				return object{}, errUnsupportedScheme
-			//			}
-			return object{}, iodine.New(errUnsupportedScheme, nil)
-		}
-		source.scheme = urlParsed.Scheme
-		source.host = urlParsed.Host
-		source.url = urlParsed
-		urlSplits := strings.Split(urlParsed.Path, "/")
-		if len(urlSplits) > 1 {
-			source.bucket = urlSplits[1]
-			source.key = path.Join(urlSplits[2:]...)
-		}
-	case urlParsed.Scheme == "":
-		if urlParsed.Host != "" {
-			return object{}, iodine.New(errUnsupportedScheme, nil)
-		}
-		if urlParsed.Path != firstArg {
-			return object{}, iodine.New(errUnsupportedScheme, nil)
-		}
-		if urlParsed.Path == "." {
-			return object{}, iodine.New(errFskey, nil)
-		}
-		source.key = strings.TrimPrefix(urlParsed.Path, "/")
-	case urlParsed.Scheme != "http" && urlParsed.Scheme != "https":
-		return object{}, iodine.New(errUnsupportedScheme, nil)
-	}
-	return source, nil
-}
-
-func parseSingleArg(urlParsed *url.URL, source object) (object, error) {
-	source.scheme = urlParsed.Scheme
-	source.url = urlParsed
-	if urlParsed.Scheme != "" {
-		if urlParsed.Host == "" {
-			return object{}, iodine.New(errHostname, nil)
-		}
-	}
-	source.host = urlParsed.Host
-	urlSplits := strings.Split(urlParsed.Path, "/")
-	if len(urlSplits) > 1 {
-		source.bucket = urlSplits[1]
-		source.key = path.Join(urlSplits[2:]...)
-	}
-	return source, nil
-}
-
-func urlAliasExpander(arg string) (*url.URL, error) {
-	urlString, err := aliasExpand(arg)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	urlParsed, err := url.Parse(urlString)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return urlParsed, nil
 }
 
 func getMcBashCompletionFilename() string {
