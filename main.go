@@ -35,13 +35,14 @@ func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		panic("Unable to obtain user's home directory")
+		fatal("Unable to obtain user's home directory")
 	}
 
 	// Ensures config file is sane and cached to _config private variable.
 	config, err := getMcConfig()
-	err = iodine.New(err, nil)
-	if os.IsNotExist(err) {
+	var ierr iodine.Error
+	ierr = iodine.New(err, nil).(iodine.Error)
+	if os.IsNotExist(ierr.EmbeddedError) {
 		return
 	}
 	if err != nil {
@@ -52,8 +53,7 @@ func checkConfig() {
 	err = checkMcConfig(config)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		msg := fmt.Sprintf("Error in config file: %s", getMcConfigFilename())
-		fatal(msg)
+		fatal("Error in config file:", getMcConfigFilename())
 	}
 }
 
