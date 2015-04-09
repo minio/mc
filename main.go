@@ -39,12 +39,13 @@ func checkConfig() {
 		fatal("Unable to obtain user's home directory")
 	}
 
-	// Ensures config file is sane and cached to _config private variable.
-	config, err := getMcConfig()
-	err = iodine.ToError(err)
-	if os.IsNotExist(err) {
+	if !isMcConfigExist() {
+		// Handled properly in main.app.Before
 		return
 	}
+
+	// Ensures config file is sane and cached to _config private variable.
+	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		fatal("Unable to read config file")
@@ -91,9 +92,9 @@ func main() {
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.EnableBashCompletion = true
-	app.Before = func(c *cli.Context) error {
-		globalQuietFlag = c.GlobalBool("quiet")
-		globalDebugFlag = c.GlobalBool("debug")
+	app.Before = func(ctx *cli.Context) error {
+		globalQuietFlag = ctx.GlobalBool("quiet")
+		globalDebugFlag = ctx.GlobalBool("debug")
 		if globalDebugFlag {
 			app.ExtraInfo = getSystemData()
 		} else {
@@ -102,5 +103,13 @@ func main() {
 		checkConfig()
 		return nil
 	}
+	app.After = func(ctx *cli.Context) error {
+		if !isMcConfigExist() && ctx.Command.Name != "config" {
+			fatal("Error: mc is not configured. Please run \"mc config\".")
+		}
+
+		return nil
+	}
+
 	app.RunAndExitOnError()
 }

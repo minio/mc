@@ -72,6 +72,7 @@ func doUpdateCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
+	/* FIXME: Config file should not hold versin info (MCVersion). Use commit-id or build-date for the check */
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))

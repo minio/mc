@@ -20,11 +20,12 @@ import (
 	"path"
 	"time"
 
+	"net/http"
+
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/minio/pkg/iodine"
-	"net/http"
 )
 
 // StartBar -- instantiate a progressbar
@@ -58,12 +59,7 @@ func getTraceTransport() s3.RoundTripTrace {
 
 // NewClient - get new client
 func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-
-	hostCfg, err := getHostConfig(config.DefaultHost)
+	hostCfg, err := getHostConfig(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -71,7 +67,6 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	var auth s3.Auth
 	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
-
 	uType, err := getURLType(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
