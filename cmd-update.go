@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"encoding/json"
 	"io/ioutil"
@@ -35,9 +36,9 @@ const (
 )
 
 type updateResults struct {
-	Version       uint // this is config version
-	LatestVersion string
-	Signature     string
+	Version     uint // this is config version
+	LatestBuild string
+	Signature   string
 }
 
 func getReq(url string) (*http.Request, error) {
@@ -72,11 +73,13 @@ func doUpdateCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
-	/* FIXME: Config file should not hold versin info (MCVersion). Use commit-id or build-date for the check */
-	config, err := getMcConfig()
+	latest, err := time.Parse(time.RFC3339Nano, ures.LatestBuild)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
-	printUpdateNotify(ures.LatestVersion, config.MCVersion)
+	if latest.After(ctx.App.Compiled) {
+		// FIXME : find some proper versioning scheme here
+		printUpdateNotify("new", "old")
+	}
 }
