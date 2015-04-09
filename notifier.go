@@ -55,7 +55,7 @@ func printUpdateNotify(latestVersion, currentVersion string) {
 	spacePaddingLine2 := strings.Repeat(" ", line2Rest)
 
 	// construct the final message
-	message := "\n\n" + top + "\n" +
+	message := "\n" + top + "\n" +
 		sideBar + line1InColor + spacePaddingLine1 + sideBar + "\n" +
 		sideBar + line2InColor + spacePaddingLine2 + sideBar + "\n" +
 		bottom + "\n"
