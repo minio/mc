@@ -36,11 +36,10 @@ type hostConfig struct {
 }
 
 type mcConfig struct {
-	Version     uint
-	MCVersion   string
-	DefaultHost string
-	Hosts       map[string]hostConfig
-	Aliases     map[string]string
+	Version   uint
+	MCVersion string
+	Hosts     map[string]hostConfig
+	Aliases   map[string]string
 }
 
 const (
@@ -74,6 +73,8 @@ func getMcConfigFilename() string {
 	return path.Join(getMcConfigDir(), configFile)
 }
 
+// getMcConfig returns the config data from file. Subsequent calls are
+// cached in a private global variable
 func getMcConfig() (cfg *mcConfig, err error) {
 	if _config != nil {
 		return _config, nil
@@ -85,6 +86,17 @@ func getMcConfig() (cfg *mcConfig, err error) {
 	}
 
 	return _config, nil
+}
+
+// getMcConfig returns the config data from file. Subsequent calls are
+// cached in a private global variable
+func isMcConfigExist() bool {
+	configFile := getMcConfigFilename()
+	_, err := os.Stat(configFile)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 // chechMcConfig checks for errors in config file
@@ -177,8 +189,7 @@ func saveConfig(ctx *cli.Context) error {
 
 	// Reload and cache new config
 	_, err = getMcConfig()
-	err = iodine.ToError(err)
-	if os.IsNotExist(err) {
+	if os.IsNotExist(iodine.ToError(err)) {
 		return iodine.New(err, nil)
 	}
 
@@ -226,9 +237,8 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	switch true {
 	case len(alias) == 0:
 		config = &mcConfig{
-			Version:     currentConfigVersion,
-			MCVersion:   "0.9",
-			DefaultHost: "https://s3.amazonaws.com",
+			Version:   currentConfigVersion,
+			MCVersion: "0.9",
 			Hosts: map[string]hostConfig{
 				"http*://s3*.amazonaws.com": {
 					Auth: auth{
@@ -237,8 +247,8 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 					}},
 			},
 			Aliases: map[string]string{
-				"s3":        "https://s3.amazonaws.com/",
-				"localhost": "http://localhost:9000/",
+				"s3":        "https://s3.amazonaws.com",
+				"localhost": "http://localhost:9000",
 			},
 		}
 		return config, nil
@@ -252,8 +262,8 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 			return nil, iodine.New(errors.New("invalid url type only supports http{s}"), nil)
 		}
 		config = &mcConfig{
-			Version:     currentConfigVersion,
-			DefaultHost: "https://s3.amazonaws.com",
+			Version:   currentConfigVersion,
+			MCVersion: "0.9",
 			Hosts: map[string]hostConfig{
 				"http*://s3*.amazonaws.com": {
 					Auth: auth{
@@ -262,8 +272,8 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 					}},
 			},
 			Aliases: map[string]string{
-				"s3":        "https://s3.amazonaws.com/",
-				"localhost": "http://localhost:9000/",
+				"s3":        "https://s3.amazonaws.com",
+				"localhost": "http://localhost:9000",
 				aliasName:   url,
 			},
 		}
@@ -301,24 +311,62 @@ func getHostConfig(hostURL string) (*hostConfig, error) {
 	return nil, iodine.New(errors.New("No matching host config found"), nil)
 }
 
+//getBashCompletionCmd generates bash completion file.
+func getBashCompletionCmd() {
+	var b bytes.Buffer
+	if os.Getenv("SHELL") != "/bin/bash" {
+		fatal("Unsupported shell for bash completion detected.. exiting")
+	}
+	b.WriteString(mcBashCompletion)
+	f := getMcBashCompletionFilename()
+	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	defer fl.Close()
+	if err != nil {
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		fatal(err)
+	}
+	_, err = fl.Write(b.Bytes())
+	if err != nil {
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		fatal(err)
+	}
+	msg := "\nConfiguration written to " + f
+	msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
+	msg = msg + "$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc"
+	info(msg)
+}
+
+// saveConfigCmd writes config file to disk
+func saveConfigCmd(ctx *cli.Context) {
+	err := saveConfig(ctx)
+	if os.IsExist(iodine.ToError(err)) {
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		msg := fmt.Sprintf("mc: Configuration file [%s] already exists.", getMcConfigFilename())
+		fatal(msg)
+	}
+
+	if err != nil {
+		if globalDebugFlag {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+		msg := fmt.Sprintf("mc: Unable to generate config file [%s]. \nError: %v.", getMcConfigFilename(), err)
+		fatal(msg)
+	}
+	info("Configuration written to " + getMcConfigFilename() + ". Please update your access credentials.")
+}
+
 // doConfigCmd is the handler for "mc config" sub-command.
 func doConfigCmd(ctx *cli.Context) {
 	switch true {
 	case ctx.Bool("completion") == true:
-		getBashCompletion()
+		getBashCompletionCmd()
 	default:
-		err := saveConfig(ctx)
-		if os.IsExist(err) {
-			log.Debug.Println(iodine.New(err, nil))
-			msg := fmt.Sprintf("mc: Please rename your current configuration file [%s]\n", getMcConfigFilename())
-			fatal(msg)
-		}
-
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			msg := fmt.Sprintf("mc: Unable to generate config file [%s]. \nError: %v\n", getMcConfigFilename(), err)
-			fatal(msg)
-		}
-		info("Configuration written to " + getMcConfigFilename() + "\n")
+		saveConfigCmd(ctx)
 	}
 }

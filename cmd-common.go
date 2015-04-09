@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"path"
 	"time"
 
@@ -58,12 +59,7 @@ func getTraceTransport() s3.RoundTripTrace {
 
 // NewClient - get new client
 func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-
-	hostCfg, err := getHostConfig(config.DefaultHost)
+	hostCfg, err := getHostConfig(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -71,7 +67,7 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	var auth s3.Auth
 	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
-
+	fmt.Println(urlStr)
 	uType, err := getURLType(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)

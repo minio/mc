@@ -154,19 +154,8 @@ func url2Bucket(urlStr string) (bucketName string, err error) {
 
 // parseURL extracts URL string from a single cmd-line argument
 func parseURL(arg string) (urlStr string, err error) {
-	urlStr = arg
-	// Use default host if no argument is passed
-	if urlStr == "" {
-		// Load config file
-		config, err := getMcConfig()
-		if err != nil {
-			return "", iodine.New(err, nil)
-		}
-		urlStr = config.DefaultHost
-	}
-
 	// Check and expand Alias
-	urlStr, err = aliasExpand(urlStr)
+	urlStr, err = aliasExpand(arg)
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
