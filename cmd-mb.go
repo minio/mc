@@ -25,6 +25,10 @@ import (
 
 // doMakeBucketCmd creates a new bucket
 func doMakeBucketCmd(ctx *cli.Context) {
+	if len(ctx.Args()) < 1 {
+		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
+	}
+
 	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
