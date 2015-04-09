@@ -11,6 +11,7 @@ func TestUVHeader(t *testing.T) {
 	fmt.Println("\n----------------  updatevalues_test.go ...\n")
 }
 
+
 func TestUpdateValuesForPath_Author(t *testing.T) {
 	m, merr := NewMapXml(doc1)
 	if merr != nil {
@@ -70,7 +71,7 @@ func TestUpdateValuesForPath_Author(t *testing.T) {
 	fmt.Println("m:", m)
 
 	fmt.Println("m.UpdateValuesForPath(mm, \"*\")")
-	mm, _ := NewMapXml(doc1)
+	mm, _  := NewMapXml(doc1)
 	n, err = m.UpdateValuesForPath(mm, "*")
 	if err != nil {
 		t.Fatal("err:", err.Error())
@@ -82,7 +83,7 @@ func TestUpdateValuesForPath_Author(t *testing.T) {
 	var newDoc = []byte(`<tag color="green" shape="square">simple element</tag>`)
 	m, merr = NewMapXml(newDoc)
 	if merr != nil {
-		t.Fatal("merr:", merr.Error())
+		t.Fatal("merr:",merr.Error())
 	}
 	fmt.Println("\nnewDoc:", string(newDoc))
 	fmt.Println("m:", m)
@@ -93,29 +94,29 @@ func TestUpdateValuesForPath_Author(t *testing.T) {
 	n, _ = m.UpdateValuesForPath("#text:simple element again", "*")
 	fmt.Println("n:", n, "m:", m)
 
-	/*
-		fmt.Println("UpdateValuesForPath, doc.books.book, title:The Recognitions : NoBook")
-		n, err = m.UpdateValuesForPath("NoBook", "doc.books.book", "title:The Recognitions")
-		if err != nil {
-			t.Fatal("err:", err.Error())
-		}
-		fmt.Println(n, "updates")
-		ss, _ = m.ValuesForPath("doc.books.book")
-		for _, v := range ss {
-			fmt.Println("v:", v)
-		}
+/*
+	fmt.Println("UpdateValuesForPath, doc.books.book, title:The Recognitions : NoBook")
+	n, err = m.UpdateValuesForPath("NoBook", "doc.books.book", "title:The Recognitions")
+	if err != nil {
+		t.Fatal("err:", err.Error())
+	}
+	fmt.Println(n, "updates")
+	ss, _ = m.ValuesForPath("doc.books.book")
+	for _, v := range ss {
+		fmt.Println("v:", v)
+	}
 
-		fmt.Println("UpdateValuesForPath, doc.books.book.title -seq=3: The Blood Oranges")
-		n, err = m.UpdateValuesForPath("The Blood Oranges", "doc.books.book.title", "-seq:3")
-		if err != nil {
-			t.Fatal("err:", err.Error())
-		}
-		fmt.Println(n, "updates")
-		ss, _ = m.ValuesForPath("doc.books.book.title")
-		for _, v := range ss {
-			fmt.Println("v:", v)
-		}
-	*/
+	fmt.Println("UpdateValuesForPath, doc.books.book.title -seq=3: The Blood Oranges")
+	n, err = m.UpdateValuesForPath("The Blood Oranges", "doc.books.book.title", "-seq:3")
+	if err != nil {
+		t.Fatal("err:", err.Error())
+	}
+	fmt.Println(n, "updates")
+	ss, _ = m.ValuesForPath("doc.books.book.title")
+	for _, v := range ss {
+		fmt.Println("v:", v)
+	}
+*/
 }
 
 var authorDoc = []byte(`
@@ -159,7 +160,7 @@ var authorDoc = []byte(`
 
 func TestAuthorDoc(t *testing.T) {
 	m, merr := NewMapXml(authorDoc)
-	if merr != nil {
+	if merr != nil	{
 		t.Fatal("merr:", merr.Error())
 	}
 	fmt.Println(m.StringIndent())
@@ -174,7 +175,7 @@ func TestAuthorDoc(t *testing.T) {
 
 	fmt.Println("m.UpdateValuesForPath(newVal, path, oldVal)")
 	path := m.PathForKeyShortest("date")
-	v, _ := m.ValuesForPath(path)
+	v,_ := m.ValuesForPath(path)
 	var counter int
 	for _, vv := range v {
 		oldVal := "date:" + vv.(string)
@@ -185,3 +186,5 @@ func TestAuthorDoc(t *testing.T) {
 	fmt.Println(counter, "updates")
 	fmt.Println(m.StringIndent())
 }
+
+

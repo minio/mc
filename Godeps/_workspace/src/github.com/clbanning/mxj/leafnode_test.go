@@ -72,6 +72,7 @@ func TestLeafNodes(t *testing.T) {
 		fmt.Printf("%#v\n", v)
 	}
 
+
 	xmldata2 := []byte(`
 		<doc>
 			<item num="2" color="blue">Item 2 is blue</item>

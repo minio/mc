@@ -22,7 +22,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
-	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/utils/log"
 )

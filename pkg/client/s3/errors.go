@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/clbanning/mxj"
-	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 /* **** SAMPLE ERROR RESPONSE ****
