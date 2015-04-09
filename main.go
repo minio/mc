@@ -23,11 +23,12 @@ import (
 	"runtime"
 	"strconv"
 
+	"io/ioutil"
+
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
-	"io/ioutil"
 )
 
 func checkConfig() {
