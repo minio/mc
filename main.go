@@ -40,9 +40,8 @@ func checkConfig() {
 
 	// Ensures config file is sane and cached to _config private variable.
 	config, err := getMcConfig()
-	var ierr iodine.Error
-	ierr = iodine.New(err, nil).(iodine.Error)
-	if os.IsNotExist(ierr.EmbeddedError) {
+	err = iodine.ToError(err)
+	if os.IsNotExist(err) {
 		return
 	}
 	if err != nil {
