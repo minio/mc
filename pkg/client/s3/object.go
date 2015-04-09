@@ -52,7 +52,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 /// Object API operations

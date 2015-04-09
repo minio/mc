@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 // Alias for S3 hosts, saved in mc json configuration file

@@ -11,7 +11,11 @@
 		},
 		{
 			"ImportPath": "github.com/clbanning/mxj",
-			"Rev": "62dd98ae54e1d2b67c9483486b1f45e344f8388c"
+			"Rev": "e11b85050263aff26728fb9863bf2ebaf6591279"
+		},
+		{
+			"ImportPath": "github.com/dustin/go-humanize",
+			"Rev": "8cc1aaa2d955ee82833337cfb10babc42be6bce6"
 		},
 		{
 			"ImportPath": "github.com/fatih/color",
@@ -27,12 +31,12 @@
 			"Rev": "ecb385c3fefd53678e3b6beba6a608fb7c8dfac1"
 		},
 		{
-			"ImportPath": "github.com/minio-io/iodine",
-			"Rev": "55cc4d4256c68fbd6f0775f1a25e37e6a2f6457e"
+			"ImportPath": "github.com/minio-io/minio/pkg/iodine",
+			"Rev": "e2c54a0904df66b9b87f324944169b8d30afceab"
 		},
 		{
 			"ImportPath": "github.com/minio-io/minio/pkg/utils/log",
-			"Rev": "1ebc692ea24cbcb373b9a26837460f0e5efd4780"
+			"Rev": "e2c54a0904df66b9b87f324944169b8d30afceab"
 		},
 		{
 			"ImportPath": "github.com/shiena/ansicolor",

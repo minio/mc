@@ -22,7 +22,7 @@ import (
 	"net/url"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 // URLType defines supported storage protocols

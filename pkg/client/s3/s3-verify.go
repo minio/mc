@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 // Only generic HTTP S3 fields are validated using this mechanism. S3

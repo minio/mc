@@ -46,7 +46,7 @@ import (
 
 	"net/http"
 
-	"github.com/minio-io/iodine"
+	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/mc/pkg/client"
 )
 
