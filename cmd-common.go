@@ -17,15 +17,15 @@
 package main
 
 import (
-	"fmt"
 	"path"
 	"time"
+
+	"net/http"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/minio/pkg/iodine"
-	"net/http"
 )
 
 // StartBar -- instantiate a progressbar
@@ -67,7 +67,6 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	var auth s3.Auth
 	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
-	fmt.Println(urlStr)
 	uType, err := getURLType(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
