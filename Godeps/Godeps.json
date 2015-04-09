@@ -14,6 +14,10 @@
 			"Rev": "62dd98ae54e1d2b67c9483486b1f45e344f8388c"
 		},
 		{
+			"ImportPath": "github.com/dustin/go-humanize",
+			"Rev": "8cc1aaa2d955ee82833337cfb10babc42be6bce6"
+		},
+		{
 			"ImportPath": "github.com/fatih/color",
 			"Rev": "f952d5afece9417e6240c2b649c1ef84bc3b6299"
 		},
