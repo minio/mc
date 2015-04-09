@@ -79,7 +79,7 @@ func (c *s3Client) queryObjects(bucket string, startAt, prefix, delimiter string
 	var buffer bytes.Buffer
 
 	if maxKeys <= 0 {
-		return nil, nil, iodine.New(errors.New("negative maxKeys are invalid"), nil)
+		return nil, nil, iodine.New(client.InvalidMaxKeys{Maxkeys: maxKeys}, nil)
 	}
 
 	marker := startAt

@@ -17,8 +17,10 @@
 package s3
 
 import (
-	"errors"
 	"net/http"
+
+	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 // HTTPTracer provides callback hook mechanism for HTTP transport.
@@ -38,24 +40,24 @@ func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err er
 	if t.Trace != nil {
 		err = t.Trace.Request(req)
 		if err != nil {
-			return nil, err
+			return nil, iodine.New(err, nil)
 		}
 	}
 
 	if t.Transport == nil {
-		return nil, errors.New("TraceRoundTrip.Transport is nil")
+		return nil, iodine.New(client.InvalidArgument{}, nil)
 	}
 
 	res, err = t.Transport.RoundTrip(req)
 	if err != nil {
-		return res, err
+		return res, iodine.New(err, nil)
 	}
 
 	if t.Trace != nil {
 		t.Trace.Response(res)
 	}
 
-	return res, err
+	return res, iodine.New(err, nil)
 }
 
 // GetNewTraceTransport returns a traceable transport

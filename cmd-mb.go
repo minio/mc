@@ -27,40 +27,30 @@ import (
 func doMakeBucketCmd(ctx *cli.Context) {
 	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 
 	bucket, err := url2Bucket(urlStr)
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 
 	clnt, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 
 	if !s3.IsValidBucketName(bucket) {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(errInvalidbucket)
 	}
 
 	err = clnt.PutBucket(bucket)
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 }

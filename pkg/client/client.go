@@ -17,6 +17,7 @@
 package client
 
 import (
+	"fmt"
 	"io"
 	"time"
 )
@@ -52,4 +53,73 @@ type Item struct {
 // Prefix - common prefix
 type Prefix struct {
 	Prefix string
+}
+
+/// Collection of standard errors
+
+// InvalidBucketName - bucket name invalid
+type InvalidBucketName struct {
+	Bucket string
+}
+
+func (e InvalidBucketName) Error() string {
+	return fmt.Sprintf("Invalid bucketname %v", e.Bucket)
+}
+
+// InvalidArgument - bad arguments provided
+type InvalidArgument struct{}
+
+func (e InvalidArgument) Error() string {
+	return fmt.Sprint("invalid arguments")
+}
+
+// InvalidMaxKeys - invalid maxkeys provided
+type InvalidMaxKeys struct {
+	Maxkeys int
+}
+
+func (e InvalidMaxKeys) Error() string {
+	return fmt.Sprintf("invalid maxkeys %v", e.Maxkeys)
+}
+
+// InvalidAuthorizationKey - invalid authorization key
+type InvalidAuthorizationKey struct{}
+
+func (e InvalidAuthorizationKey) Error() string {
+	return fmt.Sprint("invalid authorization key")
+}
+
+// AuthorizationKeyEmpty - empty auth key provided
+type AuthorizationKeyEmpty struct{}
+
+func (e AuthorizationKeyEmpty) Error() string {
+	return fmt.Sprint("authorization key empty")
+}
+
+// InvalidRange - invalid range requested
+type InvalidRange struct {
+	Offset int64
+}
+
+func (e InvalidRange) Error() string {
+	return fmt.Sprintf("invalid range value %v", e.Offset)
+}
+
+// BucketNotFound - bucket requested does not exist
+type BucketNotFound struct {
+	Bucket string
+}
+
+func (e BucketNotFound) Error() string {
+	return fmt.Sprintf("bucket: %v not found", e.Bucket)
+}
+
+// ObjectNotFound - object requested does not exist
+type ObjectNotFound struct {
+	Bucket string
+	Object string
+}
+
+func (e ObjectNotFound) Error() string {
+	return fmt.Sprintf("object %v not found at bucket: %v", e.Bucket, e.Object)
 }

@@ -39,9 +39,7 @@ limitations under the License.
 package s3
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"net/http"
@@ -81,7 +79,7 @@ func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
 // PutBucket - create new bucket
 func (c *s3Client) PutBucket(bucket string) error {
 	if !IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
-		return errors.New("invalid bucket")
+		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 	req := newReq(u)
@@ -102,10 +100,10 @@ func (c *s3Client) PutBucket(bucket string) error {
 
 func (c *s3Client) StatBucket(bucket string) error {
 	if bucket == "" {
-		return iodine.New(errors.New("invalid argument"), nil)
+		return iodine.New(client.InvalidArgument{}, nil)
 	}
 	if !IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
-		return errors.New("invalid bucket")
+		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 	req := newReq(u)
@@ -119,7 +117,7 @@ func (c *s3Client) StatBucket(bucket string) error {
 
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return iodine.New(os.ErrNotExist, nil)
+		return iodine.New(client.BucketNotFound{Bucket: bucket}, nil)
 	case http.StatusOK:
 		return nil
 	default:

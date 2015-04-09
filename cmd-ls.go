@@ -61,43 +61,33 @@ func doListCmd(ctx *cli.Context) {
 
 	urlStr, err := parseURL(ctx.Args().First())
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 
 	bucketName, objectName, err := url2Object(urlStr)
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 
 	client, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 	}
 
 	if bucketName == "" { // List all buckets
 		buckets, err := client.ListBuckets()
 		if err != nil {
-			if globalDebugFlag {
-				log.Debug.Println(iodine.New(err, nil))
-			}
+			log.Debug.Println(iodine.New(err, nil))
 			fatal(err)
 		}
 		printBuckets(buckets)
 	} else {
 		items, err = client.ListObjects(bucketName, objectName)
 		if err != nil {
-			if globalDebugFlag {
-				log.Debug.Println(iodine.New(err, nil))
-			}
+			log.Debug.Println(iodine.New(err, nil))
 			fatal(err)
 		}
 		printObjects(items)

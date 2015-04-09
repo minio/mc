@@ -117,9 +117,7 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 
 	for msg := range doPutMultiTarget(targetURLs, md5Hex, sourceSize, targetReaders) {
 		if msg.err != nil {
-			if globalDebugFlag {
-				log.Debug.Println(msg.err)
-			}
+			log.Debug.Println(msg.err)
 			fatal(msg.err)
 		}
 		info("Done")
@@ -135,9 +133,7 @@ func doCopyCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
 	urlList, err := parseURLs(ctx)
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 		return
 	}
@@ -146,9 +142,7 @@ func doCopyCmd(ctx *cli.Context) {
 
 	err = multiCopy(targetURLs, sourceURL)
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
+		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
 		return
 	}
