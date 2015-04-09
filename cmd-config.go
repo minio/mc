@@ -37,6 +37,7 @@ type hostConfig struct {
 
 type mcConfig struct {
 	Version     uint
+	MCVersion   string
 	DefaultHost string
 	Hosts       map[string]hostConfig
 	Aliases     map[string]string
@@ -231,6 +232,7 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	case len(alias) == 0:
 		config = &mcConfig{
 			Version:     currentConfigVersion,
+			MCVersion:   "0.9",
 			DefaultHost: "https://s3.amazonaws.com",
 			Hosts: map[string]hostConfig{
 				"http*://s3*.amazonaws.com": {

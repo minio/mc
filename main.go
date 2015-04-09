@@ -94,7 +94,6 @@ func main() {
 	app.Before = func(c *cli.Context) error {
 		globalQuietFlag = c.GlobalBool("quiet")
 		globalDebugFlag = c.GlobalBool("debug")
-		log.Println(globalDebugFlag)
 		if globalDebugFlag {
 			app.ExtraInfo = getSystemData()
 		} else {
