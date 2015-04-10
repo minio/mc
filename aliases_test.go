@@ -25,8 +25,8 @@ func (s *MySuite) TestIsvalidAliasName(c *C) {
 
 func (s *MySuite) TestInvalidUrlInAliasExpand(c *C) {
 	c.Skip("Test still being written")
-	invalidUrl := "foohello"
-	url, err := aliasExpand(invalidUrl, nil)
+	invalidURL := "foohello"
+	url, err := aliasExpand(invalidURL, nil)
 	c.Assert(err, Not(IsNil))
 	log.Println(url)
 	log.Println(err)
