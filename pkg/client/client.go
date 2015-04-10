@@ -17,8 +17,8 @@
 package client
 
 import (
-	"fmt"
 	"io"
+	"strconv"
 	"time"
 )
 
@@ -79,7 +79,7 @@ type InvalidMaxKeys struct {
 }
 
 func (e InvalidMaxKeys) Error() string {
-	return "invalid maxkeys: " + e.MaxKeys
+	return "invalid maxkeys: " + strconv.Itoa(e.MaxKeys)
 }
 
 // InvalidAuthorizationKey - invalid authorization key
@@ -102,7 +102,7 @@ type InvalidRange struct {
 }
 
 func (e InvalidRange) Error() string {
-	return "invalid range value %v", e.Offset
+	return "invalid range offset: " + strconv.FormatInt(e.Offset, 10)
 }
 
 // BucketNotFound - bucket requested does not exist
@@ -111,7 +111,7 @@ type BucketNotFound struct {
 }
 
 func (e BucketNotFound) Error() string {
-	return "bucket: %v not found", e.Bucket
+	return "bucket " + e.Bucket + " not found"
 }
 
 // ObjectNotFound - object requested does not exist
