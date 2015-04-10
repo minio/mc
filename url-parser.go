@@ -22,6 +22,7 @@ import (
 	"net/url"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -158,7 +159,7 @@ func parseURLs(c *cli.Context) (urlStr []string, err error) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to get config")
+		console.Fatalln("Unable to get config")
 	}
 	for _, arg := range c.Args() {
 		u, err := parseURL(arg, config.Aliases)

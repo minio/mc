@@ -32,8 +32,7 @@ func isValidAliasName(aliasName string) bool {
 	return validAliasName.MatchString(aliasName)
 }
 
-// TODO fkautz: is this still relevant?
-// aliasExpand expands aliased (name:/path) to full URL
+// aliasExpand expands aliased (name:/path) to full URL, used by url-parser
 func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, err error) {
 	url, err := url.Parse(aliasedURL)
 	if err != nil {

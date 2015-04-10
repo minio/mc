@@ -23,6 +23,7 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -31,15 +32,17 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
-// printBuckets lists buckets and its meta-dat
+// printBuckets lists buckets and its metadata
 func printBuckets(v []*client.Bucket) {
 	for _, b := range v {
+		// TODO: escape sequences internally in color package clobber the output, format this prior
+		// find a way out
 		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Local().Format(printDate), "", b.Name)
-		info(msg)
+		console.Infoln(msg)
 	}
 }
 
-// printObjects prints a meta-data of a list of objects
+// printObjects prints a metadata of a list of objects
 func printObjects(v []*client.Item) {
 	if len(v) > 0 {
 		// Items are already sorted
@@ -51,8 +54,10 @@ func printObjects(v []*client.Item) {
 
 // printObject prints object meta-data
 func printObject(date time.Time, v int64, key string) {
+	// TODO: escape sequences internally in color package clobber the output, format this prior
+	// find a way out
 	msg := fmt.Sprintf("%23s %13s %s", date.Local().Format(printDate), pb.FormatBytes(v), key)
-	info(msg)
+	console.Infoln(msg)
 }
 
 // doListCmd lists objects inside a bucket
@@ -66,38 +71,38 @@ func doListCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to get config")
+		console.Fatalln("Unable to get config")
 	}
 	urlStr, err := parseURL(ctx.Args().First(), config.Aliases)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 
 	bucketName, objectName, err := url2Object(urlStr)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 
 	client, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 
 	if bucketName == "" { // List all buckets
 		buckets, err := client.ListBuckets()
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			fatal(err)
+			console.Fatalln(err)
 		}
 		printBuckets(buckets)
 	} else {
 		items, err = client.ListObjects(bucketName, objectName)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			fatal(err)
+			console.Fatalln(err)
 		}
 		printObjects(items)
 	}

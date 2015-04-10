@@ -19,6 +19,7 @@ package main
 import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client/s3"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -32,34 +33,34 @@ func doMakeBucketCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to get config")
+		console.Fatalln("Unable to get config")
 	}
 	urlStr, err := parseURL(ctx.Args().First(), config.Aliases)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 
 	bucket, err := url2Bucket(urlStr)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 
 	clnt, err := getNewClient(globalDebugFlag, urlStr)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 
 	if !s3.IsValidBucketName(bucket) {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(errInvalidbucket)
+		console.Fatalln(errInvalidbucket)
 	}
 
 	err = clnt.PutBucket(bucket)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 }

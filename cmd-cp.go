@@ -24,6 +24,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -117,9 +118,9 @@ func multiCopy(targetURLs []string, sourceURL string) (err error) {
 	for msg := range doPutMultiTarget(targetURLs, md5Hex, sourceSize, targetReaders) {
 		if msg.err != nil {
 			log.Debug.Println(msg.err)
-			fatal(msg.err)
+			console.Fatalln(msg.err)
 		}
-		info("Done")
+		console.Infoln("Done")
 	}
 	return nil
 }
@@ -133,8 +134,7 @@ func doCopyCmd(ctx *cli.Context) {
 	urlList, err := parseURLs(ctx)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
-		return
+		console.Fatalln(err)
 	}
 	sourceURL := urlList[0]   // First arg is source
 	targetURLs := urlList[1:] // 1 or more targets
@@ -142,8 +142,6 @@ func doCopyCmd(ctx *cli.Context) {
 	err = multiCopy(targetURLs, sourceURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
-		return
+		console.Fatalln(err)
 	}
-	return
 }

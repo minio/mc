@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -53,7 +54,7 @@ func getMcConfigDir() string {
 	u, err := user.Current()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to obtain user's home directory")
+		console.Fatalln("Unable to obtain user's home directory")
 	}
 	var p string
 	// For windows the path is slightly differently
@@ -299,7 +300,7 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 func getBashCompletionCmd() {
 	var b bytes.Buffer
 	if os.Getenv("SHELL") != "/bin/bash" {
-		fatal("Unsupported shell for bash completion detected.. exiting")
+		console.Fatalln("Unsupported shell for bash completion detected.. exiting")
 	}
 	b.WriteString(mcBashCompletion)
 	f := getMcBashCompletionFilename()
@@ -307,17 +308,17 @@ func getBashCompletionCmd() {
 	defer fl.Close()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to create bash completion file")
+		console.Fatalln("Unable to create bash completion file")
 	}
 	_, err = fl.Write(b.Bytes())
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to write bash completion file")
+		console.Fatalln("Unable to write bash completion file")
 	}
 	msg := "\nConfiguration written to " + f
 	msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
 	msg = msg + "$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc"
-	info(msg)
+	console.Infoln(msg)
 }
 
 // saveConfigCmd writes config file to disk
@@ -325,14 +326,14 @@ func saveConfigCmd(ctx *cli.Context) {
 	err := saveConfig(ctx)
 	if os.IsExist(iodine.ToError(err)) {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("mc: Configuration file", getMcConfigFilename(), "already exists")
+		console.Fatalf("mc: Configuration file %s already exists\n", getMcConfigFilename())
 	}
 
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("mc: Unable to generate config file", getMcConfigFilename())
+		console.Fatalf("mc: Unable to generate config file %s\n", getMcConfigFilename())
 	}
-	info("Configuration written to " + getMcConfigFilename() + ". Please update your access credentials.")
+	console.Infof("Configuration written to %s. Please update your access credentials.\n", getMcConfigFilename())
 }
 
 // doConfigCmd is the handler for "mc config" sub-command.

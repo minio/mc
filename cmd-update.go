@@ -27,6 +27,7 @@ import (
 	"net/http"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -55,28 +56,28 @@ func doUpdateCmd(ctx *cli.Context) {
 	req, err := getReq(mcUpdateURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 	res, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 	if res.StatusCode != http.StatusOK {
 		msg := fmt.Sprintf("received invalid http status: %v", res.StatusCode)
 		log.Debug.Println(iodine.New(errors.New(msg), nil))
-		fatal(msg)
+		console.Fatalln(msg)
 	}
 	ures := updateResults{}
 	err = json.NewDecoder(io.TeeReader(res.Body, ioutil.Discard)).Decode(&ures)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 	latest, err := time.Parse(time.RFC3339Nano, ures.LatestBuild)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		console.Fatalln(err)
 	}
 	if latest.After(ctx.App.Compiled) {
 		// FIXME : find some proper versioning scheme here

@@ -27,6 +27,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -36,7 +37,7 @@ func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to obtain user's home directory")
+		console.Fatalln("Unable to obtain user's home directory")
 	}
 
 	if !isMcConfigExist() {
@@ -48,13 +49,13 @@ func checkConfig() {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to read config file")
+		console.Fatalf("Unable to read config file: %s\n", getMcConfigFilename())
 	}
 
 	err = checkMcConfig(config)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal("Error in config file:", getMcConfigFilename())
+		console.Fatalf("Error in config file: %s\n", getMcConfigFilename())
 	}
 }
 
@@ -105,7 +106,7 @@ func main() {
 	}
 	app.After = func(ctx *cli.Context) error {
 		if !isMcConfigExist() && ctx.Command.Name != "config" {
-			fatal("Error: mc is not configured. Please run \"mc config\".")
+			console.Fatalln("Error: mc is not configured. Please run \"mc config\".")
 		}
 
 		return nil
