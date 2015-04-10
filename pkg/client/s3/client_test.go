@@ -47,11 +47,6 @@ import (
 	"github.com/minio-io/mc/pkg/client"
 )
 
-// Date format
-const (
-	iso8601Format = "2006-01-02T15:04:05.000Z"
-)
-
 func TestParseBuckets(t *testing.T) {
 	res := "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListAllMyBucketsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Owner><ID>ownerIDField</ID><DisplayName>bobDisplayName</DisplayName></Owner><Buckets><Bucket><Name>bucketOne</Name><CreationDate>2006-06-21T07:04:31.000Z</CreationDate></Bucket><Bucket><Name>bucketTwo</Name><CreationDate>2006-06-21T07:04:32.000Z</CreationDate></Bucket></Buckets></ListAllMyBucketsResult>"
 	buckets, err := listAllMyBuckets(strings.NewReader(res))
@@ -62,8 +57,8 @@ func TestParseBuckets(t *testing.T) {
 		t.Errorf("num parsed buckets = %d; want %d", g, w)
 	}
 
-	t1, _ := time.Parse(iso8601Format, "2006-06-21T07:04:31.000Z")
-	t2, _ := time.Parse(iso8601Format, "2006-06-21T07:04:32.000Z")
+	t1, err := time.Parse(time.RFC3339, "2006-06-21T07:04:31.000Z")
+	t2, err := time.Parse(time.RFC3339, "2006-06-21T07:04:32.000Z")
 	want := []*client.Bucket{
 		{Name: "bucketOne", CreationDate: t1},
 		{Name: "bucketTwo", CreationDate: t2},
