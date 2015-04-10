@@ -21,7 +21,3 @@ var (
 	globalQuietFlag = false // Quiet flag set via command line
 	globalDebugFlag = false // Debug flag set via command line
 )
-
-const (
-	globalMaxKeys = 1000 // Maximum number of keys to fetch per request
-)

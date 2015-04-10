@@ -24,12 +24,6 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-// Alias for S3 hosts, saved in mc json configuration file
-type mcAlias struct {
-	Name string // Any alphanumeric string /^[a-zA-Z0-9-_]+$/
-	URL  string // Eg.: https://s3.amazonaws.com/
-}
-
 // validAliasURL: use net/url.Parse to validate
 var validAliasName = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$")
 
