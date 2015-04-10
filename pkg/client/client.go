@@ -63,37 +63,37 @@ type InvalidBucketName struct {
 }
 
 func (e InvalidBucketName) Error() string {
-	return fmt.Sprintf("Invalid bucketname %v", e.Bucket)
+	return "Invalid bucketname " + e.Bucket
 }
 
 // InvalidArgument - bad arguments provided
 type InvalidArgument struct{}
 
 func (e InvalidArgument) Error() string {
-	return fmt.Sprint("invalid arguments")
+	return "invalid arguments"
 }
 
 // InvalidMaxKeys - invalid maxkeys provided
 type InvalidMaxKeys struct {
-	Maxkeys int
+	MaxKeys int
 }
 
 func (e InvalidMaxKeys) Error() string {
-	return fmt.Sprintf("invalid maxkeys %v", e.Maxkeys)
+	return "invalid maxkeys: " + e.MaxKeys
 }
 
 // InvalidAuthorizationKey - invalid authorization key
 type InvalidAuthorizationKey struct{}
 
 func (e InvalidAuthorizationKey) Error() string {
-	return fmt.Sprint("invalid authorization key")
+	return "invalid authorization key"
 }
 
 // AuthorizationKeyEmpty - empty auth key provided
 type AuthorizationKeyEmpty struct{}
 
 func (e AuthorizationKeyEmpty) Error() string {
-	return fmt.Sprint("authorization key empty")
+	return "authorization key empty"
 }
 
 // InvalidRange - invalid range requested
@@ -102,7 +102,7 @@ type InvalidRange struct {
 }
 
 func (e InvalidRange) Error() string {
-	return fmt.Sprintf("invalid range value %v", e.Offset)
+	return "invalid range value %v", e.Offset
 }
 
 // BucketNotFound - bucket requested does not exist
@@ -111,7 +111,7 @@ type BucketNotFound struct {
 }
 
 func (e BucketNotFound) Error() string {
-	return fmt.Sprintf("bucket: %v not found", e.Bucket)
+	return "bucket: %v not found", e.Bucket
 }
 
 // ObjectNotFound - object requested does not exist
@@ -121,5 +121,5 @@ type ObjectNotFound struct {
 }
 
 func (e ObjectNotFound) Error() string {
-	return fmt.Sprintf("object %v not found at bucket: %v", e.Bucket, e.Object)
+	return "object " + e.Object + " not found in bucket " + e.Bucket
 }
