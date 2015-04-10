@@ -25,6 +25,7 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -37,7 +38,7 @@ func startBar(size int64) *pb.ProgressBar {
 	bar.ShowSpeed = true
 	bar.Callback = func(s string) {
 		// Colorize
-		infoCallback(s)
+		console.Info("\r" + s)
 	}
 	// Feels like wget
 	bar.Format("[=> ]")
