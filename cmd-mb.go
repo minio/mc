@@ -29,7 +29,12 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
 
-	urlStr, err := parseURL(ctx.Args().First())
+	config, err := getMcConfig()
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		fatal("Unable to get config")
+	}
+	urlStr, err := parseURL(ctx.Args().First(), config.Aliases)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		fatal(err)
