@@ -15,8 +15,9 @@ getdeps: checkdeps checkgopath
 	@go get github.com/golang/lint/golint && echo "Installed golint:"
 	@go get golang.org/x/tools/cmd/vet && echo "Installed vet:"
 	@go get github.com/fzipp/gocyclo && echo "Installed gocyclo:"
+	@go get github.com/remyoudompheng/go-misc/deadcode&& echo "Installed deadcode:"
 
-verifiers: getdeps vet fmt lint cyclo
+verifiers: getdeps vet fmt lint cyclo deadcode
 
 vet:
 	@echo "Running $@:"
@@ -32,6 +33,10 @@ lint:
 cyclo:
 	@echo "Running $@:"
 	@test -z "$$(gocyclo -over 15 . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+
+deadcode:
+	@echo "Running $@:"
+	@test -z "$$(deadcode | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
 
 pre-build:
 	@echo "Running pre-build:"
