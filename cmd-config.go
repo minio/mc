@@ -50,11 +50,10 @@ const (
 // be accessed via getMcConfig()
 var _config *mcConfig
 
-func getMcConfigDir() string {
+func getMcConfigDir() (string, error) {
 	u, err := user.Current()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to obtain user's home directory")
+		return "", iodine.New(err, nil)
 	}
 	var p string
 	// For windows the path is slightly differently
@@ -63,13 +62,31 @@ func getMcConfigDir() string {
 	} else {
 		p = path.Join(u.HomeDir, mcConfigDir)
 	}
-	// create the directory if it doesn't exist
-	os.MkdirAll(p, 0700)
-	return p
+	return p, nil
+}
+func getOrCreateMcConfigDir() (string, error) {
+	p, err := getMcConfigDir()
+	if err != nil {
+		return "", iodine.New(err, nil)
+	}
+	err = os.MkdirAll(p, 0700)
+	if err != nil {
+		return "", iodine.New(err, nil)
+	}
+	return p, nil
 }
 
-func getMcConfigFilename() string {
-	return path.Join(getMcConfigDir(), configFile)
+func getMcConfigPath() (string, error) {
+	dir, err := getMcConfigDir()
+	if err != nil {
+		return "", iodine.New(err, nil)
+	}
+	return path.Join(dir, configFile), nil
+}
+
+func mustGetMcConfigPath() string {
+	p, _ := getMcConfigPath()
+	return p
 }
 
 // getMcConfig returns the config data from file. Subsequent calls are
@@ -90,8 +107,11 @@ func getMcConfig() (cfg *mcConfig, err error) {
 // getMcConfig returns the config data from file. Subsequent calls are
 // cached in a private global variable
 func isMcConfigExist() bool {
-	configFile := getMcConfigFilename()
-	_, err := os.Stat(configFile)
+	configFile, err := getMcConfigPath()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(configFile)
 	if err != nil {
 		return false
 	}
@@ -134,7 +154,11 @@ func checkMcConfig(config *mcConfig) (err error) {
 
 // loadMcConfig decodes json configuration file to mcConfig structure
 func loadMcConfig() (config *mcConfig, err error) {
-	configFile := getMcConfigFilename()
+	configFile, err := getMcConfigPath()
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
 	_, err = os.Stat(configFile)
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -165,12 +189,17 @@ func saveConfig(ctx *cli.Context) error {
 		return iodine.New(err, nil)
 	}
 
-	err = os.MkdirAll(getMcConfigDir(), 0755)
-	if !os.IsExist(err) && err != nil {
+	_, err = getOrCreateMcConfigDir()
+	if err != nil {
 		return iodine.New(err, nil)
 	}
 
-	configFile, err := os.OpenFile(getMcConfigFilename(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	configPath, err := getMcConfigPath()
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+
+	configFile, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -326,14 +355,21 @@ func saveConfigCmd(ctx *cli.Context) {
 	err := saveConfig(ctx)
 	if os.IsExist(iodine.ToError(err)) {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Configuration file %s already exists\n", getMcConfigFilename())
+		configPath, _ := getMcConfigPath()
+		console.Fatalln("mc: Configuration file " + configPath + " already exists")
 	}
 
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Unable to generate config file %s\n", getMcConfigFilename())
+		configPath, _ := getMcConfigPath()
+		console.Fatalln("mc: Unable to generate config file", configPath)
 	}
-	console.Infof("Configuration written to %s. Please update your access credentials.\n", getMcConfigFilename())
+	configPath, err := getMcConfigPath()
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalln("mc: Unable to identify config file path")
+	}
+	console.Infof("Configuration written to " + configPath + ". Please update your access credentials.\n")
 }
 
 // doConfigCmd is the handler for "mc config" sub-command.

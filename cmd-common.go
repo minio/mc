@@ -27,6 +27,7 @@ import (
 	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // StartBar -- instantiate a progressbar
@@ -46,7 +47,12 @@ func startBar(size int64) *pb.ProgressBar {
 }
 
 func getMcBashCompletionFilename() string {
-	return path.Join(getMcConfigDir(), "mc.bash_completion")
+	configDir, err := getOrCreateMcConfigDir()
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		log.Fatalln("Unable to get mc config directory")
+	}
+	return path.Join(configDir, "mc.bash_completion")
 }
 
 // getTraceTransport -
