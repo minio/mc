@@ -194,31 +194,6 @@ func saveConfig(ctx *cli.Context) error {
 	return nil
 }
 
-// getBashCompletion -
-func getBashCompletion() {
-	var b bytes.Buffer
-	if os.Getenv("SHELL") != "/bin/bash" {
-		fatal("Unsupported shell for bash completion detected.. exiting")
-	}
-	b.WriteString(mcBashCompletion)
-	f := getMcBashCompletionFilename()
-	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	defer fl.Close()
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to create bash completion file")
-	}
-	_, err = fl.Write(b.Bytes())
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		fatal("Unable to write bash completion file")
-	}
-	msg := "\nConfiguration written to " + f
-	msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
-	msg = msg + "$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc\n"
-	info(msg)
-}
-
 func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 	accessKeyID := c.String("accesskeyid")
 	secretAccesskey := c.String("secretkey")

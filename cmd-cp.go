@@ -17,11 +17,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
-
-	"bytes"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
