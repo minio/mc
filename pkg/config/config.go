@@ -18,7 +18,7 @@ package config
 
 import "github.com/minio-io/minio/pkg/iodine"
 
-// Config
+// Config - configuration
 type Config struct {
 	Version uint            // Config version
 	Hosts   map[string]Auth // URL and their respective Auth map
@@ -27,7 +27,6 @@ type Config struct {
 
 // AddAlias - add a alias into existing alias list
 func (c *Config) AddAlias(aliasName string, aliasURL string) error {
-	c.Aliases = make(Aliases)
 	if c.Aliases.IsExists(aliasName) {
 		return iodine.New(AliasExists{Name: aliasName}, nil)
 	}
@@ -35,6 +34,7 @@ func (c *Config) AddAlias(aliasName string, aliasURL string) error {
 	return nil
 }
 
+// HostExists - check if host exists
 func (c *Config) HostExists(hostURL string) bool {
 	for host := range c.Hosts {
 		if host == hostURL {
@@ -44,7 +44,8 @@ func (c *Config) HostExists(hostURL string) bool {
 	return false
 }
 
-func (c *Config) AddAuth(hostURL, accessKeyID, secretAccessKey string) error {
+// AddHostAuth - add host authorization
+func (c *Config) AddHostAuth(hostURL, accessKeyID, secretAccessKey string) error {
 	if c.HostExists(hostURL) {
 		return iodine.New(HostExists{Name: hostURL}, nil)
 	}
@@ -55,6 +56,7 @@ func (c *Config) AddAuth(hostURL, accessKeyID, secretAccessKey string) error {
 	if !auth.IsValidAccessKey() || !auth.IsValidSecretKey() {
 		return iodine.New(InvalidAuthKeys{}, nil)
 	}
+	c.Aliases = make(Aliases)
 	c.Hosts = make(map[string]Auth)
 	c.Hosts[hostURL] = auth
 	return nil
