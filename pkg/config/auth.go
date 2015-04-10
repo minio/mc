@@ -1,13 +1,20 @@
 package config
 
+// Auth - authorization keys
 type Auth struct {
 	AccessKeyID     string
 	SecretAccessKey string
 }
 
+// exact key length
+const (
+	AccessKeyLength    = 20
+	SecretAccessLength = 40
+)
+
 // IsValidSecretKey - validate secret key
 func (a Auth) IsValidSecretKey() bool {
-	if len(a.SecretAccessKey) != 40 {
+	if len(a.SecretAccessKey) != SecretAccessLength {
 		return false
 	}
 	return true
@@ -15,7 +22,7 @@ func (a Auth) IsValidSecretKey() bool {
 
 // IsValidAccessKey - validate access key
 func (a Auth) IsValidAccessKey() bool {
-	if len(a.AccessKeyID) != 20 {
+	if len(a.AccessKeyID) != AccessKeyLength {
 		return false
 	}
 	// Is alphanumeric?

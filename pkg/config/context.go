@@ -81,6 +81,7 @@ func (c *Context) LoadConfig() error {
 	}
 }
 
+// New - instantiate a new config context
 func New(configPath, configFileName string) (*Context, error) {
 	if configPath == "" || strings.TrimSpace(configPath) == "" {
 		return nil, iodine.New(InvalidArgument{}, nil)
