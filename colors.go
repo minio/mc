@@ -29,11 +29,6 @@ func fatal(msgs ...interface{}) {
 	os.Exit(1)
 }
 
-func warning(msgs ...interface{}) {
-	yellow := color.New(color.FgYellow)
-	colorPrintln(yellow, msgs)
-}
-
 func info(msgs ...interface{}) {
 	if !globalQuietFlag {
 		green := color.New(color.FgGreen)
