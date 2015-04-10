@@ -105,25 +105,6 @@ func fixFileURL(urlStr string) (fixedURL string, err error) {
 
 }
 
-// url2Host extracts hostname from the URL.
-func url2Host(urlStr string) (host string, err error) {
-	if urlStr == "" {
-		return "", iodine.New(errEmptyURL, nil)
-	}
-
-	utype, e := getURLType(urlStr)
-	if e != nil || utype != urlFile {
-		return "", iodine.New(e, nil)
-	}
-
-	u, e := url.Parse(urlStr)
-	if e != nil {
-		return "", iodine.New(e, nil)
-	}
-
-	return u.Host, nil
-}
-
 // url2Object converts URL to bucket and objectname
 func url2Object(urlStr string) (bucketName, objectName string, err error) {
 	u, err := url.Parse(urlStr)

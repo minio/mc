@@ -308,7 +308,7 @@ func (cw *ansiColorWriter) Write(p []byte) (int, error) {
 	}
 
 	if cw.state == outsideCsiCode {
-		nw, err = cw.w.Write(p[first:len(p)])
+		nw, err = cw.w.Write(p[first:])
 	}
 
 	return r + nw + nc, err

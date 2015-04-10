@@ -19,8 +19,9 @@ package main
 import "errors"
 
 var (
+	// TODO remove, unused
 	// fs
-	errFskey = errors.New("Key is needed to get the file")
+	// errFskey = errors.New("Key is needed to get the file")
 
 	// url
 	errEmptyURL = errors.New("URL is empty")
@@ -31,8 +32,9 @@ var (
 	// url
 	errInvalidURL = errors.New("Invalid URL")
 
+	// TODO remove, unused
 	// host
-	errHostname = errors.New("No hostname specified")
+	// errHostname = errors.New("No hostname specified")
 
 	// common
 	errInvalidbucket = errors.New("Invalid bucket name")
