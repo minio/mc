@@ -17,8 +17,6 @@
 package main
 
 import (
-	"net/url"
-
 	"github.com/minio-io/cli"
 )
 
@@ -164,22 +162,6 @@ EXAMPLES:
 		},
 	}
 )
-
-type object struct {
-	scheme string // protocol type: possible values are http, https, nil
-	host   string
-	// Bucket name can also be a DNS name. "." is allowed, with certain restrictions.
-	// Read more at http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
-	bucket string
-	key    string
-	url    *url.URL
-}
-
-type cmdArgs struct {
-	quiet       bool
-	source      object
-	destination object
-}
 
 var options = []cli.Command{
 	cpCmd,
