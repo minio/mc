@@ -49,13 +49,13 @@ func checkConfig() {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("Unable to read config file: %s\n", getMcConfigFilename())
+		console.Fatalf("Unable to read config file: %s\n", mustGetMcConfigPath())
 	}
 
 	err = checkMcConfig(config)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("Error in config file: %s\n", getMcConfigFilename())
+		console.Fatalf("Error in config file: %s\n", mustGetMcConfigPath())
 	}
 }
 

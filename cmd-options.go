@@ -120,7 +120,7 @@ EXAMPLES:
 
 	configCmd = cli.Command{
 		Name:  "config",
-		Usage: "Generate configuration \"" + getMcConfigFilename() + "\" file.",
+		Usage: "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
 		Description: `Configure minio client configuration data. If your config
    file does not exist (the default location is ~/.auth), it will be
    automatically created for you. Note that the configure command only writes
