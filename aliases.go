@@ -32,8 +32,9 @@ func isValidAliasName(aliasName string) bool {
 	return validAliasName.MatchString(aliasName)
 }
 
+// TODO fkautz: is this still relevant?
 // aliasExpand expands aliased (name:/path) to full URL
-func aliasExpand(aliasedURL string) (newURL string, err error) {
+func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, err error) {
 	url, err := url.Parse(aliasedURL)
 	if err != nil {
 		// Not a valid URL. Return error
@@ -45,13 +46,7 @@ func aliasExpand(aliasedURL string) (newURL string, err error) {
 		return aliasedURL, nil
 	}
 
-	// load from json config file
-	config, err := getMcConfig()
-	if err != nil {
-		return "", iodine.New(err, nil)
-	}
-
-	for aliasName, expandedURL := range config.Aliases {
+	for aliasName, expandedURL := range aliases {
 		if strings.HasPrefix(aliasedURL, aliasName) {
 			// Match found. Expand it.
 			return strings.Replace(aliasedURL, aliasName+":", expandedURL, 1), nil

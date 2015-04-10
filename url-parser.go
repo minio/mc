@@ -23,6 +23,7 @@ import (
 
 	"github.com/minio-io/cli"
 	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // URLType defines supported storage protocols
@@ -134,9 +135,9 @@ func url2Bucket(urlStr string) (bucketName string, err error) {
 }
 
 // parseURL extracts URL string from a single cmd-line argument
-func parseURL(arg string) (urlStr string, err error) {
+func parseURL(arg string, aliases map[string]string) (urlStr string, err error) {
 	// Check and expand Alias
-	urlStr, err = aliasExpand(arg)
+	urlStr, err = aliasExpand(arg, aliases)
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
@@ -154,8 +155,13 @@ func parseURL(arg string) (urlStr string, err error) {
 
 // parseURL extracts multiple URL strings from a single cmd-line argument
 func parseURLs(c *cli.Context) (urlStr []string, err error) {
+	config, err := getMcConfig()
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		fatal("Unable to get config")
+	}
 	for _, arg := range c.Args() {
-		u, err := parseURL(arg)
+		u, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
