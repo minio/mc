@@ -2,7 +2,6 @@ package main
 
 import (
 	. "github.com/minio-io/check"
-	"log"
 	"testing"
 )
 
@@ -23,11 +22,33 @@ func (s *MySuite) TestIsvalidAliasName(c *C) {
 	c.Check(isValidAliasName("-fdslka"), Equals, false)
 }
 
-func (s *MySuite) TestInvalidUrlInAliasExpand(c *C) {
-	c.Skip("Test still being written")
-	invalidURL := "foohello"
-	url, err := aliasExpand(invalidURL, nil)
-	c.Assert(err, Not(IsNil))
-	log.Println(url)
-	log.Println(err)
+func (s *MySuite) TestEmptyExpansions(c *C) {
+	//	c.Skip("Test still being written")
+	url, err := aliasExpand("hello", nil)
+	c.Assert(url, Equals, "hello")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("minio://hello", nil)
+	c.Assert(url, Equals, "minio://hello")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("$#\\", nil)
+	c.Assert(url, Equals, "$#\\")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("foo:bar", map[string]string{"foo": "http://foo/"})
+	c.Assert(url, Equals, "http://foo/bar")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("myfoo:bar", map[string]string{"foo": "http://foo/"})
+	c.Assert(url, Equals, "myfoo:bar")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("", map[string]string{"foo": "http://foo/"})
+	c.Assert(url, Equals, "")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("hello", nil)
+	c.Assert(url, Equals, "hello")
+	c.Assert(err, IsNil)
 }
