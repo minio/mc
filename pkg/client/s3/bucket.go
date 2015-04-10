@@ -78,7 +78,7 @@ func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
 
 // PutBucket - create new bucket
 func (c *s3Client) PutBucket(bucket string) error {
-	if !IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
@@ -102,7 +102,7 @@ func (c *s3Client) StatBucket(bucket string) error {
 	if bucket == "" {
 		return iodine.New(client.InvalidArgument{}, nil)
 	}
-	if !IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)

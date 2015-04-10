@@ -36,7 +36,6 @@ limitations under the License.
  * limitations under the License.
  */
 
-// Package s3 implements a generic Amazon S3 client
 package s3
 
 import (
@@ -45,7 +44,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"encoding/xml"
@@ -117,7 +115,7 @@ func (c *s3Client) bucketURL(bucket string) string {
 	var url string
 	// TODO: Bucket names can contain ".".  This second check should be removed.
 	// when minio server supports buckets with "."
-	if IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
+	if client.IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
 		// if localhost use PathStyle
 		if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
 			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
@@ -168,21 +166,4 @@ func listAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
 		return nil, iodine.New(err, nil)
 	}
 	return res.Buckets.Bucket, nil
-}
-
-// IsValidBucketName reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
-// See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
-func IsValidBucketName(bucket string) bool {
-	if len(bucket) < 3 || len(bucket) > 63 {
-		return false
-	}
-	if bucket[0] == '.' || bucket[len(bucket)-1] == '.' {
-		return false
-	}
-	if match, _ := regexp.MatchString("\\.\\.", bucket); match == true {
-		return false
-	}
-	// We don't support buckets with '.' in them
-	match, _ := regexp.MatchString("^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", bucket)
-	return match
 }
