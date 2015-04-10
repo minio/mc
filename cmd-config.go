@@ -53,8 +53,7 @@ func getMcConfigDir() string {
 	u, err := user.Current()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		msg := fmt.Sprintf("Unable to obtain user's home directory. \nError: %s", err)
-		fatal(msg)
+		fatal("Unable to obtain user's home directory")
 	}
 	var p string
 	// For windows the path is slightly differently
@@ -207,12 +206,12 @@ func getBashCompletion() {
 	defer fl.Close()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		fatal("Unable to create bash completion file")
 	}
 	_, err = fl.Write(b.Bytes())
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		fatal(err)
+		fatal("Unable to write bash completion file")
 	}
 	msg := "\nConfiguration written to " + f
 	msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
@@ -332,17 +331,13 @@ func getBashCompletionCmd() {
 	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	defer fl.Close()
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
-		fatal(err)
+		log.Debug.Println(iodine.New(err, nil))
+		fatal("Unable to create bash completion file")
 	}
 	_, err = fl.Write(b.Bytes())
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
-		fatal(err)
+		log.Debug.Println(iodine.New(err, nil))
+		fatal("Unable to write bash completion file")
 	}
 	msg := "\nConfiguration written to " + f
 	msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
@@ -354,19 +349,13 @@ func getBashCompletionCmd() {
 func saveConfigCmd(ctx *cli.Context) {
 	err := saveConfig(ctx)
 	if os.IsExist(iodine.ToError(err)) {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
-		msg := fmt.Sprintf("mc: Configuration file [%s] already exists.", getMcConfigFilename())
-		fatal(msg)
+		log.Debug.Println(iodine.New(err, nil))
+		fatal("mc: Configuration file", getMcConfigFilename(), "already exists")
 	}
 
 	if err != nil {
-		if globalDebugFlag {
-			log.Debug.Println(iodine.New(err, nil))
-		}
-		msg := fmt.Sprintf("mc: Unable to generate config file [%s]. \nError: %v.", getMcConfigFilename(), err)
-		fatal(msg)
+		log.Debug.Println(iodine.New(err, nil))
+		fatal("mc: Unable to generate config file", getMcConfigFilename())
 	}
 	info("Configuration written to " + getMcConfigFilename() + ". Please update your access credentials.")
 }
