@@ -4,14 +4,14 @@ mc - Minio Client for S3 Compatible Object Storage released under [Apache licens
 
 ## Install
 
-```
+```sh
 # go get github.com/minio-io/mc
 ```
 
 ## Usage
 
 ### Commands
-```
+```sh
 $ mc help
 
 NAME:
@@ -63,7 +63,7 @@ GLOBAL OPTIONS:
 
 To generate bash completion for ``mc`` all you have to do is
 
-```
+```sh
 $ mc config --completion
 
 Configuration written to /home/user/.mc/mc.bash_completion
@@ -73,7 +73,7 @@ $ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc
 
 ```
 
-```
+```sh
 $ mc <TAB><TAB>
 config  cp         h          help       ls         mb
 ```
