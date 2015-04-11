@@ -1,6 +1,7 @@
 /*
  * QConfig - Quick way to implement a configuration file
- * (C) 2015 Minio, Inc.
+ *
+ * Minimalist Object Storage, (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +18,6 @@
 
 package qconfig
 
-// package main
-
 import (
 	"errors"
 	"fmt"
@@ -29,25 +28,51 @@ import (
 	"io/ioutil"
 )
 
+// Configure - generic config interface functions
 type Configure interface {
+	Int
+	Float64
+	String
+	StringSlice
+	Map
 	GetVersion() Version
-	SetInt(string, int)
-	GetInt(string) int
-	SetIntList(string, []int)
-	GetIntList(string) []int
-	SetFloat64(string, float64)
-	GetFloat64(string) float64
-	SetString(string, string)
-	GetString(string) string
-	SetStringList(string, []string)
-	GetStringList(string) []string
-	SetMapString(string, map[string]string)
-	GetMapString(string) map[string]string
-	SetMapStringList(string, map[string][]string)
-	GetMapStringList(string) map[string][]string
 	SaveConfig(string) error
 	LoadConfig(string) error
 	String() string
+}
+
+// Int - integer generic interface functions for qconfig
+type Int interface {
+	SetInt(string, int)
+	GetInt(string) int
+	SetIntSlice(string, []int)
+	GetIntSlice(string) []int
+}
+
+// Float64 - float64 generic interface functions for qconfig
+type Float64 interface {
+	SetFloat64(string, float64)
+	GetFloat64(string) float64
+}
+
+// String - string generic interface functions for qconfig
+type String interface {
+	SetString(string, string)
+	GetString(string) string
+}
+
+// StringSlice - string slice generic interface functions for qconfig
+type StringSlice interface {
+	SetStringSlice(string, []string)
+	GetStringSlice(string) []string
+}
+
+// Map - map generic interface functions for qconfig
+type Map interface {
+	SetMapString(string, map[string]string)
+	GetMapString(string) map[string]string
+	SetMapStringSlice(string, map[string][]string)
+	GetMapStringSlice(string) map[string][]string
 }
 
 // Version info
@@ -57,20 +82,51 @@ type Version struct {
 	Patch int
 }
 
-// Quick Config
+// GetMajor version
+func (v Version) GetMajor() int {
+	return v.Major
+}
+
+// GetMinor version
+func (v Version) GetMinor() int {
+	return v.Minor
+}
+
+// GetPatch version
+func (v Version) GetPatch() int {
+	return v.Patch
+}
+
+// String - get version string
+func (v Version) String() string {
+	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+}
+
+// Config -
 type Config map[string]interface{}
 
-func NewConfig(version Version) Configure {
+// NewConfig - instantiate a new config
+func NewConfig(major, minor, patch int) Configure {
+	// error condition
+	if major < 0 || minor < 0 || patch < 0 {
+		return nil
+	}
 	config := make(Config)
-	var verStr string
-	verStr = fmt.Sprintf("%d.%d.%d", version.Major, version.Minor, version.Patch)
-	config["Version"] = verStr
+	version := Version{
+		Major: major,
+		Minor: minor,
+		Patch: patch,
+	}
+	config["Version"] = version.String()
 	return &config
 }
 
 // GetVersion returns the current config file format version
 func (c Config) GetVersion() Version {
-	val, _ := c["Version"].(string)
+	val, ok := c["Version"].(string)
+	if !ok {
+		return Version{}
+	}
 	var version Version
 	fmt.Sscanf(val, "%d.%d.%d", &version.Major, &version.Minor, &version.Patch)
 	return version
@@ -87,14 +143,14 @@ func (c Config) GetInt(key string) int {
 	return val
 }
 
-// GetIntList returns list of int values
-func (c Config) GetIntList(key string) []int {
+// GetIntSlice returns list of int values
+func (c Config) GetIntSlice(key string) []int {
 	val, _ := c[key].([]int)
 	return val
 }
 
-// SetIntList sets list of int values
-func (c *Config) SetIntList(key string, values []int) {
+// SetIntSlice sets list of int values
+func (c *Config) SetIntSlice(key string, values []int) {
 	(*c)[key] = values
 }
 
@@ -120,13 +176,13 @@ func (c Config) GetString(key string) string {
 	return val
 }
 
-// SetStringList sets list of strings
-func (c *Config) SetStringList(key string, values []string) {
+// SetStringSlice sets list of strings
+func (c *Config) SetStringSlice(key string, values []string) {
 	(*c)[key] = values
 }
 
-// GetStringList returns list of strings
-func (c Config) GetStringList(key string) []string {
+// GetStringSlice returns list of strings
+func (c Config) GetStringSlice(key string) []string {
 	val, _ := c[key].([]string)
 	return val
 }
@@ -142,13 +198,13 @@ func (c Config) GetMapString(key string) map[string]string {
 	return val
 }
 
-//SetMapStringList sets a map of string list
-func (c *Config) SetMapStringList(key string, value map[string][]string) {
+//SetMapStringSlice sets a map of string list
+func (c *Config) SetMapStringSlice(key string, value map[string][]string) {
 	(*c)[key] = value
 }
 
-//GetMapStringList returns a map of string list
-func (c Config) GetMapStringList(key string) map[string][]string {
+//GetMapStringSlice returns a map of string list
+func (c Config) GetMapStringSlice(key string) map[string][]string {
 	val, _ := c[key].(map[string][]string)
 	return val
 }
@@ -234,7 +290,7 @@ func main() {
 
 	//cfg.SaveConfig("test.json")
 
-	cfg.SetStringList("MyDonut", []string{"/media/disk1", "/media/disk2", "/media/badDisk99", "/media/badDisk100"})
+	cfg.SetStringSlice("MyDonut", []string{"/media/disk1", "/media/disk2", "/media/badDisk99", "/media/badDisk100"})
 	cfg.SetString("MyDonut1", "/media/disk1")
 	cfg.SaveConfig("test.json")
 
