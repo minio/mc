@@ -61,13 +61,16 @@ func (c *s3Client) Put(bucket, key, md5HexString string, size int64, contents io
 	req := newReq(c.keyURL(bucket, key))
 	req.Method = "PUT"
 	req.ContentLength = size
-
 	req.Body = ioutil.NopCloser(contents)
-	md5, err := hex.DecodeString(md5HexString)
-	if err != nil {
-		return iodine.New(err, nil)
+
+	// set Content-MD5 only if md5 is provided
+	if strings.TrimSpace(md5HexString) != "" {
+		md5, err := hex.DecodeString(md5HexString)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
 	}
-	req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
 	c.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)

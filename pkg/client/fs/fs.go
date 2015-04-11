@@ -2,7 +2,7 @@
  * Minimalist Object Storage, (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * you may not use this fs except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package file
+package fs
 
 import (
 	"io"
@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,20 +30,17 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-type fileClient struct {
-	// Supports URL in following formats
-	//  - http://<ipaddress>/<bucketname>/<object>
-	//  - http://<bucketname>.<domain>/<object>
+type fsClient struct {
 	*url.URL
 }
 
-// GetNewClient -
+// GetNewClient - instantiate a new fs client
 func GetNewClient(path string) client.Client {
 	u, err := url.Parse(path)
 	if err != nil {
 		return nil
 	}
-	return &fileClient{u}
+	return &fsClient{u}
 }
 
 /// Object operations
@@ -67,7 +65,7 @@ func isValidObject(bucket, object string) (string, os.FileInfo, error) {
 }
 
 // Put - upload new object to bucket
-func (f *fileClient) Put(bucket, object, md5HexString string, size int64, contents io.Reader) error {
+func (f *fsClient) Put(bucket, object, md5HexString string, size int64, contents io.Reader) error {
 	// handle md5HexString match internally
 	if bucket == "" || object == "" {
 		return iodine.New(client.InvalidArgument{}, nil)
@@ -76,14 +74,14 @@ func (f *fileClient) Put(bucket, object, md5HexString string, size int64, conten
 	if size < 0 {
 		return iodine.New(client.InvalidArgument{}, nil)
 	}
-	file, err := os.OpenFile(objectPath, os.O_CREATE|os.O_EXCL, 0600)
+	fs, err := os.Create(objectPath)
 	if os.IsExist(err) {
 		return iodine.New(client.ObjectExists{Bucket: bucket, Object: object}, nil)
 	}
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	_, err = io.CopyN(file, contents, size)
+	_, err = io.CopyN(fs, contents, size)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -91,12 +89,12 @@ func (f *fileClient) Put(bucket, object, md5HexString string, size int64, conten
 }
 
 // Get - download an object from bucket
-func (f *fileClient) Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error) {
+func (f *fsClient) Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error) {
 	objectPath, st, err := isValidObject(bucket, object)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	body, err = os.OpenFile(objectPath, os.O_RDONLY, 0600)
+	body, err = os.Open(objectPath)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -106,7 +104,7 @@ func (f *fileClient) Get(bucket, object string) (body io.ReadCloser, size int64,
 }
 
 // GetPartial - download a partial object from bucket
-func (f *fileClient) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
+func (f *fsClient) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
@@ -114,7 +112,7 @@ func (f *fileClient) GetPartial(bucket, key string, offset, length int64) (body 
 }
 
 // StatObject -
-func (f *fileClient) StatObject(bucket, object string) (size int64, date time.Time, reterr error) {
+func (f *fsClient) StatObject(bucket, object string) (size int64, date time.Time, reterr error) {
 	_, st, err := isValidObject(bucket, object)
 	if size < 0 {
 		return 0, date, iodine.New(client.InvalidArgument{}, nil)
@@ -128,7 +126,7 @@ func (f *fileClient) StatObject(bucket, object string) (size int64, date time.Ti
 /// Bucket operations
 
 // ListBuckets - get list of buckets
-func (f *fileClient) ListBuckets() ([]*client.Bucket, error) {
+func (f *fsClient) ListBuckets() ([]*client.Bucket, error) {
 	buckets, err := ioutil.ReadDir(f.Path)
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -145,12 +143,42 @@ func (f *fileClient) ListBuckets() ([]*client.Bucket, error) {
 }
 
 // ListObjects - get a list of objects
-func (f *fileClient) ListObjects(bucket, keyPrefix string) (items []*client.Item, err error) {
-	return nil, iodine.New(client.APINotImplemented{API: "ListObjects"}, nil)
+func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err error) {
+	visitFS := func(fp string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err // fatal
+		}
+		if fi.IsDir() {
+			return nil // not a fs skip
+		}
+		if prefix != "" {
+			if strings.Contains(fp, prefix) {
+				item := &client.Item{
+					Key:          fp,
+					LastModified: fi.ModTime(),
+					Size:         fi.Size(),
+				}
+				items = append(items, item)
+			}
+		} else {
+			item := &client.Item{
+				Key:          fp,
+				LastModified: fi.ModTime(),
+				Size:         fi.Size(),
+			}
+			items = append(items, item)
+		}
+		return nil
+	}
+	err = filepath.Walk(bucket, visitFS)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	return items, nil
 }
 
 // PutBucket - create a new bucket
-func (f *fileClient) PutBucket(bucket string) error {
+func (f *fsClient) PutBucket(bucket string) error {
 	if bucket == "" || strings.TrimSpace(bucket) == "" {
 		return iodine.New(client.InvalidArgument{}, nil)
 	}
@@ -168,7 +196,7 @@ func (f *fileClient) PutBucket(bucket string) error {
 }
 
 // StatBucket -
-func (f *fileClient) StatBucket(bucket string) error {
+func (f *fsClient) StatBucket(bucket string) error {
 	if bucket == "" {
 		return iodine.New(client.InvalidArgument{}, nil)
 	}
