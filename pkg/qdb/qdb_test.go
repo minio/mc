@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-package qconfig
+package qdb
 
 import (
+	"os"
 	"testing"
 
 	. "github.com/minio-io/check"
@@ -38,6 +39,7 @@ func (s *MySuite) TestVersion(c *C) {
 }
 
 func (s *MySuite) TestSaveLoad(c *C) {
+	defer os.RemoveAll("test.json")
 	version := Version{1, 0, 0}
 
 	cfg := NewConfig(version)

@@ -1,5 +1,5 @@
 /*
- * QConfig - Quick way to implement a configuration file
+ * qdb - Quick way to implement a configuration file
  *
  * Minimalist Object Storage, (C) 2015 Minio, Inc.
  *
@@ -16,20 +16,21 @@
  * limitations under the License.
  */
 
-package qconfig
+package qdb
 
 import (
 	"errors"
 	"fmt"
 	"os"
 	"reflect"
+	"sync"
 
 	"encoding/json"
 	"io/ioutil"
 )
 
-// Configure - generic config interface functions
-type Configure interface {
+// Store - generic config interface functions
+type Store interface {
 	Int
 	Float64
 	String
@@ -96,8 +97,11 @@ func Str2Version(verStr string) Version {
 	return v
 }
 
-// Config -
-type Config map[string]interface{}
+// qstore - implements qdb.Store interface
+type qstore struct {
+	store map[string]interface{}
+	lock  *sync.RWMutex
+}
 
 // NewConfig - instantiate a new config
 func NewConfig(version Version) Configure {
@@ -105,14 +109,16 @@ func NewConfig(version Version) Configure {
 	if version.Major == 0 {
 		return nil
 	}
-	config := make(Config)
-	config["Version"] = version.String()
-	return &config
+	config := new(qstore)
+	config.store = make(map[string]interface{})
+	config.lock = new(sync.RWMutex)
+	config.store["Version"] = version.String()
+	return config
 }
 
 // GetVersion returns the current config file format version
 func (c Config) GetVersion() Version {
-	val, ok := c["Version"].(string)
+	val, ok := c.store["Version"].(string)
 	if !ok {
 		return Version{}
 	}
@@ -121,103 +127,114 @@ func (c Config) GetVersion() Version {
 
 // SetInt sets int value
 func (c *Config) SetInt(key string, value int) {
-	(*c)[key] = value
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = value
 }
 
 // GetInt returns int value
 func (c Config) GetInt(key string) int {
-	val, _ := c[key].(int)
+	val, _ := c.store[key].(int)
 	return val
 }
 
 // GetIntSlice returns list of int values
 func (c Config) GetIntSlice(key string) []int {
-	val, _ := c[key].([]int)
+	val, _ := c.store[key].([]int)
 	return val
 }
 
 // SetIntSlice sets list of int values
 func (c *Config) SetIntSlice(key string, values []int) {
-	(*c)[key] = values
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = values
 }
 
 // SetFloat64 sets 64-bit float value
 func (c *Config) SetFloat64(key string, value float64) {
-	(*c)[key] = value
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = value
 }
 
 // GetFloat64 returns 64-bit float value
 func (c Config) GetFloat64(key string) float64 {
-	val, _ := c[key].(float64)
+	val, _ := c.store[key].(float64)
 	return val
 }
 
 // SetFloat64Slice sets a list of 64-bit float values
 func (c *Config) SetFloat64Slice(key string, values []float64) {
-	(*c)[key] = values
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = values
 }
 
 // GetFloat64Slice returns a list of 64-bit float values
 func (c Config) GetFloat64Slice(key string) []float64 {
-	val, _ := c[key].([]float64)
+	val, _ := c.store[key].([]float64)
 	return val
 }
 
 // SetString sets string value
 func (c *Config) SetString(key string, value string) {
-	(*c)[key] = value
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = value
 }
 
 // GetString returns string value
 func (c Config) GetString(key string) string {
-	val, _ := c[key].(string)
+	val, _ := c.store[key].(string)
 	return val
 }
 
 // SetStringSlice sets list of strings
 func (c *Config) SetStringSlice(key string, values []string) {
-	(*c)[key] = values
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = values
 }
 
 // GetStringSlice returns list of strings
 func (c Config) GetStringSlice(key string) []string {
-	val, _ := c[key].([]string)
+	val, _ := c.store[key].([]string)
 	return val
 }
 
 //SetMapString sets a map of strings
 func (c *Config) SetMapString(key string, value map[string]string) {
-	(*c)[key] = value
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = value
 }
 
 //GetMapString returns a map of strings
 func (c Config) GetMapString(key string) map[string]string {
-	val, _ := c[key].(map[string]string)
+	val, _ := c.store[key].(map[string]string)
 	return val
 }
 
 //SetMapStringSlice sets a map of string list
 func (c *Config) SetMapStringSlice(key string, value map[string][]string) {
-	(*c)[key] = value
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = value
 }
 
 //GetMapStringSlice returns a map of string list
 func (c Config) GetMapStringSlice(key string) map[string][]string {
-	val, _ := c[key].(map[string][]string)
+	val, _ := c.store[key].(map[string][]string)
 	return val
 }
 
 // SaveConfig writes configuration data in JSON format to donut config file.
 func (c Config) SaveConfig(filename string) (err error) {
-	jsonConfig, err := json.MarshalIndent(c, "", "\t")
-	// yamlConfig, err := yaml.Marshal(c)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	jsonStore, err := json.MarshalIndent(c.store, "", "\t")
 	if err != nil {
-		return err
-	}
-
-	// err = os.MkdirAll(GetDonutConfigDir(), 0755)
-	err = os.MkdirAll(".", 0755)
-	if !os.IsExist(err) && err != nil {
 		return err
 	}
 
@@ -227,8 +244,7 @@ func (c Config) SaveConfig(filename string) (err error) {
 	}
 	defer file.Close()
 
-	_, err = file.Write(jsonConfig)
-	// _, err = file.Write(yamlConfig)
+	_, err = file.Write(jsonStore)
 	if err != nil {
 		return err
 	}
@@ -236,8 +252,11 @@ func (c Config) SaveConfig(filename string) (err error) {
 
 }
 
-// LoadConfig loads JSON config from file
+// LoadConfig - loads JSON config from file and also automatically merges new changes
 func (c *Config) LoadConfig(filename string) (err error) {
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+
 	_, err = os.Stat(filename)
 	if err != nil {
 		return err
@@ -248,56 +267,25 @@ func (c *Config) LoadConfig(filename string) (err error) {
 		return err
 	}
 
-	var loadedConfig Config
-	err = json.Unmarshal(data, &loadedConfig)
+	var loadedStore map[string]interface{}
+	err = json.Unmarshal(data, &loadedStore)
 	if err != nil {
 		return err
 	}
 
-	if !reflect.DeepEqual((*c)["Version"], loadedConfig["Version"]) {
+	if !reflect.DeepEqual((*c).store["Version"], loadedStore["Version"]) {
 		return errors.New("Version mismatch")
 	}
 
 	// Merge pre-set keys
-	for key := range loadedConfig {
-		(*c)[key] = loadedConfig[key]
+	for key := range loadedStore {
+		(*c).store[key] = loadedStore[key]
 	}
 	return nil
 }
 
 // String converts JSON config to printable string
 func (c Config) String() string {
-	// configBytes, _ := yaml.Marshal(c)
-	configBytes, _ := json.MarshalIndent(c, "", "\t")
+	configBytes, _ := json.MarshalIndent(c.store, "", "\t")
 	return string(configBytes)
 }
-
-/*
-func main() {
-
-	cfg := NewConfig(Version{1, 0, 0})
-
-	cfg.SetInt("mykey", 345)
-	fmt.Println(cfg.GetInt("mykey"))
-
-	cfg.SetString("mykeyQ", "Hello Q")
-	fmt.Println(cfg.GetString("mykeyQ"))
-
-	cfg.SetMapString("mymap", map[string]string{"mykey": "Hello Q"})
-	fmt.Println(cfg.GetMapString("mymap"))
-
-	//cfg.SaveConfig("test.json")
-
-	cfg.SetStringSlice("MyDonut", []string{"/media/disk1", "/media/disk2", "/media/badDisk99", "/media/badDisk100"})
-	cfg.SetString("MyDonut1", "/media/disk1")
-	cfg.SaveConfig("test.json")
-
-	newCfg := NewConfig(Version{1, 1, 0})
-	if err := newCfg.LoadConfig("test.json"); err != nil {
-		fmt.Printf("Error loading config, %s\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("%v\n", newCfg.String())
-}
-*/
