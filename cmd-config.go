@@ -63,6 +63,12 @@ func getMcConfigDir() (string, error) {
 		return path.Join(u.HomeDir, mcConfigDir), nil
 	}
 }
+
+func mustGetMcConfigDir() string {
+	p, _ := getMcConfigDir()
+	return p
+}
+
 func getOrCreateMcConfigDir() (string, error) {
 	p, err := getMcConfigDir()
 	if err != nil {

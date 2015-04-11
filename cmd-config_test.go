@@ -19,4 +19,18 @@ func (s *MySuite) TestGetMcConfigDir(c *C) {
 	} else {
 		c.Fail()
 	}
+	c.Assert(mustGetMcConfigDir(), Equals, dir)
+}
+
+func (s *MySuite) TestGetMcConfigPath(c *C) {
+	dir, err := getMcConfigPath()
+	c.Assert(err, IsNil)
+	if runtime.GOOS == "linux" {
+		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
+	} else if runtime.GOOS == "windows" {
+		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
+	} else {
+		c.Fail()
+	}
+	c.Assert(mustGetMcConfigPath(), Equals, dir)
 }
