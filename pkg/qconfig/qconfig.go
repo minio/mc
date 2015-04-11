@@ -33,7 +33,6 @@ type Configure interface {
 	Int
 	Float64
 	String
-	StringSlice
 	Map
 	GetVersion() Version
 	SaveConfig(string) error
@@ -53,16 +52,14 @@ type Int interface {
 type Float64 interface {
 	SetFloat64(string, float64)
 	GetFloat64(string) float64
+	SetFloat64Slice(string, []float64)
+	GetFloat64Slice(string) []float64
 }
 
 // String - string generic interface functions for qconfig
 type String interface {
 	SetString(string, string)
 	GetString(string) string
-}
-
-// StringSlice - string slice generic interface functions for qconfig
-type StringSlice interface {
 	SetStringSlice(string, []string)
 	GetStringSlice(string) []string
 }
@@ -82,24 +79,21 @@ type Version struct {
 	Patch int
 }
 
-// GetMajor version
-func (v Version) GetMajor() int {
-	return v.Major
-}
-
-// GetMinor version
-func (v Version) GetMinor() int {
-	return v.Minor
-}
-
-// GetPatch version
-func (v Version) GetPatch() int {
-	return v.Patch
+// Equal compares for equality between two version structures
+func (v Version) Equal(newVer Version) bool {
+	return reflect.DeepEqual(v, newVer)
 }
 
 // String - get version string
 func (v Version) String() string {
 	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+}
+
+// Str2Version - converts string to version
+func Str2Version(verStr string) Version {
+	var v Version
+	fmt.Sscanf(verStr, "%d.%d.%d", &v.Major, &v.Minor, &v.Patch)
+	return v
 }
 
 // Config -
@@ -122,9 +116,7 @@ func (c Config) GetVersion() Version {
 	if !ok {
 		return Version{}
 	}
-	var version Version
-	fmt.Sscanf(val, "%d.%d.%d", &version.Major, &version.Minor, &version.Patch)
-	return version
+	return Str2Version(val)
 }
 
 // SetInt sets int value
@@ -157,6 +149,17 @@ func (c *Config) SetFloat64(key string, value float64) {
 // GetFloat64 returns 64-bit float value
 func (c Config) GetFloat64(key string) float64 {
 	val, _ := c[key].(float64)
+	return val
+}
+
+// SetFloat64Slice sets a list of 64-bit float values
+func (c *Config) SetFloat64Slice(key string, values []float64) {
+	(*c)[key] = values
+}
+
+// GetFloat64Slice returns a list of 64-bit float values
+func (c Config) GetFloat64Slice(key string) []float64 {
+	val, _ := c[key].([]float64)
 	return val
 }
 

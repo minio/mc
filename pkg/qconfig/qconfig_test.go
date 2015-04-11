@@ -19,7 +19,6 @@
 package qconfig
 
 import (
-	"os"
 	"testing"
 
 	. "github.com/minio-io/check"
@@ -31,79 +30,75 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
-var version = Version{1, 0, 0}
-
 func (s *MySuite) TestVersion(c *C) {
-	cfg := NewConfig(version)
-	c.Assert(cfg.GetVersion(), DeepEquals, version)
+	cfg := NewConfig(Version{1, 0, 0})
+	c.Assert(cfg.GetVersion(), DeepEquals, Version{1, 0, 0})
+
+	c.Assert(Str2Version("1.0.0"), DeepEquals, cfg.GetVersion())
 }
 
-func (s *MySuite) TestGetSet(c *C) {
-	defer os.RemoveAll("test.json")
-	cfg := NewConfig(version)
-	/*
-		GetVersion() Version
-		SetInt(string, int)
-		GetInt(string) int
-		SetIntList(string, []int)
-		GetIntList(string) []int
-		SetFloat64(string, float64)
-		GetFloat64(string) float64
-		SetString(string, string)
-		GetString(string) string
-		SetStringList(string, []string)
-		GetStringList(string) []string
-		SetMapString(string, map[string]string)
-		GetMapString(string) map[string]string
-		SetMapStringList(string, map[string][]string)
-		GetMapStringList(string) map[string][]string
-		SaveConfig(string) error
-		LoadConfig(string) error
-		String() string
-	*/
+func (s *MySuite) TestSaveLoad(c *C) {
+	version := Version{1, 0, 0}
 
+	cfg := NewConfig(version)
 	cfg.SetFloat64("Pi", 3.1415)
-	pi := cfg.GetFloat64("Pi")
-	c.Assert(pi, Equals, 3.1415)
 	cfg.SaveConfig("test.json")
 
 	newCfg := NewConfig(version)
-	newCfg.SetInt("NewInt", 99)
 	newCfg.LoadConfig("test.json")
-	/*
+	pi := newCfg.GetFloat64("Pi")
+	c.Assert(pi, Equals, 3.1415)
+}
 
-		cfg.Set("MyDonut", "/media/disk1", "/media/disk2", "/media/badDisk99", "/media/badDisk100")
-		cfg.Set("MyDonut1", "/media/disk1")
-		cfg.SaveConfig("test.json")
+func (s *MySuite) TestGetSet(c *C) {
+	version := Version{1, 0, 0}
+	cfg := NewConfig(version)
 
-		newCfg := NewConfig(1)
-		newCfg.LoadConfig("test.json")
+	cfg.SetInt("Q", 42)
+	c.Assert(cfg.GetInt("Q"), Equals, 42)
 
-		fmt.Printf("%v\n", newCfg.String())
+	cfg.SetIntSlice("Odd", []int{1, 3, 5, 7, 9})
+	c.Assert(cfg.GetIntSlice("Odd"), DeepEquals, []int{1, 3, 5, 7, 9})
 
-		c.Assert(err, IsNil)
-		c.Assert(len(buckets), Equals, 0)
+	cfg.SetFloat64("Pi", 3.1415)
+	c.Assert(cfg.GetFloat64("Pi"), Equals, 3.1415)
 
-		err = donut.PutBucket("foo")
-		c.Assert(err, Not(IsNil))
+	cfg.SetFloat64Slice("Pi", []float64{3.1415, 2.414})
+	c.Assert(cfg.GetFloat64Slice("Pi"), DeepEquals, []float64{3.1415, 2.414})
 
-		bucketNamesProvided := []string{"bar", "foo"}
-		c.Assert(bucketNamesReceived, DeepEquals, bucketNamesProvided)
+	cfg.SetString("Grand Nagus", "Zek")
+	c.Assert(cfg.GetString("Grand Nagus"), Equals, "Zek")
 
-		err = donut.PutBucket("foobar")
-		c.Assert(err, IsNil)
-		bucketNamesProvided = append(bucketNamesProvided, "foobar")
+	cfg.SetStringSlice("Ferengi", []string{"Zek", "Brunt", "Quark", "Rom", "Nog", "Ishka"})
+	c.Assert(cfg.GetStringSlice("Ferengi"), DeepEquals, []string{"Zek", "Brunt", "Quark", "Rom", "Nog", "Ishka"})
 
-		buckets, err = donut.ListBuckets()
-		c.Assert(err, IsNil)
-		bucketNamesReceived = getBucketNames(buckets)
-		c.Assert(bucketNamesReceived, DeepEquals, bucketNamesProvided)
+	startrek1 := map[string]string{"Borg": "7of9", "Data": "Measure of a Man"}
+	startrek2 := map[string]string{"Borg": "7of9", "Data": "Measure of a Man"}
+	cfg.SetMapString("startrek", startrek1)
+	c.Assert(cfg.GetMapString("startrek"), DeepEquals, startrek2)
 
-		var actualData bytes.Buffer
-		_, err = io.Copy(&actualData, reader)
-		c.Assert(err, IsNil)
-		c.Assert(actualData.Bytes(), DeepEquals, []byte(data))
-		c.Assert(int64(actualData.Len()), Equals, size)
-	*/
+	startrek3 := map[string][]string{
+		"Quadrants": []string{"Alpha", "Beta", "Gamma", "Delta"},
+		"Aliens":    []string{"Dominion", "Borg", "Klingon", "Romulan"},
+	}
+	startrek4 := map[string][]string{
+		"Quadrants": []string{"Alpha", "Beta", "Gamma", "Delta"},
+		"Aliens":    []string{"Dominion", "Borg", "Klingon", "Romulan"},
+	}
+	cfg.SetMapStringSlice("startrek", startrek3)
+	c.Assert(cfg.GetMapStringSlice("startrek"), DeepEquals, startrek4)
+
+	startrek5 := map[string][]string{
+		"Quadrants": []string{"Beta", "Gamma", "Delta"},
+		"Aliens":    []string{"Dominion", "Borg", "Klingon", "Romulan"},
+	}
+	startrek6 := map[string][]string{
+		"Quadrants": []string{"Alpha", "Beta", "Gamma", "Delta"},
+		"Aliens":    []string{"Dominion", "Borg", "Klingon", "Romulan"},
+	}
+	cfg.SetMapStringSlice("startrek", startrek5)
+	c.Assert(cfg.GetMapStringSlice("startrek"), Not(DeepEquals), startrek6)
+
+	c.Assert(cfg.GetMapStringSlice("Startrek"), IsNil)
 
 }
