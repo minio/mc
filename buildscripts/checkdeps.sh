@@ -19,9 +19,8 @@ _init() {
     ## Minimum required versions for build dependencies
     GCC_VERSION="4.0"
     CLANG_VERSION="3.5"
-    YASM_VERSION="1.2.0"
     GIT_VERSION="1.0"
-    GO_VERSION="1.4"
+    GO_VERSION="1.3"
     OSX_VERSION="10.8"
     UNAME=$(uname -sm)
 
@@ -129,7 +128,7 @@ is_supported_arch() {
 check_deps() {
     check_version "$(env go version 2>/dev/null | sed 's/^.* go\([0-9.]*\).*$/\1/')" "${GO_VERSION}"
     if [ $? -ge 2 ]; then
-	MISSING="${MISSING} golang(1.4)"
+	MISSING="${MISSING} golang(1.3)"
     fi
 
     check_version "$(env git --version 2>/dev/null | sed -e 's/^.* \([0-9.\].*\).*$/\1/' -e 's/^\([0-9.\]*\).*/\1/g')" "${GIT_VERSION}"
@@ -153,11 +152,6 @@ check_deps() {
 	"*")
 	    ;;
     esac
-
-    check_version "$(env yasm --version 2>/dev/null | sed 's/^.* \([0-9.]*\).*$/\1/' | head -1)" "${YASM_VERSION}"
-    if [ $? -ge 2 ]; then
-	MISSING="${MISSING} yasm(1.2.0)"
-    fi
 }
 
 main() {
