@@ -17,17 +17,15 @@
 package main
 
 import (
+	"net/http"
 	"path"
 	"time"
-
-	"net/http"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // StartBar -- instantiate a progressbar
@@ -46,13 +44,17 @@ func startBar(size int64) *pb.ProgressBar {
 	return bar
 }
 
-func getMcBashCompletionFilename() string {
-	configDir, err := getOrCreateMcConfigDir()
+func getMcBashCompletionFilename() (string, error) {
+	configDir, err := getMcConfigDir()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		log.Fatalln("Unable to get mc config directory")
+		return "", err
 	}
-	return path.Join(configDir, "mc.bash_completion")
+	return path.Join(configDir, "mc.bash_completion"), nil
+}
+
+func mustGetMcBashCompletionFilename() string {
+	p, _ := getMcBashCompletionFilename()
+	return p
 }
 
 // getTraceTransport -

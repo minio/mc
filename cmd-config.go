@@ -326,13 +326,18 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 }
 
 //getBashCompletionCmd generates bash completion file.
+// TODO don't kill, return an error instead. caller should kill, not this function
 func getBashCompletionCmd() {
 	var b bytes.Buffer
 	if os.Getenv("SHELL") != "/bin/bash" {
 		console.Fatalln("Unsupported shell for bash completion detected.. exiting")
 	}
 	b.WriteString(mcBashCompletion)
-	f := getMcBashCompletionFilename()
+	f, _ := getMcBashCompletionFilename()
+	// TODO uncomment when ready
+	//	if err != nil {
+	//		return err
+	//	}
 	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	defer fl.Close()
 	if err != nil {

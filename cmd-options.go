@@ -145,7 +145,7 @@ EXAMPLES:
 			},
 			cli.BoolFlag{
 				Name:  "completion",
-				Usage: "Generate bash completion \"" + getMcBashCompletionFilename() + "\" file.",
+				Usage: "Generate bash completion \"" + mustGetMcBashCompletionFilename() + "\" file.",
 			},
 		},
 	}
