@@ -80,23 +80,23 @@ func (s *MySuite) TestGetSet(c *C) {
 	c.Assert(cfg.GetMapString("startrek"), DeepEquals, startrek2)
 
 	startrek3 := map[string][]string{
-		"Quadrants": []string{"Alpha", "Beta", "Gamma", "Delta"},
-		"Aliens":    []string{"Dominion", "Borg", "Klingon", "Romulan"},
+		"Quadrants": {"Alpha", "Beta", "Gamma", "Delta"},
+		"Aliens":    {"Dominion", "Borg", "Klingon", "Romulan"},
 	}
 	startrek4 := map[string][]string{
-		"Quadrants": []string{"Alpha", "Beta", "Gamma", "Delta"},
-		"Aliens":    []string{"Dominion", "Borg", "Klingon", "Romulan"},
+		"Quadrants": {"Alpha", "Beta", "Gamma", "Delta"},
+		"Aliens":    {"Dominion", "Borg", "Klingon", "Romulan"},
 	}
 	cfg.SetMapStringSlice("startrek", startrek3)
 	c.Assert(cfg.GetMapStringSlice("startrek"), DeepEquals, startrek4)
 
 	startrek5 := map[string][]string{
-		"Quadrants": []string{"Beta", "Gamma", "Delta"},
-		"Aliens":    []string{"Dominion", "Borg", "Klingon", "Romulan"},
+		"Quadrants": {"Beta", "Gamma", "Delta"},
+		"Aliens":    {"Dominion", "Borg", "Klingon", "Romulan"},
 	}
 	startrek6 := map[string][]string{
-		"Quadrants": []string{"Alpha", "Beta", "Gamma", "Delta"},
-		"Aliens":    []string{"Dominion", "Borg", "Klingon", "Romulan"},
+		"Quadrants": {"Alpha", "Beta", "Gamma", "Delta"},
+		"Aliens":    {"Dominion", "Borg", "Klingon", "Romulan"},
 	}
 	cfg.SetMapStringSlice("startrek", startrek5)
 	c.Assert(cfg.GetMapStringSlice("startrek"), Not(DeepEquals), startrek6)

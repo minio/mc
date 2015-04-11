@@ -64,11 +64,6 @@ func getMcConfigDir() (string, error) {
 	}
 }
 
-func mustGetMcConfigDir() string {
-	p, _ := getMcConfigDir()
-	return p
-}
-
 func getOrCreateMcConfigDir() (string, error) {
 	p, err := getMcConfigDir()
 	if err != nil {

@@ -1,5 +1,4 @@
-MINIOPATH=$(GOPATH)/src/github.com/minio-io/mc
-
+## filter multiple GOPATH
 all: getdeps install
 
 checkdeps:
@@ -7,8 +6,8 @@ checkdeps:
 	@(env bash $(PWD)/buildscripts/checkdeps.sh)
 
 checkgopath:
-	@echo "Checking if project is at ${MINIOPATH}"
-	@if [ ! -d ${MINIOPATH} ]; then echo "Project not found in $GOPATH, please follow instructions provided at https://github.com/Minio-io/minio/blob/master/CONTRIBUTING.md#setup-your-minio-github-repository" && exit 1; fi
+	@echo "Checking if project is at ${GOPATH}"
+	@for mcpath in $(echo ${GOPATH} | sed 's/:/\n/g' | grep -v Godeps); do if [ ! -d ${mcpath} ]; then echo "Project not found in ${mcpath}, please follow instructions provided at https://github.com/Minio-io/minio/blob/master/CONTRIBUTING.md#setup-your-minio-github-repository" && exit 1; fi done
 
 getdeps: checkdeps checkgopath
 	@go get github.com/minio-io/godep && echo "Installed godep:"
