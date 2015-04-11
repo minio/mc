@@ -106,17 +106,12 @@ func (v Version) String() string {
 type Config map[string]interface{}
 
 // NewConfig - instantiate a new config
-func NewConfig(major, minor, patch int) Configure {
+func NewConfig(version Version) Configure {
 	// error condition
-	if major < 0 || minor < 0 || patch < 0 {
+	if version.Major == 0 {
 		return nil
 	}
 	config := make(Config)
-	version := Version{
-		Major: major,
-		Minor: minor,
-		Patch: patch,
-	}
 	config["Version"] = version.String()
 	return &config
 }

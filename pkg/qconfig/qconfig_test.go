@@ -31,15 +31,16 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
+var version = Version{1, 0, 0}
+
 func (s *MySuite) TestVersion(c *C) {
-	version := Version{1, 0, 0}
-	cfg := NewConfig(1, 0, 0)
+	cfg := NewConfig(version)
 	c.Assert(cfg.GetVersion(), DeepEquals, version)
 }
 
 func (s *MySuite) TestGetSet(c *C) {
 	defer os.RemoveAll("test.json")
-	cfg := NewConfig(1, 0, 0)
+	cfg := NewConfig(version)
 	/*
 		GetVersion() Version
 		SetInt(string, int)
@@ -66,7 +67,7 @@ func (s *MySuite) TestGetSet(c *C) {
 	c.Assert(pi, Equals, 3.1415)
 	cfg.SaveConfig("test.json")
 
-	newCfg := NewConfig(1, 0, 0)
+	newCfg := NewConfig(version)
 	newCfg.SetInt("NewInt", 99)
 	newCfg.LoadConfig("test.json")
 	/*
