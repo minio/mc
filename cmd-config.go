@@ -55,14 +55,13 @@ func getMcConfigDir() (string, error) {
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-	var p string
 	// For windows the path is slightly differently
-	if runtime.GOOS == "windows" {
-		p = path.Join(u.HomeDir, mcConfigWindowsDir)
-	} else {
-		p = path.Join(u.HomeDir, mcConfigDir)
+	switch runtime.GOOS {
+	case "windows":
+		return path.Join(u.HomeDir, mcConfigWindowsDir), nil
+	default:
+		return path.Join(u.HomeDir, mcConfigDir), nil
 	}
-	return p, nil
 }
 func getOrCreateMcConfigDir() (string, error) {
 	p, err := getMcConfigDir()
