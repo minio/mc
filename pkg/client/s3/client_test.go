@@ -95,7 +95,7 @@ func TestValidBucketNames(t *testing.T) {
 	}
 
 	for _, bt := range m {
-		got := IsValidBucketName(bt.in)
+		got := client.IsValidBucketName(bt.in)
 		if got != bt.want {
 			t.Errorf("func(%q) = %v; want %v", bt.in, got, bt.want)
 		}

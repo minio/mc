@@ -18,7 +18,7 @@ package main
 
 import (
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/client/s3"
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
@@ -53,7 +53,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln(err)
 	}
 
-	if !s3.IsValidBucketName(bucket) {
+	if !client.IsValidBucketName(bucket) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(errInvalidbucket)
 	}
