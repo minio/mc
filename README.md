@@ -2,42 +2,17 @@
 
 mc - Minio Client for S3 Compatible Object Storage released under [Apache license v2](./LICENSE).
 
-## Install
+[![Build Status](https://travis-ci.org/minio-io/mc.svg)](https://travis-ci.org/minio-io/mc)
+
+## Download & Install
 
 ```sh
 # go get github.com/minio-io/mc
 ```
 
-## Usage
-
-### Commands
-```sh
-$ mc help
-
-NAME:
-   mc - Minio Client for S3 Compatible Object Storage
-
-USAGE:
-   mc [global options] command [command options] [arguments...]
-
-VERSION:
-   <---- GIT COMMIT ID ---->
-
-BUILD:
-   <---- BUILD TIME ---->
-
-COMMANDS:
-   cp	         copy objects and files
-   ls	         list files and objects
-   mb	         makes a bucket
-   config        Generate configuration "/home/alexa/.mc/config.json" file.
-
-GLOBAL OPTIONS:
-   --debug       enable HTTP tracing
-   --quiet, -q	 disable chatty output, such as the progress bar
-   --version, -v print the version
-
-```
+## Join Community
+* Community hangout on Gitter    [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Minio-io/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+* Ask questions on Quora  [![Quora](http://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Quora_logo.svg/55px-Quora_logo.svg.png)](http://www.quora.com/Minio)
 
 ## Contribute
 
@@ -58,22 +33,3 @@ GLOBAL OPTIONS:
 | x86-64 | Yes |
 | arm64 | Not yet|
 | i386 | Not yet |
-
-### Enable bash completion
-
-To generate bash completion for ``mc`` all you have to do is
-
-```sh
-$ mc config --completion
-
-Configuration written to /home/user/.mc/mc.bash_completion
-
-$ source ${HOME}/.mc/mc.bash_completion
-$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc
-
-```
-
-```sh
-$ mc <TAB><TAB>
-config  cp         h          help       ls         mb
-```
