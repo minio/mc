@@ -1,6 +1,7 @@
 /*
  * QConfig - Quick way to implement a configuration file
- * (C) 2015 Minio, Inc.
+ *
+ * Minimalist Object Storage, (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +19,7 @@
 package qconfig
 
 import (
+	"os"
 	"testing"
 
 	. "github.com/minio-io/check"
@@ -31,13 +33,13 @@ var _ = Suite(&MySuite{})
 
 func (s *MySuite) TestVersion(c *C) {
 	version := Version{1, 0, 0}
-	cfg := NewConfig(Version{1, 0, 0})
+	cfg := NewConfig(1, 0, 0)
 	c.Assert(cfg.GetVersion(), DeepEquals, version)
 }
 
 func (s *MySuite) TestGetSet(c *C) {
-	cfg := NewConfig(Version{1, 0, 0})
-
+	defer os.RemoveAll("test.json")
+	cfg := NewConfig(1, 0, 0)
 	/*
 		GetVersion() Version
 		SetInt(string, int)
@@ -64,10 +66,9 @@ func (s *MySuite) TestGetSet(c *C) {
 	c.Assert(pi, Equals, 3.1415)
 	cfg.SaveConfig("test.json")
 
-	newCfg := NewConfig(Version{1, 0, 0})
+	newCfg := NewConfig(1, 0, 0)
 	newCfg.SetInt("NewInt", 99)
 	newCfg.LoadConfig("test.json")
-
 	/*
 
 		cfg.Set("MyDonut", "/media/disk1", "/media/disk2", "/media/badDisk99", "/media/badDisk100")
