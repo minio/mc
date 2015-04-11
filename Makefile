@@ -59,9 +59,6 @@ restore:
 env:
 	@godep go env
 
-docs-deploy:
-	@mkdocs gh-deploy --clean
-
 install: test-all
 	@echo "Installing mc:"
 	@godep go install -a github.com/minio-io/mc
