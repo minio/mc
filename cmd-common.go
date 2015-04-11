@@ -58,6 +58,7 @@ func mustGetMcBashCompletionFilename() string {
 }
 
 // NewClient - get new client
+// TODO refactor this to be more testable
 func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	hostCfg, err := getHostConfig(urlStr)
 	if err != nil {
