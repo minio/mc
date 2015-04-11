@@ -32,7 +32,7 @@ type MySuite struct{}
 var _ = Suite(&MySuite{})
 
 func (s *MySuite) TestVersion(c *C) {
-	cfg := NewConfig(Version{1, 0, 0})
+	cfg := NewStore(Version{1, 0, 0})
 	c.Assert(cfg.GetVersion(), DeepEquals, Version{1, 0, 0})
 
 	c.Assert(Str2Version("1.0.0"), DeepEquals, cfg.GetVersion())
@@ -42,19 +42,19 @@ func (s *MySuite) TestSaveLoad(c *C) {
 	defer os.RemoveAll("test.json")
 	version := Version{1, 0, 0}
 
-	cfg := NewConfig(version)
+	cfg := NewStore(version)
 	cfg.SetFloat64("Pi", 3.1415)
-	cfg.SaveConfig("test.json")
+	cfg.Save("test.json")
 
-	newCfg := NewConfig(version)
-	newCfg.LoadConfig("test.json")
+	newCfg := NewStore(version)
+	newCfg.Load("test.json")
 	pi := newCfg.GetFloat64("Pi")
 	c.Assert(pi, Equals, 3.1415)
 }
 
 func (s *MySuite) TestGetSet(c *C) {
 	version := Version{1, 0, 0}
-	cfg := NewConfig(version)
+	cfg := NewStore(version)
 
 	cfg.SetInt("Q", 42)
 	c.Assert(cfg.GetInt("Q"), Equals, 42)

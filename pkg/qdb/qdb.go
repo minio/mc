@@ -36,8 +36,8 @@ type Store interface {
 	String
 	Map
 	GetVersion() Version
-	SaveConfig(string) error
-	LoadConfig(string) error
+	Save(string) error
+	Load(string) error
 	String() string
 }
 
@@ -103,8 +103,8 @@ type qstore struct {
 	lock  *sync.RWMutex
 }
 
-// NewConfig - instantiate a new config
-func NewConfig(version Version) Configure {
+// NewStore - instantiate a new config
+func NewStore(version Version) Store {
 	// error condition
 	if version.Major == 0 {
 		return nil
@@ -117,7 +117,7 @@ func NewConfig(version Version) Configure {
 }
 
 // GetVersion returns the current config file format version
-func (c Config) GetVersion() Version {
+func (c qstore) GetVersion() Version {
 	val, ok := c.store["Version"].(string)
 	if !ok {
 		return Version{}
@@ -126,111 +126,111 @@ func (c Config) GetVersion() Version {
 }
 
 // SetInt sets int value
-func (c *Config) SetInt(key string, value int) {
+func (c *qstore) SetInt(key string, value int) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 // GetInt returns int value
-func (c Config) GetInt(key string) int {
+func (c qstore) GetInt(key string) int {
 	val, _ := c.store[key].(int)
 	return val
 }
 
 // GetIntSlice returns list of int values
-func (c Config) GetIntSlice(key string) []int {
+func (c qstore) GetIntSlice(key string) []int {
 	val, _ := c.store[key].([]int)
 	return val
 }
 
 // SetIntSlice sets list of int values
-func (c *Config) SetIntSlice(key string, values []int) {
+func (c *qstore) SetIntSlice(key string, values []int) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = values
 }
 
 // SetFloat64 sets 64-bit float value
-func (c *Config) SetFloat64(key string, value float64) {
+func (c *qstore) SetFloat64(key string, value float64) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 // GetFloat64 returns 64-bit float value
-func (c Config) GetFloat64(key string) float64 {
+func (c qstore) GetFloat64(key string) float64 {
 	val, _ := c.store[key].(float64)
 	return val
 }
 
 // SetFloat64Slice sets a list of 64-bit float values
-func (c *Config) SetFloat64Slice(key string, values []float64) {
+func (c *qstore) SetFloat64Slice(key string, values []float64) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = values
 }
 
 // GetFloat64Slice returns a list of 64-bit float values
-func (c Config) GetFloat64Slice(key string) []float64 {
+func (c qstore) GetFloat64Slice(key string) []float64 {
 	val, _ := c.store[key].([]float64)
 	return val
 }
 
 // SetString sets string value
-func (c *Config) SetString(key string, value string) {
+func (c *qstore) SetString(key string, value string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 // GetString returns string value
-func (c Config) GetString(key string) string {
+func (c qstore) GetString(key string) string {
 	val, _ := c.store[key].(string)
 	return val
 }
 
 // SetStringSlice sets list of strings
-func (c *Config) SetStringSlice(key string, values []string) {
+func (c *qstore) SetStringSlice(key string, values []string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = values
 }
 
 // GetStringSlice returns list of strings
-func (c Config) GetStringSlice(key string) []string {
+func (c qstore) GetStringSlice(key string) []string {
 	val, _ := c.store[key].([]string)
 	return val
 }
 
 //SetMapString sets a map of strings
-func (c *Config) SetMapString(key string, value map[string]string) {
+func (c *qstore) SetMapString(key string, value map[string]string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 //GetMapString returns a map of strings
-func (c Config) GetMapString(key string) map[string]string {
+func (c qstore) GetMapString(key string) map[string]string {
 	val, _ := c.store[key].(map[string]string)
 	return val
 }
 
 //SetMapStringSlice sets a map of string list
-func (c *Config) SetMapStringSlice(key string, value map[string][]string) {
+func (c *qstore) SetMapStringSlice(key string, value map[string][]string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 //GetMapStringSlice returns a map of string list
-func (c Config) GetMapStringSlice(key string) map[string][]string {
+func (c qstore) GetMapStringSlice(key string) map[string][]string {
 	val, _ := c.store[key].(map[string][]string)
 	return val
 }
 
-// SaveConfig writes configuration data in JSON format to donut config file.
-func (c Config) SaveConfig(filename string) (err error) {
+// Save writes configuration data in JSON format to donut config file.
+func (c qstore) Save(filename string) (err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	jsonStore, err := json.MarshalIndent(c.store, "", "\t")
@@ -252,8 +252,8 @@ func (c Config) SaveConfig(filename string) (err error) {
 
 }
 
-// LoadConfig - loads JSON config from file and also automatically merges new changes
-func (c *Config) LoadConfig(filename string) (err error) {
+// Load - loads JSON config from file and also automatically merges new changes
+func (c *qstore) Load(filename string) (err error) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 
@@ -285,7 +285,7 @@ func (c *Config) LoadConfig(filename string) (err error) {
 }
 
 // String converts JSON config to printable string
-func (c Config) String() string {
+func (c qstore) String() string {
 	configBytes, _ := json.MarshalIndent(c.store, "", "\t")
 	return string(configBytes)
 }
