@@ -57,15 +57,6 @@ func mustGetMcBashCompletionFilename() string {
 	return p
 }
 
-// getTraceTransport -
-func getTraceTransport() s3.RoundTripTrace {
-	trace := s3.NewTrace(false, true, nil)
-	if trace == nil {
-		return s3.RoundTripTrace{}
-	}
-	return s3.GetNewTraceTransport(trace, http.DefaultTransport)
-}
-
 // NewClient - get new client
 func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 	hostCfg, err := getHostConfig(urlStr)
@@ -83,7 +74,7 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 
 	switch uType {
 	case urlObjectStorage: // Minio and S3 compatible object storage
-		traceTransport := getTraceTransport()
+		traceTransport := s3.GetNewTraceTransport(s3.NewTrace(false, true, nil), http.DefaultTransport)
 		if debug {
 			clnt = s3.GetNewClient(&auth, urlStr, traceTransport)
 		} else {
