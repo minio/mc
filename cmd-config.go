@@ -379,6 +379,9 @@ func saveConfigCmd(ctx *cli.Context) {
 
 // doConfigCmd is the handler for "mc config" sub-command.
 func doConfigCmd(ctx *cli.Context) {
+	if len(ctx.Args()) < 1 {
+		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
+	}
 	switch true {
 	case ctx.Bool("completion") == true:
 		getBashCompletionCmd()

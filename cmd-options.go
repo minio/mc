@@ -93,7 +93,7 @@ EXAMPLES:
 	mbCmd = cli.Command{
 		Name:        "mb",
 		Usage:       "makes a bucket",
-		Description: "Creates an S3 bucket",
+		Description: `Creates a bucket on Amazon S3, Minio Object Storage and Filesystem`,
 		Action:      doMakeBucketCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -121,11 +121,10 @@ EXAMPLES:
 	configCmd = cli.Command{
 		Name:  "config",
 		Usage: "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
-		Description: `Configure minio client configuration data. If your config
-   file does not exist (the default location is ~/.auth), it will be
-   automatically created for you. Note that the configure command only writes
-   values to the config file. It does not use any configuration values from
-   the environment variables.`,
+		Description: `Configure minio client configuration.
+
+   NOTE: that the configure command only writes values to the config file.
+   It does not use any configuration values from the environment variables.`,
 		Action: doConfigCmd,
 		Flags: []cli.Flag{
 			cli.StringFlag{
