@@ -2,11 +2,11 @@
 
 mc - Minio Client for S3 Compatible Object Storage released under [Apache license v2](./LICENSE).
 
-[![Build Status](https://travis-ci.org/minio-io/mc.svg)](https://travis-ci.org/minio-io/mc)
+[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/minio-io/mc) [![Build Status](https://travis-ci.org/minio-io/mc.svg)](https://travis-ci.org/minio-io/mc)
 
 ## Download & Install
 
-```sh
+```go
 # go get github.com/minio-io/mc
 ```
 
