@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/fatih/color"
@@ -31,8 +32,8 @@ func printUpdateNotify(latestVersion, currentVersion string) {
 	blueFaint := color.New(color.FgBlue, color.BlinkSlow).SprintfFunc()
 	yellow := color.New(color.FgYellow).SprintfFunc()
 
-	// calculate length without color coding, since due to
-	// ANSI characters it would mis-calculate the real length
+	// calculate length without color coding, due to ANSI color characters padded to actual
+	// string the final length is wrong than the original string length
 	line1Length := len(fmt.Sprintf("  Update available: %s (current: %s)", latestVersion, currentVersion))
 	line2Length := len(fmt.Sprintf("  Run %s to update. ", updateString))
 
@@ -45,11 +46,18 @@ func printUpdateNotify(latestVersion, currentVersion string) {
 	line1Rest := maxContentWidth - line1Length
 	line2Rest := maxContentWidth - line2Length
 
-	// color the rectangular box
-	top := yellow("┏" + strings.Repeat("━", maxContentWidth) + "┓")
-	bottom := yellow("┗" + strings.Repeat("━", maxContentWidth) + "┛")
-	sideBar := yellow("┃")
-
+	// on windows terminal turn off unicode characters
+	var top, bottom, sideBar string
+	if runtime.GOOS == "windows" {
+		top = yellow("*" + strings.Repeat("*", maxContentWidth) + "*")
+		bottom = yellow("*" + strings.Repeat("*", maxContentWidth) + "*")
+		sideBar = yellow("|")
+	} else {
+		// color the rectangular box, use unicode characters here
+		top = yellow("┏" + strings.Repeat("━", maxContentWidth) + "┓")
+		bottom = yellow("┗" + strings.Repeat("━", maxContentWidth) + "┛")
+		sideBar = yellow("┃")
+	}
 	// fill spaces to the rest of the area
 	spacePaddingLine1 := strings.Repeat(" ", line1Rest)
 	spacePaddingLine2 := strings.Repeat(" ", line2Rest)
