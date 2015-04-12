@@ -16,7 +16,13 @@
 
 package main
 
-import "strconv"
+import "fmt"
+
+type errInvalidArgument struct{}
+
+func (e errInvalidArgument) Error() string {
+	return "invalid argument"
+}
 
 type errEmptyURL struct{}
 
@@ -29,7 +35,7 @@ type errUnsupportedScheme struct {
 }
 
 func (e errUnsupportedScheme) Error() string {
-	return "Unsuppported URL scheme: " + strconv.Itoa(int(e.scheme))
+	return fmt.Sprintf("Unsuppported URL scheme: %d", e.scheme)
 }
 
 type errInvalidURL struct {
@@ -40,10 +46,57 @@ func (e errInvalidURL) Error() string {
 	return "Invalid URL: " + e.url
 }
 
+type errInvalidGlobURL struct {
+	glob    string
+	request string
+}
+
+func (e errInvalidGlobURL) Error() string {
+	return "Error parsing glob'ed URL while comparing " + e.glob + " " + e.request
+}
+
+type errInvalidAliasURL struct {
+	url   string
+	alias string
+}
+
+func (e errInvalidAliasURL) Error() string {
+	return "Unable to parse URL: " + e.url + " for alias: " + e.alias
+}
+
+type errInvalidAliasName struct {
+	alias string
+}
+
+func (e errInvalidAliasName) Error() string {
+	return "Not a valid alias name: " + e.alias + " Valid examples are: Area51, Grand-Nagus.."
+}
+
 type errInvalidBucket struct {
 	bucket string
 }
 
 func (e errInvalidBucket) Error() string {
 	return "Invalid bucket name: " + e.bucket
+}
+
+type errInvalidAuth struct{}
+
+func (e errInvalidAuth) Error() string {
+	return "invalid auth keys"
+}
+
+type errUnsupportedVersion struct {
+	new uint
+	old uint
+}
+
+func (e errUnsupportedVersion) Error() string {
+	return fmt.Sprintf("Unsupported version [%d]. Current operating version is [%d]", e.new, e.old)
+}
+
+type errNoMatchingHost struct{}
+
+func (e errNoMatchingHost) Error() string {
+	return "No matching host found."
 }
