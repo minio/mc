@@ -91,11 +91,12 @@ type s3Client struct {
 	//  - http://<ipaddress>/<bucketname>/<object>
 	//  - http://<bucketname>.<domain>/<object>
 	*url.URL
+	UserAgent string
 }
 
 // GetNewClient returns an initialized s3Client structure.
 // if debug use a internal trace transport
-func GetNewClient(hostURL string, auth *Auth, debug bool) client.Client {
+func GetNewClient(hostURL string, auth *Auth, userAgent string, debug bool) client.Client {
 	u, err := url.Parse(hostURL)
 	if err != nil {
 		return nil
@@ -112,7 +113,9 @@ func GetNewClient(hostURL string, auth *Auth, debug bool) client.Client {
 		&Meta{
 			Auth:      auth,
 			Transport: transport,
-		}, u,
+		},
+		u,
+		userAgent,
 	}
 	return s3c
 }
@@ -153,14 +156,16 @@ func (c *s3Client) keyURL(bucket, key string) string {
 	return url + key
 }
 
-func newReq(url string) *http.Request {
+func newReq(url string, userAgent string) *http.Request {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		// TODO: never exit from inside a package. Let the
 		// caller handle errors gracefully.
 		panic(fmt.Sprintf("s3 client; invalid URL: %v", err))
 	}
-	req.Header.Set("User-Agent", "Minio s3Client")
+	if userAgent != "" {
+		req.Header.Set("User-Agent", userAgent)
+	}
 	return req
 }
 

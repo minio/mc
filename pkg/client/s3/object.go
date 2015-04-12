@@ -58,7 +58,7 @@ import (
 
 // Put - upload new object to bucket
 func (c *s3Client) Put(bucket, key, md5HexString string, size int64, contents io.Reader) error {
-	req := newReq(c.keyURL(bucket, key))
+	req := newReq(c.keyURL(bucket, key), c.UserAgent)
 	req.Method = "PUT"
 	req.ContentLength = size
 	req.Body = ioutil.NopCloser(contents)
@@ -90,7 +90,7 @@ func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, r
 	if bucket == "" || key == "" {
 		return 0, date, iodine.New(client.InvalidArgument{}, nil)
 	}
-	req := newReq(c.keyURL(bucket, key))
+	req := newReq(c.keyURL(bucket, key), c.UserAgent)
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
@@ -123,7 +123,7 @@ func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, r
 
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 string, err error) {
-	req := newReq(c.keyURL(bucket, key))
+	req := newReq(c.keyURL(bucket, key), c.UserAgent)
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
@@ -143,7 +143,7 @@ func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	req := newReq(c.keyURL(bucket, key))
+	req := newReq(c.keyURL(bucket, key), c.UserAgent)
 	if length >= 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	} else {
