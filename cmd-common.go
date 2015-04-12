@@ -80,6 +80,6 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 		clnt = fs.GetNewClient(urlStr)
 		return clnt, nil
 	default:
-		return nil, iodine.New(errUnsupportedScheme, nil)
+		return nil, iodine.New(errUnsupportedScheme{scheme: uType}, nil)
 	}
 }
