@@ -53,7 +53,7 @@ import (
 // ListBuckets - Get list of buckets
 func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
 	u := fmt.Sprintf("%s://%s/", c.Scheme, c.Host)
-	req := newReq(u, c.UserAgent)
+	req := newReq(u, c.UserAgent, nil)
 	c.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)
@@ -75,7 +75,7 @@ func (c *s3Client) PutBucket(bucket string) error {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req := newReq(u, c.UserAgent)
+	req := newReq(u, c.UserAgent, nil)
 	req.Method = "PUT"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
@@ -99,7 +99,7 @@ func (c *s3Client) StatBucket(bucket string) error {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req := newReq(u, c.UserAgent)
+	req := newReq(u, c.UserAgent, nil)
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)

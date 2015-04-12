@@ -33,7 +33,7 @@ type Client interface {
 	// Object operations
 	Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error)
 	GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
-	Put(bucket, object, md5 string, size int64, body io.Reader) error
+	Put(bucket, object, md5 string, size int64) (io.WriteCloser, error)
 	StatObject(bucket, object string) (size int64, date time.Time, err error)
 }
 

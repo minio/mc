@@ -47,7 +47,6 @@ import (
 
 	"encoding/base64"
 	"encoding/hex"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -57,32 +56,38 @@ import (
 /// Object API operations
 
 // Put - upload new object to bucket
-func (c *s3Client) Put(bucket, key, md5HexString string, size int64, contents io.Reader) error {
-	req := newReq(c.keyURL(bucket, key), c.UserAgent)
-	req.Method = "PUT"
-	req.ContentLength = size
-	req.Body = ioutil.NopCloser(contents)
+func (c *s3Client) Put(bucket, key, md5HexString string, size int64) (io.WriteCloser, error) {
+	r, w := io.Pipe()
+	go func() {
+		req := newReq(c.keyURL(bucket, key), c.UserAgent, r)
+		req.Method = "PUT"
+		req.ContentLength = size
 
-	// set Content-MD5 only if md5 is provided
-	if strings.TrimSpace(md5HexString) != "" {
-		md5, err := hex.DecodeString(md5HexString)
-		if err != nil {
-			return iodine.New(err, nil)
+		// set Content-MD5 only if md5 is provided
+		if strings.TrimSpace(md5HexString) != "" {
+			md5, err := hex.DecodeString(md5HexString)
+			if err != nil {
+				r.CloseWithError(iodine.New(err, nil))
+			}
+			req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
 		}
-		req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
-	}
-	c.signRequest(req, c.Host)
+		c.signRequest(req, c.Host)
 
-	res, err := c.Transport.RoundTrip(req)
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-	defer res.Body.Close()
+		client := http.Client{}
+		res, err := client.Do(req)
 
-	if res.StatusCode != http.StatusOK {
-		return iodine.New(NewError(res), nil)
-	}
-	return nil
+		if err != nil {
+			r.CloseWithError(iodine.New(err, nil))
+			return
+		}
+
+		if res.StatusCode != http.StatusOK {
+			r.CloseWithError(iodine.New(err, nil))
+			return
+		}
+		r.Close()
+	}()
+	return w, nil
 }
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3
@@ -90,7 +95,7 @@ func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, r
 	if bucket == "" || key == "" {
 		return 0, date, iodine.New(client.InvalidArgument{}, nil)
 	}
-	req := newReq(c.keyURL(bucket, key), c.UserAgent)
+	req := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
@@ -123,7 +128,7 @@ func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, r
 
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 string, err error) {
-	req := newReq(c.keyURL(bucket, key), c.UserAgent)
+	req := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
@@ -143,7 +148,7 @@ func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	req := newReq(c.keyURL(bucket, key), c.UserAgent)
+	req := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
 	if length >= 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	} else {
