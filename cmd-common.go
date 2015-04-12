@@ -73,7 +73,7 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 		var auth s3.Auth
 		auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 		auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
-		clnt = s3.GetNewClient(urlStr, &auth, debug)
+		clnt = s3.GetNewClient(urlStr, &auth, mcUserAgent, debug)
 		return clnt, nil
 	case urlFile:
 		clnt = fs.GetNewClient(urlStr)

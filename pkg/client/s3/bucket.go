@@ -60,7 +60,7 @@ func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 // ListBuckets - Get list of buckets
 func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
 	u := fmt.Sprintf("%s://%s/", c.Scheme, c.Host)
-	req := newReq(u)
+	req := newReq(u, c.UserAgent)
 	c.signRequest(req, c.Host)
 
 	res, err := c.Transport.RoundTrip(req)
@@ -82,7 +82,7 @@ func (c *s3Client) PutBucket(bucket string) error {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req := newReq(u)
+	req := newReq(u, c.UserAgent)
 	req.Method = "PUT"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
@@ -106,7 +106,7 @@ func (c *s3Client) StatBucket(bucket string) error {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req := newReq(u)
+	req := newReq(u, c.UserAgent)
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)

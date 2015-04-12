@@ -145,6 +145,7 @@ func TestsignRequest(t *testing.T) {
 			Transport: http.DefaultTransport,
 		},
 		url,
+		"Minio/auth_test (mc)",
 	}
 	cl.signRequest(r, "localhost:9000")
 	if r.Header.Get("Date") == "" {

@@ -17,7 +17,17 @@
 // This package contains all the global variables and constants
 package main
 
+import (
+	"os"
+	"runtime"
+	"strings"
+)
+
 var (
 	globalQuietFlag = false // Quiet flag set via command line
 	globalDebugFlag = false // Debug flag set via command line
+
+	mcUserAgent = "Minio/" +
+		strings.SplitN(mcGitCommitHash, " ", 3)[1] +
+		" (" + os.Args[0] + "; " + runtime.GOOS + "; " + runtime.GOARCH + ")"
 )

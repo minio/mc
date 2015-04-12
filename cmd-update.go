@@ -48,7 +48,7 @@ func getReq(url string) (*http.Request, error) {
 		msg := fmt.Sprintf("s3 client; invalid URL: %v", err)
 		return nil, errors.New(msg)
 	}
-	req.Header.Set("User-Agent", "Minio Client")
+	req.Header.Set("User-Agent", mcUserAgent)
 	return req, nil
 }
 
