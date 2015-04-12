@@ -94,15 +94,24 @@ type s3Client struct {
 }
 
 // GetNewClient returns an initialized s3Client structure.
-func GetNewClient(auth *Auth, urlStr string, transport http.RoundTripper) client.Client {
-	u, err := url.Parse(urlStr)
+// if debug use a internal trace transport
+func GetNewClient(hostURL string, auth *Auth, debug bool) client.Client {
+	u, err := url.Parse(hostURL)
 	if err != nil {
 		return nil
+	}
+	var traceTransport RoundTripTrace
+	var transport http.RoundTripper
+	if debug {
+		traceTransport = GetNewTraceTransport(NewTrace(false, true, nil), http.DefaultTransport)
+		transport = GetNewTraceTransport(s3Verify{}, traceTransport)
+	} else {
+		transport = http.DefaultTransport
 	}
 	s3c := &s3Client{
 		&Meta{
 			Auth:      auth,
-			Transport: GetNewTraceTransport(s3Verify{}, transport),
+			Transport: transport,
 		}, u,
 	}
 	return s3c

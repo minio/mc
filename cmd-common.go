@@ -17,12 +17,12 @@
 package main
 
 import (
-	"net/http"
 	"path"
 	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/mc/pkg/client/fs"
 	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -60,27 +60,23 @@ func mustGetMcBashCompletionFilename() string {
 // NewClient - get new client
 // TODO refactor this to be more testable
 func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
-	hostCfg, err := getHostConfig(urlStr)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-
-	var auth s3.Auth
-	auth.AccessKeyID = hostCfg.Auth.AccessKeyID
-	auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 	uType, err := getURLType(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	switch uType {
 	case urlObjectStorage: // Minio and S3 compatible object storage
-		traceTransport := s3.GetNewTraceTransport(s3.NewTrace(false, true, nil), http.DefaultTransport)
-		if debug {
-			clnt = s3.GetNewClient(&auth, urlStr, traceTransport)
-		} else {
-			clnt = s3.GetNewClient(&auth, urlStr, http.DefaultTransport)
+		hostCfg, err := getHostConfig(urlStr)
+		if err != nil {
+			return nil, iodine.New(err, nil)
 		}
+		var auth s3.Auth
+		auth.AccessKeyID = hostCfg.Auth.AccessKeyID
+		auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
+		clnt = s3.GetNewClient(urlStr, &auth, debug)
+		return clnt, nil
+	case urlFile:
+		clnt = fs.GetNewClient(urlStr)
 		return clnt, nil
 	default:
 		return nil, iodine.New(errUnsupportedScheme, nil)
