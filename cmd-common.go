@@ -71,12 +71,15 @@ func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
-		var auth s3.Auth
-		if hostCfg.Auth != nil {
+		if hostCfg.Auth == nil {
+			return nil, iodine.New(errInvalidAuth{}, nil)
+		}
+		auth := new(s3.Auth)
+		if hostCfg.Auth.AccessKeyID != "" || hostCfg.Auth.SecretAccessKey != "" {
 			auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 			auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 		}
-		clnt = s3.GetNewClient(urlStr, &auth, mcUserAgent, debug)
+		clnt = s3.GetNewClient(urlStr, auth, mcUserAgent, debug)
 		return clnt, nil
 	case urlFile:
 		clnt = fs.GetNewClient(urlStr)

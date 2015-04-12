@@ -2,8 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"os"
 	"path"
 	"runtime"
@@ -123,29 +121,27 @@ func checkMcConfig(config *mcConfig) (err error) {
 	// check for version
 	switch {
 	case (config.Version != currentConfigVersion):
-		err := fmt.Errorf("Unsupported version [%d]. Current operating version is [%d]", config.Version, currentConfigVersion)
-		return iodine.New(err, nil)
+		return iodine.New(errUnsupportedVersion{old: currentConfigVersion, new: config.Version}, nil)
 
 	case len(config.Hosts) > 1:
 		for host, hostCfg := range config.Hosts {
+			// don't need to check for availability of AccessKeyID, not having one
+			// is a valid case for public buckets
 			if host == "" {
-				return iodine.New(fmt.Errorf("Empty host URL"), nil)
+				return iodine.New(errEmptyURL{}, nil)
 			}
-			if hostCfg.Auth != nil && hostCfg.Auth.AccessKeyID == "" {
-				return iodine.New(fmt.Errorf("AccessKeyID is empty for Host [%s]", host), nil)
-			}
-			if hostCfg.Auth != nil && hostCfg.Auth.SecretAccessKey == "" {
-				return iodine.New(fmt.Errorf("SecretAccessKey is empty for Host [%s]", host), nil)
+			if hostCfg.Auth == nil {
+				return iodine.New(errInvalidAuth{}, nil)
 			}
 		}
 	case len(config.Aliases) > 0:
 		for aliasName, aliasURL := range config.Aliases {
 			_, err := url.Parse(aliasURL)
 			if err != nil {
-				return iodine.New(fmt.Errorf("Unable to parse URL [%s] for alias [%s]", aliasURL, aliasName), nil)
+				return iodine.New(errInvalidAliasURL{alias: aliasName, url: aliasURL}, nil)
 			}
 			if !isValidAliasName(aliasName) {
-				return iodine.New(fmt.Errorf("Not a valid alias name [%s]. Valid examples are: Area51, Grand-Nagus..", aliasName), nil)
+				return iodine.New(errInvalidAliasName{alias: aliasName}, nil)
 			}
 		}
 	}
@@ -247,10 +243,11 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 						AccessKeyID:     accessKeyID,
 						SecretAccessKey: secretAccesskey,
 					}},
+				// local minio server can have this empty until we configure it.
 				"http*://localhost:*": {
 					Auth: &auth{
-						AccessKeyID:     accessKeyID,
-						SecretAccessKey: secretAccesskey,
+						AccessKeyID:     "",
+						SecretAccessKey: "",
 					}},
 			},
 			Aliases: map[string]string{
@@ -263,10 +260,10 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 		aliasName := alias[0]
 		url := alias[1]
 		if strings.HasPrefix(aliasName, "http") {
-			return nil, iodine.New(errors.New("invalid alias cannot use http{s}"), nil)
+			return nil, iodine.New(errInvalidAliasName{alias: aliasName}, nil)
 		}
 		if !strings.HasPrefix(url, "http") {
-			return nil, iodine.New(errors.New("invalid url type only supports http{s}"), nil)
+			return nil, iodine.New(errInvalidURL{url: url}, nil)
 		}
 		config = &mcConfig{
 			Version: currentConfigVersion,
@@ -285,7 +282,7 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 		}
 		return config, nil
 	default:
-		return nil, iodine.New(errors.New("invalid number of arguments for --alias, requires exact 2"), nil)
+		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
 }
 
@@ -309,22 +306,13 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 	for globURL, cfg := range config.Hosts {
 		match, err := filepath.Match(globURL, getHostURL(u))
 		if err != nil {
-			msg := fmt.Errorf("Error parsing glob'ed URL while comparing [%s] [%s]", globURL, requestURL)
-			return nil, iodine.New(msg, map[string]string{
-				"globURL": globURL,
-				"hostURL": requestURL,
-			})
+			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: requestURL}, nil)
 		}
 		if match {
-			var hostCfg hostConfig
-			if hostCfg.Auth != nil {
-				hostCfg.Auth.AccessKeyID = cfg.Auth.AccessKeyID
-				hostCfg.Auth.SecretAccessKey = cfg.Auth.SecretAccessKey
-			}
-			return &hostCfg, nil
+			return &cfg, nil
 		}
 	}
-	return nil, iodine.New(errors.New("No matching host config found"), nil)
+	return nil, iodine.New(errNoMatchingHost{}, nil)
 }
 
 //getBashCompletionCmd generates bash completion file.
@@ -376,7 +364,7 @@ func saveConfigCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to identify config file path")
 	}
-	console.Infof("Configuration written to " + configPath + ". Please update your access credentials.\n")
+	console.Infoln("Configuration written to " + configPath + ". Please update your access credentials.")
 }
 
 // doConfigCmd is the handler for "mc config" sub-command.
