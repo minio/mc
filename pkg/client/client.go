@@ -37,12 +37,6 @@ type Client interface {
 	StatObject(bucket, object string) (size int64, date time.Time, err error)
 }
 
-type WriteErrorCloser interface {
-	io.WriteCloser
-
-	CloseWithError(error) error
-}
-
 // Bucket - carries s3 bucket reply header
 type Bucket struct {
 	Name         string

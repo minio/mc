@@ -17,12 +17,12 @@
 package main
 
 import (
-	"github.com/cheggaaa/pb"
+	"io"
+
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
-	"io"
 )
 
 type message struct {
@@ -103,7 +103,7 @@ func doCopyCmd(ctx *cli.Context) {
 	for _, writer := range writeClosers {
 		writers = append(writers, writer)
 	}
-	bar := pb.New64(length)
+	bar := startBar(length)
 	writers = append(writers, bar)
 
 	// write progress bar
