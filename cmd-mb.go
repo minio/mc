@@ -36,34 +36,32 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to get config")
 	}
-	urlStr, err := parseURL(ctx.Args().First(), config.Aliases)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
-	}
-
-	bucket, err := url2Bucket(urlStr)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
-	}
-
-	clnt, err := getNewClient(globalDebugFlag, urlStr)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
-	}
-
-	if !strings.HasPrefix(urlStr, "file:") {
-		if !client.IsValidBucketName(bucket) {
+	for _, arg := range ctx.Args() {
+		urlStr, err := parseURL(arg, config.Aliases)
+		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln(errInvalidbucket)
+			console.Errorln(err)
 		}
-	}
-
-	err = clnt.PutBucket(bucket)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
+		bucket, err := url2Bucket(urlStr)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Errorln(err)
+		}
+		clnt, err := getNewClient(globalDebugFlag, urlStr)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Errorln(err)
+		}
+		if !strings.HasPrefix(urlStr, "file:") {
+			if !client.IsValidBucketName(bucket) {
+				log.Debug.Println(iodine.New(err, nil))
+				console.Errorln(errInvalidbucket)
+			}
+		}
+		err = clnt.PutBucket(bucket)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Errorln(err)
+		}
 	}
 }
