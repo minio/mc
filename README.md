@@ -1,10 +1,10 @@
-# Minio Client
+# Modern Copy
 
-mc - Minio Client for S3 Compatible Object Storage released under [Apache license v2](./LICENSE).
+mc - Modern copy command for filesystems and object Storage. "mc" has features to resume partial downloads, progress bar, network reconnect and checksum verification. It is written in golang and released under [Apache license v2](./LICENSE).
 
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/minio-io/mc) [![Build Status](https://travis-ci.org/minio-io/mc.svg)](https://travis-ci.org/minio-io/mc)
 
-## Download & Install
+## Install from Source
 
 ```go
 # go get github.com/minio-io/mc
@@ -18,18 +18,3 @@ mc - Minio Client for S3 Compatible Object Storage released under [Apache licens
 
 [Contribute to mc](./CONTRIBUTING.md)
 
-### Supported platforms
-
-| Name  | Supported |
-| ------------- | ------------- |
-| Linux  | Yes  |
-| Windows | Yes |
-| Mac OSX | Yes |
-
-### Supported architectures
-
-| Arch | Supported |
-| ------------- | ------------- |
-| x86-64 | Yes |
-| arm64 | Not yet|
-| i386 | Not yet |

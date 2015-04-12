@@ -1,5 +1,5 @@
 /*
- * Minimalist Object Storage, (C) 2014,2015 Minio, Inc.
+ * Modern Copy, (C) 2014,2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,14 @@ import (
 // List of commands
 var (
 	cpCmd = cli.Command{
-		Name:        "cp",
-		Usage:       "copy objects and files",
-		Description: "Copy files and objects recursively between Amazon S3, Minio Object Storage and Filesystem",
-		Action:      doCopyCmd,
+		Name:  "cp",
+		Usage: "Copy objects and files",
+		//		Description: "Copy files and objects recursively across object storage and filesystems",
+		Action: doCopyCmd,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "recursive, r",
-				Usage: "recursively crawls a given directory or bucket",
+				Usage: "Recursively crawl a given directory or bucket",
 			},
 		},
 		CustomHelpTemplate: `NAME:
@@ -59,10 +59,10 @@ EXAMPLES:
 	}
 
 	lsCmd = cli.Command{
-		Name:        "ls",
-		Usage:       "list files and objects",
-		Description: `List files and objects recursively between Amazon S3, Minio Object Storage and Filesystem`,
-		Action:      doListCmd,
+		Name:  "ls",
+		Usage: "List files and objects",
+		//		Description: `List files and objects recursively on object storage and fileystems`,
+		Action: doListCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -91,10 +91,10 @@ EXAMPLES:
 	}
 
 	mbCmd = cli.Command{
-		Name:        "mb",
-		Usage:       "makes a bucket",
-		Description: `Creates a bucket on Amazon S3, Minio Object Storage and Filesystem`,
-		Action:      doMakeBucketCmd,
+		Name:  "mb",
+		Usage: "Make a bucket",
+		//		Description: `Create a bucket on object storage or a folder on filesystem`,
+		Action: doMakeBucketCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -121,10 +121,10 @@ EXAMPLES:
 	configCmd = cli.Command{
 		Name:  "config",
 		Usage: "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
-		Description: `Configure minio client configuration.
-
-   NOTE: that the configure command only writes values to the config file.
-   It does not use any configuration values from the environment variables.`,
+		//		Description: Configure minio client configuration.
+		//
+		//   NOTE: that the configure command only writes values to the config file.
+		//   It does not use any configuration values from the environment variables.`,
 		Action: doConfigCmd,
 		Flags: []cli.Flag{
 			cli.StringFlag{
@@ -150,13 +150,13 @@ EXAMPLES:
 	}
 	updateCmd = cli.Command{
 		Name:        "update",
-		Usage:       "Check if new updates are available at http://minio.io",
+		Usage:       "Check for new software updates",
 		Description: "",
 		Action:      doUpdateCmd,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "yes, y",
-				Usage: "download and update local binary",
+				Usage: "Download and update local binary",
 			},
 		},
 	}
@@ -174,11 +174,11 @@ var (
 	flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
-			Usage: "enable HTTP tracing",
+			Usage: "Enable HTTP tracing",
 		},
 		cli.BoolFlag{
 			Name:  "quiet, q",
-			Usage: "disable chatty output, such as the progress bar",
+			Usage: "Disable chatty output, such as the progress bar",
 		},
 	}
 )
