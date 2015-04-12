@@ -21,7 +21,6 @@ import (
 	"io"
 	"io/ioutil"
 
-	"errors"
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
