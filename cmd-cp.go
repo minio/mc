@@ -104,6 +104,7 @@ func doCopyCmd(ctx *cli.Context) {
 		writers = append(writers, writer)
 	}
 	bar := startBar(length)
+	bar.Start()
 	writers = append(writers, bar)
 
 	// write progress bar
@@ -111,6 +112,16 @@ func doCopyCmd(ctx *cli.Context) {
 
 	// copy data to writers
 	_, err = io.CopyN(multiWriter, reader, length)
+
+	// close writers
+	for _, writer := range writeClosers {
+		err := writer.Close()
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+		}
+	}
+
+	//	time.Sleep(5 * time.Second)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to write to target")
