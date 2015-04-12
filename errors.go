@@ -16,26 +16,34 @@
 
 package main
 
-import "errors"
+import "strconv"
 
-var (
-	// TODO remove, unused
-	// fs
-	// errFskey = errors.New("Key is needed to get the file")
+type errEmptyURL struct{}
 
-	// url
-	errEmptyURL = errors.New("URL is empty")
+func (e errEmptyURL) Error() string {
+	return "URL is empty"
+}
 
-	// url
-	errUnsupportedScheme = errors.New("Unsupported URL scheme")
+type errUnsupportedScheme struct {
+	scheme urlType
+}
 
-	// url
-	errInvalidURL = errors.New("Invalid URL")
+func (e errUnsupportedScheme) Error() string {
+	return "Unsuppported URL scheme: " + strconv.Itoa(int(e.scheme))
+}
 
-	// TODO remove, unused
-	// host
-	// errHostname = errors.New("No hostname specified")
+type errInvalidURL struct {
+	url string
+}
 
-	// common
-	errInvalidbucket = errors.New("Invalid bucket name")
-)
+func (e errInvalidURL) Error() string {
+	return "Invalid URL: " + e.url
+}
+
+type errInvalidBucket struct {
+	bucket string
+}
+
+func (e errInvalidBucket) Error() string {
+	return "Invalid bucket name: " + e.bucket
+}

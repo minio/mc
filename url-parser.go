@@ -87,7 +87,7 @@ func isValidFileURL(urlStr string) bool {
 // fixFileURL rewrites file URL to proper file:///path/to/ form.
 func fixFileURL(urlStr string) (fixedURL string, err error) {
 	if urlStr == "" {
-		return "", iodine.New(errEmptyURL, nil)
+		return "", iodine.New(errEmptyURL{}, nil)
 	}
 	utype, e := getURLType(urlStr)
 	if e != nil || utype != urlFile {
@@ -102,7 +102,7 @@ func fixFileURL(urlStr string) (fixedURL string, err error) {
 	// file:///path should always have empty host
 	if u.Host != "" {
 		// Not really a file URL. Host is not empty.
-		return "", iodine.New(errInvalidURL, nil)
+		return "", iodine.New(errInvalidURL{url: urlStr}, nil)
 	}
 	// do not use u.Scheme since that would construct a path in the form
 	// file:// which is an invalid file but url Parse doesn't report error
@@ -174,7 +174,7 @@ func parseURL(arg string, aliases map[string]string) (urlStr string, err error) 
 	}
 
 	if !isValidURL(urlStr) {
-		return "", iodine.New(errUnsupportedScheme, nil)
+		return "", iodine.New(errUnsupportedScheme{scheme: urlUnknown}, nil)
 	}
 	// If it is a file URL, rewrite to file:///path/to form
 	if isValidFileURL(urlStr) {

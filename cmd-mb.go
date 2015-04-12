@@ -55,7 +55,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		if !strings.HasPrefix(urlStr, "file:") {
 			if !client.IsValidBucketName(bucket) {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Errorln(errInvalidbucket)
+				console.Errorln(errInvalidBucket{bucket: bucket})
 			}
 		}
 		err = clnt.PutBucket(bucket)
