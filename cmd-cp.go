@@ -17,11 +17,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 
+	"errors"
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
@@ -60,30 +60,35 @@ func doPutMultiTarget(targetURLs []string, md5Hex string, sourceSize int64, targ
 	return ch
 }
 
+func getClientReader(sourceURL string) (io.ReadCloser, int64, string, error) {
+	errParams := map[string]string{"sourceURL": sourceURL}
+	// Parse URL to bucket and object names
+	sourceBucket, sourceObject, err := url2Object(sourceURL)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, errParams)
+	}
+
+	sourceClnt, err := getNewClient(globalDebugFlag, sourceURL)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, errParams)
+	}
+
+	// Get a reader for the source object
+	return sourceClnt.Get(sourceBucket, sourceObject)
+}
+
 // doCopyCmd copies objects into and from a bucket or between buckets
 func multiCopy(targetURLs []string, sourceURL string) (err error) {
-	var targetBuffer bytes.Buffer
-	fmt.Fprint(&targetBuffer, targetURLs)
+	fmt.Println(targetURLs)
+
 	errParams := map[string]string{
-		"targetURLs": targetBuffer.String(),
+		"targetURLs": fmt.Sprintln(targetURLs),
 		"sourceURL":  sourceURL,
 	}
 	numTargets := len(targetURLs)
 
-	// Parse URL to bucket and object names
-	sourceBucket, sourceObject, err := url2Object(sourceURL)
-	if err != nil {
-		return iodine.New(err, errParams)
-	}
-
-	// Initialize a new client object for the source
-	sourceClnt, err := getNewClient(globalDebugFlag, sourceURL)
-	if err != nil {
-		return iodine.New(err, errParams)
-	}
-
 	// Get a reader for the source object
-	sourceReader, sourceSize, md5Hex, err := sourceClnt.Get(sourceBucket, sourceObject)
+	sourceReader, sourceSize, md5Hex, err := getClientReader(sourceURL)
 	if err != nil {
 		return iodine.New(err, errParams)
 	}
