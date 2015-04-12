@@ -51,6 +51,7 @@ import (
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
+	"sync"
 )
 
 /// Object API operations
@@ -58,6 +59,7 @@ import (
 // Put - upload new object to bucket
 func (c *s3Client) Put(bucket, key, md5HexString string, size int64) (io.WriteCloser, error) {
 	r, w := io.Pipe()
+	blockingWriter := NewBlockingWriteCloser(w)
 	go func() {
 		req := newReq(c.keyURL(bucket, key), c.UserAgent, r)
 		req.Method = "PUT"
@@ -67,7 +69,10 @@ func (c *s3Client) Put(bucket, key, md5HexString string, size int64) (io.WriteCl
 		if strings.TrimSpace(md5HexString) != "" {
 			md5, err := hex.DecodeString(md5HexString)
 			if err != nil {
-				r.CloseWithError(iodine.New(err, nil))
+				err := iodine.New(err, nil)
+				r.CloseWithError(err)
+				blockingWriter.Release(err)
+				return
 			}
 			req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
 		}
@@ -77,17 +82,56 @@ func (c *s3Client) Put(bucket, key, md5HexString string, size int64) (io.WriteCl
 		res, err := client.Do(req)
 
 		if err != nil {
-			r.CloseWithError(iodine.New(err, nil))
+			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
 			return
 		}
 
 		if res.StatusCode != http.StatusOK {
-			r.CloseWithError(iodine.New(err, nil))
+			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
 			return
 		}
+		blockingWriter.Release(nil)
 		r.Close()
 	}()
-	return w, nil
+	return blockingWriter, nil
+}
+
+type blockingWriteCloser struct {
+	w       io.WriteCloser
+	release *sync.WaitGroup
+	err     error
+}
+
+func (b *blockingWriteCloser) Write(p []byte) (int, error) {
+	n, err := b.w.Write(p)
+	err = iodine.New(err, nil)
+	return n, err
+}
+
+func (b *blockingWriteCloser) Close() error {
+	err := b.w.Close()
+	if err != nil {
+		b.err = err
+	}
+	b.release.Wait()
+	return b.err
+}
+
+func (b *blockingWriteCloser) Release(err error) {
+	b.release.Done()
+	if err != nil {
+		b.err = err
+	}
+}
+
+func NewBlockingWriteCloser(w io.WriteCloser) *blockingWriteCloser {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	return &blockingWriteCloser{w: w, release: wg}
 }
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3

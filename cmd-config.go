@@ -33,7 +33,7 @@ type auth struct {
 }
 
 type hostConfig struct {
-	Auth auth
+	Auth *auth
 }
 
 type mcConfig struct {
@@ -131,10 +131,10 @@ func checkMcConfig(config *mcConfig) (err error) {
 			if host == "" {
 				return iodine.New(fmt.Errorf("Empty host URL"), nil)
 			}
-			if hostCfg.Auth.AccessKeyID == "" {
+			if hostCfg.Auth != nil && hostCfg.Auth.AccessKeyID == "" {
 				return iodine.New(fmt.Errorf("AccessKeyID is empty for Host [%s]", host), nil)
 			}
-			if hostCfg.Auth.SecretAccessKey == "" {
+			if hostCfg.Auth != nil && hostCfg.Auth.SecretAccessKey == "" {
 				return iodine.New(fmt.Errorf("SecretAccessKey is empty for Host [%s]", host), nil)
 			}
 		}
@@ -243,12 +243,12 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 			Version: currentConfigVersion,
 			Hosts: map[string]hostConfig{
 				"http*://s3*.amazonaws.com": {
-					Auth: auth{
+					Auth: &auth{
 						AccessKeyID:     accessKeyID,
 						SecretAccessKey: secretAccesskey,
 					}},
 				"http*://localhost:*": {
-					Auth: auth{
+					Auth: &auth{
 						AccessKeyID:     accessKeyID,
 						SecretAccessKey: secretAccesskey,
 					}},
@@ -272,7 +272,7 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 			Version: currentConfigVersion,
 			Hosts: map[string]hostConfig{
 				"http*://s3*.amazonaws.com": {
-					Auth: auth{
+					Auth: &auth{
 						AccessKeyID:     accessKeyID,
 						SecretAccessKey: secretAccesskey,
 					}},
@@ -317,8 +317,10 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 		}
 		if match {
 			var hostCfg hostConfig
-			hostCfg.Auth.AccessKeyID = cfg.Auth.AccessKeyID
-			hostCfg.Auth.SecretAccessKey = cfg.Auth.SecretAccessKey
+			if hostCfg.Auth != nil {
+				hostCfg.Auth.AccessKeyID = cfg.Auth.AccessKeyID
+				hostCfg.Auth.SecretAccessKey = cfg.Auth.SecretAccessKey
+			}
 			return &hostCfg, nil
 		}
 	}
