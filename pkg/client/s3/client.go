@@ -156,8 +156,8 @@ func (c *s3Client) keyURL(bucket, key string) string {
 	return url + key
 }
 
-func newReq(url string, userAgent string) *http.Request {
-	req, err := http.NewRequest("GET", url, nil)
+func newReq(url string, userAgent string, body io.ReadCloser) *http.Request {
+	req, err := http.NewRequest("GET", url, body)
 	if err != nil {
 		// TODO: never exit from inside a package. Let the
 		// caller handle errors gracefully.

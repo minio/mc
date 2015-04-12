@@ -66,27 +66,33 @@ func isValidObject(bucket, object string) (string, os.FileInfo, error) {
 }
 
 // Put - upload new object to bucket
-func (f *fsClient) Put(bucket, object, md5HexString string, size int64, contents io.Reader) error {
+func (f *fsClient) Put(bucket, object, md5HexString string, size int64) (io.WriteCloser, error) {
+	r, w := io.Pipe()
 	// handle md5HexString match internally
 	if bucket == "" || object == "" {
-		return iodine.New(client.InvalidArgument{}, nil)
+		return nil, iodine.New(client.InvalidArgument{}, nil)
 	}
 	objectPath := path.Join(bucket, object)
 	if size < 0 {
-		return iodine.New(client.InvalidArgument{}, nil)
+		return nil, iodine.New(client.InvalidArgument{}, nil)
 	}
 	fs, err := os.Create(objectPath)
 	if os.IsExist(err) {
-		return iodine.New(client.ObjectExists{Bucket: bucket, Object: object}, nil)
+		return nil, iodine.New(client.ObjectExists{Bucket: bucket, Object: object}, nil)
 	}
 	if err != nil {
-		return iodine.New(err, nil)
+		return nil, iodine.New(err, nil)
 	}
-	_, err = io.CopyN(fs, contents, size)
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-	return nil
+	go func() {
+		_, err := io.CopyN(fs, r, size)
+		if err != nil {
+			r.CloseWithError(iodine.New(err, map[string]string{"objectPath": objectPath}))
+			// TODO cleanup if file isn't fully copied
+			return
+		}
+		r.Close()
+	}()
+	return w, nil
 }
 
 // Get - download an object from bucket

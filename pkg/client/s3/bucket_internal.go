@@ -23,7 +23,7 @@ func (c *s3Client) retryRequest(urlReq string) (listBucketResults, error) {
 	bres := listBucketResults{}
 	for try := 1; try <= maxTries; try++ {
 		time.Sleep(time.Duration(try-1) * 100 * time.Millisecond)
-		req := newReq(urlReq, c.UserAgent)
+		req := newReq(urlReq, c.UserAgent, nil)
 		c.signRequest(req, c.Host)
 		res, err := c.Transport.RoundTrip(req)
 		if err != nil {
