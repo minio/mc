@@ -1,5 +1,8 @@
 language: go
 go:
- - 1.4
- - release
+- 1.4
+- release
 sudo: false
+notifications:
+  slack:
+    secure: OtdWIuZt+BqL5/YgPIJ0MuPnU/pjTR5M/s9zfAX7iQlHZjAwQihHnevVv1xuXpqE4+hYjf4Ksw4RO7VSgfJD1nOT9EgeyRPyWanS93AXq5Bz8kprjRCF7vb/U01fjPKUJ+fOckj1xxTUEakbOFmDqkgphc0yQUMhU8MkyoCPZXI=
