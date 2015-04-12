@@ -78,8 +78,6 @@ func getClientReader(sourceURL string) (io.ReadCloser, int64, string, error) {
 
 // doCopyCmd copies objects into and from a bucket or between buckets
 func multiCopy(targetURLs []string, sourceURL string) (err error) {
-	fmt.Println(targetURLs)
-
 	errParams := map[string]string{
 		"targetURLs": fmt.Sprintln(targetURLs),
 		"sourceURL":  sourceURL,

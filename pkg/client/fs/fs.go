@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -151,29 +152,21 @@ func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err
 		if fi.IsDir() {
 			return nil // not a fs skip
 		}
-		if prefix != "" {
-			if strings.Contains(fp, prefix) {
-				item := &client.Item{
-					Key:          fp,
-					LastModified: fi.ModTime(),
-					Size:         fi.Size(),
-				}
-				items = append(items, item)
-			}
-		} else {
-			item := &client.Item{
-				Key:          fp,
-				LastModified: fi.ModTime(),
-				Size:         fi.Size(),
-			}
-			items = append(items, item)
+		// If bucket path is not absolute, trim it
+		// otherwise pass it down as is
+		item := &client.Item{
+			Key:          strings.TrimPrefix(fp, bucket),
+			LastModified: fi.ModTime(),
+			Size:         fi.Size(),
 		}
+		items = append(items, item)
 		return nil
 	}
-	err = filepath.Walk(bucket, visitFS)
+	err = filepath.Walk(path.Join(bucket, prefix), visitFS)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
+	sort.Sort(client.BySize(items))
 	return items, nil
 }
 
@@ -182,10 +175,7 @@ func (f *fsClient) PutBucket(bucket string) error {
 	if bucket == "" || strings.TrimSpace(bucket) == "" {
 		return iodine.New(client.InvalidArgument{}, nil)
 	}
-	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
-		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
-	}
-	err := os.Mkdir(bucket, os.ModeDir)
+	err := os.Mkdir(bucket, 0700)
 	if os.IsExist(err) {
 		return iodine.New(client.BucketExists{Bucket: bucket}, nil)
 	}

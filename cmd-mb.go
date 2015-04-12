@@ -17,6 +17,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
@@ -29,7 +31,6 @@ func doMakeBucketCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
-
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
@@ -53,9 +54,11 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln(err)
 	}
 
-	if !client.IsValidBucketName(bucket) {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(errInvalidbucket)
+	if !strings.HasPrefix(urlStr, "file:") {
+		if !client.IsValidBucketName(bucket) {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln(errInvalidbucket)
+		}
 	}
 
 	err = clnt.PutBucket(bucket)

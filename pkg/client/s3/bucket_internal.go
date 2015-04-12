@@ -125,6 +125,6 @@ func (c *s3Client) queryObjects(bucket string, startAt, prefix, delimiter string
 			return nil, nil, iodine.New(errors.New("No items replied"), nil)
 		}
 	}
-	sort.Sort(bySize(items))
+	sort.Sort(client.BySize(items))
 	return items, prefixes, nil
 }

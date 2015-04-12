@@ -48,13 +48,6 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-// bySize implements sort.Interface for []Item based on the Size field.
-type bySize []*client.Item
-
-func (a bySize) Len() int           { return len(a) }
-func (a bySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
-
 /// Bucket API operations
 
 // ListBuckets - Get list of buckets

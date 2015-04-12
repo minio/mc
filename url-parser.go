@@ -17,15 +17,25 @@
 package main
 
 import (
+	"path"
+	"path/filepath"
 	"strings"
 
 	"net/url"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
+
+// TODO - y4m4 - this file needs to be cleaned up before we make a release
+//
+// The actual work on this file is about how do we handle generic
+// conversions for both file:/// and http:// in a simple way.
+//
+// I propose we write this as a proper struct and its methods.
 
 // URLType defines supported storage protocols
 type urlType int
@@ -96,8 +106,9 @@ func fixFileURL(urlStr string) (fixedURL string, err error) {
 	}
 	// do not use u.Scheme since that would construct a path in the form
 	// file:// which is an invalid file but url Parse doesn't report error
-	// so we construct manually instead
-	fixedURL = "file:///" + u.Path
+	// so we construct manually instead as an absolute path
+	path, _ := filepath.Abs(u.Path)
+	fixedURL = "file://" + path
 	return fixedURL, nil
 
 }
@@ -108,6 +119,12 @@ func url2Object(urlStr string) (bucketName, objectName string, err error) {
 	if u.Path == "" {
 		// No bucket name passed. It is a valid case
 		return "", "", nil
+	}
+	// url is of scheme file, behave differently by returning
+	// directory and file instead using filepath.Split function
+	if u.Scheme == "file" {
+		bucketName, objectName = filepath.Split(u.Path)
+		return bucketName, objectName, nil
 	}
 	splits := strings.SplitN(u.Path, "/", 3)
 	switch len(splits) {
@@ -126,8 +143,26 @@ func url2Object(urlStr string) (bucketName, objectName string, err error) {
 
 // url2Bucket converts URL to bucket name
 func url2Bucket(urlStr string) (bucketName string, err error) {
-	bucketName, _, err = url2Object(urlStr)
-	return bucketName, iodine.New(err, nil)
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return "", iodine.New(err, nil)
+	}
+	if u.Scheme == "file" {
+		bucketName, objectName, err := url2Object(urlStr)
+		if err != nil {
+			return "", iodine.New(err, nil)
+		}
+		return path.Join(bucketName, objectName), nil
+	}
+	bucketName, objectName, err := url2Object(urlStr)
+	if objectName != "" {
+		// objectName also provided invalid argument
+		return "", iodine.New(client.InvalidArgument{}, nil)
+	}
+	if err != nil {
+		return "", iodine.New(err, nil)
+	}
+	return bucketName, nil
 }
 
 // parseURL extracts URL string from a single cmd-line argument
