@@ -1,5 +1,5 @@
 /*
- * Minimalist Object Storage, (C) 2015 Minio, Inc.
+ * Modern Copy, (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -30,7 +30,7 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
-// TODO - implement these steps
+// TODO - implement these
 
 func (s *MySuite) TestListBuckets(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
