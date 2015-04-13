@@ -60,6 +60,13 @@ const (
 	currentConfigVersion = 1
 )
 
+const (
+	// do not pass accesskeyid and secretaccesskey through cli
+	// users should manually edit them, add a stub code
+	accessKeyID     = "YOUR-ACCESS-KEY-ID-HERE"
+	secretAccesskey = "YOUR-SECRET-ACCESS-KEY-HERE"
+)
+
 // Global config data loaded from json config file durlng init(). This variable should only
 // be accessed via getMcConfig()
 var _config *mcConfig
@@ -109,12 +116,10 @@ func getMcConfig() (cfg *mcConfig, err error) {
 	if _config != nil {
 		return _config, nil
 	}
-
 	_config, err = loadMcConfig()
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	return _config, nil
 }
 
@@ -138,7 +143,6 @@ func checkMcConfig(config *mcConfig) (err error) {
 	switch {
 	case (config.Version != currentConfigVersion):
 		return iodine.New(errUnsupportedVersion{old: currentConfigVersion, new: config.Version}, nil)
-
 	case len(config.Hosts) > 1:
 		for host, hostCfg := range config.Hosts {
 			// don't need to check for availability of AccessKeyID, not having one
@@ -170,58 +174,46 @@ func loadMcConfig() (config *mcConfig, err error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	_, err = os.Stat(configFile)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	configBytes, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	err = json.Unmarshal(configBytes, &config)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	return config, nil
 }
 
-// saveConfig writes configuration data in json format to config file.
-func saveConfig(ctx *cli.Context) error {
-	configData, err := parseConfigInput(ctx)
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-
+// writeConfig
+func writeConfig(configData *mcConfig) error {
 	jsonConfig, err := json.MarshalIndent(configData, "", "\t")
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-
 	_, err = getOrCreateMcConfigDir()
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-
 	configPath, err := getMcConfigPath()
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-
 	configFile, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-
 	_, err = configFile.Write(jsonConfig)
 	if err != nil {
 		configFile.Close()
 		return iodine.New(err, nil)
 	}
 
+	// explicitly close config file
 	configFile.Close()
 
 	// Invalidate cached config
@@ -232,46 +224,55 @@ func saveConfig(ctx *cli.Context) error {
 	if os.IsNotExist(iodine.ToError(err)) {
 		return iodine.New(err, nil)
 	}
-
 	return nil
 }
 
-func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
-	accessKeyID := c.String("accesskeyid")
-	secretAccesskey := c.String("secretkey")
-
-	if accessKeyID == "" {
-		accessKeyID = "YOUR-ACCESS-KEY-ID-HERE"
-	}
-
-	if secretAccesskey == "" {
-		secretAccesskey = "YOUR-SECRET-ACCESS-KEY-HERE"
-	}
-
-	alias := strings.Fields(c.String("alias"))
-	switch true {
-	case len(alias) == 0:
-		config = &mcConfig{
-			Version: currentConfigVersion,
-			Hosts: map[string]hostConfig{
-				"http*://s3*.amazonaws.com": {
-					Auth: &auth{
-						AccessKeyID:     accessKeyID,
-						SecretAccessKey: secretAccesskey,
-					}},
-				// local minio server can have this empty until we configure it.
-				"http*://localhost:*": {
-					Auth: &auth{
-						AccessKeyID:     "",
-						SecretAccessKey: "",
-					}},
-			},
-			Aliases: map[string]string{
-				"s3":        "https://s3.amazonaws.com",
-				"localhost": "http://localhost:9000",
-			},
+// saveConfig writes configuration data in json format to config file.
+func saveConfig(ctx *cli.Context) error {
+	switch ctx.Args().Get(0) {
+	case "generate":
+		configData, err := generateNewConfig()
+		if err != nil {
+			return iodine.New(err, nil)
 		}
-		return config, nil
+		return writeConfig(configData)
+	default:
+		configData, err := parseConfigInput(ctx)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		return writeConfig(configData)
+	}
+}
+
+func generateNewConfig() (config *mcConfig, err error) {
+	config = &mcConfig{
+		Version: currentConfigVersion,
+		Hosts: map[string]hostConfig{
+			"http*://s3*.amazonaws.com": {
+				Auth: &auth{
+					AccessKeyID:     accessKeyID,
+					SecretAccessKey: secretAccesskey,
+				}},
+			// local minio server can have this empty until webcli is ready
+			// which would make it easier to generate accesskeys and manage them
+			"http*://localhost:*": {
+				Auth: &auth{
+					AccessKeyID:     "",
+					SecretAccessKey: "",
+				}},
+		},
+		Aliases: map[string]string{
+			"s3":        "https://s3.amazonaws.com",
+			"localhost": "http://localhost:9000",
+		},
+	}
+	return config, nil
+}
+
+func parseConfigInput(ctx *cli.Context) (config *mcConfig, err error) {
+	alias := strings.Fields(ctx.String("alias"))
+	switch true {
 	case len(alias) == 2:
 		aliasName := alias[0]
 		url := strings.TrimSuffix(alias[1], "/")
@@ -312,13 +313,11 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 	u, err := url.Parse(requestURL)
 	if err != nil {
 		return nil, iodine.New(err, nil)
-
 	}
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	for globURL, cfg := range config.Hosts {
 		match, err := filepath.Match(globURL, getHostURL(u))
 		if err != nil {
@@ -331,45 +330,18 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 	return nil, iodine.New(errNoMatchingHost{}, nil)
 }
 
-//getBashCompletionCmd generates bash completion file.
-// TODO don't kill, return an error instead. caller should kill, not this function
-func getBashCompletionCmd() {
-	var b bytes.Buffer
-	if os.Getenv("SHELL") != "/bin/bash" {
-		console.Fatalln("Unsupported shell for bash completion detected.. exiting")
-	}
-	b.WriteString(mcBashCompletion)
-	f, _ := getMcBashCompletionFilename()
-	// TODO uncomment when ready
-	//	if err != nil {
-	//		return err
-	//	}
-	fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	defer fl.Close()
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to create bash completion file")
-	}
-	_, err = fl.Write(b.Bytes())
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to write bash completion file")
-	}
-	msg := "\nConfiguration written to " + f
-	msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
-	msg = msg + "$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc"
-	console.Infoln(msg)
-}
-
 // saveConfigCmd writes config file to disk
 func saveConfigCmd(ctx *cli.Context) {
+	// show help if nothing is set
+	if len(ctx.Args()) < 1 && !ctx.IsSet("completion") && !ctx.IsSet("alias") {
+		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
+	}
 	err := saveConfig(ctx)
 	if os.IsExist(iodine.ToError(err)) {
 		log.Debug.Println(iodine.New(err, nil))
 		configPath, _ := getMcConfigPath()
 		console.Fatalln("mc: Configuration file " + configPath + " already exists")
 	}
-
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		configPath, _ := getMcConfigPath()
@@ -385,13 +357,36 @@ func saveConfigCmd(ctx *cli.Context) {
 
 // doConfigCmd is the handler for "mc config" sub-command.
 func doConfigCmd(ctx *cli.Context) {
-	if len(ctx.Args()) < 1 {
-		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
-	}
+	// treat bash completion separately here
 	switch true {
 	case ctx.Bool("completion") == true:
-		getBashCompletionCmd()
+		var b bytes.Buffer
+		if os.Getenv("SHELL") != "/bin/bash" {
+			console.Fatalln("Unsupported shell for bash completion detected.. exiting")
+		}
+		b.WriteString(mcBashCompletion)
+		f, err := getMcBashCompletionFilename()
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("mc: Unable to identify bash completion path")
+		}
+		fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+		defer fl.Close()
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("Unable to create bash completion file")
+		}
+		_, err = fl.Write(b.Bytes())
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("Unable to write bash completion file")
+		}
+		msg := "\nConfiguration written to " + f
+		msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
+		msg = msg + "$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc"
+		console.Infoln(msg)
 	default:
+		// rest of the arguments get passed down
 		saveConfigCmd(ctx)
 	}
 }
