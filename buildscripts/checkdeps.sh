@@ -20,7 +20,7 @@ _init() {
     GCC_VERSION="4.0"
     CLANG_VERSION="3.5"
     GIT_VERSION="1.0"
-    GO_VERSION="1.3"
+    GO_VERSION="1.4"
     OSX_VERSION="10.8"
     UNAME=$(uname -sm)
 
@@ -128,30 +128,8 @@ is_supported_arch() {
 check_deps() {
     check_version "$(env go version 2>/dev/null | sed 's/^.* go\([0-9.]*\).*$/\1/')" "${GO_VERSION}"
     if [ $? -ge 2 ]; then
-	MISSING="${MISSING} golang(1.3)"
+	MISSING="${MISSING} golang(1.4)"
     fi
-
-    check_version "$(env git --version 2>/dev/null | sed -e 's/^.* \([0-9.\].*\).*$/\1/' -e 's/^\([0-9.\]*\).*/\1/g')" "${GIT_VERSION}"
-    if [ $? -ge 2 ]; then
-	MISSING="${MISSING} git"
-    fi
-
-    case ${UNAME%% *} in
-        "Linux")
-	    check_version "$(env gcc --version 2>/dev/null | sed 's/^.* \([0-9.]*\).*$/\1/' | head -1)" "${GCC_VERSION}"
-	    if [ $? -ge 2 ]; then
-		MISSING="${MISSING} build-essential"
-	    fi
-            ;;
-	"Darwin")
-	    check_version "$(env gcc --version 2>/dev/null | sed 's/^.* \([0-9.]*\).*$/\1/' | head -1)" "${CLANG_VERSION}"
-	    if [ $? -ge 2 ]; then
-		MISSING="${MISSING} xcode-cli"
-	    fi
-	    ;;
-	"*")
-	    ;;
-    esac
 }
 
 main() {
