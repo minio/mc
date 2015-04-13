@@ -67,44 +67,41 @@ func doListCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
-
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to get config")
 	}
-
-	urlStr, err := parseURL(ctx.Args().First(), config.Aliases)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
-	}
-
-	client, err := getNewClient(urlStr, globalDebugFlag)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
-	}
-
-	bucketName, objectName, err := url2Object(urlStr)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
-	}
-
-	if bucketName == "" { // List all buckets
-		buckets, err := client.ListBuckets()
+	for _, arg := range ctx.Args() {
+		urlStr, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln(err)
 		}
-		printBuckets(buckets)
-	} else {
-		items, err = client.ListObjects(bucketName, objectName)
+		client, err := getNewClient(urlStr, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln(err)
 		}
-		printObjects(items)
+		bucketName, objectName, err := url2Object(urlStr)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln(err)
+		}
+		if bucketName == "" { // List all buckets
+			buckets, err := client.ListBuckets()
+			if err != nil {
+				log.Debug.Println(iodine.New(err, nil))
+				console.Fatalln(err)
+			}
+			printBuckets(buckets)
+		} else {
+			items, err = client.ListObjects(bucketName, objectName)
+			if err != nil {
+				log.Debug.Println(iodine.New(err, nil))
+				console.Fatalln(err)
+			}
+			printObjects(items)
+		}
 	}
 }
