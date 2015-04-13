@@ -110,43 +110,57 @@ OPTIONS:
 
 EXAMPLES:
    1. Create a bucket on Amazon S3 object storage
-      $ mc {{.Name}} https://s3.amazonaws.com/public-photo-store
+      $ mc {{.Name}} https://s3.amazonaws.com/public-document-store
 
    2. Create a bucket on Minio object storage
       $ mc {{.Name}} http://localhost:9000/mongodb-backup
 
+   3. Create multiple buckets on Amazon S3 object storage
+      $ mc {{.Name}} https://s3.amazonaws.com/public-photo-store https://s3.amazonaws.com/public-store
+
 `,
 	}
-
+	//   Configure minio client configuration.
+	//
+	//   NOTE: that the configure command only writes values to the config file.
+	//   It does not use any configuration values from the environment variables.`,
 	configCmd = cli.Command{
-		Name:  "config",
-		Usage: "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
-		//		Description: Configure minio client configuration.
-		//
-		//   NOTE: that the configure command only writes values to the config file.
-		//   It does not use any configuration values from the environment variables.`,
+		Name:   "config",
+		Usage:  "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
 		Action: doConfigCmd,
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "accesskeyid, a",
-				Value: "",
-				Usage: "AWS access key ID",
-			},
-			cli.StringFlag{
-				Name:  "secretkey, s",
-				Value: "",
-				Usage: "AWS secret access key",
-			},
-			cli.StringFlag{
 				Name:  "alias",
-				Value: "",
-				Usage: "Add aliases into config",
+				Usage: "Add URL aliases into config",
 			},
 			cli.BoolFlag{
 				Name:  "completion",
 				Usage: "Generate bash completion \"" + mustGetMcBashCompletionFilename() + "\" file.",
 			},
 		},
+		CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}} generate {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+OPTIONS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+EXAMPLES:
+   1. Generate mc config
+      $ mc config generate
+
+   2. Generate bash completion
+      $ mc config --completion
+
+   3. Add alias URLs
+      $ mc config --alias "zek https://s3.amazonaws.com/"
+
+`,
 	}
 	updateCmd = cli.Command{
 		Name:        "update",
