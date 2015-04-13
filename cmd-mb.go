@@ -47,7 +47,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorln(err)
 		}
-		clnt, err := getNewClient(globalDebugFlag, urlStr)
+		clnt, err := getNewClient(urlStr, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorln(err)

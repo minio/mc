@@ -33,7 +33,7 @@ func getSourceReader(sourceURL string) (reader io.ReadCloser, length int64, md5h
 		return nil, 0, "", iodine.New(err, errParams)
 	}
 
-	sourceClnt, err := getNewClient(globalDebugFlag, sourceURL)
+	sourceClnt, err := getNewClient(sourceURL, globalDebugFlag)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, errParams)
 	}
@@ -43,7 +43,7 @@ func getSourceReader(sourceURL string) (reader io.ReadCloser, length int64, md5h
 }
 
 func getTargetWriter(targetURL string, md5Hex string, length int64) (io.WriteCloser, error) {
-	client, err := getNewClient(false, targetURL)
+	client, err := getNewClient(targetURL, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
 	}

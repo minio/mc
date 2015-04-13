@@ -59,8 +59,7 @@ func mustGetMcBashCompletionFilename() string {
 
 // NewClient - get new client
 // TODO refactor this to be more testable
-// TODO debug should be after url
-func getNewClient(debug bool, urlStr string) (clnt client.Client, err error) {
+func getNewClient(urlStr string, debug bool) (clnt client.Client, err error) {
 	uType, err := getURLType(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
