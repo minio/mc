@@ -73,22 +73,17 @@ func doListCmd(ctx *cli.Context) {
 		console.Fatalln("Unable to get config")
 	}
 	for _, arg := range ctx.Args() {
-		urlStr, err := parseURL(arg, config.Aliases)
+		urlp, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln(err)
 		}
-		client, err := getNewClient(urlStr, globalDebugFlag)
+		client, err := getNewClient(urlp, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln(err)
 		}
-		bucketName, objectName, err := url2Object(urlStr)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln(err)
-		}
-		if bucketName == "" { // List all buckets
+		if urlp.bucketName == "" { // List all buckets
 			buckets, err := client.ListBuckets()
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
@@ -96,7 +91,7 @@ func doListCmd(ctx *cli.Context) {
 			}
 			printBuckets(buckets)
 		} else {
-			items, err = client.ListObjects(bucketName, objectName)
+			items, err = client.ListObjects(urlp.bucketName, urlp.objectName)
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
 				console.Fatalln(err)

@@ -59,14 +59,13 @@ func mustGetMcBashCompletionFilename() string {
 
 // NewClient - get new client
 // TODO refactor this to be more testable
-func getNewClient(urlStr string, debug bool) (clnt client.Client, err error) {
-	uType, err := getURLType(urlStr)
-	if err != nil {
-		return nil, iodine.New(err, nil)
+func getNewClient(u *urlParser, debug bool) (clnt client.Client, err error) {
+	if u == nil {
+		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
-	switch uType {
+	switch u.urlType {
 	case urlObjectStorage: // Minio and S3 compatible object storage
-		hostCfg, err := getHostConfig(urlStr)
+		hostCfg, err := getHostConfig(u.String())
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
@@ -78,12 +77,12 @@ func getNewClient(urlStr string, debug bool) (clnt client.Client, err error) {
 			auth.AccessKeyID = hostCfg.Auth.AccessKeyID
 			auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
 		}
-		clnt = s3.GetNewClient(urlStr, auth, mcUserAgent, debug)
+		clnt = s3.GetNewClient(u.String(), auth, mcUserAgent, debug)
 		return clnt, nil
 	case urlFile:
-		clnt = fs.GetNewClient(urlStr)
+		clnt = fs.GetNewClient(u.String())
 		return clnt, nil
 	default:
-		return nil, iodine.New(errUnsupportedScheme{scheme: uType}, nil)
+		return nil, iodine.New(errUnsupportedScheme{scheme: u.urlType}, nil)
 	}
 }

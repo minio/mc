@@ -25,45 +25,45 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
-func getSourceReader(sourceURL string) (reader io.ReadCloser, length int64, md5hex string, err error) {
-	errParams := map[string]string{"sourceURL": sourceURL}
-	// Parse URL to bucket and object names
-	sourceBucket, sourceObject, err := url2Object(sourceURL)
+func getSourceReader(sourceURLParser *urlParser) (reader io.ReadCloser, length int64, md5hex string, err error) {
+	sourceClnt, err := getNewClient(sourceURLParser, globalDebugFlag)
 	if err != nil {
-		return nil, 0, "", iodine.New(err, errParams)
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": sourceURLParser.String()})
 	}
-
-	sourceClnt, err := getNewClient(sourceURL, globalDebugFlag)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, errParams)
-	}
-
 	// Get a reader for the source object
+	sourceBucket := sourceURLParser.bucketName
+	// check if the bucket is valid
+	if err := sourceClnt.StatBucket(sourceBucket); err != nil {
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": sourceURLParser.String()})
+	}
+	sourceObject := sourceURLParser.objectName
 	return sourceClnt.Get(sourceBucket, sourceObject)
 }
 
-func getTargetWriter(targetURL string, md5Hex string, length int64) (io.WriteCloser, error) {
-	client, err := getNewClient(targetURL, globalDebugFlag)
+func getTargetWriter(targetURLParser *urlParser, md5Hex string, length int64) (io.WriteCloser, error) {
+	targetClnt, err := getNewClient(targetURLParser, globalDebugFlag)
 	if err != nil {
-		return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
+		return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
 	}
-	targetBucket, targetObject, err := url2Object(targetURL)
-	if err != nil {
-		return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
+	targetBucket := targetURLParser.bucketName
+	// check if bucket is valid
+	if err := targetClnt.StatBucket(targetBucket); err != nil {
+		return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
 	}
-	return client.Put(targetBucket, targetObject, md5Hex, length)
+	targetObject := targetURLParser.objectName
+	return targetClnt.Put(targetBucket, targetObject, md5Hex, length)
 }
 
-func getTargetWriters(urls []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
+func getTargetWriters(targetURLParsers []*urlParser, md5Hex string, length int64) ([]io.WriteCloser, error) {
 	var targetWriters []io.WriteCloser
-	for _, targetURL := range urls {
-		writer, err := getTargetWriter(targetURL, md5Hex, length)
+	for _, targetURLParser := range targetURLParsers {
+		writer, err := getTargetWriter(targetURLParser, md5Hex, length)
 		if err != nil {
 			// close all writers
 			for _, targetWriter := range targetWriters {
 				targetWriter.Close()
 			}
-			return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
+			return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
 		}
 		targetWriters = append(targetWriters, writer)
 	}
@@ -76,21 +76,21 @@ func doCopyCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
 	// Convert arguments to URLs: expand alias, fix format...
-	urlList, err := parseURLs(ctx)
+	urlParsers, err := parseURLs(ctx)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(err)
 	}
-	sourceURL := urlList[0]   // First arg is source
-	targetURLs := urlList[1:] // 1 or more targets
+	sourceURLParser := urlParsers[0]   // First arg is source
+	targetURLsParser := urlParsers[1:] // 1 or more targets
 
-	reader, length, hexMd5, err := getSourceReader(sourceURL)
+	reader, length, hexMd5, err := getSourceReader(sourceURLParser)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to read source")
 	}
 
-	writeClosers, err := getTargetWriters(targetURLs, hexMd5, length)
+	writeClosers, err := getTargetWriters(targetURLsParser, hexMd5, length)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to open targets for writing")
@@ -115,10 +115,9 @@ func doCopyCmd(ctx *cli.Context) {
 		err := writer.Close()
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
+			console.Errorln(err)
 		}
 	}
-
-	//	time.Sleep(5 * time.Second)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to write to target")

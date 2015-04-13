@@ -17,8 +17,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
@@ -37,28 +35,23 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln("Unable to get config")
 	}
 	for _, arg := range ctx.Args() {
-		urlStr, err := parseURL(arg, config.Aliases)
+		urlp, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorln(err)
 		}
-		bucket, err := url2Bucket(urlStr)
+		clnt, err := getNewClient(urlp, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorln(err)
 		}
-		clnt, err := getNewClient(urlStr, globalDebugFlag)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln(err)
-		}
-		if !strings.HasPrefix(urlStr, "file:") {
-			if !client.IsValidBucketName(bucket) {
+		if urlp.urlType != urlFile {
+			if !client.IsValidBucketName(urlp.bucketName) {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Errorln(errInvalidBucket{bucket: bucket})
+				console.Errorln(errInvalidBucket{bucket: urlp.bucketName})
 			}
 		}
-		err = clnt.PutBucket(bucket)
+		err = clnt.PutBucket(urlp.bucketName)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorln(err)
