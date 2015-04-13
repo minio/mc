@@ -85,7 +85,7 @@ func doListCmd(ctx *cli.Context) {
 		console.Fatalln(err)
 	}
 
-	client, err := getNewClient(globalDebugFlag, urlStr)
+	client, err := getNewClient(urlStr, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(err)
