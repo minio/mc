@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -51,7 +50,7 @@ func isValidObject(bucket, object string) (string, os.FileInfo, error) {
 	if bucket == "" || object == "" {
 		return "", nil, iodine.New(client.InvalidArgument{}, nil)
 	}
-	objectPath := path.Join(bucket, object)
+	objectPath := filepath.Join(bucket, object)
 	st, err := os.Stat(objectPath)
 	if os.IsNotExist(err) {
 		return "", nil, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: object}, nil)
@@ -63,36 +62,6 @@ func isValidObject(bucket, object string) (string, os.FileInfo, error) {
 		return "", nil, iodine.New(err, nil)
 	}
 	return objectPath, st, nil
-}
-
-// Put - upload new object to bucket
-func (f *fsClient) Put(bucket, object, md5HexString string, size int64) (io.WriteCloser, error) {
-	r, w := io.Pipe()
-	// handle md5HexString match internally
-	if bucket == "" || object == "" {
-		return nil, iodine.New(client.InvalidArgument{}, nil)
-	}
-	objectPath := path.Join(bucket, object)
-	if size < 0 {
-		return nil, iodine.New(client.InvalidArgument{}, nil)
-	}
-	fs, err := os.Create(objectPath)
-	if os.IsExist(err) {
-		return nil, iodine.New(client.ObjectExists{Bucket: bucket, Object: object}, nil)
-	}
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	go func() {
-		_, err := io.CopyN(fs, r, size)
-		if err != nil {
-			r.CloseWithError(iodine.New(err, map[string]string{"objectPath": objectPath}))
-			// TODO cleanup if file isn't fully copied
-			return
-		}
-		r.Close()
-	}()
-	return w, nil
 }
 
 // Get - download an object from bucket
@@ -168,7 +137,7 @@ func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err
 		items = append(items, item)
 		return nil
 	}
-	err = filepath.Walk(path.Join(bucket, prefix), visitFS)
+	err = filepath.Walk(filepath.Join(bucket, prefix), visitFS)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -195,9 +164,6 @@ func (f *fsClient) PutBucket(bucket string) error {
 func (f *fsClient) StatBucket(bucket string) error {
 	if bucket == "" {
 		return iodine.New(client.InvalidArgument{}, nil)
-	}
-	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
-		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	st, err := os.Stat(bucket)
 	if os.IsNotExist(err) {
