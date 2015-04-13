@@ -53,15 +53,15 @@ func (s *MySuite) TestEmptyExpansions(c *C) {
 	c.Assert(url, Equals, "$#\\")
 	c.Assert(err, IsNil)
 
-	url, err = aliasExpand("foo:bar", map[string]string{"foo": "http://foo/"})
+	url, err = aliasExpand("foo:bar", map[string]string{"foo": "http://foo"})
 	c.Assert(url, Equals, "http://foo/bar")
 	c.Assert(err, IsNil)
 
-	url, err = aliasExpand("myfoo:bar", map[string]string{"foo": "http://foo/"})
+	url, err = aliasExpand("myfoo:bar", map[string]string{"foo": "http://foo"})
 	c.Assert(url, Equals, "myfoo:bar")
 	c.Assert(err, IsNil)
 
-	url, err = aliasExpand("", map[string]string{"foo": "http://foo/"})
+	url, err = aliasExpand("", map[string]string{"foo": "http://foo"})
 	c.Assert(url, Equals, "")
 	c.Assert(err, IsNil)
 

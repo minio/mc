@@ -274,7 +274,7 @@ func parseConfigInput(c *cli.Context) (config *mcConfig, err error) {
 		return config, nil
 	case len(alias) == 2:
 		aliasName := alias[0]
-		url := alias[1]
+		url := strings.TrimSuffix(alias[1], "/")
 		if strings.HasPrefix(aliasName, "http") {
 			return nil, iodine.New(errInvalidAliasName{alias: aliasName}, nil)
 		}

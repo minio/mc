@@ -48,7 +48,8 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 	for aliasName, expandedURL := range aliases {
 		if strings.HasPrefix(aliasedURL, aliasName) {
 			// Match found. Expand it.
-			return strings.Replace(aliasedURL, aliasName+":", expandedURL, 1), nil
+			splits := strings.Split(aliasedURL, ":")
+			return expandedURL + "/" + splits[1], nil
 		}
 	}
 
