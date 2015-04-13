@@ -112,6 +112,8 @@ func (c *s3Client) StatBucket(bucket string) error {
 	case http.StatusNotFound:
 		return iodine.New(client.BucketNotFound{Bucket: bucket}, nil)
 	case http.StatusOK:
+		fallthrough
+	case http.StatusMovedPermanently:
 		return nil
 	default:
 		return iodine.New(NewError(res), nil)
