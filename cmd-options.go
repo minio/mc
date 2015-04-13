@@ -67,7 +67,7 @@ EXAMPLES:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET {{if .Description}}
+   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -87,6 +87,13 @@ EXAMPLES:
       2015-01-20 15:42:00 PST               rom
       2015-01-15 00:05:40 PST               zek
 
+   3. List buckets and objects from Minio object storage and Amazon S3 object storage
+      $ mc {{.Name}} https://s3.amazonaws.com/ http://localhost:9000/backup/
+      2015-01-20 15:42:00 PST               rom
+      2015-01-15 00:05:40 PST               zek
+      2015-03-28 12:47:50 PDT      51.00 MB 2006-Jan-1/backup.tar.gz
+      2015-03-31 14:46:33 PDT      55.00 MB 2006-Mar-1/backup.tar.gz
+
 `,
 	}
 
@@ -99,7 +106,7 @@ EXAMPLES:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET {{if .Description}}
+   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
