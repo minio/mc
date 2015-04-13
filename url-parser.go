@@ -17,6 +17,7 @@
 package main
 
 import (
+	"runtime"
 	"strings"
 
 	"net/url"
@@ -47,6 +48,8 @@ func getURLType(scheme string) urlType {
 		fallthrough
 	case "https":
 		return urlObjectStorage
+	case "c":
+		fallthrough
 	case "file":
 		fallthrough
 	case "":
@@ -61,10 +64,16 @@ func url2Object(u *url.URL) (bucketName, objectName string) {
 	// if url is of scheme file, behave differently by returning
 	// directory and file instead
 	switch u.Scheme {
+	case "c":
+		fallthrough
 	case "file":
 		fallthrough
 	case "":
-		bucketName, objectName = filepath.Split(u.Path)
+		if runtime.GOOS == "windows" {
+			bucketName, objectName = filepath.Split(u.String())
+		} else {
+			bucketName, objectName = filepath.Split(u.Path)
+		}
 	default:
 		splits := strings.SplitN(u.Path, "/", 3)
 		switch len(splits) {
@@ -100,9 +109,16 @@ func newURL(urlStr string) (*urlParser, error) {
 func (u *urlParser) String() string {
 	switch u.urlType {
 	case urlFile:
-		p, _ := filepath.Abs(u.url.Path)
-		fixedURL := "file://" + p
-		return fixedURL
+		var p string
+		switch runtime.GOOS {
+		case "windows":
+			p, _ = filepath.Abs(u.url.String())
+			return p
+		default:
+			p, _ = filepath.Abs(u.url.Path)
+			fileURL := "file://" + p
+			return fileURL
+		}
 	}
 	return u.url.String()
 }
