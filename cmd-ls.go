@@ -73,19 +73,20 @@ func doListCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to get config")
 	}
+
 	urlStr, err := parseURL(ctx.Args().First(), config.Aliases)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(err)
 	}
 
-	bucketName, objectName, err := url2Object(urlStr)
+	client, err := getNewClient(urlStr, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(err)
 	}
 
-	client, err := getNewClient(urlStr, globalDebugFlag)
+	bucketName, objectName, err := url2Object(urlStr)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(err)
