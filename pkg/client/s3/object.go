@@ -54,7 +54,7 @@ import (
 /// Object API operations
 
 // Stat - returns 0, "", os.ErrNotExist if not on S3
-func (c *s3Client) StatObject(bucket, key string) (size int64, date time.Time, reterr error) {
+func (c *s3Client) GetObjectMetadata(bucket, key string) (size int64, date time.Time, reterr error) {
 	if bucket == "" || key == "" {
 		return 0, date, iodine.New(client.InvalidArgument{}, nil)
 	}

@@ -119,7 +119,7 @@ func (f *fsClient) GetPartial(bucket, key string, offset, length int64) (body io
 }
 
 // StatObject -
-func (f *fsClient) StatObject(bucket, object string) (size int64, date time.Time, reterr error) {
+func (f *fsClient) GetObjectMetadata(bucket, object string) (size int64, date time.Time, reterr error) {
 	_, st, err := isValidObject(bucket, object)
 	if size < 0 {
 		return 0, date, iodine.New(client.InvalidArgument{}, nil)
