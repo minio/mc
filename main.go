@@ -106,7 +106,7 @@ func main() {
 		if theme != "" {
 			err := console.SetTheme(theme)
 			if err != nil {
-				console.Fatalf("Unable to set theme [%s]\n", console.GetTheme())
+				console.Fatalf("Unable to set theme [%s]\n", theme)
 			}
 		}
 		checkConfig()
