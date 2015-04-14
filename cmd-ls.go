@@ -76,7 +76,8 @@ func doListCmd(ctx *cli.Context) {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln(err)
 		}
-		if urlp.bucketName == "" { // List all buckets
+		log.Println(urlp.urlType)
+		if urlp.bucketName == "" && urlp.urlType != urlFile { // List all buckets
 			buckets, err := client.ListBuckets()
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
