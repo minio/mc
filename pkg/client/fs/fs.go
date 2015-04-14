@@ -122,6 +122,9 @@ func (f *fsClient) ListBuckets() ([]*client.Bucket, error) {
 func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err error) {
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		if err != nil {
+			if os.IsPermission(err) {
+				return nil
+			}
 			return err // fatal
 		}
 		if fi.IsDir() {
@@ -138,7 +141,7 @@ func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err
 		return nil
 	}
 	err = filepath.Walk(filepath.Join(bucket, prefix), visitFS)
-	if err != nil && !os.IsPermission(err) {
+	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
 	sort.Sort(client.BySize(items))
