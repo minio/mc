@@ -206,14 +206,14 @@ var options = []cli.Command{
 var (
 	flags = []cli.Flag{
 		cli.StringFlag{
-			Name: "theme",
+			Name:  "theme",
+			Value: "minimal",
 			Usage: fmt.Sprintf("Choose a console theme from this list [%s]", func() string {
 				keys := []string{}
 				for key := range console.ThemesDB {
 					if console.GetTheme() == key {
 						key = "*" + key + "*"
 					}
-
 					keys = append(keys, key)
 				}
 				return strings.Join(keys, ", ")
