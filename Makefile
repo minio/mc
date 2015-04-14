@@ -12,9 +12,9 @@ checkgopath:
 getdeps: checkdeps checkgopath
 	@go get github.com/minio-io/godep && echo "Installed godep:"
 	@go get github.com/golang/lint/golint && echo "Installed golint:"
-	@go get golang.org/x/tools/cmd/vet && echo "Installed vet:"
+	#@go get golang.org/x/tools/cmd/vet && echo "Installed vet:"
 	@go get github.com/fzipp/gocyclo && echo "Installed gocyclo:"
-	@go get github.com/remyoudompheng/go-misc/deadcode&& echo "Installed deadcode:"
+	@go get github.com/remyoudompheng/go-misc/deadcode && echo "Installed deadcode:"
 
 verifiers: getdeps vet fmt lint cyclo deadcode
 
