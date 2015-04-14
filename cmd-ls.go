@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/cheggaaa/pb"
@@ -35,10 +34,7 @@ const (
 // printBuckets lists buckets and its metadata
 func printBuckets(v []*client.Bucket) {
 	for _, b := range v {
-		// TODO: escape sequences internally in color package clobber the output, format this prior
-		// find a way out
-		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Local().Format(printDate), "", b.Name)
-		console.Infoln(msg)
+		console.Infof("%23s %13s %s\n", b.CreationDate.Local().Format(printDate), "", b.Name)
 	}
 }
 
@@ -54,10 +50,7 @@ func printObjects(v []*client.Item) {
 
 // printObject prints object meta-data
 func printObject(date time.Time, v int64, key string) {
-	// TODO: escape sequences internally in color package clobber the output, format this prior
-	// find a way out
-	msg := fmt.Sprintf("%23s %13s %s", date.Local().Format(printDate), pb.FormatBytes(v), key)
-	console.Infoln(msg)
+	console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), key)
 }
 
 // doListCmd lists objects inside a bucket

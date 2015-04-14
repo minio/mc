@@ -17,7 +17,11 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/console"
 )
 
 // List of commands
@@ -201,6 +205,20 @@ var options = []cli.Command{
 
 var (
 	flags = []cli.Flag{
+		cli.StringFlag{
+			Name: "theme",
+			Usage: fmt.Sprintf("Choose a console theme from this list [%s]", func() string {
+				keys := []string{}
+				for key := range console.ThemesDB {
+					if console.GetTheme() == key {
+						key = "*" + key + "*"
+					}
+
+					keys = append(keys, key)
+				}
+				return strings.Join(keys, ", ")
+			}()),
+		},
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "Enable HTTP tracing",
