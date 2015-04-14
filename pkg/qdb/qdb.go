@@ -1,5 +1,5 @@
 /*
- * qdb - Quick way to implement a configuration file
+ * qdb - Quick key value store
  *
  * Modern Copy, (C) 2015 Minio, Inc.
  *
@@ -38,6 +38,9 @@ type Store interface {
 	GetVersion() Version
 	Save(string) error
 	Load(string) error
+	Merge(Store) error
+	Diff(Store) ([]string, error)
+	GetStore() map[string]interface{}
 	String() string
 }
 
@@ -97,8 +100,8 @@ func Str2Version(verStr string) Version {
 	return v
 }
 
-// qstore - implements qdb.Store interface
-type qstore struct {
+// store - implements qdb.Store interface
+type store struct {
 	store map[string]interface{}
 	lock  *sync.RWMutex
 }
@@ -109,15 +112,17 @@ func NewStore(version Version) Store {
 	if version.Major == 0 {
 		return nil
 	}
-	config := new(qstore)
+
+	config := new(store)
 	config.store = make(map[string]interface{})
-	config.lock = new(sync.RWMutex)
 	config.store["Version"] = version.String()
+	config.lock = new(sync.RWMutex)
+
 	return config
 }
 
 // GetVersion returns the current config file format version
-func (c qstore) GetVersion() Version {
+func (c store) GetVersion() Version {
 	val, ok := c.store["Version"].(string)
 	if !ok {
 		return Version{}
@@ -126,113 +131,114 @@ func (c qstore) GetVersion() Version {
 }
 
 // SetInt sets int value
-func (c *qstore) SetInt(key string, value int) {
+func (c *store) SetInt(key string, value int) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 // GetInt returns int value
-func (c qstore) GetInt(key string) int {
+func (c store) GetInt(key string) int {
 	val, _ := c.store[key].(int)
 	return val
 }
 
 // GetIntSlice returns list of int values
-func (c qstore) GetIntSlice(key string) []int {
+func (c store) GetIntSlice(key string) []int {
 	val, _ := c.store[key].([]int)
 	return val
 }
 
 // SetIntSlice sets list of int values
-func (c *qstore) SetIntSlice(key string, values []int) {
+func (c *store) SetIntSlice(key string, values []int) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = values
 }
 
 // SetFloat64 sets 64-bit float value
-func (c *qstore) SetFloat64(key string, value float64) {
+func (c *store) SetFloat64(key string, value float64) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 // GetFloat64 returns 64-bit float value
-func (c qstore) GetFloat64(key string) float64 {
+func (c store) GetFloat64(key string) float64 {
 	val, _ := c.store[key].(float64)
 	return val
 }
 
 // SetFloat64Slice sets a list of 64-bit float values
-func (c *qstore) SetFloat64Slice(key string, values []float64) {
+func (c *store) SetFloat64Slice(key string, values []float64) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = values
 }
 
 // GetFloat64Slice returns a list of 64-bit float values
-func (c qstore) GetFloat64Slice(key string) []float64 {
+func (c store) GetFloat64Slice(key string) []float64 {
 	val, _ := c.store[key].([]float64)
 	return val
 }
 
 // SetString sets string value
-func (c *qstore) SetString(key string, value string) {
+func (c *store) SetString(key string, value string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 // GetString returns string value
-func (c qstore) GetString(key string) string {
+func (c store) GetString(key string) string {
 	val, _ := c.store[key].(string)
 	return val
 }
 
 // SetStringSlice sets list of strings
-func (c *qstore) SetStringSlice(key string, values []string) {
+func (c *store) SetStringSlice(key string, values []string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = values
 }
 
 // GetStringSlice returns list of strings
-func (c qstore) GetStringSlice(key string) []string {
+func (c store) GetStringSlice(key string) []string {
 	val, _ := c.store[key].([]string)
 	return val
 }
 
 //SetMapString sets a map of strings
-func (c *qstore) SetMapString(key string, value map[string]string) {
+func (c *store) SetMapString(key string, value map[string]string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 //GetMapString returns a map of strings
-func (c qstore) GetMapString(key string) map[string]string {
+func (c store) GetMapString(key string) map[string]string {
 	val, _ := c.store[key].(map[string]string)
 	return val
 }
 
 //SetMapStringSlice sets a map of string list
-func (c *qstore) SetMapStringSlice(key string, value map[string][]string) {
+func (c *store) SetMapStringSlice(key string, value map[string][]string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
 //GetMapStringSlice returns a map of string list
-func (c qstore) GetMapStringSlice(key string) map[string][]string {
+func (c store) GetMapStringSlice(key string) map[string][]string {
 	val, _ := c.store[key].(map[string][]string)
 	return val
 }
 
 // Save writes configuration data in JSON format to donut config file.
-func (c qstore) Save(filename string) (err error) {
+func (c store) Save(filename string) (err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	jsonStore, err := json.MarshalIndent(c.store, "", "\t")
 	if err != nil {
 		return err
@@ -253,7 +259,7 @@ func (c qstore) Save(filename string) (err error) {
 }
 
 // Load - loads JSON config from file and also automatically merges new changes
-func (c *qstore) Load(filename string) (err error) {
+func (c *store) Load(filename string) (err error) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 
@@ -281,11 +287,54 @@ func (c *qstore) Load(filename string) (err error) {
 	for key := range loadedStore {
 		(*c).store[key] = loadedStore[key]
 	}
+
 	return nil
 }
 
+// GetStore - grab internal store map for reading
+func (c store) GetStore() map[string]interface{} {
+	return c.store
+}
+
+// Merge - fast forward old keys to old+new keys
+func (c *store) Merge(s Store) (err error) {
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+
+	for key := range s.GetStore() {
+		(*c).store[key] = s.GetStore()[key]
+	}
+	return nil
+}
+
+// Diff - provide difference between two qdb.Store bi-directionally
+func (c store) Diff(s Store) (diffErrors []string, err error) {
+	if reflect.DeepEqual(c.store["Version"], s.GetStore()["Version"]) == false {
+		msg := fmt.Sprintf("Version mismatch newVersion:%s oldVersion:%s", c.store["Version"].(string), s.GetStore()["Version"].(string))
+		diffErrors = append(diffErrors, msg)
+	}
+
+	for key := range s.GetStore() {
+		_, ok := c.store[key]
+		if !ok {
+			msg := fmt.Sprintf("Key %s missing from newVersion: %s", key, c.store["Version"].(string))
+			diffErrors = append(diffErrors, msg)
+		}
+	}
+
+	for key := range c.store {
+		_, ok := s.GetStore()[key]
+		if !ok {
+			msg := fmt.Sprintf("Key %s missing from oldVersion: %s", key, s.GetStore()["Version"].(string))
+			diffErrors = append(diffErrors, msg)
+		}
+	}
+
+	return diffErrors, nil
+}
+
 // String converts JSON config to printable string
-func (c qstore) String() string {
+func (c store) String() string {
 	configBytes, _ := json.MarshalIndent(c.store, "", "\t")
 	return string(configBytes)
 }

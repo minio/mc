@@ -52,6 +52,41 @@ func (s *MySuite) TestSaveLoad(c *C) {
 	c.Assert(pi, Equals, 3.1415)
 }
 
+func (s *MySuite) TestMerge(c *C) {
+	defer os.RemoveAll("test.json")
+	version := Version{1, 0, 0}
+
+	cfg1 := NewStore(version)
+	cfg1.SetFloat64("Pi", 3.1415)
+
+	newCfg := NewStore(version)
+	newCfg.SetFloat64("h", 2*3.1415)
+
+	cfg1.Merge(newCfg)
+	cfg1.Save("test.json")
+
+	cfg2 := NewStore(version)
+	cfg2.Load("test.json")
+	h := cfg2.GetFloat64("h")
+	c.Assert(h, Equals, 2*3.1415)
+}
+
+func (s *MySuite) TestDiff(c *C) {
+	defer os.RemoveAll("test.json")
+	version1 := Version{1, 0, 0}
+
+	cfg1 := NewStore(version1)
+	cfg1.SetFloat64("Pi", 3.1415)
+
+	version2 := Version{2, 0, 0}
+	newCfg := NewStore(version2)
+	newCfg.SetFloat64("h", 2*3.1415)
+
+	diffs, err := cfg1.Diff(newCfg)
+	c.Assert(err, IsNil)
+	c.Assert(len(diffs), Equals, 3)
+}
+
 func (s *MySuite) TestGetSet(c *C) {
 	version := Version{1, 0, 0}
 	cfg := NewStore(version)
