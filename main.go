@@ -101,6 +101,14 @@ func main() {
 		} else {
 			log.Debug = log.New(ioutil.Discard, "", 0)
 		}
+
+		theme := ctx.GlobalString("theme")
+		if theme != "" {
+			err := console.SetTheme(theme)
+			if err != nil {
+				console.Fatalf("Unable to set theme [%s]\n", console.GetTheme())
+			}
+		}
 		checkConfig()
 		return nil
 	}
