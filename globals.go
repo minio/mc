@@ -24,7 +24,6 @@ import (
 )
 
 var (
-	globalQuietFlag = false // Quiet flag set via command line
 	globalDebugFlag = false // Debug flag set via command line
 
 	mcUserAgent = "Minio/" +
