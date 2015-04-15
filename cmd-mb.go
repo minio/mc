@@ -35,27 +35,30 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln("Unable to get config")
 	}
 	for _, arg := range ctx.Args() {
-		urlp, err := parseURL(arg, config.Aliases)
+		targetURLParser, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln("Unable to parse URL:", arg)
 		}
-		clnt, err := getNewClient(urlp, globalDebugFlag)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to create new client to:", urlp.String())
-		}
-		if urlp.urlType != urlFile {
-			if !client.IsValidBucketName(urlp.bucketName) {
+		// this is handled differently since http based URLs cannot have
+		// nested directories as buckets, buckets are a unique alphanumeric
+		// name having subdirectories is only supported for fsClient
+		if targetURLParser.urlType != urlFile {
+			if !client.IsValidBucketName(targetURLParser.bucketName) {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalln("Invalid bucket name:", urlp.bucketName)
+				console.Fatalf("Invalid bucket name: %s", targetURLParser.bucketName)
 			}
 		}
-		err = clnt.PutBucket(urlp.bucketName)
+		clnt, err := getNewClient(targetURLParser, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			// TODO switch on error, print more accurate error, e.g. server down, bucket name exists, etc...
-			console.Fatalln("Unable to create bucket")
+			console.Fatalf("Unable to create new client to: %s", targetURLParser.String())
+		}
+		err = clnt.PutBucket(targetURLParser.bucketName)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			// error message returned properly by PutBucket()
+			console.Fatalln(err)
 		}
 	}
 }
