@@ -25,6 +25,7 @@ import (
 
 var (
 	globalDebugFlag = false // Debug flag set via command line
+	globalQuietFlag = false // Quiet flag set via command line
 
 	mcUserAgent = "Minio/" +
 		strings.SplitN(mcGitCommitHash, " ", 3)[1] +
