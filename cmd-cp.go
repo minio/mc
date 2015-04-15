@@ -19,6 +19,7 @@ package main
 import (
 	"io"
 
+	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -95,14 +96,19 @@ func doCopyCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to open targets for writing")
 	}
-	// set up progress bar
+
 	var writers []io.Writer
 	for _, writer := range writeClosers {
 		writers = append(writers, writer)
 	}
-	bar := startBar(length)
-	bar.Start()
-	writers = append(writers, bar)
+
+	// set up progress bar
+	var bar *pb.ProgressBar
+	if !globalQuietFlag {
+		bar = startBar(length)
+		bar.Start()
+		writers = append(writers, bar)
+	}
 
 	// write progress bar
 	multiWriter := io.MultiWriter(writers...)

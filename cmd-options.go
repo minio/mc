@@ -223,6 +223,10 @@ var (
 			Name:  "debug",
 			Usage: "Enable HTTP tracing",
 		},
+		cli.BoolFlag{
+			Name:  "quiet, q",
+			Usage: "Supress chatty console output",
+		},
 	}
 )
 
