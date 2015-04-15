@@ -94,7 +94,6 @@ func main() {
 	app.Author = "Minio.io"
 	app.EnableBashCompletion = true
 	app.Before = func(ctx *cli.Context) error {
-		globalQuietFlag = ctx.GlobalBool("quiet")
 		globalDebugFlag = ctx.GlobalBool("debug")
 		if globalDebugFlag {
 			app.ExtraInfo = getSystemData()
