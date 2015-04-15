@@ -72,14 +72,6 @@ func (e errInvalidAliasName) Error() string {
 	return "Not a valid alias name: " + e.alias + " Valid examples are: Area51, Grand-Nagus.."
 }
 
-type errInvalidBucket struct {
-	bucket string
-}
-
-func (e errInvalidBucket) Error() string {
-	return "Invalid bucket name: " + e.bucket
-}
-
 type errInvalidAuth struct{}
 
 func (e errInvalidAuth) Error() string {
