@@ -79,7 +79,7 @@ func doCopyCmd(ctx *cli.Context) {
 	urlParsers, err := parseURLs(ctx)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
+		console.Fatalln("Unable to parse URL")
 	}
 	sourceURLParser := urlParsers[0]   // First arg is source
 	targetURLsParser := urlParsers[1:] // 1 or more targets
@@ -115,7 +115,7 @@ func doCopyCmd(ctx *cli.Context) {
 		err := writer.Close()
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln(err)
+			console.Errorln("Unable to close writer, object may not of written properly.")
 		}
 	}
 	if err != nil {

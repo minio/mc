@@ -38,23 +38,24 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		urlp, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln(err)
+			console.Fatalln("Unable to parse URL:", arg)
 		}
 		clnt, err := getNewClient(urlp, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln(err)
+			console.Fatalln("Unable to create new client to:", urlp.String())
 		}
 		if urlp.urlType != urlFile {
 			if !client.IsValidBucketName(urlp.bucketName) {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Errorln(errInvalidBucket{bucket: urlp.bucketName})
+				console.Fatalln("Invalid bucket name:", urlp.bucketName)
 			}
 		}
 		err = clnt.PutBucket(urlp.bucketName)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln(err)
+			// TODO switch on error, print more accurate error, e.g. server down, bucket name exists, etc...
+			console.Fatalln("Unable to create bucket")
 		}
 	}
 }
