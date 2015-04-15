@@ -153,7 +153,7 @@ func (f *fsClient) PutBucket(bucket string) error {
 	if bucket == "" || strings.TrimSpace(bucket) == "" {
 		return iodine.New(client.InvalidArgument{}, nil)
 	}
-	err := os.Mkdir(bucket, 0700)
+	err := os.MkdirAll(bucket, 0700)
 	if os.IsExist(err) {
 		return iodine.New(client.BucketExists{Bucket: bucket}, nil)
 	}
