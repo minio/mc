@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/fatih/color"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 var (
@@ -101,7 +102,8 @@ func isValidTheme(themeName string) bool {
 // SetTheme sets a color theme
 func SetTheme(themeName string) error {
 	if !isValidTheme(themeName) {
-		return errors.New("Invalid theme")
+		msg := fmt.Sprintf("invalid theme: %s", themeName)
+		return iodine.New(errors.New(msg), nil)
 	}
 	currentTheme = themeName
 	mutex.Lock()

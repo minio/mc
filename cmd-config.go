@@ -352,7 +352,7 @@ func saveConfigCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to identify config file path")
 	}
-	console.Infoln("Configuration written to " + configPath + ". Please update your access credentials.")
+	console.Infoln("mc: Configuration written to " + configPath + ". Please update your access credentials.")
 }
 
 // doConfigCmd is the handler for "mc config" sub-command.
@@ -362,7 +362,7 @@ func doConfigCmd(ctx *cli.Context) {
 	case ctx.Bool("completion") == true:
 		var b bytes.Buffer
 		if os.Getenv("SHELL") != "/bin/bash" {
-			console.Fatalln("Unsupported shell for bash completion detected.. exiting")
+			console.Fatalln("mc: Unsupported shell for bash completion detected.. exiting")
 		}
 		b.WriteString(mcBashCompletion)
 		f, err := getMcBashCompletionFilename()
@@ -374,12 +374,12 @@ func doConfigCmd(ctx *cli.Context) {
 		defer fl.Close()
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to create bash completion file")
+			console.Fatalln("mc: Unable to create bash completion file")
 		}
 		_, err = fl.Write(b.Bytes())
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to write bash completion file")
+			console.Fatalln("mc: Unable to write to bash completion file")
 		}
 		msg := "\nConfiguration written to " + f
 		msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
