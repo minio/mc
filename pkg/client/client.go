@@ -34,7 +34,7 @@ type Client interface {
 	Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error)
 	GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
 	Put(bucket, object, md5 string, size int64) (io.WriteCloser, error)
-	GetObjectMetadata(bucket, object string) (size int64, date time.Time, err error)
+	GetObjectMetadata(bucket, object string) (item *Item, err error)
 }
 
 // Bucket - carries s3 bucket reply header
@@ -47,6 +47,7 @@ type Bucket struct {
 type Item struct {
 	Key          string
 	LastModified time.Time
+	ETag         string
 	Size         int64
 }
 

@@ -121,10 +121,10 @@ func (c *s3Client) StatBucket(bucket string) error {
 }
 
 func (c *s3Client) ListObjects(bucket, objectPrefix string) (items []*client.Item, err error) {
-	size, date, err := c.GetObjectMetadata(bucket, objectPrefix)
+	item, err := c.GetObjectMetadata(bucket, objectPrefix)
 	switch err {
 	case nil: // List a single object. Exact key
-		items = append(items, &client.Item{Key: objectPrefix, LastModified: date, Size: size})
+		items = append(items, item)
 		return items, nil
 	default:
 		// List all objects matching the key prefix

@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -88,15 +87,20 @@ func (f *fsClient) GetPartial(bucket, key string, offset, length int64) (body io
 }
 
 // StatObject -
-func (f *fsClient) GetObjectMetadata(bucket, object string) (size int64, date time.Time, reterr error) {
+func (f *fsClient) GetObjectMetadata(bucket, object string) (item *client.Item, reterr error) {
+	if bucket == "" || object == "" {
+		return nil, iodine.New(client.InvalidArgument{}, nil)
+	}
 	_, st, err := isValidObject(bucket, object)
-	if size < 0 {
-		return 0, date, iodine.New(client.InvalidArgument{}, nil)
-	}
 	if err != nil {
-		return 0, date, iodine.New(err, nil)
+		return nil, iodine.New(err, nil)
 	}
-	return st.Size(), st.ModTime(), nil
+	item = new(client.Item)
+	item.Key = object
+	item.Size = st.Size()
+	item.LastModified = st.ModTime()
+	item.ETag = "" // TODO
+	return item, nil
 }
 
 /// Bucket operations
@@ -134,6 +138,7 @@ func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err
 		// otherwise pass it down as is
 		item := &client.Item{
 			Key:          strings.TrimPrefix(fp, bucket),
+			ETag:         "", // TODO
 			LastModified: fi.ModTime(),
 			Size:         fi.Size(),
 		}

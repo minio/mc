@@ -77,11 +77,9 @@ func (c *s3Client) getItems(s, m string, contents []*client.Item) (items []*clie
 func (c *s3Client) queryObjects(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, prefixes []*client.Prefix, err error) {
 	var urlReq string
 	var buffer bytes.Buffer
-
 	if maxKeys <= 0 {
 		return nil, nil, iodine.New(client.InvalidMaxKeys{MaxKeys: maxKeys}, nil)
 	}
-
 	marker := startAt
 	for len(items) < maxKeys {
 		fetchN := maxKeys - len(items)
