@@ -92,7 +92,7 @@ func main() {
 	app.Commands = options
 	app.Flags = flags
 	app.Author = "Minio.io"
-	app.EnableBashCompletion = true
+	app.EnableBashCompletion = false
 	app.Before = func(ctx *cli.Context) error {
 		globalQuietFlag = ctx.GlobalBool("quiet")
 		globalDebugFlag = ctx.GlobalBool("debug")
