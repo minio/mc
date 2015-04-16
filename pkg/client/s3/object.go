@@ -53,40 +53,41 @@ import (
 
 /// Object API operations
 
-// Stat - returns 0, "", os.ErrNotExist if not on S3
-func (c *s3Client) GetObjectMetadata(bucket, key string) (size int64, date time.Time, reterr error) {
+// GetObjectMetadata - returns nil, os.ErrNotExist if not on object storage
+func (c *s3Client) GetObjectMetadata(bucket, key string) (item *client.Item, reterr error) {
 	if bucket == "" || key == "" {
-		return 0, date, iodine.New(client.InvalidArgument{}, nil)
+		return nil, iodine.New(client.InvalidArgument{}, nil)
 	}
 	req := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return 0, date, iodine.New(err, nil)
+		return nil, iodine.New(err, nil)
 	}
 	defer res.Body.Close()
-
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return 0, date, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: key}, nil)
+		return nil, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: key}, nil)
 	case http.StatusOK:
-		size, err = strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
+		contentLength, err := strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
 		if err != nil {
-			return 0, date, iodine.New(err, nil)
+			return nil, iodine.New(err, nil)
 		}
-		if dateStr := res.Header.Get("Last-Modified"); dateStr != "" {
-			// AWS S3 uses RFC1123 standard for Date in HTTP header, unlike XML content
-			date, err := time.Parse(time.RFC1123, dateStr)
-			if err != nil {
-				return 0, date, iodine.New(err, nil)
-			}
-			return size, date, nil
+		date, err := time.Parse(time.RFC1123, res.Header.Get("Last-Modified"))
+		// AWS S3 uses RFC1123 standard for Date in HTTP header, unlike XML content
+		if err != nil {
+			return nil, iodine.New(err, nil)
 		}
+		item = new(client.Item)
+		item.Key = key
+		item.LastModified = date
+		item.Size = contentLength
+		item.ETag = strings.Trim(res.Header.Get("ETag"), "\"")
+		return item, nil
 	default:
-		return 0, date, iodine.New(NewError(res), nil)
+		return nil, iodine.New(NewError(res), nil)
 	}
-	return
 }
 
 // Get - download a requested object from a given bucket
