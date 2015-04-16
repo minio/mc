@@ -84,7 +84,7 @@ func doCopyCmd(ctx *cli.Context) {
 	urlParsers, err := parseURLs(ctx)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to parse URL")
+		console.Fatalln("mc: Unable to parse URL")
 	}
 	sourceURLParser := urlParsers[0]   // First arg is source
 	targetURLsParser := urlParsers[1:] // 1 or more targets
@@ -92,13 +92,13 @@ func doCopyCmd(ctx *cli.Context) {
 	reader, length, hexMd5, err := getSourceReader(sourceURLParser)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to read source")
+		console.Fatalln("mc: Unable to read source")
 	}
 
 	writeClosers, err := getTargetWriters(targetURLsParser, hexMd5, length)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to open targets for writing")
+		console.Fatalln("mc: Unable to open targets for writing")
 	}
 
 	var writers []io.Writer
@@ -125,11 +125,11 @@ func doCopyCmd(ctx *cli.Context) {
 		err := writer.Close()
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln("Unable to close writer, object may not of written properly.")
+			console.Errorln("mc: Unable to close writer, object may not of written properly.")
 		}
 	}
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to write to target")
+		console.Fatalln("mc: Unable to write to target")
 	}
 }

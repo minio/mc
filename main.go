@@ -37,7 +37,7 @@ func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to obtain user's home directory")
+		console.Fatalln("mc: Unable to obtain user's home directory")
 	}
 
 	if !isMcConfigExist() {
@@ -49,13 +49,13 @@ func checkConfig() {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("Unable to read config file: %s\n", mustGetMcConfigPath())
+		console.Fatalf("mc: Unable to read config file: %s\n", mustGetMcConfigPath())
 	}
 
 	err = checkMcConfig(config)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("Error in config file: %s\n", mustGetMcConfigPath())
+		console.Fatalf("mc: Error in config file: %s\n", mustGetMcConfigPath())
 	}
 }
 
@@ -106,7 +106,7 @@ func main() {
 		if theme != "" {
 			err := console.SetTheme(theme)
 			if err != nil {
-				console.Fatalf("Unable to set theme [%s]\n", theme)
+				console.Fatalf("mc: Unable to set theme [%s]\n", theme)
 			}
 		}
 		checkConfig()
@@ -114,7 +114,7 @@ func main() {
 	}
 	app.After = func(ctx *cli.Context) error {
 		if !isMcConfigExist() && ctx.Command.Name != "config" {
-			console.Fatalln("Error: mc is not configured. Please run \"mc config\".")
+			console.Fatalln("mc: error ``mc`` is not configured. Please run \"mc config\".")
 		}
 
 		return nil

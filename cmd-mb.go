@@ -32,13 +32,13 @@ func doMakeBucketCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to get config")
+		console.Fatalln("mc: Unable to read config")
 	}
 	for _, arg := range ctx.Args() {
 		targetURLParser, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to parse URL:", arg)
+			console.Fatalln("mc: Unable to parse URL: ", arg)
 		}
 		// this is handled differently since http based URLs cannot have
 		// nested directories as buckets, buckets are a unique alphanumeric
@@ -46,13 +46,13 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		if targetURLParser.urlType != urlFile {
 			if !client.IsValidBucketName(targetURLParser.bucketName) {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("Invalid bucket name: %s", targetURLParser.bucketName)
+				console.Fatalf("mc: Invalid bucket name: %s", targetURLParser.bucketName)
 			}
 		}
 		clnt, err := getNewClient(targetURLParser, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("Unable to create new client to: %s", targetURLParser.String())
+			console.Fatalf("mc: Unable to create new client to: %s", targetURLParser.String())
 		}
 		err = clnt.PutBucket(targetURLParser.bucketName)
 		if err != nil {

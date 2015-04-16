@@ -62,7 +62,7 @@ func doCopyCmdRecursive(ctx *cli.Context) {
 	urlParsers, err := parseURLs(ctx)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
+		console.Fatalf("mc: unable to parse urls: %s\n", err)
 	}
 	sourceURLParser := urlParsers[0] // First arg is source
 	targetURLParser := urlParsers[1] // 1 target for now - TODO(y4m4): 2 or more targets
@@ -70,24 +70,24 @@ func doCopyCmdRecursive(ctx *cli.Context) {
 	sourceClnt, err := getNewClient(sourceURLParser, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
+		console.Fatalf("mc: unable to get source: %s\n", err)
 	}
 	sourceObjectList, err := getSourceObjectList(sourceClnt, sourceURLParser)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln(err)
+		console.Fatalf("mc: unable to list source objects: %s\n", err)
 	}
 	// do not exit, continue even for failures
 	for _, sourceObject := range sourceObjectList {
 		reader, length, md5hex, err := sourceClnt.Get(sourceURLParser.bucketName, sourceObject.Key)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln(err)
+			console.Errorf("mc: unable to read source: %s\n", err)
 		}
 		writeCloser, err := getRecursiveTargetWriter(targetURLParser, sourceObject.Key, md5hex, length)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln(err)
+			console.Errorf("mc: unable to read target: %s\n", err)
 		}
 		var writers []io.Writer
 		writers = append(writers, writeCloser)
@@ -107,14 +107,14 @@ func doCopyCmdRecursive(ctx *cli.Context) {
 		_, err = io.CopyN(multiWriter, reader, length)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln("Unable to write to target")
+			console.Errorln("mc: Unable to write to target")
 		}
 
 		// close writers
 		err = writeCloser.Close()
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln("Unable to close writer, object may not of written properly.")
+			console.Errorln("mc: Unable to close writer, object may not of written properly.")
 		}
 	}
 	return

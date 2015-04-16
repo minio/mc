@@ -63,18 +63,18 @@ func doListCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to get config")
+		console.Fatalln("mc: Unable to get config")
 	}
 	for _, arg := range ctx.Args() {
 		targetURLParser, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to parse URL")
+			console.Fatalln("mc: Unable to parse URL")
 		}
 		client, err := getNewClient(targetURLParser, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to initiate new client")
+			console.Fatalln("mc: Unable to initiate new client")
 		}
 
 		// ListBuckets() will not be called for fsClient() as its not needed.
@@ -82,14 +82,14 @@ func doListCmd(ctx *cli.Context) {
 			buckets, err := client.ListBuckets()
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalln("Unable to list buckets for", targetURLParser.String())
+				console.Fatalln("mc: Unable to list buckets for ", targetURLParser.String())
 			}
 			printBuckets(buckets)
 		} else {
 			items, err = client.ListObjects(targetURLParser.bucketName, targetURLParser.objectName)
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalln("Unable to list objects for", targetURLParser.String())
+				console.Fatalln("mc: Unable to list objects for ", targetURLParser.String())
 			}
 			printObjects(items)
 		}
