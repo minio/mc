@@ -126,7 +126,7 @@ func (f *fsClient) ListBuckets() ([]*client.Bucket, error) {
 func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err error) {
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		if err != nil {
-			if os.IsPermission(err) {
+			if os.IsPermission(err) { // skip inaccessible files
 				return nil
 			}
 			return err // fatal

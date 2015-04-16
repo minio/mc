@@ -76,6 +76,10 @@ func doCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
+	if ctx.Bool("recursive") {
+		doCopyCmdRecursive(ctx)
+		return
+	}
 	// Convert arguments to URLs: expand alias, fix format...
 	urlParsers, err := parseURLs(ctx)
 	if err != nil {

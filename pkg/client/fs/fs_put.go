@@ -29,13 +29,14 @@ func (f *fsClient) Put(bucket, object, md5HexString string, size int64) (io.Writ
 			blockingWriter.Release(err)
 			return
 		}
-		fs, err := os.Create(objectPath)
-		if os.IsExist(err) {
-			err := iodine.New(client.ObjectExists{Bucket: bucket, Object: object}, nil)
+		objectDir, _ := filepath.Split(objectPath)
+		if err := os.MkdirAll(objectDir, 0700); err != nil {
+			err := iodine.New(err, nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
 		}
+		fs, err := os.Create(objectPath)
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)
