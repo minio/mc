@@ -19,16 +19,17 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
-	. "github.com/minio-io/check"
 	"io"
 	"sync"
+
+	. "github.com/minio-io/check"
 )
 
 type CmdTestSuite struct{}
 
 var _ = Suite(&CmdTestSuite{})
 
-func (s *CmdTestSuite) TestFileToS3Copy(c *C) {
+func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	manager := &mockClientManager{}
 	sourceURL, err := parseURL("foo", nil)
 	c.Assert(err, IsNil)
