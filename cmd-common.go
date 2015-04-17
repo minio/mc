@@ -64,7 +64,7 @@ func getNewClient(u *parsedURL, debug bool) (clnt client.Client, err error) {
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
 	switch u.scheme {
-	case urlObjectStorage: // Minio and S3 compatible object storage
+	case urlS3: // Minio and S3 compatible object storage
 		hostCfg, err := getHostConfig(u.String())
 		if err != nil {
 			return nil, iodine.New(err, nil)
@@ -79,7 +79,7 @@ func getNewClient(u *parsedURL, debug bool) (clnt client.Client, err error) {
 		}
 		clnt = s3.GetNewClient(u.String(), auth, mcUserAgent, debug)
 		return clnt, nil
-	case urlFile:
+	case urlFS:
 		clnt = fs.GetNewClient(u.String())
 		return clnt, nil
 	default:

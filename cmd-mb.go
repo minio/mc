@@ -43,7 +43,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		// this is handled differently since http based URLs cannot have
 		// nested directories as buckets, buckets are a unique alphanumeric
 		// name having subdirectories is only supported for fsClient
-		if targetURLParser.scheme != urlFile {
+		if targetURLParser.scheme != urlFS {
 			if !client.IsValidBucketName(targetURLParser.bucketName) {
 				log.Debug.Println(iodine.New(err, nil))
 				console.Fatalf("mc: Invalid bucket name: %s", targetURLParser.bucketName)

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -30,9 +31,9 @@ import (
 type urlType int
 
 const (
-	urlUnknown       urlType = iota // Unknown type
-	urlObjectStorage                // Minio and S3 compatible object storage
-	urlFile                         // POSIX compatible file systems
+	urlUnknown urlType = iota // Unknown type
+	urlS3                     // Minio and S3 compatible object storage
+	urlFS                     // POSIX compatible file systems
 )
 
 type parsedURL struct {
@@ -42,21 +43,33 @@ type parsedURL struct {
 	objectName string
 }
 
-func getURLType(scheme string) urlType {
-	switch scheme {
-	case "http":
-		fallthrough
-	case "https":
-		return urlObjectStorage
-	case "c":
-		fallthrough
-	case "file":
-		fallthrough
-	case "":
-		return urlFile
-	default:
+// getURLType returns the type of URL.
+func getURLType(urlStr string) urlType {
+	u, err := url.Parse(urlStr)
+	if err != nil {
 		return urlUnknown
 	}
+
+	if u.Scheme == "http" || u.Scheme == "https" {
+		return urlS3
+	}
+
+	if u.Scheme == "file" {
+		return urlFS
+	}
+
+	// MS Windows OS: Match drive letters
+	if runtime.GOOS == "windows" {
+		if regexp.MustCompile(`^[a-zA-Z]?$`).MatchString(u.Scheme) {
+			return urlFS
+		}
+	}
+
+	if u.Scheme == "" {
+		return urlFS
+	}
+
+	return urlUnknown
 }
 
 // url2Object converts URL to bucket and objectname
@@ -99,7 +112,7 @@ func newURL(urlStr string) (*parsedURL, error) {
 	bucketName, objectName := url2Object(u)
 	parsedURL := &parsedURL{
 		url:        u,
-		scheme:     getURLType(u.Scheme),
+		scheme:     getURLType(urlStr),
 		bucketName: bucketName,
 		objectName: objectName,
 	}
@@ -108,7 +121,7 @@ func newURL(urlStr string) (*parsedURL, error) {
 
 func (u *parsedURL) String() string {
 	switch u.scheme {
-	case urlFile:
+	case urlFS:
 		var p string
 		switch runtime.GOOS {
 		case "windows":
