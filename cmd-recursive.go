@@ -56,6 +56,22 @@ func getRecursiveTargetWriter(targetURLParser *parsedURL, targetObject, md5Hex s
 	return targetClnt.Put(targetBucket, targetObject, md5Hex, length)
 }
 
+func getRecursiveTargetWriters(targetURLParsers []*parsedURL, targetObject, md5Hex string, length int64) ([]io.WriteCloser, error) {
+	var targetWriters []io.WriteCloser
+	for _, targetURLParser := range targetURLParsers {
+		writer, err := getRecursiveTargetWriter(targetURLParser, targetObject, md5Hex, length)
+		if err != nil {
+			// close all writers
+			for _, targetWriter := range targetWriters {
+				targetWriter.Close()
+			}
+			return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
+		}
+		targetWriters = append(targetWriters, writer)
+	}
+	return targetWriters, nil
+}
+
 // doCopyCmdRecursive - copy bucket to bucket
 func doCopyCmdRecursive(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
@@ -64,8 +80,8 @@ func doCopyCmdRecursive(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("mc: unable to parse urls: %s\n", err)
 	}
-	sourceURLParser := urlParsers[0] // First arg is source
-	targetURLParser := urlParsers[1] // 1 target for now - TODO(y4m4): 2 or more targets
+	sourceURLParser := urlParsers[0]   // First arg is source
+	targetURLsParser := urlParsers[1:] // Rest are targets
 
 	sourceClnt, err := getNewClient(sourceURLParser, globalDebugFlag)
 	if err != nil {
@@ -84,13 +100,16 @@ func doCopyCmdRecursive(ctx *cli.Context) {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorf("mc: unable to read source: %s\n", err)
 		}
-		writeCloser, err := getRecursiveTargetWriter(targetURLParser, sourceObject.Key, md5hex, length)
+		writeClosers, err := getRecursiveTargetWriters(targetURLsParser, sourceObject.Key, md5hex, length)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorf("mc: unable to read target: %s\n", err)
 		}
+
 		var writers []io.Writer
-		writers = append(writers, writeCloser)
+		for _, writer := range writeClosers {
+			writers = append(writers, writer)
+		}
 
 		// set up progress bar
 		var bar *pb.ProgressBar
@@ -111,10 +130,12 @@ func doCopyCmdRecursive(ctx *cli.Context) {
 		}
 
 		// close writers
-		err = writeCloser.Close()
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln("mc: Unable to close writer, object may not of written properly.")
+		for _, writer := range writeClosers {
+			err := writer.Close()
+			if err != nil {
+				log.Debug.Println(iodine.New(err, nil))
+				console.Errorln("mc: Unable to close writer, object may not of written properly.")
+			}
 		}
 	}
 	return
