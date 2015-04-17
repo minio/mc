@@ -27,7 +27,7 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
-func getSourceObjectList(sourceClnt client.Client, sourceURLParser *urlParser) ([]*client.Item, error) {
+func getSourceObjectList(sourceClnt client.Client, sourceURLParser *parsedURL) ([]*client.Item, error) {
 	sourceObjects, err := sourceClnt.ListObjects(sourceURLParser.bucketName, sourceURLParser.objectName)
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -35,7 +35,7 @@ func getSourceObjectList(sourceClnt client.Client, sourceURLParser *urlParser) (
 	return sourceObjects, nil
 }
 
-func getRecursiveTargetWriter(targetURLParser *urlParser, targetObject, md5Hex string, length int64) (io.WriteCloser, error) {
+func getRecursiveTargetWriter(targetURLParser *parsedURL, targetObject, md5Hex string, length int64) (io.WriteCloser, error) {
 	targetClnt, err := getNewClient(targetURLParser, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})

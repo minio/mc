@@ -18,12 +18,11 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"runtime"
 	"strconv"
-
-	"io/ioutil"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"

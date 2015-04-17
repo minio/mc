@@ -26,7 +26,7 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
-func getSourceReader(sourceURLParser *urlParser) (reader io.ReadCloser, length int64, md5hex string, err error) {
+func getSourceReader(sourceURLParser *parsedURL) (reader io.ReadCloser, length int64, md5hex string, err error) {
 	sourceClnt, err := getNewClient(sourceURLParser, globalDebugFlag)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": sourceURLParser.String()})
@@ -41,7 +41,7 @@ func getSourceReader(sourceURLParser *urlParser) (reader io.ReadCloser, length i
 	return sourceClnt.Get(sourceBucket, sourceObject)
 }
 
-func getTargetWriter(targetURLParser *urlParser, md5Hex string, length int64) (io.WriteCloser, error) {
+func getTargetWriter(targetURLParser *parsedURL, md5Hex string, length int64) (io.WriteCloser, error) {
 	targetClnt, err := getNewClient(targetURLParser, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
@@ -55,7 +55,7 @@ func getTargetWriter(targetURLParser *urlParser, md5Hex string, length int64) (i
 	return targetClnt.Put(targetBucket, targetObject, md5Hex, length)
 }
 
-func getTargetWriters(targetURLParsers []*urlParser, md5Hex string, length int64) ([]io.WriteCloser, error) {
+func getTargetWriters(targetURLParsers []*parsedURL, md5Hex string, length int64) ([]io.WriteCloser, error) {
 	var targetWriters []io.WriteCloser
 	for _, targetURLParser := range targetURLParsers {
 		writer, err := getTargetWriter(targetURLParser, md5Hex, length)
@@ -72,14 +72,18 @@ func getTargetWriters(targetURLParsers []*urlParser, md5Hex string, length int64
 }
 
 // doCopyCmd copies objects into and from a bucket or between buckets
-func doCopyCmd(ctx *cli.Context) {
+func runCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
 	if ctx.Bool("recursive") {
 		doCopyCmdRecursive(ctx)
-		return
+	} else {
+		doCopyCmd(ctx)
 	}
+}
+
+func doCopyCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
 	urlParsers, err := parseURLs(ctx)
 	if err != nil {
