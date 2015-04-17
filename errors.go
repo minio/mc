@@ -18,14 +18,6 @@ package main
 
 import "fmt"
 
-type errInvalidTheme struct {
-	theme string
-}
-
-func (e errInvalidTheme) Error() string {
-	return "invalid theme: " + e.theme
-}
-
 type errInvalidArgument struct{}
 
 func (e errInvalidArgument) Error() string {
