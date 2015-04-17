@@ -1,3 +1,19 @@
+/*
+ * Mini Copy, (C) 2015 Minio, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package main
 
 import (
@@ -33,7 +49,7 @@ func isValidRetry(err error) bool {
 }
 
 // TODO: this is global, make it configurable
-var retries = waitTime{
+var tries = waitTime{
 	duration:      5 * time.Second,
 	delayDuration: 1 * time.Second,
 }
@@ -44,7 +60,7 @@ type waitTime struct {
 	delayDuration time.Duration // delay interval between each retry
 }
 
-type retryOp struct {
+type tryOp struct {
 	waittime waitTime
 	last     time.Time
 	end      time.Time
@@ -52,18 +68,18 @@ type retryOp struct {
 }
 
 // instantiate new sequence of retries for the given waittime.
-func (s waitTime) init() *retryOp {
+func (s waitTime) init() *tryOp {
+	console.Error("trying... ")
 	now := time.Now()
-	console.Error("Retrying... ")
-	return &retryOp{
+	return &tryOp{
 		waittime: s,
 		last:     now,
 		end:      now.Add(s.duration),
 	}
 }
 
-//
-func (a *retryOp) retry() bool {
+// try()
+func (a *tryOp) try() bool {
 	// grab current time
 	now := time.Now()
 

@@ -81,7 +81,7 @@ func doListCmd(ctx *cli.Context) {
 		if targetURLParser.bucketName == "" && targetURLParser.scheme != urlFS {
 			var err error
 			var buckets []*client.Bucket
-			for r := retries.init(); r.retry(); {
+			for r := tries.init(); r.try(); {
 				buckets, err = clnt.ListBuckets()
 				if !isValidRetry(err) {
 					break
@@ -91,9 +91,10 @@ func doListCmd(ctx *cli.Context) {
 				log.Debug.Println(iodine.New(err, nil))
 				console.Fatalln("mc: Unable to list buckets for ", targetURLParser.String())
 			}
+			console.Infoln()
 			printBuckets(buckets)
 		} else {
-			for r := retries.init(); r.retry(); {
+			for r := tries.init(); r.try(); {
 				items, err = clnt.ListObjects(targetURLParser.bucketName, targetURLParser.objectName)
 				if !isValidRetry(err) {
 					break
@@ -103,6 +104,7 @@ func doListCmd(ctx *cli.Context) {
 				log.Debug.Println(iodine.New(err, nil))
 				console.Fatalln("mc: Unable to list objects for ", targetURLParser.String())
 			}
+			console.Infoln()
 			printObjects(items)
 		}
 	}
