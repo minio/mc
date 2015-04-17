@@ -35,9 +35,9 @@ const (
 	urlFile                         // POSIX compatible file systems
 )
 
-type urlParser struct {
+type parsedURL struct {
 	url        *url.URL
-	urlType    urlType
+	scheme     urlType
 	bucketName string
 	objectName string
 }
@@ -91,23 +91,23 @@ func url2Object(u *url.URL) (bucketName, objectName string) {
 	return bucketName, objectName
 }
 
-func newURL(urlStr string) (*urlParser, error) {
+func newURL(urlStr string) (*parsedURL, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
 	bucketName, objectName := url2Object(u)
-	parsedURL := &urlParser{
+	parsedURL := &parsedURL{
 		url:        u,
-		urlType:    getURLType(u.Scheme),
+		scheme:     getURLType(u.Scheme),
 		bucketName: bucketName,
 		objectName: objectName,
 	}
 	return parsedURL, nil
 }
 
-func (u *urlParser) String() string {
-	switch u.urlType {
+func (u *parsedURL) String() string {
+	switch u.scheme {
 	case urlFile:
 		var p string
 		switch runtime.GOOS {
@@ -124,14 +124,14 @@ func (u *urlParser) String() string {
 }
 
 // parseURL extracts URL string from a single cmd-line argument
-func parseURL(arg string, aliases map[string]string) (url *urlParser, err error) {
+func parseURL(arg string, aliases map[string]string) (url *parsedURL, err error) {
 	// Check and expand Alias
 	urlStr, err := aliasExpand(arg, aliases)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
 	u, err := newURL(urlStr)
-	if u.urlType == urlUnknown {
+	if u.scheme == urlUnknown {
 		return nil, iodine.New(errUnsupportedScheme{scheme: urlUnknown}, nil)
 	}
 	if err != nil {
@@ -141,7 +141,7 @@ func parseURL(arg string, aliases map[string]string) (url *urlParser, err error)
 }
 
 // parseURL extracts multiple URL strings from a single cmd-line argument
-func parseURLs(c *cli.Context) (urlParsers []*urlParser, err error) {
+func parseURLs(c *cli.Context) (urlParsers []*parsedURL, err error) {
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, iodine.New(err, nil)

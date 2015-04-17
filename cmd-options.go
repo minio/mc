@@ -30,7 +30,7 @@ var (
 		Name:  "cp",
 		Usage: "Copy objects and files",
 		//		Description: "Copy files and objects recursively across object storage and filesystems",
-		Action: doCopyCmd,
+		Action: runCopyCmd,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "recursive, r",

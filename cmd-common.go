@@ -59,11 +59,11 @@ func mustGetMcBashCompletionFilename() string {
 
 // NewClient - get new client
 // TODO refactor this to be more testable
-func getNewClient(u *urlParser, debug bool) (clnt client.Client, err error) {
+func getNewClient(u *parsedURL, debug bool) (clnt client.Client, err error) {
 	if u == nil {
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
-	switch u.urlType {
+	switch u.scheme {
 	case urlObjectStorage: // Minio and S3 compatible object storage
 		hostCfg, err := getHostConfig(u.String())
 		if err != nil {
@@ -83,6 +83,6 @@ func getNewClient(u *urlParser, debug bool) (clnt client.Client, err error) {
 		clnt = fs.GetNewClient(u.String())
 		return clnt, nil
 	default:
-		return nil, iodine.New(errUnsupportedScheme{scheme: u.urlType}, nil)
+		return nil, iodine.New(errUnsupportedScheme{scheme: u.scheme}, nil)
 	}
 }
