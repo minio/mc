@@ -156,17 +156,19 @@ func (c *s3Client) keyURL(bucket, key string) string {
 	return url + key
 }
 
-func newReq(url string, userAgent string, body io.ReadCloser) *http.Request {
+func newReq(url string, userAgent string, body io.ReadCloser) (*http.Request, error) {
+	errParams := map[string]string{
+		"url":       url,
+		"userAgent": userAgent,
+	}
 	req, err := http.NewRequest("GET", url, body)
 	if err != nil {
-		// TODO: never exit from inside a package. Let the
-		// caller handle errors gracefully.
-		panic(fmt.Sprintf("s3 client; invalid URL: %v", err))
+		return nil, iodine.New(err, errParams)
 	}
 	if userAgent != "" {
 		req.Header.Set("User-Agent", userAgent)
 	}
-	return req
+	return req, nil
 }
 
 func listAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {

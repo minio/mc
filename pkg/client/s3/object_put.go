@@ -34,7 +34,13 @@ func (c *s3Client) Put(bucket, key, md5HexString string, size int64) (io.WriteCl
 	r, w := io.Pipe()
 	blockingWriter := NewBlockingWriteCloser(w)
 	go func() {
-		req := newReq(c.keyURL(bucket, key), c.UserAgent, r)
+		req, err := newReq(c.keyURL(bucket, key), c.UserAgent, r)
+		if err != nil {
+			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
 		req.Method = "PUT"
 		req.ContentLength = size
 

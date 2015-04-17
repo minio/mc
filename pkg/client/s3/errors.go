@@ -28,27 +28,26 @@ import (
 s3.ListBucket: status 403:
 <?xml version="1.0" encoding="UTF-8"?>
 <Error>
-	<Code>AccessDenied</Code>
-	<Message>Access Denied</Message>
-    <Resource>/mybucket/myphoto.jpg</Resource>
-	<RequestId>F19772218238A85A</RequestId>
-	<HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId>
+   <Code>AccessDenied</Code>
+   <Message>Access Denied</Message>
+   <Resource>/mybucket/myphoto.jpg</Resource>
+   <RequestId>F19772218238A85A</RequestId>
+   <HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId>
 </Error>
 */
 
 // Error is the type returned by some API operations.
 type Error struct {
-	res    *http.Response // response headers
-	resMsg mxj.Map        // Keys: Code, Message, Resource, RequestId, HostId
+	response    *http.Response // response headers
+	responseMap mxj.Map        // Keys: Code, Message, Resource, RequestId, HostId
 }
 
 // NewError returns a new initialized S3.Error structure
 func NewError(res *http.Response) error {
 	var err error
-	var s3Err Error
-
-	s3Err.res = res
-	s3Err.resMsg, err = mxj.NewMapXmlReader(res.Body)
+	s3Err := new(Error)
+	s3Err.response = res
+	s3Err.responseMap, err = mxj.NewMapXmlReader(res.Body)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -56,6 +55,6 @@ func NewError(res *http.Response) error {
 }
 
 // Error formats HTTP error string
-func (e Error) Error() string {
-	return fmt.Sprintf("%s", e.res.Status)
+func (e *Error) Error() string {
+	return fmt.Sprintf("%s", e.response.Status)
 }

@@ -58,7 +58,11 @@ func (c *s3Client) GetObjectMetadata(bucket, key string) (item *client.Item, ret
 	if bucket == "" || key == "" {
 		return nil, iodine.New(client.InvalidArgument{}, nil)
 	}
-	req := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+	req, err := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
@@ -92,7 +96,10 @@ func (c *s3Client) GetObjectMetadata(bucket, key string) (item *client.Item, ret
 
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 string, err error) {
-	req := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+	req, err := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
@@ -112,7 +119,10 @@ func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	req := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+	req, err := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
 	if length >= 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	} else {

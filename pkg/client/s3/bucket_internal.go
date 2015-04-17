@@ -9,46 +9,34 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"time"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-// Try the enumerate 5 times, since Amazon likes to close
-// https connections a lot, and Go sucks at dealing with it:
-// https://code.google.com/p/go/issues/detail?id=3514
-func (c *s3Client) retryRequest(urlReq string) (listBucketResults, error) {
-	const maxTries = 5
+// populate s3 response and decode results into listBucketResults{}
+func (c *s3Client) getBucketResults(urlReq string) (listBucketResults, error) {
 	bres := listBucketResults{}
-	for try := 1; try <= maxTries; try++ {
-		time.Sleep(time.Duration(try-1) * 100 * time.Millisecond)
-		req := newReq(urlReq, c.UserAgent, nil)
-		c.signRequest(req, c.Host)
-		res, err := c.Transport.RoundTrip(req)
-		if err != nil {
-			if try < maxTries {
-				continue
-			}
-			return listBucketResults{}, iodine.New(err, nil)
-		}
-		defer res.Body.Close()
+	req, err := newReq(urlReq, c.UserAgent, nil)
+	if err != nil {
+		return listBucketResults{}, iodine.New(err, nil)
+	}
+	c.signRequest(req, c.Host)
+	res, err := c.Transport.RoundTrip(req)
+	if err != nil {
+		return listBucketResults{}, iodine.New(err, nil)
+	}
+	defer res.Body.Close()
 
-		if res.StatusCode != http.StatusOK {
-			return listBucketResults{}, iodine.New(NewError(res), nil)
-		}
+	if res.StatusCode != http.StatusOK {
+		return listBucketResults{}, iodine.New(NewError(res), nil)
+	}
 
-		var logbuf bytes.Buffer
-		err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(&bres)
-		if err != nil {
-			fmt.Printf("Error parsing s3 XML response: %v for %q\n", err, logbuf.Bytes())
-			if try < maxTries-1 {
-				fmt.Printf("Reconnecting...\n")
-				continue
-			}
-			return listBucketResults{}, iodine.New(err, nil)
-		}
-		break
+	var logbuf bytes.Buffer
+	err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(&bres)
+	if err != nil {
+		fmt.Printf("Error parsing s3 XML response: %v for %q\n", err, logbuf.Bytes())
+		return listBucketResults{}, iodine.New(err, nil)
 	}
 	return bres, nil
 }
@@ -100,7 +88,7 @@ func (c *s3Client) queryObjects(bucket string, startAt, prefix, delimiter string
 		}
 
 		urlReq = buffer.String()
-		bres, err = c.retryRequest(urlReq)
+		bres, err = c.getBucketResults(urlReq)
 		if err != nil {
 			return nil, nil, iodine.New(err, nil)
 		}

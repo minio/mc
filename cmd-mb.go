@@ -54,7 +54,13 @@ func doMakeBucketCmd(ctx *cli.Context) {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalf("mc: Unable to create new client to: %s", targetURLParser.String())
 		}
-		err = clnt.PutBucket(targetURLParser.bucketName)
+		// retry - 5 times
+		for r := retries.init(); r.retry(); {
+			err = clnt.PutBucket(targetURLParser.bucketName)
+			if !isValidRetry(err) {
+				break
+			}
+		}
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			// error message returned properly by PutBucket()
