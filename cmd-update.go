@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	mcUpdateURL = "http://minio.io/updates/mc.json"
+	mcUpdateURL = "http://dl.minio.io/updates/mc.json"
 )
 
 type updateResults struct {
