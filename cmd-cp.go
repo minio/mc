@@ -76,30 +76,32 @@ func runCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
-	if ctx.Bool("recursive") {
-		doCopyCmdRecursive(ctx)
-	} else {
-		doCopyCmd(ctx)
-	}
-}
 
-func doCopyCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
-	urlParsers, err := parseURLs(ctx)
+	urls, err := parseURLs(ctx)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to parse URL")
 	}
-	sourceURLParser := urlParsers[0]   // First arg is source
-	targetURLsParser := urlParsers[1:] // 1 or more targets
+	sourceURL := urls[0]   // First arg is source
+	targetURLs := urls[1:] // 1 or more targets
 
-	reader, length, hexMd5, err := getSourceReader(sourceURLParser)
+	// perform copy
+	if ctx.Bool("recursive") {
+		doCopyCmdRecursive(ctx)
+	} else {
+		doCopyCmd(ctx, sourceURL, targetURLs)
+	}
+}
+
+func doCopyCmd(ctx *cli.Context, sourceURL *parsedURL, targetURLs []*parsedURL) {
+	reader, length, hexMd5, err := getSourceReader(sourceURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to read source")
 	}
 
-	writeClosers, err := getTargetWriters(targetURLsParser, hexMd5, length)
+	writeClosers, err := getTargetWriters(targetURLs, hexMd5, length)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to open targets for writing")
