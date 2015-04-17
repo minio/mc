@@ -15,13 +15,51 @@
  */
 package main
 
-import . "github.com/minio-io/check"
+import (
+	"bytes"
+	"crypto/md5"
+	"encoding/hex"
+	. "github.com/minio-io/check"
+	"io"
+	"sync"
+)
 
-type CmdTestSuite struct {
-}
+type CmdTestSuite struct{}
 
 var _ = Suite(&CmdTestSuite{})
 
 func (s *CmdTestSuite) TestFileToS3Copy(c *C) {
-	c.Skip("Not implemented")
+	manager := &mockClientManager{}
+	sourceURL, err := parseURL("foo", nil)
+	c.Assert(err, IsNil)
+
+	data := "Hello World"
+	md5Sum := md5.Sum([]byte(data))
+	hexMd5 := hex.EncodeToString(md5Sum[:])
+	dataLength := int64(len(data))
+
+	targetURL, err := parseURL("bar", nil)
+	c.Assert(err, IsNil)
+	targetURLs := []*parsedURL{targetURL}
+
+	sourceReader, sourceWriter := io.Pipe()
+	targetReader, targetWriter := io.Pipe()
+	var resultBuffer bytes.Buffer
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		io.Copy(sourceWriter, bytes.NewBufferString("Hello World"))
+		sourceWriter.Close()
+		wg.Done()
+	}()
+	go func() {
+		io.Copy(&resultBuffer, targetReader)
+		wg.Done()
+	}()
+	manager.On("getSourceReader", sourceURL).Return(sourceReader, dataLength, hexMd5, nil).Once()
+	manager.On("getTargetWriter", targetURL, hexMd5, dataLength).Return(targetWriter, nil).Once()
+	doCopyCmd(manager, sourceURL, targetURLs)
+	wg.Wait()
+	c.Assert(err, IsNil)
+	c.Assert(resultBuffer.String(), DeepEquals, data)
 }
