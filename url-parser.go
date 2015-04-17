@@ -24,7 +24,6 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"github.com/minio-io/cli"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -35,13 +34,6 @@ const (
 	urlS3                     // Minio and S3 compatible object storage
 	urlFS                     // POSIX compatible file systems
 )
-
-type parsedURL struct {
-	url        *url.URL
-	scheme     urlType
-	bucketName string
-	objectName string
-}
 
 // getURLType returns the type of URL.
 func getURLType(urlStr string) urlType {
@@ -103,71 +95,35 @@ func url2Object(urlStr string) (bucketName, objectName string, err error) {
 	return bucketName, objectName, nil
 }
 
-func newURL(urlStr string) (*parsedURL, error) {
-	bucketName, objectName, err := url2Object(urlStr)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	parsedURL := &parsedURL{
-		url:        u,
-		scheme:     getURLType(urlStr),
-		bucketName: bucketName,
-		objectName: objectName,
-	}
-	return parsedURL, nil
-}
-
-func (u *parsedURL) String() string {
-	switch u.scheme {
-	case urlFS:
-		var p string
-		switch runtime.GOOS {
-		case "windows":
-			p, _ = filepath.Abs(u.url.String())
-			return p
-		default:
-			p, _ = filepath.Abs(u.url.Path)
-			fileURL := "file://" + p
-			return fileURL
-		}
-	}
-	return u.url.String()
-}
-
 // parseURL extracts URL string from a single cmd-line argument
-func parseURL(arg string, aliases map[string]string) (url *parsedURL, err error) {
+func parseURL(arg string, aliases map[string]string) (urlStr string, err error) {
+	_, err = url.Parse(arg)
+	if err != nil {
+		// Not a valid URL. Return error
+		return "", iodine.New(errInvalidURL{arg}, nil)
+	}
+
 	// Check and expand Alias
-	urlStr, err := aliasExpand(arg, aliases)
+	urlStr, err = aliasExpand(arg, aliases)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return "", iodine.New(err, nil)
 	}
-	u, err := newURL(urlStr)
-	if u.scheme == urlUnknown {
-		return nil, iodine.New(errUnsupportedScheme{scheme: urlUnknown}, nil)
+
+	if getURLType(urlStr) == urlUnknown {
+		return "", iodine.New(errUnsupportedScheme{scheme: urlUnknown}, map[string]string{"URL": urlStr})
 	}
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return u, nil
+
+	return urlStr, nil
 }
 
 // parseURL extracts multiple URL strings from a single cmd-line argument
-func parseURLs(c *cli.Context) (urlParsers []*parsedURL, err error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	for _, arg := range c.Args() {
-		u, err := parseURL(arg, config.Aliases)
+func parseURLs(args []string, aliases map[string]string) (urls []string, err error) {
+	for _, arg := range args {
+		u, err := parseURL(arg, aliases)
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
-		urlParsers = append(urlParsers, u)
+		urls = append(urls, u)
 	}
-	return urlParsers, nil
+	return urls, nil
 }

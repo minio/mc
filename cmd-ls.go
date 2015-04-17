@@ -66,22 +66,28 @@ func doListCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to get config")
 	}
 	for _, arg := range ctx.Args() {
-		targetURLParser, err := parseURL(arg, config.Aliases)
+		u, err := parseURL(arg, config.Aliases)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln("mc: Unable to parse URL")
 		}
-		clnt, err := getNewClient(targetURLParser, globalDebugFlag)
+		clnt, err := getNewClient(u, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln("mc: Unable to initiate new client")
 		}
 
+		bucket, object, err := url2Object(u)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalf("mc: Unable to decode bucket and object name from the URL [%s]", u)
+		}
+
 		// ListBuckets() will not be called for fsClient() as its not needed.
-		if targetURLParser.bucketName == "" && targetURLParser.scheme != urlFS {
+		if bucket == "" && getURLType(u) != urlFS {
 			var err error
 			var buckets []*client.Bucket
-			for r := tries.init(); r.try(); {
+			for r := retries.init(); r.retry(); {
 				buckets, err = clnt.ListBuckets()
 				if !isValidRetry(err) {
 					break
@@ -89,20 +95,22 @@ func doListCmd(ctx *cli.Context) {
 			}
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalln("mc: Unable to list buckets for ", targetURLParser.String())
+				console.Fatalln("mc: Unable to list buckets for ", u)
 			}
 			console.Infoln()
 			printBuckets(buckets)
 		} else {
-			for r := tries.init(); r.try(); {
-				items, err = clnt.ListObjects(targetURLParser.bucketName, targetURLParser.objectName)
+
+			for r := retries.init(); r.retry(); {
+				items, err = clnt.ListObjects(bucket, object)
+
 				if !isValidRetry(err) {
 					break
 				}
 			}
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalln("mc: Unable to list objects for ", targetURLParser.String())
+				console.Fatalf("mc: Unable to list objects for URL[%s] ", u)
 			}
 			console.Infoln()
 			printObjects(items)

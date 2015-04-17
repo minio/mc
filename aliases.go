@@ -37,7 +37,7 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 	url, err := url.Parse(aliasedURL)
 	if err != nil {
 		// Not a valid URL. Return error
-		return aliasedURL, iodine.New(err, nil)
+		return "", iodine.New(errInvalidURL{aliasedURL}, nil)
 	}
 
 	// Not an aliased URL

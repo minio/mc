@@ -49,7 +49,7 @@ func isValidRetry(err error) bool {
 }
 
 // TODO: this is global, make it configurable
-var tries = waitTime{
+var retries = waitTime{
 	duration:      5 * time.Second,
 	delayDuration: 1 * time.Second,
 }
@@ -60,7 +60,7 @@ type waitTime struct {
 	delayDuration time.Duration // delay interval between each retry
 }
 
-type tryOp struct {
+type retryOp struct {
 	waittime waitTime
 	last     time.Time
 	end      time.Time
@@ -68,10 +68,10 @@ type tryOp struct {
 }
 
 // instantiate new sequence of retries for the given waittime.
-func (s waitTime) init() *tryOp {
+func (s waitTime) init() *retryOp {
 	console.Error("trying... ")
 	now := time.Now()
-	return &tryOp{
+	return &retryOp{
 		waittime: s,
 		last:     now,
 		end:      now.Add(s.duration),
@@ -79,7 +79,7 @@ func (s waitTime) init() *tryOp {
 }
 
 // try()
-func (a *tryOp) try() bool {
+func (a *retryOp) retry() bool {
 	// grab current time
 	now := time.Now()
 
