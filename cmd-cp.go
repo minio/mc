@@ -97,21 +97,29 @@ func runCopyCmd(ctx *cli.Context) {
 	if ctx.Bool("recursive") {
 		doCopyCmdRecursive(ctx)
 	} else {
-		doCopyCmd(mcClientManager{}, ctx, sourceURL, targetURLs)
+		humanReadableError, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
+		err = iodine.New(err, nil)
+		if err != nil {
+			if humanReadableError == "" {
+				humanReadableError = "No error message present, please rerun with --debug and report a bug."
+			}
+			log.Debug.Println(err)
+			console.Errorln("mc: " + humanReadableError)
+		}
 	}
 }
 
-func doCopyCmd(manager clientManager, ctx *cli.Context, sourceURL *parsedURL, targetURLs []*parsedURL) {
+func doCopyCmd(manager clientManager, sourceURL *parsedURL, targetURLs []*parsedURL) (string, error) {
 	reader, length, hexMd5, err := manager.getSourceReader(sourceURL)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to read source")
+		return "Unable to read from source", iodine.New(err, nil)
+		//		console.Errorln("mc: Unable to read source")
 	}
+	defer reader.Close()
 
 	writeClosers, err := getTargetWriters(manager, targetURLs, hexMd5, length)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to open targets for writing")
+		return "Unable to write to target", iodine.New(err, nil)
 	}
 
 	var writers []io.Writer
@@ -137,12 +145,11 @@ func doCopyCmd(manager clientManager, ctx *cli.Context, sourceURL *parsedURL, ta
 	for _, writer := range writeClosers {
 		err := writer.Close()
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Errorln("mc: Unable to close writer, object may not of written properly.")
+			err = iodine.New(err, nil)
 		}
 	}
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to write to target")
+		return "Unable to close all connections, write may of failed.", iodine.New(err, nil)
 	}
+	return "", nil
 }
