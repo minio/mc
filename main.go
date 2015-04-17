@@ -1,5 +1,5 @@
 /*
- * Modern Copy, (C) 2014, 2015 Minio, Inc.
+ * Mini Copy, (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ func getSystemData() map[string]string {
 
 func main() {
 	app := cli.NewApp()
-	app.Usage = "Modern Copy for object storage and filesystems"
+	app.Usage = "Mini Copy for object storage and filesystems"
 	app.Version = mcGitCommitHash
 	app.Commands = options
 	app.Flags = flags
