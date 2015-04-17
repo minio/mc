@@ -140,6 +140,9 @@ func doCopyCmd(manager clientManager, sourceURL *parsedURL, targetURLs []*parsed
 
 	// copy data to writers
 	_, err = io.CopyN(multiWriter, reader, length)
+	if err != nil {
+		return "Copying data from source to target(s) failed", iodine.New(err, nil)
+	}
 
 	// close writers
 	for _, writer := range writeClosers {
