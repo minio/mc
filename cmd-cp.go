@@ -27,51 +27,58 @@ import (
 )
 
 type clientManager interface {
-	getSourceReader(sourceURLParser *parsedURL) (reader io.ReadCloser, length int64, md5hex string, err error)
-	getTargetWriter(targetURLParser *parsedURL, md5Hex string, length int64) (io.WriteCloser, error)
+	getSourceReader(urlStr string) (reader io.ReadCloser, length int64, md5hex string, err error)
+	getTargetWriter(urlStr string, md5Hex string, length int64) (io.WriteCloser, error)
 }
 
 type mcClientManager struct{}
 
-func (manager mcClientManager) getSourceReader(sourceURLParser *parsedURL) (reader io.ReadCloser, length int64, md5hex string, err error) {
-	sourceClnt, err := getNewClient(sourceURLParser, globalDebugFlag)
+func (manager mcClientManager) getSourceReader(urlStr string) (reader io.ReadCloser, length int64, md5hex string, err error) {
+	sourceClnt, err := getNewClient(urlStr, globalDebugFlag)
 	if err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": sourceURLParser.String()})
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
 	}
 	// Get a reader for the source object
-	sourceBucket := sourceURLParser.bucketName
-	// check if the bucket is valid
-	if err := sourceClnt.StatBucket(sourceBucket); err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": sourceURLParser.String()})
-	}
-	sourceObject := sourceURLParser.objectName
-	return sourceClnt.Get(sourceBucket, sourceObject)
-}
-
-func (manager mcClientManager) getTargetWriter(targetURLParser *parsedURL, md5Hex string, length int64) (io.WriteCloser, error) {
-	targetClnt, err := getNewClient(targetURLParser, globalDebugFlag)
+	bucket, object, err := url2Object(urlStr)
 	if err != nil {
-		return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
 	}
-	targetBucket := targetURLParser.bucketName
-	// check if bucket is valid
-	if err := targetClnt.StatBucket(targetBucket); err != nil {
-		return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
+
+	// check if the bucket is valid
+	if err := sourceClnt.StatBucket(bucket); err != nil {
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
 	}
-	targetObject := targetURLParser.objectName
-	return targetClnt.Put(targetBucket, targetObject, md5Hex, length)
+	return sourceClnt.Get(bucket, object)
 }
 
-func getTargetWriters(manager clientManager, targetURLParsers []*parsedURL, md5Hex string, length int64) ([]io.WriteCloser, error) {
+func (manager mcClientManager) getTargetWriter(urlStr string, md5Hex string, length int64) (io.WriteCloser, error) {
+	targetClnt, err := getNewClient(urlStr, globalDebugFlag)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
+	bucket, object, err := url2Object(urlStr)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
+	// check if bucket is valid
+	if err := targetClnt.StatBucket(bucket); err != nil {
+		return nil, iodine.New(err, map[string]string{"failedURL": urlStr})
+	}
+	return targetClnt.Put(bucket, object, md5Hex, length)
+}
+
+func getTargetWriters(manager clientManager, urls []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
 	var targetWriters []io.WriteCloser
-	for _, targetURLParser := range targetURLParsers {
-		writer, err := manager.getTargetWriter(targetURLParser, md5Hex, length)
+	for _, u := range urls {
+		writer, err := manager.getTargetWriter(u, md5Hex, length)
 		if err != nil {
 			// close all writers
 			for _, targetWriter := range targetWriters {
 				targetWriter.Close()
 			}
-			return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
+			return nil, iodine.New(errInvalidURL{url: u}, nil)
 		}
 		targetWriters = append(targetWriters, writer)
 	}
@@ -84,8 +91,14 @@ func runCopyCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
 
+	config, err := loadMcConfig()
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalln("mc: Unable to load config file")
+	}
+
 	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := parseURLs(ctx)
+	urls, err := parseURLs(ctx.Args(), config.Aliases)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to parse URL")
@@ -109,7 +122,7 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 }
 
-func doCopyCmd(manager clientManager, sourceURL *parsedURL, targetURLs []*parsedURL) (string, error) {
+func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (string, error) {
 	reader, length, hexMd5, err := manager.getSourceReader(sourceURL)
 	if err != nil {
 		return "Unable to read from source", iodine.New(err, nil)

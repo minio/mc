@@ -8,8 +8,8 @@ type mockClientManager struct {
 	mock.Mock
 }
 
-func (m *mockClientManager) getSourceReader(sourceURLParser *parsedURL) (io.ReadCloser, int64, string, error) {
-	ret := m.Called(sourceURLParser)
+func (m *mockClientManager) getSourceReader(sourceURL string) (io.ReadCloser, int64, string, error) {
+	ret := m.Called(sourceURL)
 
 	r0 := ret.Get(0).(io.ReadCloser)
 	r1 := ret.Get(1).(int64)
@@ -18,8 +18,8 @@ func (m *mockClientManager) getSourceReader(sourceURLParser *parsedURL) (io.Read
 
 	return r0, r1, r2, r3
 }
-func (m *mockClientManager) getTargetWriter(targetURLParser *parsedURL, md5Hex string, length int64) (io.WriteCloser, error) {
-	ret := m.Called(targetURLParser, md5Hex, length)
+func (m *mockClientManager) getTargetWriter(targetURL string, md5Hex string, length int64) (io.WriteCloser, error) {
+	ret := m.Called(targetURL, md5Hex, length)
 
 	r0 := ret.Get(0).(io.WriteCloser)
 	r1 := ret.Error(1)

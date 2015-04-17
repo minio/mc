@@ -41,7 +41,7 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 
 	targetURL, err := parseURL("bar", nil)
 	c.Assert(err, IsNil)
-	targetURLs := []*parsedURL{targetURL}
+	targetURLs := []string{targetURL}
 
 	sourceReader, sourceWriter := io.Pipe()
 	targetReader, targetWriter := io.Pipe()
