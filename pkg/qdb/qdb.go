@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
+	"strings"
 	"sync"
 
 	"encoding/json"
@@ -250,6 +252,9 @@ func (c store) Save(filename string) (err error) {
 	}
 	defer file.Close()
 
+	if runtime.GOOS == "windows" {
+		jsonStore = []byte(strings.Replace(string(jsonStore), "\n", "\r\n", -1))
+	}
 	_, err = file.Write(jsonStore)
 	if err != nil {
 		return err
@@ -271,6 +276,10 @@ func (c *store) Load(filename string) (err error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
+	}
+
+	if runtime.GOOS == "windows" {
+		data = []byte(strings.Replace(string(data), "\r\n", "\n", -1))
 	}
 
 	var loadedStore map[string]interface{}
