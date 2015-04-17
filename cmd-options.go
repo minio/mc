@@ -207,7 +207,7 @@ var (
 	flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "theme",
-			Value: console.GetDefaultTheme(),
+			Value: "minimal",
 			Usage: fmt.Sprintf("Choose a console theme from this list [%s]", func() string {
 				keys := []string{}
 				for key := range console.ThemesDB {
