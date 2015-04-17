@@ -26,7 +26,14 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
-func getSourceReader(sourceURLParser *parsedURL) (reader io.ReadCloser, length int64, md5hex string, err error) {
+type clientManager interface {
+	getSourceReader(sourceURLParser *parsedURL) (reader io.ReadCloser, length int64, md5hex string, err error)
+	getTargetWriter(targetURLParser *parsedURL, md5Hex string, length int64) (io.WriteCloser, error)
+}
+
+type mcClientManager struct{}
+
+func (manager mcClientManager) getSourceReader(sourceURLParser *parsedURL) (reader io.ReadCloser, length int64, md5hex string, err error) {
 	sourceClnt, err := getNewClient(sourceURLParser, globalDebugFlag)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": sourceURLParser.String()})
@@ -41,7 +48,7 @@ func getSourceReader(sourceURLParser *parsedURL) (reader io.ReadCloser, length i
 	return sourceClnt.Get(sourceBucket, sourceObject)
 }
 
-func getTargetWriter(targetURLParser *parsedURL, md5Hex string, length int64) (io.WriteCloser, error) {
+func (manager mcClientManager) getTargetWriter(targetURLParser *parsedURL, md5Hex string, length int64) (io.WriteCloser, error) {
 	targetClnt, err := getNewClient(targetURLParser, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"failedURL": targetURLParser.String()})
@@ -55,10 +62,10 @@ func getTargetWriter(targetURLParser *parsedURL, md5Hex string, length int64) (i
 	return targetClnt.Put(targetBucket, targetObject, md5Hex, length)
 }
 
-func getTargetWriters(targetURLParsers []*parsedURL, md5Hex string, length int64) ([]io.WriteCloser, error) {
+func getTargetWriters(manager clientManager, targetURLParsers []*parsedURL, md5Hex string, length int64) ([]io.WriteCloser, error) {
 	var targetWriters []io.WriteCloser
 	for _, targetURLParser := range targetURLParsers {
-		writer, err := getTargetWriter(targetURLParser, md5Hex, length)
+		writer, err := manager.getTargetWriter(targetURLParser, md5Hex, length)
 		if err != nil {
 			// close all writers
 			for _, targetWriter := range targetWriters {
@@ -90,18 +97,18 @@ func runCopyCmd(ctx *cli.Context) {
 	if ctx.Bool("recursive") {
 		doCopyCmdRecursive(ctx)
 	} else {
-		doCopyCmd(ctx, sourceURL, targetURLs)
+		doCopyCmd(mcClientManager{}, ctx, sourceURL, targetURLs)
 	}
 }
 
-func doCopyCmd(ctx *cli.Context, sourceURL *parsedURL, targetURLs []*parsedURL) {
-	reader, length, hexMd5, err := getSourceReader(sourceURL)
+func doCopyCmd(manager clientManager, ctx *cli.Context, sourceURL *parsedURL, targetURLs []*parsedURL) {
+	reader, length, hexMd5, err := manager.getSourceReader(sourceURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to read source")
 	}
 
-	writeClosers, err := getTargetWriters(targetURLs, hexMd5, length)
+	writeClosers, err := getTargetWriters(manager, targetURLs, hexMd5, length)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to open targets for writing")
