@@ -52,19 +52,27 @@ import (
 
 // ListBuckets - Get list of buckets
 func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
+	var res *http.Response
+	var err error
+
 	u := fmt.Sprintf("%s://%s/", c.Scheme, c.Host)
-	req := newReq(u, c.UserAgent, nil)
+	req, err := newReq(u, c.UserAgent, nil)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
 	c.signRequest(req, c.Host)
 
-	res, err := c.Transport.RoundTrip(req)
+	res, err = c.Transport.RoundTrip(req)
 	if err != nil {
-		return nil, err
+		return nil, iodine.New(err, nil)
+	}
+	if res != nil {
+		if res.StatusCode != http.StatusOK {
+			err = NewError(res)
+			return nil, iodine.New(err, nil)
+		}
 	}
 	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, NewError(res)
-	}
 
 	return listAllMyBuckets(res.Body)
 }
@@ -75,7 +83,11 @@ func (c *s3Client) PutBucket(bucket string) error {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req := newReq(u, c.UserAgent, nil)
+	req, err := newReq(u, c.UserAgent, nil)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+
 	req.Method = "PUT"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
@@ -99,7 +111,11 @@ func (c *s3Client) StatBucket(bucket string) error {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req := newReq(u, c.UserAgent, nil)
+	req, err := newReq(u, c.UserAgent, nil)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+
 	req.Method = "HEAD"
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
