@@ -79,11 +79,26 @@ func (f *fsClient) Get(bucket, object string) (body io.ReadCloser, size int64, m
 }
 
 // GetPartial - download a partial object from bucket
-func (f *fsClient) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
+func (f *fsClient) GetPartial(bucket, object string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	return nil, 0, "", iodine.New(client.APINotImplemented{API: "GetPartial"}, nil)
+	objectPath, st, err := isValidObject(bucket, object)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	body, err = os.Open(objectPath)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	if offset > st.Size() || (offset+length-1) > st.Size() {
+		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
+	}
+	_, err = io.CopyN(ioutil.Discard, body, offset)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	return body, length, "", nil
 }
 
 // StatObject -
@@ -99,7 +114,7 @@ func (f *fsClient) GetObjectMetadata(bucket, object string) (item *client.Item, 
 	item.Key = object
 	item.Size = st.Size()
 	item.LastModified = st.ModTime()
-	item.ETag = "" // TODO
+	item.ETag = "" // TODO, doesn't exist yet
 	return item, nil
 }
 
