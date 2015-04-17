@@ -78,7 +78,7 @@ func doListCmd(ctx *cli.Context) {
 		}
 
 		// ListBuckets() will not be called for fsClient() as its not needed.
-		if targetURLParser.bucketName == "" && targetURLParser.scheme != urlFile {
+		if targetURLParser.bucketName == "" && targetURLParser.scheme != urlFS {
 			buckets, err := client.ListBuckets()
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
