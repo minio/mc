@@ -54,11 +54,11 @@ import (
 /// Object API operations
 
 // GetObjectMetadata - returns nil, os.ErrNotExist if not on object storage
-func (c *s3Client) GetObjectMetadata(bucket, key string) (item *client.Item, reterr error) {
-	if bucket == "" || key == "" {
+func (c *s3Client) GetObjectMetadata(bucket, object string) (item *client.Item, reterr error) {
+	if bucket == "" || object == "" {
 		return nil, iodine.New(client.InvalidArgument{}, nil)
 	}
-	req, err := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+	req, err := newReq(c.keyURL(bucket, object), c.UserAgent, nil)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -72,7 +72,7 @@ func (c *s3Client) GetObjectMetadata(bucket, key string) (item *client.Item, ret
 	defer res.Body.Close()
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return nil, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: key}, nil)
+		return nil, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: object}, nil)
 	case http.StatusOK:
 		contentLength, err := strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
 		if err != nil {
@@ -84,7 +84,7 @@ func (c *s3Client) GetObjectMetadata(bucket, key string) (item *client.Item, ret
 			return nil, iodine.New(err, nil)
 		}
 		item = new(client.Item)
-		item.Key = key
+		item.Key = object
 		item.LastModified = date
 		item.Size = contentLength
 		item.ETag = strings.Trim(res.Header.Get("ETag"), "\"")
@@ -95,8 +95,11 @@ func (c *s3Client) GetObjectMetadata(bucket, key string) (item *client.Item, ret
 }
 
 // Get - download a requested object from a given bucket
-func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 string, err error) {
-	req, err := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+func (c *s3Client) Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error) {
+	if bucket == "" || object == "" {
+		return nil, 0, "", iodine.New(client.InvalidArgument{}, nil)
+	}
+	req, err := newReq(c.keyURL(bucket, object), c.UserAgent, nil)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -113,13 +116,16 @@ func (c *s3Client) Get(bucket, key string) (body io.ReadCloser, size int64, md5 
 	return res.Body, res.ContentLength, md5sum, nil
 }
 
-// GetPartial fetches part of the s3 key object in bucket.
+// GetPartial fetches part of the s3 object in bucket.
 // If length is negative, the rest of the object is returned.
-func (c *s3Client) GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
+func (c *s3Client) GetPartial(bucket, object string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
+	if bucket == "" || object == "" {
+		return nil, 0, "", iodine.New(client.InvalidArgument{}, nil)
+	}
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	req, err := newReq(c.keyURL(bucket, key), c.UserAgent, nil)
+	req, err := newReq(c.keyURL(bucket, object), c.UserAgent, nil)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
