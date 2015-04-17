@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 
 	"github.com/fatih/color"
@@ -30,7 +31,7 @@ var (
 	mutex = &sync.RWMutex{}
 
 	// currentTheme is currently set theme
-	currentTheme = "minimal"
+	currentTheme = GetDefaultTheme()
 	// ThemesDB contains supported list of Themes
 	ThemesDB = map[string]Theme{"minimal": MiniTheme, "nocolor": NoColorTheme, "white": WhiteTheme}
 	// Fatal prints a fatal message and exits
@@ -152,4 +153,12 @@ func SetTheme(themeName string) error {
 // GetTheme returns currently set theme
 func GetTheme() string {
 	return currentTheme
+}
+
+// GetDefaultTheme returns the default theme
+func GetDefaultTheme() string {
+	if runtime.GOOS == "windows" {
+		return "nocolor"
+	}
+	return "minimal"
 }
