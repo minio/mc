@@ -69,7 +69,7 @@ type retryOp struct {
 
 // instantiate new sequence of retries for the given waittime.
 func (s waitTime) init() *retryOp {
-	console.Error("trying... ")
+	console.Error("Retrying... ")
 	now := time.Now()
 	return &retryOp{
 		waittime: s,
@@ -78,7 +78,7 @@ func (s waitTime) init() *retryOp {
 	}
 }
 
-// try()
+// retry()
 func (a *retryOp) retry() bool {
 	// grab current time
 	now := time.Now()

@@ -18,6 +18,7 @@ package main
 
 import (
 	"io"
+	"strings"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
@@ -105,8 +106,7 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		// Construct full target URL path based on source object name
 		var newTargetURLs []string
 		for _, targetURL := range targetURLs {
-			targetURL := targetURL + sourceObject.Key
-			// TODO: strip trailing slashes and properly append
+			targetURL := strings.TrimSuffix(targetURL, "/") + "/" + sourceObject.Key
 			newTargetURLs = append(newTargetURLs, targetURL)
 		}
 		writeClosers, err := getRecursiveTargetWriters(manager, newTargetURLs, md5hex, length)

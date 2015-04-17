@@ -35,7 +35,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to read config")
 	}
 	for _, arg := range ctx.Args() {
-		u, err := parseURL(arg, config.Aliases)
+		u, err := parseURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalf("mc: Unable to parse URL[%s]\n", u)

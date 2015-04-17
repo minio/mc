@@ -66,7 +66,7 @@ func doListCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to get config")
 	}
 	for _, arg := range ctx.Args() {
-		u, err := parseURL(arg, config.Aliases)
+		u, err := parseURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln("mc: Unable to parse URL")
@@ -75,7 +75,7 @@ func doListCmd(ctx *cli.Context) {
 		clnt, err := manager.getNewClient(u, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("mc: Unable to initiate new client")
+			console.Fatalln("mc: Unable to instantiate a new client")
 		}
 
 		bucket, object, err := url2Object(u)

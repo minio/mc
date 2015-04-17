@@ -24,12 +24,6 @@ func (e errInvalidArgument) Error() string {
 	return "invalid argument"
 }
 
-type errEmptyURL struct{}
-
-func (e errEmptyURL) Error() string {
-	return "URL is empty"
-}
-
 type errUnsupportedScheme struct {
 	scheme urlType
 }
@@ -55,15 +49,6 @@ func (e errInvalidGlobURL) Error() string {
 	return "Error parsing glob'ed URL while comparing " + e.glob + " " + e.request
 }
 
-type errInvalidAliasURL struct {
-	url   string
-	alias string
-}
-
-func (e errInvalidAliasURL) Error() string {
-	return "Unable to parse URL: " + e.url + " for alias: " + e.alias
-}
-
 type errInvalidAliasName struct {
 	alias string
 }
@@ -76,15 +61,6 @@ type errInvalidAuth struct{}
 
 func (e errInvalidAuth) Error() string {
 	return "invalid auth keys"
-}
-
-type errUnsupportedVersion struct {
-	new uint
-	old uint
-}
-
-func (e errUnsupportedVersion) Error() string {
-	return fmt.Sprintf("Unsupported version [%d]. Current operating version is [%d]", e.new, e.old)
 }
 
 type errNoMatchingHost struct{}

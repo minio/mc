@@ -21,13 +21,14 @@ import (
 	"path"
 	"time"
 
+	"io"
+
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/client/fs"
 	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"io"
 )
 
 // StartBar -- instantiate a progressbar
@@ -116,13 +117,15 @@ func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt cli
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
-		if hostCfg.Auth == nil {
+		if hostCfg == nil {
 			return nil, iodine.New(errInvalidAuth{}, nil)
 		}
 		auth := new(s3.Auth)
-		if hostCfg.Auth.AccessKeyID != "" || hostCfg.Auth.SecretAccessKey != "" {
-			auth.AccessKeyID = hostCfg.Auth.AccessKeyID
-			auth.SecretAccessKey = hostCfg.Auth.SecretAccessKey
+		if _, ok := hostCfg["Auth.AccessKeyID"]; ok {
+			auth.AccessKeyID = hostCfg["Auth.AccessKeyID"]
+		}
+		if _, ok := hostCfg["Auth.SecretAccessKey"]; ok {
+			auth.SecretAccessKey = hostCfg["Auth.SecretAccessKey"]
 		}
 		clnt = s3.GetNewClient(urlStr, auth, mcUserAgent, debug)
 		return clnt, nil

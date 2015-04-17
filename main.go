@@ -44,18 +44,13 @@ func checkConfig() {
 		return
 	}
 
-	// Ensures config file is sane and cached to _config private variable.
-	config, err := getMcConfig()
+	// Ensures config file is sane
+	_, err = getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("mc: Unable to read config file: %s\n", mustGetMcConfigPath())
 	}
 
-	err = checkMcConfig(config)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Error in config file: %s\n", mustGetMcConfigPath())
-	}
 }
 
 // Tries to get os/arch/platform specific information
