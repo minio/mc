@@ -44,48 +44,58 @@ type waitTime struct {
 	delayDuration time.Duration // delay interval between each retry
 }
 
-type retryOperation struct {
+type retryOp struct {
 	waittime waitTime
 	last     time.Time
 	end      time.Time
-	force    bool
 	count    int
 }
 
 // instantiate new sequence of retries for the given waittime.
-func (s waitTime) init() *retryOperation {
+func (s waitTime) init() *retryOp {
 	now := time.Now()
 	console.Error("Retrying... ")
-	return &retryOperation{
+	return &retryOp{
 		waittime: s,
 		last:     now,
 		end:      now.Add(s.duration),
-		force:    true,
 	}
 }
 
-func (a *retryOperation) retry() bool {
+//
+func (a *retryOp) retry() bool {
+	// grab current time
 	now := time.Now()
-	sleep := a.nextSleep(now)
-	if !a.force && !now.Add(sleep).Before(a.end) {
+
+	// get sleep duration based on configured waitTime delayDuration
+	sleep := func() time.Duration {
+		sleep := a.waittime.delayDuration - now.Sub(a.last)
+		if sleep < 0 {
+			return 0
+		}
+		return sleep
+	}
+
+	// check if we have reached the end, if yes return false
+	if !now.Add(sleep()).Before(a.end) {
 		console.Infoln() // print a new line
 		return false
 	}
-	a.force = false
-	if sleep > 0 && a.count > 0 {
-		time.Sleep(sleep)
+
+	// sleep for sleep duration
+	if sleep() > 0 && a.count > 0 {
+		time.Sleep(sleep())
 		now = time.Now()
 	}
-	a.count++
-	a.last = now
-	console.Infof("%d ", a.count)
-	return true
-}
 
-func (a *retryOperation) nextSleep(now time.Time) time.Duration {
-	sleep := a.waittime.delayDuration - now.Sub(a.last)
-	if sleep < 0 {
-		return 0
-	}
-	return sleep
+	// increment retry count
+	a.count++
+
+	// copy current time as last time
+	a.last = now
+
+	// print current retry count
+	console.Infof("%d ", a.count)
+
+	return true
 }
