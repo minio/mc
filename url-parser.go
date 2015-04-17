@@ -73,15 +73,14 @@ func getURLType(urlStr string) urlType {
 }
 
 // url2Object converts URL to bucket and objectname
-func url2Object(u *url.URL) (bucketName, objectName string) {
-	// if url is of scheme file, behave differently by returning
-	// directory and file instead
-	switch u.Scheme {
-	case "c":
-		fallthrough
-	case "file":
-		fallthrough
-	case "":
+func url2Object(urlStr string) (bucketName, objectName string, err error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return "", "", iodine.New(err, nil)
+	}
+
+	switch getURLType(urlStr) {
+	case urlFS:
 		if runtime.GOOS == "windows" {
 			bucketName, objectName = filepath.Split(u.String())
 		} else {
@@ -101,15 +100,19 @@ func url2Object(u *url.URL) (bucketName, objectName string) {
 			objectName = splits[2]
 		}
 	}
-	return bucketName, objectName
+	return bucketName, objectName, nil
 }
 
 func newURL(urlStr string) (*parsedURL, error) {
+	bucketName, objectName, err := url2Object(urlStr)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	bucketName, objectName := url2Object(u)
 	parsedURL := &parsedURL{
 		url:        u,
 		scheme:     getURLType(urlStr),
