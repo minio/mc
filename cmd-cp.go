@@ -32,14 +32,14 @@ func runCopyCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
 
-	config, err := loadMcConfig()
+	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to load config file")
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := parseURLs(ctx.Args(), config.Aliases)
+	urls, err := parseURLs(ctx.Args(), config.GetMapString("Aliases"))
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to parse URL")

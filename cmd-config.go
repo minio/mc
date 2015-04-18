@@ -18,19 +18,18 @@ package main
 
 import (
 	"bytes"
+	"net/url"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 
-	"encoding/json"
-	"io/ioutil"
-	"net/url"
 	"os/user"
 	"path/filepath"
 
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
+	"github.com/minio-io/mc/pkg/qdb"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -38,26 +37,11 @@ import (
 const (
 	mcConfigDir        = ".mc/"
 	mcConfigWindowsDir = "mc/"
-	configFile         = "config.json"
+	mcConfigFile       = "config.json"
 )
 
-type auth struct {
-	AccessKeyID     string
-	SecretAccessKey string
-}
-
-type hostConfig struct {
-	Auth *auth
-}
-
-type mcConfig struct {
-	Version uint
-	Hosts   map[string]hostConfig
-	Aliases map[string]string
-}
-
-const (
-	currentConfigVersion = 1
+var (
+	mcCurrentConfigVersion = qdb.Version{Major: 1, Minor: 0, Patch: 0}
 )
 
 const (
@@ -67,16 +51,12 @@ const (
 	secretAccesskey = "YOUR-SECRET-ACCESS-KEY-HERE"
 )
 
-// Global config data loaded from json config file durlng init(). This variable should only
-// be accessed via getMcConfig()
-var _config *mcConfig
-
 func getMcConfigDir() (string, error) {
 	u, err := user.Current()
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-	// For windows the path is slightly differently
+	// For windows the path is slightly different
 	switch runtime.GOOS {
 	case "windows":
 		return path.Join(u.HomeDir, mcConfigWindowsDir), nil
@@ -85,16 +65,16 @@ func getMcConfigDir() (string, error) {
 	}
 }
 
-func getOrCreateMcConfigDir() (string, error) {
+func createMcConfigDir() error {
 	p, err := getMcConfigDir()
 	if err != nil {
-		return "", iodine.New(err, nil)
+		return iodine.New(err, nil)
 	}
 	err = os.MkdirAll(p, 0700)
 	if err != nil {
-		return "", iodine.New(err, nil)
+		return iodine.New(err, nil)
 	}
-	return p, nil
+	return nil
 }
 
 func getMcConfigPath() (string, error) {
@@ -102,7 +82,7 @@ func getMcConfigPath() (string, error) {
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-	return path.Join(dir, configFile), nil
+	return path.Join(dir, mcConfigFile), nil
 }
 
 func mustGetMcConfigPath() string {
@@ -110,21 +90,25 @@ func mustGetMcConfigPath() string {
 	return p
 }
 
-// getMcConfig returns the config data from file. Subsequent calls are
-// cached in a private global variable
-func getMcConfig() (cfg *mcConfig, err error) {
-	if _config != nil {
-		return _config, nil
+// getMcConfig returns the config
+func getMcConfig() (config qdb.Store, err error) {
+	if !isMcConfigExist() {
+		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
-	_config, err = loadMcConfig()
+	configFile, err := getMcConfigPath()
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	return _config, nil
+	if configStore := qdb.NewStore(mcCurrentConfigVersion); configStore != nil {
+		if err := configStore.Load(configFile); err != nil {
+			return nil, iodine.New(err, nil)
+		}
+		return configStore, nil
+	}
+	return nil, iodine.New(errInvalidArgument{}, nil)
 }
 
-// getMcConfig returns the config data from file. Subsequent calls are
-// cached in a private global variable
+// isMcConfigExist returns true/false if config exists
 func isMcConfigExist() bool {
 	configFile, err := getMcConfigPath()
 	if err != nil {
@@ -137,65 +121,9 @@ func isMcConfigExist() bool {
 	return true
 }
 
-// chechMcConfig checks for errors in config file
-func checkMcConfig(config *mcConfig) (err error) {
-	// check for version
-	switch {
-	case (config.Version != currentConfigVersion):
-		return iodine.New(errUnsupportedVersion{old: currentConfigVersion, new: config.Version}, nil)
-	case len(config.Hosts) > 1:
-		for host, hostCfg := range config.Hosts {
-			// don't need to check for availability of AccessKeyID, not having one
-			// is a valid case for public buckets
-			if host == "" {
-				return iodine.New(errEmptyURL{}, nil)
-			}
-			if hostCfg.Auth == nil {
-				return iodine.New(errInvalidAuth{}, nil)
-			}
-		}
-	case len(config.Aliases) > 0:
-		for aliasName, aliasURL := range config.Aliases {
-			_, err := url.Parse(aliasURL)
-			if err != nil {
-				return iodine.New(errInvalidAliasURL{alias: aliasName, url: aliasURL}, nil)
-			}
-			if !isValidAliasName(aliasName) {
-				return iodine.New(errInvalidAliasName{alias: aliasName}, nil)
-			}
-		}
-	}
-	return nil
-}
-
-// loadMcConfig decodes json configuration file to mcConfig structure
-func loadMcConfig() (config *mcConfig, err error) {
-	configFile, err := getMcConfigPath()
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	_, err = os.Stat(configFile)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	configBytes, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	err = json.Unmarshal(configBytes, &config)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return config, nil
-}
-
 // writeConfig
-func writeConfig(configData *mcConfig) error {
-	jsonConfig, err := json.MarshalIndent(configData, "", "\t")
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-	_, err = getOrCreateMcConfigDir()
+func writeConfig(config qdb.Store) error {
+	err := createMcConfigDir()
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -203,25 +131,7 @@ func writeConfig(configData *mcConfig) error {
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	configFile, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-	_, err = configFile.Write(jsonConfig)
-	if err != nil {
-		configFile.Close()
-		return iodine.New(err, nil)
-	}
-
-	// explicitly close config file
-	configFile.Close()
-
-	// Invalidate cached config
-	_config = nil
-
-	// Reload and cache new config
-	_, err = getMcConfig()
-	if os.IsNotExist(iodine.ToError(err)) {
+	if err := config.Save(configPath); err != nil {
 		return iodine.New(err, nil)
 	}
 	return nil
@@ -231,46 +141,51 @@ func writeConfig(configData *mcConfig) error {
 func saveConfig(ctx *cli.Context) error {
 	switch ctx.Args().Get(0) {
 	case "generate":
-		configData, err := generateNewConfig()
+		err := writeConfig(generateNewConfig())
 		if err != nil {
 			return iodine.New(err, nil)
 		}
-		return writeConfig(configData)
+		return nil
 	default:
-		configData, err := parseConfigInput(ctx)
+		configStore, err := parseConfigInput(ctx)
 		if err != nil {
 			return iodine.New(err, nil)
 		}
-		return writeConfig(configData)
+		return writeConfig(configStore)
 	}
 }
 
-func generateNewConfig() (config *mcConfig, err error) {
-	config = &mcConfig{
-		Version: currentConfigVersion,
-		Hosts: map[string]hostConfig{
-			"http*://s3*.amazonaws.com": {
-				Auth: &auth{
-					AccessKeyID:     accessKeyID,
-					SecretAccessKey: secretAccesskey,
-				}},
-			// local minio server can have this empty until webcli is ready
-			// which would make it easier to generate accesskeys and manage them
-			"http*://localhost:*": {
-				Auth: &auth{
-					AccessKeyID:     "",
-					SecretAccessKey: "",
-				}},
-		},
-		Aliases: map[string]string{
-			"s3":        "https://s3.amazonaws.com",
-			"localhost": "http://localhost:9000",
-		},
-	}
-	return config, nil
+func generateNewConfig() (config qdb.Store) {
+	configStore := qdb.NewStore(mcCurrentConfigVersion)
+
+	s3Auth := make(map[string]string)
+	localAuth := make(map[string]string)
+
+	hosts := make(map[string]map[string]string)
+	s3Auth["Auth.AccessKeyID"] = accessKeyID
+	s3Auth["Auth.SecretAccessKey"] = secretAccesskey
+	hosts["http*://s3*.amazonaws.com"] = s3Auth
+
+	// local minio server can have this empty until webcli is ready
+	// which would make it easier to generate accesskeys and manage
+	localAuth["Auth.AccessKeyID"] = ""
+	localAuth["Auth.SecretAccessKey"] = ""
+	hosts["http*://localhost:*"] = localAuth
+
+	configStore.SetMapMapString("Hosts", hosts)
+
+	aliases := make(map[string]string)
+	aliases["s3"] = "https://s3.amazonaws.com"
+	aliases["localhost"] = "http://localhost:9000"
+
+	configStore.SetMapString("Aliases", aliases)
+	return configStore
 }
 
-func parseConfigInput(ctx *cli.Context) (config *mcConfig, err error) {
+func parseConfigInput(ctx *cli.Context) (config qdb.Store, err error) {
+	configStore := qdb.NewStore(mcCurrentConfigVersion)
+	configStore.Load(mcConfigFile)
+
 	alias := strings.Fields(ctx.String("alias"))
 	switch true {
 	case len(alias) == 2:
@@ -282,22 +197,10 @@ func parseConfigInput(ctx *cli.Context) (config *mcConfig, err error) {
 		if !strings.HasPrefix(url, "http") {
 			return nil, iodine.New(errInvalidURL{url: url}, nil)
 		}
-		config = &mcConfig{
-			Version: currentConfigVersion,
-			Hosts: map[string]hostConfig{
-				"http*://s3*.amazonaws.com": {
-					Auth: &auth{
-						AccessKeyID:     accessKeyID,
-						SecretAccessKey: secretAccesskey,
-					}},
-			},
-			Aliases: map[string]string{
-				"s3":        "https://s3.amazonaws.com",
-				"localhost": "http://localhost:9000",
-				aliasName:   url,
-			},
-		}
-		return config, nil
+		aliases := configStore.GetMapString("Aliases")
+		aliases[aliasName] = url
+		configStore.SetMapString("Aliases", aliases)
+		return configStore, nil
 	default:
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
@@ -309,22 +212,22 @@ func getHostURL(u *url.URL) string {
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(requestURL string) (*hostConfig, error) {
+func getHostConfig(requestURL string) (map[string]string, error) {
 	u, err := url.Parse(requestURL)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, iodine.New(errInvalidURL{url: requestURL}, nil)
 	}
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	for globURL, cfg := range config.Hosts {
+	for globURL, hostConfig := range config.GetMapMapString("Hosts") {
 		match, err := filepath.Match(globURL, getHostURL(u))
 		if err != nil {
 			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: requestURL}, nil)
 		}
 		if match {
-			return &cfg, nil
+			return hostConfig, nil
 		}
 	}
 	return nil, iodine.New(errNoMatchingHost{}, nil)
@@ -336,21 +239,19 @@ func saveConfigCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 && !ctx.IsSet("completion") && !ctx.IsSet("alias") {
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 	}
-	err := saveConfig(ctx)
-	if os.IsExist(iodine.ToError(err)) {
-		log.Debug.Println(iodine.New(err, nil))
-		configPath, _ := getMcConfigPath()
-		console.Fatalln("mc: Configuration file " + configPath + " already exists")
-	}
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		configPath, _ := getMcConfigPath()
-		console.Fatalln("mc: Unable to generate config file", configPath)
-	}
 	configPath, err := getMcConfigPath()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to identify config file path")
+	}
+	err = saveConfig(ctx)
+	if os.IsExist(iodine.ToError(err)) {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalln("mc: Configuration file " + configPath + " already exists")
+	}
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalln("mc: Unable to generate config file", configPath)
 	}
 	console.Infoln("mc: Configuration written to " + configPath + ". Please update your access credentials.")
 }

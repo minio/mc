@@ -46,6 +46,9 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 	}
 
 	for aliasName, expandedURL := range aliases {
+		if !isValidAliasName(aliasName) {
+			return "", iodine.New(errInvalidAliasName{alias: aliasName}, nil)
+		}
 		if strings.HasPrefix(aliasedURL, aliasName) {
 			// Match found. Expand it.
 			splits := strings.Split(aliasedURL, ":")
