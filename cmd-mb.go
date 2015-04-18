@@ -38,7 +38,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		u, err := parseURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to parse URL[%s]\n", u)
+			console.Fatalf("mc: Unable to parse URL [%s]\n", u)
 		}
 		bucket, _, err := url2Object(u)
 		if err != nil {

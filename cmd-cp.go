@@ -26,7 +26,6 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
-// doCopyCmd copies objects into and from a bucket or between buckets
 func runCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
@@ -42,27 +41,28 @@ func runCopyCmd(ctx *cli.Context) {
 	urls, err := parseURLs(ctx.Args(), config.GetMapString("Aliases"))
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to parse URL")
+		console.Fatalf("mc: Unable to parse URLs [%s]\n", urls)
 	}
 	sourceURL := urls[0]   // First arg is source
 	targetURLs := urls[1:] // 1 or more targets
 
 	// perform copy
+
 	if ctx.Bool("recursive") {
 		doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
-	} else {
-		humanReadableError, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
-		err = iodine.New(err, nil)
-		if err != nil {
-			if humanReadableError == "" {
-				humanReadableError = "No error message present, please rerun with --debug and report a bug."
-			}
-			log.Debug.Println(err)
-			console.Errorln("mc: " + humanReadableError)
+	}
+	humanReadableError, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
+	err = iodine.New(err, nil)
+	if err != nil {
+		if humanReadableError == "" {
+			humanReadableError = "No error message present, please rerun with --debug and report a bug."
 		}
+		log.Debug.Println(err)
+		console.Errorf("mc: %s\n", humanReadableError)
 	}
 }
 
+// doCopyCmd copies objects into and from a bucket or between buckets
 func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (string, error) {
 	reader, length, hexMd5, err := manager.getSourceReader(sourceURL)
 	if err != nil {

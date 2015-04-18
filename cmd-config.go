@@ -238,6 +238,15 @@ func getHostConfig(requestURL string) (map[string]string, error) {
 			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: requestURL}, nil)
 		}
 		if match {
+			// verify Auth key validity for all hosts other than localhost
+			if !strings.Contains(getHostURL(u), "localhost") {
+				if !isValidAccessKey(hostConfig["Auth.AccessKeyID"]) {
+					return nil, iodine.New(errInvalidAuthKeys{}, nil)
+				}
+				if !isValidSecretKey(hostConfig["Auth.SecretAccessKey"]) {
+					return nil, iodine.New(errInvalidAuthKeys{}, nil)
+				}
+			}
 			return hostConfig, nil
 		}
 	}
