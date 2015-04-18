@@ -43,16 +43,20 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		bucket, _, err := url2Object(u)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to decode bucket and object from URL[%s]\n", u)
+			console.Fatalf("mc: Unable to decode bucket and object from URL [%s]\n", u)
 		}
 
 		// this is handled differently since http based URLs cannot have
 		// nested directories as buckets, buckets are a unique alphanumeric
 		// name having subdirectories is only supported for fsClient
 		if getURLType(u) != urlFS {
+			if bucket == "" {
+				log.Debug.Println(iodine.New(errBucketNameEmpty{}, nil))
+				console.Fatalln("mc: bucket name empty")
+			}
 			if !client.IsValidBucketName(bucket) {
-				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Invalid bucket name: %s", bucket)
+				log.Debug.Println(iodine.New(errInvalidBucketName{bucket: bucket}, nil))
+				console.Fatalf("mc: Invalid bucket name: [%s]\n", bucket)
 			}
 		}
 
@@ -66,14 +70,13 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		// retry - 5 times
 		for r := retries.init(); r.retry(); {
 			err = clnt.PutBucket(bucket)
-
 			if !isValidRetry(err) {
 				break
 			}
 		}
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			// error message returned properly by PutBucket()
+			console.Infoln()
 			console.Fatalln(err)
 		}
 	}

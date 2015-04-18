@@ -56,5 +56,6 @@ func NewError(res *http.Response) error {
 
 // Error formats HTTP error string
 func (e *Error) Error() string {
-	return fmt.Sprintf("%s", e.response.Status)
+	message, _ := e.responseMap.ValuesForKey("Message")
+	return fmt.Sprintf("[%s] server replied with Message: %s", e.response.Header.Get("Server"), message)
 }
