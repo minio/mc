@@ -27,6 +27,7 @@ import (
 	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
+	"io"
 )
 
 // StartBar -- instantiate a progressbar
@@ -87,4 +88,63 @@ func getNewClient(urlStr string, debug bool) (clnt client.Client, err error) {
 	default:
 		return nil, iodine.New(errUnsupportedScheme{scheme: getURLType(urlStr)}, nil)
 	}
+}
+
+type clientManager interface {
+	getSourceReader(urlStr string) (reader io.ReadCloser, length int64, md5hex string, err error)
+	getTargetWriter(urlStr string, md5Hex string, length int64) (io.WriteCloser, error)
+}
+
+type mcClientManager struct{}
+
+func (manager mcClientManager) getSourceReader(urlStr string) (reader io.ReadCloser, length int64, md5hex string, err error) {
+	sourceClnt, err := getNewClient(urlStr, globalDebugFlag)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
+	}
+	// Get a reader for the source object
+	bucket, object, err := url2Object(urlStr)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
+	}
+
+	// check if the bucket is valid
+	if err := sourceClnt.StatBucket(bucket); err != nil {
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
+	}
+	return sourceClnt.Get(bucket, object)
+}
+
+func (manager mcClientManager) getTargetWriter(urlStr string, md5Hex string, length int64) (io.WriteCloser, error) {
+	targetClnt, err := getNewClient(urlStr, globalDebugFlag)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
+	bucket, object, err := url2Object(urlStr)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
+	// check if bucket is valid
+	if err := targetClnt.StatBucket(bucket); err != nil {
+		return nil, iodine.New(err, map[string]string{"failedURL": urlStr})
+	}
+	return targetClnt.Put(bucket, object, md5Hex, length)
+}
+
+func getTargetWriters(manager clientManager, urls []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
+	var targetWriters []io.WriteCloser
+	for _, u := range urls {
+		writer, err := manager.getTargetWriter(u, md5Hex, length)
+		if err != nil {
+			// close all writers
+			for _, targetWriter := range targetWriters {
+				targetWriter.Close()
+			}
+			return nil, iodine.New(errInvalidURL{url: u}, nil)
+		}
+		targetWriters = append(targetWriters, writer)
+	}
+	return targetWriters, nil
 }
