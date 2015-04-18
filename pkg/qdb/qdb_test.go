@@ -139,3 +139,49 @@ func (s *MySuite) TestGetSet(c *C) {
 	c.Assert(cfg.GetMapStringSlice("Startrek"), IsNil)
 
 }
+
+func (s *MySuite) TestGetSetSaveLoad(c *C) {
+	defer os.RemoveAll("test.json")
+	version := Version{1, 0, 0}
+
+	cfg := NewStore(version)
+	cfg.SetInt("Q", 42)
+	cfg.SetIntSlice("Odd", []int{1, 3, 5, 7, 9})
+	cfg.SetFloat64("Pi", 3.1415)
+	cfg.SetFloat64Slice("PiSlice", []float64{3.1415, 2.414})
+	cfg.SetString("Grand Nagus", "Zek")
+	cfg.SetStringSlice("Ferengi", []string{"Zek", "Brunt", "Quark", "Rom", "Nog", "Ishka"})
+	startrek1 := map[string]string{"Borg": "7of9", "Data": "Measure of a Man"}
+	startrek2 := map[string]string{"Borg": "7of9", "Data": "Measure of a Man"}
+	cfg.SetMapString("startrek", startrek1)
+	startrek3 := map[string][]string{
+		"Quadrants": {"Alpha", "Beta", "Gamma", "Delta"},
+		"Aliens":    {"Dominion", "Borg", "Klingon", "Romulan"},
+	}
+	startrek4 := map[string][]string{
+		"Quadrants": {"Alpha", "Beta", "Gamma", "Delta"},
+		"Aliens":    {"Dominion", "Borg", "Klingon", "Romulan"},
+	}
+	cfg.SetMapStringSlice("startrekSlice", startrek3)
+
+	mapMapString := map[string]map[string]string{
+		"Quandrants": {
+			"Delta": "Romulan",
+		},
+	}
+	cfg.SetMapMapString("MilkyWay", mapMapString)
+
+	cfg.Save("test.json")
+
+	newCfg := NewStore(version)
+	newCfg.Load("test.json")
+	c.Assert(newCfg.GetInt("Q"), Equals, 42)
+	c.Assert(newCfg.GetIntSlice("Odd"), DeepEquals, []int{1, 3, 5, 7, 9})
+	c.Assert(newCfg.GetFloat64("Pi"), Equals, 3.1415)
+	c.Assert(newCfg.GetFloat64Slice("PiSlice"), DeepEquals, []float64{3.1415, 2.414})
+	c.Assert(newCfg.GetString("Grand Nagus"), Equals, "Zek")
+	c.Assert(newCfg.GetStringSlice("Ferengi"), DeepEquals, []string{"Zek", "Brunt", "Quark", "Rom", "Nog", "Ishka"})
+	c.Assert(newCfg.GetMapString("startrek"), DeepEquals, startrek2)
+	c.Assert(newCfg.GetMapStringSlice("startrekSlice"), DeepEquals, startrek4)
+	c.Assert(newCfg.GetMapMapString("MilkyWay"), DeepEquals, mapMapString)
+}

@@ -37,6 +37,7 @@ type Store interface {
 	Float64
 	String
 	Map
+	MapMap
 	GetVersion() Version
 	Save(string) error
 	Load(string) error
@@ -46,7 +47,7 @@ type Store interface {
 	String() string
 }
 
-// Int - integer generic interface functions for qconfig
+// Int - integer generic interface functions for qdb
 type Int interface {
 	SetInt(string, int)
 	GetInt(string) int
@@ -54,7 +55,7 @@ type Int interface {
 	GetIntSlice(string) []int
 }
 
-// Float64 - float64 generic interface functions for qconfig
+// Float64 - float64 generic interface functions for qdb
 type Float64 interface {
 	SetFloat64(string, float64)
 	GetFloat64(string) float64
@@ -62,7 +63,7 @@ type Float64 interface {
 	GetFloat64Slice(string) []float64
 }
 
-// String - string generic interface functions for qconfig
+// String - string generic interface functions for qdb
 type String interface {
 	SetString(string, string)
 	GetString(string) string
@@ -70,12 +71,18 @@ type String interface {
 	GetStringSlice(string) []string
 }
 
-// Map - map generic interface functions for qconfig
+// Map - map generic interface functions for qdb
 type Map interface {
 	SetMapString(string, map[string]string)
 	GetMapString(string) map[string]string
 	SetMapStringSlice(string, map[string][]string)
 	GetMapStringSlice(string) map[string][]string
+}
+
+// MapMap - two level map indirection interface functions for qdb
+type MapMap interface {
+	SetMapMapString(string, map[string]map[string]string)
+	GetMapMapString(string) map[string]map[string]string
 }
 
 // Version info
@@ -141,14 +148,12 @@ func (c *store) SetInt(key string, value int) {
 
 // GetInt returns int value
 func (c store) GetInt(key string) int {
-	val, _ := c.store[key].(int)
-	return val
-}
-
-// GetIntSlice returns list of int values
-func (c store) GetIntSlice(key string) []int {
-	val, _ := c.store[key].([]int)
-	return val
+	intVal, ok := c.store[key].(int)
+	if !ok {
+		interfaceIntVal, _ := c.store[key].(interface{})
+		return int(reflect.ValueOf(interfaceIntVal).Float())
+	}
+	return intVal
 }
 
 // SetIntSlice sets list of int values
@@ -156,6 +161,21 @@ func (c *store) SetIntSlice(key string, values []int) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = values
+}
+
+// GetIntSlice returns list of int values
+func (c store) GetIntSlice(key string) []int {
+	interfaceIntSliceVal, ok := c.store[key].([]interface{})
+	if !ok {
+		intSliceVal, _ := c.store[key].([]int)
+		return intSliceVal
+	}
+	var actualIntSliceVal []int
+	for _, v := range interfaceIntSliceVal {
+		vInt := reflect.ValueOf(v)
+		actualIntSliceVal = append(actualIntSliceVal, int(vInt.Float()))
+	}
+	return actualIntSliceVal
 }
 
 // SetFloat64 sets 64-bit float value
@@ -167,8 +187,8 @@ func (c *store) SetFloat64(key string, value float64) {
 
 // GetFloat64 returns 64-bit float value
 func (c store) GetFloat64(key string) float64 {
-	val, _ := c.store[key].(float64)
-	return val
+	val := reflect.ValueOf(c.store[key])
+	return val.Float()
 }
 
 // SetFloat64Slice sets a list of 64-bit float values
@@ -180,8 +200,17 @@ func (c *store) SetFloat64Slice(key string, values []float64) {
 
 // GetFloat64Slice returns a list of 64-bit float values
 func (c store) GetFloat64Slice(key string) []float64 {
-	val, _ := c.store[key].([]float64)
-	return val
+	interfaceFloatSliceVal, ok := c.store[key].([]interface{})
+	if !ok {
+		floatSliceVal, _ := c.store[key].([]float64)
+		return floatSliceVal
+	}
+	var actualFloatSliceVal []float64
+	for _, v := range interfaceFloatSliceVal {
+		val := reflect.ValueOf(v)
+		actualFloatSliceVal = append(actualFloatSliceVal, val.Float())
+	}
+	return actualFloatSliceVal
 }
 
 // SetString sets string value
@@ -206,34 +235,93 @@ func (c *store) SetStringSlice(key string, values []string) {
 
 // GetStringSlice returns list of strings
 func (c store) GetStringSlice(key string) []string {
-	val, _ := c.store[key].([]string)
-	return val
+	interfaceStrSliceVal, ok := c.store[key].([]interface{})
+	if !ok {
+		strSliceVal, _ := c.store[key].([]string)
+		return strSliceVal
+	}
+	var actualStrSliceVal []string
+	for _, v := range interfaceStrSliceVal {
+		val := reflect.ValueOf(v)
+		actualStrSliceVal = append(actualStrSliceVal, val.String())
+	}
+	return actualStrSliceVal
 }
 
-//SetMapString sets a map of strings
+// SetMapString sets a map of strings
 func (c *store) SetMapString(key string, value map[string]string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
-//GetMapString returns a map of strings
+// GetMapString returns a map of strings
 func (c store) GetMapString(key string) map[string]string {
-	val, _ := c.store[key].(map[string]string)
-	return val
+	interfaceMapVal, ok := c.store[key].(map[string]interface{})
+	if !ok {
+		val, _ := c.store[key].(map[string]string)
+		return val
+	}
+	actualMapVal := make(map[string]string)
+	for k, v := range interfaceMapVal {
+		rv := reflect.ValueOf(v)
+		actualMapVal[k] = rv.String()
+	}
+	return actualMapVal
 }
 
-//SetMapStringSlice sets a map of string list
+// SetMapStringSlice sets a map of string list
 func (c *store) SetMapStringSlice(key string, value map[string][]string) {
 	(*c).lock.Lock()
 	defer (*c).lock.Unlock()
 	(*c).store[key] = value
 }
 
-//GetMapStringSlice returns a map of string list
+// GetMapStringSlice returns a map of string list
 func (c store) GetMapStringSlice(key string) map[string][]string {
-	val, _ := c.store[key].(map[string][]string)
-	return val
+	interfacelMapSliceVal, ok := c.store[key].(map[string]interface{})
+	if !ok {
+		mapSliceVal, _ := c.store[key].(map[string][]string)
+		return mapSliceVal
+	}
+	actualMapSliceVal := make(map[string][]string)
+	for k, v := range interfacelMapSliceVal {
+		var actualStrSliceVal []string
+		rv, _ := v.([]interface{})
+		for _, l := range rv {
+			val := reflect.ValueOf(l)
+			actualStrSliceVal = append(actualStrSliceVal, val.String())
+		}
+		actualMapSliceVal[k] = actualStrSliceVal
+	}
+	return actualMapSliceVal
+}
+
+// SetMapMapString sets a map of a map string
+func (c *store) SetMapMapString(key string, value map[string]map[string]string) {
+	(*c).lock.Lock()
+	defer (*c).lock.Unlock()
+	(*c).store[key] = value
+}
+
+// GetMapMapString gets a map of a map string
+func (c *store) GetMapMapString(key string) map[string]map[string]string {
+	interfaceMapMapVal, ok := c.store[key].(map[string]interface{})
+	if !ok {
+		val, _ := c.store[key].(map[string]map[string]string)
+		return val
+	}
+	actualMapMapVal := make(map[string]map[string]string)
+	for k, v := range interfaceMapMapVal {
+		rv, _ := v.(map[string]interface{})
+		nestedActualMapVal := make(map[string]string)
+		for m, n := range rv {
+			rn := reflect.ValueOf(n)
+			nestedActualMapVal[m] = rn.String()
+		}
+		actualMapMapVal[k] = nestedActualMapVal
+	}
+	return actualMapMapVal
 }
 
 // Save writes configuration data in JSON format to donut config file.
@@ -296,7 +384,6 @@ func (c *store) Load(filename string) (err error) {
 	for key := range loadedStore {
 		(*c).store[key] = loadedStore[key]
 	}
-
 	return nil
 }
 
