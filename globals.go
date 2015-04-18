@@ -24,8 +24,9 @@ import (
 )
 
 var (
-	globalDebugFlag = false // Debug flag set via command line
-	globalQuietFlag = false // Quiet flag set via command line
+	globalDebugFlag    = false // Debug flag set via command line
+	globalQuietFlag    = false // Quiet flag set via command line
+	globalMaxRetryFlag = 5     // Maximum number of retries
 
 	mcUserAgent = "Minio/" +
 		strings.SplitN(mcGitCommitHash, " ", 3)[1] +

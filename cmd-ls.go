@@ -88,11 +88,14 @@ func doListCmd(ctx *cli.Context) {
 		if bucket == "" && getURLType(u) != urlFS {
 			var err error
 			var buckets []*client.Bucket
-			for r := retries.init(); r.retry(); {
+
+			for i := 0; ; i++ {
 				buckets, err = clnt.ListBuckets()
-				if !isValidRetry(err) {
-					break
+				if err == nil || i >= globalMaxRetryFlag {
+					break // Success. No more retries.
 				}
+				// Progressively longer delays
+				time.Sleep(time.Duration(i*i) * time.Second)
 			}
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
@@ -101,12 +104,13 @@ func doListCmd(ctx *cli.Context) {
 			console.Infoln()
 			printBuckets(buckets)
 		} else {
-
-			for r := retries.init(); r.retry(); {
+			for i := 0; ; i++ {
 				items, err = clnt.ListObjects(bucket, object)
-				if !isValidRetry(err) {
-					break
+				if err == nil || i >= globalMaxRetryFlag {
+					break // Success. No more retries.
 				}
+				// Progressively longer delays
+				time.Sleep(time.Duration(i*i) * time.Second)
 			}
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
