@@ -37,7 +37,7 @@ var _ = Suite(&CmdTestSuite{})
 func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	manager := &MockclientManager{}
 	sourceURL, err := parseURL("foo", nil)
-	c.Assert(err, Not(IsNil))
+	c.Assert(err, IsNil)
 
 	data := "Hello World"
 	md5Sum := md5.Sum([]byte(data))
@@ -45,7 +45,7 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	dataLength := int64(len(data))
 
 	targetURL, err := parseURL("bar", nil)
-	c.Assert(err, Not(IsNil))
+	c.Assert(err, IsNil)
 	targetURLs := []string{targetURL}
 
 	sourceReader, sourceWriter := io.Pipe()
@@ -66,7 +66,7 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	manager.On("getTargetWriter", targetURL, hexMd5, dataLength).Return(targetWriter, nil).Once()
 	doCopyCmd(manager, sourceURL, targetURLs)
 	wg.Wait()
-	c.Assert(err, Not(IsNil))
+	c.Assert(err, IsNil)
 	c.Assert(resultBuffer.String(), DeepEquals, data)
 }
 

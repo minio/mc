@@ -84,15 +84,6 @@ func (e errAliasExists) Error() string {
 	return fmt.Sprintf("alias: %s exists", e.name)
 }
 
-// errAliasNotFound - alias not found
-type errAliasNotFound struct {
-	name string
-}
-
-func (e errAliasNotFound) Error() string {
-	return "alias: " + e.name + " exists"
-}
-
 // errInvalidAuthKeys - invalid authorization keys
 type errInvalidAuthKeys struct{}
 

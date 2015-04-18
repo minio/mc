@@ -34,25 +34,23 @@ func isValidAliasName(aliasName string) bool {
 
 // aliasExpand expands aliased (name:/path) to full URL, used by url-parser
 func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, err error) {
-	if aliasedURL == "" || aliases == nil {
-		return aliasedURL, iodine.New(errInvalidArgument{}, nil)
-	}
 	u, err := url.Parse(aliasedURL)
 	if err != nil {
 		return aliasedURL, iodine.New(errInvalidURL{url: aliasedURL}, nil)
 	}
-	if u.Scheme == "" {
+	// proper URL
+	if u.Host != "" {
 		return aliasedURL, nil
 	}
 	for aliasName, expandedURL := range aliases {
-		if !isValidAliasName(aliasName) {
-			return "", iodine.New(errInvalidAliasName{name: aliasName}, nil)
-		}
 		if strings.HasPrefix(aliasedURL, aliasName) {
 			// Match found. Expand it.
 			splits := strings.Split(aliasedURL, ":")
-			return expandedURL + "/" + splits[1], nil
+			if len(splits) == 2 {
+				return expandedURL + "/" + splits[1], nil
+			}
+			return expandedURL, nil
 		}
 	}
-	return aliasedURL, iodine.New(errAliasNotFound{name: aliasedURL}, nil)
+	return aliasedURL, nil
 }
