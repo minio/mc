@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/cheggaaa/pb"
@@ -34,7 +35,7 @@ func runCopyCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to load config file")
+		console.Fatalf("mc: loading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
@@ -43,10 +44,10 @@ func runCopyCmd(ctx *cli.Context) {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to parse URL with error [%s]\n", e)
+			console.Fatalf("mc: parsing URL failed with following reason: [%s]\n", e)
 		default:
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to parse URL with error [%s]\n", e)
+			console.Fatalf("mc: parsing URL failed with following reason: [%s]\n", e)
 		}
 	}
 
@@ -66,7 +67,7 @@ func runCopyCmd(ctx *cli.Context) {
 			humanReadableError = "No error message present, please rerun with --debug and report a bug."
 		}
 		log.Debug.Println(err)
-		console.Errorf("mc: %s\n", humanReadableError)
+		console.Errorf("mc: %s with following reason: [%s]\n", humanReadableError, iodine.ToError(err))
 	}
 }
 
@@ -74,13 +75,13 @@ func runCopyCmd(ctx *cli.Context) {
 func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (string, error) {
 	reader, length, hexMd5, err := manager.getSourceReader(sourceURL)
 	if err != nil {
-		return "Unable to read from source", iodine.New(err, nil)
+		return fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL), iodine.New(err, nil)
 	}
 	defer reader.Close()
 
 	writeClosers, err := getTargetWriters(manager, targetURLs, hexMd5, length)
 	if err != nil {
-		return "Unable to write to target", iodine.New(err, nil)
+		return "Writing to target URL failed", iodine.New(err, nil)
 	}
 
 	var writers []io.Writer
@@ -113,7 +114,7 @@ func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (st
 		}
 	}
 	if err != nil {
-		return "Unable to close all connections, write may of failed.", iodine.New(err, nil)
+		return "Connections still active, one or more writes may of failed.", iodine.New(err, nil)
 	}
 	return "", nil
 }

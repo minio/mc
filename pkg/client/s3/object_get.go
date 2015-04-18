@@ -39,6 +39,7 @@ limitations under the License.
 package s3
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -56,7 +57,7 @@ import (
 // GetObjectMetadata - returns nil, os.ErrNotExist if not on object storage
 func (c *s3Client) GetObjectMetadata(bucket, object string) (item *client.Item, reterr error) {
 	if bucket == "" || object == "" {
-		return nil, iodine.New(client.InvalidArgument{}, nil)
+		return nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
 	}
 	req, err := newReq(c.keyURL(bucket, object), c.UserAgent, nil)
 	if err != nil {
@@ -97,7 +98,7 @@ func (c *s3Client) GetObjectMetadata(bucket, object string) (item *client.Item, 
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error) {
 	if bucket == "" || object == "" {
-		return nil, 0, "", iodine.New(client.InvalidArgument{}, nil)
+		return nil, 0, "", iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
 	}
 	req, err := newReq(c.keyURL(bucket, object), c.UserAgent, nil)
 	if err != nil {
@@ -120,7 +121,7 @@ func (c *s3Client) Get(bucket, object string) (body io.ReadCloser, size int64, m
 // If length is negative, the rest of the object is returned.
 func (c *s3Client) GetPartial(bucket, object string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	if bucket == "" || object == "" {
-		return nil, 0, "", iodine.New(client.InvalidArgument{}, nil)
+		return nil, 0, "", iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
 	}
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)

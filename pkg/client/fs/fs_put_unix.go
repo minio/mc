@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"errors"
 	"io"
 	"os"
 	"sync"
@@ -22,7 +23,7 @@ func (f *fsClient) Put(bucket, object, md5HexString string, size int64) (io.Writ
 	go func() {
 		// handle md5HexString match internally
 		if size < 0 {
-			err := iodine.New(client.InvalidArgument{}, nil)
+			err := iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return

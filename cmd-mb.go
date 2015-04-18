@@ -56,13 +56,13 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		clnt, err = manager.getNewClient(u, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to instantiate a new client for [%s]\n", u)
+			console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
 		}
 
 		bucket, _, err := url2Object(u)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to decode bucket and object from URL [%s]\n", u)
+			console.Fatalf("mc: decoding bucket and object from URL [%s] failed\n", u)
 		}
 
 		// this is handled differently since http based URLs cannot have
@@ -70,12 +70,14 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		// name having subdirectories is only supported for fsClient
 		if getURLType(u) != urlFS {
 			if bucket == "" {
-				log.Debug.Println(iodine.New(errBucketNameEmpty{}, nil))
-				console.Fatalln("mc: bucket name empty")
+				err := iodine.New(errBucketNameEmpty{}, nil)
+				log.Debug.Println(err)
+				console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
 			}
 			if !client.IsValidBucketName(bucket) {
-				log.Debug.Println(iodine.New(errInvalidBucketName{bucket: bucket}, nil))
-				console.Fatalf("mc: Invalid bucket name: [%s]\n", bucket)
+				err := iodine.New(errInvalidBucketName{bucket: bucket}, nil)
+				log.Debug.Println(err)
+				console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
 			}
 		}
 
@@ -87,7 +89,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		}
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln(err)
+			console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
 		}
 	}
 }

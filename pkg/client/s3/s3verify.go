@@ -17,6 +17,7 @@
 package s3
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -56,10 +57,10 @@ Example AWS S3 Request / Response
 // HTTP S3 request validator.
 func (t s3Verify) Request(req *http.Request) error {
 	if req.Header.Get("Authorization") == "" {
-		return iodine.New(client.AuthorizationKeyEmpty{}, nil)
+		return iodine.New(client.AuthorizationKeyEmpty{Err: errors.New("authorization key empty")}, nil)
 	}
 	if !strings.HasPrefix(req.Header.Get("Authorization"), "AWS") {
-		return iodine.New(client.InvalidAuthorizationKey{}, nil)
+		return iodine.New(client.InvalidAuthorizationKey{Err: errors.New("invalid authorization key")}, nil)
 	}
 	return nil
 }
