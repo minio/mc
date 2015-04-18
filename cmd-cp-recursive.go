@@ -20,7 +20,6 @@ import (
 	"io"
 
 	"github.com/cheggaaa/pb"
-	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -84,22 +83,7 @@ func getRecursiveTargetWriters(urls []string, md5Hex string, length int64) ([]io
 }
 
 // doCopyCmdRecursive - copy bucket to bucket
-func doCopyCmdRecursive(ctx *cli.Context) {
-	config, err := getMcConfig()
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: unable to load config")
-	}
-
-	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := parseURLs(ctx.Args(), config.Aliases)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: unable to parse urls: %s\n", err)
-	}
-	sourceURL := urls[0]   // First arg is source
-	targetURLs := urls[1:] // Rest are targets
-
+func doCopyCmdRecursive(sourceURL string, targetURLs []string) {
 	sourceClnt, err := getNewClient(sourceURL, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
