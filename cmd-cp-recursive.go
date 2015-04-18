@@ -39,8 +39,8 @@ func getSourceObjectList(sourceClnt client.Client, urlStr string) (bucket string
 	return bucket, objects, nil
 }
 
-func getRecursiveTargetWriter(urlStr, md5Hex string, length int64) (io.WriteCloser, error) {
-	targetClnt, err := getNewClient(urlStr, globalDebugFlag)
+func getRecursiveTargetWriter(manager clientManager, urlStr, md5Hex string, length int64) (io.WriteCloser, error) {
+	targetClnt, err := manager.getNewClient(urlStr, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"URL": urlStr})
 	}
@@ -66,10 +66,10 @@ func getRecursiveTargetWriter(urlStr, md5Hex string, length int64) (io.WriteClos
 	return targetClnt.Put(bucket, object, md5Hex, length)
 }
 
-func getRecursiveTargetWriters(urls []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
+func getRecursiveTargetWriters(manager clientManager, urls []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
 	var targetWriters []io.WriteCloser
 	for _, url := range urls {
-		writer, err := getRecursiveTargetWriter(url, md5Hex, length)
+		writer, err := getRecursiveTargetWriter(manager, url, md5Hex, length)
 		if err != nil {
 			// close all writers
 			for _, targetWriter := range targetWriters {
@@ -83,8 +83,8 @@ func getRecursiveTargetWriters(urls []string, md5Hex string, length int64) ([]io
 }
 
 // doCopyCmdRecursive - copy bucket to bucket
-func doCopyCmdRecursive(sourceURL string, targetURLs []string) {
-	sourceClnt, err := getNewClient(sourceURL, globalDebugFlag)
+func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []string) {
+	sourceClnt, err := manager.getNewClient(sourceURL, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("mc: unable to get source: %s\n", err)
@@ -109,7 +109,7 @@ func doCopyCmdRecursive(sourceURL string, targetURLs []string) {
 			// TODO: strip trailing slashes and properly append
 			newTargetURLs = append(newTargetURLs, targetURL)
 		}
-		writeClosers, err := getRecursiveTargetWriters(newTargetURLs, md5hex, length)
+		writeClosers, err := getRecursiveTargetWriters(manager, newTargetURLs, md5hex, length)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorf("mc: unable to read target: %s\n", err)

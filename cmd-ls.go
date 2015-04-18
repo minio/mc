@@ -71,7 +71,8 @@ func doListCmd(ctx *cli.Context) {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln("mc: Unable to parse URL")
 		}
-		clnt, err := getNewClient(u, globalDebugFlag)
+		manager := mcClientManager{}
+		clnt, err := manager.getNewClient(u, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln("mc: Unable to initiate new client")
