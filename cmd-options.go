@@ -69,7 +69,7 @@ EXAMPLES:
 		Name:  "ls",
 		Usage: "List files and objects",
 		//		Description: `List files and objects recursively on object storage and fileystems`,
-		Action: doListCmd,
+		Action: runListCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
