@@ -126,7 +126,6 @@ func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (st
 	reader, length, hexMd5, err := manager.getSourceReader(sourceURL)
 	if err != nil {
 		return "Unable to read from source", iodine.New(err, nil)
-		//		console.Errorln("mc: Unable to read source")
 	}
 	defer reader.Close()
 
