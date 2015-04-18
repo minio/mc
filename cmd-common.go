@@ -18,6 +18,7 @@ package main
 
 import (
 	"net/url"
+	"path/filepath"
 	"time"
 
 	"io"
@@ -64,7 +65,6 @@ func (manager mcClientManager) getSourceReader(urlStr string) (reader io.ReadClo
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
 	}
-
 	// check if the bucket is valid
 	if err := sourceClnt.StatBucket(bucket); err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
@@ -115,7 +115,20 @@ func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt cli
 		clnt = s3.GetNewClient(urlStr, auth, mcUserAgent, debug)
 		return clnt, nil
 	case urlFS:
-		clnt = fs.GetNewClient(urlStr)
+		var absURLStr string
+		var err error
+		if u.IsAbs() {
+			absURLStr, err = filepath.Abs(filepath.Clean(u.Path))
+			if err != nil {
+				return nil, iodine.New(err, nil)
+			}
+		} else {
+			absURLStr, err = filepath.Abs(filepath.Clean(urlStr))
+			if err != nil {
+				return nil, iodine.New(err, nil)
+			}
+		}
+		clnt = fs.GetNewClient(absURLStr)
 		return clnt, nil
 	default:
 		return nil, iodine.New(errUnsupportedScheme{scheme: getURLType(urlStr)}, nil)

@@ -45,12 +45,10 @@ func getRecursiveTargetWriter(manager clientManager, urlStr, md5Hex string, leng
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"URL": urlStr})
 	}
-
 	bucket, object, err := url2Object(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"URL": urlStr})
 	}
-
 	// check if bucket is valid, if not found create it
 	if err := targetClnt.StatBucket(bucket); err != nil {
 		switch iodine.ToError(err).(type) {
@@ -61,7 +59,6 @@ func getRecursiveTargetWriter(manager clientManager, urlStr, md5Hex string, leng
 			}
 		default:
 			iodine.New(err, map[string]string{"URL": urlStr})
-
 		}
 	}
 	return targetClnt.Put(bucket, object, md5Hex, length)
@@ -101,7 +98,7 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		reader, length, md5hex, err := sourceClnt.Get(sourceBucket, sourceObject.Key)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorf("mc: unable to read source: %s\n", err)
+			console.Errorf("mc: unable to read from source: %s\n", err)
 		}
 		// Construct full target URL path based on source object name
 		var newTargetURLs []string
@@ -112,7 +109,7 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		writeClosers, err := getRecursiveTargetWriters(manager, newTargetURLs, md5hex, length)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Errorf("mc: unable to read target: %s\n", err)
+			console.Errorf("mc: unable to write to target: %s\n", err)
 		}
 
 		var writers []io.Writer
@@ -133,6 +130,9 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 
 		// copy data to writers
 		_, err = io.CopyN(multiWriter, reader, length)
+		//if err != nil {
+		//	fmt.Println(err)
+		//}
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Errorln("mc: Unable to write to target")

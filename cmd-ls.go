@@ -53,10 +53,41 @@ func printObject(date time.Time, v int64, key string) {
 	console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), key)
 }
 
-// doListCmd lists objects inside a bucket
-func doListCmd(ctx *cli.Context) {
+func doListBuckets(clnt client.Client, urlStr string) {
+	var err error
+	var buckets []*client.Bucket
+
+	buckets, err = clnt.ListBuckets()
+	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
+		buckets, err = clnt.ListBuckets()
+		time.Sleep(time.Duration(i*i) * time.Second)
+	}
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalln("mc: Unable to list buckets for URL [%s]\n", urlStr)
+	}
+	printBuckets(buckets)
+}
+
+func doListObjects(clnt client.Client, bucket, object, urlStr string) {
+	var err error
 	var items []*client.Item
 
+	items, err = clnt.ListObjects(bucket, object)
+	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
+		items, err = clnt.ListObjects(bucket, object)
+		// Progressively longer delays
+		time.Sleep(time.Duration(i*i) * time.Second)
+	}
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("mc: Unable to list objects for URL [%s]\n", urlStr)
+	}
+	printObjects(items)
+}
+
+// doListCmd lists objects inside a bucket
+func doListCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
@@ -68,55 +99,33 @@ func doListCmd(ctx *cli.Context) {
 	for _, arg := range ctx.Args() {
 		u, err := parseURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to parse URL [%s]\n", arg)
+			switch iodine.ToError(err).(type) {
+			case errUnsupportedScheme:
+				log.Debug.Println(iodine.New(err, nil))
+				console.Fatalf("mc: Unable to parse URL [%s], %s\n", arg, guessPossibleURL(arg))
+			default:
+				log.Debug.Println(iodine.New(err, nil))
+				console.Fatalf("mc: Unable to parse URL [%s]\n", arg)
+			}
 		}
 		manager := mcClientManager{}
 		clnt, err := manager.getNewClient(u, globalDebugFlag)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("mc: Unable to instantiate a new client")
+			console.Fatalf("mc: Unable to instantiate a new client for URL [%s]\n", u)
 		}
 
 		bucket, object, err := url2Object(u)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to decode bucket and object name from the URL [%s]", u)
+			console.Fatalf("mc: Unable to decode bucket and object name from the URL [%s]\n", u)
 		}
 
 		// ListBuckets() will not be called for fsClient() as its not needed.
 		if bucket == "" && getURLType(u) != urlFS {
-			var err error
-			var buckets []*client.Bucket
-
-			buckets, err = clnt.ListBuckets()
-			for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
-				buckets, err = clnt.ListBuckets()
-				time.Sleep(time.Duration(i*i) * time.Second)
-			}
-			if err != nil {
-				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalln("mc: Unable to list buckets for ", u)
-			}
-			console.Infoln()
-			printBuckets(buckets)
+			doListBuckets(clnt, u)
 		} else {
-			for i := 0; ; i++ {
-				items, err = clnt.ListObjects(bucket, object)
-				if err == nil || i >= globalMaxRetryFlag {
-					break // Success. No more retries.
-				}
-				// Progressively longer delays
-				time.Sleep(time.Duration(i*i) * time.Second)
-			}
-			if err != nil {
-				log.Debug.Println(iodine.New(err, nil))
-				// Add a newline
-				console.Infoln()
-				console.Fatalf("mc: Unable to list objects for URL [%s]\n", u)
-			}
-			console.Infoln()
-			printObjects(items)
+			doListObjects(clnt, bucket, object, u)
 		}
 	}
 }

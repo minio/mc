@@ -18,12 +18,13 @@ package fs
 
 import (
 	"io"
-	"io/ioutil"
-	"net/url"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
+
+	"io/ioutil"
+	"net/url"
+	"path/filepath"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -45,11 +46,14 @@ func GetNewClient(path string) client.Client {
 /// Object operations
 
 // isValidObject - wrapper function for input validation
-func isValidObject(bucket, object string) (string, os.FileInfo, error) {
-	if bucket == "" || object == "" {
+func isValidObject(fpath, bucket, object string) (string, os.FileInfo, error) {
+	// bucket is deliberately ignored here, since we already have
+	// this path, bucket is provided just for compatibility sake
+	// at this point
+	if object == "" {
 		return "", nil, iodine.New(client.InvalidArgument{}, nil)
 	}
-	objectPath := filepath.Join(bucket, object)
+	objectPath := filepath.Join(fpath, object)
 	st, err := os.Stat(objectPath)
 	if os.IsNotExist(err) {
 		return "", nil, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: object}, nil)
@@ -65,7 +69,7 @@ func isValidObject(bucket, object string) (string, os.FileInfo, error) {
 
 // Get - download an object from bucket
 func (f *fsClient) Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error) {
-	objectPath, st, err := isValidObject(bucket, object)
+	objectPath, st, err := isValidObject(f.Path, bucket, object)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -83,7 +87,7 @@ func (f *fsClient) GetPartial(bucket, object string, offset, length int64) (body
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	objectPath, st, err := isValidObject(bucket, object)
+	objectPath, st, err := isValidObject(f.Path, bucket, object)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -103,10 +107,7 @@ func (f *fsClient) GetPartial(bucket, object string, offset, length int64) (body
 
 // StatObject -
 func (f *fsClient) GetObjectMetadata(bucket, object string) (item *client.Item, reterr error) {
-	if bucket == "" || object == "" {
-		return nil, iodine.New(client.InvalidArgument{}, nil)
-	}
-	_, st, err := isValidObject(bucket, object)
+	_, st, err := isValidObject(f.Path, bucket, object)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -139,6 +140,8 @@ func (f *fsClient) ListBuckets() ([]*client.Bucket, error) {
 
 // ListObjects - get a list of objects
 func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err error) {
+	// bucket and prefix are deliberately ignored here, since we already have
+	// this path, bucket and prefix are provided just for compatibility sake at this point
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		if err != nil {
 			if os.IsPermission(err) { // skip inaccessible files
@@ -149,18 +152,17 @@ func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err
 		if fi.IsDir() {
 			return nil // not a fs skip
 		}
-		// If bucket path is not absolute, trim it
-		// otherwise pass it down as is
+		// trim f.Path
 		item := &client.Item{
-			Key:          strings.TrimPrefix(fp, bucket),
-			ETag:         "", // TODO
+			Key:          strings.TrimPrefix(fp, f.Path+string(filepath.Separator)),
+			ETag:         "", // TODO md5sum
 			LastModified: fi.ModTime(),
 			Size:         fi.Size(),
 		}
 		items = append(items, item)
 		return nil
 	}
-	err = filepath.Walk(filepath.Join(bucket, prefix), visitFS)
+	err = filepath.Walk(f.Path, visitFS)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -170,10 +172,15 @@ func (f *fsClient) ListObjects(bucket, prefix string) (items []*client.Item, err
 
 // PutBucket - create a new bucket
 func (f *fsClient) PutBucket(bucket string) error {
-	if bucket == "" || strings.TrimSpace(bucket) == "" {
-		return iodine.New(client.InvalidArgument{}, nil)
+	// bucket is deliberately ignored here, since we already have
+	// this path, bucket is provided just for compatibility sake
+	// at this point
+	bucketDir, _ := filepath.Split(f.Path)
+	absPath, err := filepath.Abs(bucketDir)
+	if err != nil {
+		return iodine.New(err, nil)
 	}
-	err := os.MkdirAll(bucket, 0700)
+	err = os.MkdirAll(absPath, 0700)
 	if os.IsExist(err) {
 		return iodine.New(client.BucketExists{Bucket: bucket}, nil)
 	}
@@ -185,10 +192,10 @@ func (f *fsClient) PutBucket(bucket string) error {
 
 // StatBucket -
 func (f *fsClient) StatBucket(bucket string) error {
-	if bucket == "" {
-		return iodine.New(client.InvalidArgument{}, nil)
-	}
-	st, err := os.Stat(bucket)
+	// bucket is deliberately ignored here, since we already have
+	// this path, bucket is provided just for compatibility sake
+	// at this point
+	st, err := os.Stat(filepath.Dir(f.Path))
 	if os.IsNotExist(err) {
 		return iodine.New(client.BucketNotFound{Bucket: bucket}, nil)
 	}

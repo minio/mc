@@ -1,10 +1,11 @@
 package main
 
-import "github.com/stretchr/testify/mock"
+import (
+	"io"
 
-import "github.com/minio-io/mc/pkg/client"
-
-import "io"
+	"github.com/minio-io/mc/pkg/client"
+	"github.com/stretchr/testify/mock"
+)
 
 // MockclientManager is a mock for testing, please ignore.
 type MockclientManager struct {

@@ -40,17 +40,25 @@ func runCopyCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
 	urls, err := parseURLs(ctx.Args(), config.GetMapString("Aliases"))
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Unable to parse URLs [%s]\n", urls)
+		switch e := iodine.ToError(err).(type) {
+		case errUnsupportedScheme:
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalf("mc: Unable to parse URL with error [%s]\n", e)
+		default:
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalf("mc: Unable to parse URL with error [%s]\n", e)
+		}
 	}
+
 	sourceURL := urls[0]   // First arg is source
 	targetURLs := urls[1:] // 1 or more targets
 
 	// perform copy
-
 	if ctx.Bool("recursive") {
 		doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
+		return
 	}
+
 	humanReadableError, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
 	err = iodine.New(err, nil)
 	if err != nil {

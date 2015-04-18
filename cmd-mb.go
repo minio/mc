@@ -37,11 +37,28 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to read config")
 	}
 	for _, arg := range ctx.Args() {
+		var err error
+		var clnt client.Client
+
 		u, err := parseURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to parse URL [%s]\n", u)
+			switch iodine.ToError(err).(type) {
+			case errUnsupportedScheme:
+				log.Debug.Println(iodine.New(err, nil))
+				console.Fatalf("mc: Unable to parse URL [%s], %s\n", arg, guessPossibleURL(arg))
+			default:
+				log.Debug.Println(iodine.New(err, nil))
+				console.Fatalf("mc: Unable to parse URL [%s]\n", arg)
+			}
 		}
+
+		manager := mcClientManager{}
+		clnt, err = manager.getNewClient(u, globalDebugFlag)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalf("mc: Unable to instantiate a new client for [%s]\n", u)
+		}
+
 		bucket, _, err := url2Object(u)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
@@ -62,24 +79,14 @@ func doMakeBucketCmd(ctx *cli.Context) {
 			}
 		}
 
-		manager := mcClientManager{}
-		clnt, err := manager.getNewClient(u, globalDebugFlag)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to create new client to [%s]\n", u)
-		}
-
-		for i := 0; ; i++ {
+		err = clnt.PutBucket(bucket)
+		for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
 			err = clnt.PutBucket(bucket)
-			if err == nil || i >= globalMaxRetryFlag {
-				break // Success. No more retries.
-			}
 			// Progressively longer delays
 			time.Sleep(time.Duration(i*i) * time.Second)
 		}
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Infoln()
 			console.Fatalln(err)
 		}
 	}
