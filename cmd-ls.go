@@ -86,7 +86,10 @@ func doListObjects(clnt client.Client, bucket, object, urlStr string) {
 	printObjects(items)
 }
 
-// doListCmd lists objects inside a bucket
+// runListCmd lists objects inside a bucket
+func runListCmd(ctx *cli.Context) {
+	doListCmd(ctx)
+}
 func doListCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
