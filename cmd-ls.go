@@ -89,12 +89,9 @@ func doListCmd(ctx *cli.Context) {
 			var err error
 			var buckets []*client.Bucket
 
-			for i := 0; ; i++ {
+			buckets, err = clnt.ListBuckets()
+			for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
 				buckets, err = clnt.ListBuckets()
-				if err == nil || i >= globalMaxRetryFlag {
-					break // Success. No more retries.
-				}
-				// Progressively longer delays
 				time.Sleep(time.Duration(i*i) * time.Second)
 			}
 			if err != nil {
