@@ -268,14 +268,16 @@ func doConfigCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to identify config file path")
 	}
 	err = saveConfig(ctx)
-	switch iodine.ToError(err).(type) {
-	case errConfigExists:
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Configuration file " + configPath + " already exists")
-	default:
-		// unexpected error
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to generate config file", configPath)
+	if err != nil {
+		switch iodine.ToError(err).(type) {
+		case errConfigExists:
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("mc: Configuration file " + configPath + " already exists")
+		default:
+			// unexpected error
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("mc: Unable to generate config file", configPath)
+		}
 	}
 	console.Infoln("mc: Configuration written to " + configPath + ". Please update your access credentials.")
 }
