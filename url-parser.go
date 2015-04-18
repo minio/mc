@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 	"runtime"
 	"strings"
@@ -35,6 +36,21 @@ const (
 	urlFS                     // POSIX compatible file systems
 )
 
+// guessPossibleURL - provide guesses for possible mistakes in user input url
+func guessPossibleURL(urlStr string) string {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return ""
+	}
+	if u.Scheme == "file" || !strings.Contains(urlStr, ":///") {
+		possibleURL := u.Scheme + ":///" + u.Host + u.Path
+		guess := fmt.Sprintf("Did you mean? %s", possibleURL)
+		return guess
+	}
+	// TODO(y4m4) - add more guesses if possible
+	return ""
+}
+
 // getURLType returns the type of URL.
 func getURLType(urlStr string) urlType {
 	u, err := url.Parse(urlStr)
@@ -46,7 +62,8 @@ func getURLType(urlStr string) urlType {
 		return urlS3
 	}
 
-	if u.Scheme == "file" {
+	// while Scheme file, host should be empty
+	if u.Scheme == "file" && u.Host == "" && strings.Contains(urlStr, ":///") {
 		return urlFS
 	}
 
@@ -57,6 +74,7 @@ func getURLType(urlStr string) urlType {
 		}
 	}
 
+	// local path, without the file:///
 	if u.Scheme == "" {
 		return urlFS
 	}
@@ -102,17 +120,14 @@ func parseURL(arg string, aliases map[string]string) (urlStr string, err error) 
 		// Not a valid URL. Return error
 		return "", iodine.New(errInvalidURL{arg}, nil)
 	}
-
 	// Check and expand Alias
 	urlStr, err = aliasExpand(arg, aliases)
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-
 	if getURLType(urlStr) == urlUnknown {
 		return "", iodine.New(errUnsupportedScheme{scheme: urlUnknown}, map[string]string{"URL": urlStr})
 	}
-
 	return urlStr, nil
 }
 
