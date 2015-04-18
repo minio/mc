@@ -19,11 +19,13 @@ package s3
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -34,6 +36,12 @@ func (c *s3Client) Put(bucket, object, md5HexString string, size int64) (io.Writ
 	r, w := io.Pipe()
 	blockingWriter := NewBlockingWriteCloser(w)
 	go func() {
+		if size < 0 {
+			err := iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
 		req, err := newReq(c.keyURL(bucket, object), c.UserAgent, r)
 		if err != nil {
 			err := iodine.New(err, nil)
@@ -59,14 +67,12 @@ func (c *s3Client) Put(bucket, object, md5HexString string, size int64) (io.Writ
 
 		client := http.Client{}
 		res, err := client.Do(req)
-
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
 		}
-
 		if res.StatusCode != http.StatusOK {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)

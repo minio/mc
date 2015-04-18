@@ -29,13 +29,6 @@ func (e APINotImplemented) Error() string {
 	return "API not implemented: " + e.API
 }
 
-// InvalidArgument - bad arguments provided
-type InvalidArgument struct{}
-
-func (e InvalidArgument) Error() string {
-	return "invalid argument"
-}
-
 // InvalidMaxKeys - invalid maxkeys provided
 type InvalidMaxKeys struct {
 	MaxKeys int
@@ -43,20 +36,6 @@ type InvalidMaxKeys struct {
 
 func (e InvalidMaxKeys) Error() string {
 	return "invalid maxkeys: " + strconv.Itoa(e.MaxKeys)
-}
-
-// InvalidAuthorizationKey - invalid authorization key
-type InvalidAuthorizationKey struct{}
-
-func (e InvalidAuthorizationKey) Error() string {
-	return "invalid authorization key"
-}
-
-// AuthorizationKeyEmpty - empty auth key provided
-type AuthorizationKeyEmpty struct{}
-
-func (e AuthorizationKeyEmpty) Error() string {
-	return "authorization key empty"
 }
 
 // InvalidRange - invalid range requested
@@ -119,4 +98,37 @@ type ObjectExists GenericObjectError
 
 func (e ObjectExists) Error() string {
 	return "object " + e.Object + " exists"
+}
+
+// GenericError - generic error
+type GenericError struct {
+	Err error
+}
+
+// UnexpectedError - unexpected error
+type UnexpectedError GenericError
+
+func (e UnexpectedError) Error() string {
+	return e.Err.Error() + ", please report this error"
+}
+
+// InvalidArgument - bad arguments provided
+type InvalidArgument GenericError
+
+func (e InvalidArgument) Error() string {
+	return e.Err.Error()
+}
+
+// InvalidAuthorizationKey - invalid authorization key
+type InvalidAuthorizationKey GenericError
+
+func (e InvalidAuthorizationKey) Error() string {
+	return e.Err.Error()
+}
+
+// AuthorizationKeyEmpty - empty auth key provided
+type AuthorizationKeyEmpty GenericError
+
+func (e AuthorizationKeyEmpty) Error() string {
+	return e.Err.Error()
 }

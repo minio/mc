@@ -17,6 +17,7 @@
 package s3
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -45,7 +46,7 @@ func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err er
 	}
 
 	if t.Transport == nil {
-		return nil, iodine.New(client.InvalidArgument{}, nil)
+		return nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
 	}
 
 	res, err = t.Transport.RoundTrip(req)

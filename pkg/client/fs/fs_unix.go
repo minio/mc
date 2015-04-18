@@ -17,6 +17,7 @@
 package fs
 
 import (
+	"errors"
 	"io"
 	"os"
 	"sort"
@@ -51,7 +52,7 @@ func isValidObject(fpath, bucket, object string) (string, os.FileInfo, error) {
 	// this path, bucket is provided just for compatibility sake
 	// at this point
 	if object == "" {
-		return "", nil, iodine.New(client.InvalidArgument{}, nil)
+		return "", nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
 	}
 	objectPath := filepath.Join(fpath, object)
 	st, err := os.Stat(objectPath)

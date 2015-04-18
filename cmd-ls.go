@@ -64,7 +64,7 @@ func doListBuckets(clnt client.Client, urlStr string) {
 	}
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to list buckets for URL [%s]\n", urlStr)
+		console.Fatalf("mc: listing buckets for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
 	}
 	printBuckets(buckets)
 }
@@ -81,7 +81,7 @@ func doListObjects(clnt client.Client, bucket, object, urlStr string) {
 	}
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Unable to list objects for URL [%s]\n", urlStr)
+		console.Fatalf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
 	}
 	printObjects(items)
 }
@@ -94,7 +94,7 @@ func runListCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to get config")
+		console.Fatalf("mc: reading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
 	for _, arg := range ctx.Args() {
 		u, err := parseURL(arg, config.GetMapString("Aliases"))
@@ -102,26 +102,27 @@ func runListCmd(ctx *cli.Context) {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unable to parse URL [%s], %s\n", arg, guessPossibleURL(arg))
+				console.Fatalf("mc: parsing URL [%s] failed, %s\n", arg, guessPossibleURL(arg))
 			default:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unable to parse URL [%s]\n", arg)
+				console.Fatalf("mc: parsing URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
 			}
 		}
 		doListCmd(mcClientManager{}, u, globalDebugFlag)
 	}
 }
 func doListCmd(manager clientManager, u string, debug bool) {
-	clnt, err := manager.getNewClient(u, debug)
+	clnt, err := manager.getNewClient(u, globalDebugFlag)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Unable to instantiate a new client for URL [%s]\n", u)
+		err := iodine.New(err, nil)
+		log.Debug.Println(err)
+		console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
 	}
 
 	bucket, object, err := url2Object(u)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Unable to decode bucket and object name from the URL [%s]\n", u)
+		console.Fatalf("mc: decoding bucket and object name from the URL [%s] failed\n", u)
 	}
 
 	// ListBuckets() will not be called for fsClient() as its not needed.

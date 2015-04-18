@@ -39,6 +39,8 @@ limitations under the License.
 package s3
 
 import (
+	"encoding/xml"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -74,7 +76,17 @@ func (c *s3Client) ListBuckets() ([]*client.Bucket, error) {
 	}
 	defer res.Body.Close()
 
-	return listAllMyBuckets(res.Body)
+	type allMyBuckets struct {
+		Buckets struct {
+			Bucket []*client.Bucket
+		}
+	}
+	var buckets allMyBuckets
+	if err := xml.NewDecoder(res.Body).Decode(&buckets); err != nil {
+		return nil, iodine.New(client.UnexpectedError{Err: errors.New("Malformed response received from server")},
+			map[string]string{"XMLError": err.Error()})
+	}
+	return buckets.Buckets.Bucket, nil
 }
 
 // PutBucket - create new bucket
@@ -105,7 +117,7 @@ func (c *s3Client) PutBucket(bucket string) error {
 
 func (c *s3Client) StatBucket(bucket string) error {
 	if bucket == "" {
-		return iodine.New(client.InvalidArgument{}, nil)
+		return iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
 	}
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)

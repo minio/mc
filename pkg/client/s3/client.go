@@ -46,8 +46,6 @@ import (
 	"net/url"
 	"strings"
 
-	"encoding/xml"
-
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
@@ -169,17 +167,4 @@ func newReq(url string, userAgent string, body io.ReadCloser) (*http.Request, er
 		req.Header.Set("User-Agent", userAgent)
 	}
 	return req, nil
-}
-
-func listAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
-	type allMyBuckets struct {
-		Buckets struct {
-			Bucket []*client.Bucket
-		}
-	}
-	var res allMyBuckets
-	if err := xml.NewDecoder(r).Decode(&res); err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return res.Buckets.Bucket, nil
 }
