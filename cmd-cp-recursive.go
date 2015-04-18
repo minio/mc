@@ -29,7 +29,7 @@ import (
 
 // getSourceObjectList - get list of all source objects to copy
 func getSourceObjectList(sourceClnt client.Client, urlStr string) (bucket string, objects []*client.Item, err error) {
-	bucket, object, err := url2Object(urlStr)
+	bucket, object, err := client.URL2Object(urlStr)
 	if err != nil {
 		return "", nil, iodine.New(err, nil)
 	}
@@ -47,7 +47,7 @@ func getRecursiveTargetWriter(manager clientManager, urlStr, md5Hex string, leng
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"URL": urlStr})
 	}
-	bucket, object, err := url2Object(urlStr)
+	bucket, object, err := client.URL2Object(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"URL": urlStr})
 	}

@@ -16,7 +16,11 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/minio-io/mc/pkg/client"
+)
 
 type errInvalidArgument struct{}
 
@@ -25,7 +29,7 @@ func (e errInvalidArgument) Error() string {
 }
 
 type errUnsupportedScheme struct {
-	scheme urlType
+	scheme client.URLType
 }
 
 func (e errUnsupportedScheme) Error() string {

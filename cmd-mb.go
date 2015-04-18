@@ -45,7 +45,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unable to parse URL [%s], %s\n", arg, guessPossibleURL(arg))
+				console.Fatalf("mc: Unable to parse URL [%s], %s\n", arg, client.GuessPossibleURL(arg))
 			default:
 				log.Debug.Println(iodine.New(err, nil))
 				console.Fatalf("mc: Unable to parse URL [%s]\n", arg)
@@ -59,7 +59,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 			console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
 		}
 
-		bucket, _, err := url2Object(u)
+		bucket, _, err := client.URL2Object(u)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalf("mc: decoding bucket and object from URL [%s] failed\n", u)
@@ -68,7 +68,7 @@ func doMakeBucketCmd(ctx *cli.Context) {
 		// this is handled differently since http based URLs cannot have
 		// nested directories as buckets, buckets are a unique alphanumeric
 		// name having subdirectories is only supported for fsClient
-		if getURLType(u) != urlFS {
+		if client.GetURLType(u) != client.URLFilesystem {
 			if bucket == "" {
 				err := iodine.New(errBucketNameEmpty{}, nil)
 				log.Debug.Println(err)
