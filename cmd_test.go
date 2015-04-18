@@ -24,6 +24,9 @@ import (
 
 	"errors"
 	. "github.com/minio-io/check"
+
+	"github.com/minio-io/mc/pkg/client"
+	clientMocks "github.com/minio-io/mc/pkg/client/mocks"
 )
 
 type CmdTestSuite struct{}
@@ -75,8 +78,10 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	c.Assert(err, IsNil)
 	targetURLs := []string{targetURL}
 
+	var mockClient client.Client
 	manager := &MockclientManager{}
+	mockClient = &clientMocks.Client{}
 
-	manager.On("getNewClient", sourceURL, false).Return(nil, errors.New("foo")).Once()
+	manager.On("getNewClient", sourceURL, false).Return(mockClient, errors.New("foo")).Once()
 	doCopyCmdRecursive(manager, sourceURL, targetURLs)
 }
