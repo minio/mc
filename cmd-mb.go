@@ -17,6 +17,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
@@ -67,12 +69,13 @@ func doMakeBucketCmd(ctx *cli.Context) {
 			console.Fatalf("mc: Unable to create new client to [%s]\n", u)
 		}
 
-		// retry - 5 times
-		for r := retries.init(); r.retry(); {
+		for i := 0; ; i++ {
 			err = clnt.PutBucket(bucket)
-			if !isValidRetry(err) {
-				break
+			if err == nil || i >= globalMaxRetryFlag {
+				break // Success. No more retries.
 			}
+			// Progressively longer delays
+			time.Sleep(time.Duration(i*i) * time.Second)
 		}
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
