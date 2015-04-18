@@ -49,7 +49,7 @@ func runCopyCmd(ctx *cli.Context) {
 
 	// perform copy
 	if ctx.Bool("recursive") {
-		doCopyCmdRecursive(ctx)
+		doCopyCmdRecursive(sourceURL, targetURLs)
 	} else {
 		humanReadableError, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
 		err = iodine.New(err, nil)
