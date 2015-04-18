@@ -24,6 +24,8 @@ import (
 
 // Client - client interface
 type Client interface {
+	MultipartUpload
+
 	// Bucket operations
 	PutBucket(bucket string) error
 	StatBucket(bucket string) error
@@ -35,9 +37,6 @@ type Client interface {
 	GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
 	Put(bucket, object, md5 string, size int64) (io.WriteCloser, error)
 	GetObjectMetadata(bucket, object string) (item *Item, err error)
-
-	// Multipart operations
-	MultipartUpload
 }
 
 // MultipartUpload - multi part upload interface
