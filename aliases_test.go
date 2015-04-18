@@ -43,15 +43,15 @@ func (s *MySuite) TestEmptyExpansions(c *C) {
 	//	c.Skip("Test still being written")
 	url, err := aliasExpand("hello", nil)
 	c.Assert(url, Equals, "hello")
-	c.Assert(err, IsNil)
+	c.Assert(err, Not(IsNil))
 
 	url, err = aliasExpand("minio://hello", nil)
 	c.Assert(url, Equals, "minio://hello")
-	c.Assert(err, IsNil)
+	c.Assert(err, Not(IsNil))
 
 	url, err = aliasExpand("$#\\", nil)
 	c.Assert(url, Equals, "$#\\")
-	c.Assert(err, IsNil)
+	c.Assert(err, Not(IsNil))
 
 	url, err = aliasExpand("foo:bar", map[string]string{"foo": "http://foo"})
 	c.Assert(url, Equals, "http://foo/bar")
@@ -59,13 +59,13 @@ func (s *MySuite) TestEmptyExpansions(c *C) {
 
 	url, err = aliasExpand("myfoo:bar", map[string]string{"foo": "http://foo"})
 	c.Assert(url, Equals, "myfoo:bar")
-	c.Assert(err, IsNil)
+	c.Assert(err, Not(IsNil))
 
 	url, err = aliasExpand("", map[string]string{"foo": "http://foo"})
 	c.Assert(url, Equals, "")
-	c.Assert(err, IsNil)
+	c.Assert(err, Not(IsNil))
 
 	url, err = aliasExpand("hello", nil)
 	c.Assert(url, Equals, "hello")
-	c.Assert(err, IsNil)
+	c.Assert(err, Not(IsNil))
 }

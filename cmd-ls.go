@@ -69,7 +69,7 @@ func doListCmd(ctx *cli.Context) {
 		u, err := parseURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("mc: Unable to parse URL")
+			console.Fatalf("mc: Unable to parse URL [%s]\n", u)
 		}
 		manager := mcClientManager{}
 		clnt, err := manager.getNewClient(u, globalDebugFlag)
@@ -104,14 +104,15 @@ func doListCmd(ctx *cli.Context) {
 
 			for r := retries.init(); r.retry(); {
 				items, err = clnt.ListObjects(bucket, object)
-
 				if !isValidRetry(err) {
 					break
 				}
 			}
 			if err != nil {
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unable to list objects for URL[%s] ", u)
+				// Add a newline
+				console.Infoln()
+				console.Fatalf("mc: Unable to list objects for URL [%s]\n", u)
 			}
 			console.Infoln()
 			printObjects(items)
