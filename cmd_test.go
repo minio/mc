@@ -22,6 +22,7 @@ import (
 	"io"
 	"sync"
 
+	"errors"
 	. "github.com/minio-io/check"
 )
 
@@ -30,7 +31,7 @@ type CmdTestSuite struct{}
 var _ = Suite(&CmdTestSuite{})
 
 func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
-	manager := &mockClientManager{}
+	manager := &MockclientManager{}
 	sourceURL, err := parseURL("foo", nil)
 	c.Assert(err, IsNil)
 
@@ -63,4 +64,19 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	wg.Wait()
 	c.Assert(err, IsNil)
 	c.Assert(resultBuffer.String(), DeepEquals, data)
+}
+
+func (s *CmdTestSuite) TestCopyRecursive(c *C) {
+	c.Skip("Incomplete")
+	sourceURL, err := parseURL("foo", nil)
+	c.Assert(err, IsNil)
+
+	targetURL, err := parseURL("bar", nil)
+	c.Assert(err, IsNil)
+	targetURLs := []string{targetURL}
+
+	manager := &MockclientManager{}
+
+	manager.On("getNewClient", sourceURL, false).Return(nil, errors.New("foo")).Once()
+	doCopyCmdRecursive(manager, sourceURL, targetURLs)
 }
