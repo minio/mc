@@ -23,6 +23,7 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
+	"github.com/minio-io/mc/pkg/qdb"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -88,9 +89,6 @@ func doListObjects(clnt client.Client, bucket, object, urlStr string) {
 
 // runListCmd lists objects inside a bucket
 func runListCmd(ctx *cli.Context) {
-	doListCmd(ctx)
-}
-func doListCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
@@ -111,24 +109,26 @@ func doListCmd(ctx *cli.Context) {
 				console.Fatalf("mc: Unable to parse URL [%s]\n", arg)
 			}
 		}
-		manager := mcClientManager{}
-		clnt, err := manager.getNewClient(u, globalDebugFlag)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to instantiate a new client for URL [%s]\n", u)
-		}
+		doListCmd(mcClientManager{}, u, globalDebugFlag)
+	}
+}
+func doListCmd(manager clientManager, u string, debug bool) {
+	clnt, err := manager.getNewClient(u, debug)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("mc: Unable to instantiate a new client for URL [%s]\n", u)
+	}
 
-		bucket, object, err := url2Object(u)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Unable to decode bucket and object name from the URL [%s]\n", u)
-		}
+	bucket, object, err := url2Object(u)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("mc: Unable to decode bucket and object name from the URL [%s]\n", u)
+	}
 
-		// ListBuckets() will not be called for fsClient() as its not needed.
-		if bucket == "" && getURLType(u) != urlFS {
-			doListBuckets(clnt, u)
-		} else {
-			doListObjects(clnt, bucket, object, u)
-		}
+	// ListBuckets() will not be called for fsClient() as its not needed.
+	if bucket == "" && getURLType(u) != urlFS {
+		doListBuckets(clnt, u)
+	} else {
+		doListObjects(clnt, bucket, object, u)
 	}
 }
