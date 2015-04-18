@@ -205,6 +205,9 @@ func parseConfigInput(ctx *cli.Context) (config qdb.Store, err error) {
 		if !strings.HasPrefix(url, "http") {
 			return nil, iodine.New(errInvalidURL{url: url}, nil)
 		}
+		if !isValidAliasName(aliasName) {
+			return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)
+		}
 		aliases := configStore.GetMapString("Aliases")
 		if _, ok := aliases[aliasName]; ok {
 			return nil, iodine.New(errAliasExists{name: aliasName}, nil)

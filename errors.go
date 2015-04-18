@@ -84,18 +84,24 @@ func (e errAliasExists) Error() string {
 	return fmt.Sprintf("alias: %s exists", e.name)
 }
 
-// errAliasNotFound - alias not found
-type errAliasNotFound struct {
-	name string
-}
-
-func (e errAliasNotFound) Error() string {
-	return fmt.Sprintf("alias: %s exists", e.name)
-}
-
 // errInvalidAuthKeys - invalid authorization keys
 type errInvalidAuthKeys struct{}
 
 func (e errInvalidAuthKeys) Error() string {
-	return fmt.Sprintf("invalid authorization keys")
+	return "invalid authorization keys"
+}
+
+// errInvalidBucketName - invalid bucket name
+type errInvalidBucketName struct {
+	bucket string
+}
+
+func (e errInvalidBucketName) Error() string {
+	return "invalid bucket name: " + e.bucket
+}
+
+type errBucketNameEmpty struct{}
+
+func (e errBucketNameEmpty) Error() string {
+	return "bucket name empty"
 }
