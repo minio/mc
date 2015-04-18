@@ -37,7 +37,7 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 	url, err := url.Parse(aliasedURL)
 	if err != nil {
 		// Not a valid URL. Return error
-		return "", iodine.New(errInvalidURL{aliasedURL}, nil)
+		return "", iodine.New(errInvalidURL{url: aliasedURL}, nil)
 	}
 
 	// Not an aliased URL
@@ -47,7 +47,7 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 
 	for aliasName, expandedURL := range aliases {
 		if !isValidAliasName(aliasName) {
-			return "", iodine.New(errInvalidAliasName{alias: aliasName}, nil)
+			return "", iodine.New(errInvalidAliasName{name: aliasName}, nil)
 		}
 		if strings.HasPrefix(aliasedURL, aliasName) {
 			// Match found. Expand it.

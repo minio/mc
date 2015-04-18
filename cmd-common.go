@@ -18,7 +18,6 @@ package main
 
 import (
 	"net/url"
-	"path"
 	"time"
 
 	"io"
@@ -45,19 +44,6 @@ func startBar(size int64) *pb.ProgressBar {
 	// Feels like wget
 	bar.Format("[=> ]")
 	return bar
-}
-
-func getMcBashCompletionFilename() (string, error) {
-	configDir, err := getMcConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return path.Join(configDir, "mc.bash_completion"), nil
-}
-
-func mustGetMcBashCompletionFilename() string {
-	p, _ := getMcBashCompletionFilename()
-	return p
 }
 
 type clientManager interface {
@@ -104,8 +90,7 @@ func (manager mcClientManager) getTargetWriter(urlStr string, md5Hex string, len
 	return targetClnt.Put(bucket, object, md5Hex, length)
 }
 
-// getNewClient gets a new client
-// TODO refactor this to be more testable
+// getNewClient gives a new client interface
 func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt client.Client, err error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {

@@ -152,10 +152,6 @@ EXAMPLES:
 				Name:  "alias",
 				Usage: "Add URL aliases into config",
 			},
-			cli.BoolFlag{
-				Name:  "completion",
-				Usage: "Generate bash completion \"" + mustGetMcBashCompletionFilename() + "\" file.",
-			},
 		},
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -173,8 +169,8 @@ EXAMPLES:
    1. Generate mc config
       $ mc config generate
 
-   2. Generate bash completion
-      $ mc config --completion
+   2. Verify configuration
+      $ mc config check
 
    3. Add alias URLs
       $ mc config --alias "zek https://s3.amazonaws.com/"
@@ -228,21 +224,4 @@ var (
 			Usage: "Supress chatty console output",
 		},
 	}
-)
-
-var (
-	mcBashCompletion = `#!/bin/bash
-
-_mc_completion() {
-    local cur prev opts base
-    COMPREPLY=()
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts=$( ${COMP_WORDS[@]:0:$COMP_CWORD} --generate-bash-completion )
-    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
-    return 0
-}
-
-complete -F _mc_completion mc
-`
 )

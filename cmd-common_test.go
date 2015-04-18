@@ -17,7 +17,6 @@
 package main
 
 import (
-	"strings"
 	"time"
 
 	"github.com/cheggaaa/pb"
@@ -34,14 +33,4 @@ func (s *MySuite) TestStatusBar(c *C) {
 	c.Assert(bar.RefreshRate, Equals, time.Millisecond*10)
 	c.Assert(bar.NotPrint, Equals, true)
 	c.Assert(bar.ShowSpeed, Equals, true)
-}
-
-func (s *MySuite) TestBashCompletionFilename(c *C) {
-	file, err := getMcBashCompletionFilename()
-	c.Assert(err, IsNil)
-	c.Assert(file, Not(Equals), "mc.bash_completion")
-	c.Assert(strings.HasSuffix(file, "mc.bash_completion"), Equals, true)
-
-	file2 := mustGetMcBashCompletionFilename()
-	c.Assert(file, Equals, file2)
 }

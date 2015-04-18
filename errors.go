@@ -50,11 +50,11 @@ func (e errInvalidGlobURL) Error() string {
 }
 
 type errInvalidAliasName struct {
-	alias string
+	name string
 }
 
 func (e errInvalidAliasName) Error() string {
-	return "Not a valid alias name: " + e.alias + " Valid examples are: Area51, Grand-Nagus.."
+	return "Not a valid alias name: " + e.name + " Valid examples are: Area51, Grand-Nagus.."
 }
 
 type errInvalidAuth struct{}
@@ -67,4 +67,35 @@ type errNoMatchingHost struct{}
 
 func (e errNoMatchingHost) Error() string {
 	return "No matching host found."
+}
+
+type errConfigExists struct{}
+
+func (e errConfigExists) Error() string {
+	return "Config exists"
+}
+
+// errAliasExists - alias exists
+type errAliasExists struct {
+	name string
+}
+
+func (e errAliasExists) Error() string {
+	return fmt.Sprintf("alias: %s exists", e.name)
+}
+
+// errAliasNotFound - alias not found
+type errAliasNotFound struct {
+	name string
+}
+
+func (e errAliasNotFound) Error() string {
+	return fmt.Sprintf("alias: %s exists", e.name)
+}
+
+// errInvalidAuthKeys - invalid authorization keys
+type errInvalidAuthKeys struct{}
+
+func (e errInvalidAuthKeys) Error() string {
+	return fmt.Sprintf("invalid authorization keys")
 }

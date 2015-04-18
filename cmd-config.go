@@ -17,7 +17,6 @@
 package main
 
 import (
-	"bytes"
 	"net/url"
 	"os"
 	"path"
@@ -141,8 +140,18 @@ func writeConfig(config qdb.Store) error {
 func saveConfig(ctx *cli.Context) error {
 	switch ctx.Args().Get(0) {
 	case "generate":
-		err := writeConfig(generateNewConfig())
+		if isMcConfigExist() {
+			return iodine.New(errConfigExists{}, nil)
+		}
+		err := writeConfig(newConfig())
 		if err != nil {
+			return iodine.New(err, nil)
+		}
+		return nil
+	case "check":
+		// verify if the binary can load config file
+		configStore, err := getMcConfig()
+		if err != nil || configStore == nil {
 			return iodine.New(err, nil)
 		}
 		return nil
@@ -155,9 +164,8 @@ func saveConfig(ctx *cli.Context) error {
 	}
 }
 
-func generateNewConfig() (config qdb.Store) {
+func newConfig() (config qdb.Store) {
 	configStore := qdb.NewStore(mcCurrentConfigVersion)
-
 	s3Auth := make(map[string]string)
 	localAuth := make(map[string]string)
 
@@ -192,12 +200,15 @@ func parseConfigInput(ctx *cli.Context) (config qdb.Store, err error) {
 		aliasName := alias[0]
 		url := strings.TrimSuffix(alias[1], "/")
 		if strings.HasPrefix(aliasName, "http") {
-			return nil, iodine.New(errInvalidAliasName{alias: aliasName}, nil)
+			return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)
 		}
 		if !strings.HasPrefix(url, "http") {
 			return nil, iodine.New(errInvalidURL{url: url}, nil)
 		}
 		aliases := configStore.GetMapString("Aliases")
+		if _, ok := aliases[aliasName]; ok {
+			return nil, iodine.New(errAliasExists{name: aliasName}, nil)
+		}
 		aliases[aliasName] = url
 		configStore.SetMapString("Aliases", aliases)
 		return configStore, nil
@@ -233,8 +244,8 @@ func getHostConfig(requestURL string) (map[string]string, error) {
 	return nil, iodine.New(errNoMatchingHost{}, nil)
 }
 
-// saveConfigCmd writes config file to disk
-func saveConfigCmd(ctx *cli.Context) {
+// doConfigCmd is the handler for "mc config" sub-command.
+func doConfigCmd(ctx *cli.Context) {
 	// show help if nothing is set
 	if len(ctx.Args()) < 1 && !ctx.IsSet("completion") && !ctx.IsSet("alias") {
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
@@ -245,49 +256,14 @@ func saveConfigCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to identify config file path")
 	}
 	err = saveConfig(ctx)
-	if os.IsExist(iodine.ToError(err)) {
+	switch iodine.ToError(err).(type) {
+	case errConfigExists:
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Configuration file " + configPath + " already exists")
-	}
-	if err != nil {
+	default:
+		// unexpected error
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to generate config file", configPath)
 	}
 	console.Infoln("mc: Configuration written to " + configPath + ". Please update your access credentials.")
-}
-
-// doConfigCmd is the handler for "mc config" sub-command.
-func doConfigCmd(ctx *cli.Context) {
-	// treat bash completion separately here
-	switch true {
-	case ctx.Bool("completion") == true:
-		var b bytes.Buffer
-		if os.Getenv("SHELL") != "/bin/bash" {
-			console.Fatalln("mc: Unsupported shell for bash completion detected.. exiting")
-		}
-		b.WriteString(mcBashCompletion)
-		f, err := getMcBashCompletionFilename()
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("mc: Unable to identify bash completion path")
-		}
-		fl, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-		defer fl.Close()
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("mc: Unable to create bash completion file")
-		}
-		_, err = fl.Write(b.Bytes())
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("mc: Unable to write to bash completion file")
-		}
-		msg := "\nConfiguration written to " + f
-		msg = msg + "\n\n$ source ${HOME}/.mc/mc.bash_completion\n"
-		msg = msg + "$ echo 'source ${HOME}/.mc/mc.bash_completion' >> ${HOME}/.bashrc"
-		console.Infoln(msg)
-	default:
-		// rest of the arguments get passed down
-		saveConfigCmd(ctx)
-	}
 }
