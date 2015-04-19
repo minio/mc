@@ -1,5 +1,5 @@
 /*
- * QConfig - Quick way to implement a configuration file
+ * qdb - Quick key value store for config files and persistent state files
  *
  * Mini Copy, (C) 2015 Minio, Inc.
  *
@@ -72,19 +72,37 @@ func (s *MySuite) TestMerge(c *C) {
 }
 
 func (s *MySuite) TestDiff(c *C) {
-	defer os.RemoveAll("test.json")
 	version1 := Version{1, 0, 0}
 
 	cfg1 := NewStore(version1)
 	cfg1.SetFloat64("Pi", 3.1415)
+	cfg1.SetInt("DS", 9)
 
 	version2 := Version{2, 0, 0}
 	newCfg := NewStore(version2)
-	newCfg.SetFloat64("h", 2*3.1415)
+	newCfg.SetFloat64("Pi", 2.14)
+	newCfg.SetInt("DS9", 10)
 
 	diffs, err := cfg1.Diff(newCfg)
 	c.Assert(err, IsNil)
-	c.Assert(len(diffs), Equals, 3)
+	c.Assert(len(diffs), Equals, 1)
+}
+
+func (s *MySuite) TestDeepDiff(c *C) {
+	version1 := Version{1, 0, 0}
+
+	cfg1 := NewStore(version1)
+	cfg1.SetFloat64("Pi", 3.1415)
+	cfg1.SetInt("DS", 9)
+
+	version2 := Version{1, 0, 0}
+	newCfg := NewStore(version2)
+	newCfg.SetFloat64("Pi", 3.14)
+	newCfg.SetInt("DS", 10)
+
+	diffs, err := cfg1.DeepDiff(newCfg)
+	c.Assert(err, IsNil)
+	c.Assert(len(diffs), Equals, 2)
 }
 
 func (s *MySuite) TestGetSet(c *C) {
