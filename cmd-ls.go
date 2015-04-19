@@ -19,6 +19,7 @@ package main
 import (
 	"time"
 
+	"fmt"
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
@@ -53,7 +54,7 @@ func printObject(date time.Time, v int64, key string) {
 	console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), key)
 }
 
-func doListBuckets(clnt client.Client, urlStr string) {
+func doListBuckets(clnt client.Client, urlStr string) (string, error) {
 	var err error
 	var buckets []*client.Bucket
 
@@ -63,13 +64,15 @@ func doListBuckets(clnt client.Client, urlStr string) {
 		time.Sleep(time.Duration(i*i) * time.Second)
 	}
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: listing buckets for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
+		err = iodine.New(err, nil)
+		humanReadable := fmt.Sprintf("mc: listing buckets for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
+		return humanReadable, err
 	}
 	printBuckets(buckets)
+	return "", nil
 }
 
-func doListObjects(clnt client.Client, bucket, object, urlStr string) {
+func doListObjects(clnt client.Client, bucket, object, urlStr string) (string, error) {
 	var err error
 	var items []*client.Item
 
@@ -80,10 +83,12 @@ func doListObjects(clnt client.Client, bucket, object, urlStr string) {
 		time.Sleep(time.Duration(i*i) * time.Second)
 	}
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
+		err = iodine.New(err, nil)
+		humanReadable := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
+		return humanReadable, err
 	}
 	printObjects(items)
+	return "", nil
 }
 
 // runListCmd lists objects inside a bucket
@@ -112,24 +117,24 @@ func runListCmd(ctx *cli.Context) {
 	}
 }
 
-func doListCmd(manager clientManager, u string, debug bool) {
+func doListCmd(manager clientManager, u string, debug bool) (string, error) {
 	clnt, err := manager.getNewClient(u, globalDebugFlag)
 	if err != nil {
 		err := iodine.New(err, nil)
-		log.Debug.Println(err)
-		console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
+		humanReadable := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
+		return humanReadable, err
 	}
 
 	bucket, object, err := client.URL2Object(u)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: decoding bucket and object name from the URL [%s] failed\n", u)
+		err := iodine.New(err, nil)
+		humanReadable := fmt.Sprintf("mc: decoding bucket and object name from the URL [%s] failed\n", u)
+		return humanReadable, err
 	}
 
 	// ListBuckets() will not be called for fsClient() as its not needed.
 	if bucket == "" && client.GetURLType(u) != client.URLFilesystem {
-		doListBuckets(clnt, u)
-	} else {
-		doListObjects(clnt, bucket, object, u)
+		return doListBuckets(clnt, u)
 	}
+	return doListObjects(clnt, bucket, object, u)
 }

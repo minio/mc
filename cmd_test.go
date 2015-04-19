@@ -171,8 +171,9 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 
 	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
 	cl1.On("ListObjects", "bucket1", "").Return(items, nil).Once()
-	doListCmd(manager, sourceURL, false)
-	// TODO work out how to test printing
+	humanReadable, err := doListCmd(manager, sourceURL, false)
+	c.Assert(humanReadable, Equals, "")
+	c.Assert(err, IsNil)
 
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
