@@ -56,7 +56,15 @@ func runCopyCmd(ctx *cli.Context) {
 
 	// perform copy
 	if ctx.Bool("recursive") {
-		doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
+		humanReadableError, err := doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
+		err = iodine.New(err, nil)
+		if err != nil {
+			if humanReadableError == "" {
+				humanReadableError = "No error message present, please rerun with --debug and report a bug."
+			}
+			log.Debug.Println(err)
+			console.Errorf("mc: %s with following reason: [%s]\n", humanReadableError, iodine.ToError(err))
+		}
 		return
 	}
 

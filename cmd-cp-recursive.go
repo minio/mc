@@ -20,11 +20,10 @@ import (
 	"io"
 	"strings"
 
+	"fmt"
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // getSourceObjectList - get list of all source objects to copy
@@ -84,24 +83,27 @@ func getRecursiveTargetWriters(manager clientManager, urls []string, md5Hex stri
 }
 
 // doCopyCmdRecursive - copy bucket to bucket
-func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []string) {
+func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []string) (string, error) {
 	sourceClnt, err := manager.getNewClient(sourceURL, globalDebugFlag)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Reading from source URL: [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
+		err = iodine.New(err, nil)
+		humanReadable := fmt.Sprintf("mc: Reading from source URL: [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
+		return humanReadable, err
 	}
 	sourceBucket, sourceObjectList, err := getSourceObjectList(sourceClnt, sourceURL)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
+		err = iodine.New(err, nil)
+		humanReadable := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
+		return humanReadable, err
 	}
 
 	// do not exit, continue even for failures
 	for _, sourceObject := range sourceObjectList {
 		reader, length, md5hex, err := sourceClnt.Get(sourceBucket, sourceObject.Key)
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Errorf("mc: Reading from source URL: [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
+			err = iodine.New(err, nil)
+			humanReadable := fmt.Sprintf("mc: Reading from source URL: [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
+			return humanReadable, err
 		}
 		// Construct full target URL path based on source object name
 		var newTargetURLs []string
@@ -111,8 +113,9 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		}
 		writeClosers, err := getRecursiveTargetWriters(manager, newTargetURLs, md5hex, length)
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Errorf("mc: Writing to target URLs failed with following reason: [%s]\n", iodine.ToError(err))
+			err = iodine.New(err, nil)
+			humanReadable := fmt.Sprintf("mc: Writing to target URLs failed with following reason: [%s]\n", iodine.ToError(err))
+			return humanReadable, err
 		}
 
 		var writers []io.Writer
@@ -135,8 +138,8 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		_, err = io.CopyN(multiWriter, reader, length)
 		if err != nil {
 			err := iodine.New(err, nil)
-			log.Debug.Println(err)
-			console.Errorf("mc: Copying data from source to target(s) failed with following reason: [%s]\n", iodine.ToError(err))
+			humanReadable := fmt.Sprintf("mc: Copying data from source to target(s) failed with following reason: [%s]\n", iodine.ToError(err))
+			return humanReadable, err
 		}
 
 		// close writers
@@ -144,11 +147,10 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 			err := writer.Close()
 			if err != nil {
 				err := iodine.New(err, nil)
-				log.Debug.Println(err)
-				console.Errorf("mc: Connections still active, one or more writes have failed with following reason: [%s]\n",
-					iodine.ToError(err))
+				humanReadable := fmt.Sprintf("mc: Connections still active, one or more writes have failed with following reason: [%s]\n", iodine.ToError(err))
+				return humanReadable, err
 			}
 		}
 	}
-	return
+	return "", nil
 }
