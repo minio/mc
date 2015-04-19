@@ -113,7 +113,7 @@ EXAMPLES:
 		Name:  "mb",
 		Usage: "Make a bucket",
 		//		Description: `Create a bucket on object storage or a folder on filesystem`,
-		Action: doMakeBucketCmd,
+		Action: runMakeBucketCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
