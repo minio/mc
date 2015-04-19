@@ -227,3 +227,36 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
+
+func (s *CmdTestSuite) TestMbCmd(c *C) {
+	//	c.Skip("Incomplete")
+	sourceURL, err := parseURL("http://example.com/bucket1", nil)
+	c.Assert(err, IsNil)
+
+	manager := &MockclientManager{}
+	cl1 := &clientMocks.Client{}
+
+	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "bucket1").Return(nil).Once()
+	doMakeBucketCmd(manager, sourceURL, false)
+	// TODO work out how to test printing
+
+	manager.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
+
+func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
+	//	c.Skip("Incomplete")
+	sourceURL, err := parseURL("bucket1", nil)
+	c.Assert(err, IsNil)
+
+	manager := &MockclientManager{}
+	cl1 := &clientMocks.Client{}
+
+	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	doMakeBucketCmd(manager, sourceURL, false)
+	// TODO work out how to test printing
+
+	manager.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
