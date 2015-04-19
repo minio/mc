@@ -107,7 +107,7 @@ func main() {
 	}
 	app.After = func(ctx *cli.Context) error {
 		if !isMcConfigExist() && ctx.Command.Name != "config" {
-			console.Fatalln("mc: error ``mc`` is not configured. Please run \"mc config\".")
+			console.Fatalln("mc: error ``mc`` is not configured. Please run \"mc config generate\".")
 		}
 
 		return nil
