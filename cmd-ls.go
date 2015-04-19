@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"fmt"
+
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
@@ -32,62 +33,36 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
-// printBuckets lists buckets and its metadata
-func printBuckets(v []*client.Bucket) {
-	for _, b := range v {
-		console.Infof("%23s %13s %s\n", b.CreationDate.Local().Format(printDate), "", b.Name)
-	}
-}
-
-// printObjects prints a metadata of a list of objects
-func printObjects(v []*client.Item) {
+// printItems prints a metadata of a list of items
+func printItems(v []*client.Item) {
 	if len(v) > 0 {
 		// Items are already sorted
 		for _, b := range v {
-			printObject(b.LastModified, b.Size, b.Key)
+			printItem(b.Time, b.Size, b.Name)
 		}
 	}
 }
 
-// printObject prints object meta-data
-func printObject(date time.Time, v int64, key string) {
-	console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), key)
+// printItem prints item meta-data
+func printItem(date time.Time, v int64, name string) {
+	console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), name)
 }
 
-func doListBuckets(clnt client.Client, urlStr string) (string, error) {
-	var err error
-	var buckets []*client.Bucket
-
-	buckets, err = clnt.ListBuckets()
-	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
-		buckets, err = clnt.ListBuckets()
-		time.Sleep(time.Duration(i*i) * time.Second)
-	}
-	if err != nil {
-		err = iodine.New(err, nil)
-		humanReadable := fmt.Sprintf("mc: listing buckets for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
-		return humanReadable, err
-	}
-	printBuckets(buckets)
-	return "", nil
-}
-
-func doListObjects(clnt client.Client, bucket, object, urlStr string) (string, error) {
+func doList(clnt client.Client, urlStr string) (string, error) {
 	var err error
 	var items []*client.Item
 
-	items, err = clnt.ListObjects(bucket, object)
+	items, err = clnt.List()
 	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
-		items, err = clnt.ListObjects(bucket, object)
-		// Progressively longer delays
+		items, err = clnt.List()
 		time.Sleep(time.Duration(i*i) * time.Second)
 	}
 	if err != nil {
 		err = iodine.New(err, nil)
-		humanReadable := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
-		return humanReadable, err
+		msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
+		return msg, err
 	}
-	printObjects(items)
+	printItems(items)
 	return "", nil
 }
 
@@ -107,10 +82,10 @@ func runListCmd(ctx *cli.Context) {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: parsing URL [%s] failed, %s\n", arg, client.GuessPossibleURL(arg))
+				console.Fatalf("mc: reading URL [%s] failed with invalid scheme, %s\n", arg, client.GuessPossibleURL(arg))
 			default:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: parsing URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
+				console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
 			}
 		}
 		doListCmd(mcClientManager{}, u, globalDebugFlag)
@@ -121,20 +96,11 @@ func doListCmd(manager clientManager, u string, debug bool) (string, error) {
 	clnt, err := manager.getNewClient(u, globalDebugFlag)
 	if err != nil {
 		err := iodine.New(err, nil)
-		humanReadable := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
-		return humanReadable, err
+		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
+			u, iodine.ToError(err))
+		return msg, err
 	}
 
-	bucket, object, err := client.URL2Object(u)
-	if err != nil {
-		err := iodine.New(err, nil)
-		humanReadable := fmt.Sprintf("mc: decoding bucket and object name from the URL [%s] failed\n", u)
-		return humanReadable, err
-	}
+	return doList(clnt, u)
 
-	// ListBuckets() will not be called for fsClient() as its not needed.
-	if bucket == "" && client.GetURLType(u) != client.URLFilesystem {
-		return doListBuckets(clnt, u)
-	}
-	return doListObjects(clnt, bucket, object, u)
 }

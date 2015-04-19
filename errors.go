@@ -94,18 +94,3 @@ type errInvalidAuthKeys struct{}
 func (e errInvalidAuthKeys) Error() string {
 	return "invalid authorization keys"
 }
-
-// errInvalidBucketName - invalid bucket name
-type errInvalidBucketName struct {
-	bucket string
-}
-
-func (e errInvalidBucketName) Error() string {
-	return "invalid bucket name: " + e.bucket
-}
-
-type errBucketNameEmpty struct{}
-
-func (e errBucketNameEmpty) Error() string {
-	return "bucket name empty"
-}

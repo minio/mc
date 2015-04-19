@@ -51,18 +51,30 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-func listAllMyBuckets(r io.Reader) ([]*client.Bucket, error) {
+func listAllMyBuckets(r io.Reader) ([]*client.Item, error) {
+	type bucket struct {
+		Name         string
+		CreationDate time.Time
+	}
 	type allMyBuckets struct {
 		Buckets struct {
-			Bucket []*client.Bucket
+			Bucket []*bucket
 		}
 	}
+
 	var buckets allMyBuckets
 	if err := xml.NewDecoder(r).Decode(&buckets); err != nil {
 		return nil, iodine.New(client.UnexpectedError{Err: errors.New("Malformed response received from server")},
 			map[string]string{"XMLError": err.Error()})
 	}
-	return buckets.Buckets.Bucket, nil
+	var items []*client.Item
+	for _, b := range buckets.Buckets.Bucket {
+		item := new(client.Item)
+		item.Name = b.Name
+		item.Time = b.CreationDate
+		items = append(items, item)
+	}
+	return items, nil
 }
 
 func TestParseBuckets(t *testing.T) {
@@ -77,11 +89,11 @@ func TestParseBuckets(t *testing.T) {
 
 	t1, err := time.Parse(time.RFC3339, "2006-06-21T07:04:31.000Z")
 	t2, err := time.Parse(time.RFC3339, "2006-06-21T07:04:32.000Z")
-	want := []*client.Bucket{
-		{Name: "bucketOne", CreationDate: t1},
-		{Name: "bucketTwo", CreationDate: t2},
+	want := []*client.Item{
+		{Name: "bucketOne", Time: t1},
+		{Name: "bucketTwo", Time: t2},
 	}
-	dump := func(v []*client.Bucket) {
+	dump := func(v []*client.Item) {
 		for i, b := range v {
 			t.Logf("Bucket #%d: %#v", i, b)
 		}

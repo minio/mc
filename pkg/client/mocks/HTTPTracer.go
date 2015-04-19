@@ -1,16 +1,18 @@
 package mocks
 
-import "github.com/stretchr/testify/mock"
+import (
+	"net/http"
 
-import "net/http"
+	"github.com/stretchr/testify/mock"
+)
 
-// HTTPTracer is a mock object
-type HTTPTracer struct {
+// httpTracer is a mock object
+type httpTracer struct {
 	mock.Mock
 }
 
 // Request is a mock method
-func (m *HTTPTracer) Request(req *http.Request) error {
+func (m *httpTracer) Request(req *http.Request) error {
 	ret := m.Called(req)
 
 	r0 := ret.Error(0)
@@ -19,7 +21,7 @@ func (m *HTTPTracer) Request(req *http.Request) error {
 }
 
 // Response is a mock method
-func (m *HTTPTracer) Response(res *http.Response) error {
+func (m *httpTracer) Response(res *http.Response) error {
 	ret := m.Called(res)
 
 	r0 := ret.Error(0)

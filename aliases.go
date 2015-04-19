@@ -43,13 +43,10 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 		return aliasedURL, nil
 	}
 	for aliasName, expandedURL := range aliases {
-		if strings.HasPrefix(aliasedURL, aliasName) {
+		if strings.HasPrefix(aliasedURL, aliasName+":") {
 			// Match found. Expand it.
 			splits := strings.Split(aliasedURL, ":")
-			if len(splits) == 2 {
-				return expandedURL + "/" + splits[1], nil
-			}
-			return expandedURL, nil
+			return expandedURL + "/" + splits[1], nil
 		}
 	}
 	return aliasedURL, nil

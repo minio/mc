@@ -60,16 +60,11 @@ func (manager mcClientManager) getSourceReader(urlStr string) (reader io.ReadClo
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
 	}
-	// Get a reader for the source object
-	bucket, object, err := client.URL2Object(urlStr)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
-	}
 	// check if the bucket is valid
-	if err := sourceClnt.StatBucket(bucket); err != nil {
+	if err := sourceClnt.StatBucket(); err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
 	}
-	return sourceClnt.Get(bucket, object)
+	return sourceClnt.Get()
 }
 
 func (manager mcClientManager) getTargetWriter(urlStr string, md5Hex string, length int64) (io.WriteCloser, error) {
@@ -77,17 +72,11 @@ func (manager mcClientManager) getTargetWriter(urlStr string, md5Hex string, len
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
-	bucket, object, err := client.URL2Object(urlStr)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-
 	// check if bucket is valid
-	if err := targetClnt.StatBucket(bucket); err != nil {
+	if err := targetClnt.StatBucket(); err != nil {
 		return nil, iodine.New(err, map[string]string{"failedURL": urlStr})
 	}
-	return targetClnt.Put(bucket, object, md5Hex, length)
+	return targetClnt.Put(md5Hex, length)
 }
 
 // getNewClient gives a new client interface

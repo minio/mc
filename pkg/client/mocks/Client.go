@@ -1,9 +1,11 @@
 package mocks
 
-import "github.com/minio-io/mc/pkg/client"
-import "github.com/stretchr/testify/mock"
+import (
+	"io"
 
-import "io"
+	"github.com/minio-io/mc/pkg/client"
+	"github.com/stretchr/testify/mock"
+)
 
 // Client mock
 type Client struct {
@@ -11,8 +13,8 @@ type Client struct {
 }
 
 // PutBucket is a mock method
-func (m *Client) PutBucket(bucket string) error {
-	ret := m.Called(bucket)
+func (m *Client) PutBucket() error {
+	ret := m.Called()
 
 	r0 := ret.Error(0)
 
@@ -20,40 +22,30 @@ func (m *Client) PutBucket(bucket string) error {
 }
 
 // StatBucket is a mock method
-func (m *Client) StatBucket(bucket string) error {
-	ret := m.Called(bucket)
+func (m *Client) StatBucket() error {
+	ret := m.Called()
 
 	r0 := ret.Error(0)
 
 	return r0
 }
 
-// ListBuckets is a mock method
-func (m *Client) ListBuckets() ([]*client.Bucket, error) {
+// List is a mock method
+func (m *Client) List() ([]*client.Item, error) {
 	ret := m.Called()
 
-	var r0 []*client.Bucket
+	var r0 []*client.Item
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).([]*client.Bucket)
+		r0 = ret.Get(0).([]*client.Item)
 	}
 	r1 := ret.Error(1)
 
 	return r0, r1
 }
 
-// ListObjects is a mock method
-func (m *Client) ListObjects(bucket string, keyPrefix string) ([]*client.Item, error) {
-	ret := m.Called(bucket, keyPrefix)
-
-	r0 := ret.Get(0).([]*client.Item)
-	r1 := ret.Error(1)
-
-	return r0, r1
-}
-
 // Get is a mock method
-func (m *Client) Get(bucket string, object string) (io.ReadCloser, int64, string, error) {
-	ret := m.Called(bucket, object)
+func (m *Client) Get() (io.ReadCloser, int64, string, error) {
+	ret := m.Called()
 
 	r0 := ret.Get(0).(io.ReadCloser)
 	r1 := ret.Get(1).(int64)
@@ -64,8 +56,8 @@ func (m *Client) Get(bucket string, object string) (io.ReadCloser, int64, string
 }
 
 // GetPartial is a mock method
-func (m *Client) GetPartial(bucket string, key string, offset int64, length int64) (io.ReadCloser, int64, string, error) {
-	ret := m.Called(bucket, key, offset, length)
+func (m *Client) GetPartial(offset int64, length int64) (io.ReadCloser, int64, string, error) {
+	ret := m.Called(offset, length)
 
 	r0 := ret.Get(0).(io.ReadCloser)
 	r1 := ret.Get(1).(int64)
@@ -76,8 +68,8 @@ func (m *Client) GetPartial(bucket string, key string, offset int64, length int6
 }
 
 // Put is a mock method
-func (m *Client) Put(bucket string, object string, md5 string, size int64) (io.WriteCloser, error) {
-	ret := m.Called(bucket, object, md5, size)
+func (m *Client) Put(md5 string, size int64) (io.WriteCloser, error) {
+	ret := m.Called(md5, size)
 
 	r0 := ret.Get(0).(io.WriteCloser)
 	r1 := ret.Error(1)
@@ -86,8 +78,8 @@ func (m *Client) Put(bucket string, object string, md5 string, size int64) (io.W
 }
 
 // GetObjectMetadata is a mock method
-func (m *Client) GetObjectMetadata(bucket string, object string) (*client.Item, error) {
-	ret := m.Called(bucket, object)
+func (m *Client) GetObjectMetadata() (*client.Item, error) {
+	ret := m.Called()
 
 	var r0 *client.Item
 	if ret.Get(0) != nil {
@@ -99,8 +91,8 @@ func (m *Client) GetObjectMetadata(bucket string, object string) (*client.Item, 
 }
 
 // InitiateMultiPartUpload is a mock method
-func (m *Client) InitiateMultiPartUpload(bucket string, object string) (string, error) {
-	ret := m.Called(bucket, object)
+func (m *Client) InitiateMultiPartUpload() (string, error) {
+	ret := m.Called()
 
 	r0 := ret.Get(0).(string)
 	r1 := ret.Error(1)
@@ -109,8 +101,8 @@ func (m *Client) InitiateMultiPartUpload(bucket string, object string) (string, 
 }
 
 // UploadPart is a mock method
-func (m *Client) UploadPart(bucket string, object string, uploadID string, partNumber int) (string, error) {
-	ret := m.Called(bucket, object, uploadID, partNumber)
+func (m *Client) UploadPart(uploadID string, partNumber int) (string, error) {
+	ret := m.Called(uploadID, partNumber)
 
 	r0 := ret.Get(0).(string)
 	r1 := ret.Error(1)
@@ -119,8 +111,8 @@ func (m *Client) UploadPart(bucket string, object string, uploadID string, partN
 }
 
 // CompleteMultiPartUpload is a mock method
-func (m *Client) CompleteMultiPartUpload(bucket string, object string, uploadID string) (string, string, error) {
-	ret := m.Called(bucket, object, uploadID)
+func (m *Client) CompleteMultiPartUpload(uploadID string) (string, string, error) {
+	ret := m.Called(uploadID)
 
 	r0 := ret.Get(0).(string)
 	r1 := ret.Get(1).(string)
@@ -130,8 +122,8 @@ func (m *Client) CompleteMultiPartUpload(bucket string, object string, uploadID 
 }
 
 // AbortMultiPartUpload is a mock method
-func (m *Client) AbortMultiPartUpload(bucket string, object string, uploadID string) error {
-	ret := m.Called(bucket, object, uploadID)
+func (m *Client) AbortMultiPartUpload(uploadID string) error {
+	ret := m.Called(uploadID)
 
 	r0 := ret.Error(0)
 
@@ -139,8 +131,8 @@ func (m *Client) AbortMultiPartUpload(bucket string, object string, uploadID str
 }
 
 // ListParts is a mock method
-func (m *Client) ListParts(bucket string, object string, uploadID string) (*client.PartItems, error) {
-	ret := m.Called(bucket, object, uploadID)
+func (m *Client) ListParts(uploadID string) (*client.PartItems, error) {
+	ret := m.Called(uploadID)
 
 	var r0 *client.PartItems
 	if ret.Get(0) != nil {

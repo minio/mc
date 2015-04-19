@@ -56,26 +56,26 @@ func runCopyCmd(ctx *cli.Context) {
 
 	// perform copy
 	if ctx.Bool("recursive") {
-		humanReadableError, err := doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
+		msgError, err := doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
 		err = iodine.New(err, nil)
 		if err != nil {
-			if humanReadableError == "" {
-				humanReadableError = "No error message present, please rerun with --debug and report a bug."
+			if msgError == "" {
+				msgError = "No error message present, please rerun with --debug and report a bug."
 			}
 			log.Debug.Println(err)
-			console.Errorf("mc: %s with following reason: [%s]\n", humanReadableError, iodine.ToError(err))
+			console.Errorf("mc: %s with following reason: [%s]\n", msgError, iodine.ToError(err))
 		}
 		return
 	}
 
-	humanReadableError, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
+	errorMsg, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
 	err = iodine.New(err, nil)
 	if err != nil {
-		if humanReadableError == "" {
-			humanReadableError = "No error message present, please rerun with --debug and report a bug."
+		if errorMsg == "" {
+			errorMsg = "No error message present, please rerun with --debug and report a bug."
 		}
 		log.Debug.Println(err)
-		console.Errorf("mc: %s with following reason: [%s]\n", humanReadableError, iodine.ToError(err))
+		console.Errorf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
 	}
 }
 

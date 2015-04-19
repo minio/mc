@@ -32,7 +32,8 @@ import (
 /// Object Operations PUT - keeping this in a separate file for readability
 
 // Put - upload new object to bucket
-func (c *s3Client) Put(bucket, object, md5HexString string, size int64) (io.WriteCloser, error) {
+func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) {
+	bucket, object := c.url2Object()
 	r, w := io.Pipe()
 	blockingWriter := NewBlockingWriteCloser(w)
 	go func() {
@@ -42,7 +43,7 @@ func (c *s3Client) Put(bucket, object, md5HexString string, size int64) (io.Writ
 			blockingWriter.Release(err)
 			return
 		}
-		req, err := newReq(c.keyURL(bucket, object), c.UserAgent, r)
+		req, err := getNewReq(c.objectURL(bucket, object), c.UserAgent, r)
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)

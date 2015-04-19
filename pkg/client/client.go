@@ -20,6 +20,7 @@ import (
 	"io"
 	"regexp"
 	"time"
+	"unicode/utf8"
 )
 
 // Client - client interface
@@ -27,25 +28,24 @@ type Client interface {
 	MultipartUpload
 
 	// Bucket operations
-	PutBucket(bucket string) error
-	StatBucket(bucket string) error
-	ListBuckets() ([]*Bucket, error)
-	ListObjects(bucket, keyPrefix string) (items []*Item, err error)
+	PutBucket() error
+	StatBucket() error
+	List() (items []*Item, err error)
 
 	// Object operations
-	Get(bucket, object string) (body io.ReadCloser, size int64, md5 string, err error)
-	GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
-	Put(bucket, object, md5 string, size int64) (io.WriteCloser, error)
-	GetObjectMetadata(bucket, object string) (item *Item, err error)
+	Get() (body io.ReadCloser, size int64, md5 string, err error)
+	GetPartial(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
+	Put(md5 string, size int64) (io.WriteCloser, error)
+	GetObjectMetadata() (item *Item, err error)
 }
 
 // MultipartUpload - multi part upload interface
 type MultipartUpload interface {
-	InitiateMultiPartUpload(bucket, object string) (objectID string, err error)
-	UploadPart(bucket, object, uploadID string, partNumber int) (md5hex string, err error)
-	CompleteMultiPartUpload(bucket, object, uploadID string) (location, md5hex string, err error)
-	AbortMultiPartUpload(bucket, object, uploadID string) error
-	ListParts(bucket, object, uploadID string) (items *PartItems, err error)
+	InitiateMultiPartUpload() (objectID string, err error)
+	UploadPart(uploadID string, partNumber int) (md5hex string, err error)
+	CompleteMultiPartUpload(uploadID string) (location, md5hex string, err error)
+	AbortMultiPartUpload(uploadID string) error
+	ListParts(uploadID string) (items *PartItems, err error)
 }
 
 // Part - part xml response
@@ -64,23 +64,11 @@ type PartItems struct {
 	Part        []*Part
 }
 
-// Bucket - carries s3 bucket reply header
-type Bucket struct {
-	Name         string
-	CreationDate time.Time // 2006-02-03T16:45:09.000Z
-}
-
 // Item - object item list
 type Item struct {
-	Key          string
-	LastModified time.Time
-	ETag         string
-	Size         int64
-}
-
-// Prefix - common prefix
-type Prefix struct {
-	Prefix string
+	Name string
+	Time time.Time
+	Size int64
 }
 
 // IsValidBucketName reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
@@ -111,3 +99,15 @@ func (a BySize) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 // Less -
 func (a BySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
+
+// IsValidObject - verify object name in accordance with
+//   - http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
+func IsValidObject(object string) bool {
+	if len(object) > 1024 || len(object) == 0 {
+		return false
+	}
+	if !utf8.ValidString(object) {
+		return false
+	}
+	return true
+}

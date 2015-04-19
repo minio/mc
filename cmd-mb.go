@@ -19,7 +19,6 @@ package main
 import (
 	"time"
 
-	"errors"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
@@ -62,50 +61,14 @@ func doMakeBucketCmd(manager clientManager, u string, debug bool) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
 	}
-
-	bucket, _, err := client.URL2Object(u)
+	err = clnt.PutBucket()
+	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
+		err = clnt.PutBucket()
+		// Progressively longer delays
+		time.Sleep(time.Duration(i*i) * time.Second)
+	}
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: decoding bucket and object from URL [%s] failed\n", u)
+		console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
 	}
-
-	// this is handled differently since http based URLs cannot have
-	// nested directories as buckets, buckets are a unique alphanumeric
-	// name having subdirectories is only supported for fsClient
-	switch client.GetURLType(u) {
-	case client.URLObject:
-		{
-			if bucket == "" {
-				err := iodine.New(errBucketNameEmpty{}, nil)
-				log.Debug.Println(err)
-				console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
-			}
-			if !client.IsValidBucketName(bucket) {
-				err := iodine.New(errInvalidBucketName{bucket: bucket}, nil)
-				log.Debug.Println(err)
-				console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
-			}
-			err = clnt.PutBucket(bucket)
-			for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
-				err = clnt.PutBucket(bucket)
-				// Progressively longer delays
-				time.Sleep(time.Duration(i*i) * time.Second)
-			}
-			if err != nil {
-				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
-			}
-		}
-	case client.URLFilesystem:
-		{
-			log.Debug.Println(iodine.New(errors.New("Cannot use file system to create bucket"), nil))
-			console.Fatalf("mc: Cannot create bucket with fs driver")
-		}
-	default:
-		{
-			log.Debug.Println(iodine.New(errors.New("Unknown client driver"), nil))
-			console.Fatalf("mc: Cannot create bucket with unknown driver")
-		}
-	}
-
 }
