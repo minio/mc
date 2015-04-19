@@ -32,7 +32,10 @@ func (m *Client) StatBucket(bucket string) error {
 func (m *Client) ListBuckets() ([]*client.Bucket, error) {
 	ret := m.Called()
 
-	r0 := ret.Get(0).([]*client.Bucket)
+	var r0 []*client.Bucket
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).([]*client.Bucket)
+	}
 	r1 := ret.Error(1)
 
 	return r0, r1

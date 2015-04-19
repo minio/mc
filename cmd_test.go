@@ -173,3 +173,57 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
+
+func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
+	//	c.Skip("Incomplete")
+	sourceURL, err := parseURL("foo", nil)
+	c.Assert(err, IsNil)
+
+	manager := &MockclientManager{}
+	cl1 := &clientMocks.Client{}
+
+	data1 := "hello1"
+	binarySum1 := md5.Sum([]byte(data1))
+	etag1 := base64.StdEncoding.EncodeToString(binarySum1[:])
+	dataLen1 := int64(len(data1))
+
+	data2 := "hello world 2"
+	binarySum2 := md5.Sum([]byte(data2))
+	etag2 := base64.StdEncoding.EncodeToString(binarySum2[:])
+	dataLen2 := int64(len(data2))
+
+	items := []*client.Item{
+		{Key: "hello1", LastModified: time.Now(), ETag: etag1, Size: dataLen1},
+		{Key: "hello2", LastModified: time.Now(), ETag: etag2, Size: dataLen2},
+	}
+
+	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	cl1.On("ListObjects", "", "foo").Return(items, nil).Once()
+	doListCmd(manager, sourceURL, false)
+	// TODO work out how to test printing
+
+	manager.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
+
+func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
+	//	c.Skip("Incomplete")
+	sourceURL, err := parseURL("http://example.com", nil)
+	c.Assert(err, IsNil)
+
+	manager := &MockclientManager{}
+	cl1 := &clientMocks.Client{}
+
+	buckets := []*client.Bucket{
+		{Name: "bucket1", CreationDate: time.Now()},
+		{Name: "bucket2", CreationDate: time.Now()},
+	}
+
+	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	cl1.On("ListBuckets").Return(buckets, nil).Once()
+	doListCmd(manager, sourceURL, false)
+	// TODO work out how to test printing
+
+	manager.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
