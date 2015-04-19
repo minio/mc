@@ -276,7 +276,7 @@ func doConfigCmd(ctx *cli.Context) {
 		default:
 			// unexpected error
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("DEBUG mc: Unable to generate config file", configPath)
+			console.Fatalln("mc: Unable to generate config file", configPath)
 		}
 	}
 	console.Infoln("mc: Configuration written to " + configPath + ". Please update your access credentials.")
