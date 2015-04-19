@@ -61,7 +61,7 @@ func (manager mcClientManager) getSourceReader(urlStr string) (reader io.ReadClo
 		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
 	}
 	// Get a reader for the source object
-	bucket, object, err := url2Object(urlStr)
+	bucket, object, err := client.URL2Object(urlStr)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
 	}
@@ -78,7 +78,7 @@ func (manager mcClientManager) getTargetWriter(urlStr string, md5Hex string, len
 		return nil, iodine.New(err, nil)
 	}
 
-	bucket, object, err := url2Object(urlStr)
+	bucket, object, err := client.URL2Object(urlStr)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -96,8 +96,8 @@ func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt cli
 	if err != nil {
 		return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
 	}
-	switch getURLType(urlStr) {
-	case urlS3: // Minio and S3 compatible object storage
+	switch client.GetURLType(urlStr) {
+	case client.URLObject: // Minio and S3 compatible object storage
 		hostCfg, err := getHostConfig(u.String())
 		if err != nil {
 			return nil, iodine.New(err, nil)
@@ -114,7 +114,7 @@ func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt cli
 		}
 		clnt = s3.GetNewClient(urlStr, auth, mcUserAgent, debug)
 		return clnt, nil
-	case urlFS:
+	case client.URLFilesystem:
 		var absURLStr string
 		var err error
 		if u.IsAbs() {
@@ -131,7 +131,7 @@ func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt cli
 		clnt = fs.GetNewClient(absURLStr)
 		return clnt, nil
 	default:
-		return nil, iodine.New(errUnsupportedScheme{scheme: getURLType(urlStr)}, nil)
+		return nil, iodine.New(errUnsupportedScheme{scheme: client.GetURLType(urlStr)}, nil)
 	}
 }
 

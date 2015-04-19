@@ -102,7 +102,7 @@ func runListCmd(ctx *cli.Context) {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: parsing URL [%s] failed, %s\n", arg, guessPossibleURL(arg))
+				console.Fatalf("mc: parsing URL [%s] failed, %s\n", arg, client.GuessPossibleURL(arg))
 			default:
 				log.Debug.Println(iodine.New(err, nil))
 				console.Fatalf("mc: parsing URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
@@ -119,14 +119,14 @@ func doListCmd(manager clientManager, u string, debug bool) {
 		console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
 	}
 
-	bucket, object, err := url2Object(u)
+	bucket, object, err := client.URL2Object(u)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("mc: decoding bucket and object name from the URL [%s] failed\n", u)
 	}
 
 	// ListBuckets() will not be called for fsClient() as its not needed.
-	if bucket == "" && getURLType(u) != urlFS {
+	if bucket == "" && client.GetURLType(u) != client.URLFilesystem {
 		doListBuckets(clnt, u)
 	} else {
 		doListObjects(clnt, bucket, object, u)
