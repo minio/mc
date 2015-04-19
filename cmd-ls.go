@@ -111,6 +111,7 @@ func runListCmd(ctx *cli.Context) {
 		doListCmd(mcClientManager{}, u, globalDebugFlag)
 	}
 }
+
 func doListCmd(manager clientManager, u string, debug bool) {
 	clnt, err := manager.getNewClient(u, globalDebugFlag)
 	if err != nil {
