@@ -1,5 +1,5 @@
 /*
- * qdb - Quick key value store
+ * qdb - Quick key value store for config files and persistent state files
  *
  * Mini Copy, (C) 2015 Minio, Inc.
  *
@@ -31,7 +31,7 @@ import (
 	"io/ioutil"
 )
 
-// Store - generic config interface functions
+// Store - generic db interface functions
 type Store interface {
 	Int
 	Float64
@@ -43,6 +43,7 @@ type Store interface {
 	Load(string) error
 	Merge(Store) error
 	Diff(Store) ([]string, error)
+	DeepDiff(Store) ([]string, error)
 	GetStore() map[string]interface{}
 	String() string
 }
@@ -115,24 +116,24 @@ type store struct {
 	lock  *sync.RWMutex
 }
 
-// NewStore - instantiate a new config
+// NewStore - instantiate a new db
 func NewStore(version Version) Store {
 	// error condition
 	if version.Major == 0 {
 		return nil
 	}
 
-	config := new(store)
-	config.store = make(map[string]interface{})
-	config.store["Version"] = version.String()
-	config.lock = new(sync.RWMutex)
+	db := new(store)
+	db.store = make(map[string]interface{})
+	db.store["Version"] = version.String()
+	db.lock = new(sync.RWMutex)
 
-	return config
+	return db
 }
 
-// GetVersion returns the current config file format version
-func (c store) GetVersion() Version {
-	val, ok := c.store["Version"].(string)
+// GetVersion returns the current db file format version
+func (s store) GetVersion() Version {
+	val, ok := s.store["Version"].(string)
 	if !ok {
 		return Version{}
 	}
@@ -140,34 +141,34 @@ func (c store) GetVersion() Version {
 }
 
 // SetInt sets int value
-func (c *store) SetInt(key string, value int) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = value
+func (s *store) SetInt(key string, value int) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = value
 }
 
 // GetInt returns int value
-func (c store) GetInt(key string) int {
-	intVal, ok := c.store[key].(int)
+func (s store) GetInt(key string) int {
+	intVal, ok := s.store[key].(int)
 	if !ok {
-		interfaceIntVal, _ := c.store[key].(interface{})
+		interfaceIntVal, _ := s.store[key].(interface{})
 		return int(reflect.ValueOf(interfaceIntVal).Float())
 	}
 	return intVal
 }
 
 // SetIntSlice sets list of int values
-func (c *store) SetIntSlice(key string, values []int) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = values
+func (s *store) SetIntSlice(key string, values []int) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = values
 }
 
 // GetIntSlice returns list of int values
-func (c store) GetIntSlice(key string) []int {
-	interfaceIntSliceVal, ok := c.store[key].([]interface{})
+func (s store) GetIntSlice(key string) []int {
+	interfaceIntSliceVal, ok := s.store[key].([]interface{})
 	if !ok {
-		intSliceVal, _ := c.store[key].([]int)
+		intSliceVal, _ := s.store[key].([]int)
 		return intSliceVal
 	}
 	var actualIntSliceVal []int
@@ -179,30 +180,30 @@ func (c store) GetIntSlice(key string) []int {
 }
 
 // SetFloat64 sets 64-bit float value
-func (c *store) SetFloat64(key string, value float64) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = value
+func (s *store) SetFloat64(key string, value float64) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = value
 }
 
 // GetFloat64 returns 64-bit float value
-func (c store) GetFloat64(key string) float64 {
-	val := reflect.ValueOf(c.store[key])
+func (s store) GetFloat64(key string) float64 {
+	val := reflect.ValueOf(s.store[key])
 	return val.Float()
 }
 
 // SetFloat64Slice sets a list of 64-bit float values
-func (c *store) SetFloat64Slice(key string, values []float64) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = values
+func (s *store) SetFloat64Slice(key string, values []float64) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = values
 }
 
 // GetFloat64Slice returns a list of 64-bit float values
-func (c store) GetFloat64Slice(key string) []float64 {
-	interfaceFloatSliceVal, ok := c.store[key].([]interface{})
+func (s store) GetFloat64Slice(key string) []float64 {
+	interfaceFloatSliceVal, ok := s.store[key].([]interface{})
 	if !ok {
-		floatSliceVal, _ := c.store[key].([]float64)
+		floatSliceVal, _ := s.store[key].([]float64)
 		return floatSliceVal
 	}
 	var actualFloatSliceVal []float64
@@ -214,30 +215,30 @@ func (c store) GetFloat64Slice(key string) []float64 {
 }
 
 // SetString sets string value
-func (c *store) SetString(key string, value string) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = value
+func (s *store) SetString(key string, value string) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = value
 }
 
 // GetString returns string value
-func (c store) GetString(key string) string {
-	val, _ := c.store[key].(string)
+func (s store) GetString(key string) string {
+	val, _ := s.store[key].(string)
 	return val
 }
 
 // SetStringSlice sets list of strings
-func (c *store) SetStringSlice(key string, values []string) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = values
+func (s *store) SetStringSlice(key string, values []string) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = values
 }
 
 // GetStringSlice returns list of strings
-func (c store) GetStringSlice(key string) []string {
-	interfaceStrSliceVal, ok := c.store[key].([]interface{})
+func (s store) GetStringSlice(key string) []string {
+	interfaceStrSliceVal, ok := s.store[key].([]interface{})
 	if !ok {
-		strSliceVal, _ := c.store[key].([]string)
+		strSliceVal, _ := s.store[key].([]string)
 		return strSliceVal
 	}
 	var actualStrSliceVal []string
@@ -249,17 +250,17 @@ func (c store) GetStringSlice(key string) []string {
 }
 
 // SetMapString sets a map of strings
-func (c *store) SetMapString(key string, value map[string]string) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = value
+func (s *store) SetMapString(key string, value map[string]string) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = value
 }
 
 // GetMapString returns a map of strings
-func (c store) GetMapString(key string) map[string]string {
-	interfaceMapVal, ok := c.store[key].(map[string]interface{})
+func (s store) GetMapString(key string) map[string]string {
+	interfaceMapVal, ok := s.store[key].(map[string]interface{})
 	if !ok {
-		val, _ := c.store[key].(map[string]string)
+		val, _ := s.store[key].(map[string]string)
 		return val
 	}
 	actualMapVal := make(map[string]string)
@@ -271,17 +272,17 @@ func (c store) GetMapString(key string) map[string]string {
 }
 
 // SetMapStringSlice sets a map of string list
-func (c *store) SetMapStringSlice(key string, value map[string][]string) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = value
+func (s *store) SetMapStringSlice(key string, value map[string][]string) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = value
 }
 
 // GetMapStringSlice returns a map of string list
-func (c store) GetMapStringSlice(key string) map[string][]string {
-	interfacelMapSliceVal, ok := c.store[key].(map[string]interface{})
+func (s store) GetMapStringSlice(key string) map[string][]string {
+	interfacelMapSliceVal, ok := s.store[key].(map[string]interface{})
 	if !ok {
-		mapSliceVal, _ := c.store[key].(map[string][]string)
+		mapSliceVal, _ := s.store[key].(map[string][]string)
 		return mapSliceVal
 	}
 	actualMapSliceVal := make(map[string][]string)
@@ -298,17 +299,17 @@ func (c store) GetMapStringSlice(key string) map[string][]string {
 }
 
 // SetMapMapString sets a map of a map string
-func (c *store) SetMapMapString(key string, value map[string]map[string]string) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
-	(*c).store[key] = value
+func (s *store) SetMapMapString(key string, value map[string]map[string]string) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
+	(*s).store[key] = value
 }
 
 // GetMapMapString gets a map of a map string
-func (c *store) GetMapMapString(key string) map[string]map[string]string {
-	interfaceMapMapVal, ok := c.store[key].(map[string]interface{})
+func (s *store) GetMapMapString(key string) map[string]map[string]string {
+	interfaceMapMapVal, ok := s.store[key].(map[string]interface{})
 	if !ok {
-		val, _ := c.store[key].(map[string]map[string]string)
+		val, _ := s.store[key].(map[string]map[string]string)
 		return val
 	}
 	actualMapMapVal := make(map[string]map[string]string)
@@ -324,12 +325,12 @@ func (c *store) GetMapMapString(key string) map[string]map[string]string {
 	return actualMapMapVal
 }
 
-// Save writes configuration data in JSON format to donut config file.
-func (c store) Save(filename string) (err error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+// Save writes db data in JSON format to a file.
+func (s store) Save(filename string) (err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
-	jsonStore, err := json.MarshalIndent(c.store, "", "\t")
+	jsonStore, err := json.MarshalIndent(s.store, "", "\t")
 	if err != nil {
 		return err
 	}
@@ -351,10 +352,10 @@ func (c store) Save(filename string) (err error) {
 
 }
 
-// Load - loads JSON config from file and also automatically merges new changes
-func (c *store) Load(filename string) (err error) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
+// Load - loads JSON db from file and merge with currently set values
+func (s *store) Load(filename string) (err error) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
 
 	_, err = os.Stat(filename)
 	if err != nil {
@@ -376,61 +377,61 @@ func (c *store) Load(filename string) (err error) {
 		return err
 	}
 
-	if !reflect.DeepEqual((*c).store["Version"], loadedStore["Version"]) {
+	if !reflect.DeepEqual((*s).store["Version"], loadedStore["Version"]) {
 		return errors.New("Version mismatch")
 	}
 
 	// Merge pre-set keys
 	for key := range loadedStore {
-		(*c).store[key] = loadedStore[key]
+		(*s).store[key] = loadedStore[key]
 	}
 	return nil
 }
 
 // GetStore - grab internal store map for reading
-func (c store) GetStore() map[string]interface{} {
-	return c.store
+func (s store) GetStore() map[string]interface{} {
+	return s.store
 }
 
 // Merge - fast forward old keys to old+new keys
-func (c *store) Merge(s Store) (err error) {
-	(*c).lock.Lock()
-	defer (*c).lock.Unlock()
+func (s *store) Merge(m Store) (err error) {
+	(*s).lock.Lock()
+	defer (*s).lock.Unlock()
 
-	for key := range s.GetStore() {
-		(*c).store[key] = s.GetStore()[key]
+	for key := range m.GetStore() {
+		(*s).store[key] = m.GetStore()[key]
 	}
 	return nil
 }
 
-// Diff - provide difference between two qdb.Store bi-directionally
-func (c store) Diff(s Store) (diffErrors []string, err error) {
-	if reflect.DeepEqual(c.store["Version"], s.GetStore()["Version"]) == false {
-		msg := fmt.Sprintf("Version mismatch newVersion:%s oldVersion:%s", c.store["Version"].(string), s.GetStore()["Version"].(string))
-		diffErrors = append(diffErrors, msg)
-	}
-
-	for key := range s.GetStore() {
-		_, ok := c.store[key]
+// Diff - returns list of keys that are in A but in B
+func (s store) Diff(b Store) (keys []string, err error) {
+	for key := range s.store {
+		_, ok := b.GetStore()[key]
 		if !ok {
-			msg := fmt.Sprintf("Key %s missing from newVersion: %s", key, c.store["Version"].(string))
-			diffErrors = append(diffErrors, msg)
+			keys = append(keys, key)
 		}
 	}
-
-	for key := range c.store {
-		_, ok := s.GetStore()[key]
-		if !ok {
-			msg := fmt.Sprintf("Key %s missing from oldVersion: %s", key, s.GetStore()["Version"].(string))
-			diffErrors = append(diffErrors, msg)
-		}
-	}
-
-	return diffErrors, nil
+	return keys, nil
 }
 
-// String converts JSON config to printable string
-func (c store) String() string {
-	configBytes, _ := json.MarshalIndent(c.store, "", "\t")
-	return string(configBytes)
+// Diff - returns list of keys in A but not in B or of different values
+func (s store) DeepDiff(b Store) (keys []string, err error) {
+	for key, valA := range s.store {
+		valB, ok := b.GetStore()[key]
+		if !ok {
+			keys = append(keys, key)
+		} else {
+			if !reflect.DeepEqual(valA, valB) {
+				keys = append(keys, key)
+			}
+		}
+	}
+	return keys, nil
+}
+
+// String converts JSON db to printable string
+func (s store) String() string {
+	dbBytes, _ := json.MarshalIndent(s.store, "", "\t")
+	return string(dbBytes)
 }
