@@ -86,5 +86,6 @@ func doMakeBucketCmd(manager clientManager, u string, debug bool) (string, error
 		msg := fmt.Sprintf("\nmc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
 		return msg, err
 	}
+	console.Infoln()
 	return "", nil
 }

@@ -58,10 +58,10 @@ func doList(clnt client.Client, urlStr string) (string, error) {
 	var items []*client.Item
 
 	items, err = clnt.List()
-	if err != nil {
+	if err != nil && isValidRetry(err) {
 		console.Infof("Retrying ...")
 	}
-	for i := 1; i <= globalMaxRetryFlag && err != nil; i++ {
+	for i := 1; i <= globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
 		items, err = clnt.List()
 		console.Errorf(" %d", i)
 		// Progressively longer delays
@@ -72,6 +72,7 @@ func doList(clnt client.Client, urlStr string) (string, error) {
 		msg := fmt.Sprintf("\nmc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
 		return msg, err
 	}
+	console.Infoln()
 	printItems(items)
 	return "", nil
 }
