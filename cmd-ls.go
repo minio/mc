@@ -73,7 +73,7 @@ func doList(clnt client.Client, urlStr string) (string, error) {
 
 // runListCmd lists objects inside a bucket
 func runListCmd(ctx *cli.Context) {
-	if len(ctx.Args()) < 1 {
+	if len(ctx.Args()) < 1 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
 	config, err := getMcConfig()
