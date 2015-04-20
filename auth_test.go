@@ -35,6 +35,7 @@ func (s *AuthSuite) TestAuthAccessKeyLength(c *C) {
 	result = isValidSecretKey("1234567890123456789012345678901234567890")
 	c.Assert(result, Equals, true)
 }
+
 func (s *AuthSuite) TestValidAccessKeyLength(c *C) {
 	// short
 	result := isValidAccessKey("1234567890123456789")
