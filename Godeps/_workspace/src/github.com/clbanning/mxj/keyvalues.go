@@ -7,6 +7,7 @@
 package mxj
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -550,7 +551,7 @@ func (mv Map) PathsForKey(key string) []string {
 	// unpack map keys to return
 	res := make([]string, len(breadbasket))
 	var i int
-	for k, _ := range breadbasket {
+	for k := range breadbasket {
 		res[i] = k
 		i++
 	}
@@ -617,4 +618,41 @@ func hasKeyPath(crumbs string, iv interface{}, key string, basket map[string]boo
 			hasKeyPath(crumbs, v, key, basket)
 		}
 	}
+}
+
+// Returns the first found value for the path.
+func (mv Map) ValueForPath(path string) (interface{}, error) {
+	vals, err := mv.ValuesForPath(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(vals) == 0 {
+		return nil, errors.New("ValueForPath: path not found")
+	}
+	return vals[0], nil
+}
+
+// Returns the first found value for the path as a string.
+func (mv Map) ValueForPathString(path string) (string, error) {
+	vals, err := mv.ValuesForPath(path)
+	if err != nil {
+		return "", err
+	}
+	if len(vals) == 0 {
+		return "", errors.New("ValueForPath: path not found")
+	}
+	val := vals[0]
+	switch str := val.(type) {
+	case string:
+		return str, nil
+	default:
+		return "", fmt.Errorf("ValueForPath: unsupported type: %T", str)
+	}
+}
+
+// Returns the first found value for the path as a string.
+// If the path is not found then it returns an empty string.
+func (mv Map) ValueOrEmptyForPathString(path string) string {
+	str, _ := mv.ValueForPathString(path)
+	return str
 }

@@ -146,7 +146,7 @@ func updateValue(key string, value interface{}, m interface{}, keys0 string, sub
 	switch m.(type) {
 	case map[string]interface{}: // gotta have the last key
 		if keys0 == "*" {
-			for k, _ := range m.(map[string]interface{}) {
+			for k := range m.(map[string]interface{}) {
 				updateValue(key, value, m, k, subkeys, cnt)
 			}
 			return

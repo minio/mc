@@ -132,7 +132,7 @@ func TestValuesForKey(t *testing.T) {
 	if sserr != nil {
 		t.Fatal("sserr:", sserr.Error())
 	}
-	for _, v := range ss {	// should be len(ss) == 0
+	for _, v := range ss { // should be len(ss) == 0
 		fmt.Println("... ss.v:", v)
 	}
 }
@@ -189,7 +189,7 @@ func TestValuesForPath(t *testing.T) {
 	}
 }
 
-func TestValuesForNotKey( t *testing.T) {
+func TestValuesForNotKey(t *testing.T) {
 	fmt.Println("ValuesForNotKey ...")
 	m, merr := NewMapXml(doc1)
 	if merr != nil {
@@ -209,7 +209,7 @@ func TestValuesForNotKey( t *testing.T) {
 	if sserr != nil {
 		t.Fatal("sserr:", sserr.Error())
 	}
-	for _, v := range ss {	// expect len(ss) == 0
+	for _, v := range ss { // expect len(ss) == 0
 		fmt.Println("... ss.v:", v)
 	}
 
@@ -409,4 +409,38 @@ func x_main(t *testing.T) {
 		t.Fatal("verr:", verr.Error())
 	}
 	fmt.Println("doc.stuff[1].data[1].F:", v)
+}
+
+func TestValueForPath(t *testing.T) {
+	m := map[string]interface{}{
+		"Div": map[string]interface{}{
+			"Colour": "blue",
+		},
+	}
+	mv := Map(m)
+
+	v, err := mv.ValueForPath("Div.Colour")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if str, ok := v.(string); !ok || str != "blue" {
+		t.Fatal("wrong value")
+	}
+}
+
+func TestValueForPathString(t *testing.T) {
+	m := map[string]interface{}{
+		"Div": map[string]interface{}{
+			"Colour": "blue",
+		},
+	}
+	mv := Map(m)
+
+	str, err := mv.ValueForPathString("Div.Colour")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if str != "blue" {
+		t.Fatal("wrong value")
+	}
 }
