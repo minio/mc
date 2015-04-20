@@ -17,13 +17,11 @@
 package main
 
 import (
-	"log"
 	"regexp"
 )
 
 // isValidSecretKey - validate secret key
 func isValidSecretKey(secretAccessKey string) bool {
-	log.Println(secretAccessKey)
 	regex := regexp.MustCompile("^.{40}$")
 	return regex.MatchString(secretAccessKey)
 }
@@ -31,6 +29,5 @@ func isValidSecretKey(secretAccessKey string) bool {
 // isValidAccessKey - validate access key
 func isValidAccessKey(accessKeyID string) bool {
 	regex := regexp.MustCompile("^[A-Z0-9\\-\\.\\_\\~]{20}$")
-	regex.MatchString(accessKeyID)
 	return regex.MatchString(accessKeyID)
 }
