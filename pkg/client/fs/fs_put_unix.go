@@ -13,11 +13,6 @@ import (
 
 // Put - upload new object to bucket
 func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) {
-	// Never create directories in here using bucket and object, since such a path might
-	// result in files being created as directories and prone to races.
-	// It should be 'PutBucket()' responsibility through the caller after validating
-	// through StatBucket()
-
 	r, w := io.Pipe()
 	blockingWriter := NewBlockingWriteCloser(w)
 	go func() {

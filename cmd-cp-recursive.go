@@ -24,6 +24,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -163,6 +164,10 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 					iodine.ToError(err))
 				return msg, err
 			}
+		}
+		if !globalDebugFlag {
+			bar.Finish()
+			console.Infoln("Success!")
 		}
 	}
 	return "", nil
