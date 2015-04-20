@@ -45,7 +45,12 @@ func printItems(v []*client.Item) {
 
 // printItem prints item meta-data
 func printItem(date time.Time, v int64, name string) {
-	console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), name)
+	// v is 0 for buckets
+	if v == 0 {
+		console.Infof("%23s %13s %s\n", date.Local().Format(printDate), "", name)
+	} else {
+		console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), name)
+	}
 }
 
 func doList(clnt client.Client, urlStr string) (string, error) {
@@ -100,7 +105,7 @@ func runListCmd(ctx *cli.Context) {
 				errorMsg = "No error message present, please rerun with --debug and report a bug."
 			}
 			log.Debug.Println(err)
-			console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
+			console.Fatalf("%s", errorMsg)
 		}
 	}
 }

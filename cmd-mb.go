@@ -56,7 +56,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 				errorMsg = "No error message present, please rerun with --debug and report a bug."
 			}
 			log.Debug.Println(err)
-			console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
+			console.Fatalf("%s", errorMsg)
 		}
 	}
 }

@@ -82,7 +82,8 @@ func runCopyCmd(ctx *cli.Context) {
 func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (string, error) {
 	reader, length, hexMd5, err := manager.getSourceReader(sourceURL)
 	if err != nil {
-		return fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL), iodine.New(err, nil)
+		msg := fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL)
+		return msg, iodine.New(err, nil)
 	}
 	defer reader.Close()
 

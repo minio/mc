@@ -106,15 +106,13 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		sourceClnt, err := manager.getNewClient(sourceObjectURL, globalDebugFlag)
 		if err != nil {
 			err := iodine.New(err, nil)
-			msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
-				sourceObjectURL, iodine.ToError(err))
+			msg := fmt.Sprintf("Instantiating a new client for URL [%s] failed", sourceObjectURL)
 			return msg, err
 		}
 		reader, length, md5hex, err := sourceClnt.Get()
 		if err != nil {
 			err = iodine.New(err, nil)
-			msg := fmt.Sprintf("mc: Reading from source URL: [%s] failed with following reason: [%s]\n",
-				sourceURL, iodine.ToError(err))
+			msg := fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL)
 			return msg, err
 		}
 		// Construct full target URL path based on source object name
@@ -125,9 +123,7 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		}
 		writeClosers, err := getRecursiveTargetWriters(manager, newTargetURLs, md5hex, length)
 		if err != nil {
-			err = iodine.New(err, nil)
-			msg := fmt.Sprintf("mc: Writing to target URLs failed with following reason: [%s]\n", iodine.ToError(err))
-			return msg, err
+			return "Writing to target URLs failed", iodine.New(err, nil)
 		}
 
 		var writers []io.Writer
@@ -150,9 +146,7 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		_, err = io.CopyN(multiWriter, reader, length)
 		if err != nil {
 			err := iodine.New(err, nil)
-			msg := fmt.Sprintf("mc: Copying data from source to target(s) failed with following reason: [%s]\n",
-				iodine.ToError(err))
-			return msg, err
+			return "Copying data from source to target(s) failed", err
 		}
 
 		// close writers
@@ -160,9 +154,7 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 			err := writer.Close()
 			if err != nil {
 				err := iodine.New(err, nil)
-				msg := fmt.Sprintf("mc: Connections still active, one or more writes have failed with following reason: [%s]\n",
-					iodine.ToError(err))
-				return msg, err
+				return "Connections still active, one or more writes have failed", err
 			}
 		}
 		if !globalDebugFlag {
