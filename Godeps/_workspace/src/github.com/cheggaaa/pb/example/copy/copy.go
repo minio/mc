@@ -1,14 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"github.com/cheggaaa/pb"
-	"io"
-	"net/http"
 	"os"
-	"strconv"
-	"strings"
+	"fmt"
+	"io"
 	"time"
+	"strings"
+	"net/http"
+	"strconv"
 )
 
 func main() {
@@ -18,12 +18,12 @@ func main() {
 		return
 	}
 	sourceName, destName := os.Args[1], os.Args[2]
-
+	
 	// check source
 	var source io.Reader
 	var sourceSize int64
 	if strings.HasPrefix(sourceName, "http://") {
-		// open as url
+		// open as url	
 		resp, err := http.Get(sourceName)
 		if err != nil {
 			fmt.Printf("Can't get %s: %v\n", sourceName, err)
@@ -54,7 +54,9 @@ func main() {
 		sourceSize = sourceStat.Size()
 		source = s
 	}
-
+	
+	
+	
 	// create dest
 	dest, err := os.Create(destName)
 	if err != nil {
@@ -62,15 +64,15 @@ func main() {
 		return
 	}
 	defer dest.Close()
-
-	// create bar
+	
+	// create bar	
 	bar := pb.New(int(sourceSize)).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10)
 	bar.ShowSpeed = true
 	bar.Start()
-
+	
 	// create multi writer
 	writer := io.MultiWriter(dest, bar)
-
+	
 	// and copy
 	io.Copy(writer, source)
 	bar.Finish()
