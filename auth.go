@@ -16,42 +16,21 @@
 
 package main
 
-// exact key length
-const (
-	accessKeyLength    = 20
-	secretAccessLength = 40
+import (
+	"log"
+	"regexp"
 )
 
 // isValidSecretKey - validate secret key
-func isValidSecretKey(secretAccesskey string) bool {
-	if len(secretAccesskey) != secretAccessLength {
-		return false
-	}
-	return true
+func isValidSecretKey(secretAccessKey string) bool {
+	log.Println(secretAccessKey)
+	regex := regexp.MustCompile("^.{40}$")
+	return regex.MatchString(secretAccessKey)
 }
 
 // isValidAccessKey - validate access key
 func isValidAccessKey(accessKeyID string) bool {
-	if len(accessKeyID) != accessKeyLength {
-		return false
-	}
-	// Is alphanumeric?
-	isalnum := func(c rune) bool {
-		return '0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z'
-	}
-	for _, char := range accessKeyID {
-		if isalnum(char) {
-			continue
-		}
-		switch char {
-		case '-':
-		case '.':
-		case '_':
-		case '~':
-			continue
-		default:
-			return false
-		}
-	}
-	return true
+	regex := regexp.MustCompile("^[A-Z0-9\\-\\.\\_\\~]{20}$")
+	regex.MatchString(accessKeyID)
+	return regex.MatchString(accessKeyID)
 }
