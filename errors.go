@@ -25,7 +25,7 @@ import (
 type errInvalidArgument struct{}
 
 func (e errInvalidArgument) Error() string {
-	return "invalid argument"
+	return "Invalid argument"
 }
 
 type errUnsupportedScheme struct {
@@ -50,7 +50,7 @@ type errInvalidGlobURL struct {
 }
 
 func (e errInvalidGlobURL) Error() string {
-	return "Error parsing glob'ed URL while comparing " + e.glob + " " + e.request
+	return "Error reading glob URL " + e.glob + " while comparing with " + e.request
 }
 
 type errInvalidAliasName struct {
@@ -58,13 +58,13 @@ type errInvalidAliasName struct {
 }
 
 func (e errInvalidAliasName) Error() string {
-	return "Not a valid alias name: " + e.name + " Valid examples are: Area51, Grand-Nagus.."
+	return "Not a valid alias name: " + e.name + " valid examples are: Area51, Grand-Nagus.."
 }
 
 type errInvalidAuth struct{}
 
 func (e errInvalidAuth) Error() string {
-	return "invalid auth keys"
+	return "Invalid auth keys"
 }
 
 type errNoMatchingHost struct{}
@@ -85,12 +85,12 @@ type errAliasExists struct {
 }
 
 func (e errAliasExists) Error() string {
-	return fmt.Sprintf("alias: %s exists", e.name)
+	return "Alias name: " + e.name + " exists"
 }
 
 // errInvalidAuthKeys - invalid authorization keys
 type errInvalidAuthKeys struct{}
 
 func (e errInvalidAuthKeys) Error() string {
-	return "invalid authorization keys"
+	return "Invalid authorization keys"
 }
