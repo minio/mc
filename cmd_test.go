@@ -151,6 +151,8 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	cl1.AssertExpectations(c)
 	cl2.AssertExpectations(c)
 	cl3.AssertExpectations(c)
+	cl4.AssertExpectations(c)
+	cl5.AssertExpectations(c)
 }
 
 func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
