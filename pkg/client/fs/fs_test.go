@@ -17,8 +17,13 @@
 package fs
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/base64"
+	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	. "github.com/minio-io/check"
@@ -30,18 +35,40 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
-// TODO - implement these
-
-func (s *MySuite) TestListBuckets(c *C) {
+func (s *MySuite) TestList(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-}
 
-func (s *MySuite) TestListObjects(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
+	objectPath := filepath.Join(root, "object1")
+	fsc := GetNewClient(objectPath)
+
+	data := "hello"
+	binarySum := md5.Sum([]byte(data))
+	etag := base64.StdEncoding.EncodeToString(binarySum[:])
+	dataLen := int64(len(data))
+
+	writer, err := fsc.Put(etag, dataLen)
 	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
+
+	size, err := io.CopyN(writer, bytes.NewBufferString(data), dataLen)
+	c.Assert(err, IsNil)
+	c.Assert(size, Equals, dataLen)
+
+	objectPath = filepath.Join(root, "object2")
+	fsc = GetNewClient(objectPath)
+
+	writer, err = fsc.Put(etag, dataLen)
+	c.Assert(err, IsNil)
+
+	size, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)
+	c.Assert(err, IsNil)
+	c.Assert(size, Equals, dataLen)
+
+	fsc = GetNewClient(root)
+	items, err := fsc.List()
+	c.Assert(err, IsNil)
+	c.Assert(len(items), Equals, 2)
 }
 
 func (s *MySuite) TestPutBucket(c *C) {
@@ -49,28 +76,96 @@ func (s *MySuite) TestPutBucket(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
 
-}
-
-func (s *MySuite) TestPutObject(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
+	bucketPath := filepath.Join(root, "bucket")
+	fsc := GetNewClient(bucketPath)
+	err = fsc.PutBucket()
 	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-}
-
-func (s *MySuite) TestGetObject(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-}
-
-func (s *MySuite) TestStatObject(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
 }
 
 func (s *MySuite) TestStatBucket(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
+
+	bucketPath := filepath.Join(root, "bucket")
+	fsc := GetNewClient(bucketPath)
+	err = fsc.PutBucket()
+	c.Assert(err, IsNil)
+	err = fsc.StatBucket()
+	c.Assert(err, IsNil)
+}
+
+func (s *MySuite) TestPutObject(c *C) {
+	root, err := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+
+	objectPath := filepath.Join(root, "object")
+	fsc := GetNewClient(objectPath)
+
+	data := "hello"
+	binarySum := md5.Sum([]byte(data))
+	etag := base64.StdEncoding.EncodeToString(binarySum[:])
+	dataLen := int64(len(data))
+
+	writer, err := fsc.Put(etag, dataLen)
+	c.Assert(err, IsNil)
+
+	size, err := io.CopyN(writer, bytes.NewBufferString(data), dataLen)
+	c.Assert(err, IsNil)
+	c.Assert(size, Equals, dataLen)
+}
+
+func (s *MySuite) TestGetObject(c *C) {
+	root, err := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+
+	objectPath := filepath.Join(root, "object")
+	fsc := GetNewClient(objectPath)
+
+	data := "hello"
+	binarySum := md5.Sum([]byte(data))
+	etag := base64.StdEncoding.EncodeToString(binarySum[:])
+	dataLen := int64(len(data))
+
+	writer, err := fsc.Put(etag, dataLen)
+	c.Assert(err, IsNil)
+
+	_, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)
+	c.Assert(err, IsNil)
+
+	reader, size, _, err := fsc.Get()
+	c.Assert(err, IsNil)
+	var results bytes.Buffer
+
+	_, err = io.CopyN(&results, reader, size)
+	c.Assert(err, IsNil)
+	c.Assert([]byte(data), DeepEquals, results.Bytes())
+
+}
+
+func (s *MySuite) TestGetObjectMetadata(c *C) {
+	root, err := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+
+	objectPath := filepath.Join(root, "object")
+	fsc := GetNewClient(objectPath)
+
+	data := "hello"
+	binarySum := md5.Sum([]byte(data))
+	etag := base64.StdEncoding.EncodeToString(binarySum[:])
+	dataLen := int64(len(data))
+
+	writer, err := fsc.Put(etag, dataLen)
+	c.Assert(err, IsNil)
+
+	_, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)
+	c.Assert(err, IsNil)
+
+	item, err := fsc.GetObjectMetadata()
+	c.Assert(err, IsNil)
+	c.Assert(item.Name, Equals, "object")
+	c.Assert(item.Size, Equals, dataLen)
 }
