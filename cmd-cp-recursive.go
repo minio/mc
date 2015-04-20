@@ -84,7 +84,7 @@ func getRecursiveTargetWriters(manager clientManager, targetURLs []string, md5He
 				targetWriter.Close()
 			}
 			// return error so that Multiwriter doesn't get control
-			return nil, err
+			return nil, iodine.New(err, nil)
 		}
 		targetWriters = append(targetWriters, writer)
 	}

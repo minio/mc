@@ -45,7 +45,7 @@ var (
 
 const (
 	// do not pass accesskeyid and secretaccesskey through cli
-	// users should manually edit them, add a stub code
+	// users should manually edit them, add a stub entry
 	accessKeyID     = "YOUR-ACCESS-KEY-ID-HERE"
 	secretAccesskey = "YOUR-SECRET-ACCESS-KEY-HERE"
 )
@@ -145,13 +145,6 @@ func saveConfig(ctx *cli.Context) error {
 		}
 		err := writeConfig(newConfig())
 		if err != nil {
-			return iodine.New(err, nil)
-		}
-		return nil
-	case "check":
-		// verify if the binary can load config file
-		configStore, err := getMcConfig()
-		if err != nil || configStore == nil {
 			return iodine.New(err, nil)
 		}
 		return nil

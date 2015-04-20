@@ -47,34 +47,37 @@ func startBar(size int64) *pb.ProgressBar {
 	return bar
 }
 
+// clientManager interface for mock tests
 type clientManager interface {
-	getSourceReader(urlStr string) (reader io.ReadCloser, length int64, md5hex string, err error)
-	getTargetWriter(urlStr string, md5Hex string, length int64) (io.WriteCloser, error)
+	getSourceReader(sourceURL string) (reader io.ReadCloser, length int64, md5hex string, err error)
+	getTargetWriter(targetURL string, md5Hex string, length int64) (io.WriteCloser, error)
 	getNewClient(urlStr string, debug bool) (clnt client.Client, err error)
 }
 
 type mcClientManager struct{}
 
-func (manager mcClientManager) getSourceReader(urlStr string) (reader io.ReadCloser, length int64, md5hex string, err error) {
-	sourceClnt, err := manager.getNewClient(urlStr, globalDebugFlag)
+// getSourceReader -
+func (manager mcClientManager) getSourceReader(sourceURL string) (reader io.ReadCloser, length int64, md5hex string, err error) {
+	sourceClnt, err := manager.getNewClient(sourceURL, globalDebugFlag)
 	if err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": sourceURL})
 	}
 	// check if the bucket is valid
 	if err := sourceClnt.StatBucket(); err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": urlStr})
+		return nil, 0, "", iodine.New(err, map[string]string{"sourceURL": sourceURL})
 	}
 	return sourceClnt.Get()
 }
 
-func (manager mcClientManager) getTargetWriter(urlStr string, md5Hex string, length int64) (io.WriteCloser, error) {
-	targetClnt, err := manager.getNewClient(urlStr, globalDebugFlag)
+// getTargetWriter -
+func (manager mcClientManager) getTargetWriter(targetURL string, md5Hex string, length int64) (io.WriteCloser, error) {
+	targetClnt, err := manager.getNewClient(targetURL, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
 	// check if bucket is valid
 	if err := targetClnt.StatBucket(); err != nil {
-		return nil, iodine.New(err, map[string]string{"failedURL": urlStr})
+		return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
 	}
 	return targetClnt.Put(md5Hex, length)
 }
@@ -124,16 +127,17 @@ func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt cli
 	}
 }
 
-func getTargetWriters(manager clientManager, urls []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
+// getTargetWriters -
+func getTargetWriters(manager clientManager, targetURLs []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
 	var targetWriters []io.WriteCloser
-	for _, u := range urls {
-		writer, err := manager.getTargetWriter(u, md5Hex, length)
+	for _, targetURL := range targetURLs {
+		writer, err := manager.getTargetWriter(targetURL, md5Hex, length)
 		if err != nil {
 			// close all writers
 			for _, targetWriter := range targetWriters {
 				targetWriter.Close()
 			}
-			return nil, iodine.New(errInvalidURL{url: u}, nil)
+			return nil, iodine.New(err, nil)
 		}
 		targetWriters = append(targetWriters, writer)
 	}
