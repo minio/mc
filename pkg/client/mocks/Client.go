@@ -21,8 +21,8 @@ func (m *Client) PutBucket() error {
 	return r0
 }
 
-// StatBucket is a mock method
-func (m *Client) StatBucket() error {
+// Stat is a mock method
+func (m *Client) Stat() error {
 	ret := m.Called()
 
 	r0 := ret.Error(0)

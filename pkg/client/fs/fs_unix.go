@@ -180,8 +180,8 @@ func (f *fsClient) PutBucket() error {
 	return nil
 }
 
-// StatBucket -
-func (f *fsClient) StatBucket() error {
+// Stat -
+func (f *fsClient) Stat() error {
 	st, err := os.Stat(f.Path)
 	if os.IsNotExist(err) {
 		return iodine.New(client.BucketNotFound{Bucket: ""}, nil)

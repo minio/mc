@@ -59,7 +59,7 @@ func getRecursiveTargetWriter(manager clientManager, targetURL, md5Hex string, l
 	// For object storage URL's do a StatBucket() and PutBucket(), not necessary for fs client
 	if client.GetURLType(targetURL) != client.URLFilesystem {
 		// check if bucket is valid, if not found create it
-		if err := targetClnt.StatBucket(); err != nil {
+		if err := targetClnt.Stat(); err != nil {
 			switch iodine.ToError(err).(type) {
 			case client.BucketNotFound:
 				err := targetClnt.PutBucket()

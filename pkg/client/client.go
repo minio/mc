@@ -27,10 +27,12 @@ import (
 type Client interface {
 	MultipartUpload
 
+	// Common operations
+	Stat() error
+	List() (items []*Item, err error)
+
 	// Bucket operations
 	PutBucket() error
-	StatBucket() error
-	List() (items []*Item, err error)
 
 	// Object operations
 	Get() (body io.ReadCloser, size int64, md5 string, err error)
