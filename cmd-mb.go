@@ -37,7 +37,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to read config")
 	}
 	for _, arg := range ctx.Args() {
-		u, err := parseURL(arg, config.GetMapString("Aliases"))
+		u, err := getURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:

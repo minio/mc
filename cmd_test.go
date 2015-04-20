@@ -34,7 +34,7 @@ var _ = Suite(&CmdTestSuite{})
 
 func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	manager := &MockclientManager{}
-	sourceURL, err := parseURL("foo", nil)
+	sourceURL, err := getURL("foo", nil)
 	c.Assert(err, IsNil)
 
 	data := "Hello World"
@@ -42,7 +42,7 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	hexMd5 := hex.EncodeToString(md5Sum[:])
 	dataLength := int64(len(data))
 
-	targetURL, err := parseURL("bar", nil)
+	targetURL, err := getURL("bar", nil)
 	c.Assert(err, IsNil)
 	targetURLs := []string{targetURL}
 
@@ -73,10 +73,10 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 
 /* - TODO(y4m4) - enable this after figuring out changes with getNewClient behavior in doCmdRecursive()
 func (s *CmdTestSuite) TestCopyRecursive(c *C) {
-	sourceURL, err := parseURL("http://example.com/bucket1/", nil)
+	sourceURL, err := getURL("http://example.com/bucket1/", nil)
 	c.Assert(err, IsNil)
 
-	targetURL, err := parseURL("http://example.com/bucket2/", nil)
+	targetURL, err := getURL("http://example.com/bucket2/", nil)
 	c.Assert(err, IsNil)
 	targetURLs := []string{targetURL}
 
@@ -144,7 +144,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 */
 
 func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
-	sourceURL, err := parseURL("http://example.com/bucket1/", nil)
+	sourceURL, err := getURL("http://example.com/bucket1/", nil)
 	c.Assert(err, IsNil)
 
 	manager := &MockclientManager{}
@@ -172,7 +172,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 }
 
 func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
-	sourceURL, err := parseURL("foo", nil)
+	sourceURL, err := getURL("foo", nil)
 	c.Assert(err, IsNil)
 
 	manager := &MockclientManager{}
@@ -200,7 +200,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 }
 
 func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
-	sourceURL, err := parseURL("http://example.com", nil)
+	sourceURL, err := getURL("http://example.com", nil)
 	c.Assert(err, IsNil)
 
 	manager := &MockclientManager{}
@@ -222,7 +222,7 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 }
 
 func (s *CmdTestSuite) TestMbCmd(c *C) {
-	sourceURL, err := parseURL("http://example.com/bucket1", nil)
+	sourceURL, err := getURL("http://example.com/bucket1", nil)
 	c.Assert(err, IsNil)
 
 	manager := &MockclientManager{}
@@ -239,7 +239,7 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 
 func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 	//	c.Skip("Incomplete")
-	sourceURL, err := parseURL("bucket1", nil)
+	sourceURL, err := getURL("bucket1", nil)
 	c.Assert(err, IsNil)
 
 	manager := &MockclientManager{}

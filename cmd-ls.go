@@ -77,7 +77,7 @@ func runListCmd(ctx *cli.Context) {
 		console.Fatalf("mc: reading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
 	for _, arg := range ctx.Args() {
-		u, err := parseURL(arg, config.GetMapString("Aliases"))
+		u, err := getURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
