@@ -38,6 +38,12 @@ func checkConfig() {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to obtain user's home directory")
 	}
+
+	// If config doesn't exist, do not attempt to read it
+	if !isMcConfigExist() {
+		return
+	}
+
 	// Ensures config file is sane
 	_, err = getMcConfig()
 	if err != nil {
