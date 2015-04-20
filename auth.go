@@ -16,14 +16,10 @@
 
 package main
 
-import (
-	"log"
-	"regexp"
-)
+import "regexp"
 
 // isValidSecretKey - validate secret key
 func isValidSecretKey(secretAccessKey string) bool {
-	log.Println(secretAccessKey)
 	regex := regexp.MustCompile("^.{40}$")
 	return regex.MatchString(secretAccessKey)
 }

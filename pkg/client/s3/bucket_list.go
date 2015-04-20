@@ -75,8 +75,7 @@ func (c *s3Client) decodeBucketResults(urlReq string) (listBucketResults, error)
 	var logbuf bytes.Buffer
 	err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(&bres)
 	if err != nil {
-		fmt.Printf("Error parsing s3 XML response: %v for %q\n", err, logbuf.Bytes())
-		return listBucketResults{}, iodine.New(err, nil)
+		return listBucketResults{}, iodine.New(err, map[string]string{"XMLError": logbuf.String()})
 	}
 	return bres, nil
 }
