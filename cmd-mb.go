@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/minio-io/cli"
@@ -42,24 +43,33 @@ func runMakeBucketCmd(ctx *cli.Context) {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unable to parse URL [%s], %s\n", arg, client.GuessPossibleURL(arg))
+				console.Fatalf("mc: reading URL [%s] failed, %s\n", arg, client.GuessPossibleURL(arg))
 			default:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unable to parse URL [%s]\n", arg)
+				console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
 			}
 		}
-		doMakeBucketCmd(mcClientManager{}, u, globalDebugFlag)
+		errorMsg, err := doMakeBucketCmd(mcClientManager{}, u, globalDebugFlag)
+		err = iodine.New(err, nil)
+		if err != nil {
+			if errorMsg == "" {
+				errorMsg = "No error message present, please rerun with --debug and report a bug."
+			}
+			log.Debug.Println(err)
+			console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
+		}
 	}
 }
 
-func doMakeBucketCmd(manager clientManager, u string, debug bool) {
+func doMakeBucketCmd(manager clientManager, u string, debug bool) (string, error) {
 	var err error
 	var clnt client.Client
 
 	clnt, err = manager.getNewClient(u, debug)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
+		err := iodine.New(err, nil)
+		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
+		return msg, err
 	}
 	err = clnt.PutBucket()
 	if err != nil {
@@ -72,7 +82,9 @@ func doMakeBucketCmd(manager clientManager, u string, debug bool) {
 		time.Sleep(time.Duration(i*i) * time.Second)
 	}
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("\nmc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
+		err := iodine.New(err, nil)
+		msg := fmt.Sprintf("\nmc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
+		return msg, err
 	}
+	return "", nil
 }

@@ -105,8 +105,8 @@ func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []st
 		sourceClnt, err := manager.getNewClient(sourceObjectURL, globalDebugFlag)
 		if err != nil {
 			err := iodine.New(err, nil)
-			msg := "mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
-				sourceObjectURL, iodine.ToError(err)
+			msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
+				sourceObjectURL, iodine.ToError(err))
 			return msg, err
 		}
 		reader, length, md5hex, err := sourceClnt.Get()

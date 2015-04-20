@@ -56,18 +56,17 @@ func runCopyCmd(ctx *cli.Context) {
 
 	// perform copy
 	if ctx.Bool("recursive") {
-		msgError, err := doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
+		errorMsg, err := doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
 		err = iodine.New(err, nil)
 		if err != nil {
-			if msgError == "" {
-				msgError = "No error message present, please rerun with --debug and report a bug."
+			if errorMsg == "" {
+				errorMsg = "No error message present, please rerun with --debug and report a bug."
 			}
 			log.Debug.Println(err)
-			console.Errorf("mc: %s with following reason: [%s]\n", msgError, iodine.ToError(err))
+			console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
 		}
 		return
 	}
-
 	errorMsg, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
 	err = iodine.New(err, nil)
 	if err != nil {
@@ -75,7 +74,7 @@ func runCopyCmd(ctx *cli.Context) {
 			errorMsg = "No error message present, please rerun with --debug and report a bug."
 		}
 		log.Debug.Println(err)
-		console.Errorf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
+		console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
 	}
 }
 

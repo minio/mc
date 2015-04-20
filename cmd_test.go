@@ -230,15 +230,15 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 
 	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket").Return(nil).Once()
-	doMakeBucketCmd(manager, sourceURL, false)
-	// TODO work out how to test printing
+	msg, err := doMakeBucketCmd(manager, sourceURL, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
 
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
 
 func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
-	//	c.Skip("Incomplete")
 	sourceURL, err := getURL("bucket1", nil)
 	c.Assert(err, IsNil)
 
@@ -247,8 +247,9 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 
 	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket").Return(nil).Once()
-	doMakeBucketCmd(manager, sourceURL, false)
-	// TODO work out how to test printing
+	msg, err := doMakeBucketCmd(manager, sourceURL, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
 
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)

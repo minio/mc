@@ -93,7 +93,15 @@ func runListCmd(ctx *cli.Context) {
 				console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
 			}
 		}
-		doListCmd(mcClientManager{}, u, globalDebugFlag)
+		errorMsg, err := doListCmd(mcClientManager{}, u, globalDebugFlag)
+		err = iodine.New(err, nil)
+		if err != nil {
+			if errorMsg == "" {
+				errorMsg = "No error message present, please rerun with --debug and report a bug."
+			}
+			log.Debug.Println(err)
+			console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
+		}
 	}
 }
 
@@ -105,7 +113,5 @@ func doListCmd(manager clientManager, u string, debug bool) (string, error) {
 			u, iodine.ToError(err))
 		return msg, err
 	}
-
 	return doList(clnt, u)
-
 }
