@@ -91,62 +91,66 @@ var WhiteTheme = Theme{
 // NoColorTheme disables color theme
 var NoColorTheme = Theme{}
 
-func isValidTheme(themeName string) bool {
-	for key := range ThemesDB {
-		if key == themeName {
-			return true
-		}
-	}
-	return false
+var (
+	// wrap around standard fmt functions
+	print   = func(a ...interface{}) { fmt.Print(a...) }
+	println = func(a ...interface{}) { fmt.Println(a...) }
+	printf  = func(f string, a ...interface{}) { fmt.Printf(f, a...) }
+
+	fatalPrint   = func(a ...interface{}) { fmt.Print(a...); os.Exit(1) }
+	fatalPrintln = func(a ...interface{}) { fmt.Println(a...); os.Exit(1) }
+	fatalPrintf  = func(f string, a ...interface{}) { fmt.Printf(f, a...); os.Exit(1) }
+)
+
+// setThemeNoColor - set theme no color
+func setThemeNoColor(themeName string) {
+	mutex.Lock()
+	currentTheme = themeName
+	Fatal = fatalPrint
+	Fatalln = fatalPrintln
+	Fatalf = fatalPrintf
+	Error = print
+	Errorln = println
+	Errorf = printf
+	Info = print
+	Infoln = println
+	Infof = printf
+	Debug = print
+	Debugln = println
+	Debugf = printf
+	mutex.Unlock()
+}
+
+// setThemeColor - set theme color style
+func setThemeColor(themeName string) {
+	mutex.Lock()
+	currentTheme = themeName
+	Fatal = func(a ...interface{}) { ThemesDB[currentTheme].Fatal.Print(a...); os.Exit(1) }
+	Fatalln = func(a ...interface{}) { ThemesDB[currentTheme].Fatal.Println(a...); os.Exit(1) }
+	Fatalf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Fatal.Printf(f, a...); os.Exit(1) }
+	Error = func(a ...interface{}) { ThemesDB[currentTheme].Error.Print(a...) }
+	Errorln = func(a ...interface{}) { ThemesDB[currentTheme].Error.Println(a...) }
+	Errorf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Error.Printf(f, a...) }
+	Info = func(a ...interface{}) { ThemesDB[currentTheme].Info.Print(a...) }
+	Infoln = func(a ...interface{}) { ThemesDB[currentTheme].Info.Println(a...) }
+	Infof = func(f string, a ...interface{}) { ThemesDB[currentTheme].Info.Printf(f, a...) }
+	Debug = func(a ...interface{}) { ThemesDB[currentTheme].Debug.Print(a...) }
+	Debugln = func(a ...interface{}) { ThemesDB[currentTheme].Debug.Println(a...) }
+	Debugf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Debug.Printf(f, a...) }
+	mutex.Unlock()
 }
 
 // SetTheme sets a color theme
 func SetTheme(themeName string) error {
-	if !isValidTheme(themeName) {
-		msg := fmt.Sprintf("invalid theme: %s", themeName)
+	switch true {
+	case themeName == "nocolor":
+		setThemeNoColor(themeName)
+	case themeName == "minimal" || themeName == "white":
+		setThemeColor(themeName)
+	default:
+		msg := fmt.Sprintf("Invalid theme: %s", themeName)
 		return iodine.New(errors.New(msg), nil)
 	}
-	currentTheme = themeName
-	mutex.Lock()
-
-	// wrap around standard fmt functions
-	print := func(a ...interface{}) { fmt.Print(a...) }
-	println := func(a ...interface{}) { fmt.Println(a...) }
-	printf := func(f string, a ...interface{}) { fmt.Printf(f, a...) }
-
-	fatalPrint := func(a ...interface{}) { fmt.Print(a...); os.Exit(1) }
-	fatalPrintln := func(a ...interface{}) { fmt.Println(a...); os.Exit(1) }
-	fatalPrintf := func(f string, a ...interface{}) { fmt.Printf(f, a...); os.Exit(1) }
-
-	switch currentTheme {
-	case "nocolor":
-		Fatal = fatalPrint
-		Fatalln = fatalPrintln
-		Fatalf = fatalPrintf
-		Error = print
-		Errorln = println
-		Errorf = printf
-		Info = print
-		Infoln = println
-		Infof = printf
-		Debug = print
-		Debugln = println
-		Debugf = printf
-	default:
-		Fatal = func(a ...interface{}) { ThemesDB[currentTheme].Fatal.Print(a...); os.Exit(1) }
-		Fatalln = func(a ...interface{}) { ThemesDB[currentTheme].Fatal.Println(a...); os.Exit(1) }
-		Fatalf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Fatal.Printf(f, a...); os.Exit(1) }
-		Error = func(a ...interface{}) { ThemesDB[currentTheme].Error.Print(a...) }
-		Errorln = func(a ...interface{}) { ThemesDB[currentTheme].Error.Println(a...) }
-		Errorf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Error.Printf(f, a...) }
-		Info = func(a ...interface{}) { ThemesDB[currentTheme].Info.Print(a...) }
-		Infoln = func(a ...interface{}) { ThemesDB[currentTheme].Info.Println(a...) }
-		Infof = func(f string, a ...interface{}) { ThemesDB[currentTheme].Info.Printf(f, a...) }
-		Debug = func(a ...interface{}) { ThemesDB[currentTheme].Debug.Print(a...) }
-		Debugln = func(a ...interface{}) { ThemesDB[currentTheme].Debug.Println(a...) }
-		Debugf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Debug.Printf(f, a...) }
-	}
-	mutex.Unlock()
 	return nil
 }
 

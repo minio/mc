@@ -99,7 +99,13 @@ func main() {
 		if theme != "" {
 			err := console.SetTheme(theme)
 			if err != nil {
-				console.Fatalf("mc: Unable to set theme [%s]\n", theme)
+				// SetTheme here back to DefaultTheme, Fatalf will not exit otherwise since the wrappers
+				// anonymous func() are not assigned yet, so in essence os.Exit(1) in Fatalf is not
+				// available and wouldn't exit here - call gets transferred to app.RunAndExitOnError()
+
+				// On windows without this it leads to nil deference
+				console.SetTheme(console.GetDefaultTheme())
+				console.Fatalf("mc: failed to set theme [%s] with following reason: [%s]\n", theme, iodine.ToError(err))
 			}
 		}
 		checkConfig()
