@@ -62,13 +62,17 @@ func doMakeBucketCmd(manager clientManager, u string, debug bool) {
 		console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
 	}
 	err = clnt.PutBucket()
-	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
+	if err != nil {
+		console.Infof("Retrying ...")
+	}
+	for i := 1; i <= globalMaxRetryFlag && err != nil; i++ {
 		err = clnt.PutBucket()
+		console.Errorf(" %d", i)
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
 	}
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
+		console.Fatalf("\nmc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
 	}
 }

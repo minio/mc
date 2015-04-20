@@ -53,13 +53,18 @@ func doList(clnt client.Client, urlStr string) (string, error) {
 	var items []*client.Item
 
 	items, err = clnt.List()
-	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
+	if err != nil {
+		console.Infof("Retrying ...")
+	}
+	for i := 1; i <= globalMaxRetryFlag && err != nil; i++ {
 		items, err = clnt.List()
+		console.Errorf(" %d", i)
+		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
 	}
 	if err != nil {
 		err = iodine.New(err, nil)
-		msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
+		msg := fmt.Sprintf("\nmc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
 		return msg, err
 	}
 	printItems(items)
