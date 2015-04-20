@@ -91,7 +91,7 @@ func (s *MySuite) TestStatBucket(c *C) {
 	fsc := GetNewClient(bucketPath)
 	err = fsc.PutBucket()
 	c.Assert(err, IsNil)
-	err = fsc.StatBucket()
+	err = fsc.Stat()
 	c.Assert(err, IsNil)
 }
 

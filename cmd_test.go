@@ -131,10 +131,10 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	cl3.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data2)), dataLen2, etag2, nil).Once()
 
 	manager.On("getNewClient", targetURL+"hello1", false).Return(cl4, nil).Once()
-	cl4.On("StatBucket").Return(nil).Once()
+	cl4.On("Stat").Return(nil).Once()
 	cl4.On("Put", etag1, dataLen1).Return(writer1, nil).Once()
 	manager.On("getNewClient", targetURL+"hello2", false).Return(cl5, nil).Once()
-	cl5.On("StatBucket").Return(nil).Once()
+	cl5.On("Stat").Return(nil).Once()
 	cl5.On("Put", etag2, dataLen2).Return(writer2, nil).Once()
 
 	msg, err := doCopyCmdRecursive(manager, sourceURL, targetURLs)

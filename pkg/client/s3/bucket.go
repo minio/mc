@@ -128,8 +128,8 @@ func (c *s3Client) PutBucket() error {
 	return nil
 }
 
-// StatBucket - send a 'HEAD' on a bucket to see if exists or not
-func (c *s3Client) StatBucket() error {
+// Stat - send a 'HEAD' on a bucket or object to see if exists
+func (c *s3Client) Stat() error {
 	bucket, _ := c.url2Object()
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
