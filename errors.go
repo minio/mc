@@ -30,6 +30,7 @@ func (e errInvalidArgument) Error() string {
 
 type errUnsupportedScheme struct {
 	scheme client.URLType
+	url    string
 }
 
 func (e errUnsupportedScheme) Error() string {

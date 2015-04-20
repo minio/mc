@@ -115,6 +115,29 @@ func (manager mcClientManager) getTargetWriter(targetURL string, md5Hex string, 
 	return targetClnt.Put(md5Hex, length)
 }
 
+func getFilesystemAbsURL(u *url.URL) (string, error) {
+	var absURLStr string
+	var err error
+	switch true {
+	case u.Scheme == "file" && u.IsAbs():
+		absURLStr, err = filepath.Abs(filepath.Clean(u.Path))
+		if err != nil {
+			return "", iodine.New(err, nil)
+		}
+	case filepath.IsAbs(u.String()):
+		absURLStr, err = filepath.Abs(filepath.Clean(u.String()))
+		if err != nil {
+			return "", iodine.New(err, nil)
+		}
+	default:
+		absURLStr, err = filepath.Abs(filepath.Clean(u.String()))
+		if err != nil {
+			return "", iodine.New(err, nil)
+		}
+	}
+	return absURLStr, nil
+}
+
 // getNewClient gives a new client interface
 func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt client.Client, err error) {
 	u, err := url.Parse(urlStr)
@@ -140,23 +163,17 @@ func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt cli
 		clnt = s3.GetNewClient(urlStr, auth, mcUserAgent, debug)
 		return clnt, nil
 	case client.URLFilesystem:
-		var absURLStr string
-		var err error
-		if u.IsAbs() {
-			absURLStr, err = filepath.Abs(filepath.Clean(u.Path))
-			if err != nil {
-				return nil, iodine.New(err, nil)
-			}
-		} else {
-			absURLStr, err = filepath.Abs(filepath.Clean(urlStr))
-			if err != nil {
-				return nil, iodine.New(err, nil)
-			}
+		absURLStr, err := getFilesystemAbsURL(u)
+		if err != nil {
+			return nil, iodine.New(err, nil)
 		}
 		clnt = fs.GetNewClient(absURLStr)
 		return clnt, nil
 	default:
-		return nil, iodine.New(errUnsupportedScheme{scheme: client.GetURLType(urlStr)}, nil)
+		return nil, iodine.New(errUnsupportedScheme{
+			scheme: client.GetURLType(urlStr),
+			url:    urlStr,
+		}, nil)
 	}
 }
 

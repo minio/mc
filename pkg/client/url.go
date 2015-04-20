@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 	"net/url"
-	"regexp"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -45,18 +45,19 @@ func GetURLType(urlStr string) URLType {
 	}
 
 	// while Scheme file, host should be empty
-	if u.Scheme == "file" && u.Host == "" && strings.Contains(urlStr, ":///") {
-		return URLFilesystem
-	}
-
-	// MS Windows OS: Match drive letters
-	if runtime.GOOS == "windows" {
-		if regexp.MustCompile(`^[a-zA-Z]?$`).MatchString(u.Scheme) {
+	// if windows skip this check, not going to support file:/// style on windows
+	// we should just check for VolumeName on windows
+	if runtime.GOOS != "windows" {
+		if u.Scheme == "file" && u.Host == "" && strings.Contains(urlStr, ":///") {
+			return URLFilesystem
+		}
+	} else {
+		if filepath.VolumeName(urlStr) != "" {
 			return URLFilesystem
 		}
 	}
 
-	// local path, without the file:///
+	// local path, without the file:/// or C:\
 	if u.Scheme == "" {
 		return URLFilesystem
 	}
