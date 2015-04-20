@@ -550,7 +550,7 @@ func (mv Map) PathsForKey(key string) []string {
 	// unpack map keys to return
 	res := make([]string, len(breadbasket))
 	var i int
-	for k := range breadbasket {
+	for k, _ := range breadbasket {
 		res[i] = k
 		i++
 	}

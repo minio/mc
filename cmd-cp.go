@@ -112,7 +112,6 @@ func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (st
 	if err != nil {
 		return "Copying data from source to target(s) failed", iodine.New(err, nil)
 	}
-
 	// close writers
 	for _, writer := range writeClosers {
 		err := writer.Close()
@@ -122,6 +121,10 @@ func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (st
 	}
 	if err != nil {
 		return "Connections still active, one or more writes may of failed.", iodine.New(err, nil)
+	}
+	if !globalQuietFlag {
+		bar.Finish()
+		console.Infoln("Success!")
 	}
 	return "", nil
 }

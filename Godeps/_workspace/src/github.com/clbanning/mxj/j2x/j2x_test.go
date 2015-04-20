@@ -4,8 +4,8 @@ package j2x
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
+	"fmt"
 	"testing"
 )
 
