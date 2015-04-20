@@ -24,9 +24,11 @@ import (
 	. "github.com/minio-io/check"
 )
 
-var _ = Suite(&MySuite{})
+type StatusBarSuite struct{}
 
-func (s *MySuite) TestStatusBar(c *C) {
+var _ = Suite(&StatusBarSuite{})
+
+func (s *StatusBarSuite) TestStatusBar(c *C) {
 	bar := startBar(1024)
 	c.Assert(bar, Not(IsNil))
 	c.Assert(bar.Units, Equals, pb.U_BYTES)

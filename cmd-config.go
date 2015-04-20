@@ -46,8 +46,8 @@ var (
 const (
 	// do not pass accesskeyid and secretaccesskey through cli
 	// users should manually edit them, add a stub entry
-	accessKeyID     = "YOUR-ACCESS-KEY-ID-HERE"
-	secretAccesskey = "YOUR-SECRET-ACCESS-KEY-HERE"
+	globalAccessKeyID     = "YOUR-ACCESS-KEY-ID-HERE"
+	globalSecretAccessKey = "YOUR-SECRET-ACCESS-KEY-HERE"
 )
 
 func getMcConfigDir() (string, error) {
@@ -163,8 +163,8 @@ func newConfig() (config qdb.Store) {
 	localAuth := make(map[string]string)
 
 	hosts := make(map[string]map[string]string)
-	s3Auth["Auth.AccessKeyID"] = accessKeyID
-	s3Auth["Auth.SecretAccessKey"] = secretAccesskey
+	s3Auth["Auth.AccessKeyID"] = globalAccessKeyID
+	s3Auth["Auth.SecretAccessKey"] = globalSecretAccessKey
 	hosts["http*://s3*.amazonaws.com"] = s3Auth
 
 	// local minio server can have this empty until webcli is ready
