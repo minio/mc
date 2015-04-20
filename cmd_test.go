@@ -18,8 +18,10 @@ package main
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 	"sync"
 	"time"
 
@@ -71,7 +73,6 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	manager.AssertExpectations(c)
 }
 
-/* - TODO(y4m4) - enable this after figuring out changes with getNewClient behavior in doCmdRecursive()
 func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	sourceURL, err := getURL("http://example.com/bucket1/", nil)
 	c.Assert(err, IsNil)
@@ -84,6 +85,8 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	cl1 := &clientMocks.Client{}
 	cl2 := &clientMocks.Client{}
 	cl3 := &clientMocks.Client{}
+	cl4 := &clientMocks.Client{}
+	cl5 := &clientMocks.Client{}
 
 	wg := &sync.WaitGroup{}
 
@@ -94,6 +97,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	reader1, writer1 := io.Pipe()
 	var results1 bytes.Buffer
 	var err1 error
+
 	wg.Add(1)
 	go func() {
 		_, err1 = io.Copy(&results1, reader1)
@@ -107,6 +111,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	reader2, writer2 := io.Pipe()
 	var err2 error
 	var results2 bytes.Buffer
+
 	wg.Add(1)
 	go func() {
 		_, err2 = io.Copy(&results2, reader2)
@@ -120,15 +125,21 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 
 	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(items, nil).Once()
-	cl1.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil).Once()
-	manager.On("getNewClient", targetURL+"hello2", false).Return(cl2, nil).Once()
-	cl2.On("StatBucket").Return(nil).Once()
-	cl2.On("Put", etag1, dataLen1).Return(writer1, nil).Once()
-	cl1.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data2)), dataLen2, etag2, nil).Once()
-	manager.On("getNewClient", targetURL+"hello1", false).Return(cl3, nil).Once()
-	cl3.On("StatBucket").Return(nil).Once()
-	cl3.On("Put", etag2, dataLen2).Return(writer2, nil).Once()
-	doCopyCmdRecursive(manager, sourceURL, targetURLs)
+	manager.On("getNewClient", sourceURL+"hello1", false).Return(cl2, nil).Once()
+	cl2.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil).Once()
+	manager.On("getNewClient", sourceURL+"hello2", false).Return(cl3, nil).Once()
+	cl3.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data2)), dataLen2, etag2, nil).Once()
+
+	manager.On("getNewClient", targetURL+"hello1", false).Return(cl4, nil).Once()
+	cl4.On("StatBucket").Return(nil).Once()
+	cl4.On("Put", etag1, dataLen1).Return(writer1, nil).Once()
+	manager.On("getNewClient", targetURL+"hello2", false).Return(cl5, nil).Once()
+	cl5.On("StatBucket").Return(nil).Once()
+	cl5.On("Put", etag2, dataLen2).Return(writer2, nil).Once()
+
+	msg, err := doCopyCmdRecursive(manager, sourceURL, targetURLs)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
 
 	wg.Wait()
 	c.Assert(err1, IsNil)
@@ -141,7 +152,6 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	cl2.AssertExpectations(c)
 	cl3.AssertExpectations(c)
 }
-*/
 
 func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	sourceURL, err := getURL("http://example.com/bucket1/", nil)
