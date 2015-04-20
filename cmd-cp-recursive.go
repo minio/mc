@@ -53,7 +53,7 @@ func getSourceObjectURLMap(manager clientManager, sourceURL string) (sourceObjec
 func getRecursiveTargetWriter(manager clientManager, targetURL, md5Hex string, length int64) (io.WriteCloser, error) {
 	targetClnt, err := manager.getNewClient(targetURL, globalDebugFlag)
 	if err != nil {
-		return nil, iodine.New(err, map[string]string{"URL": targetURL})
+		return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
 	}
 
 	// For object storage URL's do a StatBucket() and PutBucket(), not necessary for fs client
@@ -64,10 +64,10 @@ func getRecursiveTargetWriter(manager clientManager, targetURL, md5Hex string, l
 			case client.BucketNotFound:
 				err := targetClnt.PutBucket()
 				if err != nil {
-					iodine.New(err, map[string]string{"URL": targetURL})
+					return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
 				}
 			default:
-				iodine.New(err, map[string]string{"URL": targetURL})
+				return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
 			}
 		}
 	}
