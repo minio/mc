@@ -223,5 +223,10 @@ var (
 			Name:  "quiet, q",
 			Usage: "Supress chatty console output",
 		},
+		cli.IntFlag{
+			Name:  "retry",
+			Usage: "Number of retry count",
+			Value: 5,
+		},
 	}
 )

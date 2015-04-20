@@ -17,6 +17,7 @@
 package main
 
 import (
+	"net"
 	"net/url"
 	"path/filepath"
 	"time"
@@ -30,6 +31,24 @@ import (
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 )
+
+// isValidRetry - check if we should retry for the given error sequence
+func isValidRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+	// DNSError, Network Operation error
+	switch e := iodine.ToError(err).(type) {
+	case *net.DNSError:
+		return true
+	case *net.OpError:
+		switch e.Op {
+		case "read", "write", "dial":
+			return true
+		}
+	}
+	return false
+}
 
 // StartBar -- instantiate a progressbar
 func startBar(size int64) *pb.ProgressBar {

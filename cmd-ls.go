@@ -45,7 +45,12 @@ func printItems(v []*client.Item) {
 
 // printItem prints item meta-data
 func printItem(date time.Time, v int64, name string) {
-	console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), name)
+	// v is 0 for buckets
+	if v == 0 {
+		console.Infof("%23s %13s %s\n", date.Local().Format(printDate), "", name)
+	} else {
+		console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), name)
+	}
 }
 
 func doList(clnt client.Client, urlStr string) (string, error) {
@@ -53,10 +58,10 @@ func doList(clnt client.Client, urlStr string) (string, error) {
 	var items []*client.Item
 
 	items, err = clnt.List()
-	if err != nil {
+	if err != nil && isValidRetry(err) {
 		console.Infof("Retrying ...")
 	}
-	for i := 1; i <= globalMaxRetryFlag && err != nil; i++ {
+	for i := 1; i <= globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
 		items, err = clnt.List()
 		console.Errorf(" %d", i)
 		// Progressively longer delays
@@ -67,6 +72,7 @@ func doList(clnt client.Client, urlStr string) (string, error) {
 		msg := fmt.Sprintf("\nmc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
 		return msg, err
 	}
+	console.Infoln()
 	printItems(items)
 	return "", nil
 }
@@ -100,7 +106,7 @@ func runListCmd(ctx *cli.Context) {
 				errorMsg = "No error message present, please rerun with --debug and report a bug."
 			}
 			log.Debug.Println(err)
-			console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
+			console.Fatalf("%s", errorMsg)
 		}
 	}
 }

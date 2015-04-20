@@ -42,13 +42,12 @@ func (c *s3Client) List() (items []*client.Item, err error) {
 		return items, nil
 	default:
 		if bucket == "" {
-			items, err = c.listBuckets()
-		} else {
-			// List all objects matching the key prefix
-			items, err = c.listObjectsInternal(bucket, "", objectPrefix, "", globalMaxKeys)
-			if err != nil {
-				return nil, iodine.New(err, nil)
-			}
+			return c.listBuckets()
+		}
+		// List all objects matching the key prefix
+		items, err = c.listObjectsInternal(bucket, "", objectPrefix, "", globalMaxKeys)
+		if err != nil {
+			return nil, iodine.New(err, nil)
 		}
 		// even if items are equal to '0' is valid case
 		return items, nil
