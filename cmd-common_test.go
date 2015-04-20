@@ -21,18 +21,62 @@ import (
 
 	"github.com/cheggaaa/pb"
 
+	"errors"
 	. "github.com/minio-io/check"
+	"github.com/minio-io/minio/pkg/iodine"
+	"net"
 )
 
-type StatusBarSuite struct{}
+type CommonSuite struct{}
 
-var _ = Suite(&StatusBarSuite{})
+type testAddr struct{}
 
-func (s *StatusBarSuite) TestStatusBar(c *C) {
+func (ta *testAddr) Network() string {
+	return ta.String()
+}
+func (ta *testAddr) Error() string {
+	return ta.String()
+}
+func (ta *testAddr) String() string {
+	return "testAddr"
+}
+
+var _ = Suite(&CommonSuite{})
+
+func (s *CommonSuite) TestStatusBar(c *C) {
 	bar := startBar(1024)
 	c.Assert(bar, Not(IsNil))
 	c.Assert(bar.Units, Equals, pb.U_BYTES)
 	c.Assert(bar.RefreshRate, Equals, time.Millisecond*10)
 	c.Assert(bar.NotPrint, Equals, true)
 	c.Assert(bar.ShowSpeed, Equals, true)
+}
+
+func (s *CommonSuite) TestIsValidRetry(c *C) {
+	opError := &net.OpError{
+		Op:   "read",
+		Net:  "net",
+		Addr: &testAddr{},
+		Err:  errors.New("Op Error"),
+	}
+	c.Assert(isValidRetry(nil), Equals, false)
+	c.Assert(isValidRetry(errors.New("hello")), Equals, false)
+	c.Assert(isValidRetry(iodine.New(errors.New("hello"), nil)), Equals, false)
+	c.Assert(isValidRetry(&net.DNSError{}), Equals, true)
+	c.Assert(isValidRetry(iodine.New(&net.DNSError{}, nil)), Equals, true)
+	// op error read
+	c.Assert(isValidRetry(opError), Equals, true)
+	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
+	// op error write
+	opError.Op = "write"
+	c.Assert(isValidRetry(opError), Equals, true)
+	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
+	// op error dial
+	opError.Op = "dial"
+	c.Assert(isValidRetry(opError), Equals, true)
+	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
+	// op error foo
+	opError.Op = "foo"
+	c.Assert(isValidRetry(opError), Equals, false)
+	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, false)
 }

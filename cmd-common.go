@@ -34,6 +34,7 @@ import (
 
 // isValidRetry - check if we should retry for the given error sequence
 func isValidRetry(err error) bool {
+	err = iodine.New(err, nil)
 	if err == nil {
 		return false
 	}
