@@ -182,8 +182,7 @@ func (f *fsClient) PutBucket() error {
 
 // StatBucket -
 func (f *fsClient) StatBucket() error {
-	bucket, _ := f.url2Object()
-	st, err := os.Stat(bucket)
+	st, err := os.Stat(f.Path)
 	if os.IsNotExist(err) {
 		return iodine.New(client.BucketNotFound{Bucket: ""}, nil)
 	}
