@@ -24,26 +24,26 @@ import (
 // Multipart object upload handlers
 
 // InitiateMultiPartUpload -
-func (c *fsClient) InitiateMultiPartUpload(bucket, object string) (objectID string, err error) {
+func (c *fsClient) InitiateMultiPartUpload() (objectID string, err error) {
 	return "", iodine.New(client.APINotImplemented{API: "InitiateMultiPartUpload"}, nil)
 }
 
 // UploadPart -
-func (c *fsClient) UploadPart(bucket, object, uploadID string, partNumber int) (md5hex string, err error) {
+func (c *fsClient) UploadPart(uploadID string, partNumber int) (md5hex string, err error) {
 	return "", iodine.New(client.APINotImplemented{API: "UploadPart"}, nil)
 }
 
 // CompleteMultiPartUpload -
-func (c *fsClient) CompleteMultiPartUpload(bucket, object, uploadID string) (location, md5hex string, err error) {
+func (c *fsClient) CompleteMultiPartUpload(uploadID string) (location, md5hex string, err error) {
 	return "", "", iodine.New(client.APINotImplemented{API: "CompleteMultiPartUpload"}, nil)
 }
 
 // AbortMultiPartUpload -
-func (c *fsClient) AbortMultiPartUpload(bucket, object, uploadID string) error {
+func (c *fsClient) AbortMultiPartUpload(uploadID string) error {
 	return iodine.New(client.APINotImplemented{API: "AbortMultiPartUpload"}, nil)
 }
 
 // ListParts -
-func (c *fsClient) ListParts(bucket, object, uploadID string) (items *client.PartItems, err error) {
+func (c *fsClient) ListParts(uploadID string) (items *client.PartItems, err error) {
 	return nil, iodine.New(client.APINotImplemented{API: "ListParts"}, nil)
 }

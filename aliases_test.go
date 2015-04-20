@@ -37,6 +37,7 @@ func (s *MySuite) TestIsvalidAliasName(c *C) {
 	c.Check(isValidAliasName("h0SFD2k2#Fdsa"), Equals, false)
 	c.Check(isValidAliasName("0dslka-4"), Equals, false)
 	c.Check(isValidAliasName("-fdslka"), Equals, false)
+	c.Check(isValidAliasName("help"), Equals, false)
 }
 
 func (s *MySuite) TestEmptyExpansions(c *C) {

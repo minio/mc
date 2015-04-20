@@ -38,19 +38,12 @@ func checkConfig() {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to obtain user's home directory")
 	}
-
-	if !isMcConfigExist() {
-		// Handled properly in main.app.Before
-		return
-	}
-
 	// Ensures config file is sane
 	_, err = getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("mc: Unable to read config file: %s\n", mustGetMcConfigPath())
 	}
-
 }
 
 // Tries to get os/arch/platform specific information
@@ -112,6 +105,5 @@ func main() {
 
 		return nil
 	}
-
 	app.RunAndExitOnError()
 }

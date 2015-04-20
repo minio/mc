@@ -45,20 +45,32 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
+type item struct {
+	Key          string
+	LastModified time.Time
+	ETag         string
+	Size         int64
+}
+
+type prefix struct {
+	Prefix string
+}
+
 type listBucketResults struct {
-	Contents       []*client.Item
+	Contents       []*item
 	IsTruncated    bool
 	MaxKeys        int
 	Name           string // bucket name
 	Marker         string
 	Delimiter      string
 	Prefix         string
-	CommonPrefixes []*client.Prefix
+	CommonPrefixes []*prefix
 }
 
 // Meta holds Amazon S3 client credentials and flags.
@@ -92,30 +104,21 @@ type s3Client struct {
 	UserAgent string
 }
 
-// GetNewClient returns an initialized s3Client structure.
-// if debug use a internal trace transport
-func GetNewClient(hostURL string, auth *Auth, userAgent string, debug bool) client.Client {
-	u, err := url.Parse(hostURL)
-	if err != nil {
-		return nil
+// url2Object converts URL to bucketName and objectName
+func (c *s3Client) url2Object() (bucketName, objectName string) {
+	splits := strings.SplitN(c.Path, "/", 3)
+	switch len(splits) {
+	case 0, 1:
+		bucketName = ""
+		objectName = ""
+	case 2:
+		bucketName = splits[1]
+		objectName = ""
+	case 3:
+		bucketName = splits[1]
+		objectName = splits[2]
 	}
-	var traceTransport RoundTripTrace
-	var transport http.RoundTripper
-	if debug {
-		traceTransport = GetNewTraceTransport(NewTrace(false, true, nil), http.DefaultTransport)
-		transport = GetNewTraceTransport(s3Verify{}, traceTransport)
-	} else {
-		transport = http.DefaultTransport
-	}
-	s3c := &s3Client{
-		&Meta{
-			Auth:      auth,
-			Transport: transport,
-		},
-		u,
-		userAgent,
-	}
-	return s3c
+	return bucketName, objectName
 }
 
 // bucketURL constructs a URL (with a trailing slash) for a given
@@ -141,20 +144,22 @@ func (c *s3Client) bucketURL(bucket string) string {
 	return url
 }
 
-// keyURL constructs a URL using bucket and object key
-func (c *s3Client) keyURL(bucket, key string) string {
+// objectURL constructs a URL using bucket and object
+func (c *s3Client) objectURL(bucket, object string) string {
 	url := c.bucketURL(bucket)
 	if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
-		return url + "/" + key
+		return url + "/" + object
 	}
+	// Verify if its ip address, use PathStyle
 	host, _, _ := net.SplitHostPort(c.Host)
 	if net.ParseIP(host) != nil {
-		return url + "/" + key
+		return url + "/" + object
 	}
-	return url + key
+	return url + object
 }
 
-func newReq(url string, userAgent string, body io.ReadCloser) (*http.Request, error) {
+//
+func getNewReq(url string, userAgent string, body io.ReadCloser) (*http.Request, error) {
 	errParams := map[string]string{
 		"url":       url,
 		"userAgent": userAgent,
@@ -167,4 +172,28 @@ func newReq(url string, userAgent string, body io.ReadCloser) (*http.Request, er
 		req.Header.Set("User-Agent", userAgent)
 	}
 	return req, nil
+}
+
+// GetNewClient returns an initialized s3Client structure.
+// if debug use a internal trace transport
+func GetNewClient(hostURL string, auth *Auth, userAgent string, debug bool) client.Client {
+	u, err := url.Parse(hostURL)
+	if err != nil {
+		return nil
+	}
+	var traceTransport RoundTripTrace
+	var transport http.RoundTripper
+	if debug {
+		traceTransport = GetNewTraceTransport(NewTrace(false, true, nil), http.DefaultTransport)
+		transport = GetNewTraceTransport(s3Verify{}, traceTransport)
+	} else {
+		transport = http.DefaultTransport
+	}
+	s3c := &s3Client{
+		&Meta{
+			Auth:      auth,
+			Transport: transport,
+		}, u, userAgent,
+	}
+	return s3c
 }

@@ -39,7 +39,7 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := parseURLs(ctx.Args(), config.GetMapString("Aliases"))
+	urls, err := getURLs(ctx.Args(), config.GetMapString("Aliases"))
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
@@ -56,26 +56,25 @@ func runCopyCmd(ctx *cli.Context) {
 
 	// perform copy
 	if ctx.Bool("recursive") {
-		humanReadableError, err := doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
+		errorMsg, err := doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
 		err = iodine.New(err, nil)
 		if err != nil {
-			if humanReadableError == "" {
-				humanReadableError = "No error message present, please rerun with --debug and report a bug."
+			if errorMsg == "" {
+				errorMsg = "No error message present, please rerun with --debug and report a bug."
 			}
 			log.Debug.Println(err)
-			console.Errorf("mc: %s with following reason: [%s]\n", humanReadableError, iodine.ToError(err))
+			console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
 		}
 		return
 	}
-
-	humanReadableError, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
+	errorMsg, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
 	err = iodine.New(err, nil)
 	if err != nil {
-		if humanReadableError == "" {
-			humanReadableError = "No error message present, please rerun with --debug and report a bug."
+		if errorMsg == "" {
+			errorMsg = "No error message present, please rerun with --debug and report a bug."
 		}
 		log.Debug.Println(err)
-		console.Errorf("mc: %s with following reason: [%s]\n", humanReadableError, iodine.ToError(err))
+		console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
 	}
 }
 

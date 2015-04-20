@@ -17,9 +17,9 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
-	"errors"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
@@ -38,74 +38,53 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to read config")
 	}
 	for _, arg := range ctx.Args() {
-		u, err := parseURL(arg, config.GetMapString("Aliases"))
+		u, err := getURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unable to parse URL [%s], %s\n", arg, client.GuessPossibleURL(arg))
+				console.Fatalf("mc: reading URL [%s] failed, %s\n", arg, client.GuessPossibleURL(arg))
 			default:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unable to parse URL [%s]\n", arg)
+				console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
 			}
 		}
-		doMakeBucketCmd(mcClientManager{}, u, globalDebugFlag)
+		errorMsg, err := doMakeBucketCmd(mcClientManager{}, u, globalDebugFlag)
+		err = iodine.New(err, nil)
+		if err != nil {
+			if errorMsg == "" {
+				errorMsg = "No error message present, please rerun with --debug and report a bug."
+			}
+			log.Debug.Println(err)
+			console.Fatalf("mc: %s with following reason: [%s]\n", errorMsg, iodine.ToError(err))
+		}
 	}
 }
 
-func doMakeBucketCmd(manager clientManager, u string, debug bool) {
+func doMakeBucketCmd(manager clientManager, u string, debug bool) (string, error) {
 	var err error
 	var clnt client.Client
 
 	clnt, err = manager.getNewClient(u, debug)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
+		err := iodine.New(err, nil)
+		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n", u, iodine.ToError(err))
+		return msg, err
 	}
-
-	bucket, _, err := client.URL2Object(u)
+	err = clnt.PutBucket()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: decoding bucket and object from URL [%s] failed\n", u)
+		console.Infof("Retrying ...")
 	}
-
-	// this is handled differently since http based URLs cannot have
-	// nested directories as buckets, buckets are a unique alphanumeric
-	// name having subdirectories is only supported for fsClient
-	switch client.GetURLType(u) {
-	case client.URLObject:
-		{
-			if bucket == "" {
-				err := iodine.New(errBucketNameEmpty{}, nil)
-				log.Debug.Println(err)
-				console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
-			}
-			if !client.IsValidBucketName(bucket) {
-				err := iodine.New(errInvalidBucketName{bucket: bucket}, nil)
-				log.Debug.Println(err)
-				console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
-			}
-			err = clnt.PutBucket(bucket)
-			for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
-				err = clnt.PutBucket(bucket)
-				// Progressively longer delays
-				time.Sleep(time.Duration(i*i) * time.Second)
-			}
-			if err != nil {
-				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
-			}
-		}
-	case client.URLFilesystem:
-		{
-			log.Debug.Println(iodine.New(errors.New("Cannot use file system to create bucket"), nil))
-			console.Fatalf("mc: Cannot create bucket with fs driver")
-		}
-	default:
-		{
-			log.Debug.Println(iodine.New(errors.New("Unknown client driver"), nil))
-			console.Fatalf("mc: Cannot create bucket with unknown driver")
-		}
+	for i := 1; i <= globalMaxRetryFlag && err != nil; i++ {
+		err = clnt.PutBucket()
+		console.Errorf(" %d", i)
+		// Progressively longer delays
+		time.Sleep(time.Duration(i*i) * time.Second)
 	}
-
+	if err != nil {
+		err := iodine.New(err, nil)
+		msg := fmt.Sprintf("\nmc: Creating bucket failed for URL [%s] with following reason: [%s]\n", u, iodine.ToError(err))
+		return msg, err
+	}
+	return "", nil
 }

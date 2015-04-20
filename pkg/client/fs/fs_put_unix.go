@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -11,13 +12,12 @@ import (
 )
 
 // Put - upload new object to bucket
-func (f *fsClient) Put(bucket, object, md5HexString string, size int64) (io.WriteCloser, error) {
+func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) {
 	// Never create directories in here using bucket and object, since such a path might
-	// result in files being created as directories, it should be 'PutBucket()'
-	// responsibility.
+	// result in files being created as directories and prone to races.
+	// It should be 'PutBucket()' responsibility through the caller after validating
+	// through StatBucket()
 
-	// bucket and object is deliberately ignored here, since we already have
-	// this path, bucket is provided just for compatibility sake at this point
 	r, w := io.Pipe()
 	blockingWriter := NewBlockingWriteCloser(w)
 	go func() {
@@ -28,7 +28,15 @@ func (f *fsClient) Put(bucket, object, md5HexString string, size int64) (io.Writ
 			blockingWriter.Release(err)
 			return
 		}
-		fs, err := os.Create(f.Path)
+		objectDir, _ := filepath.Split(f.Path)
+		objectPath := f.Path
+		if err := os.MkdirAll(objectDir, 0700); err != nil {
+			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
+		fs, err := os.Create(objectPath)
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)

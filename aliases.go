@@ -29,6 +29,10 @@ var validAliasName = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$")
 
 // Check if it is an aliased URL
 func isValidAliasName(aliasName string) bool {
+	// help is reserved argument
+	if aliasName == "help" {
+		return false
+	}
 	return validAliasName.MatchString(aliasName)
 }
 
@@ -43,13 +47,10 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 		return aliasedURL, nil
 	}
 	for aliasName, expandedURL := range aliases {
-		if strings.HasPrefix(aliasedURL, aliasName) {
+		if strings.HasPrefix(aliasedURL, aliasName+":") {
 			// Match found. Expand it.
 			splits := strings.Split(aliasedURL, ":")
-			if len(splits) == 2 {
-				return expandedURL + "/" + splits[1], nil
-			}
-			return expandedURL, nil
+			return expandedURL + "/" + splits[1], nil
 		}
 	}
 	return aliasedURL, nil
