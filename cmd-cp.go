@@ -114,6 +114,9 @@ func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (st
 	_, copyErr := io.CopyN(multiWriter, reader, length)
 	// close writers
 	for _, writer := range writeClosers {
+		// it is the target's responsibility to notice if a close is premature.
+		// on fs, we handle in fs client
+		// over the wire, the server is responsible
 		err = writer.Close()
 		if err != nil {
 			err = iodine.New(err, nil)
