@@ -1,5 +1,5 @@
 /*
- * qconfig for config files and persistent state files
+ * q - Quick key value store for config files and persistent state files
  *
  * Mini Copy, (C) 2015 Minio, Inc.
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package qconfig
+package q
 
 import (
 	"encoding/json"
