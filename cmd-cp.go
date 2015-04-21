@@ -111,17 +111,19 @@ func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (st
 	multiWriter := io.MultiWriter(writers...)
 
 	// copy data to writers
-	_, err = io.CopyN(multiWriter, reader, length)
-	if err != nil {
-		return "Copying data from source to target(s) failed", iodine.New(err, nil)
-	}
+	_, copyErr := io.CopyN(multiWriter, reader, length)
 	// close writers
 	for _, writer := range writeClosers {
-		err := writer.Close()
+		err = writer.Close()
 		if err != nil {
 			err = iodine.New(err, nil)
 		}
 	}
+	// write copy errors if present
+	if copyErr != nil {
+		return "Copying data from source to target(s) failed", iodine.New(copyErr, nil)
+	}
+	// write close errors if present
 	if err != nil {
 		return "Connections still active, one or more writes may of failed.", iodine.New(err, nil)
 	}
