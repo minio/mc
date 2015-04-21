@@ -1,5 +1,5 @@
 /*
- * qdb - Quick key value store for config files and persistent state files
+ * q - Quick key value store for config files and persistent state files
  *
  * Mini Copy, (C) 2015 Minio, Inc.
  *
@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-package qconfig
+package q
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -31,6 +30,31 @@ func Test(t *testing.T) { TestingT(t) }
 type MySuite struct{}
 
 var _ = Suite(&MySuite{})
+
+func (s *MySuite) TestCheckData(c *C) {
+	err := CheckData(nil)
+	c.Assert(err, Not(IsNil))
+
+	type myStructBad struct {
+		User     string
+		Password string
+		Folders  []string
+	}
+	saveMeBad := myStructBad{"guest", "nopassword", []string{"Work", "Documents", "Music"}}
+	err = CheckData(&saveMeBad)
+	c.Assert(err, Not(IsNil))
+
+	type myStructGood struct {
+		Version  string
+		User     string
+		Password string
+		Folders  []string
+	}
+
+	saveMeGood := myStructGood{"1", "guest", "nopassword", []string{"Work", "Documents", "Music"}}
+	err = CheckData(&saveMeGood)
+	c.Assert(err, IsNil)
+}
 
 func (s *MySuite) TestSaveLoad(c *C) {
 	defer os.RemoveAll("test.json")
@@ -82,9 +106,11 @@ func (s *MySuite) TestDiff(c *C) {
 	fields, ok := config.Diff(newConfig)
 	c.Assert(ok, IsNil)
 	c.Assert(len(fields), Equals, 1)
-	for i, field := range fields {
-		fmt.Printf("Diff[%d]: %s=%v\n", i, field.Name(), field.Value())
-	}
+
+	// Uncomment for debugging
+	//	for i, field := range fields {
+	//		fmt.Printf("Diff[%d]: %s=%v\n", i, field.Name(), field.Value())
+	//	}
 }
 
 func (s *MySuite) TestDeepDiff(c *C) {
@@ -105,7 +131,9 @@ func (s *MySuite) TestDeepDiff(c *C) {
 	fields, err := config.DeepDiff(newConfig)
 	c.Assert(err, IsNil)
 	c.Assert(len(fields), Equals, 2)
-	for i, field := range fields {
-		fmt.Printf("DeepDiff[%d]: %s=%v\n", i, field.Name(), field.Value())
-	}
+
+	// Uncomment for debugging
+	//	for i, field := range fields {
+	//		fmt.Printf("DeepDiff[%d]: %s=%v\n", i, field.Name(), field.Value())
+	//	}
 }
