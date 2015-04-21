@@ -49,7 +49,6 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 
 	targetURL, err := getURL("bar", nil)
 	c.Assert(err, IsNil)
-	targetURLs := []string{targetURL}
 
 	sourceReader, sourceWriter := io.Pipe()
 	targetReader, targetWriter := io.Pipe()
@@ -65,9 +64,22 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 		io.Copy(&resultBuffer, targetReader)
 		wg.Done()
 	}()
-	manager.On("getSourceReader", sourceURL).Return(sourceReader, dataLength, hexMd5, nil).Once()
-	manager.On("getTargetWriter", targetURL, hexMd5, dataLength).Return(targetWriter, nil).Once()
-	msg, err := doCopyCmd(manager, sourceURL, targetURLs)
+
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	targetURLConfigMap := make(map[string]map[string]string)
+	targetConfigMap := make(map[string]string)
+	targetConfigMap["Auth.AccessKeyID"] = ""
+	targetConfigMap["Auth.SecretAccessKey"] = ""
+	targetURLConfigMap[targetURL] = targetConfigMap
+
+	manager.On("getSourceReader", sourceURL, sourceConfigMap).Return(sourceReader, dataLength, hexMd5, nil).Once()
+	manager.On("getTargetWriter", targetURL, targetConfigMap, hexMd5, dataLength).Return(targetWriter, nil).Once()
+	msg, err := doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 	wg.Wait()
@@ -82,7 +94,6 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 
 	targetURL, err := getURL("http://example.com/bucket2/", nil)
 	c.Assert(err, IsNil)
-	targetURLs := []string{targetURL}
 
 	manager := &MockclientManager{}
 	cl1 := &clientMocks.Client{}
@@ -126,21 +137,33 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 		{Name: "hello2", Time: time.Now(), Size: dataLen2},
 	}
 
-	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	targetURLConfigMap := make(map[string]map[string]string)
+	targetConfigMap := make(map[string]string)
+	targetConfigMap["Auth.AccessKeyID"] = ""
+	targetConfigMap["Auth.SecretAccessKey"] = ""
+	targetURLConfigMap[targetURL] = targetConfigMap
+
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(items, nil).Once()
-	manager.On("getNewClient", sourceURL+"hello1", false).Return(cl2, nil).Once()
+	manager.On("getNewClient", sourceURL+"hello1", sourceConfigMap, false).Return(cl2, nil).Once()
 	cl2.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil).Once()
-	manager.On("getNewClient", sourceURL+"hello2", false).Return(cl3, nil).Once()
+	manager.On("getNewClient", sourceURL+"hello2", sourceConfigMap, false).Return(cl3, nil).Once()
 	cl3.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data2)), dataLen2, etag2, nil).Once()
 
-	manager.On("getNewClient", targetURL+"hello1", false).Return(cl4, nil).Once()
+	manager.On("getNewClient", targetURL+"hello1", targetConfigMap, false).Return(cl4, nil).Once()
 	cl4.On("Stat").Return(nil).Once()
 	cl4.On("Put", etag1, dataLen1).Return(writer1, nil).Once()
-	manager.On("getNewClient", targetURL+"hello2", false).Return(cl5, nil).Once()
+	manager.On("getNewClient", targetURL+"hello2", targetConfigMap, false).Return(cl5, nil).Once()
 	cl5.On("Stat").Return(nil).Once()
 	cl5.On("Put", etag2, dataLen2).Return(writer2, nil).Once()
 
-	msg, err := doCopyCmdRecursive(manager, sourceURL, targetURLs)
+	msg, err := doCopyCmdRecursive(manager, sourceURLConfigMap, targetURLConfigMap)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -165,11 +188,23 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 
 	targetURL, err := getURL("bar", nil)
 	c.Assert(err, IsNil)
-	targetURLs := []string{targetURL}
 
 	var nilReadCloser io.ReadCloser
-	manager.On("getSourceReader", sourceURL).Return(nilReadCloser, int64(0), "", errors.New("Expected Error")).Once()
-	msg, err := doCopyCmd(manager, sourceURL, targetURLs)
+
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	targetURLConfigMap := make(map[string]map[string]string)
+	targetConfigMap := make(map[string]string)
+	targetConfigMap["Auth.AccessKeyID"] = ""
+	targetConfigMap["Auth.SecretAccessKey"] = ""
+	targetURLConfigMap[targetURL] = targetConfigMap
+
+	manager.On("getSourceReader", sourceURL, sourceConfigMap).Return(nilReadCloser, int64(0), "", errors.New("Expected Error")).Once()
+	msg, err := doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 	manager.AssertExpectations(c)
@@ -182,9 +217,9 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	dataLen1 := int64(len(data1))
 	reader1, writer1 := io.Pipe()
 
-	manager.On("getSourceReader", sourceURL).Return(reader1, dataLen1, etag1, nil).Once()
-	manager.On("getTargetWriter", targetURL, etag1, dataLen1).Return(nil, errors.New("Expected Error")).Once()
-	msg, err = doCopyCmd(manager, sourceURL, targetURLs)
+	manager.On("getSourceReader", sourceURL, sourceConfigMap).Return(reader1, dataLen1, etag1, nil).Once()
+	manager.On("getTargetWriter", targetURL, targetConfigMap, etag1, dataLen1).Return(nil, errors.New("Expected Error")).Once()
+	msg, err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	writer1.Close()
 	wg.Wait()
 	c.Assert(len(msg) > 0, Equals, true)
@@ -207,9 +242,9 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 		n3, err3 = io.Copy(&results3, reader3)
 		wg.Done()
 	}()
-	manager.On("getSourceReader", sourceURL).Return(reader2, dataLen1, etag1, nil).Once()
-	manager.On("getTargetWriter", targetURL, etag1, dataLen1).Return(writer3, nil).Once()
-	msg, err = doCopyCmd(manager, sourceURL, targetURLs)
+	manager.On("getSourceReader", sourceURL, sourceConfigMap).Return(reader2, dataLen1, etag1, nil).Once()
+	manager.On("getTargetWriter", targetURL, targetConfigMap, etag1, dataLen1).Return(writer3, nil).Once()
+	msg, err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	wg.Wait()
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
@@ -224,9 +259,9 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	}()
 	var failClose io.WriteCloser
 	failClose = &FailClose{}
-	manager.On("getSourceReader", sourceURL).Return(reader4, dataLen1, etag1, nil).Once()
-	manager.On("getTargetWriter", targetURL, etag1, dataLen1).Return(failClose, nil).Once()
-	msg, err = doCopyCmd(manager, sourceURL, targetURLs)
+	manager.On("getSourceReader", sourceURL, sourceConfigMap).Return(reader4, dataLen1, etag1, nil).Once()
+	manager.On("getTargetWriter", targetURL, targetConfigMap, etag1, dataLen1).Return(failClose, nil).Once()
+	msg, err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	wg.Wait()
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
@@ -259,9 +294,15 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 		{Name: "hello2", Time: time.Now(), Size: dataLen2},
 	}
 
-	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(items, nil).Once()
-	msg, err := doListCmd(manager, sourceURL, false)
+	msg, err := doListCmd(manager, sourceURLConfigMap, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -287,9 +328,15 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 		{Name: "hello2", Time: time.Now(), Size: dataLen2},
 	}
 
-	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(items, nil).Once()
-	msg, err := doListCmd(manager, sourceURL, false)
+	msg, err := doListCmd(manager, sourceURLConfigMap, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -309,9 +356,15 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 		{Name: "bucket2", Time: time.Now()},
 	}
 
-	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(buckets, nil).Once()
-	msg, err := doListCmd(manager, sourceURL, false)
+	msg, err := doListCmd(manager, sourceURLConfigMap, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -326,9 +379,15 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 	manager := &MockclientManager{}
 	cl1 := &clientMocks.Client{}
 
-	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket").Return(nil).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, false)
+	msg, err := doMakeBucketCmd(manager, sourceURLConfigMap, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -343,26 +402,32 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	manager := &MockclientManager{}
 	cl1 := &clientMocks.Client{}
 
-	manager.On("getNewClient", sourceURL, false).Return(nil, errors.New("Expected Failure")).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, false)
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(nil, errors.New("Expected Failure")).Once()
+	msg, err := doMakeBucketCmd(manager, sourceURLConfigMap, false)
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 
-	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket").Return(&net.DNSError{}).Once()
 	cl1.On("PutBucket").Return(nil).Once()
-	msg, err = doMakeBucketCmd(manager, sourceURL, false)
+	msg, err = doMakeBucketCmd(manager, sourceURLConfigMap, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
-	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(cl1, nil).Once()
 	// we use <= rather than < since the original doesn't count in the retry
 	retries := globalMaxRetryFlag
 	globalMaxRetryFlag = 1
 	for i := 0; i <= globalMaxRetryFlag; i++ {
 		cl1.On("PutBucket").Return(errors.New("Another Expected Error")).Once()
 	}
-	msg, err = doMakeBucketCmd(manager, sourceURL, false)
+	msg, err = doMakeBucketCmd(manager, sourceURLConfigMap, false)
 	globalMaxRetryFlag = retries
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
@@ -378,9 +443,15 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 	manager := &MockclientManager{}
 	cl1 := &clientMocks.Client{}
 
-	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfigMap := make(map[string]string)
+	sourceConfigMap["Auth.AccessKeyID"] = ""
+	sourceConfigMap["Auth.SecretAccessKey"] = ""
+	sourceURLConfigMap[sourceURL] = sourceConfigMap
+
+	manager.On("getNewClient", sourceURL, sourceConfigMap, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket").Return(nil).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, false)
+	msg, err := doMakeBucketCmd(manager, sourceURLConfigMap, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 

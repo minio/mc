@@ -29,7 +29,7 @@ func (e errInvalidArgument) Error() string {
 }
 
 type errUnsupportedScheme struct {
-	scheme client.URLType
+	scheme client.Type
 	url    string
 }
 

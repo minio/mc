@@ -41,7 +41,7 @@ func (s *MySuite) TestList(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object1")
-	fsc := GetNewClient(objectPath)
+	fsc := New(objectPath)
 
 	data := "hello"
 	binarySum := md5.Sum([]byte(data))
@@ -56,7 +56,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(size, Equals, dataLen)
 
 	objectPath = filepath.Join(root, "object2")
-	fsc = GetNewClient(objectPath)
+	fsc = New(objectPath)
 
 	writer, err = fsc.Put(etag, dataLen)
 	c.Assert(err, IsNil)
@@ -65,7 +65,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(size, Equals, dataLen)
 
-	fsc = GetNewClient(root)
+	fsc = New(root)
 	items, err := fsc.List()
 	c.Assert(err, IsNil)
 	c.Assert(len(items), Equals, 2)
@@ -77,7 +77,7 @@ func (s *MySuite) TestPutBucket(c *C) {
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsc := GetNewClient(bucketPath)
+	fsc := New(bucketPath)
 	err = fsc.PutBucket()
 	c.Assert(err, IsNil)
 }
@@ -88,7 +88,7 @@ func (s *MySuite) TestStatBucket(c *C) {
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsc := GetNewClient(bucketPath)
+	fsc := New(bucketPath)
 	err = fsc.PutBucket()
 	c.Assert(err, IsNil)
 	err = fsc.Stat()
@@ -101,7 +101,7 @@ func (s *MySuite) TestPutObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc := GetNewClient(objectPath)
+	fsc := New(objectPath)
 
 	data := "hello"
 	binarySum := md5.Sum([]byte(data))
@@ -122,7 +122,7 @@ func (s *MySuite) TestGetObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc := GetNewClient(objectPath)
+	fsc := New(objectPath)
 
 	data := "hello"
 	binarySum := md5.Sum([]byte(data))
@@ -151,7 +151,7 @@ func (s *MySuite) TestGetObjectMetadata(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc := GetNewClient(objectPath)
+	fsc := New(objectPath)
 
 	data := "hello"
 	binarySum := md5.Sum([]byte(data))

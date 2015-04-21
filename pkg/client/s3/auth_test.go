@@ -137,15 +137,18 @@ func TestBucketFromHostname(t *testing.T) {
 
 func TestsignRequest(t *testing.T) {
 	r := req("GET /foo HTTP/1.1\n\n")
-	auth := &Auth{AccessKeyID: "key", SecretAccessKey: "secretkey"}
+	config := &Config{
+		HostURL:         "localhost:9000",
+		AccessKeyID:     "key",
+		SecretAccessKey: "secretkey",
+		UserAgent:       "Minio/auth_test (mc)",
+	}
 	url, _ := url.Parse("localhost:9000")
 	cl := &s3Client{
 		&Meta{
-			Auth:      auth,
+			Config:    config,
 			Transport: http.DefaultTransport,
-		},
-		url,
-		"Minio/auth_test (mc)",
+		}, url,
 	}
 	cl.signRequest(r, "localhost:9000")
 	if r.Header.Get("Date") == "" {

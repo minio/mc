@@ -34,8 +34,8 @@ type fsClient struct {
 	*url.URL
 }
 
-// GetNewClient - instantiate a new fs client
-func GetNewClient(path string) client.Client {
+// New - instantiate a new fs client
+func New(path string) client.Client {
 	u, err := url.Parse(path)
 	if err != nil {
 		return nil

@@ -56,9 +56,23 @@ func runCopyCmd(ctx *cli.Context) {
 	sourceURL := urls[0]   // First arg is source
 	targetURLs := urls[1:] // 1 or more targets
 
+	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceConfig, err := getHostConfig(sourceURL)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("mc: reading host config for URL [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
+	}
+	sourceURLConfigMap[sourceURL] = sourceConfig
+
+	targetURLConfigMap, err := getHostConfigs(targetURLs)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("mc: reading host configs failed with following reason: [%s]\n", iodine.ToError(err))
+	}
+
 	// perform copy
 	if ctx.Bool("recursive") {
-		errorMsg, err := doCopyCmdRecursive(mcClientManager{}, sourceURL, targetURLs)
+		errorMsg, err := doCopyCmdRecursive(mcClientManager{}, sourceURLConfigMap, targetURLConfigMap)
 		err = iodine.New(err, nil)
 		if err != nil {
 			if errorMsg == "" {
@@ -69,7 +83,7 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 		return
 	}
-	errorMsg, err := doCopyCmd(mcClientManager{}, sourceURL, targetURLs)
+	errorMsg, err := doCopyCmd(mcClientManager{}, sourceURLConfigMap, targetURLConfigMap)
 	err = iodine.New(err, nil)
 	if err != nil {
 		if errorMsg == "" {
@@ -81,58 +95,62 @@ func runCopyCmd(ctx *cli.Context) {
 }
 
 // doCopyCmd copies objects into and from a bucket or between buckets
-func doCopyCmd(manager clientManager, sourceURL string, targetURLs []string) (string, error) {
-	reader, length, hexMd5, err := manager.getSourceReader(sourceURL)
-	if err != nil {
-		msg := fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL)
-		return msg, iodine.New(err, nil)
-	}
-	defer reader.Close()
+func doCopyCmd(manager clientManager, sourceURLConfigMap map[string]map[string]string, targetURLConfigMap map[string]map[string]string) (
+	string, error) {
 
-	writeClosers, err := getTargetWriters(manager, targetURLs, hexMd5, length)
-	if err != nil {
-		return "Writing to target URL failed", iodine.New(err, nil)
-	}
-
-	var writers []io.Writer
-	for _, writer := range writeClosers {
-		writers = append(writers, writer)
-	}
-
-	// set up progress bar
-	var bar *pb.ProgressBar
-	if !globalQuietFlag {
-		bar = startBar(length)
-		bar.Start()
-		writers = append(writers, bar)
-	}
-
-	// write progress bar
-	multiWriter := io.MultiWriter(writers...)
-
-	// copy data to writers
-	_, copyErr := io.CopyN(multiWriter, reader, length)
-	// close writers
-	for _, writer := range writeClosers {
-		// it is the target's responsibility to notice if a close is premature.
-		// on fs, we handle in fs client
-		// over the wire, the server is responsible
-		err = writer.Close()
+	for sourceURL, sourceConfig := range sourceURLConfigMap {
+		reader, length, hexMd5, err := manager.getSourceReader(sourceURL, sourceConfig)
 		if err != nil {
-			err = iodine.New(err, nil)
+			msg := fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL)
+			return msg, iodine.New(err, nil)
 		}
-	}
-	// write copy errors if present
-	if copyErr != nil {
-		return "Copying data from source to target(s) failed", iodine.New(copyErr, nil)
-	}
-	// write close errors if present
-	if err != nil {
-		return "Connections still active, one or more writes may of failed.", iodine.New(err, nil)
-	}
-	if !globalQuietFlag {
-		bar.Finish()
-		console.Infoln("Success!")
+		defer reader.Close()
+
+		writeClosers, err := getTargetWriters(manager, targetURLConfigMap, hexMd5, length)
+		if err != nil {
+			return "Writing to target URL failed", iodine.New(err, nil)
+		}
+
+		var writers []io.Writer
+		for _, writer := range writeClosers {
+			writers = append(writers, writer)
+		}
+
+		// set up progress bar
+		var bar *pb.ProgressBar
+		if !globalQuietFlag {
+			bar = startBar(length)
+			bar.Start()
+			writers = append(writers, bar)
+		}
+
+		// write progress bar
+		multiWriter := io.MultiWriter(writers...)
+
+		// copy data to writers
+		_, copyErr := io.CopyN(multiWriter, reader, length)
+		// close writers
+		for _, writer := range writeClosers {
+			// it is the target's responsibility to notice if a close is premature.
+			// on fs, we handle in fs client
+			// over the wire, the server is responsible
+			err = writer.Close()
+			if err != nil {
+				return "Copying data from source to target(s) failed", iodine.New(err, nil)
+			}
+		}
+		// write copy errors if present
+		if copyErr != nil {
+			return "Copying data from source to target(s) failed", iodine.New(copyErr, nil)
+		}
+		// write close errors if present
+		if err != nil {
+			return "Connections still active, one or more writes may of failed.", iodine.New(err, nil)
+		}
+		if !globalQuietFlag {
+			bar.Finish()
+			console.Infoln("Success!")
+		}
 	}
 	return "", nil
 }

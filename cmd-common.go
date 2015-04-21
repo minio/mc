@@ -18,8 +18,6 @@ package main
 
 import (
 	"net"
-	"net/url"
-	"path/filepath"
 	"time"
 
 	"io"
@@ -69,22 +67,24 @@ func startBar(size int64) *pb.ProgressBar {
 
 // clientManager interface for mock tests
 type clientManager interface {
-	getSourceReader(sourceURL string) (reader io.ReadCloser, length int64, md5hex string, err error)
-	getTargetWriter(targetURL string, md5Hex string, length int64) (io.WriteCloser, error)
-	getNewClient(urlStr string, debug bool) (clnt client.Client, err error)
+	getSourceReader(sourceURL string, sourceConfig map[string]string) (reader io.ReadCloser, length int64, md5hex string, err error)
+	getTargetWriter(targetURL string, targetConfig map[string]string, md5Hex string, length int64) (io.WriteCloser, error)
+	getNewClient(urlStr string, config map[string]string, debug bool) (clnt client.Client, err error)
 }
 
 type mcClientManager struct{}
 
 // getSourceReader -
-func (manager mcClientManager) getSourceReader(sourceURL string) (reader io.ReadCloser, length int64, md5hex string, err error) {
-	sourceClnt, err := manager.getNewClient(sourceURL, globalDebugFlag)
+func (manager mcClientManager) getSourceReader(sourceURL string, sourceConfig map[string]string) (
+	reader io.ReadCloser, length int64, md5hex string, err error) {
+
+	sourceClnt, err := manager.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
 	}
 	// check if the bucket is valid
 	// For object storage URL's do a StatBucket(), not necessary for fs client
-	if client.GetURLType(sourceURL) != client.URLFilesystem {
+	if client.GetType(sourceURL) != client.Filesystem {
 		if err := sourceClnt.Stat(); err != nil {
 			return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
 		}
@@ -93,14 +93,15 @@ func (manager mcClientManager) getSourceReader(sourceURL string) (reader io.Read
 }
 
 // getTargetWriter -
-func (manager mcClientManager) getTargetWriter(targetURL string, md5Hex string, length int64) (io.WriteCloser, error) {
-	targetClnt, err := manager.getNewClient(targetURL, globalDebugFlag)
+func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig map[string]string, md5Hex string, length int64) (
+	io.WriteCloser, error) {
+	targetClnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
 	// check if bucket is valid, if not create it on target
 	// For object storage URL's do a StatBucket() and PutBucket(), not necessary for fs client
-	if client.GetURLType(targetURL) != client.URLFilesystem {
+	if client.GetType(targetURL) != client.Filesystem {
 		if err := targetClnt.Stat(); err != nil {
 			switch iodine.ToError(err).(type) {
 			case client.BucketNotFound:
@@ -116,74 +117,43 @@ func (manager mcClientManager) getTargetWriter(targetURL string, md5Hex string, 
 	return targetClnt.Put(md5Hex, length)
 }
 
-func getFilesystemAbsURL(u *url.URL) (string, error) {
-	var absURLStr string
-	var err error
-	switch true {
-	case u.Scheme == "file" && u.IsAbs():
-		absURLStr, err = filepath.Abs(filepath.Clean(u.Path))
-		if err != nil {
-			return "", iodine.New(err, nil)
-		}
-	default:
-		absURLStr, err = filepath.Abs(filepath.Clean(u.String()))
-		if err != nil {
-			return "", iodine.New(err, nil)
-		}
-		// url parse converts "\" on windows as "%5c" unescape it
-		unescapedAbsURL, err := url.QueryUnescape(absURLStr)
-		if err != nil {
-			return "", iodine.New(err, nil)
-		}
-		absURLStr = unescapedAbsURL
-	}
-	return absURLStr, nil
-}
-
 // getNewClient gives a new client interface
-func (manager mcClientManager) getNewClient(urlStr string, debug bool) (clnt client.Client, err error) {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
-	}
-	switch client.GetURLType(urlStr) {
-	case client.URLObject: // Minio and S3 compatible object storage
-		hostCfg, err := getHostConfig(u.String())
-		if err != nil {
-			return nil, iodine.New(err, nil)
+func (manager mcClientManager) getNewClient(urlStr string, auth map[string]string, debug bool) (clnt client.Client, err error) {
+	switch client.GetType(urlStr) {
+	case client.Object: // Minio and S3 compatible object storage
+		s3Config := new(s3.Config)
+		if _, ok := auth["Auth.AccessKeyID"]; ok {
+			s3Config.AccessKeyID = auth["Auth.AccessKeyID"]
 		}
-		if hostCfg == nil {
-			return nil, iodine.New(errInvalidAuth{}, nil)
+		if _, ok := auth["Auth.SecretAccessKey"]; ok {
+			s3Config.SecretAccessKey = auth["Auth.SecretAccessKey"]
 		}
-		auth := new(s3.Auth)
-		if _, ok := hostCfg["Auth.AccessKeyID"]; ok {
-			auth.AccessKeyID = hostCfg["Auth.AccessKeyID"]
-		}
-		if _, ok := hostCfg["Auth.SecretAccessKey"]; ok {
-			auth.SecretAccessKey = hostCfg["Auth.SecretAccessKey"]
-		}
-		clnt = s3.GetNewClient(urlStr, auth, mcUserAgent, debug)
+		s3Config.UserAgent = mcUserAgent
+		s3Config.HostURL = urlStr
+		s3Config.Debug = debug
+		clnt = s3.New(s3Config)
 		return clnt, nil
-	case client.URLFilesystem:
-		absURLStr, err := getFilesystemAbsURL(u)
+	case client.Filesystem:
+		absURLStr, err := client.GetFilesystemAbsURL(urlStr)
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
-		clnt = fs.GetNewClient(absURLStr)
+		clnt = fs.New(absURLStr)
 		return clnt, nil
 	default:
 		return nil, iodine.New(errUnsupportedScheme{
-			scheme: client.GetURLType(urlStr),
+			scheme: client.GetType(urlStr),
 			url:    urlStr,
 		}, nil)
 	}
 }
 
 // getTargetWriters -
-func getTargetWriters(manager clientManager, targetURLs []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
+func getTargetWriters(manager clientManager, targetURLConfigMap map[string]map[string]string, md5Hex string, length int64) (
+	[]io.WriteCloser, error) {
 	var targetWriters []io.WriteCloser
-	for _, targetURL := range targetURLs {
-		writer, err := manager.getTargetWriter(targetURL, md5Hex, length)
+	for targetURL, targetConfig := range targetURLConfigMap {
+		writer, err := manager.getTargetWriter(targetURL, targetConfig, md5Hex, length)
 		if err != nil {
 			// close all writers
 			for _, targetWriter := range targetWriters {

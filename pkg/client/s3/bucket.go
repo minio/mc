@@ -59,7 +59,7 @@ func (c *s3Client) listBuckets() ([]*client.Item, error) {
 	var err error
 
 	u := fmt.Sprintf("%s://%s/", c.Scheme, c.Host)
-	req, err := getNewReq(u, c.UserAgent, nil)
+	req, err := c.getNewReq(u, nil)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -108,7 +108,7 @@ func (c *s3Client) PutBucket() error {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req, err := getNewReq(u, c.UserAgent, nil)
+	req, err := c.getNewReq(u, nil)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -135,7 +135,7 @@ func (c *s3Client) Stat() error {
 		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req, err := getNewReq(u, c.UserAgent, nil)
+	req, err := c.getNewReq(u, nil)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
