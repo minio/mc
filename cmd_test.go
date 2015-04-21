@@ -258,7 +258,7 @@ func (c *FailClose) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 func (c *FailClose) Close() error {
-	return errors.New("Expected Error")
+	return errors.New("Expected Close Error")
 }
 
 func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {

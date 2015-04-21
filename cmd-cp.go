@@ -137,15 +137,14 @@ func doCopyCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig,
 			// on fs, we handle in fs client
 			// over the wire, the server is responsible
 			err = writer.Close()
-			if err != nil {
-				return "Copying data from source to target(s) failed", iodine.New(err, nil)
-			}
+			// don't return an error here, this error may be caused by a previous error.
+			// we check for this again after copyErr
 		}
 		// write copy errors if present
 		if copyErr != nil {
 			return "Copying data from source to target(s) failed", iodine.New(copyErr, nil)
 		}
-		// write close errors if present
+		// write close errors if present after checking copyErr
 		if err != nil {
 			return "Connections still active, one or more writes may of failed.", iodine.New(err, nil)
 		}
