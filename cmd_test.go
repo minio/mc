@@ -26,10 +26,11 @@ import (
 	"time"
 
 	"errors"
+	"net"
+
 	. "github.com/minio-io/check"
 	"github.com/minio-io/mc/pkg/client"
 	clientMocks "github.com/minio-io/mc/pkg/client/mocks"
-	"net"
 )
 
 type CmdTestSuite struct{}
@@ -155,6 +156,89 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	cl3.AssertExpectations(c)
 	cl4.AssertExpectations(c)
 	cl5.AssertExpectations(c)
+}
+
+func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
+	manager := &MockclientManager{}
+	sourceURL, err := getURL("foo", nil)
+	c.Assert(err, IsNil)
+
+	targetURL, err := getURL("bar", nil)
+	c.Assert(err, IsNil)
+	targetURLs := []string{targetURL}
+
+	var nilReadCloser io.ReadCloser
+	manager.On("getSourceReader", sourceURL).Return(nilReadCloser, int64(0), "", errors.New("Expected Error")).Once()
+	msg, err := doCopyCmd(manager, sourceURL, targetURLs)
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
+	manager.AssertExpectations(c)
+
+	// source fails
+	wg := &sync.WaitGroup{}
+	data1 := "hello1"
+	binarySum1 := md5.Sum([]byte(data1))
+	etag1 := base64.StdEncoding.EncodeToString(binarySum1[:])
+	dataLen1 := int64(len(data1))
+	reader1, writer1 := io.Pipe()
+
+	manager.On("getSourceReader", sourceURL).Return(reader1, dataLen1, etag1, nil).Once()
+	manager.On("getTargetWriter", targetURL, etag1, dataLen1).Return(nil, errors.New("Expected Error")).Once()
+	msg, err = doCopyCmd(manager, sourceURL, targetURLs)
+	writer1.Close()
+	wg.Wait()
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
+
+	// target write fails
+	reader2, writer2 := io.Pipe()
+	wg.Add(1)
+	go func() {
+		io.CopyN(writer2, bytes.NewBufferString("hel"), 3)
+		writer2.CloseWithError(errors.New("Expected Error"))
+		wg.Done()
+	}()
+	reader3, writer3 := io.Pipe()
+	var results3 bytes.Buffer
+	var n3 int64
+	var err3 error
+	wg.Add(1)
+	go func() {
+		n3, err3 = io.Copy(&results3, reader3)
+		wg.Done()
+	}()
+	manager.On("getSourceReader", sourceURL).Return(reader2, dataLen1, etag1, nil).Once()
+	manager.On("getTargetWriter", targetURL, etag1, dataLen1).Return(writer3, nil).Once()
+	msg, err = doCopyCmd(manager, sourceURL, targetURLs)
+	wg.Wait()
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
+	c.Assert(n3, Equals, int64(3))
+
+	// target close fails
+	reader4, writer4 := io.Pipe()
+	wg.Add(1)
+	go func() {
+		io.Copy(writer4, bytes.NewBufferString(data1))
+		wg.Done()
+	}()
+	var failClose io.WriteCloser
+	failClose = &FailClose{}
+	manager.On("getSourceReader", sourceURL).Return(reader4, dataLen1, etag1, nil).Once()
+	manager.On("getTargetWriter", targetURL, etag1, dataLen1).Return(failClose, nil).Once()
+	msg, err = doCopyCmd(manager, sourceURL, targetURLs)
+	wg.Wait()
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
+}
+
+type FailClose struct{}
+
+func (c *FailClose) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+func (c *FailClose) Close() error {
+	return errors.New("Expected Error")
 }
 
 func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {

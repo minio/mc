@@ -15,7 +15,13 @@ type MockclientManager struct {
 func (m *MockclientManager) getSourceReader(urlStr string) (io.ReadCloser, int64, string, error) {
 	ret := m.Called(urlStr)
 
-	r0 := ret.Get(0).(io.ReadCloser)
+	var r0 io.ReadCloser
+	untypedR0 := ret.Get(0)
+	if untypedR0 != nil {
+		r0 = untypedR0.(io.ReadCloser)
+	} else {
+		r0 = nil
+	}
 	r1 := ret.Get(1).(int64)
 	r2 := ret.Get(2).(string)
 	r3 := ret.Error(3)
@@ -25,7 +31,13 @@ func (m *MockclientManager) getSourceReader(urlStr string) (io.ReadCloser, int64
 func (m *MockclientManager) getTargetWriter(urlStr string, md5Hex string, length int64) (io.WriteCloser, error) {
 	ret := m.Called(urlStr, md5Hex, length)
 
-	r0 := ret.Get(0).(io.WriteCloser)
+	var r0 io.WriteCloser
+	untypedR0 := ret.Get(0)
+	if untypedR0 != nil {
+		r0 = untypedR0.(io.WriteCloser)
+	} else {
+		r0 = nil
+	}
 	r1 := ret.Error(1)
 
 	return r0, r1

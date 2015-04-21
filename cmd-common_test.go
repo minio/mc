@@ -22,9 +22,10 @@ import (
 	"github.com/cheggaaa/pb"
 
 	"errors"
+	"net"
+
 	. "github.com/minio-io/check"
 	"github.com/minio-io/minio/pkg/iodine"
-	"net"
 )
 
 type CommonSuite struct{}
