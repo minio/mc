@@ -29,7 +29,7 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
-	"github.com/minio-io/mc/pkg/qdb"
+	"github.com/minio-io/mc/pkg/quick"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
@@ -40,8 +40,19 @@ const (
 	mcConfigFile       = "config.json"
 )
 
+type hostConfig struct {
+	AccessKeyID     string
+	SecretAccessKey string
+}
+
+type configV1 struct {
+	Version string
+	Aliases map[string]string
+	Hosts   map[string]*hostConfig
+}
+
 var (
-	mcCurrentConfigVersion = qdb.Version{Major: 1, Minor: 0, Patch: 0}
+	mcCurrentConfigVersion = "1.0.0"
 )
 
 const (
@@ -91,7 +102,7 @@ func mustGetMcConfigPath() string {
 }
 
 // getMcConfig returns the config
-func getMcConfig() (config qdb.Store, err error) {
+func getMcConfig() (config *configV1, err error) {
 	if !isMcConfigExist() {
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
@@ -99,11 +110,12 @@ func getMcConfig() (config qdb.Store, err error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	if configStore := qdb.NewStore(mcCurrentConfigVersion); configStore != nil {
-		if err := configStore.Load(configFile); err != nil {
+	conf := newConfigV1()
+	if config := quick.New(conf); config != nil {
+		if err := config.Load(configFile); err != nil {
 			return nil, iodine.New(err, nil)
 		}
-		return configStore, nil
+		return config.Data().(*configV1), nil
 	}
 	return nil, iodine.New(errInvalidArgument{}, nil)
 }
@@ -122,7 +134,7 @@ func isMcConfigExist() bool {
 }
 
 // writeConfig
-func writeConfig(config qdb.Store) error {
+func writeConfig(config quick.Config) error {
 	err := createMcConfigDir()
 	if err != nil {
 		return iodine.New(err, nil)
@@ -150,43 +162,51 @@ func saveConfig(ctx *cli.Context) error {
 		}
 		return nil
 	default:
-		configStore, err := parseConfigInput(ctx)
+		config, err := parseConfigInput(ctx)
 		if err != nil {
 			return iodine.New(err, nil)
 		}
-		return writeConfig(configStore)
+		return writeConfig(config)
 	}
 }
 
-func newConfig() (config qdb.Store) {
-	configStore := qdb.NewStore(mcCurrentConfigVersion)
-	s3Auth := make(map[string]string)
-	localAuth := make(map[string]string)
+func newConfigV1() *configV1 {
+	conf := new(configV1)
+	conf.Version = mcCurrentConfigVersion
+	// make sure to allocate map's otherwise Golang
+	// exists silently without providing any errors
+	conf.Hosts = make(map[string]*hostConfig)
+	conf.Aliases = make(map[string]string)
+	return conf
+}
 
-	hosts := make(map[string]map[string]string)
-	s3Auth["Auth.AccessKeyID"] = globalAccessKeyID
-	s3Auth["Auth.SecretAccessKey"] = globalSecretAccessKey
-	hosts["http*://s3*.amazonaws.com"] = s3Auth
-
+func newConfig() (config quick.Config) {
+	conf := newConfigV1()
+	s3HostConf := new(hostConfig)
+	s3HostConf.AccessKeyID = globalAccessKeyID
+	s3HostConf.SecretAccessKey = globalSecretAccessKey
 	// local minio server can have this empty until webcli is ready
 	// which would make it easier to generate accesskeys and manage
-	localAuth["Auth.AccessKeyID"] = ""
-	localAuth["Auth.SecretAccessKey"] = ""
-	hosts["http*://localhost:*"] = localAuth
+	localhostConf := new(hostConfig)
+	localhostConf.AccessKeyID = ""
+	localhostConf.SecretAccessKey = ""
 
-	configStore.SetMapMapString("Hosts", hosts)
+	conf.Hosts["http://localhost:9000"] = localhostConf
+	conf.Hosts["http*://s3*.amazonaws.com"] = s3HostConf
 
 	aliases := make(map[string]string)
 	aliases["s3"] = "https://s3.amazonaws.com"
 	aliases["localhost"] = "http://localhost:9000"
+	conf.Aliases = aliases
+	config = quick.New(conf)
 
-	configStore.SetMapString("Aliases", aliases)
-	return configStore
+	return config
 }
 
-func parseConfigInput(ctx *cli.Context) (config qdb.Store, err error) {
-	configStore := qdb.NewStore(mcCurrentConfigVersion)
-	configStore.Load(mcConfigFile)
+func parseConfigInput(ctx *cli.Context) (config quick.Config, err error) {
+	conf := newConfigV1()
+	config = quick.New(&conf)
+	config.Load(mcConfigFile)
 
 	alias := strings.Fields(ctx.String("alias"))
 	switch true {
@@ -202,13 +222,14 @@ func parseConfigInput(ctx *cli.Context) (config qdb.Store, err error) {
 		if !isValidAliasName(aliasName) {
 			return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)
 		}
-		aliases := configStore.GetMapString("Aliases")
-		if _, ok := aliases[aliasName]; ok {
+		// convert interface{} back to its original struct
+		newConf := config.Data().(configV1)
+		if _, ok := newConf.Aliases[aliasName]; ok {
 			return nil, iodine.New(errAliasExists{name: aliasName}, nil)
 		}
-		aliases[aliasName] = url
-		configStore.SetMapString("Aliases", aliases)
-		return configStore, nil
+		newConf.Aliases[aliasName] = url
+		newConfig := quick.New(newConf)
+		return newConfig, nil
 	default:
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
@@ -219,8 +240,8 @@ func getHostURL(u *url.URL) string {
 	return u.Scheme + "://" + u.Host
 }
 
-func getHostConfigs(requestURLs []string) (hostConfigs map[string]map[string]string, err error) {
-	hostConfigs = make(map[string]map[string]string)
+func getHostConfigs(requestURLs []string) (hostConfigs map[string]*hostConfig, err error) {
+	hostConfigs = make(map[string]*hostConfig)
 	for _, requestURL := range requestURLs {
 		hostConfigs[requestURL], err = getHostConfig(requestURL)
 		if err != nil {
@@ -231,7 +252,7 @@ func getHostConfigs(requestURLs []string) (hostConfigs map[string]map[string]str
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(requestURL string) (map[string]string, error) {
+func getHostConfig(requestURL string) (*hostConfig, error) {
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -242,30 +263,31 @@ func getHostConfig(requestURL string) (map[string]string, error) {
 	}
 	// skip filesystem
 	if client.GetType(requestURL) == client.Filesystem {
-		hostConfig := make(map[string]string)
-		hostConfig["Auth.AccessKeyID"] = ""
-		hostConfig["Auth.SecretAccessKey"] = ""
-		return hostConfig, nil
+		hostCfg := &hostConfig{
+			AccessKeyID:     "",
+			SecretAccessKey: "",
+		}
+		return hostCfg, nil
 	}
-	for globURL, hostConfig := range config.GetMapMapString("Hosts") {
+	for globURL, hostCfg := range config.Hosts {
 		match, err := filepath.Match(globURL, getHostURL(u))
 		if err != nil {
 			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: requestURL}, nil)
 		}
 		if match {
-			if hostConfig == nil {
+			if hostCfg == nil {
 				return nil, iodine.New(errInvalidAuth{}, nil)
 			}
 			// verify Auth key validity for all hosts other than localhost
 			if !strings.Contains(getHostURL(u), "localhost") {
-				if !client.IsValidAccessKey(hostConfig["Auth.AccessKeyID"]) {
+				if !client.IsValidAccessKey(hostCfg.AccessKeyID) {
 					return nil, iodine.New(errInvalidAuthKeys{}, nil)
 				}
-				if !client.IsValidSecretKey(hostConfig["Auth.SecretAccessKey"]) {
+				if !client.IsValidSecretKey(hostCfg.SecretAccessKey) {
 					return nil, iodine.New(errInvalidAuthKeys{}, nil)
 				}
 			}
-			return hostConfig, nil
+			return hostCfg, nil
 		}
 	}
 	return nil, iodine.New(errNoMatchingHost{}, nil)

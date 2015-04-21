@@ -40,7 +40,7 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := getURLs(ctx.Args(), config.GetMapString("Aliases"))
+	urls, err := getURLs(ctx.Args(), config.Aliases)
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
@@ -56,7 +56,7 @@ func runCopyCmd(ctx *cli.Context) {
 	sourceURL := urls[0]   // First arg is source
 	targetURLs := urls[1:] // 1 or more targets
 
-	sourceURLConfigMap := make(map[string]map[string]string)
+	sourceURLConfigMap := make(map[string]*hostConfig)
 	sourceConfig, err := getHostConfig(sourceURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
@@ -95,9 +95,7 @@ func runCopyCmd(ctx *cli.Context) {
 }
 
 // doCopyCmd copies objects into and from a bucket or between buckets
-func doCopyCmd(manager clientManager, sourceURLConfigMap map[string]map[string]string, targetURLConfigMap map[string]map[string]string) (
-	string, error) {
-
+func doCopyCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig, targetURLConfigMap map[string]*hostConfig) (string, error) {
 	for sourceURL, sourceConfig := range sourceURLConfigMap {
 		reader, length, hexMd5, err := manager.getSourceReader(sourceURL, sourceConfig)
 		if err != nil {

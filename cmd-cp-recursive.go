@@ -42,9 +42,7 @@ func getSourceURL(sourceURL, objectName string) string {
 }
 
 // getSourceObjectURLMap - get list of all source object and its URLs in a map
-func getSourceObjectURLMap(manager clientManager, sourceURL string, sourceConfig map[string]string) (
-	sourceObjectURLMap map[string]string, err error) {
-
+func getSourceObjectURLMap(manager clientManager, sourceURL string, sourceConfig *hostConfig) (sourceObjectURLMap map[string]string, err error) {
 	sourceClnt, err := manager.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -61,8 +59,7 @@ func getSourceObjectURLMap(manager clientManager, sourceURL string, sourceConfig
 }
 
 // getRecursiveTargetWriter - recursively get target writers to initiate copying data
-func getRecursiveTargetWriter(manager clientManager, targetURL string, targetConfig map[string]string, md5Hex string, length int64) (
-	io.WriteCloser, error) {
+func getRecursiveTargetWriter(manager clientManager, targetURL string, targetConfig *hostConfig, md5Hex string, length int64) (io.WriteCloser, error) {
 
 	targetClnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
@@ -88,8 +85,7 @@ func getRecursiveTargetWriter(manager clientManager, targetURL string, targetCon
 }
 
 // getRecursiveTargetWriters - convenient wrapper around getRecursiveTarget
-func getRecursiveTargetWriters(manager clientManager, targetURLConfigMap map[string]map[string]string, md5Hex string, length int64) (
-	[]io.WriteCloser, error) {
+func getRecursiveTargetWriters(manager clientManager, targetURLConfigMap map[string]*hostConfig, md5Hex string, length int64) ([]io.WriteCloser, error) {
 
 	var targetWriters []io.WriteCloser
 	for targetURL, targetConfig := range targetURLConfigMap {
@@ -108,7 +104,8 @@ func getRecursiveTargetWriters(manager clientManager, targetURLConfigMap map[str
 }
 
 // doCopyCmdRecursive - copy bucket to bucket
-func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]map[string]string, targetURLConfigMap map[string]map[string]string) (string, error) {
+func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]*hostConfig, targetURLConfigMap map[string]*hostConfig) (string, error) {
+
 	for sourceURL, sourceConfig := range sourceURLConfigMap {
 		sourceObjectURLMap, err := getSourceObjectURLMap(manager, sourceURL, sourceConfig)
 		if err != nil {
@@ -129,7 +126,7 @@ func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]map
 				msg := fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL)
 				return msg, err
 			}
-			newTargetURLConfigMap := make(map[string]map[string]string)
+			newTargetURLConfigMap := make(map[string]*hostConfig)
 			// Construct full target URL path based on source object name
 			for targetURL, targetConfig := range targetURLConfigMap {
 				targetURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + sourceObjectName
