@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"sync"
 	"time"
 
@@ -31,6 +30,7 @@ import (
 	. "github.com/minio-io/check"
 	"github.com/minio-io/mc/pkg/client"
 	clientMocks "github.com/minio-io/mc/pkg/client/mocks"
+	"io/ioutil"
 )
 
 type CmdTestSuite struct{}
@@ -97,10 +97,6 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 
 	manager := &MockclientManager{}
 	cl1 := &clientMocks.Client{}
-	cl2 := &clientMocks.Client{}
-	cl3 := &clientMocks.Client{}
-	cl4 := &clientMocks.Client{}
-	cl5 := &clientMocks.Client{}
 
 	wg := &sync.WaitGroup{}
 
@@ -151,17 +147,10 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(items, nil).Once()
-	manager.On("getNewClient", sourceURL+"hello1", sourceConfig, false).Return(cl2, nil).Once()
-	cl2.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil).Once()
-	manager.On("getNewClient", sourceURL+"hello2", sourceConfig, false).Return(cl3, nil).Once()
-	cl3.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data2)), dataLen2, etag2, nil).Once()
-
-	manager.On("getNewClient", targetURL+"hello1", targetConfig, false).Return(cl4, nil).Once()
-	cl4.On("Stat").Return(nil).Once()
-	cl4.On("Put", etag1, dataLen1).Return(writer1, nil).Once()
-	manager.On("getNewClient", targetURL+"hello2", targetConfig, false).Return(cl5, nil).Once()
-	cl5.On("Stat").Return(nil).Once()
-	cl5.On("Put", etag2, dataLen2).Return(writer2, nil).Once()
+	manager.On("getSourceReader", sourceURL+"hello1", sourceConfig).Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil).Once()
+	manager.On("getTargetWriter", targetURL+"hello1", targetConfig, etag1, dataLen1).Return(writer1, nil).Once()
+	manager.On("getSourceReader", sourceURL+"hello2", sourceConfig).Return(ioutil.NopCloser(bytes.NewBufferString(data2)), dataLen2, etag2, nil).Once()
+	manager.On("getTargetWriter", targetURL+"hello2", targetConfig, etag2, dataLen2).Return(writer2, nil).Once()
 
 	msg, err := doCopyCmdRecursive(manager, sourceURLConfigMap, targetURLConfigMap)
 	c.Assert(msg, Equals, "")
@@ -175,10 +164,6 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
-	cl2.AssertExpectations(c)
-	cl3.AssertExpectations(c)
-	cl4.AssertExpectations(c)
-	cl5.AssertExpectations(c)
 }
 
 func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
