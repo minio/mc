@@ -23,7 +23,6 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
@@ -46,8 +45,7 @@ func runCopyCmd(ctx *cli.Context) {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: reading URL [%s] failed with following reason: [%s], possible suggestions [%s]\n",
-				e.url, e, client.GuessPossibleURL(e.url))
+			console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", e.url, e)
 		default:
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalf("mc: reading URLs failed with following reason: [%s]\n", e)

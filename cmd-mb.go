@@ -45,7 +45,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: reading URL [%s] failed, %s\n", arg, client.GuessPossibleURL(arg))
+				console.Fatalf("mc: Unknown type of URL [%s].\n", arg)
 			default:
 				log.Debug.Println(iodine.New(err, nil))
 				console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
