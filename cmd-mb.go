@@ -75,7 +75,7 @@ func doMakeBucketCmd(manager clientManager, u string, debug bool) (string, error
 	if err != nil {
 		console.Infof("Retrying ...")
 	}
-	for i := 1; i <= globalMaxRetryFlag && err != nil; i++ {
+	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
 		err = clnt.PutBucket()
 		console.Errorf(" %d", i)
 		// Progressively longer delays
