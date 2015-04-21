@@ -108,9 +108,7 @@ func getRecursiveTargetWriters(manager clientManager, targetURLConfigMap map[str
 }
 
 // doCopyCmdRecursive - copy bucket to bucket
-func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]map[string]string, targetURLConfigMap map[string]map[string]string) (
-	string, error) {
-
+func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]map[string]string, targetURLConfigMap map[string]map[string]string) (string, error) {
 	for sourceURL, sourceConfig := range sourceURLConfigMap {
 		sourceObjectURLMap, err := getSourceObjectURLMap(manager, sourceURL, sourceConfig)
 		if err != nil {
