@@ -23,7 +23,7 @@
 		},
 		{
 			"ImportPath": "github.com/fatih/structs",
-			"Rev": "c00d27128bb88e9c1adab1a53cda9c72c6d1ff9b"
+			"Rev": "c06d8730d42f16f3e8dddc236c7d69c0952a8a2c"
 		},
 		{
 			"ImportPath": "github.com/minio-io/check",
