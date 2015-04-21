@@ -106,27 +106,26 @@ func runListCmd(ctx *cli.Context) {
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
-	errorMsg, err := doListCmd(mcClientManager{}, targetURLConfigMap, globalDebugFlag)
-	err = iodine.New(err, nil)
-	if err != nil {
-		if errorMsg == "" {
-			errorMsg = "mc: List command failed. Please re-run with --debug and report this bug."
+	for targetURL, targetConfig := range targetURLConfigMap {
+		errorMsg, err := doListCmd(mcClientManager{}, targetURL, targetConfig, globalDebugFlag)
+		err = iodine.New(err, nil)
+		if err != nil {
+			if errorMsg == "" {
+				errorMsg = "mc: List command failed. Please re-run with --debug and report this bug."
+			}
+			log.Debug.Println(err)
+			console.Fatalf("%s", errorMsg)
 		}
-		log.Debug.Println(err)
-		console.Fatalf("%s", errorMsg)
 	}
 }
 
-func doListCmd(manager clientManager, targetURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
-	for targetURL, targetConfig := range targetURLConfigMap {
-		clnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
-		if err != nil {
-			err := iodine.New(err, nil)
-			msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
-				targetURL, iodine.ToError(err))
-			return msg, err
-		}
-		return doList(clnt, targetURL)
+func doListCmd(manager clientManager, targetURL string, targetConfig *hostConfig, debug bool) (string, error) {
+	clnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
+	if err != nil {
+		err := iodine.New(err, nil)
+		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
+			targetURL, iodine.ToError(err))
+		return msg, err
 	}
-	return "", nil
+	return doList(clnt, targetURL)
 }

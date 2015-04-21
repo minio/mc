@@ -134,11 +134,7 @@ func (manager mcClientManager) getNewClient(urlStr string, auth *hostConfig, deb
 		clnt = s3.New(s3Config)
 		return clnt, nil
 	case client.Filesystem:
-		absURLStr, err := filepath.Abs(filepath.Clean(urlStr))
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-		clnt = fs.New(absURLStr)
+		clnt = fs.New(filepath.Clean(urlStr))
 		return clnt, nil
 	default:
 		return nil, iodine.New(errUnsupportedScheme{

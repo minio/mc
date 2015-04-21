@@ -30,6 +30,7 @@ type Client interface {
 	// Common operations
 	Stat() error
 	List() (items []*Item, err error)
+	//	ListNew() error
 
 	// Bucket operations
 	PutBucket() error
