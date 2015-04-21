@@ -62,6 +62,10 @@ const (
 	globalSecretAccessKey = "YOUR-SECRET-ACCESS-KEY-HERE"
 )
 
+const (
+	exampleHostURL = "YOUR-EXAMPLE.COM"
+)
+
 func getMcConfigDir() (string, error) {
 	u, err := user.Current()
 	if err != nil {
@@ -185,13 +189,13 @@ func newConfig() (config quick.Config) {
 	s3HostConf := new(hostConfig)
 	s3HostConf.AccessKeyID = globalAccessKeyID
 	s3HostConf.SecretAccessKey = globalSecretAccessKey
-	// local minio server can have this empty until webcli is ready
-	// which would make it easier to generate accesskeys and manage
-	localhostConf := new(hostConfig)
-	localhostConf.AccessKeyID = ""
-	localhostConf.SecretAccessKey = ""
 
-	conf.Hosts["http://localhost:9000"] = localhostConf
+	// Your example host config
+	exampleHostConf := new(hostConfig)
+	exampleHostConf.AccessKeyID = globalAccessKeyID
+	exampleHostConf.SecretAccessKey = globalSecretAccessKey
+
+	conf.Hosts[exampleHostURL] = exampleHostConf
 	conf.Hosts["http*://s3*.amazonaws.com"] = s3HostConf
 
 	aliases := make(map[string]string)
@@ -261,8 +265,17 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 	if err != nil {
 		return nil, iodine.New(errInvalidURL{url: requestURL}, nil)
 	}
-	// skip filesystem
+	// No host matching or keys needed for filesystem requests
 	if client.GetType(requestURL) == client.Filesystem {
+		hostCfg := &hostConfig{
+			AccessKeyID:     "",
+			SecretAccessKey: "",
+		}
+		return hostCfg, nil
+	}
+
+	// No host matching or keys needed for localhost and 127.0.0.1 URL's skip them
+	if strings.Contains(getHostURL(u), "localhost") || strings.Contains(getHostURL(u), "127.0.0.1") {
 		hostCfg := &hostConfig{
 			AccessKeyID:     "",
 			SecretAccessKey: "",
@@ -278,14 +291,9 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 			if hostCfg == nil {
 				return nil, iodine.New(errInvalidAuth{}, nil)
 			}
-			// verify Auth key validity for all hosts other than localhost
-			if !strings.Contains(getHostURL(u), "localhost") {
-				if !client.IsValidAccessKey(hostCfg.AccessKeyID) {
-					return nil, iodine.New(errInvalidAuthKeys{}, nil)
-				}
-				if !client.IsValidSecretKey(hostCfg.SecretAccessKey) {
-					return nil, iodine.New(errInvalidAuthKeys{}, nil)
-				}
+			// verify Auth key validity for all hosts
+			if !client.IsValidAccessKey(hostCfg.AccessKeyID) || !client.IsValidSecretKey(hostCfg.SecretAccessKey) {
+				return nil, iodine.New(errInvalidAuthKeys{}, nil)
 			}
 			return hostCfg, nil
 		}
