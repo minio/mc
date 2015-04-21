@@ -27,16 +27,9 @@ import (
 // List of commands
 var (
 	cpCmd = cli.Command{
-		Name:  "cp",
-		Usage: "Copy objects and files",
-		//		Description: "Copy files and objects recursively across object storage and filesystems",
+		Name:   "cp",
+		Usage:  "Copy objects and files",
 		Action: runCopyCmd,
-		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "recursive, r",
-				Usage: "Recursively crawl a given directory or bucket",
-			},
-		},
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -49,15 +42,16 @@ DESCRIPTION:
 OPTIONS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
+
 EXAMPLES:
    1. Copy an object from Amazon S3 object storage to local fileystem.
       $ mc {{.Name}} https://s3.amazonaws.com/jukebox/klingon_opera_aktuh_maylotah.ogg wakeup.ogg
 
-   2. Copy a bucket recursive from Minio object storage to Amazon S3 object storage
-      $ mc {{.Name}} --recursive http://localhost:9000/photos/burningman2011 https://s3.amazonaws.com/burningman/
+   2. Copy a bucket recursively from Minio object storage to Amazon S3 object storage
+      $ mc {{.Name}} http://localhost:9000/photos/burningman2011... https://s3.amazonaws.com/burningman/
 
-   3. Copy a local folder to Minio object storage and Amazon S3 object storage
-      $ mc {{.Name}} --recursive backup/ http://localhost:9000/archive/ https://s3.amazonaws.com/archive/
+   3. Copy a local folder recursively to Minio object storage and Amazon S3 object storage
+      $ mc {{.Name}} backup/... http://localhost:9000/archive/ https://s3.amazonaws.com/archive/
 
    4. Copy an object from Amazon S3 object storage to local filesystem on Windows.
       $ mc {{.Name}} https://s3.amazonaws.com/jukebox/vulcan_lute.ogg C:\Users\Surak\sleep.ogg
