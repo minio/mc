@@ -1,5 +1,5 @@
 /*
- * q - Quick key value store for config files and persistent state files
+ * Quick - Quick key value store for config files and persistent state files
  *
  * Mini Copy, (C) 2015 Minio, Inc.
  *
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package q
+package quick
 
 import (
 	"encoding/json"
@@ -44,7 +44,7 @@ type Config interface {
 	DeepDiff(Config) ([]structs.Field, error)
 }
 
-// config - implements qconfig.config interface
+// config - implements quick.Config interface
 type config struct {
 	data *interface{}
 	lock *sync.RWMutex
