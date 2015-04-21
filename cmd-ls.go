@@ -87,9 +87,9 @@ func runListCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("mc: reading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
-	targetURLConfigMap := make(map[string]map[string]string)
+	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range ctx.Args() {
-		targetURL, err := getURL(arg, config.GetMapString("Aliases"))
+		targetURL, err := getURL(arg, config.Aliases)
 		if err != nil {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
@@ -118,7 +118,7 @@ func runListCmd(ctx *cli.Context) {
 	}
 }
 
-func doListCmd(manager clientManager, targetURLConfigMap map[string]map[string]string, debug bool) (string, error) {
+func doListCmd(manager clientManager, targetURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
 	for targetURL, targetConfig := range targetURLConfigMap {
 		clnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
 		if err != nil {

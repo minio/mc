@@ -65,13 +65,13 @@ func (s *MySuite) TestSaveLoad(c *C) {
 		Folders  []string
 	}
 	saveMe := myStruct{"1", "guest", "nopassword", []string{"Work", "Documents", "Music"}}
-	config, err := New(&saveMe)
-	c.Assert(err, IsNil)
+	config := New(&saveMe)
+	c.Assert(config, Not(IsNil))
 	config.Save("test.json")
 
 	loadMe := myStruct{Version: "1"}
-	newConfig, err := New(&loadMe)
-	c.Assert(err, IsNil)
+	newConfig := New(&loadMe)
+	c.Assert(newConfig, Not(IsNil))
 	newConfig.Load("test.json")
 
 	c.Assert(config.Data(), DeepEquals, newConfig.Data())
@@ -89,8 +89,8 @@ func (s *MySuite) TestDiff(c *C) {
 		Folders  []string
 	}
 	saveMe := myStruct{"1", "guest", "nopassword", []string{"Work", "Documents", "Music"}}
-	config, err := New(&saveMe)
-	c.Assert(err, IsNil)
+	config := New(&saveMe)
+	c.Assert(config, Not(IsNil))
 
 	type myNewStruct struct {
 		Version string
@@ -100,8 +100,8 @@ func (s *MySuite) TestDiff(c *C) {
 	}
 
 	mismatch := myNewStruct{"1", "nopassword", []string{"Work", "documents", "Music"}}
-	newConfig, err := New(&mismatch)
-	c.Assert(err, IsNil)
+	newConfig := New(&mismatch)
+	c.Assert(newConfig, Not(IsNil))
 
 	fields, ok := config.Diff(newConfig)
 	c.Assert(ok, IsNil)
@@ -121,12 +121,12 @@ func (s *MySuite) TestDeepDiff(c *C) {
 		Folders  []string
 	}
 	saveMe := myStruct{"1", "guest", "nopassword", []string{"Work", "Documents", "Music"}}
-	config, err := New(&saveMe)
-	c.Assert(err, IsNil)
+	config := New(&saveMe)
+	c.Assert(config, Not(IsNil))
 
 	mismatch := myStruct{"1", "Guest", "nopassword", []string{"Work", "documents", "Music"}}
-	newConfig, err := New(&mismatch)
-	c.Assert(err, IsNil)
+	newConfig := New(&mismatch)
+	c.Assert(newConfig, Not(IsNil))
 
 	fields, err := config.DeepDiff(newConfig)
 	c.Assert(err, IsNil)

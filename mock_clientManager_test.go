@@ -12,7 +12,7 @@ type MockclientManager struct {
 	mock.Mock
 }
 
-func (m *MockclientManager) getSourceReader(urlStr string, auth map[string]string) (io.ReadCloser, int64, string, error) {
+func (m *MockclientManager) getSourceReader(urlStr string, auth *hostConfig) (io.ReadCloser, int64, string, error) {
 	ret := m.Called(urlStr, auth)
 
 	var r0 io.ReadCloser
@@ -28,7 +28,7 @@ func (m *MockclientManager) getSourceReader(urlStr string, auth map[string]strin
 
 	return r0, r1, r2, r3
 }
-func (m *MockclientManager) getTargetWriter(urlStr string, auth map[string]string, md5Hex string, length int64) (io.WriteCloser, error) {
+func (m *MockclientManager) getTargetWriter(urlStr string, auth *hostConfig, md5Hex string, length int64) (io.WriteCloser, error) {
 	ret := m.Called(urlStr, auth, md5Hex, length)
 
 	var r0 io.WriteCloser
@@ -42,7 +42,7 @@ func (m *MockclientManager) getTargetWriter(urlStr string, auth map[string]strin
 
 	return r0, r1
 }
-func (m *MockclientManager) getNewClient(urlStr string, auth map[string]string, debug bool) (client.Client, error) {
+func (m *MockclientManager) getNewClient(urlStr string, auth *hostConfig, debug bool) (client.Client, error) {
 	ret := m.Called(urlStr, auth, debug)
 
 	var r0 client.Client

@@ -169,10 +169,7 @@ EXAMPLES:
    1. Generate mc config
       $ mc config generate
 
-   2. Verify configuration
-      $ mc config check
-
-   3. Add alias URLs
+   2. Add alias URLs
       $ mc config --alias "zek https://s3.amazonaws.com/"
 
 `,

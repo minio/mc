@@ -67,15 +67,15 @@ func startBar(size int64) *pb.ProgressBar {
 
 // clientManager interface for mock tests
 type clientManager interface {
-	getSourceReader(sourceURL string, sourceConfig map[string]string) (reader io.ReadCloser, length int64, md5hex string, err error)
-	getTargetWriter(targetURL string, targetConfig map[string]string, md5Hex string, length int64) (io.WriteCloser, error)
-	getNewClient(urlStr string, config map[string]string, debug bool) (clnt client.Client, err error)
+	getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length int64, md5hex string, err error)
+	getTargetWriter(targetURL string, targetConfig *hostConfig, md5Hex string, length int64) (io.WriteCloser, error)
+	getNewClient(urlStr string, config *hostConfig, debug bool) (clnt client.Client, err error)
 }
 
 type mcClientManager struct{}
 
 // getSourceReader -
-func (manager mcClientManager) getSourceReader(sourceURL string, sourceConfig map[string]string) (
+func (manager mcClientManager) getSourceReader(sourceURL string, sourceConfig *hostConfig) (
 	reader io.ReadCloser, length int64, md5hex string, err error) {
 
 	sourceClnt, err := manager.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
@@ -93,7 +93,7 @@ func (manager mcClientManager) getSourceReader(sourceURL string, sourceConfig ma
 }
 
 // getTargetWriter -
-func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig map[string]string, md5Hex string, length int64) (
+func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig *hostConfig, md5Hex string, length int64) (
 	io.WriteCloser, error) {
 	targetClnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
@@ -118,16 +118,15 @@ func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig ma
 }
 
 // getNewClient gives a new client interface
-func (manager mcClientManager) getNewClient(urlStr string, auth map[string]string, debug bool) (clnt client.Client, err error) {
+func (manager mcClientManager) getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
 	switch client.GetType(urlStr) {
 	case client.Object: // Minio and S3 compatible object storage
+		if auth == nil {
+			return nil, iodine.New(errInvalidArgument{}, nil)
+		}
 		s3Config := new(s3.Config)
-		if _, ok := auth["Auth.AccessKeyID"]; ok {
-			s3Config.AccessKeyID = auth["Auth.AccessKeyID"]
-		}
-		if _, ok := auth["Auth.SecretAccessKey"]; ok {
-			s3Config.SecretAccessKey = auth["Auth.SecretAccessKey"]
-		}
+		s3Config.AccessKeyID = auth.AccessKeyID
+		s3Config.SecretAccessKey = auth.SecretAccessKey
 		s3Config.UserAgent = mcUserAgent
 		s3Config.HostURL = urlStr
 		s3Config.Debug = debug
@@ -149,7 +148,7 @@ func (manager mcClientManager) getNewClient(urlStr string, auth map[string]strin
 }
 
 // getTargetWriters -
-func getTargetWriters(manager clientManager, targetURLConfigMap map[string]map[string]string, md5Hex string, length int64) (
+func getTargetWriters(manager clientManager, targetURLConfigMap map[string]*hostConfig, md5Hex string, length int64) (
 	[]io.WriteCloser, error) {
 	var targetWriters []io.WriteCloser
 	for targetURL, targetConfig := range targetURLConfigMap {
