@@ -25,9 +25,11 @@ import (
 	"sync"
 	"time"
 
+	"errors"
 	. "github.com/minio-io/check"
 	"github.com/minio-io/mc/pkg/client"
 	clientMocks "github.com/minio-io/mc/pkg/client/mocks"
+	"net"
 )
 
 type CmdTestSuite struct{}
@@ -245,6 +247,41 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 	msg, err := doMakeBucketCmd(manager, sourceURL, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
+
+	manager.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
+
+func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
+	sourceURL, err := getURL("http://example.com/bucket1", nil)
+	c.Assert(err, IsNil)
+
+	manager := &MockclientManager{}
+	cl1 := &clientMocks.Client{}
+
+	manager.On("getNewClient", sourceURL, false).Return(nil, errors.New("Expected Failure")).Once()
+	msg, err := doMakeBucketCmd(manager, sourceURL, false)
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
+
+	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket").Return(&net.DNSError{}).Once()
+	cl1.On("PutBucket").Return(nil).Once()
+	msg, err = doMakeBucketCmd(manager, sourceURL, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	manager.On("getNewClient", sourceURL, false).Return(cl1, nil).Once()
+	// we use <= rather than < since the original doesn't count in the retry
+	retries := globalMaxRetryFlag
+	globalMaxRetryFlag = 1
+	for i := 0; i <= globalMaxRetryFlag; i++ {
+		cl1.On("PutBucket").Return(errors.New("Another Expected Error")).Once()
+	}
+	msg, err = doMakeBucketCmd(manager, sourceURL, false)
+	globalMaxRetryFlag = retries
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
 
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
