@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"io/ioutil"
-	"net/url"
 	"path/filepath"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -31,45 +30,28 @@ import (
 )
 
 type fsClient struct {
-	*url.URL
+	Path string
 }
 
 // New - instantiate a new fs client
 func New(path string) client.Client {
-	u, err := url.Parse(path)
-	if err != nil {
-		return nil
-	}
-	return &fsClient{u}
-}
-
-/// Object operations
-
-// url2Object converts URL to bucketName and objectName
-func (f *fsClient) url2Object() (bucketName, objectName string) {
-	unescapedURL, _ := url.QueryUnescape(f.String())
-	return filepath.Split(unescapedURL)
+	return &fsClient{Path: path}
 }
 
 // getObjectMetadata - wrapper function to get file stat
 func (f *fsClient) getObjectMetadata() (os.FileInfo, error) {
-	bucket, object := f.url2Object()
-	st, err := os.Stat(f.normalizedPath())
+	st, err := os.Stat(filepath.Clean(f.Path))
+	/* FIXME: after rewritng client.errors to handle generic path and URLs, fix the error messages appropriately.
 	if os.IsNotExist(err) {
 		return nil, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: object}, nil)
 	}
 	if st.IsDir() {
 		return nil, iodine.New(client.InvalidObjectName{Bucket: bucket, Object: object}, nil)
-	}
+	}*/
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
 	return st, nil
-}
-
-func (f *fsClient) normalizedPath() string {
-	unescapedURL, _ := url.QueryUnescape(f.String())
-	return filepath.Clean(unescapedURL)
 }
 
 // Get - download an object from bucket

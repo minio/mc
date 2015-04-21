@@ -18,6 +18,7 @@ package main
 
 import (
 	"net"
+	"path/filepath"
 	"time"
 
 	"io"
@@ -133,7 +134,7 @@ func (manager mcClientManager) getNewClient(urlStr string, auth *hostConfig, deb
 		clnt = s3.New(s3Config)
 		return clnt, nil
 	case client.Filesystem:
-		absURLStr, err := client.GetFilesystemAbsURL(urlStr)
+		absURLStr, err := filepath.Abs(filepath.Clean(urlStr))
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}

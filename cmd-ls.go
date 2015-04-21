@@ -72,7 +72,6 @@ func doList(clnt client.Client, targetURL string) (string, error) {
 		msg := fmt.Sprintf("\nmc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
 		return msg, err
 	}
-	console.Infoln()
 	printItems(items)
 	return "", nil
 }
@@ -85,7 +84,7 @@ func runListCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: reading config file failed with following reason: [%s]\n", iodine.ToError(err))
+		console.Fatalf("mc: Error reading config file. Reason: %s\n", iodine.ToError(err))
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range ctx.Args() {
@@ -94,16 +93,16 @@ func runListCmd(ctx *cli.Context) {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: reading URL [%s] failed with invalid scheme, %s\n", arg, client.GuessPossibleURL(arg))
+				console.Fatalf("mc: Unknown type of URL [%s].\n", arg)
 			default:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
+				console.Fatalf("mc: Unknown type of URL [%s]. Reason: %s\n", arg, iodine.ToError(err))
 			}
 		}
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: reading config URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
+			console.Fatalf("mc: Error reading config for URL [%s]. Reason: %s\n", targetURL, iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
@@ -111,7 +110,7 @@ func runListCmd(ctx *cli.Context) {
 	err = iodine.New(err, nil)
 	if err != nil {
 		if errorMsg == "" {
-			errorMsg = "No error message present, please rerun with --debug and report a bug."
+			errorMsg = "mc: List command failed. Please re-run with --debug and report this bug."
 		}
 		log.Debug.Println(err)
 		console.Fatalf("%s", errorMsg)
