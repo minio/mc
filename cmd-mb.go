@@ -58,45 +58,47 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
-	errorMsg, err := doMakeBucketCmd(mcClientManager{}, targetURLConfigMap, globalDebugFlag)
-	err = iodine.New(err, nil)
-	if err != nil {
-		if errorMsg == "" {
-			errorMsg = "No error message present, please rerun with --debug and report a bug."
+	for targetURL, targetConfig := range targetURLConfigMap {
+		errorMsg, err := doMakeBucketCmd(mcClientManager{}, targetURL, targetConfig, globalDebugFlag)
+		err = iodine.New(err, nil)
+		if err != nil {
+			if errorMsg == "" {
+				errorMsg = "No error message present, please rerun with --debug and report a bug."
+			}
+			log.Debug.Println(err)
+			console.Fatalf("%s", errorMsg)
 		}
-		log.Debug.Println(err)
-		console.Fatalf("%s", errorMsg)
 	}
 }
 
-func doMakeBucketCmd(manager clientManager, targetURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
-	var err error
-	var clnt client.Client
-
-	for targetURL, targetConfig := range targetURLConfigMap {
-		clnt, err = manager.getNewClient(targetURL, targetConfig, debug)
-		if err != nil {
-			err := iodine.New(err, nil)
-			msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
-				targetURL, iodine.ToError(err))
-			return msg, err
-		}
+func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
+	err := clnt.PutBucket()
+	if err != nil {
+		console.Infof("Retrying ...")
+	}
+	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
 		err = clnt.PutBucket()
-		if err != nil {
-			console.Infof("Retrying ...")
-		}
-		for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
-			err = clnt.PutBucket()
-			console.Errorf(" %d", i)
-			// Progressively longer delays
-			time.Sleep(time.Duration(i*i) * time.Second)
-		}
-		if err != nil {
-			err := iodine.New(err, nil)
-			msg := fmt.Sprintf("\nmc: Creating bucket failed for URL [%s] with following reason: [%s]\n", targetURL, iodine.ToError(err))
-			return msg, err
-		}
-		console.Infoln()
+		console.Errorf(" %d", i)
+		// Progressively longer delays
+		time.Sleep(time.Duration(i*i) * time.Second)
+	}
+	if err != nil {
+		err := iodine.New(err, nil)
+		msg := fmt.Sprintf("\nmc: Creating bucket failed for URL [%s] with following reason: [%s]\n", targetURL, iodine.ToError(err))
+		return msg, err
 	}
 	return "", nil
+}
+
+func doMakeBucketCmd(manager clientManager, targetURL string, targetConfig *hostConfig, debug bool) (string, error) {
+	var err error
+	var clnt client.Client
+	clnt, err = manager.getNewClient(targetURL, targetConfig, debug)
+	if err != nil {
+		err := iodine.New(err, nil)
+		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
+			targetURL, iodine.ToError(err))
+		return msg, err
+	}
+	return doMakeBucket(clnt, targetURL)
 }

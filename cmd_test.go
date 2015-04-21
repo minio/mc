@@ -27,10 +27,11 @@ import (
 	"errors"
 	"net"
 
+	"io/ioutil"
+
 	. "github.com/minio-io/check"
 	"github.com/minio-io/mc/pkg/client"
 	clientMocks "github.com/minio-io/mc/pkg/client/mocks"
-	"io/ioutil"
 )
 
 type CmdTestSuite struct{}
@@ -287,7 +288,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(items, nil).Once()
-	msg, err := doListCmd(manager, sourceURLConfigMap, false)
+	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -321,7 +322,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(items, nil).Once()
-	msg, err := doListCmd(manager, sourceURLConfigMap, false)
+	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -349,7 +350,7 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(buckets, nil).Once()
-	msg, err := doListCmd(manager, sourceURLConfigMap, false)
+	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -372,7 +373,7 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket").Return(nil).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURLConfigMap, false)
+	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -394,14 +395,14 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(nil, errors.New("Expected Failure")).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURLConfigMap, false)
+	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket").Return(&net.DNSError{}).Once()
 	cl1.On("PutBucket").Return(nil).Once()
-	msg, err = doMakeBucketCmd(manager, sourceURLConfigMap, false)
+	msg, err = doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -412,7 +413,7 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	for i := 0; i <= globalMaxRetryFlag; i++ {
 		cl1.On("PutBucket").Return(errors.New("Another Expected Error")).Once()
 	}
-	msg, err = doMakeBucketCmd(manager, sourceURLConfigMap, false)
+	msg, err = doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	globalMaxRetryFlag = retries
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
@@ -436,7 +437,7 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket").Return(nil).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURLConfigMap, false)
+	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
