@@ -16,13 +16,19 @@
 
 package client
 
-import . "github.com/minio-io/check"
+import (
+	"testing"
 
-type ClientSuite struct{}
+	. "github.com/minio-io/check"
+)
 
-var _ = Suite(&ClientSuite{})
+func Test(t *testing.T) { TestingT(t) }
 
-func (s *ClientSuite) TestAuthAccessKeyLength(c *C) {
+type MySuite struct{}
+
+var _ = Suite(&MySuite{})
+
+func (s *MySuite) TestAuthAccessKeyLength(c *C) {
 	// short
 	result := IsValidSecretKey("123456789012345678901234567890123456789")
 	c.Assert(result, Equals, false)
@@ -36,7 +42,7 @@ func (s *ClientSuite) TestAuthAccessKeyLength(c *C) {
 	c.Assert(result, Equals, true)
 }
 
-func (s *ClientSuite) TestValidAccessKeyLength(c *C) {
+func (s *MySuite) TestValidAccessKeyLength(c *C) {
 	// short
 	result := IsValidAccessKey("1234567890123456789")
 	c.Assert(result, Equals, false)
