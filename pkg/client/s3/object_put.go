@@ -43,7 +43,7 @@ func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 			blockingWriter.Release(err)
 			return
 		}
-		req, err := getNewReq(c.objectURL(bucket, object), c.UserAgent, r)
+		req, err := c.getNewReq(c.objectURL(bucket, object), r)
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)

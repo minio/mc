@@ -35,17 +35,17 @@ const (
 )
 
 func getSourceURL(sourceURL, objectName string) string {
-	if client.GetURLType(sourceURL) == client.URLFilesystem {
-		if runtime.GOOS == "windows" {
-			return strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparatorWindows + objectName
-		}
+	if client.GetType(sourceURL) == client.Filesystem && runtime.GOOS == "windows" {
+		return strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparatorWindows + objectName
 	}
 	return strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + objectName
 }
 
 // getSourceObjectURLMap - get list of all source object and its URLs in a map
-func getSourceObjectURLMap(manager clientManager, sourceURL string) (sourceObjectURLMap map[string]string, err error) {
-	sourceClnt, err := manager.getNewClient(sourceURL, globalDebugFlag)
+func getSourceObjectURLMap(manager clientManager, sourceURL string, sourceConfig map[string]string) (
+	sourceObjectURLMap map[string]string, err error) {
+
+	sourceClnt, err := manager.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -61,14 +61,16 @@ func getSourceObjectURLMap(manager clientManager, sourceURL string) (sourceObjec
 }
 
 // getRecursiveTargetWriter - recursively get target writers to initiate copying data
-func getRecursiveTargetWriter(manager clientManager, targetURL, md5Hex string, length int64) (io.WriteCloser, error) {
-	targetClnt, err := manager.getNewClient(targetURL, globalDebugFlag)
+func getRecursiveTargetWriter(manager clientManager, targetURL string, targetConfig map[string]string, md5Hex string, length int64) (
+	io.WriteCloser, error) {
+
+	targetClnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
 	}
 
 	// For object storage URL's do a StatBucket() and PutBucket(), not necessary for fs client
-	if client.GetURLType(targetURL) != client.URLFilesystem {
+	if client.GetType(targetURL) != client.Filesystem {
 		// check if bucket is valid, if not found create it
 		if err := targetClnt.Stat(); err != nil {
 			switch iodine.ToError(err).(type) {
@@ -86,10 +88,12 @@ func getRecursiveTargetWriter(manager clientManager, targetURL, md5Hex string, l
 }
 
 // getRecursiveTargetWriters - convenient wrapper around getRecursiveTarget
-func getRecursiveTargetWriters(manager clientManager, targetURLs []string, md5Hex string, length int64) ([]io.WriteCloser, error) {
+func getRecursiveTargetWriters(manager clientManager, targetURLConfigMap map[string]map[string]string, md5Hex string, length int64) (
+	[]io.WriteCloser, error) {
+
 	var targetWriters []io.WriteCloser
-	for _, targetURL := range targetURLs {
-		writer, err := getRecursiveTargetWriter(manager, targetURL, md5Hex, length)
+	for targetURL, targetConfig := range targetURLConfigMap {
+		writer, err := getRecursiveTargetWriter(manager, targetURL, targetConfig, md5Hex, length)
 		if err != nil {
 			// on error close all writers
 			for _, targetWriter := range targetWriters {
@@ -104,73 +108,75 @@ func getRecursiveTargetWriters(manager clientManager, targetURLs []string, md5He
 }
 
 // doCopyCmdRecursive - copy bucket to bucket
-func doCopyCmdRecursive(manager clientManager, sourceURL string, targetURLs []string) (string, error) {
-	sourceObjectURLMap, err := getSourceObjectURLMap(manager, sourceURL)
-	if err != nil {
-		err = iodine.New(err, nil)
-		msg := fmt.Sprintf("mc: Getting list of objects from source URL: [%s] failed with following reason: [%s]\n",
-			sourceURL, iodine.ToError(err))
-		return msg, err
-	}
-	// do not exit, continue even for failures
-	for sourceObjectName, sourceObjectURL := range sourceObjectURLMap {
-		sourceClnt, err := manager.getNewClient(sourceObjectURL, globalDebugFlag)
+func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]map[string]string, targetURLConfigMap map[string]map[string]string) (
+	string, error) {
+
+	for sourceURL, sourceConfig := range sourceURLConfigMap {
+		sourceObjectURLMap, err := getSourceObjectURLMap(manager, sourceURL, sourceConfig)
 		if err != nil {
-			err := iodine.New(err, nil)
-			msg := fmt.Sprintf("Instantiating a new client for URL [%s] failed", sourceObjectURL)
-			return msg, err
+			msg := fmt.Sprintf("Getting list of objects from source URL: [%s] failed", sourceURL)
+			return msg, iodine.New(err, nil)
 		}
-		reader, length, md5hex, err := sourceClnt.Get()
-		if err != nil {
-			err = iodine.New(err, nil)
-			msg := fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL)
-			return msg, err
-		}
-		// Construct full target URL path based on source object name
-		var newTargetURLs []string
-		for _, targetURL := range targetURLs {
-			targetURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + sourceObjectName
-			newTargetURLs = append(newTargetURLs, targetURL)
-		}
-		writeClosers, err := getRecursiveTargetWriters(manager, newTargetURLs, md5hex, length)
-		if err != nil {
-			return "Writing to target URLs failed", iodine.New(err, nil)
-		}
-
-		var writers []io.Writer
-		for _, writer := range writeClosers {
-			writers = append(writers, writer)
-		}
-
-		// set up progress bar
-		var bar *pb.ProgressBar
-		if !globalQuietFlag {
-			bar = startBar(length)
-			bar.Start()
-			writers = append(writers, bar)
-		}
-
-		// write progress bar
-		multiWriter := io.MultiWriter(writers...)
-
-		// copy data to writers
-		_, err = io.CopyN(multiWriter, reader, length)
-		if err != nil {
-			err := iodine.New(err, nil)
-			return "Copying data from source to target(s) failed", err
-		}
-
-		// close writers
-		for _, writer := range writeClosers {
-			err := writer.Close()
+		// do not exit, continue even for failures
+		for sourceObjectName, sourceObjectURL := range sourceObjectURLMap {
+			sourceClnt, err := manager.getNewClient(sourceObjectURL, sourceConfig, globalDebugFlag)
 			if err != nil {
 				err := iodine.New(err, nil)
-				return "Connections still active, one or more writes have failed", err
+				msg := fmt.Sprintf("Instantiating a new client for URL [%s] failed", sourceObjectURL)
+				return msg, err
 			}
-		}
-		if !globalDebugFlag {
-			bar.Finish()
-			console.Infoln("Success!")
+			reader, length, md5hex, err := sourceClnt.Get()
+			if err != nil {
+				err = iodine.New(err, nil)
+				msg := fmt.Sprintf("Reading from source URL: [%s] failed", sourceURL)
+				return msg, err
+			}
+			newTargetURLConfigMap := make(map[string]map[string]string)
+			// Construct full target URL path based on source object name
+			for targetURL, targetConfig := range targetURLConfigMap {
+				targetURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + sourceObjectName
+				newTargetURLConfigMap[targetURL] = targetConfig
+			}
+			writeClosers, err := getRecursiveTargetWriters(manager, newTargetURLConfigMap, md5hex, length)
+			if err != nil {
+				return "Writing to target URLs failed", iodine.New(err, nil)
+			}
+
+			var writers []io.Writer
+			for _, writer := range writeClosers {
+				writers = append(writers, writer)
+			}
+
+			// set up progress bar
+			var bar *pb.ProgressBar
+			if !globalQuietFlag {
+				bar = startBar(length)
+				bar.Start()
+				writers = append(writers, bar)
+			}
+
+			// write progress bar
+			multiWriter := io.MultiWriter(writers...)
+
+			// copy data to writers
+			_, err = io.CopyN(multiWriter, reader, length)
+			if err != nil {
+				err := iodine.New(err, nil)
+				return "Copying data from source to target(s) failed", err
+			}
+
+			// close writers
+			for _, writer := range writeClosers {
+				err := writer.Close()
+				if err != nil {
+					err := iodine.New(err, nil)
+					return "Connections still active, one or more writes have failed", err
+				}
+			}
+			if !globalDebugFlag {
+				bar.Finish()
+				console.Infoln("Success!")
+			}
 		}
 	}
 	return "", nil

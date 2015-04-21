@@ -53,7 +53,7 @@ func printItem(date time.Time, v int64, name string) {
 	}
 }
 
-func doList(clnt client.Client, urlStr string) (string, error) {
+func doList(clnt client.Client, targetURL string) (string, error) {
 	var err error
 	var items []*client.Item
 
@@ -69,7 +69,7 @@ func doList(clnt client.Client, urlStr string) (string, error) {
 	}
 	if err != nil {
 		err = iodine.New(err, nil)
-		msg := fmt.Sprintf("\nmc: listing objects for URL [%s] failed with following reason: [%s]\n", urlStr, iodine.ToError(err))
+		msg := fmt.Sprintf("\nmc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
 		return msg, err
 	}
 	console.Infoln()
@@ -87,8 +87,9 @@ func runListCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("mc: reading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
+	targetURLConfigMap := make(map[string]map[string]string)
 	for _, arg := range ctx.Args() {
-		u, err := getURL(arg, config.GetMapString("Aliases"))
+		targetURL, err := getURL(arg, config.GetMapString("Aliases"))
 		if err != nil {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
@@ -99,25 +100,34 @@ func runListCmd(ctx *cli.Context) {
 				console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
 			}
 		}
-		errorMsg, err := doListCmd(mcClientManager{}, u, globalDebugFlag)
-		err = iodine.New(err, nil)
+		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			if errorMsg == "" {
-				errorMsg = "No error message present, please rerun with --debug and report a bug."
-			}
-			log.Debug.Println(err)
-			console.Fatalf("%s", errorMsg)
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalf("mc: reading config URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
 		}
+		targetURLConfigMap[targetURL] = targetConfig
+	}
+	errorMsg, err := doListCmd(mcClientManager{}, targetURLConfigMap, globalDebugFlag)
+	err = iodine.New(err, nil)
+	if err != nil {
+		if errorMsg == "" {
+			errorMsg = "No error message present, please rerun with --debug and report a bug."
+		}
+		log.Debug.Println(err)
+		console.Fatalf("%s", errorMsg)
 	}
 }
 
-func doListCmd(manager clientManager, u string, debug bool) (string, error) {
-	clnt, err := manager.getNewClient(u, globalDebugFlag)
-	if err != nil {
-		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
-			u, iodine.ToError(err))
-		return msg, err
+func doListCmd(manager clientManager, targetURLConfigMap map[string]map[string]string, debug bool) (string, error) {
+	for targetURL, targetConfig := range targetURLConfigMap {
+		clnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
+		if err != nil {
+			err := iodine.New(err, nil)
+			msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
+				targetURL, iodine.ToError(err))
+			return msg, err
+		}
+		return doList(clnt, targetURL)
 	}
-	return doList(clnt, u)
+	return "", nil
 }

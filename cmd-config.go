@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/mc/pkg/qdb"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -218,15 +219,33 @@ func getHostURL(u *url.URL) string {
 	return u.Scheme + "://" + u.Host
 }
 
+func getHostConfigs(requestURLs []string) (hostConfigs map[string]map[string]string, err error) {
+	hostConfigs = make(map[string]map[string]string)
+	for _, requestURL := range requestURLs {
+		hostConfigs[requestURL], err = getHostConfig(requestURL)
+		if err != nil {
+			return nil, iodine.New(err, nil)
+		}
+	}
+	return hostConfigs, nil
+}
+
 // getHostConfig retrieves host specific configuration such as access keys, certs.
 func getHostConfig(requestURL string) (map[string]string, error) {
+	config, err := getMcConfig()
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
 	u, err := url.Parse(requestURL)
 	if err != nil {
 		return nil, iodine.New(errInvalidURL{url: requestURL}, nil)
 	}
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, iodine.New(err, nil)
+	// skip filesystem
+	if client.GetType(requestURL) == client.Filesystem {
+		hostConfig := make(map[string]string)
+		hostConfig["Auth.AccessKeyID"] = ""
+		hostConfig["Auth.SecretAccessKey"] = ""
+		return hostConfig, nil
 	}
 	for globURL, hostConfig := range config.GetMapMapString("Hosts") {
 		match, err := filepath.Match(globURL, getHostURL(u))
@@ -234,12 +253,15 @@ func getHostConfig(requestURL string) (map[string]string, error) {
 			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: requestURL}, nil)
 		}
 		if match {
+			if hostConfig == nil {
+				return nil, iodine.New(errInvalidAuth{}, nil)
+			}
 			// verify Auth key validity for all hosts other than localhost
 			if !strings.Contains(getHostURL(u), "localhost") {
-				if !isValidAccessKey(hostConfig["Auth.AccessKeyID"]) {
+				if !client.IsValidAccessKey(hostConfig["Auth.AccessKeyID"]) {
 					return nil, iodine.New(errInvalidAuthKeys{}, nil)
 				}
-				if !isValidSecretKey(hostConfig["Auth.SecretAccessKey"]) {
+				if !client.IsValidSecretKey(hostConfig["Auth.SecretAccessKey"]) {
 					return nil, iodine.New(errInvalidAuthKeys{}, nil)
 				}
 			}

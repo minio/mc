@@ -57,7 +57,7 @@ func (c *s3Client) List() (items []*client.Item, err error) {
 // populate s3 response and decode results into listBucketResults{}
 func (c *s3Client) decodeBucketResults(urlReq string) (listBucketResults, error) {
 	bres := listBucketResults{}
-	req, err := getNewReq(urlReq, c.UserAgent, nil)
+	req, err := c.getNewReq(urlReq, nil)
 	if err != nil {
 		return listBucketResults{}, iodine.New(err, nil)
 	}

@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package main
+package client
 
 import "regexp"
 
-// isValidSecretKey - validate secret key
-func isValidSecretKey(secretAccessKey string) bool {
+// IsValidSecretKey - validate secret key
+func IsValidSecretKey(secretAccessKey string) bool {
 	regex := regexp.MustCompile("^.{40}$")
 	return regex.MatchString(secretAccessKey)
 }
 
-// isValidAccessKey - validate access key
-func isValidAccessKey(accessKeyID string) bool {
+// IsValidAccessKey - validate access key
+func IsValidAccessKey(accessKeyID string) bool {
 	regex := regexp.MustCompile("^[A-Z0-9\\-\\.\\_\\~]{20}$")
 	return regex.MatchString(accessKeyID)
 }

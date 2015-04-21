@@ -35,9 +35,9 @@ func getURL(arg string, aliases map[string]string) (urlStr string, err error) {
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-	if client.GetURLType(urlStr) == client.URLUnknown {
+	if client.GetType(urlStr) == client.Unknown {
 		return "", iodine.New(errUnsupportedScheme{
-			scheme: client.URLUnknown,
+			scheme: client.Unknown,
 			url:    urlStr,
 		}, nil)
 	}

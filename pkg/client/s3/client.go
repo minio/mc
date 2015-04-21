@@ -75,14 +75,18 @@ type listBucketResults struct {
 
 // Meta holds Amazon S3 client credentials and flags.
 type Meta struct {
-	*Auth
+	*Config
 	Transport http.RoundTripper // or nil for the default behavior
 }
 
-// Auth - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
-type Auth struct {
+// Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
+type Config struct {
 	AccessKeyID     string
 	SecretAccessKey string
+	HostURL         string
+	UserAgent       string
+	Debug           bool
+
 	// Used for SSL transport layer
 	CertPEM string
 	KeyPEM  string
@@ -101,7 +105,6 @@ type s3Client struct {
 	//  - http://<ipaddress>/<bucketname>/<object>
 	//  - http://<bucketname>.<domain>/<object>
 	*url.URL
-	UserAgent string
 }
 
 // url2Object converts URL to bucketName and objectName
@@ -159,31 +162,29 @@ func (c *s3Client) objectURL(bucket, object string) string {
 }
 
 //
-func getNewReq(url string, userAgent string, body io.ReadCloser) (*http.Request, error) {
+func (c *s3Client) getNewReq(url string, body io.ReadCloser) (*http.Request, error) {
 	errParams := map[string]string{
 		"url":       url,
-		"userAgent": userAgent,
+		"userAgent": c.UserAgent,
 	}
 	req, err := http.NewRequest("GET", url, body)
 	if err != nil {
 		return nil, iodine.New(err, errParams)
 	}
-	if userAgent != "" {
-		req.Header.Set("User-Agent", userAgent)
-	}
+	req.Header.Set("User-Agent", c.UserAgent)
 	return req, nil
 }
 
-// GetNewClient returns an initialized s3Client structure.
+// New returns an initialized s3Client structure.
 // if debug use a internal trace transport
-func GetNewClient(hostURL string, auth *Auth, userAgent string, debug bool) client.Client {
-	u, err := url.Parse(hostURL)
+func New(config *Config) client.Client {
+	u, err := url.Parse(config.HostURL)
 	if err != nil {
 		return nil
 	}
 	var traceTransport RoundTripTrace
 	var transport http.RoundTripper
-	if debug {
+	if config.Debug {
 		traceTransport = GetNewTraceTransport(NewTrace(false, true, nil), http.DefaultTransport)
 		transport = GetNewTraceTransport(s3Verify{}, traceTransport)
 	} else {
@@ -191,9 +192,9 @@ func GetNewClient(hostURL string, auth *Auth, userAgent string, debug bool) clie
 	}
 	s3c := &s3Client{
 		&Meta{
-			Auth:      auth,
+			Config:    config,
 			Transport: transport,
-		}, u, userAgent,
+		}, u,
 	}
 	return s3c
 }

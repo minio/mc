@@ -56,7 +56,7 @@ import (
 // GetObjectMetadata - returns nil, os.ErrNotExist if not on object storage
 func (c *s3Client) GetObjectMetadata() (item *client.Item, reterr error) {
 	bucket, object := c.url2Object()
-	req, err := getNewReq(c.objectURL(bucket, object), c.UserAgent, nil)
+	req, err := c.getNewReq(c.objectURL(bucket, object), nil)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -94,7 +94,7 @@ func (c *s3Client) GetObjectMetadata() (item *client.Item, reterr error) {
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error) {
 	bucket, object := c.url2Object()
-	req, err := getNewReq(c.objectURL(bucket, object), c.UserAgent, nil)
+	req, err := c.getNewReq(c.objectURL(bucket, object), nil)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -118,7 +118,7 @@ func (c *s3Client) GetPartial(offset, length int64) (body io.ReadCloser, size in
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	req, err := getNewReq(c.objectURL(bucket, object), c.UserAgent, nil)
+	req, err := c.getNewReq(c.objectURL(bucket, object), nil)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
