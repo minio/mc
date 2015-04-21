@@ -18,6 +18,7 @@ package main
 
 import (
 	"io"
+	"runtime"
 	"strings"
 
 	"fmt"
@@ -29,8 +30,18 @@ import (
 )
 
 const (
-	pathSeparator = "/"
+	pathSeparator        = "/"
+	pathSeparatorWindows = "\\"
 )
+
+func getSourceURL(sourceURL, objectName string) string {
+	if client.GetURLType(sourceURL) == client.URLFilesystem {
+		if runtime.GOOS == "windows" {
+			return strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparatorWindows + objectName
+		}
+	}
+	return strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + objectName
+}
 
 // getSourceObjectURLMap - get list of all source object and its URLs in a map
 func getSourceObjectURLMap(manager clientManager, sourceURL string) (sourceObjectURLMap map[string]string, err error) {
@@ -44,7 +55,7 @@ func getSourceObjectURLMap(manager clientManager, sourceURL string) (sourceObjec
 	}
 	sourceObjectURLMap = make(map[string]string)
 	for _, object := range objects {
-		sourceObjectURLMap[object.Name] = strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + object.Name
+		sourceObjectURLMap[object.Name] = getSourceURL(sourceURL, object.Name)
 	}
 	return sourceObjectURLMap, nil
 }

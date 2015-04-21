@@ -125,16 +125,17 @@ func getFilesystemAbsURL(u *url.URL) (string, error) {
 		if err != nil {
 			return "", iodine.New(err, nil)
 		}
-	case filepath.IsAbs(u.String()):
-		absURLStr, err = filepath.Abs(filepath.Clean(u.String()))
-		if err != nil {
-			return "", iodine.New(err, nil)
-		}
 	default:
 		absURLStr, err = filepath.Abs(filepath.Clean(u.String()))
 		if err != nil {
 			return "", iodine.New(err, nil)
 		}
+		// url parse converts "\" on windows as "%5c" unescape it
+		unescapedAbsURL, err := url.QueryUnescape(absURLStr)
+		if err != nil {
+			return "", iodine.New(err, nil)
+		}
+		absURLStr = unescapedAbsURL
 	}
 	return absURLStr, nil
 }
