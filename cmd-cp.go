@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
@@ -53,7 +54,12 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 	}
 
-	sourceURL := urls[0]   // First arg is source
+	sourceURL := urls[0] // First arg is source
+	recursive := isURLRecursive(sourceURL)
+	// if recursive strip off the "..."
+	if recursive {
+		sourceURL = strings.TrimSuffix(sourceURL, recursiveSeparator)
+	}
 	targetURLs := urls[1:] // 1 or more targets
 
 	sourceURLConfigMap := make(map[string]*hostConfig)
@@ -70,8 +76,8 @@ func runCopyCmd(ctx *cli.Context) {
 		console.Fatalf("mc: reading host configs failed with following reason: [%s]\n", iodine.ToError(err))
 	}
 
-	// perform copy
-	if ctx.Bool("recursive") {
+	// perform recursive
+	if recursive {
 		errorMsg, err := doCopyCmdRecursive(mcClientManager{}, sourceURLConfigMap, targetURLConfigMap)
 		err = iodine.New(err, nil)
 		if err != nil {

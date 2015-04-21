@@ -18,10 +18,19 @@ package main
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
+
+const (
+	recursiveSeparator = "..."
+)
+
+func isURLRecursive(urlStr string) bool {
+	return strings.HasSuffix(urlStr, recursiveSeparator)
+}
 
 // getURL extracts URL string from a single cmd-line argument
 func getURL(arg string, aliases map[string]string) (urlStr string, err error) {
