@@ -56,7 +56,7 @@ func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]*ho
 			if err != nil {
 				err := iodine.New(err, nil)
 				log.Debug.Println(err)
-				console.Errorf("%s with following reason: [%s]\n", humanReadable, iodine.ToError(err))
+				console.Errorln(humanReadable)
 			}
 		}
 	}
