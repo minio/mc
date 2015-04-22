@@ -30,24 +30,26 @@ import (
 )
 
 type fsClient struct {
-	Path string
+	path string
 }
 
 // New - instantiate a new fs client
 func New(path string) client.Client {
-	return &fsClient{Path: path}
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+	return &fsClient{path: path}
 }
 
 // getObjectMetadata - wrapper function to get file stat
 func (f *fsClient) getObjectMetadata() (os.FileInfo, error) {
-	st, err := os.Stat(filepath.Clean(f.Path))
-	/* FIXME: after rewritng client.errors to handle generic path and URLs, fix the error messages appropriately.
+	st, err := os.Stat(filepath.Clean(f.path))
 	if os.IsNotExist(err) {
-		return nil, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: object}, nil)
+		return nil, iodine.New(FileNotFound{Path: f.path}, nil)
 	}
 	if st.IsDir() {
-		return nil, iodine.New(client.InvalidObjectName{Bucket: bucket, Object: object}, nil)
-	}*/
+		return nil, iodine.New(FileISDir{Path: f.path}, nil)
+	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -60,7 +62,7 @@ func (f *fsClient) Get() (body io.ReadCloser, size int64, md5 string, err error)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	body, err = os.Open(f.normalizedPath())
+	body, err = os.Open(f.path)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -78,7 +80,7 @@ func (f *fsClient) GetPartial(offset, length int64) (body io.ReadCloser, size in
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	body, err = os.Open(f.normalizedPath())
+	body, err = os.Open(f.path)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -109,7 +111,7 @@ func (f *fsClient) GetObjectMetadata() (item *client.Item, reterr error) {
 
 // listBuckets - get list of buckets
 func (f *fsClient) listBuckets() ([]*client.Item, error) {
-	buckets, err := ioutil.ReadDir(f.normalizedPath())
+	buckets, err := ioutil.ReadDir(f.path)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -143,14 +145,14 @@ func (f *fsClient) List() (items []*client.Item, err error) {
 			}
 			// trim f.String()
 			item := &client.Item{
-				Name: strings.TrimPrefix(filepath.Clean(fp), f.normalizedPath()+string(filepath.Separator)),
+				Name: strings.TrimPrefix(filepath.Clean(fp), f.path+string(filepath.Separator)),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 			}
 			items = append(items, item)
 			return nil
 		}
-		err = filepath.Walk(f.normalizedPath(), visitFS)
+		err = filepath.Walk(f.path, visitFS)
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
@@ -161,7 +163,7 @@ func (f *fsClient) List() (items []*client.Item, err error) {
 
 // PutBucket - create a new bucket
 func (f *fsClient) PutBucket() error {
-	err := os.MkdirAll(f.normalizedPath(), 0700)
+	err := os.MkdirAll(f.path, 0700)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -170,12 +172,12 @@ func (f *fsClient) PutBucket() error {
 
 // Stat -
 func (f *fsClient) Stat() error {
-	st, err := os.Stat(f.normalizedPath())
+	st, err := os.Stat(f.path)
 	if os.IsNotExist(err) {
-		return iodine.New(client.BucketNotFound{Bucket: f.normalizedPath()}, nil)
+		return iodine.New(err, nil)
 	}
 	if !st.IsDir() {
-		return iodine.New(client.InvalidBucketName{Bucket: f.normalizedPath()}, nil)
+		return iodine.New(FileNotDir{Path: f.path}, nil)
 	}
 	return nil
 }

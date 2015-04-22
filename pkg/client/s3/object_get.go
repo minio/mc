@@ -70,7 +70,7 @@ func (c *s3Client) GetObjectMetadata() (item *client.Item, reterr error) {
 	defer res.Body.Close()
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return nil, iodine.New(client.ObjectNotFound{Bucket: bucket, Object: object}, nil)
+		return nil, iodine.New(ObjectNotFound{Bucket: bucket, Object: object}, nil)
 	case http.StatusOK:
 		contentLength, err := strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
 		if err != nil {

@@ -53,8 +53,8 @@ import (
 
 /// Bucket API operations
 
-// ListBuckets - Get list of buckets
-func (c *s3Client) listBuckets() ([]*client.Item, error) {
+// Get list of buckets
+func (c *s3Client) listBucketsInternal() ([]*client.Item, error) {
 	var res *http.Response
 	var err error
 
@@ -88,7 +88,8 @@ func (c *s3Client) listBuckets() ([]*client.Item, error) {
 	}
 	var buckets allMyBuckets
 	if err := xml.NewDecoder(res.Body).Decode(&buckets); err != nil {
-		return nil, iodine.New(client.UnexpectedError{Err: errors.New("Malformed response received from server")},
+		return nil, iodine.New(client.UnexpectedError{
+			Err: errors.New("Malformed response received from server")},
 			map[string]string{"XMLError": err.Error()})
 	}
 	var items []*client.Item
@@ -105,7 +106,7 @@ func (c *s3Client) listBuckets() ([]*client.Item, error) {
 func (c *s3Client) PutBucket() error {
 	bucket, _ := c.url2Object()
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
-		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
+		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 	req, err := c.getNewReq(u, nil)
@@ -132,7 +133,7 @@ func (c *s3Client) PutBucket() error {
 func (c *s3Client) Stat() error {
 	bucket, _ := c.url2Object()
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
-		return iodine.New(client.InvalidBucketName{Bucket: bucket}, nil)
+		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 	req, err := c.getNewReq(u, nil)
@@ -150,7 +151,7 @@ func (c *s3Client) Stat() error {
 
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return iodine.New(client.BucketNotFound{Bucket: bucket}, nil)
+		return iodine.New(BucketNotFound{Bucket: bucket}, nil)
 	case http.StatusOK:
 		fallthrough
 	case http.StatusMovedPermanently:

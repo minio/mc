@@ -105,7 +105,7 @@ func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig *h
 	if client.GetType(targetURL) != client.Filesystem {
 		if err := targetClnt.Stat(); err != nil {
 			switch iodine.ToError(err).(type) {
-			case client.BucketNotFound:
+			case s3.BucketNotFound:
 				err := targetClnt.PutBucket()
 				if err != nil {
 					return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
