@@ -49,7 +49,7 @@ func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 				return
 			}
 		}
-		fs, err := os.Create(f.path)
+		fs, err := os.Create(objectPath)
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)
