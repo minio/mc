@@ -41,8 +41,8 @@ func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 			blockingWriter.Release(err)
 			return
 		}
-		objectDir, _ := filepath.Split(f.Path)
-		objectPath := f.Path
+		objectDir, _ := filepath.Split(f.path)
+		objectPath := f.path
 		if err := os.MkdirAll(objectDir, 0700); err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)

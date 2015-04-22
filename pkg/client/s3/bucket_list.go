@@ -41,8 +41,9 @@ func (c *s3Client) List() (items []*client.Item, err error) {
 		items = append(items, item)
 		return items, nil
 	default:
+		// if not bucket provided return list of all buckets
 		if bucket == "" {
-			return c.listBuckets()
+			return c.listBucketsInternal()
 		}
 		// List all objects matching the key prefix
 		items, err = c.listObjectsInternal(bucket, "", objectPrefix, "", globalMaxKeys)
@@ -109,7 +110,7 @@ func (c *s3Client) listObjectsInternal(bucket string, startAt, prefix, delimiter
 	var urlReq string
 	var buffer bytes.Buffer
 	if maxKeys <= 0 {
-		return nil, iodine.New(client.InvalidMaxKeys{MaxKeys: maxKeys}, nil)
+		return nil, iodine.New(InvalidMaxKeys{MaxKeys: maxKeys}, nil)
 	}
 	marker := startAt
 	for len(items) < maxKeys {
@@ -137,8 +138,8 @@ func (c *s3Client) listObjectsInternal(bucket string, startAt, prefix, delimiter
 		}
 		if bres.MaxKeys != fetchN || bres.Name != bucket || bres.Marker != marker {
 			msg := fmt.Sprintf("Unexpected parse from server: %#v", bres)
-			err = errors.New(msg)
-			return nil, iodine.New(err, nil)
+			return nil, iodine.New(client.UnexpectedError{
+				Err: errors.New(msg)}, nil)
 		}
 		items, marker, err = c.filterItems(startAt, marker, bres.Contents)
 		if err != nil {
@@ -149,7 +150,9 @@ func (c *s3Client) listObjectsInternal(bucket string, startAt, prefix, delimiter
 		}
 
 		if len(items) == 0 {
-			return nil, iodine.New(errors.New("No items replied"), nil)
+			errMsg := errors.New("No items replied")
+			return nil, iodine.New(client.UnexpectedError{
+				Err: errMsg}, nil)
 		}
 	}
 	sort.Sort(client.BySize(items))
