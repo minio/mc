@@ -9,19 +9,19 @@ type GenericFileError struct {
 type FileNotFound GenericFileError
 
 func (e FileNotFound) Error() string {
-	return "Requested file " + e.path + "not found"
+	return "Requested file " + e.path + " not found"
 }
 
 // FileISDir (EISDIR) - accessed file is a directory
 type FileISDir GenericFileError
 
 func (e FileISDir) Error() string {
-	return "Requested file " + e.path + "is a directory"
+	return "Requested file " + e.path + " is a directory"
 }
 
 // FileNotDir (ENOTDIR) - accessed file is not a directory
 type FileNotDir GenericFileError
 
 func (e FileNotDir) Error() string {
-	return "Requested file " + e.path + "is not a directory"
+	return "Requested file " + e.path + " is not a directory"
 }

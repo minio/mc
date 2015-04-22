@@ -54,7 +54,7 @@ EXAMPLES:
       $ mc {{.Name}} backup/... http://localhost:9000/archive/ https://s3.amazonaws.com/archive/
 
    4. Copy an object from Amazon S3 object storage to local filesystem on Windows.
-      $ mc {{.Name}} https://s3.amazonaws.com/jukebox/vulcan_lute.ogg C:\Users\Surak\sleep.ogg
+      $ mc {{.Name}} s3:documents/2014/... Documents\backup\2014
 
 `,
 	}

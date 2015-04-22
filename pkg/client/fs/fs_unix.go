@@ -46,15 +46,15 @@ func New(path string) client.Client {
 /// Object operations
 // getObjectMetadata - wrapper function to get file stat
 func (f *fsClient) getObjectMetadata() (os.FileInfo, error) {
-	st, err := os.Stat(f.path)
+	st, err := os.Stat(filepath.Clean(f.path))
 	if os.IsNotExist(err) {
 		return nil, iodine.New(FileNotFound{path: f.path}, nil)
 	}
-	if st.IsDir() {
-		return nil, iodine.New(FileISDir{path: f.path}, nil)
-	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
+	}
+	if st.IsDir() {
+		return nil, iodine.New(FileISDir{path: f.path}, nil)
 	}
 	return st, nil
 }
