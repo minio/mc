@@ -24,7 +24,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -82,24 +84,26 @@ func (c *s3Client) decodeBucketResults(urlReq string) (listBucketResults, error)
 }
 
 // filter items out of content and provide marker for future request
-func (c *s3Client) filterItems(s, m string, contents []*item) (items []*client.Item, marker string, err error) {
+func (c *s3Client) filterItems(startAt, marker, prefix, delimiter string, contents []*item) (items []*client.Item, nextMarker string, err error) {
 	for _, it := range contents {
-		if it.Key == m && it.Key != s {
+		if it.Key == marker && it.Key != startAt {
 			// Skip first dup on pages 2 and higher.
 			continue
 		}
-		if it.Key < s {
-			msg := fmt.Sprintf("Unexpected response from Amazon: item key %q but wanted greater than %q", it.Key, s)
-			return nil, m, iodine.New(errors.New(msg), nil)
+		if it.Key < startAt {
+			msg := fmt.Sprintf("Unexpected response from Amazon: item key %q but wanted greater than %q", it.Key, startAt)
+			return nil, marker, iodine.New(client.UnexpectedError{Err: errors.New(msg)}, nil)
 		}
 		item := new(client.Item)
-		item.Name = it.Key
+		// TODO (y4m4) - this is temporary, fix this after passing down proper delimiters
+		// for now using filepath.Separator
+		item.Name = strings.TrimPrefix(it.Key, filepath.Clean(prefix)+string(filepath.Separator))
 		item.Time = it.LastModified
 		item.Size = it.Size
 		items = append(items, item)
-		marker = it.Key
+		nextMarker = it.Key
 	}
-	return items, marker, nil
+	return items, nextMarker, nil
 }
 
 // listObjectsInternal returns 0 to maxKeys (inclusive) items from the
@@ -130,7 +134,6 @@ func (c *s3Client) listObjectsInternal(bucket string, startAt, prefix, delimiter
 		case delimiter != "":
 			buffer.WriteString(fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter)))
 		}
-
 		urlReq = buffer.String()
 		bres, err = c.decodeBucketResults(urlReq)
 		if err != nil {
@@ -141,7 +144,7 @@ func (c *s3Client) listObjectsInternal(bucket string, startAt, prefix, delimiter
 			return nil, iodine.New(client.UnexpectedError{
 				Err: errors.New(msg)}, nil)
 		}
-		items, marker, err = c.filterItems(startAt, marker, bres.Contents)
+		items, marker, err = c.filterItems(startAt, marker, prefix, delimiter, bres.Contents)
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
