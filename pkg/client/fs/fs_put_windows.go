@@ -41,13 +41,15 @@ func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 		}
 		objectDir, _ := filepath.Split(f.path)
 		objectPath := f.path
-		if err := os.MkdirAll(objectDir, 0700); err != nil {
-			err := iodine.New(err, nil)
-			r.CloseWithError(err)
-			blockingWriter.Release(err)
-			return
+		if objectDir != "" {
+			if err := os.MkdirAll(objectDir, 0700); err != nil {
+				err := iodine.New(err, nil)
+				r.CloseWithError(err)
+				blockingWriter.Release(err)
+				return
+			}
 		}
-		fs, err := os.Create(objectPath)
+		fs, err := os.Create(f.path)
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)

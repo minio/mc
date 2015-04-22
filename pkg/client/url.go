@@ -23,9 +23,5 @@ func GetType(urlStr string) Type {
 		return Object
 	}
 
-	if u.Scheme == "" {
-		return Filesystem
-	}
-
-	return Unknown
+	return Filesystem
 }
