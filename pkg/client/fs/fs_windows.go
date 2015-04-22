@@ -45,10 +45,10 @@ func New(path string) client.Client {
 func (f *fsClient) getObjectMetadata() (os.FileInfo, error) {
 	st, err := os.Stat(filepath.Clean(f.path))
 	if os.IsNotExist(err) {
-		return nil, iodine.New(FileNotFound{Path: f.path}, nil)
+		return nil, iodine.New(FileNotFound{path: f.path}, nil)
 	}
 	if st.IsDir() {
-		return nil, iodine.New(FileISDir{Path: f.path}, nil)
+		return nil, iodine.New(FileISDir{path: f.path}, nil)
 	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -177,7 +177,7 @@ func (f *fsClient) Stat() error {
 		return iodine.New(err, nil)
 	}
 	if !st.IsDir() {
-		return iodine.New(FileNotDir{Path: f.path}, nil)
+		return iodine.New(FileNotDir{path: f.path}, nil)
 	}
 	return nil
 }
