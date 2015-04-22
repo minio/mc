@@ -66,17 +66,17 @@ func runMakeBucketCmd(ctx *cli.Context) {
 				errorMsg = "No error message present, please rerun with --debug and report a bug."
 			}
 			log.Debug.Println(err)
-			console.Fatalf("%s", errorMsg)
+			console.Errorf("%s", errorMsg)
 		}
 	}
 }
 
 func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
 	err := clnt.PutBucket()
-	if err != nil {
+	if err != nil && isValidRetry(err) {
 		console.Infof("Retrying ...")
 	}
-	for i := 0; i < globalMaxRetryFlag && err != nil; i++ {
+	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
 		err = clnt.PutBucket()
 		console.Errorf(" %d", i)
 		// Progressively longer delays

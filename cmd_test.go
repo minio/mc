@@ -411,7 +411,11 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	retries := globalMaxRetryFlag
 	globalMaxRetryFlag = 1
 	for i := 0; i <= globalMaxRetryFlag; i++ {
-		cl1.On("PutBucket").Return(errors.New("Another Expected Error")).Once()
+		err := new(net.OpError)
+		err.Op = "dial"
+		err.Net = "tcp"
+		err.Err = errors.New("Another expected error")
+		cl1.On("PutBucket").Return(err).Once()
 	}
 	msg, err = doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	globalMaxRetryFlag = retries
