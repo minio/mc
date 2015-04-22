@@ -53,11 +53,11 @@ func (e BucketExists) Error() string {
 	return "bucket " + e.Bucket + " exists"
 }
 
-// InvalidBucketName - bucket name invalid
+// InvalidBucketName - bucket name invalid (http://goo.gl/wJlzDz)
 type InvalidBucketName GenericBucketError
 
 func (e InvalidBucketName) Error() string {
-	return "Invalid bucketname " + e.Bucket
+	return "Invalid bucketname [" + e.Bucket + "], please read http://goo.gl/wJlzDz"
 }
 
 // GenericObjectError - generic object operations error

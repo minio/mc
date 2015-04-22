@@ -114,7 +114,7 @@ func runListCmd(ctx *cli.Context) {
 				errorMsg = "mc: List command failed. Please re-run with --debug and report this bug."
 			}
 			log.Debug.Println(err)
-			console.Fatalf("%s", errorMsg)
+			console.Errorf("%s", errorMsg)
 		}
 	}
 }

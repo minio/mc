@@ -87,7 +87,7 @@ func IsValidBucketName(bucket string) bool {
 		return false
 	}
 	// We don't support buckets with '.' in them
-	match, _ := regexp.MatchString("^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", bucket)
+	match, _ := regexp.MatchString("^[a-z][a-z0-9\\-]+[a-z0-9]$", bucket)
 	return match
 }
 
