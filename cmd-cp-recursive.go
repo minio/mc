@@ -17,16 +17,16 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 const (
 	pathSeparator = "/"
-
-//	pathSeparatorWindows = "\\"
 )
 
 // doCopyCmdRecursive - copy bucket to bucket
@@ -34,24 +34,30 @@ func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]*ho
 	for sourceURL, sourceConfig := range sourceURLConfigMap {
 		// get source list
 		clnt, err := manager.getNewClient(sourceURL, sourceConfig, false)
-		log.Debug.Println(iodine.New(err, nil))
+		if err != nil {
+			return fmt.Sprintf("instantiating a new client for URL [%s]", sourceURL), iodine.New(err, nil)
+		}
 		items, err := clnt.List()
-		log.Debug.Println(iodine.New(err, nil))
+		if err != nil {
+			return fmt.Sprintf("listing objects failed for URL [%s]", sourceURL), iodine.New(err, nil)
+		}
 		for _, item := range items {
-			// get source url
+			// populate source urls
 			sourceURLs := make(map[string]*hostConfig)
 			sourceObjectURL := strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + item.Name
 			sourceURLs[sourceObjectURL] = sourceConfig
-			// get target urls
+			// populate target urls
 			targetURLs := make(map[string]*hostConfig)
 			for targetURL, targetConfig := range targetURLConfigMap {
 				targetObjectURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + item.Name
 				targetURLs[targetObjectURL] = targetConfig
 			}
 			humanReadable, err := doCopyCmd(manager, sourceURLs, targetURLs)
-			// TODO work out how to report errors
-			log.Debug.Println(humanReadable)
-			log.Debug.Println(iodine.New(err, nil))
+			if err != nil {
+				err := iodine.New(err, nil)
+				log.Debug.Println(err)
+				console.Errorf("%s with following reason: [%s]\n", humanReadable, iodine.ToError(err))
+			}
 		}
 	}
 	return "", nil

@@ -148,9 +148,11 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("List").Return(items, nil).Once()
-	manager.On("getSourceReader", sourceURL+"hello1", sourceConfig).Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil).Once()
+	sourceReader1 := ioutil.NopCloser(bytes.NewBufferString(data1))
+	sourceReader2 := ioutil.NopCloser(bytes.NewBufferString(data2))
+	manager.On("getSourceReader", sourceURL+"hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
 	manager.On("getTargetWriter", targetURL+"hello1", targetConfig, etag1, dataLen1).Return(writer1, nil).Once()
-	manager.On("getSourceReader", sourceURL+"hello2", sourceConfig).Return(ioutil.NopCloser(bytes.NewBufferString(data2)), dataLen2, etag2, nil).Once()
+	manager.On("getSourceReader", sourceURL+"hello2", sourceConfig).Return(sourceReader2, dataLen2, etag2, nil).Once()
 	manager.On("getTargetWriter", targetURL+"hello2", targetConfig, etag2, dataLen2).Return(writer2, nil).Once()
 
 	msg, err := doCopyCmdRecursive(manager, sourceURLConfigMap, targetURLConfigMap)
