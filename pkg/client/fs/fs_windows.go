@@ -47,11 +47,11 @@ func (f *fsClient) getObjectMetadata() (os.FileInfo, error) {
 	if os.IsNotExist(err) {
 		return nil, iodine.New(FileNotFound{path: f.path}, nil)
 	}
-	if st.IsDir() {
-		return nil, iodine.New(FileISDir{path: f.path}, nil)
-	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
+	}
+	if st.IsDir() {
+		return nil, iodine.New(FileISDir{path: f.path}, nil)
 	}
 	return st, nil
 }
