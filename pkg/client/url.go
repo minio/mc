@@ -12,7 +12,7 @@ const (
 	Filesystem             // POSIX compatible file systems
 )
 
-// GetType returns the type of .
+// GetType returns the type of URL
 func GetType(urlStr string) Type {
 	u, err := url.Parse(urlStr)
 	if err != nil {
@@ -24,4 +24,16 @@ func GetType(urlStr string) Type {
 	}
 
 	return Filesystem
+}
+
+// GetTypeToString returns the type of URL as string
+func GetTypeToString(t Type) string {
+	switch t {
+	case Object:
+		return "Object"
+	case Filesystem:
+		return "Filesystem"
+	default:
+		return "Unknown"
+	}
 }

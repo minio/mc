@@ -64,7 +64,9 @@ func (c *s3Client) decodeBucketResults(urlReq string) (listBucketResults, error)
 	if err != nil {
 		return listBucketResults{}, iodine.New(err, nil)
 	}
-	c.signRequest(req, c.Host)
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return listBucketResults{}, iodine.New(err, nil)

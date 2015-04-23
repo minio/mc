@@ -60,9 +60,10 @@ func (c *s3Client) GetObjectMetadata() (item *client.Item, reterr error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	req.Method = "HEAD"
-	c.signRequest(req, c.Host)
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return nil, iodine.New(err, nil)

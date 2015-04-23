@@ -16,11 +16,13 @@
 
 package main
 
-import (
-	"fmt"
+type errInvalidACL struct {
+	acl string
+}
 
-	"github.com/minio-io/mc/pkg/client"
-)
+func (e errInvalidACL) Error() string {
+	return "Invalid ACL: " + e.acl
+}
 
 type errInvalidArgument struct{}
 
@@ -29,12 +31,12 @@ func (e errInvalidArgument) Error() string {
 }
 
 type errUnsupportedScheme struct {
-	scheme client.Type
+	scheme string
 	url    string
 }
 
 func (e errUnsupportedScheme) Error() string {
-	return fmt.Sprintf("Unsuppported URL scheme: %d", e.scheme)
+	return "Unsuppported URL scheme: " + e.scheme
 }
 
 type errInvalidURL struct {

@@ -112,7 +112,7 @@ EXAMPLES:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
+   mc {{.Name}} ACL TARGET [TARGET...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -122,14 +122,14 @@ OPTIONS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Create a bucket on Amazon S3 object storage
-      $ mc {{.Name}} https://s3.amazonaws.com/public-document-store
+   1. Create a public bucket on Amazon S3 object storage
+      $ mc {{.Name}} public-read-write https://s3.amazonaws.com/public-document-store
 
-   2. Create a bucket on Minio object storage
-      $ mc {{.Name}} http://localhost:9000/mongodb-backup
+   2. Create a private bucket on Minio object storage
+      $ mc {{.Name}} private http://localhost:9000/mongodb-backup
 
-   3. Create multiple buckets on Amazon S3 object storage
-      $ mc {{.Name}} https://s3.amazonaws.com/public-photo-store https://s3.amazonaws.com/public-store
+   3. Create multiple buckets on Amazon S3 object storage with same ACL
+      $ mc {{.Name}} public-read https://s3.amazonaws.com/public-photo-store https://s3.amazonaws.com/public-store
 
 `,
 	}

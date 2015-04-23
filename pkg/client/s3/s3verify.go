@@ -16,13 +16,7 @@
 
 package s3
 
-import (
-	"errors"
-	"net/http"
-	"strings"
-
-	"github.com/minio-io/minio/pkg/iodine"
-)
+import "net/http"
 
 // Only generic HTTP S3 fields are validated using this mechanism. S3
 // command specific checks should be added to their own appropriate
@@ -55,12 +49,15 @@ Example AWS S3 Request / Response
 
 // HTTP S3 request validator.
 func (t s3Verify) Request(req *http.Request) error {
-	if req.Header.Get("Authorization") == "" {
-		return iodine.New(AuthorizationKeyEmpty{Err: errors.New("authorization key empty")}, nil)
-	}
-	if !strings.HasPrefix(req.Header.Get("Authorization"), "AWS") {
-		return iodine.New(InvalidAuthorizationKey{Err: errors.New("invalid authorization key")}, nil)
-	}
+	// No Auth key is a valid case
+	/*
+		if req.Header.Get("Authorization") == "" {
+			return iodine.New(AuthorizationKeyEmpty{Err: errors.New("authorization key empty")}, nil)
+		}
+		if !strings.HasPrefix(req.Header.Get("Authorization"), "AWS") {
+			return iodine.New(InvalidAuthorizationKey{Err: errors.New("invalid authorization key")}, nil)
+		}
+	*/
 	return nil
 }
 
