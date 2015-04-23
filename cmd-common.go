@@ -100,19 +100,11 @@ func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig *h
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	// check if bucket is valid, if not create it on target
-	// For object storage URL's do a StatBucket() and PutBucket(), not necessary for fs client
+	// check if the bucket is valid
+	// For object storage URL's do a StatBucket(), not necessary for fs client
 	if client.GetType(targetURL) != client.Filesystem {
 		if err := targetClnt.Stat(); err != nil {
-			switch iodine.ToError(err).(type) {
-			case s3.BucketNotFound:
-				err := targetClnt.PutBucket("")
-				if err != nil {
-					return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
-				}
-			default:
-				return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
-			}
+			return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
 		}
 	}
 	return targetClnt.Put(md5Hex, length)
