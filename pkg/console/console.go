@@ -58,6 +58,13 @@ var (
 	Debugln = func(a ...interface{}) { themesDB[currThemeName].Debug.Println(a...) }
 	// Debugf prints a debug message with formatting
 	Debugf = func(f string, a ...interface{}) { themesDB[currThemeName].Debug.Printf(f, a...) }
+
+	// File - File("foo.txt")
+	File = themesDB[currThemeName].File.SprintfFunc()
+	// Size - Size("12GB")
+	Size = themesDB[currThemeName].Size.SprintfFunc()
+	//Time - Time("12 Hours")
+	Time = themesDB[currThemeName].Time.SprintfFunc()
 )
 
 // Theme holds console color scheme
@@ -66,34 +73,10 @@ type Theme struct {
 	Error *color.Color
 	Info  *color.Color
 	Debug *color.Color
-}
-
-// MiniTheme is a color scheme with
-//  - Red color for Fatal
-//  - Yellow for Error
-//  - Green for Info
-//  - Cyan for Debug
-var MiniTheme = Theme{
-	Fatal: (color.New(color.FgRed, color.Bold)),
-	Error: (color.New(color.FgYellow, color.Bold)),
-	Info:  (color.New(color.FgGreen, color.Bold)),
-	Debug: (color.New(color.FgCyan, color.Bold)),
-}
-
-// WhiteTheme is a color scheme with white colors only
-var WhiteTheme = Theme{
-	Fatal: (color.New(color.FgWhite, color.Bold)),
-	Error: (color.New(color.FgWhite, color.Bold)),
-	Info:  (color.New(color.FgWhite, color.Bold)),
-	Debug: (color.New(color.FgWhite, color.Bold)),
-}
-
-// NoColorTheme disables color theme
-var NoColorTheme = Theme{
-	Fatal: (color.New()),
-	Error: (color.New()),
-	Info:  (color.New()),
-	Debug: (color.New()),
+	Size  *color.Color
+	Time  *color.Color
+	File  *color.Color
+	//	Reason *color.Color
 }
 
 var (
@@ -117,6 +100,14 @@ func SetTheme(themeName string) error {
 	currThemeName = themeName
 	theme := themesDB[currThemeName]
 
+	/* TODO: Uncomment after updating color package
+	if currThemeName == "nocolor" {
+		color.NoColor = true
+	} else {
+		color.NoColor = false
+	}
+	*/
+
 	Fatal = func(a ...interface{}) { theme.Fatal.Print(a...); os.Exit(1) }
 	Fatalln = func(a ...interface{}) { theme.Fatal.Println(a...); os.Exit(1) }
 	Fatalf = func(f string, a ...interface{}) { theme.Fatal.Printf(f, a...); os.Exit(1) }
@@ -129,6 +120,11 @@ func SetTheme(themeName string) error {
 	Debug = func(a ...interface{}) { theme.Debug.Print(a...) }
 	Debugln = func(a ...interface{}) { theme.Debug.Println(a...) }
 	Debugf = func(f string, a ...interface{}) { theme.Debug.Printf(f, a...) }
+
+	File = theme.File.SprintfFunc()
+	Size = theme.Size.SprintfFunc()
+	Time = theme.Time.SprintfFunc()
+
 	mutex.Unlock()
 
 	return nil

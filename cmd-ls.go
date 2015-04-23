@@ -45,12 +45,9 @@ func printItems(v []*client.Item) {
 
 // printItem prints item meta-data
 func printItem(date time.Time, v int64, name string) {
-	// v is 0 for buckets
-	if v == 0 {
-		console.Infof("%23s %13s %s\n", date.Local().Format(printDate), "", name)
-	} else {
-		console.Infof("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), name)
-	}
+	fmt.Printf(console.Time("%s ", date.Local().Format(printDate)))
+	fmt.Printf(console.Size("[%9s] ", pb.FormatBytes(v)))
+	fmt.Println(console.File("%s", name))
 }
 
 func doList(clnt client.Client, targetURL string) (string, error) {
