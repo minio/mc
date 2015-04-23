@@ -37,7 +37,6 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("mc: Unable to read config")
 	}
-
 	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range ctx.Args() {
 		targetURL, err := getURL(arg, config.Aliases)
@@ -72,12 +71,12 @@ func runMakeBucketCmd(ctx *cli.Context) {
 }
 
 func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
-	err := clnt.PutBucket()
+	err := clnt.PutBucket("")
 	if err != nil && isValidRetry(err) {
 		console.Infof("Retrying ...")
 	}
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		err = clnt.PutBucket()
+		err = clnt.PutBucket("")
 		console.Errorf(" %d", i)
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)

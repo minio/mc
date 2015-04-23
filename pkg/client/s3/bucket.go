@@ -51,6 +51,55 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
+// IsValidBucketACL - is provided acl string supported
+func (b BucketACL) IsValidBucketACL() bool {
+	switch true {
+	case b.IsPrivate():
+		fallthrough
+	case b.IsPublicRead():
+		fallthrough
+	case b.IsPublicReadWrite():
+		return true
+	case b.String() == "private":
+		// by default its "private"
+		return true
+	default:
+		return false
+	}
+}
+
+// BucketACL - bucket level access control
+type BucketACL string
+
+// different types of ACL's currently supported for buckets
+const (
+	BucketPrivate         = BucketACL("private")
+	BucketPublicRead      = BucketACL("public-read")
+	BucketPublicReadWrite = BucketACL("public-read-write")
+)
+
+func (b BucketACL) String() string {
+	if string(b) == "" {
+		return "private"
+	}
+	return string(b)
+}
+
+// IsPrivate - is acl Private
+func (b BucketACL) IsPrivate() bool {
+	return b == BucketACL("private")
+}
+
+// IsPublicRead - is acl PublicRead
+func (b BucketACL) IsPublicRead() bool {
+	return b == BucketACL("public-read")
+}
+
+// IsPublicReadWrite - is acl PublicReadWrite
+func (b BucketACL) IsPublicReadWrite() bool {
+	return b == BucketACL("public-read-write")
+}
+
 /// Bucket API operations
 
 // Get list of buckets
@@ -103,7 +152,11 @@ func (c *s3Client) listBucketsInternal() ([]*client.Item, error) {
 }
 
 // PutBucket - create new bucket
-func (c *s3Client) PutBucket() error {
+func (c *s3Client) PutBucket(acl string) error {
+	bacl := BucketACL(acl)
+	if !bacl.IsValidBucketACL() {
+		return iodine.New(InvalidACL{ACL: acl}, nil)
+	}
 	bucket, _ := c.url2Object()
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
@@ -113,8 +166,10 @@ func (c *s3Client) PutBucket() error {
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-
 	req.Method = "PUT"
+	// add canned ACL's while creating a bucket
+	req.Header.Add("x-amz-acl", bacl.String())
+
 	c.signRequest(req, c.Host)
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
