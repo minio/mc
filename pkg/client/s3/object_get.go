@@ -99,7 +99,9 @@ func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	c.signRequest(req, c.Host)
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
@@ -128,7 +130,9 @@ func (c *s3Client) GetPartial(offset, length int64) (body io.ReadCloser, size in
 	} else {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 	}
-	c.signRequest(req, c.Host)
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
 
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
