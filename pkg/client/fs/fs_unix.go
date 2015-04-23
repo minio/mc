@@ -120,7 +120,6 @@ func (f *fsClient) List() (items []*client.Item, err error) {
 			return err // fatal
 		}
 		item := &client.Item{
-			//			Name: strings.TrimPrefix(fp, f.path+string(filepath.Separator)),
 			Name: fp,
 			Time: fi.ModTime(),
 			Size: fi.Size(),
