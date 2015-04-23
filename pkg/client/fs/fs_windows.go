@@ -140,12 +140,8 @@ func (f *fsClient) List() (items []*client.Item, err error) {
 				}
 				return err // fatal
 			}
-			if fi.IsDir() {
-				return nil // not a fs skip
-			}
-			// trim f.String()
 			item := &client.Item{
-				Name: strings.TrimPrefix(filepath.Clean(fp), f.path+string(filepath.Separator)),
+				Name: fp,
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 			}
