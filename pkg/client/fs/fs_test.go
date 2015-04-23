@@ -68,7 +68,7 @@ func (s *MySuite) TestList(c *C) {
 	fsc = New(root)
 	items, err := fsc.List()
 	c.Assert(err, IsNil)
-	c.Assert(len(items), Equals, 2)
+	c.Assert(len(items), Equals, 3)
 }
 
 func (s *MySuite) TestPutBucket(c *C) {
