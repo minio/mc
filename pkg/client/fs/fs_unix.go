@@ -119,15 +119,13 @@ func (f *fsClient) List() (items []*client.Item, err error) {
 			}
 			return err // fatal
 		}
-		if fi.IsDir() {
-			return nil // not a fs skip
-		}
-		// trim f.path
 		item := &client.Item{
-			Name: strings.TrimPrefix(fp, f.path+string(filepath.Separator)),
+			//			Name: strings.TrimPrefix(fp, f.path+string(filepath.Separator)),
+			Name: fp,
 			Time: fi.ModTime(),
 			Size: fi.Size(),
 		}
+
 		items = append(items, item)
 		return nil
 	}

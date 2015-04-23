@@ -46,7 +46,7 @@ func printItems(v []*client.Item) {
 // printItem prints item meta-data
 func printItem(date time.Time, v int64, name string) {
 	fmt.Printf(console.Time("[%s] ", date.Local().Format(printDate)))
-	fmt.Printf(console.Size("%5s ", humanize.Bytes(uint64(v))))
+	fmt.Printf(console.Size("%6s ", humanize.IBytes(uint64(v))))
 	fmt.Println(console.File("%s", name))
 }
 
