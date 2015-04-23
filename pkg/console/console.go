@@ -100,13 +100,13 @@ func SetTheme(themeName string) error {
 	currThemeName = themeName
 	theme := themesDB[currThemeName]
 
-	/* TODO: Uncomment after updating color package
+	// Just another additional precaution to completely disable color.
+	// Color theme is also necessary, because it does other useful things like exit-on-fatal..
 	if currThemeName == "nocolor" {
 		color.NoColor = true
 	} else {
 		color.NoColor = false
 	}
-	*/
 
 	Fatal = func(a ...interface{}) { theme.Fatal.Print(a...); os.Exit(1) }
 	Fatalln = func(a ...interface{}) { theme.Fatal.Println(a...); os.Exit(1) }
