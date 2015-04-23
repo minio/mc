@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/minio-io/mc",
 	"GoVersion": "go1.4.2",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/cheggaaa/pb",
@@ -19,7 +16,7 @@
 		},
 		{
 			"ImportPath": "github.com/fatih/color",
-			"Rev": "f952d5afece9417e6240c2b649c1ef84bc3b6299"
+			"Rev": "191595cfb2ec9522680470397712a174a5684bb5"
 		},
 		{
 			"ImportPath": "github.com/fatih/structs",

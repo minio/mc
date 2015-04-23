@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 
+	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -77,6 +78,6 @@ func (t Trace) print(data []byte) {
 	if t.Writer != nil {
 		fmt.Fprintf(t.Writer, "%s", data)
 	} else {
-		fmt.Printf("%s", data)
+		console.Debugf("%s", data)
 	}
 }
