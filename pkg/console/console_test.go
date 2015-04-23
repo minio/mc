@@ -32,16 +32,16 @@ var _ = Suite(&MySuite{})
 func (s *MySuite) TestSetTheme(c *C) {
 	err := SetTheme("nocolor")
 	c.Assert(err, IsNil)
-	c.Assert(GetTheme(), Equals, "nocolor")
+	c.Assert(GetThemeName(), Equals, "nocolor")
 	err = SetTheme("unknown")
 	c.Assert(err, Not(IsNil))
-	c.Assert(GetTheme(), Equals, "nocolor")
+	c.Assert(GetThemeName(), Equals, "nocolor")
 }
 
 func (s *MySuite) TestDefaultTheme(c *C) {
 	if runtime.GOOS == "windows" {
-		c.Assert(GetDefaultTheme(), Equals, "nocolor")
+		c.Assert(GetDefaultThemeName(), Equals, "nocolor")
 	} else {
-		c.Assert(GetDefaultTheme(), Equals, "minimal")
+		c.Assert(GetDefaultThemeName(), Equals, "minimal")
 	}
 }

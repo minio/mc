@@ -17,10 +17,8 @@
 package console
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"runtime"
 	"sync"
 
 	"github.com/fatih/color"
@@ -30,34 +28,36 @@ import (
 var (
 	mutex = &sync.RWMutex{}
 
-	// currentTheme is currently set theme
-	currentTheme = GetDefaultTheme()
-	// ThemesDB contains supported list of Themes
-	ThemesDB = map[string]Theme{"minimal": MiniTheme, "nocolor": NoColorTheme, "white": WhiteTheme}
+	// themesDB contains supported list of Themes
+	themesDB = map[string]Theme{"minimal": MiniTheme, "nocolor": NoColorTheme, "white": WhiteTheme}
+
+	// currTheme is current theme
+	currThemeName = GetDefaultThemeName()
+
 	// Fatal prints a fatal message and exits
-	Fatal = ThemesDB[currentTheme].Fatal.PrintFunc()
+	Fatal = func(a ...interface{}) { themesDB[currThemeName].Fatal.Print(a...); os.Exit(1) }
 	// Fatalln prints a fatal message with a new line and exits
-	Fatalln = ThemesDB[currentTheme].Fatal.PrintlnFunc()
+	Fatalln = func(a ...interface{}) { themesDB[currThemeName].Fatal.Println(a...); os.Exit(1) }
 	// Fatalf prints a fatal message with formatting and exits
-	Fatalf = ThemesDB[currentTheme].Fatal.PrintfFunc()
+	Fatalf = func(f string, a ...interface{}) { themesDB[currThemeName].Fatal.Printf(f, a...); os.Exit(1) }
 	// Error prints a error message
-	Error = ThemesDB[currentTheme].Error.PrintFunc()
+	Error = func(a ...interface{}) { themesDB[currThemeName].Error.Print(a...) }
 	// Errorln prints a error message with a new line
-	Errorln = ThemesDB[currentTheme].Error.PrintlnFunc()
+	Errorln = func(a ...interface{}) { themesDB[currThemeName].Error.Println(a...) }
 	// Errorf prints a error message with formatting
-	Errorf = ThemesDB[currentTheme].Error.PrintfFunc()
+	Errorf = func(f string, a ...interface{}) { themesDB[currThemeName].Error.Printf(f, a...) }
 	// Info prints a informational message
-	Info = ThemesDB[currentTheme].Info.PrintFunc()
+	Info = func(a ...interface{}) { themesDB[currThemeName].Info.Print(a...) }
 	// Infoln prints a informational message with a new line
-	Infoln = ThemesDB[currentTheme].Info.PrintlnFunc()
+	Infoln = func(a ...interface{}) { themesDB[currThemeName].Info.Println(a...) }
 	// Infof prints a informational message with formatting
-	Infof = ThemesDB[currentTheme].Info.PrintfFunc()
+	Infof = func(f string, a ...interface{}) { themesDB[currThemeName].Info.Printf(f, a...) }
 	// Debug prints a debug message
-	Debug = ThemesDB[currentTheme].Debug.PrintFunc()
+	Debug = func(a ...interface{}) { themesDB[currThemeName].Debug.Print(a...) }
 	// Debugln prints a debug message with a new line
-	Debugln = ThemesDB[currentTheme].Debug.PrintlnFunc()
+	Debugln = func(a ...interface{}) { themesDB[currThemeName].Debug.Println(a...) }
 	// Debugf prints a debug message with formatting
-	Debugf = ThemesDB[currentTheme].Debug.PrintfFunc()
+	Debugf = func(f string, a ...interface{}) { themesDB[currThemeName].Debug.Printf(f, a...) }
 )
 
 // Theme holds console color scheme
@@ -89,7 +89,12 @@ var WhiteTheme = Theme{
 }
 
 // NoColorTheme disables color theme
-var NoColorTheme = Theme{}
+var NoColorTheme = Theme{
+	Fatal: (color.New()),
+	Error: (color.New()),
+	Info:  (color.New()),
+	Debug: (color.New()),
+}
 
 var (
 	// wrap around standard fmt functions
@@ -102,67 +107,54 @@ var (
 	fatalPrintf  = func(f string, a ...interface{}) { fmt.Printf(f, a...); os.Exit(1) }
 )
 
-// setThemeNoColor - set theme no color
-func setThemeNoColor(themeName string) {
-	mutex.Lock()
-	currentTheme = themeName
-	Fatal = fatalPrint
-	Fatalln = fatalPrintln
-	Fatalf = fatalPrintf
-	Error = print
-	Errorln = println
-	Errorf = printf
-	Info = print
-	Infoln = println
-	Infof = printf
-	Debug = print
-	Debugln = println
-	Debugf = printf
-	mutex.Unlock()
-}
-
-// setThemeColor - set theme color style
-func setThemeColor(themeName string) {
-	mutex.Lock()
-	currentTheme = themeName
-	Fatal = func(a ...interface{}) { ThemesDB[currentTheme].Fatal.Print(a...); os.Exit(1) }
-	Fatalln = func(a ...interface{}) { ThemesDB[currentTheme].Fatal.Println(a...); os.Exit(1) }
-	Fatalf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Fatal.Printf(f, a...); os.Exit(1) }
-	Error = func(a ...interface{}) { ThemesDB[currentTheme].Error.Print(a...) }
-	Errorln = func(a ...interface{}) { ThemesDB[currentTheme].Error.Println(a...) }
-	Errorf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Error.Printf(f, a...) }
-	Info = func(a ...interface{}) { ThemesDB[currentTheme].Info.Print(a...) }
-	Infoln = func(a ...interface{}) { ThemesDB[currentTheme].Info.Println(a...) }
-	Infof = func(f string, a ...interface{}) { ThemesDB[currentTheme].Info.Printf(f, a...) }
-	Debug = func(a ...interface{}) { ThemesDB[currentTheme].Debug.Print(a...) }
-	Debugln = func(a ...interface{}) { ThemesDB[currentTheme].Debug.Println(a...) }
-	Debugf = func(f string, a ...interface{}) { ThemesDB[currentTheme].Debug.Printf(f, a...) }
-	mutex.Unlock()
-}
-
 // SetTheme sets a color theme
 func SetTheme(themeName string) error {
-	switch true {
-	case themeName == "nocolor":
-		setThemeNoColor(themeName)
-	case themeName == "minimal" || themeName == "white":
-		setThemeColor(themeName)
-	default:
-		msg := fmt.Sprintf("Invalid theme: %s", themeName)
-		return iodine.New(errors.New(msg), nil)
+	if !IsValidTheme(themeName) {
+		return iodine.New(fmt.Errorf("Unsupported theme name [%s]", themeName), nil)
 	}
+
+	mutex.Lock()
+	currThemeName = themeName
+	theme := themesDB[currThemeName]
+
+	Fatal = func(a ...interface{}) { theme.Fatal.Print(a...); os.Exit(1) }
+	Fatalln = func(a ...interface{}) { theme.Fatal.Println(a...); os.Exit(1) }
+	Fatalf = func(f string, a ...interface{}) { theme.Fatal.Printf(f, a...); os.Exit(1) }
+	Error = func(a ...interface{}) { theme.Error.Print(a...) }
+	Errorln = func(a ...interface{}) { theme.Error.Println(a...) }
+	Errorf = func(f string, a ...interface{}) { theme.Error.Printf(f, a...) }
+	Info = func(a ...interface{}) { theme.Info.Print(a...) }
+	Infoln = func(a ...interface{}) { theme.Info.Println(a...) }
+	Infof = func(f string, a ...interface{}) { theme.Info.Printf(f, a...) }
+	Debug = func(a ...interface{}) { theme.Debug.Print(a...) }
+	Debugln = func(a ...interface{}) { theme.Debug.Println(a...) }
+	Debugf = func(f string, a ...interface{}) { theme.Debug.Printf(f, a...) }
+	mutex.Unlock()
+
 	return nil
 }
 
-// GetTheme returns currently set theme
-func GetTheme() string {
-	return currentTheme
+// GetThemeName returns currently set theme name
+func GetThemeName() string {
+	return currThemeName
 }
 
-// GetDefaultTheme returns the default theme
-func GetDefaultTheme() string {
-	if runtime.GOOS == "windows" {
-		return "nocolor"
-	}
+// GetDefaultThemeName returns the default theme
+func GetDefaultThemeName() string {
 	return "minimal"
+}
+
+// GetThemeNames returns currently supported list of  themes
+func GetThemeNames() (themeNames []string) {
+
+	for themeName := range themesDB {
+		themeNames = append(themeNames, themeName)
+	}
+	return themeNames
+}
+
+// IsValidTheme returns true if "themeName" is currently supported
+func IsValidTheme(themeName string) bool {
+	_, ok := themesDB[themeName]
+	return ok
 }
