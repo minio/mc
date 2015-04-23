@@ -21,7 +21,7 @@ import (
 
 	"fmt"
 
-	"github.com/cheggaaa/pb"
+	"github.com/dustin/go-humanize"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
@@ -45,8 +45,8 @@ func printItems(v []*client.Item) {
 
 // printItem prints item meta-data
 func printItem(date time.Time, v int64, name string) {
-	fmt.Printf(console.Time("%s ", date.Local().Format(printDate)))
-	fmt.Printf(console.Size("[%9s] ", pb.FormatBytes(v)))
+	fmt.Printf(console.Time("[%s] ", date.Local().Format(printDate)))
+	fmt.Printf(console.Size("%5s ", humanize.Bytes(uint64(v))))
 	fmt.Println(console.File("%s", name))
 }
 
