@@ -51,53 +51,19 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-// IsValidBucketACL - is provided acl string supported
-func (b BucketACL) IsValidBucketACL() bool {
-	switch true {
-	case b.IsPrivate():
+func isValidBucketACL(acl string) bool {
+	switch acl {
+	case "private":
 		fallthrough
-	case b.IsPublicRead():
+	case "public-read":
 		fallthrough
-	case b.IsPublicReadWrite():
-		return true
-	case b.String() == "private":
-		// by default its "private"
+	case "public-read-write":
+		fallthrough
+	case "":
 		return true
 	default:
 		return false
 	}
-}
-
-// BucketACL - bucket level access control
-type BucketACL string
-
-// different types of ACL's currently supported for buckets
-const (
-	BucketPrivate         = BucketACL("private")
-	BucketPublicRead      = BucketACL("public-read")
-	BucketPublicReadWrite = BucketACL("public-read-write")
-)
-
-func (b BucketACL) String() string {
-	if string(b) == "" {
-		return "private"
-	}
-	return string(b)
-}
-
-// IsPrivate - is acl Private
-func (b BucketACL) IsPrivate() bool {
-	return b == BucketACL("private")
-}
-
-// IsPublicRead - is acl PublicRead
-func (b BucketACL) IsPublicRead() bool {
-	return b == BucketACL("public-read")
-}
-
-// IsPublicReadWrite - is acl PublicReadWrite
-func (b BucketACL) IsPublicReadWrite() bool {
-	return b == BucketACL("public-read-write")
 }
 
 /// Bucket API operations
@@ -112,7 +78,9 @@ func (c *s3Client) listBucketsInternal() ([]*client.Item, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	c.signRequest(req, c.Host)
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
 
 	res, err = c.Transport.RoundTrip(req)
 	if err != nil {
@@ -153,9 +121,11 @@ func (c *s3Client) listBucketsInternal() ([]*client.Item, error) {
 
 // PutBucket - create new bucket
 func (c *s3Client) PutBucket(acl string) error {
-	bacl := BucketACL(acl)
-	if !bacl.IsValidBucketACL() {
+	if !isValidBucketACL(acl) {
 		return iodine.New(InvalidACL{ACL: acl}, nil)
+	}
+	if acl == "" {
+		acl = "private"
 	}
 	bucket, _ := c.url2Object()
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
@@ -168,9 +138,11 @@ func (c *s3Client) PutBucket(acl string) error {
 	}
 	req.Method = "PUT"
 	// add canned ACL's while creating a bucket
-	req.Header.Add("x-amz-acl", bacl.String())
+	req.Header.Add("x-amz-acl", acl)
 
-	c.signRequest(req, c.Host)
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return iodine.New(err, nil)
@@ -197,7 +169,9 @@ func (c *s3Client) Stat() error {
 	}
 
 	req.Method = "HEAD"
-	c.signRequest(req, c.Host)
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return iodine.New(err, nil)

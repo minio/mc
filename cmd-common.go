@@ -112,7 +112,8 @@ func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig *h
 
 // getNewClient gives a new client interface
 func (manager mcClientManager) getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
-	switch client.GetType(urlStr) {
+	t := client.GetType(urlStr)
+	switch t {
 	case client.Object: // Minio and S3 compatible object storage
 		if auth == nil {
 			return nil, iodine.New(errInvalidArgument{}, nil)
@@ -130,7 +131,7 @@ func (manager mcClientManager) getNewClient(urlStr string, auth *hostConfig, deb
 		return clnt, nil
 	default:
 		return nil, iodine.New(errUnsupportedScheme{
-			scheme: client.GetType(urlStr),
+			scheme: client.GetTypeToString(t),
 			url:    urlStr,
 		}, nil)
 	}

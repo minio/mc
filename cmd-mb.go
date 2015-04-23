@@ -29,7 +29,7 @@ import (
 
 // doMakeBucketCmd creates a new bucket
 func runMakeBucketCmd(ctx *cli.Context) {
-	if len(ctx.Args()) < 1 {
+	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
 	config, err := getMcConfig()
@@ -38,18 +38,24 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		console.Fatalln("mc: Unable to read config")
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
-	for _, arg := range ctx.Args() {
-		targetURL, err := getURL(arg, config.Aliases)
-		if err != nil {
-			switch iodine.ToError(err).(type) {
-			case errUnsupportedScheme:
-				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unknown type of URL [%s].\n", arg)
-			default:
-				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", arg, iodine.ToError(err))
-			}
+	targetURLs, err := getURLs(ctx.Args(), config.Aliases)
+	if err != nil {
+		switch e := iodine.ToError(err).(type) {
+		case errUnsupportedScheme:
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", e.url, e)
+		default:
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalf("mc: reading URLs failed with following reason: [%s]\n", e)
 		}
+	}
+	acl := bucketACL(ctx.Args().First())
+	if !acl.isValidBucketACL() {
+		log.Debug.Println(iodine.New(errInvalidACL{acl: acl.String()}, nil))
+		console.Fatalf("mc: Unsupported type of acl requested [%s], supported types are [private, public-read, public-read-write]\n", acl)
+	}
+	targetURLs = targetURLs[1:] // 1 or more target URLs
+	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
@@ -58,7 +64,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
-		errorMsg, err := doMakeBucketCmd(mcClientManager{}, targetURL, targetConfig, globalDebugFlag)
+		errorMsg, err := doMakeBucketCmd(mcClientManager{}, targetURL, acl.String(), targetConfig, globalDebugFlag)
 		err = iodine.New(err, nil)
 		if err != nil {
 			if errorMsg == "" {
@@ -70,13 +76,26 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	}
 }
 
-func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
-	err := clnt.PutBucket("")
+func doMakeBucketCmd(manager clientManager, targetURL, targetACL string, targetConfig *hostConfig, debug bool) (string, error) {
+	var err error
+	var clnt client.Client
+	clnt, err = manager.getNewClient(targetURL, targetConfig, debug)
+	if err != nil {
+		err := iodine.New(err, nil)
+		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
+			targetURL, iodine.ToError(err))
+		return msg, err
+	}
+	return doMakeBucket(clnt, targetURL, targetACL)
+}
+
+func doMakeBucket(clnt client.Client, targetURL, targetACL string) (string, error) {
+	err := clnt.PutBucket(targetACL)
 	if err != nil && isValidRetry(err) {
 		console.Infof("Retrying ...")
 	}
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		err = clnt.PutBucket("")
+		err = clnt.PutBucket(targetACL)
 		console.Errorf(" %d", i)
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
@@ -87,17 +106,4 @@ func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
 		return msg, err
 	}
 	return "", nil
-}
-
-func doMakeBucketCmd(manager clientManager, targetURL string, targetConfig *hostConfig, debug bool) (string, error) {
-	var err error
-	var clnt client.Client
-	clnt, err = manager.getNewClient(targetURL, targetConfig, debug)
-	if err != nil {
-		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
-			targetURL, iodine.ToError(err))
-		return msg, err
-	}
-	return doMakeBucket(clnt, targetURL)
 }

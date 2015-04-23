@@ -64,7 +64,9 @@ func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 			}
 			req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
 		}
-		c.signRequest(req, c.Host)
+		if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+			c.signRequest(req, c.Host)
+		}
 
 		client := http.Client{}
 		res, err := client.Do(req)
