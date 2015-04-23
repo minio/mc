@@ -19,6 +19,7 @@ package console
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 
 	"github.com/fatih/color"
@@ -137,6 +138,9 @@ func GetThemeName() string {
 
 // GetDefaultThemeName returns the default theme
 func GetDefaultThemeName() string {
+	if runtime.GOOS == "windows" {
+		return "nocolor"
+	}
 	return "minimal"
 }
 
