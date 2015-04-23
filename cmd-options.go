@@ -194,14 +194,14 @@ var (
 	flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "theme",
-			Value: console.GetDefaultTheme(),
+			Value: console.GetDefaultThemeName(),
 			Usage: fmt.Sprintf("Choose a console theme from this list [%s]", func() string {
 				keys := []string{}
-				for key := range console.ThemesDB {
-					if console.GetTheme() == key {
-						key = "*" + key + "*"
+				for _, themeName := range console.GetThemeNames() {
+					if console.GetThemeName() == themeName {
+						themeName = "*" + themeName + "*"
 					}
-					keys = append(keys, key)
+					keys = append(keys, themeName)
 				}
 				return strings.Join(keys, ", ")
 			}()),

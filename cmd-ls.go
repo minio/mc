@@ -69,7 +69,7 @@ func doList(clnt client.Client, targetURL string) (string, error) {
 	}
 	if err != nil {
 		err = iodine.New(err, nil)
-		msg := fmt.Sprintf("\nmc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
+		msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
 		return msg, err
 	}
 	printItems(items)

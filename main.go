@@ -95,16 +95,15 @@ func main() {
 			log.Debug = log.New(ioutil.Discard, "", 0)
 		}
 
-		theme := ctx.GlobalString("theme")
-		if theme != "" {
-			err := console.SetTheme(theme)
+		themeName := ctx.GlobalString("theme")
+
+		if console.IsValidTheme(themeName) {
+			err := console.SetTheme(themeName)
 			if err != nil {
-				// SetTheme here back to DefaultTheme, Fatalf will not exit otherwise since the wrappers
-				// anonymous func() are not assigned yet, so in essence os.Exit(1) in Fatalf is not
-				// available and wouldn't exit here - call gets transferred to app.RunAndExitOnError()
-				console.SetTheme(console.GetDefaultTheme())
-				console.Fatalf("mc: failed to set theme [%s] with following reason: [%s]\n", theme, iodine.ToError(err))
+				console.Fatalf("mc: failed to set theme [%s] with following reason: [%s]\n", themeName, iodine.ToError(err))
 			}
+		} else {
+			console.Fatalf("mc: Theme [%s] is not supported. Please choose from this list: %s\n", themeName, console.GetThemeNames())
 		}
 		checkConfig()
 		return nil
