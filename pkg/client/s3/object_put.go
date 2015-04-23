@@ -67,23 +67,22 @@ func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 		if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 			c.signRequest(req, c.Host)
 		}
-
-		client := http.Client{}
-		res, err := client.Do(req)
+		// this is necessary for debug, since the underlying transport is a wrapper
+		res, err := c.Transport.RoundTrip(req)
+		if res.StatusCode != http.StatusOK {
+			err := iodine.New(NewError(res), nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
 		}
-		if res.StatusCode != http.StatusOK {
-			err := iodine.New(err, nil)
-			r.CloseWithError(err)
-			blockingWriter.Release(err)
-			return
-		}
-		blockingWriter.Release(nil)
 		r.Close()
+		blockingWriter.Release(nil)
 	}()
 	return blockingWriter, nil
 }
@@ -98,8 +97,10 @@ type BlockingWriteCloser struct {
 // Write to the underlying writer
 func (b *BlockingWriteCloser) Write(p []byte) (int, error) {
 	n, err := b.w.Write(p)
-	err = iodine.New(err, nil)
-	return n, err
+	if err != nil {
+		b.err = err
+	}
+	return n, b.err
 }
 
 // Close blocks until another goroutine calls Release(error). Returns error code if either
@@ -119,6 +120,7 @@ func (b *BlockingWriteCloser) Release(err error) {
 	if err != nil {
 		b.err = err
 	}
+	return
 }
 
 // NewBlockingWriteCloser Creates a new write closer that must be released by the read consumer.
