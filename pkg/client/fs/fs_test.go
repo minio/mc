@@ -78,7 +78,7 @@ func (s *MySuite) TestPutBucket(c *C) {
 
 	bucketPath := filepath.Join(root, "bucket")
 	fsc := New(bucketPath)
-	err = fsc.PutBucket()
+	err = fsc.PutBucket("")
 	c.Assert(err, IsNil)
 }
 
@@ -89,7 +89,7 @@ func (s *MySuite) TestStatBucket(c *C) {
 
 	bucketPath := filepath.Join(root, "bucket")
 	fsc := New(bucketPath)
-	err = fsc.PutBucket()
+	err = fsc.PutBucket("")
 	c.Assert(err, IsNil)
 	err = fsc.Stat()
 	c.Assert(err, IsNil)

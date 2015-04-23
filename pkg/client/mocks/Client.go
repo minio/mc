@@ -13,8 +13,8 @@ type Client struct {
 }
 
 // PutBucket is a mock method
-func (m *Client) PutBucket() error {
-	ret := m.Called()
+func (m *Client) PutBucket(acl string) error {
+	ret := m.Called(acl)
 
 	r0 := ret.Error(0)
 

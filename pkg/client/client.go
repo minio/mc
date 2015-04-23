@@ -33,7 +33,7 @@ type Client interface {
 	//	ListNew() error
 
 	// Bucket operations
-	PutBucket() error
+	PutBucket(acl string) error
 
 	// Object operations
 	Get() (body io.ReadCloser, size int64, md5 string, err error)

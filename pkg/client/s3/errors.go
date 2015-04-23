@@ -25,6 +25,17 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
+/// ACL related errors
+
+// InvalidACL - acl invalid
+type InvalidACL struct {
+	ACL string
+}
+
+func (e InvalidACL) Error() string {
+	return "Requested ACL is " + e.ACL + " invalid"
+}
+
 // InvalidMaxKeys - invalid maxkeys provided
 type InvalidMaxKeys struct {
 	MaxKeys int

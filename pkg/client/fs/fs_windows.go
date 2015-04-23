@@ -162,7 +162,7 @@ func (f *fsClient) List() (items []*client.Item, err error) {
 }
 
 // PutBucket - create a new bucket
-func (f *fsClient) PutBucket() error {
+func (f *fsClient) PutBucket(acl string) error {
 	err := os.MkdirAll(f.path, 0700)
 	if err != nil {
 		return iodine.New(err, nil)
