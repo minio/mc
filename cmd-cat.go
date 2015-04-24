@@ -70,12 +70,10 @@ func doCatCmd(manager clientManager, writer io.Writer, sourceURLConfigMap map[st
 	for url, config := range sourceURLConfigMap {
 		clnt, err := manager.getNewClient(url, config, debug)
 		if err != nil {
-			// TODO make a better human readable error message
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
 		reader, size, etag, err := clnt.Get()
 		if err != nil {
-			// TODO make a better human readable error message
 			return "Unable to retrieve file: " + url, iodine.New(err, nil)
 		}
 		defer reader.Close()
