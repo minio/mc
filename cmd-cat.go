@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/minio-io/cli"
+	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/crypto/md5"
@@ -92,25 +93,35 @@ func doCatCmd(manager clientManager, writer io.Writer, sourceURLConfigMap map[st
 			return "Unable to retrieve file: " + url, iodine.New(err, nil)
 		}
 		defer reader.Close()
-		wg := &sync.WaitGroup{}
-		md5Reader, md5Writer := io.Pipe()
+		var teeReader io.Reader
 		var actualMd5 []byte
-		wg.Add(1)
-		go func() {
-			actualMd5, _ = md5.Sum(md5Reader)
-			// drop error, we'll catch later on if it fails
-			wg.Done()
-		}()
-		teeReader := io.TeeReader(reader, md5Writer)
+		if client.GetType(url) != client.Filesystem {
+			wg := &sync.WaitGroup{}
+			md5Reader, md5Writer := io.Pipe()
+			wg.Add(1)
+			go func() {
+				actualMd5, _ = md5.Sum(md5Reader)
+				// drop error, we'll catch later on if it fails
+				wg.Done()
+			}()
+			teeReader = io.TeeReader(reader, md5Writer)
+			_, err = io.CopyN(writer, teeReader, size)
+			md5Writer.Close()
+			wg.Wait()
+			if err != nil {
+				return "Copying data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
+			}
+			actualMd5String := hex.EncodeToString(actualMd5)
+			if expectedMd5 != actualMd5String {
+				return "Copying data from source was corrupted in transit: " + url,
+					iodine.New(errors.New("Data copied from source was corrupted in transit"), nil)
+			}
+			return "", nil
+		}
+		teeReader = reader
 		_, err = io.CopyN(writer, teeReader, size)
-		md5Writer.Close()
-		wg.Wait()
 		if err != nil {
 			return "Copying data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
-		}
-		actualMd5String := hex.EncodeToString(actualMd5)
-		if expectedMd5 != actualMd5String {
-			return "Copying data from source was corrupted in transit: " + url, iodine.New(errors.New("Data copied from source was corrupted in transit"), nil)
 		}
 	}
 	return "", nil
