@@ -62,11 +62,7 @@ func runCatCmd(ctx *cli.Context) {
 	humanReadable, err := doCatCmd(mcClientManager{}, os.Stdout, sourceURLConfigMap, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		if humanReadable != "" {
-			console.Fatalln(humanReadable)
-		} else {
-			os.Exit(1)
-		}
+		console.Fatalln(humanReadable)
 	}
 }
 
