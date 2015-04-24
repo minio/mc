@@ -59,7 +59,7 @@ func startBar(size int64) *pb.ProgressBar {
 	bar.ShowSpeed = true
 	bar.Callback = func(s string) {
 		// Colorize
-		console.Info("\r" + s)
+		console.Print("\r" + s)
 	}
 	// Feels like wget
 	bar.Format("[=> ]")
