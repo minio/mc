@@ -38,35 +38,35 @@ var (
 	currThemeName = GetDefaultThemeName()
 
 	// Fatal prints a error message and exits
-	Fatal = func(a ...interface{}) { print(themesDB[currThemeName].Fatal, "<FATAL>", a...); os.Exit(1) }
+	Fatal = func(a ...interface{}) { print(themesDB[currThemeName].Fatal, a...); os.Exit(1) }
 	// Fatalln prints a error message with a new line and exits
-	Fatalln = func(a ...interface{}) { println(themesDB[currThemeName].Fatal, "<FATAL>", a...); os.Exit(1) }
+	Fatalln = func(a ...interface{}) { println(themesDB[currThemeName].Fatal, a...); os.Exit(1) }
 	// Fatalf prints a error message with formatting and exits
 	Fatalf = func(f string, a ...interface{}) {
-		printf(themesDB[currThemeName].Fatal, "<FATAL>", f, a...)
+		printf(themesDB[currThemeName].Fatal, f, a...)
 		os.Exit(1)
 	}
 
 	// Error prints a error message
-	Error = func(a ...interface{}) { print(themesDB[currThemeName].Error, "<ERROR>", a...) }
+	Error = func(a ...interface{}) { print(themesDB[currThemeName].Error, a...) }
 	// Errorln prints a error message with a new line
-	Errorln = func(a ...interface{}) { println(themesDB[currThemeName].Error, "<ERROR>", a...) }
+	Errorln = func(a ...interface{}) { println(themesDB[currThemeName].Error, a...) }
 	// Errorf prints a error message with formatting
-	Errorf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Error, "<ERROR>", f, a...) }
+	Errorf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Error, f, a...) }
 
 	// Info prints a informational message
-	Info = func(a ...interface{}) { print(themesDB[currThemeName].Info, "", a...) }
+	Info = func(a ...interface{}) { print(themesDB[currThemeName].Info, a...) }
 	// Infoln prints a informational message with a new line
-	Infoln = func(a ...interface{}) { println(themesDB[currThemeName].Info, "", a...) }
+	Infoln = func(a ...interface{}) { println(themesDB[currThemeName].Info, a...) }
 	// Infof prints a informational message with formatting
-	Infof = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Info, "", f, a...) }
+	Infof = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Info, f, a...) }
 
 	// Debug prints a debug message
-	Debug = func(a ...interface{}) { print(themesDB[currThemeName].Debug, "<DEBUG>", a...) }
+	Debug = func(a ...interface{}) { print(themesDB[currThemeName].Debug, a...) }
 	// Debugln prints a debug message with a new line
-	Debugln = func(a ...interface{}) { println(themesDB[currThemeName].Debug, "<DEBUG>", a...) }
+	Debugln = func(a ...interface{}) { println(themesDB[currThemeName].Debug, a...) }
 	// Debugf prints a debug message with formatting
-	Debugf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Debug, "<DEBUG>", f, a...) }
+	Debugf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Debug, f, a...) }
 
 	// File - File("foo.txt")
 	File = themesDB[currThemeName].File.SprintfFunc()
@@ -94,27 +94,117 @@ type Theme struct {
 var (
 	// wrap around standard fmt functions
 	// print prints a message prefixed with message type and program name
-	print = func(c *color.Color, prefix string, a ...interface{}) {
-		mutex.Lock()
-		c.Printf(ProgramName()+": %s ", prefix)
-		c.Print(a...)
-		mutex.Unlock()
+	print = func(c *color.Color, a ...interface{}) {
+		switch c {
+		case themesDB[currThemeName].Debug:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <DEBUG> ")
+			c.Print(a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Fatal:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <FATAL> ")
+			c.Print(a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Error:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <ERROR> ")
+			c.Print(a...)
+			color.Output = output
+			mutex.Unlock()
+		default:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": ")
+			c.Print(a...)
+			color.Output = output
+			mutex.Unlock()
+		}
 	}
 
 	// println - same as print with a new line
-	println = func(c *color.Color, prefix string, a ...interface{}) {
-		mutex.Lock()
-		c.Printf(ProgramName()+": %s ", prefix)
-		c.Println(a...)
-		mutex.Unlock()
+	println = func(c *color.Color, a ...interface{}) {
+		switch c {
+		case themesDB[currThemeName].Debug:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <DEBUG> ")
+			c.Println(a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Fatal:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <FATAL> ")
+			c.Println(a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Error:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <ERROR> ")
+			c.Println(a...)
+			color.Output = output
+			mutex.Unlock()
+		default:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": ")
+			c.Println(a...)
+			color.Output = output
+			mutex.Unlock()
+		}
 	}
 
 	// printf - same as print, but takes a format specifier
-	printf = func(c *color.Color, prefix string, f string, a ...interface{}) {
-		mutex.Lock()
-		c.Printf(ProgramName()+": %s ", prefix)
-		c.Printf(f, a...)
-		mutex.Unlock()
+	printf = func(c *color.Color, f string, a ...interface{}) {
+		switch c {
+		case themesDB[currThemeName].Debug:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <DEBUG> ")
+			c.Printf(f, a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Fatal:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <FATAL> ")
+			c.Printf(f, a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Error:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": <ERROR> ")
+			c.Printf(f, a...)
+			color.Output = output
+			mutex.Unlock()
+		default:
+			mutex.Lock()
+			output := color.Output
+			color.Output = os.Stderr
+			c.Print(ProgramName() + ": ")
+			c.Printf(f, a...)
+			color.Output = output
+			mutex.Unlock()
+		}
 	}
 )
 
@@ -138,25 +228,25 @@ func SetTheme(themeName string) error {
 	}
 
 	// Error prints a error message
-	Error = func(a ...interface{}) { print(theme.Error, "<ERROR>", a...) }
+	Error = func(a ...interface{}) { print(theme.Error, a...) }
 	// Errorln prints a error message with a new line
-	Errorln = func(a ...interface{}) { println(theme.Error, "<ERROR>", a...) }
+	Errorln = func(a ...interface{}) { println(theme.Error, a...) }
 	// Errorf prints a error message with formatting
-	Errorf = func(f string, a ...interface{}) { printf(theme.Error, "<ERROR>", f, a...) }
+	Errorf = func(f string, a ...interface{}) { printf(theme.Error, f, a...) }
 
 	// Info prints a informational message
-	Info = func(a ...interface{}) { print(theme.Info, "", a...) }
+	Info = func(a ...interface{}) { print(theme.Info, a...) }
 	// Infoln prints a informational message with a new line
-	Infoln = func(a ...interface{}) { println(theme.Info, "", a...) }
+	Infoln = func(a ...interface{}) { println(theme.Info, a...) }
 	// Infof prints a informational message with formatting
-	Infof = func(f string, a ...interface{}) { printf(theme.Info, "", f, a...) }
+	Infof = func(f string, a ...interface{}) { printf(theme.Info, f, a...) }
 
 	// Debug prints a debug message
-	Debug = func(a ...interface{}) { print(theme.Debug, "<DEBUG>", a...) }
+	Debug = func(a ...interface{}) { print(theme.Debug, a...) }
 	// Debugln prints a debug message with a new line
-	Debugln = func(a ...interface{}) { println(theme.Debug, "<DEBUG>", a...) }
+	Debugln = func(a ...interface{}) { println(theme.Debug, a...) }
 	// Debugf prints a debug message with formatting
-	Debugf = func(f string, a ...interface{}) { printf(theme.Debug, "<DEBUG>", f, a...) }
+	Debugf = func(f string, a ...interface{}) { printf(theme.Debug, f, a...) }
 
 	Dir = theme.Dir.SprintfFunc()
 	File = theme.File.SprintfFunc()

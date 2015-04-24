@@ -238,10 +238,10 @@ EXAMPLES:
 
 var options = []cli.Command{
 	accessCmd,
-	catCmd,
-	cpCmd,
 	lsCmd,
+	catCmd,
 	mbCmd,
+	cpCmd,
 	configCmd,
 	updateCmd,
 }
