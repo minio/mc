@@ -59,21 +59,10 @@ func doList(clnt client.Client, targetURL string) (string, error) {
 		}
 		printItem(itemOnChannel.Item.Time, itemOnChannel.Item.Size, itemOnChannel.Item.Name)
 	}
-	switch iodine.ToError(err).(type) {
-	case client.APINotImplemented:
-		items, err := clnt.List()
-		if err != nil {
-			err = iodine.New(err, nil)
-			msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
-			return msg, err
-		}
-		printItems(items)
-	default:
-		if err != nil {
-			err = iodine.New(err, nil)
-			msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
-			return msg, err
-		}
+	if err != nil {
+		err = iodine.New(err, nil)
+		msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
+		return msg, err
 	}
 	return "", nil
 }
