@@ -246,7 +246,6 @@ func (c *s3Client) getObjectMetadata(bucket, object string) (item *client.Item, 
 // Stat - send a 'HEAD' on a bucket or object to see if exists
 func (c *s3Client) Stat() (*client.Item, error) {
 	bucket, object := c.url2BucketAndObject()
-	fmt.Println(bucket, object)
 	if object == "" {
 		return c.getBucketMetadata(bucket)
 	}
