@@ -26,6 +26,32 @@ import (
 
 // List of commands
 var (
+	catCmd = cli.Command{
+		Name:   "cat",
+		Usage:  "Copy an object to standard out",
+		Action: runCatCmd,
+		CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+OPTIONS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+   1. Copy an object from Amazon S3 object storage to standard out.
+      $ mc {{.Name}} https://s3.amazonaws.com/jukebox/klingon_opera_aktuh_maylotah.ogg
+
+   2. Copy an object from the file system to standard out.
+      $ mc {{.Name}} klingon_opera_aktuh_maylotah.ogg
+
+`,
+	}
 	cpCmd = cli.Command{
 		Name:   "cp",
 		Usage:  "Copy objects and files",
@@ -183,6 +209,7 @@ EXAMPLES:
 )
 
 var options = []cli.Command{
+	catCmd,
 	cpCmd,
 	lsCmd,
 	mbCmd,
