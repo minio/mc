@@ -30,6 +30,13 @@ func (m *Client) Stat() error {
 	return r0
 }
 
+// ListOnChannel is a mock method
+func (m *Client) ListOnChannel() <-chan client.ItemOnChannel {
+	ret := m.Called()
+	r0 := ret.Get(0).(chan client.ItemOnChannel)
+	return r0
+}
+
 // List is a mock method
 func (m *Client) List() ([]*client.Item, error) {
 	ret := m.Called()

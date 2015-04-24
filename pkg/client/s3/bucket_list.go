@@ -34,7 +34,62 @@ import (
 
 /// Bucket API operations
 
-// ListObjects - list objects inside a bucket or with prefix
+// ListOnChannel -
+func (c *s3Client) ListOnChannel() <-chan client.ItemOnChannel {
+	itemCh := make(chan client.ItemOnChannel)
+	go c.listInGoroutine(itemCh)
+	return itemCh
+}
+
+func (c *s3Client) listInGoroutine(itemCh chan client.ItemOnChannel) {
+	defer close(itemCh)
+
+	var items []*client.Item
+	bucket, objectPrefix := c.url2Object()
+	item, err := c.GetObjectMetadata()
+	switch err {
+	case nil: // List a single object. Exact key
+		itemCh <- client.ItemOnChannel{
+			Item: item,
+			Err:  nil,
+		}
+	default:
+		if bucket == "" {
+			items, err = c.listBucketsInternal()
+			if err != nil {
+				itemCh <- client.ItemOnChannel{
+					Item: nil,
+					Err:  iodine.New(err, nil),
+				}
+				return
+			}
+			for _, item := range items {
+				itemCh <- client.ItemOnChannel{
+					Item: item,
+					Err:  nil,
+				}
+			}
+			return
+		}
+		// List all objects matching the key prefix
+		items, err = c.listObjectsInternal(bucket, "", objectPrefix, "", globalMaxKeys)
+		if err != nil {
+			itemCh <- client.ItemOnChannel{
+				Item: nil,
+				Err:  iodine.New(err, nil),
+			}
+			return
+		}
+		for _, item := range items {
+			itemCh <- client.ItemOnChannel{
+				Item: item,
+				Err:  nil,
+			}
+		}
+	}
+}
+
+// List - list objects inside a bucket or with prefix
 func (c *s3Client) List() (items []*client.Item, err error) {
 	bucket, objectPrefix := c.url2Object()
 	item, err := c.GetObjectMetadata()

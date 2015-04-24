@@ -52,24 +52,29 @@ func printItem(date time.Time, v int64, name string) {
 
 func doList(clnt client.Client, targetURL string) (string, error) {
 	var err error
-	var items []*client.Item
-
-	items, err = clnt.List()
-	if err != nil && isValidRetry(err) {
-		console.Infof("Retrying ...")
+	for itemOnChannel := range clnt.ListOnChannel() {
+		if itemOnChannel.Err != nil {
+			err = itemOnChannel.Err
+			break
+		}
+		printItem(itemOnChannel.Item.Time, itemOnChannel.Item.Size, itemOnChannel.Item.Name)
 	}
-	for i := 1; i <= globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		items, err = clnt.List()
-		console.Errorf(" %d", i)
-		// Progressively longer delays
-		time.Sleep(time.Duration(i*i) * time.Second)
+	switch iodine.ToError(err).(type) {
+	case client.APINotImplemented:
+		items, err := clnt.List()
+		if err != nil {
+			err = iodine.New(err, nil)
+			msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
+			return msg, err
+		}
+		printItems(items)
+	default:
+		if err != nil {
+			err = iodine.New(err, nil)
+			msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
+			return msg, err
+		}
 	}
-	if err != nil {
-		err = iodine.New(err, nil)
-		msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
-		return msg, err
-	}
-	printItems(items)
 	return "", nil
 }
 

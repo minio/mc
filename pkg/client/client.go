@@ -30,7 +30,7 @@ type Client interface {
 	// Common operations
 	Stat() error
 	List() (items []*Item, err error)
-	//	ListNew() error
+	ListOnChannel() <-chan ItemOnChannel
 
 	// Bucket operations
 	PutBucket(acl string) error
@@ -65,6 +65,12 @@ type PartItems struct {
 	UploadID    string
 	IsTruncated bool
 	Part        []*Part
+}
+
+// ItemOnChannel - List items on channel
+type ItemOnChannel struct {
+	Item *Item
+	Err  error
 }
 
 // Item - object item list
