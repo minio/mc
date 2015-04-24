@@ -1,6 +1,9 @@
 {
 	"ImportPath": "github.com/minio-io/mc",
 	"GoVersion": "go1.4.2",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/cheggaaa/pb",
@@ -33,6 +36,10 @@
 		},
 		{
 			"ImportPath": "github.com/minio-io/minio/pkg/iodine",
+			"Rev": "1d4bc0c34e0c0ceb6606dab4e99288df0166c3d1"
+		},
+		{
+			"ImportPath": "github.com/minio-io/minio/pkg/utils/crypto/md5",
 			"Rev": "1d4bc0c34e0c0ceb6606dab4e99288df0166c3d1"
 		},
 		{

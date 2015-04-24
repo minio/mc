@@ -480,3 +480,34 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
+
+func (s *CmdTestSuite) TestCatCmd(c *C) {
+	sourceURL, err := getURL("http://example.com/bucket1/object1", nil)
+	c.Assert(err, IsNil)
+
+	manager := &MockclientManager{}
+	cl1 := &clientMocks.Client{}
+
+	data1 := "hello1"
+	binarySum1 := md5.Sum([]byte(data1))
+	etag1 := base64.StdEncoding.EncodeToString(binarySum1[:])
+	dataLen1 := int64(len(data1))
+
+	sourceURLConfigMap := make(map[string]*hostConfig)
+	sourceConfig := new(hostConfig)
+	sourceConfig.AccessKeyID = ""
+	sourceConfig.SecretAccessKey = ""
+	sourceURLConfigMap[sourceURL] = sourceConfig
+
+	var results bytes.Buffer
+	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	cl1.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil)
+	msg, err := doCatCmd(manager, &results, sourceURLConfigMap, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	c.Assert(data1, Equals, results.String())
+
+	manager.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
