@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2014,2015 Minio, Inc.
+ * Mini Copy (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,8 @@
 package main
 
 import (
-	"time"
-
 	"fmt"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/minio-io/cli"
@@ -40,7 +39,7 @@ func printItem(date time.Time, v int64, name string) {
 	fmt.Println(console.File("%s", name))
 }
 
-func doList(clnt client.Client, targetURL string) (string, error) {
+func doList(clnt client.Client, targetURL string) error {
 	var err error
 	for itemCh := range clnt.List() {
 		if itemCh.Err != nil {
@@ -49,12 +48,11 @@ func doList(clnt client.Client, targetURL string) (string, error) {
 		}
 		printItem(itemCh.Item.Time, itemCh.Item.Size, itemCh.Item.Name)
 	}
+
 	if err != nil {
-		err = iodine.New(err, nil)
-		msg := fmt.Sprintf("mc: listing objects for URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
-		return msg, err
+		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
-	return "", nil
+	return nil
 }
 
 // runListCmd lists objects inside a bucket
@@ -65,7 +63,7 @@ func runListCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Error reading config file. Reason: %s\n", iodine.ToError(err))
+		console.Fatalf("Unable to read config file [%s]. Reason: [%s].\n", mustGetMcConfigPath(), iodine.ToError(err))
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range ctx.Args() {
@@ -74,39 +72,33 @@ func runListCmd(ctx *cli.Context) {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unknown type of URL [%s].\n", arg)
+				console.Fatalf("Unknown type of URL [%s].\n", arg)
 			default:
 				log.Debug.Println(iodine.New(err, nil))
-				console.Fatalf("mc: Unknown type of URL [%s]. Reason: %s\n", arg, iodine.ToError(err))
+				console.Fatalf("Unable to parse argument [%s]. Reason: [%s].\n", arg, iodine.ToError(err))
 			}
 		}
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: Error reading config for URL [%s]. Reason: %s\n", targetURL, iodine.ToError(err))
+			console.Fatalf("Unable to read host configuration for [%s] from config file [%s]. Reason: [%s].\n", targetURL, mustGetMcConfigPath(), iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
-		errorMsg, err := doListCmd(mcClientManager{}, targetURL, targetConfig, globalDebugFlag)
+		err = doListCmd(mcClientManager{}, targetURL, targetConfig, globalDebugFlag)
 		err = iodine.New(err, nil)
 		if err != nil {
-			if errorMsg == "" {
-				errorMsg = "mc: List command failed. Please re-run with --debug and report this bug."
-			}
 			log.Debug.Println(err)
-			console.Errorf("%s", errorMsg)
+			console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 		}
 	}
 }
 
-func doListCmd(manager clientManager, targetURL string, targetConfig *hostConfig, debug bool) (string, error) {
+func doListCmd(manager clientManager, targetURL string, targetConfig *hostConfig, debug bool) error {
 	clnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
-		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
-			targetURL, iodine.ToError(err))
-		return msg, err
+		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
 	return doList(clnt, targetURL)
 }

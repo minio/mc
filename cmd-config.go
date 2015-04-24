@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2014, 2015 Minio, Inc.
+ * Mini Copy (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -310,19 +310,19 @@ func doConfigCmd(ctx *cli.Context) {
 	configPath, err := getMcConfigPath()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to identify config file path")
+		console.Fatalln("Unable to determine config file path.")
 	}
 	err = saveConfig(ctx)
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errConfigExists:
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("mc: Configuration file " + configPath + " already exists")
+			console.Fatalln("Configuration file " + configPath + " already exists.")
 		default:
 			// unexpected error
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("mc: Unable to generate config file", configPath)
+			console.Fatalln("Unable to generate config file", configPath, ".")
 		}
 	}
-	console.Infoln("mc: Configuration written to " + configPath + ". Please update your access credentials.")
+	console.Infoln("Configuration written to " + configPath + ". Please update your access credentials.")
 }

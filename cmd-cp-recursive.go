@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2015 Minio, Inc.
+ * Mini Copy (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/minio-io/mc/pkg/console"
@@ -30,20 +29,22 @@ const (
 )
 
 // doCopyCmdRecursive - copy bucket to bucket
-func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]*hostConfig, targetURLConfigMap map[string]*hostConfig) (string, error) {
+func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]*hostConfig, targetURLConfigMap map[string]*hostConfig) error {
 	for sourceURL, sourceConfig := range sourceURLConfigMap {
 		// get source list
 		clnt, err := manager.getNewClient(sourceURL, sourceConfig, false)
 		if err != nil {
-			return fmt.Sprintf("instantiating a new client for URL [%s]", sourceURL), iodine.New(err, nil)
+			return iodine.New(err, map[string]string{"Source": sourceURL})
 		}
+
 		for itemCh := range clnt.List() {
 			if itemCh.Err != nil {
-				return fmt.Sprintf("listing objects failed for URL [%s]", sourceURL), iodine.New(itemCh.Err, nil)
+				return iodine.New(err, map[string]string{"Source": sourceURL})
 			}
 			if itemCh.Item.FileType.IsDir() {
 				continue
 			}
+
 			// populate source urls
 			sourceURLs := make(map[string]*hostConfig)
 			sourceObjectURL := itemCh.Item.Name
@@ -54,13 +55,13 @@ func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]*ho
 				targetObjectURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + itemCh.Item.Name
 				targetURLs[targetObjectURL] = targetConfig
 			}
-			humanReadable, err := doCopyCmd(manager, sourceURLs, targetURLs)
+			err := doCopyCmd(manager, sourceURLs, targetURLs)
 			if err != nil {
 				err := iodine.New(err, nil)
 				log.Debug.Println(err)
-				console.Errorln(humanReadable)
+				console.Errorln("Failed to copy from %s to %s. Reason: [%s].\n", sourceURLs, targetURLs, iodine.ToError(err))
 			}
 		}
 	}
-	return "", nil
+	return nil
 }

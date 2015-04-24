@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2014, 2015 Minio, Inc.
+ * Mini Copy (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,12 +31,12 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
+// Check for the environment early on and gracefuly report.
 func checkConfig() {
-	// Check for the environment early on and gracefuly report.
 	_, err := user.Current()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to obtain user's home directory")
+		console.Fatalln("Unable to determine user's home directory")
 	}
 
 	// If config doesn't exist, do not attempt to read it
@@ -48,11 +48,11 @@ func checkConfig() {
 	_, err = getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: Unable to read config file: %s\n", mustGetMcConfigPath())
+		console.Fatalf("Unable to read config file: %s\n", mustGetMcConfigPath())
 	}
 }
 
-// Tries to get os/arch/platform specific information
+// Get os/arch/platform specific information.
 // Returns a map of current os/arch/platform/memstats
 func getSystemData() map[string]string {
 	host, err := os.Hostname()
@@ -100,17 +100,17 @@ func main() {
 		if console.IsValidTheme(themeName) {
 			err := console.SetTheme(themeName)
 			if err != nil {
-				console.Fatalf("mc: failed to set theme [%s] with following reason: [%s]\n", themeName, iodine.ToError(err))
+				console.Fatalf("Failed to set theme [%s]. Reason: [%s].\n", themeName, iodine.ToError(err))
 			}
 		} else {
-			console.Fatalf("mc: Theme [%s] is not supported. Please choose from this list: %s\n", themeName, console.GetThemeNames())
+			console.Fatalf("Theme [%s] is not supported.  Please choose from this list: %s.\n", themeName, console.GetThemeNames())
 		}
 		checkConfig()
 		return nil
 	}
 	app.After = func(ctx *cli.Context) error {
 		if !isMcConfigExist() && ctx.Command.Name != "config" {
-			console.Fatalln("mc: error ``mc`` is not configured. Please run \"mc config generate\".")
+			console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
 		}
 		return nil
 	}
