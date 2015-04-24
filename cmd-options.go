@@ -28,7 +28,7 @@ import (
 var (
 	catCmd = cli.Command{
 		Name:   "cat",
-		Usage:  "Copy an object to standard out",
+		Usage:  "Concantenate an object to standard output",
 		Action: runCatCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -44,11 +44,11 @@ OPTIONS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Copy an object from Amazon S3 object storage to standard out.
-      $ mc {{.Name}} https://s3.amazonaws.com/jukebox/klingon_opera_aktuh_maylotah.ogg
+   1. Concantenate an object from Amazon S3 object storage to mplayer standard input
+      $ mc {{.Name}} https://s3.amazonaws.com/jukebox/klingon_opera_aktuh_maylotah.ogg | mplayer -
 
-   2. Copy an object from the file system to standard out.
-      $ mc {{.Name}} klingon_opera_aktuh_maylotah.ogg
+   2. Concantenate a file from local filesystem to standard output.
+      $ mc {{.Name}} khitomer-accords.txt
 
 `,
 	}

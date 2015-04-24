@@ -484,7 +484,7 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 	cl1.AssertExpectations(c)
 }
 
-func (s *CmdTestSuite) TestCatCmd(c *C) {
+func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	sourceURL, err := getURL("http://example.com/bucket1/object1", nil)
 	c.Assert(err, IsNil)
 
@@ -505,6 +505,35 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 	var results bytes.Buffer
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil)
+	msg, err := doCatCmd(manager, &results, sourceURLConfigMap, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	c.Assert(data1, Equals, results.String())
+
+	manager.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
+
+func (s *CmdTestSuite) TestCatCmdFile(c *C) {
+	sourceURL, err := getURL("object1", nil)
+	c.Assert(err, IsNil)
+
+	manager := &MockclientManager{}
+	cl1 := &clientMocks.Client{}
+
+	data1 := "hello1"
+	dataLen1 := int64(len(data1))
+
+	sourceURLConfigMap := make(map[string]*hostConfig)
+	sourceConfig := new(hostConfig)
+	sourceConfig.AccessKeyID = ""
+	sourceConfig.SecretAccessKey = ""
+	sourceURLConfigMap[sourceURL] = sourceConfig
+
+	var results bytes.Buffer
+	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	cl1.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, "", nil)
 	msg, err := doCatCmd(manager, &results, sourceURLConfigMap, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
