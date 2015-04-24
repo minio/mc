@@ -33,12 +33,10 @@ func runCatCmd(ctx *cli.Context) {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			log.Debug.Println(iodine.New(err, nil))
-			// TODO normalize with the rest of the system
 			console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", e.url, e)
 		default:
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalf("mc: reading URLs failed with following reason: [%s]\n", e)
-			// TODO normalize with the rest of the system
 		}
 	}
 
@@ -84,6 +82,7 @@ func doCatCmd(manager clientManager, writer io.Writer, sourceURLConfigMap map[st
 			// TODO make a better human readable error message
 			return "Unable to retrieve file: " + url, iodine.New(err, nil)
 		}
+		defer reader.Close()
 		wg := &sync.WaitGroup{}
 		md5Reader, md5Writer := io.Pipe()
 		var actualMd5 []byte
@@ -96,18 +95,17 @@ func doCatCmd(manager clientManager, writer io.Writer, sourceURLConfigMap map[st
 		teeReader := io.TeeReader(reader, md5Writer)
 		_, err = io.CopyN(writer, teeReader, size)
 		md5Writer.Close()
-		if err != nil {
-			return "", iodine.New(err, nil)
-		}
+		// If no data was copied, do not suppress error message
+		// if data was copied, suppress error message
 		wg.Wait()
-		expectedMd5, err := base64.StdEncoding.DecodeString(etag)
 		if err != nil {
 			// Don't return human readable
-			return "", iodine.New(errors.New("Unable to read md5sum (etag)"), nil)
+			return "Copying data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
 		}
+		expectedMd5, err := base64.StdEncoding.DecodeString(etag)
 		if !bytes.Equal(expectedMd5, actualMd5) {
 			// Don't return human readable
-			return "", iodine.New(errors.New("corruption occurred"), nil)
+			return "Copying data from source was corrupted in transit: " + url, iodine.New(errors.New("Data copied from source was corrupted in transit"), nil)
 		}
 	}
 	return "", nil
