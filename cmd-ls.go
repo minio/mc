@@ -33,16 +33,6 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
-// printItems prints a metadata of a list of items
-func printItems(v []*client.Item) {
-	if len(v) > 0 {
-		// Items are already sorted
-		for _, b := range v {
-			printItem(b.Time, b.Size, b.Name)
-		}
-	}
-}
-
 // printItem prints item meta-data
 func printItem(date time.Time, v int64, name string) {
 	fmt.Printf(console.Time("[%s] ", date.Local().Format(printDate)))
@@ -52,12 +42,12 @@ func printItem(date time.Time, v int64, name string) {
 
 func doList(clnt client.Client, targetURL string) (string, error) {
 	var err error
-	for itemOnChannel := range clnt.ListOnChannel() {
-		if itemOnChannel.Err != nil {
-			err = itemOnChannel.Err
+	for itemCh := range clnt.List() {
+		if itemCh.Err != nil {
+			err = itemCh.Err
 			break
 		}
-		printItem(itemOnChannel.Item.Time, itemOnChannel.Item.Size, itemOnChannel.Item.Name)
+		printItem(itemCh.Item.Time, itemCh.Item.Size, itemCh.Item.Name)
 	}
 	if err != nil {
 		err = iodine.New(err, nil)

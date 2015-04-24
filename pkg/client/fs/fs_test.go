@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	. "github.com/minio-io/check"
+	"github.com/minio-io/mc/pkg/client"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -66,7 +67,10 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(size, Equals, dataLen)
 
 	fsc = New(root)
-	items, err := fsc.List()
+	var items []*client.Item
+	for itemCh := range fsc.List() {
+		items = append(items, itemCh.Item)
+	}
 	c.Assert(err, IsNil)
 	c.Assert(len(items), Equals, 3)
 }
