@@ -1,12 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"sync"
 
-	"encoding/base64"
+	"encoding/hex"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -72,7 +71,7 @@ func doCatCmd(manager clientManager, writer io.Writer, sourceURLConfigMap map[st
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
-		reader, size, etag, err := clnt.Get()
+		reader, size, expectedMd5, err := clnt.Get()
 		if err != nil {
 			return "Unable to retrieve file: " + url, iodine.New(err, nil)
 		}
@@ -89,16 +88,12 @@ func doCatCmd(manager clientManager, writer io.Writer, sourceURLConfigMap map[st
 		teeReader := io.TeeReader(reader, md5Writer)
 		_, err = io.CopyN(writer, teeReader, size)
 		md5Writer.Close()
-		// If no data was copied, do not suppress error message
-		// if data was copied, suppress error message
 		wg.Wait()
 		if err != nil {
-			// Don't return human readable
 			return "Copying data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
 		}
-		expectedMd5, err := base64.StdEncoding.DecodeString(etag)
-		if !bytes.Equal(expectedMd5, actualMd5) {
-			// Don't return human readable
+		actualMd5String := hex.EncodeToString(actualMd5)
+		if expectedMd5 != actualMd5String {
 			return "Copying data from source was corrupted in transit: " + url, iodine.New(errors.New("Data copied from source was corrupted in transit"), nil)
 		}
 	}
