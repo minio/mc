@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2015 Minio, Inc.
+ * Mini Copy (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ var MiniTheme = Theme{
 }*/
 var MiniTheme = Theme{
 	Debug: (color.New(color.FgWhite, color.Faint, color.Italic)),
-	Fatal: (color.New(color.FgRed, color.Italic)),
+	Fatal: (color.New(color.FgRed, color.Italic, color.Bold)),
 	Error: (color.New(color.FgYellow, color.Italic)),
 	Info:  (color.New(color.FgGreen, color.Bold)),
 	File:  (color.New(color.FgWhite)),

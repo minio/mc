@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2014,2015 Minio, Inc.
+ * Mini Copy (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to read config")
+		console.Fatalf("Unable to read config file [%s].\n", mustGetMcConfigPath())
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
 	targetURLs, err := getURLs(ctx.Args(), config.Aliases)
@@ -43,23 +43,23 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", e.url, e)
+			console.Fatalf("Unknown URL type [%s] passed. Reason: [%s].\n", e.url, e)
 		default:
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: reading URLs failed with following reason: [%s]\n", e)
+			console.Fatalf("Error in parsing path or URL. Reason: [%s].\n", e)
 		}
 	}
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
 		log.Debug.Println(iodine.New(errInvalidACL{acl: acl.String()}, nil))
-		console.Fatalf("mc: Unsupported type of acl requested [%s], supported types are [private, public-read, public-read-write]\n", acl)
+		console.Fatalf("Access type [%s] is not supported.  Valid types are [private, private, read-only].\n", acl)
 	}
 	targetURLs = targetURLs[1:] // 1 or more target URLs
 	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: reading config URL [%s] failed with following reason: [%s]\n", targetURL, iodine.ToError(err))
+			console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
@@ -68,7 +68,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		err = iodine.New(err, nil)
 		if err != nil {
 			if errorMsg == "" {
-				errorMsg = "No error message present, please rerun with --debug and report a bug."
+				errorMsg = "Empty error message.  Please rerun this command with --debug and file a bug report."
 			}
 			log.Debug.Println(err)
 			console.Errorf("%s", errorMsg)
@@ -82,7 +82,7 @@ func doMakeBucketCmd(manager clientManager, targetURL, targetACL string, targetC
 	clnt, err = manager.getNewClient(targetURL, targetConfig, debug)
 	if err != nil {
 		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("mc: instantiating a new client for URL [%s] failed with following reason: [%s]\n",
+		msg := fmt.Sprintf("Unable to initialize client for [%s]. Reason: [%s].\n",
 			targetURL, iodine.ToError(err))
 		return msg, err
 	}
@@ -102,7 +102,7 @@ func doMakeBucket(clnt client.Client, targetURL, targetACL string) (string, erro
 	}
 	if err != nil {
 		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("\nmc: Creating bucket failed for URL [%s] with following reason: [%s]\n", targetURL, iodine.ToError(err))
+		msg := fmt.Sprintf("Failed to create bucket for URL [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 		return msg, err
 	}
 	return "", nil

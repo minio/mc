@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2014, 2015 Minio, Inc.
+ * Mini Copy (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,8 +80,7 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 
 	manager.On("getSourceReader", sourceURL, sourceConfig).Return(sourceReader, dataLength, hexMd5, nil).Once()
 	manager.On("getTargetWriter", targetURL, targetConfig, hexMd5, dataLength).Return(targetWriter, nil).Once()
-	msg, err := doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
-	c.Assert(msg, Equals, "")
+	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	c.Assert(err, IsNil)
 	wg.Wait()
 	c.Assert(err, IsNil)
@@ -165,8 +164,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	manager.On("getSourceReader", "hello2", sourceConfig).Return(sourceReader2, dataLen2, etag2, nil).Once()
 	manager.On("getTargetWriter", targetURL+"hello2", targetConfig, etag2, dataLen2).Return(writer2, nil).Once()
 
-	msg, err := doCopyCmdRecursive(manager, sourceURLConfigMap, targetURLConfigMap)
-	c.Assert(msg, Equals, "")
+	err = doCopyCmdRecursive(manager, sourceURLConfigMap, targetURLConfigMap)
 	c.Assert(err, IsNil)
 
 	wg.Wait()
@@ -202,8 +200,7 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	targetURLConfigMap[targetURL] = targetConfig
 
 	manager.On("getSourceReader", sourceURL, sourceConfig).Return(nilReadCloser, int64(0), "", errors.New("Expected Error")).Once()
-	msg, err := doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
-	c.Assert(len(msg) > 0, Equals, true)
+	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	c.Assert(err, Not(IsNil))
 	manager.AssertExpectations(c)
 
@@ -217,10 +214,9 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 
 	manager.On("getSourceReader", sourceURL, sourceConfig).Return(reader1, dataLen1, etag1, nil).Once()
 	manager.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(nil, errors.New("Expected Error")).Once()
-	msg, err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	writer1.Close()
 	wg.Wait()
-	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 
 	// target write fails
@@ -242,9 +238,8 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	}()
 	manager.On("getSourceReader", sourceURL, sourceConfig).Return(reader2, dataLen1, etag1, nil).Once()
 	manager.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(writer3, nil).Once()
-	msg, err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	wg.Wait()
-	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 	c.Assert(n3, Equals, int64(3))
 
@@ -259,9 +254,8 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	failClose = &FailClose{}
 	manager.On("getSourceReader", sourceURL, sourceConfig).Return(reader4, dataLen1, etag1, nil).Once()
 	manager.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(failClose, nil).Once()
-	msg, err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
 	wg.Wait()
-	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 }
 
@@ -310,8 +304,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 		}
 	}()
 	cl1.On("List").Return(itemCh).Once()
-	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
-	c.Assert(msg, Equals, "")
+	err = doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
 	manager.AssertExpectations(c)
@@ -343,6 +336,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+
 	itemCh := make(chan client.ItemOnChannel)
 	go func() {
 		defer close(itemCh)
@@ -354,8 +348,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 		}
 	}()
 	cl1.On("List").Return(itemCh).Once()
-	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
-	c.Assert(msg, Equals, "")
+	err = doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
 	manager.AssertExpectations(c)
@@ -392,8 +385,7 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 		}
 	}()
 	cl1.On("List").Return(itemCh).Once()
-	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
-	c.Assert(msg, Equals, "")
+	err = doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
 	manager.AssertExpectations(c)

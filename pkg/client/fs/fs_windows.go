@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2015 Minio, Inc.
+ * Mini Copy (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
