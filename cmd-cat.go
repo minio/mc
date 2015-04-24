@@ -23,7 +23,7 @@ func runCatCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
@@ -32,10 +32,10 @@ func runCatCmd(ctx *cli.Context) {
 		switch iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			log.Debug.Println(iodine.New(err, nil))
-			os.Exit(-1)
+			os.Exit(1)
 		default:
 			log.Debug.Println(iodine.New(err, nil))
-			os.Exit(-1)
+			os.Exit(1)
 		}
 	}
 
@@ -50,13 +50,13 @@ func runCatCmd(ctx *cli.Context) {
 	sourceConfig, err := getHostConfig(sourceURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		os.Exit(-1)
+		os.Exit(1)
 	}
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		os.Exit(-1)
+		os.Exit(1)
 	}
 	doCatCmd(mcClientManager{}, os.Stdout, sourceURLConfigMap, globalDebugFlag)
 }
