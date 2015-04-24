@@ -292,13 +292,14 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	itemCh := make(chan client.ItemOnChannel)
 	go func() {
 		defer close(itemCh)
-		itemCh <- client.ItemOnChannel{
-			Item: nil,
-			Err:  client.APINotImplemented{},
+		for _, item := range items {
+			itemCh <- client.ItemOnChannel{
+				Item: item,
+				Err:  nil,
+			}
 		}
 	}()
 	cl1.On("ListOnChannel").Return(itemCh).Once()
-	cl1.On("List").Return(items, nil).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -335,13 +336,14 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 	itemCh := make(chan client.ItemOnChannel)
 	go func() {
 		defer close(itemCh)
-		itemCh <- client.ItemOnChannel{
-			Item: nil,
-			Err:  client.APINotImplemented{},
+		for _, item := range items {
+			itemCh <- client.ItemOnChannel{
+				Item: item,
+				Err:  nil,
+			}
 		}
 	}()
 	cl1.On("ListOnChannel").Return(itemCh).Once()
-	cl1.On("List").Return(items, nil).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -372,13 +374,14 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 	itemCh := make(chan client.ItemOnChannel)
 	go func() {
 		defer close(itemCh)
-		itemCh <- client.ItemOnChannel{
-			Item: nil,
-			Err:  client.APINotImplemented{},
+		for _, bucket := range buckets {
+			itemCh <- client.ItemOnChannel{
+				Item: bucket,
+				Err:  nil,
+			}
 		}
 	}()
 	cl1.On("ListOnChannel").Return(itemCh).Once()
-	cl1.On("List").Return(buckets, nil).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)

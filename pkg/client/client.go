@@ -18,6 +18,7 @@ package client
 
 import (
 	"io"
+	"os"
 	"regexp"
 	"time"
 	"unicode/utf8"
@@ -75,9 +76,10 @@ type ItemOnChannel struct {
 
 // Item - object item list
 type Item struct {
-	Name string
-	Time time.Time
-	Size int64
+	Name     string
+	Time     time.Time
+	Size     int64
+	FileType os.FileMode
 }
 
 // IsValidBucketName reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
@@ -96,18 +98,6 @@ func IsValidBucketName(bucket string) bool {
 	match, _ := regexp.MatchString("^[a-z][a-z0-9\\-]+[a-z0-9]$", bucket)
 	return match
 }
-
-// BySize implements sort.Interface for []Item based on the Size field.
-type BySize []*Item
-
-// Len -
-func (a BySize) Len() int { return len(a) }
-
-// Swap -
-func (a BySize) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-
-// Less -
-func (a BySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 
 // IsValidObject - verify object name in accordance with
 //   - http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html

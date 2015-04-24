@@ -19,7 +19,6 @@ package fs
 import (
 	"io"
 	"os"
-	"sort"
 	"strings"
 
 	"io/ioutil"
@@ -133,9 +132,31 @@ func (f *fsClient) ListOnChannel() <-chan client.ItemOnChannel {
 
 func (f *fsClient) listInGoroutine(itemCh chan client.ItemOnChannel) {
 	defer close(itemCh)
-	itemCh <- client.ItemOnChannel{
-		Item: nil,
-		Err:  iodine.New(client.APINotImplemented{API: "ListOnChannel"}, nil),
+	visitFS := func(fp string, fi os.FileInfo, err error) error {
+		if err != nil {
+			if os.IsPermission(err) { // skip inaccessible files
+				return nil
+			}
+			return err // fatal
+		}
+		item := &client.Item{
+			Name:     fp,
+			Time:     fi.ModTime(),
+			Size:     fi.Size(),
+			FileType: fi.Mode(),
+		}
+		itemCh <- client.ItemOnChannel{
+			Item: item,
+			Err:  nil,
+		}
+		return nil
+	}
+	err := filepath.Walk(f.path, visitFS)
+	if err != nil {
+		itemCh <- client.ItemOnChannel{
+			Item: nil,
+			Err:  iodine.New(err, nil),
+		}
 	}
 }
 
@@ -166,7 +187,6 @@ func (f *fsClient) List() (items []*client.Item, err error) {
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
-		sort.Sort(client.BySize(items))
 		return items, nil
 	}
 }
