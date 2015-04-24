@@ -54,13 +54,15 @@ import (
 /// Object API operations
 
 // GetObjectMetadata - returns nil, os.ErrNotExist if not on object storage
-func (c *s3Client) GetObjectMetadata() (item *client.Item, reterr error) {
-	bucket, object := c.url2Object()
-	req, err := c.getNewReq(c.objectURL(bucket, object), nil)
+func (c *s3Client) GetObjectMetadata() (item *client.Item, err error) {
+	bucket, object := c.url2BucketAndObject()
+	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+		return nil, iodine.New(InvalidBucketName{Bucket: bucket}, nil)
+	}
+	req, err := c.newRequest("HEAD", c.objectURL(bucket, object), nil)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	req.Method = "HEAD"
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		c.signRequest(req, c.Host)
 	}
@@ -94,8 +96,11 @@ func (c *s3Client) GetObjectMetadata() (item *client.Item, reterr error) {
 
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error) {
-	bucket, object := c.url2Object()
-	req, err := c.getNewReq(c.objectURL(bucket, object), nil)
+	bucket, object := c.url2BucketAndObject()
+	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+		return nil, 0, "", iodine.New(InvalidBucketName{Bucket: bucket}, nil)
+	}
+	req, err := c.newRequest("GET", c.objectURL(bucket, object), nil)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -117,11 +122,14 @@ func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error)
 // GetPartial fetches part of the s3 object in bucket.
 // If length is negative, the rest of the object is returned.
 func (c *s3Client) GetPartial(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
-	bucket, object := c.url2Object()
+	bucket, object := c.url2BucketAndObject()
+	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+		return nil, 0, "", iodine.New(InvalidBucketName{Bucket: bucket}, nil)
+	}
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	req, err := c.getNewReq(c.objectURL(bucket, object), nil)
+	req, err := c.newRequest("GET", c.objectURL(bucket, object), nil)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}

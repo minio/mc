@@ -50,13 +50,6 @@ type GenericBucketError struct {
 	Bucket string
 }
 
-// BucketNotFound - bucket requested does not exist
-type BucketNotFound GenericBucketError
-
-func (e BucketNotFound) Error() string {
-	return "bucket " + e.Bucket + " not found"
-}
-
 // BucketExists - bucket exists
 type BucketExists GenericBucketError
 

@@ -107,8 +107,8 @@ type s3Client struct {
 	*url.URL
 }
 
-// url2Object converts URL to bucketName and objectName
-func (c *s3Client) url2Object() (bucketName, objectName string) {
+// url2BucketAndObject converts URL to bucketName and objectName
+func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 	splits := strings.SplitN(c.Path, "/", 3)
 	switch len(splits) {
 	case 0, 1:
@@ -161,13 +161,14 @@ func (c *s3Client) objectURL(bucket, object string) string {
 	return url + object
 }
 
-//
-func (c *s3Client) getNewReq(url string, body io.ReadCloser) (*http.Request, error) {
+// Instantiate a new request
+func (c *s3Client) newRequest(method, url string, body io.ReadCloser) (*http.Request, error) {
 	errParams := map[string]string{
 		"url":       url,
+		"method":    method,
 		"userAgent": c.UserAgent,
 	}
-	req, err := http.NewRequest("GET", url, body)
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, iodine.New(err, errParams)
 	}
