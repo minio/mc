@@ -21,7 +21,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/minio-io/cli"
@@ -33,10 +32,9 @@ import (
 )
 
 func runCatCmd(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
+	if len(ctx.Args()) != 1 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
 	}
-
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
@@ -57,12 +55,6 @@ func runCatCmd(ctx *cli.Context) {
 	}
 
 	sourceURL := urls[0] // First arg is source
-	recursive := isURLRecursive(sourceURL)
-	// if recursive strip off the "..."
-	if recursive {
-		sourceURL = strings.TrimSuffix(sourceURL, recursiveSeparator)
-	}
-
 	sourceURLConfigMap := make(map[string]*hostConfig)
 	sourceConfig, err := getHostConfig(sourceURL)
 	if err != nil {
@@ -70,11 +62,6 @@ func runCatCmd(ctx *cli.Context) {
 		console.Fatalf("mc: reading host config for URL [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
 	}
 	sourceURLConfigMap[sourceURL] = sourceConfig
-
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		os.Exit(1)
-	}
 	humanReadable, err := doCatCmd(mcClientManager{}, os.Stdout, sourceURLConfigMap, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))

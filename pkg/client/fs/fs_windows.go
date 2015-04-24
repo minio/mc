@@ -17,6 +17,7 @@
 package fs
 
 import (
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -160,9 +161,44 @@ func (f *fsClient) listInGoroutine(itemCh chan client.ItemOnChannel) {
 	}
 }
 
+func isValidBucketACL(acl string) bool {
+	switch acl {
+	case "private":
+		fallthrough
+	case "public-read":
+		fallthrough
+	case "public-read-write":
+		fallthrough
+	case "":
+		return true
+	default:
+		return false
+	}
+}
+
+func aclToPerm(acl string) os.FileMode {
+	switch acl {
+	case "private":
+		return os.FileMode(0700)
+	case "public-read":
+		return os.FileMode(0500)
+	case "public-read-write":
+		return os.FileMode(0777)
+	default:
+		return os.FileMode(0700)
+	}
+}
+
 // PutBucket - create a new bucket
 func (f *fsClient) PutBucket(acl string) error {
-	err := os.MkdirAll(f.path, 0700)
+	if !isValidBucketACL(acl) {
+		return iodine.New(errors.New("invalid acl"), nil)
+	}
+	err := os.MkdirAll(f.path, aclToPerm(acl))
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	err = os.Chmod(f.path, aclToPerm(acl))
 	if err != nil {
 		return iodine.New(err, nil)
 	}

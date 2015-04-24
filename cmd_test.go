@@ -407,8 +407,8 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "private").Return(nil).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, "private", sourceConfig, false)
+	cl1.On("PutBucket", "").Return(nil).Once()
+	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -430,14 +430,14 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(nil, errors.New("Expected Failure")).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, "private", sourceConfig, false)
+	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "private").Return(&net.DNSError{}).Once()
-	cl1.On("PutBucket", "private").Return(nil).Once()
-	msg, err = doMakeBucketCmd(manager, sourceURL, "private", sourceConfig, false)
+	cl1.On("PutBucket", "").Return(&net.DNSError{}).Once()
+	cl1.On("PutBucket", "").Return(nil).Once()
+	msg, err = doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -450,9 +450,9 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 		err.Op = "dial"
 		err.Net = "tcp"
 		err.Err = errors.New("Another expected error")
-		cl1.On("PutBucket", "private").Return(err).Once()
+		cl1.On("PutBucket", "").Return(err).Once()
 	}
-	msg, err = doMakeBucketCmd(manager, sourceURL, "private", sourceConfig, false)
+	msg, err = doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	globalMaxRetryFlag = retries
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
@@ -475,8 +475,8 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "private").Return(nil).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, "private", sourceConfig, false)
+	cl1.On("PutBucket", "").Return(nil).Once()
+	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 

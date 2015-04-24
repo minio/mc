@@ -28,7 +28,7 @@ import (
 )
 
 func runCopyCmd(ctx *cli.Context) {
-	if len(ctx.Args()) < 2 {
+	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
 
