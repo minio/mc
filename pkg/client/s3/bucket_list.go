@@ -45,7 +45,7 @@ func (c *s3Client) listInGoroutine(itemCh chan client.ItemOnChannel) {
 
 	var items []*client.Item
 	bucket, objectPrefix := c.url2BucketAndObject()
-	item, err := c.GetObjectMetadata()
+	item, err := c.getObjectMetadata(bucket, objectPrefix)
 	switch err {
 	case nil: // List a single object. Exact key
 		itemCh <- client.ItemOnChannel{

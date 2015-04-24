@@ -43,6 +43,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -170,32 +171,84 @@ func (c *s3Client) PutBucket(acl string) error {
 	return nil
 }
 
-// Stat - send a 'HEAD' on a bucket or object to see if exists
-func (c *s3Client) Stat() error {
-	bucket, _ := c.url2BucketAndObject()
+func (c *s3Client) getBucketMetadata(bucket string) (item *client.Item, err error) {
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
-		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
+		return nil, iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 	req, err := c.newRequest("HEAD", u, nil)
 	if err != nil {
-		return iodine.New(err, nil)
+		return nil, iodine.New(err, nil)
 	}
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		c.signRequest(req, c.Host)
 	}
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return iodine.New(err, nil)
+		return nil, iodine.New(err, nil)
 	}
-	defer res.Body.Close()
+	item = new(client.Item)
+	item.Name = bucket
+	item.FileType = os.ModeDir
 
+	defer res.Body.Close()
 	switch res.StatusCode {
 	case http.StatusOK:
 		fallthrough
 	case http.StatusMovedPermanently:
-		return nil
+		return item, nil
 	default:
-		return iodine.New(NewError(res), nil)
+		return nil, iodine.New(NewError(res), nil)
 	}
+}
+
+// getObjectMetadata - returns nil, os.ErrNotExist if not on object storage
+func (c *s3Client) getObjectMetadata(bucket, object string) (item *client.Item, err error) {
+	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+		return nil, iodine.New(InvalidBucketName{Bucket: bucket}, nil)
+	}
+	req, err := c.newRequest("HEAD", c.objectURL(bucket, object), nil)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
+	res, err := c.Transport.RoundTrip(req)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	defer res.Body.Close()
+	switch res.StatusCode {
+	case http.StatusNotFound:
+		return nil, iodine.New(ObjectNotFound{Bucket: bucket, Object: object}, nil)
+	case http.StatusOK:
+		contentLength, err := strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
+		if err != nil {
+			return nil, iodine.New(err, nil)
+		}
+		date, err := time.Parse(time.RFC1123, res.Header.Get("Last-Modified"))
+		// AWS S3 uses RFC1123 standard for Date in HTTP header, unlike XML content
+		if err != nil {
+			return nil, iodine.New(err, nil)
+		}
+		item = new(client.Item)
+		item.Name = object
+		item.Time = date
+		item.Size = contentLength
+		item.FileType = 0
+		return item, nil
+	default:
+		return nil, iodine.New(NewError(res), nil)
+	}
+}
+
+// Stat - send a 'HEAD' on a bucket or object to see if exists
+func (c *s3Client) Stat() (*client.Item, error) {
+	bucket, object := c.url2BucketAndObject()
+	fmt.Println(bucket, object)
+	if object == "" {
+		return c.getBucketMetadata(bucket)
+	}
+	return c.getObjectMetadata(bucket, object)
 }
