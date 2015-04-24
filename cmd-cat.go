@@ -17,18 +17,18 @@
 package main
 
 import (
+	"encoding/hex"
 	"errors"
 	"io"
+	"os"
+	"strings"
 	"sync"
 
-	"encoding/hex"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/crypto/md5"
 	"github.com/minio-io/minio/pkg/utils/log"
-	"os"
-	"strings"
 )
 
 func runCatCmd(ctx *cli.Context) {
