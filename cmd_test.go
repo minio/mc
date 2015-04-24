@@ -492,7 +492,7 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 
 	data1 := "hello1"
 	binarySum1 := md5.Sum([]byte(data1))
-	etag1 := base64.StdEncoding.EncodeToString(binarySum1[:])
+	etag1 := hex.EncodeToString(binarySum1[:])
 	dataLen1 := int64(len(data1))
 
 	sourceURLConfigMap := make(map[string]*hostConfig)
