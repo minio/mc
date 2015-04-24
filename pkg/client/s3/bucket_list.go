@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -45,7 +44,7 @@ func (c *s3Client) listInGoroutine(itemCh chan client.ItemOnChannel) {
 	defer close(itemCh)
 
 	var items []*client.Item
-	bucket, objectPrefix := c.url2Object()
+	bucket, objectPrefix := c.url2BucketAndObject()
 	item, err := c.GetObjectMetadata()
 	switch err {
 	case nil: // List a single object. Exact key
@@ -91,7 +90,7 @@ func (c *s3Client) listInGoroutine(itemCh chan client.ItemOnChannel) {
 
 // List - list objects inside a bucket or with prefix
 func (c *s3Client) List() (items []*client.Item, err error) {
-	bucket, objectPrefix := c.url2Object()
+	bucket, objectPrefix := c.url2BucketAndObject()
 	item, err := c.GetObjectMetadata()
 	switch err {
 	case nil: // List a single object. Exact key
@@ -113,29 +112,27 @@ func (c *s3Client) List() (items []*client.Item, err error) {
 }
 
 // populate s3 response and decode results into listBucketResults{}
-func (c *s3Client) decodeBucketResults(urlReq string) (listBucketResults, error) {
-	bres := listBucketResults{}
-	req, err := c.getNewReq(urlReq, nil)
+func (c *s3Client) decodeBucketResults(queryURL string) (*listBucketResults, error) {
+	bres := &listBucketResults{}
+	req, err := c.newRequest("GET", queryURL, nil)
 	if err != nil {
-		return listBucketResults{}, iodine.New(err, nil)
+		return nil, iodine.New(err, nil)
 	}
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		c.signRequest(req, c.Host)
 	}
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
-		return listBucketResults{}, iodine.New(err, nil)
+		return nil, iodine.New(err, nil)
 	}
 	defer res.Body.Close()
-
 	if res.StatusCode != http.StatusOK {
-		return listBucketResults{}, iodine.New(NewError(res), nil)
+		return nil, iodine.New(NewError(res), nil)
 	}
-
 	var logbuf bytes.Buffer
-	err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(&bres)
+	err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(bres)
 	if err != nil {
-		return listBucketResults{}, iodine.New(err, map[string]string{"XMLError": logbuf.String()})
+		return nil, iodine.New(err, map[string]string{"XMLError": logbuf.String()})
 	}
 	return bres, nil
 }
@@ -163,13 +160,27 @@ func (c *s3Client) filterItems(startAt, marker, prefix, delimiter string, conten
 	return items, nextMarker, nil
 }
 
+func (c *s3Client) getQueryURL(bucket, marker, prefix, delimiter string, fetchN int) string {
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.bucketURL(bucket), fetchN))
+	switch true {
+	case marker != "":
+		buffer.WriteString(fmt.Sprintf("&marker=%s", url.QueryEscape(marker)))
+		fallthrough
+	case prefix != "":
+		buffer.WriteString(fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix)))
+		fallthrough
+	case delimiter != "":
+		buffer.WriteString(fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter)))
+	}
+	return buffer.String()
+}
+
 // listObjectsInternal returns 0 to maxKeys (inclusive) items from the
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
-func (c *s3Client) listObjectsInternal(bucket string, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, err error) {
-	var urlReq string
-	var buffer bytes.Buffer
+func (c *s3Client) listObjectsInternal(bucket, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, err error) {
 	if maxKeys <= 0 {
 		return nil, iodine.New(InvalidMaxKeys{MaxKeys: maxKeys}, nil)
 	}
@@ -179,20 +190,7 @@ func (c *s3Client) listObjectsInternal(bucket string, startAt, prefix, delimiter
 		if fetchN > globalMaxKeys {
 			fetchN = globalMaxKeys
 		}
-		var bres listBucketResults
-		buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.bucketURL(bucket), fetchN))
-		switch true {
-		case marker != "":
-			buffer.WriteString(fmt.Sprintf("&marker=%s", url.QueryEscape(marker)))
-			fallthrough
-		case prefix != "":
-			buffer.WriteString(fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix)))
-			fallthrough
-		case delimiter != "":
-			buffer.WriteString(fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter)))
-		}
-		urlReq = buffer.String()
-		bres, err = c.decodeBucketResults(urlReq)
+		bres, err := c.decodeBucketResults(c.getQueryURL(bucket, marker, prefix, delimiter, fetchN))
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
@@ -208,13 +206,10 @@ func (c *s3Client) listObjectsInternal(bucket string, startAt, prefix, delimiter
 		if !bres.IsTruncated {
 			break
 		}
-
 		if len(items) == 0 {
 			errMsg := errors.New("No items replied")
-			return nil, iodine.New(client.UnexpectedError{
-				Err: errMsg}, nil)
+			return nil, iodine.New(client.UnexpectedError{Err: errMsg}, nil)
 		}
 	}
-	sort.Sort(client.BySize(items))
 	return items, nil
 }

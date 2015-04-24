@@ -74,7 +74,7 @@ func (c *s3Client) listBucketsInternal() ([]*client.Item, error) {
 	var err error
 
 	u := fmt.Sprintf("%s://%s/", c.Scheme, c.Host)
-	req, err := c.getNewReq(u, nil)
+	req, err := c.newRequest("GET", u, nil)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -127,16 +127,16 @@ func (c *s3Client) PutBucket(acl string) error {
 	if acl == "" {
 		acl = "private"
 	}
-	bucket, _ := c.url2Object()
+	bucket, _ := c.url2BucketAndObject()
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req, err := c.getNewReq(u, nil)
+	// new request
+	req, err := c.newRequest("PUT", u, nil)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	req.Method = "PUT"
 	// add canned ACL's while creating a bucket
 	req.Header.Add("x-amz-acl", acl)
 
@@ -147,28 +147,26 @@ func (c *s3Client) PutBucket(acl string) error {
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return NewError(res)
+	if res != nil {
+		if res.StatusCode != http.StatusOK {
+			return iodine.New(NewError(res), nil)
+		}
 	}
-
+	defer res.Body.Close()
 	return nil
 }
 
 // Stat - send a 'HEAD' on a bucket or object to see if exists
 func (c *s3Client) Stat() error {
-	bucket, _ := c.url2Object()
+	bucket, _ := c.url2BucketAndObject()
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
 	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	req, err := c.getNewReq(u, nil)
+	req, err := c.newRequest("HEAD", u, nil)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-
-	req.Method = "HEAD"
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		c.signRequest(req, c.Host)
 	}
@@ -179,8 +177,6 @@ func (c *s3Client) Stat() error {
 	defer res.Body.Close()
 
 	switch res.StatusCode {
-	case http.StatusNotFound:
-		return iodine.New(BucketNotFound{Bucket: bucket}, nil)
 	case http.StatusOK:
 		fallthrough
 	case http.StatusMovedPermanently:
