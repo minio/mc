@@ -29,4 +29,23 @@ var (
 
 	mcUserAgent = "Minio/" +
 		Version + " (" + os.Args[0] + "; " + runtime.GOOS + "; " + runtime.GOARCH + ")"
+
+	mcCurrentConfigVersion = "1.0.0"
+)
+
+const (
+	mcConfigDir        = ".mc/"
+	mcConfigWindowsDir = "mc/"
+	mcConfigFile       = "config.json"
+)
+
+const (
+	// do not pass accesskeyid and secretaccesskey through cli
+	// users should manually edit them, add a stub entry
+	globalAccessKeyID     = "YOUR-ACCESS-KEY-ID-HERE"
+	globalSecretAccessKey = "YOUR-SECRET-ACCESS-KEY-HERE"
+)
+
+const (
+	exampleHostURL = "YOUR-EXAMPLE.COM"
 )

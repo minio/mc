@@ -34,12 +34,6 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
-const (
-	mcConfigDir        = ".mc/"
-	mcConfigWindowsDir = "mc/"
-	mcConfigFile       = "config.json"
-)
-
 type hostConfig struct {
 	AccessKeyID     string
 	SecretAccessKey string
@@ -50,21 +44,6 @@ type configV1 struct {
 	Aliases map[string]string
 	Hosts   map[string]*hostConfig
 }
-
-var (
-	mcCurrentConfigVersion = "1.0.0"
-)
-
-const (
-	// do not pass accesskeyid and secretaccesskey through cli
-	// users should manually edit them, add a stub entry
-	globalAccessKeyID     = "YOUR-ACCESS-KEY-ID-HERE"
-	globalSecretAccessKey = "YOUR-SECRET-ACCESS-KEY-HERE"
-)
-
-const (
-	exampleHostURL = "YOUR-EXAMPLE.COM"
-)
 
 func getMcConfigDir() (string, error) {
 	u, err := user.Current()
@@ -292,8 +271,10 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 				return nil, iodine.New(errInvalidAuth{}, nil)
 			}
 			// verify Auth key validity for all hosts
-			if !client.IsValidAccessKey(hostCfg.AccessKeyID) || !client.IsValidSecretKey(hostCfg.SecretAccessKey) {
-				return nil, iodine.New(errInvalidAuthKeys{}, nil)
+			if hostCfg.AccessKeyID != globalAccessKeyID && hostCfg.SecretAccessKey != globalSecretAccessKey {
+				if !client.IsValidAccessKey(hostCfg.AccessKeyID) || !client.IsValidSecretKey(hostCfg.SecretAccessKey) {
+					return nil, iodine.New(errInvalidAuthKeys{}, nil)
+				}
 			}
 			return hostCfg, nil
 		}
