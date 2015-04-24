@@ -289,6 +289,15 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	itemCh := make(chan client.ItemOnChannel)
+	go func() {
+		defer close(itemCh)
+		itemCh <- client.ItemOnChannel{
+			Item: nil,
+			Err:  client.APINotImplemented{},
+		}
+	}()
+	cl1.On("ListOnChannel").Return(itemCh).Once()
 	cl1.On("List").Return(items, nil).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
@@ -323,6 +332,15 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	itemCh := make(chan client.ItemOnChannel)
+	go func() {
+		defer close(itemCh)
+		itemCh <- client.ItemOnChannel{
+			Item: nil,
+			Err:  client.APINotImplemented{},
+		}
+	}()
+	cl1.On("ListOnChannel").Return(itemCh).Once()
 	cl1.On("List").Return(items, nil).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
@@ -351,6 +369,15 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	itemCh := make(chan client.ItemOnChannel)
+	go func() {
+		defer close(itemCh)
+		itemCh <- client.ItemOnChannel{
+			Item: nil,
+			Err:  client.APINotImplemented{},
+		}
+	}()
+	cl1.On("ListOnChannel").Return(itemCh).Once()
 	cl1.On("List").Return(buckets, nil).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")

@@ -110,6 +110,20 @@ func (f *fsClient) GetObjectMetadata() (item *client.Item, reterr error) {
 	return item, nil
 }
 
+func (f *fsClient) ListOnChannel() <-chan client.ItemOnChannel {
+	itemCh := make(chan client.ItemOnChannel)
+	go f.listInGoroutine(itemCh)
+	return itemCh
+}
+
+func (f *fsClient) listInGoroutine(itemCh chan client.ItemOnChannel) {
+	defer close(itemCh)
+	itemCh <- client.ItemOnChannel{
+		Item: nil,
+		Err:  iodine.New(client.APINotImplemented{API: "ListOnChannel"}, nil),
+	}
+}
+
 // List - get a list of items
 func (f *fsClient) List() (items []*client.Item, err error) {
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
