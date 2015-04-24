@@ -70,6 +70,8 @@ var (
 
 	// File - File("foo.txt")
 	File = themesDB[currThemeName].File.SprintfFunc()
+	// Dir - Dir("dir/")
+	Dir = themesDB[currThemeName].Dir.SprintfFunc()
 	// Size - Size("12GB")
 	Size = themesDB[currThemeName].Size.SprintfFunc()
 	//Time - Time("12 Hours")
@@ -85,6 +87,7 @@ type Theme struct {
 	Size  *color.Color
 	Time  *color.Color
 	File  *color.Color
+	Dir   *color.Color
 	//	Reason *color.Color
 }
 
@@ -155,6 +158,7 @@ func SetTheme(themeName string) error {
 	// Debugf prints a debug message with formatting
 	Debugf = func(f string, a ...interface{}) { printf(theme.Debug, "<DEBUG>", f, a...) }
 
+	Dir = theme.Dir.SprintfFunc()
 	File = theme.File.SprintfFunc()
 	Size = theme.Size.SprintfFunc()
 	Time = theme.Time.SprintfFunc()

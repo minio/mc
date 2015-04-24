@@ -19,22 +19,13 @@ package console
 import "github.com/fatih/color"
 
 // MiniTheme - Minio's default color theme
-/*
-var MiniTheme = Theme{
-	Debug: (color.New(color.FgWhite, color.Faint, color.Italic)),
-	Fatal: (color.New(color.FgRed, color.Bold, color.Italic)),
-	Error: (color.New(color.FgYellow, color.Bold, color.Italic)),
-	Info:  (color.New(color.FgGreen, color.Bold)),
-	File:  (color.New(color.FgCyan, color.Bold)),
-	Size:  (color.New(color.FgYellow, color.Bold)),
-	Time:  (color.New(color.FgGreen, color.Bold)),
-}*/
 var MiniTheme = Theme{
 	Debug: (color.New(color.FgWhite, color.Faint, color.Italic)),
 	Fatal: (color.New(color.FgRed, color.Italic, color.Bold)),
 	Error: (color.New(color.FgYellow, color.Italic)),
 	Info:  (color.New(color.FgGreen, color.Bold)),
 	File:  (color.New(color.FgWhite)),
+	Dir:   (color.New(color.FgCyan, color.Bold)),
 	Size:  (color.New(color.FgYellow)),
 	Time:  (color.New(color.FgGreen)),
 }
@@ -46,6 +37,7 @@ var WhiteTheme = Theme{
 	Error: (color.New(color.FgWhite, color.Bold, color.Italic)),
 	Info:  (color.New(color.FgWhite, color.Bold)),
 	File:  (color.New(color.FgWhite, color.Bold)),
+	Dir:   (color.New(color.FgWhite, color.Bold)),
 	Size:  (color.New(color.FgWhite, color.Bold)),
 	Time:  (color.New(color.FgWhite, color.Bold)),
 }
@@ -57,6 +49,7 @@ var NoColorTheme = Theme{
 	Error: (color.New()),
 	Info:  (color.New()),
 	File:  (color.New()),
+	Dir:   (color.New()),
 	Size:  (color.New()),
 	Time:  (color.New()),
 }

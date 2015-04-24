@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -33,10 +34,16 @@ const (
 )
 
 // printItem prints item meta-data
-func printItem(date time.Time, v int64, name string) {
+func printItem(date time.Time, v int64, name string, fileType os.FileMode) {
 	fmt.Printf(console.Time("[%s] ", date.Local().Format(printDate)))
 	fmt.Printf(console.Size("%6s ", humanize.IBytes(uint64(v))))
-	fmt.Println(console.File("%s", name))
+	// just making it explicit
+	if fileType.IsDir() {
+		fmt.Println(console.Dir("%s/", name))
+	}
+	if fileType.IsRegular() {
+		fmt.Println(console.File("%s", name))
+	}
 }
 
 func doList(clnt client.Client, targetURL string) error {
@@ -46,7 +53,7 @@ func doList(clnt client.Client, targetURL string) error {
 			err = itemCh.Err
 			break
 		}
-		printItem(itemCh.Item.Time, itemCh.Item.Size, itemCh.Item.Name)
+		printItem(itemCh.Item.Time, itemCh.Item.Size, itemCh.Item.Name, itemCh.Item.FileType)
 	}
 
 	if err != nil {
@@ -81,7 +88,8 @@ func runListCmd(ctx *cli.Context) {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("Unable to read host configuration for [%s] from config file [%s]. Reason: [%s].\n", targetURL, mustGetMcConfigPath(), iodine.ToError(err))
+			console.Fatalf("Unable to read host configuration for [%s] from config file [%s]. Reason: [%s].\n",
+				targetURL, mustGetMcConfigPath(), iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
