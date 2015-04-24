@@ -42,6 +42,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -114,6 +115,7 @@ func (c *s3Client) listBucketsInternal() ([]*client.Item, error) {
 		item := new(client.Item)
 		item.Name = b.Name
 		item.Time = b.CreationDate
+		item.FileType = os.ModeDir
 		items = append(items, item)
 	}
 	return items, nil

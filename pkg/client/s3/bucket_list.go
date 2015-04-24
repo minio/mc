@@ -131,6 +131,7 @@ func (c *s3Client) filterItems(startAt, marker, prefix, delimiter string, conten
 		item.Name = strings.TrimPrefix(it.Key, filepath.Clean(prefix)+string(filepath.Separator))
 		item.Time = it.LastModified
 		item.Size = it.Size
+		item.FileType = 0
 		items = append(items, item)
 		nextMarker = it.Key
 	}
