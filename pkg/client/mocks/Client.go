@@ -22,12 +22,17 @@ func (m *Client) PutBucket(acl string) error {
 }
 
 // Stat is a mock method
-func (m *Client) Stat() error {
+func (m *Client) Stat() (*client.Item, error) {
 	ret := m.Called()
 
-	r0 := ret.Error(0)
+	var r0 *client.Item
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).(*client.Item)
+	}
 
-	return r0
+	r1 := ret.Error(1)
+
+	return r0, r1
 }
 
 // List is a mock method
@@ -66,19 +71,6 @@ func (m *Client) Put(md5 string, size int64) (io.WriteCloser, error) {
 	ret := m.Called(md5, size)
 
 	r0 := ret.Get(0).(io.WriteCloser)
-	r1 := ret.Error(1)
-
-	return r0, r1
-}
-
-// GetObjectMetadata is a mock method
-func (m *Client) GetObjectMetadata() (*client.Item, error) {
-	ret := m.Called()
-
-	var r0 *client.Item
-	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*client.Item)
-	}
 	r1 := ret.Error(1)
 
 	return r0, r1

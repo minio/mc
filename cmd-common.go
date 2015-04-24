@@ -86,7 +86,7 @@ func (manager mcClientManager) getSourceReader(sourceURL string, sourceConfig *h
 	// check if the bucket is valid
 	// For object storage URL's do a StatBucket(), not necessary for fs client
 	if client.GetType(sourceURL) != client.Filesystem {
-		if err := sourceClnt.Stat(); err != nil {
+		if _, err := sourceClnt.Stat(); err != nil {
 			return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
 		}
 	}
@@ -103,7 +103,7 @@ func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig *h
 	// check if the bucket is valid
 	// For object storage URL's do a StatBucket(), not necessary for fs client
 	if client.GetType(targetURL) != client.Filesystem {
-		if err := targetClnt.Stat(); err != nil {
+		if _, err := targetClnt.Stat(); err != nil {
 			return nil, iodine.New(err, map[string]string{"failedURL": targetURL})
 		}
 	}

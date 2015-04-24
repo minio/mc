@@ -41,9 +41,7 @@ package s3
 import (
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
-	"time"
 
 	"net/http"
 
@@ -52,47 +50,6 @@ import (
 )
 
 /// Object API operations
-
-// GetObjectMetadata - returns nil, os.ErrNotExist if not on object storage
-func (c *s3Client) GetObjectMetadata() (item *client.Item, err error) {
-	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
-		return nil, iodine.New(InvalidBucketName{Bucket: bucket}, nil)
-	}
-	req, err := c.newRequest("HEAD", c.objectURL(bucket, object), nil)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
-		c.signRequest(req, c.Host)
-	}
-	res, err := c.Transport.RoundTrip(req)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	defer res.Body.Close()
-	switch res.StatusCode {
-	case http.StatusNotFound:
-		return nil, iodine.New(ObjectNotFound{Bucket: bucket, Object: object}, nil)
-	case http.StatusOK:
-		contentLength, err := strconv.ParseInt(res.Header.Get("Content-Length"), 10, 64)
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-		date, err := time.Parse(time.RFC1123, res.Header.Get("Last-Modified"))
-		// AWS S3 uses RFC1123 standard for Date in HTTP header, unlike XML content
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-		item = new(client.Item)
-		item.Name = object
-		item.Time = date
-		item.Size = contentLength
-		return item, nil
-	default:
-		return nil, iodine.New(NewError(res), nil)
-	}
-}
 
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error) {

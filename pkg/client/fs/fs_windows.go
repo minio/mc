@@ -41,8 +41,8 @@ func New(path string) client.Client {
 	return &fsClient{path: path}
 }
 
-// getObjectMetadata - wrapper function to get file stat
-func (f *fsClient) getObjectMetadata() (os.FileInfo, error) {
+// fsStat - wrapper function to get file stat
+func (f *fsClient) fsStat() (os.FileInfo, error) {
 	st, err := os.Stat(filepath.Clean(f.path))
 	if os.IsNotExist(err) {
 		return nil, iodine.New(FileNotFound{path: f.path}, nil)
@@ -50,24 +50,23 @@ func (f *fsClient) getObjectMetadata() (os.FileInfo, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	if st.IsDir() {
-		return nil, iodine.New(FileISDir{path: f.path}, nil)
-	}
 	return st, nil
 }
 
 // Get - download an object from bucket
 func (f *fsClient) Get() (body io.ReadCloser, size int64, md5 string, err error) {
-	st, err := f.getObjectMetadata()
+	item, err := f.getFSMetadata()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
+	}
+	if item.FileType.IsDir() {
+		return nil, 0, "", iodine.New(FileISDir{path: f.path}, nil)
 	}
 	body, err = os.Open(f.path)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	// TODO: support md5sum - there is no easier way to do it right now without temporary buffer
-	// so avoiding it to ensure no out of memory situations
+	// TODO: support md5sum -
 	return body, st.Size(), "", nil
 }
 
@@ -76,9 +75,12 @@ func (f *fsClient) GetPartial(offset, length int64) (body io.ReadCloser, size in
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	st, err := f.getObjectMetadata()
+	item, err := f.getFSMetadata()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
+	}
+	if item.FileType.IsDir() {
+		return nil, 0, "", iodine.New(FileISDir{path: f.path}, nil)
 	}
 	body, err = os.Open(f.path)
 	if err != nil {
@@ -92,19 +94,6 @@ func (f *fsClient) GetPartial(offset, length int64) (body io.ReadCloser, size in
 		return nil, 0, "", iodine.New(err, nil)
 	}
 	return body, length, "", nil
-}
-
-// GetObjectMetadata -
-func (f *fsClient) GetObjectMetadata() (item *client.Item, reterr error) {
-	st, err := f.getObjectMetadata()
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	item = new(client.Item)
-	item.Name = st.Name()
-	item.Size = st.Size()
-	item.Time = st.ModTime()
-	return item, nil
 }
 
 /// Bucket operations
@@ -205,14 +194,20 @@ func (f *fsClient) PutBucket(acl string) error {
 	return nil
 }
 
+// getFSMetadata -
+func (f *fsClient) getFSMetadata() (item *client.Item, reterr error) {
+	st, err := f.fsStat()
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	item = new(client.Item)
+	item.Name = st.Name()
+	item.Size = st.Size()
+	item.Time = st.ModTime()
+	return item, nil
+}
+
 // Stat -
-func (f *fsClient) Stat() error {
-	st, err := os.Stat(f.path)
-	if os.IsNotExist(err) {
-		return iodine.New(err, nil)
-	}
-	if !st.IsDir() {
-		return iodine.New(FileNotDir{path: f.path}, nil)
-	}
-	return nil
+func (f *fsClient) Stat() (item *client.Item, err error) {
+	return f.getFSMetadata()
 }

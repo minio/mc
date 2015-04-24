@@ -95,7 +95,7 @@ func (s *MySuite) TestStatBucket(c *C) {
 	fsc := New(bucketPath)
 	err = fsc.PutBucket("")
 	c.Assert(err, IsNil)
-	err = fsc.Stat()
+	_, err = fsc.Stat()
 	c.Assert(err, IsNil)
 }
 
@@ -149,7 +149,7 @@ func (s *MySuite) TestGetObject(c *C) {
 
 }
 
-func (s *MySuite) TestGetObjectMetadata(c *C) {
+func (s *MySuite) TestStat(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -168,7 +168,7 @@ func (s *MySuite) TestGetObjectMetadata(c *C) {
 	_, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)
 	c.Assert(err, IsNil)
 
-	item, err := fsc.GetObjectMetadata()
+	item, err := fsc.Stat()
 	c.Assert(err, IsNil)
 	c.Assert(item.Name, Equals, "object")
 	c.Assert(item.Size, Equals, dataLen)

@@ -29,7 +29,7 @@ type Client interface {
 	MultipartUpload
 
 	// Common operations
-	Stat() error
+	Stat() (item *Item, err error)
 	List() <-chan ItemOnChannel
 
 	// Bucket operations
@@ -39,7 +39,6 @@ type Client interface {
 	Get() (body io.ReadCloser, size int64, md5 string, err error)
 	GetPartial(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
 	Put(md5 string, size int64) (io.WriteCloser, error)
-	GetObjectMetadata() (item *Item, err error)
 }
 
 // MultipartUpload - multi part upload interface
