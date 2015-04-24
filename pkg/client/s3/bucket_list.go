@@ -33,8 +33,8 @@ import (
 
 /// Bucket API operations
 
-// ListOnChannel -
-func (c *s3Client) ListOnChannel() <-chan client.ItemOnChannel {
+// List - list buckets and objects
+func (c *s3Client) List() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
 	go c.listInGoroutine(itemCh)
 	return itemCh
@@ -85,29 +85,6 @@ func (c *s3Client) listInGoroutine(itemCh chan client.ItemOnChannel) {
 				Err:  nil,
 			}
 		}
-	}
-}
-
-// List - list objects inside a bucket or with prefix
-func (c *s3Client) List() (items []*client.Item, err error) {
-	bucket, objectPrefix := c.url2BucketAndObject()
-	item, err := c.GetObjectMetadata()
-	switch err {
-	case nil: // List a single object. Exact key
-		items = append(items, item)
-		return items, nil
-	default:
-		// if not bucket provided return list of all buckets
-		if bucket == "" {
-			return c.listBucketsInternal()
-		}
-		// List all objects matching the key prefix
-		items, err = c.listObjectsInternal(bucket, "", objectPrefix, "", globalMaxKeys)
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-		// even if items are equal to '0' is valid case
-		return items, nil
 	}
 }
 

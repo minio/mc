@@ -37,19 +37,21 @@ func doCopyCmdRecursive(manager clientManager, sourceURLConfigMap map[string]*ho
 		if err != nil {
 			return fmt.Sprintf("instantiating a new client for URL [%s]", sourceURL), iodine.New(err, nil)
 		}
-		items, err := clnt.List()
-		if err != nil {
-			return fmt.Sprintf("listing objects failed for URL [%s]", sourceURL), iodine.New(err, nil)
-		}
-		for _, item := range items {
+		for itemCh := range clnt.List() {
+			if itemCh.Err != nil {
+				return fmt.Sprintf("listing objects failed for URL [%s]", sourceURL), iodine.New(itemCh.Err, nil)
+			}
+			if itemCh.Item.FileType.IsDir() {
+				continue
+			}
 			// populate source urls
 			sourceURLs := make(map[string]*hostConfig)
-			sourceObjectURL := strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + item.Name
+			sourceObjectURL := itemCh.Item.Name
 			sourceURLs[sourceObjectURL] = sourceConfig
 			// populate target urls
 			targetURLs := make(map[string]*hostConfig)
 			for targetURL, targetConfig := range targetURLConfigMap {
-				targetObjectURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + item.Name
+				targetObjectURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + itemCh.Item.Name
 				targetURLs[targetObjectURL] = targetConfig
 			}
 			humanReadable, err := doCopyCmd(manager, sourceURLs, targetURLs)

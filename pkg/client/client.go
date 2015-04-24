@@ -30,8 +30,7 @@ type Client interface {
 
 	// Common operations
 	Stat() error
-	List() (items []*Item, err error)
-	ListOnChannel() <-chan ItemOnChannel
+	List() <-chan ItemOnChannel
 
 	// Bucket operations
 	PutBucket(acl string) error

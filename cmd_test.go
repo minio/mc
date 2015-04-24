@@ -147,12 +147,22 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	targetURLConfigMap[targetURL] = targetConfig
 
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	cl1.On("List").Return(items, nil).Once()
+	itemCh := make(chan client.ItemOnChannel)
+	go func() {
+		defer close(itemCh)
+		for _, item := range items {
+			itemCh <- client.ItemOnChannel{
+				Item: item,
+				Err:  nil,
+			}
+		}
+	}()
+	cl1.On("List").Return(itemCh).Once()
 	sourceReader1 := ioutil.NopCloser(bytes.NewBufferString(data1))
 	sourceReader2 := ioutil.NopCloser(bytes.NewBufferString(data2))
-	manager.On("getSourceReader", sourceURL+"hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
+	manager.On("getSourceReader", "hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
 	manager.On("getTargetWriter", targetURL+"hello1", targetConfig, etag1, dataLen1).Return(writer1, nil).Once()
-	manager.On("getSourceReader", sourceURL+"hello2", sourceConfig).Return(sourceReader2, dataLen2, etag2, nil).Once()
+	manager.On("getSourceReader", "hello2", sourceConfig).Return(sourceReader2, dataLen2, etag2, nil).Once()
 	manager.On("getTargetWriter", targetURL+"hello2", targetConfig, etag2, dataLen2).Return(writer2, nil).Once()
 
 	msg, err := doCopyCmdRecursive(manager, sourceURLConfigMap, targetURLConfigMap)
@@ -299,7 +309,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 			}
 		}
 	}()
-	cl1.On("ListOnChannel").Return(itemCh).Once()
+	cl1.On("List").Return(itemCh).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -343,7 +353,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 			}
 		}
 	}()
-	cl1.On("ListOnChannel").Return(itemCh).Once()
+	cl1.On("List").Return(itemCh).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -381,7 +391,7 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 			}
 		}
 	}()
-	cl1.On("ListOnChannel").Return(itemCh).Once()
+	cl1.On("List").Return(itemCh).Once()
 	msg, err := doListCmd(manager, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)

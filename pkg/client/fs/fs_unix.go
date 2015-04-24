@@ -109,7 +109,7 @@ func (f *fsClient) GetObjectMetadata() (item *client.Item, reterr error) {
 	return item, nil
 }
 
-func (f *fsClient) ListOnChannel() <-chan client.ItemOnChannel {
+func (f *fsClient) List() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
 	go f.listInGoroutine(itemCh)
 	return itemCh
@@ -143,31 +143,6 @@ func (f *fsClient) listInGoroutine(itemCh chan client.ItemOnChannel) {
 			Err:  iodine.New(err, nil),
 		}
 	}
-}
-
-// List - get a list of items
-func (f *fsClient) List() (items []*client.Item, err error) {
-	visitFS := func(fp string, fi os.FileInfo, err error) error {
-		if err != nil {
-			if os.IsPermission(err) { // skip inaccessible files
-				return nil
-			}
-			return err // fatal
-		}
-		item := &client.Item{
-			Name: fp,
-			Time: fi.ModTime(),
-			Size: fi.Size(),
-		}
-
-		items = append(items, item)
-		return nil
-	}
-	err = filepath.Walk(f.path, visitFS)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return items, nil
 }
 
 // PutBucket - create a new bucket
