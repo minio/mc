@@ -72,14 +72,14 @@ func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 		}
 		// this is necessary for debug, since the underlying transport is a wrapper
 		res, err := c.Transport.RoundTrip(req)
-		if res.StatusCode != http.StatusOK {
-			err := iodine.New(NewError(res), nil)
+		if err != nil {
+			err := iodine.New(err, nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
 		}
-		if err != nil {
-			err := iodine.New(err, nil)
+		if res.StatusCode != http.StatusOK {
+			err := iodine.New(NewError(res), nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
