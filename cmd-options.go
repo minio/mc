@@ -26,6 +26,36 @@ import (
 
 // List of commands
 var (
+	accessCmd = cli.Command{
+		Name:   "access",
+		Usage:  "Set permissions [public, private, readonly] for buckets and folders.",
+		Action: runAccessCmd,
+		CustomHelpTemplate: `Name:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} PERMISSION TARGET [TARGET...] {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+OPTIONS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+
+   1. Set bucket to "private" on Amazon S3 object storage
+      $ mc {{.Name}} private https://s3.amazonaws.com/burningman2011
+
+   2. Set bucket to "public" on Amazon S3 object storage
+      $ mc {{.Name}} public https://s3.amazonaws.com/shared
+
+   3. Set folder to world readwrite (chmod 777) on local filesystem
+      $ mc {{.Name}} public /shared/Music
+
+`,
+	}
 	catCmd = cli.Command{
 		Name:   "cat",
 		Usage:  "Concantenate an object to standard output",
@@ -86,9 +116,8 @@ EXAMPLES:
 	}
 
 	lsCmd = cli.Command{
-		Name:  "ls",
-		Usage: "List files and objects",
-		//		Description: `List files and objects recursively on object storage and fileystems`,
+		Name:   "ls",
+		Usage:  "List files and objects",
 		Action: runListCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -130,15 +159,14 @@ EXAMPLES:
 	}
 
 	mbCmd = cli.Command{
-		Name:  "mb",
-		Usage: "Make a bucket",
-		//		Description: `Create a bucket on object storage or a folder on filesystem`,
+		Name:   "mb",
+		Usage:  "Make a bucket",
 		Action: runMakeBucketCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} ACL TARGET [TARGET...] {{if .Description}}
+   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -148,14 +176,14 @@ OPTIONS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Create a public bucket on Amazon S3 object storage
-      $ mc {{.Name}} public-read-write https://s3.amazonaws.com/public-document-store
+   1. Create a bucket on Amazon S3 object storage
+      $ mc {{.Name}} https://s3.amazonaws.com/public-document-store
 
-   2. Create a private bucket on Minio object storage
-      $ mc {{.Name}} private http://localhost:9000/mongodb-backup
+   2. Create a bucket on Minio object storage
+      $ mc {{.Name}} http://localhost:9000/mongodb-backup
 
-   3. Create multiple buckets on Amazon S3 object storage with same ACL
-      $ mc {{.Name}} public-read https://s3.amazonaws.com/public-photo-store https://s3.amazonaws.com/public-store
+   3. Create multiple buckets on Amazon S3 object storage and Minio object storage
+      $ mc {{.Name}} https://s3.amazonaws.com/public-photo-store https://s3.amazonaws.com/public-store http://localhost:9000/mongodb-backup
 
 `,
 	}
@@ -209,6 +237,7 @@ EXAMPLES:
 )
 
 var options = []cli.Command{
+	accessCmd,
 	catCmd,
 	cpCmd,
 	lsCmd,

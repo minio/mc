@@ -126,22 +126,34 @@ func (c *s3Client) PutBucket(acl string) error {
 	if !isValidBucketACL(acl) {
 		return iodine.New(InvalidACL{ACL: acl}, nil)
 	}
-	if acl == "" {
-		acl = "private"
-	}
 	bucket, _ := c.url2BucketAndObject()
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
-	u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	// new request
-	req, err := c.newRequest("PUT", u, nil)
-	if err != nil {
-		return iodine.New(err, nil)
+	var req *http.Request
+	var err error
+	switch len(acl) > 0 {
+	case true:
+		u := fmt.Sprintf("%s://%s/%s?acl", c.Scheme, c.Host, bucket)
+		// new request
+		req, err = c.newRequest("PUT", u, nil)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		// by default without acl while creating a bucket
+		// make it default "private"
+		req.Header.Add("x-amz-acl", acl)
+	default:
+		u := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
+		// new request
+		req, err = c.newRequest("PUT", u, nil)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		// by default without acl while creating a bucket
+		// make it default "private"
+		req.Header.Add("x-amz-acl", "private")
 	}
-	// add canned ACL's while creating a bucket
-	req.Header.Add("x-amz-acl", acl)
-
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		c.signRequest(req, c.Host)
 	}

@@ -35,6 +35,8 @@ func isValidAliasName(aliasName string) bool {
 		fallthrough
 	case "private":
 		fallthrough
+	case "read-only":
+		fallthrough
 	case "public-read":
 		fallthrough
 	case "public-read-write":
