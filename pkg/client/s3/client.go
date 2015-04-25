@@ -19,12 +19,15 @@ package s3
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/service/s3"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
@@ -54,6 +57,7 @@ type listBucketResults struct {
 // Meta holds Amazon S3 client credentials and flags.
 type Meta struct {
 	*Config
+	*s3.S3
 	Transport http.RoundTripper // or nil for the default behavior
 }
 
@@ -169,10 +173,15 @@ func New(config *Config) client.Client {
 	} else {
 		transport = http.DefaultTransport
 	}
+	awsConf := aws.DefaultConfig
+	awsConf.Credentials = aws.Creds(config.AccessKeyID, config.SecretAccessKey, "")
+	awsConf.HTTPClient = &http.Client{Transport: transport}
+	awsConf.Logger = ioutil.Discard
 	s3c := &s3Client{
 		&Meta{
 			Config:    config,
 			Transport: transport,
+			S3:        s3.New(awsConf),
 		}, u,
 	}
 	return s3c

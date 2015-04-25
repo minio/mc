@@ -1,13 +1,45 @@
 {
 	"ImportPath": "github.com/minio-io/mc",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.4",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/aws",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/endpoints",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/query",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/rest",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/restxml",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/xml/xmlutil",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/signer/v4",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/service/s3",
+			"Rev": "528fdccfb1784861a4a24809328f891336449926"
+		},
+		{
 			"ImportPath": "github.com/cheggaaa/pb",
-			"Rev": "0464652af750701d218b6dd035f0217e407caf2d"
+			"Rev": "bd14546a551971ae7f460e6d6e527c5b56cd38d7"
 		},
 		{
 			"ImportPath": "github.com/clbanning/mxj",
@@ -39,10 +71,6 @@
 			"Rev": "1d4bc0c34e0c0ceb6606dab4e99288df0166c3d1"
 		},
 		{
-			"ImportPath": "github.com/minio-io/minio/pkg/utils/crypto/md5",
-			"Rev": "1d4bc0c34e0c0ceb6606dab4e99288df0166c3d1"
-		},
-		{
 			"ImportPath": "github.com/minio-io/minio/pkg/utils/log",
 			"Rev": "1d4bc0c34e0c0ceb6606dab4e99288df0166c3d1"
 		},
@@ -61,6 +89,10 @@
 		{
 			"ImportPath": "github.com/stretchr/testify/mock",
 			"Rev": "e4ec8152c15fc46bd5056ce65997a07c7d415325"
+		},
+		{
+			"ImportPath": "github.com/vaughan0/go-ini",
+			"Rev": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
 		}
 	]
 }

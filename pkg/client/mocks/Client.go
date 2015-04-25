@@ -103,8 +103,8 @@ func (m *Client) InitiateMultiPartUpload() (string, error) {
 }
 
 // UploadPart is a mock method
-func (m *Client) UploadPart(uploadID string, partNumber int) (string, error) {
-	ret := m.Called(uploadID, partNumber)
+func (m *Client) UploadPart(uploadID string, body io.ReadSeeker, contentLength, partNumber int64) (string, error) {
+	ret := m.Called(uploadID, body, contentLength, partNumber)
 
 	r0 := ret.Get(0).(string)
 	r1 := ret.Error(1)
