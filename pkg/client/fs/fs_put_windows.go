@@ -17,6 +17,9 @@
 package fs
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"io"
 	"os"
@@ -55,9 +58,26 @@ func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 			blockingWriter.Release(err)
 			return
 		}
-		_, err = io.CopyN(fs, r, size)
+		// calculate md5 to verify - incoming md5
+		h := md5.New()
+		mw := io.MultiWriter(fs, h)
+
+		_, err = io.CopyN(mw, r, size)
 		if err != nil {
 			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
+		expectedMD5, err := hex.DecodeString(md5HexString)
+		if err != nil {
+			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
+		if !bytes.Equal(expectedMD5, h.Sum(nil)) {
+			err := iodine.New(errors.New("md5sum mismatch"), nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return

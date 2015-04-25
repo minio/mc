@@ -17,6 +17,8 @@
 package fs
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"io"
 	"os"
@@ -54,7 +56,7 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 }
 
 // Get - download an object from bucket
-func (f *fsClient) Get() (body io.ReadCloser, size int64, md5 string, err error) {
+func (f *fsClient) Get() (io.ReadCloser, int64, string, error) {
 	item, err := f.getFSMetadata()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
@@ -62,16 +64,27 @@ func (f *fsClient) Get() (body io.ReadCloser, size int64, md5 string, err error)
 	if item.FileType.IsDir() {
 		return nil, 0, "", iodine.New(FileISDir{path: f.path}, nil)
 	}
-	body, err = os.Open(f.path)
+	body, err := os.Open(f.path)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	// TODO: support md5sum -
-	return body, st.Size(), "", nil
+	h := md5.New()
+	// calculate md5sum
+	_, err = io.Copy(h, body)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	// seek back
+	_, err = body.Seek(0, 0)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	md5Str := hex.EncodeToString(h.Sum(nil))
+	return body, item.Size, md5Str, nil
 }
 
 // GetPartial - download a partial object from bucket
-func (f *fsClient) GetPartial(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
+func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, string, error) {
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
@@ -82,7 +95,7 @@ func (f *fsClient) GetPartial(offset, length int64) (body io.ReadCloser, size in
 	if item.FileType.IsDir() {
 		return nil, 0, "", iodine.New(FileISDir{path: f.path}, nil)
 	}
-	body, err = os.Open(f.path)
+	body, err := os.Open(f.path)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -93,7 +106,19 @@ func (f *fsClient) GetPartial(offset, length int64) (body io.ReadCloser, size in
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	return body, length, "", nil
+	h := md5.New()
+	// calculate md5sum
+	_, err = io.Copy(h, body)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	// seek back
+	_, err = body.Seek(0, 0)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	md5Str := hex.EncodeToString(h.Sum(nil))
+	return body, length, md5Str, nil
 }
 
 /// Bucket operations
