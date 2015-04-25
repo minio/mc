@@ -1,5 +1,3 @@
-// +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris
-
 /*
  * Mini Copy (C) 2015 Minio, Inc.
  *
