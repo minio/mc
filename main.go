@@ -78,13 +78,12 @@ func getSystemData() map[string]string {
 	}
 }
 
-// Version number
-var Version = "Development"
+// Version is based on MD5SUM of its binary
+var Version = mustHashBinarySelf()
 
 func main() {
 	app := cli.NewApp()
 	app.Usage = "Mini Copy for object storage and filesystems"
-	log.Println(Version)
 	app.Version = Version
 	app.Commands = options
 	app.Flags = flags
