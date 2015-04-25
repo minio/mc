@@ -487,9 +487,12 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	sourceURL, err := getURL("http://example.com/bucket1/object1", nil)
 	c.Assert(err, IsNil)
+	targetURL, err := getURL("object1", nil)
+	c.Assert(err, IsNil)
 
 	manager := &MockclientManager{}
 	cl1 := &clientMocks.Client{}
+	cl2 := &clientMocks.Client{}
 
 	data1 := "hello1"
 	binarySum1 := md5.Sum([]byte(data1))
@@ -502,27 +505,48 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	sourceConfig.SecretAccessKey = ""
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	var results bytes.Buffer
+	sourceReader, sourceWriter := io.Pipe()
+	targetReader, targetWriter := io.Pipe()
+	var resultBuffer bytes.Buffer
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		io.Copy(sourceWriter, bytes.NewBufferString(data1))
+		sourceWriter.Close()
+		wg.Done()
+	}()
+	go func() {
+		io.Copy(&resultBuffer, targetReader)
+		wg.Done()
+	}()
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	cl1.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, etag1, nil)
-	msg, err := doCatCmd(manager, &results, sourceURLConfigMap, false)
+	manager.On("getNewClient", targetURL, &hostConfig{}, false).Return(cl2, nil).Once()
+	cl1.On("Get").Return(sourceReader, dataLen1, etag1, nil)
+	cl2.On("Put", etag1, dataLen1).Return(targetWriter, nil)
+	msg, err := doCatCmd(manager, sourceURLConfigMap, targetURL, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
-	c.Assert(data1, Equals, results.String())
+	c.Assert(data1, Equals, resultBuffer.String())
 
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
+	cl2.AssertExpectations(c)
 }
 
 func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	sourceURL, err := getURL("object1", nil)
 	c.Assert(err, IsNil)
+	targetURL, err := getURL("object2", nil)
+	c.Assert(err, IsNil)
 
 	manager := &MockclientManager{}
 	cl1 := &clientMocks.Client{}
+	cl2 := &clientMocks.Client{}
 
 	data1 := "hello1"
+	binarySum1 := md5.Sum([]byte(data1))
+	etag1 := hex.EncodeToString(binarySum1[:])
 	dataLen1 := int64(len(data1))
 
 	sourceURLConfigMap := make(map[string]*hostConfig)
@@ -531,15 +555,32 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	sourceConfig.SecretAccessKey = ""
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	var results bytes.Buffer
+	sourceReader, sourceWriter := io.Pipe()
+	targetReader, targetWriter := io.Pipe()
+	var resultBuffer bytes.Buffer
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		io.Copy(sourceWriter, bytes.NewBufferString(data1))
+		sourceWriter.Close()
+		wg.Done()
+	}()
+	go func() {
+		io.Copy(&resultBuffer, targetReader)
+		wg.Done()
+	}()
+
 	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	cl1.On("Get").Return(ioutil.NopCloser(bytes.NewBufferString(data1)), dataLen1, "", nil)
-	msg, err := doCatCmd(manager, &results, sourceURLConfigMap, false)
+	manager.On("getNewClient", targetURL, &hostConfig{}, false).Return(cl2, nil).Once()
+	cl1.On("Get").Return(sourceReader, dataLen1, etag1, nil)
+	cl2.On("Put", etag1, dataLen1).Return(targetWriter, nil)
+	msg, err := doCatCmd(manager, sourceURLConfigMap, targetURL, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
-	c.Assert(data1, Equals, results.String())
+	c.Assert(data1, Equals, resultBuffer.String())
 
 	manager.AssertExpectations(c)
 	cl1.AssertExpectations(c)
+	cl2.AssertExpectations(c)
 }

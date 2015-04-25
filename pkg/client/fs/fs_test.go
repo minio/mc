@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"io"
 	"io/ioutil"
 	"os"
@@ -130,7 +131,7 @@ func (s *MySuite) TestGetObject(c *C) {
 
 	data := "hello"
 	binarySum := md5.Sum([]byte(data))
-	etag := base64.StdEncoding.EncodeToString(binarySum[:])
+	etag := hex.EncodeToString(binarySum[:])
 	dataLen := int64(len(data))
 
 	writer, err := fsc.Put(etag, dataLen)
@@ -139,10 +140,10 @@ func (s *MySuite) TestGetObject(c *C) {
 	_, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)
 	c.Assert(err, IsNil)
 
-	reader, size, _, err := fsc.Get()
+	reader, size, md5Sum, err := fsc.Get()
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
-
+	c.Assert(etag, Equals, md5Sum)
 	_, err = io.CopyN(&results, reader, size)
 	c.Assert(err, IsNil)
 	c.Assert([]byte(data), DeepEquals, results.Bytes())

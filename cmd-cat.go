@@ -17,17 +17,12 @@
 package main
 
 import (
-	"encoding/hex"
 	"errors"
 	"io"
-	"os"
-	"sync"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/crypto/md5"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
@@ -62,51 +57,35 @@ func runCatCmd(ctx *cli.Context) {
 		console.Fatalf("mc: reading host config for URL [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
 	}
 	sourceURLConfigMap[sourceURL] = sourceConfig
-	humanReadable, err := doCatCmd(mcClientManager{}, os.Stdout, sourceURLConfigMap, globalDebugFlag)
+	humanReadable, err := doCatCmd(mcClientManager{}, sourceURLConfigMap, "/dev/stdout", globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(humanReadable)
 	}
 }
 
-func doCatCmd(manager clientManager, writer io.Writer, sourceURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
+func doCatCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig, targetURL string, debug bool) (string, error) {
 	for url, config := range sourceURLConfigMap {
-		clnt, err := manager.getNewClient(url, config, debug)
+		sourceClnt, err := manager.getNewClient(url, config, debug)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
-		reader, size, expectedMd5, err := clnt.Get()
+		reader, size, expectedMd5, err := sourceClnt.Get()
 		if err != nil {
 			return "Unable to retrieve file: " + url, iodine.New(err, nil)
 		}
 		defer reader.Close()
-		var teeReader io.Reader
-		var actualMd5 []byte
-		if client.GetType(url) != client.Filesystem {
-			wg := &sync.WaitGroup{}
-			md5Reader, md5Writer := io.Pipe()
-			wg.Add(1)
-			go func() {
-				actualMd5, _ = md5.Sum(md5Reader)
-				// drop error, we'll catch later on if it fails
-				wg.Done()
-			}()
-			teeReader = io.TeeReader(reader, md5Writer)
-			_, err = io.CopyN(writer, teeReader, size)
-			md5Writer.Close()
-			wg.Wait()
-			if err != nil {
-				return "Copying data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
-			}
-			actualMd5String := hex.EncodeToString(actualMd5)
-			if expectedMd5 != actualMd5String {
-				return "Copying data from source was corrupted in transit: " + url,
-					iodine.New(errors.New("Data copied from source was corrupted in transit"), nil)
-			}
-			return "", nil
+
+		stdOutClnt, err := manager.getNewClient(targetURL, &hostConfig{}, debug)
+		if err != nil {
+			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
-		teeReader = reader
-		_, err = io.CopyN(writer, teeReader, size)
+		stdOutWriter, err := stdOutClnt.Put(expectedMd5, size)
+		if err != nil {
+			return "Unable to retrieve file: " + url, iodine.New(err, nil)
+		}
+		defer stdOutWriter.Close()
+		_, err = io.CopyN(stdOutWriter, reader, size)
 		if err != nil {
 			return "Copying data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
 		}

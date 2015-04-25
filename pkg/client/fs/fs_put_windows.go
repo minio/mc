@@ -17,11 +17,13 @@
 package fs
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -30,7 +32,7 @@ import (
 // Put - upload new object to bucket
 func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) {
 	r, w := io.Pipe()
-	blockingWriter := NewBlockingWriteCloser(w)
+	blockingWriter := client.NewBlockingWriteCloser(w)
 	go func() {
 		// handle md5HexString match internally
 		if size < 0 {
@@ -56,9 +58,26 @@ func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 			blockingWriter.Release(err)
 			return
 		}
-		_, err = io.CopyN(fs, r, size)
+		// calculate md5 to verify - incoming md5
+		h := md5.New()
+		mw := io.MultiWriter(fs, h)
+
+		_, err = io.CopyN(mw, r, size)
 		if err != nil {
 			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
+		expectedMD5, err := hex.DecodeString(md5HexString)
+		if err != nil {
+			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
+		if !bytes.Equal(expectedMD5, h.Sum(nil)) {
+			err := iodine.New(errors.New("md5sum mismatch"), nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
@@ -67,44 +86,4 @@ func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 		r.Close()
 	}()
 	return blockingWriter, nil
-}
-
-// BlockingWriteCloser is a WriteCloser that blocks until released
-type BlockingWriteCloser struct {
-	w       io.WriteCloser
-	release *sync.WaitGroup
-	err     error
-}
-
-// Write to the underlying writer
-func (b *BlockingWriteCloser) Write(p []byte) (int, error) {
-	n, err := b.w.Write(p)
-	err = iodine.New(err, nil)
-	return n, err
-}
-
-// Close blocks until another goroutine calls Release(error). Returns error code if either
-// writer fails or Release is called with an error.
-func (b *BlockingWriteCloser) Close() error {
-	err := b.w.Close()
-	if err != nil {
-		b.err = err
-	}
-	b.release.Wait()
-	return b.err
-}
-
-// Release the Close, causing it to unblock. Only call this once. Calling it multiple times results in a panic.
-func (b *BlockingWriteCloser) Release(err error) {
-	b.release.Done()
-	if err != nil {
-		b.err = err
-	}
-}
-
-// NewBlockingWriteCloser Creates a new write closer that must be released by the read consumer.
-func NewBlockingWriteCloser(w io.WriteCloser) *BlockingWriteCloser {
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	return &BlockingWriteCloser{w: w, release: wg}
 }
