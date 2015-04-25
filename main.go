@@ -78,10 +78,14 @@ func getSystemData() map[string]string {
 	}
 }
 
+// Version number
+var Version = "Development"
+
 func main() {
 	app := cli.NewApp()
 	app.Usage = "Mini Copy for object storage and filesystems"
-	app.Version = mcGitCommitHash
+	log.Println(Version)
+	app.Version = Version
 	app.Commands = options
 	app.Flags = flags
 	app.Author = "Minio.io"

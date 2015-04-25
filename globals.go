@@ -20,7 +20,6 @@ package main
 import (
 	"os"
 	"runtime"
-	"strings"
 )
 
 var (
@@ -29,6 +28,5 @@ var (
 	globalMaxRetryFlag = 5     // Maximum number of retries
 
 	mcUserAgent = "Minio/" +
-		strings.SplitN(mcGitCommitHash, " ", 3)[1] +
-		" (" + os.Args[0] + "; " + runtime.GOOS + "; " + runtime.GOARCH + ")"
+		Version + " (" + os.Args[0] + "; " + runtime.GOOS + "; " + runtime.GOARCH + ")"
 )
