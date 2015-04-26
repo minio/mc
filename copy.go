@@ -2,10 +2,11 @@ package main
 
 import (
 	"io"
+	"strings"
 
 	"github.com/cheggaaa/pb"
-	"github.com/minio-io/iodine"
 	"github.com/minio-io/mc/pkg/console"
+	"github.com/minio-io/minio/pkg/iodine"
 )
 
 func doCopy(methods clientMethods, reader io.ReadCloser, md5hex string, length int64, targetURL string, targetConfig *hostConfig) error {
@@ -47,6 +48,25 @@ func doCopySingleSource(methods clientMethods, sourceURL, targetURL string, sour
 		return iodine.New(err, nil)
 	}
 	return doCopy(methods, reader, md5hex, length, targetURL, targetConfig)
+}
+
+func doCopySingleSourceRecursive(methods clientMethods, sourceURL, targetURL string, sourceConfig, targetConfig *hostConfig) error {
+	sourceClnt, err := methods.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	for itemCh := range sourceClnt.List() {
+		if itemCh.Err != nil {
+			continue
+		}
+		newSourceURL := strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + itemCh.Item.Name
+		newTargetURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + itemCh.Item.Name
+		if err := doCopySingleSource(methods, newSourceURL, newTargetURL, sourceConfig, targetConfig); err != nil {
+			console.Errorf("Failed to copy sourceURL: [%s] to targetURL: [%s] with reason: [%s]\n",
+				newSourceURL, newTargetURL, iodine.ToError(err))
+		}
+	}
+	return nil
 }
 
 // doCopyCmd copies objects into and from a bucket or between buckets

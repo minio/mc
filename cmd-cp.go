@@ -17,6 +17,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -55,11 +57,24 @@ func runCopyCmdSingleSource(methods clientMethods, urls []string) {
 		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
 			targetURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
+	recursive := isURLRecursive(sourceURL)
+	// if recursive strip off the "..."
+	if recursive {
+		sourceURL = strings.TrimSuffix(sourceURL, recursiveSeparator)
+	}
 	sourceConfig, err := getHostConfig(sourceURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
-			targetURL, mustGetMcConfigPath(), iodine.ToError(err))
+			sourceURL, mustGetMcConfigPath(), iodine.ToError(err))
+	}
+	if recursive {
+		err = doCopySingleSourceRecursive(methods, sourceURL, targetURL, sourceConfig, targetConfig)
+		if err != nil {
+			log.Debug.Println(err)
+			console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", sourceURL, targetURL, iodine.ToError(err))
+		}
+		return
 	}
 	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	if err != nil {

@@ -22,13 +22,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 	"sync"
 	"time"
 
 	"errors"
 	"net"
-
-	"io/ioutil"
 
 	. "github.com/minio-io/check"
 	"github.com/minio-io/mc/pkg/client"
@@ -67,21 +66,17 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 		wg.Done()
 	}()
 
-	sourceURLConfigMap := make(map[string]*hostConfig)
 	sourceConfig := new(hostConfig)
 	sourceConfig.AccessKeyID = ""
 	sourceConfig.SecretAccessKey = ""
-	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	targetURLConfigMap := make(map[string]*hostConfig)
 	targetConfig := new(hostConfig)
 	targetConfig.AccessKeyID = ""
 	targetConfig.SecretAccessKey = ""
-	targetURLConfigMap[targetURL] = targetConfig
 
 	methods.On("getSourceReader", sourceURL, sourceConfig).Return(sourceReader, dataLength, hexMd5, nil).Once()
 	methods.On("getTargetWriter", targetURL, targetConfig, hexMd5, dataLength).Return(targetWriter, nil).Once()
-	err = doCopyCmd(methods, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	c.Assert(err, IsNil)
 	wg.Wait()
 	c.Assert(err, IsNil)
@@ -160,12 +155,12 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	cl1.On("List").Return(itemCh).Once()
 	sourceReader1 := ioutil.NopCloser(bytes.NewBufferString(data1))
 	sourceReader2 := ioutil.NopCloser(bytes.NewBufferString(data2))
-	methods.On("getSourceReader", "hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
+	methods.On("getSourceReader", sourceURL+"hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
 	methods.On("getTargetWriter", targetURL+"hello1", targetConfig, etag1, dataLen1).Return(writer1, nil).Once()
-	methods.On("getSourceReader", "hello2", sourceConfig).Return(sourceReader2, dataLen2, etag2, nil).Once()
+	methods.On("getSourceReader", sourceURL+"hello2", sourceConfig).Return(sourceReader2, dataLen2, etag2, nil).Once()
 	methods.On("getTargetWriter", targetURL+"hello2", targetConfig, etag2, dataLen2).Return(writer2, nil).Once()
 
-	err = doCopyCmdRecursive(methods, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopySingleSourceRecursive(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	c.Assert(err, IsNil)
 
 	wg.Wait()
@@ -188,20 +183,16 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 
 	var nilReadCloser io.ReadCloser
 
-	sourceURLConfigMap := make(map[string]*hostConfig)
 	sourceConfig := new(hostConfig)
 	sourceConfig.AccessKeyID = ""
 	sourceConfig.SecretAccessKey = ""
-	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	targetURLConfigMap := make(map[string]*hostConfig)
 	targetConfig := new(hostConfig)
 	targetConfig.AccessKeyID = ""
 	targetConfig.SecretAccessKey = ""
-	targetURLConfigMap[targetURL] = targetConfig
 
 	methods.On("getSourceReader", sourceURL, sourceConfig).Return(nilReadCloser, int64(0), "", errors.New("Expected Error")).Once()
-	err = doCopyCmd(methods, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	c.Assert(err, Not(IsNil))
 	methods.AssertExpectations(c)
 
@@ -215,7 +206,7 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 
 	methods.On("getSourceReader", sourceURL, sourceConfig).Return(reader1, dataLen1, etag1, nil).Once()
 	methods.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(nil, errors.New("Expected Error")).Once()
-	err = doCopyCmd(methods, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	writer1.Close()
 	wg.Wait()
 	c.Assert(err, Not(IsNil))
@@ -239,7 +230,7 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	}()
 	methods.On("getSourceReader", sourceURL, sourceConfig).Return(reader2, dataLen1, etag1, nil).Once()
 	methods.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(writer3, nil).Once()
-	err = doCopyCmd(methods, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	wg.Wait()
 	c.Assert(err, Not(IsNil))
 	c.Assert(n3, Equals, int64(3))
@@ -255,7 +246,7 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	failClose = &FailClose{}
 	methods.On("getSourceReader", sourceURL, sourceConfig).Return(reader4, dataLen1, etag1, nil).Once()
 	methods.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(failClose, nil).Once()
-	err = doCopyCmd(methods, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	wg.Wait()
 	c.Assert(err, Not(IsNil))
 }
