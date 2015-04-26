@@ -187,10 +187,16 @@ EXAMPLES:
 
 `,
 	}
-	//   Configure minio client configuration.
+	//   Configure minio client
 	//
+	//   ----
 	//   NOTE: that the configure command only writes values to the config file.
-	//   It does not use any configuration values from the environment variables.`,
+	//   It does not use any configuration values from the environment variables.
+	//
+	//   One needs to edit configuration file manually, this is purposefully done
+	//   so to avoid taking credentials over cli arguments. It is a security precaution
+	//   ----
+	//
 	configCmd = cli.Command{
 		Name:   "config",
 		Usage:  "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
@@ -236,16 +242,37 @@ EXAMPLES:
 	}
 )
 
-var options = []cli.Command{
-	accessCmd,
+// Collection of mc commands currently supported are
+//
+// ----
+// ls     List files and objects
+// cp     Copy objects and files
+// mb     Make a bucket
+// access Set permissions [public, private, readonly] for buckets and folders.
+// cat    Concantenate an object to standard output
+// config Generate configuration "/home/harsha/.mc/config.json" file.
+// update Check for new software updates
+// ----
+//
+var commands = []cli.Command{
 	lsCmd,
-	catCmd,
-	mbCmd,
 	cpCmd,
+	mbCmd,
+	accessCmd,
+	catCmd,
 	configCmd,
 	updateCmd,
+	// Add your new commands starting from here
 }
 
+// Collection of mc flags currently supported
+//
+// --theme       "minimal"Choose a console theme from this list [*minimal*, nocolor, white]
+// --debug       Enable HTTP tracing
+// --quiet, -q   Supress chatty console output
+// --retry "5"   Number of retry count
+// --version, -v print the version
+//
 var (
 	flags = []cli.Flag{
 		cli.StringFlag{
@@ -275,5 +302,6 @@ var (
 			Usage: "Number of retry count",
 			Value: 5,
 		},
+		// Add your new flags starting here
 	}
 )

@@ -85,7 +85,7 @@ func main() {
 	app := cli.NewApp()
 	app.Usage = "Mini Copy for object storage and filesystems"
 	app.Version = Version
-	app.Commands = options
+	app.Commands = commands
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.Before = func(ctx *cli.Context) error {
