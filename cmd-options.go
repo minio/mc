@@ -39,7 +39,7 @@ USAGE:
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
 
-OPTIONS:
+FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
 
@@ -69,7 +69,7 @@ USAGE:
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
 
-OPTIONS:
+FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
 
@@ -95,7 +95,7 @@ USAGE:
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
 
-OPTIONS:
+FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
 
@@ -128,7 +128,7 @@ USAGE:
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
 
-OPTIONS:
+FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
 
@@ -171,7 +171,7 @@ USAGE:
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
 
-OPTIONS:
+FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
 
@@ -210,7 +210,7 @@ USAGE:
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
 
-OPTIONS:
+FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
 EXAMPLES:
