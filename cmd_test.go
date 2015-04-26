@@ -22,13 +22,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 	"sync"
 	"time"
 
 	"errors"
 	"net"
-
-	"io/ioutil"
 
 	. "github.com/minio-io/check"
 	"github.com/minio-io/mc/pkg/client"
@@ -40,7 +39,7 @@ type CmdTestSuite struct{}
 var _ = Suite(&CmdTestSuite{})
 
 func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	sourceURL, err := getURL("foo", nil)
 	c.Assert(err, IsNil)
 
@@ -67,26 +66,22 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 		wg.Done()
 	}()
 
-	sourceURLConfigMap := make(map[string]*hostConfig)
 	sourceConfig := new(hostConfig)
 	sourceConfig.AccessKeyID = ""
 	sourceConfig.SecretAccessKey = ""
-	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	targetURLConfigMap := make(map[string]*hostConfig)
 	targetConfig := new(hostConfig)
 	targetConfig.AccessKeyID = ""
 	targetConfig.SecretAccessKey = ""
-	targetURLConfigMap[targetURL] = targetConfig
 
-	manager.On("getSourceReader", sourceURL, sourceConfig).Return(sourceReader, dataLength, hexMd5, nil).Once()
-	manager.On("getTargetWriter", targetURL, targetConfig, hexMd5, dataLength).Return(targetWriter, nil).Once()
-	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
+	methods.On("getSourceReader", sourceURL, sourceConfig).Return(sourceReader, dataLength, hexMd5, nil).Once()
+	methods.On("getTargetWriter", targetURL, targetConfig, hexMd5, dataLength).Return(targetWriter, nil).Once()
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	c.Assert(err, IsNil)
 	wg.Wait()
 	c.Assert(err, IsNil)
 	c.Assert(resultBuffer.String(), DeepEquals, data)
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 }
 
 func (s *CmdTestSuite) TestCopyRecursive(c *C) {
@@ -96,7 +91,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	targetURL, err := getURL("http://example.com/bucket2/", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
 	wg := &sync.WaitGroup{}
@@ -146,7 +141,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	targetConfig.SecretAccessKey = ""
 	targetURLConfigMap[targetURL] = targetConfig
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	itemCh := make(chan client.ItemOnChannel)
 	go func() {
 		defer close(itemCh)
@@ -160,12 +155,12 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	cl1.On("List").Return(itemCh).Once()
 	sourceReader1 := ioutil.NopCloser(bytes.NewBufferString(data1))
 	sourceReader2 := ioutil.NopCloser(bytes.NewBufferString(data2))
-	manager.On("getSourceReader", "hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
-	manager.On("getTargetWriter", targetURL+"hello1", targetConfig, etag1, dataLen1).Return(writer1, nil).Once()
-	manager.On("getSourceReader", "hello2", sourceConfig).Return(sourceReader2, dataLen2, etag2, nil).Once()
-	manager.On("getTargetWriter", targetURL+"hello2", targetConfig, etag2, dataLen2).Return(writer2, nil).Once()
+	methods.On("getSourceReader", sourceURL+"hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
+	methods.On("getTargetWriter", targetURL+"hello1", targetConfig, etag1, dataLen1).Return(writer1, nil).Once()
+	methods.On("getSourceReader", sourceURL+"hello2", sourceConfig).Return(sourceReader2, dataLen2, etag2, nil).Once()
+	methods.On("getTargetWriter", targetURL+"hello2", targetConfig, etag2, dataLen2).Return(writer2, nil).Once()
 
-	err = doCopyCmdRecursive(manager, sourceURLConfigMap, targetURLConfigMap)
+	err = doCopySingleSourceRecursive(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	c.Assert(err, IsNil)
 
 	wg.Wait()
@@ -174,12 +169,12 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	c.Assert(err2, IsNil)
 	c.Assert(results2.String(), Equals, data2)
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
 
 func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	sourceURL, err := getURL("foo", nil)
 	c.Assert(err, IsNil)
 
@@ -188,22 +183,18 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 
 	var nilReadCloser io.ReadCloser
 
-	sourceURLConfigMap := make(map[string]*hostConfig)
 	sourceConfig := new(hostConfig)
 	sourceConfig.AccessKeyID = ""
 	sourceConfig.SecretAccessKey = ""
-	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	targetURLConfigMap := make(map[string]*hostConfig)
 	targetConfig := new(hostConfig)
 	targetConfig.AccessKeyID = ""
 	targetConfig.SecretAccessKey = ""
-	targetURLConfigMap[targetURL] = targetConfig
 
-	manager.On("getSourceReader", sourceURL, sourceConfig).Return(nilReadCloser, int64(0), "", errors.New("Expected Error")).Once()
-	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
+	methods.On("getSourceReader", sourceURL, sourceConfig).Return(nilReadCloser, int64(0), "", errors.New("Expected Error")).Once()
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	c.Assert(err, Not(IsNil))
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 
 	// source fails
 	wg := &sync.WaitGroup{}
@@ -213,9 +204,9 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	dataLen1 := int64(len(data1))
 	reader1, writer1 := io.Pipe()
 
-	manager.On("getSourceReader", sourceURL, sourceConfig).Return(reader1, dataLen1, etag1, nil).Once()
-	manager.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(nil, errors.New("Expected Error")).Once()
-	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
+	methods.On("getSourceReader", sourceURL, sourceConfig).Return(reader1, dataLen1, etag1, nil).Once()
+	methods.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(nil, errors.New("Expected Error")).Once()
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	writer1.Close()
 	wg.Wait()
 	c.Assert(err, Not(IsNil))
@@ -237,9 +228,9 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 		n3, err3 = io.Copy(&results3, reader3)
 		wg.Done()
 	}()
-	manager.On("getSourceReader", sourceURL, sourceConfig).Return(reader2, dataLen1, etag1, nil).Once()
-	manager.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(writer3, nil).Once()
-	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
+	methods.On("getSourceReader", sourceURL, sourceConfig).Return(reader2, dataLen1, etag1, nil).Once()
+	methods.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(writer3, nil).Once()
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	wg.Wait()
 	c.Assert(err, Not(IsNil))
 	c.Assert(n3, Equals, int64(3))
@@ -253,9 +244,9 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	}()
 	var failClose io.WriteCloser
 	failClose = &FailClose{}
-	manager.On("getSourceReader", sourceURL, sourceConfig).Return(reader4, dataLen1, etag1, nil).Once()
-	manager.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(failClose, nil).Once()
-	err = doCopyCmd(manager, sourceURLConfigMap, targetURLConfigMap)
+	methods.On("getSourceReader", sourceURL, sourceConfig).Return(reader4, dataLen1, etag1, nil).Once()
+	methods.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(failClose, nil).Once()
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	wg.Wait()
 	c.Assert(err, Not(IsNil))
 }
@@ -273,7 +264,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	sourceURL, err := getURL("http://example.com/bucket1/", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
 	data1 := "hello1"
@@ -293,7 +284,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	sourceConfig.SecretAccessKey = ""
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	itemCh := make(chan client.ItemOnChannel)
 	go func() {
 		defer close(itemCh)
@@ -305,10 +296,10 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 		}
 	}()
 	cl1.On("List").Return(itemCh).Once()
-	err = doListCmd(manager, sourceURL, sourceConfig, false)
+	err = doListCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
 
@@ -316,7 +307,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 	sourceURL, err := getURL("foo", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
 	data1 := "hello1"
@@ -336,7 +327,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 	sourceConfig.SecretAccessKey = ""
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 
 	itemCh := make(chan client.ItemOnChannel)
 	go func() {
@@ -349,10 +340,10 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 		}
 	}()
 	cl1.On("List").Return(itemCh).Once()
-	err = doListCmd(manager, sourceURL, sourceConfig, false)
+	err = doListCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
 
@@ -360,7 +351,7 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 	sourceURL, err := getURL("http://example.com", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
 	buckets := []*client.Item{
@@ -374,7 +365,7 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 	sourceConfig.SecretAccessKey = ""
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	itemCh := make(chan client.ItemOnChannel)
 	go func() {
 		defer close(itemCh)
@@ -386,10 +377,10 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 		}
 	}()
 	cl1.On("List").Return(itemCh).Once()
-	err = doListCmd(manager, sourceURL, sourceConfig, false)
+	err = doListCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
 
@@ -397,7 +388,7 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 	sourceURL, err := getURL("http://example.com/bucket1", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
 	sourceURLConfigMap := make(map[string]*hostConfig)
@@ -406,13 +397,13 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 	sourceConfig.SecretAccessKey = ""
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket", "").Return(nil).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
+	msg, err := doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
 
@@ -420,7 +411,7 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	sourceURL, err := getURL("http://example.com/bucket1", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
 	sourceURLConfigMap := make(map[string]*hostConfig)
@@ -429,19 +420,19 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	sourceConfig.SecretAccessKey = ""
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(nil, errors.New("Expected Failure")).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(nil, errors.New("Expected Failure")).Once()
+	msg, err := doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket", "").Return(&net.DNSError{}).Once()
 	cl1.On("PutBucket", "").Return(nil).Once()
-	msg, err = doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
+	msg, err = doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	// we use <= rather than < since the original doesn't count in the retry
 	retries := globalMaxRetryFlag
 	globalMaxRetryFlag = 1
@@ -452,12 +443,12 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 		err.Err = errors.New("Another expected error")
 		cl1.On("PutBucket", "").Return(err).Once()
 	}
-	msg, err = doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
+	msg, err = doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
 	globalMaxRetryFlag = retries
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
 
@@ -465,7 +456,7 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 	sourceURL, err := getURL("bucket1", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
 	sourceURLConfigMap := make(map[string]*hostConfig)
@@ -474,13 +465,13 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 	sourceConfig.SecretAccessKey = ""
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket", "").Return(nil).Once()
-	msg, err := doMakeBucketCmd(manager, sourceURL, sourceConfig, false)
+	msg, err := doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 }
 
@@ -490,7 +481,7 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	targetURL, err := getURL("object1", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 	cl2 := &clientMocks.Client{}
 
@@ -519,17 +510,17 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 		io.Copy(&resultBuffer, targetReader)
 		wg.Done()
 	}()
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	manager.On("getNewClient", targetURL, &hostConfig{}, false).Return(cl2, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", targetURL, &hostConfig{}, false).Return(cl2, nil).Once()
 	cl1.On("Get").Return(sourceReader, dataLen1, etag1, nil)
 	cl2.On("Put", etag1, dataLen1).Return(targetWriter, nil)
-	msg, err := doCatCmd(manager, sourceURLConfigMap, targetURL, false)
+	msg, err := doCatCmd(methods, sourceURLConfigMap, targetURL, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
 	c.Assert(data1, Equals, resultBuffer.String())
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 	cl2.AssertExpectations(c)
 }
@@ -540,7 +531,7 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	targetURL, err := getURL("object2", nil)
 	c.Assert(err, IsNil)
 
-	manager := &MockclientManager{}
+	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 	cl2 := &clientMocks.Client{}
 
@@ -570,17 +561,17 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 		wg.Done()
 	}()
 
-	manager.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	manager.On("getNewClient", targetURL, &hostConfig{}, false).Return(cl2, nil).Once()
+	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", targetURL, &hostConfig{}, false).Return(cl2, nil).Once()
 	cl1.On("Get").Return(sourceReader, dataLen1, etag1, nil)
 	cl2.On("Put", etag1, dataLen1).Return(targetWriter, nil)
-	msg, err := doCatCmd(manager, sourceURLConfigMap, targetURL, false)
+	msg, err := doCatCmd(methods, sourceURLConfigMap, targetURL, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
 	c.Assert(data1, Equals, resultBuffer.String())
 
-	manager.AssertExpectations(c)
+	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 	cl2.AssertExpectations(c)
 }

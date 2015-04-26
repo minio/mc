@@ -97,3 +97,27 @@ type errInvalidAuthKeys struct{}
 func (e errInvalidAuthKeys) Error() string {
 	return "Invalid authorization keys"
 }
+
+type errIsNotBucket struct {
+	path string
+}
+
+func (e errIsNotBucket) Error() string {
+	return "Not a bucket " + e.path
+}
+
+type errInvalidSource struct {
+	path string
+}
+
+func (e errInvalidSource) Error() string {
+	return "Invalid source " + e.path
+}
+
+type errIsNotDIR struct {
+	path string
+}
+
+func (e errIsNotDIR) Error() string {
+	return "Not a directory " + e.path
+}

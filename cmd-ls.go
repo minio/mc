@@ -93,7 +93,7 @@ func runListCmd(ctx *cli.Context) {
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
-		err = doListCmd(mcClientManager{}, targetURL, targetConfig, globalDebugFlag)
+		err = doListCmd(mcClientMethods{}, targetURL, targetConfig, globalDebugFlag)
 		err = iodine.New(err, nil)
 		if err != nil {
 			log.Debug.Println(err)
@@ -102,8 +102,8 @@ func runListCmd(ctx *cli.Context) {
 	}
 }
 
-func doListCmd(manager clientManager, targetURL string, targetConfig *hostConfig, debug bool) error {
-	clnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
+func doListCmd(methods clientMethods, targetURL string, targetConfig *hostConfig, debug bool) error {
+	clnt, err := methods.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}

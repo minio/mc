@@ -27,7 +27,7 @@ import (
 )
 
 func runCatCmd(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 || ctx.Args().First() == "help" {
+	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
 	}
 	config, err := getMcConfig()
@@ -49,24 +49,22 @@ func runCatCmd(ctx *cli.Context) {
 		}
 	}
 
-	sourceURL := urls[0] // First arg is source
-	sourceURLConfigMap := make(map[string]*hostConfig)
-	sourceConfig, err := getHostConfig(sourceURL)
+	sourceURLs := urls
+	sourceURLConfigMap, err := getHostConfigs(sourceURLs)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: reading host config for URL [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
+		console.Fatalf("mc: reading host config for URL [%s] failed with following reason: [%s]\n", sourceURLs, iodine.ToError(err))
 	}
-	sourceURLConfigMap[sourceURL] = sourceConfig
-	humanReadable, err := doCatCmd(mcClientManager{}, sourceURLConfigMap, "/dev/stdout", globalDebugFlag)
+	humanReadable, err := doCatCmd(mcClientMethods{}, sourceURLConfigMap, "/dev/stdout", globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(humanReadable)
 	}
 }
 
-func doCatCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig, targetURL string, debug bool) (string, error) {
+func doCatCmd(methods clientMethods, sourceURLConfigMap map[string]*hostConfig, targetURL string, debug bool) (string, error) {
 	for url, config := range sourceURLConfigMap {
-		sourceClnt, err := manager.getNewClient(url, config, debug)
+		sourceClnt, err := methods.getNewClient(url, config, debug)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
@@ -76,7 +74,7 @@ func doCatCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig, 
 		}
 		defer reader.Close()
 
-		stdOutClnt, err := manager.getNewClient(targetURL, &hostConfig{}, debug)
+		stdOutClnt, err := methods.getNewClient(targetURL, &hostConfig{}, debug)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
@@ -87,7 +85,7 @@ func doCatCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig, 
 		defer stdOutWriter.Close()
 		_, err = io.CopyN(stdOutWriter, reader, size)
 		if err != nil {
-			return "Copying data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
+			return "Reading data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
 		}
 	}
 	return "", nil
