@@ -55,7 +55,6 @@ func doList(clnt client.Client, targetURL string) error {
 		}
 		printItem(itemCh.Item.Time, itemCh.Item.Size, itemCh.Item.Name, itemCh.Item.FileType)
 	}
-
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
@@ -98,7 +97,7 @@ func runListCmd(ctx *cli.Context) {
 		err = iodine.New(err, nil)
 		if err != nil {
 			log.Debug.Println(err)
-			console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+			console.Fatalln("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 		}
 	}
 }
@@ -108,5 +107,15 @@ func doListCmd(manager clientManager, targetURL string, targetConfig *hostConfig
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
-	return doList(clnt, targetURL)
+	err = doList(clnt, targetURL)
+	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
+		fmt.Println(console.Retry("Retrying ... %d", i))
+		// Progressively longer delays
+		time.Sleep(time.Duration(i*i) * time.Second)
+		err = doList(clnt, targetURL)
+	}
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	return nil
 }

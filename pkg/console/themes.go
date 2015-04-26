@@ -28,6 +28,7 @@ var MiniTheme = Theme{
 	Dir:   (color.New(color.FgCyan, color.Bold)),
 	Size:  (color.New(color.FgYellow)),
 	Time:  (color.New(color.FgGreen)),
+	Retry: (color.New(color.FgMagenta, color.Bold)),
 }
 
 // WhiteTheme - All white color theme
@@ -40,6 +41,7 @@ var WhiteTheme = Theme{
 	Dir:   (color.New(color.FgWhite, color.Bold)),
 	Size:  (color.New(color.FgWhite, color.Bold)),
 	Time:  (color.New(color.FgWhite, color.Bold)),
+	Retry: (color.New(color.FgWhite, color.Bold)),
 }
 
 // NoColorTheme - Disables color theme
@@ -52,4 +54,5 @@ var NoColorTheme = Theme{
 	Dir:   (color.New()),
 	Size:  (color.New()),
 	Time:  (color.New()),
+	Retry: (color.New()),
 }

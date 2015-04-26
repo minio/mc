@@ -78,8 +78,10 @@ var (
 	Dir = themesDB[currThemeName].Dir.SprintfFunc()
 	// Size - Size("12GB")
 	Size = themesDB[currThemeName].Size.SprintfFunc()
-	//Time - Time("12 Hours")
+	// Time - Time("12 Hours")
 	Time = themesDB[currThemeName].Time.SprintfFunc()
+	// Retry - Retry message number
+	Retry = themesDB[currThemeName].Retry.SprintfFunc()
 )
 
 // Theme holds console color scheme
@@ -92,6 +94,7 @@ type Theme struct {
 	Time  *color.Color
 	File  *color.Color
 	Dir   *color.Color
+	Retry *color.Color
 	//	Reason *color.Color
 }
 
@@ -247,6 +250,7 @@ func SetTheme(themeName string) error {
 	File = theme.File.SprintfFunc()
 	Size = theme.Size.SprintfFunc()
 	Time = theme.Time.SprintfFunc()
+	Retry = theme.Retry.SprintfFunc()
 
 	mutex.Unlock()
 

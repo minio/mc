@@ -86,7 +86,6 @@ func runCopyCmd(ctx *cli.Context) {
 		return
 	}
 	err = doCopyCmd(mcClientManager{}, sourceURLConfigMap, targetURLConfigMap)
-	err = iodine.New(err, nil)
 	if err != nil {
 		log.Debug.Println(err)
 		console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", sourceURL, targetURLs, iodine.ToError(err))
