@@ -20,14 +20,22 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
-	"reflect"
+	"io/ioutil"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	. "github.com/minio-io/check"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
+
+func Test(t *testing.T) { TestingT(t) }
+
+type MySuite struct{}
+
+var _ = Suite(&MySuite{})
 
 func listAllMyBuckets(r io.Reader) ([]*client.Item, error) {
 	type bucket struct {
@@ -55,15 +63,48 @@ func listAllMyBuckets(r io.Reader) ([]*client.Item, error) {
 	return items, nil
 }
 
-func TestParseBuckets(t *testing.T) {
+func (s *MySuite) TestConfig(c *C) {
+	conf := new(Config)
+	conf.AccessKeyID = ""
+	conf.SecretAccessKey = ""
+	conf.HostURL = "http://example.com/bucket1"
+	conf.UserAgent = "Minio"
+	clnt := New(conf)
+	c.Assert(clnt, Not(IsNil))
+}
+
+func (s *MySuite) TestBucketACL(c *C) {
+	m := []struct {
+		in   string
+		want bool
+	}{
+		{"private", true},
+		{"public-read", true},
+		{"public-read-write", true},
+		{"", true},
+		{"readonly", false},
+		{"invalid", false},
+	}
+	for _, bt := range m {
+		got := isValidBucketACL(bt.in)
+		c.Assert(got, Equals, bt.want)
+	}
+}
+
+func (s *MySuite) TestError(c *C) {
+	res := "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Error><Code>AccessDenied</Code><Message>Access Denied</Message><Resource>/mybucket/myphoto.jpg</Resource><RequestId>F19772218238A85A</RequestId><HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId></Error>"
+	response := new(http.Response)
+	response.Body = ioutil.NopCloser(strings.NewReader(res))
+	err := NewError(response)
+	c.Assert(err, Not(IsNil))
+	c.Assert(err.Error(), Equals, "Access Denied")
+}
+
+func (s *MySuite) TestParseBuckets(c *C) {
 	res := "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListAllMyBucketsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Owner><ID>ownerIDField</ID><DisplayName>bobDisplayName</DisplayName></Owner><Buckets><Bucket><Name>bucketOne</Name><CreationDate>2006-06-21T07:04:31.000Z</CreationDate></Bucket><Bucket><Name>bucketTwo</Name><CreationDate>2006-06-21T07:04:32.000Z</CreationDate></Bucket></Buckets></ListAllMyBucketsResult>"
 	buckets, err := listAllMyBuckets(strings.NewReader(res))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if g, w := len(buckets), 2; g != w {
-		t.Errorf("num parsed buckets = %d; want %d", g, w)
-	}
+	c.Assert(err, IsNil)
+	c.Assert(len(buckets), Equals, 2)
 
 	t1, err := time.Parse(time.RFC3339, "2006-06-21T07:04:31.000Z")
 	t2, err := time.Parse(time.RFC3339, "2006-06-21T07:04:32.000Z")
@@ -71,20 +112,16 @@ func TestParseBuckets(t *testing.T) {
 		{Name: "bucketOne", Time: t1},
 		{Name: "bucketTwo", Time: t2},
 	}
-	dump := func(v []*client.Item) {
-		for i, b := range v {
-			t.Logf("Bucket #%d: %#v", i, b)
-		}
-	}
-	if !reflect.DeepEqual(buckets, want) {
-		t.Error("mismatch; GOT:")
-		dump(buckets)
-		t.Error("WANT:")
-		dump(want)
-	}
+	c.Assert(buckets, DeepEquals, want)
 }
 
-func TestValidBucketNames(t *testing.T) {
+func (s *MySuite) TestParseBucketsFail(c *C) {
+	res := "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListAllMyBucketsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Owner><ID>ownerIDField</ID><DisplayName>bobDisplayName</DisplayName></Owner><Buckets><Bucket><Name>bucketOne</Name><CreationDate>2006-06-21T07:04:31.000Z</CreationDate></Bucket><Bucket><Name>bucketTwo</Name><CreationDate>2006-06-21T07:04:32.000Z</CreationDate></Bucket></Buckets></ListAllMyBucketsResult"
+	_, err := listAllMyBuckets(strings.NewReader(res))
+	c.Assert(err, Not(IsNil))
+}
+
+func (s *MySuite) TestValidBucketNames(c *C) {
 	m := []struct {
 		in   string
 		want bool
@@ -104,8 +141,6 @@ func TestValidBucketNames(t *testing.T) {
 
 	for _, bt := range m {
 		got := client.IsValidBucketName(bt.in)
-		if got != bt.want {
-			t.Errorf("func(%q) = %v; want %v", bt.in, got, bt.want)
-		}
+		c.Assert(got, Equals, bt.want)
 	}
 }
