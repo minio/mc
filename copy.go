@@ -59,6 +59,7 @@ func doCopySingleSourceRecursive(methods clientMethods, sourceURL, targetURL str
 		if itemCh.Err != nil {
 			continue
 		}
+		sourceURL = strings.TrimSuffix(sourceURL, getObjectKey(sourceURL))
 		newSourceURL := strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + itemCh.Item.Name
 		newTargetURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + itemCh.Item.Name
 		if err := doCopySingleSource(methods, newSourceURL, newTargetURL, sourceConfig, targetConfig); err != nil {
