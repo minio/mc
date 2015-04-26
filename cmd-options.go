@@ -58,7 +58,7 @@ EXAMPLES:
 	}
 	catCmd = cli.Command{
 		Name:   "cat",
-		Usage:  "Concantenate an object to standard output",
+		Usage:  "Concantenate objects or files to standard output",
 		Action: runCatCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -80,6 +80,8 @@ EXAMPLES:
    2. Concantenate a file from local filesystem to standard output.
       $ mc {{.Name}} khitomer-accords.txt
 
+   3. Concantenate multiple files from local filesystem to standard output.
+      $ mc {{.Name}} *.txt > newfile.txt
 `,
 	}
 	cpCmd = cli.Command{

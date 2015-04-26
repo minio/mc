@@ -24,8 +24,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"path/filepath"
-	"strings"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -126,9 +124,7 @@ func (c *s3Client) filterItems(startAt, marker, prefix, delimiter string, conten
 			return nil, marker, iodine.New(client.UnexpectedError{Err: errors.New(msg)}, nil)
 		}
 		item := new(client.Item)
-		// TODO (y4m4) - this is temporary, fix this after passing down proper delimiters
-		// for now using filepath.Separator
-		item.Name = strings.TrimPrefix(it.Key, filepath.Clean(prefix)+string(filepath.Separator))
+		item.Name = it.Key
 		item.Time = it.LastModified
 		item.Size = it.Size
 		item.FileType = 0
