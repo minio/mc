@@ -57,16 +57,16 @@ func runCatCmd(ctx *cli.Context) {
 		console.Fatalf("mc: reading host config for URL [%s] failed with following reason: [%s]\n", sourceURL, iodine.ToError(err))
 	}
 	sourceURLConfigMap[sourceURL] = sourceConfig
-	humanReadable, err := doCatCmd(mcClientManager{}, sourceURLConfigMap, "/dev/stdout", globalDebugFlag)
+	humanReadable, err := doCatCmd(mcClientMethods{}, sourceURLConfigMap, "/dev/stdout", globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(humanReadable)
 	}
 }
 
-func doCatCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig, targetURL string, debug bool) (string, error) {
+func doCatCmd(methods clientMethods, sourceURLConfigMap map[string]*hostConfig, targetURL string, debug bool) (string, error) {
 	for url, config := range sourceURLConfigMap {
-		sourceClnt, err := manager.getNewClient(url, config, debug)
+		sourceClnt, err := methods.getNewClient(url, config, debug)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
@@ -76,7 +76,7 @@ func doCatCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig, 
 		}
 		defer reader.Close()
 
-		stdOutClnt, err := manager.getNewClient(targetURL, &hostConfig{}, debug)
+		stdOutClnt, err := methods.getNewClient(targetURL, &hostConfig{}, debug)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}

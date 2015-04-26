@@ -66,20 +66,26 @@ func startBar(size int64) *pb.ProgressBar {
 	return bar
 }
 
-// clientManager interface for mock tests
-type clientManager interface {
+// clientMethods interface for mock tests
+type clientMethods interface {
 	getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length int64, md5hex string, err error)
 	getTargetWriter(targetURL string, targetConfig *hostConfig, md5Hex string, length int64) (io.WriteCloser, error)
 	getNewClient(urlStr string, config *hostConfig, debug bool) (clnt client.Client, err error)
 }
 
-type mcClientManager struct{}
+type mcClientMethods struct{}
+
+type sourceReader struct {
+	reader io.ReadCloser
+	length int64
+	md5hex string
+}
 
 // getSourceReader -
-func (manager mcClientManager) getSourceReader(sourceURL string, sourceConfig *hostConfig) (
+func (methods mcClientMethods) getSourceReader(sourceURL string, sourceConfig *hostConfig) (
 	reader io.ReadCloser, length int64, md5hex string, err error) {
 
-	sourceClnt, err := manager.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
+	sourceClnt, err := methods.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
 	}
@@ -90,17 +96,17 @@ func (manager mcClientManager) getSourceReader(sourceURL string, sourceConfig *h
 }
 
 // getTargetWriter -
-func (manager mcClientManager) getTargetWriter(targetURL string, targetConfig *hostConfig, md5Hex string, length int64) (
+func (methods mcClientMethods) getTargetWriter(targetURL string, targetConfig *hostConfig, md5hex string, length int64) (
 	io.WriteCloser, error) {
-	targetClnt, err := manager.getNewClient(targetURL, targetConfig, globalDebugFlag)
+	targetClnt, err := methods.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	return targetClnt.Put(md5Hex, length)
+	return targetClnt.Put(md5hex, length)
 }
 
 // getNewClient gives a new client interface
-func (manager mcClientManager) getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
+func (methods mcClientMethods) getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
 	t := client.GetType(urlStr)
 	switch t {
 	case client.Object: // Minio and S3 compatible object storage
@@ -126,20 +132,23 @@ func (manager mcClientManager) getNewClient(urlStr string, auth *hostConfig, deb
 	}
 }
 
-// getTargetWriters -
-func getTargetWriters(manager clientManager, targetURLConfigMap map[string]*hostConfig, md5Hex string, length int64) (
-	[]io.WriteCloser, error) {
-	var targetWriters []io.WriteCloser
-	for targetURL, targetConfig := range targetURLConfigMap {
-		writer, err := manager.getTargetWriter(targetURL, targetConfig, md5Hex, length)
+// getSourceReaders -
+func getSourceReaders(methods clientMethods, sourceURLConfigMap map[string]*hostConfig) (map[string]sourceReader, error) {
+	sourceURLReaderMap := make(map[string]sourceReader)
+	for sourceURL, sourceConfig := range sourceURLConfigMap {
+		reader, length, md5hex, err := methods.getSourceReader(sourceURL, sourceConfig)
 		if err != nil {
-			// close all writers
-			for _, targetWriter := range targetWriters {
-				targetWriter.Close()
+			for _, sourceReader := range sourceURLReaderMap {
+				sourceReader.reader.Close()
 			}
 			return nil, iodine.New(err, nil)
 		}
-		targetWriters = append(targetWriters, writer)
+		sr := sourceReader{
+			reader: reader,
+			length: length,
+			md5hex: md5hex,
+		}
+		sourceURLReaderMap[sourceURL] = sr
 	}
-	return targetWriters, nil
+	return sourceURLReaderMap, nil
 }

@@ -18,6 +18,8 @@ package main
 
 import (
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -26,10 +28,78 @@ import (
 
 const (
 	recursiveSeparator = "..."
+	pathSeparator      = "/"
 )
 
 func isURLRecursive(urlStr string) bool {
 	return strings.HasSuffix(urlStr, recursiveSeparator)
+}
+
+func getObjectKey(sourceURL string) (objectName string) {
+	u, _ := url.Parse(sourceURL)
+	splits := strings.SplitN(u.Path, "/", 3)
+	if len(splits) == 3 {
+		return splits[2]
+	}
+	return ""
+}
+
+func getNewTargetURL(targetURL string, sourceURL string) (newTargetURL string, err error) {
+	switch client.GetType(targetURL) {
+	case client.Object:
+		return getNewTargetURLObject(targetURL, sourceURL)
+	case client.Filesystem:
+		return getNewTargetURLFilesystem(targetURL, sourceURL)
+	}
+	return "", iodine.New(errInvalidURL{url: targetURL}, nil)
+}
+
+func getNewTargetURLObject(targetURL string, sourceURL string) (newTargetURL string, err error) {
+	if getObjectKey(targetURL) != "" {
+		return "", iodine.New(errIsNotBucket{path: targetURL}, nil)
+	}
+	switch client.GetType(sourceURL) {
+	case client.Filesystem:
+		_, s := filepath.Split(sourceURL)
+		if s == "" {
+			return "", iodine.New(errInvalidSource{path: sourceURL}, nil)
+		}
+		newTargetURL = strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + s
+	case client.Object:
+		object := getObjectKey(sourceURL)
+		if object == "" {
+			return "", iodine.New(errInvalidSource{path: sourceURL}, nil)
+		}
+		_, s := filepath.Split(object)
+		newTargetURL = filepath.Join(targetURL, s)
+	}
+	return newTargetURL, nil
+}
+
+func getNewTargetURLFilesystem(targetURL string, sourceURL string) (newTargetURL string, err error) {
+	st, err := os.Stat(targetURL)
+	if err != nil {
+		return "", iodine.New(errIsNotDIR{path: targetURL}, nil)
+	}
+	if !st.IsDir() {
+		return "", iodine.New(errIsNotDIR{path: targetURL}, nil)
+	}
+	switch client.GetType(sourceURL) {
+	case client.Filesystem:
+		_, s := filepath.Split(sourceURL)
+		if s == "" {
+			return "", iodine.New(errInvalidSource{path: sourceURL}, nil)
+		}
+		newTargetURL = filepath.Join(targetURL, s)
+	case client.Object:
+		object := getObjectKey(sourceURL)
+		if object == "" {
+			return "", iodine.New(errInvalidSource{path: sourceURL}, nil)
+		}
+		_, s := filepath.Split(object)
+		newTargetURL = filepath.Join(targetURL, s)
+	}
+	return newTargetURL, nil
 }
 
 // getURL extracts URL string from a single cmd-line argument

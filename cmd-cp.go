@@ -17,15 +17,57 @@
 package main
 
 import (
-	"io"
-	"strings"
-
-	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
 )
+
+func runCopyCmdMultipleSources(methods clientMethods, urls []string) {
+	sourceURLs := urls[:len(urls)-1] // All args are source except the last one
+	targetURL := urls[len(urls)-1]   // Last one is target
+	targetConfig, err := getHostConfig(targetURL)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
+			targetURL, mustGetMcConfigPath(), iodine.ToError(err))
+	}
+	sourceURLConfigMap, err := getHostConfigs(sourceURLs)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("Unable to read host configuration for source [%s] from config file [%s]. Reason: [%s].\n",
+			sourceURLs, mustGetMcConfigPath(), iodine.ToError(err))
+	}
+	err = doCopyMultipleSources(methods, sourceURLConfigMap, targetURL, targetConfig)
+	if err != nil {
+		log.Debug.Println(err)
+		console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", sourceURLs, targetURL, iodine.ToError(err))
+	}
+
+}
+
+func runCopyCmdSingleSource(methods clientMethods, urls []string) {
+	sourceURL := urls[0]
+	targetURL := urls[1]
+	targetConfig, err := getHostConfig(targetURL)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
+			targetURL, mustGetMcConfigPath(), iodine.ToError(err))
+	}
+	sourceConfig, err := getHostConfig(sourceURL)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
+			targetURL, mustGetMcConfigPath(), iodine.ToError(err))
+	}
+	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
+	if err != nil {
+		log.Debug.Println(err)
+		console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", sourceURL, targetURL, iodine.ToError(err))
+	}
+
+}
 
 func runCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
@@ -51,100 +93,11 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 	}
 
-	sourceURL := urls[0] // First arg is source
-	recursive := isURLRecursive(sourceURL)
-	// if recursive strip off the "..."
-	if recursive {
-		sourceURL = strings.TrimSuffix(sourceURL, recursiveSeparator)
+	methods := mcClientMethods{}
+	switch len(urls) {
+	case 2:
+		runCopyCmdSingleSource(methods, urls)
+	default:
+		runCopyCmdMultipleSources(methods, urls)
 	}
-	targetURLs := urls[1:] // 1 or more targets
-
-	sourceURLConfigMap := make(map[string]*hostConfig)
-	sourceConfig, err := getHostConfig(sourceURL)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("Unable to read host configuration for source [%s] from config file [%s]. Reason: [%s].\n",
-			sourceURL, mustGetMcConfigPath(), iodine.ToError(err))
-	}
-	sourceURLConfigMap[sourceURL] = sourceConfig
-
-	targetURLConfigMap, err := getHostConfigs(targetURLs)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
-			targetURLs, mustGetMcConfigPath(), iodine.ToError(err))
-	}
-
-	// perform recursive
-	if recursive {
-		err := doCopyCmdRecursive(mcClientManager{}, sourceURLConfigMap, targetURLConfigMap)
-		err = iodine.New(err, nil)
-		if err != nil {
-			log.Debug.Println(err)
-			console.Fatalf("Failed to copy recursively. Reason: [%s].\n", iodine.ToError(err))
-		}
-		return
-	}
-	err = doCopyCmd(mcClientManager{}, sourceURLConfigMap, targetURLConfigMap)
-	if err != nil {
-		log.Debug.Println(err)
-		console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", sourceURL, targetURLs, iodine.ToError(err))
-	}
-}
-
-// doCopyCmd copies objects into and from a bucket or between buckets
-func doCopyCmd(manager clientManager, sourceURLConfigMap map[string]*hostConfig, targetURLConfigMap map[string]*hostConfig) error {
-	for sourceURL, sourceConfig := range sourceURLConfigMap {
-		reader, length, hexMd5, err := manager.getSourceReader(sourceURL, sourceConfig)
-		if err != nil {
-			return iodine.New(err, map[string]string{"Source": sourceURL})
-		}
-		defer reader.Close()
-
-		writeClosers, err := getTargetWriters(manager, targetURLConfigMap, hexMd5, length)
-		if err != nil {
-			return iodine.New(err, nil)
-		}
-
-		var writers []io.Writer
-		for _, writer := range writeClosers {
-			writers = append(writers, writer)
-		}
-
-		// set up progress bar
-		var bar *pb.ProgressBar
-		if !globalQuietFlag {
-			bar = startBar(length)
-			bar.Start()
-			writers = append(writers, bar)
-		}
-
-		// write progress bar
-		multiWriter := io.MultiWriter(writers...)
-
-		// copy data to writers
-		_, copyErr := io.CopyN(multiWriter, reader, length)
-		// close writers
-		for _, writer := range writeClosers {
-			// it is the target's responsibility to notice if a close is premature.
-			// on fs, we handle in fs client
-			// over the wire, the server is responsible
-			err = writer.Close()
-			// don't return an error here, this error may be caused by a previous error.
-			// we check for this again after copyErr
-		}
-		// write copy errors if present
-		if copyErr != nil {
-			return iodine.New(copyErr, map[string]string{"Source": sourceURL})
-		}
-		// write close errors if present after checking copyErr
-		if err != nil {
-			return iodine.New(err, map[string]string{"Source": sourceURL})
-		}
-		if !globalQuietFlag {
-			bar.Finish()
-			// console.Infoln("Success!")
-		}
-	}
-	return nil
 }

@@ -23,12 +23,12 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockclientManager is a mock for testing, please ignore.
-type MockclientManager struct {
+// MockclientMethods is a mock for testing, please ignore.
+type MockclientMethods struct {
 	mock.Mock
 }
 
-func (m *MockclientManager) getSourceReader(urlStr string, auth *hostConfig) (io.ReadCloser, int64, string, error) {
+func (m *MockclientMethods) getSourceReader(urlStr string, auth *hostConfig) (io.ReadCloser, int64, string, error) {
 	ret := m.Called(urlStr, auth)
 
 	var r0 io.ReadCloser
@@ -44,7 +44,7 @@ func (m *MockclientManager) getSourceReader(urlStr string, auth *hostConfig) (io
 
 	return r0, r1, r2, r3
 }
-func (m *MockclientManager) getTargetWriter(urlStr string, auth *hostConfig, md5Hex string, length int64) (io.WriteCloser, error) {
+func (m *MockclientMethods) getTargetWriter(urlStr string, auth *hostConfig, md5Hex string, length int64) (io.WriteCloser, error) {
 	ret := m.Called(urlStr, auth, md5Hex, length)
 
 	var r0 io.WriteCloser
@@ -58,7 +58,7 @@ func (m *MockclientManager) getTargetWriter(urlStr string, auth *hostConfig, md5
 
 	return r0, r1
 }
-func (m *MockclientManager) getNewClient(urlStr string, auth *hostConfig, debug bool) (client.Client, error) {
+func (m *MockclientMethods) getNewClient(urlStr string, auth *hostConfig, debug bool) (client.Client, error) {
 	ret := m.Called(urlStr, auth, debug)
 
 	var r0 client.Client

@@ -33,12 +33,14 @@ var (
 	mcCurrentConfigVersion = "1.0.0"
 )
 
+// mc configuration related constants
 const (
 	mcConfigDir        = ".mc/"
 	mcConfigWindowsDir = "mc/"
 	mcConfigFile       = "config.json"
 )
 
+// default access and secret key
 const (
 	// do not pass accesskeyid and secretaccesskey through cli
 	// users should manually edit them, add a stub entry
@@ -46,6 +48,7 @@ const (
 	globalSecretAccessKey = "YOUR-SECRET-ACCESS-KEY-HERE"
 )
 
+// default host
 const (
 	exampleHostURL = "YOUR-EXAMPLE.COM"
 )
