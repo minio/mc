@@ -85,14 +85,11 @@ func doMakeBucketCmd(manager clientManager, targetURL string, targetConfig *host
 
 func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
 	err := clnt.PutBucket("")
-	if err != nil && isValidRetry(err) {
-		console.Infof("Retrying ...")
-	}
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		err = clnt.PutBucket("")
-		console.Errorf(" %d", i)
+		fmt.Println(console.Retry("Retrying ... %d", i))
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
+		err = clnt.PutBucket("")
 	}
 	if err != nil {
 		err := iodine.New(err, nil)
