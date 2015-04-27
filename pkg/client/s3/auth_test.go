@@ -124,9 +124,9 @@ func (s *MySuite) TestsignRequest(c *C) {
 			Transport: http.DefaultTransport,
 		}, url,
 	}
+	r.Header.Set("Date", "Sat, 02 Apr 2011 04:23:52 GMT")
 	cl.signRequest(r, "localhost:9000")
 	c.Assert(r.Header.Get("Date"), Not(Equals), "")
-	r.Header.Set("Date", "Sat, 02 Apr 2011 04:23:52 GMT")
 	cl.signRequest(r, "localhost:9000")
 	c.Assert(r.Header.Get("Authorization"), Equals, "AWS key:kHpCR/N7Rw3PwRlDd8+5X40CFVc=")
 }
