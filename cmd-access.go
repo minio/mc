@@ -35,7 +35,7 @@ func runAccessCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("mc: loading config file failed with following reason: [%s]\n", iodine.ToError(err))
+		console.Fatalf("loading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
 
 	targetURLConfigMap := make(map[string]*hostConfig)
@@ -44,10 +44,10 @@ func runAccessCmd(ctx *cli.Context) {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: reading URL [%s] failed with following reason: [%s]\n", e.url, e)
+			console.Fatalf("reading URL [%s] failed with following reason: [%s]\n", e.url, e)
 		default:
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalf("mc: reading URLs failed with following reason: [%s]\n", e)
+			console.Fatalf("reading URLs failed with following reason: [%s]\n", e)
 		}
 	}
 	acl := bucketACL(ctx.Args().First())

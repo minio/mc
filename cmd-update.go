@@ -54,28 +54,28 @@ func doUpdateCmd(ctx *cli.Context) {
 	req, err := getReq(mcUpdateURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to update:", mcUpdateURL)
+		console.Fatalln("Unable to update:", mcUpdateURL)
 	}
 	res, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to retrieve:", mcUpdateURL)
+		console.Fatalln("Unable to retrieve:", mcUpdateURL)
 	}
 	if res.StatusCode != http.StatusOK {
 		msg := fmt.Sprint("Received invalid HTTP status: ", res.StatusCode)
 		log.Debug.Println(iodine.New(errors.New(msg), nil))
-		console.Fatalln("mc: " + msg)
+		console.Fatalln(msg)
 	}
 	ures := updateResults{}
 	err = json.NewDecoder(res.Body).Decode(&ures)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to parse JSON:", mcUpdateURL)
+		console.Fatalln("Unable to parse JSON:", mcUpdateURL)
 	}
 	latest, err := time.Parse(time.RFC3339Nano, ures.LatestBuild)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("mc: Unable to parse update time:", ures.LatestBuild)
+		console.Fatalln("Unable to parse update time:", ures.LatestBuild)
 	}
 	if latest.After(ctx.App.Compiled) {
 		// FIXME : find some proper versioning scheme here

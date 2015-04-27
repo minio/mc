@@ -202,7 +202,7 @@ EXAMPLES:
 	configCmd = cli.Command{
 		Name:   "config",
 		Usage:  "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
-		Action: doConfigCmd,
+		Action: runConfigCmd,
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "alias",
