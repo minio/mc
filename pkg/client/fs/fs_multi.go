@@ -1,5 +1,3 @@
-// +build darwin drangofly freebsd linux nacl netbsd openbsd solaris
-
 /*
  * Mini Copy (C) 2015 Minio, Inc.
  *
@@ -19,6 +17,8 @@
 package fs
 
 import (
+	"io"
+
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
@@ -31,7 +31,7 @@ func (c *fsClient) InitiateMultiPartUpload() (objectID string, err error) {
 }
 
 // UploadPart -
-func (c *fsClient) UploadPart(uploadID string, partNumber int) (md5hex string, err error) {
+func (c *fsClient) UploadPart(uploadID string, body io.ReadSeeker, contentLength, partNumber int64) (md5hex string, err error) {
 	return "", iodine.New(client.APINotImplemented{API: "UploadPart"}, nil)
 }
 

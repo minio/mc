@@ -17,34 +17,99 @@
 package s3
 
 import (
+	"io"
+
+	"github.com/awslabs/aws-sdk-go/service/s3"
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
 // Multipart object upload handlers
 
-// InitiateMultiPartUpload
-func (c *s3Client) InitiateMultiPartUpload() (objectID string, err error) {
-	return "", iodine.New(client.APINotImplemented{API: "InitiateMultiPartUpload"}, nil)
+// InitiateMultiPartUpload - start multipart upload session
+func (c *s3Client) InitiateMultiPartUpload() (uploadID string, err error) {
+	bucket, object := c.url2BucketAndObject()
+
+	multiparthUploadInput := new(s3.CreateMultipartUploadInput)
+	multiparthUploadInput.Bucket = &bucket
+	multiparthUploadInput.Key = &object
+	multiparthUploadOutput, err := c.S3.CreateMultipartUpload(multiparthUploadInput)
+	if err != nil {
+		return "", iodine.New(err, nil)
+	}
+	return *multiparthUploadOutput.UploadID, nil
 }
 
-// UploadPart
-func (c *s3Client) UploadPart(uploadID string, partNumber int) (md5hex string, err error) {
-	return "", iodine.New(client.APINotImplemented{API: "UploadPart"}, nil)
+// UploadPart - start uploading individual parts
+func (c *s3Client) UploadPart(uploadID string, body io.ReadSeeker, contentLength, partNumber int64) (md5hex string, err error) {
+	bucket, object := c.url2BucketAndObject()
+
+	uploadPartInput := new(s3.UploadPartInput)
+	uploadPartInput.Bucket = &bucket
+	uploadPartInput.Key = &object
+	uploadPartInput.Body = body
+	uploadPartInput.PartNumber = &partNumber
+	uploadPartInput.UploadID = &uploadID
+	uploadPartOutput, err := c.S3.UploadPart(uploadPartInput)
+	if err != nil {
+		return "", iodine.New(err, nil)
+	}
+	return *uploadPartOutput.ETag, nil
 }
 
 // CompleteMultiPartUpload
 func (c *s3Client) CompleteMultiPartUpload(uploadID string) (location, md5hex string, err error) {
-	return "", "", iodine.New(client.APINotImplemented{API: "CompleteMultiPartUpload"}, nil)
+	bucket, object := c.url2BucketAndObject()
+
+	completeMultiPartUploadInput := new(s3.CompleteMultipartUploadInput)
+	completeMultiPartUploadInput.Bucket = &bucket
+	completeMultiPartUploadInput.Key = &object
+	completeMultiPartUploadInput.UploadID = &uploadID
+
+	completeMultiPartUploadOutput, err := c.S3.CompleteMultipartUpload(completeMultiPartUploadInput)
+	if err != nil {
+		return "", "", iodine.New(err, nil)
+	}
+	return *completeMultiPartUploadOutput.Location, *completeMultiPartUploadOutput.ETag, nil
 }
 
 // AbortMultiPartUpload
 func (c *s3Client) AbortMultiPartUpload(uploadID string) error {
-	return iodine.New(client.APINotImplemented{API: "AbortMultiPartUpload"}, nil)
+	bucket, object := c.url2BucketAndObject()
+	abortMultiPartUploadInput := new(s3.AbortMultipartUploadInput)
+	abortMultiPartUploadInput.Bucket = &bucket
+	abortMultiPartUploadInput.Key = &object
+	abortMultiPartUploadInput.UploadID = &uploadID
+	if _, err := c.S3.AbortMultipartUpload(abortMultiPartUploadInput); err != nil {
+		return iodine.New(err, nil)
+	}
+	return nil
 }
 
 // ListParts
 func (c *s3Client) ListParts(uploadID string) (items *client.PartItems, err error) {
-	return nil, iodine.New(client.APINotImplemented{API: "ListParts"}, nil)
+	bucket, object := c.url2BucketAndObject()
+	listPartsInput := new(s3.ListPartsInput)
+	listPartsInput.Bucket = &bucket
+	listPartsInput.Key = &object
+	listPartsInput.UploadID = &uploadID
+
+	listPartsOutput, err := c.S3.ListParts(listPartsInput)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	items = new(client.PartItems)
+	items.Key = *listPartsOutput.Key
+	items.IsTruncated = *listPartsOutput.IsTruncated
+	items.UploadID = *listPartsOutput.UploadID
+	for _, part := range listPartsOutput.Parts {
+		newPart := new(client.Part)
+		newPart.ETag = *part.ETag
+		newPart.LastModified = *part.LastModified
+		newPart.PartNumber = *part.PartNumber
+		newPart.Size = *part.Size
+		items.Parts = append(items.Parts, newPart)
+	}
+	return items, nil
 
 }

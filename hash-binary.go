@@ -1,12 +1,11 @@
 package main
 
 import (
+	"crypto/md5"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-
-	"crypto/md5"
 )
 
 // hashBinary computes MD5SUM of a binary file on disk

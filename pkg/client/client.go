@@ -44,7 +44,7 @@ type Client interface {
 // MultipartUpload - multi part upload interface
 type MultipartUpload interface {
 	InitiateMultiPartUpload() (objectID string, err error)
-	UploadPart(uploadID string, partNumber int) (md5hex string, err error)
+	UploadPart(uploadID string, body io.ReadSeeker, contentLength, partNumber int64) (md5hex string, err error)
 	CompleteMultiPartUpload(uploadID string) (location, md5hex string, err error)
 	AbortMultiPartUpload(uploadID string) error
 	ListParts(uploadID string) (items *PartItems, err error)
@@ -52,9 +52,9 @@ type MultipartUpload interface {
 
 // Part - part xml response
 type Part struct {
-	PartNumber   int
-	LastModified time.Time
 	ETag         string
+	LastModified time.Time
+	PartNumber   int64
 	Size         int64
 }
 
@@ -63,7 +63,7 @@ type PartItems struct {
 	Key         string
 	UploadID    string
 	IsTruncated bool
-	Part        []*Part
+	Parts       []*Part
 }
 
 // ItemOnChannel - List items on channel
