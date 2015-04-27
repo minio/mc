@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"strings"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/mc/pkg/console"
@@ -59,13 +58,8 @@ func doCopySingleSourceRecursive(methods clientMethods, sourceURL, targetURL str
 		if itemCh.Err != nil {
 			continue
 		}
-		sourceURL = strings.TrimSuffix(sourceURL, getObjectKey(sourceURL))
-		newSourceURL := strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + itemCh.Item.Name
-		newTargetURL := strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + itemCh.Item.Name
-		if err := doCopySingleSource(methods, newSourceURL, newTargetURL, sourceConfig, targetConfig); err != nil {
-			console.Errorf("Failed to copy sourceURL: [%s] to targetURL: [%s] with reason: [%s]\n",
-				newSourceURL, newTargetURL, iodine.ToError(err))
-		}
+		newSourceURL, newTargetURL := getNewURLRecursive(sourceURL, targetURL, itemCh.Item.Name)
+		doCopySingleSource(methods, newSourceURL, newTargetURL, sourceConfig, targetConfig)
 	}
 	return nil
 }
