@@ -151,6 +151,7 @@ func (c *s3Client) newRequest(method, url string, body io.ReadCloser) (*http.Req
 		return nil, iodine.New(err, errParams)
 	}
 	req.Header.Set("User-Agent", c.UserAgent)
+	req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	return req, nil
 }
 

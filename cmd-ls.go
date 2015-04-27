@@ -97,7 +97,7 @@ func runListCmd(ctx *cli.Context) {
 		err = iodine.New(err, nil)
 		if err != nil {
 			log.Debug.Println(err)
-			console.Fatalln("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+			console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 		}
 	}
 }

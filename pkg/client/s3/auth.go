@@ -82,9 +82,6 @@ func (a *s3Client) getTLSTransport() (*http.Transport, error) {
 }
 
 func (a *s3Client) signRequest(req *http.Request, host string) {
-	if date := req.Header.Get("Date"); date == "" {
-		req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
-	}
 	hm := hmac.New(sha1.New, []byte(a.SecretAccessKey))
 	ss := a.stringToSign(req, host)
 	//fmt.Printf("String to sign: %q (%x)\n", ss, ss)
