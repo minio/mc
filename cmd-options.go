@@ -103,16 +103,16 @@ FLAGS:
 
 EXAMPLES:
    1. Copy an object from Amazon S3 object storage to local fileystem.
-      $ mc {{.Name}} https://s3.amazonaws.com/jukebox/klingon_opera_aktuh_maylotah.ogg wakeup.ogg
+      $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/
 
    2. Copy a bucket recursively from Minio object storage to Amazon S3 object storage
       $ mc {{.Name}} http://localhost:9000/photos/burningman2011... https://s3.amazonaws.com/burningman/
 
    3. Copy a local folder recursively to Minio object storage and Amazon S3 object storage
-      $ mc {{.Name}} backup/... http://localhost:9000/archive/ https://s3.amazonaws.com/archive/
+      $ mc {{.Name}} backup/... http://localhost:9000/archive/
 
    4. Copy an object from Amazon S3 object storage to local filesystem on Windows.
-      $ mc {{.Name}} s3:documents/2014/... Documents\backup\2014
+      $ mc {{.Name}} s3:documents/2014/... backup/2014
 
 `,
 	}
