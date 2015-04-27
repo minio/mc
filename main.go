@@ -23,6 +23,7 @@ import (
 	"os/user"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
@@ -81,11 +82,15 @@ func getSystemData() map[string]string {
 // Version is based on MD5SUM of its binary
 var Version = mustHashBinarySelf()
 
+// Build date
+var BuildDate string
+
 func main() {
 	app := cli.NewApp()
 	app.Usage = "Mini Copy for object storage and filesystems"
 	app.Version = Version
 	app.Commands = commands
+	app.Compiled, _ = time.Parse(time.RFC3339Nano, BuildDate)
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.Before = func(ctx *cli.Context) error {
