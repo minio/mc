@@ -17,17 +17,14 @@
 package main
 
 import (
-	"net/url"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 
 	"os/user"
-	"path/filepath"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/mc/pkg/quick"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -165,91 +162,6 @@ func newConfig() (config quick.Config) {
 	return config
 }
 
-// getHostURL -
-func getHostURL(u *url.URL) string {
-	return u.Scheme + "://" + u.Host
-}
-
-func getHostConfigs(requestURLs []string) (hostConfigs map[string]*hostConfig, err error) {
-	hostConfigs = make(map[string]*hostConfig)
-	for _, requestURL := range requestURLs {
-		hostConfigs[requestURL], err = getHostConfig(requestURL)
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-	}
-	return hostConfigs, nil
-}
-
-// getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(requestURL string) (*hostConfig, error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	u, err := url.Parse(requestURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidURL{url: requestURL}, nil)
-	}
-	// No host matching or keys needed for filesystem requests
-	if client.GetType(requestURL) == client.Filesystem {
-		hostCfg := &hostConfig{
-			AccessKeyID:     "",
-			SecretAccessKey: "",
-		}
-		return hostCfg, nil
-	}
-
-	// No host matching or keys needed for localhost and 127.0.0.1 URL's skip them
-	if strings.Contains(getHostURL(u), "localhost") || strings.Contains(getHostURL(u), "127.0.0.1") {
-		hostCfg := &hostConfig{
-			AccessKeyID:     "",
-			SecretAccessKey: "",
-		}
-		return hostCfg, nil
-	}
-	for globURL, hostCfg := range config.Hosts {
-		match, err := filepath.Match(globURL, getHostURL(u))
-		if err != nil {
-			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: requestURL}, nil)
-		}
-		if match {
-			if hostCfg == nil {
-				return nil, iodine.New(errInvalidAuth{}, nil)
-			}
-			// verify Auth key validity for all hosts
-			if hostCfg.AccessKeyID != globalAccessKeyID && hostCfg.SecretAccessKey != globalSecretAccessKey {
-				if !client.IsValidAccessKey(hostCfg.AccessKeyID) || !client.IsValidSecretKey(hostCfg.SecretAccessKey) {
-					return nil, iodine.New(errInvalidAuthKeys{}, nil)
-				}
-			}
-			return hostCfg, nil
-		}
-	}
-	return nil, iodine.New(errNoMatchingHost{}, nil)
-}
-
-// saveConfig writes configuration data in json format to config file.
-func saveConfig(arg string, alias []string) error {
-	switch arg {
-	case "generate":
-		if isMcConfigExist() {
-			return iodine.New(errConfigExists{}, nil)
-		}
-		err := writeConfig(newConfig())
-		if err != nil {
-			return iodine.New(err, nil)
-		}
-		return nil
-	default:
-		config, err := addAlias(alias)
-		if err != nil {
-			return iodine.New(err, nil)
-		}
-		return writeConfig(config)
-	}
-}
-
 func addAlias(alias []string) (quick.Config, error) {
 	if len(alias) < 2 {
 		return nil, iodine.New(errInvalidArgument{}, nil)
@@ -291,6 +203,27 @@ func runConfigCmd(ctx *cli.Context) {
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(msg)
+	}
+}
+
+// saveConfig writes configuration data in json format to config file.
+func saveConfig(arg string, alias []string) error {
+	switch arg {
+	case "generate":
+		if isMcConfigExist() {
+			return iodine.New(errConfigExists{}, nil)
+		}
+		err := writeConfig(newConfig())
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		return nil
+	default:
+		config, err := addAlias(alias)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		return writeConfig(config)
 	}
 }
 
