@@ -20,7 +20,6 @@ import (
 	"io"
 
 	"github.com/cheggaaa/pb"
-	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -52,7 +51,6 @@ func doCopy(methods clientMethods, reader io.ReadCloser, md5hex string, length i
 	}
 	if !globalQuietFlag {
 		bar.Finish()
-		console.Infoln()
 	}
 	return nil
 }
