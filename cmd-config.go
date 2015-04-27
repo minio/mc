@@ -17,17 +17,14 @@
 package main
 
 import (
-	"net/url"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 
 	"os/user"
-	"path/filepath"
 
 	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/mc/pkg/quick"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -132,27 +129,6 @@ func writeConfig(config quick.Config) error {
 	return nil
 }
 
-// saveConfig writes configuration data in json format to config file.
-func saveConfig(ctx *cli.Context) error {
-	switch ctx.Args().Get(0) {
-	case "generate":
-		if isMcConfigExist() {
-			return iodine.New(errConfigExists{}, nil)
-		}
-		err := writeConfig(newConfig())
-		if err != nil {
-			return iodine.New(err, nil)
-		}
-		return nil
-	default:
-		config, err := parseConfigInput(ctx)
-		if err != nil {
-			return iodine.New(err, nil)
-		}
-		return writeConfig(config)
-	}
-}
-
 func newConfigV1() *configV1 {
 	conf := new(configV1)
 	conf.Version = mcCurrentConfigVersion
@@ -186,124 +162,94 @@ func newConfig() (config quick.Config) {
 	return config
 }
 
-func parseConfigInput(ctx *cli.Context) (config quick.Config, err error) {
-	conf := newConfigV1()
-	config = quick.New(&conf)
-	config.Load(mcConfigFile)
-
-	alias := strings.Fields(ctx.String("alias"))
-	switch true {
-	case len(alias) == 2:
-		aliasName := alias[0]
-		url := strings.TrimSuffix(alias[1], "/")
-		if strings.HasPrefix(aliasName, "http") {
-			return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)
-		}
-		if !strings.HasPrefix(url, "http") {
-			return nil, iodine.New(errInvalidURL{url: url}, nil)
-		}
-		if !isValidAliasName(aliasName) {
-			return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)
-		}
-		// convert interface{} back to its original struct
-		newConf := config.Data().(configV1)
-		if _, ok := newConf.Aliases[aliasName]; ok {
-			return nil, iodine.New(errAliasExists{name: aliasName}, nil)
-		}
-		newConf.Aliases[aliasName] = url
-		newConfig := quick.New(newConf)
-		return newConfig, nil
-	default:
+func addAlias(alias []string) (quick.Config, error) {
+	if len(alias) < 2 {
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
+	conf := newConfigV1()
+	config := quick.New(conf)
+	config.Load(mustGetMcConfigPath())
+
+	aliasName := alias[0]
+	url := strings.TrimSuffix(alias[1], "/")
+	if strings.HasPrefix(aliasName, "http") {
+		return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)
+	}
+	if !strings.HasPrefix(url, "http") {
+		return nil, iodine.New(errInvalidURL{url: url}, nil)
+	}
+	if !isValidAliasName(aliasName) {
+		return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)
+	}
+	// convert interface{} back to its original struct
+	newConf := config.Data().(*configV1)
+	if _, ok := newConf.Aliases[aliasName]; ok {
+		return nil, iodine.New(errAliasExists{name: aliasName}, nil)
+	}
+	newConf.Aliases[aliasName] = url
+	newConfig := quick.New(newConf)
+	return newConfig, nil
 }
 
-// getHostURL -
-func getHostURL(u *url.URL) string {
-	return u.Scheme + "://" + u.Host
-}
-
-func getHostConfigs(requestURLs []string) (hostConfigs map[string]*hostConfig, err error) {
-	hostConfigs = make(map[string]*hostConfig)
-	for _, requestURL := range requestURLs {
-		hostConfigs[requestURL], err = getHostConfig(requestURL)
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-	}
-	return hostConfigs, nil
-}
-
-// getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(requestURL string) (*hostConfig, error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	u, err := url.Parse(requestURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidURL{url: requestURL}, nil)
-	}
-	// No host matching or keys needed for filesystem requests
-	if client.GetType(requestURL) == client.Filesystem {
-		hostCfg := &hostConfig{
-			AccessKeyID:     "",
-			SecretAccessKey: "",
-		}
-		return hostCfg, nil
-	}
-
-	// No host matching or keys needed for localhost and 127.0.0.1 URL's skip them
-	if strings.Contains(getHostURL(u), "localhost") || strings.Contains(getHostURL(u), "127.0.0.1") {
-		hostCfg := &hostConfig{
-			AccessKeyID:     "",
-			SecretAccessKey: "",
-		}
-		return hostCfg, nil
-	}
-	for globURL, hostCfg := range config.Hosts {
-		match, err := filepath.Match(globURL, getHostURL(u))
-		if err != nil {
-			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: requestURL}, nil)
-		}
-		if match {
-			if hostCfg == nil {
-				return nil, iodine.New(errInvalidAuth{}, nil)
-			}
-			// verify Auth key validity for all hosts
-			if hostCfg.AccessKeyID != globalAccessKeyID && hostCfg.SecretAccessKey != globalSecretAccessKey {
-				if !client.IsValidAccessKey(hostCfg.AccessKeyID) || !client.IsValidSecretKey(hostCfg.SecretAccessKey) {
-					return nil, iodine.New(errInvalidAuthKeys{}, nil)
-				}
-			}
-			return hostCfg, nil
-		}
-	}
-	return nil, iodine.New(errNoMatchingHost{}, nil)
-}
-
-// doConfigCmd is the handler for "mc config" sub-command.
-func doConfigCmd(ctx *cli.Context) {
+// runConfigCmd is the handle for "mc config" sub-command
+func runConfigCmd(ctx *cli.Context) {
 	// show help if nothing is set
-	if len(ctx.Args()) < 1 && !ctx.IsSet("completion") && !ctx.IsSet("alias") {
+	if !ctx.Args().Present() && !ctx.IsSet("alias") || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 	}
-	configPath, err := getMcConfigPath()
+	arg := ctx.Args().First()
+	alias := strings.Fields(ctx.String("alias"))
+	msg, err := doConfig(arg, alias)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to determine config file path.")
+		console.Fatalln(msg)
 	}
-	err = saveConfig(ctx)
+}
+
+// saveConfig writes configuration data in json format to config file.
+func saveConfig(arg string, alias []string) error {
+	switch arg {
+	case "generate":
+		if isMcConfigExist() {
+			return iodine.New(errConfigExists{}, nil)
+		}
+		err := writeConfig(newConfig())
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		return nil
+	default:
+		config, err := addAlias(alias)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		return writeConfig(config)
+	}
+}
+
+// doConfig is the handler for "mc config" sub-command.
+func doConfig(arg string, alias []string) (string, error) {
+	configPath, err := getMcConfigPath()
+	if err != nil {
+		return "Unable to determine config file path.", iodine.New(err, nil)
+	}
+	err = saveConfig(arg, alias)
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errConfigExists:
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Configuration file " + configPath + " already exists.")
+			return "Configuration file [" + configPath + "] already exists.", iodine.New(err, nil)
+		case errInvalidArgument:
+			return "Incorrect usage, please use \"help\" ", iodine.New(err, nil)
+		case errAliasExists:
+			return "Alias [" + alias[0] + "] already exists", iodine.New(err, nil)
+		case errInvalidAliasName:
+			return "Alias [" + alias[0] + "] is reserved word or invalid", iodine.New(err, nil)
+		case errInvalidURL:
+			return "Alias [" + alias[1] + "] is invalid URL", iodine.New(err, nil)
 		default:
 			// unexpected error
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to generate config file", configPath, ".")
+			return "Unable to generate config file [" + configPath + "].", iodine.New(err, nil)
 		}
 	}
-	console.Infoln("Configuration written to " + configPath + ". Please update your access credentials.")
+	return "Configuration written to [" + configPath + "]. Please update your access credentials.", nil
 }
