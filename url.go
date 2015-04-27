@@ -44,6 +44,20 @@ func getObjectKey(sourceURL string) (objectName string) {
 	return ""
 }
 
+func getNewURLRecursive(sourceURL, targetURL, url string) (newSourceURL, newTargetURL string) {
+	switch client.GetType(sourceURL) {
+	case client.Object:
+		sourceURL = strings.TrimSuffix(sourceURL, getObjectKey(sourceURL))
+		newSourceURL = strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator + url
+		newTargetURL = strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + url
+	case client.Filesystem:
+		newSourceURL = url
+		prefix := strings.TrimSuffix(sourceURL, pathSeparator) + pathSeparator
+		newTargetURL = strings.TrimSuffix(targetURL, pathSeparator) + pathSeparator + strings.TrimPrefix(url, prefix)
+	}
+	return newSourceURL, newTargetURL
+}
+
 func getNewTargetURL(targetURL string, sourceURL string) (newTargetURL string, err error) {
 	switch client.GetType(targetURL) {
 	case client.Object:
