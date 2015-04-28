@@ -188,7 +188,7 @@ EXAMPLES:
 	}
 	mbCmd = cli.Command{
 		Name:   "mb",
-		Usage:  "Make a directory or bucket",
+		Usage:  "Make a bucket or a folder",
 		Action: runMakeBucketCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

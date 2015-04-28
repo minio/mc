@@ -2,7 +2,7 @@
 
 ```go
 NAME:
-   mc mb - Make a directory or bucket
+   mc mb - Make a bucket or a folder
 
 USAGE:
    mc mb TARGET [TARGET...]

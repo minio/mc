@@ -64,10 +64,10 @@ func doCopySingleSource(methods clientMethods, sourceURL, targetURL string, sour
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	// check if its a directory, construct the new TargetURL, if not fallback
+	// check if its a folder, construct the new TargetURL, if not fallback
 	newTargetURL, err := getNewTargetURL(targetURL, sourceURL)
 	switch iodine.ToError(err).(type) {
-	case errIsNotDIR:
+	case errIsNotFolder:
 		return doCopy(methods, reader, md5hex, length, targetURL, targetConfig)
 	case errIsNotBucket:
 		return doCopy(methods, reader, md5hex, length, targetURL, targetConfig)

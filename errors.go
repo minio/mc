@@ -114,10 +114,10 @@ func (e errInvalidSource) Error() string {
 	return "Invalid source " + e.path
 }
 
-type errIsNotDIR struct {
+type errIsNotFolder struct {
 	path string
 }
 
-func (e errIsNotDIR) Error() string {
-	return "Not a directory " + e.path
+func (e errIsNotFolder) Error() string {
+	return "Not a folder " + e.path
 }

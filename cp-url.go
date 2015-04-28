@@ -91,10 +91,10 @@ func getNewTargetURLObject(targetURL string, sourceURL string) (newTargetURL str
 func getNewTargetURLFilesystem(targetURL string, sourceURL string) (newTargetURL string, err error) {
 	st, err := os.Stat(targetURL)
 	if err != nil {
-		return "", iodine.New(errIsNotDIR{path: targetURL}, nil)
+		return "", iodine.New(errIsNotFolder{path: targetURL}, nil)
 	}
 	if !st.IsDir() {
-		return "", iodine.New(errIsNotDIR{path: targetURL}, nil)
+		return "", iodine.New(errIsNotFolder{path: targetURL}, nil)
 	}
 	switch client.GetType(sourceURL) {
 	case client.Filesystem:

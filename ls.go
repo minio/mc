@@ -54,7 +54,7 @@ func printItem(date time.Time, v int64, name string, fileType os.FileMode) {
 	}
 }
 
-// doList - list all entities inside a directory
+// doList - list all entities inside a folder
 func doList(clnt client.Client, targetURL string) error {
 	var err error
 	for itemCh := range clnt.List() {
@@ -70,7 +70,7 @@ func doList(clnt client.Client, targetURL string) error {
 	return nil
 }
 
-// doListRecursive - list all entities inside directories and sub-directories recursively
+// doListRecursive - list all entities inside folders and sub-folders recursively
 func doListRecursive(clnt client.Client, targetURL string) error {
 	var err error
 	for itemCh := range clnt.ListRecursive() {
