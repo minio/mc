@@ -42,7 +42,7 @@ type configV1 struct {
 	Hosts   map[string]*hostConfig
 }
 
-// getMcConfigDir - construct minio client configuration directory
+// getMcConfigDir - construct minio client config folder
 func getMcConfigDir() (string, error) {
 	u, err := user.Current()
 	if err != nil {
@@ -57,7 +57,7 @@ func getMcConfigDir() (string, error) {
 	}
 }
 
-// createMcConfigDir - create minio client configuration directory
+// createMcConfigDir - create minio client config folder
 func createMcConfigDir() error {
 	p, err := getMcConfigDir()
 	if err != nil {

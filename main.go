@@ -32,12 +32,12 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
-// Check for the environment early on and gracefuly report.
+// Check for the environment early on and gracefully report.
 func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to determine user's home directory")
+		console.Fatalln("Unable to determine current user")
 	}
 
 	// If config doesn't exist, do not attempt to read it

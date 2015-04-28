@@ -67,13 +67,39 @@ func runCopyCmdMultipleSources(methods clientMethods, urls []string) {
 		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
 			targetURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
-	sourceURLConfigMap, err := getHostConfigs(sourceURLs)
+	var newRecursiveSourceURLs []string
+	var newRegularSourceURLs []string
+	for _, sourceURL := range sourceURLs {
+		recursive := isURLRecursive(sourceURL)
+		// if recursive strip off the "..."
+		if recursive {
+			sourceURL = strings.TrimSuffix(sourceURL, recursiveSeparator)
+			newRecursiveSourceURLs = append(newRecursiveSourceURLs, sourceURL)
+		} else {
+			newRegularSourceURLs = append(newRegularSourceURLs, sourceURL)
+		}
+	}
+	for _, newRecursiveSourceURL := range newRecursiveSourceURLs {
+		newRecursiveSourceConfig, err := getHostConfig(newRecursiveSourceURL)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
+				newRecursiveSourceURL, mustGetMcConfigPath(), iodine.ToError(err))
+		}
+		err = doCopySingleSourceRecursive(methods, newRecursiveSourceURL, targetURL, newRecursiveSourceConfig, targetConfig)
+		if err != nil {
+			log.Debug.Println(err)
+			console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", newRecursiveSourceURL,
+				targetURL, iodine.ToError(err))
+		}
+	}
+	newRegularSourceURLConfigMap, err := getHostConfigs(newRegularSourceURLs)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for source [%s] from config file [%s]. Reason: [%s].\n",
 			sourceURLs, mustGetMcConfigPath(), iodine.ToError(err))
 	}
-	err = doCopyMultipleSources(methods, sourceURLConfigMap, targetURL, targetConfig)
+	err = doCopyMultipleSources(methods, newRegularSourceURLConfigMap, targetURL, targetConfig)
 	if err != nil {
 		log.Debug.Println(err)
 		console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", sourceURLs, targetURL, iodine.ToError(err))

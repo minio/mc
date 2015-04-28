@@ -21,23 +21,23 @@ type GenericFileError struct {
 	path string
 }
 
-// FileNotFound (ENOENT) - file not found
-type FileNotFound GenericFileError
+// NotFound (ENOENT) - file not found
+type NotFound GenericFileError
 
-func (e FileNotFound) Error() string {
+func (e NotFound) Error() string {
 	return "Requested file " + e.path + " not found"
 }
 
-// FileISDir (EISDIR) - accessed file is a directory
-type FileISDir GenericFileError
+// ISFolder (EISDIR) - accessed file is a folder
+type ISFolder GenericFileError
 
-func (e FileISDir) Error() string {
-	return "Requested file " + e.path + " is a directory"
+func (e ISFolder) Error() string {
+	return "Requested file " + e.path + " is a folder"
 }
 
-// FileNotDir (ENOTDIR) - accessed file is not a directory
-type FileNotDir GenericFileError
+// NotFolder (ENOTDIR) - accessed file is not a folder
+type NotFolder GenericFileError
 
-func (e FileNotDir) Error() string {
-	return "Requested file " + e.path + " is not a directory"
+func (e NotFolder) Error() string {
+	return "Requested file " + e.path + " is not a folder"
 }

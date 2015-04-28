@@ -49,7 +49,7 @@ func New(path string) client.Client {
 func (f *fsClient) fsStat() (os.FileInfo, error) {
 	st, err := os.Stat(filepath.Clean(f.path))
 	if os.IsNotExist(err) {
-		return nil, iodine.New(FileNotFound{path: f.path}, nil)
+		return nil, iodine.New(NotFound{path: f.path}, nil)
 	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -64,7 +64,7 @@ func (f *fsClient) Get() (io.ReadCloser, int64, string, error) {
 		return nil, 0, "", iodine.New(err, nil)
 	}
 	if item.FileType.IsDir() {
-		return nil, 0, "", iodine.New(FileISDir{path: f.path}, nil)
+		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
 	}
 	body, err := os.Open(f.path)
 	if err != nil {
@@ -95,7 +95,7 @@ func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, strin
 		return nil, 0, "", iodine.New(err, nil)
 	}
 	if item.FileType.IsDir() {
-		return nil, 0, "", iodine.New(FileISDir{path: f.path}, nil)
+		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
 	}
 	if offset > item.Size || (offset+length-1) > item.Size {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
@@ -123,7 +123,7 @@ func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, strin
 	return body, length, md5Str, nil
 }
 
-// List - list files and directories inside a directory
+// List - list files and folders
 func (f *fsClient) List() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
 	go f.list(itemCh)
@@ -187,7 +187,7 @@ func (f *fsClient) list(itemCh chan client.ItemOnChannel) {
 	}
 }
 
-// ListRecursive - list all files and directories recursivelys
+// ListRecursive - list files and folders recursively
 func (f *fsClient) ListRecursive() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
 	go f.listRecursive(itemCh)
