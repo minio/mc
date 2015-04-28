@@ -96,7 +96,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 
 	wg := &sync.WaitGroup{}
 
-	data1 := "hello1"
+	data1 := "hello world 1"
 	binarySum1 := md5.Sum([]byte(data1))
 	etag1 := base64.StdEncoding.EncodeToString(binarySum1[:])
 	dataLen1 := int64(len(data1))
@@ -500,12 +500,13 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	targetReader, targetWriter := io.Pipe()
 	var resultBuffer bytes.Buffer
 	wg := &sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		io.Copy(sourceWriter, bytes.NewBufferString(data1))
 		sourceWriter.Close()
 		wg.Done()
 	}()
+	wg.Add(1)
 	go func() {
 		io.Copy(&resultBuffer, targetReader)
 		wg.Done()
@@ -518,6 +519,8 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
+	// without this there will be data races
+	wg.Wait()
 	c.Assert(data1, Equals, resultBuffer.String())
 
 	methods.AssertExpectations(c)
@@ -550,12 +553,13 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	targetReader, targetWriter := io.Pipe()
 	var resultBuffer bytes.Buffer
 	wg := &sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		io.Copy(sourceWriter, bytes.NewBufferString(data1))
 		sourceWriter.Close()
 		wg.Done()
 	}()
+	wg.Add(1)
 	go func() {
 		io.Copy(&resultBuffer, targetReader)
 		wg.Done()
@@ -569,6 +573,8 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
+	// with this there will be data races
+	wg.Wait()
 	c.Assert(data1, Equals, resultBuffer.String())
 
 	methods.AssertExpectations(c)
