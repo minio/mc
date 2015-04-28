@@ -138,20 +138,41 @@ func (f *fsClient) listSingle(itemCh chan client.ItemOnChannel) {
 			Err:  iodine.New(err, nil),
 		}
 	}
-	files, err := dir.Readdir(-1)
+	fi, err := dir.Stat()
 	if err != nil {
 		itemCh <- client.ItemOnChannel{
 			Item: nil,
 			Err:  iodine.New(err, nil),
 		}
 	}
-	dir.Close()
-	for _, file := range files {
+	defer dir.Close()
+	if fi.Mode().IsDir() {
+		files, err := dir.Readdir(-1)
+		if err != nil {
+			itemCh <- client.ItemOnChannel{
+				Item: nil,
+				Err:  iodine.New(err, nil),
+			}
+		}
+		for _, file := range files {
+			item := &client.Item{
+				Name:     file.Name(),
+				Time:     file.ModTime(),
+				Size:     file.Size(),
+				FileType: file.Mode(),
+			}
+			itemCh <- client.ItemOnChannel{
+				Item: item,
+				Err:  nil,
+			}
+		}
+	}
+	if fi.Mode().IsRegular() {
 		item := &client.Item{
-			Name:     file.Name(),
-			Time:     file.ModTime(),
-			Size:     file.Size(),
-			FileType: file.Mode(),
+			Name:     dir.Name(),
+			Time:     fi.ModTime(),
+			Size:     fi.Size(),
+			FileType: fi.Mode(),
 		}
 		itemCh <- client.ItemOnChannel{
 			Item: item,
