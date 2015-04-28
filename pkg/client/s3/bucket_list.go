@@ -33,14 +33,14 @@ import (
 
 /// Bucket API operations
 
-// ListSingle - list delimited path not recursive
-func (c *s3Client) ListSingle() <-chan client.ItemOnChannel {
+// List - list at delimited path not recursive
+func (c *s3Client) List() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
-	go c.listSingle(itemCh)
+	go c.list(itemCh)
 	return itemCh
 }
 
-func (c *s3Client) listSingle(itemCh chan client.ItemOnChannel) {
+func (c *s3Client) list(itemCh chan client.ItemOnChannel) {
 	defer close(itemCh)
 	var items []*client.Item
 	bucket, objectPrefix := c.url2BucketAndObject()
@@ -87,14 +87,14 @@ func (c *s3Client) listSingle(itemCh chan client.ItemOnChannel) {
 	}
 }
 
-// List - list buckets and objects
-func (c *s3Client) List() <-chan client.ItemOnChannel {
+// ListRecursive - list buckets and objects recursively
+func (c *s3Client) ListRecursive() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
-	go c.listInGoroutine(itemCh)
+	go c.listRecursive(itemCh)
 	return itemCh
 }
 
-func (c *s3Client) listInGoroutine(itemCh chan client.ItemOnChannel) {
+func (c *s3Client) listRecursive(itemCh chan client.ItemOnChannel) {
 	defer close(itemCh)
 
 	var items []*client.Item
@@ -190,6 +190,7 @@ func (c *s3Client) filterItems(startAt, marker, prefix, delimiter string, conten
 	return items, nextMarker, nil
 }
 
+// Populare query URL for Listobjects requests
 func (c *s3Client) getQueryURL(bucket, marker, prefix, delimiter string, fetchN int) string {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.bucketURL(bucket), fetchN))

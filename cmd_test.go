@@ -23,16 +23,24 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
+	"os/user"
+	"path"
+	"runtime"
 	"sync"
+	"testing"
 	"time"
 
 	"errors"
 	"net"
 
+	"github.com/cheggaaa/pb"
 	. "github.com/minio-io/check"
 	"github.com/minio-io/mc/pkg/client"
 	clientMocks "github.com/minio-io/mc/pkg/client/mocks"
+	"github.com/minio-io/minio/pkg/iodine"
 )
+
+func Test(t *testing.T) { TestingT(t) }
 
 type CmdTestSuite struct{}
 
@@ -152,7 +160,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 			}
 		}
 	}()
-	cl1.On("List").Return(itemCh).Once()
+	cl1.On("ListRecursive").Return(itemCh).Once()
 	sourceReader1 := ioutil.NopCloser(bytes.NewBufferString(data1))
 	sourceReader2 := ioutil.NopCloser(bytes.NewBufferString(data2))
 	methods.On("getSourceReader", sourceURL+"hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
@@ -171,6 +179,15 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 
 	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
+}
+
+type failClose struct{}
+
+func (c *failClose) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+func (c *failClose) Close() error {
+	return errors.New("Expected Close Error")
 }
 
 func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
@@ -242,22 +259,13 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 		io.Copy(writer4, bytes.NewBufferString(data1))
 		wg.Done()
 	}()
-	var failClose io.WriteCloser
-	failClose = &FailClose{}
+	var failclose io.WriteCloser
+	failclose = &failClose{}
 	methods.On("getSourceReader", sourceURL, sourceConfig).Return(reader4, dataLen1, etag1, nil).Once()
-	methods.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(failClose, nil).Once()
+	methods.On("getTargetWriter", targetURL, targetConfig, etag1, dataLen1).Return(failclose, nil).Once()
 	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 	wg.Wait()
 	c.Assert(err, Not(IsNil))
-}
-
-type FailClose struct{}
-
-func (c *FailClose) Write(p []byte) (int, error) {
-	return len(p), nil
-}
-func (c *FailClose) Close() error {
-	return errors.New("Expected Close Error")
 }
 
 func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
@@ -295,8 +303,8 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 			}
 		}
 	}()
-	cl1.On("List").Return(itemCh).Once()
-	err = doListCmd(methods, sourceURL, sourceConfig, false)
+	cl1.On("ListRecursive").Return(itemCh).Once()
+	err = doListRecursiveCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
 	methods.AssertExpectations(c)
@@ -339,8 +347,8 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 			}
 		}
 	}()
-	cl1.On("List").Return(itemCh).Once()
-	err = doListCmd(methods, sourceURL, sourceConfig, false)
+	cl1.On("ListRecursive").Return(itemCh).Once()
+	err = doListRecursiveCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
 	methods.AssertExpectations(c)
@@ -376,8 +384,8 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 			}
 		}
 	}()
-	cl1.On("List").Return(itemCh).Once()
-	err = doListCmd(methods, sourceURL, sourceConfig, false)
+	cl1.On("ListRecursive").Return(itemCh).Once()
+	err = doListRecursiveCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
 	methods.AssertExpectations(c)
@@ -485,7 +493,7 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	cl1 := &clientMocks.Client{}
 	cl2 := &clientMocks.Client{}
 
-	data1 := "hello1"
+	data1 := "hello world 1"
 	binarySum1 := md5.Sum([]byte(data1))
 	etag1 := hex.EncodeToString(binarySum1[:])
 	dataLen1 := int64(len(data1))
@@ -538,7 +546,7 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	cl1 := &clientMocks.Client{}
 	cl2 := &clientMocks.Client{}
 
-	data1 := "hello1"
+	data1 := "hello world 1"
 	binarySum1 := md5.Sum([]byte(data1))
 	etag1 := hex.EncodeToString(binarySum1[:])
 	dataLen1 := int64(len(data1))
@@ -580,4 +588,130 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
 	cl2.AssertExpectations(c)
+}
+
+func mustGetMcConfigDir() string {
+	dir, _ := getMcConfigDir()
+	return dir
+}
+
+func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
+	u, err := user.Current()
+	c.Assert(err, IsNil)
+	dir, err := getMcConfigDir()
+	c.Assert(err, IsNil)
+	if runtime.GOOS == "linux" {
+		c.Assert(dir, Equals, path.Join(u.HomeDir, ".mc/"))
+	} else if runtime.GOOS == "windows" {
+		c.Assert(dir, Equals, path.Join(u.HomeDir, "mc/"))
+	} else {
+		c.Fail()
+	}
+	c.Assert(mustGetMcConfigDir(), Equals, dir)
+}
+
+func (s *CmdTestSuite) TestGetMcConfigPath(c *C) {
+	dir, err := getMcConfigPath()
+	c.Assert(err, IsNil)
+	if runtime.GOOS == "linux" {
+		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
+	} else if runtime.GOOS == "windows" {
+		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
+	} else {
+		c.Fail()
+	}
+	c.Assert(mustGetMcConfigPath(), Equals, dir)
+}
+
+func (s *CmdTestSuite) TestIsvalidAliasName(c *C) {
+	c.Check(isValidAliasName("helloWorld0"), Equals, true)
+	c.Check(isValidAliasName("h0SFD2k24Fdsa"), Equals, true)
+	c.Check(isValidAliasName("fdslka-4"), Equals, true)
+	c.Check(isValidAliasName("fdslka-"), Equals, true)
+	c.Check(isValidAliasName("helloWorld$"), Equals, false)
+	c.Check(isValidAliasName("h0SFD2k2#Fdsa"), Equals, false)
+	c.Check(isValidAliasName("0dslka-4"), Equals, false)
+	c.Check(isValidAliasName("-fdslka"), Equals, false)
+	c.Check(isValidAliasName("help"), Equals, false)
+}
+
+func (s *CmdTestSuite) TestEmptyExpansions(c *C) {
+	//	c.Skip("Test still being written")
+	url, err := aliasExpand("hello", nil)
+	c.Assert(url, Equals, "hello")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("minio://hello", nil)
+	c.Assert(url, Equals, "minio://hello")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("$#\\", nil)
+	c.Assert(url, Equals, "$#\\")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("foo:bar", map[string]string{"foo": "http://foo"})
+	c.Assert(url, Equals, "http://foo/bar")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("myfoo:bar", nil)
+	c.Assert(url, Equals, "myfoo:bar")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("", nil)
+	c.Assert(url, Equals, "")
+	c.Assert(err, IsNil)
+
+	url, err = aliasExpand("hello", nil)
+	c.Assert(url, Equals, "hello")
+	c.Assert(err, IsNil)
+}
+
+type testAddr struct{}
+
+func (ta *testAddr) Network() string {
+	return ta.String()
+}
+func (ta *testAddr) Error() string {
+	return ta.String()
+}
+func (ta *testAddr) String() string {
+	return "testAddr"
+}
+
+func (s *CmdTestSuite) TestStatusBar(c *C) {
+	bar := startBar(1024)
+	c.Assert(bar, Not(IsNil))
+	c.Assert(bar.Units, Equals, pb.U_BYTES)
+	c.Assert(bar.RefreshRate, Equals, time.Millisecond*10)
+	c.Assert(bar.NotPrint, Equals, true)
+	c.Assert(bar.ShowSpeed, Equals, true)
+}
+
+func (s *CmdTestSuite) TestIsValidRetry(c *C) {
+	opError := &net.OpError{
+		Op:   "read",
+		Net:  "net",
+		Addr: &testAddr{},
+		Err:  errors.New("Op Error"),
+	}
+	c.Assert(isValidRetry(nil), Equals, false)
+	c.Assert(isValidRetry(errors.New("hello")), Equals, false)
+	c.Assert(isValidRetry(iodine.New(errors.New("hello"), nil)), Equals, false)
+	c.Assert(isValidRetry(&net.DNSError{}), Equals, true)
+	c.Assert(isValidRetry(iodine.New(&net.DNSError{}, nil)), Equals, true)
+	// op error read
+	c.Assert(isValidRetry(opError), Equals, true)
+	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
+	// op error write
+	opError.Op = "write"
+	c.Assert(isValidRetry(opError), Equals, true)
+	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
+	// op error dial
+	opError.Op = "dial"
+	c.Assert(isValidRetry(opError), Equals, true)
+	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
+	// op error foo
+	opError.Op = "foo"
+	c.Assert(isValidRetry(opError), Equals, false)
+	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, false)
 }
