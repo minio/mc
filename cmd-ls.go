@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -39,11 +40,30 @@ func printItem(date time.Time, v int64, name string, fileType os.FileMode) {
 	fmt.Printf(console.Size("%6s ", humanize.IBytes(uint64(v))))
 	// just making it explicit
 	if fileType.IsDir() {
-		fmt.Println(console.Dir("%s/", name))
+		if strings.HasSuffix(name, "/") {
+			fmt.Println(console.Dir("%s", name))
+		} else {
+			fmt.Println(console.Dir("%s/", name))
+		}
 	}
 	if fileType.IsRegular() {
 		fmt.Println(console.File("%s", name))
 	}
+}
+
+func doListSingle(clnt client.Client, targetURL string) error {
+	var err error
+	for itemCh := range clnt.ListSingle() {
+		if itemCh.Err != nil {
+			err = itemCh.Err
+			break
+		}
+		printItem(itemCh.Item.Time, itemCh.Item.Size, itemCh.Item.Name, itemCh.Item.FileType)
+	}
+	if err != nil {
+		return iodine.New(err, map[string]string{"Target": targetURL})
+	}
+	return nil
 }
 
 func doList(clnt client.Client, targetURL string) error {
@@ -93,13 +113,43 @@ func runListCmd(ctx *cli.Context) {
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
-		err = doListCmd(mcClientMethods{}, targetURL, targetConfig, globalDebugFlag)
-		err = iodine.New(err, nil)
-		if err != nil {
-			log.Debug.Println(err)
-			console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+		if isURLRecursive(targetURL) {
+			// if recursive strip off the "..."
+			targetURL = strings.TrimSuffix(targetURL, recursiveSeparator)
+			err = doListCmd(mcClientMethods{}, targetURL, targetConfig, globalDebugFlag)
+			err = iodine.New(err, nil)
+			if err != nil {
+				log.Debug.Println(err)
+				console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+			}
+		} else {
+			err = doListSingleCmd(mcClientMethods{}, targetURL, targetConfig, globalDebugFlag)
+			if err != nil {
+				if err != nil {
+					log.Debug.Println(err)
+					console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+				}
+			}
 		}
 	}
+}
+
+func doListSingleCmd(methods clientMethods, targetURL string, targetConfig *hostConfig, debug bool) error {
+	clnt, err := methods.getNewClient(targetURL, targetConfig, globalDebugFlag)
+	if err != nil {
+		return iodine.New(err, map[string]string{"Target": targetURL})
+	}
+	err = doListSingle(clnt, targetURL)
+	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
+		fmt.Println(console.Retry("Retrying ... %d", i))
+		// Progressively longer delays
+		time.Sleep(time.Duration(i*i) * time.Second)
+		err = doListSingle(clnt, targetURL)
+	}
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	return nil
 }
 
 func doListCmd(methods clientMethods, targetURL string, targetConfig *hostConfig, debug bool) error {

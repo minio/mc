@@ -267,7 +267,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
-	data1 := "hello1"
+	data1 := "hello world 1"
 	dataLen1 := int64(len(data1))
 
 	data2 := "hello world 2"
@@ -310,7 +310,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
-	data1 := "hello1"
+	data1 := "hello world 1"
 	dataLen1 := int64(len(data1))
 
 	data2 := "hello world 2"

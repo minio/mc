@@ -30,6 +30,7 @@ type Client interface {
 
 	// Common operations
 	Stat() (item *Item, err error)
+	ListSingle() <-chan ItemOnChannel
 	List() <-chan ItemOnChannel
 
 	// Bucket operations
