@@ -86,7 +86,7 @@ EXAMPLES:
 	}
 	cpCmd = cli.Command{
 		Name:   "cp",
-		Usage:  "Copy objects and files",
+		Usage:  "Copy objects and files from multiple sources single destination",
 		Action: runCopyCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -165,6 +165,27 @@ EXAMPLES:
 `,
 	}
 
+	syncCmd = cli.Command{
+		Name:   "sync",
+		Usage:  "Copies files and objects from single source to multiple destinations",
+		Action: runSyncCmd,
+		CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+FLAGS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+
+`,
+	}
 	mbCmd = cli.Command{
 		Name:   "mb",
 		Usage:  "Make a directory or bucket",
@@ -247,7 +268,8 @@ EXAMPLES:
 //
 // ----
 // ls     List files and objects
-// cp     Copy objects and files
+// cp     Copy objects and files from multiple sources to single destination
+// sync   Copy objects and files from single source to multiple destionations
 // mb     Make a bucket
 // access Set permissions [public, private, readonly] for buckets and folders.
 // cat    Concantenate an object to standard output
@@ -258,6 +280,7 @@ EXAMPLES:
 var commands = []cli.Command{
 	lsCmd,
 	cpCmd,
+	syncCmd,
 	catCmd,
 	mbCmd,
 	accessCmd,
