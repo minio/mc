@@ -1,5 +1,5 @@
 /*
- * Mini Copy (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -239,13 +239,7 @@ EXAMPLES:
 		Name:        "update",
 		Usage:       "Check for new software updates",
 		Description: "",
-		Action:      doUpdateCmd,
-		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "yes, y",
-				Usage: "Download and update local binary",
-			},
-		},
+		Action:      runUpdateCmd,
 	}
 )
 

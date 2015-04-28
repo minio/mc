@@ -1,0 +1,20 @@
+#### mb
+
+```go
+NAME:
+   mc mb - Make a directory or bucket
+
+USAGE:
+   mc mb TARGET [TARGET...]
+
+EXAMPLES:
+   1. Create a bucket on Amazon S3 object storage
+      $ mc mb https://s3.amazonaws.com/public-document-store
+
+   2. Create a bucket on Minio object storage
+      $ mc mb http://localhost:9000/mongodb-backup
+
+   3. Create multiple buckets on Amazon S3 object storage and Minio object storage
+      $ mc mb https://s3.amazonaws.com/public-photo-store https://s3.amazonaws.com/public-store http://localhost:9000/mongodb-backup
+
+```
