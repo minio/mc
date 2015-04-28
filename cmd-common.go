@@ -18,15 +18,9 @@ package main
 
 import (
 	"net"
-	"path/filepath"
 	"time"
 
-	"io"
-
 	"github.com/cheggaaa/pb"
-	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/mc/pkg/client/fs"
-	"github.com/minio-io/mc/pkg/client/s3"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 )
@@ -66,91 +60,4 @@ func startBar(size int64) *pb.ProgressBar {
 	// Feels like wget
 	bar.Format("[=> ]")
 	return bar
-}
-
-// clientMethods interface for mock tests
-type clientMethods interface {
-	getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length int64, md5hex string, err error)
-	getTargetWriter(targetURL string, targetConfig *hostConfig, md5Hex string, length int64) (io.WriteCloser, error)
-	getNewClient(urlStr string, config *hostConfig, debug bool) (clnt client.Client, err error)
-}
-
-type mcClientMethods struct{}
-
-type sourceReader struct {
-	reader io.ReadCloser
-	length int64
-	md5hex string
-}
-
-// getSourceReader -
-func (methods mcClientMethods) getSourceReader(sourceURL string, sourceConfig *hostConfig) (
-	reader io.ReadCloser, length int64, md5hex string, err error) {
-
-	sourceClnt, err := methods.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
-	}
-	if _, err := sourceClnt.Stat(); err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
-	}
-	return sourceClnt.Get()
-}
-
-// getTargetWriter -
-func (methods mcClientMethods) getTargetWriter(targetURL string, targetConfig *hostConfig, md5hex string, length int64) (
-	io.WriteCloser, error) {
-	targetClnt, err := methods.getNewClient(targetURL, targetConfig, globalDebugFlag)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return targetClnt.Put(md5hex, length)
-}
-
-// getNewClient gives a new client interface
-func (methods mcClientMethods) getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
-	t := client.GetType(urlStr)
-	switch t {
-	case client.Object: // Minio and S3 compatible object storage
-		if auth == nil {
-			return nil, iodine.New(errInvalidArgument{}, nil)
-		}
-		s3Config := new(s3.Config)
-		s3Config.AccessKeyID = auth.AccessKeyID
-		s3Config.SecretAccessKey = auth.SecretAccessKey
-		s3Config.UserAgent = mcUserAgent
-		s3Config.HostURL = urlStr
-		s3Config.Debug = debug
-		clnt = s3.New(s3Config)
-		return clnt, nil
-	case client.Filesystem:
-		clnt = fs.New(filepath.Clean(urlStr))
-		return clnt, nil
-	default:
-		return nil, iodine.New(errUnsupportedScheme{
-			scheme: client.GetTypeToString(t),
-			url:    urlStr,
-		}, nil)
-	}
-}
-
-// getSourceReaders -
-func getSourceReaders(methods clientMethods, sourceURLConfigMap map[string]*hostConfig) (map[string]sourceReader, error) {
-	sourceURLReaderMap := make(map[string]sourceReader)
-	for sourceURL, sourceConfig := range sourceURLConfigMap {
-		reader, length, md5hex, err := methods.getSourceReader(sourceURL, sourceConfig)
-		if err != nil {
-			for _, sourceReader := range sourceURLReaderMap {
-				sourceReader.reader.Close()
-			}
-			return nil, iodine.New(err, nil)
-		}
-		sr := sourceReader{
-			reader: reader,
-			length: length,
-			md5hex: md5hex,
-		}
-		sourceURLReaderMap[sourceURL] = sr
-	}
-	return sourceURLReaderMap, nil
 }
