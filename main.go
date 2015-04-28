@@ -1,5 +1,5 @@
 /*
- * Mini Copy (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014, 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ var BuildDate string
 
 func main() {
 	app := cli.NewApp()
-	app.Usage = "Mini Copy for object storage and filesystems"
+	app.Usage = "Minio Client for object storage and filesystems"
 	app.Version = Version
 	app.Commands = commands
 	app.Compiled, _ = time.Parse(time.RFC3339Nano, BuildDate)

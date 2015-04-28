@@ -1,5 +1,5 @@
 /*
- * Mini Copy (C) 2015 Minio, Inc.
+ * Minio Client (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,35 +51,43 @@ func getRequest(url string) (*http.Request, error) {
 	return req, nil
 }
 
-// doUpdateCmd -
-func doUpdateCmd(ctx *cli.Context) {
-	req, err := getRequest(mcUpdateURL)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to update:", mcUpdateURL)
+// runUpdateCmd -
+func runUpdateCmd(ctx *cli.Context) {
+	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
-	res, err := http.DefaultTransport.RoundTrip(req)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to retrieve:", mcUpdateURL)
-	}
-	if res.StatusCode != http.StatusOK {
-		msg := fmt.Sprint("Received invalid HTTP status: ", res.StatusCode)
-		log.Debug.Println(iodine.New(errors.New(msg), nil))
-		console.Fatalln(msg)
-	}
-	results := updateResults{}
-	err = json.NewDecoder(res.Body).Decode(&results)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to parse JSON:", mcUpdateURL)
-	}
-	latest, err := time.Parse(time.RFC3339Nano, results.LatestBuild)
-	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to parse update time:", results.LatestBuild)
-	}
-	if latest.After(ctx.App.Compiled) {
-		printUpdateNotify("new", "old")
+	switch ctx.Args().First() {
+	case "check":
+		req, err := getRequest(mcUpdateURL)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("Unable to update:", mcUpdateURL)
+		}
+		res, err := http.DefaultTransport.RoundTrip(req)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("Unable to retrieve:", mcUpdateURL)
+		}
+		if res.StatusCode != http.StatusOK {
+			msg := fmt.Sprint("Received invalid HTTP status: ", res.StatusCode)
+			log.Debug.Println(iodine.New(errors.New(msg), nil))
+			console.Fatalln(msg)
+		}
+		results := updateResults{}
+		err = json.NewDecoder(res.Body).Decode(&results)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("Unable to parse JSON:", mcUpdateURL)
+		}
+		latest, err := time.Parse(time.RFC3339Nano, results.LatestBuild)
+		if err != nil {
+			log.Debug.Println(iodine.New(err, nil))
+			console.Fatalln("Unable to parse update time:", results.LatestBuild)
+		}
+		if latest.After(ctx.App.Compiled) {
+			printUpdateNotify("new", "old")
+		}
+	case "yes":
+		console.Fatalln("Functionality not implemented yet")
 	}
 }

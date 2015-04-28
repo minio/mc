@@ -1,9 +1,9 @@
-# Mini Copy
+# Minio Client
 
-mc - Mini copy command for filesystems and object Storage. "mc" has features to resume partial downloads, progress bar, network reconnect and checksum verification. It is written in golang and released under [Apache license v2](./LICENSE).
+mc - Minio Client command for filesystems and object Storage. "mc" has features to resume partial downloads, progress bar, network reconnect and checksum verification. It is written in golang and released under [Apache license v2](./LICENSE).
 
 [![GoDoc](https://godoc.org/github.com/minio-io/mc?status.svg)](https://godoc.org/github.com/minio-io/mc)
- [![Build Status](https://travis-ci.org/minio-io/mc.svg)](https://travis-ci.org/minio-io/mc)
+[![Build Status](https://travis-ci.org/minio-io/mc.svg)](https://travis-ci.org/minio-io/mc)
 
 ## Install from Source
 
@@ -18,4 +18,3 @@ mc - Mini copy command for filesystems and object Storage. "mc" has features to 
 ## Contribute
 
 [Contribute to mc](./CONTRIBUTING.md)
-
