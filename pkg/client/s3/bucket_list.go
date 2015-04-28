@@ -24,12 +24,68 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"time"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
 /// Bucket API operations
+
+// ListSingle - list delimited path not recursive
+func (c *s3Client) ListSingle() <-chan client.ItemOnChannel {
+	itemCh := make(chan client.ItemOnChannel)
+	go c.listSingle(itemCh)
+	return itemCh
+}
+
+func (c *s3Client) listSingle(itemCh chan client.ItemOnChannel) {
+	defer close(itemCh)
+	var items []*client.Item
+	bucket, objectPrefix := c.url2BucketAndObject()
+	item, err := c.getObjectMetadata(bucket, objectPrefix)
+	switch err {
+	case nil: // List a single object. Exact key
+		itemCh <- client.ItemOnChannel{
+			Item: item,
+			Err:  nil,
+		}
+	default:
+		if bucket == "" {
+			items, err = c.listBucketsInternal()
+			if err != nil {
+				itemCh <- client.ItemOnChannel{
+					Item: nil,
+					Err:  iodine.New(err, nil),
+				}
+				return
+			}
+			for _, item := range items {
+				itemCh <- client.ItemOnChannel{
+					Item: item,
+					Err:  nil,
+				}
+			}
+			return
+		}
+		// List all objects matching the key prefix
+		items, err = c.listObjectsInternal(bucket, "", objectPrefix, "/", globalMaxKeys)
+		if err != nil {
+			itemCh <- client.ItemOnChannel{
+				Item: nil,
+				Err:  iodine.New(err, nil),
+			}
+			return
+		}
+		for _, item := range items {
+			itemCh <- client.ItemOnChannel{
+				Item: item,
+				Err:  nil,
+			}
+		}
+	}
+}
 
 // List - list buckets and objects
 func (c *s3Client) List() <-chan client.ItemOnChannel {
@@ -176,6 +232,16 @@ func (c *s3Client) listObjectsInternal(bucket, startAt, prefix, delimiter string
 		items, marker, err = c.filterItems(startAt, marker, prefix, delimiter, bres.Contents)
 		if err != nil {
 			return nil, iodine.New(err, nil)
+		}
+		for _, prefix := range bres.CommonPrefixes {
+			item := &client.Item{
+				Name: prefix.Prefix,
+				// TODO no way of fixiing this as of now
+				Time:     time.Now(),
+				Size:     0,
+				FileType: os.ModeDir,
+			}
+			items = append(items, item)
 		}
 		if !bres.IsTruncated {
 			break

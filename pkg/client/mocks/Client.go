@@ -51,6 +51,13 @@ func (m *Client) Stat() (*client.Item, error) {
 	return r0, r1
 }
 
+// ListSingle is a mock method
+func (m *Client) ListSingle() <-chan client.ItemOnChannel {
+	ret := m.Called()
+	r0 := ret.Get(0).(chan client.ItemOnChannel)
+	return r0
+}
+
 // List is a mock method
 func (m *Client) List() <-chan client.ItemOnChannel {
 	ret := m.Called()

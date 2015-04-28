@@ -123,6 +123,43 @@ func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, strin
 	return body, length, md5Str, nil
 }
 
+func (f *fsClient) ListSingle() <-chan client.ItemOnChannel {
+	itemCh := make(chan client.ItemOnChannel)
+	go f.listSingle(itemCh)
+	return itemCh
+}
+
+func (f *fsClient) listSingle(itemCh chan client.ItemOnChannel) {
+	defer close(itemCh)
+	dir, err := os.Open(f.path)
+	if err != nil {
+		itemCh <- client.ItemOnChannel{
+			Item: nil,
+			Err:  iodine.New(err, nil),
+		}
+	}
+	files, err := dir.Readdir(-1)
+	if err != nil {
+		itemCh <- client.ItemOnChannel{
+			Item: nil,
+			Err:  iodine.New(err, nil),
+		}
+	}
+	dir.Close()
+	for _, file := range files {
+		item := &client.Item{
+			Name:     file.Name(),
+			Time:     file.ModTime(),
+			Size:     file.Size(),
+			FileType: file.Mode(),
+		}
+		itemCh <- client.ItemOnChannel{
+			Item: item,
+			Err:  nil,
+		}
+	}
+}
+
 func (f *fsClient) List() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
 	go f.listInGoroutine(itemCh)
