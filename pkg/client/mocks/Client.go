@@ -51,15 +51,15 @@ func (m *Client) Stat() (*client.Item, error) {
 	return r0, r1
 }
 
-// ListSingle is a mock method
-func (m *Client) ListSingle() <-chan client.ItemOnChannel {
+// List is a mock method
+func (m *Client) List() <-chan client.ItemOnChannel {
 	ret := m.Called()
 	r0 := ret.Get(0).(chan client.ItemOnChannel)
 	return r0
 }
 
-// List is a mock method
-func (m *Client) List() <-chan client.ItemOnChannel {
+// ListRecursive is a mock method
+func (m *Client) ListRecursive() <-chan client.ItemOnChannel {
 	ret := m.Called()
 	r0 := ret.Get(0).(chan client.ItemOnChannel)
 	return r0

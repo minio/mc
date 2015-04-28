@@ -23,6 +23,9 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
+/// Copy - related internal functions
+
+// doCopy
 func doCopy(methods clientMethods, reader io.ReadCloser, md5hex string, length int64, targetURL string, targetConfig *hostConfig) error {
 	writeCloser, err := methods.getTargetWriter(targetURL, targetConfig, md5hex, length)
 	if err != nil {
@@ -55,6 +58,7 @@ func doCopy(methods clientMethods, reader io.ReadCloser, md5hex string, length i
 	return nil
 }
 
+// doCopySingleSource
 func doCopySingleSource(methods clientMethods, sourceURL, targetURL string, sourceConfig, targetConfig *hostConfig) error {
 	reader, length, md5hex, err := methods.getSourceReader(sourceURL, sourceConfig)
 	if err != nil {
@@ -74,12 +78,13 @@ func doCopySingleSource(methods clientMethods, sourceURL, targetURL string, sour
 	}
 }
 
+// doCopySingleSourceRecursive
 func doCopySingleSourceRecursive(methods clientMethods, sourceURL, targetURL string, sourceConfig, targetConfig *hostConfig) error {
 	sourceClnt, err := methods.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	for itemCh := range sourceClnt.List() {
+	for itemCh := range sourceClnt.ListRecursive() {
 		if itemCh.Err != nil {
 			continue
 		}
@@ -89,7 +94,7 @@ func doCopySingleSourceRecursive(methods clientMethods, sourceURL, targetURL str
 	return nil
 }
 
-// doCopyCmd copies objects into and from a bucket or between buckets
+// doCopyMultipleSources -
 func doCopyMultipleSources(methods clientMethods, sourceURLConfigMap map[string]*hostConfig, targetURL string, targetConfig *hostConfig) error {
 	sourceURLReaderMap, err := getSourceReaders(methods, sourceURLConfigMap)
 	if err != nil {

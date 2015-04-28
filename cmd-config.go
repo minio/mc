@@ -42,6 +42,7 @@ type configV1 struct {
 	Hosts   map[string]*hostConfig
 }
 
+// getMcConfigDir - construct minio client configuration directory
 func getMcConfigDir() (string, error) {
 	u, err := user.Current()
 	if err != nil {
@@ -56,6 +57,7 @@ func getMcConfigDir() (string, error) {
 	}
 }
 
+// createMcConfigDir - create minio client configuration directory
 func createMcConfigDir() error {
 	p, err := getMcConfigDir()
 	if err != nil {
@@ -68,6 +70,7 @@ func createMcConfigDir() error {
 	return nil
 }
 
+// getMcConfigPath - construct minio client configuration path
 func getMcConfigPath() (string, error) {
 	dir, err := getMcConfigDir()
 	if err != nil {
@@ -76,12 +79,13 @@ func getMcConfigPath() (string, error) {
 	return path.Join(dir, mcConfigFile), nil
 }
 
+// mustGetMcConfigPath - similar to getMcConfigPath, ignores errors
 func mustGetMcConfigPath() string {
 	p, _ := getMcConfigPath()
 	return p
 }
 
-// getMcConfig returns the config
+// getMcConfig - reads configuration file and returns config
 func getMcConfig() (config *configV1, err error) {
 	if !isMcConfigExist() {
 		return nil, iodine.New(errInvalidArgument{}, nil)
@@ -113,7 +117,7 @@ func isMcConfigExist() bool {
 	return true
 }
 
-// writeConfig
+// writeConfig - write configuration file
 func writeConfig(config quick.Config) error {
 	err := createMcConfigDir()
 	if err != nil {
@@ -129,6 +133,7 @@ func writeConfig(config quick.Config) error {
 	return nil
 }
 
+// newConfigV1() - get new config version 1.0
 func newConfigV1() *configV1 {
 	conf := new(configV1)
 	conf.Version = mcCurrentConfigVersion
@@ -139,6 +144,7 @@ func newConfigV1() *configV1 {
 	return conf
 }
 
+// newConfig - get new config interface
 func newConfig() (config quick.Config) {
 	conf := newConfigV1()
 	s3HostConf := new(hostConfig)
@@ -162,6 +168,7 @@ func newConfig() (config quick.Config) {
 	return config
 }
 
+// addAlias - add new aliases
 func addAlias(alias []string) (quick.Config, error) {
 	if len(alias) < 2 {
 		return nil, iodine.New(errInvalidArgument{}, nil)
@@ -239,7 +246,7 @@ func doConfig(arg string, alias []string) (string, error) {
 		case errConfigExists:
 			return "Configuration file [" + configPath + "] already exists.", iodine.New(err, nil)
 		case errInvalidArgument:
-			return "Incorrect usage, please use \"help\" ", iodine.New(err, nil)
+			return "Incorrect usage, please use \"mc config help\" ", iodine.New(err, nil)
 		case errAliasExists:
 			return "Alias [" + alias[0] + "] already exists", iodine.New(err, nil)
 		case errInvalidAliasName:

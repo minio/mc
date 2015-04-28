@@ -1,5 +1,5 @@
 /*
- * Mini Copy, (C) 2014, 2015 Minio, Inc.
+ * Mini Copy, (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,10 @@ import (
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
+)
+
+const (
+	standardOutput = "/dev/stdout"
 )
 
 func runCatCmd(ctx *cli.Context) {
@@ -55,7 +59,7 @@ func runCatCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("reading host config for URL [%s] failed with following reason: [%s]\n", sourceURLs, iodine.ToError(err))
 	}
-	humanReadable, err := doCatCmd(mcClientMethods{}, sourceURLConfigMap, "/dev/stdout", globalDebugFlag)
+	humanReadable, err := doCatCmd(mcClientMethods{}, sourceURLConfigMap, standardOutput, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(humanReadable)

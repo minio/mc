@@ -123,13 +123,14 @@ func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, strin
 	return body, length, md5Str, nil
 }
 
-func (f *fsClient) ListSingle() <-chan client.ItemOnChannel {
+// List - list files and directories inside a directory
+func (f *fsClient) List() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
-	go f.listSingle(itemCh)
+	go f.list(itemCh)
 	return itemCh
 }
 
-func (f *fsClient) listSingle(itemCh chan client.ItemOnChannel) {
+func (f *fsClient) list(itemCh chan client.ItemOnChannel) {
 	defer close(itemCh)
 	dir, err := os.Open(f.path)
 	if err != nil {
@@ -147,6 +148,11 @@ func (f *fsClient) listSingle(itemCh chan client.ItemOnChannel) {
 	}
 	defer dir.Close()
 	if fi.Mode().IsDir() {
+		// do not use ioutil.ReadDir(), since it tries to sort its
+		// output at our scale we are expecting that to slow down
+		// instead we take raw output and provide it back to the user
+		// - such a thing is helpful when we are moving in and out
+		// large quantities of files
 		files, err := dir.Readdir(-1)
 		if err != nil {
 			itemCh <- client.ItemOnChannel{
@@ -181,13 +187,14 @@ func (f *fsClient) listSingle(itemCh chan client.ItemOnChannel) {
 	}
 }
 
-func (f *fsClient) List() <-chan client.ItemOnChannel {
+// ListRecursive - list all files and directories recursivelys
+func (f *fsClient) ListRecursive() <-chan client.ItemOnChannel {
 	itemCh := make(chan client.ItemOnChannel)
-	go f.listInGoroutine(itemCh)
+	go f.listRecursive(itemCh)
 	return itemCh
 }
 
-func (f *fsClient) listInGoroutine(itemCh chan client.ItemOnChannel) {
+func (f *fsClient) listRecursive(itemCh chan client.ItemOnChannel) {
 	defer close(itemCh)
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		if err != nil {
@@ -217,6 +224,7 @@ func (f *fsClient) listInGoroutine(itemCh chan client.ItemOnChannel) {
 	}
 }
 
+// isValidBucketACL - is acl a valid ACL?
 func isValidBucketACL(acl string) bool {
 	switch acl {
 	case "private":
@@ -232,6 +240,7 @@ func isValidBucketACL(acl string) bool {
 	}
 }
 
+// aclToPerm - convert acl to filesystem mode
 func aclToPerm(acl string) os.FileMode {
 	switch acl {
 	case "private":
@@ -274,7 +283,7 @@ func (f *fsClient) getFSMetadata() (item *client.Item, err error) {
 	return item, nil
 }
 
-// Stat -
+// Stat - get metadata from path
 func (f *fsClient) Stat() (item *client.Item, err error) {
 	return f.getFSMetadata()
 }

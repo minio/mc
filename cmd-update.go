@@ -40,7 +40,8 @@ type updateResults struct {
 	Signature   string
 }
 
-func getReq(url string) (*http.Request, error) {
+// getRequest -
+func getRequest(url string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		msg := fmt.Sprintf("s3 client; invalid URL: %v", err)
@@ -50,8 +51,9 @@ func getReq(url string) (*http.Request, error) {
 	return req, nil
 }
 
+// doUpdateCmd -
 func doUpdateCmd(ctx *cli.Context) {
-	req, err := getReq(mcUpdateURL)
+	req, err := getRequest(mcUpdateURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to update:", mcUpdateURL)
@@ -66,19 +68,18 @@ func doUpdateCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(errors.New(msg), nil))
 		console.Fatalln(msg)
 	}
-	ures := updateResults{}
-	err = json.NewDecoder(res.Body).Decode(&ures)
+	results := updateResults{}
+	err = json.NewDecoder(res.Body).Decode(&results)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln("Unable to parse JSON:", mcUpdateURL)
 	}
-	latest, err := time.Parse(time.RFC3339Nano, ures.LatestBuild)
+	latest, err := time.Parse(time.RFC3339Nano, results.LatestBuild)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalln("Unable to parse update time:", ures.LatestBuild)
+		console.Fatalln("Unable to parse update time:", results.LatestBuild)
 	}
 	if latest.After(ctx.App.Compiled) {
-		// FIXME : find some proper versioning scheme here
 		printUpdateNotify("new", "old")
 	}
 }

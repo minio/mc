@@ -27,7 +27,7 @@ import (
 	"github.com/minio-io/minio/pkg/utils/log"
 )
 
-// doMakeBucketCmd creates a new bucket
+// runMakeBucketCmd is the handler for mc mb command
 func runMakeBucketCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
@@ -70,6 +70,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	}
 }
 
+// doMakeBucketCmd -
 func doMakeBucketCmd(methods clientMethods, targetURL string, targetConfig *hostConfig, debug bool) (string, error) {
 	var err error
 	var clnt client.Client
@@ -83,6 +84,7 @@ func doMakeBucketCmd(methods clientMethods, targetURL string, targetConfig *host
 	return doMakeBucket(clnt, targetURL)
 }
 
+// doMakeBucket - wrapper around PutBucket() API
 func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
 	err := clnt.PutBucket("")
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {

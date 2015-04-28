@@ -167,7 +167,7 @@ EXAMPLES:
 
 	mbCmd = cli.Command{
 		Name:   "mb",
-		Usage:  "Make a bucket",
+		Usage:  "Make a directory or bucket",
 		Action: runMakeBucketCmd,
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -264,9 +264,9 @@ EXAMPLES:
 var commands = []cli.Command{
 	lsCmd,
 	cpCmd,
+	catCmd,
 	mbCmd,
 	accessCmd,
-	catCmd,
 	configCmd,
 	updateCmd,
 	// Add your new commands starting from here

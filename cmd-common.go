@@ -39,6 +39,8 @@ func isValidRetry(err error) bool {
 	}
 	// DNSError, Network Operation error
 	switch e := iodine.ToError(err).(type) {
+	case *net.AddrError:
+		return true
 	case *net.DNSError:
 		return true
 	case *net.OpError:
