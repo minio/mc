@@ -39,7 +39,7 @@ func runListCmd(ctx *cli.Context) {
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range ctx.Args() {
-		targetURL, err := getURL(arg, config.Aliases)
+		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:

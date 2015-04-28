@@ -37,7 +37,7 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := getURLs(ctx.Args(), config.Aliases)
+	urls, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
@@ -97,7 +97,7 @@ func runCopyCmdMultipleSources(methods clientMethods, urls []string) {
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for source [%s] from config file [%s]. Reason: [%s].\n",
-			sourceURLs, mustGetMcConfigPath(), iodine.ToError(err))
+			newRegularSourceURLs, mustGetMcConfigPath(), iodine.ToError(err))
 	}
 	err = doCopyMultipleSources(methods, newRegularSourceURLConfigMap, targetURL, targetConfig)
 	if err != nil {

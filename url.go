@@ -35,8 +35,8 @@ func isURLRecursive(urlStr string) bool {
 	return strings.HasSuffix(urlStr, recursiveSeparator)
 }
 
-// getURL - extracts URL string from a single cmd-line argument
-func getURL(arg string, aliases map[string]string) (urlStr string, err error) {
+// getExpandedURL - extracts URL string from a single cmd-line argument
+func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err error) {
 	_, err = url.Parse(arg)
 	if err != nil {
 		// Not a valid URL. Return error
@@ -56,10 +56,10 @@ func getURL(arg string, aliases map[string]string) (urlStr string, err error) {
 	return urlStr, nil
 }
 
-// getURLs - extracts multiple URL strings from a single cmd-line argument
-func getURLs(args []string, aliases map[string]string) (urls []string, err error) {
+// getExpandedURLs - extracts multiple URL strings from a single cmd-line argument
+func getExpandedURLs(args []string, aliases map[string]string) (urls []string, err error) {
 	for _, arg := range args {
-		u, err := getURL(arg, aliases)
+		u, err := getExpandedURL(arg, aliases)
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}

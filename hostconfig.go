@@ -25,6 +25,11 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
+type hostConfig struct {
+	AccessKeyID     string
+	SecretAccessKey string
+}
+
 // getHostURL -
 func getHostURL(u *url.URL) string {
 	return u.Scheme + "://" + u.Host
