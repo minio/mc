@@ -26,6 +26,8 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
+/// mc cp related URL processing code
+
 // getObjectKey - get object name from source url
 func getObjectKey(sourceURL string) (objectName string) {
 	u, _ := url.Parse(sourceURL)

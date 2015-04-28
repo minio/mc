@@ -23,7 +23,7 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-/// Copy - related internal functions
+/// mc cp - related internal functions
 
 // doCopy
 func doCopy(methods clientMethods, reader io.ReadCloser, md5hex string, length int64, targetURL string, targetConfig *hostConfig) error {
