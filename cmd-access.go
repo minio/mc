@@ -39,7 +39,7 @@ func runAccessCmd(ctx *cli.Context) {
 	}
 
 	targetURLConfigMap := make(map[string]*hostConfig)
-	targetURLs, err := getURLs(ctx.Args(), config.Aliases)
+	targetURLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:

@@ -48,7 +48,7 @@ var _ = Suite(&CmdTestSuite{})
 
 func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	methods := &MockclientMethods{}
-	sourceURL, err := getURL("foo", nil)
+	sourceURL, err := getExpandedURL("foo", nil)
 	c.Assert(err, IsNil)
 
 	data := "Hello World"
@@ -56,7 +56,7 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 	hexMd5 := hex.EncodeToString(md5Sum[:])
 	dataLength := int64(len(data))
 
-	targetURL, err := getURL("bar", nil)
+	targetURL, err := getExpandedURL("bar", nil)
 	c.Assert(err, IsNil)
 
 	sourceReader, sourceWriter := io.Pipe()
@@ -93,10 +93,10 @@ func (s *CmdTestSuite) TestCopyToSingleTarget(c *C) {
 }
 
 func (s *CmdTestSuite) TestCopyRecursive(c *C) {
-	sourceURL, err := getURL("http://example.com/bucket1/", nil)
+	sourceURL, err := getExpandedURL("http://example.com/bucket1/", nil)
 	c.Assert(err, IsNil)
 
-	targetURL, err := getURL("http://example.com/bucket2/", nil)
+	targetURL, err := getExpandedURL("http://example.com/bucket2/", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
@@ -192,10 +192,10 @@ func (c *failClose) Close() error {
 
 func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 	methods := &MockclientMethods{}
-	sourceURL, err := getURL("foo", nil)
+	sourceURL, err := getExpandedURL("foo", nil)
 	c.Assert(err, IsNil)
 
-	targetURL, err := getURL("bar", nil)
+	targetURL, err := getExpandedURL("bar", nil)
 	c.Assert(err, IsNil)
 
 	var nilReadCloser io.ReadCloser
@@ -269,7 +269,7 @@ func (s *CmdTestSuite) TestCopyCmdFailures(c *C) {
 }
 
 func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
-	sourceURL, err := getURL("http://example.com/bucket1/", nil)
+	sourceURL, err := getExpandedURL("http://example.com/bucket1/", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
@@ -312,7 +312,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 }
 
 func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
-	sourceURL, err := getURL("foo", nil)
+	sourceURL, err := getExpandedURL("foo", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
@@ -356,7 +356,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 }
 
 func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
-	sourceURL, err := getURL("http://example.com", nil)
+	sourceURL, err := getExpandedURL("http://example.com", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
@@ -393,7 +393,7 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 }
 
 func (s *CmdTestSuite) TestMbCmd(c *C) {
-	sourceURL, err := getURL("http://example.com/bucket1", nil)
+	sourceURL, err := getExpandedURL("http://example.com/bucket1", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
@@ -416,7 +416,7 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 }
 
 func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
-	sourceURL, err := getURL("http://example.com/bucket1", nil)
+	sourceURL, err := getExpandedURL("http://example.com/bucket1", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
@@ -461,7 +461,7 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 }
 
 func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
-	sourceURL, err := getURL("bucket1", nil)
+	sourceURL, err := getExpandedURL("bucket1", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
@@ -484,9 +484,9 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 }
 
 func (s *CmdTestSuite) TestCatCmdObject(c *C) {
-	sourceURL, err := getURL("http://example.com/bucket1/object1", nil)
+	sourceURL, err := getExpandedURL("http://example.com/bucket1/object1", nil)
 	c.Assert(err, IsNil)
-	targetURL, err := getURL("object1", nil)
+	targetURL, err := getExpandedURL("object1", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
@@ -537,9 +537,9 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 }
 
 func (s *CmdTestSuite) TestCatCmdFile(c *C) {
-	sourceURL, err := getURL("object1", nil)
+	sourceURL, err := getExpandedURL("object1", nil)
 	c.Assert(err, IsNil)
-	targetURL, err := getURL("object2", nil)
+	targetURL, err := getExpandedURL("object2", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}

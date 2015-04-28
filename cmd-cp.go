@@ -37,7 +37,7 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := getURLs(ctx.Args(), config.Aliases)
+	urls, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
