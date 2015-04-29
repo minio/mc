@@ -55,6 +55,10 @@ type App struct {
 	Email string
 	// Writer writer to write output to
 	Writer io.Writer
+	// CustomAppHelpTemplate the text template for app help topic.
+	// cli.go uses text/template to render templates. You can
+	// render custom help text by setting this variable.
+	CustomAppHelpTemplate string
 }
 
 // mustCompileTime - determines the modification time of the current binary
