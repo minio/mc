@@ -102,9 +102,7 @@ func main() {
 		} else {
 			log.Debug = log.New(ioutil.Discard, "", 0)
 		}
-
 		themeName := ctx.GlobalString("theme")
-
 		if console.IsValidTheme(themeName) {
 			err := console.SetTheme(themeName)
 			if err != nil {
@@ -117,7 +115,7 @@ func main() {
 		return nil
 	}
 	app.After = func(ctx *cli.Context) error {
-		if !isMcConfigExist() && ctx.Command.Name != "config" {
+		if !isMcConfigExist() {
 			console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
 		}
 		return nil

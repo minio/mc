@@ -123,8 +123,11 @@ func (c *s3Client) bucketURL(bucket string) string {
 		if net.ParseIP(host) != nil {
 			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 		}
-		// For DNS hostname or amazonaws.com use subdomain style
-		url = fmt.Sprintf("%s://%s.%s/", c.Scheme, bucket, c.Host)
+		if strings.Contains(c.Host, "amazonaws.com") {
+			// amazonaws.com use subdomain style
+			return fmt.Sprintf("%s://%s.%s/", c.Scheme, bucket, c.Host)
+		}
+		url = fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 	}
 	return url
 }
