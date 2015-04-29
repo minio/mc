@@ -102,17 +102,17 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Copy an object from Amazon S3 object storage to local fileystem.
+   1. Copy list of objects from local file system to Amazon S3 object storage
       $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/
 
    2. Copy a bucket recursively from Minio object storage to Amazon S3 object storage
-      $ mc {{.Name}} http://localhost:9000/photos/burningman2011... https://s3.amazonaws.com/burningman/
+      $ mc {{.Name}} http://localhost:9000/photos/burningman2011... https://s3.amazonaws.com/private-photos/burningman/
 
-   3. Copy a local folder recursively to Minio object storage and Amazon S3 object storage
-      $ mc {{.Name}} backup/... http://localhost:9000/archive/
+   3. Copy multiple local folders recursively to Minio object storage
+      $ mc {{.Name}} backup/2014/... backup/2015/... http://localhost:9000/archive/
 
-   4. Copy an object from Amazon S3 object storage to local filesystem on Windows.
-      $ mc {{.Name}} s3:documents/2014/... backup/2014
+   4. Copy a bucket recursively from aliased Amazon S3 object storage to local filesystem on Windows.
+      $ mc {{.Name}} s3:documents/2014/... C:\backup\2014
 
 `,
 	}
@@ -183,6 +183,17 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
+   1. Sync an object from local filesystem to Amazon S3 object storage
+      $ mc {{.Name}} star-trek-episode-10-season4.ogg https://s3.amazonaws.com/trekarchive
+
+   2. Sync a bucket recursively from Minio object storage to multiple buckets on Amazon S3 object storage
+      $ mc {{.Name}} http://localhost:9000/photos/2014... https://s3.amazonaws.com/backup-photos https://s3.amazonaws.com/my-photos
+
+   3. Copy a local folder recursively to Minio object storage and Amazon S3 object storage
+      $ mc {{.Name}} backup/... http://localhost:9000/archive https://s3.amazonaws.com/archive
+
+   4. Sync a bucket from aliased Amazon S3 object storage to multiple folders on Windows.
+      $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
 
 `,
 	}
