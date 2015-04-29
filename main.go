@@ -129,5 +129,27 @@ func main() {
 		}
 		return nil
 	}
+	app.CustomAppHelpTemplate = `NAME:
+  {{.Name}} - {{.Usage}}
+
+USAGE:
+  {{.Name}} {{if .Flags}}[global flags] {{end}}command{{if .Flags}} [command flags]{{end}} [arguments...]
+
+COMMANDS:
+  {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+  {{end}}{{if .Flags}}
+GLOBAL FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}{{end}}
+VERSION:
+  {{.Version}}
+  {{if .Compiled}}
+BUILD:
+  {{.Compiled}}{{end}}
+  {{range $key, $value := .ExtraInfo}}
+{{$key}}:
+  {{$value}}
+{{end}}
+`
 	app.RunAndExitOnError()
 }
