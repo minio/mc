@@ -14,21 +14,19 @@ var AppHelpTemplate = `NAME:
 USAGE:
    {{.Name}} {{if .Flags}}[global flags] {{end}}command{{if .Flags}} [command flags]{{end}} [arguments...]
 
-VERSION:
-   {{.Version}}
-
-BUILD:
-   {{.Compiled}}
-{{range $key, $value := .ExtraInfo}}
-{{ $key }}:
-   {{ $value }}
-{{ end }}
 COMMANDS:
    {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}{{if .Flags}}
 GLOBAL FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{end}}
+VERSION:
+   {{.Version}}
+{{if .Compiled}}
+BUILD:
+   {{.Compiled}}{{end}}
+{{range $key, $value := .ExtraInfo}}
+{{$value}}{{end}}
 `
 
 // The text template for the command help topic.
