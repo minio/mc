@@ -41,15 +41,15 @@ func printItem(date time.Time, v int64, name string, fileType os.FileMode) {
 	fmt.Printf(console.Size("%6s ", humanize.IBytes(uint64(v))))
 
 	// just making it explicit
-	if fileType.IsDir() {
+	switch fileType.IsDir() {
+	case true:
 		// if one finds a prior suffix no need to append a new one
 		if strings.HasSuffix(name, "/") {
 			fmt.Println(console.Dir("%s", name))
 		} else {
 			fmt.Println(console.Dir("%s/", name))
 		}
-	}
-	if fileType.IsRegular() {
+	default:
 		fmt.Println(console.File("%s", name))
 	}
 }
