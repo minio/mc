@@ -393,21 +393,21 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 }
 
 func (s *CmdTestSuite) TestMbCmd(c *C) {
-	sourceURL, err := getExpandedURL("http://example.com/bucket1", nil)
+	targetURL, err := getExpandedURL("http://example.com/bucket1", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
-	sourceURLConfigMap := make(map[string]*hostConfig)
-	sourceConfig := new(hostConfig)
-	sourceConfig.AccessKeyID = ""
-	sourceConfig.SecretAccessKey = ""
-	sourceURLConfigMap[sourceURL] = sourceConfig
+	targetURLConfigMap := make(map[string]*hostConfig)
+	targetConfig := new(hostConfig)
+	targetConfig.AccessKeyID = ""
+	targetConfig.SecretAccessKey = ""
+	targetURLConfigMap[targetURL] = targetConfig
 
-	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket", "").Return(nil).Once()
-	msg, err := doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
+	msg, err := doMakeBucketCmd(methods, targetURL, targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
@@ -415,32 +415,112 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 	cl1.AssertExpectations(c)
 }
 
-func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
-	sourceURL, err := getExpandedURL("http://example.com/bucket1", nil)
+func (s *CmdTestSuite) TestAccessCmd(c *C) {
+	targetURL, err := getExpandedURL("http://example.com/bucket1", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
-	sourceURLConfigMap := make(map[string]*hostConfig)
-	sourceConfig := new(hostConfig)
-	sourceConfig.AccessKeyID = ""
-	sourceConfig.SecretAccessKey = ""
-	sourceURLConfigMap[sourceURL] = sourceConfig
+	targetURLConfigMap := make(map[string]*hostConfig)
+	targetConfig := new(hostConfig)
+	targetConfig.AccessKeyID = ""
+	targetConfig.SecretAccessKey = ""
+	targetURLConfigMap[targetURL] = targetConfig
 
-	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(nil, errors.New("Expected Failure")).Once()
-	msg, err := doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
-	c.Assert(len(msg) > 0, Equals, true)
-	c.Assert(err, Not(IsNil))
-
-	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "").Return(&net.DNSError{}).Once()
-	cl1.On("PutBucket", "").Return(nil).Once()
-	msg, err = doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "private").Return(nil).Once()
+	msg, err := doUpdateAccessCmd(methods, targetURL, "private", targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
-	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "public").Return(nil).Once()
+	msg, err = doUpdateAccessCmd(methods, targetURL, "public", targetConfig, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "readonly").Return(nil).Once()
+	msg, err = doUpdateAccessCmd(methods, targetURL, "readonly", targetConfig, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	methods.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
+
+func (s *CmdTestSuite) TestAccessCmdFailures(c *C) {
+	targetURL, err := getExpandedURL("http://example.com/bucket1", nil)
+	c.Assert(err, IsNil)
+
+	methods := &MockclientMethods{}
+	cl1 := &clientMocks.Client{}
+
+	targetURLConfigMap := make(map[string]*hostConfig)
+	targetConfig := new(hostConfig)
+	targetConfig.AccessKeyID = ""
+	targetConfig.SecretAccessKey = ""
+	targetURLConfigMap[targetURL] = targetConfig
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(nil, errors.New("Expected Failure")).Once()
+	msg, err := doMakeBucketCmd(methods, targetURL, targetConfig, false)
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "private").Return(&net.DNSError{}).Once()
+	cl1.On("PutBucket", "private").Return(nil).Once()
+	msg, err = doUpdateAccessCmd(methods, targetURL, "private", targetConfig, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	// we use <= rather than < since the original doesn't count in the retry
+	retries := globalMaxRetryFlag
+	globalMaxRetryFlag = 1
+	for i := 0; i <= globalMaxRetryFlag; i++ {
+		err := new(net.OpError)
+		err.Op = "dial"
+		err.Net = "tcp"
+		err.Err = errors.New("Another expected error")
+		cl1.On("PutBucket", "private").Return(err).Once()
+	}
+	msg, err = doUpdateAccessCmd(methods, targetURL, "private", targetConfig, false)
+	globalMaxRetryFlag = retries
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
+
+	methods.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
+
+func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
+	targetURL, err := getExpandedURL("http://example.com/bucket1", nil)
+	c.Assert(err, IsNil)
+
+	methods := &MockclientMethods{}
+	cl1 := &clientMocks.Client{}
+
+	targetURLConfigMap := make(map[string]*hostConfig)
+	targetConfig := new(hostConfig)
+	targetConfig.AccessKeyID = ""
+	targetConfig.SecretAccessKey = ""
+	targetURLConfigMap[targetURL] = targetConfig
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(nil, errors.New("Expected Failure")).Once()
+	msg, err := doMakeBucketCmd(methods, targetURL, targetConfig, false)
+	c.Assert(len(msg) > 0, Equals, true)
+	c.Assert(err, Not(IsNil))
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "").Return(&net.DNSError{}).Once()
+	cl1.On("PutBucket", "").Return(nil).Once()
+	msg, err = doMakeBucketCmd(methods, targetURL, targetConfig, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
 	// we use <= rather than < since the original doesn't count in the retry
 	retries := globalMaxRetryFlag
 	globalMaxRetryFlag = 1
@@ -451,7 +531,7 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 		err.Err = errors.New("Another expected error")
 		cl1.On("PutBucket", "").Return(err).Once()
 	}
-	msg, err = doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
+	msg, err = doMakeBucketCmd(methods, targetURL, targetConfig, false)
 	globalMaxRetryFlag = retries
 	c.Assert(len(msg) > 0, Equals, true)
 	c.Assert(err, Not(IsNil))
@@ -460,22 +540,57 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	cl1.AssertExpectations(c)
 }
 
-func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
-	sourceURL, err := getExpandedURL("bucket1", nil)
+func (s *CmdTestSuite) TestAccessCmdOnFile(c *C) {
+	targetURL, err := getExpandedURL("bucket1", nil)
 	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
-	sourceURLConfigMap := make(map[string]*hostConfig)
-	sourceConfig := new(hostConfig)
-	sourceConfig.AccessKeyID = ""
-	sourceConfig.SecretAccessKey = ""
-	sourceURLConfigMap[sourceURL] = sourceConfig
+	targetURLConfigMap := make(map[string]*hostConfig)
+	targetConfig := new(hostConfig)
+	targetConfig.AccessKeyID = ""
+	targetConfig.SecretAccessKey = ""
+	targetURLConfigMap[targetURL] = targetConfig
 
-	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "private").Return(nil).Once()
+	msg, err := doUpdateAccessCmd(methods, targetURL, "private", targetConfig, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "public").Return(nil).Once()
+	msg, err = doUpdateAccessCmd(methods, targetURL, "public", targetConfig, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
+	cl1.On("PutBucket", "readonly").Return(nil).Once()
+	msg, err = doUpdateAccessCmd(methods, targetURL, "readonly", targetConfig, false)
+	c.Assert(msg, Equals, "")
+	c.Assert(err, IsNil)
+
+	methods.AssertExpectations(c)
+	cl1.AssertExpectations(c)
+}
+
+func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
+	targetURL, err := getExpandedURL("bucket1", nil)
+	c.Assert(err, IsNil)
+
+	methods := &MockclientMethods{}
+	cl1 := &clientMocks.Client{}
+
+	targetURLConfigMap := make(map[string]*hostConfig)
+	targetConfig := new(hostConfig)
+	targetConfig.AccessKeyID = ""
+	targetConfig.SecretAccessKey = ""
+	targetURLConfigMap[targetURL] = targetConfig
+
+	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
 	cl1.On("PutBucket", "").Return(nil).Once()
-	msg, err := doMakeBucketCmd(methods, sourceURL, sourceConfig, false)
+	msg, err := doMakeBucketCmd(methods, targetURL, targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
