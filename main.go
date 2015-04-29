@@ -53,6 +53,18 @@ func checkConfig() {
 	}
 }
 
+// Build date
+var BuildDate string
+
+// getBuildDate -
+func getBuildDate() string {
+	if BuildDate == "" {
+		return ""
+	}
+	t, _ := time.Parse(time.RFC3339Nano, BuildDate)
+	return t.String()
+}
+
 // Get os/arch/platform specific information.
 // Returns a map of current os/arch/platform/memstats
 func getSystemData() map[string]string {
@@ -82,15 +94,12 @@ func getSystemData() map[string]string {
 // Version is based on MD5SUM of its binary
 var Version = mustHashBinarySelf()
 
-// Build date
-var BuildDate string
-
 func main() {
 	app := cli.NewApp()
 	app.Usage = "Minio Client for object storage and filesystems"
 	app.Version = Version
 	app.Commands = commands
-	app.Compiled, _ = time.Parse(time.RFC3339Nano, BuildDate)
+	app.Compiled = getBuildDate()
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.Before = func(ctx *cli.Context) error {
