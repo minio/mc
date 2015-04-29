@@ -143,6 +143,10 @@ func (c *s3Client) objectURL(bucket, object string) string {
 	if net.ParseIP(host) != nil {
 		return url + "/" + object
 	}
+	// if not amazon do not construct a subdomain URL
+	if !strings.Contains(c.Host, "amazonaws.com") {
+		return url + "/" + object
+	}
 	return url + object
 }
 
