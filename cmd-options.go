@@ -245,22 +245,36 @@ EXAMPLES:
 
 USAGE:
    mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} generate
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} alias NAME:HOSTURL
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} alias NAME HOSTURL
 
 EXAMPLES:
    1. Generate mc config
       $ mc config generate
 
    2. Add alias URLs
-      $ mc config alias zek:https://s3.amazonaws.com/
+      $ mc config alias zek https://s3.amazonaws.com/
 
 `,
 	}
 	updateCmd = cli.Command{
-		Name:        "update",
-		Usage:       "Check for new software updates",
-		Description: "",
-		Action:      runUpdateCmd,
+		Name:   "update",
+		Usage:  "Check for new software updates",
+		Action: runUpdateCmd,
+		CustomHelpTemplate: `Name:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} check
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} yes
+
+EXAMPLES:
+   1. Check for new updates
+      $ mc update check
+
+   2. Download new minio client locally and update
+      $ mc update yes
+
+`,
 	}
 )
 
