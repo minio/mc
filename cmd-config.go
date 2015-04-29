@@ -43,6 +43,7 @@ func runConfigCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(msg)
 	}
+	console.Infoln(msg)
 }
 
 // saveConfig writes configuration data in json format to config file.
