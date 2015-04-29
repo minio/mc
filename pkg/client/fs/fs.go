@@ -47,7 +47,7 @@ func New(path string) client.Client {
 
 // fsStat - wrapper function to get file stat
 func (f *fsClient) fsStat() (os.FileInfo, error) {
-	st, err := os.Stat(filepath.Clean(f.path))
+	st, err := os.Lstat(filepath.Clean(f.path))
 	if os.IsNotExist(err) {
 		return nil, iodine.New(NotFound{path: f.path}, nil)
 	}
@@ -139,7 +139,7 @@ func (f *fsClient) list(itemCh chan client.ItemOnChannel) {
 			Err:  iodine.New(err, nil),
 		}
 	}
-	fi, err := dir.Stat()
+	fi, err := os.Lstat(f.path)
 	if err != nil {
 		itemCh <- client.ItemOnChannel{
 			Item: nil,
@@ -147,7 +147,8 @@ func (f *fsClient) list(itemCh chan client.ItemOnChannel) {
 		}
 	}
 	defer dir.Close()
-	if fi.Mode().IsDir() {
+	switch fi.Mode().IsDir() {
+	case true:
 		// do not use ioutil.ReadDir(), since it tries to sort its
 		// output at our scale we are expecting that to slow down
 		// instead we take raw output and provide it back to the user
@@ -172,8 +173,7 @@ func (f *fsClient) list(itemCh chan client.ItemOnChannel) {
 				Err:  nil,
 			}
 		}
-	}
-	if fi.Mode().IsRegular() {
+	default:
 		item := &client.Item{
 			Name:     dir.Name(),
 			Time:     fi.ModTime(),
