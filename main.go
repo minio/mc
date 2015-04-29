@@ -57,12 +57,12 @@ func checkConfig() {
 var BuildDate string
 
 // getBuildDate -
-func getBuildDate() string {
+func getBuildDate() time.Time {
 	if BuildDate == "" {
-		return ""
+		return time.Time{}
 	}
 	t, _ := time.Parse(time.RFC3339Nano, BuildDate)
-	return t.String()
+	return t
 }
 
 // Get os/arch/platform specific information.
@@ -99,7 +99,7 @@ func main() {
 	app.Usage = "Minio Client for object storage and filesystems"
 	app.Version = Version
 	app.Commands = commands
-	app.Compiled = getBuildDate()
+	app.Compiled = getBuildDate().Format(time.RFC1123)
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.Before = func(ctx *cli.Context) error {
