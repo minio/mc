@@ -84,7 +84,7 @@ func runUpdateCmd(ctx *cli.Context) {
 			log.Debug.Println(iodine.New(err, nil))
 			console.Fatalln("Unable to parse update time:", results.LatestBuild)
 		}
-		current := getBuildDate()
+		current, _ := time.Parse(time.RFC3339Nano, BuildDate)
 		if current.IsZero() {
 			console.Fatalln("BuildDate is zero, must be a wrong build exiting..")
 		}
