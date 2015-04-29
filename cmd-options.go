@@ -240,30 +240,19 @@ EXAMPLES:
 		Name:   "config",
 		Usage:  "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
 		Action: runConfigCmd,
-		Flags: []cli.Flag{
-			cli.StringFlag{
-				Name:  "alias",
-				Usage: "Add URL aliases into config",
-			},
-		},
 		CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} generate {{if .Description}}
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} generate
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} alias NAME:HOSTURL
 
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
 EXAMPLES:
    1. Generate mc config
       $ mc config generate
 
    2. Add alias URLs
-      $ mc config --alias "zek https://s3.amazonaws.com/"
+      $ mc config alias zek:https://s3.amazonaws.com/
 
 `,
 	}
