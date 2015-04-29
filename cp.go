@@ -18,6 +18,7 @@ package main
 
 import (
 	"io"
+	"os"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -89,7 +90,22 @@ func doCopySingleSourceRecursive(methods clientMethods, sourceURL, targetURL str
 			continue
 		}
 		newSourceURL, newTargetURL := getNewURLRecursive(sourceURL, targetURL, itemCh.Item.Name)
-		doCopySingleSource(methods, newSourceURL, newTargetURL, sourceConfig, targetConfig)
+		if err := doCopySingleSource(methods, newSourceURL, newTargetURL, sourceConfig, targetConfig); err != nil {
+			// verify for directory related errors, if "open" failed on directories ignore those errors
+			switch e := iodine.ToError(err).(type) {
+			case *os.PathError:
+				switch true {
+				// even with in PathError specific error related to directory reads is ignored
+				// do not ignore any other errors, since they might be valid problems on the filesystem
+				case e.Op == "read" && e.Err.Error() == "is a directory":
+					continue
+				default:
+					return iodine.New(err, nil)
+				}
+			default:
+				return iodine.New(err, nil)
+			}
+		}
 	}
 	return nil
 }

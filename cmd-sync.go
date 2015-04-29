@@ -27,9 +27,8 @@ import (
 
 func runSyncCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
 	}
-
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
@@ -64,13 +63,13 @@ func runCopyCmdSingleSourceMultipleTargets(methods clientMethods, urls []string)
 	sourceConfig, err := getHostConfig(sourceURL)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
+		console.Fatalf("Unable to read host configuration for the source %s from config file [%s]. Reason: [%s].\n",
 			sourceURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
 	targetURLConfigMap, err := getHostConfigs(targetURLs)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
-		console.Fatalf("Unable to read host configuration for source [%s] from config file [%s]. Reason: [%s].\n",
+		console.Fatalf("Unable to read host configuration for the following targets [%s] from config file [%s]. Reason: [%s].\n",
 			targetURLs, mustGetMcConfigPath(), iodine.ToError(err))
 	}
 
