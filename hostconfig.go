@@ -82,12 +82,6 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 			if hostCfg == nil {
 				return nil, iodine.New(errInvalidAuth{}, nil)
 			}
-			// verify Auth key validity for all hosts
-			if hostCfg.AccessKeyID != globalAccessKeyID && hostCfg.SecretAccessKey != globalSecretAccessKey {
-				if !client.IsValidAccessKey(hostCfg.AccessKeyID) || !client.IsValidSecretKey(hostCfg.SecretAccessKey) {
-					return nil, iodine.New(errInvalidAuthKeys{}, nil)
-				}
-			}
 			return hostCfg, nil
 		}
 	}

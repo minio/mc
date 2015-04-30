@@ -29,6 +29,9 @@ func runSyncCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
 	}
+	if !isMcConfigExist() {
+		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+	}
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))

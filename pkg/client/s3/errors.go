@@ -103,11 +103,13 @@ func (e InvalidAuthorizationKey) Error() string {
 	return e.Err.Error()
 }
 
-// AuthorizationKeyEmpty - empty auth key provided
-type AuthorizationKeyEmpty GenericError
+// InvalidQueryURL - generic error
+type InvalidQueryURL struct {
+	URL string
+}
 
-func (e AuthorizationKeyEmpty) Error() string {
-	return e.Err.Error()
+func (e InvalidQueryURL) Error() string {
+	return "Invalid query URL: " + e.URL
 }
 
 /* **** SAMPLE ERROR RESPONSE ****

@@ -32,10 +32,14 @@ import (
 // Get - download a requested object from a given bucket
 func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error) {
 	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+	if !client.IsValidBucketName(bucket) {
 		return nil, 0, "", iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
-	req, err := c.newRequest("GET", c.objectURL(bucket, object), nil)
+	queryURL := c.objectURL(bucket, object)
+	if !c.isValidQueryURL(queryURL) {
+		return nil, 0, "", iodine.New(InvalidQueryURL{URL: queryURL}, nil)
+	}
+	req, err := c.newRequest("GET", queryURL, nil)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -58,13 +62,17 @@ func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error)
 // If length is negative, the rest of the object is returned.
 func (c *s3Client) GetPartial(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+	if !client.IsValidBucketName(bucket) {
 		return nil, 0, "", iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	req, err := c.newRequest("GET", c.objectURL(bucket, object), nil)
+	queryURL := c.objectURL(bucket, object)
+	if !c.isValidQueryURL(queryURL) {
+		return nil, 0, "", iodine.New(InvalidQueryURL{URL: queryURL}, nil)
+	}
+	req, err := c.newRequest("GET", queryURL, nil)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}

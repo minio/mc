@@ -111,9 +111,16 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 // storage implementation.
 func (c *s3Client) bucketURL(bucket string) string {
 	var url string
-	// TODO: Bucket names can contain ".".  This second check should be removed.
-	// when minio server supports buckets with "."
-	if client.IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
+	// Avoid bucket names with "." in them
+	// Citing - http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
+	//
+	// =====================
+	// When using virtual hosted–style buckets with SSL, the SSL wild card certificate
+	// only matches buckets that do not contain periods. To work around this, use HTTP
+	// or write your own certificate verification logic.
+	// =====================
+	//
+	if client.IsValidBucketName(bucket) {
 		// if localhost use PathStyle
 		if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
 			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)

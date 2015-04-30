@@ -31,7 +31,9 @@ func runAccessCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
-
+	if !isMcConfigExist() {
+		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+	}
 	config, err := getMcConfig()
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))

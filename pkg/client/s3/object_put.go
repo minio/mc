@@ -33,8 +33,12 @@ import (
 // Put - upload new object to bucket
 func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) {
 	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
+	if !client.IsValidBucketName(bucket) {
 		return nil, iodine.New(InvalidBucketName{Bucket: bucket}, nil)
+	}
+	queryURL := c.objectURL(bucket, object)
+	if !c.isValidQueryURL(queryURL) {
+		return nil, iodine.New(InvalidQueryURL{URL: queryURL}, nil)
 	}
 	r, w := io.Pipe()
 	blockingWriter := client.NewBlockingWriteCloser(w)
@@ -45,7 +49,7 @@ func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 			blockingWriter.Release(err)
 			return
 		}
-		req, err := c.newRequest("PUT", c.objectURL(bucket, object), r)
+		req, err := c.newRequest("PUT", queryURL, r)
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)

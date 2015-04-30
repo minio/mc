@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -142,8 +143,22 @@ func (c *s3Client) listRecursive(itemCh chan client.ItemOnChannel) {
 	}
 }
 
+func (c *s3Client) isValidQueryURL(queryURL string) bool {
+	u, err := url.Parse(queryURL)
+	if err != nil {
+		return false
+	}
+	if !strings.Contains(u.Scheme, "http") {
+		return false
+	}
+	return true
+}
+
 // populate s3 response and decode results into listBucketResults{}
 func (c *s3Client) decodeBucketResults(queryURL string) (*listBucketResults, error) {
+	if !c.isValidQueryURL(queryURL) {
+		return nil, iodine.New(InvalidQueryURL{URL: queryURL}, nil)
+	}
 	bres := &listBucketResults{}
 	req, err := c.newRequest("GET", queryURL, nil)
 	if err != nil {

@@ -265,14 +265,14 @@ EXAMPLES:
 
 USAGE:
    mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} check
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} yes
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} install
 
 EXAMPLES:
    1. Check for new updates
       $ mc update check
 
    2. Download new minio client locally and update
-      $ mc update yes
+      $ mc update install
 
 `,
 	}

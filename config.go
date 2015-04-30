@@ -138,8 +138,8 @@ func newConfigV1() *configV1 {
 func newConfig() (config quick.Config) {
 	conf := newConfigV1()
 	s3HostConf := new(hostConfig)
-	s3HostConf.AccessKeyID = globalAccessKeyID
-	s3HostConf.SecretAccessKey = globalSecretAccessKey
+	s3HostConf.AccessKeyID = ""
+	s3HostConf.SecretAccessKey = ""
 
 	playHostConfig := new(hostConfig)
 	playHostConfig.AccessKeyID = ""

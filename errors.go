@@ -91,13 +91,6 @@ func (e errAliasExists) Error() string {
 	return "Alias name: " + e.name + " exists"
 }
 
-// errInvalidAuthKeys - invalid authorization keys
-type errInvalidAuthKeys struct{}
-
-func (e errInvalidAuthKeys) Error() string {
-	return "Invalid authorization keys"
-}
-
 type errIsNotBucket struct {
 	path string
 }
