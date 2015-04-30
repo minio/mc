@@ -120,7 +120,7 @@ func (c *s3Client) bucketURL(bucket string) string {
 	// or write your own certificate verification logic.
 	// =====================
 	//
-	if client.IsValidBucketName(bucket) && !strings.Contains(bucket, ".") {
+	if client.IsValidBucketName(bucket) {
 		// if localhost use PathStyle
 		if strings.Contains(c.Host, "localhost") || strings.Contains(c.Host, "127.0.0.1") {
 			return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)

@@ -192,7 +192,11 @@ func (c *s3Client) getObjectMetadata(bucket, object string) (item *client.Item, 
 	if !client.IsValidBucketName(bucket) || strings.Contains(bucket, ".") {
 		return nil, iodine.New(InvalidBucketName{Bucket: bucket}, nil)
 	}
-	req, err := c.newRequest("HEAD", c.objectURL(bucket, object), nil)
+	queryURL := c.objectURL(bucket, object)
+	if !c.isValidQueryURL(queryURL) {
+		return nil, iodine.New(InvalidQueryURL{URL: queryURL}, nil)
+	}
+	req, err := c.newRequest("HEAD", queryURL, nil)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
