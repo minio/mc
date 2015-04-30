@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"time"
 
 	"encoding/json"
@@ -31,7 +32,7 @@ import (
 )
 
 const (
-	mcUpdateURL = "http://dl.minio.io/updates/mc.json"
+	mcUpdateURL = "http://dl.minio.io:9000/binaries/"
 )
 
 type updateResults struct {
@@ -56,17 +57,21 @@ func runUpdateCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
+	if !isMcConfigExist() {
+		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+	}
+	mcUpdateBinaryURL := mcUpdateURL + runtime.GOOS + "/mc"
 	switch ctx.Args().First() {
 	case "check":
-		req, err := getRequest(mcUpdateURL)
+		req, err := getRequest(mcUpdateBinaryURL)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to update:", mcUpdateURL)
+			console.Fatalln("Unable to update:", mcUpdateBinaryURL)
 		}
 		res, err := http.DefaultTransport.RoundTrip(req)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to retrieve:", mcUpdateURL)
+			console.Fatalln("Unable to retrieve:", mcUpdateBinaryURL)
 		}
 		if res.StatusCode != http.StatusOK {
 			msg := fmt.Sprint("Received invalid HTTP status: ", res.StatusCode)
@@ -91,7 +96,7 @@ func runUpdateCmd(ctx *cli.Context) {
 		if latest.After(current) {
 			printUpdateNotify("new", "old")
 		}
-	case "yes":
+	case "install":
 		console.Fatalln("Functionality not implemented yet")
 	}
 }

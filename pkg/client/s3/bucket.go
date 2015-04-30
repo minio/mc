@@ -58,9 +58,16 @@ func (c *s3Client) listBucketsInternal() ([]*client.Item, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
-		c.signRequest(req, c.Host)
+
+	// do not ignore signatures for 'listBuckets()'
+	// it is never a public request,
+	//
+	// so lets aggressively verify
+	if c.AccessKeyID == "" || c.SecretAccessKey == "" {
+		msg := "Authorization key cannot be empty for listing buckets, please choose a valid bucketname if its a public request"
+		return nil, iodine.New(errors.New(msg), nil)
 	}
+	c.signRequest(req, c.Host)
 
 	res, err = c.Transport.RoundTrip(req)
 	if err != nil {
