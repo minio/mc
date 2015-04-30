@@ -65,3 +65,4 @@ install: test-all
 
 clean:
 	@rm -fv cover.out
+	@rm -fv mc
