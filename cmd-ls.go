@@ -62,14 +62,14 @@ func runListCmd(ctx *cli.Context) {
 		if isURLRecursive(targetURL) {
 			// if recursive strip off the "..."
 			targetURL = strings.TrimSuffix(targetURL, recursiveSeparator)
-			err = doListRecursiveCmd(targetURL, targetConfig, globalDebugFlag)
+			err = doListRecursiveCmd(mcClientMethods{}, targetURL, targetConfig, globalDebugFlag)
 			err = iodine.New(err, nil)
 			if err != nil {
 				log.Debug.Println(err)
 				console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 			}
 		} else {
-			err = doListCmd(targetURL, targetConfig, globalDebugFlag)
+			err = doListCmd(mcClientMethods{}, targetURL, targetConfig, globalDebugFlag)
 			if err != nil {
 				if err != nil {
 					log.Debug.Println(err)
@@ -81,8 +81,8 @@ func runListCmd(ctx *cli.Context) {
 }
 
 // doListCmd -
-func doListCmd(targetURL string, targetConfig *hostConfig, debug bool) error {
-	clnt, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
+func doListCmd(methods clientMethods, targetURL string, targetConfig *hostConfig, debug bool) error {
+	clnt, err := methods.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
@@ -100,8 +100,8 @@ func doListCmd(targetURL string, targetConfig *hostConfig, debug bool) error {
 }
 
 // doListRecursiveCmd -
-func doListRecursiveCmd(targetURL string, targetConfig *hostConfig, debug bool) error {
-	clnt, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
+func doListRecursiveCmd(methods clientMethods, targetURL string, targetConfig *hostConfig, debug bool) error {
+	clnt, err := methods.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}

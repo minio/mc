@@ -27,8 +27,8 @@ import (
 /// mc cp - related internal functions
 
 // doCopy
-func doCopy(reader io.ReadCloser, md5hex string, length int64, targetURL string, targetConfig *hostConfig) error {
-	writeCloser, err := getTargetWriter(targetURL, targetConfig, md5hex, length)
+func doCopy(methods clientMethods, reader io.ReadCloser, md5hex string, length int64, targetURL string, targetConfig *hostConfig) error {
+	writeCloser, err := methods.getTargetWriter(targetURL, targetConfig, md5hex, length)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -60,8 +60,8 @@ func doCopy(reader io.ReadCloser, md5hex string, length int64, targetURL string,
 }
 
 // doCopySingleSource
-func doCopySingleSource(sourceURL, targetURL string, sourceConfig, targetConfig *hostConfig) error {
-	reader, length, md5hex, err := getSourceReader(sourceURL, sourceConfig)
+func doCopySingleSource(methods clientMethods, sourceURL, targetURL string, sourceConfig, targetConfig *hostConfig) error {
+	reader, length, md5hex, err := methods.getSourceReader(sourceURL, sourceConfig)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -69,19 +69,19 @@ func doCopySingleSource(sourceURL, targetURL string, sourceConfig, targetConfig 
 	newTargetURL, err := getNewTargetURL(targetURL, sourceURL)
 	switch iodine.ToError(err).(type) {
 	case errIsNotFolder:
-		return doCopy(reader, md5hex, length, targetURL, targetConfig)
+		return doCopy(methods, reader, md5hex, length, targetURL, targetConfig)
 	case errIsNotBucket:
-		return doCopy(reader, md5hex, length, targetURL, targetConfig)
+		return doCopy(methods, reader, md5hex, length, targetURL, targetConfig)
 	case nil:
-		return doCopy(reader, md5hex, length, newTargetURL, targetConfig)
+		return doCopy(methods, reader, md5hex, length, newTargetURL, targetConfig)
 	default:
 		return iodine.New(err, nil)
 	}
 }
 
 // doCopySingleSourceRecursive
-func doCopySingleSourceRecursive(sourceURL, targetURL string, sourceConfig, targetConfig *hostConfig) error {
-	sourceClnt, err := getNewClient(sourceURL, sourceConfig, globalDebugFlag)
+func doCopySingleSourceRecursive(methods clientMethods, sourceURL, targetURL string, sourceConfig, targetConfig *hostConfig) error {
+	sourceClnt, err := methods.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -90,7 +90,7 @@ func doCopySingleSourceRecursive(sourceURL, targetURL string, sourceConfig, targ
 			continue
 		}
 		newSourceURL, newTargetURL := getNewURLRecursive(sourceURL, targetURL, itemCh.Item.Name)
-		if err := doCopySingleSource(newSourceURL, newTargetURL, sourceConfig, targetConfig); err != nil {
+		if err := doCopySingleSource(methods, newSourceURL, newTargetURL, sourceConfig, targetConfig); err != nil {
 			// verify for directory related errors, if "open" failed on directories ignore those errors
 			switch e := iodine.ToError(err).(type) {
 			case *os.PathError:
@@ -111,8 +111,8 @@ func doCopySingleSourceRecursive(sourceURL, targetURL string, sourceConfig, targ
 }
 
 // doCopyMultipleSources -
-func doCopyMultipleSources(sourceURLConfigMap map[string]*hostConfig, targetURL string, targetConfig *hostConfig) error {
-	sourceURLReaderMap, err := getSourceReaders(sourceURLConfigMap)
+func doCopyMultipleSources(methods clientMethods, sourceURLConfigMap map[string]*hostConfig, targetURL string, targetConfig *hostConfig) error {
+	sourceURLReaderMap, err := getSourceReaders(methods, sourceURLConfigMap)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -121,7 +121,7 @@ func doCopyMultipleSources(sourceURLConfigMap map[string]*hostConfig, targetURL 
 		if err != nil {
 			return iodine.New(err, nil)
 		}
-		err = doCopy(sourceReader.reader, sourceReader.md5hex, sourceReader.length, newTargetURL, targetConfig)
+		err = doCopy(methods, sourceReader.reader, sourceReader.md5hex, sourceReader.length, newTargetURL, targetConfig)
 		if err != nil {
 			return iodine.New(err, map[string]string{"Source": sourceURL})
 		}

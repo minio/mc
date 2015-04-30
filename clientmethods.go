@@ -26,17 +26,25 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-/*
+// clientMethods interface for mock tests
+type clientMethods interface {
+	cpMethods
+	getNewClient(urlStr string, config *hostConfig, debug bool) (clnt client.Client, err error)
+}
+
+type mcClientMethods struct{}
+
 type sourceReader struct {
 	reader io.ReadCloser
 	length int64
 	md5hex string
 }
-*/
 
 // getSourceReader -
-func getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length int64, md5hex string, err error) {
-	sourceClnt, err := getNewClient(sourceURL, sourceConfig, globalDebugFlag)
+func (methods mcClientMethods) getSourceReader(sourceURL string, sourceConfig *hostConfig) (
+	reader io.ReadCloser, length int64, md5hex string, err error) {
+
+	sourceClnt, err := methods.getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
 	}
@@ -47,8 +55,8 @@ func getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.Read
 }
 
 // getTargetWriter -
-func getTargetWriter(targetURL string, targetConfig *hostConfig, md5hex string, length int64) (io.WriteCloser, error) {
-	targetClnt, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
+func (methods mcClientMethods) getTargetWriter(targetURL string, targetConfig *hostConfig, md5hex string, length int64) (io.WriteCloser, error) {
+	targetClnt, err := methods.getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
@@ -56,7 +64,7 @@ func getTargetWriter(targetURL string, targetConfig *hostConfig, md5hex string, 
 }
 
 // getNewClient gives a new client interface
-func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
+func (methods mcClientMethods) getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
 	t := client.GetType(urlStr)
 	switch t {
 	case client.Object: // Minio and S3 compatible object storage
