@@ -47,10 +47,11 @@ func runSyncCmd(ctx *cli.Context) {
 			console.Fatalf("Unable to parse arguments. Reason: [%s].\n", e)
 		}
 	}
-	runCopyCmdSingleSourceMultipleTargets(urls)
+	methods := mcClientMethods{}
+	runCopyCmdSingleSourceMultipleTargets(methods, urls)
 }
 
-func runCopyCmdSingleSourceMultipleTargets(urls []string) {
+func runCopyCmdSingleSourceMultipleTargets(methods clientMethods, urls []string) {
 	sourceURL := urls[0]   // first arg is source
 	targetURLs := urls[1:] // all other are targets
 
@@ -73,7 +74,7 @@ func runCopyCmdSingleSourceMultipleTargets(urls []string) {
 	}
 
 	for targetURL, targetConfig := range targetURLConfigMap {
-		err = doCopySingleSourceRecursive(sourceURL, targetURL, sourceConfig, targetConfig)
+		err = doCopySingleSourceRecursive(methods, sourceURL, targetURL, sourceConfig, targetConfig)
 		if err != nil {
 			log.Debug.Println(err)
 			console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n",

@@ -22,17 +22,17 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-type sourceReader struct {
-	reader io.ReadCloser
-	length int64
-	md5hex string
+// cpMethods - methods only valid for cp
+type cpMethods interface {
+	getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length int64, md5hex string, err error)
+	getTargetWriter(targetURL string, targetConfig *hostConfig, md5Hex string, length int64) (io.WriteCloser, error)
 }
 
 // getSourceReaders -
-func getSourceReaders(sourceURLConfigMap map[string]*hostConfig) (map[string]sourceReader, error) {
+func getSourceReaders(methods cpMethods, sourceURLConfigMap map[string]*hostConfig) (map[string]sourceReader, error) {
 	sourceURLReaderMap := make(map[string]sourceReader)
 	for sourceURL, sourceConfig := range sourceURLConfigMap {
-		reader, length, md5hex, err := getSourceReader(sourceURL, sourceConfig)
+		reader, length, md5hex, err := methods.getSourceReader(sourceURL, sourceConfig)
 		if err != nil {
 			for _, sourceReader := range sourceURLReaderMap {
 				sourceReader.reader.Close()
