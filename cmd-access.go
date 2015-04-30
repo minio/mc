@@ -66,7 +66,7 @@ func runAccessCmd(ctx *cli.Context) {
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
-		errorMsg, err := doUpdateAccessCmd(mcClientMethods{}, targetURL, acl.String(), targetConfig, globalDebugFlag)
+		errorMsg, err := doUpdateAccessCmd(targetURL, acl.String(), targetConfig, globalDebugFlag)
 		err = iodine.New(err, nil)
 		if err != nil {
 			if errorMsg == "" {
@@ -78,10 +78,10 @@ func runAccessCmd(ctx *cli.Context) {
 	}
 }
 
-func doUpdateAccessCmd(methods clientMethods, targetURL, targetACL string, targetConfig *hostConfig, debug bool) (string, error) {
+func doUpdateAccessCmd(targetURL, targetACL string, targetConfig *hostConfig, debug bool) (string, error) {
 	var err error
 	var clnt client.Client
-	clnt, err = methods.getNewClient(targetURL, targetConfig, debug)
+	clnt, err = getNewClient(targetURL, targetConfig, debug)
 	if err != nil {
 		err := iodine.New(err, nil)
 		msg := fmt.Sprintf("Unable to initialize client for [%s]. Reason: [%s].\n",

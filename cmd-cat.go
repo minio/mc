@@ -61,16 +61,16 @@ func runCatCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("reading host config for URL [%s] failed with following reason: [%s]\n", sourceURLs, iodine.ToError(err))
 	}
-	humanReadable, err := doCatCmd(mcClientMethods{}, sourceURLConfigMap, globalDebugFlag)
+	humanReadable, err := doCatCmd(sourceURLConfigMap, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(humanReadable)
 	}
 }
 
-func doCatCmd(methods clientMethods, sourceURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
+func doCatCmd(sourceURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
 	for url, config := range sourceURLConfigMap {
-		sourceClnt, err := methods.getNewClient(url, config, debug)
+		sourceClnt, err := getNewClient(url, config, debug)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}

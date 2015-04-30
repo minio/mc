@@ -61,7 +61,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
-		errorMsg, err := doMakeBucketCmd(mcClientMethods{}, targetURL, targetConfig, globalDebugFlag)
+		errorMsg, err := doMakeBucketCmd(targetURL, targetConfig, globalDebugFlag)
 		err = iodine.New(err, nil)
 		if err != nil {
 			if errorMsg == "" {
@@ -74,10 +74,10 @@ func runMakeBucketCmd(ctx *cli.Context) {
 }
 
 // doMakeBucketCmd -
-func doMakeBucketCmd(methods clientMethods, targetURL string, targetConfig *hostConfig, debug bool) (string, error) {
+func doMakeBucketCmd(targetURL string, targetConfig *hostConfig, debug bool) (string, error) {
 	var err error
 	var clnt client.Client
-	clnt, err = methods.getNewClient(targetURL, targetConfig, debug)
+	clnt, err = getNewClient(targetURL, targetConfig, debug)
 	if err != nil {
 		err := iodine.New(err, nil)
 		msg := fmt.Sprintf("Unable to initialize client for [%s]. Reason: [%s].\n",
