@@ -81,7 +81,7 @@ func (s *MySuite) TestBucketACL(c *C) {
 		{"private", true},
 		{"public-read", true},
 		{"public-read-write", true},
-		{"", true},
+		{"", false},
 		{"readonly", false},
 		{"invalid", false},
 	}

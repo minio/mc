@@ -34,7 +34,8 @@ type Client interface {
 	ListRecursive() <-chan ItemOnChannel
 
 	// Bucket operations
-	PutBucket(acl string) error
+	PutBucket() error
+	PutBucketACL(acl string) error
 
 	// Object operations
 	Get() (body io.ReadCloser, size int64, md5 string, err error)
