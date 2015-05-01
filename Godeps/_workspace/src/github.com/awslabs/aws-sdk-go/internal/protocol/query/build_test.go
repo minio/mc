@@ -1494,10 +1494,10 @@ func TestInputService9ProtocolTestRecursiveShapesCase4(t *testing.T) {
 	input := &InputService9TestShapeInputShape{
 		RecursiveStruct: &InputService9TestShapeInputService9TestShapeRecursiveStructType{
 			RecursiveList: []*InputService9TestShapeInputService9TestShapeRecursiveStructType{
-				&InputService9TestShapeInputService9TestShapeRecursiveStructType{
+				{
 					NoRecurse: aws.String("foo"),
 				},
-				&InputService9TestShapeInputService9TestShapeRecursiveStructType{
+				{
 					NoRecurse: aws.String("bar"),
 				},
 			},
@@ -1529,10 +1529,10 @@ func TestInputService9ProtocolTestRecursiveShapesCase5(t *testing.T) {
 	input := &InputService9TestShapeInputShape{
 		RecursiveStruct: &InputService9TestShapeInputService9TestShapeRecursiveStructType{
 			RecursiveList: []*InputService9TestShapeInputService9TestShapeRecursiveStructType{
-				&InputService9TestShapeInputService9TestShapeRecursiveStructType{
+				{
 					NoRecurse: aws.String("foo"),
 				},
-				&InputService9TestShapeInputService9TestShapeRecursiveStructType{
+				{
 					RecursiveStruct: &InputService9TestShapeInputService9TestShapeRecursiveStructType{
 						NoRecurse: aws.String("bar"),
 					},
@@ -1566,10 +1566,10 @@ func TestInputService9ProtocolTestRecursiveShapesCase6(t *testing.T) {
 	input := &InputService9TestShapeInputShape{
 		RecursiveStruct: &InputService9TestShapeInputService9TestShapeRecursiveStructType{
 			RecursiveMap: &map[string]*InputService9TestShapeInputService9TestShapeRecursiveStructType{
-				"bar": &InputService9TestShapeInputService9TestShapeRecursiveStructType{
+				"bar": {
 					NoRecurse: aws.String("bar"),
 				},
-				"foo": &InputService9TestShapeInputService9TestShapeRecursiveStructType{
+				"foo": {
 					NoRecurse: aws.String("foo"),
 				},
 			},
@@ -1593,4 +1593,3 @@ func TestInputService9ProtocolTestRecursiveShapesCase6(t *testing.T) {
 	// assert headers
 
 }
-

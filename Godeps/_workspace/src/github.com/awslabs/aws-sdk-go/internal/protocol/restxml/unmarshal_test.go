@@ -1318,4 +1318,3 @@ func TestOutputService11ProtocolTestScalarMembersInHeadersCase1(t *testing.T) {
 	assert.Equal(t, true, *out.TrueBool)
 
 }
-

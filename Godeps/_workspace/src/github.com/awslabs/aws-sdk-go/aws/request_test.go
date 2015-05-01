@@ -62,9 +62,9 @@ type jsonErrorResponse struct {
 func TestRequestRecoverRetry(t *testing.T) {
 	reqNum := 0
 	reqs := []http.Response{
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 200, Body: body(`{"data":"valid"}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 200, Body: body(`{"data":"valid"}`)},
 	}
 
 	s := NewService(&Config{MaxRetries: 10})
@@ -92,10 +92,10 @@ func TestRequestExhaustRetries(t *testing.T) {
 
 	reqNum := 0
 	reqs := []http.Response{
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
 	}
 
 	s := NewService(&Config{MaxRetries: -1})
