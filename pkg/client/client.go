@@ -29,12 +29,13 @@ type Client interface {
 	MultipartUpload
 
 	// Common operations
-	Stat() (item *Item, err error)
-	List() <-chan ItemOnChannel
-	ListRecursive() <-chan ItemOnChannel
+	Stat() (content *Content, err error)
+	List() <-chan ContentOnChannel
+	ListRecursive() <-chan ContentOnChannel
 
 	// Bucket operations
-	PutBucket(acl string) error
+	PutBucket() error
+	PutBucketACL(acl string) error
 
 	// Object operations
 	Get() (body io.ReadCloser, size int64, md5 string, err error)
@@ -48,7 +49,7 @@ type MultipartUpload interface {
 	UploadPart(uploadID string, body io.ReadSeeker, contentLength, partNumber int64) (md5hex string, err error)
 	CompleteMultiPartUpload(uploadID string) (location, md5hex string, err error)
 	AbortMultiPartUpload(uploadID string) error
-	ListParts(uploadID string) (items *PartItems, err error)
+	ListParts(uploadID string) (contents *PartContents, err error)
 }
 
 // Part - part xml response
@@ -59,22 +60,22 @@ type Part struct {
 	Size         int64
 }
 
-// PartItems - part xml items response
-type PartItems struct {
+// PartContents - part xml contents response
+type PartContents struct {
 	Key         string
 	UploadID    string
 	IsTruncated bool
 	Parts       []*Part
 }
 
-// ItemOnChannel - List items on channel
-type ItemOnChannel struct {
-	Item *Item
-	Err  error
+// ContentOnChannel - List contents on channel
+type ContentOnChannel struct {
+	Content *Content
+	Err     error
 }
 
-// Item - object item list
-type Item struct {
+// Content - object content list
+type Content struct {
 	Name     string
 	Time     time.Time
 	Size     int64

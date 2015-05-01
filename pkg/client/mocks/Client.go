@@ -29,7 +29,16 @@ type Client struct {
 }
 
 // PutBucket is a mock method
-func (m *Client) PutBucket(acl string) error {
+func (m *Client) PutBucket() error {
+	ret := m.Called()
+
+	r0 := ret.Error(0)
+
+	return r0
+}
+
+// PutBucketACL is a mock method
+func (m *Client) PutBucketACL(acl string) error {
 	ret := m.Called(acl)
 
 	r0 := ret.Error(0)
@@ -38,12 +47,12 @@ func (m *Client) PutBucket(acl string) error {
 }
 
 // Stat is a mock method
-func (m *Client) Stat() (*client.Item, error) {
+func (m *Client) Stat() (*client.Content, error) {
 	ret := m.Called()
 
-	var r0 *client.Item
+	var r0 *client.Content
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*client.Item)
+		r0 = ret.Get(0).(*client.Content)
 	}
 
 	r1 := ret.Error(1)
@@ -52,16 +61,16 @@ func (m *Client) Stat() (*client.Item, error) {
 }
 
 // List is a mock method
-func (m *Client) List() <-chan client.ItemOnChannel {
+func (m *Client) List() <-chan client.ContentOnChannel {
 	ret := m.Called()
-	r0 := ret.Get(0).(chan client.ItemOnChannel)
+	r0 := ret.Get(0).(chan client.ContentOnChannel)
 	return r0
 }
 
 // ListRecursive is a mock method
-func (m *Client) ListRecursive() <-chan client.ItemOnChannel {
+func (m *Client) ListRecursive() <-chan client.ContentOnChannel {
 	ret := m.Called()
-	r0 := ret.Get(0).(chan client.ItemOnChannel)
+	r0 := ret.Get(0).(chan client.ContentOnChannel)
 	return r0
 }
 
@@ -140,12 +149,12 @@ func (m *Client) AbortMultiPartUpload(uploadID string) error {
 }
 
 // ListParts is a mock method
-func (m *Client) ListParts(uploadID string) (*client.PartItems, error) {
+func (m *Client) ListParts(uploadID string) (*client.PartContents, error) {
 	ret := m.Called(uploadID)
 
-	var r0 *client.PartItems
+	var r0 *client.PartContents
 	if ret.Get(0) != nil {
-		r0 = ret.Get(0).(*client.PartItems)
+		r0 = ret.Get(0).(*client.PartContents)
 	}
 	r1 := ret.Error(1)
 

@@ -29,17 +29,36 @@ import (
 
 /// Object API operations
 
-// Get - download a requested object from a given bucket
-func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error) {
-	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) {
-		return nil, 0, "", iodine.New(InvalidBucketName{Bucket: bucket}, nil)
+func (c *s3Client) setRange(req *http.Request, offset, length int64) (*http.Request, error) {
+	if offset < 0 {
+		return nil, iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	queryURL := c.objectURL(bucket, object)
+	if length >= 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
+	} else {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+	}
+	return req, nil
+}
+
+func (c *s3Client) get() (*http.Request, error) {
+	queryURL, err := c.getRequestURL()
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
 	if !c.isValidQueryURL(queryURL) {
-		return nil, 0, "", iodine.New(InvalidQueryURL{URL: queryURL}, nil)
+		return nil, iodine.New(InvalidQueryURL{URL: queryURL}, nil)
 	}
 	req, err := c.newRequest("GET", queryURL, nil)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	return req, nil
+}
+
+// Get - download a requested object from a given bucket
+func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error) {
+	req, err := c.get()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
@@ -61,35 +80,21 @@ func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error)
 // GetPartial fetches part of the s3 object in bucket.
 // If length is negative, the rest of the object is returned.
 func (c *s3Client) GetPartial(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
-	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) {
-		return nil, 0, "", iodine.New(InvalidBucketName{Bucket: bucket}, nil)
-	}
-	if offset < 0 {
-		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
-	}
-	queryURL := c.objectURL(bucket, object)
-	if !c.isValidQueryURL(queryURL) {
-		return nil, 0, "", iodine.New(InvalidQueryURL{URL: queryURL}, nil)
-	}
-	req, err := c.newRequest("GET", queryURL, nil)
+	req, err := c.get()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	if length >= 0 {
-		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
-	} else {
-		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+	req, err = c.setRange(req, offset, length)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
 	}
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		c.signRequest(req, c.Host)
 	}
-
 	res, err := c.Transport.RoundTrip(req)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusPartialContent:
 		return res.Body, res.ContentLength, res.Header.Get("ETag"), nil

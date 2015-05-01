@@ -85,11 +85,11 @@ func doCopySingleSourceRecursive(methods clientMethods, sourceURL, targetURL str
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	for itemCh := range sourceClnt.ListRecursive() {
-		if itemCh.Err != nil {
+	for contentCh := range sourceClnt.ListRecursive() {
+		if contentCh.Err != nil {
 			continue
 		}
-		newSourceURL, newTargetURL := getNewURLRecursive(sourceURL, targetURL, itemCh.Item.Name)
+		newSourceURL, newTargetURL := getNewURLRecursive(sourceURL, targetURL, contentCh.Content.Name)
 		if err := doCopySingleSource(methods, newSourceURL, newTargetURL, sourceConfig, targetConfig); err != nil {
 			// verify for directory related errors, if "open" failed on directories ignore those errors
 			switch e := iodine.ToError(err).(type) {
