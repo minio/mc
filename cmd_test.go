@@ -715,11 +715,14 @@ func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
 	c.Assert(err, IsNil)
 	dir, err := getMcConfigDir()
 	c.Assert(err, IsNil)
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		c.Assert(dir, Equals, path.Join(u.HomeDir, ".mc/"))
-	} else if runtime.GOOS == "windows" {
+	case "windows":
 		c.Assert(dir, Equals, path.Join(u.HomeDir, "mc/"))
-	} else {
+	case "darwin":
+		c.Assert(dir, Equals, path.Join(u.HomeDir, ".mc/"))
+	default:
 		c.Fail()
 	}
 	c.Assert(mustGetMcConfigDir(), Equals, dir)
@@ -728,11 +731,14 @@ func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
 func (s *CmdTestSuite) TestGetMcConfigPath(c *C) {
 	dir, err := getMcConfigPath()
 	c.Assert(err, IsNil)
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
-	} else if runtime.GOOS == "windows" {
+	case "windows":
 		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
-	} else {
+	case "darwin":
+		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
+	default:
 		c.Fail()
 	}
 	c.Assert(mustGetMcConfigPath(), Equals, dir)
@@ -751,7 +757,6 @@ func (s *CmdTestSuite) TestIsvalidAliasName(c *C) {
 }
 
 func (s *CmdTestSuite) TestEmptyExpansions(c *C) {
-	//	c.Skip("Test still being written")
 	url, err := aliasExpand("hello", nil)
 	c.Assert(url, Equals, "hello")
 	c.Assert(err, IsNil)
