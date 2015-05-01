@@ -195,7 +195,7 @@ var subResList = []string{
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
 func (a *s3Client) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request, host string) {
-	bucket := a.bucketFromHost(req, host)
+	bucket, _ := a.url2BucketAndObject()
 	if bucket != "" {
 		buf.WriteByte('/')
 		buf.WriteString(bucket)
@@ -221,31 +221,4 @@ func (a *s3Client) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Reque
 			}
 		}
 	}
-}
-
-// hasDotSuffix reports whether s ends with "." + suffix.
-func hasDotSuffix(s string, suffix string) bool {
-	return len(s) >= len(suffix)+1 && strings.HasSuffix(s, suffix) && s[len(s)-len(suffix)-1] == '.'
-}
-
-func (a *s3Client) bucketFromHost(req *http.Request, host string) string {
-	reqHost := req.Host
-	if reqHost == "" {
-		host = req.URL.Host
-	}
-
-	if reqHost == strings.TrimPrefix(host, "http://") {
-		return ""
-	}
-
-	if reqHost == strings.TrimPrefix(host, "https://") {
-		return ""
-	}
-
-	if reqHostSuffix := strings.TrimPrefix(host, "https://"); hasDotSuffix(reqHost, reqHostSuffix) {
-		return reqHost[:len(reqHost)-len(reqHostSuffix)-1]
-	}
-
-	reqHost, _, _ = net.SplitHostPort(reqHost)
-	return reqHost
 }
