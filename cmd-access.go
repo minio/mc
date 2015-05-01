@@ -39,7 +39,6 @@ func runAccessCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("loading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
-
 	targetURLConfigMap := make(map[string]*hostConfig)
 	targetURLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {

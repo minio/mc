@@ -24,9 +24,9 @@ import (
 	"github.com/fatih/color"
 )
 
-// go get update string
+// update string
 const (
-	updateString = "go get -u github.com/minio-io/mc"
+	updateString = "mc cp " + mcUpdateURL + " ${HOME}/bin/mc"
 )
 
 // intMax - return maximum value for any given integer
@@ -42,20 +42,17 @@ func printUpdateNotify(latestVersion, currentVersion string) {
 	// TODO - make this configurable
 	//
 	// initialize coloring
-	green := color.New(color.FgGreen)
-	boldGreen := green.Add(color.Bold).SprintFunc()
 	blue := color.New(color.FgBlue).SprintFunc()
-	blueFaint := color.New(color.FgBlue, color.BlinkSlow).SprintfFunc()
 	yellow := color.New(color.FgYellow).SprintfFunc()
 
 	// calculate length without color coding, due to ANSI color characters padded to actual
 	// string the final length is wrong than the original string length
-	line1Length := len(fmt.Sprintf("  Update available: %s (current: %s)", latestVersion, currentVersion))
-	line2Length := len(fmt.Sprintf("  Run %s to update. ", updateString))
+	line1Length := len(fmt.Sprintf("  Update available: "))
+	line2Length := len(fmt.Sprintf("  Run \"%s\" to update. ", updateString))
 
 	// populate lines with color coding
-	line1InColor := fmt.Sprintf("  Update available: %s (current: %s)", boldGreen(latestVersion), blueFaint(currentVersion))
-	line2InColor := fmt.Sprintf("  Run %s to update. ", blue(updateString))
+	line1InColor := fmt.Sprintf("  Update available: ")
+	line2InColor := fmt.Sprintf("  Run \"%s\" to update. ", blue(updateString))
 
 	// calculate the rectangular box size
 	maxContentWidth := intMax(line1Length, line2Length)

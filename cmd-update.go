@@ -17,13 +17,8 @@
 package main
 
 import (
-	"errors"
-	"fmt"
 	"runtime"
 	"time"
-
-	"encoding/json"
-	"net/http"
 
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
@@ -32,24 +27,27 @@ import (
 )
 
 const (
-	mcUpdateURL = "http://dl.minio.io:9000/binaries/"
+	mcUpdateURL = "http://dl.minio.io:9000/updates/2015/Apr" + "/mc" + "." + runtime.GOOS + "." + runtime.GOARCH
 )
 
-type updateResults struct {
-	Version     uint // this is config version
-	LatestBuild string
-	Signature   string
-}
-
-// getRequest -
-func getRequest(url string) (*http.Request, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func doUpdateCheck(methods mcClientMethods, config *hostConfig) (string, error) {
+	clnt, err := methods.getNewClient(mcUpdateURL, config, globalDebugFlag)
 	if err != nil {
-		msg := fmt.Sprintf("s3 client; invalid URL: %v", err)
-		return nil, errors.New(msg)
+		return "Unable to create client: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
 	}
-	req.Header.Set("User-Agent", mcUserAgent)
-	return req, nil
+	latest, err := clnt.Stat()
+	if err != nil {
+		return "Unable to create client: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+	}
+	current, _ := time.Parse(time.RFC3339Nano, BuildDate)
+	if current.IsZero() {
+		return "BuildDate is zero, must be a wrong build exiting..", iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+	}
+	if latest.Time.After(current) {
+		printUpdateNotify("new", "old")
+	}
+	return "", nil
+
 }
 
 // runUpdateCmd -
@@ -60,43 +58,17 @@ func runUpdateCmd(ctx *cli.Context) {
 	if !isMcConfigExist() {
 		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
 	}
-	mcUpdateBinaryURL := mcUpdateURL + runtime.GOOS + "/mc"
+	hostConfig, err := getHostConfig(mcUpdateURL)
+	if err != nil {
+		log.Debug.Println(iodine.New(err, nil))
+		console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", mcUpdateURL, iodine.ToError(err))
+	}
 	switch ctx.Args().First() {
 	case "check":
-		req, err := getRequest(mcUpdateBinaryURL)
+		msg, err := doUpdateCheck(mcClientMethods{}, hostConfig)
 		if err != nil {
 			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to update:", mcUpdateBinaryURL)
+			console.Fatalf(msg)
 		}
-		res, err := http.DefaultTransport.RoundTrip(req)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to retrieve:", mcUpdateBinaryURL)
-		}
-		if res.StatusCode != http.StatusOK {
-			msg := fmt.Sprint("Received invalid HTTP status: ", res.StatusCode)
-			log.Debug.Println(iodine.New(errors.New(msg), nil))
-			console.Fatalln(msg)
-		}
-		results := updateResults{}
-		err = json.NewDecoder(res.Body).Decode(&results)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to parse JSON:", mcUpdateURL)
-		}
-		latest, err := time.Parse(time.RFC3339Nano, results.LatestBuild)
-		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
-			console.Fatalln("Unable to parse update time:", results.LatestBuild)
-		}
-		current, _ := time.Parse(time.RFC3339Nano, BuildDate)
-		if current.IsZero() {
-			console.Fatalln("BuildDate is zero, must be a wrong build exiting..")
-		}
-		if latest.After(current) {
-			printUpdateNotify("new", "old")
-		}
-	case "install":
-		console.Fatalln("Functionality not implemented yet")
 	}
 }
