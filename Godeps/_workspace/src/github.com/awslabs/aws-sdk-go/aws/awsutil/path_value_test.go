@@ -16,8 +16,8 @@ type Struct struct {
 }
 
 var data = Struct{
-	A: []Struct{Struct{C: "value1"}, Struct{C: "value2"}, Struct{C: "value3"}},
-	a: []Struct{Struct{C: "value1"}, Struct{C: "value2"}, Struct{C: "value3"}},
+	A: []Struct{{C: "value1"}, {C: "value2"}, {C: "value3"}},
+	a: []Struct{{C: "value1"}, {C: "value2"}, {C: "value3"}},
 	B: &Struct{B: &Struct{C: "terminal"}, D: &Struct{C: "terminal2"}},
 	C: "initial",
 }
