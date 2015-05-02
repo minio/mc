@@ -23,7 +23,6 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 const (
@@ -60,14 +59,14 @@ func runUpdateCmd(ctx *cli.Context) {
 	}
 	hostConfig, err := getHostConfig(mcUpdateURL)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", mcUpdateURL, iodine.ToError(err))
 	}
 	switch ctx.Args().First() {
 	case "check":
 		msg, err := doUpdateCheck(hostConfig)
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf(msg)
 		}
 	}

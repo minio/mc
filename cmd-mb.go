@@ -24,7 +24,6 @@ import (
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // runMakeBucketCmd is the handler for mc mb command
@@ -37,7 +36,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read config file [%s].\n", mustGetMcConfigPath())
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
@@ -45,17 +44,17 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unknown URL type [%s] passed. Reason: [%s].\n", e.url, e)
 		default:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Error in parsing path or URL. Reason: [%s].\n", e)
 		}
 	}
 	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
@@ -67,7 +66,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 			if errorMsg == "" {
 				errorMsg = "Empty error message.  Please rerun this command with --debug and file a bug report."
 			}
-			log.Debug.Println(err)
+			console.Debugln(err)
 			console.Errorf("%s", errorMsg)
 		}
 	}

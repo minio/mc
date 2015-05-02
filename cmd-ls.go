@@ -24,7 +24,6 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // runListCmd - is a handler for mc ls command
@@ -37,7 +36,7 @@ func runListCmd(ctx *cli.Context) {
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read config file [%s]. Reason: [%s].\n", mustGetMcConfigPath(), iodine.ToError(err))
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
@@ -46,16 +45,16 @@ func runListCmd(ctx *cli.Context) {
 		if err != nil {
 			switch iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
-				log.Debug.Println(iodine.New(err, nil))
+				console.Debugln(iodine.New(err, nil))
 				console.Fatalf("Unknown type of URL [%s].\n", arg)
 			default:
-				log.Debug.Println(iodine.New(err, nil))
+				console.Debugln(iodine.New(err, nil))
 				console.Fatalf("Unable to parse argument [%s]. Reason: [%s].\n", arg, iodine.ToError(err))
 			}
 		}
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unable to read host configuration for [%s] from config file [%s]. Reason: [%s].\n",
 				targetURL, mustGetMcConfigPath(), iodine.ToError(err))
 		}
@@ -68,14 +67,14 @@ func runListCmd(ctx *cli.Context) {
 			err = doListRecursiveCmd(targetURL, targetConfig, globalDebugFlag)
 			err = iodine.New(err, nil)
 			if err != nil {
-				log.Debug.Println(err)
+				console.Debugln(err)
 				console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 			}
 		} else {
 			err = doListCmd(targetURL, targetConfig, globalDebugFlag)
 			if err != nil {
 				if err != nil {
-					log.Debug.Println(err)
+					console.Debugln(err)
 					console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 				}
 			}

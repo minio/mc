@@ -28,6 +28,9 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
+// NoDebugPrint defines if the input should be printed or not. By default it's set to true.
+var NoDebugPrint bool = true
+
 var (
 	mutex = &sync.RWMutex{}
 
@@ -66,11 +69,23 @@ var (
 	Infof = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Info, f, a...) }
 
 	// Debug prints a debug message
-	Debug = func(a ...interface{}) { print(themesDB[currThemeName].Debug, a...) }
+	Debug = func(a ...interface{}) {
+		if !NoDebugPrint {
+			print(themesDB[currThemeName].Debug, a...)
+		}
+	}
 	// Debugln prints a debug message with a new line
-	Debugln = func(a ...interface{}) { println(themesDB[currThemeName].Debug, a...) }
+	Debugln = func(a ...interface{}) {
+		if !NoDebugPrint {
+			println(themesDB[currThemeName].Debug, a...)
+		}
+	}
 	// Debugf prints a debug message with formatting
-	Debugf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Debug, f, a...) }
+	Debugf = func(f string, a ...interface{}) {
+		if !NoDebugPrint {
+			printf(themesDB[currThemeName].Debug, f, a...)
+		}
+	}
 
 	// File - File("foo.txt")
 	File = themesDB[currThemeName].File.SprintfFunc()
@@ -214,16 +229,17 @@ func SetTheme(themeName string) error {
 
 	mutex.Lock()
 
-	currThemeName = themeName
-	theme := themesDB[currThemeName]
-
 	// Just another additional precaution to completely disable color.
 	// Color theme is also necessary, because it does other useful things like exit-on-fatal..
-	if currThemeName == "nocolor" {
+	switch currThemeName {
+	case "nocolor":
 		color.NoColor = true
-	} else {
+	default:
 		color.NoColor = false
 	}
+
+	currThemeName = themeName
+	theme := themesDB[currThemeName]
 
 	// Error prints a error message
 	Error = func(a ...interface{}) { print(theme.Error, a...) }
@@ -240,11 +256,23 @@ func SetTheme(themeName string) error {
 	Infof = func(f string, a ...interface{}) { printf(theme.Info, f, a...) }
 
 	// Debug prints a debug message
-	Debug = func(a ...interface{}) { print(theme.Debug, a...) }
+	Debug = func(a ...interface{}) {
+		if !NoDebugPrint {
+			print(theme.Debug, a...)
+		}
+	}
 	// Debugln prints a debug message with a new line
-	Debugln = func(a ...interface{}) { println(theme.Debug, a...) }
+	Debugln = func(a ...interface{}) {
+		if !NoDebugPrint {
+			println(theme.Debug, a...)
+		}
+	}
 	// Debugf prints a debug message with formatting
-	Debugf = func(f string, a ...interface{}) { printf(theme.Debug, f, a...) }
+	Debugf = func(f string, a ...interface{}) {
+		if !NoDebugPrint {
+			printf(theme.Debug, f, a...)
+		}
+	}
 
 	Dir = theme.Dir.SprintfFunc()
 	File = theme.File.SprintfFunc()

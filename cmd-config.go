@@ -23,7 +23,6 @@ import (
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/mc/pkg/quick"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // runConfigCmd is the handle for "mc config" sub-command
@@ -35,12 +34,12 @@ func runConfigCmd(ctx *cli.Context) {
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
-		log.Debug.Println(iodine.New(errInvalidArgument{}, nil))
+		console.Debugln(iodine.New(errInvalidArgument{}, nil))
 		console.Fatalln("Incorrect number of arguments, please use \"mc config help\"")
 	}
 	msg, err := doConfig(arg, tailArgs)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalln(msg)
 	}
 	console.Infoln(msg)

@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"runtime"
@@ -29,14 +28,13 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 // Check for the environment early on and gracefully report.
 func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalln("Unable to determine current user")
 	}
 
@@ -48,7 +46,7 @@ func checkConfig() {
 	// Ensures config file is sane
 	_, err = getMcConfig()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read config file: %s\n", mustGetMcConfigPath())
 	}
 }
@@ -108,8 +106,7 @@ func main() {
 		globalMaxRetryFlag = ctx.GlobalInt("retry")
 		if globalDebugFlag {
 			app.ExtraInfo = getSystemData()
-		} else {
-			log.Debug = log.New(ioutil.Discard, "", 0)
+			console.NoDebugPrint = false
 		}
 		themeName := ctx.GlobalString("theme")
 		if console.IsValidTheme(themeName) {
