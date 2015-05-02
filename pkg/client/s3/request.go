@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -73,12 +72,6 @@ func (c *s3Client) getRequestURL() (string, error) {
 	// or write your own certificate verification logic.
 	// =====================
 	//
-	if !client.IsValidBucketName(bucket) {
-		return "", iodine.New(InvalidBucketName{Bucket: bucket}, nil)
-	}
-	if !client.IsValidObject(object) {
-		return "", iodine.New(InvalidObjectName{Bucket: bucket, Object: object}, nil)
-	}
 	switch {
 	case bucket == "" && object == "":
 		return fmt.Sprintf("%s://%s/", c.Scheme, c.Host), nil

@@ -42,10 +42,7 @@ func isValidBucketACL(acl string) bool {
 
 // PutBucket - create a new bucket
 func (c *s3Client) PutBucket() error {
-	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) {
-		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
-	}
+	_, object := c.url2BucketAndObject()
 	if object != "" {
 		return iodine.New(InvalidQueryURL{URL: ""}, nil)
 	}
@@ -81,10 +78,7 @@ func (c *s3Client) PutBucketACL(acl string) error {
 	if !isValidBucketACL(acl) {
 		return iodine.New(InvalidACL{ACL: acl}, nil)
 	}
-	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) {
-		return iodine.New(InvalidBucketName{Bucket: bucket}, nil)
-	}
+	_, object := c.url2BucketAndObject()
 	if object != "" {
 		return iodine.New(InvalidQueryURL{URL: ""}, nil)
 	}

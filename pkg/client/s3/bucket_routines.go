@@ -181,9 +181,9 @@ func (c *s3Client) filterContents(startAt, marker, prefix, delimiter string, cts
 }
 
 // Populare query URL for Listobjects requests
-func (c *s3Client) getQueryURL(marker, prefix, delimiter string, fetchN int) string {
+func (c *s3Client) getQueryURL(bucket, marker, prefix, delimiter string, fetchN int) string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.mustGetRequestURL(), fetchN))
+	buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.getBucketRequestURL(bucket), fetchN))
 	switch true {
 	case marker != "":
 		buffer.WriteString(fmt.Sprintf("&marker=%s", url.QueryEscape(marker)))
@@ -211,7 +211,7 @@ func (c *s3Client) listObjects(bucket, startAt, prefix, delimiter string, maxKey
 		if fetchN > globalMaxKeys {
 			fetchN = globalMaxKeys
 		}
-		bres, err := c.decodeBucketResults(c.getQueryURL(marker, prefix, delimiter, fetchN))
+		bres, err := c.decodeBucketResults(c.getQueryURL(bucket, marker, prefix, delimiter, fetchN))
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
