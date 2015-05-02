@@ -17,6 +17,8 @@
 package main
 
 import (
+	"io/ioutil"
+	"os"
 	"os/user"
 	"path"
 	"runtime"
@@ -28,6 +30,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	. "github.com/minio-io/check"
+	"github.com/minio-io/mc/pkg/quick"
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
@@ -40,6 +43,70 @@ var _ = Suite(&CmdTestSuite{})
 func mustGetMcConfigDir() string {
 	dir, _ := getMcConfigDir()
 	return dir
+}
+
+func (s *CmdTestSuite) TestGetNewClient(c *C) {
+	_, err := getNewClient("http://example.com/bucket1", &hostConfig{}, false)
+	c.Assert(err, IsNil)
+
+	_, err = getNewClient("file", &hostConfig{}, false)
+	c.Assert(err, IsNil)
+
+	_, err = getNewClient("%", &hostConfig{}, false)
+	c.Assert(err, Not(IsNil))
+}
+
+func (s *CmdTestSuite) TestNewConfigV1(c *C) {
+	root, err := ioutil.TempDir(os.TempDir(), "mc-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+
+	conf := newConfig()
+	configFile := path.Join(root, "config.json")
+	err = conf.Save(configFile)
+	c.Assert(err, IsNil)
+
+	confNew := newConfigV1()
+	config := quick.New(confNew)
+	err = config.Load(configFile)
+	c.Assert(err, IsNil)
+	data := config.Data().(*configV1)
+
+	type aliases struct {
+		name string
+		url  string
+	}
+
+	want := []aliases{
+		{
+			"s3",
+			"https://s3.amazonaws.com",
+		},
+		{
+			"play",
+			"http://play.minio.io:9000",
+		},
+		{
+			"localhost",
+			"http://localhost:9000",
+		},
+	}
+	for _, alias := range want {
+		url, ok := data.Aliases[alias.name]
+		c.Assert(ok, Equals, true)
+		c.Assert(url, Equals, alias.url)
+	}
+
+}
+
+func (s *CmdTestSuite) TestValidACL(c *C) {
+	acl := bucketACL("private")
+	c.Assert(acl.isValidBucketACL(), Equals, true)
+}
+
+func (s *CmdTestSuite) TestInvalidACL(c *C) {
+	acl := bucketACL("invalid")
+	c.Assert(acl.isValidBucketACL(), Equals, false)
 }
 
 func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {

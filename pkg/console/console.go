@@ -29,7 +29,7 @@ import (
 )
 
 // NoDebugPrint defines if the input should be printed or not. By default it's set to true.
-var NoDebugPrint bool = true
+var NoDebugPrint = true
 
 var (
 	mutex = &sync.RWMutex{}
