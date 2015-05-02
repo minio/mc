@@ -17,12 +17,9 @@
 package s3
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
-	"github.com/awslabs/aws-sdk-go/aws"
-	"github.com/awslabs/aws-sdk-go/service/s3"
 	"github.com/minio-io/mc/pkg/client"
 )
 
@@ -41,15 +38,10 @@ func New(config *Config) client.Client {
 	} else {
 		transport = http.DefaultTransport
 	}
-	awsConf := aws.DefaultConfig
-	awsConf.Credentials = aws.Creds(config.AccessKeyID, config.SecretAccessKey, "")
-	awsConf.HTTPClient = &http.Client{Transport: transport}
-	awsConf.Logger = ioutil.Discard
 	s3c := &s3Client{
 		&Meta{
 			Config:    config,
 			Transport: transport,
-			S3:        s3.New(awsConf),
 		}, u,
 	}
 	return s3c

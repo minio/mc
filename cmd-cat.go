@@ -26,7 +26,6 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 func runCatCmd(ctx *cli.Context) {
@@ -38,7 +37,7 @@ func runCatCmd(ctx *cli.Context) {
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("loading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
 
@@ -47,10 +46,10 @@ func runCatCmd(ctx *cli.Context) {
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("reading URL [%s] failed with following reason: [%s]\n", e.url, e)
 		default:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("reading URLs failed with following reason: [%s]\n", e)
 		}
 	}
@@ -58,19 +57,19 @@ func runCatCmd(ctx *cli.Context) {
 	sourceURLs := urls
 	sourceURLConfigMap, err := getHostConfigs(sourceURLs)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("reading host config for URL [%s] failed with following reason: [%s]\n", sourceURLs, iodine.ToError(err))
 	}
-	humanReadable, err := doCatCmd(mcClientMethods{}, sourceURLConfigMap, globalDebugFlag)
+	humanReadable, err := doCatCmd(sourceURLConfigMap, globalDebugFlag)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalln(humanReadable)
 	}
 }
 
-func doCatCmd(methods clientMethods, sourceURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
+func doCatCmd(sourceURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
 	for url, config := range sourceURLConfigMap {
-		sourceClnt, err := methods.getNewClient(url, config, debug)
+		sourceClnt, err := getNewClient(url, config, debug)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}

@@ -24,7 +24,6 @@ import (
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 func runAccessCmd(ctx *cli.Context) {
@@ -36,7 +35,7 @@ func runAccessCmd(ctx *cli.Context) {
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("loading config file failed with following reason: [%s]\n", iodine.ToError(err))
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
@@ -44,44 +43,44 @@ func runAccessCmd(ctx *cli.Context) {
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("reading URL [%s] failed with following reason: [%s]\n", e.url, e)
 		default:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("reading URLs failed with following reason: [%s]\n", e)
 		}
 	}
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		log.Debug.Println(iodine.New(errInvalidACL{acl: acl.String()}, nil))
+		console.Debugln(iodine.New(errInvalidACL{acl: acl.String()}, nil))
 		console.Fatalf("Access type [%s] is not supported. Valid types are [private, public, readonly].\n", acl)
 	}
 	targetURLs = targetURLs[1:] // 1 or more target URLs
 	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
-		errorMsg, err := doUpdateAccessCmd(mcClientMethods{}, targetURL, acl.String(), targetConfig, globalDebugFlag)
+		errorMsg, err := doUpdateAccessCmd(targetURL, acl.String(), targetConfig, globalDebugFlag)
 		err = iodine.New(err, nil)
 		if err != nil {
 			if errorMsg == "" {
 				errorMsg = "Empty error message.  Please rerun this command with --debug and file a bug report."
 			}
-			log.Debug.Println(err)
+			console.Debugln(err)
 			console.Errorf("%s", errorMsg)
 		}
 	}
 }
 
-func doUpdateAccessCmd(methods clientMethods, targetURL, targetACL string, targetConfig *hostConfig, debug bool) (string, error) {
+func doUpdateAccessCmd(targetURL, targetACL string, targetConfig *hostConfig, debug bool) (string, error) {
 	var err error
 	var clnt client.Client
-	clnt, err = methods.getNewClient(targetURL, targetConfig, debug)
+	clnt, err = getNewClient(targetURL, targetConfig, debug)
 	if err != nil {
 		err := iodine.New(err, nil)
 		msg := fmt.Sprintf("Unable to initialize client for [%s]. Reason: [%s].\n",

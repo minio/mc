@@ -71,7 +71,7 @@ func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, 0, "", iodine.New(NewError(res), nil)
+		return nil, 0, "", iodine.New(ResponseToError(res), nil)
 	}
 	md5sum := strings.Trim(res.Header.Get("ETag"), "\"") // trim off the erroneous double quotes
 	return res.Body, res.ContentLength, md5sum, nil
@@ -99,6 +99,6 @@ func (c *s3Client) GetPartial(offset, length int64) (body io.ReadCloser, size in
 	case http.StatusOK, http.StatusPartialContent:
 		return res.Body, res.ContentLength, res.Header.Get("ETag"), nil
 	default:
-		return nil, 0, "", iodine.New(NewError(res), nil)
+		return nil, 0, "", iodine.New(ResponseToError(res), nil)
 	}
 }

@@ -23,15 +23,14 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 const (
 	mcUpdateURL = "http://dl.minio.io:9000/updates/2015/Apr" + "/mc" + "." + runtime.GOOS + "." + runtime.GOARCH
 )
 
-func doUpdateCheck(methods mcClientMethods, config *hostConfig) (string, error) {
-	clnt, err := methods.getNewClient(mcUpdateURL, config, globalDebugFlag)
+func doUpdateCheck(config *hostConfig) (string, error) {
+	clnt, err := getNewClient(mcUpdateURL, config, globalDebugFlag)
 	if err != nil {
 		return "Unable to create client: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
 	}
@@ -60,14 +59,14 @@ func runUpdateCmd(ctx *cli.Context) {
 	}
 	hostConfig, err := getHostConfig(mcUpdateURL)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", mcUpdateURL, iodine.ToError(err))
 	}
 	switch ctx.Args().First() {
 	case "check":
-		msg, err := doUpdateCheck(mcClientMethods{}, hostConfig)
+		msg, err := doUpdateCheck(hostConfig)
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf(msg)
 		}
 	}

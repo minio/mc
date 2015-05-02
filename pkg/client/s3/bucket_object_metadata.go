@@ -63,7 +63,7 @@ func (c *s3Client) getBucketMetadata(bucket string) (content *client.Content, er
 	case http.StatusMovedPermanently:
 		return content, nil
 	default:
-		return nil, iodine.New(NewError(res), nil)
+		return nil, iodine.New(ResponseToError(res), nil)
 	}
 }
 
@@ -109,6 +109,6 @@ func (c *s3Client) getObjectMetadata(bucket, object string) (content *client.Con
 		content.FileType = 0
 		return content, nil
 	default:
-		return nil, iodine.New(NewError(res), nil)
+		return nil, iodine.New(ResponseToError(res), nil)
 	}
 }

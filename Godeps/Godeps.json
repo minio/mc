@@ -6,44 +6,8 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/awslabs/aws-sdk-go/aws",
-			"Rev": "528fdccfb1784861a4a24809328f891336449926"
-		},
-		{
-			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/endpoints",
-			"Rev": "528fdccfb1784861a4a24809328f891336449926"
-		},
-		{
-			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/query",
-			"Rev": "528fdccfb1784861a4a24809328f891336449926"
-		},
-		{
-			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/rest",
-			"Rev": "528fdccfb1784861a4a24809328f891336449926"
-		},
-		{
-			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/restxml",
-			"Rev": "528fdccfb1784861a4a24809328f891336449926"
-		},
-		{
-			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/xml/xmlutil",
-			"Rev": "528fdccfb1784861a4a24809328f891336449926"
-		},
-		{
-			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/signer/v4",
-			"Rev": "528fdccfb1784861a4a24809328f891336449926"
-		},
-		{
-			"ImportPath": "github.com/awslabs/aws-sdk-go/service/s3",
-			"Rev": "528fdccfb1784861a4a24809328f891336449926"
-		},
-		{
 			"ImportPath": "github.com/cheggaaa/pb",
 			"Rev": "bd14546a551971ae7f460e6d6e527c5b56cd38d7"
-		},
-		{
-			"ImportPath": "github.com/clbanning/mxj",
-			"Rev": "da17de41d4c2e579884683ad838411fac440984d"
 		},
 		{
 			"ImportPath": "github.com/dustin/go-humanize",
@@ -77,22 +41,6 @@
 		{
 			"ImportPath": "github.com/shiena/ansicolor",
 			"Rev": "8368d3b31cf6f2c2464c7a91675342c9a0ac6658"
-		},
-		{
-			"ImportPath": "github.com/stretchr/objx",
-			"Rev": "cbeaeb16a013161a98496fad62933b1d21786672"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/assert",
-			"Rev": "e4ec8152c15fc46bd5056ce65997a07c7d415325"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/mock",
-			"Rev": "e4ec8152c15fc46bd5056ce65997a07c7d415325"
-		},
-		{
-			"ImportPath": "github.com/vaughan0/go-ini",
-			"Rev": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
 		}
 	]
 }

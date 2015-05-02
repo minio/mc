@@ -146,7 +146,7 @@ func (c *s3Client) decodeBucketResults(queryURL string) (*listBucketResults, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return nil, iodine.New(NewError(res), nil)
+		return nil, iodine.New(ResponseToError(res), nil)
 	}
 	var logbuf bytes.Buffer
 	err = xml.NewDecoder(io.TeeReader(res.Body, &logbuf)).Decode(bres)
@@ -271,8 +271,7 @@ func (c *s3Client) listBuckets() ([]*client.Content, error) {
 	}
 	if res != nil {
 		if res.StatusCode != http.StatusOK {
-			err = NewError(res)
-			return nil, iodine.New(err, nil)
+			return nil, iodine.New(ResponseToError(res), nil)
 		}
 	}
 	defer res.Body.Close()

@@ -22,7 +22,6 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 func runCopyCmd(ctx *cli.Context) {
@@ -34,7 +33,7 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read config file [%s]. Reason: [%s].\n", mustGetMcConfigPath(), iodine.ToError(err))
 	}
 
@@ -43,29 +42,28 @@ func runCopyCmd(ctx *cli.Context) {
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unknown type of URL(s).\n")
 		default:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unable to parse arguments. Reason: [%s].\n", e)
 		}
 	}
 
-	methods := mcClientMethods{}
 	switch len(urls) {
 	case 2:
-		runCopyCmdSingleSource(methods, urls)
+		runCopyCmdSingleSource(urls)
 	default:
-		runCopyCmdMultipleSources(methods, urls)
+		runCopyCmdMultipleSources(urls)
 	}
 }
 
-func runCopyCmdMultipleSources(methods clientMethods, urls []string) {
+func runCopyCmdMultipleSources(urls []string) {
 	sourceURLs := urls[:len(urls)-1] // All args are source except the last one
 	targetURL := urls[len(urls)-1]   // Last one is target
 	targetConfig, err := getHostConfig(targetURL)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
 			targetURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
@@ -84,38 +82,38 @@ func runCopyCmdMultipleSources(methods clientMethods, urls []string) {
 	for _, newRecursiveSourceURL := range newRecursiveSourceURLs {
 		newRecursiveSourceConfig, err := getHostConfig(newRecursiveSourceURL)
 		if err != nil {
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unable to read host configuration for the source %s from config file [%s]. Reason: [%s].\n",
 				newRecursiveSourceURL, mustGetMcConfigPath(), iodine.ToError(err))
 		}
-		err = doCopySingleSourceRecursive(methods, newRecursiveSourceURL, targetURL, newRecursiveSourceConfig, targetConfig)
+		err = doCopySingleSourceRecursive(newRecursiveSourceURL, targetURL, newRecursiveSourceConfig, targetConfig)
 		if err != nil {
-			log.Debug.Println(err)
+			console.Debugln(err)
 			console.Fatalf("Failed to copy from source %s to target %s. Reason: [%s].\n", newRecursiveSourceURL,
 				targetURL, iodine.ToError(err))
 		}
 	}
 	newRegularSourceURLConfigMap, err := getHostConfigs(newRegularSourceURLs)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for the following sources [%s] from config file [%s]. Reason: [%s].\n",
 			newRegularSourceURLs, mustGetMcConfigPath(), iodine.ToError(err))
 	}
-	err = doCopyMultipleSources(methods, newRegularSourceURLConfigMap, targetURL, targetConfig)
+	err = doCopyMultipleSources(newRegularSourceURLConfigMap, targetURL, targetConfig)
 	if err != nil {
-		log.Debug.Println(err)
+		console.Debugln(err)
 		console.Fatalf("Failed to copy from following sources [%s] to target %s. Reason: [%s].\n",
 			newRegularSourceURLs, targetURL, iodine.ToError(err))
 	}
 
 }
 
-func runCopyCmdSingleSource(methods clientMethods, urls []string) {
+func runCopyCmdSingleSource(urls []string) {
 	sourceURL := urls[0]
 	targetURL := urls[1]
 	targetConfig, err := getHostConfig(targetURL)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
 			targetURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
@@ -126,21 +124,21 @@ func runCopyCmdSingleSource(methods clientMethods, urls []string) {
 	}
 	sourceConfig, err := getHostConfig(sourceURL)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for the following targets %s from config file [%s]. Reason: [%s].\n",
 			sourceURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
 	if recursive {
-		err = doCopySingleSourceRecursive(methods, sourceURL, targetURL, sourceConfig, targetConfig)
+		err = doCopySingleSourceRecursive(sourceURL, targetURL, sourceConfig, targetConfig)
 		if err != nil {
-			log.Debug.Println(err)
+			console.Debugln(err)
 			console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", sourceURL, targetURL, iodine.ToError(err))
 		}
 		return
 	}
-	err = doCopySingleSource(methods, sourceURL, targetURL, sourceConfig, targetConfig)
+	err = doCopySingleSource(sourceURL, targetURL, sourceConfig, targetConfig)
 	if err != nil {
-		log.Debug.Println(err)
+		console.Debugln(err)
 		console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n", sourceURL, targetURL, iodine.ToError(err))
 	}
 

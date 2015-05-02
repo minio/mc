@@ -22,7 +22,6 @@ import (
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
-	"github.com/minio-io/minio/pkg/utils/log"
 )
 
 func runSyncCmd(ctx *cli.Context) {
@@ -34,7 +33,7 @@ func runSyncCmd(ctx *cli.Context) {
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read config file [%s]. Reason: [%s].\n", mustGetMcConfigPath(), iodine.ToError(err))
 	}
 
@@ -43,18 +42,17 @@ func runSyncCmd(ctx *cli.Context) {
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unknown type of URL(s).\n")
 		default:
-			log.Debug.Println(iodine.New(err, nil))
+			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unable to parse arguments. Reason: [%s].\n", e)
 		}
 	}
-	methods := mcClientMethods{}
-	runCopyCmdSingleSourceMultipleTargets(methods, urls)
+	runCopyCmdSingleSourceMultipleTargets(urls)
 }
 
-func runCopyCmdSingleSourceMultipleTargets(methods clientMethods, urls []string) {
+func runCopyCmdSingleSourceMultipleTargets(urls []string) {
 	sourceURL := urls[0]   // first arg is source
 	targetURLs := urls[1:] // all other are targets
 
@@ -65,21 +63,21 @@ func runCopyCmdSingleSourceMultipleTargets(methods clientMethods, urls []string)
 	}
 	sourceConfig, err := getHostConfig(sourceURL)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for the source %s from config file [%s]. Reason: [%s].\n",
 			sourceURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
 	targetURLConfigMap, err := getHostConfigs(targetURLs)
 	if err != nil {
-		log.Debug.Println(iodine.New(err, nil))
+		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for the following targets [%s] from config file [%s]. Reason: [%s].\n",
 			targetURLs, mustGetMcConfigPath(), iodine.ToError(err))
 	}
 
 	for targetURL, targetConfig := range targetURLConfigMap {
-		err = doCopySingleSourceRecursive(methods, sourceURL, targetURL, sourceConfig, targetConfig)
+		err = doCopySingleSourceRecursive(sourceURL, targetURL, sourceConfig, targetConfig)
 		if err != nil {
-			log.Debug.Println(err)
+			console.Debugln(err)
 			console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n",
 				sourceURL, targetURL, iodine.ToError(err))
 		}
