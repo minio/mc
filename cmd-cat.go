@@ -17,17 +17,16 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"io"
+	"os"
 
 	"github.com/minio-io/cli"
 	"github.com/minio-io/mc/pkg/console"
 	"github.com/minio-io/minio/pkg/iodine"
 	"github.com/minio-io/minio/pkg/utils/log"
-)
-
-const (
-	standardOutput = "/dev/stdout"
 )
 
 func runCatCmd(ctx *cli.Context) {
@@ -62,37 +61,38 @@ func runCatCmd(ctx *cli.Context) {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalf("reading host config for URL [%s] failed with following reason: [%s]\n", sourceURLs, iodine.ToError(err))
 	}
-	humanReadable, err := doCatCmd(mcClientMethods{}, sourceURLConfigMap, standardOutput, globalDebugFlag)
+	humanReadable, err := doCatCmd(mcClientMethods{}, sourceURLConfigMap, globalDebugFlag)
 	if err != nil {
 		log.Debug.Println(iodine.New(err, nil))
 		console.Fatalln(humanReadable)
 	}
 }
 
-func doCatCmd(methods clientMethods, sourceURLConfigMap map[string]*hostConfig, targetURL string, debug bool) (string, error) {
+func doCatCmd(methods clientMethods, sourceURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
 	for url, config := range sourceURLConfigMap {
 		sourceClnt, err := methods.getNewClient(url, config, debug)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
-		reader, size, expectedMd5, err := sourceClnt.Get()
+		reader, size, sourceMd5, err := sourceClnt.Get()
 		if err != nil {
 			return "Unable to retrieve file: " + url, iodine.New(err, nil)
 		}
 		defer reader.Close()
-
-		stdOutClnt, err := methods.getNewClient(targetURL, &hostConfig{}, debug)
+		hasher := md5.New()
+		mw := io.MultiWriter(os.Stdout, hasher)
+		_, err = io.CopyN(mw, reader, size)
 		if err != nil {
-			return "Unable to create client: " + url, iodine.New(err, nil)
+			switch e := iodine.ToError(err).(type) {
+			case *os.PathError:
+				return "Reading data to stdout failed, you system be having problems.. please report this error", iodine.New(e, nil)
+			default:
+				return "Reading data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
+			}
 		}
-		stdOutWriter, err := stdOutClnt.Put(expectedMd5, size)
-		if err != nil {
-			return "Unable to retrieve file: " + url, iodine.New(err, nil)
-		}
-		defer stdOutWriter.Close()
-		_, err = io.CopyN(stdOutWriter, reader, size)
-		if err != nil {
-			return "Reading data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
+		actualMd5 := hex.EncodeToString(hasher.Sum(nil))
+		if sourceMd5 != actualMd5 {
+			return "Md5sum mismatch, must be error in transmit what you are looking at might be corrupted", iodine.New(errors.New("corrupted data"), nil)
 		}
 	}
 	return "", nil

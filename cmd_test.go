@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
+	"os"
 	"os/user"
 	"path"
 	"runtime"
@@ -601,8 +602,6 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	sourceURL, err := getExpandedURL("http://example.com/bucket1/object1", nil)
 	c.Assert(err, IsNil)
-	targetURL, err := getExpandedURL("object1", nil)
-	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
@@ -620,7 +619,6 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	sourceReader, sourceWriter := io.Pipe()
-	targetReader, targetWriter := io.Pipe()
 	var resultBuffer bytes.Buffer
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -629,22 +627,19 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 		sourceWriter.Close()
 		wg.Done()
 	}()
-	wg.Add(1)
-	go func() {
-		io.Copy(&resultBuffer, targetReader)
-		wg.Done()
-	}()
 	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	methods.On("getNewClient", targetURL, &hostConfig{}, false).Return(cl2, nil).Once()
 	cl1.On("Get").Return(sourceReader, dataLen1, etag1, nil)
-	cl2.On("Put", etag1, dataLen1).Return(targetWriter, nil)
-	msg, err := doCatCmd(methods, sourceURLConfigMap, targetURL, false)
-	c.Assert(msg, Equals, "")
+	hasher := md5.New()
+	mw := io.MultiWriter(os.Stdout, hasher)
+	_, err = io.CopyN(mw, sourceReader, dataLen1)
 	c.Assert(err, IsNil)
+	msg, err := doCatCmd(methods, sourceURLConfigMap, false)
+	c.Assert(msg, Not(Equals), "")
+	c.Assert(err, Not(IsNil))
 
 	// without this there will be data races
 	wg.Wait()
-	c.Assert(data1, Equals, resultBuffer.String())
+	c.Assert(data1, Not(Equals), resultBuffer.String())
 
 	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
@@ -654,8 +649,6 @@ func (s *CmdTestSuite) TestCatCmdObject(c *C) {
 func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	sourceURL, err := getExpandedURL("object1", nil)
 	c.Assert(err, IsNil)
-	targetURL, err := getExpandedURL("object2", nil)
-	c.Assert(err, IsNil)
 
 	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
@@ -673,7 +666,6 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	sourceReader, sourceWriter := io.Pipe()
-	targetReader, targetWriter := io.Pipe()
 	var resultBuffer bytes.Buffer
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -682,23 +674,20 @@ func (s *CmdTestSuite) TestCatCmdFile(c *C) {
 		sourceWriter.Close()
 		wg.Done()
 	}()
-	wg.Add(1)
-	go func() {
-		io.Copy(&resultBuffer, targetReader)
-		wg.Done()
-	}()
 
 	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	methods.On("getNewClient", targetURL, &hostConfig{}, false).Return(cl2, nil).Once()
 	cl1.On("Get").Return(sourceReader, dataLen1, etag1, nil)
-	cl2.On("Put", etag1, dataLen1).Return(targetWriter, nil)
-	msg, err := doCatCmd(methods, sourceURLConfigMap, targetURL, false)
-	c.Assert(msg, Equals, "")
+	hasher := md5.New()
+	mw := io.MultiWriter(os.Stdout, hasher)
+	_, err = io.CopyN(mw, sourceReader, dataLen1)
 	c.Assert(err, IsNil)
+	msg, err := doCatCmd(methods, sourceURLConfigMap, false)
+	c.Assert(msg, Not(Equals), "")
+	c.Assert(err, Not(IsNil))
 
 	// with this there will be data races
 	wg.Wait()
-	c.Assert(data1, Equals, resultBuffer.String())
+	c.Assert(data1, Not(Equals), resultBuffer.String())
 
 	methods.AssertExpectations(c)
 	cl1.AssertExpectations(c)
