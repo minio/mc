@@ -19,9 +19,7 @@ package client
 import (
 	"io"
 	"os"
-	"regexp"
 	"time"
-	"unicode/utf8"
 )
 
 // Client - client interface
@@ -80,33 +78,4 @@ type Content struct {
 	Time     time.Time
 	Size     int64
 	FileType os.FileMode
-}
-
-// IsValidBucketName reports whether bucket is a valid bucket name, per Amazon's naming restrictions.
-// See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
-func IsValidBucketName(bucket string) bool {
-	if len(bucket) < 3 || len(bucket) > 63 {
-		return false
-	}
-	if bucket[0] == '.' || bucket[len(bucket)-1] == '.' {
-		return false
-	}
-	if match, _ := regexp.MatchString("\\.\\.", bucket); match == true {
-		return false
-	}
-	// We don't support buckets with '.' in them
-	match, _ := regexp.MatchString("^[a-z][a-z0-9\\-]+[a-z0-9]$", bucket)
-	return match
-}
-
-// IsValidObject - verify object name in accordance with
-//   - http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
-func IsValidObject(object string) bool {
-	if len(object) > 1024 || len(object) == 0 {
-		return false
-	}
-	if !utf8.ValidString(object) {
-		return false
-	}
-	return true
 }

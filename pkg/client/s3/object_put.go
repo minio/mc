@@ -22,7 +22,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -43,7 +42,7 @@ func (c *s3Client) put(size int64) (*http.Request, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	req.Header.Set("Content-Length", strconv.FormatInt(size, 10))
+	req.ContentLength = size
 	return req, nil
 }
 
@@ -53,25 +52,31 @@ func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 	if size < 0 {
 		return nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
 	}
-	req, err := c.put(size)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	// set Content-MD5 only if md5 is provided
-	if strings.TrimSpace(md5HexString) != "" {
-		md5, err := hex.DecodeString(md5HexString)
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-		req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
-	}
-	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
-		c.signRequest(req, c.Host)
-	}
 	// starting Pipe session
 	r, w := io.Pipe()
 	blockingWriter := client.NewBlockingWriteCloser(w)
 	go func() {
+		req, err := c.put(size)
+		if err != nil {
+			err := iodine.New(err, nil)
+			r.CloseWithError(err)
+			blockingWriter.Release(err)
+			return
+		}
+		// set Content-MD5 only if md5 is provided
+		if strings.TrimSpace(md5HexString) != "" {
+			md5, err := hex.DecodeString(md5HexString)
+			if err != nil {
+				err := iodine.New(err, nil)
+				r.CloseWithError(err)
+				blockingWriter.Release(err)
+				return
+			}
+			req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
+		}
+		if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+			c.signRequest(req, c.Host)
+		}
 		req.Body = r
 		// this is necessary for debug, since the underlying transport is a wrapper
 		res, err := c.Transport.RoundTrip(req)

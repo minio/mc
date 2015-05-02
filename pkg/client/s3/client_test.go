@@ -120,27 +120,3 @@ func (s *MySuite) TestParseBucketsFail(c *C) {
 	_, err := listAllMyBuckets(strings.NewReader(res))
 	c.Assert(err, Not(IsNil))
 }
-
-func (s *MySuite) TestValidBucketNames(c *C) {
-	m := []struct {
-		in   string
-		want bool
-	}{
-		{"myawsbucket", true},
-		{"myaws-bucket", true},
-		{"my-aws-bucket", true},
-		{"my.aws.bucket", false},
-		{"my-aws-bucket.1", false},
-		{"my---bucket.1", false},
-		{".myawsbucket", false},
-		{"-myawsbucket", false},
-		{"myawsbucket.", false},
-		{"myawsbucket-", false},
-		{"my..awsbucket", false},
-	}
-
-	for _, bt := range m {
-		got := client.IsValidBucketName(bt.in)
-		c.Assert(got, Equals, bt.want)
-	}
-}
