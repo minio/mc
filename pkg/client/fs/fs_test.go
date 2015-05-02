@@ -68,12 +68,12 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(size, Equals, dataLen)
 
 	fsc = New(root)
-	var items []*client.Item
-	for itemCh := range fsc.ListRecursive() {
-		items = append(items, itemCh.Item)
+	var contents []*client.Content
+	for contentCh := range fsc.ListRecursive() {
+		contents = append(contents, contentCh.Content)
 	}
 	c.Assert(err, IsNil)
-	c.Assert(len(items), Equals, 3)
+	c.Assert(len(contents), Equals, 3)
 }
 
 func (s *MySuite) TestPutBucket(c *C) {
@@ -83,7 +83,7 @@ func (s *MySuite) TestPutBucket(c *C) {
 
 	bucketPath := filepath.Join(root, "bucket")
 	fsc := New(bucketPath)
-	err = fsc.PutBucket("")
+	err = fsc.PutBucket()
 	c.Assert(err, IsNil)
 }
 
@@ -94,9 +94,23 @@ func (s *MySuite) TestStatBucket(c *C) {
 
 	bucketPath := filepath.Join(root, "bucket")
 	fsc := New(bucketPath)
-	err = fsc.PutBucket("")
+	err = fsc.PutBucket()
 	c.Assert(err, IsNil)
 	_, err = fsc.Stat()
+	c.Assert(err, IsNil)
+}
+
+func (s *MySuite) TestPutBucketACL(c *C) {
+	root, err := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+
+	bucketPath := filepath.Join(root, "bucket")
+	fsc := New(bucketPath)
+	err = fsc.PutBucket()
+	c.Assert(err, IsNil)
+
+	err = fsc.PutBucketACL("private")
 	c.Assert(err, IsNil)
 }
 
@@ -169,8 +183,8 @@ func (s *MySuite) TestStat(c *C) {
 	_, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)
 	c.Assert(err, IsNil)
 
-	item, err := fsc.Stat()
+	content, err := fsc.Stat()
 	c.Assert(err, IsNil)
-	c.Assert(item.Name, Equals, "object")
-	c.Assert(item.Size, Equals, dataLen)
+	c.Assert(content.Name, Equals, "object")
+	c.Assert(content.Size, Equals, dataLen)
 }

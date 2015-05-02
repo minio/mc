@@ -37,7 +37,7 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
-func listAllMyBuckets(r io.Reader) ([]*client.Item, error) {
+func listAllMyBuckets(r io.Reader) ([]*client.Content, error) {
 	type bucket struct {
 		Name         string
 		CreationDate time.Time
@@ -53,14 +53,14 @@ func listAllMyBuckets(r io.Reader) ([]*client.Item, error) {
 		return nil, iodine.New(client.UnexpectedError{Err: errors.New("Malformed response received from server")},
 			map[string]string{"XMLError": err.Error()})
 	}
-	var items []*client.Item
+	var contents []*client.Content
 	for _, b := range buckets.Buckets.Bucket {
-		item := new(client.Item)
-		item.Name = b.Name
-		item.Time = b.CreationDate
-		items = append(items, item)
+		content := new(client.Content)
+		content.Name = b.Name
+		content.Time = b.CreationDate
+		contents = append(contents, content)
 	}
-	return items, nil
+	return contents, nil
 }
 
 func (s *MySuite) TestConfig(c *C) {
@@ -81,7 +81,7 @@ func (s *MySuite) TestBucketACL(c *C) {
 		{"private", true},
 		{"public-read", true},
 		{"public-read-write", true},
-		{"", true},
+		{"", false},
 		{"readonly", false},
 		{"invalid", false},
 	}
@@ -108,7 +108,7 @@ func (s *MySuite) TestParseBuckets(c *C) {
 
 	t1, err := time.Parse(time.RFC3339, "2006-06-21T07:04:31.000Z")
 	t2, err := time.Parse(time.RFC3339, "2006-06-21T07:04:32.000Z")
-	want := []*client.Item{
+	want := []*client.Content{
 		{Name: "bucketOne", Time: t1},
 		{Name: "bucketTwo", Time: t2},
 	}

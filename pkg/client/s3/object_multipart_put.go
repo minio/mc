@@ -87,7 +87,7 @@ func (c *s3Client) AbortMultiPartUpload(uploadID string) error {
 }
 
 // ListParts
-func (c *s3Client) ListParts(uploadID string) (items *client.PartItems, err error) {
+func (c *s3Client) ListParts(uploadID string) (contents *client.PartContents, err error) {
 	bucket, object := c.url2BucketAndObject()
 	listPartsInput := new(s3.ListPartsInput)
 	listPartsInput.Bucket = &bucket
@@ -98,18 +98,18 @@ func (c *s3Client) ListParts(uploadID string) (items *client.PartItems, err erro
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	items = new(client.PartItems)
-	items.Key = *listPartsOutput.Key
-	items.IsTruncated = *listPartsOutput.IsTruncated
-	items.UploadID = *listPartsOutput.UploadID
+	contents = new(client.PartContents)
+	contents.Key = *listPartsOutput.Key
+	contents.IsTruncated = *listPartsOutput.IsTruncated
+	contents.UploadID = *listPartsOutput.UploadID
 	for _, part := range listPartsOutput.Parts {
 		newPart := new(client.Part)
 		newPart.ETag = *part.ETag
 		newPart.LastModified = *part.LastModified
 		newPart.PartNumber = *part.PartNumber
 		newPart.Size = *part.Size
-		items.Parts = append(items.Parts, newPart)
+		contents.Parts = append(contents.Parts, newPart)
 	}
-	return items, nil
+	return contents, nil
 
 }

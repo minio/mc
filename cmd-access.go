@@ -92,12 +92,12 @@ func doUpdateAccessCmd(methods clientMethods, targetURL, targetACL string, targe
 }
 
 func doUpdateAccess(clnt client.Client, targetURL, targetACL string) (string, error) {
-	err := clnt.PutBucket(targetACL)
+	err := clnt.PutBucketACL(targetACL)
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
 		fmt.Println(console.Retry("Retrying ... %d", i))
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
-		err = clnt.PutBucket(targetACL)
+		err = clnt.PutBucketACL(targetACL)
 	}
 	if err != nil {
 		err := iodine.New(err, nil)

@@ -133,7 +133,7 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 		wg.Done()
 	}()
 
-	items := []*client.Item{
+	contents := []*client.Content{
 		{Name: "hello1", Time: time.Now(), Size: dataLen1},
 		{Name: "hello2", Time: time.Now(), Size: dataLen2},
 	}
@@ -151,17 +151,17 @@ func (s *CmdTestSuite) TestCopyRecursive(c *C) {
 	targetURLConfigMap[targetURL] = targetConfig
 
 	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	itemCh := make(chan client.ItemOnChannel)
+	contentCh := make(chan client.ContentOnChannel)
 	go func() {
-		defer close(itemCh)
-		for _, item := range items {
-			itemCh <- client.ItemOnChannel{
-				Item: item,
-				Err:  nil,
+		defer close(contentCh)
+		for _, content := range contents {
+			contentCh <- client.ContentOnChannel{
+				Content: content,
+				Err:     nil,
 			}
 		}
 	}()
-	cl1.On("ListRecursive").Return(itemCh).Once()
+	cl1.On("ListRecursive").Return(contentCh).Once()
 	sourceReader1 := ioutil.NopCloser(bytes.NewBufferString(data1))
 	sourceReader2 := ioutil.NopCloser(bytes.NewBufferString(data2))
 	methods.On("getSourceReader", sourceURL+"hello1", sourceConfig).Return(sourceReader1, dataLen1, etag1, nil).Once()
@@ -282,7 +282,7 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	data2 := "hello world 2"
 	dataLen2 := int64(len(data2))
 
-	items := []*client.Item{
+	contents := []*client.Content{
 		{Name: "hello1", Time: time.Now(), Size: dataLen1},
 		{Name: "hello2", Time: time.Now(), Size: dataLen2},
 	}
@@ -294,17 +294,17 @@ func (s *CmdTestSuite) TestLsCmdWithBucket(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	itemCh := make(chan client.ItemOnChannel)
+	contentCh := make(chan client.ContentOnChannel)
 	go func() {
-		defer close(itemCh)
-		for _, item := range items {
-			itemCh <- client.ItemOnChannel{
-				Item: item,
-				Err:  nil,
+		defer close(contentCh)
+		for _, content := range contents {
+			contentCh <- client.ContentOnChannel{
+				Content: content,
+				Err:     nil,
 			}
 		}
 	}()
-	cl1.On("ListRecursive").Return(itemCh).Once()
+	cl1.On("ListRecursive").Return(contentCh).Once()
 	err = doListRecursiveCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
@@ -325,7 +325,7 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 	data2 := "hello world 2"
 	dataLen2 := int64(len(data2))
 
-	items := []*client.Item{
+	contents := []*client.Content{
 		{Name: "hello1", Time: time.Now(), Size: dataLen1},
 		{Name: "hello2", Time: time.Now(), Size: dataLen2},
 	}
@@ -338,17 +338,17 @@ func (s *CmdTestSuite) TestLsCmdWithFilePath(c *C) {
 
 	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
 
-	itemCh := make(chan client.ItemOnChannel)
+	contentCh := make(chan client.ContentOnChannel)
 	go func() {
-		defer close(itemCh)
-		for _, item := range items {
-			itemCh <- client.ItemOnChannel{
-				Item: item,
-				Err:  nil,
+		defer close(contentCh)
+		for _, content := range contents {
+			contentCh <- client.ContentOnChannel{
+				Content: content,
+				Err:     nil,
 			}
 		}
 	}()
-	cl1.On("ListRecursive").Return(itemCh).Once()
+	cl1.On("ListRecursive").Return(contentCh).Once()
 	err = doListRecursiveCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
@@ -363,7 +363,7 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 	methods := &MockclientMethods{}
 	cl1 := &clientMocks.Client{}
 
-	buckets := []*client.Item{
+	buckets := []*client.Content{
 		{Name: "bucket1", Time: time.Now()},
 		{Name: "bucket2", Time: time.Now()},
 	}
@@ -375,17 +375,17 @@ func (s *CmdTestSuite) TestLsCmdListsBuckets(c *C) {
 	sourceURLConfigMap[sourceURL] = sourceConfig
 
 	methods.On("getNewClient", sourceURL, sourceConfig, false).Return(cl1, nil).Once()
-	itemCh := make(chan client.ItemOnChannel)
+	contentCh := make(chan client.ContentOnChannel)
 	go func() {
-		defer close(itemCh)
+		defer close(contentCh)
 		for _, bucket := range buckets {
-			itemCh <- client.ItemOnChannel{
-				Item: bucket,
-				Err:  nil,
+			contentCh <- client.ContentOnChannel{
+				Content: bucket,
+				Err:     nil,
 			}
 		}
 	}()
-	cl1.On("ListRecursive").Return(itemCh).Once()
+	cl1.On("ListRecursive").Return(contentCh).Once()
 	err = doListRecursiveCmd(methods, sourceURL, sourceConfig, false)
 	c.Assert(err, IsNil)
 
@@ -407,7 +407,7 @@ func (s *CmdTestSuite) TestMbCmd(c *C) {
 	targetURLConfigMap[targetURL] = targetConfig
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "").Return(nil).Once()
+	cl1.On("PutBucket").Return(nil).Once()
 	msg, err := doMakeBucketCmd(methods, targetURL, targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -430,19 +430,19 @@ func (s *CmdTestSuite) TestAccessCmd(c *C) {
 	targetURLConfigMap[targetURL] = targetConfig
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "private").Return(nil).Once()
+	cl1.On("PutBucketACL", "private").Return(nil).Once()
 	msg, err := doUpdateAccessCmd(methods, targetURL, "private", targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "public").Return(nil).Once()
+	cl1.On("PutBucketACL", "public").Return(nil).Once()
 	msg, err = doUpdateAccessCmd(methods, targetURL, "public", targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "readonly").Return(nil).Once()
+	cl1.On("PutBucketACL", "readonly").Return(nil).Once()
 	msg, err = doUpdateAccessCmd(methods, targetURL, "readonly", targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -470,8 +470,8 @@ func (s *CmdTestSuite) TestAccessCmdFailures(c *C) {
 	c.Assert(err, Not(IsNil))
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "private").Return(&net.DNSError{}).Once()
-	cl1.On("PutBucket", "private").Return(nil).Once()
+	cl1.On("PutBucketACL", "private").Return(&net.DNSError{}).Once()
+	cl1.On("PutBucketACL", "private").Return(nil).Once()
 	msg, err = doUpdateAccessCmd(methods, targetURL, "private", targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -485,7 +485,7 @@ func (s *CmdTestSuite) TestAccessCmdFailures(c *C) {
 		err.Op = "dial"
 		err.Net = "tcp"
 		err.Err = errors.New("Another expected error")
-		cl1.On("PutBucket", "private").Return(err).Once()
+		cl1.On("PutBucketACL", "private").Return(err).Once()
 	}
 	msg, err = doUpdateAccessCmd(methods, targetURL, "private", targetConfig, false)
 	globalMaxRetryFlag = retries
@@ -515,8 +515,8 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 	c.Assert(err, Not(IsNil))
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "").Return(&net.DNSError{}).Once()
-	cl1.On("PutBucket", "").Return(nil).Once()
+	cl1.On("PutBucket").Return(&net.DNSError{}).Once()
+	cl1.On("PutBucket").Return(nil).Once()
 	msg, err = doMakeBucketCmd(methods, targetURL, targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -530,7 +530,7 @@ func (s *CmdTestSuite) TestMbCmdFailures(c *C) {
 		err.Op = "dial"
 		err.Net = "tcp"
 		err.Err = errors.New("Another expected error")
-		cl1.On("PutBucket", "").Return(err).Once()
+		cl1.On("PutBucket").Return(err).Once()
 	}
 	msg, err = doMakeBucketCmd(methods, targetURL, targetConfig, false)
 	globalMaxRetryFlag = retries
@@ -555,19 +555,19 @@ func (s *CmdTestSuite) TestAccessCmdOnFile(c *C) {
 	targetURLConfigMap[targetURL] = targetConfig
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "private").Return(nil).Once()
+	cl1.On("PutBucketACL", "private").Return(nil).Once()
 	msg, err := doUpdateAccessCmd(methods, targetURL, "private", targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "public").Return(nil).Once()
+	cl1.On("PutBucketACL", "public").Return(nil).Once()
 	msg, err = doUpdateAccessCmd(methods, targetURL, "public", targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "readonly").Return(nil).Once()
+	cl1.On("PutBucketACL", "readonly").Return(nil).Once()
 	msg, err = doUpdateAccessCmd(methods, targetURL, "readonly", targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)
@@ -590,7 +590,7 @@ func (s *CmdTestSuite) TestMbCmdOnFile(c *C) {
 	targetURLConfigMap[targetURL] = targetConfig
 
 	methods.On("getNewClient", targetURL, targetConfig, false).Return(cl1, nil).Once()
-	cl1.On("PutBucket", "").Return(nil).Once()
+	cl1.On("PutBucket").Return(nil).Once()
 	msg, err := doMakeBucketCmd(methods, targetURL, targetConfig, false)
 	c.Assert(msg, Equals, "")
 	c.Assert(err, IsNil)

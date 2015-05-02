@@ -59,11 +59,11 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 
 // Get - download an object from bucket
 func (f *fsClient) Get() (io.ReadCloser, int64, string, error) {
-	item, err := f.getFSMetadata()
+	content, err := f.getFSMetadata()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	if item.FileType.IsDir() {
+	if content.FileType.IsDir() {
 		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
 	}
 	body, err := os.Open(f.path)
@@ -82,7 +82,7 @@ func (f *fsClient) Get() (io.ReadCloser, int64, string, error) {
 		return nil, 0, "", iodine.New(err, nil)
 	}
 	md5Str := hex.EncodeToString(h.Sum(nil))
-	return body, item.Size, md5Str, nil
+	return body, content.Size, md5Str, nil
 }
 
 // GetPartial - download a partial object from bucket
@@ -90,14 +90,14 @@ func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, strin
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
-	item, err := f.getFSMetadata()
+	content, err := f.getFSMetadata()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	if item.FileType.IsDir() {
+	if content.FileType.IsDir() {
 		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
 	}
-	if offset > item.Size || (offset+length-1) > item.Size {
+	if offset > content.Size || (offset+length-1) > content.Size {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
 	body, err := os.Open(f.path)
@@ -124,26 +124,26 @@ func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, strin
 }
 
 // List - list files and folders
-func (f *fsClient) List() <-chan client.ItemOnChannel {
-	itemCh := make(chan client.ItemOnChannel)
-	go f.list(itemCh)
-	return itemCh
+func (f *fsClient) List() <-chan client.ContentOnChannel {
+	contentCh := make(chan client.ContentOnChannel)
+	go f.list(contentCh)
+	return contentCh
 }
 
-func (f *fsClient) list(itemCh chan client.ItemOnChannel) {
-	defer close(itemCh)
+func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
+	defer close(contentCh)
 	dir, err := os.Open(f.path)
 	if err != nil {
-		itemCh <- client.ItemOnChannel{
-			Item: nil,
-			Err:  iodine.New(err, nil),
+		contentCh <- client.ContentOnChannel{
+			Content: nil,
+			Err:     iodine.New(err, nil),
 		}
 	}
 	fi, err := os.Lstat(f.path)
 	if err != nil {
-		itemCh <- client.ItemOnChannel{
-			Item: nil,
-			Err:  iodine.New(err, nil),
+		contentCh <- client.ContentOnChannel{
+			Content: nil,
+			Err:     iodine.New(err, nil),
 		}
 	}
 	defer dir.Close()
@@ -156,46 +156,46 @@ func (f *fsClient) list(itemCh chan client.ItemOnChannel) {
 		// large quantities of files
 		files, err := dir.Readdir(-1)
 		if err != nil {
-			itemCh <- client.ItemOnChannel{
-				Item: nil,
-				Err:  iodine.New(err, nil),
+			contentCh <- client.ContentOnChannel{
+				Content: nil,
+				Err:     iodine.New(err, nil),
 			}
 		}
 		for _, file := range files {
-			item := &client.Item{
+			content := &client.Content{
 				Name:     file.Name(),
 				Time:     file.ModTime(),
 				Size:     file.Size(),
 				FileType: file.Mode(),
 			}
-			itemCh <- client.ItemOnChannel{
-				Item: item,
-				Err:  nil,
+			contentCh <- client.ContentOnChannel{
+				Content: content,
+				Err:     nil,
 			}
 		}
 	default:
-		item := &client.Item{
+		content := &client.Content{
 			Name:     dir.Name(),
 			Time:     fi.ModTime(),
 			Size:     fi.Size(),
 			FileType: fi.Mode(),
 		}
-		itemCh <- client.ItemOnChannel{
-			Item: item,
-			Err:  nil,
+		contentCh <- client.ContentOnChannel{
+			Content: content,
+			Err:     nil,
 		}
 	}
 }
 
 // ListRecursive - list files and folders recursively
-func (f *fsClient) ListRecursive() <-chan client.ItemOnChannel {
-	itemCh := make(chan client.ItemOnChannel)
-	go f.listRecursive(itemCh)
-	return itemCh
+func (f *fsClient) ListRecursive() <-chan client.ContentOnChannel {
+	contentCh := make(chan client.ContentOnChannel)
+	go f.listRecursive(contentCh)
+	return contentCh
 }
 
-func (f *fsClient) listRecursive(itemCh chan client.ItemOnChannel) {
-	defer close(itemCh)
+func (f *fsClient) listRecursive(contentCh chan client.ContentOnChannel) {
+	defer close(contentCh)
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		if err != nil {
 			if os.IsPermission(err) { // skip inaccessible files
@@ -203,23 +203,23 @@ func (f *fsClient) listRecursive(itemCh chan client.ItemOnChannel) {
 			}
 			return err // fatal
 		}
-		item := &client.Item{
+		content := &client.Content{
 			Name:     fp,
 			Time:     fi.ModTime(),
 			Size:     fi.Size(),
 			FileType: fi.Mode(),
 		}
-		itemCh <- client.ItemOnChannel{
-			Item: item,
-			Err:  nil,
+		contentCh <- client.ContentOnChannel{
+			Content: content,
+			Err:     nil,
 		}
 		return nil
 	}
 	err := filepath.Walk(f.path, visitFS)
 	if err != nil {
-		itemCh <- client.ItemOnChannel{
-			Item: nil,
-			Err:  iodine.New(err, nil),
+		contentCh <- client.ContentOnChannel{
+			Content: nil,
+			Err:     iodine.New(err, nil),
 		}
 	}
 }
@@ -255,7 +255,16 @@ func aclToPerm(acl string) os.FileMode {
 }
 
 // PutBucket - create a new bucket
-func (f *fsClient) PutBucket(acl string) error {
+func (f *fsClient) PutBucket() error {
+	err := os.MkdirAll(f.path, 0775)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	return nil
+}
+
+// PutBucket - create a new bucket
+func (f *fsClient) PutBucketACL(acl string) error {
 	if !isValidBucketACL(acl) {
 		return iodine.New(errors.New("invalid acl"), nil)
 	}
@@ -271,19 +280,19 @@ func (f *fsClient) PutBucket(acl string) error {
 }
 
 // getFSMetadata -
-func (f *fsClient) getFSMetadata() (item *client.Item, err error) {
+func (f *fsClient) getFSMetadata() (content *client.Content, err error) {
 	st, err := f.fsStat()
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	item = new(client.Item)
-	item.Name = st.Name()
-	item.Size = st.Size()
-	item.Time = st.ModTime()
-	return item, nil
+	content = new(client.Content)
+	content.Name = st.Name()
+	content.Size = st.Size()
+	content.Time = st.ModTime()
+	return content, nil
 }
 
 // Stat - get metadata from path
-func (f *fsClient) Stat() (item *client.Item, err error) {
+func (f *fsClient) Stat() (content *client.Content, err error) {
 	return f.getFSMetadata()
 }

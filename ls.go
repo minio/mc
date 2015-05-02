@@ -35,8 +35,8 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
-// printItem prints item meta-data
-func printItem(date time.Time, v int64, name string, fileType os.FileMode) {
+// printContent prints content meta-data
+func printContent(date time.Time, v int64, name string, fileType os.FileMode) {
 	fmt.Printf(console.Time("[%s] ", date.Local().Format(printDate)))
 	fmt.Printf(console.Size("%6s ", humanize.IBytes(uint64(v))))
 
@@ -57,12 +57,12 @@ func printItem(date time.Time, v int64, name string, fileType os.FileMode) {
 // doList - list all entities inside a folder
 func doList(clnt client.Client, targetURL string) error {
 	var err error
-	for itemCh := range clnt.List() {
-		if itemCh.Err != nil {
-			err = itemCh.Err
+	for contentCh := range clnt.List() {
+		if contentCh.Err != nil {
+			err = contentCh.Err
 			break
 		}
-		printItem(itemCh.Item.Time, itemCh.Item.Size, itemCh.Item.Name, itemCh.Item.FileType)
+		printContent(contentCh.Content.Time, contentCh.Content.Size, contentCh.Content.Name, contentCh.Content.FileType)
 	}
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
@@ -73,12 +73,12 @@ func doList(clnt client.Client, targetURL string) error {
 // doListRecursive - list all entities inside folders and sub-folders recursively
 func doListRecursive(clnt client.Client, targetURL string) error {
 	var err error
-	for itemCh := range clnt.ListRecursive() {
-		if itemCh.Err != nil {
-			err = itemCh.Err
+	for contentCh := range clnt.ListRecursive() {
+		if contentCh.Err != nil {
+			err = contentCh.Err
 			break
 		}
-		printItem(itemCh.Item.Time, itemCh.Item.Size, itemCh.Item.Name, itemCh.Item.FileType)
+		printContent(contentCh.Content.Time, contentCh.Content.Size, contentCh.Content.Name, contentCh.Content.FileType)
 	}
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})

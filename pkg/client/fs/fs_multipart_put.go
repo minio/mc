@@ -46,6 +46,6 @@ func (c *fsClient) AbortMultiPartUpload(uploadID string) error {
 }
 
 // ListParts -
-func (c *fsClient) ListParts(uploadID string) (items *client.PartItems, err error) {
+func (c *fsClient) ListParts(uploadID string) (contents *client.PartContents, err error) {
 	return nil, iodine.New(client.APINotImplemented{API: "ListParts"}, nil)
 }
