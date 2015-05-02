@@ -17,15 +17,10 @@
 package s3
 
 import (
-	"fmt"
+	"encoding/xml"
 	"net/http"
 	"strconv"
-
-	"github.com/clbanning/mxj"
-	"github.com/minio-io/minio/pkg/iodine"
 )
-
-/// ACL related errors
 
 // InvalidACL - acl invalid
 type InvalidACL struct {
@@ -113,7 +108,6 @@ func (e InvalidQueryURL) Error() string {
 }
 
 /* **** SAMPLE ERROR RESPONSE ****
-s3.ListBucket: status 403:
 <?xml version="1.0" encoding="UTF-8"?>
 <Error>
    <Code>AccessDenied</Code>
@@ -124,26 +118,27 @@ s3.ListBucket: status 403:
 </Error>
 */
 
-// Error is the type returned by some API operations.
-type Error struct {
-	response    *http.Response // response headers
-	responseMap mxj.Map        // Keys: Code, Message, Resource, RequestId, HostId
+// ErrorResponse is the type returned by some API operations.
+type ErrorResponse struct {
+	Code      string
+	Message   string
+	Resource  string
+	RequestID string
+	HostID    string
 }
 
-// NewError returns a new initialized S3.Error structure
-func NewError(res *http.Response) error {
-	var err error
-	s3Err := new(Error)
-	s3Err.response = res
-	s3Err.responseMap, err = mxj.NewMapXmlReader(res.Body)
+// ResponseToError returns a new encoded ErrorResponse structure
+func ResponseToError(res *http.Response) error {
+	var respError ErrorResponse
+	decoder := xml.NewDecoder(res.Body)
+	err := decoder.Decode(&respError)
 	if err != nil {
-		return iodine.New(err, nil)
+		return err
 	}
-	return s3Err
+	return respError
 }
 
 // Error formats HTTP error string
-func (e *Error) Error() string {
-	message, _ := e.responseMap.ValuesForKey("Message")
-	return fmt.Sprintf("%s", message[0])
+func (e ErrorResponse) Error() string {
+	return e.Message
 }

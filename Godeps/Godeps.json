@@ -42,10 +42,6 @@
 			"Rev": "bd14546a551971ae7f460e6d6e527c5b56cd38d7"
 		},
 		{
-			"ImportPath": "github.com/clbanning/mxj",
-			"Rev": "da17de41d4c2e579884683ad838411fac440984d"
-		},
-		{
 			"ImportPath": "github.com/dustin/go-humanize",
 			"Rev": "8cc1aaa2d955ee82833337cfb10babc42be6bce6"
 		},
