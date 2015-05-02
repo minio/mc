@@ -22,6 +22,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/minio-io/mc/pkg/client"
@@ -30,49 +31,48 @@ import (
 
 /// Object Operations PUT - keeping this in a separate file for readability
 
-// Put - upload new object to bucket
-func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) {
-	bucket, object := c.url2BucketAndObject()
-	if !client.IsValidBucketName(bucket) {
-		return nil, iodine.New(InvalidBucketName{Bucket: bucket}, nil)
+func (c *s3Client) put(size int64) (*http.Request, error) {
+	queryURL, err := c.getRequestURL()
+	if err != nil {
+		return nil, iodine.New(err, nil)
 	}
-	queryURL := c.objectURL(bucket, object)
 	if !c.isValidQueryURL(queryURL) {
 		return nil, iodine.New(InvalidQueryURL{URL: queryURL}, nil)
 	}
+	req, err := c.newRequest("PUT", queryURL, nil)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	req.Header.Set("Content-Length", strconv.FormatInt(size, 10))
+	return req, nil
+}
+
+// Put - upload new object to bucket
+func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) {
+	// if size is negative
+	if size < 0 {
+		return nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
+	}
+	req, err := c.put(size)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	// set Content-MD5 only if md5 is provided
+	if strings.TrimSpace(md5HexString) != "" {
+		md5, err := hex.DecodeString(md5HexString)
+		if err != nil {
+			return nil, iodine.New(err, nil)
+		}
+		req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
+	}
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
+	// starting Pipe session
 	r, w := io.Pipe()
 	blockingWriter := client.NewBlockingWriteCloser(w)
 	go func() {
-		if size < 0 {
-			err := iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
-			r.CloseWithError(err)
-			blockingWriter.Release(err)
-			return
-		}
-		req, err := c.newRequest("PUT", queryURL, r)
-		if err != nil {
-			err := iodine.New(err, nil)
-			r.CloseWithError(err)
-			blockingWriter.Release(err)
-			return
-		}
-		req.Method = "PUT"
-		req.ContentLength = size
-
-		// set Content-MD5 only if md5 is provided
-		if strings.TrimSpace(md5HexString) != "" {
-			md5, err := hex.DecodeString(md5HexString)
-			if err != nil {
-				err := iodine.New(err, nil)
-				r.CloseWithError(err)
-				blockingWriter.Release(err)
-				return
-			}
-			req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
-		}
-		if c.AccessKeyID != "" && c.SecretAccessKey != "" {
-			c.signRequest(req, c.Host)
-		}
+		req.Body = r
 		// this is necessary for debug, since the underlying transport is a wrapper
 		res, err := c.Transport.RoundTrip(req)
 		if err != nil {

@@ -1,19 +1,3 @@
-/*
- * Minio Client (C) 2015 Minio, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package s3
 
 import (
@@ -32,16 +16,7 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-/// Bucket API operations
-
-// List - list at delimited path not recursive
-func (c *s3Client) List() <-chan client.ItemOnChannel {
-	itemCh := make(chan client.ItemOnChannel)
-	go c.list(itemCh)
-	return itemCh
-}
-
-func (c *s3Client) list(itemCh chan client.ItemOnChannel) {
+func (c *s3Client) listInGoRoutine(itemCh chan client.ItemOnChannel) {
 	defer close(itemCh)
 	var items []*client.Item
 	bucket, objectPrefix := c.url2BucketAndObject()
@@ -54,7 +29,7 @@ func (c *s3Client) list(itemCh chan client.ItemOnChannel) {
 		}
 	default:
 		if bucket == "" {
-			items, err = c.listBucketsInternal()
+			items, err = c.listBuckets()
 			if err != nil {
 				itemCh <- client.ItemOnChannel{
 					Item: nil,
@@ -71,7 +46,7 @@ func (c *s3Client) list(itemCh chan client.ItemOnChannel) {
 			return
 		}
 		// List all objects matching the key prefix
-		items, err = c.listObjectsInternal(bucket, "", objectPrefix, "/", globalMaxKeys)
+		items, err = c.listObjects(bucket, "", objectPrefix, "/", globalMaxKeys)
 		if err != nil {
 			itemCh <- client.ItemOnChannel{
 				Item: nil,
@@ -88,14 +63,7 @@ func (c *s3Client) list(itemCh chan client.ItemOnChannel) {
 	}
 }
 
-// ListRecursive - list buckets and objects recursively
-func (c *s3Client) ListRecursive() <-chan client.ItemOnChannel {
-	itemCh := make(chan client.ItemOnChannel)
-	go c.listRecursive(itemCh)
-	return itemCh
-}
-
-func (c *s3Client) listRecursive(itemCh chan client.ItemOnChannel) {
+func (c *s3Client) listRecursiveInGoRoutine(itemCh chan client.ItemOnChannel) {
 	defer close(itemCh)
 
 	var items []*client.Item
@@ -109,7 +77,7 @@ func (c *s3Client) listRecursive(itemCh chan client.ItemOnChannel) {
 		}
 	default:
 		if bucket == "" {
-			items, err = c.listBucketsInternal()
+			items, err = c.listBuckets()
 			if err != nil {
 				itemCh <- client.ItemOnChannel{
 					Item: nil,
@@ -126,7 +94,7 @@ func (c *s3Client) listRecursive(itemCh chan client.ItemOnChannel) {
 			return
 		}
 		// List all objects matching the key prefix
-		items, err = c.listObjectsInternal(bucket, "", objectPrefix, "", globalMaxKeys)
+		items, err = c.listObjects(bucket, "", objectPrefix, "", globalMaxKeys)
 		if err != nil {
 			itemCh <- client.ItemOnChannel{
 				Item: nil,
@@ -141,17 +109,6 @@ func (c *s3Client) listRecursive(itemCh chan client.ItemOnChannel) {
 			}
 		}
 	}
-}
-
-func (c *s3Client) isValidQueryURL(queryURL string) bool {
-	u, err := url.Parse(queryURL)
-	if err != nil {
-		return false
-	}
-	if !strings.Contains(u.Scheme, "http") {
-		return false
-	}
-	return true
 }
 
 // populate s3 response and decode results into listBucketResults{}
@@ -184,7 +141,7 @@ func (c *s3Client) decodeBucketResults(queryURL string) (*listBucketResults, err
 }
 
 // filter items out of content and provide marker for future request
-func (c *s3Client) filterItems(startAt, marker, prefix, delimiter string, contents []*item) (items []*client.Item, nextMarker string, err error) {
+func (c *s3Client) filterItems(startAt, marker, prefix, delimiter string, contents []*content) (items []*client.Item, nextMarker string, err error) {
 	for _, it := range contents {
 		if it.Key == marker && it.Key != startAt {
 			// Skip first dup on pages 2 and higher.
@@ -206,9 +163,9 @@ func (c *s3Client) filterItems(startAt, marker, prefix, delimiter string, conten
 }
 
 // Populare query URL for Listobjects requests
-func (c *s3Client) getQueryURL(bucket, marker, prefix, delimiter string, fetchN int) string {
+func (c *s3Client) getQueryURL(marker, prefix, delimiter string, fetchN int) string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.bucketURL(bucket), fetchN))
+	buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.mustGetRequestURL(), fetchN))
 	switch true {
 	case marker != "":
 		buffer.WriteString(fmt.Sprintf("&marker=%s", url.QueryEscape(marker)))
@@ -222,11 +179,11 @@ func (c *s3Client) getQueryURL(bucket, marker, prefix, delimiter string, fetchN 
 	return buffer.String()
 }
 
-// listObjectsInternal returns 0 to maxKeys (inclusive) items from the
+// listObjects returns 0 to maxKeys (inclusive) items from the
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned items is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
-func (c *s3Client) listObjectsInternal(bucket, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, err error) {
+func (c *s3Client) listObjects(bucket, startAt, prefix, delimiter string, maxKeys int) (items []*client.Item, err error) {
 	if maxKeys <= 0 {
 		return nil, iodine.New(InvalidMaxKeys{MaxKeys: maxKeys}, nil)
 	}
@@ -236,7 +193,7 @@ func (c *s3Client) listObjectsInternal(bucket, startAt, prefix, delimiter string
 		if fetchN > globalMaxKeys {
 			fetchN = globalMaxKeys
 		}
-		bres, err := c.decodeBucketResults(c.getQueryURL(bucket, marker, prefix, delimiter, fetchN))
+		bres, err := c.decodeBucketResults(c.getQueryURL(marker, prefix, delimiter, fetchN))
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
@@ -266,6 +223,64 @@ func (c *s3Client) listObjectsInternal(bucket, startAt, prefix, delimiter string
 			errMsg := errors.New("No items replied")
 			return nil, iodine.New(client.UnexpectedError{Err: errMsg}, nil)
 		}
+	}
+	return items, nil
+}
+
+// Get list of buckets
+func (c *s3Client) listBuckets() ([]*client.Item, error) {
+	requestURL, err := c.getRequestURL()
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	req, err := c.newRequest("GET", requestURL, nil)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	// do not ignore signatures for 'listBuckets()' it is never a public request for amazon s3
+	// so lets aggressively verify
+	if strings.Contains(c.Host, "amazonaws.com") && (c.AccessKeyID == "" || c.SecretAccessKey == "") {
+		msg := "Authorization key cannot be empty for listing buckets, please choose a valid bucketname if its a public request"
+		return nil, iodine.New(errors.New(msg), nil)
+	}
+	// rest we can ignore
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		c.signRequest(req, c.Host)
+	}
+	res, err := c.Transport.RoundTrip(req)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	if res != nil {
+		if res.StatusCode != http.StatusOK {
+			err = NewError(res)
+			return nil, iodine.New(err, nil)
+		}
+	}
+	defer res.Body.Close()
+
+	type bucket struct {
+		Name         string
+		CreationDate time.Time
+	}
+	type allMyBuckets struct {
+		Buckets struct {
+			Bucket []*bucket
+		}
+	}
+	var buckets allMyBuckets
+	if err := xml.NewDecoder(res.Body).Decode(&buckets); err != nil {
+		return nil, iodine.New(client.UnexpectedError{
+			Err: errors.New("Malformed response received from server")},
+			map[string]string{"XMLError": err.Error()})
+	}
+	var items []*client.Item
+	for _, b := range buckets.Buckets.Bucket {
+		item := new(client.Item)
+		item.Name = b.Name
+		item.Time = b.CreationDate
+		item.FileType = os.ModeDir
+		items = append(items, item)
 	}
 	return items, nil
 }
