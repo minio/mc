@@ -70,7 +70,7 @@ func (c *s3Client) PutBucket() error {
 	}
 	if res != nil {
 		if res.StatusCode != http.StatusOK {
-			return iodine.New(NewError(res), nil)
+			return iodine.New(ResponseToError(res), nil)
 		}
 	}
 	defer res.Body.Close()
@@ -114,7 +114,7 @@ func (c *s3Client) PutBucketACL(acl string) error {
 	}
 	if res != nil {
 		if res.StatusCode != http.StatusOK {
-			return iodine.New(NewError(res), nil)
+			return iodine.New(ResponseToError(res), nil)
 		}
 	}
 	defer res.Body.Close()

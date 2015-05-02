@@ -82,7 +82,7 @@ func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 			return
 		}
 		if res.StatusCode != http.StatusOK {
-			err := iodine.New(NewError(res), nil)
+			err := iodine.New(ResponseToError(res), nil)
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return

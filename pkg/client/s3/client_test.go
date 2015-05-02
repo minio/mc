@@ -95,7 +95,7 @@ func (s *MySuite) TestError(c *C) {
 	res := "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Error><Code>AccessDenied</Code><Message>Access Denied</Message><Resource>/mybucket/myphoto.jpg</Resource><RequestId>F19772218238A85A</RequestId><HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId></Error>"
 	response := new(http.Response)
 	response.Body = ioutil.NopCloser(strings.NewReader(res))
-	err := NewError(response)
+	err := ResponseToError(response)
 	c.Assert(err, Not(IsNil))
 	c.Assert(err.Error(), Equals, "Access Denied")
 }

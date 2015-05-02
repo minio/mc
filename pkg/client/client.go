@@ -26,7 +26,7 @@ import (
 
 // Client - client interface
 type Client interface {
-	MultipartUpload
+	//	MultipartUpload - TODO
 
 	// Common operations
 	Stat() (content *Content, err error)
@@ -44,13 +44,13 @@ type Client interface {
 }
 
 // MultipartUpload - multi part upload interface
-type MultipartUpload interface {
-	InitiateMultiPartUpload() (objectID string, err error)
-	UploadPart(uploadID string, body io.ReadSeeker, contentLength, partNumber int64) (md5hex string, err error)
-	CompleteMultiPartUpload(uploadID string) (location, md5hex string, err error)
-	AbortMultiPartUpload(uploadID string) error
-	ListParts(uploadID string) (contents *PartContents, err error)
-}
+//type MultipartUpload interface {
+//	InitiateMultiPartUpload() (objectID string, err error)
+//	UploadPart(uploadID string, body io.ReadSeeker, contentLength, partNumber int64) (md5hex string, err error)
+//	CompleteMultiPartUpload(uploadID string) (location, md5hex string, err error)
+//	AbortMultiPartUpload(uploadID string) error
+//	ListParts(uploadID string) (contents *PartContents, err error)
+//}
 
 // Part - part xml response
 type Part struct {
