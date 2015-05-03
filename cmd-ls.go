@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -63,7 +62,7 @@ func runListCmd(ctx *cli.Context) {
 	for targetURL, targetConfig := range targetURLConfigMap {
 		if isURLRecursive(targetURL) {
 			// if recursive strip off the "..."
-			targetURL = strings.TrimSuffix(targetURL, recursiveSeparator)
+			targetURL = stripRecursiveURL(targetURL)
 			err = doListRecursiveCmd(targetURL, targetConfig, globalDebugFlag)
 			err = iodine.New(err, nil)
 			if err != nil {

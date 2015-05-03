@@ -16,14 +16,15 @@
 
 package main
 
-import (
-	"strings"
+import "github.com/minio/cli"
 
-	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
-)
+func runSyncCmd(ctx *cli.Context) {
+	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
+	}
+}
 
+/*
 func runSyncCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
@@ -59,7 +60,7 @@ func runCopyCmdSingleSourceMultipleTargets(urls []string) {
 	recursive := isURLRecursive(sourceURL)
 	// if recursive strip off the "..."
 	if recursive {
-		sourceURL = strings.TrimSuffix(sourceURL, recursiveSeparator)
+		sourceURL = stripRecursiveURL(sourceURL)
 	}
 	sourceConfig, err := getHostConfig(sourceURL)
 	if err != nil {
@@ -75,7 +76,7 @@ func runCopyCmdSingleSourceMultipleTargets(urls []string) {
 	}
 
 	for targetURL, targetConfig := range targetURLConfigMap {
-		err = doCopySingleSourceRecursive(sourceURL, targetURL, sourceConfig, targetConfig)
+		err = doCopyRecursive(targetURL, targetConfig, sourceURL, sourceConfig)
 		if err != nil {
 			console.Debugln(err)
 			console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n",
@@ -83,3 +84,5 @@ func runCopyCmdSingleSourceMultipleTargets(urls []string) {
 		}
 	}
 }
+
+*/

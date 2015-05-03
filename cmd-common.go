@@ -18,10 +18,7 @@ package main
 
 import (
 	"net"
-	"time"
 
-	"github.com/cheggaaa/pb"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -46,6 +43,7 @@ func isValidRetry(err error) bool {
 	return false
 }
 
+/*
 // StartBar -- instantiate a progressbar
 func startBar(size int64) *pb.ProgressBar {
 	bar := pb.New64(size)
@@ -61,3 +59,4 @@ func startBar(size int64) *pb.ProgressBar {
 	bar.Format("[=> ]")
 	return bar
 }
+*/

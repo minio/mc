@@ -94,19 +94,16 @@ func (c *s3Client) CreateObject(md5 string, size uint64) (io.WriteCloser, error)
 	r, w := io.Pipe()
 	// TODO - bump this value from default, if neede
 	// objectstorage.DefaultPartSize = 1024 * 1024 * 100
-	blockingWriter := client.NewBlockingWriteCloser(w)
 	go func() {
 		_, err := c.api.CreateObject(bucket, object, size, r)
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)
-			blockingWriter.Release(err)
 			return
 		}
-		blockingWriter.Release(nil)
 		r.Close()
 	}()
-	return blockingWriter, nil
+	return w, nil
 }
 
 // CreateBucket - create a new bucket
@@ -141,7 +138,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 		objectMetadata.Name = metadata.Key
 		objectMetadata.Time = metadata.LastModified
 		objectMetadata.Size = metadata.Size
-		objectMetadata.FileType = 0
+		objectMetadata.Type = 0
 		return objectMetadata, nil
 	}
 	err := c.api.StatBucket(bucket)
@@ -150,7 +147,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 	}
 	bucketMetadata := new(client.Content)
 	bucketMetadata.Name = bucket
-	bucketMetadata.FileType = os.ModeDir
+	bucketMetadata.Type = os.ModeDir
 	return bucketMetadata, nil
 }
 
@@ -204,7 +201,7 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 			content.Name = bucket.Data.Name
 			content.Size = 0
 			content.Time = bucket.Data.CreationDate
-			content.FileType = os.ModeDir
+			content.Type = os.ModeDir
 			contentCh <- client.ContentOnChannel{
 				Content: content,
 				Err:     nil,
@@ -218,7 +215,7 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 			content.Name = metadata.Key
 			content.Time = metadata.LastModified
 			content.Size = metadata.Size
-			content.FileType = 0
+			content.Type = 0
 			contentCh <- client.ContentOnChannel{
 				Content: content,
 				Err:     nil,
@@ -237,11 +234,11 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 				switch {
 				case object.Data.Size == 0:
 					content.Time = time.Now()
-					content.FileType = os.ModeDir
+					content.Type = os.ModeDir
 				default:
 					content.Size = object.Data.Size
 					content.Time = object.Data.LastModified
-					content.FileType = 0
+					content.Type = 0
 				}
 				contentCh <- client.ContentOnChannel{
 					Content: content,
@@ -267,7 +264,7 @@ func (c *s3Client) listRecursiveInGoRoutine(contentCh chan client.ContentOnChann
 		content.Name = object.Data.Key
 		content.Size = object.Data.Size
 		content.Time = object.Data.LastModified
-		content.FileType = 0
+		content.Type = 0
 		contentCh <- client.ContentOnChannel{
 			Content: content,
 			Err:     nil,

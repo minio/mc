@@ -35,10 +35,11 @@ func getHostURL(u *url.URL) string {
 	return u.Scheme + "://" + u.Host
 }
 
-func getHostConfigs(requestURLs []string) (hostConfigs map[string]*hostConfig, err error) {
+// getHostConfigs retrieves host specific configuration such as access keys, certs for a list of  URLs
+func getHostConfigs(URLs []string) (hostConfigs map[string]*hostConfig, err error) {
 	hostConfigs = make(map[string]*hostConfig)
-	for _, requestURL := range requestURLs {
-		hostConfigs[requestURL], err = getHostConfig(requestURL)
+	for _, URL := range URLs {
+		hostConfigs[URL], err = getHostConfig(URL)
 		if err != nil {
 			return nil, iodine.New(err, nil)
 		}
@@ -47,17 +48,17 @@ func getHostConfigs(requestURLs []string) (hostConfigs map[string]*hostConfig, e
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(requestURL string) (*hostConfig, error) {
+func getHostConfig(URL string) (*hostConfig, error) {
 	config, err := getMcConfig()
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	u, err := url.Parse(requestURL)
+	u, err := url.Parse(URL)
 	if err != nil {
-		return nil, iodine.New(errInvalidURL{url: requestURL}, nil)
+		return nil, iodine.New(errInvalidURL{url: URL}, nil)
 	}
 	// No host matching or keys needed for filesystem requests
-	if client.GetType(requestURL) == client.Filesystem {
+	if client.GetType(URL) == client.Filesystem {
 		hostCfg := &hostConfig{
 			AccessKeyID:     "",
 			SecretAccessKey: "",
@@ -76,7 +77,7 @@ func getHostConfig(requestURL string) (*hostConfig, error) {
 	for globURL, hostCfg := range config.Hosts {
 		match, err := filepath.Match(globURL, getHostURL(u))
 		if err != nil {
-			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: requestURL}, nil)
+			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: URL}, nil)
 		}
 		if match {
 			if hostCfg == nil {

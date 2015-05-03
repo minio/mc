@@ -66,3 +66,4 @@ install: test-all
 clean:
 	@rm -fv cover.out
 	@rm -fv mc
+	@find Godeps -name "*.a" -type f -exec rm -vf {} +

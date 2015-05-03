@@ -16,12 +16,8 @@
 
 package main
 
-import (
-	"io"
-
-	"github.com/minio/minio/pkg/iodine"
-)
-
+/*
+>>>>>>> intermediate copy rewrite
 type sourceReader struct {
 	reader io.ReadCloser
 	length uint64
@@ -48,3 +44,4 @@ func getSourceReaders(sourceURLConfigMap map[string]*hostConfig) (map[string]sou
 	}
 	return sourceURLReaderMap, nil
 }
+*/

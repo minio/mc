@@ -91,6 +91,7 @@ func (e errAliasExists) Error() string {
 	return "Alias name: " + e.name + " exists"
 }
 
+/*
 type errIsNotBucket struct {
 	path string
 }
@@ -98,6 +99,15 @@ type errIsNotBucket struct {
 func (e errIsNotBucket) Error() string {
 	return "Not a bucket " + e.path
 }
+
+// errInvalidAuthKeys - invalid authorization keys
+type errInvalidAuthKeys struct {
+}
+
+func (e errInvalidAuthKeys) Error() string {
+	return "Invalid authorization keys"
+}
+*/
 
 type errInvalidSource struct {
 	path string
@@ -107,10 +117,10 @@ func (e errInvalidSource) Error() string {
 	return "Invalid source " + e.path
 }
 
-type errIsNotFolder struct {
+type errInvalidTarget struct {
 	path string
 }
 
-func (e errIsNotFolder) Error() string {
-	return "Not a folder " + e.path
+func (e errInvalidTarget) Error() string {
+	return "Invalid source " + e.path
 }

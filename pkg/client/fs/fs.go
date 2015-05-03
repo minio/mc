@@ -36,20 +36,36 @@ type fsClient struct {
 }
 
 // New - instantiate a new fs client
-func New(path string) client.Client {
+func New(path string) (client.Client, error) {
 	if strings.TrimSpace(path) == "" {
-		return nil
+		return nil, iodine.New(errors.New("Path is empty."), nil)
 	}
-	return &fsClient{path: path}
+
+	// Golang strips trailing / if you clean(..) or
+	// EvalSymlinks(..). Adding '.' prevents it from doing so.
+	if strings.HasSuffix(path, string(filepath.Separator)) {
+		path = path + string('.')
+	}
+
+	return &fsClient{path: path}, nil
 }
 
 /// Object operations
 
 // fsStat - wrapper function to get file stat
 func (f *fsClient) fsStat() (os.FileInfo, error) {
-	st, err := os.Lstat(filepath.Clean(f.path))
+	// Resolve symlinks
+	fpath, err := filepath.EvalSymlinks(f.path)
 	if os.IsNotExist(err) {
-		return nil, iodine.New(NotFound{path: f.path}, nil)
+		return nil, iodine.New(NotFound{path: fpath}, nil)
+	}
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
+	st, err := os.Stat(fpath)
+	if os.IsNotExist(err) {
+		return nil, iodine.New(NotFound{path: fpath}, nil)
 	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -57,6 +73,7 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	return st, nil
 }
 
+// get - download an object from bucket
 func (f *fsClient) get(content *client.Content) (io.ReadCloser, uint64, string, error) {
 	body, err := os.Open(f.path)
 	if err != nil {
@@ -83,11 +100,17 @@ func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, stri
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	if content.FileType.IsDir() {
+	if content.Type.IsDir() {
 		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
 	}
 	if int64(offset) > content.Size || int64(offset+length-1) > content.Size {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
+	}
+
+	// Resolve symlinks
+	fpath, err := filepath.EvalSymlinks(f.path)
+	if os.IsNotExist(err) {
+		return nil, 0, "", iodine.New(NotFound{path: fpath}, nil)
 	}
 	if offset == 0 && length == 0 {
 		return f.get(content)
@@ -95,6 +118,7 @@ func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, stri
 	body, err := os.Open(f.path)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
+
 	}
 	_, err = io.CopyN(ioutil.Discard, body, int64(offset))
 	if err != nil {
@@ -124,21 +148,43 @@ func (f *fsClient) List() <-chan client.ContentOnChannel {
 
 func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
-	dir, err := os.Open(f.path)
+
+	// Resolve symlinks
+	fpath, err := filepath.EvalSymlinks(f.path)
+	if os.IsNotExist(err) {
+		contentCh <- client.ContentOnChannel{
+			Content: nil,
+			Err:     iodine.New(NotFound{path: fpath}, nil),
+		}
+		return
+	}
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
 			Err:     iodine.New(err, nil),
 		}
+		return
 	}
+
+	dir, err := os.Open(fpath)
+	if err != nil {
+		contentCh <- client.ContentOnChannel{
+			Content: nil,
+			Err:     iodine.New(err, nil),
+		}
+		return
+	}
+	defer dir.Close()
+
 	fi, err := os.Lstat(f.path)
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
 			Err:     iodine.New(err, nil),
 		}
+		return
 	}
-	defer dir.Close()
+
 	switch fi.Mode().IsDir() {
 	case true:
 		// do not use ioutil.ReadDir(), since it tries to sort its
@@ -152,13 +198,14 @@ func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
 				Content: nil,
 				Err:     iodine.New(err, nil),
 			}
+			return
 		}
 		for _, file := range files {
 			content := &client.Content{
-				Name:     file.Name(),
-				Time:     file.ModTime(),
-				Size:     file.Size(),
-				FileType: file.Mode(),
+				Name: file.Name(),
+				Time: file.ModTime(),
+				Size: file.Size(),
+				Type: file.Mode(),
 			}
 			contentCh <- client.ContentOnChannel{
 				Content: content,
@@ -167,10 +214,10 @@ func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
 		}
 	default:
 		content := &client.Content{
-			Name:     dir.Name(),
-			Time:     fi.ModTime(),
-			Size:     fi.Size(),
-			FileType: fi.Mode(),
+			Name: dir.Name(),
+			Time: fi.ModTime(),
+			Size: fi.Size(),
+			Type: fi.Mode(),
 		}
 		contentCh <- client.ContentOnChannel{
 			Content: content,
@@ -190,16 +237,18 @@ func (f *fsClient) listRecursive(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		if err != nil {
-			if os.IsPermission(err) { // skip inaccessible files
+			if strings.Contains(err.Error(), "operation not permitted") ||
+				// os.IsNotExist(err) ||
+				os.IsPermission(err) { // skip inaccessible files
 				return nil
 			}
-			return err // fatal
+			return iodine.New(err, nil) // abort
 		}
 		content := &client.Content{
-			Name:     fp,
-			Time:     fi.ModTime(),
-			Size:     fi.Size(),
-			FileType: fi.Mode(),
+			Name: fp,
+			Time: fi.ModTime(),
+			Size: fi.Size(),
+			Type: fi.Mode(),
 		}
 		contentCh <- client.ContentOnChannel{
 			Content: content,
@@ -282,9 +331,10 @@ func (f *fsClient) getFSMetadata() (content *client.Content, err error) {
 		return nil, iodine.New(err, nil)
 	}
 	content = new(client.Content)
-	content.Name = st.Name()
+	content.Name = f.path
 	content.Size = st.Size()
 	content.Time = st.ModTime()
+	content.Type = st.Mode()
 	return content, nil
 }
 
