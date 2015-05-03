@@ -19,7 +19,6 @@ package s3
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -85,13 +84,15 @@ func (a *s3Client) signRequest(req *http.Request, host string) {
 	hm := hmac.New(sha1.New, []byte(a.SecretAccessKey))
 	ss := a.stringToSign(req, host)
 	//DEBUG - fmt.Printf("String to sign: %q (%x)\n", ss, ss)
-	io.WriteString(hm, ss)
+	hm.Write([]byte(ss))
 
 	authHeader := new(bytes.Buffer)
 	fmt.Fprintf(authHeader, "AWS %s:", a.AccessKeyID)
 	encoder := base64.NewEncoder(base64.StdEncoding, authHeader)
 	encoder.Write(hm.Sum(nil))
+	// do not defer this, close it before passing down encoded authHeader
 	encoder.Close()
+
 	req.Header.Set("Authorization", authHeader.String())
 }
 
