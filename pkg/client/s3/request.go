@@ -41,13 +41,7 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 }
 
 func (c *s3Client) getBucketRequestURL(bucket string) string {
-	// default to path style
-	url := fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
-	if strings.Contains(c.Host, "amazonaws.com") {
-		// amazonaws.com use subdomain style
-		url = fmt.Sprintf("%s://%s.%s", c.Scheme, bucket, c.Host)
-	}
-	return url
+	return fmt.Sprintf("%s://%s/%s", c.Scheme, c.Host, bucket)
 }
 
 // getObjectRequestURL constructs a URL using bucket and object
