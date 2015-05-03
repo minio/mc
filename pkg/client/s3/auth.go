@@ -84,7 +84,7 @@ func (a *s3Client) getTLSTransport() (*http.Transport, error) {
 func (a *s3Client) signRequest(req *http.Request, host string) {
 	hm := hmac.New(sha1.New, []byte(a.SecretAccessKey))
 	ss := a.stringToSign(req, host)
-	//fmt.Printf("String to sign: %q (%x)\n", ss, ss)
+	//DEBUG - fmt.Printf("String to sign: %q (%x)\n", ss, ss)
 	io.WriteString(hm, ss)
 
 	authHeader := new(bytes.Buffer)
@@ -195,11 +195,6 @@ var subResList = []string{
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
 func (a *s3Client) writeCanonicalizedResource(buf *bytes.Buffer, req *http.Request, host string) {
-	bucket, _ := a.url2BucketAndObject()
-	if bucket != "" {
-		buf.WriteByte('/')
-		buf.WriteString(bucket)
-	}
 	buf.WriteString(req.URL.Path)
 	sort.Strings(subResList)
 	if req.URL.RawQuery != "" {
