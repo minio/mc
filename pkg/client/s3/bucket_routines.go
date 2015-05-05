@@ -62,7 +62,7 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 			return
 		}
 		// List all objects matching the key prefix
-		contents, err = c.listObjects(bucket, "", objectPrefix, "/", globalMaxKeys)
+		contents, marker, err := c.listObjects(bucket, "", objectPrefix, "/", globalMaxKeys)
 		if err != nil {
 			contentCh <- client.ContentOnChannel{
 				Content: nil,
@@ -76,12 +76,30 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 				Err:     nil,
 			}
 		}
+		// take marker and loop through
+		if marker != nil {
+			for marker.istruncated {
+				contents, marker, err = c.listObjects(bucket, marker.nextMarker, objectPrefix, "/", globalMaxKeys)
+				if err != nil {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     iodine.New(err, nil),
+					}
+					return
+				}
+				for _, content := range contents {
+					contentCh <- client.ContentOnChannel{
+						Content: content,
+						Err:     nil,
+					}
+				}
+			}
+		}
 	}
 }
 
 func (c *s3Client) listRecursiveInGoRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
-
 	var contents []*client.Content
 	bucket, objectPrefix := c.url2BucketAndObject()
 	content, err := c.getObjectMetadata(bucket, objectPrefix)
@@ -110,7 +128,7 @@ func (c *s3Client) listRecursiveInGoRoutine(contentCh chan client.ContentOnChann
 			return
 		}
 		// List all objects matching the key prefix
-		contents, err = c.listObjects(bucket, "", objectPrefix, "", globalMaxKeys)
+		contents, marker, err := c.listObjects(bucket, "", objectPrefix, "", globalMaxKeys)
 		if err != nil {
 			contentCh <- client.ContentOnChannel{
 				Content: nil,
@@ -122,6 +140,25 @@ func (c *s3Client) listRecursiveInGoRoutine(contentCh chan client.ContentOnChann
 			contentCh <- client.ContentOnChannel{
 				Content: content,
 				Err:     nil,
+			}
+		}
+		// take marker and loop through
+		if marker != nil {
+			for marker.istruncated {
+				contents, marker, err = c.listObjects(bucket, marker.nextMarker, objectPrefix, "", globalMaxKeys)
+				if err != nil {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     iodine.New(err, nil),
+					}
+					return
+				}
+				for _, content := range contents {
+					contentCh <- client.ContentOnChannel{
+						Content: content,
+						Err:     nil,
+					}
+				}
 			}
 		}
 	}
@@ -182,30 +219,35 @@ func (c *s3Client) filterContents(startAt, marker, prefix, delimiter string, cts
 
 // Populare query URL for Listobjects requests
 func (c *s3Client) getQueryURL(bucket, marker, prefix, delimiter string, fetchN int) string {
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("%s?max-keys=%d", c.getBucketRequestURL(bucket), fetchN))
+	queryURL := c.getBucketRequestURL(bucket) + fmt.Sprintf("?max-keys=%d", fetchN)
 	switch true {
 	case marker != "":
-		buffer.WriteString(fmt.Sprintf("&marker=%s", url.QueryEscape(marker)))
+		queryURL = queryURL + fmt.Sprintf("&marker=%s", url.QueryEscape(marker))
 		fallthrough
 	case prefix != "":
-		buffer.WriteString(fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix)))
+		queryURL = queryURL + fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix))
 		fallthrough
 	case delimiter != "":
-		buffer.WriteString(fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter)))
+		queryURL = queryURL + fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter))
 	}
-	return buffer.String()
+	return queryURL
+}
+
+type nextMarker struct {
+	nextMarker  string
+	istruncated bool
 }
 
 // listObjects returns 0 to maxKeys (inclusive) contents from the
 // provided bucket. Keys before startAt will be skipped. (This is the S3
 // 'marker' value). If the length of the returned contents is equal to
 // maxKeys, there is no indication whether or not the returned list is truncated.
-func (c *s3Client) listObjects(bucket, startAt, prefix, delimiter string, maxKeys int) (contents []*client.Content, err error) {
+func (c *s3Client) listObjects(bucket, startAt, prefix, delimiter string, maxKeys int) (contents []*client.Content, m *nextMarker, err error) {
 	if maxKeys <= 0 {
-		return nil, iodine.New(InvalidMaxKeys{MaxKeys: maxKeys}, nil)
+		return nil, nil, iodine.New(InvalidMaxKeys{MaxKeys: maxKeys}, nil)
 	}
 	marker := startAt
+	m = new(nextMarker)
 	for len(contents) < maxKeys {
 		fetchN := maxKeys - len(contents)
 		if fetchN > globalMaxKeys {
@@ -213,16 +255,15 @@ func (c *s3Client) listObjects(bucket, startAt, prefix, delimiter string, maxKey
 		}
 		bres, err := c.decodeBucketResults(c.getQueryURL(bucket, marker, prefix, delimiter, fetchN))
 		if err != nil {
-			return nil, iodine.New(err, nil)
+			return nil, nil, iodine.New(err, nil)
 		}
 		if bres.MaxKeys != fetchN || bres.Name != bucket || bres.Marker != marker {
 			msg := fmt.Sprintf("Unexpected parse from server: %#v", bres)
-			return nil, iodine.New(client.UnexpectedError{
-				Err: errors.New(msg)}, nil)
+			return nil, nil, iodine.New(client.UnexpectedError{Err: errors.New(msg)}, nil)
 		}
 		contents, marker, err = c.filterContents(startAt, marker, prefix, delimiter, bres.Contents)
 		if err != nil {
-			return nil, iodine.New(err, nil)
+			return nil, nil, iodine.New(err, nil)
 		}
 		for _, prefix := range bres.CommonPrefixes {
 			content := &client.Content{
@@ -234,15 +275,13 @@ func (c *s3Client) listObjects(bucket, startAt, prefix, delimiter string, maxKey
 			}
 			contents = append(contents, content)
 		}
-		if !bres.IsTruncated {
+		m.istruncated = bres.IsTruncated
+		m.nextMarker = marker
+		if !m.istruncated {
 			break
 		}
-		if len(contents) == 0 {
-			errMsg := errors.New("No contents replied")
-			return nil, iodine.New(client.UnexpectedError{Err: errMsg}, nil)
-		}
 	}
-	return contents, nil
+	return contents, m, nil
 }
 
 // Get list of buckets
