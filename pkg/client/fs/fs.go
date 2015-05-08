@@ -18,6 +18,7 @@ package fs
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"io"
 	"os"
@@ -57,56 +58,69 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 }
 
 // Get - download an object from bucket
-func (f *fsClient) Get() (io.ReadCloser, int64, error) {
+func (f *fsClient) Get() (io.ReadCloser, int64, string, error) {
 	content, err := f.getFSMetadata()
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, "", iodine.New(err, nil)
 	}
 	if content.FileType.IsDir() {
-		return nil, 0, iodine.New(ISFolder{path: f.path}, nil)
+		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
 	}
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, "", iodine.New(err, nil)
 	}
 	h := md5.New()
 	// calculate md5sum
 	_, err = io.Copy(h, body)
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, "", iodine.New(err, nil)
 	}
 	// seek back
 	_, err = body.Seek(0, 0)
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, "", iodine.New(err, nil)
 	}
-	return body, content.Size, nil
+	md5Str := hex.EncodeToString(h.Sum(nil))
+	return body, content.Size, md5Str, nil
 }
 
 // GetPartial - download a partial object from bucket
-func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, error) {
+func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, string, error) {
 	if offset < 0 {
-		return nil, 0, iodine.New(client.InvalidRange{Offset: offset}, nil)
+		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
 	content, err := f.getFSMetadata()
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, "", iodine.New(err, nil)
 	}
 	if content.FileType.IsDir() {
-		return nil, 0, iodine.New(ISFolder{path: f.path}, nil)
+		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
 	}
 	if offset > content.Size || (offset+length-1) > content.Size {
-		return nil, 0, iodine.New(client.InvalidRange{Offset: offset}, nil)
+		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, "", iodine.New(err, nil)
 	}
 	_, err = io.CopyN(ioutil.Discard, body, offset)
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, "", iodine.New(err, nil)
 	}
-	return body, length, nil
+	h := md5.New()
+	// calculate md5sum
+	_, err = io.Copy(h, body)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	// seek back
+	_, err = body.Seek(0, 0)
+	if err != nil {
+		return nil, 0, "", iodine.New(err, nil)
+	}
+	md5Str := hex.EncodeToString(h.Sum(nil))
+	return body, length, md5Str, nil
 }
 
 // List - list files and folders

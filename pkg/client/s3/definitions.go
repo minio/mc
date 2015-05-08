@@ -26,6 +26,7 @@ import (
 type content struct {
 	Key          string
 	LastModified time.Time
+	ETag         string
 	Size         int64
 }
 

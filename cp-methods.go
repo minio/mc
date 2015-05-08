@@ -25,13 +25,14 @@ import (
 type sourceReader struct {
 	reader io.ReadCloser
 	length int64
+	md5hex string
 }
 
 // getSourceReaders -
 func getSourceReaders(sourceURLConfigMap map[string]*hostConfig) (map[string]sourceReader, error) {
 	sourceURLReaderMap := make(map[string]sourceReader)
 	for sourceURL, sourceConfig := range sourceURLConfigMap {
-		reader, length, err := getSourceReader(sourceURL, sourceConfig)
+		reader, length, md5hex, err := getSourceReader(sourceURL, sourceConfig)
 		if err != nil {
 			for _, sourceReader := range sourceURLReaderMap {
 				sourceReader.reader.Close()
@@ -41,6 +42,7 @@ func getSourceReaders(sourceURLConfigMap map[string]*hostConfig) (map[string]sou
 		sr := sourceReader{
 			reader: reader,
 			length: length,
+			md5hex: md5hex,
 		}
 		sourceURLReaderMap[sourceURL] = sr
 	}
