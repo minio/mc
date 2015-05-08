@@ -18,9 +18,6 @@ package fs
 
 import (
 	"bytes"
-	"crypto/md5"
-	"encoding/base64"
-	"encoding/hex"
 	"io"
 	"io/ioutil"
 	"os"
@@ -46,11 +43,9 @@ func (s *MySuite) TestList(c *C) {
 	fsc := New(objectPath)
 
 	data := "hello"
-	binarySum := md5.Sum([]byte(data))
-	etag := base64.StdEncoding.EncodeToString(binarySum[:])
 	dataLen := int64(len(data))
 
-	writer, err := fsc.Put(etag, dataLen)
+	writer, err := fsc.Put(dataLen)
 	c.Assert(err, IsNil)
 
 	size, err := io.CopyN(writer, bytes.NewBufferString(data), dataLen)
@@ -60,7 +55,7 @@ func (s *MySuite) TestList(c *C) {
 	objectPath = filepath.Join(root, "object2")
 	fsc = New(objectPath)
 
-	writer, err = fsc.Put(etag, dataLen)
+	writer, err = fsc.Put(dataLen)
 	c.Assert(err, IsNil)
 
 	size, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)
@@ -123,11 +118,9 @@ func (s *MySuite) TestPutObject(c *C) {
 	fsc := New(objectPath)
 
 	data := "hello"
-	binarySum := md5.Sum([]byte(data))
-	etag := base64.StdEncoding.EncodeToString(binarySum[:])
 	dataLen := int64(len(data))
 
-	writer, err := fsc.Put(etag, dataLen)
+	writer, err := fsc.Put(dataLen)
 	c.Assert(err, IsNil)
 
 	size, err := io.CopyN(writer, bytes.NewBufferString(data), dataLen)
@@ -144,20 +137,17 @@ func (s *MySuite) TestGetObject(c *C) {
 	fsc := New(objectPath)
 
 	data := "hello"
-	binarySum := md5.Sum([]byte(data))
-	etag := hex.EncodeToString(binarySum[:])
 	dataLen := int64(len(data))
 
-	writer, err := fsc.Put(etag, dataLen)
+	writer, err := fsc.Put(dataLen)
 	c.Assert(err, IsNil)
 
 	_, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)
 	c.Assert(err, IsNil)
 
-	reader, size, md5Sum, err := fsc.Get()
+	reader, size, err := fsc.Get()
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
-	c.Assert(etag, Equals, md5Sum)
 	_, err = io.CopyN(&results, reader, size)
 	c.Assert(err, IsNil)
 	c.Assert([]byte(data), DeepEquals, results.Bytes())
@@ -173,11 +163,9 @@ func (s *MySuite) TestStat(c *C) {
 	fsc := New(objectPath)
 
 	data := "hello"
-	binarySum := md5.Sum([]byte(data))
-	etag := base64.StdEncoding.EncodeToString(binarySum[:])
 	dataLen := int64(len(data))
 
-	writer, err := fsc.Put(etag, dataLen)
+	writer, err := fsc.Put(dataLen)
 	c.Assert(err, IsNil)
 
 	_, err = io.CopyN(writer, bytes.NewBufferString(data), dataLen)

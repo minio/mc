@@ -27,8 +27,8 @@ import (
 /// mc cp - related internal functions
 
 // doCopy
-func doCopy(reader io.ReadCloser, md5hex string, length int64, targetURL string, targetConfig *hostConfig) error {
-	writeCloser, err := getTargetWriter(targetURL, targetConfig, md5hex, length)
+func doCopy(reader io.ReadCloser, length int64, targetURL string, targetConfig *hostConfig) error {
+	writeCloser, err := getTargetWriter(targetURL, targetConfig, length)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -61,7 +61,7 @@ func doCopy(reader io.ReadCloser, md5hex string, length int64, targetURL string,
 
 // doCopySingleSource
 func doCopySingleSource(sourceURL, targetURL string, sourceConfig, targetConfig *hostConfig) error {
-	reader, length, md5hex, err := getSourceReader(sourceURL, sourceConfig)
+	reader, length, err := getSourceReader(sourceURL, sourceConfig)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -69,11 +69,11 @@ func doCopySingleSource(sourceURL, targetURL string, sourceConfig, targetConfig 
 	newTargetURL, err := getNewTargetURL(targetURL, sourceURL)
 	switch iodine.ToError(err).(type) {
 	case errIsNotFolder:
-		return doCopy(reader, md5hex, length, targetURL, targetConfig)
+		return doCopy(reader, length, targetURL, targetConfig)
 	case errIsNotBucket:
-		return doCopy(reader, md5hex, length, targetURL, targetConfig)
+		return doCopy(reader, length, targetURL, targetConfig)
 	case nil:
-		return doCopy(reader, md5hex, length, newTargetURL, targetConfig)
+		return doCopy(reader, length, newTargetURL, targetConfig)
 	default:
 		return iodine.New(err, nil)
 	}
@@ -121,7 +121,7 @@ func doCopyMultipleSources(sourceURLConfigMap map[string]*hostConfig, targetURL 
 		if err != nil {
 			return iodine.New(err, nil)
 		}
-		err = doCopy(sourceReader.reader, sourceReader.md5hex, sourceReader.length, newTargetURL, targetConfig)
+		err = doCopy(sourceReader.reader, sourceReader.length, newTargetURL, targetConfig)
 		if err != nil {
 			return iodine.New(err, map[string]string{"Source": sourceURL})
 		}
