@@ -112,7 +112,7 @@ func (a *s3Client) stringToSign(req *http.Request, host string) string {
 	buf.WriteByte('\n')
 	buf.WriteString(req.Header.Get("Content-Type"))
 	buf.WriteByte('\n')
-	if req.Header.Get("x-amz-date") == "" {
+	if req.Header.Get("X-Amz-Date") == "" {
 		buf.WriteString(req.Header.Get("Date"))
 	}
 	buf.WriteByte('\n')
