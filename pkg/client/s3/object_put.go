@@ -17,12 +17,9 @@
 package s3
 
 import (
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/minio-io/mc/pkg/client"
 	"github.com/minio-io/minio/pkg/iodine"
@@ -47,7 +44,7 @@ func (c *s3Client) put(size int64) (*http.Request, error) {
 }
 
 // Put - upload new object to bucket
-func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) {
+func (c *s3Client) Put(size int64) (io.WriteCloser, error) {
 	// if size is negative
 	if size < 0 {
 		return nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
@@ -62,17 +59,6 @@ func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) 
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
-		}
-		// set Content-MD5 only if md5 is provided
-		if strings.TrimSpace(md5HexString) != "" {
-			md5, err := hex.DecodeString(md5HexString)
-			if err != nil {
-				err := iodine.New(err, nil)
-				r.CloseWithError(err)
-				blockingWriter.Release(err)
-				return
-			}
-			req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5))
 		}
 		if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 			c.signRequest(req, c.Host)
