@@ -32,6 +32,8 @@ func isValidBucketACL(acl string) bool {
 	case "public-read":
 		fallthrough
 	case "public-read-write":
+		fallthrough
+	case "authenticated-read":
 		return true
 	default:
 		return false

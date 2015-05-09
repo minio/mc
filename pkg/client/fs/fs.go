@@ -233,6 +233,8 @@ func isValidBucketACL(acl string) bool {
 		fallthrough
 	case "public-read-write":
 		fallthrough
+	case "authenticated-read":
+		fallthrough
 	case "":
 		return true
 	default:
@@ -249,6 +251,8 @@ func aclToPerm(acl string) os.FileMode {
 		return os.FileMode(0500)
 	case "public-read-write":
 		return os.FileMode(0777)
+	case "authenticated-read":
+		return os.FileMode(0770)
 	default:
 		return os.FileMode(0700)
 	}
