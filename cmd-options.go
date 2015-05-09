@@ -64,7 +64,7 @@ EXAMPLES:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE {{if .Description}}
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE [SOURCE...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -75,7 +75,7 @@ FLAGS:
 
 EXAMPLES:
    1. Concantenate an object from Amazon S3 object storage to mplayer standard input
-      $ mc {{.Name}} https://s3.amazonaws.com/jukebox/klingon_opera_aktuh_maylotah.ogg | mplayer -
+      $ mc {{.Name}} https://s3.amazonaws.com/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
 
    2. Concantenate a file from local filesystem to standard output.
       $ mc {{.Name}} khitomer-accords.txt
@@ -106,10 +106,10 @@ EXAMPLES:
       $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/
 
    2. Copy a bucket recursively from Minio object storage to Amazon S3 object storage
-      $ mc {{.Name}} http://localhost:9000/photos/burningman2011... https://s3.amazonaws.com/private-photos/burningman/
+      $ mc {{.Name}} http://play.minio.io:9000/photos/burningman2011... https://s3.amazonaws.com/private-photos/burningman/
 
    3. Copy multiple local folders recursively to Minio object storage
-      $ mc {{.Name}} backup/2014/... backup/2015/... http://localhost:9000/archive/
+      $ mc {{.Name}} backup/2014/... backup/2015/... http://play.minio.io:9000/archive/
 
    4. Copy a bucket recursively from aliased Amazon S3 object storage to local filesystem on Windows.
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014
@@ -136,7 +136,7 @@ FLAGS:
 
 EXAMPLES:
    1. List objects recursively on Minio object storage
-      $ mc {{.Name}} http://localhost:9000/backup/...
+      $ mc {{.Name}} http://play.minio.io:9000/backup/...
       [2015-03-28 12:47:50 PDT]  34MiB 2006-Jan-1/backup.tar.gz
       [2015-03-31 14:46:33 PDT]  55MiB 2006-Mar-1/backup.tar.gz
 
@@ -146,7 +146,7 @@ EXAMPLES:
       [2015-01-15 00:05:40 PST]     0B zek/
 
    3. List buckets from Amazon S3 object storage and recursively list objects from Minio object storage
-      $ mc {{.Name}} https://s3.amazonaws.com/ http://localhost:9000/backup/...
+      $ mc {{.Name}} https://s3.amazonaws.com/ http://play.minio.io:9000/backup/...
       2015-01-15 00:05:40 PST     0B zek/
       2015-03-31 14:46:33 PDT  55MiB 2006-Mar-1/backup.tar.gz
 
@@ -187,10 +187,10 @@ EXAMPLES:
       $ mc {{.Name}} star-trek-episode-10-season4.ogg https://s3.amazonaws.com/trekarchive
 
    2. Sync a bucket recursively from Minio object storage to multiple buckets on Amazon S3 object storage
-      $ mc {{.Name}} http://localhost:9000/photos/2014... https://s3.amazonaws.com/backup-photos https://s3.amazonaws.com/my-photos
+      $ mc {{.Name}} http://play.minio.io:9000/photos/2014... https://s3.amazonaws.com/backup-photos https://s3.amazonaws.com/my-photos
 
    3. Copy a local folder recursively to Minio object storage and Amazon S3 object storage
-      $ mc {{.Name}} backup/... http://localhost:9000/archive https://s3.amazonaws.com/archive
+      $ mc {{.Name}} backup/... http://play.minio.io:9000/archive https://s3.amazonaws.com/archive
 
    4. Sync a bucket from aliased Amazon S3 object storage to multiple folders on Windows.
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
@@ -219,10 +219,10 @@ EXAMPLES:
       $ mc {{.Name}} https://s3.amazonaws.com/public-document-store
 
    2. Create a bucket on Minio object storage
-      $ mc {{.Name}} http://localhost:9000/mongodb-backup
+      $ mc {{.Name}} http://play.minio.io:9000/mongodb-backup
 
    3. Create multiple buckets on Amazon S3 object storage and Minio object storage
-      $ mc {{.Name}} https://s3.amazonaws.com/public-photo-store https://s3.amazonaws.com/public-store http://localhost:9000/mongodb-backup
+      $ mc {{.Name}} https://s3.amazonaws.com/public-photo-store http://play.minio.io:9000/mongodb-backup
 
 `,
 	}
@@ -265,14 +265,10 @@ EXAMPLES:
 
 USAGE:
    mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} check
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} install
 
 EXAMPLES:
    1. Check for new updates
       $ mc update check
-
-   2. Download new minio client locally and update
-      $ mc update install
 
 `,
 	}
