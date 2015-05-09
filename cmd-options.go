@@ -51,6 +51,9 @@ EXAMPLES:
    2. Set bucket to "public" on Amazon S3 object storage
       $ mc {{.Name}} public https://s3.amazonaws.com/shared
 
+   3. Set bucket to "authenticated" on Amazon S3 object storage to provide read access to AuthenticatedUsers group
+      $ mc {{.Name}} authenticated https://s3.amazonaws.com/shared-authenticated
+
    3. Set folder to world readwrite (chmod 777) on local filesystem
       $ mc {{.Name}} public /shared/Music
 

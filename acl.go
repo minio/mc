@@ -24,6 +24,8 @@ func (b bucketACL) isValidBucketACL() bool {
 	case b.isReadOnly():
 		fallthrough
 	case b.isPublic():
+		fallthrough
+	case b.isAuthenticated():
 		return true
 	case b.String() == "private":
 		// by default its "private"
@@ -38,9 +40,10 @@ type bucketACL string
 
 // different types of ACL's currently supported for buckets
 const (
-	bucketPrivate  = bucketACL("private")
-	bucketReadOnly = bucketACL("readonly")
-	bucketPublic   = bucketACL("public")
+	bucketPrivate       = bucketACL("private")
+	bucketReadOnly      = bucketACL("readonly")
+	bucketPublic        = bucketACL("public")
+	bucketAuthenticated = bucketACL("authenticated")
 )
 
 func (b bucketACL) String() string {
@@ -52,6 +55,9 @@ func (b bucketACL) String() string {
 	}
 	if string(b) == "public" {
 		return "public-read-write"
+	}
+	if string(b) == "authenticated" {
+		return "authenticated-read"
 	}
 	return string(b)
 }
@@ -69,4 +75,9 @@ func (b bucketACL) isReadOnly() bool {
 // IsPublicReadWrite - is acl PublicReadWrite
 func (b bucketACL) isPublic() bool {
 	return b == bucketPublic
+}
+
+// IsAuthenticated - is acl AuthenticatedRead
+func (b bucketACL) isAuthenticated() bool {
+	return b == bucketAuthenticated
 }
