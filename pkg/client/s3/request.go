@@ -88,7 +88,8 @@ func (c *s3Client) newRequest(method, url string, body io.ReadCloser) (*http.Req
 	if err != nil {
 		return nil, iodine.New(err, errParams)
 	}
+
 	req.Header.Set("User-Agent", c.UserAgent)
-	req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
+	req.Header.Set("X-Amz-Date", time.Now().UTC().Format(http.TimeFormat))
 	return req, nil
 }
