@@ -31,4 +31,4 @@ bucket2
 bucket3
 ```
 
-Grab it here [example-list-buckets.py](https://github.com/Minio-io/mc/blob/master/docs/sdks/python/example-list-buckets.py)
+Grab it here [example-list-buckets.py](https://github.com/minio/mc/blob/master/docs/sdks/python/example-list-buckets.py)

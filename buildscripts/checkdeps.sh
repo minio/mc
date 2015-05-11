@@ -80,7 +80,7 @@ check_golang_env() {
     if [ $? -eq 1 ]; then
 	echo "ERROR"
 	echo "GOROOT environment variable missing, please refer to Go installation document"
-	echo "https://github.com/Minio-io/minio/blob/master/BUILDDEPS.md#install-go-13"
+	echo "https://github.com/minio/minio/blob/master/BUILDDEPS.md#install-go-13"
 	exit 1
     fi
 
@@ -88,7 +88,7 @@ check_golang_env() {
     if [ $? -eq 1 ]; then
 	echo "ERROR"
 	echo "GOPATH environment variable missing, please refer to Go installation document"
-	echo "https://github.com/Minio-io/minio/blob/master/BUILDDEPS.md#install-go-13"
+	echo "https://github.com/minio/minio/blob/master/BUILDDEPS.md#install-go-13"
 	exit 1
     fi
 }
@@ -159,7 +159,7 @@ main() {
 	echo "Please install them "
 	echo "${MISSING}"
 	echo
-	echo "Follow https://github.com/Minio-io/minio/blob/master/BUILDDEPS.md for further instructions"
+	echo "Follow https://github.com/minio/minio/blob/master/BUILDDEPS.md for further instructions"
 	exit 1
     fi
     echo "Done"

@@ -46,4 +46,4 @@ s3.listObjects(params, function(err, data) {
 });
 ```
 
-Grab it here [example-list.js](https://github.com/Minio-io/mc/blob/master/docs/sdks/js/example-list.js)
+Grab it here [example-list.js](https://github.com/minio/mc/blob/master/docs/sdks/js/example-list.js)
