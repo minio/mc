@@ -56,37 +56,18 @@ func (c *s3Client) get() (*http.Request, error) {
 	return req, nil
 }
 
-// Get - download a requested object from a given bucket
-func (c *s3Client) Get() (body io.ReadCloser, size int64, md5 string, err error) {
-	req, err := c.get()
-	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
-	}
-	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
-		c.signRequest(req, c.Host)
-	}
-	res, err := c.Transport.RoundTrip(req)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, 0, "", iodine.New(ResponseToError(res), nil)
-	}
-	md5sum := strings.Trim(res.Header.Get("ETag"), "\"") // trim off the erroneous double quotes
-	return res.Body, res.ContentLength, md5sum, nil
-}
-
-// GetPartial fetches part of the s3 object in bucket.
+// GetObject fetches full object or part of the s3 object in bucket.
 // If length is negative, the rest of the object is returned.
-func (c *s3Client) GetPartial(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
+func (c *s3Client) GetObject(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error) {
 	req, err := c.get()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	req, err = c.setRange(req, offset, length)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
+	if offset == 0 && length == 0 {
+		req, err = c.setRange(req, offset, length)
+		if err != nil {
+			return nil, 0, "", iodine.New(err, nil)
+		}
 	}
 	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
 		c.signRequest(req, c.Host)
@@ -95,9 +76,11 @@ func (c *s3Client) GetPartial(offset, length int64) (body io.ReadCloser, size in
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
+
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusPartialContent:
-		return res.Body, res.ContentLength, res.Header.Get("ETag"), nil
+		md5sum := strings.Trim(res.Header.Get("ETag"), "\"") // trim off the erroneous double quotes
+		return res.Body, res.ContentLength, md5sum, nil
 	default:
 		return nil, 0, "", iodine.New(ResponseToError(res), nil)
 	}

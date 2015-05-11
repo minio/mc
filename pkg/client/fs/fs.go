@@ -57,15 +57,7 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	return st, nil
 }
 
-// Get - download an object from bucket
-func (f *fsClient) Get() (io.ReadCloser, int64, string, error) {
-	content, err := f.getFSMetadata()
-	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
-	}
-	if content.FileType.IsDir() {
-		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
-	}
+func (f *fsClient) get(content *client.Content) (io.ReadCloser, int64, string, error) {
 	body, err := os.Open(f.path)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
@@ -85,8 +77,8 @@ func (f *fsClient) Get() (io.ReadCloser, int64, string, error) {
 	return body, content.Size, md5Str, nil
 }
 
-// GetPartial - download a partial object from bucket
-func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, string, error) {
+// GetObject download an full or part object from bucket
+func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, string, error) {
 	if offset < 0 {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
@@ -99,6 +91,9 @@ func (f *fsClient) GetPartial(offset, length int64) (io.ReadCloser, int64, strin
 	}
 	if offset > content.Size || (offset+length-1) > content.Size {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
+	}
+	if offset == 0 && length == 0 {
+		return f.get(content)
 	}
 	body, err := os.Open(f.path)
 	if err != nil {
@@ -258,8 +253,8 @@ func aclToPerm(acl string) os.FileMode {
 	}
 }
 
-// PutBucket - create a new bucket
-func (f *fsClient) PutBucket() error {
+// CreateBucket - create a new bucket
+func (f *fsClient) CreateBucket() error {
 	err := os.MkdirAll(f.path, 0775)
 	if err != nil {
 		return iodine.New(err, nil)
@@ -267,8 +262,8 @@ func (f *fsClient) PutBucket() error {
 	return nil
 }
 
-// PutBucket - create a new bucket
-func (f *fsClient) PutBucketACL(acl string) error {
+// SetBucketACL - create a new bucket
+func (f *fsClient) SetBucketACL(acl string) error {
 	if !isValidBucketACL(acl) {
 		return iodine.New(errors.New("invalid acl"), nil)
 	}

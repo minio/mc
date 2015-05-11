@@ -29,8 +29,8 @@ import (
 	"github.com/minio-io/minio/pkg/iodine"
 )
 
-// Put - upload new object to bucket
-func (f *fsClient) Put(md5HexString string, size int64) (io.WriteCloser, error) {
+// CreateObject - upload new object to bucket
+func (f *fsClient) CreateObject(md5HexString string, size int64) (io.WriteCloser, error) {
 	r, w := io.Pipe()
 	blockingWriter := client.NewBlockingWriteCloser(w)
 	go func() {

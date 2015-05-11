@@ -73,7 +73,7 @@ func doCatCmd(sourceURLConfigMap map[string]*hostConfig, debug bool) (string, er
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
-		reader, size, sourceMd5, err := sourceClnt.Get()
+		reader, size, sourceMd5, err := sourceClnt.GetObject(0, 0)
 		if err != nil {
 			return "Unable to retrieve file: " + url, iodine.New(err, nil)
 		}

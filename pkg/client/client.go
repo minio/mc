@@ -24,46 +24,18 @@ import (
 
 // Client - client interface
 type Client interface {
-	//	MultipartUpload - TODO
-
 	// Common operations
 	Stat() (content *Content, err error)
 	List() <-chan ContentOnChannel
 	ListRecursive() <-chan ContentOnChannel
 
 	// Bucket operations
-	PutBucket() error
-	PutBucketACL(acl string) error
+	CreateBucket() error
+	SetBucketACL(acl string) error
 
 	// Object operations
-	Get() (body io.ReadCloser, size int64, md5 string, err error)
-	GetPartial(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
-	Put(md5 string, size int64) (io.WriteCloser, error)
-}
-
-// MultipartUpload - multi part upload interface
-//type MultipartUpload interface {
-//	InitiateMultiPartUpload() (objectID string, err error)
-//	UploadPart(uploadID string, body io.ReadSeeker, contentLength, partNumber int64) (md5hex string, err error)
-//	CompleteMultiPartUpload(uploadID string) (location, md5hex string, err error)
-//	AbortMultiPartUpload(uploadID string) error
-//	ListParts(uploadID string) (contents *PartContents, err error)
-//}
-
-// Part - part xml response
-type Part struct {
-	ETag         string
-	LastModified time.Time
-	PartNumber   int64
-	Size         int64
-}
-
-// PartContents - part xml contents response
-type PartContents struct {
-	Key         string
-	UploadID    string
-	IsTruncated bool
-	Parts       []*Part
+	GetObject(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
+	CreateObject(md5 string, size int64) (io.WriteCloser, error)
 }
 
 // ContentOnChannel - List contents on channel
