@@ -46,8 +46,8 @@ func (c *s3Client) put(size int64) (*http.Request, error) {
 	return req, nil
 }
 
-// Put - upload new object to bucket
-func (c *s3Client) Put(md5HexString string, size int64) (io.WriteCloser, error) {
+// CreateObject - upload new object to bucket
+func (c *s3Client) CreateObject(md5HexString string, size int64) (io.WriteCloser, error) {
 	// if size is negative
 	if size < 0 {
 		return nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
