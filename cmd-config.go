@@ -19,10 +19,10 @@ package main
 import (
 	"strings"
 
-	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/console"
-	"github.com/minio-io/mc/pkg/quick"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/quick"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // runConfigCmd is the handle for "mc config" sub-command

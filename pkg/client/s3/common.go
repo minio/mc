@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/minio-io/mc/pkg/client"
+	"github.com/minio/mc/pkg/client"
 )
 
 // New returns an initialized s3Client structure.

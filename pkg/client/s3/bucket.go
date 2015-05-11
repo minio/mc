@@ -21,8 +21,8 @@ import (
 
 	"net/http"
 
-	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 func isValidBucketACL(acl string) bool {

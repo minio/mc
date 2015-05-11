@@ -22,8 +22,8 @@ import (
 	"path"
 	"runtime"
 
-	"github.com/minio-io/mc/pkg/quick"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/mc/pkg/quick"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 type configV1 struct {

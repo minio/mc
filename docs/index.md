@@ -5,7 +5,7 @@ mc - Minio Client for S3 Compatible Object Storage released under [Apache licens
 ## Install
 
 ```
-# go get github.com/minio-io/mc
+# go get github.com/minio/mc
 ```
 
 ## Usage

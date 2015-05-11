@@ -1,5 +1,5 @@
 ### Setup your mc Github Repository
-Fork [mc upstream](https://github.com/minio-io/mc/fork) source repository to your own personal repository.
+Fork [mc upstream](https://github.com/minio/mc/fork) source repository to your own personal repository.
 ```sh
 $ git clone https://github.com/$USER_ID/mc
 $ cd mc

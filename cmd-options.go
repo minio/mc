@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/console"
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
 )
 
 // List of commands

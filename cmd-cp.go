@@ -19,9 +19,9 @@ package main
 import (
 	"strings"
 
-	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/console"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 func runCopyCmd(ctx *cli.Context) {

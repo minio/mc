@@ -20,10 +20,10 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/mc/pkg/client/fs"
-	"github.com/minio-io/mc/pkg/client/s3"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/client/fs"
+	"github.com/minio/mc/pkg/client/s3"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // getSourceReader -

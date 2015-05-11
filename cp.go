@@ -21,7 +21,7 @@ import (
 	"os"
 
 	"github.com/cheggaaa/pb"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 /// mc cp - related internal functions

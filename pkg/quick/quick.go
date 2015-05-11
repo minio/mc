@@ -30,7 +30,7 @@ import (
 	"sync"
 
 	"github.com/fatih/structs"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // Config - generic config interface functions

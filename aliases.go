@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // validAliasURL: use net/url.Parse to validate

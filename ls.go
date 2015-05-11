@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/mc/pkg/console"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 /// LS - related internal functions

@@ -29,9 +29,9 @@ import (
 	"net"
 
 	"github.com/cheggaaa/pb"
-	. "github.com/minio-io/check"
-	"github.com/minio-io/mc/pkg/quick"
-	"github.com/minio-io/minio/pkg/iodine"
+	. "github.com/minio/check"
+	"github.com/minio/mc/pkg/quick"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 func Test(t *testing.T) { TestingT(t) }

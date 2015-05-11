@@ -22,7 +22,7 @@ import (
 	"os"
 	"testing"
 
-	. "github.com/minio-io/check"
+	. "github.com/minio/check"
 )
 
 func Test(t *testing.T) { TestingT(t) }

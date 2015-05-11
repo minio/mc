@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"github.com/minio-io/mc/pkg/console"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // Trace - tracing structure
