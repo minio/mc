@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio-io/cli"
-	"github.com/minio-io/mc/pkg/console"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // runListCmd - is a handler for mc ls command

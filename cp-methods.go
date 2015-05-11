@@ -19,7 +19,7 @@ package main
 import (
 	"io"
 
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 type sourceReader struct {

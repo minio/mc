@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"strings"
 
-	. "github.com/minio-io/check"
+	. "github.com/minio/check"
 )
 
 type reqAndExpected struct {

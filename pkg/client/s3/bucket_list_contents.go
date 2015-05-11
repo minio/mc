@@ -16,7 +16,7 @@
 
 package s3
 
-import "github.com/minio-io/mc/pkg/client"
+import "github.com/minio/mc/pkg/client"
 
 /// Bucket API operations
 

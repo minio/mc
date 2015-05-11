@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/cheggaaa/pb"
-	"github.com/minio-io/mc/pkg/console"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // isValidRetry - check if we should retry for the given error sequence

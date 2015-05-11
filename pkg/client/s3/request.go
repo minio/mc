@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 func (c *s3Client) isValidQueryURL(queryURL string) bool {

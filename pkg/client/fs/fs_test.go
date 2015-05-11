@@ -27,8 +27,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "github.com/minio-io/check"
-	"github.com/minio-io/mc/pkg/client"
+	. "github.com/minio/check"
+	"github.com/minio/mc/pkg/client"
 )
 
 func Test(t *testing.T) { TestingT(t) }

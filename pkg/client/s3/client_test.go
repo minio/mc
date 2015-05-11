@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/minio-io/check"
-	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/minio/pkg/iodine"
+	. "github.com/minio/check"
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 func Test(t *testing.T) { TestingT(t) }

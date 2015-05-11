@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // NoDebugPrint defines if the input should be printed or not. By default it's set to true.

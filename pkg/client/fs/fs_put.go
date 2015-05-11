@@ -25,8 +25,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/minio-io/mc/pkg/client"
-	"github.com/minio-io/minio/pkg/iodine"
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // CreateObject - upload new object to bucket
