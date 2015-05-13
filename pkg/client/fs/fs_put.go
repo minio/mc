@@ -30,17 +30,11 @@ import (
 )
 
 // CreateObject - upload new object to bucket
-func (f *fsClient) CreateObject(md5HexString string, size int64) (io.WriteCloser, error) {
+func (f *fsClient) CreateObject(md5HexString string, size uint64) (io.WriteCloser, error) {
 	r, w := io.Pipe()
 	blockingWriter := client.NewBlockingWriteCloser(w)
 	go func() {
 		// handle md5HexString match internally
-		if size < 0 {
-			err := iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
-			r.CloseWithError(err)
-			blockingWriter.Release(err)
-			return
-		}
 		objectDir, _ := filepath.Split(f.path)
 		objectPath := f.path
 		if objectDir != "" {
@@ -62,7 +56,7 @@ func (f *fsClient) CreateObject(md5HexString string, size int64) (io.WriteCloser
 		h := md5.New()
 		mw := io.MultiWriter(fs, h)
 
-		_, err = io.CopyN(mw, r, size)
+		_, err = io.CopyN(mw, r, int64(size))
 		if err != nil {
 			err := iodine.New(err, nil)
 			r.CloseWithError(err)

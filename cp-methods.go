@@ -24,7 +24,7 @@ import (
 
 type sourceReader struct {
 	reader io.ReadCloser
-	length int64
+	length uint64
 	md5hex string
 }
 

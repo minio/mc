@@ -1,5 +1,7 @@
+// +build ignore
+
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minimal object storage library (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +16,25 @@
  * limitations under the License.
  */
 
-package s3
+package main
 
-import "github.com/minio/mc/pkg/client"
+import (
+	"log"
 
-/// Bucket API operations
+	"github.com/minio/objectstorage-go"
+)
 
-// List - list at delimited path not recursive
-func (c *s3Client) List() <-chan client.ContentOnChannel {
-	contentCh := make(chan client.ContentOnChannel)
-	go c.listInGoRoutine(contentCh)
-	return contentCh
-}
-
-// ListRecursive - list buckets and objects recursively
-func (c *s3Client) ListRecursive() <-chan client.ContentOnChannel {
-	contentCh := make(chan client.ContentOnChannel)
-	go c.listRecursiveInGoRoutine(contentCh)
-	return contentCh
+func main() {
+	config := new(objectstorage.Config)
+	config.AccessKeyID = ""
+	config.SecretAccessKey = ""
+	config.Endpoint = "http://play.minio.io:9000"
+	config.AcceptType = ""
+	m := objectstorage.New(config)
+	for message := range m.ListObjects("public-bucket", "", true) {
+		if message.Err != nil {
+			log.Fatal(message.Err)
+		}
+		log.Println(message.Data)
+	}
 }

@@ -50,9 +50,9 @@ func (e InvalidArgument) Error() string {
 
 // InvalidRange - invalid range requested
 type InvalidRange struct {
-	Offset int64
+	Offset uint64
 }
 
 func (e InvalidRange) Error() string {
-	return "invalid range offset: " + strconv.FormatInt(e.Offset, 10)
+	return "invalid range offset: " + strconv.FormatUint(e.Offset, 10)
 }

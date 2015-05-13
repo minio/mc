@@ -48,7 +48,7 @@ func isValidRetry(err error) bool {
 
 // StartBar -- instantiate a progressbar
 func startBar(size int64) *pb.ProgressBar {
-	bar := pb.New(int(size))
+	bar := pb.New64(size)
 	bar.SetUnits(pb.U_BYTES)
 	bar.SetRefreshRate(time.Millisecond * 10)
 	bar.NotPrint = true

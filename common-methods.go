@@ -27,19 +27,16 @@ import (
 )
 
 // getSourceReader -
-func getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length int64, md5hex string, err error) {
+func getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length uint64, md5hex string, err error) {
 	sourceClnt, err := getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
-	}
-	if _, err := sourceClnt.Stat(); err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
 	}
 	return sourceClnt.GetObject(0, 0)
 }
 
 // getTargetWriter -
-func getTargetWriter(targetURL string, targetConfig *hostConfig, md5hex string, length int64) (io.WriteCloser, error) {
+func getTargetWriter(targetURL string, targetConfig *hostConfig, md5hex string, length uint64) (io.WriteCloser, error) {
 	targetClnt, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return nil, iodine.New(err, nil)

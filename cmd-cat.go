@@ -80,7 +80,7 @@ func doCatCmd(sourceURLConfigMap map[string]*hostConfig, debug bool) (string, er
 		defer reader.Close()
 		hasher := md5.New()
 		mw := io.MultiWriter(os.Stdout, hasher)
-		_, err = io.CopyN(mw, reader, size)
+		_, err = io.CopyN(mw, reader, int64(size))
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case *os.PathError:

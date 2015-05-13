@@ -57,7 +57,7 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	return st, nil
 }
 
-func (f *fsClient) get(content *client.Content) (io.ReadCloser, int64, string, error) {
+func (f *fsClient) get(content *client.Content) (io.ReadCloser, uint64, string, error) {
 	body, err := os.Open(f.path)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
@@ -74,14 +74,11 @@ func (f *fsClient) get(content *client.Content) (io.ReadCloser, int64, string, e
 		return nil, 0, "", iodine.New(err, nil)
 	}
 	md5Str := hex.EncodeToString(h.Sum(nil))
-	return body, content.Size, md5Str, nil
+	return body, uint64(content.Size), md5Str, nil
 }
 
 // GetObject download an full or part object from bucket
-func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, string, error) {
-	if offset < 0 {
-		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
-	}
+func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, string, error) {
 	content, err := f.getFSMetadata()
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
@@ -89,7 +86,7 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, string
 	if content.FileType.IsDir() {
 		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
 	}
-	if offset > content.Size || (offset+length-1) > content.Size {
+	if int64(offset) > content.Size || int64(offset+length-1) > content.Size {
 		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
 	if offset == 0 && length == 0 {
@@ -99,7 +96,7 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, string
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}
-	_, err = io.CopyN(ioutil.Discard, body, offset)
+	_, err = io.CopyN(ioutil.Discard, body, int64(offset))
 	if err != nil {
 		return nil, 0, "", iodine.New(err, nil)
 	}

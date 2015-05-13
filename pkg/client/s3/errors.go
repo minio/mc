@@ -16,20 +16,7 @@
 
 package s3
 
-import (
-	"encoding/xml"
-	"net/http"
-	"strconv"
-)
-
-// InvalidACL - acl invalid
-type InvalidACL struct {
-	ACL string
-}
-
-func (e InvalidACL) Error() string {
-	return "Requested ACL is " + e.ACL + " invalid"
-}
+import "strconv"
 
 // InvalidMaxKeys - invalid maxkeys provided
 type InvalidMaxKeys struct {
@@ -105,40 +92,4 @@ type InvalidQueryURL struct {
 
 func (e InvalidQueryURL) Error() string {
 	return "Invalid query URL: " + e.URL
-}
-
-/* **** SAMPLE ERROR RESPONSE ****
-<?xml version="1.0" encoding="UTF-8"?>
-<Error>
-   <Code>AccessDenied</Code>
-   <Message>Access Denied</Message>
-   <Resource>/mybucket/myphoto.jpg</Resource>
-   <RequestId>F19772218238A85A</RequestId>
-   <HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId>
-</Error>
-*/
-
-// ErrorResponse is the type returned by some API operations.
-type ErrorResponse struct {
-	Code      string
-	Message   string
-	Resource  string
-	RequestID string
-	HostID    string
-}
-
-// ResponseToError returns a new encoded ErrorResponse structure
-func ResponseToError(res *http.Response) error {
-	var respError ErrorResponse
-	decoder := xml.NewDecoder(res.Body)
-	err := decoder.Decode(&respError)
-	if err != nil {
-		return err
-	}
-	return respError
-}
-
-// Error formats HTTP error string
-func (e ErrorResponse) Error() string {
-	return e.Message
 }
