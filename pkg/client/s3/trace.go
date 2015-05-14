@@ -46,7 +46,7 @@ func NewTrace(bodyTraceFlag, requestTransportFlag bool, writer io.Writer) HTTPTr
 // Request - Trace HTTP Request
 func (t Trace) Request(req *http.Request) (err error) {
 	origAuthKey := req.Header.Get("Authorization")
-	req.Header.Set("Authorization", "AWS **PASSWORD**STRIPPED**")
+	req.Header.Set("Authorization", "AWS4-HMAC-SHA256 Credential=**REDACTED**, SignedHeaders=**REDACTED**, Signature=**REDACTED**")
 
 	if t.RequestTransportFlag {
 		reqTrace, err := httputil.DumpRequestOut(req, t.BodyTraceFlag)

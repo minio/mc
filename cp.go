@@ -27,7 +27,7 @@ import (
 /// mc cp - related internal functions
 
 // doCopy
-func doCopy(reader io.ReadCloser, md5hex string, length int64, targetURL string, targetConfig *hostConfig) error {
+func doCopy(reader io.ReadCloser, md5hex string, length uint64, targetURL string, targetConfig *hostConfig) error {
 	writeCloser, err := getTargetWriter(targetURL, targetConfig, md5hex, length)
 	if err != nil {
 		return iodine.New(err, nil)
@@ -37,14 +37,14 @@ func doCopy(reader io.ReadCloser, md5hex string, length int64, targetURL string,
 	// set up progress bar
 	var bar *pb.ProgressBar
 	if !globalQuietFlag {
-		bar = startBar(length)
+		bar = startBar(int64(length))
 		bar.Start()
 		writers = append(writers, bar)
 	}
 	// write progress bar
 	multiWriter := io.MultiWriter(writers...)
 	// copy data to writers
-	_, copyErr := io.CopyN(multiWriter, reader, length)
+	_, copyErr := io.CopyN(multiWriter, reader, int64(length))
 	// close to see the error, verify it later
 	err = writeCloser.Close()
 	if copyErr != nil {

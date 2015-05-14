@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minimal object storage library (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,19 @@
  * limitations under the License.
  */
 
-// Package s3 contains all client specific global variables and constants
-package s3
+package objectstorage_test
 
-const (
-	globalMaxKeys = 1000 // Maximum number of keys to fetch per request
+import (
+	"net/http/httptest"
+	"testing"
 )
+
+func TestBucketOperations(t *testing.T) {
+	ts := httptest.NewServer(robotsTxtHandler)
+	defer ts.Close()
+}
+
+func TestObjectOperations(t *testing.T) {
+	ts := httptest.NewServer(robotsTxtHandler)
+	defer ts.Close()
+}

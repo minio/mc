@@ -34,8 +34,8 @@ type Client interface {
 	SetBucketACL(acl string) error
 
 	// Object operations
-	GetObject(offset, length int64) (body io.ReadCloser, size int64, md5 string, err error)
-	CreateObject(md5 string, size int64) (io.WriteCloser, error)
+	GetObject(offset, length uint64) (body io.ReadCloser, size uint64, md5 string, err error)
+	CreateObject(md5 string, size uint64) (io.WriteCloser, error)
 }
 
 // ContentOnChannel - List contents on channel
