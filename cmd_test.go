@@ -121,6 +121,8 @@ func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
 		c.Assert(dir, Equals, path.Join(u.HomeDir, "mc/"))
 	case "darwin":
 		c.Assert(dir, Equals, path.Join(u.HomeDir, ".mc/"))
+	case "freebsd":
+		c.Assert(dir, Equals, path.Join(u.HomeDir, ".mc/"))
 	default:
 		c.Fail()
 	}
@@ -136,6 +138,8 @@ func (s *CmdTestSuite) TestGetMcConfigPath(c *C) {
 	case "windows":
 		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
 	case "darwin":
+		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
+	case "freebsd":
 		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
 	default:
 		c.Fail()
