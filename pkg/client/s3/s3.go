@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/iodine"
@@ -234,9 +235,15 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 				}
 				content := new(client.Content)
 				content.Name = object.Data.Key
-				content.Size = object.Data.Size
-				content.Time = object.Data.LastModified
-				content.FileType = 0
+				switch {
+				case object.Data.Size == 0:
+					content.Time = time.Now()
+					content.FileType = os.ModeDir
+				default:
+					content.Size = object.Data.Size
+					content.Time = object.Data.LastModified
+					content.FileType = 0
+				}
 				contentCh <- client.ContentOnChannel{
 					Content: content,
 					Err:     nil,

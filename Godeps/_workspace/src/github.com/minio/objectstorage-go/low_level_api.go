@@ -196,8 +196,10 @@ func (a *lowLevelAPI) listObjectsRequest(bucket string, maxkeys int, marker, pre
 		switch {
 		case marker != "":
 			marker = fmt.Sprintf("&marker=%s", url.QueryEscape(marker))
+			fallthrough
 		case prefix != "":
 			prefix = fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix))
+			fallthrough
 		case delimiter != "":
 			delimiter = fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter))
 		}

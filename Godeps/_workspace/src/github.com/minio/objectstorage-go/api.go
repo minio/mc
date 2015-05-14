@@ -349,6 +349,15 @@ func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch cha
 				Err:  nil,
 			}
 		}
+		for _, prefix := range listBucketResult.CommonPrefixes {
+			object := new(ObjectMetadata)
+			object.Key = prefix.Prefix
+			object.Size = 0
+			ch <- ObjectOnChannel{
+				Data: object,
+				Err:  nil,
+			}
+		}
 	}
 }
 
