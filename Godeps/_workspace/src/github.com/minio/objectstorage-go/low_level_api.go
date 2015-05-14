@@ -331,21 +331,23 @@ func (a *lowLevelAPI) putObjectRequest(bucket, object string, size int64, body i
 // putObject - add an object to a bucket
 //
 // You must have WRITE permissions on a bucket to add an object to it.
-func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadSeeker) error {
+func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadSeeker) (*ObjectMetadata, error) {
 	req, err := a.putObjectRequest(bucket, object, size, body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	resp, err := req.Do()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return responseToError(resp)
+			return nil, responseToError(resp)
 		}
 	}
-	return resp.Body.Close()
+	metadata := new(ObjectMetadata)
+	metadata.ETag = strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
+	return metadata, resp.Body.Close()
 }
 
 // getObjectRequest wrapper creates a new GetObject request

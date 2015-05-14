@@ -203,7 +203,11 @@ func (a *api) CreateObject(bucket, object string, size uint64, data io.Reader) (
 			if part.Err != nil {
 				return "", part.Err
 			}
-			return "", a.putObject(bucket, object, part.Len, part.Data)
+			metadata, err := a.putObject(bucket, object, part.Len, part.Data)
+			if err != nil {
+				return "", err
+			}
+			return metadata.ETag, nil
 		}
 	default:
 		initiateMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
