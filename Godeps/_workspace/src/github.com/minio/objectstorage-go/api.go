@@ -131,17 +131,26 @@ type Config struct {
 // MustGetEndpoint makes sure that a valid endpoint is provided all the time, even with false regions it will fall
 // back to default, for no regions specified it chooses to default to "milkyway" and use endpoint as is
 func (c *Config) MustGetEndpoint() string {
-	// for custom domains, there are no regions default to 'milkyway'
-	if strings.TrimSpace(c.Region) == "" && strings.TrimSpace(c.Endpoint) != "" {
+	if strings.TrimSpace(c.Endpoint) != "" {
+		if strings.Contains(strings.TrimSpace(c.Endpoint), "s3.amazonaws.com") {
+			c.Region = "us-east-1"
+			return getEndpoint(c.Region)
+		}
+		// for custom domains, there are no regions default to 'milkyway'
 		c.Region = "milkyway"
 		return c.Endpoint
 	}
 	// if valid region provided override user provided endpoint
-	if endpoint := getEndpoint(strings.TrimSpace(c.Region)); endpoint != "" {
-		c.Endpoint = endpoint
-		return c.Endpoint
+	if strings.TrimSpace(c.Region) != "" {
+		if endpoint := getEndpoint(strings.TrimSpace(c.Region)); endpoint != "" {
+			c.Endpoint = endpoint
+			return c.Endpoint
+		}
+		// fall back if region is set and not found, go through US-standard
+		c.Region = "us-east-1"
+		return getEndpoint(c.Region)
 	}
-	// fall back if region is set and not found, go through US-standard
+	// if not endpoint or region sepcified default to us-east-1
 	c.Region = "us-east-1"
 	return getEndpoint(c.Region)
 }

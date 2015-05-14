@@ -70,7 +70,6 @@ func New(config *Config) client.Client {
 	objectstorageConf.AccessKeyID = config.AccessKeyID
 	objectstorageConf.SecretAccessKey = config.SecretAccessKey
 	objectstorageConf.UserAgent = config.UserAgent
-	objectstorageConf.Region = "us-east-1"
 	objectstorageConf.Transport = transport
 	objectstorageConf.Endpoint = u.Scheme + "://" + u.Host
 	api := objectstorage.New(objectstorageConf)
