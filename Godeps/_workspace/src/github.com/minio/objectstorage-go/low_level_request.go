@@ -43,9 +43,9 @@ type request struct {
 }
 
 const (
-	authHeaderPrefix = "AWS4-HMAC-SHA256"
-	iso8601Format    = "20060102T150405Z"
-	yyyymmdd         = "20060102"
+	authHeader    = "AWS4-HMAC-SHA256"
+	iso8601Format = "20060102T150405Z"
+	yyyymmdd      = "20060102"
 )
 
 var ignoredHeaders = map[string]bool{
@@ -122,14 +122,8 @@ func (r *request) Get(key string) string {
 	return r.req.Header.Get(key)
 }
 
-// SignV4 the request before Do() (version 4.0)
-func (r *request) SignV4() {
-	t := time.Now().UTC()
-	// Add date if not present
-	if date := r.Get("Date"); date == "" {
-		r.Set("X-Amz-Date", t.Format(iso8601Format))
-	}
-
+// getHashedPayload get the hexadecimal value of the SHA256 hash of the request payload
+func (r *request) getHashedPayload() string {
 	hash := func() string {
 		switch {
 		case r.body == nil:
@@ -139,98 +133,138 @@ func (r *request) SignV4() {
 			return hex.EncodeToString(sum256Bytes)
 		}
 	}
-	bodyDigest := hash()
-	r.req.Header.Add("X-Amz-Content-Sha256", bodyDigest)
+	hashedPayload := hash()
+	r.req.Header.Add("X-Amz-Content-Sha256", hashedPayload)
+	return hashedPayload
+}
 
-	canonicalHeaders := func() string {
-		var headers []string
-		vals := make(map[string][]string)
-		for k, vv := range r.req.Header {
-			if _, ok := ignoredHeaders[http.CanonicalHeaderKey(k)]; ok {
-				continue // ignored header
-			}
-			headers = append(headers, strings.ToLower(k))
-			vals[strings.ToLower(k)] = vv
+// getCanonicalHeaders generate a list of request headers with their values
+func (r *request) getCanonicalHeaders() string {
+	var headers []string
+	vals := make(map[string][]string)
+	for k, vv := range r.req.Header {
+		if _, ok := ignoredHeaders[http.CanonicalHeaderKey(k)]; ok {
+			continue // ignored header
 		}
-		headers = append(headers, "host")
-		sort.Strings(headers)
+		headers = append(headers, strings.ToLower(k))
+		vals[strings.ToLower(k)] = vv
+	}
+	headers = append(headers, "host")
+	sort.Strings(headers)
 
-		var buf bytes.Buffer
-		for _, k := range headers {
-			buf.WriteString(k)
-			buf.WriteByte(':')
-			switch {
-			case k == "host":
-				buf.WriteString(r.req.URL.Host)
-				fallthrough
-			default:
-				for idx, v := range vals[k] {
-					if idx > 0 {
-						buf.WriteByte(',')
-					}
-					buf.WriteString(v)
+	var buf bytes.Buffer
+	for _, k := range headers {
+		buf.WriteString(k)
+		buf.WriteByte(':')
+		switch {
+		case k == "host":
+			buf.WriteString(r.req.URL.Host)
+			fallthrough
+		default:
+			for idx, v := range vals[k] {
+				if idx > 0 {
+					buf.WriteByte(',')
 				}
-				buf.WriteByte('\n')
+				buf.WriteString(v)
 			}
+			buf.WriteByte('\n')
 		}
-		return buf.String()
 	}
+	return buf.String()
+}
 
-	signedHeaders := func() string {
-		var headers []string
-		for k := range r.req.Header {
-			if _, ok := ignoredHeaders[http.CanonicalHeaderKey(k)]; ok {
-				continue // ignored header
-			}
-			headers = append(headers, strings.ToLower(k))
+// getSignedHeaders generate a string i.e alphabetically sorted, semicolon-separated list of lowercase request header names
+func (r *request) getSignedHeaders() string {
+	var headers []string
+	for k := range r.req.Header {
+		if _, ok := ignoredHeaders[http.CanonicalHeaderKey(k)]; ok {
+			continue // ignored header
 		}
-		headers = append(headers, "host")
-		sort.Strings(headers)
-		return strings.Join(headers, ";")
+		headers = append(headers, strings.ToLower(k))
 	}
+	headers = append(headers, "host")
+	sort.Strings(headers)
+	return strings.Join(headers, ";")
+}
 
-	canonicalRequest := func() string {
-		r.req.URL.RawQuery = strings.Replace(r.req.URL.Query().Encode(), "+", "%20", -1)
-		canonicalRequest := strings.Join([]string{
-			r.req.Method,
-			r.req.URL.Path,
-			r.req.URL.RawQuery,
-			canonicalHeaders(),
-			signedHeaders(),
-			bodyDigest,
-		}, "\n")
-		return canonicalRequest
-	}
+// getCanonicalRequest generate a canonical request of style
+//
+// canonicalRequest =
+//  <HTTPMethod>\n
+//  <CanonicalURI>\n
+//  <CanonicalQueryString>\n
+//  <CanonicalHeaders>\n
+//  <SignedHeaders>\n
+//  <HashedPayload>
+//
+func (r *request) getCanonicalRequest(hashedPayload string) string {
+	r.req.URL.RawQuery = strings.Replace(r.req.URL.Query().Encode(), "+", "%20", -1)
+	canonicalRequest := strings.Join([]string{
+		r.req.Method,
+		r.req.URL.Path,
+		r.req.URL.RawQuery,
+		r.getCanonicalHeaders(),
+		r.getSignedHeaders(),
+		hashedPayload,
+	}, "\n")
+	return canonicalRequest
+}
 
+// getScope generate a string of a specific date, an AWS region, and a service
+func (r *request) getScope(t time.Time) string {
 	scope := strings.Join([]string{
 		t.Format(yyyymmdd),
 		r.config.Region,
 		"s3",
 		"aws4_request",
 	}, "/")
+	return scope
+}
 
-	stringToSign := func() string {
-		stringToSign := authHeaderPrefix + "\n" + t.Format(iso8601Format) + "\n"
-		stringToSign = stringToSign + scope + "\n"
-		stringToSign = stringToSign + hex.EncodeToString(sum256([]byte(canonicalRequest())))
-		return stringToSign
+// getStringToSign a string based on selected query values
+func (r *request) getStringToSign(canonicalRequest string, t time.Time) string {
+	stringToSign := authHeader + "\n" + t.Format(iso8601Format) + "\n"
+	stringToSign = stringToSign + r.getScope(t) + "\n"
+	stringToSign = stringToSign + hex.EncodeToString(sum256([]byte(canonicalRequest)))
+	return stringToSign
+}
+
+// getSigningKey hmac seed to calculate final signature
+func (r *request) getSigningKey(t time.Time) []byte {
+	secret := r.config.SecretAccessKey
+	date := sumHMAC([]byte("AWS4"+secret), []byte(t.Format(yyyymmdd)))
+	region := sumHMAC(date, []byte(r.config.Region))
+	service := sumHMAC(region, []byte("s3"))
+	signingKey := sumHMAC(service, []byte("aws4_request"))
+	return signingKey
+}
+
+// getSignature final signature in hexadecimal form
+func (r *request) getSignature(signingKey []byte, stringToSign string) string {
+	return hex.EncodeToString(sumHMAC(signingKey, []byte(stringToSign)))
+}
+
+// SignV4 the request before Do(), in accordance with - http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html
+func (r *request) SignV4() {
+	t := time.Now().UTC()
+	// Add date if not present
+	if date := r.Get("Date"); date == "" {
+		r.Set("X-Amz-Date", t.Format(iso8601Format))
 	}
 
-	signingKey := func() []byte {
-		secret := r.config.SecretAccessKey
-		date := sumHMAC([]byte("AWS4"+secret), []byte(t.Format(yyyymmdd)))
-		region := sumHMAC(date, []byte(r.config.Region))
-		service := sumHMAC(region, []byte("s3"))
-		signingKey := sumHMAC(service, []byte("aws4_request"))
-		return signingKey
-	}
+	hashedPayload := r.getHashedPayload()
+	signedHeaders := r.getSignedHeaders()
+	canonicalRequest := r.getCanonicalRequest(hashedPayload)
+	scope := r.getScope(t)
+	stringToSign := r.getStringToSign(canonicalRequest, t)
+	signingKey := r.getSigningKey(t)
+	signature := r.getSignature(signingKey, stringToSign)
 
-	signature := func() string {
-		return hex.EncodeToString(sumHMAC(signingKey(), []byte(stringToSign())))
-	}
-
-	parts := []string{authHeaderPrefix + " Credential=" + r.config.AccessKeyID + "/" + scope,
-		"SignedHeaders=" + signedHeaders(), "Signature=" + signature(),
+	// final Authorization header
+	parts := []string{
+		authHeader + " Credential=" + r.config.AccessKeyID + "/" + scope,
+		"SignedHeaders=" + signedHeaders,
+		"Signature=" + signature,
 	}
 	auth := strings.Join(parts, ", ")
 	r.Set("Authorization", auth)

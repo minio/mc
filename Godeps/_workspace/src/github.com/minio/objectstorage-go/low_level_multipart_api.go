@@ -194,7 +194,7 @@ func (a *lowLevelAPI) listObjectPartsRequest(bucket, object, uploadID string, pa
 		case partNumberMarker != 0:
 			partNumberMarkerStr = fmt.Sprintf("&part-number-marker=%d", partNumberMarker)
 		}
-		return fmt.Sprintf("?uploadsId=%s&max-parts=%d", uploadID, maxParts) + partNumberMarkerStr
+		return fmt.Sprintf("?uploadId=%s&max-parts=%d", uploadID, maxParts) + partNumberMarkerStr
 	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),

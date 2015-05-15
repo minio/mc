@@ -199,6 +199,63 @@ func (a completedParts) Less(i, j int) bool { return a[i].PartNumber < a[j].Part
 // one can change this value during a library import
 var DefaultPartSize uint64 = 1024 * 1024 * 5
 
+func (a *api) newObjectUpload(bucket, object string, data io.Reader) (string, error) {
+	initiateMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
+	if err != nil {
+		return "", err
+	}
+	uploadID := initiateMultipartUploadResult.UploadID
+	completeMultipartUpload := new(completeMultipartUpload)
+	for part := range MultiPart(data, DefaultPartSize, nil) {
+		if part.Err != nil {
+			return "", part.Err
+		}
+		completePart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.Data)
+		if err != nil {
+			return "", a.abortMultipartUpload(bucket, object, uploadID)
+		}
+		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completePart)
+	}
+	sort.Sort(completedParts(completeMultipartUpload.Part))
+	completeMultipartUploadResult, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
+	if err != nil {
+		return "", a.abortMultipartUpload(bucket, object, uploadID)
+	}
+	return completeMultipartUploadResult.ETag, nil
+}
+
+func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Reader) (string, error) {
+	listObjectPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
+	if err != nil {
+		return "", err
+	}
+	var skipParts []int
+	completeMultipartUpload := new(completeMultipartUpload)
+	for _, uploadedPart := range listObjectPartsResult.Part {
+		completedPart := new(completePart)
+		completedPart.PartNumber = uploadedPart.PartNumber
+		completedPart.ETag = uploadedPart.ETag
+		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
+		skipParts = append(skipParts, uploadedPart.PartNumber)
+	}
+	for part := range MultiPart(data, DefaultPartSize, skipParts) {
+		if part.Err != nil {
+			return "", part.Err
+		}
+		completedPart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.Data)
+		if err != nil {
+			return "", a.abortMultipartUpload(bucket, object, uploadID)
+		}
+		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
+	}
+	sort.Sort(completedParts(completeMultipartUpload.Part))
+	completeMultipartUploadResult, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
+	if err != nil {
+		return "", a.abortMultipartUpload(bucket, object, uploadID)
+	}
+	return completeMultipartUploadResult.ETag, nil
+}
+
 // CreateObject create an object in a bucket
 //
 // You must have WRITE permissions on a bucket to create an object
@@ -208,7 +265,7 @@ func (a *api) CreateObject(bucket, object string, size uint64, data io.Reader) (
 	switch {
 	case size < DefaultPartSize:
 		// Single Part use case, use PutObject directly
-		for part := range MultiPart(data, DefaultPartSize) {
+		for part := range MultiPart(data, DefaultPartSize, nil) {
 			if part.Err != nil {
 				return "", part.Err
 			}
@@ -219,28 +276,22 @@ func (a *api) CreateObject(bucket, object string, size uint64, data io.Reader) (
 			return metadata.ETag, nil
 		}
 	default:
-		initiateMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
+		listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 		if err != nil {
 			return "", err
 		}
-		uploadID := initiateMultipartUploadResult.UploadID
-		completeMultipartUpload := new(completeMultipartUpload)
-		for part := range MultiPart(data, DefaultPartSize) {
-			if part.Err != nil {
-				return "", part.Err
+		var inProgress bool
+		var inProgressUploadID string
+		for _, upload := range listMultipartUploadsResult.Upload {
+			if object == upload.Key {
+				inProgress = true
+				inProgressUploadID = upload.UploadID
 			}
-			completePart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.Data)
-			if err != nil {
-				return "", a.abortMultipartUpload(bucket, object, uploadID)
-			}
-			completeMultipartUpload.Part = append(completeMultipartUpload.Part, completePart)
 		}
-		sort.Sort(completedParts(completeMultipartUpload.Part))
-		completeMultipartUploadResult, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
-		if err != nil {
-			return "", a.abortMultipartUpload(bucket, object, uploadID)
+		if !inProgress {
+			return a.newObjectUpload(bucket, object, data)
 		}
-		return completeMultipartUploadResult.ETag, nil
+		return a.continueObjectUpload(bucket, object, inProgressUploadID, data)
 	}
 	return "", errors.New("Unexpected control flow")
 }
