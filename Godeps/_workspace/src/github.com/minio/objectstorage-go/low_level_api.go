@@ -190,7 +190,7 @@ func (a *lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 }
 
 // listObjectsRequest wrapper creates a new ListObjects request
-func (a *lowLevelAPI) listObjectsRequest(bucket string, maxkeys int, marker, prefix, delimiter string) (*request, error) {
+func (a *lowLevelAPI) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
 	resourceQuery := func() string {
 		switch {
@@ -228,8 +228,8 @@ func (a *lowLevelAPI) listObjectsRequest(bucket string, maxkeys int, marker, pre
 // ?delimiter - A delimiter is a character you use to group keys.
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-keys - Sets the maximum number of keys returned in the response body.
-func (a *lowLevelAPI) listObjects(bucket string, maxkeys int, marker, prefix, delimiter string) (*listBucketResult, error) {
-	req, err := a.listObjectsRequest(bucket, maxkeys, marker, prefix, delimiter)
+func (a *lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (*listBucketResult, error) {
+	req, err := a.listObjectsRequest(bucket, marker, prefix, delimiter, maxkeys)
 	if err != nil {
 		return nil, err
 	}

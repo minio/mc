@@ -309,7 +309,7 @@ func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch cha
 	defer close(ch)
 	switch {
 	case recursive == true:
-		listBucketResult, err := a.listObjects(bucket, 1000, "", prefix, "")
+		listBucketResult, err := a.listObjects(bucket, "", prefix, "", 1000)
 		if err != nil {
 			ch <- ObjectOnChannel{
 				Data: nil,
@@ -327,7 +327,7 @@ func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch cha
 			if !listBucketResult.IsTruncated {
 				break
 			}
-			listBucketResult, err = a.listObjects(bucket, 1000, listBucketResult.Marker, prefix, "")
+			listBucketResult, err = a.listObjects(bucket, listBucketResult.Marker, prefix, "", 1000)
 			if err != nil {
 				ch <- ObjectOnChannel{
 					Data: nil,
@@ -344,7 +344,7 @@ func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch cha
 			}
 		}
 	default:
-		listBucketResult, err := a.listObjects(bucket, 1000, "", prefix, "/")
+		listBucketResult, err := a.listObjects(bucket, "", prefix, "/", 1000)
 		if err != nil {
 			ch <- ObjectOnChannel{
 				Data: nil,
