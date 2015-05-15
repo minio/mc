@@ -59,6 +59,7 @@ func (f *fsClient) CreateObject(md5HexString string, size uint64) (io.WriteClose
 		_, err = io.CopyN(mw, r, int64(size))
 		if err != nil {
 			err := iodine.New(err, nil)
+			fs.Close()
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
@@ -66,17 +67,20 @@ func (f *fsClient) CreateObject(md5HexString string, size uint64) (io.WriteClose
 		expectedMD5, err := hex.DecodeString(md5HexString)
 		if err != nil {
 			err := iodine.New(err, nil)
+			fs.Close()
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
 		}
 		if !bytes.Equal(expectedMD5, h.Sum(nil)) {
 			err := iodine.New(errors.New("md5sum mismatch"), nil)
+			fs.Close()
 			r.CloseWithError(err)
 			blockingWriter.Release(err)
 			return
 		}
 		blockingWriter.Release(nil)
+		fs.Close()
 		r.Close()
 	}()
 	return blockingWriter, nil
