@@ -65,6 +65,33 @@ type listBucketResult struct {
 	Prefix     string
 }
 
+type upload struct {
+	Key      string
+	UploadID string `xml:"UploadId"`
+
+	Initiator initiator
+	Owner     owner
+
+	StorageClass string
+	Initiated    time.Time `type:"timestamp" timestampFormat:"iso8601"`
+}
+
+// listMultipartUploadsResult container for ListMultipartUploads response
+type listMultipartUploadsResult struct {
+	Bucket             string
+	KeyMarker          string
+	UploadIDMarker     string `xml:"UploadIdMarker"`
+	NextKeyMarker      string
+	NextUploadIDMarker string `xml:"NextUploadIdMarker"`
+	EncodingType       string
+	MaxUploads         int64
+	IsTruncated        bool
+	Upload             []*upload
+	Prefix             string
+	Delimiter          string
+	CommonPrefixes     []*commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter
+}
+
 // initiator container for who initiated multipart upload
 type initiator struct {
 	ID          string

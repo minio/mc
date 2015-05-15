@@ -8,10 +8,77 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
-// initiateMultipartRequest wrapper creates a new InitiateMultiPart request
+// listMultipartUploadsRequest wrapper creates a new listMultipartUploads request
+func (a *lowLevelAPI) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*request, error) {
+	// resourceQuery - get resources properly escaped and lined up before using them in http request
+	resourceQuery := func() string {
+		switch {
+		case keymarker != "":
+			keymarker = fmt.Sprintf("&key-marker=%s", url.QueryEscape(keymarker))
+			fallthrough
+		case uploadIDMarker != "":
+			uploadIDMarker = fmt.Sprintf("&upload-id-marker=%s", url.QueryEscape(uploadIDMarker))
+			fallthrough
+		case prefix != "":
+			prefix = fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix))
+			fallthrough
+		case delimiter != "":
+			delimiter = fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter))
+		}
+		return fmt.Sprintf("?uploads&max-uploads=%d", maxuploads) + keymarker + uploadIDMarker + prefix + delimiter
+	}
+	op := &operation{
+		HTTPServer: a.config.MustGetEndpoint(),
+		HTTPMethod: "GET",
+		HTTPPath:   "/" + bucket + resourceQuery(),
+	}
+	r, err := newRequest(op, a.config, nil)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+// listMultipartUploads - (List Multipart Uploads) - Lists some or all (up to 1000) in-progress multipart uploads in a bucket.
+//
+// You can use the request parameters as selection criteria to return a subset of the uploads in a bucket.
+// request paramters :-
+// ---------
+// ?key-marker - Specifies the multipart upload after which listing should begin
+// ?upload-id-marker - Together with key-marker specifies the multipart upload after which listing should begin
+// ?delimiter - A delimiter is a character you use to group keys.
+// ?prefix - Limits the response to keys that begin with the specified prefix.
+// ?max-uploads - Sets the maximum number of multipart uploads returned in the response body.
+func (a *lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*listMultipartUploadsResult, error) {
+	req, err := a.listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter, maxuploads)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := req.Do()
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		if resp.StatusCode != http.StatusOK {
+			return nil, responseToError(resp)
+		}
+	}
+	listMultipartUploadsResult := new(listMultipartUploadsResult)
+	decoder := xml.NewDecoder(resp.Body)
+	err = decoder.Decode(listMultipartUploadsResult)
+	if err != nil {
+		return nil, err
+	}
+
+	// close body while returning, along with any error
+	return listMultipartUploadsResult, resp.Body.Close()
+}
+
+// initiateMultipartRequest wrapper creates a new initiateMultiPart request
 func (a *lowLevelAPI) initiateMultipartRequest(bucket, object string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
@@ -119,18 +186,32 @@ func (a *lowLevelAPI) abortMultipartUpload(bucket, object, uploadID string) erro
 }
 
 // listObjectPartsRequest wrapper creates a new ListObjectParts request
-func (a *lowLevelAPI) listObjectPartsRequest(bucket, object, uploadID string) (*request, error) {
+func (a *lowLevelAPI) listObjectPartsRequest(bucket, object, uploadID string, partNumberMarker, maxParts int) (*request, error) {
+	// resourceQuery - get resources properly escaped and lined up before using them in http request
+	resourceQuery := func() string {
+		var partNumberMarkerStr string
+		switch {
+		case partNumberMarker != 0:
+			partNumberMarkerStr = fmt.Sprintf("&part-number-marker=%d", partNumberMarker)
+		}
+		return fmt.Sprintf("?uploadsId=%s&max-parts=%d", uploadID, maxParts) + partNumberMarkerStr
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + "/" + object + "?uploadId=" + uploadID,
+		HTTPPath:   "/" + bucket + "/" + object + resourceQuery(),
 	}
 	return newRequest(op, a.config, nil)
 }
 
-// listObjectParts lists the parts that have been uploaded for a specific multipart upload.
-func (a *lowLevelAPI) listObjectParts(bucket, object, uploadID string) (*listObjectPartsResult, error) {
-	req, err := a.listObjectPartsRequest(bucket, object, uploadID)
+// listObjectParts (List Parts) - lists some or all (up to 1000) parts that have been uploaded for a specific multipart upload
+//
+// You can use the request parameters as selection criteria to return a subset of the uploads in a bucket.
+// request paramters :-
+// ---------
+// ?part-number-marker - Specifies the part after which listing should begin.
+func (a *lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumberMarker, maxParts int) (*listObjectPartsResult, error) {
+	req, err := a.listObjectPartsRequest(bucket, object, uploadID, partNumberMarker, maxParts)
 	if err != nil {
 		return nil, err
 	}
