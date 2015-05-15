@@ -24,6 +24,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/iodine"
@@ -64,21 +65,25 @@ func (f *fsClient) CreateObject(md5HexString string, size uint64) (io.WriteClose
 			blockingWriter.Release(err)
 			return
 		}
-		expectedMD5, err := hex.DecodeString(md5HexString)
-		if err != nil {
-			err := iodine.New(err, nil)
-			fs.Close()
-			r.CloseWithError(err)
-			blockingWriter.Release(err)
-			return
+		// ignore invalid md5 string sent by Amazon
+		if !strings.Contains(md5HexString, "-") {
+			expectedMD5, err := hex.DecodeString(md5HexString)
+			if err != nil {
+				err := iodine.New(err, nil)
+				fs.Close()
+				r.CloseWithError(err)
+				blockingWriter.Release(err)
+				return
+			}
+			if !bytes.Equal(expectedMD5, h.Sum(nil)) {
+				err := iodine.New(errors.New("md5sum mismatch"), nil)
+				fs.Close()
+				r.CloseWithError(err)
+				blockingWriter.Release(err)
+				return
+			}
 		}
-		if !bytes.Equal(expectedMD5, h.Sum(nil)) {
-			err := iodine.New(errors.New("md5sum mismatch"), nil)
-			fs.Close()
-			r.CloseWithError(err)
-			blockingWriter.Release(err)
-			return
-		}
+
 		blockingWriter.Release(nil)
 		fs.Close()
 		r.Close()
