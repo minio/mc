@@ -35,13 +35,13 @@ type Part struct {
 // This method runs until an EOF or error occurs. If an error occurs,
 // the method sends the error over the channel and returns.
 // Before returning, the channel is always closed.
-func MultiPart(reader io.Reader, chunkSize uint64) <-chan Part {
+func MultiPart(reader io.Reader, chunkSize uint64, skipParts []int) <-chan Part {
 	ch := make(chan Part)
-	go multiPartInRoutine(reader, chunkSize, ch)
+	go multiPartInRoutine(reader, chunkSize, skipParts, ch)
 	return ch
 }
 
-func multiPartInRoutine(reader io.Reader, chunkSize uint64, ch chan Part) {
+func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch chan Part) {
 	defer close(ch)
 	part := make([]byte, chunkSize)
 	n, err := io.ReadFull(reader, part)
@@ -65,11 +65,13 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, ch chan Part) {
 	}
 	// send the first part
 	var num = 1
-	ch <- Part{
-		Data: bytes.NewReader(part),
-		Err:  nil,
-		Len:  int64(n),
-		Num:  num,
+	if !isPartNumberUploaded(num, skipParts) {
+		ch <- Part{
+			Data: bytes.NewReader(part),
+			Err:  nil,
+			Len:  int64(n),
+			Num:  num,
+		}
 	}
 	for err == nil {
 		var n int
@@ -86,6 +88,9 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, ch chan Part) {
 			}
 		}
 		num++
+		if isPartNumberUploaded(num, skipParts) {
+			continue
+		}
 		ch <- Part{
 			Data: bytes.NewReader(part[0:n]),
 			Err:  nil,
@@ -94,4 +99,13 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, ch chan Part) {
 		}
 
 	}
+}
+
+func isPartNumberUploaded(partNumber int, skipParts []int) bool {
+	for _, part := range skipParts {
+		if part == partNumber {
+			return true
+		}
+	}
+	return false
 }
