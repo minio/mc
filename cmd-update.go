@@ -36,22 +36,23 @@ func doUpdateCheck(config *hostConfig) (string, error) {
 	}
 	latest, err := clnt.Stat()
 	if err != nil {
-		return "Unable to create client: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+		return "No update available at this time", nil
 	}
 	current, _ := time.Parse(time.RFC3339Nano, BuildDate)
 	if current.IsZero() {
-		return "BuildDate is zero, must be a wrong build exiting..", iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+		return "BuildDate is empty, must be a custom build cannot update", nil
 	}
 	if latest.Time.After(current) {
 		printUpdateNotify("new", "old")
+		return "", nil
 	}
-	return "", nil
+	return "You have latest build", nil
 
 }
 
 // runUpdateCmd -
 func runUpdateCmd(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+	if ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
@@ -62,12 +63,12 @@ func runUpdateCmd(ctx *cli.Context) {
 		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", mcUpdateURL, iodine.ToError(err))
 	}
-	switch ctx.Args().First() {
-	case "check":
-		msg, err := doUpdateCheck(hostConfig)
-		if err != nil {
-			console.Debugln(iodine.New(err, nil))
-			console.Fatalln(msg)
-		}
+	msg, err := doUpdateCheck(hostConfig)
+	if err != nil {
+		console.Debugln(iodine.New(err, nil))
+		console.Fatalln(msg)
+	}
+	if msg != "" {
+		console.Infoln(msg)
 	}
 }

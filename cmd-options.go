@@ -267,11 +267,11 @@ EXAMPLES:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} check
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}}
 
 EXAMPLES:
    1. Check for new updates
-      $ mc update check
+      $ mc update
 
 `,
 	}
