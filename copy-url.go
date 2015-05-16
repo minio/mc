@@ -181,6 +181,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *copyURLs {
 		return &copyURLs{Error: iodine.New(err, nil)}
 	}
 
+	// Target exist?
 	targetContent, err := targetClient.Stat()
 	if err == nil { // Target exists.
 		if !targetContent.Type.IsRegular() { // Target is not a regular file
@@ -219,12 +220,6 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) *copyURLs {
 
 	// Target exist?
 	targetContent, err := targetClient.Stat()
-	/*
-		if err != nil {
-			// Target does not exist.
-			return &copyURLs{Error: iodine.New(fmt.Errorf("Target directory [%s] does not exist.", targetURL), nil)}
-		}*/
-
 	if err == nil {
 		if !targetContent.Type.IsDir() {
 			// Target exists, but is not a directory.

@@ -28,8 +28,9 @@ import (
 
 // doCopy - Copy a singe file from source to destination
 func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, targetConfig *hostConfig, bar *barSend) error {
-
-	// TODO: Check if source and target are the same and report error
+	if sourceURL == targetURL {
+		return iodine.New(errSameURLs{source: sourceURL, target: targetURL}, nil)
+	}
 	readCloser, length, md5hex, err := getSourceReader(sourceURL, sourceConfig)
 	if err != nil {
 		return iodine.New(err, nil)
@@ -56,7 +57,6 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	if copyErr != nil {
 		return iodine.New(copyErr, nil)
 	}
-
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -116,7 +116,7 @@ func runCopyCmd(ctx *cli.Context) {
 
 	for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 		if cpURLs.Error != nil {
-			console.Errorln(iodine.ToError(cpURLs.Error).Error())
+			console.Errorln(iodine.ToError(cpURLs.Error))
 			continue
 		}
 		cpQueue <- true
@@ -125,15 +125,18 @@ func runCopyCmd(ctx *cli.Context) {
 			defer wg.Done()
 			srcConfig, err := getHostConfig(cpURLs.SourceContent.Name)
 			if err != nil {
-				console.Errorln(err)
+				console.Errorln(iodine.ToError(err))
 				return
 			}
 			tgtConfig, err := getHostConfig(cpURLs.TargetContent.Name)
 			if err != nil {
-				console.Errorln(err)
+				console.Errorln(iodine.ToError(err))
 				return
 			}
-			doCopy(cpURLs.SourceContent.Name, srcConfig, cpURLs.TargetContent.Name, tgtConfig, &bar)
+			if err := doCopy(cpURLs.SourceContent.Name, srcConfig, cpURLs.TargetContent.Name, tgtConfig, &bar); err != nil {
+				console.Errorln(iodine.ToError(err))
+				return
+			}
 			<-cpQueue
 		}(*cpURLs)
 	}

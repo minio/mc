@@ -189,9 +189,9 @@ func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
 	case true:
 		// do not use ioutil.ReadDir(), since it tries to sort its
 		// output at our scale we are expecting that to slow down
-		// instead we take raw output and provide it back to the user
-		// - such a thing is helpful when we are moving in and out
-		// large quantities of files
+		// instead we take raw output and provide it back to the
+		// user - this is the correct style when are moving large
+		// quantities of files
 		files, err := dir.Readdir(-1)
 		if err != nil {
 			contentCh <- client.ContentOnChannel{

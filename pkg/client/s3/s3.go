@@ -89,10 +89,11 @@ func (c *s3Client) GetObject(offset, length uint64) (io.ReadCloser, uint64, stri
 // CreateObject - create object
 func (c *s3Client) CreateObject(md5 string, size uint64) (io.WriteCloser, error) {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
-	// for a multipart upload and there is no need to cross verify
+	// for a multipart upload and there is no need to cross verify,
+	// invidual parts are properly verified
 	bucket, object := c.url2BucketAndObject()
 	r, w := io.Pipe()
-	// TODO - bump this value from default, if neede
+	// TODO - bump individual part size from default, if needed
 	// objectstorage.DefaultPartSize = 1024 * 1024 * 100
 	go func() {
 		_, err := c.api.CreateObject(bucket, object, size, r)
@@ -135,7 +136,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 			return nil, iodine.New(err, nil)
 		}
 		objectMetadata := new(client.Content)
-		objectMetadata.Name = metadata.Key
+		objectMetadata.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + metadata.Key
 		objectMetadata.Time = metadata.LastModified
 		objectMetadata.Size = metadata.Size
 		objectMetadata.Type = 0
@@ -261,7 +262,7 @@ func (c *s3Client) listRecursiveInGoRoutine(contentCh chan client.ContentOnChann
 			return
 		}
 		content := new(client.Content)
-		content.Name = object.Data.Key
+		content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Data.Key
 		content.Size = object.Data.Size
 		content.Time = object.Data.LastModified
 		content.Type = 0
