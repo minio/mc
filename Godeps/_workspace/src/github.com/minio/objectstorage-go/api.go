@@ -131,7 +131,7 @@ type Config struct {
 // MustGetEndpoint makes sure that a valid endpoint is provided all the time, even with false regions it will fall
 // back to default, for no regions specified it chooses to default to "milkyway" and use endpoint as is
 func (c *Config) MustGetEndpoint() string {
-	if strings.TrimSpace(c.Endpoint) != "" {
+	if strings.TrimSpace(c.Endpoint) != "" && strings.TrimSpace(c.Region) == "" {
 		if strings.Contains(strings.TrimSpace(c.Endpoint), "s3.amazonaws.com") {
 			c.Region = "us-east-1"
 			return getEndpoint(c.Region)
@@ -262,6 +262,9 @@ func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Read
 //
 // This version of CreateObject automatically does multipart for more than 5MB worth of data
 func (a *api) CreateObject(bucket, object string, size uint64, data io.Reader) (string, error) {
+	if strings.TrimSpace(object) == "" {
+		return "", errors.New("object name cannot be empty")
+	}
 	switch {
 	case size < DefaultPartSize:
 		// Single Part use case, use PutObject directly
