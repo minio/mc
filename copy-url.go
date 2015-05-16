@@ -160,7 +160,6 @@ func guessCopyURLType(sourceURLs []string, targetURL string) copyURLsType {
 
 // prepareCopyURLsTypeA - prepares target and source URLs for copying.
 func prepareCopyURLsTypeA(sourceURL string, targetURL string) *copyURLs {
-
 	sourceClient, err := source2Client(sourceURL)
 	if err != nil {
 		return &copyURLs{Error: iodine.New(err, nil)}
@@ -252,17 +251,15 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) *copyURLs {
 // prepareCopyRecursiveURLTypeC - prepares target and source URLs for copying.
 func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *copyURLs {
 	copyURLsCh := make(chan *copyURLs)
-
 	go func(sourceURL, targetURL string, copyURLsCh chan *copyURLs) {
 		defer close(copyURLsCh)
-
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
 			copyURLsCh <- &copyURLs{Error: iodine.New(fmt.Errorf("Source [%s] is not recursive.", sourceURL), nil)}
 			return
 		}
-		sourceURL = stripRecursiveURL(sourceURL)
 
+		sourceURL = stripRecursiveURL(sourceURL)
 		sourceClient, err := source2Client(sourceURL)
 		if err != nil {
 			copyURLsCh <- &copyURLs{Error: iodine.New(err, nil)}
@@ -296,6 +293,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *copyURLs {
 			copyURLsCh <- &copyURLs{Error: iodine.New(fmt.Errorf("Target directory [%s] does not exist.", targetURL), nil)}
 			return
 		}
+
 		if !targetContent.Type.IsDir() {
 			// Target exists, but is not a directory.
 			copyURLsCh <- &copyURLs{Error: iodine.New(fmt.Errorf("Target [%s] is not a directory.", targetURL), nil)}
@@ -313,8 +311,8 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *copyURLs {
 				// Source is not a regular file. Skip it for copy.
 				continue
 			}
-			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 
+			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 			sourceURLParse, err := url.Parse(sourceURL)
 			if err != nil {
 				copyURLsCh <- &copyURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
