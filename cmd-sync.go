@@ -17,6 +17,9 @@
 package main
 
 import (
+	"runtime"
+	"sync"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
@@ -36,7 +39,7 @@ func runSyncCmd(ctx *cli.Context) {
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
-	_, err = getExpandedURLs(ctx.Args(), config.Aliases)
+	URLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
@@ -47,40 +50,54 @@ func runSyncCmd(ctx *cli.Context) {
 			console.Fatalf("Unable to parse arguments. Reason: [%s].\n", e)
 		}
 	}
-	//	runCopyCmdSingleSourceMultipleTargets(urls)
-}
+	// Separate source and target. 'sync' can take only one source.
+	// but any number of targets, even the recursive URLs mixed in-between.
+	sourceURL := URLs[0] // first one is source
+	targetURLs := URLs[1:]
 
-/*
-func runCopyCmdSingleSourceMultipleTargets(urls []string) {
-	sourceURL := urls[0]   // first arg is source
-	targetURLs := urls[1:] // all other are targets
+	// set up progress bar
+	bar := newCopyBar(globalQuietFlag)
 
-	recursive := isURLRecursive(sourceURL)
-	// if recursive strip off the "..."
-	if recursive {
-		sourceURL = stripRecursiveURL(sourceURL)
-	}
-	sourceConfig, err := getHostConfig(sourceURL)
-	if err != nil {
-		console.Debugln(iodine.New(err, nil))
-		console.Fatalf("Unable to read host configuration for the source %s from config file [%s]. Reason: [%s].\n",
-			sourceURL, mustGetMcConfigPath(), iodine.ToError(err))
-	}
-	targetURLConfigMap, err := getHostConfigs(targetURLs)
-	if err != nil {
-		console.Debugln(iodine.New(err, nil))
-		console.Fatalf("Unable to read host configuration for the following targets [%s] from config file [%s]. Reason: [%s].\n",
-			targetURLs, mustGetMcConfigPath(), iodine.ToError(err))
-	}
-
-	for targetURL, targetConfig := range targetURLConfigMap {
-		err = doCopyRecursive(targetURL, targetConfig, sourceURL, sourceConfig)
-		if err != nil {
-			console.Debugln(err)
-			console.Fatalf("Failed to copy from source [%s] to target %s. Reason: [%s].\n",
-				sourceURL, targetURL, iodine.ToError(err))
+	go func(sourceURL string, targetURLs []string) {
+		for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
+			if syncURLs.Error != nil {
+				// no need to print errors here, any error here
+				// will be printed later during Sync()
+				continue
+			}
+			bar.Extend(syncURLs.SourceContent.Size)
 		}
-	}
-}
+	}(sourceURL, targetURLs)
 
-*/
+	var syncQueue = make(chan bool, runtime.NumCPU()-1)
+	var wg sync.WaitGroup
+
+	for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
+		if syncURLs.Error != nil {
+			console.Errorln(iodine.ToError(syncURLs.Error))
+			continue
+		}
+		syncQueue <- true
+		wg.Add(1)
+		go func(syncURLs copyURLs) {
+			defer wg.Done()
+			srcConfig, err := getHostConfig(syncURLs.SourceContent.Name)
+			if err != nil {
+				console.Errorln(iodine.ToError(err))
+				return
+			}
+			tgtConfig, err := getHostConfig(syncURLs.TargetContent.Name)
+			if err != nil {
+				console.Errorln(iodine.ToError(err))
+				return
+			}
+			if err := doCopy(syncURLs.SourceContent.Name, srcConfig, syncURLs.TargetContent.Name, tgtConfig, &bar); err != nil {
+				console.Errorln(iodine.ToError(err))
+				return
+			}
+			<-syncQueue
+		}(*syncURLs)
+	}
+	wg.Wait()
+	bar.Finish()
+}
