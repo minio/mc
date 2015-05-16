@@ -24,10 +24,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cheggaaa/pb"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/pb"
 )
 
 // Check for the environment early on and gracefully report.

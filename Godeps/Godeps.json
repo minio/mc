@@ -6,10 +6,6 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/cheggaaa/pb",
-			"Rev": "bd14546a551971ae7f460e6d6e527c5b56cd38d7"
-		},
-		{
 			"ImportPath": "github.com/dustin/go-humanize",
 			"Rev": "8cc1aaa2d955ee82833337cfb10babc42be6bce6"
 		},
@@ -37,6 +33,10 @@
 		{
 			"ImportPath": "github.com/minio/objectstorage-go",
 			"Rev": "191883582ed0260d7be8f091971d5a7a840621d0"
+		},
+		{
+			"ImportPath": "github.com/minio/pb",
+			"Rev": "622417a09783776be7c59be7c01feebd0b5423bf"
 		},
 		{
 			"ImportPath": "github.com/shiena/ansicolor",
