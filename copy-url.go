@@ -28,7 +28,7 @@ import (
 )
 
 //
-//   NOITE: All the parse rules should reduced to A: Copy(Source, Target).
+//   NOTE: All the parse rules should reduced to A: Copy(Source, Target).
 //
 //   * SINGLE SOURCE - VALID
 //   =======================
