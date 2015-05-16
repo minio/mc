@@ -20,8 +20,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/cheggaaa/pb"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/pb"
 )
 
 type copyBarCmd int

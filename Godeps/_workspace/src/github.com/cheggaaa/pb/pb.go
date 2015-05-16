@@ -80,7 +80,6 @@ type ProgressBar struct {
 	isFinish   chan struct{}
 
 	startTime    time.Time
-	startValue   int64
 	currentValue int64
 
 	prefix, postfix string
@@ -95,7 +94,6 @@ type ProgressBar struct {
 // Start print
 func (pb *ProgressBar) Start() *ProgressBar {
 	pb.startTime = time.Now()
-	pb.startValue = pb.current
 	if pb.Total == 0 {
 		pb.ShowBar = false
 		pb.ShowTimeLeft = false
@@ -113,14 +111,13 @@ func (pb *ProgressBar) Increment() int {
 }
 
 // Set current value
-func (pb *ProgressBar) Set(current int) *ProgressBar {
-	return pb.Set64(int64(current))
+func (pb *ProgressBar) Set(current int) {
+	pb.Set64(int64(current))
 }
 
 // Set64 sets the current value as int64
-func (pb *ProgressBar) Set64(current int64) *ProgressBar {
+func (pb *ProgressBar) Set64(current int64) {
 	atomic.StoreInt64(&pb.current, current)
-	return pb
 }
 
 // Add to current value
@@ -191,10 +188,7 @@ func (pb *ProgressBar) Finish() {
 	//Protect multiple calls
 	pb.finishOnce.Do(func() {
 		close(pb.isFinish)
-		// if current is 0 do not worry about writing to progress bar
-		if pb.current > 0 {
-			pb.write(atomic.LoadInt64(&pb.current))
-		}
+		pb.write(atomic.LoadInt64(&pb.current))
 		if !pb.NotPrint {
 			fmt.Println()
 		}
@@ -248,7 +242,6 @@ func (pb *ProgressBar) write(current int64) {
 
 	// time left
 	fromStart := time.Now().Sub(pb.startTime)
-	currentFromStart := current - pb.startValue
 	select {
 	case <-pb.isFinish:
 		if pb.ShowFinalTime {
@@ -256,18 +249,18 @@ func (pb *ProgressBar) write(current int64) {
 			timeLeftBox = left.String()
 		}
 	default:
-		if pb.ShowTimeLeft && currentFromStart > 0 {
-			perEntry := fromStart / time.Duration(currentFromStart)
-			left := time.Duration(pb.Total-currentFromStart) * perEntry
+		if pb.ShowTimeLeft && current > 0 {
+			perEntry := fromStart / time.Duration(current)
+			left := time.Duration(pb.Total-current) * perEntry
 			left = (left / time.Second) * time.Second
 			timeLeftBox = left.String()
 		}
 	}
 
 	// speed
-	if pb.ShowSpeed && currentFromStart > 0 {
+	if pb.ShowSpeed && current > 0 {
 		fromStart := time.Now().Sub(pb.startTime)
-		speed := float64(currentFromStart) / (float64(fromStart) / float64(time.Second))
+		speed := float64(current) / (float64(fromStart) / float64(time.Second))
 		speedBox = Format(int64(speed), pb.Units) + "/s "
 	}
 
