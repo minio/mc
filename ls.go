@@ -62,7 +62,7 @@ func doList(clnt client.Client, targetURL string) error {
 			err = contentCh.Err
 			break
 		}
-		printContent(contentCh.Content.Time, contentCh.Content.Size, contentCh.Content.Name, contentCh.Content.FileType)
+		printContent(contentCh.Content.Time, contentCh.Content.Size, contentCh.Content.Name, contentCh.Content.Type)
 	}
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
@@ -78,7 +78,7 @@ func doListRecursive(clnt client.Client, targetURL string) error {
 			err = contentCh.Err
 			break
 		}
-		printContent(contentCh.Content.Time, contentCh.Content.Size, contentCh.Content.Name, contentCh.Content.FileType)
+		printContent(contentCh.Content.Time, contentCh.Content.Size, contentCh.Content.Name, contentCh.Content.Type)
 	}
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})

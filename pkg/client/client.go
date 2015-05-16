@@ -46,8 +46,8 @@ type ContentOnChannel struct {
 
 // Content - object content list
 type Content struct {
-	Name     string
-	Time     time.Time
-	Size     int64
-	FileType os.FileMode
+	Name string
+	Time time.Time
+	Size int64
+	Type os.FileMode
 }

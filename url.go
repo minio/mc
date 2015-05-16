@@ -27,12 +27,23 @@ import (
 // re-usable constants
 const (
 	recursiveSeparator = "..."
-	pathSeparator      = "/"
 )
 
 // isURLRecursive - find out if requested url is recursive
 func isURLRecursive(urlStr string) bool {
 	return strings.HasSuffix(urlStr, recursiveSeparator)
+}
+
+// stripRecursiveURL - Strip "..." from the URL if present.
+func stripRecursiveURL(urlStr string) string {
+	if !isURLRecursive(urlStr) {
+		return urlStr
+	}
+	urlStr = strings.TrimSuffix(urlStr, recursiveSeparator)
+	if urlStr == "" {
+		urlStr = "."
+	}
+	return urlStr
 }
 
 // getExpandedURL - extracts URL string from a single cmd-line argument

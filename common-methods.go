@@ -18,7 +18,6 @@ package main
 
 import (
 	"io"
-	"path/filepath"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/client/fs"
@@ -61,8 +60,8 @@ func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Clie
 		clnt = s3.New(s3Config)
 		return clnt, nil
 	case client.Filesystem:
-		clnt = fs.New(filepath.Clean(urlStr))
-		return clnt, nil
+		clnt, err = fs.New(urlStr)
+		return clnt, err
 	default:
 		return nil, iodine.New(errUnsupportedScheme{
 			scheme: client.GetTypeToString(t),
