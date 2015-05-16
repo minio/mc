@@ -20,8 +20,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/cheggaaa/pb"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/pb"
 )
 
 type copyBarCmd int
@@ -94,7 +94,9 @@ func newCopyBar(quiet bool) barSend {
 			case copyBarCmdProgress:
 				bar.Add64(msg.Arg.(int64))
 			case copyBarCmdFinish:
-				bar.Finish()
+				if started {
+					bar.Finish()
+				}
 				finishCh <- true
 				return
 			}
