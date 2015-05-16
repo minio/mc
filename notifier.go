@@ -29,14 +29,6 @@ const (
 	updateString = "mc cp " + mcUpdateURL + " ${HOME}/bin/mc"
 )
 
-// intMax - return maximum value for any given integer
-func intMax(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
-}
-
 // printUpdateNotify - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
 func printUpdateNotify(latestVersion, currentVersion string) {
 	// TODO - make this configurable
