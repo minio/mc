@@ -318,11 +318,21 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *copyURLs {
 				copyURLsCh <- &copyURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
 			}
 
+			sourceContentName, err := url.QueryUnescape(sourceContent.Content.Name)
+			if err != nil {
+				copyURLsCh <- &copyURLs{Error: iodine.New(errInvalidSource{path: sourceContent.Content.Name}, nil)}
+			}
+
+			sourceContentParse, err := url.Parse(sourceContentName)
+			if err != nil {
+				copyURLsCh <- &copyURLs{Error: iodine.New(errInvalidSource{path: sourceContent.Content.Name}, nil)}
+			}
+
 			// Construct target path from recursive path of source without its prefix dir.
 			newTargetURLParse := *targetURLParse
 			newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path,
-				strings.TrimPrefix(sourceContent.Content.Name, filepath.Dir(sourceURLParse.Path)))
-			copyURLsCh <- prepareCopyURLsTypeA(sourceContent.Content.Name, newTargetURLParse.String())
+				strings.TrimPrefix(sourceContentParse.Path, filepath.Dir(sourceURLParse.Path)))
+			copyURLsCh <- prepareCopyURLsTypeA(sourceContentParse.String(), newTargetURLParse.String())
 		}
 	}(sourceURL, targetURL, copyURLsCh)
 
