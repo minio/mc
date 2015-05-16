@@ -134,7 +134,6 @@ func runCopyCmd(ctx *cli.Context) {
 			}
 			if err := doCopy(cpURLs.SourceContent.Name, srcConfig, cpURLs.TargetContent.Name, tgtConfig, &bar); err != nil {
 				console.Errorln(iodine.ToError(err))
-				return
 			}
 			<-cpQueue
 		}(*cpURLs)

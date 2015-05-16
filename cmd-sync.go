@@ -93,7 +93,6 @@ func runSyncCmd(ctx *cli.Context) {
 			}
 			if err := doCopy(syncURLs.SourceContent.Name, srcConfig, syncURLs.TargetContent.Name, tgtConfig, &bar); err != nil {
 				console.Errorln(iodine.ToError(err))
-				return
 			}
 			<-syncQueue
 		}(*syncURLs)
