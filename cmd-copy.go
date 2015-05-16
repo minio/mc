@@ -18,7 +18,6 @@ package main
 
 import (
 	"io"
-	"os"
 	"runtime"
 	"sync"
 
@@ -67,12 +66,12 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 
 // runCopyCmd is bound to sub-command
 func runCopyCmd(ctx *cli.Context) {
-	var retCode int
-
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
-
+	if !isMcConfigExist() {
+		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+	}
 	config, err := getMcConfig()
 	if err != nil {
 		console.Debugln(iodine.New(err, nil))
@@ -140,7 +139,4 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 	wg.Wait()
 	bar.Finish()
-
-	os.Exit(retCode)
-
 }

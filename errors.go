@@ -122,5 +122,5 @@ type errInvalidTarget struct {
 }
 
 func (e errInvalidTarget) Error() string {
-	return "Invalid source " + e.path
+	return "Invalid target " + e.path
 }

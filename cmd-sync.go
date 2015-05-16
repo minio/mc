@@ -16,15 +16,12 @@
 
 package main
 
-import "github.com/minio/cli"
+import (
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
+)
 
-func runSyncCmd(ctx *cli.Context) {
-	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
-	}
-}
-
-/*
 func runSyncCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
@@ -39,7 +36,7 @@ func runSyncCmd(ctx *cli.Context) {
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := getExpandedURLs(ctx.Args(), config.Aliases)
+	_, err = getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
@@ -50,9 +47,10 @@ func runSyncCmd(ctx *cli.Context) {
 			console.Fatalf("Unable to parse arguments. Reason: [%s].\n", e)
 		}
 	}
-	runCopyCmdSingleSourceMultipleTargets(urls)
+	//	runCopyCmdSingleSourceMultipleTargets(urls)
 }
 
+/*
 func runCopyCmdSingleSourceMultipleTargets(urls []string) {
 	sourceURL := urls[0]   // first arg is source
 	targetURLs := urls[1:] // all other are targets
