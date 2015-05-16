@@ -156,7 +156,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 			return nil, iodine.New(err, nil)
 		}
 		objectMetadata := new(client.Content)
-		objectMetadata.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + metadata.Key
+		objectMetadata.Name = c.hostURL.String()
 		objectMetadata.Time = metadata.LastModified
 		objectMetadata.Size = metadata.Size
 		objectMetadata.Type = 0
