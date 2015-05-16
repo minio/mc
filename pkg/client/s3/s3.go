@@ -53,6 +53,25 @@ type s3Client struct {
 	hostURL *url.URL
 }
 
+// url2Regions s3 region map used by bucket location constraint
+var url2Regions = map[string]string{
+	"s3-fips-us-gov-west-1.amazonaws.com": "us-gov-west-1",
+	"s3.amazonaws.com":                    "us-east-1",
+	"s3-us-west-1.amazonaws.com":          "us-west-1",
+	"s3-us-west-2.amazonaws.com":          "us-west-2",
+	"s3-eu-west-1.amazonaws.com":          "eu-west-1",
+	"s3-eu-central-1.amazonaws.com":       "eu-central-1",
+	"s3-ap-southeast-1.amazonaws.com":     "ap-southeast-1",
+	"s3-ap-southeast-2.amazonaws.com":     "ap-southeast-2",
+	"s3-ap-northeast-1.amazonaws.com":     "ap-northeast-1",
+	"s3-sa-east-1.amazonaws.com":          "sa-east-1",
+	"s3.cn-north-1.amazonaws.com.cn":      "cn-north-1",
+}
+
+func getRegion(host string) string {
+	return url2Regions[host]
+}
+
 // New returns an initialized s3Client structure. if debug use a internal trace transport
 func New(config *Config) client.Client {
 	u, err := url.Parse(config.HostURL)
@@ -71,6 +90,7 @@ func New(config *Config) client.Client {
 	objectstorageConf.SecretAccessKey = config.SecretAccessKey
 	objectstorageConf.UserAgent = config.UserAgent
 	objectstorageConf.Transport = transport
+	objectstorageConf.Region = getRegion(u.Host)
 	objectstorageConf.Endpoint = u.Scheme + "://" + u.Host
 	api := objectstorage.New(objectstorageConf)
 	return &s3Client{api: api, hostURL: u}
