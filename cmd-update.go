@@ -67,7 +67,7 @@ func runUpdateCmd(ctx *cli.Context) {
 		msg, err := doUpdateCheck(hostConfig)
 		if err != nil {
 			console.Debugln(iodine.New(err, nil))
-			console.Fatalf(msg)
+			console.Fatalln(msg)
 		}
 	}
 }

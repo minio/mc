@@ -110,12 +110,13 @@ func (a *lowLevelAPI) putBucket(bucket, acl, location string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return responseToError(resp)
 		}
 	}
-	return resp.Body.Close()
+	return nil
 }
 
 // putBucketRequestACL wrapper creates a new putBucketACL request
@@ -143,12 +144,13 @@ func (a *lowLevelAPI) putBucketACL(bucket, acl string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return responseToError(resp)
 		}
 	}
-	return resp.Body.Close()
+	return nil
 }
 
 // getBucketLocationRequest wrapper creates a new getBucketLocation request
@@ -175,6 +177,7 @@ func (a *lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return "", responseToError(resp)
@@ -186,7 +189,7 @@ func (a *lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return locationConstraint, resp.Body.Close()
+	return locationConstraint, nil
 }
 
 // listObjectsRequest wrapper creates a new ListObjects request
@@ -237,6 +240,7 @@ func (a *lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxk
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
@@ -250,7 +254,7 @@ func (a *lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxk
 	}
 
 	// close body while returning, along with any error
-	return listBucketResult, resp.Body.Close()
+	return listBucketResult, nil
 }
 
 func (a *lowLevelAPI) headBucketRequest(bucket string) (*request, error) {
@@ -272,13 +276,14 @@ func (a *lowLevelAPI) headBucket(bucket string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			// Head has no response body, handle it
 			return fmt.Errorf("%s", resp.Status)
 		}
 	}
-	return resp.Body.Close()
+	return nil
 }
 
 // deleteBucketRequest wrapper creates a new DeleteBucket request
@@ -342,6 +347,7 @@ func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadS
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
@@ -349,7 +355,7 @@ func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadS
 	}
 	metadata := new(ObjectMetadata)
 	metadata.ETag = strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
-	return metadata, resp.Body.Close()
+	return metadata, nil
 }
 
 // getObjectRequest wrapper creates a new GetObject request
@@ -432,9 +438,10 @@ func (a *lowLevelAPI) headObject(bucket, object string) (*ObjectMetadata, error)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, fmt.Errorf("%s", resp.Status)
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
@@ -502,6 +509,7 @@ func (a *lowLevelAPI) listBuckets() (*listAllMyBucketsResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
@@ -513,5 +521,5 @@ func (a *lowLevelAPI) listBuckets() (*listAllMyBucketsResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	return listAllMyBucketsResult, resp.Body.Close()
+	return listAllMyBucketsResult, nil
 }
