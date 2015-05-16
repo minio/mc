@@ -134,7 +134,9 @@ func runCopyCmd(ctx *cli.Context) {
 				console.Errorln(err)
 				return
 			}
-			doCopy(cpURLs.SourceContent.Name, srcConfig, cpURLs.TargetContent.Name, tgtConfig, &bar)
+			if tgtConfig != nil && srcConfig != nil {
+				doCopy(cpURLs.SourceContent.Name, srcConfig, cpURLs.TargetContent.Name, tgtConfig, &bar)
+			}
 			<-cpQueue
 		}(*cpURLs)
 	}
