@@ -145,6 +145,10 @@ func newConfig() (config quick.Config) {
 	playHostConfig.AccessKeyID = ""
 	playHostConfig.SecretAccessKey = ""
 
+	dlHostConfig := new(hostConfig)
+	dlHostConfig.AccessKeyID = ""
+	dlHostConfig.SecretAccessKey = ""
+
 	// Your example host config
 	exampleHostConf := new(hostConfig)
 	exampleHostConf.AccessKeyID = globalAccessKeyID
@@ -153,10 +157,12 @@ func newConfig() (config quick.Config) {
 	conf.Hosts[exampleHostURL] = exampleHostConf
 	conf.Hosts["http*://s3*.amazonaws.com"] = s3HostConf
 	conf.Hosts["http://play.minio.io:9000"] = playHostConfig
+	conf.Hosts["http://dl.minio.io:9000"] = dlHostConfig
 
 	aliases := make(map[string]string)
 	aliases["s3"] = "https://s3.amazonaws.com"
 	aliases["play"] = "http://play.minio.io:9000"
+	aliases["dl"] = "http://dl.minio.io:9000"
 	aliases["localhost"] = "http://localhost:9000"
 	conf.Aliases = aliases
 	config = quick.New(conf)
