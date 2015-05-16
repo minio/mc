@@ -5,10 +5,10 @@ Name:
    mc update - Check for new software updates
 
 USAGE:
-   mc update check
+   mc update
 
 EXAMPLES:
    1. Check for new updates
-         $ mc update check
+         $ mc update
 
 ```
