@@ -110,7 +110,7 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 	}(sourceURLs, targetURL)
 
-	var cpQueue = make(chan bool, runtime.NumCPU()-1)
+	var cpQueue = make(chan bool, intMax(runtime.NumCPU()-1, 1))
 	var wg sync.WaitGroup
 
 	for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
