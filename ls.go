@@ -78,7 +78,12 @@ func doListRecursive(clnt client.Client, targetURL string) error {
 			err = contentCh.Err
 			break
 		}
-		printContent(contentCh.Content.Time, contentCh.Content.Size, contentCh.Content.Name, contentCh.Content.Type)
+		// this special handling is necessary since we are sending back absolute paths with in ListRecursive()
+		// a user would not wish to see a URL just for recursive and not for regular List()
+		//
+		// To be consistent we have to filter them out
+		contentName := strings.TrimPrefix(contentCh.Content.Name, strings.TrimSuffix(targetURL, "/")+"/")
+		printContent(contentCh.Content.Time, contentCh.Content.Size, contentName, contentCh.Content.Type)
 	}
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})

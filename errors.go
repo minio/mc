@@ -124,3 +124,12 @@ type errInvalidTarget struct {
 func (e errInvalidTarget) Error() string {
 	return "Invalid target " + e.path
 }
+
+type errSameURLs struct {
+	source string
+	target string
+}
+
+func (e errSameURLs) Error() string {
+	return "Source " + e.source + " and Target " + e.target + " are same"
+}
