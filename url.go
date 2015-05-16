@@ -60,7 +60,7 @@ func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err e
 	}
 	if client.GetType(urlStr) == client.Unknown {
 		return "", iodine.New(errUnsupportedScheme{
-			scheme: client.GetTypeToString(client.Unknown),
+			scheme: client.Unknown.String(),
 			url:    urlStr,
 		}, nil)
 	}

@@ -64,7 +64,7 @@ func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Clie
 		return clnt, err
 	default:
 		return nil, iodine.New(errUnsupportedScheme{
-			scheme: client.GetTypeToString(t),
+			scheme: t.String(),
 			url:    urlStr,
 		}, nil)
 	}
