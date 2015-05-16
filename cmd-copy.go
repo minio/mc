@@ -103,7 +103,8 @@ func runCopyCmd(ctx *cli.Context) {
 	go func(sourceURLs []string, targetURL string) {
 		for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 			if cpURLs.Error != nil {
-				console.Errorln(iodine.ToError(cpURLs.Error))
+				// no need to print errors here, any error here
+				// will be printed later during Copy()
 				continue
 			}
 			bar.Extend(cpURLs.SourceContent.Size)
@@ -116,10 +117,9 @@ func runCopyCmd(ctx *cli.Context) {
 
 	for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 		if cpURLs.Error != nil {
-			console.Errorf(iodine.ToError(cpURLs.Error).Error())
+			console.Errorln(iodine.ToError(cpURLs.Error).Error())
 			continue
 		}
-
 		cpQueue <- true
 		wg.Add(1)
 		go func(cpURLs copyURLs) {
