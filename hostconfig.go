@@ -30,11 +30,6 @@ type hostConfig struct {
 	SecretAccessKey string
 }
 
-// getHostURL -
-func getHostURL(u *url.URL) string {
-	return u.Scheme + "://" + u.Host
-}
-
 // getHostConfigs retrieves host specific configuration such as access keys, certs for a list of  URLs
 func getHostConfigs(URLs []string) (hostConfigs map[string]*hostConfig, err error) {
 	hostConfigs = make(map[string]*hostConfig)
@@ -67,7 +62,7 @@ func getHostConfig(URL string) (*hostConfig, error) {
 	}
 
 	// No host matching or keys needed for localhost and 127.0.0.1 URL's skip them
-	if strings.Contains(getHostURL(u), "localhost") || strings.Contains(getHostURL(u), "127.0.0.1") {
+	if strings.Contains(u.Host, "localhost") || strings.Contains(u.Host, "127.0.0.1") {
 		hostCfg := &hostConfig{
 			AccessKeyID:     "",
 			SecretAccessKey: "",
@@ -75,7 +70,7 @@ func getHostConfig(URL string) (*hostConfig, error) {
 		return hostCfg, nil
 	}
 	for globURL, hostCfg := range config.Hosts {
-		match, err := filepath.Match(globURL, getHostURL(u))
+		match, err := filepath.Match(globURL, u.Host)
 		if err != nil {
 			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: URL}, nil)
 		}
