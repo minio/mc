@@ -26,6 +26,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/minio/pkg/iodine"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // NoDebugPrint defines if the input should be printed or not. By default it's set to true.
@@ -299,7 +300,7 @@ func GetThemeName() string {
 
 // GetDefaultThemeName returns the default theme
 func GetDefaultThemeName() string {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || !terminal.IsTerminal(int(os.Stdout.Fd())) {
 		return "nocolor"
 	}
 	return "minimal"
