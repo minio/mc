@@ -36,7 +36,7 @@
 		},
 		{
 			"ImportPath": "github.com/minio/objectstorage-go",
-			"Rev": "968c1cd35c8cb04d4593dd19fd9f4881b3e5082c"
+			"Rev": "0aa0a2515ed0243fbfcdf05736bed10226b67a8b"
 		},
 		{
 			"ImportPath": "github.com/shiena/ansicolor",

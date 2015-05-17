@@ -235,19 +235,63 @@ func (a *api) newObjectUpload(bucket, object string, data io.Reader) error {
 	return nil
 }
 
-func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Reader) error {
+type partOnChannel struct {
+	Data *partMetadata
+	Err  error
+}
+
+func (a *api) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partOnChannel {
+	partCh := make(chan partOnChannel)
+	go a.listObjectPartsRecursiveInRoutine(bucket, object, uploadID, partCh)
+	return partCh
+}
+
+func (a *api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, partCh chan partOnChannel) {
+	defer close(partCh)
 	listObjectPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
 	if err != nil {
-		return err
+		partCh <- partOnChannel{
+			Data: nil,
+			Err:  err,
+		}
+		return
 	}
+	for _, uploadedPart := range listObjectPartsResult.Part {
+		partCh <- partOnChannel{
+			Data: uploadedPart,
+			Err:  nil,
+		}
+	}
+	for {
+		if !listObjectPartsResult.IsTruncated {
+			break
+		}
+		listObjectPartsResult, err = a.listObjectParts(bucket, object, uploadID, listObjectPartsResult.NextPartNumberMarker, 1000)
+		if err != nil {
+			partCh <- partOnChannel{
+				Data: nil,
+				Err:  err,
+			}
+			return
+		}
+		for _, uploadedPart := range listObjectPartsResult.Part {
+			partCh <- partOnChannel{
+				Data: uploadedPart,
+				Err:  nil,
+			}
+		}
+	}
+}
+
+func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Reader) error {
 	var skipParts []int
 	completeMultipartUpload := new(completeMultipartUpload)
-	for _, uploadedPart := range listObjectPartsResult.Part {
+	for part := range a.listObjectPartsRecursive(bucket, object, uploadID) {
 		completedPart := new(completePart)
-		completedPart.PartNumber = uploadedPart.PartNumber
-		completedPart.ETag = uploadedPart.ETag
+		completedPart.PartNumber = part.Data.PartNumber
+		completedPart.ETag = part.Data.ETag
 		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
-		skipParts = append(skipParts, uploadedPart.PartNumber)
+		skipParts = append(skipParts, part.Data.PartNumber)
 	}
 	for part := range MultiPart(data, DefaultPartSize, skipParts) {
 		if part.Err != nil {
@@ -260,11 +304,60 @@ func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Read
 		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
 	}
 	sort.Sort(completedParts(completeMultipartUpload.Part))
-	_, err = a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
+	_, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+type multiPartUploadOnChannel struct {
+	Data *upload
+	Err  error
+}
+
+func (a *api) listMultipartUploadsRecursive(bucket, prefix string) <-chan multiPartUploadOnChannel {
+	ch := make(chan multiPartUploadOnChannel)
+	go a.listMultipartUploadsRecursiveInRoutine(bucket, prefix, ch)
+	return ch
+}
+
+func (a *api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch chan multiPartUploadOnChannel) {
+	defer close(ch)
+	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", prefix, "", 1000)
+	if err != nil {
+		ch <- multiPartUploadOnChannel{
+			Data: nil,
+			Err:  err,
+		}
+		return
+	}
+	for _, upload := range listMultipartUploadsResult.Upload {
+		ch <- multiPartUploadOnChannel{
+			Data: upload,
+			Err:  nil,
+		}
+	}
+	for {
+		if !listMultipartUploadsResult.IsTruncated {
+			break
+		}
+		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
+			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, prefix, "", 1000)
+		if err != nil {
+			ch <- multiPartUploadOnChannel{
+				Data: nil,
+				Err:  err,
+			}
+			return
+		}
+		for _, upload := range listMultipartUploadsResult.Upload {
+			ch <- multiPartUploadOnChannel{
+				Data: upload,
+				Err:  nil,
+			}
+		}
+	}
 }
 
 // PutObject create an object in a bucket
@@ -290,16 +383,13 @@ func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) erro
 			return nil
 		}
 	default:
-		listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
-		if err != nil {
-			return err
-		}
 		var inProgress bool
 		var inProgressUploadID string
-		for _, upload := range listMultipartUploadsResult.Upload {
-			if object == upload.Key {
+		for mpUpload := range a.listMultipartUploadsRecursive(bucket, object) {
+			if mpUpload.Data.Key == object {
 				inProgress = true
-				inProgressUploadID = upload.UploadID
+				inProgressUploadID = mpUpload.Data.UploadID
+				break
 			}
 		}
 		if !inProgress {
