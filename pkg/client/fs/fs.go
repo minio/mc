@@ -57,7 +57,7 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(f.path)
 	if os.IsNotExist(err) {
-		return nil, iodine.New(NotFound{path: fpath}, nil)
+		return nil, iodine.New(NotFound{path: f.path}, nil)
 	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -154,7 +154,7 @@ func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
 	if os.IsNotExist(err) {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     iodine.New(NotFound{path: fpath}, nil),
+			Err:     iodine.New(NotFound{path: f.path}, nil),
 		}
 		return
 	}

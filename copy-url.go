@@ -169,7 +169,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *copyURLs {
 	sourceContent, err := sourceClient.Stat()
 	if err != nil {
 		// Source does not exist or insufficient privileges.
-		return &copyURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
+		return &copyURLs{Error: iodine.New(err, nil)}
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file
@@ -205,7 +205,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) *copyURLs {
 	sourceContent, err := sourceClient.Stat()
 	if err != nil {
 		// Source does not exist or insufficient privileges.
-		return &copyURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
+		return &copyURLs{Error: iodine.New(err, nil)}
 	}
 
 	if !sourceContent.Type.IsRegular() {
