@@ -196,18 +196,6 @@ func (ta *testAddr) String() string {
 	return "testAddr"
 }
 
-func (s *CmdTestSuite) TestStatusBar(c *C) {
-	/* TODO: Fix after finishing copyBar wrapper around progress bar.
-
-	bar := newCopyBar(globalQuietFlag)
-	c.Assert(bar, Not(IsNil))
-	c.Assert(bar.Units, Equals, pb.U_BYTES)
-	c.Assert(bar.RefreshRate, Equals, time.Millisecond*10)
-	c.Assert(bar.NotPrint, Equals, true)
-	c.Assert(bar.ShowSpeed, Equals, true)
-	*/
-}
-
 func (s *CmdTestSuite) TestIsValidRetry(c *C) {
 	opError := &net.OpError{
 		Op:   "read",
