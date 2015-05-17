@@ -34,21 +34,13 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	/*
-		var readers []io.Reader
-		readers = append(readers, reader)
-
-		switch globalQuietFlag {
-		case true:
-			console.Infof("‘%s’ -> ‘%s’\n", sourceURL, targetURL)
-		default:
-			// set up progress bar
-			readers = append(readers, bar)
-		}
-
-		mr := io.MultiReader(reader, bar)
-	*/
-	console.Infof("‘%s’ -> ‘%s’\n", sourceURL, targetURL)
+	switch globalQuietFlag {
+	case true:
+		console.Infof("‘%s’ -> ‘%s’\n", sourceURL, targetURL)
+	default:
+		// set up progress
+		reader = bar.NewProxyReader(reader)
+	}
 	err = putTarget(targetURL, targetConfig, md5hex, length, reader)
 	if err != nil {
 		return iodine.New(err, nil)
@@ -104,8 +96,7 @@ func runCopyCmd(ctx *cli.Context) {
 				continue
 			}
 			if !globalQuietFlag {
-				// disabling this for now until we fix the Reader
-				//bar.Extend(cpURLs.SourceContent.Size)
+				bar.Extend(cpURLs.SourceContent.Size)
 			}
 		}
 	}(sourceURLs, targetURL)

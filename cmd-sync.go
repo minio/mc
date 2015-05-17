@@ -42,8 +42,11 @@ func runSyncCmd(ctx *cli.Context) {
 	sourceURL := URLs[0] // first one is source
 	targetURLs := URLs[1:]
 
+	var bar barSend
 	// set up progress bar
-	bar := newCopyBar()
+	if !globalQuietFlag {
+		bar = newCopyBar()
+	}
 
 	go func(sourceURL string, targetURLs []string) {
 		for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {

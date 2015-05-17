@@ -32,9 +32,19 @@ const (
 	copyBarCmdFinish
 )
 
+type copyReader struct {
+	io.Reader
+	bar *barSend
+}
+
+func (r *copyReader) Read(p []byte) (n int, err error) {
+	n, err = r.Reader.Read(p)
+	r.bar.Progress(int64(n))
+	return
+}
+
 type barMsg struct {
 	Cmd copyBarCmd
-	io.Reader
 	Arg interface{}
 }
 
@@ -51,10 +61,8 @@ func (b barSend) Progress(progress int64) {
 	b.cmdCh <- barMsg{Cmd: copyBarCmdProgress, Arg: progress}
 }
 
-func (b *barSend) Read(p []byte) (n int, err error) {
-	n = len(p)
-	b.Progress(int64(n))
-	return
+func (b *barSend) NewProxyReader(r io.Reader) *copyReader {
+	return &copyReader{r, b}
 }
 
 func (b barSend) Finish() {
