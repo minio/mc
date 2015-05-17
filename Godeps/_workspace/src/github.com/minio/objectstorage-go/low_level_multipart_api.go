@@ -62,6 +62,7 @@ func (a *lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, pr
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
@@ -75,7 +76,7 @@ func (a *lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, pr
 	}
 
 	// close body while returning, along with any error
-	return listMultipartUploadsResult, resp.Body.Close()
+	return listMultipartUploadsResult, nil
 }
 
 // initiateMultipartRequest wrapper creates a new initiateMultiPart request
@@ -98,6 +99,7 @@ func (a *lowLevelAPI) initiateMultipartUpload(bucket, object string) (*initiateM
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
@@ -109,7 +111,7 @@ func (a *lowLevelAPI) initiateMultipartUpload(bucket, object string) (*initiateM
 	if err != nil {
 		return nil, err
 	}
-	return initiateMultipartUploadResult, resp.Body.Close()
+	return initiateMultipartUploadResult, nil
 }
 
 // completeMultipartUploadRequest wrapper creates a new CompleteMultipartUpload request
@@ -142,6 +144,7 @@ func (a *lowLevelAPI) completeMultipartUpload(bucket, object, uploadID string, c
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
@@ -153,7 +156,7 @@ func (a *lowLevelAPI) completeMultipartUpload(bucket, object, uploadID string, c
 	if err != nil {
 		return nil, err
 	}
-	return completeMultipartUploadResult, resp.Body.Close()
+	return completeMultipartUploadResult, nil
 }
 
 // abortMultipartUploadRequest wrapper creates a new AbortMultipartUpload request
@@ -219,6 +222,7 @@ func (a *lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumbe
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
@@ -230,7 +234,7 @@ func (a *lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumbe
 	if err != nil {
 		return nil, err
 	}
-	return listObjectPartsResult, resp.Body.Close()
+	return listObjectPartsResult, nil
 }
 
 // uploadPartRequest wrapper creates a new UploadPart request
@@ -274,10 +278,11 @@ func (a *lowLevelAPI) uploadPart(bucket, object, uploadID string, partNumber int
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
 		}
 	}
-	return completePart, resp.Body.Close()
+	return completePart, nil
 }

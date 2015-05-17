@@ -17,6 +17,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"io"
 
 	"github.com/minio/mc/pkg/client"
@@ -25,8 +27,8 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-// getSourceReader -
-func getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length uint64, md5hex string, err error) {
+// getSource -
+func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.Reader, length uint64, md5hex string, err error) {
 	sourceClnt, err := getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
 		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
@@ -34,13 +36,22 @@ func getSourceReader(sourceURL string, sourceConfig *hostConfig) (reader io.Read
 	return sourceClnt.GetObject(0, 0)
 }
 
-// getTargetWriter -
-func getTargetWriter(targetURL string, targetConfig *hostConfig, md5hex string, length uint64) (io.WriteCloser, error) {
+// putTarget -
+func putTarget(targetURL string, targetConfig *hostConfig, md5hex string, length uint64, data io.Reader) error {
 	targetClnt, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return iodine.New(err, nil)
 	}
-	return targetClnt.CreateObject(md5hex, length)
+	md5bytes, err := hex.DecodeString(md5hex)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	md5Base64 := base64.StdEncoding.EncodeToString(md5bytes)
+	err = targetClnt.CreateObject(md5Base64, length, data)
+	if err != nil {
+		return iodine.New(err, map[string]string{"failedURL": targetURL})
+	}
+	return nil
 }
 
 // getNewClient gives a new client interface

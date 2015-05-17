@@ -51,23 +51,15 @@ func (s *MySuite) TestList(c *C) {
 	etag := base64.StdEncoding.EncodeToString(binarySum[:])
 	dataLen := len(data)
 
-	writer, err := fsc.CreateObject(etag, uint64(dataLen))
+	err = fsc.CreateObject(etag, uint64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
-
-	size, err := io.CopyN(writer, bytes.NewBufferString(data), int64(dataLen))
-	c.Assert(err, IsNil)
-	c.Assert(size, Equals, int64(dataLen))
 
 	objectPath = filepath.Join(root, "object2")
 	fsc, err = New(objectPath)
 	c.Assert(err, IsNil)
 
-	writer, err = fsc.CreateObject(etag, uint64(dataLen))
+	err = fsc.CreateObject(etag, uint64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
-
-	size, err = io.CopyN(writer, bytes.NewBufferString(data), int64(dataLen))
-	c.Assert(err, IsNil)
-	c.Assert(size, Equals, int64(dataLen))
 
 	fsc, err = New(root)
 	c.Assert(err, IsNil)
@@ -122,7 +114,7 @@ func (s *MySuite) TestPutBucketACL(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *MySuite) TestPutObject(c *C) {
+func (s *MySuite) TestCreateObject(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -136,12 +128,8 @@ func (s *MySuite) TestPutObject(c *C) {
 	etag := base64.StdEncoding.EncodeToString(binarySum[:])
 	dataLen := len(data)
 
-	writer, err := fsc.CreateObject(etag, uint64(dataLen))
+	err = fsc.CreateObject(etag, uint64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
-
-	size, err := io.CopyN(writer, bytes.NewBufferString(data), int64(dataLen))
-	c.Assert(err, IsNil)
-	c.Assert(size, Equals, int64(dataLen))
 }
 
 func (s *MySuite) TestGetObject(c *C) {
@@ -155,19 +143,17 @@ func (s *MySuite) TestGetObject(c *C) {
 
 	data := "hello"
 	binarySum := md5.Sum([]byte(data))
-	etag := hex.EncodeToString(binarySum[:])
+	etag := base64.StdEncoding.EncodeToString(binarySum[:])
+	etagHex := hex.EncodeToString(binarySum[:])
 	dataLen := len(data)
 
-	writer, err := fsc.CreateObject(etag, uint64(dataLen))
-	c.Assert(err, IsNil)
-
-	_, err = io.CopyN(writer, bytes.NewBufferString(data), int64(dataLen))
+	err = fsc.CreateObject(etag, uint64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	reader, size, md5Sum, err := fsc.GetObject(0, 0)
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
-	c.Assert(etag, Equals, md5Sum)
+	c.Assert(etagHex, Equals, md5Sum)
 	_, err = io.CopyN(&results, reader, int64(size))
 	c.Assert(err, IsNil)
 	c.Assert([]byte(data), DeepEquals, results.Bytes())
@@ -188,10 +174,7 @@ func (s *MySuite) TestStat(c *C) {
 	etag := base64.StdEncoding.EncodeToString(binarySum[:])
 	dataLen := len(data)
 
-	writer, err := fsc.CreateObject(etag, uint64(dataLen))
-	c.Assert(err, IsNil)
-
-	_, err = io.CopyN(writer, bytes.NewBufferString(data), int64(dataLen))
+	err = fsc.CreateObject(etag, uint64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	content, err := fsc.Stat()

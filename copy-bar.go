@@ -34,7 +34,7 @@ const (
 
 type barMsg struct {
 	Cmd copyBarCmd
-	io.Writer
+	io.Reader
 	Arg interface{}
 }
 
@@ -51,10 +51,10 @@ func (b barSend) Progress(progress int64) {
 	b.cmdCh <- barMsg{Cmd: copyBarCmdProgress, Arg: progress}
 }
 
-func (b *barSend) Write(p []byte) (n int, err error) {
-	length := len(p)
-	b.Progress(int64(length))
-	return length, nil
+func (b *barSend) Read(p []byte) (n int, err error) {
+	n = len(p)
+	b.Progress(int64(n))
+	return
 }
 
 func (b barSend) Finish() {
