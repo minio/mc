@@ -38,7 +38,14 @@ var (
 	themesDB = map[string]Theme{"minimal": MiniTheme, "nocolor": NoColorTheme, "white": WhiteTheme}
 
 	// currTheme is current theme
-	currThemeName = GetDefaultThemeName()
+	currThemeName = func() string {
+		theme := GetDefaultThemeName()
+		// if not a TTY disable color
+		if !isatty(os.Stdout.Fd()) {
+			return "nocolor"
+		}
+		return theme
+	}()
 
 	// Print prints a error message and exits
 	Print = themesDB[currThemeName].Info.Print
