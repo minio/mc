@@ -1,4 +1,4 @@
-// +build darwin freebsd openbsd netbsd
+// +build !windows
 
 /*
  * Minio Client (C) 2015 Minio, Inc.
@@ -18,10 +18,13 @@
 
 package console
 
-import "syscall"
+import (
+	"syscall"
+	"unsafe"
+)
 
-/// *BSD console functions
-//
-// http://fxr.watson.org/fxr/source/sys/ttycom.h?v=FREEBSD6;im=3#L69
-//
-const ioctlReadTermios = syscall.TIOCGETA
+func isatty(fd uintptr) bool {
+	var termios syscall.Termios
+	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, fd, ioctlReadTermios, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
+	return err == 0
+}
