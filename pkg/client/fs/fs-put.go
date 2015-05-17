@@ -19,7 +19,7 @@ package fs
 import (
 	"bytes"
 	"crypto/md5"
-	"encoding/hex"
+	"encoding/base64"
 	"errors"
 	"io"
 	"os"
@@ -30,55 +30,38 @@ import (
 )
 
 // CreateObject - upload new object to bucket
-func (f *fsClient) CreateObject(md5HexString string, size uint64) (io.WriteCloser, error) {
-	r, w := io.Pipe()
-	go func() {
-		// handle md5HexString match internally
-		objectDir, _ := filepath.Split(f.path)
-		objectPath := f.path
-		if objectDir != "" {
-			if err := os.MkdirAll(objectDir, 0700); err != nil {
-				err := iodine.New(err, nil)
-				r.CloseWithError(err)
-				return
-			}
+func (f *fsClient) CreateObject(md5HexString string, size uint64, data io.Reader) error {
+	// handle md5HexString match internally
+	objectDir, _ := filepath.Split(f.path)
+	objectPath := f.path
+	if objectDir != "" {
+		if err := os.MkdirAll(objectDir, 0700); err != nil {
+			return iodine.New(err, nil)
 		}
-		fs, err := os.Create(objectPath)
-		if err != nil {
-			err := iodine.New(err, nil)
-			r.CloseWithError(err)
-			return
-		}
-		// calculate md5 to verify - incoming md5
-		h := md5.New()
-		mw := io.MultiWriter(fs, h)
+	}
+	fs, err := os.Create(objectPath)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	defer fs.Close()
+	// calculate md5 to verify - incoming md5
+	h := md5.New()
+	mw := io.MultiWriter(fs, h)
 
-		_, err = io.CopyN(mw, r, int64(size))
-		if err != nil {
-			err := iodine.New(err, nil)
-			fs.Close()
-			r.CloseWithError(err)
-			return
-		}
+	_, err = io.CopyN(mw, data, int64(size))
+	if err != nil {
+		return iodine.New(err, nil)
+	}
 
-		// ignore invalid md5 string sent by Amazon
-		if !strings.Contains(md5HexString, "-") {
-			expectedMD5, err := hex.DecodeString(md5HexString)
-			if err != nil {
-				err := iodine.New(err, nil)
-				fs.Close()
-				r.CloseWithError(err)
-				return
-			}
-			if !bytes.Equal(expectedMD5, h.Sum(nil)) {
-				err := iodine.New(errors.New("md5sum mismatch"), nil)
-				fs.Close()
-				r.CloseWithError(err)
-				return
-			}
+	// ignore invalid md5 string sent by Amazon
+	if !strings.Contains(md5HexString, "-") {
+		expectedMD5, err := base64.StdEncoding.DecodeString(md5HexString)
+		if err != nil {
+			return iodine.New(err, nil)
 		}
-		fs.Close()
-		r.Close()
-	}()
-	return w, nil
+		if !bytes.Equal(expectedMD5, h.Sum(nil)) {
+			return iodine.New(errors.New("md5sum mismatch"), nil)
+		}
+	}
+	return nil
 }

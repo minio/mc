@@ -98,10 +98,10 @@ type initiator struct {
 	DisplayName string
 }
 
-// part container for particular part of an object
-type part struct {
+// partMetadata container for particular part of an object
+type partMetadata struct {
 	PartNumber   int
-	LastModified time.Time `type:"timestamp" timestampFormat:"iso8601"`
+	LastModified time.Time
 	ETag         string
 	Size         int64
 }
@@ -122,7 +122,7 @@ type listObjectPartsResult struct {
 
 	// Indicates whether the returned list of parts is truncated.
 	IsTruncated bool
-	Part        []*part
+	Part        []*partMetadata
 
 	EncodingType string
 }

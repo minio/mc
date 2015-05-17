@@ -35,7 +35,7 @@ type Client interface {
 
 	// Object operations
 	GetObject(offset, length uint64) (body io.ReadCloser, size uint64, md5 string, err error)
-	CreateObject(md5 string, size uint64) (io.WriteCloser, error)
+	CreateObject(md5 string, size uint64, data io.Reader) error
 }
 
 // ContentOnChannel - List contents on channel

@@ -107,24 +107,18 @@ func (c *s3Client) GetObject(offset, length uint64) (io.ReadCloser, uint64, stri
 }
 
 // CreateObject - create object
-func (c *s3Client) CreateObject(md5 string, size uint64) (io.WriteCloser, error) {
+func (c *s3Client) CreateObject(md5 string, size uint64, data io.Reader) error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified
 	bucket, object := c.url2BucketAndObject()
-	r, w := io.Pipe()
 	// TODO - bump individual part size from default, if needed
 	// objectstorage.DefaultPartSize = 1024 * 1024 * 100
-	go func() {
-		_, err := c.api.CreateObject(bucket, object, size, r)
-		if err != nil {
-			err := iodine.New(err, nil)
-			r.CloseWithError(err)
-			return
-		}
-		r.Close()
-	}()
-	return w, nil
+	_, err := c.api.PutObject(bucket, object, size, data)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	return nil
 }
 
 // CreateBucket - create a new bucket
@@ -133,7 +127,7 @@ func (c *s3Client) CreateBucket() error {
 	if object != "" {
 		return iodine.New(InvalidQueryURL{URL: c.hostURL.String()}, nil)
 	}
-	err := c.api.CreateBucket(bucket, "private", "")
+	err := c.api.MakeBucket(bucket, "private", "")
 	return iodine.New(err, nil)
 }
 

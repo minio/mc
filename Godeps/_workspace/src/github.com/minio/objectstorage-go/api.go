@@ -33,11 +33,14 @@ type API interface {
 
 	// Object Read/Write/Stat operations
 	ObjectAPI
+
+	// MultipartManagementAPI - cancel, list multiparts and active sessions
+	MultipartManagementAPI
 }
 
 // BucketAPI - bucket specific Read/Write/Stat interface
 type BucketAPI interface {
-	CreateBucket(bucket, acl, location string) error
+	MakeBucket(bucket, acl, location string) error
 	SetBucketACL(bucket, acl string) error
 	StatBucket(bucket string) error
 	DeleteBucket(bucket string) error
@@ -49,9 +52,15 @@ type BucketAPI interface {
 // ObjectAPI - object specific Read/Write/Stat interface
 type ObjectAPI interface {
 	GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectMetadata, error)
-	CreateObject(bucket, object string, size uint64, data io.Reader) (string, error)
+	PutObject(bucket, object string, size uint64, data io.Reader) (string, error)
 	StatObject(bucket, object string) (*ObjectMetadata, error)
 	DeleteObject(bucket, object string) error
+}
+
+// MultipartManagementAPI - multi parts management API
+type MultipartManagementAPI interface {
+	MultipartAbort(bucket, prefix string) <-chan error
+	MultipartAbortAll(bucket string) <-chan error
 }
 
 // BucketOnChannel - bucket metadata over read channel
@@ -211,14 +220,14 @@ func (a *api) newObjectUpload(bucket, object string, data io.Reader) (string, er
 		}
 		completePart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.Data)
 		if err != nil {
-			return "", a.abortMultipartUpload(bucket, object, uploadID)
+			return "", err
 		}
 		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completePart)
 	}
 	sort.Sort(completedParts(completeMultipartUpload.Part))
 	completeMultipartUploadResult, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
 	if err != nil {
-		return "", a.abortMultipartUpload(bucket, object, uploadID)
+		return "", err
 	}
 	return completeMultipartUploadResult.ETag, nil
 }
@@ -243,24 +252,24 @@ func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Read
 		}
 		completedPart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.Data)
 		if err != nil {
-			return "", a.abortMultipartUpload(bucket, object, uploadID)
+			return "", err
 		}
 		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
 	}
 	sort.Sort(completedParts(completeMultipartUpload.Part))
 	completeMultipartUploadResult, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
 	if err != nil {
-		return "", a.abortMultipartUpload(bucket, object, uploadID)
+		return "", err
 	}
 	return completeMultipartUploadResult.ETag, nil
 }
 
-// CreateObject create an object in a bucket
+// PutObject create an object in a bucket
 //
 // You must have WRITE permissions on a bucket to create an object
 //
 // This version of CreateObject automatically does multipart for more than 5MB worth of data
-func (a *api) CreateObject(bucket, object string, size uint64, data io.Reader) (string, error) {
+func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) (string, error) {
 	if strings.TrimSpace(object) == "" {
 		return "", errors.New("object name cannot be empty")
 	}
@@ -310,7 +319,7 @@ func (a *api) DeleteObject(bucket, object string) error {
 
 /// Bucket operations
 
-// CreateBucket create a new bucket
+// MakeBucket make a new bucket
 //
 // optional arguments are acl and location - by default all buckets are created
 // with ``private`` acl and location set to US Standard if one wishes to set
@@ -327,7 +336,7 @@ func (a *api) DeleteObject(bucket, object string) error {
 // ------------------
 // [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 // Default - US standard
-func (a *api) CreateBucket(bucket, acl, location string) error {
+func (a *api) MakeBucket(bucket, acl, location string) error {
 	return a.putBucket(bucket, acl, location)
 }
 
@@ -481,4 +490,98 @@ func (a *api) ListBuckets() <-chan BucketOnChannel {
 	ch := make(chan BucketOnChannel)
 	go a.listBucketsInRoutine(ch)
 	return ch
+}
+
+func (a *api) multipartAbortInRoutine(bucket, prefix string, errorCh chan error) {
+	defer close(errorCh)
+	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", prefix, "", 1000)
+	if err != nil {
+		errorCh <- err
+		return
+	}
+	for _, upload := range listMultipartUploadsResult.Upload {
+		err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+	}
+	for {
+		if !listMultipartUploadsResult.IsTruncated {
+			break
+		}
+		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
+			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, prefix, "", 1000)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		for _, upload := range listMultipartUploadsResult.Upload {
+			err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+			if err != nil {
+				errorCh <- err
+				return
+			}
+		}
+
+	}
+	errorCh <- nil
+}
+
+/// MultipartManagement operations cancel and list
+//
+//
+// NOTE:
+//   These set of calls require explicit authentication, no anonymous
+//   requests are allowed for multipart API
+//
+
+// MultipartAbort - abort a specific in progress active multipart upload, request requires uploadID
+func (a *api) MultipartAbort(bucket, prefix string) <-chan error {
+	errorCh := make(chan error)
+	go a.multipartAbortInRoutine(bucket, prefix, errorCh)
+	return errorCh
+}
+
+func (a *api) multipartAbortAllInRoutine(bucket string, errorCh chan error) {
+	defer close(errorCh)
+	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", "", "", 1000)
+	if err != nil {
+		errorCh <- err
+		return
+	}
+	for _, upload := range listMultipartUploadsResult.Upload {
+		err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+	}
+	for {
+		if !listMultipartUploadsResult.IsTruncated {
+			break
+		}
+		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
+			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, "", "", 1000)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		for _, upload := range listMultipartUploadsResult.Upload {
+			err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+			if err != nil {
+				errorCh <- err
+				return
+			}
+		}
+
+	}
+	errorCh <- nil
+}
+
+// MultipartAbortAll - abort all inprogress active multipart uploads
+func (a *api) MultipartAbortAll(bucket string) <-chan error {
+	errorCh := make(chan error)
+	go a.multipartAbortAllInRoutine(bucket, errorCh)
+	return errorCh
 }

@@ -17,7 +17,6 @@
 package main
 
 import (
-	"io"
 	"runtime"
 	"sync"
 
@@ -31,36 +30,18 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	if sourceURL == targetURL {
 		return iodine.New(errSameURLs{source: sourceURL, target: targetURL}, nil)
 	}
-	readCloser, length, md5hex, err := getSourceReader(sourceURL, sourceConfig)
+	reader, length, md5hex, err := getSource(sourceURL, sourceConfig)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	defer readCloser.Close()
-
-	writeCloser, err := getTargetWriter(targetURL, targetConfig, md5hex, length)
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-
-	var writers []io.Writer
-	writers = append(writers, writeCloser)
-
-	if !globalQuietFlag {
-		// set up progress bar
-		writers = append(writers, bar)
-	} else {
+	switch globalQuietFlag {
+	case true:
 		console.Infof("‘%s’ -> ‘%s’\n", sourceURL, targetURL)
+	default:
+		// set up progress
+		reader = bar.NewProxyReader(reader)
 	}
-
-	multiWriter := io.MultiWriter(writers...)
-
-	// copy data to writers
-	_, copyErr := io.CopyN(multiWriter, readCloser, int64(length))
-	// close to see the error, verify it later
-	err = writeCloser.Close()
-	if copyErr != nil {
-		return iodine.New(copyErr, nil)
-	}
+	err = putTarget(targetURL, targetConfig, md5hex, length, reader)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -130,7 +111,7 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 		cpQueue <- true
 		wg.Add(1)
-		go func(cpURLs *copyURLs, bar *barSend) {
+		go func(cpURLs *copyURLs, bar *barSend, cpQueue chan bool) {
 			defer wg.Done()
 			srcConfig, err := getHostConfig(cpURLs.SourceContent.Name)
 			if err != nil {
@@ -146,7 +127,7 @@ func runCopyCmd(ctx *cli.Context) {
 				console.Errorln(iodine.ToError(err))
 			}
 			<-cpQueue
-		}(cpURLs, &bar)
+		}(cpURLs, &bar, cpQueue)
 	}
 	wg.Wait()
 	if !globalQuietFlag {
