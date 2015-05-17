@@ -52,7 +52,7 @@ type BucketAPI interface {
 // ObjectAPI - object specific Read/Write/Stat interface
 type ObjectAPI interface {
 	GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectMetadata, error)
-	PutObject(bucket, object string, size uint64, data io.Reader) (string, error)
+	PutObject(bucket, object string, size uint64, data io.Reader) error
 	StatObject(bucket, object string) (*ObjectMetadata, error)
 	DeleteObject(bucket, object string) error
 }
@@ -185,6 +185,9 @@ func New(config *Config) API {
 // Additionally it also takes range arguments to download the specified range bytes of an object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
 func (a *api) GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectMetadata, error) {
+	if strings.TrimSpace(object) == "" {
+		return nil, nil, errors.New("object name cannot be empty")
+	}
 	// get the the object
 	// NOTE : returned md5sum could be the md5sum of the partial object itself
 	// not the whole object depending on if offset range was requested or not
@@ -207,35 +210,35 @@ func (a completedParts) Less(i, j int) bool { return a[i].PartNumber < a[j].Part
 // one can change this value during a library import
 var DefaultPartSize uint64 = 1024 * 1024 * 5
 
-func (a *api) newObjectUpload(bucket, object string, data io.Reader) (string, error) {
+func (a *api) newObjectUpload(bucket, object string, data io.Reader) error {
 	initiateMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
 	if err != nil {
-		return "", err
+		return err
 	}
 	uploadID := initiateMultipartUploadResult.UploadID
 	completeMultipartUpload := new(completeMultipartUpload)
 	for part := range MultiPart(data, DefaultPartSize, nil) {
 		if part.Err != nil {
-			return "", part.Err
+			return part.Err
 		}
 		completePart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.Data)
 		if err != nil {
-			return "", err
+			return err
 		}
 		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completePart)
 	}
 	sort.Sort(completedParts(completeMultipartUpload.Part))
-	completeMultipartUploadResult, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
+	_, err = a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return completeMultipartUploadResult.ETag, nil
+	return nil
 }
 
-func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Reader) (string, error) {
+func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Reader) error {
 	listObjectPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
 	if err != nil {
-		return "", err
+		return err
 	}
 	var skipParts []int
 	completeMultipartUpload := new(completeMultipartUpload)
@@ -248,20 +251,20 @@ func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Read
 	}
 	for part := range MultiPart(data, DefaultPartSize, skipParts) {
 		if part.Err != nil {
-			return "", part.Err
+			return part.Err
 		}
 		completedPart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.Data)
 		if err != nil {
-			return "", err
+			return err
 		}
 		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
 	}
 	sort.Sort(completedParts(completeMultipartUpload.Part))
-	completeMultipartUploadResult, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
+	_, err = a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return completeMultipartUploadResult.ETag, nil
+	return nil
 }
 
 // PutObject create an object in a bucket
@@ -269,27 +272,27 @@ func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Read
 // You must have WRITE permissions on a bucket to create an object
 //
 // This version of CreateObject automatically does multipart for more than 5MB worth of data
-func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) (string, error) {
+func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) error {
 	if strings.TrimSpace(object) == "" {
-		return "", errors.New("object name cannot be empty")
+		return errors.New("object name cannot be empty")
 	}
 	switch {
 	case size < DefaultPartSize:
 		// Single Part use case, use PutObject directly
 		for part := range MultiPart(data, DefaultPartSize, nil) {
 			if part.Err != nil {
-				return "", part.Err
+				return part.Err
 			}
-			metadata, err := a.putObject(bucket, object, part.Len, part.Data)
+			_, err := a.putObject(bucket, object, part.Len, part.Data)
 			if err != nil {
-				return "", err
+				return err
 			}
-			return metadata.ETag, nil
+			return nil
 		}
 	default:
 		listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 		if err != nil {
-			return "", err
+			return err
 		}
 		var inProgress bool
 		var inProgressUploadID string
@@ -304,16 +307,22 @@ func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) (str
 		}
 		return a.continueObjectUpload(bucket, object, inProgressUploadID, data)
 	}
-	return "", errors.New("Unexpected control flow")
+	return errors.New("Unexpected control flow")
 }
 
 // StatObject verify if object exists and you have permission to access it
 func (a *api) StatObject(bucket, object string) (*ObjectMetadata, error) {
+	if strings.TrimSpace(object) == "" {
+		return nil, errors.New("object name cannot be empty")
+	}
 	return a.headObject(bucket, object)
 }
 
 // DeleteObject remove the object from a bucket
 func (a *api) DeleteObject(bucket, object string) error {
+	if strings.TrimSpace(object) == "" {
+		return errors.New("object name cannot be empty")
+	}
 	return a.deleteObject(bucket, object)
 }
 

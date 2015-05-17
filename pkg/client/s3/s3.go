@@ -114,7 +114,7 @@ func (c *s3Client) CreateObject(md5 string, size uint64, data io.Reader) error {
 	bucket, object := c.url2BucketAndObject()
 	// TODO - bump individual part size from default, if needed
 	// objectstorage.DefaultPartSize = 1024 * 1024 * 100
-	_, err := c.api.PutObject(bucket, object, size, data)
+	err := c.api.PutObject(bucket, object, size, data)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
