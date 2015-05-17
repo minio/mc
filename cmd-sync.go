@@ -32,31 +32,18 @@ func runSyncCmd(ctx *cli.Context) {
 	if !isMcConfigExist() {
 		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
 	}
-	config, err := getMcConfig()
+	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
-		console.Fatalf("Unable to read config file [%s]. Reason: [%s].\n", mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalln(iodine.ToError(err))
 	}
 
-	// Convert arguments to URLs: expand alias, fix format...
-	URLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
-	if err != nil {
-		switch e := iodine.ToError(err).(type) {
-		case errUnsupportedScheme:
-			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("Unknown type of URL(s).\n")
-		default:
-			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("Unable to parse arguments. Reason: [%s].\n", e)
-		}
-	}
 	// Separate source and target. 'sync' can take only one source.
 	// but any number of targets, even the recursive URLs mixed in-between.
 	sourceURL := URLs[0] // first one is source
 	targetURLs := URLs[1:]
 
 	// set up progress bar
-	bar := newCopyBar(globalQuietFlag)
+	bar := newCopyBar()
 
 	go func(sourceURL string, targetURLs []string) {
 		for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
@@ -65,7 +52,9 @@ func runSyncCmd(ctx *cli.Context) {
 				// will be printed later during Sync()
 				continue
 			}
-			bar.Extend(syncURLs.SourceContent.Size)
+			if !globalQuietFlag {
+				bar.Extend(syncURLs.SourceContent.Size)
+			}
 		}
 	}(sourceURL, targetURLs)
 
@@ -79,7 +68,7 @@ func runSyncCmd(ctx *cli.Context) {
 		}
 		syncQueue <- true
 		wg.Add(1)
-		go func(syncURLs copyURLs) {
+		go func(syncURLs *copyURLs, bar *barSend) {
 			defer wg.Done()
 			srcConfig, err := getHostConfig(syncURLs.SourceContent.Name)
 			if err != nil {
@@ -91,12 +80,14 @@ func runSyncCmd(ctx *cli.Context) {
 				console.Errorln(iodine.ToError(err))
 				return
 			}
-			if err := doCopy(syncURLs.SourceContent.Name, srcConfig, syncURLs.TargetContent.Name, tgtConfig, &bar); err != nil {
+			if err := doCopy(syncURLs.SourceContent.Name, srcConfig, syncURLs.TargetContent.Name, tgtConfig, bar); err != nil {
 				console.Errorln(iodine.ToError(err))
 			}
 			<-syncQueue
-		}(*syncURLs)
+		}(syncURLs, &bar)
 	}
 	wg.Wait()
-	bar.Finish()
+	if !globalQuietFlag {
+		bar.Finish()
+	}
 }
