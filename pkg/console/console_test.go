@@ -17,10 +17,12 @@
 package console
 
 import (
+	"os"
 	"runtime"
 	"testing"
 
 	. "github.com/minio/check"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -39,7 +41,7 @@ func (s *MySuite) TestSetTheme(c *C) {
 }
 
 func (s *MySuite) TestDefaultTheme(c *C) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || !terminal.IsTerminal(int(os.Stdout.Fd())) {
 		c.Assert(GetDefaultThemeName(), Equals, "nocolor")
 	} else {
 		c.Assert(GetDefaultThemeName(), Equals, "minimal")

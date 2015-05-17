@@ -41,6 +41,10 @@
 		{
 			"ImportPath": "github.com/shiena/ansicolor",
 			"Rev": "8368d3b31cf6f2c2464c7a91675342c9a0ac6658"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh/terminal",
+			"Rev": "4d48e5fa3d62b5e6e71260571bf76c767198ca02"
 		}
 	]
 }
