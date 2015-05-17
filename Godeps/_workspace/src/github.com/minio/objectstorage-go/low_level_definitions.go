@@ -98,6 +98,14 @@ type initiator struct {
 	DisplayName string
 }
 
+// partMetadata container for particular part of an object
+type partMetadata struct {
+	PartNumber   int
+	LastModified time.Time
+	ETag         string
+	Size         int64
+}
+
 // listObjectPartsResult container for ListObjectParts response
 type listObjectPartsResult struct {
 	Bucket   string
@@ -114,7 +122,7 @@ type listObjectPartsResult struct {
 
 	// Indicates whether the returned list of parts is truncated.
 	IsTruncated bool
-	Part        []*PartMetadata
+	Part        []*partMetadata
 
 	EncodingType string
 }

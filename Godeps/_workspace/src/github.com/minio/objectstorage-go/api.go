@@ -33,6 +33,9 @@ type API interface {
 
 	// Object Read/Write/Stat operations
 	ObjectAPI
+
+	// MultipartManagementAPI - cancel, list multiparts and active sessions
+	MultipartManagementAPI
 }
 
 // BucketAPI - bucket specific Read/Write/Stat interface
@@ -55,10 +58,9 @@ type ObjectAPI interface {
 }
 
 // MultipartManagementAPI - multi parts management API
-type MultiPartManagementAPI interface {
-	MultipartAbort(bucket, object, uploadID string) error
-	MultipartAbortRecursive(bucket, object string) <-chan error
-	ListParts(bucket, prefix string, recursive bool) <-chan PartsOnChannel
+type MultipartManagementAPI interface {
+	MultipartAbort(bucket, prefix string) <-chan error
+	MultipartAbortAll(bucket string) <-chan error
 }
 
 // BucketOnChannel - bucket metadata over read channel
@@ -71,20 +73,6 @@ type BucketOnChannel struct {
 type ObjectOnChannel struct {
 	Data *ObjectMetadata
 	Err  error
-}
-
-// PartsOnChannel - part metadata over read channel
-type PartsOnChannel struct {
-	Data *PartMetadata
-	Err  error
-}
-
-// PartMetadata container for particular part of an object
-type PartMetadata struct {
-	PartNumber   int
-	LastModified time.Time
-	ETag         string
-	Size         int64
 }
 
 // BucketMetadata container for bucket metadata
@@ -502,4 +490,98 @@ func (a *api) ListBuckets() <-chan BucketOnChannel {
 	ch := make(chan BucketOnChannel)
 	go a.listBucketsInRoutine(ch)
 	return ch
+}
+
+func (a *api) multipartAbortInRoutine(bucket, prefix string, errorCh chan error) {
+	defer close(errorCh)
+	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", prefix, "", 1000)
+	if err != nil {
+		errorCh <- err
+		return
+	}
+	for _, upload := range listMultipartUploadsResult.Upload {
+		err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+	}
+	for {
+		if !listMultipartUploadsResult.IsTruncated {
+			break
+		}
+		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
+			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, prefix, "", 1000)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		for _, upload := range listMultipartUploadsResult.Upload {
+			err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+			if err != nil {
+				errorCh <- err
+				return
+			}
+		}
+
+	}
+	errorCh <- nil
+}
+
+/// MultipartManagement operations cancel and list
+//
+//
+// NOTE:
+//   These set of calls require explicit authentication, no anonymous
+//   requests are allowed for multipart API
+//
+
+// MultipartAbort - abort a specific in progress active multipart upload, request requires uploadID
+func (a *api) MultipartAbort(bucket, prefix string) <-chan error {
+	errorCh := make(chan error)
+	go a.multipartAbortInRoutine(bucket, prefix, errorCh)
+	return errorCh
+}
+
+func (a *api) multipartAbortAllInRoutine(bucket string, errorCh chan error) {
+	defer close(errorCh)
+	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", "", "", 1000)
+	if err != nil {
+		errorCh <- err
+		return
+	}
+	for _, upload := range listMultipartUploadsResult.Upload {
+		err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+	}
+	for {
+		if !listMultipartUploadsResult.IsTruncated {
+			break
+		}
+		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
+			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, "", "", 1000)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		for _, upload := range listMultipartUploadsResult.Upload {
+			err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+			if err != nil {
+				errorCh <- err
+				return
+			}
+		}
+
+	}
+	errorCh <- nil
+}
+
+// MultipartAbortAll - abort all inprogress active multipart uploads
+func (a *api) MultipartAbortAll(bucket string) <-chan error {
+	errorCh := make(chan error)
+	go a.multipartAbortAllInRoutine(bucket, errorCh)
+	return errorCh
 }
