@@ -45,11 +45,15 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	var writers []io.Writer
 	writers = append(writers, writeCloser)
 
-	// set up progress bar
-	writers = append(writers, bar)
+	if !globalQuietFlag {
+		// set up progress bar
+		writers = append(writers, bar)
+	} else {
+		console.Infof("‘%s’ -> ‘%s’\n", sourceURL, targetURL)
+	}
 
-	// write progress bar
 	multiWriter := io.MultiWriter(writers...)
+
 	// copy data to writers
 	_, copyErr := io.CopyN(multiWriter, readCloser, int64(length))
 	// close to see the error, verify it later
@@ -64,11 +68,8 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	return nil
 }
 
-// runCopyCmd is bound to sub-command
-func runCopyCmd(ctx *cli.Context) {
-	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
-	}
+// copyArgs2URLs extracts source and target URLs from command-line args.
+func copyArgs2URLs(args cli.Args) (sourceURLs []string, targetURL string) {
 	if !isMcConfigExist() {
 		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
 	}
@@ -79,7 +80,7 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
-	URLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
+	URLs, err := getExpandedURLs(args, config.Aliases)
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
@@ -93,11 +94,26 @@ func runCopyCmd(ctx *cli.Context) {
 
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources, even the recursive URLs mixed in-between.
-	targetURL := URLs[len(URLs)-1] // Last one is target
-	sourceURLs := URLs[:len(URLs)-1]
+	sourceURLs = URLs[:len(URLs)-1]
+	targetURL = URLs[len(URLs)-1] // Last one is target
 
+	return sourceURLs, targetURL
+}
+
+// runCopyCmd is bound to sub-command
+func runCopyCmd(ctx *cli.Context) {
+	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
+	}
+
+	// extract source and target URLs.
+	sourceURLs, targetURL := copyArgs2URLs(ctx.Args())
+
+	var bar barSend
 	// set up progress bar
-	bar := newCopyBar(globalQuietFlag)
+	if !globalQuietFlag {
+		bar = newCopyBar()
+	}
 
 	go func(sourceURLs []string, targetURL string) {
 		for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
@@ -106,7 +122,9 @@ func runCopyCmd(ctx *cli.Context) {
 				// will be printed later during Copy()
 				continue
 			}
-			bar.Extend(cpURLs.SourceContent.Size)
+			if !globalQuietFlag {
+				bar.Extend(cpURLs.SourceContent.Size)
+			}
 		}
 	}(sourceURLs, targetURL)
 
@@ -120,7 +138,7 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 		cpQueue <- true
 		wg.Add(1)
-		go func(cpURLs copyURLs) {
+		go func(cpURLs *copyURLs, bar *barSend) {
 			defer wg.Done()
 			srcConfig, err := getHostConfig(cpURLs.SourceContent.Name)
 			if err != nil {
@@ -132,12 +150,14 @@ func runCopyCmd(ctx *cli.Context) {
 				console.Errorln(iodine.ToError(err))
 				return
 			}
-			if err := doCopy(cpURLs.SourceContent.Name, srcConfig, cpURLs.TargetContent.Name, tgtConfig, &bar); err != nil {
+			if err := doCopy(cpURLs.SourceContent.Name, srcConfig, cpURLs.TargetContent.Name, tgtConfig, bar); err != nil {
 				console.Errorln(iodine.ToError(err))
 			}
 			<-cpQueue
-		}(*cpURLs)
+		}(cpURLs, &bar)
 	}
 	wg.Wait()
-	bar.Finish()
+	if !globalQuietFlag {
+		bar.Finish()
+	}
 }
