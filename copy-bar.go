@@ -63,8 +63,8 @@ func (b barSend) Finish() {
 	<-b.finishCh
 }
 
-// newCopyBar - instantiate a copyBar. When 'Quiet' is set to true, it CopyBar only prints text message for each item.
-func newCopyBar(quiet bool) barSend {
+// newCopyBar - instantiate a copyBar.
+func newCopyBar() barSend {
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
 
