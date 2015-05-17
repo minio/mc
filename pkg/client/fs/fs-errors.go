@@ -25,19 +25,19 @@ type GenericFileError struct {
 type NotFound GenericFileError
 
 func (e NotFound) Error() string {
-	return "Requested file " + e.path + " not found"
+	return "Requested file [" + e.path + "] not found"
 }
 
 // ISFolder (EISDIR) - accessed file is a folder
 type ISFolder GenericFileError
 
 func (e ISFolder) Error() string {
-	return "Requested file " + e.path + " is a folder"
+	return "Requested file [" + e.path + "] is a folder"
 }
 
 // NotFolder (ENOTDIR) - accessed file is not a folder
 type NotFolder GenericFileError
 
 func (e NotFolder) Error() string {
-	return "Requested file " + e.path + " is not a folder"
+	return "Requested file [" + e.path + "] is not a folder"
 }
