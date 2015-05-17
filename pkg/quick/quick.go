@@ -70,16 +70,16 @@ func CheckData(data interface{}) error {
 }
 
 // New - instantiate a new config
-func New(data interface{}) Config {
+func New(data interface{}) (Config, error) {
 	err := CheckData(data)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	d := new(config)
 	d.data = &data
 	d.lock = new(sync.RWMutex)
-	return d
+	return d, nil
 }
 
 // Version returns the current config file format version

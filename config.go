@@ -32,6 +32,12 @@ type configV1 struct {
 	Hosts   map[string]*hostConfig
 }
 
+// cached variables should *NEVER* be accessed directly from outside this file.
+var cache struct {
+	config       quick.Config
+	configLoaded bool // set to true if cache is valid.
+}
+
 // getMcConfigDir - construct minio client config folder
 func getMcConfigDir() (string, error) {
 	u, err := user.Current()
@@ -76,22 +82,35 @@ func mustGetMcConfigPath() string {
 }
 
 // getMcConfig - reads configuration file and returns config
-func getMcConfig() (config *configV1, err error) {
+func getMcConfig() (*configV1, error) {
 	if !isMcConfigExist() {
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
+
 	configFile, err := getMcConfigPath()
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	conf := newConfigV1()
-	if config := quick.New(conf); config != nil {
-		if err := config.Load(configFile); err != nil {
-			return nil, iodine.New(err, nil)
-		}
-		return config.Data().(*configV1), nil
+
+	// Cached in private global variable.
+	if cache.configLoaded { // Use previously cached config.
+		return cache.config.Data().(*configV1), nil
 	}
-	return nil, iodine.New(errInvalidArgument{}, nil)
+
+	conf := newConfigV1()
+	cache.config, err = quick.New(conf)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
+	err = cache.config.Load(configFile)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	cache.configLoaded = true
+
+	return cache.config.Data().(*configV1), nil
+
 }
 
 // isMcConfigExist returns true/false if config exists
@@ -135,7 +154,7 @@ func newConfigV1() *configV1 {
 }
 
 // newConfig - get new config interface
-func newConfig() (config quick.Config) {
+func newConfig() (config quick.Config, err error) {
 	conf := newConfigV1()
 	s3HostConf := new(hostConfig)
 	s3HostConf.AccessKeyID = ""
@@ -165,7 +184,10 @@ func newConfig() (config quick.Config) {
 	aliases["dl"] = "http://dl.minio.io:9000"
 	aliases["localhost"] = "http://localhost:9000"
 	conf.Aliases = aliases
-	config = quick.New(conf)
+	config, err = quick.New(conf)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
 
-	return config
+	return config, nil
 }

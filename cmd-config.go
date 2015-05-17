@@ -52,7 +52,13 @@ func saveConfig(arg string, aliases []string) error {
 		if isMcConfigExist() {
 			return iodine.New(errConfigExists{}, nil)
 		}
-		err := writeConfig(newConfig())
+
+		config, err := newConfig()
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+
+		err = writeConfig(config)
 		if err != nil {
 			return iodine.New(err, nil)
 		}
@@ -101,7 +107,10 @@ func addAlias(aliases []string) (quick.Config, error) {
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
 	conf := newConfigV1()
-	config := quick.New(conf)
+	config, err := quick.New(conf)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
 	config.Load(mustGetMcConfigPath())
 
 	aliasName := aliases[0]
@@ -121,6 +130,9 @@ func addAlias(aliases []string) (quick.Config, error) {
 		return nil, iodine.New(errAliasExists{name: aliasName}, nil)
 	}
 	newConf.Aliases[aliasName] = url
-	newConfig := quick.New(newConf)
+	newConfig, err := quick.New(newConf)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
 	return newConfig, nil
 }

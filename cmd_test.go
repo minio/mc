@@ -56,13 +56,15 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
 
-	conf := newConfig()
+	conf, err := newConfig()
+	c.Assert(err, IsNil)
 	configFile := path.Join(root, "config.json")
 	err = conf.Save(configFile)
 	c.Assert(err, IsNil)
 
 	confNew := newConfigV1()
-	config := quick.New(confNew)
+	config, err := quick.New(confNew)
+	c.Assert(err, IsNil)
 	err = config.Load(configFile)
 	c.Assert(err, IsNil)
 	data := config.Data().(*configV1)
