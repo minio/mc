@@ -20,6 +20,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"io"
+	"os"
+	"runtime"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/client/fs"
@@ -68,6 +70,9 @@ func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Clie
 		s3Config := new(s3.Config)
 		s3Config.AccessKeyID = auth.AccessKeyID
 		s3Config.SecretAccessKey = auth.SecretAccessKey
+		s3Config.AppName = "Minio"
+		s3Config.AppVersion = Version
+		s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 		s3Config.HostURL = urlStr
 		s3Config.Debug = debug
 		return s3.New(s3Config), nil

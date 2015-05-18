@@ -34,6 +34,9 @@ type Config struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	HostURL         string
+	AppName         string
+	AppVersion      string
+	AppComments     []string
 	Debug           bool
 
 	// Used for SSL transport layer
@@ -88,6 +91,7 @@ func New(config *Config) client.Client {
 	objectstorageConf.AccessKeyID = config.AccessKeyID
 	objectstorageConf.SecretAccessKey = config.SecretAccessKey
 	objectstorageConf.Transport = transport
+	objectstorageConf.AddUserAgent(config.AppName, config.AppVersion, config.AppComments...)
 	objectstorageConf.Region = getRegion(u.Host)
 	objectstorageConf.Endpoint = u.Scheme + "://" + u.Host
 	api := objectstorage.New(objectstorageConf)
