@@ -386,6 +386,9 @@ func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) erro
 		var inProgress bool
 		var inProgressUploadID string
 		for mpUpload := range a.listMultipartUploadsRecursive(bucket, object) {
+			if mpUpload.Err != nil {
+				return mpUpload.Err
+			}
 			if mpUpload.Data.Key == object {
 				inProgress = true
 				inProgressUploadID = mpUpload.Data.UploadID
