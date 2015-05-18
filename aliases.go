@@ -17,10 +17,10 @@
 package main
 
 import (
-	"net/url"
 	"regexp"
 	"strings"
 
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -47,8 +47,8 @@ func isValidAliasName(aliasName string) bool {
 
 // aliasExpand expands aliased (name:/path) to full URL, used by url-parser
 func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, err error) {
-	u, err := url.Parse(aliasedURL)
-	if err != nil {
+	u := client.Parse(aliasedURL)
+	if u == nil {
 		return aliasedURL, iodine.New(errInvalidURL{url: aliasedURL}, nil)
 	}
 	// proper URL

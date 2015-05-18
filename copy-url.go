@@ -19,7 +19,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -69,8 +68,8 @@ const (
 // source2Client returns client and hostconfig objects from the source URL.
 func source2Client(sourceURL string) (client.Client, error) {
 	// Empty source arg?
-	sourceURLParse, err := url.Parse(sourceURL)
-	if err != nil || sourceURLParse.Path == "" {
+	sourceURLParse := client.Parse(sourceURL)
+	if sourceURLParse.Path == "" {
 		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
 	}
 
@@ -89,8 +88,8 @@ func source2Client(sourceURL string) (client.Client, error) {
 // target2Client returns client and hostconfig objects from the target URL.
 func target2Client(targetURL string) (client.Client, error) {
 	// Empty target arg?
-	targetURLParse, err := url.Parse(targetURL)
-	if err != nil || targetURLParse.Path == "" {
+	targetURLParse := client.Parse(targetURL)
+	if targetURLParse.Path == "" {
 		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
 	}
 
@@ -228,13 +227,13 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) *copyURLs {
 	} // Else name is available to create.
 
 	// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
-	sourceURLParse, err := url.Parse(sourceURL)
-	if err != nil {
+	sourceURLParse := client.Parse(sourceURL)
+	if sourceURLParse == nil {
 		return &copyURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
 	}
 
-	targetURLParse, err := url.Parse(targetURL)
-	if err != nil {
+	targetURLParse := client.Parse(targetURL)
+	if targetURLParse == nil {
 		return &copyURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
 	}
 
@@ -308,24 +307,22 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *copyURLs {
 			}
 
 			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
-			sourceURLParse, err := url.Parse(sourceURL)
-			if err != nil {
+			sourceURLParse := client.Parse(sourceURL)
+			if sourceURLParse == nil {
 				copyURLsCh <- &copyURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
+				continue
 			}
 
-			targetURLParse, err := url.Parse(targetURL)
-			if err != nil {
+			targetURLParse := client.Parse(targetURL)
+			if targetURLParse == nil {
 				copyURLsCh <- &copyURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
+				continue
 			}
 
-			sourceContentName, err := url.QueryUnescape(sourceContent.Content.Name)
-			if err != nil {
+			sourceContentParse := client.Parse(sourceContent.Content.Name)
+			if sourceContentParse == nil {
 				copyURLsCh <- &copyURLs{Error: iodine.New(errInvalidSource{path: sourceContent.Content.Name}, nil)}
-			}
-
-			sourceContentParse, err := url.Parse(sourceContentName)
-			if err != nil {
-				copyURLsCh <- &copyURLs{Error: iodine.New(errInvalidSource{path: sourceContent.Content.Name}, nil)}
+				continue
 			}
 
 			// Construct target path from recursive path of source without its prefix dir.

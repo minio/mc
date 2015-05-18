@@ -17,18 +17,10 @@
 // This package contains all the global variables and constants
 package main
 
-import (
-	"os"
-	"runtime"
-)
-
 var (
 	globalDebugFlag    = false // Debug flag set via command line
 	globalQuietFlag    = false // Quiet flag set via command line
 	globalMaxRetryFlag = 5     // Maximum number of retries
-
-	mcUserAgent = "Minio/" +
-		Version + " (" + os.Args[0] + "; " + runtime.GOOS + "; " + runtime.GOARCH + ")"
 
 	mcCurrentConfigVersion = "1.0.0"
 )
