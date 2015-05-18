@@ -56,8 +56,11 @@ func putTarget(targetURL string, targetConfig *hostConfig, md5hex string, length
 
 // getNewClient gives a new client interface
 func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
-	t := client.GetType(urlStr)
-	switch t {
+	url := client.Parse(urlStr)
+	if url == nil {
+		return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
+	}
+	switch url.Type {
 	case client.Object: // Minio and S3 compatible object storage
 		if auth == nil {
 			return nil, iodine.New(errInvalidArgument{}, nil)
@@ -65,18 +68,11 @@ func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Clie
 		s3Config := new(s3.Config)
 		s3Config.AccessKeyID = auth.AccessKeyID
 		s3Config.SecretAccessKey = auth.SecretAccessKey
-		s3Config.UserAgent = mcUserAgent
 		s3Config.HostURL = urlStr
 		s3Config.Debug = debug
-		clnt = s3.New(s3Config)
-		return clnt, nil
+		return s3.New(s3Config), nil
 	case client.Filesystem:
-		clnt, err = fs.New(urlStr)
-		return clnt, err
-	default:
-		return nil, iodine.New(errUnsupportedScheme{
-			scheme: t.String(),
-			url:    urlStr,
-		}, nil)
+		return fs.New(urlStr)
 	}
+	return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
 }

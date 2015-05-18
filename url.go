@@ -17,7 +17,6 @@
 package main
 
 import (
-	"net/url"
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
@@ -48,8 +47,7 @@ func stripRecursiveURL(urlStr string) string {
 
 // getExpandedURL - extracts URL string from a single cmd-line argument
 func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err error) {
-	_, err = url.Parse(arg)
-	if err != nil {
+	if url := client.Parse(urlStr); url == nil {
 		// Not a valid URL. Return error
 		return "", iodine.New(errInvalidURL{arg}, nil)
 	}
@@ -58,11 +56,9 @@ func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err e
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-	if client.GetType(urlStr) == client.Unknown {
-		return "", iodine.New(errUnsupportedScheme{
-			scheme: client.Unknown.String(),
-			url:    urlStr,
-		}, nil)
+	if url := client.Parse(urlStr); url == nil {
+		// Not a valid URL. Return error
+		return "", iodine.New(errInvalidURL{urlStr}, nil)
 	}
 	return urlStr, nil
 }

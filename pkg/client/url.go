@@ -16,7 +16,19 @@
 
 package client
 
-import "net/url"
+import (
+	"bytes"
+	"net/url"
+	"os"
+)
+
+// URL client url structure
+type URL struct {
+	Type   URLType
+	Scheme string
+	Host   string
+	Path   string
+}
 
 // URLType - enum of different url types
 type URLType int
@@ -40,16 +52,46 @@ func (t URLType) String() string {
 	}
 }
 
-// GetType returns the type of URL
-func GetType(urlStr string) URLType {
+// Parse url parse
+func Parse(urlStr string) *URL {
 	u, err := url.Parse(urlStr)
 	if err != nil {
-		return Unknown
+		return nil
 	}
 
 	if u.Scheme == "http" || u.Scheme == "https" {
-		return Object
+		return &URL{
+			Scheme: u.Scheme,
+			Type:   Object,
+			Host:   u.Host,
+			Path:   u.Path,
+		}
 	}
+	path, err := url.QueryUnescape(u.Path)
+	if err != nil {
+		return nil
+	}
+	return &URL{
+		Type: Filesystem,
+		Path: path,
+	}
+}
 
-	return Filesystem
+func (u *URL) String() string {
+	var buf bytes.Buffer
+	if u.Scheme != "" {
+		buf.WriteString(u.Scheme)
+		buf.WriteByte(':')
+	}
+	if u.Scheme != "" || u.Host != "" {
+		buf.WriteString("//")
+		if h := u.Host; h != "" {
+			buf.WriteString(h)
+		}
+	}
+	if u.Path != "" && u.Path[0] != '/' && u.Host != "" {
+		buf.WriteByte(os.PathSeparator)
+	}
+	buf.WriteString(u.Path)
+	return buf.String()
 }

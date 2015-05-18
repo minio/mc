@@ -17,7 +17,6 @@
 package main
 
 import (
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -48,13 +47,12 @@ func getHostConfig(URL string) (*hostConfig, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	u, err := url.Parse(URL)
-	if err != nil {
+	url := client.Parse(URL)
+	if url == nil {
 		return nil, iodine.New(errInvalidURL{url: URL}, nil)
 	}
-
 	// No host matching or keys needed for filesystem requests
-	if client.GetType(URL) == client.Filesystem {
+	if url.Type == client.Filesystem {
 		hostCfg := &hostConfig{
 			AccessKeyID:     "",
 			SecretAccessKey: "",
@@ -63,7 +61,7 @@ func getHostConfig(URL string) (*hostConfig, error) {
 	}
 
 	// No host matching or keys needed for localhost and 127.0.0.1 URL's skip them
-	if strings.Contains(u.Host, "localhost") || strings.Contains(u.Host, "127.0.0.1") {
+	if strings.Contains(url.Host, "localhost") || strings.Contains(url.Host, "127.0.0.1") {
 		hostCfg := &hostConfig{
 			AccessKeyID:     "",
 			SecretAccessKey: "",
@@ -71,7 +69,7 @@ func getHostConfig(URL string) (*hostConfig, error) {
 		return hostCfg, nil
 	}
 	for globURL, hostCfg := range config.Hosts {
-		match, err := filepath.Match(globURL, u.Host)
+		match, err := filepath.Match(globURL, url.Host)
 		if err != nil {
 			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: URL}, nil)
 		}
