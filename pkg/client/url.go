@@ -19,7 +19,8 @@ package client
 import (
 	"bytes"
 	"net/url"
-	"os"
+	"runtime"
+	"strings"
 )
 
 // URL client url structure
@@ -35,28 +36,26 @@ type URLType int
 
 // enum types
 const (
-	Unknown    URLType = iota // Unknown type
-	Object                    // Minio and S3 compatible object storage
-	Filesystem                // POSIX compatible file systems
+	Object     = iota // Minio and S3 compatible object storage
+	Filesystem        // POSIX compatible file systems
 )
-
-// String converts type to string.
-func (t URLType) String() string {
-	switch t {
-	case Object:
-		return "Object"
-	case Filesystem:
-		return "Filesystem"
-	default:
-		return "Unknown"
-	}
-}
 
 // Parse url parse
 func Parse(urlStr string) *URL {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil
+	}
+	if u.Opaque != "" {
+		path, err := url.QueryUnescape(u.Opaque)
+		if err != nil {
+			return nil
+		}
+		// if Opaque defaulting to filesystem
+		return &URL{
+			Type: Filesystem,
+			Path: path,
+		}
 	}
 
 	if u.Scheme == "http" || u.Scheme == "https" {
@@ -89,9 +88,18 @@ func (u *URL) String() string {
 			buf.WriteString(h)
 		}
 	}
-	if u.Path != "" && u.Path[0] != '/' && u.Host != "" {
-		buf.WriteByte(os.PathSeparator)
+	switch runtime.GOOS {
+	case "windows":
+		if u.Path != "" && u.Path[0] != '\\' && u.Host != "" {
+			buf.WriteByte('/')
+		}
+		buf.WriteString(strings.Replace(u.Path, "\\", "/", -1))
+	default:
+		if u.Path != "" && u.Path[0] != '/' && u.Host != "" {
+			buf.WriteByte('/')
+		}
+		buf.WriteString(u.Path)
 	}
-	buf.WriteString(u.Path)
+
 	return buf.String()
 }

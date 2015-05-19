@@ -75,10 +75,10 @@ func getRegion(host string) string {
 }
 
 // New returns an initialized s3Client structure. if debug use a internal trace transport
-func New(config *Config) client.Client {
+func New(config *Config) (client.Client, error) {
 	u, err := url.Parse(config.HostURL)
 	if err != nil {
-		return nil
+		return nil, iodine.New(err, nil)
 	}
 	var transport http.RoundTripper
 	switch {
@@ -95,7 +95,7 @@ func New(config *Config) client.Client {
 	objectstorageConf.Region = getRegion(u.Host)
 	objectstorageConf.Endpoint = u.Scheme + "://" + u.Host
 	api := objectstorage.New(objectstorageConf)
-	return &s3Client{api: api, hostURL: u}
+	return &s3Client{api: api, hostURL: u}, nil
 }
 
 // GetObject - get object
