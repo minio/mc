@@ -18,9 +18,11 @@ package client
 
 import (
 	"bytes"
-	"net/url"
+	"errors"
 	"runtime"
 	"strings"
+
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // URL client url structure
@@ -40,40 +42,80 @@ const (
 	Filesystem        // POSIX compatible file systems
 )
 
-// Parse url parse
-func Parse(urlStr string) *URL {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return nil
-	}
-	if u.Opaque != "" {
-		path, err := url.QueryUnescape(u.Opaque)
-		if err != nil {
-			return nil
+// Maybe rawurl is of the form scheme:path. (Scheme must be [a-zA-Z][a-zA-Z0-9+-.]*)
+// If so, return scheme, path; else return "", rawurl.
+func getScheme(rawurl string) (scheme, path string, err error) {
+	for i := 0; i < len(rawurl); i++ {
+		c := rawurl[i]
+		switch {
+		// valid characters, do nothing
+		case 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z':
+		// invalid characters, return raw url
+		case '0' <= c && c <= '9' || c == '+' || c == '-' || c == '.':
+			if i == 0 {
+				return "", rawurl, nil
+			}
+		// check if the scheme delimiter is a first character, return missing protocol scheme
+		case c == ':':
+			if i == 0 {
+				return "", "", iodine.New(errors.New("missing protocol scheme"), nil)
+			}
+			// if not separate them properly
+			return rawurl[0:i], rawurl[i+1:], nil
+		default:
+			// we have encountered an unexpected character, so there is no valid scheme
+			return "", rawurl, nil
 		}
-		// if Opaque defaulting to filesystem
-		return &URL{
-			Type: Filesystem,
-			Path: path,
-		}
 	}
+	return "", rawurl, nil
+}
 
-	if u.Scheme == "http" || u.Scheme == "https" {
-		return &URL{
-			Scheme: u.Scheme,
-			Type:   Object,
-			Host:   u.Host,
-			Path:   u.Path,
-		}
+// Maybe s is of the form s d s.  If so, return s, ds (or s, s if cutd == true).
+// If not, return s, "".
+func split(s string, d string, cutd bool) (string, string) {
+	i := strings.Index(s, d)
+	if i < 0 {
+		return s, ""
 	}
-	path, err := url.QueryUnescape(u.Path)
+	if cutd {
+		return s[0:i], s[i+len(d):]
+	}
+	return s[0:i], s[i:]
+}
+
+func getHost(rest string) (host string) {
+	i := strings.LastIndex(rest, "@")
+	if i < 0 {
+		host = rest
+		return
+	}
+	return
+}
+
+// Parse url parse
+func Parse(urlStr string) (*URL, error) {
+	scheme, rest, err := getScheme(urlStr)
 	if err != nil {
-		return nil
+		return nil, iodine.New(err, nil)
+	}
+	rest, _ = split(rest, "?", true)
+	if strings.HasPrefix(rest, "//") {
+		// if rest has '//' prefix, skip them
+		authority, rest := split(rest[2:], "/", false)
+		host := getHost(authority)
+		if host != "" && (scheme == "http" || scheme == "https") {
+			return &URL{
+				Scheme: scheme,
+				Type:   Object,
+				Host:   host,
+				Path:   rest,
+			}, nil
+		}
 	}
 	return &URL{
 		Type: Filesystem,
-		Path: path,
-	}
+		Path: rest,
+	}, nil
 }
 
 func (u *URL) String() string {

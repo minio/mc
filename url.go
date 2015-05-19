@@ -47,7 +47,7 @@ func stripRecursiveURL(urlStr string) string {
 
 // getExpandedURL - extracts URL string from a single cmd-line argument
 func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err error) {
-	if url := client.Parse(urlStr); url == nil {
+	if _, err := client.Parse(urlStr); err != nil {
 		// Not a valid URL. Return error
 		return "", iodine.New(errInvalidURL{arg}, nil)
 	}
@@ -56,7 +56,7 @@ func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err e
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-	if url := client.Parse(urlStr); url == nil {
+	if _, err := client.Parse(urlStr); err != nil {
 		// Not a valid URL. Return error
 		return "", iodine.New(errInvalidURL{urlStr}, nil)
 	}

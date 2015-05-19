@@ -47,8 +47,8 @@ func isValidAliasName(aliasName string) bool {
 
 // aliasExpand expands aliased (name:/path) to full URL, used by url-parser
 func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, err error) {
-	u := client.Parse(aliasedURL)
-	if u == nil {
+	u, err := client.Parse(aliasedURL)
+	if err != nil {
 		return aliasedURL, iodine.New(errInvalidURL{url: aliasedURL}, nil)
 	}
 	// proper URL
