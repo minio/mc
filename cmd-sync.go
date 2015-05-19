@@ -45,7 +45,7 @@ func runSyncCmd(ctx *cli.Context) {
 	var bar barSend
 	// set up progress bar
 	if !globalQuietFlag {
-		bar = newCopyBar()
+		bar = newCpBar()
 	}
 
 	go func(sourceURL string, targetURLs []string) {
@@ -71,7 +71,7 @@ func runSyncCmd(ctx *cli.Context) {
 		}
 		syncQueue <- true
 		wg.Add(1)
-		go func(syncURLs *copyURLs, bar *barSend) {
+		go func(syncURLs *cpURLs, bar *barSend) {
 			defer wg.Done()
 			srcConfig, err := getHostConfig(syncURLs.SourceContent.Name)
 			if err != nil {

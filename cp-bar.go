@@ -24,12 +24,12 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
-type copyBarCmd int
+type cpBarCmd int
 
 const (
-	copyBarCmdExtend copyBarCmd = iota
-	copyBarCmdProgress
-	copyBarCmdFinish
+	cpBarCmdExtend cpBarCmd = iota
+	cpBarCmdProgress
+	cpBarCmdFinish
 )
 
 type copyReader struct {
@@ -44,7 +44,7 @@ func (r *copyReader) Read(p []byte) (n int, err error) {
 }
 
 type barMsg struct {
-	Cmd copyBarCmd
+	Cmd cpBarCmd
 	Arg interface{}
 }
 
@@ -54,11 +54,11 @@ type barSend struct {
 }
 
 func (b barSend) Extend(total int64) {
-	b.cmdCh <- barMsg{Cmd: copyBarCmdExtend, Arg: total}
+	b.cmdCh <- barMsg{Cmd: cpBarCmdExtend, Arg: total}
 }
 
 func (b barSend) Progress(progress int64) {
-	b.cmdCh <- barMsg{Cmd: copyBarCmdProgress, Arg: progress}
+	b.cmdCh <- barMsg{Cmd: cpBarCmdProgress, Arg: progress}
 }
 
 func (b *barSend) NewProxyReader(r io.Reader) *copyReader {
@@ -67,12 +67,12 @@ func (b *barSend) NewProxyReader(r io.Reader) *copyReader {
 
 func (b barSend) Finish() {
 	defer close(b.cmdCh)
-	b.cmdCh <- barMsg{Cmd: copyBarCmdFinish}
+	b.cmdCh <- barMsg{Cmd: cpBarCmdFinish}
 	<-b.finishCh
 }
 
-// newCopyBar - instantiate a copyBar.
-func newCopyBar() barSend {
+// newCpBar - instantiate a cpBar.
+func newCpBar() barSend {
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
 
@@ -93,15 +93,15 @@ func newCopyBar() barSend {
 		bar.Format("[=> ]")
 		for msg := range cmdCh {
 			switch msg.Cmd {
-			case copyBarCmdExtend:
+			case cpBarCmdExtend:
 				bar.Total += msg.Arg.(int64)
 				if bar.Total > 0 && !started {
 					started = true
 					bar.Start()
 				}
-			case copyBarCmdProgress:
+			case cpBarCmdProgress:
 				bar.Add64(msg.Arg.(int64))
-			case copyBarCmdFinish:
+			case cpBarCmdFinish:
 				if started {
 					bar.Finish()
 				}

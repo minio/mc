@@ -63,6 +63,24 @@ func args2URLs(args cli.Args) ([]string, error) {
 	return URLs, nil
 }
 
+func runCopyInRoutine(cpurls *cpURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+	srcConfig, err := getHostConfig(cpurls.SourceContent.Name)
+	if err != nil {
+		console.Errorln(iodine.ToError(err))
+		return
+	}
+	tgtConfig, err := getHostConfig(cpurls.TargetContent.Name)
+	if err != nil {
+		console.Errorln(iodine.ToError(err))
+		return
+	}
+	if err := doCopy(cpurls.SourceContent.Name, srcConfig, cpurls.TargetContent.Name, tgtConfig, bar); err != nil {
+		console.Errorln(iodine.ToError(err))
+	}
+	<-cpQueue
+}
+
 // runCopyCmd is bound to sub-command
 func runCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
@@ -85,7 +103,7 @@ func runCopyCmd(ctx *cli.Context) {
 	var bar barSend
 	// set up progress bar
 	if !globalQuietFlag {
-		bar = newCopyBar()
+		bar = newCpBar()
 	}
 
 	go func(sourceURLs []string, targetURL string) {
@@ -101,8 +119,8 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 	}(sourceURLs, targetURL)
 
-	var cpQueue = make(chan bool, intMax(runtime.NumCPU()-1, 1))
-	var wg sync.WaitGroup
+	cpQueue := make(chan bool, intMax(runtime.NumCPU()-1, 1))
+	wg := new(sync.WaitGroup)
 
 	for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 		if cpURLs.Error != nil {
@@ -111,24 +129,9 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 		cpQueue <- true
 		wg.Add(1)
-		go func(cpURLs *copyURLs, bar *barSend, cpQueue chan bool) {
-			defer wg.Done()
-			srcConfig, err := getHostConfig(cpURLs.SourceContent.Name)
-			if err != nil {
-				console.Errorln(iodine.ToError(err))
-				return
-			}
-			tgtConfig, err := getHostConfig(cpURLs.TargetContent.Name)
-			if err != nil {
-				console.Errorln(iodine.ToError(err))
-				return
-			}
-			if err := doCopy(cpURLs.SourceContent.Name, srcConfig, cpURLs.TargetContent.Name, tgtConfig, bar); err != nil {
-				console.Errorln(iodine.ToError(err))
-			}
-			<-cpQueue
-		}(cpURLs, &bar, cpQueue)
+		go runCopyInRoutine(cpURLs, &bar, cpQueue, wg)
 	}
+	close(cpQueue)
 	wg.Wait()
 	if !globalQuietFlag {
 		bar.Finish()
