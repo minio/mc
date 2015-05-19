@@ -25,12 +25,11 @@ import (
 )
 
 // List of commands
-var (
-	accessCmd = cli.Command{
-		Name:   "access",
-		Usage:  "Set permissions [public, private, readonly] for buckets and folders.",
-		Action: runAccessCmd,
-		CustomHelpTemplate: `Name:
+var accessCmd = cli.Command{
+	Name:   "access",
+	Usage:  "Set permissions [public, private, readonly] for buckets and folders.",
+	Action: runAccessCmd,
+	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -58,12 +57,13 @@ EXAMPLES:
       $ mc {{.Name}} public /shared/Music
 
 `,
-	}
-	catCmd = cli.Command{
-		Name:   "cat",
-		Usage:  "Concantenate objects or files to standard output",
-		Action: runCatCmd,
-		CustomHelpTemplate: `NAME:
+}
+
+var catCmd = cli.Command{
+	Name:   "cat",
+	Usage:  "Concantenate objects or files to standard output",
+	Action: runCatCmd,
+	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -86,12 +86,13 @@ EXAMPLES:
    3. Concantenate multiple files from local filesystem to standard output.
       $ mc {{.Name}} *.txt > newfile.txt
 `,
-	}
-	cpCmd = cli.Command{
-		Name:   "cp",
-		Usage:  "Copy objects and files from multiple sources single destination",
-		Action: runCopyCmd,
-		CustomHelpTemplate: `NAME:
+}
+
+var cpCmd = cli.Command{
+	Name:   "cp",
+	Usage:  "Copy objects and files from multiple sources single destination",
+	Action: runCopyCmd,
+	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -121,13 +122,13 @@ EXAMPLES:
       $ mc {{.Name}} 本語 s3:andoria/本語
 
 `,
-	}
+}
 
-	lsCmd = cli.Command{
-		Name:   "ls",
-		Usage:  "List files and objects",
-		Action: runListCmd,
-		CustomHelpTemplate: `NAME:
+var lsCmd = cli.Command{
+	Name:   "ls",
+	Usage:  "List files and objects",
+	Action: runListCmd,
+	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -168,13 +169,13 @@ EXAMPLES:
       [2015-05-19 17:28:22 PDT]    41B 本語
 
 `,
-	}
+}
 
-	syncCmd = cli.Command{
-		Name:   "sync",
-		Usage:  "Copies files and objects from single source to multiple destinations",
-		Action: runSyncCmd,
-		CustomHelpTemplate: `NAME:
+var syncCmd = cli.Command{
+	Name:   "sync",
+	Usage:  "Copies files and objects from single source to multiple destinations",
+	Action: runSyncCmd,
+	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -204,12 +205,41 @@ EXAMPLES:
       $ mc {{.Name}} 本語 s3:mylocaldocuments C:\backup\2014 play:backup
 
 `,
-	}
-	mbCmd = cli.Command{
-		Name:   "mb",
-		Usage:  "Make a bucket or a folder",
-		Action: runMakeBucketCmd,
-		CustomHelpTemplate: `NAME:
+}
+
+var diffCmd = cli.Command{
+	Name:        "diff",
+	Usage:       "Quickly check if the two objects or directories differ",
+	Description: "NOTE: This command *DOES NOT* check for content match, which means objects with same size, but different content will not be spotted.",
+	Action:      runDiffCmd,
+	CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}} FIRST SECOND {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+FLAGS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+   1. Compare foo.ogg on a local filesystem with bar.ogg on Amazon AWS cloud storage.
+      $ mc {{.Name}} foo.ogg  https://s3.amazonaws.com/jukebox/bar.ogg
+
+   2. Compare two different directories on a local filesystem.
+      $ mc {{.Name}} ~/Photos /Media/Backup/Photos
+
+`,
+}
+
+var mbCmd = cli.Command{
+	Name:   "mb",
+	Usage:  "Make a bucket or a folder",
+	Action: runMakeBucketCmd,
+	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -233,22 +263,23 @@ EXAMPLES:
       $ mc {{.Name}} https://s3.amazonaws.com/public-photo-store http://play.minio.io:9000/mongodb-backup
 
 `,
-	}
-	//   Configure minio client
-	//
-	//   ----
-	//   NOTE: that the configure command only writes values to the config file.
-	//   It does not use any configuration values from the environment variables.
-	//
-	//   One needs to edit configuration file manually, this is purposefully done
-	//   so to avoid taking credentials over cli arguments. It is a security precaution
-	//   ----
-	//
-	configCmd = cli.Command{
-		Name:   "config",
-		Usage:  "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
-		Action: runConfigCmd,
-		CustomHelpTemplate: `NAME:
+}
+
+//   Configure minio client
+//
+//   ----
+//   NOTE: that the configure command only writes values to the config file.
+//   It does not use any configuration values from the environment variables.
+//
+//   One needs to edit configuration file manually, this is purposefully done
+//   so to avoid taking credentials over cli arguments. It is a security precaution
+//   ----
+//
+var configCmd = cli.Command{
+	Name:   "config",
+	Usage:  "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
+	Action: runConfigCmd,
+	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -263,12 +294,13 @@ EXAMPLES:
       $ mc config alias zek https://s3.amazonaws.com/
 
 `,
-	}
-	updateCmd = cli.Command{
-		Name:   "update",
-		Usage:  "Check for new software updates",
-		Action: runUpdateCmd,
-		CustomHelpTemplate: `Name:
+}
+
+var updateCmd = cli.Command{
+	Name:   "update",
+	Usage:  "Check for new software updates",
+	Action: runUpdateCmd,
+	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -279,8 +311,7 @@ EXAMPLES:
       $ mc update
 
 `,
-	}
-)
+}
 
 // Collection of mc commands currently supported are
 //
@@ -299,6 +330,7 @@ var commands = []cli.Command{
 	lsCmd,
 	cpCmd,
 	syncCmd,
+	diffCmd,
 	catCmd,
 	mbCmd,
 	accessCmd,
