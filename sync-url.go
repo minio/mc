@@ -44,28 +44,28 @@ import (
 //   sync(*, f1)
 //   sync(*, []f1)
 
-type syncURLs copyURLs
+type syncURLs cpURLs
 
 // prepareCopyURLs - prepares target and source URLs for syncing.
-func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan *copyURLs {
-	syncURLsCh := make(chan *copyURLs)
+func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan *cpURLs {
+	syncURLsCh := make(chan *cpURLs)
 
 	go func() {
 		defer close(syncURLsCh)
 		for _, targetURL := range targetURLs {
 			switch guessCopyURLType([]string{sourceURL}, targetURL) {
-			case copyURLsTypeA:
+			case cpURLsTypeA:
 				syncURLs := prepareCopyURLsTypeA(sourceURL, targetURL)
 				syncURLsCh <- syncURLs
-			case copyURLsTypeB:
+			case cpURLsTypeB:
 				syncURLs := prepareCopyURLsTypeB(sourceURL, targetURL)
 				syncURLsCh <- syncURLs
-			case copyURLsTypeC:
+			case cpURLsTypeC:
 				for syncURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {
 					syncURLsCh <- syncURLs
 				}
 			default:
-				syncURLsCh <- &copyURLs{Error: iodine.New(errors.New("Invalid arguments."), nil)}
+				syncURLsCh <- &cpURLs{Error: iodine.New(errors.New("Invalid arguments."), nil)}
 			}
 		}
 	}()
