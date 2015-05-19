@@ -17,21 +17,15 @@
 package fs
 
 import (
-	"bytes"
-	"crypto/md5"
-	"encoding/base64"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/minio/minio/pkg/iodine"
 )
 
-// CreateObject - upload new object to bucket
-func (f *fsClient) CreateObject(md5HexString string, size uint64, data io.Reader) error {
-	// handle md5HexString match internally
+// PutObject - create a new file
+func (f *fsClient) PutObject(size uint64, data io.Reader) error {
 	objectDir, _ := filepath.Split(f.path)
 	objectPath := f.path
 	if objectDir != "" {
@@ -44,24 +38,10 @@ func (f *fsClient) CreateObject(md5HexString string, size uint64, data io.Reader
 		return iodine.New(err, nil)
 	}
 	defer fs.Close()
-	// calculate md5 to verify - incoming md5
-	h := md5.New()
-	mw := io.MultiWriter(fs, h)
 
-	_, err = io.CopyN(mw, data, int64(size))
+	_, err = io.CopyN(fs, data, int64(size))
 	if err != nil {
 		return iodine.New(err, nil)
-	}
-
-	// ignore invalid md5 string sent by Amazon
-	if !strings.Contains(md5HexString, "-") {
-		expectedMD5, err := base64.StdEncoding.DecodeString(md5HexString)
-		if err != nil {
-			return iodine.New(err, nil)
-		}
-		if !bytes.Equal(expectedMD5, h.Sum(nil)) {
-			return iodine.New(errors.New("md5sum mismatch"), nil)
-		}
 	}
 	return nil
 }

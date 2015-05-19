@@ -86,14 +86,14 @@ func doMakeBucketCmd(targetURL string, targetConfig *hostConfig, debug bool) (st
 	return doMakeBucket(clnt, targetURL)
 }
 
-// doMakeBucket - wrapper around CreateBucket() API
+// doMakeBucket - wrapper around MakeBucket() API
 func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
-	err := clnt.CreateBucket()
+	err := clnt.MakeBucket()
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
 		fmt.Println(console.Retry("Retrying ... %d", i))
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
-		err = clnt.CreateBucket()
+		err = clnt.MakeBucket()
 	}
 	if err != nil {
 		err := iodine.New(err, nil)

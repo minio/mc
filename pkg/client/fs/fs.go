@@ -17,8 +17,6 @@
 package fs
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"errors"
 	"io"
 	"os"
@@ -74,69 +72,45 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 }
 
 // get - download an object from bucket
-func (f *fsClient) get(content *client.Content) (io.ReadCloser, uint64, string, error) {
+func (f *fsClient) get(content *client.Content) (io.ReadCloser, uint64, error) {
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
+		return nil, 0, iodine.New(err, nil)
 	}
-	h := md5.New()
-	// calculate md5sum
-	_, err = io.Copy(h, body)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
-	}
-	// seek back
-	_, err = body.Seek(0, 0)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
-	}
-	md5Str := hex.EncodeToString(h.Sum(nil))
-	return body, uint64(content.Size), md5Str, nil
+	return body, uint64(content.Size), nil
 }
 
 // GetObject download an full or part object from bucket
-func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, string, error) {
+func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, error) {
 	content, err := f.getFSMetadata()
 	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
+		return nil, 0, iodine.New(err, nil)
 	}
 	if content.Type.IsDir() {
-		return nil, 0, "", iodine.New(ISFolder{path: f.path}, nil)
+		return nil, 0, iodine.New(ISFolder{path: f.path}, nil)
 	}
 	if int64(offset) > content.Size || int64(offset+length-1) > content.Size {
-		return nil, 0, "", iodine.New(client.InvalidRange{Offset: offset}, nil)
+		return nil, 0, iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
 
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(f.path)
 	if os.IsNotExist(err) {
-		return nil, 0, "", iodine.New(NotFound{path: fpath}, nil)
+		return nil, 0, iodine.New(NotFound{path: fpath}, nil)
 	}
 	if offset == 0 && length == 0 {
 		return f.get(content)
 	}
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
+		return nil, 0, iodine.New(err, nil)
 
 	}
 	_, err = io.CopyN(ioutil.Discard, body, int64(offset))
 	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
+		return nil, 0, iodine.New(err, nil)
 	}
-	h := md5.New()
-	// calculate md5sum
-	_, err = io.Copy(h, body)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
-	}
-	// seek back
-	_, err = body.Seek(0, 0)
-	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
-	}
-	md5Str := hex.EncodeToString(h.Sum(nil))
-	return body, length, md5Str, nil
+	return body, length, nil
 }
 
 // List - list files and folders
@@ -299,8 +273,8 @@ func aclToPerm(acl string) os.FileMode {
 	}
 }
 
-// CreateBucket - create a new bucket
-func (f *fsClient) CreateBucket() error {
+// MakeBucket - create a new bucket
+func (f *fsClient) MakeBucket() error {
 	err := os.MkdirAll(f.path, 0775)
 	if err != nil {
 		return iodine.New(err, nil)

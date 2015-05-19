@@ -30,12 +30,12 @@ type Client interface {
 	ListRecursive() <-chan ContentOnChannel
 
 	// Bucket operations
-	CreateBucket() error
+	MakeBucket() error
 	SetBucketACL(acl string) error
 
 	// Object operations
-	GetObject(offset, length uint64) (body io.ReadCloser, size uint64, md5 string, err error)
-	CreateObject(md5 string, size uint64, data io.Reader) error
+	GetObject(offset, length uint64) (body io.ReadCloser, size uint64, err error)
+	PutObject(size uint64, data io.Reader) error
 }
 
 // ContentOnChannel - List contents on channel

@@ -96,11 +96,9 @@ func target2Client(targetURL string) (client.Client, error) {
 	if err != nil {
 		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
 	}
-
 	if targetURLParse.Path == "" {
 		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
 	}
-
 	targetConfig, err := getHostConfig(targetURL)
 	if err != nil {
 		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)

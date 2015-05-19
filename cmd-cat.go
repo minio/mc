@@ -17,8 +17,6 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"errors"
 	"io"
 	"os"
@@ -73,25 +71,19 @@ func doCatCmd(sourceURLConfigMap map[string]*hostConfig, debug bool) (string, er
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}
-		reader, size, sourceMd5, err := sourceClnt.GetObject(0, 0)
+		reader, size, err := sourceClnt.GetObject(0, 0)
 		if err != nil {
 			return "Unable to retrieve file: " + url, iodine.New(err, nil)
 		}
 		defer reader.Close()
-		hasher := md5.New()
-		mw := io.MultiWriter(os.Stdout, hasher)
-		_, err = io.CopyN(mw, reader, int64(size))
+		_, err = io.CopyN(os.Stdout, reader, int64(size))
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case *os.PathError:
-				return "Reading data to stdout failed, you system be having problems.. please report this error", iodine.New(e, nil)
+				return "Reading data to stdout failed, unexpected problem.. please report this error", iodine.New(e, nil)
 			default:
 				return "Reading data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
 			}
-		}
-		actualMd5 := hex.EncodeToString(hasher.Sum(nil))
-		if sourceMd5 != actualMd5 {
-			return "Md5sum mismatch, must be error in transmit what you are looking at might be corrupted", iodine.New(errors.New("corrupted data"), nil)
 		}
 	}
 	return "", nil

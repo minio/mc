@@ -17,8 +17,6 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/hex"
 	"io"
 	"os"
 	"runtime"
@@ -30,26 +28,21 @@ import (
 )
 
 // getSource -
-func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.Reader, length uint64, md5hex string, err error) {
+func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.Reader, length uint64, err error) {
 	sourceClnt, err := getNewClient(sourceURL, sourceConfig, globalDebugFlag)
 	if err != nil {
-		return nil, 0, "", iodine.New(err, map[string]string{"failedURL": sourceURL})
+		return nil, 0, iodine.New(err, map[string]string{"failedURL": sourceURL})
 	}
 	return sourceClnt.GetObject(0, 0)
 }
 
 // putTarget -
-func putTarget(targetURL string, targetConfig *hostConfig, md5hex string, length uint64, data io.Reader) error {
+func putTarget(targetURL string, targetConfig *hostConfig, length uint64, data io.Reader) error {
 	targetClnt, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	md5bytes, err := hex.DecodeString(md5hex)
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-	md5Base64 := base64.StdEncoding.EncodeToString(md5bytes)
-	err = targetClnt.CreateObject(md5Base64, length, data)
+	err = targetClnt.PutObject(length, data)
 	if err != nil {
 		return iodine.New(err, map[string]string{"failedURL": targetURL})
 	}
