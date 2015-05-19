@@ -30,7 +30,7 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	if sourceURL == targetURL {
 		return iodine.New(errSameURLs{source: sourceURL, target: targetURL}, nil)
 	}
-	reader, length, md5hex, err := getSource(sourceURL, sourceConfig)
+	reader, length, err := getSource(sourceURL, sourceConfig)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -41,7 +41,7 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 		// set up progress
 		reader = bar.NewProxyReader(reader)
 	}
-	err = putTarget(targetURL, targetConfig, md5hex, length, reader)
+	err = putTarget(targetURL, targetConfig, length, reader)
 	if err != nil {
 		return iodine.New(err, nil)
 	}

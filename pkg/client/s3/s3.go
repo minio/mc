@@ -99,17 +99,17 @@ func New(config *Config) (client.Client, error) {
 }
 
 // GetObject - get object
-func (c *s3Client) GetObject(offset, length uint64) (io.ReadCloser, uint64, string, error) {
+func (c *s3Client) GetObject(offset, length uint64) (io.ReadCloser, uint64, error) {
 	bucket, object := c.url2BucketAndObject()
 	reader, metadata, err := c.api.GetObject(bucket, object, offset, length)
 	if err != nil {
-		return nil, 0, "", iodine.New(err, nil)
+		return nil, 0, iodine.New(err, nil)
 	}
-	return reader, uint64(metadata.Size), metadata.ETag, nil
+	return reader, uint64(metadata.Size), nil
 }
 
-// CreateObject - create object
-func (c *s3Client) CreateObject(md5 string, size uint64, data io.Reader) error {
+// PutObject - put object
+func (c *s3Client) PutObject(size uint64, data io.Reader) error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified
@@ -123,12 +123,13 @@ func (c *s3Client) CreateObject(md5 string, size uint64, data io.Reader) error {
 	return nil
 }
 
-// CreateBucket - create a new bucket
-func (c *s3Client) CreateBucket() error {
+// MakeBucket - make a new bucket
+func (c *s3Client) MakeBucket() error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		return iodine.New(InvalidQueryURL{URL: c.hostURL.String()}, nil)
 	}
+	// location string is intentionally left out
 	err := c.api.MakeBucket(bucket, "private", "")
 	return iodine.New(err, nil)
 }

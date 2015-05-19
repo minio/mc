@@ -46,8 +46,10 @@ func getScheme(rawurl string) (scheme, path string) {
 	scheme, uri := splitSpecial(rawurl, ":", true)
 	// ignore numbers in scheme
 	validScheme := regexp.MustCompile("^[a-zA-Z]+$")
-	if validScheme.MatchString(scheme) {
-		return scheme, uri
+	if uri != "" {
+		if validScheme.MatchString(scheme) {
+			return scheme, uri
+		}
 	}
 	return "", rawurl
 }
