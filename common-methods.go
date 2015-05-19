@@ -75,7 +75,7 @@ func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Clie
 		s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 		s3Config.HostURL = urlStr
 		s3Config.Debug = debug
-		return s3.New(s3Config), nil
+		return s3.New(s3Config)
 	case client.Filesystem:
 		return fs.New(urlStr)
 	}
