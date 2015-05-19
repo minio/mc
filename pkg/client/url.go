@@ -18,11 +18,9 @@ package client
 
 import (
 	"bytes"
-	"errors"
+	"regexp"
 	"runtime"
 	"strings"
-
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // URL client url structure
@@ -44,64 +42,50 @@ const (
 
 // Maybe rawurl is of the form scheme:path. (Scheme must be [a-zA-Z][a-zA-Z0-9+-.]*)
 // If so, return scheme, path; else return "", rawurl.
-func getScheme(rawurl string) (scheme, path string, err error) {
-	for i := 0; i < len(rawurl); i++ {
-		c := rawurl[i]
-		switch {
-		// valid characters, do nothing
-		case 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z':
-		// invalid characters, return raw url
-		case '0' <= c && c <= '9' || c == '+' || c == '-' || c == '.':
-			if i == 0 {
-				return "", rawurl, nil
-			}
-		// check if the scheme delimiter is a first character, return missing protocol scheme
-		case c == ':':
-			if i == 0 {
-				return "", "", iodine.New(errors.New("missing protocol scheme"), nil)
-			}
-			// if not separate them properly
-			return rawurl[0:i], rawurl[i+1:], nil
-		default:
-			// we have encountered an unexpected character, so there is no valid scheme
-			return "", rawurl, nil
-		}
+func getScheme(rawurl string) (scheme, path string) {
+	scheme, uri := splitSpecial(rawurl, ":", true)
+	// ignore numbers in scheme
+	validScheme := regexp.MustCompile("^[a-zA-Z]+$")
+	if validScheme.MatchString(scheme) {
+		return scheme, uri
 	}
-	return "", rawurl, nil
+	return "", rawurl
 }
 
-// Maybe s is of the form s d s.  If so, return s, ds (or s, s if cutd == true).
-// If not, return s, "".
-func split(s string, d string, cutd bool) (string, string) {
-	i := strings.Index(s, d)
+// Assuming s is of the form [s delimiter s].
+// If so, return s, [delimiter]s or return s, s if cutdelimiter == true
+// If no delimiter found return s, "".
+func splitSpecial(s string, delimiter string, cutdelimiter bool) (string, string) {
+	i := strings.Index(s, delimiter)
 	if i < 0 {
+		// if delimiter not found return as is
 		return s, ""
 	}
-	if cutd {
-		return s[0:i], s[i+len(d):]
+	// if delimiter should be removed, remove it
+	if cutdelimiter {
+		return s[0:i], s[i+len(delimiter):]
 	}
+	// return split strings with delimiter
 	return s[0:i], s[i:]
 }
 
-func getHost(rest string) (host string) {
-	i := strings.LastIndex(rest, "@")
-	if i < 0 {
-		host = rest
+// getHost - extract host from authority string, we do not support ftp style username@ yet
+func getHost(authority string) (host string) {
+	i := strings.LastIndex(authority, "@")
+	if i >= 0 {
+		// TODO support, username@password style userinfo, useful for ftp support
 		return
 	}
-	return
+	return authority
 }
 
-// Parse url parse
+// Parse url
 func Parse(urlStr string) (*URL, error) {
-	scheme, rest, err := getScheme(urlStr)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	rest, _ = split(rest, "?", true)
+	scheme, rest := getScheme(urlStr)
+	rest, _ = splitSpecial(rest, "?", true)
 	if strings.HasPrefix(rest, "//") {
 		// if rest has '//' prefix, skip them
-		authority, rest := split(rest[2:], "/", false)
+		authority, rest := splitSpecial(rest[2:], "/", false)
 		host := getHost(authority)
 		if host != "" && (scheme == "http" || scheme == "https") {
 			return &URL{
@@ -118,6 +102,7 @@ func Parse(urlStr string) (*URL, error) {
 	}, nil
 }
 
+// String convert URL into its canonical form
 func (u *URL) String() string {
 	var buf bytes.Buffer
 	if u.Scheme != "" {

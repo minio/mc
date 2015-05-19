@@ -46,9 +46,6 @@ func mustGetMcConfigDir() string {
 func (s *CmdTestSuite) TestGetNewClient(c *C) {
 	_, err := getNewClient("http://example.com/bucket1", &hostConfig{}, false)
 	c.Assert(err, IsNil)
-
-	_, err = getNewClient("%", &hostConfig{}, false)
-	c.Assert(err, Not(IsNil))
 }
 
 func (s *CmdTestSuite) TestNewConfigV1(c *C) {
