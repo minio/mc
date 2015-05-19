@@ -19,7 +19,6 @@ package s3
 import (
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -52,7 +51,7 @@ type TLSConfig struct {
 
 type s3Client struct {
 	api     objectstorage.API
-	hostURL *url.URL
+	hostURL *client.URL
 }
 
 // url2Regions s3 region map used by bucket location constraint
@@ -76,7 +75,7 @@ func getRegion(host string) string {
 
 // New returns an initialized s3Client structure. if debug use a internal trace transport
 func New(config *Config) (client.Client, error) {
-	u, err := url.Parse(config.HostURL)
+	u, err := client.Parse(config.HostURL)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}

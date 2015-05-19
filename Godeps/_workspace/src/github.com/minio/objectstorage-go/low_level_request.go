@@ -22,7 +22,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"runtime"
 	"sort"
 	"strings"
@@ -65,13 +64,10 @@ func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, er
 	}
 
 	// parse URL for the combination of HTTPServer + HTTPPath
-	u, err := url.Parse(op.HTTPServer + op.HTTPPath)
-	if err != nil {
-		return nil, err
-	}
+	u := op.HTTPServer + op.HTTPPath
 
 	// get a new HTTP request, for the requested method
-	req, err := http.NewRequest(method, u.String(), nil)
+	req, err := http.NewRequest(method, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -201,9 +197,10 @@ func (r *request) getSignedHeaders() string {
 //
 func (r *request) getCanonicalRequest(hashedPayload string) string {
 	r.req.URL.RawQuery = strings.Replace(r.req.URL.Query().Encode(), "+", "%20", -1)
+	encodedPath, _ := urlEncodeName(r.req.URL.Path)
 	canonicalRequest := strings.Join([]string{
 		r.req.Method,
-		r.req.URL.Path,
+		encodedPath,
 		r.req.URL.RawQuery,
 		r.getCanonicalHeaders(),
 		r.getSignedHeaders(),
