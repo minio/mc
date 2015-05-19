@@ -369,7 +369,7 @@ func (a *api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch c
 //
 // You must have WRITE permissions on a bucket to create an object
 //
-// This version of CreateObject automatically does multipart for more than 5MB worth of data
+// This version of PutObject automatically does multipart for more than 5MB worth of data
 func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) error {
 	if strings.TrimSpace(object) == "" {
 		return errors.New("object name cannot be empty")

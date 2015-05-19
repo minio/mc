@@ -41,7 +41,7 @@ func main() {
 		object.Close()
 		log.Fatalln(err)
 	}
-	uploadID, err := m.CreateObject("testbucket", "testfile", uint64(objectInfo.Size()), object)
+	uploadID, err := m.PutObject("testbucket", "testfile", uint64(objectInfo.Size()), object)
 	if err != nil {
 		object.Close()
 		log.Fatalln(err)
