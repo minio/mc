@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -195,23 +194,41 @@ func (a *lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 // listObjectsRequest wrapper creates a new ListObjects request
 func (a *lowLevelAPI) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
-	resourceQuery := func() string {
+	resourceQuery := func() (*string, error) {
+		var err error
 		switch {
 		case marker != "":
-			marker = fmt.Sprintf("&marker=%s", url.QueryEscape(marker))
+			marker, err = urlEncodeName(marker)
+			if err != nil {
+				return nil, err
+			}
+			marker = fmt.Sprintf("&marker=%s", marker)
 			fallthrough
 		case prefix != "":
-			prefix = fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix))
+			prefix, err = urlEncodeName(prefix)
+			if err != nil {
+				return nil, err
+			}
+			prefix = fmt.Sprintf("&prefix=%s", prefix)
 			fallthrough
 		case delimiter != "":
-			delimiter = fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter))
+			delimiter, err = urlEncodeName(delimiter)
+			if err != nil {
+				return nil, err
+			}
+			delimiter = fmt.Sprintf("&delimiter=%s", delimiter)
 		}
-		return fmt.Sprintf("?max-keys=%d", maxkeys) + marker + prefix + delimiter
+		query := fmt.Sprintf("?max-keys=%d", maxkeys) + marker + prefix + delimiter
+		return &query, nil
+	}
+	query, err := resourceQuery()
+	if err != nil {
+		return nil, err
 	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + resourceQuery(),
+		HTTPPath:   "/" + bucket + *query,
 	}
 	r, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -316,10 +333,14 @@ func (a *lowLevelAPI) deleteBucket(bucket string) error {
 
 // putObjectRequest wrapper creates a new PutObject request
 func (a *lowLevelAPI) putObjectRequest(bucket, object string, size int64, body io.ReadSeeker) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "PUT",
-		HTTPPath:   "/" + bucket + "/" + object,
+		HTTPPath:   "/" + bucket + "/" + encodedObject,
 	}
 	md5SumBytes, err := sumMD5Reader(body, size)
 	if err != nil {
@@ -360,10 +381,14 @@ func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadS
 
 // getObjectRequest wrapper creates a new GetObject request
 func (a *lowLevelAPI) getObjectRequest(bucket, object string, offset, length uint64) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + "/" + object,
+		HTTPPath:   "/" + bucket + "/" + encodedObject,
 	}
 	r, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -420,10 +445,14 @@ func (a *lowLevelAPI) getObject(bucket, object string, offset, length uint64) (i
 
 // headObjectRequest wrapper creates a new HeadObject request
 func (a *lowLevelAPI) headObjectRequest(bucket, object string) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "HEAD",
-		HTTPPath:   "/" + bucket + "/" + object,
+		HTTPPath:   "/" + bucket + "/" + encodedObject,
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -466,10 +495,14 @@ func (a *lowLevelAPI) headObject(bucket, object string) (*ObjectMetadata, error)
 
 // deleteObjectRequest wrapper creates a new DeleteObject request
 func (a *lowLevelAPI) deleteObjectRequest(bucket, object string) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "DELETE",
-		HTTPPath:   "/" + bucket + "/" + object,
+		HTTPPath:   "/" + bucket + "/" + encodedObject,
 	}
 	return newRequest(op, a.config, nil)
 }

@@ -8,33 +8,54 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 )
 
 // listMultipartUploadsRequest wrapper creates a new listMultipartUploads request
 func (a *lowLevelAPI) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
-	resourceQuery := func() string {
+	resourceQuery := func() (*string, error) {
+		var err error
 		switch {
 		case keymarker != "":
-			keymarker = fmt.Sprintf("&key-marker=%s", url.QueryEscape(keymarker))
+			keymarker, err = urlEncodeName(keymarker)
+			if err != nil {
+				return nil, err
+			}
+			keymarker = fmt.Sprintf("&key-marker=%s", keymarker)
 			fallthrough
 		case uploadIDMarker != "":
-			uploadIDMarker = fmt.Sprintf("&upload-id-marker=%s", url.QueryEscape(uploadIDMarker))
+			uploadIDMarker, err = urlEncodeName(uploadIDMarker)
+			if err != nil {
+				return nil, err
+			}
+			uploadIDMarker = fmt.Sprintf("&upload-id-marker=%s", uploadIDMarker)
 			fallthrough
 		case prefix != "":
-			prefix = fmt.Sprintf("&prefix=%s", url.QueryEscape(prefix))
+			prefix, err = urlEncodeName(prefix)
+			if err != nil {
+				return nil, err
+			}
+			prefix = fmt.Sprintf("&prefix=%s", prefix)
 			fallthrough
 		case delimiter != "":
-			delimiter = fmt.Sprintf("&delimiter=%s", url.QueryEscape(delimiter))
+			delimiter, err = urlEncodeName(delimiter)
+			if err != nil {
+				return nil, err
+			}
+			delimiter = fmt.Sprintf("&delimiter=%s", delimiter)
 		}
-		return fmt.Sprintf("?uploads&max-uploads=%d", maxuploads) + keymarker + uploadIDMarker + prefix + delimiter
+		query := fmt.Sprintf("?uploads&max-uploads=%d", maxuploads) + keymarker + uploadIDMarker + prefix + delimiter
+		return &query, nil
+	}
+	query, err := resourceQuery()
+	if err != nil {
+		return nil, err
 	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + resourceQuery(),
+		HTTPPath:   "/" + bucket + *query,
 	}
 	r, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -81,10 +102,14 @@ func (a *lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, pr
 
 // initiateMultipartRequest wrapper creates a new initiateMultiPart request
 func (a *lowLevelAPI) initiateMultipartRequest(bucket, object string) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "POST",
-		HTTPPath:   "/" + bucket + "/" + object + "?uploads",
+		HTTPPath:   "/" + bucket + "/" + encodedObject + "?uploads",
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -116,10 +141,14 @@ func (a *lowLevelAPI) initiateMultipartUpload(bucket, object string) (*initiateM
 
 // completeMultipartUploadRequest wrapper creates a new CompleteMultipartUpload request
 func (a *lowLevelAPI) completeMultipartUploadRequest(bucket, object, uploadID string, complete *completeMultipartUpload) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "POST",
-		HTTPPath:   "/" + bucket + "/" + object + "?uploadId=" + uploadID,
+		HTTPPath:   "/" + bucket + "/" + encodedObject + "?uploadId=" + uploadID,
 	}
 	completeMultipartUploadBytes, err := xml.Marshal(complete)
 	if err != nil {
@@ -161,10 +190,14 @@ func (a *lowLevelAPI) completeMultipartUpload(bucket, object, uploadID string, c
 
 // abortMultipartUploadRequest wrapper creates a new AbortMultipartUpload request
 func (a *lowLevelAPI) abortMultipartUploadRequest(bucket, object, uploadID string) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "DELETE",
-		HTTPPath:   "/" + bucket + "/" + object + "?uploadId=" + uploadID,
+		HTTPPath:   "/" + bucket + "/" + encodedObject + "?uploadId=" + uploadID,
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -190,6 +223,10 @@ func (a *lowLevelAPI) abortMultipartUpload(bucket, object, uploadID string) erro
 
 // listObjectPartsRequest wrapper creates a new ListObjectParts request
 func (a *lowLevelAPI) listObjectPartsRequest(bucket, object, uploadID string, partNumberMarker, maxParts int) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
 	resourceQuery := func() string {
 		var partNumberMarkerStr string
@@ -202,7 +239,7 @@ func (a *lowLevelAPI) listObjectPartsRequest(bucket, object, uploadID string, pa
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + "/" + object + resourceQuery(),
+		HTTPPath:   "/" + bucket + "/" + encodedObject + resourceQuery(),
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -239,10 +276,14 @@ func (a *lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumbe
 
 // uploadPartRequest wrapper creates a new UploadPart request
 func (a *lowLevelAPI) uploadPartRequest(bucket, object, uploadID string, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
 	op := &operation{
 		HTTPServer: a.config.MustGetEndpoint(),
 		HTTPMethod: "PUT",
-		HTTPPath:   "/" + bucket + "/" + object + "?partNumber=" + strconv.Itoa(partNumber) + "&uploadId=" + uploadID,
+		HTTPPath:   "/" + bucket + "/" + encodedObject + "?partNumber=" + strconv.Itoa(partNumber) + "&uploadId=" + uploadID,
 	}
 	md5SumBytes, err := sumMD5Reader(body, size)
 	if err != nil {

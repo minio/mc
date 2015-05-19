@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // API - object storage API interface
@@ -192,6 +193,9 @@ func New(config *Config) API {
 func (a *api) GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectMetadata, error) {
 	if strings.TrimSpace(object) == "" {
 		return nil, nil, errors.New("object name cannot be empty")
+	}
+	if !utf8.ValidString(object) {
+		return nil, nil, errors.New("invalid object name, should be utf-8")
 	}
 	// get the the object
 	// NOTE : returned md5sum could be the md5sum of the partial object itself
@@ -374,6 +378,9 @@ func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) erro
 	if strings.TrimSpace(object) == "" {
 		return errors.New("object name cannot be empty")
 	}
+	if !utf8.ValidString(object) {
+		return errors.New("invalid object name, should be utf-8")
+	}
 	switch {
 	case size < DefaultPartSize:
 		// Single Part use case, use PutObject directly
@@ -413,6 +420,9 @@ func (a *api) StatObject(bucket, object string) (*ObjectMetadata, error) {
 	if strings.TrimSpace(object) == "" {
 		return nil, errors.New("object name cannot be empty")
 	}
+	if !utf8.ValidString(object) {
+		return nil, errors.New("invalid object name, should be utf-8")
+	}
 	return a.headObject(bucket, object)
 }
 
@@ -420,6 +430,9 @@ func (a *api) StatObject(bucket, object string) (*ObjectMetadata, error) {
 func (a *api) DeleteObject(bucket, object string) error {
 	if strings.TrimSpace(object) == "" {
 		return errors.New("object name cannot be empty")
+	}
+	if !utf8.ValidString(object) {
+		return errors.New("invalid object name, should be utf-8")
 	}
 	return a.deleteObject(bucket, object)
 }

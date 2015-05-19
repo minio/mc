@@ -20,8 +20,43 @@ import (
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"io"
+	"regexp"
+	"unicode/utf8"
 )
+
+// urlEncodedName- encode the strings from UTF-8 byte representations to HTML hex escape sequences
+func urlEncodeName(objectName string) (string, error) {
+	// if object matches reserved string, no need to encode them
+	reservedNames := regexp.MustCompile("^[a-zA-Z0-9-_.~/ ]+$")
+	if reservedNames.MatchString(objectName) {
+		return objectName, nil
+	}
+	var encodedObjectName string
+	for _, s := range objectName {
+		if 'A' <= s && s <= 'Z' || 'a' <= s && s <= 'z' || '0' <= s && s <= '9' { // §2.3 Unreserved characters (mark)
+			encodedObjectName = encodedObjectName + string(s)
+			continue
+		}
+		switch s {
+		case '-', '_', '.', '~', '/', ' ': // §2.3 Unreserved characters (mark)
+			encodedObjectName = encodedObjectName + string(s)
+			continue
+		default:
+			len := utf8.RuneLen(s)
+			if len < 0 {
+				return "", errors.New("invalid utf-8")
+			}
+			u := make([]byte, len)
+			utf8.EncodeRune(u, s)
+			uHex := hex.EncodeToString(u)
+			encodedObjectName = encodedObjectName + "%" + uHex
+		}
+	}
+	return encodedObjectName, nil
+}
 
 // sum256Reader calculate sha256 sum for an input reader
 func sum256Reader(reader io.ReadSeeker) ([]byte, error) {
