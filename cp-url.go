@@ -68,7 +68,11 @@ const (
 // source2Client returns client and hostconfig objects from the source URL.
 func source2Client(sourceURL string) (client.Client, error) {
 	// Empty source arg?
-	sourceURLParse := client.Parse(sourceURL)
+	sourceURLParse, err := client.Parse(sourceURL)
+	if err != nil {
+		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
+	}
+
 	if sourceURLParse.Path == "" {
 		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
 	}
@@ -88,7 +92,11 @@ func source2Client(sourceURL string) (client.Client, error) {
 // target2Client returns client and hostconfig objects from the target URL.
 func target2Client(targetURL string) (client.Client, error) {
 	// Empty target arg?
-	targetURLParse := client.Parse(targetURL)
+	targetURLParse, err := client.Parse(targetURL)
+	if err != nil {
+		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
+	}
+
 	if targetURLParse.Path == "" {
 		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
 	}
@@ -227,13 +235,13 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) *cpURLs {
 	} // Else name is available to create.
 
 	// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
-	sourceURLParse := client.Parse(sourceURL)
-	if sourceURLParse == nil {
+	sourceURLParse, err := client.Parse(sourceURL)
+	if err != nil {
 		return &cpURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
 	}
 
-	targetURLParse := client.Parse(targetURL)
-	if targetURLParse == nil {
+	targetURLParse, err := client.Parse(targetURL)
+	if err != nil {
 		return &cpURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
 	}
 
@@ -307,20 +315,20 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *cpURLs {
 			}
 
 			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
-			sourceURLParse := client.Parse(sourceURL)
-			if sourceURLParse == nil {
+			sourceURLParse, err := client.Parse(sourceURL)
+			if err != nil {
 				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
 				continue
 			}
 
-			targetURLParse := client.Parse(targetURL)
-			if targetURLParse == nil {
+			targetURLParse, err := client.Parse(targetURL)
+			if err != nil {
 				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
 				continue
 			}
 
-			sourceContentParse := client.Parse(sourceContent.Content.Name)
-			if sourceContentParse == nil {
+			sourceContentParse, err := client.Parse(sourceContent.Content.Name)
+			if err != nil {
 				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{path: sourceContent.Content.Name}, nil)}
 				continue
 			}

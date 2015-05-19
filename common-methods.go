@@ -58,8 +58,8 @@ func putTarget(targetURL string, targetConfig *hostConfig, md5hex string, length
 
 // getNewClient gives a new client interface
 func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
-	url := client.Parse(urlStr)
-	if url == nil {
+	url, err := client.Parse(urlStr)
+	if err != nil {
 		return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
 	}
 	switch url.Type {
