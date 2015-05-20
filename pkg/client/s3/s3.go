@@ -152,7 +152,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 			return nil, iodine.New(err, nil)
 		}
 		objectMetadata := new(client.Content)
-		objectMetadata.Name = c.hostURL.String()
+		objectMetadata.Name = metadata.Key
 		objectMetadata.Time = metadata.LastModified
 		objectMetadata.Size = metadata.Size
 		objectMetadata.Type = os.FileMode(0664)
@@ -187,21 +187,19 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 
 /// Bucket API operations
 
-// List - list at delimited path not recursive
-func (c *s3Client) List() <-chan client.ContentOnChannel {
+// List - list at delimited path, if not recursive
+func (c *s3Client) List(recursive bool) <-chan client.ContentOnChannel {
 	contentCh := make(chan client.ContentOnChannel)
-	go c.listInGoRoutine(contentCh)
+	switch recursive {
+	case true:
+		go c.listRecursiveInRoutine(contentCh)
+	default:
+		go c.listInRoutine(contentCh)
+	}
 	return contentCh
 }
 
-// ListRecursive - list buckets and objects recursively
-func (c *s3Client) ListRecursive() <-chan client.ContentOnChannel {
-	contentCh := make(chan client.ContentOnChannel)
-	go c.listRecursiveInGoRoutine(contentCh)
-	return contentCh
-}
-
-func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
+func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 	bucket, object := c.url2BucketAndObject()
 	switch {
@@ -266,7 +264,7 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 	}
 }
 
-func (c *s3Client) listRecursiveInGoRoutine(contentCh chan client.ContentOnChannel) {
+func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 	bucket, object := c.url2BucketAndObject()
 	for object := range c.api.ListObjects(bucket, object, true) {

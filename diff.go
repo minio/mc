@@ -29,22 +29,22 @@ type diff struct {
 }
 
 // urlJoinPath Join a path to existing URL
-func urlJoinPath(urlStr, path string) (newURLStr string, err error) {
-	u, err := client.Parse(urlStr)
+func urlJoinPath(url1, url2 string) (newURLStr string, err error) {
+	u1, err := client.Parse(url1)
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-
-	u.Path = filepath.Join(u.Path, path)
-	newURLStr = u.String()
+	u2, err := client.Parse(url2)
+	if err != nil {
+		return "", iodine.New(err, nil)
+	}
+	u1.Path = filepath.Join(u1.Path, u2.Path)
+	newURLStr = u1.String()
 	return newURLStr, nil
 }
 
 // doDiffObjects - Diff two object URLs
 func doDiffObjects(firstURL, secondURL string, ch chan diff) {
-	if firstURL == secondURL {
-		return
-	}
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
@@ -63,6 +63,10 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 		return
 	}
 
+	if firstContent.Name == secondContent.Name {
+		return
+	}
+
 	switch {
 	case firstContent.Type.IsRegular():
 		if !secondContent.Type.IsRegular() {
@@ -76,6 +80,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option\n.",
 			err:     iodine.New(errNotAnObject{url: firstURL}, nil),
 		}
+		return
 	}
 
 	if firstContent.Size != secondContent.Size {
@@ -87,7 +92,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 }
 
 // doDiffDirs - Diff two Dir URLs
-func doDiffDirs(firstURL, secondURL string, ch chan diff) {
+func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	firstClnt, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
@@ -117,8 +122,9 @@ func doDiffDirs(firstURL, secondURL string, ch chan diff) {
 			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option\n.",
 			err:     iodine.New(errNotAnObject{url: firstURL}, nil),
 		}
+		return
 	}
-	for contentCh := range firstClnt.List() {
+	for contentCh := range firstClnt.List(recursive) {
 		if contentCh.Err != nil {
 			ch <- diff{
 				message: "Failed to list ‘" + firstURL + "’. Reason: [" + iodine.ToError(contentCh.Err).Error() + "].\n",
@@ -129,16 +135,18 @@ func doDiffDirs(firstURL, secondURL string, ch chan diff) {
 		newFirstURL, err := urlJoinPath(firstURL, contentCh.Content.Name)
 		if err != nil {
 			ch <- diff{
-				message: "Unable to construct new URL from ‘" + firstURL + "’ using ‘" + contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
-				err:     iodine.New(err, nil),
+				message: "Unable to construct new URL from ‘" + firstURL + "’ using ‘" +
+					contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+				err: iodine.New(err, nil),
 			}
 			return
 		}
 		newSecondURL, err := urlJoinPath(secondURL, contentCh.Content.Name)
 		if err != nil {
 			ch <- diff{
-				message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
-				err:     iodine.New(err, nil),
+				message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" +
+					contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+				err: iodine.New(err, nil),
 			}
 			return
 		}
@@ -149,15 +157,14 @@ func doDiffDirs(firstURL, secondURL string, ch chan diff) {
 				err:     iodine.New(err, nil),
 			}
 			return
-
 		}
 		_, newSecondContent, err := url2Stat(newSecondURL)
 		if err != nil {
 			ch <- diff{
-				message: "‘" + filepath.Base(newFirstContent.Name) + "’ only in ‘" + firstURL + "’.\n",
-				err:     nil,
+				message: "Failed to stat ‘" + newSecondURL + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+				err:     iodine.New(err, nil),
 			}
-			continue
+			return
 		}
 		switch {
 		case newFirstContent.Type.IsDir():
@@ -166,8 +173,8 @@ func doDiffDirs(firstURL, secondURL string, ch chan diff) {
 					message: newFirstURL + " and " + newSecondURL + " differs in type.\n",
 					err:     nil,
 				}
-				continue
 			}
+			continue
 		case newFirstContent.Type.IsRegular():
 			if !newSecondContent.Type.IsRegular() {
 				ch <- diff{

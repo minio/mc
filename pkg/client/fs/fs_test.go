@@ -60,7 +60,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	var contents []*client.Content
-	for contentCh := range fsc.ListRecursive() {
+	for contentCh := range fsc.List(true) {
 		contents = append(contents, contentCh.Content)
 	}
 	c.Assert(err, IsNil)

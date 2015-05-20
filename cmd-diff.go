@@ -69,8 +69,9 @@ func runDiffCmd(ctx *cli.Context) {
 			console.Fatalf("Unable to parse argument [%s]. Reason: [%s].\n", secondURL, iodine.ToError(err))
 		}
 	}
-
-	for diff := range doDiffCmd(firstURL, secondURL) {
+	// TODO recursive is not working yet
+	newFirstURL := stripRecursiveURL(firstURL)
+	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		if diff.err != nil {
 			console.Fatalf(diff.message)
 		}
@@ -78,7 +79,8 @@ func runDiffCmd(ctx *cli.Context) {
 	}
 }
 
-func doDiffInRoutine(firstURL, secondURL string, ch chan diff) {
+func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
+	defer close(ch)
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
@@ -96,29 +98,45 @@ func doDiffInRoutine(firstURL, secondURL string, ch chan diff) {
 		return
 	}
 	if firstContent.Type.IsRegular() {
-		if !secondContent.Type.IsRegular() {
+		switch {
+		case secondContent.Type.IsDir():
+			newSecondURL, err := urlJoinPath(secondURL, firstURL)
+			if err != nil {
+				ch <- diff{
+					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" +
+						firstURL + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+					err: iodine.New(err, nil),
+				}
+				return
+			}
+			doDiffObjects(firstURL, newSecondURL, ch)
+		case !secondContent.Type.IsRegular():
 			ch <- diff{
 				message: firstURL + " and " + secondURL + " differs in type.\n",
 				err:     nil,
 			}
+			return
+		case secondContent.Type.IsRegular():
+			doDiffObjects(firstURL, secondURL, ch)
 		}
-		doDiffObjects(firstURL, secondURL, ch)
 	}
 	if firstContent.Type.IsDir() {
-		if !secondContent.Type.IsDir() {
+		switch {
+		case !secondContent.Type.IsDir():
 			ch <- diff{
 				message: firstURL + " and " + secondURL + " differs in type.\n",
 				err:     nil,
 			}
+			return
+		default:
+			doDiffDirs(firstURL, secondURL, recursive, ch)
 		}
-		doDiffDirs(firstURL, secondURL, ch)
 	}
-	close(ch)
 }
 
 // doDiffCmd - Execute the diff command
-func doDiffCmd(firstURL, secondURL string) <-chan diff {
+func doDiffCmd(firstURL, secondURL string, recursive bool) <-chan diff {
 	ch := make(chan diff)
-	go doDiffInRoutine(firstURL, secondURL, ch)
+	go doDiffInRoutine(firstURL, secondURL, recursive, ch)
 	return ch
 }

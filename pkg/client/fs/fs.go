@@ -122,13 +122,18 @@ func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, erro
 }
 
 // List - list files and folders
-func (f *fsClient) List() <-chan client.ContentOnChannel {
+func (f *fsClient) List(recursive bool) <-chan client.ContentOnChannel {
 	contentCh := make(chan client.ContentOnChannel)
-	go f.list(contentCh)
+	switch recursive {
+	case true:
+		go f.listRecursiveInRoutine(contentCh)
+	default:
+		go f.listInRoutine(contentCh)
+	}
 	return contentCh
 }
 
-func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
+func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 
 	fpath := f.path
@@ -215,14 +220,7 @@ func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
 	}
 }
 
-// ListRecursive - list files and folders recursively
-func (f *fsClient) ListRecursive() <-chan client.ContentOnChannel {
-	contentCh := make(chan client.ContentOnChannel)
-	go f.listRecursive(contentCh)
-	return contentCh
-}
-
-func (f *fsClient) listRecursive(contentCh chan client.ContentOnChannel) {
+func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		if err != nil {
