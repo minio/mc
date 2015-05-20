@@ -55,34 +55,21 @@ func printContent(date time.Time, v int64, name string, fileType os.FileMode) {
 }
 
 // doList - list all entities inside a folder
-func doList(clnt client.Client, targetURL string) error {
+func doList(clnt client.Client, targetURL string, recursive bool) error {
 	var err error
-	for contentCh := range clnt.List() {
+	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
 			err = contentCh.Err
 			break
 		}
-		printContent(contentCh.Content.Time, contentCh.Content.Size, contentCh.Content.Name, contentCh.Content.Type)
-	}
-	if err != nil {
-		return iodine.New(err, map[string]string{"Target": targetURL})
-	}
-	return nil
-}
-
-// doListRecursive - list all entities inside folders and sub-folders recursively
-func doListRecursive(clnt client.Client, targetURL string) error {
-	var err error
-	for contentCh := range clnt.ListRecursive() {
-		if contentCh.Err != nil {
-			err = contentCh.Err
-			break
+		contentName := contentCh.Content.Name
+		if recursive {
+			// this special handling is necessary since we are sending back absolute paths with in ListRecursive()
+			// a user would not wish to see a URL just for recursive and not for regular List()
+			//
+			// To be consistent we have to filter them out
+			contentName = strings.TrimPrefix(contentName, strings.TrimSuffix(targetURL, "/")+"/")
 		}
-		// this special handling is necessary since we are sending back absolute paths with in ListRecursive()
-		// a user would not wish to see a URL just for recursive and not for regular List()
-		//
-		// To be consistent we have to filter them out
-		contentName := strings.TrimPrefix(contentCh.Content.Name, strings.TrimSuffix(targetURL, "/")+"/")
 		printContent(contentCh.Content.Time, contentCh.Content.Size, contentName, contentCh.Content.Type)
 	}
 	if err != nil {

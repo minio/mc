@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,7 @@
 package main
 
 import (
-	"path/filepath"
-
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
@@ -72,142 +69,74 @@ func runDiffCmd(ctx *cli.Context) {
 			console.Fatalf("Unable to parse argument [%s]. Reason: [%s].\n", secondURL, iodine.ToError(err))
 		}
 	}
-
-	doDiffCmd(firstURL, secondURL)
+	// TODO recursive is not working yet
+	newFirstURL := stripRecursiveURL(firstURL)
+	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
+		if diff.err != nil {
+			console.Fatalf(diff.message)
+		}
+		console.Infof(diff.message)
+	}
 }
 
-// urlJoinPath - Join a path to existing URL
-func urlJoinPath(urlStr string, path string) (newURLStr string, err error) {
-	u, err := client.Parse(urlStr)
+func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
+	defer close(ch)
+	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
-		return "", iodine.New(err, nil)
+		ch <- diff{
+			message: "Failed to stat " + firstURL + ". Reason: [" + iodine.ToError(err).Error() + "]\n",
+			err:     iodine.New(err, nil),
+		}
+		return
 	}
-
-	u.Path = filepath.Join(u.Path, path)
-	newURLStr = u.String()
-	return newURLStr, nil
+	_, secondContent, err := url2Stat(secondURL)
+	if err != nil {
+		ch <- diff{
+			message: "Failed to stat " + secondURL + ". Reason: [" + iodine.ToError(err).Error() + "]\n",
+			err:     iodine.New(err, nil),
+		}
+		return
+	}
+	if firstContent.Type.IsRegular() {
+		switch {
+		case secondContent.Type.IsDir():
+			newSecondURL, err := urlJoinPath(secondURL, firstURL)
+			if err != nil {
+				ch <- diff{
+					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" +
+						firstURL + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+					err: iodine.New(err, nil),
+				}
+				return
+			}
+			doDiffObjects(firstURL, newSecondURL, ch)
+		case !secondContent.Type.IsRegular():
+			ch <- diff{
+				message: firstURL + " and " + secondURL + " differs in type.\n",
+				err:     nil,
+			}
+			return
+		case secondContent.Type.IsRegular():
+			doDiffObjects(firstURL, secondURL, ch)
+		}
+	}
+	if firstContent.Type.IsDir() {
+		switch {
+		case !secondContent.Type.IsDir():
+			ch <- diff{
+				message: firstURL + " and " + secondURL + " differs in type.\n",
+				err:     nil,
+			}
+			return
+		default:
+			doDiffDirs(firstURL, secondURL, recursive, ch)
+		}
+	}
 }
 
 // doDiffCmd - Execute the diff command
-func doDiffCmd(firstURL string, secondURL string) {
-	_, firstContent, err := URL2Stat(firstURL)
-	if err != nil {
-		console.Fatalf("Failed to stat ‘%s’. Reason: [%s].\n", firstURL, iodine.ToError(err))
-	}
-
-	_, secondContent, err := URL2Stat(secondURL)
-	if err != nil {
-		console.Fatalf("Failed to stat ‘%s’. Reason: [%s].\n", secondURL, iodine.ToError(err))
-	}
-
-	if firstContent.Type.IsRegular() {
-		if !secondContent.Type.IsRegular() {
-			console.Infof("‘%s’ and ‘%s’ differs in type.\n", firstURL, secondURL)
-			return
-		}
-		doDiffCmdObjects(firstURL, secondURL)
-		return
-	}
-
-	if firstContent.Type.IsDir() {
-		if !secondContent.Type.IsDir() {
-			console.Infof("‘%s’ and ‘%s’ differs in type.\n", firstURL, secondURL)
-			return
-		}
-		doDiffCmdDirs(firstURL, secondURL)
-		return
-	}
-
-	console.Fatalf("‘%s’ is of unknown type.\n", firstURL)
-}
-
-// doDiffCmdObjects - Diff two object URLs
-func doDiffCmdObjects(firstURL string, secondURL string) {
-	if firstURL == secondURL { // kind of lame :p
-		return
-	}
-	_, firstContent, err := URL2Stat(firstURL)
-	if err != nil {
-		console.Fatalf("Failed to stat ‘%s’. Reason: [%s].\n", firstURL, iodine.ToError(err))
-	}
-
-	_, secondContent, err := URL2Stat(secondURL)
-	if err != nil {
-		console.Fatalf("Failed to stat ‘%s’. Reason: [%s].\n", secondURL, iodine.ToError(err))
-	}
-
-	if firstContent.Type.IsRegular() {
-		if !secondContent.Type.IsRegular() {
-			console.Infof("‘%s’ and ‘%s’ differs in type.\n", firstURL, secondURL)
-			return
-		}
-	} else {
-		console.Fatalf("‘%s’ is not an object. Please report this bug with ‘--debug’ option\n.", firstURL)
-	}
-
-	if firstContent.Size != secondContent.Size {
-		console.Infof("‘%s’ and ‘%s’ differs in size.\n", firstURL, secondURL)
-	}
-}
-
-// doDiffCmdDirs - Diff two Dir URLs
-func doDiffCmdDirs(firstURL string, secondURL string) {
-	firstClnt, firstContent, err := URL2Stat(firstURL)
-	if err != nil {
-		console.Fatalf("Failed to stat ‘%s’. Reason: [%s].\n", firstURL, iodine.ToError(err))
-	}
-
-	_, secondContent, err := URL2Stat(secondURL)
-	if err != nil {
-		console.Fatalf("Failed to stat ‘%s’. Reason: [%s].\n", secondURL, iodine.ToError(err))
-	}
-
-	if firstContent.Type.IsDir() {
-		if !secondContent.Type.IsDir() {
-			console.Infof("‘%s’ and ‘%s’ differs in type.\n", firstURL, secondURL)
-			return
-		}
-	} else {
-		console.Fatalf("‘%s’ is not a directory. Please report this bug with ‘--debug’ option\n.", firstURL)
-	}
-
-	for contentCh := range firstClnt.List() {
-		if contentCh.Err != nil {
-			console.Fatalf("Failed to list ‘%s’. Reason: [%s].\n", firstURL, iodine.ToError(contentCh.Err))
-		}
-
-		newFirstURL, err := urlJoinPath(firstURL, contentCh.Content.Name)
-		if err != nil {
-			console.Fatalf("Unable to construct new URL from ‘%s’ using ‘%s’. Reason: [%s].\n", firstURL, contentCh.Content.Name, iodine.ToError(err))
-		}
-
-		newSecondURL, err := urlJoinPath(secondURL, contentCh.Content.Name)
-		if err != nil {
-			console.Fatalf("Unable to construct new URL from ‘%s’ using ‘%s’. Reason: [%s].\n", secondURL, contentCh.Content.Name, iodine.ToError(err))
-		}
-
-		_, newFirstContent, err := URL2Stat(newFirstURL)
-		if err != nil {
-			console.Fatalf("Failed to stat ‘%s’. Reason: [%s].\n", newFirstURL, iodine.ToError(err))
-		}
-
-		_, newSecondContent, err := URL2Stat(newSecondURL)
-		if err != nil {
-			console.Infof("‘%s’ only in ‘%s’.\n", filepath.Base(newFirstContent.Name), firstURL)
-			continue
-		}
-
-		if newFirstContent.Type.IsDir() {
-			if !newSecondContent.Type.IsDir() {
-				console.Infof("‘%s’ and ‘%s’ differs in type.\n", newFirstURL, newSecondURL)
-				continue
-			}
-		} else if newFirstContent.Type.IsRegular() {
-			if !newSecondContent.Type.IsRegular() {
-				console.Infof("‘%s’ and ‘%s’ differs in type.\n", newFirstURL, newSecondURL)
-				continue
-			}
-			doDiffCmdObjects(newFirstURL, newSecondURL)
-		}
-	} // End of for-loop
+func doDiffCmd(firstURL, secondURL string, recursive bool) <-chan diff {
+	ch := make(chan diff)
+	go doDiffInRoutine(firstURL, secondURL, recursive, ch)
+	return ch
 }

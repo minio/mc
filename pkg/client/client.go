@@ -26,8 +26,7 @@ import (
 type Client interface {
 	// Common operations
 	Stat() (content *Content, err error)
-	List() <-chan ContentOnChannel
-	ListRecursive() <-chan ContentOnChannel
+	List(recursive bool) <-chan ContentOnChannel
 
 	// Bucket operations
 	MakeBucket() error

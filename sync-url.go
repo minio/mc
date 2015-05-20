@@ -16,11 +16,7 @@
 
 package main
 
-import (
-	"errors"
-
-	"github.com/minio/minio/pkg/iodine"
-)
+import "github.com/minio/minio/pkg/iodine"
 
 //
 //   NOTE: All the parse rules should reduced to A: Copy(Source, Target).
@@ -65,7 +61,7 @@ func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan *cpURLs {
 					syncURLsCh <- syncURLs
 				}
 			default:
-				syncURLsCh <- &cpURLs{Error: iodine.New(errors.New("Invalid arguments."), nil)}
+				syncURLsCh <- &cpURLs{Error: iodine.New(errInvalidArgument{}, nil)}
 			}
 		}
 	}()
