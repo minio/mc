@@ -19,6 +19,8 @@ package objectstorage_test
 import (
 	"net/http/httptest"
 	"testing"
+
+	. "github.com/minio/objectstorage-go"
 )
 
 func TestBucketOperations(t *testing.T) {
@@ -29,4 +31,18 @@ func TestBucketOperations(t *testing.T) {
 func TestObjectOperations(t *testing.T) {
 	ts := httptest.NewServer(robotsTxtHandler)
 	defer ts.Close()
+}
+
+func TestPartSize(t *testing.T) {
+	var maxPartSize uint64 = 1024 * 1024 * 1024 * 5
+	partSize := GetPartSize(5000000000000000000)
+	if partSize > MinimumPartSize {
+		if partSize != maxPartSize {
+			t.Fatal("invalid result, cannot be bigger than MaxPartSize 5GB")
+		}
+	}
+	partSize = GetPartSize(50000000000)
+	if partSize > MinimumPartSize {
+		t.Fatal("invalid result, cannot be bigger than MinimumPartSize 5MB")
+	}
 }

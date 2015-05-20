@@ -119,10 +119,6 @@ func getEndpoint(region string) string {
 	return Regions[region]
 }
 
-type api struct {
-	*lowLevelAPI
-}
-
 // Config - main configuration struct used by all to set endpoint, credentials, and other options for requests.
 type Config struct {
 	// Standard options
@@ -179,6 +175,10 @@ const (
 	LibraryVersion = "0.1"
 )
 
+type api struct {
+	*lowLevelAPI
+}
+
 // New - instantiate a new minio api client
 func New(config *Config) API {
 	return &api{&lowLevelAPI{config}}
@@ -215,18 +215,51 @@ func (a completedParts) Len() int           { return len(a) }
 func (a completedParts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a completedParts) Less(i, j int) bool { return a[i].PartNumber < a[j].PartNumber }
 
-// DefaultPartSize - default size per object after which PutObject becomes multipart
+// MinimumPartSize - minimum part size per object after which PutObject becomes multipart
 // one can change this value during a library import
-var DefaultPartSize uint64 = 1024 * 1024 * 5
+var MinimumPartSize uint64 = 1024 * 1024 * 5
 
-func (a *api) newObjectUpload(bucket, object string, data io.Reader) error {
+// maxParts - unexported right now
+var maxParts = uint64(10000)
+
+// maxPartSize - unexported right now
+var maxPartSize uint64 = 1024 * 1024 * 1024 * 5
+
+// GetPartSize - calculate the optimal part size for the given objectSize
+// NOTE: Assumption here is that for any given object upload to a S3 compatible object
+// storage it will have the following parameters as constants
+// ---------
+// maxParts
+// maximumPartSize
+// minimumPartSize
+// ---------
+//
+// if a the partSize after division with maxParts is greater than MinimumPartSize
+// then choose that to be the new part size, if not return MinimumPartSize
+//
+// special case where it happens to be that partSize is indeed bigger than the
+// maximum part size just return maxPartSize back
+func GetPartSize(objectSize uint64) uint64 {
+	partSize := (objectSize / (maxParts - 1)) // make sure last part has enough buffer and handle this poperly
+	{
+		if partSize > MinimumPartSize {
+			if partSize > maxPartSize {
+				return maxPartSize
+			}
+			return partSize
+		}
+		return MinimumPartSize
+	}
+}
+
+func (a *api) newObjectUpload(bucket, object string, size uint64, data io.Reader) error {
 	initiateMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
 	if err != nil {
 		return err
 	}
 	uploadID := initiateMultipartUploadResult.UploadID
 	completeMultipartUpload := new(completeMultipartUpload)
-	for part := range MultiPart(data, DefaultPartSize, nil) {
+	for part := range multiPart(data, GetPartSize(size), nil) {
 		if part.Err != nil {
 			return part.Err
 		}
@@ -292,7 +325,7 @@ func (a *api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string,
 	}
 }
 
-func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Reader) error {
+func (a *api) continueObjectUpload(bucket, object, uploadID string, size uint64, data io.Reader) error {
 	var skipParts []int
 	completeMultipartUpload := new(completeMultipartUpload)
 	for part := range a.listObjectPartsRecursive(bucket, object, uploadID) {
@@ -302,7 +335,7 @@ func (a *api) continueObjectUpload(bucket, object, uploadID string, data io.Read
 		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
 		skipParts = append(skipParts, part.Data.PartNumber)
 	}
-	for part := range MultiPart(data, DefaultPartSize, skipParts) {
+	for part := range multiPart(data, GetPartSize(size), skipParts) {
 		if part.Err != nil {
 			return part.Err
 		}
@@ -382,9 +415,9 @@ func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) erro
 		return errors.New("invalid object name, should be utf-8")
 	}
 	switch {
-	case size < DefaultPartSize:
+	case size < MinimumPartSize:
 		// Single Part use case, use PutObject directly
-		for part := range MultiPart(data, DefaultPartSize, nil) {
+		for part := range multiPart(data, MinimumPartSize, nil) {
 			if part.Err != nil {
 				return part.Err
 			}
@@ -408,9 +441,9 @@ func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) erro
 			}
 		}
 		if !inProgress {
-			return a.newObjectUpload(bucket, object, data)
+			return a.newObjectUpload(bucket, object, size, data)
 		}
-		return a.continueObjectUpload(bucket, object, inProgressUploadID, data)
+		return a.continueObjectUpload(bucket, object, inProgressUploadID, size, data)
 	}
 	return errors.New("Unexpected control flow")
 }
