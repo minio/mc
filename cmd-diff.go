@@ -73,9 +73,9 @@ func runDiffCmd(ctx *cli.Context) {
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		if diff.err != nil {
-			console.Fatalf(diff.message)
+			console.Fatalln(diff.message)
 		}
-		console.Infof(diff.message)
+		console.Infoln(diff.message)
 	}
 }
 
@@ -84,7 +84,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat " + firstURL + ". Reason: [" + iodine.ToError(err).Error() + "]\n",
+			message: "Failed to stat " + firstURL + ". Reason: [" + iodine.ToError(err).Error() + "]",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -92,7 +92,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat " + secondURL + ". Reason: [" + iodine.ToError(err).Error() + "]\n",
+			message: "Failed to stat " + secondURL + ". Reason: [" + iodine.ToError(err).Error() + "]",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -104,7 +104,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			if err != nil {
 				ch <- diff{
 					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" +
-						firstURL + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+						firstURL + "’. Reason: [" + iodine.ToError(err).Error() + "].",
 					err: iodine.New(err, nil),
 				}
 				return
@@ -112,7 +112,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			doDiffObjects(firstURL, newSecondURL, ch)
 		case !secondContent.Type.IsRegular():
 			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.\n",
+				message: firstURL + " and " + secondURL + " differs in type.",
 				err:     nil,
 			}
 			return
@@ -124,7 +124,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 		switch {
 		case !secondContent.Type.IsDir():
 			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.\n",
+				message: firstURL + " and " + secondURL + " differs in type.",
 				err:     nil,
 			}
 			return
