@@ -117,6 +117,9 @@ EXAMPLES:
    4. Copy a bucket recursively from aliased Amazon S3 object storage to local filesystem on Windows.
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014
 
+   5. Copy an object of non english characters to Amazon S3 object storage
+      $ mc {{.Name}} 本語 s3:andoria/本語
+
 `,
 	}
 
@@ -158,12 +161,11 @@ EXAMPLES:
       [2015-03-28 12:47:50 PDT] 11.00MiB Martok\Klingon Council Ministers.pdf
       [2015-03-31 14:46:33 PDT] 15.00MiB Gowron\Khitomer Conference Details.pdf
 
-   5. List files non recursively on local filesystem
-      $ mc {{.Name}}  /usr/lib/llvm-3.4
-      [2015-04-01 14:57:17 PDT]  12KiB lib/
-      [2015-04-01 14:57:17 PDT] 4.0KiB include/
-      [2015-04-01 14:57:10 PDT] 4.0KiB build/
-      [2015-04-01 14:57:07 PDT] 4.0KiB bin/
+   5. List files with non english characters on Amazon S3 object storage
+      $ mc ls s3:andoria/本...
+      [2015-05-19 17:21:49 PDT]    41B 本b語
+      [2015-05-19 17:24:19 PDT]    41B 本b語.1
+      [2015-05-19 17:28:22 PDT]    41B 本語
 
 `,
 	}
@@ -192,11 +194,14 @@ EXAMPLES:
    2. Sync a bucket recursively from Minio object storage to multiple buckets on Amazon S3 object storage
       $ mc {{.Name}} http://play.minio.io:9000/photos/2014... https://s3.amazonaws.com/backup-photos https://s3.amazonaws.com/my-photos
 
-   3. Copy a local folder recursively to Minio object storage and Amazon S3 object storage
+   3. Sync a local folder recursively to Minio object storage and Amazon S3 object storage
       $ mc {{.Name}} backup/... http://play.minio.io:9000/archive https://s3.amazonaws.com/archive
 
    4. Sync a bucket from aliased Amazon S3 object storage to multiple folders on Windows.
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
+
+   5. Sync a local file of non english character to Amazon s3 object storage
+      $ mc {{.Name}} 本語 s3:mylocaldocuments C:\backup\2014 play:backup
 
 `,
 	}
