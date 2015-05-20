@@ -71,7 +71,7 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 		url  string
 	}
 
-	want := []aliases{
+	wantAliases := []aliases{
 		{
 			"s3",
 			"https://s3.amazonaws.com",
@@ -85,12 +85,21 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 			"http://localhost:9000",
 		},
 	}
-	for _, alias := range want {
+	for _, alias := range wantAliases {
 		url, ok := data.Aliases[alias.name]
 		c.Assert(ok, Equals, true)
 		c.Assert(url, Equals, alias.url)
 	}
 
+	wantHosts := []string{
+		"play.minio.io:9000",
+		"dl.minio.io:9000",
+		"s3*.amazonaws.com",
+	}
+	for _, host := range wantHosts {
+		_, ok := data.Hosts[host]
+		c.Assert(ok, Equals, true)
+	}
 }
 
 func (s *CmdTestSuite) TestValidACL(c *C) {

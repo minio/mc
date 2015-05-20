@@ -60,11 +60,64 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	var contents []*client.Content
-	for contentCh := range fsc.List(true) {
+	for contentCh := range fsc.List(false) {
+		contents = append(contents, contentCh.Content)
+	}
+	c.Assert(err, IsNil)
+	c.Assert(len(contents), Equals, 2)
+
+	for _, content := range contents {
+		c.Assert(content.Type.IsRegular(), Equals, true)
+	}
+
+	objectPath = filepath.Join(root, "test1/newObject1")
+	fsc, err = New(objectPath)
+	c.Assert(err, IsNil)
+
+	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
+
+	fsc, err = New(root)
+	c.Assert(err, IsNil)
+
+	contents = nil
+	for contentCh := range fsc.List(false) {
 		contents = append(contents, contentCh.Content)
 	}
 	c.Assert(err, IsNil)
 	c.Assert(len(contents), Equals, 3)
+
+	for _, content := range contents {
+		// skip previous regular files
+		if content.Type.IsRegular() {
+			continue
+		}
+		c.Assert(content.Type.IsDir(), Equals, true)
+	}
+
+	fsc, err = New(root)
+	c.Assert(err, IsNil)
+
+	contents = nil
+	for contentCh := range fsc.List(true) {
+		contents = append(contents, contentCh.Content)
+	}
+
+	c.Assert(err, IsNil)
+	c.Assert(len(contents), Equals, 5)
+
+	var regularFiles int
+	var directories int
+	for _, content := range contents {
+		if content.Type.IsRegular() {
+			regularFiles++
+		}
+		if content.Type.IsDir() {
+			directories++
+		}
+	}
+	c.Assert(regularFiles, Equals, 3)
+	c.Assert(directories, Equals, 2)
 }
 
 func (s *MySuite) TestPutBucket(c *C) {
@@ -149,7 +202,30 @@ func (s *MySuite) TestGetObject(c *C) {
 
 }
 
-func (s *MySuite) TestStat(c *C) {
+func (s *MySuite) TestGetObjectRange(c *C) {
+	root, err := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+
+	objectPath := filepath.Join(root, "object")
+	fsc, err := New(objectPath)
+	c.Assert(err, IsNil)
+
+	data := "hello world"
+	dataLen := len(data)
+
+	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
+
+	reader, size, err := fsc.GetObject(0, 5)
+	c.Assert(err, IsNil)
+	var results bytes.Buffer
+	_, err = io.CopyN(&results, reader, int64(size))
+	c.Assert(err, IsNil)
+	c.Assert([]byte("hello"), DeepEquals, results.Bytes())
+}
+
+func (s *MySuite) TestStatObject(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
