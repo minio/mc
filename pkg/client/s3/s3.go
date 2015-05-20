@@ -155,7 +155,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 		objectMetadata.Name = c.hostURL.String()
 		objectMetadata.Time = metadata.LastModified
 		objectMetadata.Size = metadata.Size
-		objectMetadata.Type = 0
+		objectMetadata.Type = os.FileMode(0664)
 		return objectMetadata, nil
 	}
 	err := c.api.StatBucket(bucket)
@@ -232,7 +232,7 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 			content.Name = metadata.Key
 			content.Time = metadata.LastModified
 			content.Size = metadata.Size
-			content.Type = 0
+			content.Type = os.FileMode(0664)
 			contentCh <- client.ContentOnChannel{
 				Content: content,
 				Err:     nil,
@@ -255,7 +255,7 @@ func (c *s3Client) listInGoRoutine(contentCh chan client.ContentOnChannel) {
 				default:
 					content.Size = object.Data.Size
 					content.Time = object.Data.LastModified
-					content.Type = 0
+					content.Type = os.FileMode(0664)
 				}
 				contentCh <- client.ContentOnChannel{
 					Content: content,
@@ -281,7 +281,7 @@ func (c *s3Client) listRecursiveInGoRoutine(contentCh chan client.ContentOnChann
 		content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Data.Key
 		content.Size = object.Data.Size
 		content.Time = object.Data.LastModified
-		content.Type = 0
+		content.Type = os.FileMode(0664)
 		contentCh <- client.ContentOnChannel{
 			Content: content,
 			Err:     nil,
