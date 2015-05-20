@@ -421,7 +421,7 @@ func prepareCopyURLs(sourceURLs []string, targetURL string) <-chan *cpURLs {
 				cpURLsCh <- cpURLs
 			}
 		default:
-			cpURLsCh <- &cpURLs{Error: iodine.New(errors.New("Invalid arguments."), nil)}
+			cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidArgument{}, nil)}
 		}
 	}(sourceURLs, targetURL, cpURLsCh)
 

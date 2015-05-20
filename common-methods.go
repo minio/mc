@@ -75,8 +75,8 @@ func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Clie
 	return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
 }
 
-// URL2Stat - Returns client, config and its stat Content from the URL
-func URL2Stat(urlStr string) (client client.Client, content *client.Content, err error) {
+// url2Stat - Returns client, config and its stat Content from the URL
+func url2Stat(urlStr string) (client client.Client, content *client.Content, err error) {
 	config, err := getHostConfig(urlStr)
 	if err != nil {
 		return nil, nil, iodine.New(err, map[string]string{"URL": urlStr})

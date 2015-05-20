@@ -16,6 +16,14 @@
 
 package main
 
+type errNotAnObject struct {
+	url string
+}
+
+func (e errNotAnObject) Error() string {
+	return "Not an object " + e.url
+}
+
 type errInvalidACL struct {
 	acl string
 }
@@ -27,7 +35,7 @@ func (e errInvalidACL) Error() string {
 type errInvalidArgument struct{}
 
 func (e errInvalidArgument) Error() string {
-	return "Invalid argument"
+	return "Invalid argument."
 }
 
 type errUnsupportedScheme struct {
