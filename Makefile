@@ -43,7 +43,7 @@ pre-build:
 build-all: getdeps verifiers
 	@echo "Building Libraries:"
 	@godep go generate ./...
-	@godep go build -a ./... # have no stale packages
+	@godep go build -a ./... # no stale packages
 
 test-all: pre-build build-all
 	@echo "Running Test Suites:"
