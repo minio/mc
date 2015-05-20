@@ -17,9 +17,6 @@
 package main
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
@@ -88,12 +85,6 @@ func doListCmd(targetURL string, targetConfig *hostConfig, debug bool) error {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
 	err = doList(clnt, targetURL)
-	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		fmt.Println(console.Retry("Retrying ... %d", i))
-		// Progressively longer delays
-		time.Sleep(time.Duration(i*i) * time.Second)
-		err = doList(clnt, targetURL)
-	}
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -107,12 +98,6 @@ func doListRecursiveCmd(targetURL string, targetConfig *hostConfig, debug bool) 
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
 	err = doListRecursive(clnt, targetURL)
-	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		fmt.Println(console.Retry("Retrying ... %d", i))
-		// Progressively longer delays
-		time.Sleep(time.Duration(i*i) * time.Second)
-		err = doListRecursive(clnt, targetURL)
-	}
 	if err != nil {
 		return iodine.New(err, nil)
 	}

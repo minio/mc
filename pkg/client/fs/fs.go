@@ -39,12 +39,6 @@ func New(path string) (client.Client, error) {
 		return nil, iodine.New(errors.New("Path is empty."), nil)
 	}
 
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(path, string(filepath.Separator)) {
-		path = path + string('.')
-	}
-
 	return &fsClient{path: path}, nil
 }
 
@@ -52,8 +46,15 @@ func New(path string) (client.Client, error) {
 
 // fsStat - wrapper function to get file stat
 func (f *fsClient) fsStat() (os.FileInfo, error) {
+	fpath := f.path
+	// Golang strips trailing / if you clean(..) or
+	// EvalSymlinks(..). Adding '.' prevents it from doing so.
+	if strings.HasSuffix(fpath, string(filepath.Separator)) {
+		fpath = fpath + "."
+	}
+
 	// Resolve symlinks
-	fpath, err := filepath.EvalSymlinks(f.path)
+	fpath, err := filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
 		return nil, iodine.New(NotFound{path: f.path}, nil)
 	}
@@ -93,10 +94,17 @@ func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, erro
 		return nil, 0, iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
 
+	fpath := f.path
+	// Golang strips trailing / if you clean(..) or
+	// EvalSymlinks(..). Adding '.' prevents it from doing so.
+	if strings.HasSuffix(fpath, string(filepath.Separator)) {
+		fpath = fpath + "."
+	}
+
 	// Resolve symlinks
-	fpath, err := filepath.EvalSymlinks(f.path)
+	fpath, err = filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
-		return nil, 0, iodine.New(NotFound{path: fpath}, nil)
+		return nil, 0, iodine.New(NotFound{path: f.path}, nil)
 	}
 	if offset == 0 && length == 0 {
 		return f.get(content)
@@ -123,8 +131,15 @@ func (f *fsClient) List() <-chan client.ContentOnChannel {
 func (f *fsClient) list(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 
+	fpath := f.path
+	// Golang strips trailing / if you clean(..) or
+	// EvalSymlinks(..). Adding '.' prevents it from doing so.
+	if strings.HasSuffix(fpath, string(filepath.Separator)) {
+		fpath = fpath + "."
+	}
+
 	// Resolve symlinks
-	fpath, err := filepath.EvalSymlinks(f.path)
+	fpath, err := filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
