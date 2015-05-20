@@ -21,33 +21,35 @@ import (
 	"io"
 )
 
-// Part - message structure for results from the MultiPart
-type Part struct {
+// part - message structure for results from the MultiPart
+type part struct {
 	Data io.ReadSeeker
 	Err  error
 	Len  int64
 	Num  int // part number
 }
 
-// MultiPart reads from io.Reader, partitions the data into chunks of given chunksize, and sends
+// multiPart reads from io.Reader, partitions the data into chunks of given chunksize, and sends
 // each chunk as io.ReadSeeker to the caller over a channel
 //
 // This method runs until an EOF or error occurs. If an error occurs,
 // the method sends the error over the channel and returns.
 // Before returning, the channel is always closed.
-func MultiPart(reader io.Reader, chunkSize uint64, skipParts []int) <-chan Part {
-	ch := make(chan Part)
+//
+// additionally this function also skips list of parts if provided
+func multiPart(reader io.Reader, chunkSize uint64, skipParts []int) <-chan part {
+	ch := make(chan part)
 	go multiPartInRoutine(reader, chunkSize, skipParts, ch)
 	return ch
 }
 
-func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch chan Part) {
+func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch chan part) {
 	defer close(ch)
-	part := make([]byte, chunkSize)
-	n, err := io.ReadFull(reader, part)
+	p := make([]byte, chunkSize)
+	n, err := io.ReadFull(reader, p)
 	if err == io.EOF || err == io.ErrUnexpectedEOF { // short read, only single part return
-		ch <- Part{
-			Data: bytes.NewReader(part[0:n]),
+		ch <- part{
+			Data: bytes.NewReader(p[0:n]),
 			Err:  nil,
 			Len:  int64(n),
 			Num:  1,
@@ -56,7 +58,7 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 	}
 	// catastrophic error send error and return
 	if err != nil {
-		ch <- Part{
+		ch <- part{
 			Data: nil,
 			Err:  err,
 			Num:  0,
@@ -66,8 +68,8 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 	// send the first part
 	var num = 1
 	if !isPartNumberUploaded(num, skipParts) {
-		ch <- Part{
-			Data: bytes.NewReader(part),
+		ch <- part{
+			Data: bytes.NewReader(p),
 			Err:  nil,
 			Len:  int64(n),
 			Num:  num,
@@ -75,11 +77,11 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 	}
 	for err == nil {
 		var n int
-		part := make([]byte, chunkSize)
-		n, err = io.ReadFull(reader, part)
+		p := make([]byte, chunkSize)
+		n, err = io.ReadFull(reader, p)
 		if err != nil {
 			if err != io.EOF && err != io.ErrUnexpectedEOF { // catastrophic error
-				ch <- Part{
+				ch <- part{
 					Data: nil,
 					Err:  err,
 					Num:  0,
@@ -91,8 +93,8 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 		if isPartNumberUploaded(num, skipParts) {
 			continue
 		}
-		ch <- Part{
-			Data: bytes.NewReader(part[0:n]),
+		ch <- part{
+			Data: bytes.NewReader(p[0:n]),
 			Err:  nil,
 			Len:  int64(n),
 			Num:  num,
@@ -101,6 +103,7 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 	}
 }
 
+// to verify if partNumber is part of the skip part list
 func isPartNumberUploaded(partNumber int, skipParts []int) bool {
 	for _, part := range skipParts {
 		if part == partNumber {
