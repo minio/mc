@@ -27,9 +27,6 @@ import (
 
 // doCopy - Copy a singe file from source to destination
 func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, targetConfig *hostConfig, bar *barSend) error {
-	if sourceURL == targetURL {
-		return iodine.New(errSameURLs{source: sourceURL, target: targetURL}, nil)
-	}
 	reader, length, err := getSource(sourceURL, sourceConfig)
 	if err != nil {
 		return iodine.New(err, nil)
