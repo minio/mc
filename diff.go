@@ -48,7 +48,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’ " + "Reason: [" + iodine.ToError(err).Error() + "].\n",
+			message: "Failed to stat ‘" + firstURL + "’ " + "Reason: [" + iodine.ToError(err).Error() + "].",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -57,7 +57,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’ " + "Reason: [" + iodine.ToError(err).Error() + "].\n",
+			message: "Failed to stat ‘" + secondURL + "’ " + "Reason: [" + iodine.ToError(err).Error() + "].",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -71,13 +71,13 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	case firstContent.Type.IsRegular():
 		if !secondContent.Type.IsRegular() {
 			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.\n",
+				message: firstURL + " and " + secondURL + " differs in type.",
 				err:     nil,
 			}
 		}
 	default:
 		ch <- diff{
-			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option\n.",
+			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
 			err:     iodine.New(errNotAnObject{url: firstURL}, nil),
 		}
 		return
@@ -85,7 +85,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 
 	if firstContent.Size != secondContent.Size {
 		ch <- diff{
-			message: firstURL + " and " + secondURL + " differs in size.\n",
+			message: firstURL + " and " + secondURL + " differs in size.",
 			err:     nil,
 		}
 	}
@@ -96,7 +96,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	firstClnt, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’ ." + "Reason: [" + iodine.ToError(err).Error() + "].\n",
+			message: "Failed to stat ‘" + firstURL + "’ ." + "Reason: [" + iodine.ToError(err).Error() + "].",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -104,7 +104,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’ ." + "Reason: [" + iodine.ToError(err).Error() + "].\n",
+			message: "Failed to stat ‘" + secondURL + "’ ." + "Reason: [" + iodine.ToError(err).Error() + "].",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -113,13 +113,13 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	case firstContent.Type.IsDir():
 		if !secondContent.Type.IsDir() {
 			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.\n",
+				message: firstURL + " and " + secondURL + " differs in type.",
 				err:     nil,
 			}
 		}
 	default:
 		ch <- diff{
-			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option\n.",
+			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
 			err:     iodine.New(errNotAnObject{url: firstURL}, nil),
 		}
 		return
@@ -127,7 +127,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	for contentCh := range firstClnt.List(recursive) {
 		if contentCh.Err != nil {
 			ch <- diff{
-				message: "Failed to list ‘" + firstURL + "’. Reason: [" + iodine.ToError(contentCh.Err).Error() + "].\n",
+				message: "Failed to list ‘" + firstURL + "’. Reason: [" + iodine.ToError(contentCh.Err).Error() + "].",
 				err:     iodine.New(contentCh.Err, nil),
 			}
 			return
@@ -136,7 +136,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		if err != nil {
 			ch <- diff{
 				message: "Unable to construct new URL from ‘" + firstURL + "’ using ‘" +
-					contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+					contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].",
 				err: iodine.New(err, nil),
 			}
 			return
@@ -145,7 +145,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		if err != nil {
 			ch <- diff{
 				message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" +
-					contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+					contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].",
 				err: iodine.New(err, nil),
 			}
 			return
@@ -153,7 +153,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		_, newFirstContent, err := url2Stat(newFirstURL)
 		if err != nil {
 			ch <- diff{
-				message: "Failed to stat ‘" + newFirstURL + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+				message: "Failed to stat ‘" + newFirstURL + "’. Reason: [" + iodine.ToError(err).Error() + "].",
 				err:     iodine.New(err, nil),
 			}
 			return
@@ -161,7 +161,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		_, newSecondContent, err := url2Stat(newSecondURL)
 		if err != nil {
 			ch <- diff{
-				message: "Failed to stat ‘" + newSecondURL + "’. Reason: [" + iodine.ToError(err).Error() + "].\n",
+				message: "Failed to stat ‘" + newSecondURL + "’. Reason: [" + iodine.ToError(err).Error() + "].",
 				err:     iodine.New(err, nil),
 			}
 			return
@@ -170,7 +170,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		case newFirstContent.Type.IsDir():
 			if !newSecondContent.Type.IsDir() {
 				ch <- diff{
-					message: newFirstURL + " and " + newSecondURL + " differs in type.\n",
+					message: newFirstURL + " and " + newSecondURL + " differs in type.",
 					err:     nil,
 				}
 			}
@@ -178,7 +178,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		case newFirstContent.Type.IsRegular():
 			if !newSecondContent.Type.IsRegular() {
 				ch <- diff{
-					message: newFirstURL + " and " + newSecondURL + " differs in type.\n",
+					message: newFirstURL + " and " + newSecondURL + " differs in type.",
 					err:     nil,
 				}
 				continue
