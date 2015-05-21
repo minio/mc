@@ -50,6 +50,7 @@ func (s *CmdTestSuite) TestDiffObjects(c *C) {
 
 	for diff := range doDiffCmd(objectPath1, objectPath2, false) {
 		c.Assert(diff.err, IsNil)
+		c.Assert(len(diff.message), Equals, 0)
 	}
 }
 
@@ -78,7 +79,9 @@ func (s *CmdTestSuite) TestDiffDirs(c *C) {
 		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
+
 	for diff := range doDiffCmd(root1, root2, false) {
 		c.Assert(diff.err, IsNil)
+		c.Assert(len(diff.message), Equals, 0)
 	}
 }

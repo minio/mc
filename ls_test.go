@@ -26,7 +26,7 @@ import (
 	. "github.com/minio/check"
 )
 
-func (s *CmdTestSuite) TestLSNonRecursive(c *C) {
+func (s *CmdTestSuite) TestLSCmd(c *C) {
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -40,28 +40,23 @@ func (s *CmdTestSuite) TestLSNonRecursive(c *C) {
 		c.Assert(err, IsNil)
 	}
 
-	clnt, err := getNewClient(root, &hostConfig{}, false)
+	err = doListCmd(root, &hostConfig{}, false, false)
 	c.Assert(err, IsNil)
-	err = doList(clnt, root, false)
-	c.Assert(err, IsNil)
-}
 
-func (s *CmdTestSuite) TestLSRecursive(c *C) {
-	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	err = doListCmd(root, &hostConfig{}, true, false)
 	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
 
 	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
+		objectPath := server.URL + "/bucket/object" + strconv.Itoa(i)
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+		err := putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
+	err = doListCmd(server.URL+"/bucket", &hostConfig{}, false, false)
+	c.Assert(err, IsNil)
 
-	clnt, err := getNewClient(root, &hostConfig{}, true)
+	err = doListCmd(server.URL+"/bucket", &hostConfig{}, true, false)
 	c.Assert(err, IsNil)
-	err = doList(clnt, root, false)
-	c.Assert(err, IsNil)
+
 }

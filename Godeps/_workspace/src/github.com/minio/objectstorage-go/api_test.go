@@ -17,11 +17,14 @@
 package objectstorage
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func ExampleGetPartSize() {
@@ -41,13 +44,16 @@ type bucketHandler struct {
 func (h bucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == "GET":
-		if r.URL.Path == "/" {
+		switch {
+		case r.URL.Path == "/":
 			response := []byte("<ListAllMyBucketsResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Buckets><Bucket><Name>bucket</Name><CreationDate>2015-05-20T23:05:09.230Z</CreationDate></Bucket></Buckets><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner></ListAllMyBucketsResult>")
 			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
 			w.Write(response)
+		case r.URL.Path == "/bucket":
+			response := []byte("<ListBucketResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Contents><ETag>259d04a13802ae09c7e41be50ccc6baa</ETag><Key>object</Key><LastModified>2015-05-21T18:24:21.097Z</LastModified><Size>22061</Size><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Delimiter></Delimiter><EncodingType></EncodingType><IsTruncated>false</IsTruncated><Marker></Marker><MaxKeys>1000</MaxKeys><Name>testbucket</Name><NextMarker></NextMarker><Prefix></Prefix></ListBucketResult>")
+			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
+			w.Write(response)
 		}
-	case r.Method == "POST":
-		w.WriteHeader(http.StatusOK)
 	case r.Method == "PUT":
 		switch {
 		case r.URL.Path == h.resource:
@@ -118,6 +124,16 @@ func TestBucketOperations(t *testing.T) {
 			t.Errorf("Error")
 		}
 	}
+
+	for o := range a.ListObjects("bucket", "", true) {
+		if o.Err != nil {
+			t.Fatalf(o.Err.Error())
+		}
+		if o.Data.Key != "object" {
+			t.Errorf("Error")
+		}
+	}
+
 	err = a.DeleteBucket("bucket")
 	if err != nil {
 		t.Errorf("Error")
@@ -141,10 +157,99 @@ type objectHandler struct {
 func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == "PUT":
+		length, err := strconv.Atoi(r.Header.Get("Content-Length"))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		var buffer bytes.Buffer
+		_, err = io.CopyN(&buffer, r.Body, int64(length))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !bytes.Equal(h.data, buffer.Bytes()) {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
+		w.WriteHeader(http.StatusOK)
 	case r.Method == "HEAD":
+		if r.URL.Path != h.resource {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Length", strconv.Itoa(len(h.data)))
+		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
+		w.WriteHeader(http.StatusOK)
 	case r.Method == "POST":
 	case r.Method == "GET":
+		if r.URL.Path != h.resource {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Length", strconv.Itoa(len(h.data)))
+		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
+		w.WriteHeader(http.StatusOK)
+		io.Copy(w, bytes.NewReader(h.data))
 	case r.Method == "DELETE":
+		if r.URL.Path != h.resource {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		h.resource = ""
+		h.data = nil
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func TestObjectOperations(t *testing.T) {
+	object := objectHandler(objectHandler{
+		resource: "/bucket/object",
+		data:     []byte("Hello, World"),
+	})
+	server := httptest.NewServer(object)
+	defer server.Close()
+
+	a := New(&Config{Endpoint: server.URL})
+	data := []byte("Hello, World")
+	err := a.PutObject("bucket", "object", uint64(len(data)), bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("Error")
+	}
+	metadata, err := a.StatObject("bucket", "object")
+	if err != nil {
+		t.Fatalf("Error")
+	}
+	if metadata.Key != "object" {
+		t.Fatalf("Error")
+	}
+	if metadata.ETag != "9af2f8218b150c351ad802c6f3d66abe" {
+		t.Fatalf("Error")
+	}
+
+	reader, metadata, err := a.GetObject("bucket", "object", 0, 0)
+	if err != nil {
+		t.Fatalf("Error")
+	}
+	if metadata.Key != "object" {
+		t.Fatalf("Error")
+	}
+	if metadata.ETag != "9af2f8218b150c351ad802c6f3d66abe" {
+		t.Fatalf("Error")
+	}
+
+	var buffer bytes.Buffer
+	_, err = io.Copy(&buffer, reader)
+	if !bytes.Equal(buffer.Bytes(), data) {
+		t.Fatalf("Error")
+	}
+
+	err = a.DeleteObject("bucket", "object")
+	if err != nil {
+		t.Fatalf("Error")
 	}
 }
 
