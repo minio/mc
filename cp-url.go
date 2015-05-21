@@ -181,7 +181,6 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *cpURLs {
 		// Source is not a regular file
 		return &cpURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
 	}
-
 	targetClient, err := target2Client(targetURL)
 	if err != nil {
 		return &cpURLs{Error: iodine.New(err, nil)}
@@ -200,7 +199,6 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *cpURLs {
 			return &cpURLs{Error: iodine.New(errSameURLs{source: sourceURL, target: targetURL}, nil)}
 		}
 	}
-
 	// All OK.. We can proceed. Type A
 	return &cpURLs{SourceContent: sourceContent, TargetContent: &client.Content{Name: targetURL}}
 }

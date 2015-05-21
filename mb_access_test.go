@@ -17,17 +17,15 @@
 package main
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 
 	. "github.com/minio/check"
 )
 
-func (s *CmdTestSuite) TestLSNonRecursive(c *C) {
+func (s *CmdTestSuite) TestMbCmd(c *C) {
 	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(configDir)
@@ -45,21 +43,11 @@ func (s *CmdTestSuite) TestLSNonRecursive(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
 
-	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
-		data := "hello"
-		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(err, IsNil)
-	}
-
-	clnt, err := getNewClient(root, &hostConfig{}, false)
-	c.Assert(err, IsNil)
-	err = doList(clnt, root, false)
+	_, err = doMakeBucketCmd(filepath.Join(root, "bucket"), &hostConfig{}, false)
 	c.Assert(err, IsNil)
 }
 
-func (s *CmdTestSuite) TestLSRecursive(c *C) {
+func (s *CmdTestSuite) TestAccessCmd(c *C) {
 	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(configDir)
@@ -77,16 +65,9 @@ func (s *CmdTestSuite) TestLSRecursive(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
 
-	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
-		data := "hello"
-		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(err, IsNil)
-	}
-
-	clnt, err := getNewClient(root, &hostConfig{}, true)
+	_, err = doMakeBucketCmd(filepath.Join(root, "bucket"), &hostConfig{}, false)
 	c.Assert(err, IsNil)
-	err = doList(clnt, root, false)
+
+	_, err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write", &hostConfig{}, false)
 	c.Assert(err, IsNil)
 }
