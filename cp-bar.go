@@ -18,6 +18,7 @@ package main
 
 import (
 	"io"
+	"sync/atomic"
 	"time"
 
 	"github.com/cheggaaa/pb"
@@ -75,10 +76,8 @@ func (b barSend) Finish() {
 func newCpBar() barSend {
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
-
 	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
 		started := false
-
 		bar := pb.New64(0)
 		bar.SetUnits(pb.U_BYTES)
 		bar.SetRefreshRate(time.Millisecond * 10)
@@ -88,13 +87,12 @@ func newCpBar() barSend {
 			// Colorize
 			console.Print("\r" + s)
 		}
-
 		// Feels like wget
 		bar.Format("[=> ]")
 		for msg := range cmdCh {
 			switch msg.Cmd {
 			case cpBarCmdExtend:
-				bar.Total += msg.Arg.(int64)
+				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 				if bar.Total > 0 && !started {
 					started = true
 					bar.Start()

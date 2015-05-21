@@ -228,6 +228,16 @@ var (
 	}
 )
 
+// Lock console
+func Lock() {
+	mutex.Lock()
+}
+
+// Unlock locked console
+func Unlock() {
+	mutex.Unlock()
+}
+
 // SetTheme sets a color theme
 func SetTheme(themeName string) error {
 	if !IsValidTheme(themeName) {

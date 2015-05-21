@@ -60,22 +60,56 @@ func args2URLs(args cli.Args) ([]string, error) {
 	return URLs, nil
 }
 
-func runCopyInRoutine(cpurls *cpURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup) {
+func doCopyInRoutine(cpurls *cpURLs, bar *barSend, cpQueue chan bool, ch chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	srcConfig, err := getHostConfig(cpurls.SourceContent.Name)
 	if err != nil {
-		console.Errorln(iodine.ToError(err))
+		ch <- err
 		return
 	}
 	tgtConfig, err := getHostConfig(cpurls.TargetContent.Name)
 	if err != nil {
-		console.Errorln(iodine.ToError(err))
+		ch <- err
 		return
 	}
 	if err := doCopy(cpurls.SourceContent.Name, srcConfig, cpurls.TargetContent.Name, tgtConfig, bar); err != nil {
-		console.Errorln(iodine.ToError(err))
+		ch <- err
 	}
 	<-cpQueue
+}
+
+func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error {
+	ch := make(chan error)
+	go func(sourceURLs []string, targetURL string, bar barSend, ch chan error) {
+		defer close(ch)
+		go func(sourceURLs []string, targetURL string) {
+			for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
+				if cpURLs.Error != nil {
+					// no need to print errors here, any error here
+					// will be printed later during Copy()
+					continue
+				}
+				if !globalQuietFlag {
+					bar.Extend(cpURLs.SourceContent.Size)
+				}
+			}
+		}(sourceURLs, targetURL)
+
+		cpQueue := make(chan bool, intMax(runtime.NumCPU()-1, 1))
+		wg := new(sync.WaitGroup)
+		for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
+			if cpURLs.Error != nil {
+				ch <- cpURLs.Error
+				continue
+			}
+			cpQueue <- true
+			wg.Add(1)
+			go doCopyInRoutine(cpURLs, &bar, cpQueue, ch, wg)
+		}
+		close(cpQueue)
+		wg.Wait()
+	}(sourceURLs, targetURL, bar, ch)
+	return ch
 }
 
 // runCopyCmd is bound to sub-command
@@ -102,34 +136,11 @@ func runCopyCmd(ctx *cli.Context) {
 	if !globalQuietFlag {
 		bar = newCpBar()
 	}
-
-	go func(sourceURLs []string, targetURL string) {
-		for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
-			if cpURLs.Error != nil {
-				// no need to print errors here, any error here
-				// will be printed later during Copy()
-				continue
-			}
-			if !globalQuietFlag {
-				bar.Extend(cpURLs.SourceContent.Size)
-			}
+	for err := range doCopyCmd(sourceURLs, targetURL, bar) {
+		if err != nil {
+			console.Errorln(iodine.ToError(err))
 		}
-	}(sourceURLs, targetURL)
-
-	cpQueue := make(chan bool, intMax(runtime.NumCPU()-1, 1))
-	wg := new(sync.WaitGroup)
-
-	for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
-		if cpURLs.Error != nil {
-			console.Errorln(iodine.ToError(cpURLs.Error))
-			continue
-		}
-		cpQueue <- true
-		wg.Add(1)
-		go runCopyInRoutine(cpURLs, &bar, cpQueue, wg)
 	}
-	close(cpQueue)
-	wg.Wait()
 	if !globalQuietFlag {
 		bar.Finish()
 	}
