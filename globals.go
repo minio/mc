@@ -26,7 +26,7 @@ var (
 )
 
 // mc configuration related constants
-const (
+var (
 	mcConfigDir        = ".mc/"
 	mcConfigWindowsDir = "mc/"
 	mcConfigFile       = "config.json"

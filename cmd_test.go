@@ -17,10 +17,13 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -45,6 +48,12 @@ func mustGetMcConfigDir() string {
 
 func (s *CmdTestSuite) TestGetNewClient(c *C) {
 	_, err := getNewClient("http://example.com/bucket1", &hostConfig{}, false)
+	c.Assert(err, IsNil)
+	_, err = getNewClient("C:\\Users\\Administrator\\MyDocuments", &hostConfig{}, false)
+	c.Assert(err, IsNil)
+	_, err = getNewClient("/usr/bin/pandoc", &hostConfig{}, false)
+	c.Assert(err, IsNil)
+	_, err = getNewClient("pkg/client", &hostConfig{}, false)
 	c.Assert(err, IsNil)
 }
 
@@ -102,6 +111,15 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 	}
 }
 
+func (s *CmdTestSuite) TestRecursiveURL(c *C) {
+	c.Assert(isURLRecursive("url..."), Equals, true)
+	c.Assert(isURLRecursive("url.."), Equals, false)
+	c.Assert(stripRecursiveURL("url..."), Equals, "url")
+	c.Assert(stripRecursiveURL("url.."), Equals, "url..")
+	c.Assert(stripRecursiveURL("..."), Equals, ".")
+	c.Assert(stripRecursiveURL("...url"), Equals, "...url")
+}
+
 func (s *CmdTestSuite) TestValidACL(c *C) {
 	acl := bucketACL("private")
 	c.Assert(acl.isValidBucketACL(), Equals, true)
@@ -113,6 +131,12 @@ func (s *CmdTestSuite) TestInvalidACL(c *C) {
 }
 
 func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
+	switch runtime.GOOS {
+	case "windows":
+		mcConfigWindowsDir = "mc/"
+	default:
+		mcConfigDir = ".mc/"
+	}
 	u, err := user.Current()
 	c.Assert(err, IsNil)
 	dir, err := getMcConfigDir()
@@ -160,6 +184,7 @@ func (s *CmdTestSuite) TestIsvalidAliasName(c *C) {
 	c.Check(isValidAliasName("0dslka-4"), Equals, false)
 	c.Check(isValidAliasName("-fdslka"), Equals, false)
 	c.Check(isValidAliasName("help"), Equals, false)
+	c.Check(isValidAliasName("private"), Equals, false) // reserved names
 }
 
 func (s *CmdTestSuite) TestEmptyExpansions(c *C) {
@@ -231,4 +256,62 @@ func (s *CmdTestSuite) TestIsValidRetry(c *C) {
 	opError.Op = "foo"
 	c.Assert(isValidRetry(opError), Equals, false)
 	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, false)
+}
+
+func (s *CmdTestSuite) TestConfig(c *C) {
+	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+	switch runtime.GOOS {
+	case "windows":
+		mcConfigWindowsDir = root
+	default:
+		mcConfigDir = root
+	}
+
+	_, err = doConfig("generate", nil)
+	c.Assert(err, IsNil)
+}
+
+func (s *CmdTestSuite) TestCommonMethods(c *C) {
+	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(configDir)
+	switch runtime.GOOS {
+	case "windows":
+		mcConfigWindowsDir = configDir
+	default:
+		mcConfigDir = configDir
+	}
+	_, err = doConfig("generate", nil)
+	c.Assert(err, IsNil)
+
+	/// filesystem
+	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+
+	objectPath := filepath.Join(root, "object1")
+	data := "hello"
+	dataLen := len(data)
+
+	err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
+
+	reader, size, err := getSource(objectPath, &hostConfig{})
+	c.Assert(err, IsNil)
+	c.Assert(size, Not(Equals), 0)
+	var results bytes.Buffer
+	_, err = io.CopyN(&results, reader, int64(size))
+	c.Assert(err, IsNil)
+	c.Assert([]byte(data), DeepEquals, results.Bytes())
+
+	_, content, err := url2Stat(objectPath)
+	c.Assert(err, IsNil)
+	c.Assert(content.Name, Equals, filepath.Join(root, "object1"))
+	c.Assert(content.Type.IsRegular(), Equals, true)
+
+	_, _, err = url2Stat(objectPath + "invalid")
+	c.Assert(err, Not(IsNil))
+
 }
