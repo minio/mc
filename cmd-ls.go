@@ -33,25 +33,25 @@ func runListCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		console.Debugln(iodine.New(err, nil))
-		console.Fatalf("Unable to read config file [%s]. Reason: [%s].\n", mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalf("Unable to read config file ‘%s’. Reason: %s.\n", mustGetMcConfigPath(), iodine.ToError(err))
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range ctx.Args() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
-			switch iodine.ToError(err).(type) {
+			switch e := iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
 				console.Debugln(iodine.New(err, nil))
-				console.Fatalf("Unknown type of URL [%s].\n", arg)
+				console.Fatalf("Unknown type of URL ‘%s’. Reason: %s.\n", e.url, e)
 			default:
 				console.Debugln(iodine.New(err, nil))
-				console.Fatalf("Unable to parse argument [%s]. Reason: [%s].\n", arg, iodine.ToError(err))
+				console.Fatalf("Unable to parse argument ‘%s’. Reason: %s.\n", arg, iodine.ToError(err))
 			}
 		}
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("Unable to read host configuration for [%s] from config file [%s]. Reason: [%s].\n",
+			console.Fatalf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.\n",
 				targetURL, mustGetMcConfigPath(), iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
@@ -63,7 +63,7 @@ func runListCmd(ctx *cli.Context) {
 		err = iodine.New(err, nil)
 		if err != nil {
 			console.Debugln(err)
-			console.Fatalf("Failed to list [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+			console.Fatalf("Failed to list ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
 		}
 	}
 }

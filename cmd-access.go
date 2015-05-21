@@ -44,23 +44,23 @@ func runAccessCmd(ctx *cli.Context) {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("reading URL [%s] failed with following reason: [%s]\n", e.url, e)
+			console.Fatalf("Unknown type of URL ‘%s’. Reason: %s.\n", e.url, e)
 		default:
 			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("reading URLs failed with following reason: [%s]\n", e)
+			console.Fatalf("reading URLs failed with following Reason: %s\n", e)
 		}
 	}
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
 		console.Debugln(iodine.New(errInvalidACL{acl: acl.String()}, nil))
-		console.Fatalf("Access type [%s] is not supported. Valid types are [private, public, readonly].\n", acl)
+		console.Fatalf("Access type ‘%s’ is not supported. Valid types are [private, public, readonly].\n", acl)
 	}
 	targetURLs = targetURLs[1:] // 1 or more target URLs
 	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+			console.Fatalf("Unable to read configuration for host ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
@@ -83,7 +83,7 @@ func doUpdateAccessCmd(targetURL, targetACL string, targetConfig *hostConfig, de
 	clnt, err = getNewClient(targetURL, targetConfig, debug)
 	if err != nil {
 		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("Unable to initialize client for [%s]. Reason: [%s].\n",
+		msg := fmt.Sprintf("Unable to initialize client for ‘%s’. Reason: %s.\n",
 			targetURL, iodine.ToError(err))
 		return msg, err
 	}
@@ -100,7 +100,7 @@ func doUpdateAccess(clnt client.Client, targetURL, targetACL string) (string, er
 	}
 	if err != nil {
 		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("Failed to add bucket access policy for URL [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
 		return msg, err
 	}
 	return "", nil
