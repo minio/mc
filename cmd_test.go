@@ -28,6 +28,8 @@ import (
 
 	"errors"
 	"net"
+	"net/http"
+	"net/http/httptest"
 
 	. "github.com/minio/check"
 	"github.com/minio/mc/pkg/quick"
@@ -45,6 +47,22 @@ func mustGetMcConfigDir() string {
 	return dir
 }
 
+var server *httptest.Server
+
+type objectAPIHandler struct {
+	bucket string
+	object []string
+	data   []byte
+}
+
+func (h objectAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.Method == "GET":
+	case r.Method == "PUT":
+	case r.Method == "POST":
+	}
+}
+
 func (s *CmdTestSuite) SetUpSuite(c *C) {
 	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -52,10 +70,15 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 
 	_, err = doConfig("generate", nil)
 	c.Assert(err, IsNil)
+
+	objectAPI := objectAPIHandler(objectAPIHandler{})
+	server = httptest.NewServer(objectAPI)
 }
 
 func (s *CmdTestSuite) TearDownSuite(c *C) {
 	os.RemoveAll(customConfigDir)
+	server.Close()
+
 }
 
 func (s *CmdTestSuite) TestGetNewClient(c *C) {

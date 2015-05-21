@@ -94,3 +94,37 @@ func (s *CmdTestSuite) TestCpTypeC(c *C) {
 		c.Assert(err, IsNil)
 	}
 }
+
+func (s *CmdTestSuite) TestCpTypeD(c *C) {
+	/// filesystem
+	source1, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(err, IsNil)
+	source2, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(source1)
+	defer os.RemoveAll(source2)
+
+	for i := 0; i < 10; i++ {
+		objectPath := filepath.Join(source1, "object"+strconv.Itoa(i))
+		data := "hello"
+		dataLen := len(data)
+		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
+	}
+
+	for i := 10; i < 20; i++ {
+		objectPath := filepath.Join(source2, "object"+strconv.Itoa(i))
+		data := "hello"
+		dataLen := len(data)
+		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
+	}
+
+	target, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(target)
+
+	for err := range doCopyCmd([]string{source1 + "...", source2 + "..."}, target, bar) {
+		c.Assert(err, IsNil)
+	}
+}
