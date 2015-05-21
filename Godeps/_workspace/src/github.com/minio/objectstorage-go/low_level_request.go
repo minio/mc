@@ -103,11 +103,19 @@ func (r *request) Do() (resp *http.Response, err error) {
 	if r.config.AccessKeyID != "" && r.config.SecretAccessKey != "" {
 		r.SignV4()
 	}
-	client := &http.Client{}
+	transport := http.DefaultTransport
 	if r.config.Transport != nil {
-		client.Transport = r.config.Transport
+		transport = r.config.Transport
 	}
-	return client.Do(r.req)
+	// do not use http.Client{}, while it may seem intuitive but the problem seems to be
+	// that http.Client{} internally follows redirects and there is no easier way to disable
+	// it from outside using a configuration parameter -
+	//     this auto redirect causes complications in verifying subsequent errors
+	//
+	// The best is to use RoundTrip() directly, so the request comes back to the caller where
+	// we are going to handle such replies. And indeed that is the right thing to do here.
+	//
+	return transport.RoundTrip(r.req)
 }
 
 // Set - set additional headers if any
