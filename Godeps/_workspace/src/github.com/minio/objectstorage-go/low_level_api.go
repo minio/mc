@@ -326,7 +326,14 @@ func (a *lowLevelAPI) deleteBucket(bucket string) error {
 	if err != nil {
 		return err
 	}
-	return resp.Body.Close()
+	defer resp.Body.Close()
+	if resp != nil {
+		if resp.StatusCode != http.StatusOK {
+			// Head has no response body, handle it
+			return fmt.Errorf("%s", resp.Status)
+		}
+	}
+	return nil
 }
 
 /// Object Read/Write/Stat Operations
@@ -544,6 +551,10 @@ func (a *lowLevelAPI) listBuckets() (*listAllMyBucketsResult, error) {
 	}
 	defer resp.Body.Close()
 	if resp != nil {
+		// for un-authenticated requests, amazon sends a redirect handle it
+		if resp.StatusCode == http.StatusTemporaryRedirect {
+			return nil, fmt.Errorf("%s", resp.Status)
+		}
 		if resp.StatusCode != http.StatusOK {
 			return nil, responseToError(resp)
 		}
