@@ -21,25 +21,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 
 	. "github.com/minio/check"
 )
 
 func (s *CmdTestSuite) TestLSNonRecursive(c *C) {
-	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(configDir)
-	switch runtime.GOOS {
-	case "windows":
-		mcConfigWindowsDir = configDir
-	default:
-		mcConfigDir = configDir
-	}
-	_, err = doConfig("generate", nil)
-	c.Assert(err, IsNil)
-
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -60,18 +47,6 @@ func (s *CmdTestSuite) TestLSNonRecursive(c *C) {
 }
 
 func (s *CmdTestSuite) TestLSRecursive(c *C) {
-	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(configDir)
-	switch runtime.GOOS {
-	case "windows":
-		mcConfigWindowsDir = configDir
-	default:
-		mcConfigDir = configDir
-	}
-	_, err = doConfig("generate", nil)
-	c.Assert(err, IsNil)
-
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)

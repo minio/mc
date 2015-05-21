@@ -38,8 +38,20 @@ var cache struct {
 	configLoaded bool // set to true if cache is valid.
 }
 
+// customConfigDir used internally only by test functions
+var customConfigDir string
+
 // getMcConfigDir - construct minio client config folder
 func getMcConfigDir() (string, error) {
+	if customConfigDir != "" {
+		// For windows the path is slightly different
+		switch runtime.GOOS {
+		case "windows":
+			return path.Join(customConfigDir, mcConfigWindowsDir), nil
+		default:
+			return path.Join(customConfigDir, mcConfigDir), nil
+		}
+	}
 	u, err := user.Current()
 	if err != nil {
 		return "", iodine.New(err, nil)

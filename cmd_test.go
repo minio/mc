@@ -21,7 +21,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -44,6 +43,19 @@ var _ = Suite(&CmdTestSuite{})
 func mustGetMcConfigDir() string {
 	dir, _ := getMcConfigDir()
 	return dir
+}
+
+func (s *CmdTestSuite) SetUpSuite(c *C) {
+	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(err, IsNil)
+	customConfigDir = configDir
+
+	_, err = doConfig("generate", nil)
+	c.Assert(err, IsNil)
+}
+
+func (s *CmdTestSuite) TearDownSuite(c *C) {
+	os.RemoveAll(customConfigDir)
 }
 
 func (s *CmdTestSuite) TestGetNewClient(c *C) {
@@ -131,25 +143,17 @@ func (s *CmdTestSuite) TestInvalidACL(c *C) {
 }
 
 func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
-	switch runtime.GOOS {
-	case "windows":
-		mcConfigWindowsDir = "mc/"
-	default:
-		mcConfigDir = ".mc/"
-	}
-	u, err := user.Current()
-	c.Assert(err, IsNil)
 	dir, err := getMcConfigDir()
 	c.Assert(err, IsNil)
 	switch runtime.GOOS {
 	case "linux":
-		c.Assert(dir, Equals, path.Join(u.HomeDir, ".mc/"))
+		c.Assert(dir, Equals, path.Join(customConfigDir, ".mc/"))
 	case "windows":
-		c.Assert(dir, Equals, path.Join(u.HomeDir, "mc/"))
+		c.Assert(dir, Equals, path.Join(customConfigDir, "mc/"))
 	case "darwin":
-		c.Assert(dir, Equals, path.Join(u.HomeDir, ".mc/"))
+		c.Assert(dir, Equals, path.Join(customConfigDir, ".mc/"))
 	case "freebsd":
-		c.Assert(dir, Equals, path.Join(u.HomeDir, ".mc/"))
+		c.Assert(dir, Equals, path.Join(customConfigDir, ".mc/"))
 	default:
 		c.Fail()
 	}
@@ -258,34 +262,7 @@ func (s *CmdTestSuite) TestIsValidRetry(c *C) {
 	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, false)
 }
 
-func (s *CmdTestSuite) TestConfig(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-	switch runtime.GOOS {
-	case "windows":
-		mcConfigWindowsDir = root
-	default:
-		mcConfigDir = root
-	}
-
-	_, err = doConfig("generate", nil)
-	c.Assert(err, IsNil)
-}
-
 func (s *CmdTestSuite) TestCommonMethods(c *C) {
-	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(configDir)
-	switch runtime.GOOS {
-	case "windows":
-		mcConfigWindowsDir = configDir
-	default:
-		mcConfigDir = configDir
-	}
-	_, err = doConfig("generate", nil)
-	c.Assert(err, IsNil)
-
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
