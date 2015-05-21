@@ -24,17 +24,7 @@ import (
 	. "github.com/minio/check"
 )
 
-func (s *CmdTestSuite) TestMbCmd(c *C) {
-	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-
-	_, err = doMakeBucketCmd(filepath.Join(root, "bucket"), &hostConfig{}, false)
-	c.Assert(err, IsNil)
-}
-
-func (s *CmdTestSuite) TestAccessCmd(c *C) {
+func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -45,4 +35,17 @@ func (s *CmdTestSuite) TestAccessCmd(c *C) {
 
 	_, err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write", &hostConfig{}, false)
 	c.Assert(err, IsNil)
+
+	_, err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "invalid", &hostConfig{}, false)
+	c.Assert(err, Not(IsNil))
+
+	_, err = doMakeBucketCmd(server.URL+"/bucket", &hostConfig{}, false)
+	c.Assert(err, IsNil)
+
+	_, err = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write", &hostConfig{}, false)
+	c.Assert(err, IsNil)
+
+	_, err = doUpdateAccessCmd(server.URL+"/bucket", "invalid", &hostConfig{}, false)
+	c.Assert(err, Not(IsNil))
+
 }

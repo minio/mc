@@ -32,13 +32,17 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object1")
+	objectPathServer := server.URL + "/bucket/object1"
 	data := "hello"
 	dataLen := len(data)
 	err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
+	err = putTarget(objectPathServer, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
 
 	sourceConfigMap := make(map[string]*hostConfig)
 	sourceConfigMap[objectPath] = &hostConfig{}
+	sourceConfigMap[server.URL+"/bucket/object1"] = &hostConfig{}
 
 	_, err = doCatCmd(sourceConfigMap, false)
 	c.Assert(err, IsNil)

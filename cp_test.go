@@ -49,6 +49,11 @@ func (s *CmdTestSuite) TestCpTypeA(c *C) {
 	for err := range doCopyCmd([]string{sourcePath}, targetPath, bar) {
 		c.Assert(err, IsNil)
 	}
+
+	targetURL := server.URL + "/bucket/newObject"
+	for err := range doCopyCmd([]string{sourcePath}, targetURL, bar) {
+		c.Assert(err, IsNil)
+	}
 }
 
 func (s *CmdTestSuite) TestCpTypeB(c *C) {
@@ -68,6 +73,11 @@ func (s *CmdTestSuite) TestCpTypeB(c *C) {
 	defer os.RemoveAll(target)
 
 	for err := range doCopyCmd([]string{sourcePath}, target, bar) {
+		c.Assert(err, IsNil)
+	}
+
+	targetURL := server.URL + "/bucket"
+	for err := range doCopyCmd([]string{sourcePath}, targetURL, bar) {
 		c.Assert(err, IsNil)
 	}
 }
@@ -91,6 +101,11 @@ func (s *CmdTestSuite) TestCpTypeC(c *C) {
 	defer os.RemoveAll(target)
 
 	for err := range doCopyCmd([]string{source + "..."}, target, bar) {
+		c.Assert(err, IsNil)
+	}
+
+	targetURL := server.URL + "/bucket"
+	for err := range doCopyCmd([]string{source + "..."}, targetURL, bar) {
 		c.Assert(err, IsNil)
 	}
 }
@@ -125,6 +140,11 @@ func (s *CmdTestSuite) TestCpTypeD(c *C) {
 	defer os.RemoveAll(target)
 
 	for err := range doCopyCmd([]string{source1 + "...", source2 + "..."}, target, bar) {
+		c.Assert(err, IsNil)
+	}
+
+	targetURL := server.URL + "/bucket"
+	for err := range doCopyCmd([]string{source1 + "...", source2 + "..."}, targetURL, bar) {
 		c.Assert(err, IsNil)
 	}
 }
