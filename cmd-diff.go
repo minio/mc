@@ -84,7 +84,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat " + firstURL + ". Reason: [" + iodine.ToError(err).Error() + "]",
+			message: "Failed to stat ‘" + firstURL + "’. Reason: [" + iodine.ToError(err).Error() + "]",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -92,7 +92,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat " + secondURL + ". Reason: [" + iodine.ToError(err).Error() + "]",
+			message: "Failed to stat ‘" + secondURL + "’. Reason: [" + iodine.ToError(err).Error() + "]",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -112,7 +112,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			doDiffObjects(firstURL, newSecondURL, ch)
 		case !secondContent.Type.IsRegular():
 			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.",
+				message: "‘" + firstURL + "’ and " + "‘" + secondURL + "’ differs in type.",
 				err:     nil,
 			}
 			return
@@ -124,7 +124,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 		switch {
 		case !secondContent.Type.IsDir():
 			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.",
+				message: "‘" + firstURL + "’ and " + "‘" + secondURL + "’ differs in type.",
 				err:     nil,
 			}
 			return
