@@ -48,7 +48,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’ " + "Reason: [" + iodine.ToError(err).Error() + "].",
+			message: "Failed to stat ‘" + firstURL + "’ " + "Reason: " + iodine.ToError(err).Error() + ".",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -57,7 +57,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’ " + "Reason: [" + iodine.ToError(err).Error() + "].",
+			message: "Failed to stat ‘" + secondURL + "’ " + "Reason: " + iodine.ToError(err).Error() + ".",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -96,7 +96,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	firstClnt, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’ ." + "Reason: [" + iodine.ToError(err).Error() + "].",
+			message: "Failed to stat ‘" + firstURL + "’ ." + "Reason: " + iodine.ToError(err).Error() + ".",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -104,7 +104,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’ ." + "Reason: [" + iodine.ToError(err).Error() + "].",
+			message: "Failed to stat ‘" + secondURL + "’ ." + "Reason: " + iodine.ToError(err).Error() + ".",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -127,7 +127,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	for contentCh := range firstClnt.List(recursive) {
 		if contentCh.Err != nil {
 			ch <- diff{
-				message: "Failed to list ‘" + firstURL + "’. Reason: [" + iodine.ToError(contentCh.Err).Error() + "].",
+				message: "Failed to list ‘" + firstURL + "’. Reason: " + iodine.ToError(contentCh.Err).Error() + ".",
 				err:     iodine.New(contentCh.Err, nil),
 			}
 			return
@@ -136,7 +136,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		if err != nil {
 			ch <- diff{
 				message: "Unable to construct new URL from ‘" + firstURL + "’ using ‘" +
-					contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].",
+					contentCh.Content.Name + "’. Reason: " + iodine.ToError(err).Error() + ".",
 				err: iodine.New(err, nil),
 			}
 			return
@@ -145,7 +145,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		if err != nil {
 			ch <- diff{
 				message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" +
-					contentCh.Content.Name + "’. Reason: [" + iodine.ToError(err).Error() + "].",
+					contentCh.Content.Name + "’. Reason: " + iodine.ToError(err).Error() + ".",
 				err: iodine.New(err, nil),
 			}
 			return
@@ -153,7 +153,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		_, newFirstContent, err := url2Stat(newFirstURL)
 		if err != nil {
 			ch <- diff{
-				message: "Failed to stat ‘" + newFirstURL + "’. Reason: [" + iodine.ToError(err).Error() + "].",
+				message: "Failed to stat ‘" + newFirstURL + "’. Reason: " + iodine.ToError(err).Error() + ".",
 				err:     iodine.New(err, nil),
 			}
 			return
@@ -161,7 +161,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 		_, newSecondContent, err := url2Stat(newSecondURL)
 		if err != nil {
 			ch <- diff{
-				message: "Failed to stat ‘" + newSecondURL + "’. Reason: [" + iodine.ToError(err).Error() + "].",
+				message: "Failed to stat ‘" + newSecondURL + "’. Reason: " + iodine.ToError(err).Error() + ".",
 				err:     iodine.New(err, nil),
 			}
 			return

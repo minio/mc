@@ -37,7 +37,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	config, err := getMcConfig()
 	if err != nil {
 		console.Debugln(iodine.New(err, nil))
-		console.Fatalf("Unable to read config file [%s].\n", mustGetMcConfigPath())
+		console.Fatalf("Unable to read config file ‘%s’. Reason: %s\n", mustGetMcConfigPath(), iodine.ToError(err))
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
 	targetURLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
@@ -45,17 +45,17 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("Unknown URL type [%s] passed. Reason: [%s].\n", e.url, e)
+			console.Fatalf("Unknown URL type ‘%s’ passed. Reason: %s.\n", e.url, e)
 		default:
 			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("Error in parsing path or URL. Reason: [%s].\n", e)
+			console.Fatalf("Error in parsing path or URL. Reason: %s.\n", e)
 		}
 	}
 	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			console.Debugln(iodine.New(err, nil))
-			console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+			console.Fatalf("Unable to read configuration for host ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
@@ -79,7 +79,7 @@ func doMakeBucketCmd(targetURL string, targetConfig *hostConfig, debug bool) (st
 	clnt, err = getNewClient(targetURL, targetConfig, debug)
 	if err != nil {
 		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("Unable to initialize client for [%s]. Reason: [%s].\n",
+		msg := fmt.Sprintf("Unable to initialize client for ‘%s’. Reason: %s.\n",
 			targetURL, iodine.ToError(err))
 		return msg, err
 	}
@@ -97,7 +97,7 @@ func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
 	}
 	if err != nil {
 		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("Failed to create bucket for URL [%s]. Reason: [%s].\n", targetURL, iodine.ToError(err))
+		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
 		return msg, err
 	}
 	return "", nil

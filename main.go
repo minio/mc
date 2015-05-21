@@ -112,10 +112,10 @@ func main() {
 		if console.IsValidTheme(themeName) {
 			err := console.SetTheme(themeName)
 			if err != nil {
-				console.Fatalf("Failed to set theme [%s]. Reason: [%s].\n", themeName, iodine.ToError(err))
+				console.Fatalf("Failed to set theme ‘%s’. Reason: %s.\n", themeName, iodine.ToError(err))
 			}
 		} else {
-			console.Fatalf("Theme [%s] is not supported.  Please choose from this list: %s.\n", themeName, console.GetThemeNames())
+			console.Fatalf("Theme ‘%s’ is not supported.  Please choose from this list: %s.\n", themeName, console.GetThemeNames())
 		}
 		checkConfig()
 		return nil

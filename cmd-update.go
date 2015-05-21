@@ -61,7 +61,7 @@ func runUpdateCmd(ctx *cli.Context) {
 	hostConfig, err := getHostConfig(mcUpdateURL)
 	if err != nil {
 		console.Debugln(iodine.New(err, nil))
-		console.Fatalf("Unable to read configuration for host [%s]. Reason: [%s].\n", mcUpdateURL, iodine.ToError(err))
+		console.Fatalf("Unable to read configuration for host ‘%s’. Reason: %s.\n", mcUpdateURL, iodine.ToError(err))
 	}
 	msg, err := doUpdateCheck(hostConfig)
 	if err != nil {

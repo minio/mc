@@ -32,7 +32,7 @@ func runDiffCmd(ctx *cli.Context) {
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalf("Unable to read config file [%s]. Reason: [%s].\n", mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalf("Unable to read config file ‘%s’. Reason: %s.\n", mustGetMcConfigPath(), iodine.ToError(err))
 	}
 
 	firstURL := ctx.Args().First()
@@ -42,21 +42,21 @@ func runDiffCmd(ctx *cli.Context) {
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Fatalf("Unknown type of URL [%s].\n", firstURL)
+			console.Fatalf("Unknown type of URL ‘%s’.\n", firstURL)
 		default:
-			console.Fatalf("Unable to parse argument [%s]. Reason: [%s].\n", firstURL, iodine.ToError(err))
+			console.Fatalf("Unable to parse argument ‘%s’. Reason: %s.\n", firstURL, iodine.ToError(err))
 		}
 	}
 
 	_, err = getHostConfig(firstURL)
 	if err != nil {
-		console.Fatalf("Unable to read host configuration for [%s] from config file [%s]. Reason: [%s].\n",
+		console.Fatalf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.\n",
 			firstURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
 
 	_, err = getHostConfig(secondURL)
 	if err != nil {
-		console.Fatalf("Unable to read host configuration for [%s] from config file [%s]. Reason: [%s].\n",
+		console.Fatalf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.\n",
 			secondURL, mustGetMcConfigPath(), iodine.ToError(err))
 	}
 
@@ -64,9 +64,9 @@ func runDiffCmd(ctx *cli.Context) {
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Fatalf("Unknown type of URL [%s].\n", secondURL)
+			console.Fatalf("Unknown type of URL ‘%s’. Reason: %s.\n", secondURL, iodine.ToError(err))
 		default:
-			console.Fatalf("Unable to parse argument [%s]. Reason: [%s].\n", secondURL, iodine.ToError(err))
+			console.Fatalf("Unable to parse argument ‘%s’. Reason: %s.\n", secondURL, iodine.ToError(err))
 		}
 	}
 	// TODO recursive is not working yet
@@ -84,7 +84,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’. Reason: [" + iodine.ToError(err).Error() + "]",
+			message: "Failed to stat ‘" + firstURL + "’. Reason: " + iodine.ToError(err).Error(),
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -92,7 +92,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’. Reason: [" + iodine.ToError(err).Error() + "]",
+			message: "Failed to stat ‘" + secondURL + "’. Reason: " + iodine.ToError(err).Error(),
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -104,7 +104,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			if err != nil {
 				ch <- diff{
 					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" +
-						firstURL + "’. Reason: [" + iodine.ToError(err).Error() + "].",
+						firstURL + "’. Reason: " + iodine.ToError(err).Error(),
 					err: iodine.New(err, nil),
 				}
 				return
