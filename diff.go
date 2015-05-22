@@ -89,39 +89,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	}
 }
 
-// doDiffDirs - Diff two Dir URLs
-func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
-	firstClnt, firstContent, err := url2Stat(firstURL)
-	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’ ." + "Reason: " + iodine.ToError(err).Error() + ".",
-			err:     iodine.New(err, nil),
-		}
-		return
-	}
-	_, secondContent, err := url2Stat(secondURL)
-	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’ ." + "Reason: " + iodine.ToError(err).Error() + ".",
-			err:     iodine.New(err, nil),
-		}
-		return
-	}
-	switch {
-	case firstContent.Type.IsDir():
-		if !secondContent.Type.IsDir() {
-			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.",
-				err:     nil,
-			}
-		}
-	default:
-		ch <- diff{
-			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
-			err:     iodine.New(errNotAnObject{url: firstURL}, nil),
-		}
-		return
-	}
+func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive bool, ch chan diff) {
 	for contentCh := range firstClnt.List(recursive) {
 		if contentCh.Err != nil {
 			ch <- diff{
@@ -185,4 +153,40 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 			}
 		}
 	} // End of for-loop
+}
+
+// doDiffDirs - Diff two Dir URLs
+func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
+	firstClnt, firstContent, err := url2Stat(firstURL)
+	if err != nil {
+		ch <- diff{
+			message: "Failed to stat ‘" + firstURL + "’ ." + "Reason: " + iodine.ToError(err).Error() + ".",
+			err:     iodine.New(err, nil),
+		}
+		return
+	}
+	_, secondContent, err := url2Stat(secondURL)
+	if err != nil {
+		ch <- diff{
+			message: "Failed to stat ‘" + secondURL + "’ ." + "Reason: " + iodine.ToError(err).Error() + ".",
+			err:     iodine.New(err, nil),
+		}
+		return
+	}
+	switch {
+	case firstContent.Type.IsDir():
+		if !secondContent.Type.IsDir() {
+			ch <- diff{
+				message: firstURL + " and " + secondURL + " differs in type.",
+				err:     nil,
+			}
+		}
+	default:
+		ch <- diff{
+			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
+			err:     iodine.New(errNotAnObject{url: firstURL}, nil),
+		}
+		return
+	}
+	dodiffdirs(firstClnt, firstURL, secondURL, recursive, ch)
 }
