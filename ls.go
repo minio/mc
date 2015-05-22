@@ -63,8 +63,8 @@ func printJSON(content *client.Content) {
 
 // printContent prints content meta-data
 func printContent(date time.Time, size int64, name string, fileType os.FileMode) {
-	fmt.Printf(console.Time("[%s] ", date.Local().Format(printDate)))
-	fmt.Printf(console.Size("%6s ", humanize.IBytes(uint64(size))))
+	console.Printf(console.Time("[%s] ", date.Local().Format(printDate)))
+	console.Printf(console.Size("%6s ", humanize.IBytes(uint64(size))))
 
 	// just making it explicit
 	switch {
@@ -72,12 +72,12 @@ func printContent(date time.Time, size int64, name string, fileType os.FileMode)
 		// if one finds a prior suffix no need to append a new one
 		switch {
 		case strings.HasSuffix(name, "/") == true:
-			fmt.Println(console.Dir("%s", name))
+			console.Println(console.Dir("%s", name))
 		default:
-			fmt.Println(console.Dir("%s/", name))
+			console.Println(console.Dir("%s/", name))
 		}
 	default:
-		fmt.Println(console.File("%s", name))
+		console.Println(console.File("%s", name))
 	}
 }
 

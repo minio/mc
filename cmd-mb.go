@@ -85,7 +85,7 @@ func doMakeBucketCmd(targetURL string, targetConfig *hostConfig) (string, error)
 func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
 	err := clnt.MakeBucket()
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		fmt.Println(console.Retry("Retrying ... %d", i))
+		console.Println(console.Retry("Retrying ... %d", i))
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
 		err = clnt.MakeBucket()
