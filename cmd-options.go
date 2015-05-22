@@ -316,24 +316,22 @@ EXAMPLES:
 
 // Collection of mc commands currently supported are
 //
-// ----
-// ls     List files and objects
-// cp     Copy objects and files from multiple sources to single destination
-// sync   Copy objects and files from single source to multiple destionations
-// mb     Make a bucket
-// access Set permissions [public, private, readonly, authenticated] for buckets and folders.
-// cat    Concantenate an object to standard output
-// config Generate configuration "/home/harsha/.mc/config.json" file.
-// update Check for new software updates
-// ----
+//  ls     List files and objects
+//  cp     Copy objects and files from multiple sources to single destination
+//  sync   Copy objects and files from single source to multiple destionations
+//  mb     Make a bucket
+//  access Set permissions [public, private, readonly, authenticated] for buckets and folders.
+//  cat    Concantenate an object to standard output
+//  config Generate configuration "/home/harsha/.mc/config.json" file.
+//  update Check for new software updates
 //
 var commands = []cli.Command{
 	lsCmd,
+	mbCmd,
+	catCmd,
 	cpCmd,
 	syncCmd,
 	diffCmd,
-	catCmd,
-	mbCmd,
 	accessCmd,
 	configCmd,
 	updateCmd,
@@ -342,11 +340,11 @@ var commands = []cli.Command{
 
 // Collection of mc flags currently supported
 //
-// --theme       "minimal"Choose a console theme from this list [*minimal*, nocolor, white]
-// --debug       Enable HTTP tracing
-// --quiet, -q   Supress chatty console output
-// --retry "5"   Number of retry count
-// --version, -v print the version
+//  --theme       "minimal"Choose a console theme from this list [*minimal*, nocolor, white]
+//  --debug       Enable HTTP tracing
+//  --quiet, -q   Supress chatty console output
+//  --retry "5"   Number of retry count
+//  --version, -v print the version
 //
 var (
 	flags = []cli.Flag{

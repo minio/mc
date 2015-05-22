@@ -55,11 +55,11 @@ var (
 	Printf = themesDB[currThemeName].Info.Printf
 
 	// Fatal prints a error message and exits
-	Fatal = func(a ...interface{}) { print(themesDB[currThemeName].Fatal, a...); os.Exit(1) }
+	Fatal = func(a ...interface{}) { print(themesDB[currThemeName].Error, a...); os.Exit(1) }
 	// Fatalln prints a error message with a new line and exits
-	Fatalln = func(a ...interface{}) { println(themesDB[currThemeName].Fatal, a...); os.Exit(1) }
+	Fatalln = func(a ...interface{}) { println(themesDB[currThemeName].Error, a...); os.Exit(1) }
 	// Fatalf prints a error message with formatting and exits
-	Fatalf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Fatal, f, a...); os.Exit(1) }
+	Fatalf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Error, f, a...); os.Exit(1) }
 
 	// Error prints a error message
 	Error = func(a ...interface{}) { print(themesDB[currThemeName].Error, a...) }
