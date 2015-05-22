@@ -45,28 +45,26 @@ func urlJoinPath(url1, url2 string) (newURLStr string, err error) {
 
 // doDiffObjects - Diff two object URLs
 func doDiffObjects(firstURL, secondURL string, ch chan diff) {
-	_, firstContent, err := url2Stat(firstURL)
-	if err != nil {
+	_, firstContent, errFirst := url2Stat(firstURL)
+	_, secondContent, errSecond := url2Stat(secondURL)
+
+	switch {
+	case errFirst != nil && errSecond == nil:
 		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’ " + "Reason: " + iodine.ToError(err).Error() + ".",
-			err:     iodine.New(err, nil),
+			message: "Only in ‘" + secondURL + "’",
+			err:     nil,
+		}
+		return
+	case errFirst == nil && errSecond != nil:
+		ch <- diff{
+			message: "Only in ‘" + firstURL + "’",
+			err:     nil,
 		}
 		return
 	}
-
-	_, secondContent, err := url2Stat(secondURL)
-	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’ " + "Reason: " + iodine.ToError(err).Error() + ".",
-			err:     iodine.New(err, nil),
-		}
-		return
-	}
-
 	if firstContent.Name == secondContent.Name {
 		return
 	}
-
 	switch {
 	case firstContent.Type.IsRegular():
 		if !secondContent.Type.IsRegular() {
@@ -150,40 +148,41 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 			}
 			return
 		}
-		_, newFirstContent, err := url2Stat(newFirstURL)
-		if err != nil {
-			ch <- diff{
-				message: "Failed to stat ‘" + newFirstURL + "’. Reason: " + iodine.ToError(err).Error() + ".",
-				err:     iodine.New(err, nil),
-			}
-			return
-		}
-		_, newSecondContent, err := url2Stat(newSecondURL)
-		if err != nil {
-			ch <- diff{
-				message: "Failed to stat ‘" + newSecondURL + "’. Reason: " + iodine.ToError(err).Error() + ".",
-				err:     iodine.New(err, nil),
-			}
-			return
-		}
+		_, newFirstContent, errFirst := url2Stat(newFirstURL)
+		_, newSecondContent, errSecond := url2Stat(newSecondURL)
 		switch {
-		case newFirstContent.Type.IsDir():
-			if !newSecondContent.Type.IsDir() {
-				ch <- diff{
-					message: newFirstURL + " and " + newSecondURL + " differs in type.",
-					err:     nil,
-				}
+		case errFirst != nil && errSecond == nil:
+			ch <- diff{
+				message: "Only in ‘" + secondURL + "’",
+				err:     nil,
 			}
 			continue
-		case newFirstContent.Type.IsRegular():
-			if !newSecondContent.Type.IsRegular() {
-				ch <- diff{
-					message: newFirstURL + " and " + newSecondURL + " differs in type.",
-					err:     nil,
+		case errFirst == nil && errSecond != nil:
+			ch <- diff{
+				message: "Only in ‘" + firstURL + "’",
+				err:     nil,
+			}
+			continue
+		case errFirst == nil && errSecond == nil:
+			switch {
+			case newFirstContent.Type.IsDir():
+				if !newSecondContent.Type.IsDir() {
+					ch <- diff{
+						message: newFirstURL + " and " + newSecondURL + " differs in type.",
+						err:     nil,
+					}
 				}
 				continue
+			case newFirstContent.Type.IsRegular():
+				if !newSecondContent.Type.IsRegular() {
+					ch <- diff{
+						message: newFirstURL + " and " + newSecondURL + " differs in type.",
+						err:     nil,
+					}
+					continue
+				}
+				doDiffObjects(newFirstURL, newSecondURL, ch)
 			}
-			doDiffObjects(newFirstURL, newSecondURL, ch)
 		}
 	} // End of for-loop
 }
