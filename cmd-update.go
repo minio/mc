@@ -30,7 +30,7 @@ const (
 )
 
 func doUpdateCheck(config *hostConfig) (string, error) {
-	clnt, err := getNewClient(mcUpdateURL, config, globalDebugFlag)
+	clnt, err := getNewClient(mcUpdateURL, config)
 	if err != nil {
 		return "Unable to create client: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
 	}
@@ -60,12 +60,10 @@ func runUpdateCmd(ctx *cli.Context) {
 	}
 	hostConfig, err := getHostConfig(mcUpdateURL)
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read configuration for host ‘%s’. Reason: %s.\n", mcUpdateURL, iodine.ToError(err))
 	}
 	msg, err := doUpdateCheck(hostConfig)
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
 		console.Fatalln(msg)
 	}
 	if msg != "" {

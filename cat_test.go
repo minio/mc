@@ -44,6 +44,6 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 	sourceConfigMap[objectPath] = &hostConfig{}
 	sourceConfigMap[server.URL+"/bucket/object1"] = &hostConfig{}
 
-	_, err = doCatCmd(sourceConfigMap, false)
+	_, err = doCatCmd(sourceConfigMap)
 	c.Assert(err, IsNil)
 }

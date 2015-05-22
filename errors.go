@@ -24,14 +24,6 @@ func (e errNotAnObject) Error() string {
 	return "Not an object " + e.url
 }
 
-type errInvalidACL struct {
-	acl string
-}
-
-func (e errInvalidACL) Error() string {
-	return "Invalid ACL: " + e.acl
-}
-
 type errInvalidArgument struct{}
 
 func (e errInvalidArgument) Error() string {

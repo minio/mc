@@ -340,7 +340,8 @@ var commands = []cli.Command{
 
 // Collection of mc flags currently supported
 //
-//  --theme       "minimal"Choose a console theme from this list [*minimal*, nocolor, white]
+//  --theme       "minimal" Choose a console theme from this list [*minimal*, nocolor, white]
+//  --json        Enable json formatted output
 //  --debug       Enable HTTP tracing
 //  --quiet, -q   Supress chatty console output
 //  --retry "5"   Number of retry count
@@ -361,6 +362,10 @@ var (
 				}
 				return strings.Join(keys, ", ")
 			}()),
+		},
+		cli.BoolFlag{
+			Name:  "json",
+			Usage: "Enable json formatted output",
 		},
 		cli.BoolFlag{
 			Name:  "debug",

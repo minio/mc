@@ -34,7 +34,6 @@ import (
 func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
 		console.Fatalln("Unable to determine current user")
 	}
 
@@ -46,7 +45,6 @@ func checkConfig() {
 	// Ensures config file is sane
 	_, err = getMcConfig()
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read config file: %s\n", mustGetMcConfigPath())
 	}
 }
@@ -104,18 +102,20 @@ func main() {
 		globalQuietFlag = ctx.GlobalBool("quiet")
 		globalDebugFlag = ctx.GlobalBool("debug")
 		globalMaxRetryFlag = ctx.GlobalInt("retry")
+		globalJSONFlag = ctx.GlobalBool("json")
 		if globalDebugFlag {
 			app.ExtraInfo = getSystemData()
 			console.NoDebugPrint = false
 		}
 		themeName := ctx.GlobalString("theme")
-		if console.IsValidTheme(themeName) {
+		switch {
+		case console.IsValidTheme(themeName) != true:
+			console.Fatalf("Theme ‘%s’ is not supported.  Please choose from this list: %s.\n", themeName, console.GetThemeNames())
+		default:
 			err := console.SetTheme(themeName)
 			if err != nil {
 				console.Fatalf("Failed to set theme ‘%s’. Reason: %s.\n", themeName, iodine.ToError(err))
 			}
-		} else {
-			console.Fatalf("Theme ‘%s’ is not supported.  Please choose from this list: %s.\n", themeName, console.GetThemeNames())
 		}
 		checkConfig()
 		return nil

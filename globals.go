@@ -21,6 +21,7 @@ var (
 	globalDebugFlag    = false // Debug flag set via command line
 	globalQuietFlag    = false // Quiet flag set via command line
 	globalMaxRetryFlag = 5     // Maximum number of retries
+	globalJSONFlag     = false // Json flag set via command line
 
 	mcCurrentConfigVersion = "1.0.0"
 )
