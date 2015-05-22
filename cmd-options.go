@@ -147,7 +147,7 @@ EXAMPLES:
 
 var diffCmd = cli.Command{
 	Name:        "diff",
-	Usage:       "Quickly check if the two objects or directories differ",
+	Usage:       "Quickly check if the two objects, buckets or directories differ",
 	Description: "NOTE: This command *DOES NOT* check for content match, which means objects with same size, but different content will not be spotted.",
 	Action:      runDiffCmd,
 	CustomHelpTemplate: `NAME:
