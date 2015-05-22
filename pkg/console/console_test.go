@@ -17,7 +17,6 @@
 package console
 
 import (
-	"runtime"
 	"testing"
 
 	. "github.com/minio/check"
@@ -39,9 +38,5 @@ func (s *MySuite) TestSetTheme(c *C) {
 }
 
 func (s *MySuite) TestDefaultTheme(c *C) {
-	if runtime.GOOS == "windows" {
-		c.Assert(GetDefaultThemeName(), Equals, "nocolor")
-	} else {
-		c.Assert(GetDefaultThemeName(), Equals, "minimal")
-	}
+	c.Assert(GetDefaultThemeName(), Equals, "minimal")
 }

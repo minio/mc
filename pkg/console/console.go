@@ -19,13 +19,13 @@ package console
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"sync"
 
 	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/minio/minio/pkg/iodine"
+	"github.com/shiena/ansicolor"
 )
 
 // NoDebugPrint defines if the input should be printed or not. By default it's set to true.
@@ -33,6 +33,9 @@ var NoDebugPrint = true
 
 var (
 	mutex = &sync.RWMutex{}
+
+	stdoutColoredOutput = ansicolor.NewAnsiColorWriter(os.Stdout)
+	stderrColoredOutput = ansicolor.NewAnsiColorWriter(os.Stderr)
 
 	// themesDB contains supported list of Themes
 	themesDB = map[string]Theme{"minimal": MiniTheme, "nocolor": NoColorTheme, "white": WhiteTheme}
@@ -128,7 +131,7 @@ var (
 		case themesDB[currThemeName].Debug:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <DEBUG> ")
 			c.Print(a...)
 			color.Output = output
@@ -136,7 +139,7 @@ var (
 		case themesDB[currThemeName].Fatal:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <FATAL> ")
 			c.Print(a...)
 			color.Output = output
@@ -144,7 +147,7 @@ var (
 		case themesDB[currThemeName].Error:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <ERROR> ")
 			c.Print(a...)
 			color.Output = output
@@ -163,7 +166,7 @@ var (
 		case themesDB[currThemeName].Debug:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <DEBUG> ")
 			c.Println(a...)
 			color.Output = output
@@ -171,7 +174,7 @@ var (
 		case themesDB[currThemeName].Fatal:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <FATAL> ")
 			c.Println(a...)
 			color.Output = output
@@ -179,7 +182,7 @@ var (
 		case themesDB[currThemeName].Error:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <ERROR> ")
 			c.Println(a...)
 			color.Output = output
@@ -198,7 +201,7 @@ var (
 		case themesDB[currThemeName].Debug:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <DEBUG> ")
 			c.Printf(f, a...)
 			color.Output = output
@@ -206,7 +209,7 @@ var (
 		case themesDB[currThemeName].Fatal:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <FATAL> ")
 			c.Printf(f, a...)
 			color.Output = output
@@ -214,7 +217,7 @@ var (
 		case themesDB[currThemeName].Error:
 			mutex.Lock()
 			output := color.Output
-			color.Output = os.Stderr
+			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <ERROR> ")
 			c.Printf(f, a...)
 			color.Output = output
@@ -309,9 +312,6 @@ func GetThemeName() string {
 
 // GetDefaultThemeName returns the default theme
 func GetDefaultThemeName() string {
-	if runtime.GOOS == "windows" {
-		return "nocolor"
-	}
 	return "minimal"
 }
 
