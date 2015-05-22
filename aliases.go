@@ -59,7 +59,20 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 		if strings.HasPrefix(aliasedURL, aliasName+":") {
 			// Match found. Expand it.
 			splits := strings.Split(aliasedURL, ":")
-			return expandedURL + "/" + splits[1], nil
+			// if expandedURL is missing, return aliasedURL treat it like fs
+			if expandedURL == "" {
+				return aliasedURL, nil
+			}
+			// if more splits found return
+			if len(splits) == 2 {
+				// remove any prefixed slashes
+				u, err := client.Parse(expandedURL + "/" + strings.TrimPrefix(splits[1], "/"))
+				if err != nil {
+					return aliasedURL, iodine.New(errInvalidURL{url: aliasedURL}, nil)
+				}
+				return u.String(), nil
+			}
+			return aliasedURL, nil
 		}
 	}
 	return aliasedURL, nil

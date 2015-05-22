@@ -129,6 +129,5 @@ func (u *URL) String() string {
 		}
 		buf.WriteString(u.Path)
 	}
-
 	return buf.String()
 }
