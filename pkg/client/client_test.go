@@ -28,66 +28,36 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
-func (s *MySuite) TestAuthAccessKeyLength(c *C) {
-	// short
-	result := IsValidSecretKey("123456789012345678901234567890123456789")
-	c.Assert(result, Equals, false)
+func (s *MySuite) TestURLParse(c *C) {
+	u, err := Parse("http://s3.example.com")
+	c.Assert(err, IsNil)
+	c.Assert(u.Scheme, Equals, "http")
+	c.Assert(u.Host, Equals, "s3.example.com")
+	c.Assert(u.Path, Equals, "")
 
-	// long
-	result = IsValidSecretKey("12345678901234567890123456789012345678901")
-	c.Assert(result, Equals, false)
+	u, err = Parse("http://s3.example.com/path/new")
+	c.Assert(err, IsNil)
+	c.Assert(u.Scheme, Equals, "http")
+	c.Assert(u.Host, Equals, "s3.example.com")
+	c.Assert(u.Path, Equals, "/path/new")
 
-	// 40 characters long
-	result = IsValidSecretKey("1234567890123456789012345678901234567890")
-	c.Assert(result, Equals, true)
+	u, err = Parse(":::://s3.example.com/path/new")
+	c.Assert(err, IsNil)
+	c.Assert(u.Scheme, Equals, "")
+	c.Assert(u.Host, Equals, "")
+	c.Assert(u.Path, Equals, ":::://s3.example.com/path/new")
 }
 
-func (s *MySuite) TestValidAccessKeyLength(c *C) {
-	// short
-	result := IsValidAccessKey("1234567890123456789")
-	c.Assert(result, Equals, false)
+func (s *MySuite) TestPathParse(c *C) {
+	u, err := Parse("path/test")
+	c.Assert(err, IsNil)
+	c.Assert(u.Scheme, Equals, "")
+	c.Assert(u.Host, Equals, "")
+	c.Assert(u.Path, Equals, "path/test")
 
-	// long
-	result = IsValidAccessKey("123456789012345678901")
-	c.Assert(result, Equals, false)
-
-	// 40 characters long
-	result = IsValidAccessKey("12345678901234567890")
-	c.Assert(result, Equals, true)
-
-	// alphanumberic characters long
-	result = IsValidAccessKey("ABCDEFGHIJ1234567890")
-	c.Assert(result, Equals, true)
-
-	// alphanumberic characters long
-	result = IsValidAccessKey("A1B2C3D4E5F6G7H8I9J0")
-	c.Assert(result, Equals, true)
-
-	// alphanumberic lower case characters long
-	result = IsValidAccessKey("a1b2c3d4e5f6g7h8i9j0")
-	c.Assert(result, Equals, false)
-
-	// alphanumberic with -
-	result = IsValidAccessKey("A1B2C3D4-5F6G7H8I9J0")
-	c.Assert(result, Equals, true)
-
-	// alphanumberic with .
-	result = IsValidAccessKey("A1B2C3D4E5F6G7H8I.J0")
-	c.Assert(result, Equals, true)
-
-	// alphanumberic with _
-	result = IsValidAccessKey("A1B2C3D4E_F6G7H8I9J0")
-	c.Assert(result, Equals, true)
-
-	// alphanumberic with ~
-	result = IsValidAccessKey("A1B2C3D4E~F6G7H8I9J0")
-	c.Assert(result, Equals, true)
-
-	// with all classes
-	result = IsValidAccessKey("A1B2C3D4E~F.G_H8~9J0")
-	c.Assert(result, Equals, true)
-
-	// with all classes and an extra invalid
-	result = IsValidAccessKey("A1B2$3D4E~F.G_H8~9J0")
-	c.Assert(result, Equals, false)
+	u, err = Parse("/path/test")
+	c.Assert(err, IsNil)
+	c.Assert(u.Scheme, Equals, "")
+	c.Assert(u.Host, Equals, "")
+	c.Assert(u.Path, Equals, "/path/test")
 }

@@ -119,7 +119,7 @@ func (u *URL) String() string {
 	}
 	switch runtime.GOOS {
 	case "windows":
-		if u.Path != "" && u.Path[0] != '\\' && u.Host != "" {
+		if u.Path != "" && u.Path[0] != '\\' && u.Host != "" && u.Path[0] != '/' {
 			buf.WriteByte('/')
 		}
 		buf.WriteString(strings.Replace(u.Path, "\\", "/", -1))
