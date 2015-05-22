@@ -28,7 +28,7 @@ import (
 	"github.com/shiena/ansicolor"
 )
 
-// NoDebugPrint defines if the input should be printed or not. By default it's set to true.
+// NoDebugPrint defines if the input should be printed in debug or not. By default it's set to true.
 var NoDebugPrint = true
 
 var (
@@ -38,7 +38,11 @@ var (
 	stderrColoredOutput = ansicolor.NewAnsiColorWriter(os.Stderr)
 
 	// themesDB contains supported list of Themes
-	themesDB = map[string]Theme{"minimal": MiniTheme, "nocolor": NoColorTheme, "white": WhiteTheme}
+	themesDB = map[string]Theme{
+		"minimal": MiniTheme,
+		"nocolor": NoColorTheme,
+		"white":   WhiteTheme,
+	}
 
 	// currTheme is current theme
 	currThemeName = func() string {
@@ -120,7 +124,6 @@ type Theme struct {
 	File  *color.Color
 	Dir   *color.Color
 	Retry *color.Color
-	//	Reason *color.Color
 }
 
 var (

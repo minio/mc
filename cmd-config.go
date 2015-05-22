@@ -34,12 +34,10 @@ func runConfigCmd(ctx *cli.Context) {
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
-		console.Debugln(iodine.New(errInvalidArgument{}, nil))
 		console.Fatalln("Incorrect number of arguments, please use \"mc config help\"")
 	}
 	msg, err := doConfig(arg, tailArgs)
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
 		console.Fatalln(msg)
 	}
 	console.Infoln(msg)

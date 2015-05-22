@@ -35,7 +35,6 @@ func runCatCmd(ctx *cli.Context) {
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read config file ‘%s’. Reason: %s.\n", mustGetMcConfigPath(), iodine.ToError(err))
 	}
 
@@ -44,10 +43,8 @@ func runCatCmd(ctx *cli.Context) {
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unknown type of URL ‘%s’. Reason: %s.\n", e.url, e)
 		default:
-			console.Debugln(iodine.New(err, nil))
 			console.Fatalf("Unable to parse arguments. Reason: %s.\n", iodine.ToError(err))
 		}
 	}
@@ -55,20 +52,18 @@ func runCatCmd(ctx *cli.Context) {
 	sourceURLs := urls
 	sourceURLConfigMap, err := getHostConfigs(sourceURLs)
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
 		console.Fatalf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.\n",
 			sourceURLs, mustGetMcConfigPath(), iodine.ToError(err))
 	}
-	humanReadable, err := doCatCmd(sourceURLConfigMap, globalDebugFlag)
+	humanReadable, err := doCatCmd(sourceURLConfigMap)
 	if err != nil {
-		console.Debugln(iodine.New(err, nil))
 		console.Fatalln(humanReadable)
 	}
 }
 
-func doCatCmd(sourceURLConfigMap map[string]*hostConfig, debug bool) (string, error) {
+func doCatCmd(sourceURLConfigMap map[string]*hostConfig) (string, error) {
 	for url, config := range sourceURLConfigMap {
-		sourceClnt, err := getNewClient(url, config, debug)
+		sourceClnt, err := getNewClient(url, config)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}

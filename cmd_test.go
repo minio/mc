@@ -66,13 +66,13 @@ func (s *CmdTestSuite) TearDownSuite(c *C) {
 }
 
 func (s *CmdTestSuite) TestGetNewClient(c *C) {
-	_, err := getNewClient("http://example.com/bucket1", &hostConfig{}, false)
+	_, err := getNewClient("http://example.com/bucket1", &hostConfig{})
 	c.Assert(err, IsNil)
-	_, err = getNewClient("C:\\Users\\Administrator\\MyDocuments", &hostConfig{}, false)
+	_, err = getNewClient("C:\\Users\\Administrator\\MyDocuments", &hostConfig{})
 	c.Assert(err, IsNil)
-	_, err = getNewClient("/usr/bin/pandoc", &hostConfig{}, false)
+	_, err = getNewClient("/usr/bin/pandoc", &hostConfig{})
 	c.Assert(err, IsNil)
-	_, err = getNewClient("pkg/client", &hostConfig{}, false)
+	_, err = getNewClient("pkg/client", &hostConfig{})
 	c.Assert(err, IsNil)
 }
 

@@ -29,7 +29,7 @@ import (
 
 // getSource -
 func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.Reader, length uint64, err error) {
-	sourceClnt, err := getNewClient(sourceURL, sourceConfig, globalDebugFlag)
+	sourceClnt, err := getNewClient(sourceURL, sourceConfig)
 	if err != nil {
 		return nil, 0, iodine.New(err, map[string]string{"failedURL": sourceURL})
 	}
@@ -38,7 +38,7 @@ func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.Reader, le
 
 // putTarget -
 func putTarget(targetURL string, targetConfig *hostConfig, length uint64, data io.Reader) error {
-	targetClnt, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
+	targetClnt, err := getNewClient(targetURL, targetConfig)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -50,7 +50,7 @@ func putTarget(targetURL string, targetConfig *hostConfig, length uint64, data i
 }
 
 // getNewClient gives a new client interface
-func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Client, err error) {
+func getNewClient(urlStr string, auth *hostConfig) (clnt client.Client, err error) {
 	url, err := client.Parse(urlStr)
 	if err != nil {
 		return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
@@ -67,7 +67,7 @@ func getNewClient(urlStr string, auth *hostConfig, debug bool) (clnt client.Clie
 		s3Config.AppVersion = Version
 		s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 		s3Config.HostURL = urlStr
-		s3Config.Debug = debug
+		s3Config.Debug = globalDebugFlag
 		return s3.New(s3Config)
 	case client.Filesystem:
 		return fs.New(urlStr)
@@ -82,7 +82,7 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 		return nil, nil, iodine.New(err, map[string]string{"URL": urlStr})
 	}
 
-	client, err = getNewClient(urlStr, config, globalDebugFlag)
+	client, err = getNewClient(urlStr, config)
 	if err != nil {
 		return nil, nil, iodine.New(err, map[string]string{"URL": urlStr})
 	}

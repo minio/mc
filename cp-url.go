@@ -83,7 +83,7 @@ func source2Client(sourceURL string) (client.Client, error) {
 		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
 	}
 
-	sourceClient, err := getNewClient(sourceURL, sourceConfig, globalDebugFlag)
+	sourceClient, err := getNewClient(sourceURL, sourceConfig)
 	if err != nil {
 		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
 	}
@@ -105,7 +105,7 @@ func target2Client(targetURL string) (client.Client, error) {
 		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
 	}
 
-	targetClient, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
+	targetClient, err := getNewClient(targetURL, targetConfig)
 	if err != nil {
 		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
 	}
@@ -123,7 +123,7 @@ func isTargetURLDir(targetURL string) bool {
 		return false
 	}
 
-	targetClient, err := getNewClient(targetURL, targetConfig, globalDebugFlag)
+	targetClient, err := getNewClient(targetURL, targetConfig)
 	if err != nil {
 		return false
 	}
