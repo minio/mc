@@ -31,12 +31,12 @@
 			"Rev": "432a1019ded42d1b34fb5f1aad60fb609245d5a1"
 		},
 		{
-			"ImportPath": "github.com/minio/minio/pkg/iodine",
-			"Rev": "0f58045480309d4b13fe45878f05736c3ff20e7e"
+			"ImportPath": "github.com/minio/minio-go",
+			"Rev": "eea7789129cfc58972977dd19c4729e2e559c8fc"
 		},
 		{
-			"ImportPath": "github.com/minio/objectstorage-go",
-			"Rev": "7e4b2520052fedcc40be93c93cbb13688d11285d"
+			"ImportPath": "github.com/minio/minio/pkg/iodine",
+			"Rev": "0f58045480309d4b13fe45878f05736c3ff20e7e"
 		},
 		{
 			"ImportPath": "github.com/shiena/ansicolor",

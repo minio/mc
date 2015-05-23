@@ -23,16 +23,16 @@ import (
 	"log"
 	"os"
 
-	"github.com/minio/objectstorage-go"
+	play "github.com/minio/minio-go"
 )
 
 func main() {
-	config := new(objectstorage.Config)
+	config := new(play.Config)
 	config.AccessKeyID = ""
 	config.SecretAccessKey = ""
-	config.Endpoint = "https://s3.amazonaws.com"
+	config.Endpoint = "http://play.minio.io:9000"
 	config.AcceptType = ""
-	m := objectstorage.New(config)
+	m := play.New(config)
 	reader, size, _, err := m.GetObject("testbucket", "testfile", 0, 0)
 	if err != nil {
 		log.Println(err)

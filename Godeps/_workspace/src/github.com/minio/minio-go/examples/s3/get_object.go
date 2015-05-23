@@ -19,22 +19,32 @@
 package main
 
 import (
+	"io"
 	"log"
+	"os"
 
-	"github.com/minio/objectstorage-go"
+	s3 "github.com/minio/minio-go"
 )
 
 func main() {
-	config := new(objectstorage.Config)
+	config := new(s3.Config)
 	config.AccessKeyID = ""
 	config.SecretAccessKey = ""
-	config.Endpoint = "http://play.minio.io:9000"
+	config.Endpoint = "https://s3.amazonaws.com"
 	config.AcceptType = ""
-	m := objectstorage.New(config)
-	for message := range m.ListObjects("public-bucket", "", true) {
-		if message.Err != nil {
-			log.Fatal(message.Err)
-		}
-		log.Println(message.Data)
+	m := s3.New(config)
+	reader, size, _, err := m.GetObject("testbucket", "testfile", 0, 0)
+	if err != nil {
+		log.Println(err)
+	}
+	localfile, err := os.Create("newfile")
+	if err != nil {
+		log.Println(err)
+	}
+	defer localfile.Close()
+
+	_, err = io.CopyN(localfile, reader, size)
+	if err != nil {
+		log.Println(err)
 	}
 }

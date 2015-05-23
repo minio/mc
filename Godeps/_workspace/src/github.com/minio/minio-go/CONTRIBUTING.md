@@ -1,15 +1,12 @@
-### Setup your objectstorage-go Github Repository
-Fork [objectstorage-go upstream](https://github.com/minio/objectstorage-go/fork) source repository to your own personal repository.
+### Setup your minio-go Github Repository
+Fork [minio-go upstream](https://github.com/minio/minio-go/fork) source repository to your own personal repository.
 ```sh
-$ git clone https://github.com/$USER_ID/objectstorage-go
-$ cd objectstorage-go
-$ make
-$ objectstorage-go --help
+$ godep get https://github.com/$USER_ID/minio-go
 ```
 
 ###  Developer Guidelines
 
-``objectstorage-go`` welcomes your contribution. To make the process as seamless as possible, we ask for the following:
+``minio-go`` welcomes your contribution. To make the process as seamless as possible, we ask for the following:
 
 * Go ahead and fork the project and make your changes. We encourage pull requests to discuss code changes.
     - Fork it
@@ -18,11 +15,6 @@ $ objectstorage-go --help
     - Push to the branch (git push origin my-new-feature)
     - Create new Pull Request
 
-* If you have additional dependencies for ``objectstorage-go``, ``objectstorage-go`` manages its depedencies using [godep](https://github.com/tools/godep)
-    - Run `go get foo/bar`
-    - Edit your code to import foo/bar
-    - Run `make save` from top-level directory (or `godep restore && godep save ./...`).
-
 * When you're ready to create a pull request, be sure to:
     - Have test cases for the new code. If you have questions about how to do it, please ask in your pull request.
     - Run `go fmt`
@@ -30,5 +22,5 @@ $ objectstorage-go --help
     - Make sure `go test -race ./...` and `go build` completes.
 
 * Read [Effective Go](https://github.com/golang/go/wiki/CodeReviewComments) article from Golang project
-    - `objectstorage-go` project is strictly conformant with Golang style
+    - `minio-go` project is strictly conformant with Golang style
     - if you happen to observe offending code, please feel free to send a pull request
