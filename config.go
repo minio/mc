@@ -125,7 +125,7 @@ func getMcConfig() (*configV1, error) {
 
 }
 
-// isMcConfigExist returns true/false if config exists
+// isMcConfigExist returns err if config doesn't exist
 func isMcConfigExist() bool {
 	configFile, err := getMcConfigPath()
 	if err != nil {

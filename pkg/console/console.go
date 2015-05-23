@@ -17,6 +17,7 @@
 package console
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -30,6 +31,40 @@ import (
 
 // NoDebugPrint defines if the input should be printed in debug or not. By default it's set to true.
 var NoDebugPrint = true
+
+// NoJsonPrint defines if the input should be printed in json formatted or not. By default it's set to true.
+var NoJSONPrint = true
+
+// Message info string
+type Message string
+
+// ErrorMessage error message structure
+type ErrorMessage struct {
+	Message string `json:"Message"`
+	Error   error  `json:"Reason"`
+}
+
+// Content content message structure
+type Content struct {
+	Filetype string `json:"ContentType"`
+	Time     string `json:"LastModified"`
+	Size     string `json:"Size"`
+	Name     string `json:"Name"`
+}
+
+// Theme holds console color scheme
+type Theme struct {
+	Fatal *color.Color
+	Error *color.Color
+	Info  *color.Color
+	Debug *color.Color
+	Size  *color.Color
+	Time  *color.Color
+	File  *color.Color
+	Dir   *color.Color
+	Retry *color.Color
+	JSON  *color.Color
+}
 
 var (
 	mutex = &sync.RWMutex{}
@@ -54,77 +89,133 @@ var (
 		return theme
 	}()
 
-	// Print prints a error message and exits
+	// Print prints a message
 	Print = themesDB[currThemeName].Info.Print
-	// Println prints a error message with a new line and exits
-	Println = themesDB[currThemeName].Info.Println
-	// Printf prints a error message with formatting and exits
-	Printf = themesDB[currThemeName].Info.Printf
 
 	// Fatal prints a error message and exits
-	Fatal = func(a ...interface{}) { print(themesDB[currThemeName].Error, a...); os.Exit(1) }
+	Fatal = func(msg ErrorMessage) {
+		defer os.Exit(1)
+		if msg.Error != nil {
+			if NoJSONPrint {
+				reason := "Reason: " + iodine.ToError(msg.Error).Error()
+				message := msg.Message + ", " + reason
+				print(themesDB[currThemeName].Error, message)
+				if !NoDebugPrint {
+					print(themesDB[currThemeName].Error, msg.Error)
+				}
+				return
+			}
+			errorMessageBytes, _ := json.Marshal(&msg)
+			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
+		}
+	}
 	// Fatalln prints a error message with a new line and exits
-	Fatalln = func(a ...interface{}) { println(themesDB[currThemeName].Error, a...); os.Exit(1) }
-	// Fatalf prints a error message with formatting and exits
-	Fatalf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Error, f, a...); os.Exit(1) }
+	Fatalln = func(msg ErrorMessage) {
+		defer os.Exit(1)
+		if msg.Error != nil {
+			if NoJSONPrint {
+				reason := "Reason: " + iodine.ToError(msg.Error).Error()
+				message := msg.Message + ", " + reason
+				println(themesDB[currThemeName].Error, message)
+				if !NoDebugPrint {
+					println(themesDB[currThemeName].Error, msg.Error)
+				}
+				return
+			}
+			errorMessageBytes, _ := json.Marshal(&msg)
+			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
+		}
+	}
 
 	// Error prints a error message
-	Error = func(a ...interface{}) { print(themesDB[currThemeName].Error, a...) }
+	Error = func(msg ErrorMessage) {
+		if msg.Error != nil {
+			if NoJSONPrint {
+				reason := "Reason: " + iodine.ToError(msg.Error).Error()
+				message := msg.Message + ", " + reason
+				print(themesDB[currThemeName].Error, message)
+				if !NoDebugPrint {
+					print(themesDB[currThemeName].Error, msg.Error)
+				}
+				return
+			}
+			errorMessageBytes, _ := json.Marshal(&msg)
+			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
+		}
+	}
 	// Errorln prints a error message with a new line
-	Errorln = func(a ...interface{}) { println(themesDB[currThemeName].Error, a...) }
-	// Errorf prints a error message with formatting
-	Errorf = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Error, f, a...) }
+	Errorln = func(msg ErrorMessage) {
+		if msg.Error != nil {
+			if NoJSONPrint {
+				reason := "Reason: " + iodine.ToError(msg.Error).Error()
+				message := msg.Message + ", " + reason
+				println(themesDB[currThemeName].Error, message)
+				if !NoDebugPrint {
+					println(themesDB[currThemeName].Error, msg.Error)
+				}
+				return
+			}
+			errorMessageBytes, _ := json.Marshal(&msg)
+			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
+		}
+	}
 
 	// Info prints a informational message
-	Info = func(a ...interface{}) { print(themesDB[currThemeName].Info, a...) }
-	// Infoln prints a informational message with a new line
-	Infoln = func(a ...interface{}) { println(themesDB[currThemeName].Info, a...) }
-	// Infof prints a informational message with formatting
-	Infof = func(f string, a ...interface{}) { printf(themesDB[currThemeName].Info, f, a...) }
+	Info = func(msg Message) {
+		if NoJSONPrint {
+			print(themesDB[currThemeName].Info, msg)
+			return
+		}
+		infoBytes, _ := json.Marshal(&msg)
+		print(themesDB[currThemeName].JSON, string(infoBytes))
+	}
 
+	// Infoln prints a informational message with a new line
+	Infoln = func(msg Message) {
+		if NoJSONPrint {
+			println(themesDB[currThemeName].Info, msg)
+			return
+		}
+		infoBytes, _ := json.Marshal(&msg)
+		println(themesDB[currThemeName].JSON, string(infoBytes))
+	}
+
+	// Debug prints a debug message without a new line
 	// Debug prints a debug message
 	Debug = func(a ...interface{}) {
 		if !NoDebugPrint {
 			print(themesDB[currThemeName].Debug, a...)
 		}
 	}
+
 	// Debugln prints a debug message with a new line
 	Debugln = func(a ...interface{}) {
 		if !NoDebugPrint {
 			println(themesDB[currThemeName].Debug, a...)
 		}
 	}
-	// Debugf prints a debug message with formatting
-	Debugf = func(f string, a ...interface{}) {
-		if !NoDebugPrint {
-			printf(themesDB[currThemeName].Debug, f, a...)
+	// ContentInfo prints a structure Content
+	ContentInfo = func(c Content) {
+		if NoJSONPrint {
+			print(themesDB[currThemeName].Time, c.Time)
+			print(themesDB[currThemeName].Size, c.Size)
+			switch c.Filetype {
+			case "inode/directory":
+				println(themesDB[currThemeName].Dir, c.Name)
+			case "application/octet-stream":
+				println(themesDB[currThemeName].File, c.Name)
+			}
+			return
 		}
+		contentBytes, _ := json.Marshal(&c)
+		println(themesDB[currThemeName].JSON, string(contentBytes))
 	}
 
-	// File - File("foo.txt")
-	File = themesDB[currThemeName].File.SprintfFunc()
-	// Dir - Dir("dir/")
-	Dir = themesDB[currThemeName].Dir.SprintfFunc()
-	// Size - Size("12GB")
-	Size = themesDB[currThemeName].Size.SprintfFunc()
-	// Time - Time("12 Hours")
-	Time = themesDB[currThemeName].Time.SprintfFunc()
-	// Retry - Retry message number
-	Retry = themesDB[currThemeName].Retry.SprintfFunc()
+	// Retry prints a retry message
+	Retry = func(a ...interface{}) {
+		println(themesDB[currThemeName].Retry, a...)
+	}
 )
-
-// Theme holds console color scheme
-type Theme struct {
-	Fatal *color.Color
-	Error *color.Color
-	Info  *color.Color
-	Debug *color.Color
-	Size  *color.Color
-	Time  *color.Color
-	File  *color.Color
-	Dir   *color.Color
-	Retry *color.Color
-}
 
 var (
 	// wrap around standard fmt functions
@@ -155,9 +246,22 @@ var (
 			c.Print(a...)
 			color.Output = output
 			mutex.Unlock()
-		default:
+		case themesDB[currThemeName].Info:
 			mutex.Lock()
 			c.Print(ProgramName() + ": ")
+			c.Print(a...)
+			mutex.Unlock()
+		// special cases only for Content where it requires custom formatting
+		case themesDB[currThemeName].Time:
+			mutex.Lock()
+			c.Print(fmt.Sprintf("[%s]", a...))
+			mutex.Unlock()
+		case themesDB[currThemeName].Size:
+			mutex.Lock()
+			c.Printf(fmt.Sprintf("%6s ", a...))
+			mutex.Unlock()
+		default:
+			mutex.Lock()
 			c.Print(a...)
 			mutex.Unlock()
 		}
@@ -190,45 +294,23 @@ var (
 			c.Println(a...)
 			color.Output = output
 			mutex.Unlock()
-		default:
+		case themesDB[currThemeName].Info:
 			mutex.Lock()
 			c.Print(ProgramName() + ": ")
 			c.Println(a...)
 			mutex.Unlock()
-		}
-	}
-
-	// printf - same as print, but takes a format specifier
-	printf = func(c *color.Color, f string, a ...interface{}) {
-		switch c {
-		case themesDB[currThemeName].Debug:
+		case themesDB[currThemeName].Dir:
 			mutex.Lock()
-			output := color.Output
-			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <DEBUG> ")
-			c.Printf(f, a...)
-			color.Output = output
+			// ugly but its needed
+			c.Printf("%s/\n", a...)
 			mutex.Unlock()
-		case themesDB[currThemeName].Fatal:
+		case themesDB[currThemeName].File:
 			mutex.Lock()
-			output := color.Output
-			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <FATAL> ")
-			c.Printf(f, a...)
-			color.Output = output
-			mutex.Unlock()
-		case themesDB[currThemeName].Error:
-			mutex.Lock()
-			output := color.Output
-			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <ERROR> ")
-			c.Printf(f, a...)
-			color.Output = output
+			c.Println(a...)
 			mutex.Unlock()
 		default:
 			mutex.Lock()
-			c.Print(ProgramName() + ": ")
-			c.Printf(f, a...)
+			c.Println(a...)
 			mutex.Unlock()
 		}
 	}
@@ -262,46 +344,6 @@ func SetTheme(themeName string) error {
 	}
 
 	currThemeName = themeName
-	theme := themesDB[currThemeName]
-
-	// Error prints a error message
-	Error = func(a ...interface{}) { print(theme.Error, a...) }
-	// Errorln prints a error message with a new line
-	Errorln = func(a ...interface{}) { println(theme.Error, a...) }
-	// Errorf prints a error message with formatting
-	Errorf = func(f string, a ...interface{}) { printf(theme.Error, f, a...) }
-
-	// Info prints a informational message
-	Info = func(a ...interface{}) { print(theme.Info, a...) }
-	// Infoln prints a informational message with a new line
-	Infoln = func(a ...interface{}) { println(theme.Info, a...) }
-	// Infof prints a informational message with formatting
-	Infof = func(f string, a ...interface{}) { printf(theme.Info, f, a...) }
-
-	// Debug prints a debug message
-	Debug = func(a ...interface{}) {
-		if !NoDebugPrint {
-			print(theme.Debug, a...)
-		}
-	}
-	// Debugln prints a debug message with a new line
-	Debugln = func(a ...interface{}) {
-		if !NoDebugPrint {
-			println(theme.Debug, a...)
-		}
-	}
-	// Debugf prints a debug message with formatting
-	Debugf = func(f string, a ...interface{}) {
-		if !NoDebugPrint {
-			printf(theme.Debug, f, a...)
-		}
-	}
-
-	Dir = theme.Dir.SprintfFunc()
-	File = theme.File.SprintfFunc()
-	Size = theme.Size.SprintfFunc()
-	Time = theme.Time.SprintfFunc()
-	Retry = theme.Retry.SprintfFunc()
 
 	mutex.Unlock()
 

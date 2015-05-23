@@ -18,6 +18,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -31,33 +32,42 @@ func runCatCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Please run \"mc config generate\"",
+			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalf("Unable to read config file ‘%s’. Reason: %s.\n", mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
+			Error:   iodine.New(err, nil),
+		})
 	}
 
 	// Convert arguments to URLs: expand alias, fix format...
 	urls, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
-		switch e := iodine.ToError(err).(type) {
-		case errUnsupportedScheme:
-			console.Fatalf("Unknown type of URL ‘%s’. Reason: %s.\n", e.url, e)
-		default:
-			console.Fatalf("Unable to parse arguments. Reason: %s.\n", iodine.ToError(err))
-		}
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unknown type of URL ‘%s’", urls),
+			Error:   iodine.New(err, nil),
+		})
 	}
 
 	sourceURLs := urls
 	sourceURLConfigMap, err := getHostConfigs(sourceURLs)
 	if err != nil {
-		console.Fatalf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.\n",
-			sourceURLs, mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", sourceURLs, mustGetMcConfigPath()),
+			Error:   iodine.New(err, nil),
+		})
 	}
 	humanReadable, err := doCatCmd(sourceURLConfigMap)
 	if err != nil {
-		console.Fatalln(humanReadable)
+		console.Fatalln(console.ErrorMessage{
+			Message: humanReadable,
+			Error:   iodine.New(err, nil),
+		})
 	}
 }
 

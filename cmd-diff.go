@@ -17,6 +17,9 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
@@ -28,11 +31,17 @@ func runDiffCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Please run \"mc config generate\"",
+			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalf("Unable to read config file ‘%s’. Reason: %s.\n", mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
+			Error:   err,
+		})
 	}
 
 	firstURL := ctx.Args().First()
@@ -42,40 +51,59 @@ func runDiffCmd(ctx *cli.Context) {
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Fatalf("Unknown type of URL ‘%s’.\n", firstURL)
+			console.Fatalln(console.ErrorMessage{
+				Message: fmt.Sprintf("Unknown type of URL ‘%s’.", firstURL),
+				Error:   err,
+			})
 		default:
-			console.Fatalf("Unable to parse argument ‘%s’. Reason: %s.\n", firstURL, iodine.ToError(err))
+			console.Fatalln(console.ErrorMessage{
+				Message: fmt.Sprintf("Unable to parse argument ‘%s’.", firstURL),
+				Error:   err,
+			})
 		}
 	}
 
 	_, err = getHostConfig(firstURL)
 	if err != nil {
-		console.Fatalf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.\n",
-			firstURL, mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’.", firstURL, mustGetMcConfigPath()),
+			Error:   err,
+		})
 	}
 
 	_, err = getHostConfig(secondURL)
 	if err != nil {
-		console.Fatalf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.\n",
-			secondURL, mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.", secondURL, mustGetMcConfigPath()),
+			Error:   err,
+		})
 	}
 
 	secondURL, err = getExpandedURL(secondURL, config.Aliases)
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Fatalf("Unknown type of URL ‘%s’. Reason: %s.\n", secondURL, iodine.ToError(err))
+			console.Fatalln(console.ErrorMessage{
+				Message: fmt.Sprintf("Unknown type of URL ‘%s’.", secondURL),
+				Error:   err,
+			})
 		default:
-			console.Fatalf("Unable to parse argument ‘%s’. Reason: %s.\n", secondURL, iodine.ToError(err))
+			console.Fatalln(console.ErrorMessage{
+				Message: fmt.Sprintf("Unable to parse argument ‘%s’.", secondURL),
+				Error:   err,
+			})
 		}
 	}
 	// TODO recursive is not working yet
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		if diff.err != nil {
-			console.Fatalln(diff.message)
+			console.Fatalln(console.ErrorMessage{
+				Message: diff.message,
+				Error:   diff.err,
+			})
 		}
-		console.Infoln(diff.message)
+		console.Infoln(console.Message(diff.message))
 	}
 }
 
