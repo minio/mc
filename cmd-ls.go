@@ -30,14 +30,12 @@ func runListCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
-
 	if !isMcConfigExist() {
 		console.Fatalln(console.ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
 	}
-
 	config, err := getMcConfig()
 	if err != nil {
 		console.Fatalln(console.ErrorMessage{

@@ -267,22 +267,53 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 	bucket, object := c.url2BucketAndObject()
-	for object := range c.api.ListObjects(bucket, object, true) {
-		if object.Err != nil {
-			contentCh <- client.ContentOnChannel{
-				Content: nil,
-				Err:     object.Err,
+	switch {
+	case bucket == "" && object == "":
+		for bucket := range c.api.ListBuckets() {
+			if bucket.Err != nil {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     bucket.Err,
+				}
+				return
 			}
-			return
+			for object := range c.api.ListObjects(bucket.Data.Name, object, true) {
+				if object.Err != nil {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     object.Err,
+					}
+					return
+				}
+				content := new(client.Content)
+				content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Data.Key
+				content.Size = object.Data.Size
+				content.Time = object.Data.LastModified
+				content.Type = os.FileMode(0664)
+				contentCh <- client.ContentOnChannel{
+					Content: content,
+					Err:     nil,
+				}
+			}
 		}
-		content := new(client.Content)
-		content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Data.Key
-		content.Size = object.Data.Size
-		content.Time = object.Data.LastModified
-		content.Type = os.FileMode(0664)
-		contentCh <- client.ContentOnChannel{
-			Content: content,
-			Err:     nil,
+	default:
+		for object := range c.api.ListObjects(bucket, object, true) {
+			if object.Err != nil {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     object.Err,
+				}
+				return
+			}
+			content := new(client.Content)
+			content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Data.Key
+			content.Size = object.Data.Size
+			content.Time = object.Data.LastModified
+			content.Type = os.FileMode(0664)
+			contentCh <- client.ContentOnChannel{
+				Content: content,
+				Err:     nil,
+			}
 		}
 	}
 }

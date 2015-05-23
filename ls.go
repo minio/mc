@@ -46,11 +46,13 @@ func printContent(c *client.Content) {
 		return "application/octet-stream"
 	}()
 	content.Size = humanize.IBytes(uint64(c.Size))
-	if runtime.GOOS == "windows" {
+	switch {
+	case runtime.GOOS == "windows":
 		content.Name = strings.Replace(c.Name, "/", "\\", -1)
 		content.Name = strings.TrimSuffix(content.Name, "\\")
+	default:
+		content.Name = strings.TrimSuffix(c.Name, "/")
 	}
-	content.Name = strings.TrimSuffix(content.Name, "/")
 	content.Time = c.Time.Local().Format(printDate)
 	console.ContentInfo(content)
 }
