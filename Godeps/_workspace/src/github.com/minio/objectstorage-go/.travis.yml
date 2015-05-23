@@ -1,6 +1,6 @@
 language: go
 go:
 - 1.4.2
-sudo: false
-notifications:
-  slack: travisci:0lsU2EbtMOizjtgSmBZUNEQS
+script:
+- go vet ./...
+- go test -race -v ./...

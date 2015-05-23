@@ -31,7 +31,7 @@ import (
 // urlEncodedName- encode the strings from UTF-8 byte representations to HTML hex escape sequences
 func urlEncodeName(objectName string) (string, error) {
 	// if object matches reserved string, no need to encode them
-	reservedNames := regexp.MustCompile("^[a-zA-Z0-9-_.~/ ]+$")
+	reservedNames := regexp.MustCompile("^[a-zA-Z0-9-_.~/]+$")
 	if reservedNames.MatchString(objectName) {
 		return objectName, nil
 	}
@@ -42,7 +42,7 @@ func urlEncodeName(objectName string) (string, error) {
 			continue
 		}
 		switch s {
-		case '-', '_', '.', '~', '/', ' ': // §2.3 Unreserved characters (mark)
+		case '-', '_', '.', '~', '/': // §2.3 Unreserved characters (mark)
 			encodedObjectName = encodedObjectName + string(s)
 			continue
 		default:
