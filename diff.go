@@ -93,7 +93,7 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 	for contentCh := range firstClnt.List(recursive) {
 		if contentCh.Err != nil {
 			ch <- diff{
-				message: "Failed to list ‘" + firstURL + "’. Reason: " + iodine.ToError(contentCh.Err).Error() + ".",
+				message: "Failed to list ‘" + firstURL + "’",
 				err:     iodine.New(contentCh.Err, nil),
 			}
 			return
@@ -101,18 +101,16 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 		newFirstURL, err := urlJoinPath(firstURL, contentCh.Content.Name)
 		if err != nil {
 			ch <- diff{
-				message: "Unable to construct new URL from ‘" + firstURL + "’ using ‘" +
-					contentCh.Content.Name + "’. Reason: " + iodine.ToError(err).Error() + ".",
-				err: iodine.New(err, nil),
+				message: "Unable to construct new URL from ‘" + firstURL + "’ using ‘" + contentCh.Content.Name + "’",
+				err:     iodine.New(err, nil),
 			}
 			return
 		}
 		newSecondURL, err := urlJoinPath(secondURL, contentCh.Content.Name)
 		if err != nil {
 			ch <- diff{
-				message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" +
-					contentCh.Content.Name + "’. Reason: " + iodine.ToError(err).Error() + ".",
-				err: iodine.New(err, nil),
+				message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + contentCh.Content.Name + "’",
+				err:     iodine.New(err, nil),
 			}
 			return
 		}
@@ -160,7 +158,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	firstClnt, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’ ." + "Reason: " + iodine.ToError(err).Error() + ".",
+			message: "Failed to stat ‘" + firstURL + "’",
 			err:     iodine.New(err, nil),
 		}
 		return
@@ -168,7 +166,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’ ." + "Reason: " + iodine.ToError(err).Error() + ".",
+			message: "Failed to stat ‘" + secondURL + "’",
 			err:     iodine.New(err, nil),
 		}
 		return
