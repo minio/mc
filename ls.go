@@ -17,6 +17,7 @@
 package main
 
 import (
+	"runtime"
 	"strings"
 
 	"github.com/dustin/go-humanize"
@@ -45,7 +46,11 @@ func printContent(c *client.Content) {
 		return "application/octet-stream"
 	}()
 	content.Size = humanize.IBytes(uint64(c.Size))
-	content.Name = strings.TrimSuffix(c.Name, "/")
+	if runtime.GOOS == "windows" {
+		content.Name = strings.Replace(c.Name, "/", "\\", -1)
+		content.Name = strings.TrimSuffix(content.Name, "\\")
+	}
+	content.Name = strings.TrimSuffix(content.Name, "/")
 	content.Time = c.Time.Local().Format(printDate)
 	console.ContentInfo(content)
 }
