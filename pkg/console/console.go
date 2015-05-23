@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 
 	"path/filepath"
@@ -254,7 +255,7 @@ var (
 		// special cases only for Content where it requires custom formatting
 		case themesDB[currThemeName].Time:
 			mutex.Lock()
-			c.Print(fmt.Sprintf("[%s]", a...))
+			c.Print(fmt.Sprintf("[%s] ", a...))
 			mutex.Unlock()
 		case themesDB[currThemeName].Size:
 			mutex.Lock()
@@ -301,8 +302,12 @@ var (
 			mutex.Unlock()
 		case themesDB[currThemeName].Dir:
 			mutex.Lock()
-			// ugly but its needed
-			c.Printf("%s/\n", a...)
+			switch {
+			case runtime.GOOS == "windows":
+				c.Printf("%s\\\n", a...)
+			default:
+				c.Printf("%s/\n", a...)
+			}
 			mutex.Unlock()
 		case themesDB[currThemeName].File:
 			mutex.Lock()
