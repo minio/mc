@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package objectstorage
+package client
 
 // bucketHandler is an http.Handler that verifies bucket responses and validates incoming requests
 import (

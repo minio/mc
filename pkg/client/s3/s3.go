@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/client"
+	s3 "github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/iodine"
-	"github.com/minio/objectstorage-go"
 )
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
@@ -50,7 +50,7 @@ type TLSConfig struct {
 }
 
 type s3Client struct {
-	api     objectstorage.API
+	api     s3.API
 	hostURL *client.URL
 }
 
@@ -86,14 +86,14 @@ func New(config *Config) (client.Client, error) {
 	default:
 		transport = http.DefaultTransport
 	}
-	objectstorageConf := new(objectstorage.Config)
-	objectstorageConf.AccessKeyID = config.AccessKeyID
-	objectstorageConf.SecretAccessKey = config.SecretAccessKey
-	objectstorageConf.Transport = transport
-	objectstorageConf.AddUserAgent(config.AppName, config.AppVersion, config.AppComments...)
-	objectstorageConf.Region = getRegion(u.Host)
-	objectstorageConf.Endpoint = u.Scheme + "://" + u.Host
-	api := objectstorage.New(objectstorageConf)
+	s3Conf := new(s3.Config)
+	s3Conf.AccessKeyID = config.AccessKeyID
+	s3Conf.SecretAccessKey = config.SecretAccessKey
+	s3Conf.Transport = transport
+	s3Conf.AddUserAgent(config.AppName, config.AppVersion, config.AppComments...)
+	s3Conf.Region = getRegion(u.Host)
+	s3Conf.Endpoint = u.Scheme + "://" + u.Host
+	api := s3.New(s3Conf)
 	return &s3Client{api: api, hostURL: u}, nil
 }
 
@@ -114,7 +114,7 @@ func (c *s3Client) PutObject(size uint64, data io.Reader) error {
 	// invidual parts are properly verified
 	bucket, object := c.url2BucketAndObject()
 	// TODO - bump individual part size from default, if needed
-	// objectstorage.DefaultPartSize = 1024 * 1024 * 100
+	// s3.DefaultPartSize = 1024 * 1024 * 100
 	err := c.api.PutObject(bucket, object, size, data)
 	if err != nil {
 		return iodine.New(err, nil)

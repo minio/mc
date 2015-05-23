@@ -21,17 +21,17 @@ package main
 import (
 	"log"
 
-	"github.com/minio/objectstorage-go"
+	s3 "github.com/minio/minio-go"
 )
 
 func main() {
-	config := new(objectstorage.Config)
+	config := new(s3.Config)
 	config.AccessKeyID = ""
 	config.SecretAccessKey = ""
-	config.Endpoint = "http://play.minio.io:9000"
+	config.Endpoint = "https://s3.amazonaws.com"
 	config.AcceptType = ""
-	m := objectstorage.New(config)
-	for message := range m.ListBuckets() {
+	m := s3.New(config)
+	for message := range m.ListObjects("public-bucket", "", true) {
 		if message.Err != nil {
 			log.Fatal(message.Err)
 		}

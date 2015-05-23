@@ -20,32 +20,20 @@ package main
 
 import (
 	"log"
-	"os"
 
-	"github.com/minio/objectstorage-go"
+	s3 "github.com/minio/minio-go"
 )
 
 func main() {
-	config := new(objectstorage.Config)
+	config := new(s3.Config)
 	config.AccessKeyID = ""
 	config.SecretAccessKey = ""
-	config.Endpoint = "http://play.minio.io:9000"
+	config.Region = "us-east-1"
 	config.AcceptType = ""
-	m := objectstorage.New(config)
-	object, err := os.Open("testfile")
-	if err != nil {
-		log.Fatalln(err)
+	m := s3.New(config)
+	for err := range m.MultipartAbortAll("testbucket") {
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
-	objectInfo, err := object.Stat()
-	if err != nil {
-		object.Close()
-		log.Fatalln(err)
-	}
-	uploadID, err := m.PutObject("testbucket", "testfile", uint64(objectInfo.Size()), object)
-	if err != nil {
-		object.Close()
-		log.Fatalln(err)
-	}
-	object.Close()
-	log.Println(uploadID)
 }

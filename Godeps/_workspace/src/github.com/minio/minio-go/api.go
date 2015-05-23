@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package objectstorage
+package client
 
 import (
 	"errors"
@@ -132,7 +132,7 @@ type Config struct {
 	AcceptType string            // specify this to get server response in non XML style if server supports it
 	Transport  http.RoundTripper // custom transport usually for debugging, by default its nil
 	// internal
-	// use AddUserAgent append to default, useful when objectstorage-go is used with in your application
+	// use AddUserAgent append to default, useful when minio-go is used with in your application
 	userAgent string
 }
 
@@ -173,7 +173,7 @@ func (c *Config) AddUserAgent(name string, version string, comments ...string) {
 
 // Global constants
 const (
-	LibraryName    = "objectstorage-go"
+	LibraryName    = "minio-go"
 	LibraryVersion = "0.1"
 )
 
@@ -596,7 +596,7 @@ func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch cha
 // If you enable recursive as 'true' this function will return back all the objects in a given bucket
 //
 //  eg:-
-//         api := objectstorage.New(....)
+//         api := client.New(....)
 //         for message := range api.ListObjects("mytestbucket", "starthere", true) {
 //                 fmt.Println(message.Data)
 //         }
@@ -635,7 +635,7 @@ func (a *api) listBucketsInRoutine(ch chan BucketOnChannel) {
 //     requests are allowed for listing buckets
 //
 //  eg:-
-//         api := objectstorage.New(....)
+//         api := client.New(....)
 //         for message := range api.ListBuckets() {
 //                 fmt.Println(message.Data)
 //         }
