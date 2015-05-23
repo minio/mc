@@ -17,6 +17,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"runtime"
 	"sync"
 
@@ -29,12 +31,20 @@ func runSyncCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
 	}
+
 	if !isMcConfigExist() {
-		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Please run \"mc config generate\"",
+			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+		})
 	}
+
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalln(iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unknown URL types found: ‘%s’", URLs),
+			Error:   iodine.New(err, nil),
+		})
 	}
 
 	// Separate source and target. 'sync' can take only one source.
@@ -66,7 +76,10 @@ func runSyncCmd(ctx *cli.Context) {
 
 	for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
 		if syncURLs.Error != nil {
-			console.Errorln(iodine.ToError(syncURLs.Error))
+			console.Errorln(console.ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.New(syncURLs.Error, nil),
+			})
 			continue
 		}
 		syncQueue <- true
@@ -75,16 +88,25 @@ func runSyncCmd(ctx *cli.Context) {
 			defer wg.Done()
 			srcConfig, err := getHostConfig(syncURLs.SourceContent.Name)
 			if err != nil {
-				console.Errorln(iodine.ToError(err))
+				console.Fatalln(console.ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.New(err, nil),
+				})
 				return
 			}
 			tgtConfig, err := getHostConfig(syncURLs.TargetContent.Name)
 			if err != nil {
-				console.Errorln(iodine.ToError(err))
+				console.Fatalln(console.ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.New(err, nil),
+				})
 				return
 			}
 			if err := doCopy(syncURLs.SourceContent.Name, srcConfig, syncURLs.TargetContent.Name, tgtConfig, bar); err != nil {
-				console.Errorln(iodine.ToError(err))
+				console.Errorln(console.ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.New(err, nil),
+				})
 			}
 			<-syncQueue
 		}(syncURLs, &bar)

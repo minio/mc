@@ -34,13 +34,19 @@ func runConfigCmd(ctx *cli.Context) {
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
-		console.Fatalln("Incorrect number of arguments, please use \"mc config help\"")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Incorrect number of arguments, please use \"mc config help\"",
+			Error:   iodine.New(errInvalidArgument{}, nil),
+		})
 	}
 	msg, err := doConfig(arg, tailArgs)
 	if err != nil {
-		console.Fatalln(msg)
+		console.Fatalln(console.ErrorMessage{
+			Message: msg,
+			Error:   err,
+		})
 	}
-	console.Infoln(msg)
+	console.Infoln(console.Message(msg))
 }
 
 // saveConfig writes configuration data in json format to config file.

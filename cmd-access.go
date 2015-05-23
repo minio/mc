@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -31,42 +32,51 @@ func runAccessCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Please run \"mc config generate\"",
+			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalf("loading config file failed with following reason: [%s]\n", iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: "loading config file failed",
+			Error:   iodine.New(err, nil),
+		})
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
 	targetURLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
-		switch e := iodine.ToError(err).(type) {
-		case errUnsupportedScheme:
-			console.Fatalf("Unknown type of URL ‘%s’. Reason: %s.\n", e.url, e)
-		default:
-			console.Fatalf("reading URLs failed with following Reason: %s\n", e)
-		}
+		console.Fatalln(console.ErrorMessage{
+			Message: "Unknown type of URL ",
+			Error:   iodine.New(err, nil),
+		})
 	}
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		console.Fatalf("Access type ‘%s’ is not supported. Valid types are [private, public, readonly].\n", acl)
+		console.Fatalln(console.ErrorMessage{
+			Message: "Valid types are [private, public, readonly].",
+			Error:   iodine.New(errors.New("Invalid ACL Type ‘"+acl.String()+"’"), nil),
+		})
 	}
 	targetURLs = targetURLs[1:] // 1 or more target URLs
 	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			console.Fatalf("Unable to read configuration for host ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
+			console.Fatalln(console.ErrorMessage{
+				Message: "Unable to read configuration for host " + "‘" + targetURL + "’",
+				Error:   iodine.New(err, nil),
+			})
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
 		errorMsg, err := doUpdateAccessCmd(targetURL, acl.String(), targetConfig)
-		err = iodine.New(err, nil)
 		if err != nil {
-			if errorMsg == "" {
-				errorMsg = "Empty error message.  Please rerun this command with --debug and file a bug report."
-			}
-			console.Errorf("%s", errorMsg)
+			console.Errorln(console.ErrorMessage{
+				Message: errorMsg,
+				Error:   iodine.New(err, nil),
+			})
 		}
 	}
 }
@@ -76,10 +86,8 @@ func doUpdateAccessCmd(targetURL, targetACL string, targetConfig *hostConfig) (s
 	var clnt client.Client
 	clnt, err = getNewClient(targetURL, targetConfig)
 	if err != nil {
-		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("Unable to initialize client for ‘%s’. Reason: %s.\n",
-			targetURL, iodine.ToError(err))
-		return msg, err
+		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
+		return msg, iodine.New(err, nil)
 	}
 	return doUpdateAccess(clnt, targetURL, targetACL)
 }
@@ -87,15 +95,14 @@ func doUpdateAccessCmd(targetURL, targetACL string, targetConfig *hostConfig) (s
 func doUpdateAccess(clnt client.Client, targetURL, targetACL string) (string, error) {
 	err := clnt.SetBucketACL(targetACL)
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		fmt.Println(console.Retry("Retrying ... %d", i))
+		console.Retry("Retrying ...", i)
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
 		err = clnt.SetBucketACL(targetACL)
 	}
 	if err != nil {
-		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
-		return msg, err
+		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’", targetURL)
+		return msg, iodine.New(err, nil)
 	}
 	return "", nil
 }

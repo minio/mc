@@ -247,7 +247,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				content := new(client.Content)
 				content.Name = object.Data.Key
 				switch {
-				case object.Data.Size == 0:
+				case strings.HasSuffix(object.Data.Key, "/"):
 					content.Time = time.Now()
 					content.Type = os.ModeDir
 				default:

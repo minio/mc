@@ -17,6 +17,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"runtime"
 	"sync"
 
@@ -33,7 +35,7 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	}
 	switch globalQuietFlag {
 	case true:
-		console.Infof("‘%s’ -> ‘%s’\n", sourceURL, targetURL)
+		console.Infoln(console.Message(fmt.Sprintf("‘%s’ -> ‘%s’", sourceURL, targetURL)))
 	default:
 		// set up progress
 		reader = bar.NewProxyReader(reader)
@@ -117,13 +119,21 @@ func runCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
+
 	if !isMcConfigExist() {
-		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Please run \"mc config generate\"",
+			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+		})
 	}
+
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalln(iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unknown URL types: ‘%s’", URLs),
+			Error:   iodine.New(err, nil),
+		})
 	}
 
 	// Separate source and target. 'cp' can take only one target,
@@ -138,7 +148,10 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 	for err := range doCopyCmd(sourceURLs, targetURL, bar) {
 		if err != nil {
-			console.Errorln(iodine.ToError(err))
+			console.Errorln(console.ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.New(err, nil),
+			})
 		}
 	}
 	if !globalQuietFlag {

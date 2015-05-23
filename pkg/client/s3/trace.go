@@ -75,9 +75,10 @@ func (t Trace) Response(res *http.Response) (err error) {
 
 // print HTTP Response
 func (t Trace) print(data []byte) {
-	if t.Writer != nil {
+	switch {
+	case t.Writer != nil:
 		fmt.Fprintf(t.Writer, "%s", data)
-	} else {
-		console.Debugf("%s", data)
+	default:
+		console.Debugln(string(data))
 	}
 }

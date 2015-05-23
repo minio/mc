@@ -17,6 +17,9 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
@@ -27,12 +30,20 @@ func runListCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
+
 	if !isMcConfigExist() {
-		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Please run \"mc config generate\"",
+			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+		})
 	}
+
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalf("Unable to read config file ‘%s’. Reason: %s.\n", mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
+			Error:   iodine.New(err, nil),
+		})
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range ctx.Args() {
@@ -40,15 +51,23 @@ func runListCmd(ctx *cli.Context) {
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
-				console.Fatalf("Unknown type of URL ‘%s’. Reason: %s.\n", e.url, e)
+				console.Fatalln(console.ErrorMessage{
+					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
+					Error:   iodine.New(e, nil),
+				})
 			default:
-				console.Fatalf("Unable to parse argument ‘%s’. Reason: %s.\n", arg, iodine.ToError(err))
+				console.Fatalln(console.ErrorMessage{
+					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
+					Error:   iodine.New(err, nil),
+				})
 			}
 		}
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			console.Fatalf("Unable to read host configuration for ‘%s’ from config file ‘%s’. Reason: %s.\n",
-				targetURL, mustGetMcConfigPath(), iodine.ToError(err))
+			console.Fatalln(console.ErrorMessage{
+				Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", targetURL, mustGetMcConfigPath()),
+				Error:   iodine.New(err, nil),
+			})
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
@@ -56,9 +75,11 @@ func runListCmd(ctx *cli.Context) {
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
 		err = doListCmd(newTargetURL, targetConfig, isURLRecursive(targetURL))
-		err = iodine.New(err, nil)
 		if err != nil {
-			console.Fatalf("Failed to list ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
+			console.Fatalln(console.ErrorMessage{
+				Message: fmt.Sprintf("Failed to list ‘%s’", targetURL),
+				Error:   iodine.New(err, nil),
+			})
 		}
 	}
 }

@@ -17,6 +17,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"runtime"
 	"time"
 
@@ -56,17 +58,24 @@ func runUpdateCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Please run \"mc config generate\"",
+			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+		})
 	}
 	hostConfig, err := getHostConfig(mcUpdateURL)
 	if err != nil {
-		console.Fatalf("Unable to read configuration for host ‘%s’. Reason: %s.\n", mcUpdateURL, iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unable to read configuration for host ‘%s’", mcUpdateURL),
+			Error:   iodine.New(err, nil),
+		})
 	}
 	msg, err := doUpdateCheck(hostConfig)
 	if err != nil {
-		console.Fatalln(msg)
+		console.Fatalln(console.ErrorMessage{
+			Message: msg,
+			Error:   iodine.New(err, nil),
+		})
 	}
-	if msg != "" {
-		console.Infoln(msg)
-	}
+	console.Infoln(console.Message(msg))
 }

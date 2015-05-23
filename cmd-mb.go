@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,37 +33,51 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Please run \"mc config generate\"",
+			Error:   errors.New("\"mc\" is not configured"),
+		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalf("Unable to read config file ‘%s’. Reason: %s\n", mustGetMcConfigPath(), iodine.ToError(err))
+		console.Fatalln(console.ErrorMessage{
+			Message: "Unable to read config file ‘" + mustGetMcConfigPath() + "’",
+			Error:   err,
+		})
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
-	targetURLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
-	if err != nil {
-		switch e := iodine.ToError(err).(type) {
-		case errUnsupportedScheme:
-			console.Fatalf("Unknown URL type ‘%s’ passed. Reason: %s.\n", e.url, e)
-		default:
-			console.Fatalf("Error in parsing path or URL. Reason: %s.\n", e)
+	for _, arg := range ctx.Args() {
+		targetURL, err := getExpandedURL(arg, config.Aliases)
+		if err != nil {
+			switch e := iodine.ToError(err).(type) {
+			case errUnsupportedScheme:
+				console.Fatalln(console.ErrorMessage{
+					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
+					Error:   e,
+				})
+			default:
+				console.Fatalln(console.ErrorMessage{
+					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
+					Error:   err,
+				})
+			}
 		}
-	}
-	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			console.Fatalf("Unable to read configuration for host ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
+			console.Fatalln(console.ErrorMessage{
+				Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", targetURL, mustGetMcConfigPath()),
+				Error:   err,
+			})
 		}
 		targetURLConfigMap[targetURL] = targetConfig
 	}
 	for targetURL, targetConfig := range targetURLConfigMap {
 		errorMsg, err := doMakeBucketCmd(targetURL, targetConfig)
-		err = iodine.New(err, nil)
 		if err != nil {
-			if errorMsg == "" {
-				errorMsg = "Empty error message.  Please rerun this command with --debug and file a bug report."
-			}
-			console.Errorf("%s", errorMsg)
+			console.Errorln(console.ErrorMessage{
+				Message: errorMsg,
+				Error:   err,
+			})
 		}
 	}
 }
@@ -73,10 +88,8 @@ func doMakeBucketCmd(targetURL string, targetConfig *hostConfig) (string, error)
 	var clnt client.Client
 	clnt, err = getNewClient(targetURL, targetConfig)
 	if err != nil {
-		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("Unable to initialize client for ‘%s’. Reason: %s.\n",
-			targetURL, iodine.ToError(err))
-		return msg, err
+		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
+		return msg, iodine.New(err, nil)
 	}
 	return doMakeBucket(clnt, targetURL)
 }
@@ -85,15 +98,14 @@ func doMakeBucketCmd(targetURL string, targetConfig *hostConfig) (string, error)
 func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
 	err := clnt.MakeBucket()
 	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		fmt.Println(console.Retry("Retrying ... %d", i))
+		console.Retry("Retrying ...", i)
 		// Progressively longer delays
 		time.Sleep(time.Duration(i*i) * time.Second)
 		err = clnt.MakeBucket()
 	}
 	if err != nil {
-		err := iodine.New(err, nil)
-		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’. Reason: %s.\n", targetURL, iodine.ToError(err))
-		return msg, err
+		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", targetURL)
+		return msg, iodine.New(err, nil)
 	}
 	return "", nil
 }

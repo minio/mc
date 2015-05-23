@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -34,7 +35,10 @@ import (
 func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
-		console.Fatalln("Unable to determine current user")
+		console.Fatalln(console.ErrorMessage{
+			Message: "Unable to determine current user",
+			Error:   err,
+		})
 	}
 
 	// If config doesn't exist, do not attempt to read it
@@ -45,7 +49,10 @@ func checkConfig() {
 	// Ensures config file is sane
 	_, err = getMcConfig()
 	if err != nil {
-		console.Fatalf("Unable to read config file: %s\n", mustGetMcConfigPath())
+		console.Fatalln(console.ErrorMessage{
+			Message: fmt.Sprintf("Unable to read config file: %s", mustGetMcConfigPath()),
+			Error:   err,
+		})
 	}
 }
 
@@ -107,14 +114,23 @@ func main() {
 			app.ExtraInfo = getSystemData()
 			console.NoDebugPrint = false
 		}
+		if globalJSONFlag {
+			console.NoJSONPrint = false
+		}
 		themeName := ctx.GlobalString("theme")
 		switch {
 		case console.IsValidTheme(themeName) != true:
-			console.Fatalf("Theme ‘%s’ is not supported.  Please choose from this list: %s.\n", themeName, console.GetThemeNames())
+			console.Fatalln(console.ErrorMessage{
+				Message: fmt.Sprintf("Please choose from this list: %s.", console.GetThemeNames()),
+				Error:   fmt.Errorf("Theme ‘%s’ is not supported.", themeName),
+			})
 		default:
 			err := console.SetTheme(themeName)
 			if err != nil {
-				console.Fatalf("Failed to set theme ‘%s’. Reason: %s.\n", themeName, iodine.ToError(err))
+				console.Fatalln(console.ErrorMessage{
+					Message: fmt.Sprintf("Failed to set theme ‘%s’.", themeName),
+					Error:   err,
+				})
 			}
 		}
 		checkConfig()
@@ -122,7 +138,10 @@ func main() {
 	}
 	app.After = func(ctx *cli.Context) error {
 		if !isMcConfigExist() {
-			console.Fatalln("\"mc\" is not configured.  Please run \"mc config generate\".")
+			console.Fatalln(console.ErrorMessage{
+				Message: "Please run \"mc config generate\"",
+				Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+			})
 		}
 		return nil
 	}
