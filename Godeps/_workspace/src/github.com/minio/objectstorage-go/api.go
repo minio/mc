@@ -20,6 +20,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -156,16 +157,17 @@ func (c *Config) MustGetEndpoint() string {
 		// fall back to custom Endpoint, if no valid region can be found
 		return c.Endpoint
 	}
-	// if not endpoint or region sepcified default to us-east-1
+	// if not endpoint or region specified default to us-east-1
 	c.Region = "us-east-1"
 	return getEndpoint(c.Region)
 }
 
 // AddUserAgent - append to a default user agent
 func (c *Config) AddUserAgent(name string, version string, comments ...string) {
+	c.userAgent = LibraryName + "/" + LibraryVersion + " (" + runtime.GOOS + ", " + runtime.GOARCH + ") "
+	// if no name and version is set we do not add new user agents
 	if name != "" && version != "" {
-		newUserAgent := name + "/" + version + " (" + strings.Join(comments, ", ") + ") "
-		c.userAgent = c.userAgent + " " + newUserAgent
+		c.userAgent = c.userAgent + " " + name + "/" + version + " (" + strings.Join(comments, ", ") + ") "
 	}
 }
 

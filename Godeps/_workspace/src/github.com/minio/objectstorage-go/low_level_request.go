@@ -72,8 +72,12 @@ func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, er
 		return nil, err
 	}
 
+	// if userAgent empty do not set it
+	if config.userAgent != "" {
+		config.userAgent = LibraryName + "/" + LibraryVersion + " (" + runtime.GOOS + ", " + runtime.GOARCH + ") "
+	}
+
 	// set UserAgent
-	config.userAgent = config.userAgent + LibraryName + "/" + LibraryVersion + " (" + runtime.GOOS + ", " + runtime.GOARCH + ") "
 	req.Header.Set("User-Agent", config.userAgent)
 
 	// set Accept header for response encoding style, if available
@@ -206,6 +210,8 @@ func (r *request) getSignedHeaders() string {
 func (r *request) getCanonicalRequest(hashedPayload string) string {
 	r.req.URL.RawQuery = strings.Replace(r.req.URL.Query().Encode(), "+", "%20", -1)
 	encodedPath, _ := urlEncodeName(r.req.URL.Path)
+	// convert any space strings back to "+"
+	encodedPath = strings.Replace(encodedPath, "+", "%20", -1)
 	canonicalRequest := strings.Join([]string{
 		r.req.Method,
 		encodedPath,
