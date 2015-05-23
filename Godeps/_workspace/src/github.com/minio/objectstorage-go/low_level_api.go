@@ -401,12 +401,13 @@ func (a *lowLevelAPI) getObjectRequest(bucket, object string, offset, length uin
 	if err != nil {
 		return nil, err
 	}
-	// TODO - fix this to support full - http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
 	switch {
-	case length > 0:
+	case length > 0 && offset > 0:
 		r.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
-	default:
+	case offset > 0 && length == 0:
 		r.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+	case length > 0 && offset == 0:
+		r.Set("Range", fmt.Sprintf("bytes=-%d", length))
 	}
 	return r, nil
 }

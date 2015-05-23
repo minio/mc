@@ -66,9 +66,9 @@ EXAMPLES:
 
    5. List files with non english characters on Amazon S3 object storage
       $ mc ls s3:andoria/本...
-      [2015-05-19 17:21:49 PDT]    41B 本b語
-      [2015-05-19 17:24:19 PDT]    41B 本b語.1
-      [2015-05-19 17:28:22 PDT]    41B 本語
+      [2015-05-19 17:21:49 PDT]    41B 本語.pdf
+      [2015-05-19 17:24:19 PDT]    41B 本語.txt
+      [2015-05-19 17:28:22 PDT]    41B 本語.md
 
 `,
 }
@@ -140,7 +140,7 @@ EXAMPLES:
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
 
    5. Sync a local file of non english character to Amazon s3 object storage
-      $ mc {{.Name}} 本語 s3:mylocaldocuments C:\backup\2014 play:backup
+      $ mc {{.Name}} 本語/... s3:mylocaldocuments C:\backup\2014 play:backup
 
 `,
 }
@@ -199,6 +199,10 @@ EXAMPLES:
 
    3. Concantenate multiple files from local filesystem to standard output.
       $ mc {{.Name}} *.txt > newfile.txt
+
+   4. Concatenate a non english file name from Amazon S3 object storage
+      $ mc {{.Name}} s3:andoria/本語 > /tmp/本語
+
 `,
 }
 
