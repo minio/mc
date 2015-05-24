@@ -33,14 +33,14 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   errors.New("\"mc\" is not configured"),
 		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: "Unable to read config file ‘" + mustGetMcConfigPath() + "’",
 			Error:   err,
 		})
@@ -51,12 +51,12 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
-				console.Fatalln(console.ErrorMessage{
+				console.Fatalln(ErrorMessage{
 					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
 					Error:   e,
 				})
 			default:
-				console.Fatalln(console.ErrorMessage{
+				console.Fatalln(ErrorMessage{
 					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
 					Error:   err,
 				})
@@ -64,7 +64,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		}
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			console.Fatalln(console.ErrorMessage{
+			console.Fatalln(ErrorMessage{
 				Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", targetURL, mustGetMcConfigPath()),
 				Error:   err,
 			})
@@ -74,7 +74,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	for targetURL, targetConfig := range targetURLConfigMap {
 		errorMsg, err := doMakeBucketCmd(targetURL, targetConfig)
 		if err != nil {
-			console.Errorln(console.ErrorMessage{
+			console.Errorln(ErrorMessage{
 				Message: errorMsg,
 				Error:   err,
 			})

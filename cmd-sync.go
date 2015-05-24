@@ -33,7 +33,7 @@ func runSyncCmd(ctx *cli.Context) {
 	}
 
 	if !isMcConfigExist() {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
@@ -41,7 +41,7 @@ func runSyncCmd(ctx *cli.Context) {
 
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: fmt.Sprintf("Unknown URL types found: ‘%s’", URLs),
 			Error:   iodine.New(err, nil),
 		})
@@ -76,7 +76,7 @@ func runSyncCmd(ctx *cli.Context) {
 
 	for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
 		if syncURLs.Error != nil {
-			console.Errorln(console.ErrorMessage{
+			console.Errorln(ErrorMessage{
 				Message: "Failed with",
 				Error:   iodine.New(syncURLs.Error, nil),
 			})
@@ -88,7 +88,7 @@ func runSyncCmd(ctx *cli.Context) {
 			defer wg.Done()
 			srcConfig, err := getHostConfig(syncURLs.SourceContent.Name)
 			if err != nil {
-				console.Fatalln(console.ErrorMessage{
+				console.Fatalln(ErrorMessage{
 					Message: "Failed with",
 					Error:   iodine.New(err, nil),
 				})
@@ -96,14 +96,14 @@ func runSyncCmd(ctx *cli.Context) {
 			}
 			tgtConfig, err := getHostConfig(syncURLs.TargetContent.Name)
 			if err != nil {
-				console.Fatalln(console.ErrorMessage{
+				console.Fatalln(ErrorMessage{
 					Message: "Failed with",
 					Error:   iodine.New(err, nil),
 				})
 				return
 			}
 			if err := doCopy(syncURLs.SourceContent.Name, srcConfig, syncURLs.TargetContent.Name, tgtConfig, bar); err != nil {
-				console.Errorln(console.ErrorMessage{
+				console.Errorln(ErrorMessage{
 					Message: "Failed with",
 					Error:   iodine.New(err, nil),
 				})

@@ -20,12 +20,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"runtime"
 	"sync"
 
 	"path/filepath"
 
 	"github.com/fatih/color"
+	"github.com/fatih/structs"
 	"github.com/minio/minio/pkg/iodine"
 	"github.com/shiena/ansicolor"
 )
@@ -35,23 +35,6 @@ var NoDebugPrint = true
 
 // NoJsonPrint defines if the input should be printed in json formatted or not. By default it's set to true.
 var NoJSONPrint = true
-
-// Message info string
-type Message string
-
-// ErrorMessage error message structure
-type ErrorMessage struct {
-	Message string `json:"Message"`
-	Error   error  `json:"Reason"`
-}
-
-// Content content message structure
-type Content struct {
-	Filetype string `json:"ContentType"`
-	Time     string `json:"LastModified"`
-	Size     string `json:"Size"`
-	Name     string `json:"Name"`
-}
 
 // Theme holds console color scheme
 type Theme struct {
@@ -65,6 +48,17 @@ type Theme struct {
 	Dir   *color.Color
 	Retry *color.Color
 	JSON  *color.Color
+	Print *color.Color
+}
+
+func readErrordata(data interface{}) (string, error) {
+	st := structs.New(data)
+	if st.IsZero() {
+		return "", nil
+	}
+	msg := st.Field("Message")
+	msgErr := st.Field("Error")
+	return msg.Value().(string), msgErr.Value().(error)
 }
 
 var (
@@ -91,93 +85,114 @@ var (
 	}()
 
 	// Print prints a message
-	Print = themesDB[currThemeName].Info.Print
+	Print = func(data interface{}) {
+		if NoJSONPrint {
+			print(themesDB[currThemeName].Print, data)
+			return
+		}
+		printBytes, _ := json.Marshal(&data)
+		print(themesDB[currThemeName].JSON, string(printBytes))
+	}
+
+	// Println prints a message with a newline
+	Println = func(data interface{}) {
+		if NoJSONPrint {
+			println(themesDB[currThemeName].Print, data)
+			return
+		}
+		printBytes, _ := json.Marshal(&data)
+		println(themesDB[currThemeName].JSON, string(printBytes))
+	}
 
 	// Fatal prints a error message and exits
-	Fatal = func(msg ErrorMessage) {
+	Fatal = func(data interface{}) {
 		defer os.Exit(1)
-		if msg.Error != nil {
+		msg, err := readErrordata(data)
+		if err != nil {
 			if NoJSONPrint {
-				reason := "Reason: " + iodine.ToError(msg.Error).Error()
-				message := msg.Message + ", " + reason
+				reason := "Reason: " + iodine.ToError(err).Error()
+				message := msg + ", " + reason
 				print(themesDB[currThemeName].Error, message)
 				if !NoDebugPrint {
-					print(themesDB[currThemeName].Error, msg.Error)
+					print(themesDB[currThemeName].Error, err)
 				}
 				return
 			}
-			errorMessageBytes, _ := json.Marshal(&msg)
+			errorMessageBytes, _ := json.Marshal(&data)
 			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
 	// Fatalln prints a error message with a new line and exits
-	Fatalln = func(msg ErrorMessage) {
+	Fatalln = func(data interface{}) {
 		defer os.Exit(1)
-		if msg.Error != nil {
+		msg, err := readErrordata(data)
+		if err != nil {
 			if NoJSONPrint {
-				reason := "Reason: " + iodine.ToError(msg.Error).Error()
-				message := msg.Message + ", " + reason
+				reason := "Reason: " + iodine.ToError(err).Error()
+				message := msg + ", " + reason
 				println(themesDB[currThemeName].Error, message)
 				if !NoDebugPrint {
-					println(themesDB[currThemeName].Error, msg.Error)
+					println(themesDB[currThemeName].Error, err)
 				}
 				return
 			}
-			errorMessageBytes, _ := json.Marshal(&msg)
+			errorMessageBytes, _ := json.Marshal(&data)
 			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
 
 	// Error prints a error message
-	Error = func(msg ErrorMessage) {
-		if msg.Error != nil {
+	Error = func(data interface{}) {
+		msg, err := readErrordata(data)
+		if err != nil {
 			if NoJSONPrint {
-				reason := "Reason: " + iodine.ToError(msg.Error).Error()
-				message := msg.Message + ", " + reason
+				reason := "Reason: " + iodine.ToError(err).Error()
+				message := msg + ", " + reason
 				print(themesDB[currThemeName].Error, message)
 				if !NoDebugPrint {
-					print(themesDB[currThemeName].Error, msg.Error)
+					print(themesDB[currThemeName].Error, err)
 				}
 				return
 			}
-			errorMessageBytes, _ := json.Marshal(&msg)
+			errorMessageBytes, _ := json.Marshal(&data)
 			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
 	// Errorln prints a error message with a new line
-	Errorln = func(msg ErrorMessage) {
-		if msg.Error != nil {
+	Errorln = func(data interface{}) {
+		msg, err := readErrordata(data)
+		if err != nil {
 			if NoJSONPrint {
-				reason := "Reason: " + iodine.ToError(msg.Error).Error()
-				message := msg.Message + ", " + reason
+				reason := "Reason: " + iodine.ToError(err).Error()
+				message := msg + ", " + reason
 				println(themesDB[currThemeName].Error, message)
 				if !NoDebugPrint {
-					println(themesDB[currThemeName].Error, msg.Error)
+					println(themesDB[currThemeName].Error, err)
 				}
 				return
 			}
-			errorMessageBytes, _ := json.Marshal(&msg)
+			errorMessageBytes, _ := json.Marshal(&data)
 			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
 
 	// Info prints a informational message
-	Info = func(msg Message) {
+	Info = func(data interface{}) {
 		if NoJSONPrint {
-			print(themesDB[currThemeName].Info, msg)
+			print(themesDB[currThemeName].Info, data)
 			return
 		}
-		infoBytes, _ := json.Marshal(&msg)
+		infoBytes, _ := json.Marshal(&data)
 		print(themesDB[currThemeName].JSON, string(infoBytes))
 	}
 
 	// Infoln prints a informational message with a new line
-	Infoln = func(msg Message) {
+	Infoln = func(data interface{}) {
 		if NoJSONPrint {
-			println(themesDB[currThemeName].Info, msg)
+			println(themesDB[currThemeName].Info, data)
 			return
 		}
-		infoBytes, _ := json.Marshal(&msg)
+		infoBytes, _ := json.Marshal(&data)
 		println(themesDB[currThemeName].JSON, string(infoBytes))
 	}
 
@@ -195,22 +210,15 @@ var (
 			println(themesDB[currThemeName].Debug, a...)
 		}
 	}
-	// ContentInfo prints a structure Content
-	ContentInfo = func(c Content) {
-		if NoJSONPrint {
-			print(themesDB[currThemeName].Time, c.Time)
-			print(themesDB[currThemeName].Size, c.Size)
-			switch c.Filetype {
-			case "inode/directory":
-				println(themesDB[currThemeName].Dir, c.Name)
-			case "application/octet-stream":
-				println(themesDB[currThemeName].File, c.Name)
-			}
-			return
-		}
-		contentBytes, _ := json.Marshal(&c)
-		println(themesDB[currThemeName].JSON, string(contentBytes))
-	}
+
+	// Time helper to print Time theme
+	Time = themesDB[currThemeName].Time.SprintfFunc()
+	// Size helper to print Size theme
+	Size = themesDB[currThemeName].Size.SprintfFunc()
+	// File helper to print File theme
+	File = themesDB[currThemeName].File.SprintfFunc()
+	// Dir helper to print Dir theme
+	Dir = themesDB[currThemeName].Dir.SprintfFunc()
 
 	// Retry prints a retry message
 	Retry = func(a ...interface{}) {
@@ -252,15 +260,6 @@ var (
 			c.Print(ProgramName() + ": ")
 			c.Print(a...)
 			mutex.Unlock()
-		// special cases only for Content where it requires custom formatting
-		case themesDB[currThemeName].Time:
-			mutex.Lock()
-			c.Print(fmt.Sprintf("[%s] ", a...))
-			mutex.Unlock()
-		case themesDB[currThemeName].Size:
-			mutex.Lock()
-			c.Printf(fmt.Sprintf("%6s ", a...))
-			mutex.Unlock()
 		default:
 			mutex.Lock()
 			c.Print(a...)
@@ -298,19 +297,6 @@ var (
 		case themesDB[currThemeName].Info:
 			mutex.Lock()
 			c.Print(ProgramName() + ": ")
-			c.Println(a...)
-			mutex.Unlock()
-		case themesDB[currThemeName].Dir:
-			mutex.Lock()
-			switch {
-			case runtime.GOOS == "windows":
-				c.Printf("%s\\\n", a...)
-			default:
-				c.Printf("%s/\n", a...)
-			}
-			mutex.Unlock()
-		case themesDB[currThemeName].File:
-			mutex.Lock()
 			c.Println(a...)
 			mutex.Unlock()
 		default:

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"runtime"
 	"strings"
 
@@ -33,28 +34,47 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
-// printContent prints content meta-data
-func printContent(c *client.Content) {
-	content := console.Content{}
+func (c Content) String() string {
+	message := console.Time("[%s] ", c.Time)
+	message = message + console.Size("%6s ", c.Size)
+	message = func() string {
+		if c.Filetype == "inode/directory" {
+			return message + console.Dir("%s", c.Name)
+		}
+		return message + console.File("%s", c.Name)
+	}()
+	return message
+}
+
+func parseContent(c *client.Content) Content {
+	content := Content{}
+	content.Time = c.Time.Local().Format(printDate)
 	content.Filetype = func() string {
 		if c.Type.IsDir() {
 			return "inode/directory"
 		}
-		if c.Type.IsRegular() {
-			return "application/octet-stream"
-		}
 		return "application/octet-stream"
 	}()
 	content.Size = humanize.IBytes(uint64(c.Size))
-	switch {
-	case runtime.GOOS == "windows":
-		content.Name = strings.Replace(c.Name, "/", "\\", -1)
-		content.Name = strings.TrimSuffix(content.Name, "\\")
-	default:
-		content.Name = strings.TrimSuffix(c.Name, "/")
-	}
-	content.Time = c.Time.Local().Format(printDate)
-	console.ContentInfo(content)
+	content.Name = func() string {
+		switch {
+		case runtime.GOOS == "windows":
+			c.Name = strings.Replace(c.Name, "/", "\\", -1)
+			c.Name = strings.TrimSuffix(c.Name, "\\")
+		default:
+			c.Name = strings.TrimSuffix(c.Name, "/")
+		}
+		if c.Type.IsDir() {
+			switch {
+			case runtime.GOOS == "windows":
+				return fmt.Sprintf("%s\\", c.Name)
+			default:
+				return fmt.Sprintf("%s/", c.Name)
+			}
+		}
+		return c.Name
+	}()
+	return content
 }
 
 // doList - list all entities inside a folder
@@ -74,7 +94,8 @@ func doList(clnt client.Client, targetURL string, recursive bool) error {
 			contentName = strings.TrimPrefix(contentName, strings.TrimSuffix(targetURL, "/")+"/")
 		}
 		contentCh.Content.Name = contentName
-		printContent(contentCh.Content)
+		content := parseContent(contentCh.Content)
+		console.Println(content)
 	}
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})

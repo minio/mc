@@ -32,14 +32,14 @@ func runAccessCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: "loading config file failed",
 			Error:   iodine.New(err, nil),
 		})
@@ -47,14 +47,14 @@ func runAccessCmd(ctx *cli.Context) {
 	targetURLConfigMap := make(map[string]*hostConfig)
 	targetURLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: "Unknown type of URL ",
 			Error:   iodine.New(err, nil),
 		})
 	}
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: "Valid types are [private, public, readonly].",
 			Error:   iodine.New(errors.New("Invalid ACL Type ‘"+acl.String()+"’"), nil),
 		})
@@ -63,7 +63,7 @@ func runAccessCmd(ctx *cli.Context) {
 	for _, targetURL := range targetURLs {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			console.Fatalln(console.ErrorMessage{
+			console.Fatalln(ErrorMessage{
 				Message: "Unable to read configuration for host " + "‘" + targetURL + "’",
 				Error:   iodine.New(err, nil),
 			})
@@ -73,7 +73,7 @@ func runAccessCmd(ctx *cli.Context) {
 	for targetURL, targetConfig := range targetURLConfigMap {
 		errorMsg, err := doUpdateAccessCmd(targetURL, acl.String(), targetConfig)
 		if err != nil {
-			console.Errorln(console.ErrorMessage{
+			console.Errorln(ErrorMessage{
 				Message: errorMsg,
 				Error:   iodine.New(err, nil),
 			})

@@ -119,13 +119,13 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 		switch {
 		case errFirst != nil && errSecond == nil:
 			ch <- diff{
-				message: "Only in ‘" + secondURL + "’",
+				message: "‘" + newSecondURL + "’ Only in ‘" + secondURL + "’",
 				err:     nil,
 			}
 			continue
 		case errFirst == nil && errSecond != nil:
 			ch <- diff{
-				message: "Only in ‘" + firstURL + "’",
+				message: "‘" + newFirstURL + "’ Only in ‘" + firstURL + "’",
 				err:     nil,
 			}
 			continue
