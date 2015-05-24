@@ -48,7 +48,7 @@ func doUpdateCheck(config *hostConfig) (string, error) {
 		printUpdateNotify("new", "old")
 		return "", nil
 	}
-	return "You have latest build", nil
+	return "You are already running the most recent version of ‘mc’", nil
 
 }
 
@@ -58,24 +58,24 @@ func runUpdateCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
 	}
 	hostConfig, err := getHostConfig(mcUpdateURL)
 	if err != nil {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read configuration for host ‘%s’", mcUpdateURL),
 			Error:   iodine.New(err, nil),
 		})
 	}
 	msg, err := doUpdateCheck(hostConfig)
 	if err != nil {
-		console.Fatalln(console.ErrorMessage{
+		console.Fatalln(ErrorMessage{
 			Message: msg,
 			Error:   iodine.New(err, nil),
 		})
 	}
-	console.Infoln(console.Message(msg))
+	console.Infoln(msg)
 }
