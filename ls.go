@@ -34,18 +34,7 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
-func (c Content) String() string {
-	message := console.Time("[%s] ", c.Time)
-	message = message + console.Size("%6s ", c.Size)
-	message = func() string {
-		if c.Filetype == "inode/directory" {
-			return message + console.Dir("%s", c.Name)
-		}
-		return message + console.File("%s", c.Name)
-	}()
-	return message
-}
-
+// parseContent parse client Content container into printer struct
 func parseContent(c *client.Content) Content {
 	content := Content{}
 	content.Time = c.Time.Local().Format(printDate)
@@ -94,8 +83,7 @@ func doList(clnt client.Client, targetURL string, recursive bool) error {
 			contentName = strings.TrimPrefix(contentName, strings.TrimSuffix(targetURL, "/")+"/")
 		}
 		contentCh.Content.Name = contentName
-		content := parseContent(contentCh.Content)
-		console.Println(content)
+		console.Println(parseContent(contentCh.Content))
 	}
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})

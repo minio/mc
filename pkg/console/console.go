@@ -51,14 +51,13 @@ type Theme struct {
 	Print *color.Color
 }
 
-func readErrordata(data interface{}) (string, error) {
+func readErrorFromdata(data interface{}) error {
 	st := structs.New(data)
 	if st.IsZero() {
-		return "", nil
+		return nil
 	}
-	msg := st.Field("Message")
 	msgErr := st.Field("Error")
-	return msg.Value().(string), msgErr.Value().(error)
+	return msgErr.Value().(error)
 }
 
 var (
@@ -107,12 +106,10 @@ var (
 	// Fatal prints a error message and exits
 	Fatal = func(data interface{}) {
 		defer os.Exit(1)
-		msg, err := readErrordata(data)
+		err := readErrorFromdata(data)
 		if err != nil {
 			if NoJSONPrint {
-				reason := "Reason: " + iodine.ToError(err).Error()
-				message := msg + ", " + reason
-				print(themesDB[currThemeName].Error, message)
+				print(themesDB[currThemeName].Error, data)
 				if !NoDebugPrint {
 					print(themesDB[currThemeName].Error, err)
 				}
@@ -125,12 +122,10 @@ var (
 	// Fatalln prints a error message with a new line and exits
 	Fatalln = func(data interface{}) {
 		defer os.Exit(1)
-		msg, err := readErrordata(data)
+		err := readErrorFromdata(data)
 		if err != nil {
 			if NoJSONPrint {
-				reason := "Reason: " + iodine.ToError(err).Error()
-				message := msg + ", " + reason
-				println(themesDB[currThemeName].Error, message)
+				println(themesDB[currThemeName].Error, data)
 				if !NoDebugPrint {
 					println(themesDB[currThemeName].Error, err)
 				}
@@ -143,12 +138,10 @@ var (
 
 	// Error prints a error message
 	Error = func(data interface{}) {
-		msg, err := readErrordata(data)
+		err := readErrorFromdata(data)
 		if err != nil {
 			if NoJSONPrint {
-				reason := "Reason: " + iodine.ToError(err).Error()
-				message := msg + ", " + reason
-				print(themesDB[currThemeName].Error, message)
+				print(themesDB[currThemeName].Error, data)
 				if !NoDebugPrint {
 					print(themesDB[currThemeName].Error, err)
 				}
@@ -160,12 +153,10 @@ var (
 	}
 	// Errorln prints a error message with a new line
 	Errorln = func(data interface{}) {
-		msg, err := readErrordata(data)
+		err := readErrorFromdata(data)
 		if err != nil {
 			if NoJSONPrint {
-				reason := "Reason: " + iodine.ToError(err).Error()
-				message := msg + ", " + reason
-				println(themesDB[currThemeName].Error, message)
+				println(themesDB[currThemeName].Error, err)
 				if !NoDebugPrint {
 					println(themesDB[currThemeName].Error, err)
 				}
