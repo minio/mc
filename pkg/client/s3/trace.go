@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"regexp"
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
@@ -45,8 +46,21 @@ func NewTrace(bodyTraceFlag, requestTransportFlag bool, writer io.Writer) HTTPTr
 
 // Request - Trace HTTP Request
 func (t Trace) Request(req *http.Request) (err error) {
-	origAuthKey := req.Header.Get("Authorization")
-	req.Header.Set("Authorization", "AWS4-HMAC-SHA256 Credential=**REDACTED**, SignedHeaders=**REDACTED**, Signature=**REDACTED**")
+	origAuth := req.Header.Get("Authorization")
+
+	// Authorization (S3 v4 signature) Format:
+	// Authorization: AWS4-HMAC-SHA256 Credential=AKIAJNACEGBGMXBHLEZA/20150524/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=bbfaa693c626021bcb5f911cd898a1a30206c1fad6bad1e0eb89e282173bd24c
+
+	// Strip out access-key-id from: Credential=<access-key-id>/<date>/<aws-region>/<aws-service>/aws4_request
+	regCred := regexp.MustCompile("Credential=([A-Z]+)/")
+	newAuth := regCred.ReplaceAllString(origAuth, "Credential=**REDACTED**/")
+
+	// Strip out 256-bit signature from: Signature=<256-bit signature>
+	regSign := regexp.MustCompile("Signature=([[0-9a-f]+)")
+	newAuth = regSign.ReplaceAllString(newAuth, "Signature=**REDACTED**")
+
+	// Set a temporary redacted auth
+	req.Header.Set("Authorization", newAuth)
 
 	if t.RequestTransportFlag {
 		reqTrace, err := httputil.DumpRequestOut(req, t.BodyTraceFlag)
@@ -60,7 +74,8 @@ func (t Trace) Request(req *http.Request) (err error) {
 		}
 	}
 
-	req.Header.Set("Authorization", origAuthKey)
+	// Undo
+	req.Header.Set("Authorization", origAuth)
 	return iodine.New(err, nil)
 }
 
