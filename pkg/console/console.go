@@ -48,6 +48,7 @@ type Theme struct {
 	Dir   *color.Color
 	Retry *color.Color
 	JSON  *color.Color
+	Bar   *color.Color
 	Print *color.Color
 }
 
@@ -82,6 +83,9 @@ var (
 		}
 		return theme
 	}()
+
+	// Bar print progress bar
+	Bar = themesDB[currThemeName].Info.Print
 
 	// Print prints a message
 	Print = func(data interface{}) {
@@ -156,7 +160,7 @@ var (
 		err := readErrorFromdata(data)
 		if err != nil {
 			if NoJSONPrint {
-				println(themesDB[currThemeName].Error, err)
+				println(themesDB[currThemeName].Error, data)
 				if !NoDebugPrint {
 					println(themesDB[currThemeName].Error, err)
 				}

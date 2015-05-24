@@ -85,7 +85,7 @@ func newCpBar() barSend {
 		bar.ShowSpeed = true
 		bar.Callback = func(s string) {
 			// Colorize
-			console.Print("\r" + s)
+			console.Bar("\r" + s)
 		}
 		// Feels like wget
 		bar.Format("[=> ]")
