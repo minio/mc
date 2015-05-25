@@ -88,107 +88,155 @@ var (
 	Bar = themesDB[currThemeName].Info.Print
 
 	// Print prints a message
-	Print = func(data interface{}) {
+	Print = func(data ...interface{}) {
 		if NoJSONPrint {
-			print(themesDB[currThemeName].Print, data)
+			print(themesDB[currThemeName].Print, data...)
 			return
 		}
-		printBytes, _ := json.Marshal(&data)
-		print(themesDB[currThemeName].JSON, string(printBytes))
+		for d := range data {
+			printBytes, _ := json.Marshal(&d)
+			print(themesDB[currThemeName].JSON, string(printBytes))
+		}
+	}
+
+	// Printf prints a formatted message
+	Printf = func(f string, data ...interface{}) {
+		if NoJSONPrint {
+			printf(themesDB[currThemeName].Print, f, data...)
+			return
+		}
+		for d := range data {
+			printBytes, _ := json.Marshal(&d)
+			printf(themesDB[currThemeName].JSON, "", string(printBytes))
+		}
 	}
 
 	// Println prints a message with a newline
-	Println = func(data interface{}) {
+	Println = func(data ...interface{}) {
 		if NoJSONPrint {
-			println(themesDB[currThemeName].Print, data)
+			println(themesDB[currThemeName].Print, data...)
 			return
 		}
-		printBytes, _ := json.Marshal(&data)
-		println(themesDB[currThemeName].JSON, string(printBytes))
+		for d := range data {
+			printBytes, _ := json.Marshal(&d)
+			println(themesDB[currThemeName].JSON, string(printBytes))
+		}
 	}
 
 	// Fatal prints a error message and exits
-	Fatal = func(data interface{}) {
+	Fatal = func(data ...interface{}) {
 		defer os.Exit(1)
-		err := readErrorFromdata(data)
-		if err != nil {
-			if NoJSONPrint {
-				print(themesDB[currThemeName].Error, data)
-				if !NoDebugPrint {
-					print(themesDB[currThemeName].Error, err)
+		for d := range data {
+			err := readErrorFromdata(d)
+			if err != nil {
+				if NoJSONPrint {
+					print(themesDB[currThemeName].Error, d)
+					if !NoDebugPrint {
+						print(themesDB[currThemeName].Error, err)
+					}
+					return
 				}
-				return
+				errorMessageBytes, _ := json.Marshal(&d)
+				print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 			}
-			errorMessageBytes, _ := json.Marshal(&data)
-			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
+
+	// Fatalf is undefined since under the context of typed messages formatting
+	// is already done before caller invokes console.Fatal*
+
 	// Fatalln prints a error message with a new line and exits
-	Fatalln = func(data interface{}) {
+	Fatalln = func(data ...interface{}) {
 		defer os.Exit(1)
-		err := readErrorFromdata(data)
-		if err != nil {
-			if NoJSONPrint {
-				println(themesDB[currThemeName].Error, data)
-				if !NoDebugPrint {
-					println(themesDB[currThemeName].Error, err)
+		for d := range data {
+			err := readErrorFromdata(d)
+			if err != nil {
+				if NoJSONPrint {
+					println(themesDB[currThemeName].Error, d)
+					if !NoDebugPrint {
+						println(themesDB[currThemeName].Error, err)
+					}
+					return
 				}
-				return
+				errorMessageBytes, _ := json.Marshal(&d)
+				println(themesDB[currThemeName].JSON, string(errorMessageBytes))
 			}
-			errorMessageBytes, _ := json.Marshal(&data)
-			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
 
 	// Error prints a error message
-	Error = func(data interface{}) {
-		err := readErrorFromdata(data)
-		if err != nil {
-			if NoJSONPrint {
-				print(themesDB[currThemeName].Error, data)
-				if !NoDebugPrint {
-					print(themesDB[currThemeName].Error, err)
+	Error = func(data ...interface{}) {
+		for d := range data {
+			err := readErrorFromdata(d)
+			if err != nil {
+				if NoJSONPrint {
+					print(themesDB[currThemeName].Error, d)
+					if !NoDebugPrint {
+						print(themesDB[currThemeName].Error, err)
+					}
+					return
 				}
-				return
+				errorMessageBytes, _ := json.Marshal(&d)
+				print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 			}
-			errorMessageBytes, _ := json.Marshal(&data)
-			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
+
+	// Errorf is undefined since under the context of typed messages formatting
+	// is already done before caller invokes console.Error*
+
 	// Errorln prints a error message with a new line
-	Errorln = func(data interface{}) {
-		err := readErrorFromdata(data)
-		if err != nil {
-			if NoJSONPrint {
-				println(themesDB[currThemeName].Error, data)
-				if !NoDebugPrint {
-					println(themesDB[currThemeName].Error, err)
+	Errorln = func(data ...interface{}) {
+		for d := range data {
+			err := readErrorFromdata(d)
+			if err != nil {
+				if NoJSONPrint {
+					println(themesDB[currThemeName].Error, d)
+					if !NoDebugPrint {
+						println(themesDB[currThemeName].Error, err)
+					}
+					return
 				}
-				return
+				errorMessageBytes, _ := json.Marshal(&d)
+				println(themesDB[currThemeName].JSON, string(errorMessageBytes))
 			}
-			errorMessageBytes, _ := json.Marshal(&data)
-			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
 
 	// Info prints a informational message
-	Info = func(data interface{}) {
+	Info = func(data ...interface{}) {
 		if NoJSONPrint {
-			print(themesDB[currThemeName].Info, data)
+			print(themesDB[currThemeName].Info, data...)
 			return
 		}
-		infoBytes, _ := json.Marshal(&data)
-		print(themesDB[currThemeName].JSON, string(infoBytes))
+		for d := range data {
+			infoBytes, _ := json.Marshal(&d)
+			print(themesDB[currThemeName].JSON, string(infoBytes))
+		}
+	}
+
+	// Infof prints a informational message in custom format
+	Infof = func(f string, data ...interface{}) {
+		if NoJSONPrint {
+			printf(themesDB[currThemeName].Info, f, data...)
+			return
+		}
+		for d := range data {
+			infoBytes, _ := json.Marshal(&d)
+			printf(themesDB[currThemeName].JSON, "", string(infoBytes))
+		}
 	}
 
 	// Infoln prints a informational message with a new line
-	Infoln = func(data interface{}) {
+	Infoln = func(data ...interface{}) {
 		if NoJSONPrint {
-			println(themesDB[currThemeName].Info, data)
+			println(themesDB[currThemeName].Info, data...)
 			return
 		}
-		infoBytes, _ := json.Marshal(&data)
-		println(themesDB[currThemeName].JSON, string(infoBytes))
+		for d := range data {
+			infoBytes, _ := json.Marshal(&d)
+			println(themesDB[currThemeName].JSON, string(infoBytes))
+		}
 	}
 
 	// Debug prints a debug message without a new line
@@ -196,6 +244,13 @@ var (
 	Debug = func(a ...interface{}) {
 		if !NoDebugPrint {
 			print(themesDB[currThemeName].Debug, a...)
+		}
+	}
+
+	// Debugf prints a debug message with a new line
+	Debugf = func(f string, a ...interface{}) {
+		if !NoDebugPrint {
+			printf(themesDB[currThemeName].Debug, f, a...)
 		}
 	}
 
@@ -258,6 +313,29 @@ var (
 		default:
 			mutex.Lock()
 			c.Print(a...)
+			mutex.Unlock()
+		}
+	}
+
+	// printf - same as print with a new line
+	printf = func(c *color.Color, f string, a ...interface{}) {
+		switch c {
+		case themesDB[currThemeName].Debug:
+			mutex.Lock()
+			output := color.Output
+			color.Output = stderrColoredOutput
+			c.Print(ProgramName() + ": <DEBUG> ")
+			c.Printf(f, a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Info:
+			mutex.Lock()
+			c.Print(ProgramName() + ": ")
+			c.Printf(f, a...)
+			mutex.Unlock()
+		default:
+			mutex.Lock()
+			c.Printf(f, a...)
 			mutex.Unlock()
 		}
 	}
