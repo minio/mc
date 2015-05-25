@@ -28,7 +28,7 @@ import (
 )
 
 // getSource -
-func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.Reader, length uint64, err error) {
+func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length uint64, err error) {
 	sourceClnt, err := getNewClient(sourceURL, sourceConfig)
 	if err != nil {
 		return nil, 0, iodine.New(err, map[string]string{"failedURL": sourceURL})
