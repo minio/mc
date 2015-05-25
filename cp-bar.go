@@ -31,6 +31,7 @@ const (
 	cpBarCmdExtend cpBarCmd = iota
 	cpBarCmdProgress
 	cpBarCmdFinish
+	cpBarCmdError
 )
 
 type copyReader struct {
@@ -62,6 +63,10 @@ func (b barSend) Progress(progress int64) {
 	b.cmdCh <- barMsg{Cmd: cpBarCmdProgress, Arg: progress}
 }
 
+func (b barSend) Error() {
+	b.cmdCh <- barMsg{Cmd: cpBarCmdError}
+}
+
 func (b *barSend) NewProxyReader(r io.Reader) *copyReader {
 	return &copyReader{r, b}
 }
@@ -78,6 +83,8 @@ func newCpBar() barSend {
 	finishCh := make(chan bool)
 	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
 		started := false
+		var totalBytesRead int64
+		var currentSizeRead int64
 		bar := pb.New64(0)
 		bar.SetUnits(pb.U_BYTES)
 		bar.SetRefreshRate(time.Millisecond * 10)
@@ -98,7 +105,13 @@ func newCpBar() barSend {
 					bar.Start()
 				}
 			case cpBarCmdProgress:
-				bar.Add64(msg.Arg.(int64))
+				if msg.Arg.(int64) > 0 {
+					currentSizeRead = msg.Arg.(int64)
+					totalBytesRead += currentSizeRead
+					bar.Add64(currentSizeRead)
+				}
+			case cpBarCmdError:
+				bar.Set64(totalBytesRead - currentSizeRead)
 			case cpBarCmdFinish:
 				if started {
 					bar.Finish()

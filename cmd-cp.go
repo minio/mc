@@ -34,19 +34,21 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	defer reader.Close()
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
 		console.Infoln(fmt.Sprintf("‘%s’ -> ‘%s’", sourceURL, targetURL))
+		newReader = reader
 	default:
 		// set up progress
 		newReader = bar.NewProxyReader(reader)
 	}
 	err = putTarget(targetURL, targetConfig, length, newReader)
 	if err != nil {
+		reader.Close()
 		return iodine.New(err, nil)
 	}
+	reader.Close()
 	return nil
 }
 
