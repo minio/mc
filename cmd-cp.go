@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"runtime"
 	"sync"
 
@@ -33,18 +34,19 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 	if err != nil {
 		return iodine.New(err, nil)
 	}
+	defer reader.Close()
+	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
 		console.Infoln(fmt.Sprintf("‘%s’ -> ‘%s’", sourceURL, targetURL))
 	default:
 		// set up progress
-		reader = bar.NewProxyReader(reader)
+		newReader = bar.NewProxyReader(reader)
 	}
-	err = putTarget(targetURL, targetConfig, length, reader)
+	err = putTarget(targetURL, targetConfig, length, newReader)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-
 	return nil
 }
 
@@ -146,14 +148,17 @@ func runCopyCmd(ctx *cli.Context) {
 	if !globalQuietFlag {
 		bar = newCpBar()
 	}
+
 	for err := range doCopyCmd(sourceURLs, targetURL, bar) {
 		if err != nil {
 			console.Errorln(ErrorMessage{
 				Message: "Failed with",
 				Error:   iodine.New(err, nil),
 			})
+			bar.Error()
 		}
 	}
+
 	if !globalQuietFlag {
 		bar.Finish()
 	}
