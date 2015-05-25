@@ -17,8 +17,6 @@
 package s3
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httputil"
 	"regexp"
@@ -29,19 +27,11 @@ import (
 
 // Trace - tracing structure
 type Trace struct {
-	BodyTraceFlag        bool      // Include Body
-	RequestTransportFlag bool      // Include additional http.Transport adds such as User-Agent
-	Writer               io.Writer // Console device to write
 }
 
 // NewTrace - initialize Trace structure
-func NewTrace(bodyTraceFlag, requestTransportFlag bool, writer io.Writer) HTTPTracer {
-	t := Trace{
-		BodyTraceFlag:        bodyTraceFlag,
-		RequestTransportFlag: requestTransportFlag,
-		Writer:               writer,
-	}
-	return t
+func NewTrace() HTTPTracer {
+	return Trace{}
 }
 
 // Request - Trace HTTP Request
@@ -62,16 +52,9 @@ func (t Trace) Request(req *http.Request) (err error) {
 	// Set a temporary redacted auth
 	req.Header.Set("Authorization", newAuth)
 
-	if t.RequestTransportFlag {
-		reqTrace, err := httputil.DumpRequestOut(req, t.BodyTraceFlag)
-		if err == nil {
-			t.print(reqTrace)
-		}
-	} else {
-		reqTrace, err := httputil.DumpRequest(req, t.BodyTraceFlag)
-		if err == nil {
-			t.print(reqTrace)
-		}
+	reqTrace, err := httputil.DumpRequestOut(req, false) // Only display header
+	if err == nil {
+		console.Debug(string(reqTrace))
 	}
 
 	// Undo
@@ -81,19 +64,9 @@ func (t Trace) Request(req *http.Request) (err error) {
 
 // Response - Trace HTTP Response
 func (t Trace) Response(res *http.Response) (err error) {
-	resTrace, err := httputil.DumpResponse(res, t.BodyTraceFlag)
+	resTrace, err := httputil.DumpResponse(res, false) // Only display header
 	if err == nil {
-		t.print(resTrace)
+		console.Debug(string(resTrace))
 	}
 	return iodine.New(err, nil)
-}
-
-// print HTTP Response
-func (t Trace) print(data []byte) {
-	switch {
-	case t.Writer != nil:
-		fmt.Fprintf(t.Writer, "%s", data)
-	default:
-		console.Debugln(string(data))
-	}
 }

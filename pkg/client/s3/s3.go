@@ -82,7 +82,7 @@ func New(config *Config) (client.Client, error) {
 	var transport http.RoundTripper
 	switch {
 	case config.Debug == true:
-		transport = GetNewTraceTransport(nil, GetNewTraceTransport(NewTrace(false, true, nil), http.DefaultTransport))
+		transport = GetNewTraceTransport(NewTrace(), http.DefaultTransport)
 	default:
 		transport = http.DefaultTransport
 	}

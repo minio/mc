@@ -19,8 +19,10 @@ package s3
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -38,12 +40,7 @@ type RoundTripTrace struct {
 
 // RoundTrip executes user provided request and response hooks for each HTTP call.
 func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err error) {
-	if t.Trace != nil {
-		err = t.Trace.Request(req)
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-	}
+	timeStamp := time.Now()
 
 	if t.Transport == nil {
 		return nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
@@ -55,7 +52,17 @@ func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err er
 	}
 
 	if t.Trace != nil {
-		t.Trace.Response(res)
+		err = t.Trace.Request(req)
+		if err != nil {
+			return nil, iodine.New(err, nil)
+		}
+
+		err = t.Trace.Response(res)
+		if err != nil {
+			return nil, iodine.New(err, nil)
+		}
+
+		console.Debugln("Response Time: ", time.Since(timeStamp).String()+"\n")
 	}
 
 	return res, iodine.New(err, nil)
