@@ -93,8 +93,8 @@ var (
 			print(themesDB[currThemeName].Print, data...)
 			return
 		}
-		for d := range data {
-			printBytes, _ := json.Marshal(&d)
+		for i := 0; i < len(data); i++ {
+			printBytes, _ := json.Marshal(&data[i])
 			print(themesDB[currThemeName].JSON, string(printBytes))
 		}
 	}
@@ -105,8 +105,8 @@ var (
 			printf(themesDB[currThemeName].Print, f, data...)
 			return
 		}
-		for d := range data {
-			printBytes, _ := json.Marshal(&d)
+		for i := 0; i < len(data); i++ {
+			printBytes, _ := json.Marshal(&data[i])
 			printf(themesDB[currThemeName].JSON, "", string(printBytes))
 		}
 	}
@@ -117,8 +117,8 @@ var (
 			println(themesDB[currThemeName].Print, data...)
 			return
 		}
-		for d := range data {
-			printBytes, _ := json.Marshal(&d)
+		for i := 0; i < len(data); i++ {
+			printBytes, _ := json.Marshal(&data[i])
 			println(themesDB[currThemeName].JSON, string(printBytes))
 		}
 	}
@@ -126,17 +126,17 @@ var (
 	// Fatal prints a error message and exits
 	Fatal = func(data ...interface{}) {
 		defer os.Exit(1)
-		for d := range data {
-			err := readErrorFromdata(d)
+		for i := 0; i < len(data); i++ {
+			err := readErrorFromdata(data[i])
 			if err != nil {
 				if NoJSONPrint {
-					print(themesDB[currThemeName].Error, d)
+					print(themesDB[currThemeName].Error, data[i])
 					if !NoDebugPrint {
 						print(themesDB[currThemeName].Error, err)
 					}
 					return
 				}
-				errorMessageBytes, _ := json.Marshal(&d)
+				errorMessageBytes, _ := json.Marshal(&data[i])
 				print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 			}
 		}
@@ -148,17 +148,17 @@ var (
 	// Fatalln prints a error message with a new line and exits
 	Fatalln = func(data ...interface{}) {
 		defer os.Exit(1)
-		for d := range data {
-			err := readErrorFromdata(d)
+		for i := 0; i < len(data); i++ {
+			err := readErrorFromdata(data[i])
 			if err != nil {
 				if NoJSONPrint {
-					println(themesDB[currThemeName].Error, d)
+					println(themesDB[currThemeName].Error, data[i])
 					if !NoDebugPrint {
 						println(themesDB[currThemeName].Error, err)
 					}
 					return
 				}
-				errorMessageBytes, _ := json.Marshal(&d)
+				errorMessageBytes, _ := json.Marshal(&data[i])
 				println(themesDB[currThemeName].JSON, string(errorMessageBytes))
 			}
 		}
@@ -166,17 +166,17 @@ var (
 
 	// Error prints a error message
 	Error = func(data ...interface{}) {
-		for d := range data {
-			err := readErrorFromdata(d)
+		for i := 0; i < len(data); i++ {
+			err := readErrorFromdata(data[i])
 			if err != nil {
 				if NoJSONPrint {
-					print(themesDB[currThemeName].Error, d)
+					print(themesDB[currThemeName].Error, data[i])
 					if !NoDebugPrint {
 						print(themesDB[currThemeName].Error, err)
 					}
 					return
 				}
-				errorMessageBytes, _ := json.Marshal(&d)
+				errorMessageBytes, _ := json.Marshal(&data[i])
 				print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 			}
 		}
@@ -187,17 +187,17 @@ var (
 
 	// Errorln prints a error message with a new line
 	Errorln = func(data ...interface{}) {
-		for d := range data {
-			err := readErrorFromdata(d)
+		for i := 0; i < len(data); i++ {
+			err := readErrorFromdata(data[i])
 			if err != nil {
 				if NoJSONPrint {
-					println(themesDB[currThemeName].Error, d)
+					println(themesDB[currThemeName].Error, data[i])
 					if !NoDebugPrint {
 						println(themesDB[currThemeName].Error, err)
 					}
 					return
 				}
-				errorMessageBytes, _ := json.Marshal(&d)
+				errorMessageBytes, _ := json.Marshal(&data[i])
 				println(themesDB[currThemeName].JSON, string(errorMessageBytes))
 			}
 		}
@@ -209,8 +209,8 @@ var (
 			print(themesDB[currThemeName].Info, data...)
 			return
 		}
-		for d := range data {
-			infoBytes, _ := json.Marshal(&d)
+		for i := 0; i < len(data); i++ {
+			infoBytes, _ := json.Marshal(&data[i])
 			print(themesDB[currThemeName].JSON, string(infoBytes))
 		}
 	}
@@ -221,8 +221,8 @@ var (
 			printf(themesDB[currThemeName].Info, f, data...)
 			return
 		}
-		for d := range data {
-			infoBytes, _ := json.Marshal(&d)
+		for i := 0; i < len(data); i++ {
+			infoBytes, _ := json.Marshal(&data[i])
 			printf(themesDB[currThemeName].JSON, "", string(infoBytes))
 		}
 	}
@@ -233,8 +233,8 @@ var (
 			println(themesDB[currThemeName].Info, data...)
 			return
 		}
-		for d := range data {
-			infoBytes, _ := json.Marshal(&d)
+		for i := 0; i < len(data); i++ {
+			infoBytes, _ := json.Marshal(&data[i])
 			println(themesDB[currThemeName].JSON, string(infoBytes))
 		}
 	}
