@@ -222,6 +222,10 @@ func TestURLEncoding(t *testing.T) {
 			name:        ">123>3123123",
 			encodedName: "%3E123%3E3123123",
 		},
+		{
+			name:        "test 1 2.txt",
+			encodedName: "test%201%202.txt",
+		},
 	}
 
 	for _, u := range want {
