@@ -437,7 +437,7 @@ func (a *lowLevelAPI) getObject(bucket, object string, offset, length uint64) (i
 	if md5sum == "" {
 		return nil, nil, errors.New("missing ETag")
 	}
-	date, err := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
+	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -489,7 +489,7 @@ func (a *lowLevelAPI) headObject(bucket, object string) (*ObjectMetadata, error)
 	if err != nil {
 		return nil, err
 	}
-	date, err := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
+	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	if err != nil {
 		return nil, err
 	}
