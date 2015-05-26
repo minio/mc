@@ -157,7 +157,9 @@ func runCopyCmd(ctx *cli.Context) {
 				Message: "Failed with",
 				Error:   iodine.New(err, nil),
 			})
-			bar.Error()
+			if !globalQuietFlag {
+				bar.Error()
+			}
 		}
 	}
 
