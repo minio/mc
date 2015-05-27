@@ -72,8 +72,8 @@ func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, er
 		return nil, err
 	}
 
-	// if userAgent empty do not set it
-	if config.userAgent != "" {
+	// if userAgent empty set it
+	if config.userAgent == "" {
 		config.userAgent = LibraryName + "/" + LibraryVersion + " (" + runtime.GOOS + ", " + runtime.GOARCH + ") "
 	}
 
