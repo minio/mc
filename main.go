@@ -35,7 +35,7 @@ import (
 func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: "Unable to determine current user",
 			Error:   err,
 		})
@@ -49,7 +49,7 @@ func checkConfig() {
 	// Ensures config file is sane
 	_, err = getMcConfig()
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read config file: %s", mustGetMcConfigPath()),
 			Error:   err,
 		})
@@ -120,14 +120,14 @@ func main() {
 		themeName := ctx.GlobalString("theme")
 		switch {
 		case console.IsValidTheme(themeName) != true:
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Please choose from this list: %s.", console.GetThemeNames()),
 				Error:   fmt.Errorf("Theme ‘%s’ is not supported.", themeName),
 			})
 		default:
 			err := console.SetTheme(themeName)
 			if err != nil {
-				console.Fatalln(ErrorMessage{
+				console.Fatals(ErrorMessage{
 					Message: fmt.Sprintf("Failed to set theme ‘%s’.", themeName),
 					Error:   err,
 				})
@@ -138,7 +138,7 @@ func main() {
 	}
 	app.After = func(ctx *cli.Context) error {
 		if !isMcConfigExist() {
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: "Please run \"mc config generate\"",
 				Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 			})

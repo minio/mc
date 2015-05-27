@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	mcUpdateURL = "http://dl.minio.io:9000/updates/2015/Apr" + "/mc" + "." + runtime.GOOS + "." + runtime.GOARCH
+	mcUpdateURL = "http://dl.minio.io:9000/updates/2015/June/" + "mc" + "." + runtime.GOOS + "." + runtime.GOARCH
 )
 
 func doUpdateCheck(config *hostConfig) (string, error) {
@@ -38,7 +38,7 @@ func doUpdateCheck(config *hostConfig) (string, error) {
 	}
 	latest, err := clnt.Stat()
 	if err != nil {
-		return "No update available at this time", nil
+		return "No new update available at this time", nil
 	}
 	current, _ := time.Parse(time.RFC3339Nano, BuildDate)
 	if current.IsZero() {
@@ -58,21 +58,21 @@ func runUpdateCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
 	}
 	hostConfig, err := getHostConfig(mcUpdateURL)
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read configuration for host ‘%s’", mcUpdateURL),
 			Error:   iodine.New(err, nil),
 		})
 	}
 	msg, err := doUpdateCheck(hostConfig)
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: msg,
 			Error:   iodine.New(err, nil),
 		})

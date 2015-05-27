@@ -31,14 +31,14 @@ func runDiffCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
 			Error:   err,
 		})
@@ -51,12 +51,12 @@ func runDiffCmd(ctx *cli.Context) {
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unknown type of URL ‘%s’", firstURL),
 				Error:   err,
 			})
 		default:
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unable to parse argument ‘%s’", firstURL),
 				Error:   err,
 			})
@@ -65,7 +65,7 @@ func runDiffCmd(ctx *cli.Context) {
 
 	_, err = getHostConfig(firstURL)
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", firstURL, mustGetMcConfigPath()),
 			Error:   err,
 		})
@@ -73,7 +73,7 @@ func runDiffCmd(ctx *cli.Context) {
 
 	_, err = getHostConfig(secondURL)
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", secondURL, mustGetMcConfigPath()),
 			Error:   err,
 		})
@@ -83,12 +83,12 @@ func runDiffCmd(ctx *cli.Context) {
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unknown type of URL ‘%s’", secondURL),
 				Error:   err,
 			})
 		default:
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unable to parse argument ‘%s’", secondURL),
 				Error:   err,
 			})
@@ -98,7 +98,7 @@ func runDiffCmd(ctx *cli.Context) {
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		if diff.err != nil {
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: diff.message,
 				Error:   diff.err,
 			})
