@@ -41,7 +41,7 @@ type copyReader struct {
 
 func (r *copyReader) Read(p []byte) (n int, err error) {
 	n, err = r.Reader.Read(p)
-	r.bar.Progress(int64(n))
+	r.bar.progress(int64(n))
 	return
 }
 
@@ -59,7 +59,7 @@ func (b barSend) Extend(total int64) {
 	b.cmdCh <- barMsg{Cmd: cpBarCmdExtend, Arg: total}
 }
 
-func (b barSend) Progress(progress int64) {
+func (b barSend) progress(progress int64) {
 	b.cmdCh <- barMsg{Cmd: cpBarCmdProgress, Arg: progress}
 }
 

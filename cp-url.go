@@ -19,7 +19,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -193,7 +192,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *cpURLs {
 			return &cpURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
 		}
 		// if target is same Name, Size and Type as source return error and skip
-		u, _ := url.Parse(targetContent.Name)
+		u, _ := client.Parse(targetContent.Name)
 		if (targetContent.Size == sourceContent.Size) && (filepath.Base(u.Path) == sourceContent.Name) {
 			// Target exists, don't overwrite. Let the copy function decide return error here
 			return &cpURLs{Error: iodine.New(errSameURLs{source: sourceURL, target: targetURL}, nil)}

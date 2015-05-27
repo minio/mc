@@ -221,7 +221,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		}
 	default:
 		content := &client.Content{
-			Name: fi.Name(),
+			Name: f.path,
 			Time: fi.ModTime(),
 			Size: fi.Size(),
 			Type: fi.Mode(),
