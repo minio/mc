@@ -18,10 +18,26 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/iodine"
 )
+
+//
+//   NOTE: All the parse rules should reduced to 1: Diff(First, Second).
+//
+//   Valid cases
+//   =======================
+//   1: diff(f, f) -> diff(f, f)
+//   2: diff(f, d) -> copy(f, d/f) -> 1
+//   3: diff(d1..., d2) -> []diff(d1/f, d2/f) -> []1
+//
+//   InValid cases
+//   =======================
+//   1. diff(d1..., d2) -> INVALID
+//   2. diff(d1..., d2...) -> INVALID
+//
 
 type diff struct {
 	message string
@@ -97,6 +113,12 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 				err:     iodine.New(contentCh.Err, nil),
 			}
 			return
+		}
+		if recursive {
+			// this special handling is necessary since we are sending back absolute paths with in ListRecursive()
+			//
+			// To be consistent we have to filter them out
+			contentCh.Content.Name = strings.TrimPrefix(contentCh.Content.Name, strings.TrimSuffix(firstURL, "/")+"/")
 		}
 		newFirstURL, err := urlJoinPath(firstURL, contentCh.Content.Name)
 		if err != nil {

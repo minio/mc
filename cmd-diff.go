@@ -94,7 +94,12 @@ func runDiffCmd(ctx *cli.Context) {
 			})
 		}
 	}
-	// TODO recursive is not working yet
+	if isURLRecursive(secondURL) {
+		console.Fatals(ErrorMessage{
+			Message: "Second URL cannot be recursive, diff command is unidirectional",
+			Error:   errInvalidArgument{},
+		})
+	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		if diff.err != nil {
