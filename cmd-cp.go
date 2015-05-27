@@ -25,6 +25,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/countlock"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -66,28 +67,37 @@ func args2URLs(args cli.Args) ([]string, error) {
 	return URLs, nil
 }
 
-func doCopyInRoutine(cpurls *cpURLs, bar *barSend, cpQueue chan bool, ch chan error, wg *sync.WaitGroup) {
+func doCopyInRoutine(cpurls *cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	srcConfig, err := getHostConfig(cpurls.SourceContent.Name)
 	if err != nil {
-		ch <- err
+		errCh <- err
 		return
 	}
 	tgtConfig, err := getHostConfig(cpurls.TargetContent.Name)
 	if err != nil {
-		ch <- err
+		errCh <- err
 		return
 	}
 	if err := doCopy(cpurls.SourceContent.Name, srcConfig, cpurls.TargetContent.Name, tgtConfig, bar); err != nil {
-		ch <- err
+		errCh <- err
 	}
-	<-cpQueue
+	<-cpQueue // Signal that this copy routine is done.
 }
 
 func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error {
-	ch := make(chan error)
-	go func(sourceURLs []string, targetURL string, bar barSend, ch chan error) {
-		defer close(ch)
+	errCh := make(chan error)
+
+	go func(sourceURLs []string, targetURL string, bar barSend, errCh chan error) {
+		defer close(errCh)
+
+		var lock countlock.Locker
+		if !globalQuietFlag {
+			// Keep progress-bar and copy routines in sync.
+			lock = countlock.New()
+			defer lock.Close()
+		}
+
 		go func(sourceURLs []string, targetURL string) {
 			for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 				if cpURLs.Error != nil {
@@ -97,25 +107,32 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 				}
 				if !globalQuietFlag {
 					bar.Extend(cpURLs.SourceContent.Size)
+					lock.Up() // Let copy routine know that it is catch up.
 				}
 			}
 		}(sourceURLs, targetURL)
 
+		// Pool limited copy routines in parallel.
 		cpQueue := make(chan bool, intMax(runtime.NumCPU()-1, 1))
+		defer close(cpQueue)
+
+		// Wait for all copy routines to complete.
 		wg := new(sync.WaitGroup)
 		for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 			if cpURLs.Error != nil {
-				ch <- cpURLs.Error
+				errCh <- cpURLs.Error
 				continue
 			}
-			cpQueue <- true
+			cpQueue <- true // Wait for existing pool to drain.
 			wg.Add(1)
-			go doCopyInRoutine(cpURLs, &bar, cpQueue, ch, wg)
+			if !globalQuietFlag {
+				lock.Down() // Do not jump ahead of the progress bar builder above.
+			}
+			go doCopyInRoutine(cpURLs, &bar, cpQueue, errCh, wg)
 		}
-		close(cpQueue)
 		wg.Wait()
-	}(sourceURLs, targetURL, bar, ch)
-	return ch
+	}(sourceURLs, targetURL, bar, errCh)
+	return errCh
 }
 
 // runCopyCmd is bound to sub-command
@@ -162,7 +179,6 @@ func runCopyCmd(ctx *cli.Context) {
 			}
 		}
 	}
-
 	if !globalQuietFlag {
 		bar.Finish()
 	}
