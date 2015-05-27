@@ -78,7 +78,7 @@ var (
 	currThemeName = func() string {
 		theme := GetDefaultThemeName()
 		// if not a TTY disable color
-		if !isatty(os.Stdout.Fd()) {
+		if !isatty(os.Stdout.Fd()) || !isatty(os.Stderr.Fd()) {
 			return "nocolor"
 		}
 		return theme
