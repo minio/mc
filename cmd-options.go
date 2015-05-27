@@ -28,7 +28,7 @@ import (
 
 var lsCmd = cli.Command{
 	Name:   "ls",
-	Usage:  "List files and objects",
+	Usage:  "List files and folders",
 	Action: runListCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -75,7 +75,7 @@ EXAMPLES:
 
 var cpCmd = cli.Command{
 	Name:   "cp",
-	Usage:  "Copy objects and files from multiple sources single destination",
+	Usage:  "Copy files and folders from many sources to a single destination",
 	Action: runCopyCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -111,7 +111,7 @@ EXAMPLES:
 
 var syncCmd = cli.Command{
 	Name:   "sync",
-	Usage:  "Copies files and objects from single source to multiple destinations",
+	Usage:  "Copy files and folders from a single source to many destinations",
 	Action: runSyncCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -147,8 +147,8 @@ EXAMPLES:
 
 var diffCmd = cli.Command{
 	Name:        "diff",
-	Usage:       "Quickly check if the two objects, buckets or directories differ",
-	Description: "NOTE: This command *DOES NOT* check for content match, which means objects with same size, but different content will not be spotted.",
+	Usage:       "Compute differences between two files or folders",
+	Description: "NOTE: This command *DOES NOT* check for content similarity, which means objects with same size, but different content will not be spotted.",
 	Action:      runDiffCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -175,7 +175,7 @@ EXAMPLES:
 
 var catCmd = cli.Command{
 	Name:   "cat",
-	Usage:  "Concantenate objects or files to standard output",
+	Usage:  "Display contents of a file",
 	Action: runCatCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -208,7 +208,7 @@ EXAMPLES:
 
 var mbCmd = cli.Command{
 	Name:   "mb",
-	Usage:  "Make a bucket or a folder",
+	Usage:  "Make a bucket or folder",
 	Action: runMakeBucketCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -238,7 +238,7 @@ EXAMPLES:
 
 var accessCmd = cli.Command{
 	Name:   "access",
-	Usage:  "Set permissions [public, private, readonly, authenticated] for buckets and folders.",
+	Usage:  "Set access permissions",
 	Action: runAccessCmd,
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
@@ -282,7 +282,7 @@ EXAMPLES:
 //
 var configCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Generate configuration \"" + mustGetMcConfigPath() + "\" file.",
+	Usage:  "Generate default configuration file [~/.mc/config.json]",
 	Action: runConfigCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
