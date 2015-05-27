@@ -182,7 +182,7 @@ var (
 				if NoJSONPrint {
 					println(themesDB[currThemeName].Error, data[i])
 					if !NoDebugPrint {
-						print(themesDB[currThemeName].Error, err)
+						println(themesDB[currThemeName].Error, err)
 					}
 					return
 				}
@@ -236,7 +236,7 @@ var (
 				if NoJSONPrint {
 					println(themesDB[currThemeName].Error, data[i])
 					if !NoDebugPrint {
-						print(themesDB[currThemeName].Error, err)
+						println(themesDB[currThemeName].Error, err)
 					}
 					return
 				}
