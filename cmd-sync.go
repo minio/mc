@@ -71,7 +71,7 @@ func runSyncCmd(ctx *cli.Context) {
 		}
 	}(sourceURL, targetURLs)
 
-	var syncQueue = make(chan bool, runtime.NumCPU()-1)
+	var syncQueue = make(chan bool, intMax(runtime.NumCPU()-1, 1))
 	var wg sync.WaitGroup
 
 	for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
