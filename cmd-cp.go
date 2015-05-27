@@ -125,7 +125,7 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 
 	if !isMcConfigExist() {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
@@ -134,7 +134,7 @@ func runCopyCmd(ctx *cli.Context) {
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unknown URL types: ‘%s’", URLs),
 			Error:   iodine.New(err, nil),
 		})
@@ -153,7 +153,7 @@ func runCopyCmd(ctx *cli.Context) {
 
 	for err := range doCopyCmd(sourceURLs, targetURL, bar) {
 		if err != nil {
-			console.Errorln(ErrorMessage{
+			console.Errors(ErrorMessage{
 				Message: "Failed with",
 				Error:   iodine.New(err, nil),
 			})

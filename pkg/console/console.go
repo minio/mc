@@ -123,30 +123,58 @@ var (
 		}
 	}
 
-	// Fatal prints a error message and exits
+	// Prints prints a structured message with a newline
+	Prints = func(data ...interface{}) {
+		for i := 0; i < len(data); i++ {
+			if NoJSONPrint {
+				println(themesDB[currThemeName].Info, data[i])
+				return
+			}
+			infoBytes, _ := json.Marshal(&data[i])
+			println(themesDB[currThemeName].JSON, string(infoBytes))
+		}
+	}
+	// Fatal print a error message and exit
 	Fatal = func(data ...interface{}) {
 		defer os.Exit(1)
+		if NoJSONPrint {
+			print(themesDB[currThemeName].Error, data...)
+			return
+		}
 		for i := 0; i < len(data); i++ {
-			err := readErrorFromdata(data[i])
-			if err != nil {
-				if NoJSONPrint {
-					print(themesDB[currThemeName].Error, data[i])
-					if !NoDebugPrint {
-						print(themesDB[currThemeName].Error, err)
-					}
-					return
-				}
-				errorMessageBytes, _ := json.Marshal(&data[i])
-				print(themesDB[currThemeName].JSON, string(errorMessageBytes))
-			}
+			errorMessageBytes, _ := json.Marshal(&data[i])
+			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
 
-	// Fatalf is undefined since under the context of typed messages formatting
-	// is already done before caller invokes console.Fatal*
+	// Fatalf print a error message with a format specified and exit
+	Fatalf = func(f string, data ...interface{}) {
+		defer os.Exit(1)
+		if NoJSONPrint {
+			printf(themesDB[currThemeName].Error, f, data...)
+			return
+		}
+		for i := 0; i < len(data); i++ {
+			errorMessageBytes, _ := json.Marshal(&data[i])
+			printf(themesDB[currThemeName].JSON, "", string(errorMessageBytes))
+		}
+	}
 
-	// Fatalln prints a error message with a new line and exits
+	// Fatalln print a error message with a new line and exit
 	Fatalln = func(data ...interface{}) {
+		defer os.Exit(1)
+		if NoJSONPrint {
+			println(themesDB[currThemeName].Error, data...)
+			return
+		}
+		for i := 0; i < len(data); i++ {
+			errorMessageBytes, _ := json.Marshal(&data[i])
+			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
+		}
+	}
+
+	// Fatals print a error structure with a new line and exit
+	Fatals = func(data ...interface{}) {
 		defer os.Exit(1)
 		for i := 0; i < len(data); i++ {
 			err := readErrorFromdata(data[i])
@@ -154,7 +182,7 @@ var (
 				if NoJSONPrint {
 					println(themesDB[currThemeName].Error, data[i])
 					if !NoDebugPrint {
-						println(themesDB[currThemeName].Error, err)
+						print(themesDB[currThemeName].Error, err)
 					}
 					return
 				}
@@ -166,34 +194,49 @@ var (
 
 	// Error prints a error message
 	Error = func(data ...interface{}) {
+		if NoJSONPrint {
+			print(themesDB[currThemeName].Error, data...)
+			return
+		}
 		for i := 0; i < len(data); i++ {
-			err := readErrorFromdata(data[i])
-			if err != nil {
-				if NoJSONPrint {
-					print(themesDB[currThemeName].Error, data[i])
-					if !NoDebugPrint {
-						print(themesDB[currThemeName].Error, err)
-					}
-					return
-				}
-				errorMessageBytes, _ := json.Marshal(&data[i])
-				print(themesDB[currThemeName].JSON, string(errorMessageBytes))
-			}
+			errorMessageBytes, _ := json.Marshal(&data[i])
+			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
 		}
 	}
 
-	// Errorf is undefined since under the context of typed messages formatting
-	// is already done before caller invokes console.Error*
+	// Errorf print a error message with a format specified
+	Errorf = func(f string, data ...interface{}) {
+		if NoJSONPrint {
+			printf(themesDB[currThemeName].Error, f, data...)
+			return
+		}
+		for i := 0; i < len(data); i++ {
+			errorMessageBytes, _ := json.Marshal(&data[i])
+			printf(themesDB[currThemeName].JSON, "", string(errorMessageBytes))
+		}
+	}
 
 	// Errorln prints a error message with a new line
 	Errorln = func(data ...interface{}) {
+		if NoJSONPrint {
+			println(themesDB[currThemeName].Error, data...)
+			return
+		}
+		for i := 0; i < len(data); i++ {
+			errorMessageBytes, _ := json.Marshal(&data[i])
+			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
+		}
+	}
+
+	// Errors print a error structure with a new line
+	Errors = func(data ...interface{}) {
 		for i := 0; i < len(data); i++ {
 			err := readErrorFromdata(data[i])
 			if err != nil {
 				if NoJSONPrint {
 					println(themesDB[currThemeName].Error, data[i])
 					if !NoDebugPrint {
-						println(themesDB[currThemeName].Error, err)
+						print(themesDB[currThemeName].Error, err)
 					}
 					return
 				}
@@ -234,6 +277,18 @@ var (
 			return
 		}
 		for i := 0; i < len(data); i++ {
+			infoBytes, _ := json.Marshal(&data[i])
+			println(themesDB[currThemeName].JSON, string(infoBytes))
+		}
+	}
+
+	// Infos print a informational structured message
+	Infos = func(data ...interface{}) {
+		for i := 0; i < len(data); i++ {
+			if NoJSONPrint {
+				println(themesDB[currThemeName].Info, data[i])
+				return
+			}
 			infoBytes, _ := json.Marshal(&data[i])
 			println(themesDB[currThemeName].JSON, string(infoBytes))
 		}
@@ -325,6 +380,22 @@ var (
 			output := color.Output
 			color.Output = stderrColoredOutput
 			c.Print(ProgramName() + ": <DEBUG> ")
+			c.Printf(f, a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Fatal:
+			mutex.Lock()
+			output := color.Output
+			color.Output = stderrColoredOutput
+			c.Print(ProgramName() + ": <FATAL> ")
+			c.Printf(f, a...)
+			color.Output = output
+			mutex.Unlock()
+		case themesDB[currThemeName].Error:
+			mutex.Lock()
+			output := color.Output
+			color.Output = stderrColoredOutput
+			c.Print(ProgramName() + ": <ERROR> ")
 			c.Printf(f, a...)
 			color.Output = output
 			mutex.Unlock()

@@ -31,14 +31,14 @@ func runListCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
-		console.Fatalln(ErrorMessage{
+		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
 			Error:   iodine.New(err, nil),
 		})
@@ -49,12 +49,12 @@ func runListCmd(ctx *cli.Context) {
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
-				console.Fatalln(ErrorMessage{
+				console.Fatals(ErrorMessage{
 					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
 					Error:   iodine.New(e, nil),
 				})
 			default:
-				console.Fatalln(ErrorMessage{
+				console.Fatals(ErrorMessage{
 					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
 					Error:   iodine.New(err, nil),
 				})
@@ -62,7 +62,7 @@ func runListCmd(ctx *cli.Context) {
 		}
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", targetURL, mustGetMcConfigPath()),
 				Error:   iodine.New(err, nil),
 			})
@@ -74,7 +74,7 @@ func runListCmd(ctx *cli.Context) {
 		newTargetURL := stripRecursiveURL(targetURL)
 		err = doListCmd(newTargetURL, targetConfig, isURLRecursive(targetURL))
 		if err != nil {
-			console.Fatalln(ErrorMessage{
+			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Failed to list ‘%s’", targetURL),
 				Error:   iodine.New(err, nil),
 			})
