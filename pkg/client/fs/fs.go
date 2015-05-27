@@ -170,7 +170,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	}
 	defer dir.Close()
 
-	fi, err := os.Lstat(f.path)
+	fi, err := os.Stat(fpath)
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
@@ -195,11 +195,23 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			return
 		}
 		for _, file := range files {
+			var fi os.FileInfo
+			fi = file
+			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+				fi, err = os.Stat(filepath.Join(dir.Name(), file.Name()))
+				if err != nil {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     iodine.New(err, nil),
+					}
+					return
+				}
+			}
 			content := &client.Content{
-				Name: file.Name(),
-				Time: file.ModTime(),
-				Size: file.Size(),
-				Type: file.Mode(),
+				Name: fi.Name(),
+				Time: fi.ModTime(),
+				Size: fi.Size(),
+				Type: fi.Mode(),
 			}
 			contentCh <- client.ContentOnChannel{
 				Content: content,
@@ -208,7 +220,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		}
 	default:
 		content := &client.Content{
-			Name: dir.Name(),
+			Name: f.path,
 			Time: fi.ModTime(),
 			Size: fi.Size(),
 			Type: fi.Mode(),
@@ -223,6 +235,10 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
+		// fp also sends back itself with visitFS, ignore it we don't need it
+		if fp == f.path {
+			return nil
+		}
 		if err != nil {
 			if strings.Contains(err.Error(), "operation not permitted") ||
 				// os.IsNotExist(err) ||
@@ -230,6 +246,12 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return nil
 			}
 			return iodine.New(err, nil) // abort
+		}
+		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+			fi, err = os.Stat(fp)
+			if err != nil {
+				return iodine.New(err, nil)
+			}
 		}
 		content := &client.Content{
 			Name: fp,
