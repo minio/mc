@@ -33,8 +33,13 @@ import (
 func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, targetConfig *hostConfig, bar *barSend) error {
 	reader, length, err := getSource(sourceURL, sourceConfig)
 	if err != nil {
+		if !globalQuietFlag {
+			bar.ErrorGet(int64(length))
+		}
 		return iodine.New(err, nil)
 	}
+	defer reader.Close()
+
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
@@ -44,12 +49,14 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 		// set up progress
 		newReader = bar.NewProxyReader(reader)
 	}
+
 	err = putTarget(targetURL, targetConfig, length, newReader)
 	if err != nil {
-		reader.Close()
+		if !globalQuietFlag {
+			bar.ErrorPut(int64(length))
+		}
 		return iodine.New(err, nil)
 	}
-	reader.Close()
 	return nil
 }
 
@@ -174,9 +181,6 @@ func runCopyCmd(ctx *cli.Context) {
 				Message: "Failed with",
 				Error:   iodine.New(err, nil),
 			})
-			if !globalQuietFlag {
-				bar.Error()
-			}
 		}
 	}
 	if !globalQuietFlag {
