@@ -34,8 +34,8 @@ $ ./mc
 
 If you do not have a working Golang environment setup please follow [Install Golang](./INSTALLGO.md).
 
-```go
-# go get github.com/minio/mc
+```sh
+$ go get github.com/minio/mc
 ```
 
 ## Public Minio Server (http://play.minio.io:9000)
