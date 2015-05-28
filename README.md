@@ -38,13 +38,17 @@ If you do not have a working Golang environment setup please follow [Install Gol
 $ go get github.com/minio/mc
 ```
 
-## Public Minio Server (http://play.minio.io:9000)
+## Public Minio Server
 
-Minio server is hosted at http://play.minio.io:9000 for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible object storage. Minio runs in memory mode with auto expiry of objects in about an hour.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys. 
+Minio server is hosted at ``http://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible object storage. Minio runs in memory mode with auto expiry of objects in about an hour.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys. 
 
 ## How to use mc? 
 
-[![asciicast](https://asciinema.org/a/19318.png)](https://asciinema.org/a/19318)
+[![asciicast](https://asciinema.org/a/19318.png)](https://asciinema.org/a/19318?async&data-theme=solarized-dark)
+
+## Configuring mc for Amazon S3
+
+Follow [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html) to retrieve Access Key ID and Secret Access Key and copy them to ``mc`` configuration file ``~/.mc/config.json``.
 
 ## Join The Community
 * Community hangout on Gitter    [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
