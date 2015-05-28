@@ -32,6 +32,8 @@ $ ./mc
 
 ### From Source
 
+If you do not have a working Golang environment setup please follow [Install Golang](./INSTALLGO.md).
+
 ```go
 # go get github.com/minio/mc
 ```
