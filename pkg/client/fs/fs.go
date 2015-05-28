@@ -76,12 +76,14 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 func (f *fsClient) get(content *client.Content) (io.ReadCloser, uint64, error) {
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, uint64(content.Size), iodine.New(err, nil)
 	}
 	return body, uint64(content.Size), nil
 }
 
 // GetObject download an full or part object from bucket
+// getobject returns a reader, length and nil for no errors
+// with errors getobject will return nil reader, length and typed errors
 func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, error) {
 	content, err := f.getFSMetadata()
 	if err != nil {
@@ -106,17 +108,20 @@ func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, erro
 	if os.IsNotExist(err) {
 		return nil, 0, iodine.New(NotFound{path: f.path}, nil)
 	}
+	if err != nil {
+		return nil, 0, iodine.New(err, nil)
+	}
 	if offset == 0 && length == 0 {
 		return f.get(content)
 	}
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, length, iodine.New(err, nil)
 
 	}
 	_, err = io.CopyN(ioutil.Discard, body, int64(offset))
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, length, iodine.New(err, nil)
 	}
 	return body, length, nil
 }

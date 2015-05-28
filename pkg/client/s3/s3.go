@@ -102,7 +102,7 @@ func (c *s3Client) GetObject(offset, length uint64) (io.ReadCloser, uint64, erro
 	bucket, object := c.url2BucketAndObject()
 	reader, metadata, err := c.api.GetObject(bucket, object, offset, length)
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, length, iodine.New(err, nil)
 	}
 	return reader, uint64(metadata.Size), nil
 }
