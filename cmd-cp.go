@@ -130,6 +130,9 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 				errCh <- cpURLs.Error
 				continue
 			}
+
+			runtime.Gosched() // Yield more CPU time to progress-bar builder.
+
 			cpQueue <- true // Wait for existing pool to drain.
 			wg.Add(1)
 			if !globalQuietFlag {
