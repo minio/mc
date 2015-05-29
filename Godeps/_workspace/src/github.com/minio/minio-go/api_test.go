@@ -34,6 +34,21 @@ func ExampleGetPartSize_second() {
 	// Output: 5368709120
 }
 
+func TestACLTypes(t *testing.T) {
+	want := map[string]bool{
+		"private":            true,
+		"public-read":        true,
+		"public-read-write":  true,
+		"authenticated-read": true,
+		"invalid":            false,
+	}
+	for acl, ok := range want {
+		if BucketACL(acl).isValidBucketACL() != ok {
+			t.Fatal("Error")
+		}
+	}
+}
+
 func TestMustGetEndpoint(t *testing.T) {
 	conf := new(Config)
 	conf.Region = "us-east-1"
@@ -87,12 +102,12 @@ func TestBucketOperations(t *testing.T) {
 		t.Errorf("Error")
 	}
 
-	err = a.StatBucket("bucket")
+	err = a.BucketExists("bucket")
 	if err != nil {
 		t.Errorf("Error")
 	}
 
-	err = a.StatBucket("bucket1")
+	err = a.BucketExists("bucket1")
 	if err == nil {
 		t.Errorf("Error")
 	}
@@ -103,6 +118,14 @@ func TestBucketOperations(t *testing.T) {
 	err = a.SetBucketACL("bucket", "public-read-write")
 	if err != nil {
 		t.Errorf("Error")
+	}
+
+	acl, err := a.GetBucketACL("bucket")
+	if err != nil {
+		t.Errorf("Error")
+	}
+	if !acl.isPrivate() {
+		t.Fatalf("Error")
 	}
 
 	for b := range a.ListBuckets() {
@@ -123,12 +146,12 @@ func TestBucketOperations(t *testing.T) {
 		}
 	}
 
-	err = a.DeleteBucket("bucket")
+	err = a.RemoveBucket("bucket")
 	if err != nil {
 		t.Errorf("Error")
 	}
 
-	err = a.DeleteBucket("bucket1")
+	err = a.RemoveBucket("bucket1")
 	if err == nil {
 		t.Fatalf("Error")
 	}
@@ -179,7 +202,7 @@ func TestObjectOperations(t *testing.T) {
 		t.Fatalf("Error")
 	}
 
-	err = a.DeleteObject("bucket", "object")
+	err = a.RemoveObject("bucket", "object")
 	if err != nil {
 		t.Fatalf("Error")
 	}

@@ -152,6 +152,45 @@ func (a *lowLevelAPI) putBucketACL(bucket, acl string) error {
 	return nil
 }
 
+// getBucketACLRequest wrapper creates a new getBucketACL request
+func (a *lowLevelAPI) getBucketRequestACL(bucket string) (*request, error) {
+	op := &operation{
+		HTTPServer: a.config.MustGetEndpoint(),
+		HTTPMethod: "GET",
+		HTTPPath:   "/" + bucket + "?acl",
+	}
+	req, err := newRequest(op, a.config, nil)
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+// getBucketACL get the acl information on an existing bucket
+func (a *lowLevelAPI) getBucketACL(bucket string) (*accessControlPolicy, error) {
+	req, err := a.getBucketRequestACL(bucket)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := req.Do()
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp != nil {
+		if resp.StatusCode != http.StatusOK {
+			return nil, responseToError(resp)
+		}
+	}
+	accessControlPolicy := new(accessControlPolicy)
+	decoder := xml.NewDecoder(resp.Body)
+	err = decoder.Decode(accessControlPolicy)
+	if err != nil {
+		return nil, err
+	}
+	return accessControlPolicy, nil
+}
+
 // getBucketLocationRequest wrapper creates a new getBucketLocation request
 func (a *lowLevelAPI) getBucketLocationRequest(bucket string) (*request, error) {
 	op := &operation{
@@ -366,7 +405,7 @@ func (a *lowLevelAPI) putObjectRequest(bucket, object string, size int64, body i
 // putObject - add an object to a bucket
 //
 // You must have WRITE permissions on a bucket to add an object to it.
-func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadSeeker) (*ObjectMetadata, error) {
+func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadSeeker) (*ObjectStat, error) {
 	req, err := a.putObjectRequest(bucket, object, size, body)
 	if err != nil {
 		return nil, err
@@ -381,7 +420,7 @@ func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadS
 			return nil, responseToError(resp)
 		}
 	}
-	metadata := new(ObjectMetadata)
+	metadata := new(ObjectStat)
 	metadata.ETag = strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
 	return metadata, nil
 }
@@ -416,7 +455,7 @@ func (a *lowLevelAPI) getObjectRequest(bucket, object string, offset, length uin
 //
 // Additionally it also takes range arguments to download the specified range bytes of an object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a *lowLevelAPI) getObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectMetadata, error) {
+func (a *lowLevelAPI) getObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectStat, error) {
 	req, err := a.getObjectRequest(bucket, object, offset, length)
 	if err != nil {
 		return nil, nil, err
@@ -441,17 +480,50 @@ func (a *lowLevelAPI) getObject(bucket, object string, offset, length uint64) (i
 	if err != nil {
 		return nil, nil, err
 	}
-	objectmetadata := new(ObjectMetadata)
-	objectmetadata.ETag = md5sum
-	objectmetadata.Key = object
-	objectmetadata.Size = resp.ContentLength
-	objectmetadata.LastModified = date
+	objectstat := new(ObjectStat)
+	objectstat.ETag = md5sum
+	objectstat.Key = object
+	objectstat.Size = resp.ContentLength
+	objectstat.LastModified = date
 
 	// do not close body here, caller will close
-	return resp.Body, objectmetadata, nil
+	return resp.Body, objectstat, nil
 }
 
-// headObjectRequest wrapper creates a new HeadObject request
+// deleteObjectRequest wrapper creates a new deleteObject request
+func (a *lowLevelAPI) deleteObjectRequest(bucket, object string) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
+	op := &operation{
+		HTTPServer: a.config.MustGetEndpoint(),
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/" + bucket + "/" + encodedObject,
+	}
+	return newRequest(op, a.config, nil)
+}
+
+// deleteObject deletes a given object from a bucket
+func (a *lowLevelAPI) deleteObject(bucket, object string) error {
+	req, err := a.deleteObjectRequest(bucket, object)
+	if err != nil {
+		return err
+	}
+	resp, err := req.Do()
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp != nil {
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("%s", resp.Status)
+		}
+	}
+	return nil
+}
+
+// headObjectRequest wrapper creates a new headObject request
 func (a *lowLevelAPI) headObjectRequest(bucket, object string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
@@ -466,7 +538,7 @@ func (a *lowLevelAPI) headObjectRequest(bucket, object string) (*request, error)
 }
 
 // headObject - retrieves metadata from an object without returning the object itself
-func (a *lowLevelAPI) headObject(bucket, object string) (*ObjectMetadata, error) {
+func (a *lowLevelAPI) headObject(bucket, object string) (*ObjectStat, error) {
 	req, err := a.headObjectRequest(bucket, object)
 	if err != nil {
 		return nil, err
@@ -493,39 +565,12 @@ func (a *lowLevelAPI) headObject(bucket, object string) (*ObjectMetadata, error)
 	if err != nil {
 		return nil, err
 	}
-	objectmetadata := new(ObjectMetadata)
-	objectmetadata.ETag = md5sum
-	objectmetadata.Key = object
-	objectmetadata.Size = size
-	objectmetadata.LastModified = date
-	return objectmetadata, nil
-}
-
-// deleteObjectRequest wrapper creates a new DeleteObject request
-func (a *lowLevelAPI) deleteObjectRequest(bucket, object string) (*request, error) {
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
-	op := &operation{
-		HTTPServer: a.config.MustGetEndpoint(),
-		HTTPMethod: "DELETE",
-		HTTPPath:   "/" + bucket + "/" + encodedObject,
-	}
-	return newRequest(op, a.config, nil)
-}
-
-// deleteObject removes the object
-func (a *lowLevelAPI) deleteObject(bucket, object string) error {
-	req, err := a.deleteObjectRequest(bucket, object)
-	if err != nil {
-		return err
-	}
-	resp, err := req.Do()
-	if err != nil {
-		return err
-	}
-	return resp.Body.Close()
+	objectstat := new(ObjectStat)
+	objectstat.ETag = md5sum
+	objectstat.Key = object
+	objectstat.Size = size
+	objectstat.LastModified = date
+	return objectstat, nil
 }
 
 /// Service Operations

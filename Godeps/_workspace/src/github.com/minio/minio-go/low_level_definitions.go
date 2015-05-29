@@ -22,7 +22,7 @@ import "time"
 type listAllMyBucketsResult struct {
 	// Container for one or more buckets.
 	Buckets struct {
-		Bucket []*BucketMetadata
+		Bucket []*BucketStat
 	}
 	Owner owner
 }
@@ -40,8 +40,8 @@ type commonPrefix struct {
 
 // listBucketResult container for ListObjects response
 type listBucketResult struct {
-	CommonPrefixes []*commonPrefix   // A response can contain CommonPrefixes only if you specify a delimiter
-	Contents       []*ObjectMetadata // Metadata about each object returned
+	CommonPrefixes []*commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter
+	Contents       []*ObjectStat   // Metadata about each object returned
 	Delimiter      string
 
 	// Encoding type used to encode object keys in the response.
@@ -156,4 +156,24 @@ type completeMultipartUpload struct {
 // createBucketConfiguration container for bucket configuration
 type createBucketConfiguration struct {
 	Location string `xml:"LocationConstraint"`
+}
+
+type grantee struct {
+	ID           string
+	DisplayName  string
+	EmailAddress string
+	Type         string
+	URI          string
+}
+
+type grant struct {
+	Grantee    grantee
+	Permission string
+}
+
+type accessControlPolicy struct {
+	Owner             owner
+	AccessControlList struct {
+		Grant *grant
+	}
 }
