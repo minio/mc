@@ -33,10 +33,10 @@ func (e ErrorMessage) String() string {
 	if e.Error != nil {
 		switch e.Error.(type) {
 		case iodine.Error:
-			reason := "Reason: " + iodine.ToError(e.Error).Error()
+			reason := iodine.ToError(e.Error).Error()
 			message = e.Message + ", " + reason
 		default:
-			reason := "Reason: " + e.Error.Error()
+			reason := e.Error.Error()
 			message = e.Message + ", " + reason
 		}
 	}
