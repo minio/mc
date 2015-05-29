@@ -37,8 +37,8 @@ type errorResponse struct {
 	Code      string
 	Message   string
 	Resource  string
-	RequestID string
-	HostID    string
+	RequestID string `xml:"RequestId"`
+	HostID    string `xml:"HostId"`
 }
 
 // responseToError returns a new encoded ErrorResponse structure
@@ -50,6 +50,22 @@ func responseToError(res *http.Response) error {
 		return err
 	}
 	return respError
+}
+
+// GetCode get underlying error code for example: "MissingSecurityHeader"
+func (e errorResponse) GetCode() string {
+	return e.Code
+}
+
+// GetRequestID get request id useful in debugging
+func (e errorResponse) GetRequestID() string {
+	return e.RequestID
+}
+
+// XML send raw xml marshalled as string
+func (e errorResponse) XML() string {
+	b, _ := xml.Marshal(&e)
+	return string(b)
 }
 
 // Error formats HTTP error string

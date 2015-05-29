@@ -18,6 +18,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"runtime"
@@ -34,58 +35,56 @@ type API interface {
 
 	// Object Read/Write/Stat operations
 	ObjectAPI
-
-	// MultipartManagementAPI - cancel, list multiparts and active sessions
-	MultipartManagementAPI
 }
 
 // BucketAPI - bucket specific Read/Write/Stat interface
 type BucketAPI interface {
-	MakeBucket(bucket, acl, location string) error
-	SetBucketACL(bucket, acl string) error
-	StatBucket(bucket string) error
-	DeleteBucket(bucket string) error
+	MakeBucket(bucket string, cannedACL BucketACL, location string) error
+	BucketExists(bucket string) error
+	RemoveBucket(bucket string) error
+	SetBucketACL(bucket string, cannedACL BucketACL) error
+	GetBucketACL(bucket string) (BucketACL, error)
 
-	ListObjects(bucket, prefix string, recursive bool) <-chan ObjectOnChannel
-	ListBuckets() <-chan BucketOnChannel
+	ListBuckets() <-chan BucketStatCh
+	ListObjects(bucket, prefix string, recursive bool) <-chan ObjectStatCh
+
+	// Drop all incomplete uploads
+	DropAllIncompleteUploads(bucket string) <-chan error
 }
 
 // ObjectAPI - object specific Read/Write/Stat interface
 type ObjectAPI interface {
-	GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectMetadata, error)
+	GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectStat, error)
 	PutObject(bucket, object string, size uint64, data io.Reader) error
-	StatObject(bucket, object string) (*ObjectMetadata, error)
-	DeleteObject(bucket, object string) error
+	StatObject(bucket, object string) (*ObjectStat, error)
+	RemoveObject(bucket, object string) error
+
+	// Drop all incomplete uploads for a given prefix
+	DropIncompleteUploads(bucket, prefix string) <-chan error
 }
 
-// MultipartManagementAPI - multi parts management API
-type MultipartManagementAPI interface {
-	MultipartAbort(bucket, prefix string) <-chan error
-	MultipartAbortAll(bucket string) <-chan error
-}
-
-// BucketOnChannel - bucket metadata over read channel
-type BucketOnChannel struct {
-	Data *BucketMetadata
+// BucketStatCh - bucket metadata over read channel
+type BucketStatCh struct {
+	Data *BucketStat
 	Err  error
 }
 
-// ObjectOnChannel - object metadata over read channel
-type ObjectOnChannel struct {
-	Data *ObjectMetadata
+// ObjectStatCh - object metadata over read channel
+type ObjectStatCh struct {
+	Data *ObjectStat
 	Err  error
 }
 
-// BucketMetadata container for bucket metadata
-type BucketMetadata struct {
+// BucketStat container for bucket metadata
+type BucketStat struct {
 	// The name of the bucket.
 	Name string
 	// Date the bucket was created.
 	CreationDate time.Time
 }
 
-// ObjectMetadata container for object metadata
-type ObjectMetadata struct {
+// ObjectStat container for object metadata
+type ObjectStat struct {
 	ETag         string
 	Key          string
 	LastModified time.Time
@@ -192,7 +191,7 @@ func New(config *Config) API {
 //
 // Additionally it also takes range arguments to download the specified range bytes of an object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a *api) GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectMetadata, error) {
+func (a *api) GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, *ObjectStat, error) {
 	if strings.TrimSpace(object) == "" {
 		return nil, nil, errors.New("object name cannot be empty")
 	}
@@ -278,29 +277,29 @@ func (a *api) newObjectUpload(bucket, object string, size uint64, data io.Reader
 	return nil
 }
 
-type partOnChannel struct {
+type partCh struct {
 	Data *partMetadata
 	Err  error
 }
 
-func (a *api) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partOnChannel {
-	partCh := make(chan partOnChannel)
+func (a *api) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partCh {
+	partCh := make(chan partCh)
 	go a.listObjectPartsRecursiveInRoutine(bucket, object, uploadID, partCh)
 	return partCh
 }
 
-func (a *api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, partCh chan partOnChannel) {
-	defer close(partCh)
+func (a *api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, ch chan partCh) {
+	defer close(ch)
 	listObjectPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
 	if err != nil {
-		partCh <- partOnChannel{
+		ch <- partCh{
 			Data: nil,
 			Err:  err,
 		}
 		return
 	}
 	for _, uploadedPart := range listObjectPartsResult.Part {
-		partCh <- partOnChannel{
+		ch <- partCh{
 			Data: uploadedPart,
 			Err:  nil,
 		}
@@ -311,14 +310,14 @@ func (a *api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string,
 		}
 		listObjectPartsResult, err = a.listObjectParts(bucket, object, uploadID, listObjectPartsResult.NextPartNumberMarker, 1000)
 		if err != nil {
-			partCh <- partOnChannel{
+			ch <- partCh{
 				Data: nil,
 				Err:  err,
 			}
 			return
 		}
 		for _, uploadedPart := range listObjectPartsResult.Part {
-			partCh <- partOnChannel{
+			ch <- partCh{
 				Data: uploadedPart,
 				Err:  nil,
 			}
@@ -354,29 +353,29 @@ func (a *api) continueObjectUpload(bucket, object, uploadID string, size uint64,
 	return nil
 }
 
-type multiPartUploadOnChannel struct {
+type multiPartUploadCh struct {
 	Data *upload
 	Err  error
 }
 
-func (a *api) listMultipartUploadsRecursive(bucket, prefix string) <-chan multiPartUploadOnChannel {
-	ch := make(chan multiPartUploadOnChannel)
+func (a *api) listMultipartUploadsRecursive(bucket, prefix string) <-chan multiPartUploadCh {
+	ch := make(chan multiPartUploadCh)
 	go a.listMultipartUploadsRecursiveInRoutine(bucket, prefix, ch)
 	return ch
 }
 
-func (a *api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch chan multiPartUploadOnChannel) {
+func (a *api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch chan multiPartUploadCh) {
 	defer close(ch)
 	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", prefix, "", 1000)
 	if err != nil {
-		ch <- multiPartUploadOnChannel{
+		ch <- multiPartUploadCh{
 			Data: nil,
 			Err:  err,
 		}
 		return
 	}
 	for _, upload := range listMultipartUploadsResult.Upload {
-		ch <- multiPartUploadOnChannel{
+		ch <- multiPartUploadCh{
 			Data: upload,
 			Err:  nil,
 		}
@@ -388,14 +387,14 @@ func (a *api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch c
 		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
 			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, prefix, "", 1000)
 		if err != nil {
-			ch <- multiPartUploadOnChannel{
+			ch <- multiPartUploadCh{
 				Data: nil,
 				Err:  err,
 			}
 			return
 		}
 		for _, upload := range listMultipartUploadsResult.Upload {
-			ch <- multiPartUploadOnChannel{
+			ch <- multiPartUploadCh{
 				Data: upload,
 				Err:  nil,
 			}
@@ -449,8 +448,13 @@ func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) erro
 	return errors.New("Unexpected control flow")
 }
 
+// RemoveObject deletes an object from a bucket
+func (a *api) RemoveObject(bucket, object string) error {
+	return a.deleteObject(bucket, object)
+}
+
 // StatObject verify if object exists and you have permission to access it
-func (a *api) StatObject(bucket, object string) (*ObjectMetadata, error) {
+func (a *api) StatObject(bucket, object string) (*ObjectStat, error) {
 	if strings.TrimSpace(object) == "" {
 		return nil, errors.New("object name cannot be empty")
 	}
@@ -480,61 +484,108 @@ func (a *api) DeleteObject(bucket, object string) error {
 // different ACLs and Location one can set them properly.
 //
 // ACL valid values
-// ------------------
-// private - owner gets full access [DEFAULT]
-// public-read - owner gets full access, others get read access
-// public-read-write - owner gets full access, others get full access too
-// ------------------
+//
+//  private - owner gets full access [default]
+//  public-read - owner gets full access, all others get read access
+//  public-read-write - owner gets full access, all others get full access too
+//  authenticated-read - owner gets full access, authenticated users get read access
+//
 //
 // Location valid values
-// ------------------
-// [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
-// Default - US standard
-func (a *api) MakeBucket(bucket, acl, location string) error {
-	return a.putBucket(bucket, acl, location)
+//
+//  [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
+//  Default - US standard
+func (a *api) MakeBucket(bucket string, acl BucketACL, location string) error {
+	if !acl.isValidBucketACL() {
+		return fmt.Errorf("%s", "Invalid bucket ACL")
+	}
+	if _, ok := Regions[location]; !ok {
+		if location != "" {
+			return fmt.Errorf("%s", "Invalid bucket Location")
+		}
+	}
+	return a.putBucket(bucket, string(acl), location)
 }
 
 // SetBucketACL set the permissions on an existing bucket using access control lists (ACL)
 //
-// Currently supported are:
-// ------------------
-// private - owner gets full access
-// public-read - owner gets full access, others get read access
-// public-read-write - owner gets full access, others get full access too
-// ------------------
-func (a *api) SetBucketACL(bucket, acl string) error {
-	return a.putBucketACL(bucket, acl)
+// For example
+//
+//  private - owner gets full access [default]
+//  public-read - owner gets full access, all others get read access
+//  public-read-write - owner gets full access, all others get full access too
+//  authenticated-read - owner gets full access, authenticated users get read access
+//
+func (a *api) SetBucketACL(bucket string, acl BucketACL) error {
+	if !acl.isValidBucketACL() {
+		return fmt.Errorf("%s", "Invalid bucket ACL")
+	}
+	return a.putBucketACL(bucket, string(acl))
 }
 
-// StatBucket verify if bucket exists and you have permission to access it
-func (a *api) StatBucket(bucket string) error {
+// GetBucketACL get the permissions on an existing bucket
+//
+// Returned values are:
+//
+//  private - owner gets full access
+//  public-read - owner gets full access, others get read access
+//  public-read-write - owner gets full access, others get full access too
+//  authenticated-read - owner gets full access, authenticated users get read access
+//
+func (a *api) GetBucketACL(bucket string) (BucketACL, error) {
+	policy, err := a.getBucketACL(bucket)
+	if err != nil {
+		return "", err
+	}
+	if policy.AccessControlList.Grant == nil {
+		return "", fmt.Errorf("%s", "Unexpected error")
+	}
+	switch {
+	case policy.AccessControlList.Grant.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" &&
+		policy.AccessControlList.Grant.Permission == "WRITE":
+		return BucketACL("public-read-write"), nil
+	case policy.AccessControlList.Grant.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" &&
+		policy.AccessControlList.Grant.Permission == "READ":
+		return BucketACL("public-read"), nil
+	case policy.AccessControlList.Grant.Grantee.URI == "http://acs.amazonaws.com/groups/global/AuthenticatedUsers" &&
+		policy.AccessControlList.Grant.Permission == "READ":
+		return BucketACL("authenticated-read"), nil
+	case policy.AccessControlList.Grant.Grantee.URI == "" &&
+		policy.AccessControlList.Grant.Permission == "FULL_CONTROL":
+		return BucketACL("private"), nil
+	}
+	return "", nil
+}
+
+// BucketExists verify if bucket exists and you have permission to access it
+func (a *api) BucketExists(bucket string) error {
 	return a.headBucket(bucket)
 }
 
-// DeleteBucket deletes the bucket named in the URI
+// RemoveBucket deletes the bucket named in the URI
 // NOTE: -
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request
-func (a *api) DeleteBucket(bucket string) error {
+func (a *api) RemoveBucket(bucket string) error {
 	return a.deleteBucket(bucket)
 }
 
 // listObjectsInRoutine is an internal goroutine function called for listing objects
 // This function feeds data into channel
-func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan ObjectOnChannel) {
+func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan ObjectStatCh) {
 	defer close(ch)
 	switch {
 	case recursive == true:
 		listBucketResult, err := a.listObjects(bucket, "", prefix, "", 1000)
 		if err != nil {
-			ch <- ObjectOnChannel{
+			ch <- ObjectStatCh{
 				Data: nil,
 				Err:  err,
 			}
 			return
 		}
 		for _, object := range listBucketResult.Contents {
-			ch <- ObjectOnChannel{
+			ch <- ObjectStatCh{
 				Data: object,
 				Err:  nil,
 			}
@@ -545,14 +596,14 @@ func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch cha
 			}
 			listBucketResult, err = a.listObjects(bucket, listBucketResult.Marker, prefix, "", 1000)
 			if err != nil {
-				ch <- ObjectOnChannel{
+				ch <- ObjectStatCh{
 					Data: nil,
 					Err:  err,
 				}
 				return
 			}
 			for _, object := range listBucketResult.Contents {
-				ch <- ObjectOnChannel{
+				ch <- ObjectStatCh{
 					Data: object,
 					Err:  nil,
 				}
@@ -562,23 +613,23 @@ func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch cha
 	default:
 		listBucketResult, err := a.listObjects(bucket, "", prefix, "/", 1000)
 		if err != nil {
-			ch <- ObjectOnChannel{
+			ch <- ObjectStatCh{
 				Data: nil,
 				Err:  err,
 			}
 			return
 		}
 		for _, object := range listBucketResult.Contents {
-			ch <- ObjectOnChannel{
+			ch <- ObjectStatCh{
 				Data: object,
 				Err:  nil,
 			}
 		}
 		for _, prefix := range listBucketResult.CommonPrefixes {
-			object := new(ObjectMetadata)
+			object := new(ObjectStat)
 			object.Key = prefix.Prefix
 			object.Size = 0
-			ch <- ObjectOnChannel{
+			ch <- ObjectStatCh{
 				Data: object,
 				Err:  nil,
 			}
@@ -601,26 +652,26 @@ func (a *api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch cha
 //                 fmt.Println(message.Data)
 //         }
 //
-func (a *api) ListObjects(bucket string, prefix string, recursive bool) <-chan ObjectOnChannel {
-	ch := make(chan ObjectOnChannel)
+func (a *api) ListObjects(bucket string, prefix string, recursive bool) <-chan ObjectStatCh {
+	ch := make(chan ObjectStatCh)
 	go a.listObjectsInRoutine(bucket, prefix, recursive, ch)
 	return ch
 }
 
 // listBucketsInRoutine is an internal go routine function called for listing buckets
 // This function feeds data into channel
-func (a *api) listBucketsInRoutine(ch chan BucketOnChannel) {
+func (a *api) listBucketsInRoutine(ch chan BucketStatCh) {
 	defer close(ch)
 	listAllMyBucketListResults, err := a.listBuckets()
 	if err != nil {
-		ch <- BucketOnChannel{
+		ch <- BucketStatCh{
 			Data: nil,
 			Err:  err,
 		}
 		return
 	}
 	for _, bucket := range listAllMyBucketListResults.Buckets.Bucket {
-		ch <- BucketOnChannel{
+		ch <- BucketStatCh{
 			Data: bucket,
 			Err:  nil,
 		}
@@ -640,13 +691,13 @@ func (a *api) listBucketsInRoutine(ch chan BucketOnChannel) {
 //                 fmt.Println(message.Data)
 //         }
 //
-func (a *api) ListBuckets() <-chan BucketOnChannel {
-	ch := make(chan BucketOnChannel)
+func (a *api) ListBuckets() <-chan BucketStatCh {
+	ch := make(chan BucketStatCh)
 	go a.listBucketsInRoutine(ch)
 	return ch
 }
 
-func (a *api) multipartAbortInRoutine(bucket, prefix string, errorCh chan error) {
+func (a *api) dropIncompleteUploadsInRoutine(bucket, prefix string, errorCh chan error) {
 	defer close(errorCh)
 	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", prefix, "", 1000)
 	if err != nil {
@@ -682,7 +733,6 @@ func (a *api) multipartAbortInRoutine(bucket, prefix string, errorCh chan error)
 	errorCh <- nil
 }
 
-/// MultipartManagement operations cancel and list
 //
 //
 // NOTE:
@@ -690,14 +740,14 @@ func (a *api) multipartAbortInRoutine(bucket, prefix string, errorCh chan error)
 //   requests are allowed for multipart API
 //
 
-// MultipartAbort - abort a specific in progress active multipart upload, request requires uploadID
-func (a *api) MultipartAbort(bucket, prefix string) <-chan error {
+// DropIncompleteUploads - abort a specific in progress active multipart upload
+func (a *api) DropIncompleteUploads(bucket, prefix string) <-chan error {
 	errorCh := make(chan error)
-	go a.multipartAbortInRoutine(bucket, prefix, errorCh)
+	go a.dropIncompleteUploadsInRoutine(bucket, prefix, errorCh)
 	return errorCh
 }
 
-func (a *api) multipartAbortAllInRoutine(bucket string, errorCh chan error) {
+func (a *api) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan error) {
 	defer close(errorCh)
 	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", "", "", 1000)
 	if err != nil {
@@ -733,9 +783,9 @@ func (a *api) multipartAbortAllInRoutine(bucket string, errorCh chan error) {
 	errorCh <- nil
 }
 
-// MultipartAbortAll - abort all inprogress active multipart uploads
-func (a *api) MultipartAbortAll(bucket string) <-chan error {
+// DropAllIncompleteUploads - abort all inprogress active multipart uploads
+func (a *api) DropAllIncompleteUploads(bucket string) <-chan error {
 	errorCh := make(chan error)
-	go a.multipartAbortAllInRoutine(bucket, errorCh)
+	go a.dropAllIncompleteUploadsInRoutine(bucket, errorCh)
 	return errorCh
 }

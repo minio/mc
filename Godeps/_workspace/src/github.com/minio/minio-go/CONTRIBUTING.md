@@ -1,8 +1,3 @@
-### Setup your minio-go Github Repository
-Fork [minio-go upstream](https://github.com/minio/minio-go/fork) source repository to your own personal repository.
-```sh
-$ godep get https://github.com/$USER_ID/minio-go
-```
 
 ###  Developer Guidelines
 
