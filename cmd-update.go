@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	mcUpdateURL = "http://dl.minio.io:9000/updates/2015/June/" + "mc" + "." + runtime.GOOS + "." + runtime.GOARCH
+	mcUpdateURL = "http://dl.minio.io:9000/updates/2015/Jun/" + "mc" + "." + runtime.GOOS + "." + runtime.GOARCH
 )
 
 func doUpdateCheck(config *hostConfig) (string, error) {
