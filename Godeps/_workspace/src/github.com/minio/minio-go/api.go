@@ -448,11 +448,6 @@ func (a *api) PutObject(bucket, object string, size uint64, data io.Reader) erro
 	return errors.New("Unexpected control flow")
 }
 
-// RemoveObject deletes an object from a bucket
-func (a *api) RemoveObject(bucket, object string) error {
-	return a.deleteObject(bucket, object)
-}
-
 // StatObject verify if object exists and you have permission to access it
 func (a *api) StatObject(bucket, object string) (*ObjectStat, error) {
 	if strings.TrimSpace(object) == "" {
@@ -464,8 +459,8 @@ func (a *api) StatObject(bucket, object string) (*ObjectStat, error) {
 	return a.headObject(bucket, object)
 }
 
-// DeleteObject remove the object from a bucket
-func (a *api) DeleteObject(bucket, object string) error {
+// RemoveObject remove the object from a bucket
+func (a *api) RemoveObject(bucket, object string) error {
 	if strings.TrimSpace(object) == "" {
 		return errors.New("object name cannot be empty")
 	}
@@ -540,21 +535,29 @@ func (a *api) GetBucketACL(bucket string) (BucketACL, error) {
 	if policy.AccessControlList.Grant == nil {
 		return "", fmt.Errorf("%s", "Unexpected error")
 	}
+	grants := policy.AccessControlList.Grant
 	switch {
-	case policy.AccessControlList.Grant.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" &&
-		policy.AccessControlList.Grant.Permission == "WRITE":
-		return BucketACL("public-read-write"), nil
-	case policy.AccessControlList.Grant.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" &&
-		policy.AccessControlList.Grant.Permission == "READ":
-		return BucketACL("public-read"), nil
-	case policy.AccessControlList.Grant.Grantee.URI == "http://acs.amazonaws.com/groups/global/AuthenticatedUsers" &&
-		policy.AccessControlList.Grant.Permission == "READ":
-		return BucketACL("authenticated-read"), nil
-	case policy.AccessControlList.Grant.Grantee.URI == "" &&
-		policy.AccessControlList.Grant.Permission == "FULL_CONTROL":
-		return BucketACL("private"), nil
+	case len(grants) == 1:
+		if grants[0].Grantee.URI == "" && grants[0].Permission == "FULL_CONTROL" {
+			return BucketACL("private"), nil
+		}
+	case len(grants) == 2:
+		for _, g := range grants {
+			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AuthenticatedUsers" && g.Permission == "READ" {
+				return BucketACL("authenticated-read"), nil
+			}
+			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "READ" {
+				return BucketACL("public-read"), nil
+			}
+		}
+	case len(grants) == 3:
+		for _, g := range grants {
+			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "WRITE" {
+				return BucketACL("public-read-write"), nil
+			}
+		}
 	}
-	return "", nil
+	return "", fmt.Errorf("Cannot verify access control policy")
 }
 
 // BucketExists verify if bucket exists and you have permission to access it

@@ -158,22 +158,20 @@ type createBucketConfiguration struct {
 	Location string `xml:"LocationConstraint"`
 }
 
-type grantee struct {
-	ID           string
-	DisplayName  string
-	EmailAddress string
-	Type         string
-	URI          string
-}
-
 type grant struct {
-	Grantee    grantee
+	Grantee struct {
+		ID           string
+		DisplayName  string
+		EmailAddress string
+		Type         string
+		URI          string
+	}
 	Permission string
 }
 
 type accessControlPolicy struct {
-	Owner             owner
 	AccessControlList struct {
-		Grant *grant
+		Grant []*grant
 	}
+	Owner owner
 }
