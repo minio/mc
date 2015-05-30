@@ -22,14 +22,6 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-// intMax - return maximum value for any given integer
-func intMax(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
-}
-
 // isValidRetry - check if we should retry for the given error sequence
 func isValidRetry(err error) bool {
 	err = iodine.New(err, nil)

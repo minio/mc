@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"runtime"
 	"sync"
 
@@ -71,7 +72,7 @@ func runSyncCmd(ctx *cli.Context) {
 		}
 	}(sourceURL, targetURLs)
 
-	var syncQueue = make(chan bool, intMax(runtime.NumCPU()-1, 1))
+	syncQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
 	var wg sync.WaitGroup
 
 	for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
