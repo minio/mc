@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"runtime"
 	"sync"
 
@@ -120,7 +121,7 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 		}(sourceURLs, targetURL)
 
 		// Pool limited copy routines in parallel.
-		cpQueue := make(chan bool, intMax(runtime.NumCPU()-1, 1))
+		cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
 		defer close(cpQueue)
 
 		// Wait for all copy routines to complete.

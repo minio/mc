@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"runtime"
 	"strings"
 
@@ -47,7 +48,7 @@ func printUpdateNotify(latestVersion, currentVersion string) {
 	line2InColor := fmt.Sprintf("  Run \"%s\" to update. ", blue(updateString))
 
 	// calculate the rectangular box size
-	maxContentWidth := intMax(line1Length, line2Length)
+	maxContentWidth := int(math.Max(float64(line1Length), float64(line2Length)))
 	line1Rest := maxContentWidth - line1Length
 	line2Rest := maxContentWidth - line2Length
 
