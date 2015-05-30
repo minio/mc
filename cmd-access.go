@@ -19,7 +19,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
@@ -94,12 +93,6 @@ func doUpdateAccessCmd(targetURL, targetACL string, targetConfig *hostConfig) (s
 
 func doUpdateAccess(clnt client.Client, targetURL, targetACL string) (string, error) {
 	err := clnt.SetBucketACL(targetACL)
-	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		console.Retry("Retrying ...", i)
-		// Progressively longer delays
-		time.Sleep(time.Duration(i*i) * time.Second)
-		err = clnt.SetBucketACL(targetACL)
-	}
 	if err != nil {
 		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’", targetURL)
 		return msg, iodine.New(err, nil)

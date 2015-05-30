@@ -38,7 +38,6 @@ GLOBAL FLAGS:
    --theme "minimal"	Choose a console theme from this list [*minimal*, nocolor, white]
    --debug		Enable HTTP tracing
    --quiet, -q		Supress chatty console output
-   --retry "5"		Number of retry count
    --version, -v	print the version
 
 ```

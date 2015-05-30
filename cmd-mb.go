@@ -19,7 +19,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
@@ -97,12 +96,6 @@ func doMakeBucketCmd(targetURL string, targetConfig *hostConfig) (string, error)
 // doMakeBucket - wrapper around MakeBucket() API
 func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
 	err := clnt.MakeBucket()
-	for i := 0; i < globalMaxRetryFlag && err != nil && isValidRetry(err); i++ {
-		console.Retry("Retrying ...", i)
-		// Progressively longer delays
-		time.Sleep(time.Duration(i*i) * time.Second)
-		err = clnt.MakeBucket()
-	}
 	if err != nil {
 		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", targetURL)
 		return msg, iodine.New(err, nil)

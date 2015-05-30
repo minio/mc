@@ -26,13 +26,10 @@ import (
 	"runtime"
 	"testing"
 
-	"errors"
-	"net"
 	"net/http/httptest"
 
 	. "github.com/minio/check"
 	"github.com/minio/mc/pkg/quick"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -238,35 +235,6 @@ func (ta *testAddr) Error() string {
 }
 func (ta *testAddr) String() string {
 	return "testAddr"
-}
-
-func (s *CmdTestSuite) TestIsValidRetry(c *C) {
-	opError := &net.OpError{
-		Op:   "read",
-		Net:  "net",
-		Addr: &testAddr{},
-		Err:  errors.New("Op Error"),
-	}
-	c.Assert(isValidRetry(nil), Equals, false)
-	c.Assert(isValidRetry(errors.New("hello")), Equals, false)
-	c.Assert(isValidRetry(iodine.New(errors.New("hello"), nil)), Equals, false)
-	c.Assert(isValidRetry(&net.DNSError{}), Equals, true)
-	c.Assert(isValidRetry(iodine.New(&net.DNSError{}, nil)), Equals, true)
-	// op error read
-	c.Assert(isValidRetry(opError), Equals, true)
-	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
-	// op error write
-	opError.Op = "write"
-	c.Assert(isValidRetry(opError), Equals, true)
-	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
-	// op error dial
-	opError.Op = "dial"
-	c.Assert(isValidRetry(opError), Equals, true)
-	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, true)
-	// op error foo
-	opError.Op = "foo"
-	c.Assert(isValidRetry(opError), Equals, false)
-	c.Assert(isValidRetry(iodine.New(opError, nil)), Equals, false)
 }
 
 func (s *CmdTestSuite) TestCommonMethods(c *C) {
