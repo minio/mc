@@ -65,52 +65,6 @@ const (
 	cpURLsTypeD
 )
 
-// source2Client returns client and hostconfig objects from the source URL.
-func source2Client(sourceURL string) (client.Client, error) {
-	// Empty source arg?
-	sourceURLParse, err := client.Parse(sourceURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
-	}
-
-	if sourceURLParse.Path == "" {
-		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
-	}
-
-	sourceConfig, err := getHostConfig(sourceURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
-	}
-
-	sourceClient, err := getNewClient(sourceURL, sourceConfig)
-	if err != nil {
-		return nil, iodine.New(errInvalidSource{path: sourceURL}, nil)
-	}
-	return sourceClient, nil
-}
-
-// target2Client returns client and hostconfig objects from the target URL.
-func target2Client(targetURL string) (client.Client, error) {
-	// Empty target arg?
-	targetURLParse, err := client.Parse(targetURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
-	}
-	if targetURLParse.Path == "" {
-		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
-	}
-	targetConfig, err := getHostConfig(targetURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
-	}
-
-	targetClient, err := getNewClient(targetURL, targetConfig)
-	if err != nil {
-		return nil, iodine.New(errInvalidTarget{path: targetURL}, nil)
-	}
-	return targetClient, nil
-}
-
 // Check if the target URL represents directory. It may or may not exist yet.
 func isTargetURLDir(targetURL string) bool {
 	if strings.HasSuffix(targetURL, string(filepath.Separator)) {
@@ -178,7 +132,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *cpURLs {
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file
-		return &cpURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
+		return &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 	}
 	targetClient, err := target2Client(targetURL)
 	if err != nil {
@@ -189,15 +143,10 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *cpURLs {
 	targetContent, err := targetClient.Stat()
 	if err == nil { // Target exists.
 		if !targetContent.Type.IsRegular() { // Target is not a regular file
-			return &cpURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
-		}
-		// if target is same Name, Size and Type as source return error and skip
-		u, _ := client.Parse(targetContent.Name)
-		if (targetContent.Size == sourceContent.Size) && (filepath.Base(u.Path) == sourceContent.Name) {
-			// Target exists, don't overwrite. Let the copy function decide return error here
-			return &cpURLs{Error: iodine.New(errSameURLs{source: sourceURL, target: targetURL}, nil)}
+			return &cpURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
 		}
 	}
+
 	// All OK.. We can proceed. Type A
 	return &cpURLs{SourceContent: sourceContent, TargetContent: &client.Content{Name: targetURL}}
 }
@@ -218,7 +167,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) *cpURLs {
 
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file.
-		return &cpURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
+		return &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 	}
 
 	targetClient, err := target2Client(targetURL)
@@ -238,12 +187,12 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) *cpURLs {
 	// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 	sourceURLParse, err := client.Parse(sourceURL)
 	if err != nil {
-		return &cpURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
+		return &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 	}
 
 	targetURLParse, err := client.Parse(targetURL)
 	if err != nil {
-		return &cpURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
+		return &cpURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
 	}
 
 	targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
@@ -318,19 +267,19 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *cpURLs {
 			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
-				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{path: sourceURL}, nil)}
+				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 				continue
 			}
 
 			targetURLParse, err := client.Parse(targetURL)
 			if err != nil {
-				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidTarget{path: targetURL}, nil)}
+				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
 				continue
 			}
 
 			sourceContentParse, err := client.Parse(sourceContent.Content.Name)
 			if err != nil {
-				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{path: sourceContent.Content.Name}, nil)}
+				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceContent.Content.Name}, nil)}
 				continue
 			}
 
