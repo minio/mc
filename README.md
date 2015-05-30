@@ -48,7 +48,7 @@ Minio server is hosted at ``http://play.minio.io:9000`` for public use. This ser
 
 ## Configuring mc for Amazon S3
 
-Follow [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html) to retrieve Access Key ID and Secret Access Key and copy them to ``mc`` configuration file ``~/.mc/config.json``.
+Update AccessKeyID and SecretAccessKey fields in your ``~/.mc/config.json`` configuration file by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html). 
 
 ## Join The Community
 * Community hangout on Gitter    [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
