@@ -37,7 +37,7 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 		if !globalQuietFlag {
 			bar.ErrorGet(int64(length))
 		}
-		return iodine.New(err, nil)
+		return iodine.New(err, map[string]string{"URL": sourceURL})
 	}
 	defer reader.Close()
 

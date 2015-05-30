@@ -93,11 +93,11 @@ func (e errAliasExists) Error() string {
 
 /*
 type errIsNotBucket struct {
-	path string
+	URL string
 }
 
 func (e errIsNotBucket) Error() string {
-	return "Not a bucket " + e.path
+	return "Not a bucket " + e.URL
 }
 
 // errInvalidAuthKeys - invalid authorization keys
@@ -110,26 +110,17 @@ func (e errInvalidAuthKeys) Error() string {
 */
 
 type errInvalidSource struct {
-	path string
+	URL string
 }
 
 func (e errInvalidSource) Error() string {
-	return "Invalid source " + e.path
+	return "Invalid source " + e.URL
 }
 
 type errInvalidTarget struct {
-	path string
+	URL string
 }
 
 func (e errInvalidTarget) Error() string {
-	return "Invalid target " + e.path
-}
-
-type errSameURLs struct {
-	source string
-	target string
-}
-
-func (e errSameURLs) Error() string {
-	return "Source " + e.source + " and Target " + e.target + " are same"
+	return "Invalid target " + e.URL
 }

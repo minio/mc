@@ -18,6 +18,7 @@ package main
 
 import (
 	"io"
+	"net"
 	"os"
 	"runtime"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-// getSource -
+// getSource gets a reader from URL<
 func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length uint64, err error) {
 	sourceClnt, err := getNewClient(sourceURL, sourceConfig)
 	if err != nil {
@@ -36,13 +37,13 @@ func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser
 	return sourceClnt.GetObject(0, 0)
 }
 
-// putTarget -
-func putTarget(targetURL string, targetConfig *hostConfig, length uint64, data io.Reader) error {
+// putTarget writes to URL from reader.
+func putTarget(targetURL string, targetConfig *hostConfig, length uint64, reader io.Reader) error {
 	targetClnt, err := getNewClient(targetURL, targetConfig)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	err = targetClnt.PutObject(length, data)
+	err = targetClnt.PutObject(length, reader)
 	if err != nil {
 		return iodine.New(err, map[string]string{"failedURL": targetURL})
 	}
@@ -93,4 +94,71 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 	}
 
 	return client, content, nil
+}
+
+// source2Client returns client and hostconfig objects from the source URL.
+func source2Client(sourceURL string) (client.Client, error) {
+	// Empty source arg?
+	sourceURLParse, err := client.Parse(sourceURL)
+	if err != nil {
+		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
+	}
+
+	if sourceURLParse.Path == "" {
+		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
+	}
+
+	sourceConfig, err := getHostConfig(sourceURL)
+	if err != nil {
+		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
+	}
+
+	sourceClient, err := getNewClient(sourceURL, sourceConfig)
+	if err != nil {
+		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
+	}
+	return sourceClient, nil
+}
+
+// target2Client returns client and hostconfig objects from the target URL.
+func target2Client(targetURL string) (client.Client, error) {
+	// Empty target arg?
+	targetURLParse, err := client.Parse(targetURL)
+	if err != nil {
+		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
+	}
+	if targetURLParse.Path == "" {
+		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
+	}
+	targetConfig, err := getHostConfig(targetURL)
+	if err != nil {
+		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
+	}
+
+	targetClient, err := getNewClient(targetURL, targetConfig)
+	if err != nil {
+		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
+	}
+	return targetClient, nil
+}
+
+// isValidRetry - check if we should retry for the given error sequence
+func isValidRetry(err error) bool {
+	err = iodine.New(err, nil)
+	if err == nil {
+		return false
+	}
+	// DNSError, Network Operation error
+	switch e := iodine.ToError(err).(type) {
+	case *net.AddrError:
+		return true
+	case *net.DNSError:
+		return true
+	case *net.OpError:
+		switch e.Op {
+		case "read", "write", "dial":
+			return true
+		}
+	}
+	return false
 }
