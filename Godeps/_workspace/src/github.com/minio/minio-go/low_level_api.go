@@ -182,13 +182,13 @@ func (a *lowLevelAPI) getBucketACL(bucket string) (*accessControlPolicy, error) 
 			return nil, responseToError(resp)
 		}
 	}
-	accessControlPolicy := new(accessControlPolicy)
+	policy := new(accessControlPolicy)
 	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(accessControlPolicy)
+	err = decoder.Decode(policy)
 	if err != nil {
 		return nil, err
 	}
-	return accessControlPolicy, nil
+	return policy, nil
 }
 
 // getBucketLocationRequest wrapper creates a new getBucketLocation request
