@@ -25,6 +25,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/countlock"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -54,9 +55,15 @@ func runSyncCmd(ctx *cli.Context) {
 	targetURLs := URLs[1:]
 
 	var bar barSend
+	var lock countlock.Locker
+
 	// set up progress bar
 	if !globalQuietFlag {
 		bar = newCpBar()
+
+		// Keep progress-bar and copy routines in sync.
+		lock = countlock.New()
+		defer lock.Close()
 	}
 
 	go func(sourceURL string, targetURLs []string) {
@@ -68,6 +75,7 @@ func runSyncCmd(ctx *cli.Context) {
 			}
 			if !globalQuietFlag {
 				bar.Extend(syncURLs.SourceContent.Size)
+				lock.Up() // Let copy routine know that it is catch up.
 			}
 		}
 	}(sourceURL, targetURLs)
@@ -83,8 +91,14 @@ func runSyncCmd(ctx *cli.Context) {
 			})
 			continue
 		}
+
+		runtime.Gosched() // Yield more CPU time to progress-bar builder.
+
 		syncQueue <- true
 		wg.Add(1)
+		if !globalQuietFlag {
+			lock.Down() // Do not jump ahead of the progress bar builder above.
+		}
 		go func(syncURLs *cpURLs, bar *barSend) {
 			defer wg.Done()
 			srcConfig, err := getHostConfig(syncURLs.SourceContent.Name)
