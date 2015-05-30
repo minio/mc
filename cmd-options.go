@@ -348,7 +348,6 @@ var commands = []cli.Command{
 //  --json        Enable json formatted output
 //  --debug       Enable HTTP tracing
 //  --quiet, -q   Supress chatty console output
-//  --retry "5"   Number of retry count
 //  --version, -v print the version
 //
 var (
@@ -378,11 +377,6 @@ var (
 		cli.BoolFlag{
 			Name:  "quiet, q",
 			Usage: "Supress chatty console output",
-		},
-		cli.IntFlag{
-			Name:  "retry",
-			Usage: "Number of retry count",
-			Value: 5,
 		},
 		// Add your new flags starting here
 	}

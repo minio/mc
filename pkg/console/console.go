@@ -46,7 +46,6 @@ type Theme struct {
 	Time  *color.Color
 	File  *color.Color
 	Dir   *color.Color
-	Retry *color.Color
 	JSON  *color.Color
 	Bar   *color.Color
 	Print *color.Color
@@ -324,11 +323,6 @@ var (
 	File = themesDB[currThemeName].File.SprintfFunc()
 	// Dir helper to print Dir theme
 	Dir = themesDB[currThemeName].Dir.SprintfFunc()
-
-	// Retry prints a retry message
-	Retry = func(a ...interface{}) {
-		println(themesDB[currThemeName].Retry, a...)
-	}
 )
 
 var (

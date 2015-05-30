@@ -18,7 +18,6 @@ package main
 
 import (
 	"io"
-	"net"
 	"os"
 	"runtime"
 
@@ -140,25 +139,4 @@ func target2Client(targetURL string) (client.Client, error) {
 		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
 	}
 	return targetClient, nil
-}
-
-// isValidRetry - check if we should retry for the given error sequence
-func isValidRetry(err error) bool {
-	err = iodine.New(err, nil)
-	if err == nil {
-		return false
-	}
-	// DNSError, Network Operation error
-	switch e := iodine.ToError(err).(type) {
-	case *net.AddrError:
-		return true
-	case *net.DNSError:
-		return true
-	case *net.OpError:
-		switch e.Op {
-		case "read", "write", "dial":
-			return true
-		}
-	}
-	return false
 }

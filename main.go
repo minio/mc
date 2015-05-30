@@ -108,7 +108,6 @@ func main() {
 	app.Before = func(ctx *cli.Context) error {
 		globalQuietFlag = ctx.GlobalBool("quiet")
 		globalDebugFlag = ctx.GlobalBool("debug")
-		globalMaxRetryFlag = ctx.GlobalInt("retry")
 		globalJSONFlag = ctx.GlobalBool("json")
 		if globalDebugFlag {
 			app.ExtraInfo = getSystemData()
