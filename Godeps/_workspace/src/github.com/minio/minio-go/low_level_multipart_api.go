@@ -86,7 +86,7 @@ func (a *lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, pr
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	listMultipartUploadsResult := new(listMultipartUploadsResult)
@@ -127,7 +127,7 @@ func (a *lowLevelAPI) initiateMultipartUpload(bucket, object string) (*initiateM
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	initiateMultipartUploadResult := new(initiateMultipartUploadResult)
@@ -176,7 +176,7 @@ func (a *lowLevelAPI) completeMultipartUpload(bucket, object, uploadID string, c
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	completeMultipartUploadResult := new(completeMultipartUploadResult)
@@ -262,7 +262,7 @@ func (a *lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumbe
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	listObjectPartsResult := new(listObjectPartsResult)
@@ -322,7 +322,7 @@ func (a *lowLevelAPI) uploadPart(bucket, object, uploadID string, partNumber int
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	return completePart, nil

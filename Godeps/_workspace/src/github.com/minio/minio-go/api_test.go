@@ -29,6 +29,7 @@ func ExampleGetPartSize() {
 	fmt.Println(GetPartSize(5000000000))
 	// Output: 5242880
 }
+
 func ExampleGetPartSize_second() {
 	fmt.Println(GetPartSize(50000000000000000))
 	// Output: 5368709120
@@ -206,6 +207,13 @@ func TestObjectOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error")
 	}
+	err = a.RemoveObject("bucket", "object1")
+	if err == nil {
+		t.Fatalf("Error")
+	}
+	if err.Error() != "404 Not Found" {
+		t.Errorf("Error")
+	}
 }
 
 func TestPartSize(t *testing.T) {
@@ -259,5 +267,40 @@ func TestURLEncoding(t *testing.T) {
 		if u.encodedName != encodedName {
 			t.Errorf("Error")
 		}
+	}
+}
+
+func TestErrorResponse(t *testing.T) {
+	errorResponse := []byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message><Resource>/mybucket/myphoto.jpg</Resource><RequestId>F19772218238A85A</RequestId><HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId></Error>")
+	errorReader := bytes.NewReader(errorResponse)
+	err := responseToError(errorReader)
+	if err == nil {
+		t.Fatal("Error")
+	}
+	if err.Error() != "Access Denied" {
+		t.Fatal("Error")
+	}
+	resp := ToErrorResponse(err)
+	// valid all fields
+	if resp == nil {
+		t.Fatal("Error")
+	}
+	if resp.Code != "AccessDenied" {
+		t.Fatal("Error")
+	}
+	if resp.RequestID != "F19772218238A85A" {
+		t.Fatal("Error")
+	}
+	if resp.Message != "Access Denied" {
+		t.Fatal("Error")
+	}
+	if resp.Resource != "/mybucket/myphoto.jpg" {
+		t.Fatal("Error")
+	}
+	if resp.HostID != "GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD" {
+		t.Fatal("Error")
+	}
+	if resp.XML() == "" {
+		t.Fatal("Error")
 	}
 }
