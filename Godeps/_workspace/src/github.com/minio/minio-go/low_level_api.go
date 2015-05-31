@@ -112,7 +112,7 @@ func (a *lowLevelAPI) putBucket(bucket, acl, location string) error {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return responseToError(resp)
+			return responseToError(resp.Body)
 		}
 	}
 	return nil
@@ -146,7 +146,7 @@ func (a *lowLevelAPI) putBucketACL(bucket, acl string) error {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return responseToError(resp)
+			return responseToError(resp.Body)
 		}
 	}
 	return nil
@@ -179,7 +179,7 @@ func (a *lowLevelAPI) getBucketACL(bucket string) (*accessControlPolicy, error) 
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	policy := new(accessControlPolicy)
@@ -218,7 +218,7 @@ func (a *lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return "", responseToError(resp)
+			return "", responseToError(resp.Body)
 		}
 	}
 	var locationConstraint string
@@ -299,7 +299,7 @@ func (a *lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxk
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	listBucketResult := new(listBucketResult)
@@ -417,7 +417,7 @@ func (a *lowLevelAPI) putObject(bucket, object string, size int64, body io.ReadS
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	metadata := new(ObjectStat)
@@ -469,7 +469,7 @@ func (a *lowLevelAPI) getObject(bucket, object string, offset, length uint64) (i
 		case http.StatusOK:
 		case http.StatusPartialContent:
 		default:
-			return nil, nil, responseToError(resp)
+			return nil, nil, responseToError(resp.Body)
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
@@ -602,7 +602,7 @@ func (a *lowLevelAPI) listBuckets() (*listAllMyBucketsResult, error) {
 			return nil, fmt.Errorf("%s", resp.Status)
 		}
 		if resp.StatusCode != http.StatusOK {
-			return nil, responseToError(resp)
+			return nil, responseToError(resp.Body)
 		}
 	}
 	listAllMyBucketsResult := new(listAllMyBucketsResult)

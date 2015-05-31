@@ -18,7 +18,7 @@ package client
 
 import (
 	"encoding/xml"
-	"net/http"
+	"io"
 )
 
 /* **** SAMPLE ERROR RESPONSE ****
@@ -32,8 +32,9 @@ import (
 </Error>
 */
 
-// errorResponse is the type returned by some API operations.
-type errorResponse struct {
+// ErrorResponse is the type error returned by some API operations.
+type ErrorResponse struct {
+	XMLName   xml.Name `xml:"Error" json:"-"`
 	Code      string
 	Message   string
 	Resource  string
@@ -41,34 +42,50 @@ type errorResponse struct {
 	HostID    string `xml:"HostId"`
 }
 
-// responseToError returns a new encoded ErrorResponse structure
-func responseToError(res *http.Response) error {
-	var respError errorResponse
-	decoder := xml.NewDecoder(res.Body)
-	err := decoder.Decode(&respError)
-	if err != nil {
-		return err
+// ToErrorResponse returns parsed ErrorResponse struct, if input is nil or not ErrorResponse return value is nil
+// this fuction is useful when some one wants to dig deeper into the error structures over the network.
+//
+// for example:
+//
+//   import s3 "github.com/minio/minio-go"
+//   ...
+//   ...
+//   ..., err := s3.GetObject(...)
+//   if err != nil {
+//      resp := s3.ToErrorResponse(err)
+//      fmt.Println(resp.XML())
+//   }
+//   ...
+//   ...
+func ToErrorResponse(err error) *ErrorResponse {
+	switch err := err.(type) {
+	case ErrorResponse:
+		return &err
+	default:
+		return nil
 	}
-	return respError
-}
-
-// GetCode get underlying error code for example: "MissingSecurityHeader"
-func (e errorResponse) GetCode() string {
-	return e.Code
-}
-
-// GetRequestID get request id useful in debugging
-func (e errorResponse) GetRequestID() string {
-	return e.RequestID
 }
 
 // XML send raw xml marshalled as string
-func (e errorResponse) XML() string {
+func (e ErrorResponse) XML() string {
 	b, _ := xml.Marshal(&e)
 	return string(b)
 }
 
 // Error formats HTTP error string
-func (e errorResponse) Error() string {
+func (e ErrorResponse) Error() string {
 	return e.Message
+}
+
+/// Internal function not exposed
+
+// responseToError returns a new encoded ErrorResponse structure
+func responseToError(body io.Reader) error {
+	var respError ErrorResponse
+	decoder := xml.NewDecoder(body)
+	err := decoder.Decode(&respError)
+	if err != nil {
+		return err
+	}
+	return respError
 }
