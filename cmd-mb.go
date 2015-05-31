@@ -26,6 +26,36 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
+// Help message.
+var mbCmd = cli.Command{
+	Name:   "mb",
+	Usage:  "Make a bucket or folder",
+	Action: runMakeBucketCmd,
+	CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+FLAGS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+   1. Create a bucket on Amazon S3 object storage.
+      $ mc {{.Name}} https://s3.amazonaws.com/public-document-store
+
+   3. Make a directory on local filesystem, including its parent directories as needed.
+      $ mc {{.Name}} ~/
+
+   3. Create a bucket on Minio object storage.
+      $ mc {{.Name}} http://play.minio.io:9000/mongodb-backup
+`,
+}
+
 // runMakeBucketCmd is the handler for mc mb command
 func runMakeBucketCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {

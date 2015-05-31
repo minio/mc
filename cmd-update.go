@@ -31,6 +31,24 @@ const (
 	mcUpdateURL = "http://dl.minio.io:9000/updates/2015/Jun/" + "mc" + "." + runtime.GOOS + "." + runtime.GOARCH
 )
 
+// Help message.
+var updateCmd = cli.Command{
+	Name:   "update",
+	Usage:  "Check for new software updates",
+	Action: runUpdateCmd,
+	CustomHelpTemplate: `Name:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}}
+
+EXAMPLES:
+   1. Check for new updates
+      $ mc update
+
+`,
+}
+
 func doUpdateCheck(config *hostConfig) (string, error) {
 	clnt, err := getNewClient(mcUpdateURL, config)
 	if err != nil {

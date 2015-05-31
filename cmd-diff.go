@@ -25,6 +25,35 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
+// Help message.
+var diffCmd = cli.Command{
+	Name:        "diff",
+	Usage:       "Compute differences between two files or folders",
+	Description: "NOTE: This command *DOES NOT* check for content similarity, which means objects with same size, but different content will not be spotted",
+	Action:      runDiffCmd,
+	CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}} FIRST SECOND {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+FLAGS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+   1. Compare foo.ogg on a local filesystem with bar.ogg on Amazon AWS cloud storage.
+      $ mc {{.Name}} foo.ogg  https://s3.amazonaws.com/jukebox/bar.ogg
+
+   2. Compare two different directories on a local filesystem.
+      $ mc {{.Name}} ~/Photos /Media/Backup/Photos
+
+`,
+}
+
 // runDiffCmd - is a handler for mc diff command
 func runDiffCmd(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 || ctx.Args().First() == "help" {

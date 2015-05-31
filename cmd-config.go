@@ -25,6 +25,37 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
+//   Configure minio client
+//
+//   ----
+//   NOTE: that the configure command only writes values to the config file.
+//   It does not use any configuration values from the environment variables.
+//
+//   One needs to edit configuration file manually, this is purposefully done
+//   so to avoid taking credentials over cli arguments. It is a security precaution
+//   ----
+//
+var configCmd = cli.Command{
+	Name:   "config",
+	Usage:  "Generate default configuration file [~/.mc/config.json]",
+	Action: runConfigCmd,
+	CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} generate
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} alias NAME HOSTURL
+
+EXAMPLES:
+   1. Generate mc config.
+      $ mc config generate
+
+   2. Add alias URLs.
+      $ mc config alias zek https://s3.amazonaws.com/
+
+`,
+}
+
 // runConfigCmd is the handle for "mc config" sub-command
 func runConfigCmd(ctx *cli.Context) {
 	// show help if nothing is set
