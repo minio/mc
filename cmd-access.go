@@ -26,6 +26,41 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
+// Help message.
+var accessCmd = cli.Command{
+	Name:   "access",
+	Usage:  "Set access permissions",
+	Action: runAccessCmd,
+	CustomHelpTemplate: `Name:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} PERMISSION TARGET [TARGET...] {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+FLAGS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+
+   1. Set bucket to "private" on Amazon S3 object storage.
+      $ mc {{.Name}} private https://s3.amazonaws.com/burningman2011
+
+   2. Set bucket to "public" on Amazon S3 object storage.
+      $ mc {{.Name}} public https://s3.amazonaws.com/shared
+
+   3. Set bucket to "authenticated" on Amazon S3 object storage to provide read access to IAM Authenticated Users group.
+      $ mc {{.Name}} authenticated https://s3.amazonaws.com/shared-authenticated
+
+   4. Set folder to world readwrite (chmod 777) on local filesystem.
+      $ mc {{.Name}} public /shared/Music
+
+`,
+}
+
 func runAccessCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code

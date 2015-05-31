@@ -27,6 +27,40 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
+// Help message.
+var catCmd = cli.Command{
+	Name:   "cat",
+	Usage:  "Display contents of a file",
+	Action: runCatCmd,
+	CustomHelpTemplate: `NAME:
+   mc {{.Name}} - {{.Usage}}
+
+USAGE:
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE [SOURCE...] {{if .Description}}
+
+DESCRIPTION:
+   {{.Description}}{{end}}{{if .Flags}}
+
+FLAGS:
+   {{range .Flags}}{{.}}
+   {{end}}{{ end }}
+
+EXAMPLES:
+   1. Concantenate an object from Amazon S3 object storage to mplayer standard input.
+      $ mc {{.Name}} https://s3.amazonaws.com/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
+
+   2. Concantenate a file from local filesystem to standard output.
+      $ mc {{.Name}} khitomer-accords.txt
+
+   3. Concantenate multiple files from local filesystem to standard output.
+      $ mc {{.Name}} *.txt > newfile.txt
+
+   4. Concatenate a non english file name from Amazon S3 object storage.
+      $ mc {{.Name}} s3:andoria/本語 > /tmp/本語
+
+`,
+}
+
 func runCatCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
