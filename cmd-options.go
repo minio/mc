@@ -41,6 +41,14 @@ var commands = []cli.Command{
 // Collection of mc flags currently supported
 var (
 	flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "quiet, q",
+			Usage: "Supress chatty console output",
+		},
+		cli.BoolFlag{
+			Name:  "alias",
+			Usage: "Mimic operating system toolchain behavior wherever it makes sense",
+		},
 		cli.StringFlag{
 			Name:  "theme",
 			Value: console.GetDefaultThemeName(),
@@ -62,10 +70,6 @@ var (
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "Enable HTTP tracing",
-		},
-		cli.BoolFlag{
-			Name:  "quiet, q",
-			Usage: "Supress chatty console output",
 		},
 		// Add your new flags starting here
 	}

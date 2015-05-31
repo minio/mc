@@ -18,9 +18,10 @@
 package main
 
 var (
-	globalDebugFlag = false // Debug flag set via command line
 	globalQuietFlag = false // Quiet flag set via command line
+	globalAliasFlag = false // Alias flag set via command line
 	globalJSONFlag  = false // Json flag set via command line
+	globalDebugFlag = false // Debug flag set via command line
 
 	mcCurrentConfigVersion = "1.0.0"
 )
