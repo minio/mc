@@ -107,6 +107,7 @@ func main() {
 	app.Author = "Minio.io"
 	app.Before = func(ctx *cli.Context) error {
 		globalQuietFlag = ctx.GlobalBool("quiet")
+		globalAliasFlag = ctx.GlobalBool("alias")
 		globalDebugFlag = ctx.GlobalBool("debug")
 		globalJSONFlag = ctx.GlobalBool("json")
 		if globalDebugFlag {
