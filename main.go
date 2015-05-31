@@ -98,6 +98,16 @@ func getSystemData() map[string]string {
 var Version = mustHashBinarySelf()
 
 func main() {
+	registerCommand(lsCmd)     // List contents of a bucket
+	registerCommand(mbCmd)     // make a bucket
+	registerCommand(catCmd)    // concantenate an object to standard output
+	registerCommand(cpCmd)     // copy objects and files from multiple sources to single destination
+	registerCommand(syncCmd)   // copy objects and files from single source to multiple destionations
+	registerCommand(diffCmd)   // compare two objects
+	registerCommand(accessCmd) // set permissions [public, private, readonly, authenticated] for buckets and folders.
+	registerCommand(configCmd) // generate configuration "/home/harsha/.mc/config.json" file.
+	registerCommand(updateCmd) // update Check for new software updates
+
 	app := cli.NewApp()
 	app.Usage = "Minio Client for object storage and filesystems"
 	app.Version = Version

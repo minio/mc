@@ -25,8 +25,10 @@ import (
 )
 
 // Collection of mc commands currently supported are
-var commands = []cli.Command{
-	lsCmd,     // list files and objects
+var commands = []cli.Command{}
+
+/*
+{
 	mbCmd,     // make a bucket
 	catCmd,    // concantenate an object to standard output
 	cpCmd,     // copy objects and files from multiple sources to single destination
@@ -37,6 +39,7 @@ var commands = []cli.Command{
 	updateCmd, // update Check for new software updates
 	// Add your new commands starting from here
 }
+*/
 
 // Collection of mc flags currently supported
 var (
@@ -74,3 +77,8 @@ var (
 		// Add your new flags starting here
 	}
 )
+
+// registerCommand registers a cli command
+func registerCommand(cmd cli.Command) {
+	commands = append(commands, cmd)
+}
