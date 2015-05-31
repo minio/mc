@@ -75,7 +75,13 @@ EXAMPLES:
 
 // runListCmd - is a handler for mc ls command
 func runListCmd(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+	args := ctx.Args()
+
+	if globalAliasFlag {
+		if !ctx.Args().Present() {
+			args = []string{"."}
+		}
+	} else if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
 	if !isMcConfigExist() {
@@ -92,7 +98,7 @@ func runListCmd(ctx *cli.Context) {
 		})
 	}
 	targetURLConfigMap := make(map[string]*hostConfig)
-	for _, arg := range ctx.Args() {
+	for _, arg := range args {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
