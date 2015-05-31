@@ -27,58 +27,54 @@ import (
 // Collection of mc commands currently supported are
 var commands = []cli.Command{}
 
-/*
-{
-	mbCmd,     // make a bucket
-	catCmd,    // concantenate an object to standard output
-	cpCmd,     // copy objects and files from multiple sources to single destination
-	syncCmd,   // copy objects and files from single source to multiple destionations
-	diffCmd,   // compare two objects
-	accessCmd, // set permissions [public, private, readonly, authenticated] for buckets and folders.
-	configCmd, // generate configuration "/home/harsha/.mc/config.json" file.
-	updateCmd, // update Check for new software updates
-	// Add your new commands starting from here
-}
-*/
-
 // Collection of mc flags currently supported
+var flags = []cli.Flag{}
+
 var (
-	flags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "quiet, q",
-			Usage: "Supress chatty console output",
-		},
-		cli.BoolFlag{
-			Name:  "alias",
-			Usage: "Mimic operating system toolchain behavior wherever it makes sense",
-		},
-		cli.StringFlag{
-			Name:  "theme",
-			Value: console.GetDefaultThemeName(),
-			Usage: fmt.Sprintf("Choose a console theme from this list [%s]", func() string {
-				keys := []string{}
-				for _, themeName := range console.GetThemeNames() {
-					if console.GetThemeName() == themeName {
-						themeName = "*" + themeName + "*"
-					}
-					keys = append(keys, themeName)
-				}
-				return strings.Join(keys, ", ")
-			}()),
-		},
-		cli.BoolFlag{
-			Name:  "json",
-			Usage: "Enable json formatted output",
-		},
-		cli.BoolFlag{
-			Name:  "debug",
-			Usage: "Enable HTTP tracing",
-		},
-		// Add your new flags starting here
+	quietFlag = cli.BoolFlag{
+		Name:  "quiet, q",
+		Usage: "Suppress chatty console output",
 	}
+
+	aliasFlag = cli.BoolFlag{
+		Name:  "alias",
+		Usage: "Mimic operating system toolchain behavior wherever it makes sense",
+	}
+
+	themeFlag = cli.StringFlag{
+		Name:  "theme",
+		Value: console.GetDefaultThemeName(),
+		Usage: fmt.Sprintf("Choose a console theme from this list [%s]", func() string {
+			keys := []string{}
+			for _, themeName := range console.GetThemeNames() {
+				if console.GetThemeName() == themeName {
+					themeName = "*" + themeName + "*"
+				}
+				keys = append(keys, themeName)
+			}
+			return strings.Join(keys, ", ")
+		}()),
+	}
+
+	jsonFlag = cli.BoolFlag{
+		Name:  "json",
+		Usage: "Enable json formatted output",
+	}
+
+	debugFlag = cli.BoolFlag{
+		Name:  "debug",
+		Usage: "Enable debugging output",
+	}
+
+	// Add your new flags starting here
 )
 
 // registerCommand registers a cli command
 func registerCommand(cmd cli.Command) {
 	commands = append(commands, cmd)
+}
+
+// registerFlag registers a cli flag
+func registerFlag(flag cli.Flag) {
+	flags = append(flags, flag)
 }

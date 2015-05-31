@@ -98,6 +98,7 @@ func getSystemData() map[string]string {
 var Version = mustHashBinarySelf()
 
 func main() {
+	// register all the commands
 	registerCommand(lsCmd)     // List contents of a bucket
 	registerCommand(mbCmd)     // make a bucket
 	registerCommand(catCmd)    // concantenate an object to standard output
@@ -107,6 +108,13 @@ func main() {
 	registerCommand(accessCmd) // set permissions [public, private, readonly, authenticated] for buckets and folders.
 	registerCommand(configCmd) // generate configuration "/home/harsha/.mc/config.json" file.
 	registerCommand(updateCmd) // update Check for new software updates
+
+	// register all the flags
+	registerFlag(quietFlag) // suppress console output
+	registerFlag(aliasFlag) // OS toolchain mimic
+	registerFlag(themeFlag) // console theme flag
+	registerFlag(jsonFlag)  // json formatted output
+	registerFlag(debugFlag) // enable debugging output
 
 	app := cli.NewApp()
 	app.Usage = "Minio Client for object storage and filesystems"
