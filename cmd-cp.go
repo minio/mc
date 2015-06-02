@@ -69,6 +69,9 @@ EXAMPLES:
 
 // doCopy - Copy a singe file from source to destination
 func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, targetConfig *hostConfig, bar *barSend) error {
+	if !globalQuietFlag {
+		bar.SetPrefix(sourceURL + ": ")
+	}
 	reader, length, err := getSource(sourceURL, sourceConfig)
 	if err != nil {
 		if !globalQuietFlag {
