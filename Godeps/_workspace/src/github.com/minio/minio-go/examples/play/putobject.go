@@ -22,17 +22,17 @@ import (
 	"log"
 	"os"
 
-	play "github.com/minio/minio-go"
+	"github.com/minio/minio-go"
 )
 
 func main() {
-	config := play.Config{
+	config := minio.Config{
 		AccessKeyID:     "",
 		SecretAccessKey: "",
 		Endpoint:        "https://play.minio.io:9000",
 	}
 
-	client := play.New(&config)
+	client := minio.New(&config)
 
 	object, err := os.Open("testfile")
 	if err != nil {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package client
+package minio
 
 // BucketACL - bucket level access control
 type BucketACL string

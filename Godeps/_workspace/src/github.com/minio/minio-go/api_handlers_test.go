@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package client
+package minio
 
 // bucketHandler is an http.Handler that verifies bucket responses and validates incoming requests
 import (
