@@ -21,20 +21,22 @@ package main
 import (
 	"log"
 
-	s3 "github.com/minio/minio-go"
+	play "github.com/minio/minio-go"
 )
 
 func main() {
-	config := new(s3.Config)
-	config.AccessKeyID = ""
-	config.SecretAccessKey = ""
-	config.Endpoint = "https://s3.amazonaws.com"
-	config.AcceptType = ""
-	m := s3.New(config)
-	for message := range m.ListObjects("public-bucket", "", true) {
+	config := play.Config{
+		AccessKeyID:     "",
+		SecretAccessKey: "",
+		Endpoint:        "https://play.minio.io:9000",
+	}
+
+	client := play.New(&config)
+
+	for message := range client.ListBuckets() {
 		if message.Err != nil {
-			log.Fatal(message.Err)
+			log.Fatalln(message.Err)
 		}
-		log.Println(message.Data)
+		log.Println(message.Stat)
 	}
 }

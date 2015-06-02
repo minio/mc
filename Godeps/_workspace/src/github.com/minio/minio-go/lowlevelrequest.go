@@ -22,7 +22,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -70,11 +69,6 @@ func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, er
 	req, err := http.NewRequest(method, u, nil)
 	if err != nil {
 		return nil, err
-	}
-
-	// if userAgent empty set it
-	if config.userAgent == "" {
-		config.userAgent = LibraryName + "/" + LibraryVersion + " (" + runtime.GOOS + ", " + runtime.GOARCH + ") "
 	}
 
 	// set UserAgent

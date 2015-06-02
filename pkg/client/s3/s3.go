@@ -86,14 +86,23 @@ func New(config *Config) (client.Client, error) {
 	default:
 		transport = http.DefaultTransport
 	}
-	s3Conf := new(s3.Config)
+	s3Conf := s3.Config{
+		AccessKeyID:     config.AccessKeyID,
+		SecretAccessKey: config.SecretAccessKey,
+		Transport:       transport,
+		Region:          getRegion(u.Host),
+		Endpoint:        u.Scheme + "://" + u.Host,
+	}
 	s3Conf.AccessKeyID = config.AccessKeyID
 	s3Conf.SecretAccessKey = config.SecretAccessKey
 	s3Conf.Transport = transport
-	s3Conf.AddUserAgent(config.AppName, config.AppVersion, config.AppComments...)
+	s3Conf.SetUserAgent(config.AppName, config.AppVersion, config.AppComments...)
 	s3Conf.Region = getRegion(u.Host)
 	s3Conf.Endpoint = u.Scheme + "://" + u.Host
-	api := s3.New(s3Conf)
+	api, err := s3.New(s3Conf)
+	if err != nil {
+		return nil, err
+	}
 	return &s3Client{api: api, hostURL: u}, nil
 }
 
@@ -213,9 +222,9 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				return
 			}
 			content := new(client.Content)
-			content.Name = bucket.Data.Name
+			content.Name = bucket.Stat.Name
 			content.Size = 0
-			content.Time = bucket.Data.CreationDate
+			content.Time = bucket.Stat.CreationDate
 			content.Type = os.ModeDir
 			contentCh <- client.ContentOnChannel{
 				Content: content,
@@ -245,14 +254,14 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 					return
 				}
 				content := new(client.Content)
-				content.Name = object.Data.Key
+				content.Name = object.Stat.Key
 				switch {
-				case strings.HasSuffix(object.Data.Key, "/"):
+				case strings.HasSuffix(object.Stat.Key, "/"):
 					content.Time = time.Now()
 					content.Type = os.ModeDir
 				default:
-					content.Size = object.Data.Size
-					content.Time = object.Data.LastModified
+					content.Size = object.Stat.Size
+					content.Time = object.Stat.LastModified
 					content.Type = os.FileMode(0664)
 				}
 				contentCh <- client.ContentOnChannel{
@@ -277,7 +286,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				}
 				return
 			}
-			for object := range c.api.ListObjects(bucket.Data.Name, object, true) {
+			for object := range c.api.ListObjects(bucket.Stat.Name, object, true) {
 				if object.Err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
@@ -286,9 +295,9 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 					return
 				}
 				content := new(client.Content)
-				content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Data.Key
-				content.Size = object.Data.Size
-				content.Time = object.Data.LastModified
+				content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Stat.Key
+				content.Size = object.Stat.Size
+				content.Time = object.Stat.LastModified
 				content.Type = os.FileMode(0664)
 				contentCh <- client.ContentOnChannel{
 					Content: content,
@@ -306,9 +315,9 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return
 			}
 			content := new(client.Content)
-			content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Data.Key
-			content.Size = object.Data.Size
-			content.Time = object.Data.LastModified
+			content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Stat.Key
+			content.Size = object.Stat.Size
+			content.Time = object.Stat.LastModified
 			content.Type = os.FileMode(0664)
 			contentCh <- client.ContentOnChannel{
 				Content: content,

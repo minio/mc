@@ -50,41 +50,26 @@ func TestACLTypes(t *testing.T) {
 	}
 }
 
-func TestMustGetEndpoint(t *testing.T) {
-	conf := new(Config)
-	conf.Region = "us-east-1"
-	if conf.MustGetEndpoint() != "https://s3.amazonaws.com" {
+func TestGetRegion(t *testing.T) {
+	region, err := getRegion("https://s3.amazonaws.com")
+	if err != nil {
 		t.Fatalf("Error")
 	}
-
-	conf.Region = ""
-	conf.Endpoint = "http://localhost:9000"
-	if conf.MustGetEndpoint() != "http://localhost:9000" && conf.Region == "milkyway" {
+	if region != "us-east-1" {
 		t.Fatalf("Error")
 	}
-
-	conf.Region = ""
-	conf.Endpoint = "https://s3.amazonaws.com"
-	if conf.MustGetEndpoint() != "https://s3.amazonaws.com" && conf.Region == "us-east-1" {
+	region, err = getRegion("http://localhost:9000")
+	if err != nil {
 		t.Fatalf("Error")
 	}
-
-	conf.Region = "invalid"
-	conf.Endpoint = "http://play.minio.io:9000"
-	if conf.MustGetEndpoint() != "http://play.minio.io:9000" {
-		t.Fatalf("Error")
-	}
-
-	conf.Region = ""
-	conf.Endpoint = ""
-	if conf.MustGetEndpoint() != "https://s3.amazonaws.com" && conf.Region == "us-east-1" {
+	if region != "milkyway" {
 		t.Fatalf("Error")
 	}
 }
 
 func TestUserAgent(t *testing.T) {
 	conf := new(Config)
-	conf.AddUserAgent("minio", "1.0", "amd64")
+	conf.SetUserAgent("minio", "1.0", "amd64")
 	if !strings.Contains(conf.userAgent, "minio") {
 		t.Fatalf("Error")
 	}
@@ -97,8 +82,11 @@ func TestBucketOperations(t *testing.T) {
 	server := httptest.NewServer(bucket)
 	defer server.Close()
 
-	a := New(&Config{Endpoint: server.URL})
-	err := a.MakeBucket("bucket", "private", "")
+	a, err := New(Config{Endpoint: server.URL})
+	if err != nil {
+		t.Errorf("Error")
+	}
+	err = a.MakeBucket("bucket", "private", "")
 	if err != nil {
 		t.Errorf("Error")
 	}
@@ -133,7 +121,7 @@ func TestBucketOperations(t *testing.T) {
 		if b.Err != nil {
 			t.Fatalf(b.Err.Error())
 		}
-		if b.Data.Name != "bucket" {
+		if b.Stat.Name != "bucket" {
 			t.Errorf("Error")
 		}
 	}
@@ -142,7 +130,7 @@ func TestBucketOperations(t *testing.T) {
 		if o.Err != nil {
 			t.Fatalf(o.Err.Error())
 		}
-		if o.Data.Key != "object" {
+		if o.Stat.Key != "object" {
 			t.Errorf("Error")
 		}
 	}
@@ -169,9 +157,12 @@ func TestObjectOperations(t *testing.T) {
 	server := httptest.NewServer(object)
 	defer server.Close()
 
-	a := New(&Config{Endpoint: server.URL})
+	a, err := New(Config{Endpoint: server.URL})
+	if err != nil {
+		t.Fatalf("Error")
+	}
 	data := []byte("Hello, World")
-	err := a.PutObject("bucket", "object", uint64(len(data)), bytes.NewReader(data))
+	err = a.PutObject("bucket", "object", uint64(len(data)), bytes.NewReader(data))
 	if err != nil {
 		t.Fatalf("Error")
 	}

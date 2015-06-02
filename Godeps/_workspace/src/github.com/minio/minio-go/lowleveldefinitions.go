@@ -22,7 +22,7 @@ import "time"
 type listAllMyBucketsResult struct {
 	// Container for one or more buckets.
 	Buckets struct {
-		Bucket []*BucketStat
+		Bucket []BucketStat
 	}
 	Owner owner
 }
@@ -40,8 +40,8 @@ type commonPrefix struct {
 
 // listBucketResult container for ListObjects response
 type listBucketResult struct {
-	CommonPrefixes []*commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter
-	Contents       []*ObjectStat   // Metadata about each object returned
+	CommonPrefixes []commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter
+	Contents       []ObjectStat   // Metadata about each object returned
 	Delimiter      string
 
 	// Encoding type used to encode object keys in the response.
@@ -86,10 +86,10 @@ type listMultipartUploadsResult struct {
 	EncodingType       string
 	MaxUploads         int64
 	IsTruncated        bool
-	Upload             []*upload
+	Upload             []upload
 	Prefix             string
 	Delimiter          string
-	CommonPrefixes     []*commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter
+	CommonPrefixes     []commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter
 }
 
 // initiator container for who initiated multipart upload
@@ -122,7 +122,7 @@ type listObjectPartsResult struct {
 
 	// Indicates whether the returned list of parts is truncated.
 	IsTruncated bool
-	Part        []*partMetadata
+	Part        []partMetadata
 
 	EncodingType string
 }
@@ -150,7 +150,7 @@ type completePart struct {
 
 // completeMultipartUpload container for completing multipart upload
 type completeMultipartUpload struct {
-	Part []*completePart
+	Part []completePart
 }
 
 // createBucketConfiguration container for bucket configuration
@@ -171,7 +171,7 @@ type grant struct {
 
 type accessControlPolicy struct {
 	AccessControlList struct {
-		Grant []*grant
+		Grant []grant
 	}
 	Owner owner
 }
