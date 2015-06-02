@@ -33,6 +33,7 @@ const (
 	cpBarCmdFinish
 	cpBarCmdPutError
 	cpBarCmdGetError
+	cpBarCmdSetPrefix
 )
 
 type copyReader struct {
@@ -76,6 +77,10 @@ func (b *barSend) NewProxyReader(r io.Reader) *copyReader {
 	return &copyReader{r, b}
 }
 
+func (b *barSend) SetPrefix(prefix string) {
+	b.cmdCh <- barMsg{Cmd: cpBarCmdSetPrefix, Arg: prefix}
+}
+
 func (b barSend) Finish() {
 	defer close(b.cmdCh)
 	b.cmdCh <- barMsg{Cmd: cpBarCmdFinish}
@@ -102,6 +107,8 @@ func newCpBar() barSend {
 		bar.Format("[=> ]")
 		for msg := range cmdCh {
 			switch msg.Cmd {
+			case cpBarCmdSetPrefix:
+				bar.Prefix(msg.Arg.(string))
 			case cpBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 				if bar.Total > 0 && !started {
