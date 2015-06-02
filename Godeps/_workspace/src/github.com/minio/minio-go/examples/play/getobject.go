@@ -23,17 +23,17 @@ import (
 	"log"
 	"os"
 
-	play "github.com/minio/minio-go"
+	"github.com/minio/minio-go"
 )
 
 func main() {
-	config := play.Config{
+	config := minio.Config{
 		AccessKeyID:     "",
 		SecretAccessKey: "",
 		Endpoint:        "https://play.minio.io:9000",
 	}
 
-	client := play.New(&config)
+	client := minio.New(&config)
 	reader, stat, err := client.GetObject("mybucket", "myobject", 0, 0)
 	if err != nil {
 		log.Fatalln(err)
