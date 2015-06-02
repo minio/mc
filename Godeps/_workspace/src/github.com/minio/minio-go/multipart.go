@@ -23,10 +23,10 @@ import (
 
 // part - message structure for results from the MultiPart
 type part struct {
-	Data io.ReadSeeker
-	Err  error
-	Len  int64
-	Num  int // part number
+	ReadSeeker io.ReadSeeker
+	Err        error
+	Len        int64
+	Num        int // part number
 }
 
 // multiPart reads from io.Reader, partitions the data into chunks of given chunksize, and sends
@@ -49,19 +49,19 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 	n, err := io.ReadFull(reader, p)
 	if err == io.EOF || err == io.ErrUnexpectedEOF { // short read, only single part return
 		ch <- part{
-			Data: bytes.NewReader(p[0:n]),
-			Err:  nil,
-			Len:  int64(n),
-			Num:  1,
+			ReadSeeker: bytes.NewReader(p[0:n]),
+			Err:        nil,
+			Len:        int64(n),
+			Num:        1,
 		}
 		return
 	}
 	// catastrophic error send error and return
 	if err != nil {
 		ch <- part{
-			Data: nil,
-			Err:  err,
-			Num:  0,
+			ReadSeeker: nil,
+			Err:        err,
+			Num:        0,
 		}
 		return
 	}
@@ -69,10 +69,10 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 	var num = 1
 	if !isPartNumberUploaded(num, skipParts) {
 		ch <- part{
-			Data: bytes.NewReader(p),
-			Err:  nil,
-			Len:  int64(n),
-			Num:  num,
+			ReadSeeker: bytes.NewReader(p),
+			Err:        nil,
+			Len:        int64(n),
+			Num:        num,
 		}
 	}
 	for err == nil {
@@ -82,9 +82,9 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 		if err != nil {
 			if err != io.EOF && err != io.ErrUnexpectedEOF { // catastrophic error
 				ch <- part{
-					Data: nil,
-					Err:  err,
-					Num:  0,
+					ReadSeeker: nil,
+					Err:        err,
+					Num:        0,
 				}
 				return
 			}
@@ -94,10 +94,10 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 			continue
 		}
 		ch <- part{
-			Data: bytes.NewReader(p[0:n]),
-			Err:  nil,
-			Len:  int64(n),
-			Num:  num,
+			ReadSeeker: bytes.NewReader(p[0:n]),
+			Err:        nil,
+			Len:        int64(n),
+			Num:        num,
 		}
 
 	}

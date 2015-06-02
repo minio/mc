@@ -5,10 +5,12 @@
 ```sh
 $ go get github.com/minio/minio-go
 ```
+## Simple Example
 
 ## Documentation
 
-Documentation for minimal object storage library http://godoc.org/github.com/minio/minio-go
+* API reference 
+* Complete example.
 
 ## Join The Community
 * Community hangout on Gitter    [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)

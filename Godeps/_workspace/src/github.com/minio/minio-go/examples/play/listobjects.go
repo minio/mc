@@ -20,32 +20,23 @@ package main
 
 import (
 	"log"
-	"os"
 
-	s3 "github.com/minio/minio-go"
+	play "github.com/minio/minio-go"
 )
 
 func main() {
-	config := new(s3.Config)
-	config.AccessKeyID = ""
-	config.SecretAccessKey = ""
-	config.Endpoint = "https://s3.amazonaws.com"
-	config.AcceptType = ""
-	m := s3.New(config)
-	object, err := os.Open("testfile")
-	if err != nil {
-		log.Fatalln(err)
+	config := play.Config{
+		AccessKeyID:     "",
+		SecretAccessKey: "",
+		Endpoint:        "https://play.minio.io:9000",
 	}
-	objectInfo, err := object.Stat()
-	if err != nil {
-		object.Close()
-		log.Fatalln(err)
+
+	client := play.New(&config)
+
+	for message := range client.ListObjects("mybucket", "", true) {
+		if message.Err != nil {
+			log.Fatalln(message.Err)
+		}
+		log.Println(message.Stat)
 	}
-	uploadID, err := m.PutObject("testbucket", "testfile", uint64(objectInfo.Size()), object)
-	if err != nil {
-		object.Close()
-		log.Fatalln(err)
-	}
-	object.Close()
-	log.Println(uploadID)
 }

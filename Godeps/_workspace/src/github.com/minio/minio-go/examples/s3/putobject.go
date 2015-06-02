@@ -19,7 +19,6 @@
 package main
 
 import (
-	"io"
 	"log"
 	"os"
 
@@ -27,24 +26,27 @@ import (
 )
 
 func main() {
-	config := new(s3.Config)
-	config.AccessKeyID = ""
-	config.SecretAccessKey = ""
-	config.Endpoint = "https://s3.amazonaws.com"
-	config.AcceptType = ""
-	m := s3.New(config)
-	reader, size, _, err := m.GetObject("testbucket", "testfile", 0, 0)
-	if err != nil {
-		log.Println(err)
+	config := s3.Config{
+		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
+		SecretAccessKey: "YOUR-PASSWORD-HERE",
+		Endpoint:        "https://s3.amazonaws.com",
 	}
-	localfile, err := os.Create("newfile")
-	if err != nil {
-		log.Println(err)
-	}
-	defer localfile.Close()
 
-	_, err = io.CopyN(localfile, reader, size)
+	client := s3.New(&config)
+
+	object, err := os.Open("testfile")
 	if err != nil {
-		log.Println(err)
+		log.Fatalln(err)
 	}
+	objectInfo, err := object.Stat()
+	if err != nil {
+		object.Close()
+		log.Fatalln(err)
+	}
+
+	err = client.PutObject("mybucket", "myobject", uint64(objectInfo.Size()), object)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer object.Close()
 }

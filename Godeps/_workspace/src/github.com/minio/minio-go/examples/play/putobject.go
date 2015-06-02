@@ -26,12 +26,14 @@ import (
 )
 
 func main() {
-	config := new(play.Config)
-	config.AccessKeyID = ""
-	config.SecretAccessKey = ""
-	config.Endpoint = "http://play.minio.io:9000"
-	config.AcceptType = ""
-	m := play.New(config)
+	config := play.Config{
+		AccessKeyID:     "",
+		SecretAccessKey: "",
+		Endpoint:        "https://play.minio.io:9000",
+	}
+
+	client := play.New(&config)
+
 	object, err := os.Open("testfile")
 	if err != nil {
 		log.Fatalln(err)
@@ -41,11 +43,10 @@ func main() {
 		object.Close()
 		log.Fatalln(err)
 	}
-	uploadID, err := m.PutObject("testbucket", "testfile", uint64(objectInfo.Size()), object)
+
+	err = client.PutObject("mybucket", "myobject", uint64(objectInfo.Size()), object)
 	if err != nil {
-		object.Close()
 		log.Fatalln(err)
 	}
-	object.Close()
-	log.Println(uploadID)
+	defer object.Close()
 }
