@@ -103,12 +103,13 @@ func newCpBar() barSend {
 		bar.SetRefreshRate(time.Millisecond * 10)
 		bar.NotPrint = true
 		bar.ShowSpeed = true
+		cursorUp := fmt.Sprintf("%c[%dA", 27, 1)
 		bar.Callback = func(s string) {
 			if redraw {
 				console.Bar("\n")
 			}
 			// Clear the caption line
-			console.Bar("\r" + fmt.Sprintf("%c[%dA", 27, 1) + strings.Repeat(" ", len(s)) + "\r")
+			console.Bar("\r" + cursorUp + strings.Repeat(" ", len(s)) + "\r")
 			// Print the caption and the progress bar
 			console.Bar(barCaption + "\n" + s)
 			redraw = false
