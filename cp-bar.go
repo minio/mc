@@ -17,7 +17,9 @@
 package main
 
 import (
+	"fmt"
 	"io"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -93,6 +95,8 @@ func newCpBar() barSend {
 	finishCh := make(chan bool)
 	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
 		started := false
+		redraw := false
+		barCaption := ""
 		var totalBytesRead int64 // total amounts of bytes copied
 		bar := pb.New64(0)
 		bar.SetUnits(pb.U_BYTES)
@@ -100,19 +104,26 @@ func newCpBar() barSend {
 		bar.NotPrint = true
 		bar.ShowSpeed = true
 		bar.Callback = func(s string) {
-			// Colorize
-			console.Bar("\r" + s)
+			if redraw {
+				console.Bar("\n")
+			}
+			// Clear the caption line
+			console.Bar("\r" + fmt.Sprintf("%c[%dA", 27, 1) + strings.Repeat(" ", len(s)) + "\r")
+			// Print the caption and the progress bar
+			console.Bar(barCaption + "\n" + s)
+			redraw = false
 		}
 		// Feels like wget
 		bar.Format("[=> ]")
 		for msg := range cmdCh {
 			switch msg.Cmd {
 			case cpBarCmdSetPrefix:
-				bar.Prefix(msg.Arg.(string))
+				barCaption = msg.Arg.(string)
 			case cpBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 				if bar.Total > 0 && !started {
 					started = true
+					redraw = true
 					bar.Start()
 				}
 			case cpBarCmdProgress:
@@ -121,10 +132,12 @@ func newCpBar() barSend {
 					bar.Add64(msg.Arg.(int64))
 				}
 			case cpBarCmdPutError:
+				redraw = true
 				if totalBytesRead > msg.Arg.(int64) {
 					bar.Set64(totalBytesRead - msg.Arg.(int64))
 				}
 			case cpBarCmdGetError:
+				redraw = true
 				if msg.Arg.(int64) > 0 {
 					bar.Add64(msg.Arg.(int64))
 				}
