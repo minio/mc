@@ -121,12 +121,12 @@ func newCpBar() barSend {
 				barCaption = msg.Arg.(string)
 			case cpBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
+			case cpBarCmdProgress:
 				if bar.Total > 0 && !started {
 					started = true
 					redraw = true
 					bar.Start()
 				}
-			case cpBarCmdProgress:
 				if msg.Arg.(int64) > 0 {
 					totalBytesRead += msg.Arg.(int64)
 					bar.Add64(msg.Arg.(int64))
