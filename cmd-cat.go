@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -120,7 +121,11 @@ func doCatCmd(sourceURLConfigMap map[string]*hostConfig) (string, error) {
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case *os.PathError:
-				return "Reading data to stdout failed, unexpected problem.. please report this error", iodine.New(e, nil)
+				if e.Err == syscall.EPIPE {
+					// stdout closed by the user. Gracefully exit.
+					return "", nil
+				}
+				return "Writing data to stdout failed, unexpected problem.. please report this error", iodine.New(e, nil)
 			default:
 				return "Reading data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
 			}
