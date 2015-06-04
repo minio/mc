@@ -49,7 +49,7 @@ test-all: pre-build build-all
 	@echo "Running Test Suites:"
 	@godep go test -race ./...
 
-save: restore
+save:
 	@godep save ./...
 
 restore:
