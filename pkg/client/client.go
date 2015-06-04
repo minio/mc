@@ -33,8 +33,8 @@ type Client interface {
 	SetBucketACL(acl string) error
 
 	// Object operations
-	GetObject(offset, length uint64) (body io.ReadCloser, size uint64, err error)
-	PutObject(size uint64, data io.Reader) error
+	GetObject(offset, length int64) (body io.ReadCloser, size int64, err error)
+	PutObject(size int64, data io.Reader) error
 }
 
 // ContentOnChannel - List contents on channel

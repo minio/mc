@@ -18,22 +18,11 @@ package minio
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http/httptest"
 	"strings"
 	"testing"
 )
-
-func ExampleGetPartSize() {
-	fmt.Println(GetPartSize(5000000000))
-	// Output: 5242880
-}
-
-func ExampleGetPartSize_second() {
-	fmt.Println(GetPartSize(50000000000000000))
-	// Output: 5368709120
-}
 
 func TestACLTypes(t *testing.T) {
 	want := map[string]bool{
@@ -162,7 +151,7 @@ func TestObjectOperations(t *testing.T) {
 		t.Fatalf("Error")
 	}
 	data := []byte("Hello, World")
-	err = a.PutObject("bucket", "object", uint64(len(data)), bytes.NewReader(data))
+	err = a.PutObject("bucket", "object", int64(len(data)), bytes.NewReader(data))
 	if err != nil {
 		t.Fatalf("Error")
 	}
@@ -208,14 +197,14 @@ func TestObjectOperations(t *testing.T) {
 }
 
 func TestPartSize(t *testing.T) {
-	var maxPartSize uint64 = 1024 * 1024 * 1024 * 5
-	partSize := GetPartSize(5000000000000000000)
+	var maxPartSize int64 = 1024 * 1024 * 1024 * 5
+	partSize := getPartSize(5000000000000000000)
 	if partSize > MinimumPartSize {
 		if partSize > maxPartSize {
 			t.Fatal("invalid result, cannot be bigger than MaxPartSize 5GB")
 		}
 	}
-	partSize = GetPartSize(50000000000)
+	partSize = getPartSize(50000000000)
 	if partSize > MinimumPartSize {
 		t.Fatal("invalid result, cannot be bigger than MinimumPartSize 5MB")
 	}

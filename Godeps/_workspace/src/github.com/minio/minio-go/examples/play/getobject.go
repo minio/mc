@@ -32,9 +32,11 @@ func main() {
 		SecretAccessKey: "",
 		Endpoint:        "https://play.minio.io:9000",
 	}
-
-	client := minio.New(&config)
-	reader, stat, err := client.GetObject("mybucket", "myobject", 0, 0)
+	playClient, err := minio.New(config)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	reader, stat, err := playClient.GetObject("mybucket", "myobject", 0, 0)
 	if err != nil {
 		log.Fatalln(err)
 	}

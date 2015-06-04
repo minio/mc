@@ -21,22 +21,23 @@ package main
 import (
 	"log"
 
-	s3 "github.com/minio/minio-go"
+	"github.com/minio/minio-go"
 )
 
 func main() {
-	config := s3.Config{
+	config := minio.Config{
 		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
 		SecretAccessKey: "YOUR-PASSWORD-HERE",
 		Endpoint:        "https://s3.amazonaws.com",
 	}
-
-	client := s3.New(&config)
-
-	for message := range client.ListBuckets() {
-		if message.Err != nil {
-			log.Fatalln(message.Err)
+	s3Client, err := minio.New(config)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for bucket := range s3Client.ListBuckets() {
+		if bucket.Err != nil {
+			log.Fatalln(bucket.Err)
 		}
-		log.Println(message.Stat)
+		log.Println(bucket.Stat)
 	}
 }

@@ -38,7 +38,7 @@ func (s *CmdTestSuite) TestCpTypeA(c *C) {
 	sourcePath := filepath.Join(source, "object1")
 	data := "hello"
 	dataLen := len(data)
-	err = putTarget(sourcePath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(sourcePath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	target, err := ioutil.TempDir(os.TempDir(), "cmd-")
@@ -65,7 +65,7 @@ func (s *CmdTestSuite) TestCpTypeB(c *C) {
 	sourcePath := filepath.Join(source, "object1")
 	data := "hello"
 	dataLen := len(data)
-	err = putTarget(sourcePath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(sourcePath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	target, err := ioutil.TempDir(os.TempDir(), "cmd-")
@@ -92,7 +92,7 @@ func (s *CmdTestSuite) TestCpTypeC(c *C) {
 		objectPath := filepath.Join(source, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+		err = putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
 
@@ -123,7 +123,7 @@ func (s *CmdTestSuite) TestCpTypeD(c *C) {
 		objectPath := filepath.Join(source1, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+		err = putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
 
@@ -131,7 +131,7 @@ func (s *CmdTestSuite) TestCpTypeD(c *C) {
 		objectPath := filepath.Join(source2, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+		err = putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
 

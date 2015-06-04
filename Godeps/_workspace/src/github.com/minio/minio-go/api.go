@@ -17,6 +17,7 @@
 package minio
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -55,8 +56,8 @@ type BucketAPI interface {
 
 // ObjectAPI - object specific Read/Write/Stat interface
 type ObjectAPI interface {
-	GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, ObjectStat, error)
-	PutObject(bucket, object string, size uint64, data io.Reader) error
+	GetObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error)
+	PutObject(bucket, object string, size int64, data io.Reader) error
 	StatObject(bucket, object string) (ObjectStat, error)
 	RemoveObject(bucket, object string) error
 
@@ -184,7 +185,7 @@ func New(config Config) (API, error) {
 //
 // Additionally it also takes range arguments to download the specified range bytes of an object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a api) GetObject(bucket, object string, offset, length uint64) (io.ReadCloser, ObjectStat, error) {
+func (a api) GetObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
 	if strings.TrimSpace(object) == "" {
 		return nil, ObjectStat{}, errors.New("object name cannot be empty")
 	}
@@ -210,13 +211,13 @@ func (a completedParts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a completedParts) Less(i, j int) bool { return a[i].PartNumber < a[j].PartNumber }
 
 // MinimumPartSize minimum part size per object after which PutObject behaves internally as multipart
-var MinimumPartSize uint64 = 1024 * 1024 * 5
+var MinimumPartSize int64 = 1024 * 1024 * 5
 
 // maxParts - unexported right now
-var maxParts = uint64(10000)
+var maxParts = int64(10000)
 
 // maxPartSize - unexported right now
-var maxPartSize uint64 = 1024 * 1024 * 1024 * 5
+var maxPartSize int64 = 1024 * 1024 * 1024 * 5
 
 // GetPartSize - calculate the optimal part size for the given objectSize
 //
@@ -232,7 +233,7 @@ var maxPartSize uint64 = 1024 * 1024 * 1024 * 5
 //
 // special case where it happens to be that partSize is indeed bigger than the
 // maximum part size just return maxPartSize back
-func GetPartSize(objectSize uint64) uint64 {
+func getPartSize(objectSize int64) int64 {
 	partSize := (objectSize / (maxParts - 1)) // make sure last part has enough buffer and handle this poperly
 	{
 		if partSize > MinimumPartSize {
@@ -245,18 +246,18 @@ func GetPartSize(objectSize uint64) uint64 {
 	}
 }
 
-func (a api) newObjectUpload(bucket, object string, size uint64, data io.Reader) error {
+func (a api) newObjectUpload(bucket, object string, size int64, data io.Reader) error {
 	initiateMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
 	if err != nil {
 		return err
 	}
 	uploadID := initiateMultipartUploadResult.UploadID
 	completeMultipartUpload := completeMultipartUpload{}
-	for part := range multiPart(data, GetPartSize(size), nil) {
+	for part := range multiPart(data, getPartSize(size), nil) {
 		if part.Err != nil {
 			return part.Err
 		}
-		completePart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.ReadSeeker)
+		completePart, err := a.uploadPart(bucket, object, uploadID, part.Md5Sum, part.Num, part.Len, part.ReadSeeker)
 		if err != nil {
 			return err
 		}
@@ -318,21 +319,36 @@ func (a api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, 
 	}
 }
 
-func (a api) continueObjectUpload(bucket, object, uploadID string, size uint64, data io.Reader) error {
-	var skipParts []int
+type skipPart struct {
+	md5sum     []byte
+	partNumber int
+}
+
+func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, data io.Reader) error {
+	var skipParts []skipPart
 	completeMultipartUpload := completeMultipartUpload{}
 	for part := range a.listObjectPartsRecursive(bucket, object, uploadID) {
+		if part.Err != nil {
+			return part.Err
+		}
 		var completedPart completePart
 		completedPart.PartNumber = part.Metadata.PartNumber
 		completedPart.ETag = part.Metadata.ETag
 		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
-		skipParts = append(skipParts, part.Metadata.PartNumber)
+		md5SumBytes, err := hex.DecodeString(strings.Trim(part.Metadata.ETag, "\"")) // trim off the odd double quotes
+		if err != nil {
+			return err
+		}
+		skipParts = append(skipParts, skipPart{
+			md5sum:     md5SumBytes,
+			partNumber: part.Metadata.PartNumber,
+		})
 	}
-	for part := range multiPart(data, GetPartSize(size), skipParts) {
+	for part := range multiPart(data, getPartSize(size), skipParts) {
 		if part.Err != nil {
 			return part.Err
 		}
-		completedPart, err := a.uploadPart(bucket, object, uploadID, part.Num, part.Len, part.ReadSeeker)
+		completedPart, err := a.uploadPart(bucket, object, uploadID, part.Md5Sum, part.Num, part.Len, part.ReadSeeker)
 		if err != nil {
 			return err
 		}
@@ -400,7 +416,7 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch ch
 // You must have WRITE permissions on a bucket to create an object
 //
 // This version of PutObject automatically does multipart for more than 5MB worth of data
-func (a api) PutObject(bucket, object string, size uint64, data io.Reader) error {
+func (a api) PutObject(bucket, object string, size int64, data io.Reader) error {
 	if strings.TrimSpace(object) == "" {
 		return errors.New("object name cannot be empty")
 	}
@@ -414,7 +430,7 @@ func (a api) PutObject(bucket, object string, size uint64, data io.Reader) error
 			if part.Err != nil {
 				return part.Err
 			}
-			_, err := a.putObject(bucket, object, part.Len, part.ReadSeeker)
+			_, err := a.putObject(bucket, object, part.Md5Sum, part.Len, part.ReadSeeker)
 			if err != nil {
 				return err
 			}

@@ -31,22 +31,25 @@ func main() {
 		SecretAccessKey: "",
 		Endpoint:        "https://play.minio.io:9000",
 	}
-
-	client := minio.New(&config)
-
+	playClient, err := minio.New(config)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	object, err := os.Open("testfile")
 	if err != nil {
 		log.Fatalln(err)
 	}
+	defer object.Close()
+
 	objectInfo, err := object.Stat()
 	if err != nil {
 		object.Close()
 		log.Fatalln(err)
 	}
 
-	err = client.PutObject("mybucket", "myobject", uint64(objectInfo.Size()), object)
+	err = playClient.PutObject("mybucket", "myobject", objectInfo.Size(), object)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	defer object.Close()
+
 }

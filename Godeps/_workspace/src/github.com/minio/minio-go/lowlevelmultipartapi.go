@@ -290,7 +290,7 @@ func (a lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumber
 }
 
 // uploadPartRequest wrapper creates a new UploadPart request
-func (a lowLevelAPI) uploadPartRequest(bucket, object, uploadID string, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
+func (a lowLevelAPI) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -299,10 +299,6 @@ func (a lowLevelAPI) uploadPartRequest(bucket, object, uploadID string, partNumb
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
 		HTTPPath:   "/" + bucket + "/" + encodedObject + "?partNumber=" + strconv.Itoa(partNumber) + "&uploadId=" + uploadID,
-	}
-	md5SumBytes, err := sumMD5Reader(body, size)
-	if err != nil {
-		return nil, err
 	}
 	r, err := newRequest(op, a.config, body)
 	if err != nil {
@@ -315,13 +311,8 @@ func (a lowLevelAPI) uploadPartRequest(bucket, object, uploadID string, partNumb
 }
 
 // uploadPart uploads a part in a multipart upload.
-func (a lowLevelAPI) uploadPart(bucket, object, uploadID string, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
-	req, err := a.uploadPartRequest(bucket, object, uploadID, partNumber, size, body)
-	if err != nil {
-		return completePart{}, err
-	}
-	// get hex encoding for md5sum in base64
-	md5SumBytes, err := base64.StdEncoding.DecodeString(req.Get("Content-MD5"))
+func (a lowLevelAPI) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
+	req, err := a.uploadPartRequest(bucket, object, uploadID, md5SumBytes, partNumber, size, body)
 	if err != nil {
 		return completePart{}, err
 	}

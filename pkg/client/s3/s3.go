@@ -107,17 +107,17 @@ func New(config *Config) (client.Client, error) {
 }
 
 // GetObject - get object
-func (c *s3Client) GetObject(offset, length uint64) (io.ReadCloser, uint64, error) {
+func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, error) {
 	bucket, object := c.url2BucketAndObject()
 	reader, metadata, err := c.api.GetObject(bucket, object, offset, length)
 	if err != nil {
 		return nil, length, iodine.New(err, nil)
 	}
-	return reader, uint64(metadata.Size), nil
+	return reader, metadata.Size, nil
 }
 
 // PutObject - put object
-func (c *s3Client) PutObject(size uint64, data io.Reader) error {
+func (c *s3Client) PutObject(size int64, data io.Reader) error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified

@@ -18,11 +18,13 @@ package minio
 
 import (
 	"bytes"
+	"crypto/md5"
 	"io"
 )
 
 // part - message structure for results from the MultiPart
 type part struct {
+	Md5Sum     []byte
 	ReadSeeker io.ReadSeeker
 	Err        error
 	Len        int64
@@ -37,18 +39,20 @@ type part struct {
 // Before returning, the channel is always closed.
 //
 // additionally this function also skips list of parts if provided
-func multiPart(reader io.Reader, chunkSize uint64, skipParts []int) <-chan part {
+func multiPart(reader io.Reader, chunkSize int64, skipParts []skipPart) <-chan part {
 	ch := make(chan part)
 	go multiPartInRoutine(reader, chunkSize, skipParts, ch)
 	return ch
 }
 
-func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch chan part) {
+func multiPartInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, ch chan part) {
 	defer close(ch)
 	p := make([]byte, chunkSize)
 	n, err := io.ReadFull(reader, p)
 	if err == io.EOF || err == io.ErrUnexpectedEOF { // short read, only single part return
+		m := md5.Sum(p[0:n])
 		ch <- part{
+			Md5Sum:     m[:],
 			ReadSeeker: bytes.NewReader(p[0:n]),
 			Err:        nil,
 			Len:        int64(n),
@@ -67,8 +71,14 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 	}
 	// send the first part
 	var num = 1
-	if !isPartNumberUploaded(num, skipParts) {
+	md5SumBytes := md5.Sum(p)
+	sp := skipPart{
+		partNumber: num,
+		md5sum:     md5SumBytes[:],
+	}
+	if !isPartNumberUploaded(sp, skipParts) {
 		ch <- part{
+			Md5Sum:     md5SumBytes[:],
 			ReadSeeker: bytes.NewReader(p),
 			Err:        nil,
 			Len:        int64(n),
@@ -90,10 +100,16 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 			}
 		}
 		num++
-		if isPartNumberUploaded(num, skipParts) {
+		md5SumBytes := md5.Sum(p[0:n])
+		sp := skipPart{
+			partNumber: num,
+			md5sum:     md5SumBytes[:],
+		}
+		if isPartNumberUploaded(sp, skipParts) {
 			continue
 		}
 		ch <- part{
+			Md5Sum:     md5SumBytes[:],
 			ReadSeeker: bytes.NewReader(p[0:n]),
 			Err:        nil,
 			Len:        int64(n),
@@ -104,9 +120,9 @@ func multiPartInRoutine(reader io.Reader, chunkSize uint64, skipParts []int, ch 
 }
 
 // to verify if partNumber is part of the skip part list
-func isPartNumberUploaded(partNumber int, skipParts []int) bool {
-	for _, part := range skipParts {
-		if part == partNumber {
+func isPartNumberUploaded(part skipPart, skipParts []skipPart) bool {
+	for _, p := range skipParts {
+		if p.partNumber == part.partNumber && bytes.Equal(p.md5sum, part.md5sum) {
 			return true
 		}
 	}
