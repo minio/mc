@@ -23,8 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cheggaaa/pb"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/pb"
 )
 
 type cpBarCmd int
@@ -120,6 +120,10 @@ func newCpBar() barSend {
 			switch msg.Cmd {
 			case cpBarCmdSetPrefix:
 				barCaption = msg.Arg.(string)
+				if bar.GetWidth() < len(barCaption) {
+					trimSize := len(barCaption) - bar.GetWidth() + 3 + 1
+					barCaption = "..." + barCaption[trimSize:]
+				}
 			case cpBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 			case cpBarCmdProgress:
