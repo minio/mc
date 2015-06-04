@@ -60,7 +60,7 @@ env:
 
 install: test-all
 	@echo "Installing mc:"
-	@godep go install -a -ldflags "-X main.BuildDate `date -u '+%FT%T.%N%:z'`" github.com/minio/mc
+	@godep go install -a -ldflags "-X main.BuildDate `go run buildscripts/date.go`" github.com/minio/mc
 	@mkdir -p $(HOME)/.mc
 
 clean:
