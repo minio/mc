@@ -72,19 +72,41 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	return st, nil
 }
 
+// PutObject - create a new file
+func (f *fsClient) PutObject(size int64, data io.Reader) error {
+	objectDir, _ := filepath.Split(f.path)
+	objectPath := f.path
+	if objectDir != "" {
+		if err := os.MkdirAll(objectDir, 0700); err != nil {
+			return iodine.New(err, nil)
+		}
+	}
+	fs, err := os.Create(objectPath)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	defer fs.Close()
+
+	_, err = io.CopyN(fs, data, int64(size))
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	return nil
+}
+
 // get - download an object from bucket
-func (f *fsClient) get(content *client.Content) (io.ReadCloser, uint64, error) {
+func (f *fsClient) get(content *client.Content) (io.ReadCloser, int64, error) {
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, uint64(content.Size), iodine.New(err, nil)
+		return nil, content.Size, iodine.New(err, nil)
 	}
-	return body, uint64(content.Size), nil
+	return body, content.Size, nil
 }
 
 // GetObject download an full or part object from bucket
 // getobject returns a reader, length and nil for no errors
 // with errors getobject will return nil reader, length and typed errors
-func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, error) {
+func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, error) {
 	content, err := f.getFSMetadata()
 	if err != nil {
 		return nil, 0, iodine.New(err, nil)
@@ -92,7 +114,7 @@ func (f *fsClient) GetObject(offset, length uint64) (io.ReadCloser, uint64, erro
 	if content.Type.IsDir() {
 		return nil, 0, iodine.New(ISFolder{path: f.path}, nil)
 	}
-	if int64(offset) > content.Size || int64(offset+length-1) > content.Size {
+	if offset > content.Size || offset+length-1 > content.Size {
 		return nil, 0, iodine.New(client.InvalidRange{Offset: offset}, nil)
 	}
 

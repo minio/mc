@@ -28,7 +28,7 @@ import (
 )
 
 // getSource gets a reader from URL<
-func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length uint64, err error) {
+func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length int64, err error) {
 	sourceClnt, err := getNewClient(sourceURL, sourceConfig)
 	if err != nil {
 		return nil, 0, iodine.New(err, map[string]string{"failedURL": sourceURL})
@@ -37,7 +37,7 @@ func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser
 }
 
 // putTarget writes to URL from reader.
-func putTarget(targetURL string, targetConfig *hostConfig, length uint64, reader io.Reader) error {
+func putTarget(targetURL string, targetConfig *hostConfig, length int64, reader io.Reader) error {
 	targetClnt, err := getNewClient(targetURL, targetConfig)
 	if err != nil {
 		return iodine.New(err, nil)

@@ -247,7 +247,7 @@ func (s *CmdTestSuite) TestCommonMethods(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	err = putTarget(objectPath, &hostConfig{}, uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	reader, size, err := getSource(objectPath, &hostConfig{})

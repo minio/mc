@@ -46,14 +46,14 @@ func (s *MySuite) TestList(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	objectPath = filepath.Join(root, "object2")
 	fsc, err = New(objectPath)
 	c.Assert(err, IsNil)
 
-	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	fsc, err = New(root)
@@ -74,7 +74,7 @@ func (s *MySuite) TestList(c *C) {
 	fsc, err = New(objectPath)
 	c.Assert(err, IsNil)
 
-	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	fsc, err = New(root)
@@ -175,7 +175,7 @@ func (s *MySuite) TestPutObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 }
 
@@ -191,7 +191,7 @@ func (s *MySuite) TestGetObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	reader, size, err := fsc.GetObject(0, 0)
@@ -215,7 +215,7 @@ func (s *MySuite) TestGetObjectRange(c *C) {
 	data := "hello world"
 	dataLen := len(data)
 
-	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	reader, size, err := fsc.GetObject(0, 5)
@@ -238,7 +238,7 @@ func (s *MySuite) TestStatObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.PutObject(uint64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	content, err := fsc.Stat()
