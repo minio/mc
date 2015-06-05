@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -89,6 +90,22 @@ func (b barSend) Finish() {
 	<-b.finishCh
 }
 
+func trimBarCaption(caption string, width int) string {
+	if len(caption) > width {
+		// Trim caption to fit within the screen
+		trimSize := len(caption) - width + 3 + 1
+		if trimSize < len(caption) {
+			caption = "..." + caption[trimSize:]
+			// Further trim partial names.
+			partialTrimSize := strings.IndexByte(caption, filepath.Separator)
+			if partialTrimSize > 0 {
+				caption = caption[partialTrimSize:]
+			}
+		}
+	}
+	return caption
+}
+
 // newCpBar - instantiate a cpBar.
 func newCpBar() barSend {
 	cmdCh := make(chan barMsg)
@@ -120,10 +137,7 @@ func newCpBar() barSend {
 			switch msg.Cmd {
 			case cpBarCmdSetPrefix:
 				barCaption = msg.Arg.(string)
-				if bar.GetWidth() < len(barCaption) {
-					trimSize := len(barCaption) - bar.GetWidth() + 3 + 1
-					barCaption = "..." + barCaption[trimSize:]
-				}
+				barCaption = trimBarCaption(barCaption, bar.GetWidth())
 			case cpBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 			case cpBarCmdProgress:
@@ -155,6 +169,5 @@ func newCpBar() barSend {
 			}
 		}
 	}(cmdCh, finishCh)
-
 	return barSend{cmdCh, finishCh}
 }
