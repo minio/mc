@@ -69,8 +69,8 @@ var (
 	// Add your new flags starting here
 )
 
-// registerCommand registers a cli command
-func registerCommand(cmd cli.Command) {
+// registerCmd registers a cli command
+func registerCmd(cmd cli.Command) {
 	commands = append(commands, cmd)
 }
 
