@@ -154,13 +154,26 @@ func (c *s3Client) SetBucketACL(acl string) error {
 
 // Stat - send a 'HEAD' on a bucket or object to get its metadata
 func (c *s3Client) Stat() (*client.Content, error) {
+	objectMetadata := new(client.Content)
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		metadata, err := c.api.StatObject(bucket, object)
 		if err != nil {
+			if err.Error() == "404 Not Found" {
+				for content := range c.List(false) {
+					if content.Err != nil {
+						return nil, iodine.New(err, nil)
+					}
+					if !strings.HasPrefix(content.Content.Name, object) {
+						content.Content.Type = os.ModeDir
+						content.Content.Name = object
+						content.Content.Size = 0
+						return content.Content, nil
+					}
+				}
+			}
 			return nil, iodine.New(err, nil)
 		}
-		objectMetadata := new(client.Content)
 		objectMetadata.Name = c.hostURL.String() // do not change this
 		objectMetadata.Time = metadata.LastModified
 		objectMetadata.Size = metadata.Size
@@ -210,9 +223,9 @@ func (c *s3Client) List(recursive bool) <-chan client.ContentOnChannel {
 
 func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
-	bucket, object := c.url2BucketAndObject()
+	b, o := c.url2BucketAndObject()
 	switch {
-	case bucket == "" && object == "":
+	case b == "" && o == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
 				contentCh <- client.ContentOnChannel{
@@ -232,7 +245,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 			}
 		}
 	default:
-		metadata, err := c.api.StatObject(bucket, object)
+		metadata, err := c.api.StatObject(b, o)
 		switch err.(type) {
 		case nil:
 			content := new(client.Content)
@@ -245,7 +258,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				Err:     nil,
 			}
 		default:
-			for object := range c.api.ListObjects(bucket, object, false) {
+			for object := range c.api.ListObjects(b, o, false) {
 				if object.Err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
@@ -254,7 +267,12 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 					return
 				}
 				content := new(client.Content)
-				content.Name = object.Stat.Key
+				normalizedPrefix := strings.TrimSuffix(o, "/") + "/"
+				normalizedKey := object.Stat.Key
+				if normalizedPrefix != object.Stat.Key && strings.HasPrefix(object.Stat.Key, normalizedPrefix) {
+					normalizedKey = strings.TrimPrefix(object.Stat.Key, normalizedPrefix)
+				}
+				content.Name = normalizedKey
 				switch {
 				case strings.HasSuffix(object.Stat.Key, "/"):
 					content.Time = time.Now()
@@ -275,9 +293,9 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 
 func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
-	bucket, object := c.url2BucketAndObject()
+	b, o := c.url2BucketAndObject()
 	switch {
-	case bucket == "" && object == "":
+	case b == "" && o == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
 				contentCh <- client.ContentOnChannel{
@@ -286,7 +304,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				}
 				return
 			}
-			for object := range c.api.ListObjects(bucket.Stat.Name, object, true) {
+			for object := range c.api.ListObjects(bucket.Stat.Name, o, true) {
 				if object.Err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
@@ -306,7 +324,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			}
 		}
 	default:
-		for object := range c.api.ListObjects(bucket, object, true) {
+		for object := range c.api.ListObjects(b, o, true) {
 			if object.Err != nil {
 				contentCh <- client.ContentOnChannel{
 					Content: nil,
@@ -315,7 +333,9 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return
 			}
 			content := new(client.Content)
-			content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Stat.Key
+			normalizedKey := strings.TrimPrefix(object.Stat.Key, strings.TrimSuffix(o, "/")+"/")
+			hostPrefix := strings.TrimSuffix(c.hostURL.String(), "/") + "/"
+			content.Name = hostPrefix + normalizedKey
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
 			content.Type = os.FileMode(0664)

@@ -211,7 +211,8 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *cpURLs {
 			return
 		}
 
-		sourceURL = stripRecursiveURL(sourceURL)
+		// add `/` after trimming off `...` to emulate directories
+		sourceURL = strings.TrimSuffix(stripRecursiveURL(sourceURL), "/") + "/"
 		sourceClient, err := source2Client(sourceURL)
 		if err != nil {
 			cpURLsCh <- &cpURLs{Error: iodine.New(err, nil)}
