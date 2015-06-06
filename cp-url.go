@@ -212,7 +212,14 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *cpURLs {
 		}
 
 		// add `/` after trimming off `...` to emulate directories
-		sourceURL = strings.TrimSuffix(stripRecursiveURL(sourceURL), "/") + "/"
+		sourceURL = stripRecursiveURL(sourceURL)
+		// is set when ... includes a directory, i.e. /path/to/dir... instead of path/to/dir/...
+		recursivePrefix := ""
+		if !strings.HasSuffix(sourceURL, string(filepath.Separator)) {
+			recursivePrefix = filepath.Base(sourceURL)
+		}
+		sourceURL = strings.TrimSuffix(sourceURL, string(filepath.Separator)) + string(filepath.Separator)
+
 		sourceClient, err := source2Client(sourceURL)
 		if err != nil {
 			cpURLsCh <- &cpURLs{Error: iodine.New(err, nil)}
@@ -286,7 +293,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *cpURLs {
 
 			// Construct target path from recursive path of source without its prefix dir.
 			newTargetURLParse := *targetURLParse
-			newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path,
+			newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, recursivePrefix,
 				strings.TrimPrefix(sourceContentParse.Path, filepath.Dir(sourceURLParse.Path)))
 			cpURLsCh <- prepareCopyURLsTypeA(sourceContentParse.String(), newTargetURLParse.String())
 		}
