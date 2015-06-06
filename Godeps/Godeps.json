@@ -28,7 +28,7 @@
 		},
 		{
 			"ImportPath": "github.com/minio/minio-go",
-			"Rev": "b2f0482ae45f7944f7e7079fd03d3820e70c4fd3"
+			"Rev": "745daad6222582eb6ecbb864f0cbcdc4427dd52f"
 		},
 		{
 			"ImportPath": "github.com/minio/minio/pkg/iodine",

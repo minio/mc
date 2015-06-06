@@ -105,6 +105,7 @@ type ObjectStat struct {
 var regions = map[string]string{
 	"s3-fips-us-gov-west-1.amazonaws.com": "us-gov-west-1",
 	"s3.amazonaws.com":                    "us-east-1",
+	"s3-external-1.amazonaws.com":         "us-east-1",
 	"s3-us-west-1.amazonaws.com":          "us-west-1",
 	"s3-us-west-2.amazonaws.com":          "us-west-2",
 	"s3-eu-west-1.amazonaws.com":          "eu-west-1",
@@ -587,25 +588,9 @@ func (a api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan
 	defer close(ch)
 	switch {
 	case recursive == true:
-		listBucketResult, err := a.listObjects(bucket, "", prefix, "", 1000)
-		if err != nil {
-			ch <- ObjectStatCh{
-				Stat: ObjectStat{},
-				Err:  err,
-			}
-			return
-		}
-		for _, object := range listBucketResult.Contents {
-			ch <- ObjectStatCh{
-				Stat: object,
-				Err:  nil,
-			}
-		}
+		var marker string
 		for {
-			if !listBucketResult.IsTruncated {
-				break
-			}
-			listBucketResult, err = a.listObjects(bucket, listBucketResult.Marker, prefix, "", 1000)
+			result, err := a.listObjects(bucket, marker, prefix, "", 1000)
 			if err != nil {
 				ch <- ObjectStatCh{
 					Stat: ObjectStat{},
@@ -613,16 +598,19 @@ func (a api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan
 				}
 				return
 			}
-			for _, object := range listBucketResult.Contents {
+			for _, object := range result.Contents {
 				ch <- ObjectStatCh{
 					Stat: object,
 					Err:  nil,
 				}
-				listBucketResult.Marker = object.Key
+				marker = object.Key
+			}
+			if !result.IsTruncated {
+				break
 			}
 		}
 	default:
-		listBucketResult, err := a.listObjects(bucket, "", prefix, "/", 1000)
+		result, err := a.listObjects(bucket, "", prefix, "/", 1000)
 		if err != nil {
 			ch <- ObjectStatCh{
 				Stat: ObjectStat{},
@@ -630,13 +618,13 @@ func (a api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan
 			}
 			return
 		}
-		for _, object := range listBucketResult.Contents {
+		for _, object := range result.Contents {
 			ch <- ObjectStatCh{
 				Stat: object,
 				Err:  nil,
 			}
 		}
-		for _, prefix := range listBucketResult.CommonPrefixes {
+		for _, prefix := range result.CommonPrefixes {
 			object := ObjectStat{}
 			object.Key = prefix.Prefix
 			object.Size = 0
