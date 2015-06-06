@@ -267,6 +267,15 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		if fp == f.path {
 			return nil
 		}
+		if err != nil {
+			if strings.Contains(err.Error(), "operation not permitted") {
+				return nil
+			}
+			if os.IsPermission(err) {
+				return nil
+			}
+			return iodine.New(err, nil) // abort
+		}
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			fi, err = os.Stat(fp)
 			if err != nil {
@@ -277,17 +286,8 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			}
 		}
 		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
-			if err != nil {
-				if strings.Contains(err.Error(), "operation not permitted") {
-					return nil
-				}
-				if os.IsPermission(err) {
-					return nil
-				}
-				return iodine.New(err, nil) // abort
-			}
 			content := &client.Content{
-				Name: fp,
+				Name: strings.TrimPrefix(fp, f.path),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 				Type: fi.Mode(),

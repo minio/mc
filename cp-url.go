@@ -285,7 +285,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *cpURLs {
 				continue
 			}
 
-			sourceContentParse, err := client.Parse(sourceContent.Content.Name)
+			sourceContentParse, err := client.Parse(sourceURLParse.String() + sourceContent.Content.Name)
 			if err != nil {
 				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceContent.Content.Name}, nil)}
 				continue
