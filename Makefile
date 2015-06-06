@@ -40,14 +40,11 @@ deadcode:
 pre-build:
 	@echo "Running pre-build:"
 
-build-all: getdeps verifiers
-	@echo "Building Libraries:"
-	@godep go generate ./...
-	@godep go build -a ./... # no stale packages
-
-test-all: pre-build build-all
-	@echo "Running Test Suites:"
-	@godep go test -race ./...
+gomake-all: getdeps verifiers
+	@echo "Installing mc:"
+	@go run make.go release
+	@go run make.go install
+	@mkdir -p $(HOME)/.mc
 
 save:
 	@godep save ./...
@@ -58,10 +55,7 @@ restore:
 env:
 	@godep go env
 
-install: test-all
-	@echo "Installing mc:"
-	@godep go install -a -ldflags "-X main.BuildDate `go run buildscripts/date.go`" github.com/minio/mc
-	@mkdir -p $(HOME)/.mc
+install: gomake-all
 
 clean:
 	@rm -fv cover.out

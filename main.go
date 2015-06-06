@@ -23,7 +23,6 @@ import (
 	"os/user"
 	"runtime"
 	"strconv"
-	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -56,18 +55,6 @@ func checkConfig() {
 	}
 }
 
-// Build date
-var BuildDate string
-
-// getBuildDate -
-func getBuildDate() string {
-	t, _ := time.Parse(time.RFC3339Nano, BuildDate)
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format(time.RFC1123)
-}
-
 // Get os/arch/platform specific information.
 // Returns a map of current os/arch/platform/memstats
 func getSystemData() map[string]string {
@@ -94,9 +81,6 @@ func getSystemData() map[string]string {
 	}
 }
 
-// Version is based on MD5SUM of its binary
-var Version = mustHashBinarySelf()
-
 func main() {
 	// register all the commands
 	registerCmd(lsCmd)     // List contents of a bucket
@@ -120,7 +104,7 @@ func main() {
 	app.Usage = "Minio Client for object storage and filesystems"
 	app.Version = Version
 	app.Commands = commands
-	app.Compiled = getBuildDate()
+	app.Compiled = getVersion()
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.Before = func(ctx *cli.Context) error {
@@ -176,9 +160,7 @@ GLOBAL FLAGS:
   {{range .Flags}}{{.}}
   {{end}}{{end}}
 VERSION:
-  {{.Version}}
   {{if .Compiled}}
-BUILD:
   {{.Compiled}}{{end}}
   {{range $key, $value := .ExtraInfo}}
 {{$key}}:
