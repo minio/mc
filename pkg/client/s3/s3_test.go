@@ -180,7 +180,7 @@ func (s *MySuite) TestObjectOperations(c *C) {
 
 	content, err := s3c.Stat()
 	c.Assert(err, IsNil)
-	c.Assert(content.Name, Equals, server.URL+object.resource)
+	c.Assert(content.Name, Equals, "object")
 	c.Assert(content.Size, Equals, int64(len(object.data)))
 	c.Assert(content.Type.IsRegular(), Equals, true)
 
