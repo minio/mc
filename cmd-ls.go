@@ -19,6 +19,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -126,7 +128,11 @@ func runListCmd(ctx *cli.Context) {
 	for targetURL, targetConfig := range targetURLConfigMap {
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
-		err = doListCmd(newTargetURL, targetConfig, isURLRecursive(targetURL))
+		recursivePrefix := "" // is set when ... includes a directory, i.e. /path/to/dir... instead of path/to/dir/...
+		if isURLRecursive(targetURL) && !strings.HasSuffix(newTargetURL, string(filepath.Separator)) {
+			recursivePrefix = filepath.Base(newTargetURL)
+		}
+		err = doListCmd(newTargetURL, targetConfig, isURLRecursive(targetURL), recursivePrefix)
 		if err != nil {
 			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Failed to list ‘%s’", targetURL),
@@ -137,12 +143,12 @@ func runListCmd(ctx *cli.Context) {
 }
 
 // doListCmd -
-func doListCmd(targetURL string, targetConfig *hostConfig, recursive bool) error {
+func doListCmd(targetURL string, targetConfig *hostConfig, recursive bool, recursivePrefix string) error {
 	clnt, err := getNewClient(targetURL, targetConfig)
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
-	err = doList(clnt, targetURL, recursive)
+	err = doList(clnt, targetURL, recursive, recursivePrefix)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
