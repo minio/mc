@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -73,6 +74,10 @@ func doList(clnt client.Client, targetURL string, recursive bool, recursivePrefi
 		if contentCh.Err != nil {
 			err = contentCh.Err
 			break
+		}
+
+		if recursive && recursivePrefix != "" {
+			contentCh.Content.Name = filepath.Join(filepath.Base(targetURL), contentCh.Content.Name)
 		}
 		console.Println(parseContent(contentCh.Content))
 	}
