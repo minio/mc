@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -67,7 +68,7 @@ func parseContent(c *client.Content) Content {
 }
 
 // doList - list all entities inside a folder
-func doList(clnt client.Client, targetURL string, recursive bool) error {
+func doList(clnt client.Client, targetURL string, recursive bool, recursivePrefix string) error {
 	var err error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
@@ -80,7 +81,11 @@ func doList(clnt client.Client, targetURL string, recursive bool) error {
 			// a user would not wish to see a URL just for recursive and not for regular List()
 			//
 			// To be consistent we have to filter them out
-			contentName = strings.TrimPrefix(contentName, strings.TrimSuffix(targetURL, "/")+"/")
+			contentName = strings.TrimPrefix(contentName,
+				strings.TrimSuffix(targetURL, string(filepath.Separator))+string(filepath.Separator))
+			if recursivePrefix != "" {
+				contentName = recursivePrefix + string(filepath.Separator) + contentName
+			}
 		}
 		contentCh.Content.Name = contentName
 		console.Println(parseContent(contentCh.Content))
