@@ -83,9 +83,7 @@ func doList(clnt client.Client, targetURL string, recursive bool, recursivePrefi
 			// To be consistent we have to filter them out
 			contentName = strings.TrimPrefix(contentName,
 				strings.TrimSuffix(targetURL, string(filepath.Separator))+string(filepath.Separator))
-			if recursivePrefix != "" {
-				contentName = recursivePrefix + string(filepath.Separator) + contentName
-			}
+			contentName = filepath.Join(recursivePrefix, contentName)
 		}
 		contentCh.Content.Name = contentName
 		console.Println(parseContent(contentCh.Content))

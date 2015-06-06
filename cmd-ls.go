@@ -128,7 +128,8 @@ func runListCmd(ctx *cli.Context) {
 	for targetURL, targetConfig := range targetURLConfigMap {
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
-		recursivePrefix := "" // is set when ... includes a directory, i.e. /path/to/dir... instead of path/to/dir/...
+		// is set when ... includes a directory, i.e. /path/to/dir... instead of path/to/dir/...
+		recursivePrefix := ""
 		if isURLRecursive(targetURL) && !strings.HasSuffix(newTargetURL, string(filepath.Separator)) {
 			recursivePrefix = filepath.Base(newTargetURL)
 		}
