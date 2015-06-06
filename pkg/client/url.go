@@ -18,6 +18,7 @@ package client
 
 import (
 	"bytes"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -25,10 +26,11 @@ import (
 
 // URL client url structure
 type URL struct {
-	Type   URLType
-	Scheme string
-	Host   string
-	Path   string
+	Type      URLType
+	Scheme    string
+	Host      string
+	Path      string
+	Separator rune
 }
 
 // URLType - enum of different url types
@@ -91,16 +93,18 @@ func Parse(urlStr string) (*URL, error) {
 		host := getHost(authority)
 		if host != "" && (scheme == "http" || scheme == "https") {
 			return &URL{
-				Scheme: scheme,
-				Type:   Object,
-				Host:   host,
-				Path:   rest,
+				Scheme:    scheme,
+				Type:      Object,
+				Host:      host,
+				Path:      rest,
+				Separator: '/',
 			}, nil
 		}
 	}
 	return &URL{
-		Type: Filesystem,
-		Path: rest,
+		Type:      Filesystem,
+		Path:      rest,
+		Separator: filepath.Separator,
 	}, nil
 }
 
