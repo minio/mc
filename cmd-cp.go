@@ -175,13 +175,13 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 			runtime.Gosched() // Yield more CPU time to progress-bar builder.
 
 			cpQueue <- true // Wait for existing pool to drain.
-			wg.Add(1)
+			wg.Add(1)       // keep track of all the goroutines
 			if !globalQuietFlag {
 				lock.Down() // Do not jump ahead of the progress bar builder above.
 			}
 			go doCopyInRoutine(cpURLs, &bar, cpQueue, errCh, wg)
 		}
-		wg.Wait()
+		wg.Wait() // wait for the go routines to complete
 	}(sourceURLs, targetURL, bar, errCh)
 	return errCh
 }
