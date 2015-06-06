@@ -260,6 +260,17 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	}
 }
 
+func (f *fsClient) delimiter(fp string) string {
+	var stripPrefix string
+	if strings.LastIndex(f.path, string(filepath.Separator)) == 0 {
+		stripPrefix = string(filepath.Separator)
+	}
+	if strings.LastIndex(f.path, string(filepath.Separator)) > 0 {
+		stripPrefix = f.path
+	}
+	return strings.TrimPrefix(fp, stripPrefix)
+}
+
 func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
@@ -287,7 +298,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		}
 		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
 			content := &client.Content{
-				Name: strings.TrimPrefix(fp, f.path),
+				Name: f.delimiter(fp),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 				Type: fi.Mode(),

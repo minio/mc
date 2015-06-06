@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -75,17 +74,6 @@ func doList(clnt client.Client, targetURL string, recursive bool, recursivePrefi
 			err = contentCh.Err
 			break
 		}
-		contentName := contentCh.Content.Name
-		if recursive {
-			// this special handling is necessary since we are sending back absolute paths with in ListRecursive()
-			// a user would not wish to see a URL just for recursive and not for regular List()
-			//
-			// To be consistent we have to filter them out
-			contentName = strings.TrimPrefix(contentName,
-				strings.TrimSuffix(targetURL, string(filepath.Separator))+string(filepath.Separator))
-			contentName = filepath.Join(recursivePrefix, contentName)
-		}
-		contentCh.Content.Name = contentName
 		console.Println(parseContent(contentCh.Content))
 	}
 	if err != nil {
