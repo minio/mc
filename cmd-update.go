@@ -58,9 +58,9 @@ func doUpdateCheck(config *hostConfig) (string, error) {
 	if err != nil {
 		return "No new update available at this time", nil
 	}
-	current, _ := time.Parse(time.RFC3339Nano, BuildDate)
+	current, _ := time.Parse(time.RFC3339Nano, Version)
 	if current.IsZero() {
-		return "BuildDate is empty, must be a custom build cannot update", nil
+		return "Version is empty, must be a custom build cannot update. Please download releases from http://dl.minio.io:9000 for proper updates", nil
 	}
 	if latest.Time.After(current) {
 		printUpdateNotify("new", "old")
