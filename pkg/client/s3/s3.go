@@ -174,7 +174,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 			}
 			return nil, iodine.New(err, nil)
 		}
-		objectMetadata.Name = c.hostURL.String() // do not change this
+		objectMetadata.Name = metadata.Key
 		objectMetadata.Time = metadata.LastModified
 		objectMetadata.Size = metadata.Size
 		objectMetadata.Type = os.FileMode(0664)
@@ -313,7 +313,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 					return
 				}
 				content := new(client.Content)
-				content.Name = strings.TrimSuffix(c.hostURL.String(), "/") + "/" + object.Stat.Key
+				content.Name = object.Stat.Key
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.LastModified
 				content.Type = os.FileMode(0664)
@@ -334,8 +334,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			}
 			content := new(client.Content)
 			normalizedKey := strings.TrimPrefix(object.Stat.Key, strings.TrimSuffix(o, "/")+"/")
-			hostPrefix := strings.TrimSuffix(c.hostURL.String(), "/") + "/"
-			content.Name = hostPrefix + normalizedKey
+			content.Name = normalizedKey
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
 			content.Type = os.FileMode(0664)

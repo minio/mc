@@ -78,13 +78,14 @@ func runGoBuild(ctx *cli.Context) {
 	if mcBuildErr != nil {
 		console.Fatalln(mcBuildErr)
 	}
-	var mcTestOut bytes.Buffer
-	mcTest.Stdout = &mcTestOut
+	var mcTestStdOut bytes.Buffer
+	mcTest.Stdout = &mcTestStdOut
 	mcTestErr := mcTest.Run()
 	if mcTestErr != nil {
+		fmt.Print(mcTestStdOut.String())
 		console.Fatalln(mcTestErr)
 	}
-	fmt.Print(mcTestOut.String())
+	fmt.Print(mcTestStdOut.String())
 	mcInstallErr := mcInstall.Run()
 	if mcInstallErr != nil {
 		console.Fatalln(mcInstallErr)
