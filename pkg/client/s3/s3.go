@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -27,6 +28,8 @@ import (
 	s3 "github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/iodine"
 )
+
+const delimiter = "/"
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Config struct {
@@ -192,7 +195,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 
 // url2BucketAndObject gives bucketName and objectName from URL path
 func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
-	splits := strings.SplitN(c.hostURL.Path, "/", 3)
+	splits := strings.SplitN(c.hostURL.Path, delimiter, 3)
 	switch len(splits) {
 	case 0, 1:
 		bucketName = ""
@@ -267,14 +270,14 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 					return
 				}
 				content := new(client.Content)
-				normalizedPrefix := strings.TrimSuffix(o, "/") + "/"
+				normalizedPrefix := strings.TrimSuffix(o, delimiter) + delimiter
 				normalizedKey := object.Stat.Key
 				if normalizedPrefix != object.Stat.Key && strings.HasPrefix(object.Stat.Key, normalizedPrefix) {
 					normalizedKey = strings.TrimPrefix(object.Stat.Key, normalizedPrefix)
 				}
 				content.Name = normalizedKey
 				switch {
-				case strings.HasSuffix(object.Stat.Key, "/"):
+				case strings.HasSuffix(object.Stat.Key, delimiter):
 					content.Time = time.Now()
 					content.Type = os.ModeDir
 				default:
@@ -313,7 +316,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 					return
 				}
 				content := new(client.Content)
-				content.Name = object.Stat.Key
+				content.Name = filepath.Join(bucket.Stat.Name, object.Stat.Key)
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.LastModified
 				content.Type = os.FileMode(0664)
@@ -333,7 +336,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return
 			}
 			content := new(client.Content)
-			normalizedKey := strings.TrimPrefix(object.Stat.Key, strings.TrimSuffix(o, "/")+"/")
+			normalizedKey := strings.TrimPrefix(object.Stat.Key, strings.TrimSuffix(o, delimiter)+delimiter)
 			content.Name = normalizedKey
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
