@@ -42,6 +42,11 @@ pre-build:
 
 gomake-all: getdeps verifiers
 	@echo "Installing mc:"
+	@go run make.go install
+	@mkdir -p $(HOME)/.mc
+
+release: getdeps verifiers
+	@echo "Installing mc:"
 	@go run make.go release
 	@go run make.go install
 	@mkdir -p $(HOME)/.mc
