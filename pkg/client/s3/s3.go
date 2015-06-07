@@ -162,17 +162,16 @@ func (c *s3Client) Stat() (*client.Content, error) {
 	if object != "" {
 		metadata, err := c.api.StatObject(bucket, object)
 		if err != nil {
-			if err.Error() == "404 Not Found" {
+			errResponse := s3.ToErrorResponse(err)
+			if errResponse.Code == "NoSuchKey" {
 				for content := range c.List(false) {
 					if content.Err != nil {
 						return nil, iodine.New(err, nil)
 					}
-					if !strings.HasPrefix(content.Content.Name, object) {
-						content.Content.Type = os.ModeDir
-						content.Content.Name = object
-						content.Content.Size = 0
-						return content.Content, nil
-					}
+					content.Content.Type = os.ModeDir
+					content.Content.Name = object
+					content.Content.Size = 0
+					return content.Content, nil
 				}
 			}
 			return nil, iodine.New(err, nil)
@@ -336,7 +335,10 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return
 			}
 			content := new(client.Content)
-			normalizedKey := strings.TrimPrefix(object.Stat.Key, strings.TrimSuffix(o, delimiter)+delimiter)
+			normalizedKey := object.Stat.Key
+			if strings.HasSuffix(o, delimiter) {
+				normalizedKey = strings.TrimPrefix(object.Stat.Key, o)
+			}
 			content.Name = normalizedKey
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
