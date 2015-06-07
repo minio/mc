@@ -141,7 +141,7 @@ func (s *MySuite) TestBucketOperations(c *C) {
 	err = s3c.SetBucketACL("public-read-write")
 	c.Assert(err, IsNil)
 
-	conf.HostURL = server.URL + "/"
+	conf.HostURL = server.URL + delimiter
 	s3c, err = New(conf)
 	c.Assert(err, IsNil)
 

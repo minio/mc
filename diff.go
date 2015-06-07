@@ -18,7 +18,6 @@ package main
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/iodine"
@@ -113,12 +112,6 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 				err:     iodine.New(contentCh.Err, nil),
 			}
 			return
-		}
-		if recursive {
-			// this special handling is necessary since we are sending back absolute paths with in ListRecursive()
-			//
-			// To be consistent we have to filter them out
-			contentCh.Content.Name = strings.TrimPrefix(contentCh.Content.Name, strings.TrimSuffix(firstURL, "/")+"/")
 		}
 		newFirstURL, err := urlJoinPath(firstURL, contentCh.Content.Name)
 		if err != nil {
