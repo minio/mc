@@ -19,8 +19,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -119,8 +117,9 @@ func runListCmd(ctx *cli.Context) {
 		targetConfig, err := getHostConfig(targetURL)
 		if err != nil {
 			console.Fatals(ErrorMessage{
-				Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", targetURL, mustGetMcConfigPath()),
-				Error:   iodine.New(err, nil),
+				Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’",
+					targetURL, mustGetMcConfigPath()),
+				Error: iodine.New(err, nil),
 			})
 		}
 		targetURLConfigMap[targetURL] = targetConfig
@@ -128,12 +127,7 @@ func runListCmd(ctx *cli.Context) {
 	for targetURL, targetConfig := range targetURLConfigMap {
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
-		// is set when ... includes a directory, i.e. /path/to/dir... instead of path/to/dir/...
-		recursivePrefix := ""
-		if isURLRecursive(targetURL) && !strings.HasSuffix(newTargetURL, string(filepath.Separator)) {
-			recursivePrefix = filepath.Base(newTargetURL)
-		}
-		err = doListCmd(newTargetURL, targetConfig, isURLRecursive(targetURL), recursivePrefix)
+		err = doListCmd(newTargetURL, targetConfig, isURLRecursive(targetURL))
 		if err != nil {
 			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Failed to list ‘%s’", targetURL),
@@ -144,12 +138,12 @@ func runListCmd(ctx *cli.Context) {
 }
 
 // doListCmd -
-func doListCmd(targetURL string, targetConfig *hostConfig, recursive bool, recursivePrefix string) error {
+func doListCmd(targetURL string, targetConfig *hostConfig, recursive bool) error {
 	clnt, err := getNewClient(targetURL, targetConfig)
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
-	err = doList(clnt, targetURL, recursive, recursivePrefix)
+	err = doList(clnt, targetURL, recursive)
 	if err != nil {
 		return iodine.New(err, nil)
 	}

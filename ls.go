@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -68,16 +67,12 @@ func parseContent(c *client.Content) Content {
 }
 
 // doList - list all entities inside a folder
-func doList(clnt client.Client, targetURL string, recursive bool, recursivePrefix string) error {
+func doList(clnt client.Client, targetURL string, recursive bool) error {
 	var err error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
 			err = contentCh.Err
 			break
-		}
-
-		if recursive && recursivePrefix != "" {
-			contentCh.Content.Name = filepath.Join(filepath.Base(targetURL), contentCh.Content.Name)
 		}
 		console.Println(parseContent(contentCh.Content))
 	}
