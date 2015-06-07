@@ -40,10 +40,10 @@ func (s *CmdTestSuite) TestLSCmd(c *C) {
 		c.Assert(err, IsNil)
 	}
 
-	err = doListCmd(root, &hostConfig{}, false, "")
+	err = doListCmd(root, &hostConfig{}, false)
 	c.Assert(err, IsNil)
 
-	err = doListCmd(root, &hostConfig{}, true, "test")
+	err = doListCmd(root, &hostConfig{}, true)
 	c.Assert(err, IsNil)
 
 	for i := 0; i < 10; i++ {
@@ -53,10 +53,10 @@ func (s *CmdTestSuite) TestLSCmd(c *C) {
 		err := putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
-	err = doListCmd(server.URL+"/bucket", &hostConfig{}, false, "")
+	err = doListCmd(server.URL+"/bucket", &hostConfig{}, false)
 	c.Assert(err, IsNil)
 
-	err = doListCmd(server.URL+"/bucket", &hostConfig{}, true, "test")
+	err = doListCmd(server.URL+"/bucket", &hostConfig{}, true)
 	c.Assert(err, IsNil)
 
 }
