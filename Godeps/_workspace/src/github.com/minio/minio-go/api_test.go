@@ -89,7 +89,7 @@ func TestBucketOperations(t *testing.T) {
 	if err == nil {
 		t.Errorf("Error")
 	}
-	if err.Error() != "403 Forbidden" {
+	if err.Error() != "Access Denied" {
 		t.Errorf("Error")
 	}
 
@@ -133,7 +133,7 @@ func TestBucketOperations(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Error")
 	}
-	if err.Error() != "404 Not Found" {
+	if err.Error() != "The specified bucket does not exist." {
 		t.Errorf("Error")
 	}
 }
@@ -191,7 +191,7 @@ func TestObjectOperations(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Error")
 	}
-	if err.Error() != "404 Not Found" {
+	if err.Error() != "The specified key does not exist." {
 		t.Errorf("Error")
 	}
 }

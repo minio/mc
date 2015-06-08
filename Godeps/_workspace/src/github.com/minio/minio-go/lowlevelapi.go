@@ -335,7 +335,24 @@ func (a lowLevelAPI) headBucket(bucket string) error {
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			// Head has no response body, handle it
-			return fmt.Errorf("%s", resp.Status)
+			var errorResponse ErrorResponse
+			switch {
+			case resp.StatusCode == http.StatusNotFound:
+				errorResponse = ErrorResponse{
+					Code:      "NoSuchBucket",
+					Message:   "The specified bucket does not exist.",
+					Resource:  "/" + bucket,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			case resp.StatusCode == http.StatusForbidden:
+				errorResponse = ErrorResponse{
+					Code:      "AccessDenied",
+					Message:   "Access Denied",
+					Resource:  "/" + bucket,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			}
+			return errorResponse
 		}
 	}
 	return nil
@@ -367,8 +384,24 @@ func (a lowLevelAPI) deleteBucket(bucket string) error {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			// Head has no response body, handle it
-			return fmt.Errorf("%s", resp.Status)
+			var errorResponse ErrorResponse
+			switch {
+			case resp.StatusCode == http.StatusNotFound:
+				errorResponse = ErrorResponse{
+					Code:      "NoSuchBucket",
+					Message:   "The specified bucket does not exist.",
+					Resource:  "/" + bucket,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			case resp.StatusCode == http.StatusForbidden:
+				errorResponse = ErrorResponse{
+					Code:      "AccessDenied",
+					Message:   "Access Denied",
+					Resource:  "/" + bucket,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			}
+			return errorResponse
 		}
 	}
 	return nil
@@ -512,7 +545,24 @@ func (a lowLevelAPI) deleteObject(bucket, object string) error {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("%s", resp.Status)
+			var errorResponse ErrorResponse
+			switch {
+			case resp.StatusCode == http.StatusNotFound:
+				errorResponse = ErrorResponse{
+					Code:      "NoSuchKey",
+					Message:   "The specified key does not exist.",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			case resp.StatusCode == http.StatusForbidden:
+				errorResponse = ErrorResponse{
+					Code:      "AccessDenied",
+					Message:   "Access Denied",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			}
+			return errorResponse
 		}
 	}
 	return nil
@@ -545,7 +595,24 @@ func (a lowLevelAPI) headObject(bucket, object string) (ObjectStat, error) {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return ObjectStat{}, fmt.Errorf("%s", resp.Status)
+			var errorResponse ErrorResponse
+			switch {
+			case resp.StatusCode == http.StatusNotFound:
+				errorResponse = ErrorResponse{
+					Code:      "NoSuchKey",
+					Message:   "The specified key does not exist.",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			case resp.StatusCode == http.StatusForbidden:
+				errorResponse = ErrorResponse{
+					Code:      "AccessDenied",
+					Message:   "Access Denied",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			}
+			return ObjectStat{}, errorResponse
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
@@ -594,7 +661,7 @@ func (a lowLevelAPI) listBuckets() (listAllMyBucketsResult, error) {
 	if resp != nil {
 		// for un-authenticated requests, amazon sends a redirect handle it
 		if resp.StatusCode == http.StatusTemporaryRedirect {
-			return listAllMyBucketsResult{}, fmt.Errorf("%s", resp.Status)
+			return listAllMyBucketsResult{}, errors.New(resp.Status)
 		}
 		if resp.StatusCode != http.StatusOK {
 			return listAllMyBucketsResult{}, responseToError(resp.Body)
