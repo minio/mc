@@ -15,7 +15,7 @@
 		},
 		{
 			"ImportPath": "github.com/fatih/structs",
-			"Rev": "c06d8730d42f16f3e8dddc236c7d69c0952a8a2c"
+			"Rev": "c00d27128bb88e9c1adab1a53cda9c72c6d1ff9b"
 		},
 		{
 			"ImportPath": "github.com/minio/check",
@@ -28,7 +28,7 @@
 		},
 		{
 			"ImportPath": "github.com/minio/minio-go",
-			"Rev": "745daad6222582eb6ecbb864f0cbcdc4427dd52f"
+			"Rev": "dee5d16f0c4515ddb2785a1b8317ec11796d8fc3"
 		},
 		{
 			"ImportPath": "github.com/minio/minio/pkg/iodine",

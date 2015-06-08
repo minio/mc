@@ -230,7 +230,24 @@ func (a lowLevelAPI) abortMultipartUpload(bucket, object, uploadID string) error
 	if resp != nil {
 		if resp.StatusCode != http.StatusNoContent {
 			// Abort has no response body, handle it
-			return fmt.Errorf("%s", resp.Status)
+			var errorResponse ErrorResponse
+			switch {
+			case resp.StatusCode == http.StatusNotFound:
+				errorResponse = ErrorResponse{
+					Code:      "NoSuchUpload",
+					Message:   "The specified multipart upload does not exist.",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			case resp.StatusCode == http.StatusForbidden:
+				errorResponse = ErrorResponse{
+					Code:      "AccessDenied",
+					Message:   "Access Denied",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			}
+			return errorResponse
 		}
 	}
 	return resp.Body.Close()

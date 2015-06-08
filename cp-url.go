@@ -124,7 +124,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *cpURLs {
 		return &cpURLs{Error: iodine.New(err, nil)}
 	}
 
-	// Source exist?
+	// Source exists?
 	sourceContent, err := sourceClient.Stat()
 	if err != nil {
 		// Source does not exist or insufficient privileges.
@@ -134,12 +134,12 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *cpURLs {
 		// Source is not a regular file
 		return &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 	}
+
 	targetClient, err := target2Client(targetURL)
 	if err != nil {
 		return &cpURLs{Error: iodine.New(err, nil)}
 	}
-
-	// Target exist?
+	// Target exists?
 	targetContent, err := targetClient.Stat()
 	if err == nil { // Target exists.
 		if !targetContent.Type.IsRegular() { // Target is not a regular file
@@ -148,6 +148,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) *cpURLs {
 	}
 
 	// All OK.. We can proceed. Type A
+	sourceContent.Name = sourceURL
 	return &cpURLs{SourceContent: sourceContent, TargetContent: &client.Content{Name: targetURL}}
 }
 
@@ -213,13 +214,6 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *cpURLs {
 
 		// add `/` after trimming off `...` to emulate directories
 		sourceURL = stripRecursiveURL(sourceURL)
-		// is set when ... includes a directory, i.e. /path/to/dir... instead of path/to/dir/...
-		recursivePrefix := ""
-		if !strings.HasSuffix(sourceURL, string(filepath.Separator)) {
-			recursivePrefix = filepath.Base(sourceURL)
-		}
-		sourceURL = strings.TrimSuffix(sourceURL, string(filepath.Separator)) + string(filepath.Separator)
-
 		sourceClient, err := source2Client(sourceURL)
 		if err != nil {
 			cpURLsCh <- &cpURLs{Error: iodine.New(err, nil)}
@@ -285,16 +279,19 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan *cpURLs {
 				continue
 			}
 
-			sourceContentParse, err := client.Parse(sourceURLParse.String() + sourceContent.Content.Name)
+			sourceURLDelimited := sourceURLParse.String()[:strings.LastIndex(sourceURLParse.String(),
+				string(sourceURLParse.Separator))+1]
+			sourceContentName := sourceContent.Content.Name
+			sourceContentURL := sourceURLDelimited + sourceContentName
+			sourceContentParse, err := client.Parse(sourceContentURL)
 			if err != nil {
-				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceContent.Content.Name}, nil)}
+				cpURLsCh <- &cpURLs{Error: iodine.New(errInvalidSource{URL: sourceContentName}, nil)}
 				continue
 			}
 
 			// Construct target path from recursive path of source without its prefix dir.
 			newTargetURLParse := *targetURLParse
-			newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, recursivePrefix,
-				strings.TrimPrefix(sourceContentParse.Path, filepath.Dir(sourceURLParse.Path)))
+			newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, sourceContentName)
 			cpURLsCh <- prepareCopyURLsTypeA(sourceContentParse.String(), newTargetURLParse.String())
 		}
 	}(sourceURL, targetURL, cpURLsCh)

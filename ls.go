@@ -38,13 +38,18 @@ const (
 func parseContent(c *client.Content) Content {
 	content := Content{}
 	content.Time = c.Time.Local().Format(printDate)
+
+	// guess file type
 	content.Filetype = func() string {
 		if c.Type.IsDir() {
 			return "inode/directory"
 		}
 		return "application/octet-stream"
 	}()
+
 	content.Size = humanize.IBytes(uint64(c.Size))
+
+	// Convert OS Type to match console file printing style
 	content.Name = func() string {
 		switch {
 		case runtime.GOOS == "windows":

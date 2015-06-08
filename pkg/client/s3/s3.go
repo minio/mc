@@ -159,20 +159,29 @@ func (c *s3Client) SetBucketACL(acl string) error {
 func (c *s3Client) Stat() (*client.Content, error) {
 	objectMetadata := new(client.Content)
 	bucket, object := c.url2BucketAndObject()
+	switch {
+	// valid case for s3:...
+	case bucket == "" && object == "":
+		for bucket := range c.api.ListBuckets() {
+			if bucket.Err != nil {
+				return nil, iodine.New(bucket.Err, nil)
+			}
+			return &client.Content{Type: os.ModeDir}, nil
+		}
+	}
 	if object != "" {
 		metadata, err := c.api.StatObject(bucket, object)
 		if err != nil {
-			if err.Error() == "404 Not Found" {
+			errResponse := s3.ToErrorResponse(err)
+			if errResponse.Code == "NoSuchKey" {
 				for content := range c.List(false) {
 					if content.Err != nil {
 						return nil, iodine.New(err, nil)
 					}
-					if !strings.HasPrefix(content.Content.Name, object) {
-						content.Content.Type = os.ModeDir
-						content.Content.Name = object
-						content.Content.Size = 0
-						return content.Content, nil
-					}
+					content.Content.Type = os.ModeDir
+					content.Content.Name = object
+					content.Content.Size = 0
+					return content.Content, nil
 				}
 			}
 			return nil, iodine.New(err, nil)
@@ -336,7 +345,20 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return
 			}
 			content := new(client.Content)
-			normalizedKey := strings.TrimPrefix(object.Stat.Key, strings.TrimSuffix(o, delimiter)+delimiter)
+			normalizedKey := object.Stat.Key
+			switch {
+			case o == "":
+				// if no prefix provided and also URL is not delimited then we add bucket back into object name
+				if strings.LastIndex(c.hostURL.Path, string(c.hostURL.Separator)) == 0 {
+					if c.hostURL.String()[:strings.LastIndex(c.hostURL.String(), string(c.hostURL.Separator))+1] != b {
+						normalizedKey = filepath.Join(b, object.Stat.Key)
+					}
+				}
+			default:
+				if strings.HasSuffix(o, delimiter) {
+					normalizedKey = strings.TrimPrefix(object.Stat.Key, o)
+				}
+			}
 			content.Name = normalizedKey
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
