@@ -25,13 +25,8 @@ import (
 	"github.com/fatih/color"
 )
 
-// update string
-const (
-	updateString = "mc cp " + mcUpdateURL + " ${HOME}/bin/mc"
-)
-
 // printUpdateNotify - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
-func printUpdateNotify(latestVersion, currentVersion string) {
+func printUpdateNotify(updateString, latestVersion, currentVersion string) {
 	// TODO - make this configurable
 	//
 	// initialize coloring
