@@ -17,18 +17,27 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"runtime"
 	"time"
 
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
 
+// Updates container to hold updates json
+type Updates struct {
+	BuildDate string
+	Platforms map[string]string
+}
+
 const (
-	mcUpdateURL = "http://dl.minio.io:9000/updates/2015/Jun/" + "mc" + "." + runtime.GOOS + "." + runtime.GOARCH
+	mcUpdateURL = "http://dl.minio.io:9000/updates/updates.json"
 )
 
 // Help message.
@@ -50,20 +59,37 @@ EXAMPLES:
 }
 
 func doUpdateCheck(config *hostConfig) (string, error) {
+	mcUpdateURLParse, err := client.Parse(mcUpdateURL)
+	if err != nil {
+		return "Unable to parse URL: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+	}
 	clnt, err := getNewClient(mcUpdateURL, config)
 	if err != nil {
 		return "Unable to create client: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
 	}
-	latest, err := clnt.Stat()
+	data, _, err := clnt.GetObject(0, 0)
 	if err != nil {
-		return "No new update available at this time", nil
+		return "Unable to read: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
 	}
 	current, _ := time.Parse(time.RFC3339Nano, Version)
 	if current.IsZero() {
-		return "Version is empty, must be a custom build cannot update. Please download releases from http://dl.minio.io:9000 for proper updates", nil
+		message := `Version is empty, must be a custom build cannot update. Please download releases from
+http://dl.minio.io:9000 for continuous updates`
+		return message, nil
 	}
-	if latest.Time.After(current) {
-		printUpdateNotify("new", "old")
+	var updates Updates
+	decoder := json.NewDecoder(data)
+	err = decoder.Decode(&updates)
+	if err != nil {
+		return "Unable to parse update fields", iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+	}
+	latest, _ := time.Parse(http.TimeFormat, updates.BuildDate)
+	if latest.IsZero() {
+		return "No update available at this time", nil
+	}
+	if latest.After(current) {
+		updateString := "mc cp " + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ${HOME}/bin/mc"
+		printUpdateNotify(updateString, "new", "old")
 		return "", nil
 	}
 	return "You are already running the most recent version of ‘mc’", nil
