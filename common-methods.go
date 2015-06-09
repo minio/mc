@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"sync"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/client/fs"
@@ -47,6 +48,42 @@ func putTarget(targetURL string, targetConfig *hostConfig, length int64, reader 
 		return iodine.New(err, map[string]string{"failedURL": targetURL})
 	}
 	return nil
+}
+
+// putTargets writes to URL from reader.
+func putTargets(targetURLs []string, length int64, reader io.Reader) chan error {
+	var tgtPipeReaders []*io.PipeReader
+	var tgtPipeWriters []*io.PipeWriter
+	var tgtClients []client.Client
+	for i, targetURL := range targetURLs {
+		tgtPipeReaders[i], tgtPipeWriters[i] = io.Pipe()
+		tgtClient, err := target2Client(targetURL)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		tgtClients[i] = tgtClient
+	}
+
+	errChan := make(chan error)
+	var wg sync.WaitGroup
+
+	multiTgtWriter := io.MultiWriter(tgtPipeWriters...)
+	go io.CopyN(multiTgtWriter, io.Reader)
+
+	for i, targetURL := range targetURLs {
+		wg.Add(1)
+		go func(targetClient client.Client, reader io.Reader, errCh chan error) {
+			defer wg.Done()
+			err = targetClnt[i].PutObject(length, reader)
+			if err != nil {
+				// TODO: client.Client needs a URL() method. Fix this after implementing one.
+				// errCh <- iodine.New(err, map[string]string{"failedURL": targetURL})
+				errCh <- iodine.New(err, nil)
+			}
+			errCh <- nil
+		}(tgtClients[i], tgtPipeReaders[i], errCh)
+	}
+	wg.Wait()
 }
 
 // getNewClient gives a new client interface
