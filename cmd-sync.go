@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"runtime"
 	"sync"
@@ -66,6 +67,44 @@ EXAMPLES:
 `,
 }
 
+// doSync - Sync an object to multiple destination
+func doSync(sURLs syncURLs, bar *barSend) error {
+	if !globalQuietFlag {
+		bar.SetPrefix(sURLs.SourceContent.Name + ": ")
+	}
+	reader, length, err := getSource(sURLs.SourceContent.Name)
+	if err != nil {
+		if !globalQuietFlag {
+			bar.ErrorGet(int64(length))
+		}
+		return iodine.New(err, map[string]string{"URL": sURLs.SourceContent.Name})
+	}
+	defer reader.Close()
+
+	var targetURLs []string
+	for _, targetContent := range sURLs.TargetContents {
+		targetURLs = append(targetURLs, targetContent.Name)
+	}
+
+	var newReader io.Reader
+	switch globalQuietFlag {
+	case true:
+		newReader = reader
+	default:
+		// set up progress
+		newReader = bar.NewProxyReader(reader)
+	}
+
+	for err := range putTargets(targetURLs, length, newReader) {
+		if err != nil {
+			if !globalQuietFlag {
+				bar.ErrorPut(int64(length))
+			}
+		}
+	}
+	return nil
+}
+
 func runSyncCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
@@ -104,14 +143,14 @@ func runSyncCmd(ctx *cli.Context) {
 	}
 
 	go func(sourceURL string, targetURLs []string) {
-		for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
-			if syncURLs.Error != nil {
+		for sURLs := range prepareSyncURLs(sourceURL, targetURLs) {
+			if sURLs.Error != nil {
 				// no need to print errors here, any error here
 				// will be printed later during Sync()
 				continue
 			}
 			if !globalQuietFlag {
-				bar.Extend(syncURLs.SourceContent.Size)
+				bar.Extend(sURLs.SourceContent.Size)
 				lock.Up() // Let copy routine know that it is catch up.
 			}
 		}
@@ -120,11 +159,11 @@ func runSyncCmd(ctx *cli.Context) {
 	syncQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
 	var wg sync.WaitGroup
 
-	for syncURLs := range prepareSyncURLs(sourceURL, targetURLs) {
-		if syncURLs.Error != nil {
+	for sURLs := range prepareSyncURLs(sourceURL, targetURLs) {
+		if sURLs.Error != nil {
 			console.Errors(ErrorMessage{
 				Message: "Failed with",
-				Error:   iodine.New(syncURLs.Error, nil),
+				Error:   iodine.New(sURLs.Error, nil),
 			})
 			continue
 		}
@@ -136,32 +175,13 @@ func runSyncCmd(ctx *cli.Context) {
 		if !globalQuietFlag {
 			lock.Down() // Do not jump ahead of the progress bar builder above.
 		}
-		go func(syncURLs *cpURLs, bar *barSend) {
+		go func(sURLs syncURLs, bar *barSend) {
 			defer wg.Done()
-			srcConfig, err := getHostConfig(syncURLs.SourceContent.Name)
-			if err != nil {
-				console.Fatals(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(err, nil),
-				})
+			if err := doSync(sURLs, bar); err != nil {
 				return
-			}
-			tgtConfig, err := getHostConfig(syncURLs.TargetContent.Name)
-			if err != nil {
-				console.Fatals(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(err, nil),
-				})
-				return
-			}
-			if err := doCopy(syncURLs.SourceContent.Name, srcConfig, syncURLs.TargetContent.Name, tgtConfig, bar); err != nil {
-				console.Errors(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(err, nil),
-				})
 			}
 			<-syncQueue
-		}(syncURLs, &bar)
+		}(sURLs, &bar)
 	}
 	wg.Wait()
 	if !globalQuietFlag {

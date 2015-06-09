@@ -97,7 +97,6 @@ func runListCmd(ctx *cli.Context) {
 			Error:   iodine.New(err, nil),
 		})
 	}
-	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range args {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
@@ -114,20 +113,9 @@ func runListCmd(ctx *cli.Context) {
 				})
 			}
 		}
-		targetConfig, err := getHostConfig(targetURL)
-		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’",
-					targetURL, mustGetMcConfigPath()),
-				Error: iodine.New(err, nil),
-			})
-		}
-		targetURLConfigMap[targetURL] = targetConfig
-	}
-	for targetURL, targetConfig := range targetURLConfigMap {
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
-		err = doListCmd(newTargetURL, targetConfig, isURLRecursive(targetURL))
+		err = doListCmd(newTargetURL, isURLRecursive(targetURL))
 		if err != nil {
 			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Failed to list ‘%s’", targetURL),
@@ -138,12 +126,12 @@ func runListCmd(ctx *cli.Context) {
 }
 
 // doListCmd -
-func doListCmd(targetURL string, targetConfig *hostConfig, recursive bool) error {
-	clnt, err := getNewClient(targetURL, targetConfig)
+func doListCmd(targetURL string, recursive bool) error {
+	clnt, err := target2Client(targetURL)
 	if err != nil {
 		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
-	err = doList(clnt, targetURL, recursive)
+	err = doList(clnt, recursive)
 	if err != nil {
 		return iodine.New(err, nil)
 	}

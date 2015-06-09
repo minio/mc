@@ -74,7 +74,6 @@ func runMakeBucketCmd(ctx *cli.Context) {
 			Error:   err,
 		})
 	}
-	targetURLConfigMap := make(map[string]*hostConfig)
 	for _, arg := range ctx.Args() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
@@ -91,17 +90,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 				})
 			}
 		}
-		targetConfig, err := getHostConfig(targetURL)
-		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", targetURL, mustGetMcConfigPath()),
-				Error:   err,
-			})
-		}
-		targetURLConfigMap[targetURL] = targetConfig
-	}
-	for targetURL, targetConfig := range targetURLConfigMap {
-		errorMsg, err := doMakeBucketCmd(targetURL, targetConfig)
+		errorMsg, err := doMakeBucketCmd(targetURL)
 		if err != nil {
 			console.Errors(ErrorMessage{
 				Message: errorMsg,
@@ -112,22 +101,22 @@ func runMakeBucketCmd(ctx *cli.Context) {
 }
 
 // doMakeBucketCmd -
-func doMakeBucketCmd(targetURL string, targetConfig *hostConfig) (string, error) {
+func doMakeBucketCmd(targetURL string) (string, error) {
 	var err error
 	var clnt client.Client
-	clnt, err = getNewClient(targetURL, targetConfig)
+	clnt, err = target2Client(targetURL)
 	if err != nil {
 		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
 		return msg, iodine.New(err, nil)
 	}
-	return doMakeBucket(clnt, targetURL)
+	return doMakeBucket(clnt)
 }
 
 // doMakeBucket - wrapper around MakeBucket() API
-func doMakeBucket(clnt client.Client, targetURL string) (string, error) {
+func doMakeBucket(clnt client.Client) (string, error) {
 	err := clnt.MakeBucket()
 	if err != nil {
-		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", targetURL)
+		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", clnt.URL().String())
 		return msg, iodine.New(err, nil)
 	}
 	return "", nil

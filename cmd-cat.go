@@ -90,14 +90,7 @@ func runCatCmd(ctx *cli.Context) {
 	}
 
 	sourceURLs := urls
-	sourceURLConfigMap, err := getHostConfigs(sourceURLs)
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", sourceURLs, mustGetMcConfigPath()),
-			Error:   iodine.New(err, nil),
-		})
-	}
-	humanReadable, err := doCatCmd(sourceURLConfigMap)
+	humanReadable, err := doCatCmd(sourceURLs)
 	if err != nil {
 		console.Fatals(ErrorMessage{
 			Message: humanReadable,
@@ -106,9 +99,9 @@ func runCatCmd(ctx *cli.Context) {
 	}
 }
 
-func doCatCmd(sourceURLConfigMap map[string]*hostConfig) (string, error) {
-	for url, config := range sourceURLConfigMap {
-		sourceClnt, err := getNewClient(url, config)
+func doCatCmd(sourceURLs []string) (string, error) {
+	for _, url := range sourceURLs {
+		sourceClnt, err := source2Client(url)
 		if err != nil {
 			return "Unable to create client: " + url, iodine.New(err, nil)
 		}

@@ -67,29 +67,24 @@ const (
 
 // Check if the target URL represents directory. It may or may not exist yet.
 func isTargetURLDir(targetURL string) bool {
-	if strings.HasSuffix(targetURL, string(filepath.Separator)) {
+	targetURLParse, err := client.Parse(targetURL)
+	if err != nil {
+		return false
+	}
+	if strings.HasSuffix(targetURLParse.String(), string(targetURLParse.Separator)) {
 		return true
 	}
-
-	targetConfig, err := getHostConfig(targetURL)
+	targetClient, err := target2Client(targetURL)
 	if err != nil {
 		return false
 	}
-
-	targetClient, err := getNewClient(targetURL, targetConfig)
-	if err != nil {
-		return false
-	}
-
 	targetContent, err := targetClient.Stat()
 	if err != nil { // Cannot stat target
 		return false
 	}
-
 	if !targetContent.Type.IsDir() { // Target is a dir. Type B
 		return false
 	}
-
 	return true
 }
 

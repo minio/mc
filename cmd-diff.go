@@ -91,23 +91,6 @@ func runDiffCmd(ctx *cli.Context) {
 			})
 		}
 	}
-
-	_, err = getHostConfig(firstURL)
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", firstURL, mustGetMcConfigPath()),
-			Error:   err,
-		})
-	}
-
-	_, err = getHostConfig(secondURL)
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unable to read host configuration for ‘%s’ from config file ‘%s’", secondURL, mustGetMcConfigPath()),
-			Error:   err,
-		})
-	}
-
 	secondURL, err = getExpandedURL(secondURL, config.Aliases)
 	if err != nil {
 		switch iodine.ToError(err).(type) {

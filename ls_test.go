@@ -36,27 +36,27 @@ func (s *CmdTestSuite) TestLSCmd(c *C) {
 		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
+		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
 
-	err = doListCmd(root, &hostConfig{}, false)
+	err = doListCmd(root, false)
 	c.Assert(err, IsNil)
 
-	err = doListCmd(root, &hostConfig{}, true)
+	err = doListCmd(root, true)
 	c.Assert(err, IsNil)
 
 	for i := 0; i < 10; i++ {
 		objectPath := server.URL + "/bucket/object" + strconv.Itoa(i)
 		data := "hello"
 		dataLen := len(data)
-		err := putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
+		err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
-	err = doListCmd(server.URL+"/bucket", &hostConfig{}, false)
+	err = doListCmd(server.URL+"/bucket", false)
 	c.Assert(err, IsNil)
 
-	err = doListCmd(server.URL+"/bucket", &hostConfig{}, true)
+	err = doListCmd(server.URL+"/bucket", true)
 	c.Assert(err, IsNil)
 
 }

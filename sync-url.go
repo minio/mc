@@ -16,7 +16,10 @@
 
 package main
 
-import "github.com/minio/minio/pkg/iodine"
+import (
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/minio/pkg/iodine"
+)
 
 //
 //   NOTE: All the parse rules should reduced to A: Copy(Source, Target).
@@ -40,29 +43,50 @@ import "github.com/minio/minio/pkg/iodine"
 //   sync(*, f1)
 //   sync(*, []f1)
 
-type syncURLs cpURLs
+type syncURLs struct {
+	SourceContent  *client.Content
+	TargetContents []*client.Content
+	Error          error
+}
 
 // prepareCopyURLs - prepares target and source URLs for syncing.
-func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan *cpURLs {
-	syncURLsCh := make(chan *cpURLs)
+func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
+	syncURLsCh := make(chan syncURLs)
 
 	go func() {
 		defer close(syncURLsCh)
-		for _, targetURL := range targetURLs {
-			switch guessCopyURLType([]string{sourceURL}, targetURL) {
-			case cpURLsTypeA:
-				syncURLs := prepareCopyURLsTypeA(sourceURL, targetURL)
-				syncURLsCh <- syncURLs
-			case cpURLsTypeB:
-				syncURLs := prepareCopyURLsTypeB(sourceURL, targetURL)
-				syncURLsCh <- syncURLs
-			case cpURLsTypeC:
-				for syncURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {
-					syncURLsCh <- syncURLs
-				}
-			default:
-				syncURLsCh <- &cpURLs{Error: iodine.New(errInvalidArgument{}, nil)}
+		switch guessCopyURLType([]string{sourceURL}, targetURLs[0]) {
+		case cpURLsTypeA:
+			var sURLs syncURLs
+			for _, targetURL := range targetURLs {
+				cpURLs := prepareCopyURLsTypeA(sourceURL, targetURL)
+				sURLs.SourceContent = cpURLs.SourceContent
+				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
 			}
+			syncURLsCh <- sURLs
+		case cpURLsTypeB:
+			var sURLs syncURLs
+			for _, targetURL := range targetURLs {
+				cpURLs := prepareCopyURLsTypeB(sourceURL, targetURL)
+				sURLs.SourceContent = cpURLs.SourceContent
+				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
+			}
+			syncURLsCh <- sURLs
+		case cpURLsTypeC:
+			var cpURLsList []*cpURLs
+			for _, targetURL := range targetURLs {
+				for cpURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {
+					cpURLsList = append(cpURLsList, cpURLs)
+				}
+			}
+			var sURLs syncURLs
+			for _, cpURLs := range cpURLsList {
+				sURLs.SourceContent = cpURLs.SourceContent
+				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
+				syncURLsCh <- sURLs
+			}
+		default:
+			syncURLsCh <- syncURLs{Error: iodine.New(errInvalidArgument{}, nil)}
 		}
 	}()
 	return syncURLsCh

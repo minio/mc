@@ -72,7 +72,7 @@ func parseContent(c *client.Content) Content {
 }
 
 // doList - list all entities inside a folder
-func doList(clnt client.Client, targetURL string, recursive bool) error {
+func doList(clnt client.Client, recursive bool) error {
 	var err error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
@@ -82,7 +82,7 @@ func doList(clnt client.Client, targetURL string, recursive bool) error {
 		console.Println(parseContent(contentCh.Content))
 	}
 	if err != nil {
-		return iodine.New(err, map[string]string{"Target": targetURL})
+		return iodine.New(err, map[string]string{"Target": clnt.URL().String()})
 	}
 	return nil
 }
