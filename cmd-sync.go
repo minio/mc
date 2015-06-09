@@ -68,43 +68,39 @@ EXAMPLES:
 }
 
 // doSync - Sync an object to multiple destination
-func doSync(sourceURL string, targetURL []string, bar *barSend) error {
-	srcConfig, err := getHostConfig(sURLs.SourceContent.Name)
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "Failed with",
-			Error:   iodine.New(err, nil),
-		})
-	}
-
+func doSync(sURLs syncURLs, bar *barSend) error {
 	if !globalQuietFlag {
-		bar.SetPrefix(sourceURL + ": ")
+		bar.SetPrefix(sURLs.SourceContent.Name + ": ")
 	}
-	reader, length, err := getSource(sourceURL, sourceConfig)
+	reader, length, err := getSource(sURLs.SourceContent.Name)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorGet(int64(length))
 		}
-		return iodine.New(err, map[string]string{"URL": sourceURL})
+		return iodine.New(err, map[string]string{"URL": sURLs.SourceContent.Name})
 	}
 	defer reader.Close()
+
+	var targetURLs []string
+	for _, targetContent := range sURLs.TargetContents {
+		targetURLs = append(targetURLs, targetContent.Name)
+	}
 
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
-		console.Infoln(fmt.Sprintf("‘%s’ -> ‘%s’", sourceURL, targetURL))
 		newReader = reader
 	default:
 		// set up progress
 		newReader = bar.NewProxyReader(reader)
 	}
 
-	err = putTargets(targetURLs, length, newReader)
-	if err != nil {
-		if !globalQuietFlag {
-			bar.ErrorPut(int64(length))
+	for err := range putTargets(targetURLs, length, newReader) {
+		if err != nil {
+			if !globalQuietFlag {
+				bar.ErrorPut(int64(length))
+			}
 		}
-		return iodine.New(err, nil)
 	}
 	return nil
 }
@@ -181,8 +177,8 @@ func runSyncCmd(ctx *cli.Context) {
 		}
 		go func(sURLs syncURLs, bar *barSend) {
 			defer wg.Done()
-			if err := doSync(syncURLs, bar); err != nil {
-				errCh <- err
+			if err := doSync(sURLs, bar); err != nil {
+				return
 			}
 			<-syncQueue
 		}(sURLs, &bar)

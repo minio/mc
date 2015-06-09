@@ -68,9 +68,9 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) <-chan erro
 	}
 	var wg sync.WaitGroup
 
-	var tgtWriters []io.Writer
+	tgtWriters := make([]io.Writer, len(tgtPipeWriters))
 	for i, tgtPipeWriter := range tgtPipeWriters {
-		tgtWriters = append(tgtWriters, tgtPipeWriter)
+		tgtWriters[i] = tgtPipeWriter
 	}
 	multiTgtWriter := io.MultiWriter(tgtWriters...)
 	go io.CopyN(multiTgtWriter, reader, length)

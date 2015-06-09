@@ -35,15 +35,14 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 	objectPathServer := server.URL + "/bucket/object1"
 	data := "hello"
 	dataLen := len(data)
-	err = putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
-	err = putTarget(objectPathServer, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	sourceConfigMap := make(map[string]*hostConfig)
-	sourceConfigMap[objectPath] = &hostConfig{}
-	sourceConfigMap[server.URL+"/bucket/object1"] = &hostConfig{}
-
-	_, err = doCatCmd(sourceConfigMap)
+	var sourceURLs []string
+	sourceURLs = append(sourceURLs, objectPath)
+	sourceURLs = append(sourceURLs, objectPathServer)
+	_, err = doCatCmd(sourceURLs)
 	c.Assert(err, IsNil)
 }

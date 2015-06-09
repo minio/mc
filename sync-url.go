@@ -44,52 +44,49 @@ import (
 //   sync(*, []f1)
 
 type syncURLs struct {
-	SourceContent *client.Content
-	TargetContent []*client.Content
-	Error         error
+	SourceContent  *client.Content
+	TargetContents []*client.Content
+	Error          error
 }
 
 // prepareCopyURLs - prepares target and source URLs for syncing.
 func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
-	syncURLsCh := make(chan *syncURLs)
+	syncURLsCh := make(chan syncURLs)
 
 	go func() {
 		defer close(syncURLsCh)
 		switch guessCopyURLType([]string{sourceURL}, targetURLs[0]) {
 		case cpURLsTypeA:
 			var sURLs syncURLs
-			for i, targetURL := range targetURLs {
+			for _, targetURL := range targetURLs {
 				cpURLs := prepareCopyURLsTypeA(sourceURL, targetURL)
 				sURLs.SourceContent = cpURLs.SourceContent
-				sURLs.TargetContent = append(sURLs.TargetContent, cpURLs.TargetContent)
+				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
 			}
 			syncURLsCh <- sURLs
 		case cpURLsTypeB:
 			var sURLs syncURLs
-			for i, targetURL := range targetURLs {
+			for _, targetURL := range targetURLs {
 				cpURLs := prepareCopyURLsTypeB(sourceURL, targetURL)
 				sURLs.SourceContent = cpURLs.SourceContent
-				sURLs.TargetContent = append(sURLs.TargetContent, cpURLs.TargetContent)
+				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
 			}
 			syncURLsCh <- sURLs
 		case cpURLsTypeC:
-			var cpURLsChs []<-chan *cpURLs
+			var cpURLsList []*cpURLs
 			for _, targetURL := range targetURLs {
-				cpURLsCh := prepareCopyURLsTypeC(sourceURL, targetURL)
-				cpURLsChs = append(cpURLsChs, cpURLsCh)
-			}
-
-			var sURLsList []syncURLs
-			for cpURLs = range cpURLsChs[0] {
-				sURLsList.SourceContent = cpURLs.SourceContent
-				for cpURLsCh := range cpURLsChs[1:] {
-					cpURLs <- cpURLsCh
-					sURLsList.TargetContent = append(sURLsList.TargetContent, cpURLs.TargetContent)
+				for cpURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {
+					cpURLsList = append(cpURLsList, cpURLs)
 				}
-				syncURLsCh <- sURLsList
+			}
+			var sURLs syncURLs
+			for _, cpURLs := range cpURLsList {
+				sURLs.SourceContent = cpURLs.SourceContent
+				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
+				syncURLsCh <- sURLs
 			}
 		default:
-			syncURLsCh <- &cpURLs{Error: iodine.New(errInvalidArgument{}, nil)}
+			syncURLsCh <- syncURLs{Error: iodine.New(errInvalidArgument{}, nil)}
 		}
 	}()
 	return syncURLsCh

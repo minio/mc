@@ -39,13 +39,13 @@ func (s *CmdTestSuite) TestDiffObjects(c *C) {
 	objectPath1 := filepath.Join(root1, "object1")
 	data := "hello"
 	dataLen := len(data)
-	err = putTarget(objectPath1, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(objectPath1, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	objectPath2 := filepath.Join(root2, "object1")
 	data = "hello"
 	dataLen = len(data)
-	err = putTarget(objectPath2, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(objectPath2, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	for diff := range doDiffCmd(objectPath1, objectPath2, false) {
@@ -68,7 +68,7 @@ func (s *CmdTestSuite) TestDiffDirs(c *C) {
 		objectPath := filepath.Join(root1, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
+		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
 
@@ -76,7 +76,7 @@ func (s *CmdTestSuite) TestDiffDirs(c *C) {
 		objectPath := filepath.Join(root2, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, &hostConfig{}, int64(dataLen), bytes.NewReader([]byte(data)))
+		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
 
