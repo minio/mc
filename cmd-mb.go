@@ -52,7 +52,7 @@ EXAMPLES:
       $ mc {{.Name}} ~/
 
    3. Create a bucket on Minio object storage.
-      $ mc {{.Name}} http://play.minio.io:9000/mongodb-backup
+      $ mc {{.Name}} https://play.minio.io:9000/mongodb-backup
 `,
 }
 

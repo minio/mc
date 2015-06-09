@@ -103,7 +103,7 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 		},
 		{
 			"play",
-			"http://play.minio.io:9000",
+			"https://play.minio.io:9000",
 		},
 		{
 			"localhost",

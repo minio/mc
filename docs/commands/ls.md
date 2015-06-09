@@ -9,7 +9,7 @@ USAGE:
 
 EXAMPLES:
    1. List objects recursively on Minio object storage
-         $ mc ls http://play.minio.io:9000/backup/...
+         $ mc ls https://play.minio.io:9000/backup/...
          [2015-03-28 12:47:50 PDT]  34MiB 2006-Jan-1/backup.tar.gz
          [2015-03-31 14:46:33 PDT]  55MiB 2006-Mar-1/backup.tar.gz
 
@@ -19,7 +19,7 @@ EXAMPLES:
          [2015-01-15 00:05:40 PST]     0B zek/
 
    3. List buckets from Amazon S3 object storage and recursively list objects from Minio object storage
-         $ mc ls https://s3.amazonaws.com/ http://play.minio.io:9000/backup/...
+         $ mc ls https://s3.amazonaws.com/ https://play.minio.io:9000/backup/...
 	 [2015-01-15 00:05:40 PST]     0B zek/
 	 [2015-03-31 14:46:33 PDT]  55MiB 2006-Mar-1/backup.tar.gz
 
