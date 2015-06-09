@@ -52,7 +52,6 @@ type syncURLs struct {
 // prepareCopyURLs - prepares target and source URLs for syncing.
 func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
 	syncURLsCh := make(chan syncURLs)
-
 	go func() {
 		defer close(syncURLsCh)
 		switch guessCopyURLType([]string{sourceURL}, targetURLs[0]) {
@@ -76,6 +75,10 @@ func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
 			var cpURLsList []*cpURLs
 			for _, targetURL := range targetURLs {
 				for cpURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {
+					if cpURLs.Error != nil {
+						syncURLsCh <- syncURLs{Error: iodine.New(cpURLs.Error, nil)}
+						continue
+					}
 					cpURLsList = append(cpURLsList, cpURLs)
 				}
 			}
