@@ -68,11 +68,11 @@ EXAMPLES:
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, targetConfig *hostConfig, bar *barSend) error {
+func doCopy(sourceURL string, targetURL string, bar *barSend) error {
 	if !globalQuietFlag {
 		bar.SetPrefix(sourceURL + ": ")
 	}
-	reader, length, err := getSource(sourceURL, sourceConfig)
+	reader, length, err := getSource(sourceURL)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorGet(int64(length))
@@ -91,7 +91,7 @@ func doCopy(sourceURL string, sourceConfig *hostConfig, targetURL string, target
 		newReader = bar.NewProxyReader(reader)
 	}
 
-	err = putTarget(targetURL, targetConfig, length, newReader)
+	err = putTarget(targetURL, length, newReader)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorPut(int64(length))
@@ -117,17 +117,7 @@ func args2URLs(args cli.Args) ([]string, error) {
 
 func doCopyInRoutine(cpurls *cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
-	srcConfig, err := getHostConfig(cpurls.SourceContent.Name)
-	if err != nil {
-		errCh <- err
-		return
-	}
-	tgtConfig, err := getHostConfig(cpurls.TargetContent.Name)
-	if err != nil {
-		errCh <- err
-		return
-	}
-	if err := doCopy(cpurls.SourceContent.Name, srcConfig, cpurls.TargetContent.Name, tgtConfig, bar); err != nil {
+	if err := doCopy(cpurls.SourceContent.Name, cpurls.TargetContent.Name, bar); err != nil {
 		errCh <- err
 	}
 	<-cpQueue // Signal that this copy routine is done.

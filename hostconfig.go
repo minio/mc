@@ -29,18 +29,6 @@ type hostConfig struct {
 	SecretAccessKey string
 }
 
-// getHostConfigs retrieves host specific configuration such as access keys, certs for a list of  URLs
-func getHostConfigs(URLs []string) (hostConfigs map[string]*hostConfig, err error) {
-	hostConfigs = make(map[string]*hostConfig)
-	for _, URL := range URLs {
-		hostConfigs[URL], err = getHostConfig(URL)
-		if err != nil {
-			return nil, iodine.New(err, nil)
-		}
-	}
-	return hostConfigs, nil
-}
-
 // getHostConfig retrieves host specific configuration such as access keys, certs.
 func getHostConfig(URL string) (*hostConfig, error) {
 	config, err := getMcConfig()

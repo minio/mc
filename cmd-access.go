@@ -78,7 +78,6 @@ func runAccessCmd(ctx *cli.Context) {
 			Error:   iodine.New(err, nil),
 		})
 	}
-	targetURLConfigMap := make(map[string]*hostConfig)
 	targetURLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
 	if err != nil {
 		console.Fatals(ErrorMessage{
@@ -95,17 +94,7 @@ func runAccessCmd(ctx *cli.Context) {
 	}
 	targetURLs = targetURLs[1:] // 1 or more target URLs
 	for _, targetURL := range targetURLs {
-		targetConfig, err := getHostConfig(targetURL)
-		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Unable to read configuration for host " + "‘" + targetURL + "’",
-				Error:   iodine.New(err, nil),
-			})
-		}
-		targetURLConfigMap[targetURL] = targetConfig
-	}
-	for targetURL, targetConfig := range targetURLConfigMap {
-		errorMsg, err := doUpdateAccessCmd(targetURL, acl.String(), targetConfig)
+		errorMsg, err := doUpdateAccessCmd(targetURL, acl)
 		if err != nil {
 			console.Errors(ErrorMessage{
 				Message: errorMsg,
@@ -115,21 +104,21 @@ func runAccessCmd(ctx *cli.Context) {
 	}
 }
 
-func doUpdateAccessCmd(targetURL, targetACL string, targetConfig *hostConfig) (string, error) {
+func doUpdateAccessCmd(targetURL string, targetACL bucketACL) (string, error) {
 	var err error
 	var clnt client.Client
-	clnt, err = getNewClient(targetURL, targetConfig)
+	clnt, err = target2Client(targetURL)
 	if err != nil {
 		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
 		return msg, iodine.New(err, nil)
 	}
-	return doUpdateAccess(clnt, targetURL, targetACL)
+	return doUpdateAccess(clnt, targetACL)
 }
 
-func doUpdateAccess(clnt client.Client, targetURL, targetACL string) (string, error) {
-	err := clnt.SetBucketACL(targetACL)
+func doUpdateAccess(clnt client.Client, targetACL bucketACL) (string, error) {
+	err := clnt.SetBucketACL(targetACL.String())
 	if err != nil {
-		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’", targetURL)
+		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’", clnt.URL().String())
 		return msg, iodine.New(err, nil)
 	}
 	return "", nil

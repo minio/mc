@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"os"
 	"runtime"
@@ -29,8 +30,8 @@ import (
 )
 
 // getSource gets a reader from URL<
-func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser, length int64, err error) {
-	sourceClnt, err := getNewClient(sourceURL, sourceConfig)
+func getSource(sourceURL string) (reader io.ReadCloser, length int64, err error) {
+	sourceClnt, err := source2Client(sourceURL)
 	if err != nil {
 		return nil, 0, iodine.New(err, map[string]string{"failedURL": sourceURL})
 	}
@@ -38,8 +39,8 @@ func getSource(sourceURL string, sourceConfig *hostConfig) (reader io.ReadCloser
 }
 
 // putTarget writes to URL from reader.
-func putTarget(targetURL string, targetConfig *hostConfig, length int64, reader io.Reader) error {
-	targetClnt, err := getNewClient(targetURL, targetConfig)
+func putTarget(targetURL string, length int64, reader io.Reader) error {
+	targetClnt, err := target2Client(targetURL)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -51,39 +52,42 @@ func putTarget(targetURL string, targetConfig *hostConfig, length int64, reader 
 }
 
 // putTargets writes to URL from reader.
-func putTargets(targetURLs []string, length int64, reader io.Reader) chan error {
+func putTargets(targetURLs []string, length int64, reader io.Reader) <-chan error {
 	var tgtPipeReaders []*io.PipeReader
 	var tgtPipeWriters []*io.PipeWriter
 	var tgtClients []client.Client
+	var errorCh = make(chan error)
 	for i, targetURL := range targetURLs {
 		tgtPipeReaders[i], tgtPipeWriters[i] = io.Pipe()
 		tgtClient, err := target2Client(targetURL)
 		if err != nil {
-			return iodine.New(err, nil)
+			errorCh <- iodine.New(err, nil)
+			continue
 		}
 		tgtClients[i] = tgtClient
 	}
-
-	errChan := make(chan error)
 	var wg sync.WaitGroup
 
-	multiTgtWriter := io.MultiWriter(tgtPipeWriters...)
-	go io.CopyN(multiTgtWriter, io.Reader)
+	var tgtWriters []io.Writer
+	for i, tgtPipeWriter := range tgtPipeWriters {
+		tgtWriters = append(tgtWriters, tgtPipeWriter)
+	}
+	multiTgtWriter := io.MultiWriter(tgtWriters...)
+	go io.CopyN(multiTgtWriter, reader, length)
 
-	for i, targetURL := range targetURLs {
+	for i := range tgtClients {
 		wg.Add(1)
-		go func(targetClient client.Client, reader io.Reader, errCh chan error) {
+		go func(targetClient client.Client, reader io.Reader, errorCh chan error) {
 			defer wg.Done()
-			err = targetClnt[i].PutObject(length, reader)
+			err := targetClient.PutObject(length, reader)
 			if err != nil {
-				// TODO: client.Client needs a URL() method. Fix this after implementing one.
-				// errCh <- iodine.New(err, map[string]string{"failedURL": targetURL})
-				errCh <- iodine.New(err, nil)
+				errorCh <- iodine.New(err, map[string]string{"failedURL": targetClient.URL().String()})
 			}
-			errCh <- nil
-		}(tgtClients[i], tgtPipeReaders[i], errCh)
+			close(errorCh)
+		}(tgtClients[i], tgtPipeReaders[i], errorCh)
 	}
 	wg.Wait()
+	return errorCh
 }
 
 // getNewClient gives a new client interface
@@ -132,24 +136,32 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 	return client, content, nil
 }
 
+func url2Client(url string) (client.Client, error) {
+	// Empty source arg?
+	urlParse, err := client.Parse(url)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
+	if urlParse.Path == "" {
+		return nil, iodine.New(errors.New("invalid path"), nil)
+	}
+
+	urlonfig, err := getHostConfig(url)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+
+	client, err := getNewClient(url, urlonfig)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	return client, nil
+}
+
 // source2Client returns client and hostconfig objects from the source URL.
 func source2Client(sourceURL string) (client.Client, error) {
-	// Empty source arg?
-	sourceURLParse, err := client.Parse(sourceURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
-	}
-
-	if sourceURLParse.Path == "" {
-		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
-	}
-
-	sourceConfig, err := getHostConfig(sourceURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
-	}
-
-	sourceClient, err := getNewClient(sourceURL, sourceConfig)
+	sourceClient, err := url2Client(sourceURL)
 	if err != nil {
 		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
 	}
@@ -158,20 +170,7 @@ func source2Client(sourceURL string) (client.Client, error) {
 
 // target2Client returns client and hostconfig objects from the target URL.
 func target2Client(targetURL string) (client.Client, error) {
-	// Empty target arg?
-	targetURLParse, err := client.Parse(targetURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
-	}
-	if targetURLParse.Path == "" {
-		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
-	}
-	targetConfig, err := getHostConfig(targetURL)
-	if err != nil {
-		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
-	}
-
-	targetClient, err := getNewClient(targetURL, targetConfig)
+	targetClient, err := url2Client(targetURL)
 	if err != nil {
 		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
 	}

@@ -89,7 +89,6 @@ func doSync(sourceURL string, targetURL []string, bar *barSend) error {
 	}
 	defer reader.Close()
 
-
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
@@ -182,7 +181,7 @@ func runSyncCmd(ctx *cli.Context) {
 		}
 		go func(sURLs syncURLs, bar *barSend) {
 			defer wg.Done()
-			if err := doSync(..., bar); err != nil {
+			if err := doSync(syncURLs, bar); err != nil {
 				errCh <- err
 			}
 			<-syncQueue

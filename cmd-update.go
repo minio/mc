@@ -19,13 +19,11 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"runtime"
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
@@ -58,12 +56,8 @@ EXAMPLES:
 `,
 }
 
-func doUpdateCheck(config *hostConfig) (string, error) {
-	mcUpdateURLParse, err := client.Parse(mcUpdateURL)
-	if err != nil {
-		return "Unable to parse URL: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
-	}
-	clnt, err := getNewClient(mcUpdateURL, config)
+func doUpdateCheck() (string, error) {
+	clnt, err := url2Client(mcUpdateURL)
 	if err != nil {
 		return "Unable to create client: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
 	}
@@ -87,6 +81,7 @@ https://dl.minio.io:9000 for continuous updates`
 	if latest.IsZero() {
 		return "No update available at this time", nil
 	}
+	mcUpdateURLParse := clnt.URL()
 	if latest.After(current) {
 		updateString := "mc cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ${HOME}/bin/mc"
 		printUpdateNotify(updateString, "new", "old")
@@ -107,14 +102,7 @@ func runUpdateCmd(ctx *cli.Context) {
 			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
 		})
 	}
-	hostConfig, err := getHostConfig(mcUpdateURL)
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unable to read configuration for host ‘%s’", mcUpdateURL),
-			Error:   iodine.New(err, nil),
-		})
-	}
-	msg, err := doUpdateCheck(hostConfig)
+	msg, err := doUpdateCheck()
 	if err != nil {
 		console.Fatals(ErrorMessage{
 			Message: msg,
