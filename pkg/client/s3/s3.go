@@ -109,6 +109,11 @@ func New(config *Config) (client.Client, error) {
 	return &s3Client{api: api, hostURL: u}, nil
 }
 
+// URL get url
+func (c *s3Client) URL() *client.URL {
+	return c.hostURL
+}
+
 // GetObject - get object
 func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, error) {
 	bucket, object := c.url2BucketAndObject()

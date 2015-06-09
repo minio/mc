@@ -35,6 +35,9 @@ type Client interface {
 	// Object operations
 	GetObject(offset, length int64) (body io.ReadCloser, size int64, err error)
 	PutObject(size int64, data io.Reader) error
+
+	// URL returns back internal url
+	URL() *URL
 }
 
 // ContentOnChannel - List contents on channel

@@ -42,6 +42,12 @@ func New(path string) (client.Client, error) {
 	return &fsClient{path: path}, nil
 }
 
+// URL get url
+func (f *fsClient) URL() *client.URL {
+	url, _ := client.Parse(f.path)
+	return url
+}
+
 /// Object operations
 
 // fsStat - wrapper function to get file stat
