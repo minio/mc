@@ -192,8 +192,8 @@ func newConfig() (config quick.Config, err error) {
 
 	aliases := make(map[string]string)
 	aliases["s3"] = "https://s3.amazonaws.com"
-	aliases["play"] = "http://play.minio.io:9000"
-	aliases["dl"] = "http://dl.minio.io:9000"
+	aliases["play"] = "https://play.minio.io:9000"
+	aliases["dl"] = "https://dl.minio.io:9000"
 	aliases["localhost"] = "http://localhost:9000"
 	conf.Aliases = aliases
 	config, err = quick.New(conf)

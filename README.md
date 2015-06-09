@@ -21,10 +21,10 @@
 
 ### From Binary
 
-Download ``mc`` from http://dl.minio.io:9000/updates/2015/Jun/mc.linux.amd64
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/mc.linux.amd64
 
 ~~~
-$ wget http://dl.minio.io:9000/updates/2015/Jun/mc.linux.amd64 -O mc
+$ wget https://dl.minio.io:9000/updates/2015/Jun/mc.linux.amd64 -O mc
 $ chmod +x mc
 $ ./mc
 ...
@@ -40,7 +40,7 @@ $ go get github.com/minio/mc
 
 ## Public Minio Server
 
-Minio server is hosted at ``http://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible object storage. Minio runs in memory mode with auto expiry of objects in about an hour.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys. 
+Minio server is hosted at ``https://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible object storage. Minio runs in memory mode with auto expiry of objects in about an hour.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys. 
 
 ## How to use mc? 
 

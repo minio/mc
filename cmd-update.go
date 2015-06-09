@@ -37,7 +37,7 @@ type Updates struct {
 }
 
 const (
-	mcUpdateURL = "http://dl.minio.io:9000/updates/updates.json"
+	mcUpdateURL = "https://dl.minio.io:9000/updates/updates.json"
 )
 
 // Help message.
@@ -74,7 +74,7 @@ func doUpdateCheck(config *hostConfig) (string, error) {
 	current, _ := time.Parse(time.RFC3339Nano, Version)
 	if current.IsZero() {
 		message := `Version is empty, must be a custom build cannot update. Please download releases from
-http://dl.minio.io:9000 for continuous updates`
+https://dl.minio.io:9000 for continuous updates`
 		return message, nil
 	}
 	var updates Updates
@@ -88,7 +88,7 @@ http://dl.minio.io:9000 for continuous updates`
 		return "No update available at this time", nil
 	}
 	if latest.After(current) {
-		updateString := "mc cp " + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ${HOME}/bin/mc"
+		updateString := "mc cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ${HOME}/bin/mc"
 		printUpdateNotify(updateString, "new", "old")
 		return "", nil
 	}
