@@ -53,36 +53,51 @@ func putTarget(targetURL string, length int64, reader io.Reader) error {
 
 // putTargets writes to URL from reader.
 func putTargets(targetURLs []string, length int64, reader io.Reader) <-chan error {
-	tgtReaders := make([]io.Reader, len(targetURLs))
-	tgtWriters := make([]io.Writer, len(targetURLs))
-	tgtClients := make([]client.Client, len(targetURLs))
 	var errorCh = make(chan error)
-	for i, targetURL := range targetURLs {
-		tgtReaders[i], tgtWriters[i] = io.Pipe()
-		tgtClient, err := target2Client(targetURL)
-		if err != nil {
-			errorCh <- iodine.New(err, nil)
-			continue
-		}
-		tgtClients[i] = tgtClient
-	}
-	var wg sync.WaitGroup
+	go func() {
+		defer close(errorCh)
 
-	multiTgtWriter := io.MultiWriter(tgtWriters...)
-	go io.CopyN(multiTgtWriter, reader, length)
+		tgtReaders := make([]io.ReadCloser, len(targetURLs))
+		tgtWriters := make([]io.WriteCloser, len(targetURLs))
+		tgtClients := make([]client.Client, len(targetURLs))
 
-	for i := range tgtClients {
-		wg.Add(1)
-		go func(targetClient client.Client, reader io.Reader, errorCh chan error) {
-			defer wg.Done()
-			err := targetClient.PutObject(length, reader)
+		for i, targetURL := range targetURLs {
+			tgtReaders[i], tgtWriters[i] = io.Pipe()
+			tgtClient, err := target2Client(targetURL)
 			if err != nil {
-				errorCh <- iodine.New(err, map[string]string{"failedURL": targetClient.URL().String()})
+				errorCh <- iodine.New(err, nil)
+				continue
 			}
-		}(tgtClients[i], tgtReaders[i], errorCh)
-	}
-	wg.Wait()
-	close(errorCh)
+			tgtClients[i] = tgtClient
+		}
+		var wg sync.WaitGroup
+
+		writers := make([]io.Writer, len(targetURLs))
+		for i, writer := range tgtWriters {
+			writers[i] = io.Writer(writer)
+		}
+		multiTgtWriter := io.MultiWriter(writers...)
+		go func() {
+			for _, tgtWriter := range tgtWriters {
+				defer tgtWriter.Close()
+			}
+
+			io.CopyN(multiTgtWriter, reader, length)
+		}()
+
+		for i := range tgtClients {
+			wg.Add(1)
+			go func(targetClient client.Client, reader io.Reader, errorCh chan error) {
+				defer wg.Done()
+				err := targetClient.PutObject(length, reader)
+				if err != nil {
+					errorCh <- iodine.New(err, map[string]string{"failedURL": targetClient.URL().String()})
+				}
+			}(tgtClients[i], tgtReaders[i], errorCh)
+		}
+		wg.Wait()
+	}()
+
 	return errorCh
 }
 
