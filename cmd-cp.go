@@ -96,7 +96,7 @@ func doCopy(sourceURL string, targetURL string, bar *barSend) error {
 		if !globalQuietFlag {
 			bar.ErrorPut(int64(length))
 		}
-		return iodine.New(err, nil)
+		return iodine.New(err, map[string]string{"URL": targetURL})
 	}
 	return nil
 }
