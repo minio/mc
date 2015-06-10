@@ -71,18 +71,20 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) <-chan erro
 	multiTgtWriter := io.MultiWriter(tgtWriters...)
 	go io.CopyN(multiTgtWriter, reader, length)
 
-	for i := range tgtClients {
-		wg.Add(1)
-		go func(targetClient client.Client, reader io.Reader, errorCh chan error) {
-			defer wg.Done()
-			err := targetClient.PutObject(length, reader)
-			if err != nil {
-				errorCh <- iodine.New(err, map[string]string{"failedURL": targetClient.URL().String()})
-			}
-		}(tgtClients[i], tgtReaders[i], errorCh)
-	}
-	wg.Wait()
-	close(errorCh)
+	go func(tgtClients []client.Client, errorCh chan error) {
+		defer close(errorCh)
+		for i := range tgtClients {
+			wg.Add(1)
+			go func(targetClient client.Client, reader io.Reader, errorCh chan error) {
+				defer wg.Done()
+				err := targetClient.PutObject(length, reader)
+				if err != nil {
+					errorCh <- iodine.New(err, map[string]string{"failedURL": targetClient.URL().String()})
+				}
+			}(tgtClients[i], tgtReaders[i], errorCh)
+		}
+		wg.Wait()
+	}(tgtClients, errorCh)
 	return errorCh
 }
 

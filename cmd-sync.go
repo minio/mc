@@ -81,11 +81,6 @@ func doSync(sURLs syncURLs, bar *barSend) error {
 	}
 	defer reader.Close()
 
-	var targetURLs []string
-	for _, targetContent := range sURLs.TargetContents {
-		targetURLs = append(targetURLs, targetContent.Name)
-	}
-
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
@@ -94,8 +89,7 @@ func doSync(sURLs syncURLs, bar *barSend) error {
 		// set up progress
 		newReader = bar.NewProxyReader(reader)
 	}
-
-	for err := range putTargets(targetURLs, length, newReader) {
+	for err := range putTargets([]string{sURLs.TargetContent.Name}, length, newReader) {
 		if err != nil {
 			if !globalQuietFlag {
 				bar.ErrorPut(int64(length))

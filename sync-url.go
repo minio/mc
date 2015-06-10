@@ -44,9 +44,9 @@ import (
 //   sync(*, []f1)
 
 type syncURLs struct {
-	SourceContent  *client.Content
-	TargetContents []*client.Content
-	Error          error
+	SourceContent *client.Content
+	TargetContent *client.Content
+	Error         error
 }
 
 // prepareCopyURLs - prepares target and source URLs for syncing.
@@ -60,33 +60,34 @@ func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
 			for _, targetURL := range targetURLs {
 				cpURLs := prepareCopyURLsTypeA(sourceURL, targetURL)
 				sURLs.SourceContent = cpURLs.SourceContent
-				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
+				sURLs.TargetContent = sURLs.TargetContent
+				syncURLsCh <- sURLs
 			}
-			syncURLsCh <- sURLs
 		case cpURLsTypeB:
 			var sURLs syncURLs
 			for _, targetURL := range targetURLs {
 				cpURLs := prepareCopyURLsTypeB(sourceURL, targetURL)
 				sURLs.SourceContent = cpURLs.SourceContent
-				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
+				sURLs.TargetContent = cpURLs.TargetContent
+				syncURLsCh <- sURLs
 			}
-			syncURLsCh <- sURLs
 		case cpURLsTypeC:
-			var cpURLsList []*cpURLs
+			// collection of channels
+			var cpURLsChs []<-chan *cpURLs
 			for _, targetURL := range targetURLs {
-				for cpURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {
+				cpURLsChs = append(cpURLsChs, prepareCopyURLsTypeC(sourceURL, targetURL))
+			}
+			for _, cpURLsCh := range cpURLsChs {
+				var sURLs syncURLs
+				for cpURLs := range cpURLsCh {
 					if cpURLs.Error != nil {
 						syncURLsCh <- syncURLs{Error: iodine.New(cpURLs.Error, nil)}
-						continue
+						break
 					}
-					cpURLsList = append(cpURLsList, cpURLs)
+					sURLs.SourceContent = cpURLs.SourceContent
+					sURLs.TargetContent = cpURLs.TargetContent
+					syncURLsCh <- sURLs
 				}
-			}
-			var sURLs syncURLs
-			for _, cpURLs := range cpURLsList {
-				sURLs.SourceContent = cpURLs.SourceContent
-				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
-				syncURLsCh <- sURLs
 			}
 		default:
 			syncURLsCh <- syncURLs{Error: iodine.New(errInvalidArgument{}, nil)}
