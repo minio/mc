@@ -100,6 +100,10 @@ func doSync(sURLs syncURLs, bar *barSend) error {
 			if !globalQuietFlag {
 				bar.ErrorPut(int64(length))
 			}
+			console.Errors(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.New(err, nil),
+			})
 		}
 	}
 	return nil
