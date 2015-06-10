@@ -119,7 +119,7 @@ func (a lowLevelAPI) putBucket(bucket, acl, location string) error {
 }
 
 // putBucketRequestACL wrapper creates a new putBucketACL request
-func (a lowLevelAPI) putBucketRequestACL(bucket, acl string) (*request, error) {
+func (a lowLevelAPI) putBucketACLRequest(bucket, acl string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
@@ -135,7 +135,7 @@ func (a lowLevelAPI) putBucketRequestACL(bucket, acl string) (*request, error) {
 
 // putBucketACL set the permissions on an existing bucket using access control lists (ACL)
 func (a lowLevelAPI) putBucketACL(bucket, acl string) error {
-	req, err := a.putBucketRequestACL(bucket, acl)
+	req, err := a.putBucketACLRequest(bucket, acl)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (a lowLevelAPI) putBucketACL(bucket, acl string) error {
 }
 
 // getBucketACLRequest wrapper creates a new getBucketACL request
-func (a lowLevelAPI) getBucketRequestACL(bucket string) (*request, error) {
+func (a lowLevelAPI) getBucketACLRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -168,7 +168,7 @@ func (a lowLevelAPI) getBucketRequestACL(bucket string) (*request, error) {
 
 // getBucketACL get the acl information on an existing bucket
 func (a lowLevelAPI) getBucketACL(bucket string) (accessControlPolicy, error) {
-	req, err := a.getBucketRequestACL(bucket)
+	req, err := a.getBucketACLRequest(bucket)
 	if err != nil {
 		return accessControlPolicy{}, err
 	}
@@ -187,6 +187,15 @@ func (a lowLevelAPI) getBucketACL(bucket string) (accessControlPolicy, error) {
 	err = decoder.Decode(&policy)
 	if err != nil {
 		return accessControlPolicy{}, err
+	}
+	if policy.AccessControlList.Grant == nil {
+		errorResponse := ErrorResponse{
+			Code:      "InternalError",
+			Message:   "Unexpected error please report this at https://github.com/minio/minio-go/issues",
+			Resource:  "/" + bucket,
+			RequestID: "minio",
+		}
+		return accessControlPolicy{}, errorResponse
 	}
 	return policy, nil
 }
@@ -288,6 +297,9 @@ func (a lowLevelAPI) listObjectsRequest(bucket, marker, prefix, delimiter string
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-keys - Sets the maximum number of keys returned in the response body.
 func (a lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (listBucketResult, error) {
+	if err := invalidBucketToError(bucket); err != nil {
+		return listBucketResult{}, err
+	}
 	req, err := a.listObjectsRequest(bucket, marker, prefix, delimiter, maxkeys)
 	if err != nil {
 		return listBucketResult{}, err
@@ -323,6 +335,9 @@ func (a lowLevelAPI) headBucketRequest(bucket string) (*request, error) {
 
 // headBucket - useful to determine if a bucket exists and you have permission to access it.
 func (a lowLevelAPI) headBucket(bucket string) error {
+	if err := invalidBucketToError(bucket); err != nil {
+		return err
+	}
 	req, err := a.headBucketRequest(bucket)
 	if err != nil {
 		return err
@@ -373,6 +388,9 @@ func (a lowLevelAPI) deleteBucketRequest(bucket string) (*request, error) {
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request
 func (a lowLevelAPI) deleteBucket(bucket string) error {
+	if err := invalidBucketToError(bucket); err != nil {
+		return err
+	}
 	req, err := a.deleteBucketRequest(bucket)
 	if err != nil {
 		return err
@@ -484,6 +502,9 @@ func (a lowLevelAPI) getObjectRequest(bucket, object string, offset, length int6
 // Additionally it also takes range arguments to download the specified range bytes of an object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
 func (a lowLevelAPI) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
+	if err := invalidArgumentToError(object); err != nil {
+		return nil, ObjectStat{}, err
+	}
 	req, err := a.getObjectRequest(bucket, object, offset, length)
 	if err != nil {
 		return nil, ObjectStat{}, err
@@ -534,6 +555,12 @@ func (a lowLevelAPI) deleteObjectRequest(bucket, object string) (*request, error
 
 // deleteObject deletes a given object from a bucket
 func (a lowLevelAPI) deleteObject(bucket, object string) error {
+	if err := invalidBucketToError(bucket); err != nil {
+		return err
+	}
+	if err := invalidArgumentToError(object); err != nil {
+		return err
+	}
 	req, err := a.deleteObjectRequest(bucket, object)
 	if err != nil {
 		return err
@@ -584,6 +611,12 @@ func (a lowLevelAPI) headObjectRequest(bucket, object string) (*request, error) 
 
 // headObject - retrieves metadata from an object without returning the object itself
 func (a lowLevelAPI) headObject(bucket, object string) (ObjectStat, error) {
+	if err := invalidBucketToError(bucket); err != nil {
+		return ObjectStat{}, err
+	}
+	if err := invalidArgumentToError(object); err != nil {
+		return ObjectStat{}, err
+	}
 	req, err := a.headObjectRequest(bucket, object)
 	if err != nil {
 		return ObjectStat{}, err

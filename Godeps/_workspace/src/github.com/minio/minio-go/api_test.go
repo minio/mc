@@ -75,7 +75,7 @@ func TestBucketOperations(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error")
 	}
-	err = a.MakeBucket("bucket", "private", "")
+	err = a.MakeBucket("bucket", "private")
 	if err != nil {
 		t.Errorf("Error")
 	}

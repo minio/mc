@@ -19,7 +19,6 @@ package minio
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -27,7 +26,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"unicode/utf8"
 )
 
 // API - object storage API interface
@@ -41,7 +39,7 @@ type API interface {
 
 // BucketAPI - bucket specific Read/Write/Stat interface
 type BucketAPI interface {
-	MakeBucket(bucket string, cannedACL BucketACL, location string) error
+	MakeBucket(bucket string, cannedACL BucketACL) error
 	BucketExists(bucket string) error
 	RemoveBucket(bucket string) error
 	SetBucketACL(bucket string, cannedACL BucketACL) error
@@ -128,8 +126,8 @@ func getRegion(endPoint string) (region string, err error) {
 		return regions[u.Host], nil
 	}
 
-	// Region cannot be empty according to Amazon S3 standard. So
-	// we address all the four quadrants of our galaxy.
+	// Region cannot be empty according to Amazon S3 standard.
+	// So we address all the four quadrants of our galaxy.
 	return "milkyway", nil
 }
 
@@ -144,22 +142,23 @@ type Config struct {
 	// Advanced options
 	AcceptType string            // specify this to get server response in non XML style if server supports it
 	Transport  http.RoundTripper // custom transport usually for debugging, by default its nil
+
 	// internal
-	// use AddUserAgent append to default, useful when minio-go is used with in your application
+	// use SetUserAgent append to default, useful when minio-go is used with in your application
 	userAgent string
 }
 
 // Global constants
 const (
 	LibraryName    = "minio-go"
-	LibraryVersion = "0.1"
+	LibraryVersion = "0.1.0"
 )
 
 // SetUserAgent - append to a default user agent
 func (c *Config) SetUserAgent(name string, version string, comments ...string) {
 	// if no name and version is set we do not add new user agents
 	if name != "" && version != "" {
-		c.userAgent = c.userAgent + " " + name + "/" + version + " (" + strings.Join(comments, ", ") + ") "
+		c.userAgent = c.userAgent + " " + name + "/" + version + " (" + strings.Join(comments, "; ") + ") "
 	}
 }
 
@@ -187,20 +186,8 @@ func New(config Config) (API, error) {
 // Additionally it also takes range arguments to download the specified range bytes of an object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
 func (a api) GetObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
-	if strings.TrimSpace(object) == "" {
-		return nil, ObjectStat{}, errors.New("object name cannot be empty")
-	}
-	if !utf8.ValidString(object) {
-		return nil, ObjectStat{}, errors.New("invalid object name, should be utf-8")
-	}
 	// get the the object
-	// NOTE : returned md5sum could be the md5sum of the partial object itself
-	// not the whole object depending on if offset range was requested or not
-	body, objectMetadata, err := a.getObject(bucket, object, offset, length)
-	if err != nil {
-		return nil, ObjectStat{}, err
-	}
-	return body, objectMetadata, nil
+	return a.getObject(bucket, object, offset, length)
 }
 
 // completedParts is a wrapper to make parts sortable by their part number
@@ -418,11 +405,8 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch ch
 //
 // This version of PutObject automatically does multipart for more than 5MB worth of data
 func (a api) PutObject(bucket, object string, size int64, data io.Reader) error {
-	if strings.TrimSpace(object) == "" {
-		return errors.New("object name cannot be empty")
-	}
-	if !utf8.ValidString(object) {
-		return errors.New("invalid object name, should be utf-8")
+	if err := invalidArgumentToError(object); err != nil {
+		return err
 	}
 	switch {
 	case size < MinimumPartSize:
@@ -460,23 +444,11 @@ func (a api) PutObject(bucket, object string, size int64, data io.Reader) error 
 
 // StatObject verify if object exists and you have permission to access it
 func (a api) StatObject(bucket, object string) (ObjectStat, error) {
-	if strings.TrimSpace(object) == "" {
-		return ObjectStat{}, errors.New("object name cannot be empty")
-	}
-	if !utf8.ValidString(object) {
-		return ObjectStat{}, errors.New("invalid object name, should be utf-8")
-	}
 	return a.headObject(bucket, object)
 }
 
 // RemoveObject remove the object from a bucket
 func (a api) RemoveObject(bucket, object string) error {
-	if strings.TrimSpace(object) == "" {
-		return errors.New("object name cannot be empty")
-	}
-	if !utf8.ValidString(object) {
-		return errors.New("invalid object name, should be utf-8")
-	}
 	return a.deleteObject(bucket, object)
 }
 
@@ -495,18 +467,17 @@ func (a api) RemoveObject(bucket, object string) error {
 //  public-read-write - owner gets full access, all others get full access too
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
-// Location valid values
+// Location valid values which are automatically derived from config endpoint
 //
 //  [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 //  Default - US standard
-func (a api) MakeBucket(bucket string, acl BucketACL, location string) error {
+func (a api) MakeBucket(bucket string, acl BucketACL) error {
 	if !acl.isValidBucketACL() {
-		return fmt.Errorf("%s", "Invalid bucket ACL")
+		return invalidArgumentToError("")
 	}
-	if _, ok := regions[location]; !ok {
-		if location != "" {
-			return fmt.Errorf("%s", "Invalid bucket Location")
-		}
+	location, _ := getRegion(a.config.Endpoint)
+	if location == "milkyway" {
+		location = ""
 	}
 	return a.putBucket(bucket, string(acl), location)
 }
@@ -522,7 +493,7 @@ func (a api) MakeBucket(bucket string, acl BucketACL, location string) error {
 //
 func (a api) SetBucketACL(bucket string, acl BucketACL) error {
 	if !acl.isValidBucketACL() {
-		return fmt.Errorf("%s", "Invalid bucket ACL")
+		return invalidArgumentToError("")
 	}
 	return a.putBucketACL(bucket, string(acl))
 }
@@ -537,12 +508,12 @@ func (a api) SetBucketACL(bucket string, acl BucketACL) error {
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
 func (a api) GetBucketACL(bucket string) (BucketACL, error) {
+	if err := invalidBucketToError(bucket); err != nil {
+		return "", err
+	}
 	policy, err := a.getBucketACL(bucket)
 	if err != nil {
 		return "", err
-	}
-	if policy.AccessControlList.Grant == nil {
-		return "", fmt.Errorf("%s", "Unexpected error")
 	}
 	grants := policy.AccessControlList.Grant
 	switch {
@@ -566,7 +537,12 @@ func (a api) GetBucketACL(bucket string) (BucketACL, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("Cannot verify access control policy")
+	return "", ErrorResponse{
+		Code:      "NoSuchBucketPolicy",
+		Message:   "The specified bucket does not have a bucket policy.",
+		Resource:  "/" + bucket,
+		RequestID: "minio",
+	}
 }
 
 // BucketExists verify if bucket exists and you have permission to access it
@@ -585,6 +561,13 @@ func (a api) RemoveBucket(bucket string) error {
 // listObjectsInRoutine is an internal goroutine function called for listing objects
 // This function feeds data into channel
 func (a api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan ObjectStatCh) {
+	if err := invalidBucketToError(bucket); err != nil {
+		ch <- ObjectStatCh{
+			Stat: ObjectStat{},
+			Err:  err,
+		}
+		return
+	}
 	defer close(ch)
 	switch {
 	case recursive == true:
@@ -698,6 +681,10 @@ func (a api) ListBuckets() <-chan BucketStatCh {
 
 func (a api) dropIncompleteUploadsInRoutine(bucket, prefix string, errorCh chan error) {
 	defer close(errorCh)
+	if err := invalidBucketToError(bucket); err != nil {
+		errorCh <- err
+		return
+	}
 	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", prefix, "", 1000)
 	if err != nil {
 		errorCh <- err
@@ -748,6 +735,10 @@ func (a api) DropIncompleteUploads(bucket, prefix string) <-chan error {
 
 func (a api) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan error) {
 	defer close(errorCh)
+	if err := invalidBucketToError(bucket); err != nil {
+		errorCh <- err
+		return
+	}
 	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", "", "", 1000)
 	if err != nil {
 		errorCh <- err
