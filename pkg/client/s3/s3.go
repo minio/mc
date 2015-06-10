@@ -146,7 +146,7 @@ func (c *s3Client) MakeBucket() error {
 		return iodine.New(InvalidQueryURL{URL: c.hostURL.String()}, nil)
 	}
 	// location string is intentionally left out
-	err := c.api.MakeBucket(bucket, s3.BucketACL("private"), "")
+	err := c.api.MakeBucket(bucket, s3.BucketACL("private"))
 	return iodine.New(err, nil)
 }
 

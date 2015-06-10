@@ -19,6 +19,8 @@ package minio
 import (
 	"encoding/xml"
 	"io"
+	"strings"
+	"unicode/utf8"
 )
 
 /* **** SAMPLE ERROR RESPONSE ****
@@ -88,4 +90,35 @@ func responseToError(body io.Reader) error {
 		return err
 	}
 	return respError
+}
+
+func invalidBucketToError(bucket string) error {
+	if strings.TrimSpace(bucket) == "" || bucket == "" {
+		// no resource since bucket is empty string
+		errorResponse := ErrorResponse{
+			Code:      "InvalidBucketName",
+			Message:   "The specified bucket is not valid.",
+			RequestID: "minio",
+		}
+		return errorResponse
+	}
+	return nil
+}
+
+func invalidArgumentToError(arg string) error {
+	errorResponse := ErrorResponse{
+		Code:      "InvalidArgument",
+		Message:   "Invalid Argument",
+		RequestID: "minio",
+	}
+	if strings.TrimSpace(arg) == "" || arg == "" {
+		// no resource since arg is empty string
+		return errorResponse
+	}
+	if !utf8.ValidString(arg) {
+		// add resource to reply back with invalid string
+		errorResponse.Resource = arg
+		return errorResponse
+	}
+	return nil
 }
