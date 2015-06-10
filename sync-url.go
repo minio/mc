@@ -59,6 +59,10 @@ func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
 			var sURLs syncURLs
 			for _, targetURL := range targetURLs {
 				cpURLs := prepareCopyURLsTypeA(sourceURL, targetURL)
+				if cpURLs.Error != nil {
+					syncURLsCh <- syncURLs{Error: iodine.New(cpURLs.Error, nil)}
+					continue
+				}
 				sURLs.SourceContent = cpURLs.SourceContent
 				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
 			}
@@ -67,26 +71,26 @@ func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
 			var sURLs syncURLs
 			for _, targetURL := range targetURLs {
 				cpURLs := prepareCopyURLsTypeB(sourceURL, targetURL)
+				if cpURLs.Error != nil {
+					syncURLsCh <- syncURLs{Error: iodine.New(cpURLs.Error, nil)}
+					continue
+				}
 				sURLs.SourceContent = cpURLs.SourceContent
 				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
 			}
 			syncURLsCh <- sURLs
 		case cpURLsTypeC:
-			var cpURLsList []*cpURLs
+			var sURLs syncURLs
 			for _, targetURL := range targetURLs {
 				for cpURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {
 					if cpURLs.Error != nil {
 						syncURLsCh <- syncURLs{Error: iodine.New(cpURLs.Error, nil)}
 						continue
 					}
-					cpURLsList = append(cpURLsList, cpURLs)
+					sURLs.SourceContent = cpURLs.SourceContent
+					sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
+					syncURLsCh <- sURLs
 				}
-			}
-			var sURLs syncURLs
-			for _, cpURLs := range cpURLsList {
-				sURLs.SourceContent = cpURLs.SourceContent
-				sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
-				syncURLsCh <- sURLs
 			}
 		default:
 			syncURLsCh <- syncURLs{Error: iodine.New(errInvalidArgument{}, nil)}
