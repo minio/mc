@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 
@@ -76,6 +77,10 @@ func doList(clnt client.Client, recursive bool) error {
 	var err error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
+			if os.IsNotExist(iodine.ToError(contentCh.Err)) {
+				console.Errorln(iodine.ToError(contentCh.Err))
+				continue
+			}
 			err = contentCh.Err
 			break
 		}

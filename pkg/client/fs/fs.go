@@ -227,11 +227,17 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			return
 		}
 		for _, file := range files {
-			var fi os.FileInfo
-			fi = file
+			fi := file
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
-				fi, err = os.Stat(filepath.Join(dir.Name(), file.Name()))
+				fi, err = os.Stat(filepath.Join(dir.Name(), fi.Name()))
 				if err != nil {
+					if os.IsNotExist(err) { // return proper error on broken symlinks
+						contentCh <- client.ContentOnChannel{
+							Content: nil,
+							Err:     iodine.New(err, map[string]string{"Target": file.Name()}),
+						}
+						return
+					}
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
 						Err:     iodine.New(err, nil),
