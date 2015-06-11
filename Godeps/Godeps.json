@@ -1,10 +1,14 @@
 {
 	"ImportPath": "github.com/minio/mc",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.4",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
+		{
+			"ImportPath": "github.com/cheggaaa/pb",
+			"Rev": "e648e12b78cedf14ebb2fc1855033f07b034cfbb"
+		},
 		{
 			"ImportPath": "github.com/dustin/go-humanize",
 			"Rev": "8cc1aaa2d955ee82833337cfb10babc42be6bce6"
@@ -33,10 +37,6 @@
 		{
 			"ImportPath": "github.com/minio/minio/pkg/iodine",
 			"Rev": "0f58045480309d4b13fe45878f05736c3ff20e7e"
-		},
-		{
-			"ImportPath": "github.com/minio/pb",
-			"Rev": "23b3da381ac6aed453db51c316a90564f4f3ba7e"
 		},
 		{
 			"ImportPath": "github.com/shiena/ansicolor",

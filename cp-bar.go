@@ -23,8 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cheggaaa/pb"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/pb"
 )
 
 type cpBarCmd int
