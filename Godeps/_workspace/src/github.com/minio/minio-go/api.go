@@ -60,8 +60,8 @@ type ObjectAPI interface {
 	StatObject(bucket, object string) (ObjectStat, error)
 	RemoveObject(bucket, object string) error
 
-	// Drop all incomplete uploads for a given prefix
-	DropIncompleteUploads(bucket, prefix string) <-chan error
+	// Drop all incomplete uploads for a given object
+	DropIncompleteUploads(bucket, object string) <-chan error
 }
 
 // BucketStatCh - bucket metadata over read channel
@@ -365,15 +365,15 @@ type multiPartUploadCh struct {
 	Err      error
 }
 
-func (a api) listMultipartUploadsRecursive(bucket, prefix string) <-chan multiPartUploadCh {
+func (a api) listMultipartUploadsRecursive(bucket, object string) <-chan multiPartUploadCh {
 	ch := make(chan multiPartUploadCh)
-	go a.listMultipartUploadsRecursiveInRoutine(bucket, prefix, ch)
+	go a.listMultipartUploadsRecursiveInRoutine(bucket, object, ch)
 	return ch
 }
 
-func (a api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch chan multiPartUploadCh) {
+func (a api) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch chan multiPartUploadCh) {
 	defer close(ch)
-	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", prefix, "", 1000)
+	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
 		ch <- multiPartUploadCh{
 			Metadata: upload{},
@@ -392,7 +392,7 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch ch
 			break
 		}
 		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
-			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, prefix, "", 1000)
+			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, object, "", 1000)
 		if err != nil {
 			ch <- multiPartUploadCh{
 				Metadata: upload{},
@@ -689,13 +689,13 @@ func (a api) ListBuckets() <-chan BucketStatCh {
 	return ch
 }
 
-func (a api) dropIncompleteUploadsInRoutine(bucket, prefix string, errorCh chan error) {
+func (a api) dropIncompleteUploadsInRoutine(bucket, object string, errorCh chan error) {
 	defer close(errorCh)
 	if err := invalidBucketToError(bucket); err != nil {
 		errorCh <- err
 		return
 	}
-	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", prefix, "", 1000)
+	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
 		errorCh <- err
 		return
@@ -712,7 +712,7 @@ func (a api) dropIncompleteUploadsInRoutine(bucket, prefix string, errorCh chan 
 			break
 		}
 		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
-			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, prefix, "", 1000)
+			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, object, "", 1000)
 		if err != nil {
 			errorCh <- err
 			return
@@ -734,12 +734,11 @@ func (a api) dropIncompleteUploadsInRoutine(bucket, prefix string, errorCh chan 
 // NOTE:
 //   These set of calls require explicit authentication, no anonymous
 //   requests are allowed for multipart API
-//
 
 // DropIncompleteUploads - abort a specific in progress active multipart upload
-func (a api) DropIncompleteUploads(bucket, prefix string) <-chan error {
+func (a api) DropIncompleteUploads(bucket, object string) <-chan error {
 	errorCh := make(chan error)
-	go a.dropIncompleteUploadsInRoutine(bucket, prefix, errorCh)
+	go a.dropIncompleteUploadsInRoutine(bucket, object, errorCh)
 	return errorCh
 }
 
