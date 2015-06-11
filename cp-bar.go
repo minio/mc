@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -36,7 +35,7 @@ const (
 	cpBarCmdFinish
 	cpBarCmdPutError
 	cpBarCmdGetError
-	cpBarCmdSetPrefix
+	cpBarCmdSetCaption
 )
 
 type copyReader struct {
@@ -80,8 +79,13 @@ func (b *barSend) NewProxyReader(r io.Reader) *copyReader {
 	return &copyReader{r, b}
 }
 
-func (b *barSend) SetPrefix(prefix string) {
-	b.cmdCh <- barMsg{Cmd: cpBarCmdSetPrefix, Arg: prefix}
+type caption struct {
+	message   string
+	separator rune
+}
+
+func (b *barSend) SetCaption(c caption) {
+	b.cmdCh <- barMsg{Cmd: cpBarCmdSetCaption, Arg: c}
 }
 
 func (b barSend) Finish() {
@@ -90,20 +94,20 @@ func (b barSend) Finish() {
 	<-b.finishCh
 }
 
-func trimBarCaption(caption string, width int) string {
-	if len(caption) > width {
+func trimBarCaption(c caption, width int) string {
+	if len(c.message) > width {
 		// Trim caption to fit within the screen
-		trimSize := len(caption) - width + 3 + 1
-		if trimSize < len(caption) {
-			caption = "..." + caption[trimSize:]
+		trimSize := len(c.message) - width + 3 + 1
+		if trimSize < len(c.message) {
+			c.message = "..." + c.message[trimSize:]
 			// Further trim partial names.
-			partialTrimSize := strings.IndexByte(caption, filepath.Separator)
+			partialTrimSize := strings.IndexByte(c.message, byte(c.separator))
 			if partialTrimSize > 0 {
-				caption = caption[partialTrimSize:]
+				c.message = c.message[partialTrimSize:]
 			}
 		}
 	}
-	return caption
+	return c.message
 }
 
 // newCpBar - instantiate a cpBar.
@@ -111,10 +115,10 @@ func newCpBar() barSend {
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
 	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
-		started := false
-		redraw := false
-		barCaption := ""
-		var totalBytesRead int64 // total amounts of bytes copied
+		var started bool
+		var redraw bool
+		var barCaption string
+		var totalBytesRead int64 // total amounts of bytes read
 		bar := pb.New64(0)
 		bar.SetUnits(pb.U_BYTES)
 		bar.SetRefreshRate(time.Millisecond * 10)
@@ -135,9 +139,8 @@ func newCpBar() barSend {
 		bar.Format("[=> ]")
 		for msg := range cmdCh {
 			switch msg.Cmd {
-			case cpBarCmdSetPrefix:
-				barCaption = msg.Arg.(string)
-				barCaption = trimBarCaption(barCaption, bar.GetWidth())
+			case cpBarCmdSetCaption:
+				barCaption = trimBarCaption(msg.Arg.(caption), bar.GetWidth())
 			case cpBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 			case cpBarCmdProgress:
