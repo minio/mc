@@ -17,6 +17,7 @@
 package minio
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"io"
 	"strings"
@@ -55,7 +56,7 @@ type ErrorResponse struct {
 //   ..., err := s3.GetObject(...)
 //   if err != nil {
 //      resp := s3.ToErrorResponse(err)
-//      fmt.Println(resp.XML())
+//      fmt.Println(resp.ToXML())
 //   }
 //   ...
 //   ...
@@ -69,8 +70,14 @@ func ToErrorResponse(err error) *ErrorResponse {
 }
 
 // XML send raw xml marshalled as string
-func (e ErrorResponse) XML() string {
+func (e ErrorResponse) ToXML() string {
 	b, _ := xml.Marshal(&e)
+	return string(b)
+}
+
+// JSON send raw json marshalled as string
+func (e ErrorResponse) ToJSON() string {
+	b, _ := json.Marshal(&e)
 	return string(b)
 }
 
@@ -82,10 +89,9 @@ func (e ErrorResponse) Error() string {
 /// Internal function not exposed
 
 // responseToError returns a new encoded ErrorResponse structure
-func responseToError(body io.Reader) error {
+func (a lowLevelAPI) responseToError(errBody io.Reader) error {
 	var respError ErrorResponse
-	decoder := xml.NewDecoder(body)
-	err := decoder.Decode(&respError)
+	err := acceptTypeDecoder(errBody, a.config.AcceptType, &respError)
 	if err != nil {
 		return err
 	}
