@@ -26,9 +26,9 @@ import (
 	. "github.com/minio/check"
 )
 
-var barCp barSend
+var barSync barSend
 
-func (s *CmdTestSuite) TestCpTypeA(c *C) {
+func (s *CmdTestSuite) TestSyncTypeA(c *C) {
 	/// filesystem
 	source, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -45,17 +45,17 @@ func (s *CmdTestSuite) TestCpTypeA(c *C) {
 	defer os.RemoveAll(target)
 	targetPath := filepath.Join(target, "newObject1")
 
-	for err := range doCopyCmd([]string{sourcePath}, targetPath, barCp) {
+	for err := range doSyncCmd(sourcePath, []string{targetPath}, barSync) {
 		c.Assert(err, IsNil)
 	}
 
 	targetURL := server.URL + "/bucket/newObject"
-	for err := range doCopyCmd([]string{sourcePath}, targetURL, barCp) {
+	for err := range doSyncCmd(sourcePath, []string{targetURL}, barSync) {
 		c.Assert(err, IsNil)
 	}
 }
 
-func (s *CmdTestSuite) TestCpTypeB(c *C) {
+func (s *CmdTestSuite) TestSyncTypeB(c *C) {
 	/// filesystem
 	source, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -71,17 +71,17 @@ func (s *CmdTestSuite) TestCpTypeB(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(target)
 
-	for err := range doCopyCmd([]string{sourcePath}, target, barCp) {
+	for err := range doSyncCmd(sourcePath, []string{target}, barSync) {
 		c.Assert(err, IsNil)
 	}
 
 	targetURL := server.URL + "/bucket"
-	for err := range doCopyCmd([]string{sourcePath}, targetURL, barCp) {
+	for err := range doSyncCmd(sourcePath, []string{targetURL}, barSync) {
 		c.Assert(err, IsNil)
 	}
 }
 
-func (s *CmdTestSuite) TestCpTypeC(c *C) {
+func (s *CmdTestSuite) TestSyncTypeC(c *C) {
 	/// filesystem
 	source, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -99,51 +99,24 @@ func (s *CmdTestSuite) TestCpTypeC(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(target)
 
-	for err := range doCopyCmd([]string{source + "..."}, target, barCp) {
+	for err := range doSyncCmd(source+"...", []string{target}, barSync) {
 		c.Assert(err, IsNil)
 	}
 
 	targetURL := server.URL + "/bucket"
-	for err := range doCopyCmd([]string{source + "..."}, targetURL, barCp) {
+	for err := range doSyncCmd(source+"...", []string{targetURL}, barSync) {
 		c.Assert(err, IsNil)
 	}
-}
 
-func (s *CmdTestSuite) TestCpTypeD(c *C) {
-	/// filesystem
-	source1, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	target1, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
-	source2, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	defer os.RemoveAll(target1)
+
+	target2, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
-	defer os.RemoveAll(source1)
-	defer os.RemoveAll(source2)
+	defer os.RemoveAll(target2)
 
-	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(source1, "object"+strconv.Itoa(i))
-		data := "hello"
-		dataLen := len(data)
-		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(err, IsNil)
-	}
-
-	for i := 10; i < 20; i++ {
-		objectPath := filepath.Join(source2, "object"+strconv.Itoa(i))
-		data := "hello"
-		dataLen := len(data)
-		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(err, IsNil)
-	}
-
-	target, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(target)
-
-	for err := range doCopyCmd([]string{source1 + "...", source2 + "..."}, target, barCp) {
-		c.Assert(err, IsNil)
-	}
-
-	targetURL := server.URL + "/bucket"
-	for err := range doCopyCmd([]string{source1 + "...", source2 + "..."}, targetURL, barCp) {
+	for err := range doSyncCmd(source+"...", []string{target1, target2}, barSync) {
 		c.Assert(err, IsNil)
 	}
 }
