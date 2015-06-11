@@ -54,8 +54,9 @@ type BucketAPI interface {
 
 // ObjectAPI - object specific Read/Write/Stat interface
 type ObjectAPI interface {
+	GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error)
 	GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error)
-	PutObject(bucket, object string, size int64, data io.Reader) error
+	PutObject(bucket, object, contentType string, size int64, data io.Reader) error
 	StatObject(bucket, object string) (ObjectStat, error)
 	RemoveObject(bucket, object string) error
 
@@ -181,13 +182,21 @@ func New(config Config) (API, error) {
 
 /// Object operations
 
-// GetPartialObject retrieve object
+// GetObject retrieve object
+
+// Downloads full object with no ranges, if you need ranges use GetPartialObject
+func (a api) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error) {
+	// get object
+	return a.getPartialObject(bucket, object, 0, 0)
+}
+
+// GetPartialObject retrieve partial object
 //
 // Takes range arguments to download the specified range bytes of an object.
 // Setting offset and length = 0 will download the full object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
 func (a api) GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
-	// get the the object
+	// get partial object
 	return a.getPartialObject(bucket, object, offset, length)
 }
 
@@ -235,7 +244,7 @@ func getPartSize(objectSize int64) int64 {
 	}
 }
 
-func (a api) newObjectUpload(bucket, object string, size int64, data io.Reader) error {
+func (a api) newObjectUpload(bucket, object, contentType string, size int64, data io.Reader) error {
 	initiateMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
 	if err != nil {
 		return err
@@ -405,7 +414,7 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, prefix string, ch ch
 // You must have WRITE permissions on a bucket to create an object
 //
 // This version of PutObject automatically does multipart for more than 5MB worth of data
-func (a api) PutObject(bucket, object string, size int64, data io.Reader) error {
+func (a api) PutObject(bucket, object, contentType string, size int64, data io.Reader) error {
 	if err := invalidArgumentToError(object); err != nil {
 		return err
 	}
@@ -416,7 +425,7 @@ func (a api) PutObject(bucket, object string, size int64, data io.Reader) error 
 			if part.Err != nil {
 				return part.Err
 			}
-			_, err := a.putObject(bucket, object, part.Md5Sum, part.Len, part.ReadSeeker)
+			_, err := a.putObject(bucket, object, contentType, part.Md5Sum, part.Len, part.ReadSeeker)
 			if err != nil {
 				return err
 			}
@@ -436,7 +445,7 @@ func (a api) PutObject(bucket, object string, size int64, data io.Reader) error 
 			}
 		}
 		if !inProgress {
-			return a.newObjectUpload(bucket, object, size, data)
+			return a.newObjectUpload(bucket, object, contentType, size, data)
 		}
 		return a.continueObjectUpload(bucket, object, inProgressUploadID, size, data)
 	}

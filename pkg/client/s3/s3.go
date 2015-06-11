@@ -132,7 +132,7 @@ func (c *s3Client) PutObject(size int64, data io.Reader) error {
 	bucket, object := c.url2BucketAndObject()
 	// TODO - bump individual part size from default, if needed
 	// s3.DefaultPartSize = 1024 * 1024 * 100
-	err := c.api.PutObject(bucket, object, size, data)
+	err := c.api.PutObject(bucket, object, "application/octet-stream", size, data)
 	if err != nil {
 		return iodine.New(err, nil)
 	}

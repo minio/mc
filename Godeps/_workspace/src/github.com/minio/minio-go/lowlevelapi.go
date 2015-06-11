@@ -428,7 +428,10 @@ func (a lowLevelAPI) deleteBucket(bucket string) error {
 /// Object Read/Write/Stat Operations
 
 // putObjectRequest wrapper creates a new PutObject request
-func (a lowLevelAPI) putObjectRequest(bucket, object string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
+func (a lowLevelAPI) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
+	if strings.TrimSpace(contentType) == "" {
+		contentType = "application/octet-stream"
+	}
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -444,6 +447,7 @@ func (a lowLevelAPI) putObjectRequest(bucket, object string, md5SumBytes []byte,
 	}
 	// set Content-MD5 as base64 encoded md5
 	r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
+	r.Set("Content-Type", contentType)
 	r.req.ContentLength = size
 	return r, nil
 }
@@ -451,8 +455,8 @@ func (a lowLevelAPI) putObjectRequest(bucket, object string, md5SumBytes []byte,
 // putObject - add an object to a bucket
 //
 // You must have WRITE permissions on a bucket to add an object to it.
-func (a lowLevelAPI) putObject(bucket, object string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
-	req, err := a.putObjectRequest(bucket, object, md5SumBytes, size, body)
+func (a lowLevelAPI) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
+	req, err := a.putObjectRequest(bucket, object, contentType, md5SumBytes, size, body)
 	if err != nil {
 		return ObjectStat{}, err
 	}
