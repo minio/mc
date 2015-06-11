@@ -151,7 +151,7 @@ func TestObjectOperations(t *testing.T) {
 		t.Fatalf("Error")
 	}
 	data := []byte("Hello, World")
-	err = a.PutObject("bucket", "object", int64(len(data)), bytes.NewReader(data))
+	err = a.PutObject("bucket", "object", "", int64(len(data)), bytes.NewReader(data))
 	if err != nil {
 		t.Fatalf("Error")
 	}
@@ -166,7 +166,7 @@ func TestObjectOperations(t *testing.T) {
 		t.Fatalf("Error")
 	}
 
-	reader, metadata, err := a.GetPartialObject("bucket", "object", 0, 0)
+	reader, metadata, err := a.GetObject("bucket", "object")
 	if err != nil {
 		t.Fatalf("Error")
 	}
