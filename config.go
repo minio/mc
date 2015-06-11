@@ -21,6 +21,7 @@ import (
 	"os/user"
 	"path"
 	"runtime"
+	"sync"
 
 	"github.com/minio/mc/pkg/quick"
 	"github.com/minio/minio/pkg/iodine"
@@ -33,10 +34,7 @@ type configV1 struct {
 }
 
 // cached variables should *NEVER* be accessed directly from outside this file.
-var cache struct {
-	config       quick.Config
-	configLoaded bool // set to true if cache is valid.
-}
+var cache sync.Pool
 
 // customConfigDir used internally only by test functions
 var customConfigDir string
@@ -105,23 +103,22 @@ func getMcConfig() (*configV1, error) {
 	}
 
 	// Cached in private global variable.
-	if cache.configLoaded { // Use previously cached config.
-		return cache.config.Data().(*configV1), nil
+	if v := cache.Get(); v != nil { // Use previously cached config.
+		return v.(quick.Config).Data().(*configV1), nil
 	}
 
 	conf := newConfigV1()
-	cache.config, err = quick.New(conf)
+	qconf, err := quick.New(conf)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
 
-	err = cache.config.Load(configFile)
+	err = qconf.Load(configFile)
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	cache.configLoaded = true
-
-	return cache.config.Data().(*configV1), nil
+	cache.Put(qconf)
+	return qconf.Data().(*configV1), nil
 
 }
 
