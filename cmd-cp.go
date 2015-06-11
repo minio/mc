@@ -90,7 +90,7 @@ func doCopy(sourceURL string, targetURL string, bar *barSend) error {
 		// set up progress
 		newReader = bar.NewProxyReader(reader)
 	}
-
+	runtime.Gosched() // Yield more CPU
 	err = putTarget(targetURL, length, newReader)
 	if err != nil {
 		if !globalQuietFlag {
@@ -145,7 +145,7 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 				}
 				if !globalQuietFlag {
 					bar.Extend(cpURLs.SourceContent.Size)
-					lock.Up() // Let copy routine know that it is catch up.
+					lock.Up() // Let copy routine know that it has to catch up.
 				}
 			}
 		}(sourceURLs, targetURL)

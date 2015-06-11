@@ -78,7 +78,7 @@ func guessSyncURLType(sourceURL string, targetURLs []string) syncURLsType {
 }
 
 func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) <-chan syncURLs {
-	syncURLsCh := make(chan syncURLs)
+	syncURLsCh := make(chan syncURLs, 10000)
 	go func() {
 		defer close(syncURLsCh)
 		var sURLs syncURLs
@@ -97,7 +97,7 @@ func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) <-chan syncURLs
 }
 
 func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) <-chan syncURLs {
-	syncURLsCh := make(chan syncURLs)
+	syncURLsCh := make(chan syncURLs, 10000)
 	go func() {
 		defer close(syncURLsCh)
 		var sURLs syncURLs
@@ -116,7 +116,7 @@ func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) <-chan syncURLs
 }
 
 func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs {
-	syncURLsCh := make(chan syncURLs)
+	syncURLsCh := make(chan syncURLs, 10000)
 	go func() {
 		defer close(syncURLsCh)
 		if !isURLRecursive(sourceURL) {
@@ -214,7 +214,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 
 // prepareCopyURLs - prepares target and source URLs for syncing.
 func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
-	syncURLsCh := make(chan syncURLs)
+	syncURLsCh := make(chan syncURLs, 10000)
 	go func() {
 		defer close(syncURLsCh)
 		switch guessSyncURLType(sourceURL, targetURLs) {
