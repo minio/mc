@@ -69,10 +69,7 @@ func getSystemData() map[string]string {
 		pb.FormatBytes(int64(memstats.TotalAlloc)),
 		pb.FormatBytes(int64(memstats.HeapAlloc)),
 		pb.FormatBytes(int64(memstats.HeapSys)))
-	platform := fmt.Sprintf("Host: %s | OS: %s | Arch: %s",
-		host,
-		runtime.GOOS,
-		runtime.GOARCH)
+	platform := fmt.Sprintf("Host: %s | OS: %s | Arch: %s", host, runtime.GOOS, runtime.GOARCH)
 	goruntime := fmt.Sprintf("Version: %s | CPUs: %s", runtime.Version(), strconv.Itoa(runtime.NumCPU()))
 	return map[string]string{
 		"PLATFORM": platform,
@@ -122,17 +119,20 @@ func main() {
 		themeName := ctx.GlobalString("theme")
 		switch {
 		case console.IsValidTheme(themeName) != true:
-			console.Fatals(ErrorMessage{
+			err := iodine.New(errInvalidTheme{Theme: themeName}, nil)
+			console.Errors(ErrorMessage{
 				Message: fmt.Sprintf("Please choose from this list: %s.", console.GetThemeNames()),
-				Error:   fmt.Errorf("Theme ‘%s’ is not supported.", themeName),
+				Error:   err,
 			})
+			return err
 		default:
 			err := console.SetTheme(themeName)
 			if err != nil {
-				console.Fatals(ErrorMessage{
+				console.Errors(ErrorMessage{
 					Message: fmt.Sprintf("Failed to set theme ‘%s’.", themeName),
 					Error:   err,
 				})
+				return err
 			}
 		}
 		checkConfig()

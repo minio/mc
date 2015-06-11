@@ -91,24 +91,6 @@ func (e errAliasExists) Error() string {
 	return "Alias name: " + e.name + " exists"
 }
 
-/*
-type errIsNotBucket struct {
-	URL string
-}
-
-func (e errIsNotBucket) Error() string {
-	return "Not a bucket " + e.URL
-}
-
-// errInvalidAuthKeys - invalid authorization keys
-type errInvalidAuthKeys struct {
-}
-
-func (e errInvalidAuthKeys) Error() string {
-	return "Invalid authorization keys"
-}
-*/
-
 type errInvalidSource struct {
 	URL string
 }
@@ -123,4 +105,12 @@ type errInvalidTarget struct {
 
 func (e errInvalidTarget) Error() string {
 	return "Invalid target " + e.URL
+}
+
+type errInvalidTheme struct {
+	Theme string
+}
+
+func (e errInvalidTheme) Error() string {
+	return "Theme " + e.Theme + " is not supported."
 }
