@@ -57,25 +57,6 @@ type s3Client struct {
 	hostURL *client.URL
 }
 
-// url2Regions s3 region map used by bucket location constraint
-var url2Regions = map[string]string{
-	"s3-fips-us-gov-west-1.amazonaws.com": "us-gov-west-1",
-	"s3.amazonaws.com":                    "us-east-1",
-	"s3-us-west-1.amazonaws.com":          "us-west-1",
-	"s3-us-west-2.amazonaws.com":          "us-west-2",
-	"s3-eu-west-1.amazonaws.com":          "eu-west-1",
-	"s3-eu-central-1.amazonaws.com":       "eu-central-1",
-	"s3-ap-southeast-1.amazonaws.com":     "ap-southeast-1",
-	"s3-ap-southeast-2.amazonaws.com":     "ap-southeast-2",
-	"s3-ap-northeast-1.amazonaws.com":     "ap-northeast-1",
-	"s3-sa-east-1.amazonaws.com":          "sa-east-1",
-	"s3.cn-north-1.amazonaws.com.cn":      "cn-north-1",
-}
-
-func getRegion(host string) string {
-	return url2Regions[host]
-}
-
 // New returns an initialized s3Client structure. if debug use a internal trace transport
 func New(config *Config) (client.Client, error) {
 	u, err := client.Parse(config.HostURL)
@@ -93,14 +74,12 @@ func New(config *Config) (client.Client, error) {
 		AccessKeyID:     config.AccessKeyID,
 		SecretAccessKey: config.SecretAccessKey,
 		Transport:       transport,
-		Region:          getRegion(u.Host),
 		Endpoint:        u.Scheme + "://" + u.Host,
 	}
 	s3Conf.AccessKeyID = config.AccessKeyID
 	s3Conf.SecretAccessKey = config.SecretAccessKey
 	s3Conf.Transport = transport
 	s3Conf.SetUserAgent(config.AppName, config.AppVersion, config.AppComments...)
-	s3Conf.Region = getRegion(u.Host)
 	s3Conf.Endpoint = u.Scheme + "://" + u.Host
 	api, err := s3.New(s3Conf)
 	if err != nil {
