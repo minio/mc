@@ -46,6 +46,9 @@ func mustGetMcConfigDir() string {
 var server *httptest.Server
 
 func (s *CmdTestSuite) SetUpSuite(c *C) {
+	// do not set it elsewhere, leads to data races since this is a global flag
+	globalQuietFlag = true
+
 	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
 	customConfigDir = configDir
