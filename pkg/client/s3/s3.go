@@ -117,7 +117,7 @@ func (c *s3Client) URL() *client.URL {
 // GetObject - get object
 func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, error) {
 	bucket, object := c.url2BucketAndObject()
-	reader, metadata, err := c.api.GetObject(bucket, object, offset, length)
+	reader, metadata, err := c.api.GetPartialObject(bucket, object, offset, length)
 	if err != nil {
 		return nil, length, iodine.New(err, nil)
 	}

@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	reader, stat, err := playClient.GetObject("mybucket", "myobject", 0, 0)
+	reader, stat, err := playClient.GetPartialObject("mybucket", "myobject", 0, 0)
 	if err != nil {
 		log.Fatalln(err)
 	}
