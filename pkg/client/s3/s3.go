@@ -29,8 +29,6 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-const delimiter = "/"
-
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Config struct {
 	AccessKeyID     string
@@ -188,7 +186,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 
 // url2BucketAndObject gives bucketName and objectName from URL path
 func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
-	splits := strings.SplitN(c.hostURL.Path, delimiter, 3)
+	splits := strings.SplitN(c.hostURL.Path, string(c.hostURL.Separator), 3)
 	switch len(splits) {
 	case 0, 1:
 		bucketName = ""
@@ -263,14 +261,14 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 					return
 				}
 				content := new(client.Content)
-				normalizedPrefix := strings.TrimSuffix(o, delimiter) + delimiter
+				normalizedPrefix := strings.TrimSuffix(o, string(c.hostURL.Separator)) + string(c.hostURL.Separator)
 				normalizedKey := object.Stat.Key
 				if normalizedPrefix != object.Stat.Key && strings.HasPrefix(object.Stat.Key, normalizedPrefix) {
 					normalizedKey = strings.TrimPrefix(object.Stat.Key, normalizedPrefix)
 				}
 				content.Name = normalizedKey
 				switch {
-				case strings.HasSuffix(object.Stat.Key, delimiter):
+				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
 					content.Time = time.Now()
 					content.Type = os.ModeDir
 				default:
@@ -339,7 +337,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 					}
 				}
 			default:
-				if strings.HasSuffix(o, delimiter) {
+				if strings.HasSuffix(o, string(c.hostURL.Separator)) {
 					normalizedKey = strings.TrimPrefix(object.Stat.Key, o)
 				}
 			}
