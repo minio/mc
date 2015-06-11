@@ -166,7 +166,7 @@ func TestObjectOperations(t *testing.T) {
 		t.Fatalf("Error")
 	}
 
-	reader, metadata, err := a.GetObject("bucket", "object", 0, 0)
+	reader, metadata, err := a.GetPartialObject("bucket", "object", 0, 0)
 	if err != nil {
 		t.Fatalf("Error")
 	}

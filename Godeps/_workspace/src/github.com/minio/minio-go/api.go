@@ -54,7 +54,7 @@ type BucketAPI interface {
 
 // ObjectAPI - object specific Read/Write/Stat interface
 type ObjectAPI interface {
-	GetObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error)
+	GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error)
 	PutObject(bucket, object string, size int64, data io.Reader) error
 	StatObject(bucket, object string) (ObjectStat, error)
 	RemoveObject(bucket, object string) error
@@ -181,13 +181,14 @@ func New(config Config) (API, error) {
 
 /// Object operations
 
-// GetObject retrieve object
+// GetPartialObject retrieve object
 //
-// Additionally it also takes range arguments to download the specified range bytes of an object.
+// Takes range arguments to download the specified range bytes of an object.
+// Setting offset and length = 0 will download the full object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a api) GetObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
+func (a api) GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
 	// get the the object
-	return a.getObject(bucket, object, offset, length)
+	return a.getPartialObject(bucket, object, offset, length)
 }
 
 // completedParts is a wrapper to make parts sortable by their part number
