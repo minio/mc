@@ -55,7 +55,7 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	fpath := f.path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(filepath.Separator)) {
+	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
 		fpath = fpath + "."
 	}
 
@@ -127,7 +127,7 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, error)
 	fpath := f.path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(filepath.Separator)) {
+	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
 		fpath = fpath + "."
 	}
 
@@ -172,7 +172,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	fpath := f.path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(filepath.Separator)) {
+	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
 		fpath = fpath + "."
 	}
 
@@ -274,7 +274,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 
 func (f *fsClient) delimited(fp string) string {
 	var stripPrefix string
-	stripPrefix = f.path[:strings.LastIndex(f.path, string(filepath.Separator))+1]
+	stripPrefix = f.path[:strings.LastIndex(f.path, string(f.URL().Separator))+1]
 	return strings.TrimPrefix(fp, stripPrefix)
 }
 

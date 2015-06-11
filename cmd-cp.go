@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/countlock"
 	"github.com/minio/mc/pkg/yielder"
@@ -69,34 +70,35 @@ EXAMPLES:
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(sourceURL string, targetURL string, bar *barSend) error {
+func doCopy(cURLs *cpURLs, bar *barSend) error {
 	if !globalQuietFlag {
-		bar.SetPrefix(sourceURL + ": ")
+		sourceContentParse, _ := client.Parse(cURLs.SourceContent.Name)
+		bar.SetCaption(caption{message: cURLs.SourceContent.Name + ": ", separator: sourceContentParse.Separator})
 	}
-	reader, length, err := getSource(sourceURL)
+	reader, length, err := getSource(cURLs.SourceContent.Name)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorGet(int64(length))
 		}
-		return iodine.New(err, map[string]string{"URL": sourceURL})
+		return iodine.New(err, map[string]string{"URL": cURLs.SourceContent.Name})
 	}
 	defer reader.Close()
 
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
-		console.Infoln(fmt.Sprintf("‘%s’ -> ‘%s’", sourceURL, targetURL))
+		console.Infoln(fmt.Sprintf("‘%s’ -> ‘%s’", cURLs.SourceContent.Name, cURLs.TargetContent.Name))
 		newReader = yielder.NewReader(reader)
 	default:
 		// set up progress
 		newReader = bar.NewProxyReader(yielder.NewReader(reader))
 	}
-	err = putTarget(targetURL, length, newReader)
+	err = putTarget(cURLs.TargetContent.Name, length, newReader)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorPut(int64(length))
 		}
-		return iodine.New(err, map[string]string{"URL": targetURL})
+		return iodine.New(err, map[string]string{"URL": cURLs.TargetContent.Name})
 	}
 	return nil
 }
@@ -115,9 +117,9 @@ func args2URLs(args cli.Args) ([]string, error) {
 	return URLs, nil
 }
 
-func doCopyInRoutine(cpurls *cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
+func doCopyInRoutine(cURLs *cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
-	if err := doCopy(cpurls.SourceContent.Name, cpurls.TargetContent.Name, bar); err != nil {
+	if err := doCopy(cURLs, bar); err != nil {
 		errCh <- err
 	}
 	<-cpQueue // Signal that this copy routine is done.
