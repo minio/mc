@@ -17,6 +17,7 @@
 package yielder
 
 import (
+	"bytes"
 	"testing"
 
 	. "github.com/minio/check"
@@ -29,11 +30,11 @@ type MySuite struct{}
 var _ = Suite(&MySuite{})
 
 func (s *MySuite) TestYielder(c *C) {
-	r := NewReader()
+	r := NewReader(bytes.NewReader([]byte("hello")))
 	c.Assert(r, Not(IsNil))
 
-	p := make([]byte, 100)
+	p := make([]byte, 5)
 	n, err := r.Read(p)
 	c.Assert(err, IsNil)
-	c.Assert(n, Equals, 100)
+	c.Assert(n, Equals, 5)
 }

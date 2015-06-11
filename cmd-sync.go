@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/countlock"
+	"github.com/minio/mc/pkg/yielder"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -90,12 +91,11 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, errCh chan error,
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
-		newReader = reader
+		newReader = yielder.NewReader(reader)
 	default:
 		// set up progress
-		newReader = bar.NewProxyReader(reader)
+		newReader = bar.NewProxyReader(yielder.NewReader(reader))
 	}
-	runtime.Gosched() // Yield more CPU
 	for err := range putTargets(targetURLs, length, newReader) {
 		if err != nil {
 			if !globalQuietFlag {
@@ -139,9 +139,6 @@ func doSyncCmd(sourceURL string, targetURLs []string, bar barSend) <-chan error 
 				errCh <- iodine.New(sURLs.Error, nil)
 				continue
 			}
-
-			runtime.Gosched() // Yield more CPU time to progress-bar builder.
-
 			syncQueue <- true
 			wg.Add(1)
 			if !globalQuietFlag {

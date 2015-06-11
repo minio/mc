@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/countlock"
+	"github.com/minio/mc/pkg/yielder"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -85,12 +86,11 @@ func doCopy(sourceURL string, targetURL string, bar *barSend) error {
 	switch globalQuietFlag {
 	case true:
 		console.Infoln(fmt.Sprintf("‘%s’ -> ‘%s’", sourceURL, targetURL))
-		newReader = reader
+		newReader = yielder.NewReader(reader)
 	default:
 		// set up progress
-		newReader = bar.NewProxyReader(reader)
+		newReader = bar.NewProxyReader(yielder.NewReader(reader))
 	}
-	runtime.Gosched() // Yield more CPU
 	err = putTarget(targetURL, length, newReader)
 	if err != nil {
 		if !globalQuietFlag {
@@ -161,9 +161,6 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 				errCh <- cpURLs.Error
 				continue
 			}
-
-			runtime.Gosched() // Yield more CPU time to progress-bar builder.
-
 			cpQueue <- true // Wait for existing pool to drain.
 			wg.Add(1)       // keep track of all the goroutines
 			if !globalQuietFlag {

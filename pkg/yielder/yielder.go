@@ -15,29 +15,32 @@
  */
 
 // Package yielder relinquishes control to other go routines more
-// frequently in the middle of busy I/O activity when used along with
-// multi-reader or writer.
-
+// frequently in the middle of busy I/O activity
 package yielder
 
-import "runtime"
+import (
+	"io"
+	"runtime"
+)
 
-// NewReader returns an initialized yielding reader.
-func NewReader() *Reader {
-	return &Reader{enabled: true}
+// NewReader returns an initialized yielding proxy reader.
+func NewReader(reader io.Reader) *Reader {
+	return &Reader{reader, true}
 }
 
 // Reader implements io.Reader compatible scheduler.
 type Reader struct {
+	io.Reader
 	enabled bool
 }
 
-// Read yields CPU to other go routines. It is useful to make low-priority I/O routines.
-func (r Reader) Read(p []byte) (int, error) {
+// Read yields CPU to other go routines. Useful in making low-priority I/O routines.
+func (r Reader) Read(p []byte) (n int, err error) {
 	if r.enabled {
 		runtime.Gosched()
 	}
-	return len(p), nil
+	n, err = r.Reader.Read(p)
+	return
 }
 
 // Enable turns on the yielder.
