@@ -113,10 +113,20 @@ func getNewClient(urlStr string, auth *hostConfig) (clnt client.Client, err erro
 			return nil, iodine.New(errInvalidArgument{}, nil)
 		}
 		s3Config := new(s3.Config)
-		s3Config.AccessKeyID = auth.AccessKeyID
-		s3Config.SecretAccessKey = auth.SecretAccessKey
+		s3Config.AccessKeyID = func() string {
+			if auth.AccessKeyID == globalAccessKeyID {
+				return ""
+			}
+			return auth.AccessKeyID
+		}()
+		s3Config.SecretAccessKey = func() string {
+			if auth.SecretAccessKey == globalSecretAccessKey {
+				return ""
+			}
+			return auth.SecretAccessKey
+		}()
 		s3Config.AppName = "Minio"
-		s3Config.AppVersion = Version
+		s3Config.AppVersion = getVersion()
 		s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 		s3Config.HostURL = urlStr
 		s3Config.Debug = globalDebugFlag
