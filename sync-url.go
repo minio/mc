@@ -61,11 +61,9 @@ func guessSyncURLType(sourceURL string, targetURLs []string) syncURLsType {
 	if targetURLs == nil { // Target is empty
 		return syncURLsType(cpURLsTypeInvalid)
 	}
-
 	if sourceURL == "" { // Source list is empty
 		return syncURLsType(cpURLsTypeInvalid)
 	}
-
 	if isURLRecursive(sourceURL) { // Type C
 		return syncURLsType(cpURLsTypeC)
 	} // else Type A or Type B
@@ -83,13 +81,15 @@ func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) <-chan syncURLs
 		defer close(syncURLsCh)
 		var sURLs syncURLs
 		for _, targetURL := range targetURLs {
-			cpURLs := prepareCopyURLsTypeA(sourceURL, targetURL)
-			if cpURLs.Error != nil {
-				syncURLsCh <- syncURLs{Error: iodine.New(cpURLs.Error, nil)}
-				continue
+			var cURLs cpURLs
+			for cURLs = range prepareCopyURLsTypeA(sourceURL, targetURL) {
+				if cURLs.Error != nil {
+					syncURLsCh <- syncURLs{Error: iodine.New(cURLs.Error, nil)}
+					continue
+				}
 			}
-			sURLs.SourceContent = cpURLs.SourceContent
-			sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
+			sURLs.SourceContent = cURLs.SourceContent
+			sURLs.TargetContents = append(sURLs.TargetContents, cURLs.TargetContent)
 		}
 		syncURLsCh <- sURLs
 	}()
@@ -102,13 +102,15 @@ func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) <-chan syncURLs
 		defer close(syncURLsCh)
 		var sURLs syncURLs
 		for _, targetURL := range targetURLs {
-			cpURLs := prepareCopyURLsTypeB(sourceURL, targetURL)
-			if cpURLs.Error != nil {
-				syncURLsCh <- syncURLs{Error: iodine.New(cpURLs.Error, nil)}
-				continue
+			var cURLs cpURLs
+			for cURLs = range prepareCopyURLsTypeB(sourceURL, targetURL) {
+				if cURLs.Error != nil {
+					syncURLsCh <- syncURLs{Error: iodine.New(cURLs.Error, nil)}
+					continue
+				}
 			}
-			sURLs.SourceContent = cpURLs.SourceContent
-			sURLs.TargetContents = append(sURLs.TargetContents, cpURLs.TargetContent)
+			sURLs.SourceContent = cURLs.SourceContent
+			sURLs.TargetContents = append(sURLs.TargetContents, cURLs.TargetContent)
 		}
 		syncURLsCh <- sURLs
 	}()

@@ -21,12 +21,31 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"io"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 )
+
+type decoder interface {
+	Decode(v interface{}) error
+}
+
+func acceptTypeDecoder(body io.Reader, acceptType string, v interface{}) error {
+	var decoder decoder
+	switch {
+	case acceptType == "application/xml":
+		decoder = xml.NewDecoder(body)
+	case acceptType == "application/json":
+		decoder = json.NewDecoder(body)
+	default:
+		decoder = xml.NewDecoder(body)
+	}
+	return decoder.Decode(v)
+}
 
 // urlEncodedName- encode the strings from UTF-8 byte representations to HTML hex escape sequences
 func urlEncodeName(objectName string) (string, error) {

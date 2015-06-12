@@ -137,12 +137,30 @@ type Config struct {
 	// Standard options
 	AccessKeyID     string
 	SecretAccessKey string
-	Region          string // Optional field. If empty, region is determined automatically.
 	Endpoint        string
 
 	// Advanced options
-	AcceptType string            // specify this to get server response in non XML style if server supports it
-	Transport  http.RoundTripper // custom transport usually for debugging, by default its nil
+	// Specify this to get server response in non XML style if server supports it
+	AcceptType string
+	// Optional field. If empty, region is determined automatically.
+	Region string
+
+	// Expert options
+	//
+	// Set this to override default transport ``http.DefaultTransport``
+	//
+	// This transport is usually needed for debugging OR to add your own
+	// custom TLS certificates on the client transport, for custom CA's and
+	// certs which are not part of standard certificate authority
+	//
+	// For example :-
+	//
+	//  tr := &http.Transport{
+	//          TLSClientConfig:    &tls.Config{RootCAs: pool},
+	//          DisableCompression: true,
+	//  }
+	//
+	Transport http.RoundTripper
 
 	// internal
 	// use SetUserAgent append to default, useful when minio-go is used with in your application
@@ -208,8 +226,8 @@ func (a completedParts) Len() int           { return len(a) }
 func (a completedParts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a completedParts) Less(i, j int) bool { return a[i].PartNumber < a[j].PartNumber }
 
-// MinimumPartSize minimum part size per object after which PutObject behaves internally as multipart
-var MinimumPartSize int64 = 1024 * 1024 * 5
+// minimumPartSize minimum part size per object after which PutObject behaves internally as multipart
+var minimumPartSize int64 = 1024 * 1024 * 5
 
 // maxParts - unexported right now
 var maxParts = int64(10000)
@@ -226,7 +244,7 @@ var maxPartSize int64 = 1024 * 1024 * 1024 * 5
 //  maximumPartSize
 //  minimumPartSize
 //
-// if a the partSize after division with maxParts is greater than MinimumPartSize
+// if a the partSize after division with maxParts is greater than minimumPartSize
 // then choose that to be the new part size, if not return MinimumPartSize
 //
 // special case where it happens to be that partSize is indeed bigger than the
@@ -234,13 +252,13 @@ var maxPartSize int64 = 1024 * 1024 * 1024 * 5
 func getPartSize(objectSize int64) int64 {
 	partSize := (objectSize / (maxParts - 1)) // make sure last part has enough buffer and handle this poperly
 	{
-		if partSize > MinimumPartSize {
+		if partSize > minimumPartSize {
 			if partSize > maxPartSize {
 				return maxPartSize
 			}
 			return partSize
 		}
-		return MinimumPartSize
+		return minimumPartSize
 	}
 }
 
@@ -419,9 +437,9 @@ func (a api) PutObject(bucket, object, contentType string, size int64, data io.R
 		return err
 	}
 	switch {
-	case size < MinimumPartSize:
+	case size < minimumPartSize:
 		// Single Part use case, use PutObject directly
-		for part := range multiPart(data, MinimumPartSize, nil) {
+		for part := range multiPart(data, minimumPartSize, nil) {
 			if part.Err != nil {
 				return part.Err
 			}

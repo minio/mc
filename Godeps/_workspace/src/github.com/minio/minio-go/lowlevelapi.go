@@ -19,6 +19,7 @@ package minio
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -35,6 +36,8 @@ type lowLevelAPI struct {
 
 // putBucketRequest wrapper creates a new PutBucket request
 func (a lowLevelAPI) putBucketRequest(bucket, acl, location string) (*request, error) {
+	var r *request
+	var err error
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
@@ -46,14 +49,20 @@ func (a lowLevelAPI) putBucketRequest(bucket, acl, location string) (*request, e
 	case location != "":
 		createBucketConfig := new(createBucketConfiguration)
 		createBucketConfig.Location = location
-		createBucketConfigBytes, err := xml.Marshal(createBucketConfig)
+		var createBucketConfigBytes []byte
+		switch {
+		case a.config.AcceptType == "application/xml":
+			createBucketConfigBytes, err = xml.Marshal(createBucketConfig)
+		case a.config.AcceptType == "application/json":
+			createBucketConfigBytes, err = json.Marshal(createBucketConfig)
+		default:
+			createBucketConfigBytes, err = xml.Marshal(createBucketConfig)
+		}
 		if err != nil {
 			return nil, err
 		}
 		createBucketConfigBuffer = bytes.NewReader(createBucketConfigBytes)
 	}
-	var r *request
-	var err error
 	switch {
 	case createBucketConfigBuffer == nil:
 		r, err = newRequest(op, a.config, nil)
@@ -112,7 +121,7 @@ func (a lowLevelAPI) putBucket(bucket, acl, location string) error {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return responseToError(resp.Body)
+			return a.responseToError(resp.Body)
 		}
 	}
 	return nil
@@ -146,7 +155,7 @@ func (a lowLevelAPI) putBucketACL(bucket, acl string) error {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return responseToError(resp.Body)
+			return a.responseToError(resp.Body)
 		}
 	}
 	return nil
@@ -179,12 +188,11 @@ func (a lowLevelAPI) getBucketACL(bucket string) (accessControlPolicy, error) {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return accessControlPolicy{}, responseToError(resp.Body)
+			return accessControlPolicy{}, a.responseToError(resp.Body)
 		}
 	}
 	policy := accessControlPolicy{}
-	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(&policy)
+	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &policy)
 	if err != nil {
 		return accessControlPolicy{}, err
 	}
@@ -227,12 +235,11 @@ func (a lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return "", responseToError(resp.Body)
+			return "", a.responseToError(resp.Body)
 		}
 	}
 	var locationConstraint string
-	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(&locationConstraint)
+	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &locationConstraint)
 	if err != nil {
 		return "", err
 	}
@@ -311,12 +318,11 @@ func (a lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxke
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listBucketResult{}, responseToError(resp.Body)
+			return listBucketResult{}, a.responseToError(resp.Body)
 		}
 	}
 	listBucketResult := listBucketResult{}
-	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(&listBucketResult)
+	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &listBucketResult)
 	if err != nil {
 		return listBucketResult, err
 	}
@@ -467,7 +473,7 @@ func (a lowLevelAPI) putObject(bucket, object, contentType string, md5SumBytes [
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return ObjectStat{}, responseToError(resp.Body)
+			return ObjectStat{}, a.responseToError(resp.Body)
 		}
 	}
 	var metadata ObjectStat
@@ -523,7 +529,7 @@ func (a lowLevelAPI) getPartialObject(bucket, object string, offset, length int6
 		case http.StatusOK:
 		case http.StatusPartialContent:
 		default:
-			return nil, ObjectStat{}, responseToError(resp.Body)
+			return nil, ObjectStat{}, a.responseToError(resp.Body)
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
@@ -702,12 +708,11 @@ func (a lowLevelAPI) listBuckets() (listAllMyBucketsResult, error) {
 			return listAllMyBucketsResult{}, errors.New(resp.Status)
 		}
 		if resp.StatusCode != http.StatusOK {
-			return listAllMyBucketsResult{}, responseToError(resp.Body)
+			return listAllMyBucketsResult{}, a.responseToError(resp.Body)
 		}
 	}
 	listAllMyBucketsResult := listAllMyBucketsResult{}
-	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(&listAllMyBucketsResult)
+	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &listAllMyBucketsResult)
 	if err != nil {
 		return listAllMyBucketsResult, err
 	}

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -102,12 +103,11 @@ func (a lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, pre
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listMultipartUploadsResult{}, responseToError(resp.Body)
+			return listMultipartUploadsResult{}, a.responseToError(resp.Body)
 		}
 	}
 	listMultipartUploadsResult := listMultipartUploadsResult{}
-	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(&listMultipartUploadsResult)
+	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &listMultipartUploadsResult)
 	if err != nil {
 		return listMultipartUploadsResult, err
 	}
@@ -142,12 +142,11 @@ func (a lowLevelAPI) initiateMultipartUpload(bucket, object string) (initiateMul
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return initiateMultipartUploadResult{}, responseToError(resp.Body)
+			return initiateMultipartUploadResult{}, a.responseToError(resp.Body)
 		}
 	}
 	initiateMultipartUploadResult := initiateMultipartUploadResult{}
-	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(&initiateMultipartUploadResult)
+	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &initiateMultipartUploadResult)
 	if err != nil {
 		return initiateMultipartUploadResult, err
 	}
@@ -165,7 +164,15 @@ func (a lowLevelAPI) completeMultipartUploadRequest(bucket, object, uploadID str
 		HTTPMethod: "POST",
 		HTTPPath:   "/" + bucket + "/" + encodedObject + "?uploadId=" + uploadID,
 	}
-	completeMultipartUploadBytes, err := xml.Marshal(complete)
+	var completeMultipartUploadBytes []byte
+	switch {
+	case a.config.AcceptType == "application/xml":
+		completeMultipartUploadBytes, err = xml.Marshal(complete)
+	case a.config.AcceptType == "application/json":
+		completeMultipartUploadBytes, err = json.Marshal(complete)
+	default:
+		completeMultipartUploadBytes, err = xml.Marshal(complete)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -191,12 +198,11 @@ func (a lowLevelAPI) completeMultipartUpload(bucket, object, uploadID string, c 
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return completeMultipartUploadResult{}, responseToError(resp.Body)
+			return completeMultipartUploadResult{}, a.responseToError(resp.Body)
 		}
 	}
 	completeMultipartUploadResult := completeMultipartUploadResult{}
-	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(&completeMultipartUploadResult)
+	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &completeMultipartUploadResult)
 	if err != nil {
 		return completeMultipartUploadResult, err
 	}
@@ -294,12 +300,11 @@ func (a lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumber
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listObjectPartsResult{}, responseToError(resp.Body)
+			return listObjectPartsResult{}, a.responseToError(resp.Body)
 		}
 	}
 	listObjectPartsResult := listObjectPartsResult{}
-	decoder := xml.NewDecoder(resp.Body)
-	err = decoder.Decode(&listObjectPartsResult)
+	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &listObjectPartsResult)
 	if err != nil {
 		return listObjectPartsResult, err
 	}
@@ -345,7 +350,7 @@ func (a lowLevelAPI) uploadPart(bucket, object, uploadID string, md5SumBytes []b
 	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return completePart{}, responseToError(resp.Body)
+			return completePart{}, a.responseToError(resp.Body)
 		}
 	}
 	return cPart, nil

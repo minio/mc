@@ -199,14 +199,14 @@ func TestObjectOperations(t *testing.T) {
 func TestPartSize(t *testing.T) {
 	var maxPartSize int64 = 1024 * 1024 * 1024 * 5
 	partSize := getPartSize(5000000000000000000)
-	if partSize > MinimumPartSize {
+	if partSize > minimumPartSize {
 		if partSize > maxPartSize {
-			t.Fatal("invalid result, cannot be bigger than MaxPartSize 5GB")
+			t.Fatal("invalid result, cannot be bigger than maxPartSize 5GB")
 		}
 	}
 	partSize = getPartSize(50000000000)
-	if partSize > MinimumPartSize {
-		t.Fatal("invalid result, cannot be bigger than MinimumPartSize 5MB")
+	if partSize > minimumPartSize {
+		t.Fatal("invalid result, cannot be bigger than minimumPartSize 5MB")
 	}
 }
 
@@ -251,9 +251,10 @@ func TestURLEncoding(t *testing.T) {
 }
 
 func TestErrorResponse(t *testing.T) {
+	a := lowLevelAPI{&Config{}}
 	errorResponse := []byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message><Resource>/mybucket/myphoto.jpg</Resource><RequestId>F19772218238A85A</RequestId><HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId></Error>")
 	errorReader := bytes.NewReader(errorResponse)
-	err := responseToError(errorReader)
+	err := a.responseToError(errorReader)
 	if err == nil {
 		t.Fatal("Error")
 	}
@@ -280,7 +281,10 @@ func TestErrorResponse(t *testing.T) {
 	if resp.HostID != "GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD" {
 		t.Fatal("Error")
 	}
-	if resp.XML() == "" {
+	if resp.ToXML() == "" {
+		t.Fatal("Error")
+	}
+	if resp.ToJSON() == "" {
 		t.Fatal("Error")
 	}
 }
