@@ -81,16 +81,8 @@ func doList(clnt client.Client, recursive bool) error {
 				console.Errorln(iodine.ToError(contentCh.Err))
 				continue
 			}
-			switch err := iodine.ToError(contentCh.Err).(type) {
-			case *os.PathError:
-				if err.Op == "readlink" {
-					console.Errorln(iodine.ToError(contentCh.Err))
-					continue
-				}
-			}
 			err = contentCh.Err
 			break
-
 		}
 		console.Println(parseContent(contentCh.Content))
 	}
