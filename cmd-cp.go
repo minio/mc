@@ -70,7 +70,7 @@ EXAMPLES:
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(cURLs *cpURLs, bar *barSend) error {
+func doCopy(cURLs cpURLs, bar *barSend) error {
 	if !globalQuietFlag {
 		sourceContentParse, _ := client.Parse(cURLs.SourceContent.Name)
 		bar.SetCaption(caption{message: cURLs.SourceContent.Name + ": ", separator: sourceContentParse.Separator})
@@ -117,7 +117,7 @@ func args2URLs(args cli.Args) ([]string, error) {
 	return URLs, nil
 }
 
-func doCopyInRoutine(cURLs *cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
+func doCopyInRoutine(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if err := doCopy(cURLs, bar); err != nil {
 		errCh <- err
