@@ -231,18 +231,11 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fi, err = os.Stat(filepath.Join(dir.Name(), fi.Name()))
 				if err != nil {
-					if os.IsNotExist(err) { // return proper error on broken symlinks
-						contentCh <- client.ContentOnChannel{
-							Content: nil,
-							Err:     iodine.New(err, map[string]string{"Target": file.Name()}),
-						}
-						return
-					}
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     iodine.New(err, nil),
+						Err:     iodine.New(err, map[string]string{"Target": file.Name()}),
 					}
-					return
+					continue
 				}
 			}
 			if fi.Mode().IsRegular() || fi.Mode().IsDir() {
@@ -297,7 +290,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			fi, err = os.Stat(fp)
 			if err != nil {
-				if os.IsNotExist(err) { // ignore broken symlinks
+				if os.IsNotExist(err) || os.IsPermission(err) { // ignore broken symlinks and permission denied
 					return nil
 				}
 				return iodine.New(err, nil)
