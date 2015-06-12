@@ -79,6 +79,9 @@ func getSystemData() map[string]string {
 }
 
 func main() {
+	// enable GOMAXPROCS to default to number of CPUs
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	// register all the commands
 	registerCmd(lsCmd)     // List contents of a bucket
 	registerCmd(mbCmd)     // make a bucket
