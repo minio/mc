@@ -16,7 +16,10 @@
 
 package minio
 
-import "time"
+import (
+	"encoding/xml"
+	"time"
+)
 
 // listAllMyBucketsResult container for ListBucets response
 type listAllMyBucketsResult struct {
@@ -134,7 +137,7 @@ type initiateMultipartUploadResult struct {
 	UploadID string `xml:"UploadId"`
 }
 
-// completeMultipartUploadResult containe for completed multipart upload response
+// completeMultipartUploadResult container for completed multipart upload response
 type completeMultipartUploadResult struct {
 	Location string
 	Bucket   string
@@ -144,18 +147,21 @@ type completeMultipartUploadResult struct {
 
 // completePart sub container lists individual part numbers and their md5sum, part of CompleteMultipartUpload
 type completePart struct {
+	XMLName    xml.Name `xml:"http://doc.s3.amazonaws.com/2006-03-01 Part" json:"-"`
 	PartNumber int
 	ETag       string
 }
 
 // completeMultipartUpload container for completing multipart upload
 type completeMultipartUpload struct {
-	Part []completePart
+	XMLName xml.Name `xml:"http://doc.s3.amazonaws.com/2006-03-01 CompleteMultipartUpload" json:"-"`
+	Part    []completePart
 }
 
 // createBucketConfiguration container for bucket configuration
 type createBucketConfiguration struct {
-	Location string `xml:"LocationConstraint"`
+	XMLName  xml.Name `xml:"http://doc.s3.amazonaws.com/2006-03-01 CreateBucketConfiguration" json:"-"`
+	Location string   `xml:"LocationConstraint"`
 }
 
 type grant struct {
