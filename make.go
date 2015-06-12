@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 )
 
 type Version struct {
@@ -70,39 +69,59 @@ func getVersion() string {
 	return nil
 }
 
-func runGoBuild(ctx *cli.Context) {
-	if ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "build", 1) // last argument is exit code
-	}
-	mcBuild := exec.Command("godep", "go", "build", "-a", "./...")
-	mcTest := exec.Command("godep", "go", "test", "-race", "./...")
-	mcInstall := exec.Command("godep", "go", "install", "-a", "github.com/minio/mc")
-	mcBuildErr := mcBuild.Run()
-	if mcBuildErr != nil {
-		console.Fatalln(mcBuildErr)
-	}
-	var mcTestStdOut bytes.Buffer
-	mcTest.Stdout = &mcTestStdOut
-	mcTestErr := mcTest.Run()
-	if mcTestErr != nil {
-		fmt.Print(mcTestStdOut.String())
-		console.Fatalln(mcTestErr)
-	}
-	fmt.Print(mcTestStdOut.String())
-	mcInstallErr := mcInstall.Run()
-	if mcInstallErr != nil {
-		console.Fatalln(mcInstallErr)
-	}
+type command struct {
+	cmd    *exec.Cmd
+	stderr *bytes.Buffer
+	stdout *bytes.Buffer
 }
 
-func runReleaseCmd(ctx *cli.Context) {
+func (c command) runCommand() error {
+	c.cmd.Stdout = c.stdout
+	c.cmd.Stderr = c.stderr
+	return c.cmd.Run()
+}
+func (c command) String() string {
+	message := c.stderr.String()
+	message += c.stdout.String()
+	return message
+}
+
+func runMcInstall(ctx *cli.Context) {
+	if ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "install", 1) // last argument is exit code
+	}
+	mcBuild := command{exec.Command("godep", "go", "build", "-a", "./..."), &bytes.Buffer{}, &bytes.Buffer{}}
+	mcTest := command{exec.Command("godep", "go", "test", "-race", "./..."), &bytes.Buffer{}, &bytes.Buffer{}}
+	mcInstall := command{exec.Command("godep", "go", "install", "-a", "github.com/minio/mc"), &bytes.Buffer{}, &bytes.Buffer{}}
+	mcBuildErr := mcBuild.runCommand()
+	if mcBuildErr != nil {
+		fmt.Print(mcBuild)
+		os.Exit(1)
+	}
+	fmt.Print(mcBuild)
+	mcTestErr := mcTest.runCommand()
+	if mcTestErr != nil {
+		fmt.Println(mcTest)
+		os.Exit(1)
+	}
+	fmt.Print(mcTest)
+	mcInstallErr := mcInstall.runCommand()
+	if mcInstallErr != nil {
+		fmt.Println(mcInstall)
+		os.Exit(1)
+	}
+	fmt.Print(mcInstall)
+}
+
+func runMcRelease(ctx *cli.Context) {
 	if ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "release", 1) // last argument is exit code
 	}
 	version := Version{Date: time.Now().UTC().Format(time.RFC3339Nano)}
 	err := writeVersion(version)
 	if err != nil {
-		console.Fatalln(err)
+		fmt.Print(err)
+		os.Exit(1)
 	}
 }
 
@@ -112,10 +131,10 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:   "release",
-			Action: runReleaseCmd,
+			Action: runMcRelease,
 		}, {
 			Name:   "install",
-			Action: runGoBuild,
+			Action: runMcInstall,
 		},
 	}
 	app.Author = "Minio.io"
