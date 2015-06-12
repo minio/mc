@@ -111,27 +111,30 @@ func Parse(urlStr string) (*URL, error) {
 // String convert URL into its canonical form
 func (u *URL) String() string {
 	var buf bytes.Buffer
-	if u.Scheme != "" {
+	// if fileystem no translation needed, return as is
+	if u.Type == Filesystem {
+		return u.Path
+	}
+	// if Object convert from any non standard paths to a supported URL path style
+	if u.Type == Object {
 		buf.WriteString(u.Scheme)
 		buf.WriteByte(':')
-	}
-	if u.Scheme != "" || u.Host != "" {
 		buf.WriteString("//")
 		if h := u.Host; h != "" {
 			buf.WriteString(h)
 		}
-	}
-	switch runtime.GOOS {
-	case "windows":
-		if u.Path != "" && u.Path[0] != '\\' && u.Host != "" && u.Path[0] != '/' {
-			buf.WriteByte('/')
+		switch runtime.GOOS {
+		case "windows":
+			if u.Path != "" && u.Path[0] != '\\' && u.Host != "" && u.Path[0] != '/' {
+				buf.WriteByte('/')
+			}
+			buf.WriteString(strings.Replace(u.Path, "\\", "/", -1))
+		default:
+			if u.Path != "" && u.Path[0] != '/' && u.Host != "" {
+				buf.WriteByte('/')
+			}
+			buf.WriteString(u.Path)
 		}
-		buf.WriteString(strings.Replace(u.Path, "\\", "/", -1))
-	default:
-		if u.Path != "" && u.Path[0] != '/' && u.Host != "" {
-			buf.WriteByte('/')
-		}
-		buf.WriteString(u.Path)
 	}
 	return buf.String()
 }

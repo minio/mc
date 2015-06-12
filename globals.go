@@ -29,7 +29,7 @@ var (
 // mc configuration related constants
 const (
 	mcConfigDir        = ".mc/"
-	mcConfigWindowsDir = "mc/"
+	mcConfigWindowsDir = "mc\\"
 	mcConfigFile       = "config.json"
 )
 
