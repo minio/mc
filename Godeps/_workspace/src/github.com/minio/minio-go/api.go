@@ -507,6 +507,9 @@ func (a api) MakeBucket(bucket string, acl BucketACL) error {
 	if location == "milkyway" {
 		location = ""
 	}
+	if location == "us-east-1" {
+		location = ""
+	}
 	return a.putBucket(bucket, string(acl), location)
 }
 
