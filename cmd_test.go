@@ -154,13 +154,13 @@ func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
 	c.Assert(err, IsNil)
 	switch runtime.GOOS {
 	case "linux":
-		c.Assert(dir, Equals, path.Join(customConfigDir, ".mc/"))
-	case "windows":
-		c.Assert(dir, Equals, path.Join(customConfigDir, "mc/"))
-	case "darwin":
-		c.Assert(dir, Equals, path.Join(customConfigDir, ".mc/"))
+		fallthrough
 	case "freebsd":
-		c.Assert(dir, Equals, path.Join(customConfigDir, ".mc/"))
+		fallthrough
+	case "darwin":
+		c.Assert(dir, Equals, path.Join(customConfigDir, mcConfigDir))
+	case "windows":
+		c.Assert(dir, Equals, path.Join(customConfigDir, mcConfigWindowsDir))
 	default:
 		c.Fail()
 	}
