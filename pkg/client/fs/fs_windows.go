@@ -26,6 +26,7 @@ import (
 )
 
 func normalizePath(path string) (string, error) {
+	var err error
 	if filepath.VolumeName(path) == "" && filepath.HasPrefix(path, "\\") {
 		path, err = syscall.FullPath(path)
 		if err != nil {
