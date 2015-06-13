@@ -41,3 +41,10 @@ type NotFolder GenericFileError
 func (e NotFolder) Error() string {
 	return "Requested file ‘" + e.path + "’ is not a folder"
 }
+
+// EmptyPath (EINVAL) - invalid argument
+type EmptyPath struct{}
+
+func (e EmptyPath) Error() string {
+	return "Invalid path, path cannot be empty"
+}

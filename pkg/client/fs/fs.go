@@ -36,9 +36,13 @@ type fsClient struct {
 // New - instantiate a new fs client
 func New(path string) (client.Client, error) {
 	if strings.TrimSpace(path) == "" {
-		return nil, iodine.New(errors.New("Path is empty."), nil)
+		return nil, iodine.New(EmptyPath{}, nil)
 	}
-
+	var err error
+	path, err = normalizePath(path)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
 	return &fsClient{path: path}, nil
 }
 
