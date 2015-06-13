@@ -83,7 +83,12 @@ https://dl.minio.io:9000 for continuous updates`
 	}
 	mcUpdateURLParse := clnt.URL()
 	if latest.After(current) {
-		updateString := "mc cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ${HOME}/bin/mc"
+		var updateString string
+		if runtime.GOOS == "windows" {
+			updateString = "mc.exe cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ."
+		} else {
+			updateString = "mc cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ${HOME}/bin/mc"
+		}
 		printUpdateNotify(updateString, "new", "old")
 		return "", nil
 	}
