@@ -155,15 +155,17 @@ func (c *s3Client) Stat() (*client.Content, error) {
 		metadata, err := c.api.StatObject(bucket, object)
 		if err != nil {
 			errResponse := s3.ToErrorResponse(err)
-			if errResponse.Code == "NoSuchKey" {
-				for content := range c.List(false) {
-					if content.Err != nil {
-						return nil, iodine.New(err, nil)
+			if errResponse != nil {
+				if errResponse.Code == "NoSuchKey" {
+					for content := range c.List(false) {
+						if content.Err != nil {
+							return nil, iodine.New(err, nil)
+						}
+						content.Content.Type = os.ModeDir
+						content.Content.Name = object
+						content.Content.Size = 0
+						return content.Content, nil
 					}
-					content.Content.Type = os.ModeDir
-					content.Content.Name = object
-					content.Content.Size = 0
-					return content.Content, nil
 				}
 			}
 			return nil, iodine.New(err, nil)
