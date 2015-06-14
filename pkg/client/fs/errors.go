@@ -42,6 +42,13 @@ func (e NotFolder) Error() string {
 	return "Requested file ‘" + e.path + "’ is not a folder"
 }
 
+// ISBrokenSymlink (ENOTENT) - file has broken symlink
+type ISBrokenSymlink GenericFileError
+
+func (e ISBrokenSymlink) Error() string {
+	return "Requested file ‘" + e.path + "’ has broken symlink"
+}
+
 // EmptyPath (EINVAL) - invalid argument
 type EmptyPath struct{}
 
