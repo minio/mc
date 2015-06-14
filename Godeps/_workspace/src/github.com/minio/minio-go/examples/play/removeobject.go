@@ -34,10 +34,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	for bucket := range s3Client.ListBuckets() {
-		if bucket.Err != nil {
-			log.Fatalln(bucket.Err)
-		}
-		log.Println(bucket.Stat)
+	er = s3Client.RemoveObject("mybucket", "myobject")
+	if err != nil {
+		log.Fatalln(err)
 	}
+	log.Println("Success")
 }
