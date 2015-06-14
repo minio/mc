@@ -49,7 +49,7 @@ func isValidAliasName(aliasName string) bool {
 func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, err error) {
 	u, err := client.Parse(aliasedURL)
 	if err != nil {
-		return aliasedURL, iodine.New(errInvalidURL{url: aliasedURL}, nil)
+		return aliasedURL, iodine.New(errInvalidURL{URL: aliasedURL}, nil)
 	}
 	// proper URL
 	if u.Host != "" {
@@ -69,7 +69,7 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 				trimmedURL := expandedURL + "/" + strings.TrimPrefix(strings.TrimPrefix(splits[1], "/"), "\\")
 				u, err := client.Parse(trimmedURL)
 				if err != nil {
-					return aliasedURL, iodine.New(errInvalidURL{url: aliasedURL}, nil)
+					return aliasedURL, iodine.New(errInvalidURL{URL: aliasedURL}, nil)
 				}
 				return u.String(), nil
 			}

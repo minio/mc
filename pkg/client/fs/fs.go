@@ -17,7 +17,6 @@
 package fs
 
 import (
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -376,7 +375,7 @@ func (f *fsClient) MakeBucket() error {
 // SetBucketACL - create a new bucket
 func (f *fsClient) SetBucketACL(acl string) error {
 	if !isValidBucketACL(acl) {
-		return iodine.New(errors.New("invalid acl"), nil)
+		return iodine.New(client.InvalidACLType{ACL: acl}, nil)
 	}
 	err := os.MkdirAll(f.path, aclToPerm(acl))
 	if err != nil {

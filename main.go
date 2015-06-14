@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -145,7 +144,7 @@ func main() {
 		if !isMcConfigExist() {
 			console.Fatals(ErrorMessage{
 				Message: "Please run \"mc config generate\"",
-				Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+				Error:   iodine.New(errNotConfigured{}, nil),
 			})
 		}
 		return nil

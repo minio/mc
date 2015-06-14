@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -165,7 +164,7 @@ func runSyncCmd(ctx *cli.Context) {
 	if !isMcConfigExist() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+			Error:   iodine.New(errNotConfigured{}, nil),
 		})
 	}
 

@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -69,7 +68,7 @@ func runCatCmd(ctx *cli.Context) {
 	if !isMcConfigExist() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+			Error:   iodine.New(errNotConfigured{}, nil),
 		})
 	}
 	config, err := getMcConfig()
@@ -118,9 +117,9 @@ func doCatCmd(sourceURLs []string) (string, error) {
 					// stdout closed by the user. Gracefully exit.
 					return "", nil
 				}
-				return "Writing data to stdout failed, unexpected problem.. please report this error", iodine.New(e, nil)
+				return "Writing data to stdout failed, unexpected problem.. please report this error", iodine.New(err, nil)
 			default:
-				return "Reading data from source failed: " + url, iodine.New(errors.New("Copy data from source failed"), nil)
+				return "Reading data from source failed: " + url, iodine.New(err, nil)
 			}
 		}
 	}

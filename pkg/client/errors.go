@@ -30,22 +30,20 @@ func (e APINotImplemented) Error() string {
 }
 
 // GenericError - generic error
-type GenericError struct {
-	Err error
-}
+type GenericError struct{}
 
 // UnexpectedError - unexpected error
 type UnexpectedError GenericError
 
 func (e UnexpectedError) Error() string {
-	return e.Err.Error() + ", please report this error"
+	return "Unexpected error, please report this error at https://github.com/minio/mc/issues"
 }
 
 // InvalidArgument - bad arguments provided
 type InvalidArgument GenericError
 
 func (e InvalidArgument) Error() string {
-	return e.Err.Error()
+	return "Invalid argument"
 }
 
 // InvalidRange - invalid range requested
@@ -55,4 +53,13 @@ type InvalidRange struct {
 
 func (e InvalidRange) Error() string {
 	return "invalid range offset: " + strconv.FormatInt(e.Offset, 10)
+}
+
+// InvalidACLType - invalid acl type
+type InvalidACLType struct {
+	ACL string
+}
+
+func (e InvalidACLType) Error() string {
+	return "invalid acl type: " + e.ACL
 }

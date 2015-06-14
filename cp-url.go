@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -191,7 +190,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) <-chan cpURLs {
 		if err == nil {
 			if !targetContent.Type.IsDir() {
 				// Target exists, but is not a directory.
-				cpURLsCh <- cpURLs{Error: iodine.New(fmt.Errorf("Target [%s] is not a directory.", targetURL), nil)}
+				cpURLsCh <- cpURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
 				return
 			}
 		} // Else name is available to create.
@@ -225,7 +224,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
 		defer close(cpURLsCh)
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
-			cpURLsCh <- cpURLs{Error: iodine.New(fmt.Errorf("Source [%s] is not recursive.", sourceURL), nil)}
+			cpURLsCh <- cpURLs{Error: iodine.New(errSourceNotRecursive{URL: sourceURL}, nil)}
 			return
 		}
 
@@ -247,7 +246,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
 
 		if !sourceContent.Type.IsDir() {
 			// Source is not a dir.
-			cpURLsCh <- cpURLs{Error: iodine.New(fmt.Errorf("Source [%s] is not a directory.", sourceURL), nil)}
+			cpURLsCh <- cpURLs{Error: iodine.New(errSourceIsNotDir{URL: sourceURL}, nil)}
 			return
 		}
 
@@ -261,13 +260,13 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
 		targetContent, err := targetClient.Stat()
 		if err != nil {
 			// Target does not exist.
-			cpURLsCh <- cpURLs{Error: iodine.New(fmt.Errorf("Target directory [%s] does not exist.", targetURL), nil)}
+			cpURLsCh <- cpURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}
 			return
 		}
 
 		if !targetContent.Type.IsDir() {
 			// Target exists, but is not a directory.
-			cpURLsCh <- cpURLs{Error: iodine.New(fmt.Errorf("Target [%s] is not a directory.", targetURL), nil)}
+			cpURLsCh <- cpURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
 			return
 		}
 
@@ -333,17 +332,17 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan cpURLs {
 		targetContent, err := targetClient.Stat()
 		if err != nil {
 			// Target does not exist.
-			cpURLsCh <- cpURLs{Error: iodine.New(fmt.Errorf("Target directory [%s] does not exist.", targetURL), nil)}
+			cpURLsCh <- cpURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}
 			return
 		}
 		if !targetContent.Type.IsDir() {
 			// Target exists, but is not a directory.
-			cpURLsCh <- cpURLs{Error: iodine.New(fmt.Errorf("Target [%s] is not a directory.", targetURL), nil)}
+			cpURLsCh <- cpURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
 			return
 		}
 		if sourceURLs == nil {
 			// Source list is empty.
-			cpURLsCh <- cpURLs{Error: iodine.New(fmt.Errorf("Source list is empty"), nil)}
+			cpURLsCh <- cpURLs{Error: iodine.New(errSourceListEmpty{}, nil)}
 			return
 		}
 		for _, sourceURL := range sourceURLs {

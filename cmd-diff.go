@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/minio/cli"
@@ -62,7 +61,7 @@ func runDiffCmd(ctx *cli.Context) {
 	if !isMcConfigExist() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+			Error:   iodine.New(errNotConfigured{}, nil),
 		})
 	}
 	config, err := getMcConfig()

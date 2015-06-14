@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -123,7 +122,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 		defer close(syncURLsCh)
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
-			syncURLsCh <- syncURLs{Error: iodine.New(fmt.Errorf("Source [%s] is not recursive.", sourceURL), nil)}
+			syncURLsCh <- syncURLs{Error: iodine.New(errSourceNotRecursive{URL: sourceURL}, nil)}
 			return
 		}
 		// add `/` after trimming off `...` to emulate directories
@@ -143,7 +142,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 
 		if !sourceContent.Type.IsDir() {
 			// Source is not a dir.
-			syncURLsCh <- syncURLs{Error: iodine.New(fmt.Errorf("Source [%s] is not a directory.", sourceURL), nil)}
+			syncURLsCh <- syncURLs{Error: iodine.New(errSourceIsNotDir{URL: sourceURL}, nil)}
 			return
 		}
 
@@ -158,13 +157,13 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 			targetContent, err := targetClient.Stat()
 			if err != nil {
 				// Target does not exist.
-				syncURLsCh <- syncURLs{Error: iodine.New(fmt.Errorf("Target directory [%s] does not exist.", targetURL), nil)}
+				syncURLsCh <- syncURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}
 				return
 			}
 
 			if !targetContent.Type.IsDir() {
 				// Target exists, but is not a directory.
-				syncURLsCh <- syncURLs{Error: iodine.New(fmt.Errorf("Target [%s] is not a directory.", targetURL), nil)}
+				syncURLsCh <- syncURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
 				return
 			}
 		}
