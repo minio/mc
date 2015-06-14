@@ -116,7 +116,6 @@ func newCpBar() barSend {
 	finishCh := make(chan bool)
 	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
 		var started bool
-		var redraw bool
 		var barCaption string
 		var totalBytesRead int64 // total amounts of bytes read
 		bar := pb.New64(0)
@@ -125,15 +124,16 @@ func newCpBar() barSend {
 		bar.NotPrint = true
 		bar.ShowSpeed = true
 		cursorUp := fmt.Sprintf("%c[%dA", 27, 1)
+		eraseCurrentLine := fmt.Sprintf("%c[2K\r", 27)
+		cursorDown := fmt.Sprintf("%c[%dB", 27, 1)
 		bar.Callback = func(s string) {
-			if redraw {
-				console.Bar("\n")
-			}
-			// Clear the caption line
-			console.Bar("\r" + cursorUp + strings.Repeat(" ", len(s)) + "\r")
-			// Print the caption and the progress bar
-			console.Bar(barCaption + "\n" + s)
-			redraw = false
+			console.Print(cursorUp)
+			console.Print(eraseCurrentLine)
+			console.Bar(barCaption)
+
+			console.Print(cursorDown)
+			console.Print(eraseCurrentLine)
+			console.Bar(s)
 		}
 		// Feels like wget
 		bar.Format("[=> ]")
@@ -146,7 +146,6 @@ func newCpBar() barSend {
 			case cpBarCmdProgress:
 				if bar.Total > 0 && !started {
 					started = true
-					redraw = true
 					bar.Start()
 				}
 				if msg.Arg.(int64) > 0 {
@@ -154,12 +153,10 @@ func newCpBar() barSend {
 					bar.Add64(msg.Arg.(int64))
 				}
 			case cpBarCmdPutError:
-				redraw = true
 				if totalBytesRead > msg.Arg.(int64) {
 					bar.Set64(totalBytesRead - msg.Arg.(int64))
 				}
 			case cpBarCmdGetError:
-				redraw = true
 				if msg.Arg.(int64) > 0 {
 					bar.Add64(msg.Arg.(int64))
 				}
