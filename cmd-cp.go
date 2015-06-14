@@ -125,6 +125,20 @@ func doCopyInRoutine(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan e
 	<-cpQueue // Signal that this copy routine is done.
 }
 
+func doPrepareCopyURLs(sourceURLs []string, targetURL string, bar barSend, lock countlock.Locker) {
+	for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
+		if cURLs.Error != nil {
+			// no need to print errors here, any error here
+			// will be printed later during Copy()
+			continue
+		}
+		if !globalQuietFlag {
+			bar.Extend(cURLs.SourceContent.Size)
+			lock.Up() // Let copy routine know that it has to catch up.
+		}
+	}
+}
+
 func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error {
 	errCh := make(chan error)
 	go func(sourceURLs []string, targetURL string, bar barSend, errCh chan error) {
@@ -136,27 +150,15 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 			defer lock.Close()
 		}
 
-		go func(sourceURLs []string, targetURL string, bar barSend, lock countlock.Locker) {
-			var cURLs cpURLs
-			for cURLs = range prepareCopyURLs(sourceURLs, targetURL) {
-				if cURLs.Error != nil {
-					// no need to print errors here, any error here
-					// will be printed later during Copy()
-					continue
-				}
-				if !globalQuietFlag {
-					bar.Extend(cURLs.SourceContent.Size)
-					lock.Up() // Let copy routine know that it has to catch up.
-				}
-			}
-		}(sourceURLs, targetURL, bar, lock)
+		// Wait for all copy routines to complete.
+		wg := new(sync.WaitGroup)
 
 		// Pool limited copy routines in parallel.
 		cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
 		defer close(cpQueue)
 
-		// Wait for all copy routines to complete.
-		wg := new(sync.WaitGroup)
+		go doPrepareCopyURLs(sourceURLs, targetURL, bar, lock)
+
 		for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 			if cURLs.Error != nil {
 				errCh <- cURLs.Error
