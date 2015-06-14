@@ -26,15 +26,15 @@ import (
 
 func main() {
 	config := minio.Config{
-		AccessKeyID:     "",
-		SecretAccessKey: "",
+		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
+		SecretAccessKey: "YOUR-PASSWORD-HERE",
 		Endpoint:        "https://play.minio.io:9000",
 	}
-	playClient, err := minio.New(config)
+	s3Client, err := minio.New(config)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	for object := range playClient.ListObjects("mybucket", "", true) {
+	for object := range s3Client.ListObjects("mybucket", "", true) {
 		if object.Err != nil {
 			log.Fatalln(object.Err)
 		}

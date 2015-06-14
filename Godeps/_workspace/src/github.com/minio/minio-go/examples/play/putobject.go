@@ -27,11 +27,11 @@ import (
 
 func main() {
 	config := minio.Config{
-		AccessKeyID:     "",
-		SecretAccessKey: "",
+		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
+		SecretAccessKey: "YOUR-PASSWORD-HERE",
 		Endpoint:        "https://play.minio.io:9000",
 	}
-	playClient, err := minio.New(config)
+	s3Client, err := minio.New(config)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -40,14 +40,13 @@ func main() {
 		log.Fatalln(err)
 	}
 	defer object.Close()
-
 	objectInfo, err := object.Stat()
 	if err != nil {
 		object.Close()
 		log.Fatalln(err)
 	}
 
-	err = playClient.PutObject("mybucket", "myobject", objectInfo.Size(), object)
+	err = s3Client.PutObject("mybucket", "myobject", "application/octet-stream", objectInfo.Size(), object)
 	if err != nil {
 		log.Fatalln(err)
 	}

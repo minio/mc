@@ -28,15 +28,15 @@ import (
 
 func main() {
 	config := minio.Config{
-		AccessKeyID:     "",
-		SecretAccessKey: "",
+		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
+		SecretAccessKey: "YOUR-PASSWORD-HERE",
 		Endpoint:        "https://play.minio.io:9000",
 	}
-	playClient, err := minio.New(config)
+	s3Client, err := minio.New(config)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	reader, stat, err := playClient.GetPartialObject("mybucket", "myobject", 0, 0)
+	reader, stat, err := s3Client.GetObject("mybucket", "myobject")
 	if err != nil {
 		log.Fatalln(err)
 	}

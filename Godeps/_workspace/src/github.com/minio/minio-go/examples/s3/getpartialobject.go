@@ -19,7 +19,9 @@
 package main
 
 import (
+	"io"
 	"log"
+	"os"
 
 	"github.com/minio/minio-go"
 )
@@ -28,16 +30,24 @@ func main() {
 	config := minio.Config{
 		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
 		SecretAccessKey: "YOUR-PASSWORD-HERE",
-		Endpoint:        "https://play.minio.io:9000",
+		Endpoint:        "https://s3.amazonaws.com",
 	}
 	s3Client, err := minio.New(config)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	for bucket := range s3Client.ListBuckets() {
-		if bucket.Err != nil {
-			log.Fatalln(bucket.Err)
-		}
-		log.Println(bucket.Stat)
+	reader, stat, err := s3Client.GetPartialObject("mybucket", "myobject", 0, 10)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	localfile, err := os.Create("testfile")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer localfile.Close()
+
+	if _, err = io.CopyN(localfile, reader, stat.Size); err != nil {
+		log.Fatalln(err)
 	}
 }

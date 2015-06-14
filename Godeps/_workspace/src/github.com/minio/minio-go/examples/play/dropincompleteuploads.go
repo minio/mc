@@ -34,10 +34,10 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	for bucket := range s3Client.ListBuckets() {
-		if bucket.Err != nil {
-			log.Fatalln(bucket.Err)
+	for err := range s3Client.DropIncompleteUploads("mybucket", "myobject") {
+		if err != nil {
+			log.Fatalln(err)
 		}
-		log.Println(bucket.Stat)
 	}
+	log.Println("Success")
 }

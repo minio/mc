@@ -467,7 +467,7 @@ func (a api) PutObject(bucket, object, contentType string, size int64, data io.R
 		}
 		return a.continueObjectUpload(bucket, object, inProgressUploadID, size, data)
 	}
-	return errors.New("Unexpected control flow")
+	return errors.New("Unexpected control flow, please report this error at https://github.com/minio/minio-go/issues")
 }
 
 // StatObject verify if object exists and you have permission to access it
