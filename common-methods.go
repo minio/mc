@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"io"
 	"os"
 	"runtime"
@@ -105,7 +104,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) <-chan erro
 func getNewClient(urlStr string, auth *hostConfig) (clnt client.Client, err error) {
 	url, err := client.Parse(urlStr)
 	if err != nil {
-		return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
+		return nil, iodine.New(errInvalidURL{URL: urlStr}, nil)
 	}
 	switch url.Type {
 	case client.Object: // Minio and S3 compatible object storage
@@ -134,7 +133,7 @@ func getNewClient(urlStr string, auth *hostConfig) (clnt client.Client, err erro
 	case client.Filesystem:
 		return fs.New(urlStr)
 	}
-	return nil, iodine.New(errInvalidURL{url: urlStr}, nil)
+	return nil, iodine.New(errInvalidURL{URL: urlStr}, nil)
 }
 
 // url2Stat - Returns client, config and its stat Content from the URL
@@ -165,7 +164,7 @@ func url2Client(url string) (client.Client, error) {
 	}
 
 	if urlParse.Path == "" {
-		return nil, iodine.New(errors.New("invalid path"), nil)
+		return nil, iodine.New(errInvalidURL{URL: url}, nil)
 	}
 
 	urlonfig, err := getHostConfig(url)
@@ -177,6 +176,7 @@ func url2Client(url string) (client.Client, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
+
 	return client, nil
 }
 

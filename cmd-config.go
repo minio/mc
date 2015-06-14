@@ -154,7 +154,7 @@ func addAlias(aliases []string) (quick.Config, error) {
 		return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)
 	}
 	if !strings.HasPrefix(url, "http") {
-		return nil, iodine.New(errInvalidURL{url: url}, nil)
+		return nil, iodine.New(errInvalidURL{URL: url}, nil)
 	}
 	if !isValidAliasName(aliasName) {
 		return nil, iodine.New(errInvalidAliasName{name: aliasName}, nil)

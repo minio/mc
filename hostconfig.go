@@ -37,7 +37,7 @@ func getHostConfig(URL string) (*hostConfig, error) {
 	}
 	url, err := client.Parse(URL)
 	if err != nil {
-		return nil, iodine.New(errInvalidURL{url: URL}, nil)
+		return nil, iodine.New(errInvalidURL{URL: URL}, nil)
 	}
 	// No host matching or keys needed for filesystem requests
 	if url.Type == client.Filesystem {

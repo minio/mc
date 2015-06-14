@@ -16,6 +16,20 @@
 
 package main
 
+type errInvalidACL struct {
+	acl string
+}
+
+func (e errInvalidACL) Error() string {
+	return "Invalid ACL Type ‘" + e.acl + "’."
+}
+
+type errNotConfigured struct{}
+
+func (e errNotConfigured) Error() string {
+	return "‘mc’ not configured."
+}
+
 type errNotAnObject struct {
 	url string
 }
@@ -37,14 +51,6 @@ type errUnsupportedScheme struct {
 
 func (e errUnsupportedScheme) Error() string {
 	return "Unsuppported URL scheme: " + e.scheme
-}
-
-type errInvalidURL struct {
-	url string
-}
-
-func (e errInvalidURL) Error() string {
-	return "Invalid URL: " + e.url
 }
 
 type errInvalidGlobURL struct {
@@ -79,7 +85,7 @@ func (e errNoMatchingHost) Error() string {
 type errConfigExists struct{}
 
 func (e errConfigExists) Error() string {
-	return "Config exists"
+	return "Config exists."
 }
 
 // errAliasExists - alias exists
@@ -88,20 +94,24 @@ type errAliasExists struct {
 }
 
 func (e errAliasExists) Error() string {
-	return "Alias name: " + e.name + " exists"
+	return "Alias name: " + e.name + " exists."
 }
 
-type errInvalidSource struct {
+type errInvalidURL struct {
 	URL string
 }
+
+func (e errInvalidURL) Error() string {
+	return "Invalid url " + e.URL
+}
+
+type errInvalidSource errInvalidURL
 
 func (e errInvalidSource) Error() string {
 	return "Invalid source " + e.URL
 }
 
-type errInvalidTarget struct {
-	URL string
-}
+type errInvalidTarget errInvalidURL
 
 func (e errInvalidTarget) Error() string {
 	return "Invalid target " + e.URL
@@ -113,4 +123,34 @@ type errInvalidTheme struct {
 
 func (e errInvalidTheme) Error() string {
 	return "Theme " + e.Theme + " is not supported."
+}
+
+type errTargetIsNotDir errInvalidURL
+
+func (e errTargetIsNotDir) Error() string {
+	return "Target ‘" + e.URL + "’ is not a directory."
+}
+
+type errTargetNotFound errInvalidURL
+
+func (e errTargetNotFound) Error() string {
+	return "Target directory ‘" + e.URL + "’ does not exist."
+}
+
+type errSourceNotRecursive errInvalidURL
+
+func (e errSourceNotRecursive) Error() string {
+	return "Source ‘" + e.URL + "’ is not recursive."
+}
+
+type errSourceIsNotDir errTargetIsNotDir
+
+func (e errSourceIsNotDir) Error() string {
+	return "Source ‘" + e.URL + "’ is not a directory."
+}
+
+type errSourceListEmpty errInvalidArgument
+
+func (e errSourceListEmpty) Error() string {
+	return "Source list is empty."
 }

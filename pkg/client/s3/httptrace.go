@@ -17,7 +17,6 @@
 package s3
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
@@ -43,7 +42,7 @@ func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err er
 	timeStamp := time.Now()
 
 	if t.Transport == nil {
-		return nil, iodine.New(client.InvalidArgument{Err: errors.New("invalid argument")}, nil)
+		return nil, iodine.New(client.InvalidArgument{}, nil)
 	}
 
 	res, err = t.Transport.RoundTrip(req)

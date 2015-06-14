@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/minio/cli"
@@ -68,7 +67,7 @@ func runAccessCmd(ctx *cli.Context) {
 	if !isMcConfigExist() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errors.New("\"mc\" is not configured"), nil),
+			Error:   iodine.New(errNotConfigured{}, nil),
 		})
 	}
 	config, err := getMcConfig()
@@ -89,7 +88,7 @@ func runAccessCmd(ctx *cli.Context) {
 	if !acl.isValidBucketACL() {
 		console.Fatals(ErrorMessage{
 			Message: "Valid types are [private, public, readonly].",
-			Error:   iodine.New(errors.New("Invalid ACL Type ‘"+acl.String()+"’"), nil),
+			Error:   iodine.New(errInvalidACL{acl: acl.String()}, nil),
 		})
 	}
 	targetURLs = targetURLs[1:] // 1 or more target URLs

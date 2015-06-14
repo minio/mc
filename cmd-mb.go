@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/minio/cli"
@@ -64,14 +63,14 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	if !isMcConfigExist() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
-			Error:   errors.New("\"mc\" is not configured"),
+			Error:   iodine.New(errNotConfigured{}, nil),
 		})
 	}
 	config, err := getMcConfig()
 	if err != nil {
 		console.Fatals(ErrorMessage{
 			Message: "Unable to read config file ‘" + mustGetMcConfigPath() + "’",
-			Error:   err,
+			Error:   iodine.New(err, nil),
 		})
 	}
 	for _, arg := range ctx.Args() {
@@ -81,12 +80,12 @@ func runMakeBucketCmd(ctx *cli.Context) {
 			case errUnsupportedScheme:
 				console.Fatals(ErrorMessage{
 					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
-					Error:   e,
+					Error:   iodine.New(e, nil),
 				})
 			default:
 				console.Fatals(ErrorMessage{
 					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
-					Error:   err,
+					Error:   iodine.New(err, nil),
 				})
 			}
 		}
@@ -94,7 +93,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		if err != nil {
 			console.Errors(ErrorMessage{
 				Message: errorMsg,
-				Error:   err,
+				Error:   iodine.New(err, nil),
 			})
 		}
 	}
