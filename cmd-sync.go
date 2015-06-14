@@ -109,6 +109,20 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, errCh chan error,
 	<-syncQueue // Signal that this copy routine is done.
 }
 
+func doPrepareSyncURLs(sourceURL string, targetURLs []string, bar barSend, lock countlock.Locker) {
+	for sURLs := range prepareSyncURLs(sourceURL, targetURLs) {
+		if sURLs.Error != nil {
+			// no need to print errors here, any error here
+			// will be printed later during Sync()
+			continue
+		}
+		if !globalQuietFlag {
+			bar.Extend(sURLs.SourceContent.Size)
+			lock.Up() // Let copy routine know that it has to catch up.
+		}
+	}
+}
+
 func doSyncCmd(sourceURL string, targetURLs []string, bar barSend) <-chan error {
 	errCh := make(chan error)
 	go func(sourceURL string, targetURLs []string, bar barSend, errCh chan error) {
@@ -119,22 +133,12 @@ func doSyncCmd(sourceURL string, targetURLs []string, bar barSend) <-chan error 
 			lock = countlock.New()
 			defer lock.Close()
 		}
-		go func(sourceURL string, targetURLs []string) {
-			for sURLs := range prepareSyncURLs(sourceURL, targetURLs) {
-				if sURLs.Error != nil {
-					// no need to print errors here, any error here
-					// will be printed later during Sync()
-					continue
-				}
-				if !globalQuietFlag {
-					bar.Extend(sURLs.SourceContent.Size)
-					lock.Up() // Let copy routine know that it has to catch up.
-				}
-			}
-		}(sourceURL, targetURLs)
 
-		syncQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
 		wg := new(sync.WaitGroup)
+		syncQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
+		defer close(syncQueue)
+
+		go doPrepareSyncURLs(sourceURL, targetURLs, bar, lock)
 
 		for sURLs := range prepareSyncURLs(sourceURL, targetURLs) {
 			if sURLs.Error != nil {
