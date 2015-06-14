@@ -127,10 +127,8 @@ func doCopyInRoutine(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan e
 
 func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error {
 	errCh := make(chan error)
-
 	go func(sourceURLs []string, targetURL string, bar barSend, errCh chan error) {
 		defer close(errCh)
-
 		var lock countlock.Locker
 		if !globalQuietFlag {
 			// Keep progress-bar and copy routines in sync.
@@ -138,19 +136,20 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 			defer lock.Close()
 		}
 
-		go func(sourceURLs []string, targetURL string) {
-			for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
-				if cpURLs.Error != nil {
+		go func(sourceURLs []string, targetURL string, bar barSend, lock countlock.Locker) {
+			var cURLs cpURLs
+			for cURLs = range prepareCopyURLs(sourceURLs, targetURL) {
+				if cURLs.Error != nil {
 					// no need to print errors here, any error here
 					// will be printed later during Copy()
 					continue
 				}
 				if !globalQuietFlag {
-					bar.Extend(cpURLs.SourceContent.Size)
+					bar.Extend(cURLs.SourceContent.Size)
 					lock.Up() // Let copy routine know that it has to catch up.
 				}
 			}
-		}(sourceURLs, targetURL)
+		}(sourceURLs, targetURL, bar, lock)
 
 		// Pool limited copy routines in parallel.
 		cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
@@ -158,9 +157,9 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 
 		// Wait for all copy routines to complete.
 		wg := new(sync.WaitGroup)
-		for cpURLs := range prepareCopyURLs(sourceURLs, targetURL) {
-			if cpURLs.Error != nil {
-				errCh <- cpURLs.Error
+		for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
+			if cURLs.Error != nil {
+				errCh <- cURLs.Error
 				continue
 			}
 			cpQueue <- true // Wait for existing pool to drain.
@@ -168,7 +167,7 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 			if !globalQuietFlag {
 				lock.Down() // Do not jump ahead of the progress bar builder above.
 			}
-			go doCopyInRoutine(cpURLs, &bar, cpQueue, errCh, wg)
+			go doCopyInRoutine(cURLs, &bar, cpQueue, errCh, wg)
 		}
 		wg.Wait() // wait for the go routines to complete
 	}(sourceURLs, targetURL, bar, errCh)
