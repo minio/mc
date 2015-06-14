@@ -66,7 +66,7 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
-		return nil, iodine.New(NotFound{path: f.path}, nil)
+		return nil, iodine.New(ISBrokenSymlink{path: f.path}, nil)
 	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
@@ -138,7 +138,7 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, error)
 	// Resolve symlinks
 	fpath, err = filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
-		return nil, 0, iodine.New(NotFound{path: f.path}, nil)
+		return nil, 0, iodine.New(ISBrokenSymlink{path: f.path}, nil)
 	}
 	if err != nil {
 		return nil, 0, iodine.New(err, nil)
@@ -185,7 +185,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	if os.IsNotExist(err) {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     iodine.New(NotFound{path: f.path}, nil),
+			Err:     iodine.New(ISBrokenSymlink{path: f.path}, nil),
 		}
 		return
 	}
@@ -234,6 +234,13 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			fi := file
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fi, err = os.Stat(filepath.Join(dir.Name(), fi.Name()))
+				if os.IsNotExist(err) {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     iodine.New(ISBrokenSymlink{path: file.Name()}, map[string]string{"Target": file.Name()}),
+					}
+					continue
+				}
 				if err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
