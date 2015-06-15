@@ -28,30 +28,30 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
-type cpBarCmd int
+type pbBarCmd int
 
 const (
-	cpBarCmdExtend cpBarCmd = iota
-	cpBarCmdProgress
-	cpBarCmdFinish
-	cpBarCmdPutError
-	cpBarCmdGetError
-	cpBarCmdSetCaption
+	pbBarCmdExtend pbBarCmd = iota
+	pbBarCmdProgress
+	pbBarCmdFinish
+	pbBarCmdPutError
+	pbBarCmdGetError
+	pbBarCmdSetCaption
 )
 
-type copyReader struct {
+type proxyReader struct {
 	io.Reader
 	bar *barSend
 }
 
-func (r *copyReader) Read(p []byte) (n int, err error) {
+func (r *proxyReader) Read(p []byte) (n int, err error) {
 	n, err = r.Reader.Read(p)
 	r.bar.progress(int64(n))
 	return
 }
 
 type barMsg struct {
-	Cmd cpBarCmd
+	Cmd pbBarCmd
 	Arg interface{}
 }
 
@@ -61,23 +61,23 @@ type barSend struct {
 }
 
 func (b barSend) Extend(total int64) {
-	b.cmdCh <- barMsg{Cmd: cpBarCmdExtend, Arg: total}
+	b.cmdCh <- barMsg{Cmd: pbBarCmdExtend, Arg: total}
 }
 
 func (b barSend) progress(progress int64) {
-	b.cmdCh <- barMsg{Cmd: cpBarCmdProgress, Arg: progress}
+	b.cmdCh <- barMsg{Cmd: pbBarCmdProgress, Arg: progress}
 }
 
 func (b barSend) ErrorPut(size int64) {
-	b.cmdCh <- barMsg{Cmd: cpBarCmdPutError, Arg: size}
+	b.cmdCh <- barMsg{Cmd: pbBarCmdPutError, Arg: size}
 }
 
 func (b barSend) ErrorGet(size int64) {
-	b.cmdCh <- barMsg{Cmd: cpBarCmdGetError, Arg: size}
+	b.cmdCh <- barMsg{Cmd: pbBarCmdGetError, Arg: size}
 }
 
-func (b *barSend) NewProxyReader(r io.Reader) *copyReader {
-	return &copyReader{r, b}
+func (b *barSend) NewProxyReader(r io.Reader) *proxyReader {
+	return &proxyReader{r, b}
 }
 
 type caption struct {
@@ -86,12 +86,12 @@ type caption struct {
 }
 
 func (b *barSend) SetCaption(c caption) {
-	b.cmdCh <- barMsg{Cmd: cpBarCmdSetCaption, Arg: c}
+	b.cmdCh <- barMsg{Cmd: pbBarCmdSetCaption, Arg: c}
 }
 
 func (b barSend) Finish() {
 	defer close(b.cmdCh)
-	b.cmdCh <- barMsg{Cmd: cpBarCmdFinish}
+	b.cmdCh <- barMsg{Cmd: pbBarCmdFinish}
 	<-b.finishCh
 }
 
@@ -111,7 +111,7 @@ func trimBarCaption(c caption, width int) string {
 	return c.message
 }
 
-// newCpBar - instantiate a cpBar.
+// newCpBar - instantiate a pbBar.
 func newCpBar() barSend {
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
@@ -131,28 +131,29 @@ func newCpBar() barSend {
 		barLock := &sync.Mutex{}
 		bar.Callback = func(s string) {
 			barLock.Lock()
-			if !firstTime {
-				console.Print(cursorUp)
+			{
+				if !firstTime {
+					console.Print(cursorUp)
+					console.Print(eraseCurrentLine)
+				}
+				console.Bar(barCaption)
+				console.Print(cursorDown)
 				console.Print(eraseCurrentLine)
+				console.Bar(s)
+
+				firstTime = false
 			}
-			firstTime = false
-
-			console.Bar(barCaption)
-
-			console.Print(cursorDown)
-			console.Print(eraseCurrentLine)
-			console.Bar(s)
 			barLock.Unlock()
 		}
 		// Feels like wget
 		bar.Format("[=> ]")
 		for msg := range cmdCh {
 			switch msg.Cmd {
-			case cpBarCmdSetCaption:
+			case pbBarCmdSetCaption:
 				barCaption = trimBarCaption(msg.Arg.(caption), bar.GetWidth())
-			case cpBarCmdExtend:
+			case pbBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
-			case cpBarCmdProgress:
+			case pbBarCmdProgress:
 				if bar.Total > 0 && !started {
 					started = true
 					bar.Start()
@@ -161,15 +162,15 @@ func newCpBar() barSend {
 					totalBytesRead += msg.Arg.(int64)
 					bar.Add64(msg.Arg.(int64))
 				}
-			case cpBarCmdPutError:
+			case pbBarCmdPutError:
 				if totalBytesRead > msg.Arg.(int64) {
 					bar.Set64(totalBytesRead - msg.Arg.(int64))
 				}
-			case cpBarCmdGetError:
+			case pbBarCmdGetError:
 				if msg.Arg.(int64) > 0 {
 					bar.Add64(msg.Arg.(int64))
 				}
-			case cpBarCmdFinish:
+			case pbBarCmdFinish:
 				if started {
 					bar.Finish()
 				}
