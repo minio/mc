@@ -126,9 +126,14 @@ func newCpBar() barSend {
 		cursorUp := fmt.Sprintf("%c[%dA", 27, 1)
 		eraseCurrentLine := fmt.Sprintf("%c[2K\r", 27)
 		cursorDown := fmt.Sprintf("%c[%dB", 27, 1)
+		firstTime := true
 		bar.Callback = func(s string) {
-			console.Print(cursorUp)
-			console.Print(eraseCurrentLine)
+			if !firstTime {
+				console.Print(cursorUp)
+				console.Print(eraseCurrentLine)
+			}
+			firstTime = false
+
 			console.Bar(barCaption)
 
 			console.Print(cursorDown)
