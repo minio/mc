@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -127,7 +128,9 @@ func newCpBar() barSend {
 		eraseCurrentLine := fmt.Sprintf("%c[2K\r", 27)
 		cursorDown := fmt.Sprintf("%c[%dB", 27, 1)
 		firstTime := true
+		barLock := &sync.Mutex{}
 		bar.Callback = func(s string) {
+			barLock.Lock()
 			if !firstTime {
 				console.Print(cursorUp)
 				console.Print(eraseCurrentLine)
@@ -139,6 +142,7 @@ func newCpBar() barSend {
 			console.Print(cursorDown)
 			console.Print(eraseCurrentLine)
 			console.Bar(s)
+			barLock.Unlock()
 		}
 		// Feels like wget
 		bar.Format("[=> ]")
