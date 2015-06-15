@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -111,6 +110,12 @@ func trimBarCaption(c caption, width int) string {
 	return c.message
 }
 
+const (
+	cursorUP         = "\x1b[A"
+	cursorDown       = "\x1b[B"
+	eraseCurrentLine = "\x1b[2K\r"
+)
+
 // newCpBar - instantiate a pbBar.
 func newCpBar() barSend {
 	cmdCh := make(chan barMsg)
@@ -124,16 +129,13 @@ func newCpBar() barSend {
 		bar.SetRefreshRate(time.Millisecond * 10)
 		bar.NotPrint = true
 		bar.ShowSpeed = true
-		cursorUp := fmt.Sprintf("%c[%dA", 27, 1)
-		eraseCurrentLine := fmt.Sprintf("%c[2K\r", 27)
-		cursorDown := fmt.Sprintf("%c[%dB", 27, 1)
 		firstTime := true
 		barLock := &sync.Mutex{}
 		bar.Callback = func(s string) {
 			barLock.Lock()
 			{
 				if !firstTime {
-					console.Print(cursorUp)
+					console.Print(cursorUP)
 					console.Print(eraseCurrentLine)
 				}
 				console.Bar(barCaption)
