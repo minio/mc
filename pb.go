@@ -18,6 +18,7 @@ package main
 
 import (
 	"io"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -110,12 +111,6 @@ func trimBarCaption(c caption, width int) string {
 	return c.message
 }
 
-const (
-	cursorUP         = "\x1b[A"
-	cursorDown       = "\x1b[B"
-	eraseCurrentLine = "\x1b[2K\r"
-)
-
 // newCpBar - instantiate a pbBar.
 func newCpBar() barSend {
 	cmdCh := make(chan barMsg)
@@ -133,7 +128,15 @@ func newCpBar() barSend {
 		barLock := &sync.Mutex{}
 		bar.Callback = func(s string) {
 			barLock.Lock()
-			{
+			switch runtime.GOOS {
+			case "windows":
+				console.Print("\r" + strings.Repeat(" ", (bar.GetWidth()-1)) + "\r")
+				console.Bar(barCaption + "\n")
+				console.Bar("\r" + s)
+			default:
+				cursorUP := "\x1b[A"
+				cursorDown := "\x1b[B"
+				eraseCurrentLine := "\x1b[2K\r"
 				if !firstTime {
 					console.Print(cursorUP)
 					console.Print(eraseCurrentLine)
@@ -142,9 +145,8 @@ func newCpBar() barSend {
 				console.Print(cursorDown)
 				console.Print(eraseCurrentLine)
 				console.Bar(s)
-
-				firstTime = false
 			}
+			firstTime = false
 			barLock.Unlock()
 		}
 		// Feels like wget
