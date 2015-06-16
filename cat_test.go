@@ -43,6 +43,8 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 	var sourceURLs []string
 	sourceURLs = append(sourceURLs, objectPath)
 	sourceURLs = append(sourceURLs, objectPathServer)
-	_, err = doCatCmd(sourceURLs)
-	c.Assert(err, IsNil)
+	for _, sourceURL := range sourceURLs {
+		_, err = doCatCmd(sourceURL)
+		c.Assert(err, IsNil)
+	}
 }

@@ -78,49 +78,54 @@ func runCatCmd(ctx *cli.Context) {
 			Error:   iodine.New(err, nil),
 		})
 	}
-
 	// Convert arguments to URLs: expand alias, fix format...
-	urls, err := getExpandedURLs(ctx.Args(), config.Aliases)
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unknown type of URL ‘%s’", urls),
-			Error:   iodine.New(err, nil),
-		})
-	}
-
-	sourceURLs := urls
-	humanReadable, err := doCatCmd(sourceURLs)
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: humanReadable,
-			Error:   iodine.New(err, nil),
-		})
+	for _, arg := range ctx.Args() {
+		sourceURL, err := getExpandedURL(arg, config.Aliases)
+		if err != nil {
+			switch e := iodine.ToError(err).(type) {
+			case errUnsupportedScheme:
+				console.Fatals(ErrorMessage{
+					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
+					Error:   iodine.New(e, nil),
+				})
+			default:
+				console.Fatals(ErrorMessage{
+					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
+					Error:   iodine.New(err, nil),
+				})
+			}
+		}
+		errorMsg, err := doCatCmd(sourceURL)
+		if err != nil {
+			console.Fatals(ErrorMessage{
+				Message: errorMsg,
+				Error:   iodine.New(err, nil),
+			})
+		}
 	}
 }
 
-func doCatCmd(sourceURLs []string) (string, error) {
-	for _, url := range sourceURLs {
-		sourceClnt, err := source2Client(url)
-		if err != nil {
-			return "Unable to create client: " + url, iodine.New(err, nil)
-		}
-		reader, size, err := sourceClnt.GetObject(0, 0)
-		if err != nil {
-			return "Unable to retrieve file: " + url, iodine.New(err, nil)
-		}
-		defer reader.Close()
-		_, err = io.CopyN(os.Stdout, reader, int64(size))
-		if err != nil {
-			switch e := iodine.ToError(err).(type) {
-			case *os.PathError:
-				if e.Err == syscall.EPIPE {
-					// stdout closed by the user. Gracefully exit.
-					return "", nil
-				}
-				return "Writing data to stdout failed, unexpected problem.. please report this error", iodine.New(err, nil)
-			default:
-				return "Reading data from source failed: " + url, iodine.New(err, nil)
+func doCatCmd(sourceURL string) (string, error) {
+	sourceClnt, err := source2Client(sourceURL)
+	if err != nil {
+		return "Unable to create client: " + sourceURL, iodine.New(err, nil)
+	}
+	reader, size, err := sourceClnt.GetObject(0, 0)
+	if err != nil {
+		return "Unable to retrieve file: " + sourceURL, iodine.New(err, nil)
+	}
+	defer reader.Close()
+	_, err = io.CopyN(os.Stdout, reader, int64(size))
+	if err != nil {
+		switch e := iodine.ToError(err).(type) {
+		case *os.PathError:
+			if e.Err == syscall.EPIPE {
+				// stdout closed by the user. Gracefully exit.
+				return "", nil
 			}
+			return "Writing data to stdout failed, unexpected problem.. please report this error", iodine.New(err, nil)
+		default:
+			return "Reading data from source failed: " + sourceURL, iodine.New(err, nil)
 		}
 	}
 	return "", nil

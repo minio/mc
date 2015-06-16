@@ -86,7 +86,6 @@ func isTargetURLDir(targetURL string) bool {
 	return true
 }
 
-// SINGLE SOURCE - Type A: copy(f, f) -> copy(f, f)
 // guessCopyURLType guesses the type of URL. This approach all allows prepareURL
 // functions to accurately report failure causes.
 func guessCopyURLType(sourceURLs []string, targetURL string) cpURLsType {
@@ -112,6 +111,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string) cpURLsType {
 	return cpURLsTypeD
 }
 
+// SINGLE SOURCE - Type A: copy(f, f) -> copy(f, f)
 // prepareCopyURLsTypeA - prepares target and source URLs for copying.
 func prepareCopyURLsTypeA(sourceURL string, targetURL string) <-chan cpURLs {
 	cpURLsCh := make(chan cpURLs, 10000)
