@@ -77,6 +77,12 @@ func doList(clnt client.Client, recursive bool) error {
 	var err error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
+			switch e := iodine.ToError(contentCh.Err).(type) {
+			// handle this specifically for filesystem
+			case client.ISBrokenSymlink:
+				console.Errorln(e)
+				continue
+			}
 			if os.IsNotExist(iodine.ToError(contentCh.Err)) || os.IsPermission(iodine.ToError(contentCh.Err)) {
 				console.Errorln(iodine.ToError(contentCh.Err))
 				continue

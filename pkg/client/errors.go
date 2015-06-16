@@ -29,9 +29,6 @@ func (e APINotImplemented) Error() string {
 	return "API not implemented: " + e.API
 }
 
-// GenericError - generic error
-type GenericError struct{}
-
 // UnexpectedError - unexpected error
 type UnexpectedError GenericError
 
@@ -62,4 +59,111 @@ type InvalidACLType struct {
 
 func (e InvalidACLType) Error() string {
 	return "invalid acl type: " + e.ACL
+}
+
+// InvalidMaxKeys - invalid maxkeys provided
+type InvalidMaxKeys struct {
+	MaxKeys int
+}
+
+func (e InvalidMaxKeys) Error() string {
+	return "invalid maxkeys: " + strconv.Itoa(e.MaxKeys)
+}
+
+// GenericBucketError - generic bucket operations error
+type GenericBucketError struct {
+	Bucket string
+}
+
+// BucketExists - bucket exists
+type BucketExists GenericBucketError
+
+func (e BucketExists) Error() string {
+	return "bucket " + e.Bucket + " exists"
+}
+
+// InvalidBucketName - bucket name invalid (http://goo.gl/wJlzDz)
+type InvalidBucketName GenericBucketError
+
+func (e InvalidBucketName) Error() string {
+	return "Invalid bucketname [" + e.Bucket + "], please read http://goo.gl/wJlzDz"
+}
+
+// GenericObjectError - generic object operations error
+type GenericObjectError struct {
+	Bucket string
+	Object string
+}
+
+// ObjectNotFound - object requested does not exist
+type ObjectNotFound GenericObjectError
+
+func (e ObjectNotFound) Error() string {
+	return "object " + e.Object + " not found in bucket " + e.Bucket
+}
+
+// InvalidObjectName - object requested is invalid
+type InvalidObjectName GenericObjectError
+
+func (e InvalidObjectName) Error() string {
+	return "object " + e.Object + "at" + e.Bucket + "is invalid"
+}
+
+// ObjectExists - object exists
+type ObjectExists GenericObjectError
+
+func (e ObjectExists) Error() string {
+	return "object " + e.Object + " exists"
+}
+
+// GenericError - generic error
+type GenericError struct{}
+
+// InvalidQueryURL - generic error
+type InvalidQueryURL struct {
+	URL string
+}
+
+func (e InvalidQueryURL) Error() string {
+	return "Invalid query URL: " + e.URL
+}
+
+// GenericFileError - generic file error
+type GenericFileError struct {
+	Path string
+}
+
+// NotFound (ENOENT) - file not found
+type NotFound GenericFileError
+
+func (e NotFound) Error() string {
+	return "Requested file ‘" + e.Path + "’ not found"
+}
+
+// ISFolder (EISDIR) - accessed file is a folder
+type ISFolder GenericFileError
+
+func (e ISFolder) Error() string {
+	return "Requested file ‘" + e.Path + "’ is a folder"
+}
+
+// NotFolder (ENOTDIR) - accessed file is not a folder
+type NotFolder GenericFileError
+
+func (e NotFolder) Error() string {
+	return "Requested file ‘" + e.Path + "’ is not a folder"
+}
+
+// ISBrokenSymlink (ENOTENT) - file has broken symlink
+type ISBrokenSymlink GenericFileError
+
+func (e ISBrokenSymlink) Error() string {
+	return "Requested file ‘" + e.Path + "’ has broken symlink"
+}
+
+// EmptyPath (EINVAL) - invalid argument
+type EmptyPath struct{}
+
+func (e EmptyPath) Error() string {
+	return "Invalid path, path cannot be empty"
 }

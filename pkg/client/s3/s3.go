@@ -120,7 +120,7 @@ func (c *s3Client) PutObject(size int64, data io.Reader) error {
 func (c *s3Client) MakeBucket() error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return iodine.New(InvalidQueryURL{URL: c.hostURL.String()}, nil)
+		return iodine.New(client.InvalidQueryURL{URL: c.hostURL.String()}, nil)
 	}
 	// location string is intentionally left out
 	err := c.api.MakeBucket(bucket, s3.BucketACL("private"))
@@ -131,7 +131,7 @@ func (c *s3Client) MakeBucket() error {
 func (c *s3Client) SetBucketACL(acl string) error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return iodine.New(InvalidQueryURL{URL: c.hostURL.String()}, nil)
+		return iodine.New(client.InvalidQueryURL{URL: c.hostURL.String()}, nil)
 	}
 	err := c.api.SetBucketACL(bucket, s3.BucketACL(acl))
 	return iodine.New(err, nil)
