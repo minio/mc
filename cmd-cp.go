@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"path/filepath"
 	"runtime"
 	"sync"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/countlock"
 	"github.com/minio/mc/pkg/yielder"
@@ -71,8 +71,7 @@ EXAMPLES:
 // doCopy - Copy a singe file from source to destination
 func doCopy(cURLs cpURLs, bar *barSend) error {
 	if !globalQuietFlag {
-		sourceContentParse, _ := client.Parse(cURLs.SourceContent.Name)
-		bar.SetCaption(caption{message: cURLs.SourceContent.Name + ": ", separator: sourceContentParse.Separator})
+		bar.SetCaption(filepath.Base(cURLs.SourceContent.Name) + ": ")
 	}
 	reader, length, err := getSource(cURLs.SourceContent.Name)
 	if err != nil {

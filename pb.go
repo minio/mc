@@ -19,7 +19,6 @@ package main
 import (
 	"io"
 	"runtime"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -79,7 +78,7 @@ func (b *barSend) NewProxyReader(r io.Reader) *proxyReader {
 	return &proxyReader{r, b}
 }
 
-func (b *barSend) SetCaption(c caption) {
+func (b *barSend) SetCaption(c string) {
 	b.cmdCh <- barMsg{Cmd: pbBarCmdSetCaption, Arg: c}
 }
 
@@ -96,7 +95,7 @@ func cursorAnimate() <-chan rune {
 	if runtime.GOOS == "windows" {
 		cursors = "|/-\\"
 	} else {
-		cursors = "➩ ➪ ➫ ➬ ➭ ➮ ➯ ➱"
+		cursors = "➩➪➫➬➭➮➯➱"
 	}
 	go func() {
 		for {
@@ -108,25 +107,19 @@ func cursorAnimate() <-chan rune {
 	return cursorCh
 }
 
-type caption struct {
-	message   string
-	separator rune
-}
-
-func fixateBarCaption(c caption, s string, width int) string {
-	if len(c.message) > width {
+func fixateBarCaption(c string, s string, width int) string {
+	if len(c) > width {
 		// Trim caption to fit within the screen
-		trimSize := len(c.message) - width + 2 + 1
-		if trimSize < len(c.message) {
-			c.message = ".." + c.message[trimSize:]
-			// Further trim partial names.
-			partialTrimSize := strings.IndexByte(c.message, byte(c.separator))
-			if partialTrimSize > 0 {
-				c.message = c.message[partialTrimSize:]
-			}
+		trimSize := len(c) - width + 3 + 1
+		if trimSize < len(c) {
+			c = "..." + c[trimSize:]
 		}
 	}
-	return s + " " + c.message
+	return s + " " + c
+}
+
+func getFixedWidth(width, percent int) int {
+	return width * percent / 100
 }
 
 // newCpBar - instantiate a pbBar.
@@ -138,7 +131,7 @@ func newCpBar() barSend {
 		var totalBytesRead int64 // total amounts of bytes read
 		bar := pb.New64(0)
 		bar.SetUnits(pb.U_BYTES)
-		bar.SetRefreshRate(time.Millisecond * 10)
+		bar.SetRefreshRate(time.Millisecond * 125)
 		bar.NotPrint = true
 		bar.ShowSpeed = true
 		bar.Callback = func(s string) {
@@ -150,7 +143,7 @@ func newCpBar() barSend {
 		for msg := range cmdCh {
 			switch msg.Cmd {
 			case pbBarCmdSetCaption:
-				bar.Prefix(fixateBarCaption(msg.Arg.(caption), string(<-cursorCh), 15))
+				bar.Prefix(fixateBarCaption(msg.Arg.(string), string(<-cursorCh), getFixedWidth(bar.GetWidth(), 10)))
 			case pbBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 			case pbBarCmdProgress:

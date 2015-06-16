@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"path/filepath"
 	"runtime"
 	"sync"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/countlock"
 	"github.com/minio/mc/pkg/yielder"
@@ -72,8 +72,7 @@ EXAMPLES:
 func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if !globalQuietFlag {
-		sourceContentParse, _ := client.Parse(sURLs.SourceContent.Name)
-		bar.SetCaption(caption{message: sURLs.SourceContent.Name + ": ", separator: sourceContentParse.Separator})
+		bar.SetCaption(filepath.Base(sURLs.SourceContent.Name) + ": ")
 	}
 	reader, length, err := getSource(sURLs.SourceContent.Name)
 	if err != nil {
