@@ -18,6 +18,7 @@ package main
 
 import (
 	"io"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -78,11 +79,6 @@ func (b *barSend) NewProxyReader(r io.Reader) *proxyReader {
 	return &proxyReader{r, b}
 }
 
-type caption struct {
-	message   string
-	separator rune
-}
-
 func (b *barSend) SetCaption(c caption) {
 	b.cmdCh <- barMsg{Cmd: pbBarCmdSetCaption, Arg: c}
 }
@@ -94,12 +90,35 @@ func (b barSend) Finish() {
 	console.Println()
 }
 
-func fixateBarCaption(c caption, width int) string {
+func cursorAnimate() <-chan rune {
+	cursorCh := make(chan rune)
+	var cursors string
+	if runtime.GOOS == "windows" {
+		cursors = "|/-\\"
+	} else {
+		cursors = "➩ ➪ ➫ ➬ ➭ ➮ ➯ ➱"
+	}
+	go func() {
+		for {
+			for _, cursor := range cursors {
+				cursorCh <- cursor
+			}
+		}
+	}()
+	return cursorCh
+}
+
+type caption struct {
+	message   string
+	separator rune
+}
+
+func fixateBarCaption(c caption, s string, width int) string {
 	if len(c.message) > width {
 		// Trim caption to fit within the screen
-		trimSize := len(c.message) - width + 3 + 1
+		trimSize := len(c.message) - width + 2 + 1
 		if trimSize < len(c.message) {
-			c.message = "..." + c.message[trimSize:]
+			c.message = ".." + c.message[trimSize:]
 			// Further trim partial names.
 			partialTrimSize := strings.IndexByte(c.message, byte(c.separator))
 			if partialTrimSize > 0 {
@@ -107,7 +126,7 @@ func fixateBarCaption(c caption, width int) string {
 			}
 		}
 	}
-	return c.message
+	return s + " " + c.message
 }
 
 // newCpBar - instantiate a pbBar.
@@ -125,12 +144,13 @@ func newCpBar() barSend {
 		bar.Callback = func(s string) {
 			console.Bar(s + "\r")
 		}
+		cursorCh := cursorAnimate()
 		// Feels like wget
 		bar.Format("[=> ]")
 		for msg := range cmdCh {
 			switch msg.Cmd {
 			case pbBarCmdSetCaption:
-				bar.Prefix(fixateBarCaption(msg.Arg.(caption), 15))
+				bar.Prefix(fixateBarCaption(msg.Arg.(caption), string(<-cursorCh), 15))
 			case pbBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 			case pbBarCmdProgress:
