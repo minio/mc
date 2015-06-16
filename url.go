@@ -23,7 +23,7 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-// re-usable constants
+// ``...`` recursiveSeparator
 const (
 	recursiveSeparator = "..."
 )
@@ -73,4 +73,18 @@ func getExpandedURLs(args []string, aliases map[string]string) (urls []string, e
 		urls = append(urls, u)
 	}
 	return urls, nil
+}
+
+// args2URLs extracts source and target URLs from command-line args.
+func args2URLs(args []string) ([]string, error) {
+	config, err := getMcConfig()
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	// Convert arguments to URLs: expand alias, fix format...
+	URLs, err := getExpandedURLs(args, config.Aliases)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	return URLs, nil
 }

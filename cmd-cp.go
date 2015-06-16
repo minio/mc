@@ -101,20 +101,6 @@ func doCopy(cURLs cpURLs, bar *barSend) error {
 	return nil
 }
 
-// args2URLs extracts source and target URLs from command-line args.
-func args2URLs(args cli.Args) ([]string, error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	// Convert arguments to URLs: expand alias, fix format...
-	URLs, err := getExpandedURLs(args, config.Aliases)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return URLs, nil
-}
-
 func doCopyInRoutine(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if err := doCopy(cURLs, bar); err != nil {

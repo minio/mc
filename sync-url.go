@@ -32,8 +32,8 @@ import (
 //   A: sync(f, f) -> copy(f, f)
 //   B: sync(f, d) -> copy(f, d/f) -> A
 //   C: sync(f, []d) -> []copy(f, d/f) -> []A
-//   D: sync(d1..., d2) -> []copy(d1/f, d2/d1/f) -> []A
-//   E: sync(d1..., []d2) -> [][]copy(d1/f, d2/d1/f) -> [][]A
+//      sync(d1..., d2) -> []copy(d1/f, d2/d1/f) -> []A
+//      sync(d1..., []d2) -> [][]copy(d1/f, d2/d1/f) -> [][]A
 //
 //   * SINGLE SOURCE - INVALID
 //   =========================
@@ -74,6 +74,7 @@ func guessSyncURLType(sourceURL string, targetURLs []string) syncURLsType {
 	return syncURLsType(cpURLsTypeA)
 }
 
+// prepareSyncURLsTypeA - A: sync(f, f) -> copy(f, f)
 func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) <-chan syncURLs {
 	syncURLsCh := make(chan syncURLs, 10000)
 	go func() {
@@ -95,6 +96,7 @@ func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) <-chan syncURLs
 	return syncURLsCh
 }
 
+// prepareSyncURLsTypeB - B: sync(f, d) -> copy(f, d/f) -> A
 func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) <-chan syncURLs {
 	syncURLsCh := make(chan syncURLs, 10000)
 	go func() {
@@ -116,6 +118,7 @@ func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) <-chan syncURLs
 	return syncURLsCh
 }
 
+// prepareSyncURLsTypeC - C: sync(f, []d) -> []copy(f, d/f) -> []A
 func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs {
 	syncURLsCh := make(chan syncURLs, 10000)
 	go func() {

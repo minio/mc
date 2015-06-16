@@ -167,6 +167,7 @@ func runSyncCmd(ctx *cli.Context) {
 		})
 	}
 
+	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
 		console.Fatals(ErrorMessage{

@@ -77,13 +77,6 @@ func runAccessCmd(ctx *cli.Context) {
 			Error:   iodine.New(err, nil),
 		})
 	}
-	targetURLs, err := getExpandedURLs(ctx.Args(), config.Aliases)
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "Unknown type of URL ",
-			Error:   iodine.New(err, nil),
-		})
-	}
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
 		console.Fatals(ErrorMessage{
@@ -91,8 +84,22 @@ func runAccessCmd(ctx *cli.Context) {
 			Error:   iodine.New(errInvalidACL{acl: acl.String()}, nil),
 		})
 	}
-	targetURLs = targetURLs[1:] // 1 or more target URLs
-	for _, targetURL := range targetURLs {
+	for _, arg := range ctx.Args().Tail() {
+		targetURL, err := getExpandedURL(arg, config.Aliases)
+		if err != nil {
+			switch e := iodine.ToError(err).(type) {
+			case errUnsupportedScheme:
+				console.Fatals(ErrorMessage{
+					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
+					Error:   iodine.New(e, nil),
+				})
+			default:
+				console.Fatals(ErrorMessage{
+					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
+					Error:   iodine.New(err, nil),
+				})
+			}
+		}
 		errorMsg, err := doUpdateAccessCmd(targetURL, acl)
 		if err != nil {
 			console.Errors(ErrorMessage{

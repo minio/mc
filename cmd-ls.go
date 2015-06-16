@@ -75,7 +75,6 @@ EXAMPLES:
 // runListCmd - is a handler for mc ls command
 func runListCmd(ctx *cli.Context) {
 	args := ctx.Args()
-
 	if globalAliasFlag {
 		if !ctx.Args().Present() {
 			args = []string{"."}
@@ -83,6 +82,7 @@ func runListCmd(ctx *cli.Context) {
 	} else if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
+
 	if !isMcConfigExist() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
@@ -96,6 +96,7 @@ func runListCmd(ctx *cli.Context) {
 			Error:   iodine.New(err, nil),
 		})
 	}
+
 	for _, arg := range args {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
@@ -124,7 +125,7 @@ func runListCmd(ctx *cli.Context) {
 	}
 }
 
-// doListCmd -
+// doListCmd list files on target
 func doListCmd(targetURL string, recursive bool) error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
