@@ -21,6 +21,8 @@
 
 #### GNU/Linux
 
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
+
 ~~~
 $ wget https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
 $ chmod +x mc
@@ -28,6 +30,8 @@ $ ./mc config generate
 ~~~
 
 #### OS X 
+
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/darwin-amd64/mc
 
 ~~~
 $ curl https://dl.minio.io:9000/updates/2015/Jun/darwin-amd64/mc > mc
@@ -37,7 +41,11 @@ $ ./mc config generate
 
 #### Windows
 
-Download from https://dl.minio.io:9000/updates/2015/Jun/windows-amd64/mc.exe
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/windows-amd64/mc.exe
+
+~~~
+C:\Users\Username\Downloads> mc.exe config generate
+~~~
 
 #### Source
 
