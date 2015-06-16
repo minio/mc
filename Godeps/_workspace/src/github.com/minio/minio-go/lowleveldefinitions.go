@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-// listAllMyBucketsResult container for ListBucets response
+// listAllMyBucketsResult container for listBuckets response
 type listAllMyBucketsResult struct {
 	// Container for one or more buckets.
 	Buckets struct {
@@ -36,14 +36,14 @@ type owner struct {
 	ID          string
 }
 
-// commonPrefix container for prefix response in ListObjects
+// commonPrefix container for prefix response
 type commonPrefix struct {
 	Prefix string
 }
 
-// listBucketResult container for ListObjects response
+// listBucketResult container for listObjects response
 type listBucketResult struct {
-	CommonPrefixes []commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter
+	CommonPrefixes []commonPrefix // A response can contain CommonPrefixes only if you have specified a delimiter
 	Contents       []ObjectStat   // Metadata about each object returned
 	Delimiter      string
 
@@ -68,15 +68,21 @@ type listBucketResult struct {
 	Prefix     string
 }
 
-type upload struct {
-	Key      string
-	UploadID string `xml:"UploadId"`
+// multiPartUpload container for multipart session
+type multiPartUpload struct {
+	// Date and time at which the multipart upload was initiated.
+	Initiated time.Time `type:"timestamp" timestampFormat:"iso8601"`
 
 	Initiator initiator
 	Owner     owner
 
 	StorageClass string
-	Initiated    time.Time `type:"timestamp" timestampFormat:"iso8601"`
+
+	// Key of the object for which the multipart upload was initiated.
+	Key string
+
+	// Upload ID that identifies the multipart upload.
+	UploadID string `xml:"UploadId"`
 }
 
 // listMultipartUploadsResult container for ListMultipartUploads response
@@ -89,7 +95,7 @@ type listMultipartUploadsResult struct {
 	EncodingType       string
 	MaxUploads         int64
 	IsTruncated        bool
-	Upload             []upload
+	Uploads            []multiPartUpload `xml:"Upload"`
 	Prefix             string
 	Delimiter          string
 	CommonPrefixes     []commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter
@@ -103,13 +109,20 @@ type initiator struct {
 
 // partMetadata container for particular part of an object
 type partMetadata struct {
-	PartNumber   int
+	// Part number identifies the part.
+	PartNumber int
+
+	// Date and time the part was uploaded.
 	LastModified time.Time
-	ETag         string
-	Size         int64
+
+	// Entity tag returned when the part was uploaded, usually md5sum of the part
+	ETag string
+
+	// Size of the uploaded part data.
+	Size int64
 }
 
-// listObjectPartsResult container for ListObjectParts response
+// listObjectPartsResult container for ListObjectParts response.
 type listObjectPartsResult struct {
 	Bucket   string
 	Key      string
@@ -125,19 +138,19 @@ type listObjectPartsResult struct {
 
 	// Indicates whether the returned list of parts is truncated.
 	IsTruncated bool
-	Part        []partMetadata
+	Parts       []partMetadata `xml:"Part"`
 
 	EncodingType string
 }
 
-// initiateMultipartUploadResult container for InitiateMultiPartUpload response
+// initiateMultipartUploadResult container for InitiateMultiPartUpload response.
 type initiateMultipartUploadResult struct {
 	Bucket   string
 	Key      string
 	UploadID string `xml:"UploadId"`
 }
 
-// completeMultipartUploadResult container for completed multipart upload response
+// completeMultipartUploadResult container for completed multipart upload response.
 type completeMultipartUploadResult struct {
 	Location string
 	Bucket   string
@@ -145,17 +158,19 @@ type completeMultipartUploadResult struct {
 	ETag     string
 }
 
-// completePart sub container lists individual part numbers and their md5sum, part of CompleteMultipartUpload
+// completePart sub container lists individual part numbers and their md5sum, part of completeMultipartUpload.
 type completePart struct {
-	XMLName    xml.Name `xml:"http://doc.s3.amazonaws.com/2006-03-01 Part" json:"-"`
+	XMLName xml.Name `xml:"http://doc.s3.amazonaws.com/2006-03-01 Part" json:"-"`
+
+	// Part number identifies the part.
 	PartNumber int
 	ETag       string
 }
 
 // completeMultipartUpload container for completing multipart upload
 type completeMultipartUpload struct {
-	XMLName xml.Name `xml:"http://doc.s3.amazonaws.com/2006-03-01 CompleteMultipartUpload" json:"-"`
-	Part    []completePart
+	XMLName xml.Name       `xml:"http://doc.s3.amazonaws.com/2006-03-01 CompleteMultipartUpload" json:"-"`
+	Parts   []completePart `xml:"Part"`
 }
 
 // createBucketConfiguration container for bucket configuration

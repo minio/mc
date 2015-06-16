@@ -30,11 +30,12 @@ import (
 	"time"
 )
 
+// lowLevelAPI container to hold unexported internal functions
 type lowLevelAPI struct {
 	config *Config
 }
 
-// putBucketRequest wrapper creates a new PutBucket request
+// putBucketRequest wrapper creates a new putBucket request
 func (a lowLevelAPI) putBucketRequest(bucket, acl, location string) (*request, error) {
 	var r *request
 	var err error
@@ -103,11 +104,13 @@ func (a lowLevelAPI) putBucketRequest(bucket, acl, location string) (*request, e
 // private - owner gets full access [DEFAULT]
 // public-read - owner gets full access, others get read access
 // public-read-write - owner gets full access, others get full access too
+// authenticated-read - owner gets full access, authenticated users get read access
 // ------------------
 //
 // Location valid values
 // ------------------
 // [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
+//
 // Default - US standard
 func (a lowLevelAPI) putBucket(bucket, acl, location string) error {
 	req, err := a.putBucketRequest(bucket, acl, location)
@@ -142,7 +145,7 @@ func (a lowLevelAPI) putBucketACLRequest(bucket, acl string) (*request, error) {
 	return req, nil
 }
 
-// putBucketACL set the permissions on an existing bucket using access control lists (ACL)
+// putBucketACL set the permissions on an existing bucket using Canned ACL's
 func (a lowLevelAPI) putBucketACL(bucket, acl string) error {
 	req, err := a.putBucketACLRequest(bucket, acl)
 	if err != nil {
@@ -246,7 +249,7 @@ func (a lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 	return locationConstraint, nil
 }
 
-// listObjectsRequest wrapper creates a new ListObjects request
+// listObjectsRequest wrapper creates a new listObjects request
 func (a lowLevelAPI) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
 	resourceQuery := func() (*string, error) {
@@ -330,6 +333,7 @@ func (a lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxke
 	return listBucketResult, nil
 }
 
+// headBucketRequest wrapper creates a new headBucket request
 func (a lowLevelAPI) headBucketRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
@@ -339,7 +343,7 @@ func (a lowLevelAPI) headBucketRequest(bucket string) (*request, error) {
 	return newRequest(op, a.config, nil)
 }
 
-// headBucket - useful to determine if a bucket exists and you have permission to access it.
+// headBucket useful to determine if a bucket exists and you have permission to access it.
 func (a lowLevelAPI) headBucket(bucket string) error {
 	if err := invalidBucketToError(bucket); err != nil {
 		return err
@@ -379,7 +383,7 @@ func (a lowLevelAPI) headBucket(bucket string) error {
 	return nil
 }
 
-// deleteBucketRequest wrapper creates a new DeleteBucket request
+// deleteBucketRequest wrapper creates a new deleteBucket request
 func (a lowLevelAPI) deleteBucketRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
@@ -389,7 +393,8 @@ func (a lowLevelAPI) deleteBucketRequest(bucket string) (*request, error) {
 	return newRequest(op, a.config, nil)
 }
 
-// deleteBucket - deletes the bucket named in the URI
+// deleteBucket deletes the bucket named in the URI
+//
 // NOTE: -
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request
@@ -459,8 +464,7 @@ func (a lowLevelAPI) putObjectRequest(bucket, object, contentType string, md5Sum
 }
 
 // putObject - add an object to a bucket
-//
-// You must have WRITE permissions on a bucket to add an object to it.
+// NOTE: You must have WRITE permissions on a bucket to add an object to it.
 func (a lowLevelAPI) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
 	req, err := a.putObjectRequest(bucket, object, contentType, md5SumBytes, size, body)
 	if err != nil {
@@ -481,7 +485,7 @@ func (a lowLevelAPI) putObject(bucket, object, contentType string, md5SumBytes [
 	return metadata, nil
 }
 
-// getObjectRequest wrapper creates a new GetObject request
+// getObjectRequest wrapper creates a new getObject request
 func (a lowLevelAPI) getObjectRequest(bucket, object string, offset, length int64) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
@@ -507,12 +511,13 @@ func (a lowLevelAPI) getObjectRequest(bucket, object string, offset, length int6
 	return r, nil
 }
 
-// getPartialObject - retrieve object from Object Storage
+// getObject - retrieve object from Object Storage
 //
-// Additionally it also takes range arguments to download the specified range bytes of an object.
-// Setting offset and length = 0 will download the full object.
+// Additionally this function also takes range arguments to download the specified
+// range bytes of an object. Setting offset and length = 0 will download the full object.
+//
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a lowLevelAPI) getPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
+func (a lowLevelAPI) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
 	if err := invalidArgumentToError(object); err != nil {
 		return nil, ObjectStat{}, err
 	}
@@ -620,7 +625,7 @@ func (a lowLevelAPI) headObjectRequest(bucket, object string) (*request, error) 
 	return newRequest(op, a.config, nil)
 }
 
-// headObject - retrieves metadata from an object without returning the object itself
+// headObject retrieves metadata from an object without returning the object itself
 func (a lowLevelAPI) headObject(bucket, object string) (ObjectStat, error) {
 	if err := invalidBucketToError(bucket); err != nil {
 		return ObjectStat{}, err
@@ -681,7 +686,7 @@ func (a lowLevelAPI) headObject(bucket, object string) (ObjectStat, error) {
 
 /// Service Operations
 
-// listBucketRequest wrapper creates a new ListBuckets request
+// listBucketRequest wrapper creates a new listBuckets request
 func (a lowLevelAPI) listBucketsRequest() (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,

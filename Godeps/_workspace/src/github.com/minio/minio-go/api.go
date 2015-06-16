@@ -205,7 +205,7 @@ func New(config Config) (API, error) {
 // Downloads full object with no ranges, if you need ranges use GetPartialObject
 func (a api) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error) {
 	// get object
-	return a.getPartialObject(bucket, object, 0, 0)
+	return a.getObject(bucket, object, 0, 0)
 }
 
 // GetPartialObject retrieve partial object
@@ -215,7 +215,7 @@ func (a api) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error)
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
 func (a api) GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
 	// get partial object
-	return a.getPartialObject(bucket, object, offset, length)
+	return a.getObject(bucket, object, offset, length)
 }
 
 // completedParts is a wrapper to make parts sortable by their part number
@@ -277,9 +277,9 @@ func (a api) newObjectUpload(bucket, object, contentType string, size int64, dat
 		if err != nil {
 			return err
 		}
-		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completePart)
+		completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completePart)
 	}
-	sort.Sort(completedParts(completeMultipartUpload.Part))
+	sort.Sort(completedParts(completeMultipartUpload.Parts))
 	_, err = a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
 	if err != nil {
 		return err
@@ -308,7 +308,7 @@ func (a api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, 
 		}
 		return
 	}
-	for _, uploadedPart := range listObjectPartsResult.Part {
+	for _, uploadedPart := range listObjectPartsResult.Parts {
 		ch <- partCh{
 			Metadata: uploadedPart,
 			Err:      nil,
@@ -326,7 +326,7 @@ func (a api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, 
 			}
 			return
 		}
-		for _, uploadedPart := range listObjectPartsResult.Part {
+		for _, uploadedPart := range listObjectPartsResult.Parts {
 			ch <- partCh{
 				Metadata: uploadedPart,
 				Err:      nil,
@@ -350,7 +350,7 @@ func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, d
 		var completedPart completePart
 		completedPart.PartNumber = part.Metadata.PartNumber
 		completedPart.ETag = part.Metadata.ETag
-		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
+		completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completedPart)
 		md5SumBytes, err := hex.DecodeString(strings.Trim(part.Metadata.ETag, "\"")) // trim off the odd double quotes
 		if err != nil {
 			return err
@@ -368,9 +368,9 @@ func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, d
 		if err != nil {
 			return err
 		}
-		completeMultipartUpload.Part = append(completeMultipartUpload.Part, completedPart)
+		completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completedPart)
 	}
-	sort.Sort(completedParts(completeMultipartUpload.Part))
+	sort.Sort(completedParts(completeMultipartUpload.Parts))
 	_, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
 	if err != nil {
 		return err
@@ -379,7 +379,7 @@ func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, d
 }
 
 type multiPartUploadCh struct {
-	Metadata upload
+	Metadata multiPartUpload
 	Err      error
 }
 
@@ -394,14 +394,14 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch ch
 	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
 		ch <- multiPartUploadCh{
-			Metadata: upload{},
+			Metadata: multiPartUpload{},
 			Err:      err,
 		}
 		return
 	}
-	for _, upload := range listMultipartUploadsResult.Upload {
+	for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
 		ch <- multiPartUploadCh{
-			Metadata: upload,
+			Metadata: multiPartUpload,
 			Err:      nil,
 		}
 	}
@@ -413,14 +413,14 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch ch
 			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, object, "", 1000)
 		if err != nil {
 			ch <- multiPartUploadCh{
-				Metadata: upload{},
+				Metadata: multiPartUpload{},
 				Err:      err,
 			}
 			return
 		}
-		for _, upload := range listMultipartUploadsResult.Upload {
+		for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
 			ch <- multiPartUploadCh{
-				Metadata: upload,
+				Metadata: multiPartUpload,
 				Err:      nil,
 			}
 		}
@@ -721,8 +721,8 @@ func (a api) dropIncompleteUploadsInRoutine(bucket, object string, errorCh chan 
 		errorCh <- err
 		return
 	}
-	for _, upload := range listMultipartUploadsResult.Upload {
-		err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+	for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+		err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
 		if err != nil {
 			errorCh <- err
 			return
@@ -738,8 +738,8 @@ func (a api) dropIncompleteUploadsInRoutine(bucket, object string, errorCh chan 
 			errorCh <- err
 			return
 		}
-		for _, upload := range listMultipartUploadsResult.Upload {
-			err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+		for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+			err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
 			if err != nil {
 				errorCh <- err
 				return
@@ -774,8 +774,8 @@ func (a api) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan error
 		errorCh <- err
 		return
 	}
-	for _, upload := range listMultipartUploadsResult.Upload {
-		err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+	for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+		err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
 		if err != nil {
 			errorCh <- err
 			return
@@ -791,8 +791,8 @@ func (a api) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan error
 			errorCh <- err
 			return
 		}
-		for _, upload := range listMultipartUploadsResult.Upload {
-			err := a.abortMultipartUpload(bucket, upload.Key, upload.UploadID)
+		for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+			err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
 			if err != nil {
 				errorCh <- err
 				return
