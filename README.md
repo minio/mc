@@ -21,10 +21,10 @@
 
 ### From Binary
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/mc.linux.amd64
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
 
 ~~~
-$ wget https://dl.minio.io:9000/updates/2015/Jun/mc.linux.amd64 -O mc
+$ wget https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
 $ chmod +x mc
 $ ./mc
 ...
@@ -44,7 +44,7 @@ Minio server is hosted at ``https://play.minio.io:9000`` for public use. This se
 
 ## How to use mc?
 
-[![asciicast](https://asciinema.org/a/21240.png)](https://asciinema.org/a/21240?async&data-theme=solarized-dark)
+[![asciicast](https://asciinema.org/a/21509.png)](https://asciinema.org/a/21509?async)
 
 ## Configuring mc for Amazon S3
 
