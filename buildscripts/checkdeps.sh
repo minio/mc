@@ -148,7 +148,7 @@ main() {
     echo "Done"
     echo "Using GOPATH=${GOPATH} and GOROOT=${GOROOT}"
 
-    echo -n "Checking dependencies for Minio.. "
+    echo -n "Checking dependencies for Minio Client.. "
     check_deps
 
     ## If dependencies are missing, warn the user and abort
