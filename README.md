@@ -19,8 +19,6 @@
 
 ## Install
 
-### Binaries
-
 #### GNU/Linux
 
 ~~~
@@ -41,7 +39,7 @@ $ ./mc config generate
 
 Download from https://dl.minio.io:9000/updates/2015/Jun/windows-amd64/mc.exe
 
-### Source
+#### Source
 
 If you do not have a working Golang environment, please follow [Install Golang](./INSTALLGO.md).
 
