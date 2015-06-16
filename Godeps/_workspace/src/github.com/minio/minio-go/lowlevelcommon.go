@@ -30,10 +30,12 @@ import (
 	"unicode/utf8"
 )
 
+// decoder provides a unified decoding method interface
 type decoder interface {
 	Decode(v interface{}) error
 }
 
+// acceptTypeDecoder provide decoded value in given acceptType
 func acceptTypeDecoder(body io.Reader, acceptType string, v interface{}) error {
 	var decoder decoder
 	switch {
@@ -47,22 +49,28 @@ func acceptTypeDecoder(body io.Reader, acceptType string, v interface{}) error {
 	return decoder.Decode(v)
 }
 
-// urlEncodedName- encode the strings from UTF-8 byte representations to HTML hex escape sequences
-func urlEncodeName(objectName string) (string, error) {
+// urlEncodedName encode the strings from UTF-8 byte representations to HTML hex escape sequences
+//
+// This is necessary since regular url.Parse() and url.Encode() functions do not support UTF-8
+// non english characters cannot be parsed due to the nature in which url.Encode() is written
+//
+// This function on the other hand is a direct replacement for url.Encode() technique to support
+// pretty much every UTF-8 character.
+func urlEncodeName(name string) (string, error) {
 	// if object matches reserved string, no need to encode them
 	reservedNames := regexp.MustCompile("^[a-zA-Z0-9-_.~/]+$")
-	if reservedNames.MatchString(objectName) {
-		return objectName, nil
+	if reservedNames.MatchString(name) {
+		return name, nil
 	}
-	var encodedObjectName string
-	for _, s := range objectName {
+	var encodedName string
+	for _, s := range name {
 		if 'A' <= s && s <= 'Z' || 'a' <= s && s <= 'z' || '0' <= s && s <= '9' { // §2.3 Unreserved characters (mark)
-			encodedObjectName = encodedObjectName + string(s)
+			encodedName = encodedName + string(s)
 			continue
 		}
 		switch s {
 		case '-', '_', '.', '~', '/': // §2.3 Unreserved characters (mark)
-			encodedObjectName = encodedObjectName + string(s)
+			encodedName = encodedName + string(s)
 			continue
 		default:
 			len := utf8.RuneLen(s)
@@ -73,14 +81,14 @@ func urlEncodeName(objectName string) (string, error) {
 			utf8.EncodeRune(u, s)
 			for _, r := range u {
 				hex := hex.EncodeToString([]byte{r})
-				encodedObjectName = encodedObjectName + "%" + strings.ToUpper(hex)
+				encodedName = encodedName + "%" + strings.ToUpper(hex)
 			}
 		}
 	}
-	return encodedObjectName, nil
+	return encodedName, nil
 }
 
-// sum256Reader calculate sha256 sum for an input reader
+// sum256Reader calculate sha256 sum for an input read seeker
 func sum256Reader(reader io.ReadSeeker) ([]byte, error) {
 	h := sha256.New()
 	var err error
@@ -117,7 +125,7 @@ func sumHMAC(key []byte, data []byte) []byte {
 	return hash.Sum(nil)
 }
 
-// sumMD5Reader calculate md5 for an input reader of a given size
+// sumMD5Reader calculate md5 for an input read seeker of a given size
 func sumMD5Reader(body io.ReadSeeker, size int64) ([]byte, error) {
 	hasher := md5.New()
 	_, err := io.CopyN(hasher, body, size)
