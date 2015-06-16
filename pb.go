@@ -18,9 +18,7 @@ package main
 
 import (
 	"io"
-	"runtime"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -93,9 +91,10 @@ func (b barSend) Finish() {
 	defer close(b.cmdCh)
 	b.cmdCh <- barMsg{Cmd: pbBarCmdFinish}
 	<-b.finishCh
+	console.Println()
 }
 
-func trimBarCaption(c caption, width int) string {
+func fixateBarCaption(c caption, width int) string {
 	if len(c.message) > width {
 		// Trim caption to fit within the screen
 		trimSize := len(c.message) - width + 3 + 1
@@ -117,44 +116,21 @@ func newCpBar() barSend {
 	finishCh := make(chan bool)
 	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
 		var started bool
-		var barCaption string
 		var totalBytesRead int64 // total amounts of bytes read
 		bar := pb.New64(0)
 		bar.SetUnits(pb.U_BYTES)
 		bar.SetRefreshRate(time.Millisecond * 10)
 		bar.NotPrint = true
 		bar.ShowSpeed = true
-		firstTime := true
-		barLock := &sync.Mutex{}
 		bar.Callback = func(s string) {
-			barLock.Lock()
-			switch runtime.GOOS {
-			case "windows":
-				console.Print("\r" + strings.Repeat(" ", (bar.GetWidth()-1)) + "\r")
-				console.Bar(barCaption + "\n")
-				console.Bar("\r" + s)
-			default:
-				cursorUP := "\x1b[A"
-				cursorDown := "\x1b[B"
-				eraseCurrentLine := "\x1b[2K\r"
-				if !firstTime {
-					console.Print(cursorUP)
-					console.Print(eraseCurrentLine)
-				}
-				console.Bar(barCaption)
-				console.Print(cursorDown)
-				console.Print(eraseCurrentLine)
-				console.Bar(s)
-			}
-			firstTime = false
-			barLock.Unlock()
+			console.Bar(s + "\r")
 		}
 		// Feels like wget
 		bar.Format("[=> ]")
 		for msg := range cmdCh {
 			switch msg.Cmd {
 			case pbBarCmdSetCaption:
-				barCaption = trimBarCaption(msg.Arg.(caption), bar.GetWidth())
+				bar.Prefix(fixateBarCaption(msg.Arg.(caption), 15))
 			case pbBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 			case pbBarCmdProgress:
