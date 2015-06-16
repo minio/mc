@@ -19,20 +19,31 @@
 
 ## Install
 
-### From Binary
+### Binaries
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
+#### GNU/Linux
 
 ~~~
 $ wget https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
 $ chmod +x mc
-$ ./mc
-...
+$ ./mc config generate
 ~~~
 
-### From Source
+#### OS X 
 
-If you do not have a working Golang environment setup please follow [Install Golang](./INSTALLGO.md).
+~~~
+$ curl https://dl.minio.io:9000/updates/2015/Jun/darwin-amd64/mc > mc
+$ chmod +x mc
+$ ./mc config generate
+~~~
+
+#### Windows
+
+Download from https://dl.minio.io:9000/updates/2015/Jun/windows-amd64/mc.exe
+
+### Source
+
+If you do not have a working Golang environment, please follow [Install Golang](./INSTALLGO.md).
 
 ```sh
 $ go get github.com/minio/mc
