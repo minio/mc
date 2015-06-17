@@ -24,7 +24,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 	"text/template"
 	"time"
 
@@ -52,11 +51,10 @@ var Version = {{if .Date}}"{{.Date}}"{{else}}""{{end}}
 
 // Tag is of following format
 //
-//   [[STRING]-[EPOCH]-[GITREV]]
+//   [[STRING]-[EPOCH]
 //
 // STRING is release string of your choice.
 // EPOCH is unix seconds since Jan 1, 1970 UTC.
-// GITREV is git commit id
 var Tag = {{if .Tag}}"{{.Tag}}"{{else}}""{{end}}
 
 // getVersion -
@@ -129,22 +127,13 @@ func runMcRelease(ctx *cli.Context) {
 	if ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "release", 1) // last argument is exit code
 	}
-	git := command{exec.Command("git", "rev-parse", "--short", "HEAD"), &bytes.Buffer{}, &bytes.Buffer{}}
-	gitErr := git.runCommand()
-	if gitErr != nil {
-		fmt.Print(git)
-		os.Exit(1)
-	}
-	revParse := git.stdout.String()
 	t := time.Now().UTC()
 	date := t.Format(time.RFC3339Nano)
-
 	//   [[STRING]-[EPOCH]-[GITREV]]
 	//
 	// STRING is release string of your choice.
 	// EPOCH is unix seconds since Jan 1, 1970 UTC.
-	// GITREV is git commit id
-	tag := "release" + "-" + strconv.FormatInt(t.Unix(), 10) + "-" + strings.TrimSpace(revParse)
+	tag := "release" + "-" + strconv.FormatInt(t.Unix(), 10)
 
 	version := Version{Date: date, Tag: tag}
 	err := writeVersion(version)
@@ -161,7 +150,8 @@ func main() {
 		{
 			Name:   "release",
 			Action: runMcRelease,
-		}, {
+		},
+		{
 			Name:   "install",
 			Action: runMcInstall,
 		},
