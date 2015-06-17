@@ -74,6 +74,7 @@ func getSystemData() map[string]string {
 		"PLATFORM": platform,
 		"RUNTIME":  goruntime,
 		"MEM":      mem,
+		"TAG":      Tag,
 	}
 }
 
