@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"path/filepath"
 	"runtime"
 	"sync"
 
@@ -71,7 +70,7 @@ EXAMPLES:
 // doCopy - Copy a singe file from source to destination
 func doCopy(cURLs cpURLs, bar *barSend) error {
 	if !globalQuietFlag {
-		bar.SetCaption(filepath.Base(cURLs.SourceContent.Name) + ": ")
+		bar.SetCaption(cURLs.SourceContent.Name + ": ")
 	}
 	reader, length, err := getSource(cURLs.SourceContent.Name)
 	if err != nil {
