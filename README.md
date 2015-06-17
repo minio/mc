@@ -61,7 +61,7 @@ Minio server is hosted at ``https://play.minio.io:9000`` for public use. This se
 
 ## How to use mc?
 
-[![asciicast](https://asciinema.org/a/21509.png)](https://asciinema.org/a/21509?async)
+[![asciicast](https://asciinema.org/a/21576.png)](https://asciinema.org/a/21576?async)
 
 ## Configuring mc for Amazon S3
 
