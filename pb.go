@@ -19,6 +19,7 @@ package main
 import (
 	"io"
 	"runtime"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -108,12 +109,15 @@ func cursorAnimate() <-chan rune {
 }
 
 func fixateBarCaption(c string, s string, width int) string {
-	if len(c) > width {
+	switch {
+	case len(c) > width:
 		// Trim caption to fit within the screen
-		trimSize := len(c) - width + 3 + 1
+		trimSize := len(c) - width + 3
 		if trimSize < len(c) {
 			c = "..." + c[trimSize:]
 		}
+	case len(c) < width:
+		c = c + strings.Repeat(" ", width-len(c))
 	}
 	return s + " " + c
 }
@@ -143,7 +147,7 @@ func newCpBar() barSend {
 		for msg := range cmdCh {
 			switch msg.Cmd {
 			case pbBarCmdSetCaption:
-				bar.Prefix(fixateBarCaption(msg.Arg.(string), string(<-cursorCh), getFixedWidth(bar.GetWidth(), 10)))
+				bar.Prefix(fixateBarCaption(msg.Arg.(string), string(<-cursorCh), getFixedWidth(bar.GetWidth(), 18)))
 			case pbBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 			case pbBarCmdProgress:

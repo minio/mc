@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"path/filepath"
 	"runtime"
 	"sync"
 
@@ -72,7 +71,7 @@ EXAMPLES:
 func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if !globalQuietFlag {
-		bar.SetCaption(filepath.Base(sURLs.SourceContent.Name) + ": ")
+		bar.SetCaption(sURLs.SourceContent.Name + ": ")
 	}
 	reader, length, err := getSource(sURLs.SourceContent.Name)
 	if err != nil {
