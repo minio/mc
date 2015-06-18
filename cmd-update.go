@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"runtime"
 	"time"
@@ -84,11 +85,15 @@ https://dl.minio.io:9000 for continuous updates`
 	if latest.After(current) {
 		var updateString string
 		if runtime.GOOS == "windows" {
-			updateString = "mc.exe cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ."
+			updateString = "mc.exe cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " .\\mc.exe"
 		} else {
-			updateString = "mc cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ${HOME}/bin/mc"
+			updateString = "mc cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ./mc"
 		}
-		printUpdateNotify(updateString, "new", "old")
+		msg, err := printUpdateNotify(updateString, "new", "old")
+		if err != nil {
+			return "", err
+		}
+		fmt.Println(msg)
 		return "", nil
 	}
 	return "You are already running the most recent version of ‘mc’", nil
@@ -113,5 +118,8 @@ func runUpdateCmd(ctx *cli.Context) {
 			Error:   iodine.New(err, nil),
 		})
 	}
-	console.Infoln(msg)
+	// no msg do not print one
+	if msg != "" {
+		console.Infoln(msg)
+	}
 }

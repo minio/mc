@@ -23,10 +23,11 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/olekukonko/ts"
 )
 
 // printUpdateNotify - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
-func printUpdateNotify(updateString, latestVersion, currentVersion string) {
+func printUpdateNotify(updateString, latestVersion, currentVersion string) (string, error) {
 	// TODO - make this configurable
 	//
 	// initialize coloring
@@ -35,11 +36,13 @@ func printUpdateNotify(updateString, latestVersion, currentVersion string) {
 
 	// calculate length without color coding, due to ANSI color characters padded to actual
 	// string the final length is wrong than the original string length
-	line1Length := len(fmt.Sprintf("  Update available: "))
-	line2Length := len(fmt.Sprintf("  Run \"%s\" to update. ", updateString))
+	line1Str := fmt.Sprintf("  Update available: ")
+	line2Str := fmt.Sprintf("  Run \"%s\" to update. ", updateString)
+	line1Length := len(line1Str)
+	line2Length := len(line2Str)
 
 	// populate lines with color coding
-	line1InColor := fmt.Sprintf("  Update available: ")
+	line1InColor := line1Str
 	line2InColor := fmt.Sprintf("  Run \"%s\" to update. ", blue(updateString))
 
 	// calculate the rectangular box size
@@ -47,28 +50,37 @@ func printUpdateNotify(updateString, latestVersion, currentVersion string) {
 	line1Rest := maxContentWidth - line1Length
 	line2Rest := maxContentWidth - line2Length
 
-	// on windows terminal turn off unicode characters
-	var top, bottom, sideBar string
-	if runtime.GOOS == "windows" {
-		top = yellow("*" + strings.Repeat("*", maxContentWidth) + "*")
-		bottom = yellow("*" + strings.Repeat("*", maxContentWidth) + "*")
-		sideBar = yellow("|")
-	} else {
-		// color the rectangular box, use unicode characters here
-		top = yellow("┏" + strings.Repeat("━", maxContentWidth) + "┓")
-		bottom = yellow("┗" + strings.Repeat("━", maxContentWidth) + "┛")
-		sideBar = yellow("┃")
+	terminal, err := ts.GetSize()
+	if err != nil {
+		return "", err
 	}
-	// fill spaces to the rest of the area
-	spacePaddingLine1 := strings.Repeat(" ", line1Rest)
-	spacePaddingLine2 := strings.Repeat(" ", line2Rest)
+	var message string
+	switch {
+	case len(line2Str) > terminal.Col():
+		message = "\n" + line1InColor + "\n" + line2InColor + "\n"
+	default:
+		// on windows terminal turn off unicode characters
+		var top, bottom, sideBar string
+		if runtime.GOOS == "windows" {
+			top = yellow("*" + strings.Repeat("*", maxContentWidth) + "*")
+			bottom = yellow("*" + strings.Repeat("*", maxContentWidth) + "*")
+			sideBar = yellow("|")
+		} else {
+			// color the rectangular box, use unicode characters here
+			top = yellow("┏" + strings.Repeat("━", maxContentWidth) + "┓")
+			bottom = yellow("┗" + strings.Repeat("━", maxContentWidth) + "┛")
+			sideBar = yellow("┃")
+		}
+		// fill spaces to the rest of the area
+		spacePaddingLine1 := strings.Repeat(" ", line1Rest)
+		spacePaddingLine2 := strings.Repeat(" ", line2Rest)
 
-	// construct the final message
-	message := "\n" + top + "\n" +
-		sideBar + line1InColor + spacePaddingLine1 + sideBar + "\n" +
-		sideBar + line2InColor + spacePaddingLine2 + sideBar + "\n" +
-		bottom + "\n"
-
+		// construct the final message
+		message = "\n" + top + "\n" +
+			sideBar + line1InColor + spacePaddingLine1 + sideBar + "\n" +
+			sideBar + line2InColor + spacePaddingLine2 + sideBar + "\n" +
+			bottom + "\n"
+	}
 	// finally print the message
-	fmt.Println(message)
+	return message, nil
 }
