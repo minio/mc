@@ -19,7 +19,7 @@ package main
 import (
 	"os"
 	"os/user"
-	"path"
+	"path/filepath"
 	"runtime"
 	"sync"
 
@@ -45,9 +45,9 @@ func getMcConfigDir() (string, error) {
 		// For windows the path is slightly different
 		switch runtime.GOOS {
 		case "windows":
-			return path.Join(customConfigDir, mcConfigWindowsDir), nil
+			return filepath.Join(customConfigDir, mcConfigWindowsDir), nil
 		default:
-			return path.Join(customConfigDir, mcConfigDir), nil
+			return filepath.Join(customConfigDir, mcConfigDir), nil
 		}
 	}
 	u, err := user.Current()
@@ -57,9 +57,9 @@ func getMcConfigDir() (string, error) {
 	// For windows the path is slightly different
 	switch runtime.GOOS {
 	case "windows":
-		return path.Join(u.HomeDir, mcConfigWindowsDir), nil
+		return filepath.Join(u.HomeDir, mcConfigWindowsDir), nil
 	default:
-		return path.Join(u.HomeDir, mcConfigDir), nil
+		return filepath.Join(u.HomeDir, mcConfigDir), nil
 	}
 }
 
@@ -82,7 +82,7 @@ func getMcConfigPath() (string, error) {
 	if err != nil {
 		return "", iodine.New(err, nil)
 	}
-	return path.Join(dir, mcConfigFile), nil
+	return filepath.Join(dir, mcConfigFile), nil
 }
 
 // mustGetMcConfigPath - similar to getMcConfigPath, ignores errors
