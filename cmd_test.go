@@ -21,7 +21,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -83,7 +82,7 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 
 	conf, err := newConfig()
 	c.Assert(err, IsNil)
-	configFile := path.Join(root, "config.json")
+	configFile := filepath.Join(root, "config.json")
 	err = conf.Save(configFile)
 	c.Assert(err, IsNil)
 
@@ -158,9 +157,9 @@ func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
 	case "freebsd":
 		fallthrough
 	case "darwin":
-		c.Assert(dir, Equals, path.Join(customConfigDir, mcConfigDir))
+		c.Assert(dir, Equals, filepath.Join(customConfigDir, mcConfigDir))
 	case "windows":
-		c.Assert(dir, Equals, path.Join(customConfigDir, mcConfigWindowsDir))
+		c.Assert(dir, Equals, filepath.Join(customConfigDir, mcConfigWindowsDir))
 	default:
 		c.Fail()
 	}
@@ -172,13 +171,13 @@ func (s *CmdTestSuite) TestGetMcConfigPath(c *C) {
 	c.Assert(err, IsNil)
 	switch runtime.GOOS {
 	case "linux":
-		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
-	case "windows":
-		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
-	case "darwin":
-		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
+		fallthrough
 	case "freebsd":
-		c.Assert(dir, Equals, path.Join(mustGetMcConfigDir(), "config.json"))
+		fallthrough
+	case "darwin":
+		c.Assert(dir, Equals, filepath.Join(mustGetMcConfigDir(), "config.json"))
+	case "windows":
+		c.Assert(dir, Equals, filepath.Join(mustGetMcConfigDir(), "config.json"))
 	default:
 		c.Fail()
 	}
