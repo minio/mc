@@ -61,16 +61,14 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
 		fpath = fpath + "."
 	}
-
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
-		return nil, iodine.New(client.ISBrokenSymlink{Path: f.path}, nil)
+		return nil, iodine.New(err, nil)
 	}
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-
 	st, err := os.Stat(fpath)
 	if os.IsNotExist(err) {
 		return nil, iodine.New(client.NotFound{Path: fpath}, nil)
@@ -137,7 +135,7 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, error)
 	// Resolve symlinks
 	fpath, err = filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
-		return nil, 0, iodine.New(client.ISBrokenSymlink{Path: f.path}, nil)
+		return nil, 0, iodine.New(err, nil)
 	}
 	if err != nil {
 		return nil, 0, iodine.New(err, nil)
@@ -184,7 +182,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	if os.IsNotExist(err) {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     iodine.New(client.ISBrokenSymlink{Path: f.path}, nil),
+			Err:     iodine.New(err, nil),
 		}
 		return
 	}
