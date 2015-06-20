@@ -51,6 +51,43 @@ EXAMPLES:
 `,
 }
 
+func listSessions(sessionDir string) {
+	sessions, err := ioutil.ReadDir(sessionDir)
+	if err != nil {
+		console.Fatalln(iodine.ToError(err))
+	}
+	for _, session := range sessions {
+		if session.Mode().IsRegular() {
+			console.Infoln(session.Name())
+		}
+	}
+}
+
+func resumeSession(sid string) {
+	sfile, err := getSessionFile(sid)
+	if err != nil {
+		console.Fatalln(iodine.ToError(err))
+	}
+	_, err = os.Stat(sfile)
+	if err != nil {
+		console.Fatalln(iodine.ToError(iodine.New(errInvalidSessionID{id: sid}, nil)))
+	}
+}
+
+func clearSessions(sdir string) {
+	sessions, err := ioutil.ReadDir(sdir)
+	if err != nil {
+		console.Fatalln(iodine.ToError(err))
+	}
+	for _, session := range sessions {
+		if session.Mode().IsRegular() {
+			err := os.Remove(filepath.Join(sdir, session.Name()))
+			if err != nil {
+				console.Fatalln(iodine.ToError(err))
+			}
+		}
+	}
+}
 func runSessionCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -63,39 +100,24 @@ func runSessionCmd(ctx *cli.Context) {
 			console.Fatalln(iodine.ToError(err))
 		}
 	}
+	sessionDir, err := getSessionDir()
+	if err != nil {
+		console.Fatalln(iodine.ToError(err))
+	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions
 	case "list":
-		sessionDir, err := getSessionDir()
-		if err != nil {
-			console.Fatalln(iodine.ToError(err))
+		listSessions(sessionDir)
+	case "resume":
+		if len(ctx.Args().Tail()) != 1 {
+			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 		}
-		sessions, err := ioutil.ReadDir(sessionDir)
-		if err != nil {
-			console.Fatalln(iodine.ToError(err))
+		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
+			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 		}
-		for _, session := range sessions {
-			if session.Mode().IsRegular() {
-				console.Infoln(session.Name())
-			}
-		}
+		resumeSession(ctx.Args().Tail().First())
 	// purge all pending sessions
 	case "clear":
-		sessionDir, err := getSessionDir()
-		if err != nil {
-			console.Fatalln(iodine.ToError(err))
-		}
-		sessions, err := ioutil.ReadDir(sessionDir)
-		if err != nil {
-			console.Fatalln(iodine.ToError(err))
-		}
-		for _, session := range sessions {
-			if session.Mode().IsRegular() {
-				err := os.Remove(filepath.Join(sessionDir, session.Name()))
-				if err != nil {
-					console.Fatalln(iodine.ToError(err))
-				}
-			}
-		}
+		clearSessions(sessionDir)
 	}
 }
