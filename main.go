@@ -83,15 +83,16 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// register all the commands
-	registerCmd(lsCmd)     // List contents of a bucket
-	registerCmd(mbCmd)     // make a bucket
-	registerCmd(catCmd)    // concantenate an object to standard output
-	registerCmd(cpCmd)     // copy objects and files from multiple sources to single destination
-	registerCmd(syncCmd)   // copy objects and files from single source to multiple destionations
-	registerCmd(diffCmd)   // compare two objects
-	registerCmd(accessCmd) // set permissions [public, private, readonly, authenticated] for buckets and folders.
-	registerCmd(configCmd) // generate configuration "/home/harsha/.mc/config.json" file.
-	registerCmd(updateCmd) // update Check for new software updates
+	registerCmd(lsCmd)      // List contents of a bucket
+	registerCmd(mbCmd)      // make a bucket
+	registerCmd(catCmd)     // concantenate an object to standard output
+	registerCmd(cpCmd)      // copy objects and files from multiple sources to single destination
+	registerCmd(syncCmd)    // sync objects and files from single source to multiple destinations
+	registerCmd(sessionCmd) // session handling for resuming copy and sync operations
+	registerCmd(diffCmd)    // compare two objects
+	registerCmd(accessCmd)  // set permissions [public, private, readonly, authenticated] for buckets and folders.
+	registerCmd(configCmd)  // generate configuration "/home/harsha/.mc/config.json" file.
+	registerCmd(updateCmd)  // update Check for new software updates
 
 	// register all the flags
 	registerFlag(quietFlag) // suppress console output
