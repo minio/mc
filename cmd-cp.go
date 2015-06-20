@@ -20,7 +20,10 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
+	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/minio/cli"
@@ -108,6 +111,16 @@ func doCopyInRoutine(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan e
 	<-cpQueue // Signal that this copy routine is done.
 }
 
+func doCopyInRoutineSession(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup, s *sessionV1) {
+	defer wg.Done()
+	if err := doCopy(cURLs, bar); err != nil {
+		errCh <- err
+	}
+	<-cpQueue // Signal that this copy routine is done.
+	// store files which have finished copying
+	s.Files = append(s.Files, cURLs.SourceContent.Name)
+}
+
 func doPrepareCopyURLs(sourceURLs []string, targetURL string, bar barSend, lock countlock.Locker) {
 	for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 		if cURLs.Error != nil {
@@ -120,6 +133,64 @@ func doPrepareCopyURLs(sourceURLs []string, targetURL string, bar barSend, lock 
 			lock.Up() // Let copy routine know that it has to catch up.
 		}
 	}
+}
+
+func trap(sid string) {
+	// Go signal notification works by sending `os.Signal`
+	// values on a channel.
+	sigs := make(chan os.Signal, 1)
+
+	// `signal.Notify` registers the given channel to
+	// receive notifications of the specified signals.
+	signal.Notify(sigs, os.Kill, os.Interrupt)
+
+	// This executes a blocking receive for signals.
+	// When it gets one it'll then notify the program
+	// that it can finish.
+	<-sigs
+	if err := saveSession(sid); err != nil {
+		console.Fatalln(err)
+	}
+	console.Fatal()
+}
+
+func doCopySession(sourceURLs []string, targetURL string, bar barSend, s *sessionV1) <-chan error {
+	errCh := make(chan error)
+	go func(sourceURLs []string, targetURL string, bar barSend, errCh chan error, s *sessionV1) {
+		defer close(errCh)
+		go trap(s.SessionID)
+
+		var lock countlock.Locker
+		if !globalQuietFlag {
+			// Keep progress-bar and copy routines in sync.
+			lock = countlock.New()
+			defer lock.Close()
+		}
+
+		// Wait for all copy routines to complete.
+		wg := new(sync.WaitGroup)
+
+		// Pool limited copy routines in parallel.
+		cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
+		defer close(cpQueue)
+
+		go doPrepareCopyURLs(sourceURLs, targetURL, bar, lock)
+
+		for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
+			if cURLs.Error != nil {
+				errCh <- cURLs.Error
+				continue
+			}
+			cpQueue <- true // Wait for existing pool to drain.
+			wg.Add(1)       // keep track of all the goroutines
+			if !globalQuietFlag {
+				lock.Down() // Do not jump ahead of the progress bar builder above.
+			}
+			go doCopyInRoutineSession(cURLs, &bar, cpQueue, errCh, wg, s)
+		}
+		wg.Wait() // wait for the go routines to complete
+	}(sourceURLs, targetURL, bar, errCh, s)
+	return errCh
 }
 
 func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error {
@@ -172,6 +243,24 @@ func runCopyCmd(ctx *cli.Context) {
 		})
 	}
 
+	var s *sessionV1
+	var err error
+	var resume bool
+	var sid = ""
+	switch resume {
+	case false:
+		s, err = newSession()
+		if err != nil {
+			console.Fatalln(iodine.ToError(err))
+		}
+	case true:
+		s, err = loadSession(sid)
+		if err != nil {
+			console.Fatalln(iodine.ToError(err))
+		}
+	}
+	s.Command = "mc cp " + strings.Join(ctx.Args(), " ")
+
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
@@ -192,7 +281,7 @@ func runCopyCmd(ctx *cli.Context) {
 		bar = newCpBar()
 	}
 
-	for err := range doCopyCmd(sourceURLs, targetURL, bar) {
+	for err := range doCopySession(sourceURLs, targetURL, bar, s) {
 		if err != nil {
 			console.Errors(ErrorMessage{
 				Message: "Failed with",
