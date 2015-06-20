@@ -33,6 +33,11 @@ const (
 	mcConfigFile       = "config.json"
 )
 
+// session config related constants
+const (
+	sessionDir = "session"
+)
+
 // default access and secret key
 const (
 	// do not pass accesskeyid and secretaccesskey through cli
