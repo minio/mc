@@ -81,6 +81,10 @@ func runSessionCmd(ctx *cli.Context) {
 		}
 	// purge all pending sessions
 	case "clear":
+		sessionDir, err := getSessionDir()
+		if err != nil {
+			console.Fatalln(iodine.ToError(err))
+		}
 		sessions, err := ioutil.ReadDir(sessionDir)
 		if err != nil {
 			console.Fatalln(iodine.ToError(err))
