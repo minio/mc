@@ -16,6 +16,14 @@
 
 package main
 
+type errInvalidSessionID struct {
+	id string
+}
+
+func (e errInvalidSessionID) Error() string {
+	return "Invalid session id ‘" + e.id + "’."
+}
+
 type errInvalidACL struct {
 	acl string
 }
