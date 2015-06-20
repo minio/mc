@@ -18,12 +18,10 @@ package main
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/minio/mc/pkg/quick"
 	"github.com/minio/minio/pkg/iodine"
@@ -35,9 +33,6 @@ type sessionV1 struct {
 	Command   string
 	Files     []string
 }
-
-// cached variables should *NEVER* be accessed directly from outside this file.
-var scache sync.Pool
 
 func isSessionDirExists() bool {
 	sdir, err := getSessionDir()
@@ -119,16 +114,16 @@ func getSessionFile(sid string) (string, error) {
 }
 
 // save a session
-func saveSession(sid string) error {
-	sessionFile, err := getSessionFile(sid)
+func saveSession(s *sessionV1) error {
+	sessionFile, err := getSessionFile(s.SessionID)
 	if err != nil {
 		return err
 	}
-	// Use previously cached config.
-	if v := scache.Get(); v != nil {
-		return v.(quick.Config).Save(sessionFile)
+	qs, err := quick.New(s)
+	if err != nil {
+		return err
 	}
-	return errors.New("No cached session found")
+	return qs.Save(sessionFile)
 }
 
 // provides a new session
@@ -140,7 +135,6 @@ func newSession() (*sessionV1, error) {
 	if err := writeSession(qs); err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	scache.Put(qs)
 	return qs.Data().(*sessionV1), nil
 }
 
@@ -157,10 +151,6 @@ func loadSession(sid string) (*sessionV1, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	// Cached in private global variable.
-	if v := scache.Get(); v != nil { // Use previously cached config.
-		return v.(quick.Config).Data().(*sessionV1), nil
-	}
 	s := new(sessionV1)
 	s.Version = mcCurrentSessionVersion
 	// map of command and files copied
@@ -174,7 +164,6 @@ func loadSession(sid string) (*sessionV1, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	scache.Put(qs)
 	return qs.Data().(*sessionV1), nil
 
 }

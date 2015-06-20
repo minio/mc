@@ -116,7 +116,8 @@ func doCopyInRoutineSession(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh
 	if err := doCopy(cURLs, bar); err != nil {
 		errCh <- err
 	}
-	<-cpQueue // Signal that this copy routine is done.
+	// Signal that this copy routine is done.
+	<-cpQueue
 	// store files which have finished copying
 	s.Files = append(s.Files, cURLs.SourceContent.Name)
 }
@@ -135,7 +136,7 @@ func doPrepareCopyURLs(sourceURLs []string, targetURL string, bar barSend, lock 
 	}
 }
 
-func trap(sid string) {
+func trap(done chan bool) {
 	// Go signal notification works by sending `os.Signal`
 	// values on a channel.
 	sigs := make(chan os.Signal, 1)
@@ -148,17 +149,15 @@ func trap(sid string) {
 	// When it gets one it'll then notify the program
 	// that it can finish.
 	<-sigs
-	if err := saveSession(sid); err != nil {
-		console.Fatalln(err)
-	}
-	console.Fatal("")
+	done <- true
 }
 
 func doCopySession(sourceURLs []string, targetURL string, bar barSend, s *sessionV1) <-chan error {
 	errCh := make(chan error)
+	done := make(chan bool)
 	go func(sourceURLs []string, targetURL string, bar barSend, errCh chan error, s *sessionV1) {
 		defer close(errCh)
-		go trap(s.SessionID)
+		go trap(done)
 
 		var lock countlock.Locker
 		if !globalQuietFlag {
@@ -178,7 +177,7 @@ func doCopySession(sourceURLs []string, targetURL string, bar barSend, s *sessio
 
 		for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 			if cURLs.Error != nil {
-				errCh <- cURLs.Error
+				errCh <- iodine.New(cURLs.Error, nil)
 				continue
 			}
 			cpQueue <- true // Wait for existing pool to drain.
@@ -190,6 +189,13 @@ func doCopySession(sourceURLs []string, targetURL string, bar barSend, s *sessio
 		}
 		wg.Wait() // wait for the go routines to complete
 	}(sourceURLs, targetURL, bar, errCh, s)
+	if <-done {
+		close(done)
+		if err := saveSession(s); err != nil {
+			console.Fatalln(iodine.ToError(err))
+		}
+		os.Exit(0)
+	}
 	return errCh
 }
 
@@ -281,7 +287,7 @@ func runCopyCmd(ctx *cli.Context) {
 		bar = newCpBar()
 	}
 
-	for err := range doCopyCmd(sourceURLs, targetURL, bar) {
+	for err := range doCopySession(sourceURLs, targetURL, bar, s) {
 		if err != nil {
 			console.Errors(ErrorMessage{
 				Message: "Failed with",
