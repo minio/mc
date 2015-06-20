@@ -151,7 +151,7 @@ func trap(sid string) {
 	if err := saveSession(sid); err != nil {
 		console.Fatalln(err)
 	}
-	console.Fatal()
+	console.Fatal("")
 }
 
 func doCopySession(sourceURLs []string, targetURL string, bar barSend, s *sessionV1) <-chan error {
@@ -281,7 +281,7 @@ func runCopyCmd(ctx *cli.Context) {
 		bar = newCpBar()
 	}
 
-	for err := range doCopySession(sourceURLs, targetURL, bar, s) {
+	for err := range doCopyCmd(sourceURLs, targetURL, bar) {
 		if err != nil {
 			console.Errors(ErrorMessage{
 				Message: "Failed with",
