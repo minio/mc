@@ -114,6 +114,42 @@ func clearSession(sid string) error {
 	return nil
 }
 
+func sessionExecture(bar barSend, s *sessionV1) {
+	switch s.CommandType {
+	case "cp":
+		for cps := range doCopyCmdSession(bar, s) {
+			if cps.Error != nil {
+				console.Errors(ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.New(cps.Error, nil),
+				})
+			}
+			if cps.Done {
+				if err := saveSession(s); err != nil {
+					console.Fatalln(iodine.ToError(err))
+				}
+				os.Exit(0)
+			}
+		}
+	case "sync":
+		for ss := range doSyncCmdSession(bar, s) {
+			if ss.Error != nil {
+				console.Errors(ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.New(ss.Error, nil),
+				})
+			}
+			if ss.Done {
+				if err := saveSession(s); err != nil {
+					console.Fatalln(iodine.ToError(err))
+				}
+				// this os.Exit is needed really to exit in-case of "os.Interrupt"
+				os.Exit(0)
+			}
+		}
+	}
+}
+
 func runSessionCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -147,39 +183,7 @@ func runSessionCmd(ctx *cli.Context) {
 		if !globalQuietFlag {
 			bar = newCpBar()
 		}
-		switch s.CommandType {
-		case "cp":
-			for cps := range doCopyCmdSession(bar, s) {
-				if cps.Error != nil {
-					console.Errors(ErrorMessage{
-						Message: "Failed with",
-						Error:   iodine.New(cps.Error, nil),
-					})
-				}
-				if cps.Done {
-					if err := saveSession(s); err != nil {
-						console.Fatalln(iodine.ToError(err))
-					}
-					os.Exit(0)
-				}
-			}
-		case "sync":
-			for ss := range doSyncCmdSession(bar, s) {
-				if ss.Error != nil {
-					console.Errors(ErrorMessage{
-						Message: "Failed with",
-						Error:   iodine.New(err, nil),
-					})
-				}
-				if ss.Done {
-					if err := saveSession(s); err != nil {
-						console.Fatalln(iodine.ToError(err))
-					}
-					// this os.Exit is needed really to exit in-case of "os.Interrupt"
-					os.Exit(0)
-				}
-			}
-		}
+		sessionExecture(bar, s)
 		if !globalQuietFlag {
 			bar.Finish()
 			if err := clearSession(sid); err != nil {
