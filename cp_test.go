@@ -34,6 +34,9 @@ func (s *CmdTestSuite) TestCpTypeA(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(source)
 
+	cps, err := newSession()
+	c.Assert(err, IsNil)
+
 	sourcePath := filepath.Join(source, "object1")
 	data := "hello"
 	dataLen := len(data)
@@ -45,12 +48,19 @@ func (s *CmdTestSuite) TestCpTypeA(c *C) {
 	defer os.RemoveAll(target)
 	targetPath := filepath.Join(target, "newObject1")
 
-	for err := range doCopyCmd([]string{sourcePath}, targetPath, barCp) {
+	cps.URLs = append(cps.URLs, sourcePath)
+	cps.URLs = append(cps.URLs, targetPath)
+	for err := range doCopyCmdSession(barCp, cps) {
 		c.Assert(err, IsNil)
 	}
 
+	cps, err = newSession()
+	c.Assert(err, IsNil)
 	targetURL := server.URL + "/bucket/newObject"
-	for err := range doCopyCmd([]string{sourcePath}, targetURL, barCp) {
+
+	cps.URLs = append(cps.URLs, sourcePath)
+	cps.URLs = append(cps.URLs, targetURL)
+	for err := range doCopyCmdSession(barCp, cps) {
 		c.Assert(err, IsNil)
 	}
 }
@@ -71,12 +81,22 @@ func (s *CmdTestSuite) TestCpTypeB(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(target)
 
-	for err := range doCopyCmd([]string{sourcePath}, target, barCp) {
+	cps, err := newSession()
+	c.Assert(err, IsNil)
+
+	cps.URLs = append(cps.URLs, sourcePath)
+	cps.URLs = append(cps.URLs, target)
+	for err := range doCopyCmdSession(barCp, cps) {
 		c.Assert(err, IsNil)
 	}
 
+	cps, err = newSession()
+	c.Assert(err, IsNil)
+
 	targetURL := server.URL + "/bucket"
-	for err := range doCopyCmd([]string{sourcePath}, targetURL, barCp) {
+	cps.URLs = append(cps.URLs, sourcePath)
+	cps.URLs = append(cps.URLs, targetURL)
+	for err := range doCopyCmdSession(barCp, cps) {
 		c.Assert(err, IsNil)
 	}
 }
@@ -99,12 +119,21 @@ func (s *CmdTestSuite) TestCpTypeC(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(target)
 
-	for err := range doCopyCmd([]string{source + "..."}, target, barCp) {
+	cps, err := newSession()
+	c.Assert(err, IsNil)
+
+	cps.URLs = append(cps.URLs, source+"...")
+	cps.URLs = append(cps.URLs, target)
+	for err := range doCopyCmdSession(barCp, cps) {
 		c.Assert(err, IsNil)
 	}
 
-	targetURL := server.URL + "/bucket"
-	for err := range doCopyCmd([]string{source + "..."}, targetURL, barCp) {
+	cps, err = newSession()
+	c.Assert(err, IsNil)
+
+	cps.URLs = append(cps.URLs, source+"...")
+	cps.URLs = append(cps.URLs, server.URL+"/bucket")
+	for err := range doCopyCmdSession(barCp, cps) {
 		c.Assert(err, IsNil)
 	}
 }
@@ -138,12 +167,22 @@ func (s *CmdTestSuite) TestCpTypeD(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(target)
 
-	for err := range doCopyCmd([]string{source1 + "...", source2 + "..."}, target, barCp) {
+	cps, err := newSession()
+	c.Assert(err, IsNil)
+	cps.URLs = append(cps.URLs, source1+"...")
+	cps.URLs = append(cps.URLs, source2+"...")
+	cps.URLs = append(cps.URLs, target)
+	for err := range doCopyCmdSession(barCp, cps) {
 		c.Assert(err, IsNil)
 	}
 
+	cps, err = newSession()
+	c.Assert(err, IsNil)
 	targetURL := server.URL + "/bucket"
-	for err := range doCopyCmd([]string{source1 + "...", source2 + "..."}, targetURL, barCp) {
+	cps.URLs = append(cps.URLs, source1+"...")
+	cps.URLs = append(cps.URLs, source2+"...")
+	cps.URLs = append(cps.URLs, targetURL)
+	for err := range doCopyCmdSession(barCp, cps) {
 		c.Assert(err, IsNil)
 	}
 }

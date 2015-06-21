@@ -147,11 +147,11 @@ func runSessionCmd(ctx *cli.Context) {
 		if !globalQuietFlag {
 			bar = newCpBar()
 		}
-		for cps := range doCopySession(bar, s) {
+		for cps := range doCopyCmdSession(bar, s) {
 			if cps.Error != nil {
 				console.Errors(ErrorMessage{
 					Message: "Failed with",
-					Error:   iodine.New(err, nil),
+					Error:   iodine.New(cps.Error, nil),
 				})
 			}
 			if cps.Done {

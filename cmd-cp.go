@@ -69,11 +69,20 @@ EXAMPLES:
 `,
 }
 
-// doCopy - Copy a singe file from source to destination
-func doCopy(cURLs cpURLs, bar *barSend) error {
+// doCopySession - Copy a singe file from source to destination
+func doCopySession(cURLs cpURLs, bar *barSend, s *sessionV1) error {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	if !globalQuietFlag {
 		bar.SetCaption(cURLs.SourceContent.Name + ": ")
 	}
+
+	_, ok := s.Files[cURLs.SourceContent.Name]
+	if ok {
+		bar.ErrorGet(int64(cURLs.SourceContent.Size))
+		return nil
+	}
+
 	reader, length, err := getSource(cURLs.SourceContent.Name)
 	if err != nil {
 		if !globalQuietFlag {
@@ -92,6 +101,7 @@ func doCopy(cURLs cpURLs, bar *barSend) error {
 		// set up progress
 		newReader = bar.NewProxyReader(yielder.NewReader(reader))
 	}
+
 	err = putTarget(cURLs.TargetContent.Name, length, newReader)
 	if err != nil {
 		if !globalQuietFlag {
@@ -99,15 +109,10 @@ func doCopy(cURLs cpURLs, bar *barSend) error {
 		}
 		return iodine.New(err, map[string]string{"URL": cURLs.TargetContent.Name})
 	}
-	return nil
-}
 
-func doCopyInRoutine(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
-	defer wg.Done()
-	if err := doCopy(cURLs, bar); err != nil {
-		errCh <- err
-	}
-	<-cpQueue // Signal that this copy routine is done.
+	// store files which have finished copying
+	s.Files[cURLs.SourceContent.Name] = true
+	return nil
 }
 
 type cpSession struct {
@@ -117,21 +122,11 @@ type cpSession struct {
 
 func doCopyInRoutineSession(cURLs cpURLs, bar *barSend, cpQueue chan bool, cpsCh chan cpSession, wg *sync.WaitGroup, s *sessionV1) {
 	defer wg.Done()
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
-	_, ok := s.Files[cURLs.SourceContent.Name]
-	switch ok {
-	case true:
-		bar.ErrorGet(int64(cURLs.SourceContent.Size))
-	case false:
-		if err := doCopy(cURLs, bar); err != nil {
-			cpsCh <- cpSession{
-				Error: iodine.New(err, nil),
-				Done:  false,
-			}
+	if err := doCopySession(cURLs, bar, s); err != nil {
+		cpsCh <- cpSession{
+			Error: iodine.New(err, nil),
+			Done:  false,
 		}
-		// store files which have finished copying
-		s.Files[cURLs.SourceContent.Name] = true
 	}
 	// Signal that this copy routine is done.
 	<-cpQueue
@@ -170,7 +165,7 @@ func trap(cpsCh chan cpSession) {
 	}
 }
 
-func doCopySession(bar barSend, s *sessionV1) <-chan cpSession {
+func doCopyCmdSession(bar barSend, s *sessionV1) <-chan cpSession {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources, even the recursive URLs mixed in-between.
 	sourceURLs := s.URLs[:len(s.URLs)-1]
@@ -217,42 +212,6 @@ func doCopySession(bar barSend, s *sessionV1) <-chan cpSession {
 	return cpsCh
 }
 
-func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error {
-	errCh := make(chan error)
-	go func(sourceURLs []string, targetURL string, bar barSend, errCh chan error) {
-		defer close(errCh)
-		var lock countlock.Locker
-		if !globalQuietFlag {
-			// Keep progress-bar and copy routines in sync.
-			lock = countlock.New()
-			defer lock.Close()
-		}
-
-		// Wait for all copy routines to complete.
-		wg := new(sync.WaitGroup)
-
-		// Pool limited copy routines in parallel.
-		cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-		defer close(cpQueue)
-
-		go doPrepareCopyURLs(sourceURLs, targetURL, bar, lock)
-
-		for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
-			if cURLs.Error != nil {
-				errCh <- iodine.New(cURLs.Error, nil)
-			}
-			cpQueue <- true // Wait for existing pool to drain.
-			wg.Add(1)       // keep track of all the goroutines
-			if !globalQuietFlag {
-				lock.Down() // Do not jump ahead of the progress bar builder above.
-			}
-			go doCopyInRoutine(cURLs, &bar, cpQueue, errCh, wg)
-		}
-		wg.Wait() // wait for the go routines to complete
-	}(sourceURLs, targetURL, bar, errCh)
-	return errCh
-}
-
 // runCopyCmd is bound to sub-command
 func runCopyCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
@@ -291,7 +250,7 @@ func runCopyCmd(ctx *cli.Context) {
 		bar = newCpBar()
 	}
 
-	for cps := range doCopySession(bar, s) {
+	for cps := range doCopyCmdSession(bar, s) {
 		if cps.Error != nil {
 			console.Errors(ErrorMessage{
 				Message: "Failed with",
