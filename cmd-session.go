@@ -51,8 +51,12 @@ EXAMPLES:
 `,
 }
 
-func listSessions(sessionDir string) {
-	sessions, err := ioutil.ReadDir(sessionDir)
+func listSessions(sdir string) {
+	sdir, err := getSessionDir()
+	if err != nil {
+		console.Fatalln(iodine.ToError(err))
+	}
+	sessions, err := ioutil.ReadDir(sdir)
 	if err != nil {
 		console.Fatalln(iodine.ToError(err))
 	}
@@ -63,31 +67,53 @@ func listSessions(sessionDir string) {
 	}
 }
 
-func resumeSession(sid string) {
+func resumeSession(sid string) (*sessionV1, error) {
 	sfile, err := getSessionFile(sid)
 	if err != nil {
-		console.Fatalln(iodine.ToError(err))
+		return nil, iodine.New(err, nil)
 	}
 	_, err = os.Stat(sfile)
 	if err != nil {
-		console.Fatalln(iodine.ToError(iodine.New(errInvalidSessionID{id: sid}, nil)))
+		return nil, iodine.New(errInvalidSessionID{id: sid}, nil)
 	}
+	s, err := loadSession(sid)
+	if err != nil {
+		return nil, iodine.New(err, nil)
+	}
+	return s, nil
 }
 
-func clearSessions(sdir string) {
-	sessions, err := ioutil.ReadDir(sdir)
-	if err != nil {
-		console.Fatalln(iodine.ToError(err))
-	}
-	for _, session := range sessions {
-		if session.Mode().IsRegular() {
-			err := os.Remove(filepath.Join(sdir, session.Name()))
-			if err != nil {
-				console.Fatalln(iodine.ToError(err))
+func clearSession(sid string) error {
+	if sid == "*" {
+		sdir, err := getSessionDir()
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		sessions, err := ioutil.ReadDir(sdir)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+		for _, session := range sessions {
+			if session.Mode().IsRegular() {
+				err := os.Remove(filepath.Join(sdir, session.Name()))
+				if err != nil {
+					return iodine.New(err, nil)
+				}
 			}
 		}
+		return nil
 	}
+	sfile, err := getSessionFile(sid)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	err = os.Remove(sfile)
+	if err != nil {
+		return iodine.New(errInvalidSessionID{id: sid}, nil)
+	}
+	return nil
 }
+
 func runSessionCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -100,10 +126,6 @@ func runSessionCmd(ctx *cli.Context) {
 			console.Fatalln(iodine.ToError(err))
 		}
 	}
-	sessionDir, err := getSessionDir()
-	if err != nil {
-		console.Fatalln(iodine.ToError(err))
-	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions
 	case "list":
@@ -115,9 +137,46 @@ func runSessionCmd(ctx *cli.Context) {
 		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
 			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 		}
-		resumeSession(ctx.Args().Tail().First())
-	// purge all pending sessions
+		sid := strings.TrimSpace(ctx.Args().Tail().First())
+		s, err := resumeSession(sid)
+		if err != nil {
+			console.Fatalln(iodine.ToError(err))
+		}
+		var bar barSend
+		// set up progress bar
+		if !globalQuietFlag {
+			bar = newCpBar()
+		}
+		for cps := range doCopySession(bar, s) {
+			if cps.Error != nil {
+				console.Errors(ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.New(err, nil),
+				})
+			}
+			if cps.Done {
+				if err := saveSession(s); err != nil {
+					console.Fatalln(iodine.ToError(err))
+				}
+				os.Exit(0)
+			}
+		}
+		if !globalQuietFlag {
+			bar.Finish()
+			if err := clearSession(sid); err != nil {
+				console.Fatalln(iodine.ToError(err))
+			}
+		}
+	// purge a requested pending session, if "*" purge everything
 	case "clear":
-		clearSessions(sessionDir)
+		if len(ctx.Args().Tail()) != 1 {
+			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
+		}
+		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
+			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
+		}
+		if err := clearSession(strings.TrimSpace(ctx.Args().Tail().First())); err != nil {
+			console.Fatalln(iodine.ToError(err))
+		}
 	}
 }

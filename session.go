@@ -22,16 +22,19 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/minio/mc/pkg/quick"
 	"github.com/minio/minio/pkg/iodine"
 )
 
 type sessionV1 struct {
-	Version   string
-	SessionID string
-	Command   string
-	Files     []string
+	Version   string          `json:"version"`
+	SessionID string          `json:"sid"`
+	URLs      []string        `json:"args"`
+	Files     map[string]bool `json:"files"`
+
+	Lock *sync.Mutex `json:"-"`
 }
 
 func isSessionDirExists() bool {
@@ -85,24 +88,11 @@ func newSessionV1() (config quick.Config, err error) {
 	s := new(sessionV1)
 	s.Version = mcCurrentSessionVersion
 	// map of command and files copied
-	s.Command = ""
-	s.Files = nil
+	s.URLs = nil
+	s.Files = make(map[string]bool)
+	s.Lock = new(sync.Mutex)
 	s.SessionID = newUUID()
 	return quick.New(s)
-}
-
-func writeSession(config quick.Config) error {
-	if err := createSessionDir(); err != nil {
-		return iodine.New(err, nil)
-	}
-	sdir, err := getSessionDir()
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-	if err := config.Save(filepath.Join(sdir, config.Data().(*sessionV1).SessionID)); err != nil {
-		return iodine.New(err, nil)
-	}
-	return nil
 }
 
 func getSessionFile(sid string) (string, error) {
@@ -132,9 +122,6 @@ func newSession() (*sessionV1, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	if err := writeSession(qs); err != nil {
-		return nil, iodine.New(err, nil)
-	}
 	return qs.Data().(*sessionV1), nil
 }
 
@@ -154,8 +141,9 @@ func loadSession(sid string) (*sessionV1, error) {
 	s := new(sessionV1)
 	s.Version = mcCurrentSessionVersion
 	// map of command and files copied
-	s.Command = ""
-	s.Files = nil
+	s.URLs = nil
+	s.Lock = new(sync.Mutex)
+	s.Files = make(map[string]bool)
 	qs, err := quick.New(s)
 	if err != nil {
 		return nil, iodine.New(err, nil)

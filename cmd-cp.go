@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/minio/cli"
@@ -111,15 +110,31 @@ func doCopyInRoutine(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan e
 	<-cpQueue // Signal that this copy routine is done.
 }
 
-func doCopyInRoutineSession(cURLs cpURLs, bar *barSend, cpQueue chan bool, errCh chan error, wg *sync.WaitGroup, s *sessionV1) {
+type cpSession struct {
+	Error error
+	Done  bool
+}
+
+func doCopyInRoutineSession(cURLs cpURLs, bar *barSend, cpQueue chan bool, cpsCh chan cpSession, wg *sync.WaitGroup, s *sessionV1) {
 	defer wg.Done()
-	if err := doCopy(cURLs, bar); err != nil {
-		errCh <- err
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+	_, ok := s.Files[cURLs.SourceContent.Name]
+	switch ok {
+	case true:
+		bar.ErrorGet(int64(cURLs.SourceContent.Size))
+	case false:
+		if err := doCopy(cURLs, bar); err != nil {
+			cpsCh <- cpSession{
+				Error: iodine.New(err, nil),
+				Done:  false,
+			}
+		}
+		// store files which have finished copying
+		s.Files[cURLs.SourceContent.Name] = true
 	}
 	// Signal that this copy routine is done.
 	<-cpQueue
-	// store files which have finished copying
-	s.Files = append(s.Files, cURLs.SourceContent.Name)
 }
 
 func doPrepareCopyURLs(sourceURLs []string, targetURL string, bar barSend, lock countlock.Locker) {
@@ -136,7 +151,7 @@ func doPrepareCopyURLs(sourceURLs []string, targetURL string, bar barSend, lock 
 	}
 }
 
-func trap(done chan bool) {
+func trap(cpsCh chan cpSession) {
 	// Go signal notification works by sending `os.Signal`
 	// values on a channel.
 	sigs := make(chan os.Signal, 1)
@@ -149,15 +164,22 @@ func trap(done chan bool) {
 	// When it gets one it'll then notify the program
 	// that it can finish.
 	<-sigs
-	done <- true
+	cpsCh <- cpSession{
+		Error: nil,
+		Done:  true,
+	}
 }
 
-func doCopySession(sourceURLs []string, targetURL string, bar barSend, s *sessionV1) <-chan error {
-	errCh := make(chan error)
-	done := make(chan bool)
-	go func(sourceURLs []string, targetURL string, bar barSend, errCh chan error, s *sessionV1) {
-		defer close(errCh)
-		go trap(done)
+func doCopySession(bar barSend, s *sessionV1) <-chan cpSession {
+	// Separate source and target. 'cp' can take only one target,
+	// but any number of sources, even the recursive URLs mixed in-between.
+	sourceURLs := s.URLs[:len(s.URLs)-1]
+	targetURL := s.URLs[len(s.URLs)-1] // Last one is target
+
+	cpsCh := make(chan cpSession)
+	go func(sourceURLs []string, targetURL string, bar barSend, cpsCh chan cpSession, s *sessionV1) {
+		defer close(cpsCh)
+		go trap(cpsCh)
 
 		var lock countlock.Locker
 		if !globalQuietFlag {
@@ -177,7 +199,10 @@ func doCopySession(sourceURLs []string, targetURL string, bar barSend, s *sessio
 
 		for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 			if cURLs.Error != nil {
-				errCh <- iodine.New(cURLs.Error, nil)
+				cpsCh <- cpSession{
+					Error: cURLs.Error,
+					Done:  false,
+				}
 				continue
 			}
 			cpQueue <- true // Wait for existing pool to drain.
@@ -185,18 +210,11 @@ func doCopySession(sourceURLs []string, targetURL string, bar barSend, s *sessio
 			if !globalQuietFlag {
 				lock.Down() // Do not jump ahead of the progress bar builder above.
 			}
-			go doCopyInRoutineSession(cURLs, &bar, cpQueue, errCh, wg, s)
+			go doCopyInRoutineSession(cURLs, &bar, cpQueue, cpsCh, wg, s)
 		}
 		wg.Wait() // wait for the go routines to complete
-	}(sourceURLs, targetURL, bar, errCh, s)
-	if <-done {
-		close(done)
-		if err := saveSession(s); err != nil {
-			console.Fatalln(iodine.ToError(err))
-		}
-		os.Exit(0)
-	}
-	return errCh
+	}(sourceURLs, targetURL, bar, cpsCh, s)
+	return cpsCh
 }
 
 func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error {
@@ -221,8 +239,7 @@ func doCopyCmd(sourceURLs []string, targetURL string, bar barSend) <-chan error 
 
 		for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
 			if cURLs.Error != nil {
-				errCh <- cURLs.Error
-				continue
+				errCh <- iodine.New(cURLs.Error, nil)
 			}
 			cpQueue <- true // Wait for existing pool to drain.
 			wg.Add(1)       // keep track of all the goroutines
@@ -248,38 +265,25 @@ func runCopyCmd(ctx *cli.Context) {
 			Error:   iodine.New(errNotConfigured{}, nil),
 		})
 	}
-
-	var s *sessionV1
-	var err error
-	var resume bool
-	var sid = ""
-	switch resume {
-	case false:
-		s, err = newSession()
-		if err != nil {
-			console.Fatalln(iodine.ToError(err))
-		}
-	case true:
-		s, err = loadSession(sid)
-		if err != nil {
+	if !isSessionDirExists() {
+		if err := createSessionDir(); err != nil {
 			console.Fatalln(iodine.ToError(err))
 		}
 	}
-	s.Command = "mc cp " + strings.Join(ctx.Args(), " ")
+
+	s, err := newSession()
+	if err != nil {
+		console.Fatalln(iodine.ToError(err))
+	}
 
 	// extract URLs.
-	URLs, err := args2URLs(ctx.Args())
+	s.URLs, err = args2URLs(ctx.Args())
 	if err != nil {
 		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unknown URL types: ‘%s’", URLs),
+			Message: fmt.Sprintf("Unknown URL types: ‘%s’", ctx.Args()),
 			Error:   iodine.New(err, nil),
 		})
 	}
-
-	// Separate source and target. 'cp' can take only one target,
-	// but any number of sources, even the recursive URLs mixed in-between.
-	sourceURLs := URLs[:len(URLs)-1]
-	targetURL := URLs[len(URLs)-1] // Last one is target
 
 	var bar barSend
 	// set up progress bar
@@ -287,15 +291,23 @@ func runCopyCmd(ctx *cli.Context) {
 		bar = newCpBar()
 	}
 
-	for err := range doCopySession(sourceURLs, targetURL, bar, s) {
-		if err != nil {
+	for cps := range doCopySession(bar, s) {
+		if cps.Error != nil {
 			console.Errors(ErrorMessage{
 				Message: "Failed with",
-				Error:   iodine.New(err, nil),
+				Error:   iodine.New(cps.Error, nil),
 			})
+		}
+		if cps.Done {
+			if err := saveSession(s); err != nil {
+				console.Fatalln(iodine.ToError(err))
+			}
+			os.Exit(0)
 		}
 	}
 	if !globalQuietFlag {
 		bar.Finish()
+		// ignore any error returned here
+		clearSession(s.SessionID)
 	}
 }
