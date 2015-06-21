@@ -45,12 +45,20 @@ func (s *CmdTestSuite) TestSyncTypeA(c *C) {
 	defer os.RemoveAll(target)
 	targetPath := filepath.Join(target, "newObject1")
 
-	for err := range doSyncCmd(sourcePath, []string{targetPath}, barSync) {
+	ss, err := newSession()
+	c.Assert(err, IsNil)
+	ss.URLs = append(ss.URLs, sourcePath)
+	ss.URLs = append(ss.URLs, targetPath)
+	for err := range doSyncCmdSession(barSync, ss) {
 		c.Assert(err, IsNil)
 	}
 
+	ss, err = newSession()
+	c.Assert(err, IsNil)
 	targetURL := server.URL + "/bucket/newObject"
-	for err := range doSyncCmd(sourcePath, []string{targetURL}, barSync) {
+	ss.URLs = append(ss.URLs, sourcePath)
+	ss.URLs = append(ss.URLs, targetURL)
+	for err := range doSyncCmdSession(barSync, ss) {
 		c.Assert(err, IsNil)
 	}
 }
@@ -71,12 +79,20 @@ func (s *CmdTestSuite) TestSyncTypeB(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(target)
 
-	for err := range doSyncCmd(sourcePath, []string{target}, barSync) {
+	ss, err := newSession()
+	c.Assert(err, IsNil)
+	ss.URLs = append(ss.URLs, sourcePath)
+	ss.URLs = append(ss.URLs, target)
+	for err := range doSyncCmdSession(barSync, ss) {
 		c.Assert(err, IsNil)
 	}
 
+	ss, err = newSession()
+	c.Assert(err, IsNil)
 	targetURL := server.URL + "/bucket"
-	for err := range doSyncCmd(sourcePath, []string{targetURL}, barSync) {
+	ss.URLs = append(ss.URLs, sourcePath)
+	ss.URLs = append(ss.URLs, targetURL)
+	for err := range doSyncCmdSession(barSync, ss) {
 		c.Assert(err, IsNil)
 	}
 }
@@ -99,12 +115,20 @@ func (s *CmdTestSuite) TestSyncTypeC(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(target)
 
-	for err := range doSyncCmd(source+"...", []string{target}, barSync) {
+	ss, err := newSession()
+	c.Assert(err, IsNil)
+	ss.URLs = append(ss.URLs, source+"...")
+	ss.URLs = append(ss.URLs, target)
+	for err := range doSyncCmdSession(barSync, ss) {
 		c.Assert(err, IsNil)
 	}
 
 	targetURL := server.URL + "/bucket"
-	for err := range doSyncCmd(source+"...", []string{targetURL}, barSync) {
+	ss, err = newSession()
+	c.Assert(err, IsNil)
+	ss.URLs = append(ss.URLs, source+"...")
+	ss.URLs = append(ss.URLs, targetURL)
+	for err := range doSyncCmdSession(barSync, ss) {
 		c.Assert(err, IsNil)
 	}
 
@@ -116,7 +140,12 @@ func (s *CmdTestSuite) TestSyncTypeC(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(target2)
 
-	for err := range doSyncCmd(source+"...", []string{target1, target2}, barSync) {
+	ss, err = newSession()
+	c.Assert(err, IsNil)
+	ss.URLs = append(ss.URLs, source+"...")
+	ss.URLs = append(ss.URLs, target1)
+	ss.URLs = append(ss.URLs, target2)
+	for err := range doSyncCmdSession(barSync, ss) {
 		c.Assert(err, IsNil)
 	}
 }

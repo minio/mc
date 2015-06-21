@@ -17,22 +17,22 @@
 package main
 
 import (
-	"crypto/rand"
-	"fmt"
-	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/minio/mc/pkg/quick"
 	"github.com/minio/minio/pkg/iodine"
 )
 
 type sessionV1 struct {
-	Version   string          `json:"version"`
-	SessionID string          `json:"sid"`
-	URLs      []string        `json:"args"`
-	Files     map[string]bool `json:"files"`
+	Version     string          `json:"version"`
+	CommandType string          `json:"command-type"`
+	SessionID   string          `json:"sid"`
+	URLs        []string        `json:"args"`
+	Files       map[string]bool `json:"files"`
 
 	Lock *sync.Mutex `json:"-"`
 }
@@ -69,19 +69,16 @@ func getSessionDir() (string, error) {
 }
 
 var mcCurrentSessionVersion = mcCurrentConfigVersion
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-// newUUID generates a random UUID according to RFC 4122
-func newUUID() string {
-	uuid := make([]byte, 16)
-	_, err := io.ReadFull(rand.Reader, uuid)
-	if err != nil {
-		panic(err)
+// newSID generates a random session id of regular lower case and uppercase english characters
+func newSID(n int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
 	}
-	// variant bits; see section 4.1.1
-	uuid[8] = uuid[8]&^0xc0 | 0x80
-	// version 4 (pseudo-random); see section 4.1.3
-	uuid[6] = uuid[6]&^0xf0 | 0x40
-	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
+	return string(b)
 }
 
 func newSessionV1() (config quick.Config, err error) {
@@ -91,7 +88,7 @@ func newSessionV1() (config quick.Config, err error) {
 	s.URLs = nil
 	s.Files = make(map[string]bool)
 	s.Lock = new(sync.Mutex)
-	s.SessionID = newUUID()
+	s.SessionID = newSID(8)
 	return quick.New(s)
 }
 

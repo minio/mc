@@ -147,18 +147,37 @@ func runSessionCmd(ctx *cli.Context) {
 		if !globalQuietFlag {
 			bar = newCpBar()
 		}
-		for cps := range doCopyCmdSession(bar, s) {
-			if cps.Error != nil {
-				console.Errors(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(cps.Error, nil),
-				})
-			}
-			if cps.Done {
-				if err := saveSession(s); err != nil {
-					console.Fatalln(iodine.ToError(err))
+		switch s.CommandType {
+		case "cp":
+			for cps := range doCopyCmdSession(bar, s) {
+				if cps.Error != nil {
+					console.Errors(ErrorMessage{
+						Message: "Failed with",
+						Error:   iodine.New(cps.Error, nil),
+					})
 				}
-				os.Exit(0)
+				if cps.Done {
+					if err := saveSession(s); err != nil {
+						console.Fatalln(iodine.ToError(err))
+					}
+					os.Exit(0)
+				}
+			}
+		case "sync":
+			for ss := range doSyncCmdSession(bar, s) {
+				if ss.Error != nil {
+					console.Errors(ErrorMessage{
+						Message: "Failed with",
+						Error:   iodine.New(err, nil),
+					})
+				}
+				if ss.Done {
+					if err := saveSession(s); err != nil {
+						console.Fatalln(iodine.ToError(err))
+					}
+					// this os.Exit is needed really to exit in-case of "os.Interrupt"
+					os.Exit(0)
+				}
 			}
 		}
 		if !globalQuietFlag {

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
+	"os/signal"
 	"runtime"
 	"sync"
 
@@ -67,18 +69,31 @@ EXAMPLES:
 `,
 }
 
-// doSync - Sync an object to multiple destination
-func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, errCh chan error, wg *sync.WaitGroup) {
+// doSyncSession - Sync an object to multiple destination
+func doSyncSession(sURLs syncURLs, bar *barSend, syncQueue chan bool, ssCh chan syncSession, wg *sync.WaitGroup, s *sessionV1) {
 	defer wg.Done()
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	if !globalQuietFlag {
 		bar.SetCaption(sURLs.SourceContent.Name + ": ")
+	}
+	_, ok := s.Files[sURLs.SourceContent.Name]
+	if ok {
+		if !globalQuietFlag {
+			bar.ErrorGet(int64(sURLs.SourceContent.Size))
+		}
+		<-syncQueue // Signal that this copy routine is done.
+		return
 	}
 	reader, length, err := getSource(sURLs.SourceContent.Name)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorGet(int64(length))
 		}
-		errCh <- iodine.New(err, map[string]string{"URL": sURLs.SourceContent.Name})
+		ssCh <- syncSession{
+			Error: iodine.New(err, map[string]string{"URL": sURLs.SourceContent.Name}),
+			Done:  false,
+		}
 	}
 	defer reader.Close()
 
@@ -100,10 +115,15 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, errCh chan error,
 			if !globalQuietFlag {
 				bar.ErrorPut(int64(length))
 			}
-			errCh <- iodine.New(err, nil)
+			ssCh <- syncSession{
+				Error: iodine.New(err, nil),
+				Done:  false,
+			}
 		}
 	}
 	<-syncQueue // Signal that this copy routine is done.
+	// store files which have finished copying
+	s.Files[sURLs.SourceContent.Name] = true
 }
 
 func doPrepareSyncURLs(sourceURL string, targetURLs []string, bar barSend, lock countlock.Locker) {
@@ -120,10 +140,41 @@ func doPrepareSyncURLs(sourceURL string, targetURLs []string, bar barSend, lock 
 	}
 }
 
-func doSyncCmd(sourceURL string, targetURLs []string, bar barSend) <-chan error {
-	errCh := make(chan error)
-	go func(sourceURL string, targetURLs []string, bar barSend, errCh chan error) {
-		defer close(errCh)
+type syncSession struct {
+	Error error
+	Done  bool
+}
+
+func trapSync(ssCh chan syncSession) {
+	// Go signal notification works by sending `os.Signal`
+	// values on a channel.
+	sigs := make(chan os.Signal, 1)
+
+	// `signal.Notify` registers the given channel to
+	// receive notifications of the specified signals.
+	signal.Notify(sigs, os.Kill, os.Interrupt)
+
+	// This executes a blocking receive for signals.
+	// When it gets one it'll then notify the program
+	// that it can finish.
+	<-sigs
+	ssCh <- syncSession{
+		Error: nil,
+		Done:  true,
+	}
+}
+
+func doSyncCmdSession(bar barSend, s *sessionV1) <-chan syncSession {
+	ssCh := make(chan syncSession)
+	// Separate source and target. 'sync' can take only one source.
+	// but any number of targets, even the recursive URLs mixed in-between.
+	sourceURL := s.URLs[0] // first one is source
+	targetURLs := s.URLs[1:]
+
+	go func(sourceURL string, targetURLs []string, bar barSend, ssCh chan syncSession, s *sessionV1) {
+		defer close(ssCh)
+		go trapSync(ssCh)
+
 		var lock countlock.Locker
 		if !globalQuietFlag {
 			// Keep progress-bar and copy routines in sync.
@@ -139,7 +190,10 @@ func doSyncCmd(sourceURL string, targetURLs []string, bar barSend) <-chan error 
 
 		for sURLs := range prepareSyncURLs(sourceURL, targetURLs) {
 			if sURLs.Error != nil {
-				errCh <- iodine.New(sURLs.Error, nil)
+				ssCh <- syncSession{
+					Error: iodine.New(sURLs.Error, nil),
+					Done:  false,
+				}
 				continue
 			}
 			syncQueue <- true
@@ -147,11 +201,11 @@ func doSyncCmd(sourceURL string, targetURLs []string, bar barSend) <-chan error 
 			if !globalQuietFlag {
 				lock.Down() // Do not jump ahead of the progress bar builder above.
 			}
-			go doSync(sURLs, &bar, syncQueue, errCh, wg)
+			go doSyncSession(sURLs, &bar, syncQueue, ssCh, wg, s)
 		}
 		wg.Wait()
-	}(sourceURL, targetURLs, bar, errCh)
-	return errCh
+	}(sourceURL, targetURLs, bar, ssCh, s)
+	return ssCh
 }
 
 func runSyncCmd(ctx *cli.Context) {
@@ -166,19 +220,26 @@ func runSyncCmd(ctx *cli.Context) {
 		})
 	}
 
+	if !isSessionDirExists() {
+		if err := createSessionDir(); err != nil {
+			console.Fatalln(iodine.ToError(err))
+		}
+	}
+
+	s, err := newSession()
+	if err != nil {
+		console.Fatalln(iodine.ToError(err))
+	}
+	s.CommandType = "sync"
+
 	// extract URLs.
-	URLs, err := args2URLs(ctx.Args())
+	s.URLs, err = args2URLs(ctx.Args())
 	if err != nil {
 		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unknown URL types found: ‘%s’", URLs),
+			Message: fmt.Sprintf("Unknown URL types found: ‘%s’", ctx.Args()),
 			Error:   iodine.New(err, nil),
 		})
 	}
-
-	// Separate source and target. 'sync' can take only one source.
-	// but any number of targets, even the recursive URLs mixed in-between.
-	sourceURL := URLs[0] // first one is source
-	targetURLs := URLs[1:]
 
 	var bar barSend
 	// set up progress bar
@@ -186,16 +247,25 @@ func runSyncCmd(ctx *cli.Context) {
 		bar = newCpBar()
 	}
 
-	for err := range doSyncCmd(sourceURL, targetURLs, bar) {
-		if err != nil {
+	for ss := range doSyncCmdSession(bar, s) {
+		if ss.Error != nil {
 			console.Errors(ErrorMessage{
 				Message: "Failed with",
-				Error:   iodine.New(err, nil),
+				Error:   iodine.New(ss.Error, nil),
 			})
+		}
+		if ss.Done {
+			if err := saveSession(s); err != nil {
+				console.Fatalln(iodine.ToError(err))
+			}
+			// this os.Exit is needed really to exit in-case of "os.Interrupt"
+			os.Exit(0)
 		}
 	}
 
 	if !globalQuietFlag {
 		bar.Finish()
+		// ignore any error returned here
+		clearSession(s.SessionID)
 	}
 }
