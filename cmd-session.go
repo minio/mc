@@ -46,7 +46,14 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   -- TODO --
+   1. List sessions
+      $ mc {{.Name}} session list
+
+   2. Resume session
+      $ mc {{.Name}} session resume [SESSION]
+
+   3. Clear session
+      $ mc {{.Name}} session clear [SESSION]|[*]
 
 `,
 }
@@ -114,7 +121,7 @@ func clearSession(sid string) error {
 	return nil
 }
 
-func sessionExecture(bar barSend, s *sessionV1) {
+func sessionExecute(bar barSend, s *sessionV1) {
 	switch s.CommandType {
 	case "cp":
 		for cps := range doCopyCmdSession(bar, s) {
@@ -183,7 +190,7 @@ func runSessionCmd(ctx *cli.Context) {
 		if !globalQuietFlag {
 			bar = newCpBar()
 		}
-		sessionExecture(bar, s)
+		sessionExecute(bar, s)
 		if !globalQuietFlag {
 			bar.Finish()
 			if err := clearSession(sid); err != nil {
