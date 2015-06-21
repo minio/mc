@@ -146,7 +146,7 @@ func doPrepareCopyURLs(sourceURLs []string, targetURL string, bar barSend, lock 
 	}
 }
 
-func trap(cpsCh chan cpSession) {
+func trapCp(cpsCh chan cpSession) {
 	// Go signal notification works by sending `os.Signal`
 	// values on a channel.
 	sigs := make(chan os.Signal, 1)
@@ -174,7 +174,7 @@ func doCopyCmdSession(bar barSend, s *sessionV1) <-chan cpSession {
 	cpsCh := make(chan cpSession)
 	go func(sourceURLs []string, targetURL string, bar barSend, cpsCh chan cpSession, s *sessionV1) {
 		defer close(cpsCh)
-		go trap(cpsCh)
+		go trapCp(cpsCh)
 
 		var lock countlock.Locker
 		if !globalQuietFlag {
@@ -234,6 +234,7 @@ func runCopyCmd(ctx *cli.Context) {
 	if err != nil {
 		console.Fatalln(iodine.ToError(err))
 	}
+	s.CommandType = "cp"
 
 	// extract URLs.
 	s.URLs, err = args2URLs(ctx.Args())
@@ -261,6 +262,7 @@ func runCopyCmd(ctx *cli.Context) {
 			if err := saveSession(s); err != nil {
 				console.Fatalln(iodine.ToError(err))
 			}
+			// this os.Exit is needed really to exit in-case of "os.Interrupt"
 			os.Exit(0)
 		}
 	}
