@@ -58,20 +58,25 @@ EXAMPLES:
 `,
 }
 
-func listSessions(sdir string) {
+func listSessions(sdir string) error {
 	sdir, err := getSessionDir()
 	if err != nil {
-		console.Fatalln(iodine.ToError(err))
+		return iodine.New(err, nil)
 	}
 	sessions, err := ioutil.ReadDir(sdir)
 	if err != nil {
-		console.Fatalln(iodine.ToError(err))
+		return iodine.New(err, nil)
 	}
 	for _, session := range sessions {
 		if session.Mode().IsRegular() {
-			console.Infoln(session.Name())
+			s, err := loadSession(session.Name())
+			if err != nil {
+				return iodine.New(err, nil)
+			}
+			console.Println(s)
 		}
 	}
+	return nil
 }
 
 func resumeSession(sid string) (*sessionV1, error) {
@@ -133,7 +138,10 @@ func sessionExecute(bar barSend, s *sessionV1) {
 			}
 			if cps.Done {
 				if err := saveSession(s); err != nil {
-					console.Fatalln(iodine.ToError(err))
+					console.Fatals(ErrorMessage{
+						Message: "Failed with",
+						Error:   iodine.ToError(err),
+					})
 				}
 				os.Exit(0)
 			}
@@ -148,7 +156,10 @@ func sessionExecute(bar barSend, s *sessionV1) {
 			}
 			if ss.Done {
 				if err := saveSession(s); err != nil {
-					console.Fatalln(iodine.ToError(err))
+					console.Fatals(ErrorMessage{
+						Message: "Failed with",
+						Error:   iodine.ToError(err),
+					})
 				}
 				// this os.Exit is needed really to exit in-case of "os.Interrupt"
 				os.Exit(0)
@@ -166,13 +177,22 @@ func runSessionCmd(ctx *cli.Context) {
 	}
 	if !isSessionDirExists() {
 		if err := createSessionDir(); err != nil {
-			console.Fatalln(iodine.ToError(err))
+			console.Fatals(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.ToError(err),
+			})
 		}
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions
 	case "list":
-		listSessions(sessionDir)
+		err := listSessions(sessionDir)
+		if err != nil {
+			console.Fatals(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.ToError(err),
+			})
+		}
 	case "resume":
 		if len(ctx.Args().Tail()) != 1 {
 			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -183,7 +203,10 @@ func runSessionCmd(ctx *cli.Context) {
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
 		s, err := resumeSession(sid)
 		if err != nil {
-			console.Fatalln(iodine.ToError(err))
+			console.Fatals(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.ToError(err),
+			})
 		}
 		var bar barSend
 		// set up progress bar
@@ -194,7 +217,10 @@ func runSessionCmd(ctx *cli.Context) {
 		if !globalQuietFlag {
 			bar.Finish()
 			if err := clearSession(sid); err != nil {
-				console.Fatalln(iodine.ToError(err))
+				console.Fatals(ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.ToError(err),
+				})
 			}
 		}
 	// purge a requested pending session, if "*" purge everything
@@ -206,7 +232,10 @@ func runSessionCmd(ctx *cli.Context) {
 			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 		}
 		if err := clearSession(strings.TrimSpace(ctx.Args().Tail().First())); err != nil {
-			console.Fatalln(iodine.ToError(err))
+			console.Fatals(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.ToError(err),
+			})
 		}
 	}
 }

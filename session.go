@@ -20,21 +20,31 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
 	"github.com/minio/minio/pkg/iodine"
 )
 
 type sessionV1 struct {
 	Version     string          `json:"version"`
+	Started     time.Time       `json:"started"`
 	CommandType string          `json:"command-type"`
-	SessionID   string          `json:"sid"`
+	SessionID   string          `json:"session-id"`
 	URLs        []string        `json:"args"`
 	Files       map[string]bool `json:"files"`
 
 	Lock *sync.Mutex `json:"-"`
+}
+
+func (s sessionV1) String() string {
+	message := console.Time("[%s] ", s.Started.Local().Format(printDate))
+	message = message + console.SessionID("%s", s.SessionID)
+	message = message + console.Command(" [%s %s]", s.CommandType, strings.Join(s.URLs, " "))
+	return message
 }
 
 func isSessionDirExists() bool {
@@ -86,6 +96,7 @@ func newSessionV1() (config quick.Config, err error) {
 	s.Version = mcCurrentSessionVersion
 	// map of command and files copied
 	s.URLs = nil
+	s.Started = time.Now().UTC()
 	s.Files = make(map[string]bool)
 	s.Lock = new(sync.Mutex)
 	s.SessionID = newSID(8)
