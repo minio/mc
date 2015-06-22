@@ -38,17 +38,19 @@ var NoJSONPrint = true
 
 // Theme holds console color scheme
 type Theme struct {
-	Fatal *color.Color
-	Error *color.Color
-	Info  *color.Color
-	Debug *color.Color
-	Size  *color.Color
-	Time  *color.Color
-	File  *color.Color
-	Dir   *color.Color
-	JSON  *color.Color
-	Bar   *color.Color
-	Print *color.Color
+	Fatal     *color.Color
+	Error     *color.Color
+	Info      *color.Color
+	Debug     *color.Color
+	Size      *color.Color
+	Time      *color.Color
+	File      *color.Color
+	Dir       *color.Color
+	Command   *color.Color
+	SessionID *color.Color
+	JSON      *color.Color
+	Bar       *color.Color
+	Print     *color.Color
 }
 
 func readErrorFromData(data interface{}) error {
@@ -323,6 +325,10 @@ var (
 	File = themesDB[currThemeName].File.SprintfFunc()
 	// Dir helper to print Dir theme
 	Dir = themesDB[currThemeName].Dir.SprintfFunc()
+	// Command helper to print command theme
+	Command = themesDB[currThemeName].Command.SprintfFunc()
+	// SessionID helper to print sessionid theme
+	SessionID = themesDB[currThemeName].SessionID.SprintfFunc()
 )
 
 var (
