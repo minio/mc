@@ -73,7 +73,7 @@ func listSessions(sdir string) error {
 			if err != nil {
 				return iodine.New(err, nil)
 			}
-			console.Println(s)
+			console.Prints(s)
 		}
 	}
 	return nil
@@ -140,7 +140,7 @@ func sessionExecute(bar barSend, s *sessionV1) {
 				if err := saveSession(s); err != nil {
 					console.Fatals(ErrorMessage{
 						Message: "Failed with",
-						Error:   iodine.ToError(err),
+						Error:   iodine.New(err, nil),
 					})
 				}
 				os.Exit(0)
@@ -158,7 +158,7 @@ func sessionExecute(bar barSend, s *sessionV1) {
 				if err := saveSession(s); err != nil {
 					console.Fatals(ErrorMessage{
 						Message: "Failed with",
-						Error:   iodine.ToError(err),
+						Error:   iodine.New(err, nil),
 					})
 				}
 				// this os.Exit is needed really to exit in-case of "os.Interrupt"

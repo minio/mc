@@ -68,7 +68,7 @@ func runDiffCmd(ctx *cli.Context) {
 	if err != nil {
 		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
-			Error:   err,
+			Error:   iodine.New(err, nil),
 		})
 	}
 
@@ -81,12 +81,12 @@ func runDiffCmd(ctx *cli.Context) {
 		case errUnsupportedScheme:
 			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unknown type of URL ‘%s’", firstURL),
-				Error:   err,
+				Error:   iodine.New(err, nil),
 			})
 		default:
 			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unable to parse argument ‘%s’", firstURL),
-				Error:   err,
+				Error:   iodine.New(err, nil),
 			})
 		}
 	}
@@ -96,19 +96,19 @@ func runDiffCmd(ctx *cli.Context) {
 		case errUnsupportedScheme:
 			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unknown type of URL ‘%s’", secondURL),
-				Error:   err,
+				Error:   iodine.New(err, nil),
 			})
 		default:
 			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Unable to parse argument ‘%s’", secondURL),
-				Error:   err,
+				Error:   iodine.New(err, nil),
 			})
 		}
 	}
 	if isURLRecursive(secondURL) {
 		console.Fatals(ErrorMessage{
 			Message: "Second URL cannot be recursive, diff command is unidirectional",
-			Error:   errInvalidArgument{},
+			Error:   iodine.New(errInvalidArgument{}, nil),
 		})
 	}
 	newFirstURL := stripRecursiveURL(firstURL)
@@ -116,7 +116,7 @@ func runDiffCmd(ctx *cli.Context) {
 		if diff.err != nil {
 			console.Fatals(ErrorMessage{
 				Message: diff.message,
-				Error:   diff.err,
+				Error:   iodine.New(diff.err, nil),
 			})
 		}
 		console.Infos(InfoMessage{

@@ -52,6 +52,22 @@ type syncURLs struct {
 	Error          error
 }
 
+func (s syncURLs) IsEmpty() bool {
+	empty := false
+	if s.SourceContent == nil {
+		empty = true
+		if s.TargetContents == nil {
+			empty = true
+			return empty
+		}
+		if len(s.TargetContents) > 0 && s.TargetContents[0] == nil {
+			empty = true
+			return empty
+		}
+	}
+	return empty
+}
+
 type syncURLsType cpURLsType
 
 // guessSyncURLType guesses the type of URL. This approach all allows prepareURL
@@ -91,7 +107,9 @@ func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) <-chan syncURLs
 			sURLs.SourceContent = cURLs.SourceContent
 			sURLs.TargetContents = append(sURLs.TargetContents, cURLs.TargetContent)
 		}
-		syncURLsCh <- sURLs
+		if !sURLs.IsEmpty() {
+			syncURLsCh <- sURLs
+		}
 	}()
 	return syncURLsCh
 }
@@ -113,7 +131,9 @@ func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) <-chan syncURLs
 			sURLs.SourceContent = cURLs.SourceContent
 			sURLs.TargetContents = append(sURLs.TargetContents, cURLs.TargetContent)
 		}
-		syncURLsCh <- sURLs
+		if !sURLs.IsEmpty() {
+			syncURLsCh <- sURLs
+		}
 	}()
 	return syncURLsCh
 }

@@ -74,7 +74,7 @@ func runConfigCmd(ctx *cli.Context) {
 	if err != nil {
 		console.Fatals(ErrorMessage{
 			Message: msg,
-			Error:   err,
+			Error:   iodine.New(err, nil),
 		})
 	}
 	console.Infos(InfoMessage{
@@ -89,12 +89,10 @@ func saveConfig(arg string, aliases []string) error {
 		if isMcConfigExist() {
 			return iodine.New(errConfigExists{}, nil)
 		}
-
 		config, err := newConfig()
 		if err != nil {
 			return iodine.New(err, nil)
 		}
-
 		err = writeConfig(config)
 		if err != nil {
 			return iodine.New(err, nil)

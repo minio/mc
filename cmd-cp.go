@@ -95,7 +95,10 @@ func doCopySession(cURLs cpURLs, bar *barSend, s *sessionV1) error {
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
-		console.Infoln(fmt.Sprintf("‘%s’ -> ‘%s’", cURLs.SourceContent.Name, cURLs.TargetContent.Name))
+		console.Infos(CopyMessage{
+			Source: cURLs.SourceContent.Name,
+			Target: cURLs.TargetContent.Name,
+		})
 		newReader = yielder.NewReader(reader)
 	default:
 		// set up progress
@@ -226,13 +229,19 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 	if !isSessionDirExists() {
 		if err := createSessionDir(); err != nil {
-			console.Fatalln(iodine.ToError(err))
+			console.Fatals(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.New(err, nil),
+			})
 		}
 	}
 
 	s, err := newSession()
 	if err != nil {
-		console.Fatalln(iodine.ToError(err))
+		console.Fatals(ErrorMessage{
+			Message: "Failed with",
+			Error:   iodine.New(err, nil),
+		})
 	}
 	s.CommandType = "cp"
 
@@ -262,7 +271,7 @@ func runCopyCmd(ctx *cli.Context) {
 			if err := saveSession(s); err != nil {
 				console.Fatals(ErrorMessage{
 					Message: "Failed with",
-					Error:   iodine.ToError(err),
+					Error:   iodine.New(err, nil),
 				})
 			}
 			console.Infos(InfoMessage{

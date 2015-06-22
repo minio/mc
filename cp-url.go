@@ -53,6 +53,13 @@ type cpURLs struct {
 	Error         error
 }
 
+func (c cpURLs) IsEmpty() bool {
+	if c.SourceContent == nil && c.TargetContent == nil {
+		return true
+	}
+	return false
+}
+
 type cpURLsType uint8
 
 const (

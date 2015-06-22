@@ -119,7 +119,7 @@ func runListCmd(ctx *cli.Context) {
 		if err != nil {
 			console.Fatals(ErrorMessage{
 				Message: fmt.Sprintf("Failed to list ‘%s’", targetURL),
-				Error:   iodine.New(err, nil),
+				Error:   iodine.New(err, map[string]string{"Target": targetURL}),
 			})
 		}
 	}
@@ -133,7 +133,7 @@ func doListCmd(targetURL string, recursive bool) error {
 	}
 	err = doList(clnt, recursive)
 	if err != nil {
-		return iodine.New(err, nil)
+		return iodine.New(err, map[string]string{"Target": targetURL})
 	}
 	return nil
 }
