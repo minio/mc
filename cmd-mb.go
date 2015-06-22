@@ -89,13 +89,16 @@ func runMakeBucketCmd(ctx *cli.Context) {
 				})
 			}
 		}
-		errorMsg, err := doMakeBucketCmd(targetURL)
+		msg, err := doMakeBucketCmd(targetURL)
 		if err != nil {
 			console.Errors(ErrorMessage{
-				Message: errorMsg,
+				Message: msg,
 				Error:   iodine.New(err, nil),
 			})
 		}
+		console.Infos(InfoMessage{
+			Message: msg,
+		})
 	}
 }
 
@@ -118,5 +121,5 @@ func doMakeBucket(clnt client.Client) (string, error) {
 		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", clnt.URL().String())
 		return msg, iodine.New(err, nil)
 	}
-	return "", nil
+	return "Bucket created successfully : " + clnt.URL().String(), nil
 }

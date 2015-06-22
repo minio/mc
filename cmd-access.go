@@ -100,13 +100,16 @@ func runAccessCmd(ctx *cli.Context) {
 				})
 			}
 		}
-		errorMsg, err := doUpdateAccessCmd(targetURL, acl)
+		msg, err := doUpdateAccessCmd(targetURL, acl)
 		if err != nil {
 			console.Errors(ErrorMessage{
-				Message: errorMsg,
+				Message: msg,
 				Error:   iodine.New(err, nil),
 			})
 		}
+		console.Infos(InfoMessage{
+			Message: msg,
+		})
 	}
 }
 
@@ -127,5 +130,5 @@ func doUpdateAccess(clnt client.Client, targetACL bucketACL) (string, error) {
 		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’", clnt.URL().String())
 		return msg, iodine.New(err, nil)
 	}
-	return "", nil
+	return "Bucket access policy updated successfully : " + clnt.URL().String(), nil
 }

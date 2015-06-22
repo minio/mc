@@ -77,7 +77,9 @@ func runConfigCmd(ctx *cli.Context) {
 			Error:   err,
 		})
 	}
-	console.Infoln(msg)
+	console.Infos(InfoMessage{
+		Message: msg,
+	})
 }
 
 // saveConfig writes configuration data in json format to config file.

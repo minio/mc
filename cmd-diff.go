@@ -119,7 +119,9 @@ func runDiffCmd(ctx *cli.Context) {
 				Error:   diff.err,
 			})
 		}
-		console.Infoln(diff.message)
+		console.Infos(InfoMessage{
+			Message: diff.message,
+		})
 	}
 }
 
