@@ -74,6 +74,7 @@ func (i InfoMessage) String() string {
 	return i.Message
 }
 
+// CopyMessage container for file copy messages
 type CopyMessage struct {
 	Message string `json:"message"`
 	Source  string `json:"source"`
@@ -82,4 +83,11 @@ type CopyMessage struct {
 
 func (c CopyMessage) String() string {
 	return fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target)
+}
+
+// SyncMessage container for file sync messages, inherits CopyMessage
+type SyncMessage CopyMessage
+
+func (s SyncMessage) String() string {
+	return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Target)
 }

@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/minio/cli"
@@ -71,9 +72,13 @@ EXAMPLES:
 
 // doSyncSession - Sync an object to multiple destination
 func doSyncSession(sURLs syncURLs, bar *barSend, syncQueue chan bool, ssCh chan syncSession, wg *sync.WaitGroup, s *sessionV1) {
+	// waitgroup reply deferred until this function returns
 	defer wg.Done()
+
+	// hold lock for map updates inside session
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
+
 	if !globalQuietFlag {
 		bar.SetCaption(sURLs.SourceContent.Name + ": ")
 	}
@@ -105,6 +110,10 @@ func doSyncSession(sURLs syncURLs, bar *barSend, syncQueue chan bool, ssCh chan 
 	var newReader io.Reader
 	switch globalQuietFlag {
 	case true:
+		console.Infos(SyncMessage{
+			Source: sURLs.SourceContent.Name,
+			Target: strings.Join(targetURLs, " "),
+		})
 		newReader = yielder.NewReader(reader)
 	default:
 		// set up progress
