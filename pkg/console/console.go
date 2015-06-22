@@ -51,7 +51,7 @@ type Theme struct {
 	Print *color.Color
 }
 
-func readErrorFromdata(data interface{}) error {
+func readErrorFromData(data interface{}) error {
 	st := structs.New(data)
 	if st.IsZero() {
 		return nil
@@ -176,7 +176,7 @@ var (
 	Fatals = func(data ...interface{}) {
 		defer os.Exit(1)
 		for i := 0; i < len(data); i++ {
-			err := readErrorFromdata(data[i])
+			err := readErrorFromData(data[i])
 			if err != nil {
 				if NoJSONPrint {
 					println(themesDB[currThemeName].Error, data[i])
@@ -230,7 +230,7 @@ var (
 	// Errors print a error structure with a new line
 	Errors = func(data ...interface{}) {
 		for i := 0; i < len(data); i++ {
-			err := readErrorFromdata(data[i])
+			err := readErrorFromData(data[i])
 			if err != nil {
 				if NoJSONPrint {
 					println(themesDB[currThemeName].Error, data[i])

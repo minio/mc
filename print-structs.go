@@ -67,3 +67,7 @@ func (c Content) String() string {
 type InfoMessage struct {
 	Message string `json:"message"`
 }
+
+func (i InfoMessage) String() string {
+	return i.Message
+}
