@@ -260,8 +260,14 @@ func runCopyCmd(ctx *cli.Context) {
 		}
 		if cps.Done {
 			if err := saveSession(s); err != nil {
-				console.Fatalln(iodine.ToError(err))
+				console.Fatals(ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.ToError(err),
+				})
 			}
+			console.Infos(InfoMessage{
+				Message: "\nSession terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
+			})
 			// this os.Exit is needed really to exit in-case of "os.Interrupt"
 			os.Exit(0)
 		}

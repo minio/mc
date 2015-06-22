@@ -24,8 +24,8 @@ import (
 
 // ErrorMessage container for message reason encapsulation
 type ErrorMessage struct {
-	Message string
-	Error   error
+	Message string `json:"message"`
+	Error   error  `json:"error"`
 }
 
 func (e ErrorMessage) String() string {
@@ -45,10 +45,10 @@ func (e ErrorMessage) String() string {
 
 // Content container for content message structure
 type Content struct {
-	Filetype string `json:"ContentType"`
-	Time     string `json:"LastModified"`
-	Size     string `json:"Size"`
-	Name     string `json:"Name"`
+	Filetype string `json:"content-type"`
+	Time     string `json:"last-modified"`
+	Size     string `json:"size"`
+	Name     string `json:"name"`
 }
 
 func (c Content) String() string {
@@ -61,4 +61,9 @@ func (c Content) String() string {
 		return message + console.File("%s", c.Name)
 	}()
 	return message
+}
+
+// InfoMessage container for informational messages
+type InfoMessage struct {
+	Message string `json:"message"`
 }
