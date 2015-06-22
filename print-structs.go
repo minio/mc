@@ -18,6 +18,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
@@ -70,4 +72,14 @@ type InfoMessage struct {
 
 func (i InfoMessage) String() string {
 	return i.Message
+}
+
+type CopyMessage struct {
+	Message string `json:"message"`
+	Source  string `json:"source"`
+	Target  string `json:"target"`
+}
+
+func (c CopyMessage) String() string {
+	return fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target)
 }

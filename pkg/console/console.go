@@ -128,7 +128,7 @@ var (
 	Prints = func(data ...interface{}) {
 		for i := 0; i < len(data); i++ {
 			if NoJSONPrint {
-				println(themesDB[currThemeName].Info, data[i])
+				println(themesDB[currThemeName].Print, data[i])
 				return
 			}
 			infoBytes, _ := json.Marshal(&data[i])

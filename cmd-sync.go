@@ -222,13 +222,19 @@ func runSyncCmd(ctx *cli.Context) {
 
 	if !isSessionDirExists() {
 		if err := createSessionDir(); err != nil {
-			console.Fatalln(iodine.ToError(err))
+			console.Fatals(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.New(err, nil),
+			})
 		}
 	}
 
 	s, err := newSession()
 	if err != nil {
-		console.Fatalln(iodine.ToError(err))
+		console.Fatals(ErrorMessage{
+			Message: "Failed with",
+			Error:   iodine.New(err, nil),
+		})
 	}
 	s.CommandType = "sync"
 
@@ -258,7 +264,7 @@ func runSyncCmd(ctx *cli.Context) {
 			if err := saveSession(s); err != nil {
 				console.Fatals(ErrorMessage{
 					Message: "Failed wtih",
-					Error:   iodine.ToError(err),
+					Error:   iodine.New(err, nil),
 				})
 			}
 			console.Infos(InfoMessage{

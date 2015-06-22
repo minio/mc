@@ -35,7 +35,7 @@ func checkConfig() {
 	if err != nil {
 		console.Fatals(ErrorMessage{
 			Message: "Unable to determine current user",
-			Error:   err,
+			Error:   iodine.New(err, nil),
 		})
 	}
 
@@ -49,7 +49,7 @@ func checkConfig() {
 	if err != nil {
 		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unable to read config file: %s", mustGetMcConfigPath()),
-			Error:   err,
+			Error:   iodine.New(err, nil),
 		})
 	}
 }
@@ -126,7 +126,7 @@ func main() {
 			err := iodine.New(errInvalidTheme{Theme: themeName}, nil)
 			console.Errors(ErrorMessage{
 				Message: fmt.Sprintf("Please choose from this list: %s.", console.GetThemeNames()),
-				Error:   err,
+				Error:   iodine.New(err, nil),
 			})
 			return err
 		default:
@@ -134,7 +134,7 @@ func main() {
 			if err != nil {
 				console.Errors(ErrorMessage{
 					Message: fmt.Sprintf("Failed to set theme ‘%s’.", themeName),
-					Error:   err,
+					Error:   iodine.New(err, nil),
 				})
 				return err
 			}

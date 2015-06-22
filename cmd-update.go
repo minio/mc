@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"runtime"
 	"time"
@@ -93,7 +92,7 @@ https://dl.minio.io:9000 for continuous updates`
 		if err != nil {
 			return "", err
 		}
-		fmt.Println(msg)
+		console.Prints(InfoMessage{Message: msg})
 		return "", nil
 	}
 	return "You are already running the most recent version of ‘mc’", nil
@@ -120,6 +119,6 @@ func runUpdateCmd(ctx *cli.Context) {
 	}
 	// no msg do not print one
 	if msg != "" {
-		console.Infoln(msg)
+		console.Infos(InfoMessage{Message: msg})
 	}
 }
