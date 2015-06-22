@@ -47,13 +47,13 @@ FLAGS:
 
 EXAMPLES:
    1. List sessions
-      $ mc {{.Name}} session list
+      $ mc {{.Name}} list
 
    2. Resume session
-      $ mc {{.Name}} session resume [SESSION]
+      $ mc {{.Name}} resume [SESSION]
 
    3. Clear session
-      $ mc {{.Name}} session clear [SESSION]|[*]
+      $ mc {{.Name}} clear [SESSION]|[*]
 
 `,
 }
