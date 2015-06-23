@@ -22,7 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -51,7 +51,7 @@ type StackEntry struct {
 	Data map[string]string
 }
 
-var gopath string
+var gopathSource string
 
 var globalState = struct {
 	sync.RWMutex
@@ -87,10 +87,9 @@ func GetGlobalState() map[string]string {
 
 // GetGlobalStateKey - get value for key from globalState struct
 func GetGlobalStateKey(k string) string {
-	result, ok := globalState.m[k]
-	if !ok {
-		return ""
-	}
+	globalState.RLock()
+	result, _ := globalState.m[k]
+	globalState.RUnlock()
 	return result
 }
 
@@ -152,8 +151,8 @@ func createStackEntry() StackEntry {
 	host, _ := os.Hostname()
 	pc, file, line, _ := runtime.Caller(2)
 	function := runtime.FuncForPC(pc).Name()
-	_, function = path.Split(function)
-	file = strings.TrimPrefix(file, gopath) // trim gopath from file
+	_, function = filepath.Split(function)
+	file = strings.TrimPrefix(file, gopathSource) // trim gopathSource from file
 
 	data := GetGlobalState()
 	for k, v := range getSystemData() {
@@ -191,14 +190,15 @@ func getSystemData() map[string]string {
 }
 
 // Annotate an error with a stack entry and returns itself
-//func (err *WrappedError) Annotate(info map[string]string) *WrappedError {
-//	entry := createStackEntry()
-//	for k, v := range info {
-//		entry.Data[k] = v
-//	}
-//	err.Stack = append(err.Stack, entry)
-//	return err
-//}
+//
+//  func (err *WrappedError) Annotate(info map[string]string) *WrappedError {
+//       entry := createStackEntry()
+//       for k, v := range info {
+// 		 entry.Data[k] = v
+//       }
+//       err.Stack = append(err.Stack, entry)
+//       return err
+//  }
 
 // EmitJSON writes JSON output for the error
 func (err Error) EmitJSON() ([]byte, error) {
@@ -223,8 +223,10 @@ func (err Error) Error() string {
 
 func init() {
 	_, iodineFile, _, _ := runtime.Caller(0)
-	iodineFile = path.Dir(iodineFile)   // trim iodine.go
-	iodineFile = path.Dir(iodineFile)   // trim iodine
-	iodineFile = path.Dir(iodineFile)   // trim minio
-	gopath = path.Dir(iodineFile) + "/" // trim github.com
+	iodineFile = filepath.Dir(iodineFile)         // trim iodine.go
+	iodineFile = filepath.Dir(iodineFile)         // trim iodine
+	iodineFile = filepath.Dir(iodineFile)         // trim pkg
+	iodineFile = filepath.Dir(iodineFile)         // trim minio
+	iodineFile = filepath.Dir(iodineFile)         // trim minio
+	gopathSource = filepath.Dir(iodineFile) + "/" // trim github.com
 }
