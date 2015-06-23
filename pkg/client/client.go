@@ -46,7 +46,7 @@ type ContentOnChannel struct {
 	Err     error
 }
 
-// Content - object content list
+// Content container for content metadata
 type Content struct {
 	Name string
 	Time time.Time
