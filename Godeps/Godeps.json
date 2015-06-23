@@ -32,11 +32,13 @@
 		},
 		{
 			"ImportPath": "github.com/minio/minio-go",
+			"Comment": "v0.1.0",
 			"Rev": "115db4940219a4cb142281d0ee216d85599bd4b9"
 		},
 		{
 			"ImportPath": "github.com/minio/minio/pkg/iodine",
-			"Rev": "0f58045480309d4b13fe45878f05736c3ff20e7e"
+			"Comment": "release-1434511043-18-g792e6c2",
+			"Rev": "792e6c2d3a0bee392abd049e70f0cad52a5f8320"
 		},
 		{
 			"ImportPath": "github.com/olekukonko/ts",
