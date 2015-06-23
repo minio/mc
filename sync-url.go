@@ -150,13 +150,8 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 		}
 		// add `/` after trimming off `...` to emulate directories
 		sourceURL = stripRecursiveURL(sourceURL)
-		sourceClient, err := source2Client(sourceURL)
-		if err != nil {
-			syncURLsCh <- syncURLs{Error: iodine.New(err, nil)}
-			return
-		}
+		sourceClient, sourceContent, err := url2Stat(sourceURL)
 		// Source exist?
-		sourceContent, err := sourceClient.Stat()
 		if err != nil {
 			// Source does not exist or insufficient privileges.
 			syncURLsCh <- syncURLs{Error: iodine.New(err, nil)}
@@ -170,14 +165,8 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 		}
 
 		for _, targetURL := range targetURLs {
-			targetClient, err := target2Client(targetURL)
-			if err != nil {
-				syncURLsCh <- syncURLs{Error: iodine.New(err, nil)}
-				return
-			}
-
+			_, targetContent, err := url2Stat(targetURL)
 			// Target exist?
-			targetContent, err := targetClient.Stat()
 			if err != nil {
 				// Target does not exist.
 				syncURLsCh <- syncURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}

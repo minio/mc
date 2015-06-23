@@ -24,12 +24,13 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-// ErrorMessage container for message reason encapsulation
+// ErrorMessage container for error reason encapsulation
 type ErrorMessage struct {
 	Message string `json:"message"`
 	Error   error  `json:"error"`
 }
 
+// String string printer for error message
 func (e ErrorMessage) String() string {
 	var message string
 	if e.Error != nil {
@@ -53,6 +54,7 @@ type Content struct {
 	Name     string `json:"name"`
 }
 
+// String string printer for Content metadata
 func (c Content) String() string {
 	message := console.Time("[%s] ", c.Time)
 	message = message + console.Size("%6s ", c.Size)
@@ -70,6 +72,7 @@ type InfoMessage struct {
 	Message string `json:"message"`
 }
 
+// String string printer for informational message
 func (i InfoMessage) String() string {
 	return i.Message
 }
@@ -81,6 +84,7 @@ type CopyMessage struct {
 	Target  string `json:"target"`
 }
 
+// String string printer for copy message
 func (c CopyMessage) String() string {
 	return fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target)
 }
@@ -88,6 +92,7 @@ func (c CopyMessage) String() string {
 // SyncMessage container for file sync messages, inherits CopyMessage
 type SyncMessage CopyMessage
 
+// String string printer for sync message
 func (s SyncMessage) String() string {
 	return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Target)
 }

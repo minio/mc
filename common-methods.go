@@ -104,7 +104,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) <-chan erro
 func getNewClient(urlStr string, auth *hostConfig) (clnt client.Client, err error) {
 	url, err := client.Parse(urlStr)
 	if err != nil {
-		return nil, iodine.New(errInvalidURL{URL: urlStr}, nil)
+		return nil, iodine.New(errInvalidURL{URL: urlStr}, map[string]string{"URL": urlStr})
 	}
 	switch url.Type {
 	case client.Object: // Minio and S3 compatible object storage
@@ -138,12 +138,7 @@ func getNewClient(urlStr string, auth *hostConfig) (clnt client.Client, err erro
 
 // url2Stat - Returns client, config and its stat Content from the URL
 func url2Stat(urlStr string) (client client.Client, content *client.Content, err error) {
-	config, err := getHostConfig(urlStr)
-	if err != nil {
-		return nil, nil, iodine.New(err, map[string]string{"URL": urlStr})
-	}
-
-	client, err = getNewClient(urlStr, config)
+	client, err = url2Client(urlStr)
 	if err != nil {
 		return nil, nil, iodine.New(err, map[string]string{"URL": urlStr})
 	}
@@ -160,21 +155,21 @@ func url2Client(url string) (client.Client, error) {
 	// Empty source arg?
 	urlParse, err := client.Parse(url)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, iodine.New(err, map[string]string{"URL": url})
 	}
 
 	if urlParse.Path == "" {
-		return nil, iodine.New(errInvalidURL{URL: url}, nil)
+		return nil, iodine.New(errInvalidURL{URL: url}, map[string]string{"URL": url})
 	}
 
 	urlonfig, err := getHostConfig(url)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, iodine.New(err, map[string]string{"URL": url})
 	}
 
 	client, err := getNewClient(url, urlonfig)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, iodine.New(err, map[string]string{"URL": url})
 	}
 
 	return client, nil
@@ -184,7 +179,7 @@ func url2Client(url string) (client.Client, error) {
 func source2Client(sourceURL string) (client.Client, error) {
 	sourceClient, err := url2Client(sourceURL)
 	if err != nil {
-		return nil, iodine.New(errInvalidSource{URL: sourceURL}, nil)
+		return nil, iodine.New(errInvalidSource{URL: sourceURL}, map[string]string{"URL": sourceURL})
 	}
 	return sourceClient, nil
 }
@@ -193,7 +188,7 @@ func source2Client(sourceURL string) (client.Client, error) {
 func target2Client(targetURL string) (client.Client, error) {
 	targetClient, err := url2Client(targetURL)
 	if err != nil {
-		return nil, iodine.New(errInvalidTarget{URL: targetURL}, nil)
+		return nil, iodine.New(errInvalidTarget{URL: targetURL}, map[string]string{"URL": targetURL})
 	}
 	return targetClient, nil
 }
