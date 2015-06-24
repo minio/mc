@@ -51,7 +51,7 @@ var Version = {{if .Date}}"{{.Date}}"{{else}}""{{end}}
 
 // Tag is of following format
 //
-//   [[STRING]-[EPOCH]
+//   [STRING]-[EPOCH]
 //
 // STRING is release string of your choice.
 // EPOCH is unix seconds since Jan 1, 1970 UTC.
@@ -129,7 +129,7 @@ func runMcRelease(ctx *cli.Context) {
 	}
 	t := time.Now().UTC()
 	date := t.Format(time.RFC3339Nano)
-	//   [[STRING]-[EPOCH]-[GITREV]]
+	//   [STRING]-[EPOCH]
 	//
 	// STRING is release string of your choice.
 	// EPOCH is unix seconds since Jan 1, 1970 UTC.

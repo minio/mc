@@ -143,6 +143,10 @@ func sessionExecute(bar barSend, s *sessionV1) {
 						Error:   iodine.New(err, nil),
 					})
 				}
+				console.Infos(InfoMessage{
+					Message: "\nSession terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
+				})
+				// this os.Exit is needed really to exit in-case of "os.Interrupt"
 				os.Exit(0)
 			}
 		}
@@ -161,6 +165,9 @@ func sessionExecute(bar barSend, s *sessionV1) {
 						Error:   iodine.New(err, nil),
 					})
 				}
+				console.Infos(InfoMessage{
+					Message: "\nSession terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
+				})
 				// this os.Exit is needed really to exit in-case of "os.Interrupt"
 				os.Exit(0)
 			}
