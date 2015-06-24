@@ -16,6 +16,12 @@
 
 package main
 
+type errUnexpected struct{}
+
+func (e errUnexpected) Error() string {
+	return "Unexpected control flow, please report this bug at https://github.com/minio/mc/issues."
+}
+
 type errInvalidSessionID struct {
 	id string
 }
@@ -93,16 +99,14 @@ func (e errNoMatchingHost) Error() string {
 type errConfigExists struct{}
 
 func (e errConfigExists) Error() string {
-	return "Config exists."
+	return "Already exists."
 }
 
 // errAliasExists - alias exists
-type errAliasExists struct {
-	name string
-}
+type errAliasExists struct{}
 
 func (e errAliasExists) Error() string {
-	return "Alias name: " + e.name + " exists."
+	return "Already exists."
 }
 
 type errInvalidURL struct {

@@ -119,11 +119,11 @@ func doConfig(arg string, aliases []string) (string, error) {
 	if err != nil {
 		switch iodine.ToError(err).(type) {
 		case errConfigExists:
-			return "Configuration file [" + configPath + "] already exists.", iodine.New(err, nil)
+			return "Configuration file [" + configPath + "]", iodine.New(err, nil)
 		case errInvalidArgument:
 			return "Incorrect usage, please use \"mc config help\" ", iodine.New(err, nil)
 		case errAliasExists:
-			return "Alias [" + aliases[0] + "] already exists", iodine.New(err, nil)
+			return "Alias name: [" + aliases[0] + "]", iodine.New(err, nil)
 		case errInvalidAliasName:
 			return "Alias [" + aliases[0] + "] is reserved word or invalid", iodine.New(err, nil)
 		case errInvalidURL:
@@ -133,7 +133,13 @@ func doConfig(arg string, aliases []string) (string, error) {
 			return "Unable to generate config file [" + configPath + "].", iodine.New(err, nil)
 		}
 	}
-	return "Configuration written to [" + configPath + "]. Please update your access credentials.", nil
+	if arg == "alias" {
+		return "Alias written to [" + configPath + "].", nil
+	}
+	if arg == "generate" {
+		return "Configuration written to [" + configPath + "]. Please update your access credentials.", nil
+	}
+	return "", iodine.New(errUnexpected{}, nil)
 }
 
 // addAlias - add new aliases
@@ -162,7 +168,7 @@ func addAlias(aliases []string) (quick.Config, error) {
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV1)
 	if _, ok := newConf.Aliases[aliasName]; ok {
-		return nil, iodine.New(errAliasExists{name: aliasName}, nil)
+		return nil, iodine.New(errAliasExists{}, nil)
 	}
 	newConf.Aliases[aliasName] = url
 	newConfig, err := quick.New(newConf)
