@@ -104,7 +104,7 @@ func runUpdateCmd(ctx *cli.Context) {
 	if ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
-	if !isMcConfigExist() {
+	if !isMcConfigExists() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errNotConfigured{}, nil),

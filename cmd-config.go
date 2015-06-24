@@ -86,7 +86,7 @@ func runConfigCmd(ctx *cli.Context) {
 func saveConfig(arg string, aliases []string) error {
 	switch arg {
 	case "generate":
-		if isMcConfigExist() {
+		if isMcConfigExists() {
 			return iodine.New(errConfigExists{}, nil)
 		}
 		config, err := newConfig()

@@ -40,7 +40,7 @@ func checkConfig() {
 	}
 
 	// If config doesn't exist, do not attempt to read it
-	if !isMcConfigExist() {
+	if !isMcConfigExists() {
 		return
 	}
 
@@ -143,7 +143,7 @@ func main() {
 		return nil
 	}
 	app.After = func(ctx *cli.Context) error {
-		if !isMcConfigExist() {
+		if !isMcConfigExists() {
 			console.Fatals(ErrorMessage{
 				Message: "Please run \"mc config generate\"",
 				Error:   iodine.New(errNotConfigured{}, nil),
