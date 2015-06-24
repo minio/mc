@@ -83,7 +83,7 @@ func runListCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
 
-	if !isMcConfigExist() {
+	if !isMcConfigExists() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errNotConfigured{}, nil),

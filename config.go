@@ -93,7 +93,7 @@ func mustGetMcConfigPath() string {
 
 // getMcConfig - reads configuration file and returns config
 func getMcConfig() (*configV1, error) {
-	if !isMcConfigExist() {
+	if !isMcConfigExists() {
 		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
 
@@ -122,8 +122,8 @@ func getMcConfig() (*configV1, error) {
 
 }
 
-// isMcConfigExist returns err if config doesn't exist
-func isMcConfigExist() bool {
+// isMcConfigExists xreturns err if config doesn't exist
+func isMcConfigExists() bool {
 	configFile, err := getMcConfigPath()
 	if err != nil {
 		return false

@@ -60,7 +60,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
-	if !isMcConfigExist() {
+	if !isMcConfigExists() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errNotConfigured{}, nil),

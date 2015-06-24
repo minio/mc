@@ -58,7 +58,7 @@ func runDiffCmd(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
-	if !isMcConfigExist() {
+	if !isMcConfigExists() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errNotConfigured{}, nil),

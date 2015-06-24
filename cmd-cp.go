@@ -221,7 +221,7 @@ func runCopyCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
 
-	if !isMcConfigExist() {
+	if !isMcConfigExists() {
 		console.Fatals(ErrorMessage{
 			Message: "Please run \"mc config generate\"",
 			Error:   iodine.New(errNotConfigured{}, nil),
