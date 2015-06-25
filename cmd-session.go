@@ -244,5 +244,7 @@ func runSessionCmd(ctx *cli.Context) {
 				Error:   iodine.ToError(err),
 			})
 		}
+	default:
+		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 }
