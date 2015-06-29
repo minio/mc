@@ -246,6 +246,7 @@ func runSyncCmd(ctx *cli.Context) {
 		})
 	}
 	s.CommandType = "sync"
+	s.RootPath, _ = os.Getwd()
 
 	// extract URLs.
 	s.URLs, err = args2URLs(ctx.Args())

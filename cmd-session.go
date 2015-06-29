@@ -186,7 +186,7 @@ func runSessionCmd(ctx *cli.Context) {
 		if err := createSessionDir(); err != nil {
 			console.Fatals(ErrorMessage{
 				Message: "Failed with",
-				Error:   iodine.ToError(err),
+				Error:   iodine.New(err, nil),
 			})
 		}
 	}
@@ -197,7 +197,7 @@ func runSessionCmd(ctx *cli.Context) {
 		if err != nil {
 			console.Fatals(ErrorMessage{
 				Message: "Failed with",
-				Error:   iodine.ToError(err),
+				Error:   iodine.New(err, nil),
 			})
 		}
 	case "resume":
@@ -212,8 +212,19 @@ func runSessionCmd(ctx *cli.Context) {
 		if err != nil {
 			console.Fatals(ErrorMessage{
 				Message: "Failed with",
-				Error:   iodine.ToError(err),
+				Error:   iodine.New(err, nil),
 			})
+		}
+		savedCwd, err := os.Getwd()
+		if err != nil {
+			console.Fatals(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.New(err, nil),
+			})
+		}
+		if s.RootPath != "" {
+			// chdir to RootPath
+			os.Chdir(s.RootPath)
 		}
 		var bar barSend
 		// set up progress bar
@@ -226,9 +237,11 @@ func runSessionCmd(ctx *cli.Context) {
 			if err := clearSession(sid); err != nil {
 				console.Fatals(ErrorMessage{
 					Message: "Failed with",
-					Error:   iodine.ToError(err),
+					Error:   iodine.New(err, nil),
 				})
 			}
+			// change dir back
+			os.Chdir(savedCwd)
 		}
 	// purge a requested pending session, if "*" purge everything
 	case "clear":
@@ -241,7 +254,7 @@ func runSessionCmd(ctx *cli.Context) {
 		if err := clearSession(strings.TrimSpace(ctx.Args().Tail().First())); err != nil {
 			console.Fatals(ErrorMessage{
 				Message: "Failed with",
-				Error:   iodine.ToError(err),
+				Error:   iodine.New(err, nil),
 			})
 		}
 	default:

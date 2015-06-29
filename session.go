@@ -34,6 +34,7 @@ type sessionV1 struct {
 	Started     time.Time       `json:"started"`
 	CommandType string          `json:"command-type"`
 	SessionID   string          `json:"session-id"`
+	RootPath    string          `json:"root-path"`
 	URLs        []string        `json:"args"`
 	Files       map[string]bool `json:"files"`
 
