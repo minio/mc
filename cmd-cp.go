@@ -244,6 +244,7 @@ func runCopyCmd(ctx *cli.Context) {
 		})
 	}
 	s.CommandType = "cp"
+	s.RootPath, _ = os.Getwd()
 
 	// extract URLs.
 	s.URLs, err = args2URLs(ctx.Args())
