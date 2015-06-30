@@ -93,11 +93,12 @@ func doCopySession(cURLs cpURLs, bar *barSend, s *sessionV1) error {
 	defer reader.Close()
 
 	var newReader io.Reader
-	switch globalQuietFlag {
+	switch globalQuietFlag || globalJSONFlag {
 	case true:
 		console.Infos(CopyMessage{
 			Source: cURLs.SourceContent.Name,
 			Target: cURLs.TargetContent.Name,
+			Length: cURLs.SourceContent.Size,
 		})
 		newReader = yielder.NewReader(reader)
 	default:

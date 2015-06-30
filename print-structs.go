@@ -26,7 +26,7 @@ import (
 
 // ErrorMessage container for error reason encapsulation
 type ErrorMessage struct {
-	Message string `json:"message"`
+	Message string `json:"-"`
 	Error   error  `json:"error"`
 }
 
@@ -37,10 +37,10 @@ func (e ErrorMessage) String() string {
 		switch e.Error.(type) {
 		case iodine.Error:
 			reason := iodine.ToError(e.Error).Error()
-			message = e.Message + ", " + reason
+			message = reason
 		default:
 			reason := e.Error.Error()
-			message = e.Message + ", " + reason
+			message = reason
 		}
 	}
 	return message
@@ -69,7 +69,7 @@ func (c Content) String() string {
 
 // InfoMessage container for informational messages
 type InfoMessage struct {
-	Message string `json:"message"`
+	Message string `json:"info"`
 }
 
 // String string printer for informational message
@@ -79,9 +79,9 @@ func (i InfoMessage) String() string {
 
 // CopyMessage container for file copy messages
 type CopyMessage struct {
-	Message string `json:"message"`
-	Source  string `json:"source"`
-	Target  string `json:"target"`
+	Source string `json:"source"`
+	Target string `json:"target"`
+	Length int64  `json:"length"`
 }
 
 // String string printer for copy message
@@ -90,9 +90,13 @@ func (c CopyMessage) String() string {
 }
 
 // SyncMessage container for file sync messages, inherits CopyMessage
-type SyncMessage CopyMessage
+type SyncMessage struct {
+	Source  string   `json:"source"`
+	Targets []string `json:"targets"`
+	Length  int64    `json:"length"`
+}
 
 // String string printer for sync message
 func (s SyncMessage) String() string {
-	return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Target)
+	return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets)
 }
