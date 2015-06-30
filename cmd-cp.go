@@ -79,14 +79,14 @@ func doCopySession(cURLs cpURLs, bar *barSend, s *sessionV1) error {
 
 	_, ok := s.Files[cURLs.SourceContent.Name]
 	if ok {
-		bar.ErrorGet(int64(cURLs.SourceContent.Size))
+		putFakeTarget(bar.NewProxyReader(&fakeReader{size: cURLs.SourceContent.Size}))
 		return nil
 	}
 
 	reader, length, err := getSource(cURLs.SourceContent.Name)
 	if err != nil {
 		if !globalQuietFlag {
-			bar.ErrorGet(int64(length))
+			bar.ErrorGet(length)
 		}
 		return iodine.New(err, map[string]string{"URL": cURLs.SourceContent.Name})
 	}
@@ -109,7 +109,7 @@ func doCopySession(cURLs cpURLs, bar *barSend, s *sessionV1) error {
 	err = putTarget(cURLs.TargetContent.Name, length, newReader)
 	if err != nil {
 		if !globalQuietFlag {
-			bar.ErrorPut(int64(length))
+			bar.ErrorPut(length)
 		}
 		return iodine.New(err, map[string]string{"URL": cURLs.TargetContent.Name})
 	}
