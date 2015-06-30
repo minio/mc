@@ -18,6 +18,7 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -38,6 +39,18 @@ const (
 	pbBarCmdSetCaption
 )
 
+type fakeReader struct {
+	size int64
+}
+
+func (r *fakeReader) Read(p []byte) (n int, err error) {
+	return int(r.size), io.EOF
+}
+
+func putFakeTarget(reader io.Reader) {
+	io.Copy(ioutil.Discard, reader)
+}
+
 type proxyReader struct {
 	io.Reader
 	bar *barSend
@@ -47,6 +60,10 @@ func (r *proxyReader) Read(p []byte) (n int, err error) {
 	n, err = r.Reader.Read(p)
 	r.bar.progress(int64(n))
 	return
+}
+
+func (b *barSend) NewProxyReader(r io.Reader) *proxyReader {
+	return &proxyReader{r, b}
 }
 
 type barMsg struct {
@@ -73,10 +90,6 @@ func (b barSend) ErrorPut(size int64) {
 
 func (b barSend) ErrorGet(size int64) {
 	b.cmdCh <- barMsg{Cmd: pbBarCmdGetError, Arg: size}
-}
-
-func (b *barSend) NewProxyReader(r io.Reader) *proxyReader {
-	return &proxyReader{r, b}
 }
 
 func (b *barSend) SetCaption(c string) {

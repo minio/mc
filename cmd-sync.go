@@ -84,7 +84,7 @@ func doSyncSession(sURLs syncURLs, bar *barSend, syncQueue chan bool, ssCh chan 
 	_, ok := s.Files[sURLs.SourceContent.Name]
 	if ok {
 		if !globalQuietFlag {
-			bar.ErrorGet(int64(sURLs.SourceContent.Size))
+			putFakeTarget(bar.NewProxyReader(&fakeReader{size: sURLs.SourceContent.Size}))
 		}
 		<-syncQueue // Signal that this copy routine is done.
 		return
