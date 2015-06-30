@@ -42,9 +42,9 @@ type sessionV1 struct {
 }
 
 func (s sessionV1) String() string {
-	message := console.Time("[%s] ", s.Started.Local().Format(printDate))
-	message = message + console.SessionID("%s", s.SessionID)
-	message = message + console.Command(" [%s %s]", s.CommandType, strings.Join(s.URLs, " "))
+	message := console.SessionID("%s -> ", s.SessionID)
+	message = message + console.Time("[%s]", s.Started.Local().Format(printDate))
+	message = message + console.Command(" %s %s", s.CommandType, strings.Join(s.URLs, " "))
 	return message
 }
 

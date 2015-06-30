@@ -30,13 +30,13 @@ import (
 // Help message.
 var sessionCmd = cli.Command{
 	Name:   "session",
-	Usage:  "Start sessions for cp and sync",
+	Usage:  "Manage sessions for cp and sync",
 	Action: runSessionCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE TARGET [TARGET...] {{if .Description}}
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} [SESSION] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}

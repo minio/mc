@@ -43,9 +43,9 @@ func parseContent(c *client.Content) Content {
 	// guess file type
 	content.Filetype = func() string {
 		if c.Type.IsDir() {
-			return "inode/directory"
+			return "directory"
 		}
-		return "application/octet-stream"
+		return "file"
 	}()
 
 	content.Size = humanize.IBytes(uint64(c.Size))

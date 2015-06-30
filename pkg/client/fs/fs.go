@@ -194,16 +194,6 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		return
 	}
 
-	dir, err := os.Open(fpath)
-	if err != nil {
-		contentCh <- client.ContentOnChannel{
-			Content: nil,
-			Err:     iodine.New(err, nil),
-		}
-		return
-	}
-	defer dir.Close()
-
 	fi, err := os.Stat(fpath)
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
@@ -212,6 +202,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		}
 		return
 	}
+
 	switch fi.Mode().IsDir() {
 	case true:
 		// do not use ioutil.ReadDir(), since it tries to sort its
@@ -219,6 +210,16 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		// instead we take raw output and provide it back to the
 		// user - this is the correct style when are moving large
 		// quantities of files
+		dir, err := os.Open(fpath)
+		if err != nil {
+			contentCh <- client.ContentOnChannel{
+				Content: nil,
+				Err:     iodine.New(err, nil),
+			}
+			return
+		}
+		defer dir.Close()
+
 		files, err := dir.Readdir(-1)
 		if err != nil {
 			contentCh <- client.ContentOnChannel{
