@@ -276,8 +276,9 @@ func runSyncCmd(ctx *cli.Context) {
 					Error:   iodine.New(err, nil),
 				})
 			}
+			console.Println()
 			console.Infos(InfoMessage{
-				Message: "\nSession terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
+				Message: "Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
 			})
 			// this os.Exit is needed really to exit in-case of "os.Interrupt"
 			os.Exit(0)
