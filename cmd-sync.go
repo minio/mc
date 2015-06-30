@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/minio/cli"
@@ -108,11 +107,11 @@ func doSyncSession(sURLs syncURLs, bar *barSend, syncQueue chan bool, ssCh chan 
 	}
 
 	var newReader io.Reader
-	switch globalQuietFlag {
+	switch globalQuietFlag || globalJSONFlag {
 	case true:
 		console.Infos(SyncMessage{
-			Source: sURLs.SourceContent.Name,
-			Target: strings.Join(targetURLs, " "),
+			Source:  sURLs.SourceContent.Name,
+			Targets: targetURLs,
 		})
 		newReader = yielder.NewReader(reader)
 	default:
