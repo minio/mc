@@ -48,7 +48,7 @@ func (e ErrorMessage) String() string {
 
 // Content container for content message structure
 type Content struct {
-	Filetype string `json:"content-type"`
+	Filetype string `json:"type"`
 	Time     string `json:"last-modified"`
 	Size     string `json:"size"`
 	Name     string `json:"name"`
@@ -59,7 +59,7 @@ func (c Content) String() string {
 	message := console.Time("[%s] ", c.Time)
 	message = message + console.Size("%6s ", c.Size)
 	message = func() string {
-		if c.Filetype == "inode/directory" {
+		if c.Filetype == "directory" {
 			return message + console.Dir("%s", c.Name)
 		}
 		return message + console.File("%s", c.Name)
