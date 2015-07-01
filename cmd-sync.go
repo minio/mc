@@ -130,8 +130,9 @@ func doSyncSession(sURLs syncURLs, bar *barSend, syncQueue chan bool, ssCh chan 
 		}
 	}
 	<-syncQueue // Signal that this copy routine is done.
+
 	// store files which have finished copying
-	s.Files[sURLs.SourceContent.Name] = true
+	s.Files[sURLs.SourceContent.Name] = struct{}{}
 }
 
 func doPrepareSyncURLs(sourceURL string, targetURLs []string, bar barSend, lock countlock.Locker) {

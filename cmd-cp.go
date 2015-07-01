@@ -115,7 +115,8 @@ func doCopySession(cURLs cpURLs, bar *barSend, s *sessionV1) error {
 	}
 
 	// store files which have finished copying
-	s.Files[cURLs.SourceContent.Name] = true
+	s.Files[cURLs.SourceContent.Name] = struct{}{}
+
 	return nil
 }
 

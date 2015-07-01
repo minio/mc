@@ -30,13 +30,13 @@ import (
 )
 
 type sessionV1 struct {
-	Version     string          `json:"version"`
-	Started     time.Time       `json:"started"`
-	CommandType string          `json:"command-type"`
-	SessionID   string          `json:"session-id"`
-	RootPath    string          `json:"working-directory"`
-	URLs        []string        `json:"args"`
-	Files       map[string]bool `json:"files"`
+	Version     string              `json:"version"`
+	Started     time.Time           `json:"started"`
+	CommandType string              `json:"command-type"`
+	SessionID   string              `json:"session-id"`
+	RootPath    string              `json:"working-directory"`
+	URLs        []string            `json:"args"`
+	Files       map[string]struct{} `json:"files"`
 
 	Lock *sync.Mutex `json:"-"`
 }
@@ -98,7 +98,7 @@ func newSessionV1() (config quick.Config, err error) {
 	// map of command and files copied
 	s.URLs = nil
 	s.Started = time.Now().UTC()
-	s.Files = make(map[string]bool)
+	s.Files = make(map[string]struct{})
 	s.Lock = new(sync.Mutex)
 	s.SessionID = newSID(8)
 	return quick.New(s)
@@ -152,7 +152,7 @@ func loadSession(sid string) (*sessionV1, error) {
 	// map of command and files copied
 	s.URLs = nil
 	s.Lock = new(sync.Mutex)
-	s.Files = make(map[string]bool)
+	s.Files = make(map[string]struct{})
 	qs, err := quick.New(s)
 	if err != nil {
 		return nil, iodine.New(err, nil)
