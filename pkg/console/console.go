@@ -86,7 +86,9 @@ var (
 	}()
 
 	// Bar print progress bar
-	Bar = themesDB[currThemeName].Info.Print
+	Bar = func(data ...interface{}) {
+		print(themesDB[currThemeName].Bar, data...)
+	}
 
 	// Print prints a message
 	Print = func(data ...interface{}) {
