@@ -53,7 +53,7 @@ EXAMPLES:
       $ mc {{.Name}} resume [SESSION]
 
    3. Clear session
-      $ mc {{.Name}} clear [SESSION]|[*]
+      $ mc {{.Name}} clear [SESSION]|[all]
 
 `,
 }
@@ -96,7 +96,7 @@ func resumeSession(sid string) (*sessionV1, error) {
 }
 
 func clearSession(sid string) error {
-	if sid == "*" {
+	if sid == "all" {
 		sdir, err := getSessionDir()
 		if err != nil {
 			return iodine.New(err, nil)
