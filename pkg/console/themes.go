@@ -32,6 +32,7 @@ var MiniTheme = Theme{
 	Time:      (color.New(color.FgGreen)),
 	JSON:      (color.New(color.FgWhite, color.Italic)),
 	Bar:       (color.New(color.FgGreen, color.Bold)),
+	PrintC:    (color.New(color.FgGreen, color.Bold)),
 	Print:     (color.New()),
 }
 
@@ -49,6 +50,7 @@ var WhiteTheme = Theme{
 	Time:      (color.New(color.FgWhite, color.Bold)),
 	JSON:      (color.New(color.FgWhite, color.Bold, color.Italic)),
 	Bar:       (color.New(color.FgWhite, color.Bold)),
+	PrintC:    (color.New(color.FgWhite, color.Bold)),
 	Print:     (color.New()),
 }
 
@@ -66,5 +68,6 @@ var NoColorTheme = Theme{
 	Time:      (color.New()),
 	JSON:      (color.New()),
 	Bar:       (color.New()),
+	PrintC:    (color.New()),
 	Print:     (color.New()),
 }

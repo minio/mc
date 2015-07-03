@@ -17,15 +17,17 @@
 package main
 
 import (
+	"fmt"
 	"io"
-	"io/ioutil"
 	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/pb"
+	"github.com/olekukonko/ts"
 )
 
 type pbBarCmd int
@@ -39,18 +41,6 @@ const (
 	pbBarCmdSetCaption
 )
 
-type fakeReader struct {
-	size int64
-}
-
-func (r *fakeReader) Read(p []byte) (n int, err error) {
-	return int(r.size), io.EOF
-}
-
-func putFakeTarget(reader io.Reader) {
-	io.Copy(ioutil.Discard, reader)
-}
-
 type proxyReader struct {
 	io.Reader
 	bar *barSend
@@ -58,12 +48,8 @@ type proxyReader struct {
 
 func (r *proxyReader) Read(p []byte) (n int, err error) {
 	n, err = r.Reader.Read(p)
-	r.bar.progress(int64(n))
+	r.bar.Progress(int64(n))
 	return
-}
-
-func (b *barSend) NewProxyReader(r io.Reader) *proxyReader {
-	return &proxyReader{r, b}
 }
 
 type barMsg struct {
@@ -76,11 +62,15 @@ type barSend struct {
 	finishCh <-chan bool
 }
 
+func (b *barSend) NewProxyReader(r io.Reader) *proxyReader {
+	return &proxyReader{r, b}
+}
+
 func (b barSend) Extend(total int64) {
 	b.cmdCh <- barMsg{Cmd: pbBarCmdExtend, Arg: total}
 }
 
-func (b barSend) progress(progress int64) {
+func (b barSend) Progress(progress int64) {
 	b.cmdCh <- barMsg{Cmd: pbBarCmdProgress, Arg: progress}
 }
 
@@ -109,7 +99,13 @@ func cursorAnimate() <-chan rune {
 	if runtime.GOOS == "windows" {
 		cursors = "|/-\\"
 	} else {
-		cursors = "➩➪➫➬➭➮➯➱"
+		// cursors = "➩➪➫➬➭➮➯➱"
+		// cursors = "▁▃▄▅▆▇█▇▆▅▄▃"
+		cursors = "◐◓◑◒"
+		// cursors = "←↖↑↗→↘↓↙"
+		// cursors = "⣾⣽⣻⢿⡿⣟⣯⣷"
+		// cursors = "◴◷◶◵"
+		// cursors = "◰◳◲◱"
 	}
 	go func() {
 		for {
@@ -121,18 +117,18 @@ func cursorAnimate() <-chan rune {
 	return cursorCh
 }
 
-func fixateBarCaption(c string, s string, width int) string {
+func fixateBarCaption(caption string, width int) string {
 	switch {
-	case len(c) > width:
+	case len(caption) > width:
 		// Trim caption to fit within the screen
-		trimSize := len(c) - width + 3
-		if trimSize < len(c) {
-			c = "..." + c[trimSize:]
+		trimSize := len(caption) - width + 3
+		if trimSize < len(caption) {
+			caption = "..." + caption[trimSize:]
 		}
-	case len(c) < width:
-		c = c + strings.Repeat(" ", width-len(c))
+	case len(caption) < width:
+		caption += strings.Repeat(" ", width-len(caption))
 	}
-	return s + " " + c
+	return caption
 }
 
 func getFixedWidth(width, percent int) int {
@@ -154,7 +150,7 @@ func newCpBar() barSend {
 		bar.Callback = func(s string) {
 			console.Bar("\r" + s)
 		}
-		cursorCh := cursorAnimate()
+		// cursorCh := cursorAnimate()
 		if runtime.GOOS == "windows" {
 			bar.Format("[=> ]")
 		} else {
@@ -163,7 +159,7 @@ func newCpBar() barSend {
 		for msg := range cmdCh {
 			switch msg.Cmd {
 			case pbBarCmdSetCaption:
-				bar.Prefix(fixateBarCaption(msg.Arg.(string), string(<-cursorCh), getFixedWidth(bar.GetWidth(), 18)))
+				bar.Prefix(fixateBarCaption(msg.Arg.(string), getFixedWidth(bar.GetWidth(), 18)))
 			case pbBarCmdExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
 			case pbBarCmdProgress:
@@ -193,4 +189,43 @@ func newCpBar() barSend {
 		}
 	}(cmdCh, finishCh)
 	return barSend{cmdCh, finishCh}
+}
+
+/******************************** Scan Bar ************************************/
+// fixateScanBar truncates long text to fit within the terminal size.
+func fixateScanBar(text string, width int) string {
+	if len([]rune(text)) > width {
+		// Trim text to fit within the screen
+		trimSize := len([]rune(text)) - width + 3 //"..."
+		if trimSize < len([]rune(text)) {
+			text = "..." + text[trimSize:]
+		}
+	}
+	return text
+}
+
+// Progress bar function report objects being scaned.
+type scanBarFunc func(string)
+
+// scanBarFactory returns a progress bar function to report URL scanning.
+func scanBarFactory(prefix string) scanBarFunc {
+	prevLineSize := 0
+	fileCount := 0
+	termSize, _ := ts.GetSize()
+	termWidth := termSize.Col()
+
+	cursorCh := cursorAnimate()
+
+	return func(source string) {
+		scanPrefix := fmt.Sprintf("Scanning %s [%s] %s ", prefix, humanize.Comma(int64(fileCount)), string(<-cursorCh))
+		if prevLineSize != 0 { // erase previous line
+			console.PrintC("\r" + scanPrefix + strings.Repeat(" ", prevLineSize-len([]rune(scanPrefix))))
+		}
+
+		source = fixateScanBar(source, termWidth-len([]rune(scanPrefix))-1)
+		barText := "\r" + scanPrefix + source
+		console.PrintC(barText)
+		prevLineSize = len([]rune(barText))
+		fileCount++
+	}
 }

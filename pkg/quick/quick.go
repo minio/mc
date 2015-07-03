@@ -30,7 +30,6 @@ import (
 	"sync"
 
 	"github.com/fatih/structs"
-	"github.com/minio/mc/pkg/atomic"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -116,22 +115,15 @@ func (d config) Save(filename string) (err error) {
 		return iodine.New(err, nil)
 	}
 
-	file, err := atomic.FileCreate(filename)
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-
 	if runtime.GOOS == "windows" {
 		jsonData = []byte(strings.Replace(string(jsonData), "\n", "\r\n", -1))
 	}
-	_, err = file.Write(jsonData)
+
+	err = ioutil.WriteFile(filename, jsonData, 0600)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
 
-	if err := file.Close(); err != nil {
-		return iodine.New(err, nil)
-	}
 	return nil
 }
 

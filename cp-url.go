@@ -47,27 +47,27 @@ import (
 //   ==================================
 //   copy(*, f)
 
-type cpURLs struct {
+type copyURLs struct {
 	SourceContent *client.Content
 	TargetContent *client.Content
 	Error         error
 }
 
-func (c cpURLs) IsEmpty() bool {
+func (c copyURLs) IsEmpty() bool {
 	if c.SourceContent == nil && c.TargetContent == nil {
 		return true
 	}
 	return false
 }
 
-type cpURLsType uint8
+type copyURLsType uint8
 
 const (
-	cpURLsTypeInvalid cpURLsType = iota
-	cpURLsTypeA
-	cpURLsTypeB
-	cpURLsTypeC
-	cpURLsTypeD
+	copyURLsTypeInvalid copyURLsType = iota
+	copyURLsTypeA
+	copyURLsTypeB
+	copyURLsTypeC
+	copyURLsTypeD
 )
 
 // Check if the target URL represents directory. It may or may not exist yet.
@@ -91,94 +91,94 @@ func isTargetURLDir(targetURL string) bool {
 
 // guessCopyURLType guesses the type of URL. This approach all allows prepareURL
 // functions to accurately report failure causes.
-func guessCopyURLType(sourceURLs []string, targetURL string) cpURLsType {
+func guessCopyURLType(sourceURLs []string, targetURL string) copyURLsType {
 	if strings.TrimSpace(targetURL) == "" || targetURL == "" { // Target is empty
-		return cpURLsTypeInvalid
+		return copyURLsTypeInvalid
 	}
 	if sourceURLs == nil { // Source list is empty
-		return cpURLsTypeInvalid
+		return copyURLsTypeInvalid
 	}
 	if len(sourceURLs) == 1 { // 1 Source, 1 Target
 		switch {
 		// Type C
 		case isURLRecursive(sourceURLs[0]):
-			return cpURLsTypeC
+			return copyURLsTypeC
 		// Type B
 		case isTargetURLDir(targetURL):
-			return cpURLsTypeB
+			return copyURLsTypeB
 		// Type A
 		default:
-			return cpURLsTypeA
+			return copyURLsTypeA
 		}
 	} // else Type D
-	return cpURLsTypeD
+	return copyURLsTypeD
 }
 
 // SINGLE SOURCE - Type A: copy(f, f) -> copy(f, f)
 // prepareCopyURLsTypeA - prepares target and source URLs for copying.
-func prepareCopyURLsTypeA(sourceURL string, targetURL string) <-chan cpURLs {
-	cpURLsCh := make(chan cpURLs, 10000)
-	go func(sourceURL, targetURL string, cpURLsCh chan cpURLs) {
-		defer close(cpURLsCh)
+func prepareCopyURLsTypeA(sourceURL string, targetURL string) <-chan copyURLs {
+	copyURLsCh := make(chan copyURLs, 10000)
+	go func(sourceURL, targetURL string, copyURLsCh chan copyURLs) {
+		defer close(copyURLsCh)
 		_, sourceContent, err := url2Stat(sourceURL)
 		if err != nil {
 			// Source does not exist or insufficient privileges.
-			cpURLsCh <- cpURLs{Error: iodine.New(err, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(err, nil)}
 			return
 		}
 		if !sourceContent.Type.IsRegular() {
 			// Source is not a regular file
-			cpURLsCh <- cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 			return
 		}
 		targetClient, err := target2Client(targetURL)
 		if err != nil {
-			cpURLsCh <- cpURLs{Error: iodine.New(err, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(err, nil)}
 			return
 		}
 		// Target exists?
 		targetContent, err := targetClient.Stat()
 		if err == nil { // Target exists.
 			if !targetContent.Type.IsRegular() { // Target is not a regular file
-				cpURLsCh <- cpURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
+				copyURLsCh <- copyURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
 				return
 			}
 		}
 		// All OK.. We can proceed. Type A
 		sourceContent.Name = sourceURL
-		cpURLsCh <- cpURLs{SourceContent: sourceContent, TargetContent: &client.Content{Name: targetURL}}
-	}(sourceURL, targetURL, cpURLsCh)
-	return cpURLsCh
+		copyURLsCh <- copyURLs{SourceContent: sourceContent, TargetContent: &client.Content{Name: targetURL}}
+	}(sourceURL, targetURL, copyURLsCh)
+	return copyURLsCh
 }
 
 // SINGLE SOURCE - Type B: copy(f, d) -> copy(f, d/f) -> A
 // prepareCopyURLsTypeB - prepares target and source URLs for copying.
-func prepareCopyURLsTypeB(sourceURL string, targetURL string) <-chan cpURLs {
-	cpURLsCh := make(chan cpURLs, 10000)
-	go func(sourceURL, targetURL string, cpURLsCh chan cpURLs) {
-		defer close(cpURLsCh)
+func prepareCopyURLsTypeB(sourceURL string, targetURL string) <-chan copyURLs {
+	copyURLsCh := make(chan copyURLs, 10000)
+	go func(sourceURL, targetURL string, copyURLsCh chan copyURLs) {
+		defer close(copyURLsCh)
 		_, sourceContent, err := url2Stat(sourceURL)
 		if err != nil {
 			// Source does not exist or insufficient privileges.
-			cpURLsCh <- cpURLs{Error: iodine.New(err, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(err, nil)}
 			return
 		}
 
 		if !sourceContent.Type.IsRegular() {
 			// Source is not a regular file.
-			cpURLsCh <- cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 			return
 		}
 
 		_, targetContent, err := url2Stat(targetURL)
 		if err != nil {
-			cpURLsCh <- cpURLs{Error: iodine.New(err, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(err, nil)}
 			return
 		}
 		if err == nil {
 			if !targetContent.Type.IsDir() {
 				// Target exists, but is not a directory.
-				cpURLsCh <- cpURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
+				copyURLsCh <- copyURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
 				return
 			}
 		} // Else name is available to create.
@@ -186,33 +186,33 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) <-chan cpURLs {
 		// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 		sourceURLParse, err := client.Parse(sourceURL)
 		if err != nil {
-			cpURLsCh <- cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 			return
 		}
 
 		targetURLParse, err := client.Parse(targetURL)
 		if err != nil {
-			cpURLsCh <- cpURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
 			return
 		}
 
 		targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
 		for cURLs := range prepareCopyURLsTypeA(sourceURL, targetURLParse.String()) {
-			cpURLsCh <- cURLs
+			copyURLsCh <- cURLs
 		}
-	}(sourceURL, targetURL, cpURLsCh)
-	return cpURLsCh
+	}(sourceURL, targetURL, copyURLsCh)
+	return copyURLsCh
 }
 
 // SINGLE SOURCE - Type C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
 // prepareCopyRecursiveURLTypeC - prepares target and source URLs for copying.
-func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
-	cpURLsCh := make(chan cpURLs, 10000)
-	go func(sourceURL, targetURL string, cpURLsCh chan cpURLs) {
-		defer close(cpURLsCh)
+func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
+	copyURLsCh := make(chan copyURLs, 10000)
+	go func(sourceURL, targetURL string, copyURLsCh chan copyURLs) {
+		defer close(copyURLsCh)
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
-			cpURLsCh <- cpURLs{Error: iodine.New(errSourceNotRecursive{URL: sourceURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errSourceNotRecursive{URL: sourceURL}, nil)}
 			return
 		}
 
@@ -221,13 +221,13 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
 		sourceClient, sourceContent, err := url2Stat(sourceURL)
 		if err != nil {
 			// Source does not exist or insufficient privileges.
-			cpURLsCh <- cpURLs{Error: iodine.New(err, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(err, nil)}
 			return
 		}
 
 		if !sourceContent.Type.IsDir() {
 			// Source is not a dir.
-			cpURLsCh <- cpURLs{Error: iodine.New(errSourceIsNotDir{URL: sourceURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errSourceIsNotDir{URL: sourceURL}, nil)}
 			return
 		}
 
@@ -235,20 +235,20 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
 		// Target exist?
 		if err != nil {
 			// Target does not exist.
-			cpURLsCh <- cpURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}
 			return
 		}
 
 		if !targetContent.Type.IsDir() {
 			// Target exists, but is not a directory.
-			cpURLsCh <- cpURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
 			return
 		}
 
 		for sourceContent := range sourceClient.List(true) {
 			if sourceContent.Err != nil {
 				// Listing failed.
-				cpURLsCh <- cpURLs{Error: iodine.New(sourceContent.Err, nil)}
+				copyURLsCh <- copyURLs{Error: iodine.New(sourceContent.Err, nil)}
 				continue
 			}
 
@@ -260,13 +260,13 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
 			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
-				cpURLsCh <- cpURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
+				copyURLsCh <- copyURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
 				continue
 			}
 
 			targetURLParse, err := client.Parse(targetURL)
 			if err != nil {
-				cpURLsCh <- cpURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
+				copyURLsCh <- copyURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
 				continue
 			}
 
@@ -276,7 +276,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
 			sourceContentURL := sourceURLDelimited + sourceContentName
 			sourceContentParse, err := client.Parse(sourceContentURL)
 			if err != nil {
-				cpURLsCh <- cpURLs{Error: iodine.New(errInvalidSource{URL: sourceContentName}, nil)}
+				copyURLsCh <- copyURLs{Error: iodine.New(errInvalidSource{URL: sourceContentName}, nil)}
 				continue
 			}
 
@@ -284,24 +284,24 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan cpURLs {
 			newTargetURLParse := *targetURLParse
 			newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, sourceContentName)
 			for cURLs := range prepareCopyURLsTypeA(sourceContentParse.String(), newTargetURLParse.String()) {
-				cpURLsCh <- cURLs
+				copyURLsCh <- cURLs
 			}
 
 		}
-	}(sourceURL, targetURL, cpURLsCh)
-	return cpURLsCh
+	}(sourceURL, targetURL, copyURLsCh)
+	return copyURLsCh
 }
 
 // MULTI-SOURCE - Type D: copy([]f, d) -> []B
 // prepareCopyURLsTypeD - prepares target and source URLs for copying.
-func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan cpURLs {
-	cpURLsCh := make(chan cpURLs, 10000)
-	go func(sourceURLs []string, targetURL string, cpURLsCh chan cpURLs) {
-		defer close(cpURLsCh)
+func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan copyURLs {
+	copyURLsCh := make(chan copyURLs, 10000)
+	go func(sourceURLs []string, targetURL string, copyURLsCh chan copyURLs) {
+		defer close(copyURLsCh)
 
 		if sourceURLs == nil {
 			// Source list is empty.
-			cpURLsCh <- cpURLs{Error: iodine.New(errSourceListEmpty{}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errSourceListEmpty{}, nil)}
 			return
 		}
 
@@ -309,13 +309,13 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan cpURLs {
 		// Target exist?
 		if err != nil {
 			// Target does not exist.
-			cpURLsCh <- cpURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}
 			return
 		}
 
 		if !targetContent.Type.IsDir() {
 			// Target exists, but is not a directory.
-			cpURLsCh <- cpURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
 			return
 		}
 
@@ -325,44 +325,44 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan cpURLs {
 			switch isURLRecursive(sourceURL) {
 			case true:
 				for cURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {
-					cpURLsCh <- cURLs
+					copyURLsCh <- cURLs
 				}
 			case false:
 				for cURLs := range prepareCopyURLsTypeB(sourceURL, targetURL) {
-					cpURLsCh <- cURLs
+					copyURLsCh <- cURLs
 				}
 			}
 		}
-	}(sourceURLs, targetURL, cpURLsCh)
-	return cpURLsCh
+	}(sourceURLs, targetURL, copyURLsCh)
+	return copyURLsCh
 }
 
 // prepareCopyURLs - prepares target and source URLs for copying.
-func prepareCopyURLs(sourceURLs []string, targetURL string) <-chan cpURLs {
-	cpURLsCh := make(chan cpURLs, 10000)
-	go func(sourceURLs []string, targetURL string, cpURLsCh chan cpURLs) {
-		defer close(cpURLsCh)
+func prepareCopyURLs(sourceURLs []string, targetURL string) <-chan copyURLs {
+	copyURLsCh := make(chan copyURLs, 10000)
+	go func(sourceURLs []string, targetURL string, copyURLsCh chan copyURLs) {
+		defer close(copyURLsCh)
 		switch guessCopyURLType(sourceURLs, targetURL) {
-		case cpURLsTypeA:
+		case copyURLsTypeA:
 			for cURLs := range prepareCopyURLsTypeA(sourceURLs[0], targetURL) {
-				cpURLsCh <- cURLs
+				copyURLsCh <- cURLs
 			}
-		case cpURLsTypeB:
+		case copyURLsTypeB:
 			for cURLs := range prepareCopyURLsTypeB(sourceURLs[0], targetURL) {
-				cpURLsCh <- cURLs
+				copyURLsCh <- cURLs
 			}
-		case cpURLsTypeC:
+		case copyURLsTypeC:
 			for cURLs := range prepareCopyURLsTypeC(sourceURLs[0], targetURL) {
-				cpURLsCh <- cURLs
+				copyURLsCh <- cURLs
 			}
-		case cpURLsTypeD:
+		case copyURLsTypeD:
 			for cURLs := range prepareCopyURLsTypeD(sourceURLs, targetURL) {
-				cpURLsCh <- cURLs
+				copyURLsCh <- cURLs
 			}
 		default:
-			cpURLsCh <- cpURLs{Error: iodine.New(errInvalidArgument{}, nil)}
+			copyURLsCh <- copyURLs{Error: iodine.New(errInvalidArgument{}, nil)}
 		}
-	}(sourceURLs, targetURL, cpURLsCh)
+	}(sourceURLs, targetURL, copyURLsCh)
 
-	return cpURLsCh
+	return copyURLsCh
 }

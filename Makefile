@@ -16,7 +16,8 @@ getdeps: checkdeps checkgopath
 	@go get github.com/fzipp/gocyclo && echo "Installed gocyclo:"
 	@go get github.com/remyoudompheng/go-misc/deadcode && echo "Installed deadcode:"
 
-verifiers: getdeps vet fmt lint cyclo deadcode
+# verifiers: getdeps vet fmt lint cyclo deadcode
+verifiers: getdeps vet fmt lint cyclo
 
 vet:
 	@echo "Running $@:"

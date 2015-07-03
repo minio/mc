@@ -16,6 +16,7 @@
 
 package main
 
+/*
 import (
 	"bytes"
 	"io/ioutil"
@@ -186,3 +187,4 @@ func (s *CmdTestSuite) TestCpTypeD(c *C) {
 		c.Assert(err, IsNil)
 	}
 }
+*/
