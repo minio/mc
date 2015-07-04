@@ -152,7 +152,7 @@ func newCpBar() barSend {
 		bar.NotPrint = true
 		bar.ShowSpeed = true
 		bar.Callback = func(s string) {
-			console.Bar(s + "\r")
+			console.Bar("\r" + s)
 		}
 		cursorCh := cursorAnimate()
 		// Feels like wget
