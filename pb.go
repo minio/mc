@@ -155,8 +155,11 @@ func newCpBar() barSend {
 			console.Bar("\r" + s)
 		}
 		cursorCh := cursorAnimate()
-		// Feels like wget
-		bar.Format("[=> ]")
+		if runtime.GOOS == "windows" {
+			bar.Format("[=> ]")
+		} else {
+			bar.Format("[▆ ]")
+		}
 		for msg := range cmdCh {
 			switch msg.Cmd {
 			case pbBarCmdSetCaption:
