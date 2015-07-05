@@ -6,10 +6,6 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/cheggaaa/pb",
-			"Rev": "e648e12b78cedf14ebb2fc1855033f07b034cfbb"
-		},
-		{
 			"ImportPath": "github.com/dustin/go-humanize",
 			"Rev": "8cc1aaa2d955ee82833337cfb10babc42be6bce6"
 		},
@@ -39,6 +35,10 @@
 			"ImportPath": "github.com/minio/minio/pkg/iodine",
 			"Comment": "release-1434511043-18-g792e6c2",
 			"Rev": "792e6c2d3a0bee392abd049e70f0cad52a5f8320"
+		},
+		{
+			"ImportPath": "github.com/minio/pb",
+			"Rev": "48437da7a8df656ce8a124f49c97dc88421cf528"
 		},
 		{
 			"ImportPath": "github.com/olekukonko/ts",
