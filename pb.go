@@ -158,7 +158,7 @@ func newCpBar() barSend {
 		if runtime.GOOS == "windows" {
 			bar.Format("[=> ]")
 		} else {
-			bar.Format("[▆ ]")
+			bar.Format("┃▒▓░┃")
 		}
 		for msg := range cmdCh {
 			switch msg.Cmd {
