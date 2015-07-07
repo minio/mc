@@ -30,6 +30,7 @@ import (
 	"sync"
 
 	"github.com/fatih/structs"
+	"github.com/minio/mc/pkg/atomic"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -115,13 +116,10 @@ func (d config) Save(filename string) (err error) {
 		return iodine.New(err, nil)
 	}
 
-	tmpfile := filename + ".tmp"
-
-	file, err := os.OpenFile(tmpfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	file, err := atomic.FileCreate(filename)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	defer file.Close()
 
 	if runtime.GOOS == "windows" {
 		jsonData = []byte(strings.Replace(string(jsonData), "\n", "\r\n", -1))
@@ -130,8 +128,8 @@ func (d config) Save(filename string) (err error) {
 	if err != nil {
 		return iodine.New(err, nil)
 	}
-	err = os.Rename(tmpfile, filename)
-	if err != nil {
+
+	if err := file.Close(); err != nil {
 		return iodine.New(err, nil)
 	}
 	return nil
