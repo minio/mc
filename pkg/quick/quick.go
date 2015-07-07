@@ -115,7 +115,9 @@ func (d config) Save(filename string) (err error) {
 		return iodine.New(err, nil)
 	}
 
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	tmpfile := filename + ".tmp"
+
+	file, err := os.OpenFile(tmpfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
@@ -125,6 +127,10 @@ func (d config) Save(filename string) (err error) {
 		jsonData = []byte(strings.Replace(string(jsonData), "\n", "\r\n", -1))
 	}
 	_, err = file.Write(jsonData)
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+	err = os.Rename(tmpfile, filename)
 	if err != nil {
 		return iodine.New(err, nil)
 	}
