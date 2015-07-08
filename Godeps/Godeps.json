@@ -28,17 +28,17 @@
 		},
 		{
 			"ImportPath": "github.com/minio/minio-go",
-			"Comment": "v0.1.0",
-			"Rev": "115db4940219a4cb142281d0ee216d85599bd4b9"
+			"Comment": "v0.1.0-5-g1a605dc",
+			"Rev": "1a605dcbedc298fe5d2da0840220a79a7c756298"
 		},
 		{
 			"ImportPath": "github.com/minio/minio/pkg/iodine",
-			"Comment": "release-1434511043-18-g792e6c2",
-			"Rev": "792e6c2d3a0bee392abd049e70f0cad52a5f8320"
+			"Comment": "release-1434511043-154-g784d403",
+			"Rev": "784d4033f73452ab9f20643da9f9085f638e705e"
 		},
 		{
 			"ImportPath": "github.com/minio/pb",
-			"Rev": "48437da7a8df656ce8a124f49c97dc88421cf528"
+			"Rev": "e3e099c334cd89a6fe993f0683eaafd85604290f"
 		},
 		{
 			"ImportPath": "github.com/olekukonko/ts",

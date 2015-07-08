@@ -47,7 +47,7 @@ func (h bucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			fallthrough
 		case r.URL.Path == "/bucket":
-			response := []byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Contents><ETag>259d04a13802ae09c7e41be50ccc6baa</ETag><Key>object</Key><LastModified>2015-05-21T18:24:21.097Z</LastModified><Size>22061</Size><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Delimiter></Delimiter><EncodingType></EncodingType><IsTruncated>false</IsTruncated><Marker></Marker><MaxKeys>1000</MaxKeys><Name>testbucket</Name><NextMarker></NextMarker><Prefix></Prefix></ListBucketResult>")
+			response := []byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Contents><ETag>\"259d04a13802ae09c7e41be50ccc6baa\"</ETag><Key>object</Key><LastModified>2015-05-21T18:24:21.097Z</LastModified><Size>22061</Size><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Delimiter></Delimiter><EncodingType></EncodingType><IsTruncated>false</IsTruncated><Marker></Marker><MaxKeys>1000</MaxKeys><Name>testbucket</Name><NextMarker></NextMarker><Prefix></Prefix></ListBucketResult>")
 			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
 			w.Write(response)
 		}
@@ -106,7 +106,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
+		w.Header().Set("ETag", "\"9af2f8218b150c351ad802c6f3d66abe\"")
 		w.WriteHeader(http.StatusOK)
 	case r.Method == "HEAD":
 		if r.URL.Path != h.resource {
@@ -115,7 +115,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(len(h.data)))
 		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
-		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
+		w.Header().Set("ETag", "\"9af2f8218b150c351ad802c6f3d66abe\"")
 		w.WriteHeader(http.StatusOK)
 	case r.Method == "POST":
 		_, ok := r.URL.Query()["uploads"]
@@ -144,7 +144,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(len(h.data)))
 		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
-		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
+		w.Header().Set("ETag", "\"9af2f8218b150c351ad802c6f3d66abe\"")
 		w.WriteHeader(http.StatusOK)
 		io.Copy(w, bytes.NewReader(h.data))
 	case r.Method == "DELETE":
