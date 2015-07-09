@@ -47,9 +47,8 @@ func getHostConfig(URL string) (*hostConfig, error) {
 		}
 		return hostCfg, nil
 	}
-
-	// No host matching or keys needed for localhost and 127.0.0.1 URL's skip them
-	if strings.Contains(url.Host, "localhost") || strings.Contains(url.Host, "127.0.0.1") {
+	// No host matching or keys needed for 127.0.0.1 URL's skip them
+	if strings.Contains(url.Host, "127.0.0.1") {
 		hostCfg := &hostConfig{
 			AccessKeyID:     "",
 			SecretAccessKey: "",
