@@ -3,5 +3,6 @@
 
 - Anand Babu (AB) Periasamy <ab@unlocksmith.org>
 - Anis Elleuch <vadmeste@gmail.com>
+- Bosky <bosky@helpshift.com>
 - Frederick F. Kautz IV <fkautz@minio.io>
 - Harshavardhana <harsha@minio.io>
