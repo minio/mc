@@ -138,7 +138,7 @@ func (r *request) getHashedPayload() string {
 		}
 	}
 	hashedPayload := hash()
-	r.req.Header.Add("X-Amz-Content-Sha256", hashedPayload)
+	r.req.Header.Add("x-amz-content-sha256", hashedPayload)
 	return hashedPayload
 }
 
@@ -256,7 +256,7 @@ func (r *request) SignV4() {
 	t := time.Now().UTC()
 	// Add date if not present
 	if date := r.Get("Date"); date == "" {
-		r.Set("X-Amz-Date", t.Format(iso8601Format))
+		r.Set("x-amz-date", t.Format(iso8601Format))
 	}
 
 	hashedPayload := r.getHashedPayload()
