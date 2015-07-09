@@ -97,10 +97,10 @@ func (a lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, pre
 		return listMultipartUploadsResult{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return listMultipartUploadsResult{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return listMultipartUploadsResult{}, a.responseToError(resp.Body)
@@ -136,10 +136,10 @@ func (a lowLevelAPI) initiateMultipartUpload(bucket, object string) (initiateMul
 		return initiateMultipartUploadResult{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return initiateMultipartUploadResult{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return initiateMultipartUploadResult{}, a.responseToError(resp.Body)
@@ -192,10 +192,10 @@ func (a lowLevelAPI) completeMultipartUpload(bucket, object, uploadID string, c 
 		return completeMultipartUploadResult{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return completeMultipartUploadResult{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return completeMultipartUploadResult{}, a.responseToError(resp.Body)
@@ -230,6 +230,7 @@ func (a lowLevelAPI) abortMultipartUpload(bucket, object, uploadID string) error
 		return err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return err
 	}
@@ -256,7 +257,7 @@ func (a lowLevelAPI) abortMultipartUpload(bucket, object, uploadID string) error
 			return errorResponse
 		}
 	}
-	return resp.Body.Close()
+	return nil
 }
 
 // listObjectPartsRequest wrapper creates a new ListObjectParts request
@@ -294,10 +295,10 @@ func (a lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumber
 		return listObjectPartsResult{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return listObjectPartsResult{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return listObjectPartsResult{}, a.responseToError(resp.Body)
@@ -344,10 +345,10 @@ func (a lowLevelAPI) uploadPart(bucket, object, uploadID string, md5SumBytes []b
 
 	// initiate the request
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return completePart{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return completePart{}, a.responseToError(resp.Body)

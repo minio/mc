@@ -35,6 +35,13 @@ type lowLevelAPI struct {
 	config *Config
 }
 
+// closeResp close non nil response with any response Body
+func closeResp(resp *http.Response) {
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+}
+
 // putBucketRequest wrapper creates a new putBucket request
 func (a lowLevelAPI) putBucketRequest(bucket, acl, location string) (*request, error) {
 	var r *request
@@ -118,10 +125,10 @@ func (a lowLevelAPI) putBucket(bucket, acl, location string) error {
 		return err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return a.responseToError(resp.Body)
@@ -152,10 +159,10 @@ func (a lowLevelAPI) putBucketACL(bucket, acl string) error {
 		return err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return a.responseToError(resp.Body)
@@ -185,10 +192,10 @@ func (a lowLevelAPI) getBucketACL(bucket string) (accessControlPolicy, error) {
 		return accessControlPolicy{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return accessControlPolicy{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return accessControlPolicy{}, a.responseToError(resp.Body)
@@ -232,10 +239,10 @@ func (a lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 		return "", err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return "", a.responseToError(resp.Body)
@@ -315,10 +322,10 @@ func (a lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxke
 		return listBucketResult{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return listBucketResult{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return listBucketResult{}, a.responseToError(resp.Body)
@@ -353,10 +360,10 @@ func (a lowLevelAPI) headBucket(bucket string) error {
 		return err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			// Head has no response body, handle it
@@ -407,10 +414,10 @@ func (a lowLevelAPI) deleteBucket(bucket string) error {
 		return err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			var errorResponse ErrorResponse
@@ -471,10 +478,10 @@ func (a lowLevelAPI) putObject(bucket, object, contentType string, md5SumBytes [
 		return ObjectStat{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return ObjectStat{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			return ObjectStat{}, a.responseToError(resp.Body)
@@ -582,10 +589,10 @@ func (a lowLevelAPI) deleteObject(bucket, object string) error {
 		return err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			var errorResponse ErrorResponse
@@ -638,10 +645,10 @@ func (a lowLevelAPI) headObject(bucket, object string) (ObjectStat, error) {
 		return ObjectStat{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return ObjectStat{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			var errorResponse ErrorResponse
@@ -703,10 +710,10 @@ func (a lowLevelAPI) listBuckets() (listAllMyBucketsResult, error) {
 		return listAllMyBucketsResult{}, err
 	}
 	resp, err := req.Do()
+	defer closeResp(resp)
 	if err != nil {
 		return listAllMyBucketsResult{}, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		// for un-authenticated requests, amazon sends a redirect handle it
 		if resp.StatusCode == http.StatusTemporaryRedirect {
