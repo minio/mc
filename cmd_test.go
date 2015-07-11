@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 
 	"net/http/httptest"
@@ -55,7 +56,7 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	_, err = doConfig("generate", nil)
 	c.Assert(err, IsNil)
 
-	objectAPI := objectAPIHandler(objectAPIHandler{bucket: "bucket", object: make(map[string][]byte)})
+	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
 	server = httptest.NewServer(objectAPI)
 }
 
