@@ -22,15 +22,19 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 )
 
 type objectAPIHandler struct {
+	lock   *sync.Mutex
 	bucket string
 	object map[string][]byte
 }
 
 func (h objectAPIHandler) getHandler(w http.ResponseWriter, r *http.Request) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	switch {
 	case r.URL.Path == "/":
 		response := []byte("<ListAllMyBucketsResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Buckets><Bucket><Name>bucket</Name><CreationDate>2015-05-20T23:05:09.230Z</CreationDate></Bucket></Buckets><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner></ListAllMyBucketsResult>")
@@ -53,6 +57,8 @@ func (h objectAPIHandler) getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h objectAPIHandler) headHandler(w http.ResponseWriter, r *http.Request) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	switch {
 	case r.URL.Path == "/":
 		w.WriteHeader(http.StatusOK)
@@ -70,6 +76,8 @@ func (h objectAPIHandler) headHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h objectAPIHandler) putHandler(w http.ResponseWriter, r *http.Request) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	switch {
 	case r.URL.Path == "/":
 		w.WriteHeader(http.StatusBadRequest)
