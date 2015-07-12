@@ -18,6 +18,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/minio/mc/pkg/console"
@@ -32,18 +33,25 @@ type ErrorMessage struct {
 
 // String string printer for error message
 func (e ErrorMessage) String() string {
-	var message string
-	if e.Error != nil {
-		switch e.Error.(type) {
-		case iodine.Error:
-			reason := iodine.ToError(e.Error).Error()
-			message = reason
-		default:
-			reason := e.Error.Error()
-			message = reason
+	if !globalJSONFlag {
+		var message string
+		if e.Error != nil {
+			switch e.Error.(type) {
+			case iodine.Error:
+				reason := iodine.ToError(e.Error).Error()
+				message = reason
+			default:
+				reason := e.Error.Error()
+				message = reason
+			}
 		}
+		return message
 	}
-	return message
+	eBytes, err := json.Marshal(iodine.ToError(e.Error))
+	if err != nil {
+		panic(err)
+	}
+	return string(eBytes)
 }
 
 // Content container for content message structure
@@ -56,15 +64,22 @@ type Content struct {
 
 // String string printer for Content metadata
 func (c Content) String() string {
-	message := console.Time("[%s] ", c.Time)
-	message = message + console.Size("%6s ", c.Size)
-	message = func() string {
-		if c.Filetype == "directory" {
-			return message + console.Dir("%s", c.Name)
-		}
-		return message + console.File("%s", c.Name)
-	}()
-	return message
+	if !globalJSONFlag {
+		message := console.Time("[%s] ", c.Time)
+		message = message + console.Size("%6s ", c.Size)
+		message = func() string {
+			if c.Filetype == "directory" {
+				return message + console.Dir("%s", c.Name)
+			}
+			return message + console.File("%s", c.Name)
+		}()
+		return message
+	}
+	cBytes, err := json.Marshal(c)
+	if err != nil {
+		panic(err)
+	}
+	return string(cBytes)
 }
 
 // InfoMessage container for informational messages
@@ -86,7 +101,14 @@ type CopyMessage struct {
 
 // String string printer for copy message
 func (c CopyMessage) String() string {
-	return fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target)
+	if !globalJSONFlag {
+		return fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target)
+	}
+	cBytes, err := json.Marshal(c)
+	if err != nil {
+		panic(err)
+	}
+	return string(cBytes)
 }
 
 // SyncMessage container for file sync messages, inherits CopyMessage
@@ -98,5 +120,12 @@ type SyncMessage struct {
 
 // String string printer for sync message
 func (s SyncMessage) String() string {
-	return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets)
+	if !globalJSONFlag {
+		return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets)
+	}
+	sBytes, err := json.Marshal(s)
+	if err != nil {
+		panic(err)
+	}
+	return string(sBytes)
 }
