@@ -17,7 +17,6 @@
 package console
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -25,16 +24,12 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
-	"github.com/fatih/structs"
 	"github.com/minio/minio/pkg/iodine"
 	"github.com/shiena/ansicolor"
 )
 
 // NoDebugPrint defines if the input should be printed in debug or not. By default it's set to true.
 var NoDebugPrint = true
-
-// NoJsonPrint defines if the input should be printed in json formatted or not. By default it's set to true.
-var NoJSONPrint = true
 
 // Theme holds console color scheme
 type Theme struct {
@@ -51,15 +46,6 @@ type Theme struct {
 	JSON      *color.Color
 	Bar       *color.Color
 	Print     *color.Color
-}
-
-func readErrorFromData(data interface{}) error {
-	st := structs.New(data)
-	if st.IsZero() {
-		return nil
-	}
-	msgErr := st.Field("Error")
-	return msgErr.Value().(error)
 }
 
 var (
@@ -92,230 +78,120 @@ var (
 
 	// Print prints a message
 	Print = func(data ...interface{}) {
-		if NoJSONPrint {
-			print(themesDB[currThemeName].Print, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			printBytes, _ := json.Marshal(&data[i])
-			print(themesDB[currThemeName].JSON, string(printBytes))
-		}
+		print(themesDB[currThemeName].Print, data...)
+		return
 	}
 
 	// Printf prints a formatted message
 	Printf = func(f string, data ...interface{}) {
-		if NoJSONPrint {
-			printf(themesDB[currThemeName].Print, f, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			printBytes, _ := json.Marshal(&data[i])
-			printf(themesDB[currThemeName].JSON, "", string(printBytes))
-		}
+		printf(themesDB[currThemeName].Print, f, data...)
+		return
 	}
 
 	// Println prints a message with a newline
 	Println = func(data ...interface{}) {
-		if NoJSONPrint {
-			println(themesDB[currThemeName].Print, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			printBytes, _ := json.Marshal(&data[i])
-			println(themesDB[currThemeName].JSON, string(printBytes))
-		}
+		println(themesDB[currThemeName].Print, data...)
 	}
 
 	// Prints prints a structured message with a newline
 	Prints = func(data ...interface{}) {
-		for i := 0; i < len(data); i++ {
-			if NoJSONPrint {
-				println(themesDB[currThemeName].Print, data[i])
-				return
-			}
-			infoBytes, _ := json.Marshal(&data[i])
-			println(themesDB[currThemeName].JSON, string(infoBytes))
-		}
+		println(themesDB[currThemeName].Print, data...)
+		return
 	}
 	// Fatal print a error message and exit
 	Fatal = func(data ...interface{}) {
 		defer os.Exit(1)
-		if NoJSONPrint {
-			print(themesDB[currThemeName].Error, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			errorMessageBytes, _ := json.Marshal(&data[i])
-			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
-		}
+		print(themesDB[currThemeName].Error, data...)
+		return
 	}
 
 	// Fatalf print a error message with a format specified and exit
 	Fatalf = func(f string, data ...interface{}) {
 		defer os.Exit(1)
-		if NoJSONPrint {
-			printf(themesDB[currThemeName].Error, f, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			errorMessageBytes, _ := json.Marshal(&data[i])
-			printf(themesDB[currThemeName].JSON, "", string(errorMessageBytes))
-		}
+		printf(themesDB[currThemeName].Error, f, data...)
+		return
 	}
 
 	// Fatalln print a error message with a new line and exit
 	Fatalln = func(data ...interface{}) {
 		defer os.Exit(1)
-		if NoJSONPrint {
-			println(themesDB[currThemeName].Error, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			errorMessageBytes, _ := json.Marshal(&data[i])
-			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
-		}
+		println(themesDB[currThemeName].Error, data...)
+		return
 	}
 
 	// Fatals print a error structure with a new line and exit
 	Fatals = func(data ...interface{}) {
 		defer os.Exit(1)
-		for i := 0; i < len(data); i++ {
-			err := readErrorFromData(data[i])
-			if err != nil {
-				if NoJSONPrint {
-					println(themesDB[currThemeName].Error, data[i])
-					if !NoDebugPrint {
-						println(themesDB[currThemeName].Error, err)
-					}
-					return
-				}
-				errorMessageBytes, _ := json.Marshal(&data[i])
-				println(themesDB[currThemeName].JSON, string(errorMessageBytes))
-			}
-		}
+		println(themesDB[currThemeName].Error, data...)
+		return
 	}
 
 	// Error prints a error message
 	Error = func(data ...interface{}) {
-		if NoJSONPrint {
-			print(themesDB[currThemeName].Error, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			errorMessageBytes, _ := json.Marshal(&data[i])
-			print(themesDB[currThemeName].JSON, string(errorMessageBytes))
-		}
+		print(themesDB[currThemeName].Error, data...)
+		return
 	}
 
 	// Errorf print a error message with a format specified
 	Errorf = func(f string, data ...interface{}) {
-		if NoJSONPrint {
-			printf(themesDB[currThemeName].Error, f, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			errorMessageBytes, _ := json.Marshal(&data[i])
-			printf(themesDB[currThemeName].JSON, "", string(errorMessageBytes))
-		}
+		printf(themesDB[currThemeName].Error, f, data...)
+		return
 	}
 
 	// Errorln prints a error message with a new line
 	Errorln = func(data ...interface{}) {
-		if NoJSONPrint {
-			println(themesDB[currThemeName].Error, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			errorMessageBytes, _ := json.Marshal(&data[i])
-			println(themesDB[currThemeName].JSON, string(errorMessageBytes))
-		}
+		println(themesDB[currThemeName].Error, data...)
+		return
 	}
 
 	// Errors print a error structure with a new line
 	Errors = func(data ...interface{}) {
-		for i := 0; i < len(data); i++ {
-			err := readErrorFromData(data[i])
-			if err != nil {
-				if NoJSONPrint {
-					println(themesDB[currThemeName].Error, data[i])
-					if !NoDebugPrint {
-						println(themesDB[currThemeName].Error, err)
-					}
-					return
-				}
-				errorMessageBytes, _ := json.Marshal(&data[i])
-				println(themesDB[currThemeName].JSON, string(errorMessageBytes))
-			}
-		}
+		println(themesDB[currThemeName].Error, data...)
 	}
 
 	// Info prints a informational message
 	Info = func(data ...interface{}) {
-		if NoJSONPrint {
-			print(themesDB[currThemeName].Info, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			infoBytes, _ := json.Marshal(&data[i])
-			print(themesDB[currThemeName].JSON, string(infoBytes))
-		}
+		print(themesDB[currThemeName].Info, data...)
+		return
 	}
 
 	// Infof prints a informational message in custom format
 	Infof = func(f string, data ...interface{}) {
-		if NoJSONPrint {
-			printf(themesDB[currThemeName].Info, f, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			infoBytes, _ := json.Marshal(&data[i])
-			printf(themesDB[currThemeName].JSON, "", string(infoBytes))
-		}
+		printf(themesDB[currThemeName].Info, f, data...)
+		return
 	}
 
 	// Infoln prints a informational message with a new line
 	Infoln = func(data ...interface{}) {
-		if NoJSONPrint {
-			println(themesDB[currThemeName].Info, data...)
-			return
-		}
-		for i := 0; i < len(data); i++ {
-			infoBytes, _ := json.Marshal(&data[i])
-			println(themesDB[currThemeName].JSON, string(infoBytes))
-		}
+		println(themesDB[currThemeName].Info, data...)
+		return
 	}
 
 	// Infos print a informational structured message
 	Infos = func(data ...interface{}) {
-		for i := 0; i < len(data); i++ {
-			if NoJSONPrint {
-				println(themesDB[currThemeName].Info, data[i])
-				return
-			}
-			infoBytes, _ := json.Marshal(&data[i])
-			println(themesDB[currThemeName].JSON, string(infoBytes))
-		}
+		println(themesDB[currThemeName].Info, data...)
+		return
 	}
 
 	// Debug prints a debug message without a new line
 	// Debug prints a debug message
-	Debug = func(a ...interface{}) {
+	Debug = func(data ...interface{}) {
 		if !NoDebugPrint {
-			print(themesDB[currThemeName].Debug, a...)
+			print(themesDB[currThemeName].Debug, data...)
 		}
 	}
 
 	// Debugf prints a debug message with a new line
-	Debugf = func(f string, a ...interface{}) {
+	Debugf = func(f string, data ...interface{}) {
 		if !NoDebugPrint {
-			printf(themesDB[currThemeName].Debug, f, a...)
+			printf(themesDB[currThemeName].Debug, f, data...)
 		}
 	}
 
 	// Debugln prints a debug message with a new line
-	Debugln = func(a ...interface{}) {
+	Debugln = func(data ...interface{}) {
 		if !NoDebugPrint {
-			println(themesDB[currThemeName].Debug, a...)
+			println(themesDB[currThemeName].Debug, data...)
 		}
 	}
 

@@ -117,9 +117,6 @@ func main() {
 			app.ExtraInfo = getSystemData()
 			console.NoDebugPrint = false
 		}
-		if globalJSONFlag {
-			console.NoJSONPrint = false
-		}
 		themeName := ctx.GlobalString("theme")
 		switch {
 		case console.IsValidTheme(themeName) != true:
