@@ -92,31 +92,8 @@ func clearSession(sid string) {
 
 func sessionExecute(s *sessionV2) {
 	switch s.Header.CommandType {
-	/*
-				case "cp":
-					for cps := range doCopyCmdSession(bar, s) {
-		  				if cps.Error != nil {
-							console.Errors(ErrorMessage{
-								Message: "Failed with",
-								Error:   iodine.New(cps.Error, nil),
-							})
-						}
-						if cps.Done {
-							if err := saveSessionV2(s); err != nil {
-								console.Fatals(ErrorMessage{
-									Message: "Failed with",
-									Error:   iodine.New(err, nil),
-								})
-							}
-							console.Println()
-							console.Infos(InfoMessage{
-								Message: "Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
-							})
-							// this os.Exit is needed really to exit in-case of "os.Interrupt"
-							os.Exit(0)
-						}
-					}
-	*/
+	case "cp":
+		doCopyCmdSession(s)
 	case "sync":
 		doSyncCmdSession(s)
 	}
