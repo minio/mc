@@ -32,16 +32,13 @@ import (
 	"github.com/minio/mc/pkg/quick"
 )
 
+var customConfigDir string
+
 func Test(t *testing.T) { TestingT(t) }
 
 type CmdTestSuite struct{}
 
 var _ = Suite(&CmdTestSuite{})
-
-func mustGetMcConfigDir() string {
-	dir, _ := getMcConfigDir()
-	return dir
-}
 
 var server *httptest.Server
 
@@ -49,9 +46,17 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	// do not set it elsewhere, leads to data races since this is a global flag
 	globalQuietFlag = true
 
-	configDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
+	tmpDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
-	customConfigDir = configDir
+
+	// For windows the path is slightly different.
+	if runtime.GOOS == "windows" {
+		customConfigDir = filepath.Join(tmpDir, mcConfigWindowsDir)
+
+	} else {
+		customConfigDir = filepath.Join(tmpDir, mcConfigDir)
+	}
+	setMcConfigDir(customConfigDir)
 
 	_, err = doConfig("generate", nil)
 	c.Assert(err, IsNil)
@@ -158,9 +163,9 @@ func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
 	case "freebsd":
 		fallthrough
 	case "darwin":
-		c.Assert(dir, Equals, filepath.Join(customConfigDir, mcConfigDir))
+		c.Assert(dir, Equals, customConfigDir)
 	case "windows":
-		c.Assert(dir, Equals, filepath.Join(customConfigDir, mcConfigWindowsDir))
+		c.Assert(dir, Equals, customConfigDir)
 	default:
 		c.Fail()
 	}

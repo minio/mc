@@ -31,6 +31,12 @@ var commands = []cli.Command{}
 var flags = []cli.Flag{}
 
 var (
+	configFlag = cli.StringFlag{
+		Name:  "config, C",
+		Value: mustGetMcConfigDir(),
+		Usage: "Path to configuration directory",
+	}
+
 	quietFlag = cli.BoolFlag{
 		Name:  "quiet, q",
 		Usage: "Suppress chatty console output",
