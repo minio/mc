@@ -109,7 +109,7 @@ func (s *sessionV2) String() string {
 
 func (s *sessionV2) Info() {
 	console.Infos(InfoMessage{
-		Message: "\nSession terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
+		Message: "Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
 	})
 }
 
