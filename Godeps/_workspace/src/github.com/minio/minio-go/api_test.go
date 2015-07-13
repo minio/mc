@@ -138,6 +138,53 @@ func TestBucketOperations(t *testing.T) {
 	}
 }
 
+func TestBucketOperationsFail(t *testing.T) {
+	bucket := bucketHandler(bucketHandler{
+		resource: "/bucket",
+	})
+	server := httptest.NewServer(bucket)
+	defer server.Close()
+
+	a, err := New(Config{Endpoint: server.URL})
+	if err != nil {
+		t.Errorf("Error")
+	}
+	err = a.MakeBucket("bucket$$$", "private")
+	if err == nil {
+		t.Errorf("Error")
+	}
+
+	err = a.BucketExists("bucket.")
+	if err == nil {
+		t.Errorf("Error")
+	}
+
+	err = a.SetBucketACL("bucket-.", "public-read-write")
+	if err == nil {
+		t.Errorf("Error")
+	}
+
+	_, err = a.GetBucketACL("bucket??")
+	if err == nil {
+		t.Errorf("Error")
+	}
+
+	for o := range a.ListObjects("bucket??", "", true) {
+		if o.Err == nil {
+			t.Fatalf(o.Err.Error())
+		}
+	}
+
+	err = a.RemoveBucket("bucket??")
+	if err == nil {
+		t.Errorf("Error")
+	}
+
+	if err.Error() != "The specified bucket is not valid." {
+		t.Errorf("Error")
+	}
+}
+
 func TestObjectOperations(t *testing.T) {
 	object := objectHandler(objectHandler{
 		resource: "/bucket/object",
