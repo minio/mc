@@ -51,9 +51,6 @@ FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
 
-
-
-
 EXAMPLES:
    1. Copy list of objects from local file system to Amazon S3 object storage.
       $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/
