@@ -73,17 +73,14 @@ EXAMPLES:
 // doCopy - Copy a singe file from source to destination
 func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup) error {
 	defer wg.Done() // Notify that this copy routine is done.
-	defer func() {  // Notify the copy queue that it is free to pickup next routine.
-		<-cpQueue
-	}()
 
-	if !globalQuietFlag {
+	if !globalQuietFlag || !globalJSONFlag {
 		bar.SetCaption(cpURLs.SourceContent.Name + ": ")
 	}
 
 	reader, length, err := getSource(cpURLs.SourceContent.Name)
 	if err != nil {
-		if !globalQuietFlag {
+		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(length)
 		}
 		return iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name})
@@ -105,11 +102,13 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 
 	err = putTarget(cpURLs.TargetContent.Name, length, newReader)
 	if err != nil {
-		if !globalQuietFlag {
+		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorPut(length)
 		}
 		return iodine.New(err, map[string]string{"URL": cpURLs.TargetContent.Name})
 	}
+
+	<-cpQueue // Notify the copy queue that it is free to pickup next routine.
 
 	return nil
 }
@@ -186,11 +185,10 @@ func doCopyCmdSession(session *sessionV2) {
 	defer close(cpQueue)
 
 	scanner := bufio.NewScanner(session.NewDataReader())
-
 	isCopied := isCopiedFactory(session.Header.LastCopied)
 
 	var bar barSend
-	if !globalQuietFlag { // set up progress bar
+	if !globalQuietFlag || !globalJSONFlag { // set up progress bar
 		bar = newCpBar()
 		defer bar.Finish()
 		bar.Extend(session.Header.TotalBytes)
