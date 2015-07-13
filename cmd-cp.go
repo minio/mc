@@ -181,12 +181,6 @@ func doCopyCmdSession(session *sessionV2) {
 		doPrepareCopyURLs(session, trapCh)
 	}
 
-	var bar barSend
-	if !globalQuietFlag { // set up progress bar
-		bar = newCpBar()
-		defer bar.Finish()
-	}
-
 	wg := new(sync.WaitGroup)
 	cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
 	defer close(cpQueue)
@@ -195,7 +189,12 @@ func doCopyCmdSession(session *sessionV2) {
 
 	isCopied := isCopiedFactory(session.Header.LastCopied)
 
-	bar.Extend(session.Header.TotalBytes)
+	var bar barSend
+	if !globalQuietFlag { // set up progress bar
+		bar = newCpBar()
+		defer bar.Finish()
+		bar.Extend(session.Header.TotalBytes)
+	}
 
 	for scanner.Scan() {
 		var cpURLs copyURLs
