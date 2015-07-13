@@ -49,7 +49,7 @@ import (
 type syncURLs struct {
 	SourceContent  *client.Content
 	TargetContents []*client.Content
-	Error          error
+	Error          error `json:"-"`
 }
 
 func (s syncURLs) IsEmpty() bool {
@@ -68,26 +68,26 @@ func (s syncURLs) IsEmpty() bool {
 	return empty
 }
 
-type syncURLsType cpURLsType
+type syncURLsType copyURLsType
 
 // guessSyncURLType guesses the type of URL. This approach all allows prepareURL
 // functions to accurately report failure causes.
 func guessSyncURLType(sourceURL string, targetURLs []string) syncURLsType {
 	if targetURLs == nil { // Target is empty
-		return syncURLsType(cpURLsTypeInvalid)
+		return syncURLsType(copyURLsTypeInvalid)
 	}
 	if sourceURL == "" { // Source list is empty
-		return syncURLsType(cpURLsTypeInvalid)
+		return syncURLsType(copyURLsTypeInvalid)
 	}
 	if isURLRecursive(sourceURL) { // Type C
-		return syncURLsType(cpURLsTypeC)
+		return syncURLsType(copyURLsTypeC)
 	} // else Type A or Type B
 	for _, targetURL := range targetURLs {
 		if isTargetURLDir(targetURL) { // Type B
-			return syncURLsType(cpURLsTypeB)
+			return syncURLsType(copyURLsTypeB)
 		}
 	} // else Type A
-	return syncURLsType(cpURLsTypeA)
+	return syncURLsType(copyURLsTypeA)
 }
 
 // prepareSyncURLsTypeA - A: sync(f, f) -> copy(f, f)
@@ -97,7 +97,7 @@ func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) <-chan syncURLs
 		defer close(syncURLsCh)
 		var sURLs syncURLs
 		for _, targetURL := range targetURLs {
-			var cURLs cpURLs
+			var cURLs copyURLs
 			for cURLs = range prepareCopyURLsTypeA(sourceURL, targetURL) {
 				if cURLs.Error != nil {
 					syncURLsCh <- syncURLs{Error: iodine.New(cURLs.Error, nil)}
@@ -121,7 +121,7 @@ func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) <-chan syncURLs
 		defer close(syncURLsCh)
 		var sURLs syncURLs
 		for _, targetURL := range targetURLs {
-			var cURLs cpURLs
+			var cURLs copyURLs
 			for cURLs = range prepareCopyURLsTypeB(sourceURL, targetURL) {
 				if cURLs.Error != nil {
 					syncURLsCh <- syncURLs{Error: iodine.New(cURLs.Error, nil)}
@@ -231,15 +231,15 @@ func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
 	go func() {
 		defer close(syncURLsCh)
 		switch guessSyncURLType(sourceURL, targetURLs) {
-		case syncURLsType(cpURLsTypeA):
+		case syncURLsType(copyURLsTypeA):
 			for sURLs := range prepareSyncURLsTypeA(sourceURL, targetURLs) {
 				syncURLsCh <- sURLs
 			}
-		case syncURLsType(cpURLsTypeB):
+		case syncURLsType(copyURLsTypeB):
 			for sURLs := range prepareSyncURLsTypeB(sourceURL, targetURLs) {
 				syncURLsCh <- sURLs
 			}
-		case syncURLsType(cpURLsTypeC):
+		case syncURLsType(copyURLsTypeC):
 			for sURLs := range prepareSyncURLsTypeC(sourceURL, targetURLs) {
 				syncURLsCh <- sURLs
 			}

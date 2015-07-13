@@ -78,11 +78,19 @@ func getSystemData() map[string]string {
 	}
 }
 
+func migrate() {
+	// Migrate session files if any.
+	migrateSession()
+}
+
 func main() {
-	// enable GOMAXPROCS to default to number of CPUs
+	// Migrate any old version of config / state files to newer format.
+	migrate()
+
+	// Enable GOMAXPROCS to default to number of CPUs.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// register all the commands
+	// Register all the commands
 	registerCmd(lsCmd)      // List contents of a bucket
 	registerCmd(mbCmd)      // make a bucket
 	registerCmd(catCmd)     // concantenate an object to standard output

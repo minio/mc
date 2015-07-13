@@ -17,17 +17,17 @@
 package main
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"os"
-	"os/signal"
 	"runtime"
 	"sync"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/countlock"
 	"github.com/minio/mc/pkg/yielder"
 	"github.com/minio/minio/pkg/iodine"
 )
@@ -69,34 +69,25 @@ EXAMPLES:
 `,
 }
 
-// doSyncSession - Sync an object to multiple destination
-func doSyncSession(sURLs syncURLs, bar *barSend, syncQueue chan bool, ssCh chan syncSession, wg *sync.WaitGroup, s *sessionV1) {
-	// waitgroup reply deferred until this function returns
-	defer wg.Done()
-
-	// hold lock for map updates inside session
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+// doSync - Sync an object to multiple destination
+func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGroup) (err error) {
+	defer wg.Done() // Notify that this copy routine is done.
+	defer func() {  // Notify the copy queue that it is free to pickup next routine.
+		<-syncQueue
+	}()
 
 	if !globalQuietFlag {
 		bar.SetCaption(sURLs.SourceContent.Name + ": ")
 	}
-	_, ok := s.Files[sURLs.SourceContent.Name]
-	if ok {
-		if !globalQuietFlag {
-			putFakeTarget(bar.NewProxyReader(&fakeReader{size: sURLs.SourceContent.Size}))
-		}
-		<-syncQueue // Signal that this copy routine is done.
-		return
-	}
+
 	reader, length, err := getSource(sURLs.SourceContent.Name)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorGet(int64(length))
-		}
-		ssCh <- syncSession{
-			Error: iodine.New(err, map[string]string{"URL": sURLs.SourceContent.Name}),
-			Done:  false,
+			console.Errors(ErrorMessage{
+				Message: "Failed with",
+				Error:   iodine.New(err, nil),
+			})
 		}
 	}
 	defer reader.Close()
@@ -107,114 +98,126 @@ func doSyncSession(sURLs syncURLs, bar *barSend, syncQueue chan bool, ssCh chan 
 	}
 
 	var newReader io.Reader
-	switch globalQuietFlag || globalJSONFlag {
-	case true:
+	if globalQuietFlag || globalJSONFlag {
 		console.Infos(SyncMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
 		})
 		newReader = yielder.NewReader(reader)
-	default:
+	} else {
 		// set up progress
 		newReader = bar.NewProxyReader(yielder.NewReader(reader))
 	}
+
 	for err := range putTargets(targetURLs, length, newReader) {
 		if err != nil {
 			if !globalQuietFlag {
 				bar.ErrorPut(int64(length))
 			}
-			ssCh <- syncSession{
-				Error: iodine.New(err, nil),
-				Done:  false,
+		}
+	}
+
+	return nil
+}
+
+// doSyncFake - Perform a fake sync to update the progress bar appropriately.
+func doSyncFake(sURLs syncURLs, bar *barSend) (err error) {
+	bar.Progress(sURLs.SourceContent.Size)
+	return nil
+}
+
+// doPrepareSyncURLs scans the source URL and prepares a list of objects for syncing.
+func doPrepareSyncURLs(session *sessionV2, trapCh <-chan bool) {
+	sourceURL := session.Header.CommandArgs[0] // first one is source.
+	targetURLs := session.Header.CommandArgs[1:]
+	var totalBytes int64
+	var totalObjects int
+
+	// Create a session data file to store the processed URLs.
+	dataFP := session.NewDataWriter()
+
+	scanBar := scanBarFactory(sourceURL)
+	URLsCh := prepareSyncURLs(sourceURL, targetURLs)
+	done := false
+	for done == false {
+		select {
+		case sURLs, ok := <-URLsCh:
+			if !ok { // Done with URL prepration
+				done = true
+				break
 			}
-		}
-	}
-	<-syncQueue // Signal that this copy routine is done.
-
-	// store files which have finished copying
-	s.Files[sURLs.SourceContent.Name] = struct{}{}
-}
-
-func doPrepareSyncURLs(sourceURL string, targetURLs []string, bar barSend, lock countlock.Locker) {
-	for sURLs := range prepareSyncURLs(sourceURL, targetURLs) {
-		if sURLs.Error != nil {
-			// no need to print errors here, any error here
-			// will be printed later during Sync()
-			continue
-		}
-		if !globalQuietFlag {
-			bar.Extend(sURLs.SourceContent.Size)
-			lock.Up() // Let copy routine know that it has to catch up.
-		}
-	}
-}
-
-type syncSession struct {
-	Error error
-	Done  bool
-}
-
-func trapSync(ssCh chan syncSession) {
-	// Go signal notification works by sending `os.Signal`
-	// values on a channel.
-	sigs := make(chan os.Signal, 1)
-
-	// `signal.Notify` registers the given channel to
-	// receive notifications of the specified signals.
-	signal.Notify(sigs, os.Kill, os.Interrupt)
-
-	// This executes a blocking receive for signals.
-	// When it gets one it'll then notify the program
-	// that it can finish.
-	<-sigs
-	ssCh <- syncSession{
-		Error: nil,
-		Done:  true,
-	}
-}
-
-func doSyncCmdSession(bar barSend, s *sessionV1) <-chan syncSession {
-	ssCh := make(chan syncSession)
-	// Separate source and target. 'sync' can take only one source.
-	// but any number of targets, even the recursive URLs mixed in-between.
-	sourceURL := s.URLs[0] // first one is source
-	targetURLs := s.URLs[1:]
-
-	go func(sourceURL string, targetURLs []string, bar barSend, ssCh chan syncSession, s *sessionV1) {
-		defer close(ssCh)
-		go trapSync(ssCh)
-
-		var lock countlock.Locker
-		if !globalQuietFlag {
-			// Keep progress-bar and copy routines in sync.
-			lock = countlock.New()
-			defer lock.Close()
-		}
-
-		wg := new(sync.WaitGroup)
-		syncQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-		defer close(syncQueue)
-
-		go doPrepareSyncURLs(sourceURL, targetURLs, bar, lock)
-
-		for sURLs := range prepareSyncURLs(sourceURL, targetURLs) {
 			if sURLs.Error != nil {
-				ssCh <- syncSession{
-					Error: iodine.New(sURLs.Error, nil),
-					Done:  false,
-				}
-				continue
+				console.Errors(ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.New(sURLs.Error, nil),
+				})
+				break
 			}
-			syncQueue <- true
-			wg.Add(1)
-			if !globalQuietFlag {
-				lock.Down() // Do not jump ahead of the progress bar builder above.
+
+			jsonData, err := json.Marshal(sURLs)
+			if err != nil {
+				session.Close()
+				console.Fatals(ErrorMessage{
+					Message: fmt.Sprintf("Unable to marshal URLs to JSON for ‘%s’", sURLs.SourceContent.Name),
+					Error:   iodine.New(err, nil),
+				})
 			}
-			go doSyncSession(sURLs, &bar, syncQueue, ssCh, wg, s)
+			fmt.Fprintln(dataFP, string(jsonData))
+			scanBar(sURLs.SourceContent.Name)
+
+			totalBytes += sURLs.SourceContent.Size
+			totalObjects++
+		case <-trapCh:
+			session.Close() // If we are interrupted during the URL scanning, we drop the session.
+			os.Exit(0)
 		}
-		wg.Wait()
-	}(sourceURL, targetURLs, bar, ssCh, s)
-	return ssCh
+	}
+	session.Header.TotalBytes = totalBytes
+	session.Header.TotalObjects = totalObjects
+	session.Save()
+}
+
+func doSyncCmdSession(session *sessionV2) {
+	trapCh := signalTrap(os.Interrupt, os.Kill)
+
+	if !session.HasData() {
+		doPrepareSyncURLs(session, trapCh)
+	}
+
+	var bar barSend
+	if !globalQuietFlag { // set up progress bar
+		bar = newCpBar()
+		defer bar.Finish()
+	}
+
+	wg := new(sync.WaitGroup)
+	syncQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
+	defer close(syncQueue)
+
+	scanner := bufio.NewScanner(session.NewDataReader())
+
+	isCopied := isCopiedFactory(session.Header.LastCopied)
+
+	bar.Extend(session.Header.TotalBytes)
+	for scanner.Scan() {
+		var sURLs syncURLs
+		json.Unmarshal([]byte(scanner.Text()), &sURLs)
+		if isCopied(sURLs.SourceContent.Name) {
+			doSyncFake(sURLs, &bar)
+		} else {
+			select {
+			case syncQueue <- true:
+				wg.Add(1)
+				go doSync(sURLs, &bar, syncQueue, wg)
+				session.Header.LastCopied = sURLs.SourceContent.Name
+			case <-trapCh:
+				session.Save()
+				session.Info()
+				os.Exit(0)
+			}
+		}
+	}
+	wg.Wait()
 }
 
 func runSyncCmd(ctx *cli.Context) {
@@ -222,73 +225,22 @@ func runSyncCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
 	}
 
-	if !isMcConfigExists() {
-		console.Fatals(ErrorMessage{
-			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
-	}
+	session := newSessionV2()
+	defer session.Close()
 
-	if !isSessionDirExists() {
-		if err := createSessionDir(); err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(err, nil),
-			})
-		}
-	}
-
-	s, err := newSession()
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "Failed with",
-			Error:   iodine.New(err, nil),
-		})
-	}
-	s.CommandType = "sync"
-	s.RootPath, _ = os.Getwd()
+	session.Header.CommandType = "sync"
+	session.Header.RootPath, _ = os.Getwd()
 
 	// extract URLs.
-	s.URLs, err = args2URLs(ctx.Args())
+	var err error
+	session.Header.CommandArgs, err = args2URLs(ctx.Args())
 	if err != nil {
+		session.Close()
 		console.Fatals(ErrorMessage{
 			Message: fmt.Sprintf("Unknown URL types found: ‘%s’", ctx.Args()),
 			Error:   iodine.New(err, nil),
 		})
 	}
 
-	var bar barSend
-	// set up progress bar
-	if !globalQuietFlag {
-		bar = newCpBar()
-	}
-
-	for ss := range doSyncCmdSession(bar, s) {
-		if ss.Error != nil {
-			console.Errors(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(ss.Error, nil),
-			})
-		}
-		if ss.Done {
-			if err := saveSession(s); err != nil {
-				console.Fatals(ErrorMessage{
-					Message: "Failed wtih",
-					Error:   iodine.New(err, nil),
-				})
-			}
-			console.Println()
-			console.Infos(InfoMessage{
-				Message: "Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
-			})
-			// this os.Exit is needed really to exit in-case of "os.Interrupt"
-			os.Exit(0)
-		}
-	}
-
-	if !globalQuietFlag {
-		bar.Finish()
-		// ignore any error returned here
-		clearSession(s.SessionID)
-	}
+	doSyncCmdSession(session)
 }

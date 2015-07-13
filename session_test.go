@@ -34,15 +34,18 @@ func (s *CmdTestSuite) TestSession(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
 
-	session, err := newSession()
+	session := newSessionV2()
 	c.Assert(err, IsNil)
-	c.Assert(session.URLs, IsNil)
+	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 
-	err = saveSession(session)
+	err = session.Save()
 	c.Assert(err, IsNil)
 
-	savedSession, err := loadSession(session.SessionID)
+	savedSession, err := loadSessionV2(session.SessionID)
 	c.Assert(err, IsNil)
 	c.Assert(session.SessionID, Equals, savedSession.SessionID)
+
+	err = session.Close()
+	c.Assert(err, IsNil)
 }

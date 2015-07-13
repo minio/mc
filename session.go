@@ -21,39 +21,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/quick"
 	"github.com/minio/minio/pkg/iodine"
 )
 
-type sessionV1 struct {
-	Version     string              `json:"version"`
-	Started     time.Time           `json:"started"`
-	CommandType string              `json:"command-type"`
-	SessionID   string              `json:"session-id"`
-	RootPath    string              `json:"working-directory"`
-	URLs        []string            `json:"args"`
-	Files       map[string]struct{} `json:"files"`
-
-	Lock *sync.Mutex `json:"-"`
-}
-
-func (s sessionV1) String() string {
-	message := console.SessionID("%s -> ", s.SessionID)
-	message = message + console.Time("[%s]", s.Started.Local().Format(printDate))
-	message = message + console.Command(" %s %s", s.CommandType, strings.Join(s.URLs, " "))
-	return message
+func migrateSession() {
+	// Migrate session V1 to V2
+	migrateSessionV1ToV2()
 }
 
 func isSessionDirExists() bool {
-	sdir, err := getSessionDir()
-	if err != nil {
-		return false
-	}
-	_, err = os.Stat(sdir)
+	_, err := os.Stat(getSessionDir())
 	if err != nil {
 		return false
 	}
@@ -61,25 +41,20 @@ func isSessionDirExists() bool {
 }
 
 func createSessionDir() error {
-	sdir, err := getSessionDir()
-	if err != nil {
-		return iodine.New(err, nil)
-	}
-	if err := os.MkdirAll(sdir, 0700); err != nil {
+	if err := os.MkdirAll(getSessionDir(), 0700); err != nil {
 		return iodine.New(err, nil)
 	}
 	return nil
 }
 
-func getSessionDir() (string, error) {
-	mcConfigDir, err := getMcConfigDir()
+func getSessionDir() string {
+	configDir, err := getMcConfigDir()
 	if err != nil {
-		return "", iodine.New(err, nil)
+		// TODO: revamp error handling -ab. Do not pass errors mindlessly to upper layer for a tool like mc.
 	}
-	return filepath.Join(mcConfigDir, sessionDir), nil
+	return filepath.Join(configDir, sessionDir)
 }
 
-var mcCurrentSessionVersion = mcCurrentConfigVersion
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 // newSID generates a random session id of regular lower case and uppercase english characters
@@ -92,75 +67,31 @@ func newSID(n int) string {
 	return string(b)
 }
 
-func newSessionV1() (config quick.Config, err error) {
-	s := new(sessionV1)
-	s.Version = mcCurrentSessionVersion
-	// map of command and files copied
-	s.URLs = nil
-	s.Started = time.Now().UTC()
-	s.Files = make(map[string]struct{})
-	s.Lock = new(sync.Mutex)
-	s.SessionID = newSID(8)
-	return quick.New(s)
+func getSessionFile(sid string) string {
+	return filepath.Join(getSessionDir(), sid+".json")
 }
 
-func getSessionFile(sid string) (string, error) {
-	sdir, err := getSessionDir()
-	if err != nil {
-		return "", iodine.New(err, nil)
-	}
-	return filepath.Join(sdir, sid), nil
+func getSessionDataFile(sid string) string {
+	return filepath.Join(getSessionDir(), sid+".data")
 }
 
-// save a session
-func saveSession(s *sessionV1) error {
-	sessionFile, err := getSessionFile(s.SessionID)
+func getSessionIDs() (sids []string) {
+	sessionList, err := filepath.Glob(getSessionDir() + "/*.json")
 	if err != nil {
-		return err
+		console.Fatalf("Unable to list session directory ‘%s’, %s", getSessionDir(), iodine.New(err, nil))
 	}
-	qs, err := quick.New(s)
-	if err != nil {
-		return err
+
+	for _, path := range sessionList {
+		sids = append(sids, strings.TrimSuffix(filepath.Base(path), ".json"))
 	}
-	return qs.Save(sessionFile)
+	return sids
 }
 
-// provides a new session
-func newSession() (*sessionV1, error) {
-	qs, err := newSessionV1()
+func isSession(sid string) bool {
+	_, err := os.Stat(getSessionFile(sid))
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return false
 	}
-	return qs.Data().(*sessionV1), nil
-}
 
-// loadSession - reads session file if exists and re-initiates internal variables
-func loadSession(sid string) (*sessionV1, error) {
-	if !isSessionDirExists() {
-		return nil, iodine.New(errInvalidArgument{}, nil)
-	}
-	sessionFile, err := getSessionFile(sid)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	_, err = os.Stat(sessionFile)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	s := new(sessionV1)
-	s.Version = mcCurrentSessionVersion
-	// map of command and files copied
-	s.URLs = nil
-	s.Lock = new(sync.Mutex)
-	s.Files = make(map[string]struct{})
-	qs, err := quick.New(s)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	err = qs.Load(sessionFile)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return qs.Data().(*sessionV1), nil
-
+	return true
 }

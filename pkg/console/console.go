@@ -45,6 +45,7 @@ type Theme struct {
 	SessionID *color.Color
 	JSON      *color.Color
 	Bar       *color.Color
+	PrintC    *color.Color
 	Print     *color.Color
 }
 
@@ -79,6 +80,12 @@ var (
 	// Print prints a message
 	Print = func(data ...interface{}) {
 		print(themesDB[currThemeName].Print, data...)
+		return
+	}
+
+	// PrintC prints a message with color
+	PrintC = func(data ...interface{}) {
+		print(themesDB[currThemeName].PrintC, data...)
 		return
 	}
 

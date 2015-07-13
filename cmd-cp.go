@@ -17,17 +17,18 @@
 package main
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"os"
-	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/countlock"
 	"github.com/minio/mc/pkg/yielder"
 	"github.com/minio/minio/pkg/iodine"
 )
@@ -50,6 +51,9 @@ FLAGS:
    {{range .Flags}}{{.}}
    {{end}}{{ end }}
 
+
+
+
 EXAMPLES:
    1. Copy list of objects from local file system to Amazon S3 object storage.
       $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/
@@ -69,152 +73,152 @@ EXAMPLES:
 `,
 }
 
-// doCopySession - Copy a singe file from source to destination
-func doCopySession(cURLs cpURLs, bar *barSend, s *sessionV1) error {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+// doCopy - Copy a singe file from source to destination
+func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup) error {
+	defer wg.Done() // Notify that this copy routine is done.
+	defer func() {  // Notify the copy queue that it is free to pickup next routine.
+		<-cpQueue
+	}()
+
 	if !globalQuietFlag {
-		bar.SetCaption(cURLs.SourceContent.Name + ": ")
+		bar.SetCaption(cpURLs.SourceContent.Name + ": ")
 	}
 
-	_, ok := s.Files[cURLs.SourceContent.Name]
-	if ok {
-		putFakeTarget(bar.NewProxyReader(&fakeReader{size: cURLs.SourceContent.Size}))
-		return nil
-	}
-
-	reader, length, err := getSource(cURLs.SourceContent.Name)
+	reader, length, err := getSource(cpURLs.SourceContent.Name)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorGet(length)
 		}
-		return iodine.New(err, map[string]string{"URL": cURLs.SourceContent.Name})
+		return iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name})
 	}
 	defer reader.Close()
 
 	var newReader io.Reader
-	switch globalQuietFlag || globalJSONFlag {
-	case true:
+	if globalQuietFlag || globalJSONFlag {
 		console.Infos(CopyMessage{
-			Source: cURLs.SourceContent.Name,
-			Target: cURLs.TargetContent.Name,
-			Length: cURLs.SourceContent.Size,
+			Source: cpURLs.SourceContent.Name,
+			Target: cpURLs.TargetContent.Name,
+			Length: cpURLs.SourceContent.Size,
 		})
 		newReader = yielder.NewReader(reader)
-	default:
+	} else {
 		// set up progress
 		newReader = bar.NewProxyReader(yielder.NewReader(reader))
 	}
 
-	err = putTarget(cURLs.TargetContent.Name, length, newReader)
+	err = putTarget(cpURLs.TargetContent.Name, length, newReader)
 	if err != nil {
 		if !globalQuietFlag {
 			bar.ErrorPut(length)
 		}
-		return iodine.New(err, map[string]string{"URL": cURLs.TargetContent.Name})
+		return iodine.New(err, map[string]string{"URL": cpURLs.TargetContent.Name})
 	}
-
-	// store files which have finished copying
-	s.Files[cURLs.SourceContent.Name] = struct{}{}
 
 	return nil
 }
 
-type cpSession struct {
-	Error error
-	Done  bool
+// doCopyFake - Perform a fake copy to update the progress bar appropriately.
+func doCopyFake(sURLs copyURLs, bar *barSend) (err error) {
+	bar.Progress(sURLs.SourceContent.Size)
+	return nil
 }
 
-func doCopyInRoutineSession(cURLs cpURLs, bar *barSend, cpQueue chan bool, cpsCh chan cpSession, wg *sync.WaitGroup, s *sessionV1) {
-	defer wg.Done()
-	if err := doCopySession(cURLs, bar, s); err != nil {
-		cpsCh <- cpSession{
-			Error: iodine.New(err, nil),
-			Done:  false,
-		}
-	}
-	// Signal that this copy routine is done.
-	<-cpQueue
-}
-
-func doPrepareCopyURLs(sourceURLs []string, targetURL string, bar barSend, lock countlock.Locker) {
-	for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
-		if cURLs.Error != nil {
-			// no need to print errors here, any error here
-			// will be printed later during Copy()
-			continue
-		}
-		if !globalQuietFlag {
-			bar.Extend(cURLs.SourceContent.Size)
-			lock.Up() // Let copy routine know that it has to catch up.
-		}
-	}
-}
-
-func trapCp(cpsCh chan cpSession) {
-	// Go signal notification works by sending `os.Signal`
-	// values on a channel.
-	sigs := make(chan os.Signal, 1)
-
-	// `signal.Notify` registers the given channel to
-	// receive notifications of the specified signals.
-	signal.Notify(sigs, os.Kill, os.Interrupt)
-
-	// This executes a blocking receive for signals.
-	// When it gets one it'll then notify the program
-	// that it can finish.
-	<-sigs
-	cpsCh <- cpSession{
-		Error: nil,
-		Done:  true,
-	}
-}
-
-func doCopyCmdSession(bar barSend, s *sessionV1) <-chan cpSession {
+// doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
+func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources, even the recursive URLs mixed in-between.
-	sourceURLs := s.URLs[:len(s.URLs)-1]
-	targetURL := s.URLs[len(s.URLs)-1] // Last one is target
+	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
+	targetURL := session.Header.CommandArgs[len(session.Header.CommandArgs)-1] // Last one is target
 
-	cpsCh := make(chan cpSession)
-	go func(sourceURLs []string, targetURL string, bar barSend, cpsCh chan cpSession, s *sessionV1) {
-		defer close(cpsCh)
-		go trapCp(cpsCh)
+	var totalBytes int64
+	var totalObjects int
 
-		var lock countlock.Locker
-		if !globalQuietFlag {
-			// Keep progress-bar and copy routines in sync.
-			lock = countlock.New()
-			defer lock.Close()
-		}
+	// Create a session data file to store the processed URLs.
+	dataFP := session.NewDataWriter()
+	scanBar := scanBarFactory(strings.Join(sourceURLs, " "))
+	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
+	done := false
 
-		// Wait for all copy routines to complete.
-		wg := new(sync.WaitGroup)
-
-		// Pool limited copy routines in parallel.
-		cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-		defer close(cpQueue)
-
-		go doPrepareCopyURLs(sourceURLs, targetURL, bar, lock)
-
-		for cURLs := range prepareCopyURLs(sourceURLs, targetURL) {
-			if cURLs.Error != nil {
-				cpsCh <- cpSession{
-					Error: cURLs.Error,
-					Done:  false,
-				}
-				continue
+	for done == false {
+		select {
+		case cpURLs, ok := <-URLsCh:
+			if !ok { // Done with URL prepration
+				done = true
+				break
 			}
-			cpQueue <- true // Wait for existing pool to drain.
-			wg.Add(1)       // keep track of all the goroutines
-			if !globalQuietFlag {
-				lock.Down() // Do not jump ahead of the progress bar builder above.
+			if cpURLs.Error != nil {
+				console.Errors(ErrorMessage{
+					Message: "Failed with",
+					Error:   iodine.New(cpURLs.Error, nil),
+				})
+				break
 			}
-			go doCopyInRoutineSession(cURLs, &bar, cpQueue, cpsCh, wg, s)
+
+			jsonData, err := json.Marshal(cpURLs)
+			if err != nil {
+				session.Close()
+				console.Fatals(ErrorMessage{
+					Message: fmt.Sprintf("Unable to marshal URLs to JSON for ‘%s’", cpURLs.SourceContent.Name),
+					Error:   iodine.New(err, nil),
+				})
+			}
+			fmt.Fprintln(dataFP, string(jsonData))
+			scanBar(cpURLs.SourceContent.Name)
+
+			totalBytes += cpURLs.SourceContent.Size
+			totalObjects++
+		case <-trapCh:
+			session.Close() // If we are interrupted during the URL scanning, we drop the session.
+			os.Exit(0)
 		}
-		wg.Wait() // wait for the go routines to complete
-	}(sourceURLs, targetURL, bar, cpsCh, s)
-	return cpsCh
+	}
+	session.Header.TotalBytes = totalBytes
+	session.Header.TotalObjects = totalObjects
+	session.Save()
+}
+
+func doCopyCmdSession(session *sessionV2) {
+	trapCh := signalTrap(os.Interrupt, os.Kill)
+
+	if !session.HasData() {
+		doPrepareCopyURLs(session, trapCh)
+	}
+
+	var bar barSend
+	if !globalQuietFlag { // set up progress bar
+		bar = newCpBar()
+		defer bar.Finish()
+	}
+
+	wg := new(sync.WaitGroup)
+	cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
+	defer close(cpQueue)
+
+	scanner := bufio.NewScanner(session.NewDataReader())
+
+	isCopied := isCopiedFactory(session.Header.LastCopied)
+
+	bar.Extend(session.Header.TotalBytes)
+
+	for scanner.Scan() {
+		var cpURLs copyURLs
+		json.Unmarshal([]byte(scanner.Text()), &cpURLs)
+		if isCopied(cpURLs.SourceContent.Name) {
+			doCopyFake(cpURLs, &bar)
+		} else {
+			select {
+			case cpQueue <- true:
+				wg.Add(1)
+				go doCopy(cpURLs, &bar, cpQueue, wg)
+				session.Header.LastCopied = cpURLs.SourceContent.Name
+			case <-trapCh:
+				session.Save()
+				session.Info()
+				os.Exit(0)
+			}
+		}
+	}
+	wg.Wait()
 }
 
 // runCopyCmd is bound to sub-command
@@ -223,71 +227,22 @@ func runCopyCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
 	}
 
-	if !isMcConfigExists() {
-		console.Fatals(ErrorMessage{
-			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
-	}
-	if !isSessionDirExists() {
-		if err := createSessionDir(); err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(err, nil),
-			})
-		}
-	}
+	session := newSessionV2()
+	defer session.Close()
 
-	s, err := newSession()
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "Failed with",
-			Error:   iodine.New(err, nil),
-		})
-	}
-	s.CommandType = "cp"
-	s.RootPath, _ = os.Getwd()
+	session.Header.CommandType = "cp"
+	session.Header.RootPath, _ = os.Getwd()
 
 	// extract URLs.
-	s.URLs, err = args2URLs(ctx.Args())
+	var err error
+	session.Header.CommandArgs, err = args2URLs(ctx.Args())
 	if err != nil {
+		session.Close()
 		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unknown URL types: ‘%s’", ctx.Args()),
+			Message: fmt.Sprintf("Unknown URL types found: ‘%s’", ctx.Args()),
 			Error:   iodine.New(err, nil),
 		})
 	}
 
-	var bar barSend
-	// set up progress bar
-	if !globalQuietFlag {
-		bar = newCpBar()
-	}
-
-	for cps := range doCopyCmdSession(bar, s) {
-		if cps.Error != nil {
-			console.Errors(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(cps.Error, nil),
-			})
-		}
-		if cps.Done {
-			if err := saveSession(s); err != nil {
-				console.Fatals(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(err, nil),
-				})
-			}
-			console.Println()
-			console.Infos(InfoMessage{
-				Message: "Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
-			})
-			// this os.Exit is needed really to exit in-case of "os.Interrupt"
-			os.Exit(0)
-		}
-	}
-	if !globalQuietFlag {
-		bar.Finish()
-		// ignore any error returned here
-		clearSession(s.SessionID)
-	}
+	doCopyCmdSession(session)
 }
