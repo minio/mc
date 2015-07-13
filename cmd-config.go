@@ -77,9 +77,7 @@ func runConfigCmd(ctx *cli.Context) {
 			Error:   iodine.New(err, nil),
 		})
 	}
-	console.Infos(InfoMessage{
-		Message: msg,
-	})
+	console.Infoln(msg)
 }
 
 // saveConfig writes configuration data in json format to config file.
