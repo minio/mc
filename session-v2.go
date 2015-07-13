@@ -108,9 +108,7 @@ func (s *sessionV2) String() string {
 }
 
 func (s *sessionV2) Info() {
-	console.Infos(InfoMessage{
-		Message: "Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’",
-	})
+	console.Infoln("Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’")
 }
 
 // NewDataReader provides reader interface to session data file.

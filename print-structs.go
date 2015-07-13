@@ -82,16 +82,6 @@ func (c Content) String() string {
 	return string(cBytes)
 }
 
-// InfoMessage container for informational messages
-type InfoMessage struct {
-	Message string `json:"info"`
-}
-
-// String string printer for informational message
-func (i InfoMessage) String() string {
-	return i.Message
-}
-
 // CopyMessage container for file copy messages
 type CopyMessage struct {
 	Source string `json:"source"`

@@ -96,9 +96,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 				Error:   iodine.New(err, nil),
 			})
 		}
-		console.Infos(InfoMessage{
-			Message: msg,
-		})
+		console.Infoln(msg)
 	}
 }
 

@@ -119,9 +119,7 @@ func runDiffCmd(ctx *cli.Context) {
 				Error:   iodine.New(diff.err, nil),
 			})
 		}
-		console.Infos(InfoMessage{
-			Message: diff.message,
-		})
+		console.Infoln(diff.message)
 	}
 }
 

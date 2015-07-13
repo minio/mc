@@ -92,7 +92,7 @@ https://dl.minio.io:9000 for continuous updates`
 		if err != nil {
 			return "", err
 		}
-		console.Prints(InfoMessage{Message: msg})
+		console.Println(msg)
 		return "", nil
 	}
 	return "You are already running the most recent version of ‘mc’", nil
@@ -119,6 +119,6 @@ func runUpdateCmd(ctx *cli.Context) {
 	}
 	// no msg do not print one
 	if msg != "" {
-		console.Infos(InfoMessage{Message: msg})
+		console.Infoln(msg)
 	}
 }
