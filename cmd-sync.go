@@ -87,14 +87,13 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 			})
 		}
 	}
-	defer reader.Close()
 
 	var targetURLs []string
 	for _, targetContent := range sURLs.TargetContents {
 		targetURLs = append(targetURLs, targetContent.Name)
 	}
 
-	var newReader io.Reader
+	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
 		console.Infos(SyncMessage{
 			Source:  sURLs.SourceContent.Name,
@@ -105,6 +104,7 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 		// set up progress
 		newReader = bar.NewProxyReader(yielder.NewReader(reader))
 	}
+	defer newReader.Close()
 
 	for err := range putTargets(targetURLs, length, newReader) {
 		if err != nil {
@@ -121,7 +121,9 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 
 // doSyncFake - Perform a fake sync to update the progress bar appropriately.
 func doSyncFake(sURLs syncURLs, bar *barSend) (err error) {
-	bar.Progress(sURLs.SourceContent.Size)
+	if !globalDebugFlag || !globalJSONFlag {
+		bar.Progress(sURLs.SourceContent.Size)
+	}
 	return nil
 }
 

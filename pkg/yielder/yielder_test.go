@@ -18,6 +18,7 @@ package yielder
 
 import (
 	"bytes"
+	"io/ioutil"
 	"testing"
 
 	. "github.com/minio/check"
@@ -30,7 +31,7 @@ type MySuite struct{}
 var _ = Suite(&MySuite{})
 
 func (s *MySuite) TestYielder(c *C) {
-	r := NewReader(bytes.NewReader([]byte("hello")))
+	r := NewReader(ioutil.NopCloser(bytes.NewReader([]byte("hello"))))
 	c.Assert(r, Not(IsNil))
 
 	p := make([]byte, 5)

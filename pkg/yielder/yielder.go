@@ -24,13 +24,13 @@ import (
 )
 
 // NewReader returns an initialized yielding proxy reader.
-func NewReader(reader io.Reader) *Reader {
+func NewReader(reader io.ReadCloser) *Reader {
 	return &Reader{reader, true}
 }
 
 // Reader implements io.Reader compatible scheduler.
 type Reader struct {
-	io.Reader
+	io.ReadCloser
 	enabled bool
 }
 
@@ -39,8 +39,13 @@ func (r Reader) Read(p []byte) (n int, err error) {
 	if r.enabled {
 		runtime.Gosched()
 	}
-	n, err = r.Reader.Read(p)
+	n, err = r.ReadCloser.Read(p)
 	return
+}
+
+// Close closes yielder
+func (r Reader) Close() (err error) {
+	return r.ReadCloser.Close()
 }
 
 // Enable turns on the yielder.

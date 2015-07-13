@@ -42,14 +42,18 @@ const (
 )
 
 type proxyReader struct {
-	io.Reader
+	io.ReadCloser
 	bar *barSend
 }
 
 func (r *proxyReader) Read(p []byte) (n int, err error) {
-	n, err = r.Reader.Read(p)
+	n, err = r.ReadCloser.Read(p)
 	r.bar.Progress(int64(n))
 	return
+}
+
+func (r *proxyReader) Close() (err error) {
+	return r.ReadCloser.Close()
 }
 
 type barMsg struct {
@@ -62,7 +66,7 @@ type barSend struct {
 	finishCh <-chan bool
 }
 
-func (b *barSend) NewProxyReader(r io.Reader) *proxyReader {
+func (b *barSend) NewProxyReader(r io.ReadCloser) *proxyReader {
 	return &proxyReader{r, b}
 }
 
