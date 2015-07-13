@@ -103,11 +103,12 @@ func main() {
 	registerCmd(updateCmd)  // update Check for new software updates
 
 	// register all the flags
-	registerFlag(quietFlag) // suppress console output
-	registerFlag(aliasFlag) // OS toolchain mimic
-	registerFlag(themeFlag) // console theme flag
-	registerFlag(jsonFlag)  // json formatted output
-	registerFlag(debugFlag) // enable debugging output
+	registerFlag(configFlag) // path to config folder
+	registerFlag(quietFlag)  // suppress console output
+	registerFlag(aliasFlag)  // OS toolchain mimic
+	registerFlag(themeFlag)  // console theme flag
+	registerFlag(jsonFlag)   // json formatted output
+	registerFlag(debugFlag)  // enable debugging output
 
 	app := cli.NewApp()
 	app.Usage = "Minio Client for object storage and filesystems"
@@ -117,6 +118,10 @@ func main() {
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.Before = func(ctx *cli.Context) error {
+		if ctx.GlobalString("config") != "" {
+			setMcConfigDir(ctx.GlobalString("config"))
+		}
+
 		globalQuietFlag = ctx.GlobalBool("quiet")
 		globalAliasFlag = ctx.GlobalBool("alias")
 		globalDebugFlag = ctx.GlobalBool("debug")

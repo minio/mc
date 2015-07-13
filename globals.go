@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// This package contains all the global variables and constants
+// This package contains all the global variables and constants. ONLY TO BE ACCESSED VIA GET/SET FUNCTIONS.
 package main
 
 var (
@@ -26,7 +26,7 @@ var (
 	mcCurrentConfigVersion = "1.0.0"
 )
 
-// mc configuration related constants
+// mc configuration related constants.
 const (
 	mcConfigDir        = ".mc/"
 	mcConfigWindowsDir = "mc\\"

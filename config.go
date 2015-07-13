@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
 	"github.com/minio/minio/pkg/iodine"
 )
@@ -36,20 +37,20 @@ type configV1 struct {
 // cached variables should *NEVER* be accessed directly from outside this file.
 var cache sync.Pool
 
-// customConfigDir used internally only by test functions
-var customConfigDir string
+// customConfigDir contains the whole path to config dir. Only access via get/set functions.
+var mcCustomConfigDir string
 
-// getMcConfigDir - construct minio client config folder
+// setMcConfigDir - construct minio client config folder.
+func setMcConfigDir(configDir string) {
+	mcCustomConfigDir = configDir
+}
+
+// getMcConfigDir - construct minio client config folder.
 func getMcConfigDir() (string, error) {
-	if customConfigDir != "" {
-		// For windows the path is slightly different
-		switch runtime.GOOS {
-		case "windows":
-			return filepath.Join(customConfigDir, mcConfigWindowsDir), nil
-		default:
-			return filepath.Join(customConfigDir, mcConfigDir), nil
-		}
+	if mcCustomConfigDir != "" {
+		return mcCustomConfigDir, nil
 	}
+
 	u, err := user.Current()
 	if err != nil {
 		return "", iodine.New(err, nil)
@@ -61,6 +62,15 @@ func getMcConfigDir() (string, error) {
 	default:
 		return filepath.Join(u.HomeDir, mcConfigDir), nil
 	}
+}
+
+// mustGetMcConfigDir - construct minio client config folder or fail
+func mustGetMcConfigDir() (configDir string) {
+	configDir, err := getMcConfigDir()
+	if err != nil {
+		console.Fatalf("Unable to determine default configuration folder. %s\n", err)
+	}
+	return configDir
 }
 
 // createMcConfigDir - create minio client config folder
