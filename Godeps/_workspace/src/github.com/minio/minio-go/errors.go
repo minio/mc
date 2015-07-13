@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"io"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 )
@@ -99,11 +100,41 @@ func (a lowLevelAPI) responseToError(errBody io.Reader) error {
 }
 
 func invalidBucketToError(bucket string) error {
-	if strings.TrimSpace(bucket) == "" || bucket == "" {
+	// verify bucket name in accordance with
+	//  - http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
+	isValidBucket := func(bucket string) bool {
+		if len(bucket) < 3 || len(bucket) > 63 {
+			return false
+		}
+		if bucket[0] == '.' || bucket[len(bucket)-1] == '.' {
+			return false
+		}
+		if match, _ := regexp.MatchString("\\.\\.", bucket); match == true {
+			return false
+		}
+		// We don't support buckets with '.' in them
+		match, _ := regexp.MatchString("^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", bucket)
+		return match
+	}
+
+	if !isValidBucket(strings.TrimSpace(bucket)) {
 		// no resource since bucket is empty string
 		errorResponse := ErrorResponse{
 			Code:      "InvalidBucketName",
 			Message:   "The specified bucket is not valid.",
+			RequestID: "minio",
+		}
+		return errorResponse
+	}
+	return nil
+}
+
+func invalidObjectToError(object string) error {
+	if strings.TrimSpace(object) == "" || object == "" {
+		// no resource since object name is empty
+		errorResponse := ErrorResponse{
+			Code:      "NoSuchKey",
+			Message:   "The specified key does not exist.",
 			RequestID: "minio",
 		}
 		return errorResponse

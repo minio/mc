@@ -72,17 +72,14 @@ EXAMPLES:
 // doSync - Sync an object to multiple destination
 func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGroup) (err error) {
 	defer wg.Done() // Notify that this copy routine is done.
-	defer func() {  // Notify the copy queue that it is free to pickup next routine.
-		<-syncQueue
-	}()
 
-	if !globalQuietFlag {
+	if !globalQuietFlag || !globalJSONFlag {
 		bar.SetCaption(sURLs.SourceContent.Name + ": ")
 	}
 
 	reader, length, err := getSource(sURLs.SourceContent.Name)
 	if err != nil {
-		if !globalQuietFlag {
+		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(int64(length))
 			console.Errors(ErrorMessage{
 				Message: "Failed with",
@@ -111,11 +108,13 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 
 	for err := range putTargets(targetURLs, length, newReader) {
 		if err != nil {
-			if !globalQuietFlag {
+			if !globalQuietFlag || !globalJSONFlag {
 				bar.ErrorPut(int64(length))
 			}
 		}
 	}
+
+	<-syncQueue // Notify the copy queue that it is free to pickup next routine.
 
 	return nil
 }
@@ -189,15 +188,13 @@ func doSyncCmdSession(session *sessionV2) {
 	defer close(syncQueue)
 
 	scanner := bufio.NewScanner(session.NewDataReader())
-
 	isCopied := isCopiedFactory(session.Header.LastCopied)
 
 	var bar barSend
-	if !globalQuietFlag { // set up progress bar
+	if !globalQuietFlag || !globalJSONFlag { // set up progress bar
 		bar = newCpBar()
 		defer bar.Finish()
 		bar.Extend(session.Header.TotalBytes)
-
 	}
 
 	for scanner.Scan() {
