@@ -35,7 +35,6 @@ func (s *CmdTestSuite) TestSession(c *C) {
 	c.Assert(isSessionDirExists(), Equals, true)
 
 	session := newSessionV2()
-	c.Assert(err, IsNil)
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 
