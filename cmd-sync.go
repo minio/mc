@@ -28,7 +28,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/yielder"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -102,10 +101,10 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
 		})
-		newReader = yielder.NewReader(reader)
+		newReader = reader
 	} else {
 		// set up progress
-		newReader = bar.NewProxyReader(yielder.NewReader(reader))
+		newReader = bar.NewProxyReader(reader)
 	}
 	defer newReader.Close()
 

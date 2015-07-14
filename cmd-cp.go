@@ -29,7 +29,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/yielder"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -96,10 +95,10 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 			Target: cpURLs.TargetContent.Name,
 			Length: cpURLs.SourceContent.Size,
 		})
-		newReader = yielder.NewReader(reader)
+		newReader = reader
 	} else {
 		// set up progress
-		newReader = bar.NewProxyReader(yielder.NewReader(reader))
+		newReader = bar.NewProxyReader(reader)
 	}
 	defer newReader.Close()
 
