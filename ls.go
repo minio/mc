@@ -79,17 +79,11 @@ func doList(clnt client.Client, recursive bool) error {
 			switch err := iodine.ToError(contentCh.Err).(type) {
 			// handle this specifically for filesystem
 			case client.ISBrokenSymlink:
-				console.Errors(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(err, nil),
-				})
+				console.Errorf(err.Error())
 				continue
 			}
 			if os.IsNotExist(iodine.ToError(contentCh.Err)) || os.IsPermission(iodine.ToError(contentCh.Err)) {
-				console.Errors(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(contentCh.Err, nil),
-				})
+				console.Errorf(contentCh.Err.Error())
 				continue
 			}
 			err = contentCh.Err

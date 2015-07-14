@@ -52,7 +52,6 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	// For windows the path is slightly different.
 	if runtime.GOOS == "windows" {
 		customConfigDir = filepath.Join(tmpDir, mcConfigWindowsDir)
-
 	} else {
 		customConfigDir = filepath.Join(tmpDir, mcConfigDir)
 	}
@@ -72,6 +71,8 @@ func (s *CmdTestSuite) TearDownSuite(c *C) {
 
 func (s *CmdTestSuite) TestGetNewClient(c *C) {
 	_, err := getNewClient("http://example.com/bucket1", &hostConfig{})
+	c.Assert(err, IsNil)
+	_, err = getNewClient("https://example.com/bucket1", &hostConfig{})
 	c.Assert(err, IsNil)
 	_, err = getNewClient("C:\\Users\\Administrator\\MyDocuments", &hostConfig{})
 	c.Assert(err, IsNil)

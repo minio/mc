@@ -65,17 +65,11 @@ func runConfigCmd(ctx *cli.Context) {
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
-		console.Fatals(ErrorMessage{
-			Message: "Incorrect number of arguments, please use \"mc config help\"",
-			Error:   iodine.New(errInvalidArgument{}, nil),
-		})
+		console.Fatalf("Incorrect number of arguments, please use \"mc config help\". %s", errInvalidArgument{})
 	}
 	msg, err := doConfig(arg, tailArgs)
 	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: msg,
-			Error:   iodine.New(err, nil),
-		})
+		console.Fatalln(msg)
 	}
 	console.Infoln(msg)
 }

@@ -22,37 +22,7 @@ import (
 	"fmt"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
-
-// ErrorMessage container for error reason encapsulation
-type ErrorMessage struct {
-	Message string `json:"-"`
-	Error   error  `json:"error"`
-}
-
-// String string printer for error message
-func (e ErrorMessage) String() string {
-	if !globalJSONFlag {
-		var message string
-		if e.Error != nil {
-			switch e.Error.(type) {
-			case iodine.Error:
-				reason := iodine.ToError(e.Error).Error()
-				message = reason
-			default:
-				reason := e.Error.Error()
-				message = reason
-			}
-		}
-		return message
-	}
-	eBytes, err := json.Marshal(iodine.ToError(e.Error))
-	if err != nil {
-		panic(err)
-	}
-	return string(eBytes)
-}
 
 // Content container for content message structure
 type Content struct {

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -68,4 +69,13 @@ func getHostConfig(URL string) (*hostConfig, error) {
 		}
 	}
 	return nil, iodine.New(errNoMatchingHost{}, nil)
+}
+
+// mustGetHostConfig retrieves host specific configuration such as access keys, exits upon error
+func mustGetHostConfig(URL string) *hostConfig {
+	hostCfg, err := getHostConfig(URL)
+	if err != nil {
+		console.Fatalf("Unable to retrieve host configuration. %s\n", err)
+	}
+	return hostCfg
 }

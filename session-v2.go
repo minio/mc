@@ -65,18 +65,12 @@ type sessionV2 struct {
 func newSessionV2() *sessionV2 {
 	// TODO: Blindly create .mc and session dirs at init and remove these checks -ab.
 	if !isMcConfigExists() {
-		console.Fatals(ErrorMessage{
-			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
+		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
 	}
 
 	if !isSessionDirExists() {
 		if err := createSessionDir(); err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalf("Unable to create session directory. %s\n", err)
 		}
 	}
 
@@ -91,12 +85,8 @@ func newSessionV2() *sessionV2 {
 	var err error
 	s.DataFP, err = os.Create(getSessionDataFile(s.SessionID))
 	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "Unable to create session data file \"" + getSessionDataFile(s.SessionID) + "\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
+		console.Fatalf("Unable to create session data file \""+getSessionDataFile(s.SessionID)+"\". %s\n", err)
 	}
-
 	return s
 }
 
@@ -202,10 +192,7 @@ func loadSessionV2(sid string) (*sessionV2, error) {
 
 	s.DataFP, err = os.Open(getSessionDataFile(s.SessionID))
 	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "Unable to open session data file \"" + getSessionDataFile(s.SessionID) + "\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
+		console.Fatalf("Unable to open session data file \""+getSessionDataFile(s.SessionID)+"\". %s", errNotConfigured{})
 	}
 
 	return s, nil
@@ -218,7 +205,7 @@ func isCopiedFactory(lastCopied string) func(string) bool {
 	copied := true // closure
 	return func(sourceURL string) bool {
 		if sourceURL == "" {
-			console.Fatalln("Empty source URL passed to isCopied() function. Please report this bug.")
+			console.Fatalf("Empty source URL passed to isCopied() function. %s\n", errUnexpected{})
 		}
 		if lastCopied == "" {
 			return false

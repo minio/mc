@@ -17,8 +17,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
@@ -84,43 +82,24 @@ func runListCmd(ctx *cli.Context) {
 	}
 
 	if !isMcConfigExists() {
-		console.Fatals(ErrorMessage{
-			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
+		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
 	}
-	config, err := getMcConfig()
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
-			Error:   iodine.New(err, nil),
-		})
-	}
-
+	config := mustGetMcConfig()
 	for _, arg := range args {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
-					Error:   iodine.New(e, nil),
-				})
+				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 			default:
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
-					Error:   iodine.New(err, nil),
-				})
+				console.Fatalf("Unable to parse argument %s. %s\n", arg, err)
 			}
 		}
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
 		err = doListCmd(newTargetURL, isURLRecursive(targetURL))
 		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: fmt.Sprintf("Failed to list ‘%s’", targetURL),
-				Error:   iodine.New(err, map[string]string{"Target": targetURL}),
-			})
+			console.Fatalln("Failed to list : %s. %s\n", targetURL, err)
 		}
 	}
 }

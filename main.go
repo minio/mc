@@ -25,7 +25,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 	"github.com/minio/pb"
 )
 
@@ -33,10 +32,7 @@ import (
 func checkConfig() {
 	_, err := user.Current()
 	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "Unable to determine current user",
-			Error:   iodine.New(err, nil),
-		})
+		console.Fatalf("Unable to determine current user. %s\n", err)
 	}
 
 	// If config doesn't exist, do not attempt to read it
@@ -47,10 +43,7 @@ func checkConfig() {
 	// Ensures config file is sane
 	_, err = getMcConfig()
 	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unable to read config file: %s", mustGetMcConfigPath()),
-			Error:   iodine.New(err, nil),
-		})
+		console.Fatalf("Unable to read config file. %s\n", err)
 	}
 }
 
@@ -59,7 +52,7 @@ func checkConfig() {
 func getSystemData() map[string]string {
 	host, err := os.Hostname()
 	if err != nil {
-		host = ""
+		console.Fatalf("Unable to determine hostname. %s\n", err)
 	}
 	memstats := &runtime.MemStats{}
 	runtime.ReadMemStats(memstats)
@@ -133,19 +126,12 @@ func main() {
 		themeName := ctx.GlobalString("theme")
 		switch {
 		case console.IsValidTheme(themeName) != true:
-			err := iodine.New(errInvalidTheme{Theme: themeName}, nil)
-			console.Errors(ErrorMessage{
-				Message: fmt.Sprintf("Please choose from this list: %s.", console.GetThemeNames()),
-				Error:   iodine.New(err, nil),
-			})
-			return err
+			console.Errorf("Invalid theme, please choose from the following list: %s.\n", console.GetThemeNames())
+			return errInvalidTheme{Theme: themeName}
 		default:
 			err := console.SetTheme(themeName)
 			if err != nil {
-				console.Errors(ErrorMessage{
-					Message: fmt.Sprintf("Failed to set theme ‘%s’.", themeName),
-					Error:   iodine.New(err, nil),
-				})
+				console.Errorf("Failed to set theme ‘%s’.", themeName)
 				return err
 			}
 		}
@@ -154,10 +140,7 @@ func main() {
 	}
 	app.After = func(ctx *cli.Context) error {
 		if !isMcConfigExists() {
-			console.Fatals(ErrorMessage{
-				Message: "Please run \"mc config generate\"",
-				Error:   iodine.New(errNotConfigured{}, nil),
-			})
+			console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
 		}
 		return nil
 	}

@@ -50,7 +50,6 @@ func getMcConfigDir() (string, error) {
 	if mcCustomConfigDir != "" {
 		return mcCustomConfigDir, nil
 	}
-
 	u, err := user.Current()
 	if err != nil {
 		return "", iodine.New(err, nil)
@@ -97,7 +96,10 @@ func getMcConfigPath() (string, error) {
 
 // mustGetMcConfigPath - similar to getMcConfigPath, ignores errors
 func mustGetMcConfigPath() string {
-	p, _ := getMcConfigPath()
+	p, err := getMcConfigPath()
+	if err != nil {
+		console.Fatalf("Unable to determine default config path. %s\n", err)
+	}
 	return p
 }
 
@@ -130,6 +132,15 @@ func getMcConfig() (*configV1, error) {
 	cache.Put(qconf)
 	return qconf.Data().(*configV1), nil
 
+}
+
+// mustGetMcConfig - reads configuration file and returns configs, exits on error
+func mustGetMcConfig() *configV1 {
+	config, err := getMcConfig()
+	if err != nil {
+		console.Fatalf("Unable to retrieve mc configuration. %s\n", err)
+	}
+	return config
 }
 
 // isMcConfigExists xreturns err if config doesn't exist
@@ -209,4 +220,13 @@ func newConfig() (config quick.Config, err error) {
 	}
 
 	return config, nil
+}
+
+// mustNewConfig instantiates a new config handler, exists upon error
+func mustNewConfig() quick.Config {
+	config, err := newConfig()
+	if err != nil {
+		console.Fatalf("Unable to instantiate a new config handler. %s\n", err)
+	}
+	return config
 }

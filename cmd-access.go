@@ -65,47 +65,26 @@ func runAccessCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
 	if !isMcConfigExists() {
-		console.Fatals(ErrorMessage{
-			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
+		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
 	}
-	config, err := getMcConfig()
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "loading config file failed",
-			Error:   iodine.New(err, nil),
-		})
-	}
+	config := mustGetMcConfig()
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		console.Fatals(ErrorMessage{
-			Message: "Valid types are [private, public, readonly].",
-			Error:   iodine.New(errInvalidACL{acl: acl.String()}, nil),
-		})
+		console.Fatalf("Valid types are [private, public, readonly]. %s\n", errInvalidACL{acl: acl.String()})
 	}
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
-					Error:   iodine.New(e, nil),
-				})
+				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 			default:
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
-					Error:   iodine.New(err, nil),
-				})
+				console.Fatalf("Unable to parse argument %s. %s\n", arg, err)
 			}
 		}
 		msg, err := doUpdateAccessCmd(targetURL, acl)
 		if err != nil {
-			console.Errors(ErrorMessage{
-				Message: msg,
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalln(msg)
 		}
 		console.Infoln(msg)
 	}
