@@ -85,9 +85,8 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		}
 		return iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name})
 	}
-	defer reader.Close()
 
-	var newReader io.Reader
+	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
 		console.Infos(CopyMessage{
 			Source: cpURLs.SourceContent.Name,
@@ -99,6 +98,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		// set up progress
 		newReader = bar.NewProxyReader(yielder.NewReader(reader))
 	}
+	defer newReader.Close()
 
 	err = putTarget(cpURLs.TargetContent.Name, length, newReader)
 	if err != nil {
@@ -109,13 +109,14 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 	}
 
 	<-cpQueue // Notify the copy queue that it is free to pickup next routine.
-
 	return nil
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
 func doCopyFake(sURLs copyURLs, bar *barSend) (err error) {
-	bar.Progress(sURLs.SourceContent.Size)
+	if !globalQuietFlag || !globalJSONFlag {
+		bar.Progress(sURLs.SourceContent.Size)
+	}
 	return nil
 }
 
