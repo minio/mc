@@ -25,6 +25,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -188,6 +189,7 @@ func (c *Config) SetUserAgent(name string, version string, comments ...string) {
 }
 
 type api struct {
+	*sync.Mutex
 	lowLevelAPI
 }
 
@@ -202,7 +204,7 @@ func New(config Config) (API, error) {
 	}
 	config.SetUserAgent(LibraryName, LibraryVersion, runtime.GOOS, runtime.GOARCH)
 	config.isUserAgentSet = false // default
-	return api{lowLevelAPI{&config}}, nil
+	return api{&sync.Mutex{}, lowLevelAPI{&config}}, nil
 }
 
 /// Object operations
@@ -473,6 +475,8 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch ch
 //
 // This version of PutObject automatically does multipart for more than 5MB worth of data
 func (a api) PutObject(bucket, object, contentType string, size int64, data io.Reader) error {
+	a.Lock()
+	defer a.Unlock()
 	if err := invalidBucketToError(bucket); err != nil {
 		return err
 	}
@@ -506,9 +510,15 @@ func (a api) PutObject(bucket, object, contentType string, size int64, data io.R
 			}
 		}
 		if !inProgress {
-			return a.newObjectUpload(bucket, object, contentType, size, data)
+			if err := a.newObjectUpload(bucket, object, contentType, size, data); err != nil {
+				return err
+			}
+			return nil
 		}
-		return a.continueObjectUpload(bucket, object, inProgressUploadID, size, data)
+		if err := a.continueObjectUpload(bucket, object, inProgressUploadID, size, data); err != nil {
+			return err
+		}
+		return nil
 	}
 	return errors.New("Unexpected control flow, please report this error at https://github.com/minio/minio-go/issues")
 }
@@ -555,6 +565,8 @@ func (a api) RemoveObject(bucket, object string) error {
 //  [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 //  Default - US standard
 func (a api) MakeBucket(bucket string, acl BucketACL) error {
+	a.Lock()
+	defer a.Unlock()
 	if err := invalidBucketToError(bucket); err != nil {
 		return err
 	}
@@ -581,6 +593,8 @@ func (a api) MakeBucket(bucket string, acl BucketACL) error {
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
 func (a api) SetBucketACL(bucket string, acl BucketACL) error {
+	a.Lock()
+	defer a.Unlock()
 	if err := invalidBucketToError(bucket); err != nil {
 		return err
 	}
