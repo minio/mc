@@ -63,15 +63,8 @@ type sessionV2 struct {
 
 // provides a new session
 func newSessionV2() *sessionV2 {
-	// TODO: Blindly create .mc and session dirs at init and remove these checks -ab.
 	if !isMcConfigExists() {
 		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
-	}
-
-	if !isSessionDirExists() {
-		if err := createSessionDir(); err != nil {
-			console.Fatalf("Unable to create session directory. %s\n", err)
-		}
 	}
 
 	s := &sessionV2{}
@@ -146,7 +139,12 @@ func (s *sessionV2) Close() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	err := os.Remove(getSessionDataFile(s.SessionID))
+	err := s.DataFP.Close()
+	if err != nil {
+		return iodine.New(err, nil)
+	}
+
+	err = os.Remove(getSessionDataFile(s.SessionID))
 	if err != nil {
 		return iodine.New(err, nil)
 	}

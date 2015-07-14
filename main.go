@@ -35,6 +35,12 @@ func checkConfig() {
 		console.Fatalf("Unable to determine current user. %s\n", err)
 	}
 
+	if !isSessionDirExists() {
+		if err := createSessionDir(); err != nil {
+			console.Fatalf("Unable to create session directory. %s\n", err)
+		}
+	}
+
 	// If config doesn't exist, do not attempt to read it
 	if !isMcConfigExists() {
 		return
@@ -45,6 +51,7 @@ func checkConfig() {
 	if err != nil {
 		console.Fatalf("Unable to read config file. %s\n", err)
 	}
+
 }
 
 // Get os/arch/platform specific information.
