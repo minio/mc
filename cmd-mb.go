@@ -61,40 +61,22 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
 	if !isMcConfigExists() {
-		console.Fatals(ErrorMessage{
-			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
+		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
 	}
-	config, err := getMcConfig()
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: "Unable to read config file ‘" + mustGetMcConfigPath() + "’",
-			Error:   iodine.New(err, nil),
-		})
-	}
+	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
-					Error:   iodine.New(e, nil),
-				})
+				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 			default:
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
-					Error:   iodine.New(err, nil),
-				})
+				console.Fatalf("Unable to parse argument %s. %s\n", arg, err)
 			}
 		}
 		msg, err := doMakeBucketCmd(targetURL)
 		if err != nil {
-			console.Errors(ErrorMessage{
-				Message: msg,
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalln(msg)
 		}
 		console.Infoln(msg)
 	}

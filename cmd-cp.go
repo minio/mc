@@ -90,7 +90,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.Infos(CopyMessage{
+		console.Infoln(CopyMessage{
 			Source: cpURLs.SourceContent.Name,
 			Target: cpURLs.TargetContent.Name,
 			Length: cpURLs.SourceContent.Size,
@@ -144,20 +144,14 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if cpURLs.Error != nil {
-				console.Errors(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(cpURLs.Error, nil),
-				})
+				console.Errorln(cpURLs.Error)
 				break
 			}
 
 			jsonData, err := json.Marshal(cpURLs)
 			if err != nil {
 				session.Close()
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unable to marshal URLs to JSON for ‘%s’", cpURLs.SourceContent.Name),
-					Error:   iodine.New(err, nil),
-				})
+				console.Fatalf("Unable to marshal URLs to JSON. %s\n", err)
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			scanBar(cpURLs.SourceContent.Name)
@@ -225,18 +219,19 @@ func runCopyCmd(ctx *cli.Context) {
 	session := newSessionV2()
 	defer session.Close()
 
+	var err error
 	session.Header.CommandType = "cp"
-	session.Header.RootPath, _ = os.Getwd()
+	session.Header.RootPath, err = os.Getwd()
+	if err != nil {
+		session.Close()
+		console.Fatalf("Unable to get current working directory. %s\n", err)
+	}
 
 	// extract URLs.
-	var err error
 	session.Header.CommandArgs, err = args2URLs(ctx.Args())
 	if err != nil {
 		session.Close()
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unknown URL types found: ‘%s’", ctx.Args()),
-			Error:   iodine.New(err, nil),
-		})
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err)
 	}
 
 	doCopyCmdSession(session)

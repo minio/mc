@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"syscall"
@@ -66,41 +65,23 @@ func runCatCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
 	}
 	if !isMcConfigExists() {
-		console.Fatals(ErrorMessage{
-			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
+		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
 	}
-	config, err := getMcConfig()
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
-			Error:   iodine.New(err, nil),
-		})
-	}
+	config := mustGetMcConfig()
 	// Convert arguments to URLs: expand alias, fix format...
 	for _, arg := range ctx.Args() {
 		sourceURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
 			switch e := iodine.ToError(err).(type) {
 			case errUnsupportedScheme:
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unknown type of URL ‘%s’", e.url),
-					Error:   iodine.New(e, nil),
-				})
+				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 			default:
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unable to parse argument ‘%s’", arg),
-					Error:   iodine.New(err, nil),
-				})
+				console.Fatalf("Unable to parse argument %s. %s\n", arg, err)
 			}
 		}
 		errorMsg, err := doCatCmd(sourceURL)
 		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: errorMsg,
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalln(errorMsg)
 		}
 	}
 }

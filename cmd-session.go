@@ -108,10 +108,7 @@ func runSessionCmd(ctx *cli.Context) {
 	}
 	if !isSessionDirExists() {
 		if err := createSessionDir(); err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalf("Unable to create session directory. %s\n", err)
 		}
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
@@ -119,10 +116,7 @@ func runSessionCmd(ctx *cli.Context) {
 	case "list":
 		err := listSessions()
 		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalln(err)
 		}
 	case "resume":
 		if len(ctx.Args().Tail()) != 1 {
@@ -136,26 +130,17 @@ func runSessionCmd(ctx *cli.Context) {
 
 		_, err := os.Stat(getSessionFile(sid))
 		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(errInvalidSessionID{id: sid}, nil),
-			})
+			console.Fatalln(errInvalidSessionID{id: sid})
 		}
 
 		s, err := loadSessionV2(sid)
 		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(errInvalidSessionID{id: sid}, nil),
-			})
+			console.Fatalln(errInvalidSessionID{id: sid})
 		}
 
 		savedCwd, err := os.Getwd()
 		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalln("Unable to verify your current working directory. %s\n", err)
 		}
 		if s.Header.RootPath != "" {
 			// chdir to RootPath
@@ -165,10 +150,7 @@ func runSessionCmd(ctx *cli.Context) {
 		sessionExecute(s)
 		err = s.Close()
 		if err != nil {
-			console.Fatals(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalln("Unable to close session file properly. %s\n", err)
 		}
 
 		// change dir back

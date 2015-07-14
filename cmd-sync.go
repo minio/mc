@@ -28,7 +28,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -84,10 +83,7 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(int64(length))
 		}
-		console.Errors(ErrorMessage{
-			Message: "Failed with",
-			Error:   iodine.New(err, nil),
-		})
+		console.Errorf("Unable to read from source %s. %s\n", sURLs.SourceContent.Name, err)
 	}
 
 	var targetURLs []string
@@ -97,7 +93,7 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.Infos(SyncMessage{
+		console.Infoln(SyncMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
 		})
@@ -113,6 +109,7 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 			if !globalQuietFlag || !globalJSONFlag {
 				bar.ErrorPut(int64(length))
 			}
+			console.Errorf("Unable to write to one or many destinations. %s\n", err)
 		}
 	}
 	return nil
@@ -147,20 +144,14 @@ func doPrepareSyncURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if sURLs.Error != nil {
-				console.Errors(ErrorMessage{
-					Message: "Failed with",
-					Error:   iodine.New(sURLs.Error, nil),
-				})
+				console.Errorln(sURLs.Error)
 				break
 			}
 
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
 				session.Close()
-				console.Fatals(ErrorMessage{
-					Message: fmt.Sprintf("Unable to marshal URLs to JSON for ‘%s’", sURLs.SourceContent.Name),
-					Error:   iodine.New(err, nil),
-				})
+				console.Fatalf("Unable to marshal URLs to JSON. %s\n", err)
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			scanBar(sURLs.SourceContent.Name)
@@ -227,18 +218,19 @@ func runSyncCmd(ctx *cli.Context) {
 	session := newSessionV2()
 	defer session.Close()
 
+	var err error
 	session.Header.CommandType = "sync"
-	session.Header.RootPath, _ = os.Getwd()
+	session.Header.RootPath, err = os.Getwd()
+	if err != nil {
+		session.Close()
+		console.Fatalf("Unable to get current working directory. %s\n", err)
+	}
 
 	// extract URLs.
-	var err error
 	session.Header.CommandArgs, err = args2URLs(ctx.Args())
 	if err != nil {
 		session.Close()
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unknown URL types found: ‘%s’", ctx.Args()),
-			Error:   iodine.New(err, nil),
-		})
+		console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), err)
 	}
 
 	doSyncCmdSession(session)

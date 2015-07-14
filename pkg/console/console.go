@@ -126,13 +126,6 @@ var (
 		return
 	}
 
-	// Fatals print a error structure with a new line and exit
-	Fatals = func(data ...interface{}) {
-		defer os.Exit(1)
-		println(themesDB[currThemeName].Error, data...)
-		return
-	}
-
 	// Error prints a error message
 	Error = func(data ...interface{}) {
 		print(themesDB[currThemeName].Error, data...)
@@ -151,11 +144,6 @@ var (
 		return
 	}
 
-	// Errors print a error structure with a new line
-	Errors = func(data ...interface{}) {
-		println(themesDB[currThemeName].Error, data...)
-	}
-
 	// Info prints a informational message
 	Info = func(data ...interface{}) {
 		print(themesDB[currThemeName].Info, data...)
@@ -170,12 +158,6 @@ var (
 
 	// Infoln prints a informational message with a new line
 	Infoln = func(data ...interface{}) {
-		println(themesDB[currThemeName].Info, data...)
-		return
-	}
-
-	// Infos print a informational structured message
-	Infos = func(data ...interface{}) {
 		println(themesDB[currThemeName].Info, data...)
 		return
 	}

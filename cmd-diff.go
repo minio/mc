@@ -17,8 +17,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
@@ -59,65 +57,39 @@ func runDiffCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
 	if !isMcConfigExists() {
-		console.Fatals(ErrorMessage{
-			Message: "Please run \"mc config generate\"",
-			Error:   iodine.New(errNotConfigured{}, nil),
-		})
-	}
-	config, err := getMcConfig()
-	if err != nil {
-		console.Fatals(ErrorMessage{
-			Message: fmt.Sprintf("Unable to read config file ‘%s’", mustGetMcConfigPath()),
-			Error:   iodine.New(err, nil),
-		})
+		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
 	}
 
+	config := mustGetMcConfig()
 	firstURL := ctx.Args().First()
 	secondURL := ctx.Args()[1]
 
+	var err error
 	firstURL, err = getExpandedURL(firstURL, config.Aliases)
 	if err != nil {
-		switch iodine.ToError(err).(type) {
+		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Fatals(ErrorMessage{
-				Message: fmt.Sprintf("Unknown type of URL ‘%s’", firstURL),
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 		default:
-			console.Fatals(ErrorMessage{
-				Message: fmt.Sprintf("Unable to parse argument ‘%s’", firstURL),
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalf("Unable to parse argument %s. %s\n", firstURL, err)
 		}
 	}
 	secondURL, err = getExpandedURL(secondURL, config.Aliases)
 	if err != nil {
-		switch iodine.ToError(err).(type) {
+		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
-			console.Fatals(ErrorMessage{
-				Message: fmt.Sprintf("Unknown type of URL ‘%s’", secondURL),
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 		default:
-			console.Fatals(ErrorMessage{
-				Message: fmt.Sprintf("Unable to parse argument ‘%s’", secondURL),
-				Error:   iodine.New(err, nil),
-			})
+			console.Fatalf("Unable to parse argument %s. %s\n", secondURL, err)
 		}
 	}
 	if isURLRecursive(secondURL) {
-		console.Fatals(ErrorMessage{
-			Message: "Second URL cannot be recursive, diff command is unidirectional",
-			Error:   iodine.New(errInvalidArgument{}, nil),
-		})
+		console.Fatalf("Second URL cannot be recursive. %s\n", errInvalidArgument{})
 	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		if diff.err != nil {
-			console.Fatals(ErrorMessage{
-				Message: diff.message,
-				Error:   iodine.New(diff.err, nil),
-			})
+			console.Fatalln(diff.message)
 		}
 		console.Infoln(diff.message)
 	}
