@@ -72,6 +72,9 @@ EXAMPLES:
 // doSync - Sync an object to multiple destination
 func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGroup) (err error) {
 	defer wg.Done() // Notify that this copy routine is done.
+	defer func() {
+		<-syncQueue
+	}()
 
 	if !globalQuietFlag || !globalJSONFlag {
 		bar.SetCaption(sURLs.SourceContent.Name + ": ")
@@ -81,11 +84,11 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 	if err != nil {
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(int64(length))
-			console.Errors(ErrorMessage{
-				Message: "Failed with",
-				Error:   iodine.New(err, nil),
-			})
 		}
+		console.Errors(ErrorMessage{
+			Message: "Failed with",
+			Error:   iodine.New(err, nil),
+		})
 	}
 
 	var targetURLs []string
@@ -113,9 +116,6 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 			}
 		}
 	}
-
-	<-syncQueue // Notify the copy queue that it is free to pickup next routine.
-
 	return nil
 }
 

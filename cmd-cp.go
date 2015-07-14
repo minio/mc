@@ -73,6 +73,9 @@ EXAMPLES:
 // doCopy - Copy a singe file from source to destination
 func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup) error {
 	defer wg.Done() // Notify that this copy routine is done.
+	defer func() {
+		<-cpQueue
+	}()
 
 	if !globalQuietFlag || !globalJSONFlag {
 		bar.SetCaption(cpURLs.SourceContent.Name + ": ")
@@ -105,10 +108,8 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorPut(length)
 		}
-		return iodine.New(err, map[string]string{"URL": cpURLs.TargetContent.Name})
+		console.Errorln(iodine.ToError(err))
 	}
-
-	<-cpQueue // Notify the copy queue that it is free to pickup next routine.
 	return nil
 }
 
