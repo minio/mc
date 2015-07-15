@@ -298,7 +298,7 @@ func TestURLEncoding(t *testing.T) {
 }
 
 func TestErrorResponse(t *testing.T) {
-	a := lowLevelAPI{&Config{}}
+	a := apiV1{&Config{}}
 	errorResponse := []byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message><Resource>/mybucket/myphoto.jpg</Resource><RequestId>F19772218238A85A</RequestId><HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId></Error>")
 	errorReader := bytes.NewReader(errorResponse)
 	err := a.responseToError(errorReader)

@@ -29,7 +29,7 @@ import (
 )
 
 // listMultipartUploadsRequest wrapper creates a new listMultipartUploads request
-func (a lowLevelAPI) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*request, error) {
+func (a apiV1) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
 	resourceQuery := func() (string, error) {
 		var err error
@@ -91,7 +91,7 @@ func (a lowLevelAPI) listMultipartUploadsRequest(bucket, keymarker, uploadIDMark
 // ?delimiter - A delimiter is a character you use to group keys.
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-uploads - Sets the maximum number of multipart uploads returned in the response body.
-func (a lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (listMultipartUploadsResult, error) {
+func (a apiV1) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (listMultipartUploadsResult, error) {
 	req, err := a.listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter, maxuploads)
 	if err != nil {
 		return listMultipartUploadsResult{}, err
@@ -116,7 +116,7 @@ func (a lowLevelAPI) listMultipartUploads(bucket, keymarker, uploadIDMarker, pre
 }
 
 // initiateMultipartRequest wrapper creates a new initiateMultiPart request
-func (a lowLevelAPI) initiateMultipartRequest(bucket, object string) (*request, error) {
+func (a apiV1) initiateMultipartRequest(bucket, object string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (a lowLevelAPI) initiateMultipartRequest(bucket, object string) (*request, 
 }
 
 // initiateMultipartUpload initiates a multipart upload and returns an upload ID
-func (a lowLevelAPI) initiateMultipartUpload(bucket, object string) (initiateMultipartUploadResult, error) {
+func (a apiV1) initiateMultipartUpload(bucket, object string) (initiateMultipartUploadResult, error) {
 	req, err := a.initiateMultipartRequest(bucket, object)
 	if err != nil {
 		return initiateMultipartUploadResult{}, err
@@ -154,7 +154,7 @@ func (a lowLevelAPI) initiateMultipartUpload(bucket, object string) (initiateMul
 }
 
 // completeMultipartUploadRequest wrapper creates a new CompleteMultipartUpload request
-func (a lowLevelAPI) completeMultipartUploadRequest(bucket, object, uploadID string, complete completeMultipartUpload) (*request, error) {
+func (a apiV1) completeMultipartUploadRequest(bucket, object, uploadID string, complete completeMultipartUpload) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (a lowLevelAPI) completeMultipartUploadRequest(bucket, object, uploadID str
 }
 
 // completeMultipartUpload completes a multipart upload by assembling previously uploaded parts.
-func (a lowLevelAPI) completeMultipartUpload(bucket, object, uploadID string, c completeMultipartUpload) (completeMultipartUploadResult, error) {
+func (a apiV1) completeMultipartUpload(bucket, object, uploadID string, c completeMultipartUpload) (completeMultipartUploadResult, error) {
 	req, err := a.completeMultipartUploadRequest(bucket, object, uploadID, c)
 	if err != nil {
 		return completeMultipartUploadResult{}, err
@@ -210,7 +210,7 @@ func (a lowLevelAPI) completeMultipartUpload(bucket, object, uploadID string, c 
 }
 
 // abortMultipartUploadRequest wrapper creates a new AbortMultipartUpload request
-func (a lowLevelAPI) abortMultipartUploadRequest(bucket, object, uploadID string) (*request, error) {
+func (a apiV1) abortMultipartUploadRequest(bucket, object, uploadID string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -224,7 +224,7 @@ func (a lowLevelAPI) abortMultipartUploadRequest(bucket, object, uploadID string
 }
 
 // abortMultipartUpload aborts a multipart upload for the given uploadID, all parts are deleted
-func (a lowLevelAPI) abortMultipartUpload(bucket, object, uploadID string) error {
+func (a apiV1) abortMultipartUpload(bucket, object, uploadID string) error {
 	req, err := a.abortMultipartUploadRequest(bucket, object, uploadID)
 	if err != nil {
 		return err
@@ -238,18 +238,25 @@ func (a lowLevelAPI) abortMultipartUpload(bucket, object, uploadID string) error
 		if resp.StatusCode != http.StatusNoContent {
 			// Abort has no response body, handle it
 			var errorResponse ErrorResponse
-			switch {
-			case resp.StatusCode == http.StatusNotFound:
+			switch resp.StatusCode {
+			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchUpload",
 					Message:   "The specified multipart upload does not exist.",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
-			case resp.StatusCode == http.StatusForbidden:
+			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			default:
+				errorResponse = ErrorResponse{
+					Code:      resp.Status,
+					Message:   "",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
@@ -261,7 +268,7 @@ func (a lowLevelAPI) abortMultipartUpload(bucket, object, uploadID string) error
 }
 
 // listObjectPartsRequest wrapper creates a new ListObjectParts request
-func (a lowLevelAPI) listObjectPartsRequest(bucket, object, uploadID string, partNumberMarker, maxParts int) (*request, error) {
+func (a apiV1) listObjectPartsRequest(bucket, object, uploadID string, partNumberMarker, maxParts int) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -289,7 +296,7 @@ func (a lowLevelAPI) listObjectPartsRequest(bucket, object, uploadID string, par
 // request paramters :-
 // ---------
 // ?part-number-marker - Specifies the part after which listing should begin.
-func (a lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumberMarker, maxParts int) (listObjectPartsResult, error) {
+func (a apiV1) listObjectParts(bucket, object, uploadID string, partNumberMarker, maxParts int) (listObjectPartsResult, error) {
 	req, err := a.listObjectPartsRequest(bucket, object, uploadID, partNumberMarker, maxParts)
 	if err != nil {
 		return listObjectPartsResult{}, err
@@ -313,7 +320,7 @@ func (a lowLevelAPI) listObjectParts(bucket, object, uploadID string, partNumber
 }
 
 // uploadPartRequest wrapper creates a new UploadPart request
-func (a lowLevelAPI) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
+func (a apiV1) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -334,7 +341,7 @@ func (a lowLevelAPI) uploadPartRequest(bucket, object, uploadID string, md5SumBy
 }
 
 // uploadPart uploads a part in a multipart upload.
-func (a lowLevelAPI) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
+func (a apiV1) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
 	req, err := a.uploadPartRequest(bucket, object, uploadID, md5SumBytes, partNumber, size, body)
 	if err != nil {
 		return completePart{}, err
