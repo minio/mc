@@ -112,7 +112,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Usage = "Minio Client for object storage and filesystems"
-	app.Version = Version
+	app.Version = getVersion()
 	app.Commands = commands
 	app.Compiled = getVersion()
 	app.Flags = flags
