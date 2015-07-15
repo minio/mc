@@ -215,7 +215,10 @@ type scanBarFunc func(string)
 func scanBarFactory(prefix string) scanBarFunc {
 	prevLineSize := 0
 	fileCount := 0
-	termSize, _ := ts.GetSize()
+	termSize, err := ts.GetSize()
+	if err != nil {
+		console.Fatalf("Unable to get terminal size. %s\n", err)
+	}
 	termWidth := termSize.Col()
 	cursorCh := cursorAnimate()
 
@@ -224,7 +227,6 @@ func scanBarFactory(prefix string) scanBarFunc {
 		if prevLineSize != 0 { // erase previous line
 			console.PrintC("\r" + scanPrefix + strings.Repeat(" ", prevLineSize-len([]rune(scanPrefix))))
 		}
-
 		source = fixateScanBar(source, termWidth-len([]rune(scanPrefix))-1)
 		barText := "\r" + scanPrefix + source
 		console.PrintC(barText)
