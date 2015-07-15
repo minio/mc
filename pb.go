@@ -217,11 +217,10 @@ func scanBarFactory(prefix string) scanBarFunc {
 	fileCount := 0
 	termSize, _ := ts.GetSize()
 	termWidth := termSize.Col()
-
 	cursorCh := cursorAnimate()
 
 	return func(source string) {
-		scanPrefix := fmt.Sprintf("Scanning %s [%s] %s ", prefix, humanize.Comma(int64(fileCount)), string(<-cursorCh))
+		scanPrefix := fmt.Sprintf("[%s] %s ", humanize.Comma(int64(fileCount)), string(<-cursorCh))
 		if prevLineSize != 0 { // erase previous line
 			console.PrintC("\r" + scanPrefix + strings.Repeat(" ", prevLineSize-len([]rune(scanPrefix))))
 		}
