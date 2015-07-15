@@ -33,8 +33,8 @@
 		},
 		{
 			"ImportPath": "github.com/minio/minio/pkg/iodine",
-			"Comment": "release-1434511043-154-g784d403",
-			"Rev": "784d4033f73452ab9f20643da9f9085f638e705e"
+			"Comment": "release-1434511043-231-ga23a61d",
+			"Rev": "a23a61da113fcf353d097b4323f66afae62cd430"
 		},
 		{
 			"ImportPath": "github.com/minio/pb",
