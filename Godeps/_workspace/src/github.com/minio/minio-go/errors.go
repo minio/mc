@@ -90,7 +90,7 @@ func (e ErrorResponse) Error() string {
 /// Internal function not exposed
 
 // responseToError returns a new encoded ErrorResponse structure
-func (a lowLevelAPI) responseToError(errBody io.Reader) error {
+func (a apiV1) responseToError(errBody io.Reader) error {
 	var respError ErrorResponse
 	err := acceptTypeDecoder(errBody, a.config.AcceptType, &respError)
 	if err != nil {

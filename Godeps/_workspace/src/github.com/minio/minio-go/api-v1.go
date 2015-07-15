@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,8 +29,8 @@ import (
 	"time"
 )
 
-// lowLevelAPI container to hold unexported internal functions
-type lowLevelAPI struct {
+// apiV1 container to hold unexported internal functions
+type apiV1 struct {
 	config *Config
 }
 
@@ -43,7 +42,7 @@ func closeResp(resp *http.Response) {
 }
 
 // putBucketRequest wrapper creates a new putBucket request
-func (a lowLevelAPI) putBucketRequest(bucket, acl, location string) (*request, error) {
+func (a apiV1) putBucketRequest(bucket, acl, location string) (*request, error) {
 	var r *request
 	var err error
 	op := &operation{
@@ -119,7 +118,7 @@ func (a lowLevelAPI) putBucketRequest(bucket, acl, location string) (*request, e
 // [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 //
 // Default - US standard
-func (a lowLevelAPI) putBucket(bucket, acl, location string) error {
+func (a apiV1) putBucket(bucket, acl, location string) error {
 	req, err := a.putBucketRequest(bucket, acl, location)
 	if err != nil {
 		return err
@@ -138,7 +137,7 @@ func (a lowLevelAPI) putBucket(bucket, acl, location string) error {
 }
 
 // putBucketRequestACL wrapper creates a new putBucketACL request
-func (a lowLevelAPI) putBucketACLRequest(bucket, acl string) (*request, error) {
+func (a apiV1) putBucketACLRequest(bucket, acl string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
@@ -153,7 +152,7 @@ func (a lowLevelAPI) putBucketACLRequest(bucket, acl string) (*request, error) {
 }
 
 // putBucketACL set the permissions on an existing bucket using Canned ACL's
-func (a lowLevelAPI) putBucketACL(bucket, acl string) error {
+func (a apiV1) putBucketACL(bucket, acl string) error {
 	req, err := a.putBucketACLRequest(bucket, acl)
 	if err != nil {
 		return err
@@ -172,7 +171,7 @@ func (a lowLevelAPI) putBucketACL(bucket, acl string) error {
 }
 
 // getBucketACLRequest wrapper creates a new getBucketACL request
-func (a lowLevelAPI) getBucketACLRequest(bucket string) (*request, error) {
+func (a apiV1) getBucketACLRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -186,7 +185,7 @@ func (a lowLevelAPI) getBucketACLRequest(bucket string) (*request, error) {
 }
 
 // getBucketACL get the acl information on an existing bucket
-func (a lowLevelAPI) getBucketACL(bucket string) (accessControlPolicy, error) {
+func (a apiV1) getBucketACL(bucket string) (accessControlPolicy, error) {
 	req, err := a.getBucketACLRequest(bucket)
 	if err != nil {
 		return accessControlPolicy{}, err
@@ -209,9 +208,9 @@ func (a lowLevelAPI) getBucketACL(bucket string) (accessControlPolicy, error) {
 	if policy.AccessControlList.Grant == nil {
 		errorResponse := ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Unexpected error please report this at https://github.com/minio/minio-go/issues",
+			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go/issues",
 			Resource:  "/" + bucket,
-			RequestID: "minio",
+			RequestID: resp.Header.Get("x-amz-request-id"),
 		}
 		return accessControlPolicy{}, errorResponse
 	}
@@ -219,7 +218,7 @@ func (a lowLevelAPI) getBucketACL(bucket string) (accessControlPolicy, error) {
 }
 
 // getBucketLocationRequest wrapper creates a new getBucketLocation request
-func (a lowLevelAPI) getBucketLocationRequest(bucket string) (*request, error) {
+func (a apiV1) getBucketLocationRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -233,7 +232,7 @@ func (a lowLevelAPI) getBucketLocationRequest(bucket string) (*request, error) {
 }
 
 // getBucketLocation uses location subresource to return a bucket's region
-func (a lowLevelAPI) getBucketLocation(bucket string) (string, error) {
+func (a apiV1) getBucketLocation(bucket string) (string, error) {
 	req, err := a.getBucketLocationRequest(bucket)
 	if err != nil {
 		return "", err
@@ -257,7 +256,7 @@ func (a lowLevelAPI) getBucketLocation(bucket string) (string, error) {
 }
 
 // listObjectsRequest wrapper creates a new listObjects request
-func (a lowLevelAPI) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*request, error) {
+func (a apiV1) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
 	resourceQuery := func() (*string, error) {
 		var err error
@@ -313,7 +312,7 @@ func (a lowLevelAPI) listObjectsRequest(bucket, marker, prefix, delimiter string
 // ?delimiter - A delimiter is a character you use to group keys.
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-keys - Sets the maximum number of keys returned in the response body.
-func (a lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (listBucketResult, error) {
+func (a apiV1) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (listBucketResult, error) {
 	if err := invalidBucketToError(bucket); err != nil {
 		return listBucketResult{}, err
 	}
@@ -341,7 +340,7 @@ func (a lowLevelAPI) listObjects(bucket, marker, prefix, delimiter string, maxke
 }
 
 // headBucketRequest wrapper creates a new headBucket request
-func (a lowLevelAPI) headBucketRequest(bucket string) (*request, error) {
+func (a apiV1) headBucketRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "HEAD",
@@ -351,7 +350,7 @@ func (a lowLevelAPI) headBucketRequest(bucket string) (*request, error) {
 }
 
 // headBucket useful to determine if a bucket exists and you have permission to access it.
-func (a lowLevelAPI) headBucket(bucket string) error {
+func (a apiV1) headBucket(bucket string) error {
 	if err := invalidBucketToError(bucket); err != nil {
 		return err
 	}
@@ -368,18 +367,25 @@ func (a lowLevelAPI) headBucket(bucket string) error {
 		if resp.StatusCode != http.StatusOK {
 			// Head has no response body, handle it
 			var errorResponse ErrorResponse
-			switch {
-			case resp.StatusCode == http.StatusNotFound:
+			switch resp.StatusCode {
+			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchBucket",
 					Message:   "The specified bucket does not exist.",
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
-			case resp.StatusCode == http.StatusForbidden:
+			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
+					Resource:  "/" + bucket,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			default:
+				errorResponse = ErrorResponse{
+					Code:      resp.Status,
+					Message:   "",
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
@@ -391,7 +397,7 @@ func (a lowLevelAPI) headBucket(bucket string) error {
 }
 
 // deleteBucketRequest wrapper creates a new deleteBucket request
-func (a lowLevelAPI) deleteBucketRequest(bucket string) (*request, error) {
+func (a apiV1) deleteBucketRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
@@ -405,7 +411,7 @@ func (a lowLevelAPI) deleteBucketRequest(bucket string) (*request, error) {
 // NOTE: -
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request
-func (a lowLevelAPI) deleteBucket(bucket string) error {
+func (a apiV1) deleteBucket(bucket string) error {
 	if err := invalidBucketToError(bucket); err != nil {
 		return err
 	}
@@ -421,18 +427,25 @@ func (a lowLevelAPI) deleteBucket(bucket string) error {
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			var errorResponse ErrorResponse
-			switch {
-			case resp.StatusCode == http.StatusNotFound:
+			switch resp.StatusCode {
+			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchBucket",
 					Message:   "The specified bucket does not exist.",
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
-			case resp.StatusCode == http.StatusForbidden:
+			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
+					Resource:  "/" + bucket,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			default:
+				errorResponse = ErrorResponse{
+					Code:      resp.Status,
+					Message:   "",
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
@@ -446,7 +459,7 @@ func (a lowLevelAPI) deleteBucket(bucket string) error {
 /// Object Read/Write/Stat Operations
 
 // putObjectRequest wrapper creates a new PutObject request
-func (a lowLevelAPI) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
+func (a apiV1) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
@@ -472,7 +485,7 @@ func (a lowLevelAPI) putObjectRequest(bucket, object, contentType string, md5Sum
 
 // putObject - add an object to a bucket
 // NOTE: You must have WRITE permissions on a bucket to add an object to it.
-func (a lowLevelAPI) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
+func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
 	req, err := a.putObjectRequest(bucket, object, contentType, md5SumBytes, size, body)
 	if err != nil {
 		return ObjectStat{}, err
@@ -489,11 +502,18 @@ func (a lowLevelAPI) putObject(bucket, object, contentType string, md5SumBytes [
 	}
 	var metadata ObjectStat
 	metadata.ETag = strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
+	if metadata.ETag == "" {
+		return ObjectStat{}, ErrorResponse{
+			Code:      "InternalError",
+			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
+			RequestID: resp.Header.Get("x-amz-request-id"),
+		}
+	}
 	return metadata, nil
 }
 
 // getObjectRequest wrapper creates a new getObject request
-func (a lowLevelAPI) getObjectRequest(bucket, object string, offset, length int64) (*request, error) {
+func (a apiV1) getObjectRequest(bucket, object string, offset, length int64) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -524,7 +544,7 @@ func (a lowLevelAPI) getObjectRequest(bucket, object string, offset, length int6
 // range bytes of an object. Setting offset and length = 0 will download the full object.
 //
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a lowLevelAPI) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
+func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
 	if err := invalidArgumentToError(object); err != nil {
 		return nil, ObjectStat{}, err
 	}
@@ -546,11 +566,19 @@ func (a lowLevelAPI) getObject(bucket, object string, offset, length int64) (io.
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
 	if md5sum == "" {
-		return nil, ObjectStat{}, errors.New("missing ETag")
+		return nil, ObjectStat{}, ErrorResponse{
+			Code:      "InternalError",
+			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
+			RequestID: resp.Header.Get("x-amz-request-id"),
+		}
 	}
 	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	if err != nil {
-		return nil, ObjectStat{}, err
+		return nil, ObjectStat{}, ErrorResponse{
+			Code:      "InternalError",
+			Message:   "Content-Length unrecognized, please report this issue at https://github.com/minio/minio-go/issues",
+			RequestID: resp.Header.Get("x-amz-request-id"),
+		}
 	}
 	var objectstat ObjectStat
 	objectstat.ETag = md5sum
@@ -563,7 +591,7 @@ func (a lowLevelAPI) getObject(bucket, object string, offset, length int64) (io.
 }
 
 // deleteObjectRequest wrapper creates a new deleteObject request
-func (a lowLevelAPI) deleteObjectRequest(bucket, object string) (*request, error) {
+func (a apiV1) deleteObjectRequest(bucket, object string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -577,7 +605,7 @@ func (a lowLevelAPI) deleteObjectRequest(bucket, object string) (*request, error
 }
 
 // deleteObject deletes a given object from a bucket
-func (a lowLevelAPI) deleteObject(bucket, object string) error {
+func (a apiV1) deleteObject(bucket, object string) error {
 	if err := invalidBucketToError(bucket); err != nil {
 		return err
 	}
@@ -596,18 +624,25 @@ func (a lowLevelAPI) deleteObject(bucket, object string) error {
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			var errorResponse ErrorResponse
-			switch {
-			case resp.StatusCode == http.StatusNotFound:
+			switch resp.StatusCode {
+			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchKey",
 					Message:   "The specified key does not exist.",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
-			case resp.StatusCode == http.StatusForbidden:
+			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+			default:
+				errorResponse = ErrorResponse{
+					Code:      resp.Status,
+					Message:   "",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
@@ -619,7 +654,7 @@ func (a lowLevelAPI) deleteObject(bucket, object string) error {
 }
 
 // headObjectRequest wrapper creates a new headObject request
-func (a lowLevelAPI) headObjectRequest(bucket, object string) (*request, error) {
+func (a apiV1) headObjectRequest(bucket, object string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -633,7 +668,7 @@ func (a lowLevelAPI) headObjectRequest(bucket, object string) (*request, error) 
 }
 
 // headObject retrieves metadata from an object without returning the object itself
-func (a lowLevelAPI) headObject(bucket, object string) (ObjectStat, error) {
+func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 	if err := invalidBucketToError(bucket); err != nil {
 		return ObjectStat{}, err
 	}
@@ -652,36 +687,56 @@ func (a lowLevelAPI) headObject(bucket, object string) (ObjectStat, error) {
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			var errorResponse ErrorResponse
-			switch {
-			case resp.StatusCode == http.StatusNotFound:
+			switch resp.StatusCode {
+			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchKey",
 					Message:   "The specified key does not exist.",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
-			case resp.StatusCode == http.StatusForbidden:
+			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
+			default:
+				errorResponse = ErrorResponse{
+					Code:      resp.Status,
+					Message:   "",
+					Resource:  "/" + bucket + "/" + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+				}
+
 			}
 			return ObjectStat{}, errorResponse
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
 	if md5sum == "" {
-		return ObjectStat{}, errors.New("missing ETag")
+		return ObjectStat{}, ErrorResponse{
+			Code:      "InternalError",
+			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
+			RequestID: resp.Header.Get("x-amz-request-id"),
+		}
 	}
 	size, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
-		return ObjectStat{}, err
+		return ObjectStat{}, ErrorResponse{
+			Code:      "InternalError",
+			Message:   "Content-Length unrecognized, please report this issue at https://github.com/minio/minio-go/issues",
+			RequestID: resp.Header.Get("x-amz-request-id"),
+		}
 	}
 	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	if err != nil {
-		return ObjectStat{}, err
+		return ObjectStat{}, ErrorResponse{
+			Code:      "InternalError",
+			Message:   "Last-Modified time format unrecognized, please report this issue at https://github.com/minio/minio-go/issues",
+			RequestID: resp.Header.Get("x-amz-request-id"),
+		}
 	}
 	var objectstat ObjectStat
 	objectstat.ETag = md5sum
@@ -694,7 +749,7 @@ func (a lowLevelAPI) headObject(bucket, object string) (ObjectStat, error) {
 /// Service Operations
 
 // listBucketRequest wrapper creates a new listBuckets request
-func (a lowLevelAPI) listBucketsRequest() (*request, error) {
+func (a apiV1) listBucketsRequest() (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -704,7 +759,7 @@ func (a lowLevelAPI) listBucketsRequest() (*request, error) {
 }
 
 // listBuckets list of all buckets owned by the authenticated sender of the request
-func (a lowLevelAPI) listBuckets() (listAllMyBucketsResult, error) {
+func (a apiV1) listBuckets() (listAllMyBucketsResult, error) {
 	req, err := a.listBucketsRequest()
 	if err != nil {
 		return listAllMyBucketsResult{}, err
@@ -717,7 +772,11 @@ func (a lowLevelAPI) listBuckets() (listAllMyBucketsResult, error) {
 	if resp != nil {
 		// for un-authenticated requests, amazon sends a redirect handle it
 		if resp.StatusCode == http.StatusTemporaryRedirect {
-			return listAllMyBucketsResult{}, errors.New(resp.Status)
+			return listAllMyBucketsResult{}, ErrorResponse{
+				Code:      "AccessDenied",
+				Message:   "Anonymous access is forbidden for this operation",
+				RequestID: resp.Header.Get("x-amz-request-id"),
+			}
 		}
 		if resp.StatusCode != http.StatusOK {
 			return listAllMyBucketsResult{}, a.responseToError(resp.Body)

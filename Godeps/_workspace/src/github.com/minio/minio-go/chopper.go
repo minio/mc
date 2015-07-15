@@ -31,7 +31,13 @@ type part struct {
 	Num        int // part number
 }
 
-// multiPart reads from io.Reader, partitions the data into chunks of given chunksize, and sends
+// skipPart - skipping uploaded parts
+type skipPart struct {
+	md5sum     []byte
+	partNumber int
+}
+
+// chopper reads from io.Reader, partitions the data into chunks of given chunksize, and sends
 // each chunk as io.ReadSeeker to the caller over a channel
 //
 // This method runs until an EOF or error occurs. If an error occurs,
@@ -39,13 +45,13 @@ type part struct {
 // Before returning, the channel is always closed.
 //
 // additionally this function also skips list of parts if provided
-func multiPart(reader io.Reader, chunkSize int64, skipParts []skipPart) <-chan part {
+func chopper(reader io.Reader, chunkSize int64, skipParts []skipPart) <-chan part {
 	ch := make(chan part)
-	go multiPartInRoutine(reader, chunkSize, skipParts, ch)
+	go chopperInRoutine(reader, chunkSize, skipParts, ch)
 	return ch
 }
 
-func multiPartInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, ch chan part) {
+func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, ch chan part) {
 	defer close(ch)
 	p := make([]byte, chunkSize)
 	n, err := io.ReadFull(reader, p)
