@@ -22,7 +22,6 @@ import (
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 type hostConfig struct {
@@ -34,11 +33,11 @@ type hostConfig struct {
 func getHostConfig(URL string) (*hostConfig, error) {
 	config, err := getMcConfig()
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, NewIodine(err, nil)
 	}
 	url, err := client.Parse(URL)
 	if err != nil {
-		return nil, iodine.New(errInvalidURL{URL: URL}, nil)
+		return nil, NewIodine(errInvalidURL{URL: URL}, nil)
 	}
 	// No host matching or keys needed for filesystem requests
 	if url.Type == client.Filesystem {
@@ -59,16 +58,16 @@ func getHostConfig(URL string) (*hostConfig, error) {
 	for globURL, hostCfg := range config.Hosts {
 		match, err := filepath.Match(globURL, url.Host)
 		if err != nil {
-			return nil, iodine.New(errInvalidGlobURL{glob: globURL, request: URL}, nil)
+			return nil, NewIodine(errInvalidGlobURL{glob: globURL, request: URL}, nil)
 		}
 		if match {
 			if hostCfg == nil {
-				return nil, iodine.New(errInvalidAuth{}, nil)
+				return nil, NewIodine(errInvalidAuth{}, nil)
 			}
 			return hostCfg, nil
 		}
 	}
-	return nil, iodine.New(errNoMatchingHost{}, nil)
+	return nil, NewIodine(errNoMatchingHost{}, nil)
 }
 
 // mustGetHostConfig retrieves host specific configuration such as access keys, exits upon error

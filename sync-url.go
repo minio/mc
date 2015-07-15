@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 //
@@ -100,7 +99,7 @@ func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) <-chan syncURLs
 			var cURLs copyURLs
 			for cURLs = range prepareCopyURLsTypeA(sourceURL, targetURL) {
 				if cURLs.Error != nil {
-					syncURLsCh <- syncURLs{Error: iodine.New(cURLs.Error, nil)}
+					syncURLsCh <- syncURLs{Error: NewIodine(cURLs.Error, nil)}
 					continue
 				}
 			}
@@ -124,7 +123,7 @@ func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) <-chan syncURLs
 			var cURLs copyURLs
 			for cURLs = range prepareCopyURLsTypeB(sourceURL, targetURL) {
 				if cURLs.Error != nil {
-					syncURLsCh <- syncURLs{Error: iodine.New(cURLs.Error, nil)}
+					syncURLsCh <- syncURLs{Error: NewIodine(cURLs.Error, nil)}
 					continue
 				}
 			}
@@ -145,7 +144,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 		defer close(syncURLsCh)
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
-			syncURLsCh <- syncURLs{Error: iodine.New(errSourceNotRecursive{URL: sourceURL}, nil)}
+			syncURLsCh <- syncURLs{Error: NewIodine(errSourceNotRecursive{URL: sourceURL}, nil)}
 			return
 		}
 		// add `/` after trimming off `...` to emulate directories
@@ -154,13 +153,13 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 		// Source exist?
 		if err != nil {
 			// Source does not exist or insufficient privileges.
-			syncURLsCh <- syncURLs{Error: iodine.New(err, nil)}
+			syncURLsCh <- syncURLs{Error: NewIodine(err, nil)}
 			return
 		}
 
 		if !sourceContent.Type.IsDir() {
 			// Source is not a dir.
-			syncURLsCh <- syncURLs{Error: iodine.New(errSourceIsNotDir{URL: sourceURL}, nil)}
+			syncURLsCh <- syncURLs{Error: NewIodine(errSourceIsNotDir{URL: sourceURL}, nil)}
 			return
 		}
 
@@ -169,20 +168,20 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 			// Target exist?
 			if err != nil {
 				// Target does not exist.
-				syncURLsCh <- syncURLs{Error: iodine.New(errTargetNotFound{URL: targetURL}, nil)}
+				syncURLsCh <- syncURLs{Error: NewIodine(errTargetNotFound{URL: targetURL}, nil)}
 				return
 			}
 
 			if !targetContent.Type.IsDir() {
 				// Target exists, but is not a directory.
-				syncURLsCh <- syncURLs{Error: iodine.New(errTargetIsNotDir{URL: targetURL}, nil)}
+				syncURLsCh <- syncURLs{Error: NewIodine(errTargetIsNotDir{URL: targetURL}, nil)}
 				return
 			}
 		}
 		for sourceContent := range sourceClient.List(true) {
 			if sourceContent.Err != nil {
 				// Listing failed.
-				syncURLsCh <- syncURLs{Error: iodine.New(sourceContent.Err, nil)}
+				syncURLsCh <- syncURLs{Error: NewIodine(sourceContent.Err, nil)}
 				continue
 			}
 			if !sourceContent.Content.Type.IsRegular() {
@@ -192,7 +191,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
-				syncURLsCh <- syncURLs{Error: iodine.New(errInvalidSource{URL: sourceURL}, nil)}
+				syncURLsCh <- syncURLs{Error: NewIodine(errInvalidSource{URL: sourceURL}, nil)}
 				continue
 			}
 			var newTargetURLs []string
@@ -200,7 +199,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 			for _, targetURL := range targetURLs {
 				targetURLParse, err := client.Parse(targetURL)
 				if err != nil {
-					syncURLsCh <- syncURLs{Error: iodine.New(errInvalidTarget{URL: targetURL}, nil)}
+					syncURLsCh <- syncURLs{Error: NewIodine(errInvalidTarget{URL: targetURL}, nil)}
 					continue
 				}
 				sourceURLDelimited := sourceURLParse.String()[:strings.LastIndex(sourceURLParse.String(),
@@ -209,7 +208,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 				sourceContentURL := sourceURLDelimited + sourceContentName
 				sourceContentParse, err = client.Parse(sourceContentURL)
 				if err != nil {
-					syncURLsCh <- syncURLs{Error: iodine.New(errInvalidSource{URL: sourceContentName}, nil)}
+					syncURLsCh <- syncURLs{Error: NewIodine(errInvalidSource{URL: sourceContentName}, nil)}
 					continue
 				}
 				// Construct target path from recursive path of source without its prefix dir.
@@ -244,7 +243,7 @@ func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
 				syncURLsCh <- sURLs
 			}
 		default:
-			syncURLsCh <- syncURLs{Error: iodine.New(errInvalidArgument{}, nil)}
+			syncURLsCh <- syncURLs{Error: NewIodine(errInvalidArgument{}, nil)}
 		}
 	}()
 	return syncURLsCh

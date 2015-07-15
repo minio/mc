@@ -22,7 +22,6 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -75,7 +74,7 @@ func runAccessCmd(ctx *cli.Context) {
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
-			switch e := iodine.ToError(err).(type) {
+			switch e := ToError(err).(type) {
 			case errUnsupportedScheme:
 				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 			default:
@@ -96,7 +95,7 @@ func doUpdateAccessCmd(targetURL string, targetACL bucketACL) (string, error) {
 	clnt, err = target2Client(targetURL)
 	if err != nil {
 		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
-		return msg, iodine.New(err, nil)
+		return msg, NewIodine(err, nil)
 	}
 	return doUpdateAccess(clnt, targetACL)
 }
@@ -105,7 +104,7 @@ func doUpdateAccess(clnt client.Client, targetACL bucketACL) (string, error) {
 	err := clnt.SetBucketACL(targetACL.String())
 	if err != nil {
 		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’", clnt.URL().String())
-		return msg, iodine.New(err, nil)
+		return msg, NewIodine(err, nil)
 	}
 	return "Bucket access policy updated successfully : " + clnt.URL().String(), nil
 }

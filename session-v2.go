@@ -27,7 +27,6 @@ import (
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // migrateSessionV1ToV2 migrates all session files from v1 to v2. This
@@ -37,7 +36,7 @@ func migrateSessionV1ToV2() {
 	for _, sid := range getSessionIDsV1() {
 		err := os.Remove(getSessionFileV1(sid))
 		if err != nil {
-			console.Fatalf("Migration failed. Unable to remove old session file %s. %s\n", getSessionFileV1(sid), iodine.New(err, nil))
+			console.Fatalf("Migration failed. Unable to remove old session file %s. %s\n", getSessionFileV1(sid), NewIodine(err, nil))
 		}
 	}
 }
@@ -123,12 +122,12 @@ func (s *sessionV2) Save() error {
 
 	err := s.DataFP.Sync()
 	if err != nil {
-		return iodine.New(err, nil)
+		return NewIodine(err, nil)
 	}
 
 	qs, err := quick.New(s.Header)
 	if err != nil {
-		return iodine.New(err, nil)
+		return NewIodine(err, nil)
 	}
 
 	return qs.Save(getSessionFile(s.SessionID))
@@ -141,21 +140,21 @@ func (s *sessionV2) Close() error {
 
 	err := s.DataFP.Close()
 	if err != nil {
-		return iodine.New(err, nil)
+		return NewIodine(err, nil)
 	}
 
 	err = os.Remove(getSessionDataFile(s.SessionID))
 	if err != nil {
-		return iodine.New(err, nil)
+		return NewIodine(err, nil)
 	}
 
 	err = os.Remove(getSessionFile(s.SessionID))
 	if err != nil {
-		return iodine.New(err, nil)
+		return NewIodine(err, nil)
 	}
 
 	if err != nil {
-		return iodine.New(err, nil)
+		return NewIodine(err, nil)
 	}
 	return nil
 }
@@ -163,13 +162,13 @@ func (s *sessionV2) Close() error {
 // loadSession - reads session file if exists and re-initiates internal variables
 func loadSessionV2(sid string) (*sessionV2, error) {
 	if !isSessionDirExists() {
-		return nil, iodine.New(errInvalidArgument{}, nil)
+		return nil, NewIodine(errInvalidArgument{}, nil)
 	}
 	sessionFile := getSessionFile(sid)
 
 	_, err := os.Stat(sessionFile)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, NewIodine(err, nil)
 	}
 
 	s := &sessionV2{}
@@ -178,11 +177,11 @@ func loadSessionV2(sid string) (*sessionV2, error) {
 	s.Header.Version = "1.1.0"
 	qs, err := quick.New(s.Header)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, NewIodine(err, nil)
 	}
 	err = qs.Load(sessionFile)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, NewIodine(err, nil)
 	}
 
 	s.mutex = new(sync.Mutex)
