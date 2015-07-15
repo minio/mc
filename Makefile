@@ -53,8 +53,7 @@ release: getdeps verifiers
 	@mkdir -p $(HOME)/.mc
 
 godepupdate:
-	@for i in $(grep ImportPath Godeps/Godeps.json  | grep -v minio/mc | cut -f2 -d: | sed -e 's/,//' -e 's/^[ \t]*//' -e 's/[ \t]*$//' -e 's/\"//g'); do godep update $i; done
-
+	@(env bash $(PWD)/buildscripts/updatedeps.sh)
 save:
 	@godep save ./...
 
