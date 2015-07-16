@@ -19,7 +19,6 @@ package main
 import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -88,7 +87,7 @@ func runListCmd(ctx *cli.Context) {
 	for _, arg := range args {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
-			switch e := iodine.ToError(err).(type) {
+			switch e := ToError(err).(type) {
 			case errUnsupportedScheme:
 				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 			default:
@@ -108,11 +107,11 @@ func runListCmd(ctx *cli.Context) {
 func doListCmd(targetURL string, recursive bool) error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
-		return iodine.New(err, map[string]string{"Target": targetURL})
+		return NewIodine(err, map[string]string{"Target": targetURL})
 	}
 	err = doList(clnt, recursive)
 	if err != nil {
-		return iodine.New(err, map[string]string{"Target": targetURL})
+		return NewIodine(err, map[string]string{"Target": targetURL})
 	}
 	return nil
 }

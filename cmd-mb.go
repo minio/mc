@@ -22,7 +22,6 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -67,7 +66,7 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	for _, arg := range ctx.Args() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
-			switch e := iodine.ToError(err).(type) {
+			switch e := ToError(err).(type) {
 			case errUnsupportedScheme:
 				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 			default:
@@ -89,7 +88,7 @@ func doMakeBucketCmd(targetURL string) (string, error) {
 	clnt, err = target2Client(targetURL)
 	if err != nil {
 		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
-		return msg, iodine.New(err, nil)
+		return msg, NewIodine(err, nil)
 	}
 	return doMakeBucket(clnt)
 }
@@ -99,7 +98,7 @@ func doMakeBucket(clnt client.Client) (string, error) {
 	err := clnt.MakeBucket()
 	if err != nil {
 		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", clnt.URL().String())
-		return msg, iodine.New(err, nil)
+		return msg, NewIodine(err, nil)
 	}
 	return "Bucket created successfully : " + clnt.URL().String(), nil
 }

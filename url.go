@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // ``...`` recursiveSeparator
@@ -49,16 +48,16 @@ func stripRecursiveURL(urlStr string) string {
 func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err error) {
 	if _, err := client.Parse(urlStr); err != nil {
 		// Not a valid URL. Return error
-		return "", iodine.New(errInvalidURL{arg}, nil)
+		return "", NewIodine(errInvalidURL{arg}, nil)
 	}
 	// Check and expand Alias
 	urlStr, err = aliasExpand(arg, aliases)
 	if err != nil {
-		return "", iodine.New(err, nil)
+		return "", NewIodine(err, nil)
 	}
 	if _, err := client.Parse(urlStr); err != nil {
 		// Not a valid URL. Return error
-		return "", iodine.New(errInvalidURL{urlStr}, nil)
+		return "", NewIodine(errInvalidURL{urlStr}, nil)
 	}
 	return urlStr, nil
 }
@@ -68,7 +67,7 @@ func getExpandedURLs(args []string, aliases map[string]string) (urls []string, e
 	for _, arg := range args {
 		u, err := getExpandedURL(arg, aliases)
 		if err != nil {
-			return nil, iodine.New(err, nil)
+			return nil, NewIodine(err, nil)
 		}
 		urls = append(urls, u)
 	}
@@ -79,12 +78,12 @@ func getExpandedURLs(args []string, aliases map[string]string) (urls []string, e
 func args2URLs(args []string) ([]string, error) {
 	config, err := getMcConfig()
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, NewIodine(err, nil)
 	}
 	// Convert arguments to URLs: expand alias, fix format...
 	URLs, err := getExpandedURLs(args, config.Aliases)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, NewIodine(err, nil)
 	}
 	return URLs, nil
 }

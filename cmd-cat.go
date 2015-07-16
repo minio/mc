@@ -23,7 +23,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -72,7 +71,7 @@ func runCatCmd(ctx *cli.Context) {
 	for _, arg := range ctx.Args() {
 		sourceURL, err := getExpandedURL(arg, config.Aliases)
 		if err != nil {
-			switch e := iodine.ToError(err).(type) {
+			switch e := ToError(err).(type) {
 			case errUnsupportedScheme:
 				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 			default:
@@ -89,24 +88,24 @@ func runCatCmd(ctx *cli.Context) {
 func doCatCmd(sourceURL string) (string, error) {
 	sourceClnt, err := source2Client(sourceURL)
 	if err != nil {
-		return "Unable to create client: " + sourceURL, iodine.New(err, nil)
+		return "Unable to create client: " + sourceURL, NewIodine(err, nil)
 	}
 	reader, size, err := sourceClnt.GetObject(0, 0)
 	if err != nil {
-		return "Unable to retrieve file: " + sourceURL, iodine.New(err, nil)
+		return "Unable to retrieve file: " + sourceURL, NewIodine(err, nil)
 	}
 	defer reader.Close()
 	_, err = io.CopyN(os.Stdout, reader, int64(size))
 	if err != nil {
-		switch e := iodine.ToError(err).(type) {
+		switch e := ToError(err).(type) {
 		case *os.PathError:
 			if e.Err == syscall.EPIPE {
 				// stdout closed by the user. Gracefully exit.
 				return "", nil
 			}
-			return "Writing data to stdout failed, unexpected problem.. please report this error", iodine.New(err, nil)
+			return "Writing data to stdout failed, unexpected problem.. please report this error", NewIodine(err, nil)
 		default:
-			return "Reading data from source failed: " + sourceURL, iodine.New(err, nil)
+			return "Reading data from source failed: " + sourceURL, NewIodine(err, nil)
 		}
 	}
 	return "", nil

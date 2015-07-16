@@ -25,7 +25,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 /// ls - related internal functions
@@ -76,13 +75,13 @@ func doList(clnt client.Client, recursive bool) error {
 	var err error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
-			switch err := iodine.ToError(contentCh.Err).(type) {
+			switch err := ToError(contentCh.Err).(type) {
 			// handle this specifically for filesystem
 			case client.ISBrokenSymlink:
 				console.Errorf(err.Error())
 				continue
 			}
-			if os.IsNotExist(iodine.ToError(contentCh.Err)) || os.IsPermission(iodine.ToError(contentCh.Err)) {
+			if os.IsNotExist(ToError(contentCh.Err)) || os.IsPermission(ToError(contentCh.Err)) {
 				console.Errorf(contentCh.Err.Error())
 				continue
 			}
@@ -92,7 +91,7 @@ func doList(clnt client.Client, recursive bool) error {
 		console.Prints(parseContent(contentCh.Content))
 	}
 	if err != nil {
-		return iodine.New(err, map[string]string{"Target": clnt.URL().String()})
+		return NewIodine(err, map[string]string{"Target": clnt.URL().String()})
 	}
 	return nil
 }
