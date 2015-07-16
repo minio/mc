@@ -25,6 +25,7 @@ import (
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 type configV1 struct {
@@ -51,7 +52,7 @@ func getMcConfigDir() (string, error) {
 	}
 	u, err := user.Current()
 	if err != nil {
-		return "", NewIodine(err, nil)
+		return "", iodine.New(err, nil)
 	}
 	// For windows the path is slightly different
 	switch runtime.GOOS {
@@ -75,11 +76,11 @@ func mustGetMcConfigDir() (configDir string) {
 func createMcConfigDir() error {
 	p, err := getMcConfigDir()
 	if err != nil {
-		return NewIodine(err, nil)
+		return iodine.New(err, nil)
 	}
 	err = os.MkdirAll(p, 0700)
 	if err != nil {
-		return NewIodine(err, nil)
+		return iodine.New(err, nil)
 	}
 	return nil
 }
@@ -88,7 +89,7 @@ func createMcConfigDir() error {
 func getMcConfigPath() (string, error) {
 	dir, err := getMcConfigDir()
 	if err != nil {
-		return "", NewIodine(err, nil)
+		return "", iodine.New(err, nil)
 	}
 	return filepath.Join(dir, mcConfigFile), nil
 }
@@ -105,12 +106,12 @@ func mustGetMcConfigPath() string {
 // getMcConfig - reads configuration file and returns config
 func getMcConfig() (*configV1, error) {
 	if !isMcConfigExists() {
-		return nil, NewIodine(errInvalidArgument{}, nil)
+		return nil, iodine.New(errInvalidArgument{}, nil)
 	}
 
 	configFile, err := getMcConfigPath()
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, iodine.New(err, nil)
 	}
 
 	// Cached in private global variable.
@@ -121,12 +122,12 @@ func getMcConfig() (*configV1, error) {
 	conf := newConfigV1()
 	qconf, err := quick.New(conf)
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, iodine.New(err, nil)
 	}
 
 	err = qconf.Load(configFile)
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, iodine.New(err, nil)
 	}
 	cache.Put(qconf)
 	return qconf.Data().(*configV1), nil
@@ -159,14 +160,14 @@ func isMcConfigExists() bool {
 func writeConfig(config quick.Config) error {
 	err := createMcConfigDir()
 	if err != nil {
-		return NewIodine(err, nil)
+		return iodine.New(err, nil)
 	}
 	configPath, err := getMcConfigPath()
 	if err != nil {
-		return NewIodine(err, nil)
+		return iodine.New(err, nil)
 	}
 	if err := config.Save(configPath); err != nil {
-		return NewIodine(err, nil)
+		return iodine.New(err, nil)
 	}
 	return nil
 }
@@ -215,7 +216,7 @@ func newConfig() (config quick.Config, err error) {
 	conf.Aliases = aliases
 	config, err = quick.New(conf)
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, iodine.New(err, nil)
 	}
 
 	return config, nil

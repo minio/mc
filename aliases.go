@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // validAliasURL: use net/url.Parse to validate
@@ -48,7 +49,7 @@ func isValidAliasName(aliasName string) bool {
 func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, err error) {
 	u, err := client.Parse(aliasedURL)
 	if err != nil {
-		return aliasedURL, NewIodine(errInvalidURL{URL: aliasedURL}, nil)
+		return aliasedURL, iodine.New(errInvalidURL{URL: aliasedURL}, nil)
 	}
 	// proper URL
 	if u.Host != "" {
@@ -68,7 +69,7 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (newURL string, e
 				trimmedURL := expandedURL + "/" + strings.TrimPrefix(strings.TrimPrefix(splits[1], "/"), "\\")
 				u, err := client.Parse(trimmedURL)
 				if err != nil {
-					return aliasedURL, NewIodine(errInvalidURL{URL: aliasedURL}, nil)
+					return aliasedURL, iodine.New(errInvalidURL{URL: aliasedURL}, nil)
 				}
 				return u.String(), nil
 			}

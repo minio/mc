@@ -29,6 +29,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -84,7 +85,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(length)
 		}
-		return NewIodine(err, map[string]string{"URL": cpURLs.SourceContent.Name})
+		return iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name})
 	}
 
 	var newReader io.ReadCloser
@@ -106,7 +107,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorPut(length)
 		}
-		console.Errorln(ToError(err))
+		console.Errorln(iodine.ToError(err))
 	}
 	return nil
 }
