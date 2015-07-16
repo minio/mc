@@ -26,6 +26,7 @@ import (
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 type sessionV1 struct {
@@ -49,13 +50,13 @@ func (s sessionV1) String() string {
 // loadSession - reads session file if exists and re-initiates internal variables
 func loadSessionV1(sid string) (*sessionV1, error) {
 	if !isSessionDirExists() {
-		return nil, NewIodine(errInvalidArgument{}, nil)
+		return nil, NewIodine(iodine.New(errInvalidArgument{}, nil))
 	}
 	sessionFile := getSessionFileV1(sid)
 
 	_, err := os.Stat(sessionFile)
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, NewIodine(iodine.New(err, nil))
 	}
 	s := new(sessionV1)
 	s.Version = "1.0.0"
@@ -65,11 +66,11 @@ func loadSessionV1(sid string) (*sessionV1, error) {
 	s.Files = make(map[string]bool)
 	qs, err := quick.New(s)
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, NewIodine(iodine.New(err, nil))
 	}
 	err = qs.Load(sessionFile)
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, NewIodine(iodine.New(err, nil))
 	}
 	return qs.Data().(*sessionV1), nil
 }
@@ -77,7 +78,7 @@ func loadSessionV1(sid string) (*sessionV1, error) {
 func getSessionIDsV1() (sids []string) {
 	sessionList, err := filepath.Glob(getSessionDir() + "/*")
 	if err != nil {
-		console.Fatalf("Unable to list session directory ‘%s’, %s", getSessionDir(), NewIodine(err, nil))
+		console.Fatalf("Unable to list session directory ‘%s’, %s", getSessionDir(), NewIodine(iodine.New(err, nil)))
 	}
 
 	for _, path := range sessionList {
@@ -86,7 +87,7 @@ func getSessionIDsV1() (sids []string) {
 		if sidReg.Match([]byte(sid)) {
 			sessionV1, err := loadSessionV1(sid)
 			if err != nil {
-				console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(err, nil))
+				console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(iodine.New(err, nil)))
 			}
 			if sessionV1.Version != "1.0.0" {
 				continue

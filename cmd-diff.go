@@ -19,6 +19,7 @@ package main
 import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -66,7 +67,7 @@ func runDiffCmd(ctx *cli.Context) {
 	var err error
 	firstURL, err = getExpandedURL(firstURL, config.Aliases)
 	if err != nil {
-		switch e := ToError(err).(type) {
+		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 		default:
@@ -75,7 +76,7 @@ func runDiffCmd(ctx *cli.Context) {
 	}
 	secondURL, err = getExpandedURL(secondURL, config.Aliases)
 	if err != nil {
-		switch e := ToError(err).(type) {
+		switch e := iodine.ToError(err).(type) {
 		case errUnsupportedScheme:
 			console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
 		default:
@@ -100,7 +101,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if err != nil {
 		ch <- diff{
 			message: "Failed to stat ‘" + firstURL + "’",
-			err:     NewIodine(err, nil),
+			err:     NewIodine(iodine.New(err, nil)),
 		}
 		return
 	}
@@ -108,7 +109,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if err != nil {
 		ch <- diff{
 			message: "Failed to stat ‘" + secondURL + "’",
-			err:     NewIodine(err, nil),
+			err:     NewIodine(iodine.New(err, nil)),
 		}
 		return
 	}
@@ -119,7 +120,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			if err != nil {
 				ch <- diff{
 					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + firstURL,
-					err:     NewIodine(err, nil),
+					err:     NewIodine(iodine.New(err, nil)),
 				}
 				return
 			}

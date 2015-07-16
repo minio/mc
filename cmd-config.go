@@ -22,6 +22,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 //   Configure minio client
@@ -78,25 +79,25 @@ func saveConfig(arg string, aliases []string) error {
 	switch arg {
 	case "generate":
 		if isMcConfigExists() {
-			return NewIodine(errConfigExists{}, nil)
+			return NewIodine(iodine.New(errConfigExists{}, nil))
 		}
 		config, err := newConfig()
 		if err != nil {
-			return NewIodine(err, nil)
+			return NewIodine(iodine.New(err, nil))
 		}
 		err = writeConfig(config)
 		if err != nil {
-			return NewIodine(err, nil)
+			return NewIodine(iodine.New(err, nil))
 		}
 		return nil
 	case "alias":
 		config, err := addAlias(aliases)
 		if err != nil {
-			return NewIodine(err, nil)
+			return NewIodine(iodine.New(err, nil))
 		}
 		return writeConfig(config)
 	default:
-		return NewIodine(errInvalidArgument{}, nil)
+		return NewIodine(iodine.New(errInvalidArgument{}, nil))
 	}
 }
 
@@ -104,24 +105,24 @@ func saveConfig(arg string, aliases []string) error {
 func doConfig(arg string, aliases []string) (string, error) {
 	configPath, err := getMcConfigPath()
 	if err != nil {
-		return "Unable to determine config file path.", NewIodine(err, nil)
+		return "Unable to determine config file path.", NewIodine(iodine.New(err, nil))
 	}
 	err = saveConfig(arg, aliases)
 	if err != nil {
-		switch ToError(err).(type) {
+		switch iodine.ToError(err).(type) {
 		case errConfigExists:
-			return "Configuration file [" + configPath + "]", NewIodine(err, nil)
+			return "Configuration file [" + configPath + "]", NewIodine(iodine.New(err, nil))
 		case errInvalidArgument:
-			return "Incorrect usage, please use \"mc config help\" ", NewIodine(err, nil)
+			return "Incorrect usage, please use \"mc config help\" ", NewIodine(iodine.New(err, nil))
 		case errAliasExists:
-			return "Alias name: [" + aliases[0] + "]", NewIodine(err, nil)
+			return "Alias name: [" + aliases[0] + "]", NewIodine(iodine.New(err, nil))
 		case errInvalidAliasName:
-			return "Alias [" + aliases[0] + "] is a reserved word or invalid name", NewIodine(err, nil)
+			return "Alias [" + aliases[0] + "] is reserved word or invalid", NewIodine(iodine.New(err, nil))
 		case errInvalidURL:
-			return "[" + aliases[1] + "] is invalid URL doesn't start with http or https", NewIodine(err, nil)
+			return "Alias [" + aliases[1] + "] is invalid URL", NewIodine(iodine.New(err, nil))
 		default:
 			// unexpected error
-			return "Unable to generate config file [" + configPath + "].", NewIodine(err, nil)
+			return "Unable to generate config file [" + configPath + "].", NewIodine(iodine.New(err, nil))
 		}
 	}
 	if arg == "alias" {
@@ -130,41 +131,41 @@ func doConfig(arg string, aliases []string) (string, error) {
 	if arg == "generate" {
 		return "Configuration written to [" + configPath + "]. Please update your access credentials.", nil
 	}
-	return "", NewIodine(errUnexpected{}, nil)
+	return "", NewIodine(iodine.New(errUnexpected{}, nil))
 }
 
 // addAlias - add new aliases
 func addAlias(aliases []string) (quick.Config, error) {
 	if len(aliases) < 2 {
-		return nil, NewIodine(errInvalidArgument{}, nil)
+		return nil, NewIodine(iodine.New(errInvalidArgument{}, nil))
 	}
 	conf := newConfigV1()
 	config, err := quick.New(conf)
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, NewIodine(iodine.New(err, nil))
 	}
 	config.Load(mustGetMcConfigPath())
 
 	aliasName := aliases[0]
 	url := strings.TrimSuffix(aliases[1], "/")
 	if strings.HasPrefix(aliasName, "http") {
-		return nil, NewIodine(errInvalidAliasName{name: aliasName}, nil)
+		return nil, NewIodine(iodine.New(errInvalidAliasName{name: aliasName}, nil))
 	}
 	if !strings.HasPrefix(url, "http") {
-		return nil, NewIodine(errInvalidURL{URL: url}, nil)
+		return nil, NewIodine(iodine.New(errInvalidURL{URL: url}, nil))
 	}
 	if !isValidAliasName(aliasName) {
-		return nil, NewIodine(errInvalidAliasName{name: aliasName}, nil)
+		return nil, NewIodine(iodine.New(errInvalidAliasName{name: aliasName}, nil))
 	}
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV1)
 	if _, ok := newConf.Aliases[aliasName]; ok {
-		return nil, NewIodine(errAliasExists{}, nil)
+		return nil, NewIodine(iodine.New(errAliasExists{}, nil))
 	}
 	newConf.Aliases[aliasName] = url
 	newConfig, err := quick.New(newConf)
 	if err != nil {
-		return nil, NewIodine(err, nil)
+		return nil, NewIodine(iodine.New(err, nil))
 	}
 	return newConfig, nil
 }

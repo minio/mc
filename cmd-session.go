@@ -22,6 +22,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -59,7 +60,7 @@ func listSessions() error {
 	for _, sid := range getSessionIDs() {
 		s, err := loadSessionV2(sid)
 		if err != nil {
-			return NewIodine(err, nil)
+			return NewIodine(iodine.New(err, nil))
 		}
 		console.Prints(s)
 	}
@@ -71,7 +72,7 @@ func clearSession(sid string) {
 		for _, sid := range getSessionIDs() {
 			session, err := loadSessionV2(sid)
 			if err != nil {
-				console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(err, nil))
+				console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(iodine.New(err, nil)))
 			}
 			session.Close()
 		}
@@ -84,7 +85,7 @@ func clearSession(sid string) {
 
 	session, err := loadSessionV2(sid)
 	if err != nil {
-		console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(err, nil))
+		console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(iodine.New(err, nil)))
 	}
 	session.Close()
 }

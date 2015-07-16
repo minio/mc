@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 //
@@ -46,11 +47,11 @@ type diff struct {
 func urlJoinPath(url1, url2 string) (newURLStr string, err error) {
 	u1, err := client.Parse(url1)
 	if err != nil {
-		return "", NewIodine(err, nil)
+		return "", NewIodine(iodine.New(err, nil))
 	}
 	u2, err := client.Parse(url2)
 	if err != nil {
-		return "", NewIodine(err, nil)
+		return "", NewIodine(iodine.New(err, nil))
 	}
 	u1.Path = filepath.Join(u1.Path, u2.Path)
 	newURLStr = u1.String()
@@ -90,7 +91,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	default:
 		ch <- diff{
 			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
-			err:     NewIodine(errNotAnObject{url: firstURL}, nil),
+			err:     NewIodine(iodine.New(errNotAnObject{url: firstURL}, nil)),
 		}
 		return
 	}
@@ -108,7 +109,7 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 		if contentCh.Err != nil {
 			ch <- diff{
 				message: "Failed to list ‘" + firstURL + "’",
-				err:     NewIodine(contentCh.Err, nil),
+				err:     NewIodine(iodine.New(contentCh.Err, nil)),
 			}
 			return
 		}
@@ -116,7 +117,7 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 		if err != nil {
 			ch <- diff{
 				message: "Unable to construct new URL from ‘" + firstURL + "’ using ‘" + contentCh.Content.Name + "’",
-				err:     NewIodine(err, nil),
+				err:     NewIodine(iodine.New(err, nil)),
 			}
 			return
 		}
@@ -124,7 +125,7 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 		if err != nil {
 			ch <- diff{
 				message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + contentCh.Content.Name + "’",
-				err:     NewIodine(err, nil),
+				err:     NewIodine(iodine.New(err, nil)),
 			}
 			return
 		}
@@ -173,7 +174,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if err != nil {
 		ch <- diff{
 			message: "Failed to stat ‘" + firstURL + "’",
-			err:     NewIodine(err, nil),
+			err:     NewIodine(iodine.New(err, nil)),
 		}
 		return
 	}
@@ -181,7 +182,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if err != nil {
 		ch <- diff{
 			message: "Failed to stat ‘" + secondURL + "’",
-			err:     NewIodine(err, nil),
+			err:     NewIodine(iodine.New(err, nil)),
 		}
 		return
 	}
@@ -196,7 +197,7 @@ func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
 	default:
 		ch <- diff{
 			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
-			err:     NewIodine(errNotAnObject{url: firstURL}, nil),
+			err:     NewIodine(iodine.New(errNotAnObject{url: firstURL}, nil)),
 		}
 		return
 	}
