@@ -89,7 +89,7 @@ func doMakeBucketCmd(targetURL string) (string, error) {
 	clnt, err = target2Client(targetURL)
 	if err != nil {
 		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
-		return msg, iodine.New(err, nil)
+		return msg, NewIodine(iodine.New(err, nil))
 	}
 	return doMakeBucket(clnt)
 }
@@ -99,7 +99,7 @@ func doMakeBucket(clnt client.Client) (string, error) {
 	err := clnt.MakeBucket()
 	if err != nil {
 		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", clnt.URL().String())
-		return msg, iodine.New(err, nil)
+		return msg, NewIodine(iodine.New(err, nil))
 	}
 	return "Bucket created successfully : " + clnt.URL().String(), nil
 }

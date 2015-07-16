@@ -96,7 +96,7 @@ func doUpdateAccessCmd(targetURL string, targetACL bucketACL) (string, error) {
 	clnt, err = target2Client(targetURL)
 	if err != nil {
 		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
-		return msg, iodine.New(err, nil)
+		return msg, NewIodine(iodine.New(err, nil))
 	}
 	return doUpdateAccess(clnt, targetACL)
 }
@@ -105,7 +105,7 @@ func doUpdateAccess(clnt client.Client, targetACL bucketACL) (string, error) {
 	err := clnt.SetBucketACL(targetACL.String())
 	if err != nil {
 		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’", clnt.URL().String())
-		return msg, iodine.New(err, nil)
+		return msg, NewIodine(iodine.New(err, nil))
 	}
 	return "Bucket access policy updated successfully : " + clnt.URL().String(), nil
 }

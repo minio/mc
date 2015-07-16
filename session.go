@@ -42,7 +42,7 @@ func isSessionDirExists() bool {
 
 func createSessionDir() error {
 	if err := os.MkdirAll(getSessionDir(), 0700); err != nil {
-		return iodine.New(err, nil)
+		return NewIodine(iodine.New(err, nil))
 	}
 	return nil
 }
@@ -78,7 +78,7 @@ func getSessionDataFile(sid string) string {
 func getSessionIDs() (sids []string) {
 	sessionList, err := filepath.Glob(getSessionDir() + "/*.json")
 	if err != nil {
-		console.Fatalf("Unable to list session directory ‘%s’, %s", getSessionDir(), iodine.New(err, nil))
+		console.Fatalf("Unable to list session directory ‘%s’, %s", getSessionDir(), NewIodine(iodine.New(err, nil)))
 	}
 
 	for _, path := range sessionList {

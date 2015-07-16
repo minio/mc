@@ -89,11 +89,11 @@ func runCatCmd(ctx *cli.Context) {
 func doCatCmd(sourceURL string) (string, error) {
 	sourceClnt, err := source2Client(sourceURL)
 	if err != nil {
-		return "Unable to create client: " + sourceURL, iodine.New(err, nil)
+		return "Unable to create client: " + sourceURL, NewIodine(iodine.New(err, nil))
 	}
 	reader, size, err := sourceClnt.GetObject(0, 0)
 	if err != nil {
-		return "Unable to retrieve file: " + sourceURL, iodine.New(err, nil)
+		return "Unable to retrieve file: " + sourceURL, NewIodine(iodine.New(err, nil))
 	}
 	defer reader.Close()
 	_, err = io.CopyN(os.Stdout, reader, int64(size))
@@ -106,7 +106,7 @@ func doCatCmd(sourceURL string) (string, error) {
 			}
 			return "Writing data to stdout failed, unexpected problem.. please report this error", iodine.New(err, nil)
 		default:
-			return "Reading data from source failed: " + sourceURL, iodine.New(err, nil)
+			return "Reading data from source failed: " + sourceURL, NewIodine(iodine.New(err, nil))
 		}
 	}
 	return "", nil

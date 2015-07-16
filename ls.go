@@ -92,7 +92,7 @@ func doList(clnt client.Client, recursive bool) error {
 		console.Prints(parseContent(contentCh.Content))
 	}
 	if err != nil {
-		return iodine.New(err, map[string]string{"Target": clnt.URL().String()})
+		return NewIodine(iodine.New(err, map[string]string{"Target": clnt.URL().String()}))
 	}
 	return nil
 }

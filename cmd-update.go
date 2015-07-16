@@ -58,11 +58,11 @@ EXAMPLES:
 func doUpdateCheck() (string, error) {
 	clnt, err := url2Client(mcUpdateURL)
 	if err != nil {
-		return "Unable to create client: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+		return "Unable to create client: " + mcUpdateURL, NewIodine(iodine.New(err, map[string]string{"failedURL": mcUpdateURL}))
 	}
 	data, _, err := clnt.GetObject(0, 0)
 	if err != nil {
-		return "Unable to read: " + mcUpdateURL, iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+		return "Unable to read: " + mcUpdateURL, NewIodine(iodine.New(err, map[string]string{"failedURL": mcUpdateURL}))
 	}
 	current, _ := time.Parse(time.RFC3339Nano, Version)
 	if current.IsZero() {
@@ -74,7 +74,7 @@ https://dl.minio.io:9000 for continuous updates`
 	decoder := json.NewDecoder(data)
 	err = decoder.Decode(&updates)
 	if err != nil {
-		return "Unable to parse update fields", iodine.New(err, map[string]string{"failedURL": mcUpdateURL})
+		return "Unable to parse update fields", NewIodine(iodine.New(err, map[string]string{"failedURL": mcUpdateURL}))
 	}
 	latest, _ := time.Parse(http.TimeFormat, updates.BuildDate)
 	if latest.IsZero() {
@@ -105,7 +105,7 @@ func runUpdateCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	if !isMcConfigExists() {
-		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
+		console.Fatalf("Please run \"mc config generate\". %s\n", NewIodine(iodine.New(errNotConfigured{}, nil)))
 	}
 	msg, err := doUpdateCheck()
 	if err != nil {

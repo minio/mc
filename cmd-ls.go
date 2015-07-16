@@ -108,11 +108,11 @@ func runListCmd(ctx *cli.Context) {
 func doListCmd(targetURL string, recursive bool) error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
-		return iodine.New(err, map[string]string{"Target": targetURL})
+		return NewIodine(iodine.New(err, map[string]string{"Target": targetURL}))
 	}
 	err = doList(clnt, recursive)
 	if err != nil {
-		return iodine.New(err, map[string]string{"Target": targetURL})
+		return NewIodine(iodine.New(err, map[string]string{"Target": targetURL}))
 	}
 	return nil
 }

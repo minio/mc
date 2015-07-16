@@ -101,7 +101,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if err != nil {
 		ch <- diff{
 			message: "Failed to stat ‘" + firstURL + "’",
-			err:     iodine.New(err, nil),
+			err:     NewIodine(iodine.New(err, nil)),
 		}
 		return
 	}
@@ -109,7 +109,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if err != nil {
 		ch <- diff{
 			message: "Failed to stat ‘" + secondURL + "’",
-			err:     iodine.New(err, nil),
+			err:     NewIodine(iodine.New(err, nil)),
 		}
 		return
 	}
@@ -120,7 +120,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			if err != nil {
 				ch <- diff{
 					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + firstURL,
-					err:     iodine.New(err, nil),
+					err:     NewIodine(iodine.New(err, nil)),
 				}
 				return
 			}

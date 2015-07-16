@@ -85,7 +85,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(length)
 		}
-		return iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name})
+		return NewIodine(iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name}))
 	}
 
 	var newReader io.ReadCloser
@@ -107,7 +107,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorPut(length)
 		}
-		console.Errorln(iodine.ToError(err))
+		console.Errorln(NewIodine(err))
 	}
 	return nil
 }
