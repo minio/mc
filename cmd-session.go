@@ -62,7 +62,7 @@ func listSessions() error {
 		if err != nil {
 			return NewIodine(iodine.New(err, nil))
 		}
-		console.Prints(s)
+		console.Print(s)
 	}
 	return nil
 }

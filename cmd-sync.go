@@ -93,7 +93,7 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.Infoln(SyncMessage{
+		console.PrintC(SyncMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
 		})
