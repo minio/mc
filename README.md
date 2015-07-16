@@ -1,4 +1,4 @@
-# Minio Client (mc) [![Build Status](https://travis-ci.org/minio/mc.svg)](https://travis-ci.org/minio/mc)
+# Minio Client (mc) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ``mc`` provides minimal tools to work with Amazon S3 compatible object storage and filesystems. It has features to resume partial downloads, progress bar, parallel copy and network reconnect. ``mc`` is written in golang and released under [Apache license v2](./LICENSE).
 
@@ -17,7 +17,7 @@
   update	Check for new software updates
 ```
 
-## Install
+## Install [![Build Status](https://travis-ci.org/minio/mc.svg)](https://travis-ci.org/minio/mc)
 
 #### GNU/Linux
 
@@ -29,7 +29,7 @@ $ chmod +x mc
 $ ./mc config generate
 ~~~
 
-#### OS X 
+#### OS X
 
 Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/darwin-amd64/mc
 
@@ -66,10 +66,6 @@ Minio server is hosted at ``https://play.minio.io:9000`` for public use. This se
 ## Configuring mc for Amazon S3
 
 Update AccessKeyID and SecretAccessKey fields in your ``~/.mc/config.json`` configuration file by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
-
-## Join The Community
-* Community hangout on Gitter    [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-* Ask questions on Quora  [![Quora](http://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Quora_logo.svg/55px-Quora_logo.svg.png)](http://www.quora.com/Minio)
 
 ## Contribute
 
