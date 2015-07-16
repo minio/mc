@@ -20,12 +20,44 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/minio/mc/pkg/console"
 )
 
+// SessionJSONMessage json container for session messages
+type SessionJSONMessage struct {
+	Version     string   `json:"version"`
+	SessionID   string   `json:"sessionid"`
+	Time        string   `json:"time"`
+	CommandType string   `json:"command-type"`
+	CommandArgs []string `json:"command-args"`
+}
+
+func (s sessionV2) String() string {
+	if !globalJSONFlag {
+		message := console.SessionID("%s -> ", s.SessionID)
+		message = message + console.Time("[%s]", s.Header.When.Local().Format(printDate))
+		message = message + console.Command(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " "))
+		return message + "\n"
+	}
+	sessionMesage := SessionJSONMessage{
+		Version:     s.Header.Version,
+		SessionID:   s.SessionID,
+		Time:        s.Header.When.Local().Format(printDate),
+		CommandType: s.Header.CommandType,
+		CommandArgs: s.Header.CommandArgs,
+	}
+	sessionJSONBytes, err := json.MarshalIndent(sessionMesage, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+	return console.JSON(string(sessionJSONBytes) + "\n")
+}
+
 // Content container for content message structure
 type Content struct {
+	Version  string `json:"version"`
 	Filetype string `json:"type"`
 	Time     string `json:"last-modified"`
 	Size     string `json:"size"`
@@ -43,36 +75,40 @@ func (c Content) String() string {
 			}
 			return message + console.File("%s", c.Name)
 		}()
-		return message
+		return message + "\n"
 	}
-	cBytes, err := json.Marshal(c)
+	c.Version = "1.0.0"
+	jsonMessageBytes, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		panic(err)
 	}
-	return string(cBytes)
+	return console.JSON(string(jsonMessageBytes) + "\n")
 }
 
 // CopyMessage container for file copy messages
 type CopyMessage struct {
-	Source string `json:"source"`
-	Target string `json:"target"`
-	Length int64  `json:"length"`
+	Version string `json:"version"`
+	Source  string `json:"source"`
+	Target  string `json:"target"`
+	Length  int64  `json:"length"`
 }
 
 // String string printer for copy message
 func (c CopyMessage) String() string {
 	if !globalJSONFlag {
-		return fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target)
+		return fmt.Sprintf("‘%s’ -> ‘%s’\n", c.Source, c.Target)
 	}
-	cBytes, err := json.Marshal(c)
+	c.Version = "1.0.0"
+	copyMessageBytes, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		panic(err)
 	}
-	return string(cBytes)
+	return console.JSON(string(copyMessageBytes) + "\n")
 }
 
 // SyncMessage container for file sync messages, inherits CopyMessage
 type SyncMessage struct {
+	Version string   `json:"version"`
 	Source  string   `json:"source"`
 	Targets []string `json:"targets"`
 	Length  int64    `json:"length"`
@@ -81,11 +117,12 @@ type SyncMessage struct {
 // String string printer for sync message
 func (s SyncMessage) String() string {
 	if !globalJSONFlag {
-		return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets)
+		return fmt.Sprintf("‘%s’ -> ‘%s’\n", s.Source, s.Targets)
 	}
-	sBytes, err := json.Marshal(s)
+	s.Version = "1.0.0"
+	syncMessageBytes, err := json.MarshalIndent(s, "", "\t")
 	if err != nil {
 		panic(err)
 	}
-	return string(sBytes)
+	return console.JSON(string(syncMessageBytes) + "\n")
 }

@@ -100,11 +100,6 @@ var (
 		println(themesDB[currThemeName].Print, data...)
 	}
 
-	// Prints prints a structured message with a newline
-	Prints = func(data ...interface{}) {
-		println(themesDB[currThemeName].Print, data...)
-		return
-	}
 	// Fatal print a error message and exit
 	Fatal = func(data ...interface{}) {
 		defer os.Exit(1)
@@ -196,6 +191,8 @@ var (
 	Command = themesDB[currThemeName].Command.SprintfFunc()
 	// SessionID helper to print sessionid theme
 	SessionID = themesDB[currThemeName].SessionID.SprintfFunc()
+	// JSON helper to print json strings
+	JSON = themesDB[currThemeName].JSON.SprintfFunc()
 )
 
 var (

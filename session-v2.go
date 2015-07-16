@@ -21,7 +21,6 @@ package main
 import (
 	"io"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -83,19 +82,12 @@ func newSessionV2() *sessionV2 {
 	return s
 }
 
-func (s *sessionV2) String() string {
-	message := console.SessionID("%s -> ", s.SessionID)
-	message = message + console.Time("[%s]", s.Header.When.Local().Format(printDate))
-	message = message + console.Command(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " "))
-	return message
-}
-
-func (s *sessionV2) Info() {
+func (s sessionV2) Info() {
 	console.Infoln("Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’")
 }
 
 // NewDataReader provides reader interface to session data file.
-func (s *sessionV2) HasData() bool {
+func (s sessionV2) HasData() bool {
 	if s.Header.LastCopied == "" {
 		return false
 	}

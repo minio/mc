@@ -90,7 +90,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.Infoln(CopyMessage{
+		console.PrintC(CopyMessage{
 			Source: cpURLs.SourceContent.Name,
 			Target: cpURLs.TargetContent.Name,
 			Length: cpURLs.SourceContent.Size,
