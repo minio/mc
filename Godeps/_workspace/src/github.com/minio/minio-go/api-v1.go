@@ -130,7 +130,7 @@ func (a apiV1) putBucket(bucket, acl, location string) error {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return a.responseToError(resp.Body)
+			return a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	return nil
@@ -164,7 +164,7 @@ func (a apiV1) putBucketACL(bucket, acl string) error {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return a.responseToError(resp.Body)
+			return a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	return nil
@@ -197,7 +197,7 @@ func (a apiV1) getBucketACL(bucket string) (accessControlPolicy, error) {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return accessControlPolicy{}, a.responseToError(resp.Body)
+			return accessControlPolicy{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	policy := accessControlPolicy{}
@@ -244,7 +244,7 @@ func (a apiV1) getBucketLocation(bucket string) (string, error) {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return "", a.responseToError(resp.Body)
+			return "", a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	var locationConstraint string
@@ -313,7 +313,7 @@ func (a apiV1) listObjectsRequest(bucket, marker, prefix, delimiter string, maxk
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-keys - Sets the maximum number of keys returned in the response body.
 func (a apiV1) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (listBucketResult, error) {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return listBucketResult{}, err
 	}
 	req, err := a.listObjectsRequest(bucket, marker, prefix, delimiter, maxkeys)
@@ -327,7 +327,7 @@ func (a apiV1) listObjects(bucket, marker, prefix, delimiter string, maxkeys int
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listBucketResult{}, a.responseToError(resp.Body)
+			return listBucketResult{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	listBucketResult := listBucketResult{}
@@ -351,7 +351,7 @@ func (a apiV1) headBucketRequest(bucket string) (*request, error) {
 
 // headBucket useful to determine if a bucket exists and you have permission to access it.
 func (a apiV1) headBucket(bucket string) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	req, err := a.headBucketRequest(bucket)
@@ -412,7 +412,7 @@ func (a apiV1) deleteBucketRequest(bucket string) (*request, error) {
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request
 func (a apiV1) deleteBucket(bucket string) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	req, err := a.deleteBucketRequest(bucket)
@@ -497,7 +497,7 @@ func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte,
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return ObjectStat{}, a.responseToError(resp.Body)
+			return ObjectStat{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	var metadata ObjectStat
@@ -545,7 +545,7 @@ func (a apiV1) getObjectRequest(bucket, object string, offset, length int64) (*r
 //
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
 func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
-	if err := invalidArgumentToError(object); err != nil {
+	if err := invalidArgumentError(object); err != nil {
 		return nil, ObjectStat{}, err
 	}
 	req, err := a.getObjectRequest(bucket, object, offset, length)
@@ -561,7 +561,7 @@ func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCl
 		case http.StatusOK:
 		case http.StatusPartialContent:
 		default:
-			return nil, ObjectStat{}, a.responseToError(resp.Body)
+			return nil, ObjectStat{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
@@ -611,10 +611,10 @@ func (a apiV1) deleteObjectRequest(bucket, object string) (*request, error) {
 
 // deleteObject deletes a given object from a bucket
 func (a apiV1) deleteObject(bucket, object string) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
-	if err := invalidArgumentToError(object); err != nil {
+	if err := invalidArgumentError(object); err != nil {
 		return err
 	}
 	req, err := a.deleteObjectRequest(bucket, object)
@@ -674,10 +674,10 @@ func (a apiV1) headObjectRequest(bucket, object string) (*request, error) {
 
 // headObject retrieves metadata from an object without returning the object itself
 func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return ObjectStat{}, err
 	}
-	if err := invalidArgumentToError(object); err != nil {
+	if err := invalidArgumentError(object); err != nil {
 		return ObjectStat{}, err
 	}
 	req, err := a.headObjectRequest(bucket, object)
@@ -790,7 +790,7 @@ func (a apiV1) listBuckets() (listAllMyBucketsResult, error) {
 			}
 		}
 		if resp.StatusCode != http.StatusOK {
-			return listAllMyBucketsResult{}, a.responseToError(resp.Body)
+			return listAllMyBucketsResult{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	listAllMyBucketsResult := listAllMyBucketsResult{}

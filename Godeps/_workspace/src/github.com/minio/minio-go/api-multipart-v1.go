@@ -103,7 +103,7 @@ func (a apiV1) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix, d
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listMultipartUploadsResult{}, a.responseToError(resp.Body)
+			return listMultipartUploadsResult{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	listMultipartUploadsResult := listMultipartUploadsResult{}
@@ -142,7 +142,7 @@ func (a apiV1) initiateMultipartUpload(bucket, object string) (initiateMultipart
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return initiateMultipartUploadResult{}, a.responseToError(resp.Body)
+			return initiateMultipartUploadResult{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	initiateMultipartUploadResult := initiateMultipartUploadResult{}
@@ -198,7 +198,7 @@ func (a apiV1) completeMultipartUpload(bucket, object, uploadID string, c comple
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return completeMultipartUploadResult{}, a.responseToError(resp.Body)
+			return completeMultipartUploadResult{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	completeMultipartUploadResult := completeMultipartUploadResult{}
@@ -308,7 +308,7 @@ func (a apiV1) listObjectParts(bucket, object, uploadID string, partNumberMarker
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listObjectPartsResult{}, a.responseToError(resp.Body)
+			return listObjectPartsResult{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	listObjectPartsResult := listObjectPartsResult{}
@@ -358,7 +358,7 @@ func (a apiV1) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, p
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return completePart{}, a.responseToError(resp.Body)
+			return completePart{}, a.ToErrorResponseBody(resp.Body)
 		}
 	}
 	return cPart, nil
