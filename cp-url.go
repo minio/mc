@@ -53,13 +53,6 @@ type copyURLs struct {
 	Error         error
 }
 
-func (c copyURLs) IsEmpty() bool {
-	if c.SourceContent == nil && c.TargetContent == nil {
-		return true
-	}
-	return false
-}
-
 type copyURLsType uint8
 
 const (
