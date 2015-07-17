@@ -17,6 +17,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -28,22 +29,6 @@ type syncURLs struct {
 	SourceContent  *client.Content
 	TargetContents []*client.Content
 	Error          error `json:"-"`
-}
-
-func (s syncURLs) IsEmpty() bool {
-	empty := false
-	if s.SourceContent == nil {
-		empty = true
-		if s.TargetContents == nil {
-			empty = true
-			return empty
-		}
-		if len(s.TargetContents) > 0 && s.TargetContents[0] == nil {
-			empty = true
-			return empty
-		}
-	}
-	return empty
 }
 
 type syncURLsType uint8
@@ -149,6 +134,10 @@ func prepareSingleSyncURLsTypeB(sourceURL string, targetURL string) syncURLs {
 	}
 
 	_, targetContent, err := url2Stat(targetURL)
+	if os.IsNotExist(iodine.ToError(err)) {
+		// Source and target are files. Already reduced to Type A.
+		return prepareSingleSyncURLsTypeA(sourceURL, targetURL)
+	}
 	if err != nil {
 		return syncURLs{Error: NewIodine(iodine.New(err, nil))}
 	}
