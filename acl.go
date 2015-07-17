@@ -27,9 +27,6 @@ func (b bucketACL) isValidBucketACL() bool {
 		fallthrough
 	case b.isAuthenticated():
 		return true
-	case b.String() == "private":
-		// by default its "private"
-		return true
 	default:
 		return false
 	}
@@ -47,19 +44,22 @@ const (
 )
 
 func (b bucketACL) String() string {
-	if string(b) == "" {
+	if !b.isValidBucketACL() {
+		return string(b)
+	}
+	if b.isPrivate() {
 		return "private"
 	}
-	if string(b) == "readonly" {
+	if b.isReadOnly() {
 		return "public-read"
 	}
-	if string(b) == "public" {
+	if b.isPublic() {
 		return "public-read-write"
 	}
-	if string(b) == "authenticated" {
+	if b.isAuthenticated() {
 		return "authenticated-read"
 	}
-	return string(b)
+	return "private"
 }
 
 // IsPrivate - is acl Private

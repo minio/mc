@@ -67,7 +67,7 @@ var (
 		theme := GetDefaultThemeName()
 		// if not a TTY disable color
 		if !isatty(os.Stdout.Fd()) || !isatty(os.Stderr.Fd()) {
-			return "nocolor"
+			theme = "nocolor"
 		}
 		return theme
 	}()
