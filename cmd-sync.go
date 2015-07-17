@@ -147,6 +147,15 @@ func doPrepareSyncURLs(session *sessionV2, trapCh <-chan bool) {
 				console.Errorln(sURLs.Error)
 				break
 			}
+			if !globalForceFlag {
+				if len(sURLs.TargetContents) > 0 {
+					if sURLs.TargetContents[0].Size != 0 || !sURLs.TargetContents[0].Time.IsZero() {
+						console.Fatalf("Destination already exists, cannot overwrite ‘%s’ with ‘%s’. "+
+							"Use ‘--force’ flag to override.\n", sURLs.TargetContents[0].Name, sURLs.SourceContent.Name)
+						break
+					}
+				}
+			}
 
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
@@ -177,7 +186,6 @@ func doSyncCmdSession(session *sessionV2) {
 
 	wg := new(sync.WaitGroup)
 	syncQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-	defer close(syncQueue)
 
 	scanner := bufio.NewScanner(session.NewDataReader())
 	isCopied := isCopiedFactory(session.Header.LastCopied)

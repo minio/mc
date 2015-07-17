@@ -100,6 +100,9 @@ func prepareSingleSyncURLsTypeA(sourceURL string, targetURL string) syncURLs {
 		if !targetContent.Type.IsRegular() { // Target is not a regular file
 			return syncURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
 		}
+		var targetContents []*client.Content
+		targetContents = append(targetContents, targetContent)
+		return syncURLs{SourceContent: sourceContent, TargetContents: targetContents}
 	}
 	// All OK.. We can proceed. Type A
 	sourceContent.Name = sourceURL

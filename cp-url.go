@@ -136,6 +136,8 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) <-chan copyURLs {
 				copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
 				return
 			}
+			copyURLsCh <- copyURLs{SourceContent: sourceContent, TargetContent: targetContent}
+			return
 		}
 		// All OK.. We can proceed. Type A
 		sourceContent.Name = sourceURL

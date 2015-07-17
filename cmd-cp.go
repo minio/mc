@@ -147,6 +147,13 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				console.Errorln(cpURLs.Error)
 				break
 			}
+			if !globalForceFlag {
+				if cpURLs.TargetContent.Size != 0 || !cpURLs.TargetContent.Time.IsZero() {
+					console.Fatalf("Destination already exists, cannot overwrite ‘%s’ with ‘%s’. "+
+						"Use ‘--force’ flag to override.\n", cpURLs.TargetContent.Name, cpURLs.SourceContent.Name)
+					break
+				}
+			}
 
 			jsonData, err := json.Marshal(cpURLs)
 			if err != nil {
@@ -177,7 +184,6 @@ func doCopyCmdSession(session *sessionV2) {
 
 	wg := new(sync.WaitGroup)
 	cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-	defer close(cpQueue)
 
 	scanner := bufio.NewScanner(session.NewDataReader())
 	isCopied := isCopiedFactory(session.Header.LastCopied)

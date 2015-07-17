@@ -105,6 +105,7 @@ func main() {
 	// register all the flags
 	registerFlag(configFlag) // path to config folder
 	registerFlag(quietFlag)  // suppress console output
+	registerFlag(forceFlag)  // force copying data
 	registerFlag(aliasFlag)  // OS toolchain mimic
 	registerFlag(themeFlag)  // console theme flag
 	registerFlag(jsonFlag)   // json formatted output
@@ -123,6 +124,7 @@ func main() {
 		}
 
 		globalQuietFlag = ctx.GlobalBool("quiet")
+		globalForceFlag = ctx.GlobalBool("force")
 		globalAliasFlag = ctx.GlobalBool("alias")
 		globalDebugFlag = ctx.GlobalBool("debug")
 		globalJSONFlag = ctx.GlobalBool("json")
