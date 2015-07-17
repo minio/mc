@@ -87,19 +87,18 @@ func (e ErrorResponse) Error() string {
 	return e.Message
 }
 
-/// Internal function not exposed
-
-// responseToError returns a new encoded ErrorResponse structure
-func (a apiV1) responseToError(errBody io.Reader) error {
-	var respError ErrorResponse
-	err := acceptTypeDecoder(errBody, a.config.AcceptType, &respError)
+// ToErrorResponseBody returns a new encoded ErrorResponse structure
+func (a apiV1) ToErrorResponseBody(errBody io.Reader) error {
+	var errorResponse ErrorResponse
+	err := acceptTypeDecoder(errBody, a.config.AcceptType, &errorResponse)
 	if err != nil {
 		return err
 	}
-	return respError
+	return errorResponse
 }
 
-func invalidBucketToError(bucket string) error {
+// invalidBucketToError - invalid bucket to errorResponse
+func invalidBucketError(bucket string) error {
 	// verify bucket name in accordance with
 	//  - http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
 	isValidBucket := func(bucket string) bool {
@@ -129,7 +128,8 @@ func invalidBucketToError(bucket string) error {
 	return nil
 }
 
-func invalidObjectToError(object string) error {
+// invalidObjectError invalid object name to errorResponse
+func invalidObjectError(object string) error {
 	if strings.TrimSpace(object) == "" || object == "" {
 		// no resource since object name is empty
 		errorResponse := ErrorResponse{
@@ -142,7 +142,8 @@ func invalidObjectToError(object string) error {
 	return nil
 }
 
-func invalidArgumentToError(arg string) error {
+// invalidArgumentError invalid argument to errorResponse
+func invalidArgumentError(arg string) error {
 	errorResponse := ErrorResponse{
 		Code:      "InvalidArgument",
 		Message:   "Invalid Argument",

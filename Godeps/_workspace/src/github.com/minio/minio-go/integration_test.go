@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package minio
+package integration_test
 
 import (
 	"bytes"
 	"log"
 	"os"
 	"testing"
+
+	"github.com/minio/minio-go"
 )
 
 // SET THESE!
@@ -30,19 +32,19 @@ var bucket = ""
 var accessKeyID = ""
 var secretAccessKey = ""
 
-var config = Config{
+var config = minio.Config{
 	AccessKeyID:     accessKeyID,
 	SecretAccessKey: secretAccessKey,
 	Endpoint:        "https://s3-us-west-2.amazonaws.com",
 }
-var client, _ = New(config)
+var client, _ = minio.New(config)
 
-var standardConfig = Config{
+var standardConfig = minio.Config{
 	AccessKeyID:     accessKeyID,
 	SecretAccessKey: secretAccessKey,
 	Endpoint:        "https://s3.amazonaws.com",
 }
-var standardClient, _ = New(standardConfig)
+var standardClient, _ = minio.New(standardConfig)
 
 func TestMakeBucket(t *testing.T) {
 	err := client.MakeBucket(bucket, "private")
@@ -124,7 +126,7 @@ func TestBucketAcls(t *testing.T) {
 	if err != nil {
 		t.Error("get prw failed")
 	}
-	if !acl.isPublic() {
+	if acl.String() != "public-read-write" {
 		t.Error("prw wasn't prw")
 	}
 
@@ -133,11 +135,10 @@ func TestBucketAcls(t *testing.T) {
 		t.Error("set pr failed")
 	}
 	acl, err = client.GetBucketACL(bucket)
-	log.Println("pr: ", acl)
 	if err != nil {
 		t.Error("get pr failed")
 	}
-	if !acl.isReadOnly() {
+	if acl.String() != "public-read" {
 		t.Error("pr wasn't pr")
 	}
 
@@ -149,7 +150,7 @@ func TestBucketAcls(t *testing.T) {
 	if err != nil {
 		t.Error("get ar failed")
 	}
-	if !acl.isAuthenticated() {
+	if acl.String() != "authenticated-read" {
 		t.Error("ar wasn't ar")
 	}
 
@@ -161,8 +162,7 @@ func TestBucketAcls(t *testing.T) {
 	if err != nil {
 		t.Error("get p failed")
 	}
-	log.Println("p:", acl)
-	if !acl.isPrivate() {
+	if acl.String() != "private" {
 		t.Error("p wasn't p")
 	}
 }
@@ -385,13 +385,13 @@ func TestPutLargeTextFile(t *testing.T) {
 	key := "large/text_file"
 	fileName := "/tmp/11m_text"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size(), file); err != nil {
 		t.Error("Should fail when length is too large")
@@ -407,13 +407,13 @@ func TestPutLargeBinaryFile(t *testing.T) {
 	key := "large/binary_file"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size(), file); err != nil {
 		t.Error("Should fail when length is too large")
@@ -422,20 +422,22 @@ func TestPutLargeBinaryFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(stat)
+	if stat.Key != key {
+		t.Error("invalid stat")
+	}
 }
 
 func TestPutLargeSizeTooSmall(t *testing.T) {
 	key := "large/toosmall"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err = client.PutObject(bucket, key, "", fileStat.Size()-1, file); err == nil {
 		t.Error("Should fail when length is too large")
@@ -446,13 +448,13 @@ func TestPutLargeSizeTooLarge(t *testing.T) {
 	key := "large/toolarge"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err = client.PutObject(bucket, key, "", fileStat.Size()+1, file); err == nil {
 		t.Error("Should fail when length is too large")
@@ -463,13 +465,13 @@ func TestPutLargeBinaryFileContentType(t *testing.T) {
 	key := "large/text_plain"
 	fileName := "/tmp/11m_text"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "plain/text", fileStat.Size(), file); err != nil {
 		t.Error("Should fail when length is too large")
@@ -478,20 +480,22 @@ func TestPutLargeBinaryFileContentType(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(stat)
+	if stat.Key != key {
+		t.Error("invalid stat")
+	}
 }
 
 func TestPutLargeBinaryFileWithQuestionMark(t *testing.T) {
 	key := "large/obj?ect"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size(), file); err != nil {
 		t.Error("Should fail when length is too large")
@@ -500,20 +504,22 @@ func TestPutLargeBinaryFileWithQuestionMark(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(stat)
+	if stat.Key != key {
+		t.Error("invalid stat")
+	}
 }
 
 func TestPutLargeBinaryFileWithHashMark(t *testing.T) {
 	key := "large/obj#ect"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size(), file); err != nil {
 		t.Error("Should fail when length is too large")
@@ -522,20 +528,22 @@ func TestPutLargeBinaryFileWithHashMark(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(stat)
+	if stat.Key != key {
+		t.Error("invalid stat")
+	}
 }
 
 func TestPutLargeBinaryFileWithUnicode1(t *testing.T) {
 	key := "large/世界"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size(), file); err != nil {
 		t.Error("Should fail when length is too large")
@@ -544,20 +552,22 @@ func TestPutLargeBinaryFileWithUnicode1(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(stat)
+	if stat.Key != key {
+		t.Error("invalid stat")
+	}
 }
 
 func TestPutLargeBinaryFileWithUnicode2(t *testing.T) {
 	key := "large/世界世"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size(), file); err != nil {
 		t.Error("Should fail when length is too large")
@@ -566,7 +576,9 @@ func TestPutLargeBinaryFileWithUnicode2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(stat)
+	if stat.Key != key {
+		t.Error("invalid stat")
+	}
 }
 
 func TestPutLargeBinaryFileWithUnicode3(t *testing.T) {
@@ -577,36 +589,37 @@ func TestPutLargeBinaryFileWithUnicode3(t *testing.T) {
 	key := "large/世界世界"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size(), file); err != nil {
-		log.Println(fileStat.Size())
 		t.Error(err)
 	}
 	stat, err := client.StatObject(bucket, key)
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(stat)
+	if stat.Key != key {
+		t.Error("invalid stat")
+	}
 }
 
 func TestPutLargeBinaryFileWithUnicode4(t *testing.T) {
 	key := "large/4世界世界世"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size()-1, file); err == nil {
 		t.Error("Should fail when length is too large")
@@ -617,13 +630,13 @@ func TestPutLargeBinaryFileWithUnicode5(t *testing.T) {
 	key := "large/5世界世界世界"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size()-1, file); err == nil {
 		t.Error("Should fail when length is too large")
@@ -634,13 +647,13 @@ func TestPutLargeBinaryFileWithUnicode6(t *testing.T) {
 	key := "large/6世界世界世界世"
 	fileName := "/tmp/11m_binary"
 	file, err := os.Open(fileName)
-	defer file.Close()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer file.Close()
 	fileStat, err := os.Stat(fileName)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if err := client.PutObject(bucket, key, "", fileStat.Size()-1, file); err == nil {
 		t.Error("Should fail when length is too large")

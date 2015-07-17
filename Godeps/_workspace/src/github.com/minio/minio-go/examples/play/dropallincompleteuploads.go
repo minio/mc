@@ -26,9 +26,7 @@ import (
 
 func main() {
 	config := minio.Config{
-		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
-		SecretAccessKey: "YOUR-PASSWORD-HERE",
-		Endpoint:        "https://play.minio.io:9000",
+		Endpoint: "https://play.minio.io:9000",
 	}
 	s3Client, err := minio.New(config)
 	if err != nil {

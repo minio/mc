@@ -172,7 +172,7 @@ type Config struct {
 // Global constants
 const (
 	LibraryName    = "minio-go"
-	LibraryVersion = "0.1.0"
+	LibraryVersion = "0.2.0"
 )
 
 // SetUserAgent - append to a default user agent
@@ -212,10 +212,10 @@ func New(config Config) (API, error) {
 
 // Downloads full object with no ranges, if you need ranges use GetPartialObject
 func (a apiV2) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error) {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return nil, ObjectStat{}, err
 	}
-	if err := invalidObjectToError(object); err != nil {
+	if err := invalidObjectError(object); err != nil {
 		return nil, ObjectStat{}, err
 	}
 	// get object
@@ -228,10 +228,10 @@ func (a apiV2) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, erro
 // Setting offset and length = 0 will download the full object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
 func (a apiV2) GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return nil, ObjectStat{}, err
 	}
-	if err := invalidObjectToError(object); err != nil {
+	if err := invalidObjectError(object); err != nil {
 		return nil, ObjectStat{}, err
 	}
 	// get partial object
@@ -468,10 +468,10 @@ func (a apiV2) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch 
 //
 // This version of PutObject automatically does multipart for more than 5MB worth of data
 func (a apiV2) PutObject(bucket, object, contentType string, size int64, data io.Reader) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
-	if err := invalidArgumentToError(object); err != nil {
+	if err := invalidArgumentError(object); err != nil {
 		return err
 	}
 	switch {
@@ -516,10 +516,10 @@ func (a apiV2) PutObject(bucket, object, contentType string, size int64, data io
 
 // StatObject verify if object exists and you have permission to access it
 func (a apiV2) StatObject(bucket, object string) (ObjectStat, error) {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return ObjectStat{}, err
 	}
-	if err := invalidObjectToError(object); err != nil {
+	if err := invalidObjectError(object); err != nil {
 		return ObjectStat{}, err
 	}
 	return a.headObject(bucket, object)
@@ -527,10 +527,10 @@ func (a apiV2) StatObject(bucket, object string) (ObjectStat, error) {
 
 // RemoveObject remove the object from a bucket
 func (a apiV2) RemoveObject(bucket, object string) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
-	if err := invalidObjectToError(object); err != nil {
+	if err := invalidObjectError(object); err != nil {
 		return err
 	}
 	return a.deleteObject(bucket, object)
@@ -556,11 +556,11 @@ func (a apiV2) RemoveObject(bucket, object string) error {
 //  [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 //  Default - US standard
 func (a apiV2) MakeBucket(bucket string, acl BucketACL) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	if !acl.isValidBucketACL() {
-		return invalidArgumentToError("")
+		return invalidArgumentError("")
 	}
 	location, _ := getRegion(a.config.Endpoint)
 	if location == "milkyway" {
@@ -582,11 +582,11 @@ func (a apiV2) MakeBucket(bucket string, acl BucketACL) error {
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
 func (a apiV2) SetBucketACL(bucket string, acl BucketACL) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	if !acl.isValidBucketACL() {
-		return invalidArgumentToError("")
+		return invalidArgumentError("")
 	}
 	return a.putBucketACL(bucket, string(acl))
 }
@@ -601,7 +601,7 @@ func (a apiV2) SetBucketACL(bucket string, acl BucketACL) error {
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
 func (a apiV2) GetBucketACL(bucket string) (BucketACL, error) {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return "", err
 	}
 	policy, err := a.getBucketACL(bucket)
@@ -640,7 +640,7 @@ func (a apiV2) GetBucketACL(bucket string) (BucketACL, error) {
 
 // BucketExists verify if bucket exists and you have permission to access it
 func (a apiV2) BucketExists(bucket string) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	return a.headBucket(bucket)
@@ -651,7 +651,7 @@ func (a apiV2) BucketExists(bucket string) error {
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request
 func (a apiV2) RemoveBucket(bucket string) error {
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	return a.deleteBucket(bucket)
@@ -661,7 +661,7 @@ func (a apiV2) RemoveBucket(bucket string) error {
 // This function feeds data into channel
 func (a apiV2) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan ObjectStatCh) {
 	defer close(ch)
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		ch <- ObjectStatCh{
 			Stat: ObjectStat{},
 			Err:  err,
@@ -787,11 +787,11 @@ func (a apiV2) ListBuckets() <-chan BucketStatCh {
 
 func (a apiV2) dropIncompleteUploadsInRoutine(bucket, object string, errorCh chan error) {
 	defer close(errorCh)
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		errorCh <- err
 		return
 	}
-	if err := invalidObjectToError(object); err != nil {
+	if err := invalidObjectError(object); err != nil {
 		errorCh <- err
 		return
 	}
@@ -843,7 +843,7 @@ func (a apiV2) DropIncompleteUploads(bucket, object string) <-chan error {
 
 func (a apiV2) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan error) {
 	defer close(errorCh)
-	if err := invalidBucketToError(bucket); err != nil {
+	if err := invalidBucketError(bucket); err != nil {
 		errorCh <- err
 		return
 	}
