@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/minio/cli"
@@ -56,13 +57,26 @@ EXAMPLES:
 `,
 }
 
+// bySessionWhen is a type for sorting session metadata by time
+type bySessionWhen []*sessionV2
+
+func (b bySessionWhen) Len() int           { return len(b) }
+func (b bySessionWhen) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b bySessionWhen) Less(i, j int) bool { return b[i].Header.When.Before(b[j].Header.When) }
+
 func listSessions() error {
+	var bySessions []*sessionV2
 	for _, sid := range getSessionIDs() {
 		s, err := loadSessionV2(sid)
 		if err != nil {
 			return NewIodine(iodine.New(err, nil))
 		}
-		console.Print(s)
+		bySessions = append(bySessions, s)
+	}
+	// sort sessions based on time
+	sort.Sort(bySessionWhen(bySessions))
+	for _, session := range bySessions {
+		console.Print(session)
 	}
 	return nil
 }
