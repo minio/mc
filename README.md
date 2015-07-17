@@ -17,7 +17,7 @@
   update	Check for new software updates
 ```
 
-## Install [![Build Status](https://travis-ci.org/minio/mc.svg)](https://travis-ci.org/minio/mc)
+## Install [![Build Status](https://api.travis-ci.org/minio/mc.svg?branch=master)](https://travis-ci.org/minio/mc)
 
 #### GNU/Linux
 
