@@ -21,6 +21,7 @@ import "github.com/minio/minio/pkg/iodine"
 
 var (
 	globalQuietFlag = false // Quiet flag set via command line
+	globalForceFlag = false // Force flag set via command line
 	globalAliasFlag = false // Alias flag set via command line
 	globalJSONFlag  = false // Json flag set via command line
 	globalDebugFlag = false // Debug flag set via command line
