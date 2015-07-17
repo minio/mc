@@ -117,7 +117,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string) copyURLsType {
 // SINGLE SOURCE - Type A: copy(f, f) -> copy(f, f)
 // prepareCopyURLsTypeA - prepares target and source URLs for copying.
 func prepareCopyURLsTypeA(sourceURL string, targetURL string) <-chan copyURLs {
-	copyURLsCh := make(chan copyURLs, 10000)
+	copyURLsCh := make(chan copyURLs)
 	go func(sourceURL, targetURL string, copyURLsCh chan copyURLs) {
 		defer close(copyURLsCh)
 		_, sourceContent, err := url2Stat(sourceURL)
@@ -154,7 +154,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) <-chan copyURLs {
 // SINGLE SOURCE - Type B: copy(f, d) -> copy(f, d/f) -> A
 // prepareCopyURLsTypeB - prepares target and source URLs for copying.
 func prepareCopyURLsTypeB(sourceURL string, targetURL string) <-chan copyURLs {
-	copyURLsCh := make(chan copyURLs, 10000)
+	copyURLsCh := make(chan copyURLs)
 	go func(sourceURL, targetURL string, copyURLsCh chan copyURLs) {
 		defer close(copyURLsCh)
 		_, sourceContent, err := url2Stat(sourceURL)
@@ -207,7 +207,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) <-chan copyURLs {
 // SINGLE SOURCE - Type C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
 // prepareCopyRecursiveURLTypeC - prepares target and source URLs for copying.
 func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
-	copyURLsCh := make(chan copyURLs, 10000)
+	copyURLsCh := make(chan copyURLs)
 	go func(sourceURL, targetURL string, copyURLsCh chan copyURLs) {
 		defer close(copyURLsCh)
 		if !isURLRecursive(sourceURL) {
@@ -295,7 +295,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 // MULTI-SOURCE - Type D: copy([]f, d) -> []B
 // prepareCopyURLsTypeD - prepares target and source URLs for copying.
 func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan copyURLs {
-	copyURLsCh := make(chan copyURLs, 10000)
+	copyURLsCh := make(chan copyURLs)
 	go func(sourceURLs []string, targetURL string, copyURLsCh chan copyURLs) {
 		defer close(copyURLsCh)
 
@@ -339,7 +339,7 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan copyURLs
 
 // prepareCopyURLs - prepares target and source URLs for copying.
 func prepareCopyURLs(sourceURLs []string, targetURL string) <-chan copyURLs {
-	copyURLsCh := make(chan copyURLs, 10000)
+	copyURLsCh := make(chan copyURLs)
 	go func(sourceURLs []string, targetURL string, copyURLsCh chan copyURLs) {
 		defer close(copyURLsCh)
 		switch guessCopyURLType(sourceURLs, targetURL) {
