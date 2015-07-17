@@ -109,7 +109,7 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 			if !globalQuietFlag || !globalJSONFlag {
 				bar.ErrorPut(int64(length))
 			}
-			console.Errorf("Unable to write to one or many destinations. %s\n", err)
+			console.Errorf("Unable to write to one or more destinations. %s\n", err)
 		}
 	}
 	return nil
