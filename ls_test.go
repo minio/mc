@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	. "github.com/minio/check"
+	. "gopkg.in/check.v1"
 )
 
 func (s *CmdTestSuite) TestLSCmd(c *C) {

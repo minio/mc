@@ -99,7 +99,7 @@ func runListCmd(ctx *cli.Context) {
 		newTargetURL := stripRecursiveURL(targetURL)
 		err = doListCmd(newTargetURL, isURLRecursive(targetURL))
 		if err != nil {
-			console.Fatalln("Failed to list : %s. %s\n", targetURL, err)
+			console.Fatalf("Failed to list : %s. %s\n", targetURL, err)
 		}
 	}
 }

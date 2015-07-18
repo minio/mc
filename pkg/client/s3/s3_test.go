@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/minio/check"
+	. "gopkg.in/check.v1"
 )
 
 type bucketHandler struct {

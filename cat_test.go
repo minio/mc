@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/minio/check"
+	. "gopkg.in/check.v1"
 )
 
 func (s *CmdTestSuite) TestCatCmd(c *C) {

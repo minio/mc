@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/minio/mc",
-	"GoVersion": "go1.4",
+	"GoVersion": "go1.4.2",
 	"Packages": [
 		"./..."
 	],
@@ -16,10 +16,6 @@
 		{
 			"ImportPath": "github.com/fatih/structs",
 			"Rev": "c00d27128bb88e9c1adab1a53cda9c72c6d1ff9b"
-		},
-		{
-			"ImportPath": "github.com/minio/check",
-			"Rev": "67f8c16c6c27bb03c82e41c2be533ace00035ab4"
 		},
 		{
 			"ImportPath": "github.com/minio/cli",
@@ -47,6 +43,10 @@
 		{
 			"ImportPath": "github.com/shiena/ansicolor",
 			"Rev": "8368d3b31cf6f2c2464c7a91675342c9a0ac6658"
+		},
+		{
+			"ImportPath": "gopkg.in/check.v1",
+			"Rev": "64131543e7896d5bcc6bd5a76287eb75ea96c673"
 		}
 	]
 }
