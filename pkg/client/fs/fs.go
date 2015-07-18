@@ -94,9 +94,19 @@ func (f *fsClient) PutObject(size int64, data io.Reader) error {
 	}
 	defer fs.Close()
 
-	_, err = io.CopyN(fs, data, int64(size))
-	if err != nil {
-		return iodine.New(err, nil)
+	// even if size is zero try to read from source
+	if size > 0 {
+		_, err = io.CopyN(fs, data, int64(size))
+		if err != nil {
+			return iodine.New(err, nil)
+		}
+	} else {
+		// size could be 0 for virtual files on certain filesystems
+		// for example /proc, so read till EOF for such files
+		_, err = io.Copy(fs, data)
+		if err != nil {
+			return iodine.New(err, nil)
+		}
 	}
 	return nil
 }

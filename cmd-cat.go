@@ -91,12 +91,15 @@ func doCatCmd(sourceURL string) (string, error) {
 	if err != nil {
 		return "Unable to create client: " + sourceURL, NewIodine(iodine.New(err, nil))
 	}
-	reader, size, err := sourceClnt.GetObject(0, 0)
+	// ignore size, since os.Stat() would not return proper size all the time for local filesystem
+	// for example /proc files.
+	reader, _, err := sourceClnt.GetObject(0, 0)
 	if err != nil {
 		return "Unable to retrieve file: " + sourceURL, NewIodine(iodine.New(err, nil))
 	}
 	defer reader.Close()
-	_, err = io.CopyN(os.Stdout, reader, int64(size))
+	// read till EOF
+	_, err = io.Copy(os.Stdout, reader)
 	if err != nil {
 		switch e := iodine.ToError(err).(type) {
 		case *os.PathError:
