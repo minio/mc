@@ -25,97 +25,97 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-type syncURLs struct {
+type castURLs struct {
 	SourceContent  *client.Content
 	TargetContents []*client.Content
 	Error          error `json:"-"`
 }
 
-type syncURLsType uint8
+type castURLsType uint8
 
 const (
-	syncURLsTypeInvalid syncURLsType = iota
-	syncURLsTypeA
-	syncURLsTypeB
-	syncURLsTypeC
-	syncURLsTypeD
+	castURLsTypeInvalid castURLsType = iota
+	castURLsTypeA
+	castURLsTypeB
+	castURLsTypeC
+	castURLsTypeD
 )
 
-//   NOTE: All the parse rules should reduced to A: Sync(Source, []Target).
+//   NOTE: All the parse rules should reduced to A: Cast(Source, []Target).
 //
-//   * SYNC ARGS - VALID CASES
+//   * CAST ARGS - VALID CASES
 //   =========================
-//   A: sync(f, []f) -> sync(f, []f)
-//   B: sync(f, [](d | f)) -> sync(f, [](d/f | f)) -> A:
-//   C: sync(d1..., [](d2 | f)) -> []sync(d1/f, [](d1/d2/f | d1/f)) -> []A:
+//   A: cast(f, []f) -> cast(f, []f)
+//   B: cast(f, [](d | f)) -> cast(f, [](d/f | f)) -> A:
+//   C: cast(d1..., [](d2 | f)) -> []cast(d1/f, [](d1/d2/f | d1/f)) -> []A:
 //
-//   * SYNC ARGS - INVALID CASES
+//   * CAST ARGS - INVALID CASES
 //   ===========================
-//   sync(d, *)
-//   sync(d..., f)
-//   sync(*, d...)
+//   cast(d, *)
+//   cast(d..., f)
+//   cast(*, d...)
 
-// guessSyncURLType guesses the type of URL. This approach all allows prepareURL
+// guessCastURLType guesses the type of URL. This approach all allows prepareURL
 // functions to accurately report failure causes.
-func guessSyncURLType(sourceURL string, targetURLs []string) syncURLsType {
+func guessCastURLType(sourceURL string, targetURLs []string) castURLsType {
 	if targetURLs == nil || len(targetURLs) == 0 { // Target is empty
-		return syncURLsTypeInvalid
+		return castURLsTypeInvalid
 	}
 	if sourceURL == "" { // Source is empty
-		return syncURLsTypeInvalid
+		return castURLsTypeInvalid
 	}
 	for _, targetURL := range targetURLs {
 		if targetURL == "" { // One of the target is empty
-			return syncURLsTypeInvalid
+			return castURLsTypeInvalid
 		}
 	}
 
 	if isURLRecursive(sourceURL) { // Type C
-		return syncURLsTypeC
+		return castURLsTypeC
 	} // else Type A or Type B
 	for _, targetURL := range targetURLs {
 		if isTargetURLDir(targetURL) { // Type B
-			return syncURLsTypeB
+			return castURLsTypeB
 		}
 	} // else Type A
-	return syncURLsTypeA
+	return castURLsTypeA
 }
 
-// prepareSingleSyncURLTypeA - prepares a single source and single target argument for syncing.
-func prepareSingleSyncURLsTypeA(sourceURL string, targetURL string) syncURLs {
+// prepareSingleCastURLTypeA - prepares a single source and single target argument for casting.
+func prepareSingleCastURLsTypeA(sourceURL string, targetURL string) castURLs {
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil { // Source does not exist or insufficient privileges.
-		return syncURLs{Error: NewIodine(iodine.New(err, nil))}
+		return castURLs{Error: NewIodine(iodine.New(err, nil))}
 	}
 	if !sourceContent.Type.IsRegular() { // Source is not a regular file
-		return syncURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
+		return castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 	}
 	targetClient, err := target2Client(targetURL)
 	if err != nil {
-		return syncURLs{Error: NewIodine(iodine.New(err, nil))}
+		return castURLs{Error: NewIodine(iodine.New(err, nil))}
 	}
 	// Target exists?
 	targetContent, err := targetClient.Stat()
 	if err == nil { // Target exists.
 		if !targetContent.Type.IsRegular() { // Target is not a regular file
-			return syncURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
+			return castURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
 		}
 		var targetContents []*client.Content
 		targetContents = append(targetContents, targetContent)
-		return syncURLs{SourceContent: sourceContent, TargetContents: targetContents}
+		return castURLs{SourceContent: sourceContent, TargetContents: targetContents}
 	}
 	// All OK.. We can proceed. Type A
 	sourceContent.Name = sourceURL
-	return syncURLs{SourceContent: sourceContent, TargetContents: []*client.Content{{Name: targetURL}}}
+	return castURLs{SourceContent: sourceContent, TargetContents: []*client.Content{{Name: targetURL}}}
 }
 
-// prepareSyncURLsTypeA - A: sync(f, f) -> sync(f, f)
-func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) syncURLs {
-	var sURLs syncURLs
+// prepareCastURLsTypeA - A: cast(f, f) -> cast(f, f)
+func prepareCastURLsTypeA(sourceURL string, targetURLs []string) castURLs {
+	var sURLs castURLs
 	for _, targetURL := range targetURLs { // Prepare each target separately
-		URLs := prepareSingleSyncURLsTypeA(sourceURL, targetURL)
+		URLs := prepareSingleCastURLsTypeA(sourceURL, targetURL)
 		if URLs.Error != nil {
-			return syncURLs{Error: NewIodine(iodine.New(URLs.Error, nil))}
+			return castURLs{Error: NewIodine(iodine.New(URLs.Error, nil))}
 		}
 		sURLs.SourceContent = URLs.SourceContent
 		sURLs.TargetContents = append(sURLs.TargetContents, URLs.TargetContents...)
@@ -123,55 +123,55 @@ func prepareSyncURLsTypeA(sourceURL string, targetURLs []string) syncURLs {
 	return sURLs
 }
 
-// prepareSingleSyncURLsTypeB - prepares a single target and single source URLs for syncing.
-func prepareSingleSyncURLsTypeB(sourceURL string, targetURL string) syncURLs {
+// prepareSingleCastURLsTypeB - prepares a single target and single source URLs for casting.
+func prepareSingleCastURLsTypeB(sourceURL string, targetURL string) castURLs {
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
-		return syncURLs{Error: NewIodine(iodine.New(err, nil))}
+		return castURLs{Error: NewIodine(iodine.New(err, nil))}
 	}
 
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file.
-		return syncURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
+		return castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 	}
 
 	_, targetContent, err := url2Stat(targetURL)
 	if os.IsNotExist(iodine.ToError(err)) {
 		// Source and target are files. Already reduced to Type A.
-		return prepareSingleSyncURLsTypeA(sourceURL, targetURL)
+		return prepareSingleCastURLsTypeA(sourceURL, targetURL)
 	}
 	if err != nil {
-		return syncURLs{Error: NewIodine(iodine.New(err, nil))}
+		return castURLs{Error: NewIodine(iodine.New(err, nil))}
 	}
 
 	if targetContent.Type.IsRegular() { // File to File
 		// Source and target are files. Already reduced to Type A.
-		return prepareSingleSyncURLsTypeA(sourceURL, targetURL)
+		return prepareSingleCastURLsTypeA(sourceURL, targetURL)
 	}
 
 	// Source is a file, target is a directory and exists.
 	sourceURLParse, err := client.Parse(sourceURL)
 	if err != nil {
-		return syncURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
+		return castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 	}
 
 	targetURLParse, err := client.Parse(targetURL)
 	if err != nil {
-		return syncURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
+		return castURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
 	}
 	// Reduce Type B to Type A.
 	targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
-	return prepareSingleSyncURLsTypeA(sourceURL, targetURLParse.String())
+	return prepareSingleCastURLsTypeA(sourceURL, targetURLParse.String())
 }
 
-// prepareSyncURLsTypeB - B: sync(f, d) -> sync(f, d/f) -> A
-func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) syncURLs {
-	var sURLs syncURLs
+// prepareCastURLsTypeB - B: cast(f, d) -> cast(f, d/f) -> A
+func prepareCastURLsTypeB(sourceURL string, targetURLs []string) castURLs {
+	var sURLs castURLs
 	for _, targetURL := range targetURLs {
-		URLs := prepareSingleSyncURLsTypeB(sourceURL, targetURL)
+		URLs := prepareSingleCastURLsTypeB(sourceURL, targetURL)
 		if URLs.Error != nil {
-			return syncURLs{Error: NewIodine(iodine.New(URLs.Error, nil))}
+			return castURLs{Error: NewIodine(iodine.New(URLs.Error, nil))}
 		}
 		sURLs.SourceContent = URLs.SourceContent
 		sURLs.TargetContents = append(sURLs.TargetContents, URLs.TargetContents[0])
@@ -179,14 +179,14 @@ func prepareSyncURLsTypeB(sourceURL string, targetURLs []string) syncURLs {
 	return sURLs
 }
 
-// prepareSyncURLsTypeC - C: sync(f, []d) -> []sync(f, d/f) -> []A
-func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs {
-	syncURLsCh := make(chan syncURLs)
+// prepareCastURLsTypeC - C: cast(f, []d) -> []cast(f, d/f) -> []A
+func prepareCastURLsTypeC(sourceURL string, targetURLs []string) <-chan castURLs {
+	castURLsCh := make(chan castURLs)
 	go func() {
-		defer close(syncURLsCh)
+		defer close(castURLsCh)
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
-			syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(errSourceNotRecursive{URL: sourceURL}, nil))}
+			castURLsCh <- castURLs{Error: NewIodine(iodine.New(errSourceNotRecursive{URL: sourceURL}, nil))}
 			return
 		}
 		// add `/` after trimming off `...` to emulate directories
@@ -195,13 +195,13 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 		// Source exist?
 		if err != nil {
 			// Source does not exist or insufficient privileges.
-			syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(err, nil))}
+			castURLsCh <- castURLs{Error: NewIodine(iodine.New(err, nil))}
 			return
 		}
 
 		if !sourceContent.Type.IsDir() {
 			// Source is not a dir.
-			syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(errSourceIsNotDir{URL: sourceURL}, nil))}
+			castURLsCh <- castURLs{Error: NewIodine(iodine.New(errSourceIsNotDir{URL: sourceURL}, nil))}
 			return
 		}
 
@@ -211,13 +211,13 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 			// Target exist?
 			if err != nil {
 				// Target does not exist.
-				syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(errTargetNotFound{URL: targetURL}, nil))}
+				castURLsCh <- castURLs{Error: NewIodine(iodine.New(errTargetNotFound{URL: targetURL}, nil))}
 				return
 			}
 
 			if !targetContent.Type.IsDir() {
 				// Target exists, but is not a directory.
-				syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(errTargetIsNotDir{URL: targetURL}, nil))}
+				castURLsCh <- castURLs{Error: NewIodine(iodine.New(errTargetIsNotDir{URL: targetURL}, nil))}
 				return
 			}
 		}
@@ -225,17 +225,17 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 		for sourceContent := range sourceClient.List(true) {
 			if sourceContent.Err != nil {
 				// Listing failed.
-				syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(sourceContent.Err, nil))}
+				castURLsCh <- castURLs{Error: NewIodine(iodine.New(sourceContent.Err, nil))}
 				continue
 			}
 			if !sourceContent.Content.Type.IsRegular() {
-				// Source is not a regular file. Skip it for sync.
+				// Source is not a regular file. Skip it for cast.
 				continue
 			}
 			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
-				syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
+				castURLsCh <- castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 				continue
 			}
 			var newTargetURLs []string
@@ -243,7 +243,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 			for _, targetURL := range targetURLs {
 				targetURLParse, err := client.Parse(targetURL)
 				if err != nil {
-					syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
+					castURLsCh <- castURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
 					continue
 				}
 				sourceURLDelimited := sourceURLParse.String()[:strings.LastIndex(sourceURLParse.String(),
@@ -252,7 +252,7 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 				sourceContentURL := sourceURLDelimited + sourceContentName
 				sourceContentParse, err = client.Parse(sourceContentURL)
 				if err != nil {
-					syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceContentName}, nil))}
+					castURLsCh <- castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceContentName}, nil))}
 					continue
 				}
 				// Construct target path from recursive path of source without its prefix dir.
@@ -260,29 +260,29 @@ func prepareSyncURLsTypeC(sourceURL string, targetURLs []string) <-chan syncURLs
 				newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, sourceContentName)
 				newTargetURLs = append(newTargetURLs, newTargetURLParse.String())
 			}
-			syncURLsCh <- prepareSyncURLsTypeA(sourceContentParse.String(), newTargetURLs)
+			castURLsCh <- prepareCastURLsTypeA(sourceContentParse.String(), newTargetURLs)
 		}
 	}()
-	return syncURLsCh
+	return castURLsCh
 }
 
-// prepareSyncURLs - prepares target and source URLs for syncing.
-func prepareSyncURLs(sourceURL string, targetURLs []string) <-chan syncURLs {
-	syncURLsCh := make(chan syncURLs)
+// prepareCastURLs - prepares target and source URLs for casting.
+func prepareCastURLs(sourceURL string, targetURLs []string) <-chan castURLs {
+	castURLsCh := make(chan castURLs)
 	go func() {
-		defer close(syncURLsCh)
-		switch guessSyncURLType(sourceURL, targetURLs) {
-		case syncURLsType(syncURLsTypeA):
-			syncURLsCh <- prepareSyncURLsTypeA(sourceURL, targetURLs)
-		case syncURLsType(syncURLsTypeB):
-			syncURLsCh <- prepareSyncURLsTypeB(sourceURL, targetURLs)
-		case syncURLsType(syncURLsTypeC):
-			for sURLs := range prepareSyncURLsTypeC(sourceURL, targetURLs) {
-				syncURLsCh <- sURLs
+		defer close(castURLsCh)
+		switch guessCastURLType(sourceURL, targetURLs) {
+		case castURLsType(castURLsTypeA):
+			castURLsCh <- prepareCastURLsTypeA(sourceURL, targetURLs)
+		case castURLsType(castURLsTypeB):
+			castURLsCh <- prepareCastURLsTypeB(sourceURL, targetURLs)
+		case castURLsType(castURLsTypeC):
+			for sURLs := range prepareCastURLsTypeC(sourceURL, targetURLs) {
+				castURLsCh <- sURLs
 			}
 		default:
-			syncURLsCh <- syncURLs{Error: NewIodine(iodine.New(errInvalidArgument{}, nil))}
+			castURLsCh <- castURLs{Error: NewIodine(iodine.New(errInvalidArgument{}, nil))}
 		}
 	}()
-	return syncURLsCh
+	return castURLsCh
 }

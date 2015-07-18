@@ -106,23 +106,23 @@ func (c CopyMessage) String() string {
 	return console.JSON(string(copyMessageBytes) + "\n")
 }
 
-// SyncMessage container for file sync messages, inherits CopyMessage
-type SyncMessage struct {
+// CastMessage container for file cast messages
+type CastMessage struct {
 	Version string   `json:"version"`
 	Source  string   `json:"source"`
 	Targets []string `json:"targets"`
 	Length  int64    `json:"length"`
 }
 
-// String string printer for sync message
-func (s SyncMessage) String() string {
+// String string printer for cast message
+func (s CastMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("‘%s’ -> ‘%s’\n", s.Source, s.Targets)
 	}
 	s.Version = "1.0.0"
-	syncMessageBytes, err := json.MarshalIndent(s, "", "\t")
+	castMessageBytes, err := json.MarshalIndent(s, "", "\t")
 	if err != nil {
 		panic(err)
 	}
-	return console.JSON(string(syncMessageBytes) + "\n")
+	return console.JSON(string(castMessageBytes) + "\n")
 }

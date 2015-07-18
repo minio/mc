@@ -108,8 +108,8 @@ func sessionExecute(s *sessionV2) {
 	switch s.Header.CommandType {
 	case "cp":
 		doCopyCmdSession(s)
-	case "sync":
-		doSyncCmdSession(s)
+	case "cast":
+		doCastCmdSession(s)
 	}
 }
 
