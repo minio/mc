@@ -31,10 +31,10 @@ import (
 )
 
 // Help message.
-var syncCmd = cli.Command{
-	Name:   "sync",
+var castCmd = cli.Command{
+	Name:   "cast",
 	Usage:  "Copy files and folders from a single source to many destinations",
-	Action: runSyncCmd,
+	Action: runCastCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -49,29 +49,29 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Sync an object from local filesystem to Amazon S3 object storage.
+   1. Cast an object from local filesystem to Amazon S3 object storage.
       $ mc {{.Name}} star-trek-episode-10-season4.ogg https://s3.amazonaws.com/trekarchive
 
-   2. Sync a bucket recursively from Minio object storage to multiple buckets on Amazon S3 object storage.
+   2. Cast a bucket recursively from Minio object storage to multiple buckets on Amazon S3 object storage.
       $ mc {{.Name}} https://play.minio.io:9000/photos/2014... https://s3.amazonaws.com/backup-photos https://s3-west-1.amazonaws.com/local-photos
 
-   3. Sync a local folder recursively to Minio object storage and Amazon S3 object storage.
+   3. Cast a local folder recursively to Minio object storage and Amazon S3 object storage.
       $ mc {{.Name}} backup/... https://play.minio.io:9000/archive https://s3.amazonaws.com/archive
 
-   4. Sync a bucket from aliased Amazon S3 object storage to multiple folders on Windows.
+   4. Cast a bucket from aliased Amazon S3 object storage to multiple folders on Windows.
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
 
-   5. Sync a local directory of non english character recursively to Amazon s3 object storage and Minio object storage.
+   5. Cast a local directory of non english character recursively to Amazon s3 object storage and Minio object storage.
       $ mc {{.Name}} 本語/... s3:mylocaldocuments play:backup
 
 `,
 }
 
-// doSync - Sync an object to multiple destination
-func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGroup) (err error) {
+// doCast - Cast an object to multiple destination
+func doCast(sURLs castURLs, bar *barSend, castQueue chan bool, wg *sync.WaitGroup) (err error) {
 	defer wg.Done() // Notify that this copy routine is done.
 	defer func() {
-		<-syncQueue
+		<-castQueue
 	}()
 
 	if !globalQuietFlag || !globalJSONFlag {
@@ -93,7 +93,7 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.PrintC(SyncMessage{
+		console.PrintC(CastMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
 		})
@@ -115,16 +115,16 @@ func doSync(sURLs syncURLs, bar *barSend, syncQueue chan bool, wg *sync.WaitGrou
 	return nil
 }
 
-// doSyncFake - Perform a fake sync to update the progress bar appropriately.
-func doSyncFake(sURLs syncURLs, bar *barSend) (err error) {
+// doCastFake - Perform a fake cast to update the progress bar appropriately.
+func doCastFake(sURLs castURLs, bar *barSend) (err error) {
 	if !globalDebugFlag || !globalJSONFlag {
 		bar.Progress(sURLs.SourceContent.Size)
 	}
 	return nil
 }
 
-// doPrepareSyncURLs scans the source URL and prepares a list of objects for syncing.
-func doPrepareSyncURLs(session *sessionV2, trapCh <-chan bool) {
+// doPrepareCastURLs scans the source URL and prepares a list of objects for casting.
+func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURLs := session.Header.CommandArgs[1:]
 	var totalBytes int64
@@ -134,7 +134,7 @@ func doPrepareSyncURLs(session *sessionV2, trapCh <-chan bool) {
 	dataFP := session.NewDataWriter()
 
 	scanBar := scanBarFactory(sourceURL)
-	URLsCh := prepareSyncURLs(sourceURL, targetURLs)
+	URLsCh := prepareCastURLs(sourceURL, targetURLs)
 	done := false
 	for done == false {
 		select {
@@ -177,15 +177,15 @@ func doPrepareSyncURLs(session *sessionV2, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doSyncCmdSession(session *sessionV2) {
+func doCastCmdSession(session *sessionV2) {
 	trapCh := signalTrap(os.Interrupt, os.Kill)
 
 	if !session.HasData() {
-		doPrepareSyncURLs(session, trapCh)
+		doPrepareCastURLs(session, trapCh)
 	}
 
 	wg := new(sync.WaitGroup)
-	syncQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
+	castQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
 
 	scanner := bufio.NewScanner(session.NewDataReader())
 	isCopied := isCopiedFactory(session.Header.LastCopied)
@@ -198,15 +198,15 @@ func doSyncCmdSession(session *sessionV2) {
 	}
 
 	for scanner.Scan() {
-		var sURLs syncURLs
+		var sURLs castURLs
 		json.Unmarshal([]byte(scanner.Text()), &sURLs)
 		if isCopied(sURLs.SourceContent.Name) {
-			doSyncFake(sURLs, &bar)
+			doCastFake(sURLs, &bar)
 		} else {
 			select {
-			case syncQueue <- true:
+			case castQueue <- true:
 				wg.Add(1)
-				go doSync(sURLs, &bar, syncQueue, wg)
+				go doCast(sURLs, &bar, castQueue, wg)
 				session.Header.LastCopied = sURLs.SourceContent.Name
 			case <-trapCh:
 				session.Save()
@@ -218,16 +218,16 @@ func doSyncCmdSession(session *sessionV2) {
 	wg.Wait()
 }
 
-func runSyncCmd(ctx *cli.Context) {
+func runCastCmd(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "sync", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "cast", 1) // last argument is exit code
 	}
 
 	session := newSessionV2()
 	defer session.Close()
 
 	var err error
-	session.Header.CommandType = "sync"
+	session.Header.CommandType = "cast"
 	session.Header.RootPath, err = os.Getwd()
 	if err != nil {
 		session.Close()
@@ -241,5 +241,5 @@ func runSyncCmd(ctx *cli.Context) {
 		console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), err)
 	}
 
-	doSyncCmdSession(session)
+	doCastCmdSession(session)
 }
