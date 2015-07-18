@@ -24,8 +24,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "gopkg.in/check.v1"
 	"github.com/minio/mc/pkg/client"
+	. "gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }

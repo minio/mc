@@ -28,8 +28,8 @@ import (
 
 	"net/http/httptest"
 
-	. "gopkg.in/check.v1"
 	"github.com/minio/mc/pkg/quick"
+	. "gopkg.in/check.v1"
 )
 
 var customConfigDir string
