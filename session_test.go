@@ -19,7 +19,7 @@ package main
 import (
 	"regexp"
 
-	. "github.com/minio/check"
+	. "gopkg.in/check.v1"
 )
 
 func (s *CmdTestSuite) TestValidSessionID(c *C) {

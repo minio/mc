@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "github.com/minio/check"
+	. "gopkg.in/check.v1"
 	"github.com/minio/mc/pkg/client"
 )
 

@@ -28,7 +28,7 @@ import (
 
 	"net/http/httptest"
 
-	. "github.com/minio/check"
+	. "gopkg.in/check.v1"
 	"github.com/minio/mc/pkg/quick"
 )
 
