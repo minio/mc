@@ -60,43 +60,62 @@ func checkCastSyntax(ctx *cli.Context) {
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err)
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), iodine.New(err, nil))
 	}
 
 	srcURL := URLs[0]
 	tgtURLs := URLs[1:]
 
+	/****** Generic rules *******/
+	// Source cannot be a directory (except when recursive)
 	if !isURLRecursive(srcURL) {
 		_, srcContent, err := url2Stat(srcURL)
 		// Source exist?.
 		if err != nil {
 			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, iodine.New(err, nil))
 		}
-
-		// Rule A & B validation.
-		if srcContent.Type.IsRegular() {
-			// All targets should be a valid file or folder.
-			for _, tgtURL := range tgtURLs {
-				_, tgtContent, err := url2Stat(tgtURL)
-				// Target exist?
-				if err != nil {
-					console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, iodine.New(err, nil))
-				}
-
-				if !tgtContent.Type.IsRegular() {
-					if !tgtContent.Type.IsDir() {
-						console.Fatalf("Target ‘%s’ is not a valid file or directory.\n", tgtURL)
-					}
-				}
-			}
-		} else { // Source is not a file.
+		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
 				console.Fatalf("Source ‘%s’ is a directory. Please use ‘%s...’ ellipses sufix to copy a directory and its contents recursively.\n", srcURL, srcURL)
 			}
 			console.Fatalf("Source ‘%s’ is not a regular file.\n", srcURL)
 		}
+	}
+	// Recursive URLs are not allowed in target.
+	for _, tgtURL := range tgtURLs {
+		if isURLRecursive(tgtURL) {
+			console.Fatalf("Target ‘%s’ cannot be recursive. %s\n", tgtURL, iodine.New(err, nil))
+		}
+	}
 
-	} else { // Rule C validation.
+	switch guessCastURLType(srcURL, tgtURLs) {
+	case castURLsTypeA: // Source is already a regular file.
+		// All targets should be a valid file or folder.
+		for _, tgtURL := range tgtURLs {
+			_, tgtContent, err := url2Stat(tgtURL)
+			// Target exist?
+			if err != nil {
+				console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, iodine.New(err, nil))
+			}
+			if !tgtContent.Type.IsRegular() {
+				console.Fatalf("Target ‘%s’ is not a valid file.\n", tgtURL)
+			}
+		}
+	case castURLsTypeB: // Source is already a regular file.
+		// All targets should be a valid file or folder.
+		for _, tgtURL := range tgtURLs {
+			_, tgtContent, err := url2Stat(tgtURL)
+			// Target exist?
+			if err != nil {
+				console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, iodine.New(err, nil))
+			}
+			if !tgtContent.Type.IsRegular() {
+				if !tgtContent.Type.IsDir() {
+					console.Fatalf("Target ‘%s’ is not a valid file or directory.\n", tgtURL)
+				}
+			}
+		}
+	case castURLsTypeC:
 		srcURL = stripRecursiveURL(srcURL)
 		_, srcContent, err := url2Stat(srcURL)
 		// Source exist?.
@@ -107,8 +126,7 @@ func checkCastSyntax(ctx *cli.Context) {
 		if srcContent.Type.IsRegular() { // Elipses is supported only for directories.
 			console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), iodine.New(err, nil))
 		}
-
-		// All targets should be a valid file or folder.
+		// All targets should be a valid folder.
 		for _, tgtURL := range tgtURLs {
 			_, tgtContent, err := url2Stat(tgtURL)
 			// Target exist?
@@ -119,6 +137,8 @@ func checkCastSyntax(ctx *cli.Context) {
 				console.Fatalf("Target ‘%s’ is not a directory.\n", tgtURL)
 			}
 		}
+	default:
+		console.Fatalln("Invalid arguments. Unanle to determine how to cast.")
 	}
 }
 
@@ -339,11 +359,11 @@ func prepareCastURLs(sourceURL string, targetURLs []string) <-chan castURLs {
 	go func() {
 		defer close(castURLsCh)
 		switch guessCastURLType(sourceURL, targetURLs) {
-		case castURLsType(castURLsTypeA):
+		case castURLsTypeA:
 			castURLsCh <- prepareCastURLsTypeA(sourceURL, targetURLs)
-		case castURLsType(castURLsTypeB):
+		case castURLsTypeB:
 			castURLsCh <- prepareCastURLsTypeB(sourceURL, targetURLs)
-		case castURLsType(castURLsTypeC):
+		case castURLsTypeC:
 			for sURLs := range prepareCastURLsTypeC(sourceURL, targetURLs) {
 				castURLsCh <- sURLs
 			}

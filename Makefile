@@ -32,7 +32,7 @@ lint:
 
 cyclo:
 	@echo "Running $@:"
-	@test -z "$$(gocyclo -over 25 . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	@test -z "$$(gocyclo -over 30 . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
 
 deadcode:
 	@echo "Running $@:"
