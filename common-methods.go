@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/minio/mc/pkg/client"
@@ -27,6 +28,25 @@ import (
 	"github.com/minio/mc/pkg/client/s3"
 	"github.com/minio/minio/pkg/iodine"
 )
+
+// Check if the target URL represents directory. It may or may not exist yet.
+func isTargetURLDir(targetURL string) bool {
+	targetURLParse, err := client.Parse(targetURL)
+	if err != nil {
+		return false
+	}
+	if strings.HasSuffix(targetURLParse.String(), string(targetURLParse.Separator)) {
+		return true
+	}
+	_, targetContent, err := url2Stat(targetURL)
+	if err != nil {
+		return false
+	}
+	if !targetContent.Type.IsDir() { // Target is a dir. Type B
+		return false
+	}
+	return true
+}
 
 // getSource gets a reader from URL<
 func getSource(sourceURL string) (reader io.ReadCloser, length int64, err error) {

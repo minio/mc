@@ -21,7 +21,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -47,13 +49,78 @@ const (
 //   =========================
 //   A: cast(f, []f) -> cast(f, []f)
 //   B: cast(f, [](d | f)) -> cast(f, [](d/f | f)) -> A:
-//   C: cast(d1..., [](d2 | f)) -> []cast(d1/f, [](d1/d2/f | d1/f)) -> []A:
-//
-//   * CAST ARGS - INVALID CASES
-//   ===========================
-//   cast(d, *)
-//   cast(d..., f)
-//   cast(*, d...)
+//   C: cast(d1..., [](d2)) -> []cast(d1/f, [](d1/d2/f)) -> []A:
+
+// checkCastSyntax(URLs []string)
+func checkCastSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "cast", 1) // last argument is exit code.
+	}
+
+	// extract URLs.
+	URLs, err := args2URLs(ctx.Args())
+	if err != nil {
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err)
+	}
+
+	srcURL := URLs[0]
+	tgtURLs := URLs[1:]
+
+	if !isURLRecursive(srcURL) {
+		_, srcContent, err := url2Stat(srcURL)
+		// Source exist?.
+		if err != nil {
+			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, iodine.New(err, nil))
+		}
+
+		// Rule A & B validation.
+		if srcContent.Type.IsRegular() {
+			// All targets should be a valid file or folder.
+			for _, tgtURL := range tgtURLs {
+				_, tgtContent, err := url2Stat(tgtURL)
+				// Target exist?
+				if err != nil {
+					console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, iodine.New(err, nil))
+				}
+
+				if !tgtContent.Type.IsRegular() {
+					if !tgtContent.Type.IsDir() {
+						console.Fatalf("Target ‘%s’ is not a valid file or directory.\n", tgtURL)
+					}
+				}
+			}
+		} else { // Source is not a file.
+			if srcContent.Type.IsDir() {
+				console.Fatalf("Source ‘%s’ is a directory. Please use ‘%s...’ ellipses sufix to copy a directory and its contents recursively.\n", srcURL, srcURL)
+			}
+			console.Fatalf("Source ‘%s’ is not a regular file.\n", srcURL)
+		}
+
+	} else { // Rule C validation.
+		srcURL = stripRecursiveURL(srcURL)
+		_, srcContent, err := url2Stat(srcURL)
+		// Source exist?.
+		if err != nil {
+			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, iodine.New(err, nil))
+		}
+
+		if srcContent.Type.IsRegular() { // Elipses is supported only for directories.
+			console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), iodine.New(err, nil))
+		}
+
+		// All targets should be a valid file or folder.
+		for _, tgtURL := range tgtURLs {
+			_, tgtContent, err := url2Stat(tgtURL)
+			// Target exist?
+			if err != nil {
+				console.Fatalf("Unable to stat target directory ‘%s’. %s\n", tgtURL, iodine.New(err, nil))
+			}
+			if !tgtContent.Type.IsDir() {
+				console.Fatalf("Target ‘%s’ is not a directory.\n", tgtURL)
+			}
+		}
+	}
+}
 
 // guessCastURLType guesses the type of URL. This approach all allows prepareURL
 // functions to accurately report failure causes.
@@ -179,7 +246,7 @@ func prepareCastURLsTypeB(sourceURL string, targetURLs []string) castURLs {
 	return sURLs
 }
 
-// prepareCastURLsTypeC - C: cast(f, []d) -> []cast(f, d/f) -> []A
+// prepareCastURLsTypeC - C:
 func prepareCastURLsTypeC(sourceURL string, targetURLs []string) <-chan castURLs {
 	castURLsCh := make(chan castURLs)
 	go func() {

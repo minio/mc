@@ -24,29 +24,6 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-//
-//   NOTE: All the parse rules should reduced to A: Copy(Source, Target).
-//
-//   * SINGLE SOURCE - VALID
-//   =======================
-//   A: copy(f, f) -> copy(f, f)
-//   B: copy(f, d) -> copy(f, d/f) -> A
-//   C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
-//
-//   * SINGLE SOURCE - INVALID
-//   =========================
-//   copy(d, *)
-//   copy(d..., f)
-//   copy(*, d...)
-//
-//   * MULTI-SOURCE RECURSIVE - VALID
-//   ================================
-//   D: copy([](d1... | f), d2) -> []copy(d1/f | f, d2/d1/f | d2/f) -> []A
-//
-//   * MULTI-SOURCE RECURSIVE - INVALID
-//   ==================================
-//   copy(*, f)
-
 type copyURLs struct {
 	SourceContent *client.Content
 	TargetContent *client.Content
@@ -63,24 +40,20 @@ const (
 	copyURLsTypeD
 )
 
-// Check if the target URL represents directory. It may or may not exist yet.
-func isTargetURLDir(targetURL string) bool {
-	targetURLParse, err := client.Parse(targetURL)
-	if err != nil {
-		return false
-	}
-	if strings.HasSuffix(targetURLParse.String(), string(targetURLParse.Separator)) {
-		return true
-	}
-	_, targetContent, err := url2Stat(targetURL)
-	if err != nil {
-		return false
-	}
-	if !targetContent.Type.IsDir() { // Target is a dir. Type B
-		return false
-	}
-	return true
-}
+//   NOTE: All the parse rules should reduced to A: Copy(Source, Target).
+//
+//   * VALID RULES
+//   =======================
+//   A: copy(f, f) -> copy(f, f)
+//   B: copy(f, d) -> copy(f, d/f) -> A
+//   C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
+//
+//   * INVALID RULES
+//   =========================
+//   A: copy(d, *)
+//   B: copy(d..., f)
+//   C: copy(*, d...)
+//
 
 // guessCopyURLType guesses the type of URL. This approach all allows prepareURL
 // functions to accurately report failure causes.
