@@ -76,7 +76,7 @@ func checkCastSyntax(ctx *cli.Context) {
 		}
 		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
-				console.Fatalf("Source ‘%s’ is a directory. Please use ‘%s...’ ellipses sufix to copy a directory and its contents recursively.\n", srcURL, srcURL)
+				console.Fatalf("Source ‘%s’ is a directory. Please use ‘%s...’ to recursively copy this directory and its contents.\n", srcURL, srcURL)
 			}
 			console.Fatalf("Source ‘%s’ is not a regular file.\n", srcURL)
 		}
@@ -123,7 +123,7 @@ func checkCastSyntax(ctx *cli.Context) {
 			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, iodine.New(err, nil))
 		}
 
-		if srcContent.Type.IsRegular() { // Elipses is supported only for directories.
+		if srcContent.Type.IsRegular() { // Ellipses is supported only for directories.
 			console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), iodine.New(err, nil))
 		}
 		// All targets should be a valid folder.
