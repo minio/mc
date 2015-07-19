@@ -219,9 +219,7 @@ func doCastCmdSession(session *sessionV2) {
 }
 
 func runCastCmd(ctx *cli.Context) {
-	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "cast", 1) // last argument is exit code
-	}
+	checkCastSyntax(ctx)
 
 	session := newSessionV2()
 	defer session.Close()
