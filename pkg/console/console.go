@@ -103,21 +103,21 @@ var (
 	// Fatal print a error message and exit
 	Fatal = func(data ...interface{}) {
 		defer os.Exit(1)
-		print(themesDB[currThemeName].Error, data...)
+		print(themesDB[currThemeName].Fatal, data...)
 		return
 	}
 
 	// Fatalf print a error message with a format specified and exit
 	Fatalf = func(f string, data ...interface{}) {
 		defer os.Exit(1)
-		printf(themesDB[currThemeName].Error, f, data...)
+		printf(themesDB[currThemeName].Fatal, f, data...)
 		return
 	}
 
 	// Fatalln print a error message with a new line and exit
 	Fatalln = func(data ...interface{}) {
 		defer os.Exit(1)
-		println(themesDB[currThemeName].Error, data...)
+		println(themesDB[currThemeName].Fatal, data...)
 		return
 	}
 
@@ -212,7 +212,7 @@ var (
 			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <FATAL> ")
+			c.Print(ProgramName() + ": <ERROR> ")
 			c.Print(a...)
 			color.Output = output
 			mutex.Unlock()
@@ -251,7 +251,7 @@ var (
 			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <FATAL> ")
+			c.Print(ProgramName() + ": <ERROR> ")
 			c.Printf(f, a...)
 			color.Output = output
 			mutex.Unlock()
@@ -290,7 +290,7 @@ var (
 			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <FATAL> ")
+			c.Print(ProgramName() + ": <ERROR> ")
 			c.Println(a...)
 			color.Output = output
 			mutex.Unlock()
