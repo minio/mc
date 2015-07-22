@@ -97,11 +97,13 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) <-chan copyURLs {
 			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 			return
 		}
+		/* Too expensive. Ignore this for now. Let it fail while putObject.
 		targetClient, err := target2Client(targetURL)
 		if err != nil {
 			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(err, nil))}
 			return
 		}
+
 		// Target exists?
 		targetContent, err := targetClient.Stat()
 		if err == nil { // Target exists.
@@ -112,6 +114,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) <-chan copyURLs {
 			copyURLsCh <- copyURLs{SourceContent: sourceContent, TargetContent: targetContent}
 			return
 		}
+		*/
 		// All OK.. We can proceed. Type A
 		sourceContent.Name = sourceURL
 		copyURLsCh <- copyURLs{SourceContent: sourceContent, TargetContent: &client.Content{Name: targetURL}}

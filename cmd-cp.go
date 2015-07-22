@@ -147,6 +147,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				console.Errorln(cpURLs.Error)
 				break
 			}
+			/* Too expensive. Ignore this for now. Let it fail while putObject.
 			if !globalForceFlag {
 				if cpURLs.TargetContent.Size != 0 || !cpURLs.TargetContent.Time.IsZero() {
 					console.Fatalf("Destination already exists, cannot overwrite ‘%s’ with ‘%s’. "+
@@ -154,6 +155,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 					break
 				}
 			}
+			*/
 
 			jsonData, err := json.Marshal(cpURLs)
 			if err != nil {
