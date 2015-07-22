@@ -71,53 +71,64 @@ func putTarget(targetURL string, length int64, reader io.Reader) error {
 }
 
 // putTargets writes to URL from reader.
-func putTargets(targetURLs []string, length int64, reader io.Reader) <-chan error {
-	var errorCh = make(chan error)
-	go func() {
-		defer close(errorCh)
+func putTargets(targetURLs []string, length int64, reader io.Reader) error {
+	var tgtReaders []io.ReadCloser
+	var tgtWriters []io.WriteCloser
+	var tgtClients []client.Client
 
-		var tgtReaders []io.ReadCloser
-		var tgtWriters []io.WriteCloser
-		var tgtClients []client.Client
-
-		for _, targetURL := range targetURLs {
-			tgtClient, err := target2Client(targetURL)
-			if err != nil {
-				errorCh <- NewIodine(iodine.New(err, nil))
-				continue
-			}
-			tgtClients = append(tgtClients, tgtClient)
-			tgtReader, tgtWriter := io.Pipe()
-			tgtReaders = append(tgtReaders, tgtReader)
-			tgtWriters = append(tgtWriters, tgtWriter)
+	for _, targetURL := range targetURLs {
+		tgtClient, err := target2Client(targetURL)
+		if err != nil {
+			return iodine.New(err, nil)
 		}
+		tgtClients = append(tgtClients, tgtClient)
+		tgtReader, tgtWriter := io.Pipe()
+		tgtReaders = append(tgtReaders, tgtReader)
+		tgtWriters = append(tgtWriters, tgtWriter)
+	}
 
-		go func() {
-			var writers []io.Writer
-			for _, tgtWriter := range tgtWriters {
-				defer tgtWriter.Close()
-				writers = append(writers, io.Writer(tgtWriter))
-			}
-			multiTgtWriter := io.MultiWriter(writers...)
-			io.CopyN(multiTgtWriter, reader, length)
-		}()
+	go func() {
+		var writers []io.Writer
+		for _, tgtWriter := range tgtWriters {
+			defer tgtWriter.Close()
+			writers = append(writers, io.Writer(tgtWriter))
+		}
+		multiTgtWriter := io.MultiWriter(writers...)
+		io.CopyN(multiTgtWriter, reader, length)
+	}()
 
-		var wg sync.WaitGroup
+	var wg sync.WaitGroup
+	errorCh := make(chan error, len(tgtClients))
+
+	func() { // Parallel putObject
+		defer close(errorCh) // Each routine gets to return one err status.
+
 		for i := range tgtClients {
 			wg.Add(1)
-			go func(targetClient client.Client, reader io.ReadCloser, errorCh chan error) {
+			// make local copy for go routine
+			tgtClient := tgtClients[i]
+			tgtReader := tgtReaders[i]
+
+			go func(targetClient client.Client, reader io.ReadCloser, errorCh chan<- error) {
 				defer wg.Done()
 				err := targetClient.PutObject(length, reader)
 				if err != nil {
+					errorCh <- iodine.New(err, map[string]string{"failedURL": targetClient.URL().String()})
 					reader.Close()
-					errorCh <- NewIodine(iodine.New(err, map[string]string{"failedURL": targetClient.URL().String()}))
+					return
 				}
-			}(tgtClients[i], tgtReaders[i], errorCh)
+				errorCh <- err // return nil error = success.
+			}(tgtClient, tgtReader, errorCh)
 		}
 		wg.Wait()
 	}()
 
-	return errorCh
+	for err := range errorCh {
+		if err != nil { // Return on first error encounter.
+			return err
+		}
+	}
+	return nil // success.
 }
 
 // getNewClient gives a new client interface

@@ -28,6 +28,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -67,12 +68,18 @@ EXAMPLES:
 `,
 }
 
-// doCast - Cast an object to multiple destination
-func doCast(sURLs castURLs, bar *barSend, castQueue chan bool, wg *sync.WaitGroup) (err error) {
+// doCast - Cast an object to multiple destination. castURLs status contains a copy of sURLs and error if any.
+func doCast(sURLs castURLs, bar *barSend, castQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- castURLs) {
 	defer wg.Done() // Notify that this copy routine is done.
 	defer func() {
-		<-castQueue
+		<-castQueueCh
 	}()
+
+	if sURLs.Error != nil { // Errorneous sURLs passed.
+		sURLs.Error = iodine.New(sURLs.Error, nil)
+		statusCh <- sURLs
+		return
+	}
 
 	if !globalQuietFlag || !globalJSONFlag {
 		bar.SetCaption(sURLs.SourceContent.Name + ": ")
@@ -83,7 +90,9 @@ func doCast(sURLs castURLs, bar *barSend, castQueue chan bool, wg *sync.WaitGrou
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(int64(length))
 		}
-		console.Errorf("Unable to read from source %s. %s\n", sURLs.SourceContent.Name, err)
+		sURLs.Error = iodine.New(err, nil)
+		statusCh <- sURLs
+		return
 	}
 
 	var targetURLs []string
@@ -104,15 +113,18 @@ func doCast(sURLs castURLs, bar *barSend, castQueue chan bool, wg *sync.WaitGrou
 	}
 	defer newReader.Close()
 
-	for err := range putTargets(targetURLs, length, newReader) {
-		if err != nil {
-			if !globalQuietFlag || !globalJSONFlag {
-				bar.ErrorPut(int64(length))
-			}
-			console.Errorf("Unable to write to one or more destinations. %s\n", err)
+	err = putTargets(targetURLs, length, newReader)
+	if err != nil {
+		if !globalQuietFlag || !globalJSONFlag {
+			bar.ErrorPut(int64(length))
 		}
+		sURLs.Error = iodine.New(err, nil)
+		statusCh <- sURLs
+		return
 	}
-	return nil
+
+	sURLs.Error = nil // just for safety
+	statusCh <- sURLs
 }
 
 // doCastFake - Perform a fake cast to update the progress bar appropriately.
@@ -184,37 +196,76 @@ func doCastCmdSession(session *sessionV2) {
 		doPrepareCastURLs(session, trapCh)
 	}
 
-	wg := new(sync.WaitGroup)
-	castQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-
-	scanner := bufio.NewScanner(session.NewDataReader())
-	isCopied := isCopiedFactory(session.Header.LastCopied)
-
+	// Set up progress bar.
 	var bar barSend
-	if !globalQuietFlag || !globalJSONFlag { // set up progress bar
+	if !globalQuietFlag || !globalJSONFlag {
 		bar = newCpBar()
-		defer bar.Finish()
 		bar.Extend(session.Header.TotalBytes)
 	}
 
-	for scanner.Scan() {
-		var sURLs castURLs
-		json.Unmarshal([]byte(scanner.Text()), &sURLs)
-		if isCopied(sURLs.SourceContent.Name) {
-			doCastFake(sURLs, &bar)
-		} else {
+	// Prepare URL scanner from session data file.
+	scanner := bufio.NewScanner(session.NewDataReader())
+	// isCopied returns true if an object has been already copied
+	// or not. This is useful when we resume from a session.
+	isCopied := isCopiedFactory(session.Header.LastCopied)
+
+	wg := new(sync.WaitGroup)
+	// Limit numner of cast routines based on available CPU resources.
+	castQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
+	defer close(castQueue)
+	// Status channel for receiveing cast return status.
+	statusCh := make(chan castURLs)
+
+	// Go routine to monitor doCast status and signal traps.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
 			select {
-			case castQueue <- true:
-				wg.Add(1)
-				go doCast(sURLs, &bar, castQueue, wg)
-				session.Header.LastCopied = sURLs.SourceContent.Name
-			case <-trapCh:
+			case cURLs, ok := <-statusCh: // Receive status.
+				if !ok { // We are done here. Top level function has returned.
+					bar.Finish()
+					return
+				}
+				if cURLs.Error == nil {
+					session.Header.LastCopied = cURLs.SourceContent.Name
+				} else {
+					console.Errorf("Failed to cast ‘%s’, %s\n", cURLs.SourceContent.Name, cURLs.Error)
+				}
+			case <-trapCh: // Receive interrupt notification.
 				session.Save()
 				session.Info()
 				os.Exit(0)
 			}
 		}
-	}
+	}()
+
+	// Go routine to perform concurrently casting.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		castWg := new(sync.WaitGroup)
+		defer close(statusCh)
+
+		for scanner.Scan() {
+			var sURLs castURLs
+			json.Unmarshal([]byte(scanner.Text()), &sURLs)
+			if isCopied(sURLs.SourceContent.Name) {
+				doCastFake(sURLs, &bar)
+			} else {
+				// Wait for other cast routines to
+				// complete. We only have limited CPU
+				// and network resources.
+				castQueue <- true
+				// Account for each cast routines we start.
+				castWg.Add(1)
+				// Do casting in background concurrently.
+				go doCast(sURLs, &bar, castQueue, castWg, statusCh)
+			}
+		}
+		castWg.Wait()
+	}()
+
 	wg.Wait()
 }
 
