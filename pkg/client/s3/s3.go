@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/client"
-	s3 "github.com/minio/minio-go"
+	"github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -51,7 +51,7 @@ type TLSConfig struct {
 }
 
 type s3Client struct {
-	api     s3.API
+	api     minio.API
 	hostURL *client.URL
 }
 
@@ -68,7 +68,7 @@ func New(config *Config) (client.Client, error) {
 	default:
 		transport = http.DefaultTransport
 	}
-	s3Conf := s3.Config{
+	s3Conf := minio.Config{
 		AccessKeyID:     config.AccessKeyID,
 		SecretAccessKey: config.SecretAccessKey,
 		Transport:       transport,
@@ -79,7 +79,7 @@ func New(config *Config) (client.Client, error) {
 	s3Conf.Transport = transport
 	s3Conf.SetUserAgent(config.AppName, config.AppVersion, config.AppComments...)
 	s3Conf.Endpoint = u.Scheme + "://" + u.Host
-	api, err := s3.New(s3Conf)
+	api, err := minio.New(s3Conf)
 	if err != nil {
 		return nil, err
 	}
@@ -101,16 +101,26 @@ func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, error)
 	return reader, metadata.Size, nil
 }
 
+// ObjectAlreadyExists - typed return for MethodNotAllowed
+type ObjectAlreadyExists struct {
+	Object string
+}
+
+func (e ObjectAlreadyExists) Error() string {
+	return "Object #" + e.Object + " already exists."
+}
+
 // PutObject - put object
 func (c *s3Client) PutObject(size int64, data io.Reader) error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified
 	bucket, object := c.url2BucketAndObject()
-	// TODO - bump individual part size from default, if needed
-	// s3.DefaultPartSize = 1024 * 1024 * 100
 	err := c.api.PutObject(bucket, object, "application/octet-stream", size, data)
 	if err != nil {
+		if minio.ToErrorResponse(err).Code == "MethodNotAllowed" {
+			return iodine.New(ObjectAlreadyExists{Object: object}, nil)
+		}
 		return iodine.New(err, nil)
 	}
 	return nil
@@ -123,7 +133,7 @@ func (c *s3Client) MakeBucket() error {
 		return iodine.New(client.InvalidQueryURL{URL: c.hostURL.String()}, nil)
 	}
 	// location string is intentionally left out
-	err := c.api.MakeBucket(bucket, s3.BucketACL("private"))
+	err := c.api.MakeBucket(bucket, minio.BucketACL("private"))
 	return iodine.New(err, nil)
 }
 
@@ -133,7 +143,7 @@ func (c *s3Client) SetBucketACL(acl string) error {
 	if object != "" {
 		return iodine.New(client.InvalidQueryURL{URL: c.hostURL.String()}, nil)
 	}
-	err := c.api.SetBucketACL(bucket, s3.BucketACL(acl))
+	err := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
 	return iodine.New(err, nil)
 }
 
@@ -154,7 +164,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 	if object != "" {
 		metadata, err := c.api.StatObject(bucket, object)
 		if err != nil {
-			errResponse := s3.ToErrorResponse(err)
+			errResponse := minio.ToErrorResponse(err)
 			if errResponse != nil {
 				if errResponse.Code == "NoSuchKey" {
 					for content := range c.List(false) {
