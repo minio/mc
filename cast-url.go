@@ -177,10 +177,13 @@ func prepareSingleCastURLsTypeA(sourceURL string, targetURL string) castURLs {
 	if !sourceContent.Type.IsRegular() { // Source is not a regular file
 		return castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 	}
+
+	/* // Too expensive. Lets ignore it for now.
 	targetClient, err := target2Client(targetURL)
 	if err != nil {
 		return castURLs{Error: NewIodine(iodine.New(err, nil))}
 	}
+
 	// Target exists?
 	targetContent, err := targetClient.Stat()
 	if err == nil { // Target exists.
@@ -191,6 +194,7 @@ func prepareSingleCastURLsTypeA(sourceURL string, targetURL string) castURLs {
 		targetContents = append(targetContents, targetContent)
 		return castURLs{SourceContent: sourceContent, TargetContents: targetContents}
 	}
+	*/
 	// All OK.. We can proceed. Type A
 	sourceContent.Name = sourceURL
 	return castURLs{SourceContent: sourceContent, TargetContents: []*client.Content{{Name: targetURL}}}

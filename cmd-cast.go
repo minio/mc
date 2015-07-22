@@ -159,6 +159,7 @@ func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 				console.Errorln(sURLs.Error)
 				break
 			}
+			/* We are going to copy any way now. Let it fail at the time of putObject
 			if !globalForceFlag {
 				if len(sURLs.TargetContents) > 0 {
 					if sURLs.TargetContents[0].Size != 0 || !sURLs.TargetContents[0].Time.IsZero() {
@@ -168,6 +169,7 @@ func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 					}
 				}
 			}
+			*/
 
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
