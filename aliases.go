@@ -35,11 +35,11 @@ func isValidAliasName(aliasName string) bool {
 		fallthrough
 	case "private":
 		fallthrough
-	case "read-only":
+	case "readonly":
 		fallthrough
-	case "public-read":
+	case "public":
 		fallthrough
-	case "public-read-write":
+	case "authenticated":
 		return false
 	}
 	return validAliasName.MatchString(aliasName)

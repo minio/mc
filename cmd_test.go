@@ -60,13 +60,33 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	_, err = doConfig("generate", nil)
 	c.Assert(err, IsNil)
 
+	_, err = doConfig("generate", nil)
+	c.Assert(err, Not(IsNil))
+
+	_, err = doConfig("cover", nil)
+	c.Assert(err, Not(IsNil))
+
+	_, err = doConfig("alias", []string{"test", "https://test.io"})
+	c.Assert(err, IsNil)
+
+	_, err = doConfig("alias", []string{"test", "https://test.io"})
+	c.Assert(err, Not(IsNil))
+
+	_, err = doConfig("alias", []string{"test", "htt://test.io"})
+	c.Assert(err, Not(IsNil))
+
+	_, err = doConfig("alias", []string{"readonly", "https://new.test.io"})
+	c.Assert(err, Not(IsNil))
+
 	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
 	server = httptest.NewServer(objectAPI)
 }
 
 func (s *CmdTestSuite) TearDownSuite(c *C) {
 	os.RemoveAll(customConfigDir)
-	server.Close()
+	if server != nil {
+		server.Close()
+	}
 }
 
 func (s *CmdTestSuite) TestGetNewClient(c *C) {
@@ -93,7 +113,7 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 	err = conf.Save(configFile)
 	c.Assert(err, IsNil)
 
-	confNew := newConfigV1()
+	confNew := newConfigV101()
 	config, err := quick.New(confNew)
 	c.Assert(err, IsNil)
 	err = config.Load(configFile)
@@ -126,6 +146,8 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 	}
 
 	wantHosts := []string{
+		"localhost:*",
+		"127.0.0.1:*",
 		"play.minio.io:9000",
 		"dl.minio.io:9000",
 		"s3*.amazonaws.com",
@@ -145,9 +167,39 @@ func (s *CmdTestSuite) TestRecursiveURL(c *C) {
 	c.Assert(stripRecursiveURL("...url"), Equals, "...url")
 }
 
+func (s *CmdTestSuite) TestHostConfig(c *C) {
+	hostcfg, err := getHostConfig("https://s3.amazonaws.com")
+	c.Assert(err, IsNil)
+	c.Assert(hostcfg.AccessKeyID, Equals, globalAccessKeyID)
+	c.Assert(hostcfg.SecretAccessKey, Equals, globalSecretAccessKey)
+
+	_, err = getHostConfig("http://test.minio.io")
+	c.Assert(err, Not(IsNil))
+}
+
+func (s *CmdTestSuite) TestArgs2URL(c *C) {
+	URLs := []string{"localhost:", "s3:", "play:", "https://s3-us-west-2.amazonaws.com"}
+	expandedURLs, err := args2URLs(URLs)
+	c.Assert(err, IsNil)
+	c.Assert(expandedURLs[0], Equals, "http://localhost:9000/")
+	c.Assert(expandedURLs[1], Equals, "https://s3.amazonaws.com/")
+	c.Assert(expandedURLs[2], Equals, "https://play.minio.io:9000/")
+	c.Assert(expandedURLs[3], Equals, "https://s3-us-west-2.amazonaws.com")
+}
+
 func (s *CmdTestSuite) TestValidACL(c *C) {
 	acl := bucketACL("private")
 	c.Assert(acl.isValidBucketACL(), Equals, true)
+	c.Assert(acl.String(), Equals, "private")
+	acl = bucketACL("public")
+	c.Assert(acl.isValidBucketACL(), Equals, true)
+	c.Assert(acl.String(), Equals, "public-read-write")
+	acl = bucketACL("readonly")
+	c.Assert(acl.isValidBucketACL(), Equals, true)
+	c.Assert(acl.String(), Equals, "public-read")
+	acl = bucketACL("authenticated")
+	c.Assert(acl.isValidBucketACL(), Equals, true)
+	c.Assert(acl.String(), Equals, "authenticated-read")
 }
 
 func (s *CmdTestSuite) TestInvalidACL(c *C) {
