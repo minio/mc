@@ -190,6 +190,11 @@ func newConfig() (config quick.Config, err error) {
 	s3HostConf.AccessKeyID = globalAccessKeyID
 	s3HostConf.SecretAccessKey = globalSecretAccessKey
 
+	// Your example host config
+	exampleHostConf := new(hostConfig)
+	exampleHostConf.AccessKeyID = globalAccessKeyID
+	exampleHostConf.SecretAccessKey = globalSecretAccessKey
+
 	playHostConfig := new(hostConfig)
 	playHostConfig.AccessKeyID = ""
 	playHostConfig.SecretAccessKey = ""
@@ -198,12 +203,13 @@ func newConfig() (config quick.Config, err error) {
 	dlHostConfig.AccessKeyID = ""
 	dlHostConfig.SecretAccessKey = ""
 
-	// Your example host config
-	exampleHostConf := new(hostConfig)
-	exampleHostConf.AccessKeyID = globalAccessKeyID
-	exampleHostConf.SecretAccessKey = globalSecretAccessKey
+	localHostConfig := new(hostConfig)
+	localHostConfig.AccessKeyID = ""
+	localHostConfig.SecretAccessKey = ""
 
 	conf.Hosts[exampleHostURL] = exampleHostConf
+	conf.Hosts["localhost:*"] = localHostConfig
+	conf.Hosts["127.0.0.1:*"] = localHostConfig
 	conf.Hosts["s3*.amazonaws.com"] = s3HostConf
 	conf.Hosts["play.minio.io:9000"] = playHostConfig
 	conf.Hosts["dl.minio.io:9000"] = dlHostConfig
