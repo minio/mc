@@ -48,14 +48,6 @@ func getHostConfig(URL string) (*hostConfig, error) {
 		}
 		return hostCfg, nil
 	}
-	// No host matching or keys needed for 127.0.0.1 URL's skip them
-	if strings.Contains(url.Host, "127.0.0.1") {
-		hostCfg := &hostConfig{
-			AccessKeyID:     "",
-			SecretAccessKey: "",
-		}
-		return hostCfg, nil
-	}
 	for globURL, hostCfg := range config.Hosts {
 		match, err := filepath.Match(globURL, url.Host)
 		if err != nil {
@@ -67,6 +59,14 @@ func getHostConfig(URL string) (*hostConfig, error) {
 			}
 			return hostCfg, nil
 		}
+	}
+	// No host matching or keys needed for 127.0.0.1 URL's skip them
+	if strings.Contains(url.Host, "127.0.0.1") || strings.Contains(url.Host, "localhost") {
+		hostCfg := &hostConfig{
+			AccessKeyID:     "",
+			SecretAccessKey: "",
+		}
+		return hostCfg, nil
 	}
 	return nil, NewIodine(iodine.New(errNoMatchingHost{}, nil))
 }
