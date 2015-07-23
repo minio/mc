@@ -159,18 +159,6 @@ func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 				console.Errorln(sURLs.Error)
 				break
 			}
-			/* We are going to copy any way now. Let it fail at the time of putObject
-			if !globalForceFlag {
-				if len(sURLs.TargetContents) > 0 {
-					if sURLs.TargetContents[0].Size != 0 || !sURLs.TargetContents[0].Time.IsZero() {
-						console.Fatalf("Destination already exists, cannot overwrite ‘%s’ with ‘%s’. "+
-							"Use ‘--force’ flag to override.\n", sURLs.TargetContents[0].Name, sURLs.SourceContent.Name)
-						break
-					}
-				}
-			}
-			*/
-
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
 				session.Close()

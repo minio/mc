@@ -126,19 +126,8 @@ func checkCastSyntax(ctx *cli.Context) {
 		if srcContent.Type.IsRegular() { // Ellipses is supported only for directories.
 			console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), iodine.New(err, nil))
 		}
-		// All targets should be a valid folder.
-		for _, tgtURL := range tgtURLs {
-			_, tgtContent, err := url2Stat(tgtURL)
-			// Target exist?
-			if err != nil {
-				console.Fatalf("Unable to stat target directory ‘%s’. %s\n", tgtURL, iodine.New(err, nil))
-			}
-			if !tgtContent.Type.IsDir() {
-				console.Fatalf("Target ‘%s’ is not a directory.\n", tgtURL)
-			}
-		}
 	default:
-		console.Fatalln("Invalid arguments. Unanle to determine how to cast.")
+		console.Fatalln("Invalid arguments. Unable to determine how to cast. Please report this issue at https://github.com/minio/mc/issues")
 	}
 }
 
@@ -178,23 +167,6 @@ func prepareSingleCastURLsTypeA(sourceURL string, targetURL string) castURLs {
 		return castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 	}
 
-	/* // Too expensive. Lets ignore it for now.
-	targetClient, err := target2Client(targetURL)
-	if err != nil {
-		return castURLs{Error: NewIodine(iodine.New(err, nil))}
-	}
-
-	// Target exists?
-	targetContent, err := targetClient.Stat()
-	if err == nil { // Target exists.
-		if !targetContent.Type.IsRegular() { // Target is not a regular file
-			return castURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
-		}
-		var targetContents []*client.Content
-		targetContents = append(targetContents, targetContent)
-		return castURLs{SourceContent: sourceContent, TargetContents: targetContents}
-	}
-	*/
 	// All OK.. We can proceed. Type A
 	sourceContent.Name = sourceURL
 	return castURLs{SourceContent: sourceContent, TargetContents: []*client.Content{{Name: targetURL}}}
@@ -294,23 +266,6 @@ func prepareCastURLsTypeC(sourceURL string, targetURLs []string) <-chan castURLs
 			// Source is not a dir.
 			castURLsCh <- castURLs{Error: NewIodine(iodine.New(errSourceIsNotDir{URL: sourceURL}, nil))}
 			return
-		}
-
-		// Type C requires all targets to be a dir and it should exist.
-		for _, targetURL := range targetURLs {
-			_, targetContent, err := url2Stat(targetURL)
-			// Target exist?
-			if err != nil {
-				// Target does not exist.
-				castURLsCh <- castURLs{Error: NewIodine(iodine.New(errTargetNotFound{URL: targetURL}, nil))}
-				return
-			}
-
-			if !targetContent.Type.IsDir() {
-				// Target exists, but is not a directory.
-				castURLsCh <- castURLs{Error: NewIodine(iodine.New(errTargetIsNotDir{URL: targetURL}, nil))}
-				return
-			}
 		}
 
 		for sourceContent := range sourceClient.List(true) {
