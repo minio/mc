@@ -47,9 +47,6 @@ func (b bucketACL) String() string {
 	if !b.isValidBucketACL() {
 		return string(b)
 	}
-	if b.isPrivate() {
-		return "private"
-	}
 	if b.isReadOnly() {
 		return "public-read"
 	}

@@ -46,6 +46,10 @@ gomake-all: getdeps verifiers
 	@go run make.go -install
 	@mkdir -p $(HOME)/.mc
 
+coverage:
+	@go test -race -coverprofile=cover.out
+	@go tool cover -html=cover.out && echo "Visit your browser"
+
 release: getdeps verifiers
 	@echo "Installing mc:"
 	@go run make.go -release

@@ -47,4 +47,8 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 		_, err = doCatCmd(sourceURL)
 		c.Assert(err, IsNil)
 	}
+
+	objectPath = filepath.Join(root, "object2")
+	_, err = doCatCmd(objectPath)
+	c.Assert(err, Not(IsNil))
 }
