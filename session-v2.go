@@ -32,7 +32,6 @@ import (
 // migrateSessionV1ToV2 migrates all session files from v1 to v2. This
 // function should be called from the main early on.
 func migrateSessionV1ToV2() {
-	// TODO: Fill it in.
 	for _, sid := range getSessionIDsV1() {
 		err := os.Remove(getSessionFileV1(sid))
 		if err != nil {

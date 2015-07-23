@@ -172,20 +172,66 @@ func writeConfig(config quick.Config) error {
 	return nil
 }
 
-// newConfigV1() - get new config version 1.0
+func migrateConfig() {
+	// Migrate session V1 to V101
+	migrateConfigV1ToV101()
+}
+
+func migrateConfigV1ToV101() {
+	if !isMcConfigExists() {
+		return
+	}
+	conf := newConfigV1()
+	config, err := quick.New(conf)
+	if err != nil {
+		console.Fatalln(NewIodine(iodine.New(err, nil)))
+	}
+	config.Load(mustGetMcConfigPath())
+	conf = config.Data().(*configV1)
+	// version is the same return
+	if conf.Version == mcCurrentConfigVersion {
+		return
+	}
+	conf.Version = mcCurrentConfigVersion
+
+	localHostConfig := new(hostConfig)
+	localHostConfig.AccessKeyID = ""
+	localHostConfig.SecretAccessKey = ""
+
+	conf.Hosts["localhost:*"] = localHostConfig
+	conf.Hosts["127.0.0.1:*"] = localHostConfig
+
+	newConfig, err := quick.New(conf)
+	if err := newConfig.Save(mustGetMcConfigPath()); err != nil {
+		console.Fatalln(NewIodine(iodine.New(err, nil)))
+	}
+	console.Infof("Successfully migrated %s from version: %s to version: %s\n", mustGetMcConfigPath(), mcPreviousConfigVersion, mcCurrentConfigVersion)
+}
+
+// newConfigV1() - get new config version 1.0.0
 func newConfigV1() *configV1 {
 	conf := new(configV1)
-	conf.Version = mcCurrentConfigVersion
+	conf.Version = mcPreviousConfigVersion
 	// make sure to allocate map's otherwise Golang
-	// exists silently without providing any errors
+	// exits silently without providing any errors
 	conf.Hosts = make(map[string]*hostConfig)
 	conf.Aliases = make(map[string]string)
 	return conf
 }
 
-// newConfig - get new config interface
-func newConfig() (config quick.Config, err error) {
-	conf := newConfigV1()
+// newConfigV101() - get new config version 1.0.1
+func newConfigV101() *configV1 {
+	conf := new(configV1)
+	conf.Version = mcCurrentConfigVersion
+	// make sure to allocate map's otherwise Golang
+	// exits silently without providing any errors
+	conf.Hosts = make(map[string]*hostConfig)
+	conf.Aliases = make(map[string]string)
+
+	localHostConfig := new(hostConfig)
+	localHostConfig.AccessKeyID = ""
+	localHostConfig.SecretAccessKey = ""
+
 	s3HostConf := new(hostConfig)
 	s3HostConf.AccessKeyID = globalAccessKeyID
 	s3HostConf.SecretAccessKey = globalSecretAccessKey
@@ -203,10 +249,6 @@ func newConfig() (config quick.Config, err error) {
 	dlHostConfig.AccessKeyID = ""
 	dlHostConfig.SecretAccessKey = ""
 
-	localHostConfig := new(hostConfig)
-	localHostConfig.AccessKeyID = ""
-	localHostConfig.SecretAccessKey = ""
-
 	conf.Hosts[exampleHostURL] = exampleHostConf
 	conf.Hosts["localhost:*"] = localHostConfig
 	conf.Hosts["127.0.0.1:*"] = localHostConfig
@@ -220,11 +262,17 @@ func newConfig() (config quick.Config, err error) {
 	aliases["dl"] = "https://dl.minio.io:9000"
 	aliases["localhost"] = "http://localhost:9000"
 	conf.Aliases = aliases
+
+	return conf
+}
+
+// newConfig - get new config interface
+func newConfig() (config quick.Config, err error) {
+	conf := newConfigV101()
 	config, err = quick.New(conf)
 	if err != nil {
 		return nil, NewIodine(iodine.New(err, nil))
 	}
-
 	return config, nil
 }
 

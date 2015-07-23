@@ -26,7 +26,8 @@ var (
 	globalJSONFlag  = false // Json flag set via command line
 	globalDebugFlag = false // Debug flag set via command line
 
-	mcCurrentConfigVersion = "1.0.0"
+	mcPreviousConfigVersion = "1.0.0"
+	mcCurrentConfigVersion  = "1.0.1"
 )
 
 // mc configuration related constants.
