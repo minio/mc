@@ -211,6 +211,7 @@ func (a apiV1) getBucketACL(bucket string) (accessControlPolicy, error) {
 			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go/issues",
 			Resource:  "/" + bucket,
 			RequestID: resp.Header.Get("x-amz-request-id"),
+			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
 		return accessControlPolicy{}, errorResponse
 	}
@@ -374,6 +375,7 @@ func (a apiV1) headBucket(bucket string) error {
 					Message:   "The specified bucket does not exist.",
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
@@ -381,6 +383,7 @@ func (a apiV1) headBucket(bucket string) error {
 					Message:   "Access Denied",
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			default:
 				errorResponse = ErrorResponse{
@@ -388,6 +391,7 @@ func (a apiV1) headBucket(bucket string) error {
 					Message:   resp.Status,
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			}
 			return errorResponse
@@ -434,6 +438,7 @@ func (a apiV1) deleteBucket(bucket string) error {
 					Message:   "The specified bucket does not exist.",
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
@@ -441,6 +446,7 @@ func (a apiV1) deleteBucket(bucket string) error {
 					Message:   "Access Denied",
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			default:
 				errorResponse = ErrorResponse{
@@ -448,6 +454,7 @@ func (a apiV1) deleteBucket(bucket string) error {
 					Message:   resp.Status,
 					Resource:  "/" + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			}
 			return errorResponse
@@ -507,6 +514,7 @@ func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte,
 			Code:      "InternalError",
 			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
+			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
 	}
 	return metadata, nil
@@ -570,6 +578,7 @@ func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCl
 			Code:      "InternalError",
 			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
+			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
 	}
 	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
@@ -578,6 +587,7 @@ func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCl
 			Code:      "InternalError",
 			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
+			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
 	}
 	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
@@ -636,6 +646,7 @@ func (a apiV1) deleteObject(bucket, object string) error {
 					Message:   "The specified key does not exist.",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
@@ -643,6 +654,7 @@ func (a apiV1) deleteObject(bucket, object string) error {
 					Message:   "Access Denied",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			default:
 				errorResponse = ErrorResponse{
@@ -650,6 +662,7 @@ func (a apiV1) deleteObject(bucket, object string) error {
 					Message:   resp.Status,
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			}
 			return errorResponse
@@ -699,6 +712,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 					Message:   "The specified key does not exist.",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
@@ -706,6 +720,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 					Message:   "Access Denied",
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 			default:
 				errorResponse = ErrorResponse{
@@ -713,6 +728,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 					Message:   resp.Status,
 					Resource:  "/" + bucket + "/" + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
 
 			}
@@ -725,6 +741,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 			Code:      "InternalError",
 			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
+			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
 	}
 	size, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
@@ -733,6 +750,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 			Code:      "InternalError",
 			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
+			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
 	}
 	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
@@ -741,6 +759,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 			Code:      "InternalError",
 			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
+			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
 	}
 	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
@@ -787,6 +806,7 @@ func (a apiV1) listBuckets() (listAllMyBucketsResult, error) {
 				Code:      "AccessDenied",
 				Message:   "Anonymous access is forbidden for this operation",
 				RequestID: resp.Header.Get("x-amz-request-id"),
+				HostID:    resp.Header.Get("x-amz-id-2"),
 			}
 		}
 		if resp.StatusCode != http.StatusOK {

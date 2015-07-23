@@ -70,13 +70,13 @@ func ToErrorResponse(err error) *ErrorResponse {
 	}
 }
 
-// XML send raw xml marshalled as string
+// ToXML send raw xml marshalled as string
 func (e ErrorResponse) ToXML() string {
 	b, _ := xml.Marshal(&e)
 	return string(b)
 }
 
-// JSON send raw json marshalled as string
+// ToJSON send raw json marshalled as string
 func (e ErrorResponse) ToJSON() string {
 	b, _ := json.Marshal(&e)
 	return string(b)
