@@ -220,7 +220,7 @@ func doCastCmdSession(session *sessionV2) {
 				if cURLs.Error == nil {
 					session.Header.LastCopied = cURLs.SourceContent.Name
 				} else {
-					console.Errorf("Failed to cast ‘%s’, %s\n", cURLs.SourceContent.Name, cURLs.Error)
+					console.Errorf("Failed to cast ‘%s’, %s\n", cURLs.SourceContent.Name, NewIodine(cURLs.Error))
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Save()

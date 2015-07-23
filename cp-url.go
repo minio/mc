@@ -20,7 +20,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
 
@@ -54,6 +56,52 @@ const (
 //   B: copy(d..., f)
 //   C: copy(*, d...)
 //
+func checkCopySyntax(ctx *cli.Context) {
+	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code.
+	}
+
+	// extract URLs.
+	URLs, err := args2URLs(ctx.Args())
+	if err != nil {
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), iodine.New(err, nil))
+	}
+
+	srcURLs := URLs[:len(URLs)-1]
+	tgtURL := URLs[len(URLs)-1]
+
+	/****** Generic rules *******/
+	// Recursive URLs are not allowed in target.
+	if isURLRecursive(tgtURL) {
+		console.Fatalf("Target ‘%s’ cannot be recursive. %s\n", tgtURL, iodine.New(err, nil))
+	}
+
+	switch guessCopyURLType(srcURLs, tgtURL) {
+	case copyURLsTypeA: // Source is already a regular file.
+		// no verification needed, pass through
+	case copyURLsTypeB: // Source is already a regular file.
+		// no verification needed, pass through
+	case copyURLsTypeC:
+		for _, srcURL := range srcURLs {
+			srcURL = stripRecursiveURL(srcURL)
+			_, srcContent, err := url2Stat(srcURL)
+			// Source exist?.
+			if err != nil {
+				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, iodine.New(err, nil))
+			}
+			if srcContent.Type.IsRegular() { // Ellipses is supported only for directories.
+				console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), iodine.New(err, nil))
+			}
+		}
+	case copyURLsTypeD:
+		// only verify if target is a valid directory and exists
+		if !isTargetURLDir(tgtURL) {
+			console.Fatalf("Target ‘%s’ should be a directory and exist, when we have a mixture of files and folders in source\n", tgtURL)
+		}
+	default:
+		console.Fatalln("Invalid arguments. Unable to determine how to copy. Please report this issue at https://github.com/minio/mc/issues")
+	}
+}
 
 // guessCopyURLType guesses the type of URL. This approach all allows prepareURL
 // functions to accurately report failure causes.
@@ -122,19 +170,6 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) <-chan copyURLs {
 			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 			return
 		}
-
-		_, targetContent, err := url2Stat(targetURL)
-		if err != nil {
-			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(err, nil))}
-			return
-		}
-		if err == nil {
-			if !targetContent.Type.IsDir() {
-				// Target exists, but is not a directory.
-				copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errTargetIsNotDir{URL: targetURL}, nil))}
-				return
-			}
-		} // Else name is available to create.
 
 		// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
 		sourceURLParse, err := client.Parse(sourceURL)
@@ -241,20 +276,6 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan copyURLs
 		if sourceURLs == nil {
 			// Source list is empty.
 			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errSourceListEmpty{}, nil))}
-			return
-		}
-
-		_, targetContent, err := url2Stat(targetURL)
-		// Target exist?
-		if err != nil {
-			// Target does not exist.
-			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errTargetNotFound{URL: targetURL}, nil))}
-			return
-		}
-
-		if !targetContent.Type.IsDir() {
-			// Target exists, but is not a directory.
-			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errTargetIsNotDir{URL: targetURL}, nil))}
 			return
 		}
 
