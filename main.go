@@ -79,6 +79,8 @@ func getSystemData() map[string]string {
 }
 
 func migrate() {
+	// Migrate config files if any.
+	migrateConfig()
 	// Migrate session files if any.
 	migrateSession()
 }
