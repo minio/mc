@@ -198,8 +198,12 @@ func migrateConfigV1ToV101() {
 	localHostConfig.AccessKeyID = ""
 	localHostConfig.SecretAccessKey = ""
 
-	conf.Hosts["localhost:*"] = localHostConfig
-	conf.Hosts["127.0.0.1:*"] = localHostConfig
+	if _, ok := conf.Hosts["localhost:*"]; !ok {
+		conf.Hosts["localhost:*"] = localHostConfig
+	}
+	if _, ok := conf.Hosts["127.0.0.1:*"]; !ok {
+		conf.Hosts["127.0.0.1:*"] = localHostConfig
+	}
 
 	newConfig, err := quick.New(conf)
 	if err := newConfig.Save(mustGetMcConfigPath()); err != nil {
