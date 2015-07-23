@@ -17,7 +17,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -90,31 +89,9 @@ func checkCastSyntax(ctx *cli.Context) {
 
 	switch guessCastURLType(srcURL, tgtURLs) {
 	case castURLsTypeA: // Source is already a regular file.
-		// All targets should be a valid file or folder.
-		for _, tgtURL := range tgtURLs {
-			_, tgtContent, err := url2Stat(tgtURL)
-			// Target exist?
-			if err != nil {
-				console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, iodine.New(err, nil))
-			}
-			if !tgtContent.Type.IsRegular() {
-				console.Fatalf("Target ‘%s’ is not a valid file.\n", tgtURL)
-			}
-		}
+		//
 	case castURLsTypeB: // Source is already a regular file.
-		// All targets should be a valid file or folder.
-		for _, tgtURL := range tgtURLs {
-			_, tgtContent, err := url2Stat(tgtURL)
-			// Target exist?
-			if err != nil {
-				console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, iodine.New(err, nil))
-			}
-			if !tgtContent.Type.IsRegular() {
-				if !tgtContent.Type.IsDir() {
-					console.Fatalf("Target ‘%s’ is not a valid file or directory.\n", tgtURL)
-				}
-			}
-		}
+		//
 	case castURLsTypeC:
 		srcURL = stripRecursiveURL(srcURL)
 		_, srcContent, err := url2Stat(srcURL)
@@ -126,6 +103,7 @@ func checkCastSyntax(ctx *cli.Context) {
 		if srcContent.Type.IsRegular() { // Ellipses is supported only for directories.
 			console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), iodine.New(err, nil))
 		}
+
 	default:
 		console.Fatalln("Invalid arguments. Unable to determine how to cast. Please report this issue at https://github.com/minio/mc/issues")
 	}
@@ -200,12 +178,9 @@ func prepareSingleCastURLsTypeB(sourceURL string, targetURL string) castURLs {
 	}
 
 	_, targetContent, err := url2Stat(targetURL)
-	if os.IsNotExist(iodine.ToError(err)) {
+	if err != nil {
 		// Source and target are files. Already reduced to Type A.
 		return prepareSingleCastURLsTypeA(sourceURL, targetURL)
-	}
-	if err != nil {
-		return castURLs{Error: NewIodine(iodine.New(err, nil))}
 	}
 
 	if targetContent.Type.IsRegular() { // File to File

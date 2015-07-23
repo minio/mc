@@ -107,6 +107,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorPut(length)
 		}
+		console.Println("")
 		console.Errorln(NewIodine(err))
 	}
 	return nil
@@ -211,9 +212,7 @@ func doCopyCmdSession(session *sessionV2) {
 
 // runCopyCmd is bound to sub-command
 func runCopyCmd(ctx *cli.Context) {
-	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code
-	}
+	checkCopySyntax(ctx)
 
 	session := newSessionV2()
 	defer session.Close()

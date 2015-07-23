@@ -35,14 +35,17 @@ func isTargetURLDir(targetURL string) bool {
 	if err != nil {
 		return false
 	}
-	if strings.HasSuffix(targetURLParse.String(), string(targetURLParse.Separator)) {
+	if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
+		return false
+	}
+	if strings.HasSuffix(targetURLParse.Path, string(targetURLParse.Separator)) {
 		return true
 	}
 	_, targetContent, err := url2Stat(targetURL)
 	if err != nil {
 		return false
 	}
-	if !targetContent.Type.IsDir() { // Target is a dir. Type B
+	if !targetContent.Type.IsDir() { // Target is a dir.
 		return false
 	}
 	return true
