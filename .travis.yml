@@ -4,4 +4,4 @@ go:
 sudo: false
 notifications:
   slack:
-    secure: OtdWIuZt+BqL5/YgPIJ0MuPnU/pjTR5M/s9zfAX7iQlHZjAwQihHnevVv1xuXpqE4+hYjf4Ksw4RO7VSgfJD1nOT9EgeyRPyWanS93AXq5Bz8kprjRCF7vb/U01fjPKUJ+fOckj1xxTUEakbOFmDqkgphc0yQUMhU8MkyoCPZXI=
+    secure: McinxQ4R/Yu2r/U8lVsdAIQ195Rf+3/Ku6DViWyqLHsTt5fTnVrSfbIKs8vy0t2A0bRLO6zv2xOSMWjfiimZLPMgMbMqLtTFEzUzB8RZyx2n2xgmL8q3gjXcLA3vkBreaRYCzJzX6DjvrxRfhyOg+BQHpLpACWik3FS/7VIdDCI=
