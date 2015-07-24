@@ -37,7 +37,7 @@ func checkConfig() {
 
 	if !isSessionDirExists() {
 		if err := createSessionDir(); err != nil {
-			console.Fatalf("Unable to create session directory. %s\n", err)
+			console.Fatalf("Unable to create session folder. %s\n", err)
 		}
 	}
 

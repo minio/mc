@@ -122,7 +122,7 @@ func (l *logger) String() string {
 }
 
 // -----------------------------------------------------------------------
-// Handling of temporary files and directories.
+// Handling of temporary files and folders.
 
 type tempDir struct {
 	sync.Mutex

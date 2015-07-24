@@ -11,7 +11,7 @@ EXAMPLES:
    1. Create a bucket on Amazon S3 object storage.
       $ mc mb https://s3.amazonaws.com/public-document-store
 
-   3. Make a directory on local filesystem, including its parent directories as needed.
+   3. Make a folder on local filesystem, including its parent folders as needed.
       $ mc mb ~/
 
    3. Create a bucket on Minio object storage.

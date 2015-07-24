@@ -78,7 +78,7 @@ func loadSessionV1(sid string) (*sessionV1, error) {
 func getSessionIDsV1() (sids []string) {
 	sessionList, err := filepath.Glob(getSessionDir() + "/*")
 	if err != nil {
-		console.Fatalf("Unable to list session directory ‘%s’, %s", getSessionDir(), NewIodine(iodine.New(err, nil)))
+		console.Fatalf("Unable to list session folder ‘%s’, %s", getSessionDir(), NewIodine(iodine.New(err, nil)))
 	}
 
 	for _, path := range sessionList {

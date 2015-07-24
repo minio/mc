@@ -29,7 +29,7 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-// Check if the target URL represents directory. It may or may not exist yet.
+// Check if the target URL represents folder. It may or may not exist yet.
 func isTargetURLDir(targetURL string) bool {
 	targetURLParse, err := client.Parse(targetURL)
 	if err != nil {

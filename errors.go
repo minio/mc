@@ -140,13 +140,13 @@ func (e errInvalidTheme) Error() string {
 type errTargetIsNotDir errInvalidURL
 
 func (e errTargetIsNotDir) Error() string {
-	return "Target ‘" + e.URL + "’ is not a directory."
+	return "Target ‘" + e.URL + "’ is not a folder."
 }
 
 type errTargetNotFound errInvalidURL
 
 func (e errTargetNotFound) Error() string {
-	return "Target directory ‘" + e.URL + "’ does not exist."
+	return "Target folder ‘" + e.URL + "’ does not exist."
 }
 
 type errSourceNotRecursive errInvalidURL
@@ -158,7 +158,7 @@ func (e errSourceNotRecursive) Error() string {
 type errSourceIsNotDir errTargetIsNotDir
 
 func (e errSourceIsNotDir) Error() string {
-	return "Source ‘" + e.URL + "’ is not a directory."
+	return "Source ‘" + e.URL + "’ is not a folder."
 }
 
 type errSourceListEmpty errInvalidArgument

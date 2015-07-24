@@ -81,11 +81,11 @@ func checkCopySyntax(ctx *cli.Context) {
 	switch guessCopyURLType(srcURLs, tgtURL) {
 	case copyURLsTypeA: // File -> File.
 		checkCopySyntaxTypeA(srcURLs, tgtURL)
-	case copyURLsTypeB: // File -> Directory.
+	case copyURLsTypeB: // File -> Folder.
 		checkCopySyntaxTypeB(srcURLs, tgtURL)
-	case copyURLsTypeC: // Directory... -> Directory.
+	case copyURLsTypeC: // Folder... -> Folder.
 		checkCopySyntaxTypeC(srcURLs, tgtURL)
-	case copyURLsTypeD: // File | Directory... -> Directory.
+	case copyURLsTypeD: // File | Folder... -> Folder.
 		checkCopySyntaxTypeD(srcURLs, tgtURL)
 	default:
 		console.Fatalln("Invalid arguments. Unable to determine how to copy. Please report this issue at https://github.com/minio/mc/issues")
@@ -103,17 +103,19 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	if err != nil {
 		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
 	}
+	if srcContent.Type.IsDir() {
+		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	}
 	if !srcContent.Type.IsRegular() {
 		console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
-	if err != nil {
-		console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
-	}
-	if !tgtContent.Type.IsRegular() {
-		console.Fatalf("Target ‘%s’ is not a file. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	if err == nil {
+		if !tgtContent.Type.IsRegular() {
+			console.Fatalf("Target ‘%s’ is not a file. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		}
 	}
 }
 
@@ -129,7 +131,7 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
 	}
 	if srcContent.Type.IsDir() {
-		console.Fatalf("Source ‘%s’ is a directory. Use ‘%s...’ argument to copy this directory and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
 	if !srcContent.Type.IsRegular() {
 		console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
@@ -137,11 +139,10 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
-	if err != nil {
-		console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
-	}
-	if !tgtContent.Type.IsDir() {
-		console.Fatalf("Target ‘%s’ is not a directory. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	if err == nil {
+		if !tgtContent.Type.IsDir() {
+			console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		}
 	}
 }
 
@@ -157,8 +158,8 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	if err != nil {
 		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
 	}
-	if srcContent.Type.IsRegular() { // Ellipses is supported only for directories.
-		console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
+		console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
 
 	_, tgtContent, err := url2Stat(tgtURL)
@@ -167,7 +168,7 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 		console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
 	}
 	if !tgtContent.Type.IsDir() {
-		console.Fatalf("Target ‘%s’ is not a directory. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
 }
 
@@ -181,8 +182,8 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 			if err != nil {
 				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
 			}
-			if !srcContent.Type.IsDir() { // Ellipses is supported only for directories.
-				console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(errInvalidArgument{}, nil)))
+			if !srcContent.Type.IsDir() { // Ellipses is supported only for folders.
+				console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(errInvalidArgument{}, nil)))
 			}
 		} else { // Regular URL.
 			_, srcContent, err := url2Stat(srcURL)
@@ -191,7 +192,7 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
 			}
 			if srcContent.Type.IsDir() {
-				console.Fatalf("Source ‘%s’ is a directory. Use ‘%s...’ argument to copy this directory and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+				console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 			}
 			if !srcContent.Type.IsRegular() {
 				console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
@@ -204,7 +205,7 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 		console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
 	}
 	if !tgtContent.Type.IsDir() {
-		console.Fatalf("Target ‘%s’ is not a directory. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
 }
 
@@ -216,6 +217,11 @@ func guessCopyURLType(sourceURLs []string, targetURL string) copyURLsType {
 	}
 	if sourceURLs == nil { // Source list is empty
 		return copyURLsTypeInvalid
+	}
+	for _, sourceURL := range sourceURLs {
+		if sourceURL == "" { // One of the source is empty
+			return copyURLsTypeInvalid
+		}
 	}
 	if len(sourceURLs) == 1 { // 1 Source, 1 Target
 		switch {
@@ -263,7 +269,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 		return copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
 	}
 
-	// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
+	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	sourceURLParse, err := client.Parse(sourceURL)
 	if err != nil {
 		return copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
@@ -290,7 +296,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			return
 		}
 
-		// add `/` after trimming off `...` to emulate directories
+		// add `/` after trimming off `...` to emulate folders
 		sourceURL = stripRecursiveURL(sourceURL)
 		sourceClient, sourceContent, err := url2Stat(sourceURL)
 		if err != nil {
@@ -317,7 +323,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 				continue
 			}
 
-			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
+			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
 				copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
@@ -363,7 +369,7 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan copyURLs
 		}
 
 		for _, sourceURL := range sourceURLs {
-			// Target is directory. Possibilities are only Type B and C
+			// Target is folder. Possibilities are only Type B and C
 			// Is it a recursive URL "..."?
 			if isURLRecursive(sourceURL) {
 				for cURLs := range prepareCopyURLsTypeC(sourceURL, targetURL) {

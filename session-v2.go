@@ -43,7 +43,7 @@ func migrateSessionV1ToV2() {
 type sessionV2Header struct {
 	Version      string    `json:"version"`
 	When         time.Time `json:"time"`
-	RootPath     string    `json:"working-directory"`
+	RootPath     string    `json:"working-folder"`
 	CommandType  string    `json:"command-type"`
 	CommandArgs  []string  `json:"cmd-args"`
 	LastCopied   string    `json:"last-copied"`
