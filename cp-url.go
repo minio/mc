@@ -60,7 +60,9 @@ func checkCopySyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code.
 	}
-
+	if !isMcConfigExists() {
+		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
+	}
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
