@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/minio/mc/pkg/console"
 	. "gopkg.in/check.v1"
 )
 
@@ -48,4 +49,28 @@ func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
 	_, err = doUpdateAccessCmd(server.URL+"/bucket", "invalid")
 	c.Assert(err, Not(IsNil))
 
+}
+
+func (s *CmdTestSuite) TestAccessContext(c *C) {
+	err := app.Run([]string{os.Args[0], "access", "private", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "access", "public", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "access", "readonly", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "access", "authenticated", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "access", "invalid", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+	// reset back
+	console.IsExited = false
 }
