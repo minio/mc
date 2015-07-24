@@ -47,6 +47,10 @@ func (h objectAPIHandler) getHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(response)
 		return
 	case r.URL.Path != "":
+		if _, ok := h.object[filepath.Base(r.URL.Path)]; !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 		w.Header().Set("Content-Length", strconv.Itoa(len(h.object[filepath.Base(r.URL.Path)])))
 		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
 		w.Header().Set("ETag", "b1946ac92492d2347c6235b4d2611184")

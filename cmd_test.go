@@ -17,8 +17,6 @@
 package main
 
 import (
-	"bytes"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -296,35 +294,4 @@ func (ta *testAddr) Error() string {
 }
 func (ta *testAddr) String() string {
 	return "testAddr"
-}
-
-func (s *CmdTestSuite) TestCommonMethods(c *C) {
-	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-
-	objectPath := filepath.Join(root, "object1")
-	data := "hello"
-	dataLen := len(data)
-
-	err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
-
-	reader, size, err := getSource(objectPath)
-	c.Assert(err, IsNil)
-	c.Assert(size, Not(Equals), 0)
-	var results bytes.Buffer
-	_, err = io.CopyN(&results, reader, int64(size))
-	c.Assert(err, IsNil)
-	c.Assert([]byte(data), DeepEquals, results.Bytes())
-
-	_, content, err := url2Stat(objectPath)
-	c.Assert(err, IsNil)
-	c.Assert(content.Name, Equals, filepath.Join(root, "object1"))
-	c.Assert(content.Type.IsRegular(), Equals, true)
-
-	_, _, err = url2Stat(objectPath + "invalid")
-	c.Assert(err, Not(IsNil))
-
 }
