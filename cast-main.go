@@ -128,11 +128,10 @@ func doCast(sURLs castURLs, bar *barSend, castQueueCh <-chan bool, wg *sync.Wait
 }
 
 // doCastFake - Perform a fake cast to update the progress bar appropriately.
-func doCastFake(sURLs castURLs, bar *barSend) (err error) {
+func doCastFake(sURLs castURLs, bar *barSend) {
 	if !globalDebugFlag || !globalJSONFlag {
 		bar.Progress(sURLs.SourceContent.Size)
 	}
-	return nil
 }
 
 // doPrepareCastURLs scans the source URL and prepares a list of objects for casting.

@@ -125,11 +125,10 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cURLs copyURLs, bar *barSend) (err error) {
+func doCopyFake(cURLs copyURLs, bar *barSend) {
 	if !globalQuietFlag || !globalJSONFlag {
 		bar.Progress(cURLs.SourceContent.Size)
 	}
-	return nil
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
@@ -236,7 +235,7 @@ func doCopyCmdSession(session *sessionV2) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		cpWg := new(sync.WaitGroup)
+		copyWg := new(sync.WaitGroup)
 		defer close(statusCh)
 
 		for scanner.Scan() {
@@ -250,12 +249,12 @@ func doCopyCmdSession(session *sessionV2) {
 				// and network resources.
 				cpQueue <- true
 				// Account for each cast routines we start.
-				cpWg.Add(1)
+				copyWg.Add(1)
 				// Do casting in background concurrently.
-				go doCopy(cpURLs, &bar, cpQueue, cpWg, statusCh)
+				go doCopy(cpURLs, &bar, cpQueue, copyWg, statusCh)
 			}
 		}
-		cpWg.Wait()
+		copyWg.Wait()
 	}()
 
 	wg.Wait()
