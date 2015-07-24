@@ -48,7 +48,7 @@ const (
 //   =========================
 //   A: cast(f, []f) -> cast(f, []f)
 //   B: cast(f, [](d | f)) -> cast(f, [](d/f | f)) -> A:
-//   C: cast(d1..., [](d2)) -> []cast(d1/f, [](d1/d2/f)) -> []A:
+//   C: cast(d1..., [](d2)) -> []cast(d1/f, [](d2/d1/f)) -> []A:
 
 // checkCastSyntax(URLs []string)
 func checkCastSyntax(ctx *cli.Context) {
