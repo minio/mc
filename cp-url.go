@@ -64,7 +64,7 @@ func checkCopySyntax(ctx *cli.Context) {
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), iodine.New(err, nil))
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), NewIodine(iodine.New(err, nil)))
 	}
 
 	srcURLs := URLs[:len(URLs)-1]
@@ -73,7 +73,7 @@ func checkCopySyntax(ctx *cli.Context) {
 	/****** Generic rules *******/
 	// Recursive URLs are not allowed in target.
 	if isURLRecursive(tgtURL) {
-		console.Fatalf("Target ‘%s’ cannot be recursive. %s\n", tgtURL, iodine.New(err, nil))
+		console.Fatalf("Target ‘%s’ cannot be recursive. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
 
 	switch guessCopyURLType(srcURLs, tgtURL) {
@@ -87,10 +87,10 @@ func checkCopySyntax(ctx *cli.Context) {
 			_, srcContent, err := url2Stat(srcURL)
 			// Source exist?.
 			if err != nil {
-				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, iodine.New(err, nil))
+				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
 			}
 			if srcContent.Type.IsRegular() { // Ellipses is supported only for directories.
-				console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), iodine.New(err, nil))
+				console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(err, nil)))
 			}
 		}
 	case copyURLsTypeD:

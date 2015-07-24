@@ -59,7 +59,7 @@ func checkCastSyntax(ctx *cli.Context) {
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), iodine.New(err, nil))
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), NewIodine(iodine.New(err, nil)))
 	}
 
 	srcURL := URLs[0]
@@ -71,7 +71,7 @@ func checkCastSyntax(ctx *cli.Context) {
 		_, srcContent, err := url2Stat(srcURL)
 		// Source exist?.
 		if err != nil {
-			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, iodine.New(err, nil))
+			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
 		}
 		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
@@ -83,7 +83,7 @@ func checkCastSyntax(ctx *cli.Context) {
 	// Recursive URLs are not allowed in target.
 	for _, tgtURL := range tgtURLs {
 		if isURLRecursive(tgtURL) {
-			console.Fatalf("Target ‘%s’ cannot be recursive. %s\n", tgtURL, iodine.New(err, nil))
+			console.Fatalf("Target ‘%s’ cannot be recursive. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 		}
 	}
 
@@ -97,11 +97,11 @@ func checkCastSyntax(ctx *cli.Context) {
 		_, srcContent, err := url2Stat(srcURL)
 		// Source exist?.
 		if err != nil {
-			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, iodine.New(err, nil))
+			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
 		}
 
 		if srcContent.Type.IsRegular() { // Ellipses is supported only for directories.
-			console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), iodine.New(err, nil))
+			console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(err, nil)))
 		}
 
 	default:
