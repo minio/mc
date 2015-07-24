@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/minio/mc/pkg/console"
 	. "gopkg.in/check.v1"
 )
 
@@ -84,4 +85,20 @@ func (s *CmdTestSuite) TestDiffDirs(c *C) {
 		c.Assert(diff.err, IsNil)
 		c.Assert(len(diff.message), Equals, 0)
 	}
+}
+
+func (s *CmdTestSuite) TestDiffContext(c *C) {
+	err := app.Run([]string{os.Args[0], "diff", server.URL + "/bucket", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "diff", server.URL + "/bucket...", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "diff", server.URL + "/invalid", server.URL + "/invalid..."})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+	// reset back
+	console.IsExited = false
 }
