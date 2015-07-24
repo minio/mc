@@ -272,7 +272,7 @@ func runCopyCmd(ctx *cli.Context) {
 	session.Header.RootPath, err = os.Getwd()
 	if err != nil {
 		session.Close()
-		console.Fatalf("Unable to get current working directory. %s\n", err)
+		console.Fatalf("Unable to get current working folder. %s\n", err)
 	}
 
 	// extract URLs.

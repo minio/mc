@@ -70,7 +70,7 @@ func (c Content) String() string {
 		message := console.Time("[%s] ", c.Time)
 		message = message + console.Size("%6s ", c.Size)
 		message = func() string {
-			if c.Filetype == "directory" {
+			if c.Filetype == "folder" {
 				return message + console.Dir("%s", c.Name)
 			}
 			return message + console.File("%s", c.Name)

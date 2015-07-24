@@ -23,7 +23,7 @@ $ mc --help
 * If you have additional dependencies for ``mc``, ``mc`` manages its depedencies using [godep](https://github.com/tools/godep)
     - Run `go get foo/bar`
     - Edit your code to import foo/bar
-    - Run `make save` from top-level directory (or `godep restore && godep save ./...`).
+    - Run `make save` from top-level folder (or `godep restore && godep save ./...`).
 
 * When you're ready to create a pull request, be sure to:
     - Have test cases for the new code. If you have questions about how to do it, please ask in your pull request.

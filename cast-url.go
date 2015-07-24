@@ -39,7 +39,6 @@ const (
 	castURLsTypeA
 	castURLsTypeB
 	castURLsTypeC
-	castURLsTypeD
 )
 
 //   NOTE: All the parse rules should reduced to A: Cast(Source, []Target).
@@ -68,7 +67,7 @@ func checkCastSyntax(ctx *cli.Context) {
 	tgtURLs := URLs[1:]
 
 	/****** Generic rules *******/
-	// Source cannot be a directory (except when recursive)
+	// Source cannot be a folder (except when recursive)
 	if !isURLRecursive(srcURL) {
 		_, srcContent, err := url2Stat(srcURL)
 		// Source exist?.
@@ -77,7 +76,7 @@ func checkCastSyntax(ctx *cli.Context) {
 		}
 		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
-				console.Fatalf("Source ‘%s’ is a directory. Please use ‘%s...’ to recursively copy this directory and its contents.\n", srcURL, srcURL)
+				console.Fatalf("Source ‘%s’ is a folder. Please use ‘%s...’ to recursively copy this folder and its contents.\n", srcURL, srcURL)
 			}
 			console.Fatalf("Source ‘%s’ is not a regular file.\n", srcURL)
 		}
@@ -90,24 +89,79 @@ func checkCastSyntax(ctx *cli.Context) {
 	}
 
 	switch guessCastURLType(srcURL, tgtURLs) {
-	case castURLsTypeA: // Source is already a regular file.
-		//
-	case castURLsTypeB: // Source is already a regular file.
-		//
-	case castURLsTypeC:
-		srcURL = stripRecursiveURL(srcURL)
-		_, srcContent, err := url2Stat(srcURL)
-		// Source exist?.
-		if err != nil {
-			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
-		}
-
-		if srcContent.Type.IsRegular() { // Ellipses is supported only for directories.
-			console.Fatalf("Source ‘%s’ is not a directory. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(err, nil)))
-		}
-
+	case castURLsTypeA: // File -> File.
+		checkCastSyntaxTypeA(srcURL, tgtURLs)
+	case castURLsTypeB: // File -> Folder.
+		checkCastSyntaxTypeB(srcURL, tgtURLs)
+	case castURLsTypeC: // Folder -> Folder.
+		checkCastSyntaxTypeC(srcURL, tgtURLs)
 	default:
 		console.Fatalln("Invalid arguments. Unable to determine how to cast. Please report this issue at https://github.com/minio/mc/issues")
+	}
+}
+
+func checkCastSyntaxTypeA(srcURL string, tgtURLs []string) {
+	if len(tgtURLs) == 0 && tgtURLs == nil {
+		console.Fatalf("Invalid number of target arguments to cast command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	}
+	_, srcContent, err := url2Stat(srcURL)
+	// Source exist?.
+	if err != nil {
+		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+	}
+	if srcContent.Type.IsDir() {
+		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to cast this folder and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	}
+	if !srcContent.Type.IsRegular() {
+		console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	}
+	for _, tgtURL := range tgtURLs {
+		_, tgtContent, err := url2Stat(tgtURL)
+		// Target exist?.
+		if err == nil {
+			if !tgtContent.Type.IsRegular() {
+				console.Fatalf("Target ‘%s’ is not a file. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+			}
+		}
+	}
+}
+
+func checkCastSyntaxTypeB(srcURL string, tgtURLs []string) {
+	if len(tgtURLs) == 0 && tgtURLs == nil {
+		console.Fatalf("Invalid number of target arguments to cast command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	}
+	_, srcContent, err := url2Stat(srcURL)
+	// Source exist?.
+	if err != nil {
+		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+	}
+	if srcContent.Type.IsDir() {
+		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to cast this folder and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	}
+	if !srcContent.Type.IsRegular() {
+		console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	}
+	// targetURL can be folder or file, internally TypeB calls TypeA if it finds a file
+}
+
+func checkCastSyntaxTypeC(srcURL string, tgtURLs []string) {
+	if len(tgtURLs) == 0 && tgtURLs == nil {
+		console.Fatalf("Invalid number of target arguments to cast command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	}
+	srcURL = stripRecursiveURL(srcURL)
+	_, srcContent, err := url2Stat(srcURL)
+	// Source exist?.
+	if err != nil {
+		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+	}
+
+	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
+		console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(err, nil)))
+	}
+	for _, tgtURL := range tgtURLs {
+		if !isTargetURLDir(tgtURL) {
+			console.Fatalf("One of the target ‘%s’ is not a folder. cannot have mixtures of directories and files while copying directories. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		}
 	}
 }
 
@@ -190,7 +244,7 @@ func prepareSingleCastURLsTypeB(sourceURL string, targetURL string) castURLs {
 		return prepareSingleCastURLsTypeA(sourceURL, targetURL)
 	}
 
-	// Source is a file, target is a directory and exists.
+	// Source is a file, target is a folder and exists.
 	sourceURLParse, err := client.Parse(sourceURL)
 	if err != nil {
 		return castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
@@ -229,7 +283,7 @@ func prepareCastURLsTypeC(sourceURL string, targetURLs []string) <-chan castURLs
 			castURLsCh <- castURLs{Error: NewIodine(iodine.New(errSourceNotRecursive{URL: sourceURL}, nil))}
 			return
 		}
-		// add `/` after trimming off `...` to emulate directories
+		// add `/` after trimming off `...` to emulate folders
 		sourceURL = stripRecursiveURL(sourceURL)
 		sourceClient, sourceContent, err := url2Stat(sourceURL)
 		// Source exist?
@@ -255,7 +309,7 @@ func prepareCastURLsTypeC(sourceURL string, targetURLs []string) <-chan castURLs
 				// Source is not a regular file. Skip it for cast.
 				continue
 			}
-			// All OK.. We can proceed. Type B: source is a file, target is a directory and exists.
+			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
 				castURLsCh <- castURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}

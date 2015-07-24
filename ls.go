@@ -42,7 +42,7 @@ func parseContent(c *client.Content) Content {
 	// guess file type
 	content.Filetype = func() string {
 		if c.Type.IsDir() {
-			return "directory"
+			return "folder"
 		}
 		return "file"
 	}()

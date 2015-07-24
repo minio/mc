@@ -122,7 +122,7 @@ func runSessionCmd(ctx *cli.Context) {
 	}
 	if !isSessionDirExists() {
 		if err := createSessionDir(); err != nil {
-			console.Fatalf("Unable to create session directory. %s\n", err)
+			console.Fatalf("Unable to create session folder. %s\n", err)
 		}
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
@@ -154,7 +154,7 @@ func runSessionCmd(ctx *cli.Context) {
 
 		savedCwd, err := os.Getwd()
 		if err != nil {
-			console.Fatalln("Unable to verify your current working directory. %s\n", err)
+			console.Fatalln("Unable to verify your current working folder. %s\n", err)
 		}
 		if s.Header.RootPath != "" {
 			// chdir to RootPath

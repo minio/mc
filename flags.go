@@ -34,7 +34,7 @@ var (
 	configFlag = cli.StringFlag{
 		Name:  "config, C",
 		Value: mustGetMcConfigDir(),
-		Usage: "Path to configuration directory",
+		Usage: "Path to configuration folder",
 	}
 
 	quietFlag = cli.BoolFlag{

@@ -62,7 +62,7 @@ EXAMPLES:
    4. Cast a bucket from aliased Amazon S3 object storage to multiple folders on Windows.
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
 
-   5. Cast a local directory of non english character recursively to Amazon s3 object storage and Minio object storage.
+   5. Cast a local folder of non english character recursively to Amazon s3 object storage and Minio object storage.
       $ mc {{.Name}} 本語/... s3:mylocaldocuments play:backup
 
 `,
@@ -269,7 +269,7 @@ func runCastCmd(ctx *cli.Context) {
 	session.Header.RootPath, err = os.Getwd()
 	if err != nil {
 		session.Close()
-		console.Fatalf("Unable to get current working directory. %s\n", err)
+		console.Fatalf("Unable to get current working folder. %s\n", err)
 	}
 
 	// extract URLs.
