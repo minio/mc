@@ -62,10 +62,13 @@ func runConfigCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 	}
+	if strings.TrimSpace(ctx.Args().First()) == "" {
+		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
+	}
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
-		console.Fatalf("Incorrect number of arguments, please use \"mc config help\". %s", errInvalidArgument{})
+		console.Fatalf("Incorrect number of arguments, please read \"mc config help\". %s", errInvalidArgument{})
 	}
 	msg, err := doConfig(arg, tailArgs)
 	if err != nil {
