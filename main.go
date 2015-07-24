@@ -85,13 +85,40 @@ func migrate() {
 	migrateSession()
 }
 
-func main() {
-	// Migrate any old version of config / state files to newer format.
-	migrate()
+func registerBefore(ctx *cli.Context) error {
+	if ctx.GlobalString("config") != "" {
+		setMcConfigDir(ctx.GlobalString("config"))
+	}
 
-	// Enable GOMAXPROCS to default to number of CPUs.
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	globalQuietFlag = ctx.GlobalBool("quiet")
+	globalForceFlag = ctx.GlobalBool("force")
+	globalAliasFlag = ctx.GlobalBool("alias")
+	globalDebugFlag = ctx.GlobalBool("debug")
+	globalJSONFlag = ctx.GlobalBool("json")
+	themeName := ctx.GlobalString("theme")
+	switch {
+	case console.IsValidTheme(themeName) != true:
+		console.Errorf("Invalid theme, please choose from the following list: %s.\n", console.GetThemeNames())
+		return errInvalidTheme{Theme: themeName}
+	default:
+		err := console.SetTheme(themeName)
+		if err != nil {
+			console.Errorf("Failed to set theme ‘%s’.", themeName)
+			return err
+		}
+	}
+	checkConfig()
+	return nil
+}
 
+func registerAfter(ctx *cli.Context) error {
+	if !isMcConfigExists() {
+		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
+	}
+	return nil
+}
+
+func registerApp() *cli.App {
 	// Register all the commands
 	registerCmd(lsCmd)      // List contents of a bucket
 	registerCmd(mbCmd)      // make a bucket
@@ -120,41 +147,6 @@ func main() {
 	app.Compiled = getVersion()
 	app.Flags = flags
 	app.Author = "Minio.io"
-	app.Before = func(ctx *cli.Context) error {
-		if ctx.GlobalString("config") != "" {
-			setMcConfigDir(ctx.GlobalString("config"))
-		}
-
-		globalQuietFlag = ctx.GlobalBool("quiet")
-		globalForceFlag = ctx.GlobalBool("force")
-		globalAliasFlag = ctx.GlobalBool("alias")
-		globalDebugFlag = ctx.GlobalBool("debug")
-		globalJSONFlag = ctx.GlobalBool("json")
-		if globalDebugFlag {
-			app.ExtraInfo = getSystemData()
-			console.NoDebugPrint = false
-		}
-		themeName := ctx.GlobalString("theme")
-		switch {
-		case console.IsValidTheme(themeName) != true:
-			console.Errorf("Invalid theme, please choose from the following list: %s.\n", console.GetThemeNames())
-			return errInvalidTheme{Theme: themeName}
-		default:
-			err := console.SetTheme(themeName)
-			if err != nil {
-				console.Errorf("Failed to set theme ‘%s’.", themeName)
-				return err
-			}
-		}
-		checkConfig()
-		return nil
-	}
-	app.After = func(ctx *cli.Context) error {
-		if !isMcConfigExists() {
-			console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
-		}
-		return nil
-	}
 	app.CustomAppHelpTemplate = `NAME:
   {{.Name}} - {{.Usage}}
 
@@ -175,5 +167,26 @@ VERSION:
   {{$value}}
 {{end}}
 `
+	app.CommandNotFound = func(ctx *cli.Context, command string) {
+		console.Fatalf("Command not found: ‘%s’\n", command)
+	}
+	return app
+}
+
+func main() {
+	// Enable GOMAXPROCS to default to number of CPUs.
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// Migrate any old version of config / state files to newer format.
+	migrate()
+
+	app := registerApp()
+	app.Before = registerBefore
+	app.After = registerAfter
+	if globalDebugFlag {
+		app.ExtraInfo = getSystemData()
+		console.NoDebugPrint = false
+	}
+
 	app.RunAndExitOnError()
 }

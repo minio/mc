@@ -26,6 +26,8 @@ import (
 
 	"net/http/httptest"
 
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
 	. "gopkg.in/check.v1"
 )
@@ -39,6 +41,7 @@ type CmdTestSuite struct{}
 var _ = Suite(&CmdTestSuite{})
 
 var server *httptest.Server
+var app *cli.App
 
 func (s *CmdTestSuite) SetUpSuite(c *C) {
 	// do not set it elsewhere, leads to data races since this is a global flag
@@ -76,8 +79,10 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	_, err = doConfig("alias", []string{"readonly", "https://new.test.io"})
 	c.Assert(err, Not(IsNil))
 
+	app = registerApp()
 	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
 	server = httptest.NewServer(objectAPI)
+	console.IsTesting = true
 }
 
 func (s *CmdTestSuite) TearDownSuite(c *C) {
@@ -284,14 +289,7 @@ func (s *CmdTestSuite) TestEmptyExpansions(c *C) {
 	c.Assert(err, IsNil)
 }
 
-type testAddr struct{}
-
-func (ta *testAddr) Network() string {
-	return ta.String()
-}
-func (ta *testAddr) Error() string {
-	return ta.String()
-}
-func (ta *testAddr) String() string {
-	return "testAddr"
+func (s *CmdTestSuite) TestApp(c *C) {
+	err := app.Run([]string{""})
+	c.Assert(err, IsNil)
 }

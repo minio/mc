@@ -31,6 +31,12 @@ import (
 // NoDebugPrint defines if the input should be printed in debug or not. By default it's set to true.
 var NoDebugPrint = true
 
+// IsTesting this flag indicates if IsExited should be set or not, false by default
+var IsTesting = false
+
+// IsExited sets this boolean value if Fatal is called instead of os.Exit(1)
+var IsExited = false
+
 // Theme holds console color scheme
 type Theme struct {
 	Fatal     *color.Color
@@ -102,39 +108,69 @@ var (
 
 	// Fatal print a error message and exit
 	Fatal = func(data ...interface{}) {
-		defer os.Exit(1)
 		print(themesDB[currThemeName].Fatal, data...)
+		if !IsTesting {
+			os.Exit(1)
+		}
+		defer func() {
+			IsExited = true
+		}()
 		return
 	}
 
 	// Fatalf print a error message with a format specified and exit
 	Fatalf = func(f string, data ...interface{}) {
-		defer os.Exit(1)
 		printf(themesDB[currThemeName].Fatal, f, data...)
+		if !IsTesting {
+			os.Exit(1)
+		}
+		defer func() {
+			IsExited = true
+		}()
 		return
 	}
 
 	// Fatalln print a error message with a new line and exit
 	Fatalln = func(data ...interface{}) {
-		defer os.Exit(1)
 		println(themesDB[currThemeName].Fatal, data...)
+		if !IsTesting {
+			os.Exit(1)
+		}
+		defer func() {
+			IsExited = true
+		}()
 		return
 	}
 
 	// Error prints a error message
 	Error = func(data ...interface{}) {
+		if IsTesting {
+			defer func() {
+				IsExited = true
+			}()
+		}
 		print(themesDB[currThemeName].Error, data...)
 		return
 	}
 
 	// Errorf print a error message with a format specified
 	Errorf = func(f string, data ...interface{}) {
+		if IsTesting {
+			defer func() {
+				IsExited = true
+			}()
+		}
 		printf(themesDB[currThemeName].Error, f, data...)
 		return
 	}
 
 	// Errorln prints a error message with a new line
 	Errorln = func(data ...interface{}) {
+		if IsTesting {
+			defer func() {
+				IsExited = true
+			}()
+		}
 		println(themesDB[currThemeName].Error, data...)
 		return
 	}
