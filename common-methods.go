@@ -35,14 +35,14 @@ func isTargetURLDir(targetURL string) bool {
 	if err != nil {
 		return false
 	}
-	if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
-		return false
-	}
-	if strings.HasSuffix(targetURLParse.Path, string(targetURLParse.Separator)) {
-		return true
-	}
 	_, targetContent, err := url2Stat(targetURL)
 	if err != nil {
+		if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
+			return false
+		}
+		if strings.HasSuffix(targetURLParse.Path, string(targetURLParse.Separator)) {
+			return true
+		}
 		return false
 	}
 	if !targetContent.Type.IsDir() { // Target is a dir.
@@ -196,12 +196,12 @@ func url2Client(url string) (client.Client, error) {
 		return nil, NewIodine(iodine.New(errInvalidURL{URL: url}, map[string]string{"URL": url}))
 	}
 
-	urlonfig, err := getHostConfig(url)
+	urlconfig, err := getHostConfig(url)
 	if err != nil {
 		return nil, NewIodine(iodine.New(err, map[string]string{"URL": url}))
 	}
 
-	client, err := getNewClient(url, urlonfig)
+	client, err := getNewClient(url, urlconfig)
 	if err != nil {
 		return nil, NewIodine(iodine.New(err, map[string]string{"URL": url}))
 	}

@@ -75,7 +75,6 @@ func checkCopySyntax(ctx *cli.Context) {
 	if isURLRecursive(tgtURL) {
 		console.Fatalf("Target ‘%s’ cannot be recursive. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
-
 	switch guessCopyURLType(srcURLs, tgtURL) {
 	case copyURLsTypeA: // Source is already a regular file.
 		// no verification needed, pass through

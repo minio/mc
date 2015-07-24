@@ -70,11 +70,17 @@ EXAMPLES:
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup) error {
+func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGroup, statusCh chan<- copyURLs) {
 	defer wg.Done() // Notify that this copy routine is done.
 	defer func() {
 		<-cpQueue
 	}()
+
+	if cpURLs.Error != nil {
+		cpURLs.Error = iodine.New(cpURLs.Error, nil)
+		statusCh <- cpURLs
+		return
+	}
 
 	if !globalQuietFlag || !globalJSONFlag {
 		bar.SetCaption(cpURLs.SourceContent.Name + ": ")
@@ -85,7 +91,9 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(length)
 		}
-		return NewIodine(iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name}))
+		cpURLs.Error = NewIodine(iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name}))
+		statusCh <- cpURLs
+		return
 	}
 
 	var newReader io.ReadCloser
@@ -107,16 +115,19 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue chan bool, wg *sync.WaitGroup
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorPut(length)
 		}
-		console.Println("")
-		console.Errorln(NewIodine(err))
+		cpURLs.Error = NewIodine(iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name}))
+		statusCh <- cpURLs
+		return
 	}
-	return nil
+
+	cpURLs.Error = nil // just for safety
+	statusCh <- cpURLs
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(sURLs copyURLs, bar *barSend) (err error) {
+func doCopyFake(cURLs copyURLs, bar *barSend) (err error) {
 	if !globalQuietFlag || !globalJSONFlag {
-		bar.Progress(sURLs.SourceContent.Size)
+		bar.Progress(cURLs.SourceContent.Size)
 	}
 	return nil
 }
@@ -176,37 +187,77 @@ func doCopyCmdSession(session *sessionV2) {
 		doPrepareCopyURLs(session, trapCh)
 	}
 
-	wg := new(sync.WaitGroup)
-	cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-
-	scanner := bufio.NewScanner(session.NewDataReader())
-	isCopied := isCopiedFactory(session.Header.LastCopied)
-
 	var bar barSend
 	if !globalQuietFlag || !globalJSONFlag { // set up progress bar
 		bar = newCpBar()
-		defer bar.Finish()
 		bar.Extend(session.Header.TotalBytes)
 	}
 
-	for scanner.Scan() {
-		var cpURLs copyURLs
-		json.Unmarshal([]byte(scanner.Text()), &cpURLs)
-		if isCopied(cpURLs.SourceContent.Name) {
-			doCopyFake(cpURLs, &bar)
-		} else {
+	// Prepare URL scanner from session data file.
+	scanner := bufio.NewScanner(session.NewDataReader())
+	// isCopied returns true if an object has been already copied
+	// or not. This is useful when we resume from a session.
+	isCopied := isCopiedFactory(session.Header.LastCopied)
+
+	wg := new(sync.WaitGroup)
+	// Limit numner of cast routines based on available CPU resources.
+	cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
+	defer close(cpQueue)
+
+	// Status channel for receiveing cast return status.
+	statusCh := make(chan copyURLs)
+
+	// Go routine to monitor doCast status and signal traps.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
 			select {
-			case cpQueue <- true:
-				wg.Add(1)
-				go doCopy(cpURLs, &bar, cpQueue, wg)
-				session.Header.LastCopied = cpURLs.SourceContent.Name
-			case <-trapCh:
+			case cpURLs, ok := <-statusCh: // Receive status.
+				if !ok { // We are done here. Top level function has returned.
+					bar.Finish()
+					return
+				}
+				if cpURLs.Error == nil {
+					session.Header.LastCopied = cpURLs.SourceContent.Name
+				} else {
+					console.Println("")
+					console.Errorf("Failed to copy ‘%s’, %s\n", cpURLs.SourceContent.Name, NewIodine(iodine.New(cpURLs.Error, nil)))
+				}
+			case <-trapCh: // Receive interrupt notification.
 				session.Save()
 				session.Info()
 				os.Exit(0)
 			}
 		}
-	}
+	}()
+
+	// Go routine to perform concurrently casting.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cpWg := new(sync.WaitGroup)
+		defer close(statusCh)
+
+		for scanner.Scan() {
+			var cpURLs copyURLs
+			json.Unmarshal([]byte(scanner.Text()), &cpURLs)
+			if isCopied(cpURLs.SourceContent.Name) {
+				doCopyFake(cpURLs, &bar)
+			} else {
+				// Wait for other cast routines to
+				// complete. We only have limited CPU
+				// and network resources.
+				cpQueue <- true
+				// Account for each cast routines we start.
+				cpWg.Add(1)
+				// Do casting in background concurrently.
+				go doCopy(cpURLs, &bar, cpQueue, cpWg, statusCh)
+			}
+		}
+		cpWg.Wait()
+	}()
+
 	wg.Wait()
 }
 

@@ -212,15 +212,15 @@ func doCastCmdSession(session *sessionV2) {
 		defer wg.Done()
 		for {
 			select {
-			case cURLs, ok := <-statusCh: // Receive status.
+			case sURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
 					bar.Finish()
 					return
 				}
-				if cURLs.Error == nil {
-					session.Header.LastCopied = cURLs.SourceContent.Name
+				if sURLs.Error == nil {
+					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
-					console.Errorf("Failed to cast ‘%s’, %s\n", cURLs.SourceContent.Name, NewIodine(cURLs.Error))
+					console.Errorf("Failed to cast ‘%s’, %s\n", sURLs.SourceContent.Name, NewIodine(sURLs.Error))
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Save()
