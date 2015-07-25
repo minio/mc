@@ -101,7 +101,9 @@ func clearSession(sid string) {
 	if err != nil {
 		console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(iodine.New(err, nil)))
 	}
-	session.Close()
+	if session != nil {
+		session.Close()
+	}
 }
 
 func sessionExecute(s *sessionV2) {
@@ -146,12 +148,14 @@ func runSessionCmd(ctx *cli.Context) {
 		if err != nil {
 			console.Fatalln(errInvalidSessionID{id: sid})
 		}
-
 		s, err := loadSessionV2(sid)
 		if err != nil {
 			console.Fatalln(errInvalidSessionID{id: sid})
 		}
-
+		// extra check for testing purposes
+		if s == nil {
+			return
+		}
 		savedCwd, err := os.Getwd()
 		if err != nil {
 			console.Fatalln("Unable to verify your current working folder. %s\n", err)
