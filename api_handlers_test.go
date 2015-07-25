@@ -21,7 +21,9 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -79,6 +81,21 @@ func (h objectAPIHandler) headHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func isValidBucket(bucket string) bool {
+	if len(bucket) < 3 || len(bucket) > 63 {
+		return false
+	}
+	if bucket[0] == '.' || bucket[len(bucket)-1] == '.' {
+		return false
+	}
+	if match, _ := regexp.MatchString("\\.\\.", bucket); match == true {
+		return false
+	}
+	// We don't support buckets with '.' in them
+	match, _ := regexp.MatchString("^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", bucket)
+	return match
+}
+
 func (h objectAPIHandler) putHandler(w http.ResponseWriter, r *http.Request) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
@@ -107,6 +124,11 @@ func (h objectAPIHandler) putHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	case r.URL.Path != "":
+		if !isValidBucket(strings.Split(r.URL.Path, "/")[1]) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		length, err := strconv.Atoi(r.Header.Get("Content-Length"))
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)

@@ -51,6 +51,18 @@ func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
 
 }
 
+func (s *CmdTestSuite) TestMBContext(c *C) {
+	err := app.Run([]string{os.Args[0], "mb", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "mb", server.URL + "/$.bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+	// reset back
+	console.IsExited = false
+}
+
 func (s *CmdTestSuite) TestAccessContext(c *C) {
 	err := app.Run([]string{os.Args[0], "access", "private", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
