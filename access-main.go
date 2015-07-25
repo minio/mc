@@ -45,13 +45,13 @@ FLAGS:
 
 EXAMPLES:
 
-   1. Set bucket to "private" on Amazon S3 object storage.
+   1. Set bucket to "private" on Amazon S3 cloud storage.
       $ mc {{.Name}} private https://s3.amazonaws.com/burningman2011
 
-   2. Set bucket to "public" on Amazon S3 object storage.
+   2. Set bucket to "public" on Amazon S3 cloud storage.
       $ mc {{.Name}} public https://s3.amazonaws.com/shared
 
-   3. Set bucket to "authenticated" on Amazon S3 object storage to provide read access to IAM Authenticated Users group.
+   3. Set bucket to "authenticated" on Amazon S3 cloud storage to provide read access to IAM Authenticated Users group.
       $ mc {{.Name}} authenticated https://s3.amazonaws.com/shared-authenticated
 
    4. Set folder to world readwrite (chmod 777) on local filesystem.

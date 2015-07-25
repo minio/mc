@@ -1,6 +1,6 @@
 # Minio Client (mc) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-``mc`` provides minimal tools to work with Amazon S3 compatible object storage and filesystems. It has features to resume partial downloads, progress bar, parallel copy and network reconnect. ``mc`` is written in golang and released under [Apache license v2](./LICENSE).
+``mc`` provides minimal tools to work with Amazon S3 compatible cloud storage and filesystems. It has features to resume partial downloads, progress bar, parallel copy and network reconnect. ``mc`` is written in golang and released under [Apache license v2](./LICENSE).
 
 ## Commands
 
@@ -57,7 +57,7 @@ $ go get github.com/minio/mc
 
 ## Public Minio Server
 
-Minio server is hosted at ``https://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible object storage. Minio runs in memory mode with auto expiry of objects in about an hour.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys.
+Minio server is hosted at ``https://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible cloud storage. Minio runs in memory mode with auto expiry of objects in about an hour.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys.
 
 ## How to use mc?
 
