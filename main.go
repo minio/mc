@@ -54,6 +54,13 @@ func checkConfig() {
 
 }
 
+func migrate() {
+	// Migrate config files if any.
+	migrateConfig()
+	// Migrate session files if any.
+	migrateSession()
+}
+
 // Get os/arch/platform specific information.
 // Returns a map of current os/arch/platform/memstats
 func getSystemData() map[string]string {
@@ -63,7 +70,7 @@ func getSystemData() map[string]string {
 	}
 	memstats := &runtime.MemStats{}
 	runtime.ReadMemStats(memstats)
-	mem := fmt.Sprintf("Used: %s | Allocated: %s | Used-Heap: %s | Allocated-Heap: %s",
+	mem := fmt.Sprintf("Used: %s | Allocated: %s | UsedHeap: %s | AllocatedHeap: %s",
 		pb.FormatBytes(int64(memstats.Alloc)),
 		pb.FormatBytes(int64(memstats.TotalAlloc)),
 		pb.FormatBytes(int64(memstats.HeapAlloc)),
@@ -78,13 +85,6 @@ func getSystemData() map[string]string {
 	}
 }
 
-func migrate() {
-	// Migrate config files if any.
-	migrateConfig()
-	// Migrate session files if any.
-	migrateSession()
-}
-
 func registerBefore(ctx *cli.Context) error {
 	if ctx.GlobalString("config") != "" {
 		setMcConfigDir(ctx.GlobalString("config"))
@@ -96,6 +96,9 @@ func registerBefore(ctx *cli.Context) error {
 	globalDebugFlag = ctx.GlobalBool("debug")
 	globalJSONFlag = ctx.GlobalBool("json")
 	themeName := ctx.GlobalString("theme")
+	if globalDebugFlag {
+		console.NoDebugPrint = false
+	}
 	switch {
 	case console.IsValidTheme(themeName) != true:
 		console.Errorf("Invalid theme, please choose from the following list: %s.\n", console.GetThemeNames())
@@ -162,7 +165,7 @@ GLOBAL FLAGS:
 VERSION:
   {{if .Compiled}}
   {{.Compiled}}{{end}}
-  {{range $key, $value := .ExtraInfo}}
+  {{range $key, $value := ExtraInfo}}
 {{$key}}:
   {{$value}}
 {{end}}
@@ -183,10 +186,11 @@ func main() {
 	app := registerApp()
 	app.Before = registerBefore
 	app.After = registerAfter
-	if globalDebugFlag {
-		app.ExtraInfo = getSystemData()
-		console.NoDebugPrint = false
+	app.ExtraInfo = func() map[string]string {
+		if globalDebugFlag {
+			return getSystemData()
+		}
+		return make(map[string]string)
 	}
-
 	app.RunAndExitOnError()
 }
