@@ -1,5 +1,5 @@
 /*
- * Minimal object storage library (C) 2015 Minio, Inc.
+ * Minio Go Library for Amazon S3 compatible cloud storage (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 	"time"
 )
 
-// API - object storage API interface
+// API - cloud storage API interface
 type API interface {
 	// Bucket Read/Write/Stat operations
 	BucketAPI

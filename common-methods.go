@@ -141,7 +141,7 @@ func getNewClient(urlStr string, auth *hostConfig) (clnt client.Client, err erro
 		return nil, NewIodine(iodine.New(errInvalidURL{URL: urlStr}, map[string]string{"URL": urlStr}))
 	}
 	switch url.Type {
-	case client.Object: // Minio and S3 compatible object storage
+	case client.Object: // Minio and S3 compatible cloud storage
 		if auth == nil {
 			return nil, NewIodine(iodine.New(errInvalidArgument{}, nil))
 		}

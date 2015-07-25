@@ -38,7 +38,7 @@ type URLType int
 
 // enum types
 const (
-	Object     = iota // Minio and S3 compatible object storage
+	Object     = iota // Minio and S3 compatible cloud storage
 	Filesystem        // POSIX compatible file systems
 )
 

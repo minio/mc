@@ -8,12 +8,12 @@ USAGE:
    mc mb TARGET [TARGET...]
 
 EXAMPLES:
-   1. Create a bucket on Amazon S3 object storage.
+   1. Create a bucket on Amazon S3 cloud storage.
       $ mc mb https://s3.amazonaws.com/public-document-store
 
    3. Make a folder on local filesystem, including its parent folders as needed.
       $ mc mb ~/
 
-   3. Create a bucket on Minio object storage.
+   3. Create a bucket on Minio cloud storage.
       $ mc mb https://play.minio.io:9000/mongodb-backup
 ```
