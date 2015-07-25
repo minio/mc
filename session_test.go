@@ -17,8 +17,10 @@
 package main
 
 import (
+	"os"
 	"regexp"
 
+	"github.com/minio/mc/pkg/console"
 	. "gopkg.in/check.v1"
 )
 
@@ -47,4 +49,38 @@ func (s *CmdTestSuite) TestSession(c *C) {
 
 	err = session.Close()
 	c.Assert(err, IsNil)
+}
+
+func (s *CmdTestSuite) TestSessionContext(c *C) {
+	err := app.Run([]string{os.Args[0], "session", "list"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "session", "clear", "all"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	err = app.Run([]string{os.Args[0], "session", "resume", "invalid"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+
+	err = app.Run([]string{os.Args[0], "session", "clear", "invalid"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+	console.IsExited = false
+
+	err = createSessionDir()
+	c.Assert(err, IsNil)
+	c.Assert(isSessionDirExists(), Equals, true)
+
+	session := newSessionV2()
+	c.Assert(session.Header.CommandArgs, IsNil)
+	c.Assert(len(session.SessionID), Equals, 8)
+
+	err = session.Save()
+	c.Assert(err, IsNil)
+
+	err = app.Run([]string{os.Args[0], "session", "clear", session.SessionID})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
 }

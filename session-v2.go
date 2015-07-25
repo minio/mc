@@ -29,8 +29,8 @@ import (
 	"github.com/minio/minio/pkg/iodine"
 )
 
-// migrateSessionV1ToV2 migrates all session files from v1 to v2. This
-// function should be called from the main early on.
+// migrateSessionV1ToV2 migrates all session files from v1 to v2.
+// This function should be called from the main early on.
 func migrateSessionV1ToV2() {
 	for _, sid := range getSessionIDsV1() {
 		err := os.Remove(getSessionFileV1(sid))
@@ -40,6 +40,7 @@ func migrateSessionV1ToV2() {
 	}
 }
 
+// sessionV2Header
 type sessionV2Header struct {
 	Version      string    `json:"version"`
 	When         time.Time `json:"time"`
@@ -51,6 +52,7 @@ type sessionV2Header struct {
 	TotalObjects int       `json:"total-objects"`
 }
 
+// sessionV2
 type sessionV2 struct {
 	Header    *sessionV2Header
 	SessionID string
@@ -59,7 +61,7 @@ type sessionV2 struct {
 	sigCh     bool
 }
 
-// provides a new session
+// newSessionV2 provides a new session
 func newSessionV2() *sessionV2 {
 	if !isMcConfigExists() {
 		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
@@ -81,11 +83,12 @@ func newSessionV2() *sessionV2 {
 	return s
 }
 
+// String printer for SessionV2
 func (s sessionV2) Info() {
-	console.Infoln("Session terminated. To resume session type ‘mc session resume " + s.SessionID + "’")
+	console.Infoln("Session terminated. To resume session ‘mc session resume " + s.SessionID + "’")
 }
 
-// NewDataReader provides reader interface to session data file.
+// HasData provides true if this is a session resume, false otherwise.
 func (s sessionV2) HasData() bool {
 	if s.Header.LastCopied == "" {
 		return false
@@ -107,7 +110,7 @@ func (s *sessionV2) NewDataWriter() io.Writer {
 	return io.Writer(s.DataFP)
 }
 
-// save this session
+// Save this session
 func (s *sessionV2) Save() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
