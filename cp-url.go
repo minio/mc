@@ -75,6 +75,15 @@ func checkCopySyntax(ctx *cli.Context) {
 	if isURLRecursive(tgtURL) {
 		console.Fatalf("Recursive option is not supported for target ‘%s’ argument. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
+	url, err := client.Parse(tgtURL)
+	if err != nil {
+		console.Fatalf("Unable to parse target ‘%s’ argument. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
+	}
+	if url.Host != "" {
+		if url.Path == string(url.Separator) {
+			console.Fatalf("Bucket creation detected for %s, cloud storage URL's should use ‘mc mb’ to create buckets\n", tgtURL)
+		}
+	}
 	switch guessCopyURLType(srcURLs, tgtURL) {
 	case copyURLsTypeA: // File -> File.
 		checkCopySyntaxTypeA(srcURLs, tgtURL)
