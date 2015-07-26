@@ -198,7 +198,7 @@ func loadSessionV2(sid string) (*sessionV2, error) {
 
 	s.DataFP, err = os.Open(getSessionDataFile(s.SessionID))
 	if err != nil {
-		console.Fatalf("Unable to open session data file \""+getSessionDataFile(s.SessionID)+"\". %s", NewIodine(iodine.New(errNotConfigured{}, nil)))
+		console.Fatalf("Unable to open session data file \""+getSessionDataFile(s.SessionID)+"\". %s\n", NewIodine(iodine.New(err, nil)))
 	}
 
 	return s, nil
