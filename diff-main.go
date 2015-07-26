@@ -56,9 +56,6 @@ func runDiffCmd(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
-	if !isMcConfigExists() {
-		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
-	}
 
 	config := mustGetMcConfig()
 	firstURL := ctx.Args().First()
