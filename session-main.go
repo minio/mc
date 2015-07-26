@@ -88,7 +88,7 @@ func clearSession(sid string) {
 			if err != nil {
 				console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(iodine.New(err, nil)))
 			}
-			session.Close()
+			session.Remove()
 		}
 		return
 	}
@@ -102,7 +102,7 @@ func clearSession(sid string) {
 		console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(iodine.New(err, nil)))
 	}
 	if session != nil {
-		session.Close()
+		session.Remove()
 	}
 }
 
@@ -168,9 +168,12 @@ func runSessionCmd(ctx *cli.Context) {
 		sessionExecute(s)
 		err = s.Close()
 		if err != nil {
-			console.Fatalln("Unable to close session file properly. %s\n", err)
+			console.Fatalf("Unable to close session file properly. %s\n", err)
 		}
-
+		err = s.Remove()
+		if err != nil {
+			console.Fatalf("Unable to clear session files properly. %s\n", err)
+		}
 		// change dir back
 		os.Chdir(savedCwd)
 
