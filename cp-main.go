@@ -171,6 +171,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 			totalObjects++
 		case <-trapCh:
 			session.Close() // If we are interrupted during the URL scanning, we drop the session.
+			session.Remove()
 			os.Exit(0)
 		}
 	}
@@ -224,7 +225,7 @@ func doCopyCmdSession(session *sessionV2) {
 					console.Errorf("Failed to copy ‘%s’, %s\n", cpURLs.SourceContent.Name, NewIodine(iodine.New(cpURLs.Error, nil)))
 				}
 			case <-trapCh: // Receive interrupt notification.
-				session.Save()
+				session.Close()
 				session.Info()
 				os.Exit(0)
 			}
@@ -271,16 +272,17 @@ func runCopyCmd(ctx *cli.Context) {
 	session.Header.CommandType = "cp"
 	session.Header.RootPath, err = os.Getwd()
 	if err != nil {
-		session.Close()
+		session.Remove()
 		console.Fatalf("Unable to get current working folder. %s\n", err)
 	}
 
 	// extract URLs.
 	session.Header.CommandArgs, err = args2URLs(ctx.Args())
 	if err != nil {
-		session.Close()
+		session.Remove()
 		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err)
 	}
 
 	doCopyCmdSession(session)
+	session.Remove()
 }

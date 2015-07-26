@@ -138,7 +138,20 @@ func (s *sessionV2) Close() error {
 		return NewIodine(iodine.New(err, nil))
 	}
 
-	err = os.Remove(getSessionDataFile(s.SessionID))
+	qs, err := quick.New(s.Header)
+	if err != nil {
+		return NewIodine(iodine.New(err, nil))
+	}
+
+	return qs.Save(getSessionFile(s.SessionID))
+}
+
+// Remove removes all the session files.
+func (s *sessionV2) Remove() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	err := os.Remove(getSessionDataFile(s.SessionID))
 	if err != nil {
 		return NewIodine(iodine.New(err, nil))
 	}
@@ -151,6 +164,7 @@ func (s *sessionV2) Close() error {
 	if err != nil {
 		return NewIodine(iodine.New(err, nil))
 	}
+
 	return nil
 }
 

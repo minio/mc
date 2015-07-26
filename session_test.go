@@ -40,14 +40,14 @@ func (s *CmdTestSuite) TestSession(c *C) {
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 
-	err = session.Save()
+	err = session.Close()
 	c.Assert(err, IsNil)
 
 	savedSession, err := loadSessionV2(session.SessionID)
 	c.Assert(err, IsNil)
 	c.Assert(session.SessionID, Equals, savedSession.SessionID)
 
-	err = session.Close()
+	err = session.Remove()
 	c.Assert(err, IsNil)
 }
 
