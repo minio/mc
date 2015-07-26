@@ -146,12 +146,12 @@ func (s *sessionV2) Close() error {
 	return qs.Save(getSessionFile(s.SessionID))
 }
 
-// Remove removes all the session files.
-func (s *sessionV2) Remove() error {
+// Delete removes all the session files.
+func (s *sessionV2) Delete() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	err := os.Remove(getSessionDataFile(s.SessionID))
+	err := os.Remove(s.DataFP.Name())
 	if err != nil {
 		return NewIodine(iodine.New(err, nil))
 	}
