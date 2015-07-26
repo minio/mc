@@ -86,10 +86,7 @@ func getSystemData() map[string]string {
 }
 
 func registerBefore(ctx *cli.Context) error {
-	if ctx.GlobalString("config") != "" {
-		setMcConfigDir(ctx.GlobalString("config"))
-	}
-
+	setMcConfigDir(ctx.GlobalString("config"))
 	globalQuietFlag = ctx.GlobalBool("quiet")
 	globalForceFlag = ctx.GlobalBool("force")
 	globalAliasFlag = ctx.GlobalBool("alias")
@@ -110,6 +107,10 @@ func registerBefore(ctx *cli.Context) error {
 			return err
 		}
 	}
+
+	// Migrate any old version of config / state files to newer format.
+	migrate()
+
 	checkConfig()
 	return nil
 }
@@ -180,9 +181,6 @@ func main() {
 	// Enable GOMAXPROCS to default to number of CPUs.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// Migrate any old version of config / state files to newer format.
-	migrate()
-
 	app := registerApp()
 	app.Before = registerBefore
 	app.After = registerAfter
@@ -192,5 +190,6 @@ func main() {
 		}
 		return make(map[string]string)
 	}
+
 	app.RunAndExitOnError()
 }
