@@ -21,7 +21,7 @@ _init() {
 }
 
 update() {
-    for dep in $1; do
+    for dep in $@; do
         godep update $dep;
     done
 }
