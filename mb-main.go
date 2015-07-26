@@ -60,9 +60,6 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
-	if !isMcConfigExists() {
-		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
-	}
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)

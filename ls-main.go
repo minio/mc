@@ -81,9 +81,6 @@ func runListCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
 
-	if !isMcConfigExists() {
-		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
-	}
 	config := mustGetMcConfig()
 	for _, arg := range args {
 		targetURL, err := getExpandedURL(arg, config.Aliases)

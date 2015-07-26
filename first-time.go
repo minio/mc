@@ -56,12 +56,21 @@ func checkGolangVersion() {
 func firstTimeRun() {
 	if !isMcConfigExists() {
 		if err := createMcConfigDir(); err != nil {
-			console.Fatalf("Unable to create ‘mc’ folder. %s\n", err)
+			console.Fatalf("Unable to create ‘mc’ config folder. %s\n", err)
 		}
+		config, err := newConfig()
+		if err != nil {
+			console.Fatalln(NewIodine(iodine.New(err, nil)))
+		}
+		err = writeConfig(config)
+		if err != nil {
+			console.Fatalln(NewIodine(iodine.New(err, nil)))
+		}
+		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}
 	if !isSessionDirExists() {
 		if err := createSessionDir(); err != nil {
-			console.Fatalf("Unable to create session folder. %s\n", err)
+			console.Fatalf("Unable to create ‘mc’ session folder. %s\n", err)
 		}
 	}
 	checkGolangVersion()

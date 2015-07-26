@@ -37,20 +37,16 @@ import (
 //
 var configCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Generate default configuration file [~/.mc/config.json]",
+	Usage:  "Add new alias to default configuration file [~/.mc/config.json]",
 	Action: runConfigCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} generate
    mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} alias NAME HOSTURL
 
 EXAMPLES:
-   1. Generate mc config.
-      $ mc config generate
-
-   2. Add alias URLs.
+   1. Add alias URLs.
       $ mc config alias zek https://s3.amazonaws.com/
 
 `,
@@ -80,19 +76,6 @@ func runConfigCmd(ctx *cli.Context) {
 // saveConfig writes configuration data in json format to config file.
 func saveConfig(arg string, aliases []string) error {
 	switch arg {
-	case "generate":
-		if isMcConfigExists() {
-			return NewIodine(iodine.New(errConfigExists{}, nil))
-		}
-		config, err := newConfig()
-		if err != nil {
-			return NewIodine(iodine.New(err, nil))
-		}
-		err = writeConfig(config)
-		if err != nil {
-			return NewIodine(iodine.New(err, nil))
-		}
-		return nil
 	case "alias":
 		config, err := addAlias(aliases)
 		if err != nil {
@@ -125,14 +108,11 @@ func doConfig(arg string, aliases []string) (string, error) {
 			return "Alias [" + aliases[1] + "] is invalid URL", NewIodine(iodine.New(err, nil))
 		default:
 			// unexpected error
-			return "Unable to generate config file [" + configPath + "].", NewIodine(iodine.New(err, nil))
+			return "Unable to modify config file [" + configPath + "].", NewIodine(iodine.New(err, nil))
 		}
 	}
 	if arg == "alias" {
 		return "Alias written to [" + configPath + "].", nil
-	}
-	if arg == "generate" {
-		return "Configuration written to [" + configPath + "]. Please update your access credentials.", nil
 	}
 	return "", NewIodine(iodine.New(errUnexpected{}, nil))
 }

@@ -58,13 +58,16 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	}
 	setMcConfigDir(customConfigDir)
 
-	_, err = doConfig("generate", nil)
+	err = createMcConfigDir()
 	c.Assert(err, IsNil)
 
-	_, err = doConfig("generate", nil)
-	c.Assert(err, Not(IsNil))
+	config, err := newConfig()
+	c.Assert(err, IsNil)
 
-	_, err = doConfig("cover", nil)
+	err = writeConfig(config)
+	c.Assert(err, IsNil)
+
+	_, err = doConfig("invalid", nil)
 	c.Assert(err, Not(IsNil))
 
 	_, err = doConfig("alias", []string{"test", "https://test.io"})

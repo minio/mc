@@ -104,13 +104,6 @@ func registerBefore(ctx *cli.Context) error {
 	return nil
 }
 
-func registerAfter(ctx *cli.Context) error {
-	if !isMcConfigExists() {
-		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
-	}
-	return nil
-}
-
 func registerApp() *cli.App {
 	// Register all the commands
 	registerCmd(lsCmd)      // List contents of a bucket
@@ -174,7 +167,6 @@ func main() {
 
 	app := registerApp()
 	app.Before = registerBefore
-	app.After = registerAfter
 	app.ExtraInfo = func() map[string]string {
 		if globalDebugFlag {
 			return getSystemData()

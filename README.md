@@ -13,7 +13,7 @@
   cast		Copy files and folders from a single source to many destinations
   diff		Compute differences between two files or folders
   access	Set access permissions
-  config	Generate default configuration file [~/.mc/config.json]
+  config        Add new alias to default configuration file [~/.mc/config.json]
   update	Check for new software updates
 ```
 
@@ -26,7 +26,7 @@ Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
 ~~~
 $ wget https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
 $ chmod +x mc
-$ ./mc config generate
+$ ./mc
 ~~~
 
 #### OS X
@@ -36,7 +36,7 @@ Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/darwin-amd64/mc
 ~~~
 $ curl https://dl.minio.io:9000/updates/2015/Jun/darwin-amd64/mc > mc
 $ chmod +x mc
-$ ./mc config generate
+$ ./mc
 ~~~
 
 #### Windows
@@ -44,7 +44,7 @@ $ ./mc config generate
 Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/windows-amd64/mc.exe
 
 ~~~
-C:\Users\Username\Downloads> mc.exe config generate
+C:\Users\Username\Downloads> mc.exe
 ~~~
 
 #### Source

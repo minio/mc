@@ -63,10 +63,6 @@ type sessionV2 struct {
 
 // newSessionV2 provides a new session
 func newSessionV2() *sessionV2 {
-	if !isMcConfigExists() {
-		console.Fatalf("Please run \"mc config generate\". %s\n", errNotConfigured{})
-	}
-
 	s := &sessionV2{}
 	s.Header = &sessionV2Header{}
 	s.Header.Version = "1.1.0"
