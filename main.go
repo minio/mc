@@ -35,17 +35,6 @@ func checkConfig() {
 		console.Fatalf("Unable to determine current user. %s\n", err)
 	}
 
-	if !isSessionDirExists() {
-		if err := createSessionDir(); err != nil {
-			console.Fatalf("Unable to create session folder. %s\n", err)
-		}
-	}
-
-	// If config doesn't exist, do not attempt to read it
-	if !isMcConfigExists() {
-		return
-	}
-
 	// Ensures config file is sane
 	_, err = getMcConfig()
 	if err != nil {
@@ -178,6 +167,8 @@ VERSION:
 }
 
 func main() {
+	firstTimeRun()
+
 	// Enable GOMAXPROCS to default to number of CPUs.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
