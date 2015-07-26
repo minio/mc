@@ -263,12 +263,12 @@ func runCastCmd(ctx *cli.Context) {
 	checkCastSyntax(ctx)
 
 	session := newSessionV2()
-	defer session.Close()
 
 	var err error
 	session.Header.CommandType = "cast"
 	session.Header.RootPath, err = os.Getwd()
 	if err != nil {
+		session.Close()
 		session.Delete()
 		console.Fatalf("Unable to get current working folder. %s\n", err)
 	}
@@ -276,10 +276,12 @@ func runCastCmd(ctx *cli.Context) {
 	// extract URLs.
 	session.Header.CommandArgs, err = args2URLs(ctx.Args())
 	if err != nil {
+		session.Close()
 		session.Delete()
 		console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), err)
 	}
 
 	doCastCmdSession(session)
+	session.Close()
 	session.Delete()
 }
