@@ -170,11 +170,10 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
-	if err != nil {
-		console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
-	}
-	if !tgtContent.Type.IsDir() {
-		console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+	if err == nil {
+		if !tgtContent.Type.IsDir() {
+			console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		}
 	}
 }
 
