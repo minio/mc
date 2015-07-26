@@ -7,7 +7,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/dustin/go-humanize",
-			"Rev": "8cc1aaa2d955ee82833337cfb10babc42be6bce6"
+			"Rev": "c128122e0b9b93799aef8181a537e5d8fd7081d6"
 		},
 		{
 			"ImportPath": "github.com/fatih/color",
@@ -29,8 +29,8 @@
 		},
 		{
 			"ImportPath": "github.com/minio/minio/pkg/iodine",
-			"Comment": "release-1434511043-231-ga23a61d",
-			"Rev": "a23a61da113fcf353d097b4323f66afae62cd430"
+			"Comment": "warning: tag 'release-1434511043' is really 'RELEASE.Wed-Jun-17-03-17-23-GMT-2015' here\nrelease-1434511043-265-g7133513",
+			"Rev": "71335136005e1836b6192a45eaaa68a2779b893a"
 		},
 		{
 			"ImportPath": "github.com/minio/pb",
