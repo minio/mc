@@ -168,8 +168,11 @@ func checkCastSyntaxTypeC(srcURL string, tgtURLs []string) {
 		console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(err, nil)))
 	}
 	for _, tgtURL := range tgtURLs {
-		if !isTargetURLDir(tgtURL) {
-			console.Fatalf("One of the target ‘%s’ is not a folder. cannot have mixtures of directories and files while copying directories recursively. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		_, content, err := url2Stat(tgtURL)
+		if err == nil {
+			if !content.Type.IsDir() {
+				console.Fatalf("One of the target ‘%s’ is not a folder. cannot have mixtures of directories and files while copying directories recursively. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+			}
 		}
 	}
 }
