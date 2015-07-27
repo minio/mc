@@ -67,6 +67,9 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	err = writeConfig(config)
 	c.Assert(err, IsNil)
 
+	err = createSessionDir()
+	c.Assert(err, IsNil)
+
 	_, err = doConfig("invalid", nil)
 	c.Assert(err, Not(IsNil))
 
