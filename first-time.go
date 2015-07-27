@@ -17,6 +17,7 @@
 package main
 
 import (
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -28,8 +29,26 @@ import (
 var minWindowsGolangVersion = "1.5"
 var minGolangVersion = "1.3"
 
+// following code handles the current Golang release styles, we might have to update them in future
+// if golang community divulges from the below formatting style.
+const (
+	betaRegexp = "beta[0-9]"
+	rcRegexp   = "rc[0-9]"
+)
+
+func getNormalizedGolangVersion() string {
+	version := strings.TrimPrefix(runtime.Version(), "go")
+	br := regexp.MustCompile(betaRegexp)
+	rr := regexp.MustCompile(rcRegexp)
+	betaStr := br.FindString(version)
+	version = strings.TrimRight(version, betaStr)
+	rcStr := rr.FindString(version)
+	version = strings.TrimRight(version, rcStr)
+	return version
+}
+
 func checkGolangVersion() {
-	v1, err := version.NewVersion(strings.TrimPrefix(runtime.Version(), "go"))
+	v1, err := version.NewVersion(getNormalizedGolangVersion())
 	if err != nil {
 		console.Fatalf("Unable to parse runtime version, %s\n", NewIodine(iodine.New(err, nil)))
 	}
