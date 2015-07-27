@@ -220,7 +220,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string) copyURLsType {
 	if strings.TrimSpace(targetURL) == "" || targetURL == "" { // Target is empty
 		return copyURLsTypeInvalid
 	}
-	if sourceURLs == nil { // Source list is empty
+	if len(sourceURLs) == 0 || sourceURLs == nil { // Source list is empty
 		return copyURLsTypeInvalid
 	}
 	for _, sourceURL := range sourceURLs {

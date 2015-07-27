@@ -147,12 +147,14 @@ func (s *sessionV2) Delete() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	err := os.Remove(s.DataFP.Name())
-	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+	if s.DataFP != nil {
+		err := os.Remove(s.DataFP.Name())
+		if err != nil {
+			return NewIodine(iodine.New(err, nil))
+		}
 	}
 
-	err = os.Remove(getSessionFile(s.SessionID))
+	err := os.Remove(getSessionFile(s.SessionID))
 	if err != nil {
 		return NewIodine(iodine.New(err, nil))
 	}

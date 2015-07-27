@@ -16,7 +16,12 @@
 
 package main
 
-import . "gopkg.in/check.v1"
+import (
+	"os"
+
+	"github.com/minio/mc/pkg/console"
+	. "gopkg.in/check.v1"
+)
 
 func (s *CmdTestSuite) TestCopyURLType(c *C) {
 	sourceURLs := []string{server.URL + "/bucket/object1"}
@@ -34,6 +39,18 @@ func (s *CmdTestSuite) TestCopyURLType(c *C) {
 	sourceURLs = []string{server.URL + "/bucket/...", server.URL + "/bucket/..."}
 	targetURL = server.URL + "/bucket/test"
 	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeD)
+
+	sourceURLs = []string{}
+	targetURL = server.URL + "/bucket"
+	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
+
+	sourceURLs = nil
+	targetURL = server.URL + "/bucket"
+	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
+
+	sourceURLs = []string{server.URL + "/bucket/...", server.URL + "/bucket/..."}
+	targetURL = ""
+	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
 }
 
 func (s *CmdTestSuite) TestCastURLType(c *C) {
@@ -43,6 +60,10 @@ func (s *CmdTestSuite) TestCastURLType(c *C) {
 
 	sourceURL = server.URL + "/bucket"
 	targetURLs = nil
+	c.Assert(guessCastURLType(sourceURL, targetURLs), Equals, castURLsTypeInvalid)
+
+	sourceURL = ""
+	targetURLs = []string{server.URL + "/bucket/object_new"}
 	c.Assert(guessCastURLType(sourceURL, targetURLs), Equals, castURLsTypeInvalid)
 
 	sourceURL = server.URL + "/bucket..."
@@ -56,4 +77,29 @@ func (s *CmdTestSuite) TestCastURLType(c *C) {
 	sourceURL = server.URL + "/bucket/object1"
 	targetURLs = []string{server.URL + "/bucket/object_new"}
 	c.Assert(guessCastURLType(sourceURL, targetURLs), Equals, castURLsTypeA)
+}
+
+// TODO fix both copy and cast
+func (s *CmdTestSuite) TestCopyContext(c *C) {
+	err := app.Run([]string{os.Args[0], "cp", server.URL + "/bucket...", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+
+	err = app.Run([]string{os.Args[0], "cp", server.URL + "/invalid...", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+	// reset back
+	console.IsExited = false
+}
+
+func (s *CmdTestSuite) TestCastContext(c *C) {
+	err := app.Run([]string{os.Args[0], "cast", server.URL + "/bucket...", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+
+	err = app.Run([]string{os.Args[0], "cast", server.URL + "/invalid...", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+	// reset back
+	console.IsExited = false
 }
