@@ -17,11 +17,12 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 
-	"github.com/hashicorp/go-version"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 )
@@ -47,27 +48,60 @@ func getNormalizedGolangVersion() string {
 	return version
 }
 
-func checkGolangVersion() {
-	v1, err := version.NewVersion(getNormalizedGolangVersion())
-	if err != nil {
-		console.Fatalf("Unable to parse runtime version, %s\n", NewIodine(iodine.New(err, nil)))
+type version struct {
+	major, minor, patch string
+}
+
+func newVersion(v string) version {
+	var ver version
+	verSlice := strings.Split(v, ".")
+	if len(verSlice) > 2 {
+		ver = version{
+			major: verSlice[0],
+			minor: verSlice[1],
+			patch: verSlice[2],
+		}
+		return ver
 	}
+	ver = version{
+		major: verSlice[0],
+		minor: verSlice[1],
+		patch: "0",
+	}
+	return ver
+}
+
+func (v1 version) String() string {
+	return fmt.Sprintf("%s%s%s", v1.major, v1.minor, v1.patch)
+}
+
+func (v1 version) Version() int {
+	ver, err := strconv.Atoi(v1.String())
+	if err != nil {
+		console.Fatalf("Unable to parse version string. %s\n", err)
+	}
+	return ver
+}
+
+func (v1 version) LessThan(v2 version) bool {
+	if v1.Version() < v2.Version() {
+		return true
+	}
+	return false
+}
+
+func checkGolangVersion() {
+	v1 := newVersion(getNormalizedGolangVersion())
 	switch runtime.GOOS {
 	case "windows":
-		v2, err := version.NewVersion(minWindowsGolangVersion)
-		if err != nil {
-			console.Fatalf("Unable to parse minimum version, %s\n", NewIodine(iodine.New(err, nil)))
-		}
+		v2 := newVersion(minWindowsGolangVersion)
 		if v1.LessThan(v2) {
-			console.Errorln("Minimum Golang runtime expected on windows is go1.5, please compile ‘mc’ with go1.5")
+			console.Errorln("Minimum Golang runtime expected on windows is go1.5, please compile ‘mc’ with atleast go1.5")
 		}
 	default:
-		v2, err := version.NewVersion(minGolangVersion)
-		if err != nil {
-			console.Fatalf("Unable to parse minimum version, %s\n", NewIodine(iodine.New(err, nil)))
-		}
+		v2 := newVersion(minGolangVersion)
 		if v1.LessThan(v2) {
-			console.Errorln("Minimum Golang runtime expected on windows is go1.3, please compile ‘mc’ with go1.3")
+			console.Errorln("Minimum Golang runtime expected on windows is go1.3, please compile ‘mc’ with atleast go1.3")
 		}
 	}
 }
