@@ -18,10 +18,6 @@
 			"Rev": "c00d27128bb88e9c1adab1a53cda9c72c6d1ff9b"
 		},
 		{
-			"ImportPath": "github.com/hashicorp/go-version",
-			"Rev": "999359b6b7a041ce16e695d51e92145b83f01087"
-		},
-		{
 			"ImportPath": "github.com/minio/cli",
 			"Comment": "1.2.0-114-g9280cba",
 			"Rev": "9280cbaadcdd26d50b5ae85123682e37944701de"
