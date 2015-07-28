@@ -100,16 +100,20 @@ func (b barSend) Finish() {
 func cursorAnimate() <-chan rune {
 	cursorCh := make(chan rune)
 	var cursors string
-	if runtime.GOOS == "windows" {
-		cursors = "|/-\\"
-	} else {
+
+	switch runtime.GOOS {
+	case "linux":
 		// cursors = "➩➪➫➬➭➮➯➱"
 		// cursors = "▁▃▄▅▆▇█▇▆▅▄▃"
 		cursors = "◐◓◑◒"
 		// cursors = "←↖↑↗→↘↓↙"
-		// cursors = "⣾⣽⣻⢿⡿⣟⣯⣷"
 		// cursors = "◴◷◶◵"
 		// cursors = "◰◳◲◱"
+	case "darwin":
+		cursors = "◐◓◑◒"
+		//cursors = "⣾⣽⣻⢿⡿⣟⣯⣷"
+	default:
+		cursors = "|/-\\"
 	}
 	go func() {
 		for {
@@ -154,12 +158,14 @@ func newCpBar() barSend {
 		bar.Callback = func(s string) {
 			console.Bar("\r" + s)
 		}
-		// cursorCh := cursorAnimate()
-		if runtime.GOOS == "windows" {
-			bar.Format("[=> ]")
-		} else {
+		switch runtime.GOOS {
+		case "linux":
 			bar.Format("┃▓█░┃")
 			// bar.Format("█▓▒░█")
+		case "darwin":
+			bar.Format(" ▓ ░ ")
+		default:
+			bar.Format("[=> ]")
 		}
 		for msg := range cmdCh {
 			switch msg.Cmd {
