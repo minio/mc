@@ -29,7 +29,7 @@ import (
 // Help message.
 var sessionCmd = cli.Command{
 	Name:   "session",
-	Usage:  "Manage sessions for cp and sync",
+	Usage:  "Manage sessions for cp and cast",
 	Action: runSessionCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
