@@ -33,7 +33,7 @@ func (s *MySuite) TestURLParse(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(u.Scheme, Equals, "http")
 	c.Assert(u.Host, Equals, "s3.example.com")
-	c.Assert(u.Path, Equals, "")
+	c.Assert(u.Path, Equals, "/")
 
 	u, err = Parse("http://s3.example.com/path/new")
 	c.Assert(err, IsNil)

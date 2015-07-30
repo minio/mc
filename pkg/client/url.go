@@ -90,6 +90,9 @@ func Parse(urlStr string) (*URL, error) {
 	if strings.HasPrefix(rest, "//") {
 		// if rest has '//' prefix, skip them
 		authority, rest := splitSpecial(rest[2:], "/", false)
+		if rest == "" {
+			rest = "/"
+		}
 		host := getHost(authority)
 		if host != "" && (scheme == "http" || scheme == "https") {
 			return &URL{
