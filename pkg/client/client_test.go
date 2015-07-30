@@ -34,18 +34,21 @@ func (s *MySuite) TestURLParse(c *C) {
 	c.Assert(u.Scheme, Equals, "http")
 	c.Assert(u.Host, Equals, "s3.example.com")
 	c.Assert(u.Path, Equals, "/")
+	c.Assert(u.SchemeSeparator, Equals, "://")
 
 	u, err = Parse("http://s3.example.com/path/new")
 	c.Assert(err, IsNil)
 	c.Assert(u.Scheme, Equals, "http")
 	c.Assert(u.Host, Equals, "s3.example.com")
 	c.Assert(u.Path, Equals, "/path/new")
+	c.Assert(u.SchemeSeparator, Equals, "://")
 
 	u, err = Parse(":::://s3.example.com/path/new")
 	c.Assert(err, IsNil)
 	c.Assert(u.Scheme, Equals, "")
 	c.Assert(u.Host, Equals, "")
 	c.Assert(u.Path, Equals, ":::://s3.example.com/path/new")
+	c.Assert(u.SchemeSeparator, Equals, "")
 }
 
 func (s *MySuite) TestPathParse(c *C) {
@@ -54,10 +57,12 @@ func (s *MySuite) TestPathParse(c *C) {
 	c.Assert(u.Scheme, Equals, "")
 	c.Assert(u.Host, Equals, "")
 	c.Assert(u.Path, Equals, "path/test")
+	c.Assert(u.SchemeSeparator, Equals, "")
 
 	u, err = Parse("/path/test")
 	c.Assert(err, IsNil)
 	c.Assert(u.Scheme, Equals, "")
 	c.Assert(u.Host, Equals, "")
 	c.Assert(u.Path, Equals, "/path/test")
+	c.Assert(u.SchemeSeparator, Equals, "")
 }

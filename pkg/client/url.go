@@ -26,11 +26,12 @@ import (
 
 // URL client url structure
 type URL struct {
-	Type      URLType
-	Scheme    string
-	Host      string
-	Path      string
-	Separator rune
+	Type            URLType
+	Scheme          string
+	Host            string
+	Path            string
+	SchemeSeparator string
+	Separator       rune
 }
 
 // URLType - enum of different url types
@@ -96,11 +97,12 @@ func Parse(urlStr string) (*URL, error) {
 		host := getHost(authority)
 		if host != "" && (scheme == "http" || scheme == "https") {
 			return &URL{
-				Scheme:    scheme,
-				Type:      Object,
-				Host:      host,
-				Path:      rest,
-				Separator: '/',
+				Scheme:          scheme,
+				Type:            Object,
+				Host:            host,
+				Path:            rest,
+				SchemeSeparator: "://",
+				Separator:       '/',
 			}, nil
 		}
 	}

@@ -65,7 +65,7 @@ func New(config *Config) (client.Client, error) {
 	match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
 	if match {
 		hostSplits := strings.SplitN(u.Host, ".", 2)
-		u.Path = "/" + hostSplits[0] + u.Path
+		u.Path = string(u.Separator) + hostSplits[0] + u.Path
 		u.Host = hostSplits[1]
 	}
 	var transport http.RoundTripper
@@ -79,13 +79,13 @@ func New(config *Config) (client.Client, error) {
 		AccessKeyID:     config.AccessKeyID,
 		SecretAccessKey: config.SecretAccessKey,
 		Transport:       transport,
-		Endpoint:        u.Scheme + "://" + u.Host,
+		Endpoint:        u.Scheme + u.SchemeSeparator + u.Host,
 	}
 	s3Conf.AccessKeyID = config.AccessKeyID
 	s3Conf.SecretAccessKey = config.SecretAccessKey
 	s3Conf.Transport = transport
 	s3Conf.SetUserAgent(config.AppName, config.AppVersion, config.AppComments...)
-	s3Conf.Endpoint = u.Scheme + "://" + u.Host
+	s3Conf.Endpoint = u.Scheme + u.SchemeSeparator + u.Host
 	api, err := minio.New(s3Conf)
 	if err != nil {
 		return nil, err
