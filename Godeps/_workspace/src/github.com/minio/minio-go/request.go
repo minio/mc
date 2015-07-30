@@ -82,6 +82,50 @@ var ignoredHeaders = map[string]bool{
 	"User-Agent":     true,
 }
 
+// path2Object gives objectName from URL path
+func path2Object(path string) (objectName string) {
+	pathSplits := strings.SplitN(path, "?", 2)
+	splits := strings.SplitN(pathSplits[0], separator, 3)
+	switch len(splits) {
+	case 0, 1:
+		fallthrough
+	case 2:
+		objectName = ""
+	case 3:
+		objectName = splits[2]
+	}
+	return
+}
+
+// path2Query gives query part from URL path
+func path2Query(path string) (query string) {
+	pathSplits := strings.SplitN(path, "?", 2)
+	if len(pathSplits) > 1 {
+		query = pathSplits[1]
+	}
+	return
+}
+
+func (op *operation) getRequestURL(config Config) (url string) {
+	// parse URL for the combination of HTTPServer + HTTPPath
+	if config.Region != "milkyway" {
+		// if virtual style hosts, bucket name is not needed to be part of path
+		if config.isVirtualStyle {
+			url = op.HTTPServer + separator + path2Object(op.HTTPPath)
+			query := path2Query(op.HTTPPath)
+			// verify if there is a query string to
+			if query != "" {
+				url = url + "?" + query
+			}
+		} else {
+			url = op.HTTPServer + op.HTTPPath
+		}
+	} else {
+		url = op.HTTPServer + op.HTTPPath
+	}
+	return
+}
+
 // newRequest - instantiate a new request
 func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, error) {
 	// if no method default to POST
@@ -90,8 +134,7 @@ func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, er
 		method = "POST"
 	}
 
-	// parse URL for the combination of HTTPServer + HTTPPath
-	u := op.HTTPServer + op.HTTPPath
+	u := op.getRequestURL(*config)
 
 	// get a new HTTP request, for the requested method
 	req, err := http.NewRequest(method, u, nil)

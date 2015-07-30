@@ -61,13 +61,6 @@ func New(config *Config) (client.Client, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
-	// convert any virtual host styled requests
-	match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
-	if match {
-		hostSplits := strings.SplitN(u.Host, ".", 2)
-		u.Path = string(u.Separator) + hostSplits[0] + u.Path
-		u.Host = hostSplits[1]
-	}
 	var transport http.RoundTripper
 	switch {
 	case config.Debug == true:
@@ -205,7 +198,15 @@ func (c *s3Client) Stat() (*client.Content, error) {
 
 // url2BucketAndObject gives bucketName and objectName from URL path
 func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
-	splits := strings.SplitN(c.hostURL.Path, string(c.hostURL.Separator), 3)
+	// convert any virtual host styled requests
+	path := c.hostURL.Path
+	match, _ := filepath.Match("*.s3*.amazonaws.com", c.hostURL.Host)
+	if match {
+		hostSplits := strings.SplitN(c.hostURL.Host, ".", 2)
+		path = string(c.hostURL.Separator) + hostSplits[0] + c.hostURL.Path
+	}
+
+	splits := strings.SplitN(path, string(c.hostURL.Separator), 3)
 	switch len(splits) {
 	case 0, 1:
 		bucketName = ""

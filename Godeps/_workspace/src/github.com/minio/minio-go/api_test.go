@@ -40,14 +40,14 @@ func TestACLTypes(t *testing.T) {
 }
 
 func TestGetRegion(t *testing.T) {
-	region, err := getRegion("https://s3.amazonaws.com")
+	region, err := getRegion("s3.amazonaws.com")
 	if err != nil {
 		t.Fatalf("Error")
 	}
 	if region != "us-east-1" {
 		t.Fatalf("Error")
 	}
-	region, err = getRegion("http://localhost:9000")
+	region, err = getRegion("localhost:9000")
 	if err != nil {
 		t.Fatalf("Error")
 	}

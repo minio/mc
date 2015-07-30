@@ -2,18 +2,19 @@ package color
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/mattn/go-isatty"
 	"github.com/shiena/ansicolor"
 )
 
-// NoColor defines if the output is colorized or not. By default it's set to
-// false. This is a global option and affects all colors. For more control over
-// each color block use the methods DisableColor() individually.
-var NoColor bool = false
+// NoColor defines if the output is colorized or not. It's dynamically set to
+// false or true based on the stdout's file descriptor referring to a terminal
+// or not. This is a global option and affects all colors. For more control
+// over each color block use the methods DisableColor() individually.
+var NoColor = !isatty.IsTerminal(os.Stdout.Fd())
 
 // Color defines a custom color object which is defined by SGR parameters.
 type Color struct {
@@ -75,7 +76,7 @@ func New(value ...Attribute) *Color {
 // output with the given SGR parameters until color.Unset() is called.
 func Set(p ...Attribute) *Color {
 	c := New(p...)
-	c.set()
+	c.Set()
 	return c
 }
 
@@ -89,8 +90,8 @@ func Unset() {
 	fmt.Fprintf(Output, "%s[%dm", escape, Reset)
 }
 
-// set sets the SGR sequence.
-func (c *Color) set() *Color {
+// Set sets the SGR sequence.
+func (c *Color) Set() *Color {
 	if c.isNoColorSet() {
 		return c
 	}
@@ -122,7 +123,7 @@ func (c *Color) prepend(value Attribute) {
 
 // Output defines the standard output of the print functions. By default
 // os.Stdout is used.
-var Output io.Writer = ansicolor.NewAnsiColorWriter(os.Stdout)
+var Output = ansicolor.NewAnsiColorWriter(os.Stdout)
 
 // Print formats using the default formats for its operands and writes to
 // standard output. Spaces are added between operands when neither is a
@@ -130,7 +131,7 @@ var Output io.Writer = ansicolor.NewAnsiColorWriter(os.Stdout)
 // encountered. This is the standard fmt.Print() method wrapped with the given
 // color.
 func (c *Color) Print(a ...interface{}) (n int, err error) {
-	c.set()
+	c.Set()
 	defer c.unset()
 
 	return fmt.Fprint(Output, a...)
@@ -140,7 +141,7 @@ func (c *Color) Print(a ...interface{}) (n int, err error) {
 // It returns the number of bytes written and any write error encountered.
 // This is the standard fmt.Printf() method wrapped with the given color.
 func (c *Color) Printf(format string, a ...interface{}) (n int, err error) {
-	c.set()
+	c.Set()
 	defer c.unset()
 
 	return fmt.Fprintf(Output, format, a...)
@@ -152,7 +153,7 @@ func (c *Color) Printf(format string, a ...interface{}) (n int, err error) {
 // encountered. This is the standard fmt.Print() method wrapped with the given
 // color.
 func (c *Color) Println(a ...interface{}) (n int, err error) {
-	c.set()
+	c.Set()
 	defer c.unset()
 
 	return fmt.Fprintln(Output, a...)

@@ -19,7 +19,7 @@ type csiState int
 const (
 	outsideCsiCode csiState = iota
 	firstCsiCode
-	secondeCsiCode
+	secondCsiCode
 )
 
 type ansiColorWriter struct {
@@ -78,6 +78,24 @@ const (
 	ansiBackgroundCyan    = "46"
 	ansiBackgroundWhite   = "47"
 	ansiBackgroundDefault = "49"
+
+	ansiLightForegroundGray    = "90"
+	ansiLightForegroundRed     = "91"
+	ansiLightForegroundGreen   = "92"
+	ansiLightForegroundYellow  = "93"
+	ansiLightForegroundBlue    = "94"
+	ansiLightForegroundMagenta = "95"
+	ansiLightForegroundCyan    = "96"
+	ansiLightForegroundWhite   = "97"
+
+	ansiLightBackgroundGray    = "100"
+	ansiLightBackgroundRed     = "101"
+	ansiLightBackgroundGreen   = "102"
+	ansiLightBackgroundYellow  = "103"
+	ansiLightBackgroundBlue    = "104"
+	ansiLightBackgroundMagenta = "105"
+	ansiLightBackgroundCyan    = "106"
+	ansiLightBackgroundWhite   = "107"
 )
 
 type drawType int
@@ -112,6 +130,24 @@ var colorMap = map[string]winColor{
 	ansiBackgroundCyan:    {backgroundGreen | backgroundBlue, background},
 	ansiBackgroundWhite:   {backgroundRed | backgroundGreen | backgroundBlue, background},
 	ansiBackgroundDefault: {0, background},
+
+	ansiLightForegroundGray:    {foregroundIntensity, foreground},
+	ansiLightForegroundRed:     {foregroundIntensity | foregroundRed, foreground},
+	ansiLightForegroundGreen:   {foregroundIntensity | foregroundGreen, foreground},
+	ansiLightForegroundYellow:  {foregroundIntensity | foregroundRed | foregroundGreen, foreground},
+	ansiLightForegroundBlue:    {foregroundIntensity | foregroundBlue, foreground},
+	ansiLightForegroundMagenta: {foregroundIntensity | foregroundRed | foregroundBlue, foreground},
+	ansiLightForegroundCyan:    {foregroundIntensity | foregroundGreen | foregroundBlue, foreground},
+	ansiLightForegroundWhite:   {foregroundIntensity | foregroundRed | foregroundGreen | foregroundBlue, foreground},
+
+	ansiLightBackgroundGray:    {backgroundIntensity, background},
+	ansiLightBackgroundRed:     {backgroundIntensity | backgroundRed, background},
+	ansiLightBackgroundGreen:   {backgroundIntensity | backgroundGreen, background},
+	ansiLightBackgroundYellow:  {backgroundIntensity | backgroundRed | backgroundGreen, background},
+	ansiLightBackgroundBlue:    {backgroundIntensity | backgroundBlue, background},
+	ansiLightBackgroundMagenta: {backgroundIntensity | backgroundRed | backgroundBlue, background},
+	ansiLightBackgroundCyan:    {backgroundIntensity | backgroundGreen | backgroundBlue, background},
+	ansiLightBackgroundWhite:   {backgroundIntensity | backgroundRed | backgroundGreen | backgroundBlue, background},
 }
 
 var (
@@ -281,12 +317,12 @@ func (cw *ansiColorWriter) Write(p []byte) (int, error) {
 				break
 			case secondeCsiChar:
 				nc++
-				cw.state = secondeCsiCode
+				cw.state = secondCsiCode
 				last = i - 1
 			default:
 				cw.state = outsideCsiCode
 			}
-		case secondeCsiCode:
+		case secondCsiCode:
 			nc++
 			if isParameterChar(ch) {
 				cw.paramBuf.WriteByte(ch)

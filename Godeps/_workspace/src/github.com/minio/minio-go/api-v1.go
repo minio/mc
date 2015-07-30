@@ -29,6 +29,10 @@ import (
 	"time"
 )
 
+const (
+	separator = "/"
+)
+
 // apiV1 container to hold unexported internal functions
 type apiV1 struct {
 	config *Config
@@ -48,7 +52,7 @@ func (a apiV1) putBucketRequest(bucket, acl, location string) (*request, error) 
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
-		HTTPPath:   "/" + bucket,
+		HTTPPath:   separator + bucket,
 	}
 	var createBucketConfigBuffer *bytes.Reader
 	// If location is set use it and create proper bucket configuration
@@ -141,7 +145,7 @@ func (a apiV1) putBucketACLRequest(bucket, acl string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
-		HTTPPath:   "/" + bucket + "?acl",
+		HTTPPath:   separator + bucket + "?acl",
 	}
 	req, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -175,7 +179,7 @@ func (a apiV1) getBucketACLRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + "?acl",
+		HTTPPath:   separator + bucket + "?acl",
 	}
 	req, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -209,7 +213,7 @@ func (a apiV1) getBucketACL(bucket string) (accessControlPolicy, error) {
 		errorResponse := ErrorResponse{
 			Code:      "InternalError",
 			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go/issues",
-			Resource:  "/" + bucket,
+			Resource:  separator + bucket,
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -223,7 +227,7 @@ func (a apiV1) getBucketLocationRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + "?location",
+		HTTPPath:   separator + bucket + "?location",
 	}
 	req, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -293,7 +297,7 @@ func (a apiV1) listObjectsRequest(bucket, marker, prefix, delimiter string, maxk
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + *query,
+		HTTPPath:   separator + bucket + *query,
 	}
 	r, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -345,7 +349,7 @@ func (a apiV1) headBucketRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "HEAD",
-		HTTPPath:   "/" + bucket,
+		HTTPPath:   separator + bucket,
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -373,7 +377,7 @@ func (a apiV1) headBucket(bucket string) error {
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchBucket",
 					Message:   "The specified bucket does not exist.",
-					Resource:  "/" + bucket,
+					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -381,7 +385,7 @@ func (a apiV1) headBucket(bucket string) error {
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
-					Resource:  "/" + bucket,
+					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -389,7 +393,7 @@ func (a apiV1) headBucket(bucket string) error {
 				errorResponse = ErrorResponse{
 					Code:      resp.Status,
 					Message:   resp.Status,
-					Resource:  "/" + bucket,
+					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -405,7 +409,7 @@ func (a apiV1) deleteBucketRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
-		HTTPPath:   "/" + bucket,
+		HTTPPath:   separator + bucket,
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -436,7 +440,7 @@ func (a apiV1) deleteBucket(bucket string) error {
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchBucket",
 					Message:   "The specified bucket does not exist.",
-					Resource:  "/" + bucket,
+					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -444,7 +448,7 @@ func (a apiV1) deleteBucket(bucket string) error {
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
-					Resource:  "/" + bucket,
+					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -452,7 +456,7 @@ func (a apiV1) deleteBucket(bucket string) error {
 				errorResponse = ErrorResponse{
 					Code:      resp.Status,
 					Message:   resp.Status,
-					Resource:  "/" + bucket,
+					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -477,7 +481,7 @@ func (a apiV1) putObjectRequest(bucket, object, contentType string, md5SumBytes 
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
-		HTTPPath:   "/" + bucket + "/" + encodedObject,
+		HTTPPath:   separator + bucket + separator + encodedObject,
 	}
 	r, err := newRequest(op, a.config, body)
 	if err != nil {
@@ -529,7 +533,7 @@ func (a apiV1) getObjectRequest(bucket, object string, offset, length int64) (*r
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + "/" + encodedObject,
+		HTTPPath:   separator + bucket + separator + encodedObject,
 	}
 	r, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -614,7 +618,7 @@ func (a apiV1) deleteObjectRequest(bucket, object string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
-		HTTPPath:   "/" + bucket + "/" + encodedObject,
+		HTTPPath:   separator + bucket + separator + encodedObject,
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -644,7 +648,7 @@ func (a apiV1) deleteObject(bucket, object string) error {
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchKey",
 					Message:   "The specified key does not exist.",
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -652,7 +656,7 @@ func (a apiV1) deleteObject(bucket, object string) error {
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -660,7 +664,7 @@ func (a apiV1) deleteObject(bucket, object string) error {
 				errorResponse = ErrorResponse{
 					Code:      resp.Status,
 					Message:   resp.Status,
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -680,7 +684,7 @@ func (a apiV1) headObjectRequest(bucket, object string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "HEAD",
-		HTTPPath:   "/" + bucket + "/" + encodedObject,
+		HTTPPath:   separator + bucket + separator + encodedObject,
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -710,7 +714,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchKey",
 					Message:   "The specified key does not exist.",
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -718,7 +722,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -726,7 +730,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 				errorResponse = ErrorResponse{
 					Code:      resp.Status,
 					Message:   resp.Status,
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}
@@ -783,7 +787,7 @@ func (a apiV1) listBucketsRequest() (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   "/",
+		HTTPPath:   separator,
 	}
 	return newRequest(op, a.config, nil)
 }
