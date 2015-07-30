@@ -65,7 +65,7 @@ func New(config *Config) (client.Client, error) {
 	match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
 	if match {
 		hostSplits := strings.SplitN(u.Host, ".", 2)
-		u.Path = hostSplits[0]
+		u.Path = "/" + hostSplits[0] + u.Path
 		u.Host = hostSplits[1]
 	}
 	var transport http.RoundTripper
