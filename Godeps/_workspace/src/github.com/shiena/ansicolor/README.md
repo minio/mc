@@ -1,3 +1,5 @@
+[![GoDoc](https://godoc.org/github.com/shiena/ansicolor?status.svg)](https://godoc.org/github.com/shiena/ansicolor)
+
 # ansicolor
 
 Ansicolor library provides color console in Windows as ANSICON for Golang.
@@ -25,6 +27,14 @@ Ansicolor library provides color console in Windows as ANSICON for Golang.
 |\x1b[36m|Cyan|
 |\x1b[37m|White|
 |\x1b[39m|Default(foreground color at startup)|
+|\x1b[90m|Light Gray|
+|\x1b[91m|Light Red|
+|\x1b[92m|Light Green|
+|\x1b[93m|Light Yellow|
+|\x1b[94m|Light Blue|
+|\x1b[95m|Light Magenta|
+|\x1b[96m|Light Cyan|
+|\x1b[97m|Light White|
 
 |Escape sequence|Background colors|
 |---------------|----|
@@ -37,6 +47,14 @@ Ansicolor library provides color console in Windows as ANSICON for Golang.
 |\x1b[46m|Cyan|
 |\x1b[47m|White|
 |\x1b[49m|Default(background color at startup)|
+|\x1b[100m|Light Gray|
+|\x1b[101m|Light Red|
+|\x1b[102m|Light Green|
+|\x1b[103m|Light Yellow|
+|\x1b[104m|Light Blue|
+|\x1b[105m|Light Magenta|
+|\x1b[106m|Light Cyan|
+|\x1b[107m|Light White|
 
 ## Example
 

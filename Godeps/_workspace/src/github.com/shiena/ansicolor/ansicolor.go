@@ -13,5 +13,8 @@ import "io"
 // colors of the text by the escape sequence.
 // In the console of other systems, which writes to w all text.
 func NewAnsiColorWriter(w io.Writer) io.Writer {
-	return &ansiColorWriter{w: w}
+	if _, ok := w.(*ansiColorWriter); !ok {
+		return &ansiColorWriter{w: w}
+	}
+	return w
 }

@@ -72,7 +72,7 @@ func (a apiV1) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, pr
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + query,
+		HTTPPath:   separator + bucket + query,
 	}
 	r, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -124,7 +124,7 @@ func (a apiV1) initiateMultipartRequest(bucket, object string) (*request, error)
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "POST",
-		HTTPPath:   "/" + bucket + "/" + encodedObject + "?uploads",
+		HTTPPath:   separator + bucket + separator + encodedObject + "?uploads",
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -162,7 +162,7 @@ func (a apiV1) completeMultipartUploadRequest(bucket, object, uploadID string, c
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "POST",
-		HTTPPath:   "/" + bucket + "/" + encodedObject + "?uploadId=" + uploadID,
+		HTTPPath:   separator + bucket + separator + encodedObject + "?uploadId=" + uploadID,
 	}
 	var completeMultipartUploadBytes []byte
 	switch {
@@ -218,7 +218,7 @@ func (a apiV1) abortMultipartUploadRequest(bucket, object, uploadID string) (*re
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
-		HTTPPath:   "/" + bucket + "/" + encodedObject + "?uploadId=" + uploadID,
+		HTTPPath:   separator + bucket + separator + encodedObject + "?uploadId=" + uploadID,
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -243,21 +243,21 @@ func (a apiV1) abortMultipartUpload(bucket, object, uploadID string) error {
 				errorResponse = ErrorResponse{
 					Code:      "NoSuchUpload",
 					Message:   "The specified multipart upload does not exist.",
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
 			default:
 				errorResponse = ErrorResponse{
 					Code:      resp.Status,
 					Message:   "",
-					Resource:  "/" + bucket + "/" + object,
+					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
 			}
@@ -285,7 +285,7 @@ func (a apiV1) listObjectPartsRequest(bucket, object, uploadID string, partNumbe
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   "/" + bucket + "/" + encodedObject + resourceQuery(),
+		HTTPPath:   separator + bucket + separator + encodedObject + resourceQuery(),
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -328,7 +328,7 @@ func (a apiV1) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
-		HTTPPath:   "/" + bucket + "/" + encodedObject + "?partNumber=" + strconv.Itoa(partNumber) + "&uploadId=" + uploadID,
+		HTTPPath:   separator + bucket + separator + encodedObject + "?partNumber=" + strconv.Itoa(partNumber) + "&uploadId=" + uploadID,
 	}
 	r, err := newRequest(op, a.config, body)
 	if err != nil {

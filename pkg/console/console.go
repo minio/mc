@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 	"github.com/minio/minio/pkg/iodine"
 	"github.com/shiena/ansicolor"
 )
@@ -72,7 +73,7 @@ var (
 	currThemeName = func() string {
 		theme := GetDefaultThemeName()
 		// if not a TTY disable color
-		if !isatty(os.Stdout.Fd()) || !isatty(os.Stderr.Fd()) {
+		if !isatty.IsTerminal(os.Stdout.Fd()) || !isatty.IsTerminal(os.Stderr.Fd()) {
 			theme = "nocolor"
 		}
 		return theme

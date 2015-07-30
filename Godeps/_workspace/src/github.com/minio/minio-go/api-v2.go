@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -118,17 +119,11 @@ var regions = map[string]string{
 }
 
 // getRegion returns a region based on its endpoint mapping.
-func getRegion(endPoint string) (region string, err error) {
-	u, err := url.Parse(endPoint)
-	if err != nil {
-		return "", err
+func getRegion(host string) (region string, err error) {
+	if regions[host] != "" {
+		return regions[host], nil
 	}
-
-	if regions[u.Host] != "" {
-		return regions[u.Host], nil
-	}
-
-	// Region cannot be empty according to Amazon S3 standard.
+	// Region cannot be empty according to Amazon S3.
 	// So we address all the four quadrants of our galaxy.
 	return "milkyway", nil
 }
@@ -167,6 +162,7 @@ type Config struct {
 	// use SetUserAgent append to default, useful when minio-go is used with in your application
 	userAgent      string
 	isUserAgentSet bool // allow user agent's to be set only once
+	isVirtualStyle bool // set when virtual hostnames are on
 }
 
 // Global constants
@@ -195,7 +191,17 @@ type apiV2 struct {
 // New - instantiate a new minio api client
 func New(config Config) (API, error) {
 	if config.Region == "" {
-		region, err := getRegion(config.Endpoint)
+		u, err := url.Parse(config.Endpoint)
+		if err != nil {
+			return apiV2{}, err
+		}
+		match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
+		if match {
+			config.isVirtualStyle = true
+			hostSplits := strings.SplitN(u.Host, ".", 2)
+			u.Host = hostSplits[1]
+		}
+		region, err := getRegion(u.Host)
 		if err != nil {
 			return apiV2{}, err
 		}

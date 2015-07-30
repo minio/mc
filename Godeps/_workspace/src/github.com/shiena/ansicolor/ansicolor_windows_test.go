@@ -124,6 +124,14 @@ func TestWriteAnsiColorText(t *testing.T) {
 		{"foreground cyan   ", uint16(0x0003 | 0x0000), "36"},
 		{"foreground white  ", uint16(0x0007 | 0x0000), "37"},
 		{"foreground default", defaultFgColor | 0x0000, "39"},
+		{"foreground light gray   ", uint16(0x0000 | 0x0008 | 0x0000), "90"},
+		{"foreground light red    ", uint16(0x0004 | 0x0008 | 0x0000), "91"},
+		{"foreground light green  ", uint16(0x0002 | 0x0008 | 0x0000), "92"},
+		{"foreground light yellow ", uint16(0x0006 | 0x0008 | 0x0000), "93"},
+		{"foreground light blue   ", uint16(0x0001 | 0x0008 | 0x0000), "94"},
+		{"foreground light magenta", uint16(0x0005 | 0x0008 | 0x0000), "95"},
+		{"foreground light cyan   ", uint16(0x0003 | 0x0008 | 0x0000), "96"},
+		{"foreground light white  ", uint16(0x0007 | 0x0008 | 0x0000), "97"},
 	}
 
 	bgParam := []testParam{
@@ -136,6 +144,14 @@ func TestWriteAnsiColorText(t *testing.T) {
 		{"background cyan   ", uint16(0x0007 | 0x0030), "46"},
 		{"background white  ", uint16(0x0007 | 0x0070), "47"},
 		{"background default", uint16(0x0007) | defaultBgColor, "49"},
+		{"background light gray   ", uint16(0x0007 | 0x0000 | 0x0080), "100"},
+		{"background light red    ", uint16(0x0007 | 0x0040 | 0x0080), "101"},
+		{"background light green  ", uint16(0x0007 | 0x0020 | 0x0080), "102"},
+		{"background light yellow ", uint16(0x0007 | 0x0060 | 0x0080), "103"},
+		{"background light blue   ", uint16(0x0007 | 0x0010 | 0x0080), "104"},
+		{"background light magenta", uint16(0x0007 | 0x0050 | 0x0080), "105"},
+		{"background light cyan   ", uint16(0x0007 | 0x0030 | 0x0080), "106"},
+		{"background light white  ", uint16(0x0007 | 0x0070 | 0x0080), "107"},
 	}
 
 	resetParam := []testParam{

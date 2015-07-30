@@ -200,11 +200,18 @@ func migrateConfigV1ToV101() {
 	localHostConfig.AccessKeyID = ""
 	localHostConfig.SecretAccessKey = ""
 
+	s3HostConf := hostConfig{}
+	s3HostConf.AccessKeyID = globalAccessKeyID
+	s3HostConf.SecretAccessKey = globalSecretAccessKey
+
 	if _, ok := conf.Hosts["localhost:*"]; !ok {
 		conf.Hosts["localhost:*"] = localHostConfig
 	}
 	if _, ok := conf.Hosts["127.0.0.1:*"]; !ok {
 		conf.Hosts["127.0.0.1:*"] = localHostConfig
+	}
+	if _, ok := conf.Hosts["*.s3*.amazonaws.com"]; !ok {
+		conf.Hosts["*.s3*.amazonaws.com"] = s3HostConf
 	}
 
 	newConfig, err := quick.New(conf)
@@ -259,6 +266,7 @@ func newConfigV101() *configV1 {
 	conf.Hosts["localhost:*"] = localHostConfig
 	conf.Hosts["127.0.0.1:*"] = localHostConfig
 	conf.Hosts["s3*.amazonaws.com"] = s3HostConf
+	conf.Hosts["*.s3*.amazonaws.com"] = s3HostConf
 	conf.Hosts["play.minio.io:9000"] = playHostConfig
 	conf.Hosts["dl.minio.io:9000"] = dlHostConfig
 
