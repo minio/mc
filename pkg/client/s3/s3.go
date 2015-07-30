@@ -61,6 +61,13 @@ func New(config *Config) (client.Client, error) {
 	if err != nil {
 		return nil, iodine.New(err, nil)
 	}
+	// convert any virtual host styled requests
+	match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
+	if match {
+		hostSplits := strings.SplitN(u.Host, ".", 2)
+		u.Path = hostSplits[0]
+		u.Host = hostSplits[1]
+	}
 	var transport http.RoundTripper
 	switch {
 	case config.Debug == true:
