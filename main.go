@@ -110,8 +110,8 @@ func registerApp() *cli.App {
 	registerCmd(mbCmd)      // make a bucket
 	registerCmd(catCmd)     // concantenate an object to standard output
 	registerCmd(cpCmd)      // copy objects and files from multiple sources to single destination
-	registerCmd(castCmd)    // cast objects and files from single source to multiple destinations
-	registerCmd(sessionCmd) // session handling for resuming copy and cast operations
+	registerCmd(mirrorCmd)  // mirror objects and files from single source to multiple destinations
+	registerCmd(sessionCmd) // session handling for resuming copy and mirror operations
 	registerCmd(diffCmd)    // compare two objects
 	registerCmd(accessCmd)  // set permissions [public, private, readonly, authenticated] for buckets and folders.
 	registerCmd(configCmd)  // generate configuration "/home/harsha/.mc/config.json" file.

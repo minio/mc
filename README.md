@@ -10,7 +10,7 @@
   mb		Make a bucket or folder
   cat		Display contents of a file
   cp		Copy files and folders from many sources to a single destination
-  cast		Copy files and folders from a single source to many destinations
+  mirror	Copy files and folders from a single source to many destinations
   diff		Compute differences between two files or folders
   access	Set access permissions
   config        Add new alias to default configuration file [~/.mc/config.json]
