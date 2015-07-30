@@ -29,18 +29,18 @@ type hostConfig struct {
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(URL string) (*hostConfig, error) {
+func getHostConfig(URL string) (hostConfig, error) {
 	config, err := getMcConfig()
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return hostConfig{}, NewIodine(iodine.New(err, nil))
 	}
 	url, err := client.Parse(URL)
 	if err != nil {
-		return nil, NewIodine(iodine.New(errInvalidURL{URL: URL}, nil))
+		return hostConfig{}, NewIodine(iodine.New(errInvalidURL{URL: URL}, nil))
 	}
 	// No host matching or keys needed for filesystem requests
 	if url.Type == client.Filesystem {
-		hostCfg := &hostConfig{
+		hostCfg := hostConfig{
 			AccessKeyID:     "",
 			SecretAccessKey: "",
 		}
@@ -50,14 +50,11 @@ func getHostConfig(URL string) (*hostConfig, error) {
 	for globURL, hostCfg := range config.Hosts {
 		match, err := filepath.Match(globURL, url.Host)
 		if err != nil {
-			return nil, NewIodine(iodine.New(errInvalidGlobURL{glob: globURL, request: URL}, nil))
+			return hostConfig{}, NewIodine(iodine.New(errInvalidGlobURL{glob: globURL, request: URL}, nil))
 		}
 		if match {
-			if hostCfg == nil {
-				return nil, NewIodine(iodine.New(errInvalidAuth{}, nil))
-			}
 			return hostCfg, nil
 		}
 	}
-	return nil, NewIodine(iodine.New(errNoMatchingHost{}, nil))
+	return hostConfig{}, NewIodine(iodine.New(errNoMatchingHost{}, nil))
 }

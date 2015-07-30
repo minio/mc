@@ -31,7 +31,7 @@ import (
 type configV1 struct {
 	Version string
 	Aliases map[string]string
-	Hosts   map[string]*hostConfig
+	Hosts   map[string]hostConfig
 }
 
 // cached variables should *NEVER* be accessed directly from outside this file.
@@ -186,7 +186,9 @@ func migrateConfigV1ToV101() {
 	if err != nil {
 		console.Fatalln(NewIodine(iodine.New(err, nil)))
 	}
-	config.Load(mustGetMcConfigPath())
+	if err := config.Load(mustGetMcConfigPath()); err != nil {
+		console.Fatalln(NewIodine(iodine.New(err, nil)))
+	}
 	conf = config.Data().(*configV1)
 	// version is the same return
 	if conf.Version == mcCurrentConfigVersion {
@@ -194,7 +196,7 @@ func migrateConfigV1ToV101() {
 	}
 	conf.Version = mcCurrentConfigVersion
 
-	localHostConfig := new(hostConfig)
+	localHostConfig := hostConfig{}
 	localHostConfig.AccessKeyID = ""
 	localHostConfig.SecretAccessKey = ""
 
@@ -218,7 +220,7 @@ func newConfigV1() *configV1 {
 	conf.Version = mcPreviousConfigVersion
 	// make sure to allocate map's otherwise Golang
 	// exits silently without providing any errors
-	conf.Hosts = make(map[string]*hostConfig)
+	conf.Hosts = make(map[string]hostConfig)
 	conf.Aliases = make(map[string]string)
 	return conf
 }
@@ -229,27 +231,27 @@ func newConfigV101() *configV1 {
 	conf.Version = mcCurrentConfigVersion
 	// make sure to allocate map's otherwise Golang
 	// exits silently without providing any errors
-	conf.Hosts = make(map[string]*hostConfig)
+	conf.Hosts = make(map[string]hostConfig)
 	conf.Aliases = make(map[string]string)
 
-	localHostConfig := new(hostConfig)
+	localHostConfig := hostConfig{}
 	localHostConfig.AccessKeyID = ""
 	localHostConfig.SecretAccessKey = ""
 
-	s3HostConf := new(hostConfig)
+	s3HostConf := hostConfig{}
 	s3HostConf.AccessKeyID = globalAccessKeyID
 	s3HostConf.SecretAccessKey = globalSecretAccessKey
 
 	// Your example host config
-	exampleHostConf := new(hostConfig)
+	exampleHostConf := hostConfig{}
 	exampleHostConf.AccessKeyID = globalAccessKeyID
 	exampleHostConf.SecretAccessKey = globalSecretAccessKey
 
-	playHostConfig := new(hostConfig)
+	playHostConfig := hostConfig{}
 	playHostConfig.AccessKeyID = ""
 	playHostConfig.SecretAccessKey = ""
 
-	dlHostConfig := new(hostConfig)
+	dlHostConfig := hostConfig{}
 	dlHostConfig.AccessKeyID = ""
 	dlHostConfig.SecretAccessKey = ""
 
