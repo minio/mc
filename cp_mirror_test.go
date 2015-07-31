@@ -53,32 +53,6 @@ func (s *CmdTestSuite) TestCopyURLType(c *C) {
 	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
 }
 
-func (s *CmdTestSuite) TestMirrorURLType(c *C) {
-	sourceURL := server.URL + "/bucket"
-	targetURLs := []string{}
-	c.Assert(guessMirrorURLType(sourceURL, targetURLs), Equals, mirrorURLsTypeInvalid)
-
-	sourceURL = server.URL + "/bucket"
-	targetURLs = nil
-	c.Assert(guessMirrorURLType(sourceURL, targetURLs), Equals, mirrorURLsTypeInvalid)
-
-	sourceURL = ""
-	targetURLs = []string{server.URL + "/bucket/object_new"}
-	c.Assert(guessMirrorURLType(sourceURL, targetURLs), Equals, mirrorURLsTypeInvalid)
-
-	sourceURL = server.URL + "/bucket..."
-	targetURLs = []string{server.URL + "/bucket"}
-	c.Assert(guessMirrorURLType(sourceURL, targetURLs), Equals, mirrorURLsTypeC)
-
-	sourceURL = server.URL + "/bucket/object1"
-	targetURLs = []string{server.URL + "/bucket"}
-	c.Assert(guessMirrorURLType(sourceURL, targetURLs), Equals, mirrorURLsTypeB)
-
-	sourceURL = server.URL + "/bucket/object1"
-	targetURLs = []string{server.URL + "/bucket/object_new"}
-	c.Assert(guessMirrorURLType(sourceURL, targetURLs), Equals, mirrorURLsTypeA)
-}
-
 // TODO fix both copy and mirror
 func (s *CmdTestSuite) TestCopyContext(c *C) {
 	err := app.Run([]string{os.Args[0], "cp", server.URL + "/bucket...", server.URL + "/bucket"})
