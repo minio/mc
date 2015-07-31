@@ -41,7 +41,7 @@ const (
 	mirrorURLsTypeC
 )
 
-//   NOTE: All the parse rules should reduced to A: Cast(Source, []Target).
+//   NOTE: All the parse rules should reduced to A: Mirror(Source, []Target).
 //
 //   * CAST ARGS - VALID CASES
 //   =========================
@@ -49,11 +49,12 @@ const (
 //   B: mirror(f, [](d | f)) -> mirror(f, [](d/f | f)) -> A:
 //   C: mirror(d1..., [](d2)) -> []mirror(d1/f, [](d2/d1/f)) -> []A:
 
-// checkCastSyntax(URLs []string)
-func checkCastSyntax(ctx *cli.Context) {
+// checkMirrorSyntax(URLs []string)
+func checkMirrorSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "mirror", 1) // last argument is exit code.
 	}
+
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
@@ -97,19 +98,19 @@ func checkCastSyntax(ctx *cli.Context) {
 		}
 	}
 
-	switch guessCastURLType(srcURL, tgtURLs) {
+	switch guessMirrorURLType(srcURL, tgtURLs) {
 	case mirrorURLsTypeA: // File -> File.
-		checkCastSyntaxTypeA(srcURL, tgtURLs)
+		checkMirrorSyntaxTypeA(srcURL, tgtURLs)
 	case mirrorURLsTypeB: // File -> Folder.
-		checkCastSyntaxTypeB(srcURL, tgtURLs)
+		checkMirrorSyntaxTypeB(srcURL, tgtURLs)
 	case mirrorURLsTypeC: // Folder -> Folder.
-		checkCastSyntaxTypeC(srcURL, tgtURLs)
+		checkMirrorSyntaxTypeC(srcURL, tgtURLs)
 	default:
 		console.Fatalln("Invalid arguments. Unable to determine how to mirror. Please report this issue at https://github.com/minio/mc/issues")
 	}
 }
 
-func checkCastSyntaxTypeA(srcURL string, tgtURLs []string) {
+func checkMirrorSyntaxTypeA(srcURL string, tgtURLs []string) {
 	if len(tgtURLs) == 0 && tgtURLs == nil {
 		console.Fatalf("Invalid number of target arguments to mirror command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
@@ -135,7 +136,7 @@ func checkCastSyntaxTypeA(srcURL string, tgtURLs []string) {
 	}
 }
 
-func checkCastSyntaxTypeB(srcURL string, tgtURLs []string) {
+func checkMirrorSyntaxTypeB(srcURL string, tgtURLs []string) {
 	if len(tgtURLs) == 0 && tgtURLs == nil {
 		console.Fatalf("Invalid number of target arguments to mirror command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
@@ -153,7 +154,7 @@ func checkCastSyntaxTypeB(srcURL string, tgtURLs []string) {
 	// targetURL can be folder or file, internally TypeB calls TypeA if it finds a file
 }
 
-func checkCastSyntaxTypeC(srcURL string, tgtURLs []string) {
+func checkMirrorSyntaxTypeC(srcURL string, tgtURLs []string) {
 	if len(tgtURLs) == 0 && tgtURLs == nil {
 		console.Fatalf("Invalid number of target arguments to mirror command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
 	}
@@ -177,9 +178,9 @@ func checkCastSyntaxTypeC(srcURL string, tgtURLs []string) {
 	}
 }
 
-// guessCastURLType guesses the type of URL. This approach all allows prepareURL
+// guessMirrorURLType guesses the type of URL. This approach all allows prepareURL
 // functions to accurately report failure causes.
-func guessCastURLType(sourceURL string, targetURLs []string) mirrorURLsType {
+func guessMirrorURLType(sourceURL string, targetURLs []string) mirrorURLsType {
 	if targetURLs == nil || len(targetURLs) == 0 { // Target is empty
 		return mirrorURLsTypeInvalid
 	}
@@ -203,8 +204,8 @@ func guessCastURLType(sourceURL string, targetURLs []string) mirrorURLsType {
 	return mirrorURLsTypeA
 }
 
-// prepareSingleCastURLTypeA - prepares a single source and single target argument for mirroring.
-func prepareSingleCastURLsTypeA(sourceURL string, targetURL string) mirrorURLs {
+// prepareSingleMirrorURLTypeA - prepares a single source and single target argument for mirroring.
+func prepareSingleMirrorURLsTypeA(sourceURL string, targetURL string) mirrorURLs {
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil { // Source does not exist or insufficient privileges.
 		return mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
@@ -218,11 +219,11 @@ func prepareSingleCastURLsTypeA(sourceURL string, targetURL string) mirrorURLs {
 	return mirrorURLs{SourceContent: sourceContent, TargetContents: []*client.Content{{Name: targetURL}}}
 }
 
-// prepareCastURLsTypeA - A: mirror(f, f) -> mirror(f, f)
-func prepareCastURLsTypeA(sourceURL string, targetURLs []string) mirrorURLs {
+// prepareMirrorURLsTypeA - A: mirror(f, f) -> mirror(f, f)
+func prepareMirrorURLsTypeA(sourceURL string, targetURLs []string) mirrorURLs {
 	var sURLs mirrorURLs
 	for _, targetURL := range targetURLs { // Prepare each target separately
-		URLs := prepareSingleCastURLsTypeA(sourceURL, targetURL)
+		URLs := prepareSingleMirrorURLsTypeA(sourceURL, targetURL)
 		if URLs.Error != nil {
 			return mirrorURLs{Error: NewIodine(iodine.New(URLs.Error, nil))}
 		}
@@ -232,8 +233,8 @@ func prepareCastURLsTypeA(sourceURL string, targetURLs []string) mirrorURLs {
 	return sURLs
 }
 
-// prepareSingleCastURLsTypeB - prepares a single target and single source URLs for mirroring.
-func prepareSingleCastURLsTypeB(sourceURL string, targetURL string) mirrorURLs {
+// prepareSingleMirrorURLsTypeB - prepares a single target and single source URLs for mirroring.
+func prepareSingleMirrorURLsTypeB(sourceURL string, targetURL string) mirrorURLs {
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
@@ -248,12 +249,12 @@ func prepareSingleCastURLsTypeB(sourceURL string, targetURL string) mirrorURLs {
 	_, targetContent, err := url2Stat(targetURL)
 	if err != nil {
 		// Source and target are files. Already reduced to Type A.
-		return prepareSingleCastURLsTypeA(sourceURL, targetURL)
+		return prepareSingleMirrorURLsTypeA(sourceURL, targetURL)
 	}
 
 	if targetContent.Type.IsRegular() { // File to File
 		// Source and target are files. Already reduced to Type A.
-		return prepareSingleCastURLsTypeA(sourceURL, targetURL)
+		return prepareSingleMirrorURLsTypeA(sourceURL, targetURL)
 	}
 
 	// Source is a file, target is a folder and exists.
@@ -268,14 +269,14 @@ func prepareSingleCastURLsTypeB(sourceURL string, targetURL string) mirrorURLs {
 	}
 	// Reduce Type B to Type A.
 	targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
-	return prepareSingleCastURLsTypeA(sourceURL, targetURLParse.String())
+	return prepareSingleMirrorURLsTypeA(sourceURL, targetURLParse.String())
 }
 
-// prepareCastURLsTypeB - B: mirror(f, d) -> mirror(f, d/f) -> A
-func prepareCastURLsTypeB(sourceURL string, targetURLs []string) mirrorURLs {
+// prepareMirrorURLsTypeB - B: mirror(f, d) -> mirror(f, d/f) -> A
+func prepareMirrorURLsTypeB(sourceURL string, targetURLs []string) mirrorURLs {
 	var sURLs mirrorURLs
 	for _, targetURL := range targetURLs {
-		URLs := prepareSingleCastURLsTypeB(sourceURL, targetURL)
+		URLs := prepareSingleMirrorURLsTypeB(sourceURL, targetURL)
 		if URLs.Error != nil {
 			return mirrorURLs{Error: NewIodine(iodine.New(URLs.Error, nil))}
 		}
@@ -285,8 +286,8 @@ func prepareCastURLsTypeB(sourceURL string, targetURLs []string) mirrorURLs {
 	return sURLs
 }
 
-// prepareCastURLsTypeC - C:
-func prepareCastURLsTypeC(sourceURL string, targetURLs []string) <-chan mirrorURLs {
+// prepareMirrorURLsTypeC - C:
+func prepareMirrorURLsTypeC(sourceURL string, targetURLs []string) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
 	go func() {
 		defer close(mirrorURLsCh)
@@ -349,24 +350,24 @@ func prepareCastURLsTypeC(sourceURL string, targetURLs []string) <-chan mirrorUR
 				newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, sourceContentName)
 				newTargetURLs = append(newTargetURLs, newTargetURLParse.String())
 			}
-			mirrorURLsCh <- prepareCastURLsTypeA(sourceContentParse.String(), newTargetURLs)
+			mirrorURLsCh <- prepareMirrorURLsTypeA(sourceContentParse.String(), newTargetURLs)
 		}
 	}()
 	return mirrorURLsCh
 }
 
-// prepareCastURLs - prepares target and source URLs for mirroring.
-func prepareCastURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs {
+// prepareMirrorURLs - prepares target and source URLs for mirroring.
+func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
 	go func() {
 		defer close(mirrorURLsCh)
-		switch guessCastURLType(sourceURL, targetURLs) {
+		switch guessMirrorURLType(sourceURL, targetURLs) {
 		case mirrorURLsTypeA:
-			mirrorURLsCh <- prepareCastURLsTypeA(sourceURL, targetURLs)
+			mirrorURLsCh <- prepareMirrorURLsTypeA(sourceURL, targetURLs)
 		case mirrorURLsTypeB:
-			mirrorURLsCh <- prepareCastURLsTypeB(sourceURL, targetURLs)
+			mirrorURLsCh <- prepareMirrorURLsTypeB(sourceURL, targetURLs)
 		case mirrorURLsTypeC:
-			for sURLs := range prepareCastURLsTypeC(sourceURL, targetURLs) {
+			for sURLs := range prepareMirrorURLsTypeC(sourceURL, targetURLs) {
 				mirrorURLsCh <- sURLs
 			}
 		default:
