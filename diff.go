@@ -48,6 +48,11 @@ type diff struct {
 	err     error
 }
 
+func mustURLJoinPath(url1, url2 string) string {
+	newURL, _ := urlJoinPath(url1, url2)
+	return newURL
+}
+
 // urlJoinPath Join a path to existing URL
 func urlJoinPath(url1, url2 string) (newURLStr string, err error) {
 	u1, err := client.Parse(url1)
@@ -243,17 +248,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 				}
 				return
 			}
-			firstURLDelimited := firstClnt.URL().String()[:strings.LastIndex(firstClnt.URL().String(), string(firstClnt.URL().Separator))+1]
-			newFirstURL := firstURLDelimited + firstContentCh.Content.Name
-			newFirstURLParse, err := client.Parse(newFirstURL)
-			if err != nil {
-				ch <- diff{
-					message: "Unable to construct new URL from ‘" + firstClnt.URL().String() + "’ using ‘" + firstContentCh.Content.Name + "’",
-					err:     NewIodine(iodine.New(err, nil)),
-				}
-				return
-			}
-			firstTrie.Insert(patricia.Prefix(newFirstURLParse.String()), struct{}{})
+			firstTrie.Insert(patricia.Prefix(firstContentCh.Content.Name), struct{}{})
 		}
 	}(ch)
 	wg.Add(1)
@@ -267,17 +262,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 				}
 				return
 			}
-			secondURLDelimited := secondClnt.URL().String()[:strings.LastIndex(secondClnt.URL().String(), string(secondClnt.URL().Separator))+1]
-			newSecondURL := secondURLDelimited + secondContentCh.Content.Name
-			newSecondURLParse, err := client.Parse(newSecondURL)
-			if err != nil {
-				ch <- diff{
-					message: "Unable to construct new URL from ‘" + secondClnt.URL().String() + "’ using ‘" + secondContentCh.Content.Name + "’",
-					err:     NewIodine(iodine.New(err, nil)),
-				}
-				return
-			}
-			secondTrie.Insert(patricia.Prefix(newSecondURLParse.String()), struct{}{})
+			secondTrie.Insert(patricia.Prefix(secondContentCh.Content.Name), struct{}{})
 		}
 	}(ch)
 
@@ -296,20 +281,23 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 	}(doneCh)
 	wg.Wait()
 	doneCh <- struct{}{}
+	console.PrintC("\r" + "Finished" + "\n")
 
-	matchURLCh := make(chan string, 10000)
-	go func(matchURLCh chan<- string) {
+	matchNameCh := make(chan string, 10000)
+	go func(matchNameCh chan<- string) {
 		itemFunc := func(prefix patricia.Prefix, item patricia.Item) error {
-			matchURLCh <- string(prefix)
+			matchNameCh <- string(prefix)
 			return nil
 		}
 		firstTrie.Visit(itemFunc)
-		defer close(matchURLCh)
-	}(matchURLCh)
-	for matchURL := range matchURLCh {
-		if !secondTrie.Match(patricia.Prefix(matchURL)) {
+		defer close(matchNameCh)
+	}(matchNameCh)
+	for matchName := range matchNameCh {
+		if !secondTrie.Match(patricia.Prefix(matchName)) {
+			firstURLDelimited := firstClnt.URL().String()[:strings.LastIndex(firstClnt.URL().String(), string(firstClnt.URL().Separator))+1]
+			firstURL := firstURLDelimited + matchName
 			ch <- diff{
-				message: "‘" + matchURL + "’ Only in ‘" + firstClnt.URL().String() + "’",
+				message: "‘" + firstURL + "’ Only in ‘" + firstClnt.URL().String() + "’",
 				err:     nil,
 			}
 		}
