@@ -18,9 +18,12 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
+	"sync"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/iodine"
+	"github.com/tchap/go-patricia/patricia"
 )
 
 //
@@ -56,6 +59,60 @@ func urlJoinPath(url1, url2 string) (newURLStr string, err error) {
 	u1.Path = filepath.Join(u1.Path, u2.Path)
 	newURLStr = u1.String()
 	return newURLStr, nil
+}
+
+func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
+	defer close(ch)
+	firstClnt, firstContent, err := url2Stat(firstURL)
+	if err != nil {
+		ch <- diff{
+			message: "Failed to stat ‘" + firstURL + "’",
+			err:     NewIodine(iodine.New(err, nil)),
+		}
+		return
+	}
+	secondClnt, secondContent, err := url2Stat(secondURL)
+	if err != nil {
+		ch <- diff{
+			message: "Failed to stat ‘" + secondURL + "’",
+			err:     NewIodine(iodine.New(err, nil)),
+		}
+		return
+	}
+	if firstContent.Type.IsRegular() {
+		switch {
+		case secondContent.Type.IsDir():
+			newSecondURL, err := urlJoinPath(secondURL, firstURL)
+			if err != nil {
+				ch <- diff{
+					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + firstURL,
+					err:     NewIodine(iodine.New(err, nil)),
+				}
+				return
+			}
+			doDiffObjects(firstURL, newSecondURL, ch)
+		case !secondContent.Type.IsRegular():
+			ch <- diff{
+				message: "‘" + firstURL + "’ and " + "‘" + secondURL + "’ differs in type.",
+				err:     nil,
+			}
+			return
+		case secondContent.Type.IsRegular():
+			doDiffObjects(firstURL, secondURL, ch)
+		}
+	}
+	if firstContent.Type.IsDir() {
+		switch {
+		case !secondContent.Type.IsDir():
+			ch <- diff{
+				message: "‘" + firstURL + "’ and " + "‘" + secondURL + "’ differs in type.",
+				err:     nil,
+			}
+			return
+		default:
+			doDiffDirs(firstClnt, secondClnt, recursive, ch)
+		}
+	}
 }
 
 // doDiffObjects - Diff two object URLs
@@ -104,27 +161,27 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	}
 }
 
-func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive bool, ch chan diff) {
-	for contentCh := range firstClnt.List(recursive) {
+func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
+	for contentCh := range firstClnt.List(false) {
 		if contentCh.Err != nil {
 			ch <- diff{
-				message: "Failed to list ‘" + firstURL + "’",
+				message: "Failed to list ‘" + firstClnt.URL().String() + "’",
 				err:     NewIodine(iodine.New(contentCh.Err, nil)),
 			}
 			return
 		}
-		newFirstURL, err := urlJoinPath(firstURL, contentCh.Content.Name)
+		newFirstURL, err := urlJoinPath(firstClnt.URL().String(), contentCh.Content.Name)
 		if err != nil {
 			ch <- diff{
-				message: "Unable to construct new URL from ‘" + firstURL + "’ using ‘" + contentCh.Content.Name + "’",
+				message: "Unable to construct new URL from ‘" + firstClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’",
 				err:     NewIodine(iodine.New(err, nil)),
 			}
 			return
 		}
-		newSecondURL, err := urlJoinPath(secondURL, contentCh.Content.Name)
+		newSecondURL, err := urlJoinPath(secondClnt.URL().String(), contentCh.Content.Name)
 		if err != nil {
 			ch <- diff{
-				message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + contentCh.Content.Name + "’",
+				message: "Unable to construct new URL from ‘" + secondClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’",
 				err:     NewIodine(iodine.New(err, nil)),
 			}
 			return
@@ -134,13 +191,13 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 		switch {
 		case errFirst != nil && errSecond == nil:
 			ch <- diff{
-				message: "‘" + newSecondURL + "’ Only in ‘" + secondURL + "’",
+				message: "‘" + newSecondURL + "’ Only in ‘" + secondClnt.URL().String() + "’",
 				err:     nil,
 			}
 			continue
 		case errFirst == nil && errSecond != nil:
 			ch <- diff{
-				message: "‘" + newFirstURL + "’ Only in ‘" + firstURL + "’",
+				message: "‘" + newFirstURL + "’ Only in ‘" + firstClnt.URL().String() + "’",
 				err:     nil,
 			}
 			continue
@@ -168,38 +225,85 @@ func dodiffdirs(firstClnt client.Client, firstURL, secondURL string, recursive b
 	} // End of for-loop
 }
 
-// doDiffDirs - Diff two Dir URLs
-func doDiffDirs(firstURL, secondURL string, recursive bool, ch chan diff) {
-	firstClnt, firstContent, err := url2Stat(firstURL)
-	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’",
-			err:     NewIodine(iodine.New(err, nil)),
+func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
+	firstTrie := patricia.NewTrie()
+	secondTrie := patricia.NewTrie()
+	wg := new(sync.WaitGroup)
+
+	wg.Add(1)
+	go func(ch chan<- diff) {
+		defer wg.Done()
+		for firstContentCh := range firstClnt.List(true) {
+			if firstContentCh.Err != nil {
+				ch <- diff{
+					message: "Failed to list ‘" + firstClnt.URL().String() + "’",
+					err:     NewIodine(iodine.New(firstContentCh.Err, nil)),
+				}
+				return
+			}
+			firstURLDelimited := firstClnt.URL().String()[:strings.LastIndex(firstClnt.URL().String(), string(firstClnt.URL().Separator))+1]
+			newFirstURL := firstURLDelimited + firstContentCh.Content.Name
+			newFirstURLParse, err := client.Parse(newFirstURL)
+			if err != nil {
+				ch <- diff{
+					message: "Unable to construct new URL from ‘" + firstClnt.URL().String() + "’ using ‘" + firstContentCh.Content.Name + "’",
+					err:     NewIodine(iodine.New(err, nil)),
+				}
+				return
+			}
+			firstTrie.Insert(patricia.Prefix(newFirstURLParse.String()), struct{}{})
 		}
-		return
-	}
-	_, secondContent, err := url2Stat(secondURL)
-	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’",
-			err:     NewIodine(iodine.New(err, nil)),
+	}(ch)
+	wg.Add(1)
+	go func(ch chan<- diff) {
+		defer wg.Done()
+		for secondContentCh := range secondClnt.List(true) {
+			if secondContentCh.Err != nil {
+				ch <- diff{
+					message: "Failed to list ‘" + secondClnt.URL().String() + "’",
+					err:     NewIodine(iodine.New(secondContentCh.Err, nil)),
+				}
+				return
+			}
+			secondURLDelimited := secondClnt.URL().String()[:strings.LastIndex(secondClnt.URL().String(), string(secondClnt.URL().Separator))+1]
+			newSecondURL := secondURLDelimited + secondContentCh.Content.Name
+			newSecondURLParse, err := client.Parse(newSecondURL)
+			if err != nil {
+				ch <- diff{
+					message: "Unable to construct new URL from ‘" + secondClnt.URL().String() + "’ using ‘" + secondContentCh.Content.Name + "’",
+					err:     NewIodine(iodine.New(err, nil)),
+				}
+				return
+			}
+			secondTrie.Insert(patricia.Prefix(newSecondURLParse.String()), struct{}{})
 		}
-		return
-	}
-	switch {
-	case firstContent.Type.IsDir():
-		if !secondContent.Type.IsDir() {
+	}(ch)
+	wg.Wait()
+
+	matchURLCh := make(chan string, 10000)
+	go func(matchURLCh chan<- string) {
+		itemFunc := func(prefix patricia.Prefix, item patricia.Item) error {
+			matchURLCh <- string(prefix)
+			return nil
+		}
+		firstTrie.Visit(itemFunc)
+		defer close(matchURLCh)
+	}(matchURLCh)
+	for matchURL := range matchURLCh {
+		if !secondTrie.Match(patricia.Prefix(matchURL)) {
 			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.",
+				message: "‘" + matchURL + "’ Only in ‘" + firstClnt.URL().String() + "’",
 				err:     nil,
 			}
 		}
-	default:
-		ch <- diff{
-			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
-			err:     NewIodine(iodine.New(errNotAnObject{url: firstURL}, nil)),
-		}
+	}
+}
+
+// doDiffDirs - Diff two Dir URLs
+func doDiffDirs(firstClnt, secondClnt client.Client, recursive bool, ch chan diff) {
+	if recursive {
+		dodiffRecursive(firstClnt, secondClnt, ch)
 		return
 	}
-	dodiffdirs(firstClnt, firstURL, secondURL, recursive, ch)
+	dodiff(firstClnt, secondClnt, ch)
 }

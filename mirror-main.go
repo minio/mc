@@ -141,7 +141,7 @@ func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 
-	scanBar := scanBarFactory(sourceURL)
+	scanBar := scanBarFactory("")
 	URLsCh := prepareCastURLs(sourceURL, targetURLs)
 	done := false
 	for done == false {

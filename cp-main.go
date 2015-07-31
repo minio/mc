@@ -24,7 +24,6 @@ import (
 	"math"
 	"os"
 	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/minio/cli"
@@ -143,7 +142,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
-	scanBar := scanBarFactory(strings.Join(sourceURLs, " "))
+	scanBar := scanBarFactory("")
 	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
 	done := false
 
