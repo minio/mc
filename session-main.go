@@ -111,7 +111,7 @@ func sessionExecute(s *sessionV2) {
 	case "cp":
 		doCopyCmdSession(s)
 	case "mirror":
-		doCastCmdSession(s)
+		doMirrorCmdSession(s)
 	}
 }
 

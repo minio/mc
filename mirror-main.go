@@ -35,7 +35,7 @@ import (
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Copy files and folders from a single source to many destinations",
-	Action: runCastCmd,
+	Action: runMirrorCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -50,23 +50,23 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Cast a bucket recursively from Minio cloud storage to multiple buckets on Amazon S3 cloud storage.
+   1. Mirror a bucket recursively from Minio cloud storage to multiple buckets on Amazon S3 cloud storage.
       $ mc {{.Name}} https://play.minio.io:9000/photos/2014... https://s3.amazonaws.com/backup-photos https://s3-west-1.amazonaws.com/local-photos
 
-   2. Cast a local folder recursively to Minio cloud storage and Amazon S3 cloud storage.
+   2. Mirror a local folder recursively to Minio cloud storage and Amazon S3 cloud storage.
       $ mc {{.Name}} backup/... https://play.minio.io:9000/archive https://s3.amazonaws.com/archive
 
-   3. Cast a bucket from aliased Amazon S3 cloud storage to multiple folders on Windows.
+   3. Mirror a bucket from aliased Amazon S3 cloud storage to multiple folders on Windows.
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
 
-   4. Cast a local folder of non english character recursively to Amazon s3 cloud storage and Minio cloud storage.
+   4. Mirror a local folder of non english character recursively to Amazon s3 cloud storage and Minio cloud storage.
       $ mc {{.Name}} 本語/... s3:mylocaldocuments play:backup
 
 `,
 }
 
-// doCast - Cast an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
-func doCast(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
+// doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
+func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
 	defer wg.Done() // Notify that this copy routine is done.
 	defer func() {
 		<-mirrorQueueCh
@@ -99,7 +99,7 @@ func doCast(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *sync.
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.PrintC(CastMessage{
+		console.PrintC(MirrorMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
 		})
@@ -124,15 +124,15 @@ func doCast(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *sync.
 	statusCh <- sURLs
 }
 
-// doCastFake - Perform a fake mirror to update the progress bar appropriately.
-func doCastFake(sURLs mirrorURLs, bar *barSend) {
+// doMirrorFake - Perform a fake mirror to update the progress bar appropriately.
+func doMirrorFake(sURLs mirrorURLs, bar *barSend) {
 	if !globalDebugFlag || !globalJSONFlag {
 		bar.Progress(sURLs.SourceContent.Size)
 	}
 }
 
-// doPrepareCastURLs scans the source URL and prepares a list of objects for mirroring.
-func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
+// doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
+func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURLs := session.Header.CommandArgs[1:]
 	var totalBytes int64
@@ -142,7 +142,7 @@ func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 	dataFP := session.NewDataWriter()
 
 	scanBar := scanBarFactory("")
-	URLsCh := prepareCastURLs(sourceURL, targetURLs)
+	URLsCh := prepareMirrorURLs(sourceURL, targetURLs)
 	done := false
 	for done == false {
 		select {
@@ -176,11 +176,11 @@ func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCastCmdSession(session *sessionV2) {
+func doMirrorCmdSession(session *sessionV2) {
 	trapCh := signalTrap(os.Interrupt, os.Kill)
 
 	if !session.HasData() {
-		doPrepareCastURLs(session, trapCh)
+		doPrepareMirrorURLs(session, trapCh)
 	}
 
 	// Set up progress bar.
@@ -203,7 +203,7 @@ func doCastCmdSession(session *sessionV2) {
 	// Status channel for receiveing mirror return status.
 	statusCh := make(chan mirrorURLs)
 
-	// Go routine to monitor doCast status and signal traps.
+	// Go routine to monitor doMirror status and signal traps.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -238,7 +238,7 @@ func doCastCmdSession(session *sessionV2) {
 			var sURLs mirrorURLs
 			json.Unmarshal([]byte(scanner.Text()), &sURLs)
 			if isCopied(sURLs.SourceContent.Name) {
-				doCastFake(sURLs, &bar)
+				doMirrorFake(sURLs, &bar)
 			} else {
 				// Wait for other mirror routines to
 				// complete. We only have limited CPU
@@ -247,7 +247,7 @@ func doCastCmdSession(session *sessionV2) {
 				// Account for each mirror routines we start.
 				mirrorWg.Add(1)
 				// Do mirroring in background concurrently.
-				go doCast(sURLs, &bar, mirrorQueue, mirrorWg, statusCh)
+				go doMirror(sURLs, &bar, mirrorQueue, mirrorWg, statusCh)
 			}
 		}
 		mirrorWg.Wait()
@@ -256,8 +256,8 @@ func doCastCmdSession(session *sessionV2) {
 	wg.Wait()
 }
 
-func runCastCmd(ctx *cli.Context) {
-	checkCastSyntax(ctx)
+func runMirrorCmd(ctx *cli.Context) {
+	checkMirrorSyntax(ctx)
 
 	session := newSessionV2()
 
@@ -278,7 +278,7 @@ func runCastCmd(ctx *cli.Context) {
 		console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), err)
 	}
 
-	doCastCmdSession(session)
+	doMirrorCmdSession(session)
 	session.Close()
 	session.Delete()
 }
