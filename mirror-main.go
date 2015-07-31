@@ -155,6 +155,9 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				console.Errorln(sURLs.Error)
 				break
 			}
+			if sURLs.isEmpty() {
+				break
+			}
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
 				session.Close()
@@ -217,6 +220,7 @@ func doMirrorCmdSession(session *sessionV2) {
 				if sURLs.Error == nil {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
+					console.Println()
 					console.Errorf("Failed to mirror ‘%s’, %s\n", sURLs.SourceContent.Name, NewIodine(sURLs.Error))
 				}
 			case <-trapCh: // Receive interrupt notification.
