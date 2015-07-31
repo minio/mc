@@ -199,14 +199,14 @@ func doCopyCmdSession(session *sessionV2) {
 	isCopied := isCopiedFactory(session.Header.LastCopied)
 
 	wg := new(sync.WaitGroup)
-	// Limit numner of cast routines based on available CPU resources.
+	// Limit number of copy routines based on available CPU resources.
 	cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
 	defer close(cpQueue)
 
-	// Status channel for receiveing cast return status.
+	// Status channel for receiveing copy return status.
 	statusCh := make(chan copyURLs)
 
-	// Go routine to monitor doCast status and signal traps.
+	// Go routine to monitor doCopy status and signal traps.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -231,7 +231,7 @@ func doCopyCmdSession(session *sessionV2) {
 		}
 	}()
 
-	// Go routine to perform concurrently casting.
+	// Go routine to perform concurrently copying.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -244,13 +244,13 @@ func doCopyCmdSession(session *sessionV2) {
 			if isCopied(cpURLs.SourceContent.Name) {
 				doCopyFake(cpURLs, &bar)
 			} else {
-				// Wait for other cast routines to
+				// Wait for other copy routines to
 				// complete. We only have limited CPU
 				// and network resources.
 				cpQueue <- true
-				// Account for each cast routines we start.
+				// Account for each copy routines we start.
 				copyWg.Add(1)
-				// Do casting in background concurrently.
+				// Do copying in background concurrently.
 				go doCopy(cpURLs, &bar, cpQueue, copyWg, statusCh)
 			}
 		}
