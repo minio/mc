@@ -20,8 +20,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/iodine"
 	"github.com/tchap/go-patricia/patricia"
 )
@@ -278,7 +280,22 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 			secondTrie.Insert(patricia.Prefix(newSecondURLParse.String()), struct{}{})
 		}
 	}(ch)
+
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+	go func(doneCh <-chan struct{}) {
+		cursorCh := cursorAnimate()
+		for {
+			select {
+			case <-time.Tick(100 * time.Millisecond):
+				console.PrintC("\r" + "Scanning.. " + string(<-cursorCh))
+			case <-doneCh:
+				return
+			}
+		}
+	}(doneCh)
 	wg.Wait()
+	doneCh <- struct{}{}
 
 	matchURLCh := make(chan string, 10000)
 	go func(matchURLCh chan<- string) {
