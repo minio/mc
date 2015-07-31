@@ -90,65 +90,12 @@ func runDiffCmd(ctx *cli.Context) {
 		}
 		console.Infoln(diff.message)
 	}
-}
-
-func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
-	defer close(ch)
-	_, firstContent, err := url2Stat(firstURL)
-	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’",
-			err:     NewIodine(iodine.New(err, nil)),
-		}
-		return
-	}
-	_, secondContent, err := url2Stat(secondURL)
-	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’",
-			err:     NewIodine(iodine.New(err, nil)),
-		}
-		return
-	}
-	if firstContent.Type.IsRegular() {
-		switch {
-		case secondContent.Type.IsDir():
-			newSecondURL, err := urlJoinPath(secondURL, firstURL)
-			if err != nil {
-				ch <- diff{
-					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + firstURL,
-					err:     NewIodine(iodine.New(err, nil)),
-				}
-				return
-			}
-			doDiffObjects(firstURL, newSecondURL, ch)
-		case !secondContent.Type.IsRegular():
-			ch <- diff{
-				message: "‘" + firstURL + "’ and " + "‘" + secondURL + "’ differs in type.",
-				err:     nil,
-			}
-			return
-		case secondContent.Type.IsRegular():
-			doDiffObjects(firstURL, secondURL, ch)
-		}
-	}
-	if firstContent.Type.IsDir() {
-		switch {
-		case !secondContent.Type.IsDir():
-			ch <- diff{
-				message: "‘" + firstURL + "’ and " + "‘" + secondURL + "’ differs in type.",
-				err:     nil,
-			}
-			return
-		default:
-			doDiffDirs(firstURL, secondURL, recursive, ch)
-		}
-	}
+	console.Println()
 }
 
 // doDiffCmd - Execute the diff command
 func doDiffCmd(firstURL, secondURL string, recursive bool) <-chan diff {
-	ch := make(chan diff)
+	ch := make(chan diff, 10000)
 	go doDiffInRoutine(firstURL, secondURL, recursive, ch)
 	return ch
 }

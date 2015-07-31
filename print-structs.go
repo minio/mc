@@ -106,7 +106,7 @@ func (c CopyMessage) String() string {
 	return console.JSON(string(copyMessageBytes) + "\n")
 }
 
-// CastMessage container for file cast messages
+// CastMessage container for file mirror messages
 type CastMessage struct {
 	Version string   `json:"version"`
 	Source  string   `json:"source"`
@@ -114,15 +114,15 @@ type CastMessage struct {
 	Length  int64    `json:"length"`
 }
 
-// String string printer for cast message
+// String string printer for mirror message
 func (s CastMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("‘%s’ -> ‘%s’\n", s.Source, s.Targets)
 	}
 	s.Version = "1.0.0"
-	castMessageBytes, err := json.MarshalIndent(s, "", "\t")
+	mirrorMessageBytes, err := json.MarshalIndent(s, "", "\t")
 	if err != nil {
 		panic(err)
 	}
-	return console.JSON(string(castMessageBytes) + "\n")
+	return console.JSON(string(mirrorMessageBytes) + "\n")
 }

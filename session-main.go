@@ -29,7 +29,7 @@ import (
 // Help message.
 var sessionCmd = cli.Command{
 	Name:   "session",
-	Usage:  "Manage sessions for cp and cast",
+	Usage:  "Manage sessions for cp and mirror",
 	Action: runSessionCmd,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -110,7 +110,7 @@ func sessionExecute(s *sessionV2) {
 	switch s.Header.CommandType {
 	case "cp":
 		doCopyCmdSession(s)
-	case "cast":
+	case "mirror":
 		doCastCmdSession(s)
 	}
 }

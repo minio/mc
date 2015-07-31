@@ -32,8 +32,8 @@ import (
 )
 
 // Help message.
-var castCmd = cli.Command{
-	Name:   "cast",
+var mirrorCmd = cli.Command{
+	Name:   "mirror",
 	Usage:  "Copy files and folders from a single source to many destinations",
 	Action: runCastCmd,
 	CustomHelpTemplate: `NAME:
@@ -50,29 +50,26 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Cast an object from local filesystem to Amazon S3 cloud storage.
-      $ mc {{.Name}} star-trek-episode-10-season4.ogg https://s3.amazonaws.com/trekarchive
-
-   2. Cast a bucket recursively from Minio cloud storage to multiple buckets on Amazon S3 cloud storage.
+   1. Cast a bucket recursively from Minio cloud storage to multiple buckets on Amazon S3 cloud storage.
       $ mc {{.Name}} https://play.minio.io:9000/photos/2014... https://s3.amazonaws.com/backup-photos https://s3-west-1.amazonaws.com/local-photos
 
-   3. Cast a local folder recursively to Minio cloud storage and Amazon S3 cloud storage.
+   2. Cast a local folder recursively to Minio cloud storage and Amazon S3 cloud storage.
       $ mc {{.Name}} backup/... https://play.minio.io:9000/archive https://s3.amazonaws.com/archive
 
-   4. Cast a bucket from aliased Amazon S3 cloud storage to multiple folders on Windows.
+   3. Cast a bucket from aliased Amazon S3 cloud storage to multiple folders on Windows.
       $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
 
-   5. Cast a local folder of non english character recursively to Amazon s3 cloud storage and Minio cloud storage.
+   4. Cast a local folder of non english character recursively to Amazon s3 cloud storage and Minio cloud storage.
       $ mc {{.Name}} 本語/... s3:mylocaldocuments play:backup
 
 `,
 }
 
-// doCast - Cast an object to multiple destination. castURLs status contains a copy of sURLs and error if any.
-func doCast(sURLs castURLs, bar *barSend, castQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- castURLs) {
+// doCast - Cast an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
+func doCast(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
 	defer wg.Done() // Notify that this copy routine is done.
 	defer func() {
-		<-castQueueCh
+		<-mirrorQueueCh
 	}()
 
 	if sURLs.Error != nil { // Errorneous sURLs passed.
@@ -127,14 +124,14 @@ func doCast(sURLs castURLs, bar *barSend, castQueueCh <-chan bool, wg *sync.Wait
 	statusCh <- sURLs
 }
 
-// doCastFake - Perform a fake cast to update the progress bar appropriately.
-func doCastFake(sURLs castURLs, bar *barSend) {
+// doCastFake - Perform a fake mirror to update the progress bar appropriately.
+func doCastFake(sURLs mirrorURLs, bar *barSend) {
 	if !globalDebugFlag || !globalJSONFlag {
 		bar.Progress(sURLs.SourceContent.Size)
 	}
 }
 
-// doPrepareCastURLs scans the source URL and prepares a list of objects for casting.
+// doPrepareCastURLs scans the source URL and prepares a list of objects for mirroring.
 func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURLs := session.Header.CommandArgs[1:]
@@ -144,7 +141,7 @@ func doPrepareCastURLs(session *sessionV2, trapCh <-chan bool) {
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 
-	scanBar := scanBarFactory(sourceURL)
+	scanBar := scanBarFactory("")
 	URLsCh := prepareCastURLs(sourceURL, targetURLs)
 	done := false
 	for done == false {
@@ -200,11 +197,11 @@ func doCastCmdSession(session *sessionV2) {
 	isCopied := isCopiedFactory(session.Header.LastCopied)
 
 	wg := new(sync.WaitGroup)
-	// Limit numner of cast routines based on available CPU resources.
-	castQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-	defer close(castQueue)
-	// Status channel for receiveing cast return status.
-	statusCh := make(chan castURLs)
+	// Limit numner of mirror routines based on available CPU resources.
+	mirrorQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
+	defer close(mirrorQueue)
+	// Status channel for receiveing mirror return status.
+	statusCh := make(chan mirrorURLs)
 
 	// Go routine to monitor doCast status and signal traps.
 	wg.Add(1)
@@ -220,7 +217,7 @@ func doCastCmdSession(session *sessionV2) {
 				if sURLs.Error == nil {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
-					console.Errorf("Failed to cast ‘%s’, %s\n", sURLs.SourceContent.Name, NewIodine(sURLs.Error))
+					console.Errorf("Failed to mirror ‘%s’, %s\n", sURLs.SourceContent.Name, NewIodine(sURLs.Error))
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()
@@ -230,30 +227,30 @@ func doCastCmdSession(session *sessionV2) {
 		}
 	}()
 
-	// Go routine to perform concurrently casting.
+	// Go routine to perform concurrently mirroring.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		castWg := new(sync.WaitGroup)
+		mirrorWg := new(sync.WaitGroup)
 		defer close(statusCh)
 
 		for scanner.Scan() {
-			var sURLs castURLs
+			var sURLs mirrorURLs
 			json.Unmarshal([]byte(scanner.Text()), &sURLs)
 			if isCopied(sURLs.SourceContent.Name) {
 				doCastFake(sURLs, &bar)
 			} else {
-				// Wait for other cast routines to
+				// Wait for other mirror routines to
 				// complete. We only have limited CPU
 				// and network resources.
-				castQueue <- true
-				// Account for each cast routines we start.
-				castWg.Add(1)
-				// Do casting in background concurrently.
-				go doCast(sURLs, &bar, castQueue, castWg, statusCh)
+				mirrorQueue <- true
+				// Account for each mirror routines we start.
+				mirrorWg.Add(1)
+				// Do mirroring in background concurrently.
+				go doCast(sURLs, &bar, mirrorQueue, mirrorWg, statusCh)
 			}
 		}
-		castWg.Wait()
+		mirrorWg.Wait()
 	}()
 
 	wg.Wait()
@@ -265,7 +262,7 @@ func runCastCmd(ctx *cli.Context) {
 	session := newSessionV2()
 
 	var err error
-	session.Header.CommandType = "cast"
+	session.Header.CommandType = "mirror"
 	session.Header.RootPath, err = os.Getwd()
 	if err != nil {
 		session.Close()
