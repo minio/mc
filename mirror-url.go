@@ -34,6 +34,16 @@ type mirrorURLs struct {
 	Error          error `json:"-"`
 }
 
+func (m mirrorURLs) isEmpty() bool {
+	if m.SourceContent == nil && len(m.TargetContents) == 0 && m.Error == nil {
+		return true
+	}
+	if m.SourceContent.Size == 0 && len(m.TargetContents) == 0 && m.Error == nil {
+		return true
+	}
+	return false
+}
+
 //
 //   * MIRROR ARGS - VALID CASES
 //   =========================
@@ -67,12 +77,6 @@ func checkMirrorSyntax(ctx *cli.Context) {
 				console.Fatalf("Source ‘%s’ is a folder. Please use ‘%s...’ to recursively copy this folder and its contents.\n", srcURL, srcURL)
 			}
 			console.Fatalf("Source ‘%s’ is not a regular file.\n", srcURL)
-		}
-	}
-	// Recursive URLs are not allowed in target.
-	for _, tgtURL := range tgtURLs {
-		if isURLRecursive(tgtURL) {
-			console.Fatalf("Target ‘%s’ cannot be recursive. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
 		}
 	}
 
@@ -111,162 +115,68 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-// prepareSingleMirrorURLTypeA - prepares a single source and single target argument for mirroring.
-func prepareSingleMirrorURLsTypeA(sourceURL string, targetURL string) mirrorURLs {
-	_, sourceContent, err := url2Stat(sourceURL)
-	if err != nil { // Source does not exist or insufficient privileges.
-		return mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
-	}
-	if !sourceContent.Type.IsRegular() { // Source is not a regular file
-		return mirrorURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
-	}
-
-	// All OK.. We can proceed. Type A
-	sourceContent.Name = sourceURL
-	return mirrorURLs{SourceContent: sourceContent, TargetContents: []*client.Content{{Name: targetURL}}}
-}
-
-// prepareMirrorURLsTypeA - A: mirror(f, f) -> mirror(f, f)
-func prepareMirrorURLsTypeA(sourceURL string, targetURLs []string) mirrorURLs {
-	var sURLs mirrorURLs
-	for _, targetURL := range targetURLs { // Prepare each target separately
-		URLs := prepareSingleMirrorURLsTypeA(sourceURL, targetURL)
-		if URLs.Error != nil {
-			return mirrorURLs{Error: NewIodine(iodine.New(URLs.Error, nil))}
-		}
-		sURLs.SourceContent = URLs.SourceContent
-		sURLs.TargetContents = append(sURLs.TargetContents, URLs.TargetContents...)
-	}
-	return sURLs
-}
-
-func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) {
-	sourceTrie := patricia.NewTrie()
-	var targetTries []*patricia.Trie
-	wg := new(sync.WaitGroup)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for sourceContentCh := range sourceClnt.List(true) {
-			if sourceContentCh.Err != nil {
-				return
-			}
-			sourceURLDelimited := sourceClnt.URL().String()[:strings.LastIndex(sourceClnt.URL().String(), string(sourceClnt.URL().Separator))+1]
-			newSourceURL := sourceURLDelimited + sourceContentCh.Content.Name
-			newSourceURLParse, err := client.Parse(newSourceURL)
-			if err != nil {
-				return
-			}
-			sourceTrie.Insert(patricia.Prefix(newSourceURLParse.String()), struct{}{})
-		}
-	}()
-
-	for _, targetClnt := range targetClnts {
-		wg.Add(1)
-		go func(targetClnt client.Client) {
-			defer wg.Done()
-			targetTrie := patricia.NewTrie()
-			for targetContentCh := range targetClnt.List(true) {
-				if targetContentCh.Err != nil {
-					return
-				}
-				targetURLDelimited := targetClnt.URL().String()[:strings.LastIndex(targetClnt.URL().String(), string(targetClnt.URL().Separator))+1]
-				newTargetURL := targetURLDelimited + targetContentCh.Content.Name
-				newTargetURLParse, err := client.Parse(newTargetURL)
-				if err != nil {
-					return
-				}
-				targetTrie.Insert(patricia.Prefix(newTargetURLParse.String()), struct{}{})
-				targetTries = append(targetTries, targetTrie)
-			}
-		}(targetClnt)
-	}
-	wg.Wait()
-
-	matchURLCh := make(chan string, 10000)
-	go func(matchURLCh chan<- string) {
-		itemFunc := func(prefix patricia.Prefix, item patricia.Item) error {
-			matchURLCh <- string(prefix)
-			return nil
-		}
-		sourceTrie.Visit(itemFunc)
-		defer close(matchURLCh)
-	}(matchURLCh)
-	for matchURL := range matchURLCh {
-		for _, targetTrie := range targetTries {
-			if targetTrie.Match(patricia.Prefix(matchURL)) {
-				continue
-			}
-		}
-	}
-}
-
-// prepareMirrorURLsTypeC - C:
-func prepareMirrorURLsTypeC(sourceURL string, targetURLs []string) <-chan mirrorURLs {
+func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
 	go func() {
 		defer close(mirrorURLsCh)
-		if !isURLRecursive(sourceURL) {
-			// Source is not of recursive type.
-			mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(errSourceNotRecursive{URL: sourceURL}, nil))}
-			return
-		}
-		// add `/` after trimming off `...` to emulate folders
-		sourceURL = stripRecursiveURL(sourceURL)
-		sourceClient, sourceContent, err := url2Stat(sourceURL)
-		// Source exist?
-		if err != nil {
-			// Source does not exist or insufficient privileges.
-			mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
-			return
-		}
+		sourceTrie := patricia.NewTrie()
+		targetTries := make([]*patricia.Trie, len(targetClnts))
+		wg := new(sync.WaitGroup)
 
-		if !sourceContent.Type.IsDir() {
-			// Source is not a dir.
-			mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(errSourceIsNotDir{URL: sourceURL}, nil))}
-			return
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for sourceContentCh := range sourceClnt.List(true) {
+				if sourceContentCh.Err != nil {
+					return
+				}
+				sourceTrie.Insert(patricia.Prefix(sourceContentCh.Content.Name), sourceContentCh.Content.Size)
+			}
+		}()
 
-		for sourceContent := range sourceClient.List(true) {
-			if sourceContent.Err != nil {
-				// Listing failed.
-				mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(sourceContent.Err, nil))}
-				continue
-			}
-			if !sourceContent.Content.Type.IsRegular() {
-				// Source is not a regular file. Skip it for mirror.
-				continue
-			}
-			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-			sourceURLParse, err := client.Parse(sourceURL)
-			if err != nil {
-				mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
-				continue
-			}
-			var newTargetURLs []string
-			var sourceContentParse *client.URL
-			for _, targetURL := range targetURLs {
-				targetURLParse, err := client.Parse(targetURL)
-				if err != nil {
-					mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
-					continue
+		for i, targetClnt := range targetClnts {
+			wg.Add(1)
+			go func(i int, targetClnt client.Client) {
+				defer wg.Done()
+				targetTrie := patricia.NewTrie()
+				for targetContentCh := range targetClnt.List(true) {
+					if targetContentCh.Err != nil {
+						return
+					}
+					targetTrie.Insert(patricia.Prefix(targetContentCh.Content.Name), struct{}{})
 				}
-				sourceURLDelimited := sourceURLParse.String()[:strings.LastIndex(sourceURLParse.String(),
-					string(sourceURLParse.Separator))+1]
-				sourceContentName := sourceContent.Content.Name
-				sourceContentURL := sourceURLDelimited + sourceContentName
-				sourceContentParse, err = client.Parse(sourceContentURL)
-				if err != nil {
-					mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceContentName}, nil))}
-					continue
-				}
-				// Construct target path from recursive path of source without its prefix dir.
-				newTargetURLParse := *targetURLParse
-				newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, sourceContentName)
-				newTargetURLs = append(newTargetURLs, newTargetURLParse.String())
+				targetTries[i] = targetTrie
+			}(i, targetClnt)
+		}
+		wg.Wait()
+
+		matchNameCh := make(chan string, 10000)
+		go func(matchNameCh chan<- string) {
+			itemFunc := func(prefix patricia.Prefix, item patricia.Item) error {
+				matchNameCh <- string(prefix)
+				return nil
 			}
-			mirrorURLsCh <- prepareMirrorURLsTypeA(sourceContentParse.String(), newTargetURLs)
+			sourceTrie.Visit(itemFunc)
+			defer close(matchNameCh)
+		}(matchNameCh)
+		for matchName := range matchNameCh {
+			sourceContent := new(client.Content)
+			var targetContents []*client.Content
+			for i, targetTrie := range targetTries {
+				if !targetTrie.Match(patricia.Prefix(matchName)) {
+					sourceURLDelimited := sourceClnt.URL().String()[:strings.LastIndex(sourceClnt.URL().String(),
+						string(sourceClnt.URL().Separator))+1]
+					newTargetURLParse := targetClnts[i].URL()
+					newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, matchName)
+					sourceContent.Size = sourceTrie.Get(patricia.Prefix(matchName)).(int64)
+					sourceContent.Name = sourceURLDelimited + matchName
+					targetContents = append(targetContents, &client.Content{Name: newTargetURLParse.String()})
+				}
+			}
+			mirrorURLsCh <- mirrorURLs{
+				SourceContent:  sourceContent,
+				TargetContents: targetContents,
+			}
 		}
 	}()
 	return mirrorURLsCh
@@ -275,9 +185,37 @@ func prepareMirrorURLsTypeC(sourceURL string, targetURLs []string) <-chan mirror
 // prepareMirrorURLs - prepares target and source URLs for mirroring.
 func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
+
 	go func() {
 		defer close(mirrorURLsCh)
-		for sURLs := range prepareMirrorURLsTypeC(sourceURL, targetURLs) {
+		sourceClnt, err := url2Client(stripRecursiveURL(sourceURL))
+		if err != nil {
+			mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
+			return
+		}
+		targetClnts := make([]client.Client, len(targetURLs))
+		for i, targetURL := range targetURLs {
+			targetURL = stripRecursiveURL(targetURL)
+			targetClnt, targetContent, err := url2Stat(targetURL)
+			if err != nil {
+				mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
+				return
+			}
+			// if one of the targets is not dir exit
+			if !targetContent.Type.IsDir() {
+				mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
+				return
+			}
+			// special case, be extremely careful before changing this behavior - will lead to data loss
+			newTargetURL := strings.TrimSuffix(targetURL, string(targetClnt.URL().Separator)) + string(targetClnt.URL().Separator)
+			targetClnt, err = url2Client(newTargetURL)
+			if err != nil {
+				mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
+				return
+			}
+			targetClnts[i] = targetClnt
+		}
+		for sURLs := range deltaSourceTargets(sourceClnt, targetClnts) {
 			mirrorURLsCh <- sURLs
 		}
 	}()
