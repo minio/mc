@@ -38,31 +38,31 @@ deadcode:
 	@echo "Running $@:"
 	@test -z "$$(deadcode | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
 
-pre-build:
-	@echo "Running pre-build:"
-
-gomake-all: getdeps verifiers
+build: getdeps verifiers
 	@echo "Installing mc:"
-	@go run make.go -install
+	@godep go test -race ./...
+
+gomake-all: build
+	@godep go install github.com/minio/mc
 	@mkdir -p $(HOME)/.mc
+
+release: genversion
+	@echo "Installing minio with new version.go:"
+	@godep go install github.com/minio/mc
+	@mkdir -p $(HOME)/.mc
+
+genversion:
+	@echo "Generating a new version.go:"
+	@godep go run genversion.go
 
 coverage:
 	@go test -race -coverprofile=cover.out
 	@go tool cover -html=cover.out && echo "Visit your browser"
 
-release: getdeps verifiers
-	@echo "Installing mc:"
-	@go run make.go -release
-	@go run make.go -install
-	@mkdir -p $(HOME)/.mc
-
 godepupdate:
 	@(env bash $(PWD)/buildscripts/updatedeps.sh)
 save:
 	@godep save ./...
-
-restore:
-	@godep restore
 
 env:
 	@godep go env
