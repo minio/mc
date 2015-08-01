@@ -19,11 +19,8 @@
 package main
 
 import (
-	"bytes"
-	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"text/template"
 	"time"
 )
@@ -75,48 +72,7 @@ func getVersion() string {
 	return nil
 }
 
-type command struct {
-	cmd    *exec.Cmd
-	stderr *bytes.Buffer
-	stdout *bytes.Buffer
-}
-
-func (c command) runCommand() error {
-	c.cmd.Stdout = c.stdout
-	c.cmd.Stderr = c.stderr
-	return c.cmd.Run()
-}
-func (c command) String() string {
-	message := c.stderr.String()
-	message += c.stdout.String()
-	return message
-}
-
-func runMcInstall() {
-	mcBuild := command{exec.Command("godep", "go", "build", "-a", "./..."), &bytes.Buffer{}, &bytes.Buffer{}}
-	mcTest := command{exec.Command("godep", "go", "test", "-race", "./..."), &bytes.Buffer{}, &bytes.Buffer{}}
-	mcInstall := command{exec.Command("godep", "go", "install", "-a", "github.com/minio/mc"), &bytes.Buffer{}, &bytes.Buffer{}}
-	mcBuildErr := mcBuild.runCommand()
-	if mcBuildErr != nil {
-		fmt.Print(mcBuild)
-		os.Exit(1)
-	}
-	fmt.Print(mcBuild)
-	mcTestErr := mcTest.runCommand()
-	if mcTestErr != nil {
-		fmt.Println(mcTest)
-		os.Exit(1)
-	}
-	fmt.Print(mcTest)
-	mcInstallErr := mcInstall.runCommand()
-	if mcInstallErr != nil {
-		fmt.Println(mcInstall)
-		os.Exit(1)
-	}
-	fmt.Print(mcInstall)
-}
-
-func runMcRelease() {
+func genVersion() {
 	t := time.Now().UTC()
 	date := t.Format(time.RFC3339Nano)
 	tag := fmt.Sprintf(
@@ -137,15 +93,5 @@ func runMcRelease() {
 }
 
 func main() {
-	releaseFlag := flag.Bool("release", false, "make a release")
-	installFlag := flag.Bool("install", false, "install mc")
-
-	flag.Parse()
-
-	if *releaseFlag {
-		runMcRelease()
-	}
-	if *installFlag {
-		runMcInstall()
-	}
+	genVersion()
 }
