@@ -23,7 +23,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -64,12 +64,12 @@ func (b bySessionWhen) Len() int           { return len(b) }
 func (b bySessionWhen) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b bySessionWhen) Less(i, j int) bool { return b[i].Header.When.Before(b[j].Header.When) }
 
-func listSessions() error {
+func listSessions() *probe.Error {
 	var bySessions []*sessionV2
 	for _, sid := range getSessionIDs() {
 		s, err := loadSessionV2(sid)
 		if err != nil {
-			return NewIodine(iodine.New(err, nil))
+			return err.Trace()
 		}
 		bySessions = append(bySessions, s)
 	}
@@ -85,9 +85,7 @@ func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
 			session, err := loadSessionV2(sid)
-			if err != nil {
-				console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(iodine.New(err, nil)))
-			}
+			ifFatal(err)
 			session.Delete()
 		}
 		return
@@ -98,9 +96,7 @@ func clearSession(sid string) {
 	}
 
 	session, err := loadSessionV2(sid)
-	if err != nil {
-		console.Fatalf("Unable to load session ‘%s’, %s", sid, NewIodine(iodine.New(err, nil)))
-	}
+	ifFatal(err)
 	if session != nil {
 		session.Delete()
 	}
@@ -123,17 +119,13 @@ func runSessionCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 	if !isSessionDirExists() {
-		if err := createSessionDir(); err != nil {
-			console.Fatalf("Unable to create session folder. %s\n", err)
-		}
+		ifFatal(createSessionDir())
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions
 	case "list":
 		err := listSessions()
-		if err != nil {
-			console.Fatalln(err)
-		}
+		ifFatal(err)
 	case "resume":
 		if len(ctx.Args().Tail()) != 1 {
 			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -144,38 +136,37 @@ func runSessionCmd(ctx *cli.Context) {
 
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
 
-		_, err := os.Stat(getSessionFile(sid))
-		if err != nil {
+		if _, err := os.Stat(getSessionFile(sid)); err != nil {
 			console.Fatalln(errInvalidSessionID{id: sid})
 		}
 		s, err := loadSessionV2(sid)
-		if err != nil {
-			console.Fatalln(errInvalidSessionID{id: sid})
-		}
+		ifFatal(err)
 		// extra check for testing purposes
 		if s == nil {
 			return
 		}
-		savedCwd, err := os.Getwd()
-		if err != nil {
-			console.Fatalln("Unable to verify your current working folder. %s\n", err)
-		}
-		if s.Header.RootPath != "" {
-			// chdir to RootPath
-			os.Chdir(s.Header.RootPath)
-		}
+		{
+			savedCwd, err := os.Getwd()
+			if err != nil {
+				console.Fatalln("Unable to verify your current working folder. %s\n", err)
+			}
+			if s.Header.RootPath != "" {
+				// chdir to RootPath
+				os.Chdir(s.Header.RootPath)
+			}
 
-		sessionExecute(s)
-		err = s.Close()
-		if err != nil {
-			console.Fatalf("Unable to close session file properly. %s\n", err)
+			sessionExecute(s)
+			err = s.Close()
+			if err != nil {
+				console.Fatalf("Unable to close session file properly. %s\n", err)
+			}
+			err = s.Delete()
+			if err != nil {
+				console.Fatalf("Unable to clear session files properly. %s\n", err)
+			}
+			// change dir back
+			os.Chdir(savedCwd)
 		}
-		err = s.Delete()
-		if err != nil {
-			console.Fatalf("Unable to clear session files properly. %s\n", err)
-		}
-		// change dir back
-		os.Chdir(savedCwd)
 
 	// purge a requested pending session, if "*" purge everything
 	case "clear":

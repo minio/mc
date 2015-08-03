@@ -28,7 +28,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // Help message.
@@ -76,7 +75,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 	}()
 
 	if cpURLs.Error != nil {
-		cpURLs.Error = iodine.New(cpURLs.Error, nil)
+		cpURLs.Error.Trace()
 		statusCh <- cpURLs
 		return
 	}
@@ -90,7 +89,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(length)
 		}
-		cpURLs.Error = NewIodine(iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name}))
+		cpURLs.Error = err.Trace()
 		statusCh <- cpURLs
 		return
 	}
@@ -114,7 +113,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorPut(length)
 		}
-		cpURLs.Error = NewIodine(iodine.New(err, map[string]string{"URL": cpURLs.SourceContent.Name}))
+		cpURLs.Error = err.Trace()
 		statusCh <- cpURLs
 		return
 	}
@@ -154,7 +153,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if cpURLs.Error != nil {
-				console.Errorln(cpURLs.Error)
+				ifError(cpURLs.Error)
 				break
 			}
 
@@ -221,7 +220,7 @@ func doCopyCmdSession(session *sessionV2) {
 					session.Header.LastCopied = cpURLs.SourceContent.Name
 				} else {
 					console.Println()
-					console.Errorf("Failed to copy ‘%s’, %s\n", cpURLs.SourceContent.Name, NewIodine(iodine.New(cpURLs.Error, nil)))
+					ifError(cpURLs.Error)
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()

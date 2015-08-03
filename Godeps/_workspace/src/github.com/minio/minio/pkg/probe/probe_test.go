@@ -1,10 +1,8 @@
-// +build windows
-
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minio Cloud Storage, (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this fs except in compliance with the License.
+ * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,20 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package fs
+package probe
 
 import (
-	"path/filepath"
-	"syscall"
+	"os"
+	"testing"
 )
 
-func normalizePath(path string) string {
-	if filepath.VolumeName(path) == "" && filepath.HasPrefix(path, "\\") {
-		path, err = syscall.FullPath(path)
-		if err != nil {
-			panic(err)
-		}
+func testDummy() *Error {
+	_, e := os.Stat("this-file-cannot-exit-234234232423423")
+	es := New(e)
+	es.Trace("this is hell", "asdf")
+	return es
+}
+
+func TestProbe(t *testing.T) {
+	es := testDummy()
+	if es == nil {
+		t.Fail()
 	}
-	return path
+
+	newES := es.Trace()
+	if newES == nil {
+		t.Fail()
+	}
+	/*
+		fmt.Println(es)
+		fmt.Println(es.JSON())
+		fmt.Println(es.ToError())
+	*/
 }

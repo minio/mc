@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // ``...`` recursiveSeparator
@@ -46,29 +46,25 @@ func stripRecursiveURL(urlStr string) string {
 }
 
 // getExpandedURL - extracts URL string from a single cmd-line argument
-func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err error) {
-	if _, err := client.Parse(urlStr); err != nil {
-		// Not a valid URL. Return error
-		return "", NewIodine(iodine.New(errInvalidURL{arg}, nil))
-	}
+func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err *probe.Error) {
 	// Check and expand Alias
 	urlStr, err = aliasExpand(arg, aliases)
 	if err != nil {
-		return "", NewIodine(iodine.New(err, nil))
+		return "", err.Trace()
 	}
 	if _, err := client.Parse(urlStr); err != nil {
 		// Not a valid URL. Return error
-		return "", NewIodine(iodine.New(errInvalidURL{urlStr}, nil))
+		return "", probe.New(errInvalidURL{urlStr})
 	}
 	return urlStr, nil
 }
 
 // getExpandedURLs - extracts multiple URL strings from a single cmd-line argument
-func getExpandedURLs(args []string, aliases map[string]string) (urls []string, err error) {
+func getExpandedURLs(args []string, aliases map[string]string) (urls []string, err *probe.Error) {
 	for _, arg := range args {
 		u, err := getExpandedURL(arg, aliases)
 		if err != nil {
-			return nil, NewIodine(iodine.New(err, nil))
+			return nil, err.Trace()
 		}
 		urls = append(urls, u)
 	}
@@ -76,16 +72,16 @@ func getExpandedURLs(args []string, aliases map[string]string) (urls []string, e
 }
 
 // args2URLs extracts source and target URLs from command-line args.
-func args2URLs(args []string) ([]string, error) {
+func args2URLs(args []string) ([]string, *probe.Error) {
 	config, err := getMcConfig()
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return nil, err.Trace()
 
 	}
 	// Convert arguments to URLs: expand alias, fix format...
 	URLs, err := getExpandedURLs(args, config.Aliases)
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return nil, err.Trace()
 	}
 	return URLs, nil
 }

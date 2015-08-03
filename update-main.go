@@ -24,7 +24,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Updates container to hold updates json
@@ -55,14 +55,14 @@ EXAMPLES:
 `,
 }
 
-func doUpdateCheck() (string, error) {
+func doUpdateCheck() (string, *probe.Error) {
 	clnt, err := url2Client(mcUpdateURL)
 	if err != nil {
-		return "Unable to create client: " + mcUpdateURL, NewIodine(iodine.New(err, map[string]string{"failedURL": mcUpdateURL}))
+		return "Unable to create client: " + mcUpdateURL, err.Trace()
 	}
 	data, _, err := clnt.GetObject(0, 0)
 	if err != nil {
-		return "Unable to read: " + mcUpdateURL, NewIodine(iodine.New(err, map[string]string{"failedURL": mcUpdateURL}))
+		return "Unable to read: " + mcUpdateURL, err.Trace()
 	}
 	current, _ := time.Parse(time.RFC3339Nano, Version)
 	if current.IsZero() {
@@ -72,9 +72,8 @@ https://dl.minio.io:9000 for continuous updates`
 	}
 	var updates Updates
 	decoder := json.NewDecoder(data)
-	err = decoder.Decode(&updates)
-	if err != nil {
-		return "Unable to parse update fields", NewIodine(iodine.New(err, map[string]string{"failedURL": mcUpdateURL}))
+	if err := decoder.Decode(&updates); err != nil {
+		return "Unable to parse update fields", probe.New(err)
 	}
 	latest, _ := time.Parse(http.TimeFormat, updates.BuildDate)
 	if latest.IsZero() {
@@ -90,7 +89,7 @@ https://dl.minio.io:9000 for continuous updates`
 		}
 		msg, err := printUpdateNotify(updateString, "new", "old")
 		if err != nil {
-			return "", err
+			return "", probe.New(err)
 		}
 		console.Println(msg)
 		return "", nil
@@ -105,9 +104,7 @@ func runUpdateCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	msg, err := doUpdateCheck()
-	if err != nil {
-		console.Fatalln(msg)
-	}
+	ifFatal(err)
 	// no msg do not print one
 	if msg != "" {
 		console.Infoln(msg)

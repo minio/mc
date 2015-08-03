@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 var minWindowsGolangVersion = "1.5"
@@ -112,19 +111,14 @@ func firstTimeRun() {
 			console.Fatalf("Unable to create ‘mc’ config folder. %s\n", err)
 		}
 		config, err := newConfig()
-		if err != nil {
-			console.Fatalln(NewIodine(iodine.New(err, nil)))
-		}
+		ifFatal(err)
 		err = writeConfig(config)
-		if err != nil {
-			console.Fatalln(NewIodine(iodine.New(err, nil)))
-		}
+		ifFatal(err)
 		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}
 	if !isSessionDirExists() {
-		if err := createSessionDir(); err != nil {
-			console.Fatalf("Unable to create ‘mc’ session folder. %s\n", err)
-		}
+		err := createSessionDir()
+		ifFatal(err)
 	}
 	checkGolangVersion()
 }

@@ -18,6 +18,6 @@
 
 package fs
 
-func normalizePath(path string) (string, error) {
-	return path, nil
+func normalizePath(path string) string {
+	return path
 }

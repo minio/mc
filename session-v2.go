@@ -26,7 +26,7 @@ import (
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // migrateSessionV1ToV2 migrates all session files from v1 to v2.
@@ -35,7 +35,7 @@ func migrateSessionV1ToV2() {
 	for _, sid := range getSessionIDsV1() {
 		err := os.Remove(getSessionFileV1(sid))
 		if err != nil {
-			console.Fatalf("Migration failed. Unable to remove old session file %s. %s\n", getSessionFileV1(sid), NewIodine(iodine.New(err, nil)))
+			console.Fatalf("Migration failed. Unable to remove old session file %s. %s\n", getSessionFileV1(sid), probe.New(err))
 		}
 	}
 }
@@ -107,75 +107,72 @@ func (s *sessionV2) NewDataWriter() io.Writer {
 }
 
 // Save this session
-func (s *sessionV2) Save() error {
+func (s *sessionV2) Save() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	err := s.DataFP.Sync()
-	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+	if err := s.DataFP.Sync(); err != nil {
+		return probe.New(err)
 	}
 
 	qs, err := quick.New(s.Header)
 	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
 
 	return qs.Save(getSessionFile(s.SessionID))
 }
 
 // Close ends this session and removes all associated session files.
-func (s *sessionV2) Close() error {
+func (s *sessionV2) Close() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	err := s.DataFP.Close()
-	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+	if err := s.DataFP.Close(); err != nil {
+		return probe.New(err)
 	}
 
 	qs, err := quick.New(s.Header)
 	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
 
 	return qs.Save(getSessionFile(s.SessionID))
 }
 
 // Delete removes all the session files.
-func (s *sessionV2) Delete() error {
+func (s *sessionV2) Delete() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.DataFP != nil {
 		err := os.Remove(s.DataFP.Name())
 		if err != nil {
-			return NewIodine(iodine.New(err, nil))
+			return probe.New(err)
 		}
 	}
 
 	err := os.Remove(getSessionFile(s.SessionID))
 	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return probe.New(err)
 	}
 
 	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return probe.New(err)
 	}
 
 	return nil
 }
 
 // loadSession - reads session file if exists and re-initiates internal variables
-func loadSessionV2(sid string) (*sessionV2, error) {
+func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	if !isSessionDirExists() {
-		return nil, NewIodine(iodine.New(errInvalidArgument{}, nil))
+		return nil, probe.New(errInvalidArgument{})
 	}
 	sessionFile := getSessionFile(sid)
 
-	_, err := os.Stat(sessionFile)
-	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+	if _, err := os.Stat(sessionFile); err != nil {
+		return nil, probe.New(err)
 	}
 
 	s := &sessionV2{}
@@ -184,19 +181,22 @@ func loadSessionV2(sid string) (*sessionV2, error) {
 	s.Header.Version = "1.1.0"
 	qs, err := quick.New(s.Header)
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return nil, err.Trace()
 	}
 	err = qs.Load(sessionFile)
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return nil, err.Trace()
 	}
 
 	s.mutex = new(sync.Mutex)
 	s.Header = qs.Data().(*sessionV2Header)
 
-	s.DataFP, err = os.Open(getSessionDataFile(s.SessionID))
-	if err != nil {
-		console.Fatalf("Unable to open session data file \""+getSessionDataFile(s.SessionID)+"\". %s\n", NewIodine(iodine.New(err, nil)))
+	{
+		var err error
+		s.DataFP, err = os.Open(getSessionDataFile(s.SessionID))
+		if err != nil {
+			console.Fatalf("Unable to open session data file \""+getSessionDataFile(s.SessionID)+"\". %s\n", err)
+		}
 	}
 
 	return s, nil
@@ -209,7 +209,7 @@ func isCopiedFactory(lastCopied string) func(string) bool {
 	copied := true // closure
 	return func(sourceURL string) bool {
 		if sourceURL == "" {
-			console.Fatalf("Empty source URL passed to isCopied() function. %s\n", NewIodine(iodine.New(errUnexpected{}, nil)))
+			console.Fatalf("Empty source URL passed to isCopied() function. %s\n", probe.New(errUnexpected{}))
 		}
 		if lastCopied == "" {
 			return false

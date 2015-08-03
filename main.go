@@ -36,11 +36,10 @@ func checkConfig() {
 	}
 
 	// Ensures config file is sane
-	_, err = getMcConfig()
-	if err != nil {
-		console.Fatalf("Unable to read config file. %s\n", err)
+	{
+		_, err := getMcConfig()
+		ifFatal(err)
 	}
-
 }
 
 func migrate() {

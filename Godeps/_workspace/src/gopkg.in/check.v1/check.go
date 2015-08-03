@@ -335,7 +335,7 @@ func (c *C) logPanic(skip int, value interface{}) {
 			if name == "Value.call" && strings.HasSuffix(path, valueGo) {
 				continue
 			}
-			if name == "call16" && strings.Contains(path, asmGo) {
+			if (name == "call16" || name == "call32") && strings.Contains(path, asmGo) {
 				continue
 			}
 			c.logf("%s:%d\n  in %s", nicePath(file), line, name)

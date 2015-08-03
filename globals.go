@@ -17,8 +17,6 @@
 // This package contains all the global variables and constants. ONLY TO BE ACCESSED VIA GET/SET FUNCTIONS.
 package main
 
-import "github.com/minio/minio/pkg/iodine"
-
 var (
 	globalQuietFlag = false // Quiet flag set via command line
 	globalForceFlag = false // Force flag set via command line
@@ -54,11 +52,3 @@ const (
 const (
 	exampleHostURL = "YOUR-EXAMPLE.COM"
 )
-
-// NewIodine - iodine wrapper for debug flag behavior
-func NewIodine(err error) error {
-	if !globalDebugFlag {
-		return iodine.ToError(err)
-	}
-	return err
-}

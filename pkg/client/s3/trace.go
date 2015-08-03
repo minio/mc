@@ -22,7 +22,6 @@ import (
 	"regexp"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // Trace - tracing structure
@@ -59,7 +58,7 @@ func (t Trace) Request(req *http.Request) (err error) {
 
 	// Undo
 	req.Header.Set("Authorization", origAuth)
-	return iodine.New(err, nil)
+	return err
 }
 
 // Response - Trace HTTP Response
@@ -68,5 +67,5 @@ func (t Trace) Response(res *http.Response) (err error) {
 	if err == nil {
 		console.Debug(string(resTrace))
 	}
-	return iodine.New(err, nil)
+	return err
 }

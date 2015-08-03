@@ -23,13 +23,13 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 type copyURLs struct {
 	SourceContent *client.Content
 	TargetContent *client.Content
-	Error         error
+	Error         *probe.Error `json:"-"`
 }
 
 type copyURLsType uint8
@@ -64,7 +64,7 @@ func checkCopySyntax(ctx *cli.Context) {
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), NewIodine(iodine.New(err, nil)))
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err.Trace())
 	}
 
 	srcURLs := URLs[:len(URLs)-1]
@@ -73,15 +73,18 @@ func checkCopySyntax(ctx *cli.Context) {
 	/****** Generic rules *******/
 	// Recursive URLs are not allowed in target.
 	if isURLRecursive(tgtURL) {
-		console.Fatalf("Recursive option is not supported for target ‘%s’ argument. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Recursive option is not supported for target ‘%s’ argument. %s\n", tgtURL, probe.New(errInvalidArgument{}))
 	}
-	url, err := client.Parse(tgtURL)
-	if err != nil {
-		console.Fatalf("Unable to parse target ‘%s’ argument. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
-	}
-	if url.Host != "" {
-		if url.Path == string(url.Separator) {
-			console.Fatalf("Bucket creation detected for %s, cloud storage URL's should use ‘mc mb’ to create buckets\n", tgtURL)
+	// scope locally
+	{
+		url, err := client.Parse(tgtURL)
+		if err != nil {
+			console.Fatalf("Unable to parse target ‘%s’ argument. %s\n", tgtURL, probe.New(err))
+		}
+		if url.Host != "" {
+			if url.Path == string(url.Separator) {
+				console.Fatalf("Bucket creation detected for %s, cloud storage URL's should use ‘mc mb’ to create buckets\n", tgtURL)
+			}
 		}
 	}
 	switch guessCopyURLType(srcURLs, tgtURL) {
@@ -101,26 +104,26 @@ func checkCopySyntax(ctx *cli.Context) {
 // checkCopySyntaxTypeA verifies if the source and target are valid file arguments.
 func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	if len(srcURLs) != 1 {
-		console.Fatalf("Invalid number of source arguments to copy command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Invalid number of source arguments to copy command. %s\n", probe.New(errInvalidArgument{}))
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
 	// Source exist?.
 	if err != nil {
-		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, err.Trace())
 	}
 	if srcContent.Type.IsDir() {
-		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, probe.New(errInvalidArgument{}))
 	}
 	if !srcContent.Type.IsRegular() {
-		console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, probe.New(errInvalidArgument{}))
 	}
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsRegular() {
-			console.Fatalf("Target ‘%s’ is not a file. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+			console.Fatalf("Target ‘%s’ is not a file. %s\n", tgtURL, probe.New(errInvalidArgument{}))
 		}
 	}
 }
@@ -128,26 +131,26 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid dir.
 func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 	if len(srcURLs) != 1 {
-		console.Fatalf("Invalid number of source arguments to copy command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Invalid number of source arguments to copy command. %s\n", probe.New(errInvalidArgument{}))
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
 	// Source exist?.
 	if err != nil {
-		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, probe.New(err))
 	}
 	if srcContent.Type.IsDir() {
-		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, probe.New(errInvalidArgument{}))
 	}
 	if !srcContent.Type.IsRegular() {
-		console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, probe.New(errInvalidArgument{}))
 	}
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+			console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, probe.New(errInvalidArgument{}))
 		}
 	}
 }
@@ -155,24 +158,24 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 // checkCopySyntaxTypeC verifies if the source is a valid recursive dir and target is a valid dir.
 func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	if len(srcURLs) != 1 {
-		console.Fatalf("Invalid number of source arguments to copy command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Invalid number of source arguments to copy command. %s\n", probe.New(errInvalidArgument{}))
 	}
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(srcURL)
 	// Source exist?.
 	if err != nil {
-		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, err.Trace())
 	}
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), probe.New(errInvalidArgument{}))
 	}
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+			console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, probe.New(errInvalidArgument{}))
 		}
 	}
 }
@@ -185,32 +188,32 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 			_, srcContent, err := url2Stat(srcURL)
 			// Source exist?.
 			if err != nil {
-				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, err.Trace())
 			}
 			if !srcContent.Type.IsDir() { // Ellipses is supported only for folders.
-				console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(errInvalidArgument{}, nil)))
+				console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), probe.New(errInvalidArgument{}))
 			}
 		} else { // Regular URL.
 			_, srcContent, err := url2Stat(srcURL)
 			// Source exist?.
 			if err != nil {
-				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+				console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, err.Trace())
 			}
 			if srcContent.Type.IsDir() {
-				console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+				console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, probe.New(errInvalidArgument{}))
 			}
 			if !srcContent.Type.IsRegular() {
-				console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+				console.Fatalf("Source ‘%s’ is not a file. %s\n", srcURL, probe.New(errInvalidArgument{}))
 			}
 		}
 	}
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err != nil {
-		console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
+		console.Fatalf("Unable to stat target ‘%s’. %s\n", tgtURL, err.Trace())
 	}
 	if !tgtContent.Type.IsDir() {
-		console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Target ‘%s’ is not a folder. %s\n", tgtURL, probe.New(errInvalidArgument{}))
 	}
 }
 
@@ -250,11 +253,11 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
-		return copyURLs{Error: NewIodine(iodine.New(err, nil))}
+		return copyURLs{Error: err.Trace()}
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file
-		return copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
+		return copyURLs{Error: probe.New(errInvalidSource{URL: sourceURL})}
 	}
 	// All OK.. We can proceed. Type A
 	sourceContent.Name = sourceURL
@@ -267,26 +270,27 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
-		return copyURLs{Error: NewIodine(iodine.New(err, nil))}
+		return copyURLs{Error: err.Trace()}
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file.
-		return copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
+		return copyURLs{Error: probe.New(errInvalidSource{URL: sourceURL})}
 	}
 
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-	sourceURLParse, err := client.Parse(sourceURL)
-	if err != nil {
-		return copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
-	}
+	{
+		sourceURLParse, err := client.Parse(sourceURL)
+		if err != nil {
+			return copyURLs{Error: probe.New(errInvalidSource{URL: sourceURL})}
+		}
 
-	targetURLParse, err := client.Parse(targetURL)
-	if err != nil {
-		return copyURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
+		targetURLParse, err := client.Parse(targetURL)
+		if err != nil {
+			return copyURLs{Error: probe.New(errInvalidTarget{URL: targetURL})}
+		}
+		targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
+		return prepareCopyURLsTypeA(sourceURL, targetURLParse.String())
 	}
-
-	targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
-	return prepareCopyURLsTypeA(sourceURL, targetURLParse.String())
 }
 
 // SINGLE SOURCE - Type C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
@@ -297,7 +301,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 		defer close(copyURLsCh)
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
-			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errSourceNotRecursive{URL: sourceURL}, nil))}
+			copyURLsCh <- copyURLs{Error: probe.New(errSourceNotRecursive{URL: sourceURL})}
 			return
 		}
 
@@ -306,20 +310,20 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 		sourceClient, sourceContent, err := url2Stat(sourceURL)
 		if err != nil {
 			// Source does not exist or insufficient privileges.
-			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(err, nil))}
+			copyURLsCh <- copyURLs{Error: err.Trace()}
 			return
 		}
 
 		if !sourceContent.Type.IsDir() {
 			// Source is not a dir.
-			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errSourceIsNotDir{URL: sourceURL}, nil))}
+			copyURLsCh <- copyURLs{Error: probe.New(errSourceIsNotDir{URL: sourceURL})}
 			return
 		}
 
 		for sourceContent := range sourceClient.List(true) {
 			if sourceContent.Err != nil {
 				// Listing failed.
-				copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(sourceContent.Err, nil))}
+				copyURLsCh <- copyURLs{Error: sourceContent.Err.Trace()}
 				continue
 			}
 
@@ -331,13 +335,13 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceURL}, nil))}
+				copyURLsCh <- copyURLs{Error: probe.New(errInvalidSource{URL: sourceURL})}
 				continue
 			}
 
 			targetURLParse, err := client.Parse(targetURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
+				copyURLsCh <- copyURLs{Error: probe.New(errInvalidTarget{URL: targetURL})}
 				continue
 			}
 
@@ -347,7 +351,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			sourceContentURL := sourceURLDelimited + sourceContentName
 			sourceContentParse, err := client.Parse(sourceContentURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errInvalidSource{URL: sourceContentName}, nil))}
+				copyURLsCh <- copyURLs{Error: probe.New(errInvalidSource{URL: sourceContentName})}
 				continue
 			}
 
@@ -369,7 +373,7 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan copyURLs
 
 		if sourceURLs == nil {
 			// Source list is empty.
-			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errSourceListEmpty{}, nil))}
+			copyURLsCh <- copyURLs{Error: probe.New(errSourceListEmpty{})}
 			return
 		}
 
@@ -407,7 +411,7 @@ func prepareCopyURLs(sourceURLs []string, targetURL string) <-chan copyURLs {
 				copyURLsCh <- cURLs
 			}
 		default:
-			copyURLsCh <- copyURLs{Error: NewIodine(iodine.New(errInvalidArgument{}, nil))}
+			copyURLsCh <- copyURLs{Error: probe.New(errInvalidArgument{})}
 		}
 	}(sourceURLs, targetURL, copyURLsCh)
 
