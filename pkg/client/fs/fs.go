@@ -139,10 +139,10 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 	// Resolve symlinks
 	_, err := filepath.EvalSymlinks(tmppath)
 	if os.IsNotExist(err) {
-		return nil, 0, probe.New(err)
+		return nil, length, probe.New(err)
 	}
 	if err != nil {
-		return nil, 0, probe.New(err)
+		return nil, length, probe.New(err)
 	}
 	if offset == 0 && length == 0 {
 		return f.get()

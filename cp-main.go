@@ -28,6 +28,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -275,11 +276,14 @@ func runCopyCmd(ctx *cli.Context) {
 	}
 
 	// extract URLs.
-	session.Header.CommandArgs, err = args2URLs(ctx.Args())
-	if err != nil {
-		session.Close()
-		session.Delete()
-		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err)
+	{
+		var err *probe.Error
+		session.Header.CommandArgs, err = args2URLs(ctx.Args())
+		if err != nil {
+			session.Close()
+			session.Delete()
+			console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err)
+		}
 	}
 
 	doCopyCmdSession(session)

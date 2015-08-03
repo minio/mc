@@ -274,12 +274,15 @@ func runMirrorCmd(ctx *cli.Context) {
 		console.Fatalf("Unable to get current working folder. %s\n", err)
 	}
 
-	// extract URLs.
-	session.Header.CommandArgs, err = args2URLs(ctx.Args())
-	if err != nil {
-		session.Close()
-		session.Delete()
-		console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), err)
+	{
+		// extract URLs.
+		var err *probe.Error
+		session.Header.CommandArgs, err = args2URLs(ctx.Args())
+		if err != nil {
+			session.Close()
+			session.Delete()
+			console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), err)
+		}
 	}
 
 	doMirrorCmdSession(session)
