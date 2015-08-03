@@ -64,7 +64,6 @@ func runMakeBucketCmd(ctx *cli.Context) {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		ifFatal(err)
 		msg, err := doMakeBucketCmd(targetURL)
-		fmt.Println(msg)
 		ifFatal(err)
 		console.Infoln(msg)
 	}
