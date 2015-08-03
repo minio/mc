@@ -25,7 +25,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/shiena/ansicolor"
 )
 
@@ -365,7 +365,7 @@ func Unlock() {
 // SetTheme sets a color theme
 func SetTheme(themeName string) error {
 	if !IsValidTheme(themeName) {
-		return iodine.New(fmt.Errorf("Unsupported theme name [%s]", themeName), nil)
+		return probe.New(fmt.Errorf("Unsupported theme name [%s]", themeName))
 	}
 
 	mutex.Lock()

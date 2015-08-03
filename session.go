@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 func migrateSession() {
@@ -40,9 +40,9 @@ func isSessionDirExists() bool {
 	return true
 }
 
-func createSessionDir() error {
+func createSessionDir() *probe.Error {
 	if err := os.MkdirAll(getSessionDir(), 0700); err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return probe.New(err)
 	}
 	return nil
 }
@@ -78,7 +78,7 @@ func getSessionDataFile(sid string) string {
 func getSessionIDs() (sids []string) {
 	sessionList, err := filepath.Glob(getSessionDir() + "/*.json")
 	if err != nil {
-		console.Fatalf("Unable to list session folder ‘%s’, %s", getSessionDir(), NewIodine(iodine.New(err, nil)))
+		console.Fatalf("Unable to list session folder ‘%s’, %s", getSessionDir(), probe.New(err))
 	}
 
 	for _, path := range sessionList {
@@ -88,10 +88,8 @@ func getSessionIDs() (sids []string) {
 }
 
 func isSession(sid string) bool {
-	_, err := os.Stat(getSessionFile(sid))
-	if err != nil {
+	if _, err := os.Stat(getSessionFile(sid)); err != nil {
 		return false
 	}
-
 	return true
 }

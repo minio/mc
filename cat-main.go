@@ -22,8 +22,7 @@ import (
 	"syscall"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -68,46 +67,35 @@ func runCatCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
 	for _, arg := range ctx.Args() {
 		sourceURL, err := getExpandedURL(arg, config.Aliases)
-		if err != nil {
-			switch e := iodine.ToError(err).(type) {
-			case errUnsupportedScheme:
-				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
-			default:
-				console.Fatalf("Unable to parse argument %s. %s\n", arg, err)
-			}
-		}
-		errorMsg, err := doCatCmd(sourceURL)
-		if err != nil {
-			console.Fatalln(errorMsg)
-		}
+		ifFatal(err)
+		ifFatal(doCatCmd(sourceURL))
 	}
 }
 
-func doCatCmd(sourceURL string) (string, error) {
+func doCatCmd(sourceURL string) *probe.Error {
 	sourceClnt, err := source2Client(sourceURL)
 	if err != nil {
-		return "Unable to create client: " + sourceURL, NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
 	// ignore size, since os.Stat() would not return proper size all the time for local filesystem
 	// for example /proc files.
 	reader, _, err := sourceClnt.GetObject(0, 0)
 	if err != nil {
-		return "Unable to retrieve file: " + sourceURL, NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
 	defer reader.Close()
 	// read till EOF
-	_, err = io.Copy(os.Stdout, reader)
-	if err != nil {
-		switch e := iodine.ToError(err).(type) {
+	if _, err := io.Copy(os.Stdout, reader); err != nil {
+		switch e := err.(type) {
 		case *os.PathError:
 			if e.Err == syscall.EPIPE {
 				// stdout closed by the user. Gracefully exit.
-				return "", nil
+				return nil
 			}
-			return "Writing data to stdout failed, unexpected problem.. please report this error", iodine.New(err, nil)
+			return probe.New(err)
 		default:
-			return "Reading data from source failed: " + sourceURL, NewIodine(iodine.New(err, nil))
+			return probe.New(err)
 		}
 	}
-	return "", nil
+	return nil
 }

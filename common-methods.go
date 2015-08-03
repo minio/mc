@@ -26,7 +26,7 @@ import (
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/client/fs"
 	"github.com/minio/mc/pkg/client/s3"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Check if the target URL represents folder. It may or may not exist yet.
@@ -35,46 +35,48 @@ func isTargetURLDir(targetURL string) bool {
 	if err != nil {
 		return false
 	}
-	_, targetContent, err := url2Stat(targetURL)
-	if err != nil {
-		if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
+	{
+		_, targetContent, err := url2Stat(targetURL)
+		if err != nil {
+			if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
+				return false
+			}
+			if strings.HasSuffix(targetURLParse.Path, string(targetURLParse.Separator)) {
+				return true
+			}
 			return false
 		}
-		if strings.HasSuffix(targetURLParse.Path, string(targetURLParse.Separator)) {
-			return true
+		if !targetContent.Type.IsDir() { // Target is a dir.
+			return false
 		}
-		return false
-	}
-	if !targetContent.Type.IsDir() { // Target is a dir.
-		return false
 	}
 	return true
 }
 
 // getSource gets a reader from URL<
-func getSource(sourceURL string) (reader io.ReadCloser, length int64, err error) {
+func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe.Error) {
 	sourceClnt, err := source2Client(sourceURL)
 	if err != nil {
-		return nil, 0, NewIodine(iodine.New(err, map[string]string{"failedURL": sourceURL}))
+		return nil, 0, err.Trace()
 	}
 	return sourceClnt.GetObject(0, 0)
 }
 
 // putTarget writes to URL from reader.
-func putTarget(targetURL string, length int64, reader io.Reader) error {
+func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
 	targetClnt, err := target2Client(targetURL)
 	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
 	err = targetClnt.PutObject(length, reader)
 	if err != nil {
-		return NewIodine(iodine.New(err, map[string]string{"failedURL": targetURL}))
+		return err.Trace()
 	}
 	return nil
 }
 
 // putTargets writes to URL from reader.
-func putTargets(targetURLs []string, length int64, reader io.Reader) error {
+func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Error {
 	var tgtReaders []io.ReadCloser
 	var tgtWriters []io.WriteCloser
 	var tgtClients []client.Client
@@ -82,7 +84,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) error {
 	for _, targetURL := range targetURLs {
 		tgtClient, err := target2Client(targetURL)
 		if err != nil {
-			return iodine.New(err, nil)
+			return err.Trace()
 		}
 		tgtClients = append(tgtClients, tgtClient)
 		tgtReader, tgtWriter := io.Pipe()
@@ -101,7 +103,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) error {
 	}()
 
 	var wg sync.WaitGroup
-	errorCh := make(chan error, len(tgtClients))
+	errorCh := make(chan *probe.Error, len(tgtClients))
 
 	func() { // Parallel putObject
 		defer close(errorCh) // Each routine gets to return one err status.
@@ -112,15 +114,15 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) error {
 			tgtClient := tgtClients[i]
 			tgtReader := tgtReaders[i]
 
-			go func(targetClient client.Client, reader io.ReadCloser, errorCh chan<- error) {
+			go func(targetClient client.Client, reader io.ReadCloser, errorCh chan<- *probe.Error) {
 				defer wg.Done()
 				err := targetClient.PutObject(length, reader)
 				if err != nil {
-					errorCh <- iodine.New(err, map[string]string{"failedURL": targetClient.URL().String()})
+					errorCh <- err.Trace()
 					reader.Close()
 					return
 				}
-				errorCh <- err // return nil error = success.
+				errorCh <- nil
 			}(tgtClient, tgtReader, errorCh)
 		}
 		wg.Wait()
@@ -135,10 +137,10 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) error {
 }
 
 // getNewClient gives a new client interface
-func getNewClient(urlStr string, auth hostConfig) (clnt client.Client, err error) {
+func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) {
 	url, err := client.Parse(urlStr)
 	if err != nil {
-		return nil, iodine.New(errInvalidURL{URL: urlStr}, map[string]string{"URL": urlStr})
+		return nil, probe.New(err)
 	}
 	switch url.Type {
 	case client.Object: // Minio and S3 compatible cloud storage
@@ -164,62 +166,69 @@ func getNewClient(urlStr string, auth hostConfig) (clnt client.Client, err error
 	case client.Filesystem:
 		return fs.New(urlStr)
 	}
-	return nil, iodine.New(errInvalidURL{URL: urlStr}, nil)
+	return nil, probe.New(errInvalidURL{URL: urlStr})
 }
 
 // url2Stat - Returns client, config and its stat Content from the URL
-func url2Stat(urlStr string) (client client.Client, content *client.Content, err error) {
+func url2Stat(urlStr string) (client client.Client, content *client.Content, err *probe.Error) {
 	client, err = url2Client(urlStr)
 	if err != nil {
-		return nil, nil, iodine.New(err, map[string]string{"URL": urlStr})
+		return nil, nil, err.Trace()
 	}
 
 	content, err = client.Stat()
 	if err != nil {
-		return nil, nil, iodine.New(err, map[string]string{"URL": urlStr})
+		return nil, nil, err.Trace()
 	}
 
 	return client, content, nil
 }
 
-func url2Client(url string) (client.Client, error) {
+func isValidURL(url string) bool {
 	// Empty source arg?
 	urlParse, err := client.Parse(url)
 	if err != nil {
-		return nil, iodine.New(err, map[string]string{"URL": url})
+		return false
 	}
 
 	if urlParse.Path == "" {
-		return nil, iodine.New(errInvalidURL{URL: url}, map[string]string{"URL": url})
+		return false
 	}
 
+	return true
+}
+
+func url2Client(url string) (client.Client, *probe.Error) {
+	if !isValidURL(url) {
+		return nil, probe.New(errInvalidURL{URL: url})
+	}
 	urlconfig, err := getHostConfig(url)
 	if err != nil {
-		return nil, iodine.New(err, map[string]string{"URL": url})
+		return nil, err.Trace()
 	}
 
 	client, err := getNewClient(url, urlconfig)
 	if err != nil {
-		return nil, iodine.New(err, map[string]string{"URL": url})
+		return nil, err.Trace()
 	}
 
 	return client, nil
 }
 
 // source2Client returns client and hostconfig objects from the source URL.
-func source2Client(sourceURL string) (client.Client, error) {
+func source2Client(sourceURL string) (client.Client, *probe.Error) {
 	sourceClient, err := url2Client(sourceURL)
 	if err != nil {
-		return nil, iodine.New(errInvalidSource{URL: sourceURL}, map[string]string{"URL": sourceURL})
+		return nil, err.Trace()
 	}
 	return sourceClient, nil
 }
 
 // target2Client returns client and hostconfig objects from the target URL.
-func target2Client(targetURL string) (client.Client, error) {
+func target2Client(targetURL string) (client.Client, *probe.Error) {
 	targetClient, err := url2Client(targetURL)
 	if err != nil {
-		return nil, iodine.New(errInvalidTarget{URL: targetURL}, map[string]string{"URL": targetURL})
+		return nil, err.Trace()
 	}
 	return targetClient, nil
 }

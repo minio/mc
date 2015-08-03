@@ -22,7 +22,6 @@ import (
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
 )
 
 // HTTPTracer provides callback hook mechanism for HTTP transport.
@@ -42,29 +41,27 @@ func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err er
 	timeStamp := time.Now()
 
 	if t.Transport == nil {
-		return nil, iodine.New(client.InvalidArgument{}, nil)
+		return nil, client.InvalidArgument{}
 	}
 
 	res, err = t.Transport.RoundTrip(req)
 	if err != nil {
-		return res, iodine.New(err, nil)
+		return res, err
 	}
 
 	if t.Trace != nil {
 		err = t.Trace.Request(req)
 		if err != nil {
-			return nil, iodine.New(err, nil)
+			return nil, err
 		}
 
 		err = t.Trace.Response(res)
 		if err != nil {
-			return nil, iodine.New(err, nil)
+			return nil, err
 		}
-
 		console.Debugln("Response Time: ", time.Since(timeStamp).String()+"\n")
 	}
-
-	return res, iodine.New(err, nil)
+	return res, err
 }
 
 // GetNewTraceTransport returns a traceable transport

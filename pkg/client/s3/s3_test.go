@@ -188,7 +188,9 @@ func (s *MySuite) TestObjectOperations(c *C) {
 	c.Assert(size, Equals, int64(len(object.data)))
 
 	var buffer bytes.Buffer
-	_, err = io.CopyN(&buffer, reader, int64(size))
-	c.Assert(err, IsNil)
-	c.Assert(buffer.Bytes(), DeepEquals, object.data)
+	{
+		_, err := io.CopyN(&buffer, reader, int64(size))
+		c.Assert(err, IsNil)
+		c.Assert(buffer.Bytes(), DeepEquals, object.data)
+	}
 }

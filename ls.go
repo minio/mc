@@ -25,7 +25,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 /// ls - related internal functions
@@ -72,18 +72,18 @@ func parseContent(c *client.Content) Content {
 }
 
 // doList - list all entities inside a folder
-func doList(clnt client.Client, recursive bool) error {
-	var err error
+func doList(clnt client.Client, recursive bool) *probe.Error {
+	var err *probe.Error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
-			switch err := iodine.ToError(contentCh.Err).(type) {
+			switch contentCh.Err.ToError().(type) {
 			// handle this specifically for filesystem
 			case client.ISBrokenSymlink:
-				console.Errorln(NewIodine(iodine.New(err, nil)).Error())
+				ifError(contentCh.Err)
 				continue
 			}
-			if os.IsNotExist(iodine.ToError(contentCh.Err)) || os.IsPermission(iodine.ToError(contentCh.Err)) {
-				console.Errorln(NewIodine(iodine.New(contentCh.Err, nil)).Error())
+			if os.IsNotExist(contentCh.Err.ToError()) || os.IsPermission(contentCh.Err.ToError()) {
+				ifError(contentCh.Err)
 				continue
 			}
 			err = contentCh.Err
@@ -92,7 +92,7 @@ func doList(clnt client.Client, recursive bool) error {
 		console.Print(parseContent(contentCh.Content))
 	}
 	if err != nil {
-		return NewIodine(iodine.New(err, map[string]string{"Target": clnt.URL().String()}))
+		return err.Trace()
 	}
 	return nil
 }

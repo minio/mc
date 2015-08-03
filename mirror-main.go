@@ -28,7 +28,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -73,7 +73,7 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 	}()
 
 	if sURLs.Error != nil { // Errorneous sURLs passed.
-		sURLs.Error = iodine.New(sURLs.Error, nil)
+		sURLs.Error = sURLs.Error.Trace()
 		statusCh <- sURLs
 		return
 	}
@@ -87,7 +87,7 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorGet(int64(length))
 		}
-		sURLs.Error = iodine.New(err, nil)
+		sURLs.Error = err.Trace()
 		statusCh <- sURLs
 		return
 	}
@@ -115,7 +115,7 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 		if !globalQuietFlag || !globalJSONFlag {
 			bar.ErrorPut(int64(length))
 		}
-		sURLs.Error = iodine.New(err, nil)
+		sURLs.Error = err.Trace()
 		statusCh <- sURLs
 		return
 	}
@@ -152,7 +152,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if sURLs.Error != nil {
-				console.Errorln(sURLs.Error)
+				ifError(sURLs.Error)
 				break
 			}
 			if sURLs.isEmpty() {
@@ -161,7 +161,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
 				session.Close()
-				console.Fatalf("Unable to marshal URLs to JSON. %s\n", err)
+				console.Fatalf("Unable to marshal URLs to JSON. %s\n", probe.New(err))
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			scanBar(sURLs.SourceContent.Name)
@@ -221,7 +221,7 @@ func doMirrorCmdSession(session *sessionV2) {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
 					console.Println()
-					console.Errorf("Failed to mirror ‘%s’, %s\n", sURLs.SourceContent.Name, NewIodine(sURLs.Error))
+					ifError(sURLs.Error)
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()

@@ -18,8 +18,7 @@ package main
 
 import (
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -84,32 +83,23 @@ func runListCmd(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	for _, arg := range args {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
-		if err != nil {
-			switch e := iodine.ToError(err).(type) {
-			case errUnsupportedScheme:
-				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
-			default:
-				console.Fatalf("Unable to parse argument %s. %s\n", arg, err)
-			}
-		}
+		ifFatal(err)
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
 		err = doListCmd(newTargetURL, isURLRecursive(targetURL))
-		if err != nil {
-			console.Fatalf("Failed to list : %s. %s\n", targetURL, err)
-		}
+		ifFatal(err)
 	}
 }
 
 // doListCmd list files on target
-func doListCmd(targetURL string, recursive bool) error {
+func doListCmd(targetURL string, recursive bool) *probe.Error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
-		return NewIodine(iodine.New(err, map[string]string{"Target": targetURL}))
+		return err.Trace()
 	}
 	err = doList(clnt, recursive)
 	if err != nil {
-		return NewIodine(iodine.New(err, map[string]string{"Target": targetURL}))
+		return err.Trace()
 	}
 	return nil
 }

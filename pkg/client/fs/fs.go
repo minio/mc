@@ -25,7 +25,7 @@ import (
 	"io/ioutil"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 type fsClient struct {
@@ -33,16 +33,11 @@ type fsClient struct {
 }
 
 // New - instantiate a new fs client
-func New(path string) (client.Client, error) {
+func New(path string) (client.Client, *probe.Error) {
 	if strings.TrimSpace(path) == "" {
-		return nil, iodine.New(client.EmptyPath{}, nil)
+		return nil, probe.New(client.EmptyPath{})
 	}
-	var err error
-	path, err = normalizePath(path)
-	if err != nil {
-		return nil, iodine.New(err, nil)
-	}
-	return &fsClient{path: path}, nil
+	return &fsClient{path: normalizePath(path)}, nil
 }
 
 // URL get url
@@ -54,7 +49,7 @@ func (f *fsClient) URL() *client.URL {
 /// Object operations
 
 // fsStat - wrapper function to get file stat
-func (f *fsClient) fsStat() (os.FileInfo, error) {
+func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	fpath := f.path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
@@ -64,33 +59,33 @@ func (f *fsClient) fsStat() (os.FileInfo, error) {
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
-		return nil, iodine.New(err, nil)
+		return nil, probe.New(err)
 	}
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, probe.New(err)
 	}
 	st, err := os.Stat(fpath)
 	if os.IsNotExist(err) {
-		return nil, iodine.New(client.NotFound{Path: fpath}, nil)
+		return nil, probe.New(client.NotFound{Path: fpath})
 	}
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, probe.New(err)
 	}
 	return st, nil
 }
 
 // PutObject - create a new file
-func (f *fsClient) PutObject(size int64, data io.Reader) error {
+func (f *fsClient) PutObject(size int64, data io.Reader) *probe.Error {
 	objectDir, _ := filepath.Split(f.path)
 	objectPath := f.path
 	if objectDir != "" {
 		if err := os.MkdirAll(objectDir, 0700); err != nil {
-			return iodine.New(err, nil)
+			return probe.New(err)
 		}
 	}
 	fs, err := os.Create(objectPath)
 	if err != nil {
-		return iodine.New(err, nil)
+		return probe.New(err)
 	}
 	defer fs.Close()
 
@@ -98,69 +93,68 @@ func (f *fsClient) PutObject(size int64, data io.Reader) error {
 	if size > 0 {
 		_, err = io.CopyN(fs, data, int64(size))
 		if err != nil {
-			return iodine.New(err, nil)
+			return probe.New(err)
 		}
 	} else {
 		// size could be 0 for virtual files on certain filesystems
 		// for example /proc, so read till EOF for such files
 		_, err = io.Copy(fs, data)
 		if err != nil {
-			return iodine.New(err, nil)
+			return probe.New(err)
 		}
 	}
 	return nil
 }
 
 // get - download an object from bucket
-func (f *fsClient) get(content *client.Content) (io.ReadCloser, int64, error) {
+func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, content.Size, iodine.New(err, nil)
+		return nil, 0, probe.New(err)
 	}
-	return body, content.Size, nil
+	{
+		content, err := f.getFSMetadata()
+		if err != nil {
+			return nil, content.Size, err.Trace()
+		}
+		return body, content.Size, nil
+	}
 }
 
 // GetObject download an full or part object from bucket
 // getobject returns a reader, length and nil for no errors
 // with errors getobject will return nil reader, length and typed errors
-func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, error) {
-	content, err := f.getFSMetadata()
-	if err != nil {
-		return nil, 0, iodine.New(err, nil)
-	}
-	if content.Type.IsDir() {
-		return nil, 0, iodine.New(client.ISFolder{Path: f.path}, nil)
-	}
-	if offset > content.Size || offset+length-1 > content.Size {
-		return nil, 0, iodine.New(client.InvalidRange{Offset: offset}, nil)
+func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
+	if offset < 0 || length < 0 {
+		return nil, 0, probe.New(client.InvalidRange{Offset: offset})
 	}
 
-	fpath := f.path
+	tmppath := f.path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
-		fpath = fpath + "."
+	if strings.HasSuffix(tmppath, string(f.URL().Separator)) {
+		tmppath = tmppath + "."
 	}
 
 	// Resolve symlinks
-	fpath, err = filepath.EvalSymlinks(fpath)
+	_, err := filepath.EvalSymlinks(tmppath)
 	if os.IsNotExist(err) {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, probe.New(err)
 	}
 	if err != nil {
-		return nil, 0, iodine.New(err, nil)
+		return nil, 0, probe.New(err)
 	}
 	if offset == 0 && length == 0 {
-		return f.get(content)
+		return f.get()
 	}
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, length, iodine.New(err, nil)
+		return nil, length, probe.New(err)
 
 	}
 	_, err = io.CopyN(ioutil.Discard, body, int64(offset))
 	if err != nil {
-		return nil, length, iodine.New(err, nil)
+		return nil, length, probe.New(err)
 	}
 	return body, length, nil
 }
@@ -192,14 +186,14 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	if os.IsNotExist(err) {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     iodine.New(err, nil),
+			Err:     probe.New(err),
 		}
 		return
 	}
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     iodine.New(err, nil),
+			Err:     probe.New(err),
 		}
 		return
 	}
@@ -208,7 +202,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     iodine.New(err, nil),
+			Err:     probe.New(err),
 		}
 		return
 	}
@@ -224,7 +218,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		if err != nil {
 			contentCh <- client.ContentOnChannel{
 				Content: nil,
-				Err:     iodine.New(err, nil),
+				Err:     probe.New(err),
 			}
 			return
 		}
@@ -234,7 +228,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		if err != nil {
 			contentCh <- client.ContentOnChannel{
 				Content: nil,
-				Err:     iodine.New(err, nil),
+				Err:     probe.New(err),
 			}
 			return
 		}
@@ -245,15 +239,14 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 				if os.IsNotExist(err) {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err: iodine.New(client.ISBrokenSymlink{Path: file.Name()},
-							map[string]string{"Target": file.Name()}),
+						Err:     probe.New(client.ISBrokenSymlink{Path: file.Name()}),
 					}
 					continue
 				}
 				if err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     iodine.New(err, map[string]string{"Target": file.Name()}),
+						Err:     probe.New(err),
 					}
 					continue
 				}
@@ -305,7 +298,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			if os.IsPermission(err) {
 				return nil
 			}
-			return iodine.New(err, nil) // abort
+			return err
 		}
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			fi, err = os.Stat(fp)
@@ -313,7 +306,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				if os.IsNotExist(err) || os.IsPermission(err) { // ignore broken symlinks and permission denied
 					return nil
 				}
-				return iodine.New(err, nil)
+				return err
 			}
 		}
 		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
@@ -334,7 +327,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     iodine.New(err, nil),
+			Err:     probe.New(err),
 		}
 	}
 }
@@ -374,35 +367,35 @@ func aclToPerm(acl string) os.FileMode {
 }
 
 // MakeBucket - create a new bucket
-func (f *fsClient) MakeBucket() error {
+func (f *fsClient) MakeBucket() *probe.Error {
 	err := os.MkdirAll(f.path, 0775)
 	if err != nil {
-		return iodine.New(err, nil)
+		return probe.New(err)
 	}
 	return nil
 }
 
 // SetBucketACL - create a new bucket
-func (f *fsClient) SetBucketACL(acl string) error {
+func (f *fsClient) SetBucketACL(acl string) *probe.Error {
 	if !isValidBucketACL(acl) {
-		return iodine.New(client.InvalidACLType{ACL: acl}, nil)
+		return probe.New(client.InvalidACLType{ACL: acl})
 	}
 	err := os.MkdirAll(f.path, aclToPerm(acl))
 	if err != nil {
-		return iodine.New(err, nil)
+		return probe.New(err)
 	}
 	err = os.Chmod(f.path, aclToPerm(acl))
 	if err != nil {
-		return iodine.New(err, nil)
+		return probe.New(err)
 	}
 	return nil
 }
 
 // getFSMetadata -
-func (f *fsClient) getFSMetadata() (content *client.Content, err error) {
+func (f *fsClient) getFSMetadata() (content *client.Content, err *probe.Error) {
 	st, err := f.fsStat()
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, err.Trace()
 	}
 	content = new(client.Content)
 	content.Name = f.path
@@ -413,6 +406,6 @@ func (f *fsClient) getFSMetadata() (content *client.Content, err error) {
 }
 
 // Stat - get metadata from path
-func (f *fsClient) Stat() (content *client.Content, err error) {
+func (f *fsClient) Stat() (content *client.Content, err *probe.Error) {
 	return f.getFSMetadata()
 }

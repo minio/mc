@@ -7,7 +7,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/dustin/go-humanize",
-			"Rev": "c128122e0b9b93799aef8181a537e5d8fd7081d6"
+			"Rev": "00897f070f09f194c26d65afae734ba4c32404e8"
 		},
 		{
 			"ImportPath": "github.com/fatih/color",
@@ -33,9 +33,9 @@
 			"Rev": "20db439bc6671562eeff32d4cc3381eb7e824671"
 		},
 		{
-			"ImportPath": "github.com/minio/minio/pkg/iodine",
-			"Comment": "release-1434511043-280-g6be5a2f",
-			"Rev": "6be5a2fb7ec1fb92b7474485efb4633d8cf84a8e"
+			"ImportPath": "github.com/minio/minio/pkg/probe",
+			"Comment": "release-1434511043-296-g7f13095",
+			"Rev": "7f1309526056653a8e07277b3e39bfc49766363a"
 		},
 		{
 			"ImportPath": "github.com/minio/pb",
@@ -56,7 +56,7 @@
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",
-			"Rev": "b3d3430320d4260e5fea99841af984b3badcea63"
+			"Rev": "11d3bc7aa68e238947792f30573146a3231fc0f1"
 		}
 	]
 }

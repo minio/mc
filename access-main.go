@@ -17,12 +17,9 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -67,42 +64,26 @@ func runAccessCmd(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		console.Fatalf("Valid types are [private, public, readonly]. %s\n", errInvalidACL{acl: acl.String()})
+		ifFatal(probe.New(errInvalidACL{acl: acl.String()}))
 	}
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
-		if err != nil {
-			switch e := iodine.ToError(err).(type) {
-			case errUnsupportedScheme:
-				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
-			default:
-				console.Fatalf("Unable to parse argument %s. %s\n", arg, err)
-			}
-		}
-		msg, err := doUpdateAccessCmd(targetURL, acl)
-		if err != nil {
-			console.Fatalln(msg)
-		}
-		console.Infoln(msg)
+		ifFatal(err)
+
+		err = doUpdateAccessCmd(targetURL, acl)
+		ifFatal(err)
 	}
 }
 
-func doUpdateAccessCmd(targetURL string, targetACL bucketACL) (string, error) {
-	var err error
+func doUpdateAccessCmd(targetURL string, targetACL bucketACL) *probe.Error {
 	var clnt client.Client
-	clnt, err = target2Client(targetURL)
+	clnt, err := target2Client(targetURL)
 	if err != nil {
-		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
-		return msg, NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
-	return doUpdateAccess(clnt, targetACL)
-}
-
-func doUpdateAccess(clnt client.Client, targetACL bucketACL) (string, error) {
-	err := clnt.SetBucketACL(targetACL.String())
+	err = clnt.SetBucketACL(targetACL.String())
 	if err != nil {
-		msg := fmt.Sprintf("Failed to add bucket access policy for URL ‘%s’", clnt.URL().String())
-		return msg, NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
-	return "Bucket access policy updated successfully : " + clnt.URL().String(), nil
+	return nil
 }

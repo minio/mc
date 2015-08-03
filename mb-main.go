@@ -20,9 +20,8 @@ import (
 	"fmt"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -63,40 +62,25 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
-		if err != nil {
-			switch e := iodine.ToError(err).(type) {
-			case errUnsupportedScheme:
-				console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
-			default:
-				console.Fatalf("Unable to parse argument %s. %s\n", arg, err)
-			}
-		}
+		ifFatal(err)
 		msg, err := doMakeBucketCmd(targetURL)
-		if err != nil {
-			console.Fatalln(msg)
-		}
+		fmt.Println(msg)
+		ifFatal(err)
 		console.Infoln(msg)
 	}
 }
 
 // doMakeBucketCmd -
-func doMakeBucketCmd(targetURL string) (string, error) {
-	var err error
-	var clnt client.Client
-	clnt, err = target2Client(targetURL)
+func doMakeBucketCmd(targetURL string) (string, *probe.Error) {
+	clnt, err := target2Client(targetURL)
 	if err != nil {
 		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
-		return msg, NewIodine(iodine.New(err, nil))
+		return msg, err.Trace()
 	}
-	return doMakeBucket(clnt)
-}
-
-// doMakeBucket - wrapper around MakeBucket() API
-func doMakeBucket(clnt client.Client) (string, error) {
-	err := clnt.MakeBucket()
+	err = clnt.MakeBucket()
 	if err != nil {
 		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", clnt.URL().String())
-		return msg, NewIodine(iodine.New(err, nil))
+		return msg, err.Trace()
 	}
 	return "Bucket created successfully : " + clnt.URL().String(), nil
 }

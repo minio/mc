@@ -20,21 +20,23 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat() (content *Content, err error)
+	Stat() (content *Content, err *probe.Error)
 	List(recursive bool) <-chan ContentOnChannel
 
 	// Bucket operations
-	MakeBucket() error
-	SetBucketACL(acl string) error
+	MakeBucket() *probe.Error
+	SetBucketACL(acl string) *probe.Error
 
 	// Object operations
-	GetObject(offset, length int64) (body io.ReadCloser, size int64, err error)
-	PutObject(size int64, data io.Reader) error
+	GetObject(offset, length int64) (body io.ReadCloser, size int64, err *probe.Error)
+	PutObject(size int64, data io.Reader) *probe.Error
 
 	// URL returns back internal url
 	URL() *URL
@@ -43,7 +45,7 @@ type Client interface {
 // ContentOnChannel - List contents on channel
 type ContentOnChannel struct {
 	Content *Content
-	Err     error
+	Err     *probe.Error
 }
 
 // Content container for content metadata

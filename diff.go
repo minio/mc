@@ -24,7 +24,7 @@ import (
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/tchap/go-patricia/patricia"
 )
 
@@ -54,18 +54,17 @@ func mustURLJoinPath(url1, url2 string) string {
 }
 
 // urlJoinPath Join a path to existing URL
-func urlJoinPath(url1, url2 string) (newURLStr string, err error) {
+func urlJoinPath(url1, url2 string) (string, *probe.Error) {
 	u1, err := client.Parse(url1)
 	if err != nil {
-		return "", NewIodine(iodine.New(err, nil))
+		return "", probe.New(err)
 	}
 	u2, err := client.Parse(url2)
 	if err != nil {
-		return "", NewIodine(iodine.New(err, nil))
+		return "", probe.New(err)
 	}
 	u1.Path = filepath.Join(u1.Path, u2.Path)
-	newURLStr = u1.String()
-	return newURLStr, nil
+	return u1.String(), nil
 }
 
 func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
@@ -74,7 +73,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if err != nil {
 		ch <- diff{
 			message: "Failed to stat ‘" + firstURL + "’",
-			err:     NewIodine(iodine.New(err, nil)),
+			err:     err.Trace(),
 		}
 		return
 	}
@@ -82,7 +81,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if err != nil {
 		ch <- diff{
 			message: "Failed to stat ‘" + secondURL + "’",
-			err:     NewIodine(iodine.New(err, nil)),
+			err:     err.Trace(),
 		}
 		return
 	}
@@ -93,7 +92,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			if err != nil {
 				ch <- diff{
 					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + firstURL,
-					err:     NewIodine(iodine.New(err, nil)),
+					err:     err.Trace(),
 				}
 				return
 			}
@@ -155,7 +154,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	default:
 		ch <- diff{
 			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
-			err:     NewIodine(iodine.New(errNotAnObject{url: firstURL}, nil)),
+			err:     probe.New(errNotAnObject{url: firstURL}),
 		}
 		return
 	}
@@ -173,7 +172,7 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 		if contentCh.Err != nil {
 			ch <- diff{
 				message: "Failed to list ‘" + firstClnt.URL().String() + "’",
-				err:     NewIodine(iodine.New(contentCh.Err, nil)),
+				err:     contentCh.Err.Trace(),
 			}
 			return
 		}
@@ -181,7 +180,7 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 		if err != nil {
 			ch <- diff{
 				message: "Unable to construct new URL from ‘" + firstClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’",
-				err:     NewIodine(iodine.New(err, nil)),
+				err:     err.Trace(),
 			}
 			return
 		}
@@ -189,7 +188,7 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 		if err != nil {
 			ch <- diff{
 				message: "Unable to construct new URL from ‘" + secondClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’",
-				err:     NewIodine(iodine.New(err, nil)),
+				err:     err.Trace(),
 			}
 			return
 		}
@@ -244,7 +243,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 			if firstContentCh.Err != nil {
 				ch <- diff{
 					message: "Failed to list ‘" + firstClnt.URL().String() + "’",
-					err:     NewIodine(iodine.New(firstContentCh.Err, nil)),
+					err:     firstContentCh.Err.Trace(),
 				}
 				return
 			}
@@ -258,7 +257,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 			if secondContentCh.Err != nil {
 				ch <- diff{
 					message: "Failed to list ‘" + secondClnt.URL().String() + "’",
-					err:     NewIodine(iodine.New(secondContentCh.Err, nil)),
+					err:     secondContentCh.Err.Trace(),
 				}
 				return
 			}

@@ -34,19 +34,19 @@ func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
 	_, err = doMakeBucketCmd(filepath.Join(root, "bucket"))
 	c.Assert(err, IsNil)
 
-	_, err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write")
+	err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write")
 	c.Assert(err, IsNil)
 
-	_, err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "invalid")
+	err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "invalid")
 	c.Assert(err, Not(IsNil))
 
 	_, err = doMakeBucketCmd(server.URL + "/bucket")
 	c.Assert(err, IsNil)
 
-	_, err = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write")
+	err = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write")
 	c.Assert(err, IsNil)
 
-	_, err = doUpdateAccessCmd(server.URL+"/bucket", "invalid")
+	err = doUpdateAccessCmd(server.URL+"/bucket", "invalid")
 	c.Assert(err, Not(IsNil))
 
 }

@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 type hostConfig struct {
@@ -29,32 +29,33 @@ type hostConfig struct {
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.
-func getHostConfig(URL string) (hostConfig, error) {
+func getHostConfig(URL string) (hostConfig, *probe.Error) {
 	config, err := getMcConfig()
 	if err != nil {
-		return hostConfig{}, NewIodine(iodine.New(err, nil))
+		return hostConfig{}, err.Trace()
 	}
-	url, err := client.Parse(URL)
-	if err != nil {
-		return hostConfig{}, NewIodine(iodine.New(errInvalidURL{URL: URL}, nil))
-	}
-	// No host matching or keys needed for filesystem requests
-	if url.Type == client.Filesystem {
-		hostCfg := hostConfig{
-			AccessKeyID:     "",
-			SecretAccessKey: "",
-		}
-		return hostCfg, nil
-	}
-
-	for globURL, hostCfg := range config.Hosts {
-		match, err := filepath.Match(globURL, url.Host)
+	{
+		url, err := client.Parse(URL)
 		if err != nil {
-			return hostConfig{}, NewIodine(iodine.New(errInvalidGlobURL{glob: globURL, request: URL}, nil))
+			return hostConfig{}, probe.New(err)
 		}
-		if match {
+		// No host matching or keys needed for filesystem requests
+		if url.Type == client.Filesystem {
+			hostCfg := hostConfig{
+				AccessKeyID:     "",
+				SecretAccessKey: "",
+			}
 			return hostCfg, nil
 		}
+		for globURL, hostCfg := range config.Hosts {
+			match, err := filepath.Match(globURL, url.Host)
+			if err != nil {
+				return hostConfig{}, probe.New(errInvalidGlobURL{glob: globURL, request: URL})
+			}
+			if match {
+				return hostCfg, nil
+			}
+		}
 	}
-	return hostConfig{}, NewIodine(iodine.New(errNoMatchingHost{}, nil))
+	return hostConfig{}, probe.New(errNoMatchingHost{})
 }

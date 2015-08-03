@@ -26,7 +26,7 @@ import (
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio-go"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
@@ -56,10 +56,10 @@ type s3Client struct {
 }
 
 // New returns an initialized s3Client structure. if debug use a internal trace transport
-func New(config *Config) (client.Client, error) {
+func New(config *Config) (client.Client, *probe.Error) {
 	u, err := client.Parse(config.HostURL)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, probe.New(err)
 	}
 	var transport http.RoundTripper
 	switch {
@@ -81,7 +81,7 @@ func New(config *Config) (client.Client, error) {
 	s3Conf.Endpoint = u.Scheme + u.SchemeSeparator + u.Host
 	api, err := minio.New(s3Conf)
 	if err != nil {
-		return nil, err
+		return nil, probe.New(err)
 	}
 	return &s3Client{api: api, hostURL: u}, nil
 }
@@ -92,11 +92,11 @@ func (c *s3Client) URL() *client.URL {
 }
 
 // GetObject - get object
-func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, error) {
+func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	reader, metadata, err := c.api.GetPartialObject(bucket, object, offset, length)
 	if err != nil {
-		return nil, length, iodine.New(err, nil)
+		return nil, length, probe.New(err)
 	}
 	return reader, metadata.Size, nil
 }
@@ -111,7 +111,7 @@ func (e ObjectAlreadyExists) Error() string {
 }
 
 // PutObject - put object
-func (c *s3Client) PutObject(size int64, data io.Reader) error {
+func (c *s3Client) PutObject(size int64, data io.Reader) *probe.Error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified
@@ -119,36 +119,41 @@ func (c *s3Client) PutObject(size int64, data io.Reader) error {
 	err := c.api.PutObject(bucket, object, "application/octet-stream", size, data)
 	if err != nil {
 		if minio.ToErrorResponse(err).Code == "MethodNotAllowed" {
-			return iodine.New(ObjectAlreadyExists{Object: object}, nil)
+			return probe.New(ObjectAlreadyExists{Object: object})
 		}
-		return iodine.New(err, nil)
+		return probe.New(err)
 	}
 	return nil
 }
 
 // MakeBucket - make a new bucket
-func (c *s3Client) MakeBucket() error {
+func (c *s3Client) MakeBucket() *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return iodine.New(client.InvalidQueryURL{URL: c.hostURL.String()}, nil)
+		return probe.New(client.InvalidQueryURL{URL: c.hostURL.String()})
 	}
-	// location string is intentionally left out
 	err := c.api.MakeBucket(bucket, minio.BucketACL("private"))
-	return iodine.New(err, nil)
+	if err != nil {
+		return probe.New(err)
+	}
+	return nil
 }
 
 // SetBucketACL add canned acl's on a bucket
-func (c *s3Client) SetBucketACL(acl string) error {
+func (c *s3Client) SetBucketACL(acl string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return iodine.New(client.InvalidQueryURL{URL: c.hostURL.String()}, nil)
+		return probe.New(client.InvalidQueryURL{URL: c.hostURL.String()})
 	}
 	err := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
-	return iodine.New(err, nil)
+	if err != nil {
+		return probe.New(err)
+	}
+	return nil
 }
 
 // Stat - send a 'HEAD' on a bucket or object to get its metadata
-func (c *s3Client) Stat() (*client.Content, error) {
+func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	objectMetadata := new(client.Content)
 	bucket, object := c.url2BucketAndObject()
 	switch {
@@ -156,7 +161,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 	case bucket == "" && object == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
-				return nil, iodine.New(bucket.Err, nil)
+				return nil, probe.New(bucket.Err)
 			}
 			return &client.Content{Type: os.ModeDir}, nil
 		}
@@ -169,7 +174,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 				if errResponse.Code == "NoSuchKey" {
 					for content := range c.List(false) {
 						if content.Err != nil {
-							return nil, iodine.New(err, nil)
+							return nil, probe.New(content.Err)
 						}
 						content.Content.Type = os.ModeDir
 						content.Content.Name = object
@@ -178,7 +183,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 					}
 				}
 			}
-			return nil, iodine.New(err, nil)
+			return nil, probe.New(err)
 		}
 		objectMetadata.Name = metadata.Key
 		objectMetadata.Time = metadata.LastModified
@@ -188,7 +193,7 @@ func (c *s3Client) Stat() (*client.Content, error) {
 	}
 	err := c.api.BucketExists(bucket)
 	if err != nil {
-		return nil, iodine.New(err, nil)
+		return nil, probe.New(err)
 	}
 	bucketMetadata := new(client.Content)
 	bucketMetadata.Name = bucket
@@ -244,7 +249,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 			if bucket.Err != nil {
 				contentCh <- client.ContentOnChannel{
 					Content: nil,
-					Err:     bucket.Err,
+					Err:     probe.New(bucket.Err),
 				}
 				return
 			}
@@ -276,7 +281,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				if object.Err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     object.Err,
+						Err:     probe.New(object.Err),
 					}
 					return
 				}
@@ -314,7 +319,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			if bucket.Err != nil {
 				contentCh <- client.ContentOnChannel{
 					Content: nil,
-					Err:     bucket.Err,
+					Err:     probe.New(bucket.Err),
 				}
 				return
 			}
@@ -322,7 +327,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				if object.Err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     object.Err,
+						Err:     probe.New(object.Err),
 					}
 					return
 				}
@@ -342,7 +347,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			if object.Err != nil {
 				contentCh <- client.ContentOnChannel{
 					Content: nil,
-					Err:     object.Err,
+					Err:     probe.New(object.Err),
 				}
 				return
 			}

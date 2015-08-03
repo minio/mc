@@ -25,7 +25,7 @@ import (
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 type configV1 struct {
@@ -46,13 +46,13 @@ func setMcConfigDir(configDir string) {
 }
 
 // getMcConfigDir - construct minio client config folder.
-func getMcConfigDir() (string, error) {
+func getMcConfigDir() (string, *probe.Error) {
 	if mcCustomConfigDir != "" {
 		return mcCustomConfigDir, nil
 	}
 	u, err := user.Current()
 	if err != nil {
-		return "", NewIodine(iodine.New(err, nil))
+		return "", probe.New(err)
 	}
 	// For windows the path is slightly different
 	switch runtime.GOOS {
@@ -66,52 +66,47 @@ func getMcConfigDir() (string, error) {
 // mustGetMcConfigDir - construct minio client config folder or fail
 func mustGetMcConfigDir() (configDir string) {
 	configDir, err := getMcConfigDir()
-	if err != nil {
-		console.Fatalf("Unable to determine default configuration folder. %s\n", NewIodine(iodine.New(err, nil)))
-	}
+	ifFatal(err)
 	return configDir
 }
 
 // createMcConfigDir - create minio client config folder
-func createMcConfigDir() error {
+func createMcConfigDir() *probe.Error {
 	p, err := getMcConfigDir()
 	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
-	err = os.MkdirAll(p, 0700)
-	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+	if err := os.MkdirAll(p, 0700); err != nil {
+		return probe.New(err)
 	}
 	return nil
 }
 
 // getMcConfigPath - construct minio client configuration path
-func getMcConfigPath() (string, error) {
+func getMcConfigPath() (string, *probe.Error) {
 	dir, err := getMcConfigDir()
 	if err != nil {
-		return "", NewIodine(iodine.New(err, nil))
+		return "", err.Trace()
 	}
 	return filepath.Join(dir, mcConfigFile), nil
 }
 
 // mustGetMcConfigPath - similar to getMcConfigPath, ignores errors
 func mustGetMcConfigPath() string {
-	p, err := getMcConfigPath()
-	if err != nil {
-		console.Fatalf("Unable to determine default config path. %s\n", NewIodine(iodine.New(err, nil)))
-	}
-	return p
+	path, err := getMcConfigPath()
+	ifFatal(err)
+	return path
 }
 
 // getMcConfig - reads configuration file and returns config
-func getMcConfig() (*configV1, error) {
+func getMcConfig() (*configV1, *probe.Error) {
 	if !isMcConfigExists() {
-		return nil, NewIodine(iodine.New(errInvalidArgument{}, nil))
+		return nil, probe.New(errInvalidArgument{})
 	}
 
 	configFile, err := getMcConfigPath()
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return nil, err.Trace()
 	}
 
 	// Cached in private global variable.
@@ -122,12 +117,12 @@ func getMcConfig() (*configV1, error) {
 	conf := newConfigV1()
 	qconf, err := quick.New(conf)
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return nil, err.Trace()
 	}
 
 	err = qconf.Load(configFile)
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return nil, err.Trace()
 	}
 	cache.Put(qconf)
 	return qconf.Data().(*configV1), nil
@@ -137,9 +132,7 @@ func getMcConfig() (*configV1, error) {
 // mustGetMcConfig - reads configuration file and returns configs, exits on error
 func mustGetMcConfig() *configV1 {
 	config, err := getMcConfig()
-	if err != nil {
-		console.Fatalf("Unable to retrieve mc configuration. %s\n", err)
-	}
+	ifFatal(err)
 	return config
 }
 
@@ -149,25 +142,24 @@ func isMcConfigExists() bool {
 	if err != nil {
 		return false
 	}
-	_, err = os.Stat(configFile)
-	if err != nil {
+	if _, err := os.Stat(configFile); err != nil {
 		return false
 	}
 	return true
 }
 
 // writeConfig - write configuration file
-func writeConfig(config quick.Config) error {
+func writeConfig(config quick.Config) *probe.Error {
 	err := createMcConfigDir()
 	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
 	configPath, err := getMcConfigPath()
 	if err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
 	if err := config.Save(configPath); err != nil {
-		return NewIodine(iodine.New(err, nil))
+		return err.Trace()
 	}
 	return nil
 }
@@ -183,12 +175,10 @@ func migrateConfigV1ToV101() {
 	}
 	conf := newConfigV1()
 	config, err := quick.New(conf)
-	if err != nil {
-		console.Fatalln(NewIodine(iodine.New(err, nil)))
-	}
-	if err := config.Load(mustGetMcConfigPath()); err != nil {
-		console.Fatalln(NewIodine(iodine.New(err, nil)))
-	}
+	ifFatal(err)
+	err = config.Load(mustGetMcConfigPath())
+	ifFatal(err)
+
 	conf = config.Data().(*configV1)
 	// version is the same return
 	if conf.Version == mcCurrentConfigVersion {
@@ -214,10 +204,13 @@ func migrateConfigV1ToV101() {
 		conf.Hosts["*.s3*.amazonaws.com"] = s3HostConf
 	}
 
-	newConfig, err := quick.New(conf)
-	if err := newConfig.Save(mustGetMcConfigPath()); err != nil {
-		console.Fatalln(NewIodine(iodine.New(err, nil)))
+	{
+		newConfig, err := quick.New(conf)
+		ifFatal(err)
+		err = newConfig.Save(mustGetMcConfigPath())
+		ifFatal(err)
 	}
+
 	console.Infof("Successfully migrated %s from version: %s to version: %s\n", mustGetMcConfigPath(), mcPreviousConfigVersion, mcCurrentConfigVersion)
 }
 
@@ -281,11 +274,11 @@ func newConfigV101() *configV1 {
 }
 
 // newConfig - get new config interface
-func newConfig() (config quick.Config, err error) {
+func newConfig() (config quick.Config, err *probe.Error) {
 	conf := newConfigV101()
 	config, err = quick.New(conf)
 	if err != nil {
-		return nil, NewIodine(iodine.New(err, nil))
+		return nil, err.Trace()
 	}
 	return config, nil
 }
@@ -293,8 +286,6 @@ func newConfig() (config quick.Config, err error) {
 // mustNewConfig instantiates a new config handler, exists upon error
 func mustNewConfig() quick.Config {
 	config, err := newConfig()
-	if err != nil {
-		console.Fatalf("Unable to instantiate a new config handler. %s\n", NewIodine(iodine.New(err, nil)))
-	}
+	ifFatal(err)
 	return config
 }

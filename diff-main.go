@@ -19,7 +19,7 @@ package main
 import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -61,25 +61,11 @@ func runDiffCmd(ctx *cli.Context) {
 	firstURL := ctx.Args().First()
 	secondURL := ctx.Args()[1]
 
-	var err error
+	var err *probe.Error
 	firstURL, err = getExpandedURL(firstURL, config.Aliases)
-	if err != nil {
-		switch e := iodine.ToError(err).(type) {
-		case errUnsupportedScheme:
-			console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
-		default:
-			console.Fatalf("Unable to parse argument %s. %s\n", firstURL, err)
-		}
-	}
+	ifFatal(err)
 	secondURL, err = getExpandedURL(secondURL, config.Aliases)
-	if err != nil {
-		switch e := iodine.ToError(err).(type) {
-		case errUnsupportedScheme:
-			console.Fatalf("Unknown type of URL %s. %s\n", e.url, err)
-		default:
-			console.Fatalf("Unable to parse argument %s. %s\n", secondURL, err)
-		}
-	}
+	ifFatal(err)
 	if isURLRecursive(secondURL) {
 		console.Fatalf("Second URL cannot be recursive. %s\n", errInvalidArgument{})
 	}

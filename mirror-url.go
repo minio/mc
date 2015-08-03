@@ -24,14 +24,14 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/iodine"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/tchap/go-patricia/patricia"
 )
 
 type mirrorURLs struct {
 	SourceContent  *client.Content
 	TargetContents []*client.Content
-	Error          error `json:"-"`
+	Error          *probe.Error `json:"-"`
 }
 
 func (m mirrorURLs) isEmpty() bool {
@@ -58,7 +58,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	if err != nil {
-		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), NewIodine(iodine.New(err, nil)))
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err.Trace())
 	}
 
 	srcURL := URLs[0]
@@ -70,7 +70,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		_, srcContent, err := url2Stat(srcURL)
 		// Source exist?.
 		if err != nil {
-			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
+			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, err.Trace())
 		}
 		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
@@ -83,7 +83,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	for _, tgtURL := range tgtURLs {
 		url, err := client.Parse(tgtURL)
 		if err != nil {
-			console.Fatalf("Unable to parse target ‘%s’ argument. %s\n", tgtURL, NewIodine(iodine.New(err, nil)))
+			console.Fatalf("Unable to parse target ‘%s’ argument. %s\n", tgtURL, err)
 		}
 		if url.Host != "" {
 			if url.Path == string(url.Separator) {
@@ -93,23 +93,20 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 
 	if len(tgtURLs) == 0 && tgtURLs == nil {
-		console.Fatalf("Invalid number of target arguments to mirror command. %s\n", NewIodine(iodine.New(errInvalidArgument{}, nil)))
+		console.Fatalf("Invalid number of target arguments to mirror command. %s\n", probe.New(errInvalidArgument{}))
 	}
 	srcURL = stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(srcURL)
-	// Source exist?.
-	if err != nil {
-		console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, NewIodine(iodine.New(err, nil)))
-	}
+	ifFatal(err)
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), NewIodine(iodine.New(err, nil)))
+		console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), probe.New(errSourceIsNotDir{}))
 	}
 	for _, tgtURL := range tgtURLs {
 		_, content, err := url2Stat(tgtURL)
 		if err == nil {
 			if !content.Type.IsDir() {
-				console.Fatalf("One of the target ‘%s’ is not a folder. cannot have mixtures of directories and files while copying directories recursively. %s\n", tgtURL, NewIodine(iodine.New(errInvalidArgument{}, nil)))
+				console.Fatalf("One of the target ‘%s’ is not a folder. cannot have mixtures of directories and files while copying directories recursively. %s\n", tgtURL, probe.New(errInvalidArgument{}))
 			}
 		}
 	}
@@ -128,6 +125,7 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 			defer wg.Done()
 			for sourceContentCh := range sourceClnt.List(true) {
 				if sourceContentCh.Err != nil {
+					mirrorURLsCh <- mirrorURLs{Error: sourceContentCh.Err.Trace()}
 					return
 				}
 				sourceTrie.Insert(patricia.Prefix(sourceContentCh.Content.Name), sourceContentCh.Content.Size)
@@ -141,6 +139,7 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 				targetTrie := patricia.NewTrie()
 				for targetContentCh := range targetClnt.List(true) {
 					if targetContentCh.Err != nil {
+						mirrorURLsCh <- mirrorURLs{Error: targetContentCh.Err.Trace()}
 						return
 					}
 					targetTrie.Insert(patricia.Prefix(targetContentCh.Content.Name), struct{}{})
@@ -190,7 +189,7 @@ func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs 
 		defer close(mirrorURLsCh)
 		sourceClnt, err := url2Client(stripRecursiveURL(sourceURL))
 		if err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
+			mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
 			return
 		}
 		targetClnts := make([]client.Client, len(targetURLs))
@@ -198,19 +197,19 @@ func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs 
 			targetURL = stripRecursiveURL(targetURL)
 			targetClnt, targetContent, err := url2Stat(targetURL)
 			if err != nil {
-				mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
+				mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
 				return
 			}
 			// if one of the targets is not dir exit
 			if !targetContent.Type.IsDir() {
-				mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(errInvalidTarget{URL: targetURL}, nil))}
+				mirrorURLsCh <- mirrorURLs{Error: probe.New(errInvalidTarget{URL: targetURL})}
 				return
 			}
 			// special case, be extremely careful before changing this behavior - will lead to data loss
 			newTargetURL := strings.TrimSuffix(targetURL, string(targetClnt.URL().Separator)) + string(targetClnt.URL().Separator)
 			targetClnt, err = url2Client(newTargetURL)
 			if err != nil {
-				mirrorURLsCh <- mirrorURLs{Error: NewIodine(iodine.New(err, nil))}
+				mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
 				return
 			}
 			targetClnts[i] = targetClnt
