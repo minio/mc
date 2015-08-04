@@ -118,8 +118,11 @@ func (c *s3Client) PutObject(size int64, data io.Reader) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	err := c.api.PutObject(bucket, object, "application/octet-stream", size, data)
 	if err != nil {
-		if minio.ToErrorResponse(err).Code == "MethodNotAllowed" {
-			return probe.New(ObjectAlreadyExists{Object: object})
+		errResponse := minio.ToErrorResponse(err)
+		if errResponse != nil {
+			if errResponse.Code == "MethodNotAllowed" {
+				return probe.New(ObjectAlreadyExists{Object: object})
+			}
 		}
 		return probe.New(err)
 	}

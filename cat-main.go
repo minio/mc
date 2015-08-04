@@ -67,8 +67,8 @@ func runCatCmd(ctx *cli.Context) {
 	// Convert arguments to URLs: expand alias, fix format...
 	for _, arg := range ctx.Args() {
 		sourceURL, err := getExpandedURL(arg, config.Aliases)
-		ifFatal(err)
-		ifFatal(doCatCmd(sourceURL))
+		Fatal(err)
+		Fatal(doCatCmd(sourceURL))
 	}
 }
 

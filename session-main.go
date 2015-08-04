@@ -85,7 +85,7 @@ func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
 			session, err := loadSessionV2(sid)
-			ifFatal(err)
+			Fatal(err)
 			session.Delete()
 		}
 		return
@@ -96,7 +96,7 @@ func clearSession(sid string) {
 	}
 
 	session, err := loadSessionV2(sid)
-	ifFatal(err)
+	Fatal(err)
 	if session != nil {
 		session.Delete()
 	}
@@ -119,13 +119,13 @@ func runSessionCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 	if !isSessionDirExists() {
-		ifFatal(createSessionDir())
+		Fatal(createSessionDir())
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions
 	case "list":
 		err := listSessions()
-		ifFatal(err)
+		Fatal(err)
 	case "resume":
 		if len(ctx.Args().Tail()) != 1 {
 			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -140,7 +140,7 @@ func runSessionCmd(ctx *cli.Context) {
 			console.Fatalln(errInvalidSessionID{id: sid})
 		}
 		s, err := loadSessionV2(sid)
-		ifFatal(err)
+		Fatal(err)
 		// extra check for testing purposes
 		if s == nil {
 			return

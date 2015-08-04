@@ -104,7 +104,7 @@ func runUpdateCmd(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	msg, err := doUpdateCheck()
-	ifFatal(err)
+	Fatal(err)
 	// no msg do not print one
 	if msg != "" {
 		console.Infoln(msg)

@@ -66,7 +66,7 @@ func getMcConfigDir() (string, *probe.Error) {
 // mustGetMcConfigDir - construct minio client config folder or fail
 func mustGetMcConfigDir() (configDir string) {
 	configDir, err := getMcConfigDir()
-	ifFatal(err)
+	Fatal(err)
 	return configDir
 }
 
@@ -94,7 +94,7 @@ func getMcConfigPath() (string, *probe.Error) {
 // mustGetMcConfigPath - similar to getMcConfigPath, ignores errors
 func mustGetMcConfigPath() string {
 	path, err := getMcConfigPath()
-	ifFatal(err)
+	Fatal(err)
 	return path
 }
 
@@ -132,7 +132,7 @@ func getMcConfig() (*configV1, *probe.Error) {
 // mustGetMcConfig - reads configuration file and returns configs, exits on error
 func mustGetMcConfig() *configV1 {
 	config, err := getMcConfig()
-	ifFatal(err)
+	Fatal(err)
 	return config
 }
 
@@ -175,9 +175,9 @@ func migrateConfigV1ToV101() {
 	}
 	conf := newConfigV1()
 	config, err := quick.New(conf)
-	ifFatal(err)
+	Fatal(err)
 	err = config.Load(mustGetMcConfigPath())
-	ifFatal(err)
+	Fatal(err)
 
 	conf = config.Data().(*configV1)
 	// version is the same return
@@ -206,9 +206,9 @@ func migrateConfigV1ToV101() {
 
 	{
 		newConfig, err := quick.New(conf)
-		ifFatal(err)
+		Fatal(err)
 		err = newConfig.Save(mustGetMcConfigPath())
-		ifFatal(err)
+		Fatal(err)
 	}
 
 	console.Infof("Successfully migrated %s from version: %s to version: %s\n", mustGetMcConfigPath(), mcPreviousConfigVersion, mcCurrentConfigVersion)
@@ -286,6 +286,6 @@ func newConfig() (config quick.Config, err *probe.Error) {
 // mustNewConfig instantiates a new config handler, exists upon error
 func mustNewConfig() quick.Config {
 	config, err := newConfig()
-	ifFatal(err)
+	Fatal(err)
 	return config
 }

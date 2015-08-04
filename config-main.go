@@ -67,7 +67,7 @@ func runConfigCmd(ctx *cli.Context) {
 		console.Fatalf("Incorrect number of arguments, please read \"mc config help\". %s", errInvalidArgument{})
 	}
 	msg, err := doConfig(arg, tailArgs)
-	ifFatal(err)
+	Fatal(err)
 	console.Infoln(msg)
 }
 

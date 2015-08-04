@@ -57,7 +57,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
-	ifFatal(err)
+	Fatal(err)
 
 	srcURL := URLs[0]
 	tgtURLs := URLs[1:]
@@ -66,7 +66,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	// Source cannot be a folder (except when recursive)
 	if !isURLRecursive(srcURL) {
 		_, srcContent, err := url2Stat(srcURL)
-		ifFatal(err)
+		Fatal(err)
 
 		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
@@ -93,16 +93,16 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 	srcURL = stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(srcURL)
-	ifFatal(err)
+	Fatal(err)
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		ifFatal(probe.New(errSourceIsNotDir{URL: srcURL}))
+		Fatal(probe.New(errSourceIsNotDir{URL: srcURL}))
 	}
 	for _, tgtURL := range tgtURLs {
 		_, content, err := url2Stat(tgtURL)
 		if err == nil {
 			if !content.Type.IsDir() {
-				ifFatal(probe.New(errTargetIsNotDir{URL: tgtURL}))
+				Fatal(probe.New(errTargetIsNotDir{URL: tgtURL}))
 			}
 		}
 	}
@@ -165,7 +165,7 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 				if !targetTrie.Match(patricia.Prefix(matchName)) {
 					sourceURLDelimited := sourceClnt.URL().String()[:strings.LastIndex(sourceClnt.URL().String(),
 						string(sourceClnt.URL().Separator))+1]
-					newTargetURLParse := targetClnts[i].URL()
+					newTargetURLParse := *targetClnts[i].URL()
 					newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, matchName)
 					sourceContent.Size = sourceTrie.Get(patricia.Prefix(matchName)).(int64)
 					sourceContent.Name = sourceURLDelimited + matchName

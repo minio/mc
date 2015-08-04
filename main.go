@@ -38,7 +38,7 @@ func checkConfig() {
 	// Ensures config file is sane
 	{
 		_, err := getMcConfig()
-		ifFatal(err)
+		Fatal(err)
 	}
 }
 
