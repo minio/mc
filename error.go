@@ -17,21 +17,15 @@ func ifFatal(err *probe.Error) {
 	}
 }
 
-func ifError(err error) {
-	switch e := err.(type) {
-	case *probe.Error:
-		switch e {
-		case nil:
-			// nothing to print
-		default:
-			if !globalDebugFlag {
-				console.Errorln(e.ToError())
-			}
-			console.Errorln(err)
-		}
+func ifError(err *probe.Error) {
+	switch err {
 	case nil:
 		// nothing to print
 	default:
+		if !globalDebugFlag {
+			console.Errorln(err.ToError())
+			return
+		}
 		console.Errorln(err)
 	}
 }

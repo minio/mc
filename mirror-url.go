@@ -128,7 +128,9 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 					mirrorURLsCh <- mirrorURLs{Error: sourceContentCh.Err.Trace()}
 					return
 				}
-				sourceTrie.Insert(patricia.Prefix(sourceContentCh.Content.Name), sourceContentCh.Content.Size)
+				if sourceContentCh.Content.Type.IsRegular() {
+					sourceTrie.Insert(patricia.Prefix(sourceContentCh.Content.Name), sourceContentCh.Content.Size)
+				}
 			}
 		}()
 
@@ -142,7 +144,9 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 						mirrorURLsCh <- mirrorURLs{Error: targetContentCh.Err.Trace()}
 						return
 					}
-					targetTrie.Insert(patricia.Prefix(targetContentCh.Content.Name), struct{}{})
+					if targetContentCh.Content.Type.IsRegular() {
+						targetTrie.Insert(patricia.Prefix(targetContentCh.Content.Name), struct{}{})
+					}
 				}
 				targetTries[i] = targetTrie
 			}(i, targetClnt)
