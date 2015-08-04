@@ -30,24 +30,25 @@ func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
+	{
+		err := doMakeBucketCmd(filepath.Join(root, "bucket"))
+		c.Assert(err, IsNil)
 
-	_, err = doMakeBucketCmd(filepath.Join(root, "bucket"))
-	c.Assert(err, IsNil)
+		err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write")
+		c.Assert(err, IsNil)
 
-	err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write")
-	c.Assert(err, IsNil)
+		err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "invalid")
+		c.Assert(err, Not(IsNil))
 
-	err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "invalid")
-	c.Assert(err, Not(IsNil))
+		err = doMakeBucketCmd(server.URL + "/bucket")
+		c.Assert(err, IsNil)
 
-	_, err = doMakeBucketCmd(server.URL + "/bucket")
-	c.Assert(err, IsNil)
+		err = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write")
+		c.Assert(err, IsNil)
 
-	err = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write")
-	c.Assert(err, IsNil)
-
-	err = doUpdateAccessCmd(server.URL+"/bucket", "invalid")
-	c.Assert(err, Not(IsNil))
+		err = doUpdateAccessCmd(server.URL+"/bucket", "invalid")
+		c.Assert(err, Not(IsNil))
+	}
 
 }
 

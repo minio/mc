@@ -86,8 +86,7 @@ func runListCmd(ctx *cli.Context) {
 		ifFatal(err)
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
-		err = doListCmd(newTargetURL, isURLRecursive(targetURL))
-		ifFatal(err)
+		ifFatal(doListCmd(newTargetURL, isURLRecursive(targetURL)))
 	}
 }
 
