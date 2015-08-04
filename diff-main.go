@@ -63,9 +63,9 @@ func runDiffCmd(ctx *cli.Context) {
 
 	var err *probe.Error
 	firstURL, err = getExpandedURL(firstURL, config.Aliases)
-	ifFatal(err)
+	Fatal(err)
 	secondURL, err = getExpandedURL(secondURL, config.Aliases)
-	ifFatal(err)
+	Fatal(err)
 	if isURLRecursive(secondURL) {
 		console.Fatalf("Second URL cannot be recursive. %s\n", errInvalidArgument{})
 	}
