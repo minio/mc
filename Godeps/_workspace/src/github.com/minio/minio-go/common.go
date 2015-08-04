@@ -69,7 +69,7 @@ func urlEncodeName(name string) (string, error) {
 			continue
 		}
 		switch s {
-		case '-', '_', '.', '~', '/': // §2.3 Unreserved characters (mark)
+		case '-', '_', '.', '~', '/', '+': // §2.3 Unreserved characters (mark)
 			encodedName = encodedName + string(s)
 			continue
 		default:

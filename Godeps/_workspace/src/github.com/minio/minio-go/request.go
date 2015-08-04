@@ -82,6 +82,23 @@ var ignoredHeaders = map[string]bool{
 	"User-Agent":     true,
 }
 
+func path2BucketAndObject(path string) (bucketName, objectName string) {
+	pathSplits := strings.SplitN(path, "?", 2)
+	splits := strings.SplitN(pathSplits[0], separator, 3)
+	switch len(splits) {
+	case 0, 1:
+		bucketName = ""
+		objectName = ""
+	case 2:
+		bucketName = splits[1]
+		objectName = ""
+	case 3:
+		bucketName = splits[1]
+		objectName = splits[2]
+	}
+	return bucketName, objectName
+}
+
 // path2Object gives objectName from URL path
 func path2Object(path string) (objectName string) {
 	pathSplits := strings.SplitN(path, "?", 2)
@@ -277,6 +294,7 @@ func (r *request) getCanonicalRequest(hashedPayload string) string {
 	encodedPath, _ := urlEncodeName(r.req.URL.Path)
 	// convert any space strings back to "+"
 	encodedPath = strings.Replace(encodedPath, "+", "%20", -1)
+	encodedPath = strings.Replace(encodedPath, "%2B", "+", -1)
 	canonicalRequest := strings.Join([]string{
 		r.req.Method,
 		encodedPath,
