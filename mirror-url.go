@@ -165,7 +165,7 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 				if !targetTrie.Match(patricia.Prefix(matchName)) {
 					sourceURLDelimited := sourceClnt.URL().String()[:strings.LastIndex(sourceClnt.URL().String(),
 						string(sourceClnt.URL().Separator))+1]
-					newTargetURLParse := targetClnts[i].URL()
+					newTargetURLParse := *targetClnts[i].URL()
 					newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, matchName)
 					sourceContent.Size = sourceTrie.Get(patricia.Prefix(matchName)).(int64)
 					sourceContent.Name = sourceURLDelimited + matchName
