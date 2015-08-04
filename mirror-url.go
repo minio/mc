@@ -57,9 +57,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
-	if err != nil {
-		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err.Trace())
-	}
+	ifFatal(err)
 
 	srcURL := URLs[0]
 	tgtURLs := URLs[1:]
@@ -68,10 +66,8 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	// Source cannot be a folder (except when recursive)
 	if !isURLRecursive(srcURL) {
 		_, srcContent, err := url2Stat(srcURL)
-		// Source exist?.
-		if err != nil {
-			console.Fatalf("Unable to stat source ‘%s’. %s\n", srcURL, err.Trace())
-		}
+		ifFatal(err)
+
 		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
 				console.Fatalf("Source ‘%s’ is a folder. Please use ‘%s...’ to recursively copy this folder and its contents.\n", srcURL, srcURL)
@@ -93,20 +89,20 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 
 	if len(tgtURLs) == 0 && tgtURLs == nil {
-		console.Fatalf("Invalid number of target arguments to mirror command. %s\n", probe.New(errInvalidArgument{}))
+		console.Fatalf("Invalid number of target arguments to mirror command. %s\n", errInvalidArgument{})
 	}
 	srcURL = stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(srcURL)
 	ifFatal(err)
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		console.Fatalf("Source ‘%s’ is not a folder. %s\n", stripRecursiveURL(srcURL), probe.New(errSourceIsNotDir{}))
+		ifFatal(probe.New(errSourceIsNotDir{URL: srcURL}))
 	}
 	for _, tgtURL := range tgtURLs {
 		_, content, err := url2Stat(tgtURL)
 		if err == nil {
 			if !content.Type.IsDir() {
-				console.Fatalf("One of the target ‘%s’ is not a folder. cannot have mixtures of directories and files while copying directories recursively. %s\n", tgtURL, probe.New(errInvalidArgument{}))
+				ifFatal(probe.New(errTargetIsNotDir{URL: tgtURL}))
 			}
 		}
 	}

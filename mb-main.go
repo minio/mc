@@ -17,8 +17,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
@@ -63,23 +61,20 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	for _, arg := range ctx.Args() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		ifFatal(err)
-		msg, err := doMakeBucketCmd(targetURL)
-		ifFatal(err)
-		console.Infoln(msg)
+		ifFatal(doMakeBucketCmd(targetURL))
+		console.Infoln("Bucket created successfully : " + targetURL)
 	}
 }
 
 // doMakeBucketCmd -
-func doMakeBucketCmd(targetURL string) (string, *probe.Error) {
+func doMakeBucketCmd(targetURL string) *probe.Error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
-		msg := fmt.Sprintf("Unable to initialize client for ‘%s’", targetURL)
-		return msg, err.Trace()
+		return err.Trace()
 	}
 	err = clnt.MakeBucket()
 	if err != nil {
-		msg := fmt.Sprintf("Failed to create bucket for URL ‘%s’", clnt.URL().String())
-		return msg, err.Trace()
+		return err.Trace()
 	}
-	return "Bucket created successfully : " + clnt.URL().String(), nil
+	return nil
 }
