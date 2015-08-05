@@ -59,7 +59,6 @@ type Theme struct {
 var (
 	mutex = &sync.RWMutex{}
 
-	stdoutColoredOutput = ansicolor.NewAnsiColorWriter(os.Stdout)
 	stderrColoredOutput = ansicolor.NewAnsiColorWriter(os.Stderr)
 
 	// themesDB contains supported list of Themes
@@ -70,14 +69,7 @@ var (
 	}
 
 	// currTheme is current theme
-	currThemeName = func() string {
-		theme := GetDefaultThemeName()
-		// if not a TTY disable color
-		if !isatty.IsTerminal(os.Stdout.Fd()) || !isatty.IsTerminal(os.Stderr.Fd()) {
-			theme = "nocolor"
-		}
-		return theme
-	}()
+	currThemeName = GetDefaultThemeName()
 
 	// Bar print progress bar
 	Bar = func(data ...interface{}) {
@@ -236,118 +228,115 @@ var (
 	// wrap around standard fmt functions
 	// print prints a message prefixed with message type and program name
 	print = func(c *color.Color, a ...interface{}) {
+		mutex.Lock()
+		defer mutex.Unlock()
+
 		switch c {
 		case themesDB[currThemeName].Debug:
-			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <DEBUG> ")
-			c.Print(a...)
+			if isatty.IsTerminal(os.Stderr.Fd()) {
+				c.Print(ProgramName() + ": <DEBUG> ")
+				c.Print(a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
+				fmt.Fprint(color.Output, a...)
+			}
 			color.Output = output
-			mutex.Unlock()
 		case themesDB[currThemeName].Fatal:
-			mutex.Lock()
-			output := color.Output
-			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <ERROR> ")
-			c.Print(a...)
-			color.Output = output
-			mutex.Unlock()
+			fallthrough
 		case themesDB[currThemeName].Error:
-			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <ERROR> ")
-			c.Print(a...)
+			if isatty.IsTerminal(os.Stderr.Fd()) {
+				c.Print(ProgramName() + ": <ERROR> ")
+				c.Print(a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
+				fmt.Fprint(color.Output, a...)
+			}
 			color.Output = output
-			mutex.Unlock()
 		case themesDB[currThemeName].Info:
-			mutex.Lock()
 			c.Print(ProgramName() + ": ")
 			c.Print(a...)
-			mutex.Unlock()
 		default:
-			mutex.Lock()
 			c.Print(a...)
-			mutex.Unlock()
 		}
 	}
 
 	// printf - same as print with a new line
 	printf = func(c *color.Color, f string, a ...interface{}) {
+		mutex.Lock()
+		defer mutex.Unlock()
+
 		switch c {
 		case themesDB[currThemeName].Debug:
-			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <DEBUG> ")
-			c.Printf(f, a...)
+			if isatty.IsTerminal(os.Stderr.Fd()) {
+				c.Print(ProgramName() + ": <DEBUG> ")
+				c.Printf(f, a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
+				fmt.Fprintf(color.Output, f, a...)
+			}
 			color.Output = output
-			mutex.Unlock()
 		case themesDB[currThemeName].Fatal:
-			mutex.Lock()
-			output := color.Output
-			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <ERROR> ")
-			c.Printf(f, a...)
-			color.Output = output
-			mutex.Unlock()
+			fallthrough
 		case themesDB[currThemeName].Error:
-			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <ERROR> ")
-			c.Printf(f, a...)
+			if isatty.IsTerminal(os.Stderr.Fd()) {
+				c.Print(ProgramName() + ": <ERROR> ")
+				c.Printf(f, a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
+				fmt.Fprintf(color.Output, f, a...)
+			}
 			color.Output = output
-			mutex.Unlock()
 		case themesDB[currThemeName].Info:
-			mutex.Lock()
 			c.Print(ProgramName() + ": ")
 			c.Printf(f, a...)
-			mutex.Unlock()
 		default:
-			mutex.Lock()
 			c.Printf(f, a...)
-			mutex.Unlock()
 		}
 	}
 
 	// println - same as print with a new line
 	println = func(c *color.Color, a ...interface{}) {
+		mutex.Lock()
+		defer mutex.Unlock()
+
 		switch c {
 		case themesDB[currThemeName].Debug:
-			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <DEBUG> ")
-			c.Println(a...)
+			if isatty.IsTerminal(os.Stderr.Fd()) {
+				c.Print(ProgramName() + ": <DEBUG> ")
+				c.Println(a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
+				fmt.Fprintln(color.Output, a...)
+			}
 			color.Output = output
-			mutex.Unlock()
 		case themesDB[currThemeName].Fatal:
-			mutex.Lock()
-			output := color.Output
-			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <ERROR> ")
-			c.Println(a...)
-			color.Output = output
-			mutex.Unlock()
+			fallthrough
 		case themesDB[currThemeName].Error:
-			mutex.Lock()
 			output := color.Output
 			color.Output = stderrColoredOutput
-			c.Print(ProgramName() + ": <ERROR> ")
-			c.Println(a...)
+			if isatty.IsTerminal(os.Stderr.Fd()) {
+				c.Print(ProgramName() + ": <ERROR> ")
+				c.Println(a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
+				fmt.Fprintln(color.Output, a...)
+			}
 			color.Output = output
-			mutex.Unlock()
 		case themesDB[currThemeName].Info:
-			mutex.Lock()
 			c.Print(ProgramName() + ": ")
 			c.Println(a...)
-			mutex.Unlock()
 		default:
-			mutex.Lock()
 			c.Println(a...)
-			mutex.Unlock()
 		}
 	}
 )
