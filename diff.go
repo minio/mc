@@ -43,6 +43,12 @@ import (
 //   2. diff(d1..., d2...) -> INVALID
 //
 
+type diffV1 struct {
+	firstURL  string
+	secondURL string
+	diffType  string
+}
+
 type diff struct {
 	message string
 	err     error
@@ -99,8 +105,12 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			doDiffObjects(firstURL, newSecondURL, ch)
 		case !secondContent.Type.IsRegular():
 			ch <- diff{
-				message: "‘" + firstURL + "’ and " + "‘" + secondURL + "’ differs in type.",
-				err:     nil,
+				message: diffV1{
+					firstURL:  firstURL,
+					secondURL: secondURL,
+					diffType:  "Type",
+				}.String(),
+				err: nil,
 			}
 			return
 		case secondContent.Type.IsRegular():
@@ -111,8 +121,12 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 		switch {
 		case !secondContent.Type.IsDir():
 			ch <- diff{
-				message: "‘" + firstURL + "’ and " + "‘" + secondURL + "’ differs in type.",
-				err:     nil,
+				message: diffV1{
+					firstURL:  firstURL,
+					secondURL: secondURL,
+					diffType:  "Type",
+				}.String(),
+				err: nil,
 			}
 			return
 		default:
@@ -129,14 +143,12 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	switch {
 	case errFirst != nil && errSecond == nil:
 		ch <- diff{
-			message: "Only in ‘" + secondURL + "’",
-			err:     nil,
+			err: errFirst.Trace(),
 		}
 		return
 	case errFirst == nil && errSecond != nil:
 		ch <- diff{
-			message: "Only in ‘" + firstURL + "’",
-			err:     nil,
+			err: errSecond.Trace(),
 		}
 		return
 	}
@@ -147,8 +159,12 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	case firstContent.Type.IsRegular():
 		if !secondContent.Type.IsRegular() {
 			ch <- diff{
-				message: firstURL + " and " + secondURL + " differs in type.",
-				err:     nil,
+				message: diffV1{
+					firstURL:  firstURL,
+					secondURL: secondURL,
+					diffType:  "Type",
+				}.String(),
+				err: nil,
 			}
 		}
 	default:
@@ -161,8 +177,12 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 
 	if firstContent.Size != secondContent.Size {
 		ch <- diff{
-			message: firstURL + " and " + secondURL + " differs in size.",
-			err:     nil,
+			message: diffV1{
+				firstURL:  firstURL,
+				secondURL: secondURL,
+				diffType:  "Size",
+			}.String(),
+			err: nil,
 		}
 	}
 }
@@ -197,14 +217,22 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 		switch {
 		case errFirst != nil && errSecond == nil:
 			ch <- diff{
-				message: "‘" + newSecondURL + "’ Only in ‘" + secondClnt.URL().String() + "’",
-				err:     nil,
+				message: diffV1{
+					firstURL:  newSecondURL,
+					secondURL: secondClnt.URL().String(),
+					diffType:  "Only-in",
+				}.String(),
+				err: nil,
 			}
 			continue
 		case errFirst == nil && errSecond != nil:
 			ch <- diff{
-				message: "‘" + newFirstURL + "’ Only in ‘" + firstClnt.URL().String() + "’",
-				err:     nil,
+				message: diffV1{
+					firstURL:  newFirstURL,
+					secondURL: firstClnt.URL().String(),
+					diffType:  "Only-in",
+				}.String(),
+				err: nil,
 			}
 			continue
 		case errFirst == nil && errSecond == nil:
@@ -212,16 +240,24 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 			case newFirstContent.Type.IsDir():
 				if !newSecondContent.Type.IsDir() {
 					ch <- diff{
-						message: newFirstURL + " and " + newSecondURL + " differs in type.",
-						err:     nil,
+						message: diffV1{
+							firstURL:  newFirstURL,
+							secondURL: newSecondURL,
+							diffType:  "Type",
+						}.String(),
+						err: nil,
 					}
 				}
 				continue
 			case newFirstContent.Type.IsRegular():
 				if !newSecondContent.Type.IsRegular() {
 					ch <- diff{
-						message: newFirstURL + " and " + newSecondURL + " differs in type.",
-						err:     nil,
+						message: diffV1{
+							firstURL:  newFirstURL,
+							secondURL: newSecondURL,
+							diffType:  "Type",
+						}.String(),
+						err: nil,
 					}
 					continue
 				}
@@ -296,8 +332,12 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 			firstURLDelimited := firstClnt.URL().String()[:strings.LastIndex(firstClnt.URL().String(), string(firstClnt.URL().Separator))+1]
 			firstURL := firstURLDelimited + matchName
 			ch <- diff{
-				message: "‘" + firstURL + "’ Only in ‘" + firstClnt.URL().String() + "’",
-				err:     nil,
+				message: diffV1{
+					firstURL:  firstURL,
+					secondURL: firstClnt.URL().String(),
+					diffType:  "Only-in",
+				}.String(),
+				err: nil,
 			}
 		}
 	}

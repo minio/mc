@@ -25,6 +25,40 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
+// DiffJSONMessage json container for diff messages
+type DiffJSONMessage struct {
+	Version   string `json:"version"`
+	FirstURL  string `json:"first"`
+	SecondURL string `json:"second"`
+	Diff      string `json:"diff"`
+}
+
+func (s diffV1) String() string {
+	if !globalJSONFlag {
+		var message string
+		if s.diffType == "Only-in" {
+			message = "‘" + s.firstURL + "’ Only in ‘" + s.secondURL + "’\n"
+		}
+		if s.diffType == "Type" {
+			message = s.firstURL + " and " + s.secondURL + " differs in type.\n"
+		}
+		if s.diffType == "Size" {
+			message = s.firstURL + " and " + s.secondURL + " differs in size.\n"
+		}
+		return message
+	}
+	diffMessage := DiffJSONMessage{}
+	diffMessage.Version = "1.0.0"
+	diffMessage.FirstURL = s.firstURL
+	diffMessage.SecondURL = s.secondURL
+	diffMessage.Diff = s.diffType
+	diffJSONBytes, err := json.MarshalIndent(diffMessage, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+	return console.JSON(string(diffJSONBytes) + "\n")
+}
+
 // SessionJSONMessage json container for session messages
 type SessionJSONMessage struct {
 	Version     string   `json:"version"`

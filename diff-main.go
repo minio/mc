@@ -71,10 +71,8 @@ func runDiffCmd(ctx *cli.Context) {
 	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
-		if diff.err != nil {
-			console.Fatalln(diff.message)
-		}
-		console.Infoln(diff.message)
+		Fatal(diff.err)
+		console.PrintC(diff.message)
 	}
 	console.Println()
 }
