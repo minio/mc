@@ -37,7 +37,7 @@ var shareCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
+   mc {{.Name}} TARGET DURATION {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -47,10 +47,10 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Generate presigned url for an object with expiration of 10minutes
+   1. Generate presigned url for an object, with expiration of 10minutes
       $ mc {{.Name}} url https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz 10m
 
-   2. Generate presigned url for all objects at given path
+   2. Generate presigned url for all objects at given path, with expiration of 20minutes
       $ mc {{.Name}} url https://s3.amazonaws.com/backup... 20m
 
 `,
