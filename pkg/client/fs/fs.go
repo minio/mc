@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"io/ioutil"
 
@@ -119,6 +120,10 @@ func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 		}
 		return body, content.Size, nil
 	}
+}
+
+func (f *fsClient) PresignedGetObject(expires time.Duration, offset, length int64) (string, *probe.Error) {
+	return "", probe.New(client.APINotImplemented{API: "PresignedGetObject"})
 }
 
 // GetObject download an full or part object from bucket

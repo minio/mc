@@ -29,8 +29,8 @@
 		},
 		{
 			"ImportPath": "github.com/minio/minio-go",
-			"Comment": "v0.2.0-19-g44dd766",
-			"Rev": "44dd766b3563b2f95cc7cf03c4789b28254f3d8a"
+			"Comment": "v0.2.0-21-gd9184e5",
+			"Rev": "d9184e5834efb7cd4a24df4d6ebab9b51dad4d9c"
 		},
 		{
 			"ImportPath": "github.com/minio/minio/pkg/probe",

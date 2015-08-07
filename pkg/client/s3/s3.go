@@ -101,13 +101,14 @@ func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 	return reader, metadata.Size, nil
 }
 
-// ObjectAlreadyExists - typed return for MethodNotAllowed
-type ObjectAlreadyExists struct {
-	Object string
-}
-
-func (e ObjectAlreadyExists) Error() string {
-	return "Object #" + e.Object + " already exists."
+// PresignedGetObject - get a presigned usable get object url to share
+func (c *s3Client) PresignedGetObject(expires time.Duration, offset, length int64) (string, *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	presignedURL, err := c.api.PresignedGetPartialObject(bucket, object, expires, offset, length)
+	if err != nil {
+		return "", probe.New(err)
+	}
+	return presignedURL, nil
 }
 
 // PutObject - put object
@@ -121,7 +122,7 @@ func (c *s3Client) PutObject(size int64, data io.Reader) *probe.Error {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse != nil {
 			if errResponse.Code == "MethodNotAllowed" {
-				return probe.New(ObjectAlreadyExists{Object: object})
+				return probe.New(client.ObjectAlreadyExists{Object: object})
 			}
 		}
 		return probe.New(err)

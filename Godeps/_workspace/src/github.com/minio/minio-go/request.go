@@ -37,9 +37,10 @@ type operation struct {
 
 // request - a http request
 type request struct {
-	req    *http.Request
-	config *Config
-	body   io.ReadSeeker
+	req     *http.Request
+	config  *Config
+	body    io.ReadSeeker
+	expires string
 }
 
 const (
@@ -157,9 +158,9 @@ func httpNewRequest(method, urlStr string, body io.Reader) (*http.Request, error
 		if err != nil {
 			return nil, err
 		}
-		uEncoded.Opaque = separator + bucketName + separator + encodedObjectName
+		uEncoded.Opaque = "//" + uEncoded.Host + separator + bucketName + separator + encodedObjectName
 	} else {
-		uEncoded.Opaque = separator + bucketName
+		uEncoded.Opaque = "//" + uEncoded.Host + separator + bucketName
 	}
 	rc, ok := body.(io.ReadCloser)
 	if !ok && body != nil {
@@ -186,6 +187,39 @@ func httpNewRequest(method, urlStr string, body io.Reader) (*http.Request, error
 		}
 	}
 	return req, nil
+}
+
+func newPresignedRequest(op *operation, config *Config, expires string) (*request, error) {
+	// if no method default to POST
+	method := op.HTTPMethod
+	if method == "" {
+		method = "POST"
+	}
+
+	u := op.getRequestURL(*config)
+
+	// get a new HTTP request, for the requested method
+	req, err := httpNewRequest(method, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// set UserAgent
+	req.Header.Set("User-Agent", config.userAgent)
+
+	// set Accept header for response encoding style, if available
+	if config.AcceptType != "" {
+		req.Header.Set("Accept", config.AcceptType)
+	}
+
+	// save for subsequent use
+	r := new(request)
+	r.config = config
+	r.expires = expires
+	r.req = req
+	r.body = nil
+
+	return r, nil
 }
 
 // newRequest - instantiate a new request
@@ -249,6 +283,14 @@ func (r *request) Do() (resp *http.Response, err error) {
 	return transport.RoundTrip(r.req)
 }
 
+func (r *request) SetQuery(key, value string) {
+	r.req.URL.Query().Set(key, value)
+}
+
+func (r *request) AddQuery(key, value string) {
+	r.req.URL.Query().Add(key, value)
+}
+
 // Set - set additional headers if any
 func (r *request) Set(key, value string) {
 	r.req.Header.Set(key, value)
@@ -263,6 +305,8 @@ func (r *request) Get(key string) string {
 func (r *request) getHashedPayload() string {
 	hash := func() string {
 		switch {
+		case r.expires != "":
+			return "UNSIGNED-PAYLOAD"
 		case r.body == nil:
 			return hex.EncodeToString(sum256([]byte{}))
 		default:
@@ -271,7 +315,10 @@ func (r *request) getHashedPayload() string {
 		}
 	}
 	hashedPayload := hash()
-	r.req.Header.Add("x-amz-content-sha256", hashedPayload)
+	r.req.Header.Set("X-Amz-Content-Sha256", hashedPayload)
+	if hashedPayload == "UNSIGNED-PAYLOAD" {
+		r.req.Header.Set("X-Amz-Content-Sha256", "")
+	}
 	return hashedPayload
 }
 
@@ -336,9 +383,13 @@ func (r *request) getSignedHeaders() string {
 //
 func (r *request) getCanonicalRequest(hashedPayload string) string {
 	r.req.URL.RawQuery = strings.Replace(r.req.URL.Query().Encode(), "+", "%20", -1)
+
+	// get path URI from Opaque
+	uri := strings.Join(strings.Split(r.req.URL.Opaque, "/")[3:], "/")
+
 	canonicalRequest := strings.Join([]string{
 		r.req.Method,
-		r.req.URL.Opaque,
+		"/" + uri,
 		r.req.URL.RawQuery,
 		r.getCanonicalHeaders(),
 		r.getSignedHeaders(),
@@ -381,28 +432,52 @@ func (r *request) getSignature(signingKey []byte, stringToSign string) string {
 	return hex.EncodeToString(sumHMAC(signingKey, []byte(stringToSign)))
 }
 
+// Presign the request, in accordance with - http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+func (r *request) PreSignV4() string {
+	r.SignV4()
+	return r.req.URL.String()
+}
+
 // SignV4 the request before Do(), in accordance with - http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html
 func (r *request) SignV4() {
+	query := r.req.URL.Query()
+	if r.expires != "" {
+		query.Set("X-Amz-Algorithm", authHeader)
+	}
 	t := time.Now().UTC()
 	// Add date if not present
-	if date := r.Get("Date"); date == "" {
-		r.Set("x-amz-date", t.Format(iso8601Format))
+	if r.expires != "" {
+		query.Set("X-Amz-Date", t.Format(iso8601Format))
+		query.Set("X-Amz-Expires", r.expires)
+	} else {
+		r.Set("X-Amz-Date", t.Format(iso8601Format))
 	}
 
 	hashedPayload := r.getHashedPayload()
 	signedHeaders := r.getSignedHeaders()
-	canonicalRequest := r.getCanonicalRequest(hashedPayload)
+	if r.expires != "" {
+		query.Set("X-Amz-SignedHeaders", signedHeaders)
+	}
 	scope := r.getScope(t)
+	if r.expires != "" {
+		query.Set("X-Amz-Credential", r.config.AccessKeyID+"/"+scope)
+		r.req.URL.RawQuery = query.Encode()
+	}
+	canonicalRequest := r.getCanonicalRequest(hashedPayload)
 	stringToSign := r.getStringToSign(canonicalRequest, t)
 	signingKey := r.getSigningKey(t)
 	signature := r.getSignature(signingKey, stringToSign)
 
-	// final Authorization header
-	parts := []string{
-		authHeader + " Credential=" + r.config.AccessKeyID + "/" + scope,
-		"SignedHeaders=" + signedHeaders,
-		"Signature=" + signature,
+	if r.expires != "" {
+		r.req.URL.RawQuery += "&X-Amz-Signature=" + signature
+	} else {
+		// final Authorization header
+		parts := []string{
+			authHeader + " Credential=" + r.config.AccessKeyID + "/" + scope,
+			"SignedHeaders=" + signedHeaders,
+			"Signature=" + signature,
+		}
+		auth := strings.Join(parts, ", ")
+		r.Set("Authorization", auth)
 	}
-	auth := strings.Join(parts, ", ")
-	r.Set("Authorization", auth)
 }
