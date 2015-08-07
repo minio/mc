@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -77,7 +78,16 @@ func runShareCmd(ctx *cli.Context) {
 	// if recursive strip off the "..."
 	newTargetURL := stripRecursiveURL(targetURL)
 	Fatal(doShareCmd(newTargetURL, isURLRecursive(targetURL), expires))
+}
 
+func getNewTargetURL(targetParser *client.URL, name string) string {
+	match, _ := filepath.Match("*.s3*.amazonaws.com", targetParser.Host)
+	if match {
+		targetParser.Path = string(targetParser.Separator) + name
+	} else {
+		targetParser.Path = string(targetParser.Separator) + path2Bucket(targetParser) + string(targetParser.Separator) + name
+	}
+	return targetParser.String()
 }
 
 // doShareCmd share files from target
@@ -96,9 +106,7 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		if contentCh.Err != nil {
 			return contentCh.Err.Trace()
 		}
-		targetParser := clnt.URL()
-		targetParser.Path = path2Bucket(targetParser) + string(targetParser.Separator) + contentCh.Content.Name
-		newClnt, err := url2Client(targetParser.String())
+		newClnt, err := url2Client(getNewTargetURL(clnt.URL(), contentCh.Content.Name))
 		if err != nil {
 			return err.Trace()
 		}
