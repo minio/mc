@@ -156,13 +156,15 @@ func runSessionCmd(ctx *cli.Context) {
 			}
 
 			sessionExecute(s)
-			err = s.Close()
-			if err != nil {
-				console.Fatalf("Unable to close session file properly. %s\n", err)
-			}
-			err = s.Delete()
-			if err != nil {
-				console.Fatalf("Unable to clear session files properly. %s\n", err)
+			{
+				err := s.Close()
+				if err != nil {
+					console.Fatalf("Unable to close session file properly. %s\n", err)
+				}
+				err = s.Delete()
+				if err != nil {
+					console.Fatalf("Unable to clear session files properly. %s\n", err)
+				}
 			}
 			// change dir back
 			os.Chdir(savedCwd)
