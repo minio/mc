@@ -22,7 +22,7 @@ import (
 	"syscall"
 
 	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // Help message.

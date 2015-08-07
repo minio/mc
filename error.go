@@ -18,44 +18,28 @@ package main
 
 import (
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // Fatal wrapper function which takes error and selectively prints stack frames if available on debug
-func Fatal(err error) {
+func Fatal(err *probe.Error) {
 	if err == nil {
 		return
 	}
-	switch e := err.(type) {
-	case *probe.Error:
-		if e == nil {
-			return
-		}
-		if !globalDebugFlag {
-			console.Fatalln(e.ToError())
-		}
-		console.Fatalln(err)
-	default:
-		console.Fatalln(err)
+	if !globalDebugFlag {
+		console.Fatalln(err.ToError())
 	}
+	console.Fatalln(err)
 }
 
 // Error synonymous with Fatal but doesn't exit on error != nil
-func Error(err error) {
+func Error(err *probe.Error) {
 	if err == nil {
 		return
 	}
-	switch e := err.(type) {
-	case *probe.Error:
-		if e == nil {
-			return
-		}
-		if !globalDebugFlag {
-			console.Errorln(e.ToError())
-			return
-		}
-		console.Errorln(err)
-	default:
-		console.Errorln(err)
+	if !globalDebugFlag {
+		console.Errorln(err.ToError())
+		return
 	}
+	console.Errorln(err)
 }

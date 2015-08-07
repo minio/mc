@@ -24,7 +24,7 @@ import (
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/tchap/go-patricia/patricia"
 )
 
@@ -51,7 +51,7 @@ type diffV1 struct {
 
 type diff struct {
 	message string
-	err     error
+	err     *probe.Error
 }
 
 func mustURLJoinPath(url1, url2 string) string {

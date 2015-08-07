@@ -25,7 +25,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/shiena/ansicolor"
 )
 
@@ -352,7 +352,7 @@ func Unlock() {
 }
 
 // SetTheme sets a color theme
-func SetTheme(themeName string) error {
+func SetTheme(themeName string) *probe.Error {
 	if !IsValidTheme(themeName) {
 		return probe.New(fmt.Errorf("Unsupported theme name [%s]", themeName))
 	}

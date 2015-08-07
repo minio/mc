@@ -124,17 +124,9 @@ func (e *Error) Untrace() {
 	e.tracePoints = e.tracePoints[:l-1]
 }
 
-// Error returns error string.
-func (e *Error) Error() string {
-	if e == nil {
-		return "<nil>"
-	}
-	return e.String()
-}
-
 // String returns error message.
 func (e *Error) String() string {
-	if e == nil {
+	if e == nil || e.e == nil {
 		return "<nil>"
 	}
 	e.lock.RLock()
@@ -164,7 +156,7 @@ func (e *Error) String() string {
 
 // JSON returns JSON formated error trace.
 func (e *Error) JSON() string {
-	if e == nil {
+	if e == nil || e.e == nil {
 		return "<nil>"
 	}
 

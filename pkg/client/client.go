@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // Client - client interface

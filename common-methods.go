@@ -26,7 +26,7 @@ import (
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/client/fs"
 	"github.com/minio/mc/pkg/client/s3"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // Check if the target URL represents folder. It may or may not exist yet.

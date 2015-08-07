@@ -84,16 +84,13 @@ func registerBefore(ctx *cli.Context) error {
 	if globalDebugFlag {
 		console.NoDebugPrint = false
 	}
-	switch {
-	case console.IsValidTheme(themeName) != true:
+	if console.IsValidTheme(themeName) != true {
 		console.Errorf("Invalid theme, please choose from the following list: %s.\n", console.GetThemeNames())
 		return errInvalidTheme{Theme: themeName}
-	default:
-		err := console.SetTheme(themeName)
-		if err != nil {
-			console.Errorf("Failed to set theme ‘%s’.", themeName)
-			return err
-		}
+	}
+	if err := console.SetTheme(themeName); err != nil {
+		console.Errorf("Failed to set theme ‘%s’.", themeName)
+		Error(err)
 	}
 
 	// Migrate any old version of config / state files to newer format.

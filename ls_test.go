@@ -24,6 +24,7 @@ import (
 	"strconv"
 
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/probe"
 	. "gopkg.in/check.v1"
 )
 
@@ -33,32 +34,34 @@ func (s *CmdTestSuite) TestLSCmd(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
 
+	var perr *probe.Error
+
 	for i := 0; i < 10; i++ {
 		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(err, IsNil)
+		perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(perr, IsNil)
 	}
 
-	err = doListCmd(root, false)
-	c.Assert(err, IsNil)
+	perr = doListCmd(root, false)
+	c.Assert(perr, IsNil)
 
-	err = doListCmd(root, true)
-	c.Assert(err, IsNil)
+	perr = doListCmd(root, true)
+	c.Assert(perr, IsNil)
 
 	for i := 0; i < 10; i++ {
 		objectPath := server.URL + "/bucket/object" + strconv.Itoa(i)
 		data := "hello"
 		dataLen := len(data)
-		err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(err, IsNil)
+		perr := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(perr, IsNil)
 	}
-	err = doListCmd(server.URL+"/bucket", false)
-	c.Assert(err, IsNil)
+	perr = doListCmd(server.URL+"/bucket", false)
+	c.Assert(perr, IsNil)
 
-	err = doListCmd(server.URL+"/bucket", true)
-	c.Assert(err, IsNil)
+	perr = doListCmd(server.URL+"/bucket", true)
+	c.Assert(perr, IsNil)
 }
 
 func (s *CmdTestSuite) TestLSContext(c *C) {

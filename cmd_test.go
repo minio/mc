@@ -58,32 +58,32 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	}
 	setMcConfigDir(customConfigDir)
 
-	err = createMcConfigDir()
-	c.Assert(err, IsNil)
+	perr := createMcConfigDir()
+	c.Assert(perr, IsNil)
 
-	config, err := newConfig()
-	c.Assert(err, IsNil)
+	config, perr := newConfig()
+	c.Assert(perr, IsNil)
 
-	err = writeConfig(config)
-	c.Assert(err, IsNil)
+	perr = writeConfig(config)
+	c.Assert(perr, IsNil)
 
-	err = createSessionDir()
-	c.Assert(err, IsNil)
+	perr = createSessionDir()
+	c.Assert(perr, IsNil)
 
-	_, err = doConfig("invalid", nil)
-	c.Assert(err, Not(IsNil))
+	_, perr = doConfig("invalid", nil)
+	c.Assert(perr, Not(IsNil))
 
-	_, err = doConfig("alias", []string{"test", "https://test.io"})
-	c.Assert(err, IsNil)
+	_, perr = doConfig("alias", []string{"test", "https://test.io"})
+	c.Assert(perr, IsNil)
 
-	_, err = doConfig("alias", []string{"test", "https://test.io"})
-	c.Assert(err, Not(IsNil))
+	_, perr = doConfig("alias", []string{"test", "https://test.io"})
+	c.Assert(perr, Not(IsNil))
 
-	_, err = doConfig("alias", []string{"test", "htt://test.io"})
-	c.Assert(err, Not(IsNil))
+	_, perr = doConfig("alias", []string{"test", "htt://test.io"})
+	c.Assert(perr, Not(IsNil))
 
-	_, err = doConfig("alias", []string{"readonly", "https://new.test.io"})
-	c.Assert(err, Not(IsNil))
+	_, perr = doConfig("alias", []string{"readonly", "https://new.test.io"})
+	c.Assert(perr, Not(IsNil))
 
 	app = registerApp()
 	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
@@ -116,17 +116,17 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
 
-	conf, err := newConfig()
-	c.Assert(err, IsNil)
+	conf, perr := newConfig()
+	c.Assert(perr, IsNil)
 	configFile := filepath.Join(root, "config.json")
-	err = conf.Save(configFile)
-	c.Assert(err, IsNil)
+	perr = conf.Save(configFile)
+	c.Assert(perr, IsNil)
 
 	confNew := newConfigV101()
-	config, err := quick.New(confNew)
-	c.Assert(err, IsNil)
-	err = config.Load(configFile)
-	c.Assert(err, IsNil)
+	config, perr := quick.New(confNew)
+	c.Assert(perr, IsNil)
+	perr = config.Load(configFile)
+	c.Assert(perr, IsNil)
 	data := config.Data().(*configV1)
 
 	type aliases struct {

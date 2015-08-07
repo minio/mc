@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/probe"
 	. "gopkg.in/check.v1"
 )
 
@@ -36,10 +37,12 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 	objectPathServer := server.URL + "/bucket/object1"
 	data := "hello"
 	dataLen := len(data)
-	err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
-	err = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
+
+	var perr *probe.Error
+	perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(perr, IsNil)
+	perr = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(perr, IsNil)
 
 	var sourceURLs []string
 	sourceURLs = append(sourceURLs, objectPath)
