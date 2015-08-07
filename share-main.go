@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -100,24 +99,9 @@ func path2Bucket(u *client.URL) (bucketName string) {
 }
 
 func doShare(clnt client.Client, recursive bool) *probe.Error {
-	var err *probe.Error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
-			switch contentCh.Err.ToError().(type) {
-			// handle this specifically for filesystem
-			case client.ISBrokenSymlink:
-				Error(contentCh.Err)
-				continue
-			}
-			if os.IsNotExist(contentCh.Err.ToError()) || os.IsPermission(contentCh.Err.ToError()) {
-				Error(contentCh.Err)
-				continue
-			}
-			err = contentCh.Err
-			break
-		}
-		if err != nil {
-			return err.Trace()
+			return contentCh.Err.Trace()
 		}
 		targetParser := clnt.URL()
 		targetParser.Path = path2Bucket(targetParser) + string(targetParser.Separator) + contentCh.Content.Name
