@@ -95,6 +95,15 @@ type GenericObjectError struct {
 	Object string
 }
 
+// ObjectAlreadyExists - typed return for MethodNotAllowed
+type ObjectAlreadyExists struct {
+	Object string
+}
+
+func (e ObjectAlreadyExists) Error() string {
+	return "Object #" + e.Object + " already exists."
+}
+
 // ObjectNotFound - object requested does not exist
 type ObjectNotFound GenericObjectError
 

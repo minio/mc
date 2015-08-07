@@ -524,6 +524,42 @@ func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte,
 	return metadata, nil
 }
 
+func (a apiV1) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*request, error) {
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
+	op := &operation{
+		HTTPServer: a.config.Endpoint,
+		HTTPMethod: "GET",
+		HTTPPath:   separator + bucket + separator + encodedObject,
+	}
+	r, err := newPresignedRequest(op, a.config, strconv.FormatInt(expires, 10))
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case length > 0 && offset > 0:
+		r.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
+	case offset > 0 && length == 0:
+		r.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+	case length > 0 && offset == 0:
+		r.Set("Range", fmt.Sprintf("bytes=-%d", length))
+	}
+	return r, nil
+}
+
+func (a apiV1) presignedGetObject(bucket, object string, expires, offset, length int64) (string, error) {
+	if err := invalidArgumentError(object); err != nil {
+		return "", err
+	}
+	req, err := a.presignedGetObjectRequest(bucket, object, expires, offset, length)
+	if err != nil {
+		return "", err
+	}
+	return req.PreSignV4(), nil
+}
+
 // getObjectRequest wrapper creates a new getObject request
 func (a apiV1) getObjectRequest(bucket, object string, offset, length int64) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
