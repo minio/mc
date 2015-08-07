@@ -40,30 +40,34 @@ func (s *MySuite) TestList(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object1")
-	fsc, err := New(objectPath)
+	fsc, perr := New(objectPath)
 	c.Assert(err, IsNil)
 
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	objectPath = filepath.Join(root, "object2")
-	fsc, err = New(objectPath)
+	fsc, perr = New(objectPath)
 	c.Assert(err, IsNil)
 
-	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	fsc, err = New(root)
+	fsc, perr = New(root)
 	c.Assert(err, IsNil)
 
 	var contents []*client.Content
 	for contentCh := range fsc.List(false) {
+		if contentCh.Err != nil {
+			perr = contentCh.Err
+			break
+		}
 		contents = append(contents, contentCh.Content)
 	}
-	c.Assert(err, IsNil)
+	c.Assert(perr, IsNil)
 	c.Assert(len(contents), Equals, 2)
 
 	for _, content := range contents {
@@ -71,20 +75,24 @@ func (s *MySuite) TestList(c *C) {
 	}
 
 	objectPath = filepath.Join(root, "test1/newObject1")
-	fsc, err = New(objectPath)
+	fsc, perr = New(objectPath)
 	c.Assert(err, IsNil)
 
-	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	fsc, err = New(root)
+	fsc, perr = New(root)
 	c.Assert(err, IsNil)
 
 	contents = nil
 	for contentCh := range fsc.List(false) {
+		if contentCh.Err != nil {
+			perr = contentCh.Err
+			break
+		}
 		contents = append(contents, contentCh.Content)
 	}
-	c.Assert(err, IsNil)
+	c.Assert(perr, IsNil)
 	c.Assert(len(contents), Equals, 3)
 
 	for _, content := range contents {
@@ -95,11 +103,15 @@ func (s *MySuite) TestList(c *C) {
 		c.Assert(content.Type.IsDir(), Equals, true)
 	}
 
-	fsc, err = New(root)
+	fsc, perr = New(root)
 	c.Assert(err, IsNil)
 
 	contents = nil
 	for contentCh := range fsc.List(true) {
+		if contentCh.Err != nil {
+			perr = contentCh.Err
+			break
+		}
 		contents = append(contents, contentCh.Content)
 	}
 
@@ -127,10 +139,10 @@ func (s *MySuite) TestPutBucket(c *C) {
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsc, err := New(bucketPath)
-	c.Assert(err, IsNil)
-	err = fsc.MakeBucket()
-	c.Assert(err, IsNil)
+	fsc, perr := New(bucketPath)
+	c.Assert(perr, IsNil)
+	perr = fsc.MakeBucket()
+	c.Assert(perr, IsNil)
 }
 
 func (s *MySuite) TestStatBucket(c *C) {
@@ -140,12 +152,12 @@ func (s *MySuite) TestStatBucket(c *C) {
 
 	bucketPath := filepath.Join(root, "bucket")
 
-	fsc, err := New(bucketPath)
-	c.Assert(err, IsNil)
-	err = fsc.MakeBucket()
-	c.Assert(err, IsNil)
-	_, err = fsc.Stat()
-	c.Assert(err, IsNil)
+	fsc, perr := New(bucketPath)
+	c.Assert(perr, IsNil)
+	perr = fsc.MakeBucket()
+	c.Assert(perr, IsNil)
+	_, perr = fsc.Stat()
+	c.Assert(perr, IsNil)
 }
 
 func (s *MySuite) TestPutBucketACL(c *C) {
@@ -154,13 +166,13 @@ func (s *MySuite) TestPutBucketACL(c *C) {
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsc, err := New(bucketPath)
-	c.Assert(err, IsNil)
-	err = fsc.MakeBucket()
-	c.Assert(err, IsNil)
+	fsc, perr := New(bucketPath)
+	c.Assert(perr, IsNil)
+	perr = fsc.MakeBucket()
+	c.Assert(perr, IsNil)
 
-	err = fsc.SetBucketACL("private")
-	c.Assert(err, IsNil)
+	perr = fsc.SetBucketACL("private")
+	c.Assert(perr, IsNil)
 }
 
 func (s *MySuite) TestPutObject(c *C) {
@@ -169,14 +181,14 @@ func (s *MySuite) TestPutObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, err := New(objectPath)
-	c.Assert(err, IsNil)
+	fsc, perr := New(objectPath)
+	c.Assert(perr, IsNil)
 
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
+	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(perr, IsNil)
 }
 
 func (s *MySuite) TestGetObject(c *C) {
@@ -185,17 +197,17 @@ func (s *MySuite) TestGetObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, err := New(objectPath)
-	c.Assert(err, IsNil)
+	fsc, perr := New(objectPath)
+	c.Assert(perr, IsNil)
 
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
+	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(perr, IsNil)
 
-	reader, size, err := fsc.GetObject(0, 0)
-	c.Assert(err, IsNil)
+	reader, size, perr := fsc.GetObject(0, 0)
+	c.Assert(perr, IsNil)
 	var results bytes.Buffer
 	_, err = io.CopyN(&results, reader, int64(size))
 	c.Assert(err, IsNil)
@@ -209,17 +221,17 @@ func (s *MySuite) TestGetObjectRange(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, err := New(objectPath)
-	c.Assert(err, IsNil)
+	fsc, perr := New(objectPath)
+	c.Assert(perr, IsNil)
 
 	data := "hello world"
 	dataLen := len(data)
 
-	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
+	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(perr, IsNil)
 
-	reader, size, err := fsc.GetObject(0, 5)
-	c.Assert(err, IsNil)
+	reader, size, perr := fsc.GetObject(0, 5)
+	c.Assert(perr, IsNil)
 	var results bytes.Buffer
 	_, err = io.CopyN(&results, reader, int64(size))
 	c.Assert(err, IsNil)
@@ -232,17 +244,17 @@ func (s *MySuite) TestStatObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, err := New(objectPath)
-	c.Assert(err, IsNil)
+	fsc, perr := New(objectPath)
+	c.Assert(perr, IsNil)
 
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
+	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(perr, IsNil)
 
-	content, err := fsc.Stat()
-	c.Assert(err, IsNil)
+	content, perr := fsc.Stat()
+	c.Assert(perr, IsNil)
 	c.Assert(content.Name, Equals, objectPath)
 	c.Assert(content.Size, Equals, int64(dataLen))
 }

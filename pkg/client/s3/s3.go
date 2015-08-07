@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go"
-	"github.com/minio/minio/pkg/probe"
 )
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
@@ -178,7 +178,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 				if errResponse.Code == "NoSuchKey" {
 					for content := range c.List(false) {
 						if content.Err != nil {
-							return nil, probe.New(content.Err)
+							return nil, content.Err.Trace()
 						}
 						content.Content.Type = os.ModeDir
 						content.Content.Name = object

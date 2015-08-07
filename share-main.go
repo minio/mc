@@ -25,7 +25,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // Help message.
@@ -70,7 +70,7 @@ func runShareCmd(ctx *cli.Context) {
 	if len(args) == 2 {
 		var err error
 		expires, err = time.ParseDuration(args.Last())
-		Fatal(err)
+		Fatal(probe.New(err))
 	}
 	targetURL, err := getExpandedURL(url, config.Aliases)
 	Fatal(err)

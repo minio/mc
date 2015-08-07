@@ -33,11 +33,6 @@
 			"Rev": "d9184e5834efb7cd4a24df4d6ebab9b51dad4d9c"
 		},
 		{
-			"ImportPath": "github.com/minio/minio/pkg/probe",
-			"Comment": "release-1434511043-300-g28d9565",
-			"Rev": "28d9565400d68ae1cd79b81075823f10775e6230"
-		},
-		{
 			"ImportPath": "github.com/minio/pb",
 			"Rev": "e3e099c334cd89a6fe993f0683eaafd85604290f"
 		},
