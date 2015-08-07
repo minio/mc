@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -47,39 +48,65 @@ FLAGS:
 
 EXAMPLES:
    1. Generate presigned url for an object with expiration of 10minutes
-      $ mc {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz expire 10m
+      $ mc {{.Name}} url https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz 10m
 
    2. Generate presigned url for all objects at given path
-      $ mc {{.Name}} https://s3.amazonaws.com/backup... expire 20m
+      $ mc {{.Name}} url https://s3.amazonaws.com/backup... 20m
 
 `,
 }
 
 // runShareCmd - is a handler for mc share command
 func runShareCmd(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+	if !ctx.Args().Present() || ctx.Args().First() == "help" || len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
 	}
 	args := ctx.Args()
 	config := mustGetMcConfig()
-	for _, arg := range args {
-		targetURL, err := getExpandedURL(arg, config.Aliases)
+	/// get first and last arguments
+	url := args.First() // url to be shared
+	// default expiration is 7days
+	expires := time.Duration(604800) * time.Second
+	if len(args) == 2 {
+		var err error
+		expires, err = time.ParseDuration(args.Last())
 		Fatal(err)
-		// if recursive strip off the "..."
-		newTargetURL := stripRecursiveURL(targetURL)
-		Fatal(doShareCmd(newTargetURL, isURLRecursive(targetURL)))
 	}
+	targetURL, err := getExpandedURL(url, config.Aliases)
+	Fatal(err)
+	// if recursive strip off the "..."
+	newTargetURL := stripRecursiveURL(targetURL)
+	Fatal(doShareCmd(newTargetURL, isURLRecursive(targetURL), expires))
+
 }
 
 // doShareCmd share files from target
-func doShareCmd(targetURL string, recursive bool) *probe.Error {
+func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.Error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
 		return err.Trace()
 	}
-	err = doShare(clnt, recursive)
-	if err != nil {
-		return err.Trace()
+	if expires.Seconds() < 1 {
+		return probe.New(errors.New("Too low expires, expiration cannot be less than 1 second"))
+	}
+	if expires.Seconds() > 604800 {
+		return probe.New(errors.New("Too high expires, expiration cannot be larger than 7 days"))
+	}
+	for contentCh := range clnt.List(recursive) {
+		if contentCh.Err != nil {
+			return contentCh.Err.Trace()
+		}
+		targetParser := clnt.URL()
+		targetParser.Path = path2Bucket(targetParser) + string(targetParser.Separator) + contentCh.Content.Name
+		newClnt, err := url2Client(targetParser.String())
+		if err != nil {
+			return err.Trace()
+		}
+		presignedURL, err := newClnt.PresignedGetObject(expires, 0, 0)
+		if err != nil {
+			return err.Trace()
+		}
+		console.PrintC(fmt.Sprintf("Succesfully generated shared URL with expiry %s, please copy: %s\n", expires, presignedURL))
 	}
 	return nil
 }
@@ -96,26 +123,4 @@ func path2Bucket(u *client.URL) (bucketName string) {
 		bucketName = splits[1]
 	}
 	return bucketName
-}
-
-func doShare(clnt client.Client, recursive bool) *probe.Error {
-	for contentCh := range clnt.List(recursive) {
-		if contentCh.Err != nil {
-			return contentCh.Err.Trace()
-		}
-		targetParser := clnt.URL()
-		targetParser.Path = path2Bucket(targetParser) + string(targetParser.Separator) + contentCh.Content.Name
-		newClnt, err := url2Client(targetParser.String())
-		if err != nil {
-			return err.Trace()
-		}
-		// TODO enable expiry
-		expire := time.Duration(1000) * time.Second
-		presignedURL, err := newClnt.PresignedGetObject(time.Duration(1000)*time.Second, 0, 0)
-		if err != nil {
-			return err.Trace()
-		}
-		console.PrintC(fmt.Sprintf("Succesfully generated shared URL with expiry %s, please copy: %s\n", expire, presignedURL))
-	}
-	return nil
 }
