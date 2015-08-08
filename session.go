@@ -42,7 +42,7 @@ func isSessionDirExists() bool {
 
 func createSessionDir() *probe.Error {
 	if err := os.MkdirAll(getSessionDir(), 0700); err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	return nil
 }
@@ -78,7 +78,7 @@ func getSessionDataFile(sid string) string {
 func getSessionIDs() (sids []string) {
 	sessionList, err := filepath.Glob(getSessionDir() + "/*.json")
 	if err != nil {
-		console.Fatalf("Unable to list session folder ‘%s’, %s", getSessionDir(), probe.New(err))
+		console.Fatalf("Unable to list session folder ‘%s’, %s", getSessionDir(), probe.NewError(err))
 	}
 
 	for _, path := range sessionList {

@@ -354,7 +354,7 @@ func Unlock() {
 // SetTheme sets a color theme
 func SetTheme(themeName string) *probe.Error {
 	if !IsValidTheme(themeName) {
-		return probe.New(fmt.Errorf("Unsupported theme name [%s]", themeName))
+		return probe.NewError(fmt.Errorf("Unsupported theme name [%s]", themeName))
 	}
 
 	mutex.Lock()

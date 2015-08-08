@@ -140,7 +140,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) {
 	url, err := client.Parse(urlStr)
 	if err != nil {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 	switch url.Type {
 	case client.Object: // Minio and S3 compatible cloud storage
@@ -166,7 +166,7 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 	case client.Filesystem:
 		return fs.New(urlStr)
 	}
-	return nil, probe.New(errInvalidURL{URL: urlStr})
+	return nil, probe.NewError(errInvalidURL{URL: urlStr})
 }
 
 // url2Stat - Returns client, config and its stat Content from the URL
@@ -200,7 +200,7 @@ func isValidURL(url string) bool {
 
 func url2Client(url string) (client.Client, *probe.Error) {
 	if !isValidURL(url) {
-		return nil, probe.New(errInvalidURL{URL: url})
+		return nil, probe.NewError(errInvalidURL{URL: url})
 	}
 	urlconfig, err := getHostConfig(url)
 	if err != nil {

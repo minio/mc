@@ -73,7 +73,7 @@ https://dl.minio.io:9000 for continuous updates`
 	var updates Updates
 	decoder := json.NewDecoder(data)
 	if err := decoder.Decode(&updates); err != nil {
-		return "Unable to parse update fields", probe.New(err)
+		return "Unable to parse update fields", probe.NewError(err)
 	}
 	latest, _ := time.Parse(http.TimeFormat, updates.BuildDate)
 	if latest.IsZero() {
@@ -89,7 +89,7 @@ https://dl.minio.io:9000 for continuous updates`
 		}
 		msg, err := printUpdateNotify(updateString, "new", "old")
 		if err != nil {
-			return "", probe.New(err)
+			return "", probe.NewError(err)
 		}
 		console.Println(msg)
 		return "", nil

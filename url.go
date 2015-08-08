@@ -54,7 +54,7 @@ func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err *
 	}
 	if _, err := client.Parse(urlStr); err != nil {
 		// Not a valid URL. Return error
-		return "", probe.New(errInvalidURL{urlStr})
+		return "", probe.NewError(errInvalidURL{urlStr})
 	}
 	return urlStr, nil
 }

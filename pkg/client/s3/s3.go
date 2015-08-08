@@ -59,7 +59,7 @@ type s3Client struct {
 func New(config *Config) (client.Client, *probe.Error) {
 	u, err := client.Parse(config.HostURL)
 	if err != nil {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 	var transport http.RoundTripper
 	switch {
@@ -81,7 +81,7 @@ func New(config *Config) (client.Client, *probe.Error) {
 	s3Conf.Endpoint = u.Scheme + u.SchemeSeparator + u.Host
 	api, err := minio.New(s3Conf)
 	if err != nil {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 	return &s3Client{api: api, hostURL: u}, nil
 }
@@ -96,7 +96,7 @@ func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 	bucket, object := c.url2BucketAndObject()
 	reader, metadata, err := c.api.GetPartialObject(bucket, object, offset, length)
 	if err != nil {
-		return nil, length, probe.New(err)
+		return nil, length, probe.NewError(err)
 	}
 	return reader, metadata.Size, nil
 }
@@ -106,7 +106,7 @@ func (c *s3Client) PresignedGetObject(expires time.Duration, offset, length int6
 	bucket, object := c.url2BucketAndObject()
 	presignedURL, err := c.api.PresignedGetPartialObject(bucket, object, expires, offset, length)
 	if err != nil {
-		return "", probe.New(err)
+		return "", probe.NewError(err)
 	}
 	return presignedURL, nil
 }
@@ -122,10 +122,10 @@ func (c *s3Client) PutObject(size int64, data io.Reader) *probe.Error {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse != nil {
 			if errResponse.Code == "MethodNotAllowed" {
-				return probe.New(client.ObjectAlreadyExists{Object: object})
+				return probe.NewError(client.ObjectAlreadyExists{Object: object})
 			}
 		}
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	return nil
 }
@@ -134,11 +134,11 @@ func (c *s3Client) PutObject(size int64, data io.Reader) *probe.Error {
 func (c *s3Client) MakeBucket() *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return probe.New(client.InvalidQueryURL{URL: c.hostURL.String()})
+		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
 	}
 	err := c.api.MakeBucket(bucket, minio.BucketACL("private"))
 	if err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	return nil
 }
@@ -147,11 +147,11 @@ func (c *s3Client) MakeBucket() *probe.Error {
 func (c *s3Client) SetBucketACL(acl string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return probe.New(client.InvalidQueryURL{URL: c.hostURL.String()})
+		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
 	}
 	err := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
 	if err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	return nil
 }
@@ -165,7 +165,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	case bucket == "" && object == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
-				return nil, probe.New(bucket.Err)
+				return nil, probe.NewError(bucket.Err)
 			}
 			return &client.Content{Type: os.ModeDir}, nil
 		}
@@ -187,7 +187,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 					}
 				}
 			}
-			return nil, probe.New(err)
+			return nil, probe.NewError(err)
 		}
 		objectMetadata.Name = metadata.Key
 		objectMetadata.Time = metadata.LastModified
@@ -197,7 +197,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	}
 	err := c.api.BucketExists(bucket)
 	if err != nil {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 	bucketMetadata := new(client.Content)
 	bucketMetadata.Name = bucket
@@ -253,7 +253,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 			if bucket.Err != nil {
 				contentCh <- client.ContentOnChannel{
 					Content: nil,
-					Err:     probe.New(bucket.Err),
+					Err:     probe.NewError(bucket.Err),
 				}
 				return
 			}
@@ -285,7 +285,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				if object.Err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     probe.New(object.Err),
+						Err:     probe.NewError(object.Err),
 					}
 					return
 				}
@@ -323,7 +323,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			if bucket.Err != nil {
 				contentCh <- client.ContentOnChannel{
 					Content: nil,
-					Err:     probe.New(bucket.Err),
+					Err:     probe.NewError(bucket.Err),
 				}
 				return
 			}
@@ -331,7 +331,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				if object.Err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     probe.New(object.Err),
+						Err:     probe.NewError(object.Err),
 					}
 					return
 				}
@@ -351,7 +351,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			if object.Err != nil {
 				contentCh <- client.ContentOnChannel{
 					Content: nil,
-					Err:     probe.New(object.Err),
+					Err:     probe.NewError(object.Err),
 				}
 				return
 			}

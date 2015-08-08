@@ -37,7 +37,7 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 	{
 		url, err := client.Parse(URL)
 		if err != nil {
-			return hostConfig{}, probe.New(err)
+			return hostConfig{}, probe.NewError(err)
 		}
 		// No host matching or keys needed for filesystem requests
 		if url.Type == client.Filesystem {
@@ -50,12 +50,12 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 		for globURL, hostCfg := range config.Hosts {
 			match, err := filepath.Match(globURL, url.Host)
 			if err != nil {
-				return hostConfig{}, probe.New(errInvalidGlobURL{glob: globURL, request: URL})
+				return hostConfig{}, probe.NewError(errInvalidGlobURL{glob: globURL, request: URL})
 			}
 			if match {
 				return hostCfg, nil
 			}
 		}
 	}
-	return hostConfig{}, probe.New(errNoMatchingHost{})
+	return hostConfig{}, probe.NewError(errNoMatchingHost{})
 }
