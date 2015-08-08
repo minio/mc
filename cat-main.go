@@ -92,9 +92,9 @@ func doCatCmd(sourceURL string) *probe.Error {
 				// stdout closed by the user. Gracefully exit.
 				return nil
 			}
-			return probe.New(err)
+			return probe.NewError(err)
 		default:
-			return probe.New(err)
+			return probe.NewError(err)
 		}
 	}
 	return nil

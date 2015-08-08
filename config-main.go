@@ -81,7 +81,7 @@ func saveConfig(arg string, aliases []string) *probe.Error {
 		}
 		return writeConfig(config)
 	default:
-		return probe.New(errInvalidArgument{})
+		return probe.NewError(errInvalidArgument{})
 	}
 }
 
@@ -113,13 +113,13 @@ func doConfig(arg string, aliases []string) (string, *probe.Error) {
 	if arg == "alias" {
 		return "Alias written to [" + configPath + "].", nil
 	}
-	return "", probe.New(errUnexpected{})
+	return "", probe.NewError(errUnexpected{})
 }
 
 // addAlias - add new aliases
 func addAlias(aliases []string) (quick.Config, *probe.Error) {
 	if len(aliases) < 2 {
-		return nil, probe.New(errInvalidArgument{})
+		return nil, probe.NewError(errInvalidArgument{})
 	}
 	conf := newConfigV1()
 	config, err := quick.New(conf)
@@ -134,18 +134,18 @@ func addAlias(aliases []string) (quick.Config, *probe.Error) {
 	aliasName := aliases[0]
 	url := strings.TrimSuffix(aliases[1], "/")
 	if strings.HasPrefix(aliasName, "http") {
-		return nil, probe.New(errInvalidAliasName{name: aliasName})
+		return nil, probe.NewError(errInvalidAliasName{name: aliasName})
 	}
 	if !strings.HasPrefix(url, "http") {
-		return nil, probe.New(errInvalidURL{URL: url})
+		return nil, probe.NewError(errInvalidURL{URL: url})
 	}
 	if !isValidAliasName(aliasName) {
-		return nil, probe.New(errInvalidAliasName{name: aliasName})
+		return nil, probe.NewError(errInvalidAliasName{name: aliasName})
 	}
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV1)
 	if _, ok := newConf.Aliases[aliasName]; ok {
-		return nil, probe.New(errAliasExists{})
+		return nil, probe.NewError(errAliasExists{})
 	}
 	newConf.Aliases[aliasName] = url
 	newConfig, err := quick.New(newConf)

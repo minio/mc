@@ -36,7 +36,7 @@ type fsClient struct {
 // New - instantiate a new fs client
 func New(path string) (client.Client, *probe.Error) {
 	if strings.TrimSpace(path) == "" {
-		return nil, probe.New(client.EmptyPath{})
+		return nil, probe.NewError(client.EmptyPath{})
 	}
 	return &fsClient{path: normalizePath(path)}, nil
 }
@@ -60,17 +60,17 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(fpath)
 	if os.IsNotExist(err) {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 	if err != nil {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 	st, err := os.Stat(fpath)
 	if os.IsNotExist(err) {
-		return nil, probe.New(client.NotFound{Path: fpath})
+		return nil, probe.NewError(client.NotFound{Path: fpath})
 	}
 	if err != nil {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 	return st, nil
 }
@@ -81,12 +81,12 @@ func (f *fsClient) PutObject(size int64, data io.Reader) *probe.Error {
 	objectPath := f.path
 	if objectDir != "" {
 		if err := os.MkdirAll(objectDir, 0700); err != nil {
-			return probe.New(err)
+			return probe.NewError(err)
 		}
 	}
 	fs, err := os.Create(objectPath)
 	if err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	defer fs.Close()
 
@@ -94,14 +94,14 @@ func (f *fsClient) PutObject(size int64, data io.Reader) *probe.Error {
 	if size > 0 {
 		_, err = io.CopyN(fs, data, int64(size))
 		if err != nil {
-			return probe.New(err)
+			return probe.NewError(err)
 		}
 	} else {
 		// size could be 0 for virtual files on certain filesystems
 		// for example /proc, so read till EOF for such files
 		_, err = io.Copy(fs, data)
 		if err != nil {
-			return probe.New(err)
+			return probe.NewError(err)
 		}
 	}
 	return nil
@@ -111,7 +111,7 @@ func (f *fsClient) PutObject(size int64, data io.Reader) *probe.Error {
 func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, 0, probe.New(err)
+		return nil, 0, probe.NewError(err)
 	}
 	{
 		content, err := f.getFSMetadata()
@@ -123,7 +123,7 @@ func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 }
 
 func (f *fsClient) PresignedGetObject(expires time.Duration, offset, length int64) (string, *probe.Error) {
-	return "", probe.New(client.APINotImplemented{API: "PresignedGetObject"})
+	return "", probe.NewError(client.APINotImplemented{API: "PresignedGetObject"})
 }
 
 // GetObject download an full or part object from bucket
@@ -131,7 +131,7 @@ func (f *fsClient) PresignedGetObject(expires time.Duration, offset, length int6
 // with errors getobject will return nil reader, length and typed errors
 func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
 	if offset < 0 || length < 0 {
-		return nil, 0, probe.New(client.InvalidRange{Offset: offset})
+		return nil, 0, probe.NewError(client.InvalidRange{Offset: offset})
 	}
 
 	tmppath := f.path
@@ -144,22 +144,22 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 	// Resolve symlinks
 	_, err := filepath.EvalSymlinks(tmppath)
 	if os.IsNotExist(err) {
-		return nil, length, probe.New(err)
+		return nil, length, probe.NewError(err)
 	}
 	if err != nil {
-		return nil, length, probe.New(err)
+		return nil, length, probe.NewError(err)
 	}
 	if offset == 0 && length == 0 {
 		return f.get()
 	}
 	body, err := os.Open(f.path)
 	if err != nil {
-		return nil, length, probe.New(err)
+		return nil, length, probe.NewError(err)
 
 	}
 	_, err = io.CopyN(ioutil.Discard, body, int64(offset))
 	if err != nil {
-		return nil, length, probe.New(err)
+		return nil, length, probe.NewError(err)
 	}
 	return body, length, nil
 }
@@ -191,14 +191,14 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	if os.IsNotExist(err) {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     probe.New(err),
+			Err:     probe.NewError(err),
 		}
 		return
 	}
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     probe.New(err),
+			Err:     probe.NewError(err),
 		}
 		return
 	}
@@ -207,7 +207,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     probe.New(err),
+			Err:     probe.NewError(err),
 		}
 		return
 	}
@@ -223,7 +223,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		if err != nil {
 			contentCh <- client.ContentOnChannel{
 				Content: nil,
-				Err:     probe.New(err),
+				Err:     probe.NewError(err),
 			}
 			return
 		}
@@ -233,7 +233,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		if err != nil {
 			contentCh <- client.ContentOnChannel{
 				Content: nil,
-				Err:     probe.New(err),
+				Err:     probe.NewError(err),
 			}
 			return
 		}
@@ -244,14 +244,14 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 				if os.IsNotExist(err) {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     probe.New(client.ISBrokenSymlink{Path: file.Name()}),
+						Err:     probe.NewError(client.ISBrokenSymlink{Path: file.Name()}),
 					}
 					continue
 				}
 				if err != nil {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     probe.New(err),
+						Err:     probe.NewError(err),
 					}
 					continue
 				}
@@ -332,7 +332,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     probe.New(err),
+			Err:     probe.NewError(err),
 		}
 	}
 }
@@ -375,7 +375,7 @@ func aclToPerm(acl string) os.FileMode {
 func (f *fsClient) MakeBucket() *probe.Error {
 	err := os.MkdirAll(f.path, 0775)
 	if err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	return nil
 }
@@ -383,15 +383,15 @@ func (f *fsClient) MakeBucket() *probe.Error {
 // SetBucketACL - create a new bucket
 func (f *fsClient) SetBucketACL(acl string) *probe.Error {
 	if !isValidBucketACL(acl) {
-		return probe.New(client.InvalidACLType{ACL: acl})
+		return probe.NewError(client.InvalidACLType{ACL: acl})
 	}
 	err := os.MkdirAll(f.path, aclToPerm(acl))
 	if err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	err = os.Chmod(f.path, aclToPerm(acl))
 	if err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	return nil
 }

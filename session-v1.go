@@ -50,12 +50,12 @@ func (s sessionV1) String() string {
 // loadSession - reads session file if exists and re-initiates internal variables
 func loadSessionV1(sid string) (*sessionV1, *probe.Error) {
 	if !isSessionDirExists() {
-		return nil, probe.New(errInvalidArgument{})
+		return nil, probe.NewError(errInvalidArgument{})
 	}
 	sessionFile := getSessionFileV1(sid)
 
 	if _, err := os.Stat(sessionFile); err != nil {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 	s := new(sessionV1)
 	s.Version = "1.0.0"
@@ -77,7 +77,7 @@ func loadSessionV1(sid string) (*sessionV1, *probe.Error) {
 func getSessionIDsV1() (sids []string) {
 	sessionList, err := filepath.Glob(getSessionDir() + "/*")
 	if err != nil {
-		console.Fatalf("Unable to list session folder ‘%s’, %s", getSessionDir(), probe.New(err))
+		console.Fatalf("Unable to list session folder ‘%s’, %s", getSessionDir(), probe.NewError(err))
 	}
 
 	for _, path := range sessionList {

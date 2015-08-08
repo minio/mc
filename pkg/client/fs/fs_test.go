@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fs
+package fs_test
 
 import (
 	"bytes"
@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/client/fs"
 	. "gopkg.in/check.v1"
 )
 
@@ -40,7 +41,7 @@ func (s *MySuite) TestList(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object1")
-	fsc, perr := New(objectPath)
+	fsc, perr := fs.New(objectPath)
 	c.Assert(err, IsNil)
 
 	data := "hello"
@@ -50,13 +51,13 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	objectPath = filepath.Join(root, "object2")
-	fsc, perr = New(objectPath)
+	fsc, perr = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
 	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	fsc, perr = New(root)
+	fsc, perr = fs.New(root)
 	c.Assert(err, IsNil)
 
 	var contents []*client.Content
@@ -75,13 +76,13 @@ func (s *MySuite) TestList(c *C) {
 	}
 
 	objectPath = filepath.Join(root, "test1/newObject1")
-	fsc, perr = New(objectPath)
+	fsc, perr = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
 	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	fsc, perr = New(root)
+	fsc, perr = fs.New(root)
 	c.Assert(err, IsNil)
 
 	contents = nil
@@ -103,7 +104,7 @@ func (s *MySuite) TestList(c *C) {
 		c.Assert(content.Type.IsDir(), Equals, true)
 	}
 
-	fsc, perr = New(root)
+	fsc, perr = fs.New(root)
 	c.Assert(err, IsNil)
 
 	contents = nil
@@ -139,7 +140,7 @@ func (s *MySuite) TestPutBucket(c *C) {
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsc, perr := New(bucketPath)
+	fsc, perr := fs.New(bucketPath)
 	c.Assert(perr, IsNil)
 	perr = fsc.MakeBucket()
 	c.Assert(perr, IsNil)
@@ -152,7 +153,7 @@ func (s *MySuite) TestStatBucket(c *C) {
 
 	bucketPath := filepath.Join(root, "bucket")
 
-	fsc, perr := New(bucketPath)
+	fsc, perr := fs.New(bucketPath)
 	c.Assert(perr, IsNil)
 	perr = fsc.MakeBucket()
 	c.Assert(perr, IsNil)
@@ -166,7 +167,7 @@ func (s *MySuite) TestPutBucketACL(c *C) {
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsc, perr := New(bucketPath)
+	fsc, perr := fs.New(bucketPath)
 	c.Assert(perr, IsNil)
 	perr = fsc.MakeBucket()
 	c.Assert(perr, IsNil)
@@ -181,7 +182,7 @@ func (s *MySuite) TestPutObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, perr := New(objectPath)
+	fsc, perr := fs.New(objectPath)
 	c.Assert(perr, IsNil)
 
 	data := "hello"
@@ -197,7 +198,7 @@ func (s *MySuite) TestGetObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, perr := New(objectPath)
+	fsc, perr := fs.New(objectPath)
 	c.Assert(perr, IsNil)
 
 	data := "hello"
@@ -221,7 +222,7 @@ func (s *MySuite) TestGetObjectRange(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, perr := New(objectPath)
+	fsc, perr := fs.New(objectPath)
 	c.Assert(perr, IsNil)
 
 	data := "hello world"
@@ -244,7 +245,7 @@ func (s *MySuite) TestStatObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, perr := New(objectPath)
+	fsc, perr := fs.New(objectPath)
 	c.Assert(perr, IsNil)
 
 	data := "hello"

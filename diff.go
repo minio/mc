@@ -63,11 +63,11 @@ func mustURLJoinPath(url1, url2 string) string {
 func urlJoinPath(url1, url2 string) (string, *probe.Error) {
 	u1, err := client.Parse(url1)
 	if err != nil {
-		return "", probe.New(err)
+		return "", probe.NewError(err)
 	}
 	u2, err := client.Parse(url2)
 	if err != nil {
-		return "", probe.New(err)
+		return "", probe.NewError(err)
 	}
 	u1.Path = filepath.Join(u1.Path, u2.Path)
 	return u1.String(), nil
@@ -170,7 +170,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	default:
 		ch <- diff{
 			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
-			err:     probe.New(errNotAnObject{url: firstURL}),
+			err:     probe.NewError(errNotAnObject{url: firstURL}),
 		}
 		return
 	}

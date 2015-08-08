@@ -161,7 +161,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
 				session.Close()
-				console.Fatalf("Unable to marshal URLs to JSON. %s\n", probe.New(err))
+				console.Fatalf("Unable to marshal URLs to JSON. %s\n", probe.NewError(err))
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			scanBar(sURLs.SourceContent.Name)

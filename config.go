@@ -52,7 +52,7 @@ func getMcConfigDir() (string, *probe.Error) {
 	}
 	u, err := user.Current()
 	if err != nil {
-		return "", probe.New(err)
+		return "", probe.NewError(err)
 	}
 	// For windows the path is slightly different
 	switch runtime.GOOS {
@@ -77,7 +77,7 @@ func createMcConfigDir() *probe.Error {
 		return err.Trace()
 	}
 	if err := os.MkdirAll(p, 0700); err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ func mustGetMcConfigPath() string {
 // getMcConfig - reads configuration file and returns config
 func getMcConfig() (*configV1, *probe.Error) {
 	if !isMcConfigExists() {
-		return nil, probe.New(errInvalidArgument{})
+		return nil, probe.NewError(errInvalidArgument{})
 	}
 
 	configFile, err := getMcConfigPath()

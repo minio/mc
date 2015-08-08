@@ -71,7 +71,7 @@ func runShareCmd(ctx *cli.Context) {
 	if len(args) == 2 {
 		var err error
 		expires, err = time.ParseDuration(args.Last())
-		Fatal(probe.New(err))
+		Fatal(probe.NewError(err))
 	}
 	targetURL, err := getExpandedURL(url, config.Aliases)
 	Fatal(err)
@@ -97,10 +97,10 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		return err.Trace()
 	}
 	if expires.Seconds() < 1 {
-		return probe.New(errors.New("Too low expires, expiration cannot be less than 1 second"))
+		return probe.NewError(errors.New("Too low expires, expiration cannot be less than 1 second"))
 	}
 	if expires.Seconds() > 604800 {
-		return probe.New(errors.New("Too high expires, expiration cannot be larger than 7 days"))
+		return probe.NewError(errors.New("Too high expires, expiration cannot be larger than 7 days"))
 	}
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {

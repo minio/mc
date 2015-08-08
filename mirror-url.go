@@ -96,13 +96,13 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	Fatal(err)
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		Fatal(probe.New(errSourceIsNotDir{URL: srcURL}))
+		Fatal(probe.NewError(errSourceIsNotDir{URL: srcURL}))
 	}
 	for _, tgtURL := range tgtURLs {
 		_, content, err := url2Stat(tgtURL)
 		if err == nil {
 			if !content.Type.IsDir() {
-				Fatal(probe.New(errTargetIsNotDir{URL: tgtURL}))
+				Fatal(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
 			}
 		}
 	}
@@ -202,7 +202,7 @@ func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs 
 			}
 			// if one of the targets is not dir exit
 			if !targetContent.Type.IsDir() {
-				mirrorURLsCh <- mirrorURLs{Error: probe.New(errInvalidTarget{URL: targetURL})}
+				mirrorURLsCh <- mirrorURLs{Error: probe.NewError(errInvalidTarget{URL: targetURL})}
 				return
 			}
 			// special case, be extremely careful before changing this behavior - will lead to data loss

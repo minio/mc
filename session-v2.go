@@ -35,7 +35,7 @@ func migrateSessionV1ToV2() {
 	for _, sid := range getSessionIDsV1() {
 		err := os.Remove(getSessionFileV1(sid))
 		if err != nil {
-			console.Fatalf("Migration failed. Unable to remove old session file %s. %s\n", getSessionFileV1(sid), probe.New(err))
+			console.Fatalf("Migration failed. Unable to remove old session file %s. %s\n", getSessionFileV1(sid), probe.NewError(err))
 		}
 	}
 }
@@ -112,7 +112,7 @@ func (s *sessionV2) Save() *probe.Error {
 	defer s.mutex.Unlock()
 
 	if err := s.DataFP.Sync(); err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 
 	qs, err := quick.New(s.Header)
@@ -129,7 +129,7 @@ func (s *sessionV2) Close() *probe.Error {
 	defer s.mutex.Unlock()
 
 	if err := s.DataFP.Close(); err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 
 	qs, err := quick.New(s.Header)
@@ -148,17 +148,17 @@ func (s *sessionV2) Delete() *probe.Error {
 	if s.DataFP != nil {
 		err := os.Remove(s.DataFP.Name())
 		if err != nil {
-			return probe.New(err)
+			return probe.NewError(err)
 		}
 	}
 
 	err := os.Remove(getSessionFile(s.SessionID))
 	if err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 
 	if err != nil {
-		return probe.New(err)
+		return probe.NewError(err)
 	}
 
 	return nil
@@ -167,12 +167,12 @@ func (s *sessionV2) Delete() *probe.Error {
 // loadSession - reads session file if exists and re-initiates internal variables
 func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	if !isSessionDirExists() {
-		return nil, probe.New(errInvalidArgument{})
+		return nil, probe.NewError(errInvalidArgument{})
 	}
 	sessionFile := getSessionFile(sid)
 
 	if _, err := os.Stat(sessionFile); err != nil {
-		return nil, probe.New(err)
+		return nil, probe.NewError(err)
 	}
 
 	s := &sessionV2{}
@@ -209,7 +209,7 @@ func isCopiedFactory(lastCopied string) func(string) bool {
 	copied := true // closure
 	return func(sourceURL string) bool {
 		if sourceURL == "" {
-			console.Fatalf("Empty source URL passed to isCopied() function. %s\n", probe.New(errUnexpected{}))
+			console.Fatalf("Empty source URL passed to isCopied() function. %s\n", probe.NewError(errUnexpected{}))
 		}
 		if lastCopied == "" {
 			return false
