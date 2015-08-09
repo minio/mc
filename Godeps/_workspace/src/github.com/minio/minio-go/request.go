@@ -19,6 +19,7 @@ package minio
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -433,9 +434,12 @@ func (r *request) getSignature(signingKey []byte, stringToSign string) string {
 }
 
 // Presign the request, in accordance with - http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
-func (r *request) PreSignV4() string {
+func (r *request) PreSignV4() (string, error) {
+	if r.config.AccessKeyID == "" && r.config.SecretAccessKey == "" {
+		return "", errors.New("presign requires accesskey and secretkey")
+	}
 	r.SignV4()
-	return r.req.URL.String()
+	return r.req.URL.String(), nil
 }
 
 // SignV4 the request before Do(), in accordance with - http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html

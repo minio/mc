@@ -14,55 +14,17 @@
  * limitations under the License.
  */
 
-package minio
+package minio_test
 
 import (
 	"bytes"
 	"io"
 	"net/http/httptest"
-	"strings"
 	"testing"
+	"time"
+
+	"github.com/minio/minio-go"
 )
-
-func TestACLTypes(t *testing.T) {
-	want := map[string]bool{
-		"private":            true,
-		"public-read":        true,
-		"public-read-write":  true,
-		"authenticated-read": true,
-		"invalid":            false,
-	}
-	for acl, ok := range want {
-		if BucketACL(acl).isValidBucketACL() != ok {
-			t.Fatal("Error")
-		}
-	}
-}
-
-func TestGetRegion(t *testing.T) {
-	region, err := getRegion("s3.amazonaws.com")
-	if err != nil {
-		t.Fatalf("Error")
-	}
-	if region != "us-east-1" {
-		t.Fatalf("Error")
-	}
-	region, err = getRegion("localhost:9000")
-	if err != nil {
-		t.Fatalf("Error")
-	}
-	if region != "milkyway" {
-		t.Fatalf("Error")
-	}
-}
-
-func TestUserAgent(t *testing.T) {
-	conf := new(Config)
-	conf.SetUserAgent("minio", "1.0", "amd64")
-	if !strings.Contains(conf.userAgent, "minio") {
-		t.Fatalf("Error")
-	}
-}
 
 func TestBucketOperations(t *testing.T) {
 	bucket := bucketHandler(bucketHandler{
@@ -71,7 +33,7 @@ func TestBucketOperations(t *testing.T) {
 	server := httptest.NewServer(bucket)
 	defer server.Close()
 
-	a, err := New(Config{Endpoint: server.URL})
+	a, err := minio.New(minio.Config{Endpoint: server.URL})
 	if err != nil {
 		t.Errorf("Error")
 	}
@@ -102,7 +64,7 @@ func TestBucketOperations(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error")
 	}
-	if !acl.isPrivate() {
+	if acl != minio.BucketACL("private") {
 		t.Fatalf("Error")
 	}
 
@@ -145,7 +107,7 @@ func TestBucketOperationsFail(t *testing.T) {
 	server := httptest.NewServer(bucket)
 	defer server.Close()
 
-	a, err := New(Config{Endpoint: server.URL})
+	a, err := minio.New(minio.Config{Endpoint: server.URL})
 	if err != nil {
 		t.Errorf("Error")
 	}
@@ -193,7 +155,7 @@ func TestObjectOperations(t *testing.T) {
 	server := httptest.NewServer(object)
 	defer server.Close()
 
-	a, err := New(Config{Endpoint: server.URL})
+	a, err := minio.New(minio.Config{Endpoint: server.URL})
 	if err != nil {
 		t.Fatalf("Error")
 	}
@@ -243,72 +205,67 @@ func TestObjectOperations(t *testing.T) {
 	}
 }
 
-func TestPartSize(t *testing.T) {
-	var maxPartSize int64 = 1024 * 1024 * 1024 * 5
-	partSize := getPartSize(5000000000000000000)
-	if partSize > minimumPartSize {
-		if partSize > maxPartSize {
-			t.Fatal("invalid result, cannot be bigger than maxPartSize 5GB")
-		}
-	}
-	partSize = getPartSize(50000000000)
-	if partSize > minimumPartSize {
-		t.Fatal("invalid result, cannot be bigger than minimumPartSize 5MB")
-	}
-}
+func TestPresignedURL(t *testing.T) {
+	object := objectHandler(objectHandler{
+		resource: "/bucket/object",
+		data:     []byte("Hello, World"),
+	})
+	server := httptest.NewServer(object)
+	defer server.Close()
 
-func TestURLEncoding(t *testing.T) {
-	type urlStrings struct {
-		name        string
-		encodedName string
+	a, err := minio.New(minio.Config{Endpoint: server.URL})
+	if err != nil {
+		t.Fatalf("Error")
+	}
+	// should error out for invalid access keys
+	_, err = a.PresignedGetObject("bucket", "object", time.Duration(1000)*time.Second)
+	if err == nil {
+		t.Fatalf("Error")
 	}
 
-	want := []urlStrings{
-		{
-			name:        "bigfile-1._%",
-			encodedName: "bigfile-1._%25",
-		},
-		{
-			name:        "本語",
-			encodedName: "%E6%9C%AC%E8%AA%9E",
-		},
-		{
-			name:        "本b語.1",
-			encodedName: "%E6%9C%ACb%E8%AA%9E.1",
-		},
-		{
-			name:        ">123>3123123",
-			encodedName: "%3E123%3E3123123",
-		},
-		{
-			name:        "test 1 2.txt",
-			encodedName: "test%201%202.txt",
-		},
+	a, err = minio.New(minio.Config{
+		Endpoint:        server.URL,
+		AccessKeyID:     "accessKey",
+		SecretAccessKey: "secretKey",
+	})
+	if err != nil {
+		t.Fatalf("Error")
 	}
-
-	for _, u := range want {
-		encodedName, err := urlEncodeName(u.name)
-		if err != nil {
-			t.Fatalf("Error")
-		}
-		if u.encodedName != encodedName {
-			t.Errorf("Error")
-		}
+	url, err := a.PresignedGetObject("bucket", "object", time.Duration(1000)*time.Second)
+	if err != nil {
+		t.Fatalf("Error")
+	}
+	if url == "" {
+		t.Fatalf("Error")
+	}
+	url, err = a.PresignedGetPartialObject("bucket", "object", time.Duration(1000)*time.Second, 5, 11)
+	if err != nil {
+		t.Fatalf("Error")
+	}
+	if url == "" {
+		t.Fatalf("Error")
+	}
+	_, err = a.PresignedGetObject("bucket", "object", time.Duration(0)*time.Second)
+	if err == nil {
+		t.Fatalf("Error")
+	}
+	_, err = a.PresignedGetObject("bucket", "object", time.Duration(604801)*time.Second)
+	if err == nil {
+		t.Fatalf("Error")
 	}
 }
 
 func TestErrorResponse(t *testing.T) {
-	a := apiV1{&Config{}}
 	errorResponse := []byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message><Resource>/mybucket/myphoto.jpg</Resource><RequestId>F19772218238A85A</RequestId><HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId></Error>")
 	errorReader := bytes.NewReader(errorResponse)
-	err := a.ToErrorResponseBody(errorReader)
+	err := minio.BodyToErrorResponse(errorReader, "application/xml")
 	if err == nil {
 		t.Fatal("Error")
 	}
 	if err.Error() != "Access Denied" {
 		t.Fatal("Error")
 	}
-	resp := ToErrorResponse(err)
+	resp := minio.ToErrorResponse(err)
 	// valid all fields
 	if resp == nil {
 		t.Fatal("Error")

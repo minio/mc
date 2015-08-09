@@ -72,13 +72,19 @@ func ToErrorResponse(err error) *ErrorResponse {
 
 // ToXML send raw xml marshalled as string
 func (e ErrorResponse) ToXML() string {
-	b, _ := xml.Marshal(&e)
+	b, err := xml.Marshal(&e)
+	if err != nil {
+		panic(err)
+	}
 	return string(b)
 }
 
 // ToJSON send raw json marshalled as string
 func (e ErrorResponse) ToJSON() string {
-	b, _ := json.Marshal(&e)
+	b, err := json.Marshal(&e)
+	if err != nil {
+		panic(err)
+	}
 	return string(b)
 }
 
@@ -87,10 +93,10 @@ func (e ErrorResponse) Error() string {
 	return e.Message
 }
 
-// ToErrorResponseBody returns a new encoded ErrorResponse structure
-func (a apiV1) ToErrorResponseBody(errBody io.Reader) error {
+// BodyToErrorResponse returns a new encoded ErrorResponse structure
+func BodyToErrorResponse(errBody io.Reader, acceptType string) error {
 	var errorResponse ErrorResponse
-	err := acceptTypeDecoder(errBody, a.config.AcceptType, &errorResponse)
+	err := acceptTypeDecoder(errBody, acceptType, &errorResponse)
 	if err != nil {
 		return err
 	}

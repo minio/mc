@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package minio
+package minio_test
 
 // bucketHandler is an http.Handler that verifies bucket responses and validates incoming requests
 import (
