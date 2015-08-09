@@ -336,7 +336,7 @@ func (a apiV2) newObjectUpload(bucket, object, contentType string, size int64, d
 				}
 			}
 		}
-		completePart, err := a.uploadPart(bucket, object, uploadID, part.Md5Sum, part.Num, part.Len, part.ReadSeeker)
+		completePart, err := a.uploadPart(bucket, object, uploadID, part.MD5Sum, part.Num, part.Len, part.ReadSeeker)
 		if err != nil {
 			return err
 		}
@@ -357,7 +357,7 @@ type partCh struct {
 }
 
 func (a apiV2) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partCh {
-	partCh := make(chan partCh)
+	partCh := make(chan partCh, 1000)
 	go a.listObjectPartsRecursiveInRoutine(bucket, object, uploadID, partCh)
 	return partCh
 }
@@ -433,7 +433,7 @@ func (a apiV2) continueObjectUpload(bucket, object, uploadID string, size int64,
 				}
 			}
 		}
-		completedPart, err := a.uploadPart(bucket, object, uploadID, part.Md5Sum, part.Num, part.Len, part.ReadSeeker)
+		completedPart, err := a.uploadPart(bucket, object, uploadID, part.MD5Sum, part.Num, part.Len, part.ReadSeeker)
 		if err != nil {
 			return err
 		}
@@ -453,7 +453,7 @@ type multiPartUploadCh struct {
 }
 
 func (a apiV2) listMultipartUploadsRecursive(bucket, object string) <-chan multiPartUploadCh {
-	ch := make(chan multiPartUploadCh)
+	ch := make(chan multiPartUploadCh, 1000)
 	go a.listMultipartUploadsRecursiveInRoutine(bucket, object, ch)
 	return ch
 }
@@ -521,7 +521,7 @@ func (a apiV2) PutObject(bucket, object, contentType string, size int64, data io
 					Message: "IncompleteBody",
 				}
 			}
-			_, err := a.putObject(bucket, object, contentType, part.Md5Sum, part.Len, part.ReadSeeker)
+			_, err := a.putObject(bucket, object, contentType, part.MD5Sum, part.Len, part.ReadSeeker)
 			if err != nil {
 				return err
 			}
@@ -775,7 +775,7 @@ func (a apiV2) listObjectsInRoutine(bucket, prefix string, recursive bool, ch ch
 //         }
 //
 func (a apiV2) ListObjects(bucket string, prefix string, recursive bool) <-chan ObjectStatCh {
-	ch := make(chan ObjectStatCh)
+	ch := make(chan ObjectStatCh, 1000)
 	go a.listObjectsInRoutine(bucket, prefix, recursive, ch)
 	return ch
 }
@@ -814,7 +814,7 @@ func (a apiV2) listBucketsInRoutine(ch chan BucketStatCh) {
 //         }
 //
 func (a apiV2) ListBuckets() <-chan BucketStatCh {
-	ch := make(chan BucketStatCh)
+	ch := make(chan BucketStatCh, 100)
 	go a.listBucketsInRoutine(ch)
 	return ch
 }

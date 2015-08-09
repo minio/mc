@@ -24,7 +24,7 @@ import (
 
 // part - message structure for results from the MultiPart
 type part struct {
-	Md5Sum     []byte
+	MD5Sum     []byte
 	ReadSeeker io.ReadSeeker
 	Err        error
 	Len        int64
@@ -46,7 +46,7 @@ type skipPart struct {
 //
 // additionally this function also skips list of parts if provided
 func chopper(reader io.Reader, chunkSize int64, skipParts []skipPart) <-chan part {
-	ch := make(chan part)
+	ch := make(chan part, 3)
 	go chopperInRoutine(reader, chunkSize, skipParts, ch)
 	return ch
 }
@@ -58,7 +58,7 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 	if err == io.EOF || err == io.ErrUnexpectedEOF { // short read, only single part return
 		m := md5.Sum(p[0:n])
 		ch <- part{
-			Md5Sum:     m[:],
+			MD5Sum:     m[:],
 			ReadSeeker: bytes.NewReader(p[0:n]),
 			Err:        nil,
 			Len:        int64(n),
@@ -84,7 +84,7 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 	}
 	if !isPartNumberUploaded(sp, skipParts) {
 		ch <- part{
-			Md5Sum:     md5SumBytes[:],
+			MD5Sum:     md5SumBytes[:],
 			ReadSeeker: bytes.NewReader(p),
 			Err:        nil,
 			Len:        int64(n),
@@ -115,7 +115,7 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 			continue
 		}
 		ch <- part{
-			Md5Sum:     md5SumBytes[:],
+			MD5Sum:     md5SumBytes[:],
 			ReadSeeker: bytes.NewReader(p[0:n]),
 			Err:        nil,
 			Len:        int64(n),

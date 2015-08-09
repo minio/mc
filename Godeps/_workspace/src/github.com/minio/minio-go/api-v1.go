@@ -134,7 +134,7 @@ func (a apiV1) putBucket(bucket, acl, location string) error {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return a.ToErrorResponseBody(resp.Body)
+			return BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
 	return nil
@@ -168,7 +168,7 @@ func (a apiV1) putBucketACL(bucket, acl string) error {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return a.ToErrorResponseBody(resp.Body)
+			return BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
 	return nil
@@ -201,7 +201,7 @@ func (a apiV1) getBucketACL(bucket string) (accessControlPolicy, error) {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return accessControlPolicy{}, a.ToErrorResponseBody(resp.Body)
+			return accessControlPolicy{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
 	policy := accessControlPolicy{}
@@ -249,7 +249,7 @@ func (a apiV1) getBucketLocation(bucket string) (string, error) {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return "", a.ToErrorResponseBody(resp.Body)
+			return "", BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
 	var locationConstraint string
@@ -332,7 +332,7 @@ func (a apiV1) listObjects(bucket, marker, prefix, delimiter string, maxkeys int
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listBucketResult{}, a.ToErrorResponseBody(resp.Body)
+			return listBucketResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
 	listBucketResult := listBucketResult{}
@@ -508,7 +508,7 @@ func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte,
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return ObjectStat{}, a.ToErrorResponseBody(resp.Body)
+			return ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
 	var metadata ObjectStat
@@ -557,7 +557,7 @@ func (a apiV1) presignedGetObject(bucket, object string, expires, offset, length
 	if err != nil {
 		return "", err
 	}
-	return req.PreSignV4(), nil
+	return req.PreSignV4()
 }
 
 // getObjectRequest wrapper creates a new getObject request
@@ -609,7 +609,7 @@ func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCl
 		case http.StatusOK:
 		case http.StatusPartialContent:
 		default:
-			return nil, ObjectStat{}, a.ToErrorResponseBody(resp.Body)
+			return nil, ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
@@ -850,7 +850,7 @@ func (a apiV1) listBuckets() (listAllMyBucketsResult, error) {
 			}
 		}
 		if resp.StatusCode != http.StatusOK {
-			return listAllMyBucketsResult{}, a.ToErrorResponseBody(resp.Body)
+			return listAllMyBucketsResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
 	listAllMyBucketsResult := listAllMyBucketsResult{}
