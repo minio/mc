@@ -24,19 +24,19 @@ vet:
 	@go vet ./...
 fmt:
 	@echo "Running $@:"
-	@test -z "$$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)" || \
+	@test -z "$$(gofmt -s -l . 2>&1 | grep -v 'Godeps/_workspace/src/')" || \
 		echo "+ please format Go code with 'gofmt -s'"
 lint:
 	@echo "Running $@:"
-	@test -z "$$(golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	@test -z "$$(golint ./... 2>&1 | grep -v 'Godeps/_workspace/src/')"
 
 cyclo:
 	@echo "Running $@:"
-	@test -z "$$(gocyclo -over 30 . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	@test -z "$$(gocyclo -over 30 . 2>&1 | grep -v 'Godeps/_workspace/src/')"
 
 deadcode:
 	@echo "Running $@:"
-	@test -z "$$(deadcode | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	@test -z "$$(deadcode 2>&1 | grep -v 'Godeps/_workspace/src/')"
 
 build: getdeps verifiers
 	@echo "Installing mc:"
