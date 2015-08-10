@@ -83,10 +83,10 @@ func runListCmd(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	for _, arg := range args {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
-		Fatal(err)
+		fatalIf(err)
 		// if recursive strip off the "..."
 		newTargetURL := stripRecursiveURL(targetURL)
-		Fatal(doListCmd(newTargetURL, isURLRecursive(targetURL)))
+		fatalIf(doListCmd(newTargetURL, isURLRecursive(targetURL)))
 	}
 }
 

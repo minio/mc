@@ -60,10 +60,10 @@ func runMakeBucketCmd(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
-		Fatal(err)
+		fatalIf(err)
 
 		err = doMakeBucketCmd(targetURL)
-		Fatal(err)
+		fatalIf(err)
 		console.Infoln("Bucket created successfully : " + targetURL)
 	}
 }

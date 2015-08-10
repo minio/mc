@@ -108,12 +108,12 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
-	Fatal(err)
+	fatalIf(err)
 	if srcContent.Type.IsDir() {
 		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, errInvalidArgument{})
 	}
 	if !srcContent.Type.IsRegular() {
-		Fatal(probe.NewError(errSourceIsNotFile{URL: srcURL}))
+		fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}))
 	}
 }
 
@@ -124,19 +124,19 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
-	Fatal(err)
+	fatalIf(err)
 	if srcContent.Type.IsDir() {
 		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, errInvalidArgument{})
 	}
 	if !srcContent.Type.IsRegular() {
-		Fatal(probe.NewError(errSourceIsNotFile{URL: srcURL}))
+		fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}))
 	}
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			Fatal(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
+			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
 		}
 	}
 }
@@ -149,16 +149,16 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(srcURL)
-	Fatal(err)
+	fatalIf(err)
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		Fatal(probe.NewError(errSourceIsNotDir{URL: srcURL}))
+		fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}))
 	}
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			Fatal(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
+			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
 		}
 	}
 }
@@ -169,18 +169,18 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 		if isURLRecursive(srcURL) {
 			srcURL = stripRecursiveURL(srcURL)
 			_, srcContent, err := url2Stat(srcURL)
-			Fatal(err)
+			fatalIf(err)
 			if !srcContent.Type.IsDir() { // Ellipses is supported only for folders.
-				Fatal(probe.NewError(errSourceIsNotDir{URL: srcURL}))
+				fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}))
 			}
 		} else { // Regular URL.
 			_, srcContent, err := url2Stat(srcURL)
-			Fatal(err)
+			fatalIf(err)
 			if srcContent.Type.IsDir() {
 				console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, errInvalidArgument{})
 			}
 			if !srcContent.Type.IsRegular() {
-				Fatal(probe.NewError(errSourceIsNotFile{URL: srcURL}))
+				fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}))
 			}
 		}
 	}
@@ -188,7 +188,7 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			Fatal(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
+			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
 		}
 	}
 }

@@ -38,7 +38,7 @@ func checkConfig() {
 	// Ensures config file is sane
 	{
 		_, err := getMcConfig()
-		Fatal(err)
+		fatalIf(err)
 	}
 }
 
@@ -90,7 +90,7 @@ func registerBefore(ctx *cli.Context) error {
 	}
 	if err := console.SetTheme(themeName); err != nil {
 		console.Errorf("Failed to set theme ‘%s’.", themeName)
-		Error(err)
+		errorIf(err)
 	}
 
 	// Migrate any old version of config / state files to newer format.

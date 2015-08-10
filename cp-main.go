@@ -154,7 +154,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if cpURLs.Error != nil {
-				Error(cpURLs.Error)
+				errorIf(cpURLs.Error)
 				break
 			}
 
@@ -221,7 +221,7 @@ func doCopyCmdSession(session *sessionV2) {
 					session.Header.LastCopied = cpURLs.SourceContent.Name
 				} else {
 					console.Println()
-					Error(cpURLs.Error)
+					errorIf(cpURLs.Error)
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()
