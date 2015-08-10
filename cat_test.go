@@ -48,11 +48,11 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 	sourceURLs = append(sourceURLs, objectPath)
 	sourceURLs = append(sourceURLs, objectPathServer)
 	for _, sourceURL := range sourceURLs {
-		c.Assert(doCatCmd(sourceURL), IsNil)
+		c.Assert(catURL(sourceURL), IsNil)
 	}
 
 	objectPath = filepath.Join(root, "object2")
-	c.Assert(doCatCmd(objectPath), Not(IsNil))
+	c.Assert(catURL(objectPath), Not(IsNil))
 }
 
 func (s *CmdTestSuite) TestCatContext(c *C) {

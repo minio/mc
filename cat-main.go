@@ -29,7 +29,7 @@ import (
 var catCmd = cli.Command{
 	Name:   "cat",
 	Usage:  "Display contents of a file",
-	Action: runCatCmd,
+	Action: mainCat,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -59,33 +59,53 @@ EXAMPLES:
 `,
 }
 
-func runCatCmd(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+func mainCat(ctx *cli.Context) {
+	stdinMode := false
+	if globalAliasFlag {
+		if !ctx.Args().Present() {
+			stdinMode = true
+		}
+	} else if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
 	}
-	config := mustGetMcConfig()
-	// Convert arguments to URLs: expand alias, fix format...
-	for _, arg := range ctx.Args() {
-		sourceURL, err := getExpandedURL(arg, config.Aliases)
-		Fatal(err)
-		Fatal(doCatCmd(sourceURL))
+
+	if stdinMode {
+		Fatal(catOut(os.Stdin))
+	} else {
+		// Convert arguments to URLs: expand alias, fix format...
+		for _, arg := range ctx.Args() {
+			Fatal(catURL(arg))
+		}
 	}
+
 }
 
-func doCatCmd(sourceURL string) *probe.Error {
-	sourceClnt, err := source2Client(sourceURL)
+func catURL(sourceURL string) *probe.Error {
+	config := mustGetMcConfig()
+
+	URL, err := getExpandedURL(sourceURL, config.Aliases)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(sourceURL)
 	}
-	// ignore size, since os.Stat() would not return proper size all the time for local filesystem
-	// for example /proc files.
+
+	sourceClnt, err := source2Client(URL)
+	if err != nil {
+		return err.Trace(URL)
+	}
+
+	// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
 	reader, _, err := sourceClnt.GetObject(0, 0)
 	if err != nil {
 		return err.Trace()
 	}
 	defer reader.Close()
+
+	return catOut(reader).Trace()
+}
+
+func catOut(r io.Reader) *probe.Error {
 	// read till EOF
-	if _, err := io.Copy(os.Stdout, reader); err != nil {
+	if _, err := io.Copy(os.Stdout, r); err != nil {
 		switch e := err.(type) {
 		case *os.PathError:
 			if e.Err == syscall.EPIPE {
