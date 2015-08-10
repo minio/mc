@@ -57,7 +57,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
-	Fatal(err)
+	fatalIf(err)
 
 	srcURL := URLs[0]
 	tgtURLs := URLs[1:]
@@ -66,7 +66,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	// Source cannot be a folder (except when recursive)
 	if !isURLRecursive(srcURL) {
 		_, srcContent, err := url2Stat(srcURL)
-		Fatal(err)
+		fatalIf(err)
 
 		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
@@ -93,16 +93,16 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 	srcURL = stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(srcURL)
-	Fatal(err)
+	fatalIf(err)
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		Fatal(probe.NewError(errSourceIsNotDir{URL: srcURL}))
+		fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}))
 	}
 	for _, tgtURL := range tgtURLs {
 		_, content, err := url2Stat(tgtURL)
 		if err == nil {
 			if !content.Type.IsDir() {
-				Fatal(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
+				fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
 			}
 		}
 	}

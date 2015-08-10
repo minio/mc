@@ -21,8 +21,8 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-// Fatal wrapper function which takes error and selectively prints stack frames if available on debug
-func Fatal(err *probe.Error) {
+// fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
+func fatalIf(err *probe.Error) {
 	if err == nil {
 		return
 	}
@@ -32,8 +32,8 @@ func Fatal(err *probe.Error) {
 	console.Fatalln(err)
 }
 
-// Error synonymous with Fatal but doesn't exit on error != nil
-func Error(err *probe.Error) {
+// errorIf synonymous with fatalIf but doesn't exit on error != nil
+func errorIf(err *probe.Error) {
 	if err == nil {
 		return
 	}

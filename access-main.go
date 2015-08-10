@@ -64,14 +64,14 @@ func runAccessCmd(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		Fatal(probe.NewError(errInvalidACL{acl: acl.String()}))
+		fatalIf(probe.NewError(errInvalidACL{acl: acl.String()}))
 	}
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
-		Fatal(err)
+		fatalIf(err)
 
 		err = doUpdateAccessCmd(targetURL, acl)
-		Fatal(err)
+		fatalIf(err)
 	}
 }
 

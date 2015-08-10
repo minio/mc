@@ -70,11 +70,11 @@ func mainCat(ctx *cli.Context) {
 	}
 
 	if stdinMode {
-		Fatal(catOut(os.Stdin))
+		fatalIf(catOut(os.Stdin))
 	} else {
 		// Convert arguments to URLs: expand alias, fix format...
 		for _, arg := range ctx.Args() {
-			Fatal(catURL(arg))
+			fatalIf(catURL(arg))
 		}
 	}
 

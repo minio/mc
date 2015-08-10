@@ -152,7 +152,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if sURLs.Error != nil {
-				Error(sURLs.Error)
+				errorIf(sURLs.Error)
 				break
 			}
 			if sURLs.isEmpty() {
@@ -221,7 +221,7 @@ func doMirrorCmdSession(session *sessionV2) {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
 					console.Println()
-					Error(sURLs.Error)
+					errorIf(sURLs.Error)
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()

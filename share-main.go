@@ -71,13 +71,13 @@ func runShareCmd(ctx *cli.Context) {
 	if len(args) == 2 {
 		var err error
 		expires, err = time.ParseDuration(args.Last())
-		Fatal(probe.NewError(err))
+		fatalIf(probe.NewError(err))
 	}
 	targetURL, err := getExpandedURL(url, config.Aliases)
-	Fatal(err)
+	fatalIf(err)
 	// if recursive strip off the "..."
 	newTargetURL := stripRecursiveURL(targetURL)
-	Fatal(doShareCmd(newTargetURL, isURLRecursive(targetURL), expires))
+	fatalIf(doShareCmd(newTargetURL, isURLRecursive(targetURL), expires))
 }
 
 func getNewTargetURL(targetParser *client.URL, name string) string {

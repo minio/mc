@@ -111,14 +111,14 @@ func firstTimeRun() {
 			console.Fatalf("Unable to create ‘mc’ config folder. %s\n", err)
 		}
 		config, err := newConfig()
-		Fatal(err)
+		fatalIf(err)
 		err = writeConfig(config)
-		Fatal(err)
+		fatalIf(err)
 		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}
 	if !isSessionDirExists() {
 		err := createSessionDir()
-		Fatal(err)
+		fatalIf(err)
 	}
 	checkGolangVersion()
 }
