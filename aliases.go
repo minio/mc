@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // validAliasURL: use net/url.Parse to validate
