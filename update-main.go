@@ -24,7 +24,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Updates container to hold updates json

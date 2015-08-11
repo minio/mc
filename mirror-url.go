@@ -24,7 +24,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/tchap/go-patricia/patricia"
 )
 

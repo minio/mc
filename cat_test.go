@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 	. "gopkg.in/check.v1"
 )
 
