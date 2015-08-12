@@ -88,6 +88,7 @@ func registerBefore(ctx *cli.Context) error {
 		console.Errorf("Invalid theme, please choose from the following list: %s.\n", console.GetThemeNames())
 		return errInvalidTheme{Theme: themeName}
 	}
+
 	if err := console.SetTheme(themeName); err != nil {
 		console.Errorf("Failed to set theme ‘%s’.", themeName)
 		errorIf(err)
