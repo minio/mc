@@ -18,9 +18,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/minio/mc/pkg/console"
 )
@@ -159,4 +161,26 @@ func (s MirrorMessage) String() string {
 		panic(err)
 	}
 	return console.JSON(string(mirrorMessageBytes) + "\n")
+}
+
+// ShareMessage container for share messages
+type ShareMessage struct {
+	Version      string        `json:"version"`
+	Expires      time.Duration `json:"expires"`
+	PresignedURL string        `json:"presigned-url"`
+}
+
+// String string printer for share message
+func (s ShareMessage) String() string {
+	if !globalJSONFlag {
+		return fmt.Sprintf("Succesfully generated shared URL with expiry %s, please share: %s\n", s.Expires, s.PresignedURL)
+	}
+	s.Version = "1.0.0"
+	shareMessageBytes, err := json.MarshalIndent(s, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+	// json encoding escapes ampersand into its unicode character which is not usable directly for share and fails with cloud storage.
+	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
+	return console.JSON("%s\n", string(shareMessageBytes))
 }
