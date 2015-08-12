@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	for err := range s3Client.DropIncompleteUploads("mybucket", "myobject") {
+	for err := range s3Client.DropIncompleteUpload("mybucket", "myobject") {
 		if err != nil {
 			log.Fatalln(err)
 		}
