@@ -298,10 +298,19 @@ var (
 			}
 			color.Output = output
 		case themesDB[currThemeName].Info:
-			c.Print(ProgramName() + ": ")
-			c.Print(a...)
+			if isatty.IsTerminal(os.Stdout.Fd()) {
+				c.Print(ProgramName() + ": ")
+				c.Print(a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": ")
+				fmt.Fprint(color.Output, a...)
+			}
 		default:
-			c.Print(a...)
+			if isatty.IsTerminal(os.Stdout.Fd()) {
+				c.Print(a...)
+			} else {
+				fmt.Fprint(color.Output, a...)
+			}
 		}
 	}
 
@@ -336,10 +345,19 @@ var (
 			}
 			color.Output = output
 		case themesDB[currThemeName].Info:
-			c.Print(ProgramName() + ": ")
-			c.Printf(f, a...)
+			if isatty.IsTerminal(os.Stdout.Fd()) {
+				c.Print(ProgramName() + ": ")
+				c.Printf(f, a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": ")
+				fmt.Fprintf(color.Output, f, a...)
+			}
 		default:
-			c.Printf(f, a...)
+			if isatty.IsTerminal(os.Stdout.Fd()) {
+				c.Printf(f, a...)
+			} else {
+				fmt.Fprintf(color.Output, f, a...)
+			}
 		}
 	}
 
@@ -374,10 +392,19 @@ var (
 			}
 			color.Output = output
 		case themesDB[currThemeName].Info:
-			c.Print(ProgramName() + ": ")
-			c.Println(a...)
+			if isatty.IsTerminal(os.Stdout.Fd()) {
+				c.Print(ProgramName() + ": ")
+				c.Println(a...)
+			} else {
+				fmt.Fprint(color.Output, ProgramName()+": ")
+				fmt.Fprintln(color.Output, a...)
+			}
 		default:
-			c.Println(a...)
+			if isatty.IsTerminal(os.Stdout.Fd()) {
+				c.Println(a...)
+			} else {
+				fmt.Fprintln(color.Output, a...)
+			}
 		}
 	}
 )
