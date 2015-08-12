@@ -26,7 +26,7 @@ import (
 var accessCmd = cli.Command{
 	Name:   "access",
 	Usage:  "Set access permissions",
-	Action: runAccessCmd,
+	Action: mainAccess,
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 
@@ -57,7 +57,7 @@ EXAMPLES:
 `,
 }
 
-func runAccessCmd(ctx *cli.Context) {
+func mainAccess(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}

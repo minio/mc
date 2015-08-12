@@ -35,7 +35,7 @@ import (
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Mirror files and folders from a single source to many destinations",
-	Action: runMirrorCmd,
+	Action: mainMirror,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -261,7 +261,7 @@ func doMirrorCmdSession(session *sessionV2) {
 	wg.Wait()
 }
 
-func runMirrorCmd(ctx *cli.Context) {
+func mainMirror(ctx *cli.Context) {
 	checkMirrorSyntax(ctx)
 
 	session := newSessionV2()

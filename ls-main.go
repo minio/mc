@@ -25,7 +25,7 @@ import (
 var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "List files and folders",
-	Action: runListCmd,
+	Action: mainList,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -69,8 +69,8 @@ EXAMPLES:
 `,
 }
 
-// runListCmd - is a handler for mc ls command
-func runListCmd(ctx *cli.Context) {
+// mainList - is a handler for mc ls command
+func mainList(ctx *cli.Context) {
 	args := ctx.Args()
 	if globalAliasFlag {
 		if !ctx.Args().Present() {
@@ -96,9 +96,5 @@ func doListCmd(targetURL string, recursive bool) *probe.Error {
 	if err != nil {
 		return err.Trace()
 	}
-	err = doList(clnt, recursive)
-	if err != nil {
-		return err.Trace()
-	}
-	return nil
+	return doList(clnt, recursive).Trace()
 }

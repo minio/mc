@@ -32,7 +32,7 @@ import (
 var shareCmd = cli.Command{
 	Name:   "share",
 	Usage:  "Share presigned URLs from cloud storage",
-	Action: runShareCmd,
+	Action: mainShare,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -56,8 +56,8 @@ EXAMPLES:
 `,
 }
 
-// runShareCmd - is a handler for mc share command
-func runShareCmd(ctx *cli.Context) {
+// mainShare - is a handler for mc share command
+func mainShare(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" || len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
 	}

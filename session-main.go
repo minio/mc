@@ -30,7 +30,7 @@ import (
 var sessionCmd = cli.Command{
 	Name:   "session",
 	Usage:  "Manage sessions for cp and mirror",
-	Action: runSessionCmd,
+	Action: mainSession,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -111,7 +111,7 @@ func sessionExecute(s *sessionV2) {
 	}
 }
 
-func runSessionCmd(ctx *cli.Context) {
+func mainSession(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
