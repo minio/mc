@@ -35,7 +35,7 @@ type errInvalidACL struct {
 }
 
 func (e errInvalidACL) Error() string {
-	return "Invalid ACL Type ‘" + e.acl + "’."
+	return "Invalid ACL Type ‘" + e.acl + "’. Valid types are [private, public, readonly]."
 }
 
 type errNotConfigured struct{}
@@ -49,13 +49,13 @@ type errNotAnObject struct {
 }
 
 func (e errNotAnObject) Error() string {
-	return "Not an object " + e.url
+	return "URL: ‘" + e.url + "’ not an object"
 }
 
 type errInvalidArgument struct{}
 
 func (e errInvalidArgument) Error() string {
-	return "Invalid argument."
+	return "Incorrect usage, please use \"mc config help\""
 }
 
 type errUnsupportedScheme struct {
@@ -64,7 +64,7 @@ type errUnsupportedScheme struct {
 }
 
 func (e errUnsupportedScheme) Error() string {
-	return "Unsuppported URL scheme: " + e.scheme
+	return "Unsuppported URL scheme: " + e.scheme + " URL: ‘" + e.url + "’"
 }
 
 type errInvalidGlobURL struct {
@@ -76,37 +76,45 @@ func (e errInvalidGlobURL) Error() string {
 	return "Error reading glob URL " + e.glob + " while comparing with " + e.request
 }
 
+type errReservedAliasName struct {
+	alias string
+}
+
+func (e errReservedAliasName) Error() string {
+	return "Alias name ‘" + e.alias + "’ is a reserved word, reserved words are [help, private, readonly, public, authenticated]"
+}
+
 type errInvalidAliasName struct {
-	name string
+	alias string
 }
 
 func (e errInvalidAliasName) Error() string {
-	return "Not a valid alias name: " + e.name + " valid examples are: Area51, Grand-Nagus.."
+	return "Alias name ‘" + e.alias + "’ is invalid, valid examples are: Area51, Grand-Nagus.."
 }
 
-type errInvalidAuth struct{}
-
-func (e errInvalidAuth) Error() string {
-	return "Invalid auth keys"
+type errNoMatchingHost struct {
+	url string
 }
-
-type errNoMatchingHost struct{}
 
 func (e errNoMatchingHost) Error() string {
-	return "No matching host found."
-}
-
-type errConfigExists struct{}
-
-func (e errConfigExists) Error() string {
-	return "Already exists."
+	return "No matching host found for the given url ‘" + e.url + "’"
 }
 
 // errAliasExists - alias exists
-type errAliasExists struct{}
+type errAliasExists struct {
+	alias string
+}
 
 func (e errAliasExists) Error() string {
-	return "Already exists."
+	return "Alias name: ‘" + e.alias + "’ already exists."
+}
+
+type errInitClient struct {
+	url string
+}
+
+func (e errInitClient) Error() string {
+	return "Unable to initialize client for url ‘" + e.url + "’"
 }
 
 type errInvalidURL struct {

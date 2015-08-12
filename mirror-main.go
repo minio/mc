@@ -221,6 +221,7 @@ func doMirrorCmdSession(session *sessionV2) {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
 					console.Println()
+					console.Printf("Failed to mirror ‘%s’, ", sURLs.SourceContent.Name)
 					errorIf(sURLs.Error)
 				}
 			case <-trapCh: // Receive interrupt notification.

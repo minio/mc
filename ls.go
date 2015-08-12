@@ -86,7 +86,7 @@ func doList(clnt client.Client, recursive bool) *probe.Error {
 				errorIf(contentCh.Err)
 				continue
 			}
-			err = contentCh.Err
+			err = contentCh.Err.Trace()
 			break
 		}
 		console.Print(parseContent(contentCh.Content))

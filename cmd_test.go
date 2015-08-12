@@ -70,19 +70,19 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	perr = createSessionDir()
 	c.Assert(perr, IsNil)
 
-	_, perr = doConfig("invalid", nil)
+	perr = doConfig("invalid", nil)
 	c.Assert(perr, Not(IsNil))
 
-	_, perr = doConfig("alias", []string{"test", "https://test.io"})
+	perr = doConfig("alias", []string{"test", "https://test.io"})
 	c.Assert(perr, IsNil)
 
-	_, perr = doConfig("alias", []string{"test", "https://test.io"})
+	perr = doConfig("alias", []string{"test", "https://test.io"})
 	c.Assert(perr, Not(IsNil))
 
-	_, perr = doConfig("alias", []string{"test", "htt://test.io"})
+	perr = doConfig("alias", []string{"test", "htt://test.io"})
 	c.Assert(perr, Not(IsNil))
 
-	_, perr = doConfig("alias", []string{"readonly", "https://new.test.io"})
+	perr = doConfig("alias", []string{"readonly", "https://new.test.io"})
 	c.Assert(perr, Not(IsNil))
 
 	app = registerApp()
@@ -261,8 +261,8 @@ func (s *CmdTestSuite) TestIsvalidAliasName(c *C) {
 	c.Check(isValidAliasName("h0SFD2k2#Fdsa"), Equals, false)
 	c.Check(isValidAliasName("0dslka-4"), Equals, false)
 	c.Check(isValidAliasName("-fdslka"), Equals, false)
-	c.Check(isValidAliasName("help"), Equals, false)
-	c.Check(isValidAliasName("private"), Equals, false) // reserved names
+	c.Check(isAliasReserved("help"), Equals, true)
+	c.Check(isAliasReserved("private"), Equals, true) // reserved names
 }
 
 func (s *CmdTestSuite) TestEmptyExpansions(c *C) {

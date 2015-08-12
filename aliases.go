@@ -27,8 +27,7 @@ import (
 // validAliasURL: use net/url.Parse to validate
 var validAliasName = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$")
 
-// Check if it is an aliased URL
-func isValidAliasName(aliasName string) bool {
+func isAliasReserved(aliasName string) bool {
 	// help is reserved argument
 	switch aliasName {
 	case "help":
@@ -40,8 +39,14 @@ func isValidAliasName(aliasName string) bool {
 	case "public":
 		fallthrough
 	case "authenticated":
+		return true
+	default:
 		return false
 	}
+}
+
+// Check if it is an aliased URL
+func isValidAliasName(aliasName string) bool {
 	return validAliasName.MatchString(aliasName)
 }
 

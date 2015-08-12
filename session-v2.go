@@ -170,7 +170,6 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 		return nil, probe.NewError(errInvalidArgument{})
 	}
 	sessionFile := getSessionFile(sid)
-
 	if _, err := os.Stat(sessionFile); err != nil {
 		return nil, probe.NewError(err)
 	}
@@ -179,26 +178,24 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	s.Header = &sessionV2Header{}
 	s.SessionID = sid
 	s.Header.Version = "1.1.0"
-	qs, err := quick.New(s.Header)
-	if err != nil {
-		return nil, err.Trace()
+	qs, perr := quick.New(s.Header)
+	if perr != nil {
+		return nil, perr.Trace()
 	}
-	err = qs.Load(sessionFile)
-	if err != nil {
-		return nil, err.Trace()
+	perr = qs.Load(sessionFile)
+	if perr != nil {
+		return nil, perr.Trace()
 	}
 
 	s.mutex = new(sync.Mutex)
 	s.Header = qs.Data().(*sessionV2Header)
 
-	{
-		var err error
-		s.DataFP, err = os.Open(getSessionDataFile(s.SessionID))
-		if err != nil {
-			console.Fatalf("Unable to open session data file \""+getSessionDataFile(s.SessionID)+"\". %s\n", err)
-		}
+	var err error
+	s.DataFP, err = os.Open(getSessionDataFile(s.SessionID))
+	if err != nil {
+		// fail proactively here
+		console.Fatalf("Unable to open session data file \""+getSessionDataFile(s.SessionID)+"\". %s\n", err)
 	}
-
 	return s, nil
 }
 
