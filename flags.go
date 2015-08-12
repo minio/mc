@@ -32,7 +32,7 @@ var flags = []cli.Flag{}
 
 var (
 	configFlag = cli.StringFlag{
-		Name:  "config, C",
+		Name:  "conf-dir, C",
 		Value: mustGetMcConfigDir(),
 		Usage: "Path to configuration folder",
 	}
