@@ -27,7 +27,7 @@ var diffCmd = cli.Command{
 	Name:        "diff",
 	Usage:       "Compute differences between two files or folders",
 	Description: "NOTE: This command *DOES NOT* check for content similarity, which means objects with same size, but different content will not be spotted",
-	Action:      runDiffCmd,
+	Action:      mainDiff,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -51,8 +51,8 @@ EXAMPLES:
 `,
 }
 
-// runDiffCmd - is a handler for mc diff command
-func runDiffCmd(ctx *cli.Context) {
+// mainDiff - is a handler for mc diff command
+func mainDiff(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}

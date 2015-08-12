@@ -26,7 +26,7 @@ import (
 var mbCmd = cli.Command{
 	Name:   "mb",
 	Usage:  "Make a bucket or folder",
-	Action: runMakeBucketCmd,
+	Action: mainMakeBucket,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -52,8 +52,8 @@ EXAMPLES:
 `,
 }
 
-// runMakeBucketCmd is the handler for mc mb command
-func runMakeBucketCmd(ctx *cli.Context) {
+// mainMakeBucket is the handler for mc mb command
+func mainMakeBucket(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}

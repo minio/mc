@@ -41,7 +41,7 @@ const (
 var updateCmd = cli.Command{
 	Name:   "update",
 	Usage:  "Check for new software updates",
-	Action: runUpdateCmd,
+	Action: mainUpdate,
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 
@@ -55,29 +55,38 @@ EXAMPLES:
 `,
 }
 
-func doUpdateCheck() (string, *probe.Error) {
+// mainUpdate -
+func mainUpdate(ctx *cli.Context) {
+	if ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
+	}
+	fatalIf(doUpdateCheck())
+}
+
+func doUpdateCheck() *probe.Error {
 	clnt, err := url2Client(mcUpdateURL)
 	if err != nil {
-		return "Unable to create client: " + mcUpdateURL, err.Trace()
+		return err.Trace(mcUpdateURL)
 	}
 	data, _, err := clnt.GetObject(0, 0)
 	if err != nil {
-		return "Unable to read: " + mcUpdateURL, err.Trace()
+		return err.Trace(mcUpdateURL)
 	}
 	current, _ := time.Parse(time.RFC3339Nano, Version)
 	if current.IsZero() {
-		message := `Version is empty, must be a custom build cannot update. Please download releases from
-https://dl.minio.io:9000 for continuous updates`
-		return message, nil
+		console.Infoln(`Version is empty, must be a custom build cannot update. Please download releases from
+https://dl.minio.io:9000 for continuous updates`)
+		return nil
 	}
 	var updates Updates
 	decoder := json.NewDecoder(data)
 	if err := decoder.Decode(&updates); err != nil {
-		return "Unable to parse update fields", probe.NewError(err)
+		return probe.NewError(err)
 	}
 	latest, _ := time.Parse(http.TimeFormat, updates.BuildDate)
 	if latest.IsZero() {
-		return "No update available at this time", nil
+		console.Infoln("No update available at this time")
+		return nil
 	}
 	mcUpdateURLParse := clnt.URL()
 	if latest.After(current) {
@@ -89,24 +98,11 @@ https://dl.minio.io:9000 for continuous updates`
 		}
 		msg, err := printUpdateNotify(updateString, "new", "old")
 		if err != nil {
-			return "", probe.NewError(err)
+			return probe.NewError(err)
 		}
 		console.Println(msg)
-		return "", nil
+		return nil
 	}
-	return "You are already running the most recent version of ‘mc’", nil
-
-}
-
-// runUpdateCmd -
-func runUpdateCmd(ctx *cli.Context) {
-	if ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
-	}
-	msg, err := doUpdateCheck()
-	fatalIf(err)
-	// no msg do not print one
-	if msg != "" {
-		console.Infoln(msg)
-	}
+	console.Infoln("You are already running the most recent version of ‘mc’")
+	return nil
 }

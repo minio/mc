@@ -38,7 +38,7 @@ import (
 var configCmd = cli.Command{
 	Name:   "config",
 	Usage:  "Add new alias to default configuration file [~/.mc/config.json]",
-	Action: runConfigCmd,
+	Action: mainConfig,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -52,8 +52,8 @@ EXAMPLES:
 `,
 }
 
-// runConfigCmd is the handle for "mc config" sub-command
-func runConfigCmd(ctx *cli.Context) {
+// mainConfig is the handle for "mc config" sub-command
+func mainConfig(ctx *cli.Context) {
 	// show help if nothing is set
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code

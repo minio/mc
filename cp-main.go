@@ -35,7 +35,7 @@ import (
 var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy files and folders from many sources to a single destination",
-	Action: runCopyCmd,
+	Action: mainCopy,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -261,8 +261,8 @@ func doCopyCmdSession(session *sessionV2) {
 	wg.Wait()
 }
 
-// runCopyCmd is bound to sub-command
-func runCopyCmd(ctx *cli.Context) {
+// mainCopy is bound to sub-command
+func mainCopy(ctx *cli.Context) {
 	checkCopySyntax(ctx)
 
 	session := newSessionV2()
