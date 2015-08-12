@@ -74,7 +74,7 @@ func getSystemData() map[string]string {
 }
 
 func registerBefore(ctx *cli.Context) error {
-	setMcConfigDir(ctx.GlobalString("conf-dir"))
+	setMcConfigDir(ctx.GlobalString("config-folder"))
 	globalQuietFlag = ctx.GlobalBool("quiet")
 	globalMimicFlag = ctx.GlobalBool("mimic")
 	globalDebugFlag = ctx.GlobalBool("debug")
@@ -119,7 +119,7 @@ func registerApp() *cli.App {
 	// register all the flags
 	registerFlag(configFlag) // path to config folder
 	registerFlag(quietFlag)  // suppress console output
-	registerFlag(mimicFlag)   // OS toolchain mimic
+	registerFlag(mimicFlag)  // OS toolchain mimic
 	registerFlag(themeFlag)  // console theme flag
 	registerFlag(jsonFlag)   // json formatted output
 	registerFlag(debugFlag)  // enable debugging output
