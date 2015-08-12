@@ -209,19 +209,60 @@ var (
 	}
 
 	// Time helper to print Time theme
-	Time = themesDB[currThemeName].Time.SprintfFunc()
+	Time = func(format string, data ...interface{}) string {
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return themesDB[currThemeName].Time.SprintfFunc()(format, data...)
+		}
+		return fmt.Sprintf(format, data...)
+	}
+
 	// Size helper to print Size theme
-	Size = themesDB[currThemeName].Size.SprintfFunc()
+	Size = func(format string, data ...interface{}) string {
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return themesDB[currThemeName].Size.SprintfFunc()(format, data...)
+		}
+		return fmt.Sprintf(format, data...)
+	}
+
 	// File helper to print File theme
-	File = themesDB[currThemeName].File.SprintfFunc()
+	File = func(format string, data ...interface{}) string {
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return themesDB[currThemeName].File.SprintfFunc()(format, data...)
+		}
+		return fmt.Sprintf(format, data...)
+	}
+
 	// Dir helper to print Dir theme
-	Dir = themesDB[currThemeName].Dir.SprintfFunc()
+	Dir = func(format string, data ...interface{}) string {
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return themesDB[currThemeName].Dir.SprintfFunc()(format, data...)
+		}
+		return fmt.Sprintf(format, data...)
+	}
+
 	// Command helper to print command theme
-	Command = themesDB[currThemeName].Command.SprintfFunc()
+	Command = func(format string, data ...interface{}) string {
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return themesDB[currThemeName].Command.SprintfFunc()(format, data...)
+		}
+		return fmt.Sprintf(format, data...)
+	}
+
 	// SessionID helper to print sessionid theme
-	SessionID = themesDB[currThemeName].SessionID.SprintfFunc()
+	SessionID = func(format string, data ...interface{}) string {
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return themesDB[currThemeName].SessionID.SprintfFunc()(format, data...)
+		}
+		return fmt.Sprintf(format, data...)
+	}
+
 	// JSON helper to print json strings
-	JSON = themesDB[currThemeName].JSON.SprintfFunc()
+	JSON = func(format string, data ...interface{}) string {
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return themesDB[currThemeName].JSON.SprintfFunc()(format, data...)
+		}
+		return fmt.Sprintf(format, data...)
+	}
 )
 
 var (
