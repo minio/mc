@@ -18,7 +18,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -114,7 +113,7 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		if err != nil {
 			return err.Trace()
 		}
-		console.PrintC(fmt.Sprintf("Succesfully generated shared URL with expiry %s, please copy: %s\n", expires, presignedURL))
+		console.PrintC(ShareMessage{Expires: expires, PresignedURL: presignedURL})
 	}
 	return nil
 }
