@@ -7,7 +7,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/dustin/go-humanize",
-			"Rev": "00897f070f09f194c26d65afae734ba4c32404e8"
+			"Rev": "1c212aae1d02984808182b98b0da7a3e07e4c770"
 		},
 		{
 			"ImportPath": "github.com/fatih/color",
@@ -29,8 +29,8 @@
 		},
 		{
 			"ImportPath": "github.com/minio/minio-go",
-			"Comment": "v0.2.0-27-gd053903",
-			"Rev": "d053903f65055551c9327c3acf3b64b5f013cf9b"
+			"Comment": "v0.2.1-4-g69b0564",
+			"Rev": "69b05646606fd39171e16d6bf4edc84bb77787e0"
 		},
 		{
 			"ImportPath": "github.com/minio/minio/pkg/probe",

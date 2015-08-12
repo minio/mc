@@ -65,7 +65,7 @@ type ObjectAPI interface {
 	RemoveObject(bucket, object string) error
 
 	// Drop all incomplete uploads for a given object
-	DropIncompleteUploads(bucket, object string) <-chan error
+	DropIncompleteUpload(bucket, object string) <-chan error
 }
 
 // PresignedAPI - object specific for now
@@ -177,7 +177,7 @@ type Config struct {
 // Global constants
 const (
 	LibraryName    = "minio-go"
-	LibraryVersion = "0.2.0"
+	LibraryVersion = "0.2.1"
 )
 
 // SetUserAgent - append to a default user agent
@@ -819,7 +819,7 @@ func (a apiV2) ListBuckets() <-chan BucketStatCh {
 	return ch
 }
 
-func (a apiV2) dropIncompleteUploadsInRoutine(bucket, object string, errorCh chan error) {
+func (a apiV2) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan error) {
 	defer close(errorCh)
 	if err := invalidBucketError(bucket); err != nil {
 		errorCh <- err
@@ -835,9 +835,12 @@ func (a apiV2) dropIncompleteUploadsInRoutine(bucket, object string, errorCh cha
 		return
 	}
 	for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
-		err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
-		if err != nil {
-			errorCh <- err
+		if object == multiPartUpload.Key {
+			err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
+			if err != nil {
+				errorCh <- err
+				return
+			}
 			return
 		}
 	}
@@ -852,9 +855,12 @@ func (a apiV2) dropIncompleteUploadsInRoutine(bucket, object string, errorCh cha
 			return
 		}
 		for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
-			err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
-			if err != nil {
-				errorCh <- err
+			if object == multiPartUpload.Key {
+				err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
+				if err != nil {
+					errorCh <- err
+					return
+				}
 				return
 			}
 		}
@@ -868,10 +874,10 @@ func (a apiV2) dropIncompleteUploadsInRoutine(bucket, object string, errorCh cha
 //   These set of calls require explicit authentication, no anonymous
 //   requests are allowed for multipart API
 
-// DropIncompleteUploads - abort a specific in progress active multipart upload
-func (a apiV2) DropIncompleteUploads(bucket, object string) <-chan error {
+// DropIncompleteUpload - abort a specific in progress active multipart upload
+func (a apiV2) DropIncompleteUpload(bucket, object string) <-chan error {
 	errorCh := make(chan error)
-	go a.dropIncompleteUploadsInRoutine(bucket, object, errorCh)
+	go a.dropIncompleteUploadInRoutine(bucket, object, errorCh)
 	return errorCh
 }
 

@@ -46,7 +46,7 @@ func main() {
 * [ListObjects(bucket, prefix, recursive) <-chan ObjectStat](examples/s3/listobjects.go)
 * [ListBuckets() <-chan BucketStat](examples/s3/listbuckets.go)
 * [DropAllIncompleteUploads(bucket) <-chan error](examples/s3/dropallincompleteuploads.go)
-* [DropIncompleteUploads(bucket, object) <-chan error](examples/s3/dropincompleteuploads.go)
+* [DropIncompleteUpload(bucket, object) <-chan error](examples/s3/dropincompleteuploads.go)
 
 ### Object Level
 * [PutObject(bucket, object, size, io.Reader) error](examples/s3/putobject.go)
