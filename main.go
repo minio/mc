@@ -74,7 +74,7 @@ func getSystemData() map[string]string {
 }
 
 func registerBefore(ctx *cli.Context) error {
-	setMcConfigDir(ctx.GlobalString("config"))
+	setMcConfigDir(ctx.GlobalString("conf-dir"))
 	globalQuietFlag = ctx.GlobalBool("quiet")
 	globalForceFlag = ctx.GlobalBool("force")
 	globalAliasFlag = ctx.GlobalBool("alias")
@@ -93,6 +93,8 @@ func registerBefore(ctx *cli.Context) error {
 		console.Errorf("Failed to set theme ‘%s’.", themeName)
 		errorIf(err)
 	}
+
+	firstTimeRun()
 
 	// Migrate any old version of config / state files to newer format.
 	migrate()
@@ -158,8 +160,6 @@ VERSION:
 }
 
 func main() {
-	firstTimeRun()
-
 	// Enable GOMAXPROCS to default to number of CPUs.
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
