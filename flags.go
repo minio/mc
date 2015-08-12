@@ -42,13 +42,8 @@ var (
 		Usage: "Suppress chatty console output",
 	}
 
-	forceFlag = cli.BoolFlag{
-		Name:  "force",
-		Usage: "Force copying when destination exists",
-	}
-
-	aliasFlag = cli.BoolFlag{
-		Name:  "alias",
+	mimicFlag = cli.BoolFlag{
+		Name:  "mimic",
 		Usage: "Mimic operating system toolchain behavior wherever it makes sense",
 	}
 

@@ -72,7 +72,7 @@ EXAMPLES:
 // mainList - is a handler for mc ls command
 func mainList(ctx *cli.Context) {
 	args := ctx.Args()
-	if globalAliasFlag {
+	if globalMimicFlag {
 		if !ctx.Args().Present() {
 			args = []string{"."}
 		}
