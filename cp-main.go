@@ -221,6 +221,7 @@ func doCopyCmdSession(session *sessionV2) {
 					session.Header.LastCopied = cpURLs.SourceContent.Name
 				} else {
 					console.Println()
+					console.Printf("Failed to copy ‘%s’, ", cpURLs.SourceContent.Name)
 					errorIf(cpURLs.Error)
 				}
 			case <-trapCh: // Receive interrupt notification.

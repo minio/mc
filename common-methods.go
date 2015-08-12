@@ -35,20 +35,19 @@ func isTargetURLDir(targetURL string) bool {
 	if err != nil {
 		return false
 	}
-	{
-		_, targetContent, err := url2Stat(targetURL)
-		if err != nil {
-			if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
-				return false
-			}
-			if strings.HasSuffix(targetURLParse.Path, string(targetURLParse.Separator)) {
-				return true
-			}
+
+	_, targetContent, perr := url2Stat(targetURL)
+	if perr != nil {
+		if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
 			return false
 		}
-		if !targetContent.Type.IsDir() { // Target is a dir.
-			return false
+		if strings.HasSuffix(targetURLParse.Path, string(targetURLParse.Separator)) {
+			return true
 		}
+		return false
+	}
+	if !targetContent.Type.IsDir() { // Target is a dir.
+		return false
 	}
 	return true
 }
@@ -166,7 +165,7 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 	case client.Filesystem:
 		return fs.New(urlStr)
 	}
-	return nil, probe.NewError(errInvalidURL{URL: urlStr})
+	return nil, probe.NewError(errInitClient{url: urlStr})
 }
 
 // url2Stat - Returns client, config and its stat Content from the URL

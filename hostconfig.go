@@ -57,5 +57,5 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 			}
 		}
 	}
-	return hostConfig{}, probe.NewError(errNoMatchingHost{})
+	return hostConfig{}, probe.NewError(errNoMatchingHost{url: URL})
 }

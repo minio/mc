@@ -66,9 +66,12 @@ func runConfigCmd(ctx *cli.Context) {
 	if len(tailArgs) > 2 {
 		console.Fatalf("Incorrect number of arguments, please read \"mc config help\". %s", errInvalidArgument{})
 	}
-	msg, err := doConfig(arg, tailArgs)
+	configPath, err := getMcConfigPath()
 	fatalIf(err)
-	console.Infoln(msg)
+
+	fatalIf(doConfig(arg, tailArgs))
+	// upon success
+	console.Infoln("Alias written successfully to [" + configPath + "].")
 }
 
 // saveConfig writes configuration data in json format to config file.
@@ -79,41 +82,15 @@ func saveConfig(arg string, aliases []string) *probe.Error {
 		if err != nil {
 			return err.Trace()
 		}
-		return writeConfig(config)
+		return writeConfig(config).Trace()
 	default:
 		return probe.NewError(errInvalidArgument{})
 	}
 }
 
 // doConfig is the handler for "mc config" sub-command.
-func doConfig(arg string, aliases []string) (string, *probe.Error) {
-	configPath, err := getMcConfigPath()
-	if err != nil {
-		return "Unable to determine config file path.", err.Trace()
-	}
-	err = saveConfig(arg, aliases)
-	if err != nil {
-		switch err.ToError().(type) {
-		case errConfigExists:
-			return "Configuration file [" + configPath + "]", err.Trace()
-		case errInvalidArgument:
-			return "Incorrect usage, please use \"mc config help\" ", err.Trace()
-		case errAliasExists:
-			return "Alias name: [" + aliases[0] + "]", err.Trace()
-		case errInvalidAliasName:
-			return "Alias [" + aliases[0] + "] is reserved word or invalid", err.Trace()
-
-		case errInvalidURL:
-			return "Alias [" + aliases[1] + "] is invalid URL", err.Trace()
-		default:
-			// unexpected error
-			return "Unable to modify config file [" + configPath + "].", err.Trace()
-		}
-	}
-	if arg == "alias" {
-		return "Alias written to [" + configPath + "].", nil
-	}
-	return "", probe.NewError(errUnexpected{})
+func doConfig(arg string, aliases []string) *probe.Error {
+	return saveConfig(arg, aliases).Trace()
 }
 
 // addAlias - add new aliases
@@ -134,18 +111,21 @@ func addAlias(aliases []string) (quick.Config, *probe.Error) {
 	aliasName := aliases[0]
 	url := strings.TrimSuffix(aliases[1], "/")
 	if strings.HasPrefix(aliasName, "http") {
-		return nil, probe.NewError(errInvalidAliasName{name: aliasName})
+		return nil, probe.NewError(errInvalidAliasName{alias: aliasName})
 	}
 	if !strings.HasPrefix(url, "http") {
 		return nil, probe.NewError(errInvalidURL{URL: url})
 	}
+	if isAliasReserved(aliasName) {
+		return nil, probe.NewError(errReservedAliasName{alias: aliasName})
+	}
 	if !isValidAliasName(aliasName) {
-		return nil, probe.NewError(errInvalidAliasName{name: aliasName})
+		return nil, probe.NewError(errInvalidAliasName{alias: aliasName})
 	}
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV1)
 	if _, ok := newConf.Aliases[aliasName]; ok {
-		return nil, probe.NewError(errAliasExists{})
+		return nil, probe.NewError(errAliasExists{alias: aliasName})
 	}
 	newConf.Aliases[aliasName] = url
 	newConfig, err := quick.New(newConf)

@@ -204,12 +204,10 @@ func migrateConfigV1ToV101() {
 		conf.Hosts["*.s3*.amazonaws.com"] = s3HostConf
 	}
 
-	{
-		newConfig, err := quick.New(conf)
-		fatalIf(err)
-		err = newConfig.Save(mustGetMcConfigPath())
-		fatalIf(err)
-	}
+	newConfig, perr := quick.New(conf)
+	fatalIf(perr)
+	perr = newConfig.Save(mustGetMcConfigPath())
+	fatalIf(perr)
 
 	console.Infof("Successfully migrated %s from version: %s to version: %s\n", mustGetMcConfigPath(), mcPreviousConfigVersion, mcCurrentConfigVersion)
 }

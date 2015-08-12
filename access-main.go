@@ -70,8 +70,7 @@ func runAccessCmd(ctx *cli.Context) {
 		targetURL, err := getExpandedURL(arg, config.Aliases)
 		fatalIf(err)
 
-		err = doUpdateAccessCmd(targetURL, acl)
-		fatalIf(err)
+		fatalIf(doUpdateAccessCmd(targetURL, acl))
 	}
 }
 
