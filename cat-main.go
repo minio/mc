@@ -61,7 +61,7 @@ EXAMPLES:
 
 func mainCat(ctx *cli.Context) {
 	stdinMode := false
-	if globalAliasFlag {
+	if globalMimicFlag {
 		if !ctx.Args().Present() {
 			stdinMode = true
 		}
