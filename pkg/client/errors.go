@@ -22,11 +22,12 @@ import "strconv"
 
 // APINotImplemented - api not implemented
 type APINotImplemented struct {
-	API string
+	API     string
+	APIType string
 }
 
 func (e APINotImplemented) Error() string {
-	return "API not implemented: " + e.API
+	return "‘" + e.API + "’ feature " + "is not implemented for ‘" + e.APIType + "’"
 }
 
 // UnexpectedError - unexpected error

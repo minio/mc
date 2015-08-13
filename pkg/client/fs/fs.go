@@ -122,8 +122,8 @@ func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 	}
 }
 
-func (f *fsClient) PresignedGetObject(expires time.Duration, offset, length int64) (string, *probe.Error) {
-	return "", probe.NewError(client.APINotImplemented{API: "PresignedGetObject"})
+func (f *fsClient) Share(expires time.Duration, offset, length int64) (string, *probe.Error) {
+	return "", probe.NewError(client.APINotImplemented{API: "Share", APIType: "filesystem"})
 }
 
 // GetObject download an full or part object from bucket

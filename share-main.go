@@ -31,13 +31,13 @@ import (
 // Help message.
 var shareCmd = cli.Command{
 	Name:   "share",
-	Usage:  "Share presigned URLs from cloud storage",
+	Usage:  "Share documents via URL",
 	Action: mainShare,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET DURATION {{if .Description}}
+   mc {{.Name}} TARGET [DURATION=s|m|h|d] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -47,11 +47,14 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. Generate presigned url for an object, with expiration of 10minutes
-      $ mc {{.Name}} url https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz 10m
+   1. Generate URL for sharing, with a default expiry of 7 days.
+      $ mc {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
-   2. Generate presigned url for all objects at given path, with expiration of 20minutes
-      $ mc {{.Name}} url https://s3.amazonaws.com/backup... 20m
+   2. Generate URL for sharing, with an expiry of 10 minutes.
+      $ mc {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz 10m
+
+   3. Generate list of URLs for sharing a folder recursively, with expiration of 1 hour each.
+      $ mc {{.Name}} https://s3.amazonaws.com/backup... 1h
 
 `,
 }
@@ -109,7 +112,7 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		if err != nil {
 			return err.Trace()
 		}
-		presignedURL, err := newClnt.PresignedGetObject(expires, 0, 0)
+		presignedURL, err := newClnt.Share(expires, 0, 0)
 		if err != nil {
 			return err.Trace()
 		}
