@@ -55,25 +55,18 @@ func (s *CmdTestSuite) TestCopyURLType(c *C) {
 
 // TODO fix both copy and mirror
 func (s *CmdTestSuite) TestCopyContext(c *C) {
-	err := app.Run([]string{os.Args[0], "cp", server.URL + "/bucket...", server.URL + "/bucket"})
+	err := app.Run([]string{os.Args[0], "cp", server.URL + "/invalid...", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	err = app.Run([]string{os.Args[0], "cp", server.URL + "/invalid...", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
+	c.Assert(console.IsError, Equals, true)
 	// reset back
-	console.IsExited = false
+	console.IsError = false
 }
 
 func (s *CmdTestSuite) TestMirrorContext(c *C) {
-	err := app.Run([]string{os.Args[0], "mirror", server.URL + "/bucket...", server.URL + "/bucket"})
+	err := app.Run([]string{os.Args[0], "mirror", server.URL + "/invalid...", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
+	c.Assert(console.IsError, Equals, true)
 
-	err = app.Run([]string{os.Args[0], "mirror", server.URL + "/invalid...", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
 	// reset back
-	console.IsExited = false
+	console.IsError = false
 }

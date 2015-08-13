@@ -78,13 +78,13 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 		return
 	}
 
-	if !globalQuietFlag || !globalJSONFlag {
+	if !globalQuietFlag && !globalJSONFlag {
 		bar.SetCaption(sURLs.SourceContent.Name + ": ")
 	}
 
 	reader, length, err := getSource(sURLs.SourceContent.Name)
 	if err != nil {
-		if !globalQuietFlag || !globalJSONFlag {
+		if !globalQuietFlag && !globalJSONFlag {
 			bar.ErrorGet(int64(length))
 		}
 		sURLs.Error = err.Trace()
@@ -112,7 +112,7 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 
 	err = putTargets(targetURLs, length, newReader)
 	if err != nil {
-		if !globalQuietFlag || !globalJSONFlag {
+		if !globalQuietFlag && !globalJSONFlag {
 			bar.ErrorPut(int64(length))
 		}
 		sURLs.Error = err.Trace()
@@ -141,7 +141,11 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 
-	scanBar := scanBarFactory("")
+	var scanBar scanBarFunc
+	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
+		scanBar = scanBarFactory("")
+	}
+
 	URLsCh := prepareMirrorURLs(sourceURL, targetURLs)
 	done := false
 	for done == false {
@@ -152,6 +156,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if sURLs.Error != nil {
+				console.PrintC("Failed to prepare mirror URLs, ")
 				errorIf(sURLs.Error)
 				break
 			}
@@ -164,7 +169,9 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				console.Fatalf("Unable to marshal URLs to JSON. %s\n", probe.NewError(err))
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
-			scanBar(sURLs.SourceContent.Name)
+			if !globalQuietFlag && !globalJSONFlag {
+				scanBar(sURLs.SourceContent.Name)
+			}
 
 			totalBytes += sURLs.SourceContent.Size
 			totalObjects++
@@ -188,7 +195,7 @@ func doMirrorCmdSession(session *sessionV2) {
 
 	// Set up progress bar.
 	var bar barSend
-	if !globalQuietFlag || !globalJSONFlag {
+	if !globalQuietFlag && !globalJSONFlag {
 		bar = newCpBar()
 		bar.Extend(session.Header.TotalBytes)
 	}
@@ -214,14 +221,16 @@ func doMirrorCmdSession(session *sessionV2) {
 			select {
 			case sURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
-					bar.Finish()
+					if !globalQuietFlag && !globalJSONFlag {
+						bar.Finish()
+					}
 					return
 				}
 				if sURLs.Error == nil {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
 					console.Println()
-					console.Printf("Failed to mirror ‘%s’, ", sURLs.SourceContent.Name)
+					console.PrintC(fmt.Sprintf("Failed to mirror ‘%s’, ", sURLs.SourceContent.Name))
 					errorIf(sURLs.Error)
 				}
 			case <-trapCh: // Receive interrupt notification.
@@ -275,15 +284,13 @@ func mainMirror(ctx *cli.Context) {
 		console.Fatalf("Unable to get current working folder. %s\n", err)
 	}
 
-	{
-		// extract URLs.
-		var err *probe.Error
-		session.Header.CommandArgs, err = args2URLs(ctx.Args())
-		if err != nil {
-			session.Close()
-			session.Delete()
-			console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), err)
-		}
+	// extract URLs.
+	var perr *probe.Error
+	session.Header.CommandArgs, perr = args2URLs(ctx.Args())
+	if perr != nil {
+		session.Close()
+		session.Delete()
+		console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), perr)
 	}
 
 	doMirrorCmdSession(session)
