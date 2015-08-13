@@ -44,6 +44,10 @@ var server *httptest.Server
 var app *cli.App
 
 func (s *CmdTestSuite) SetUpSuite(c *C) {
+	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
+	server = httptest.NewServer(objectAPI)
+	console.IsTesting = true
+
 	// do not set it elsewhere, leads to data races since this is a global flag
 	globalQuietFlag = true
 
@@ -86,9 +90,6 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	c.Assert(perr, Not(IsNil))
 
 	app = registerApp()
-	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
-	server = httptest.NewServer(objectAPI)
-	console.IsTesting = true
 }
 
 func (s *CmdTestSuite) TearDownSuite(c *C) {

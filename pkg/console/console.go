@@ -35,8 +35,11 @@ var NoDebugPrint = true
 // IsTesting this flag indicates if IsExited should be set or not, false by default
 var IsTesting = false
 
-// IsExited sets this boolean value if Fatal is called instead of os.Exit(1)
+// IsExited sets this boolean value if Fatal is called when IsTestng is enabled
 var IsExited = false
+
+// IsError sets this boolean value if Error is called when IsTesting is enabled
+var IsError = false
 
 // Theme holds console color scheme
 type Theme struct {
@@ -139,7 +142,7 @@ var (
 	Error = func(data ...interface{}) {
 		if IsTesting {
 			defer func() {
-				IsExited = true
+				IsError = true
 			}()
 		}
 		print(themesDB[currThemeName].Error, data...)
@@ -150,7 +153,7 @@ var (
 	Errorf = func(f string, data ...interface{}) {
 		if IsTesting {
 			defer func() {
-				IsExited = true
+				IsError = true
 			}()
 		}
 		printf(themesDB[currThemeName].Error, f, data...)
@@ -161,7 +164,7 @@ var (
 	Errorln = func(data ...interface{}) {
 		if IsTesting {
 			defer func() {
-				IsExited = true
+				IsError = true
 			}()
 		}
 		println(themesDB[currThemeName].Error, data...)

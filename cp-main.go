@@ -81,7 +81,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 		return
 	}
 
-	if !globalQuietFlag || !globalJSONFlag {
+	if !globalQuietFlag && !globalJSONFlag {
 		bar.SetCaption(cpURLs.SourceContent.Name + ": ")
 	}
 
@@ -125,7 +125,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
 func doCopyFake(cURLs copyURLs, bar *barSend) {
-	if !globalQuietFlag || !globalJSONFlag {
+	if !globalQuietFlag && !globalJSONFlag {
 		bar.Progress(cURLs.SourceContent.Size)
 	}
 }
@@ -142,7 +142,12 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
-	scanBar := scanBarFactory("")
+
+	var scanBar scanBarFunc
+	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
+		scanBar = scanBarFactory("")
+	}
+
 	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
 	done := false
 
@@ -154,6 +159,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if cpURLs.Error != nil {
+				console.PrintC("Failed to prepare copy URLs, ")
 				errorIf(cpURLs.Error)
 				break
 			}
@@ -164,7 +170,9 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				console.Fatalf("Unable to marshal URLs to JSON. %s\n", err)
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
-			scanBar(cpURLs.SourceContent.Name)
+			if !globalQuietFlag && !globalJSONFlag {
+				scanBar(cpURLs.SourceContent.Name)
+			}
 
 			totalBytes += cpURLs.SourceContent.Size
 			totalObjects++
@@ -187,7 +195,7 @@ func doCopyCmdSession(session *sessionV2) {
 	}
 
 	var bar barSend
-	if !globalQuietFlag || !globalJSONFlag { // set up progress bar
+	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
 		bar = newCpBar()
 		bar.Extend(session.Header.TotalBytes)
 	}
@@ -214,14 +222,16 @@ func doCopyCmdSession(session *sessionV2) {
 			select {
 			case cpURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
-					bar.Finish()
+					if !globalQuietFlag && !globalJSONFlag {
+						bar.Finish()
+					}
 					return
 				}
 				if cpURLs.Error == nil {
 					session.Header.LastCopied = cpURLs.SourceContent.Name
 				} else {
 					console.Println()
-					console.Printf("Failed to copy ‘%s’, ", cpURLs.SourceContent.Name)
+					console.PrintC(fmt.Sprintf("Failed to copy ‘%s’, ", cpURLs.SourceContent.Name))
 					errorIf(cpURLs.Error)
 				}
 			case <-trapCh: // Receive interrupt notification.
@@ -257,7 +267,6 @@ func doCopyCmdSession(session *sessionV2) {
 		}
 		copyWg.Wait()
 	}()
-
 	wg.Wait()
 }
 
@@ -277,14 +286,12 @@ func mainCopy(ctx *cli.Context) {
 	}
 
 	// extract URLs.
-	{
-		var err *probe.Error
-		session.Header.CommandArgs, err = args2URLs(ctx.Args())
-		if err != nil {
-			session.Close()
-			session.Delete()
-			console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), err)
-		}
+	var perr *probe.Error
+	session.Header.CommandArgs, perr = args2URLs(ctx.Args())
+	if perr != nil {
+		session.Close()
+		session.Delete()
+		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), perr)
 	}
 
 	doCopyCmdSession(session)

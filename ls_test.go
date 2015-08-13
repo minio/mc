@@ -67,7 +67,7 @@ func (s *CmdTestSuite) TestLSCmd(c *C) {
 func (s *CmdTestSuite) TestLSContext(c *C) {
 	err := app.Run([]string{os.Args[0], "ls", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
+	c.Assert(console.IsError, Equals, false)
 
 	err = app.Run([]string{os.Args[0], "ls", server.URL + "/invalid"})
 	c.Assert(err, IsNil)
