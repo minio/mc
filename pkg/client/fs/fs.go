@@ -25,8 +25,8 @@ import (
 
 	"io/ioutil"
 
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio/pkg/probe"
 )
 
 type fsClient struct {

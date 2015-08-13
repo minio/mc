@@ -23,9 +23,9 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/minio/cli"
+	"github.com/minio/mc/internal/github.com/minio/cli"
+	"github.com/minio/mc/internal/github.com/minio/pb"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/pb"
 )
 
 // Check for the environment early on and gracefully report.

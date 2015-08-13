@@ -26,10 +26,10 @@ import (
 
 	"net/http/httptest"
 
-	"github.com/minio/cli"
+	"github.com/minio/mc/internal/github.com/minio/cli"
+	. "github.com/minio/mc/internal/gopkg.in/check.v1"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
-	. "gopkg.in/check.v1"
 )
 
 var customConfigDir string

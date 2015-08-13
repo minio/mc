@@ -22,8 +22,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/fatih/color"
-	"github.com/olekukonko/ts"
+	"github.com/minio/mc/internal/github.com/fatih/color"
+	"github.com/minio/mc/internal/github.com/olekukonko/ts"
 )
 
 // printUpdateNotify - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier

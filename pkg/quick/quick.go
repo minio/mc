@@ -28,8 +28,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/fatih/structs"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/internal/github.com/fatih/structs"
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 )
 
 // Config - generic config interface functions
