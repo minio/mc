@@ -101,8 +101,8 @@ func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 	return reader, metadata.Size, nil
 }
 
-// PresignedGetObject - get a presigned usable get object url to share
-func (c *s3Client) PresignedGetObject(expires time.Duration, offset, length int64) (string, *probe.Error) {
+// Share - get a usable get object url to share
+func (c *s3Client) Share(expires time.Duration, offset, length int64) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	presignedURL, err := c.api.PresignedGetPartialObject(bucket, object, expires, offset, length)
 	if err != nil {

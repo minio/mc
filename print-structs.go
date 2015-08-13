@@ -166,7 +166,7 @@ func (s MirrorMessage) String() string {
 // ShareMessage container for share messages
 type ShareMessage struct {
 	Version      string        `json:"version"`
-	Expires      time.Duration `json:"expires"`
+	Expires      time.Duration `json:"expire-seconds"`
 	PresignedURL string        `json:"presigned-url"`
 }
 
