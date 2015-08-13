@@ -26,7 +26,7 @@ import (
 
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/quick"
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/quick"
 )
 
 type sessionV1 struct {
