@@ -17,8 +17,8 @@
 package main
 
 import (
-	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/internal/github.com/minio/cli"
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 )
 
 // Help message.

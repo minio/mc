@@ -16,7 +16,7 @@
 
 package console
 
-import "github.com/fatih/color"
+import "github.com/minio/mc/internal/github.com/fatih/color"
 
 // MiniTheme - Minio's default color theme
 var MiniTheme = Theme{

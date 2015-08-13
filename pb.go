@@ -24,10 +24,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dustin/go-humanize"
+	"github.com/minio/mc/internal/github.com/dustin/go-humanize"
+	"github.com/minio/mc/internal/github.com/minio/pb"
+	"github.com/minio/mc/internal/github.com/olekukonko/ts"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/pb"
-	"github.com/olekukonko/ts"
 )
 
 type pbBarCmd int

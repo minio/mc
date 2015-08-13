@@ -1,9 +1,0 @@
-language: go
-go:
-- 1.4.2
-script:
-- go vet ./...
-- go test -race -v ./...
-notifications:
-  slack:
-    secure: HrOX2k6F/sEl6Rr4m5vHOdJCIwV42be0kz1Jy/WSMvrl/fQ8YkldKviLeWh4aWt1kclsYhNQ4FqGML+RIZYsdOqej4fAw9Vi5pZkI1MzPJq0UjrtMqkqzvD90eDGQYCKwaXjEIN8cohwJeb6X0B0HKAd9sqJW5GH5SwnhH5WWP8=

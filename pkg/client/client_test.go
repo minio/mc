@@ -19,7 +19,7 @@ package client
 import (
 	"testing"
 
-	. "gopkg.in/check.v1"
+	. "github.com/minio/mc/internal/gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }

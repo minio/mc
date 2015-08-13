@@ -38,12 +38,6 @@ func (e errInvalidACL) Error() string {
 	return "Invalid ACL Type ‘" + e.acl + "’. Valid types are [private, public, readonly]."
 }
 
-type errNotConfigured struct{}
-
-func (e errNotConfigured) Error() string {
-	return "‘mc’ not configured."
-}
-
 type errNotAnObject struct {
 	url string
 }
@@ -56,15 +50,6 @@ type errInvalidArgument struct{}
 
 func (e errInvalidArgument) Error() string {
 	return "Incorrect usage, please use \"mc config help\""
-}
-
-type errUnsupportedScheme struct {
-	scheme string
-	url    string
-}
-
-func (e errUnsupportedScheme) Error() string {
-	return "Unsuppported URL scheme: " + e.scheme + " URL: ‘" + e.url + "’"
 }
 
 type errInvalidGlobURL struct {
@@ -149,12 +134,6 @@ type errTargetIsNotDir errInvalidURL
 
 func (e errTargetIsNotDir) Error() string {
 	return "Target ‘" + e.URL + "’ is not a folder."
-}
-
-type errTargetNotFound errInvalidURL
-
-func (e errTargetNotFound) Error() string {
-	return "Target folder ‘" + e.URL + "’ does not exist."
 }
 
 type errSourceNotRecursive errInvalidURL

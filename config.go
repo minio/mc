@@ -23,9 +23,9 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/quick"
-	"github.com/minio/minio/pkg/probe"
 )
 
 type configV1 struct {
@@ -279,11 +279,4 @@ func newConfig() (config quick.Config, err *probe.Error) {
 		return nil, err.Trace()
 	}
 	return config, nil
-}
-
-// mustNewConfig instantiates a new config handler, exists upon error
-func mustNewConfig() quick.Config {
-	config, err := newConfig()
-	fatalIf(err)
-	return config
 }

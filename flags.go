@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio/cli"
+	"github.com/minio/mc/internal/github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 )
 

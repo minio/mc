@@ -22,10 +22,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/internal/github.com/tchap/go-patricia/patricia"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
-	"github.com/tchap/go-patricia/patricia"
 )
 
 //
@@ -52,11 +52,6 @@ type diffV1 struct {
 type diff struct {
 	message string
 	err     *probe.Error
-}
-
-func mustURLJoinPath(url1, url2 string) string {
-	newURL, _ := urlJoinPath(url1, url2)
-	return newURL
 }
 
 // urlJoinPath Join a path to existing URL

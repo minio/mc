@@ -20,17 +20,17 @@ $ mc --help
     - Push to the branch (git push origin my-new-feature)
     - Create new Pull Request
 
-* If you have additional dependencies for ``mc``, ``mc`` manages its depedencies using [godep](https://github.com/tools/godep)
+* If you have additional dependencies for ``mc``, ``mc`` manages its depedencies using [govendor](https://github.com/kardianos/govendor)
     - Run `go get foo/bar`
     - Edit your code to import foo/bar
-    - Run `make save` from top-level folder (or `godep restore && godep save ./...`).
+    - Run `govendor add foo/bar` from top-level folder
 
 * When you're ready to create a pull request, be sure to:
     - Have test cases for the new code. If you have questions about how to do it, please ask in your pull request.
     - Run `go fmt`
     - Squash your commits into a single commit. `git rebase -i`. It's okay to force update your pull request.
-    - Make sure `go test -race ./...` and `go build` completes.
+    - Make sure `make build` completes.
 
 * Read [Effective Go](https://github.com/golang/go/wiki/CodeReviewComments) article from Golang project
-    - `mc` project is strictly conformant with Golang style
+    - `mc` project is conformant with Golang style
     - if you happen to observe offending code, please feel free to send a pull request

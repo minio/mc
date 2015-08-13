@@ -21,11 +21,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/minio/cli"
+	"github.com/minio/mc/internal/github.com/minio/cli"
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/internal/github.com/tchap/go-patricia/patricia"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
-	"github.com/tchap/go-patricia/patricia"
 )
 
 type mirrorURLs struct {
