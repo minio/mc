@@ -26,7 +26,7 @@ import (
 
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/quick"
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/quick"
 )
 
 // migrateSessionV1ToV2 migrates all session files from v1 to v2.
