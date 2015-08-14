@@ -49,7 +49,7 @@ gomake-all: build
 	@mkdir -p $(HOME)/.mc
 
 release: genversion
-	@echo "Installing minio with new version.go:"
+	@echo "Installing mc with new version.go:"
 	@go install github.com/minio/mc
 	@mkdir -p $(HOME)/.mc
 

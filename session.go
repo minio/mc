@@ -52,7 +52,7 @@ func getSessionDir() string {
 	if err != nil {
 		// TODO: revamp error handling -ab. Do not pass errors mindlessly to upper layer for a tool like mc.
 	}
-	return filepath.Join(configDir, sessionDir)
+	return filepath.Join(configDir, globalSessionDir)
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

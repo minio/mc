@@ -27,9 +27,9 @@ import (
 	"net/http/httptest"
 
 	"github.com/minio/mc/internal/github.com/minio/cli"
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/quick"
 	. "github.com/minio/mc/internal/gopkg.in/check.v1"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/quick"
 )
 
 var customConfigDir string
@@ -56,9 +56,9 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 
 	// For windows the path is slightly different.
 	if runtime.GOOS == "windows" {
-		customConfigDir = filepath.Join(tmpDir, mcConfigWindowsDir)
+		customConfigDir = filepath.Join(tmpDir, globalMCConfigWindowsDir)
 	} else {
-		customConfigDir = filepath.Join(tmpDir, mcConfigDir)
+		customConfigDir = filepath.Join(tmpDir, globalMCConfigDir)
 	}
 	setMcConfigDir(customConfigDir)
 
