@@ -17,6 +17,9 @@
 package main
 
 import (
+	"os"
+	"reflect"
+
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/console"
 )
@@ -25,6 +28,18 @@ import (
 func fatalIf(err *probe.Error) {
 	if err == nil {
 		return
+	}
+	if globalJSONFlag {
+		errorMessage := ErrorMessage{
+			Type:          "Fatal",
+			TypedError:    reflect.TypeOf(err.ToError()).String(),
+			EmbeddedError: err.ToError(),
+		}
+		if globalDebugFlag {
+			errorMessage.ProbeError = err.JSON()
+		}
+		console.Println(errorMessage)
+		os.Exit(1)
 	}
 	if !globalDebugFlag {
 		console.Fatalln(err.ToError())
@@ -35,6 +50,18 @@ func fatalIf(err *probe.Error) {
 // errorIf synonymous with fatalIf but doesn't exit on error != nil
 func errorIf(err *probe.Error) {
 	if err == nil {
+		return
+	}
+	if globalJSONFlag {
+		errorMessage := ErrorMessage{
+			Type:          "Error",
+			TypedError:    reflect.TypeOf(err.ToError()).String(),
+			EmbeddedError: err.ToError(),
+		}
+		if globalDebugFlag {
+			errorMessage.ProbeError = err.JSON()
+		}
+		console.Println(errorMessage)
 		return
 	}
 	if !globalDebugFlag {

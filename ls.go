@@ -35,8 +35,8 @@ const (
 )
 
 // parseContent parse client Content container into printer struct
-func parseContent(c *client.Content) Content {
-	content := Content{}
+func parseContent(c *client.Content) ContentMessage {
+	content := ContentMessage{}
 	content.Time = c.Time.Local().Format(printDate)
 
 	// guess file type
