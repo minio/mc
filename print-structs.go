@@ -29,7 +29,6 @@ import (
 
 // DiffJSONMessage json container for diff messages
 type DiffJSONMessage struct {
-	Version   string `json:"version"`
 	FirstURL  string `json:"first"`
 	SecondURL string `json:"second"`
 	Diff      string `json:"diff"`
@@ -50,7 +49,6 @@ func (s diffV1) String() string {
 		return message
 	}
 	diffMessage := DiffJSONMessage{}
-	diffMessage.Version = "1.0.0"
 	diffMessage.FirstURL = s.firstURL
 	diffMessage.SecondURL = s.secondURL
 	diffMessage.Diff = s.diffType
@@ -63,7 +61,6 @@ func (s diffV1) String() string {
 
 // SessionJSONMessage json container for session messages
 type SessionJSONMessage struct {
-	Version     string   `json:"version"`
 	SessionID   string   `json:"sessionid"`
 	Time        string   `json:"time"`
 	CommandType string   `json:"command-type"`
@@ -78,7 +75,6 @@ func (s sessionV2) String() string {
 		return message + "\n"
 	}
 	sessionMesage := SessionJSONMessage{
-		Version:     s.Header.Version,
 		SessionID:   s.SessionID,
 		Time:        s.Header.When.Local().Format(printDate),
 		CommandType: s.Header.CommandType,
@@ -93,7 +89,6 @@ func (s sessionV2) String() string {
 
 // Content container for content message structure
 type Content struct {
-	Version  string `json:"version"`
 	Filetype string `json:"type"`
 	Time     string `json:"last-modified"`
 	Size     string `json:"size"`
@@ -113,7 +108,6 @@ func (c Content) String() string {
 		}()
 		return message + "\n"
 	}
-	c.Version = "1.0.0"
 	jsonMessageBytes, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		panic(err)
@@ -123,10 +117,9 @@ func (c Content) String() string {
 
 // CopyMessage container for file copy messages
 type CopyMessage struct {
-	Version string `json:"version"`
-	Source  string `json:"source"`
-	Target  string `json:"target"`
-	Length  int64  `json:"length"`
+	Source string `json:"source"`
+	Target string `json:"target"`
+	Length int64  `json:"length"`
 }
 
 // String string printer for copy message
@@ -134,7 +127,6 @@ func (c CopyMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("‘%s’ -> ‘%s’\n", c.Source, c.Target)
 	}
-	c.Version = "1.0.0"
 	copyMessageBytes, err := json.MarshalIndent(c, "", "\t")
 	if err != nil {
 		panic(err)
@@ -144,7 +136,6 @@ func (c CopyMessage) String() string {
 
 // MirrorMessage container for file mirror messages
 type MirrorMessage struct {
-	Version string   `json:"version"`
 	Source  string   `json:"source"`
 	Targets []string `json:"targets"`
 	Length  int64    `json:"length"`
@@ -155,7 +146,6 @@ func (s MirrorMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("‘%s’ -> ‘%s’\n", s.Source, s.Targets)
 	}
-	s.Version = "1.0.0"
 	mirrorMessageBytes, err := json.MarshalIndent(s, "", "\t")
 	if err != nil {
 		panic(err)
@@ -165,7 +155,6 @@ func (s MirrorMessage) String() string {
 
 // ShareMessage container for share messages
 type ShareMessage struct {
-	Version      string        `json:"version"`
 	Expires      time.Duration `json:"expire-seconds"`
 	PresignedURL string        `json:"presigned-url"`
 }
@@ -175,7 +164,6 @@ func (s ShareMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("Succesfully generated shared URL with expiry %s, please share: %s\n", s.Expires, s.PresignedURL)
 	}
-	s.Version = "1.0.0"
 	shareMessageBytes, err := json.MarshalIndent(s, "", "\t")
 	if err != nil {
 		panic(err)

@@ -94,7 +94,7 @@ func registerBefore(ctx *cli.Context) error {
 		errorIf(err)
 	}
 
-	firstTimeRun()
+	verifyMCRuntime()
 
 	// Migrate any old version of config / state files to newer format.
 	migrate()
