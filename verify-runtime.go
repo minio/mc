@@ -89,7 +89,7 @@ func (v1 version) LessThan(v2 version) bool {
 	return false
 }
 
-func checkGolangVersion() {
+func checkGolangRuntimeVersion() {
 	v1 := newVersion(getNormalizedGolangVersion())
 	switch runtime.GOOS {
 	case "windows":
@@ -105,7 +105,7 @@ func checkGolangVersion() {
 	}
 }
 
-func firstTimeRun() {
+func verifyMCRuntime() {
 	if !isMcConfigExists() {
 		if err := createMcConfigDir(); err != nil {
 			console.Fatalf("Unable to create ‘mc’ config folder. %s\n", err)
@@ -120,5 +120,5 @@ func firstTimeRun() {
 		err := createSessionDir()
 		fatalIf(err)
 	}
-	checkGolangVersion()
+	checkGolangRuntimeVersion()
 }
