@@ -27,6 +27,25 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
+// ErrorMessage json container for error messages
+type ErrorMessage struct {
+	Type          string `json:"type"`
+	TypedError    string `json:"typed-error"`
+	EmbeddedError error  `json:"embedded-error"`
+	ProbeError    string `json:"probe-error"`
+}
+
+func (e ErrorMessage) String() string {
+	if !globalJSONFlag {
+		return e.EmbeddedError.Error()
+	}
+	errorMessageBytes, err := json.MarshalIndent(e, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+	return console.JSON(string(errorMessageBytes) + "\n")
+}
+
 // DiffJSONMessage json container for diff messages
 type DiffJSONMessage struct {
 	FirstURL  string `json:"first"`
@@ -87,8 +106,8 @@ func (s sessionV2) String() string {
 	return console.JSON(string(sessionJSONBytes) + "\n")
 }
 
-// Content container for content message structure
-type Content struct {
+// ContentMessage container for content message structure
+type ContentMessage struct {
 	Filetype string `json:"type"`
 	Time     string `json:"last-modified"`
 	Size     string `json:"size"`
@@ -96,7 +115,7 @@ type Content struct {
 }
 
 // String string printer for Content metadata
-func (c Content) String() string {
+func (c ContentMessage) String() string {
 	if !globalJSONFlag {
 		message := console.Time("[%s] ", c.Time)
 		message = message + console.Size("%6s ", c.Size)
