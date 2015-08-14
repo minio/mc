@@ -24,8 +24,8 @@ import (
 	"sync"
 
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/quick"
+	"github.com/minio/mc/pkg/console"
 )
 
 type configV1 struct {
@@ -57,9 +57,9 @@ func getMcConfigDir() (string, *probe.Error) {
 	// For windows the path is slightly different
 	switch runtime.GOOS {
 	case "windows":
-		return filepath.Join(u.HomeDir, mcConfigWindowsDir), nil
+		return filepath.Join(u.HomeDir, globalMCConfigWindowsDir), nil
 	default:
-		return filepath.Join(u.HomeDir, mcConfigDir), nil
+		return filepath.Join(u.HomeDir, globalMCConfigDir), nil
 	}
 }
 
@@ -88,7 +88,7 @@ func getMcConfigPath() (string, *probe.Error) {
 	if err != nil {
 		return "", err.Trace()
 	}
-	return filepath.Join(dir, mcConfigFile), nil
+	return filepath.Join(dir, globalMCConfigFile), nil
 }
 
 // mustGetMcConfigPath - similar to getMcConfigPath, ignores errors
@@ -181,10 +181,10 @@ func migrateConfigV1ToV101() {
 
 	conf = config.Data().(*configV1)
 	// version is the same return
-	if conf.Version == mcCurrentConfigVersion {
+	if conf.Version == globalMCCurrentConfigVersion {
 		return
 	}
-	conf.Version = mcCurrentConfigVersion
+	conf.Version = globalMCCurrentConfigVersion
 
 	localHostConfig := hostConfig{}
 	localHostConfig.AccessKeyID = ""
@@ -209,13 +209,13 @@ func migrateConfigV1ToV101() {
 	perr = newConfig.Save(mustGetMcConfigPath())
 	fatalIf(perr)
 
-	console.Infof("Successfully migrated %s from version: %s to version: %s\n", mustGetMcConfigPath(), mcPreviousConfigVersion, mcCurrentConfigVersion)
+	console.Infof("Successfully migrated %s from version: %s to version: %s\n", mustGetMcConfigPath(), globalMCPreviousConfigVersion, globalMCCurrentConfigVersion)
 }
 
 // newConfigV1() - get new config version 1.0.0
 func newConfigV1() *configV1 {
 	conf := new(configV1)
-	conf.Version = mcPreviousConfigVersion
+	conf.Version = globalMCPreviousConfigVersion
 	// make sure to allocate map's otherwise Golang
 	// exits silently without providing any errors
 	conf.Hosts = make(map[string]hostConfig)
@@ -226,7 +226,7 @@ func newConfigV1() *configV1 {
 // newConfigV101() - get new config version 1.0.1
 func newConfigV101() *configV1 {
 	conf := new(configV1)
-	conf.Version = mcCurrentConfigVersion
+	conf.Version = globalMCCurrentConfigVersion
 	// make sure to allocate map's otherwise Golang
 	// exits silently without providing any errors
 	conf.Hosts = make(map[string]hostConfig)
@@ -253,7 +253,7 @@ func newConfigV101() *configV1 {
 	dlHostConfig.AccessKeyID = ""
 	dlHostConfig.SecretAccessKey = ""
 
-	conf.Hosts[exampleHostURL] = exampleHostConf
+	conf.Hosts[globalExampleHostURL] = exampleHostConf
 	conf.Hosts["localhost:*"] = localHostConfig
 	conf.Hosts["127.0.0.1:*"] = localHostConfig
 	conf.Hosts["s3*.amazonaws.com"] = s3HostConf

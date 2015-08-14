@@ -18,10 +18,12 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/user"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/minio/mc/internal/github.com/minio/cli"
 	"github.com/minio/mc/internal/github.com/minio/pb"
@@ -69,7 +71,6 @@ func getSystemData() map[string]string {
 		"PLATFORM": platform,
 		"RUNTIME":  goruntime,
 		"MEM":      mem,
-		"TAG":      Tag,
 	}
 }
 
@@ -102,6 +103,15 @@ func registerBefore(ctx *cli.Context) error {
 	return nil
 }
 
+// getFormattedVersion -
+func getFormattedVersion() string {
+	t, _ := time.Parse(time.RFC3339Nano, Version)
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format(http.TimeFormat)
+}
+
 func registerApp() *cli.App {
 	// Register all the commands
 	registerCmd(lsCmd)      // List contents of a bucket
@@ -115,6 +125,7 @@ func registerApp() *cli.App {
 	registerCmd(accessCmd)  // set permissions [public, private, readonly, authenticated] for buckets and folders.
 	registerCmd(configCmd)  // generate configuration "/home/harsha/.mc/config.json" file.
 	registerCmd(updateCmd)  // update Check for new software updates
+	registerCmd(versionCmd) // print version
 
 	// register all the flags
 	registerFlag(configFlag) // path to config folder
@@ -126,9 +137,9 @@ func registerApp() *cli.App {
 
 	app := cli.NewApp()
 	app.Usage = "Minio Client for cloud storage and filesystems"
-	app.Version = getVersion()
+	// hide --version flag, version is a command
+	app.HideVersion = true
 	app.Commands = commands
-	app.Compiled = getVersion()
 	app.Flags = flags
 	app.Author = "Minio.io"
 	app.CustomAppHelpTemplate = `NAME:
@@ -144,8 +155,9 @@ GLOBAL FLAGS:
   {{range .Flags}}{{.}}
   {{end}}{{end}}
 VERSION:
-  {{if .Compiled}}
-  {{.Compiled}}{{end}}
+
+` + getFormattedVersion() +
+		`
   {{range $key, $value := ExtraInfo}}
 {{$key}}:
   {{$value}}
@@ -163,6 +175,7 @@ func main() {
 
 	app := registerApp()
 	app.Before = registerBefore
+
 	app.ExtraInfo = func() map[string]string {
 		if globalDebugFlag {
 			return getSystemData()

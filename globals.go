@@ -22,32 +22,27 @@ var (
 	globalMimicFlag = false // Unix flag set via command line
 	globalJSONFlag  = false // Json flag set via command line
 	globalDebugFlag = false // Debug flag set via command line
-
-	mcPreviousConfigVersion = "1.0.0"
-	mcCurrentConfigVersion  = "1.0.1"
 )
 
 // mc configuration related constants.
 const (
-	mcConfigDir        = ".mc/"
-	mcConfigWindowsDir = "mc\\"
-	mcConfigFile       = "config.json"
-)
+	globalMCPreviousConfigVersion = "1.0.0"
+	globalMCCurrentConfigVersion  = "1.0.1"
+	globalMCVersion               = Version
 
-// session config related constants
-const (
-	sessionDir = "session"
-)
+	globalMCConfigDir        = ".mc/"
+	globalMCConfigWindowsDir = "mc\\"
+	globalMCConfigFile       = "config.json"
 
-// default access and secret key
-const (
+	// session config related constants
+	globalSessionDir = "session"
+
+	// default access and secret key
 	// do not pass accesskeyid and secretaccesskey through cli
 	// users should manually edit them, add a stub entry
 	globalAccessKeyID     = "YOUR-ACCESS-KEY-ID-HERE"
 	globalSecretAccessKey = "YOUR-SECRET-ACCESS-KEY-HERE"
-)
 
-// default host
-const (
-	exampleHostURL = "YOUR-EXAMPLE.COM"
+	// default host
+	globalExampleHostURL = "YOUR-EXAMPLE.COM"
 )

@@ -157,7 +157,7 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 			return auth.SecretAccessKey
 		}()
 		s3Config.AppName = "Minio"
-		s3Config.AppVersion = getVersion()
+		s3Config.AppVersion = globalMCVersion
 		s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 		s3Config.HostURL = urlStr
 		s3Config.Debug = globalDebugFlag
