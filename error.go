@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"reflect"
 
@@ -36,7 +37,8 @@ func fatalIf(err *probe.Error) {
 			EmbeddedError: err.ToError(),
 		}
 		if globalDebugFlag {
-			errorMessage.ProbeError = err.JSON()
+			rawProbe := json.RawMessage(err.JSON())
+			errorMessage.ProbeError = &rawProbe
 		}
 		console.Println(errorMessage)
 		os.Exit(1)
@@ -59,7 +61,8 @@ func errorIf(err *probe.Error) {
 			EmbeddedError: err.ToError(),
 		}
 		if globalDebugFlag {
-			errorMessage.ProbeError = err.JSON()
+			rawProbe := json.RawMessage(err.JSON())
+			errorMessage.ProbeError = &rawProbe
 		}
 		console.Println(errorMessage)
 		return
