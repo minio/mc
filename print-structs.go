@@ -29,10 +29,10 @@ import (
 
 // ErrorMessage json container for error messages
 type ErrorMessage struct {
-	Type          string `json:"type"`
-	TypedError    string `json:"typed-error"`
-	EmbeddedError error  `json:"embedded-error"`
-	ProbeError    string `json:"probe-error"`
+	Type          string           `json:"type"`
+	TypedError    string           `json:"typed-error"`
+	EmbeddedError error            `json:"embedded-error"`
+	ProbeError    *json.RawMessage `json:"probe-error,omitempty"`
 }
 
 func (e ErrorMessage) String() string {
