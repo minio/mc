@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
@@ -29,7 +30,22 @@ func fatalIf(err *probe.Error) {
 		return
 	}
 	if globalJSONFlag {
-		console.Println(ErrorMessage{err})
+		errorMessage := struct {
+			// Error     string            `json:"error"`
+			Cause     error              `json:"cause"`
+			Type      string             `json:"type"`
+			CallTrace []probe.TracePoint `json:"trace,omitempty"`
+			SysInfo   map[string]string  `json:"sysinfo"`
+		}{
+			Type:    "Fatal",
+			Cause:   err.ToGoError(),
+			SysInfo: err.SysInfo,
+		}
+		if globalDebugFlag {
+			errorMessage.CallTrace = err.CallTrace
+		}
+		json, _ := json.Marshal(errorMessage)
+		console.Println(string(json))
 		os.Exit(1)
 	}
 	if !globalDebugFlag {
@@ -44,13 +60,26 @@ func errorIf(err *probe.Error) {
 		return
 	}
 	if globalJSONFlag {
-		errorMessage := ErrorMessage{err}
-		console.Println(errorMessage)
+		errorMessage := struct {
+			// Error     string            `json:"error"`
+			Cause     error              `json:"cause"`
+			Type      string             `json:"type"`
+			CallTrace []probe.TracePoint `json:"trace,omitempty"`
+			SysInfo   map[string]string  `json:"sysinfo"`
+		}{
+			Type:    "Error",
+			Cause:   err.ToGoError(),
+			SysInfo: err.SysInfo,
+		}
+		if globalDebugFlag {
+			errorMessage.CallTrace = err.CallTrace
+		}
+		json, _ := json.Marshal(errorMessage)
+		console.Println(string(json))
 		return
 	}
 	if !globalDebugFlag {
 		console.Errorln(err.ToGoError())
-		return
 	}
 	console.Errorln(err)
 }

@@ -24,34 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/console"
 )
-
-// ErrorMessage json container for error messages
-type ErrorMessage struct {
-	*probe.Error
-}
-
-func (e ErrorMessage) String() string {
-	if !globalJSONFlag {
-		return e.Cause.Error()
-	}
-	if !globalDebugFlag {
-		errorMessageBytes, err := json.MarshalIndent(struct {
-			Cause error `json:"cause"`
-		}{Cause: e.Cause}, "", "\t")
-		if err != nil {
-			panic(err)
-		}
-		return console.JSON(string(errorMessageBytes) + "\n")
-	}
-	errorMessageBytes, err := json.MarshalIndent(e, "", "\t")
-	if err != nil {
-		panic(err)
-	}
-	return console.JSON(string(errorMessageBytes) + "\n")
-}
 
 // DiffJSONMessage json container for diff messages
 type DiffJSONMessage struct {

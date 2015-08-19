@@ -48,8 +48,8 @@
 			"canonical": "github.com/minio/minio/pkg/probe",
 			"comment": "",
 			"local": "github.com/minio/minio/pkg/probe",
-			"revision": "8789c5a49d3212d38ee42b36eec6eaeea45d6778",
-			"revisionTime": "2015-08-18T23:52:04-07:00"
+			"revision": "f223c8b36d4553962dd6a0ab587f2db82dc367f7",
+			"revisionTime": "2015-08-19T01:23:59-07:00"
 		},
 		{
 			"canonical": "github.com/minio/minio/pkg/quick",
