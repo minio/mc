@@ -53,7 +53,6 @@ type Theme struct {
 	Dir       *color.Color
 	Command   *color.Color
 	SessionID *color.Color
-	JSON      *color.Color
 	Bar       *color.Color
 	PrintC    *color.Color
 	Print     *color.Color
@@ -255,14 +254,6 @@ var (
 	SessionID = func(format string, data ...interface{}) string {
 		if isatty.IsTerminal(os.Stdout.Fd()) {
 			return themesDB[currThemeName].SessionID.SprintfFunc()(format, data...)
-		}
-		return fmt.Sprintf(format, data...)
-	}
-
-	// JSON helper to print json strings
-	JSON = func(format string, data ...interface{}) string {
-		if isatty.IsTerminal(os.Stdout.Fd()) {
-			return themesDB[currThemeName].JSON.SprintfFunc()(format, data...)
 		}
 		return fmt.Sprintf(format, data...)
 	}

@@ -31,7 +31,6 @@ func fatalIf(err *probe.Error) {
 	}
 	if globalJSONFlag {
 		errorMessage := struct {
-			// Error     string            `json:"error"`
 			Cause     error              `json:"cause"`
 			Type      string             `json:"type"`
 			CallTrace []probe.TracePoint `json:"trace,omitempty"`
@@ -44,7 +43,10 @@ func fatalIf(err *probe.Error) {
 		if globalDebugFlag {
 			errorMessage.CallTrace = err.CallTrace
 		}
-		json, _ := json.Marshal(errorMessage)
+		json, err := json.Marshal(errorMessage)
+		if err != nil {
+			panic(err)
+		}
 		console.Println(string(json))
 		os.Exit(1)
 	}
@@ -61,7 +63,6 @@ func errorIf(err *probe.Error) {
 	}
 	if globalJSONFlag {
 		errorMessage := struct {
-			// Error     string            `json:"error"`
 			Cause     error              `json:"cause"`
 			Type      string             `json:"type"`
 			CallTrace []probe.TracePoint `json:"trace,omitempty"`
@@ -74,12 +75,16 @@ func errorIf(err *probe.Error) {
 		if globalDebugFlag {
 			errorMessage.CallTrace = err.CallTrace
 		}
-		json, _ := json.Marshal(errorMessage)
+		json, err := json.Marshal(errorMessage)
+		if err != nil {
+			panic(err)
+		}
 		console.Println(string(json))
 		return
 	}
 	if !globalDebugFlag {
 		console.Errorln(err.ToGoError())
+		return
 	}
 	console.Errorln(err)
 }

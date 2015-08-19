@@ -58,13 +58,15 @@ func mainVersion(ctxx *cli.Context) {
 		Format string    `json:"format"`
 	}
 	if globalJSONFlag {
-		tB, err := json.MarshalIndent(struct {
-			Version Version `json:"version"`
-		}{Version: Version{t, "RFC3339Nano"}}, "", "\t")
+		tB, err := json.Marshal(
+			struct {
+				Version Version `json:"version"`
+			}{Version: Version{t, "RFC3339Nano"}},
+		)
 		if err != nil {
 			console.Fatalln(probe.NewError(err))
 		}
-		console.Println(console.JSON(string(tB)))
+		console.Println(string(tB))
 		return
 	}
 	console.Println(t.Format(http.TimeFormat))

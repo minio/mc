@@ -52,11 +52,11 @@ func (s diffV1) String() string {
 	diffMessage.FirstURL = s.firstURL
 	diffMessage.SecondURL = s.secondURL
 	diffMessage.Diff = s.diffType
-	diffJSONBytes, err := json.MarshalIndent(diffMessage, "", "\t")
+	diffJSONBytes, err := json.Marshal(diffMessage)
 	if err != nil {
 		panic(err)
 	}
-	return console.JSON(string(diffJSONBytes) + "\n")
+	return string(diffJSONBytes) + "\n"
 }
 
 // SessionJSONMessage json container for session messages
@@ -80,11 +80,11 @@ func (s sessionV2) String() string {
 		CommandType: s.Header.CommandType,
 		CommandArgs: s.Header.CommandArgs,
 	}
-	sessionJSONBytes, err := json.MarshalIndent(sessionMesage, "", "\t")
+	sessionJSONBytes, err := json.Marshal(sessionMesage)
 	if err != nil {
 		panic(err)
 	}
-	return console.JSON(string(sessionJSONBytes) + "\n")
+	return string(sessionJSONBytes) + "\n"
 }
 
 // ContentMessage container for content message structure
@@ -108,11 +108,11 @@ func (c ContentMessage) String() string {
 		}()
 		return message + "\n"
 	}
-	jsonMessageBytes, err := json.MarshalIndent(c, "", "\t")
+	jsonMessageBytes, err := json.Marshal(c)
 	if err != nil {
 		panic(err)
 	}
-	return console.JSON(string(jsonMessageBytes) + "\n")
+	return string(jsonMessageBytes) + "\n"
 }
 
 // CopyMessage container for file copy messages
@@ -127,11 +127,11 @@ func (c CopyMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("‘%s’ -> ‘%s’\n", c.Source, c.Target)
 	}
-	copyMessageBytes, err := json.MarshalIndent(c, "", "\t")
+	copyMessageBytes, err := json.Marshal(c)
 	if err != nil {
 		panic(err)
 	}
-	return console.JSON(string(copyMessageBytes) + "\n")
+	return string(copyMessageBytes) + "\n"
 }
 
 // MirrorMessage container for file mirror messages
@@ -146,11 +146,11 @@ func (s MirrorMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("‘%s’ -> ‘%s’\n", s.Source, s.Targets)
 	}
-	mirrorMessageBytes, err := json.MarshalIndent(s, "", "\t")
+	mirrorMessageBytes, err := json.Marshal(s)
 	if err != nil {
 		panic(err)
 	}
-	return console.JSON(string(mirrorMessageBytes) + "\n")
+	return string(mirrorMessageBytes) + "\n"
 }
 
 // ShareMessage container for share messages
@@ -164,12 +164,12 @@ func (s ShareMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("Succesfully generated shared URL with expiry %s, please share: %s\n", s.Expires, s.PresignedURL)
 	}
-	shareMessageBytes, err := json.MarshalIndent(s, "", "\t")
+	shareMessageBytes, err := json.Marshal(s)
 	if err != nil {
 		panic(err)
 	}
 	// json encoding escapes ampersand into its unicode character which is not usable directly for share
 	// and fails with cloud storage. convert them back so that they are usable
 	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
-	return console.JSON("%s\n", string(shareMessageBytes))
+	return fmt.Sprintf("%s\n", string(shareMessageBytes))
 }
