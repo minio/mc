@@ -17,7 +17,6 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"reflect"
 
@@ -33,18 +32,17 @@ func fatalIf(err *probe.Error) {
 	if globalJSONFlag {
 		errorMessage := ErrorMessage{
 			Type:          "Fatal",
-			TypedError:    reflect.TypeOf(err.ToError()).String(),
-			EmbeddedError: err.ToError(),
+			TypedError:    reflect.TypeOf(err.ToGoError()).String(),
+			EmbeddedError: err.ToGoError(),
 		}
 		if globalDebugFlag {
-			rawProbe := json.RawMessage(err.JSON())
-			errorMessage.ProbeError = &rawProbe
+			errorMessage.ProbeError = err
 		}
 		console.Println(errorMessage)
 		os.Exit(1)
 	}
 	if !globalDebugFlag {
-		console.Fatalln(err.ToError())
+		console.Fatalln(err.ToGoError())
 	}
 	console.Fatalln(err)
 }
@@ -57,18 +55,17 @@ func errorIf(err *probe.Error) {
 	if globalJSONFlag {
 		errorMessage := ErrorMessage{
 			Type:          "Error",
-			TypedError:    reflect.TypeOf(err.ToError()).String(),
-			EmbeddedError: err.ToError(),
+			TypedError:    reflect.TypeOf(err.ToGoError()).String(),
+			EmbeddedError: err.ToGoError(),
 		}
 		if globalDebugFlag {
-			rawProbe := json.RawMessage(err.JSON())
-			errorMessage.ProbeError = &rawProbe
+			errorMessage.ProbeError = err
 		}
 		console.Println(errorMessage)
 		return
 	}
 	if !globalDebugFlag {
-		console.Errorln(err.ToError())
+		console.Errorln(err.ToGoError())
 		return
 	}
 	console.Errorln(err)
