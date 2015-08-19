@@ -30,21 +30,26 @@ import (
 
 // ErrorMessage json container for error messages
 type ErrorMessage struct {
-	Type          string       `json:"type"`
-	TypedError    string       `json:"typed-error"`
-	EmbeddedError error        `json:"embedded-error"`
-	ProbeError    *probe.Error `json:"probe-error,omitempty"`
+	*probe.Error
 }
 
 func (e ErrorMessage) String() string {
 	if !globalJSONFlag {
-		return e.EmbeddedError.Error()
+		return e.Cause.Error()
 	}
-	errorMessageBytes, err := json.MarshalIndent(e, "", "\t")
-	if err != nil {
-		panic(err)
+	if !globalDebugFlag {
+		errorMessageBytes, err := json.MarshalIndent(e.Cause, "", "\t")
+		if err != nil {
+			panic(err)
+		}
+		return console.JSON(string(errorMessageBytes) + "\n")
+	} else {
+		errorMessageBytes, err := json.MarshalIndent(e, "", "\t")
+		if err != nil {
+			panic(err)
+		}
+		return console.JSON(string(errorMessageBytes) + "\n")
 	}
-	return console.JSON(string(errorMessageBytes) + "\n")
 }
 
 // DiffJSONMessage json container for diff messages
