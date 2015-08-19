@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"io/ioutil"
 	"text/tabwriter"
@@ -135,8 +136,14 @@ func (a *App) Run(arguments []string) (err error) {
 			w := tabwriter.NewWriter(a.Writer, 0, 8, 1, '\t', 0)
 			t := template.Must(template.New("help").Funcs(funcMap).Parse(templ))
 			err := t.Execute(w, data)
-			if err != nil {
-				panic(err)
+			switch e := err.(type) {
+			case *os.PathError:
+				if e.Err == syscall.EPIPE {
+					break
+				}
+				if err != nil {
+					panic(err)
+				}
 			}
 			w.Flush()
 		}
