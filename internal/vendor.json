@@ -6,8 +6,8 @@
 			"canonical": "github.com/dustin/go-humanize",
 			"comment": "",
 			"local": "github.com/dustin/go-humanize",
-			"revision": "8789c5a49d3212d38ee42b36eec6eaeea45d6778",
-			"revisionTime": "2015-08-18T23:52:04-07:00"
+			"revision": "f223c8b36d4553962dd6a0ab587f2db82dc367f7",
+			"revisionTime": "2015-08-19T01:23:59-07:00"
 		},
 		{
 			"canonical": "github.com/fatih/color",
@@ -20,8 +20,8 @@
 			"canonical": "github.com/fatih/structs",
 			"comment": "",
 			"local": "github.com/fatih/structs",
-			"revision": "8789c5a49d3212d38ee42b36eec6eaeea45d6778",
-			"revisionTime": "2015-08-18T23:52:04-07:00"
+			"revision": "f223c8b36d4553962dd6a0ab587f2db82dc367f7",
+			"revisionTime": "2015-08-19T01:23:59-07:00"
 		},
 		{
 			"canonical": "github.com/mattn/go-isatty",
@@ -34,8 +34,8 @@
 			"canonical": "github.com/minio/cli",
 			"comment": "",
 			"local": "github.com/minio/cli",
-			"revision": "9280cbaadcdd26d50b5ae85123682e37944701de",
-			"revisionTime": "2015-07-24T23:32:06-07:00"
+			"revision": "ee386baecc113eef2b8945df429120a5aec319ef",
+			"revisionTime": "2015-08-19T11:23:55-07:00"
 		},
 		{
 			"canonical": "github.com/minio/minio-go",
@@ -55,8 +55,8 @@
 			"canonical": "github.com/minio/minio/pkg/quick",
 			"comment": "",
 			"local": "github.com/minio/minio/pkg/quick",
-			"revision": "8789c5a49d3212d38ee42b36eec6eaeea45d6778",
-			"revisionTime": "2015-08-18T23:52:04-07:00"
+			"revision": "f223c8b36d4553962dd6a0ab587f2db82dc367f7",
+			"revisionTime": "2015-08-19T01:23:59-07:00"
 		},
 		{
 			"canonical": "github.com/minio/pb",
