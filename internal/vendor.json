@@ -6,8 +6,8 @@
 			"canonical": "github.com/dustin/go-humanize",
 			"comment": "",
 			"local": "github.com/dustin/go-humanize",
-			"revision": "1c212aae1d02984808182b98b0da7a3e07e4c770",
-			"revisionTime": "2015-08-09T13:14:05-07:00"
+			"revision": "8789c5a49d3212d38ee42b36eec6eaeea45d6778",
+			"revisionTime": "2015-08-18T23:52:04-07:00"
 		},
 		{
 			"canonical": "github.com/fatih/color",
@@ -20,15 +20,15 @@
 			"canonical": "github.com/fatih/structs",
 			"comment": "",
 			"local": "github.com/fatih/structs",
-			"revision": "a9f7daa9c2729e97450c2da2feda19130a367d8f",
-			"revisionTime": "2015-05-26T09:43:52+03:00"
+			"revision": "8789c5a49d3212d38ee42b36eec6eaeea45d6778",
+			"revisionTime": "2015-08-18T23:52:04-07:00"
 		},
 		{
 			"canonical": "github.com/mattn/go-isatty",
 			"comment": "",
 			"local": "github.com/mattn/go-isatty",
-			"revision": "ae0b1f8f8004be68d791a576e3d8e7648ab41449",
-			"revisionTime": "2015-04-09T09:42:43+09:00"
+			"revision": "7fcbc72f853b92b5720db4a6b8482be612daef24",
+			"revisionTime": "2015-08-14T09:26:29+09:00"
 		},
 		{
 			"canonical": "github.com/minio/cli",
@@ -41,22 +41,22 @@
 			"canonical": "github.com/minio/minio-go",
 			"comment": "",
 			"local": "github.com/minio/minio-go",
-			"revision": "69b05646606fd39171e16d6bf4edc84bb77787e0",
-			"revisionTime": "2015-08-11T13:40:24-07:00"
+			"revision": "feda9e7303c21b33793ce0f8105e8884b5eee6b1",
+			"revisionTime": "2015-08-17T20:55:25-07:00"
 		},
 		{
 			"canonical": "github.com/minio/minio/pkg/probe",
 			"comment": "",
 			"local": "github.com/minio/minio/pkg/probe",
-			"revision": "76d11ed1e49fd7e15f4eb6b7d56c6113806c9497",
-			"revisionTime": "2015-08-13T16:35:03-07:00"
+			"revision": "8789c5a49d3212d38ee42b36eec6eaeea45d6778",
+			"revisionTime": "2015-08-18T23:52:04-07:00"
 		},
 		{
 			"canonical": "github.com/minio/minio/pkg/quick",
 			"comment": "",
 			"local": "github.com/minio/minio/pkg/quick",
-			"revision": "76d11ed1e49fd7e15f4eb6b7d56c6113806c9497",
-			"revisionTime": "2015-08-13T16:35:03-07:00"
+			"revision": "8789c5a49d3212d38ee42b36eec6eaeea45d6778",
+			"revisionTime": "2015-08-18T23:52:04-07:00"
 		},
 		{
 			"canonical": "github.com/minio/pb",

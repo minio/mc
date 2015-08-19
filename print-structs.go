@@ -24,15 +24,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/console"
 )
 
 // ErrorMessage json container for error messages
 type ErrorMessage struct {
-	Type          string           `json:"type"`
-	TypedError    string           `json:"typed-error"`
-	EmbeddedError error            `json:"embedded-error"`
-	ProbeError    *json.RawMessage `json:"probe-error,omitempty"`
+	Type          string       `json:"type"`
+	TypedError    string       `json:"typed-error"`
+	EmbeddedError error        `json:"embedded-error"`
+	ProbeError    *probe.Error `json:"probe-error,omitempty"`
 }
 
 func (e ErrorMessage) String() string {

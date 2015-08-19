@@ -76,13 +76,13 @@ func doList(clnt client.Client, recursive bool) *probe.Error {
 	var err *probe.Error
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
-			switch contentCh.Err.ToError().(type) {
+			switch contentCh.Err.ToGoError().(type) {
 			// handle this specifically for filesystem
 			case client.ISBrokenSymlink:
 				errorIf(contentCh.Err.Trace())
 				continue
 			}
-			if os.IsNotExist(contentCh.Err.ToError()) || os.IsPermission(contentCh.Err.ToError()) {
+			if os.IsNotExist(contentCh.Err.ToGoError()) || os.IsPermission(contentCh.Err.ToGoError()) {
 				errorIf(contentCh.Err.Trace())
 				continue
 			}
