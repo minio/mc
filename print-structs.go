@@ -38,18 +38,19 @@ func (e ErrorMessage) String() string {
 		return e.Cause.Error()
 	}
 	if !globalDebugFlag {
-		errorMessageBytes, err := json.MarshalIndent(e.Cause, "", "\t")
-		if err != nil {
-			panic(err)
-		}
-		return console.JSON(string(errorMessageBytes) + "\n")
-	} else {
-		errorMessageBytes, err := json.MarshalIndent(e, "", "\t")
+		errorMessageBytes, err := json.MarshalIndent(struct {
+			Cause error `json:"cause"`
+		}{Cause: e.Cause}, "", "\t")
 		if err != nil {
 			panic(err)
 		}
 		return console.JSON(string(errorMessageBytes) + "\n")
 	}
+	errorMessageBytes, err := json.MarshalIndent(e, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+	return console.JSON(string(errorMessageBytes) + "\n")
 }
 
 // DiffJSONMessage json container for diff messages
@@ -193,7 +194,8 @@ func (s ShareMessage) String() string {
 	if err != nil {
 		panic(err)
 	}
-	// json encoding escapes ampersand into its unicode character which is not usable directly for share and fails with cloud storage.
+	// json encoding escapes ampersand into its unicode character which is not usable directly for share
+	// and fails with cloud storage. convert them back so that they are usable
 	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
 	return console.JSON("%s\n", string(shareMessageBytes))
 }
