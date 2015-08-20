@@ -17,6 +17,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/minio/mc/internal/github.com/minio/cli"
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/client"
@@ -64,13 +66,14 @@ func mainAccess(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		fatalIf(probe.NewError(errInvalidACL{acl: acl.String()}), "ACL validation failed.")
+		fatalIf(probe.NewError(errors.New("")),
+			"Unrecognized permission ‘"+acl.String()+"’. Allowed values are [private, public, readonly].")
 	}
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err, "Unable to validate given URL.")
+		fatalIf(err, "Unable to parse URL argument ‘"+arg+"’.")
 
-		fatalIf(doUpdateAccessCmd(targetURL, acl), "Unable to set access permissions.")
+		fatalIf(doUpdateAccessCmd(targetURL, acl).Trace(), "Unable to set access permission ‘"+acl.String()+"’ for URL ‘"+targetURL+"’.")
 	}
 }
 
