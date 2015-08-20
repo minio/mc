@@ -156,8 +156,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if sURLs.Error != nil {
-				console.PrintC("Failed to prepare mirror URLs, ")
-				errorIf(sURLs.Error)
+				errorIf(sURLs.Error, "Unable to prepare mirror URLs.")
 				break
 			}
 			if sURLs.isEmpty() {
@@ -230,8 +229,7 @@ func doMirrorCmdSession(session *sessionV2) {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
 					console.Println()
-					console.PrintC(fmt.Sprintf("Failed to mirror ‘%s’, ", sURLs.SourceContent.Name))
-					errorIf(sURLs.Error)
+					errorIf(sURLs.Error, fmt.Sprintf("Failed to mirror ‘%s’.", sURLs.SourceContent.Name))
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()

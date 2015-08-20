@@ -60,34 +60,33 @@ func mainUpdate(ctx *cli.Context) {
 	if ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
-	fatalIf(doUpdateCheck())
-}
-
-func doUpdateCheck() *probe.Error {
 	clnt, err := url2Client(mcUpdateURL)
-	if err != nil {
-		return err.Trace(mcUpdateURL)
-	}
+	fatalIf(err, "Unable to initalize update URL")
+
 	data, _, err := clnt.GetObject(0, 0)
-	if err != nil {
-		return err.Trace(mcUpdateURL)
-	}
-	current, _ := time.Parse(time.RFC3339Nano, Version)
+	fatalIf(err, "Unable to read update URL")
+
+	current, goerr := time.Parse(time.RFC3339Nano, Version)
+	fatalIf(probe.NewError(goerr), "Unable to parse Version as time")
+
 	if current.IsZero() {
 		console.Infoln(`Version is empty, must be a custom build cannot update. Please download releases from
 https://dl.minio.io:9000 for continuous updates`)
-		return nil
+		return
 	}
 	var updates Updates
 	decoder := json.NewDecoder(data)
-	if err := decoder.Decode(&updates); err != nil {
-		return probe.NewError(err)
-	}
-	latest, _ := time.Parse(http.TimeFormat, updates.BuildDate)
+	goerr = decoder.Decode(&updates)
+	fatalIf(probe.NewError(goerr), "Unable to decode update URL data")
+
+	latest, goerr := time.Parse(http.TimeFormat, updates.BuildDate)
+	fatalIf(probe.NewError(goerr), "Unable to parse BuildDate")
+
 	if latest.IsZero() {
 		console.Infoln("No update available at this time")
-		return nil
+		return
 	}
+
 	mcUpdateURLParse := clnt.URL()
 	if latest.After(current) {
 		var updateString string
@@ -97,12 +96,11 @@ https://dl.minio.io:9000 for continuous updates`)
 			updateString = "mc cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ./mc"
 		}
 		msg, err := printUpdateNotify(updateString, "new", "old")
-		if err != nil {
-			return probe.NewError(err)
-		}
+		fatalIf(probe.NewError(err), "Unable to print update notification")
+
 		console.Println(msg)
-		return nil
+		return
 	}
 	console.Infoln("You are already running the most recent version of ‘mc’")
-	return nil
+	return
 }

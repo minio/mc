@@ -85,7 +85,8 @@ func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
 			session, err := loadSessionV2(sid)
-			fatalIf(err)
+			fatalIf(err, "Unable to load session")
+
 			session.Delete()
 		}
 		return
@@ -96,7 +97,8 @@ func clearSession(sid string) {
 	}
 
 	session, err := loadSessionV2(sid)
-	fatalIf(err)
+	fatalIf(err, "Unable to load session")
+
 	if session != nil {
 		session.Delete()
 	}
@@ -119,13 +121,12 @@ func mainSession(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 	if !isSessionDirExists() {
-		fatalIf(createSessionDir())
+		fatalIf(createSessionDir(), "Unable to create session")
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions
 	case "list":
-		err := listSessions()
-		fatalIf(err)
+		fatalIf(listSessions(), "Unable to list sessions")
 	case "resume":
 		if len(ctx.Args().Tail()) != 1 {
 			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -140,7 +141,8 @@ func mainSession(ctx *cli.Context) {
 			console.Fatalln(errInvalidSessionID{id: sid})
 		}
 		s, err := loadSessionV2(sid)
-		fatalIf(err)
+		fatalIf(err, "Unable to load session")
+
 		// extra check for testing purposes
 		if s == nil {
 			return

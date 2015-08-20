@@ -62,17 +62,18 @@ func mainDiff(ctx *cli.Context) {
 	secondURL := ctx.Args()[1]
 
 	var err *probe.Error
-	firstURL, err = getExpandedURL(firstURL, config.Aliases)
-	fatalIf(err)
-	secondURL, err = getExpandedURL(secondURL, config.Aliases)
-	fatalIf(err)
+	firstURL, err = getCanonicalizedURL(firstURL, config.Aliases)
+	fatalIf(err, "Unable to canonicalize first URL.")
+
+	secondURL, err = getCanonicalizedURL(secondURL, config.Aliases)
+	fatalIf(err, "Unable to canonicalize second URL.")
+
 	if isURLRecursive(secondURL) {
 		console.Fatalf("Second URL cannot be recursive. %s\n", errInvalidArgument{})
 	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
-		fatalIf(diff.err)
-		console.PrintC(diff.message)
+		fatalIf(diff.err, diff.message)
 	}
 	console.Println()
 }

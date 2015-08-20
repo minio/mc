@@ -45,8 +45,8 @@ func stripRecursiveURL(urlStr string) string {
 	return urlStr
 }
 
-// getExpandedURL - extracts URL string from a single cmd-line argument
-func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err *probe.Error) {
+// getCanonicalizedURL - extracts URL string from a single cmd-line argument
+func getCanonicalizedURL(arg string, aliases map[string]string) (urlStr string, err *probe.Error) {
 	// Check and expand Alias
 	urlStr, err = aliasExpand(arg, aliases)
 	if err != nil {
@@ -59,10 +59,10 @@ func getExpandedURL(arg string, aliases map[string]string) (urlStr string, err *
 	return urlStr, nil
 }
 
-// getExpandedURLs - extracts multiple URL strings from a single cmd-line argument
-func getExpandedURLs(args []string, aliases map[string]string) (urls []string, err *probe.Error) {
+// getCanonicalizedURLs - extracts multiple URL strings from a single cmd-line argument
+func getCanonicalizedURLs(args []string, aliases map[string]string) (urls []string, err *probe.Error) {
 	for _, arg := range args {
-		u, err := getExpandedURL(arg, aliases)
+		u, err := getCanonicalizedURL(arg, aliases)
 		if err != nil {
 			return nil, err.Trace()
 		}
@@ -79,7 +79,7 @@ func args2URLs(args []string) ([]string, *probe.Error) {
 
 	}
 	// Convert arguments to URLs: expand alias, fix format...
-	URLs, err := getExpandedURLs(args, config.Aliases)
+	URLs, err := getCanonicalizedURLs(args, config.Aliases)
 	if err != nil {
 		return nil, err.Trace()
 	}

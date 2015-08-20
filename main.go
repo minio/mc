@@ -38,10 +38,8 @@ func checkConfig() {
 	}
 
 	// Ensures config file is sane
-	{
-		_, err := getMcConfig()
-		fatalIf(err)
-	}
+	_, perr := getMcConfig()
+	fatalIf(perr, "Unable to read config")
 }
 
 func migrate() {
@@ -90,8 +88,7 @@ func registerBefore(ctx *cli.Context) error {
 	}
 
 	if err := console.SetTheme(themeName); err != nil {
-		console.Errorf("Failed to set theme ‘%s’.", themeName)
-		errorIf(err)
+		errorIf(err, "Unable to set theme")
 	}
 
 	verifyMCRuntime()

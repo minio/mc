@@ -108,12 +108,13 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
-	fatalIf(err)
+	fatalIf(err, "Unable to stat source URL")
+
 	if srcContent.Type.IsDir() {
 		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, errInvalidArgument{})
 	}
 	if !srcContent.Type.IsRegular() {
-		fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}))
+		fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}), "Invalid source type")
 	}
 }
 
@@ -124,19 +125,20 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
-	fatalIf(err)
+	fatalIf(err, "Unable to stat source URL")
+
 	if srcContent.Type.IsDir() {
 		console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, errInvalidArgument{})
 	}
 	if !srcContent.Type.IsRegular() {
-		fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}))
+		fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}), "Invalid source type")
 	}
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
+			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}), "Invalid target type")
 		}
 	}
 }
@@ -149,16 +151,16 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(srcURL)
-	fatalIf(err)
+	fatalIf(err, "Unable to stat source URL")
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}))
+		fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}), "Invalid source type")
 	}
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
+			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}), "Invalid target type")
 		}
 	}
 }
@@ -169,18 +171,20 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 		if isURLRecursive(srcURL) {
 			srcURL = stripRecursiveURL(srcURL)
 			_, srcContent, err := url2Stat(srcURL)
-			fatalIf(err)
+			fatalIf(err, "Unable to stat source URL")
+
 			if !srcContent.Type.IsDir() { // Ellipses is supported only for folders.
-				fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}))
+				fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}), "Invalid source type")
 			}
 		} else { // Regular URL.
 			_, srcContent, err := url2Stat(srcURL)
-			fatalIf(err)
+			fatalIf(err, "Unable to stat source URL")
+
 			if srcContent.Type.IsDir() {
 				console.Fatalf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively. %s\n", srcURL, srcURL, errInvalidArgument{})
 			}
 			if !srcContent.Type.IsRegular() {
-				fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}))
+				fatalIf(probe.NewError(errSourceIsNotFile{URL: srcURL}), "Unable to read from source url")
 			}
 		}
 	}
@@ -188,7 +192,7 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
+			fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}), "Unable to write to target url")
 		}
 	}
 }

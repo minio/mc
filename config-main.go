@@ -52,7 +52,7 @@ EXAMPLES:
 `,
 }
 
-// mainConfig is the handle for "mc config" sub-command
+// mainConfig is the handle for "mc config" sub-command. writes configuration data in json format to config file.
 func mainConfig(ctx *cli.Context) {
 	// show help if nothing is set
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
@@ -67,30 +67,20 @@ func mainConfig(ctx *cli.Context) {
 		console.Fatalf("Incorrect number of arguments, please read \"mc config help\". %s", errInvalidArgument{})
 	}
 	configPath, err := getMcConfigPath()
-	fatalIf(err)
+	fatalIf(err, "Unable to get mc config path")
 
-	fatalIf(doConfig(arg, tailArgs))
-	// upon success
-	console.Infoln("Alias written successfully to [" + configPath + "].")
-}
-
-// saveConfig writes configuration data in json format to config file.
-func saveConfig(arg string, aliases []string) *probe.Error {
 	switch arg {
 	case "alias":
-		config, err := addAlias(aliases)
-		if err != nil {
-			return err.Trace()
-		}
-		return writeConfig(config).Trace()
-	default:
-		return probe.NewError(errInvalidArgument{})
-	}
-}
+		config, err := addAlias(tailArgs)
+		fatalIf(err, "Unable to set alias name")
 
-// doConfig is the handler for "mc config" sub-command.
-func doConfig(arg string, aliases []string) *probe.Error {
-	return saveConfig(arg, aliases).Trace()
+		err = writeConfig(config)
+		fatalIf(err, "Unable to write alias name")
+	default:
+		fatalIf(probe.NewError(errInvalidArgument{}), "Unable to configure")
+	}
+	// upon success
+	console.Infoln("Alias written successfully to [" + configPath + "].")
 }
 
 // addAlias - add new aliases

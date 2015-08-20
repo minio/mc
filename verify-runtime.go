@@ -111,14 +111,15 @@ func verifyMCRuntime() {
 			console.Fatalf("Unable to create ‘mc’ config folder. %s\n", err)
 		}
 		config, err := newConfig()
-		fatalIf(err)
+		fatalIf(err, "Unable to initialize newConfig")
+
 		err = writeConfig(config)
-		fatalIf(err)
+		fatalIf(err, "Unable to write newConfig")
+
 		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}
 	if !isSessionDirExists() {
-		err := createSessionDir()
-		fatalIf(err)
+		fatalIf(createSessionDir(), "Unable to create session dir")
 	}
 	checkGolangRuntimeVersion()
 }

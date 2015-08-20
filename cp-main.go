@@ -159,8 +159,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if cpURLs.Error != nil {
-				console.PrintC("Failed to prepare copy URLs, ")
-				errorIf(cpURLs.Error)
+				errorIf(cpURLs.Error, "Failed to prepare copy URLs.")
 				break
 			}
 
@@ -231,8 +230,7 @@ func doCopyCmdSession(session *sessionV2) {
 					session.Header.LastCopied = cpURLs.SourceContent.Name
 				} else {
 					console.Println()
-					console.PrintC(fmt.Sprintf("Failed to copy ‘%s’, ", cpURLs.SourceContent.Name))
-					errorIf(cpURLs.Error)
+					errorIf(cpURLs.Error, fmt.Sprintf("Failed to copy ‘%s’. ", cpURLs.SourceContent.Name))
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()
