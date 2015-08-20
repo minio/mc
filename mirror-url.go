@@ -57,7 +57,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
-	fatalIf(err)
+	fatalIf(err, "Unable to convert args to URLs")
 
 	srcURL := URLs[0]
 	tgtURLs := URLs[1:]
@@ -66,7 +66,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	// Source cannot be a folder (except when recursive)
 	if !isURLRecursive(srcURL) {
 		_, srcContent, err := url2Stat(srcURL)
-		fatalIf(err)
+		fatalIf(err, "Unable to stat URL")
 
 		if !srcContent.Type.IsRegular() {
 			if srcContent.Type.IsDir() {
@@ -91,18 +91,18 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	if len(tgtURLs) == 0 && tgtURLs == nil {
 		console.Fatalf("Invalid number of target arguments to mirror command. %s\n", errInvalidArgument{})
 	}
-	srcURL = stripRecursiveURL(srcURL)
-	_, srcContent, err := url2Stat(srcURL)
-	fatalIf(err)
+
+	_, srcContent, err := url2Stat(stripRecursiveURL(srcURL))
+	fatalIf(err, "Unable to stat source URL.")
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}))
+		fatalIf(probe.NewError(errSourceIsNotDir{URL: srcURL}), "Invalid source type.")
 	}
 	for _, tgtURL := range tgtURLs {
 		_, content, err := url2Stat(tgtURL)
 		if err == nil {
 			if !content.Type.IsDir() {
-				fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}))
+				fatalIf(probe.NewError(errTargetIsNotDir{URL: tgtURL}), "Invalid target type.")
 			}
 		}
 	}

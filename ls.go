@@ -79,11 +79,11 @@ func doList(clnt client.Client, recursive bool) *probe.Error {
 			switch contentCh.Err.ToGoError().(type) {
 			// handle this specifically for filesystem
 			case client.ISBrokenSymlink:
-				errorIf(contentCh.Err.Trace())
+				errorIf(contentCh.Err.Trace(), "Unable to list broken link.")
 				continue
 			}
 			if os.IsNotExist(contentCh.Err.ToGoError()) || os.IsPermission(contentCh.Err.ToGoError()) {
-				errorIf(contentCh.Err.Trace())
+				errorIf(contentCh.Err.Trace(), "Unable to list.")
 				continue
 			}
 			err = contentCh.Err.Trace()

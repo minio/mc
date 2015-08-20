@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
@@ -25,17 +26,19 @@ import (
 )
 
 // fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
-func fatalIf(err *probe.Error) {
+func fatalIf(err *probe.Error, msg string) {
 	if err == nil {
 		return
 	}
 	if globalJSONFlag {
 		errorMessage := struct {
+			Message   string             `json:"message"`
 			Cause     error              `json:"cause"`
 			Type      string             `json:"type"`
 			CallTrace []probe.TracePoint `json:"trace,omitempty"`
 			SysInfo   map[string]string  `json:"sysinfo"`
 		}{
+			Message: msg,
 			Type:    "Fatal",
 			Cause:   err.ToGoError(),
 			SysInfo: err.SysInfo,
@@ -51,23 +54,25 @@ func fatalIf(err *probe.Error) {
 		os.Exit(1)
 	}
 	if !globalDebugFlag {
-		console.Fatalln(err.ToGoError())
+		console.Fatalln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
 	}
-	console.Fatalln(err)
+	console.Fatalln(fmt.Sprintf("%s %s", msg, err))
 }
 
 // errorIf synonymous with fatalIf but doesn't exit on error != nil
-func errorIf(err *probe.Error) {
+func errorIf(err *probe.Error, msg string) {
 	if err == nil {
 		return
 	}
 	if globalJSONFlag {
 		errorMessage := struct {
+			Message   string             `json:"message"`
 			Cause     error              `json:"cause"`
 			Type      string             `json:"type"`
 			CallTrace []probe.TracePoint `json:"trace,omitempty"`
 			SysInfo   map[string]string  `json:"sysinfo"`
 		}{
+			Message: msg,
 			Type:    "Error",
 			Cause:   err.ToGoError(),
 			SysInfo: err.SysInfo,
@@ -83,8 +88,8 @@ func errorIf(err *probe.Error) {
 		return
 	}
 	if !globalDebugFlag {
-		console.Errorln(err.ToGoError())
+		console.Errorln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
 		return
 	}
-	console.Errorln(err)
+	console.Errorln(fmt.Sprintf("%s %s", msg, err))
 }

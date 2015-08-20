@@ -58,6 +58,7 @@ func (s *CmdTestSuite) TestCopyContext(c *C) {
 	err := app.Run([]string{os.Args[0], "cp", server.URL + "/invalid...", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsError, Equals, true)
+
 	// reset back
 	console.IsError = false
 }

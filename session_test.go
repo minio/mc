@@ -59,22 +59,36 @@ func (s *CmdTestSuite) TestSessionContext(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
+	// reset back
+	console.IsExited = false
+
 	err = app.Run([]string{os.Args[0], "session", "clear", "all"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
 
 	err = app.Run([]string{os.Args[0], "session", "resume", "invalid"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
+	// reset back
+	console.IsExited = false
+
 	err = app.Run([]string{os.Args[0], "session", "clear", "invalid"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
+
+	// reset back
 	console.IsExited = false
 
 	perr := createSessionDir()
 	c.Assert(perr, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
+
+	// reset back
+	console.IsExited = false
 
 	session := newSessionV2()
 	c.Assert(session.Header.CommandArgs, IsNil)
@@ -86,4 +100,7 @@ func (s *CmdTestSuite) TestSessionContext(c *C) {
 	err = app.Run([]string{os.Args[0], "session", "clear", session.SessionID})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
 }

@@ -57,9 +57,13 @@ func (s *CmdTestSuite) TestMBContext(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
+	// reset back
+	console.IsExited = false
+
 	err = app.Run([]string{os.Args[0], "mb", server.URL + "/$.bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
+
 	// reset back
 	console.IsExited = false
 }
@@ -69,17 +73,29 @@ func (s *CmdTestSuite) TestAccessContext(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
+	// reset back
+	console.IsExited = false
+
 	err = app.Run([]string{os.Args[0], "access", "public", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
 
 	err = app.Run([]string{os.Args[0], "access", "readonly", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
+	// reset back
+	console.IsExited = false
+
 	err = app.Run([]string{os.Args[0], "access", "authenticated", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
 
 	err = app.Run([]string{os.Args[0], "access", "invalid", server.URL + "/bucket"})
 	c.Assert(err, IsNil)

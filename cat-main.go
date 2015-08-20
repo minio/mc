@@ -70,11 +70,11 @@ func mainCat(ctx *cli.Context) {
 	}
 
 	if stdinMode {
-		fatalIf(catOut(os.Stdin))
+		fatalIf(catOut(os.Stdin), "Unable to read from stdin")
 	} else {
 		// Convert arguments to URLs: expand alias, fix format...
 		for _, arg := range ctx.Args() {
-			fatalIf(catURL(arg))
+			fatalIf(catURL(arg), "Unable to read from URL")
 		}
 	}
 
@@ -83,7 +83,7 @@ func mainCat(ctx *cli.Context) {
 func catURL(sourceURL string) *probe.Error {
 	config := mustGetMcConfig()
 
-	URL, err := getExpandedURL(sourceURL, config.Aliases)
+	URL, err := getCanonicalizedURL(sourceURL, config.Aliases)
 	if err != nil {
 		return err.Trace(sourceURL)
 	}

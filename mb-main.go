@@ -59,11 +59,11 @@ func mainMakeBucket(ctx *cli.Context) {
 	}
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
-		targetURL, err := getExpandedURL(arg, config.Aliases)
-		fatalIf(err)
+		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
+		fatalIf(err, "Unable to canonicalize URL")
 
-		err = doMakeBucketCmd(targetURL)
-		fatalIf(err)
+		fatalIf(doMakeBucketCmd(targetURL), "Unable to make bucket")
+
 		console.Infoln("Bucket created successfully : " + targetURL)
 	}
 }

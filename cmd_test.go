@@ -74,21 +74,6 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	perr = createSessionDir()
 	c.Assert(perr, IsNil)
 
-	perr = doConfig("invalid", nil)
-	c.Assert(perr, Not(IsNil))
-
-	perr = doConfig("alias", []string{"test", "https://test.io"})
-	c.Assert(perr, IsNil)
-
-	perr = doConfig("alias", []string{"test", "https://test.io"})
-	c.Assert(perr, Not(IsNil))
-
-	perr = doConfig("alias", []string{"test", "htt://test.io"})
-	c.Assert(perr, Not(IsNil))
-
-	perr = doConfig("alias", []string{"readonly", "https://new.test.io"})
-	c.Assert(perr, Not(IsNil))
-
 	app = registerApp()
 }
 

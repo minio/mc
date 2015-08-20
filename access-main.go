@@ -64,13 +64,13 @@ func mainAccess(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		fatalIf(probe.NewError(errInvalidACL{acl: acl.String()}))
+		fatalIf(probe.NewError(errInvalidACL{acl: acl.String()}), "ACL validation failed.")
 	}
 	for _, arg := range ctx.Args().Tail() {
-		targetURL, err := getExpandedURL(arg, config.Aliases)
-		fatalIf(err)
+		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
+		fatalIf(err, "Unable to validate given URL.")
 
-		fatalIf(doUpdateAccessCmd(targetURL, acl))
+		fatalIf(doUpdateAccessCmd(targetURL, acl), "Unable to set access permissions.")
 	}
 }
 

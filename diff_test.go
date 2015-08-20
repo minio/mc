@@ -94,13 +94,20 @@ func (s *CmdTestSuite) TestDiffContext(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
+	// reset back
+	console.IsExited = false
+
 	err = app.Run([]string{os.Args[0], "diff", server.URL + "/bucket...", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
+	// reset back
+	console.IsExited = false
+
 	err = app.Run([]string{os.Args[0], "diff", server.URL + "/invalid", server.URL + "/invalid..."})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
+
 	// reset back
 	console.IsExited = false
 }

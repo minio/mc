@@ -60,9 +60,13 @@ func (s *CmdTestSuite) TestCatContext(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
+	// reset back
+	console.IsExited = false
+
 	err = app.Run([]string{os.Args[0], "cat", server.URL + "/invalid"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
+
 	// reset back
 	console.IsExited = false
 }
