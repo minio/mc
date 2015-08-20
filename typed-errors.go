@@ -30,6 +30,7 @@ func (e errInvalidSessionID) Error() string {
 	return "Invalid session id ‘" + e.id + "’."
 }
 
+/*
 type errInvalidACL struct {
 	acl string
 }
@@ -37,6 +38,7 @@ type errInvalidACL struct {
 func (e errInvalidACL) Error() string {
 	return "Invalid ACL Type ‘" + e.acl + "’. Valid types are [private, public, readonly]."
 }
+*/
 
 type errNotAnObject struct {
 	url string
