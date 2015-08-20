@@ -41,21 +41,21 @@ var IsExited = false
 // IsError sets this boolean value if Error is called when IsTesting is enabled
 var IsError = false
 
-// Theme holds console color scheme
-type Theme struct {
-	Fatal     *color.Color
-	Error     *color.Color
-	Info      *color.Color
-	Debug     *color.Color
-	Size      *color.Color
-	Time      *color.Color
-	File      *color.Color
-	Dir       *color.Color
-	Command   *color.Color
-	SessionID *color.Color
-	Bar       *color.Color
-	PrintC    *color.Color
-	Print     *color.Color
+// Theme default map
+var Theme = map[string]*color.Color{
+	"Debug":     color.New(color.FgWhite, color.Faint, color.Italic),
+	"Fatal":     color.New(color.FgRed, color.Italic, color.Bold),
+	"Error":     color.New(color.FgYellow, color.Italic),
+	"Info":      color.New(color.FgGreen, color.Bold),
+	"File":      color.New(color.FgWhite),
+	"Dir":       color.New(color.FgCyan, color.Bold),
+	"Command":   color.New(color.FgWhite, color.Bold),
+	"SessionID": color.New(color.FgYellow, color.Bold),
+	"Size":      color.New(color.FgYellow),
+	"Time":      color.New(color.FgGreen),
+	"Bar":       color.New(color.FgGreen, color.Bold),
+	"Print":     color.New(),
+	"PrintC":    color.New(color.FgGreen, color.Bold),
 }
 
 var (
@@ -63,47 +63,33 @@ var (
 
 	stderrColoredOutput = ansicolor.NewAnsiColorWriter(os.Stderr)
 
-	// themesDB contains supported list of Themes
-	themesDB = map[string]Theme{
-		"minimal": MiniTheme,
-		"nocolor": NoColorTheme,
-		"white":   WhiteTheme,
-	}
-
-	// currTheme is current theme
-	currThemeName = GetDefaultThemeName()
-
-	// Bar print progress bar
-	Bar = func(data ...interface{}) {
-		print(themesDB[currThemeName].Bar, data...)
-	}
-
 	// Print prints a message
 	Print = func(data ...interface{}) {
-		print(themesDB[currThemeName].Print, data...)
+		consolePrint("Print", Theme["Print"], data...)
 		return
 	}
 
 	// PrintC prints a message with color
 	PrintC = func(data ...interface{}) {
-		print(themesDB[currThemeName].PrintC, data...)
+		consolePrint("PrintC", Theme["PrintC"], data...)
 		return
 	}
 
 	// Printf prints a formatted message
-	Printf = func(f string, data ...interface{}) {
-		printf(themesDB[currThemeName].Print, f, data...)
+	Printf = func(format string, data ...interface{}) {
+		consolePrintf("Print", Theme["Print"], format, data...)
 		return
 	}
 
 	// Println prints a message with a newline
 	Println = func(data ...interface{}) {
-		println(themesDB[currThemeName].Print, data...)
+		consolePrintln("Print", Theme["Print"], data...)
+		return
 	}
 
 	// Fatal print a error message and exit
 	Fatal = func(data ...interface{}) {
-		print(themesDB[currThemeName].Fatal, data...)
+		consolePrint("Fatal", Theme["Fatal"], data...)
 		if !IsTesting {
 			os.Exit(1)
 		}
@@ -114,8 +100,8 @@ var (
 	}
 
 	// Fatalf print a error message with a format specified and exit
-	Fatalf = func(f string, data ...interface{}) {
-		printf(themesDB[currThemeName].Fatal, f, data...)
+	Fatalf = func(format string, data ...interface{}) {
+		consolePrintf("Fatal", Theme["Fatal"], format, data...)
 		if !IsTesting {
 			os.Exit(1)
 		}
@@ -127,7 +113,7 @@ var (
 
 	// Fatalln print a error message with a new line and exit
 	Fatalln = func(data ...interface{}) {
-		println(themesDB[currThemeName].Fatal, data...)
+		consolePrintln("Fatal", Theme["Fatal"], data...)
 		if !IsTesting {
 			os.Exit(1)
 		}
@@ -144,18 +130,18 @@ var (
 				IsError = true
 			}()
 		}
-		print(themesDB[currThemeName].Error, data...)
+		consolePrint("Error", Theme["Error"], data...)
 		return
 	}
 
 	// Errorf print a error message with a format specified
-	Errorf = func(f string, data ...interface{}) {
+	Errorf = func(format string, data ...interface{}) {
 		if IsTesting {
 			defer func() {
 				IsError = true
 			}()
 		}
-		printf(themesDB[currThemeName].Error, f, data...)
+		consolePrintf("Error", Theme["Error"], format, data...)
 		return
 	}
 
@@ -166,25 +152,25 @@ var (
 				IsError = true
 			}()
 		}
-		println(themesDB[currThemeName].Error, data...)
+		consolePrintln("Error", Theme["Error"], data...)
 		return
 	}
 
 	// Info prints a informational message
 	Info = func(data ...interface{}) {
-		print(themesDB[currThemeName].Info, data...)
+		consolePrint("Info", Theme["Info"], data...)
 		return
 	}
 
 	// Infof prints a informational message in custom format
-	Infof = func(f string, data ...interface{}) {
-		printf(themesDB[currThemeName].Info, f, data...)
+	Infof = func(format string, data ...interface{}) {
+		consolePrintf("Info", Theme["Info"], format, data...)
 		return
 	}
 
 	// Infoln prints a informational message with a new line
 	Infoln = func(data ...interface{}) {
-		println(themesDB[currThemeName].Info, data...)
+		consolePrintln("Info", Theme["Info"], data...)
 		return
 	}
 
@@ -192,82 +178,41 @@ var (
 	// Debug prints a debug message
 	Debug = func(data ...interface{}) {
 		if !NoDebugPrint {
-			print(themesDB[currThemeName].Debug, data...)
+			consolePrint("Debug", Theme["Debug"], data...)
 		}
 	}
 
 	// Debugf prints a debug message with a new line
-	Debugf = func(f string, data ...interface{}) {
+	Debugf = func(format string, data ...interface{}) {
 		if !NoDebugPrint {
-			printf(themesDB[currThemeName].Debug, f, data...)
+			consolePrintf("Debug", Theme["Debug"], format, data...)
 		}
 	}
 
 	// Debugln prints a debug message with a new line
 	Debugln = func(data ...interface{}) {
 		if !NoDebugPrint {
-			println(themesDB[currThemeName].Debug, data...)
+			consolePrintln("Debug", Theme["Debug"], data...)
 		}
 	}
 
-	// Time helper to print Time theme
-	Time = func(format string, data ...interface{}) string {
+	Colorize = func(tag string, data interface{}) string {
 		if isatty.IsTerminal(os.Stdout.Fd()) {
-			return themesDB[currThemeName].Time.SprintfFunc()(format, data...)
+			return Theme[tag].SprintFunc()(data)
 		}
-		return fmt.Sprintf(format, data...)
-	}
-
-	// Size helper to print Size theme
-	Size = func(format string, data ...interface{}) string {
-		if isatty.IsTerminal(os.Stdout.Fd()) {
-			return themesDB[currThemeName].Size.SprintfFunc()(format, data...)
-		}
-		return fmt.Sprintf(format, data...)
-	}
-
-	// File helper to print File theme
-	File = func(format string, data ...interface{}) string {
-		if isatty.IsTerminal(os.Stdout.Fd()) {
-			return themesDB[currThemeName].File.SprintfFunc()(format, data...)
-		}
-		return fmt.Sprintf(format, data...)
-	}
-
-	// Dir helper to print Dir theme
-	Dir = func(format string, data ...interface{}) string {
-		if isatty.IsTerminal(os.Stdout.Fd()) {
-			return themesDB[currThemeName].Dir.SprintfFunc()(format, data...)
-		}
-		return fmt.Sprintf(format, data...)
-	}
-
-	// Command helper to print command theme
-	Command = func(format string, data ...interface{}) string {
-		if isatty.IsTerminal(os.Stdout.Fd()) {
-			return themesDB[currThemeName].Command.SprintfFunc()(format, data...)
-		}
-		return fmt.Sprintf(format, data...)
-	}
-
-	// SessionID helper to print sessionid theme
-	SessionID = func(format string, data ...interface{}) string {
-		if isatty.IsTerminal(os.Stdout.Fd()) {
-			return themesDB[currThemeName].SessionID.SprintfFunc()(format, data...)
-		}
-		return fmt.Sprintf(format, data...)
+		return fmt.Sprint(data)
 	}
 )
 
 var (
 	// wrap around standard fmt functions
-	// print prints a message prefixed with message type and program name
-	print = func(c *color.Color, a ...interface{}) {
+	// consolePrint prints a message prefixed with message type and program name
+	consolePrint = func(tag string, c *color.Color, a ...interface{}) {
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		switch c {
-		case themesDB[currThemeName].Debug:
+		switch tag {
+		case "Debug":
 			output := color.Output
 			color.Output = stderrColoredOutput
 			if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -278,9 +223,9 @@ var (
 				fmt.Fprint(color.Output, a...)
 			}
 			color.Output = output
-		case themesDB[currThemeName].Fatal:
+		case "Fatal":
 			fallthrough
-		case themesDB[currThemeName].Error:
+		case "Error":
 			output := color.Output
 			color.Output = stderrColoredOutput
 			if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -291,7 +236,7 @@ var (
 				fmt.Fprint(color.Output, a...)
 			}
 			color.Output = output
-		case themesDB[currThemeName].Info:
+		case "Info":
 			if isatty.IsTerminal(os.Stdout.Fd()) {
 				c.Print(ProgramName() + ": ")
 				c.Print(a...)
@@ -308,60 +253,60 @@ var (
 		}
 	}
 
-	// printf - same as print with a new line
-	printf = func(c *color.Color, f string, a ...interface{}) {
+	// consolePrintf - same as print with a new line
+	consolePrintf = func(tag string, c *color.Color, format string, a ...interface{}) {
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		switch c {
-		case themesDB[currThemeName].Debug:
+		switch tag {
+		case "Debug":
 			output := color.Output
 			color.Output = stderrColoredOutput
 			if isatty.IsTerminal(os.Stderr.Fd()) {
 				c.Print(ProgramName() + ": <DEBUG> ")
-				c.Printf(f, a...)
+				c.Printf(format, a...)
 			} else {
 				fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
-				fmt.Fprintf(color.Output, f, a...)
+				fmt.Fprintf(color.Output, format, a...)
 			}
 			color.Output = output
-		case themesDB[currThemeName].Fatal:
+		case "Fatal":
 			fallthrough
-		case themesDB[currThemeName].Error:
+		case "Error":
 			output := color.Output
 			color.Output = stderrColoredOutput
 			if isatty.IsTerminal(os.Stderr.Fd()) {
 				c.Print(ProgramName() + ": <ERROR> ")
-				c.Printf(f, a...)
+				c.Printf(format, a...)
 			} else {
 				fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
-				fmt.Fprintf(color.Output, f, a...)
+				fmt.Fprintf(color.Output, format, a...)
 			}
 			color.Output = output
-		case themesDB[currThemeName].Info:
+		case "Info":
 			if isatty.IsTerminal(os.Stdout.Fd()) {
 				c.Print(ProgramName() + ": ")
-				c.Printf(f, a...)
+				c.Printf(format, a...)
 			} else {
 				fmt.Fprint(color.Output, ProgramName()+": ")
-				fmt.Fprintf(color.Output, f, a...)
+				fmt.Fprintf(color.Output, format, a...)
 			}
 		default:
 			if isatty.IsTerminal(os.Stdout.Fd()) {
-				c.Printf(f, a...)
+				c.Printf(format, a...)
 			} else {
-				fmt.Fprintf(color.Output, f, a...)
+				fmt.Fprintf(color.Output, format, a...)
 			}
 		}
 	}
 
-	// println - same as print with a new line
-	println = func(c *color.Color, a ...interface{}) {
+	// consolePrintln - same as print with a new line
+	consolePrintln = func(tag string, c *color.Color, a ...interface{}) {
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		switch c {
-		case themesDB[currThemeName].Debug:
+		switch tag {
+		case "Debug":
 			output := color.Output
 			color.Output = stderrColoredOutput
 			if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -372,9 +317,9 @@ var (
 				fmt.Fprintln(color.Output, a...)
 			}
 			color.Output = output
-		case themesDB[currThemeName].Fatal:
+		case "Fatal":
 			fallthrough
-		case themesDB[currThemeName].Error:
+		case "Error":
 			output := color.Output
 			color.Output = stderrColoredOutput
 			if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -385,7 +330,7 @@ var (
 				fmt.Fprintln(color.Output, a...)
 			}
 			color.Output = output
-		case themesDB[currThemeName].Info:
+		case "Info":
 			if isatty.IsTerminal(os.Stdout.Fd()) {
 				c.Print(ProgramName() + ": ")
 				c.Println(a...)
@@ -413,52 +358,15 @@ func Unlock() {
 	mutex.Unlock()
 }
 
-// SetTheme sets a color theme
-func SetTheme(themeName string) *probe.Error {
-	if !IsValidTheme(themeName) {
-		return probe.NewError(fmt.Errorf("Unsupported theme name [%s]", themeName))
-	}
-
+// SetCustomTheme sets a color theme
+func SetCustomTheme(theme map[string]*color.Color) *probe.Error {
 	mutex.Lock()
-
-	// Just another additional precaution to completely disable color.
-	// Color theme is also necessary, because it does other useful things like exit-on-fatal..
-	switch currThemeName {
-	case "nocolor":
-		color.NoColor = true
-	default:
-		color.NoColor = false
+	defer mutex.Unlock()
+	// add new theme
+	for k, v := range theme {
+		Theme[k] = v
 	}
-
-	currThemeName = themeName
-
-	mutex.Unlock()
-
 	return nil
-}
-
-// GetThemeName returns currently set theme name
-func GetThemeName() string {
-	return currThemeName
-}
-
-// GetDefaultThemeName returns the default theme
-func GetDefaultThemeName() string {
-	return "minimal"
-}
-
-// GetThemeNames returns currently supported list of  themes
-func GetThemeNames() (themeNames []string) {
-	for themeName := range themesDB {
-		themeNames = append(themeNames, themeName)
-	}
-	return themeNames
-}
-
-// IsValidTheme returns true if "themeName" is currently supported
-func IsValidTheme(themeName string) bool {
-	_, ok := themesDB[themeName]
-	return ok
 }
 
 // ProgramName - return the name of the executable program

@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/minio/mc/pkg/console"
 )
@@ -33,13 +34,13 @@ type ContentMessage struct {
 // String string printer for Content metadata
 func (c ContentMessage) String() string {
 	if !globalJSONFlag {
-		message := console.Time("[%s] ", c.Time)
-		message = message + console.Size("%6s ", c.Size)
+		message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time))
+		message = message + console.Colorize("Size", fmt.Sprintf("%6s ", c.Size))
 		message = func() string {
 			if c.Filetype == "folder" {
-				return message + console.Dir("%s", c.Name)
+				return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Name))
 			}
-			return message + console.File("%s", c.Name)
+			return message + console.Colorize("File", fmt.Sprintf("%s", c.Name))
 		}()
 		return message + "\n"
 	}

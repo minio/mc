@@ -156,7 +156,7 @@ func newCpBar() barSend {
 		bar.NotPrint = true
 		bar.ShowSpeed = true
 		bar.Callback = func(s string) {
-			console.Bar("\r" + s)
+			console.Colorize("Bar", ("\r" + s))
 		}
 		switch runtime.GOOS {
 		case "linux":
