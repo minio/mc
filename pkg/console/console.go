@@ -35,7 +35,7 @@ var NoDebugPrint = true
 // IsTesting this flag indicates if IsExited should be set or not, false by default
 var IsTesting = false
 
-// IsExited sets this boolean value if Fatal is called when IsTestng is enabled
+// IsExited sets this boolean value if Fatal is called when IsTesting is enabled
 var IsExited = false
 
 // IsError sets this boolean value if Error is called when IsTesting is enabled
