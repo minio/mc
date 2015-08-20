@@ -16,13 +16,7 @@
 
 package main
 
-import (
-	"fmt"
-	"strings"
-
-	"github.com/minio/mc/internal/github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
-)
+import "github.com/minio/mc/internal/github.com/minio/cli"
 
 // Collection of mc commands currently supported are
 var commands = []cli.Command{}
@@ -45,21 +39,6 @@ var (
 	mimicFlag = cli.BoolFlag{
 		Name:  "mimic",
 		Usage: "Mimic operating system toolchain behavior wherever it makes sense",
-	}
-
-	themeFlag = cli.StringFlag{
-		Name:  "theme",
-		Value: console.GetDefaultThemeName(),
-		Usage: fmt.Sprintf("Choose a console theme from this list [%s]", func() string {
-			keys := []string{}
-			for _, themeName := range console.GetThemeNames() {
-				if console.GetThemeName() == themeName {
-					themeName = "*" + themeName + "*"
-				}
-				keys = append(keys, themeName)
-			}
-			return strings.Join(keys, ", ")
-		}()),
 	}
 
 	jsonFlag = cli.BoolFlag{

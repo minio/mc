@@ -78,17 +78,8 @@ func registerBefore(ctx *cli.Context) error {
 	globalMimicFlag = ctx.GlobalBool("mimic")
 	globalDebugFlag = ctx.GlobalBool("debug")
 	globalJSONFlag = ctx.GlobalBool("json")
-	themeName := ctx.GlobalString("theme")
 	if globalDebugFlag {
 		console.NoDebugPrint = false
-	}
-	if console.IsValidTheme(themeName) != true {
-		console.Errorf("Invalid theme, please choose from the following list: %s.\n", console.GetThemeNames())
-		return errInvalidTheme{Theme: themeName}
-	}
-
-	if err := console.SetTheme(themeName); err != nil {
-		errorIf(err, "Unable to set theme")
 	}
 
 	verifyMCRuntime()
@@ -128,7 +119,6 @@ func registerApp() *cli.App {
 	registerFlag(configFlag) // path to config folder
 	registerFlag(quietFlag)  // suppress console output
 	registerFlag(mimicFlag)  // OS toolchain mimic
-	registerFlag(themeFlag)  // console theme flag
 	registerFlag(jsonFlag)   // json formatted output
 	registerFlag(debugFlag)  // enable debugging output
 

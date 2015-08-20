@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,9 +42,9 @@ type sessionV1 struct {
 }
 
 func (s sessionV1) String() string {
-	message := console.Time("[%s] ", s.Started.Local().Format(printDate))
-	message = message + console.SessionID("%s", s.SessionID)
-	message = message + console.Command(" [%s %s]", s.CommandType, strings.Join(s.URLs, " "))
+	message := console.Colorize("Time", fmt.Sprintf("[%s] ", s.Started.Local().Format(printDate)))
+	message = message + console.Colorize("SessionID", fmt.Sprintf("%s", s.SessionID))
+	message = message + console.Colorize("Command", fmt.Sprintf(" [%s %s]", s.CommandType, strings.Join(s.URLs, " ")))
 	return message
 }
 

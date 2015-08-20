@@ -122,14 +122,6 @@ func (e errInvalidTarget) Error() string {
 	return "Invalid target " + e.URL
 }
 
-type errInvalidTheme struct {
-	Theme string
-}
-
-func (e errInvalidTheme) Error() string {
-	return "Theme " + e.Theme + " is not supported."
-}
-
 type errTargetIsNotDir errInvalidURL
 
 func (e errTargetIsNotDir) Error() string {

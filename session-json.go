@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
@@ -33,9 +34,9 @@ type SessionJSONMessage struct {
 
 func (s sessionV2) String() string {
 	if !globalJSONFlag {
-		message := console.SessionID("%s -> ", s.SessionID)
-		message = message + console.Time("[%s]", s.Header.When.Local().Format(printDate))
-		message = message + console.Command(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " "))
+		message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
+		message = message + console.Colorize("Time", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
+		message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
 		return message + "\n"
 	}
 	sessionMesage := SessionJSONMessage{

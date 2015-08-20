@@ -19,6 +19,7 @@ package console
 import (
 	"testing"
 
+	"github.com/minio/mc/internal/github.com/fatih/color"
 	. "github.com/minio/mc/internal/gopkg.in/check.v1"
 )
 
@@ -29,14 +30,8 @@ type MySuite struct{}
 var _ = Suite(&MySuite{})
 
 func (s *MySuite) TestSetTheme(c *C) {
-	err := SetTheme("nocolor")
+	err := SetCustomTheme(map[string]*color.Color{"unknown": new(color.Color)})
 	c.Assert(err, IsNil)
-	c.Assert(GetThemeName(), Equals, "nocolor")
-	err = SetTheme("unknown")
-	c.Assert(err, Not(IsNil))
-	c.Assert(GetThemeName(), Equals, "nocolor")
-}
-
-func (s *MySuite) TestDefaultTheme(c *C) {
-	c.Assert(GetDefaultThemeName(), Equals, "minimal")
+	_, ok := Theme["unknown"]
+	c.Assert(ok, Equals, true)
 }
