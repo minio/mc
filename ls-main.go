@@ -83,11 +83,10 @@ func mainList(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	for _, arg := range args {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err, "Unable to canonicalize URL")
+		fatalIf(err.Trace(), "Unable to canonicalize URL")
 
 		// if recursive strip off the "..."
-		newTargetURL := stripRecursiveURL(targetURL)
-		fatalIf(doListCmd(newTargetURL, isURLRecursive(targetURL)), "Unable to list target URL")
+		fatalIf(doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL)).Trace(), "Unable to list target URL")
 	}
 }
 

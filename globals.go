@@ -26,9 +26,8 @@ var (
 
 // mc configuration related constants.
 const (
-	globalMCPreviousConfigVersion = "1.0.0"
-	globalMCCurrentConfigVersion  = "1.0.1"
-	globalMCVersion               = Version
+	globalMCConfigVersion = "2"
+	globalMCVersion       = Version
 
 	globalMCConfigDir        = ".mc/"
 	globalMCConfigWindowsDir = "mc\\"

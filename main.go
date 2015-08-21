@@ -39,7 +39,7 @@ func checkConfig() {
 
 	// Ensures config file is sane
 	_, perr := getMcConfig()
-	fatalIf(perr, "Unable to read config")
+	fatalIf(perr.Trace(), "Unable to read config")
 }
 
 func migrate() {
