@@ -71,7 +71,7 @@ func mainAccess(ctx *cli.Context) {
 	}
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err, "Unable to parse URL argument ‘"+arg+"’.")
+		fatalIf(err.Trace(), "Unable to parse URL argument ‘"+arg+"’.")
 
 		fatalIf(doUpdateAccessCmd(targetURL, acl).Trace(), "Unable to set access permission ‘"+acl.String()+"’ for URL ‘"+targetURL+"’.")
 	}

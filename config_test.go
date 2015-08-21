@@ -24,21 +24,14 @@ import (
 )
 
 func (s *CmdTestSuite) TestConfigContext(c *C) {
-	err := app.Run([]string{os.Args[0], "config", "invalid"})
+	err := app.Run([]string{os.Args[0], "config", "alias", "test", "htt://test.io"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "config", "alias", "test", "htt://test.io"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	// reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "config", "alias", "test", "http://test.io"})
+	err = app.Run([]string{os.Args[0], "config", "alias", "new", "http://test.io"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 }

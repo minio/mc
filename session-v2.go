@@ -19,6 +19,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"os"
 	"sync"
@@ -167,7 +168,7 @@ func (s *sessionV2) Delete() *probe.Error {
 // loadSession - reads session file if exists and re-initiates internal variables
 func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	if !isSessionDirExists() {
-		return nil, probe.NewError(errInvalidArgument{})
+		return nil, probe.NewError(errInvalidArgument)
 	}
 	sessionFile := getSessionFile(sid)
 	if _, err := os.Stat(sessionFile); err != nil {
@@ -193,8 +194,7 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	var err error
 	s.DataFP, err = os.Open(getSessionDataFile(s.SessionID))
 	if err != nil {
-		// fail proactively here
-		console.Fatalf("Unable to open session data file \""+getSessionDataFile(s.SessionID)+"\". %s\n", err)
+		return nil, probe.NewError(err)
 	}
 	return s, nil
 }
@@ -206,7 +206,8 @@ func isCopiedFactory(lastCopied string) func(string) bool {
 	copied := true // closure
 	return func(sourceURL string) bool {
 		if sourceURL == "" {
-			console.Fatalf("Empty source URL passed to isCopied() function. %s\n", probe.NewError(errUnexpected{}))
+			fatalIf(probe.NewError(errors.New("")),
+				"Empty source URL passed to isCopied() function. please report this bug at https://github.com/minio/mc/issues.")
 		}
 		if lastCopied == "" {
 			return false

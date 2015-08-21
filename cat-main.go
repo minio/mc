@@ -70,11 +70,11 @@ func mainCat(ctx *cli.Context) {
 	}
 
 	if stdinMode {
-		fatalIf(catOut(os.Stdin), "Unable to read from stdin")
+		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from stdin")
 	} else {
 		// Convert arguments to URLs: expand alias, fix format...
 		for _, arg := range ctx.Args() {
-			fatalIf(catURL(arg), "Unable to read from URL")
+			fatalIf(catURL(arg).Trace(), "Unable to read from URL")
 		}
 	}
 
