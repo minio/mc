@@ -69,7 +69,7 @@ func mainDiff(ctx *cli.Context) {
 	fatalIf(err, "Unable to canonicalize second URL.")
 
 	if isURLRecursive(secondURL) {
-		console.Fatalf("Second URL cannot be recursive. %s\n", errInvalidArgument{})
+		console.Fatalf("Second URL cannot be recursive. %s\n", errInvalidArgument)
 	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {

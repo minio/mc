@@ -16,29 +16,7 @@
 
 package main
 
-type errUnexpected struct{}
-
-func (e errUnexpected) Error() string {
-	return "Unexpected control flow, please report this bug at https://github.com/minio/mc/issues."
-}
-
-type errInvalidSessionID struct {
-	id string
-}
-
-func (e errInvalidSessionID) Error() string {
-	return "Invalid session id ‘" + e.id + "’."
-}
-
-/*
-type errInvalidACL struct {
-	acl string
-}
-
-func (e errInvalidACL) Error() string {
-	return "Invalid ACL Type ‘" + e.acl + "’. Valid types are [private, public, readonly]."
-}
-*/
+import "errors"
 
 type errNotAnObject struct {
 	url string
@@ -48,11 +26,7 @@ func (e errNotAnObject) Error() string {
 	return "URL: ‘" + e.url + "’ not an object"
 }
 
-type errInvalidArgument struct{}
-
-func (e errInvalidArgument) Error() string {
-	return "Incorrect usage, please use \"mc config help\""
-}
+var errInvalidArgument = errors.New("Invalid arguments provided, cannot proceed")
 
 type errInvalidGlobURL struct {
 	glob    string
@@ -63,37 +37,12 @@ func (e errInvalidGlobURL) Error() string {
 	return "Error reading glob URL " + e.glob + " while comparing with " + e.request
 }
 
-type errReservedAliasName struct {
-	alias string
-}
-
-func (e errReservedAliasName) Error() string {
-	return "Alias name ‘" + e.alias + "’ is a reserved word, reserved words are [help, private, readonly, public, authenticated]"
-}
-
-type errInvalidAliasName struct {
-	alias string
-}
-
-func (e errInvalidAliasName) Error() string {
-	return "Alias name ‘" + e.alias + "’ is invalid, valid examples are: Area51, Grand-Nagus.."
-}
-
 type errNoMatchingHost struct {
 	url string
 }
 
 func (e errNoMatchingHost) Error() string {
 	return "No matching host found for the given url ‘" + e.url + "’"
-}
-
-// errAliasExists - alias exists
-type errAliasExists struct {
-	alias string
-}
-
-func (e errAliasExists) Error() string {
-	return "Alias name: ‘" + e.alias + "’ already exists."
 }
 
 type errInitClient struct {
@@ -148,8 +97,4 @@ func (e errSourceIsNotFile) Error() string {
 	return "Source ‘" + e.URL + "’ is not a file."
 }
 
-type errSourceListEmpty errInvalidArgument
-
-func (e errSourceListEmpty) Error() string {
-	return "Source list is empty."
-}
+var errSourceListEmpty = errors.New("Source list is empty.")

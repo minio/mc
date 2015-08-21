@@ -103,7 +103,7 @@ func mustGetMcConfigPath() string {
 // getMcConfig - reads configuration file and returns config
 func getMcConfig() (*configV1, *probe.Error) {
 	if !isMcConfigExists() {
-		return nil, probe.NewError(errInvalidArgument{})
+		return nil, probe.NewError(errInvalidArgument)
 	}
 
 	configFile, err := getMcConfigPath()
@@ -154,7 +154,7 @@ func isMcConfigExists() bool {
 // writeConfig - write configuration file
 func writeConfig(config quick.Config) *probe.Error {
 	if config == nil {
-		return probe.NewError(errInvalidArgument{})
+		return probe.NewError(errInvalidArgument)
 	}
 	err := createMcConfigDir()
 	if err != nil {
@@ -181,10 +181,10 @@ func migrateConfigV1ToV101() {
 	}
 	conf := newConfigV1()
 	config, err := quick.New(conf)
-	fatalIf(err, "Unable to initialize quick config")
+	fatalIf(err.Trace(), "Unable to initialize quick config")
 
 	err = config.Load(mustGetMcConfigPath())
-	fatalIf(err, "Unable to load config")
+	fatalIf(err.Trace(), "Unable to load config")
 
 	conf = config.Data().(*configV1)
 	// version is the same return
@@ -211,11 +211,11 @@ func migrateConfigV1ToV101() {
 		conf.Hosts["*.s3*.amazonaws.com"] = s3HostConf
 	}
 
-	newConfig, perr := quick.New(conf)
-	fatalIf(perr, "Unable to initialize quick config")
+	newConfig, err := quick.New(conf)
+	fatalIf(err.Trace(), "Unable to initialize quick config")
 
-	perr = newConfig.Save(mustGetMcConfigPath())
-	fatalIf(perr, "Unable to save config")
+	err = newConfig.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config")
 
 	console.Infof("Successfully migrated %s from version: %s to version: %s\n", mustGetMcConfigPath(), globalMCPreviousConfigVersion, globalMCCurrentConfigVersion)
 }

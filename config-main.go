@@ -17,6 +17,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/minio/mc/internal/github.com/minio/cli"
@@ -64,63 +66,57 @@ func mainConfig(ctx *cli.Context) {
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
-		console.Fatalf("Incorrect number of arguments, please read \"mc config help\". %s", errInvalidArgument{})
+		fatalIf(probe.NewError(errors.New("")),
+			"Incorrect number of arguments, please read ‘mc config help’")
 	}
 	configPath, err := getMcConfigPath()
 	fatalIf(err, "Unable to get mc config path")
 
 	switch arg {
 	case "alias":
-		config, err := addAlias(tailArgs)
-		fatalIf(err, "Unable to set alias name")
-
-		err = writeConfig(config)
-		fatalIf(err, "Unable to write alias name")
+		if len(tailArgs) < 2 {
+			cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
+		}
+		addAlias(tailArgs)
 	default:
-		fatalIf(probe.NewError(errInvalidArgument{}), "Unable to configure")
+		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 	}
 	// upon success
 	console.Infoln("Alias written successfully to [" + configPath + "].")
 }
 
 // addAlias - add new aliases
-func addAlias(aliases []string) (quick.Config, *probe.Error) {
-	if len(aliases) < 2 {
-		return nil, probe.NewError(errInvalidArgument{})
-	}
+func addAlias(aliases []string) {
 	conf := newConfigV1()
 	config, err := quick.New(conf)
-	if err != nil {
-		return nil, err.Trace()
-	}
+	fatalIf(err.Trace(), "Unable to initialize quick config")
+
 	err = config.Load(mustGetMcConfigPath())
-	if err != nil {
-		return nil, err.Trace()
-	}
+	fatalIf(err.Trace(), "Unable to load config path")
 
 	aliasName := aliases[0]
 	url := strings.TrimSuffix(aliases[1], "/")
 	if strings.HasPrefix(aliasName, "http") {
-		return nil, probe.NewError(errInvalidAliasName{alias: aliasName})
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: Area51, Grand-Nagus..", aliasName))
 	}
 	if !strings.HasPrefix(url, "http") {
-		return nil, probe.NewError(errInvalidURL{URL: url})
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias URL ‘%s’ is invalid, valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com...", url))
 	}
 	if isAliasReserved(aliasName) {
-		return nil, probe.NewError(errReservedAliasName{alias: aliasName})
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is a reserved word, reserved words are [help, private, readonly, public, authenticated]", aliasName))
 	}
 	if !isValidAliasName(aliasName) {
-		return nil, probe.NewError(errInvalidAliasName{alias: aliasName})
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: Area51, Grand-Nagus..", aliasName))
 	}
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV1)
 	if _, ok := newConf.Aliases[aliasName]; ok {
-		return nil, probe.NewError(errAliasExists{alias: aliasName})
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Specified alias name: ‘%s’ already exists.", aliasName))
 	}
 	newConf.Aliases[aliasName] = url
 	newConfig, err := quick.New(newConf)
-	if err != nil {
-		return nil, err.Trace()
-	}
-	return newConfig, nil
+	fatalIf(err.Trace(), "Unable to initialize quick config")
+
+	err = writeConfig(newConfig)
+	fatalIf(err.Trace(), "Unable to write alias name")
 }

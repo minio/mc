@@ -51,7 +51,7 @@ func (s sessionV1) String() string {
 // loadSession - reads session file if exists and re-initiates internal variables
 func loadSessionV1(sid string) (*sessionV1, *probe.Error) {
 	if !isSessionDirExists() {
-		return nil, probe.NewError(errInvalidArgument{})
+		return nil, probe.NewError(errInvalidArgument)
 	}
 	sessionFile := getSessionFileV1(sid)
 

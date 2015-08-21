@@ -61,10 +61,10 @@ func mainUpdate(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	clnt, err := url2Client(mcUpdateURL)
-	fatalIf(err, "Unable to initalize update URL")
+	fatalIf(err.Trace(), "Unable to initalize update URL")
 
 	data, _, err := clnt.GetObject(0, 0)
-	fatalIf(err, "Unable to read update URL")
+	fatalIf(err.Trace(), "Unable to read update URL")
 
 	current, goerr := time.Parse(time.RFC3339Nano, Version)
 	fatalIf(probe.NewError(goerr), "Unable to parse Version as time")

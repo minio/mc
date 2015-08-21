@@ -25,8 +25,10 @@ import (
 	"time"
 
 	"github.com/minio/mc/internal/github.com/dustin/go-humanize"
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/internal/github.com/minio/pb"
 	"github.com/minio/mc/internal/github.com/olekukonko/ts"
+
 	"github.com/minio/mc/pkg/console"
 )
 
@@ -224,7 +226,7 @@ func scanBarFactory(prefix string) scanBarFunc {
 	fileCount := 0
 	termSize, err := ts.GetSize()
 	if err != nil {
-		console.Fatalf("Unable to get terminal size. %s\n", err)
+		fatalIf(probe.NewError(err), "Unable to get terminal size.")
 	}
 	termWidth := termSize.Col()
 	cursorCh := cursorAnimate()
