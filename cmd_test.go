@@ -97,7 +97,7 @@ func (s *CmdTestSuite) TestGetNewClient(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *CmdTestSuite) TestNewConfigV1(c *C) {
+func (s *CmdTestSuite) TestNewConfigV2(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "mc-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -108,12 +108,12 @@ func (s *CmdTestSuite) TestNewConfigV1(c *C) {
 	perr = conf.Save(configFile)
 	c.Assert(perr, IsNil)
 
-	confNew := newConfigV101()
+	confNew := newConfigV2()
 	config, perr := quick.New(confNew)
 	c.Assert(perr, IsNil)
 	perr = config.Load(configFile)
 	c.Assert(perr, IsNil)
-	data := config.Data().(*configV1)
+	data := config.Data().(*configV2)
 
 	type aliases struct {
 		name string

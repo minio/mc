@@ -76,9 +76,10 @@ func mainShare(ctx *cli.Context) {
 		fatalIf(probe.NewError(err), "Unable to parse time argument")
 	}
 	targetURL, err := getCanonicalizedURL(url, config.Aliases)
-	fatalIf(err, "Unable to canonicalize URL")
+	fatalIf(err.Trace(), "Unable to canonicalize URL")
+
 	// if recursive strip off the "..."
-	fatalIf(doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires), "Unable generate URL for sharing")
+	fatalIf(doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires).Trace(), "Unable generate URL for sharing")
 }
 
 func getNewTargetURL(targetParser *client.URL, name string) string {
