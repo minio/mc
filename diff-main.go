@@ -17,9 +17,10 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/minio/mc/internal/github.com/minio/cli"
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
-	"github.com/minio/mc/pkg/console"
 )
 
 // Help message.
@@ -63,19 +64,19 @@ func mainDiff(ctx *cli.Context) {
 
 	var err *probe.Error
 	firstURL, err = getCanonicalizedURL(firstURL, config.Aliases)
-	fatalIf(err.Trace(), "Unable to canonicalize first URL.")
+	fatalIf(err.Trace(firstURL), "Unable to canonicalize first URL.")
 
 	secondURL, err = getCanonicalizedURL(secondURL, config.Aliases)
-	fatalIf(err.Trace(), "Unable to canonicalize second URL.")
+	fatalIf(err.Trace(secondURL), "Unable to canonicalize second URL.")
 
 	if isURLRecursive(secondURL) {
-		console.Fatalf("Second URL cannot be recursive. %s\n", errInvalidArgument)
+		fatalIf(probe.NewError(errInvalidArgument), "Second argument ‘"+secondURL+"’ cannot be recursive.")
 	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
-		fatalIf(diff.err.Trace(), diff.message)
+		fatalIf(diff.err.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
+		fmt.Println(diff.message)
 	}
-	console.Println()
 }
 
 // doDiffCmd - Execute the diff command
