@@ -19,6 +19,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 )
 
 // CopyMessage container for file copy messages
@@ -34,8 +36,7 @@ func (c CopyMessage) String() string {
 		return fmt.Sprintf("‘%s’ -> ‘%s’\n", c.Source, c.Target)
 	}
 	copyMessageBytes, err := json.Marshal(c)
-	if err != nil {
-		panic(err)
-	}
+	fatalIf(probe.NewError(err), "Failed to marshal copy message.")
+
 	return string(copyMessageBytes) + "\n"
 }

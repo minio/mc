@@ -91,10 +91,4 @@ func (e errSourceIsNotDir) Error() string {
 	return "Source ‘" + e.URL + "’ is not a folder."
 }
 
-type errSourceIsNotFile errTargetIsNotDir
-
-func (e errSourceIsNotFile) Error() string {
-	return "Source ‘" + e.URL + "’ is not a file."
-}
-
 var errSourceListEmpty = errors.New("Source list is empty.")
