@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/minio/mc/internal/github.com/fatih/color"
 	"github.com/minio/mc/internal/github.com/minio/cli"
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/quick"
+	"github.com/minio/mc/pkg/console"
 )
 
 //   Configure minio client
@@ -48,7 +50,10 @@ USAGE:
 
 EXAMPLES:
    1. Add alias URLs.
-      $ mc config alias zek https://s3.amazonaws.com/
+      $ mc {{.Name}} alias zek https://s3.amazonaws.com/
+
+   2. List all aliased URLs.
+      $ mc {{.Name}} alias list
 
 `,
 }
@@ -70,6 +75,26 @@ func mainConfig(ctx *cli.Context) {
 
 	switch arg {
 	case "alias":
+		if tailArgs.First() == "list" {
+			conf := newConfigV2()
+			config, err := quick.New(conf)
+			fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
+
+			err = config.Load(mustGetMcConfigPath())
+			fatalIf(err.Trace(), "Unable to load config path")
+
+			// convert interface{} back to its original struct
+			newConf := config.Data().(*configV2)
+			// set new custom coloring
+			console.SetCustomTheme(map[string]*color.Color{
+				"Alias": color.New(color.FgCyan, color.Bold),
+				"URL":   color.New(color.FgWhite),
+			})
+			for k, v := range newConf.Aliases {
+				console.Print(AliasMessage{k, v})
+			}
+			return
+		}
 		if len(tailArgs) < 2 {
 			cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 		}
@@ -86,7 +111,7 @@ func addAlias(alias, url string) {
 	if alias == "" || url == "" {
 		fatalIf(probe.NewError(errors.New("")), "Alias or URL cannot be empty.")
 	}
-	conf := newConfigV1()
+	conf := newConfigV2()
 	config, err := quick.New(conf)
 	fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
 
@@ -104,7 +129,7 @@ func addAlias(alias, url string) {
 		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
 	}
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV1)
+	newConf := config.Data().(*configV2)
 	if oldURL, ok := newConf.Aliases[alias]; ok {
 		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias ‘%s’ already exists for ‘%s’.", alias, oldURL))
 	}
