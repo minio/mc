@@ -17,6 +17,8 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -42,6 +44,34 @@ import (
 //   1. diff(d1..., d2) -> INVALID
 //   2. diff(d1..., d2...) -> INVALID
 //
+
+// DiffMessage json container for diff messages
+type DiffMessage struct {
+	FirstURL  string `json:"first"`
+	SecondURL string `json:"second"`
+	Diff      string `json:"diff"`
+}
+
+func (d DiffMessage) String() string {
+	if !globalJSONFlag {
+		msg := ""
+		switch d.Diff {
+		case "Only-in":
+			msg = "‘" + d.FirstURL + "’ only in ‘" + d.SecondURL + "’."
+		case "Type":
+			msg = d.FirstURL + " and " + d.SecondURL + " differs in type."
+		case "Size":
+			msg = d.FirstURL + " and " + d.SecondURL + " differs in size."
+		default:
+			fatalIf(probe.NewError(errors.New("")), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
+		}
+		return msg
+	}
+	diffJSONBytes, err := json.Marshal(d)
+	fatalIf(probe.NewError(err), "Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+d.Diff+"’.")
+
+	return string(diffJSONBytes)
+}
 
 type diff struct {
 	message string
