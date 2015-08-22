@@ -26,7 +26,7 @@ func (e errNotAnObject) Error() string {
 	return "URL: ‘" + e.url + "’ not an object"
 }
 
-var errInvalidArgument = errors.New("Invalid arguments provided, cannot proceed")
+var errInvalidArgument = errors.New("Invalid arguments provided, cannot proceed.")
 
 type errInvalidGlobURL struct {
 	glob    string
@@ -34,7 +34,7 @@ type errInvalidGlobURL struct {
 }
 
 func (e errInvalidGlobURL) Error() string {
-	return "Error reading glob URL " + e.glob + " while comparing with " + e.request
+	return "Error reading glob URL ‘" + e.glob + "’ while comparing with ‘" + e.request + "’."
 }
 
 type errNoMatchingHost struct {
@@ -42,7 +42,7 @@ type errNoMatchingHost struct {
 }
 
 func (e errNoMatchingHost) Error() string {
-	return "No matching host found for the given url ‘" + e.url + "’"
+	return "No matching host found for the given url ‘" + e.url + "’."
 }
 
 type errInitClient struct {
@@ -50,7 +50,7 @@ type errInitClient struct {
 }
 
 func (e errInitClient) Error() string {
-	return "Unable to initialize client for url ‘" + e.url + "’"
+	return "Unable to initialize client for url ‘" + e.url + "’."
 }
 
 type errInvalidURL struct {
