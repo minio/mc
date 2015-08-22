@@ -85,7 +85,7 @@ func (e errSourceNotRecursive) Error() string {
 	return "Source ‘" + e.URL + "’ is not recursive."
 }
 
-type errSourceIsNotDir errTargetIsNotDir
+type errSourceIsNotDir errInvalidURL
 
 func (e errSourceIsNotDir) Error() string {
 	return "Source ‘" + e.URL + "’ is not a folder."

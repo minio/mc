@@ -18,32 +18,28 @@ package main
 
 import "encoding/json"
 
-// DiffJSONMessage json container for diff messages
-type DiffJSONMessage struct {
+// DiffMessage json container for diff messages
+type DiffMessage struct {
 	FirstURL  string `json:"first"`
 	SecondURL string `json:"second"`
 	Diff      string `json:"diff"`
 }
 
-func (s diffV1) String() string {
+func (d DiffMessage) String() string {
 	if !globalJSONFlag {
 		var message string
-		if s.diffType == "Only-in" {
-			message = "‘" + s.firstURL + "’ Only in ‘" + s.secondURL + "’\n"
+		if d.Diff == "Only-in" {
+			message = "‘" + d.FirstURL + "’ Only in ‘" + d.SecondURL + "’\n"
 		}
-		if s.diffType == "Type" {
-			message = s.firstURL + " and " + s.secondURL + " differs in type.\n"
+		if d.Diff == "Type" {
+			message = d.FirstURL + " and " + d.SecondURL + " differs in type.\n"
 		}
-		if s.diffType == "Size" {
-			message = s.firstURL + " and " + s.secondURL + " differs in size.\n"
+		if d.Diff == "Size" {
+			message = d.FirstURL + " and " + d.SecondURL + " differs in size.\n"
 		}
 		return message
 	}
-	diffMessage := DiffJSONMessage{}
-	diffMessage.FirstURL = s.firstURL
-	diffMessage.SecondURL = s.secondURL
-	diffMessage.Diff = s.diffType
-	diffJSONBytes, err := json.Marshal(diffMessage)
+	diffJSONBytes, err := json.Marshal(d)
 	if err != nil {
 		panic(err)
 	}
