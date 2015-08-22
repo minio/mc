@@ -141,36 +141,36 @@ func mainSession(ctx *cli.Context) {
 			console.Fatalf("Session ‘%s’ not found.\n", sid)
 		}
 
-		s, perr := loadSessionV2(sid)
-		fatalIf(perr.Trace(), "Unable to load session")
+		s, err := loadSessionV2(sid)
+		fatalIf(err.Trace(sid), "Unable to load session")
 
 		// extra check for testing purposes
 		if s == nil {
 			return
 		}
 
-		savedCwd, err := os.Getwd()
+		savedCwd, e := os.Getwd()
 		if err != nil {
-			console.Fatalf("Unable to verify your current working folder. %s\n", err)
+			console.Fatalf("Unable to verify your current working folder. %s\n", e)
 		}
 		if s.Header.RootPath != "" {
 			// chdir to RootPath
-			if err := os.Chdir(s.Header.RootPath); err != nil {
-				console.Fatalf("Unable to change directory to root path while resuming session. %s\n", err)
+			if e := os.Chdir(s.Header.RootPath); e != nil {
+				console.Fatalf("Unable to change directory to root path while resuming session. %s\n", e)
 			}
 		}
 
 		sessionExecute(s)
-		perr = s.Close()
-		fatalIf(perr.Trace(), "Unable to close session file properly.")
+		err = s.Close()
+		fatalIf(err.Trace(), "Unable to close session file properly.")
 
-		perr = s.Delete()
-		fatalIf(perr.Trace(), "Unable to clear session files properly.")
+		err = s.Delete()
+		fatalIf(err.Trace(), "Unable to clear session files properly.")
 
 		// change dir back
-		err = os.Chdir(savedCwd)
-		if err != nil {
-			console.Fatalf("Unable to change directory to saved path. %s\n", err)
+		e = os.Chdir(savedCwd)
+		if e != nil {
+			console.Fatalf("Unable to change directory to saved path. %s\n", e)
 		}
 	// purge a requested pending session, if "*" purge everything
 	case "clear":
