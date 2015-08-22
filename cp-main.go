@@ -159,14 +159,14 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if cpURLs.Error != nil {
-				errorIf(cpURLs.Error, "Failed to prepare copy URLs.")
+				errorIf(cpURLs.Error.Trace(), "Unable to prepare URLs for copying.")
 				break
 			}
 
 			jsonData, err := json.Marshal(cpURLs)
 			if err != nil {
 				session.Close()
-				console.Fatalf("Unable to marshal URLs to JSON. %s\n", err)
+				fatalIf(probe.NewError(err), "Unable to prepare URLs for copying. Error in JSON marshaling.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuietFlag && !globalJSONFlag {
@@ -230,7 +230,7 @@ func doCopyCmdSession(session *sessionV2) {
 					session.Header.LastCopied = cpURLs.SourceContent.Name
 				} else {
 					console.Println()
-					errorIf(cpURLs.Error, fmt.Sprintf("Failed to copy ‘%s’. ", cpURLs.SourceContent.Name))
+					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()
@@ -274,22 +274,22 @@ func mainCopy(ctx *cli.Context) {
 
 	session := newSessionV2()
 
-	var err error
+	var e error
 	session.Header.CommandType = "cp"
-	session.Header.RootPath, err = os.Getwd()
-	if err != nil {
+	session.Header.RootPath, e = os.Getwd()
+	if e != nil {
 		session.Close()
 		session.Delete()
-		console.Fatalf("Unable to get current working folder. %s\n", err)
+		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
 
 	// extract URLs.
-	var perr *probe.Error
-	session.Header.CommandArgs, perr = args2URLs(ctx.Args())
-	if perr != nil {
+	var err *probe.Error
+	session.Header.CommandArgs, err = args2URLs(ctx.Args())
+	if err != nil {
 		session.Close()
 		session.Delete()
-		console.Fatalf("One or more unknown URL types found %s. %s\n", ctx.Args(), perr)
+		fatalIf(err.Trace(), "One or more unknown URL types passed.")
 	}
 
 	doCopyCmdSession(session)
