@@ -65,11 +65,11 @@ func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe
 func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
 	targetClnt, err := target2Client(targetURL)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(targetURL)
 	}
 	err = targetClnt.PutObject(length, reader)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(targetURL)
 	}
 	return nil
 }
@@ -83,7 +83,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 	for _, targetURL := range targetURLs {
 		tgtClient, err := target2Client(targetURL)
 		if err != nil {
-			return err.Trace()
+			return err.Trace(targetURL)
 		}
 		tgtClients = append(tgtClients, tgtClient)
 		tgtReader, tgtWriter := io.Pipe()
@@ -129,7 +129,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 
 	for err := range errorCh {
 		if err != nil { // Return on first error encounter.
-			return err
+			return err.Trace()
 		}
 	}
 	return nil // success.
@@ -172,12 +172,12 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 func url2Stat(urlStr string) (client client.Client, content *client.Content, err *probe.Error) {
 	client, err = url2Client(urlStr)
 	if err != nil {
-		return nil, nil, err.Trace()
+		return nil, nil, err.Trace(urlStr)
 	}
 
 	content, err = client.Stat()
 	if err != nil {
-		return nil, nil, err.Trace()
+		return nil, nil, err.Trace(urlStr)
 	}
 
 	return client, content, nil
@@ -203,12 +203,12 @@ func url2Client(url string) (client.Client, *probe.Error) {
 	}
 	urlconfig, err := getHostConfig(url)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(url)
 	}
 
 	client, err := getNewClient(url, urlconfig)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(url)
 	}
 
 	return client, nil
@@ -218,7 +218,7 @@ func url2Client(url string) (client.Client, *probe.Error) {
 func source2Client(sourceURL string) (client.Client, *probe.Error) {
 	sourceClient, err := url2Client(sourceURL)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(sourceURL)
 	}
 	return sourceClient, nil
 }
@@ -227,7 +227,7 @@ func source2Client(sourceURL string) (client.Client, *probe.Error) {
 func target2Client(targetURL string) (client.Client, *probe.Error) {
 	targetClient, err := url2Client(targetURL)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(targetURL)
 	}
 	return targetClient, nil
 }

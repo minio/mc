@@ -54,7 +54,7 @@ func isValidAliasName(aliasName string) bool {
 func aliasExpand(aliasedURL string, aliases map[string]string) (string, *probe.Error) {
 	u, err := client.Parse(aliasedURL)
 	if err != nil {
-		return aliasedURL, probe.NewError(errInvalidURL{URL: aliasedURL})
+		return aliasedURL, probe.NewError(err)
 	}
 	// proper URL
 	if u.Host != "" {

@@ -34,4 +34,7 @@ func (s *CmdTestSuite) TestConfigContext(c *C) {
 	err = app.Run([]string{os.Args[0], "config", "alias", "new", "http://test.io"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
 }

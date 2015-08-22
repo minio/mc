@@ -70,11 +70,11 @@ func mainCat(ctx *cli.Context) {
 	}
 
 	if stdinMode {
-		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from stdin")
+		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from stdin.")
 	} else {
 		// Convert arguments to URLs: expand alias, fix format...
 		for _, arg := range ctx.Args() {
-			fatalIf(catURL(arg).Trace(), "Unable to read from URL")
+			fatalIf(catURL(arg).Trace(arg), "Unable to read from ‘"+arg+"’.")
 		}
 	}
 
@@ -96,11 +96,11 @@ func catURL(sourceURL string) *probe.Error {
 	// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
 	reader, _, err := sourceClnt.GetObject(0, 0)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(URL)
 	}
 	defer reader.Close()
 
-	return catOut(reader).Trace()
+	return catOut(reader).Trace(URL)
 }
 
 func catOut(r io.Reader) *probe.Error {

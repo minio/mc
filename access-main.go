@@ -71,9 +71,8 @@ func mainAccess(ctx *cli.Context) {
 	}
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err.Trace(), "Unable to parse URL argument ‘"+arg+"’.")
-
-		fatalIf(doUpdateAccessCmd(targetURL, acl).Trace(), "Unable to set access permission ‘"+acl.String()+"’ for URL ‘"+targetURL+"’.")
+		fatalIf(err.Trace(arg), "Unable to parse URL argument ‘"+arg+"’.")
+		fatalIf(doUpdateAccessCmd(targetURL, acl).Trace(targetURL), "Unable to set access permission ‘"+acl.String()+"’ for URL ‘"+targetURL+"’.")
 	}
 }
 
@@ -81,11 +80,10 @@ func doUpdateAccessCmd(targetURL string, targetACL bucketACL) *probe.Error {
 	var clnt client.Client
 	clnt, err := target2Client(targetURL)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(targetURL)
 	}
-	err = clnt.SetBucketACL(targetACL.String())
-	if err != nil {
-		return err.Trace()
+	if err = clnt.SetBucketACL(targetACL.String()); err != nil {
+		return err.Trace(targetURL, targetACL.String())
 	}
 	return nil
 }

@@ -24,7 +24,6 @@ import (
 	"github.com/minio/mc/internal/github.com/minio/cli"
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/internal/github.com/minio/minio/pkg/quick"
-	"github.com/minio/mc/pkg/console"
 )
 
 //   Configure minio client
@@ -66,57 +65,53 @@ func mainConfig(ctx *cli.Context) {
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
-		fatalIf(probe.NewError(errors.New("")),
-			"Incorrect number of arguments, please read ‘mc config help’")
+		fatalIf(probe.NewError(errors.New("")), "Incorrect number of arguments to config command. Please read ‘mc config help’")
 	}
-	configPath, err := getMcConfigPath()
-	fatalIf(err, "Unable to get mc config path")
 
 	switch arg {
 	case "alias":
 		if len(tailArgs) < 2 {
 			cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 		}
-		addAlias(tailArgs)
+		alias := tailArgs[0]
+		url := tailArgs[1]
+		addAlias(alias, url)
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 	}
-	// upon success
-	console.Infoln("Alias written successfully to [" + configPath + "].")
 }
 
 // addAlias - add new aliases
-func addAlias(aliases []string) {
+func addAlias(alias, url string) {
+	if alias == "" || url == "" {
+		fatalIf(probe.NewError(errors.New("")), "Alias or URL cannot be empty.")
+	}
 	conf := newConfigV1()
 	config, err := quick.New(conf)
-	fatalIf(err.Trace(), "Unable to initialize quick config")
+	fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
 
 	err = config.Load(mustGetMcConfigPath())
 	fatalIf(err.Trace(), "Unable to load config path")
 
-	aliasName := aliases[0]
-	url := strings.TrimSuffix(aliases[1], "/")
-	if strings.HasPrefix(aliasName, "http") {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: Area51, Grand-Nagus..", aliasName))
-	}
+	url = strings.TrimSuffix(url, "/")
 	if !strings.HasPrefix(url, "http") {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias URL ‘%s’ is invalid, valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com...", url))
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Invalid alias URL ‘%s’. Valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com.", url))
 	}
-	if isAliasReserved(aliasName) {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is a reserved word, reserved words are [help, private, readonly, public, authenticated]", aliasName))
+	if isAliasReserved(alias) {
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Cannot use a reserved name ‘%s’ as an alias. Following are reserved names: [help, private, readonly, public, authenticated].", alias))
 	}
-	if !isValidAliasName(aliasName) {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: Area51, Grand-Nagus..", aliasName))
+	if !isValidAliasName(alias) {
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
 	}
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV1)
-	if _, ok := newConf.Aliases[aliasName]; ok {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Specified alias name: ‘%s’ already exists.", aliasName))
+	if oldURL, ok := newConf.Aliases[alias]; ok {
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias ‘%s’ already exists for ‘%s’.", alias, oldURL))
 	}
-	newConf.Aliases[aliasName] = url
+	newConf.Aliases[alias] = url
 	newConfig, err := quick.New(newConf)
-	fatalIf(err.Trace(), "Unable to initialize quick config")
+	fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
 
 	err = writeConfig(newConfig)
-	fatalIf(err.Trace(), "Unable to write alias name")
+	fatalIf(err.Trace(alias, url), "Unable to save alias ‘"+alias+"’.")
 }

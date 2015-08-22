@@ -34,10 +34,11 @@ import (
 // This function should be called from the main early on.
 func migrateSessionV1ToV2() {
 	for _, sid := range getSessionIDsV1() {
-		err := os.Remove(getSessionFileV1(sid))
-		if err != nil {
-			console.Fatalf("Migration failed. Unable to remove old session file %s. %s\n", getSessionFileV1(sid), probe.NewError(err))
-		}
+		sessionFileV1, err := getSessionFileV1(sid)
+		fatalIf(err.Trace(sid), "Unable to determine session file for ‘"+sid+"’.")
+
+		e := os.Remove(sessionFileV1)
+		fatalIf(probe.NewError(e), "Migration failed. Unable to remove old session file ‘"+sessionFileV1+"’.")
 	}
 }
 
@@ -72,11 +73,14 @@ func newSessionV2() *sessionV2 {
 	s.Header.When = time.Now().UTC()
 	s.mutex = new(sync.Mutex)
 	s.SessionID = newSID(8)
+
+	sessionDataFile, perr := getSessionDataFile(s.SessionID)
+	fatalIf(perr.Trace(s.SessionID), "Unable to create session data file \""+sessionDataFile+"\".")
+
 	var err error
-	s.DataFP, err = os.Create(getSessionDataFile(s.SessionID))
-	if err != nil {
-		console.Fatalf("Unable to create session data file \""+getSessionDataFile(s.SessionID)+"\". %s\n", err)
-	}
+	s.DataFP, err = os.Create(sessionDataFile)
+	fatalIf(probe.NewError(err), "Unable to create session data file \""+sessionDataFile+"\".")
+
 	return s
 }
 
@@ -118,10 +122,14 @@ func (s *sessionV2) Save() *probe.Error {
 
 	qs, err := quick.New(s.Header)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(s.SessionID)
 	}
 
-	return qs.Save(getSessionFile(s.SessionID))
+	sessionFile, err := getSessionFile(s.SessionID)
+	if err != nil {
+		return err.Trace(s.SessionID)
+	}
+	return qs.Save(sessionFile).Trace()
 }
 
 // Close ends this session and removes all associated session files.
@@ -138,7 +146,11 @@ func (s *sessionV2) Close() *probe.Error {
 		return err.Trace()
 	}
 
-	return qs.Save(getSessionFile(s.SessionID))
+	sessionFile, err := getSessionFile(s.SessionID)
+	if err != nil {
+		return err.Trace(s.SessionID)
+	}
+	return qs.Save(sessionFile).Trace()
 }
 
 // Delete removes all the session files.
@@ -153,12 +165,12 @@ func (s *sessionV2) Delete() *probe.Error {
 		}
 	}
 
-	err := os.Remove(getSessionFile(s.SessionID))
+	sessionFile, err := getSessionFile(s.SessionID)
 	if err != nil {
-		return probe.NewError(err)
+		return err.Trace(s.SessionID)
 	}
 
-	if err != nil {
+	if err := os.Remove(sessionFile); err != nil {
 		return probe.NewError(err)
 	}
 
@@ -170,7 +182,11 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	if !isSessionDirExists() {
 		return nil, probe.NewError(errInvalidArgument)
 	}
-	sessionFile := getSessionFile(sid)
+	sessionFile, err := getSessionFile(sid)
+	if err != nil {
+		return nil, err.Trace(sid)
+	}
+
 	if _, err := os.Stat(sessionFile); err != nil {
 		return nil, probe.NewError(err)
 	}
@@ -179,23 +195,27 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	s.Header = &sessionV2Header{}
 	s.SessionID = sid
 	s.Header.Version = "1.1.0"
-	qs, perr := quick.New(s.Header)
-	if perr != nil {
-		return nil, perr.Trace()
+	qs, err := quick.New(s.Header)
+	if err != nil {
+		return nil, err.Trace()
 	}
-	perr = qs.Load(sessionFile)
-	if perr != nil {
-		return nil, perr.Trace()
+	err = qs.Load(sessionFile)
+	if err != nil {
+		return nil, err.Trace()
 	}
 
 	s.mutex = new(sync.Mutex)
 	s.Header = qs.Data().(*sessionV2Header)
 
-	var err error
-	s.DataFP, err = os.Open(getSessionDataFile(s.SessionID))
+	sessionDataFile, err := getSessionDataFile(s.SessionID)
 	if err != nil {
-		return nil, probe.NewError(err)
+		return nil, err.Trace()
 	}
+
+	var e error
+	s.DataFP, e = os.Open(sessionDataFile)
+	fatalIf(probe.NewError(e), "Unable to open session data file ‘"+sessionDataFile+"’.")
+
 	return s, nil
 }
 

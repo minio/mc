@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -51,13 +52,14 @@ func (s sessionV1) String() string {
 // loadSession - reads session file if exists and re-initiates internal variables
 func loadSessionV1(sid string) (*sessionV1, *probe.Error) {
 	if !isSessionDirExists() {
-		return nil, probe.NewError(errInvalidArgument)
+		return nil, probe.NewError(errors.New("Session folder does not exist."))
 	}
-	sessionFile := getSessionFileV1(sid)
 
-	if _, err := os.Stat(sessionFile); err != nil {
-		return nil, probe.NewError(err)
+	sessionFile, err := getSessionFileV1(sid)
+	if err != nil {
+		return nil, err.Trace(sid)
 	}
+
 	s := new(sessionV1)
 	s.Version = "1.0.0"
 	// map of command and files copied
@@ -66,29 +68,28 @@ func loadSessionV1(sid string) (*sessionV1, *probe.Error) {
 	s.Files = make(map[string]bool)
 	qs, err := quick.New(s)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(s.Version)
 	}
 	err = qs.Load(sessionFile)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(sessionFile, s.Version)
 	}
 	return qs.Data().(*sessionV1), nil
 }
 
 func getSessionIDsV1() (sids []string) {
-	sessionList, err := filepath.Glob(getSessionDir() + "/*")
-	if err != nil {
-		console.Fatalf("Unable to list session folder ‘%s’, %s", getSessionDir(), probe.NewError(err))
-	}
+	sessionDir, err := getSessionDir()
+	fatalIf(err.Trace(), "Unable to determine session folder.")
+
+	sessionList, e := filepath.Glob(sessionDir + "/*")
+	fatalIf(probe.NewError(e), "Unable to access session folder ‘"+sessionDir+"’.")
 
 	for _, path := range sessionList {
 		sidReg := regexp.MustCompile("^[a-zA-Z]{8}$")
 		sid := filepath.Base(path)
 		if sidReg.Match([]byte(sid)) {
 			sessionV1, err := loadSessionV1(sid)
-			if err != nil {
-				console.Fatalf("Unable to load session ‘%s’, %s", sid, err.Trace())
-			}
+			fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’.")
 			if sessionV1.Version != "1.0.0" {
 				continue
 			}
@@ -98,6 +99,16 @@ func getSessionIDsV1() (sids []string) {
 	return sids
 }
 
-func getSessionFileV1(sid string) string {
-	return filepath.Join(getSessionDir(), sid)
+func getSessionFileV1(sid string) (string, *probe.Error) {
+	sessionDir, err := getSessionDir()
+	if err != nil {
+		return "", err.Trace()
+	}
+
+	sessionFile := filepath.Join(sessionDir, sid)
+	if _, err := os.Stat(sessionFile); err != nil {
+		return "", probe.NewError(err)
+	}
+
+	return sessionFile, nil
 }
