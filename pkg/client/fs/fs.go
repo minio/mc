@@ -122,7 +122,7 @@ func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 	}
 }
 
-func (f *fsClient) Share(expires time.Duration, offset, length int64) (string, *probe.Error) {
+func (f *fsClient) Share(expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(client.APINotImplemented{API: "Share", APIType: "filesystem"})
 }
 

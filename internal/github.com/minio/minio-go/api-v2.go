@@ -72,7 +72,6 @@ type ObjectAPI interface {
 // PresignedAPI - object specific for now
 type PresignedAPI interface {
 	PresignedGetObject(bucket, object string, expires time.Duration) (string, error)
-	PresignedGetPartialObject(bucket, object string, expires time.Duration, offset, length int64) (string, error)
 }
 
 // BucketStatCh - bucket metadata over read channel
@@ -233,14 +232,6 @@ func (a apiV2) PresignedGetObject(bucket, object string, expires time.Duration) 
 		return "", invalidArgumentError("")
 	}
 	return a.presignedGetObject(bucket, object, expireSeconds, 0, 0)
-}
-
-func (a apiV2) PresignedGetPartialObject(bucket, object string, expires time.Duration, offset, length int64) (string, error) {
-	expireSeconds := int64(expires / time.Second)
-	if expireSeconds < 1 || expireSeconds > 604800 {
-		return "", invalidArgumentError("")
-	}
-	return a.presignedGetObject(bucket, object, expireSeconds, offset, length)
 }
 
 // GetObject retrieve object
