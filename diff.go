@@ -73,16 +73,16 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	firstClnt, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’",
-			err:     err.Trace(),
+			message: "Failed to stat ‘" + firstURL + "’.",
+			err:     err.Trace(firstURL),
 		}
 		return
 	}
 	secondClnt, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’",
-			err:     err.Trace(),
+			message: "Failed to stat ‘" + secondURL + "’.",
+			err:     err.Trace(secondURL),
 		}
 		return
 	}
@@ -92,8 +92,8 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 			newSecondURL, err := urlJoinPath(secondURL, firstURL)
 			if err != nil {
 				ch <- diff{
-					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + firstURL,
-					err:     err.Trace(),
+					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + firstURL + "’.",
+					err:     err.Trace(secondURL, firstURL),
 				}
 				return
 			}
@@ -138,12 +138,12 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	switch {
 	case errFirst != nil && errSecond == nil:
 		ch <- diff{
-			err: errFirst.Trace(),
+			err: errFirst.Trace(firstURL, secondURL),
 		}
 		return
 	case errFirst == nil && errSecond != nil:
 		ch <- diff{
-			err: errSecond.Trace(),
+			err: errSecond.Trace(firstURL, secondURL),
 		}
 		return
 	}
@@ -186,24 +186,24 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 	for contentCh := range firstClnt.List(false) {
 		if contentCh.Err != nil {
 			ch <- diff{
-				message: "Failed to list ‘" + firstClnt.URL().String() + "’",
-				err:     contentCh.Err.Trace(),
+				message: "Failed to list ‘" + firstClnt.URL().String() + "’.",
+				err:     contentCh.Err.Trace(firstClnt.URL().String()),
 			}
 			return
 		}
 		newFirstURL, err := urlJoinPath(firstClnt.URL().String(), contentCh.Content.Name)
 		if err != nil {
 			ch <- diff{
-				message: "Unable to construct new URL from ‘" + firstClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’",
-				err:     err.Trace(),
+				message: "Unable to construct new URL from ‘" + firstClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’.",
+				err:     err.Trace(firstClnt.URL().String()),
 			}
 			return
 		}
 		newSecondURL, err := urlJoinPath(secondClnt.URL().String(), contentCh.Content.Name)
 		if err != nil {
 			ch <- diff{
-				message: "Unable to construct new URL from ‘" + secondClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’",
-				err:     err.Trace(),
+				message: "Unable to construct new URL from ‘" + secondClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’.",
+				err:     err.Trace(secondClnt.URL().String()),
 			}
 			return
 		}
@@ -273,8 +273,8 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 		for firstContentCh := range firstClnt.List(true) {
 			if firstContentCh.Err != nil {
 				ch <- diff{
-					message: "Failed to list ‘" + firstClnt.URL().String() + "’",
-					err:     firstContentCh.Err.Trace(),
+					message: "Failed to list ‘" + firstClnt.URL().String() + "’.",
+					err:     firstContentCh.Err.Trace(firstClnt.URL().String()),
 				}
 				return
 			}
@@ -287,8 +287,8 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 		for secondContentCh := range secondClnt.List(true) {
 			if secondContentCh.Err != nil {
 				ch <- diff{
-					message: "Failed to list ‘" + secondClnt.URL().String() + "’",
-					err:     secondContentCh.Err.Trace(),
+					message: "Failed to list ‘" + secondClnt.URL().String() + "’.",
+					err:     secondContentCh.Err.Trace(secondClnt.URL().String()),
 				}
 				return
 			}
@@ -311,7 +311,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 	}(doneCh)
 	wg.Wait()
 	doneCh <- struct{}{}
-	console.PrintC("\r" + "Finished" + "\n")
+	console.PrintC("\r" + "Finished." + "\n")
 
 	matchNameCh := make(chan string, 10000)
 	go func(matchNameCh chan<- string) {
