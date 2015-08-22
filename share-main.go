@@ -112,7 +112,7 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		if err != nil {
 			return err.Trace()
 		}
-		presignedURL, err := newClnt.Share(expires, 0, 0)
+		presignedURL, err := newClnt.Share(expires)
 		if err != nil {
 			return err.Trace()
 		}
