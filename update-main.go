@@ -61,29 +61,29 @@ func mainUpdate(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	clnt, err := url2Client(mcUpdateURL)
-	fatalIf(err.Trace(), "Unable to initalize update URL")
+	fatalIf(err.Trace(mcUpdateURL), "Unable to initalize update URL.")
 
 	data, _, err := clnt.GetObject(0, 0)
-	fatalIf(err.Trace(), "Unable to read update URL")
+	fatalIf(err.Trace(mcUpdateURL), "Unable to read from update URL ‘"+mcUpdateURL+"’.")
 
-	current, goerr := time.Parse(time.RFC3339Nano, Version)
-	fatalIf(probe.NewError(goerr), "Unable to parse Version as time")
+	current, e := time.Parse(time.RFC3339Nano, Version)
+	fatalIf(probe.NewError(e), "Unable to parse Version string as time.")
 
 	if current.IsZero() {
-		console.Infoln(`Version is empty, must be a custom build cannot update. Please download releases from
-https://dl.minio.io:9000 for continuous updates`)
+		console.Infoln("Updates not supported for custom build. Version field is empty. Please download official releases from https://dl.minio.io:9000")
 		return
 	}
+
 	var updates Updates
 	decoder := json.NewDecoder(data)
-	goerr = decoder.Decode(&updates)
-	fatalIf(probe.NewError(goerr), "Unable to decode update URL data")
+	e = decoder.Decode(&updates)
+	fatalIf(probe.NewError(e), "Unable to decode update notification.")
 
-	latest, goerr := time.Parse(http.TimeFormat, updates.BuildDate)
-	fatalIf(probe.NewError(goerr), "Unable to parse BuildDate")
+	latest, e := time.Parse(http.TimeFormat, updates.BuildDate)
+	fatalIf(probe.NewError(e), "Unable to parse BuildDate.")
 
 	if latest.IsZero() {
-		console.Infoln("No update available at this time")
+		console.Infoln("No update available at this time.")
 		return
 	}
 
@@ -96,11 +96,11 @@ https://dl.minio.io:9000 for continuous updates`)
 			updateString = "mc cp " + mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS] + " ./mc"
 		}
 		msg, err := printUpdateNotify(updateString, "new", "old")
-		fatalIf(probe.NewError(err), "Unable to print update notification")
+		fatalIf(err.Trace(updateString), "Unable to print update notification string ‘"+updateString+"’.")
 
 		console.Println(msg)
 		return
 	}
-	console.Infoln("You are already running the most recent version of ‘mc’")
+	console.Infoln("You are already running the most recent version of ‘mc’.")
 	return
 }

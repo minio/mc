@@ -63,9 +63,7 @@ func mainVersion(ctxx *cli.Context) {
 				Version Version `json:"version"`
 			}{Version: Version{t, "RFC3339Nano"}},
 		)
-		if err != nil {
-			console.Fatalln(probe.NewError(err))
-		}
+		fatalIf(probe.NewError(err), "Unable to construct version string.")
 		console.Println(string(tB))
 		return
 	}

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -24,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 )
 
 var minGolangVersion = "1.5"
@@ -74,10 +76,8 @@ func (v1 version) String() string {
 }
 
 func (v1 version) Version() int {
-	ver, err := strconv.Atoi(v1.String())
-	if err != nil {
-		console.Fatalf("Unable to parse version string. %s\n", err)
-	}
+	ver, e := strconv.Atoi(v1.String())
+	fatalIf(probe.NewError(e), "Unable to parse version string.")
 	return ver
 }
 
@@ -92,7 +92,8 @@ func checkGolangRuntimeVersion() {
 	v1 := newVersion(getNormalizedGolangVersion())
 	v2 := newVersion(minGolangVersion)
 	if v1.LessThan(v2) {
-		console.Errorf("Found Golang runtime: ‘%s’, minimum Golang runtime expected for ‘%s’ is go1.5, please compile ‘mc’ with atleast go1.5\n", v1, runtime.GOOS)
+		errorIf(probe.NewError(errors.New("")),
+			"Old Golang runtime version ‘"+v1.String()+"’ detected., ‘mc’ requires minimum go1.5 or later.")
 	}
 }
 
@@ -102,15 +103,15 @@ func verifyMCRuntime() {
 		fatalIf(err.Trace(), "Unable to create ‘mc’ config folder.")
 
 		config, err := newConfig()
-		fatalIf(err.Trace(), "Unable to initialize newConfig")
+		fatalIf(err.Trace(), "Unable to initialize newConfig.")
 
 		err = writeConfig(config)
-		fatalIf(err.Trace(), "Unable to write newConfig")
+		fatalIf(err.Trace(), "Unable to write newConfig.")
 
 		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}
 	if !isSessionDirExists() {
-		fatalIf(createSessionDir(), "Unable to create session dir")
+		fatalIf(createSessionDir(), "Unable to create session dir.")
 	}
 	checkGolangRuntimeVersion()
 }

@@ -23,11 +23,12 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/olekukonko/ts"
 )
 
 // printUpdateNotify - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
-func printUpdateNotify(updateString, latestVersion, currentVersion string) (string, error) {
+func printUpdateNotify(updateString, latestVersion, currentVersion string) (string, *probe.Error) {
 	// TODO - make this configurable
 	//
 	// initialize coloring
@@ -52,7 +53,7 @@ func printUpdateNotify(updateString, latestVersion, currentVersion string) (stri
 
 	terminal, err := ts.GetSize()
 	if err != nil {
-		return "", err
+		return "", probe.NewError(err)
 	}
 	var message string
 	switch {

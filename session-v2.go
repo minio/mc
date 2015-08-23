@@ -20,7 +20,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -79,7 +78,7 @@ func (s sessionV2) String() string {
 		message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
 		message = message + console.Colorize("Time", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
 		message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
-		return message + "\n"
+		return message
 	}
 	sessionMesage := SessionJSONMessage{
 		SessionID:   s.SessionID,
@@ -87,11 +86,10 @@ func (s sessionV2) String() string {
 		CommandType: s.Header.CommandType,
 		CommandArgs: s.Header.CommandArgs,
 	}
-	sessionJSONBytes, err := json.Marshal(sessionMesage)
-	if err != nil {
-		panic(err)
-	}
-	return string(sessionJSONBytes) + "\n"
+	sessionJSONBytes, e := json.Marshal(sessionMesage)
+	fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
+
+	return string(sessionJSONBytes)
 }
 
 // newSessionV2 provides a new session
@@ -228,11 +226,11 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	s.Header.Version = "1.1.0"
 	qs, err := quick.New(s.Header)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(sid, s.Header.Version)
 	}
 	err = qs.Load(sessionFile)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(sid, s.Header.Version)
 	}
 
 	s.mutex = new(sync.Mutex)
@@ -240,7 +238,7 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 
 	sessionDataFile, err := getSessionDataFile(s.SessionID)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(sid, s.Header.Version)
 	}
 
 	var e error
@@ -257,8 +255,7 @@ func isCopiedFactory(lastCopied string) func(string) bool {
 	copied := true // closure
 	return func(sourceURL string) bool {
 		if sourceURL == "" {
-			fatalIf(probe.NewError(errors.New("")),
-				"Empty source URL passed to isCopied() function. please report this bug at https://github.com/minio/mc/issues.")
+			fatalIf(probe.NewError(errInvalidArgument), "Empty source argument passed.")
 		}
 		if lastCopied == "" {
 			return false
