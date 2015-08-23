@@ -156,9 +156,6 @@ VERSION:
 }
 
 func main() {
-	// Enable GOMAXPROCS to default to number of CPUs.
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	app := registerApp()
 	app.Before = registerBefore
 
