@@ -61,6 +61,12 @@ coverage:
 	@GO15VENDOREXPERIMENT=1 go test -race -coverprofile=cover.out
 	@go tool cover -html=cover.out && echo "Visit your browser"
 
+pkg-remove:
+	@GO15VENDOREXPERIMENT=1 govendor remove $(PKG)
+
+pkg-add:
+	@GO15VENDOREXPERIMENT=1 govendor add $(PKG)
+
 install: gomake-all
 
 clean:
