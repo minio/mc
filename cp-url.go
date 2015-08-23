@@ -82,7 +82,7 @@ func checkCopySyntax(ctx *cli.Context) {
 		}
 		if url.Host != "" {
 			if url.Path == string(url.Separator) {
-				fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Bucket creation detected for %s, cloud storage URL's should use ‘mc mb’ to create buckets.", tgtURL))
+				fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 			}
 		}
 	}

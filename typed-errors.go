@@ -73,12 +73,6 @@ func (e errInvalidTarget) Error() string {
 	return "Invalid target " + e.URL
 }
 
-type errTargetIsNotDir errInvalidURL
-
-func (e errTargetIsNotDir) Error() string {
-	return "Target ‘" + e.URL + "’ is not a folder."
-}
-
 type errSourceNotRecursive errInvalidURL
 
 func (e errSourceNotRecursive) Error() string {

@@ -30,7 +30,7 @@ var lsCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
+   mc {{.Name}} TARGET [TARGET ...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -83,10 +83,10 @@ func mainList(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	for _, arg := range args {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err.Trace(), "Unable to canonicalize URL")
+		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
 
 		// if recursive strip off the "..."
-		fatalIf(doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL)).Trace(), "Unable to list target URL")
+		fatalIf(doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL)).Trace(), "Unable to list target ‘"+targetURL+"’.")
 	}
 }
 

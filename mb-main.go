@@ -31,7 +31,7 @@ var mbCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET...] {{if .Description}}
+   mc {{.Name}} TARGET [TARGET ...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -60,11 +60,9 @@ func mainMakeBucket(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err.Trace(), "Unable to canonicalize URL")
-
-		fatalIf(doMakeBucketCmd(targetURL).Trace(), "Unable to make bucket")
-
-		console.Infoln("Bucket created successfully : " + targetURL)
+		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
+		fatalIf(doMakeBucketCmd(targetURL).Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+		console.Infoln("Bucket created successfully: " + targetURL)
 	}
 }
 

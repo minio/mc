@@ -33,7 +33,7 @@ var accessCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} PERMISSION TARGET [TARGET...] {{if .Description}}
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} PERMISSION TARGET [TARGET ...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -71,8 +71,8 @@ func mainAccess(ctx *cli.Context) {
 	}
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err.Trace(arg), "Unable to parse URL argument ‘"+arg+"’.")
-		fatalIf(doUpdateAccessCmd(targetURL, acl).Trace(targetURL), "Unable to set access permission ‘"+acl.String()+"’ for URL ‘"+targetURL+"’.")
+		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
+		fatalIf(doUpdateAccessCmd(targetURL, acl).Trace(targetURL), "Unable to set access permission ‘"+acl.String()+"’ for ‘"+targetURL+"’.")
 	}
 }
 

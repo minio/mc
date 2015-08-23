@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -34,7 +35,35 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
-// parseContent parse client Content container into printer struct
+// ContentMessage container for content message structure.
+type ContentMessage struct {
+	Filetype string `json:"type"`
+	Time     string `json:"last-modified"`
+	Size     string `json:"size"`
+	Name     string `json:"name"`
+}
+
+// String string printer for Content metadata.
+func (c ContentMessage) String() string {
+	if !globalJSONFlag {
+		message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time))
+		message = message + console.Colorize("Size", fmt.Sprintf("%6s ", c.Size))
+		message = func() string {
+			if c.Filetype == "folder" {
+				return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Name))
+			}
+			return message + console.Colorize("File", fmt.Sprintf("%s", c.Name))
+		}()
+		return message
+	}
+	jsonMessageBytes, err := json.Marshal(c)
+	if err != nil {
+		panic(err)
+	}
+	return string(jsonMessageBytes)
+}
+
+// parseContent parse client Content container into printer struct.
 func parseContent(c *client.Content) ContentMessage {
 	content := ContentMessage{}
 	content.Time = c.Time.Local().Format(printDate)
@@ -49,7 +78,7 @@ func parseContent(c *client.Content) ContentMessage {
 
 	content.Size = humanize.IBytes(uint64(c.Size))
 
-	// Convert OS Type to match console file printing style
+	// Convert OS Type to match console file printing style.
 	content.Name = func() string {
 		switch {
 		case runtime.GOOS == "windows":
@@ -71,7 +100,7 @@ func parseContent(c *client.Content) ContentMessage {
 	return content
 }
 
-// doList - list all entities inside a folder
+// doList - list all entities inside a folder.
 func doList(clnt client.Client, recursive bool) *probe.Error {
 	var err *probe.Error
 	for contentCh := range clnt.List(recursive) {
@@ -89,7 +118,7 @@ func doList(clnt client.Client, recursive bool) *probe.Error {
 			err = contentCh.Err.Trace()
 			break
 		}
-		console.Print(parseContent(contentCh.Content))
+		console.Println(parseContent(contentCh.Content))
 	}
 	if err != nil {
 		return err.Trace()

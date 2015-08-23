@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -27,19 +28,18 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/pb"
 )
 
 // Check for the environment early on and gracefully report.
 func checkConfig() {
-	_, err := user.Current()
-	if err != nil {
-		console.Fatalf("Unable to determine current user. %s\n", err)
-	}
+	_, e := user.Current()
+	fatalIf(probe.NewError(e), "Unable to determine current user.")
 
 	// Ensures config file is sane
-	_, perr := getMcConfig()
-	fatalIf(perr.Trace(), "Unable to read config")
+	_, err := getMcConfig()
+	fatalIf(err.Trace(), "Unable to access configuration file.")
 }
 
 func migrate() {
@@ -52,10 +52,9 @@ func migrate() {
 // Get os/arch/platform specific information.
 // Returns a map of current os/arch/platform/memstats
 func getSystemData() map[string]string {
-	host, err := os.Hostname()
-	if err != nil {
-		console.Fatalf("Unable to determine hostname. %s\n", err)
-	}
+	host, e := os.Hostname()
+	fatalIf(probe.NewError(e), "Unable to determine the hostname.")
+
 	memstats := &runtime.MemStats{}
 	runtime.ReadMemStats(memstats)
 	mem := fmt.Sprintf("Used: %s | Allocated: %s | UsedHeap: %s | AllocatedHeap: %s",
@@ -151,7 +150,7 @@ VERSION:
 {{end}}
 `
 	app.CommandNotFound = func(ctx *cli.Context, command string) {
-		console.Fatalf("Command not found: ‘%s’\n", command)
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Command not found: ‘%s’", command))
 	}
 	return app
 }
