@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
@@ -67,6 +68,9 @@ func mainShare(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" || len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
 	}
+	console.SetCustomTheme(map[string]*color.Color{
+		"Share": color.New(color.FgGreen, color.Bold),
+	})
 	args := ctx.Args()
 	config := mustGetMcConfig()
 	/// get first and last arguments
@@ -95,7 +99,7 @@ type ShareMessage struct {
 // String string printer for share message
 func (s ShareMessage) String() string {
 	if !globalJSONFlag {
-		return fmt.Sprintf("Succesfully generated shared URL with expiry %s, please share: %s", s.Expires, s.PresignedURL)
+		return console.Colorize("Share", fmt.Sprintf("Succesfully generated shared URL with expiry %s, please share: %s", s.Expires, s.PresignedURL))
 	}
 	shareMessageBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Failed to marshal into JSON.")
@@ -140,7 +144,7 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		if err != nil {
 			return err.Trace()
 		}
-		console.PrintC(ShareMessage{Expires: expires, PresignedURL: presignedURL}.String() + "\n")
+		console.Println(ShareMessage{Expires: expires / time.Second, PresignedURL: presignedURL}.String())
 	}
 	return nil
 }
