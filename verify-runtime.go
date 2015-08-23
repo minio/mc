@@ -26,8 +26,7 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
-var minWindowsGolangVersion = "1.5"
-var minGolangVersion = "1.3"
+var minGolangVersion = "1.5"
 
 // following code handles the current Golang release styles, we might have to update them in future
 // if golang community divulges from the below formatting style.
@@ -91,17 +90,9 @@ func (v1 version) LessThan(v2 version) bool {
 
 func checkGolangRuntimeVersion() {
 	v1 := newVersion(getNormalizedGolangVersion())
-	switch runtime.GOOS {
-	case "windows":
-		v2 := newVersion(minWindowsGolangVersion)
-		if v1.LessThan(v2) {
-			console.Errorln("Minimum Golang runtime expected on windows is go1.5, please compile ‘mc’ with atleast go1.5")
-		}
-	default:
-		v2 := newVersion(minGolangVersion)
-		if v1.LessThan(v2) {
-			console.Errorln("Minimum Golang runtime expected on windows is go1.3, please compile ‘mc’ with atleast go1.3")
-		}
+	v2 := newVersion(minGolangVersion)
+	if v1.LessThan(v2) {
+		console.Errorf("Found Golang runtime: ‘%s’, minimum Golang runtime expected for ‘%s’ is go1.5, please compile ‘mc’ with atleast go1.5\n", v1, runtime.GOOS)
 	}
 }
 
