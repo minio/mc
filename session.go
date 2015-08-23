@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 func migrateSession() {

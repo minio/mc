@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio/mc/internal/github.com/fatih/color"
-	"github.com/minio/mc/internal/github.com/minio/cli"
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/quick"
+	"github.com/fatih/color"
+	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio/pkg/quick"
 )
 
 //   Configure minio client

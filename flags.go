@@ -16,7 +16,7 @@
 
 package main
 
-import "github.com/minio/mc/internal/github.com/minio/cli"
+import "github.com/minio/cli"
 
 // Collection of mc commands currently supported are
 var commands = []cli.Command{}

@@ -23,10 +23,10 @@ import (
 
 	"path/filepath"
 
-	"github.com/minio/mc/internal/github.com/fatih/color"
-	"github.com/minio/mc/internal/github.com/mattn/go-isatty"
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
-	"github.com/minio/mc/internal/github.com/shiena/ansicolor"
+	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
+	"github.com/minio/minio/pkg/probe"
+	"github.com/shiena/ansicolor"
 )
 
 // NoDebugPrint defines if the input should be printed in debug or not. By default it's set to true.

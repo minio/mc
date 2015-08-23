@@ -1,5 +1,5 @@
 ## filter multiple GOPATH
-all: getdeps install
+all: install
 
 checkdeps:
 	@echo "Checking deps:"
@@ -20,37 +20,37 @@ verifiers: getdeps vet fmt lint cyclo deadcode
 
 vet:
 	@echo "Running $@:"
-	@go vet .
-	@go vet github.com/minio/mc/pkg...
+	@GO15VENDOREXPERIMENT=1 go vet .
+	@GO15VENDOREXPERIMENT=1 go vet github.com/minio/mc/pkg...
 fmt:
 	@echo "Running $@:"
-	@gofmt -s -l *.go
-	@gofmt -s -l pkg
+	@GO15VENDOREXPERIMENT=1 gofmt -s -l *.go
+	@GO15VENDOREXPERIMENT=1 gofmt -s -l pkg
 lint:
 	@echo "Running $@:"
-	@golint .
-	@golint pkg
+	@GO15VENDOREXPERIMENT=1 golint .
+	@GO15VENDOREXPERIMENT=1 golint pkg
 
 cyclo:
 	@echo "Running $@:"
-	@gocyclo -over 30 .
+	@GO15VENDOREXPERIMENT=1 gocyclo -over 30 .
 
 deadcode:
 	@echo "Running $@:"
-	@deadcode
+	@GO15VENDOREXPERIMENT=1 deadcode
 
 build: getdeps verifiers
 	@echo "Installing mc:"
-	@go test -race ./
-	@go test -race github.com/minio/mc/pkg...
+	@GO15VENDOREXPERIMENT=1 go test -race ./
+	@GO15VENDOREXPERIMENT=1 go test -race github.com/minio/mc/pkg...
 
 gomake-all: build
-	@go install github.com/minio/mc
+	@GO15VENDOREXPERIMENT=1 go install github.com/minio/mc
 	@mkdir -p $(HOME)/.mc
 
 release: genversion
 	@echo "Installing mc with new version.go:"
-	@go install github.com/minio/mc
+	@GO15VENDOREXPERIMENT=1 go install github.com/minio/mc
 	@mkdir -p $(HOME)/.mc
 
 genversion:
@@ -58,7 +58,7 @@ genversion:
 	@go run genversion.go
 
 coverage:
-	@go test -race -coverprofile=cover.out
+	@GO15VENDOREXPERIMENT=1 go test -race -coverprofile=cover.out
 	@go tool cover -html=cover.out && echo "Visit your browser"
 
 install: gomake-all

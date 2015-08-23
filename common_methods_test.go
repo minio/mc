@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/minio/mc/internal/gopkg.in/check.v1"
+	. "gopkg.in/check.v1"
 )
 
 func (s *CmdTestSuite) TestCommonMethods(c *C) {

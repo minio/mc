@@ -19,8 +19,8 @@ package console
 import (
 	"testing"
 
-	"github.com/minio/mc/internal/github.com/fatih/color"
-	. "github.com/minio/mc/internal/gopkg.in/check.v1"
+	"github.com/fatih/color"
+	. "gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { TestingT(t) }

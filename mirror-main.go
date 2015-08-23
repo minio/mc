@@ -26,9 +26,9 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/minio/mc/internal/github.com/minio/cli"
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
+	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.

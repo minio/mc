@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // CopyMessage container for file copy messages

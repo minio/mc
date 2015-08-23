@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
