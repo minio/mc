@@ -68,6 +68,24 @@ EXAMPLES:
 `,
 }
 
+// CopyMessage container for file copy messages
+type CopyMessage struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
+	Length int64  `json:"length"`
+}
+
+// String string printer for copy message
+func (c CopyMessage) String() string {
+	if !globalJSONFlag {
+		return fmt.Sprintf("‘%s’ -> ‘%s’\n", c.Source, c.Target)
+	}
+	copyMessageBytes, err := json.Marshal(c)
+	fatalIf(probe.NewError(err), "Failed to marshal copy message.")
+
+	return string(copyMessageBytes) + "\n"
+}
+
 // doCopy - Copy a singe file from source to destination
 func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGroup, statusCh chan<- copyURLs) {
 	defer wg.Done() // Notify that this copy routine is done.

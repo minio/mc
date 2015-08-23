@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -56,6 +57,26 @@ EXAMPLES:
       $ mc {{.Name}} alias list
 
 `,
+}
+
+// AliasMessage container for content message structure
+type AliasMessage struct {
+	Alias string `json:"alias"`
+	URL   string `json:"url"`
+}
+
+// String string printer for Content metadata
+func (a AliasMessage) String() string {
+	if !globalJSONFlag {
+		message := console.Colorize("Alias", fmt.Sprintf("[%s] <-", a.Alias))
+		message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
+		return message + "\n"
+	}
+	jsonMessageBytes, err := json.Marshal(a)
+	if err != nil {
+		panic(err)
+	}
+	return string(jsonMessageBytes) + "\n"
 }
 
 // mainConfig is the handle for "mc config" sub-command. writes configuration data in json format to config file.

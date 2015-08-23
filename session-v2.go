@@ -19,9 +19,12 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,6 +57,14 @@ type sessionV2Header struct {
 	TotalObjects int       `json:"total-objects"`
 }
 
+// SessionJSONMessage json container for session messages
+type SessionJSONMessage struct {
+	SessionID   string   `json:"sessionid"`
+	Time        string   `json:"time"`
+	CommandType string   `json:"command-type"`
+	CommandArgs []string `json:"command-args"`
+}
+
 // sessionV2
 type sessionV2 struct {
 	Header    *sessionV2Header
@@ -61,6 +72,26 @@ type sessionV2 struct {
 	mutex     *sync.Mutex
 	DataFP    *os.File
 	sigCh     bool
+}
+
+func (s sessionV2) String() string {
+	if !globalJSONFlag {
+		message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
+		message = message + console.Colorize("Time", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
+		message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
+		return message + "\n"
+	}
+	sessionMesage := SessionJSONMessage{
+		SessionID:   s.SessionID,
+		Time:        s.Header.When.Local().Format(printDate),
+		CommandType: s.Header.CommandType,
+		CommandArgs: s.Header.CommandArgs,
+	}
+	sessionJSONBytes, err := json.Marshal(sessionMesage)
+	if err != nil {
+		panic(err)
+	}
+	return string(sessionJSONBytes) + "\n"
 }
 
 // newSessionV2 provides a new session

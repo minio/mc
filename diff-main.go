@@ -59,15 +59,15 @@ func mainDiff(ctx *cli.Context) {
 	}
 
 	config := mustGetMcConfig()
-	firstURL := ctx.Args().First()
-	secondURL := ctx.Args()[1]
+	firstArg := ctx.Args().First()
+	secondArg := ctx.Args()[1]
 
 	var err *probe.Error
-	firstURL, err = getCanonicalizedURL(firstURL, config.Aliases)
-	fatalIf(err.Trace(firstURL), "Unable to canonicalize first URL.")
+	firstURL, err := getCanonicalizedURL(firstArg, config.Aliases)
+	fatalIf(err.Trace(firstArg), "Unable to parse first argument ‘"+firstArg+"’.")
 
-	secondURL, err = getCanonicalizedURL(secondURL, config.Aliases)
-	fatalIf(err.Trace(secondURL), "Unable to canonicalize second URL.")
+	secondURL, err := getCanonicalizedURL(secondArg, config.Aliases)
+	fatalIf(err.Trace(secondArg), "Unable to parse second argument ‘"+secondArg+"’.")
 
 	if isURLRecursive(secondURL) {
 		fatalIf(probe.NewError(errInvalidArgument), "Second argument ‘"+secondURL+"’ cannot be recursive.")
