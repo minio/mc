@@ -86,8 +86,8 @@ func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
 			session, err := loadSessionV2(sid)
-			fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’")
-			fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’")
+			fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’.")
+			fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
 		}
 		return
 	}

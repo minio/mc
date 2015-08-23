@@ -111,7 +111,7 @@ func verifyMCRuntime() {
 		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}
 	if !isSessionDirExists() {
-		fatalIf(createSessionDir(), "Unable to create session dir.")
+		fatalIf(createSessionDir().Trace(), "Unable to create session dir.")
 	}
 	checkGolangRuntimeVersion()
 }

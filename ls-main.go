@@ -86,7 +86,8 @@ func mainList(ctx *cli.Context) {
 		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
 
 		// if recursive strip off the "..."
-		fatalIf(doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL)).Trace(), "Unable to list target ‘"+targetURL+"’.")
+		err = doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL))
+		fatalIf(err.Trace(targetURL), "Unable to list target ‘"+targetURL+"’.")
 	}
 }
 
@@ -94,7 +95,7 @@ func mainList(ctx *cli.Context) {
 func doListCmd(targetURL string, recursive bool) *probe.Error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(targetURL)
 	}
-	return doList(clnt, recursive).Trace()
+	return doList(clnt, recursive).Trace(targetURL)
 }

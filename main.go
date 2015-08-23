@@ -150,7 +150,7 @@ VERSION:
 {{end}}
 `
 	app.CommandNotFound = func(ctx *cli.Context, command string) {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Command not found: ‘%s’", command))
+		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Command ‘%s’ not found.", command))
 	}
 	return app
 }
