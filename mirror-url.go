@@ -50,7 +50,6 @@ func (m mirrorURLs) isEmpty() bool {
 type MirrorMessage struct {
 	Source  string   `json:"source"`
 	Targets []string `json:"targets"`
-	Length  int64    `json:"length"`
 }
 
 // String string printer for mirror message
@@ -85,23 +84,15 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	/****** Generic rules *******/
 	// Source cannot be a folder (except when recursive)
 	if !isURLRecursive(srcURL) {
-		_, srcContent, err := url2Stat(srcURL)
-		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
+		fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Source ‘%s’ is not recursive. Use ‘%s...’ as argument to mirror recursively.", srcURL, srcURL))
+	}
+	// Recursive source URL.
+	newSrcURL := stripRecursiveURL(srcURL)
+	_, srcContent, err := url2Stat(newSrcURL)
+	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
 
-		if !srcContent.Type.IsRegular() {
-			if srcContent.Type.IsDir() {
-				fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively.", srcURL, srcURL))
-			}
-			fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a file.")
-		}
-	} else { // Recursive source URL.
-		newSrcURL := stripRecursiveURL(srcURL)
-		_, srcContent, err := url2Stat(newSrcURL)
-		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
-
-		if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-			fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a folder.")
-		}
+	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
+		fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a folder.")
 	}
 
 	if len(tgtURLs) == 0 && tgtURLs == nil {
@@ -122,6 +113,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 				fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 			}
 		}
+
 		_, content, err := url2Stat(tgtURL)
 		fatalIf(err.Trace(tgtURL), "Unable to stat target ‘"+tgtURL+"’.")
 		if !content.Type.IsDir() {

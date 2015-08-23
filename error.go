@@ -39,7 +39,7 @@ func fatalIf(err *probe.Error, msg string) {
 			SysInfo   map[string]string  `json:"sysinfo"`
 		}{
 			Message: msg,
-			Type:    "Fatal",
+			Type:    "fatal",
 			Cause:   err.ToGoError(),
 			SysInfo: err.SysInfo,
 		}
@@ -73,7 +73,7 @@ func errorIf(err *probe.Error, msg string) {
 			SysInfo   map[string]string  `json:"sysinfo"`
 		}{
 			Message: msg,
-			Type:    "Error",
+			Type:    "error",
 			Cause:   err.ToGoError(),
 			SysInfo: err.SysInfo,
 		}
