@@ -20,8 +20,8 @@ import (
 	"os"
 	"regexp"
 
-	. "github.com/minio/mc/internal/gopkg.in/check.v1"
 	"github.com/minio/mc/pkg/console"
+	. "gopkg.in/check.v1"
 )
 
 func (s *CmdTestSuite) TestValidSessionID(c *C) {

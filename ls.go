@@ -22,10 +22,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/minio/mc/internal/github.com/dustin/go-humanize"
-	"github.com/minio/mc/internal/github.com/minio/minio/pkg/probe"
+	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 )
 
 /// ls - related internal functions

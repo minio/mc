@@ -1,0 +1,97 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"canonical": "github.com/dustin/go-humanize",
+			"comment": "",
+			"local": "vendor/github.com/dustin/go-humanize",
+			"revision": "1c212aae1d02984808182b98b0da7a3e07e4c770",
+			"revisionTime": "2015-08-09T13:14:05-07:00"
+		},
+		{
+			"canonical": "github.com/fatih/color",
+			"comment": "",
+			"local": "vendor/github.com/fatih/color",
+			"revision": "f773d4c806cc8e4a5749d6a35e2a4bbcd71443d6",
+			"revisionTime": "2015-08-04T08:17:43+03:00"
+		},
+		{
+			"canonical": "github.com/fatih/structs",
+			"comment": "",
+			"local": "vendor/github.com/fatih/structs",
+			"revision": "5721d85c9a0e65ee65005e7da48c56612ae04ee3",
+			"revisionTime": "2015-08-20T22:35:37-07:00"
+		},
+		{
+			"canonical": "github.com/mattn/go-isatty",
+			"comment": "",
+			"local": "vendor/github.com/mattn/go-isatty",
+			"revision": "7fcbc72f853b92b5720db4a6b8482be612daef24",
+			"revisionTime": "2015-08-14T09:26:29+09:00"
+		},
+		{
+			"canonical": "github.com/minio/cli",
+			"comment": "",
+			"local": "vendor/github.com/minio/cli",
+			"revision": "ee386baecc113eef2b8945df429120a5aec319ef",
+			"revisionTime": "2015-08-19T11:23:55-07:00"
+		},
+		{
+			"canonical": "github.com/minio/minio-go",
+			"comment": "",
+			"local": "vendor/github.com/minio/minio-go",
+			"revision": "ca58a5b7e02c2e0adf5fb404df3545f0ddc45b29",
+			"revisionTime": "2015-08-22T15:40:20-07:00"
+		},
+		{
+			"canonical": "github.com/minio/minio/pkg/probe",
+			"comment": "",
+			"local": "vendor/github.com/minio/minio/pkg/probe",
+			"revision": "4d1f38d28cabcfa321e9d88acef67e16e7bafb2a",
+			"revisionTime": "2015-08-22T18:37:56-07:00"
+		},
+		{
+			"canonical": "github.com/minio/minio/pkg/quick",
+			"comment": "",
+			"local": "vendor/github.com/minio/minio/pkg/quick",
+			"revision": "4d1f38d28cabcfa321e9d88acef67e16e7bafb2a",
+			"revisionTime": "2015-08-22T18:37:56-07:00"
+		},
+		{
+			"canonical": "github.com/minio/pb",
+			"comment": "",
+			"local": "vendor/github.com/minio/pb",
+			"revision": "6a97c3b0da073f974e0b8d1ac1bc42c0a7adca46",
+			"revisionTime": "2015-08-12T18:13:54-07:00"
+		},
+		{
+			"canonical": "github.com/olekukonko/ts",
+			"comment": "",
+			"local": "vendor/github.com/olekukonko/ts",
+			"revision": "ecf753e7c962639ab5a1fb46f7da627d4c0a04b8",
+			"revisionTime": "2014-04-12T15:01:45-07:00"
+		},
+		{
+			"canonical": "github.com/shiena/ansicolor",
+			"comment": "",
+			"local": "vendor/github.com/shiena/ansicolor",
+			"revision": "a5e2b567a4dd6cc74545b8a4f27c9d63b9e7735b",
+			"revisionTime": "2015-07-19T16:15:31+09:00"
+		},
+		{
+			"canonical": "github.com/tchap/go-patricia/patricia",
+			"comment": "",
+			"local": "vendor/github.com/tchap/go-patricia/patricia",
+			"revision": "a560f85131e8aafc2cc4bcb1e265ae3fc6ee5f50",
+			"revisionTime": "2015-06-11T09:53:39+02:00"
+		},
+		{
+			"canonical": "gopkg.in/check.v1",
+			"comment": "",
+			"local": "vendor/gopkg.in/check.v1",
+			"revision": "11d3bc7aa68e238947792f30573146a3231fc0f1",
+			"revisionTime": "2015-07-29T10:04:31+02:00"
+		}
+	]
+}
