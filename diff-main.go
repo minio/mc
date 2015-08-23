@@ -17,9 +17,9 @@
 package main
 
 import (
-	"fmt"
-
+	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -58,6 +58,10 @@ func mainDiff(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
 
+	console.SetCustomTheme(map[string]*color.Color{
+		"Diff": color.New(color.FgGreen, color.Bold),
+	})
+
 	config := mustGetMcConfig()
 	firstArg := ctx.Args().First()
 	secondArg := ctx.Args()[1]
@@ -75,7 +79,7 @@ func mainDiff(ctx *cli.Context) {
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		fatalIf(diff.err.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
-		fmt.Println(diff.message)
+		console.Println(diff.message)
 	}
 }
 

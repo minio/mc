@@ -58,10 +58,10 @@ type sessionV2Header struct {
 
 // SessionJSONMessage json container for session messages
 type SessionJSONMessage struct {
-	SessionID   string   `json:"sessionid"`
-	Time        string   `json:"time"`
-	CommandType string   `json:"command-type"`
-	CommandArgs []string `json:"command-args"`
+	SessionID   string    `json:"sessionid"`
+	Time        time.Time `json:"time"`
+	CommandType string    `json:"command-type"`
+	CommandArgs []string  `json:"command-args"`
 }
 
 // sessionV2
@@ -82,7 +82,7 @@ func (s sessionV2) String() string {
 	}
 	sessionMesage := SessionJSONMessage{
 		SessionID:   s.SessionID,
-		Time:        s.Header.When.Local().Format(printDate),
+		Time:        s.Header.When.Local(),
 		CommandType: s.Header.CommandType,
 		CommandArgs: s.Header.CommandArgs,
 	}

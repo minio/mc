@@ -56,16 +56,16 @@ func (d DiffMessage) String() string {
 	if !globalJSONFlag {
 		msg := ""
 		switch d.Diff {
-		case "Only-in":
-			msg = "‘" + d.FirstURL + "’ only in ‘" + d.SecondURL + "’."
-		case "Type":
-			msg = d.FirstURL + " and " + d.SecondURL + " differs in type."
-		case "Size":
-			msg = d.FirstURL + " and " + d.SecondURL + " differs in size."
+		case "only-in-first":
+			msg = "‘" + d.FirstURL + "’" + " and " + "‘" + d.SecondURL + "’" + " - only in first."
+		case "type":
+			msg = "‘" + d.FirstURL + "’" + " and " + "‘" + d.SecondURL + "’" + " - differ in type."
+		case "size":
+			msg = "‘" + d.FirstURL + "’" + " and " + "‘" + d.SecondURL + "’" + " - differ in size."
 		default:
 			fatalIf(probe.NewError(errors.New("")), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
 		}
-		return msg
+		return console.Colorize("Diff", msg)
 	}
 	diffJSONBytes, err := json.Marshal(d)
 	fatalIf(probe.NewError(err), "Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+d.Diff+"’.")
@@ -127,7 +127,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 				message: DiffMessage{
 					FirstURL:  firstURL,
 					SecondURL: secondURL,
-					Diff:      "Type",
+					Diff:      "type",
 				}.String(),
 				err: nil,
 			}
@@ -143,7 +143,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 				message: DiffMessage{
 					FirstURL:  firstURL,
 					SecondURL: secondURL,
-					Diff:      "Type",
+					Diff:      "type",
 				}.String(),
 				err: nil,
 			}
@@ -181,7 +181,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 				message: DiffMessage{
 					FirstURL:  firstURL,
 					SecondURL: secondURL,
-					Diff:      "Type",
+					Diff:      "type",
 				}.String(),
 				err: nil,
 			}
@@ -199,7 +199,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 			message: DiffMessage{
 				FirstURL:  firstURL,
 				SecondURL: secondURL,
-				Diff:      "Size",
+				Diff:      "size",
 			}.String(),
 			err: nil,
 		}
@@ -234,22 +234,12 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 		_, newFirstContent, errFirst := url2Stat(newFirstURL)
 		_, newSecondContent, errSecond := url2Stat(newSecondURL)
 		switch {
-		case errFirst != nil && errSecond == nil:
-			ch <- diff{
-				message: DiffMessage{
-					FirstURL:  newSecondURL,
-					SecondURL: secondClnt.URL().String(),
-					Diff:      "Only-in",
-				}.String(),
-				err: nil,
-			}
-			continue
 		case errFirst == nil && errSecond != nil:
 			ch <- diff{
 				message: DiffMessage{
 					FirstURL:  newFirstURL,
-					SecondURL: firstClnt.URL().String(),
-					Diff:      "Only-in",
+					SecondURL: newSecondURL,
+					Diff:      "only-in-first",
 				}.String(),
 				err: nil,
 			}
@@ -262,7 +252,7 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 						message: DiffMessage{
 							FirstURL:  newFirstURL,
 							SecondURL: newSecondURL,
-							Diff:      "Type",
+							Diff:      "type",
 						}.String(),
 						err: nil,
 					}
@@ -274,7 +264,7 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 						message: DiffMessage{
 							FirstURL:  newFirstURL,
 							SecondURL: newSecondURL,
-							Diff:      "Type",
+							Diff:      "type",
 						}.String(),
 						err: nil,
 					}
@@ -327,7 +317,9 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 		for {
 			select {
 			case <-time.Tick(100 * time.Millisecond):
-				console.PrintC("\r" + "Scanning.. " + string(<-cursorCh))
+				if !globalQuietFlag && !globalJSONFlag {
+					console.PrintC("\r" + "Scanning.. " + string(<-cursorCh))
+				}
 			case <-doneCh:
 				return
 			}
@@ -335,7 +327,9 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 	}(doneCh)
 	wg.Wait()
 	doneCh <- struct{}{}
-	console.PrintC("\r" + "Finished." + "\n")
+	if !globalQuietFlag && !globalJSONFlag {
+		console.PrintC("\r" + "Finished." + "\n")
+	}
 
 	matchNameCh := make(chan string, 10000)
 	go func(matchNameCh chan<- string) {
@@ -354,7 +348,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 				message: DiffMessage{
 					FirstURL:  firstURL,
 					SecondURL: firstClnt.URL().String(),
-					Diff:      "Only-in",
+					Diff:      "only-in-first",
 				}.String(),
 				err: nil,
 			}

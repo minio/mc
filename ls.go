@@ -22,6 +22,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/client"
@@ -37,17 +38,17 @@ const (
 
 // ContentMessage container for content message structure.
 type ContentMessage struct {
-	Filetype string `json:"type"`
-	Time     string `json:"last-modified"`
-	Size     string `json:"size"`
-	Name     string `json:"name"`
+	Filetype string    `json:"type"`
+	Time     time.Time `json:"last-modified"`
+	Size     int64     `json:"size"`
+	Name     string    `json:"name"`
 }
 
 // String string printer for Content metadata.
 func (c ContentMessage) String() string {
 	if !globalJSONFlag {
-		message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time))
-		message = message + console.Colorize("Size", fmt.Sprintf("%6s ", c.Size))
+		message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
+		message = message + console.Colorize("Size", fmt.Sprintf("%6s ", humanize.IBytes(uint64(c.Size))))
 		message = func() string {
 			if c.Filetype == "folder" {
 				return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Name))
@@ -65,7 +66,7 @@ func (c ContentMessage) String() string {
 // parseContent parse client Content container into printer struct.
 func parseContent(c *client.Content) ContentMessage {
 	content := ContentMessage{}
-	content.Time = c.Time.Local().Format(printDate)
+	content.Time = c.Time.Local()
 
 	// guess file type
 	content.Filetype = func() string {
@@ -75,7 +76,7 @@ func parseContent(c *client.Content) ContentMessage {
 		return "file"
 	}()
 
-	content.Size = humanize.IBytes(uint64(c.Size))
+	content.Size = c.Size
 
 	// Convert OS Type to match console file printing style.
 	content.Name = func() string {

@@ -87,6 +87,12 @@ func mainConfig(ctx *cli.Context) {
 	if strings.TrimSpace(ctx.Args().First()) == "" {
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 	}
+	// set new custom coloring
+	console.SetCustomTheme(map[string]*color.Color{
+		"Alias": color.New(color.FgCyan, color.Bold),
+		"URL":   color.New(color.FgWhite),
+	})
+
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
@@ -105,11 +111,6 @@ func mainConfig(ctx *cli.Context) {
 
 			// convert interface{} back to its original struct
 			newConf := config.Data().(*configV2)
-			// set new custom coloring
-			console.SetCustomTheme(map[string]*color.Color{
-				"Alias": color.New(color.FgCyan, color.Bold),
-				"URL":   color.New(color.FgWhite),
-			})
 			for k, v := range newConf.Aliases {
 				console.Println(AliasMessage{k, v})
 			}
