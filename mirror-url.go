@@ -60,7 +60,7 @@ func (s MirrorMessage) String() string {
 	}
 	mirrorMessageBytes, err := json.Marshal(s)
 	if err != nil {
-		panic(err)
+		fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
 	}
 	return string(mirrorMessageBytes)
 }

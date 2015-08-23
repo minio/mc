@@ -58,7 +58,7 @@ func (c ContentMessage) String() string {
 	}
 	jsonMessageBytes, err := json.Marshal(c)
 	if err != nil {
-		panic(err)
+		fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
 	}
 	return string(jsonMessageBytes)
 }
