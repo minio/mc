@@ -58,10 +58,9 @@ func (s MirrorMessage) String() string {
 	if !globalJSONFlag {
 		return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets)
 	}
-	mirrorMessageBytes, err := json.Marshal(s)
-	if err != nil {
-		panic(err)
-	}
+	mirrorMessageBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
+
 	return string(mirrorMessageBytes)
 }
 

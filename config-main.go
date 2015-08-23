@@ -72,10 +72,9 @@ func (a AliasMessage) String() string {
 		message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
 		return message
 	}
-	jsonMessageBytes, err := json.Marshal(a)
-	if err != nil {
-		panic(err)
-	}
+	jsonMessageBytes, e := json.Marshal(a)
+	fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
+
 	return string(jsonMessageBytes)
 }
 
