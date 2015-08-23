@@ -73,9 +73,8 @@ func (a AliasMessage) String() string {
 		return message
 	}
 	jsonMessageBytes, e := json.Marshal(a)
-	if e != nil {
-		fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
-	}
+	fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
+
 	return string(jsonMessageBytes)
 }
 
