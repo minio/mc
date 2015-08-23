@@ -41,7 +41,7 @@ import (
 //
 var configCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Modify, add alias, oauth into default configuration file [~/.mc/config.json]",
+	Usage:  "Modify, add alias, oauth into default configuration file [~/.mc/config.json].",
 	Action: mainConfig,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

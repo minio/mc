@@ -28,7 +28,7 @@ import (
 // Help message.
 var catCmd = cli.Command{
 	Name:   "cat",
-	Usage:  "Display contents of a file",
+	Usage:  "Display contents of a file.",
 	Action: mainCat,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

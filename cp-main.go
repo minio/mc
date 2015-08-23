@@ -34,7 +34,7 @@ import (
 // Help message.
 var cpCmd = cli.Command{
 	Name:   "cp",
-	Usage:  "Copy files and folders from many sources to a single destination",
+	Usage:  "Copy files and folders from many sources to a single destination.",
 	Action: mainCopy,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

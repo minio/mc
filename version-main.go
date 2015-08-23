@@ -28,7 +28,7 @@ import (
 
 var versionCmd = cli.Command{
 	Name:   "version",
-	Usage:  "Print version",
+	Usage:  "Print version.",
 	Action: mainVersion,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

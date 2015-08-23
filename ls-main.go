@@ -24,7 +24,7 @@ import (
 // Help message.
 var lsCmd = cli.Command{
 	Name:   "ls",
-	Usage:  "List files and folders",
+	Usage:  "List files and folders.",
 	Action: mainList,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

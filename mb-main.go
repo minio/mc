@@ -25,7 +25,7 @@ import (
 // Help message.
 var mbCmd = cli.Command{
 	Name:   "mb",
-	Usage:  "Make a bucket or folder",
+	Usage:  "Make a bucket or folder.",
 	Action: mainMakeBucket,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

@@ -27,7 +27,7 @@ import (
 // Help message.
 var accessCmd = cli.Command{
 	Name:   "access",
-	Usage:  "Set access permissions",
+	Usage:  "Set access permissions.",
 	Action: mainAccess,
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
