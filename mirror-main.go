@@ -87,7 +87,7 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 		if !globalQuietFlag && !globalJSONFlag {
 			bar.ErrorGet(int64(length))
 		}
-		sURLs.Error = err.Trace()
+		sURLs.Error = err.Trace(sURLs.SourceContent.Name)
 		statusCh <- sURLs
 		return
 	}
@@ -102,7 +102,7 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 		console.PrintC(MirrorMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
-		})
+		}.String() + "\n")
 		newReader = reader
 	} else {
 		// set up progress
@@ -115,7 +115,7 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 		if !globalQuietFlag && !globalJSONFlag {
 			bar.ErrorPut(int64(length))
 		}
-		sURLs.Error = err.Trace()
+		sURLs.Error = err.Trace(targetURLs...)
 		statusCh <- sURLs
 		return
 	}
@@ -156,7 +156,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if sURLs.Error != nil {
-				errorIf(sURLs.Error, "Unable to prepare mirror URLs.")
+				errorIf(sURLs.Error, "Unable to prepare mirror arguments.")
 				break
 			}
 			if sURLs.isEmpty() {
@@ -165,7 +165,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
 				session.Close()
-				console.Fatalf("Unable to marshal URLs to JSON. %s\n", probe.NewError(err))
+				fatalIf(probe.NewError(err), "Unable to marshal URLs into JSON.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuietFlag && !globalJSONFlag {
@@ -228,8 +228,7 @@ func doMirrorCmdSession(session *sessionV2) {
 				if sURLs.Error == nil {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
-					console.Println()
-					errorIf(sURLs.Error, fmt.Sprintf("Failed to mirror ‘%s’.", sURLs.SourceContent.Name))
+					errorIf(sURLs.Error.Trace(), "Failed to mirror.")
 				}
 			case <-trapCh: // Receive interrupt notification.
 				session.Close()
@@ -271,24 +270,23 @@ func doMirrorCmdSession(session *sessionV2) {
 func mainMirror(ctx *cli.Context) {
 	checkMirrorSyntax(ctx)
 
+	var e error
 	session := newSessionV2()
-
-	var err error
 	session.Header.CommandType = "mirror"
-	session.Header.RootPath, err = os.Getwd()
-	if err != nil {
+	session.Header.RootPath, e = os.Getwd()
+	if e != nil {
 		session.Close()
 		session.Delete()
-		console.Fatalf("Unable to get current working folder. %s\n", err)
+		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
 
 	// extract URLs.
-	var perr *probe.Error
-	session.Header.CommandArgs, perr = args2URLs(ctx.Args())
-	if perr != nil {
+	var err *probe.Error
+	session.Header.CommandArgs, err = args2URLs(ctx.Args())
+	if err != nil {
 		session.Close()
 		session.Delete()
-		console.Fatalf("One or more unknown URL types found in %s. %s\n", ctx.Args(), perr)
+		fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("One or more unknown argument types found in ‘%s’.", ctx.Args()))
 	}
 
 	doMirrorCmdSession(session)

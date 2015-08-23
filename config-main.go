@@ -70,13 +70,13 @@ func (a AliasMessage) String() string {
 	if !globalJSONFlag {
 		message := console.Colorize("Alias", fmt.Sprintf("[%s] <-", a.Alias))
 		message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
-		return message + "\n"
+		return message
 	}
 	jsonMessageBytes, err := json.Marshal(a)
 	if err != nil {
 		panic(err)
 	}
-	return string(jsonMessageBytes) + "\n"
+	return string(jsonMessageBytes)
 }
 
 // mainConfig is the handle for "mc config" sub-command. writes configuration data in json format to config file.
@@ -112,7 +112,7 @@ func mainConfig(ctx *cli.Context) {
 				"URL":   color.New(color.FgWhite),
 			})
 			for k, v := range newConf.Aliases {
-				console.Print(AliasMessage{k, v})
+				console.Println(AliasMessage{k, v})
 			}
 			return
 		}

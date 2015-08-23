@@ -50,7 +50,7 @@ func getCanonicalizedURL(arg string, aliases map[string]string) (urlStr string, 
 	// Check and expand Alias
 	urlStr, err = aliasExpand(arg, aliases)
 	if err != nil {
-		return "", err.Trace()
+		return "", err.Trace(arg)
 	}
 	if _, err := client.Parse(urlStr); err != nil {
 		// Not a valid URL. Return error
@@ -64,7 +64,7 @@ func getCanonicalizedURLs(args []string, aliases map[string]string) (urls []stri
 	for _, arg := range args {
 		u, err := getCanonicalizedURL(arg, aliases)
 		if err != nil {
-			return nil, err.Trace()
+			return nil, err.Trace(arg)
 		}
 		urls = append(urls, u)
 	}
@@ -81,7 +81,7 @@ func args2URLs(args []string) ([]string, *probe.Error) {
 	// Convert arguments to URLs: expand alias, fix format...
 	URLs, err := getCanonicalizedURLs(args, config.Aliases)
 	if err != nil {
-		return nil, err.Trace()
+		return nil, err.Trace(args...)
 	}
 	return URLs, nil
 }

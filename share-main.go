@@ -76,13 +76,14 @@ func mainShare(ctx *cli.Context) {
 	if len(args) == 2 {
 		var err error
 		expires, err = time.ParseDuration(args.Last())
-		fatalIf(probe.NewError(err), "Unable to parse time argument")
+		fatalIf(probe.NewError(err), "Unable to parse time argument.")
 	}
 	targetURL, err := getCanonicalizedURL(url, config.Aliases)
 	fatalIf(err.Trace(url), "Unable to parse argument ‘"+url+"’.")
 
 	// if recursive strip off the "..."
-	fatalIf(doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires).Trace(), "Unable generate URL for sharing")
+	err = doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
+	fatalIf(err.Trace(targetURL), "Unable generate URL for sharing.")
 }
 
 // ShareMessage container for share messages
@@ -94,16 +95,15 @@ type ShareMessage struct {
 // String string printer for share message
 func (s ShareMessage) String() string {
 	if !globalJSONFlag {
-		return fmt.Sprintf("Succesfully generated shared URL with expiry %s, please share: %s\n", s.Expires, s.PresignedURL)
+		return fmt.Sprintf("Succesfully generated shared URL with expiry %s, please share: %s", s.Expires, s.PresignedURL)
 	}
 	shareMessageBytes, err := json.Marshal(s)
-	if err != nil {
-		panic(err)
-	}
+	fatalIf(probe.NewError(err), "Failed to marshal into JSON.")
+
 	// json encoding escapes ampersand into its unicode character which is not usable directly for share
 	// and fails with cloud storage. convert them back so that they are usable
 	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
-	return fmt.Sprintf("%s\n", string(shareMessageBytes))
+	return string(shareMessageBytes)
 }
 
 func getNewTargetURL(targetParser *client.URL, name string) string {
@@ -123,10 +123,10 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		return err.Trace()
 	}
 	if expires.Seconds() < 1 {
-		return probe.NewError(errors.New("Too low expires, expiration cannot be less than 1 second"))
+		return probe.NewError(errors.New("Too low expires, expiration cannot be less than 1 second."))
 	}
 	if expires.Seconds() > 604800 {
-		return probe.NewError(errors.New("Too high expires, expiration cannot be larger than 7 days"))
+		return probe.NewError(errors.New("Too high expires, expiration cannot be larger than 7 days."))
 	}
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
@@ -140,7 +140,7 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		if err != nil {
 			return err.Trace()
 		}
-		console.PrintC(ShareMessage{Expires: expires, PresignedURL: presignedURL})
+		console.PrintC(ShareMessage{Expires: expires, PresignedURL: presignedURL}.String() + "\n")
 	}
 	return nil
 }

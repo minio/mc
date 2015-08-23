@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"sort"
 	"strings"
@@ -76,7 +77,7 @@ func listSessions() *probe.Error {
 	// sort sessions based on time
 	sort.Sort(bySessionWhen(bySessions))
 	for _, session := range bySessions {
-		console.Print(session)
+		console.Println(session)
 	}
 	return nil
 }
@@ -85,22 +86,21 @@ func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
 			session, err := loadSessionV2(sid)
-			fatalIf(err.Trace(), "Unable to load session ‘"+sid+"’")
-
-			fatalIf(session.Delete().Trace(), "Unable to load session ‘"+sid+"’")
+			fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’")
+			fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’")
 		}
 		return
 	}
 
 	if !isSession(sid) {
-		console.Fatalf("Session ‘%s’ not found.\n", sid)
+		fatalIf(probe.NewError(errors.New("")), "Session ‘"+sid+"’ not found.")
 	}
 
 	session, err := loadSessionV2(sid)
-	fatalIf(err.Trace(), "Unable to load session ‘"+sid+"’")
+	fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’.")
 
 	if session != nil {
-		fatalIf(session.Delete().Trace(), "Unable to load session ‘"+sid+"’")
+		fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
 	}
 }
 
@@ -121,12 +121,12 @@ func mainSession(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 	if !isSessionDirExists() {
-		fatalIf(createSessionDir(), "Unable to create session directory")
+		fatalIf(createSessionDir().Trace(), "Unable to create session directory.")
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions
 	case "list":
-		fatalIf(listSessions(), "Unable to list sessions")
+		fatalIf(listSessions().Trace(), "Unable to list sessions.")
 	case "resume":
 		if len(ctx.Args().Tail()) != 1 {
 			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -138,11 +138,11 @@ func mainSession(ctx *cli.Context) {
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
 
 		if !isSession(sid) {
-			console.Fatalf("Session ‘%s’ not found.\n", sid)
+			fatalIf(probe.NewError(errors.New("")), "Session ‘"+sid+"’ not found.")
 		}
 
 		s, err := loadSessionV2(sid)
-		fatalIf(err.Trace(sid), "Unable to load session")
+		fatalIf(err.Trace(sid), "Unable to load session.")
 
 		// extra check for testing purposes
 		if s == nil {
@@ -150,16 +150,13 @@ func mainSession(ctx *cli.Context) {
 		}
 
 		savedCwd, e := os.Getwd()
-		if err != nil {
-			console.Fatalf("Unable to verify your current working folder. %s\n", e)
-		}
+		fatalIf(probe.NewError(e), "Unable to verify your current working folder.")
+
 		if s.Header.RootPath != "" {
 			// chdir to RootPath
-			if e := os.Chdir(s.Header.RootPath); e != nil {
-				console.Fatalf("Unable to change directory to root path while resuming session. %s\n", e)
-			}
+			e = os.Chdir(s.Header.RootPath)
+			fatalIf(probe.NewError(e), "Unable to change directory to root path while resuming session.")
 		}
-
 		sessionExecute(s)
 		err = s.Close()
 		fatalIf(err.Trace(), "Unable to close session file properly.")
@@ -169,9 +166,8 @@ func mainSession(ctx *cli.Context) {
 
 		// change dir back
 		e = os.Chdir(savedCwd)
-		if e != nil {
-			console.Fatalf("Unable to change directory to saved path. %s\n", e)
-		}
+		fatalIf(probe.NewError(e), "Unable to change directory to saved path ‘"+savedCwd+"’.")
+
 	// purge a requested pending session, if "*" purge everything
 	case "clear":
 		if len(ctx.Args().Tail()) != 1 {

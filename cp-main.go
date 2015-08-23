@@ -78,12 +78,12 @@ type CopyMessage struct {
 // String string printer for copy message
 func (c CopyMessage) String() string {
 	if !globalJSONFlag {
-		return fmt.Sprintf("‘%s’ -> ‘%s’\n", c.Source, c.Target)
+		return fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target)
 	}
 	copyMessageBytes, err := json.Marshal(c)
 	fatalIf(probe.NewError(err), "Failed to marshal copy message.")
 
-	return string(copyMessageBytes) + "\n"
+	return string(copyMessageBytes)
 }
 
 // doCopy - Copy a singe file from source to destination
@@ -119,7 +119,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 			Source: cpURLs.SourceContent.Name,
 			Target: cpURLs.TargetContent.Name,
 			Length: cpURLs.SourceContent.Size,
-		})
+		}.String() + "\n")
 		newReader = reader
 	} else {
 		// set up progress
