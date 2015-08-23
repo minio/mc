@@ -48,7 +48,7 @@ func fatalIf(err *probe.Error, msg string) {
 		}
 		json, err := json.Marshal(errorMessage)
 		if err != nil {
-			panic(err)
+			console.Fatalln(probe.NewError(err))
 		}
 		console.Println(string(json))
 		os.Exit(1)
@@ -82,7 +82,7 @@ func errorIf(err *probe.Error, msg string) {
 		}
 		json, err := json.Marshal(errorMessage)
 		if err != nil {
-			panic(err)
+			console.Fatalln(probe.NewError(err))
 		}
 		console.Println(string(json))
 		return

@@ -70,7 +70,7 @@ func getMcConfigDir() (string, *probe.Error) {
 // mustGetMcConfigDir - construct minio client config folder or fail
 func mustGetMcConfigDir() (configDir string) {
 	configDir, err := getMcConfigDir()
-	fatalIf(err.Trace(), "Unable to get mcConfigDir")
+	fatalIf(err.Trace(), "Unable to get mcConfigDir.")
 
 	return configDir
 }
@@ -99,7 +99,7 @@ func getMcConfigPath() (string, *probe.Error) {
 // mustGetMcConfigPath - similar to getMcConfigPath, ignores errors
 func mustGetMcConfigPath() string {
 	path, err := getMcConfigPath()
-	fatalIf(err.Trace(), "Unable to get mcConfigPath")
+	fatalIf(err.Trace(), "Unable to get mcConfigPath.")
 
 	return path
 }
@@ -138,7 +138,7 @@ func getMcConfig() (*configV2, *probe.Error) {
 // mustGetMcConfig - reads configuration file and returns configs, exits on error
 func mustGetMcConfig() *configV2 {
 	config, err := getMcConfig()
-	fatalIf(err.Trace(), "Unable to get mcConfig")
+	fatalIf(err.Trace(), "Unable to get mcConfig.")
 
 	return config
 }
@@ -186,7 +186,7 @@ func migrateConfigV1ToV101() {
 		return
 	}
 	mcConfigV1, err := quick.Load(mustGetMcConfigPath(), newConfigV1())
-	fatalIf(err.Trace(), "Unable to load config")
+	fatalIf(err.Trace(), "Unable to load config.")
 
 	// update to newer version
 	if mcConfigV1.Version() == "1.0.0" {
@@ -212,12 +212,12 @@ func migrateConfigV1ToV101() {
 		}
 
 		mcNewConfigV101, err := quick.New(confV101)
-		fatalIf(err.Trace(), "Unable to initialize quick config")
+		fatalIf(err.Trace(), "Unable to initialize quick config.")
 
 		err = mcNewConfigV101.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config")
+		fatalIf(err.Trace(), "Unable to save config.")
 
-		console.Infof("Successfully migrated %s from version: 1.0.0 to version: 1.0.1\n", mustGetMcConfigPath())
+		console.Infof("Successfully migrated %s from version ‘1.0.0’ to version ‘1.0.1’.\n", mustGetMcConfigPath())
 	}
 }
 
@@ -226,7 +226,7 @@ func migrateConfigV101ToV2() {
 		return
 	}
 	mcConfigV101, err := quick.Load(mustGetMcConfigPath(), newConfigV101())
-	fatalIf(err.Trace(), "Unable to load config")
+	fatalIf(err.Trace(), "Unable to load config.")
 
 	// update to newer version
 	if mcConfigV101.Version() == "1.0.1" {
@@ -234,12 +234,12 @@ func migrateConfigV101ToV2() {
 		confV2.Version = globalMCConfigVersion
 
 		mcNewConfigV2, err := quick.New(confV2)
-		fatalIf(err.Trace(), "Unable to initialize quick config")
+		fatalIf(err.Trace(), "Unable to initialize quick config.")
 
 		err = mcNewConfigV2.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config")
+		fatalIf(err.Trace(), "Unable to save config.")
 
-		console.Infof("Successfully migrated %s from version: 1.0.1 to version: 2\n", mustGetMcConfigPath())
+		console.Infof("Successfully migrated %s from version ‘1.0.1’ to version: ‘2’.\n", mustGetMcConfigPath())
 	}
 }
 

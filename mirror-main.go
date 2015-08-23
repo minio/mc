@@ -156,7 +156,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if sURLs.Error != nil {
-				errorIf(sURLs.Error, "Unable to prepare mirror arguments.")
+				errorIf(sURLs.Error.Trace(), "Unable to prepare mirror arguments.")
 				break
 			}
 			if sURLs.isEmpty() {
