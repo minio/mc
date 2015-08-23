@@ -30,7 +30,7 @@ import (
 // Help message.
 var sessionCmd = cli.Command{
 	Name:   "session",
-	Usage:  "Manage sessions for cp and mirror",
+	Usage:  "Manage sessions for cp and mirror.",
 	Action: mainSession,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

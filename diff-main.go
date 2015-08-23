@@ -26,8 +26,8 @@ import (
 // Help message.
 var diffCmd = cli.Command{
 	Name:        "diff",
-	Usage:       "Compute differences between two files or folders",
-	Description: "NOTE: This command *DOES NOT* check for content similarity, which means objects with same size, but different content will not be spotted",
+	Usage:       "Compute differences between two files or folders.",
+	Description: "NOTE: This command *DOES NOT* check for content similarity, which means objects with same size, but different content will not be spotted.",
 	Action:      mainDiff,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

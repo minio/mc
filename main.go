@@ -122,7 +122,7 @@ func registerApp() *cli.App {
 	registerFlag(debugFlag)  // enable debugging output
 
 	app := cli.NewApp()
-	app.Usage = "Minio Client for cloud storage and filesystems"
+	app.Usage = "Minio Client for cloud storage and filesystems."
 	// hide --version flag, version is a command
 	app.HideVersion = true
 	app.Commands = commands

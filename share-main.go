@@ -35,7 +35,7 @@ import (
 // Help message.
 var shareCmd = cli.Command{
 	Name:   "share",
-	Usage:  "Share documents via URL",
+	Usage:  "Share documents via URL.",
 	Action: mainShare,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

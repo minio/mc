@@ -40,7 +40,7 @@ const (
 // Help message.
 var updateCmd = cli.Command{
 	Name:   "update",
-	Usage:  "Check for new software updates",
+	Usage:  "Check for new software updates.",
 	Action: mainUpdate,
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
