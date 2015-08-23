@@ -298,9 +298,17 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		}
 		if err != nil {
 			if strings.Contains(err.Error(), "operation not permitted") {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     probe.NewError(err),
+				}
 				return nil
 			}
 			if os.IsPermission(err) {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     probe.NewError(err),
+				}
 				return nil
 			}
 			return err
@@ -309,6 +317,10 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			fi, err = os.Stat(fp)
 			if err != nil {
 				if os.IsNotExist(err) || os.IsPermission(err) { // ignore broken symlinks and permission denied
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     probe.NewError(err),
+					}
 					return nil
 				}
 				return err

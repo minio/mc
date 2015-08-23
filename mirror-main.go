@@ -34,7 +34,7 @@ import (
 // Help message.
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
-	Usage:  "Mirror files and folders from a single source to many destinations.",
+	Usage:  "Mirror folders recursively from a single source to many destinations.",
 	Action: mainMirror,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}

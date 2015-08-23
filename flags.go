@@ -28,27 +28,27 @@ var (
 	configFlag = cli.StringFlag{
 		Name:  "config-folder, C",
 		Value: mustGetMcConfigDir(),
-		Usage: "Path to configuration folder",
+		Usage: "Path to configuration folder.",
 	}
 
 	quietFlag = cli.BoolFlag{
 		Name:  "quiet, q",
-		Usage: "Suppress chatty console output",
+		Usage: "Suppress chatty console output.",
 	}
 
 	mimicFlag = cli.BoolFlag{
 		Name:  "mimic",
-		Usage: "Mimic operating system toolchain behavior wherever it makes sense",
+		Usage: "Behave like operating system tools. Use with shell aliases.",
 	}
 
 	jsonFlag = cli.BoolFlag{
 		Name:  "json",
-		Usage: "Enable json formatted output",
+		Usage: "Enable json formatted output.",
 	}
 
 	debugFlag = cli.BoolFlag{
 		Name:  "debug",
-		Usage: "Enable debugging output",
+		Usage: "Enable debugging output.",
 	}
 
 	// Add your new flags starting here
