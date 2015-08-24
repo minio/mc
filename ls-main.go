@@ -17,7 +17,9 @@
 package main
 
 import (
+	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -79,6 +81,12 @@ func mainList(ctx *cli.Context) {
 	} else if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 	}
+	console.SetCustomTheme(map[string]*color.Color{
+		"File": color.New(color.FgWhite),
+		"Dir":  color.New(color.FgCyan, color.Bold),
+		"Size": color.New(color.FgYellow),
+		"Time": color.New(color.FgGreen),
+	})
 
 	config := mustGetMcConfig()
 	for _, arg := range args {

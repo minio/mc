@@ -56,8 +56,8 @@ type sessionV2Header struct {
 	TotalObjects int       `json:"total-objects"`
 }
 
-// SessionJSONMessage json container for session messages
-type SessionJSONMessage struct {
+// SessionMessage container for session messages
+type SessionMessage struct {
 	SessionID   string    `json:"sessionid"`
 	Time        time.Time `json:"time"`
 	CommandType string    `json:"command-type"`
@@ -76,20 +76,20 @@ type sessionV2 struct {
 func (s sessionV2) String() string {
 	if !globalJSONFlag {
 		message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
-		message = message + console.Colorize("Time", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
+		message = message + console.Colorize("SessionTime", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
 		message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
 		return message
 	}
-	sessionMesage := SessionJSONMessage{
+	sessionMesage := SessionMessage{
 		SessionID:   s.SessionID,
 		Time:        s.Header.When.Local(),
 		CommandType: s.Header.CommandType,
 		CommandArgs: s.Header.CommandArgs,
 	}
-	sessionJSONBytes, e := json.Marshal(sessionMesage)
+	sessionBytes, e := json.Marshal(sessionMesage)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
-	return string(sessionJSONBytes)
+	return string(sessionBytes)
 }
 
 // newSessionV2 provides a new session

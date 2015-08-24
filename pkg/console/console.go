@@ -43,19 +43,13 @@ var IsError = false
 
 // Theme default map
 var Theme = map[string]*color.Color{
-	"Debug":     color.New(color.FgWhite, color.Faint, color.Italic),
-	"Fatal":     color.New(color.FgRed, color.Italic, color.Bold),
-	"Error":     color.New(color.FgYellow, color.Italic),
-	"Info":      color.New(color.FgGreen, color.Bold),
-	"File":      color.New(color.FgWhite),
-	"Dir":       color.New(color.FgCyan, color.Bold),
-	"Command":   color.New(color.FgWhite, color.Bold),
-	"SessionID": color.New(color.FgYellow, color.Bold),
-	"Size":      color.New(color.FgYellow),
-	"Time":      color.New(color.FgGreen),
-	"Bar":       color.New(color.FgGreen, color.Bold),
-	"Print":     color.New(),
-	"PrintC":    color.New(color.FgGreen, color.Bold),
+	"Debug":  color.New(color.FgWhite, color.Faint, color.Italic),
+	"Fatal":  color.New(color.FgRed, color.Italic, color.Bold),
+	"Error":  color.New(color.FgYellow, color.Italic),
+	"Info":   color.New(color.FgGreen, color.Bold),
+	"Bar":    color.New(color.FgGreen, color.Bold),
+	"Print":  color.New(),
+	"PrintC": color.New(color.FgGreen, color.Bold),
 }
 
 var (
