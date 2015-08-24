@@ -58,7 +58,7 @@ func (s MirrorMessage) String() string {
 		return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets)
 	}
 	mirrorMessageBytes, e := json.Marshal(s)
-	fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(mirrorMessageBytes)
 }

@@ -87,7 +87,7 @@ func (s sessionV2) String() string {
 		CommandArgs: s.Header.CommandArgs,
 	}
 	sessionJSONBytes, e := json.Marshal(sessionMesage)
-	fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(sessionJSONBytes)
 }

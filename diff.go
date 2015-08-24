@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -281,6 +282,11 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 	secondTrie := patricia.NewTrie()
 	wg := new(sync.WaitGroup)
 
+	type urlAttr struct {
+		Size int64
+		Type os.FileMode
+	}
+
 	wg.Add(1)
 	go func(ch chan<- diff) {
 		defer wg.Done()
@@ -292,7 +298,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 				}
 				return
 			}
-			firstTrie.Insert(patricia.Prefix(firstContentCh.Content.Name), struct{}{})
+			firstTrie.Insert(patricia.Prefix(firstContentCh.Content.Name), urlAttr{firstContentCh.Content.Size, firstContentCh.Content.Type})
 		}
 	}(ch)
 	wg.Add(1)
@@ -306,7 +312,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 				}
 				return
 			}
-			secondTrie.Insert(patricia.Prefix(secondContentCh.Content.Name), struct{}{})
+			secondTrie.Insert(patricia.Prefix(secondContentCh.Content.Name), urlAttr{secondContentCh.Content.Size, secondContentCh.Content.Type})
 		}
 	}(ch)
 
@@ -341,16 +347,60 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 		defer close(matchNameCh)
 	}(matchNameCh)
 	for matchName := range matchNameCh {
+		firstURLDelimited := firstClnt.URL().String()[:strings.LastIndex(firstClnt.URL().String(), string(firstClnt.URL().Separator))+1]
+		secondURLDelimited := secondClnt.URL().String()[:strings.LastIndex(secondClnt.URL().String(), string(secondClnt.URL().Separator))+1]
+		firstURL := firstURLDelimited + matchName
+		secondURL := secondURLDelimited + matchName
 		if !secondTrie.Match(patricia.Prefix(matchName)) {
-			firstURLDelimited := firstClnt.URL().String()[:strings.LastIndex(firstClnt.URL().String(), string(firstClnt.URL().Separator))+1]
-			firstURL := firstURLDelimited + matchName
 			ch <- diff{
 				message: DiffMessage{
 					FirstURL:  firstURL,
-					SecondURL: firstClnt.URL().String(),
+					SecondURL: secondURL,
 					Diff:      "only-in-first",
 				}.String(),
 				err: nil,
+			}
+		} else {
+			firstURLAttr := firstTrie.Get(patricia.Prefix(matchName)).(urlAttr)
+			secondURLAttr := secondTrie.Get(patricia.Prefix(matchName)).(urlAttr)
+
+			if firstURLAttr.Type.IsRegular() {
+				if !secondURLAttr.Type.IsRegular() {
+					ch <- diff{
+						message: DiffMessage{
+							FirstURL:  firstURL,
+							SecondURL: secondURL,
+							Diff:      "type",
+						}.String(),
+						err: nil,
+					}
+					continue
+				}
+			}
+
+			if firstURLAttr.Type.IsDir() {
+				if !secondURLAttr.Type.IsDir() {
+					ch <- diff{
+						message: DiffMessage{
+							FirstURL:  firstURL,
+							SecondURL: secondURL,
+							Diff:      "type",
+						}.String(),
+						err: nil,
+					}
+					continue
+				}
+			}
+
+			if firstURLAttr.Size != secondURLAttr.Size {
+				ch <- diff{
+					message: DiffMessage{
+						FirstURL:  firstURL,
+						SecondURL: secondURL,
+						Diff:      "size",
+					}.String(),
+					err: nil,
+				}
 			}
 		}
 	}
