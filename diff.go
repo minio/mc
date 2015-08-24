@@ -64,7 +64,7 @@ func (d DiffMessage) String() string {
 		case "size":
 			msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
 		default:
-			fatalIf(errDummy.Trace(), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
+			fatalIf(errDummy().Trace(), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
 		}
 		return msg
 	}

@@ -77,7 +77,7 @@ func mainDiff(ctx *cli.Context) {
 	fatalIf(err.Trace(secondArg), "Unable to parse second argument ‘"+secondArg+"’.")
 
 	if isURLRecursive(secondURL) {
-		fatalIf(errInvalidArgument.Trace(), "Second argument ‘"+secondURL+"’ cannot be recursive.")
+		fatalIf(errInvalidArgument().Trace(), "Second argument ‘"+secondURL+"’ cannot be recursive.")
 	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {

@@ -209,7 +209,7 @@ func (s *sessionV2) Delete() *probe.Error {
 // loadSession - reads session file if exists and re-initiates internal variables
 func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	if !isSessionDirExists() {
-		return nil, errInvalidArgument.Trace()
+		return nil, errInvalidArgument().Trace()
 	}
 	sessionFile, err := getSessionFile(sid)
 	if err != nil {
@@ -255,7 +255,7 @@ func isCopiedFactory(lastCopied string) func(string) bool {
 	copied := true // closure
 	return func(sourceURL string) bool {
 		if sourceURL == "" {
-			fatalIf(errInvalidArgument.Trace(), "Empty source argument passed.")
+			fatalIf(errInvalidArgument().Trace(), "Empty source argument passed.")
 		}
 		if lastCopied == "" {
 			return false

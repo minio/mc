@@ -83,7 +83,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	/****** Generic rules *******/
 	// Source cannot be a folder (except when recursive)
 	if !isURLRecursive(srcURL) {
-		fatalIf(errInvalidArgument.Trace(), fmt.Sprintf("Source ‘%s’ is not recursive. Use ‘%s...’ as argument to mirror recursively.", srcURL, srcURL))
+		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Source ‘%s’ is not recursive. Use ‘%s...’ as argument to mirror recursively.", srcURL, srcURL))
 	}
 	// Recursive source URL.
 	newSrcURL := stripRecursiveURL(srcURL)
@@ -91,17 +91,17 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		fatalIf(errInvalidArgument.Trace(), "Source ‘"+srcURL+"’ is not a folder.")
+		fatalIf(errInvalidArgument().Trace(), "Source ‘"+srcURL+"’ is not a folder.")
 	}
 
 	if len(tgtURLs) == 0 && tgtURLs == nil {
-		fatalIf(errInvalidArgument.Trace(), "Invalid number of target arguments to mirror command.")
+		fatalIf(errInvalidArgument().Trace(), "Invalid number of target arguments to mirror command.")
 	}
 
 	for _, tgtURL := range tgtURLs {
 		// Recursive URLs are not allowed in target.
 		if isURLRecursive(tgtURL) {
-			fatalIf(errDummy.Trace(), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
+			fatalIf(errDummy().Trace(), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
 		}
 
 		url, e := client.Parse(tgtURL)
@@ -109,14 +109,14 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 		if url.Host != "" {
 			if url.Path == string(url.Separator) {
-				fatalIf(errInvalidArgument.Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 			}
 		}
 
 		_, content, err := url2Stat(tgtURL)
 		fatalIf(err.Trace(tgtURL), "Unable to stat target ‘"+tgtURL+"’.")
 		if !content.Type.IsDir() {
-			fatalIf(errInvalidArgument.Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
+			fatalIf(errInvalidArgument().Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
 		}
 	}
 }

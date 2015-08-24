@@ -149,7 +149,7 @@ VERSION:
 {{end}}
 `
 	app.CommandNotFound = func(ctx *cli.Context, command string) {
-		fatalIf(errDummy.Trace(), fmt.Sprintf("Command ‘%s’ not found.", command))
+		fatalIf(errDummy().Trace(), fmt.Sprintf("Command ‘%s’ not found.", command))
 	}
 	return app
 }
