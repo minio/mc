@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
@@ -122,6 +123,12 @@ func mainSession(ctx *cli.Context) {
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session directory.")
 	}
+	console.SetCustomTheme(map[string]*color.Color{
+		"Command":     color.New(color.FgWhite, color.Bold),
+		"SessionID":   color.New(color.FgYellow, color.Bold),
+		"SessionTime": color.New(color.FgGreen),
+	})
+
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions
 	case "list":
