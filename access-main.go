@@ -64,7 +64,7 @@ func mainAccess(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		fatalIf(errDummy.Trace(),
+		fatalIf(errDummy().Trace(),
 			"Unrecognized permission ‘"+acl.String()+"’. Allowed values are [private, public, readonly].")
 	}
 	for _, arg := range ctx.Args().Tail() {

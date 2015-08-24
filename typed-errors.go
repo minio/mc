@@ -23,9 +23,15 @@ import (
 )
 
 var (
-	errDummy           = probe.NewError(errors.New("")).Untrace()
-	errInvalidArgument = probe.NewError(errors.New("Invalid arguments provided, cannot proceed.")).Untrace()
-	errSourceListEmpty = probe.NewError(errors.New("Source argument list is empty.")).Untrace()
+	errDummy = func() *probe.Error {
+		return probe.NewError(errors.New("")).Untrace()
+	}
+	errInvalidArgument = func() *probe.Error {
+		return probe.NewError(errors.New("Invalid arguments provided, cannot proceed.")).Untrace()
+	}
+	errSourceListEmpty = func() *probe.Error {
+		return probe.NewError(errors.New("Source argument list is empty.")).Untrace()
+	}
 )
 
 type eInvalidGlobURL struct {

@@ -93,7 +93,7 @@ func clearSession(sid string) {
 	}
 
 	if !isSession(sid) {
-		fatalIf(errDummy.Trace(), "Session ‘"+sid+"’ not found.")
+		fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
 	}
 
 	session, err := loadSessionV2(sid)
@@ -144,7 +144,7 @@ func mainSession(ctx *cli.Context) {
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
 
 		if !isSession(sid) {
-			fatalIf(errDummy.Trace(), "Session ‘"+sid+"’ not found.")
+			fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
 		}
 
 		s, err := loadSessionV2(sid)
