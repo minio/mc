@@ -78,14 +78,14 @@ func mainDiff(ctx *cli.Context) {
 	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
-		fatalIf(diff.err.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
-		console.Println(diff.message)
+		fatalIf(diff.Error.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
+		console.Println(diff.String())
 	}
 }
 
 // doDiffCmd - Execute the diff command
-func doDiffCmd(firstURL, secondURL string, recursive bool) <-chan diff {
-	ch := make(chan diff, 10000)
+func doDiffCmd(firstURL, secondURL string, recursive bool) <-chan DiffMessage {
+	ch := make(chan DiffMessage, 10000)
 	go doDiffInRoutine(firstURL, secondURL, recursive, ch)
 	return ch
 }

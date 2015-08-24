@@ -48,9 +48,10 @@ import (
 
 // DiffMessage json container for diff messages
 type DiffMessage struct {
-	FirstURL  string `json:"first"`
-	SecondURL string `json:"second"`
-	Diff      string `json:"diff"`
+	FirstURL  string       `json:"first"`
+	SecondURL string       `json:"second"`
+	Diff      string       `json:"diff"`
+	Error     *probe.Error `json:"error,omitempty"`
 }
 
 func (d DiffMessage) String() string {
@@ -74,11 +75,6 @@ func (d DiffMessage) String() string {
 	return string(diffJSONBytes)
 }
 
-type diff struct {
-	message string
-	err     *probe.Error
-}
-
 // urlJoinPath Join a path to existing URL
 func urlJoinPath(url1, url2 string) (string, *probe.Error) {
 	u1, err := client.Parse(url1)
@@ -93,21 +89,19 @@ func urlJoinPath(url1, url2 string) (string, *probe.Error) {
 	return u1.String(), nil
 }
 
-func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
+func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan DiffMessage) {
 	defer close(ch)
 	firstClnt, firstContent, err := url2Stat(firstURL)
 	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + firstURL + "’.",
-			err:     err.Trace(firstURL),
+		ch <- DiffMessage{
+			Error: err.Trace(firstURL),
 		}
 		return
 	}
 	secondClnt, secondContent, err := url2Stat(secondURL)
 	if err != nil {
-		ch <- diff{
-			message: "Failed to stat ‘" + secondURL + "’.",
-			err:     err.Trace(secondURL),
+		ch <- DiffMessage{
+			Error: err.Trace(secondURL),
 		}
 		return
 	}
@@ -116,21 +110,17 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 		case secondContent.Type.IsDir():
 			newSecondURL, err := urlJoinPath(secondURL, firstURL)
 			if err != nil {
-				ch <- diff{
-					message: "Unable to construct new URL from ‘" + secondURL + "’ using ‘" + firstURL + "’.",
-					err:     err.Trace(secondURL, firstURL),
+				ch <- DiffMessage{
+					Error: err.Trace(secondURL, firstURL),
 				}
 				return
 			}
 			doDiffObjects(firstURL, newSecondURL, ch)
 		case !secondContent.Type.IsRegular():
-			ch <- diff{
-				message: DiffMessage{
-					FirstURL:  firstURL,
-					SecondURL: secondURL,
-					Diff:      "type",
-				}.String(),
-				err: nil,
+			ch <- DiffMessage{
+				FirstURL:  firstURL,
+				SecondURL: secondURL,
+				Diff:      "type",
 			}
 			return
 		case secondContent.Type.IsRegular():
@@ -140,13 +130,10 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 	if firstContent.Type.IsDir() {
 		switch {
 		case !secondContent.Type.IsDir():
-			ch <- diff{
-				message: DiffMessage{
-					FirstURL:  firstURL,
-					SecondURL: secondURL,
-					Diff:      "type",
-				}.String(),
-				err: nil,
+			ch <- DiffMessage{
+				FirstURL:  firstURL,
+				SecondURL: secondURL,
+				Diff:      "type",
 			}
 			return
 		default:
@@ -156,19 +143,19 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diff) {
 }
 
 // doDiffObjects - Diff two object URLs
-func doDiffObjects(firstURL, secondURL string, ch chan diff) {
+func doDiffObjects(firstURL, secondURL string, ch chan DiffMessage) {
 	_, firstContent, errFirst := url2Stat(firstURL)
 	_, secondContent, errSecond := url2Stat(secondURL)
 
 	switch {
 	case errFirst != nil && errSecond == nil:
-		ch <- diff{
-			err: errFirst.Trace(firstURL, secondURL),
+		ch <- DiffMessage{
+			Error: errFirst.Trace(firstURL, secondURL),
 		}
 		return
 	case errFirst == nil && errSecond != nil:
-		ch <- diff{
-			err: errSecond.Trace(firstURL, secondURL),
+		ch <- DiffMessage{
+			Error: errSecond.Trace(firstURL, secondURL),
 		}
 		return
 	}
@@ -178,57 +165,47 @@ func doDiffObjects(firstURL, secondURL string, ch chan diff) {
 	switch {
 	case firstContent.Type.IsRegular():
 		if !secondContent.Type.IsRegular() {
-			ch <- diff{
-				message: DiffMessage{
-					FirstURL:  firstURL,
-					SecondURL: secondURL,
-					Diff:      "type",
-				}.String(),
-				err: nil,
+			ch <- DiffMessage{
+				FirstURL:  firstURL,
+				SecondURL: secondURL,
+				Diff:      "type",
 			}
 		}
 	default:
-		ch <- diff{
-			message: "‘" + firstURL + "’ is not an object. Please report this bug with ‘--debug’ option.",
-			err:     probe.NewError(errNotAnObject{url: firstURL}),
+		ch <- DiffMessage{
+			Error: probe.NewError(errNotAnObject{url: firstURL}),
 		}
 		return
 	}
 
 	if firstContent.Size != secondContent.Size {
-		ch <- diff{
-			message: DiffMessage{
-				FirstURL:  firstURL,
-				SecondURL: secondURL,
-				Diff:      "size",
-			}.String(),
-			err: nil,
+		ch <- DiffMessage{
+			FirstURL:  firstURL,
+			SecondURL: secondURL,
+			Diff:      "size",
 		}
 	}
 }
 
-func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
+func dodiff(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 	for contentCh := range firstClnt.List(false) {
 		if contentCh.Err != nil {
-			ch <- diff{
-				message: "Failed to list ‘" + firstClnt.URL().String() + "’.",
-				err:     contentCh.Err.Trace(firstClnt.URL().String()),
+			ch <- DiffMessage{
+				Error: contentCh.Err.Trace(firstClnt.URL().String()),
 			}
 			return
 		}
 		newFirstURL, err := urlJoinPath(firstClnt.URL().String(), contentCh.Content.Name)
 		if err != nil {
-			ch <- diff{
-				message: "Unable to construct new URL from ‘" + firstClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’.",
-				err:     err.Trace(firstClnt.URL().String()),
+			ch <- DiffMessage{
+				Error: err.Trace(firstClnt.URL().String()),
 			}
 			return
 		}
 		newSecondURL, err := urlJoinPath(secondClnt.URL().String(), contentCh.Content.Name)
 		if err != nil {
-			ch <- diff{
-				message: "Unable to construct new URL from ‘" + secondClnt.URL().String() + "’ using ‘" + contentCh.Content.Name + "’.",
-				err:     err.Trace(secondClnt.URL().String()),
+			ch <- DiffMessage{
+				Error: err.Trace(secondClnt.URL().String()),
 			}
 			return
 		}
@@ -236,38 +213,29 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 		_, newSecondContent, errSecond := url2Stat(newSecondURL)
 		switch {
 		case errFirst == nil && errSecond != nil:
-			ch <- diff{
-				message: DiffMessage{
-					FirstURL:  newFirstURL,
-					SecondURL: newSecondURL,
-					Diff:      "only-in-first",
-				}.String(),
-				err: nil,
+			ch <- DiffMessage{
+				FirstURL:  newFirstURL,
+				SecondURL: newSecondURL,
+				Diff:      "only-in-first",
 			}
 			continue
 		case errFirst == nil && errSecond == nil:
 			switch {
 			case newFirstContent.Type.IsDir():
 				if !newSecondContent.Type.IsDir() {
-					ch <- diff{
-						message: DiffMessage{
-							FirstURL:  newFirstURL,
-							SecondURL: newSecondURL,
-							Diff:      "type",
-						}.String(),
-						err: nil,
+					ch <- DiffMessage{
+						FirstURL:  newFirstURL,
+						SecondURL: newSecondURL,
+						Diff:      "type",
 					}
 				}
 				continue
 			case newFirstContent.Type.IsRegular():
 				if !newSecondContent.Type.IsRegular() {
-					ch <- diff{
-						message: DiffMessage{
-							FirstURL:  newFirstURL,
-							SecondURL: newSecondURL,
-							Diff:      "type",
-						}.String(),
-						err: nil,
+					ch <- DiffMessage{
+						FirstURL:  newFirstURL,
+						SecondURL: newSecondURL,
+						Diff:      "type",
 					}
 					continue
 				}
@@ -277,7 +245,7 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan diff) {
 	} // End of for-loop
 }
 
-func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
+func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 	firstTrie := patricia.NewTrie()
 	secondTrie := patricia.NewTrie()
 	wg := new(sync.WaitGroup)
@@ -288,13 +256,12 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 	}
 
 	wg.Add(1)
-	go func(ch chan<- diff) {
+	go func(ch chan<- DiffMessage) {
 		defer wg.Done()
 		for firstContentCh := range firstClnt.List(true) {
 			if firstContentCh.Err != nil {
-				ch <- diff{
-					message: "Failed to list ‘" + firstClnt.URL().String() + "’.",
-					err:     firstContentCh.Err.Trace(firstClnt.URL().String()),
+				ch <- DiffMessage{
+					Error: firstContentCh.Err.Trace(firstClnt.URL().String()),
 				}
 				return
 			}
@@ -302,13 +269,12 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 		}
 	}(ch)
 	wg.Add(1)
-	go func(ch chan<- diff) {
+	go func(ch chan<- DiffMessage) {
 		defer wg.Done()
 		for secondContentCh := range secondClnt.List(true) {
 			if secondContentCh.Err != nil {
-				ch <- diff{
-					message: "Failed to list ‘" + secondClnt.URL().String() + "’.",
-					err:     secondContentCh.Err.Trace(secondClnt.URL().String()),
+				ch <- DiffMessage{
+					Error: secondContentCh.Err.Trace(secondClnt.URL().String()),
 				}
 				return
 			}
@@ -352,13 +318,10 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 		firstURL := firstURLDelimited + matchName
 		secondURL := secondURLDelimited + matchName
 		if !secondTrie.Match(patricia.Prefix(matchName)) {
-			ch <- diff{
-				message: DiffMessage{
-					FirstURL:  firstURL,
-					SecondURL: secondURL,
-					Diff:      "only-in-first",
-				}.String(),
-				err: nil,
+			ch <- DiffMessage{
+				FirstURL:  firstURL,
+				SecondURL: secondURL,
+				Diff:      "only-in-first",
 			}
 		} else {
 			firstURLAttr := firstTrie.Get(patricia.Prefix(matchName)).(urlAttr)
@@ -366,13 +329,10 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 
 			if firstURLAttr.Type.IsRegular() {
 				if !secondURLAttr.Type.IsRegular() {
-					ch <- diff{
-						message: DiffMessage{
-							FirstURL:  firstURL,
-							SecondURL: secondURL,
-							Diff:      "type",
-						}.String(),
-						err: nil,
+					ch <- DiffMessage{
+						FirstURL:  firstURL,
+						SecondURL: secondURL,
+						Diff:      "type",
 					}
 					continue
 				}
@@ -380,26 +340,20 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 
 			if firstURLAttr.Type.IsDir() {
 				if !secondURLAttr.Type.IsDir() {
-					ch <- diff{
-						message: DiffMessage{
-							FirstURL:  firstURL,
-							SecondURL: secondURL,
-							Diff:      "type",
-						}.String(),
-						err: nil,
+					ch <- DiffMessage{
+						FirstURL:  firstURL,
+						SecondURL: secondURL,
+						Diff:      "type",
 					}
 					continue
 				}
 			}
 
 			if firstURLAttr.Size != secondURLAttr.Size {
-				ch <- diff{
-					message: DiffMessage{
-						FirstURL:  firstURL,
-						SecondURL: secondURL,
-						Diff:      "size",
-					}.String(),
-					err: nil,
+				ch <- DiffMessage{
+					FirstURL:  firstURL,
+					SecondURL: secondURL,
+					Diff:      "size",
 				}
 			}
 		}
@@ -407,7 +361,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan diff) {
 }
 
 // doDiffDirs - Diff two Dir URLs
-func doDiffDirs(firstClnt, secondClnt client.Client, recursive bool, ch chan diff) {
+func doDiffDirs(firstClnt, secondClnt client.Client, recursive bool, ch chan DiffMessage) {
 	if recursive {
 		dodiffRecursive(firstClnt, secondClnt, ch)
 		return
