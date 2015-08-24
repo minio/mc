@@ -173,25 +173,25 @@ is_supported_arch() {
 check_deps() {
     check_version "$(env go version 2>/dev/null | sed 's/^.* go\([0-9.]*\).*$/\1/')" "${GO_VERSION}"
     if [ $? -ge 2 ]; then
-        MISSING="${MISSING} golang(1.4)"
+        MISSING="${MISSING} golang(${GO_VERSION})"
     fi
 
     check_version "$(env git --version 2>/dev/null | sed -e 's/^.* \([0-9.\].*\).*$/\1/' -e 's/^\([0-9.\]*\).*/\1/g')" "${GIT_VERSION}"
     if [ $? -ge 2 ]; then
-        MISSING="${MISSING} git"
+        MISSING="${MISSING} git(${GIT_VERSION})"
     fi
 
     case ${UNAME%% *} in
         "Linux")
             check_version "$(env gcc --version 2>/dev/null | sed 's/^.* \([0-9.]*\).*$/\1/' | head -1)" "${GCC_VERSION}"
             if [ $? -ge 2 ]; then
-                MISSING="${MISSING} build-essential"
+                MISSING="${MISSING} build-essential(${GCC_VERSION})"
             fi
             ;;
         "Darwin")
             check_version "$(env gcc --version 2>/dev/null | sed 's/^.* \([0-9.]*\).*$/\1/' | head -1)" "${CLANG_VERSION}"
             if [ $? -ge 2 ]; then
-                MISSING="${MISSING} xcode-cli"
+                MISSING="${MISSING} xcode-cli(${CLANG_VERSION})"
             fi
             ;;
         "*")
