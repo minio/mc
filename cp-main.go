@@ -194,6 +194,11 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 			totalBytes += cpURLs.SourceContent.Size
 			totalObjects++
 		case <-trapCh:
+			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
+			if !globalQuietFlag && !globalJSONFlag {
+				console.Printf("%c[2K\n", 27)
+				console.Printf("%c[A", 27)
+			}
 			session.Close() // If we are interrupted during the URL scanning, we drop the session.
 			session.Delete()
 			os.Exit(0)
@@ -247,10 +252,19 @@ func doCopyCmdSession(session *sessionV2) {
 				if cpURLs.Error == nil {
 					session.Header.LastCopied = cpURLs.SourceContent.Name
 				} else {
-					console.Println()
+					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
+					if !globalQuietFlag && !globalJSONFlag {
+						console.Printf("%c[2K\n", 27)
+						console.Printf("%c[A", 27)
+					}
 					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
 				}
 			case <-trapCh: // Receive interrupt notification.
+				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
+				if !globalQuietFlag && !globalJSONFlag {
+					console.Printf("%c[2K\n", 27)
+					console.Printf("%c[A", 27)
+				}
 				session.Close()
 				session.Info()
 				os.Exit(0)

@@ -59,7 +59,10 @@ func mainDiff(ctx *cli.Context) {
 	}
 
 	console.SetCustomTheme(map[string]*color.Color{
-		"Diff": color.New(color.FgGreen, color.Bold),
+		"DiffMessage":     color.New(color.FgGreen, color.Bold),
+		"DiffOnlyInFirst": color.New(color.FgRed, color.Bold),
+		"DiffType":        color.New(color.FgYellow, color.Bold),
+		"DiffSize":        color.New(color.FgMagenta, color.Bold),
 	})
 
 	config := mustGetMcConfig()

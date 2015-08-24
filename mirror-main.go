@@ -175,6 +175,11 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 			totalBytes += sURLs.SourceContent.Size
 			totalObjects++
 		case <-trapCh:
+			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
+			if !globalQuietFlag && !globalJSONFlag {
+				console.Printf("%c[2K\n", 27)
+				console.Printf("%c[A", 27)
+			}
 			session.Close() // If we are interrupted during the URL scanning, we drop the session.
 			session.Delete()
 			os.Exit(0)
@@ -228,9 +233,19 @@ func doMirrorCmdSession(session *sessionV2) {
 				if sURLs.Error == nil {
 					session.Header.LastCopied = sURLs.SourceContent.Name
 				} else {
+					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
+					if !globalQuietFlag && !globalJSONFlag {
+						console.Printf("%c[2K\n", 27)
+						console.Printf("%c[A", 27)
+					}
 					errorIf(sURLs.Error.Trace(), "Failed to mirror.")
 				}
 			case <-trapCh: // Receive interrupt notification.
+				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
+				if !globalQuietFlag && !globalJSONFlag {
+					console.Printf("%c[2K\n", 27)
+					console.Printf("%c[A", 27)
+				}
 				session.Close()
 				session.Info()
 				os.Exit(0)
