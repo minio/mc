@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -84,7 +83,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	/****** Generic rules *******/
 	// Source cannot be a folder (except when recursive)
 	if !isURLRecursive(srcURL) {
-		fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Source ‘%s’ is not recursive. Use ‘%s...’ as argument to mirror recursively.", srcURL, srcURL))
+		fatalIf(errInvalidArgument.Trace(), fmt.Sprintf("Source ‘%s’ is not recursive. Use ‘%s...’ as argument to mirror recursively.", srcURL, srcURL))
 	}
 	// Recursive source URL.
 	newSrcURL := stripRecursiveURL(srcURL)
@@ -92,17 +91,17 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a folder.")
+		fatalIf(errInvalidArgument.Trace(), "Source ‘"+srcURL+"’ is not a folder.")
 	}
 
 	if len(tgtURLs) == 0 && tgtURLs == nil {
-		fatalIf(probe.NewError(errInvalidArgument), "Invalid number of target arguments to mirror command.")
+		fatalIf(errInvalidArgument.Trace(), "Invalid number of target arguments to mirror command.")
 	}
 
 	for _, tgtURL := range tgtURLs {
 		// Recursive URLs are not allowed in target.
 		if isURLRecursive(tgtURL) {
-			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
+			fatalIf(errDummy.Trace(), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
 		}
 
 		url, e := client.Parse(tgtURL)
@@ -110,14 +109,14 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 		if url.Host != "" {
 			if url.Path == string(url.Separator) {
-				fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+				fatalIf(errInvalidArgument.Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 			}
 		}
 
 		_, content, err := url2Stat(tgtURL)
 		fatalIf(err.Trace(tgtURL), "Unable to stat target ‘"+tgtURL+"’.")
 		if !content.Type.IsDir() {
-			fatalIf(probe.NewError(errInvalidArgument), "Target ‘"+tgtURL+"’ is not a folder.")
+			fatalIf(errInvalidArgument.Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
 		}
 	}
 }
@@ -216,7 +215,7 @@ func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs 
 			}
 			// if one of the targets is not dir exit
 			if !targetContent.Type.IsDir() {
-				mirrorURLsCh <- mirrorURLs{Error: probe.NewError(errInvalidTarget{URL: targetURL})}
+				mirrorURLsCh <- mirrorURLs{Error: probe.NewError(eInvalidTarget{URL: targetURL})}
 				return
 			}
 			// special case, be extremely careful before changing this behavior - will lead to data loss

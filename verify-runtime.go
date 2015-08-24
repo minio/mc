@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -92,7 +91,7 @@ func checkGolangRuntimeVersion() {
 	v1 := newVersion(getNormalizedGolangVersion())
 	v2 := newVersion(minGolangVersion)
 	if v1.LessThan(v2) {
-		errorIf(probe.NewError(errors.New("")),
+		errorIf(errDummy.Trace(),
 			"Old Golang runtime version ‘"+v1.String()+"’ detected., ‘mc’ requires minimum go1.5 or later.")
 	}
 }

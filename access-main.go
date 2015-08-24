@@ -17,8 +17,6 @@
 package main
 
 import (
-	"errors"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/probe"
@@ -66,7 +64,7 @@ func mainAccess(ctx *cli.Context) {
 	config := mustGetMcConfig()
 	acl := bucketACL(ctx.Args().First())
 	if !acl.isValidBucketACL() {
-		fatalIf(probe.NewError(errors.New("")),
+		fatalIf(errDummy.Trace(),
 			"Unrecognized permission ‘"+acl.String()+"’. Allowed values are [private, public, readonly].")
 	}
 	for _, arg := range ctx.Args().Tail() {

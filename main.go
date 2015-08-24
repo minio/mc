@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -150,7 +149,7 @@ VERSION:
 {{end}}
 `
 	app.CommandNotFound = func(ctx *cli.Context, command string) {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Command ‘%s’ not found.", command))
+		fatalIf(errDummy.Trace(), fmt.Sprintf("Command ‘%s’ not found.", command))
 	}
 	return app
 }

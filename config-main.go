@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -96,7 +95,7 @@ func mainConfig(ctx *cli.Context) {
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 	if len(tailArgs) > 2 {
-		fatalIf(probe.NewError(errors.New("")), "Incorrect number of arguments to config command. Please read ‘mc config help’")
+		fatalIf(errDummy.Trace(), "Incorrect number of arguments to config command. Please read ‘mc config help’")
 	}
 
 	switch arg {
@@ -130,7 +129,7 @@ func mainConfig(ctx *cli.Context) {
 // addAlias - add new aliases
 func addAlias(alias, url string) {
 	if alias == "" || url == "" {
-		fatalIf(probe.NewError(errors.New("")), "Alias or URL cannot be empty.")
+		fatalIf(errDummy.Trace(), "Alias or URL cannot be empty.")
 	}
 	conf := newConfigV2()
 	config, err := quick.New(conf)
@@ -141,18 +140,18 @@ func addAlias(alias, url string) {
 
 	url = strings.TrimSuffix(url, "/")
 	if !strings.HasPrefix(url, "http") {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Invalid alias URL ‘%s’. Valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com.", url))
+		fatalIf(errDummy.Trace(), fmt.Sprintf("Invalid alias URL ‘%s’. Valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com.", url))
 	}
 	if isAliasReserved(alias) {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Cannot use a reserved name ‘%s’ as an alias. Following are reserved names: [help, private, readonly, public, authenticated].", alias))
+		fatalIf(errDummy.Trace(), fmt.Sprintf("Cannot use a reserved name ‘%s’ as an alias. Following are reserved names: [help, private, readonly, public, authenticated].", alias))
 	}
 	if !isValidAliasName(alias) {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
+		fatalIf(errDummy.Trace(), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
 	}
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV2)
 	if oldURL, ok := newConf.Aliases[alias]; ok {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Alias ‘%s’ already exists for ‘%s’.", alias, oldURL))
+		fatalIf(errDummy.Trace(), fmt.Sprintf("Alias ‘%s’ already exists for ‘%s’.", alias, oldURL))
 	}
 	newConf.Aliases[alias] = url
 	newConfig, err := quick.New(newConf)
