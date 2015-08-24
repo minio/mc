@@ -58,7 +58,7 @@ func (c ContentMessage) String() string {
 		return message
 	}
 	jsonMessageBytes, e := json.Marshal(c)
-	fatalIf(probe.NewError(e), "Unable to marshall into JSON.")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)
 }
