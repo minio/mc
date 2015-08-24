@@ -107,7 +107,7 @@ func mustGetMcConfigPath() string {
 // getMcConfig - reads configuration file and returns config
 func getMcConfig() (*configV2, *probe.Error) {
 	if !isMcConfigExists() {
-		return nil, probe.NewError(errInvalidArgument)
+		return nil, errInvalidArgument.Trace()
 	}
 
 	configFile, err := getMcConfigPath()
@@ -158,7 +158,7 @@ func isMcConfigExists() bool {
 // writeConfig - write configuration file
 func writeConfig(config quick.Config) *probe.Error {
 	if config == nil {
-		return probe.NewError(errInvalidArgument)
+		return errInvalidArgument.Trace()
 	}
 	err := createMcConfigDir()
 	if err != nil {

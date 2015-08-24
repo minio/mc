@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,7 +64,7 @@ func (d DiffMessage) String() string {
 		case "size":
 			msg = "‘" + d.FirstURL + "’" + " and " + "‘" + d.SecondURL + "’" + " - differ in size."
 		default:
-			fatalIf(probe.NewError(errors.New("")), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
+			fatalIf(errDummy.Trace(), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
 		}
 		return console.Colorize("Diff", msg)
 	}
@@ -77,13 +76,13 @@ func (d DiffMessage) String() string {
 
 // urlJoinPath Join a path to existing URL
 func urlJoinPath(url1, url2 string) (string, *probe.Error) {
-	u1, err := client.Parse(url1)
-	if err != nil {
-		return "", probe.NewError(err)
+	u1, e := client.Parse(url1)
+	if e != nil {
+		return "", probe.NewError(e)
 	}
-	u2, err := client.Parse(url2)
-	if err != nil {
-		return "", probe.NewError(err)
+	u2, e := client.Parse(url2)
+	if e != nil {
+		return "", probe.NewError(e)
 	}
 	u1.Path = filepath.Join(u1.Path, u2.Path)
 	return u1.String(), nil
@@ -173,7 +172,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan DiffMessage) {
 		}
 	default:
 		ch <- DiffMessage{
-			Error: probe.NewError(errNotAnObject{url: firstURL}),
+			Error: probe.NewError(eNotAnObject{URL: firstURL}),
 		}
 		return
 	}

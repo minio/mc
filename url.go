@@ -54,7 +54,7 @@ func getCanonicalizedURL(arg string, aliases map[string]string) (urlStr string, 
 	}
 	if _, err := client.Parse(urlStr); err != nil {
 		// Not a valid URL. Return error
-		return "", probe.NewError(errInvalidURL{urlStr})
+		return "", probe.NewError(eInvalidURL{urlStr})
 	}
 	return urlStr, nil
 }

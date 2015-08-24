@@ -16,73 +16,73 @@
 
 package main
 
-import "errors"
+import (
+	"errors"
 
-type errNotAnObject struct {
-	url string
-}
+	"github.com/minio/minio/pkg/probe"
+)
 
-func (e errNotAnObject) Error() string {
-	return "URL: ‘" + e.url + "’ not an object"
-}
+var (
+	errDummy           = probe.NewError(errors.New("")).Untrace()
+	errInvalidArgument = probe.NewError(errors.New("Invalid arguments provided, cannot proceed.")).Untrace()
+	errSourceListEmpty = probe.NewError(errors.New("Source argument list is empty.")).Untrace()
+)
 
-var errInvalidArgument = errors.New("Invalid arguments provided, cannot proceed.")
-
-type errInvalidGlobURL struct {
+type eInvalidGlobURL struct {
 	glob    string
 	request string
 }
 
-func (e errInvalidGlobURL) Error() string {
+func (e eInvalidGlobURL) Error() string {
 	return "Error reading glob URL ‘" + e.glob + "’ while comparing with ‘" + e.request + "’."
 }
 
-type errNoMatchingHost struct {
-	url string
-}
-
-func (e errNoMatchingHost) Error() string {
-	return "No matching host found for the given url ‘" + e.url + "’."
-}
-
-type errInitClient struct {
-	url string
-}
-
-func (e errInitClient) Error() string {
-	return "Unable to initialize client for url ‘" + e.url + "’."
-}
-
-type errInvalidURL struct {
+type eInvalidURL struct {
 	URL string
 }
 
-func (e errInvalidURL) Error() string {
-	return "Invalid url " + e.URL
+func (e eInvalidURL) Error() string {
+	return "Invalid URL " + e.URL
 }
 
-type errInvalidSource errInvalidURL
+type eNoMatchingHost eInvalidURL
 
-func (e errInvalidSource) Error() string {
+func (e eNoMatchingHost) Error() string {
+	return "No matching host found for the given URL ‘" + e.URL + "’."
+}
+
+type eInitClient eInvalidURL
+
+func (e eInitClient) Error() string {
+	return "Unable to initialize client for URL ‘" + e.URL + "’."
+}
+
+type eInvalidSource eInvalidURL
+
+func (e eInvalidSource) Error() string {
 	return "Invalid source " + e.URL
 }
 
-type errInvalidTarget errInvalidURL
+type eInvalidTarget eInvalidURL
 
-func (e errInvalidTarget) Error() string {
+func (e eInvalidTarget) Error() string {
 	return "Invalid target " + e.URL
 }
 
-type errSourceNotRecursive errInvalidURL
+type eSourceNotRecursive eInvalidURL
 
-func (e errSourceNotRecursive) Error() string {
+func (e eSourceNotRecursive) Error() string {
 	return "Source ‘" + e.URL + "’ is not recursive."
 }
 
-type errSourceIsNotDir errInvalidURL
+type eSourceIsNotDir eInvalidURL
 
-func (e errSourceIsNotDir) Error() string {
+func (e eSourceIsNotDir) Error() string {
 	return "Source ‘" + e.URL + "’ is not a folder."
 }
 
-var errSourceListEmpty = errors.New("Source list is empty.")
+type eNotAnObject eInvalidURL
+
+func (e eNotAnObject) Error() string {
+	return "‘" + e.URL + "’ is not an object."
+}

@@ -58,12 +58,12 @@ func mainVersion(ctxx *cli.Context) {
 		Format string    `json:"format"`
 	}
 	if globalJSONFlag {
-		tB, err := json.Marshal(
+		tB, e := json.Marshal(
 			struct {
 				Version Version `json:"version"`
 			}{Version: Version{t, "RFC3339Nano"}},
 		)
-		fatalIf(probe.NewError(err), "Unable to construct version string.")
+		fatalIf(probe.NewError(e), "Unable to construct version string.")
 		console.Println(string(tB))
 		return
 	}

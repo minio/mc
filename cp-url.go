@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -72,7 +71,7 @@ func checkCopySyntax(ctx *cli.Context) {
 	/****** Generic rules *******/
 	// Recursive URLs are not allowed in target.
 	if isURLRecursive(tgtURL) {
-		fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
+		fatalIf(errDummy.Trace(), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
 	}
 	// scope locally
 	{
@@ -82,7 +81,7 @@ func checkCopySyntax(ctx *cli.Context) {
 		}
 		if url.Host != "" {
 			if url.Path == string(url.Separator) {
-				fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+				fatalIf(errInvalidArgument.Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 			}
 		}
 	}
@@ -96,14 +95,14 @@ func checkCopySyntax(ctx *cli.Context) {
 	case copyURLsTypeD: // File | Folder... -> Folder.
 		checkCopySyntaxTypeD(srcURLs, tgtURL)
 	default:
-		fatalIf(probe.NewError(errInvalidArgument), "Invalid arguments to copy command.")
+		fatalIf(errInvalidArgument.Trace(), "Invalid arguments to copy command.")
 	}
 }
 
 // checkCopySyntaxTypeA verifies if the source and target are valid file arguments.
 func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	if len(srcURLs) != 1 {
-		fatalIf(probe.NewError(errInvalidArgument), "Invalid number of source arguments to copy command.")
+		fatalIf(errInvalidArgument.Trace(), "Invalid number of source arguments to copy command.")
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
@@ -111,34 +110,34 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 	if srcContent.Type.IsDir() {
-		fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively.", srcURL, srcURL))
+		fatalIf(errInvalidArgument.Trace(), fmt.Sprintf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively.", srcURL, srcURL))
 	}
 	if !srcContent.Type.IsRegular() {
-		fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a file.")
+		fatalIf(errInvalidArgument.Trace(), "Source ‘"+srcURL+"’ is not a file.")
 	}
 }
 
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid dir.
 func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 	if len(srcURLs) != 1 {
-		fatalIf(probe.NewError(errInvalidArgument), "Invalid number of source arguments to copy command.")
+		fatalIf(errInvalidArgument.Trace(), "Invalid number of source arguments to copy command.")
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 	if srcContent.Type.IsDir() {
-		fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively.", srcURL, srcURL))
+		fatalIf(errInvalidArgument.Trace(), fmt.Sprintf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively.", srcURL, srcURL))
 	}
 	if !srcContent.Type.IsRegular() {
-		fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a file.")
+		fatalIf(errInvalidArgument.Trace(), "Source ‘"+srcURL+"’ is not a file.")
 	}
 
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			fatalIf(probe.NewError(errInvalidArgument), "Target ‘"+tgtURL+"’ is not a folder.")
+			fatalIf(errInvalidArgument.Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
 		}
 	}
 }
@@ -146,7 +145,7 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 // checkCopySyntaxTypeC verifies if the source is a valid recursive dir and target is a valid dir.
 func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	if len(srcURLs) != 1 {
-		fatalIf(probe.NewError(errInvalidArgument), "Invalid number of source arguments to copy command.")
+		fatalIf(errInvalidArgument.Trace(), "Invalid number of source arguments to copy command.")
 	}
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
@@ -154,13 +153,13 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a folder.")
+		fatalIf(errInvalidArgument.Trace(), "Source ‘"+srcURL+"’ is not a folder.")
 	}
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			fatalIf(probe.NewError(errInvalidArgument), "Target ‘"+tgtURL+"’ is not a folder.")
+			fatalIf(errInvalidArgument.Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
 		}
 	}
 }
@@ -174,17 +173,17 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 			fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 			if !srcContent.Type.IsDir() { // Ellipses is supported only for folders.
-				fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a folder.")
+				fatalIf(errInvalidArgument.Trace(), "Source ‘"+srcURL+"’ is not a folder.")
 			}
 		} else { // Regular URL.
 			_, srcContent, err := url2Stat(srcURL)
 			fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 			if srcContent.Type.IsDir() {
-				fatalIf(probe.NewError(errInvalidArgument), fmt.Sprintf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively.", srcURL, srcURL))
+				fatalIf(errInvalidArgument.Trace(), fmt.Sprintf("Source ‘%s’ is a folder. Use ‘%s...’ argument to copy this folder and its contents recursively.", srcURL, srcURL))
 			}
 			if !srcContent.Type.IsRegular() {
-				fatalIf(probe.NewError(errInvalidArgument), "Source ‘"+srcURL+"’ is not a file.")
+				fatalIf(errInvalidArgument.Trace(), "Source ‘"+srcURL+"’ is not a file.")
 			}
 		}
 	}
@@ -192,7 +191,7 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 	// Target exist?.
 	if err == nil {
 		if !tgtContent.Type.IsDir() {
-			fatalIf(probe.NewError(errInvalidArgument), "Target ‘"+tgtURL+"’ is not a folder.")
+			fatalIf(errInvalidArgument.Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
 		}
 	}
 }
@@ -237,7 +236,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file
-		return copyURLs{Error: probe.NewError(errInvalidSource{URL: sourceURL})}
+		return copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceURL})}
 	}
 	// All OK.. We can proceed. Type A
 	sourceContent.Name = sourceURL
@@ -254,19 +253,19 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file.
-		return copyURLs{Error: probe.NewError(errInvalidSource{URL: sourceURL})}
+		return copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceURL})}
 	}
 
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	{
 		sourceURLParse, err := client.Parse(sourceURL)
 		if err != nil {
-			return copyURLs{Error: probe.NewError(errInvalidSource{URL: sourceURL})}
+			return copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceURL})}
 		}
 
 		targetURLParse, err := client.Parse(targetURL)
 		if err != nil {
-			return copyURLs{Error: probe.NewError(errInvalidTarget{URL: targetURL})}
+			return copyURLs{Error: probe.NewError(eInvalidTarget{URL: targetURL})}
 		}
 		targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
 		return prepareCopyURLsTypeA(sourceURL, targetURLParse.String())
@@ -281,7 +280,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 		defer close(copyURLsCh)
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
-			copyURLsCh <- copyURLs{Error: probe.NewError(errSourceNotRecursive{URL: sourceURL})}
+			copyURLsCh <- copyURLs{Error: probe.NewError(eSourceNotRecursive{URL: sourceURL})}
 			return
 		}
 
@@ -296,7 +295,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 
 		if !sourceContent.Type.IsDir() {
 			// Source is not a dir.
-			copyURLsCh <- copyURLs{Error: probe.NewError(errSourceIsNotDir{URL: sourceURL})}
+			copyURLsCh <- copyURLs{Error: probe.NewError(eSourceIsNotDir{URL: sourceURL})}
 			return
 		}
 
@@ -315,13 +314,13 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: probe.NewError(errInvalidSource{URL: sourceURL})}
+				copyURLsCh <- copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceURL})}
 				continue
 			}
 
 			targetURLParse, err := client.Parse(targetURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: probe.NewError(errInvalidTarget{URL: targetURL})}
+				copyURLsCh <- copyURLs{Error: probe.NewError(eInvalidTarget{URL: targetURL})}
 				continue
 			}
 
@@ -331,7 +330,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			sourceContentURL := sourceURLDelimited + sourceContentName
 			sourceContentParse, err := client.Parse(sourceContentURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: probe.NewError(errInvalidSource{URL: sourceContentName})}
+				copyURLsCh <- copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceContentName})}
 				continue
 			}
 
@@ -353,7 +352,7 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan copyURLs
 
 		if sourceURLs == nil {
 			// Source list is empty.
-			copyURLsCh <- copyURLs{Error: probe.NewError(errSourceListEmpty)}
+			copyURLsCh <- copyURLs{Error: errSourceListEmpty.Trace()}
 			return
 		}
 
@@ -391,7 +390,7 @@ func prepareCopyURLs(sourceURLs []string, targetURL string) <-chan copyURLs {
 				copyURLsCh <- cURLs
 			}
 		default:
-			copyURLsCh <- copyURLs{Error: probe.NewError(errInvalidArgument)}
+			copyURLsCh <- copyURLs{Error: errInvalidArgument.Trace()}
 		}
 	}(sourceURLs, targetURL, copyURLsCh)
 
