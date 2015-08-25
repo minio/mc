@@ -32,7 +32,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+//  Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Mirror folders recursively from a single source to many destinations.",

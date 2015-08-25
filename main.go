@@ -100,25 +100,25 @@ func getFormattedVersion() string {
 
 func registerApp() *cli.App {
 	// Register all the commands
-	registerCmd(lsCmd)      // List contents of a bucket
-	registerCmd(mbCmd)      // make a bucket
-	registerCmd(catCmd)     // concantenate an object to standard output
-	registerCmd(cpCmd)      // copy objects and files from multiple sources to single destination
-	registerCmd(mirrorCmd)  // mirror objects and files from single source to multiple destinations
-	registerCmd(sessionCmd) // session handling for resuming copy and mirror operations
-	registerCmd(shareCmd)   // share any given url for third party access
-	registerCmd(diffCmd)    // compare two objects
-	registerCmd(accessCmd)  // set permissions [public, private, readonly, authenticated] for buckets and folders.
-	registerCmd(configCmd)  // generate configuration "/home/harsha/.mc/config.json" file.
-	registerCmd(updateCmd)  // update Check for new software updates
-	registerCmd(versionCmd) // print version
+	registerCmd(lsCmd)      // List contents of a bucket.
+	registerCmd(mbCmd)      // Make a bucket.
+	registerCmd(catCmd)     // Display contents of a file.
+	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
+	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
+	registerCmd(sessionCmd) // Manage sessions for copy and mirror.
+	registerCmd(shareCmd)   // Share documents via URL.
+	registerCmd(diffCmd)    // Computer differences between two files or folders.
+	registerCmd(accessCmd)  // Set access permissions.
+	registerCmd(configCmd)  // Configure minio client.
+	registerCmd(updateCmd)  // Check for new software updates.
+	registerCmd(versionCmd) // Print version.
 
 	// register all the flags
-	registerFlag(configFlag) // path to config folder
-	registerFlag(quietFlag)  // suppress console output
-	registerFlag(mimicFlag)  // OS toolchain mimic
-	registerFlag(jsonFlag)   // json formatted output
-	registerFlag(debugFlag)  // enable debugging output
+	registerFlag(configFlag) // Path to configuration folder.
+	registerFlag(quietFlag)  // Suppress chatty console output.
+	registerFlag(mimicFlag)  // Behave like operating system tools. Use with shell aliases.
+	registerFlag(jsonFlag)   // Enable json formatted output.
+	registerFlag(debugFlag)  // Enable debugging output.
 
 	app := cli.NewApp()
 	app.Usage = "Minio Client for cloud storage and filesystems."

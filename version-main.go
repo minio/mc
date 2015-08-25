@@ -26,6 +26,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
+// Print version.
 var versionCmd = cli.Command{
 	Name:   "version",
 	Usage:  "Print version.",

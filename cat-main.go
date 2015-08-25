@@ -26,7 +26,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+// Display contents of a file.
 var catCmd = cli.Command{
 	Name:   "cat",
 	Usage:  "Display contents of a file.",

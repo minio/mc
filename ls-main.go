@@ -25,7 +25,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+// list files and folders.
 var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "List files and folders.",

@@ -28,7 +28,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+// Manage sessions for cp and mirror.
 var sessionCmd = cli.Command{
 	Name:   "session",
 	Usage:  "Manage sessions for cp and mirror.",

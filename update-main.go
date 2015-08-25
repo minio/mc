@@ -29,7 +29,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+// Check for new software updates.
 var updateCmd = cli.Command{
 	Name:   "update",
 	Usage:  "Check for new software updates.",
