@@ -64,17 +64,14 @@ EXAMPLES:
 
 // AccessMessage is container for access command on bucket success and failure messages
 type AccessMessage struct {
-	Status string       `json:"status"`
-	Bucket string       `json:"bucket"`
-	Acl    string       `json:"acl"`
-	Error  *probe.Error `json:"error,omitempty"`
+	Status string `json:"status"`
+	Bucket string `json:"bucket"`
+	Acl    string `json:"acl"`
 }
 
 func (s AccessMessage) String() string {
 	if !globalJSONFlag {
-		if s.Status == "success" {
-			return console.Colorize("Access", "Set access permission ‘"+s.Acl+"’ updated successfully for ‘"+s.Bucket+"’")
-		}
+		return console.Colorize("Access", "Set access permission ‘"+s.Acl+"’ updated successfully for ‘"+s.Bucket+"’")
 	}
 	accessJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
@@ -121,7 +118,6 @@ func mainAccess(ctx *cli.Context) {
 			Status: "success",
 			Bucket: targetURL,
 			Acl:    acl.String(),
-			Error:  nil,
 		})
 	}
 }

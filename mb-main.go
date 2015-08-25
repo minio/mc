@@ -58,16 +58,13 @@ EXAMPLES:
 
 // MakeBucketMessage is container for make bucket success and failure messages
 type MakeBucketMessage struct {
-	Status string       `json:"status"`
-	Bucket string       `json:"bucket"`
-	Error  *probe.Error `json:"error,omitempty"`
+	Status string `json:"status"`
+	Bucket string `json:"bucket"`
 }
 
 func (s MakeBucketMessage) String() string {
 	if !globalJSONFlag {
-		if s.Status == "success" {
-			return console.Colorize("MakeBucket", "Bucket created successfully  ‘"+s.Bucket+"’")
-		}
+		return console.Colorize("MakeBucket", "Bucket created successfully  ‘"+s.Bucket+"’")
 	}
 	makeBucketJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
@@ -103,7 +100,6 @@ func mainMakeBucket(ctx *cli.Context) {
 		console.Println(MakeBucketMessage{
 			Status: "success",
 			Bucket: targetURL,
-			Error:  nil,
 		})
 	}
 }

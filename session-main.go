@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"sort"
 	"strings"
@@ -82,12 +83,33 @@ func listSessions() *probe.Error {
 	return nil
 }
 
+// ClearSessionMessage container for clearing session messages
+type ClearSessionMessage struct {
+	Status    string `json:"success"`
+	SessionID string `json:"session-id"`
+}
+
+func (c ClearSessionMessage) String() string {
+	if !globalJSONFlag {
+		return console.Colorize("ClearSession", "Session ‘"+c.SessionID+"’ cleared successfully")
+	}
+	clearSessionJSONBytes, err := json.Marshal(c)
+	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+
+	return string(clearSessionJSONBytes)
+}
+
 func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
 			session, err := loadSessionV2(sid)
 			fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’.")
+
 			fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
+			console.Println(ClearSessionMessage{
+				Status:    "success",
+				SessionID: sid,
+			})
 		}
 		return
 	}
@@ -101,6 +123,10 @@ func clearSession(sid string) {
 
 	if session != nil {
 		fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
+		console.Println(ClearSessionMessage{
+			Status:    "success",
+			SessionID: sid,
+		})
 	}
 }
 
@@ -128,13 +154,11 @@ func checkSessionSyntax(ctx *cli.Context) {
 			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
 		}
 	case "clear":
-		if len(ctx.Args()) == 2 {
-			if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
-				fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
-			}
+		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
+			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
 		}
 	default:
-		fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 }
 
@@ -146,9 +170,10 @@ func mainSession(ctx *cli.Context) {
 	}
 
 	console.SetCustomTheme(map[string]*color.Color{
-		"Command":     color.New(color.FgWhite, color.Bold),
-		"SessionID":   color.New(color.FgYellow, color.Bold),
-		"SessionTime": color.New(color.FgGreen),
+		"Command":      color.New(color.FgWhite, color.Bold),
+		"SessionID":    color.New(color.FgYellow, color.Bold),
+		"SessionTime":  color.New(color.FgGreen),
+		"ClearSession": color.New(color.FgGreen, color.Bold),
 	})
 
 	switch strings.TrimSpace(ctx.Args().First()) {
