@@ -64,14 +64,14 @@ EXAMPLES:
 
 // AccessMessage is container for access command on bucket success and failure messages
 type AccessMessage struct {
-	Status string `json:"status"`
-	Bucket string `json:"bucket"`
-	Acl    string `json:"acl"`
+	Status string      `json:"status"`
+	Bucket string      `json:"bucket"`
+	Perms  bucketPerms `json:"permission"`
 }
 
 func (s AccessMessage) String() string {
 	if !globalJSONFlag {
-		return console.Colorize("Access", "Set access permission ‘"+s.Acl+"’ updated successfully for ‘"+s.Bucket+"’")
+		return console.Colorize("Access", "Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
 	}
 	accessJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
@@ -86,10 +86,10 @@ func checkAccessSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
-	acl := bucketACL(ctx.Args().First())
-	if !acl.isValidBucketACL() {
+	perms := bucketPerms(ctx.Args().First())
+	if !perms.isValidBucketPERM() {
 		fatalIf(errDummy().Trace(),
-			"Unrecognized permission ‘"+acl.String()+"’. Allowed values are [private, public, readonly].")
+			"Unrecognized permission ‘"+perms.String()+"’. Allowed values are [private, public, readonly].")
 	}
 	for _, arg := range ctx.Args().Tail() {
 		if strings.TrimSpace(arg) == "" {
@@ -105,31 +105,31 @@ func mainAccess(ctx *cli.Context) {
 		"Access": color.New(color.FgGreen, color.Bold),
 	})
 
-	acl := bucketACL(ctx.Args().First())
+	perms := bucketPerms(ctx.Args().First())
 
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
 		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
 
-		fatalIf(doUpdateAccessCmd(targetURL, acl).Trace(targetURL, acl.String()), "Unable to set access permission ‘"+acl.String()+"’ for ‘"+targetURL+"’.")
+		fatalIf(doUpdateAccessCmd(targetURL, perms).Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
 
 		console.Println(AccessMessage{
 			Status: "success",
 			Bucket: targetURL,
-			Acl:    acl.String(),
+			Perms:  perms,
 		})
 	}
 }
 
-func doUpdateAccessCmd(targetURL string, targetACL bucketACL) *probe.Error {
+func doUpdateAccessCmd(targetURL string, targetPERMS bucketPerms) *probe.Error {
 	var clnt client.Client
 	clnt, err := target2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
-	if err = clnt.SetBucketACL(targetACL.String()); err != nil {
-		return err.Trace(targetURL, targetACL.String())
+	if err = clnt.SetBucketACL(targetPERMS.String()); err != nil {
+		return err.Trace(targetURL, targetPERMS.String())
 	}
 	return nil
 }

@@ -35,7 +35,6 @@ func isTargetURLDir(targetURL string) bool {
 	if err != nil {
 		return false
 	}
-
 	_, targetContent, perr := url2Stat(targetURL)
 	if perr != nil {
 		if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
@@ -106,7 +105,6 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 
 	func() { // Parallel putObject
 		defer close(errorCh) // Each routine gets to return one err status.
-
 		for i := range tgtClients {
 			wg.Add(1)
 			// make local copy for go routine
@@ -117,8 +115,8 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 				defer wg.Done()
 				err := targetClient.PutObject(length, reader)
 				if err != nil {
+					defer reader.Close()
 					errorCh <- err.Trace()
-					reader.Close()
 					return
 				}
 				errorCh <- nil
@@ -126,7 +124,6 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 		}
 		wg.Wait()
 	}()
-
 	for err := range errorCh {
 		if err != nil { // Return on first error encounter.
 			return err.Trace()
@@ -161,9 +158,17 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 		s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 		s3Config.HostURL = urlStr
 		s3Config.Debug = globalDebugFlag
-		return s3.New(s3Config)
+		s3Client, err := s3.New(s3Config)
+		if err != nil {
+			return nil, err.Trace()
+		}
+		return s3Client, nil
 	case client.Filesystem:
-		return fs.New(urlStr)
+		fsClient, err := fs.New(urlStr)
+		if err != nil {
+			return nil, err.Trace()
+		}
+		return fsClient, nil
 	}
 	return nil, errInitClient(urlStr).Trace()
 }
@@ -174,12 +179,10 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
-
 	content, err = client.Stat()
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
-
 	return client, content, nil
 }
 
@@ -189,11 +192,9 @@ func isValidURL(url string) bool {
 	if err != nil {
 		return false
 	}
-
 	if urlParse.Path == "" {
 		return false
 	}
-
 	return true
 }
 
@@ -205,12 +206,10 @@ func url2Client(url string) (client.Client, *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(url)
 	}
-
 	client, err := getNewClient(url, urlconfig)
 	if err != nil {
 		return nil, err.Trace(url)
 	}
-
 	return client, nil
 }
 
