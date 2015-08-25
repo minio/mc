@@ -188,7 +188,13 @@ func (s *sessionV2) Delete() *probe.Error {
 	defer s.mutex.Unlock()
 
 	if s.DataFP != nil {
-		err := os.Remove(s.DataFP.Name())
+		name := s.DataFP.Name()
+		// close file pro-actively before deleting
+		// ignore any error, it could be possibly that
+		// the file is closed already
+		s.DataFP.Close()
+
+		err := os.Remove(name)
 		if err != nil {
 			return probe.NewError(err)
 		}
