@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
@@ -65,6 +66,23 @@ EXAMPLES:
 `,
 }
 
+// MirrorMessage container for file mirror messages
+type MirrorMessage struct {
+	Source  string   `json:"source"`
+	Targets []string `json:"targets"`
+}
+
+// String string printer for mirror message
+func (s MirrorMessage) String() string {
+	if !globalJSONFlag {
+		return console.Colorize("Mirror", fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets))
+	}
+	mirrorMessageBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(mirrorMessageBytes)
+}
+
 // doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
 func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
 	defer wg.Done() // Notify that this copy routine is done.
@@ -99,10 +117,10 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.PrintC(MirrorMessage{
+		console.Println(MirrorMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
-		}.String() + "\n")
+		}.String())
 		newReader = reader
 	} else {
 		// set up progress
@@ -156,7 +174,12 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if sURLs.Error != nil {
-				errorIf(sURLs.Error.Trace(), "Unable to prepare mirror arguments.")
+				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
+				if !globalQuietFlag && !globalJSONFlag {
+					console.Printf("%c[2K\n", 27)
+					console.Printf("%c[A", 27)
+				}
+				errorIf(sURLs.Error.Trace(), "Unable to prepare URLs for mirroring.")
 				break
 			}
 			if sURLs.isEmpty() {
@@ -284,6 +307,10 @@ func doMirrorCmdSession(session *sessionV2) {
 
 func mainMirror(ctx *cli.Context) {
 	checkMirrorSyntax(ctx)
+
+	console.SetCustomTheme(map[string]*color.Color{
+		"Mirror": color.New(color.FgGreen, color.Bold),
+	})
 
 	var e error
 	session := newSessionV2()

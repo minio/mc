@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
@@ -78,7 +79,7 @@ type CopyMessage struct {
 // String string printer for copy message
 func (c CopyMessage) String() string {
 	if !globalJSONFlag {
-		return fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target)
+		return console.Colorize("Copy", fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target))
 	}
 	copyMessageBytes, err := json.Marshal(c)
 	fatalIf(probe.NewError(err), "Failed to marshal copy message.")
@@ -115,11 +116,11 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.PrintC(CopyMessage{
+		console.Println(CopyMessage{
 			Source: cpURLs.SourceContent.Name,
 			Target: cpURLs.TargetContent.Name,
 			Length: cpURLs.SourceContent.Size,
-		}.String() + "\n")
+		}.String())
 		newReader = reader
 	} else {
 		// set up progress
@@ -177,6 +178,11 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				break
 			}
 			if cpURLs.Error != nil {
+				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
+				if !globalQuietFlag && !globalJSONFlag {
+					console.Printf("%c[2K\n", 27)
+					console.Printf("%c[A", 27)
+				}
 				errorIf(cpURLs.Error.Trace(), "Unable to prepare URLs for copying.")
 				break
 			}
@@ -303,6 +309,10 @@ func doCopyCmdSession(session *sessionV2) {
 // mainCopy is bound to sub-command
 func mainCopy(ctx *cli.Context) {
 	checkCopySyntax(ctx)
+
+	console.SetCustomTheme(map[string]*color.Color{
+		"Copy": color.New(color.FgGreen, color.Bold),
+	})
 
 	session := newSessionV2()
 

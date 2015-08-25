@@ -17,7 +17,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -43,23 +42,6 @@ func (m mirrorURLs) isEmpty() bool {
 		return true
 	}
 	return false
-}
-
-// MirrorMessage container for file mirror messages
-type MirrorMessage struct {
-	Source  string   `json:"source"`
-	Targets []string `json:"targets"`
-}
-
-// String string printer for mirror message
-func (s MirrorMessage) String() string {
-	if !globalJSONFlag {
-		return fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets)
-	}
-	mirrorMessageBytes, e := json.Marshal(s)
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(mirrorMessageBytes)
 }
 
 //
