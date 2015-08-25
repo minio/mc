@@ -17,10 +17,11 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
 )
 
 // Help message.
@@ -52,11 +53,23 @@ EXAMPLES:
 `,
 }
 
-// mainDiff - is a handler for mc diff command
-func mainDiff(ctx *cli.Context) {
+func checkDiffSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
+	for _, arg := range ctx.Args() {
+		if strings.TrimSpace(arg) == "" {
+			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+		}
+	}
+	if isURLRecursive(ctx.Args().Last()) {
+		fatalIf(errInvalidArgument().Trace(), "Second argument ‘"+ctx.Args().Last()+"’ cannot be recursive.")
+	}
+}
+
+// mainDiff - is a handler for mc diff command
+func mainDiff(ctx *cli.Context) {
+	checkDiffSyntax(ctx)
 
 	console.SetCustomTheme(map[string]*color.Color{
 		"DiffMessage":     color.New(color.FgGreen, color.Bold),
@@ -67,18 +80,14 @@ func mainDiff(ctx *cli.Context) {
 
 	config := mustGetMcConfig()
 	firstArg := ctx.Args().First()
-	secondArg := ctx.Args()[1]
+	secondArg := ctx.Args().Last()
 
-	var err *probe.Error
 	firstURL, err := getCanonicalizedURL(firstArg, config.Aliases)
 	fatalIf(err.Trace(firstArg), "Unable to parse first argument ‘"+firstArg+"’.")
 
 	secondURL, err := getCanonicalizedURL(secondArg, config.Aliases)
 	fatalIf(err.Trace(secondArg), "Unable to parse second argument ‘"+secondArg+"’.")
 
-	if isURLRecursive(secondURL) {
-		fatalIf(errInvalidArgument().Trace(), "Second argument ‘"+secondURL+"’ cannot be recursive.")
-	}
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		fatalIf(diff.Error.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
