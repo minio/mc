@@ -74,7 +74,7 @@ func aliasExpand(aliasedURL string, aliases map[string]string) (string, *probe.E
 				trimmedURL := expandedURL + "/" + strings.TrimPrefix(strings.TrimPrefix(splits[1], "/"), "\\")
 				u, err := client.Parse(trimmedURL)
 				if err != nil {
-					return aliasedURL, probe.NewError(eInvalidURL{URL: aliasedURL})
+					return aliasedURL, errInvalidURL(aliasedURL).Trace()
 				}
 				return u.String(), nil
 			}

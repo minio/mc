@@ -50,12 +50,12 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 		for globURL, hostCfg := range config.Hosts {
 			match, err := filepath.Match(globURL, url.Host)
 			if err != nil {
-				return hostConfig{}, probe.NewError(eInvalidGlobURL{glob: globURL, request: URL})
+				return hostConfig{}, errInvalidGlobURL(globURL, URL).Trace()
 			}
 			if match {
 				return hostCfg, nil
 			}
 		}
 	}
-	return hostConfig{}, probe.NewError(eNoMatchingHost{URL: URL})
+	return hostConfig{}, errNoMatchingHost(URL).Trace()
 }

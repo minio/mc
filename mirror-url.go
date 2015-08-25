@@ -197,7 +197,7 @@ func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs 
 			}
 			// if one of the targets is not dir exit
 			if !targetContent.Type.IsDir() {
-				mirrorURLsCh <- mirrorURLs{Error: probe.NewError(eInvalidTarget{URL: targetURL})}
+				mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(targetURL).Trace()}
 				return
 			}
 			// special case, be extremely careful before changing this behavior - will lead to data loss

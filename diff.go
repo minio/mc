@@ -172,7 +172,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan DiffMessage) {
 		}
 	default:
 		ch <- DiffMessage{
-			Error: probe.NewError(eNotAnObject{URL: firstURL}),
+			Error: errNotAnObject(firstURL).Trace(),
 		}
 		return
 	}
