@@ -27,13 +27,13 @@ import (
 	"github.com/olekukonko/ts"
 )
 
-// printUpdateNotify - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
-func printUpdateNotify(updateString, latestVersion, currentVersion string) (string, *probe.Error) {
+// colorizeUpdateMessage - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
+func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
 	// TODO - make this configurable
 	//
 	// initialize coloring
-	blue := color.New(color.FgBlue).SprintFunc()
-	yellow := color.New(color.FgYellow).SprintfFunc()
+	blue := color.New(color.FgBlue, color.Bold).SprintFunc()
+	yellow := color.New(color.FgYellow, color.Bold).SprintfFunc()
 
 	// calculate length without color coding, due to ANSI color characters padded to actual
 	// string the final length is wrong than the original string length
@@ -55,6 +55,7 @@ func printUpdateNotify(updateString, latestVersion, currentVersion string) (stri
 	if err != nil {
 		return "", probe.NewError(err)
 	}
+
 	var message string
 	switch {
 	case len(line2Str) > terminal.Col():

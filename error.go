@@ -49,7 +49,11 @@ func fatalIf(err *probe.Error, msg string) {
 		if globalDebugFlag {
 			errorMessage.CallTrace = err.CallTrace
 		}
-		json, err := json.Marshal(errorMessage)
+		json, err := json.Marshal(struct {
+			Error ErrorMessage `json:"error"`
+		}{
+			Error: errorMessage,
+		})
 		if err != nil {
 			console.Fatalln(probe.NewError(err))
 		}
@@ -77,7 +81,11 @@ func errorIf(err *probe.Error, msg string) {
 		if globalDebugFlag {
 			errorMessage.CallTrace = err.CallTrace
 		}
-		json, err := json.Marshal(errorMessage)
+		json, err := json.Marshal(struct {
+			Error ErrorMessage `json:"error"`
+		}{
+			Error: errorMessage,
+		})
 		if err != nil {
 			console.Fatalln(probe.NewError(err))
 		}
