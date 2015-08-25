@@ -182,24 +182,24 @@ func (s *CmdTestSuite) TestArgs2URL(c *C) {
 	c.Assert(expandedURLs[3], Equals, "https://s3-us-west-2.amazonaws.com")
 }
 
-func (s *CmdTestSuite) TestValidACL(c *C) {
-	acl := bucketACL("private")
-	c.Assert(acl.isValidBucketACL(), Equals, true)
-	c.Assert(acl.String(), Equals, "private")
-	acl = bucketACL("public")
-	c.Assert(acl.isValidBucketACL(), Equals, true)
-	c.Assert(acl.String(), Equals, "public-read-write")
-	acl = bucketACL("readonly")
-	c.Assert(acl.isValidBucketACL(), Equals, true)
-	c.Assert(acl.String(), Equals, "public-read")
-	acl = bucketACL("authenticated")
-	c.Assert(acl.isValidBucketACL(), Equals, true)
-	c.Assert(acl.String(), Equals, "authenticated-read")
+func (s *CmdTestSuite) TestValidPERMS(c *C) {
+	perms := bucketPerms("private")
+	c.Assert(perms.isValidBucketPERM(), Equals, true)
+	c.Assert(perms.String(), Equals, "private")
+	perms = bucketPerms("public")
+	c.Assert(perms.isValidBucketPERM(), Equals, true)
+	c.Assert(perms.String(), Equals, "public-read-write")
+	perms = bucketPerms("readonly")
+	c.Assert(perms.isValidBucketPERM(), Equals, true)
+	c.Assert(perms.String(), Equals, "public-read")
+	perms = bucketPerms("authenticated")
+	c.Assert(perms.isValidBucketPERM(), Equals, true)
+	c.Assert(perms.String(), Equals, "authenticated-read")
 }
 
-func (s *CmdTestSuite) TestInvalidACL(c *C) {
-	acl := bucketACL("invalid")
-	c.Assert(acl.isValidBucketACL(), Equals, false)
+func (s *CmdTestSuite) TestInvalidPERMS(c *C) {
+	perms := bucketPerms("invalid")
+	c.Assert(perms.isValidBucketPERM(), Equals, false)
 }
 
 func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
