@@ -26,69 +26,47 @@ var (
 	errDummy = func() *probe.Error {
 		return probe.NewError(errors.New("")).Untrace()
 	}
+
 	errInvalidArgument = func() *probe.Error {
 		return probe.NewError(errors.New("Invalid arguments provided, cannot proceed.")).Untrace()
 	}
+
 	errSourceListEmpty = func() *probe.Error {
 		return probe.NewError(errors.New("Source argument list is empty.")).Untrace()
 	}
+
+	errInvalidGlobURL = func(glob, request string) *probe.Error {
+		return probe.NewError(errors.New("Error reading glob URL ‘" + glob + "’ while comparing with ‘" + request + "’.")).Untrace()
+	}
+
+	errInvalidURL = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Invalid URL ‘" + URL + "’.")).Untrace()
+	}
+
+	errNoMatchingHost = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("No matching host found for the given URL ‘" + URL + "’.")).Untrace()
+	}
+
+	errInitClient = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Unable to initialize client for URL ‘" + URL + "’.")).Untrace()
+	}
+
+	errInvalidSource = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Invalid source ‘" + URL + "’.")).Untrace()
+	}
+
+	errInvalidTarget = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Invalid target ‘" + URL + "’.")).Untrace()
+	}
+
+	errSourceNotRecursive = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Source ‘" + URL + "’ is not recursive.")).Untrace()
+	}
+
+	errSourceIsNotDir = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Source ‘" + URL + "’ is not a folder.")).Untrace()
+	}
+	errNotAnObject = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("‘" + URL + "’ is not an object.")).Untrace()
+	}
 )
-
-type eInvalidGlobURL struct {
-	glob    string
-	request string
-}
-
-func (e eInvalidGlobURL) Error() string {
-	return "Error reading glob URL ‘" + e.glob + "’ while comparing with ‘" + e.request + "’."
-}
-
-type eInvalidURL struct {
-	URL string
-}
-
-func (e eInvalidURL) Error() string {
-	return "Invalid URL " + e.URL
-}
-
-type eNoMatchingHost eInvalidURL
-
-func (e eNoMatchingHost) Error() string {
-	return "No matching host found for the given URL ‘" + e.URL + "’."
-}
-
-type eInitClient eInvalidURL
-
-func (e eInitClient) Error() string {
-	return "Unable to initialize client for URL ‘" + e.URL + "’."
-}
-
-type eInvalidSource eInvalidURL
-
-func (e eInvalidSource) Error() string {
-	return "Invalid source " + e.URL
-}
-
-type eInvalidTarget eInvalidURL
-
-func (e eInvalidTarget) Error() string {
-	return "Invalid target " + e.URL
-}
-
-type eSourceNotRecursive eInvalidURL
-
-func (e eSourceNotRecursive) Error() string {
-	return "Source ‘" + e.URL + "’ is not recursive."
-}
-
-type eSourceIsNotDir eInvalidURL
-
-func (e eSourceIsNotDir) Error() string {
-	return "Source ‘" + e.URL + "’ is not a folder."
-}
-
-type eNotAnObject eInvalidURL
-
-func (e eNotAnObject) Error() string {
-	return "‘" + e.URL + "’ is not an object."
-}

@@ -236,7 +236,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file
-		return copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceURL})}
+		return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
 	}
 	// All OK.. We can proceed. Type A
 	sourceContent.Name = sourceURL
@@ -253,19 +253,19 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file.
-		return copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceURL})}
+		return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
 	}
 
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	{
 		sourceURLParse, err := client.Parse(sourceURL)
 		if err != nil {
-			return copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceURL})}
+			return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
 		}
 
 		targetURLParse, err := client.Parse(targetURL)
 		if err != nil {
-			return copyURLs{Error: probe.NewError(eInvalidTarget{URL: targetURL})}
+			return copyURLs{Error: errInvalidTarget(targetURL).Trace()}
 		}
 		targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
 		return prepareCopyURLsTypeA(sourceURL, targetURLParse.String())
@@ -280,7 +280,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 		defer close(copyURLsCh)
 		if !isURLRecursive(sourceURL) {
 			// Source is not of recursive type.
-			copyURLsCh <- copyURLs{Error: probe.NewError(eSourceNotRecursive{URL: sourceURL})}
+			copyURLsCh <- copyURLs{Error: errSourceNotRecursive(sourceURL).Trace()}
 			return
 		}
 
@@ -295,7 +295,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 
 		if !sourceContent.Type.IsDir() {
 			// Source is not a dir.
-			copyURLsCh <- copyURLs{Error: probe.NewError(eSourceIsNotDir{URL: sourceURL})}
+			copyURLsCh <- copyURLs{Error: errSourceIsNotDir(sourceURL).Trace()}
 			return
 		}
 
@@ -314,13 +314,13 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 			sourceURLParse, err := client.Parse(sourceURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceURL})}
+				copyURLsCh <- copyURLs{Error: errInvalidSource(sourceURL).Trace()}
 				continue
 			}
 
 			targetURLParse, err := client.Parse(targetURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: probe.NewError(eInvalidTarget{URL: targetURL})}
+				copyURLsCh <- copyURLs{Error: errInvalidTarget(targetURL).Trace()}
 				continue
 			}
 
@@ -330,7 +330,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			sourceContentURL := sourceURLDelimited + sourceContentName
 			sourceContentParse, err := client.Parse(sourceContentURL)
 			if err != nil {
-				copyURLsCh <- copyURLs{Error: probe.NewError(eInvalidSource{URL: sourceContentName})}
+				copyURLsCh <- copyURLs{Error: errInvalidSource(sourceContentName).Trace()}
 				continue
 			}
 

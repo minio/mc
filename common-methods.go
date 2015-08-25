@@ -165,7 +165,7 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 	case client.Filesystem:
 		return fs.New(urlStr)
 	}
-	return nil, probe.NewError(eInitClient{URL: urlStr})
+	return nil, errInitClient(urlStr).Trace()
 }
 
 // url2Stat - Returns client, config and its stat Content from the URL
@@ -199,7 +199,7 @@ func isValidURL(url string) bool {
 
 func url2Client(url string) (client.Client, *probe.Error) {
 	if !isValidURL(url) {
-		return nil, probe.NewError(eInvalidURL{URL: url})
+		return nil, errInvalidURL(url).Trace()
 	}
 	urlconfig, err := getHostConfig(url)
 	if err != nil {
