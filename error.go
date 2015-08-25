@@ -25,19 +25,22 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
+// ErrorMessage container for error messages
+type ErrorMessage struct {
+	Message   string             `json:"message"`
+	Cause     error              `json:"cause"`
+	Type      string             `json:"type"`
+	CallTrace []probe.TracePoint `json:"trace,omitempty"`
+	SysInfo   map[string]string  `json:"sysinfo"`
+}
+
 // fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
 func fatalIf(err *probe.Error, msg string) {
 	if err == nil {
 		return
 	}
 	if globalJSONFlag {
-		errorMessage := struct {
-			Message   string             `json:"message"`
-			Cause     error              `json:"cause"`
-			Type      string             `json:"type"`
-			CallTrace []probe.TracePoint `json:"trace,omitempty"`
-			SysInfo   map[string]string  `json:"sysinfo"`
-		}{
+		errorMessage := ErrorMessage{
 			Message: msg,
 			Type:    "fatal",
 			Cause:   err.ToGoError(),
@@ -65,13 +68,7 @@ func errorIf(err *probe.Error, msg string) {
 		return
 	}
 	if globalJSONFlag {
-		errorMessage := struct {
-			Message   string             `json:"message"`
-			Cause     error              `json:"cause"`
-			Type      string             `json:"type"`
-			CallTrace []probe.TracePoint `json:"trace,omitempty"`
-			SysInfo   map[string]string  `json:"sysinfo"`
-		}{
+		errorMessage := ErrorMessage{
 			Message: msg,
 			Type:    "error",
 			Cause:   err.ToGoError(),

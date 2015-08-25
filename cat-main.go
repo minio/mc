@@ -19,6 +19,7 @@ package main
 import (
 	"io"
 	"os"
+	"strings"
 	"syscall"
 
 	"github.com/minio/cli"
@@ -56,28 +57,42 @@ EXAMPLES:
    4. Concatenate a non english file name from Amazon S3 cloud storage.
       $ mc {{.Name}} s3:andoria/本語 > /tmp/本語
 
+   5. Behave like operating system tool ‘cat’, used for shell aliases.
+      $ echo "Hello, World!" | mc --mimic cat
+      Hello, World!
+
 `,
 }
 
-func mainCat(ctx *cli.Context) {
-	stdinMode := false
-	if globalMimicFlag {
-		if !ctx.Args().Present() {
-			stdinMode = true
-		}
-	} else if !ctx.Args().Present() || ctx.Args().First() == "help" {
+func checkCatSyntax(ctx *cli.Context) {
+	if (!ctx.Args().Present() && !globalMimicFlag) || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
 	}
-
-	if stdinMode {
-		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from stdin.")
-	} else {
-		// Convert arguments to URLs: expand alias, fix format...
-		for _, arg := range ctx.Args() {
-			fatalIf(catURL(arg).Trace(arg), "Unable to read from ‘"+arg+"’.")
+	for _, arg := range ctx.Args() {
+		if strings.TrimSpace(arg) == "" {
+			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
 		}
 	}
+}
 
+func mainCat(ctx *cli.Context) {
+	checkCatSyntax(ctx)
+
+	stdinMode := false
+	if globalMimicFlag && !ctx.Args().Present() {
+		stdinMode = true
+	}
+
+	// handle std input data
+	if stdinMode {
+		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from stdin.")
+		return
+	}
+
+	// Convert arguments to URLs: expand alias, fix format...
+	for _, arg := range ctx.Args() {
+		fatalIf(catURL(arg).Trace(arg), "Unable to read from ‘"+arg+"’.")
+	}
 }
 
 func catURL(sourceURL string) *probe.Error {

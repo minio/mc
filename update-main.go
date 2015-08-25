@@ -102,5 +102,4 @@ func mainUpdate(ctx *cli.Context) {
 		return
 	}
 	console.Infoln("You are already running the most recent version of ‘mc’.")
-	return
 }

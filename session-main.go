@@ -113,16 +113,38 @@ func sessionExecute(s *sessionV2) {
 	}
 }
 
-func mainSession(ctx *cli.Context) {
+func checkSessionSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 1 || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 	if strings.TrimSpace(ctx.Args().First()) == "" {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
+
+	switch strings.TrimSpace(ctx.Args().First()) {
+	case "list":
+	case "resume":
+		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
+			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+		}
+	case "clear":
+		if len(ctx.Args()) == 2 {
+			if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
+				fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+			}
+		}
+	default:
+		fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+	}
+}
+
+func mainSession(ctx *cli.Context) {
+	checkSessionSyntax(ctx)
+
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session directory.")
 	}
+
 	console.SetCustomTheme(map[string]*color.Color{
 		"Command":     color.New(color.FgWhite, color.Bold),
 		"SessionID":   color.New(color.FgYellow, color.Bold),
@@ -134,15 +156,7 @@ func mainSession(ctx *cli.Context) {
 	case "list":
 		fatalIf(listSessions().Trace(), "Unable to list sessions.")
 	case "resume":
-		if len(ctx.Args().Tail()) != 1 {
-			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
-		}
-		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
-			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
-		}
-
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
-
 		if !isSession(sid) {
 			fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
 		}
@@ -170,20 +184,12 @@ func mainSession(ctx *cli.Context) {
 		err = s.Delete()
 		fatalIf(err.Trace(), "Unable to clear session files properly.")
 
-		// change dir back
+		// chdir back to saved path
 		e = os.Chdir(savedCwd)
 		fatalIf(probe.NewError(e), "Unable to change directory to saved path ‘"+savedCwd+"’.")
 
-	// purge a requested pending session, if "*" purge everything
+	// purge a requested pending session, if "all" purge everything
 	case "clear":
-		if len(ctx.Args().Tail()) != 1 {
-			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
-		}
-		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
-			cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
-		}
 		clearSession(strings.TrimSpace(ctx.Args().Tail().First()))
-	default:
-		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 }

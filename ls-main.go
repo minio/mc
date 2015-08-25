@@ -17,6 +17,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -42,45 +44,64 @@ FLAGS:
    {{end}}{{ end }}
 
 EXAMPLES:
-   1. List objects recursively on Minio cloud storage.
-      $ mc {{.Name}} https://play.minio.io:9000/backup/...
-      [2015-03-28 12:47:50 PDT]  34MiB 2006-Jan-1/backup.tar.gz
-      [2015-03-31 14:46:33 PDT]  55MiB 2006-Mar-1/backup.tar.gz
-
-   2. List buckets on Amazon S3 cloud storage.
+   1. List buckets on Amazon S3 cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/
       [2015-01-20 15:42:00 PST]     0B rom/
       [2015-01-15 00:05:40 PST]     0B zek/
 
-   3. List buckets from Amazon S3 cloud storage and recursively list objects from Minio cloud storage.
+   2. List buckets from Amazon S3 cloud storage and recursively list objects from Minio cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/ https://play.minio.io:9000/backup/...
       2015-01-15 00:05:40 PST     0B zek/
       2015-03-31 14:46:33 PDT  55MiB 2006-Mar-1/backup.tar.gz
 
-   4. List files recursively on local filesystem on Windows.
+   3. List files recursively on local filesystem on Windows.
       $ mc {{.Name}} C:\Users\Worf\...
       [2015-03-28 12:47:50 PDT] 11.00MiB Martok\Klingon Council Ministers.pdf
       [2015-03-31 14:46:33 PDT] 15.00MiB Gowron\Khitomer Conference Details.pdf
 
-   5. List files with non english characters on Amazon S3 cloud storage.
+   4. List files with non english characters on Amazon S3 cloud storage.
       $ mc ls s3:andoria/本...
       [2015-05-19 17:21:49 PDT]    41B 本語.pdf
       [2015-05-19 17:24:19 PDT]    41B 本語.txt
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
+   5. Behave like operating system tool ‘ls’, used for shell aliases.
+      $ mc --mimic ls
+      ...
+      [2015-05-19 17:28:22 PDT]    41B 本語.md
+
 `,
+}
+
+func checkListSyntax(ctx *cli.Context) {
+	args := ctx.Args()
+	if !ctx.Args().Present() {
+		if globalMimicFlag {
+			args = []string{"."}
+		} else {
+			cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
+		}
+	}
+	if ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
+	}
+	for _, arg := range args {
+		if strings.TrimSpace(arg) == "" {
+			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+		}
+	}
 }
 
 // mainList - is a handler for mc ls command
 func mainList(ctx *cli.Context) {
+	checkListSyntax(ctx)
+
 	args := ctx.Args()
-	if globalMimicFlag {
-		if !ctx.Args().Present() {
-			args = []string{"."}
-		}
-	} else if !ctx.Args().Present() || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
+	// Operating system tool behavior
+	if globalMimicFlag && !ctx.Args().Present() {
+		args = []string{"."}
 	}
+
 	console.SetCustomTheme(map[string]*color.Color{
 		"File": color.New(color.FgWhite),
 		"Dir":  color.New(color.FgCyan, color.Bold),

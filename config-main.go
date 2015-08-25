@@ -46,14 +46,15 @@ var configCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} alias NAME HOSTURL
+   mc {{.Name}} add alias ALIASNAME URL
+   mc {{.Name}} list alias
 
 EXAMPLES:
-   1. Add alias URLs.
-      $ mc {{.Name}} alias zek https://s3.amazonaws.com/
+   1. Add aliases for a URL
+      $ mc {{.Name}} add alias zek https://s3.amazonaws.com/
 
    2. List all aliased URLs.
-      $ mc {{.Name}} alias list
+      $ mc {{.Name}} list alias
 
 `,
 }
@@ -67,7 +68,7 @@ type AliasMessage struct {
 // String string printer for Content metadata
 func (a AliasMessage) String() string {
 	if !globalJSONFlag {
-		message := console.Colorize("Alias", fmt.Sprintf("[%s] <-", a.Alias))
+		message := console.Colorize("Alias", fmt.Sprintf("[%s] <- ", a.Alias))
 		message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
 		return message
 	}
@@ -77,8 +78,7 @@ func (a AliasMessage) String() string {
 	return string(jsonMessageBytes)
 }
 
-// mainConfig is the handle for "mc config" sub-command. writes configuration data in json format to config file.
-func mainConfig(ctx *cli.Context) {
+func checkConfigSyntax(ctx *cli.Context) {
 	// show help if nothing is set
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
@@ -86,6 +86,32 @@ func mainConfig(ctx *cli.Context) {
 	if strings.TrimSpace(ctx.Args().First()) == "" {
 		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 	}
+	if len(ctx.Args().Tail()) > 3 {
+		fatalIf(errDummy().Trace(), "Incorrect number of arguments to config command")
+	}
+	switch strings.TrimSpace(ctx.Args().First()) {
+	case "add":
+		if strings.TrimSpace(ctx.Args().Tail().First()) != "alias" {
+			cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
+		}
+		if strings.TrimSpace(ctx.Args().Tail().First()) == "alias" {
+			if len(ctx.Args().Tail().Tail()) != 2 {
+				fatalIf(errInvalidArgument().Trace(), "Incorrect number of arguments for add alias command.")
+			}
+		}
+	case "list":
+		if strings.TrimSpace(ctx.Args().Tail().First()) != "alias" {
+			cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
+		}
+	default:
+		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
+	}
+}
+
+// mainConfig is the handle for "mc config" sub-command. writes configuration data in json format to config file.
+func mainConfig(ctx *cli.Context) {
+	checkConfigSyntax(ctx)
+
 	// set new custom coloring
 	console.SetCustomTheme(map[string]*color.Color{
 		"Alias": color.New(color.FgCyan, color.Bold),
@@ -94,35 +120,28 @@ func mainConfig(ctx *cli.Context) {
 
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
-	if len(tailArgs) > 2 {
-		fatalIf(errDummy().Trace(), "Incorrect number of arguments to config command. Please read ‘mc config help’")
-	}
 
-	switch arg {
-	case "alias":
-		if tailArgs.First() == "list" {
+	switch strings.TrimSpace(arg) {
+	case "add":
+		if strings.TrimSpace(tailArgs.First()) == "alias" {
+			addAlias(tailArgs.Get(1), tailArgs.Get(2))
+		}
+	case "list":
+		if strings.TrimSpace(tailArgs.First()) == "alias" {
 			conf := newConfigV2()
 			config, err := quick.New(conf)
 			fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
 
-			err = config.Load(mustGetMcConfigPath())
-			fatalIf(err.Trace(), "Unable to load config path")
+			configPath := mustGetMcConfigPath()
+			err = config.Load(configPath)
+			fatalIf(err.Trace(configPath), "Unable to load config path")
 
 			// convert interface{} back to its original struct
 			newConf := config.Data().(*configV2)
 			for k, v := range newConf.Aliases {
 				console.Println(AliasMessage{k, v})
 			}
-			return
 		}
-		if len(tailArgs) < 2 {
-			cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
-		}
-		alias := tailArgs[0]
-		url := tailArgs[1]
-		addAlias(alias, url)
-	default:
-		cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
 	}
 }
 
