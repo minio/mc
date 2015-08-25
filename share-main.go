@@ -63,33 +63,6 @@ EXAMPLES:
 `,
 }
 
-// mainShare - is a handler for mc share command
-func mainShare(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
-	}
-	console.SetCustomTheme(map[string]*color.Color{
-		"Share": color.New(color.FgGreen, color.Bold),
-	})
-	args := ctx.Args()
-	config := mustGetMcConfig()
-	/// get first and last arguments
-	url := args.First() // url to be shared
-	// default expiration is 7days
-	expires := time.Duration(604800) * time.Second
-	if len(args) == 2 {
-		var err error
-		expires, err = time.ParseDuration(args.Last())
-		fatalIf(probe.NewError(err), "Unable to parse time argument.")
-	}
-	targetURL, err := getCanonicalizedURL(url, config.Aliases)
-	fatalIf(err.Trace(url), "Unable to parse argument ‘"+url+"’.")
-
-	// if recursive strip off the "..."
-	err = doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
-	fatalIf(err.Trace(targetURL), "Unable generate URL for sharing.")
-}
-
 // ShareMessage container for share messages
 type ShareMessage struct {
 	Expires      time.Duration `json:"expire-seconds"`
@@ -108,6 +81,47 @@ func (s ShareMessage) String() string {
 	// and fails with cloud storage. convert them back so that they are usable
 	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
 	return string(shareMessageBytes)
+}
+
+func checkShareSyntax(ctx *cli.Context) {
+	if !ctx.Args().Present() || ctx.Args().First() == "help" || len(ctx.Args()) > 2 {
+		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
+	}
+	if len(ctx.Args()) > 2 {
+		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
+	}
+	if strings.TrimSpace(ctx.Args().First()) == "" {
+		fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+	}
+}
+
+// mainShare - is a handler for mc share command
+func mainShare(ctx *cli.Context) {
+	checkShareSyntax(ctx)
+
+	console.SetCustomTheme(map[string]*color.Color{
+		"Share": color.New(color.FgGreen, color.Bold),
+	})
+
+	args := ctx.Args()
+	config := mustGetMcConfig()
+
+	/// get first and last arguments
+	url := args.First() // url to be shared
+	// default expiration is 7days
+	expires := time.Duration(604800) * time.Second
+	if len(args) == 2 {
+		var err error
+		expires, err = time.ParseDuration(args.Last())
+		fatalIf(probe.NewError(err), "Unable to parse time argument.")
+	}
+
+	targetURL, err := getCanonicalizedURL(url, config.Aliases)
+	fatalIf(err.Trace(url), "Unable to parse argument ‘"+url+"’.")
+
+	// if recursive strip off the "..."
+	err = doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
+	fatalIf(err.Trace(targetURL), "Unable to generate URL for sharing.")
 }
 
 func getNewTargetURL(targetParser *client.URL, name string) string {
@@ -144,11 +158,15 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		if err != nil {
 			return err.Trace()
 		}
-		console.Println(ShareMessage{Expires: expires / time.Second, PresignedURL: presignedURL}.String())
+		console.Println(ShareMessage{
+			Expires:      time.Duration(int64(expires.Seconds())) * time.Second,
+			PresignedURL: presignedURL,
+		}.String())
 	}
 	return nil
 }
 
+// this code is necessary since, share only operates on cloud storage URLs not filesystem
 func path2Bucket(u *client.URL) (bucketName string) {
 	pathSplits := strings.SplitN(u.Path, "?", 2)
 	splits := strings.SplitN(pathSplits[0], string(u.Separator), 3)

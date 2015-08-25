@@ -30,29 +30,29 @@ func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
-	{
-		err := doMakeBucketCmd(filepath.Join(root, "bucket"))
-		c.Assert(err, IsNil)
 
-		err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write")
-		c.Assert(err, IsNil)
+	perr := doMakeBucketCmd(filepath.Join(root, "bucket"))
+	c.Assert(perr, IsNil)
 
-		err = doUpdateAccessCmd(filepath.Join(root, "bucket"), "invalid")
-		c.Assert(err, Not(IsNil))
+	perr = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write")
+	c.Assert(perr, IsNil)
 
-		err = doMakeBucketCmd(server.URL + "/bucket")
-		c.Assert(err, IsNil)
+	perr = doUpdateAccessCmd(filepath.Join(root, "bucket"), "invalid")
+	c.Assert(perr, Not(IsNil))
 
-		err = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write")
-		c.Assert(err, IsNil)
+	perr = doMakeBucketCmd(server.URL + "/bucket")
+	c.Assert(perr, IsNil)
 
-		err = doUpdateAccessCmd(server.URL+"/bucket", "invalid")
-		c.Assert(err, Not(IsNil))
-	}
+	perr = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write")
+	c.Assert(perr, IsNil)
 
+	perr = doUpdateAccessCmd(server.URL+"/bucket", "invalid")
+	c.Assert(perr, Not(IsNil))
 }
 
 func (s *CmdTestSuite) TestMBContext(c *C) {
+	console.IsExited = false
+
 	err := app.Run([]string{os.Args[0], "mb", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
@@ -69,6 +69,8 @@ func (s *CmdTestSuite) TestMBContext(c *C) {
 }
 
 func (s *CmdTestSuite) TestAccessContext(c *C) {
+	console.IsExited = false
+
 	err := app.Run([]string{os.Args[0], "access", "private", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)

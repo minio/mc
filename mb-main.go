@@ -17,6 +17,10 @@
 package main
 
 import (
+	"encoding/json"
+	"strings"
+
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
@@ -52,17 +56,55 @@ EXAMPLES:
 `,
 }
 
-// mainMakeBucket is the handler for mc mb command
-func mainMakeBucket(ctx *cli.Context) {
+// MakeBucketMessage is container for make bucket success and failure messages
+type MakeBucketMessage struct {
+	Status string       `json:"status"`
+	Bucket string       `json:"bucket"`
+	Error  *probe.Error `json:"error,omitempty"`
+}
+
+func (s MakeBucketMessage) String() string {
+	if !globalJSONFlag {
+		if s.Status == "success" {
+			return console.Colorize("MakeBucket", "Bucket created successfully  ‘"+s.Bucket+"’")
+		}
+	}
+	makeBucketJSONBytes, err := json.Marshal(s)
+	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+
+	return string(makeBucketJSONBytes)
+}
+
+func checkMakeBucketSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
+	for _, arg := range ctx.Args() {
+		if strings.TrimSpace(arg) == "" {
+			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+		}
+	}
+}
+
+// mainMakeBucket is the handler for mc mb command
+func mainMakeBucket(ctx *cli.Context) {
+	checkMakeBucketSyntax(ctx)
+
+	console.SetCustomTheme(map[string]*color.Color{
+		"MakeBucket": color.New(color.FgGreen, color.Bold),
+	})
+
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
+		fatalIf(err.Trace(arg), "Unable to parse bucket ‘"+arg+"’.")
+
 		fatalIf(doMakeBucketCmd(targetURL).Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
-		console.Infoln("Bucket created successfully: " + targetURL)
+		console.Println(MakeBucketMessage{
+			Status: "success",
+			Bucket: targetURL,
+			Error:  nil,
+		})
 	}
 }
 
@@ -70,11 +112,11 @@ func mainMakeBucket(ctx *cli.Context) {
 func doMakeBucketCmd(targetURL string) *probe.Error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(targetURL)
 	}
 	err = clnt.MakeBucket()
 	if err != nil {
-		return err.Trace()
+		return err.Trace(targetURL)
 	}
 	return nil
 }
