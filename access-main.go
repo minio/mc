@@ -58,7 +58,6 @@ EXAMPLES:
 
    4. Set folder to world readwrite (chmod 777) on local filesystem.
       $ mc {{.Name}} public /shared/Music
-
 `,
 }
 

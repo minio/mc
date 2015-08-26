@@ -62,7 +62,6 @@ EXAMPLES:
 
    4. Mirror a local folder of non english character recursively to Amazon s3 cloud storage and Minio cloud storage.
       $ mc {{.Name}} 本語/... s3:mylocaldocuments play:backup
-
 `,
 }
 

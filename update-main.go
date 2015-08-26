@@ -42,11 +42,10 @@ USAGE:
 
 EXAMPLES:
    1. Check for new official releases
-      $ mc update release
+      $ mc {{.Name}} release
 
    2. Check for new experimental releases
-      $ mc update experimental
-
+      $ mc {{.Name}} experimental
 `,
 }
 

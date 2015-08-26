@@ -65,7 +65,6 @@ EXAMPLES:
 
    5. Copy an object of non english characters to Amazon S3 cloud storage.
       $ mc {{.Name}} 本語 s3:andoria/本語
-
 `,
 }
 

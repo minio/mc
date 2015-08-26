@@ -60,7 +60,6 @@ EXAMPLES:
    5. Behave like operating system tool ‘cat’, used for shell aliases.
       $ echo "Hello, World!" | mc --mimic cat
       Hello, World!
-
 `,
 }
 
