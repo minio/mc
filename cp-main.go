@@ -32,7 +32,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+// Copy files and folders from many sources to a single destination.
 var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy files and folders from many sources to a single destination.",

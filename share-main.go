@@ -32,7 +32,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+// Share documents via URL.
 var shareCmd = cli.Command{
 	Name:   "share",
 	Usage:  "Share documents via URL.",

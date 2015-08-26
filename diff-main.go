@@ -24,7 +24,7 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
-// Help message.
+// Compute differences between two files or folders.
 var diffCmd = cli.Command{
 	Name:        "diff",
 	Usage:       "Compute differences between two files or folders.",

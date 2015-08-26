@@ -27,7 +27,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+// Set access permissions.
 var accessCmd = cli.Command{
 	Name:   "access",
 	Usage:  "Set access permissions.",

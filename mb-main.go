@@ -26,7 +26,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Help message.
+// make a bucket or folder.
 var mbCmd = cli.Command{
 	Name:   "mb",
 	Usage:  "Make a bucket or folder.",
