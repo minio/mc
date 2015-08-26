@@ -6,42 +6,45 @@
 
 ``mc`` implements the following commands
 ```
-  ls		List files and folders
-  mb		Make a bucket or folder
-  cat		Display contents of a file
-  cp		Copy files and folders from many sources to a single destination
-  mirror	Copy files and folders from a single source to many destinations
-  diff		Compute differences between two files or folders
-  access	Set access permissions
-  config        Add new alias to default configuration file [~/.mc/config.json]
-  update	Check for new software updates
+  ls		List files and folders.
+  mb		Make a bucket or folder.
+  cat		Display contents of a file.
+  cp		Copy files and folders from many sources to a single destination.
+  mirror	Mirror folders recursively from a single source to many destinations.
+  session	Manage sessions for cp and mirror.
+  share		Share documents via URL.
+  diff		Compute differences between two files or folders.
+  access	Set access permissions.
+  config	Modify, add, remove alias from default configuration file [~/.mc/config.json].
+  update	Check for new software updates.
+  version	Print version.
 ```
 
 ## Install [![Build Status](https://api.travis-ci.org/minio/mc.svg?branch=master)](https://travis-ci.org/minio/mc)
 
 #### GNU/Linux
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Aug/linux-amd64/mc
 
 ~~~
-$ wget https://dl.minio.io:9000/updates/2015/Jun/linux-amd64/mc
+$ wget https://dl.minio.io:9000/updates/2015/Aug/linux-amd64/mc
 $ chmod +x mc
 $ ./mc
 ~~~
 
 #### OS X
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/darwin-amd64/mc
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Aug/darwin-amd64/mc
 
 ~~~
-$ curl https://dl.minio.io:9000/updates/2015/Jun/darwin-amd64/mc > mc
+$ curl https://dl.minio.io:9000/updates/2015/Aug/darwin-amd64/mc > mc
 $ chmod +x mc
 $ ./mc
 ~~~
 
 #### Windows
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Jun/windows-amd64/mc.exe
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Aug/windows-amd64/mc.exe
 
 ~~~
 C:\Users\Username\Downloads> mc.exe
