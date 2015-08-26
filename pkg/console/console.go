@@ -368,3 +368,10 @@ func ProgramName() string {
 	_, progName := filepath.Split(os.Args[0])
 	return progName
 }
+
+// SetNoColor disable coloring
+func SetNoColor() {
+	mutex.Lock()
+	defer mutex.Unlock()
+	color.NoColor = true
+}

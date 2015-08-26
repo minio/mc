@@ -51,6 +51,11 @@ var (
 		Usage: "Enable debugging output.",
 	}
 
+	noColorFlag = cli.BoolFlag{
+		Name:  "nocolor",
+		Usage: "Disable console coloring.",
+	}
+
 	// Add your new flags starting here
 )
 

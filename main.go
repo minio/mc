@@ -79,6 +79,9 @@ func registerBefore(ctx *cli.Context) error {
 	if globalDebugFlag {
 		console.NoDebugPrint = false
 	}
+	if ctx.GlobalBool("nocolor") {
+		console.SetNoColor()
+	}
 
 	verifyMCRuntime()
 
@@ -114,11 +117,12 @@ func registerApp() *cli.App {
 	registerCmd(versionCmd) // Print version.
 
 	// register all the flags
-	registerFlag(configFlag) // Path to configuration folder.
-	registerFlag(quietFlag)  // Suppress chatty console output.
-	registerFlag(mimicFlag)  // Behave like operating system tools. Use with shell aliases.
-	registerFlag(jsonFlag)   // Enable json formatted output.
-	registerFlag(debugFlag)  // Enable debugging output.
+	registerFlag(configFlag)  // Path to configuration folder.
+	registerFlag(quietFlag)   // Suppress chatty console output.
+	registerFlag(mimicFlag)   // Behave like operating system tools. Use with shell aliases.
+	registerFlag(jsonFlag)    // Enable json formatted output.
+	registerFlag(debugFlag)   // Enable debugging output.
+	registerFlag(noColorFlag) // Disable console coloring.
 
 	app := cli.NewApp()
 	app.Usage = "Minio Client for cloud storage and filesystems."
