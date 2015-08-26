@@ -40,14 +40,13 @@ import (
 //
 var configCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Modify, add alias, oauth into default configuration file [~/.mc/config.json].",
+	Usage:  "Modify, add, remove alias from default configuration file [~/.mc/config.json].",
 	Action: mainConfig,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} add alias ALIASNAME URL
-   mc {{.Name}} list alias
+   mc {{.Name}} OPERATION OPTION [ARGS...]
 
 EXAMPLES:
    1. Add aliases for a URL
@@ -56,21 +55,32 @@ EXAMPLES:
    2. List all aliased URLs.
       $ mc {{.Name}} list alias
 
+   3. Remove an alias
+      $ mc {{.Name}} remove alias zek
 `,
 }
 
 // AliasMessage container for content message structure
 type AliasMessage struct {
+	op    string
 	Alias string `json:"alias"`
-	URL   string `json:"url"`
+	URL   string `json:"url,omitempty"`
 }
 
 // String string printer for Content metadata
 func (a AliasMessage) String() string {
 	if !globalJSONFlag {
-		message := console.Colorize("Alias", fmt.Sprintf("[%s] <- ", a.Alias))
-		message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
-		return message
+		if a.op == "list" {
+			message := console.Colorize("Alias", fmt.Sprintf("[%s] <- ", a.Alias))
+			message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
+			return message
+		}
+		if a.op == "remove" {
+			return console.Colorize("AliasMessage", "Removed alias ‘"+a.Alias+"’ successfully.")
+		}
+		if a.op == "add" {
+			return console.Colorize("AliasMessage", "Added alias ‘"+a.Alias+"’ successfully.")
+		}
 	}
 	jsonMessageBytes, e := json.Marshal(a)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -99,6 +109,15 @@ func checkConfigSyntax(ctx *cli.Context) {
 				fatalIf(errInvalidArgument().Trace(), "Incorrect number of arguments for add alias command.")
 			}
 		}
+	case "remove":
+		if strings.TrimSpace(ctx.Args().Tail().First()) != "alias" {
+			cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
+		}
+		if strings.TrimSpace(ctx.Args().Tail().First()) == "alias" {
+			if len(ctx.Args().Tail().Tail()) != 1 {
+				fatalIf(errInvalidArgument().Trace(), "Incorrect number of arguments for remove alias command.")
+			}
+		}
 	case "list":
 		if strings.TrimSpace(ctx.Args().Tail().First()) != "alias" {
 			cli.ShowCommandHelpAndExit(ctx, "config", 1) // last argument is exit code
@@ -114,8 +133,9 @@ func mainConfig(ctx *cli.Context) {
 
 	// set new custom coloring
 	console.SetCustomTheme(map[string]*color.Color{
-		"Alias": color.New(color.FgCyan, color.Bold),
-		"URL":   color.New(color.FgWhite),
+		"Alias":        color.New(color.FgCyan, color.Bold),
+		"AliasMessage": color.New(color.FgGreen, color.Bold),
+		"URL":          color.New(color.FgWhite),
 	})
 
 	arg := ctx.Args().First()
@@ -126,23 +146,73 @@ func mainConfig(ctx *cli.Context) {
 		if strings.TrimSpace(tailArgs.First()) == "alias" {
 			addAlias(tailArgs.Get(1), tailArgs.Get(2))
 		}
+	case "remove":
+		if strings.TrimSpace(tailArgs.First()) == "alias" {
+			removeAlias(tailArgs.Get(1))
+		}
 	case "list":
 		if strings.TrimSpace(tailArgs.First()) == "alias" {
-			conf := newConfigV2()
-			config, err := quick.New(conf)
-			fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
-
-			configPath := mustGetMcConfigPath()
-			err = config.Load(configPath)
-			fatalIf(err.Trace(configPath), "Unable to load config path")
-
-			// convert interface{} back to its original struct
-			newConf := config.Data().(*configV2)
-			for k, v := range newConf.Aliases {
-				console.Println(AliasMessage{k, v})
-			}
+			listAliases()
 		}
 	}
+}
+
+// listAliases - list alias
+func listAliases() {
+	conf := newConfigV2()
+	config, err := quick.New(conf)
+	fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
+
+	configPath := mustGetMcConfigPath()
+	err = config.Load(configPath)
+	fatalIf(err.Trace(configPath), "Unable to load config path")
+
+	// convert interface{} back to its original struct
+	newConf := config.Data().(*configV2)
+	for k, v := range newConf.Aliases {
+		console.Println(AliasMessage{
+			op:    "list",
+			Alias: k,
+			URL:   v,
+		})
+	}
+}
+
+// removeAlias - remove alias
+func removeAlias(alias string) {
+	if alias == "" {
+		fatalIf(errDummy().Trace(), "Alias or URL cannot be empty.")
+	}
+	conf := newConfigV2()
+	config, err := quick.New(conf)
+	fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
+
+	err = config.Load(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to load config path")
+	if isAliasReserved(alias) {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("Cannot use a reserved name ‘%s’ as an alias. Following are reserved names: [help, private, readonly, public, authenticated].", alias))
+	}
+	if !isValidAliasName(alias) {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
+	}
+	// convert interface{} back to its original struct
+	newConf := config.Data().(*configV2)
+
+	if _, ok := newConf.Aliases[alias]; !ok {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias ‘%s’ does not exist.", alias))
+	}
+	delete(newConf.Aliases, alias)
+
+	newConfig, err := quick.New(newConf)
+	fatalIf(err.Trace(conf.Version), "Failed to initialize ‘quick’ configuration data structure.")
+
+	err = writeConfig(newConfig)
+	fatalIf(err.Trace(alias), "Unable to save alias ‘"+alias+"’.")
+
+	console.Println(AliasMessage{
+		op:    "remove",
+		Alias: alias,
+	})
 }
 
 // addAlias - add new aliases
@@ -178,4 +248,10 @@ func addAlias(alias, url string) {
 
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(alias, url), "Unable to save alias ‘"+alias+"’.")
+
+	console.Println(AliasMessage{
+		op:    "add",
+		Alias: alias,
+		URL:   url,
+	})
 }
