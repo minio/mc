@@ -49,7 +49,6 @@ EXAMPLES:
 
    2. Compare two different folders on a local filesystem.
       $ mc {{.Name}} ~/Photos /Media/Backup/Photos
-
 `,
 }
 

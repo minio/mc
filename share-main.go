@@ -59,7 +59,6 @@ EXAMPLES:
 
    3. Generate list of URLs for sharing a folder recursively, with expiration of 1 hour each.
       $ mc {{.Name}} https://s3.amazonaws.com/backup... 1h
-
 `,
 }
 

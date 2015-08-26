@@ -69,7 +69,6 @@ EXAMPLES:
       $ mc --mimic ls
       ...
       [2015-05-19 17:28:22 PDT]    41B 本語.md
-
 `,
 }
 

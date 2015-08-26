@@ -38,17 +38,14 @@ USAGE:
    mc {{.Name}} {{if .Description}}
 
 DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
-
-EXAMPLES:
+   {{.Description}}{{end}}
 `,
 }
 
-func mainVersion(ctxx *cli.Context) {
+func mainVersion(ctx *cli.Context) {
+	if ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
+	}
 	t, _ := time.Parse(time.RFC3339Nano, Version)
 	if t.IsZero() {
 		console.Println("")

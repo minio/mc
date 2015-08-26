@@ -55,7 +55,6 @@ EXAMPLES:
 
    3. Clear session
       $ mc {{.Name}} clear [SESSION]|[all]
-
 `,
 }
 
