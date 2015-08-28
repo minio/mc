@@ -223,6 +223,46 @@ func newPresignedRequest(op *operation, config *Config, expires string) (*reques
 	return r, nil
 }
 
+// newUnauthenticatedRequest - instantiate a new unauthenticated request
+func newUnauthenticatedRequest(op *operation, config *Config, body io.Reader) (*request, error) {
+	// if no method default to POST
+	method := op.HTTPMethod
+	if method == "" {
+		method = "POST"
+	}
+
+	u := op.getRequestURL(*config)
+
+	// get a new HTTP request, for the requested method
+	req, err := httpNewRequest(method, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// set UserAgent
+	req.Header.Set("User-Agent", config.userAgent)
+
+	// set Accept header for response encoding style, if available
+	if config.AcceptType != "" {
+		req.Header.Set("Accept", config.AcceptType)
+	}
+
+	// add body
+	switch {
+	case body == nil:
+		req.Body = nil
+	default:
+		req.Body = ioutil.NopCloser(body)
+	}
+
+	// save for subsequent use
+	r := new(request)
+	r.req = req
+	r.config = config
+
+	return r, nil
+}
+
 // newRequest - instantiate a new request
 func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, error) {
 	// if no method default to POST
