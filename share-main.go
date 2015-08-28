@@ -41,7 +41,7 @@ var shareCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [DURATION=s|m|h|d] {{if .Description}}
+   mc {{.Name}} TARGET [DURATION=h|m|s] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -64,14 +64,14 @@ EXAMPLES:
 
 // ShareMessage container for share messages
 type ShareMessage struct {
-	Expires      time.Duration `json:"expire-seconds"`
+	Expires      shareDuration `json:"expire-seconds"`
 	PresignedURL string        `json:"presigned-url"`
 }
 
 // String string printer for share message
 func (s ShareMessage) String() string {
 	if !globalJSONFlag {
-		return console.Colorize("Share", fmt.Sprintf("Succesfully generated shared URL with expiry %s, please share: %s", s.Expires, s.PresignedURL))
+		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s", s.Expires, s.PresignedURL))
 	}
 	shareMessageBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Failed to marshal into JSON.")
@@ -119,7 +119,7 @@ func mainShare(ctx *cli.Context) {
 	fatalIf(err.Trace(url), "Unable to parse argument ‘"+url+"’.")
 
 	// if recursive strip off the "..."
-	err = doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
+	err = doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), shareDuration{expires})
 	fatalIf(err.Trace(targetURL), "Unable to generate URL for sharing.")
 }
 
@@ -134,7 +134,7 @@ func getNewTargetURL(targetParser *client.URL, name string) string {
 }
 
 // doShareCmd share files from target
-func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.Error {
+func doShareCmd(targetURL string, recursive bool, expires shareDuration) *probe.Error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
 		return err.Trace()
@@ -153,12 +153,12 @@ func doShareCmd(targetURL string, recursive bool, expires time.Duration) *probe.
 		if err != nil {
 			return err.Trace()
 		}
-		presignedURL, err := newClnt.Share(expires)
+		presignedURL, err := newClnt.Share(expires.GetDuration())
 		if err != nil {
 			return err.Trace()
 		}
 		console.Println(ShareMessage{
-			Expires:      time.Duration(int64(expires.Seconds())) * time.Second,
+			Expires:      expires,
 			PresignedURL: presignedURL,
 		}.String())
 	}
