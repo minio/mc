@@ -469,6 +469,59 @@ func (a apiV1) deleteBucket(bucket string) error {
 
 /// Object Read/Write/Stat Operations
 
+func (a apiV1) putObjectUnAuthenticatedRequest(bucket, object, contentType string, size int64, body io.Reader) (*request, error) {
+	if strings.TrimSpace(contentType) == "" {
+		contentType = "application/octet-stream"
+	}
+	encodedObject, err := urlEncodeName(object)
+	if err != nil {
+		return nil, err
+	}
+	op := &operation{
+		HTTPServer: a.config.Endpoint,
+		HTTPMethod: "PUT",
+		HTTPPath:   separator + bucket + separator + encodedObject,
+	}
+	r, err := newUnauthenticatedRequest(op, a.config, body)
+	if err != nil {
+		return nil, err
+	}
+	// Content-MD5 is not set consciously
+	r.Set("Content-Type", contentType)
+	r.req.ContentLength = size
+	return r, nil
+}
+
+// putObjectUnAuthenticated - add an object to a bucket
+// NOTE: You must have WRITE permissions on a bucket to add an object to it.
+func (a apiV1) putObjectUnAuthenticated(bucket, object, contentType string, size int64, body io.Reader) (ObjectStat, error) {
+	req, err := a.putObjectUnAuthenticatedRequest(bucket, object, contentType, size, body)
+	if err != nil {
+		return ObjectStat{}, err
+	}
+	resp, err := req.Do()
+	defer closeResp(resp)
+	if err != nil {
+		return ObjectStat{}, err
+	}
+	if resp != nil {
+		if resp.StatusCode != http.StatusOK {
+			return ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+		}
+	}
+	var metadata ObjectStat
+	metadata.ETag = strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
+	if metadata.ETag == "" {
+		return ObjectStat{}, ErrorResponse{
+			Code:      "InternalError",
+			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
+			RequestID: resp.Header.Get("x-amz-request-id"),
+			HostID:    resp.Header.Get("x-amz-id-2"),
+		}
+	}
+	return metadata, nil
+}
+
 // putObjectRequest wrapper creates a new PutObject request
 func (a apiV1) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
 	if strings.TrimSpace(contentType) == "" {

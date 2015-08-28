@@ -45,17 +45,11 @@ func TestUserAgent(t *testing.T) {
 }
 
 func TestGetRegion(t *testing.T) {
-	region, err := getRegion("s3.amazonaws.com")
-	if err != nil {
-		t.Fatalf("Error")
-	}
+	region := getRegion("s3.amazonaws.com")
 	if region != "us-east-1" {
 		t.Fatalf("Error")
 	}
-	region, err = getRegion("localhost:9000")
-	if err != nil {
-		t.Fatalf("Error")
-	}
+	region = getRegion("localhost:9000")
 	if region != "milkyway" {
 		t.Fatalf("Error")
 	}
