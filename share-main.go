@@ -17,10 +17,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -62,26 +59,6 @@ EXAMPLES:
 `,
 }
 
-// ShareMessage container for share messages
-type ShareMessage struct {
-	Expires      shareDuration `json:"expire-seconds"`
-	PresignedURL string        `json:"presigned-url"`
-}
-
-// String string printer for share message
-func (s ShareMessage) String() string {
-	if !globalJSONFlag {
-		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s", s.Expires, s.PresignedURL))
-	}
-	shareMessageBytes, err := json.Marshal(s)
-	fatalIf(probe.NewError(err), "Failed to marshal into JSON.")
-
-	// json encoding escapes ampersand into its unicode character which is not usable directly for share
-	// and fails with cloud storage. convert them back so that they are usable
-	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
-	return string(shareMessageBytes)
-}
-
 func checkShareSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" || len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
@@ -119,7 +96,7 @@ func mainShare(ctx *cli.Context) {
 	fatalIf(err.Trace(url), "Unable to parse argument ‘"+url+"’.")
 
 	// if recursive strip off the "..."
-	err = doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), shareDuration{expires})
+	err = doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), shareDuration{duration: expires})
 	fatalIf(err.Trace(targetURL), "Unable to generate URL for sharing.")
 }
 
@@ -157,10 +134,8 @@ func doShareCmd(targetURL string, recursive bool, expires shareDuration) *probe.
 		if err != nil {
 			return err.Trace()
 		}
-		console.Println(ShareMessage{
-			Expires:      expires,
-			PresignedURL: presignedURL,
-		}.String())
+		expires.presignedURL = presignedURL
+		console.Println(expires)
 	}
 	return nil
 }

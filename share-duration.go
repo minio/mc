@@ -17,13 +17,19 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // shareDuration extended version of time.Duration implementing .Days() for convenience
 type shareDuration struct {
-	duration time.Duration
+	duration     time.Duration
+	presignedURL string
 }
 
 func (s shareDuration) Days() float64 {
@@ -38,13 +44,31 @@ func (s shareDuration) Hours() float64 {
 	return s.duration.Hours()
 }
 
-func (s shareDuration) String() string {
-	if s.duration.Hours() > 24 {
-		return fmt.Sprintf("%dd", int64(s.Days()))
-	}
-	return s.duration.String()
-}
-
 func (s shareDuration) GetDuration() time.Duration {
 	return s.duration
+}
+
+func (s shareDuration) String() string {
+	if !globalJSONFlag {
+		durationString := func() string {
+			if s.duration.Hours() > 24 {
+				return fmt.Sprintf("%dd", int64(s.Days()))
+			}
+			return s.duration.String()
+		}
+		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s", durationString(), s.presignedURL))
+	}
+	shareMessageBytes, err := json.Marshal(struct {
+		Expires      time.Duration `json:"expire-seconds"`
+		PresignedURL string        `json:"presigned-url"`
+	}{
+		Expires:      time.Duration(s.Seconds()),
+		PresignedURL: s.presignedURL,
+	})
+	fatalIf(probe.NewError(err), "Failed to marshal into JSON.")
+
+	// json encoding escapes ampersand into its unicode character which is not usable directly for share
+	// and fails with cloud storage. convert them back so that they are usable
+	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
+	return string(shareMessageBytes)
 }
