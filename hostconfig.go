@@ -24,8 +24,8 @@ import (
 )
 
 type hostConfig struct {
-	AccessKeyID     string
-	SecretAccessKey string
+	AccessKeyID     string `json:"accesskey-id"`
+	SecretAccessKey string `json:"secretaccess-key"`
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.

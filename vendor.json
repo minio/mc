@@ -41,8 +41,8 @@
 			"canonical": "github.com/minio/minio-go",
 			"comment": "",
 			"local": "vendor/github.com/minio/minio-go",
-			"revision": "7860bcf566f9e641f94a4d85ac60a4f3a0883f46",
-			"revisionTime": "2015-08-28T00:38:53-07:00"
+			"revision": "58b253ddbe5daa7be83fba45a29f7e24a2cc9046",
+			"revisionTime": "2015-08-28T22:41:00-07:00"
 		},
 		{
 			"canonical": "github.com/minio/minio/pkg/probe",
