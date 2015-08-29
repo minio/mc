@@ -29,6 +29,7 @@ import (
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/pb"
+	"github.com/olekukonko/ts"
 )
 
 // Check for the environment early on and gracefully report.
@@ -162,6 +163,10 @@ func main() {
 	app.Before = registerBefore
 
 	app.ExtraInfo = func() map[string]string {
+		if _, e := ts.GetSize(); e != nil {
+			globalQuietFlag = true
+		}
+
 		if globalDebugFlag {
 			return getSystemData()
 		}
