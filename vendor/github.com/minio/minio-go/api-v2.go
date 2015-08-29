@@ -44,11 +44,11 @@ type API interface {
 
 // BucketAPI - bucket specific Read/Write/Stat interface
 type BucketAPI interface {
-	MakeBucket(bucket string, cannedACL BucketACL) error
+	MakeBucket(bucket string, cannedACL ACL) error
 	BucketExists(bucket string) error
 	RemoveBucket(bucket string) error
-	SetBucketACL(bucket string, cannedACL BucketACL) error
-	GetBucketACL(bucket string) (BucketACL, error)
+	SetBucketACL(bucket string, acl ACL) error
+	GetBucketACL(bucket string) (ACL, error)
 
 	ListBuckets() <-chan BucketStatCh
 	ListObjects(bucket, prefix string, recursive bool) <-chan ObjectStatCh
@@ -61,7 +61,9 @@ type BucketAPI interface {
 type ObjectAPI interface {
 	GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error)
 	GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error)
-	PutObject(bucket, object, contentType string, size int64, data io.Reader) error
+	PutObject(bucket, object, contentType string, acl ACL, size int64, data io.Reader) error
+	SetObjectACL(bucket, object string, acl ACL) error
+	GetObjectACL(bucket, object string) (ACL, error)
 	StatObject(bucket, object string) (ObjectStat, error)
 	RemoveObject(bucket, object string) error
 
@@ -499,12 +501,15 @@ func (a apiV2) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch 
 // You must have WRITE permissions on a bucket to create an object
 //
 // This version of PutObject automatically does multipart for more than 5MB worth of data
-func (a apiV2) PutObject(bucket, object, contentType string, size int64, data io.Reader) error {
+func (a apiV2) PutObject(bucket, object, contentType string, acl ACL, size int64, data io.Reader) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	if err := invalidArgumentError(object); err != nil {
 		return err
+	}
+	if !acl.isValidACL() {
+		return invalidArgumentError("")
 	}
 	// for un-authenticated requests do not initiated multipart operation
 	//
@@ -534,7 +539,7 @@ func (a apiV2) PutObject(bucket, object, contentType string, size int64, data io
 					Resource: separator + bucket + separator + object,
 				}
 			}
-			_, err := a.putObject(bucket, object, contentType, part.MD5Sum, part.Len, part.ReadSeeker)
+			_, err := a.putObject(bucket, object, contentType, string(acl), part.MD5Sum, part.Len, part.ReadSeeker)
 			if err != nil {
 				return err
 			}
@@ -554,11 +559,81 @@ func (a apiV2) PutObject(bucket, object, contentType string, size int64, data io
 			}
 		}
 		if !inProgress {
-			return a.newObjectUpload(bucket, object, contentType, size, data)
+			if err := a.newObjectUpload(bucket, object, contentType, size, data); err != nil {
+				return err
+			}
+			return a.putObjectACL(bucket, object, string(acl))
 		}
-		return a.continueObjectUpload(bucket, object, inProgressUploadID, size, data)
+		if err := a.continueObjectUpload(bucket, object, inProgressUploadID, size, data); err != nil {
+			return err
+		}
+		return a.putObjectACL(bucket, object, string(acl))
 	}
 	return errors.New("Unexpected control flow, please report this error at https://github.com/minio/minio-go/issues")
+}
+
+// GetObjectACL get the permissions on an existing object
+//
+// Returned values are:
+//
+//  private - owner gets full access
+//  public-read - owner gets full access, others get read access
+//  public-read-write - owner gets full access, others get full access too
+//  authenticated-read - owner gets full access, authenticated users get read access
+//
+func (a apiV2) GetObjectACL(bucket, object string) (ACL, error) {
+	if err := invalidBucketError(bucket); err != nil {
+		return "", err
+	}
+	if err := invalidArgumentError(object); err != nil {
+		return "", err
+	}
+	policy, err := a.getObjectACL(bucket, object)
+	if err != nil {
+		return "", err
+	}
+	grants := policy.AccessControlList.Grant
+	switch {
+	case len(grants) == 1:
+		if grants[0].Grantee.URI == "" && grants[0].Permission == "FULL_CONTROL" {
+			return ACL("private"), nil
+		}
+	case len(grants) == 2:
+		for _, g := range grants {
+			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AuthenticatedUsers" && g.Permission == "READ" {
+				return ACL("authenticated-read"), nil
+			}
+			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "READ" {
+				return ACL("public-read"), nil
+			}
+		}
+	case len(grants) == 3:
+		for _, g := range grants {
+			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "WRITE" {
+				return ACL("public-read-write"), nil
+			}
+		}
+	}
+	return "", ErrorResponse{
+		Code:      "NoSuchObjectPolicy",
+		Message:   "The specified object does not have a access policy.",
+		Resource:  separator + bucket + separator + object,
+		RequestID: "minio",
+	}
+}
+
+// SetObjectACL set object acl's
+func (a apiV2) SetObjectACL(bucket, object string, acl ACL) error {
+	if err := invalidBucketError(bucket); err != nil {
+		return err
+	}
+	if err := invalidArgumentError(object); err != nil {
+		return err
+	}
+	if !acl.isValidACL() {
+		return invalidArgumentError("")
+	}
+	return a.putObjectACL(bucket, object, string(acl))
 }
 
 // StatObject verify if object exists and you have permission to access it
@@ -602,11 +677,11 @@ func (a apiV2) RemoveObject(bucket, object string) error {
 //
 //  [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 //  Default - US standard
-func (a apiV2) MakeBucket(bucket string, acl BucketACL) error {
+func (a apiV2) MakeBucket(bucket string, acl ACL) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
-	if !acl.isValidBucketACL() {
+	if !acl.isValidACL() {
 		return invalidArgumentError("")
 	}
 	location := a.config.Region
@@ -628,11 +703,11 @@ func (a apiV2) MakeBucket(bucket string, acl BucketACL) error {
 //  public-read-write - owner gets full access, all others get full access too
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
-func (a apiV2) SetBucketACL(bucket string, acl BucketACL) error {
+func (a apiV2) SetBucketACL(bucket string, acl ACL) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
-	if !acl.isValidBucketACL() {
+	if !acl.isValidACL() {
 		return invalidArgumentError("")
 	}
 	return a.putBucketACL(bucket, string(acl))
@@ -647,7 +722,7 @@ func (a apiV2) SetBucketACL(bucket string, acl BucketACL) error {
 //  public-read-write - owner gets full access, others get full access too
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
-func (a apiV2) GetBucketACL(bucket string) (BucketACL, error) {
+func (a apiV2) GetBucketACL(bucket string) (ACL, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return "", err
 	}
@@ -659,28 +734,28 @@ func (a apiV2) GetBucketACL(bucket string) (BucketACL, error) {
 	switch {
 	case len(grants) == 1:
 		if grants[0].Grantee.URI == "" && grants[0].Permission == "FULL_CONTROL" {
-			return BucketACL("private"), nil
+			return ACL("private"), nil
 		}
 	case len(grants) == 2:
 		for _, g := range grants {
 			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AuthenticatedUsers" && g.Permission == "READ" {
-				return BucketACL("authenticated-read"), nil
+				return ACL("authenticated-read"), nil
 			}
 			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "READ" {
-				return BucketACL("public-read"), nil
+				return ACL("public-read"), nil
 			}
 		}
 	case len(grants) == 3:
 		for _, g := range grants {
 			if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "WRITE" {
-				return BucketACL("public-read-write"), nil
+				return ACL("public-read-write"), nil
 			}
 		}
 	}
 	return "", ErrorResponse{
 		Code:      "NoSuchBucketPolicy",
 		Message:   "The specified bucket does not have a bucket policy.",
-		Resource:  "/" + bucket,
+		Resource:  separator + bucket,
 		RequestID: "minio",
 	}
 }

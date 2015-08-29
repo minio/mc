@@ -108,13 +108,14 @@ func (s *CmdTestSuite) TestNewConfigV2(c *C) {
 	perr = conf.Save(configFile)
 	c.Assert(perr, IsNil)
 
-	confNew := newConfigV2()
+	confNew := newConfigV3()
 	config, perr := quick.New(confNew)
 	c.Assert(perr, IsNil)
 	perr = config.Load(configFile)
 	c.Assert(perr, IsNil)
-	data := config.Data().(*configV2)
+	data := config.Data().(*configV3)
 
+	c.Assert(data.ACL, Equals, "private")
 	type aliases struct {
 		name string
 		url  string

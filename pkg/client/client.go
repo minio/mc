@@ -38,6 +38,7 @@ type Client interface {
 	Share(expires time.Duration) (string, *probe.Error)
 	GetObject(offset, length int64) (body io.ReadCloser, size int64, err *probe.Error)
 	PutObject(size int64, data io.Reader) *probe.Error
+	SetObjectACL(acl string) *probe.Error
 
 	// URL returns back internal url
 	URL() *URL

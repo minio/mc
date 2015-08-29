@@ -16,6 +16,8 @@
 
 package main
 
+import "github.com/minio/minio/pkg/probe"
+
 // isValidBucketPERM - is provided acl string supported
 func (b bucketPerms) isValidBucketPERM() bool {
 	switch true {
@@ -77,4 +79,13 @@ func (b bucketPerms) isPublic() bool {
 // IsAuthenticated - is acl AuthenticatedRead
 func (b bucketPerms) isAuthenticated() bool {
 	return b == bucketAuthenticated
+}
+
+// getConfigACL - read ACL from config
+func getConfigACL() (acl string, err *probe.Error) {
+	config, err := getMcConfig()
+	if err != nil {
+		return "", err.Trace()
+	}
+	return config.ACL, nil
 }

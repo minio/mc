@@ -30,7 +30,7 @@ func TestACLTypes(t *testing.T) {
 		"invalid":            false,
 	}
 	for acl, ok := range want {
-		if BucketACL(acl).isValidBucketACL() != ok {
+		if ACL(acl).isValidACL() != ok {
 			t.Fatal("Error")
 		}
 	}
