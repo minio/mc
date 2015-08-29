@@ -18,8 +18,8 @@ package main
 
 import "github.com/minio/minio/pkg/probe"
 
-// isValidBucketPERM - is provided acl string supported
-func (b bucketPerms) isValidBucketPERM() bool {
+// isValidAccessPERM - is provided acl string supported
+func (b accessPerms) isValidAccessPERM() bool {
 	switch true {
 	case b.isPrivate():
 		fallthrough
@@ -34,19 +34,19 @@ func (b bucketPerms) isValidBucketPERM() bool {
 	}
 }
 
-// bucketPerms - bucket level access control
-type bucketPerms string
+// accessPerms - access level access control
+type accessPerms string
 
-// different types of ACL's currently supported for buckets
+// different types of ACL's currently supported for accesss
 const (
-	bucketPrivate       = bucketPerms("private")
-	bucketReadOnly      = bucketPerms("readonly")
-	bucketPublic        = bucketPerms("public")
-	bucketAuthenticated = bucketPerms("authenticated")
+	accessPrivate       = accessPerms("private")
+	accessReadOnly      = accessPerms("readonly")
+	accessPublic        = accessPerms("public")
+	accessAuthenticated = accessPerms("authenticated")
 )
 
-func (b bucketPerms) String() string {
-	if !b.isValidBucketPERM() {
+func (b accessPerms) String() string {
+	if !b.isValidAccessPERM() {
 		return string(b)
 	}
 	if b.isReadOnly() {
@@ -62,30 +62,30 @@ func (b bucketPerms) String() string {
 }
 
 // IsPrivate - is acl Private
-func (b bucketPerms) isPrivate() bool {
-	return b == bucketPrivate
+func (b accessPerms) isPrivate() bool {
+	return b == accessPrivate
 }
 
 // IsPublicRead - is acl PublicRead
-func (b bucketPerms) isReadOnly() bool {
-	return b == bucketReadOnly
+func (b accessPerms) isReadOnly() bool {
+	return b == accessReadOnly
 }
 
 // IsPublicReadWrite - is acl PublicReadWrite
-func (b bucketPerms) isPublic() bool {
-	return b == bucketPublic
+func (b accessPerms) isPublic() bool {
+	return b == accessPublic
 }
 
 // IsAuthenticated - is acl AuthenticatedRead
-func (b bucketPerms) isAuthenticated() bool {
-	return b == bucketAuthenticated
+func (b accessPerms) isAuthenticated() bool {
+	return b == accessAuthenticated
 }
 
-// getConfigACL - read ACL from config
-func getConfigACL() (acl string, err *probe.Error) {
+// getDefaultAccess - read ACL from config
+func getDefaultAccess() (acl string, err *probe.Error) {
 	config, err := getMcConfig()
 	if err != nil {
 		return "", err.Trace()
 	}
-	return config.ACL, nil
+	return config.Access, nil
 }

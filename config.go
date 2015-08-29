@@ -36,7 +36,7 @@ type configV2 struct {
 
 type configV3 struct {
 	Version string
-	ACL     string
+	Access  string
 	Aliases map[string]string
 	Hosts   map[string]hostConfig
 }
@@ -265,7 +265,7 @@ func migrateConfigV2ToV3() {
 		confV3.Aliases = mcConfigV2.Data().(*configV2).Aliases
 		confV3.Hosts = mcConfigV2.Data().(*configV2).Hosts
 		confV3.Version = globalMCConfigVersion
-		confV3.ACL = "private"
+		confV3.Access = "private"
 
 		mcNewConfigV3, err := quick.New(confV3)
 		fatalIf(err.Trace(), "Unable to initialize quick config.")
@@ -355,7 +355,7 @@ func newConfigV3() *configV3 {
 	aliases["dl"] = "https://dl.minio.io:9000"
 	aliases["localhost"] = "http://localhost:9000"
 	conf.Aliases = aliases
-	conf.ACL = "private"
+	conf.Access = "private"
 
 	return conf
 }
