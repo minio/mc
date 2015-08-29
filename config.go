@@ -37,7 +37,9 @@ type configV3 struct {
 type configV2 struct {
 	Version string
 	Aliases map[string]string
-	Hosts   map[string]struct {
+	// custom anonymous struct is necessary from version to 2 to version 3
+	// since hostConfig{} has changed to lower case fields for unmarshal
+	Hosts map[string]struct {
 		AccessKeyID     string
 		SecretAccessKey string
 	}
@@ -192,6 +194,11 @@ func migrateConfig() {
 	migrateConfigV2ToV3()
 }
 
+func fixConfig() {
+	// Fix config V3
+	fixConfigV3()
+}
+
 func migrateConfigV1ToV101() {
 	if !isMcConfigExists() {
 		return
@@ -202,7 +209,7 @@ func migrateConfigV1ToV101() {
 	// update to newer version
 	if mcConfigV1.Version() == "1.0.0" {
 		confV101 := mcConfigV1.Data().(*configV1)
-		confV101.Version = globalMCConfigVersion
+		confV101.Version = "1.0.1"
 
 		localHostConfig := struct {
 			AccessKeyID     string
@@ -248,7 +255,7 @@ func migrateConfigV101ToV2() {
 	// update to newer version
 	if mcConfigV101.Version() == "1.0.1" {
 		confV2 := mcConfigV101.Data().(*configV101)
-		confV2.Version = globalMCConfigVersion
+		confV2.Version = "2"
 
 		mcNewConfigV2, err := quick.New(confV2)
 		fatalIf(err.Trace(), "Unable to initialize quick config.")
@@ -287,6 +294,54 @@ func migrateConfigV2ToV3() {
 		fatalIf(err.Trace(), "Unable to save config.")
 
 		console.Infof("Successfully migrated %s from version ‘2’ to version: ‘3’.\n", mustGetMcConfigPath())
+	}
+}
+
+func fixConfigV3() {
+	if !isMcConfigExists() {
+		return
+	}
+	// brokenConfigV3 broken config between version 3
+	type brokenConfigV3 struct {
+		Version string
+		ACL     string
+		Access  string
+		Aliases map[string]string
+		Hosts   map[string]struct {
+			AccessKeyID     string
+			SecretAccessKey string
+		}
+	}
+	conf := new(brokenConfigV3)
+	conf.Aliases = make(map[string]string)
+	conf.Hosts = make(map[string]struct {
+		AccessKeyID     string
+		SecretAccessKey string
+	})
+
+	mcConfigV3, err := quick.Load(mustGetMcConfigPath(), conf)
+	fatalIf(err.Trace(), "Unable to load config.")
+
+	// Update to newer version
+	if len(mcConfigV3.Data().(*brokenConfigV3).Aliases) == 0 || mcConfigV3.Data().(*brokenConfigV3).ACL != "" || mcConfigV3.Data().(*brokenConfigV3).Access != "" && mcConfigV3.Version() == "3" {
+		confV3 := new(configV3)
+		confV3.Aliases = mcConfigV3.Data().(*brokenConfigV3).Aliases
+		confV3.Hosts = make(map[string]hostConfig)
+		for host, hostConf := range mcConfigV3.Data().(*brokenConfigV3).Hosts {
+			newHostConf := hostConfig{}
+			newHostConf.AccessKeyID = hostConf.AccessKeyID
+			newHostConf.SecretAccessKey = hostConf.SecretAccessKey
+			confV3.Hosts[host] = newHostConf
+		}
+		confV3.Version = globalMCConfigVersion
+
+		mcNewConfigV3, err := quick.New(confV3)
+		fatalIf(err.Trace(), "Unable to initialize quick config.")
+
+		err = mcNewConfigV3.Save(mustGetMcConfigPath())
+		fatalIf(err.Trace(), "Unable to save config.")
+
+		console.Infof("Successfully fixed %s broken config for version ‘3’.\n", mustGetMcConfigPath())
 	}
 }
 
