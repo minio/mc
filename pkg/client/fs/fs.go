@@ -75,8 +75,26 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	return st, nil
 }
 
+// SetObjectACL - set new acl
+func (f *fsClient) SetObjectACL(acl string) *probe.Error {
+	if !isValidACL(acl) {
+		return probe.NewError(client.InvalidACLType{ACL: acl})
+	}
+	_, err := os.Stat(f.path)
+	if err != nil {
+		return probe.NewError(err)
+	}
+	err = os.Chmod(f.path, aclToPerm(acl))
+	if err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+
+}
+
 // PutObject - create a new file
 func (f *fsClient) PutObject(size int64, data io.Reader) *probe.Error {
+	// for filesystem we will not support any ACL's in PutObject()
 	objectDir, _ := filepath.Split(f.path)
 	objectPath := f.path
 	if objectDir != "" {
@@ -349,8 +367,8 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	}
 }
 
-// isValidBucketACL - is acl a valid ACL?
-func isValidBucketACL(acl string) bool {
+// isValidACL - is acl a valid ACL?
+func isValidACL(acl string) bool {
 	switch acl {
 	case "private":
 		fallthrough
@@ -394,7 +412,7 @@ func (f *fsClient) MakeBucket() *probe.Error {
 
 // SetBucketACL - create a new bucket
 func (f *fsClient) SetBucketACL(acl string) *probe.Error {
-	if !isValidBucketACL(acl) {
+	if !isValidACL(acl) {
 		return probe.NewError(client.InvalidACLType{ACL: acl})
 	}
 	err := os.MkdirAll(f.path, aclToPerm(acl))

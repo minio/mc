@@ -39,6 +39,9 @@ type Config struct {
 	AppComments     []string
 	Debug           bool
 
+	// Used for Bucket/Object ACL
+	ACL string
+
 	// Used for SSL transport layer
 	CertPEM string
 	KeyPEM  string
@@ -52,6 +55,7 @@ type TLSConfig struct {
 
 type s3Client struct {
 	api     minio.API
+	acl     string
 	hostURL *client.URL
 }
 
@@ -83,7 +87,7 @@ func New(config *Config) (client.Client, *probe.Error) {
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
-	return &s3Client{api: api, hostURL: u}, nil
+	return &s3Client{api: api, hostURL: u, acl: config.ACL}, nil
 }
 
 // URL get url
@@ -117,7 +121,7 @@ func (c *s3Client) PutObject(size int64, data io.Reader) *probe.Error {
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified
 	bucket, object := c.url2BucketAndObject()
-	err := c.api.PutObject(bucket, object, "application/octet-stream", size, data)
+	err := c.api.PutObject(bucket, object, "application/octet-stream", minio.ACL(c.acl), size, data)
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse != nil {
@@ -130,13 +134,26 @@ func (c *s3Client) PutObject(size int64, data io.Reader) *probe.Error {
 	return nil
 }
 
+// SetObjectACL - set object acl
+func (c *s3Client) SetObjectACL(acl string) *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+	if object == "" {
+		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
+	}
+	err := c.api.SetObjectACL(bucket, object, minio.ACL(acl))
+	if err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
 // MakeBucket - make a new bucket
 func (c *s3Client) MakeBucket() *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
 	}
-	err := c.api.MakeBucket(bucket, minio.BucketACL("private"))
+	err := c.api.MakeBucket(bucket, minio.ACL("private"))
 	if err != nil {
 		return probe.NewError(err)
 	}
@@ -149,7 +166,7 @@ func (c *s3Client) SetBucketACL(acl string) *probe.Error {
 	if object != "" {
 		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
 	}
-	err := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
+	err := c.api.SetBucketACL(bucket, minio.ACL(acl))
 	if err != nil {
 		return probe.NewError(err)
 	}
