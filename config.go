@@ -149,7 +149,7 @@ func getMcConfig() (*configV3, *probe.Error) {
 // mustGetMcConfig - reads configuration file and returns configs, exits on error
 func mustGetMcConfig() *configV3 {
 	config, err := getMcConfig()
-	fatalIf(err.Trace(), "Unable to get mcConfig.")
+	fatalIf(err.Trace(), "Unable to read mc configuration.")
 
 	return config
 }
@@ -204,7 +204,7 @@ func migrateConfigV1ToV101() {
 		return
 	}
 	mcConfigV1, err := quick.Load(mustGetMcConfigPath(), newConfigV1())
-	fatalIf(err.Trace(), "Unable to load config.")
+	fatalIf(err.Trace(), "Unable to load config version ‘1’.")
 
 	// update to newer version
 	if mcConfigV1.Version() == "1.0.0" {
@@ -236,10 +236,10 @@ func migrateConfigV1ToV101() {
 		}
 
 		mcNewConfigV101, err := quick.New(confV101)
-		fatalIf(err.Trace(), "Unable to initialize quick config.")
+		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘1.0.1’.")
 
 		err = mcNewConfigV101.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config.")
+		fatalIf(err.Trace(), "Unable to save config version ‘1.0.1’.")
 
 		console.Infof("Successfully migrated %s from version ‘1.0.0’ to version ‘1.0.1’.\n", mustGetMcConfigPath())
 	}
@@ -250,7 +250,7 @@ func migrateConfigV101ToV2() {
 		return
 	}
 	mcConfigV101, err := quick.Load(mustGetMcConfigPath(), newConfigV101())
-	fatalIf(err.Trace(), "Unable to load config.")
+	fatalIf(err.Trace(), "Unable to load config version ‘1.0.1’.")
 
 	// update to newer version
 	if mcConfigV101.Version() == "1.0.1" {
@@ -258,12 +258,12 @@ func migrateConfigV101ToV2() {
 		confV2.Version = "2"
 
 		mcNewConfigV2, err := quick.New(confV2)
-		fatalIf(err.Trace(), "Unable to initialize quick config.")
+		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘2’.")
 
 		err = mcNewConfigV2.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config.")
+		fatalIf(err.Trace(), "Unable to save config version ‘2’.")
 
-		console.Infof("Successfully migrated %s from version ‘1.0.1’ to version: ‘2’.\n", mustGetMcConfigPath())
+		console.Infof("Successfully migrated %s from version ‘1.0.1’ to version ‘2’.\n", mustGetMcConfigPath())
 	}
 }
 
@@ -272,7 +272,7 @@ func migrateConfigV2ToV3() {
 		return
 	}
 	mcConfigV2, err := quick.Load(mustGetMcConfigPath(), newConfigV2())
-	fatalIf(err.Trace(), "Unable to load config.")
+	fatalIf(err.Trace(), "Unable to load mc config V2.")
 
 	// update to newer version
 	if mcConfigV2.Version() == "2" {
@@ -288,12 +288,12 @@ func migrateConfigV2ToV3() {
 		confV3.Version = globalMCConfigVersion
 
 		mcNewConfigV3, err := quick.New(confV3)
-		fatalIf(err.Trace(), "Unable to initialize quick config.")
+		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘3’.")
 
 		err = mcNewConfigV3.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config.")
+		fatalIf(err.Trace(), "Unable to save config version ‘3’.")
 
-		console.Infof("Successfully migrated %s from version ‘2’ to version: ‘3’.\n", mustGetMcConfigPath())
+		console.Infof("Successfully migrated %s from version ‘2’ to version ‘3’.\n", mustGetMcConfigPath())
 	}
 }
 
@@ -336,10 +336,10 @@ func fixConfigV3() {
 		confV3.Version = globalMCConfigVersion
 
 		mcNewConfigV3, err := quick.New(confV3)
-		fatalIf(err.Trace(), "Unable to initialize quick config.")
+		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘3’.")
 
 		err = mcNewConfigV3.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config.")
+		fatalIf(err.Trace(), "Unable to save config version ‘3’.")
 
 		console.Infof("Successfully fixed %s broken config for version ‘3’.\n", mustGetMcConfigPath())
 	}
