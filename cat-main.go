@@ -84,7 +84,7 @@ func mainCat(ctx *cli.Context) {
 
 	// handle std input data
 	if stdinMode {
-		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from stdin.")
+		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from standard input.")
 		return
 	}
 
@@ -96,7 +96,6 @@ func mainCat(ctx *cli.Context) {
 
 func catURL(sourceURL string) *probe.Error {
 	config := mustGetMcConfig()
-
 	URL, err := getCanonicalizedURL(sourceURL, config.Aliases)
 	if err != nil {
 		return err.Trace(sourceURL)
