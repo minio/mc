@@ -69,7 +69,7 @@ func (u UpdateMessage) String() string {
 			if runtime.GOOS == "windows" {
 				msg = "mc.exe cp " + u.Download + " .\\mc.exe"
 			} else {
-				msg = "mc cp " + u.Download + " ./mc"
+				msg = "mc cp " + u.Download + " ./mc.new; chmod 755 ./mc.new"
 			}
 			msg, err := colorizeUpdateMessage(msg)
 			fatalIf(err.Trace(msg), "Unable to colorize experimental update notification string ‘"+msg+"’.")
