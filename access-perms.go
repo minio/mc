@@ -16,10 +16,8 @@
 
 package main
 
-import "github.com/minio/minio/pkg/probe"
-
-// isValidAccessPERM - is provided acl string supported
-func (b accessPerms) isValidAccessPERM() bool {
+// isValidBucketPERM - is provided acl string supported
+func (b bucketPerms) isValidBucketPERM() bool {
 	switch true {
 	case b.isPrivate():
 		fallthrough
@@ -34,19 +32,19 @@ func (b accessPerms) isValidAccessPERM() bool {
 	}
 }
 
-// accessPerms - access level access control
-type accessPerms string
+// bucketPerms - bucket level access control
+type bucketPerms string
 
-// different types of ACL's currently supported for accesss
+// different types of ACL's currently supported for buckets
 const (
-	accessPrivate       = accessPerms("private")
-	accessReadOnly      = accessPerms("readonly")
-	accessPublic        = accessPerms("public")
-	accessAuthenticated = accessPerms("authenticated")
+	bucketPrivate       = bucketPerms("private")
+	bucketReadOnly      = bucketPerms("readonly")
+	bucketPublic        = bucketPerms("public")
+	bucketAuthenticated = bucketPerms("authenticated")
 )
 
-func (b accessPerms) String() string {
-	if !b.isValidAccessPERM() {
+func (b bucketPerms) String() string {
+	if !b.isValidBucketPERM() {
 		return string(b)
 	}
 	if b.isReadOnly() {
@@ -62,30 +60,21 @@ func (b accessPerms) String() string {
 }
 
 // IsPrivate - is acl Private
-func (b accessPerms) isPrivate() bool {
-	return b == accessPrivate
+func (b bucketPerms) isPrivate() bool {
+	return b == bucketPrivate
 }
 
 // IsPublicRead - is acl PublicRead
-func (b accessPerms) isReadOnly() bool {
-	return b == accessReadOnly
+func (b bucketPerms) isReadOnly() bool {
+	return b == bucketReadOnly
 }
 
 // IsPublicReadWrite - is acl PublicReadWrite
-func (b accessPerms) isPublic() bool {
-	return b == accessPublic
+func (b bucketPerms) isPublic() bool {
+	return b == bucketPublic
 }
 
 // IsAuthenticated - is acl AuthenticatedRead
-func (b accessPerms) isAuthenticated() bool {
-	return b == accessAuthenticated
-}
-
-// getDefaultAccess - read ACL from config
-func getDefaultAccess() (acl string, err *probe.Error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return "", err.Trace()
-	}
-	return config.Access, nil
+func (b bucketPerms) isAuthenticated() bool {
+	return b == bucketAuthenticated
 }

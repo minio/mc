@@ -88,10 +88,13 @@ func (a apiV1) putBucketRequest(bucket, acl, location string) (*request, error) 
 		r.req.ContentLength = int64(createBucketConfigBuffer.Len())
 	}
 	// by default bucket is private
-	r.Set("x-amz-acl", "private")
-	if acl != "" {
+	switch {
+	case acl != "":
 		r.Set("x-amz-acl", acl)
+	default:
+		r.Set("x-amz-acl", "private")
 	}
+
 	return r, nil
 }
 
@@ -520,7 +523,7 @@ func (a apiV1) putObjectUnAuthenticated(bucket, object, contentType string, size
 }
 
 // putObjectRequest wrapper creates a new PutObject request
-func (a apiV1) putObjectRequest(bucket, object, contentType, acl string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
+func (a apiV1) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
@@ -537,11 +540,6 @@ func (a apiV1) putObjectRequest(bucket, object, contentType, acl string, md5SumB
 	if err != nil {
 		return nil, err
 	}
-
-	r.Set("x-amz-acl", "private")
-	if acl != "" {
-		r.Set("x-amz-acl", acl)
-	}
 	// set Content-MD5 as base64 encoded md5
 	r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
 	r.Set("Content-Type", contentType)
@@ -551,8 +549,8 @@ func (a apiV1) putObjectRequest(bucket, object, contentType, acl string, md5SumB
 
 // putObject - add an object to a bucket
 // NOTE: You must have WRITE permissions on a bucket to add an object to it.
-func (a apiV1) putObject(bucket, object, contentType, acl string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
-	req, err := a.putObjectRequest(bucket, object, contentType, acl, md5SumBytes, size, body)
+func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
+	req, err := a.putObjectRequest(bucket, object, contentType, md5SumBytes, size, body)
 	if err != nil {
 		return ObjectStat{}, err
 	}
@@ -577,97 +575,6 @@ func (a apiV1) putObject(bucket, object, contentType, acl string, md5SumBytes []
 		}
 	}
 	return metadata, nil
-}
-
-// putObjectACLRequest wrapper creates a new PutObjectACL request
-func (a apiV1) putObjectACLRequest(bucket, object, acl string) (*request, error) {
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
-	op := &operation{
-		HTTPServer: a.config.Endpoint,
-		HTTPMethod: "PUT",
-		HTTPPath:   separator + bucket + separator + encodedObject + "?acl",
-	}
-	r, err := newRequest(op, a.config, nil)
-	if err != nil {
-		return nil, err
-	}
-	r.Set("x-amz-acl", acl)
-	return r, nil
-}
-
-// putObject - add an object to a bucket
-// NOTE: You must have WRITE permissions on a bucket to add an object to it.
-func (a apiV1) putObjectACL(bucket, object, acl string) error {
-	req, err := a.putObjectACLRequest(bucket, object, acl)
-	if err != nil {
-		return err
-	}
-	resp, err := req.Do()
-	defer closeResp(resp)
-	if err != nil {
-		return err
-	}
-	if resp != nil {
-		if resp.StatusCode != http.StatusOK {
-			return BodyToErrorResponse(resp.Body, a.config.AcceptType)
-		}
-	}
-	return nil
-}
-
-// getObjectACLRequest wrapper creates a new getObjectACL request
-func (a apiV1) getObjectACLRequest(bucket, object string) (*request, error) {
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
-	op := &operation{
-		HTTPServer: a.config.Endpoint,
-		HTTPMethod: "GET",
-		HTTPPath:   separator + bucket + separator + encodedObject + "?acl",
-	}
-	req, err := newRequest(op, a.config, nil)
-	if err != nil {
-		return nil, err
-	}
-	return req, nil
-}
-
-// getObjectACL get the acl information on an existing bucket
-func (a apiV1) getObjectACL(bucket, object string) (accessControlPolicy, error) {
-	req, err := a.getObjectACLRequest(bucket, object)
-	if err != nil {
-		return accessControlPolicy{}, err
-	}
-	resp, err := req.Do()
-	defer closeResp(resp)
-	if err != nil {
-		return accessControlPolicy{}, err
-	}
-	if resp != nil {
-		if resp.StatusCode != http.StatusOK {
-			return accessControlPolicy{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
-		}
-	}
-	policy := accessControlPolicy{}
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &policy)
-	if err != nil {
-		return accessControlPolicy{}, err
-	}
-	if policy.AccessControlList.Grant == nil {
-		errorResponse := ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go/issues",
-			Resource:  separator + bucket + separator + object,
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
-		}
-		return accessControlPolicy{}, errorResponse
-	}
-	return policy, nil
 }
 
 func (a apiV1) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*request, error) {

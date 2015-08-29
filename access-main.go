@@ -65,7 +65,7 @@ EXAMPLES:
 type AccessMessage struct {
 	Status string      `json:"status"`
 	Bucket string      `json:"bucket"`
-	Perms  accessPerms `json:"permission"`
+	Perms  bucketPerms `json:"permission"`
 }
 
 func (s AccessMessage) String() string {
@@ -85,8 +85,8 @@ func checkAccessSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
-	perms := accessPerms(ctx.Args().First())
-	if !perms.isValidAccessPERM() {
+	perms := bucketPerms(ctx.Args().First())
+	if !perms.isValidBucketPERM() {
 		fatalIf(errDummy().Trace(),
 			"Unrecognized permission ‘"+perms.String()+"’. Allowed values are [private, public, readonly].")
 	}
@@ -104,7 +104,8 @@ func mainAccess(ctx *cli.Context) {
 		"Access": color.New(color.FgGreen, color.Bold),
 	})
 
-	perms := accessPerms(ctx.Args().First())
+	perms := bucketPerms(ctx.Args().First())
+
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args().Tail() {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
@@ -120,7 +121,7 @@ func mainAccess(ctx *cli.Context) {
 	}
 }
 
-func doUpdateAccessCmd(targetURL string, targetPERMS accessPerms) *probe.Error {
+func doUpdateAccessCmd(targetURL string, targetPERMS bucketPerms) *probe.Error {
 	var clnt client.Client
 	clnt, err := target2Client(targetURL)
 	if err != nil {

@@ -157,11 +157,6 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 		s3Config.AppVersion = globalMCVersion
 		s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 		s3Config.HostURL = urlStr
-		access, err := getDefaultAccess()
-		if err != nil {
-			return nil, err.Trace()
-		}
-		s3Config.ACL = accessPerms(access).String()
 		s3Config.Debug = globalDebugFlag
 		s3Client, err := s3.New(s3Config)
 		if err != nil {

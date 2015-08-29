@@ -108,13 +108,12 @@ func (s *CmdTestSuite) TestNewConfigV2(c *C) {
 	perr = conf.Save(configFile)
 	c.Assert(perr, IsNil)
 
-	confNew := newConfigV3()
+	confNew := newConfigV2()
 	config, perr := quick.New(confNew)
 	c.Assert(perr, IsNil)
 	perr = config.Load(configFile)
 	c.Assert(perr, IsNil)
-	data := config.Data().(*configV3)
-	c.Assert(data.Access, Equals, "private")
+	data := config.Data().(*configV2)
 
 	type aliases struct {
 		name string
@@ -184,23 +183,23 @@ func (s *CmdTestSuite) TestArgs2URL(c *C) {
 }
 
 func (s *CmdTestSuite) TestValidPERMS(c *C) {
-	perms := accessPerms("private")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
+	perms := bucketPerms("private")
+	c.Assert(perms.isValidBucketPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "private")
-	perms = accessPerms("public")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
+	perms = bucketPerms("public")
+	c.Assert(perms.isValidBucketPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "public-read-write")
-	perms = accessPerms("readonly")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
+	perms = bucketPerms("readonly")
+	c.Assert(perms.isValidBucketPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "public-read")
-	perms = accessPerms("authenticated")
-	c.Assert(perms.isValidAccessPERM(), Equals, true)
+	perms = bucketPerms("authenticated")
+	c.Assert(perms.isValidBucketPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "authenticated-read")
 }
 
 func (s *CmdTestSuite) TestInvalidPERMS(c *C) {
-	perms := accessPerms("invalid")
-	c.Assert(perms.isValidAccessPERM(), Equals, false)
+	perms := bucketPerms("invalid")
+	c.Assert(perms.isValidBucketPERM(), Equals, false)
 }
 
 func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {

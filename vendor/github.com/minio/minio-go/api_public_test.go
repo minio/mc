@@ -64,7 +64,7 @@ func TestBucketOperations(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error")
 	}
-	if acl != minio.ACL("private") {
+	if acl != minio.BucketACL("private") {
 		t.Fatalf("Error")
 	}
 
@@ -160,7 +160,7 @@ func TestObjectOperations(t *testing.T) {
 		t.Fatalf("Error")
 	}
 	data := []byte("Hello, World")
-	err = a.PutObject("bucket", "object", "", minio.ACL("private"), int64(len(data)), bytes.NewReader(data))
+	err = a.PutObject("bucket", "object", "", int64(len(data)), bytes.NewReader(data))
 	if err != nil {
 		t.Fatalf("Error")
 	}
