@@ -323,7 +323,7 @@ func fixConfigV3() {
 	fatalIf(err.Trace(), "Unable to load config.")
 
 	// Update to newer version
-	if len(mcConfigV3.Data().(*brokenConfigV3).Aliases) == 0 || mcConfigV3.Data().(*brokenConfigV3).ACL != "" || mcConfigV3.Data().(*brokenConfigV3).Access != "" && mcConfigV3.Version() == "3" {
+	if len(mcConfigV3.Data().(*brokenConfigV3).Aliases) != 0 || mcConfigV3.Data().(*brokenConfigV3).ACL != "" || mcConfigV3.Data().(*brokenConfigV3).Access != "" && mcConfigV3.Version() == "3" {
 		confV3 := new(configV3)
 		confV3.Aliases = mcConfigV3.Data().(*brokenConfigV3).Aliases
 		confV3.Hosts = make(map[string]hostConfig)
