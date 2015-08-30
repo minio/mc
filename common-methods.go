@@ -31,10 +31,7 @@ import (
 
 // Check if the target URL represents folder. It may or may not exist yet.
 func isTargetURLDir(targetURL string) bool {
-	targetURLParse, err := client.Parse(targetURL)
-	if err != nil {
-		return false
-	}
+	targetURLParse := client.NewURL(targetURL)
 	_, targetContent, perr := url2Stat(targetURL)
 	if perr != nil {
 		if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
@@ -134,10 +131,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 
 // getNewClient gives a new client interface
 func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) {
-	url, err := client.Parse(urlStr)
-	if err != nil {
-		return nil, probe.NewError(err)
-	}
+	url := client.NewURL(urlStr)
 	switch url.Type {
 	case client.Object: // Minio and S3 compatible cloud storage
 		s3Config := new(s3.Config)
@@ -171,31 +165,6 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 		return fsClient, nil
 	}
 	return nil, errInitClient(urlStr).Trace()
-}
-
-// url2Stat - Returns client, config and its stat Content from the URL
-func url2Stat(urlStr string) (client client.Client, content *client.Content, err *probe.Error) {
-	client, err = url2Client(urlStr)
-	if err != nil {
-		return nil, nil, err.Trace(urlStr)
-	}
-	content, err = client.Stat()
-	if err != nil {
-		return nil, nil, err.Trace(urlStr)
-	}
-	return client, content, nil
-}
-
-func isValidURL(url string) bool {
-	// Empty source arg?
-	urlParse, err := client.Parse(url)
-	if err != nil {
-		return false
-	}
-	if urlParse.Path == "" {
-		return false
-	}
-	return true
 }
 
 func url2Client(url string) (client.Client, *probe.Error) {

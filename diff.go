@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -74,20 +73,6 @@ func (d DiffMessage) String() string {
 	return string(diffJSONBytes)
 }
 
-// urlJoinPath Join a path to existing URL
-func urlJoinPath(url1, url2 string) (string, *probe.Error) {
-	u1, e := client.Parse(url1)
-	if e != nil {
-		return "", probe.NewError(e)
-	}
-	u2, e := client.Parse(url2)
-	if e != nil {
-		return "", probe.NewError(e)
-	}
-	u1.Path = filepath.Join(u1.Path, u2.Path)
-	return u1.String(), nil
-}
-
 func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan DiffMessage) {
 	defer close(ch)
 	firstClnt, firstContent, err := url2Stat(firstURL)
@@ -107,13 +92,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan DiffMes
 	if firstContent.Type.IsRegular() {
 		switch {
 		case secondContent.Type.IsDir():
-			newSecondURL, err := urlJoinPath(secondURL, firstURL)
-			if err != nil {
-				ch <- DiffMessage{
-					Error: err.Trace(secondURL, firstURL),
-				}
-				return
-			}
+			newSecondURL := urlJoinPath(secondURL, firstURL)
 			doDiffObjects(firstURL, newSecondURL, ch)
 		case !secondContent.Type.IsRegular():
 			ch <- DiffMessage{
@@ -194,20 +173,8 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 			}
 			return
 		}
-		newFirstURL, err := urlJoinPath(firstClnt.URL().String(), contentCh.Content.Name)
-		if err != nil {
-			ch <- DiffMessage{
-				Error: err.Trace(firstClnt.URL().String()),
-			}
-			return
-		}
-		newSecondURL, err := urlJoinPath(secondClnt.URL().String(), contentCh.Content.Name)
-		if err != nil {
-			ch <- DiffMessage{
-				Error: err.Trace(secondClnt.URL().String()),
-			}
-			return
-		}
+		newFirstURL := urlJoinPath(firstClnt.URL().String(), contentCh.Content.Name)
+		newSecondURL := urlJoinPath(secondClnt.URL().String(), contentCh.Content.Name)
 		_, newFirstContent, errFirst := url2Stat(newFirstURL)
 		_, newSecondContent, errSecond := url2Stat(newSecondURL)
 		switch {

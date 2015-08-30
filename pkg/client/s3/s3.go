@@ -57,10 +57,7 @@ type s3Client struct {
 
 // New returns an initialized s3Client structure. if debug use a internal trace transport
 func New(config *Config) (client.Client, *probe.Error) {
-	u, err := client.Parse(config.HostURL)
-	if err != nil {
-		return nil, probe.NewError(err)
-	}
+	u := client.NewURL(config.HostURL)
 	var transport http.RoundTripper
 	switch {
 	case config.Debug == true:
