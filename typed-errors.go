@@ -39,10 +39,6 @@ var (
 		return probe.NewError(errors.New("Error reading glob URL ‘" + glob + "’ while comparing with ‘" + request + "’.")).Untrace()
 	}
 
-	errInvalidURL = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Invalid URL ‘" + URL + "’.")).Untrace()
-	}
-
 	errNoMatchingHost = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("No matching host found for the given URL ‘" + URL + "’.")).Untrace()
 	}

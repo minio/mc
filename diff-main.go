@@ -81,11 +81,8 @@ func mainDiff(ctx *cli.Context) {
 	firstArg := ctx.Args().First()
 	secondArg := ctx.Args().Last()
 
-	firstURL, err := getCanonicalizedURL(firstArg, config.Aliases)
-	fatalIf(err.Trace(firstArg), "Unable to parse first argument ‘"+firstArg+"’.")
-
-	secondURL, err := getCanonicalizedURL(secondArg, config.Aliases)
-	fatalIf(err.Trace(secondArg), "Unable to parse second argument ‘"+secondArg+"’.")
+	firstURL := aliasExpand(firstArg, config.Aliases)
+	secondURL := aliasExpand(secondArg, config.Aliases)
 
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {

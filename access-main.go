@@ -108,8 +108,7 @@ func mainAccess(ctx *cli.Context) {
 
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args().Tail() {
-		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
+		targetURL := aliasExpand(arg, config.Aliases)
 
 		fatalIf(doUpdateAccessCmd(targetURL, perms).Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
 
