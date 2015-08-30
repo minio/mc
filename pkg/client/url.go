@@ -63,10 +63,10 @@ func getScheme(rawurl string) (scheme, path string) {
 func splitSpecial(s string, delimiter string, cutdelimiter bool) (string, string) {
 	i := strings.Index(s, delimiter)
 	if i < 0 {
-		// if delimiter not found return as is
+		// if delimiter not found return as is.
 		return s, ""
 	}
-	// if delimiter should be removed, remove it
+	// if delimiter should be removed, remove it.
 	if cutdelimiter {
 		return s[0:i], s[i+len(delimiter):]
 	}
@@ -74,18 +74,18 @@ func splitSpecial(s string, delimiter string, cutdelimiter bool) (string, string
 	return s[0:i], s[i:]
 }
 
-// getHost - extract host from authority string, we do not support ftp style username@ yet
+// getHost - extract host from authority string, we do not support ftp style username@ yet.
 func getHost(authority string) (host string) {
 	i := strings.LastIndex(authority, "@")
 	if i >= 0 {
-		// TODO support, username@password style userinfo, useful for ftp support
+		// TODO support, username@password style userinfo, useful for ftp support.
 		return
 	}
 	return authority
 }
 
-// Parse url
-func Parse(urlStr string) (*URL, error) {
+// NewURL returns an abstracted URL for filesystems and object storage.
+func NewURL(urlStr string) *URL {
 	scheme, rest := getScheme(urlStr)
 	rest, _ = splitSpecial(rest, "?", true)
 	if strings.HasPrefix(rest, "//") {
@@ -103,24 +103,24 @@ func Parse(urlStr string) (*URL, error) {
 				Path:            rest,
 				SchemeSeparator: "://",
 				Separator:       '/',
-			}, nil
+			}
 		}
 	}
 	return &URL{
 		Type:      Filesystem,
 		Path:      rest,
 		Separator: filepath.Separator,
-	}, nil
+	}
 }
 
-// String convert URL into its canonical form
+// String convert URL into its canonical form.
 func (u *URL) String() string {
 	var buf bytes.Buffer
-	// if fileystem no translation needed, return as is
+	// if fileystem no translation needed, return as is.
 	if u.Type == Filesystem {
 		return u.Path
 	}
-	// if Object convert from any non standard paths to a supported URL path style
+	// if Object convert from any non standard paths to a supported URL path style.
 	if u.Type == Object {
 		buf.WriteString(u.Scheme)
 		buf.WriteByte(':')

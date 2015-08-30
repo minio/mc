@@ -35,10 +35,7 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 		return hostConfig{}, err.Trace()
 	}
 	{
-		url, err := client.Parse(URL)
-		if err != nil {
-			return hostConfig{}, probe.NewError(err)
-		}
+		url := client.NewURL(URL)
 		// No host matching or keys needed for filesystem requests
 		if url.Type == client.Filesystem {
 			hostCfg := hostConfig{

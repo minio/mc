@@ -75,10 +75,7 @@ func checkCopySyntax(ctx *cli.Context) {
 	}
 	// scope locally
 	{
-		url, err := client.Parse(tgtURL)
-		if err != nil {
-			fatalIf(probe.NewError(err), fmt.Sprintf("Unable to parse target ‘%s’ argument.", tgtURL))
-		}
+		url := client.NewURL(tgtURL)
 		if url.Host != "" {
 			if url.Path == string(url.Separator) {
 				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
@@ -258,15 +255,8 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	{
-		sourceURLParse, err := client.Parse(sourceURL)
-		if err != nil {
-			return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
-		}
-
-		targetURLParse, err := client.Parse(targetURL)
-		if err != nil {
-			return copyURLs{Error: errInvalidTarget(targetURL).Trace()}
-		}
+		sourceURLParse := client.NewURL(sourceURL)
+		targetURLParse := client.NewURL(targetURL)
 		targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
 		return prepareCopyURLsTypeA(sourceURL, targetURLParse.String())
 	}
@@ -312,27 +302,14 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			}
 
 			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-			sourceURLParse, err := client.Parse(sourceURL)
-			if err != nil {
-				copyURLsCh <- copyURLs{Error: errInvalidSource(sourceURL).Trace()}
-				continue
-			}
-
-			targetURLParse, err := client.Parse(targetURL)
-			if err != nil {
-				copyURLsCh <- copyURLs{Error: errInvalidTarget(targetURL).Trace()}
-				continue
-			}
+			sourceURLParse := client.NewURL(sourceURL)
+			targetURLParse := client.NewURL(targetURL)
 
 			sourceURLDelimited := sourceURLParse.String()[:strings.LastIndex(sourceURLParse.String(),
 				string(sourceURLParse.Separator))+1]
 			sourceContentName := sourceContent.Content.Name
 			sourceContentURL := sourceURLDelimited + sourceContentName
-			sourceContentParse, err := client.Parse(sourceContentURL)
-			if err != nil {
-				copyURLsCh <- copyURLs{Error: errInvalidSource(sourceContentName).Trace()}
-				continue
-			}
+			sourceContentParse := client.NewURL(sourceContentURL)
 
 			// Construct target path from recursive path of source without its prefix dir.
 			newTargetURLParse := *targetURLParse

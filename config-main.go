@@ -50,7 +50,9 @@ USAGE:
 
 EXAMPLES:
    1. Add aliases for a URL
-      $ mc {{.Name}} add alias zek https://s3.amazonaws.com/
+      $ mc {{.Name}} add alias mcloud https://s3.amazonaws.com/miniocloud
+      $ mc ls mcloud
+      $ mc cp /bin/true mccloud/true
 
    2. List all aliased URLs.
       $ mc {{.Name}} list alias
@@ -189,9 +191,6 @@ func removeAlias(alias string) {
 
 	err = config.Load(mustGetMcConfigPath())
 	fatalIf(err.Trace(), "Unable to load config path")
-	if isAliasReserved(alias) {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Cannot use a reserved name ‘%s’ as an alias. Following are reserved names: [help, private, readonly, public, authenticated].", alias))
-	}
 	if !isValidAliasName(alias) {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
 	}
@@ -230,9 +229,6 @@ func addAlias(alias, url string) {
 	url = strings.TrimSuffix(url, "/")
 	if !strings.HasPrefix(url, "http") {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Invalid alias URL ‘%s’. Valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com.", url))
-	}
-	if isAliasReserved(alias) {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Cannot use a reserved name ‘%s’ as an alias. Following are reserved names: [help, private, readonly, public, authenticated].", alias))
 	}
 	if !isValidAliasName(alias) {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))

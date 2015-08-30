@@ -86,9 +86,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 			fatalIf(errDummy().Trace(), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
 		}
 
-		url, e := client.Parse(tgtURL)
-		fatalIf(probe.NewError(e), "Unable to parse target ‘"+tgtURL+"’ argument.")
-
+		url := client.NewURL(tgtURL)
 		if url.Host != "" {
 			if url.Path == string(url.Separator) {
 				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))

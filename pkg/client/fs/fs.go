@@ -43,8 +43,7 @@ func New(path string) (client.Client, *probe.Error) {
 
 // URL get url
 func (f *fsClient) URL() *client.URL {
-	url, _ := client.Parse(f.path)
-	return url
+	return client.NewURL(f.path)
 }
 
 /// Object operations

@@ -173,13 +173,15 @@ func (s *CmdTestSuite) TestHostConfig(c *C) {
 }
 
 func (s *CmdTestSuite) TestArgs2URL(c *C) {
-	URLs := []string{"localhost:", "s3:", "play:", "https://s3-us-west-2.amazonaws.com"}
+	URLs := []string{"localhost", "s3", "play", "playgo", "goplay", "https://s3-us-west-2.amazonaws.com"}
 	expandedURLs, err := args2URLs(URLs)
 	c.Assert(err, IsNil)
-	c.Assert(expandedURLs[0], Equals, "http://localhost:9000/")
-	c.Assert(expandedURLs[1], Equals, "https://s3.amazonaws.com/")
-	c.Assert(expandedURLs[2], Equals, "https://play.minio.io:9000/")
-	c.Assert(expandedURLs[3], Equals, "https://s3-us-west-2.amazonaws.com")
+	c.Assert(expandedURLs[0], Equals, "http://localhost:9000")
+	c.Assert(expandedURLs[1], Equals, "https://s3.amazonaws.com")
+	c.Assert(expandedURLs[2], Equals, "https://play.minio.io:9000")
+	c.Assert(expandedURLs[3], Equals, "playgo") // Has no corresponding alias. So expect same value.
+	c.Assert(expandedURLs[4], Equals, "goplay") // Has no corresponding alias. So expect same value.
+	c.Assert(expandedURLs[5], Equals, "https://s3-us-west-2.amazonaws.com")
 }
 
 func (s *CmdTestSuite) TestValidPERMS(c *C) {
@@ -247,38 +249,29 @@ func (s *CmdTestSuite) TestIsvalidAliasName(c *C) {
 	c.Check(isValidAliasName("h0SFD2k2#Fdsa"), Equals, false)
 	c.Check(isValidAliasName("0dslka-4"), Equals, false)
 	c.Check(isValidAliasName("-fdslka"), Equals, false)
-	c.Check(isAliasReserved("help"), Equals, true)
-	c.Check(isAliasReserved("private"), Equals, true) // reserved names
 }
 
 func (s *CmdTestSuite) TestEmptyExpansions(c *C) {
-	url, err := aliasExpand("hello", nil)
+	url := aliasExpand("hello", nil)
 	c.Assert(url, Equals, "hello")
-	c.Assert(err, IsNil)
 
-	url, err = aliasExpand("minio://hello", nil)
+	url = aliasExpand("minio://hello", nil)
 	c.Assert(url, Equals, "minio://hello")
-	c.Assert(err, IsNil)
 
-	url, err = aliasExpand("$#\\", nil)
+	url = aliasExpand("$#\\", nil)
 	c.Assert(url, Equals, "$#\\")
-	c.Assert(err, IsNil)
 
-	url, err = aliasExpand("foo:bar", map[string]string{"foo": "http://foo"})
+	url = aliasExpand("foo/bar", map[string]string{"foo": "http://foo"})
 	c.Assert(url, Equals, "http://foo/bar")
-	c.Assert(err, IsNil)
 
-	url, err = aliasExpand("myfoo:bar", nil)
-	c.Assert(url, Equals, "myfoo:bar")
-	c.Assert(err, IsNil)
+	url = aliasExpand("myfoo/bar", nil)
+	c.Assert(url, Equals, "myfoo/bar")
 
-	url, err = aliasExpand("", nil)
+	url = aliasExpand("", nil)
 	c.Assert(url, Equals, "")
-	c.Assert(err, IsNil)
 
-	url, err = aliasExpand("hello", nil)
+	url = aliasExpand("hello", nil)
 	c.Assert(url, Equals, "hello")
-	c.Assert(err, IsNil)
 }
 
 func (s *CmdTestSuite) TestApp(c *C) {

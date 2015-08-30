@@ -17,6 +17,7 @@
 package main
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
@@ -28,7 +29,21 @@ const (
 	recursiveSeparator = "..."
 )
 
-// isURLRecursive - find out if requested url is recursive
+// url2Stat - Returns client, config and its stat Content from the URL.
+func isValidURL(url string) bool {
+	// TODO: Requires a better logic.
+	return true
+}
+
+// urlJoinPath Join a path to existing URL.
+func urlJoinPath(url1, url2 string) string {
+	u1 := client.NewURL(url1)
+	u2 := client.NewURL(url2)
+	u1.Path = filepath.Join(u1.Path, u2.Path)
+	return u1.String()
+}
+
+// isURLRecursive - find out if requested url is recursive.
 func isURLRecursive(urlStr string) bool {
 	return strings.HasSuffix(urlStr, recursiveSeparator)
 }
@@ -45,21 +60,18 @@ func stripRecursiveURL(urlStr string) string {
 	return urlStr
 }
 
-// getCanonicalizedURL - extracts URL string from a single cmd-line argument
-func getCanonicalizedURL(arg string, aliases map[string]string) (urlStr string, err *probe.Error) {
+// getCanonicalizedURL - extracts URL string from a single cmd-line argument.
+func getCanonicalizedURL(arg string, aliases map[string]string) (string, *probe.Error) {
 	// Check and expand Alias
-	urlStr, err = aliasExpand(arg, aliases)
-	if err != nil {
-		return "", err.Trace(arg)
-	}
-	if _, err := client.Parse(urlStr); err != nil {
+	urlStr := aliasExpand(arg, aliases)
+	if !isValidURL(urlStr) {
 		// Not a valid URL. Return error
 		return "", errInvalidURL(urlStr).Trace()
 	}
 	return urlStr, nil
 }
 
-// getCanonicalizedURLs - extracts multiple URL strings from a single cmd-line argument
+// getCanonicalizedURLs - extracts multiple URL strings from a single cmd-line argument.
 func getCanonicalizedURLs(args []string, aliases map[string]string) (urls []string, err *probe.Error) {
 	for _, arg := range args {
 		u, err := getCanonicalizedURL(arg, aliases)
@@ -84,4 +96,17 @@ func args2URLs(args []string) ([]string, *probe.Error) {
 		return nil, err.Trace(args...)
 	}
 	return URLs, nil
+}
+
+// url2Stat returns stat info for URL.
+func url2Stat(urlStr string) (client client.Client, content *client.Content, err *probe.Error) {
+	client, err = url2Client(urlStr)
+	if err != nil {
+		return nil, nil, err.Trace(urlStr)
+	}
+	content, err = client.Stat()
+	if err != nil {
+		return nil, nil, err.Trace(urlStr)
+	}
+	return client, content, nil
 }

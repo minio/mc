@@ -19,67 +19,37 @@ package main
 import (
 	"regexp"
 	"strings"
-
-	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio/pkg/probe"
+	"unicode"
+	"unicode/utf8"
 )
 
-// validAliasURL: use net/url.Parse to validate
+// validAliasName regex validation.
 var validAliasName = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$")
 
-func isAliasReserved(aliasName string) bool {
-	// help is reserved argument
-	switch aliasName {
-	case "help":
-		fallthrough
-	case "private":
-		fallthrough
-	case "readonly":
-		fallthrough
-	case "public":
-		fallthrough
-	case "authenticated":
-		return true
-	default:
-		return false
-	}
-}
-
-// Check if it is an aliased URL
+// Check if it is an aliased URL.
 func isValidAliasName(aliasName string) bool {
 	return validAliasName.MatchString(aliasName)
 }
 
-// aliasExpand expands aliased (name:/path) to full URL, used by url-parser
-func aliasExpand(aliasedURL string, aliases map[string]string) (string, *probe.Error) {
-	u, err := client.Parse(aliasedURL)
-	if err != nil {
-		return aliasedURL, probe.NewError(err)
-	}
-	// proper URL
-	if u.Host != "" {
-		return aliasedURL, nil
-	}
-	for aliasName, expandedURL := range aliases {
-		if strings.HasPrefix(aliasedURL, aliasName+":") {
+// aliasExpand expands aliased (name:/path) to full URL, used by url-parser.
+func aliasExpand(aliasedURL string, aliases map[string]string) string {
+	for aliasName, aliasValue := range aliases {
+		if strings.HasPrefix(aliasedURL, aliasName) {
 			// Match found. Expand it.
-			splits := strings.Split(aliasedURL, ":")
-			// if expandedURL is missing, return aliasedURL treat it like fs
-			if expandedURL == "" {
-				return aliasedURL, nil
+			splits := strings.SplitN(aliasedURL, aliasName, 2)
+			if len(splits) == 1 {
+				return aliasedURL // Not an aliased URL. Return as is.
 			}
-			// if more splits found return
-			if len(splits) == 2 {
-				// remove any prefixed slashes
-				trimmedURL := expandedURL + "/" + strings.TrimPrefix(strings.TrimPrefix(splits[1], "/"), "\\")
-				u, err := client.Parse(trimmedURL)
-				if err != nil {
-					return aliasedURL, errInvalidURL(aliasedURL).Trace()
-				}
-				return u.String(), nil
+			if len(splits[0]) == 0 && len(splits[1]) == 0 {
+				return aliasValue // exact match.
 			}
-			return aliasedURL, nil
+			separator, _ := utf8.DecodeRuneInString(splits[1])
+			if unicode.IsLetter(separator) || unicode.IsNumber(separator) {
+				return aliasedURL // Do not expand for whole strings with alias prefix.
+			}
+			// Matched, but path needs to be joined.
+			return urlJoinPath(aliasValue, splits[1])
 		}
 	}
-	return aliasedURL, nil
+	return aliasedURL // No matching alias found. Return as is.
 }
