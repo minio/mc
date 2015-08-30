@@ -173,14 +173,14 @@ func (s *CmdTestSuite) TestHostConfig(c *C) {
 }
 
 func (s *CmdTestSuite) TestArgs2URL(c *C) {
-	URLs := []string{"localhost", "s3", "play", "playgo", "goplay", "https://s3-us-west-2.amazonaws.com"}
+	URLs := []string{"localhost", "s3", "play", "playgo", "play.go", "https://s3-us-west-2.amazonaws.com"}
 	expandedURLs, err := args2URLs(URLs)
 	c.Assert(err, IsNil)
 	c.Assert(expandedURLs[0], Equals, "http://localhost:9000")
 	c.Assert(expandedURLs[1], Equals, "https://s3.amazonaws.com")
 	c.Assert(expandedURLs[2], Equals, "https://play.minio.io:9000")
-	c.Assert(expandedURLs[3], Equals, "playgo") // Has no corresponding alias. So expect same value.
-	c.Assert(expandedURLs[4], Equals, "goplay") // Has no corresponding alias. So expect same value.
+	c.Assert(expandedURLs[3], Equals, "playgo")  // Has no corresponding alias. So expect same value.
+	c.Assert(expandedURLs[4], Equals, "play.go") // Has no corresponding alias. So expect same value.
 	c.Assert(expandedURLs[5], Equals, "https://s3-us-west-2.amazonaws.com")
 }
 
