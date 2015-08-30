@@ -52,7 +52,7 @@ EXAMPLES:
    1. Add aliases for a URL
       $ mc {{.Name}} add alias mcloud https://s3.amazonaws.com/miniocloud
       $ mc ls mcloud
-      $ mc cp /bin/true mccloud/true
+      $ mc cp /bin/true mcloud/true
 
    2. List all aliased URLs.
       $ mc {{.Name}} list alias
