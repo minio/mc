@@ -17,9 +17,9 @@
 package main
 
 import (
+	"os"
 	"regexp"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 )
 
@@ -43,8 +43,8 @@ func aliasExpand(aliasedURL string, aliases map[string]string) string {
 			if len(splits[0]) == 0 && len(splits[1]) == 0 {
 				return aliasValue // exact match.
 			}
-			separator, _ := utf8.DecodeRuneInString(splits[1])
-			if unicode.IsLetter(separator) || unicode.IsNumber(separator) {
+			_, sepLen := utf8.DecodeRuneInString(splits[1])
+			if sepLen == 1 && !os.IsPathSeparator(splits[1][0]) {
 				return aliasedURL // Do not expand for whole strings with alias prefix.
 			}
 			// Matched, but path needs to be joined.
