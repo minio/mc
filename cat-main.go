@@ -96,10 +96,7 @@ func mainCat(ctx *cli.Context) {
 
 func catURL(sourceURL string) *probe.Error {
 	config := mustGetMcConfig()
-	URL, err := getCanonicalizedURL(sourceURL, config.Aliases)
-	if err != nil {
-		return err.Trace(sourceURL)
-	}
+	URL := aliasExpand(sourceURL, config.Aliases)
 
 	sourceClnt, err := source2Client(URL)
 	if err != nil {

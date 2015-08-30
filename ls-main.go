@@ -110,11 +110,10 @@ func mainList(ctx *cli.Context) {
 
 	config := mustGetMcConfig()
 	for _, arg := range args {
-		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
+		targetURL := aliasExpand(arg, config.Aliases)
 
 		// if recursive strip off the "..."
-		err = doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL))
+		err := doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL))
 		fatalIf(err.Trace(targetURL), "Unable to list target ‘"+targetURL+"’.")
 	}
 }

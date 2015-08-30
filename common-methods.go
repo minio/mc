@@ -168,9 +168,6 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 }
 
 func url2Client(url string) (client.Client, *probe.Error) {
-	if !isValidURL(url) {
-		return nil, errInvalidURL(url).Trace()
-	}
 	urlconfig, err := getHostConfig(url)
 	if err != nil {
 		return nil, err.Trace(url)

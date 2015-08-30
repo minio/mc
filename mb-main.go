@@ -93,8 +93,7 @@ func mainMakeBucket(ctx *cli.Context) {
 
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
-		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
-		fatalIf(err.Trace(arg), "Unable to parse bucket ‘"+arg+"’.")
+		targetURL := aliasExpand(arg, config.Aliases)
 
 		fatalIf(doMakeBucketCmd(targetURL).Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
 		console.Println(MakeBucketMessage{

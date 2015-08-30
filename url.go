@@ -29,12 +29,6 @@ const (
 	recursiveSeparator = "..."
 )
 
-// url2Stat - Returns client, config and its stat Content from the URL.
-func isValidURL(url string) bool {
-	// TODO: Requires a better logic.
-	return true
-}
-
 // urlJoinPath Join a path to existing URL.
 func urlJoinPath(url1, url2 string) string {
 	u1 := client.NewURL(url1)
@@ -60,29 +54,6 @@ func stripRecursiveURL(urlStr string) string {
 	return urlStr
 }
 
-// getCanonicalizedURL - extracts URL string from a single cmd-line argument.
-func getCanonicalizedURL(arg string, aliases map[string]string) (string, *probe.Error) {
-	// Check and expand Alias
-	urlStr := aliasExpand(arg, aliases)
-	if !isValidURL(urlStr) {
-		// Not a valid URL. Return error
-		return "", errInvalidURL(urlStr).Trace()
-	}
-	return urlStr, nil
-}
-
-// getCanonicalizedURLs - extracts multiple URL strings from a single cmd-line argument.
-func getCanonicalizedURLs(args []string, aliases map[string]string) (urls []string, err *probe.Error) {
-	for _, arg := range args {
-		u, err := getCanonicalizedURL(arg, aliases)
-		if err != nil {
-			return nil, err.Trace(arg)
-		}
-		urls = append(urls, u)
-	}
-	return urls, nil
-}
-
 // args2URLs extracts source and target URLs from command-line args.
 func args2URLs(args []string) ([]string, *probe.Error) {
 	config, err := getMcConfig()
@@ -91,9 +62,9 @@ func args2URLs(args []string) ([]string, *probe.Error) {
 
 	}
 	// Convert arguments to URLs: expand alias, fix format...
-	URLs, err := getCanonicalizedURLs(args, config.Aliases)
-	if err != nil {
-		return nil, err.Trace(args...)
+	URLs := []string{}
+	for _, arg := range args {
+		URLs = append(URLs, aliasExpand(arg, config.Aliases))
 	}
 	return URLs, nil
 }

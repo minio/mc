@@ -34,24 +34,22 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 	if err != nil {
 		return hostConfig{}, err.Trace()
 	}
-	{
-		url := client.NewURL(URL)
-		// No host matching or keys needed for filesystem requests
-		if url.Type == client.Filesystem {
-			hostCfg := hostConfig{
-				AccessKeyID:     "",
-				SecretAccessKey: "",
-			}
-			return hostCfg, nil
+	url := client.NewURL(URL)
+	// No host matching or keys needed for filesystem requests
+	if url.Type == client.Filesystem {
+		hostCfg := hostConfig{
+			AccessKeyID:     "",
+			SecretAccessKey: "",
 		}
-		for globURL, hostCfg := range config.Hosts {
-			match, err := filepath.Match(globURL, url.Host)
-			if err != nil {
-				return hostConfig{}, errInvalidGlobURL(globURL, URL).Trace()
-			}
-			if match {
-				return hostCfg, nil
-			}
+		return hostCfg, nil
+	}
+	for globURL, hostCfg := range config.Hosts {
+		match, err := filepath.Match(globURL, url.Host)
+		if err != nil {
+			return hostConfig{}, errInvalidGlobURL(globURL, URL).Trace()
+		}
+		if match {
+			return hostCfg, nil
 		}
 	}
 	return hostConfig{}, errNoMatchingHost(URL).Trace()
