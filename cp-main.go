@@ -41,14 +41,7 @@ var cpCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE [SOURCE...] TARGET {{if .Description}}
-
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   mc {{.Name}} SOURCE [SOURCE...] TARGET
 
 EXAMPLES:
    1. Copy list of objects from local file system to Amazon S3 cloud storage.
@@ -61,10 +54,13 @@ EXAMPLES:
       $ mc {{.Name}} backup/2014/... backup/2015/... https://play.minio.io:9000/archive/
 
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
-      $ mc {{.Name}} s3:documents/2014/... C:\backup\2014
+      $ mc {{.Name}} s3/documents/2014/... C:\backup\2014
 
    5. Copy an object of non english characters to Amazon S3 cloud storage.
-      $ mc {{.Name}} 本語 s3:andoria/本語
+      $ mc {{.Name}} 本語 s3/andoria/本語
+
+   6. Copy local folder with space characters to Amazon S3 cloud storage.
+      $ mc {{.Name}} 'workdir/documents/May 2014...' s3/miniocloud
 `,
 }
 

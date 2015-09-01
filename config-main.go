@@ -46,7 +46,11 @@ var configCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} OPERATION OPTION [ARGS...]
+   mc {{.Name}} add OPTION [ARGS...]
+   mc {{.Name}} list OPTION [ARGS...]
+   mc {{.Name}} remove OPTION [ARGS...]
+
+   OPTION = alias
 
 EXAMPLES:
    1. Add aliases for a URL

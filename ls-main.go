@@ -34,14 +34,7 @@ var lsCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET ...] {{if .Description}}
-
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   mc {{.Name}} TARGET [TARGET ...]
 
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.
@@ -60,12 +53,18 @@ EXAMPLES:
       [2015-03-31 14:46:33 PDT] 15.00MiB Gowron\Khitomer Conference Details.pdf
 
    4. List files with non english characters on Amazon S3 cloud storage.
-      $ mc ls s3:andoria/本...
+      $ mc ls s3/andoria/本...
       [2015-05-19 17:21:49 PDT]    41B 本語.pdf
       [2015-05-19 17:24:19 PDT]    41B 本語.txt
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
-   5. Behave like operating system tool ‘ls’, used for shell aliases.
+   5. List files with space characters on Amazon S3 cloud storage. 
+      $ mc ls 's3/miniocloud/Community Files/'
+      [2015-05-19 17:21:49 PDT]    41B 本語.pdf
+      [2015-05-19 17:24:19 PDT]    41B 本語.txt
+      [2015-05-19 17:28:22 PDT]    41B 本語.md
+    
+   6. Behave like operating system tool ‘ls’, used for shell aliases.
       $ mc --mimic ls
       ...
       [2015-05-19 17:28:22 PDT]    41B 本語.md

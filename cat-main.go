@@ -35,14 +35,7 @@ var catCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE [SOURCE...] {{if .Description}}
-
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   mc {{.Name}} SOURCE [SOURCE...]
 
 EXAMPLES:
    1. Concantenate an object from Amazon S3 cloud storage to mplayer standard input.
@@ -55,7 +48,7 @@ EXAMPLES:
       $ mc {{.Name}} *.txt > newfile.txt
 
    4. Concatenate a non english file name from Amazon S3 cloud storage.
-      $ mc {{.Name}} s3:andoria/本語 > /tmp/本語
+      $ mc {{.Name}} s3/andoria/本語 > /tmp/本語
 
    5. Behave like operating system tool ‘cat’, used for shell aliases.
       $ echo "Hello, World!" | mc --mimic cat

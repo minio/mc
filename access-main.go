@@ -29,20 +29,19 @@ import (
 // Set access permissions.
 var accessCmd = cli.Command{
 	Name:   "access",
-	Usage:  "Set access permissions.",
+	Usage:  "Set or get access permissions.",
 	Action: mainAccess,
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} [OPTION] PERMISSION TARGET [TARGET ...] {{if .Description}}
+   mc {{.Name}} set PERMISSION TARGET [TARGET ...]
+   mc {{.Name}} get TARGET [TARGET ...]
+
+   PERMISSION = private | readonly | public | authorized {{if .Description}}
 
 DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   {{.Description}}{{end}}
 
 EXAMPLES:
 
@@ -55,7 +54,7 @@ EXAMPLES:
    3. Set bucket to "authenticated" on Amazon S3 cloud storage to provide read access to IAM Authenticated Users group.
       $ mc {{.Name}} set authorized https://s3.amazonaws.com/shared-authenticated
 
-   4. Set folder to world readwrite (chmod 777) on local filesystem.
+   4. Get bucket permissions.
       $ mc {{.Name}} get https://s3.amazonaws.com/shared
 `,
 }

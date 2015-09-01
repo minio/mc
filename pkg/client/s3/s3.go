@@ -177,7 +177,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	objectMetadata := new(client.Content)
 	bucket, object := c.url2BucketAndObject()
 	switch {
-	// valid case for s3:...
+	// valid case for s3/...
 	case bucket == "" && object == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {

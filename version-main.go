@@ -35,10 +35,8 @@ var versionCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} {{if .Description}}
+   mc {{.Name}}
 
-DESCRIPTION:
-   {{.Description}}{{end}}
 `,
 }
 

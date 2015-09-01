@@ -37,24 +37,22 @@ var sessionCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} [SESSION] {{if .Description}}
+   mc {{.Name}} list
+   mc {{.Name}} resume SESSION-ID
+   mc {{.Name}} clear SESSION-ID
 
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   SESSION-ID = $SESSION | all
 
 EXAMPLES:
    1. List sessions
       $ mc {{.Name}} list
+      ygVIpSJs -> [2015-08-29 15:25:12 PDT] cp /usr/bin... test
 
    2. Resume session
-      $ mc {{.Name}} resume [SESSION]
+      $ mc {{.Name}} resume ygVIpSJs
 
    3. Clear session
-      $ mc {{.Name}} clear [SESSION]|[all]
+      $ mc {{.Name}} clear ygVIpSJs
 `,
 }
 
