@@ -34,18 +34,11 @@ var diffCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} FIRST SECOND {{if .Description}}
-
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   mc {{.Name}} FIRST SECOND
 
 EXAMPLES:
    1. Compare foo.ogg on a local filesystem with bar.ogg on Amazon AWS cloud storage.
-      $ mc {{.Name}} foo.ogg  https://s3.amazonaws.com/jukebox/bar.ogg
+      $ mc {{.Name}} foo.ogg https://s3.amazonaws.com/jukebox/bar.ogg
 
    2. Compare two different folders on a local filesystem.
       $ mc {{.Name}} ~/Photos /Media/Backup/Photos

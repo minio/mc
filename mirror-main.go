@@ -41,14 +41,7 @@ var mirrorCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} SOURCE TARGET [TARGET ...] {{if .Description}}
-
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   mc {{.Name}} SOURCE TARGET [TARGET ...]
 
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to multiple buckets on Amazon S3 cloud storage.
@@ -58,10 +51,13 @@ EXAMPLES:
       $ mc {{.Name}} backup/... https://play.minio.io:9000/archive https://s3.amazonaws.com/archive
 
    3. Mirror a bucket from aliased Amazon S3 cloud storage to multiple folders on Windows.
-      $ mc {{.Name}} s3:documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
+      $ mc {{.Name}} s3/documents/2014/... C:\backup\2014 C:\shared\volume\backup\2014
 
    4. Mirror a local folder of non english character recursively to Amazon s3 cloud storage and Minio cloud storage.
-      $ mc {{.Name}} 本語/... s3:mylocaldocuments play:backup
+      $ mc {{.Name}} 本語/... s3/mylocaldocuments play/backup
+
+   5. Mirror a local folder with space characters to Amazon s3 cloud storage
+      $ mc {{.Name}} 'workdir/documents/Aug 2015...' s3/miniocloud
 `,
 }
 

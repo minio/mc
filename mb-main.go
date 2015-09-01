@@ -35,14 +35,7 @@ var mbCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET ...] {{if .Description}}
-
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   mc {{.Name}} TARGET [TARGET ...]
 
 EXAMPLES:
    1. Create a bucket on Amazon S3 cloud storage.

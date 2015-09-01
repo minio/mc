@@ -38,7 +38,8 @@ var updateCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}}
+   mc {{.Name}} release
+   mc {{.Name}} experimental
 
 EXAMPLES:
    1. Check for new official releases

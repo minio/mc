@@ -38,14 +38,9 @@ var shareCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [DURATION=h|m|s] {{if .Description}}
+   mc {{.Name}} TARGET [DURATION]
 
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .Flags}}
-
-FLAGS:
-   {{range .Flags}}{{.}}
-   {{end}}{{ end }}
+   DURATION = NN[h|m|s] [DEFAULT=168h]
 
 EXAMPLES:
    1. Generate URL for sharing, with a default expiry of 7 days.
@@ -54,8 +49,9 @@ EXAMPLES:
    2. Generate URL for sharing, with an expiry of 10 minutes.
       $ mc {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz 10m
 
-   3. Generate list of URLs for sharing a folder recursively, with expiration of 1 hour each.
-      $ mc {{.Name}} https://s3.amazonaws.com/backup... 1h
+   3. Generate list of URLs for sharing a folder recursively, with expiration of 5 days each.
+      $ mc {{.Name}} https://s3.amazonaws.com/backup... 120h
+
 `,
 }
 
