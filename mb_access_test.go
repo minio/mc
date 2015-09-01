@@ -17,30 +17,14 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/minio/mc/pkg/console"
 	. "gopkg.in/check.v1"
 )
 
 func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
-	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-
-	perr := doMakeBucketCmd(filepath.Join(root, "bucket"))
-	c.Assert(perr, IsNil)
-
-	perr = doUpdateAccessCmd(filepath.Join(root, "bucket"), "public-read-write")
-	c.Assert(perr, IsNil)
-
-	perr = doUpdateAccessCmd(filepath.Join(root, "bucket"), "invalid")
-	c.Assert(perr, Not(IsNil))
-
-	perr = doMakeBucketCmd(server.URL + "/bucket")
+	perr := doMakeBucketCmd(server.URL + "/bucket")
 	c.Assert(perr, IsNil)
 
 	perr = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write")
@@ -92,7 +76,7 @@ func (s *CmdTestSuite) TestAccessContext(c *C) {
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "access", "authenticated", server.URL + "/bucket"})
+	err = app.Run([]string{os.Args[0], "access", "authorized", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 

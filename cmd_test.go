@@ -194,7 +194,7 @@ func (s *CmdTestSuite) TestValidPERMS(c *C) {
 	perms = bucketPerms("readonly")
 	c.Assert(perms.isValidBucketPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "public-read")
-	perms = bucketPerms("authenticated")
+	perms = bucketPerms("authorized")
 	c.Assert(perms.isValidBucketPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "authenticated-read")
 }

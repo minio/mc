@@ -161,7 +161,7 @@ func (s *MySuite) TestStatBucket(c *C) {
 	c.Assert(perr, IsNil)
 }
 
-func (s *MySuite) TestPutBucketACL(c *C) {
+func (s *MySuite) TestBucketACLFails(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -173,7 +173,10 @@ func (s *MySuite) TestPutBucketACL(c *C) {
 	c.Assert(perr, IsNil)
 
 	perr = fsc.SetBucketACL("private")
-	c.Assert(perr, IsNil)
+	c.Assert(perr, Not(IsNil))
+
+	_, perr = fsc.GetBucketACL()
+	c.Assert(perr, Not(IsNil))
 }
 
 func (s *MySuite) TestPutObject(c *C) {

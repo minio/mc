@@ -36,7 +36,7 @@ var accessCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} PERMISSION TARGET [TARGET ...] {{if .Description}}
+   mc {{.Name}}{{if .Flags}} [ARGS...]{{end}} [OPTION] PERMISSION TARGET [TARGET ...] {{if .Description}}
 
 DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
@@ -48,16 +48,16 @@ FLAGS:
 EXAMPLES:
 
    1. Set bucket to "private" on Amazon S3 cloud storage.
-      $ mc {{.Name}} private https://s3.amazonaws.com/burningman2011
+      $ mc {{.Name}} set private https://s3.amazonaws.com/burningman2011
 
    2. Set bucket to "public" on Amazon S3 cloud storage.
-      $ mc {{.Name}} public https://s3.amazonaws.com/shared
+      $ mc {{.Name}} set public https://s3.amazonaws.com/shared
 
    3. Set bucket to "authenticated" on Amazon S3 cloud storage to provide read access to IAM Authenticated Users group.
-      $ mc {{.Name}} authenticated https://s3.amazonaws.com/shared-authenticated
+      $ mc {{.Name}} set authorized https://s3.amazonaws.com/shared-authenticated
 
    4. Set folder to world readwrite (chmod 777) on local filesystem.
-      $ mc {{.Name}} public /shared/Music
+      $ mc {{.Name}} get https://s3.amazonaws.com/shared
 `,
 }
 

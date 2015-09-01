@@ -25,7 +25,7 @@ func (b bucketPerms) isValidBucketPERM() bool {
 		fallthrough
 	case b.isPublic():
 		fallthrough
-	case b.isAuthenticated():
+	case b.isAuthorized():
 		return true
 	default:
 		return false
@@ -37,10 +37,10 @@ type bucketPerms string
 
 // different types of ACL's currently supported for buckets
 const (
-	bucketPrivate       = bucketPerms("private")
-	bucketReadOnly      = bucketPerms("readonly")
-	bucketPublic        = bucketPerms("public")
-	bucketAuthenticated = bucketPerms("authenticated")
+	bucketPrivate    = bucketPerms("private")
+	bucketReadOnly   = bucketPerms("readonly")
+	bucketPublic     = bucketPerms("public")
+	bucketAuthorized = bucketPerms("authorized")
 )
 
 func (b bucketPerms) String() string {
@@ -53,7 +53,7 @@ func (b bucketPerms) String() string {
 	if b.isPublic() {
 		return "public-read-write"
 	}
-	if b.isAuthenticated() {
+	if b.isAuthorized() {
 		return "authenticated-read"
 	}
 	return "private"
@@ -74,7 +74,7 @@ func (b bucketPerms) isPublic() bool {
 	return b == bucketPublic
 }
 
-// IsAuthenticated - is acl AuthenticatedRead
-func (b bucketPerms) isAuthenticated() bool {
-	return b == bucketAuthenticated
+// IsAuthorized - is acl AuthorizedRead
+func (b bucketPerms) isAuthorized() bool {
+	return b == bucketAuthorized
 }

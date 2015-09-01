@@ -32,6 +32,7 @@ type Client interface {
 
 	// Bucket operations
 	MakeBucket() *probe.Error
+	GetBucketACL() (acl string, error *probe.Error)
 	SetBucketACL(acl string) *probe.Error
 
 	// Object operations
