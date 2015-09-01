@@ -63,17 +63,13 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	tgtURLs := URLs[1:]
 
 	/****** Generic rules *******/
-	// Source cannot be a folder (except when recursive)
-	if !isURLRecursive(srcURL) {
-		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Source ‘%s’ is not recursive. Use ‘%s...’ as argument to mirror recursively.", srcURL, srcURL))
-	}
 	// Recursive source URL.
 	newSrcURL := stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(newSrcURL)
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
 
-	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		fatalIf(errInvalidArgument().Trace(), "Source ‘"+srcURL+"’ is not a folder.")
+	if !srcContent.Type.IsDir() {
+		fatalIf(errInvalidArgument().Trace(srcContent.Name, srcContent.Type.String()), fmt.Sprintf("Source ‘%s’ is not a folder. Only folders are supported by mirror.", srcURL))
 	}
 
 	if len(tgtURLs) == 0 && tgtURLs == nil {
@@ -131,7 +127,7 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 				for targetContentCh := range targetClnt.List(true) {
 					if targetContentCh.Err != nil {
 						mirrorURLsCh <- mirrorURLs{Error: targetContentCh.Err.Trace()}
-						return
+						continue
 					}
 					if targetContentCh.Content.Type.IsRegular() {
 						targetTrie.Insert(patricia.Prefix(targetContentCh.Content.Name), struct{}{})
@@ -187,7 +183,6 @@ func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs 
 		}
 		targetClnts := make([]client.Client, len(targetURLs))
 		for i, targetURL := range targetURLs {
-			targetURL = stripRecursiveURL(targetURL)
 			targetClnt, targetContent, err := url2Stat(targetURL)
 			if err != nil {
 				mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetURL)}
