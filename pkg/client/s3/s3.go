@@ -146,6 +146,19 @@ func (c *s3Client) MakeBucket() *probe.Error {
 	return nil
 }
 
+// GetBucketACL get canned acl's on a bucket
+func (c *s3Client) GetBucketACL() (acl string, error *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	if object != "" {
+		return "", probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
+	}
+	bucketACL, err := c.api.GetBucketACL(bucket)
+	if err != nil {
+		return "", probe.NewError(err)
+	}
+	return bucketACL.String(), nil
+}
+
 // SetBucketACL add canned acl's on a bucket
 func (c *s3Client) SetBucketACL(acl string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()

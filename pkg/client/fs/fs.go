@@ -348,40 +348,6 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	}
 }
 
-// isValidBucketACL - is acl a valid ACL?
-func isValidBucketACL(acl string) bool {
-	switch acl {
-	case "private":
-		fallthrough
-	case "public-read":
-		fallthrough
-	case "public-read-write":
-		fallthrough
-	case "authenticated-read":
-		fallthrough
-	case "":
-		return true
-	default:
-		return false
-	}
-}
-
-// aclToPerm - convert acl to filesystem mode
-func aclToPerm(acl string) os.FileMode {
-	switch acl {
-	case "private":
-		return os.FileMode(0700)
-	case "public-read":
-		return os.FileMode(0500)
-	case "public-read-write":
-		return os.FileMode(0777)
-	case "authenticated-read":
-		return os.FileMode(0770)
-	default:
-		return os.FileMode(0700)
-	}
-}
-
 // MakeBucket - create a new bucket
 func (f *fsClient) MakeBucket() *probe.Error {
 	err := os.MkdirAll(f.path, 0775)
@@ -391,20 +357,14 @@ func (f *fsClient) MakeBucket() *probe.Error {
 	return nil
 }
 
-// SetBucketACL - create a new bucket
+// GetBucketACL - get bucket acl
+func (f *fsClient) GetBucketACL() (acl string, error *probe.Error) {
+	return "", probe.NewError(client.APINotImplemented{API: "GetBucketACL", APIType: "filesystem"})
+}
+
+// SetBucketACL - create a new bucket acl
 func (f *fsClient) SetBucketACL(acl string) *probe.Error {
-	if !isValidBucketACL(acl) {
-		return probe.NewError(client.InvalidACLType{ACL: acl})
-	}
-	err := os.MkdirAll(f.path, aclToPerm(acl))
-	if err != nil {
-		return probe.NewError(err)
-	}
-	err = os.Chmod(f.path, aclToPerm(acl))
-	if err != nil {
-		return probe.NewError(err)
-	}
-	return nil
+	return probe.NewError(client.APINotImplemented{API: "SetBucketACL", APIType: "filesystem"})
 }
 
 // getFSMetadata -
