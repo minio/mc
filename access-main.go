@@ -22,7 +22,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
@@ -63,14 +62,20 @@ EXAMPLES:
 
 // AccessMessage is container for access command on bucket success and failure messages
 type AccessMessage struct {
-	Status string      `json:"status"`
-	Bucket string      `json:"bucket"`
-	Perms  bucketPerms `json:"permission"`
+	Operation string      `json:"operation"`
+	Status    string      `json:"status"`
+	Bucket    string      `json:"bucket"`
+	Perms     bucketPerms `json:"permission"`
 }
 
 func (s AccessMessage) String() string {
 	if !globalJSONFlag {
-		return console.Colorize("Access", "Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
+		if s.Operation == "set" {
+			return console.Colorize("Access", "Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
+		}
+		if s.Operation == "get" {
+			return console.Colorize("Access", "Access permission for ‘"+s.Bucket+"’"+" is ‘"+string(s.Perms)+"’")
+		}
 	}
 	accessJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
@@ -85,14 +90,24 @@ func checkAccessSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
-	perms := bucketPerms(ctx.Args().First())
-	if !perms.isValidBucketPERM() {
-		fatalIf(errDummy().Trace(),
-			"Unrecognized permission ‘"+perms.String()+"’. Allowed values are [private, public, readonly].")
-	}
-	for _, arg := range ctx.Args().Tail() {
-		if strings.TrimSpace(arg) == "" {
-			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+	switch ctx.Args().Get(0) {
+	case "set":
+		if len(ctx.Args().Tail()) < 2 {
+			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
+		}
+		perms := bucketPerms(ctx.Args().Tail().Get(0))
+		if !perms.isValidBucketPERM() {
+			fatalIf(errDummy().Trace(),
+				"Unrecognized permission ‘"+perms.String()+"’. Allowed values are [private, public, readonly].")
+		}
+		for _, arg := range ctx.Args().Tail().Tail() {
+			if strings.TrimSpace(arg) == "" {
+				fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+			}
+		}
+	case "get":
+		if len(ctx.Args().Tail()) < 1 {
+			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 		}
 	}
 }
@@ -104,24 +119,40 @@ func mainAccess(ctx *cli.Context) {
 		"Access": color.New(color.FgGreen, color.Bold),
 	})
 
-	perms := bucketPerms(ctx.Args().First())
-
 	config := mustGetMcConfig()
-	for _, arg := range ctx.Args().Tail() {
-		targetURL := aliasExpand(arg, config.Aliases)
 
-		fatalIf(doUpdateAccessCmd(targetURL, perms).Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+	switch ctx.Args().Get(0) {
+	case "set":
+		perms := bucketPerms(ctx.Args().Tail().Get(0))
+		for _, arg := range ctx.Args().Tail().Tail() {
+			targetURL := aliasExpand(arg, config.Aliases)
 
-		console.Println(AccessMessage{
-			Status: "success",
-			Bucket: targetURL,
-			Perms:  perms,
-		})
+			fatalIf(doSetAccess(targetURL, perms).Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+
+			console.Println(AccessMessage{
+				Operation: "set",
+				Status:    "success",
+				Bucket:    targetURL,
+				Perms:     perms,
+			})
+		}
+	case "get":
+		for _, arg := range ctx.Args().Tail() {
+			targetURL := aliasExpand(arg, config.Aliases)
+			perms, err := doGetAccess(targetURL)
+			fatalIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")
+
+			console.Println(AccessMessage{
+				Operation: "get",
+				Status:    "success",
+				Bucket:    targetURL,
+				Perms:     perms,
+			})
+		}
 	}
 }
 
-func doUpdateAccessCmd(targetURL string, targetPERMS bucketPerms) *probe.Error {
-	var clnt client.Client
+func doSetAccess(targetURL string, targetPERMS bucketPerms) *probe.Error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -130,4 +161,16 @@ func doUpdateAccessCmd(targetURL string, targetPERMS bucketPerms) *probe.Error {
 		return err.Trace(targetURL, targetPERMS.String())
 	}
 	return nil
+}
+
+func doGetAccess(targetURL string) (perms bucketPerms, err *probe.Error) {
+	clnt, err := target2Client(targetURL)
+	if err != nil {
+		return "", err.Trace(targetURL)
+	}
+	acl, err := clnt.GetBucketACL()
+	if err != nil {
+		return "", err.Trace(targetURL)
+	}
+	return aclToPerms(acl), nil
 }

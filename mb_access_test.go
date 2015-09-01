@@ -27,10 +27,10 @@ func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
 	perr := doMakeBucketCmd(server.URL + "/bucket")
 	c.Assert(perr, IsNil)
 
-	perr = doUpdateAccessCmd(server.URL+"/bucket", "public-read-write")
+	perr = doSetAccess(server.URL+"/bucket", "public-read-write")
 	c.Assert(perr, IsNil)
 
-	perr = doUpdateAccessCmd(server.URL+"/bucket", "invalid")
+	perr = doSetAccess(server.URL+"/bucket", "invalid")
 	c.Assert(perr, Not(IsNil))
 }
 
@@ -55,35 +55,35 @@ func (s *CmdTestSuite) TestMBContext(c *C) {
 func (s *CmdTestSuite) TestAccessContext(c *C) {
 	console.IsExited = false
 
-	err := app.Run([]string{os.Args[0], "access", "private", server.URL + "/bucket"})
+	err := app.Run([]string{os.Args[0], "access", "set", "private", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "access", "public", server.URL + "/bucket"})
+	err = app.Run([]string{os.Args[0], "access", "set", "public", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "access", "readonly", server.URL + "/bucket"})
+	err = app.Run([]string{os.Args[0], "access", "set", "readonly", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "access", "authorized", server.URL + "/bucket"})
+	err = app.Run([]string{os.Args[0], "access", "set", "authorized", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "access", "invalid", server.URL + "/bucket"})
+	err = app.Run([]string{os.Args[0], "access", "set", "invalid", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 	// reset back

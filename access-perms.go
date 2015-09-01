@@ -59,6 +59,21 @@ func (b bucketPerms) String() string {
 	return "private"
 }
 
+func aclToPerms(acl string) bucketPerms {
+	switch acl {
+	case "private":
+		return bucketPerms("private")
+	case "public-read":
+		return bucketPerms("readonly")
+	case "public-read-write":
+		return bucketPerms("public")
+	case "authenticated-read":
+		return bucketPerms("authorized")
+	default:
+		return bucketPerms(acl)
+	}
+}
+
 // IsPrivate - is acl Private
 func (b bucketPerms) isPrivate() bool {
 	return b == bucketPrivate
