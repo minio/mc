@@ -64,7 +64,7 @@ func args2URLs(args []string) ([]string, *probe.Error) {
 	// Convert arguments to URLs: expand alias, fix format...
 	URLs := []string{}
 	for _, arg := range args {
-		URLs = append(URLs, aliasExpand(arg, config.Aliases))
+		URLs = append(URLs, getAliasURL(arg, config.Aliases))
 	}
 	return URLs, nil
 }

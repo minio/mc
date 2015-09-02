@@ -34,8 +34,8 @@
 			"canonical": "github.com/minio/cli",
 			"comment": "",
 			"local": "vendor/github.com/minio/cli",
-			"revision": "ee386baecc113eef2b8945df429120a5aec319ef",
-			"revisionTime": "2015-08-19T11:23:55-07:00"
+			"revision": "8d4728a947c06097835fb3e2858b7754580a1d2f",
+			"revisionTime": "2015-09-01T18:40:37-07:00"
 		},
 		{
 			"canonical": "github.com/minio/minio-go",

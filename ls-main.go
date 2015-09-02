@@ -109,7 +109,7 @@ func mainList(ctx *cli.Context) {
 
 	config := mustGetMcConfig()
 	for _, arg := range args {
-		targetURL := aliasExpand(arg, config.Aliases)
+		targetURL := getAliasURL(arg, config.Aliases)
 
 		// if recursive strip off the "..."
 		err := doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL))
