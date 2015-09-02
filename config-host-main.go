@@ -15,7 +15,7 @@ import (
 
 var configHostCmd = cli.Command{
 	Name:   "host",
-	Usage:  "Manage hosts in configuration file.",
+	Usage:  "List, modify and remove hosts in configuration file.",
 	Action: mainConfigHost,
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}
