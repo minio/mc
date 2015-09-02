@@ -23,19 +23,51 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestConfigContext(c *C) {
+func (s *CmdTestSuite) TestConfigAliasContext(c *C) {
 	console.IsExited = false
 
-	err := app.Run([]string{os.Args[0], "config", "add", "alias", "test", "htt://test.io"})
+	err := app.Run([]string{os.Args[0], "config", "alias", "add", "test", "htt://test.io"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "config", "add", "alias", "new", "http://test.io"})
+	err = app.Run([]string{os.Args[0], "config", "alias", "add", "new", "http://test.io"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
+}
+
+func (s *CmdTestSuite) TestConfigHostContext(c *C) {
+	console.IsExited = false
+
+	err := app.Run([]string{os.Args[0], "config", "host", "add", "*test.io", "invalid", "invalid"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+
+	// reset back
+	console.IsExited = false
+
+	err = app.Run([]string{os.Args[0], "config", "host", "add", "*my-example.com", "AKIKJAA5BMMU2RHO6IBB", "V7f1CCwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr9"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
+
+	err = app.Run([]string{os.Args[0], "config", "host", "remove", "*my-example.com"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
+
+	err = app.Run([]string{os.Args[0], "config", "host", "remove", "dl.minio.io:9000"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false

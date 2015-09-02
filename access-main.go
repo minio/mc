@@ -124,7 +124,7 @@ func mainAccess(ctx *cli.Context) {
 	case "set":
 		perms := bucketPerms(ctx.Args().Tail().Get(0))
 		for _, arg := range ctx.Args().Tail().Tail() {
-			targetURL := aliasExpand(arg, config.Aliases)
+			targetURL := getAliasURL(arg, config.Aliases)
 
 			fatalIf(doSetAccess(targetURL, perms).Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
 
@@ -137,7 +137,7 @@ func mainAccess(ctx *cli.Context) {
 		}
 	case "get":
 		for _, arg := range ctx.Args().Tail() {
-			targetURL := aliasExpand(arg, config.Aliases)
+			targetURL := getAliasURL(arg, config.Aliases)
 			perms, err := doGetAccess(targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")
 

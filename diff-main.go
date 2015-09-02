@@ -74,8 +74,8 @@ func mainDiff(ctx *cli.Context) {
 	firstArg := ctx.Args().First()
 	secondArg := ctx.Args().Last()
 
-	firstURL := aliasExpand(firstArg, config.Aliases)
-	secondURL := aliasExpand(secondArg, config.Aliases)
+	firstURL := getAliasURL(firstArg, config.Aliases)
+	secondURL := getAliasURL(secondArg, config.Aliases)
 
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {

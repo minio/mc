@@ -88,7 +88,7 @@ func mainShare(ctx *cli.Context) {
 		fatalIf(probe.NewError(err), "Unable to parse time argument.")
 	}
 
-	targetURL := aliasExpand(url, config.Aliases)
+	targetURL := getAliasURL(url, config.Aliases)
 
 	// if recursive strip off the "..."
 	err := doShareCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL), shareDuration{duration: expires})

@@ -252,25 +252,25 @@ func (s *CmdTestSuite) TestIsvalidAliasName(c *C) {
 }
 
 func (s *CmdTestSuite) TestEmptyExpansions(c *C) {
-	url := aliasExpand("hello", nil)
+	url := getAliasURL("hello", nil)
 	c.Assert(url, Equals, "hello")
 
-	url = aliasExpand("minio://hello", nil)
+	url = getAliasURL("minio://hello", nil)
 	c.Assert(url, Equals, "minio://hello")
 
-	url = aliasExpand("$#\\", nil)
+	url = getAliasURL("$#\\", nil)
 	c.Assert(url, Equals, "$#\\")
 
-	url = aliasExpand("foo/bar", map[string]string{"foo": "http://foo"})
+	url = getAliasURL("foo/bar", map[string]string{"foo": "http://foo"})
 	c.Assert(url, Equals, "http://foo/bar")
 
-	url = aliasExpand("myfoo/bar", nil)
+	url = getAliasURL("myfoo/bar", nil)
 	c.Assert(url, Equals, "myfoo/bar")
 
-	url = aliasExpand("", nil)
+	url = getAliasURL("", nil)
 	c.Assert(url, Equals, "")
 
-	url = aliasExpand("hello", nil)
+	url = getAliasURL("hello", nil)
 	c.Assert(url, Equals, "hello")
 }
 
