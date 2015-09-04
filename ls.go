@@ -112,6 +112,11 @@ func doList(clnt client.Client, recursive bool) *probe.Error {
 				continue
 			}
 			if os.IsNotExist(contentCh.Err.ToGoError()) || os.IsPermission(contentCh.Err.ToGoError()) {
+				if contentCh.Content != nil {
+					if contentCh.Content.Type.IsDir() && (contentCh.Content.Type&os.ModeSymlink == os.ModeSymlink) {
+						continue
+					}
+				}
 				errorIf(contentCh.Err.Trace(), "Unable to list.")
 				continue
 			}

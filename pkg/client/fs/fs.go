@@ -58,13 +58,24 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	}
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(fpath)
-	if os.IsNotExist(err) {
-		return nil, probe.NewError(err)
+	if os.IsPermission(err) {
+		lfi, lerr := os.Lstat(fpath)
+		if lerr != nil {
+			return nil, probe.NewError(lerr)
+		}
+		return lfi, nil
 	}
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
 	st, err := os.Stat(fpath)
+	if os.IsPermission(err) {
+		lst, lerr := os.Lstat(fpath)
+		if lerr != nil {
+			return nil, probe.NewError(lerr)
+		}
+		return lst, nil
+	}
 	if os.IsNotExist(err) {
 		return nil, probe.NewError(client.NotFound{Path: fpath})
 	}
@@ -112,13 +123,11 @@ func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 	if err != nil {
 		return nil, 0, probe.NewError(err)
 	}
-	{
-		content, err := f.getFSMetadata()
-		if err != nil {
-			return nil, content.Size, err.Trace()
-		}
-		return body, content.Size, nil
+	content, perr := f.getFSMetadata()
+	if perr != nil {
+		return nil, content.Size, perr.Trace(f.path)
 	}
+	return body, content.Size, nil
 }
 
 func (f *fsClient) Share(expires time.Duration) (string, *probe.Error) {
@@ -185,28 +194,11 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		fpath = fpath + "."
 	}
 
-	// Resolve symlinks
-	fpath, err := filepath.EvalSymlinks(fpath)
-	if os.IsNotExist(err) {
-		contentCh <- client.ContentOnChannel{
-			Content: nil,
-			Err:     probe.NewError(err),
-		}
-		return
-	}
+	fi, err := f.fsStat()
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     probe.NewError(err),
-		}
-		return
-	}
-
-	fi, err := os.Stat(fpath)
-	if err != nil {
-		contentCh <- client.ContentOnChannel{
-			Content: nil,
-			Err:     probe.NewError(err),
+			Err:     err.Trace(f.path),
 		}
 		return
 	}
@@ -240,6 +232,26 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			fi := file
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fi, err = os.Stat(filepath.Join(dir.Name(), fi.Name()))
+				if os.IsPermission(err) {
+					lfi, lerr := os.Lstat(filepath.Join(dir.Name(), fi.Name()))
+					if lerr != nil {
+						contentCh <- client.ContentOnChannel{
+							Content: nil,
+							Err:     probe.NewError(lerr),
+						}
+						continue
+					}
+					contentCh <- client.ContentOnChannel{
+						Content: &client.Content{
+							Name: lfi.Name(),
+							Time: lfi.ModTime(),
+							Size: lfi.Size(),
+							Type: lfi.Mode(),
+						},
+						Err: probe.NewError(err),
+					}
+					continue
+				}
 				if os.IsNotExist(err) {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
@@ -304,9 +316,22 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return nil
 			}
 			if os.IsPermission(err) {
+				lfi, lerr := os.Lstat(fp)
+				if lerr != nil {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     probe.NewError(err),
+					}
+					return nil
+				}
 				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(err),
+					Content: &client.Content{
+						Name: f.delimited(fp),
+						Time: lfi.ModTime(),
+						Size: lfi.Size(),
+						Type: lfi.Mode(),
+					},
+					Err: probe.NewError(err),
 				}
 				return nil
 			}
@@ -315,10 +340,30 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			fi, err = os.Stat(fp)
 			if err != nil {
-				if os.IsNotExist(err) || os.IsPermission(err) { // ignore broken symlinks and permission denied
+				if os.IsPermission(err) {
+					lfi, lerr := os.Lstat(fp)
+					if lerr != nil {
+						contentCh <- client.ContentOnChannel{
+							Content: nil,
+							Err:     probe.NewError(err),
+						}
+						return nil
+					}
+					contentCh <- client.ContentOnChannel{
+						Content: &client.Content{
+							Name: f.delimited(fp),
+							Time: lfi.ModTime(),
+							Size: lfi.Size(),
+							Type: lfi.Mode(),
+						},
+						Err: probe.NewError(err),
+					}
+					return nil
+				}
+				if os.IsNotExist(err) { // ignore broken symlinks
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     probe.NewError(err),
+						Err:     probe.NewError(client.ISBrokenSymlink{Path: fp}),
 					}
 					return nil
 				}
