@@ -33,7 +33,11 @@ const (
 func urlJoinPath(url1, url2 string) string {
 	u1 := client.NewURL(url1)
 	u2 := client.NewURL(url2)
-	u1.Path = filepath.Join(u1.Path, u2.Path)
+	if u1.Path != string(u1.Separator) {
+		u1.Path = filepath.Join(u1.Path, u2.Path)
+	} else {
+		u1.Path = u2.Path
+	}
 	return u1.String()
 }
 
