@@ -31,7 +31,7 @@ func isValidAliasName(aliasName string) bool {
 	return validAliasName.MatchString(aliasName)
 }
 
-// getAliasURL expands aliased (name:/path) to full URL, used by url-parser.
+// getAliasURL expands aliased (name/path) to full URL, used by url-parser.
 func getAliasURL(aliasedURL string, aliases map[string]string) string {
 	for aliasName, aliasValue := range aliases {
 		if strings.HasPrefix(aliasedURL, aliasName) {
