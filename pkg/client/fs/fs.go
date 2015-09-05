@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -58,23 +59,35 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	}
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(fpath)
-	if os.IsPermission(err) {
-		lfi, lerr := os.Lstat(fpath)
-		if lerr != nil {
-			return nil, probe.NewError(lerr)
+	if runtime.GOOS == "windows" {
+		// On windows there are directory symlinks
+		// which are called junction files which
+		// carry special meaning on windows
+		// - which cannot be accessed with regular operations
+		if os.IsPermission(err) {
+			lfi, lerr := os.Lstat(fpath)
+			if lerr != nil {
+				return nil, probe.NewError(lerr)
+			}
+			return lfi, nil
 		}
-		return lfi, nil
 	}
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
 	st, err := os.Stat(fpath)
-	if os.IsPermission(err) {
-		lst, lerr := os.Lstat(fpath)
-		if lerr != nil {
-			return nil, probe.NewError(lerr)
+	if runtime.GOOS == "windows" {
+		// On windows there are directory symlinks
+		// which are called junction files which
+		// carry special meaning on windows
+		// - which cannot be accessed with regular operations
+		if os.IsPermission(err) {
+			lst, lerr := os.Lstat(fpath)
+			if lerr != nil {
+				return nil, probe.NewError(lerr)
+			}
+			return lst, nil
 		}
-		return lst, nil
 	}
 	if os.IsNotExist(err) {
 		return nil, probe.NewError(client.NotFound{Path: fpath})
@@ -233,24 +246,36 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fi, err = os.Stat(filepath.Join(dir.Name(), fi.Name()))
 				if os.IsPermission(err) {
-					lfi, lerr := os.Lstat(filepath.Join(dir.Name(), fi.Name()))
-					if lerr != nil {
+					// On windows there are directory symlinks
+					// which are called junction files which
+					// carry special meaning on windows
+					// - which cannot be accessed with regular operations
+					if runtime.GOOS == "windows" {
+						lfi, lerr := os.Lstat(filepath.Join(dir.Name(), fi.Name()))
+						if lerr != nil {
+							contentCh <- client.ContentOnChannel{
+								Content: nil,
+								Err:     probe.NewError(lerr),
+							}
+							continue
+						}
+						contentCh <- client.ContentOnChannel{
+							Content: &client.Content{
+								Name: lfi.Name(),
+								Time: lfi.ModTime(),
+								Size: lfi.Size(),
+								Type: lfi.Mode(),
+							},
+							Err: probe.NewError(err),
+						}
+						continue
+					} else {
 						contentCh <- client.ContentOnChannel{
 							Content: nil,
-							Err:     probe.NewError(lerr),
+							Err:     probe.NewError(err),
 						}
 						continue
 					}
-					contentCh <- client.ContentOnChannel{
-						Content: &client.Content{
-							Name: lfi.Name(),
-							Time: lfi.ModTime(),
-							Size: lfi.Size(),
-							Type: lfi.Mode(),
-						},
-						Err: probe.NewError(err),
-					}
-					continue
 				}
 				if os.IsNotExist(err) {
 					contentCh <- client.ContentOnChannel{
@@ -316,36 +341,16 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return nil
 			}
 			if os.IsPermission(err) {
-				lfi, lerr := os.Lstat(fp)
-				if lerr != nil {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(err),
-					}
-					return nil
-				}
-				contentCh <- client.ContentOnChannel{
-					Content: &client.Content{
-						Name: f.delimited(fp),
-						Time: lfi.ModTime(),
-						Size: lfi.Size(),
-						Type: lfi.Mode(),
-					},
-					Err: probe.NewError(err),
-				}
-				return nil
-			}
-			return err
-		}
-		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
-			fi, err = os.Stat(fp)
-			if err != nil {
-				if os.IsPermission(err) {
+				if runtime.GOOS == "windows" {
+					// On windows there are directory symlinks
+					// which are called junction files which
+					// carry special meaning on windows
+					// - which cannot be accessed with regular operations
 					lfi, lerr := os.Lstat(fp)
 					if lerr != nil {
 						contentCh <- client.ContentOnChannel{
 							Content: nil,
-							Err:     probe.NewError(err),
+							Err:     probe.NewError(lerr),
 						}
 						return nil
 					}
@@ -357,6 +362,48 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 							Type: lfi.Mode(),
 						},
 						Err: probe.NewError(err),
+					}
+				} else {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     probe.NewError(err),
+					}
+				}
+				return nil
+			}
+			return err
+		}
+		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+			fi, err = os.Stat(fp)
+			if err != nil {
+				if os.IsPermission(err) {
+					if runtime.GOOS == "windows" {
+						// On windows there are directory symlinks
+						// which are called junction files which
+						// carry special meaning on windows
+						// - which cannot be accessed with regular operations
+						lfi, lerr := os.Lstat(fp)
+						if lerr != nil {
+							contentCh <- client.ContentOnChannel{
+								Content: nil,
+								Err:     probe.NewError(lerr),
+							}
+							return nil
+						}
+						contentCh <- client.ContentOnChannel{
+							Content: &client.Content{
+								Name: f.delimited(fp),
+								Time: lfi.ModTime(),
+								Size: lfi.Size(),
+								Type: lfi.Mode(),
+							},
+							Err: probe.NewError(err),
+						}
+					} else {
+						contentCh <- client.ContentOnChannel{
+							Content: nil,
+							Err:     probe.NewError(err),
+						}
 					}
 					return nil
 				}
