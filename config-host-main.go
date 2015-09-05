@@ -26,8 +26,10 @@ USAGE:
    OPERATION = add | list | remove
 
 EXAMPLES:
-   1. Add host configuration for a URL.
+   1. Add host configuration for a URL. For security reasons turn off bash history
+      $ set +o history
       $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1C\wQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr1
+      $ set -o history
 
    2. List all hosts.
       $ mc config {{.Name}} list
