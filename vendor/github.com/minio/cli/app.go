@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -290,6 +291,9 @@ func (a *App) RunAsSubcommand(ctx *Context) (err error) {
 		if c != nil {
 			return c.Run(context)
 		}
+		fmt.Fprintf(a.Writer, "Incorrect Usage.\n\n")
+		ShowSubcommandHelp(context)
+		return errors.New("Command not found")
 	}
 
 	// Run default Action
