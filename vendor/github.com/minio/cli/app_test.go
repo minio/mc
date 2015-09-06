@@ -181,9 +181,7 @@ func TestApp_RunAsSubcommandParseFlags(t *testing.T) {
 			Before: func(_ *cli.Context) error { return nil },
 		},
 	}
-	a.Run([]string{"", "foo", "--lang", "spanish", "abcd"})
-
-	expect(t, context.Args().Get(0), "abcd")
+	a.Run([]string{"", "foo", "--lang", "spanish"})
 	expect(t, context.String("lang"), "spanish")
 }
 

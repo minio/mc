@@ -42,7 +42,7 @@ EXAMPLES:
       $ mc {{.Name}} https://s3.amazonaws.com/public-document-store
 
    3. Make a folder on local filesystem, including its parent folders as needed.
-      $ mc {{.Name}} ~/
+      $ mc {{.Name}} "My Documents"
 
    3. Create a bucket on Minio cloud storage.
       $ mc {{.Name}} https://play.minio.io:9000/mongodb-backup
