@@ -24,27 +24,27 @@
 
 #### GNU/Linux
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Aug/linux-amd64/mc
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Sept/linux-amd64/mc
 
 ~~~
-$ wget https://dl.minio.io:9000/updates/2015/Aug/linux-amd64/mc
+$ wget https://dl.minio.io:9000/updates/2015/Sept/linux-amd64/mc
 $ chmod +x mc
 $ ./mc
 ~~~
 
 #### OS X
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Aug/darwin-amd64/mc
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Sept/darwin-amd64/mc
 
 ~~~
-$ curl https://dl.minio.io:9000/updates/2015/Aug/darwin-amd64/mc > mc
+$ curl https://dl.minio.io:9000/updates/2015/Sept/darwin-amd64/mc > mc
 $ chmod +x mc
 $ ./mc
 ~~~
 
 #### Windows
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Aug/windows-amd64/mc.exe
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Sept/windows-amd64/mc.exe
 
 ~~~
 C:\Users\Username\Downloads> mc.exe
