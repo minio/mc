@@ -51,8 +51,11 @@ EXAMPLES:
       $ mc {{.Name}} s3/andoria/本語 > /tmp/本語
 
    5. Behave like operating system tool ‘cat’, used for shell aliases.
-      $ echo "Hello, World!" | mc --mimic cat
+      $ echo "Hello, World!" | mc --mimic {{.Name}}
       Hello, World!
+
+   6. Concantenate an object with space characters from Amazon S3 cloud storage.
+      $ mc {{.Name}} 's3/miniocloud/Readme First.txt' | head -1
 `,
 }
 

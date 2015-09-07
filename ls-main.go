@@ -54,20 +54,18 @@ EXAMPLES:
 
    4. List files with non english characters on Amazon S3 cloud storage.
       $ mc ls s3/andoria/本...
-      [2015-05-19 17:21:49 PDT]    41B 本語.pdf
       [2015-05-19 17:24:19 PDT]    41B 本語.txt
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
    5. List files with space characters on Amazon S3 cloud storage. 
       $ mc ls 's3/miniocloud/Community Files/'
-      [2015-05-19 17:21:49 PDT]    41B 本語.pdf
       [2015-05-19 17:24:19 PDT]    41B 本語.txt
       [2015-05-19 17:28:22 PDT]    41B 本語.md
     
    6. Behave like operating system tool ‘ls’, used for shell aliases.
       $ mc --mimic ls
-      ...
       [2015-05-19 17:28:22 PDT]    41B 本語.md
+
 `,
 }
 

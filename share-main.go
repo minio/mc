@@ -52,6 +52,9 @@ EXAMPLES:
    3. Generate list of URLs for sharing a folder recursively, with expiration of 5 days each.
       $ mc {{.Name}} https://s3.amazonaws.com/backup... 120h
 
+   4. Generate URL with space characters for sharing, with an expiry of 5 seconds.
+      $ mc {{.Name}} s3/miniocloud/nothing-like-anything 5s
+
 `,
 }
 
