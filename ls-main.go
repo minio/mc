@@ -22,7 +22,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
 )
 
 // list files and folders.
@@ -105,27 +104,16 @@ func mainList(ctx *cli.Context) {
 		"Time": color.New(color.FgGreen),
 	})
 
-	config := mustGetMcConfig()
-	showFolderNames := len(args) > 1
+	targetURLs, err := args2URLs(args)
+	fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
 
-	for _, arg := range args {
-		targetURL := getAliasURL(arg, config.Aliases)
-
-		if !globalJSONFlag && showFolderNames {
-			console.Println(arg + ":")
-		}
-
+	var lsPrefixMode = len(targetURLs) > 1
+	for _, targetURL := range targetURLs {
 		// if recursive strip off the "..."
-		err := doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL))
+		clnt, err := target2Client(stripRecursiveURL(targetURL))
+		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
+
+		err = doList(clnt, isURLRecursive(targetURL), lsPrefixMode)
 		fatalIf(err.Trace(targetURL), "Unable to list target ‘"+targetURL+"’.")
 	}
-}
-
-// doListCmd list files on target
-func doListCmd(targetURL string, recursive bool) *probe.Error {
-	clnt, err := target2Client(targetURL)
-	if err != nil {
-		return err.Trace(targetURL)
-	}
-	return doList(clnt, recursive).Trace(targetURL)
 }

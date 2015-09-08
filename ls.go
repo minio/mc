@@ -103,8 +103,15 @@ func parseContent(c *client.Content) ContentMessage {
 }
 
 // doList - list all entities inside a folder.
-func doList(clnt client.Client, recursive bool) *probe.Error {
+func doList(clnt client.Client, recursive, lsPrefixMode bool) *probe.Error {
 	var err *probe.Error
+	parentContent, err := clnt.Stat()
+	if err != nil {
+		return err.Trace(clnt.URL().String())
+	}
+	if parentContent.Type.IsDir() && lsPrefixMode {
+		console.Println(console.Colorize("Dir", fmt.Sprintf("%s", clnt.URL().String())))
+	}
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
