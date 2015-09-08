@@ -59,8 +59,8 @@ func (s shareDuration) String() string {
 		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s", durationString(), s.presignedURL))
 	}
 	shareMessageBytes, err := json.Marshal(struct {
-		Expires      time.Duration `json:"expire-seconds"`
-		PresignedURL string        `json:"presigned-url"`
+		Expires      time.Duration `json:"expireSeconds"`
+		PresignedURL string        `json:"presignedURL"`
 	}{
 		Expires:      time.Duration(s.Seconds()),
 		PresignedURL: s.presignedURL,

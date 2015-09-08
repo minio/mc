@@ -44,8 +44,8 @@ EXAMPLES:
 type HostMessage struct {
 	op              string
 	Host            string `json:"host"`
-	AccessKeyID     string `json:"access-key-id,omitempty"`
-	SecretAccessKey string `json:"secret-access-key,omitempty"`
+	AccessKeyID     string `json:"accessKeyId,omitempty"`
+	SecretAccessKey string `json:"secretAccessKey,omitempty"`
 }
 
 // String string printer for Content metadata

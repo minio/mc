@@ -39,7 +39,7 @@ const (
 // ContentMessage container for content message structure.
 type ContentMessage struct {
 	Filetype string    `json:"type"`
-	Time     time.Time `json:"last-modified"`
+	Time     time.Time `json:"lastModified"`
 	Size     int64     `json:"size"`
 	Name     string    `json:"name"`
 }
