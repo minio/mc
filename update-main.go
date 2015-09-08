@@ -59,7 +59,7 @@ type Updates struct {
 // UpdateMessage container to hold update messages
 type UpdateMessage struct {
 	Update   bool      `json:"update"`
-	Download string    `json:"download-url"`
+	Download string    `json:"downloadURL"`
 	Version  time.Time `json:"version"`
 }
 

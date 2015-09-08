@@ -83,7 +83,7 @@ func listSessions() *probe.Error {
 // ClearSessionMessage container for clearing session messages
 type ClearSessionMessage struct {
 	Status    string `json:"success"`
-	SessionID string `json:"session-id"`
+	SessionID string `json:"sessionId"`
 }
 
 func (c ClearSessionMessage) String() string {
