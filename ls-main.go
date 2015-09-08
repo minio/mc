@@ -18,6 +18,7 @@ package main
 
 import (
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -81,9 +82,15 @@ func mainList(ctx *cli.Context) {
 	}
 
 	config := mustGetMcConfig()
+	showFolderNames := len(args) > 1
+
 	for _, arg := range args {
 		targetURL, err := getCanonicalizedURL(arg, config.Aliases)
 		fatalIf(err.Trace(arg), "Unable to parse argument ‘"+arg+"’.")
+
+		if !globalJSONFlag && showFolderNames {
+			console.Println(arg + ":")
+		}
 
 		// if recursive strip off the "..."
 		err = doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL))
