@@ -20,8 +20,11 @@ verifiers: getdeps vet fmt lint cyclo deadcode
 
 vet:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 go vet .
-	@GO15VENDOREXPERIMENT=1 go vet github.com/minio/mc/pkg...
+	@GO15VENDOREXPERIMENT=1 go tool vet -all *.go
+	@GO15VENDOREXPERIMENT=1 go tool vet -all ./pkg
+	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true *.go
+	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./pkg
+
 fmt:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 gofmt -s -l *.go
