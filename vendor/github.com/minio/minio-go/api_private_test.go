@@ -96,6 +96,10 @@ func TestURLEncoding(t *testing.T) {
 			name:        "test 1 2.txt",
 			encodedName: "test%201%202.txt",
 		},
+		{
+			name:        "test++ 1.txt",
+			encodedName: "test%2B%2B%201.txt",
+		},
 	}
 
 	for _, u := range want {

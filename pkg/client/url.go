@@ -90,7 +90,8 @@ func NewURL(urlStr string) *URL {
 	rest, _ = splitSpecial(rest, "?", true)
 	if strings.HasPrefix(rest, "//") {
 		// if rest has '//' prefix, skip them
-		authority, rest := splitSpecial(rest[2:], "/", false)
+		var authority string
+		authority, rest = splitSpecial(rest[2:], "/", false)
 		if rest == "" {
 			rest = "/"
 		}

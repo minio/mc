@@ -37,16 +37,16 @@ type decoder interface {
 
 // acceptTypeDecoder provide decoded value in given acceptType
 func acceptTypeDecoder(body io.Reader, acceptType string, v interface{}) error {
-	var decoder decoder
+	var d decoder
 	switch {
 	case acceptType == "application/xml":
-		decoder = xml.NewDecoder(body)
+		d = xml.NewDecoder(body)
 	case acceptType == "application/json":
-		decoder = json.NewDecoder(body)
+		d = json.NewDecoder(body)
 	default:
-		decoder = xml.NewDecoder(body)
+		d = xml.NewDecoder(body)
 	}
-	return decoder.Decode(v)
+	return d.Decode(v)
 }
 
 // urlEncodedName encode the strings from UTF-8 byte representations to HTML hex escape sequences

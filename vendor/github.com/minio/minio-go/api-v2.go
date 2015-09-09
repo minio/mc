@@ -177,7 +177,7 @@ type Config struct {
 // Global constants
 const (
 	LibraryName    = "minio-go"
-	LibraryVersion = "0.2.3"
+	LibraryVersion = "0.2.4"
 )
 
 // SetUserAgent - append to a default user agent
@@ -304,12 +304,12 @@ func calculatePartSize(objectSize int64) int64 {
 }
 
 func (a apiV2) newObjectUpload(bucket, object, contentType string, size int64, data io.Reader) error {
-	initiateMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
+	initMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
 	if err != nil {
 		return err
 	}
-	uploadID := initiateMultipartUploadResult.UploadID
-	completeMultipartUpload := completeMultipartUpload{}
+	uploadID := initMultipartUploadResult.UploadID
+	complMultipartUpload := completeMultipartUpload{}
 	var totalLength int64
 
 	partSize := calculatePartSize(size)
@@ -329,15 +329,16 @@ func (a apiV2) newObjectUpload(bucket, object, contentType string, size int64, d
 				}
 			}
 		}
-		completePart, err := a.uploadPart(bucket, object, uploadID, part.MD5Sum, part.Num, part.Len, part.ReadSeeker)
+		var complPart completePart
+		complPart, err = a.uploadPart(bucket, object, uploadID, part.MD5Sum, part.Num, part.Len, part.ReadSeeker)
 		if err != nil {
 			return err
 		}
 		totalLength += part.Len
-		completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completePart)
+		complMultipartUpload.Parts = append(complMultipartUpload.Parts, complPart)
 	}
-	sort.Sort(completedParts(completeMultipartUpload.Parts))
-	_, err = a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
+	sort.Sort(completedParts(complMultipartUpload.Parts))
+	_, err = a.completeMultipartUpload(bucket, object, uploadID, complMultipartUpload)
 	if err != nil {
 		return err
 	}
@@ -357,7 +358,7 @@ func (a apiV2) listObjectPartsRecursive(bucket, object, uploadID string) <-chan 
 
 func (a apiV2) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, ch chan partCh) {
 	defer close(ch)
-	listObjectPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
+	listObjPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
 	if err != nil {
 		ch <- partCh{
 			Metadata: partMetadata{},
@@ -365,17 +366,17 @@ func (a apiV2) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string
 		}
 		return
 	}
-	for _, uploadedPart := range listObjectPartsResult.Parts {
+	for _, uploadedPart := range listObjPartsResult.Parts {
 		ch <- partCh{
 			Metadata: uploadedPart,
 			Err:      nil,
 		}
 	}
 	for {
-		if !listObjectPartsResult.IsTruncated {
+		if !listObjPartsResult.IsTruncated {
 			break
 		}
-		listObjectPartsResult, err = a.listObjectParts(bucket, object, uploadID, listObjectPartsResult.NextPartNumberMarker, 1000)
+		listObjPartsResult, err = a.listObjectParts(bucket, object, uploadID, listObjPartsResult.NextPartNumberMarker, 1000)
 		if err != nil {
 			ch <- partCh{
 				Metadata: partMetadata{},
@@ -383,7 +384,7 @@ func (a apiV2) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string
 			}
 			return
 		}
-		for _, uploadedPart := range listObjectPartsResult.Parts {
+		for _, uploadedPart := range listObjPartsResult.Parts {
 			ch <- partCh{
 				Metadata: uploadedPart,
 				Err:      nil,
@@ -458,7 +459,7 @@ func (a apiV2) listMultipartUploadsRecursive(bucket, object string) <-chan multi
 
 func (a apiV2) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch chan multiPartUploadCh) {
 	defer close(ch)
-	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
+	listMultipartUplResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
 		ch <- multiPartUploadCh{
 			Metadata: multiPartUpload{},
@@ -466,18 +467,18 @@ func (a apiV2) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch 
 		}
 		return
 	}
-	for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+	for _, multiPartUpload := range listMultipartUplResult.Uploads {
 		ch <- multiPartUploadCh{
 			Metadata: multiPartUpload,
 			Err:      nil,
 		}
 	}
 	for {
-		if !listMultipartUploadsResult.IsTruncated {
+		if !listMultipartUplResult.IsTruncated {
 			break
 		}
-		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
-			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, object, "", 1000)
+		listMultipartUplResult, err = a.listMultipartUploads(bucket,
+			listMultipartUplResult.NextKeyMarker, listMultipartUplResult.NextUploadIDMarker, object, "", 1000)
 		if err != nil {
 			ch <- multiPartUploadCh{
 				Metadata: multiPartUpload{},
@@ -485,7 +486,7 @@ func (a apiV2) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch 
 			}
 			return
 		}
-		for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+		for _, multiPartUpload := range listMultipartUplResult.Uploads {
 			ch <- multiPartUploadCh{
 				Metadata: multiPartUpload,
 				Err:      nil,
@@ -842,12 +843,12 @@ func (a apiV2) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan
 		errorCh <- err
 		return
 	}
-	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
+	listMultipartUplResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
 		errorCh <- err
 		return
 	}
-	for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+	for _, multiPartUpload := range listMultipartUplResult.Uploads {
 		if object == multiPartUpload.Key {
 			err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
 			if err != nil {
@@ -858,16 +859,16 @@ func (a apiV2) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan
 		}
 	}
 	for {
-		if !listMultipartUploadsResult.IsTruncated {
+		if !listMultipartUplResult.IsTruncated {
 			break
 		}
-		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
-			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, object, "", 1000)
+		listMultipartUplResult, err = a.listMultipartUploads(bucket,
+			listMultipartUplResult.NextKeyMarker, listMultipartUplResult.NextUploadIDMarker, object, "", 1000)
 		if err != nil {
 			errorCh <- err
 			return
 		}
-		for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+		for _, multiPartUpload := range listMultipartUplResult.Uploads {
 			if object == multiPartUpload.Key {
 				err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
 				if err != nil {
@@ -900,12 +901,12 @@ func (a apiV2) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan err
 		errorCh <- err
 		return
 	}
-	listMultipartUploadsResult, err := a.listMultipartUploads(bucket, "", "", "", "", 1000)
+	listMultipartUplResult, err := a.listMultipartUploads(bucket, "", "", "", "", 1000)
 	if err != nil {
 		errorCh <- err
 		return
 	}
-	for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+	for _, multiPartUpload := range listMultipartUplResult.Uploads {
 		err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
 		if err != nil {
 			errorCh <- err
@@ -913,16 +914,16 @@ func (a apiV2) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan err
 		}
 	}
 	for {
-		if !listMultipartUploadsResult.IsTruncated {
+		if !listMultipartUplResult.IsTruncated {
 			break
 		}
-		listMultipartUploadsResult, err = a.listMultipartUploads(bucket,
-			listMultipartUploadsResult.NextKeyMarker, listMultipartUploadsResult.NextUploadIDMarker, "", "", 1000)
+		listMultipartUplResult, err = a.listMultipartUploads(bucket,
+			listMultipartUplResult.NextKeyMarker, listMultipartUplResult.NextUploadIDMarker, "", "", 1000)
 		if err != nil {
 			errorCh <- err
 			return
 		}
-		for _, multiPartUpload := range listMultipartUploadsResult.Uploads {
+		for _, multiPartUpload := range listMultipartUplResult.Uploads {
 			err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
 			if err != nil {
 				errorCh <- err
