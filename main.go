@@ -32,11 +32,22 @@ import (
 	"github.com/olekukonko/ts"
 )
 
-// Check for the environment early on and gracefully report.
-func checkConfig() {
-	_, e := user.Current()
+// Check for the user id erarly on and gracefully report.
+func checkUser() {
+	u, e := user.Current()
 	fatalIf(probe.NewError(e), "Unable to determine current user.")
 
+	var uid int
+	uid, e = strconv.Atoi(u.Uid)
+	fatalIf(probe.NewError(e), "Unable to convert user id to an integer.")
+
+	if uid == 0 {
+		fatalIf(errDummy().Trace(), "Please run as a normal user, running as root is disallowed")
+	}
+}
+
+// Check for sane config environment early on and gracefully report.
+func checkConfig() {
 	// Ensures config file is sane
 	_, err := getMcConfig()
 	fatalIf(err.Trace(), "Unable to access configuration file.")
@@ -86,11 +97,13 @@ func registerBefore(ctx *cli.Context) error {
 		console.SetNoColor()
 	}
 
+	// check if mc is being run as root
+	checkUser()
+	// verify golang runtime
 	verifyMCRuntime()
-
 	// Migrate any old version of config / state files to newer format.
 	migrate()
-
+	// checkConfig if it can be read
 	checkConfig()
 	return nil
 }
