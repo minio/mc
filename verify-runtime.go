@@ -27,7 +27,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-var minGolangVersion = "1.5"
+var minGolangRuntimeVersion = "1.5.1"
 
 // following code handles the current Golang release styles, we might have to update them in future
 // if golang community divulges from the below formatting style.
@@ -89,7 +89,7 @@ func (v1 version) LessThan(v2 version) bool {
 
 func checkGolangRuntimeVersion() {
 	v1 := newVersion(getNormalizedGolangVersion())
-	v2 := newVersion(minGolangVersion)
+	v2 := newVersion(minGolangRuntimeVersion)
 	if v1.LessThan(v2) {
 		errorIf(errDummy().Trace(),
 			"Old Golang runtime version ‘"+v1.String()+"’ detected., ‘mc’ requires minimum go1.5 or later.")
