@@ -207,7 +207,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		fpath = fpath + "."
 	}
 
-	fi, err := f.fsStat()
+	fst, err := f.fsStat()
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
@@ -216,7 +216,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		return
 	}
 
-	switch fi.Mode().IsDir() {
+	switch fst.Mode().IsDir() {
 	case true:
 		// do not use ioutil.ReadDir(), since it tries to sort its
 		// output at our scale we are expecting that to slow down
@@ -308,9 +308,9 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	default:
 		content := &client.Content{
 			Name: f.path,
-			Time: fi.ModTime(),
-			Size: fi.Size(),
-			Type: fi.Mode(),
+			Time: fst.ModTime(),
+			Size: fst.Size(),
+			Type: fst.Mode(),
 		}
 		contentCh <- client.ContentOnChannel{
 			Content: content,
