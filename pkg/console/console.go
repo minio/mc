@@ -53,7 +53,10 @@ var Theme = map[string]*color.Color{
 }
 
 var (
-	mutex = &sync.RWMutex{}
+	// Used by the caller to print multiple lines atomically. Exposed by Lock/Unlock methods.
+	publicMutex = &sync.Mutex{}
+	// Used internally by console.
+	privateMutex = &sync.Mutex{}
 
 	stderrColoredOutput = ansicolor.NewAnsiColorWriter(os.Stderr)
 
@@ -198,164 +201,162 @@ var (
 	}
 )
 
-var (
-	// wrap around standard fmt functions
-	// consolePrint prints a message prefixed with message type and program name
-	consolePrint = func(tag string, c *color.Color, a ...interface{}) {
-		mutex.Lock()
-		defer mutex.Unlock()
+// wrap around standard fmt functions
+// consolePrint prints a message prefixed with message type and program name
+func consolePrint(tag string, c *color.Color, a ...interface{}) {
+	privateMutex.Lock()
+	defer privateMutex.Unlock()
 
-		switch tag {
-		case "Debug":
-			output := color.Output
-			color.Output = stderrColoredOutput
-			if isatty.IsTerminal(os.Stderr.Fd()) {
-				c.Print(ProgramName() + ": <DEBUG> ")
-				c.Print(a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
-				fmt.Fprint(color.Output, a...)
-			}
-			color.Output = output
-		case "Fatal":
-			fallthrough
-		case "Error":
-			output := color.Output
-			color.Output = stderrColoredOutput
-			if isatty.IsTerminal(os.Stderr.Fd()) {
-				c.Print(ProgramName() + ": <ERROR> ")
-				c.Print(a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
-				fmt.Fprint(color.Output, a...)
-			}
-			color.Output = output
-		case "Info":
-			if isatty.IsTerminal(os.Stdout.Fd()) {
-				c.Print(ProgramName() + ": ")
-				c.Print(a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": ")
-				fmt.Fprint(color.Output, a...)
-			}
-		default:
-			if isatty.IsTerminal(os.Stdout.Fd()) {
-				c.Print(a...)
-			} else {
-				fmt.Fprint(color.Output, a...)
-			}
+	switch tag {
+	case "Debug":
+		output := color.Output
+		color.Output = stderrColoredOutput
+		if isatty.IsTerminal(os.Stderr.Fd()) {
+			c.Print(ProgramName() + ": <DEBUG> ")
+			c.Print(a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
+			fmt.Fprint(color.Output, a...)
+		}
+		color.Output = output
+	case "Fatal":
+		fallthrough
+	case "Error":
+		output := color.Output
+		color.Output = stderrColoredOutput
+		if isatty.IsTerminal(os.Stderr.Fd()) {
+			c.Print(ProgramName() + ": <ERROR> ")
+			c.Print(a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
+			fmt.Fprint(color.Output, a...)
+		}
+		color.Output = output
+	case "Info":
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			c.Print(ProgramName() + ": ")
+			c.Print(a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": ")
+			fmt.Fprint(color.Output, a...)
+		}
+	default:
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			c.Print(a...)
+		} else {
+			fmt.Fprint(color.Output, a...)
 		}
 	}
+}
 
-	// consolePrintf - same as print with a new line
-	consolePrintf = func(tag string, c *color.Color, format string, a ...interface{}) {
-		mutex.Lock()
-		defer mutex.Unlock()
+// consolePrintf - same as print with a new line
+func consolePrintf(tag string, c *color.Color, format string, a ...interface{}) {
+	privateMutex.Lock()
+	defer privateMutex.Unlock()
 
-		switch tag {
-		case "Debug":
-			output := color.Output
-			color.Output = stderrColoredOutput
-			if isatty.IsTerminal(os.Stderr.Fd()) {
-				c.Print(ProgramName() + ": <DEBUG> ")
-				c.Printf(format, a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
-				fmt.Fprintf(color.Output, format, a...)
-			}
-			color.Output = output
-		case "Fatal":
-			fallthrough
-		case "Error":
-			output := color.Output
-			color.Output = stderrColoredOutput
-			if isatty.IsTerminal(os.Stderr.Fd()) {
-				c.Print(ProgramName() + ": <ERROR> ")
-				c.Printf(format, a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
-				fmt.Fprintf(color.Output, format, a...)
-			}
-			color.Output = output
-		case "Info":
-			if isatty.IsTerminal(os.Stdout.Fd()) {
-				c.Print(ProgramName() + ": ")
-				c.Printf(format, a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": ")
-				fmt.Fprintf(color.Output, format, a...)
-			}
-		default:
-			if isatty.IsTerminal(os.Stdout.Fd()) {
-				c.Printf(format, a...)
-			} else {
-				fmt.Fprintf(color.Output, format, a...)
-			}
+	switch tag {
+	case "Debug":
+		output := color.Output
+		color.Output = stderrColoredOutput
+		if isatty.IsTerminal(os.Stderr.Fd()) {
+			c.Print(ProgramName() + ": <DEBUG> ")
+			c.Printf(format, a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
+			fmt.Fprintf(color.Output, format, a...)
+		}
+		color.Output = output
+	case "Fatal":
+		fallthrough
+	case "Error":
+		output := color.Output
+		color.Output = stderrColoredOutput
+		if isatty.IsTerminal(os.Stderr.Fd()) {
+			c.Print(ProgramName() + ": <ERROR> ")
+			c.Printf(format, a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
+			fmt.Fprintf(color.Output, format, a...)
+		}
+		color.Output = output
+	case "Info":
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			c.Print(ProgramName() + ": ")
+			c.Printf(format, a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": ")
+			fmt.Fprintf(color.Output, format, a...)
+		}
+	default:
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			c.Printf(format, a...)
+		} else {
+			fmt.Fprintf(color.Output, format, a...)
 		}
 	}
+}
 
-	// consolePrintln - same as print with a new line
-	consolePrintln = func(tag string, c *color.Color, a ...interface{}) {
-		mutex.Lock()
-		defer mutex.Unlock()
+// consolePrintln - same as print with a new line
+func consolePrintln(tag string, c *color.Color, a ...interface{}) {
+	privateMutex.Lock()
+	defer privateMutex.Unlock()
 
-		switch tag {
-		case "Debug":
-			output := color.Output
-			color.Output = stderrColoredOutput
-			if isatty.IsTerminal(os.Stderr.Fd()) {
-				c.Print(ProgramName() + ": <DEBUG> ")
-				c.Println(a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
-				fmt.Fprintln(color.Output, a...)
-			}
-			color.Output = output
-		case "Fatal":
-			fallthrough
-		case "Error":
-			output := color.Output
-			color.Output = stderrColoredOutput
-			if isatty.IsTerminal(os.Stderr.Fd()) {
-				c.Print(ProgramName() + ": <ERROR> ")
-				c.Println(a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
-				fmt.Fprintln(color.Output, a...)
-			}
-			color.Output = output
-		case "Info":
-			if isatty.IsTerminal(os.Stdout.Fd()) {
-				c.Print(ProgramName() + ": ")
-				c.Println(a...)
-			} else {
-				fmt.Fprint(color.Output, ProgramName()+": ")
-				fmt.Fprintln(color.Output, a...)
-			}
-		default:
-			if isatty.IsTerminal(os.Stdout.Fd()) {
-				c.Println(a...)
-			} else {
-				fmt.Fprintln(color.Output, a...)
-			}
+	switch tag {
+	case "Debug":
+		output := color.Output
+		color.Output = stderrColoredOutput
+		if isatty.IsTerminal(os.Stderr.Fd()) {
+			c.Print(ProgramName() + ": <DEBUG> ")
+			c.Println(a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": <DEBUG> ")
+			fmt.Fprintln(color.Output, a...)
+		}
+		color.Output = output
+	case "Fatal":
+		fallthrough
+	case "Error":
+		output := color.Output
+		color.Output = stderrColoredOutput
+		if isatty.IsTerminal(os.Stderr.Fd()) {
+			c.Print(ProgramName() + ": <ERROR> ")
+			c.Println(a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": <ERROR> ")
+			fmt.Fprintln(color.Output, a...)
+		}
+		color.Output = output
+	case "Info":
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			c.Print(ProgramName() + ": ")
+			c.Println(a...)
+		} else {
+			fmt.Fprint(color.Output, ProgramName()+": ")
+			fmt.Fprintln(color.Output, a...)
+		}
+	default:
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			c.Println(a...)
+		} else {
+			fmt.Fprintln(color.Output, a...)
 		}
 	}
-)
+}
 
 // Lock console
 func Lock() {
-	mutex.Lock()
+	publicMutex.Lock()
 }
 
 // Unlock locked console
 func Unlock() {
-	mutex.Unlock()
+	publicMutex.Unlock()
 }
 
 // SetCustomTheme sets a color theme
 func SetCustomTheme(theme map[string]*color.Color) *probe.Error {
-	mutex.Lock()
-	defer mutex.Unlock()
+	privateMutex.Lock()
+	defer privateMutex.Unlock()
 	// add new theme
 	for k, v := range theme {
 		Theme[k] = v
@@ -371,7 +372,7 @@ func ProgramName() string {
 
 // SetNoColor disable coloring
 func SetNoColor() {
-	mutex.Lock()
-	defer mutex.Unlock()
+	privateMutex.Lock()
+	defer privateMutex.Unlock()
 	color.NoColor = true
 }
