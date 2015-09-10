@@ -51,32 +51,13 @@ type version struct {
 	major, minor, patch string
 }
 
-func newVersion(v string) version {
-	var ver version
-	verSlice := strings.Split(v, ".")
-	if len(verSlice) > 2 {
-		ver = version{
-			major: verSlice[0],
-			minor: verSlice[1],
-			patch: verSlice[2],
-		}
-		return ver
-	}
-	ver = version{
-		major: verSlice[0],
-		minor: verSlice[1],
-		patch: "0",
-	}
-	return ver
-}
-
 func (v1 version) String() string {
 	return fmt.Sprintf("%s%s%s", v1.major, v1.minor, v1.patch)
 }
 
 func (v1 version) Version() int {
 	ver, e := strconv.Atoi(v1.String())
-	fatalIf(probe.NewError(e), "Unable to parse version string.")
+	fatalIf(probe.NewError(e), "Unable to convert version string to an integer.")
 	return ver
 }
 
@@ -85,6 +66,19 @@ func (v1 version) LessThan(v2 version) bool {
 		return true
 	}
 	return false
+}
+
+func newVersion(v string) version {
+	ver := version{}
+	verSlice := strings.Split(v, ".")
+	ver.major = verSlice[0]
+	ver.minor = verSlice[1]
+	if len(verSlice) == 3 {
+		ver.patch = verSlice[2]
+	} else {
+		ver.patch = "0"
+	}
+	return ver
 }
 
 func checkGolangRuntimeVersion() {
