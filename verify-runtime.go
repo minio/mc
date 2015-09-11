@@ -86,7 +86,7 @@ func checkGolangRuntimeVersion() {
 	v2 := newVersion(minGolangRuntimeVersion)
 	if v1.LessThan(v2) {
 		errorIf(errDummy().Trace(),
-			"Old Golang runtime version ‘"+v1.String()+"’ detected., ‘mc’ requires minimum go1.5 or later.")
+			"Old Golang runtime version ‘"+v1.String()+"’ detected., ‘mc’ requires minimum go1.5.1 or later.")
 	}
 }
 
@@ -105,6 +105,9 @@ func verifyMCRuntime() {
 	}
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session dir.")
+	}
+	if !isSharedURLsDatadirExists() {
+		fatalIf(createSharedURLsDatadir().Trace(), "Unable to create shared url datadir.")
 	}
 	checkGolangRuntimeVersion()
 }
