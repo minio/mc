@@ -33,8 +33,9 @@ const (
 	globalMCConfigWindowsDir = "mc\\"
 	globalMCConfigFile       = "config.json"
 
-	// session config related constants
-	globalSessionDir = "session"
+	// session config and shared urls related constants
+	globalSessionDir        = "session"
+	globalSharedURLsDatadir = "share"
 
 	// default access and secret key
 	// do not pass accesskeyid and secretaccesskey through cli
