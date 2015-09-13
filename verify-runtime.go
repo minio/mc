@@ -106,8 +106,8 @@ func verifyMCRuntime() {
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session dir.")
 	}
-	if !isSharedURLsDatadirExists() {
-		fatalIf(createSharedURLsDatadir().Trace(), "Unable to create shared url datadir.")
+	if !isSharedURLsDataDirExists() {
+		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared url datadir.")
 	}
 	checkGolangRuntimeVersion()
 }

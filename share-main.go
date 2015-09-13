@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -133,8 +132,13 @@ func checkShareSyntax(ctx *cli.Context) {
 func mainShare(ctx *cli.Context) {
 	checkShareSyntax(ctx)
 
-	if !isSharedURLsDatadirExists() {
-		fatalIf(createSharedURLsDatadir().Trace(), "Unable to create shared url datadir.")
+	if !isSharedURLsDataDirExists() {
+		shareDir, _ := getSharedURLsDataDir()
+		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared URL data directory ‘"+shareDir+"’.")
+	}
+	if !isSharedURLsDataFileExists() {
+		shareFile, _ := getSharedURLsDataFile()
+		fatalIf(createSharedURLsDataFile().Trace(), "Unable to create shared URL data file ‘"+shareFile+"’.")
 	}
 
 	console.SetCustomTheme(map[string]*color.Color{
@@ -189,6 +193,7 @@ func doShareList() *probe.Error {
 			msg += console.Colorize("Expires", expiresIn)
 			msg += "\n"
 			console.Println(msg)
+			continue
 		}
 		shareListBytes, err := json.Marshal(struct {
 			ExpiresIn time.Duration
@@ -213,16 +218,7 @@ func doShareURL(targetURL string, recursive bool, expires shareMessage) *probe.E
 	shareDate := time.Now().UTC()
 	sURLs, err := loadSharedURLsV1()
 	if err != nil {
-		if os.IsNotExist(err.ToGoError()) {
-			sURLs = &sharedURLs{}
-			sURLs.Version = "1.0.0"
-			sURLs.URLs = make(map[string]struct {
-				Date    time.Time
-				Message shareMessage
-			})
-		} else {
-			return err.Trace()
-		}
+		return err.Trace()
 	}
 
 	var clnt client.Client
