@@ -22,26 +22,53 @@ import (
 	"time"
 )
 
-// humanizeDuration humanizes time.Duration output to a meaningful value,
-// golang's default ``time.Duration`` output is badly formatted and unreadable.
-func humanizeDuration(duration time.Duration) string {
+type humanizedTime struct {
+	Days    int64 `json:"days,omitempty"`
+	Hours   int64 `json:"hours,omitempty"`
+	Minutes int64 `json:"minutes,omitempty"`
+	Seconds int64 `json:"seconds,omitempty"`
+}
+
+// String() humanizes humanizedTime to human readable,
+func (r humanizedTime) String() string {
+	if r.Minutes == 0 {
+		return fmt.Sprintf("%d seconds", r.Seconds)
+	}
+	if r.Hours == 0 {
+		return fmt.Sprintf("%d minutes %d seconds", r.Minutes, r.Seconds)
+	}
+	if r.Days == 0 {
+		return fmt.Sprintf("%d hours %d minutes %d seconds", r.Hours, r.Minutes, r.Seconds)
+	}
+	return fmt.Sprintf("%d days %d hours %d minutes %d seconds", r.Days, r.Hours, r.Minutes, r.Seconds)
+}
+
+func timeDurationToHumanizedTime(duration time.Duration) humanizedTime {
+	r := humanizedTime{}
 	if duration.Seconds() < 60.0 {
-		return fmt.Sprintf("%d seconds", int64(duration.Seconds()))
+		r.Seconds = int64(duration.Seconds())
+		return r
 	}
 	if duration.Minutes() < 60.0 {
 		remainingSeconds := math.Mod(duration.Seconds(), 60)
-		return fmt.Sprintf("%d minutes %d seconds", int64(duration.Minutes()), int64(remainingSeconds))
+		r.Seconds = int64(remainingSeconds)
+		r.Minutes = int64(duration.Minutes())
+		return r
 	}
 	if duration.Hours() < 24.0 {
 		remainingMinutes := math.Mod(duration.Minutes(), 60)
 		remainingSeconds := math.Mod(duration.Seconds(), 60)
-		return fmt.Sprintf("%d hours %d minutes %d seconds",
-			int64(duration.Hours()), int64(remainingMinutes), int64(remainingSeconds))
+		r.Seconds = int64(remainingSeconds)
+		r.Minutes = int64(remainingMinutes)
+		r.Hours = int64(duration.Hours())
+		return r
 	}
 	remainingHours := math.Mod(duration.Hours(), 24)
 	remainingMinutes := math.Mod(duration.Minutes(), 60)
 	remainingSeconds := math.Mod(duration.Seconds(), 60)
-	return fmt.Sprintf("%d days %d hours %d minutes %d seconds",
-		int64(duration.Hours()/24), int64(remainingHours),
-		int64(remainingMinutes), int64(remainingSeconds))
+	r.Hours = int64(remainingHours)
+	r.Minutes = int64(remainingMinutes)
+	r.Seconds = int64(remainingSeconds)
+	r.Days = int64(duration.Hours() / 24)
+	return r
 }

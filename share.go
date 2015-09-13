@@ -17,31 +17,45 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/minio/minio/pkg/probe"
-	"github.com/minio/minio/pkg/quick"
 )
 
-type sharedURLs struct {
-	Version string
-	URLs    map[string]struct {
-		Date    time.Time
-		Message ShareMessage
-	}
+func newSharedURLs() *sharedURLsV2 {
+	return newSharedURLsV2()
 }
 
-func newSharedURLs() *sharedURLs {
-	s := &sharedURLs{
-		Version: "1.0.0",
-		URLs: make(map[string]struct {
-			Date    time.Time
-			Message ShareMessage
-		}),
+func migrateSharedURLsV1ToV2() {
+	if !isSharedURLsDataFileExists() {
+		return
 	}
-	return s
+	sURLsV2 := newSharedURLsV2()
+
+	// try to load latest version if possible
+	sURLsV2, err := loadSharedURLsV2()
+	if err != nil {
+		switch err.ToGoError().(type) {
+		case *json.UnmarshalTypeError:
+			// try to load V1 if possible
+			var sURLsV1 *sharedURLsV1
+			sURLsV1, err = loadSharedURLsV1()
+			fatalIf(err.Trace(), "Unable to load shared url version ‘1.0.0’.")
+			if sURLsV1.Version != "1.0.0" {
+				fatalIf(errDummy().Trace(), "Invalid version loaded ‘"+sURLsV1.Version+"’.")
+			}
+			for key, value := range sURLsV1.URLs {
+				value.Message.Key = key
+				sURLsV2.URLs = append(sURLsV2.URLs, value)
+			}
+			err = saveSharedURLsV2(sURLsV2)
+			fatalIf(err.Trace(), "Unable to save new shared url version ‘1.1.0’.")
+		default:
+			fatalIf(err.Trace(), "Unable to load shared url version ‘1.1.0’.")
+		}
+	}
 }
 
 func getSharedURLsDataDir() (string, *probe.Error) {
@@ -97,41 +111,8 @@ func isSharedURLsDataFileExists() bool {
 }
 
 func createSharedURLsDataFile() *probe.Error {
-	if err := saveSharedURLsV1(newSharedURLs()); err != nil {
+	if err := saveSharedURLsV2(newSharedURLs()); err != nil {
 		return err.Trace()
 	}
 	return nil
-}
-
-func loadSharedURLsV1() (*sharedURLs, *probe.Error) {
-	sharedURLsDataFile, err := getSharedURLsDataFile()
-	if err != nil {
-		return nil, err.Trace()
-	}
-	if _, err := os.Stat(sharedURLsDataFile); err != nil {
-		return nil, probe.NewError(err)
-	}
-
-	qs, err := quick.New(newSharedURLs())
-	if err != nil {
-		return nil, err.Trace()
-	}
-	err = qs.Load(sharedURLsDataFile)
-	if err != nil {
-		return nil, err.Trace(sharedURLsDataFile)
-	}
-	s := qs.Data().(*sharedURLs)
-	return s, nil
-}
-
-func saveSharedURLsV1(s *sharedURLs) *probe.Error {
-	qs, err := quick.New(s)
-	if err != nil {
-		return err.Trace()
-	}
-	sharedURLsDataFile, err := getSharedURLsDataFile()
-	if err != nil {
-		return err.Trace()
-	}
-	return qs.Save(sharedURLsDataFile).Trace(sharedURLsDataFile)
 }

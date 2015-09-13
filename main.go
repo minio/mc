@@ -60,6 +60,8 @@ func migrate() {
 	fixConfig()
 	// Migrate session files if any.
 	migrateSession()
+	// Migrate shared urls if any.
+	migrateSharedURLs()
 }
 
 // Get os/arch/platform specific information.
