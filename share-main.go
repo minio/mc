@@ -64,43 +64,21 @@ EXAMPLES:
 `,
 }
 
-// shareMessage implements extended version of time.Duration, .Days() for convenience
-type shareMessage struct {
+// ShareMessage is container for share command on success and failure messages
+type ShareMessage struct {
 	Expiry time.Duration
 	URL    string
 }
 
-func (s shareMessage) Days() float64 {
-	return s.Expiry.Hours() / 24
-}
-
-func (s shareMessage) Seconds() float64 {
-	return s.Expiry.Seconds()
-}
-
-func (s shareMessage) Hours() float64 {
-	return s.Expiry.Hours()
-}
-
-func (s shareMessage) GetDuration() time.Duration {
-	return s.Expiry
-}
-
-func (s shareMessage) String() string {
+func (s ShareMessage) String() string {
 	if !globalJSONFlag {
-		durationString := func() string {
-			if s.Expiry.Hours() > 24 {
-				return fmt.Sprintf("%dd", int64(s.Days()))
-			}
-			return s.Expiry.String()
-		}
-		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s", durationString(), s.URL))
+		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s", humanizeDuration(s.Expiry), s.URL))
 	}
 	shareMessageBytes, err := json.Marshal(struct {
-		Expires   time.Duration `json:"expireSeconds"`
+		Expiry    time.Duration `json:"expireSeconds"`
 		SharedURL string        `json:"sharedURL"`
 	}{
-		Expires:   time.Duration(s.Seconds()),
+		Expiry:    time.Duration(s.Expiry.Seconds()),
 		SharedURL: s.URL,
 	})
 	fatalIf(probe.NewError(err), "Failed to marshal into JSON.")
@@ -174,7 +152,7 @@ func mainShare(ctx *cli.Context) {
 	targetURL := getAliasURL(url, config.Aliases)
 
 	// if recursive strip off the "..."
-	err := doShareURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), shareMessage{Expiry: expires})
+	err := doShareURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
 	fatalIf(err.Trace(targetURL), "Unable to generate URL for sharing.")
 }
 
@@ -185,26 +163,26 @@ func doShareList() *probe.Error {
 		return err.Trace()
 	}
 	for url, data := range sURLs.URLs {
-		if time.Since(data.Date) > data.Message.GetDuration() {
+		if time.Since(data.Date) > data.Message.Expiry {
 			delete(sURLs.URLs, url)
 			continue
 		}
-		expiresIn := data.Message.GetDuration() - time.Since(data.Date)
+		expiry := data.Message.Expiry - time.Since(data.Date)
 		if !globalJSONFlag {
-			msg := console.Colorize("Share", "Shared URL: ")
+			msg := console.Colorize("Share", "Name: ")
 			msg += console.Colorize("URL", url+"\n")
-			msg += console.Colorize("Share", "Expires-In: ")
-			msg += console.Colorize("Expires", expiresIn)
+			msg += console.Colorize("Share", "Expiry: ")
+			msg += console.Colorize("Expires", humanizeDuration(expiry))
 			msg += "\n"
 			console.Println(msg)
 			continue
 		}
 		shareListBytes, err := json.Marshal(struct {
-			ExpiresIn time.Duration `json:"expiresIn"`
-			URL       string        `json:"url"`
+			Expiry time.Duration `json:"expiry"`
+			URL    string        `json:"url"`
 		}{
-			ExpiresIn: time.Duration(expiresIn.Seconds()),
-			URL:       url,
+			Expiry: time.Duration(expiry.Seconds()),
+			URL:    url,
 		})
 		if err != nil {
 			return probe.NewError(err)
@@ -218,7 +196,7 @@ func doShareList() *probe.Error {
 }
 
 // doShareURL share files from target
-func doShareURL(targetURL string, recursive bool, expires shareMessage) *probe.Error {
+func doShareURL(targetURL string, recursive bool, expires time.Duration) *probe.Error {
 	shareDate := time.Now().UTC()
 	sURLs, err := loadSharedURLsV1()
 	if err != nil {
@@ -246,19 +224,22 @@ func doShareURL(targetURL string, recursive bool, expires shareMessage) *probe.E
 			return err.Trace()
 		}
 		var sharedURL string
-		sharedURL, err = newClnt.Share(expires.GetDuration())
+		sharedURL, err = newClnt.Share(expires)
 		if err != nil {
 			return err.Trace()
 		}
-		expires.URL = sharedURL
+		shareMessage := ShareMessage{
+			Expiry: expires,
+			URL:    sharedURL,
+		}
 		sURLs.URLs[newClnt.URL().String()] = struct {
 			Date    time.Time
-			Message shareMessage
+			Message ShareMessage
 		}{
 			Date:    shareDate,
-			Message: expires,
+			Message: shareMessage,
 		}
-		console.Println(expires)
+		console.Println(shareMessage)
 	}
 	saveSharedURLsV1(sURLs)
 	return nil
