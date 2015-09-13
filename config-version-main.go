@@ -55,7 +55,6 @@ func mainConfigVersion(ctx *cli.Context) {
 	type Version struct {
 		Value string `json:"value"`
 	}
-
 	if globalJSONFlag {
 		tB, e := json.Marshal(
 			struct {

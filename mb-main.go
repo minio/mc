@@ -55,10 +55,13 @@ type MakeBucketMessage struct {
 	Bucket string `json:"bucket"`
 }
 
+// String colorized make bucket message
 func (s MakeBucketMessage) String() string {
-	if !globalJSONFlag {
-		return console.Colorize("MakeBucket", "Bucket created successfully  ‘"+s.Bucket+"’")
-	}
+	return console.Colorize("MakeBucket", "Bucket created successfully  ‘"+s.Bucket+"’")
+}
+
+// JSON jsonified make bucket message
+func (s MakeBucketMessage) JSON() string {
 	makeBucketJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
@@ -89,7 +92,7 @@ func mainMakeBucket(ctx *cli.Context) {
 		targetURL := getAliasURL(arg, config.Aliases)
 
 		fatalIf(doMakeBucketCmd(targetURL).Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
-		console.Println(MakeBucketMessage{
+		Prints("%s\n", MakeBucketMessage{
 			Status: "success",
 			Bucket: targetURL,
 		})

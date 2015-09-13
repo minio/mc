@@ -63,21 +63,25 @@ type AliasMessage struct {
 	URL   string `json:"url,omitempty"`
 }
 
-// String string printer for Content metadata
+// String colorized alias message
 func (a AliasMessage) String() string {
-	if !globalJSONFlag {
-		if a.op == "list" {
-			message := console.Colorize("Alias", fmt.Sprintf("[%s] <- ", a.Alias))
-			message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
-			return message
-		}
-		if a.op == "remove" {
-			return console.Colorize("AliasMessage", "Removed alias ‘"+a.Alias+"’ successfully.")
-		}
-		if a.op == "add" {
-			return console.Colorize("AliasMessage", "Added alias ‘"+a.Alias+"’ successfully.")
-		}
+	if a.op == "list" {
+		message := console.Colorize("Alias", fmt.Sprintf("[%s] <- ", a.Alias))
+		message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
+		return message
 	}
+	if a.op == "remove" {
+		return console.Colorize("AliasMessage", "Removed alias ‘"+a.Alias+"’ successfully.")
+	}
+	if a.op == "add" {
+		return console.Colorize("AliasMessage", "Added alias ‘"+a.Alias+"’ successfully.")
+	}
+	// should never come here
+	return ""
+}
+
+// JSON jsonified alias message
+func (a AliasMessage) JSON() string {
 	jsonMessageBytes, e := json.Marshal(a)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -145,7 +149,7 @@ func listAliases() {
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV3)
 	for k, v := range newConf.Aliases {
-		console.Println(AliasMessage{
+		Prints("%s\n", AliasMessage{
 			op:    "list",
 			Alias: k,
 			URL:   v,
@@ -180,7 +184,7 @@ func removeAlias(alias string) {
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(alias), "Unable to save alias ‘"+alias+"’.")
 
-	console.Println(AliasMessage{
+	Prints("%s\n", AliasMessage{
 		op:    "remove",
 		Alias: alias,
 	})
@@ -216,7 +220,7 @@ func addAlias(alias, url string) {
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(alias, url), "Unable to save alias ‘"+alias+"’.")
 
-	console.Println(AliasMessage{
+	Prints("%s\n", AliasMessage{
 		op:    "add",
 		Alias: alias,
 		URL:   url,

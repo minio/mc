@@ -48,24 +48,28 @@ type HostMessage struct {
 	SecretAccessKey string `json:"secretAccessKey,omitempty"`
 }
 
-// String string printer for Content metadata
+// String colorized host message
 func (a HostMessage) String() string {
-	if !globalJSONFlag {
-		if a.op == "list" {
-			message := console.Colorize("Host", fmt.Sprintf("[%s] ", a.Host))
-			if a.AccessKeyID != "" || a.SecretAccessKey != "" {
-				message += console.Colorize("AccessKeyID", fmt.Sprintf("<- %s,", a.AccessKeyID))
-				message += console.Colorize("SecretAccessKey", fmt.Sprintf(" %s", a.SecretAccessKey))
-			}
-			return message
+	if a.op == "list" {
+		message := console.Colorize("Host", fmt.Sprintf("[%s] ", a.Host))
+		if a.AccessKeyID != "" || a.SecretAccessKey != "" {
+			message += console.Colorize("AccessKeyID", fmt.Sprintf("<- %s,", a.AccessKeyID))
+			message += console.Colorize("SecretAccessKey", fmt.Sprintf(" %s", a.SecretAccessKey))
 		}
-		if a.op == "remove" {
-			return console.Colorize("HostMessage", "Removed host ‘"+a.Host+"’ successfully.")
-		}
-		if a.op == "add" {
-			return console.Colorize("HostMessage", "Added host ‘"+a.Host+"’ successfully.")
-		}
+		return message
 	}
+	if a.op == "remove" {
+		return console.Colorize("HostMessage", "Removed host ‘"+a.Host+"’ successfully.")
+	}
+	if a.op == "add" {
+		return console.Colorize("HostMessage", "Added host ‘"+a.Host+"’ successfully.")
+	}
+	// should never reach here
+	return ""
+}
+
+// JSON jsonified host message
+func (a HostMessage) JSON() string {
 	jsonMessageBytes, e := json.Marshal(a)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -133,7 +137,7 @@ func listHosts() {
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV3)
 	for k, v := range newConf.Hosts {
-		console.Println(HostMessage{
+		Prints("%s\n", HostMessage{
 			op:              "list",
 			Host:            k,
 			AccessKeyID:     v.AccessKeyID,
@@ -169,7 +173,7 @@ func removeHost(hostGlob string) {
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(hostGlob), "Unable to save host glob ‘"+hostGlob+"’.")
 
-	console.Println(HostMessage{
+	Prints("%s\n", HostMessage{
 		op:   "remove",
 		Host: hostGlob,
 	})
@@ -227,7 +231,7 @@ func addHost(hostGlob, accessKeyID, secretAccessKey string) {
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(hostGlob), "Unable to save host glob ‘"+hostGlob+"’.")
 
-	console.Println(HostMessage{
+	Prints("%s\n", HostMessage{
 		op:              "add",
 		Host:            hostGlob,
 		AccessKeyID:     accessKeyID,

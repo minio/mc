@@ -67,15 +67,20 @@ type AccessMessage struct {
 	Perms     bucketPerms `json:"permission"`
 }
 
+// String colorized access message
 func (s AccessMessage) String() string {
-	if !globalJSONFlag {
-		if s.Operation == "set" {
-			return console.Colorize("Access", "Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
-		}
-		if s.Operation == "get" {
-			return console.Colorize("Access", "Access permission for ‘"+s.Bucket+"’"+" is ‘"+string(s.Perms)+"’")
-		}
+	if s.Operation == "set" {
+		return console.Colorize("Access", "Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
 	}
+	if s.Operation == "get" {
+		return console.Colorize("Access", "Access permission for ‘"+s.Bucket+"’"+" is ‘"+string(s.Perms)+"’")
+	}
+	// nothing to print
+	return ""
+}
+
+// JSON jsonified access message
+func (s AccessMessage) JSON() string {
 	accessJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
@@ -128,7 +133,7 @@ func mainAccess(ctx *cli.Context) {
 
 			fatalIf(doSetAccess(targetURL, perms).Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
 
-			console.Println(AccessMessage{
+			Prints("%s\n", AccessMessage{
 				Operation: "set",
 				Status:    "success",
 				Bucket:    targetURL,
@@ -141,7 +146,7 @@ func mainAccess(ctx *cli.Context) {
 			perms, err := doGetAccess(targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")
 
-			console.Println(AccessMessage{
+			Prints("%s\n", AccessMessage{
 				Operation: "get",
 				Status:    "success",
 				Bucket:    targetURL,
