@@ -67,12 +67,14 @@ type MirrorMessage struct {
 	Targets []string `json:"targets"`
 }
 
-// String string printer for mirror message
-func (s MirrorMessage) String() string {
-	if !globalJSONFlag {
-		return console.Colorize("Mirror", fmt.Sprintf("‘%s’ -> ‘%s’", s.Source, s.Targets))
-	}
-	mirrorMessageBytes, e := json.Marshal(s)
+// String colorized mirror message
+func (m MirrorMessage) String() string {
+	return console.Colorize("Mirror", fmt.Sprintf("‘%s’ -> ‘%s’", m.Source, m.Targets))
+}
+
+// JSON jsonified mirror message
+func (m MirrorMessage) JSON() string {
+	mirrorMessageBytes, e := json.Marshal(m)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(mirrorMessageBytes)
@@ -112,10 +114,10 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.Println(MirrorMessage{
+		Prints("%s\n", MirrorMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
-		}.String())
+		})
 		newReader = reader
 	} else {
 		// set up progress

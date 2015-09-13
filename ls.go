@@ -44,19 +44,21 @@ type ContentMessage struct {
 	Name     string    `json:"name"`
 }
 
-// String string printer for Content metadata.
+// String colorized string message
 func (c ContentMessage) String() string {
-	if !globalJSONFlag {
-		message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
-		message = message + console.Colorize("Size", fmt.Sprintf("%6s ", humanize.IBytes(uint64(c.Size))))
-		message = func() string {
-			if c.Filetype == "folder" {
-				return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Name))
-			}
-			return message + console.Colorize("File", fmt.Sprintf("%s", c.Name))
-		}()
-		return message
-	}
+	message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
+	message = message + console.Colorize("Size", fmt.Sprintf("%6s ", humanize.IBytes(uint64(c.Size))))
+	message = func() string {
+		if c.Filetype == "folder" {
+			return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Name))
+		}
+		return message + console.Colorize("File", fmt.Sprintf("%s", c.Name))
+	}()
+	return message
+}
+
+// JSON jsonified content message
+func (c ContentMessage) JSON() string {
 	jsonMessageBytes, e := json.Marshal(c)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -123,7 +125,7 @@ func doList(clnt client.Client, recursive bool) *probe.Error {
 			err = contentCh.Err.Trace()
 			break
 		}
-		console.Println(parseContent(contentCh.Content))
+		Prints("%s\n", parseContent(contentCh.Content))
 	}
 	if err != nil {
 		return err.Trace()

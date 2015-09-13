@@ -63,21 +63,24 @@ type UpdateMessage struct {
 	Version  time.Time `json:"version"`
 }
 
+// String colorized update message
 func (u UpdateMessage) String() string {
-	if !globalJSONFlag {
-		if u.Update {
-			var msg string
-			if runtime.GOOS == "windows" {
-				msg = "mc.exe cp " + u.Download + " .\\mc.exe"
-			} else {
-				msg = "mc cp " + u.Download + " ./mc.new; chmod 755 ./mc.new"
-			}
-			msg, err := colorizeUpdateMessage(msg)
-			fatalIf(err.Trace(msg), "Unable to colorize experimental update notification string ‘"+msg+"’.")
-			return msg
+	if u.Update {
+		var msg string
+		if runtime.GOOS == "windows" {
+			msg = "mc.exe cp " + u.Download + " .\\mc.exe"
+		} else {
+			msg = "mc cp " + u.Download + " ./mc.new; chmod 755 ./mc.new"
 		}
-		return console.Colorize("UpdateMessage", "You are already running the most recent version of ‘mc’.")
+		msg, err := colorizeUpdateMessage(msg)
+		fatalIf(err.Trace(msg), "Unable to colorize experimental update notification string ‘"+msg+"’.")
+		return msg
 	}
+	return console.Colorize("UpdateMessage", "You are already running the most recent version of ‘mc’.")
+}
+
+// JSON jsonified update message
+func (u UpdateMessage) JSON() string {
 	updateMessageJSONBytes, err := json.Marshal(u)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
@@ -143,19 +146,19 @@ func getExperimentalUpdate() {
 	}
 
 	mcExperimentalURLParse := clnt.URL()
-	if latest.After(current) {
-		console.Println(UpdateMessage{
-			Update:   true,
-			Download: mcExperimentalURLParse.Scheme + "://" + mcExperimentalURLParse.Host + string(mcExperimentalURLParse.Separator) + experimentals.Platforms[runtime.GOOS],
-			Version:  latest,
-		})
-		return
-	}
-	console.Println(UpdateMessage{
-		Update:   false,
-		Download: mcExperimentalURLParse.Scheme + "://" + mcExperimentalURLParse.Host + string(mcExperimentalURLParse.Separator) + experimentals.Platforms[runtime.GOOS],
+	downloadURL := (mcExperimentalURLParse.Scheme + "://" +
+		mcExperimentalURLParse.Host +
+		string(mcExperimentalURLParse.Separator) +
+		experimentals.Platforms[runtime.GOOS])
+
+	updateMessage := UpdateMessage{
+		Download: downloadURL,
 		Version:  latest,
-	})
+	}
+	if latest.After(current) {
+		updateMessage.Update = true
+	}
+	Prints("%s\n", updateMessage)
 }
 
 func getReleaseUpdate() {
@@ -185,18 +188,13 @@ func getReleaseUpdate() {
 	}
 
 	mcUpdateURLParse := clnt.URL()
-	if latest.After(current) {
-		console.Println(UpdateMessage{
-			Update:   true,
-			Download: mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS],
-			Version:  latest,
-		})
-		return
-	}
-	console.Println(UpdateMessage{
-		Update:   false,
-		Download: mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS],
+	downloadURL := mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS]
+	updateMessage := UpdateMessage{
+		Download: downloadURL,
 		Version:  latest,
-	})
-	return
+	}
+	if latest.After(current) {
+		updateMessage.Update = true
+	}
+	Prints("%s\n", updateMessage)
 }

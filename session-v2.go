@@ -73,13 +73,16 @@ type sessionV2 struct {
 	sigCh     bool
 }
 
+// String colorized session message
 func (s sessionV2) String() string {
-	if !globalJSONFlag {
-		message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
-		message = message + console.Colorize("SessionTime", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
-		message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
-		return message
-	}
+	message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
+	message = message + console.Colorize("SessionTime", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
+	message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
+	return message
+}
+
+// JSON jsonified session message
+func (s sessionV2) JSON() string {
 	sessionMesage := SessionMessage{
 		SessionID:   s.SessionID,
 		Time:        s.Header.When.Local(),

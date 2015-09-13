@@ -71,11 +71,13 @@ type CopyMessage struct {
 	Length int64  `json:"length"`
 }
 
-// String string printer for copy message
+// String colorized copy message
 func (c CopyMessage) String() string {
-	if !globalJSONFlag {
-		return console.Colorize("Copy", fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target))
-	}
+	return console.Colorize("Copy", fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target))
+}
+
+// JSON jsonified copy message
+func (c CopyMessage) JSON() string {
 	copyMessageBytes, err := json.Marshal(c)
 	fatalIf(probe.NewError(err), "Failed to marshal copy message.")
 
@@ -111,11 +113,11 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		console.Println(CopyMessage{
+		Prints("%s\n", CopyMessage{
 			Source: cpURLs.SourceContent.Name,
 			Target: cpURLs.TargetContent.Name,
 			Length: cpURLs.SourceContent.Size,
-		}.String())
+		})
 		newReader = reader
 	} else {
 		// set up progress

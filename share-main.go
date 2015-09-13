@@ -70,10 +70,13 @@ type ShareMessage struct {
 	URL    string
 }
 
+// String - regular colorized message
 func (s ShareMessage) String() string {
-	if !globalJSONFlag {
-		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s", humanizeDuration(s.Expiry), s.URL))
-	}
+	return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s", humanizeDuration(s.Expiry), s.URL))
+}
+
+// JSON json message for share command
+func (s ShareMessage) JSON() string {
 	shareMessageBytes, err := json.Marshal(struct {
 		Expiry    time.Duration `json:"expireSeconds"`
 		SharedURL string        `json:"sharedURL"`
@@ -239,7 +242,7 @@ func doShareURL(targetURL string, recursive bool, expires time.Duration) *probe.
 			Date:    shareDate,
 			Message: shareMessage,
 		}
-		console.Println(shareMessage)
+		Prints("%s\n", shareMessage)
 	}
 	saveSharedURLsV1(sURLs)
 	return nil

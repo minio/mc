@@ -52,21 +52,25 @@ type DiffMessage struct {
 	Error     *probe.Error `json:"error,omitempty"`
 }
 
+// String colorized diff message
 func (d DiffMessage) String() string {
-	if !globalJSONFlag {
-		msg := ""
-		switch d.Diff {
-		case "only-in-first":
-			msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
-		case "type":
-			msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
-		case "size":
-			msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
-		default:
-			fatalIf(errDummy().Trace(), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
-		}
-		return msg
+	msg := ""
+	switch d.Diff {
+	case "only-in-first":
+		msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
+	case "type":
+		msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
+	case "size":
+		msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
+	default:
+		fatalIf(errDummy().Trace(), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
 	}
+	return msg
+
+}
+
+// JSON jsonified diff message
+func (d DiffMessage) JSON() string {
 	diffJSONBytes, err := json.Marshal(d)
 	fatalIf(probe.NewError(err), "Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+d.Diff+"’.")
 
