@@ -133,11 +133,15 @@ func mainShare(ctx *cli.Context) {
 	checkShareSyntax(ctx)
 
 	if !isSharedURLsDataDirExists() {
-		shareDir, _ := getSharedURLsDataDir()
+		shareDir, err := getSharedURLsDataDir()
+		fatalIf(err.Trace(), "Unable to get shared URL data directory")
+
 		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared URL data directory ‘"+shareDir+"’.")
 	}
 	if !isSharedURLsDataFileExists() {
-		shareFile, _ := getSharedURLsDataFile()
+		shareFile, err := getSharedURLsDataFile()
+		fatalIf(err.Trace(), "Unable to get shared URL data file")
+
 		fatalIf(createSharedURLsDataFile().Trace(), "Unable to create shared URL data file ‘"+shareFile+"’.")
 	}
 
@@ -196,8 +200,8 @@ func doShareList() *probe.Error {
 			continue
 		}
 		shareListBytes, err := json.Marshal(struct {
-			ExpiresIn time.Duration
-			URL       string
+			ExpiresIn time.Duration `json:"expiresIn"`
+			URL       string        `json:"url"`
 		}{
 			ExpiresIn: time.Duration(expiresIn.Seconds()),
 			URL:       url,

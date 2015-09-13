@@ -109,11 +109,7 @@ func loadSharedURLsV1() (*sharedURLs, *probe.Error) {
 		return nil, err.Trace()
 	}
 	if _, err := os.Stat(sharedURLsDataFile); err != nil {
-		// If not found, initialize an empty json file.
-		if os.IsNotExist(err) {
-		} else {
-			return nil, probe.NewError(err)
-		}
+		return nil, probe.NewError(err)
 	}
 
 	qs, err := quick.New(newSharedURLs())
