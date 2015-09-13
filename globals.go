@@ -35,7 +35,7 @@ const (
 
 	// session config and shared urls related constants
 	globalSessionDir        = "session"
-	globalSharedURLsDatadir = "share"
+	globalSharedURLsDataDir = "share"
 
 	// default access and secret key
 	// do not pass accesskeyid and secretaccesskey through cli

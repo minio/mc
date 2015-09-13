@@ -33,8 +33,39 @@ type sharedURLs struct {
 	}
 }
 
-func createSharedURLsDatadir() *probe.Error {
-	shareDir, err := getSharedURLsDatadir()
+func newSharedURLs() *sharedURLs {
+	s := &sharedURLs{
+		Version: "1.0.0",
+		URLs: make(map[string]struct {
+			Date    time.Time
+			Message shareMessage
+		}),
+	}
+	return s
+}
+
+func getSharedURLsDataDir() (string, *probe.Error) {
+	configDir, err := getMcConfigDir()
+	if err != nil {
+		return "", err.Trace()
+	}
+
+	sharedURLsDataDir := filepath.Join(configDir, globalSharedURLsDataDir)
+	return sharedURLsDataDir, nil
+}
+
+func isSharedURLsDataDirExists() bool {
+	shareDir, err := getSharedURLsDataDir()
+	fatalIf(err.Trace(), "Unable to determine share folder.")
+
+	if _, e := os.Stat(shareDir); e != nil {
+		return false
+	}
+	return true
+}
+
+func createSharedURLsDataDir() *probe.Error {
+	shareDir, err := getSharedURLsDataDir()
 	if err != nil {
 		return err.Trace()
 	}
@@ -45,34 +76,31 @@ func createSharedURLsDatadir() *probe.Error {
 	return nil
 }
 
-func getSharedURLsDatadir() (string, *probe.Error) {
-	configDir, err := getMcConfigDir()
+func getSharedURLsDataFile() (string, *probe.Error) {
+	shareDir, err := getSharedURLsDataDir()
 	if err != nil {
 		return "", err.Trace()
 	}
 
-	sharedURLsDatadir := filepath.Join(configDir, globalSharedURLsDatadir)
-	return sharedURLsDatadir, nil
+	shareFile := filepath.Join(shareDir, "urls.json")
+	return shareFile, nil
 }
 
-func isSharedURLsDatadirExists() bool {
-	shareDir, err := getSharedURLsDatadir()
-	fatalIf(err.Trace(), "Unable to determine share folder.")
+func isSharedURLsDataFileExists() bool {
+	shareFile, err := getSharedURLsDataFile()
+	fatalIf(err.Trace(), "Unable to determine share filename.")
 
-	if _, e := os.Stat(shareDir); e != nil {
+	if _, e := os.Stat(shareFile); e != nil {
 		return false
 	}
 	return true
 }
 
-func getSharedURLsDataFile() (string, *probe.Error) {
-	sharedURLsDatadir, err := getSharedURLsDatadir()
-	if err != nil {
-		return "", err.Trace()
+func createSharedURLsDataFile() *probe.Error {
+	if err := saveSharedURLsV1(newSharedURLs()); err != nil {
+		return err.Trace()
 	}
-
-	sharedURLsDataFile := filepath.Join(sharedURLsDatadir, "urls.json")
-	return sharedURLsDataFile, nil
+	return nil
 }
 
 func loadSharedURLsV1() (*sharedURLs, *probe.Error) {
@@ -81,13 +109,14 @@ func loadSharedURLsV1() (*sharedURLs, *probe.Error) {
 		return nil, err.Trace()
 	}
 	if _, err := os.Stat(sharedURLsDataFile); err != nil {
-		return nil, probe.NewError(err)
+		// If not found, initialize an empty json file.
+		if os.IsNotExist(err) {
+		} else {
+			return nil, probe.NewError(err)
+		}
 	}
 
-	s := &sharedURLs{}
-	s.Version = "1.0.0"
-
-	qs, err := quick.New(s)
+	qs, err := quick.New(newSharedURLs())
 	if err != nil {
 		return nil, err.Trace()
 	}
@@ -95,7 +124,7 @@ func loadSharedURLsV1() (*sharedURLs, *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(sharedURLsDataFile)
 	}
-	s = qs.Data().(*sharedURLs)
+	s := qs.Data().(*sharedURLs)
 	return s, nil
 }
 
