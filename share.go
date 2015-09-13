@@ -29,7 +29,7 @@ type sharedURLs struct {
 	Version string
 	URLs    map[string]struct {
 		Date    time.Time
-		Message shareMessage
+		Message ShareMessage
 	}
 }
 
@@ -38,7 +38,7 @@ func newSharedURLs() *sharedURLs {
 		Version: "1.0.0",
 		URLs: make(map[string]struct {
 			Date    time.Time
-			Message shareMessage
+			Message ShareMessage
 		}),
 	}
 	return s
