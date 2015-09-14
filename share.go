@@ -32,7 +32,6 @@ func migrateSharedURLsV1ToV2() {
 	if !isSharedURLsDataFileExists() {
 		return
 	}
-	sURLsV2 := newSharedURLsV2()
 
 	// try to load latest version if possible
 	sURLsV2, err := loadSharedURLsV2()
@@ -46,6 +45,7 @@ func migrateSharedURLsV1ToV2() {
 			if sURLsV1.Version != "1.0.0" {
 				fatalIf(errDummy().Trace(), "Invalid version loaded ‘"+sURLsV1.Version+"’.")
 			}
+			sURLsV2 = newSharedURLsV2()
 			for key, value := range sURLsV1.URLs {
 				value.Message.Key = key
 				sURLsV2.URLs = append(sURLsV2.URLs, value)
