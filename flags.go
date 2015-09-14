@@ -18,11 +18,14 @@ package main
 
 import "github.com/minio/cli"
 
-// Collection of mc commands currently supported are
+// Collection of mc commands currently supported
 var commands = []cli.Command{}
 
 // Collection of mc flags currently supported
 var flags = []cli.Flag{}
+
+// Collection of mc commands currently supported in a trie tree
+var commandsTree = newTrie()
 
 var (
 	configFlag = cli.StringFlag{
@@ -62,6 +65,7 @@ var (
 // registerCmd registers a cli command
 func registerCmd(cmd cli.Command) {
 	commands = append(commands, cmd)
+	commandsTree.Insert(cmd.Name)
 }
 
 // registerFlag registers a cli flag

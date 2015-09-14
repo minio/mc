@@ -119,6 +119,14 @@ func getFormattedVersion() string {
 	return t.Format(http.TimeFormat)
 }
 
+func findClosestCommands(command string) []string {
+	var closestCommands []string
+	for _, value := range commandsTree.PrefixMatch(command) {
+		closestCommands = append(closestCommands, value.(string))
+	}
+	return closestCommands
+}
+
 func registerApp() *cli.App {
 	// Register all the commands
 	registerCmd(lsCmd)      // List contents of a bucket.
@@ -168,7 +176,16 @@ VERSION:
   {{$value}}
 {{end}}`
 	app.CommandNotFound = func(ctx *cli.Context, command string) {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Command ‘%s’ not found.", command))
+		msg := fmt.Sprintf("‘%s’ is not a mc command. See ‘mc help’.", command)
+		closestCommands := findClosestCommands(command)
+		if len(closestCommands) > 0 {
+			msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
+			for _, cmd := range closestCommands {
+				msg += fmt.Sprintf("        ‘%s’\n", cmd)
+			}
+		}
+		fatalIf(errDummy().Trace(), msg)
+
 	}
 	return app
 }
