@@ -31,10 +31,10 @@ type humanizedTime struct {
 
 // String() humanizes humanizedTime to human readable,
 func (r humanizedTime) String() string {
-	if r.Minutes == 0 {
+	if r.Days == 0 && r.Hours == 0 && r.Minutes == 0 {
 		return fmt.Sprintf("%d seconds", r.Seconds)
 	}
-	if r.Hours == 0 {
+	if r.Days == 0 && r.Hours == 0 {
 		return fmt.Sprintf("%d minutes %d seconds", r.Minutes, r.Seconds)
 	}
 	if r.Days == 0 {
