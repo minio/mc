@@ -66,7 +66,7 @@ func (t *Trie) Insert(key string) {
 	curNode.value = key
 }
 
-// prefixMatch
+// PrefixMatch - prefix match
 func (t *Trie) PrefixMatch(key string) []interface{} {
 	node, _ := t.findNode(key)
 	if node != nil {
