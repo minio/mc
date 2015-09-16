@@ -132,7 +132,7 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 			break
 		}
 		if multipleArgs && parentContent.Type.IsDir() {
-			contentCh.Content.Name = filepath.Join(parentContent.Name, contentCh.Content.Name)
+			contentCh.Content.Name = filepath.Join(parentContent.Name, strings.TrimPrefix(contentCh.Content.Name, parentContent.Name))
 		}
 		Prints("%s\n", parseContent(contentCh.Content))
 	}
