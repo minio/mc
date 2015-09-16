@@ -18,7 +18,6 @@ package minio
 
 import (
 	"crypto/hmac"
-	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -123,20 +122,4 @@ func sumHMAC(key []byte, data []byte) []byte {
 	hash := hmac.New(sha256.New, key)
 	hash.Write(data)
 	return hash.Sum(nil)
-}
-
-// sumMD5Reader calculate md5 for an input read seeker of a given size
-func sumMD5Reader(body io.ReadSeeker, size int64) ([]byte, error) {
-	hasher := md5.New()
-	_, err := io.CopyN(hasher, body, size)
-	if err != nil {
-		return nil, err
-	}
-	// seek back
-	_, err = body.Seek(0, 0)
-	if err != nil {
-		return nil, err
-	}
-	// encode the md5 checksum in base64
-	return hasher.Sum(nil), nil
 }

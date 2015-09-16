@@ -35,68 +35,68 @@ func TestBucketOperations(t *testing.T) {
 
 	a, err := minio.New(minio.Config{Endpoint: server.URL})
 	if err != nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 	err = a.MakeBucket("bucket", "private")
 	if err != nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	err = a.BucketExists("bucket")
 	if err != nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	err = a.BucketExists("bucket1")
 	if err == nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 	if err.Error() != "Access Denied" {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	err = a.SetBucketACL("bucket", "public-read-write")
 	if err != nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	acl, err := a.GetBucketACL("bucket")
 	if err != nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 	if acl != minio.BucketACL("private") {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 
 	for b := range a.ListBuckets() {
 		if b.Err != nil {
-			t.Fatalf(b.Err.Error())
+			t.Fatal(b.Err.Error())
 		}
 		if b.Stat.Name != "bucket" {
-			t.Errorf("Error")
+			t.Fatal("Error")
 		}
 	}
 
 	for o := range a.ListObjects("bucket", "", true) {
 		if o.Err != nil {
-			t.Fatalf(o.Err.Error())
+			t.Fatal(o.Err.Error())
 		}
 		if o.Stat.Key != "object" {
-			t.Errorf("Error")
+			t.Fatal("Error")
 		}
 	}
 
 	err = a.RemoveBucket("bucket")
 	if err != nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	err = a.RemoveBucket("bucket1")
 	if err == nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	if err.Error() != "The specified bucket does not exist." {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 }
 
@@ -109,41 +109,41 @@ func TestBucketOperationsFail(t *testing.T) {
 
 	a, err := minio.New(minio.Config{Endpoint: server.URL})
 	if err != nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 	err = a.MakeBucket("bucket$$$", "private")
 	if err == nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	err = a.BucketExists("bucket.")
 	if err == nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	err = a.SetBucketACL("bucket-.", "public-read-write")
 	if err == nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	_, err = a.GetBucketACL("bucket??")
 	if err == nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	for o := range a.ListObjects("bucket??", "", true) {
 		if o.Err == nil {
-			t.Fatalf(o.Err.Error())
+			t.Fatal(o.Err.Error())
 		}
 	}
 
 	err = a.RemoveBucket("bucket??")
 	if err == nil {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 
 	if err.Error() != "The specified bucket is not valid." {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 }
 
@@ -157,51 +157,51 @@ func TestObjectOperations(t *testing.T) {
 
 	a, err := minio.New(minio.Config{Endpoint: server.URL})
 	if err != nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	data := []byte("Hello, World")
 	err = a.PutObject("bucket", "object", "", int64(len(data)), bytes.NewReader(data))
 	if err != nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	metadata, err := a.StatObject("bucket", "object")
 	if err != nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	if metadata.Key != "object" {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	if metadata.ETag != "9af2f8218b150c351ad802c6f3d66abe" {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 
 	reader, metadata, err := a.GetObject("bucket", "object")
 	if err != nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	if metadata.Key != "object" {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	if metadata.ETag != "9af2f8218b150c351ad802c6f3d66abe" {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 
 	var buffer bytes.Buffer
 	_, err = io.Copy(&buffer, reader)
 	if !bytes.Equal(buffer.Bytes(), data) {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 
 	err = a.RemoveObject("bucket", "object")
 	if err != nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	err = a.RemoveObject("bucket", "object1")
 	if err == nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	if err.Error() != "The specified key does not exist." {
-		t.Errorf("Error")
+		t.Fatal("Error")
 	}
 }
 
@@ -215,12 +215,12 @@ func TestPresignedURL(t *testing.T) {
 
 	a, err := minio.New(minio.Config{Endpoint: server.URL})
 	if err != nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	// should error out for invalid access keys
 	_, err = a.PresignedGetObject("bucket", "object", time.Duration(1000)*time.Second)
 	if err == nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 
 	a, err = minio.New(minio.Config{
@@ -229,22 +229,22 @@ func TestPresignedURL(t *testing.T) {
 		SecretAccessKey: "secretKey",
 	})
 	if err != nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	url, err := a.PresignedGetObject("bucket", "object", time.Duration(1000)*time.Second)
 	if err != nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	if url == "" {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	_, err = a.PresignedGetObject("bucket", "object", time.Duration(0)*time.Second)
 	if err == nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 	_, err = a.PresignedGetObject("bucket", "object", time.Duration(604801)*time.Second)
 	if err == nil {
-		t.Fatalf("Error")
+		t.Fatal("Error")
 	}
 }
 
