@@ -49,10 +49,10 @@ func (s *TestSuite) TestLS(c *C) {
 	clnt, perr = target2Client(root)
 	c.Assert(perr, IsNil)
 
-	perr = doList(clnt, false)
+	perr = doList(clnt, false, false)
 	c.Assert(perr, IsNil)
 
-	perr = doList(clnt, true)
+	perr = doList(clnt, true, false)
 	c.Assert(perr, IsNil)
 
 	for i := 0; i < 10; i++ {
@@ -66,10 +66,10 @@ func (s *TestSuite) TestLS(c *C) {
 	clnt, perr = target2Client(server.URL + "/bucket")
 	c.Assert(perr, IsNil)
 
-	perr = doList(clnt, false)
+	perr = doList(clnt, false, false)
 	c.Assert(perr, IsNil)
 
-	perr = doList(clnt, true)
+	perr = doList(clnt, true, false)
 	c.Assert(perr, IsNil)
 }
 
