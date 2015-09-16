@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -103,8 +104,13 @@ func parseContent(c *client.Content) ContentMessage {
 }
 
 // doList - list all entities inside a folder.
-func doList(clnt client.Client, recursive bool) *probe.Error {
+func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 	var err *probe.Error
+	var parentContent *client.Content
+	parentContent, err = clnt.Stat()
+	if err != nil {
+		return err.Trace(clnt.URL().String())
+	}
 	for contentCh := range clnt.List(recursive) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
@@ -124,6 +130,9 @@ func doList(clnt client.Client, recursive bool) *probe.Error {
 			}
 			err = contentCh.Err.Trace()
 			break
+		}
+		if multipleArgs && parentContent.Type.IsDir() {
+			contentCh.Content.Name = filepath.Join(parentContent.Name, contentCh.Content.Name)
 		}
 		Prints("%s\n", parseContent(contentCh.Content))
 	}
