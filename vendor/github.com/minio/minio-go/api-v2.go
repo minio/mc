@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -277,6 +278,9 @@ var maxParts = int64(10000)
 // maxPartSize - unexported right now
 var maxPartSize int64 = 1024 * 1024 * 1024 * 5
 
+// maxConcurrentQueue - max concurrent upload queue
+var maxConcurrentQueue int64 = 4
+
 // calculatePartSize - calculate the optimal part size for the given objectSize
 //
 // NOTE: Assumption here is that for any given object upload to a S3 compatible object
@@ -312,30 +316,57 @@ func (a apiV2) newObjectUpload(bucket, object, contentType string, size int64, d
 	complMultipartUpload := completeMultipartUpload{}
 	var totalLength int64
 
+	// Calculate optimal part size for a given size
 	partSize := calculatePartSize(size)
-	for part := range chopper(data, partSize, nil) {
-		if part.Err != nil {
-			return part.Err
-		}
+	// Allocate bufferred error channel for maximum parts
+	errCh := make(chan error, maxParts)
+	// Limit multi part queue size to concurrent
+	mpQueueCh := make(chan struct{}, maxConcurrentQueue)
+	defer close(errCh)
+	defer close(mpQueueCh)
+	// Allocate a new wait group
+	wg := new(sync.WaitGroup)
+
+	for p := range chopper(data, partSize, nil) {
 		// This check is primarily for last part
 		// This verifies if the part.Len was an unexpected read i.e if we lost few bytes
-		if part.Len < partSize {
+		if p.Len < partSize {
 			expectedPartLen := size - totalLength
-			if expectedPartLen != part.Len {
+			if expectedPartLen != p.Len {
 				return ErrorResponse{
 					Code:     "UnexpectedShortRead",
-					Message:  "Data read ‘" + strconv.FormatInt(expectedPartLen, 10) + "’ is less than the expected size ‘" + strconv.FormatInt(part.Len, 10) + "’",
+					Message:  "Data read ‘" + strconv.FormatInt(expectedPartLen, 10) + "’ is not equal to expected size ‘" + strconv.FormatInt(p.Len, 10) + "’",
 					Resource: separator + bucket + separator + object,
 				}
 			}
 		}
-		var complPart completePart
-		complPart, err = a.uploadPart(bucket, object, uploadID, part.MD5Sum, part.Num, part.Len, part.ReadSeeker)
-		if err != nil {
-			return err
-		}
-		totalLength += part.Len
-		complMultipartUpload.Parts = append(complMultipartUpload.Parts, complPart)
+		// Limit to 4 parts a given time
+		mpQueueCh <- struct{}{}
+		// Account for all parts uploaded simultaneousy
+		wg.Add(1)
+		go func(errCh chan<- error, mpQueueCh <-chan struct{}, p part) {
+			defer wg.Done()
+			defer func() {
+				<-mpQueueCh
+			}()
+			if p.Err != nil {
+				errCh <- p.Err
+				return
+			}
+			var complPart completePart
+			complPart, err = a.uploadPart(bucket, object, uploadID, p.MD5Sum, p.Num, p.Len, p.ReadSeeker)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			complMultipartUpload.Parts = append(complMultipartUpload.Parts, complPart)
+			errCh <- nil
+		}(errCh, mpQueueCh, p)
+		totalLength += p.Len
+	}
+	wg.Wait()
+	if err := <-errCh; err != nil {
+		return err
 	}
 	sort.Sort(completedParts(complMultipartUpload.Parts))
 	_, err = a.completeMultipartUpload(bucket, object, uploadID, complMultipartUpload)
@@ -415,28 +446,57 @@ func (a apiV2) continueObjectUpload(bucket, object, uploadID string, size int64,
 			partNumber: part.Metadata.PartNumber,
 		})
 	}
+
+	// Calculate the optimal part size for a given size
 	partSize := calculatePartSize(size)
-	for part := range chopper(data, partSize, skipParts) {
-		if part.Err != nil {
-			return part.Err
-		}
+	// Allocate bufferred error channel for maximum parts
+	errCh := make(chan error, maxParts)
+	// Limit multipart queue size to concurrent
+	mpQueueCh := make(chan struct{}, maxConcurrentQueue)
+	defer close(errCh)
+	defer close(mpQueueCh)
+	// Allocate a new wait group
+	wg := new(sync.WaitGroup)
+
+	for p := range chopper(data, partSize, skipParts) {
 		// This check is primarily for last part
 		// This verifies if the part.Len was an unexpected read i.e if we lost few bytes
-		if part.Len < partSize {
+		if p.Len < partSize {
 			expectedPartLen := size - totalLength
-			if expectedPartLen != part.Len {
+			if expectedPartLen != p.Len {
 				return ErrorResponse{
 					Code:     "UnexpectedShortRead",
-					Message:  "Data read ‘" + strconv.FormatInt(expectedPartLen, 10) + "’ is less than the expected size ‘" + strconv.FormatInt(part.Len, 10) + "’",
+					Message:  "Data read ‘" + strconv.FormatInt(expectedPartLen, 10) + "’ is not equal to expected size ‘" + strconv.FormatInt(p.Len, 10) + "’",
 					Resource: separator + bucket + separator + object,
 				}
 			}
 		}
-		completedPart, err := a.uploadPart(bucket, object, uploadID, part.MD5Sum, part.Num, part.Len, part.ReadSeeker)
-		if err != nil {
-			return err
-		}
-		completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completedPart)
+		// Limit to 4 parts a given time
+		mpQueueCh <- struct{}{}
+		// Account for all parts uploaded simultaneousy
+		wg.Add(1)
+		go func(errCh chan<- error, mpQueueCh <-chan struct{}, p part) {
+			defer wg.Done()
+			defer func() {
+				<-mpQueueCh
+			}()
+			if p.Err != nil {
+				errCh <- p.Err
+				return
+			}
+			completedPart, err := a.uploadPart(bucket, object, uploadID, p.MD5Sum, p.Num, p.Len, p.ReadSeeker)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completedPart)
+			errCh <- nil
+		}(errCh, mpQueueCh, p)
+		totalLength += p.Len
+	}
+	wg.Wait()
+	if err := <-errCh; err != nil {
+		return err
 	}
 	sort.Sort(completedParts(completeMultipartUpload.Parts))
 	_, err := a.completeMultipartUpload(bucket, object, uploadID, completeMultipartUpload)
