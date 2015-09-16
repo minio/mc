@@ -26,7 +26,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestCommonMethods(c *C) {
+func (s *TestSuite) TestCommonMethods(c *C) {
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)

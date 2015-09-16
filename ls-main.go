@@ -17,12 +17,13 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
 )
 
 // list files and folders.
@@ -105,21 +106,53 @@ func mainList(ctx *cli.Context) {
 		"Time": color.New(color.FgGreen),
 	})
 
-	config := mustGetMcConfig()
-	for _, arg := range args {
-		targetURL := getAliasURL(arg, config.Aliases)
+	targetURLs, err := args2URLs(args)
+	fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
 
+	if len(targetURLs) == 1 {
 		// if recursive strip off the "..."
-		err := doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL))
-		fatalIf(err.Trace(targetURL), "Unable to list target ‘"+targetURL+"’.")
-	}
-}
+		var clnt client.Client
+		clnt, err = target2Client(stripRecursiveURL(targetURLs[0]))
+		fatalIf(err.Trace(targetURLs[0]), "Unable to initialize target ‘"+targetURLs[0]+"’.")
 
-// doListCmd list files on target
-func doListCmd(targetURL string, recursive bool) *probe.Error {
-	clnt, err := target2Client(targetURL)
-	if err != nil {
-		return err.Trace(targetURL)
+		err = doList(clnt, isURLRecursive(targetURLs[0]))
+		fatalIf(err.Trace(targetURLs[0]), "Unable to list target ‘"+targetURLs[0]+"’.")
+		return
 	}
-	return doList(clnt, recursive).Trace(targetURL)
+	var newTargetFiles []client.Client
+	newTargetFolders := make(map[client.Client]bool)
+	for _, targetURL := range targetURLs {
+		// if recursive strip off the "..."
+		var clnt client.Client
+		clnt, err = target2Client(stripRecursiveURL(targetURL))
+		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
+
+		var content *client.Content
+		content, err = clnt.Stat()
+		fatalIf(err.Trace(targetURL), "Unable to stat target ‘"+targetURL+"’.")
+
+		// Following code is an attempt to always order files
+		// first than directories when there are more than one
+		// command line arguments for 'ls'
+		if content.Type.IsDir() {
+			newTargetFolders[clnt] = isURLRecursive(targetURL)
+		}
+		if content.Type.IsRegular() {
+			newTargetFiles = append(newTargetFiles, clnt)
+		}
+	}
+	for _, targetClnt := range newTargetFiles {
+		err = doList(targetClnt, false)
+		fatalIf(err.Trace(targetClnt.URL().String()), "Unable to list target ‘"+targetClnt.URL().String()+"’.")
+	}
+	for targetClnt, recursive := range newTargetFolders {
+		if len(newTargetFiles) > 0 {
+			console.Println(console.Colorize("Dir", fmt.Sprintf("\n%s:", targetClnt.URL().String())))
+		} else {
+			console.Println(console.Colorize("Dir", fmt.Sprintf("%s:", targetClnt.URL().String())))
+		}
+		err = doList(targetClnt, recursive)
+		fatalIf(err.Trace(targetClnt.URL().String()), "Unable to list target ‘"+targetClnt.URL().String()+"’.")
+	}
+	return
 }

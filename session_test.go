@@ -24,14 +24,14 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestValidSessionID(c *C) {
+func (s *TestSuite) TestValidSessionID(c *C) {
 	validSid := regexp.MustCompile("^[a-zA-Z]+$")
 	sid := newSID(8)
 	c.Assert(len(sid), Equals, 8)
 	c.Assert(validSid.MatchString(sid), Equals, true)
 }
 
-func (s *CmdTestSuite) TestSession(c *C) {
+func (s *TestSuite) TestSession(c *C) {
 	perr := createSessionDir()
 	c.Assert(perr, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
@@ -54,7 +54,7 @@ func (s *CmdTestSuite) TestSession(c *C) {
 	c.Assert(perr, IsNil)
 }
 
-func (s *CmdTestSuite) TestSessionContext(c *C) {
+func (s *TestSuite) TestSessionContext(c *C) {
 	err := app.Run([]string{os.Args[0], "session", "list"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)

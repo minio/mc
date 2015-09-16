@@ -36,20 +36,22 @@ var customConfigDir string
 
 func Test(t *testing.T) { TestingT(t) }
 
-type CmdTestSuite struct{}
+type TestSuite struct{}
 
-var _ = Suite(&CmdTestSuite{})
+var _ = Suite(&TestSuite{})
 
 var server *httptest.Server
 var app *cli.App
 
-func (s *CmdTestSuite) SetUpSuite(c *C) {
+func (s *TestSuite) SetUpSuite(c *C) {
 	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
 	server = httptest.NewServer(objectAPI)
 	console.IsTesting = true
 
 	// do not set it elsewhere, leads to data races since this is a global flag
-	globalQuietFlag = true
+	globalQuietFlag = true // quiet is set to turn of progress bar
+	// do not set it elsewhere, leads to data races since this is a global flag
+	globalJSONFlag = true // json is set to avoid printing colors upon terminals
 
 	tmpDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -77,14 +79,14 @@ func (s *CmdTestSuite) SetUpSuite(c *C) {
 	app = registerApp()
 }
 
-func (s *CmdTestSuite) TearDownSuite(c *C) {
+func (s *TestSuite) TearDownSuite(c *C) {
 	os.RemoveAll(customConfigDir)
 	if server != nil {
 		server.Close()
 	}
 }
 
-func (s *CmdTestSuite) TestGetNewClient(c *C) {
+func (s *TestSuite) TestGetNewClient(c *C) {
 	_, err := getNewClient("http://example.com/bucket1", hostConfig{})
 	c.Assert(err, IsNil)
 	_, err = getNewClient("https://example.com/bucket1", hostConfig{})
@@ -97,7 +99,7 @@ func (s *CmdTestSuite) TestGetNewClient(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *CmdTestSuite) TestNewConfigV2(c *C) {
+func (s *TestSuite) TestNewConfigV2(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "mc-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -153,7 +155,7 @@ func (s *CmdTestSuite) TestNewConfigV2(c *C) {
 	}
 }
 
-func (s *CmdTestSuite) TestRecursiveURL(c *C) {
+func (s *TestSuite) TestRecursiveURL(c *C) {
 	c.Assert(isURLRecursive("url..."), Equals, true)
 	c.Assert(isURLRecursive("url.."), Equals, false)
 	c.Assert(stripRecursiveURL("url..."), Equals, "url")
@@ -162,7 +164,7 @@ func (s *CmdTestSuite) TestRecursiveURL(c *C) {
 	c.Assert(stripRecursiveURL("...url"), Equals, "...url")
 }
 
-func (s *CmdTestSuite) TestHostConfig(c *C) {
+func (s *TestSuite) TestHostConfig(c *C) {
 	hostcfg, err := getHostConfig("https://s3.amazonaws.com")
 	c.Assert(err, IsNil)
 	c.Assert(hostcfg.AccessKeyID, Equals, globalAccessKeyID)
@@ -172,7 +174,7 @@ func (s *CmdTestSuite) TestHostConfig(c *C) {
 	c.Assert(err, Not(IsNil))
 }
 
-func (s *CmdTestSuite) TestArgs2URL(c *C) {
+func (s *TestSuite) TestArgs2URL(c *C) {
 	URLs := []string{"localhost", "s3", "play", "playgo", "play.go", "https://s3-us-west-2.amazonaws.com"}
 	expandedURLs, err := args2URLs(URLs)
 	c.Assert(err, IsNil)
@@ -184,7 +186,7 @@ func (s *CmdTestSuite) TestArgs2URL(c *C) {
 	c.Assert(expandedURLs[5], Equals, "https://s3-us-west-2.amazonaws.com")
 }
 
-func (s *CmdTestSuite) TestValidPERMS(c *C) {
+func (s *TestSuite) TestValidPERMS(c *C) {
 	perms := bucketPerms("private")
 	c.Assert(perms.isValidBucketPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "private")
@@ -199,12 +201,12 @@ func (s *CmdTestSuite) TestValidPERMS(c *C) {
 	c.Assert(perms.String(), Equals, "authenticated-read")
 }
 
-func (s *CmdTestSuite) TestInvalidPERMS(c *C) {
+func (s *TestSuite) TestInvalidPERMS(c *C) {
 	perms := bucketPerms("invalid")
 	c.Assert(perms.isValidBucketPERM(), Equals, false)
 }
 
-func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
+func (s *TestSuite) TestGetMcConfigDir(c *C) {
 	dir, err := getMcConfigDir()
 	c.Assert(err, IsNil)
 	switch runtime.GOOS {
@@ -222,7 +224,7 @@ func (s *CmdTestSuite) TestGetMcConfigDir(c *C) {
 	c.Assert(mustGetMcConfigDir(), Equals, dir)
 }
 
-func (s *CmdTestSuite) TestGetMcConfigPath(c *C) {
+func (s *TestSuite) TestGetMcConfigPath(c *C) {
 	dir, err := getMcConfigPath()
 	c.Assert(err, IsNil)
 	switch runtime.GOOS {
@@ -240,7 +242,7 @@ func (s *CmdTestSuite) TestGetMcConfigPath(c *C) {
 	c.Assert(mustGetMcConfigPath(), Equals, dir)
 }
 
-func (s *CmdTestSuite) TestIsvalidAliasName(c *C) {
+func (s *TestSuite) TestIsvalidAliasName(c *C) {
 	c.Check(isValidAliasName("helloWorld0"), Equals, true)
 	c.Check(isValidAliasName("h0SFD2k24Fdsa"), Equals, true)
 	c.Check(isValidAliasName("fdslka-4"), Equals, true)
@@ -251,7 +253,7 @@ func (s *CmdTestSuite) TestIsvalidAliasName(c *C) {
 	c.Check(isValidAliasName("-fdslka"), Equals, false)
 }
 
-func (s *CmdTestSuite) TestEmptyExpansions(c *C) {
+func (s *TestSuite) TestEmptyExpansions(c *C) {
 	url := getAliasURL("hello", nil)
 	c.Assert(url, Equals, "hello")
 
@@ -274,7 +276,7 @@ func (s *CmdTestSuite) TestEmptyExpansions(c *C) {
 	c.Assert(url, Equals, "hello")
 }
 
-func (s *CmdTestSuite) TestApp(c *C) {
+func (s *TestSuite) TestApp(c *C) {
 	err := app.Run([]string{""})
 	c.Assert(err, IsNil)
 }

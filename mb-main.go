@@ -91,7 +91,7 @@ func mainMakeBucket(ctx *cli.Context) {
 	for _, arg := range ctx.Args() {
 		targetURL := getAliasURL(arg, config.Aliases)
 
-		fatalIf(doMakeBucketCmd(targetURL).Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+		fatalIf(doMakeBucket(targetURL).Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
 		Prints("%s\n", MakeBucketMessage{
 			Status: "success",
 			Bucket: targetURL,
@@ -99,8 +99,8 @@ func mainMakeBucket(ctx *cli.Context) {
 	}
 }
 
-// doMakeBucketCmd -
-func doMakeBucketCmd(targetURL string) *probe.Error {
+// doMakeBucket -
+func doMakeBucket(targetURL string) *probe.Error {
 	clnt, err := target2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)

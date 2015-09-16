@@ -23,12 +23,13 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestLSCmd(c *C) {
+func (s *TestSuite) TestLS(c *C) {
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -44,10 +45,14 @@ func (s *CmdTestSuite) TestLSCmd(c *C) {
 		c.Assert(perr, IsNil)
 	}
 
-	perr = doListCmd(root, false)
+	var clnt client.Client
+	clnt, perr = target2Client(root)
 	c.Assert(perr, IsNil)
 
-	perr = doListCmd(root, true)
+	perr = doList(clnt, false)
+	c.Assert(perr, IsNil)
+
+	perr = doList(clnt, true)
 	c.Assert(perr, IsNil)
 
 	for i := 0; i < 10; i++ {
@@ -57,14 +62,18 @@ func (s *CmdTestSuite) TestLSCmd(c *C) {
 		perr := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(perr, IsNil)
 	}
-	perr = doListCmd(server.URL+"/bucket", false)
+
+	clnt, perr = target2Client(server.URL + "/bucket")
 	c.Assert(perr, IsNil)
 
-	perr = doListCmd(server.URL+"/bucket", true)
+	perr = doList(clnt, false)
+	c.Assert(perr, IsNil)
+
+	perr = doList(clnt, true)
 	c.Assert(perr, IsNil)
 }
 
-func (s *CmdTestSuite) TestLSContext(c *C) {
+func (s *TestSuite) TestLSContext(c *C) {
 	err := app.Run([]string{os.Args[0], "ls", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsError, Equals, false)

@@ -32,15 +32,15 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
-type pbBarCmd int
+type pbBar int
 
 const (
-	pbBarCmdExtend pbBarCmd = iota
-	pbBarCmdProgress
-	pbBarCmdFinish
-	pbBarCmdPutError
-	pbBarCmdGetError
-	pbBarCmdSetCaption
+	pbBarExtend pbBar = iota
+	pbBarProgress
+	pbBarFinish
+	pbBarPutError
+	pbBarGetError
+	pbBarSetCaption
 )
 
 type proxyReader struct {
@@ -59,12 +59,12 @@ func (r *proxyReader) Close() (err error) {
 }
 
 type barMsg struct {
-	Cmd pbBarCmd
+	Op  pbBar
 	Arg interface{}
 }
 
 type barSend struct {
-	cmdCh    chan<- barMsg
+	opCh     chan<- barMsg
 	finishCh <-chan bool
 }
 
@@ -73,28 +73,28 @@ func (b *barSend) NewProxyReader(r io.ReadCloser) *proxyReader {
 }
 
 func (b barSend) Extend(total int64) {
-	b.cmdCh <- barMsg{Cmd: pbBarCmdExtend, Arg: total}
+	b.opCh <- barMsg{Op: pbBarExtend, Arg: total}
 }
 
 func (b barSend) Progress(progress int64) {
-	b.cmdCh <- barMsg{Cmd: pbBarCmdProgress, Arg: progress}
+	b.opCh <- barMsg{Op: pbBarProgress, Arg: progress}
 }
 
 func (b barSend) ErrorPut(size int64) {
-	b.cmdCh <- barMsg{Cmd: pbBarCmdPutError, Arg: size}
+	b.opCh <- barMsg{Op: pbBarPutError, Arg: size}
 }
 
 func (b barSend) ErrorGet(size int64) {
-	b.cmdCh <- barMsg{Cmd: pbBarCmdGetError, Arg: size}
+	b.opCh <- barMsg{Op: pbBarGetError, Arg: size}
 }
 
 func (b *barSend) SetCaption(c string) {
-	b.cmdCh <- barMsg{Cmd: pbBarCmdSetCaption, Arg: c}
+	b.opCh <- barMsg{Op: pbBarSetCaption, Arg: c}
 }
 
 func (b barSend) Finish() {
-	defer close(b.cmdCh)
-	b.cmdCh <- barMsg{Cmd: pbBarCmdFinish}
+	defer close(b.opCh)
+	b.opCh <- barMsg{Op: pbBarFinish}
 	<-b.finishCh
 	console.Println()
 }
@@ -170,12 +170,12 @@ func newCpBar() barSend {
 			bar.Format("[=> ]")
 		}
 		for msg := range cmdCh {
-			switch msg.Cmd {
-			case pbBarCmdSetCaption:
+			switch msg.Op {
+			case pbBarSetCaption:
 				bar.Prefix(fixateBarCaption(msg.Arg.(string), getFixedWidth(bar.GetWidth(), 18)))
-			case pbBarCmdExtend:
+			case pbBarExtend:
 				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
-			case pbBarCmdProgress:
+			case pbBarProgress:
 				if bar.Total > 0 && !started {
 					started = true
 					bar.Start()
@@ -184,15 +184,15 @@ func newCpBar() barSend {
 					totalBytesRead += msg.Arg.(int64)
 					bar.Add64(msg.Arg.(int64))
 				}
-			case pbBarCmdPutError:
+			case pbBarPutError:
 				if totalBytesRead > msg.Arg.(int64) {
 					bar.Set64(totalBytesRead - msg.Arg.(int64))
 				}
-			case pbBarCmdGetError:
+			case pbBarGetError:
 				if msg.Arg.(int64) > 0 {
 					bar.Add64(msg.Arg.(int64))
 				}
-			case pbBarCmdFinish:
+			case pbBarFinish:
 				if started {
 					bar.Finish()
 				}
