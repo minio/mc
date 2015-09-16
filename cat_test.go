@@ -27,7 +27,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestCatCmd(c *C) {
+func (s *TestSuite) TestCat(c *C) {
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -55,7 +55,7 @@ func (s *CmdTestSuite) TestCatCmd(c *C) {
 	c.Assert(catURL(objectPath), Not(IsNil))
 }
 
-func (s *CmdTestSuite) TestCatContext(c *C) {
+func (s *TestSuite) TestCatContext(c *C) {
 	err := app.Run([]string{os.Args[0], "cat", server.URL + "/bucket/object1"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)

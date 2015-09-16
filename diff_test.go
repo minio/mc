@@ -28,7 +28,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestDiffObjects(c *C) {
+func (s *TestSuite) TestDiffObjects(c *C) {
 	/// filesystem
 	root1, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -50,12 +50,12 @@ func (s *CmdTestSuite) TestDiffObjects(c *C) {
 	perr = putTarget(objectPath2, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(perr, IsNil)
 
-	for diff := range doDiffCmd(objectPath1, objectPath2, false) {
+	for diff := range doDiff(objectPath1, objectPath2, false) {
 		c.Assert(diff.Error, IsNil)
 	}
 }
 
-func (s *CmdTestSuite) TestDiffDirs(c *C) {
+func (s *TestSuite) TestDiffDirs(c *C) {
 	/// filesystem
 	root1, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
@@ -82,12 +82,12 @@ func (s *CmdTestSuite) TestDiffDirs(c *C) {
 		c.Assert(perr, IsNil)
 	}
 
-	for diff := range doDiffCmd(root1, root2, false) {
+	for diff := range doDiff(root1, root2, false) {
 		c.Assert(diff.Error, IsNil)
 	}
 }
 
-func (s *CmdTestSuite) TestDiffContext(c *C) {
+func (s *TestSuite) TestDiffContext(c *C) {
 	err := app.Run([]string{os.Args[0], "diff", server.URL + "/bucket", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)

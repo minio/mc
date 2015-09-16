@@ -23,8 +23,8 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
-	perr := doMakeBucketCmd(server.URL + "/bucket")
+func (s *TestSuite) TestMbAndAccess(c *C) {
+	perr := doMakeBucket(server.URL + "/bucket")
 	c.Assert(perr, IsNil)
 
 	perr = doSetAccess(server.URL+"/bucket", "public-read-write")
@@ -34,7 +34,7 @@ func (s *CmdTestSuite) TestMbAndAccessCmd(c *C) {
 	c.Assert(perr, Not(IsNil))
 }
 
-func (s *CmdTestSuite) TestMBContext(c *C) {
+func (s *TestSuite) TestMBContext(c *C) {
 	console.IsExited = false
 
 	err := app.Run([]string{os.Args[0], "mb", server.URL + "/bucket"})
@@ -52,7 +52,7 @@ func (s *CmdTestSuite) TestMBContext(c *C) {
 	console.IsExited = false
 }
 
-func (s *CmdTestSuite) TestAccessContext(c *C) {
+func (s *TestSuite) TestAccessContext(c *C) {
 	console.IsExited = false
 
 	err := app.Run([]string{os.Args[0], "access", "set", "private", server.URL + "/bucket"})

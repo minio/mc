@@ -23,7 +23,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestConfigAliasContext(c *C) {
+func (s *TestSuite) TestConfigAliasContext(c *C) {
 	console.IsExited = false
 
 	err := app.Run([]string{os.Args[0], "config", "alias", "add", "test", "htt://test.io"})
@@ -41,7 +41,7 @@ func (s *CmdTestSuite) TestConfigAliasContext(c *C) {
 	console.IsExited = false
 }
 
-func (s *CmdTestSuite) TestConfigHostContext(c *C) {
+func (s *TestSuite) TestConfigHostContext(c *C) {
 	console.IsExited = false
 
 	err := app.Run([]string{os.Args[0], "config", "host", "add", "*test.io", "invalid", "invalid"})

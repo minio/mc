@@ -23,7 +23,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *CmdTestSuite) TestCopyURLType(c *C) {
+func (s *TestSuite) TestCopyURLType(c *C) {
 	sourceURLs := []string{server.URL + "/bucket/object1"}
 	targetURL := server.URL + "/bucket/test"
 	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeA)
@@ -53,8 +53,7 @@ func (s *CmdTestSuite) TestCopyURLType(c *C) {
 	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
 }
 
-// TODO fix both copy and mirror
-func (s *CmdTestSuite) TestCopyContext(c *C) {
+func (s *TestSuite) TestCopyContext(c *C) {
 	err := app.Run([]string{os.Args[0], "cp", server.URL + "/invalid...", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsError, Equals, true)
@@ -63,7 +62,7 @@ func (s *CmdTestSuite) TestCopyContext(c *C) {
 	console.IsError = false
 }
 
-func (s *CmdTestSuite) TestMirrorContext(c *C) {
+func (s *TestSuite) TestMirrorContext(c *C) {
 	err := app.Run([]string{os.Args[0], "mirror", server.URL + "/invalid...", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsError, Equals, true)

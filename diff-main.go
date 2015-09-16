@@ -78,15 +78,15 @@ func mainDiff(ctx *cli.Context) {
 	secondURL := getAliasURL(secondArg, config.Aliases)
 
 	newFirstURL := stripRecursiveURL(firstURL)
-	for diff := range doDiffCmd(newFirstURL, secondURL, isURLRecursive(firstURL)) {
+	for diff := range doDiff(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		fatalIf(diff.Error.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
 
 		Prints("%s\n", diff)
 	}
 }
 
-// doDiffCmd - Execute the diff command
-func doDiffCmd(firstURL, secondURL string, recursive bool) <-chan DiffMessage {
+// doDiff - Execute the diff command
+func doDiff(firstURL, secondURL string, recursive bool) <-chan DiffMessage {
 	ch := make(chan DiffMessage, 10000)
 	go doDiffInRoutine(firstURL, secondURL, recursive, ch)
 	return ch
