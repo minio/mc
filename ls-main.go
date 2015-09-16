@@ -106,8 +106,14 @@ func mainList(ctx *cli.Context) {
 	})
 
 	config := mustGetMcConfig()
+	showFolderNames := len(args) > 1
+
 	for _, arg := range args {
 		targetURL := getAliasURL(arg, config.Aliases)
+
+		if !globalJSONFlag && showFolderNames {
+			console.Println(arg + ":")
+		}
 
 		// if recursive strip off the "..."
 		err := doListCmd(stripRecursiveURL(targetURL), isURLRecursive(targetURL))
