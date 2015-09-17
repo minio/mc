@@ -183,8 +183,8 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 			if bucket.Err != nil {
 				return nil, probe.NewError(bucket.Err)
 			}
-			return &client.Content{Type: os.ModeDir}, nil
 		}
+		return &client.Content{Type: os.ModeDir}, nil
 	}
 	if object != "" {
 		metadata, err := c.api.StatObject(bucket, object)
