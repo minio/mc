@@ -44,8 +44,11 @@ deadcode:
 
 build: getdeps verifiers
 	@echo "Installing mc:"
-	@GO15VENDOREXPERIMENT=1 go test -race ./
-	@GO15VENDOREXPERIMENT=1 go test -race github.com/minio/mc/pkg...
+
+test: getdeps verifiers
+	@echo "Running all testing:"
+	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) ./
+	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build
 	@GO15VENDOREXPERIMENT=1 go install github.com/minio/mc
@@ -61,7 +64,7 @@ genversion:
 	@go run genversion.go
 
 coverage:
-	@GO15VENDOREXPERIMENT=1 go test -race -coverprofile=cover.out
+	@GO15VENDOREXPERIMENT=1 go test -race -coverprofile=cover.out ./
 	@go tool cover -html=cover.out && echo "Visit your browser"
 
 pkg-remove:
