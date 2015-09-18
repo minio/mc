@@ -32,7 +32,7 @@ fmt:
 lint:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 golint .
-	@GO15VENDOREXPERIMENT=1 golint pkg
+	@GO15VENDOREXPERIMENT=1 golint github.com/minio/mc/pkg...
 
 cyclo:
 	@echo "Running $@:"

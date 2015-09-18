@@ -18,7 +18,6 @@ package s3
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -136,7 +135,7 @@ func (c *s3Client) MakeBucket() *probe.Error {
 		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
 	}
 	if bucket == "" {
-		return probe.NewError(errors.New(fmt.Sprintf("Bucket name is empty.")))
+		return probe.NewError(errors.New("Bucket name is empty."))
 	}
 
 	err := c.api.MakeBucket(bucket, minio.BucketACL("private"))

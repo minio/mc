@@ -193,6 +193,7 @@ var (
 		}
 	}
 
+	// Colorize prints message in a colorized form, dictated by the corresponding tag argument
 	Colorize = func(tag string, data interface{}) string {
 		if isatty.IsTerminal(os.Stdout.Fd()) {
 			return Theme[tag].SprintFunc()(data)
