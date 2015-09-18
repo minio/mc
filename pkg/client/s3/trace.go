@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"regexp"
+	"strings"
 
 	"github.com/minio/mc/pkg/console"
 )
@@ -37,27 +38,30 @@ func NewTrace() HTTPTracer {
 func (t Trace) Request(req *http.Request) (err error) {
 	origAuth := req.Header.Get("Authorization")
 
-	// Authorization (S3 v4 signature) Format:
-	// Authorization: AWS4-HMAC-SHA256 Credential=AKIAJNACEGBGMXBHLEZA/20150524/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=bbfaa693c626021bcb5f911cd898a1a30206c1fad6bad1e0eb89e282173bd24c
+	if strings.TrimSpace(origAuth) != "" {
+		// Authorization (S3 v4 signature) Format:
+		// Authorization: AWS4-HMAC-SHA256 Credential=AKIAJNACEGBGMXBHLEZA/20150524/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=bbfaa693c626021bcb5f911cd898a1a30206c1fad6bad1e0eb89e282173bd24c
 
-	// Strip out access-key-id from: Credential=<access-key-id>/<date>/<aws-region>/<aws-service>/aws4_request
-	regCred := regexp.MustCompile("Credential=([A-Z]+)/")
-	newAuth := regCred.ReplaceAllString(origAuth, "Credential=**REDACTED**/")
+		// Strip out accessKeyID from: Credential=<access-key-id>/<date>/<aws-region>/<aws-service>/aws4_request
+		regCred := regexp.MustCompile("Credential=([A-Z0-9]+)/")
+		newAuth := regCred.ReplaceAllString(origAuth, "Credential=**REDACTED**/")
 
-	// Strip out 256-bit signature from: Signature=<256-bit signature>
-	regSign := regexp.MustCompile("Signature=([[0-9a-f]+)")
-	newAuth = regSign.ReplaceAllString(newAuth, "Signature=**REDACTED**")
+		// Strip out 256-bit signature from: Signature=<256-bit signature>
+		regSign := regexp.MustCompile("Signature=([[0-9a-f]+)")
+		newAuth = regSign.ReplaceAllString(newAuth, "Signature=**REDACTED**")
 
-	// Set a temporary redacted auth
-	req.Header.Set("Authorization", newAuth)
+		// Set a temporary redacted auth
+		req.Header.Set("Authorization", newAuth)
 
-	reqTrace, err := httputil.DumpRequestOut(req, false) // Only display header
-	if err == nil {
-		console.Debug(string(reqTrace))
+		var reqTrace []byte
+		reqTrace, err = httputil.DumpRequestOut(req, false) // Only display header
+		if err == nil {
+			console.Debug(string(reqTrace))
+		}
+
+		// Undo
+		req.Header.Set("Authorization", origAuth)
 	}
-
-	// Undo
-	req.Header.Set("Authorization", origAuth)
 	return err
 }
 
