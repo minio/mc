@@ -21,7 +21,7 @@ _init() {
 
     ## Minimum required versions for build dependencies
     GCC_VERSION="4.0"
-    CLANG_VERSION="3.5"
+    CLANG_VERSION="7.0.0"
     YASM_VERSION="1.2.0"
     GIT_VERSION="1.0"
     GO_VERSION="1.5.1"
@@ -189,7 +189,7 @@ check_deps() {
             fi
             ;;
         "Darwin")
-            check_version "$(env gcc --version 2>/dev/null | sed 's/^.* \([0-9.]*\).*$/\1/' | head -1)" "${CLANG_VERSION}"
+            check_version "$(env gcc --version 2>/dev/null | awk '{print $4}' | head -1)" "${CLANG_VERSION}"
             if [ $? -ge 2 ]; then
                 MISSING="${MISSING} xcode-cli(${CLANG_VERSION})"
             fi
