@@ -50,8 +50,6 @@ func (s *TestSuite) SetUpSuite(c *C) {
 
 	// do not set it elsewhere, leads to data races since this is a global flag
 	globalQuietFlag = true // quiet is set to turn of progress bar
-	// do not set it elsewhere, leads to data races since this is a global flag
-	globalJSONFlag = true // json is set to avoid printing colors upon terminals
 
 	tmpDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)

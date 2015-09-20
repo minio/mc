@@ -80,7 +80,6 @@ func parseContent(c *client.Content) ContentMessage {
 	}()
 
 	content.Size = c.Size
-
 	// Convert OS Type to match console file printing style.
 	content.Name = func() string {
 		switch {

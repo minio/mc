@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
@@ -57,7 +58,7 @@ func fatalIf(err *probe.Error, msg string) {
 			console.Fatalln(probe.NewError(err))
 		}
 		console.Println(string(json))
-		console.Fatal("")
+		os.Exit(1)
 	}
 	if !globalDebugFlag {
 		console.Fatalln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
@@ -89,7 +90,6 @@ func errorIf(err *probe.Error, msg string) {
 			console.Fatalln(probe.NewError(err))
 		}
 		console.Println(string(json))
-		console.Error("")
 		return
 	}
 	if !globalDebugFlag {

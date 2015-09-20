@@ -23,20 +23,18 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	. "gopkg.in/check.v1"
 )
 
-func (s *TestSuite) TestLS(c *C) {
+func (s *TestSuite) TestLSContext(c *C) {
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
 
 	var perr *probe.Error
-
 	for i := 0; i < 10; i++ {
 		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
 		data := "hello"
@@ -44,16 +42,6 @@ func (s *TestSuite) TestLS(c *C) {
 		perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(perr, IsNil)
 	}
-
-	var clnt client.Client
-	clnt, perr = target2Client(root)
-	c.Assert(perr, IsNil)
-
-	perr = doList(clnt, false, false)
-	c.Assert(perr, IsNil)
-
-	perr = doList(clnt, true, false)
-	c.Assert(perr, IsNil)
 
 	for i := 0; i < 10; i++ {
 		objectPath := server.URL + "/bucket/object" + strconv.Itoa(i)
@@ -63,18 +51,28 @@ func (s *TestSuite) TestLS(c *C) {
 		c.Assert(perr, IsNil)
 	}
 
-	clnt, perr = target2Client(server.URL + "/bucket")
-	c.Assert(perr, IsNil)
+	err = app.Run([]string{os.Args[0], "ls", root})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsError, Equals, false)
 
-	perr = doList(clnt, false, false)
-	c.Assert(perr, IsNil)
+	// reset back
+	console.IsExited = false
 
-	perr = doList(clnt, true, false)
-	c.Assert(perr, IsNil)
-}
+	err = app.Run([]string{os.Args[0], "ls", root + "..."})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsError, Equals, false)
 
-func (s *TestSuite) TestLSContext(c *C) {
-	err := app.Run([]string{os.Args[0], "ls", server.URL + "/bucket"})
+	// reset back
+	console.IsExited = false
+
+	err = app.Run([]string{os.Args[0], "ls", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsError, Equals, false)
+
+	// reset back
+	console.IsExited = false
+
+	err = app.Run([]string{os.Args[0], "ls", server.URL + "/bucket..."})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsError, Equals, false)
 
