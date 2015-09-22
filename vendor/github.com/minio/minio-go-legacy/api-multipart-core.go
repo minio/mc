@@ -1,5 +1,5 @@
 /*
- * Minio Go Library for Amazon S3 Compatible Cloud Storage (C) 2015 Minio, Inc.
+ * Minio Go Library for Amazon S3 Legacy v2 Signature Compatible Cloud Storage (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 )
 
 // listMultipartUploadsRequest wrapper creates a new listMultipartUploads request
-func (a apiV1) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*request, error) {
+func (a apiCore) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
 	resourceQuery := func() (string, error) {
 		var err error
@@ -91,7 +91,7 @@ func (a apiV1) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, pr
 // ?delimiter - A delimiter is a character you use to group keys.
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-uploads - Sets the maximum number of multipart uploads returned in the response body.
-func (a apiV1) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (listMultipartUploadsResult, error) {
+func (a apiCore) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (listMultipartUploadsResult, error) {
 	req, err := a.listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter, maxuploads)
 	if err != nil {
 		return listMultipartUploadsResult{}, err
@@ -116,7 +116,7 @@ func (a apiV1) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix, d
 }
 
 // initiateMultipartRequest wrapper creates a new initiateMultiPart request
-func (a apiV1) initiateMultipartRequest(bucket, object string) (*request, error) {
+func (a apiCore) initiateMultipartRequest(bucket, object string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (a apiV1) initiateMultipartRequest(bucket, object string) (*request, error)
 }
 
 // initiateMultipartUpload initiates a multipart upload and returns an upload ID
-func (a apiV1) initiateMultipartUpload(bucket, object string) (initiateMultipartUploadResult, error) {
+func (a apiCore) initiateMultipartUpload(bucket, object string) (initiateMultipartUploadResult, error) {
 	req, err := a.initiateMultipartRequest(bucket, object)
 	if err != nil {
 		return initiateMultipartUploadResult{}, err
@@ -154,7 +154,7 @@ func (a apiV1) initiateMultipartUpload(bucket, object string) (initiateMultipart
 }
 
 // completeMultipartUploadRequest wrapper creates a new CompleteMultipartUpload request
-func (a apiV1) completeMultipartUploadRequest(bucket, object, uploadID string, complete completeMultipartUpload) (*request, error) {
+func (a apiCore) completeMultipartUploadRequest(bucket, object, uploadID string, complete completeMultipartUpload) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (a apiV1) completeMultipartUploadRequest(bucket, object, uploadID string, c
 }
 
 // completeMultipartUpload completes a multipart upload by assembling previously uploaded parts.
-func (a apiV1) completeMultipartUpload(bucket, object, uploadID string, c completeMultipartUpload) (completeMultipartUploadResult, error) {
+func (a apiCore) completeMultipartUpload(bucket, object, uploadID string, c completeMultipartUpload) (completeMultipartUploadResult, error) {
 	req, err := a.completeMultipartUploadRequest(bucket, object, uploadID, c)
 	if err != nil {
 		return completeMultipartUploadResult{}, err
@@ -210,7 +210,7 @@ func (a apiV1) completeMultipartUpload(bucket, object, uploadID string, c comple
 }
 
 // abortMultipartUploadRequest wrapper creates a new AbortMultipartUpload request
-func (a apiV1) abortMultipartUploadRequest(bucket, object, uploadID string) (*request, error) {
+func (a apiCore) abortMultipartUploadRequest(bucket, object, uploadID string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -224,7 +224,7 @@ func (a apiV1) abortMultipartUploadRequest(bucket, object, uploadID string) (*re
 }
 
 // abortMultipartUpload aborts a multipart upload for the given uploadID, all parts are deleted
-func (a apiV1) abortMultipartUpload(bucket, object, uploadID string) error {
+func (a apiCore) abortMultipartUpload(bucket, object, uploadID string) error {
 	req, err := a.abortMultipartUploadRequest(bucket, object, uploadID)
 	if err != nil {
 		return err
@@ -268,7 +268,7 @@ func (a apiV1) abortMultipartUpload(bucket, object, uploadID string) error {
 }
 
 // listObjectPartsRequest wrapper creates a new ListObjectParts request
-func (a apiV1) listObjectPartsRequest(bucket, object, uploadID string, partNumberMarker, maxParts int) (*request, error) {
+func (a apiCore) listObjectPartsRequest(bucket, object, uploadID string, partNumberMarker, maxParts int) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -296,7 +296,7 @@ func (a apiV1) listObjectPartsRequest(bucket, object, uploadID string, partNumbe
 // request paramters :-
 // ---------
 // ?part-number-marker - Specifies the part after which listing should begin.
-func (a apiV1) listObjectParts(bucket, object, uploadID string, partNumberMarker, maxParts int) (listObjectPartsResult, error) {
+func (a apiCore) listObjectParts(bucket, object, uploadID string, partNumberMarker, maxParts int) (listObjectPartsResult, error) {
 	req, err := a.listObjectPartsRequest(bucket, object, uploadID, partNumberMarker, maxParts)
 	if err != nil {
 		return listObjectPartsResult{}, err
@@ -320,7 +320,7 @@ func (a apiV1) listObjectParts(bucket, object, uploadID string, partNumberMarker
 }
 
 // uploadPartRequest wrapper creates a new UploadPart request
-func (a apiV1) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
+func (a apiCore) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -341,7 +341,7 @@ func (a apiV1) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []
 }
 
 // uploadPart uploads a part in a multipart upload.
-func (a apiV1) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
+func (a apiCore) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
 	req, err := a.uploadPartRequest(bucket, object, uploadID, md5SumBytes, partNumber, size, body)
 	if err != nil {
 		return completePart{}, err

@@ -324,14 +324,6 @@ func (r *request) Do() (resp *http.Response, err error) {
 	return transport.RoundTrip(r.req)
 }
 
-func (r *request) SetQuery(key, value string) {
-	r.req.URL.Query().Set(key, value)
-}
-
-func (r *request) AddQuery(key, value string) {
-	r.req.URL.Query().Add(key, value)
-}
-
 // Set - set additional headers if any
 func (r *request) Set(key, value string) {
 	r.req.Header.Set(key, value)
