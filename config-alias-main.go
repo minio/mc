@@ -147,7 +147,7 @@ func listAliases() {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV3)
+	newConf := config.Data().(*configV4)
 	for k, v := range newConf.Aliases {
 		Prints("%s\n", AliasMessage{
 			op:    "list",
@@ -173,7 +173,7 @@ func removeAlias(alias string) {
 	}
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV3)
+	newConf := config.Data().(*configV4)
 	if _, ok := newConf.Aliases[alias]; !ok {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias ‘%s’ does not exist.", alias))
 	}
@@ -209,7 +209,7 @@ func addAlias(alias, url string) {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
 	}
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV3)
+	newConf := config.Data().(*configV4)
 	if oldURL, ok := newConf.Aliases[alias]; ok {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias ‘%s’ already exists for ‘%s’.", alias, oldURL))
 	}

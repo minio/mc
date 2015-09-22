@@ -51,7 +51,15 @@ func (s *TestSuite) TestConfigHostContext(c *C) {
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "config", "host", "add", "*my-example.com", "AKIKJAA5BMMU2RHO6IBB", "V7f1CCwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr9"})
+	err = app.Run([]string{os.Args[0],
+		"config",
+		"host",
+		"add",
+		"*my-example.com",
+		"AKIKJAA5BMMU2RHO6IBB",
+		"V7f1CCwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr9",
+		"v2",
+	})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 

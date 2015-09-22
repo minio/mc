@@ -24,8 +24,9 @@ import (
 )
 
 type hostConfig struct {
-	AccessKeyID     string `json:"access-key-id"`
-	SecretAccessKey string `json:"secret-access-key"`
+	AccessKeyID     string `json:"accessKeyId"`
+	SecretAccessKey string `json:"secretAccessKey"`
+	Signature       string `json:"signature"`
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, certs.
@@ -40,6 +41,7 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 		hostCfg := hostConfig{
 			AccessKeyID:     "",
 			SecretAccessKey: "",
+			Signature:       "",
 		}
 		return hostCfg, nil
 	}

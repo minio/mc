@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package s3
+package s3v2
 
 // bucketHandler is an http.Handler that verifies bucket responses and validates incoming requests
 import (
