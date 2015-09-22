@@ -45,6 +45,9 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 		}
 		return hostCfg, nil
 	}
+	if _, ok := config.Hosts[url.Host]; ok {
+		return config.Hosts[url.Host], nil
+	}
 	for globURL, hostCfg := range config.Hosts {
 		match, err := filepath.Match(globURL, url.Host)
 		if err != nil {

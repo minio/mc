@@ -152,7 +152,8 @@ func getMcConfig() (*configV5, *probe.Error) {
 		return v.(quick.Config).Data().(*configV5), nil
 	}
 
-	conf := newConfigV5()
+	conf := new(configV5)
+	conf.Version = globalMCConfigVersion
 	qconf, err := quick.New(conf)
 	if err != nil {
 		return nil, err.Trace()
