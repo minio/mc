@@ -51,7 +51,7 @@ func mainConfigVersion(ctx *cli.Context) {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV4)
+	newConf := config.Data().(*configV5)
 	type Version struct {
 		Value string `json:"value"`
 	}

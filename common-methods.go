@@ -25,8 +25,8 @@ import (
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/client/fs"
-	"github.com/minio/mc/pkg/client/s3"
 	"github.com/minio/mc/pkg/client/s3v2"
+	"github.com/minio/mc/pkg/client/s3v4"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -156,10 +156,10 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 
 		var s3Client client.Client
 		var err *probe.Error
-		if auth.Signature == "v2" {
+		if auth.API == "S3v2" {
 			s3Client, err = s3v2.New(s3Config)
 		} else {
-			s3Client, err = s3.New(s3Config)
+			s3Client, err = s3v4.New(s3Config)
 		}
 		if err != nil {
 			return nil, err.Trace()

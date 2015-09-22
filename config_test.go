@@ -58,7 +58,7 @@ func (s *TestSuite) TestConfigHostContext(c *C) {
 		"*my-example.com",
 		"AKIKJAA5BMMU2RHO6IBB",
 		"V7f1CCwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr9",
-		"v2",
+		"S3v2",
 	})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)

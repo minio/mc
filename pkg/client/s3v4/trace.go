@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package s3
+package s3v4
 
 import (
 	"net/http"
