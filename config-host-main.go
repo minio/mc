@@ -239,7 +239,7 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
 	newConf.Hosts[hostGlob] = hostConfig{
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
-		API:             "S3v4",
+		API:             api,
 	}
 	newConfig, err := quick.New(newConf)
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
