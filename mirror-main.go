@@ -158,7 +158,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 
 	var scanBar scanBarFunc
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
-		scanBar = scanBarFactory("")
+		scanBar = scanBarFactory()
 	}
 
 	URLsCh := prepareMirrorURLs(sourceURL, targetURLs)

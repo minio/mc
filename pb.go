@@ -221,27 +221,32 @@ func fixateScanBar(text string, width int) string {
 type scanBarFunc func(string)
 
 // scanBarFactory returns a progress bar function to report URL scanning.
-func scanBarFactory(prefix string) scanBarFunc {
+func scanBarFactory() scanBarFunc {
 	prevLineSize := 0
+	prevSource := ""
 	fileCount := 0
 	termSize, err := ts.GetSize()
 	if err != nil {
-		fatalIf(probe.NewError(err), "Unable to get terminal size. Please enable --quiet mode for simpler terminals")
+		fatalIf(probe.NewError(err), "Unable to get terminal size. Please use --quiet option.")
 	}
 	termWidth := termSize.Col()
 	cursorCh := cursorAnimate()
 
 	return func(source string) {
 		scanPrefix := fmt.Sprintf("[%s] %s ", humanize.Comma(int64(fileCount)), string(<-cursorCh))
-		if prefix != "" {
-			scanPrefix = fmt.Sprintf("Scanning %s [%s] %s ", prefix, humanize.Comma(int64(fileCount)), string(<-cursorCh))
+		cmnPrefix := commonPrefix(source, prevSource)
+		eraseLen := prevLineSize - len([]rune(scanPrefix+cmnPrefix))
+		if eraseLen < 1 {
+			eraseLen = 0
 		}
 		if prevLineSize != 0 { // erase previous line
-			console.PrintC("\r" + scanPrefix + strings.Repeat(" ", prevLineSize-len([]rune(scanPrefix))))
+			console.PrintC("\r" + scanPrefix + cmnPrefix + strings.Repeat(" ", eraseLen))
 		}
+
 		source = fixateScanBar(source, termWidth-len([]rune(scanPrefix))-1)
-		barText := "\r" + scanPrefix + source
-		console.PrintC(barText)
+		barText := scanPrefix + source
+		console.PrintC("\r" + barText)
+		prevSource = source
 		prevLineSize = len([]rune(barText))
 		fileCount++
 	}
