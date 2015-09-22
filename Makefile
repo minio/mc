@@ -61,7 +61,7 @@ release: genversion
 
 genversion:
 	@echo "Generating a new version.go:"
-	@go run genversion.go
+	@GO15VENDOREXPERIMENT=1 go run buildscripts/genversion.go
 
 coverage:
 	@GO15VENDOREXPERIMENT=1 go test -race -coverprofile=cover.out ./
