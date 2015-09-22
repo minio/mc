@@ -58,9 +58,9 @@ type Updates struct {
 
 // UpdateMessage container to hold update messages
 type UpdateMessage struct {
-	Update   bool      `json:"update"`
-	Download string    `json:"downloadURL"`
-	Version  time.Time `json:"version"`
+	Update   bool   `json:"update"`
+	Download string `json:"downloadURL"`
+	Version  string `json:"version"`
 }
 
 // String colorized update message
@@ -126,7 +126,7 @@ func getExperimentalUpdate() {
 	data, _, err := clnt.GetObject(0, 0)
 	fatalIf(err.Trace(mcExperimentalURL), "Unable to read from experimental URL ‘"+mcExperimentalURL+"’.")
 
-	current, e := time.Parse(time.RFC3339Nano, Version)
+	current, e := time.Parse(http.TimeFormat, mcVersion)
 	fatalIf(probe.NewError(e), "Unable to parse Version string as time.")
 
 	if current.IsZero() {
@@ -153,7 +153,7 @@ func getExperimentalUpdate() {
 
 	updateMessage := UpdateMessage{
 		Download: downloadURL,
-		Version:  latest,
+		Version:  mcVersion,
 	}
 	if latest.After(current) {
 		updateMessage.Update = true
@@ -168,7 +168,7 @@ func getReleaseUpdate() {
 	data, _, err := clnt.GetObject(0, 0)
 	fatalIf(err.Trace(mcUpdateURL), "Unable to read from update URL ‘"+mcUpdateURL+"’.")
 
-	current, e := time.Parse(time.RFC3339Nano, Version)
+	current, e := time.Parse(http.TimeFormat, mcVersion)
 	fatalIf(probe.NewError(e), "Unable to parse Version string as time.")
 
 	if current.IsZero() {
@@ -191,7 +191,7 @@ func getReleaseUpdate() {
 	downloadURL := mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS]
 	updateMessage := UpdateMessage{
 		Download: downloadURL,
-		Version:  latest,
+		Version:  mcVersion,
 	}
 	if latest.After(current) {
 		updateMessage.Update = true

@@ -18,12 +18,10 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/user"
 	"runtime"
 	"strconv"
-	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -110,15 +108,6 @@ func registerBefore(ctx *cli.Context) error {
 	return nil
 }
 
-// getFormattedVersion -
-func getFormattedVersion() string {
-	t, _ := time.Parse(time.RFC3339Nano, Version)
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format(http.TimeFormat)
-}
-
 func findClosestCommands(command string) []string {
 	var closestCommands []string
 	for _, value := range commandsTree.PrefixMatch(command) {
@@ -170,7 +159,7 @@ GLOBAL FLAGS:
   {{range .Flags}}{{.}}
   {{end}}{{end}}
 VERSION:
-  ` + getFormattedVersion() +
+  ` + mcVersion +
 		`{{ "\n"}} {{range $key, $value := ExtraInfo}}
 {{$key}}:
   {{$value}}
