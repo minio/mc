@@ -161,7 +161,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 
 	var scanBar scanBarFunc
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
-		scanBar = scanBarFactory("")
+		scanBar = scanBarFactory()
 	}
 
 	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
@@ -180,14 +180,14 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 					console.Printf("%c[2K\n", 27)
 					console.Printf("%c[A", 27)
 				}
-				errorIf(cpURLs.Error.Trace(), "Unable to prepare URLs for copying.")
+				errorIf(cpURLs.Error.Trace(), "Unable to prepare URL for copying.")
 				break
 			}
 
 			jsonData, err := json.Marshal(cpURLs)
 			if err != nil {
 				session.Close()
-				fatalIf(probe.NewError(err), "Unable to prepare URLs for copying. Error in JSON marshaling.")
+				fatalIf(probe.NewError(err), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuietFlag && !globalJSONFlag {
