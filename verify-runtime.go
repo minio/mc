@@ -85,12 +85,14 @@ func checkGolangRuntimeVersion() {
 	v1 := newVersion(getNormalizedGolangVersion())
 	v2 := newVersion(minGolangRuntimeVersion)
 	if v1.LessThan(v2) {
-		errorIf(errDummy().Trace(),
+		fatalIf(errDummy().Trace(),
 			"Old Golang runtime version ‘"+v1.String()+"’ detected., ‘mc’ requires minimum go1.5.1 or later.")
 	}
 }
 
 func verifyMCRuntime() {
+	checkGolangRuntimeVersion()
+
 	if !isMcConfigExists() {
 		err := createMcConfigDir()
 		fatalIf(err.Trace(), "Unable to create ‘mc’ config folder.")
@@ -109,5 +111,4 @@ func verifyMCRuntime() {
 	if !isSharedURLsDataDirExists() {
 		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared url datadir.")
 	}
-	checkGolangRuntimeVersion()
 }
