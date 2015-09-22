@@ -31,9 +31,9 @@ EXAMPLES:
       $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
       $ set -o history
 
-   2. Add host configuration for a URL, using old signature v2. For security reasons turn off bash history
+   2. Add host configuration for a URL, using s3 api v2. For security reasons turn off bash history
       $ set +o history
-      $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 v2
+      $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
       $ set -o history
 
    3. List all hosts.
@@ -51,7 +51,7 @@ type HostMessage struct {
 	Host            string `json:"host"`
 	AccessKeyID     string `json:"accessKeyId,omitempty"`
 	SecretAccessKey string `json:"secretAccessKey,omitempty"`
-	Signature       string `json:"signature,omitempty"`
+	API             string `json:"api,omitempty"`
 }
 
 // String colorized host message
@@ -61,7 +61,7 @@ func (a HostMessage) String() string {
 		if a.AccessKeyID != "" || a.SecretAccessKey != "" {
 			message += console.Colorize("AccessKeyID", fmt.Sprintf("<- %s,", a.AccessKeyID))
 			message += console.Colorize("SecretAccessKey", fmt.Sprintf(" %s,", a.SecretAccessKey))
-			message += console.Colorize("Signature", fmt.Sprintf(" %s", a.Signature))
+			message += console.Colorize("API", fmt.Sprintf(" %s", a.API))
 		}
 		return message
 	}
@@ -115,7 +115,7 @@ func mainConfigHost(ctx *cli.Context) {
 	// set new custom coloring
 	console.SetCustomTheme(map[string]*color.Color{
 		"Host":            color.New(color.FgCyan, color.Bold),
-		"Signature":       color.New(color.FgYellow, color.Bold),
+		"API":             color.New(color.FgYellow, color.Bold),
 		"HostMessage":     color.New(color.FgGreen, color.Bold),
 		"AccessKeyID":     color.New(color.FgBlue, color.Bold),
 		"SecretAccessKey": color.New(color.FgRed, color.Bold),
@@ -143,14 +143,14 @@ func listHosts() {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV4)
+	newConf := config.Data().(*configV5)
 	for k, v := range newConf.Hosts {
 		Prints("%s\n", HostMessage{
 			op:              "list",
 			Host:            k,
 			AccessKeyID:     v.AccessKeyID,
 			SecretAccessKey: v.SecretAccessKey,
-			Signature:       v.Signature,
+			API:             v.API,
 		})
 	}
 
@@ -171,7 +171,7 @@ func removeHost(hostGlob string) {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV4)
+	newConf := config.Data().(*configV5)
 	if _, ok := newConf.Hosts[hostGlob]; !ok {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Host glob ‘%s’ does not exist.", hostGlob))
 	}
@@ -207,15 +207,15 @@ func isValidAccessKey(accessKeyID string) bool {
 }
 
 // addHost - add new host
-func addHost(hostGlob, accessKeyID, secretAccessKey, signature string) {
+func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
 	if strings.TrimSpace(hostGlob) == "" {
 		fatalIf(errDummy().Trace(), "Unable to proceed, empty arguments provided.")
 	}
-	if strings.TrimSpace(signature) == "" {
-		signature = "v4"
+	if strings.TrimSpace(api) == "" {
+		api = "S3v4"
 	}
-	if strings.ToLower(signature) != "v2" && strings.ToLower(signature) != "v4" {
-		fatalIf(errInvalidArgument().Trace(), "Unrecognized version name provided, supported inputs are ‘v4’, ‘v2’")
+	if strings.TrimSpace(api) != "S3v2" && strings.TrimSpace(api) != "S3v4" {
+		fatalIf(errInvalidArgument().Trace(), "Unrecognized version name provided, supported inputs are ‘S3v4’, ‘S3v2’")
 	}
 	config, err := newConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
@@ -235,11 +235,11 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, signature string) {
 		}
 	}
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV4)
+	newConf := config.Data().(*configV5)
 	newConf.Hosts[hostGlob] = hostConfig{
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
-		Signature:       signature,
+		API:             "S3v4",
 	}
 	newConfig, err := quick.New(newConf)
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
@@ -252,6 +252,6 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, signature string) {
 		Host:            hostGlob,
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
-		Signature:       signature,
+		API:             api,
 	})
 }

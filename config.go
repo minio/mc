@@ -28,10 +28,20 @@ import (
 	"github.com/minio/minio/pkg/quick"
 )
 
-type configV4 struct {
+type configV5 struct {
 	Version string                `json:"version"`
 	Aliases map[string]string     `json:"alias"`
 	Hosts   map[string]hostConfig `json:"hosts"`
+}
+
+type configV4 struct {
+	Version string            `json:"version"`
+	Aliases map[string]string `json:"alias"`
+	Hosts   map[string]struct {
+		AccessKeyID     string `json:"accessKeyId"`
+		SecretAccessKey string `json:"secretAccessKey"`
+		Signature       string `json:"signature"`
+	} `json:"hosts"`
 }
 
 type configV3 struct {
@@ -127,7 +137,7 @@ func mustGetMcConfigPath() string {
 }
 
 // getMcConfig - reads configuration file and returns config
-func getMcConfig() (*configV4, *probe.Error) {
+func getMcConfig() (*configV5, *probe.Error) {
 	if !isMcConfigExists() {
 		return nil, errInvalidArgument().Trace()
 	}
@@ -139,10 +149,10 @@ func getMcConfig() (*configV4, *probe.Error) {
 
 	// Cached in private global variable.
 	if v := cache.Get(); v != nil { // Use previously cached config.
-		return v.(quick.Config).Data().(*configV4), nil
+		return v.(quick.Config).Data().(*configV5), nil
 	}
 
-	conf := newConfigV4()
+	conf := newConfigV5()
 	qconf, err := quick.New(conf)
 	if err != nil {
 		return nil, err.Trace()
@@ -153,11 +163,11 @@ func getMcConfig() (*configV4, *probe.Error) {
 		return nil, err.Trace()
 	}
 	cache.Put(qconf)
-	return qconf.Data().(*configV4), nil
+	return qconf.Data().(*configV5), nil
 }
 
 // mustGetMcConfig - reads configuration file and returns configs, exits on error
-func mustGetMcConfig() *configV4 {
+func mustGetMcConfig() *configV5 {
 	config, err := getMcConfig()
 	fatalIf(err.Trace(), "Unable to read mc configuration.")
 	return config
@@ -203,6 +213,8 @@ func migrateConfig() {
 	migrateConfigV2ToV3()
 	// Migrate config V3 to V4
 	migrateConfigV3ToV4()
+	// Migrate config V4 to V5
+	migrateConfigV4ToV5()
 }
 
 func fixConfig() {
@@ -325,15 +337,23 @@ func migrateConfigV3ToV4() {
 	if mcConfigV3.Version() == "3" {
 		confV4 := new(configV4)
 		confV4.Aliases = mcConfigV3.Data().(*configV3).Aliases
-		confV4.Hosts = make(map[string]hostConfig)
+		confV4.Hosts = make(map[string]struct {
+			AccessKeyID     string `json:"accessKeyId"`
+			SecretAccessKey string `json:"secretAccessKey"`
+			Signature       string `json:"signature"`
+		})
 		for host, hostConf := range mcConfigV3.Data().(*configV3).Hosts {
-			confV4.Hosts[host] = hostConfig{
+			confV4.Hosts[host] = struct {
+				AccessKeyID     string `json:"accessKeyId"`
+				SecretAccessKey string `json:"secretAccessKey"`
+				Signature       string `json:"signature"`
+			}{
 				AccessKeyID:     hostConf.AccessKeyID,
 				SecretAccessKey: hostConf.SecretAccessKey,
 				Signature:       "v4",
 			}
 		}
-		confV4.Version = globalMCConfigVersion
+		confV4.Version = "4"
 
 		mcNewConfigV4, err := quick.New(confV4)
 		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘4’.")
@@ -342,6 +362,37 @@ func migrateConfigV3ToV4() {
 		fatalIf(err.Trace(), "Unable to save config version ‘4’.")
 
 		console.Infof("Successfully migrated %s from version ‘3’ to version ‘4’.\n", mustGetMcConfigPath())
+	}
+}
+
+func migrateConfigV4ToV5() {
+	if !isMcConfigExists() {
+		return
+	}
+	mcConfigV4, err := quick.Load(mustGetMcConfigPath(), newConfigV4())
+	fatalIf(err.Trace(), "Unable to load mc config V2.")
+
+	// update to newer version
+	if mcConfigV4.Version() == "4" {
+		confV5 := new(configV5)
+		confV5.Aliases = mcConfigV4.Data().(*configV4).Aliases
+		confV5.Hosts = make(map[string]hostConfig)
+		for host, hostConf := range mcConfigV4.Data().(*configV4).Hosts {
+			confV5.Hosts[host] = hostConfig{
+				AccessKeyID:     hostConf.AccessKeyID,
+				SecretAccessKey: hostConf.SecretAccessKey,
+				API:             "S3v4",
+			}
+		}
+		confV5.Version = globalMCConfigVersion
+
+		mcNewConfigV5, err := quick.New(confV5)
+		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘5’.")
+
+		err = mcNewConfigV5.Save(mustGetMcConfigPath())
+		fatalIf(err.Trace(), "Unable to save config version ‘5’.")
+
+		console.Infof("Successfully migrated %s from version ‘4’ to version ‘5’.\n", mustGetMcConfigPath())
 	}
 }
 
@@ -457,6 +508,20 @@ func newConfigV3() *configV3 {
 
 func newConfigV4() *configV4 {
 	conf := new(configV4)
+	conf.Version = "4"
+	// make sure to allocate map's otherwise Golang
+	// exits silently without providing any errors
+	conf.Hosts = make(map[string]struct {
+		AccessKeyID     string `json:"accessKeyId"`
+		SecretAccessKey string `json:"secretAccessKey"`
+		Signature       string `json:"signature"`
+	})
+	conf.Aliases = make(map[string]string)
+	return conf
+}
+
+func newConfigV5() *configV5 {
+	conf := new(configV5)
 	conf.Version = globalMCConfigVersion
 	// make sure to allocate map's otherwise Golang
 	// exits silently without providing any errors
@@ -466,32 +531,32 @@ func newConfigV4() *configV4 {
 	localHostConfig := hostConfig{
 		AccessKeyID:     "",
 		SecretAccessKey: "",
-		Signature:       "v4",
+		API:             "S3v4",
 	}
 
 	s3HostConf := hostConfig{
 		AccessKeyID:     globalAccessKeyID,
 		SecretAccessKey: globalSecretAccessKey,
-		Signature:       "v4",
+		API:             "S3v4",
 	}
 
 	// Your example host config
 	exampleHostConf := hostConfig{
 		AccessKeyID:     globalAccessKeyID,
 		SecretAccessKey: globalSecretAccessKey,
-		Signature:       "v4",
+		API:             "S3v4",
 	}
 
 	playHostConfig := hostConfig{
 		AccessKeyID:     "",
 		SecretAccessKey: "",
-		Signature:       "v4",
+		API:             "S3v4",
 	}
 
 	dlHostConfig := hostConfig{
 		AccessKeyID:     "",
 		SecretAccessKey: "",
-		Signature:       "v4",
+		API:             "S3v4",
 	}
 
 	conf.Hosts[globalExampleHostURL] = exampleHostConf
@@ -513,7 +578,7 @@ func newConfigV4() *configV4 {
 
 // newConfig - get new config interface
 func newConfig() (config quick.Config, err *probe.Error) {
-	config, err = quick.New(newConfigV4())
+	config, err = quick.New(newConfigV5())
 	if err != nil {
 		return nil, err.Trace()
 	}
