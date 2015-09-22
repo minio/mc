@@ -73,7 +73,7 @@ type ShareMessage struct {
 
 // String - regular colorized message
 func (s ShareMessage) String() string {
-	return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s\n   Key:%s", timeDurationToHumanizedTime(s.Expiry), s.URL, s.Key))
+	return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s\n   Key: %s", timeDurationToHumanizedTime(s.Expiry), s.URL, s.Key))
 }
 
 // JSON json message for share command

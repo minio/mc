@@ -45,6 +45,13 @@
 			"revisionTime": "2015-09-16T14:54:23-07:00"
 		},
 		{
+			"canonical": "github.com/minio/minio-go-legacy",
+			"comment": "",
+			"local": "vendor/github.com/minio/minio-go-legacy",
+			"revision": "c73c27f1a8bcde793d1218761bd2cae9733ab756",
+			"revisionTime": "2015-09-21T20:50:10-07:00"
+		},
+		{
 			"canonical": "github.com/minio/minio/pkg/probe",
 			"comment": "",
 			"local": "vendor/github.com/minio/minio/pkg/probe",

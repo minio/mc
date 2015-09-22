@@ -97,7 +97,7 @@ func (s *TestSuite) TestGetNewClient(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *TestSuite) TestNewConfigV2(c *C) {
+func (s *TestSuite) TestNewConfigV4(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "mc-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -108,12 +108,12 @@ func (s *TestSuite) TestNewConfigV2(c *C) {
 	perr = conf.Save(configFile)
 	c.Assert(perr, IsNil)
 
-	confNew := newConfigV3()
+	confNew := newConfigV4()
 	config, perr := quick.New(confNew)
 	c.Assert(perr, IsNil)
 	perr = config.Load(configFile)
 	c.Assert(perr, IsNil)
-	data := config.Data().(*configV3)
+	data := config.Data().(*configV4)
 
 	type aliases struct {
 		name string
@@ -167,6 +167,7 @@ func (s *TestSuite) TestHostConfig(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(hostcfg.AccessKeyID, Equals, globalAccessKeyID)
 	c.Assert(hostcfg.SecretAccessKey, Equals, globalSecretAccessKey)
+	c.Assert(hostcfg.Signature, Equals, "v4")
 
 	_, err = getHostConfig("http://test.minio.io")
 	c.Assert(err, Not(IsNil))

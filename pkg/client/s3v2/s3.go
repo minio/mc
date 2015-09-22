@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package s3
+package s3v2
 
 import (
 	"errors"
@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio-go"
+	"github.com/minio/minio-go-legacy"
 	"github.com/minio/minio/pkg/probe"
 )
 

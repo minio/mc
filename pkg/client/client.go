@@ -57,3 +57,14 @@ type Content struct {
 	Size int64
 	Type os.FileMode
 }
+
+// Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
+type Config struct {
+	AccessKeyID     string
+	SecretAccessKey string
+	HostURL         string
+	AppName         string
+	AppVersion      string
+	AppComments     []string
+	Debug           bool
+}

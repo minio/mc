@@ -26,15 +26,20 @@ USAGE:
    OPERATION = add | list | remove
 
 EXAMPLES:
-   1. Add host configuration for a URL. For security reasons turn off bash history
+   1. Add host configuration for a URL, using default signature V4. For security reasons turn off bash history
       $ set +o history
-      $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1C\wQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr1
+      $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
       $ set -o history
 
-   2. List all hosts.
+   2. Add host configuration for a URL, using old signature v2. For security reasons turn off bash history
+      $ set +o history
+      $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 v2
+      $ set -o history
+
+   3. List all hosts.
       $ mc config {{.Name}} list
 
-   3. Remove host config.
+   4. Remove host config.
       $ mc config {{.Name}} remove s3.amazonaws.com
 
 `,
@@ -46,6 +51,7 @@ type HostMessage struct {
 	Host            string `json:"host"`
 	AccessKeyID     string `json:"accessKeyId,omitempty"`
 	SecretAccessKey string `json:"secretAccessKey,omitempty"`
+	Signature       string `json:"signature,omitempty"`
 }
 
 // String colorized host message
@@ -54,7 +60,8 @@ func (a HostMessage) String() string {
 		message := console.Colorize("Host", fmt.Sprintf("[%s] ", a.Host))
 		if a.AccessKeyID != "" || a.SecretAccessKey != "" {
 			message += console.Colorize("AccessKeyID", fmt.Sprintf("<- %s,", a.AccessKeyID))
-			message += console.Colorize("SecretAccessKey", fmt.Sprintf(" %s", a.SecretAccessKey))
+			message += console.Colorize("SecretAccessKey", fmt.Sprintf(" %s,", a.SecretAccessKey))
+			message += console.Colorize("Signature", fmt.Sprintf(" %s", a.Signature))
 		}
 		return message
 	}
@@ -84,12 +91,12 @@ func checkConfigHostSyntax(ctx *cli.Context) {
 	if strings.TrimSpace(ctx.Args().First()) == "" {
 		cli.ShowCommandHelpAndExit(ctx, "host", 1) // last argument is exit code
 	}
-	if len(ctx.Args().Tail()) > 3 {
+	if len(ctx.Args().Tail()) > 4 {
 		fatalIf(errDummy().Trace(), "Incorrect number of arguments to host command")
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	case "add":
-		if len(ctx.Args().Tail()) != 3 {
+		if len(ctx.Args().Tail()) < 3 || len(ctx.Args().Tail()) > 4 {
 			fatalIf(errInvalidArgument().Trace(), "Incorrect number of arguments for add host command.")
 		}
 	case "remove":
@@ -108,9 +115,10 @@ func mainConfigHost(ctx *cli.Context) {
 	// set new custom coloring
 	console.SetCustomTheme(map[string]*color.Color{
 		"Host":            color.New(color.FgCyan, color.Bold),
+		"Signature":       color.New(color.FgYellow, color.Bold),
+		"HostMessage":     color.New(color.FgGreen, color.Bold),
 		"AccessKeyID":     color.New(color.FgBlue, color.Bold),
 		"SecretAccessKey": color.New(color.FgRed, color.Bold),
-		"HostMessage":     color.New(color.FgGreen, color.Bold),
 	})
 
 	arg := ctx.Args().First()
@@ -118,7 +126,7 @@ func mainConfigHost(ctx *cli.Context) {
 
 	switch strings.TrimSpace(arg) {
 	case "add":
-		addHost(tailArgs.Get(0), tailArgs.Get(1), tailArgs.Get(2))
+		addHost(tailArgs.Get(0), tailArgs.Get(1), tailArgs.Get(2), tailArgs.Get(3))
 	case "remove":
 		removeHost(tailArgs.Get(0))
 	case "list":
@@ -135,13 +143,14 @@ func listHosts() {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV3)
+	newConf := config.Data().(*configV4)
 	for k, v := range newConf.Hosts {
 		Prints("%s\n", HostMessage{
 			op:              "list",
 			Host:            k,
 			AccessKeyID:     v.AccessKeyID,
 			SecretAccessKey: v.SecretAccessKey,
+			Signature:       v.Signature,
 		})
 	}
 
@@ -162,7 +171,7 @@ func removeHost(hostGlob string) {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV3)
+	newConf := config.Data().(*configV4)
 	if _, ok := newConf.Hosts[hostGlob]; !ok {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Host glob ‘%s’ does not exist.", hostGlob))
 	}
@@ -197,10 +206,16 @@ func isValidAccessKey(accessKeyID string) bool {
 	return regex.MatchString(accessKeyID)
 }
 
-// addHosts - add new hosts
-func addHost(hostGlob, accessKeyID, secretAccessKey string) {
+// addHost - add new host
+func addHost(hostGlob, accessKeyID, secretAccessKey, signature string) {
 	if strings.TrimSpace(hostGlob) == "" {
 		fatalIf(errDummy().Trace(), "Unable to proceed, empty arguments provided.")
+	}
+	if strings.TrimSpace(signature) == "" {
+		signature = "v4"
+	}
+	if strings.ToLower(signature) != "v2" && strings.ToLower(signature) != "v4" {
+		fatalIf(errInvalidArgument().Trace(), "Unrecognized version name provided, supported inputs are ‘v4’, ‘v2’")
 	}
 	config, err := newConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
@@ -220,10 +235,11 @@ func addHost(hostGlob, accessKeyID, secretAccessKey string) {
 		}
 	}
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV3)
+	newConf := config.Data().(*configV4)
 	newConf.Hosts[hostGlob] = hostConfig{
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
+		Signature:       signature,
 	}
 	newConfig, err := quick.New(newConf)
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
@@ -236,5 +252,6 @@ func addHost(hostGlob, accessKeyID, secretAccessKey string) {
 		Host:            hostGlob,
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
+		Signature:       signature,
 	})
 }
