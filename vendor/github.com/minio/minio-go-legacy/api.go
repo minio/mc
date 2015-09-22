@@ -194,8 +194,8 @@ func (c *Config) SetUserAgent(name string, version string, comments ...string) {
 	}
 }
 
-type apiV2 struct {
-	apiV1
+type api struct {
+	apiCore
 }
 
 // New - instantiate a new minio api client
@@ -203,7 +203,7 @@ func New(config Config) (API, error) {
 	if strings.TrimSpace(config.Region) == "" || len(config.Region) == 0 {
 		u, err := url.Parse(config.Endpoint)
 		if err != nil {
-			return apiV2{}, err
+			return api{}, err
 		}
 		match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
 		if match {
@@ -215,7 +215,7 @@ func New(config Config) (API, error) {
 	}
 	config.SetUserAgent(LibraryName, LibraryVersion, runtime.GOOS, runtime.GOARCH)
 	config.isUserAgentSet = false // default
-	return apiV2{apiV1{&config}}, nil
+	return api{apiCore{&config}}, nil
 }
 
 /// Object operations
@@ -223,7 +223,7 @@ func New(config Config) (API, error) {
 /// Expires maximum is 7days - ie. 604800 and minimum is 1
 
 // PresignedGetObject get a presigned URL to retrieve an object for third party apps
-func (a apiV2) PresignedGetObject(bucket, object string, expires time.Duration) (string, error) {
+func (a api) PresignedGetObject(bucket, object string, expires time.Duration) (string, error) {
 	expireSeconds := int64(expires / time.Second)
 	if expireSeconds < 1 || expireSeconds > 604800 {
 		return "", invalidArgumentError("")
@@ -234,7 +234,7 @@ func (a apiV2) PresignedGetObject(bucket, object string, expires time.Duration) 
 /// GetObject retrieve object
 
 // Downloads full object with no ranges, if you need ranges use GetPartialObject
-func (a apiV2) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error) {
+func (a api) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return nil, ObjectStat{}, err
 	}
@@ -250,7 +250,7 @@ func (a apiV2) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, erro
 // Takes range arguments to download the specified range bytes of an object.
 // Setting offset and length = 0 will download the full object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a apiV2) GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
+func (a api) GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return nil, ObjectStat{}, err
 	}
@@ -307,7 +307,7 @@ func calculatePartSize(objectSize int64) int64 {
 	return minimumPartSize
 }
 
-func (a apiV2) newObjectUpload(bucket, object, contentType string, size int64, data io.Reader) error {
+func (a api) newObjectUpload(bucket, object, contentType string, size int64, data io.Reader) error {
 	initMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
 	if err != nil {
 		return err
@@ -381,13 +381,13 @@ type partCh struct {
 	Err      error
 }
 
-func (a apiV2) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partCh {
+func (a api) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partCh {
 	partCh := make(chan partCh, 1000)
 	go a.listObjectPartsRecursiveInRoutine(bucket, object, uploadID, partCh)
 	return partCh
 }
 
-func (a apiV2) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, ch chan partCh) {
+func (a api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, ch chan partCh) {
 	defer close(ch)
 	listObjPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
 	if err != nil {
@@ -424,7 +424,7 @@ func (a apiV2) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string
 	}
 }
 
-func (a apiV2) continueObjectUpload(bucket, object, uploadID string, size int64, data io.Reader) error {
+func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, data io.Reader) error {
 	var skipParts []skipPart
 	completeMultipartUpload := completeMultipartUpload{}
 	var totalLength int64
@@ -511,13 +511,13 @@ type multiPartUploadCh struct {
 	Err      error
 }
 
-func (a apiV2) listMultipartUploadsRecursive(bucket, object string) <-chan multiPartUploadCh {
+func (a api) listMultipartUploadsRecursive(bucket, object string) <-chan multiPartUploadCh {
 	ch := make(chan multiPartUploadCh, 1000)
 	go a.listMultipartUploadsRecursiveInRoutine(bucket, object, ch)
 	return ch
 }
 
-func (a apiV2) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch chan multiPartUploadCh) {
+func (a api) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch chan multiPartUploadCh) {
 	defer close(ch)
 	listMultipartUplResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
@@ -560,7 +560,7 @@ func (a apiV2) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch 
 // You must have WRITE permissions on a bucket to create an object
 //
 // This version of PutObject automatically does multipart for more than 5MB worth of data
-func (a apiV2) PutObject(bucket, object, contentType string, size int64, data io.Reader) error {
+func (a api) PutObject(bucket, object, contentType string, size int64, data io.Reader) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -623,7 +623,7 @@ func (a apiV2) PutObject(bucket, object, contentType string, size int64, data io
 }
 
 // StatObject verify if object exists and you have permission to access it
-func (a apiV2) StatObject(bucket, object string) (ObjectStat, error) {
+func (a api) StatObject(bucket, object string) (ObjectStat, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return ObjectStat{}, err
 	}
@@ -634,7 +634,7 @@ func (a apiV2) StatObject(bucket, object string) (ObjectStat, error) {
 }
 
 // RemoveObject remove the object from a bucket
-func (a apiV2) RemoveObject(bucket, object string) error {
+func (a api) RemoveObject(bucket, object string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -663,7 +663,7 @@ func (a apiV2) RemoveObject(bucket, object string) error {
 //
 //  [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 //  Default - US standard
-func (a apiV2) MakeBucket(bucket string, acl BucketACL) error {
+func (a api) MakeBucket(bucket string, acl BucketACL) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -689,7 +689,7 @@ func (a apiV2) MakeBucket(bucket string, acl BucketACL) error {
 //  public-read-write - owner gets full access, all others get full access too
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
-func (a apiV2) SetBucketACL(bucket string, acl BucketACL) error {
+func (a api) SetBucketACL(bucket string, acl BucketACL) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -708,7 +708,7 @@ func (a apiV2) SetBucketACL(bucket string, acl BucketACL) error {
 //  public-read-write - owner gets full access, others get full access too
 //  authenticated-read - owner gets full access, authenticated users get read access
 //
-func (a apiV2) GetBucketACL(bucket string) (BucketACL, error) {
+func (a api) GetBucketACL(bucket string) (BucketACL, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return "", err
 	}
@@ -747,7 +747,7 @@ func (a apiV2) GetBucketACL(bucket string) (BucketACL, error) {
 }
 
 // BucketExists verify if bucket exists and you have permission to access it
-func (a apiV2) BucketExists(bucket string) error {
+func (a api) BucketExists(bucket string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -758,7 +758,7 @@ func (a apiV2) BucketExists(bucket string) error {
 // NOTE: -
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request
-func (a apiV2) RemoveBucket(bucket string) error {
+func (a api) RemoveBucket(bucket string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -767,7 +767,7 @@ func (a apiV2) RemoveBucket(bucket string) error {
 
 // listObjectsInRoutine is an internal goroutine function called for listing objects
 // This function feeds data into channel
-func (a apiV2) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan ObjectStatCh) {
+func (a api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan ObjectStatCh) {
 	defer close(ch)
 	if err := invalidBucketError(bucket); err != nil {
 		ch <- ObjectStatCh{
@@ -848,7 +848,7 @@ func (a apiV2) listObjectsInRoutine(bucket, prefix string, recursive bool, ch ch
 //                 fmt.Println(message.Stat)
 //         }
 //
-func (a apiV2) ListObjects(bucket string, prefix string, recursive bool) <-chan ObjectStatCh {
+func (a api) ListObjects(bucket string, prefix string, recursive bool) <-chan ObjectStatCh {
 	ch := make(chan ObjectStatCh, 1000)
 	go a.listObjectsInRoutine(bucket, prefix, recursive, ch)
 	return ch
@@ -856,7 +856,7 @@ func (a apiV2) ListObjects(bucket string, prefix string, recursive bool) <-chan 
 
 // listBucketsInRoutine is an internal go routine function called for listing buckets
 // This function feeds data into channel
-func (a apiV2) listBucketsInRoutine(ch chan BucketStatCh) {
+func (a api) listBucketsInRoutine(ch chan BucketStatCh) {
 	defer close(ch)
 	listAllMyBucketListResults, err := a.listBuckets()
 	if err != nil {
@@ -887,13 +887,13 @@ func (a apiV2) listBucketsInRoutine(ch chan BucketStatCh) {
 //                 fmt.Println(message.Stat)
 //         }
 //
-func (a apiV2) ListBuckets() <-chan BucketStatCh {
+func (a api) ListBuckets() <-chan BucketStatCh {
 	ch := make(chan BucketStatCh, 100)
 	go a.listBucketsInRoutine(ch)
 	return ch
 }
 
-func (a apiV2) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan error) {
+func (a api) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan error) {
 	defer close(errorCh)
 	if err := invalidBucketError(bucket); err != nil {
 		errorCh <- err
@@ -949,13 +949,13 @@ func (a apiV2) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan
 //   requests are allowed for multipart API
 
 // DropIncompleteUpload - abort a specific in progress active multipart upload
-func (a apiV2) DropIncompleteUpload(bucket, object string) <-chan error {
+func (a api) DropIncompleteUpload(bucket, object string) <-chan error {
 	errorCh := make(chan error)
 	go a.dropIncompleteUploadInRoutine(bucket, object, errorCh)
 	return errorCh
 }
 
-func (a apiV2) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan error) {
+func (a api) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan error) {
 	defer close(errorCh)
 	if err := invalidBucketError(bucket); err != nil {
 		errorCh <- err
@@ -995,7 +995,7 @@ func (a apiV2) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan err
 }
 
 // DropAllIncompleteUploads - abort all inprogress active multipart uploads
-func (a apiV2) DropAllIncompleteUploads(bucket string) <-chan error {
+func (a api) DropAllIncompleteUploads(bucket string) <-chan error {
 	errorCh := make(chan error)
 	go a.dropAllIncompleteUploadsInRoutine(bucket, errorCh)
 	return errorCh

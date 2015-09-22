@@ -1,5 +1,5 @@
 /*
- * Minio Go Library for Amazon S3 Legacy v2 Signature Compatible Cloud Storage (C) 2015 Minio, Inc.
+ * Minio Go Library for Amazon S3 Compatible Cloud Storage (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ const (
 	separator = "/"
 )
 
-// apiV1 container to hold unexported internal functions
-type apiV1 struct {
+// apiCore container to hold unexported internal functions
+type apiCore struct {
 	config *Config
 }
 
@@ -46,7 +46,7 @@ func closeResp(resp *http.Response) {
 }
 
 // putBucketRequest wrapper creates a new putBucket request
-func (a apiV1) putBucketRequest(bucket, acl, location string) (*request, error) {
+func (a apiCore) putBucketRequest(bucket, acl, location string) (*request, error) {
 	var r *request
 	var err error
 	op := &operation{
@@ -122,7 +122,7 @@ func (a apiV1) putBucketRequest(bucket, acl, location string) (*request, error) 
 // [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 //
 // Default - US standard
-func (a apiV1) putBucket(bucket, acl, location string) error {
+func (a apiCore) putBucket(bucket, acl, location string) error {
 	req, err := a.putBucketRequest(bucket, acl, location)
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (a apiV1) putBucket(bucket, acl, location string) error {
 }
 
 // putBucketRequestACL wrapper creates a new putBucketACL request
-func (a apiV1) putBucketACLRequest(bucket, acl string) (*request, error) {
+func (a apiCore) putBucketACLRequest(bucket, acl string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
@@ -156,7 +156,7 @@ func (a apiV1) putBucketACLRequest(bucket, acl string) (*request, error) {
 }
 
 // putBucketACL set the permissions on an existing bucket using Canned ACL's
-func (a apiV1) putBucketACL(bucket, acl string) error {
+func (a apiCore) putBucketACL(bucket, acl string) error {
 	req, err := a.putBucketACLRequest(bucket, acl)
 	if err != nil {
 		return err
@@ -175,7 +175,7 @@ func (a apiV1) putBucketACL(bucket, acl string) error {
 }
 
 // getBucketACLRequest wrapper creates a new getBucketACL request
-func (a apiV1) getBucketACLRequest(bucket string) (*request, error) {
+func (a apiCore) getBucketACLRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -189,7 +189,7 @@ func (a apiV1) getBucketACLRequest(bucket string) (*request, error) {
 }
 
 // getBucketACL get the acl information on an existing bucket
-func (a apiV1) getBucketACL(bucket string) (accessControlPolicy, error) {
+func (a apiCore) getBucketACL(bucket string) (accessControlPolicy, error) {
 	req, err := a.getBucketACLRequest(bucket)
 	if err != nil {
 		return accessControlPolicy{}, err
@@ -212,7 +212,7 @@ func (a apiV1) getBucketACL(bucket string) (accessControlPolicy, error) {
 	if policy.AccessControlList.Grant == nil {
 		errorResponse := ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go/issues",
 			Resource:  separator + bucket,
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
@@ -223,7 +223,7 @@ func (a apiV1) getBucketACL(bucket string) (accessControlPolicy, error) {
 }
 
 // getBucketLocationRequest wrapper creates a new getBucketLocation request
-func (a apiV1) getBucketLocationRequest(bucket string) (*request, error) {
+func (a apiCore) getBucketLocationRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -237,7 +237,7 @@ func (a apiV1) getBucketLocationRequest(bucket string) (*request, error) {
 }
 
 // getBucketLocation uses location subresource to return a bucket's region
-func (a apiV1) getBucketLocation(bucket string) (string, error) {
+func (a apiCore) getBucketLocation(bucket string) (string, error) {
 	req, err := a.getBucketLocationRequest(bucket)
 	if err != nil {
 		return "", err
@@ -261,7 +261,7 @@ func (a apiV1) getBucketLocation(bucket string) (string, error) {
 }
 
 // listObjectsRequest wrapper creates a new listObjects request
-func (a apiV1) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*request, error) {
+func (a apiCore) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
 	resourceQuery := func() (*string, error) {
 		var err error
@@ -317,7 +317,7 @@ func (a apiV1) listObjectsRequest(bucket, marker, prefix, delimiter string, maxk
 // ?delimiter - A delimiter is a character you use to group keys.
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-keys - Sets the maximum number of keys returned in the response body.
-func (a apiV1) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (listBucketResult, error) {
+func (a apiCore) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (listBucketResult, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return listBucketResult{}, err
 	}
@@ -345,7 +345,7 @@ func (a apiV1) listObjects(bucket, marker, prefix, delimiter string, maxkeys int
 }
 
 // headBucketRequest wrapper creates a new headBucket request
-func (a apiV1) headBucketRequest(bucket string) (*request, error) {
+func (a apiCore) headBucketRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "HEAD",
@@ -355,7 +355,7 @@ func (a apiV1) headBucketRequest(bucket string) (*request, error) {
 }
 
 // headBucket useful to determine if a bucket exists and you have permission to access it.
-func (a apiV1) headBucket(bucket string) error {
+func (a apiCore) headBucket(bucket string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func (a apiV1) headBucket(bucket string) error {
 }
 
 // deleteBucketRequest wrapper creates a new deleteBucket request
-func (a apiV1) deleteBucketRequest(bucket string) (*request, error) {
+func (a apiCore) deleteBucketRequest(bucket string) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
@@ -419,7 +419,7 @@ func (a apiV1) deleteBucketRequest(bucket string) (*request, error) {
 // NOTE: -
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request
-func (a apiV1) deleteBucket(bucket string) error {
+func (a apiCore) deleteBucket(bucket string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -469,7 +469,7 @@ func (a apiV1) deleteBucket(bucket string) error {
 
 /// Object Read/Write/Stat Operations
 
-func (a apiV1) putObjectUnAuthenticatedRequest(bucket, object, contentType string, size int64, body io.Reader) (*request, error) {
+func (a apiCore) putObjectUnAuthenticatedRequest(bucket, object, contentType string, size int64, body io.Reader) (*request, error) {
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
@@ -494,7 +494,7 @@ func (a apiV1) putObjectUnAuthenticatedRequest(bucket, object, contentType strin
 
 // putObjectUnAuthenticated - add an object to a bucket
 // NOTE: You must have WRITE permissions on a bucket to add an object to it.
-func (a apiV1) putObjectUnAuthenticated(bucket, object, contentType string, size int64, body io.Reader) (ObjectStat, error) {
+func (a apiCore) putObjectUnAuthenticated(bucket, object, contentType string, size int64, body io.Reader) (ObjectStat, error) {
 	req, err := a.putObjectUnAuthenticatedRequest(bucket, object, contentType, size, body)
 	if err != nil {
 		return ObjectStat{}, err
@@ -514,7 +514,7 @@ func (a apiV1) putObjectUnAuthenticated(bucket, object, contentType string, size
 	if metadata.ETag == "" {
 		return ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -523,7 +523,7 @@ func (a apiV1) putObjectUnAuthenticated(bucket, object, contentType string, size
 }
 
 // putObjectRequest wrapper creates a new PutObject request
-func (a apiV1) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
+func (a apiCore) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
@@ -549,7 +549,7 @@ func (a apiV1) putObjectRequest(bucket, object, contentType string, md5SumBytes 
 
 // putObject - add an object to a bucket
 // NOTE: You must have WRITE permissions on a bucket to add an object to it.
-func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
+func (a apiCore) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
 	req, err := a.putObjectRequest(bucket, object, contentType, md5SumBytes, size, body)
 	if err != nil {
 		return ObjectStat{}, err
@@ -569,7 +569,7 @@ func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte,
 	if metadata.ETag == "" {
 		return ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -577,7 +577,7 @@ func (a apiV1) putObject(bucket, object, contentType string, md5SumBytes []byte,
 	return metadata, nil
 }
 
-func (a apiV1) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*request, error) {
+func (a apiCore) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -587,7 +587,7 @@ func (a apiV1) presignedGetObjectRequest(bucket, object string, expires, offset,
 		HTTPMethod: "GET",
 		HTTPPath:   separator + bucket + separator + encodedObject,
 	}
-	r, err := newPresignedRequest(op, a.config, expires)
+	r, err := newPresignedRequest(op, a.config, strconv.FormatInt(expires, 10))
 	if err != nil {
 		return nil, err
 	}
@@ -602,7 +602,7 @@ func (a apiV1) presignedGetObjectRequest(bucket, object string, expires, offset,
 	return r, nil
 }
 
-func (a apiV1) presignedGetObject(bucket, object string, expires, offset, length int64) (string, error) {
+func (a apiCore) presignedGetObject(bucket, object string, expires, offset, length int64) (string, error) {
 	if err := invalidArgumentError(object); err != nil {
 		return "", err
 	}
@@ -610,11 +610,11 @@ func (a apiV1) presignedGetObject(bucket, object string, expires, offset, length
 	if err != nil {
 		return "", err
 	}
-	return req.PreSignV2()
+	return req.PreSignV4()
 }
 
 // getObjectRequest wrapper creates a new getObject request
-func (a apiV1) getObjectRequest(bucket, object string, offset, length int64) (*request, error) {
+func (a apiCore) getObjectRequest(bucket, object string, offset, length int64) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -645,7 +645,7 @@ func (a apiV1) getObjectRequest(bucket, object string, offset, length int64) (*r
 // range bytes of an object. Setting offset and length = 0 will download the full object.
 //
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
+func (a apiCore) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
 	if err := invalidArgumentError(object); err != nil {
 		return nil, ObjectStat{}, err
 	}
@@ -669,7 +669,7 @@ func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCl
 	if md5sum == "" {
 		return nil, ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -678,7 +678,7 @@ func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCl
 	if err != nil {
 		return nil, ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -699,7 +699,7 @@ func (a apiV1) getObject(bucket, object string, offset, length int64) (io.ReadCl
 }
 
 // deleteObjectRequest wrapper creates a new deleteObject request
-func (a apiV1) deleteObjectRequest(bucket, object string) (*request, error) {
+func (a apiCore) deleteObjectRequest(bucket, object string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -713,7 +713,7 @@ func (a apiV1) deleteObjectRequest(bucket, object string) (*request, error) {
 }
 
 // deleteObject deletes a given object from a bucket
-func (a apiV1) deleteObject(bucket, object string) error {
+func (a apiCore) deleteObject(bucket, object string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -765,7 +765,7 @@ func (a apiV1) deleteObject(bucket, object string) error {
 }
 
 // headObjectRequest wrapper creates a new headObject request
-func (a apiV1) headObjectRequest(bucket, object string) (*request, error) {
+func (a apiCore) headObjectRequest(bucket, object string) (*request, error) {
 	encodedObject, err := urlEncodeName(object)
 	if err != nil {
 		return nil, err
@@ -779,7 +779,7 @@ func (a apiV1) headObjectRequest(bucket, object string) (*request, error) {
 }
 
 // headObject retrieves metadata from an object without returning the object itself
-func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
+func (a apiCore) headObject(bucket, object string) (ObjectStat, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return ObjectStat{}, err
 	}
@@ -832,7 +832,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 	if md5sum == "" {
 		return ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -841,7 +841,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 	if err != nil {
 		return ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -850,7 +850,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 	if err != nil {
 		return ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -872,7 +872,7 @@ func (a apiV1) headObject(bucket, object string) (ObjectStat, error) {
 /// Service Operations
 
 // listBucketRequest wrapper creates a new listBuckets request
-func (a apiV1) listBucketsRequest() (*request, error) {
+func (a apiCore) listBucketsRequest() (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -882,7 +882,7 @@ func (a apiV1) listBucketsRequest() (*request, error) {
 }
 
 // listBuckets list of all buckets owned by the authenticated sender of the request
-func (a apiV1) listBuckets() (listAllMyBucketsResult, error) {
+func (a apiCore) listBuckets() (listAllMyBucketsResult, error) {
 	req, err := a.listBucketsRequest()
 	if err != nil {
 		return listAllMyBucketsResult{}, err
