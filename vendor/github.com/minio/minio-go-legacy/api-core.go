@@ -678,7 +678,7 @@ func (a apiCore) getObject(bucket, object string, offset, length int64) (io.Read
 	if err != nil {
 		return nil, ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
