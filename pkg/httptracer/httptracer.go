@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package s3v4
+package httptracer
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 )
 
@@ -41,7 +41,7 @@ func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err er
 	timeStamp := time.Now()
 
 	if t.Transport == nil {
-		return nil, client.InvalidArgument{}
+		return nil, errors.New("Invalid Argument")
 	}
 
 	res, err = t.Transport.RoundTrip(req)
@@ -65,6 +65,9 @@ func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err er
 }
 
 // GetNewTraceTransport returns a traceable transport
+//
+// Takes first argument a custom tracer which implements Response, Request() conforming to HTTPTracer interface.
+// Another argument can be a default transport or a custom http.RoundTripper implementation
 func GetNewTraceTransport(trace HTTPTracer, transport http.RoundTripper) RoundTripTrace {
 	return RoundTripTrace{Trace: trace,
 		Transport: transport}

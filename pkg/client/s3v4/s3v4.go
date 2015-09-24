@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/probe"
 )
@@ -38,12 +39,9 @@ type s3Client struct {
 // New returns an initialized s3Client structure. if debug use a internal trace transport
 func New(config *client.Config) (client.Client, *probe.Error) {
 	u := client.NewURL(config.HostURL)
-	var transport http.RoundTripper
-	switch {
-	case config.Debug == true:
-		transport = GetNewTraceTransport(NewTrace(), http.DefaultTransport)
-	default:
-		transport = http.DefaultTransport
+	transport := http.DefaultTransport
+	if config.Debug == true {
+		transport = httptracer.GetNewTraceTransport(NewTrace(), http.DefaultTransport)
 	}
 	s3Conf := minio.Config{
 		AccessKeyID:     config.AccessKeyID,
