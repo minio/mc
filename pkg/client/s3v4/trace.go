@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/httptracer"
 )
 
 // Trace - tracing structure
@@ -30,7 +31,7 @@ type Trace struct {
 }
 
 // NewTrace - initialize Trace structure
-func NewTrace() HTTPTracer {
+func NewTrace() httptracer.HTTPTracer {
 	return Trace{}
 }
 
