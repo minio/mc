@@ -116,7 +116,6 @@ type ObjectStat struct {
 var regions = map[string]string{
 	"s3-fips-us-gov-west-1.amazonaws.com": "us-gov-west-1",
 	"s3.amazonaws.com":                    "us-east-1",
-	"s3-external-1.amazonaws.com":         "us-east-1",
 	"s3-us-west-1.amazonaws.com":          "us-west-1",
 	"s3-us-west-2.amazonaws.com":          "us-west-2",
 	"s3-eu-west-1.amazonaws.com":          "eu-west-1",
