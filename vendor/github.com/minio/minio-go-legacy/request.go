@@ -453,11 +453,26 @@ var resourceList = []string{
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
 func (r *request) writeCanonicalizedResource(buf *bytes.Buffer) error {
 	requestURL := r.req.URL
-	encodedURLPath, err := urlEncodeName(requestURL.Path)
-	if err != nil {
-		return err
+	if r.config.isVirtualStyle {
+		for k, v := range regions {
+			if v == r.config.Region {
+				path := "/" + strings.TrimSuffix(requestURL.Host, "."+k)
+				path += requestURL.Path
+				encodedURLPath, err := urlEncodeName(path)
+				if err != nil {
+					return err
+				}
+				buf.WriteString(encodedURLPath)
+				break
+			}
+		}
+	} else {
+		encodedURLPath, err := urlEncodeName(requestURL.Path)
+		if err != nil {
+			return err
+		}
+		buf.WriteString(encodedURLPath)
 	}
-	buf.WriteString(encodedURLPath)
 	sort.Strings(resourceList)
 	if requestURL.RawQuery != "" {
 		var n int
