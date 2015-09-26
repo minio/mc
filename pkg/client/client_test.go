@@ -46,6 +46,12 @@ func (s *MySuite) TestURLParse(c *C) {
 	c.Assert(u.Host, Equals, "")
 	c.Assert(u.Path, Equals, ":::://s3.example.com/path/new")
 	c.Assert(u.SchemeSeparator, Equals, "")
+
+	u = NewURL("localhost:9000")
+	c.Assert(u.Scheme, Equals, "")
+	c.Assert(u.Host, Equals, "")
+	c.Assert(u.Path, Equals, "localhost:9000")
+	c.Assert(u.SchemeSeparator, Equals, "")
 }
 
 func (s *MySuite) TestPathParse(c *C) {
