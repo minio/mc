@@ -69,8 +69,18 @@ type sessionV2 struct {
 	Header    *sessionV2Header
 	SessionID string
 	mutex     *sync.Mutex
-	DataFP    *os.File
+	DataFP    *sessionDataFP
 	sigCh     bool
+}
+
+type sessionDataFP struct {
+	dirty bool
+	*os.File
+}
+
+func (file *sessionDataFP) Write(p []byte) (int, error) {
+	file.dirty = true
+	return file.File.Write(p)
 }
 
 // String colorized session message
@@ -109,10 +119,10 @@ func newSessionV2() *sessionV2 {
 	sessionDataFile, perr := getSessionDataFile(s.SessionID)
 	fatalIf(perr.Trace(s.SessionID), "Unable to create session data file \""+sessionDataFile+"\".")
 
-	var err error
-	s.DataFP, err = os.Create(sessionDataFile)
+	dataFile, err := os.Create(sessionDataFile)
 	fatalIf(probe.NewError(err), "Unable to create session data file \""+sessionDataFile+"\".")
 
+	s.DataFP = &sessionDataFP{false, dataFile}
 	return s
 }
 
@@ -148,8 +158,11 @@ func (s *sessionV2) Save() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if err := s.DataFP.Sync(); err != nil {
-		return probe.NewError(err)
+	if s.DataFP.dirty {
+		if err := s.DataFP.Sync(); err != nil {
+			return probe.NewError(err)
+		}
+		s.DataFP.dirty = false
 	}
 
 	qs, err := quick.New(s.Header)
@@ -251,8 +264,10 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	}
 
 	var e error
-	s.DataFP, e = os.Open(sessionDataFile)
-	fatalIf(probe.NewError(e), "Unable to open session data file ‘"+sessionDataFile+"’.")
+	dataFile, e := os.Open(sessionDataFile)
+	fatalIf(probe.NewError(e), "Unable to open session data file \""+sessionDataFile+"\".")
+
+	s.DataFP = &sessionDataFP{false, dataFile}
 
 	return s, nil
 }

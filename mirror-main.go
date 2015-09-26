@@ -252,13 +252,14 @@ func doMirrorCmdSession(session *sessionV2) {
 				}
 				if sURLs.Error == nil {
 					session.Header.LastCopied = sURLs.SourceContent.Name
+					session.Save()
 				} else {
 					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
 					if !globalQuietFlag && !globalJSONFlag {
 						console.Printf("%c[2K\n", 27)
 						console.Printf("%c[A", 27)
 					}
-					errorIf(sURLs.Error.Trace(), "Failed to mirror.")
+					fatalIf(sURLs.Error.Trace(), "Failed to mirror.")
 				}
 			case <-trapCh: // Receive interrupt notification.
 				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
