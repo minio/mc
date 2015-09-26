@@ -128,7 +128,7 @@ func newSessionV2() *sessionV2 {
 
 // String printer for SessionV2
 func (s sessionV2) Info() {
-	console.Infoln("Session terminated. To resume session ‘mc session resume " + s.SessionID + "’")
+	console.Infoln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
 }
 
 // HasData provides true if this is a session resume, false otherwise.

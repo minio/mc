@@ -261,7 +261,10 @@ func doCopyCmdSession(session *sessionV2) {
 						console.Printf("%c[2K\n", 27)
 						console.Printf("%c[A", 27)
 					}
-					fatalIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
+					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
+					session.Close()
+					session.Info()
+					os.Exit(0)
 				}
 			case <-trapCh: // Receive interrupt notification.
 				// Print in new line and adjust to top so that we don't print over the ongoing progress bar

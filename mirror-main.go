@@ -259,7 +259,10 @@ func doMirrorCmdSession(session *sessionV2) {
 						console.Printf("%c[2K\n", 27)
 						console.Printf("%c[A", 27)
 					}
-					fatalIf(sURLs.Error.Trace(), "Failed to mirror.")
+					errorIf(sURLs.Error.Trace(), "Failed to mirror.")
+					session.Close()
+					session.Info()
+					os.Exit(0)
 				}
 			case <-trapCh: // Receive interrupt notification.
 				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
