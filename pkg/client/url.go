@@ -46,12 +46,15 @@ const (
 // Maybe rawurl is of the form scheme:path. (Scheme must be [a-zA-Z][a-zA-Z0-9+-.]*)
 // If so, return scheme, path; else return "", rawurl.
 func getScheme(rawurl string) (scheme, path string) {
-	scheme, uri := splitSpecial(rawurl, ":", true)
-	// ignore numbers in scheme
-	validScheme := regexp.MustCompile("^[a-zA-Z]+$")
-	if uri != "" {
-		if validScheme.MatchString(scheme) {
-			return scheme, uri
+	urlSplits := strings.Split(rawurl, "://")
+	if len(urlSplits) == 2 {
+		scheme, uri := urlSplits[0], "//"+urlSplits[1]
+		// ignore numbers in scheme
+		validScheme := regexp.MustCompile("^[a-zA-Z]+$")
+		if uri != "" {
+			if validScheme.MatchString(scheme) {
+				return scheme, uri
+			}
 		}
 	}
 	return "", rawurl
