@@ -70,6 +70,8 @@ Minio server is hosted at ``https://play.minio.io:9000`` for public use. This se
 
 Update AccessKeyID and SecretAccessKey fields in your ``~/.mc/config.json`` configuration file by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
 
-## Contribute
+## Contribute to Minio Client
+Please follow Minio [Contributor's Guide](./CONTRIBUTING.md)
 
-[Contribute to mc](./CONTRIBUTING.md)
+### Jobs
+If you think in Lisp or Haskell and hack in go, you would blend right in. Send your github link to callhome@minio.io.
