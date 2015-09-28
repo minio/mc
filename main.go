@@ -52,10 +52,10 @@ func checkConfig() {
 }
 
 func migrate() {
-	// Migrate config files if any.
-	migrateConfig()
 	// Fix broken config files if any.
 	fixConfig()
+	// Migrate config files if any.
+	migrateConfig()
 	// Migrate session files if any.
 	migrateSession()
 	// Migrate shared urls if any.

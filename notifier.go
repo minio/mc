@@ -29,8 +29,6 @@ import (
 
 // colorizeUpdateMessage - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
 func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
-	// TODO - make this configurable
-	//
 	// initialize coloring
 	blue := color.New(color.FgBlue, color.Bold).SprintFunc()
 	yellow := color.New(color.FgYellow, color.Bold).SprintfFunc()
