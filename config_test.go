@@ -23,6 +23,14 @@ import (
 	. "gopkg.in/check.v1"
 )
 
+func (s *TestSuite) TestConfigVersionContext(c *C) {
+	console.IsExited = false
+	err := app.Run([]string{os.Args[0], "config", "version"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+	console.IsExited = false
+}
+
 func (s *TestSuite) TestConfigAliasContext(c *C) {
 	console.IsExited = false
 

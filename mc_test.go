@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"net/http/httptest"
 
@@ -273,6 +274,47 @@ func (s *TestSuite) TestEmptyExpansions(c *C) {
 
 	url = getAliasURL("hello", nil)
 	c.Assert(url, Equals, "hello")
+}
+
+func (s *TestSuite) TestHumanizedTime(c *C) {
+	hTime := timeDurationToHumanizedTime(time.Duration(10) * time.Second)
+	c.Assert(hTime.Minutes, Equals, int64(0))
+	c.Assert(hTime.Hours, Equals, int64(0))
+	c.Assert(hTime.Days, Equals, int64(0))
+
+	hTime = timeDurationToHumanizedTime(time.Duration(10) * time.Minute)
+	c.Assert(hTime.Hours, Equals, int64(0))
+	c.Assert(hTime.Days, Equals, int64(0))
+
+	hTime = timeDurationToHumanizedTime(time.Duration(10) * time.Hour)
+	c.Assert(hTime.Days, Equals, int64(0))
+
+	hTime = timeDurationToHumanizedTime(time.Duration(24) * time.Hour)
+	c.Assert(hTime.Days, Not(Equals), int64(0))
+}
+
+func (s *TestSuite) TestVersionContext(c *C) {
+	console.IsExited = false
+
+	err := app.Run([]string{os.Args[0], "version"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
+}
+
+func (s *TestSuite) TestCommonPrefix(c *C) {
+	c.Assert(commonPrefix("/usr", "/usr/local"), Equals, "/usr")
+	c.Assert(commonPrefix("/uabbf", "/ursfad/ccc"), Equals, "/u")
+	c.Assert(commonPrefix("/usr/local/lib", "/usr/local/test"), Equals, "/usr/local/")
+}
+
+func (s *TestSuite) TestVersions(c *C) {
+	v1 := newVersion("1.5.1")
+	v2 := newVersion("1.5.0")
+	c.Assert(v2.LessThan(v1), Equals, true)
+	c.Assert(v1.LessThan(v2), Equals, false)
 }
 
 func (s *TestSuite) TestApp(c *C) {
