@@ -80,7 +80,7 @@ type sessionDataFP struct {
 
 func (file *sessionDataFP) Write(p []byte) (int, error) {
 	file.dirty = true
-	return file.File.Write(p)
+	return file.Write(p)
 }
 
 // String colorized session message
