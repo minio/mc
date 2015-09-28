@@ -28,6 +28,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
@@ -259,7 +260,21 @@ func doMirrorCmdSession(session *sessionV2) {
 						console.Printf("%c[2K\n", 27)
 						console.Printf("%c[A", 27)
 					}
-					errorIf(sURLs.Error.Trace(), "Failed to mirror.")
+					switch sURLs.Error.ToGoError().(type) {
+					// handle this specifically for filesystem
+					case client.ISBrokenSymlink:
+						errorIf(sURLs.Error.Trace(), "Failed to mirror.")
+						continue
+					}
+					if os.IsNotExist(sURLs.Error.ToGoError()) || os.IsPermission(sURLs.Error.ToGoError()) {
+						if sURLs.SourceContent != nil {
+							if sURLs.SourceContent.Type.IsDir() && (sURLs.SourceContent.Type&os.ModeSymlink == os.ModeSymlink) {
+								continue
+							}
+						}
+						errorIf(sURLs.Error.Trace(), "Failed to mirror.")
+						continue
+					}
 					session.Close()
 					session.Info()
 					os.Exit(0)
