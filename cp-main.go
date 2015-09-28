@@ -28,6 +28,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
@@ -261,7 +262,21 @@ func doCopyCmdSession(session *sessionV2) {
 						console.Printf("%c[2K\n", 27)
 						console.Printf("%c[A", 27)
 					}
-					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
+					switch cpURLs.Error.ToGoError().(type) {
+					// handle this specifically for filesystem
+					case client.ISBrokenSymlink:
+						errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
+						continue
+					}
+					if os.IsNotExist(cpURLs.Error.ToGoError()) || os.IsPermission(cpURLs.Error.ToGoError()) {
+						if cpURLs.SourceContent != nil {
+							if cpURLs.SourceContent.Type.IsDir() && (cpURLs.SourceContent.Type&os.ModeSymlink == os.ModeSymlink) {
+								continue
+							}
+						}
+						errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
+						continue
+					}
 					session.Close()
 					session.Info()
 					os.Exit(0)
