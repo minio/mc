@@ -223,6 +223,7 @@ func fixConfig() {
 	fixConfigV3()
 }
 
+// Migrate from config version ‘1.0’ to ‘1.0.1’
 func migrateConfigV1ToV101() {
 	if !isMcConfigExists() {
 		return
@@ -269,6 +270,7 @@ func migrateConfigV1ToV101() {
 	}
 }
 
+// Migrate from config ‘1.0.1’ to ‘2’
 func migrateConfigV101ToV2() {
 	if !isMcConfigExists() {
 		return
@@ -291,6 +293,7 @@ func migrateConfigV101ToV2() {
 	}
 }
 
+// Migrate from config ‘2’ to ‘3’
 func migrateConfigV2ToV3() {
 	if !isMcConfigExists() {
 		return
@@ -327,6 +330,7 @@ func migrateConfigV2ToV3() {
 	}
 }
 
+// Migrate from config version ‘3’ to ‘4’
 func migrateConfigV3ToV4() {
 	if !isMcConfigExists() {
 		return
@@ -366,6 +370,7 @@ func migrateConfigV3ToV4() {
 	}
 }
 
+// Migrate config version ‘4’ to ‘5’
 func migrateConfigV4ToV5() {
 	if !isMcConfigExists() {
 		return
@@ -397,6 +402,7 @@ func migrateConfigV4ToV5() {
 	}
 }
 
+// Fix config version ‘3’, by removing broken struct tags
 func fixConfigV3() {
 	if !isMcConfigExists() {
 		return

@@ -31,7 +31,7 @@ import (
 )
 
 type fsClient struct {
-	path string
+	Path string
 }
 
 // New - instantiate a new fs client
@@ -39,19 +39,21 @@ func New(path string) (client.Client, *probe.Error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, probe.NewError(client.EmptyPath{})
 	}
-	return &fsClient{path: normalizePath(path)}, nil
+	return &fsClient{
+		Path: normalizePath(path),
+	}, nil
 }
 
 // URL get url
 func (f *fsClient) URL() *client.URL {
-	return client.NewURL(f.path)
+	return client.NewURL(f.Path)
 }
 
 /// Object operations
 
 // fsStat - wrapper function to get file stat
 func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
-	fpath := f.path
+	fpath := f.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
 	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
@@ -100,8 +102,8 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 
 // PutObject - create a new file
 func (f *fsClient) PutObject(size int64, data io.Reader) *probe.Error {
-	objectDir, _ := filepath.Split(f.path)
-	objectPath := f.path
+	objectDir, _ := filepath.Split(f.Path)
+	objectPath := f.Path
 	if objectDir != "" {
 		if err := os.MkdirAll(objectDir, 0700); err != nil {
 			return probe.NewError(err)
@@ -132,13 +134,13 @@ func (f *fsClient) PutObject(size int64, data io.Reader) *probe.Error {
 
 // get - download an object from bucket
 func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
-	body, err := os.Open(f.path)
+	body, err := os.Open(f.Path)
 	if err != nil {
 		return nil, 0, probe.NewError(err)
 	}
 	content, perr := f.getFSMetadata()
 	if perr != nil {
-		return nil, content.Size, perr.Trace(f.path)
+		return nil, content.Size, perr.Trace(f.Path)
 	}
 	return body, content.Size, nil
 }
@@ -155,7 +157,7 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 		return nil, 0, probe.NewError(client.InvalidRange{Offset: offset})
 	}
 
-	tmppath := f.path
+	tmppath := f.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
 	if strings.HasSuffix(tmppath, string(f.URL().Separator)) {
@@ -173,7 +175,7 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 	if offset == 0 && length == 0 {
 		return f.get()
 	}
-	body, err := os.Open(f.path)
+	body, err := os.Open(f.Path)
 	if err != nil {
 		return nil, length, probe.NewError(err)
 
@@ -200,7 +202,7 @@ func (f *fsClient) List(recursive bool) <-chan client.ContentOnChannel {
 func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 
-	fpath := f.path
+	fpath := f.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
 	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
@@ -211,7 +213,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     err.Trace(f.path),
+			Err:     err.Trace(f.Path),
 		}
 		return
 	}
@@ -307,7 +309,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		}
 	default:
 		content := &client.Content{
-			Name: f.path,
+			Name: f.Path,
 			Time: fst.ModTime(),
 			Size: fst.Size(),
 			Type: fst.Mode(),
@@ -321,7 +323,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 
 func (f *fsClient) delimited(fp string) string {
 	var stripPrefix string
-	stripPrefix = f.path[:strings.LastIndex(f.path, string(f.URL().Separator))+1]
+	stripPrefix = f.Path[:strings.LastIndex(f.Path, string(f.URL().Separator))+1]
 	return strings.TrimPrefix(fp, stripPrefix)
 }
 
@@ -329,7 +331,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	defer close(contentCh)
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		// fp also sends back itself with visitFS, ignore it we don't need it
-		if fp == f.path {
+		if fp == f.Path {
 			return nil
 		}
 		if err != nil {
@@ -431,7 +433,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		}
 		return nil
 	}
-	err := filepath.Walk(f.path, visitFS)
+	err := filepath.Walk(f.Path, visitFS)
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
@@ -442,7 +444,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 
 // MakeBucket - create a new bucket
 func (f *fsClient) MakeBucket() *probe.Error {
-	err := os.MkdirAll(f.path, 0775)
+	err := os.MkdirAll(f.Path, 0775)
 	if err != nil {
 		return probe.NewError(err)
 	}
@@ -466,7 +468,7 @@ func (f *fsClient) getFSMetadata() (content *client.Content, err *probe.Error) {
 		return nil, err.Trace()
 	}
 	content = new(client.Content)
-	content.Name = f.path
+	content.Name = f.Path
 	content.Size = st.Size()
 	content.Time = st.ModTime()
 	content.Type = st.Mode()
