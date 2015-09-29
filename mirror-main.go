@@ -142,7 +142,7 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 
 // doMirrorFake - Perform a fake mirror to update the progress bar appropriately.
 func doMirrorFake(sURLs mirrorURLs, bar *barSend) {
-	if !globalDebugFlag || !globalJSONFlag {
+	if !globalDebugFlag && !globalJSONFlag {
 		bar.Progress(sURLs.SourceContent.Size)
 	}
 }

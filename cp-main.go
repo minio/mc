@@ -104,7 +104,7 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 
 	reader, length, err := getSource(cpURLs.SourceContent.Name)
 	if err != nil {
-		if !globalQuietFlag || !globalJSONFlag {
+		if !globalQuietFlag && !globalJSONFlag {
 			bar.ErrorGet(length)
 		}
 		cpURLs.Error = err.Trace()
@@ -126,9 +126,8 @@ func doCopy(cpURLs copyURLs, bar *barSend, cpQueue <-chan bool, wg *sync.WaitGro
 	}
 	defer newReader.Close()
 
-	err = putTarget(cpURLs.TargetContent.Name, length, newReader)
-	if err != nil {
-		if !globalQuietFlag || !globalJSONFlag {
+	if err := putTarget(cpURLs.TargetContent.Name, length, newReader); err != nil {
+		if !globalQuietFlag && !globalJSONFlag {
 			bar.ErrorPut(length)
 		}
 		cpURLs.Error = err.Trace()
