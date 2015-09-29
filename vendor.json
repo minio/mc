@@ -55,15 +55,15 @@
 			"canonical": "github.com/minio/minio/pkg/probe",
 			"comment": "",
 			"local": "vendor/github.com/minio/minio/pkg/probe",
-			"revision": "2f260adc69701f89a38fc8a27cde4b868dfe9ddf",
-			"revisionTime": "2015-08-24T03:43:13-07:00"
+			"revision": "daa089fb06b05ad7a9ce945e51362d349ffaf662",
+			"revisionTime": "2015-09-29T10:17:19-07:00"
 		},
 		{
 			"canonical": "github.com/minio/minio/pkg/quick",
 			"comment": "",
 			"local": "vendor/github.com/minio/minio/pkg/quick",
-			"revision": "4d1f38d28cabcfa321e9d88acef67e16e7bafb2a",
-			"revisionTime": "2015-08-22T18:37:56-07:00"
+			"revision": "daa089fb06b05ad7a9ce945e51362d349ffaf662",
+			"revisionTime": "2015-09-29T10:17:19-07:00"
 		},
 		{
 			"canonical": "github.com/minio/pb",
