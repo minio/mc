@@ -199,10 +199,14 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 
 // url2BucketAndObject gives bucketName and objectName from URL path
 func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
-	// convert any virtual host styled requests
 	path := c.hostURL.Path
+	// Convert any virtual host styled requests
+	//
+	// For the time being this check is introduced for S3,
+	// if you have custom virtual styled hosts please. list them below
 	match, _ := filepath.Match("*.s3*.amazonaws.com", c.hostURL.Host)
-	if match {
+	switch {
+	case match == true:
 		hostSplits := strings.SplitN(c.hostURL.Host, ".", 2)
 		path = string(c.hostURL.Separator) + hostSplits[0] + c.hostURL.Path
 	}
