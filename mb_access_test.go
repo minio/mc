@@ -32,6 +32,10 @@ func (s *TestSuite) TestMbAndAccess(c *C) {
 
 	perr = doSetAccess(server.URL+"/bucket", "invalid")
 	c.Assert(perr, Not(IsNil))
+
+	perm, perr := doGetAccess(server.URL + "/bucket")
+	c.Assert(perr, IsNil)
+	c.Assert(perm.isPrivate(), Equals, true)
 }
 
 func (s *TestSuite) TestMBContext(c *C) {
@@ -84,6 +88,18 @@ func (s *TestSuite) TestAccessContext(c *C) {
 	console.IsExited = false
 
 	err = app.Run([]string{os.Args[0], "access", "set", "invalid", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+	// reset back
+	console.IsExited = false
+
+	err = app.Run([]string{os.Args[0], "access", "get", server.URL + "/bucket"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+	// reset back
+	console.IsExited = false
+
+	err = app.Run([]string{os.Args[0], "access", "get", server.URL + "/invalid"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 	// reset back
