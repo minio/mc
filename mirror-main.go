@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"os"
 	"runtime"
 	"sync"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
@@ -256,33 +256,26 @@ func doMirrorCmdSession(session *sessionV2) {
 					if !globalQuietFlag && !globalJSONFlag {
 						console.Eraseline()
 					}
+					// all the cases which are handled where session should be saved are contained in the following
+					// switch case, we shouldn't be saving sessions for all errors since some errors might need to be
+					// reported to user properly.
+					//
+					// All other critical cases should be handled properly gracefully
+					// handle more errors and save the session.
+					errorIf(sURLs.Error.Trace(), "Failed to mirror.")
 					switch sURLs.Error.ToGoError().(type) {
-					// handle this specifically for filesystem
-					case client.ISBrokenSymlink:
-						errorIf(sURLs.Error.Trace(), "Failed to mirror.")
-						continue
+					case *net.OpError:
+						gracefulSessionSave(session)
+					case net.Error:
+						gracefulSessionSave(session)
 					}
-					if os.IsNotExist(sURLs.Error.ToGoError()) || os.IsPermission(sURLs.Error.ToGoError()) {
-						if sURLs.SourceContent != nil {
-							if sURLs.SourceContent.Type.IsDir() && (sURLs.SourceContent.Type&os.ModeSymlink == os.ModeSymlink) {
-								continue
-							}
-						}
-						errorIf(sURLs.Error.Trace(), "Failed to mirror.")
-						continue
-					}
-					session.Close()
-					session.Info()
-					os.Exit(0)
 				}
 			case <-trapCh: // Receive interrupt notification.
 				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
 				if !globalQuietFlag && !globalJSONFlag {
 					console.Eraseline()
 				}
-				session.Close()
-				session.Info()
-				os.Exit(0)
+				gracefulSessionSave(session)
 			}
 		}
 	}()
