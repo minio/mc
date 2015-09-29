@@ -200,6 +200,12 @@ var (
 		}
 		return fmt.Sprint(data)
 	}
+
+	// Eraseline Print in new line and adjust to top so that we don't print over the ongoing progress bar
+	Eraseline = func() {
+		consolePrintf("Print", Theme["Print"], "%c[2K\n", 27)
+		consolePrintf("Print", Theme["Print"], "%c[A", 27)
+	}
 )
 
 // wrap around standard fmt functions

@@ -270,8 +270,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 	wg.Wait()
 	doneCh <- struct{}{}
 	if !globalQuietFlag && !globalJSONFlag {
-		console.Printf("%c[2K\n", 27)
-		console.Printf("%c[A", 27)
+		console.Eraseline()
 	}
 
 	matchNameCh := make(chan string, 10000)

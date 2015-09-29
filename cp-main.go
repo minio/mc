@@ -178,8 +178,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 			if cpURLs.Error != nil {
 				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
 				if !globalQuietFlag && !globalJSONFlag {
-					console.Printf("%c[2K\n", 27)
-					console.Printf("%c[A", 27)
+					console.Eraseline()
 				}
 				errorIf(cpURLs.Error.Trace(), "Unable to prepare URL for copying.")
 				break
@@ -187,7 +186,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 
 			jsonData, err := json.Marshal(cpURLs)
 			if err != nil {
-				session.Close()
+				session.Delete()
 				fatalIf(probe.NewError(err), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
@@ -200,11 +199,9 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 		case <-trapCh:
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
 			if !globalQuietFlag && !globalJSONFlag {
-				console.Printf("%c[2K\n", 27)
-				console.Printf("%c[A", 27)
+				console.Eraseline()
 			}
-			session.Close() // If we are interrupted during the URL scanning, we drop the session.
-			session.Delete()
+			session.Delete() // If we are interrupted during the URL scanning, we drop the session.
 			os.Exit(0)
 		}
 	}
@@ -259,8 +256,7 @@ func doCopyCmdSession(session *sessionV2) {
 				} else {
 					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
 					if !globalQuietFlag && !globalJSONFlag {
-						console.Printf("%c[2K\n", 27)
-						console.Printf("%c[A", 27)
+						console.Eraseline()
 					}
 					switch cpURLs.Error.ToGoError().(type) {
 					// handle this specifically for filesystem
@@ -282,10 +278,8 @@ func doCopyCmdSession(session *sessionV2) {
 					os.Exit(0)
 				}
 			case <-trapCh: // Receive interrupt notification.
-				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
 				if !globalQuietFlag && !globalJSONFlag {
-					console.Printf("%c[2K\n", 27)
-					console.Printf("%c[A", 27)
+					console.Eraseline()
 				}
 				session.Close()
 				session.Info()
@@ -336,7 +330,6 @@ func mainCopy(ctx *cli.Context) {
 	session.Header.CommandType = "cp"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {
-		session.Close()
 		session.Delete()
 		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
@@ -345,12 +338,10 @@ func mainCopy(ctx *cli.Context) {
 	var err *probe.Error
 	session.Header.CommandArgs, err = args2URLs(ctx.Args())
 	if err != nil {
-		session.Close()
 		session.Delete()
 		fatalIf(err.Trace(), "One or more unknown URL types passed.")
 	}
 
 	doCopyCmdSession(session)
-	session.Close()
 	session.Delete()
 }

@@ -77,8 +77,12 @@ func checkCopySyntax(ctx *cli.Context) {
 	{
 		url := client.NewURL(tgtURL)
 		if url.Host != "" {
+			// This check is for type URL.
 			if url.Path == string(url.Separator) {
 				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+			}
+			if err := bucketExists(tgtURL); err != nil {
+				fatalIf(err.Trace(), fmt.Sprintf("Unable to stat target ‘%s’.", tgtURL))
 			}
 		}
 	}
