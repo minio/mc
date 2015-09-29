@@ -218,7 +218,7 @@ func doMirrorCmdSession(session *sessionV2) {
 	// Set up progress bar.
 	var bar barSend
 	if !globalQuietFlag && !globalJSONFlag {
-		bar = newCpBar()
+		bar = newProgressBar()
 		bar.Extend(session.Header.TotalBytes)
 	}
 
@@ -321,6 +321,7 @@ func mainMirror(ctx *cli.Context) {
 
 	console.SetCustomTheme(map[string]*color.Color{
 		"Mirror": color.New(color.FgGreen, color.Bold),
+		"Bar":    color.New(color.FgGreen, color.Bold),
 	})
 
 	var e error

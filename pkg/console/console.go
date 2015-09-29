@@ -47,7 +47,6 @@ var Theme = map[string]*color.Color{
 	"Fatal":  color.New(color.FgRed, color.Italic, color.Bold),
 	"Error":  color.New(color.FgYellow, color.Italic),
 	"Info":   color.New(color.FgGreen, color.Bold),
-	"Bar":    color.New(color.FgGreen, color.Bold),
 	"Print":  color.New(),
 	"PrintC": color.New(color.FgGreen, color.Bold),
 }

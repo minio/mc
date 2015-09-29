@@ -218,7 +218,7 @@ func doCopyCmdSession(session *sessionV2) {
 
 	var bar barSend
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
-		bar = newCpBar()
+		bar = newProgressBar()
 		bar.Extend(session.Header.TotalBytes)
 	}
 
@@ -321,6 +321,7 @@ func mainCopy(ctx *cli.Context) {
 
 	console.SetCustomTheme(map[string]*color.Color{
 		"Copy": color.New(color.FgGreen, color.Bold),
+		"Bar":  color.New(color.FgGreen, color.Bold),
 	})
 
 	session := newSessionV2()

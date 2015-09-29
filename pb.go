@@ -145,8 +145,8 @@ func getFixedWidth(width, percent int) int {
 	return width * percent / 100
 }
 
-// newCpBar - instantiate a pbBar.
-func newCpBar() barSend {
+// newProgressBar - instantiate a pbBar.
+func newProgressBar() barSend {
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
 	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
