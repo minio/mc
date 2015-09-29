@@ -174,8 +174,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 			if sURLs.Error != nil {
 				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
 				if !globalQuietFlag && !globalJSONFlag {
-					console.Printf("%c[2K\n", 27)
-					console.Printf("%c[A", 27)
+					console.Eraseline()
 				}
 				errorIf(sURLs.Error.Trace(), "Unable to prepare URLs for mirroring.")
 				break
@@ -185,7 +184,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 			}
 			jsonData, err := json.Marshal(sURLs)
 			if err != nil {
-				session.Close()
+				session.Delete()
 				fatalIf(probe.NewError(err), "Unable to marshal URLs into JSON.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
@@ -198,11 +197,9 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 		case <-trapCh:
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
 			if !globalQuietFlag && !globalJSONFlag {
-				console.Printf("%c[2K\n", 27)
-				console.Printf("%c[A", 27)
+				console.Eraseline()
 			}
-			session.Close() // If we are interrupted during the URL scanning, we drop the session.
-			session.Delete()
+			session.Delete() // If we are interrupted during the URL scanning, we drop the session.
 			os.Exit(0)
 		}
 	}
@@ -257,8 +254,7 @@ func doMirrorCmdSession(session *sessionV2) {
 				} else {
 					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
 					if !globalQuietFlag && !globalJSONFlag {
-						console.Printf("%c[2K\n", 27)
-						console.Printf("%c[A", 27)
+						console.Eraseline()
 					}
 					switch sURLs.Error.ToGoError().(type) {
 					// handle this specifically for filesystem
@@ -282,8 +278,7 @@ func doMirrorCmdSession(session *sessionV2) {
 			case <-trapCh: // Receive interrupt notification.
 				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
 				if !globalQuietFlag && !globalJSONFlag {
-					console.Printf("%c[2K\n", 27)
-					console.Printf("%c[A", 27)
+					console.Eraseline()
 				}
 				session.Close()
 				session.Info()
@@ -333,7 +328,6 @@ func mainMirror(ctx *cli.Context) {
 	session.Header.CommandType = "mirror"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {
-		session.Close()
 		session.Delete()
 		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
@@ -342,12 +336,10 @@ func mainMirror(ctx *cli.Context) {
 	var err *probe.Error
 	session.Header.CommandArgs, err = args2URLs(ctx.Args())
 	if err != nil {
-		session.Close()
 		session.Delete()
 		fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("One or more unknown argument types found in ‘%s’.", ctx.Args()))
 	}
 
 	doMirrorCmdSession(session)
-	session.Close()
 	session.Delete()
 }
