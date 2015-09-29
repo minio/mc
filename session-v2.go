@@ -131,6 +131,12 @@ func (s sessionV2) Info() {
 	console.Infoln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
 }
 
+func gracefulSessionSave(session *sessionV2) {
+	session.Close()
+	session.Info()
+	os.Exit(0)
+}
+
 // HasData provides true if this is a session resume, false otherwise.
 func (s sessionV2) HasData() bool {
 	if s.Header.LastCopied == "" {

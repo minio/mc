@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"os"
 	"runtime"
 	"sync"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
@@ -257,32 +257,25 @@ func doCopyCmdSession(session *sessionV2) {
 					if !globalQuietFlag && !globalJSONFlag {
 						console.Eraseline()
 					}
+					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
+					// all the cases which are handled where session should be saved are contained in the following
+					// switch case, we shouldn't be saving sessions for all errors since some errors might need to be
+					// reported to user properly.
+					//
+					// All other critical cases should be handled properly gracefully
+					// handle more errors and save the session.
 					switch cpURLs.Error.ToGoError().(type) {
-					// handle this specifically for filesystem
-					case client.ISBrokenSymlink:
-						errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
-						continue
+					case *net.OpError:
+						gracefulSessionSave(session)
+					case net.Error:
+						gracefulSessionSave(session)
 					}
-					if os.IsNotExist(cpURLs.Error.ToGoError()) || os.IsPermission(cpURLs.Error.ToGoError()) {
-						if cpURLs.SourceContent != nil {
-							if cpURLs.SourceContent.Type.IsDir() && (cpURLs.SourceContent.Type&os.ModeSymlink == os.ModeSymlink) {
-								continue
-							}
-						}
-						errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
-						continue
-					}
-					session.Close()
-					session.Info()
-					os.Exit(0)
 				}
 			case <-trapCh: // Receive interrupt notification.
 				if !globalQuietFlag && !globalJSONFlag {
 					console.Eraseline()
 				}
-				session.Close()
-				session.Info()
-				os.Exit(0)
+				gracefulSessionSave(session)
 			}
 		}
 	}()
