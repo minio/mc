@@ -114,7 +114,7 @@ func newSessionV2() *sessionV2 {
 	s.Header.CommandArgs = nil
 	s.Header.When = time.Now().UTC()
 	s.mutex = new(sync.Mutex)
-	s.SessionID = newSID(8)
+	s.SessionID = randomID(8)
 
 	sessionDataFile, perr := getSessionDataFile(s.SessionID)
 	fatalIf(perr.Trace(s.SessionID), "Unable to create session data file \""+sessionDataFile+"\".")

@@ -26,7 +26,7 @@ import (
 
 func (s *TestSuite) TestValidSessionID(c *C) {
 	validSid := regexp.MustCompile("^[a-zA-Z]+$")
-	sid := newSID(8)
+	sid := randomID(8)
 	c.Assert(len(sid), Equals, 8)
 	c.Assert(validSid.MatchString(sid), Equals, true)
 }
