@@ -20,7 +20,7 @@
   version	Print version.
 ```
 
-## Install [![Build Status](https://api.travis-ci.org/minio/mc.svg?branch=master)](https://travis-ci.org/minio/mc)
+## Install [![Build Status](https://api.travis-ci.org/minio/mc.svg?branch=master)](https://travis-ci.org/minio/mc) [![Build status](https://ci.appveyor.com/api/projects/status/3ng8bef7b3e1v763?svg=true)](https://ci.appveyor.com/project/harshavardhana/mc)
 
 #### GNU/Linux
 

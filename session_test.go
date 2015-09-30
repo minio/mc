@@ -97,6 +97,8 @@ func (s *TestSuite) TestSessionContext(c *C) {
 	perr = session.Save()
 	c.Assert(perr, IsNil)
 
+	c.Assert(session.Close(), IsNil)
+
 	err = app.Run([]string{os.Args[0], "session", "clear", session.SessionID})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)

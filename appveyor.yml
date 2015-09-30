@@ -1,0 +1,45 @@
+# version format
+version: "{build}"
+
+# Operating system (build VM template)
+os: Windows Server 2012 R2
+
+clone_folder: c:\gopath\src\github.com\minio\mc
+
+# environment variables
+environment:
+  GOPATH: c:\gopath
+  GO15VENDOREXPERIMENT: 1
+
+# scripts that run after cloning repository
+install:
+  - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
+  - set GOVENDOR15EXPERIMENT=1
+  - rmdir c:\go /s /q
+  - appveyor DownloadFile https://storage.googleapis.com/golang/go1.5.1.windows-amd64.msi
+  - msiexec /i go1.5.1.windows-amd64.msi /q
+  - go version
+  - go env
+  - go get -u github.com/golang/lint/golint
+  - go get -u golang.org/x/tools/cmd/vet
+  - go get -u github.com/fzipp/gocyclo
+  - go get -u github.com/remyoudompheng/go-misc/deadcode
+
+# to run your custom scripts instead of automatic MSBuild
+build_script:
+  - set GOVENDOR15EXPERIMENT=1
+  - go tool vet -all ./pkg
+  - go tool vet -shadow=true ./pkg
+  - gofmt -s -l pkg
+  - golint .
+  - golint github.com/minio/mc/pkg...
+  - gocyclo -over 30 .
+  - deadcode
+  - go test
+  - go test -race
+
+# to disable automatic tests
+test: off
+
+# to disable deployment
+deploy: off
