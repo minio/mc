@@ -314,7 +314,6 @@ func mainMirror(ctx *cli.Context) {
 
 	console.SetCustomTheme(map[string]*color.Color{
 		"Mirror": color.New(color.FgGreen, color.Bold),
-		"Bar":    color.New(color.FgGreen, color.Bold),
 	})
 
 	var e error

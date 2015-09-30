@@ -314,7 +314,6 @@ func mainCopy(ctx *cli.Context) {
 
 	console.SetCustomTheme(map[string]*color.Color{
 		"Copy": color.New(color.FgGreen, color.Bold),
-		"Bar":  color.New(color.FgGreen, color.Bold),
 	})
 
 	session := newSessionV2()
