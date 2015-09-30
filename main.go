@@ -32,15 +32,13 @@ import (
 
 // Check for the user id erarly on and gracefully report.
 func checkUser() {
-	u, e := user.Current()
+	_, e := user.Current()
 	fatalIf(probe.NewError(e), "Unable to determine current user.")
 
-	var uid int
-	uid, e = strconv.Atoi(u.Uid)
-	fatalIf(probe.NewError(e), "Unable to convert user id to an integer.")
-
-	if uid == 0 {
-		fatalIf(errDummy().Trace(), "Please run as a normal user, running as root is disallowed")
+	if runtime.GOOS != "windows" {
+		if os.Geteuid() == 0 {
+			fatalIf(errDummy().Trace(), "Please run as a normal user, running as root is disallowed")
+		}
 	}
 }
 
