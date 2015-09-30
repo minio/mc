@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/fatih/color"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/pb"
 	"github.com/olekukonko/ts"
@@ -147,6 +148,9 @@ func getFixedWidth(width, percent int) int {
 
 // newProgressBar - instantiate a pbBar.
 func newProgressBar() barSend {
+	console.SetCustomTheme(map[string]*color.Color{
+		"Bar": color.New(color.FgGreen, color.Bold),
+	})
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
 	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
