@@ -18,14 +18,12 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
+	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/probe"
-	"github.com/tchap/go-patricia/patricia"
 )
 
 type mirrorURLs struct {
@@ -99,71 +97,74 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
+
 	go func() {
 		defer close(mirrorURLsCh)
-		sourceTrie := patricia.NewTrie()
-		targetTries := make([]*patricia.Trie, len(targetClnts))
-		wg := new(sync.WaitGroup)
+		id := newRandomID(8)
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for sourceContentCh := range sourceClnt.List(true) {
-				if sourceContentCh.Err != nil {
-					mirrorURLsCh <- mirrorURLs{Error: sourceContentCh.Err.Trace()}
-					return
-				}
-				if sourceContentCh.Content.Type.IsRegular() {
-					sourceTrie.Insert(patricia.Prefix(sourceContentCh.Content.Name), sourceContentCh.Content.Size)
-				}
-			}
-		}()
+		sourceSortedList := sortedList{}
+		targetSortedList := make([]*sortedList, len(targetClnts))
 
-		for i, targetClnt := range targetClnts {
-			wg.Add(1)
-			go func(i int, targetClnt client.Client) {
-				defer wg.Done()
-				targetTrie := patricia.NewTrie()
-				for targetContentCh := range targetClnt.List(true) {
-					if targetContentCh.Err != nil {
-						mirrorURLsCh <- mirrorURLs{Error: targetContentCh.Err.Trace()}
-						continue
-					}
-					if targetContentCh.Content.Type.IsRegular() {
-						targetTrie.Insert(patricia.Prefix(targetContentCh.Content.Name), struct{}{})
-					}
-				}
-				targetTries[i] = targetTrie
-			}(i, targetClnt)
+		surldelimited := sourceClnt.URL().String()
+		if strings.HasSuffix(surldelimited, "/") == false {
+			surldelimited = surldelimited + "/"
 		}
-		wg.Wait()
-
-		matchNameCh := make(chan string, 10000)
-		go func(matchNameCh chan<- string) {
-			itemFunc := func(prefix patricia.Prefix, item patricia.Item) error {
-				matchNameCh <- string(prefix)
-				return nil
+		err := sourceSortedList.Create(sourceClnt, id+".src")
+		if err != nil {
+			mirrorURLsCh <- mirrorURLs{
+				Error: err.Trace(),
 			}
-			sourceTrie.Visit(itemFunc)
-			defer close(matchNameCh)
-		}(matchNameCh)
-		for matchName := range matchNameCh {
-			sourceContent := new(client.Content)
-			var targetContents []*client.Content
-			for i, targetTrie := range targetTries {
-				if !targetTrie.Match(patricia.Prefix(matchName)) {
-					sourceURLDelimited := sourceClnt.URL().String()[:strings.LastIndex(sourceClnt.URL().String(),
-						string(sourceClnt.URL().Separator))+1]
-					newTargetURLParse := *targetClnts[i].URL()
-					newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, matchName)
-					sourceContent.Size = sourceTrie.Get(patricia.Prefix(matchName)).(int64)
-					sourceContent.Name = sourceURLDelimited + matchName
-					targetContents = append(targetContents, &client.Content{Name: newTargetURLParse.String()})
+			return
+		}
+
+		turldelimited := make([]string, len(targetClnts))
+		for i := range targetClnts {
+			turldelimited[i] = targetClnts[i].URL().String()
+			if strings.HasSuffix(turldelimited[i], "/") == false {
+				turldelimited[i] = turldelimited[i] + "/"
+			}
+			targetSortedList[i] = &sortedList{}
+			err := targetSortedList[i].Create(targetClnts[i], id+"."+strconv.Itoa(i))
+			if err != nil {
+				// FIXME: do cleanup by calling Delete()
+				mirrorURLsCh <- mirrorURLs{
+					Error: err.Trace(),
+				}
+				return
+			}
+		}
+		for source := range sourceSortedList.List(true) {
+			if source.Content.Type.IsDir() {
+				continue
+			}
+			targetContents := make([]*client.Content, 0, len(targetClnts))
+			for i, t := range targetSortedList {
+				match, err := t.Match(source.Content)
+				if err != nil || match {
+					// continue on io.EOF or if the keys matches
+					// FIXME: handle other errors and ignore this target for future calls
+					continue
+				}
+				targetContents = append(targetContents, &client.Content{Name: turldelimited[i] + source.Content.Name})
+			}
+			source.Content.Name = surldelimited + source.Content.Name
+			if len(targetContents) > 0 {
+				mirrorURLsCh <- mirrorURLs{
+					SourceContent:  source.Content,
+					TargetContents: targetContents,
 				}
 			}
+		}
+		if err := sourceSortedList.Delete(); err != nil {
 			mirrorURLsCh <- mirrorURLs{
-				SourceContent:  sourceContent,
-				TargetContents: targetContents,
+				Error: err.Trace(),
+			}
+		}
+		for _, t := range targetSortedList {
+			if err := t.Delete(); err != nil {
+				mirrorURLsCh <- mirrorURLs{
+					Error: err.Trace(),
+				}
 			}
 		}
 	}()

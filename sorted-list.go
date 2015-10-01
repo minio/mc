@@ -22,16 +22,18 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/probe"
 )
 
 type sortedList struct {
-	name string
-	file *os.File
-	dec  *gob.Decoder
-	enc  *gob.Encoder
+	name    string
+	file    *os.File
+	dec     *gob.Decoder
+	enc     *gob.Encoder
+	current client.Content
 }
 
 func getSortedListDir() (string, *probe.Error) {
@@ -121,6 +123,36 @@ func (sl sortedList) List(recursive bool) <-chan client.ContentOnChannel {
 		}
 	}()
 	return ch
+}
+
+func (sl *sortedList) Match(source *client.Content) (bool, *probe.Error) {
+	if len(sl.current.Name) == 0 {
+		// for the first time read
+		if err := sl.dec.Decode(&sl.current); err != nil {
+			if err != io.EOF {
+				return false, probe.NewError(err)
+			}
+			return false, nil
+		}
+	}
+	for {
+		compare := strings.Compare(source.Name, sl.current.Name)
+		if compare == 0 {
+			if source.Type.IsRegular() && sl.current.Type.IsRegular() && source.Size == sl.current.Size {
+				return true, nil
+			}
+			return false, nil
+		}
+		if compare < 0 {
+			return false, nil
+		}
+		// assign zero values to fields because if s.current's previous decode had non zero value
+		// fields it will not be over written if this loop's decode does not contain those fields
+		sl.current = client.Content{}
+		if err := sl.dec.Decode(&sl.current); err != nil {
+			return false, probe.NewError(err)
+		}
+	}
 }
 
 // Delete close and delete the ondisk file
