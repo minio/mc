@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -26,7 +25,6 @@ import (
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
-	"github.com/tchap/go-patricia/patricia"
 )
 
 //
@@ -216,45 +214,60 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 }
 
 func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
-	firstTrie := patricia.NewTrie()
-	secondTrie := patricia.NewTrie()
-	wg := new(sync.WaitGroup)
-
-	type urlAttr struct {
-		Size int64
-		Type os.FileMode
+	firstURLDelimited := firstClnt.URL().String()
+	secondURLDelimited := secondClnt.URL().String()
+	if strings.HasSuffix(firstURLDelimited, "/") == false {
+		firstURLDelimited = firstURLDelimited + "/"
+	}
+	if strings.HasSuffix(secondURLDelimited, "/") == false {
+		secondURLDelimited = secondURLDelimited + "/"
+	}
+	firstClnt, err := url2Client(firstURLDelimited)
+	if err != nil {
+		ch <- DiffMessage{Error: err.Trace()}
+		return
+	}
+	secondClnt, err = url2Client(secondURLDelimited)
+	if err != nil {
+		ch <- DiffMessage{Error: err.Trace()}
+		return
 	}
 
-	wg.Add(1)
-	go func(ch chan<- DiffMessage) {
-		defer wg.Done()
-		for firstContentCh := range firstClnt.List(true) {
-			if firstContentCh.Err != nil {
-				ch <- DiffMessage{
-					Error: firstContentCh.Err.Trace(firstClnt.URL().String()),
-				}
-				return
-			}
-			firstTrie.Insert(patricia.Prefix(firstContentCh.Content.Name), urlAttr{firstContentCh.Content.Size, firstContentCh.Content.Type})
-		}
-	}(ch)
-	wg.Add(1)
-	go func(ch chan<- DiffMessage) {
-		defer wg.Done()
-		for secondContentCh := range secondClnt.List(true) {
-			if secondContentCh.Err != nil {
-				ch <- DiffMessage{
-					Error: secondContentCh.Err.Trace(secondClnt.URL().String()),
-				}
-				return
-			}
-			secondTrie.Insert(patricia.Prefix(secondContentCh.Content.Name), urlAttr{secondContentCh.Content.Size, secondContentCh.Content.Type})
-		}
-	}(ch)
+	wg := new(sync.WaitGroup)
 
-	doneCh := make(chan struct{})
+	firstSortedList := sortedList{}
+	secondSortedList := sortedList{}
+	id := randomID(8)
+	firstid := id + ".1"
+	secondid := id + ".2"
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := firstSortedList.Create(firstClnt, firstid)
+		if err != nil {
+			ch <- DiffMessage{
+				Error: err.Trace(),
+			}
+			return
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := secondSortedList.Create(secondClnt, secondid)
+		if err != nil {
+			ch <- DiffMessage{
+				Error: err.Trace(),
+			}
+			return
+		}
+	}()
+
+	doneCh := make(chan bool)
 	defer close(doneCh)
-	go func(doneCh <-chan struct{}) {
+	go func(doneCh <-chan bool) {
 		cursorCh := cursorAnimate()
 		for {
 			select {
@@ -268,64 +281,96 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 		}
 	}(doneCh)
 	wg.Wait()
-	doneCh <- struct{}{}
+	doneCh <- true
+
 	if !globalQuietFlag && !globalJSONFlag {
 		console.Eraseline()
 	}
 
-	matchNameCh := make(chan string, 10000)
-	go func(matchNameCh chan<- string) {
-		itemFunc := func(prefix patricia.Prefix, item patricia.Item) error {
-			matchNameCh <- string(prefix)
-			return nil
+	fch := firstSortedList.List(true)
+	sch := secondSortedList.List(true)
+	f, fok := <-fch
+	s, sok := <-sch
+	for {
+		if fok == false {
+			break
 		}
-		firstTrie.Visit(itemFunc)
-		defer close(matchNameCh)
-	}(matchNameCh)
-	for matchName := range matchNameCh {
-		firstURLDelimited := firstClnt.URL().String()[:strings.LastIndex(firstClnt.URL().String(), string(firstClnt.URL().Separator))+1]
-		secondURLDelimited := secondClnt.URL().String()[:strings.LastIndex(secondClnt.URL().String(), string(secondClnt.URL().Separator))+1]
-		firstURL := firstURLDelimited + matchName
-		secondURL := secondURLDelimited + matchName
-		if !secondTrie.Match(patricia.Prefix(matchName)) {
+		if f.Content.Type.IsDir() {
+			// skip directories
+			// there is no concept of directories on S3
+			f, fok = <-fch
+			continue
+		}
+		firstURL := firstURLDelimited + f.Content.Name
+		secondURL := secondURLDelimited + f.Content.Name
+		if sok == false {
+			// Second list reached EOF
 			ch <- DiffMessage{
 				FirstURL:  firstURL,
 				SecondURL: secondURL,
 				Diff:      "only-in-first",
 			}
-		} else {
-			firstURLAttr := firstTrie.Get(patricia.Prefix(matchName)).(urlAttr)
-			secondURLAttr := secondTrie.Get(patricia.Prefix(matchName)).(urlAttr)
+			f, fok = <-fch
+			continue
+		}
+		if s.Content.Type.IsDir() {
+			// skip directories
+			s, sok = <-sch
+			continue
+		}
+		fC := f.Content
+		sC := s.Content
+		compare := strings.Compare(fC.Name, sC.Name)
 
-			if firstURLAttr.Type.IsRegular() {
-				if !secondURLAttr.Type.IsRegular() {
+		if compare == 0 {
+			if fC.Type.IsRegular() {
+				if !sC.Type.IsRegular() {
 					ch <- DiffMessage{
 						FirstURL:  firstURL,
 						SecondURL: secondURL,
 						Diff:      "type",
 					}
-					continue
 				}
-			}
-
-			if firstURLAttr.Type.IsDir() {
-				if !secondURLAttr.Type.IsDir() {
+			} else if fC.Type.IsDir() {
+				if !sC.Type.IsDir() {
 					ch <- DiffMessage{
 						FirstURL:  firstURL,
 						SecondURL: secondURL,
 						Diff:      "type",
 					}
-					continue
 				}
-			}
-
-			if firstURLAttr.Size != secondURLAttr.Size {
+			} else if fC.Size != sC.Size {
 				ch <- DiffMessage{
 					FirstURL:  firstURL,
 					SecondURL: secondURL,
 					Diff:      "size",
 				}
 			}
+			f, fok = <-fch
+			s, sok = <-sch
+		}
+		if compare < 0 {
+			ch <- DiffMessage{
+				FirstURL:  firstURL,
+				SecondURL: secondURL,
+				Diff:      "only-in-first",
+			}
+			f, fok = <-fch
+		}
+		if compare > 0 {
+			s, sok = <-sch
+		}
+	}
+	err = firstSortedList.Delete()
+	if err != nil {
+		ch <- DiffMessage{
+			Error: err.Trace(),
+		}
+	}
+	err = secondSortedList.Delete()
+	if err != nil {
+		ch <- DiffMessage{
+			Error: err.Trace(),
 		}
 	}
 }

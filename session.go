@@ -17,11 +17,9 @@
 package main
 
 import (
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/minio/minio/pkg/probe"
 )
@@ -61,18 +59,6 @@ func isSessionDirExists() bool {
 		return false
 	}
 	return true
-}
-
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-// newSID generates a random session id of regular lower case and uppercase english characters
-func newSID(n int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
-	sid := make([]rune, n)
-	for i := range sid {
-		sid[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(sid)
 }
 
 func getSessionFile(sid string) (string, *probe.Error) {
