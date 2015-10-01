@@ -30,7 +30,7 @@ import (
 // colorizeUpdateMessage - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
 func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
 	// initialize coloring
-	blue := color.New(color.FgBlue, color.Bold).SprintFunc()
+	cyan := color.New(color.FgCyan, color.Bold).SprintFunc()
 	yellow := color.New(color.FgYellow, color.Bold).SprintfFunc()
 
 	// calculate length without color coding, due to ANSI color characters padded to actual
@@ -42,7 +42,7 @@ func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
 
 	// populate lines with color coding
 	line1InColor := line1Str
-	line2InColor := fmt.Sprintf("  Run \"%s\" to update. ", blue(updateString))
+	line2InColor := fmt.Sprintf("  Run \"%s\" to update. ", cyan(updateString))
 
 	// calculate the rectangular box size
 	maxContentWidth := int(math.Max(float64(line1Length), float64(line2Length)))
