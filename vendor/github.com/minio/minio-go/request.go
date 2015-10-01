@@ -348,9 +348,8 @@ func (r *request) getHashedPayload() string {
 		}
 	}
 	hashedPayload := hash()
-	r.req.Header.Set("X-Amz-Content-Sha256", hashedPayload)
-	if hashedPayload == "UNSIGNED-PAYLOAD" {
-		r.req.Header.Set("X-Amz-Content-Sha256", "")
+	if hashedPayload != "UNSIGNED-PAYLOAD" {
+		r.req.Header.Set("X-Amz-Content-Sha256", hashedPayload)
 	}
 	return hashedPayload
 }

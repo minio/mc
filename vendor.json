@@ -41,8 +41,8 @@
 			"canonical": "github.com/minio/minio-go",
 			"comment": "",
 			"local": "vendor/github.com/minio/minio-go",
-			"revision": "8cd66490f49b893c83bdbbc4c8cea047bed7cdd6",
-			"revisionTime": "2015-09-22T23:49:08-07:00"
+			"revision": "7b215c6781d0bf99bdf2182afd47bc4633cf67aa",
+			"revisionTime": "2015-10-01T10:26:02-07:00"
 		},
 		{
 			"canonical": "github.com/minio/minio-go-legacy",
