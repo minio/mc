@@ -19,14 +19,9 @@ package minio
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"io"
-	"regexp"
-	"strings"
-	"unicode/utf8"
 )
 
 // decoder provides a unified decoding method interface
@@ -46,45 +41,6 @@ func acceptTypeDecoder(body io.Reader, acceptType string, v interface{}) error {
 		d = xml.NewDecoder(body)
 	}
 	return d.Decode(v)
-}
-
-// urlEncodedName encode the strings from UTF-8 byte representations to HTML hex escape sequences
-//
-// This is necessary since regular url.Parse() and url.Encode() functions do not support UTF-8
-// non english characters cannot be parsed due to the nature in which url.Encode() is written
-//
-// This function on the other hand is a direct replacement for url.Encode() technique to support
-// pretty much every UTF-8 character.
-func urlEncodeName(name string) (string, error) {
-	// if object matches reserved string, no need to encode them
-	reservedNames := regexp.MustCompile("^[a-zA-Z0-9-_.~/]+$")
-	if reservedNames.MatchString(name) {
-		return name, nil
-	}
-	var encodedName string
-	for _, s := range name {
-		if 'A' <= s && s <= 'Z' || 'a' <= s && s <= 'z' || '0' <= s && s <= '9' { // §2.3 Unreserved characters (mark)
-			encodedName = encodedName + string(s)
-			continue
-		}
-		switch s {
-		case '-', '_', '.', '~', '/': // §2.3 Unreserved characters (mark)
-			encodedName = encodedName + string(s)
-			continue
-		default:
-			len := utf8.RuneLen(s)
-			if len < 0 {
-				return "", errors.New("invalid utf-8")
-			}
-			u := make([]byte, len)
-			utf8.EncodeRune(u, s)
-			for _, r := range u {
-				hex := hex.EncodeToString([]byte{r})
-				encodedName = encodedName + "%" + strings.ToUpper(hex)
-			}
-		}
-	}
-	return encodedName, nil
 }
 
 // sum256Reader calculate sha256 sum for an input read seeker

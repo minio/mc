@@ -264,27 +264,14 @@ func (a apiCore) getBucketLocation(bucket string) (string, error) {
 func (a apiCore) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request
 	resourceQuery := func() (*string, error) {
-		var err error
 		switch {
 		case marker != "":
-			marker, err = urlEncodeName(marker)
-			if err != nil {
-				return nil, err
-			}
 			marker = fmt.Sprintf("&marker=%s", marker)
 			fallthrough
 		case prefix != "":
-			prefix, err = urlEncodeName(prefix)
-			if err != nil {
-				return nil, err
-			}
 			prefix = fmt.Sprintf("&prefix=%s", prefix)
 			fallthrough
 		case delimiter != "":
-			delimiter, err = urlEncodeName(delimiter)
-			if err != nil {
-				return nil, err
-			}
 			delimiter = fmt.Sprintf("&delimiter=%s", delimiter)
 		}
 		query := fmt.Sprintf("?max-keys=%d", maxkeys) + marker + prefix + delimiter
@@ -473,14 +460,10 @@ func (a apiCore) putObjectUnAuthenticatedRequest(bucket, object, contentType str
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
-		HTTPPath:   separator + bucket + separator + encodedObject,
+		HTTPPath:   separator + bucket + separator + object,
 	}
 	r, err := newUnauthenticatedRequest(op, a.config, body)
 	if err != nil {
@@ -527,14 +510,10 @@ func (a apiCore) putObjectRequest(bucket, object, contentType string, md5SumByte
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
-		HTTPPath:   separator + bucket + separator + encodedObject,
+		HTTPPath:   separator + bucket + separator + object,
 	}
 	r, err := newRequest(op, a.config, body)
 	if err != nil {
@@ -578,14 +557,10 @@ func (a apiCore) putObject(bucket, object, contentType string, md5SumBytes []byt
 }
 
 func (a apiCore) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*request, error) {
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   separator + bucket + separator + encodedObject,
+		HTTPPath:   separator + bucket + separator + object,
 	}
 	r, err := newPresignedRequest(op, a.config, strconv.FormatInt(expires, 10))
 	if err != nil {
@@ -615,14 +590,10 @@ func (a apiCore) presignedGetObject(bucket, object string, expires, offset, leng
 
 // getObjectRequest wrapper creates a new getObject request
 func (a apiCore) getObjectRequest(bucket, object string, offset, length int64) (*request, error) {
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
-		HTTPPath:   separator + bucket + separator + encodedObject,
+		HTTPPath:   separator + bucket + separator + object,
 	}
 	r, err := newRequest(op, a.config, nil)
 	if err != nil {
@@ -700,14 +671,10 @@ func (a apiCore) getObject(bucket, object string, offset, length int64) (io.Read
 
 // deleteObjectRequest wrapper creates a new deleteObject request
 func (a apiCore) deleteObjectRequest(bucket, object string) (*request, error) {
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
-		HTTPPath:   separator + bucket + separator + encodedObject,
+		HTTPPath:   separator + bucket + separator + object,
 	}
 	return newRequest(op, a.config, nil)
 }
@@ -766,14 +733,10 @@ func (a apiCore) deleteObject(bucket, object string) error {
 
 // headObjectRequest wrapper creates a new headObject request
 func (a apiCore) headObjectRequest(bucket, object string) (*request, error) {
-	encodedObject, err := urlEncodeName(object)
-	if err != nil {
-		return nil, err
-	}
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "HEAD",
-		HTTPPath:   separator + bucket + separator + encodedObject,
+		HTTPPath:   separator + bucket + separator + object,
 	}
 	return newRequest(op, a.config, nil)
 }
