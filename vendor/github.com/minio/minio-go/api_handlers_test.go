@@ -56,8 +56,19 @@ func (h bucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case r.URL.Path == h.resource:
 			_, ok := r.URL.Query()["acl"]
 			if ok {
-				if r.Header.Get("x-amz-acl") != "public-read-write" {
+				switch r.Header.Get("x-amz-acl") {
+				case "public-read-write":
+					fallthrough
+				case "public-read":
+					fallthrough
+				case "private":
+					fallthrough
+				case "authenticated-read":
+					w.WriteHeader(http.StatusOK)
+					return
+				default:
 					w.WriteHeader(http.StatusNotImplemented)
+					return
 				}
 			}
 			w.WriteHeader(http.StatusOK)

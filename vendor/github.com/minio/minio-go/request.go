@@ -23,10 +23,11 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // operation - rest operation
@@ -85,6 +86,46 @@ var ignoredHeaders = map[string]bool{
 	"User-Agent":     true,
 }
 
+// getURLEncodedPath encode the strings from UTF-8 byte representations to HTML hex escape sequences
+//
+// This is necessary since regular url.Parse() and url.Encode() functions do not support UTF-8
+// non english characters cannot be parsed due to the nature in which url.Encode() is written
+//
+// This function on the other hand is a direct replacement for url.Encode() technique to support
+// pretty much every UTF-8 character.
+func getURLEncodedPath(pathName string) string {
+	// if object matches reserved string, no need to encode them
+	reservedNames := regexp.MustCompile("^[a-zA-Z0-9-_.~/]+$")
+	if reservedNames.MatchString(pathName) {
+		return pathName
+	}
+	var encodedPathname string
+	for _, s := range pathName {
+		if 'A' <= s && s <= 'Z' || 'a' <= s && s <= 'z' || '0' <= s && s <= '9' { // §2.3 Unreserved characters (mark)
+			encodedPathname = encodedPathname + string(s)
+			continue
+		}
+		switch s {
+		case '-', '_', '.', '~', '/': // §2.3 Unreserved characters (mark)
+			encodedPathname = encodedPathname + string(s)
+			continue
+		default:
+			len := utf8.RuneLen(s)
+			if len < 0 {
+				// if utf8 cannot convert return the same string as is
+				return pathName
+			}
+			u := make([]byte, len)
+			utf8.EncodeRune(u, s)
+			for _, r := range u {
+				hex := hex.EncodeToString([]byte{r})
+				encodedPathname = encodedPathname + "%" + strings.ToUpper(hex)
+			}
+		}
+	}
+	return encodedPathname
+}
+
 func path2BucketAndObject(path string) (bucketName, objectName string) {
 	pathSplits := strings.SplitN(path, "?", 2)
 	splits := strings.SplitN(pathSplits[0], separator, 3)
@@ -104,16 +145,13 @@ func path2BucketAndObject(path string) (bucketName, objectName string) {
 
 // path2Object gives objectName from URL path
 func path2Object(path string) (objectName string) {
-	pathSplits := strings.SplitN(path, "?", 2)
-	splits := strings.SplitN(pathSplits[0], separator, 3)
-	switch len(splits) {
-	case 0, 1:
-		fallthrough
-	case 2:
-		objectName = ""
-	case 3:
-		objectName = splits[2]
-	}
+	_, objectName = path2BucketAndObject(path)
+	return
+}
+
+// path2Bucket gives bucketName from URL path
+func path2Bucket(path string) (bucketName string) {
+	bucketName, _ = path2BucketAndObject(path)
 	return
 }
 
@@ -128,66 +166,24 @@ func path2Query(path string) (query string) {
 
 func (op *operation) getRequestURL(config Config) (url string) {
 	// parse URL for the combination of HTTPServer + HTTPPath
-	if config.Region != "milkyway" {
-		// if virtual style hosts, bucket name is not needed to be part of path
-		if config.isVirtualStyle {
-			url = op.HTTPServer + separator + path2Object(op.HTTPPath)
-			query := path2Query(op.HTTPPath)
-			// verify if there is a query string to
-			if query != "" {
-				url = url + "?" + query
-			}
-		} else {
-			url = op.HTTPServer + op.HTTPPath
-		}
-	} else {
-		url = op.HTTPServer + op.HTTPPath
+	url = op.HTTPServer + separator
+	if !config.isVirtualStyle {
+		url += path2Bucket(op.HTTPPath)
+	}
+	objectName := getURLEncodedPath(path2Object(op.HTTPPath))
+	queryPath := path2Query(op.HTTPPath)
+	if objectName == "" && queryPath != "" {
+		url += "?" + queryPath
+		return
+	}
+	if objectName != "" && queryPath == "" {
+		url += separator + objectName
+		return
+	}
+	if objectName != "" && queryPath != "" {
+		url += separator + objectName + "?" + queryPath
 	}
 	return
-}
-
-func httpNewRequest(method, urlStr string, body io.Reader) (*http.Request, error) {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return nil, err
-	}
-	// make sure to encode properly, url.Parse in golang is buggy and creates erroneous encoding
-	uEncoded := u
-	bucketName, objectName := path2BucketAndObject(uEncoded.Path)
-	if objectName != "" {
-		encodedObjectName, err := urlEncodeName(objectName)
-		if err != nil {
-			return nil, err
-		}
-		uEncoded.Opaque = "//" + uEncoded.Host + separator + bucketName + separator + encodedObjectName
-	} else {
-		uEncoded.Opaque = "//" + uEncoded.Host + separator + bucketName
-	}
-	rc, ok := body.(io.ReadCloser)
-	if !ok && body != nil {
-		rc = ioutil.NopCloser(body)
-	}
-	req := &http.Request{
-		Method:     method,
-		URL:        uEncoded,
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-		Header:     make(http.Header),
-		Body:       rc,
-		Host:       uEncoded.Host,
-	}
-	if body != nil {
-		switch v := body.(type) {
-		case *bytes.Buffer:
-			req.ContentLength = int64(v.Len())
-		case *bytes.Reader:
-			req.ContentLength = int64(v.Len())
-		case *strings.Reader:
-			req.ContentLength = int64(v.Len())
-		}
-	}
-	return req, nil
 }
 
 func newPresignedRequest(op *operation, config *Config, expires string) (*request, error) {
@@ -200,7 +196,7 @@ func newPresignedRequest(op *operation, config *Config, expires string) (*reques
 	u := op.getRequestURL(*config)
 
 	// get a new HTTP request, for the requested method
-	req, err := httpNewRequest(method, u, nil)
+	req, err := http.NewRequest(method, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +230,7 @@ func newUnauthenticatedRequest(op *operation, config *Config, body io.Reader) (*
 	u := op.getRequestURL(*config)
 
 	// get a new HTTP request, for the requested method
-	req, err := httpNewRequest(method, u, nil)
+	req, err := http.NewRequest(method, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +270,7 @@ func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, er
 	u := op.getRequestURL(*config)
 
 	// get a new HTTP request, for the requested method
-	req, err := httpNewRequest(method, u, nil)
+	req, err := http.NewRequest(method, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -415,13 +411,9 @@ func (r *request) getSignedHeaders() string {
 //
 func (r *request) getCanonicalRequest(hashedPayload string) string {
 	r.req.URL.RawQuery = strings.Replace(r.req.URL.Query().Encode(), "+", "%20", -1)
-
-	// get path URI from Opaque
-	uri := strings.Join(strings.Split(r.req.URL.Opaque, "/")[3:], "/")
-
 	canonicalRequest := strings.Join([]string{
 		r.req.Method,
-		"/" + uri,
+		getURLEncodedPath(r.req.URL.Path),
 		r.req.URL.RawQuery,
 		r.getCanonicalHeaders(),
 		r.getSignedHeaders(),

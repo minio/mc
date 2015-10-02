@@ -103,11 +103,7 @@ func TestURLEncoding(t *testing.T) {
 	}
 
 	for _, u := range want {
-		encodedName, err := urlEncodeName(u.name)
-		if err != nil {
-			t.Fatalf("Error")
-		}
-		if u.encodedName != encodedName {
+		if u.encodedName != getURLEncodedPath(u.name) {
 			t.Errorf("Error")
 		}
 	}
