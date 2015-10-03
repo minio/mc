@@ -103,7 +103,7 @@ func (sl *sortedList) Create(clnt client.Client, id string) *probe.Error {
 }
 
 // List list the entries from the sorted file
-func (sl *sortedList) List(recursive bool) <-chan client.ContentOnChannel {
+func (sl sortedList) List(recursive bool) <-chan client.ContentOnChannel {
 	ch := make(chan client.ContentOnChannel)
 	go func() {
 		defer close(ch)
@@ -124,7 +124,7 @@ func (sl *sortedList) List(recursive bool) <-chan client.ContentOnChannel {
 }
 
 // Delete close and delete the ondisk file
-func (sl *sortedList) Delete() *probe.Error {
+func (sl sortedList) Delete() *probe.Error {
 	if err := sl.file.Close(); err != nil {
 		return probe.NewError(err)
 	}

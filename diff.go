@@ -237,9 +237,9 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 
 	firstSortedList := sortedList{}
 	secondSortedList := sortedList{}
-	id := randomID(8)
-	firstid := id + ".1"
-	secondid := id + ".2"
+	id := newRandomID(8)
+	firstid := id + ".firstURL"
+	secondid := id + ".secondURL"
 
 	wg.Add(1)
 	go func() {

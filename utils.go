@@ -23,8 +23,8 @@ import (
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-// randomID generates a random id of regular lower case and uppercase english characters
-func randomID(n int) string {
+// newRandomID generates a random id of regular lower case and uppercase english characters
+func newRandomID(n int) string {
 	rand.Seed(time.Now().UTC().UnixNano())
 	sid := make([]rune, n)
 	for i := range sid {
