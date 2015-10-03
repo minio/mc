@@ -62,8 +62,8 @@
 			"canonical": "github.com/minio/minio/pkg/quick",
 			"comment": "",
 			"local": "vendor/github.com/minio/minio/pkg/quick",
-			"revision": "daa089fb06b05ad7a9ce945e51362d349ffaf662",
-			"revisionTime": "2015-09-29T10:17:19-07:00"
+			"revision": "09dc360e06ece15f14df0e15e77d42652b329f05",
+			"revisionTime": "2015-10-03T12:26:04-07:00"
 		},
 		{
 			"canonical": "github.com/minio/pb",
