@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/minio/mc/pkg/client"
@@ -233,38 +232,6 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 		return
 	}
 
-	wg := new(sync.WaitGroup)
-
-	firstSortedList := sortedList{}
-	secondSortedList := sortedList{}
-	id := newRandomID(8)
-	firstid := id + ".firstURL"
-	secondid := id + ".secondURL"
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := firstSortedList.Create(firstClnt, firstid)
-		if err != nil {
-			ch <- DiffMessage{
-				Error: err.Trace(),
-			}
-			return
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := secondSortedList.Create(secondClnt, secondid)
-		if err != nil {
-			ch <- DiffMessage{
-				Error: err.Trace(),
-			}
-			return
-		}
-	}()
-
 	doneCh := make(chan bool)
 	defer close(doneCh)
 	go func(doneCh <-chan bool) {
@@ -280,15 +247,14 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 			}
 		}
 	}(doneCh)
-	wg.Wait()
 	doneCh <- true
 
 	if !globalQuietFlag && !globalJSONFlag {
 		console.Eraseline()
 	}
 
-	fch := firstSortedList.List(true)
-	sch := secondSortedList.List(true)
+	fch := firstClnt.List(true)
+	sch := secondClnt.List(true)
 	f, fok := <-fch
 	s, sok := <-sch
 	for {
@@ -359,18 +325,6 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 		}
 		if compare > 0 {
 			s, sok = <-sch
-		}
-	}
-	err = firstSortedList.Delete()
-	if err != nil {
-		ch <- DiffMessage{
-			Error: err.Trace(),
-		}
-	}
-	err = secondSortedList.Delete()
-	if err != nil {
-		ch <- DiffMessage{
-			Error: err.Trace(),
 		}
 	}
 }
