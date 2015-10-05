@@ -3,5 +3,5 @@
 
 package main
 
-const mcVersion = "Tue, 22 Sep 2015 21:15:45 GMT"
-const mcReleaseTag = "RELEASE.Tue-22-Sep-2015-21-15-45-GMT"
+const mcVersion = "Mon, 05 Oct 2015 17:52:35 GMT"
+const mcReleaseTag = "RELEASE.Mon-05-Oct-2015-17-52-35-GMT"
