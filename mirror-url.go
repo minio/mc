@@ -106,9 +106,6 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 		targetSortedList := make([]*sortedList, len(targetClnts))
 
 		surldelimited := sourceClnt.URL().String()
-		if strings.HasSuffix(surldelimited, "/") == false {
-			surldelimited = surldelimited + "/"
-		}
 		err := sourceSortedList.Create(sourceClnt, id+".src")
 		if err != nil {
 			mirrorURLsCh <- mirrorURLs{
@@ -120,9 +117,6 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 		turldelimited := make([]string, len(targetClnts))
 		for i := range targetClnts {
 			turldelimited[i] = targetClnts[i].URL().String()
-			if strings.HasSuffix(turldelimited[i], "/") == false {
-				turldelimited[i] = turldelimited[i] + "/"
-			}
 			targetSortedList[i] = &sortedList{}
 			err := targetSortedList[i].Create(targetClnts[i], id+"."+strconv.Itoa(i))
 			if err != nil {
@@ -177,7 +171,11 @@ func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs 
 
 	go func() {
 		defer close(mirrorURLsCh)
-		sourceClnt, err := url2Client(stripRecursiveURL(sourceURL))
+		sourceURL = stripRecursiveURL(sourceURL)
+		if strings.HasSuffix(sourceURL, "/") == false {
+			sourceURL = sourceURL + "/"
+		}
+		sourceClnt, err := url2Client(sourceURL)
 		if err != nil {
 			mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceURL)}
 			return
