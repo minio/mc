@@ -209,7 +209,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCopyCmdSession(session *sessionV2) {
+func doCopySession(session *sessionV2) {
 	trapCh := signalTrap(os.Interrupt, os.Kill)
 
 	if !session.HasData() {
@@ -334,6 +334,6 @@ func mainCopy(ctx *cli.Context) {
 		fatalIf(err.Trace(), "One or more unknown URL types passed.")
 	}
 
-	doCopyCmdSession(session)
+	doCopySession(session)
 	session.Delete()
 }
