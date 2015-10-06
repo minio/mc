@@ -208,7 +208,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doMirrorCmdSession(session *sessionV2) {
+func doMirrorSession(session *sessionV2) {
 	trapCh := signalTrap(os.Interrupt, os.Kill)
 
 	if !session.HasData() {
@@ -256,13 +256,13 @@ func doMirrorCmdSession(session *sessionV2) {
 					if !globalQuietFlag && !globalJSONFlag {
 						console.Eraseline()
 					}
+					errorIf(sURLs.Error.Trace(), fmt.Sprintf("Failed to mirror ‘%s’.", sURLs.SourceContent.Name))
 					// all the cases which are handled where session should be saved are contained in the following
 					// switch case, we shouldn't be saving sessions for all errors since some errors might need to be
 					// reported to user properly.
 					//
 					// All other critical cases should be handled properly gracefully
 					// handle more errors and save the session.
-					errorIf(sURLs.Error.Trace(), "Failed to mirror.")
 					switch sURLs.Error.ToGoError().(type) {
 					case *net.OpError:
 						gracefulSessionSave(session)
@@ -333,6 +333,6 @@ func mainMirror(ctx *cli.Context) {
 		fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("One or more unknown argument types found in ‘%s’.", ctx.Args()))
 	}
 
-	doMirrorCmdSession(session)
+	doMirrorSession(session)
 	session.Delete()
 }

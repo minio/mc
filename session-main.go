@@ -134,9 +134,9 @@ func clearSession(sid string) {
 func sessionExecute(s *sessionV2) {
 	switch s.Header.CommandType {
 	case "cp":
-		doCopyCmdSession(s)
+		doCopySession(s)
 	case "mirror":
-		doMirrorCmdSession(s)
+		doMirrorSession(s)
 	}
 }
 
