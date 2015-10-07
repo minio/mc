@@ -44,7 +44,7 @@ func mainVersion(ctx *cli.Context) {
 	if ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
 	}
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Version": color.New(color.FgGreen, color.Bold),
 	})
 	if globalJSONFlag {

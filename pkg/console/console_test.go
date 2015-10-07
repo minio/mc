@@ -29,10 +29,10 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
-func (s *MySuite) TestSetTheme(c *C) {
-	err := SetCustomTheme(map[string]*color.Color{"unknown": new(color.Color)})
+func (s *MySuite) TestSetPalette(c *C) {
+	err := SetCustomPalette(map[string]*color.Color{"unknown": new(color.Color)})
 	c.Assert(err, IsNil)
-	_, ok := Theme["unknown"]
+	_, ok := Palette["unknown"]
 	c.Assert(ok, Equals, true)
 }
 

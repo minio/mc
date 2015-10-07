@@ -134,7 +134,7 @@ func mainShare(ctx *cli.Context) {
 		fatalIf(createSharedURLsDataFile().Trace(), "Unable to create shared URL data file ‘"+shareFile+"’.")
 	}
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Share":   color.New(color.FgGreen, color.Bold),
 		"Expires": color.New(color.FgRed, color.Bold),
 		"URL":     color.New(color.FgCyan, color.Bold),

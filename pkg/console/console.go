@@ -41,8 +41,8 @@ var IsExited = false
 // IsError sets this boolean value if Error is called when IsTesting is enabled
 var IsError = false
 
-// Theme default map
-var Theme = map[string]*color.Color{
+// Palette default map
+var Palette = map[string]*color.Color{
 	"Debug":  color.New(color.FgWhite, color.Faint, color.Italic),
 	"Fatal":  color.New(color.FgRed, color.Italic, color.Bold),
 	"Error":  color.New(color.FgYellow, color.Italic),
@@ -61,25 +61,25 @@ var (
 
 	// Print prints a message
 	Print = func(data ...interface{}) {
-		consolePrint("Print", Theme["Print"], data...)
+		consolePrint("Print", Palette["Print"], data...)
 		return
 	}
 
 	// PrintC prints a message with color
 	PrintC = func(data ...interface{}) {
-		consolePrint("PrintC", Theme["PrintC"], data...)
+		consolePrint("PrintC", Palette["PrintC"], data...)
 		return
 	}
 
 	// Printf prints a formatted message
 	Printf = func(format string, data ...interface{}) {
-		consolePrintf("Print", Theme["Print"], format, data...)
+		consolePrintf("Print", Palette["Print"], format, data...)
 		return
 	}
 
 	// Println prints a message with a newline
 	Println = func(data ...interface{}) {
-		consolePrintln("Print", Theme["Print"], data...)
+		consolePrintln("Print", Palette["Print"], data...)
 		return
 	}
 
@@ -96,21 +96,21 @@ var (
 
 	// Fatal print a error message and exit
 	Fatal = func(data ...interface{}) {
-		consolePrint("Fatal", Theme["Fatal"], data...)
+		consolePrint("Fatal", Palette["Fatal"], data...)
 		fatalQuitRoutine()
 		return
 	}
 
 	// Fatalf print a error message with a format specified and exit
 	Fatalf = func(format string, data ...interface{}) {
-		consolePrintf("Fatal", Theme["Fatal"], format, data...)
+		consolePrintf("Fatal", Palette["Fatal"], format, data...)
 		fatalQuitRoutine()
 		return
 	}
 
 	// Fatalln print a error message with a new line and exit
 	Fatalln = func(data ...interface{}) {
-		consolePrintln("Fatal", Theme["Fatal"], data...)
+		consolePrintln("Fatal", Palette["Fatal"], data...)
 		fatalQuitRoutine()
 		return
 	}
@@ -127,40 +127,40 @@ var (
 
 	// Error prints a error message
 	Error = func(data ...interface{}) {
-		consolePrint("Error", Theme["Error"], data...)
+		consolePrint("Error", Palette["Error"], data...)
 		errorQuitRoutine()
 		return
 	}
 
 	// Errorf print a error message with a format specified
 	Errorf = func(format string, data ...interface{}) {
-		consolePrintf("Error", Theme["Error"], format, data...)
+		consolePrintf("Error", Palette["Error"], format, data...)
 		errorQuitRoutine()
 		return
 	}
 
 	// Errorln prints a error message with a new line
 	Errorln = func(data ...interface{}) {
-		consolePrintln("Error", Theme["Error"], data...)
+		consolePrintln("Error", Palette["Error"], data...)
 		errorQuitRoutine()
 		return
 	}
 
 	// Info prints a informational message
 	Info = func(data ...interface{}) {
-		consolePrint("Info", Theme["Info"], data...)
+		consolePrint("Info", Palette["Info"], data...)
 		return
 	}
 
 	// Infof prints a informational message in custom format
 	Infof = func(format string, data ...interface{}) {
-		consolePrintf("Info", Theme["Info"], format, data...)
+		consolePrintf("Info", Palette["Info"], format, data...)
 		return
 	}
 
 	// Infoln prints a informational message with a new line
 	Infoln = func(data ...interface{}) {
-		consolePrintln("Info", Theme["Info"], data...)
+		consolePrintln("Info", Palette["Info"], data...)
 		return
 	}
 
@@ -168,36 +168,36 @@ var (
 	// Debug prints a debug message
 	Debug = func(data ...interface{}) {
 		if !NoDebugPrint {
-			consolePrint("Debug", Theme["Debug"], data...)
+			consolePrint("Debug", Palette["Debug"], data...)
 		}
 	}
 
 	// Debugf prints a debug message with a new line
 	Debugf = func(format string, data ...interface{}) {
 		if !NoDebugPrint {
-			consolePrintf("Debug", Theme["Debug"], format, data...)
+			consolePrintf("Debug", Palette["Debug"], format, data...)
 		}
 	}
 
 	// Debugln prints a debug message with a new line
 	Debugln = func(data ...interface{}) {
 		if !NoDebugPrint {
-			consolePrintln("Debug", Theme["Debug"], data...)
+			consolePrintln("Debug", Palette["Debug"], data...)
 		}
 	}
 
 	// Colorize prints message in a colorized form, dictated by the corresponding tag argument
 	Colorize = func(tag string, data interface{}) string {
 		if isatty.IsTerminal(os.Stdout.Fd()) {
-			return Theme[tag].SprintFunc()(data)
+			return Palette[tag].SprintFunc()(data)
 		}
 		return fmt.Sprint(data)
 	}
 
 	// Eraseline Print in new line and adjust to top so that we don't print over the ongoing progress bar
 	Eraseline = func() {
-		consolePrintf("Print", Theme["Print"], "%c[2K\n", 27)
-		consolePrintf("Print", Theme["Print"], "%c[A", 27)
+		consolePrintf("Print", Palette["Print"], "%c[2K\n", 27)
+		consolePrintf("Print", Palette["Print"], "%c[A", 27)
 	}
 )
 
@@ -353,13 +353,13 @@ func Unlock() {
 	publicMutex.Unlock()
 }
 
-// SetCustomTheme sets a color theme
-func SetCustomTheme(theme map[string]*color.Color) *probe.Error {
+// SetCustomPalette sets a color theme
+func SetCustomPalette(theme map[string]*color.Color) *probe.Error {
 	privateMutex.Lock()
 	defer privateMutex.Unlock()
 	// add new theme
 	for k, v := range theme {
-		Theme[k] = v
+		Palette[k] = v
 	}
 	return nil
 }

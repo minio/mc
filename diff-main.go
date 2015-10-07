@@ -63,7 +63,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 func mainDiff(ctx *cli.Context) {
 	checkDiffSyntax(ctx)
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"DiffMessage":     color.New(color.FgGreen, color.Bold),
 		"DiffOnlyInFirst": color.New(color.FgRed, color.Bold),
 		"DiffType":        color.New(color.FgYellow, color.Bold),

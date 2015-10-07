@@ -312,7 +312,7 @@ func doCopySession(session *sessionV2) {
 func mainCopy(ctx *cli.Context) {
 	checkCopySyntax(ctx)
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Copy": color.New(color.FgGreen, color.Bold),
 	})
 
