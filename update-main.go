@@ -106,7 +106,7 @@ func checkUpdateSyntax(ctx *cli.Context) {
 func mainUpdate(ctx *cli.Context) {
 	checkUpdateSyntax(ctx)
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"UpdateMessage": color.New(color.FgGreen, color.Bold),
 	})
 

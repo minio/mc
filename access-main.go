@@ -119,7 +119,7 @@ func checkAccessSyntax(ctx *cli.Context) {
 func mainAccess(ctx *cli.Context) {
 	checkAccessSyntax(ctx)
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Access": color.New(color.FgGreen, color.Bold),
 	})
 

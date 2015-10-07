@@ -98,7 +98,7 @@ func mainList(ctx *cli.Context) {
 		args = []string{"."}
 	}
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"File": color.New(color.FgWhite),
 		"Dir":  color.New(color.FgCyan, color.Bold),
 		"Size": color.New(color.FgYellow),

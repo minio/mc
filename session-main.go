@@ -170,7 +170,7 @@ func mainSession(ctx *cli.Context) {
 		fatalIf(createSessionDir().Trace(), "Unable to create session directory.")
 	}
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Command":      color.New(color.FgWhite, color.Bold),
 		"SessionID":    color.New(color.FgYellow, color.Bold),
 		"SessionTime":  color.New(color.FgGreen),

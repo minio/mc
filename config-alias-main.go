@@ -119,7 +119,7 @@ func mainConfigAlias(ctx *cli.Context) {
 	checkConfigAliasSyntax(ctx)
 
 	// set new custom coloring
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Alias":        color.New(color.FgCyan, color.Bold),
 		"AliasMessage": color.New(color.FgGreen, color.Bold),
 		"URL":          color.New(color.FgWhite, color.Bold),

@@ -83,7 +83,7 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 func mainMakeBucket(ctx *cli.Context) {
 	checkMakeBucketSyntax(ctx)
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"MakeBucket": color.New(color.FgGreen, color.Bold),
 	})
 

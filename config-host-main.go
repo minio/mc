@@ -113,7 +113,7 @@ func mainConfigHost(ctx *cli.Context) {
 	checkConfigHostSyntax(ctx)
 
 	// set new custom coloring
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Host":            color.New(color.FgCyan, color.Bold),
 		"API":             color.New(color.FgYellow, color.Bold),
 		"HostMessage":     color.New(color.FgGreen, color.Bold),

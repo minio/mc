@@ -312,7 +312,7 @@ func doMirrorSession(session *sessionV2) {
 func mainMirror(ctx *cli.Context) {
 	checkMirrorSyntax(ctx)
 
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Mirror": color.New(color.FgGreen, color.Bold),
 	})
 

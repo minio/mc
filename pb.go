@@ -148,7 +148,7 @@ func getFixedWidth(width, percent int) int {
 
 // newProgressBar - instantiate a pbBar.
 func newProgressBar() barSend {
-	console.SetCustomTheme(map[string]*color.Color{
+	console.SetCustomPalette(map[string]*color.Color{
 		"Bar": color.New(color.FgGreen, color.Bold),
 	})
 	cmdCh := make(chan barMsg)
