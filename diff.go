@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"strings"
-	"time"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
@@ -230,27 +229,6 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 	if err != nil {
 		ch <- DiffMessage{Error: err.Trace()}
 		return
-	}
-
-	doneCh := make(chan bool)
-	defer close(doneCh)
-	go func(doneCh <-chan bool) {
-		cursorCh := cursorAnimate()
-		for {
-			select {
-			case <-time.Tick(100 * time.Millisecond):
-				if !globalQuietFlag && !globalJSONFlag {
-					console.PrintC("\r" + "Scanning.. " + string(<-cursorCh))
-				}
-			case <-doneCh:
-				return
-			}
-		}
-	}(doneCh)
-	doneCh <- true
-
-	if !globalQuietFlag && !globalJSONFlag {
-		console.Eraseline()
 	}
 
 	fch := firstClnt.List(true)

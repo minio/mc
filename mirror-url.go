@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -102,6 +104,22 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 		defer close(mirrorURLsCh)
 		id := newRandomID(8)
 
+		doneCh := make(chan bool)
+		defer close(doneCh)
+		go func(doneCh <-chan bool) {
+			cursorCh := cursorAnimate()
+			for {
+				select {
+				case <-time.Tick(100 * time.Millisecond):
+					if !globalQuietFlag && !globalJSONFlag {
+						console.PrintC("\r" + "Scanning.. " + string(<-cursorCh))
+					}
+				case <-doneCh:
+					return
+				}
+			}
+		}(doneCh)
+
 		sourceSortedList := sortedList{}
 		targetSortedList := make([]*sortedList, len(targetClnts))
 
@@ -160,6 +178,10 @@ func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <
 					Error: err.Trace(),
 				}
 			}
+		}
+		doneCh <- true
+		if !globalQuietFlag && !globalJSONFlag {
+			console.Eraseline()
 		}
 	}()
 	return mirrorURLsCh
