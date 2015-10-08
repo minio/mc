@@ -73,6 +73,7 @@ type ObjectAPI interface {
 // PresignedAPI - object specific for now
 type PresignedAPI interface {
 	PresignedGetObject(bucket, object string, expires time.Duration) (string, error)
+	PresignedPostPolicy(*PostPolicy) (map[string]string, error)
 }
 
 // BucketStatCh - bucket metadata over read channel
@@ -553,6 +554,20 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch ch
 			}
 		}
 	}
+}
+
+// PresignedPostPolicy return POST form data that can be used for object upload
+func (a api) PresignedPostPolicy(p *PostPolicy) (map[string]string, error) {
+	if p.expiration.IsZero() {
+		return nil, errors.New("Expiration time must be specified")
+	}
+	if _, ok := p.formData["key"]; !ok {
+		return nil, errors.New("object key must be specified")
+	}
+	if _, ok := p.formData["bucket"]; !ok {
+		return nil, errors.New("bucket name must be specified")
+	}
+	return a.presignedPostPolicy(p), nil
 }
 
 // PutObject create an object in a bucket
