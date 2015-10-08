@@ -44,8 +44,8 @@
 		},
 		{
 			"path": "github.com/minio/minio/pkg/quick",
-			"revision": "09dc360e06ece15f14df0e15e77d42652b329f05",
-			"revisionTime": "2015-10-03T12:26:04-07:00"
+			"revision": "e719adec8bbe0b717acba2d1ab7c61a1392c70ce",
+			"revisionTime": "2015-10-07T17:49:16-07:00"
 		},
 		{
 			"path": "github.com/minio/pb",
