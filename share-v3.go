@@ -24,15 +24,15 @@ import (
 	"github.com/minio/minio/pkg/quick"
 )
 
-type sharedURLsV1 struct {
+type sharedURLsV3 struct {
 	Version string
-	URLs    map[string]struct {
+	URLs    []struct {
 		Date    time.Time
-		Message ShareMessageV1
+		Message ShareMessageV3
 	}
 }
 
-func loadSharedURLsV1() (*sharedURLsV1, *probe.Error) {
+func loadSharedURLsV3() (*sharedURLsV3, *probe.Error) {
 	sharedURLsDataFile, err := getSharedURLsDataFile()
 	if err != nil {
 		return nil, err.Trace()
@@ -41,7 +41,7 @@ func loadSharedURLsV1() (*sharedURLsV1, *probe.Error) {
 		return nil, probe.NewError(err)
 	}
 
-	qs, err := quick.New(newSharedURLsV1())
+	qs, err := quick.New(newSharedURLsV3())
 	if err != nil {
 		return nil, err.Trace()
 	}
@@ -49,17 +49,30 @@ func loadSharedURLsV1() (*sharedURLsV1, *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(sharedURLsDataFile)
 	}
-	s := qs.Data().(*sharedURLsV1)
+	s := qs.Data().(*sharedURLsV3)
 	return s, nil
 }
 
-func newSharedURLsV1() *sharedURLsV1 {
-	s := &sharedURLsV1{
-		Version: "1.0.0",
-		URLs: make(map[string]struct {
-			Date    time.Time
-			Message ShareMessageV1
-		}),
+func saveSharedURLsV3(s *sharedURLsV3) *probe.Error {
+	qs, err := quick.New(s)
+	if err != nil {
+		return err.Trace()
+	}
+	sharedURLsDataFile, err := getSharedURLsDataFile()
+	if err != nil {
+		return err.Trace()
+	}
+	return qs.Save(sharedURLsDataFile).Trace(sharedURLsDataFile)
+}
+
+func newSharedURLsV3() *sharedURLsV3 {
+	var urls []struct {
+		Date    time.Time
+		Message ShareMessageV3
+	}
+	s := &sharedURLsV3{
+		Version: "3",
+		URLs:    urls,
 	}
 	return s
 }

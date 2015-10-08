@@ -19,9 +19,12 @@ package minio
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
 	"io"
+	"strings"
+	"time"
 )
 
 // decoder provides a unified decoding method interface
@@ -78,4 +81,29 @@ func sumHMAC(key []byte, data []byte) []byte {
 	hash := hmac.New(sha256.New, key)
 	hash.Write(data)
 	return hash.Sum(nil)
+}
+
+// getSigningKey hmac seed to calculate final signature
+func getSigningKey(secret, region string, t time.Time) []byte {
+	date := sumHMAC([]byte("AWS4"+secret), []byte(t.Format(yyyymmdd)))
+	regionbytes := sumHMAC(date, []byte(region))
+	service := sumHMAC(regionbytes, []byte("s3"))
+	signingKey := sumHMAC(service, []byte("aws4_request"))
+	return signingKey
+}
+
+// getSignature final signature in hexadecimal form
+func getSignature(signingKey []byte, stringToSign string) string {
+	return hex.EncodeToString(sumHMAC(signingKey, []byte(stringToSign)))
+}
+
+// getScope generate a string of a specific date, an AWS region, and a service
+func getScope(region string, t time.Time) string {
+	scope := strings.Join([]string{
+		t.Format(yyyymmdd),
+		region,
+		"s3",
+		"aws4_request",
+	}, "/")
+	return scope
 }

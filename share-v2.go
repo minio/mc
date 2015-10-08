@@ -28,7 +28,7 @@ type sharedURLsV2 struct {
 	Version string
 	URLs    []struct {
 		Date    time.Time
-		Message ShareMessage
+		Message ShareMessageV2
 	}
 }
 
@@ -68,7 +68,7 @@ func saveSharedURLsV2(s *sharedURLsV2) *probe.Error {
 func newSharedURLsV2() *sharedURLsV2 {
 	var urls []struct {
 		Date    time.Time
-		Message ShareMessage
+		Message ShareMessageV2
 	}
 	s := &sharedURLsV2{
 		Version: "1.1.0",

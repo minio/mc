@@ -29,8 +29,8 @@
 		},
 		{
 			"path": "github.com/minio/minio-go",
-			"revision": "4900c9c8695340456ca8409c2354d503f839a608",
-			"revisionTime": "2015-10-02T12:03:54-07:00"
+			"revision": "26948ab46dafaa60c6e14637ebfc1eb43802cb6c",
+			"revisionTime": "2015-10-06T11:59:55-07:00"
 		},
 		{
 			"path": "github.com/minio/minio-go-legacy",
@@ -44,8 +44,8 @@
 		},
 		{
 			"path": "github.com/minio/minio/pkg/quick",
-			"revision": "09dc360e06ece15f14df0e15e77d42652b329f05",
-			"revisionTime": "2015-10-03T12:26:04-07:00"
+			"revision": "e719adec8bbe0b717acba2d1ab7c61a1392c70ce",
+			"revisionTime": "2015-10-07T17:49:16-07:00"
 		},
 		{
 			"path": "github.com/minio/pb",
@@ -61,11 +61,6 @@
 			"path": "github.com/shiena/ansicolor",
 			"revision": "a5e2b567a4dd6cc74545b8a4f27c9d63b9e7735b",
 			"revisionTime": "2015-07-19T16:15:31+09:00"
-		},
-		{
-			"path": "github.com/tchap/go-patricia/patricia",
-			"revision": "a560f85131e8aafc2cc4bcb1e265ae3fc6ee5f50",
-			"revisionTime": "2015-06-11T09:53:39+02:00"
 		},
 		{
 			"path": "gopkg.in/check.v1",

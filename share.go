@@ -20,12 +20,35 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
+	"github.com/fatih/color"
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio/pkg/quick"
 )
 
-func newSharedURLs() *sharedURLsV2 {
-	return newSharedURLsV2()
+func shareDataDirSetup() {
+	if !isSharedURLsDataDirExists() {
+		shareDir, err := getSharedURLsDataDir()
+		fatalIf(err.Trace(), "Unable to get shared URL data directory")
+
+		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared URL data directory ‘"+shareDir+"’.")
+	}
+	if !isSharedURLsDataFileExists() {
+		shareFile, err := getSharedURLsDataFile()
+		fatalIf(err.Trace(), "Unable to get shared URL data file")
+
+		fatalIf(createSharedURLsDataFile().Trace(), "Unable to create shared URL data file ‘"+shareFile+"’.")
+	}
+}
+
+// migrateSharedURLs migrate to newest version sequentially
+func migrateSharedURLs() {
+	migrateSharedURLsV1ToV2()
+	migrateSharedURLsV2ToV3()
 }
 
 func migrateSharedURLsV1ToV2() {
@@ -48,7 +71,18 @@ func migrateSharedURLsV1ToV2() {
 			sURLsV2 = newSharedURLsV2()
 			for key, value := range sURLsV1.URLs {
 				value.Message.Key = key
-				sURLsV2.URLs = append(sURLsV2.URLs, value)
+				entry := struct {
+					Date    time.Time
+					Message ShareMessageV2
+				}{
+					Date: value.Date,
+					Message: ShareMessageV2{
+						Expiry: value.Message.Expiry,
+						URL:    value.Message.URL,
+						Key:    value.Message.Key,
+					},
+				}
+				sURLsV2.URLs = append(sURLsV2.URLs, entry)
 			}
 			err = saveSharedURLsV2(sURLsV2)
 			fatalIf(err.Trace(), "Unable to save new shared url version ‘1.1.0’.")
@@ -56,6 +90,47 @@ func migrateSharedURLsV1ToV2() {
 			fatalIf(err.Trace(), "Unable to load shared url version ‘1.1.0’.")
 		}
 	}
+}
+
+func migrateSharedURLsV2ToV3() {
+	if !isSharedURLsDataFileExists() {
+		return
+	}
+	conffile, err := getSharedURLsDataFile()
+	if err != nil {
+		return
+	}
+	v3, err := quick.CheckVersion(conffile, "3")
+	if err != nil {
+		fatalIf(err.Trace(), "Unable to check version on share list file")
+	}
+	if v3 {
+		return
+	}
+
+	// try to load V2 if possible
+	sURLsV2, err := loadSharedURLsV2()
+	fatalIf(err.Trace(), "Unable to load shared url version ‘1.1.0’.")
+	if sURLsV2.Version != "1.1.0" {
+		fatalIf(errDummy().Trace(), "Invalid version loaded ‘"+sURLsV2.Version+"’.")
+	}
+	sURLsV3 := newSharedURLsV3()
+	for _, value := range sURLsV2.URLs {
+		entry := struct {
+			Date    time.Time
+			Message ShareMessageV3
+		}{
+			Date: value.Date,
+			Message: ShareMessageV3{
+				Expiry:      value.Message.Expiry,
+				DownloadURL: value.Message.URL,
+				Key:         value.Message.Key,
+			},
+		}
+		sURLsV3.URLs = append(sURLsV3.URLs, entry)
+	}
+	err = saveSharedURLsV3(sURLsV3)
+	fatalIf(err.Trace(), "Unable to save new shared url version ‘1.2.0’.")
 }
 
 func getSharedURLsDataDir() (string, *probe.Error) {
@@ -111,8 +186,55 @@ func isSharedURLsDataFileExists() bool {
 }
 
 func createSharedURLsDataFile() *probe.Error {
-	if err := saveSharedURLsV2(newSharedURLs()); err != nil {
+	if err := saveSharedURLsV3(newSharedURLsV3()); err != nil {
 		return err.Trace()
 	}
 	return nil
+}
+
+func getNewTargetURL(targetParser *client.URL, name string) string {
+	match, _ := filepath.Match("*.s3*.amazonaws.com", targetParser.Host)
+	if match {
+		targetParser.Path = string(targetParser.Separator) + name
+	} else {
+		targetParser.Path = string(targetParser.Separator) + path2Bucket(targetParser) + string(targetParser.Separator) + name
+	}
+	return targetParser.String()
+}
+
+// this code is necessary since, share only operates on cloud storage URLs not filesystem
+func path2Bucket(u *client.URL) (bucketName string) {
+	pathSplits := strings.SplitN(u.Path, "?", 2)
+	splits := strings.SplitN(pathSplits[0], string(u.Separator), 3)
+	switch len(splits) {
+	case 0, 1:
+		bucketName = ""
+	case 2:
+		bucketName = splits[1]
+	case 3:
+		bucketName = splits[1]
+	}
+	return bucketName
+}
+
+func setSharePalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"Share":   color.New(color.FgGreen, color.Bold),
+		"Expires": color.New(color.FgRed, color.Bold),
+		"URL":     color.New(color.FgCyan, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Share":   color.New(color.FgWhite, color.Bold),
+			"Expires": color.New(color.FgWhite, color.Bold),
+			"URL":     color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
 }
