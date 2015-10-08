@@ -163,19 +163,37 @@ func checkSessionSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainSession(ctx *cli.Context) {
-	checkSessionSyntax(ctx)
-
-	if !isSessionDirExists() {
-		fatalIf(createSessionDir().Trace(), "Unable to create session directory.")
-	}
-
+func setSessionPalette(style string) {
 	console.SetCustomPalette(map[string]*color.Color{
 		"Command":      color.New(color.FgWhite, color.Bold),
 		"SessionID":    color.New(color.FgYellow, color.Bold),
 		"SessionTime":  color.New(color.FgGreen),
 		"ClearSession": color.New(color.FgGreen, color.Bold),
 	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Command":      color.New(color.FgWhite, color.Bold),
+			"SessionID":    color.New(color.FgWhite, color.Bold),
+			"SessionTime":  color.New(color.FgWhite, color.Bold),
+			"ClearSession": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
+func mainSession(ctx *cli.Context) {
+	checkSessionSyntax(ctx)
+
+	setSessionPalette(ctx.GlobalString("colors"))
+
+	if !isSessionDirExists() {
+		fatalIf(createSessionDir().Trace(), "Unable to create session directory.")
+	}
 
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list resumable sessions

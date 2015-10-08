@@ -117,6 +117,28 @@ func checkShareSyntax(ctx *cli.Context) {
 	}
 }
 
+func setSharePalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"Share":   color.New(color.FgGreen, color.Bold),
+		"Expires": color.New(color.FgRed, color.Bold),
+		"URL":     color.New(color.FgCyan, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Share":   color.New(color.FgWhite, color.Bold),
+			"Expires": color.New(color.FgWhite, color.Bold),
+			"URL":     color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
 // mainShare - is a handler for mc share command
 func mainShare(ctx *cli.Context) {
 	checkShareSyntax(ctx)
@@ -134,11 +156,7 @@ func mainShare(ctx *cli.Context) {
 		fatalIf(createSharedURLsDataFile().Trace(), "Unable to create shared URL data file ‘"+shareFile+"’.")
 	}
 
-	console.SetCustomPalette(map[string]*color.Color{
-		"Share":   color.New(color.FgGreen, color.Bold),
-		"Expires": color.New(color.FgRed, color.Bold),
-		"URL":     color.New(color.FgCyan, color.Bold),
-	})
+	setSharePalette(ctx.GlobalString("colors"))
 
 	args := ctx.Args()
 	config := mustGetMcConfig()

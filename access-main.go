@@ -116,12 +116,25 @@ func checkAccessSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainAccess(ctx *cli.Context) {
-	checkAccessSyntax(ctx)
-
+func setAccessPalette(style string) {
 	console.SetCustomPalette(map[string]*color.Color{
 		"Access": color.New(color.FgGreen, color.Bold),
 	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Access": color.New(color.FgWhite, color.Bold),
+		})
+	}
+	if style == "nocolor" {
+		// ALl coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
+func mainAccess(ctx *cli.Context) {
+	checkAccessSyntax(ctx)
+
+	setAccessPalette(ctx.GlobalString("colors"))
 
 	config := mustGetMcConfig()
 

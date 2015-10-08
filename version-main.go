@@ -40,13 +40,30 @@ USAGE:
 `,
 }
 
+func setVersionPalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"Version": color.New(color.FgGreen, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Version": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
 func mainVersion(ctx *cli.Context) {
 	if ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
 	}
-	console.SetCustomPalette(map[string]*color.Color{
-		"Version": color.New(color.FgGreen, color.Bold),
-	})
+
+	setVersionPalette(ctx.GlobalString("colors"))
+
 	if globalJSONFlag {
 		tB, e := json.Marshal(
 			struct {

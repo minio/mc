@@ -308,13 +308,28 @@ func doCopySession(session *sessionV2) {
 	wg.Wait()
 }
 
+func setCopyPalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"Copy": color.New(color.FgGreen, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Copy": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
 // mainCopy is bound to sub-command
 func mainCopy(ctx *cli.Context) {
 	checkCopySyntax(ctx)
 
-	console.SetCustomPalette(map[string]*color.Color{
-		"Copy": color.New(color.FgGreen, color.Bold),
-	})
+	setCopyPalette(ctx.GlobalString("colors"))
 
 	session := newSessionV2()
 

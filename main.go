@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
@@ -91,9 +92,8 @@ func registerBefore(ctx *cli.Context) error {
 	if globalDebugFlag {
 		console.NoDebugPrint = false
 	}
-	if ctx.GlobalBool("nocolor") {
-		console.SetNoColor()
-	}
+
+	setMainPalette(ctx.GlobalString("colors"))
 
 	// check if mc is being run as root
 	checkUser()
@@ -130,12 +130,12 @@ func registerApp() *cli.App {
 	registerCmd(versionCmd) // Print version.
 
 	// register all the flags
-	registerFlag(configFlag)  // Path to configuration folder.
-	registerFlag(quietFlag)   // Suppress chatty console output.
-	registerFlag(mimicFlag)   // Behave like operating system tools. Use with shell aliases.
-	registerFlag(jsonFlag)    // Enable json formatted output.
-	registerFlag(debugFlag)   // Enable debugging output.
-	registerFlag(noColorFlag) // Disable console coloring.
+	registerFlag(configFlag) // Path to configuration folder.
+	registerFlag(quietFlag)  // Suppress chatty console output.
+	registerFlag(mimicFlag)  // Behave like operating system tools. Use with shell aliases.
+	registerFlag(jsonFlag)   // Enable json formatted output.
+	registerFlag(debugFlag)  // Enable debugging output.
+	registerFlag(colorsFlag) // Choose different styles of console coloring.
 
 	app := cli.NewApp()
 	app.Usage = "Minio Client for cloud storage and filesystems."
@@ -175,6 +175,33 @@ VERSION:
 
 	}
 	return app
+}
+
+func setMainPalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"Debug":  color.New(color.FgWhite, color.Faint, color.Italic),
+		"Fatal":  color.New(color.FgRed, color.Italic, color.Bold),
+		"Error":  color.New(color.FgYellow, color.Italic),
+		"Info":   color.New(color.FgGreen, color.Bold),
+		"Print":  color.New(),
+		"PrintC": color.New(color.FgGreen, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Debug":  color.New(color.FgWhite, color.Faint, color.Italic),
+			"Fatal":  color.New(color.FgWhite, color.Italic, color.Bold),
+			"Error":  color.New(color.FgWhite, color.Italic, color.Bold),
+			"Info":   color.New(color.FgWhite, color.Bold),
+			"Print":  color.New(),
+			"PrintC": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
 }
 
 func main() {

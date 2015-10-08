@@ -59,16 +59,34 @@ func checkDiffSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainDiff - is a handler for mc diff command
-func mainDiff(ctx *cli.Context) {
-	checkDiffSyntax(ctx)
-
+func setDiffPalette(style string) {
 	console.SetCustomPalette(map[string]*color.Color{
 		"DiffMessage":     color.New(color.FgGreen, color.Bold),
 		"DiffOnlyInFirst": color.New(color.FgRed, color.Bold),
 		"DiffType":        color.New(color.FgYellow, color.Bold),
 		"DiffSize":        color.New(color.FgMagenta, color.Bold),
 	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"DiffMessage":     color.New(color.FgWhite, color.Bold),
+			"DiffOnlyInFirst": color.New(color.FgWhite, color.Bold),
+			"DiffType":        color.New(color.FgWhite, color.Bold),
+			"DiffSize":        color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
+// mainDiff - is a handler for mc diff command
+func mainDiff(ctx *cli.Context) {
+	checkDiffSyntax(ctx)
+
+	setDiffPalette(ctx.GlobalString("colors"))
 
 	config := mustGetMcConfig()
 	firstArg := ctx.Args().First()

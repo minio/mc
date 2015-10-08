@@ -88,6 +88,29 @@ func checkListSyntax(ctx *cli.Context) {
 	}
 }
 
+func setListPalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"File": color.New(color.FgWhite),
+		"Dir":  color.New(color.FgCyan, color.Bold),
+		"Size": color.New(color.FgYellow),
+		"Time": color.New(color.FgGreen),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"File": color.New(color.FgWhite, color.Bold),
+			"Dir":  color.New(color.FgWhite, color.Bold),
+			"Size": color.New(color.FgWhite, color.Bold),
+			"Time": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
 // mainList - is a handler for mc ls command
 func mainList(ctx *cli.Context) {
 	checkListSyntax(ctx)
@@ -98,12 +121,7 @@ func mainList(ctx *cli.Context) {
 		args = []string{"."}
 	}
 
-	console.SetCustomPalette(map[string]*color.Color{
-		"File": color.New(color.FgWhite),
-		"Dir":  color.New(color.FgCyan, color.Bold),
-		"Size": color.New(color.FgYellow),
-		"Time": color.New(color.FgGreen),
-	})
+	setListPalette(ctx.GlobalString("colors"))
 
 	targetURLs, err := args2URLs(args)
 	fatalIf(err.Trace(args...), "One or more unknown URL types passed.")

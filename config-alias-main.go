@@ -114,16 +114,32 @@ func checkConfigAliasSyntax(ctx *cli.Context) {
 	}
 }
 
-//
-func mainConfigAlias(ctx *cli.Context) {
-	checkConfigAliasSyntax(ctx)
-
-	// set new custom coloring
+func setConfigAliasPalette(style string) {
 	console.SetCustomPalette(map[string]*color.Color{
 		"Alias":        color.New(color.FgCyan, color.Bold),
 		"AliasMessage": color.New(color.FgGreen, color.Bold),
 		"URL":          color.New(color.FgWhite, color.Bold),
 	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Alias":        color.New(color.FgWhite, color.Bold),
+			"AliasMessage": color.New(color.FgWhite, color.Bold),
+			"URL":          color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
+//
+func mainConfigAlias(ctx *cli.Context) {
+	checkConfigAliasSyntax(ctx)
+
+	setConfigAliasPalette(ctx.GlobalString("colors"))
 
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
