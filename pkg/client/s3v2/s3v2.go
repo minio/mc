@@ -77,13 +77,17 @@ func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 }
 
 // Share - get a usable get object url to share
-func (c *s3Client) Share(expires time.Duration) (string, *probe.Error) {
+func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	presignedURL, err := c.api.PresignedGetObject(bucket, object, expires)
 	if err != nil {
 		return "", probe.NewError(err)
 	}
 	return presignedURL, nil
+}
+
+func (f *s3Client) ShareUpload(recursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
+	return nil, probe.NewError(client.APINotImplemented{API: "Share", APIType: "filesystem"})
 }
 
 // PutObject - put object

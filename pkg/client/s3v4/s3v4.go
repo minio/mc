@@ -77,13 +77,30 @@ func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 }
 
 // Share - get a usable get object url to share
-func (c *s3Client) Share(expires time.Duration) (string, *probe.Error) {
+func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	presignedURL, err := c.api.PresignedGetObject(bucket, object, expires)
 	if err != nil {
 		return "", probe.NewError(err)
 	}
 	return presignedURL, nil
+}
+
+func (c *s3Client) ShareUpload(recursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	p := minio.NewPostPolicy()
+	p.SetExpires(time.Now().UTC().Add(expires))
+	if len(contentType) > 0 {
+		p.SetContentType(contentType)
+	}
+	p.SetBucket(bucket)
+	if recursive {
+		p.SetKeyStartsWith(object)
+	} else {
+		p.SetKey(object)
+	}
+	m, err := c.api.PresignedPostPolicy(p)
+	return m, probe.NewError(err)
 }
 
 // PutObject - put object

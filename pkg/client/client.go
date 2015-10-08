@@ -36,7 +36,8 @@ type Client interface {
 	SetBucketACL(acl string) *probe.Error
 
 	// Object operations
-	Share(expires time.Duration) (string, *probe.Error)
+	ShareDownload(expires time.Duration) (string, *probe.Error)
+	ShareUpload(bool, time.Duration, string) (map[string]string, *probe.Error)
 	GetObject(offset, length int64) (body io.ReadCloser, size int64, err *probe.Error)
 	PutObject(size int64, data io.Reader) *probe.Error
 

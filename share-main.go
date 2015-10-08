@@ -41,7 +41,8 @@ var shareCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [DURATION]
+   mc {{.Name}} download TARGET [DURATION]
+   mc {{.Name}} upload TARGET [DURATION] [Content-Type]
 
    DURATION = NN[h|m|s] [DEFAULT=168h]
 
@@ -65,28 +66,70 @@ EXAMPLES:
 }
 
 // ShareMessage is container for share command on success and failure messages
-type ShareMessage struct {
+type ShareMessageV1 struct {
 	Expiry time.Duration `json:"expiry"`
 	URL    string        `json:"url"`
 	Key    string        `json:"keyName"`
 }
 
+type ShareMessageV2 ShareMessageV1
+
+type ShareMessageV3 struct {
+	Expiry      time.Duration     `json:"expiry"`
+	DownloadUrl string            `json:"downloadUrl,omitempty"`
+	UploadInfo  map[string]string `json:"uploadInfo,omitempty"`
+	Key         string            `json:"keyName"`
+}
+
+type ShareMessage ShareMessageV3
+
 // String - regular colorized message
 func (s ShareMessage) String() string {
-	return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   URL: %s\n   Key: %s", timeDurationToHumanizedTime(s.Expiry), s.URL, s.Key))
+	if len(s.DownloadUrl) > 0 {
+		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   DownloadUrl: %s\n   Key: %s", timeDurationToHumanizedTime(s.Expiry), s.DownloadUrl, s.Key))
+	} else {
+		var key string
+		URL := client.NewURL(s.Key)
+		postUrl := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator) + s.UploadInfo["bucket"] + " "
+		curlCommand := "curl " + postUrl
+		for k, v := range s.UploadInfo {
+			if k == "key" {
+				key = v
+				continue
+			}
+			curlCommand = curlCommand + fmt.Sprintf("-F %s=%s ", k, v)
+		}
+		curlCommand = curlCommand + fmt.Sprintf("-F key=%s ", key) + "-F file=@<LOCALFILEPATH> "
+		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   curl-command: %s\n   Key: %s", timeDurationToHumanizedTime(s.Expiry), curlCommand, s.Key))
+	}
 }
 
 // JSON json message for share command
 func (s ShareMessage) JSON() string {
-	shareMessageBytes, err := json.Marshal(struct {
-		Expiry humanizedTime `json:"expiry"`
-		URL    string        `json:"url"`
-		Key    string        `json:"keyName"`
-	}{
-		Expiry: timeDurationToHumanizedTime(s.Expiry),
-		URL:    s.URL,
-		Key:    s.Key,
-	})
+	var shareMessageBytes []byte
+	var err error
+	if len(s.DownloadUrl) > 0 {
+		shareMessageBytes, err = json.Marshal(struct {
+			Expiry      humanizedTime `json:"expiry"`
+			DownloadUrl string        `json:"downloadUrl"`
+			Key         string        `json:"keyName"`
+		}{
+			Expiry:      timeDurationToHumanizedTime(s.Expiry),
+			DownloadUrl: s.DownloadUrl,
+			Key:         s.Key,
+		})
+	} else {
+		shareMessageBytes, err = json.Marshal(struct {
+			Expiry     humanizedTime     `json:"expiry"`
+			UploadInfo map[string]string `json:"uploadInfo"`
+			Key        string            `json:"keyName"`
+		}{
+			Expiry:     timeDurationToHumanizedTime(s.Expiry),
+			UploadInfo: s.UploadInfo,
+			Key:        s.Key,
+		})
+	}
+
 	fatalIf(probe.NewError(err), "Failed to marshal into JSON.")
 
 	// json encoding escapes ampersand into its unicode character which is not usable directly for share
@@ -98,13 +141,11 @@ func (s ShareMessage) JSON() string {
 // migrateSharedURLs migrate to newest version sequentially
 func migrateSharedURLs() {
 	migrateSharedURLsV1ToV2()
+	migrateSharedURLsV2ToV3()
 }
 
 func checkShareSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
-	}
-	if len(ctx.Args()) > 2 {
+	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "share", 1) // last argument is exit code
 	}
 	if ctx.Args().Get(0) == "list" {
@@ -142,7 +183,6 @@ func setSharePalette(style string) {
 // mainShare - is a handler for mc share command
 func mainShare(ctx *cli.Context) {
 	checkShareSyntax(ctx)
-
 	if !isSharedURLsDataDirExists() {
 		shareDir, err := getSharedURLsDataDir()
 		fatalIf(err.Trace(), "Unable to get shared URL data directory")
@@ -168,26 +208,46 @@ func mainShare(ctx *cli.Context) {
 		return
 	}
 
-	/// get first and last arguments
-	url := args.Get(0) // url to be shared
-	// default expiration is 7days
-	expires := time.Duration(604800) * time.Second
-	if len(args) == 2 {
+	if args.Get(0) == "upload" {
+		var expires time.Duration
 		var err error
-		expires, err = time.ParseDuration(args.Get(1))
-		fatalIf(probe.NewError(err), "Unable to parse time argument.")
+		url := args.Get(1)
+		if len(args.Get(2)) == 0 {
+			expires = time.Duration(604800) * time.Second
+		} else {
+			expires, err = time.ParseDuration(args.Get(2))
+			if err != nil {
+				fatalIf(probe.NewError(err), "Unable to parse time argument.")
+			}
+		}
+		contentType := args.Get(3)
+		targetURL := getAliasURL(url, config.Aliases)
+		e := doShareUploadURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires, contentType)
+		fatalIf(e.Trace(targetURL), "Unable to generate URL for sharing.")
+		return
+	} else if args.Get(0) == "download" {
+		/// get first and last arguments
+		url := args.Get(1) // url to be shared
+		// default expiration is 7days
+		expires := time.Duration(604800) * time.Second
+		if len(args) == 3 {
+			var err error
+			expires, err = time.ParseDuration(args.Get(2))
+			fatalIf(probe.NewError(err), "Unable to parse time argument.")
+		}
+
+		targetURL := getAliasURL(url, config.Aliases)
+
+		// if recursive strip off the "..."
+		err := doShareDownloadURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
+		fatalIf(err.Trace(targetURL), "Unable to generate URL for sharing.")
+		return
 	}
-
-	targetURL := getAliasURL(url, config.Aliases)
-
-	// if recursive strip off the "..."
-	err := doShareURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
-	fatalIf(err.Trace(targetURL), "Unable to generate URL for sharing.")
 }
 
 // doShareList list shared url's
 func doShareList() *probe.Error {
-	sURLs, err := loadSharedURLsV2()
+	sURLs, err := loadSharedURLsV3()
 	if err != nil {
 		return err.Trace()
 	}
@@ -198,42 +258,105 @@ func doShareList() *probe.Error {
 		}
 		expiry := data.Message.Expiry - time.Since(data.Date)
 		if !globalJSONFlag {
+			var kind string
+			if len(data.Message.DownloadUrl) > 0 {
+				kind = "Download"
+			} else {
+				kind = "Upload"
+			}
 			msg := console.Colorize("Share", "Name: ")
-			msg += console.Colorize("URL", data.Message.Key+"\n")
+			msg += console.Colorize("URL", data.Message.Key+" ("+kind+")\n")
 			msg += console.Colorize("Share", "Expiry: ")
 			msg += console.Colorize("Expires", timeDurationToHumanizedTime(expiry))
 			msg += "\n"
 			console.Println(msg)
 			continue
 		}
-		shareListBytes, err := json.Marshal(struct {
-			Expiry humanizedTime `json:"expiry"`
-			URL    string        `json:"url"`
-			Key    string        `json:"keyName"`
-		}{
-			Expiry: timeDurationToHumanizedTime(expiry),
-			URL:    data.Message.URL,
-			Key:    data.Message.Key,
-		})
+		var shareMessageBytes []byte
+		var err error
+		s := data.Message
+		if len(s.DownloadUrl) > 0 {
+			shareMessageBytes, err = json.Marshal(struct {
+				Expiry      humanizedTime `json:"expiry"`
+				DownloadUrl string        `json:"downloadUrl"`
+				Key         string        `json:"keyName"`
+			}{
+				Expiry:      timeDurationToHumanizedTime(s.Expiry),
+				DownloadUrl: s.DownloadUrl,
+				Key:         s.Key,
+			})
+		} else {
+			shareMessageBytes, err = json.Marshal(struct {
+				Expiry     humanizedTime     `json:"expiry"`
+				UploadInfo map[string]string `json:"uploadInfo"`
+				Key        string            `json:"keyName"`
+			}{
+				Expiry:     timeDurationToHumanizedTime(s.Expiry),
+				UploadInfo: s.UploadInfo,
+				Key:        s.Key,
+			})
+		}
 		if err != nil {
 			return probe.NewError(err)
 		}
-		console.Println(string(shareListBytes))
+		console.Println(string(shareMessageBytes))
 	}
-	if err := saveSharedURLsV2(sURLs); err != nil {
+	if err := saveSharedURLsV3(sURLs); err != nil {
 		return err.Trace()
 	}
 	return nil
 }
 
 // doShareURL share files from target
-func doShareURL(targetURL string, recursive bool, expires time.Duration) *probe.Error {
+func doShareUploadURL(targetURL string, recursive bool, expires time.Duration, contentType string) *probe.Error {
 	shareDate := time.Now().UTC()
-	sURLs, err := loadSharedURLsV2()
+	sURLs, err := loadSharedURLsV3()
 	if err != nil {
 		return err.Trace()
 	}
 
+	clnt, err := url2Client(targetURL)
+	if err != nil {
+		return err.Trace()
+	}
+	m, err := clnt.ShareUpload(recursive, expires, contentType)
+	if err != nil {
+		return err.Trace()
+	}
+	Key := targetURL
+	if recursive {
+		Key = Key + recursiveSeparator
+		m["key"] = "<KEY>"
+	}
+	shareMessage := ShareMessage{
+		Expiry:     expires,
+		UploadInfo: m,
+		Key:        Key,
+	}
+	shareMessageV3 := ShareMessageV3{
+		Expiry:     expires,
+		UploadInfo: m,
+		Key:        Key,
+	}
+	sURLs.URLs = append(sURLs.URLs, struct {
+		Date    time.Time
+		Message ShareMessageV3
+	}{
+		Date:    shareDate,
+		Message: shareMessageV3,
+	})
+	Prints("%s\n", shareMessage)
+	saveSharedURLsV3(sURLs)
+	return nil
+}
+
+// doShareURL share files from target
+func doShareDownloadURL(targetURL string, recursive bool, expires time.Duration) *probe.Error {
+	shareDate := time.Now().UTC()
+	sURLs, err := loadSharedURLsV3()
+	if err != nil {
+		return err.Trace()
+	}
 	var clnt client.Client
 	clnt, err = target2Client(targetURL)
 	if err != nil {
@@ -255,25 +378,30 @@ func doShareURL(targetURL string, recursive bool, expires time.Duration) *probe.
 			return err.Trace()
 		}
 		var sharedURL string
-		sharedURL, err = newClnt.Share(expires)
+		sharedURL, err = newClnt.ShareDownload(expires)
 		if err != nil {
 			return err.Trace()
 		}
 		shareMessage := ShareMessage{
-			Expiry: expires,
-			URL:    sharedURL,
-			Key:    newClnt.URL().String(),
+			Expiry:      expires,
+			DownloadUrl: sharedURL,
+			Key:         newClnt.URL().String(),
+		}
+		shareMessageV3 := ShareMessageV3{
+			Expiry:      expires,
+			DownloadUrl: sharedURL,
+			Key:         newClnt.URL().String(),
 		}
 		sURLs.URLs = append(sURLs.URLs, struct {
 			Date    time.Time
-			Message ShareMessage
+			Message ShareMessageV3
 		}{
 			Date:    shareDate,
-			Message: shareMessage,
+			Message: shareMessageV3,
 		})
 		Prints("%s\n", shareMessage)
 	}
-	saveSharedURLsV2(sURLs)
+	saveSharedURLsV3(sURLs)
 	return nil
 }
 

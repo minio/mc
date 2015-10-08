@@ -145,8 +145,12 @@ func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 	return body, content.Size, nil
 }
 
-func (f *fsClient) Share(expires time.Duration) (string, *probe.Error) {
-	return "", probe.NewError(client.APINotImplemented{API: "Share", APIType: "filesystem"})
+func (f *fsClient) ShareDownload(expires time.Duration) (string, *probe.Error) {
+	return "", probe.NewError(client.APINotImplemented{API: "ShareDownload", APIType: "filesystem"})
+}
+
+func (f *fsClient) ShareUpload(recursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
+	return nil, probe.NewError(client.APINotImplemented{API: "ShareUpload", APIType: "filesystem"})
 }
 
 // GetObject download an full or part object from bucket

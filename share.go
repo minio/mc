@@ -20,8 +20,10 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio/pkg/quick"
 )
 
 func newSharedURLs() *sharedURLsV2 {
@@ -48,7 +50,18 @@ func migrateSharedURLsV1ToV2() {
 			sURLsV2 = newSharedURLsV2()
 			for key, value := range sURLsV1.URLs {
 				value.Message.Key = key
-				sURLsV2.URLs = append(sURLsV2.URLs, value)
+				entry := struct {
+					Date    time.Time
+					Message ShareMessageV2
+				}{
+					Date: value.Date,
+					Message: ShareMessageV2{
+						Expiry: value.Message.Expiry,
+						URL:    value.Message.URL,
+						Key:    value.Message.Key,
+					},
+				}
+				sURLsV2.URLs = append(sURLsV2.URLs, entry)
 			}
 			err = saveSharedURLsV2(sURLsV2)
 			fatalIf(err.Trace(), "Unable to save new shared url version ‘1.1.0’.")
@@ -56,6 +69,47 @@ func migrateSharedURLsV1ToV2() {
 			fatalIf(err.Trace(), "Unable to load shared url version ‘1.1.0’.")
 		}
 	}
+}
+
+func migrateSharedURLsV2ToV3() {
+	if !isSharedURLsDataFileExists() {
+		return
+	}
+	conffile, err := getSharedURLsDataFile()
+	if err != nil {
+		return
+	}
+	v3, err := quick.CheckVersion(conffile, "3")
+	if err != nil {
+		fatalIf(err.Trace(), "Unable to check version on share list file")
+	}
+	if v3 {
+		return
+	}
+
+	// try to load V2 if possible
+	sURLsV2, err := loadSharedURLsV2()
+	fatalIf(err.Trace(), "Unable to load shared url version ‘1.1.0’.")
+	if sURLsV2.Version != "1.1.0" {
+		fatalIf(errDummy().Trace(), "Invalid version loaded ‘"+sURLsV2.Version+"’.")
+	}
+	sURLsV3 := newSharedURLsV3()
+	for _, value := range sURLsV2.URLs {
+		entry := struct {
+			Date    time.Time
+			Message ShareMessageV3
+		}{
+			Date: value.Date,
+			Message: ShareMessageV3{
+				Expiry:      value.Message.Expiry,
+				DownloadUrl: value.Message.URL,
+				Key:         value.Message.Key,
+			},
+		}
+		sURLsV3.URLs = append(sURLsV3.URLs, entry)
+	}
+	err = saveSharedURLsV3(sURLsV3)
+	fatalIf(err.Trace(), "Unable to save new shared url version ‘1.2.0’.")
 }
 
 func getSharedURLsDataDir() (string, *probe.Error) {
