@@ -178,7 +178,9 @@ func newProgressBar() barSend {
 			case pbBarSetCaption:
 				bar.Prefix(fixateBarCaption(msg.Arg.(string), getFixedWidth(bar.GetWidth(), 18)))
 			case pbBarExtend:
-				atomic.AddInt64(&bar.Total, msg.Arg.(int64))
+				if msg.Arg.(int64) > 0 {
+					atomic.AddInt64(&bar.Total, msg.Arg.(int64))
+				}
 			case pbBarProgress:
 				if bar.Total > 0 && !started {
 					started = true
