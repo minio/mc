@@ -90,8 +90,10 @@ func (sl *sortedList) Create(clnt client.Client, id string) *probe.Error {
 					if content.Content.Type.IsDir() && (content.Content.Type&os.ModeSymlink == os.ModeSymlink) {
 						continue
 					}
+					errorIf(content.Err.Trace(), fmt.Sprintf("Skipping ‘%s’.", content.Content.Name))
+					continue
 				}
-				errorIf(content.Err.Trace(), fmt.Sprintf("Skipping ‘%s’.", content.Content.Name))
+				errorIf(content.Err.Trace(), "Skipping unknown file.")
 				continue
 			}
 			return content.Err.Trace()
