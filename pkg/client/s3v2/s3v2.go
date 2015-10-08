@@ -87,7 +87,20 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 }
 
 func (c *s3Client) ShareUpload(recursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
-	return nil, probe.NewError(client.APINotImplemented{API: "Share", APIType: "filesystem"})
+	bucket, object := c.url2BucketAndObject()
+	p := minio.NewPostPolicy()
+	p.SetExpires(time.Now().UTC().Add(expires))
+	if len(contentType) > 0 {
+		p.SetContentType(contentType)
+	}
+	p.SetBucket(bucket)
+	if recursive {
+		p.SetKeyStartsWith(object)
+	} else {
+		p.SetKey(object)
+	}
+	m, err := c.api.PresignedPostPolicy(p)
+	return m, probe.NewError(err)
 }
 
 // PutObject - put object
