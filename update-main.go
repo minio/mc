@@ -102,13 +102,28 @@ func checkUpdateSyntax(ctx *cli.Context) {
 	}
 }
 
+func setUpdatePalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"UpdateMessage": color.New(color.FgGreen, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"UpdateMessage": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
 // mainUpdate -
 func mainUpdate(ctx *cli.Context) {
 	checkUpdateSyntax(ctx)
 
-	console.SetCustomPalette(map[string]*color.Color{
-		"UpdateMessage": color.New(color.FgGreen, color.Bold),
-	})
+	setUpdatePalette(ctx.GlobalString("colors"))
 
 	arg := strings.TrimSpace(ctx.Args().First())
 	switch arg {

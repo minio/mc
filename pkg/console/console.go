@@ -42,14 +42,7 @@ var IsExited = false
 var IsError = false
 
 // Palette default map
-var Palette = map[string]*color.Color{
-	"Debug":  color.New(color.FgWhite, color.Faint, color.Italic),
-	"Fatal":  color.New(color.FgRed, color.Italic, color.Bold),
-	"Error":  color.New(color.FgYellow, color.Italic),
-	"Info":   color.New(color.FgGreen, color.Bold),
-	"Print":  color.New(),
-	"PrintC": color.New(color.FgGreen, color.Bold),
-}
+var Palette = map[string]*color.Color{}
 
 var (
 	// Used by the caller to print multiple lines atomically. Exposed by Lock/Unlock methods.

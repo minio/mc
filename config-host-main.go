@@ -109,10 +109,7 @@ func checkConfigHostSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainConfigHost(ctx *cli.Context) {
-	checkConfigHostSyntax(ctx)
-
-	// set new custom coloring
+func setConfigHostPalette(style string) {
 	console.SetCustomPalette(map[string]*color.Color{
 		"Host":            color.New(color.FgCyan, color.Bold),
 		"API":             color.New(color.FgYellow, color.Bold),
@@ -120,6 +117,27 @@ func mainConfigHost(ctx *cli.Context) {
 		"AccessKeyID":     color.New(color.FgBlue, color.Bold),
 		"SecretAccessKey": color.New(color.FgRed, color.Bold),
 	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Host":            color.New(color.FgWhite, color.Bold),
+			"API":             color.New(color.FgWhite, color.Bold),
+			"HostMessage":     color.New(color.FgWhite, color.Bold),
+			"AccessKeyID":     color.New(color.FgWhite, color.Bold),
+			"SecretAccessKey": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
+func mainConfigHost(ctx *cli.Context) {
+	checkConfigHostSyntax(ctx)
+
+	setConfigHostPalette(ctx.GlobalString("colors"))
 
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()

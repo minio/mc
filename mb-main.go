@@ -79,13 +79,27 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 	}
 }
 
+func setMakeBucketPalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"MakeBucket": color.New(color.FgGreen, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"MakeBucket": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
+}
+
 // mainMakeBucket is the handler for mc mb command
 func mainMakeBucket(ctx *cli.Context) {
 	checkMakeBucketSyntax(ctx)
 
-	console.SetCustomPalette(map[string]*color.Color{
-		"MakeBucket": color.New(color.FgGreen, color.Bold),
-	})
+	setMakeBucketPalette(ctx.GlobalString("colors"))
 
 	config := mustGetMcConfig()
 	for _, arg := range ctx.Args() {
