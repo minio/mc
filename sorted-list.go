@@ -79,9 +79,13 @@ func (sl *sortedList) Create(clnt client.Client, id string) *probe.Error {
 	for content := range clnt.List(true) {
 		if content.Err != nil {
 			switch err := content.Err.ToGoError().(type) {
-			case client.ISBrokenSymlink:
+			case client.BrokenSymlink:
 				// FIXME: send the error to caller using channel
 				errorIf(content.Err.Trace(), fmt.Sprintf("Skipping broken Symlink ‘%s’.", err.Path))
+				continue
+			case client.TooManyLevelsSymlink:
+				// FIXME: send the error to caller using channel
+				errorIf(content.Err.Trace(), fmt.Sprintf("Skipping too many levels Symlink ‘%s’.", err.Path))
 				continue
 			}
 			if os.IsNotExist(content.Err.ToGoError()) || os.IsPermission(content.Err.ToGoError()) {
