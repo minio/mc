@@ -329,7 +329,7 @@ func (a api) newObjectUpload(bucket, object, contentType string, size int64, dat
 	for p := range chopper(data, partSize, nil) {
 		// This check is primarily for last part
 		// This verifies if the part.Len was an unexpected read i.e if we lost few bytes
-		if p.Len < partSize {
+		if p.Len < partSize && size > 0 {
 			expectedPartLen := size - totalLength
 			if expectedPartLen != p.Len {
 				return ErrorResponse{
@@ -460,7 +460,7 @@ func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, d
 	for p := range chopper(data, partSize, skipParts) {
 		// This check is primarily for last part
 		// This verifies if the part.Len was an unexpected read i.e if we lost few bytes
-		if p.Len < partSize {
+		if p.Len < partSize && size > 0 {
 			expectedPartLen := size - totalLength
 			if expectedPartLen != p.Len {
 				return ErrorResponse{
@@ -580,7 +580,7 @@ func (a api) PutObject(bucket, object, contentType string, size int64, data io.R
 		}
 	}
 	switch {
-	case size < minimumPartSize:
+	case size < minimumPartSize && size > 0:
 		// Single Part use case, use PutObject directly
 		for part := range chopper(data, minimumPartSize, nil) {
 			if part.Err != nil {
