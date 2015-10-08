@@ -114,8 +114,11 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
 			// handle this specifically for filesystem
-			case client.ISBrokenSymlink:
+			case client.BrokenSymlink:
 				errorIf(contentCh.Err.Trace(), "Unable to list broken link.")
+				continue
+			case client.TooManyLevelsSymlink:
+				errorIf(contentCh.Err.Trace(), "Unable to list too many levels link.")
 				continue
 			}
 			if os.IsNotExist(contentCh.Err.ToGoError()) || os.IsPermission(contentCh.Err.ToGoError()) {

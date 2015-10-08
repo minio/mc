@@ -150,25 +150,18 @@ func (e NotFound) Error() string {
 	return "Requested file ‘" + e.Path + "’ not found"
 }
 
-// ISFolder (EISDIR) - accessed file is a folder
-type ISFolder GenericFileError
+// BrokenSymlink (ENOTENT) - file has broken symlink
+type BrokenSymlink GenericFileError
 
-func (e ISFolder) Error() string {
-	return "Requested file ‘" + e.Path + "’ is a folder"
-}
-
-// NotFolder (ENOTDIR) - accessed file is not a folder
-type NotFolder GenericFileError
-
-func (e NotFolder) Error() string {
-	return "Requested file ‘" + e.Path + "’ is not a folder"
-}
-
-// ISBrokenSymlink (ENOTENT) - file has broken symlink
-type ISBrokenSymlink GenericFileError
-
-func (e ISBrokenSymlink) Error() string {
+func (e BrokenSymlink) Error() string {
 	return "Requested file ‘" + e.Path + "’ has broken symlink"
+}
+
+// TooManyLevelsSymlink (ELOOP) - file has too many levels of symlinks
+type TooManyLevelsSymlink GenericFileError
+
+func (e TooManyLevelsSymlink) Error() string {
+	return "Requested file ‘" + e.Path + "’ has too many levels of symlinks"
 }
 
 // EmptyPath (EINVAL) - invalid argument

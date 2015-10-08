@@ -286,7 +286,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 				if os.IsNotExist(err) {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     probe.NewError(client.ISBrokenSymlink{Path: file.Name()}),
+						Err:     probe.NewError(client.BrokenSymlink{Path: file.Name()}),
 					}
 					continue
 				}
@@ -416,10 +416,18 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				if os.IsNotExist(err) { // ignore broken symlinks
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     probe.NewError(client.ISBrokenSymlink{Path: fp}),
+						Err:     probe.NewError(client.BrokenSymlink{Path: fp}),
 					}
 					return nil
 				}
+				if strings.Contains(err.Error(), "too many levels of symbolic links") {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     probe.NewError(client.TooManyLevelsSymlink{Path: fp}),
+					}
+					return nil
+				}
+
 				return err
 			}
 		}
