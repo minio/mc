@@ -86,7 +86,7 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	return presignedURL, nil
 }
 
-func (f *s3Client) ShareUpload(recursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
+func (c *s3Client) ShareUpload(recursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
 	return nil, probe.NewError(client.APINotImplemented{API: "Share", APIType: "filesystem"})
 }
 

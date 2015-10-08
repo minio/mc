@@ -20,14 +20,35 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/fatih/color"
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/minio/pkg/quick"
 )
 
-func newSharedURLs() *sharedURLsV2 {
-	return newSharedURLsV2()
+func shareDataDirSetup() {
+	if !isSharedURLsDataDirExists() {
+		shareDir, err := getSharedURLsDataDir()
+		fatalIf(err.Trace(), "Unable to get shared URL data directory")
+
+		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared URL data directory ‘"+shareDir+"’.")
+	}
+	if !isSharedURLsDataFileExists() {
+		shareFile, err := getSharedURLsDataFile()
+		fatalIf(err.Trace(), "Unable to get shared URL data file")
+
+		fatalIf(createSharedURLsDataFile().Trace(), "Unable to create shared URL data file ‘"+shareFile+"’.")
+	}
+}
+
+// migrateSharedURLs migrate to newest version sequentially
+func migrateSharedURLs() {
+	migrateSharedURLsV1ToV2()
+	migrateSharedURLsV2ToV3()
 }
 
 func migrateSharedURLsV1ToV2() {
@@ -102,7 +123,7 @@ func migrateSharedURLsV2ToV3() {
 			Date: value.Date,
 			Message: ShareMessageV3{
 				Expiry:      value.Message.Expiry,
-				DownloadUrl: value.Message.URL,
+				DownloadURL: value.Message.URL,
 				Key:         value.Message.Key,
 			},
 		}
@@ -165,8 +186,55 @@ func isSharedURLsDataFileExists() bool {
 }
 
 func createSharedURLsDataFile() *probe.Error {
-	if err := saveSharedURLsV2(newSharedURLs()); err != nil {
+	if err := saveSharedURLsV3(newSharedURLsV3()); err != nil {
 		return err.Trace()
 	}
 	return nil
+}
+
+func getNewTargetURL(targetParser *client.URL, name string) string {
+	match, _ := filepath.Match("*.s3*.amazonaws.com", targetParser.Host)
+	if match {
+		targetParser.Path = string(targetParser.Separator) + name
+	} else {
+		targetParser.Path = string(targetParser.Separator) + path2Bucket(targetParser) + string(targetParser.Separator) + name
+	}
+	return targetParser.String()
+}
+
+// this code is necessary since, share only operates on cloud storage URLs not filesystem
+func path2Bucket(u *client.URL) (bucketName string) {
+	pathSplits := strings.SplitN(u.Path, "?", 2)
+	splits := strings.SplitN(pathSplits[0], string(u.Separator), 3)
+	switch len(splits) {
+	case 0, 1:
+		bucketName = ""
+	case 2:
+		bucketName = splits[1]
+	case 3:
+		bucketName = splits[1]
+	}
+	return bucketName
+}
+
+func setSharePalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"Share":   color.New(color.FgGreen, color.Bold),
+		"Expires": color.New(color.FgRed, color.Bold),
+		"URL":     color.New(color.FgCyan, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Share":   color.New(color.FgWhite, color.Bold),
+			"Expires": color.New(color.FgWhite, color.Bold),
+			"URL":     color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
+	}
 }
