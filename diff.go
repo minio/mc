@@ -261,6 +261,10 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 		if fok == false {
 			break
 		}
+		if f.Err != nil {
+			ch <- DiffMessage{Error: f.Err.Trace()}
+			continue
+		}
 		if f.Content.Type.IsDir() {
 			// skip directories
 			// there is no concept of directories on S3
@@ -277,6 +281,10 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 				Diff:      "only-in-first",
 			}
 			f, fok = <-fch
+			continue
+		}
+		if s.Err != nil {
+			ch <- DiffMessage{Error: s.Err.Trace()}
 			continue
 		}
 		if s.Content.Type.IsDir() {
