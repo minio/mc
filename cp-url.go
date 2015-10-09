@@ -36,10 +36,10 @@ type copyURLsType uint8
 
 const (
 	copyURLsTypeInvalid copyURLsType = iota
-	copyURLsTypeA
-	copyURLsTypeB
-	copyURLsTypeC
-	copyURLsTypeD
+	copyURLsTypeA                    // file to file
+	copyURLsTypeB                    // file to dir
+	copyURLsTypeC                    // recursive to dir
+	copyURLsTypeD                    // complex to dir
 )
 
 //   NOTE: All the parse rules should reduced to A: Copy(Source, Target).
