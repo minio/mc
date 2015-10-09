@@ -82,7 +82,7 @@ func (m MirrorMessage) JSON() string {
 }
 
 // doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
-func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
+func doMirror(sURLs mirrorURLs, progressReader interface{}, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
 	defer wg.Done() // Notify that this copy routine is done.
 	defer func() {
 		<-mirrorQueueCh
@@ -95,13 +95,13 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 	}
 
 	if !globalQuietFlag && !globalJSONFlag {
-		bar.SetCaption(sURLs.SourceContent.Name + ": ")
+		progressReader.(*barSend).SetCaption(sURLs.SourceContent.Name + ": ")
 	}
 
 	reader, length, err := getSource(sURLs.SourceContent.Name)
 	if err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
-			bar.ErrorGet(int64(length))
+			progressReader.(*barSend).ErrorGet(int64(length))
 		}
 		sURLs.Error = err.Trace(sURLs.SourceContent.Name)
 		statusCh <- sURLs
@@ -119,17 +119,17 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
 		})
-		newReader = reader
+		newReader = progressReader.(*accounter).NewProxyReader(reader)
 	} else {
 		// set up progress
-		newReader = bar.NewProxyReader(reader)
+		newReader = progressReader.(*barSend).NewProxyReader(reader)
 	}
 	defer newReader.Close()
 
 	err = putTargets(targetURLs, length, newReader)
 	if err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
-			bar.ErrorPut(int64(length))
+			progressReader.(*barSend).ErrorPut(int64(length))
 		}
 		sURLs.Error = err.Trace(targetURLs...)
 		statusCh <- sURLs
@@ -141,9 +141,9 @@ func doMirror(sURLs mirrorURLs, bar *barSend, mirrorQueueCh <-chan bool, wg *syn
 }
 
 // doMirrorFake - Perform a fake mirror to update the progress bar appropriately.
-func doMirrorFake(sURLs mirrorURLs, bar *barSend) {
+func doMirrorFake(sURLs mirrorURLs, progressReader interface{}) {
 	if !globalDebugFlag && !globalJSONFlag {
-		bar.Progress(sURLs.SourceContent.Size)
+		progressReader.(*barSend).Progress(sURLs.SourceContent.Size)
 	}
 }
 
@@ -216,10 +216,11 @@ func doMirrorSession(session *sessionV2) {
 	}
 
 	// Set up progress bar.
-	var bar barSend
+	var progressReader interface{}
 	if !globalQuietFlag && !globalJSONFlag {
-		bar = newProgressBar()
-		bar.Extend(session.Header.TotalBytes)
+		progressReader = newProgressBar(session.Header.TotalBytes)
+	} else {
+		progressReader = newAccounter(session.Header.TotalBytes)
 	}
 
 	// Prepare URL scanner from session data file.
@@ -244,7 +245,9 @@ func doMirrorSession(session *sessionV2) {
 			case sURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
 					if !globalQuietFlag && !globalJSONFlag {
-						bar.Finish()
+						progressReader.(*barSend).Finish()
+					} else {
+						console.Println(console.Colorize("Mirror", progressReader.(*accounter).Finish()))
 					}
 					return
 				}
@@ -291,7 +294,7 @@ func doMirrorSession(session *sessionV2) {
 			var sURLs mirrorURLs
 			json.Unmarshal([]byte(scanner.Text()), &sURLs)
 			if isCopied(sURLs.SourceContent.Name) {
-				doMirrorFake(sURLs, &bar)
+				doMirrorFake(sURLs, progressReader)
 			} else {
 				// Wait for other mirror routines to
 				// complete. We only have limited CPU
@@ -300,7 +303,7 @@ func doMirrorSession(session *sessionV2) {
 				// Account for each mirror routines we start.
 				mirrorWg.Add(1)
 				// Do mirroring in background concurrently.
-				go doMirror(sURLs, &bar, mirrorQueue, mirrorWg, statusCh)
+				go doMirror(sURLs, progressReader, mirrorQueue, mirrorWg, statusCh)
 			}
 		}
 		mirrorWg.Wait()

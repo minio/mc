@@ -21,7 +21,6 @@ import (
 	"io"
 	"runtime"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -36,8 +35,7 @@ import (
 type pbBar int
 
 const (
-	pbBarExtend pbBar = iota
-	pbBarProgress
+	pbBarProgress pbBar = iota
 	pbBarFinish
 	pbBarPutError
 	pbBarGetError
@@ -71,10 +69,6 @@ type barSend struct {
 
 func (b *barSend) NewProxyReader(r io.ReadCloser) *proxyReader {
 	return &proxyReader{r, b}
-}
-
-func (b barSend) Extend(total int64) {
-	b.opCh <- barMsg{Op: pbBarExtend, Arg: total}
 }
 
 func (b barSend) Progress(progress int64) {
@@ -147,16 +141,16 @@ func getFixedWidth(width, percent int) int {
 }
 
 // newProgressBar - instantiate a pbBar.
-func newProgressBar() barSend {
+func newProgressBar(total int64) *barSend {
 	console.SetCustomPalette(map[string]*color.Color{
 		"Bar": color.New(color.FgGreen, color.Bold),
 	})
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
-	go func(cmdCh <-chan barMsg, finishCh chan<- bool) {
+	go func(total int64, cmdCh <-chan barMsg, finishCh chan<- bool) {
 		var started bool
 		var totalBytesRead int64 // total amounts of bytes read
-		bar := pb.New64(0)
+		bar := pb.New64(total)
 		bar.SetUnits(pb.U_BYTES)
 		bar.SetRefreshRate(time.Millisecond * 125)
 		bar.NotPrint = true
@@ -177,10 +171,6 @@ func newProgressBar() barSend {
 			switch msg.Op {
 			case pbBarSetCaption:
 				bar.Prefix(fixateBarCaption(msg.Arg.(string), getFixedWidth(bar.GetWidth(), 18)))
-			case pbBarExtend:
-				if msg.Arg.(int64) > 0 {
-					atomic.AddInt64(&bar.Total, msg.Arg.(int64))
-				}
 			case pbBarProgress:
 				if bar.Total > 0 && !started {
 					started = true
@@ -206,8 +196,8 @@ func newProgressBar() barSend {
 				return
 			}
 		}
-	}(cmdCh, finishCh)
-	return barSend{cmdCh, finishCh}
+	}(total, cmdCh, finishCh)
+	return &barSend{cmdCh, finishCh}
 }
 
 /******************************** Scan Bar ************************************/
