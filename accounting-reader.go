@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dustin/go-humanize"
+	"github.com/minio/pb"
 )
 
 type accountingReader struct {
@@ -64,7 +64,10 @@ func (a *accounter) write(current int64) string {
 
 	if currentFromStart > 0 {
 		speed := float64(currentFromStart) / (float64(fromStart) / float64(time.Second))
-		speedBox = humanize.IBytes(uint64(speed))
+		speedBox = pb.FormatBytes(int64(speed))
+	}
+	if speedBox == "" {
+		speedBox = "0 MB"
 	}
 	return speedBox + "/s"
 }
@@ -85,8 +88,8 @@ func (a *accounter) Finish() string {
 	var message string
 	a.finishOnce.Do(func() {
 		close(a.isFinished)
-		message = fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", humanize.IBytes(uint64(a.Total)),
-			humanize.IBytes(uint64(a.current)), a.write(atomic.LoadInt64(&a.current)))
+		message = fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.FormatBytes(a.Total),
+			pb.FormatBytes(a.current), a.write(atomic.LoadInt64(&a.current)))
 	})
 	return message
 }
