@@ -556,6 +556,22 @@ func (a apiCore) putObject(bucket, object, contentType string, md5SumBytes []byt
 	return metadata, nil
 }
 
+func (a apiCore) presignedPostPolicyRequest(p *PostPolicy) *request {
+	r := new(request)
+	r.config = a.config
+	return r
+}
+
+func (a apiCore) presignedPostPolicy(p *PostPolicy) map[string]string {
+	r := a.presignedPostPolicyRequest(p)
+
+	policyBase64 := p.base64()
+	p.formData["policy"] = policyBase64
+	p.formData["AWSAccessKeyId"] = r.config.AccessKeyID
+	p.formData["signature"] = r.PostPresignSignature(policyBase64)
+	return p.formData
+}
+
 func (a apiCore) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,

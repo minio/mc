@@ -319,6 +319,14 @@ func (r *request) PreSignV2() (string, error) {
 	return r.req.URL.String(), nil
 }
 
+func (r *request) PostPresignSignature(policyBase64 string) string {
+	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
+	hm.Write([]byte(policyBase64))
+
+	signature := base64.StdEncoding.EncodeToString(hm.Sum(nil))
+	return signature
+}
+
 // Authorization = "AWS" + " " + AWSAccessKeyId + ":" + Signature;
 // Signature = Base64( HMAC-SHA1( YourSecretAccessKeyID, UTF-8-Encoding-Of( StringToSign ) ) );
 //
