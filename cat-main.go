@@ -139,10 +139,11 @@ func mainCat(ctx *cli.Context) {
 	}
 
 	// if Args contain ‘-’, we need to preserve its order specially.
-	args := []string{}
+	args := []string(ctx.Args())
 	if ctx.Args().First() == "-" {
 		for i, arg := range os.Args {
 			if arg == "cat" {
+				// Overwrite ctx.Args with os.Args.
 				args = os.Args[i+1:]
 				break
 			}
