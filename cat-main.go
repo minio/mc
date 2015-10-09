@@ -17,7 +17,11 @@
 package main
 
 import (
+	"bufio"
+	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 	"syscall"
@@ -41,16 +45,16 @@ EXAMPLES:
    1. Concantenate an object from Amazon S3 cloud storage to mplayer standard input.
       $ mc {{.Name}} https://s3.amazonaws.com/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
 
-   2. Concantenate a file from local filesystem to standard output.
-      $ mc {{.Name}} khitomer-accords.txt
+   2. Concantenate contents of file1.txt and stdin to standard output.
+      $ mc {{.Name}} file1.txt - > file.txt
 
-   3. Concantenate multiple files from local filesystem to standard output.
-      $ mc {{.Name}} *.txt > newfile.txt
+   3. Concantenate multiple files from the local filesystem to standard output.
+      $ mc {{.Name}} part.* > complete.img
 
    4. Concatenate a non english file name from Amazon S3 cloud storage.
       $ mc {{.Name}} s3/andoria/本語 > /tmp/本語
 
-   5. Behave like operating system tool ‘cat’, used for shell aliases.
+   5. Behave like operating system ‘cat’ tool. Useful for alias cat='mc --mimic cat'.
       $ echo "Hello, World!" | mc --mimic {{.Name}}
       Hello, World!
 
@@ -59,17 +63,67 @@ EXAMPLES:
 `,
 }
 
+// checkCatSyntax performs command-line input validation for cat command.
 func checkCatSyntax(ctx *cli.Context) {
 	if (!ctx.Args().Present() && !globalMimicFlag) || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
 	}
+
 	for _, arg := range ctx.Args() {
-		if strings.TrimSpace(arg) == "" {
-			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+		if strings.HasPrefix(arg, "-") && len(arg) > 1 {
+			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag ‘%s’ passed.", arg))
 		}
 	}
 }
 
+// catURL displays contents of a URL to stdout.
+func catURL(sourceURL string) *probe.Error {
+	config := mustGetMcConfig()
+	URL := getAliasURL(sourceURL, config.Aliases)
+
+	var reader io.ReadCloser
+	switch URL {
+	case "-":
+		reader = ioutil.NopCloser(bufio.NewReader(os.Stdin))
+	default:
+		sourceClnt, err := source2Client(URL)
+		if err != nil {
+			return err.Trace(URL)
+		}
+		// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
+		reader, _, err = sourceClnt.GetObject(0, 0)
+		if err != nil {
+			return err.Trace(URL)
+		}
+	}
+	defer reader.Close()
+
+	return catOut(reader).Trace(URL)
+}
+
+// catOut reads from reader stream and writes to stdout.
+func catOut(r io.Reader) *probe.Error {
+	// Do not forget to flush after stdout.
+	//	out := bufio.NewWriter(os.Stdout)
+	//	defer out.Flush()
+
+	// Read till EOF.
+	if _, err := io.Copy(os.Stdout, r); err != nil {
+		switch e := err.(type) {
+		case *os.PathError:
+			if e.Err == syscall.EPIPE {
+				// stdout closed by the user. Gracefully exit.
+				return nil
+			}
+			return probe.NewError(err)
+		default:
+			return probe.NewError(err)
+		}
+	}
+	return nil
+}
+
+// mainCat is the main entry point for cat command.
 func mainCat(ctx *cli.Context) {
 	checkCatSyntax(ctx)
 
@@ -84,44 +138,18 @@ func mainCat(ctx *cli.Context) {
 		return
 	}
 
-	// Convert arguments to URLs: expand alias, fix format...
-	for _, arg := range ctx.Args() {
-		fatalIf(catURL(arg).Trace(arg), "Unable to read from ‘"+arg+"’.")
-	}
-}
-
-func catURL(sourceURL string) *probe.Error {
-	config := mustGetMcConfig()
-	URL := getAliasURL(sourceURL, config.Aliases)
-
-	sourceClnt, err := source2Client(URL)
-	if err != nil {
-		return err.Trace(URL)
-	}
-
-	// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
-	reader, _, err := sourceClnt.GetObject(0, 0)
-	if err != nil {
-		return err.Trace(URL)
-	}
-	defer reader.Close()
-
-	return catOut(reader).Trace(URL)
-}
-
-func catOut(r io.Reader) *probe.Error {
-	// read till EOF
-	if _, err := io.Copy(os.Stdout, r); err != nil {
-		switch e := err.(type) {
-		case *os.PathError:
-			if e.Err == syscall.EPIPE {
-				// stdout closed by the user. Gracefully exit.
-				return nil
+	// if Args contain ‘-’, we need to preserve its order specially.
+	args := []string{}
+	if ctx.Args().First() == "-" {
+		for i, arg := range os.Args {
+			if arg == "cat" {
+				args = os.Args[i+1:]
+				break
 			}
-			return probe.NewError(err)
-		default:
-			return probe.NewError(err)
 		}
 	}
-	return nil
+	// Convert arguments to URLs: expand alias, fix format...
+	for _, arg := range args {
+		fatalIf(catURL(arg).Trace(arg), "Unable to read from ‘"+arg+"’.")
+	}
 }
