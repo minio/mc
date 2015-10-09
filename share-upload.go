@@ -17,6 +17,8 @@
 package main
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -64,9 +66,14 @@ func mainShareUpload(ctx *cli.Context) {
 	var err error
 	shareDataDirSetup()
 	checkShareUploadSyntax(ctx)
+	setSharePalette(ctx.GlobalString("colors"))
+
 	args := ctx.Args()
 	config := mustGetMcConfig()
 	url := args.Get(0)
+	if strings.HasSuffix(url, "/") {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("Upload location can not end with '/'. Did you mean %s%s", url, recursiveSeparator))
+	}
 	if len(args.Get(1)) == 0 {
 		expires = time.Duration(604800) * time.Second
 	} else {
@@ -77,8 +84,6 @@ func mainShareUpload(ctx *cli.Context) {
 	}
 	contentType := args.Get(2)
 	targetURL := getAliasURL(url, config.Aliases)
-
-	setSharePalette(ctx.GlobalString("colors"))
 
 	e := doShareUploadURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires, contentType)
 	fatalIf(e.Trace(targetURL), "Unable to generate URL for sharing.")
@@ -103,7 +108,7 @@ func doShareUploadURL(targetURL string, recursive bool, expires time.Duration, c
 	Key := targetURL
 	if recursive {
 		Key = Key + recursiveSeparator
-		m["key"] = "<KEY>"
+		m["key"] = m["key"] + "<FILE>"
 	}
 	shareMessage := ShareMessage{
 		Expiry:     expires,
