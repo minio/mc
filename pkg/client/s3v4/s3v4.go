@@ -89,15 +89,24 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 func (c *s3Client) ShareUpload(recursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	p := minio.NewPostPolicy()
-	p.SetExpires(time.Now().UTC().Add(expires))
-	if len(contentType) > 0 {
+	if err := p.SetExpires(time.Now().UTC().Add(expires)); err != nil {
+		return nil, probe.NewError(err)
+	}
+	if strings.TrimSpace(contentType) != "" || contentType != "" {
+		// No need to verify for error here, since we have stripped out spaces
 		p.SetContentType(contentType)
 	}
-	p.SetBucket(bucket)
+	if err := p.SetBucket(bucket); err != nil {
+		return nil, probe.NewError(err)
+	}
 	if recursive {
-		p.SetKeyStartsWith(object)
+		if err := p.SetKeyStartsWith(object); err != nil {
+			return nil, probe.NewError(err)
+		}
 	} else {
-		p.SetKey(object)
+		if err := p.SetKey(object); err != nil {
+			return nil, probe.NewError(err)
+		}
 	}
 	m, err := c.api.PresignedPostPolicy(p)
 	return m, probe.NewError(err)

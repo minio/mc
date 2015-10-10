@@ -81,17 +81,18 @@ func (sl *sortedList) Create(clnt client.Client, id string) *probe.Error {
 			switch err := content.Err.ToGoError().(type) {
 			case client.BrokenSymlink:
 				// FIXME: send the error to caller using channel
-				errorIf(content.Err.Trace(), fmt.Sprintf("Skipping broken Symlink ‘%s’.", err.Path))
+				errorIf(content.Err.Trace(), fmt.Sprintf("Skipping broken symlink ‘%s’.", err.Path))
 				continue
 			case client.TooManyLevelsSymlink:
 				// FIXME: send the error to caller using channel
-				errorIf(content.Err.Trace(), fmt.Sprintf("Skipping too many levels Symlink ‘%s’.", err.Path))
+				errorIf(content.Err.Trace(), fmt.Sprintf("Skipping too many levels symlink ‘%s’.", err.Path))
 				continue
 			}
 			if os.IsNotExist(content.Err.ToGoError()) || os.IsPermission(content.Err.ToGoError()) {
 				// FIXME: abstract this at fs.go layer
 				if content.Content != nil {
 					if content.Content.Type.IsDir() && (content.Content.Type&os.ModeSymlink == os.ModeSymlink) {
+						errorIf(content.Err.Trace(), fmt.Sprintf("Skipping broken folder symlink ‘%s’.", content.Content.Name))
 						continue
 					}
 					errorIf(content.Err.Trace(), fmt.Sprintf("Skipping ‘%s’.", content.Content.Name))

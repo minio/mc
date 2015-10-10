@@ -192,7 +192,7 @@ func mainSession(ctx *cli.Context) {
 	setSessionPalette(ctx.GlobalString("colors"))
 
 	if !isSessionDirExists() {
-		fatalIf(createSessionDir().Trace(), "Unable to create session directory.")
+		fatalIf(createSessionDir().Trace(), "Unable to create session folder.")
 	}
 
 	switch strings.TrimSpace(ctx.Args().First()) {
@@ -219,7 +219,7 @@ func mainSession(ctx *cli.Context) {
 		if s.Header.RootPath != "" {
 			// chdir to RootPath
 			e = os.Chdir(s.Header.RootPath)
-			fatalIf(probe.NewError(e), "Unable to change directory to root path while resuming session.")
+			fatalIf(probe.NewError(e), "Unable to change our folder to root path while resuming session.")
 		}
 		sessionExecute(s)
 		err = s.Close()
@@ -230,7 +230,7 @@ func mainSession(ctx *cli.Context) {
 
 		// chdir back to saved path
 		e = os.Chdir(savedCwd)
-		fatalIf(probe.NewError(e), "Unable to change directory to saved path ‘"+savedCwd+"’.")
+		fatalIf(probe.NewError(e), "Unable to change our folder to saved path ‘"+savedCwd+"’.")
 
 	// purge a requested pending session, if "all" purge everything
 	case "clear":

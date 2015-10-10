@@ -84,7 +84,7 @@ func mainShareDownload(ctx *cli.Context) {
 
 	// if recursive strip off the "..."
 	err := doShareDownloadURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
-	fatalIf(err.Trace(targetURL), "Unable to generate URL for sharing.")
+	fatalIf(err.Trace(targetURL), "Unable to generate URL for download.")
 	return
 }
 
