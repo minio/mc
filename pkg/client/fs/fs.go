@@ -62,7 +62,7 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	// Resolve symlinks
 	fpath, err := filepath.EvalSymlinks(fpath)
 	if runtime.GOOS == "windows" {
-		// On windows there are directory symlinks
+		// On windows there are folder symlinks
 		// which are called junction files which
 		// carry special meaning on windows
 		// - which cannot be accessed with regular operations
@@ -252,7 +252,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fi, err = os.Stat(filepath.Join(dir.Name(), fi.Name()))
 				if os.IsPermission(err) {
-					// On windows there are directory symlinks
+					// On windows there are folder symlinks
 					// which are called junction files which
 					// carry special meaning on windows
 					// - which cannot be accessed with regular operations
@@ -348,7 +348,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			}
 			if os.IsPermission(err) {
 				if runtime.GOOS == "windows" {
-					// On windows there are directory symlinks
+					// On windows there are folder symlinks
 					// which are called junction files which
 					// carry special meaning on windows
 					// - which cannot be accessed with regular operations
@@ -384,7 +384,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			if err != nil {
 				if os.IsPermission(err) {
 					if runtime.GOOS == "windows" {
-						// On windows there are directory symlinks
+						// On windows there are folder symlinks
 						// which are called junction files which
 						// carry special meaning on windows
 						// - which cannot be accessed with regular operations

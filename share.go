@@ -33,9 +33,9 @@ import (
 func shareDataDirSetup() {
 	if !isSharedURLsDataDirExists() {
 		shareDir, err := getSharedURLsDataDir()
-		fatalIf(err.Trace(), "Unable to get shared URL data directory")
+		fatalIf(err.Trace(), "Unable to get shared URL data folder.")
 
-		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared URL data directory ‘"+shareDir+"’.")
+		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared URL data folder ‘"+shareDir+"’.")
 	}
 	if !isSharedURLsDataFileExists() {
 		shareFile, err := getSharedURLsDataFile()
@@ -215,6 +215,32 @@ func path2Bucket(u *client.URL) (bucketName string) {
 		bucketName = splits[1]
 	}
 	return bucketName
+}
+
+// this code is necessary since, share only operates on cloud storage URLs not filesystem
+func isObjectKeyPresent(url string) bool {
+	u := client.NewURL(url)
+	path := u.Path
+	match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
+	switch {
+	case match == true:
+		hostSplits := strings.SplitN(u.Host, ".", 2)
+		path = string(u.Separator) + hostSplits[0] + u.Path
+	}
+	pathSplits := strings.SplitN(path, "?", 2)
+	splits := strings.SplitN(pathSplits[0], string(u.Separator), 3)
+	switch len(splits) {
+	case 0, 1:
+		return false
+	case 2:
+		return false
+	case 3:
+		if splits[2] == "" {
+			return false
+		}
+		return true
+	}
+	return false
 }
 
 func setSharePalette(style string) {

@@ -59,6 +59,13 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 	if len(args) > 3 {
 		cli.ShowCommandHelpAndExit(ctx, "upload", 1) // last argument is exit code
 	}
+	url := stripRecursiveURL(strings.TrimSpace(args.Get(0)))
+	if !isObjectKeyPresent(url) {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("Upload location needs object key ‘%s’.", strings.TrimSpace(args.Get(0))))
+	}
+	if strings.HasSuffix(strings.TrimSpace(args.Get(0)), "/") {
+		fatalIf(errDummy().Trace(), fmt.Sprintf("Upload location cannot end with ‘/’. Did you mean ‘%s’.", url+recursiveSeparator))
+	}
 }
 
 func mainShareUpload(ctx *cli.Context) {
@@ -70,23 +77,19 @@ func mainShareUpload(ctx *cli.Context) {
 
 	args := ctx.Args()
 	config := mustGetMcConfig()
-	url := args.Get(0)
-	if strings.HasSuffix(url, "/") {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Upload location can not end with '/'. Did you mean %s%s", url, recursiveSeparator))
-	}
-	if len(args.Get(1)) == 0 {
+	if strings.TrimSpace(args.Get(1)) == "" {
 		expires = time.Duration(604800) * time.Second
 	} else {
-		expires, err = time.ParseDuration(args.Get(1))
+		expires, err = time.ParseDuration(strings.TrimSpace(args.Get(1)))
 		if err != nil {
 			fatalIf(probe.NewError(err), "Unable to parse time argument.")
 		}
 	}
-	contentType := args.Get(2)
-	targetURL := getAliasURL(url, config.Aliases)
+	contentType := strings.TrimSpace(args.Get(2))
+	targetURL := getAliasURL(strings.TrimSpace(args.Get(0)), config.Aliases)
 
 	e := doShareUploadURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires, contentType)
-	fatalIf(e.Trace(targetURL), "Unable to generate URL for sharing.")
+	fatalIf(e.Trace(targetURL), "Unable to generate URL for upload.")
 }
 
 // doShareURL share files from target
