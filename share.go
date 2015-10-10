@@ -222,12 +222,14 @@ func setSharePalette(style string) {
 		"Share":   color.New(color.FgGreen, color.Bold),
 		"Expires": color.New(color.FgRed, color.Bold),
 		"URL":     color.New(color.FgCyan, color.Bold),
+		"File":    color.New(color.FgRed, color.Bold),
 	})
 	if style == "light" {
 		console.SetCustomPalette(map[string]*color.Color{
 			"Share":   color.New(color.FgWhite, color.Bold),
 			"Expires": color.New(color.FgWhite, color.Bold),
 			"URL":     color.New(color.FgWhite, color.Bold),
+			"File":    color.New(color.FgWhite, color.Bold),
 		})
 		return
 	}

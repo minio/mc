@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -75,7 +76,7 @@ type ShareMessage ShareMessageV3
 // String - regular colorized message
 func (s ShareMessage) String() string {
 	if len(s.DownloadURL) > 0 {
-		return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   DownloadURL: %s\n   Key: %s", timeDurationToHumanizedTime(s.Expiry), s.DownloadURL, s.Key))
+		return console.Colorize("Share", fmt.Sprintf("%s", s.DownloadURL))
 	}
 	var key string
 	URL := client.NewURL(s.Key)
@@ -88,8 +89,10 @@ func (s ShareMessage) String() string {
 		}
 		curlCommand = curlCommand + fmt.Sprintf("-F %s=%s ", k, v)
 	}
-	curlCommand = curlCommand + fmt.Sprintf("-F key=%s ", key) + "-F file=@<LOCALFILEPATH> "
-	return console.Colorize("Share", fmt.Sprintf("Expiry: %s\n   curl-command: %s\n   Key: %s", timeDurationToHumanizedTime(s.Expiry), curlCommand, s.Key))
+	curlCommand = curlCommand + fmt.Sprintf("-F key=%s ", key) + "-F file=@<FILE> "
+	emphasize := console.Colorize("File", "<FILE>")
+	curlCommand = strings.Replace(curlCommand, "<FILE>", emphasize, -1)
+	return console.Colorize("Share", fmt.Sprintf("%s", curlCommand))
 }
 
 // JSON json message for share command
@@ -107,14 +110,27 @@ func (s ShareMessage) JSON() string {
 			Key:         s.Key,
 		})
 	} else {
+		var key string
+		URL := client.NewURL(s.Key)
+		postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator) + s.UploadInfo["bucket"] + " "
+		curlCommand := "curl " + postURL
+		for k, v := range s.UploadInfo {
+			if k == "key" {
+				key = v
+				continue
+			}
+			curlCommand = curlCommand + fmt.Sprintf("-F %s=%s ", k, v)
+		}
+		curlCommand = curlCommand + fmt.Sprintf("-F key=%s ", key) + "-F file=@<FILE> "
+
 		shareMessageBytes, err = json.Marshal(struct {
-			Expiry     humanizedTime     `json:"expiry"`
-			UploadInfo map[string]string `json:"uploadInfo"`
-			Key        string            `json:"keyName"`
+			Expiry        humanizedTime `json:"expiry"`
+			UploadCommand string        `json:"uploadCommand"`
+			Key           string        `json:"keyName"`
 		}{
-			Expiry:     timeDurationToHumanizedTime(s.Expiry),
-			UploadInfo: s.UploadInfo,
-			Key:        s.Key,
+			Expiry:        timeDurationToHumanizedTime(s.Expiry),
+			UploadCommand: curlCommand,
+			Key:           s.Key,
 		})
 	}
 
@@ -123,6 +139,8 @@ func (s ShareMessage) JSON() string {
 	// json encoding escapes ampersand into its unicode character which is not usable directly for share
 	// and fails with cloud storage. convert them back so that they are usable
 	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
+	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u003c"), []byte("<"), -1)
+	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u003e"), []byte(">"), -1)
 	return string(shareMessageBytes)
 }
 
