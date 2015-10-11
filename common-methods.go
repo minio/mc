@@ -49,7 +49,7 @@ func isTargetURLDir(targetURL string) bool {
 	return true
 }
 
-// getSource gets a reader from URL<
+// getSource gets a reader from URL
 func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe.Error) {
 	sourceClnt, err := source2Client(sourceURL)
 	if err != nil {
@@ -58,7 +58,7 @@ func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe
 	return sourceClnt.GetObject(0, 0)
 }
 
-// putTarget writes to URL from reader.
+// putTarget writes to URL from reader. If length=0, read until EOF.
 func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
 	targetClnt, err := target2Client(targetURL)
 	if err != nil {
@@ -71,11 +71,13 @@ func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
 	return nil
 }
 
-// putTargets writes to URL from reader.
+// putTargets writes to URL from reader. If length=0, read until EOF.
 func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Error {
-	var tgtReaders []io.ReadCloser
-	var tgtWriters []io.WriteCloser
+	var tgtReaders []*io.PipeReader
+	var tgtWriters []*io.PipeWriter
 	var tgtClients []client.Client
+	errCh := make(chan *probe.Error)
+	defer close(errCh)
 
 	for _, targetURL := range targetURLs {
 		tgtClient, err := target2Client(targetURL)
@@ -91,11 +93,23 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 	go func() {
 		var writers []io.Writer
 		for _, tgtWriter := range tgtWriters {
-			defer tgtWriter.Close()
 			writers = append(writers, io.Writer(tgtWriter))
 		}
+
 		multiTgtWriter := io.MultiWriter(writers...)
-		io.CopyN(multiTgtWriter, reader, length)
+		var e error
+		switch length {
+		case 0:
+			_, e = io.Copy(multiTgtWriter, reader)
+		default:
+			_, e = io.CopyN(multiTgtWriter, reader, length)
+		}
+		for _, tgtWriter := range tgtWriters {
+			if e != nil {
+				tgtWriter.CloseWithError(e)
+			}
+			tgtWriter.Close()
+		}
 	}()
 
 	var wg sync.WaitGroup
@@ -111,22 +125,23 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 
 			go func(targetClient client.Client, reader io.ReadCloser, errorCh chan<- *probe.Error) {
 				defer wg.Done()
+				defer reader.Close()
 				err := targetClient.PutObject(length, reader)
 				if err != nil {
-					defer reader.Close()
 					errorCh <- err.Trace()
 					return
 				}
-				errorCh <- nil
 			}(tgtClient, tgtReader, errorCh)
 		}
 		wg.Wait()
 	}()
-	for err := range errorCh {
-		if err != nil { // Return on first error encounter.
-			return err.Trace()
-		}
+
+	// Return on first error encounter.
+	err := <-errorCh
+	if err != nil {
+		return err.Trace()
 	}
+
 	return nil // success.
 }
 
