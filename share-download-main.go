@@ -96,7 +96,7 @@ func doShareDownloadURL(targetURL string, recursive bool, expires time.Duration)
 		return err.Trace()
 	}
 	var clnt client.Client
-	clnt, err = target2Client(targetURL)
+	clnt, err = url2Client(targetURL)
 	if err != nil {
 		return err.Trace()
 	}

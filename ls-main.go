@@ -129,7 +129,7 @@ func mainList(ctx *cli.Context) {
 	for _, targetURL := range targetURLs {
 		// if recursive strip off the "..."
 		var clnt client.Client
-		clnt, err = target2Client(stripRecursiveURL(targetURL))
+		clnt, err = url2Client(stripRecursiveURL(targetURL))
 		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
 		err = doList(clnt, isURLRecursive(targetURL), len(targetURLs) > 1)

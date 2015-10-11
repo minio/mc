@@ -67,15 +67,15 @@ func (s *TestSuite) TestCommonMethods(c *C) {
 	_, _, perr = url2Stat(objectPath + "invalid")
 	c.Assert(perr, Not(IsNil))
 
-	_, perr = source2Client(objectPathServer)
+	_, perr = url2Client(objectPathServer)
 	c.Assert(perr, IsNil)
 
-	_, perr = target2Client(objectPathServer)
+	_, perr = url2Client(objectPathServer)
 	c.Assert(perr, IsNil)
 
-	_, perr = source2Client("http://test.minio.io" + "/bucket/fail")
+	_, perr = url2Client("http://test.minio.io" + "/bucket/fail")
 	c.Assert(perr, Not(IsNil))
 
-	_, perr = target2Client("http://test.minio.io" + "/bucket/fail")
+	_, perr = url2Client("http://test.minio.io" + "/bucket/fail")
 	c.Assert(perr, Not(IsNil))
 }

@@ -170,7 +170,7 @@ func mainAccess(ctx *cli.Context) {
 }
 
 func doSetAccess(targetURL string, targetPERMS bucketPerms) *probe.Error {
-	clnt, err := target2Client(targetURL)
+	clnt, err := url2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
@@ -181,7 +181,7 @@ func doSetAccess(targetURL string, targetPERMS bucketPerms) *probe.Error {
 }
 
 func doGetAccess(targetURL string) (perms bucketPerms, err *probe.Error) {
-	clnt, err := target2Client(targetURL)
+	clnt, err := url2Client(targetURL)
 	if err != nil {
 		return "", err.Trace(targetURL)
 	}
