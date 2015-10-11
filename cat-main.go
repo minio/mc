@@ -86,7 +86,7 @@ func catURL(sourceURL string) *probe.Error {
 	case "-":
 		reader = ioutil.NopCloser(bufio.NewReader(os.Stdin))
 	default:
-		sourceClnt, err := source2Client(URL)
+		sourceClnt, err := url2Client(URL)
 		if err != nil {
 			return err.Trace(URL)
 		}

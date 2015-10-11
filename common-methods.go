@@ -51,7 +51,7 @@ func isTargetURLDir(targetURL string) bool {
 
 // getSource gets a reader from URL
 func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe.Error) {
-	sourceClnt, err := source2Client(sourceURL)
+	sourceClnt, err := url2Client(sourceURL)
 	if err != nil {
 		return nil, 0, err.Trace()
 	}
@@ -60,7 +60,7 @@ func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe
 
 // putTarget writes to URL from reader. If length=0, read until EOF.
 func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
-	targetClnt, err := target2Client(targetURL)
+	targetClnt, err := url2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
@@ -80,7 +80,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 	defer close(errCh)
 
 	for _, targetURL := range targetURLs {
-		tgtClient, err := target2Client(targetURL)
+		tgtClient, err := url2Client(targetURL)
 		if err != nil {
 			return err.Trace(targetURL)
 		}
@@ -200,24 +200,6 @@ func url2Client(url string) (client.Client, *probe.Error) {
 		return nil, err.Trace(url)
 	}
 	return client, nil
-}
-
-// source2Client returns client and hostconfig objects from the source URL.
-func source2Client(sourceURL string) (client.Client, *probe.Error) {
-	sourceClient, err := url2Client(sourceURL)
-	if err != nil {
-		return nil, err.Trace(sourceURL)
-	}
-	return sourceClient, nil
-}
-
-// target2Client returns client and hostconfig objects from the target URL.
-func target2Client(targetURL string) (client.Client, *probe.Error) {
-	targetClient, err := url2Client(targetURL)
-	if err != nil {
-		return nil, err.Trace(targetURL)
-	}
-	return targetClient, nil
 }
 
 // bucketExists returns error

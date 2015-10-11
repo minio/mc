@@ -115,7 +115,7 @@ func mainMakeBucket(ctx *cli.Context) {
 
 // doMakeBucket -
 func doMakeBucket(targetURL string) *probe.Error {
-	clnt, err := target2Client(targetURL)
+	clnt, err := url2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
