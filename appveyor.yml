@@ -20,23 +20,14 @@ install:
   - msiexec /i go1.5.1.windows-amd64.msi /q
   - go version
   - go env
-  - go get -u github.com/golang/lint/golint
-  - go get -u golang.org/x/tools/cmd/vet
-  - go get -u github.com/fzipp/gocyclo
-  - go get -u github.com/remyoudompheng/go-misc/deadcode
 
 # to run your custom scripts instead of automatic MSBuild
 build_script:
   - set GOVENDOR15EXPERIMENT=1
-  - go tool vet -all ./pkg
-  - go tool vet -shadow=true ./pkg
-  - gofmt -s -l pkg
-  - golint .
-  - golint github.com/minio/mc/pkg...
-  - gocyclo -over 30 .
-  - deadcode
   - go test
   - go test -race
+  - go test github.com/minio/mc/pkg...
+  - go test -race github.com/minio/mc/pkg...
 
 # to disable automatic tests
 test: off
