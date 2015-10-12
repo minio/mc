@@ -306,7 +306,7 @@ func (r *request) PreSignV2() (string, error) {
 		r.Set("Date", d.Format(http.TimeFormat))
 	}
 	epochExpires := d.Unix() + r.expires
-	signText := fmt.Sprintf("GET\n\n\n%d\n%s", epochExpires, r.req.URL.Path)
+	signText := fmt.Sprintf("%s\n\n\n%d\n%s", r.req.Method, epochExpires, r.req.URL.Path)
 	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
 	hm.Write([]byte(signText))
 

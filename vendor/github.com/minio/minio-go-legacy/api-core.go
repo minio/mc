@@ -266,10 +266,10 @@ func (a apiCore) listObjectsRequest(bucket, marker, prefix, delimiter string, ma
 	resourceQuery := func() (*string, error) {
 		switch {
 		case marker != "":
-			marker = fmt.Sprintf("&marker=%s", marker)
+			marker = fmt.Sprintf("&marker=%s", getURLEncodedPath(marker))
 			fallthrough
 		case prefix != "":
-			prefix = fmt.Sprintf("&prefix=%s", prefix)
+			prefix = fmt.Sprintf("&prefix=%s", getURLEncodedPath(prefix))
 			fallthrough
 		case delimiter != "":
 			delimiter = fmt.Sprintf("&delimiter=%s", delimiter)
@@ -598,6 +598,22 @@ func (a apiCore) presignedGetObject(bucket, object string, expires, offset, leng
 		return "", err
 	}
 	req, err := a.presignedGetObjectRequest(bucket, object, expires, offset, length)
+	if err != nil {
+		return "", err
+	}
+	return req.PreSignV2()
+}
+
+func (a apiCore) presignedPutObject(bucket, object string, expires int64) (string, error) {
+	if err := invalidArgumentError(object); err != nil {
+		return "", err
+	}
+	op := &operation{
+		HTTPServer: a.config.Endpoint,
+		HTTPMethod: "PUT",
+		HTTPPath:   separator + bucket + separator + object,
+	}
+	req, err := newPresignedRequest(op, a.config, expires)
 	if err != nil {
 		return "", err
 	}

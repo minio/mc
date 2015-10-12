@@ -54,7 +54,11 @@ func main() {
 * [StatObject(bucket, object) (ObjectStat, error)](examples/statobject.go)
 * [RemoveObject(bucket, object) error](examples/removeobject.go)
 * [DropIncompleteUpload(bucket, object) <-chan error](examples/dropincompleteuploads.go)
-* [PresignedGetObject(bucket, object, expires) (string, error)](examples/presignedgetobject.go)
+
+### Presigned Bucket/Object Level
+* [PresignedGetObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedgetobject.go)
+* [PresignedPutObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedputobject.go)
+* [PresignedPostPolicy(NewPostPolicy()) (map[string]string, error)](examples/s3/presignedpostpolicy.go)
 
 ### API Reference
 

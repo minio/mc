@@ -34,13 +34,13 @@ func (a apiCore) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, 
 	resourceQuery := func() (string, error) {
 		switch {
 		case keymarker != "":
-			keymarker = fmt.Sprintf("&key-marker=%s", keymarker)
+			keymarker = fmt.Sprintf("&key-marker=%s", getURLEncodedPath(keymarker))
 			fallthrough
 		case uploadIDMarker != "":
 			uploadIDMarker = fmt.Sprintf("&upload-id-marker=%s", uploadIDMarker)
 			fallthrough
 		case prefix != "":
-			prefix = fmt.Sprintf("&prefix=%s", prefix)
+			prefix = fmt.Sprintf("&prefix=%s", getURLEncodedPath(prefix))
 			fallthrough
 		case delimiter != "":
 			delimiter = fmt.Sprintf("&delimiter=%s", delimiter)
