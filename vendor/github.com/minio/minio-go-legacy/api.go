@@ -73,6 +73,7 @@ type ObjectAPI interface {
 // PresignedAPI - object specific for now
 type PresignedAPI interface {
 	PresignedGetObject(bucket, object string, expires time.Duration) (string, error)
+	PresignedPutObject(bucket, object string, expires time.Duration) (string, error)
 	PresignedPostPolicy(*PostPolicy) (map[string]string, error)
 }
 
@@ -235,6 +236,15 @@ func (a api) PresignedPostPolicy(p *PostPolicy) (map[string]string, error) {
 /// Object operations
 
 /// Expires maximum is 7days - ie. 604800 and minimum is 1
+
+// PresignedPutObject get a presigned URL to retrieve an object for third party apps
+func (a api) PresignedPutObject(bucket, object string, expires time.Duration) (string, error) {
+	expireSeconds := int64(expires / time.Second)
+	if expireSeconds < 1 || expireSeconds > 604800 {
+		return "", invalidArgumentError("")
+	}
+	return a.presignedPutObject(bucket, object, expireSeconds)
+}
 
 // PresignedGetObject get a presigned URL to retrieve an object for third party apps
 func (a api) PresignedGetObject(bucket, object string, expires time.Duration) (string, error) {

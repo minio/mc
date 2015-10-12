@@ -266,10 +266,10 @@ func (a apiCore) listObjectsRequest(bucket, marker, prefix, delimiter string, ma
 	resourceQuery := func() (*string, error) {
 		switch {
 		case marker != "":
-			marker = fmt.Sprintf("&marker=%s", marker)
+			marker = fmt.Sprintf("&marker=%s", getURLEncodedPath(marker))
 			fallthrough
 		case prefix != "":
-			prefix = fmt.Sprintf("&prefix=%s", prefix)
+			prefix = fmt.Sprintf("&prefix=%s", getURLEncodedPath(prefix))
 			fallthrough
 		case delimiter != "":
 			delimiter = fmt.Sprintf("&delimiter=%s", delimiter)
@@ -576,6 +576,19 @@ func (a apiCore) presignedPostPolicy(p *PostPolicy) map[string]string {
 	p.formData["x-amz-date"] = t.Format(iso8601DateFormat)
 	p.formData["x-amz-signature"] = r.PostPresignSignature(policyBase64, t)
 	return p.formData
+}
+
+func (a apiCore) presignedPutObject(bucket, object string, expires int64) (string, error) {
+	op := &operation{
+		HTTPServer: a.config.Endpoint,
+		HTTPMethod: "PUT",
+		HTTPPath:   separator + bucket + separator + object,
+	}
+	r, err := newPresignedRequest(op, a.config, strconv.FormatInt(expires, 10))
+	if err != nil {
+		return "", err
+	}
+	return r.PreSignV4()
 }
 
 func (a apiCore) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*request, error) {

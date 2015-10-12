@@ -55,6 +55,11 @@ func main() {
 * [StatObject(bucket, object) (ObjectStat, error)](examples/s3/statobject.go)
 * [RemoveObject(bucket, object) error](examples/s3/removeobject.go)
 
+### Presigned Bucket/Object Level
+* [PresignedGetObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedgetobject.go)
+* [PresignedPutObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedputobject.go)
+* [PresignedPostPolicy(NewPostPolicy()) (map[string]string, error)](examples/s3/presignedpostpolicy.go)
+
 ### API Reference
 
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/minio/minio-go)
