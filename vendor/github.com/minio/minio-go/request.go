@@ -177,11 +177,19 @@ func (op *operation) getRequestURL(config Config) (url string) {
 		return
 	}
 	if objectName != "" && queryPath == "" {
-		url += separator + objectName
+		if strings.HasSuffix(url, separator) {
+			url += objectName
+		} else {
+			url += separator + objectName
+		}
 		return
 	}
 	if objectName != "" && queryPath != "" {
-		url += separator + objectName + "?" + queryPath
+		if strings.HasSuffix(url, separator) {
+			url += objectName + "?" + queryPath
+		} else {
+			url += separator + objectName + "?" + queryPath
+		}
 	}
 	return
 }
