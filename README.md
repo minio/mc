@@ -9,13 +9,14 @@
   ls		List files and folders.
   mb		Make a bucket or folder.
   cat		Display contents of a file.
+  pig		Write contents of stdin to files. Pig is the opposite of cat command.
   cp		Copy files and folders from many sources to a single destination.
   mirror	Mirror folders recursively from a single source to many destinations.
   session	Manage sessions for cp and mirror.
   share		Share documents via URL.
   diff		Compute differences between two files or folders.
-  access	Set access permissions.
-  config	Modify, add, remove alias from default configuration file [~/.mc/config.json].
+  access	Set or get access permissions.
+  config	Collection of config management commands.
   update	Check for new software updates.
   version	Print version.
 ```
