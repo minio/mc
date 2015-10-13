@@ -142,11 +142,20 @@ func (op *operation) getRequestURL(config Config) (url string) {
 		return
 	}
 	if objectName != "" && queryPath == "" {
-		url += separator + objectName
+		if strings.HasSuffix(url, separator) {
+			url += objectName
+		} else {
+			url += separator + objectName
+		}
 		return
 	}
 	if objectName != "" && queryPath != "" {
-		url += separator + objectName + "?" + queryPath
+		if strings.HasSuffix(url, separator) {
+			url += objectName + "?" + queryPath
+		} else {
+			url += separator + objectName + "?" + queryPath
+		}
+		return
 	}
 	return
 }
@@ -306,7 +315,20 @@ func (r *request) PreSignV2() (string, error) {
 		r.Set("Date", d.Format(http.TimeFormat))
 	}
 	epochExpires := d.Unix() + r.expires
-	signText := fmt.Sprintf("%s\n\n\n%d\n%s", r.req.Method, epochExpires, r.req.URL.Path)
+	var path string
+	if r.config.isVirtualStyle {
+		for k, v := range regions {
+			if v == r.config.Region {
+				path = "/" + strings.TrimSuffix(r.req.URL.Host, "."+k)
+				path += r.req.URL.Path
+				path = getURLEncodedPath(path)
+				break
+			}
+		}
+	} else {
+		path = getURLEncodedPath(r.req.URL.Path)
+	}
+	signText := fmt.Sprintf("%s\n\n\n%d\n%s", r.req.Method, epochExpires, path)
 	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
 	hm.Write([]byte(signText))
 
