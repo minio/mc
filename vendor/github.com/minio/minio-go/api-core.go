@@ -494,14 +494,6 @@ func (a apiCore) putObjectUnAuthenticated(bucket, object, contentType string, si
 	}
 	var metadata ObjectStat
 	metadata.ETag = strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
-	if metadata.ETag == "" {
-		return ObjectStat{}, ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
-		}
-	}
 	return metadata, nil
 }
 
@@ -545,14 +537,6 @@ func (a apiCore) putObject(bucket, object, contentType string, md5SumBytes []byt
 	}
 	var metadata ObjectStat
 	metadata.ETag = strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
-	if metadata.ETag == "" {
-		return ObjectStat{}, ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
-		}
-	}
 	return metadata, nil
 }
 
@@ -672,14 +656,6 @@ func (a apiCore) getObject(bucket, object string, offset, length int64) (io.Read
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
-	if md5sum == "" {
-		return nil, ObjectStat{}, ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
-		}
-	}
 	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	if err != nil {
 		return nil, ObjectStat{}, ErrorResponse{
@@ -827,14 +803,6 @@ func (a apiCore) headObject(bucket, object string) (ObjectStat, error) {
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
-	if md5sum == "" {
-		return ObjectStat{}, ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Missing Etag, please report this issue at https://github.com/minio/minio-go/issues",
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
-		}
-	}
 	size, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
 		return ObjectStat{}, ErrorResponse{
