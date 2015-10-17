@@ -159,7 +159,7 @@ GLOBAL FLAGS:
   {{end}}{{end}}
 VERSION:
   ` + mcVersion +
-		`{{ "\n"}} {{range $key, $value := ExtraInfo}}
+		`{{ "\n"}}{{range $key, $value := ExtraInfo}}
 {{$key}}:
   {{$value}}
 {{end}}`
