@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio-xl/pkg/probe"
 )
 
 var minGolangRuntimeVersion = "1.5.1"

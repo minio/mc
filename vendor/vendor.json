@@ -38,14 +38,14 @@
 			"revisionTime": "2015-10-13T17:08:05-07:00"
 		},
 		{
-			"path": "github.com/minio/minio/pkg/probe",
-			"revision": "daa089fb06b05ad7a9ce945e51362d349ffaf662",
-			"revisionTime": "2015-09-29T10:17:19-07:00"
+			"path": "github.com/minio/minio-xl/pkg/probe",
+			"revision": "c6e98ee0f2bd750e516e468b04dffe6419654aa6",
+			"revisionTime": "2015-10-16T11:34:25-07:00"
 		},
 		{
-			"path": "github.com/minio/minio/pkg/quick",
-			"revision": "e719adec8bbe0b717acba2d1ab7c61a1392c70ce",
-			"revisionTime": "2015-10-07T17:49:16-07:00"
+			"path": "github.com/minio/minio-xl/pkg/quick",
+			"revision": "c6e98ee0f2bd750e516e468b04dffe6419654aa6",
+			"revisionTime": "2015-10-16T11:34:25-07:00"
 		},
 		{
 			"path": "github.com/minio/pb",
