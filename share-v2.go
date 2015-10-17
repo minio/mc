@@ -20,8 +20,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/minio/minio/pkg/probe"
-	"github.com/minio/minio/pkg/quick"
+	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio-xl/pkg/quick"
 )
 
 type sharedURLsV2 struct {

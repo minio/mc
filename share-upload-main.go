@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio-xl/pkg/probe"
 )
 
 // Share documents via URL.

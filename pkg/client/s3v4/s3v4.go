@@ -28,7 +28,7 @@ import (
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio-xl/pkg/probe"
 )
 
 type s3Client struct {

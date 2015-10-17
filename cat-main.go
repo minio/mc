@@ -27,7 +27,7 @@ import (
 	"syscall"
 
 	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio-xl/pkg/probe"
 )
 
 // Display contents of a file.

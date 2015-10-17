@@ -28,7 +28,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio-xl/pkg/probe"
 )
 
 /// ls - related internal functions
