@@ -191,6 +191,11 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 	return body, length, nil
 }
 
+func (f *fsClient) Remove() *probe.Error {
+	err := os.Remove(f.Path)
+	return probe.NewError(err)
+}
+
 // List - list files and folders
 func (f *fsClient) List(recursive bool) <-chan client.ContentOnChannel {
 	contentCh := make(chan client.ContentOnChannel)
