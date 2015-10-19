@@ -420,7 +420,7 @@ func (a apiCore) deleteBucket(bucket string) error {
 		return err
 	}
 	if resp != nil {
-		if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode != http.StatusNoContent {
 			var errorResponse ErrorResponse
 			switch resp.StatusCode {
 			case http.StatusNotFound:
@@ -705,7 +705,7 @@ func (a apiCore) deleteObject(bucket, object string) error {
 		return err
 	}
 	if resp != nil {
-		if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode != http.StatusNoContent {
 			var errorResponse ErrorResponse
 			switch resp.StatusCode {
 			case http.StatusNotFound:
@@ -721,6 +721,14 @@ func (a apiCore) deleteObject(bucket, object string) error {
 					Code:      "AccessDenied",
 					Message:   "Access Denied",
 					Resource:  separator + bucket + separator + object,
+					RequestID: resp.Header.Get("x-amz-request-id"),
+					HostID:    resp.Header.Get("x-amz-id-2"),
+				}
+			case http.StatusConflict:
+				errorResponse = ErrorResponse{
+					Code:      "Conflict",
+					Message:   "Bucket not empty",
+					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
 				}

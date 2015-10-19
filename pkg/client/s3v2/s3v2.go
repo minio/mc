@@ -76,6 +76,18 @@ func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 	return reader, metadata.Size, nil
 }
 
+// Remove - remove object or bucket
+func (c *s3Client) Remove() *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+	var err error
+	if object == "" {
+		err = c.api.RemoveBucket(bucket)
+	} else {
+		err = c.api.RemoveObject(bucket, object)
+	}
+	return probe.NewError(err)
+}
+
 // Share - get a usable get object url to share
 func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
