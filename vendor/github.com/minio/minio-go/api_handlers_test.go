@@ -88,7 +88,7 @@ func (h bucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 		default:
 			h.resource = ""
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 		}
 	}
 }
@@ -165,6 +165,6 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		h.resource = ""
 		h.data = nil
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
