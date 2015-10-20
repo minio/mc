@@ -106,7 +106,7 @@ func doShareDownloadURL(targetURL string, recursive bool, expires time.Duration)
 	if expires.Seconds() > 604800 {
 		return probe.NewError(errors.New("Too high expires, expiration cannot be larger than 7 days."))
 	}
-	for contentCh := range clnt.List(recursive) {
+	for contentCh := range clnt.List(recursive, false) {
 		if contentCh.Err != nil {
 			return contentCh.Err.Trace()
 		}

@@ -63,7 +63,7 @@ func rmList(url string) (<-chan string, *probe.Error) {
 		errorIf(err.Trace(), "Unable to get client object for "+url)
 		return nil, err.Trace()
 	}
-	in := clnt.List(true)
+	in := clnt.List(true, false)
 	out := make(chan string)
 
 	var depthFirst func(currentDir string) (*client.Content, bool)

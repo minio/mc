@@ -61,7 +61,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	var contents []*client.Content
-	for contentCh := range fsc.List(false) {
+	for contentCh := range fsc.List(false, false) {
 		if contentCh.Err != nil {
 			perr = contentCh.Err
 			break
@@ -86,7 +86,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	contents = nil
-	for contentCh := range fsc.List(false) {
+	for contentCh := range fsc.List(false, false) {
 		if contentCh.Err != nil {
 			perr = contentCh.Err
 			break
@@ -108,7 +108,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	contents = nil
-	for contentCh := range fsc.List(true) {
+	for contentCh := range fsc.List(true, false) {
 		if contentCh.Err != nil {
 			perr = contentCh.Err
 			break

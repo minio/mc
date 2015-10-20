@@ -23,6 +23,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio-xl/pkg/probe"
 )
 
 // list files and folders.
@@ -49,22 +50,23 @@ EXAMPLES:
 
    3. List files recursively on local filesystem on Windows.
       $ mc {{.Name}} C:\Users\Worf\...
-      [2015-03-28 12:47:50 PDT] 11.00MiB Martok\Klingon Council Ministers.pdf
       [2015-03-31 14:46:33 PDT] 15.00MiB Gowron\Khitomer Conference Details.pdf
 
    4. List files with non english characters on Amazon S3 cloud storage.
       $ mc ls s3/andoria/本...
-      [2015-05-19 17:24:19 PDT]    41B 本語.txt
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
    5. List files with space characters on Amazon S3 cloud storage. 
       $ mc ls 's3/miniocloud/Community Files/'
-      [2015-05-19 17:24:19 PDT]    41B 本語.txt
       [2015-05-19 17:28:22 PDT]    41B 本語.md
     
    6. Behave like operating system tool ‘ls’, used for shell aliases.
       $ mc --mimic ls
       [2015-05-19 17:28:22 PDT]    41B 本語.md
+
+   7. List incompletely uploaded files for a given bucket
+      $ mc ls incomplete s3/miniocloud
+      [2015-10-19 22:28:02 PDT]     0B bin/
 
 `,
 }
@@ -113,6 +115,7 @@ func setListPalette(style string) {
 
 // mainList - is a handler for mc ls command
 func mainList(ctx *cli.Context) {
+	setListPalette(ctx.GlobalString("colors"))
 	checkListSyntax(ctx)
 
 	args := ctx.Args()
@@ -121,18 +124,32 @@ func mainList(ctx *cli.Context) {
 		args = []string{"."}
 	}
 
-	setListPalette(ctx.GlobalString("colors"))
+	var targetURLs []string
+	var err *probe.Error
+	if args.First() == "incomplete" {
+		targetURLs, err = args2URLs(args.Tail())
+		fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
+		for _, targetURL := range targetURLs {
+			// if recursive strip off the "..."
+			var clnt client.Client
+			clnt, err = url2Client(stripRecursiveURL(targetURL))
+			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
-	targetURLs, err := args2URLs(args)
-	fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
+			err = doListIncomplete(clnt, isURLRecursive(targetURL), len(targetURLs) > 1)
+			fatalIf(err.Trace(clnt.URL().String()), "Unable to list target ‘"+clnt.URL().String()+"’.")
+		}
+	} else {
+		targetURLs, err = args2URLs(args)
+		fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
+		for _, targetURL := range targetURLs {
+			// if recursive strip off the "..."
+			var clnt client.Client
+			clnt, err = url2Client(stripRecursiveURL(targetURL))
+			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
-	for _, targetURL := range targetURLs {
-		// if recursive strip off the "..."
-		var clnt client.Client
-		clnt, err = url2Client(stripRecursiveURL(targetURL))
-		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
-
-		err = doList(clnt, isURLRecursive(targetURL), len(targetURLs) > 1)
-		fatalIf(err.Trace(clnt.URL().String()), "Unable to list target ‘"+clnt.URL().String()+"’.")
+			err = doList(clnt, isURLRecursive(targetURL), len(targetURLs) > 1)
+			fatalIf(err.Trace(clnt.URL().String()), "Unable to list target ‘"+clnt.URL().String()+"’.")
+		}
 	}
+
 }

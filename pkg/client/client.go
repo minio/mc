@@ -28,7 +28,7 @@ import (
 type Client interface {
 	// Common operations
 	Stat() (content *Content, err *probe.Error)
-	List(recursive bool) <-chan ContentOnChannel
+	List(recursive, incomplete bool) <-chan ContentOnChannel
 
 	// Bucket operations
 	MakeBucket() *probe.Error

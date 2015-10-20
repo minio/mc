@@ -68,23 +68,6 @@ type listBucketResult struct {
 	Prefix     string
 }
 
-// multiPartUpload container for multipart session
-type multiPartUpload struct {
-	// Date and time at which the multipart upload was initiated.
-	Initiated time.Time `type:"timestamp" timestampFormat:"iso8601"`
-
-	Initiator initiator
-	Owner     owner
-
-	StorageClass string
-
-	// Key of the object for which the multipart upload was initiated.
-	Key string
-
-	// Upload ID that identifies the multipart upload.
-	UploadID string `xml:"UploadId"`
-}
-
 // listMultipartUploadsResult container for ListMultipartUploads response
 type listMultipartUploadsResult struct {
 	Bucket             string
@@ -95,7 +78,7 @@ type listMultipartUploadsResult struct {
 	EncodingType       string
 	MaxUploads         int64
 	IsTruncated        bool
-	Uploads            []multiPartUpload `xml:"Upload"`
+	Uploads            []ObjectMultipartStat `xml:"Upload"`
 	Prefix             string
 	Delimiter          string
 	CommonPrefixes     []commonPrefix // A response can contain CommonPrefixes only if you specify a delimiter

@@ -206,7 +206,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 			errResponse := minio.ToErrorResponse(err)
 			if errResponse != nil {
 				if errResponse.Code == "NoSuchKey" {
-					for content := range c.List(false) {
+					for content := range c.List(false, false) {
 						if content.Err != nil {
 							return nil, content.Err.Trace()
 						}
@@ -267,15 +267,146 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 /// Bucket API operations
 
 // List - list at delimited path, if not recursive
-func (c *s3Client) List(recursive bool) <-chan client.ContentOnChannel {
+func (c *s3Client) List(recursive, incomplete bool) <-chan client.ContentOnChannel {
 	contentCh := make(chan client.ContentOnChannel)
-	switch recursive {
-	case true:
-		go c.listRecursiveInRoutine(contentCh)
-	default:
-		go c.listInRoutine(contentCh)
+	if incomplete {
+		if recursive {
+			go c.listIncompleteRecursiveInRoutine(contentCh)
+		} else {
+			go c.listIncompleteInRoutine(contentCh)
+		}
+	} else {
+		if recursive {
+			go c.listRecursiveInRoutine(contentCh)
+		} else {
+			go c.listInRoutine(contentCh)
+		}
 	}
 	return contentCh
+}
+
+func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChannel) {
+	defer close(contentCh)
+	b, o := c.url2BucketAndObject()
+	switch {
+	case b == "" && o == "":
+		for bucket := range c.api.ListBuckets() {
+			if bucket.Err != nil {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     probe.NewError(bucket.Err),
+				}
+				return
+			}
+			content := new(client.Content)
+			content.Name = bucket.Stat.Name
+			content.Size = 0
+			content.Time = bucket.Stat.CreationDate
+			content.Type = os.ModeDir
+			contentCh <- client.ContentOnChannel{
+				Content: content,
+				Err:     nil,
+			}
+		}
+	default:
+		for object := range c.api.ListIncompleteUploads(b, o, false) {
+			if object.Err != nil {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     probe.NewError(object.Err),
+				}
+				return
+			}
+			content := new(client.Content)
+			normalizedPrefix := strings.TrimSuffix(o, string(c.hostURL.Separator)) + string(c.hostURL.Separator)
+			normalizedKey := object.Stat.Key
+			if normalizedPrefix != object.Stat.Key && strings.HasPrefix(object.Stat.Key, normalizedPrefix) {
+				normalizedKey = strings.TrimPrefix(object.Stat.Key, normalizedPrefix)
+			}
+			content.Name = normalizedKey
+			switch {
+			case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
+				content.Time = time.Now()
+				content.Type = os.ModeDir
+			default:
+				content.Size = object.Stat.Size
+				content.Time = object.Stat.Initiated
+				content.Type = os.ModeTemporary
+			}
+			contentCh <- client.ContentOnChannel{
+				Content: content,
+				Err:     nil,
+			}
+		}
+	}
+}
+
+func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
+	defer close(contentCh)
+	b, o := c.url2BucketAndObject()
+	switch {
+	case b == "" && o == "":
+		for bucket := range c.api.ListBuckets() {
+			if bucket.Err != nil {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     probe.NewError(bucket.Err),
+				}
+				return
+			}
+			for object := range c.api.ListIncompleteUploads(bucket.Stat.Name, o, true) {
+				if object.Err != nil {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     probe.NewError(object.Err),
+					}
+					return
+				}
+				content := new(client.Content)
+				content.Name = filepath.Join(bucket.Stat.Name, object.Stat.Key)
+				content.Size = object.Stat.Size
+				content.Time = object.Stat.Initiated
+				content.Type = os.ModeTemporary
+				contentCh <- client.ContentOnChannel{
+					Content: content,
+					Err:     nil,
+				}
+			}
+		}
+	default:
+		for object := range c.api.ListIncompleteUploads(b, o, true) {
+			if object.Err != nil {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     probe.NewError(object.Err),
+				}
+				return
+			}
+			content := new(client.Content)
+			normalizedKey := object.Stat.Key
+			switch {
+			case o == "":
+				// if no prefix provided and also URL is not delimited then we add bucket back into object name
+				if strings.LastIndex(c.hostURL.Path, string(c.hostURL.Separator)) == 0 {
+					if c.hostURL.String()[:strings.LastIndex(c.hostURL.String(), string(c.hostURL.Separator))+1] != b {
+						normalizedKey = filepath.Join(b, object.Stat.Key)
+					}
+				}
+			default:
+				if strings.HasSuffix(o, string(c.hostURL.Separator)) {
+					normalizedKey = strings.TrimPrefix(object.Stat.Key, o)
+				}
+			}
+			content.Name = normalizedKey
+			content.Size = object.Stat.Size
+			content.Time = object.Stat.Initiated
+			content.Type = os.ModeTemporary
+			contentCh <- client.ContentOnChannel{
+				Content: content,
+				Err:     nil,
+			}
+		}
+	}
 }
 
 func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {

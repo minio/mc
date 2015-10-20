@@ -197,8 +197,14 @@ func (f *fsClient) Remove() *probe.Error {
 }
 
 // List - list files and folders
-func (f *fsClient) List(recursive bool) <-chan client.ContentOnChannel {
+func (f *fsClient) List(recursive, incomplete bool) <-chan client.ContentOnChannel {
 	contentCh := make(chan client.ContentOnChannel)
+	if incomplete {
+		go func() {
+			defer close(contentCh)
+		}()
+		return contentCh
+	}
 	switch recursive {
 	case true:
 		go f.listRecursiveInRoutine(contentCh)

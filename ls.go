@@ -110,7 +110,50 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 	if err != nil {
 		return err.Trace(clnt.URL().String())
 	}
-	for contentCh := range clnt.List(recursive) {
+	for contentCh := range clnt.List(recursive, false) {
+		if contentCh.Err != nil {
+			switch contentCh.Err.ToGoError().(type) {
+			// handle this specifically for filesystem
+			case client.BrokenSymlink:
+				errorIf(contentCh.Err.Trace(), "Unable to list broken link.")
+				continue
+			case client.TooManyLevelsSymlink:
+				errorIf(contentCh.Err.Trace(), "Unable to list too many levels link.")
+				continue
+			}
+			if os.IsNotExist(contentCh.Err.ToGoError()) || os.IsPermission(contentCh.Err.ToGoError()) {
+				if contentCh.Content != nil {
+					if contentCh.Content.Type.IsDir() && (contentCh.Content.Type&os.ModeSymlink == os.ModeSymlink) {
+						errorIf(contentCh.Err.Trace(), "Unable to list broken folder link.")
+						continue
+					}
+				}
+				errorIf(contentCh.Err.Trace(), "Unable to list.")
+				continue
+			}
+			err = contentCh.Err.Trace()
+			break
+		}
+		if multipleArgs && parentContent.Type.IsDir() {
+			contentCh.Content.Name = filepath.Join(parentContent.Name, strings.TrimPrefix(contentCh.Content.Name, parentContent.Name))
+		}
+		Prints("%s\n", parseContent(contentCh.Content))
+	}
+	if err != nil {
+		return err.Trace()
+	}
+	return nil
+}
+
+// doListIncomplete - list all incomplete uploads entities inside a folder.
+func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
+	var err *probe.Error
+	var parentContent *client.Content
+	parentContent, err = clnt.Stat()
+	if err != nil {
+		return err.Trace(clnt.URL().String())
+	}
+	for contentCh := range clnt.List(recursive, true) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
 			// handle this specifically for filesystem
