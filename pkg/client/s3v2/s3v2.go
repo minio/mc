@@ -88,6 +88,14 @@ func (c *s3Client) Remove() *probe.Error {
 	return probe.NewError(err)
 }
 
+// RemoveIncompleteUpload - remove multiparts of an incomplete multiart upload
+func (c *s3Client) RemoveIncompleteUpload() *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+	ch := c.api.DropIncompleteUpload(bucket, object)
+	err := <-ch
+	return probe.NewError(err)
+}
+
 // Share - get a usable get object url to share
 func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
