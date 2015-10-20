@@ -166,7 +166,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan DiffMessage) {
 }
 
 func dodiff(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
-	for contentCh := range firstClnt.List(false) {
+	for contentCh := range firstClnt.List(false, false) {
 		if contentCh.Err != nil {
 			ch <- DiffMessage{
 				Error: contentCh.Err.Trace(firstClnt.URL().String()),
@@ -231,8 +231,8 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 		return
 	}
 
-	fch := firstClnt.List(true)
-	sch := secondClnt.List(true)
+	fch := firstClnt.List(true, false)
+	sch := secondClnt.List(true, false)
 	f, fok := <-fch
 	s, sok := <-sch
 	for {

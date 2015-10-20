@@ -76,7 +76,7 @@ func (sl *sortedList) Create(clnt client.Client, id string) *probe.Error {
 	}
 	sl.enc = gob.NewEncoder(sl.file)
 	sl.dec = gob.NewDecoder(sl.file)
-	for content := range clnt.List(true) {
+	for content := range clnt.List(true, false) {
 		if content.Err != nil {
 			switch err := content.Err.ToGoError().(type) {
 			case client.BrokenSymlink:

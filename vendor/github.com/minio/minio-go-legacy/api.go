@@ -53,9 +53,7 @@ type BucketAPI interface {
 
 	ListBuckets() <-chan BucketStatCh
 	ListObjects(bucket, prefix string, recursive bool) <-chan ObjectStatCh
-
-	// Drop all incomplete uploads
-	DropAllIncompleteUploads(bucket string) <-chan error
+	ListIncompleteUploads(bucket, prefix string, recursive bool) <-chan ObjectMultipartStatCh
 }
 
 // ObjectAPI - object specific Read/Write/Stat interface
@@ -89,6 +87,12 @@ type ObjectStatCh struct {
 	Err  error
 }
 
+// ObjectMultipartStatCh - multipart object metadata over read channel
+type ObjectMultipartStatCh struct {
+	Stat ObjectMultipartStat
+	Err  error
+}
+
 // BucketStat container for bucket metadata
 type BucketStat struct {
 	// The name of the bucket.
@@ -112,6 +116,24 @@ type ObjectStat struct {
 
 	// The class of storage used to store the object.
 	StorageClass string
+}
+
+// ObjectMultipartStat container for multipart object metadata
+type ObjectMultipartStat struct {
+	// Date and time at which the multipart upload was initiated.
+	Initiated time.Time `type:"timestamp" timestampFormat:"iso8601"`
+
+	Initiator initiator
+	Owner     owner
+
+	StorageClass string
+
+	// Key of the object for which the multipart upload was initiated.
+	Key  string
+	Size int64
+
+	// Upload ID that identifies the multipart upload.
+	UploadID string `xml:"UploadId"`
 }
 
 // Regions s3 region map used by bucket location constraint
@@ -448,6 +470,17 @@ func (a api) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, 
 	}
 }
 
+func (a api) getMultipartSize(bucket, object, uploadID string) (int64, error) {
+	var size int64
+	for part := range a.listObjectPartsRecursive(bucket, object, uploadID) {
+		if part.Err != nil {
+			return 0, part.Err
+		}
+		size += part.Metadata.Size
+	}
+	return size, nil
+}
+
 func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, data io.Reader) error {
 	var skipParts []skipPart
 	completeMultipartUpload := completeMultipartUpload{}
@@ -531,7 +564,7 @@ func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, d
 }
 
 type multiPartUploadCh struct {
-	Metadata multiPartUpload
+	Metadata ObjectMultipartStat
 	Err      error
 }
 
@@ -546,7 +579,7 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch ch
 	listMultipartUplResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
 		ch <- multiPartUploadCh{
-			Metadata: multiPartUpload{},
+			Metadata: ObjectMultipartStat{},
 			Err:      err,
 		}
 		return
@@ -565,7 +598,7 @@ func (a api) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch ch
 			listMultipartUplResult.NextKeyMarker, listMultipartUplResult.NextUploadIDMarker, object, "", 1000)
 		if err != nil {
 			ch <- multiPartUploadCh{
-				Metadata: multiPartUpload{},
+				Metadata: ObjectMultipartStat{},
 				Err:      err,
 			}
 			return
@@ -789,6 +822,113 @@ func (a api) RemoveBucket(bucket string) error {
 	return a.deleteBucket(bucket)
 }
 
+// listIncompleteUploadsInRoutine is an internal goroutine function called for listing objects
+// This function feeds data into channel
+func (a api) listIncompleteUploadsInRoutine(bucket, prefix string, recursive bool, ch chan ObjectMultipartStatCh) {
+	defer close(ch)
+	if err := invalidBucketError(bucket); err != nil {
+		ch <- ObjectMultipartStatCh{
+			Stat: ObjectMultipartStat{},
+			Err:  err,
+		}
+		return
+	}
+	switch {
+	case recursive == true:
+		var multipartMarker string
+		var uploadIDMarker string
+		for {
+			result, err := a.listMultipartUploads(bucket, multipartMarker, uploadIDMarker, prefix, "", 1000)
+			if err != nil {
+				ch <- ObjectMultipartStatCh{
+					Stat: ObjectMultipartStat{},
+					Err:  err,
+				}
+				return
+			}
+			for _, objectSt := range result.Uploads {
+				objectSt.Size, err = a.getMultipartSize(bucket, objectSt.Key, objectSt.UploadID)
+				if err != nil {
+					ch <- ObjectMultipartStatCh{
+						Stat: ObjectMultipartStat{},
+						Err:  err,
+					}
+				}
+				ch <- ObjectMultipartStatCh{
+					Stat: objectSt,
+					Err:  nil,
+				}
+				multipartMarker = result.NextKeyMarker
+				uploadIDMarker = result.NextUploadIDMarker
+			}
+			if !result.IsTruncated {
+				break
+			}
+		}
+	default:
+		var multipartMarker string
+		var uploadIDMarker string
+		for {
+			result, err := a.listMultipartUploads(bucket, multipartMarker, uploadIDMarker, prefix, "/", 1000)
+			if err != nil {
+				ch <- ObjectMultipartStatCh{
+					Stat: ObjectMultipartStat{},
+					Err:  err,
+				}
+				return
+			}
+			multipartMarker = result.NextKeyMarker
+			uploadIDMarker = result.NextUploadIDMarker
+			for _, objectSt := range result.Uploads {
+				objectSt.Size, err = a.getMultipartSize(bucket, objectSt.Key, objectSt.UploadID)
+				if err != nil {
+					ch <- ObjectMultipartStatCh{
+						Stat: ObjectMultipartStat{},
+						Err:  err,
+					}
+				}
+				ch <- ObjectMultipartStatCh{
+					Stat: objectSt,
+					Err:  nil,
+				}
+			}
+			for _, prefix := range result.CommonPrefixes {
+				object := ObjectMultipartStat{}
+				object.Key = prefix.Prefix
+				object.Size = 0
+				ch <- ObjectMultipartStatCh{
+					Stat: object,
+					Err:  nil,
+				}
+			}
+			if !result.IsTruncated {
+				break
+			}
+		}
+	}
+}
+
+// ListIncompleteUploads - (List incompletely uploaded multipart objects) - List some multipart objects or all recursively
+//
+// ListIncompleteUploads is a channel based API implemented to facilitate ease of usage of S3 API ListMultipartUploads()
+// by automatically recursively traversing all multipart objects on a given bucket if specified.
+//
+// Your input paramters are just bucket, prefix and recursive
+//
+// If you enable recursive as 'true' this function will return back all the multipart objects in a given bucket
+//
+//  eg:-
+//         api := client.New(....)
+//         for message := range api.ListIncompleteUploads("mytestbucket", "starthere", true) {
+//                 fmt.Println(message.Stat)
+//         }
+//
+func (a api) ListIncompleteUploads(bucket, prefix string, recursive bool) <-chan ObjectMultipartStatCh {
+	ch := make(chan ObjectMultipartStatCh, 1000)
+	go a.listIncompleteUploadsInRoutine(bucket, prefix, recursive, ch)
+	return ch
+}
+
 // listObjectsInRoutine is an internal goroutine function called for listing objects
 // This function feeds data into channel
 func (a api) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan ObjectStatCh) {
@@ -966,61 +1106,10 @@ func (a api) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan e
 	}
 }
 
-//
-//
-// NOTE:
-//   These set of calls require explicit authentication, no anonymous
-//   requests are allowed for multipart API
-
 // DropIncompleteUpload - abort a specific in progress active multipart upload
+//   requires explicit authentication, no anonymous requests are allowed for multipart API
 func (a api) DropIncompleteUpload(bucket, object string) <-chan error {
 	errorCh := make(chan error)
 	go a.dropIncompleteUploadInRoutine(bucket, object, errorCh)
-	return errorCh
-}
-
-func (a api) dropAllIncompleteUploadsInRoutine(bucket string, errorCh chan error) {
-	defer close(errorCh)
-	if err := invalidBucketError(bucket); err != nil {
-		errorCh <- err
-		return
-	}
-	listMultipartUplResult, err := a.listMultipartUploads(bucket, "", "", "", "", 1000)
-	if err != nil {
-		errorCh <- err
-		return
-	}
-	for _, multiPartUpload := range listMultipartUplResult.Uploads {
-		err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
-		if err != nil {
-			errorCh <- err
-			return
-		}
-	}
-	for {
-		if !listMultipartUplResult.IsTruncated {
-			break
-		}
-		listMultipartUplResult, err = a.listMultipartUploads(bucket,
-			listMultipartUplResult.NextKeyMarker, listMultipartUplResult.NextUploadIDMarker, "", "", 1000)
-		if err != nil {
-			errorCh <- err
-			return
-		}
-		for _, multiPartUpload := range listMultipartUplResult.Uploads {
-			err := a.abortMultipartUpload(bucket, multiPartUpload.Key, multiPartUpload.UploadID)
-			if err != nil {
-				errorCh <- err
-				return
-			}
-		}
-
-	}
-}
-
-// DropAllIncompleteUploads - abort all inprogress active multipart uploads
-func (a api) DropAllIncompleteUploads(bucket string) <-chan error {
-	errorCh := make(chan error)
-	go a.dropAllIncompleteUploadsInRoutine(bucket, errorCh)
 	return errorCh
 }

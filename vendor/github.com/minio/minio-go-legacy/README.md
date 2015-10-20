@@ -43,9 +43,9 @@ func main() {
 * [RemoveBucket(bucket) error](examples/removebucket.go)
 * [GetBucketACL(bucket) (BucketACL, error)](examples/getbucketacl.go)
 * [SetBucketACL(bucket, BucketACL) error)](examples/setbucketacl.go)
-* [ListObjects(bucket, prefix, recursive) <-chan ObjectStat](examples/listobjects.go)
 * [ListBuckets() <-chan BucketStat](examples/listbuckets.go)
-* [DropAllIncompleteUploads(bucket) <-chan error](examples/dropallincompleteuploads.go)
+* [ListObjects(bucket, prefix, recursive) <-chan ObjectStat](examples/listobjects.go)
+* [ListIncompleteUploads(bucket, prefix, recursive) <-chan ObjectMultipartStat](examples/listincompleteuploads.go)
 
 ### Object Level
 * [PutObject(bucket, object, size, io.Reader) error](examples/putobject.go)

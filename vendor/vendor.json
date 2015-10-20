@@ -29,13 +29,13 @@
 		},
 		{
 			"path": "github.com/minio/minio-go",
-			"revision": "4f7eabdfdaa652a3f329f163361042e0def4ac89",
-			"revisionTime": "2015-10-17T10:23:30-07:00"
+			"revision": "c1f2d26734709729b0a3e20262ea6ecf8e4a3606",
+			"revisionTime": "2015-10-19T19:40:25-07:00"
 		},
 		{
 			"path": "github.com/minio/minio-go-legacy",
-			"revision": "58eb2eb70a67819d2ea5a9e2a8f6c10bee164efc",
-			"revisionTime": "2015-10-17T10:22:58-07:00"
+			"revision": "9c6317ea5db59384f3d4ff493e790e61950fe958",
+			"revisionTime": "2015-10-19T19:40:01-07:00"
 		},
 		{
 			"path": "github.com/minio/minio-xl/pkg/probe",

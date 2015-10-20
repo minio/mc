@@ -147,7 +147,7 @@ func (s *MySuite) TestBucketOperations(c *C) {
 	s3c, err = New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(false) {
+	for content := range s3c.List(false, false) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Content.Name, Equals, "bucket")
 		c.Assert(content.Content.Type.IsDir(), Equals, true)
@@ -157,7 +157,7 @@ func (s *MySuite) TestBucketOperations(c *C) {
 	s3c, err = New(conf)
 	c.Assert(err, IsNil)
 
-	for content := range s3c.List(false) {
+	for content := range s3c.List(false, false) {
 		c.Assert(content.Err, IsNil)
 		c.Assert(content.Content.Name, Equals, "object")
 		c.Assert(content.Content.Type.IsRegular(), Equals, true)

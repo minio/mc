@@ -295,7 +295,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			return
 		}
 
-		for sourceContent := range sourceClient.List(true) {
+		for sourceContent := range sourceClient.List(true, false) {
 			if sourceContent.Err != nil {
 				// Listing failed.
 				copyURLsCh <- copyURLs{Error: sourceContent.Err.Trace()}
