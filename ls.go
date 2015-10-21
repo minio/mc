@@ -106,7 +106,13 @@ func parseContent(c *client.Content) ContentMessage {
 func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 	var err *probe.Error
 	var parentContent *client.Content
-	parentContent, err = clnt.Stat()
+	urlStr := clnt.URL().String()
+	parentDir := url2Dir(urlStr)
+	parentClnt, err := url2Client(parentDir)
+	if err != nil {
+		return err.Trace(clnt.URL().String())
+	}
+	parentContent, err = parentClnt.Stat()
 	if err != nil {
 		return err.Trace(clnt.URL().String())
 	}

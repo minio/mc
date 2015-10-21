@@ -93,5 +93,9 @@ func url2Dir(urlStr string) string {
 		return urlStr
 	}
 	lastIndex := strings.LastIndex(urlStr, string(url.Separator))
-	return urlStr[:lastIndex+1]
+	dirname := urlStr[:lastIndex+1]
+	if dirname == "" {
+		return "."
+	}
+	return dirname
 }
