@@ -41,6 +41,7 @@ type Client interface {
 	GetObject(offset, length int64) (body io.ReadCloser, size int64, err *probe.Error)
 	PutObject(size int64, data io.Reader) *probe.Error
 	Remove() *probe.Error
+	RemoveIncompleteUpload() *probe.Error
 
 	// URL returns back internal url
 	URL() *URL
