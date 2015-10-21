@@ -56,13 +56,13 @@ EXAMPLES:
       $ mc {{.Name}} march/expenses.doc
 
    6. Remove a file named "force" on local filesystem:
-      $ mc {{.Name}} force force
+      $ mc {{.Name}} force
 
    7. Remove incomplete upload of a file on Cloud storage:
       $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/file01.mp3 incomplete
 
    2. Remove incomplete uploads of folder recursively on Cloud storage
-      $ mc {{.Name}} force https://s3.amazonaws.com/jazz-songs/louis/... incomplete force
+      $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/... incomplete force
 
 `,
 }
@@ -105,49 +105,49 @@ func rmList(url string) (<-chan string, *probe.Error) {
 	return out, nil
 }
 
-func rm(url string) {
+func rmSingle(url string) {
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to get client object for "+url)
+		errorIf(err.Trace(), "Unable to get client object for "+url+".")
 		return
 	}
 	err = clnt.Remove()
-	errorIf(err.Trace(), "Unable to remove "+url)
+	errorIf(err.Trace(), "Unable to remove "+url+".")
 }
 
 func rmAll(url string) {
 	urlPartial1 := url2Dir(url)
 	out, err := rmList(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to List "+url)
+		errorIf(err.Trace(), "Unable to List "+url+".")
 		return
 	}
 	for urlPartial2 := range out {
 		urlFull := urlPartial1 + urlPartial2
 		newclnt, e := url2Client(urlFull)
 		if e != nil {
-			errorIf(e, "Unable to create client object : "+urlFull)
+			errorIf(e, "Unable to create client object : "+urlFull+".")
 			continue
 		}
 		err = newclnt.Remove()
-		errorIf(err, "Unable to remove : "+urlFull)
+		errorIf(err, "Unable to remove : "+urlFull+".")
 	}
 }
 
 func rmIncompleteUpload(url string) {
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to get client object for "+url)
+		errorIf(err.Trace(), "Unable to get client object for "+url+".")
 		return
 	}
 	err = clnt.RemoveIncompleteUpload()
-	errorIf(err.Trace(), "Unable to remove "+url)
+	errorIf(err.Trace(), "Unable to remove "+url+".")
 }
 
 func rmAllIncompleteUploads(url string) {
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to get client object for "+url)
+		errorIf(err.Trace(), "Unable to get client object for "+url+".")
 		return
 	}
 	urlPartial1 := url2Dir(url)
@@ -156,61 +156,80 @@ func rmAllIncompleteUploads(url string) {
 		urlFull := urlPartial1 + entry.Content.Name
 		newclnt, e := url2Client(urlFull)
 		if e != nil {
-			errorIf(e, "Unable to create client object : "+urlFull)
+			errorIf(e, "Unable to create client object : "+urlFull+".")
 			continue
 		}
 		err = newclnt.RemoveIncompleteUpload()
-		errorIf(err, "Unable to remove : "+urlFull)
+		errorIf(err, "Unable to remove : "+urlFull+".")
 	}
 }
 
 func checkRmSyntax(ctx *cli.Context) {
-	args, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(), "args2URL failed")
+	args := ctx.Args()
+
 	var force bool
-	length := len(args)
-	if length == 0 {
+	var incomplete bool
+	if !args.Present() || args.First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "rm", 1) // last argument is exit code.
 	}
-	if len(args) == 1 && args[0] == "force" {
-		cli.ShowCommandHelpAndExit(ctx, "rm", 1)
+	if len(args) == 1 && args.Get(0) == "force" {
+		return
 	}
-	if args[length-1] == "force" {
+	if len(args) == 2 && args.Get(0) == "force" && args.Get(1) == "incomplete" ||
+		len(args) == 2 && args.Get(1) == "force" && args.Get(0) == "incomplete" {
+		return
+	}
+	if args.Last() == "force" {
 		force = true
-		args = args[:length-1]
-		length--
+		args = args[:len(args)-1]
 	}
-	if args[length-1] == "incomplete" {
-		args = args[:length-1]
+	if args.Last() == "incomplete" {
+		incomplete = true
+		args = args[:len(args)-1]
 	}
+
+	// By this time we have sanitized the input args and now we have only the URLs parse them properly
+	// and validate.
+	URLs, err := args2URLs(args)
+	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
+
 	// If input validation fails then provide context sensitive help without displaying generic help message.
 	// The context sensitive help is shown per argument instead of all arguments to keep the help display
 	// as well as the code simple. Also most of the times there will be just one arg
-	for _, arg := range args {
-		url := client.NewURL(arg)
-		if strings.HasSuffix(arg, string(url.Separator)) {
-			helpStr := "Usage : mc rm " + arg + recursiveSeparator + " force"
+	for _, url := range URLs {
+		u := client.NewURL(url)
+		var helpStr string
+		if strings.HasSuffix(url, string(u.Separator)) {
+			if incomplete {
+				helpStr = "Usage : mc rm " + url + recursiveSeparator + " incomplete force"
+			} else {
+				helpStr = "Usage : mc rm " + url + recursiveSeparator + " force"
+			}
 			fatalIf(errDummy().Trace(), helpStr)
 		}
-		if isURLRecursive(arg) && !force {
-			helpStr := "Usage : mc rm " + arg + " force"
+		if isURLRecursive(url) && !force {
+			if incomplete {
+				helpStr = "Usage : mc rm " + url + " incomplete force"
+			} else {
+				helpStr = "Usage : mc rm " + url + " force"
+			}
 			fatalIf(errDummy().Trace(), helpStr)
 		}
-		if url.Type == client.Filesystem {
+		if u.Type == client.Filesystem {
 			// For local file system we don't support "mc rm fileprefix..." just like the behavior of "mc ls fileprefix..."
 			// So recursive delete has to be of the form "mc rm dir1/dir2/..."
-			isRecursive := isURLRecursive(arg)
-			path := stripRecursiveURL(arg)
-			if isRecursive && (strings.HasSuffix(path, string(url.Separator)) == false) {
-				helpStr := "Usage : mc rm " + path + string(url.Separator) + recursiveSeparator + " force"
+			isRecursive := isURLRecursive(url)
+			path := stripRecursiveURL(url)
+			if isRecursive && (strings.HasSuffix(path, string(u.Separator)) == false) {
+				helpStr := "Usage : mc rm " + path + string(u.Separator) + recursiveSeparator + " force"
 				fatalIf(errDummy().Trace(), helpStr)
 			}
 			_, content, err := url2Stat(path)
 			if err != nil {
-				fatalIf(err.Trace(), "url2stat error on "+arg)
+				fatalIf(err.Trace(), "url2stat error on "+url)
 			}
 			if content.Type&os.ModeDir != 0 && !isRecursive {
-				helpStr := "Usage : mc rm " + arg + string(url.Separator) + recursiveSeparator + " force"
+				helpStr := "Usage : mc rm " + url + string(u.Separator) + recursiveSeparator + " force"
 				fatalIf(errDummy().Trace(), helpStr)
 			}
 			continue
@@ -220,36 +239,45 @@ func checkRmSyntax(ctx *cli.Context) {
 
 func mainRm(ctx *cli.Context) {
 	checkRmSyntax(ctx)
-	args, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(), "args2URL failed")
 	var incomplete bool
-	length := len(args)
+	var force bool
 
-	if args[length-1] == "force" {
-		args = args[:length-1]
-		length--
-	}
-	if args[length-1] == "incomplete" {
-		args = args[:length-1]
-		incomplete = true
-	}
-	if incomplete {
-		for _, arg := range args {
-			if isURLRecursive(arg) {
-				url := stripRecursiveURL(arg)
-				rmAllIncompleteUploads(url)
-			} else {
-				rmIncompleteUpload(arg)
+	args := ctx.Args()
+	if len(args) != 1 {
+		if len(args) == 2 && args.Get(0) == "force" && args.Get(1) == "incomplete" ||
+			len(args) == 2 && args.Get(0) == "incomplete" && args.Get(1) == "force" {
+			args = args[:len(args)]
+		} else {
+			if args.Last() == "force" {
+				force = true
+				args = args[:len(args)-1]
+			}
+			if args.Last() == "incomplete" {
+				incomplete = true
+				args = args[:len(args)-1]
 			}
 		}
-	} else {
-		for _, arg := range args {
-			if isURLRecursive(arg) {
-				url := stripRecursiveURL(arg)
-				rmAll(url)
+	}
+
+	URLs, err := args2URLs(args)
+	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
+
+	// execute for incomplete
+	if incomplete {
+		for _, url := range URLs {
+			if isURLRecursive(url) && force {
+				rmAllIncompleteUploads(stripRecursiveURL(url))
 			} else {
-				rm(arg)
+				rmIncompleteUpload(url)
 			}
+		}
+		return
+	}
+	for _, url := range URLs {
+		if isURLRecursive(url) && force {
+			rmAll(stripRecursiveURL(url))
+		} else {
+			rmSingle(url)
 		}
 	}
 }
