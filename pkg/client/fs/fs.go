@@ -17,7 +17,6 @@
 package fs
 
 import (
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -194,7 +193,7 @@ func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe
 
 // RemoveIncompleteUpload - remove multiparts of an incomplete multi[art upload]
 func (f *fsClient) RemoveIncompleteUpload() *probe.Error {
-	return probe.NewError(errors.New("Call not implemented"))
+	return probe.NewError(client.APINotImplemented{API: "RemoveIncompleteUpload", APIType: "filesystem"})
 }
 
 func (f *fsClient) Remove() *probe.Error {
