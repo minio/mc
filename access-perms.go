@@ -16,8 +16,8 @@
 
 package main
 
-// isValidBucketPERM - is provided acl string supported
-func (b bucketPerms) isValidBucketPERM() bool {
+// isValidAccessPERM - is provided acl string supported
+func (b accessPerms) isValidAccessPERM() bool {
 	switch true {
 	case b.isPrivate():
 		fallthrough
@@ -32,19 +32,19 @@ func (b bucketPerms) isValidBucketPERM() bool {
 	}
 }
 
-// bucketPerms - bucket level access control
-type bucketPerms string
+// accessPerms - access level access control
+type accessPerms string
 
-// different types of ACL's currently supported for buckets
+// different types of ACL's currently supported for accesss
 const (
-	bucketPrivate    = bucketPerms("private")
-	bucketReadOnly   = bucketPerms("readonly")
-	bucketPublic     = bucketPerms("public")
-	bucketAuthorized = bucketPerms("authorized")
+	accessPrivate    = accessPerms("private")
+	accessReadOnly   = accessPerms("readonly")
+	accessPublic     = accessPerms("public")
+	accessAuthorized = accessPerms("authorized")
 )
 
-func (b bucketPerms) String() string {
-	if !b.isValidBucketPERM() {
+func (b accessPerms) String() string {
+	if !b.isValidAccessPERM() {
 		return string(b)
 	}
 	if b.isReadOnly() {
@@ -59,37 +59,37 @@ func (b bucketPerms) String() string {
 	return "private"
 }
 
-func aclToPerms(acl string) bucketPerms {
+func aclToPerms(acl string) accessPerms {
 	switch acl {
 	case "private":
-		return bucketPerms("private")
+		return accessPerms("private")
 	case "public-read":
-		return bucketPerms("readonly")
+		return accessPerms("readonly")
 	case "public-read-write":
-		return bucketPerms("public")
+		return accessPerms("public")
 	case "authenticated-read":
-		return bucketPerms("authorized")
+		return accessPerms("authorized")
 	default:
-		return bucketPerms(acl)
+		return accessPerms(acl)
 	}
 }
 
 // IsPrivate - is acl Private
-func (b bucketPerms) isPrivate() bool {
-	return b == bucketPrivate
+func (b accessPerms) isPrivate() bool {
+	return b == accessPrivate
 }
 
 // IsPublicRead - is acl PublicRead
-func (b bucketPerms) isReadOnly() bool {
-	return b == bucketReadOnly
+func (b accessPerms) isReadOnly() bool {
+	return b == accessReadOnly
 }
 
 // IsPublicReadWrite - is acl PublicReadWrite
-func (b bucketPerms) isPublic() bool {
-	return b == bucketPublic
+func (b accessPerms) isPublic() bool {
+	return b == accessPublic
 }
 
 // IsAuthorized - is acl AuthorizedRead
-func (b bucketPerms) isAuthorized() bool {
-	return b == bucketAuthorized
+func (b accessPerms) isAuthorized() bool {
+	return b == accessAuthorized
 }

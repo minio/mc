@@ -227,7 +227,7 @@ func mainRm(ctx *cli.Context) {
 	if len(args) != 1 {
 		if len(args) == 2 && args.Get(0) == "force" && args.Get(1) == "incomplete" ||
 			len(args) == 2 && args.Get(0) == "incomplete" && args.Get(1) == "force" {
-			args = args[:len(args)]
+			args = args[:]
 		} else {
 			if args.Last() == "force" {
 				force = true

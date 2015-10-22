@@ -187,23 +187,23 @@ func (s *TestSuite) TestArgs2URL(c *C) {
 }
 
 func (s *TestSuite) TestValidPERMS(c *C) {
-	perms := bucketPerms("private")
-	c.Assert(perms.isValidBucketPERM(), Equals, true)
+	perms := accessPerms("private")
+	c.Assert(perms.isValidAccessPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "private")
-	perms = bucketPerms("public")
-	c.Assert(perms.isValidBucketPERM(), Equals, true)
+	perms = accessPerms("public")
+	c.Assert(perms.isValidAccessPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "public-read-write")
-	perms = bucketPerms("readonly")
-	c.Assert(perms.isValidBucketPERM(), Equals, true)
+	perms = accessPerms("readonly")
+	c.Assert(perms.isValidAccessPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "public-read")
-	perms = bucketPerms("authorized")
-	c.Assert(perms.isValidBucketPERM(), Equals, true)
+	perms = accessPerms("authorized")
+	c.Assert(perms.isValidAccessPERM(), Equals, true)
 	c.Assert(perms.String(), Equals, "authenticated-read")
 }
 
 func (s *TestSuite) TestInvalidPERMS(c *C) {
-	perms := bucketPerms("invalid")
-	c.Assert(perms.isValidBucketPERM(), Equals, false)
+	perms := accessPerms("invalid")
+	c.Assert(perms.isValidAccessPERM(), Equals, false)
 }
 
 func (s *TestSuite) TestGetMcConfigDir(c *C) {

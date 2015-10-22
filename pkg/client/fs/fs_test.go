@@ -47,14 +47,14 @@ func (s *MySuite) TestList(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	objectPath = filepath.Join(root, "object2")
 	fsc, perr = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
-	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	fsc, perr = fs.New(root)
@@ -79,7 +79,7 @@ func (s *MySuite) TestList(c *C) {
 	fsc, perr = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
-	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	fsc, perr = fs.New(root)
@@ -172,14 +172,14 @@ func (s *MySuite) TestBucketACLFails(c *C) {
 	perr = fsc.MakeBucket()
 	c.Assert(perr, IsNil)
 
-	perr = fsc.SetBucketACL("private")
+	perr = fsc.SetBucketAccess("private")
 	c.Assert(perr, Not(IsNil))
 
-	_, perr = fsc.GetBucketACL()
+	_, perr = fsc.GetBucketAccess()
 	c.Assert(perr, Not(IsNil))
 }
 
-func (s *MySuite) TestPutObject(c *C) {
+func (s *MySuite) TestPut(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -191,11 +191,11 @@ func (s *MySuite) TestPutObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(perr, IsNil)
 }
 
-func (s *MySuite) TestGetObject(c *C) {
+func (s *MySuite) TestGet(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -207,10 +207,10 @@ func (s *MySuite) TestGetObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(perr, IsNil)
 
-	reader, size, perr := fsc.GetObject(0, 0)
+	reader, size, perr := fsc.Get(0, 0)
 	c.Assert(perr, IsNil)
 	var results bytes.Buffer
 	_, err = io.CopyN(&results, reader, int64(size))
@@ -219,7 +219,7 @@ func (s *MySuite) TestGetObject(c *C) {
 
 }
 
-func (s *MySuite) TestGetObjectRange(c *C) {
+func (s *MySuite) TestGetRange(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
@@ -231,10 +231,10 @@ func (s *MySuite) TestGetObjectRange(c *C) {
 	data := "hello world"
 	dataLen := len(data)
 
-	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(perr, IsNil)
 
-	reader, size, perr := fsc.GetObject(0, 5)
+	reader, size, perr := fsc.Get(0, 5)
 	c.Assert(perr, IsNil)
 	var results bytes.Buffer
 	_, err = io.CopyN(&results, reader, int64(size))
@@ -254,7 +254,7 @@ func (s *MySuite) TestStatObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	perr = fsc.PutObject(int64(dataLen), bytes.NewReader([]byte(data)))
+	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(perr, IsNil)
 
 	content, perr := fsc.Stat()

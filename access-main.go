@@ -64,7 +64,7 @@ type AccessMessage struct {
 	Operation string      `json:"operation"`
 	Status    string      `json:"status"`
 	Bucket    string      `json:"bucket"`
-	Perms     bucketPerms `json:"permission"`
+	Perms     accessPerms `json:"permission"`
 }
 
 // String colorized access message
@@ -99,8 +99,8 @@ func checkAccessSyntax(ctx *cli.Context) {
 		if len(ctx.Args().Tail()) < 2 {
 			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 		}
-		perms := bucketPerms(ctx.Args().Tail().Get(0))
-		if !perms.isValidBucketPERM() {
+		perms := accessPerms(ctx.Args().Tail().Get(0))
+		if !perms.isValidAccessPERM() {
 			fatalIf(errDummy().Trace(),
 				"Unrecognized permission ‘"+perms.String()+"’. Allowed values are [private, public, readonly].")
 		}
@@ -140,7 +140,7 @@ func mainAccess(ctx *cli.Context) {
 
 	switch ctx.Args().Get(0) {
 	case "set":
-		perms := bucketPerms(ctx.Args().Tail().Get(0))
+		perms := accessPerms(ctx.Args().Tail().Get(0))
 		for _, arg := range ctx.Args().Tail().Tail() {
 			targetURL := getAliasURL(arg, config.Aliases)
 
@@ -169,23 +169,23 @@ func mainAccess(ctx *cli.Context) {
 	}
 }
 
-func doSetAccess(targetURL string, targetPERMS bucketPerms) *probe.Error {
+func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
 	clnt, err := url2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
-	if err = clnt.SetBucketACL(targetPERMS.String()); err != nil {
+	if err = clnt.SetBucketAccess(targetPERMS.String()); err != nil {
 		return err.Trace(targetURL, targetPERMS.String())
 	}
 	return nil
 }
 
-func doGetAccess(targetURL string) (perms bucketPerms, err *probe.Error) {
+func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
 	clnt, err := url2Client(targetURL)
 	if err != nil {
 		return "", err.Trace(targetURL)
 	}
-	acl, err := clnt.GetBucketACL()
+	acl, err := clnt.GetBucketAccess()
 	if err != nil {
 		return "", err.Trace(targetURL)
 	}

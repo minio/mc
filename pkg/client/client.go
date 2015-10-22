@@ -32,14 +32,18 @@ type Client interface {
 
 	// Bucket operations
 	MakeBucket() *probe.Error
-	GetBucketACL() (acl string, error *probe.Error)
-	SetBucketACL(acl string) *probe.Error
+	GetBucketAccess() (access string, error *probe.Error)
+	SetBucketAccess(access string) *probe.Error
 
-	// Object operations
+	// I/O operations
+	Get(offset, length int64) (body io.ReadCloser, size int64, err *probe.Error)
+	Put(size int64, data io.Reader) *probe.Error
+
+	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)
 	ShareUpload(bool, time.Duration, string) (map[string]string, *probe.Error)
-	GetObject(offset, length int64) (body io.ReadCloser, size int64, err *probe.Error)
-	PutObject(size int64, data io.Reader) *probe.Error
+
+	// Delete operations
 	Remove() *probe.Error
 	RemoveIncompleteUpload() *probe.Error
 
