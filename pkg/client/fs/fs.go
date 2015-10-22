@@ -349,11 +349,32 @@ func (f *fsClient) delimited(fp string) string {
 
 func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
+	var dirName string
+	var filePrefix string
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		// fp also sends back itself with visitFS, ignore it we don't need it
 		if fp == f.Path {
 			return nil
 		}
+		if fp == "." {
+			return nil
+		}
+		// we should not skip file or directory during two situations: (ex. mc ls /usr/bi...)
+		// 1. when fp is /usr and prefix is /usr/bi
+		// 2. when fp is /usr/bin/subdir and prefix is /usr/bi
+		if !strings.HasPrefix(fp, filePrefix) &&
+			!strings.HasPrefix(filePrefix, fp) {
+			if fi.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Skip when fp is /usr and prefix is /usr/bi
+		if !strings.HasPrefix(fp, filePrefix) {
+			return nil
+		}
+
 		if err != nil {
 			if strings.Contains(err.Error(), "operation not permitted") {
 				contentCh <- client.ContentOnChannel{
@@ -461,7 +482,14 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		}
 		return nil
 	}
-	err := filepath.Walk(f.Path, visitFS)
+	if strings.HasSuffix(f.Path, string(f.URL().Separator)) {
+		dirName = f.Path
+		// filePrefix is ""
+	} else {
+		dirName = filepath.Dir(f.Path)
+		filePrefix = f.Path
+	}
+	err := filepath.Walk(dirName, visitFS)
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
