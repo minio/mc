@@ -91,7 +91,7 @@ func (c *s3Client) Remove() *probe.Error {
 // RemoveIncompleteUpload - remove multiparts of an incomplete multipart upload
 func (c *s3Client) RemoveIncompleteUpload() *probe.Error {
 	bucket, object := c.url2BucketAndObject()
-	ch := c.api.DropIncompleteUpload(bucket, object)
+	ch := c.api.RemoveIncompleteUpload(bucket, object)
 	err := <-ch
 	return probe.NewError(err)
 }
