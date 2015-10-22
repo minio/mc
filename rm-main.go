@@ -111,7 +111,7 @@ func rmSingle(url string) {
 		errorIf(err.Trace(), "Unable to get client object for "+url+".")
 		return
 	}
-	err = clnt.Remove()
+	err = clnt.Remove(false)
 	errorIf(err.Trace(), "Unable to remove "+url+".")
 }
 
@@ -129,7 +129,7 @@ func rmAll(url string) {
 			errorIf(e, "Unable to create client object : "+urlFull+".")
 			continue
 		}
-		err = newclnt.Remove()
+		err = newclnt.Remove(false)
 		errorIf(err, "Unable to remove : "+urlFull+".")
 	}
 }
@@ -140,7 +140,7 @@ func rmIncompleteUpload(url string) {
 		errorIf(err.Trace(), "Unable to get client object for "+url+".")
 		return
 	}
-	err = clnt.RemoveIncompleteUpload()
+	err = clnt.Remove(true)
 	errorIf(err.Trace(), "Unable to remove "+url+".")
 }
 
@@ -159,7 +159,7 @@ func rmAllIncompleteUploads(url string) {
 			errorIf(e, "Unable to create client object : "+urlFull+".")
 			continue
 		}
-		err = newclnt.RemoveIncompleteUpload()
+		err = newclnt.Remove(true)
 		errorIf(err, "Unable to remove : "+urlFull+".")
 	}
 }

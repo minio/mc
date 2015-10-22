@@ -44,8 +44,7 @@ type Client interface {
 	ShareUpload(bool, time.Duration, string) (map[string]string, *probe.Error)
 
 	// Delete operations
-	Remove() *probe.Error
-	RemoveIncompleteUpload() *probe.Error
+	Remove(incomplete bool) *probe.Error
 
 	// URL returns back internal url
 	URL() *URL
