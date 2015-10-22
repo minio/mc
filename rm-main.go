@@ -17,7 +17,7 @@
 package main
 
 import (
-	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/minio/cli"
@@ -123,7 +123,7 @@ func rmAll(url string) {
 		return
 	}
 	for urlPartial2 := range out {
-		urlFull := urlPartial1 + urlPartial2
+		urlFull := filepath.Join(urlPartial1, urlPartial2)
 		newclnt, e := url2Client(urlFull)
 		if e != nil {
 			errorIf(e, "Unable to create client object : "+urlFull+".")
@@ -153,7 +153,7 @@ func rmAllIncompleteUploads(url string) {
 	urlPartial1 := url2Dir(url)
 	ch := clnt.List(true, true)
 	for entry := range ch {
-		urlFull := urlPartial1 + entry.Content.Name
+		urlFull := filepath.Join(urlPartial1, entry.Content.Name)
 		newclnt, e := url2Client(urlFull)
 		if e != nil {
 			errorIf(e, "Unable to create client object : "+urlFull+".")
@@ -214,25 +214,6 @@ func checkRmSyntax(ctx *cli.Context) {
 				helpStr = "Usage : mc rm " + url + " force"
 			}
 			fatalIf(errDummy().Trace(), helpStr)
-		}
-		if u.Type == client.Filesystem {
-			// For local file system we don't support "mc rm fileprefix..." just like the behavior of "mc ls fileprefix..."
-			// So recursive delete has to be of the form "mc rm dir1/dir2/..."
-			isRecursive := isURLRecursive(url)
-			path := stripRecursiveURL(url)
-			if isRecursive && (strings.HasSuffix(path, string(u.Separator)) == false) {
-				helpStr := "Usage : mc rm " + path + string(u.Separator) + recursiveSeparator + " force"
-				fatalIf(errDummy().Trace(), helpStr)
-			}
-			_, content, err := url2Stat(path)
-			if err != nil {
-				fatalIf(err.Trace(), "url2stat error on "+url)
-			}
-			if content.Type&os.ModeDir != 0 && !isRecursive {
-				helpStr := "Usage : mc rm " + url + string(u.Separator) + recursiveSeparator + " force"
-				fatalIf(errDummy().Trace(), helpStr)
-			}
-			continue
 		}
 	}
 }
