@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/user"
 	"runtime"
 	"strconv"
 
@@ -30,18 +29,6 @@ import (
 	"github.com/minio/pb"
 	"github.com/olekukonko/ts"
 )
-
-// Check for the user id erarly on and gracefully report.
-func checkUser() {
-	_, e := user.Current()
-	fatalIf(probe.NewError(e), "Unable to determine current user.")
-
-	if runtime.GOOS != "windows" {
-		if os.Geteuid() == 0 {
-			fatalIf(errDummy().Trace(), "Please run as a normal user, running as root is disallowed")
-		}
-	}
-}
 
 // Check for sane config environment early on and gracefully report.
 func checkConfig() {
@@ -93,15 +80,16 @@ func registerBefore(ctx *cli.Context) error {
 		console.NoDebugPrint = false
 	}
 
+	// Set theme.
 	setMainPalette(ctx.GlobalString("colors"))
 
-	// check if mc is being run as root
-	checkUser()
-	// verify golang runtime
+	// Verify golang runtime
 	verifyMCRuntime()
+
 	// Migrate any old version of config / state files to newer format.
 	migrate()
-	// checkConfig if it can be read
+
+	// Checkconfig if it can be read
 	checkConfig()
 	return nil
 }
