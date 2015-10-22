@@ -56,7 +56,7 @@ C:\Users\Username\Downloads> mc.exe
 If you do not have a working Golang environment, please follow [Install Golang](./INSTALLGO.md).
 
 ```sh
-$ go get github.com/minio/mc
+$ go get -u github.com/minio/mc
 ```
 
 ## Public Minio Server
