@@ -77,22 +77,18 @@ func (c *s3Client) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error
 }
 
 // Remove - remove object or bucket
-func (c *s3Client) Remove() *probe.Error {
+func (c *s3Client) Remove(incomplete bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
+	if incomplete {
+		errCh := c.api.RemoveIncompleteUpload(bucket, object)
+		return probe.NewError(<-errCh)
+	}
 	var err error
 	if object == "" {
 		err = c.api.RemoveBucket(bucket)
 	} else {
 		err = c.api.RemoveObject(bucket, object)
 	}
-	return probe.NewError(err)
-}
-
-// RemoveIncompleteUpload - remove multiparts of an incomplete multipart upload
-func (c *s3Client) RemoveIncompleteUpload() *probe.Error {
-	bucket, object := c.url2BucketAndObject()
-	ch := c.api.RemoveIncompleteUpload(bucket, object)
-	err := <-ch
 	return probe.NewError(err)
 }
 

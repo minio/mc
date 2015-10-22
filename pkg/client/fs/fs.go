@@ -191,12 +191,10 @@ func (f *fsClient) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error
 	return body, length, nil
 }
 
-// RemoveIncompleteUpload - remove multiparts of an incomplete multi[art upload]
-func (f *fsClient) RemoveIncompleteUpload() *probe.Error {
-	return probe.NewError(client.APINotImplemented{API: "RemoveIncompleteUpload", APIType: "filesystem"})
-}
-
-func (f *fsClient) Remove() *probe.Error {
+func (f *fsClient) Remove(incomplete bool) *probe.Error {
+	if incomplete {
+		return nil
+	}
 	err := os.Remove(f.Path)
 	return probe.NewError(err)
 }
