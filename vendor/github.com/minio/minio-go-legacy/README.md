@@ -53,7 +53,7 @@ func main() {
 * [GetPartialObject(bucket, object, offset, length) (io.Reader, ObjectStat, error)](examples/getpartialobject.go)
 * [StatObject(bucket, object) (ObjectStat, error)](examples/statobject.go)
 * [RemoveObject(bucket, object) error](examples/removeobject.go)
-* [DropIncompleteUpload(bucket, object) <-chan error](examples/dropincompleteuploads.go)
+* [RemoveIncompleteUpload(bucket, object) <-chan error](examples/removeincompleteupload.go)
 
 ### Presigned Bucket/Object Level
 * [PresignedGetObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedgetobject.go)

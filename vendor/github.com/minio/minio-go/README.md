@@ -46,7 +46,6 @@ func main() {
 * [ListBuckets() <-chan BucketStat](examples/s3/listbuckets.go)
 * [ListObjects(bucket, prefix, recursive) <-chan ObjectStat](examples/s3/listobjects.go)
 * [ListIncompleteUploads(bucket, prefix, recursive) <-chan ObjectMultipartStat](examples/s3/listincompleteuploads.go)
-* [DropIncompleteUpload(bucket, object) <-chan error](examples/s3/dropincompleteuploads.go)
 
 ### Object Level
 * [PutObject(bucket, object, size, io.Reader) error](examples/s3/putobject.go)
@@ -54,6 +53,7 @@ func main() {
 * [GetPartialObject(bucket, object, offset, length) (io.Reader, ObjectStat, error)](examples/s3/getpartialobject.go)
 * [StatObject(bucket, object) (ObjectStat, error)](examples/s3/statobject.go)
 * [RemoveObject(bucket, object) error](examples/s3/removeobject.go)
+* [RemoveIncompleteUpload(bucket, object) <-chan error](examples/s3/removeincompleteupload.go)
 
 ### Presigned Bucket/Object Level
 * [PresignedGetObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedgetobject.go)

@@ -64,8 +64,7 @@ type ObjectAPI interface {
 	StatObject(bucket, object string) (ObjectStat, error)
 	RemoveObject(bucket, object string) error
 
-	// Drop all incomplete uploads for a given object
-	DropIncompleteUpload(bucket, object string) <-chan error
+	RemoveIncompleteUpload(bucket, object string) <-chan error
 }
 
 // PresignedAPI - object specific for now
@@ -1057,7 +1056,7 @@ func (a api) ListBuckets() <-chan BucketStatCh {
 	return ch
 }
 
-func (a api) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan error) {
+func (a api) removeIncompleteUploadInRoutine(bucket, object string, errorCh chan error) {
 	defer close(errorCh)
 	if err := invalidBucketError(bucket); err != nil {
 		errorCh <- err
@@ -1106,10 +1105,10 @@ func (a api) dropIncompleteUploadInRoutine(bucket, object string, errorCh chan e
 	}
 }
 
-// DropIncompleteUpload - abort a specific in progress active multipart upload
+// RemoveIncompleteUpload - abort a specific in progress active multipart upload
 //   requires explicit authentication, no anonymous requests are allowed for multipart API
-func (a api) DropIncompleteUpload(bucket, object string) <-chan error {
+func (a api) RemoveIncompleteUpload(bucket, object string) <-chan error {
 	errorCh := make(chan error)
-	go a.dropIncompleteUploadInRoutine(bucket, object, errorCh)
+	go a.removeIncompleteUploadInRoutine(bucket, object, errorCh)
 	return errorCh
 }
