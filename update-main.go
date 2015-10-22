@@ -138,7 +138,7 @@ func getExperimentalUpdate() {
 	clnt, err := url2Client(mcExperimentalURL)
 	fatalIf(err.Trace(mcExperimentalURL), "Unable to initalize experimental URL.")
 
-	data, _, err := clnt.GetObject(0, 0)
+	data, _, err := clnt.Get(0, 0)
 	fatalIf(err.Trace(mcExperimentalURL), "Unable to read from experimental URL ‘"+mcExperimentalURL+"’.")
 
 	current, e := time.Parse(http.TimeFormat, mcVersion)
@@ -180,7 +180,7 @@ func getReleaseUpdate() {
 	clnt, err := url2Client(mcUpdateURL)
 	fatalIf(err.Trace(mcUpdateURL), "Unable to initalize update URL.")
 
-	data, _, err := clnt.GetObject(0, 0)
+	data, _, err := clnt.Get(0, 0)
 	fatalIf(err.Trace(mcUpdateURL), "Unable to read from update URL ‘"+mcUpdateURL+"’.")
 
 	current, e := time.Parse(http.TimeFormat, mcVersion)

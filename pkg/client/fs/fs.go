@@ -100,8 +100,8 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	return st, nil
 }
 
-// PutObject - create a new file
-func (f *fsClient) PutObject(size int64, data io.Reader) *probe.Error {
+// Put - create a new file
+func (f *fsClient) Put(size int64, data io.Reader) *probe.Error {
 	objectDir, _ := filepath.Split(f.Path)
 	objectPath := f.Path
 	if objectDir != "" {
@@ -153,10 +153,10 @@ func (f *fsClient) ShareUpload(recursive bool, expires time.Duration, contentTyp
 	return nil, probe.NewError(client.APINotImplemented{API: "ShareUpload", APIType: "filesystem"})
 }
 
-// GetObject download an full or part object from bucket
+// Get download an full or part object from bucket
 // getobject returns a reader, length and nil for no errors
 // with errors getobject will return nil reader, length and typed errors
-func (f *fsClient) GetObject(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
+func (f *fsClient) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
 	if offset < 0 || length < 0 {
 		return nil, 0, probe.NewError(client.InvalidRange{Offset: offset})
 	}
@@ -507,14 +507,14 @@ func (f *fsClient) MakeBucket() *probe.Error {
 	return nil
 }
 
-// GetBucketACL - get bucket acl
-func (f *fsClient) GetBucketACL() (acl string, error *probe.Error) {
-	return "", probe.NewError(client.APINotImplemented{API: "GetBucketACL", APIType: "filesystem"})
+// GetBucketACL - get bucket access
+func (f *fsClient) GetBucketAccess() (acl string, error *probe.Error) {
+	return "", probe.NewError(client.APINotImplemented{API: "GetBucketAccess", APIType: "filesystem"})
 }
 
-// SetBucketACL - create a new bucket acl
-func (f *fsClient) SetBucketACL(acl string) *probe.Error {
-	return probe.NewError(client.APINotImplemented{API: "SetBucketACL", APIType: "filesystem"})
+// SetBucketAccess - set bucket access
+func (f *fsClient) SetBucketAccess(acl string) *probe.Error {
+	return probe.NewError(client.APINotImplemented{API: "SetBucketAccess", APIType: "filesystem"})
 }
 
 // getFSMetadata -

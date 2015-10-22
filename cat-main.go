@@ -91,7 +91,7 @@ func catURL(sourceURL string) *probe.Error {
 			return err.Trace(URL)
 		}
 		// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
-		reader, _, err = sourceClnt.GetObject(0, 0)
+		reader, _, err = sourceClnt.Get(0, 0)
 		if err != nil {
 			return err.Trace(URL)
 		}

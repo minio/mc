@@ -66,8 +66,8 @@ func (c *s3Client) URL() *client.URL {
 	return c.hostURL
 }
 
-// GetObject - get object
-func (c *s3Client) GetObject(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
+// Get - get object
+func (c *s3Client) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	reader, metadata, err := c.api.GetPartialObject(bucket, object, offset, length)
 	if err != nil {
@@ -132,8 +132,8 @@ func (c *s3Client) ShareUpload(recursive bool, expires time.Duration, contentTyp
 	return m, probe.NewError(err)
 }
 
-// PutObject - put object
-func (c *s3Client) PutObject(size int64, data io.Reader) *probe.Error {
+// Put - put object
+func (c *s3Client) Put(size int64, data io.Reader) *probe.Error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified
@@ -168,8 +168,8 @@ func (c *s3Client) MakeBucket() *probe.Error {
 	return nil
 }
 
-// GetBucketACL get canned acl's on a bucket
-func (c *s3Client) GetBucketACL() (acl string, error *probe.Error) {
+// GetBucketAccess get canned acl on a bucket
+func (c *s3Client) GetBucketAccess() (acl string, error *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		return "", probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
@@ -181,8 +181,8 @@ func (c *s3Client) GetBucketACL() (acl string, error *probe.Error) {
 	return bucketACL.String(), nil
 }
 
-// SetBucketACL add canned acl's on a bucket
-func (c *s3Client) SetBucketACL(acl string) *probe.Error {
+// SetBucketAccess set canned acl on a bucket
+func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})

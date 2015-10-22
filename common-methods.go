@@ -55,7 +55,7 @@ func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe
 	if err != nil {
 		return nil, 0, err.Trace()
 	}
-	return sourceClnt.GetObject(0, 0)
+	return sourceClnt.Get(0, 0)
 }
 
 // putTarget writes to URL from reader. If length=0, read until EOF.
@@ -64,7 +64,7 @@ func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
 	if err != nil {
 		return err.Trace(targetURL)
 	}
-	err = targetClnt.PutObject(length, reader)
+	err = targetClnt.Put(length, reader)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
@@ -126,7 +126,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 			go func(targetClient client.Client, reader io.ReadCloser, errorCh chan<- *probe.Error) {
 				defer wg.Done()
 				defer reader.Close()
-				err := targetClient.PutObject(length, reader)
+				err := targetClient.Put(length, reader)
 				if err != nil {
 					errorCh <- err.Trace()
 					return
