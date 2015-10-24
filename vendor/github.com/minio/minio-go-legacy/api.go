@@ -149,6 +149,9 @@ var regions = map[string]string{
 	"s3-ap-northeast-1.amazonaws.com":     "ap-northeast-1",
 	"s3-sa-east-1.amazonaws.com":          "sa-east-1",
 	"s3.cn-north-1.amazonaws.com.cn":      "cn-north-1",
+
+	// Add google cloud storage as one of the regions
+	"storage.googleapis.com": "google",
 }
 
 // getRegion returns a region based on its endpoint mapping.
@@ -228,8 +231,14 @@ func New(config Config) (API, error) {
 		if err != nil {
 			return api{}, err
 		}
-		match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
-		if match {
+		matchS3, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
+		if matchS3 {
+			config.isVirtualStyle = true
+			hostSplits := strings.SplitN(u.Host, ".", 2)
+			u.Host = hostSplits[1]
+		}
+		matchGoogle, _ := filepath.Match("*.storage.googleapis.com", u.Host)
+		if matchGoogle {
 			config.isVirtualStyle = true
 			hostSplits := strings.SplitN(u.Host, ".", 2)
 			u.Host = hostSplits[1]
@@ -333,7 +342,7 @@ var maxConcurrentQueue int64 = 4
 // storage it will have the following parameters as constants
 //
 //  maxParts
-//  maximumPartSize
+//  maxiPartSize
 //  minimumPartSize
 //
 // if a the partSize after division with maxParts is greater than minimumPartSize
@@ -400,7 +409,7 @@ func (a api) newObjectUpload(bucket, object, contentType string, size int64, dat
 				return
 			}
 			var complPart completePart
-			complPart, err = a.uploadPart(bucket, object, uploadID, p.MD5Sum, p.Num, p.Len, p.ReadSeeker)
+			complPart, err = a.uploadPart(bucket, object, uploadID, p.MD5Sum, p.Num, p.Len, p.Reader)
 			if err != nil {
 				errCh <- err
 				return
@@ -541,7 +550,7 @@ func (a api) continueObjectUpload(bucket, object, uploadID string, size int64, d
 				errCh <- p.Err
 				return
 			}
-			completedPart, err := a.uploadPart(bucket, object, uploadID, p.MD5Sum, p.Num, p.Len, p.ReadSeeker)
+			completedPart, err := a.uploadPart(bucket, object, uploadID, p.MD5Sum, p.Num, p.Len, p.Reader)
 			if err != nil {
 				errCh <- err
 				return
@@ -637,6 +646,21 @@ func (a api) PutObject(bucket, object, contentType string, size int64, data io.R
 			return nil
 		}
 	}
+	// Special handling just for Google Cloud Storage.
+	// TODO - we should remove this in future when we fully implement Resumable object upload.
+	if a.config.Region == "google" {
+		if size > maxPartSize {
+			return ErrorResponse{
+				Code:     "EntityTooLarge",
+				Message:  "Your proposed upload exceeds the maximum allowed object size.",
+				Resource: separator + bucket + separator + object,
+			}
+		}
+		if _, err := a.putObject(bucket, object, contentType, nil, size, data); err != nil {
+			return err
+		}
+		return nil
+	}
 	switch {
 	case size < minimumPartSize && size > 0:
 		// Single Part use case, use PutObject directly
@@ -648,11 +672,11 @@ func (a api) PutObject(bucket, object, contentType string, size int64, data io.R
 			if part.Len != size {
 				return ErrorResponse{
 					Code:     "MethodUnexpectedEOF",
-					Message:  "Data read is less than the requested size",
+					Message:  "Data read is less than the requested size.",
 					Resource: separator + bucket + separator + object,
 				}
 			}
-			_, err := a.putObject(bucket, object, contentType, part.MD5Sum, part.Len, part.ReadSeeker)
+			_, err := a.putObject(bucket, object, contentType, part.MD5Sum, part.Len, part.Reader)
 			if err != nil {
 				return err
 			}
@@ -676,7 +700,7 @@ func (a api) PutObject(bucket, object, contentType string, size int64, data io.R
 		}
 		return a.continueObjectUpload(bucket, object, inProgressUploadID, size, data)
 	}
-	return errors.New("Unexpected control flow, please report this error at https://github.com/minio/minio-go-legacy/issues")
+	return errors.New("Unexpected control flow, please report this error at https://github.com/minio/minio-go-legacy/issues.")
 }
 
 // StatObject verify if object exists and you have permission to access it
@@ -774,6 +798,33 @@ func (a api) GetBucketACL(bucket string) (BucketACL, error) {
 		return "", err
 	}
 	grants := policy.AccessControlList.Grant
+	// While it is compatible Google Cloud Storage behaves differently in terms of its XML reply.
+	if a.config.Region == "google" {
+		if len(grants) == 0 {
+			return BucketACL("private"), nil
+		}
+		switch {
+		case len(grants) == 1:
+			if grants[0].Grantee.URI == "http://acs.amazonaws.com/groups/global/AuthenticatedUsers" && grants[0].Permission == "READ" {
+				return BucketACL("authenticated-read"), nil
+			}
+			if grants[0].Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && grants[0].Permission == "READ" {
+				return BucketACL("public-read"), nil
+			}
+		case len(grants) == 2:
+			for _, g := range grants {
+				if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "WRITE" {
+					return BucketACL("public-read-write"), nil
+				}
+			}
+		}
+		return "", ErrorResponse{
+			Code:      "NoSuchBucketPolicy",
+			Message:   "The specified bucket does not have a bucket policy.",
+			Resource:  "/" + bucket,
+			RequestID: "minio",
+		}
+	}
 	switch {
 	case len(grants) == 1:
 		if grants[0].Grantee.URI == "" && grants[0].Permission == "FULL_CONTROL" {

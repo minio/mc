@@ -47,7 +47,7 @@ type operation struct {
 type request struct {
 	req     *http.Request
 	config  *Config
-	body    io.ReadSeeker
+	body    io.Reader
 	expires int64
 }
 
@@ -234,7 +234,7 @@ func newUnauthenticatedRequest(op *operation, config *Config, body io.Reader) (*
 }
 
 // newRequest - instantiate a new request
-func newRequest(op *operation, config *Config, body io.ReadSeeker) (*request, error) {
+func newRequest(op *operation, config *Config, body io.Reader) (*request, error) {
 	// if no method default to POST
 	method := op.HTTPMethod
 	if method == "" {
@@ -356,14 +356,14 @@ func (r *request) PostPresignSignature(policyBase64 string) string {
 //  	Content-MD5 + "\n" +
 //  	Content-Type + "\n" +
 //  	Date + "\n" +
-//  	CanonicalizedAmzHeaders +
+//  	CanonicalizedProtocolHeaders +
 //  	CanonicalizedResource;
 //
 // CanonicalizedResource = [ "/" + Bucket ] +
 //  	<HTTP-Request-URI, from the protocol name up to the query string> +
 //  	[ subresource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
 //
-// CanonicalizedAmzHeaders = <described below>
+// CanonicalizedProtocolHeaders = <described below>
 
 // SignV2 the request before Do() (version 2.0)
 func (r *request) SignV2() {
@@ -392,14 +392,14 @@ func (r *request) SignV2() {
 // 	 Content-MD5 + "\n" +
 //	 Content-Type + "\n" +
 //	 Date + "\n" +
-//	 CanonicalizedAmzHeaders +
+//	 CanonicalizedProtocolHeaders +
 //	 CanonicalizedResource;
 func (r *request) getStringToSign() string {
 	buf := new(bytes.Buffer)
 	// write standard headers
 	r.writeDefaultHeaders(buf)
-	// write canonicalized AMZ headers if any
-	r.writeCanonicalizedAmzHeaders(buf)
+	// write canonicalized protocol headers if any
+	r.writeCanonicalizedHeaders(buf)
 	// write canonicalized Query resources if any
 	r.writeCanonicalizedResource(buf)
 	return buf.String()
@@ -416,19 +416,19 @@ func (r *request) writeDefaultHeaders(buf *bytes.Buffer) {
 	buf.WriteByte('\n')
 }
 
-func (r *request) writeCanonicalizedAmzHeaders(buf *bytes.Buffer) {
-	var amzHeaders []string
+func (r *request) writeCanonicalizedHeaders(buf *bytes.Buffer) {
+	var protoHeaders []string
 	vals := make(map[string][]string)
 	for k, vv := range r.req.Header {
-		// all the AMZ headers go lower
+		// all the AMZ and GOOG headers should be lowercase
 		lk := strings.ToLower(k)
 		if strings.HasPrefix(lk, "x-amz") {
-			amzHeaders = append(amzHeaders, lk)
+			protoHeaders = append(protoHeaders, lk)
 			vals[lk] = vv
 		}
 	}
-	sort.Strings(amzHeaders)
-	for _, k := range amzHeaders {
+	sort.Strings(protoHeaders)
+	for _, k := range protoHeaders {
 		buf.WriteString(k)
 		buf.WriteByte(':')
 		for idx, v := range vals[k] {
