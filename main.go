@@ -195,6 +195,9 @@ func setMainPalette(style string) {
 }
 
 func main() {
+	// Set projet's root source path.
+	probe.SetRoot()
+
 	app := registerApp()
 	app.Before = registerBefore
 
