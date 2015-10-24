@@ -445,7 +445,7 @@ func fixConfigV3() {
 			newHostConf.SecretAccessKey = hostConf.SecretAccessKey
 			confV3.Hosts[host] = newHostConf
 		}
-		confV3.Version = globalMCConfigVersion
+		confV3.Version = "3"
 
 		mcNewConfigV3, err := quick.New(confV3)
 		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘3’.")
