@@ -24,11 +24,11 @@ import (
 
 // part - message structure for results from the MultiPart
 type part struct {
-	MD5Sum     []byte
-	ReadSeeker io.ReadSeeker
-	Err        error
-	Len        int64
-	Num        int // part number
+	MD5Sum []byte
+	Reader io.Reader
+	Err    error
+	Len    int64
+	Num    int // part number
 }
 
 // skipPart - skipping uploaded parts
@@ -38,7 +38,7 @@ type skipPart struct {
 }
 
 // chopper reads from io.Reader, partitions the data into chunks of given chunksize, and sends
-// each chunk as io.ReadSeeker to the caller over a channel
+// each chunk as io.Reader to the caller over a channel
 //
 // This method runs until an EOF or error occurs. If an error occurs,
 // the method sends the error over the channel and returns.
@@ -58,20 +58,20 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 	if err == io.EOF || err == io.ErrUnexpectedEOF { // short read, only single part return
 		m := md5.Sum(p[0:n])
 		ch <- part{
-			MD5Sum:     m[:],
-			ReadSeeker: bytes.NewReader(p[0:n]),
-			Err:        nil,
-			Len:        int64(n),
-			Num:        1,
+			MD5Sum: m[:],
+			Reader: bytes.NewReader(p[0:n]),
+			Err:    nil,
+			Len:    int64(n),
+			Num:    1,
 		}
 		return
 	}
 	// catastrophic error send error and return
 	if err != nil {
 		ch <- part{
-			ReadSeeker: nil,
-			Err:        err,
-			Num:        0,
+			Reader: nil,
+			Err:    err,
+			Num:    0,
 		}
 		return
 	}
@@ -84,11 +84,11 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 	}
 	if !isPartNumberUploaded(sp, skipParts) {
 		ch <- part{
-			MD5Sum:     md5SumBytes[:],
-			ReadSeeker: bytes.NewReader(p),
-			Err:        nil,
-			Len:        int64(n),
-			Num:        num,
+			MD5Sum: md5SumBytes[:],
+			Reader: bytes.NewReader(p),
+			Err:    nil,
+			Len:    int64(n),
+			Num:    num,
 		}
 	}
 	for err == nil {
@@ -98,9 +98,9 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 		if err != nil {
 			if err != io.EOF && err != io.ErrUnexpectedEOF { // catastrophic error
 				ch <- part{
-					ReadSeeker: nil,
-					Err:        err,
-					Num:        0,
+					Reader: nil,
+					Err:    err,
+					Num:    0,
 				}
 				return
 			}
@@ -115,11 +115,11 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 			continue
 		}
 		ch <- part{
-			MD5Sum:     md5SumBytes[:],
-			ReadSeeker: bytes.NewReader(p[0:n]),
-			Err:        nil,
-			Len:        int64(n),
-			Num:        num,
+			MD5Sum: md5SumBytes[:],
+			Reader: bytes.NewReader(p[0:n]),
+			Err:    nil,
+			Len:    int64(n),
+			Num:    num,
 		}
 
 	}

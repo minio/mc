@@ -228,7 +228,7 @@ func (a apiCore) abortMultipartUpload(bucket, object, uploadID string) error {
 			default:
 				errorResponse = ErrorResponse{
 					Code:      resp.Status,
-					Message:   "",
+					Message:   "Unknown error, please report this at https://github.com/minio/minio-go-legacy/issues.",
 					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 				}
@@ -288,7 +288,7 @@ func (a apiCore) listObjectParts(bucket, object, uploadID string, partNumberMark
 }
 
 // uploadPartRequest wrapper creates a new UploadPart request
-func (a apiCore) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
+func (a apiCore) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.Reader) (*request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
@@ -299,13 +299,15 @@ func (a apiCore) uploadPartRequest(bucket, object, uploadID string, md5SumBytes 
 		return nil, err
 	}
 	// set Content-MD5 as base64 encoded md5
-	r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
+	if md5SumBytes != nil {
+		r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
+	}
 	r.req.ContentLength = size
 	return r, nil
 }
 
 // uploadPart uploads a part in a multipart upload.
-func (a apiCore) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
+func (a apiCore) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.Reader) (completePart, error) {
 	req, err := a.uploadPartRequest(bucket, object, uploadID, md5SumBytes, partNumber, size, body)
 	if err != nil {
 		return completePart{}, err

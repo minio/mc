@@ -209,10 +209,16 @@ func (a apiCore) getBucketACL(bucket string) (accessControlPolicy, error) {
 	if err != nil {
 		return accessControlPolicy{}, err
 	}
+
+	// In-case of google private bucket policy doesn't have any Grant list
+	if a.config.Region == "google" {
+		return policy, nil
+	}
+
 	if policy.AccessControlList.Grant == nil {
 		errorResponse := ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go-legacy/issues.",
 			Resource:  separator + bucket,
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
@@ -371,7 +377,7 @@ func (a apiCore) headBucket(bucket string) error {
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
-					Message:   "Access Denied",
+					Message:   "Access Denied.",
 					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
@@ -434,7 +440,7 @@ func (a apiCore) deleteBucket(bucket string) error {
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
-					Message:   "Access Denied",
+					Message:   "Access Denied.",
 					Resource:  separator + bucket,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
@@ -498,7 +504,7 @@ func (a apiCore) putObjectUnAuthenticated(bucket, object, contentType string, si
 }
 
 // putObjectRequest wrapper creates a new PutObject request
-func (a apiCore) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (*request, error) {
+func (a apiCore) putObjectRequest(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.Reader) (*request, error) {
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
@@ -512,7 +518,9 @@ func (a apiCore) putObjectRequest(bucket, object, contentType string, md5SumByte
 		return nil, err
 	}
 	// set Content-MD5 as base64 encoded md5
-	r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
+	if md5SumBytes != nil {
+		r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
+	}
 	r.Set("Content-Type", contentType)
 	r.req.ContentLength = size
 	return r, nil
@@ -520,7 +528,7 @@ func (a apiCore) putObjectRequest(bucket, object, contentType string, md5SumByte
 
 // putObject - add an object to a bucket
 // NOTE: You must have WRITE permissions on a bucket to add an object to it.
-func (a apiCore) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
+func (a apiCore) putObject(bucket, object, contentType string, md5SumBytes []byte, size int64, body io.Reader) (ObjectStat, error) {
 	req, err := a.putObjectRequest(bucket, object, contentType, md5SumBytes, size, body)
 	if err != nil {
 		return ObjectStat{}, err
@@ -657,7 +665,7 @@ func (a apiCore) getObject(bucket, object string, offset, length int64) (io.Read
 	if err != nil {
 		return nil, ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues.",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -789,7 +797,7 @@ func (a apiCore) headObject(bucket, object string) (ObjectStat, error) {
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
 					Code:      "AccessDenied",
-					Message:   "Access Denied",
+					Message:   "Access Denied.",
 					Resource:  separator + bucket + separator + object,
 					RequestID: resp.Header.Get("x-amz-request-id"),
 					HostID:    resp.Header.Get("x-amz-id-2"),
@@ -812,7 +820,7 @@ func (a apiCore) headObject(bucket, object string) (ObjectStat, error) {
 	if err != nil {
 		return ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues.",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -821,7 +829,7 @@ func (a apiCore) headObject(bucket, object string) (ObjectStat, error) {
 	if err != nil {
 		return ObjectStat{}, ErrorResponse{
 			Code:      "InternalError",
-			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues",
+			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go-legacy/issues.",
 			RequestID: resp.Header.Get("x-amz-request-id"),
 			HostID:    resp.Header.Get("x-amz-id-2"),
 		}
@@ -868,7 +876,7 @@ func (a apiCore) listBuckets() (listAllMyBucketsResult, error) {
 		if resp.StatusCode == http.StatusTemporaryRedirect {
 			return listAllMyBucketsResult{}, ErrorResponse{
 				Code:      "AccessDenied",
-				Message:   "Anonymous access is forbidden for this operation",
+				Message:   "Anonymous access is forbidden for this operation.",
 				RequestID: resp.Header.Get("x-amz-request-id"),
 				HostID:    resp.Header.Get("x-amz-id-2"),
 			}
