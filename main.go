@@ -195,8 +195,8 @@ func setMainPalette(style string) {
 }
 
 func main() {
-	// Set projet's root source path.
-	probe.SetRoot()
+	probe.Init() // Set project's root source path.
+	probe.SetAppInfo("Release-Tag", "RELEASE.Mon-05-Oct-2015-17-52-35-GMT")
 
 	app := registerApp()
 	app.Before = registerBefore
