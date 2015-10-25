@@ -116,21 +116,22 @@ func rmSingle(url string) {
 }
 
 func rmAll(url string) {
-	urlPartial1 := url2Dir(url)
 	out, err := rmList(url)
 	if err != nil {
 		errorIf(err.Trace(), "Unable to List "+url+".")
 		return
 	}
-	for urlPartial2 := range out {
-		urlFull := filepath.Join(urlPartial1, urlPartial2)
-		newclnt, e := url2Client(urlFull)
+	urlDir := url2Dir(url)
+	for urlPartial := range out {
+		newURL := client.NewURL(urlDir)
+		newURL.Path = filepath.Join(newURL.Path, urlPartial)
+		newclnt, e := url2Client(newURL.String())
 		if e != nil {
-			errorIf(e, "Unable to create client object : "+urlFull+".")
+			errorIf(e, "Unable to create client object : "+newURL.String()+".")
 			continue
 		}
 		err = newclnt.Remove(false)
-		errorIf(err, "Unable to remove : "+urlFull+".")
+		errorIf(err, "Unable to remove : "+newURL.String()+".")
 	}
 }
 
