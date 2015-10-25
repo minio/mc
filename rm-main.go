@@ -67,101 +67,121 @@ EXAMPLES:
 `,
 }
 
-func rmList(url string) (<-chan string, *probe.Error) {
+type rmListOnChannel struct {
+	keyName string
+	err     *probe.Error
+}
+
+func rmList(url string) <-chan rmListOnChannel {
+	rmListCh := make(chan rmListOnChannel)
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to get client object for "+url)
-		return nil, err.Trace()
+		rmListCh <- rmListOnChannel{
+			keyName: "",
+			err:     err.Trace(url),
+		}
+		return rmListCh
 	}
 	in := clnt.List(true, false)
-	out := make(chan string)
-
 	var depthFirst func(currentDir string) (*client.Content, bool)
-
 	depthFirst = func(currentDir string) (*client.Content, bool) {
 		entry, ok := <-in
 		for {
+			if entry.Err != nil {
+				rmListCh <- rmListOnChannel{
+					keyName: "",
+					err:     entry.Err,
+				}
+				return nil, false
+			}
 			if !ok || !strings.HasPrefix(entry.Content.Name, currentDir) {
 				return entry.Content, ok
 			}
 			if entry.Content.Type.IsRegular() {
-				out <- entry.Content.Name
+				rmListCh <- rmListOnChannel{
+					keyName: entry.Content.Name,
+					err:     nil,
+				}
 			}
 			if entry.Content.Type.IsDir() {
 				var content *client.Content
 				content, ok = depthFirst(entry.Content.Name)
-				out <- entry.Content.Name
-				entry = client.ContentOnChannel{Content: content}
+				rmListCh <- rmListOnChannel{
+					keyName: entry.Content.Name,
+					err:     nil,
+				}
+				entry = client.ContentOnChannel{
+					Content: content,
+					Err:     nil,
+				}
 				continue
 			}
 			entry, ok = <-in
 		}
 	}
-
 	go func() {
 		depthFirst("")
-		close(out)
+		close(rmListCh)
 	}()
-	return out, nil
+	return rmListCh
 }
 
 func rmSingle(url string) {
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to get client object for "+url+".")
+		errorIf(err.Trace(url), "Unable to get client object for "+url+".")
 		return
 	}
 	err = clnt.Remove(false)
-	errorIf(err.Trace(), "Unable to remove "+url+".")
+	errorIf(err.Trace(url), "Unable to remove "+url+".")
 }
 
 func rmAll(url string) {
-	out, err := rmList(url)
-	if err != nil {
-		errorIf(err.Trace(), "Unable to List "+url+".")
-		return
-	}
 	urlDir := url2Dir(url)
-	for urlPartial := range out {
+	for rmListCh := range rmList(url) {
+		if rmListCh.err != nil {
+			// if rmList throws an error die here.
+			fatalIf(rmListCh.err.Trace(), "Unable to list : "+url+" .")
+		}
 		newURL := client.NewURL(urlDir)
-		newURL.Path = filepath.Join(newURL.Path, urlPartial)
-		newclnt, e := url2Client(newURL.String())
-		if e != nil {
-			errorIf(e, "Unable to create client object : "+newURL.String()+".")
+		newURL.Path = filepath.Join(newURL.Path, rmListCh.keyName)
+		newClnt, err := url2Client(newURL.String())
+		if err != nil {
+			errorIf(err.Trace(newURL.String()), "Unable to create client object : "+newURL.String()+" .")
 			continue
 		}
-		err = newclnt.Remove(false)
-		errorIf(err, "Unable to remove : "+newURL.String()+".")
+		err = newClnt.Remove(false)
+		errorIf(err.Trace(newURL.String()), "Unable to remove : "+newURL.String()+" .")
 	}
 }
 
 func rmIncompleteUpload(url string) {
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to get client object for "+url+".")
+		errorIf(err.Trace(), "Unable to get client object for "+url+" .")
 		return
 	}
 	err = clnt.Remove(true)
-	errorIf(err.Trace(), "Unable to remove "+url+".")
+	errorIf(err.Trace(), "Unable to remove "+url+" .")
 }
 
 func rmAllIncompleteUploads(url string) {
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to get client object for "+url+".")
+		errorIf(err.Trace(url), "Unable to get client object for "+url+" .")
 		return
 	}
-	urlPartial1 := url2Dir(url)
-	ch := clnt.List(true, true)
-	for entry := range ch {
-		urlFull := filepath.Join(urlPartial1, entry.Content.Name)
-		newclnt, e := url2Client(urlFull)
-		if e != nil {
-			errorIf(e, "Unable to create client object : "+urlFull+".")
+	urlDir := url2Dir(url)
+	for entry := range clnt.List(true, true) {
+		newURL := client.NewURL(urlDir)
+		newURL.Path = filepath.Join(newURL.Path, entry.Content.Name)
+		newClnt, err := url2Client(newURL.String())
+		if err != nil {
+			errorIf(err.Trace(newURL.String()), "Unable to create client object : "+newURL.String()+" .")
 			continue
 		}
-		err = newclnt.Remove(true)
-		errorIf(err, "Unable to remove : "+urlFull+".")
+		err = newClnt.Remove(true)
+		errorIf(err.Trace(newURL.String()), "Unable to remove : "+newURL.String()+" .")
 	}
 }
 
