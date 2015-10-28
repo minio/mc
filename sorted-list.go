@@ -22,7 +22,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio-xl/pkg/probe"
@@ -143,14 +142,13 @@ func (sl *sortedList) Match(source *client.Content) (bool, *probe.Error) {
 		}
 	}
 	for {
-		compare := strings.Compare(source.Name, sl.current.Name)
-		if compare == 0 {
+		if source.Name == sl.current.Name {
 			if source.Type.IsRegular() && sl.current.Type.IsRegular() && source.Size == sl.current.Size {
 				return true, nil
 			}
 			return false, nil
 		}
-		if compare < 0 {
+		if source.Name < sl.current.Name {
 			return false, nil
 		}
 		// assign zero values to fields because if s.current's previous decode had non zero value

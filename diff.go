@@ -272,9 +272,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 		}
 		fC := f.Content
 		sC := s.Content
-		compare := strings.Compare(fC.Name, sC.Name)
-
-		if compare == 0 {
+		if fC.Name == sC.Name {
 			if fC.Type.IsRegular() {
 				if !sC.Type.IsRegular() {
 					ch <- DiffMessage{
@@ -301,7 +299,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 			f, fok = <-fch
 			s, sok = <-sch
 		}
-		if compare < 0 {
+		if fC.Name < sC.Name {
 			ch <- DiffMessage{
 				FirstURL:  firstURL,
 				SecondURL: secondURL,
@@ -309,7 +307,7 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 			}
 			f, fok = <-fch
 		}
-		if compare > 0 {
+		if fC.Name > sC.Name {
 			s, sok = <-sch
 		}
 	}
