@@ -339,22 +339,19 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	}
 }
 
-func (f *fsClient) delimited(fp string) string {
-	var stripPrefix string
-	stripPrefix = f.Path[:strings.LastIndex(f.Path, string(f.URL().Separator))+1]
-	return strings.TrimPrefix(fp, stripPrefix)
-}
-
 func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 	var dirName string
 	var filePrefix string
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
-		// fp also sends back itself with visitFS, ignore it we don't need it
-		if fp == f.Path {
-			return nil
+		// if file path ends with os.PathSeparator and equals to root path, skip it.
+		if strings.HasSuffix(fp, string(f.URL().Separator)) {
+			if fp == dirName {
+				return nil
+			}
 		}
-		if fp == "." {
+		// We would never need to print system root path "/"
+		if fp == "/" {
 			return nil
 		}
 		// we should not skip file or directory during two situations: (ex. mc ls /usr/bi...)
@@ -397,7 +394,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 					}
 					contentCh <- client.ContentOnChannel{
 						Content: &client.Content{
-							Name: f.delimited(fp),
+							Name: strings.TrimPrefix(fp, dirName),
 							Time: lfi.ModTime(),
 							Size: lfi.Size(),
 							Type: lfi.Mode(),
@@ -433,18 +430,18 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 						}
 						contentCh <- client.ContentOnChannel{
 							Content: &client.Content{
-								Name: f.delimited(fp),
+								Name: strings.TrimPrefix(fp, dirName),
 								Time: lfi.ModTime(),
 								Size: lfi.Size(),
 								Type: lfi.Mode(),
 							},
 							Err: probe.NewError(err),
 						}
-					} else {
-						contentCh <- client.ContentOnChannel{
-							Content: nil,
-							Err:     probe.NewError(err),
-						}
+						return nil
+					}
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     probe.NewError(err),
 					}
 					return nil
 				}
@@ -462,13 +459,12 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 					}
 					return nil
 				}
-
 				return err
 			}
 		}
 		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
 			content := &client.Content{
-				Name: f.delimited(fp),
+				Name: strings.TrimPrefix(fp, dirName),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 				Type: fi.Mode(),
@@ -480,11 +476,20 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		}
 		return nil
 	}
+	// No prefix to be filtered by default.
+	filePrefix = ""
+	// if f.Path ends with os.PathSeparator - assuming it to be a directory and moving on.
 	if strings.HasSuffix(f.Path, string(f.URL().Separator)) {
 		dirName = f.Path
-		// filePrefix is ""
 	} else {
+		// if not a directory, take base path to navigate through WalkFunc.
 		dirName = filepath.Dir(f.Path)
+		if !strings.HasSuffix(dirName, string(f.URL().Separator)) {
+			// basepath truncates the os.PathSeparator, add it deligently - useful for trimming
+			// file path inside WalkFunc
+			dirName = dirName + string(f.URL().Separator)
+		}
+		// filePrefix is kept for filtering incoming contents through WalkFunc.
 		filePrefix = f.Path
 	}
 	err := filepath.Walk(dirName, visitFS)

@@ -129,13 +129,17 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 			}
 			if os.IsNotExist(contentCh.Err.ToGoError()) || os.IsPermission(contentCh.Err.ToGoError()) {
 				if contentCh.Content != nil {
-					if contentCh.Content.Type.IsDir() && (contentCh.Content.Type&os.ModeSymlink == os.ModeSymlink) {
-						errorIf(contentCh.Err.Trace(), "Unable to list broken folder link.")
-						continue
+					if contentCh.Content.Type.IsDir() {
+						if contentCh.Content.Type&os.ModeSymlink == os.ModeSymlink {
+							errorIf(contentCh.Err.Trace(), "Unable to list broken folder link.")
+							continue
+						}
+						errorIf(contentCh.Err.Trace(), "Unable to list folder.")
 					}
+				} else {
+					errorIf(contentCh.Err.Trace(), "Unable to list.")
+					continue
 				}
-				errorIf(contentCh.Err.Trace(), "Unable to list.")
-				continue
 			}
 			err = contentCh.Err.Trace()
 			break
