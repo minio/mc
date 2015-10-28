@@ -37,8 +37,6 @@ const (
 	globalSessionDir        = "session"
 	globalSharedURLsDataDir = "share"
 
-	golbalSortedListDir = "sortedlist"
-
 	// default access and secret key
 	// do not pass accesskeyid and secretaccesskey through cli
 	// users should manually edit them, add a stub entry

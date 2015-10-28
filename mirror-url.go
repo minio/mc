@@ -18,13 +18,10 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
@@ -97,135 +94,124 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTargets(sourceClnt client.Client, targetClnts []client.Client) <-chan mirrorURLs {
-	mirrorURLsCh := make(chan mirrorURLs)
-
-	go func() {
-		defer close(mirrorURLsCh)
-		id := newRandomID(8)
-
-		doneCh := make(chan bool)
-		defer close(doneCh)
-		go func(doneCh <-chan bool) {
-			cursorCh := cursorAnimate()
-			for {
-				select {
-				case <-time.Tick(100 * time.Millisecond):
-					if !globalQuietFlag && !globalJSONFlag {
-						console.PrintC("\r" + "Scanning.. " + string(<-cursorCh))
-					}
-				case <-doneCh:
-					return
-				}
-			}
-		}(doneCh)
-
-		sourceSortedList := sortedList{}
-		targetSortedList := make([]*sortedList, len(targetClnts))
-
-		surldelimited := sourceClnt.URL().String()
-		err := sourceSortedList.Create(sourceClnt, id+".src")
-		if err != nil {
-			mirrorURLsCh <- mirrorURLs{
-				Error: err.Trace(),
-			}
-			return
+func getContent(ch <-chan client.ContentOnChannel) (c *client.Content) {
+	for rv := range ch {
+		if rv.Err != nil {
+			continue
+		}
+		if rv.Content.Type.IsDir() {
+			// ignore directories
+			continue
 		}
 
-		turldelimited := make([]string, len(targetClnts))
-		for i := range targetClnts {
-			turldelimited[i] = targetClnts[i].URL().String()
-			targetSortedList[i] = &sortedList{}
-			err := targetSortedList[i].Create(targetClnts[i], id+"."+strconv.Itoa(i))
-			if err != nil {
-				// FIXME: do cleanup by calling Delete()
-				mirrorURLsCh <- mirrorURLs{
-					Error: err.Trace(),
-				}
-				return
-			}
-		}
-		for source := range sourceSortedList.List(true) {
-			if source.Content.Type.IsDir() {
-				continue
-			}
-			targetContents := make([]*client.Content, 0, len(targetClnts))
-			for i, t := range targetSortedList {
-				match, err := t.Match(source.Content)
-				if err != nil || match {
-					// continue on io.EOF or if the keys matches
-					// FIXME: handle other errors and ignore this target for future calls
-					continue
-				}
-				targetContents = append(targetContents, &client.Content{Name: turldelimited[i] + source.Content.Name})
-			}
-			source.Content.Name = surldelimited + source.Content.Name
-			if len(targetContents) > 0 {
-				mirrorURLsCh <- mirrorURLs{
-					SourceContent:  source.Content,
-					TargetContents: targetContents,
-				}
-			}
-		}
-		if err := sourceSortedList.Delete(); err != nil {
-			mirrorURLsCh <- mirrorURLs{
-				Error: err.Trace(),
-			}
-		}
-		for _, t := range targetSortedList {
-			if err := t.Delete(); err != nil {
-				mirrorURLsCh <- mirrorURLs{
-					Error: err.Trace(),
-				}
-			}
-		}
-		doneCh <- true
-		if !globalQuietFlag && !globalJSONFlag {
-			console.Eraseline()
-		}
-	}()
-	return mirrorURLsCh
+		c = rv.Content
+		break
+	}
+
+	return
 }
 
-// prepareMirrorURLs - prepares target and source URLs for mirroring.
-func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs {
-	mirrorURLsCh := make(chan mirrorURLs)
+func getTargetContent(srcContent *client.Content, targetContent *client.Content, targetCh <-chan client.ContentOnChannel) (c *client.Content) {
+	if srcContent == nil {
+		// nothing to do for empty source content
+		return
+	}
 
-	go func() {
-		defer close(mirrorURLsCh)
-		sourceURL = stripRecursiveURL(sourceURL)
-		if strings.HasSuffix(sourceURL, "/") == false {
-			sourceURL = sourceURL + "/"
+	if targetContent == nil {
+		c = getContent(targetCh)
+	} else {
+		c = targetContent
+	}
+
+	for ; c != nil; c = getContent(targetCh) {
+		if srcContent.Name <= c.Name {
+			break
 		}
-		sourceClnt, err := url2Client(sourceURL)
+	}
+
+	return
+}
+
+func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan<- mirrorURLs) {
+	defer close(mirrorURLsCh)
+
+	newSourceURL := stripRecursiveURL(sourceURL)
+	if strings.HasSuffix(newSourceURL, "/") == false {
+		newSourceURL = newSourceURL + "/"
+	}
+	sourceClient, err := url2Client(newSourceURL)
+	if err != nil {
+		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceURL)}
+		return
+	}
+
+	targetLen := len(targetURLs)
+	newTargetURLs := make([]string, targetLen)
+	targetClients := make([]client.Client, targetLen)
+	for i, targetURL := range targetURLs {
+		targetClient, targetContent, err := url2Stat(targetURL)
 		if err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceURL)}
+			mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetURL)}
 			return
 		}
-		targetClnts := make([]client.Client, len(targetURLs))
-		for i, targetURL := range targetURLs {
-			targetClnt, targetContent, err := url2Stat(targetURL)
-			if err != nil {
-				mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetURL)}
-				return
-			}
-			// if one of the targets is not dir exit
-			if !targetContent.Type.IsDir() {
-				mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(targetURL).Trace()}
-				return
-			}
-			// special case, be extremely careful before changing this behavior - will lead to data loss
-			newTargetURL := strings.TrimSuffix(targetURL, string(targetClnt.URL().Separator)) + string(targetClnt.URL().Separator)
-			targetClnt, err = url2Client(newTargetURL)
-			if err != nil {
-				mirrorURLsCh <- mirrorURLs{Error: err.Trace(newTargetURL)}
-				return
-			}
-			targetClnts[i] = targetClnt
+		// targets have to be directory
+		if !targetContent.Type.IsDir() {
+			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(targetURL).Trace()}
+			return
 		}
-		for sURLs := range deltaSourceTargets(sourceClnt, targetClnts) {
-			mirrorURLsCh <- sURLs
+		// special case, be extremely careful before changing this behavior - will lead to data loss
+		newTargetURL := strings.TrimSuffix(targetURL, string(targetClient.URL().Separator)) + string(targetClient.URL().Separator)
+		targetClient, err = url2Client(newTargetURL)
+		if err != nil {
+			mirrorURLsCh <- mirrorURLs{Error: err.Trace(newTargetURL)}
+			return
 		}
-	}()
+		targetClients[i] = targetClient
+		newTargetURLs[i] = newTargetURL
+	}
+
+	targetChs := make([]<-chan client.ContentOnChannel, targetLen)
+	for i, targetClient := range targetClients {
+		targetChs[i] = targetClient.List(true, false)
+	}
+	targetContents := make([]*client.Content, targetLen)
+
+	srcCh := sourceClient.List(true, false)
+	for srcContent := getContent(srcCh); srcContent != nil; srcContent = getContent(srcCh) {
+		var mirrorTargets []*client.Content
+		for i := range targetChs {
+			targetContents[i] = getTargetContent(srcContent, targetContents[i], targetChs[i])
+
+			// either target reached EOF or target does not have source content
+			if targetContents[i] == nil || srcContent.Name != targetContents[i].Name {
+				mirrorTargets = append(mirrorTargets, &client.Content{Name: newTargetURLs[i] + srcContent.Name})
+				continue
+			}
+
+			// source and target have same content
+			if srcContent.Type.IsRegular() && targetContents[i].Type.IsRegular() {
+				// but size mismatches
+				if srcContent.Size != targetContents[i].Size {
+					mirrorTargets = append(mirrorTargets, &client.Content{Name: newTargetURLs[i] + srcContent.Name})
+				}
+				continue
+			}
+
+			// source and target have different content type
+			// TODO: add error
+		}
+		if len(mirrorTargets) > 0 {
+			srcContent.Name = newSourceURL + srcContent.Name
+			mirrorURLsCh <- mirrorURLs{
+				SourceContent:  srcContent,
+				TargetContents: mirrorTargets,
+			}
+		}
+	}
+}
+
+func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs {
+	mirrorURLsCh := make(chan mirrorURLs)
+	go deltaSourceTargets(sourceURL, targetURLs, mirrorURLsCh)
 	return mirrorURLsCh
 }
