@@ -22,8 +22,8 @@ install:
 
 # to run your custom scripts instead of automatic MSBuild
 build_script:
-  - go test
-  - go test -race
+  - go test .
+  - go test -race .
   - go test github.com/minio/mc/pkg...
   - go test -race github.com/minio/mc/pkg...
 

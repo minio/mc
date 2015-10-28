@@ -25,6 +25,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/fatih/color"
@@ -179,7 +180,11 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 				if !globalQuietFlag && !globalJSONFlag {
 					console.Eraseline()
 				}
-				errorIf(cpURLs.Error.Trace(), "Unable to prepare URL for copying.")
+				if strings.Contains(cpURLs.Error.ToGoError().Error(), " is a folder.") {
+					errorIf(cpURLs.Error.Trace(), "Folder cannot be copied. Please use ‘...’ suffix.")
+				} else {
+					errorIf(cpURLs.Error.Trace(), "Unable to prepare URL for copying.")
+				}
 				break
 			}
 

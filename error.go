@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
@@ -33,6 +32,43 @@ type ErrorMessage struct {
 	CallTrace []probe.TracePoint `json:"trace,omitempty"`
 	SysInfo   map[string]string  `json:"sysinfo"`
 }
+
+// fatalIfMultiple wrapper function which takes error message map and selectively prints stack frames if available on debug
+// fatalIfMultiple is implemented to handle multiple argument validation.
+/*
+func fatalIfMultiple(errMsgMap map[string]*probe.Error) {
+	if errMsgMap == nil {
+		return
+	}
+	for msg, err := range errMsgMap {
+		if globalJSONFlag {
+			errorMessage := ErrorMessage{
+				Message: msg,
+				Type:    "error",
+				Cause:   err.ToGoError(),
+				SysInfo: err.SysInfo,
+			}
+			if globalDebugFlag {
+				errorMessage.CallTrace = err.CallTrace
+			}
+			json, err := json.Marshal(struct {
+				Error ErrorMessage `json:"error"`
+			}{
+				Error: errorMessage,
+			})
+			if err != nil {
+				console.Fatalln(probe.NewError(err))
+			}
+			console.Println(string(json))
+		}
+		if !globalDebugFlag {
+			console.Errorln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
+		}
+		console.Errorln(fmt.Sprintf("%s %s", msg, err))
+	}
+	console.Fatalln()
+}
+*/
 
 // fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
 func fatalIf(err *probe.Error, msg string) {
@@ -58,7 +94,7 @@ func fatalIf(err *probe.Error, msg string) {
 			console.Fatalln(probe.NewError(err))
 		}
 		console.Println(string(json))
-		os.Exit(1)
+		console.Fatalln()
 	}
 	if !globalDebugFlag {
 		console.Fatalln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
