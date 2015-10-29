@@ -17,11 +17,15 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
@@ -70,6 +74,20 @@ EXAMPLES:
 type rmListOnChannel struct {
 	keyName string
 	err     *probe.Error
+}
+
+type rmMessage struct {
+	Name string `json:"name"`
+}
+
+func (msg rmMessage) String() string {
+	return console.Colorize("Remove", fmt.Sprintf("removed ‘%s’", msg.Name))
+}
+
+func (msg rmMessage) JSON() string {
+	msgBytes, err := json.Marshal(msg)
+	fatalIf(probe.NewError(err), "Failed to marshal remove message.")
+	return string(msgBytes)
 }
 
 func rmList(url string) <-chan rmListOnChannel {
@@ -126,17 +144,20 @@ func rmList(url string) <-chan rmListOnChannel {
 	return rmListCh
 }
 
-func rmSingle(url string) {
+func rmSingle(url string, rmPrint rmPrinterFunc) {
 	clnt, err := url2Client(url)
 	if err != nil {
 		errorIf(err.Trace(url), "Unable to get client object for "+url+".")
 		return
 	}
 	err = clnt.Remove(false)
+	if err == nil {
+		rmPrint(rmMessage{url})
+	}
 	errorIf(err.Trace(url), "Unable to remove "+url+".")
 }
 
-func rmAll(url string) {
+func rmAll(url string, rmPrint rmPrinterFunc) {
 	urlDir := url2Dir(url)
 	for rmListCh := range rmList(url) {
 		if rmListCh.err != nil {
@@ -151,21 +172,28 @@ func rmAll(url string) {
 			continue
 		}
 		err = newClnt.Remove(false)
+		if err == nil {
+			rmPrint(rmMessage{rmListCh.keyName})
+		}
 		errorIf(err.Trace(newURL.String()), "Unable to remove : "+newURL.String()+" .")
 	}
+
 }
 
-func rmIncompleteUpload(url string) {
+func rmIncompleteUpload(url string, rmPrint rmPrinterFunc) {
 	clnt, err := url2Client(url)
 	if err != nil {
 		errorIf(err.Trace(), "Unable to get client object for "+url+" .")
 		return
 	}
 	err = clnt.Remove(true)
+	if err == nil {
+		rmPrint(rmMessage{url})
+	}
 	errorIf(err.Trace(), "Unable to remove "+url+" .")
 }
 
-func rmAllIncompleteUploads(url string) {
+func rmAllIncompleteUploads(url string, rmPrint rmPrinterFunc) {
 	clnt, err := url2Client(url)
 	if err != nil {
 		errorIf(err.Trace(url), "Unable to get client object for "+url+" .")
@@ -181,7 +209,27 @@ func rmAllIncompleteUploads(url string) {
 			continue
 		}
 		err = newClnt.Remove(true)
+		if err == nil {
+			rmPrint(rmMessage{entry.Content.Name})
+		}
 		errorIf(err.Trace(newURL.String()), "Unable to remove : "+newURL.String()+" .")
+	}
+}
+
+func setRmPalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"Remove": color.New(color.FgGreen, color.Bold),
+	})
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Remove": color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
 	}
 }
 
@@ -239,10 +287,28 @@ func checkRmSyntax(ctx *cli.Context) {
 	}
 }
 
+type rmPrinterFunc func(rmMessage)
+
+func rmPrinterFuncGenerate() rmPrinterFunc {
+	var scanBar scanBarFunc
+	if !globalJSONFlag && !globalQuietFlag {
+		scanBar = scanBarFactory()
+	}
+	return func(msg rmMessage) {
+		if globalJSONFlag || globalQuietFlag {
+			Prints("%s\n", msg)
+			return
+		}
+		scanBar(msg.Name)
+	}
+}
+
 func mainRm(ctx *cli.Context) {
 	checkRmSyntax(ctx)
 	var incomplete bool
 	var force bool
+
+	setRmPalette(ctx.GlobalString("colors"))
 
 	args := ctx.Args()
 	if len(args) != 1 {
@@ -264,22 +330,27 @@ func mainRm(ctx *cli.Context) {
 	URLs, err := args2URLs(args)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
 
+	rmPrint := rmPrinterFuncGenerate()
+
 	// execute for incomplete
 	if incomplete {
 		for _, url := range URLs {
 			if isURLRecursive(url) && force {
-				rmAllIncompleteUploads(stripRecursiveURL(url))
+				rmAllIncompleteUploads(stripRecursiveURL(url), rmPrint)
 			} else {
-				rmIncompleteUpload(url)
+				rmIncompleteUpload(url, rmPrint)
 			}
 		}
 		return
 	}
 	for _, url := range URLs {
 		if isURLRecursive(url) && force {
-			rmAll(stripRecursiveURL(url))
+			rmAll(stripRecursiveURL(url), rmPrint)
 		} else {
-			rmSingle(url)
+			rmSingle(url, rmPrint)
 		}
+	}
+	if !globalJSONFlag && !globalQuietFlag {
+		console.Eraseline()
 	}
 }
