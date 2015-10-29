@@ -157,9 +157,9 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 
-	var scanBar scanBarFunc
+	var updateBar updateBarFunc
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
-		scanBar = scanBarFactory()
+		updateBar = updateBarFactory()
 	}
 
 	URLsCh := prepareMirrorURLs(sourceURL, targetURLs)
@@ -189,7 +189,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuietFlag && !globalJSONFlag {
-				scanBar(sURLs.SourceContent.Name)
+				updateBar(sURLs.SourceContent.Name)
 			}
 
 			totalBytes += sURLs.SourceContent.Size

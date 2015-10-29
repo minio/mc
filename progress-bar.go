@@ -202,7 +202,7 @@ func newProgressBar(total int64) *barSend {
 
 /******************************** Scan Bar ************************************/
 // fixateScanBar truncates long text to fit within the terminal size.
-func fixateScanBar(text string, width int) string {
+func fixateUpdateBar(text string, width int) string {
 	if len([]rune(text)) > width {
 		// Trim text to fit within the screen
 		trimSize := len([]rune(text)) - width + 3 //"..."
@@ -213,11 +213,16 @@ func fixateScanBar(text string, width int) string {
 	return text
 }
 
-// Progress bar function report objects being scaned.
-type scanBarFunc func(string)
+// update bar function - simple update bar that is of the form:
+// "[X] ◓ randomstring"
+// when updateBar(randomstring) is called, X indicates the number of
+// times updateBarFunc was called. Take a look at implementation of "rm"
+// for reference
 
-// scanBarFactory returns a progress bar function to report URL scanning.
-func scanBarFactory() scanBarFunc {
+type updateBarFunc func(string)
+
+// updateBarFactory returns an update bar function
+func updateBarFactory() updateBarFunc {
 	prevLineSize := 0
 	prevSource := ""
 	fileCount := 0
@@ -239,7 +244,7 @@ func scanBarFactory() scanBarFunc {
 			console.PrintC("\r" + scanPrefix + cmnPrefix + strings.Repeat(" ", eraseLen))
 		}
 
-		source = fixateScanBar(source, termWidth-len([]rune(scanPrefix))-1)
+		source = fixateUpdateBar(source, termWidth-len([]rune(scanPrefix))-1)
 		barText := scanPrefix + source
 		console.PrintC("\r" + barText)
 		prevSource = source
