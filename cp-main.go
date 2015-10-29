@@ -160,9 +160,9 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 
-	var scanBar scanBarFunc
+	var updateBar updateBarFunc
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
-		scanBar = scanBarFactory()
+		updateBar = updateBarFactory()
 	}
 
 	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
@@ -195,7 +195,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuietFlag && !globalJSONFlag {
-				scanBar(cpURLs.SourceContent.Name)
+				updateBar(cpURLs.SourceContent.Name)
 			}
 
 			totalBytes += cpURLs.SourceContent.Size

@@ -290,16 +290,16 @@ func checkRmSyntax(ctx *cli.Context) {
 type rmPrinterFunc func(rmMessage)
 
 func rmPrinterFuncGenerate() rmPrinterFunc {
-	var scanBar scanBarFunc
+	var updateBar updateBarFunc
 	if !globalJSONFlag && !globalQuietFlag {
-		scanBar = scanBarFactory()
+		updateBar = updateBarFactory()
 	}
 	return func(msg rmMessage) {
 		if globalJSONFlag || globalQuietFlag {
 			Prints("%s\n", msg)
 			return
 		}
-		scanBar(msg.Name)
+		updateBar(msg.Name)
 	}
 }
 
