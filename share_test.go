@@ -17,57 +17,51 @@
 package main
 
 import (
-	"bytes"
-	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strconv"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio-xl/pkg/probe"
 	. "gopkg.in/check.v1"
 )
 
-func (s *TestSuite) TestRemove(c *C) {
-	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
+func (s *TestSuite) TestShareFailure(c *C) {
+	objectURL := server.URL + "/bucket/object1"
 
-	objectPath := filepath.Join(root, "object1")
-	data := "hello"
-	dataLen := len(data)
-
-	var perr *probe.Error
-	perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
-
-	err = app.Run([]string{os.Args[0], "rm", objectPath})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, false)
-
-	// reset back
-	console.IsExited = false
-
-	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
-		data := "hello"
-		dataLen := len(data)
-		perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(perr, IsNil)
-	}
-
-	// reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "rm", filepath.Join(root, "...")})
+	// invalid duration format ``1hr``
+	err := app.Run([]string{os.Args[0], "share", "download", objectURL, "1hr"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "rm", filepath.Join(root, "..."), "force"})
+	// too high duration 169h, maximum is 168h i.e 7days.
+	err = app.Run([]string{os.Args[0], "share", "download", objectURL, "169hr"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+
+	// reset back
+	console.IsExited = false
+
+	// too low duration 0s, minimum required is 1s.
+	err = app.Run([]string{os.Args[0], "share", "download", objectURL, "0s"})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, true)
+
+	// reset back
+	console.IsExited = false
+}
+
+func (s *TestSuite) TestShareSuccess(c *C) {
+	objectURL := server.URL + "/bucket/object1"
+
+	err := app.Run([]string{os.Args[0], "share", "download", objectURL})
+	c.Assert(err, IsNil)
+	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
+
+	err = app.Run([]string{os.Args[0], "share", "download", objectURL, "1h"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
