@@ -17,24 +17,13 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
-
-	"github.com/minio/mc/pkg/console"
+	"net/http"
+	"time"
 
 	. "gopkg.in/check.v1"
 )
 
-func (s *TestSuite) TestPigFail(c *C) {
-	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-
-	err = app.Run([]string{os.Args[0], "pig", server.URL + "/bucket/"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	// reset back
-	console.IsExited = false
+func (s *TestSuite) TestVersion(c *C) {
+	_, err := time.Parse(mcVersion, http.TimeFormat)
+	c.Assert(err, NotNil)
 }
