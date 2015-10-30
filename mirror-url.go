@@ -88,8 +88,10 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 		_, content, err := url2Stat(tgtURL)
 		fatalIf(err.Trace(tgtURL), "Unable to stat target ‘"+tgtURL+"’.")
-		if !content.Type.IsDir() {
-			fatalIf(errInvalidArgument().Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
+		if content != nil {
+			if !content.Type.IsDir() {
+				fatalIf(errInvalidArgument().Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
+			}
 		}
 	}
 }
