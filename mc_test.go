@@ -69,6 +69,12 @@ func (s *TestSuite) SetUpSuite(c *C) {
 	config, perr := newConfig()
 	c.Assert(perr, IsNil)
 
+	config.Data().(*configV5).Hosts["127.0.0.1:*"] = hostConfig{
+		AccessKeyID:     "WLGDGYAQYIGI833EV05A",
+		SecretAccessKey: "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF",
+		API:             "S3v4",
+	}
+
 	perr = writeConfig(config)
 	c.Assert(perr, IsNil)
 
@@ -98,7 +104,7 @@ func (s *TestSuite) TestGetNewClient(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *TestSuite) TestNewConfigV4(c *C) {
+func (s *TestSuite) TestNewConfigV5(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "mc-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)

@@ -67,6 +67,8 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 func mainShareDownload(ctx *cli.Context) {
 	shareDataDirSetup()
 	checkShareDownloadSyntax(ctx)
+	setSharePalette(ctx.GlobalString("colors"))
+
 	args := ctx.Args()
 	config := mustGetMcConfig()
 	url := args.Get(0)
@@ -79,9 +81,6 @@ func mainShareDownload(ctx *cli.Context) {
 	}
 
 	targetURL := getAliasURL(url, config.Aliases)
-
-	setSharePalette(ctx.GlobalString("colors"))
-
 	// if recursive strip off the "..."
 	err := doShareDownloadURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
 	fatalIf(err.Trace(targetURL), "Unable to generate URL for download.")
