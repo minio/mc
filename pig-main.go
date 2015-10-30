@@ -59,15 +59,9 @@ func checkPigSyntax(ctx *cli.Context) {
 
 // pig writes contents of stdin a collection of URLs.
 func pig(targetURLs []string) *probe.Error {
-	URLs := []string{}
-	config := mustGetMcConfig()
-	for _, URL := range targetURLs {
-		URLs = append(URLs, getAliasURL(URL, config.Aliases))
-	}
-
-	//Stream from stdin to multiple objects until EOF.
+	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
-	err := putTargets(URLs, 0, os.Stdin)
+	err := putTargets(targetURLs, 0, os.Stdin)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
@@ -82,5 +76,11 @@ func pig(targetURLs []string) *probe.Error {
 // mainPig is the main entry point for pig command.
 func mainPig(ctx *cli.Context) {
 	checkPigSyntax(ctx)
-	fatalIf(pig(ctx.Args()).Trace(ctx.Args()...), "Unable to write to one or more targets.")
+
+	// extract URLs.
+	URLs, err := args2URLs(ctx.Args())
+	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
+
+	err = pig(URLs)
+	fatalIf(err.Trace(URLs...), "Unable to write to one or more targets.")
 }
