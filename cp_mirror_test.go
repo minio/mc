@@ -16,12 +16,7 @@
 
 package main
 
-import (
-	"os"
-
-	"github.com/minio/mc/pkg/console"
-	. "gopkg.in/check.v1"
-)
+import . "gopkg.in/check.v1"
 
 func (s *TestSuite) TestCopyURLType(c *C) {
 	sourceURLs := []string{server.URL + "/bucket/object1"}
@@ -51,22 +46,4 @@ func (s *TestSuite) TestCopyURLType(c *C) {
 	sourceURLs = []string{server.URL + "/bucket/...", server.URL + "/bucket/..."}
 	targetURL = ""
 	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
-}
-
-func (s *TestSuite) TestCopyContext(c *C) {
-	err := app.Run([]string{os.Args[0], "cp", server.URL + "/invalid...", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, true)
-
-	// reset back
-	console.IsError = false
-}
-
-func (s *TestSuite) TestMirrorContext(c *C) {
-	err := app.Run([]string{os.Args[0], "mirror", server.URL + "/invalid...", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, true)
-
-	// reset back
-	console.IsError = false
 }
