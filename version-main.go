@@ -67,17 +67,19 @@ func mainVersion(ctx *cli.Context) {
 	if globalJSONFlag {
 		tB, e := json.Marshal(
 			struct {
-				Version struct {
+				CommitID string `json:"commitId"`
+				Version  struct {
 					Value  string `json:"value"`
 					Format string `json:"format"`
 				} `json:"version"`
 			}{
+				CommitID: mcCommitID,
 				Version: struct {
 					Value  string `json:"value"`
 					Format string `json:"format"`
 				}{
 					Value:  mcVersion,
-					Format: "RFC2616",
+					Format: "RFC3339",
 				},
 			},
 		)
@@ -86,6 +88,7 @@ func mainVersion(ctx *cli.Context) {
 		return
 	}
 	msg := console.Colorize("Version", fmt.Sprintf("Version: %s\n", mcVersion))
-	msg += console.Colorize("Version", fmt.Sprintf("Release-Tag: %s", mcReleaseTag))
+	msg += console.Colorize("Version", fmt.Sprintf("Release-Tag: %s\n", mcReleaseTag))
+	msg += console.Colorize("Version", fmt.Sprintf("Commit-ID: %s", mcCommitID))
 	console.Println(msg)
 }

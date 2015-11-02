@@ -1,4 +1,5 @@
-## filter multiple GOPATH
+LDFLAGS = $(shell go run buildscripts/gen-ldflags.go)
+
 all: install
 
 checkdeps:
@@ -42,26 +43,17 @@ deadcode:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 deadcode
 
-build: getdeps verifiers
+build: verifiers
 	@echo "Installing mc:"
 
-test: getdeps verifiers
+test: verifiers
 	@echo "Running all testing:"
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) ./
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build
-	@GO15VENDOREXPERIMENT=1 go install github.com/minio/mc
+	@GO15VENDOREXPERIMENT=1 go build -ldflags $(LDFLAGS) -o $(GOPATH)/bin/mc
 	@mkdir -p $(HOME)/.mc
-
-release: genversion
-	@echo "Installing mc with new version.go:"
-	@GO15VENDOREXPERIMENT=1 go install github.com/minio/mc
-	@mkdir -p $(HOME)/.mc
-
-genversion:
-	@echo "Generating a new version.go:"
-	@GO15VENDOREXPERIMENT=1 go run buildscripts/genversion.go
 
 coverage:
 	@GO15VENDOREXPERIMENT=1 go test -race -coverprofile=cover.out ./

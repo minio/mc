@@ -141,11 +141,15 @@ func getExperimentalUpdate() {
 	data, _, err := clnt.Get(0, 0)
 	fatalIf(err.Trace(mcExperimentalURL), "Unable to read from experimental URL ‘"+mcExperimentalURL+"’.")
 
-	current, e := time.Parse(http.TimeFormat, mcVersion)
+	if mcVersion == "UNOFFICIAL.GOGET" {
+		fatalIf(errDummy().Trace(mcVersion), "Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#mc")
+	}
+
+	current, e := time.Parse(time.RFC3339, mcVersion)
 	fatalIf(probe.NewError(e), "Unable to parse Version string as time.")
 
 	if current.IsZero() {
-		fatalIf(errDummy().Trace(), "Experimental updates not supported for custom build. Version field is empty. Please download official releases from https://dl.minio.io:9000")
+		fatalIf(errDummy().Trace(), "Experimental updates not supported for custom build. Version field is empty. Please download official releases from https://minio.io/#mc")
 	}
 
 	var experimentals Updates
@@ -183,11 +187,15 @@ func getReleaseUpdate() {
 	data, _, err := clnt.Get(0, 0)
 	fatalIf(err.Trace(mcUpdateURL), "Unable to read from update URL ‘"+mcUpdateURL+"’.")
 
-	current, e := time.Parse(http.TimeFormat, mcVersion)
+	if mcVersion == "UNOFFICIAL.GOGET" {
+		fatalIf(errDummy().Trace(mcVersion), "Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#mc")
+	}
+
+	current, e := time.Parse(time.RFC3339, mcVersion)
 	fatalIf(probe.NewError(e), "Unable to parse Version string as time.")
 
 	if current.IsZero() {
-		fatalIf(errDummy().Trace(), "Updates not supported for custom build. Version field is empty. Please download official releases from https://dl.minio.io:9000")
+		fatalIf(errDummy().Trace(), "Updates not supported for custom build. Version field is empty. Please download official releases from https://minio.io/#mc")
 	}
 
 	var updates Updates
