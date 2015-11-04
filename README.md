@@ -70,7 +70,25 @@ Minio server is hosted at ``https://play.minio.io:9000`` for public use. This se
 
 ## Configuring mc for Amazon S3
 
-Update AccessKeyID and SecretAccessKey fields in your ``~/.mc/config.json`` configuration file by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
+Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html). 
+
+Once you have them update your ``~/.mc/config.json`` configuration file.
+```
+$ mc config host add <your_s3_endpoint> <your_access_key> <your_secret_key> S3v4
+```
+
+NOTE: ``S3v4`` is default unless specified. 
+
+## Configure mc for Google Cloud Storage
+
+Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys). 
+
+Once you have them update your ``~/./mc/config.json`` configuration file.
+```
+$ mc config host add storage.googleapis.com <your_access_key> <your_secret_key> S3v2
+```
+
+NOTE: Google Cloud Storage only supports Legacy Signature Version ``2``, so you have to pick - ``S3v2``
 
 ## Contribute to Minio Client
 Please follow Minio [Contributor's Guide](./CONTRIBUTING.md)
