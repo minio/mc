@@ -1,6 +1,6 @@
 # Minio Client (mc) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-``mc`` provides minimal tools to work with Amazon S3 compatible cloud storage and filesystems. It has features to resume partial downloads, progress bar, parallel copy and network reconnect. ``mc`` is written in golang and released under [Apache license v2](./LICENSE).
+``mc`` provides minimal tools to work with Amazon S3 compatible cloud storage and filesystems. It has features like resumable partial uploads, progress bar, parallel copy. ``mc`` is written in golang and released under [Apache license v2](./LICENSE).
 
 ## Commands
 
@@ -9,6 +9,7 @@
   ls		List files and folders.
   mb		Make a bucket or folder.
   cat		Display contents of a file.
+  rm		Remove file or bucket.
   pig		Write contents of stdin to files. Pig is the opposite of cat command.
   cp		Copy files and folders from many sources to a single destination.
   mirror	Mirror folders recursively from a single source to many destinations.
