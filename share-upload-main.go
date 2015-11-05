@@ -28,7 +28,7 @@ import (
 // Share documents via URL.
 var shareUpload = cli.Command{
 	Name:   "upload",
-	Usage:  "Share link that can be used to upload files to private bucket",
+	Usage:  "Generate ‘curl’ command to upload files.",
 	Action: mainShareUpload,
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}

@@ -30,7 +30,7 @@ import "github.com/minio/cli"
 //
 var configCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Collection of config management commands.",
+	Usage:  "Manage ‘mc’ configuration.",
 	Action: mainConfig,
 	Subcommands: []cli.Command{
 		configAliasCmd,

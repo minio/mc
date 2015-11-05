@@ -32,7 +32,7 @@ import (
 // remove a file or folder.
 var rmCmd = cli.Command{
 	Name:   "rm",
-	Usage:  "Remove file or bucket.",
+	Usage:  "Remove file or bucket [WARNING: Use with care].",
 	Action: mainRm,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -53,19 +53,10 @@ EXAMPLES:
    3. Remove a bucket on Minio cloud storage
      $ mc {{.Name}} https://play.minio.io:9000/mongodb-backup
 
-   4. Remove a bucket on Cloud storage recursively
-     $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/... force
-
-   5. Remove a file on local filesystem:
-      $ mc {{.Name}} march/expenses.doc
-
-   6. Remove a file named "force" on local filesystem:
-      $ mc {{.Name}} force
-
-   7. Remove incomplete upload of a file on Cloud storage:
+   4. Remove incomplete upload of a file on Cloud storage:
       $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/file01.mp3 incomplete
 
-   2. Remove incomplete uploads of folder recursively on Cloud storage
+   5. Remove incomplete uploads of folder recursively on Cloud storage
       $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/... incomplete force
 
 `,
