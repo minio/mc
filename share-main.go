@@ -32,7 +32,7 @@ import (
 // Share documents via URL.
 var shareCmd = cli.Command{
 	Name:   "share",
-	Usage:  "Share documents via URL.",
+	Usage:  "Download and upload documents.",
 	Action: mainShare,
 	Subcommands: []cli.Command{
 		shareDownload,

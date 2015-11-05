@@ -45,7 +45,7 @@ EXAMPLES:
    3. Stream MySQL database dump to Amazon S3 directly.
       $ mysqldump -u root -p ******* accountsdb | mc {{.Name}} https://s3.amazonaws.com/ferenginar/backups/accountsdb-oct-9-2015.sql
 
-   4. Contatinate a zip file to two object storage servers simultaneously.
+   4. Stream a zip file to two object storage servers simultaneously.
       $ cat ~/myphotos.zip | mc {{.Name}} https://s3.amazonaws.com/mybucket/photos.zip  https://minio.mystartup.io:9000/backup/photos.zip 
 `,
 }

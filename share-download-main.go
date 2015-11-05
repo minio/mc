@@ -28,7 +28,7 @@ import (
 // Share documents via URL.
 var shareDownload = cli.Command{
 	Name:   "download",
-	Usage:  "Share documents via URL.",
+	Usage:  "Generate URL to download documents.",
 	Action: mainShareDownload,
 	CustomHelpTemplate: `NAME:
     mc share {{.Name}} - {{.Usage}}

@@ -45,8 +45,8 @@ USAGE:
    mc {{.Name}} SOURCE TARGET [TARGET...]
 
 EXAMPLES:
-   1. Mirror a bucket recursively from Minio cloud storage to multiple buckets on Amazon S3 cloud storage.
-      $ mc {{.Name}} https://play.minio.io:9000/photos/2014 https://s3.amazonaws.com/backup-photos https://s3-west-1.amazonaws.com/local-photos
+   1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
+      $ mc {{.Name}} https://play.minio.io:9000/photos/2014 https://s3.amazonaws.com/backup-photos
 
    2. Mirror a local folder recursively to Minio cloud storage and Amazon S3 cloud storage.
       $ mc {{.Name}} backup/ https://play.minio.io:9000/archive https://s3.amazonaws.com/archive

@@ -31,7 +31,7 @@ import (
 // Manage sessions for cp and mirror.
 var sessionCmd = cli.Command{
 	Name:   "session",
-	Usage:  "Manage sessions for cp and mirror.",
+	Usage:  "Manage saved sessions of cp and mirror operations.",
 	Action: mainSession,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
