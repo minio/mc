@@ -27,8 +27,7 @@ import (
 )
 
 // Trace - tracing structure
-type Trace struct {
-}
+type Trace struct{}
 
 // NewTrace - initialize Trace structure
 func NewTrace() httptracer.HTTPTracer {
