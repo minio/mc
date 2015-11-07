@@ -11,16 +11,6 @@ import (
 // expirationDateFormat date format for expiration key in json policy
 const expirationDateFormat = "2006-01-02T15:04:05.999Z"
 
-// contentLengthRange - min and max size of content
-type contentLengthRange struct {
-	min int
-	max int
-}
-
-func (c contentLengthRange) marshalJSON() string {
-	return fmt.Sprintf("[\"content-length-range\",%d,%d]", c.min, c.max)
-}
-
 // Policy explanation: http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
 type policy struct {
 	matchType string
@@ -28,15 +18,14 @@ type policy struct {
 	value     string
 }
 
-func (p policy) marshalJSON() string {
-	return fmt.Sprintf("[\"%s\",\"%s\",\"%s\"]", p.matchType, p.key, p.value)
-}
-
 // PostPolicy provides strict static type conversion and validation for Amazon S3's POST policy JSON string.
 type PostPolicy struct {
 	expiration         time.Time // expiration date and time of the POST policy.
 	policies           []policy
-	contentLengthRange contentLengthRange
+	contentLengthRange struct {
+		min int
+		max int
+	}
 
 	// Post form data
 	formData map[string]string
@@ -98,35 +87,61 @@ func (p *PostPolicy) SetContentType(contentType string) error {
 		return errors.New("contentType invalid")
 	}
 	policy := policy{"eq", "$Content-Type", contentType}
-	p.policies = append(p.policies, policy)
+	if err := p.addNewPolicy(policy); err != nil {
+		return err
+	}
 	p.formData["Content-Type"] = contentType
 	return nil
 }
 
+// SetContentLength - set new min and max content legnth condition
+func (p *PostPolicy) SetContentLength(min, max int) error {
+	if min > max {
+		return errors.New("minimum cannot be bigger than maximum")
+	}
+	if min < 0 {
+		return errors.New("minimum cannot be negative")
+	}
+	if max < 0 {
+		return errors.New("maximum cannot be negative")
+	}
+	p.contentLengthRange.min = min
+	p.contentLengthRange.max = max
+	return nil
+}
+
+// addNewPolicy - internal helper to validate adding new policies
+func (p *PostPolicy) addNewPolicy(po policy) error {
+	if po.matchType == "" || po.key == "" || po.value == "" {
+		return errors.New("policy invalid")
+	}
+	p.policies = append(p.policies, po)
+	return nil
+}
+
+// Stringer interface for printing in pretty manner
+func (p PostPolicy) String() string {
+	return string(p.marshalJSON())
+}
+
 // marshalJSON provides Marshalled JSON
 func (p PostPolicy) marshalJSON() []byte {
-	var expirationStr string
-	if p.expiration.IsZero() == false {
-		expirationStr = `"expiration":"` + p.expiration.Format(expirationDateFormat) + `"`
-	}
+	expirationStr := `"expiration":"` + p.expiration.Format(expirationDateFormat) + `"`
 	var policiesStr string
 	policies := []string{}
-	for _, policy := range p.policies {
-		policies = append(policies, policy.marshalJSON())
+	for _, po := range p.policies {
+		policies = append(policies, fmt.Sprintf("[\"%s\",\"%s\",\"%s\"]", po.matchType, po.key, po.value))
 	}
 	if p.contentLengthRange.min != 0 || p.contentLengthRange.max != 0 {
-		policies = append(policies, p.contentLengthRange.marshalJSON())
+		policies = append(policies, fmt.Sprintf("[\"content-length-range\", %d, %d]",
+			p.contentLengthRange.min, p.contentLengthRange.max))
 	}
 	if len(policies) > 0 {
 		policiesStr = `"conditions":[` + strings.Join(policies, ",") + "]"
 	}
 	retStr := "{"
-	if len(expirationStr) > 0 {
-		retStr = retStr + expirationStr + ","
-	}
-	if len(policiesStr) > 0 {
-		retStr = retStr + policiesStr
-	}
+	retStr = retStr + expirationStr + ","
+	retStr = retStr + policiesStr
 	retStr = retStr + "}"
 	return []byte(retStr)
 }

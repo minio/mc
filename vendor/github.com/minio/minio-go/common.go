@@ -107,3 +107,9 @@ func getScope(region string, t time.Time) string {
 	}, "/")
 	return scope
 }
+
+// getCredential generate a credential string
+func getCredential(accessKeyID, region string, t time.Time) string {
+	scope := getScope(region, t)
+	return accessKeyID + "/" + scope
+}
