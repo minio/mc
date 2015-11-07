@@ -1,5 +1,4 @@
 LDFLAGS = $(shell go run buildscripts/gen-ldflags.go)
-LDFLAGS_STATIC = '-extldflags "-static"'
 
 all: install
 
@@ -11,7 +10,6 @@ checkgopath:
 	@echo "Checking if project is at ${GOPATH}"
 	@for mcpath in $(echo ${GOPATH} | sed 's/:/\n/g'); do if [ ! -d ${mcpath}/src/github.com/minio/mc ]; then echo "Project not found in ${mcpath}, please follow instructions provided at https://github.com/minio/minio/blob/master/CONTRIBUTING.md#setup-your-minio-github-repository" && exit 1; fi done
 	@echo "LDFLAGS: ${LDFLAGS}"
-	@echo "LDFLAGS_STATIC: ${LDFLAGS_STATIC}"
 
 getdeps: checkdeps checkgopath
 	@go get github.com/golang/lint/golint && echo "Installed golint:"
@@ -55,7 +53,7 @@ test: verifiers
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build
-	@GO15VENDOREXPERIMENT=1 go build --ldflags $(LDFLAGS) --ldflags $(LDFLAGS_STATIC) -o $(GOPATH)/bin/mc
+	@GO15VENDOREXPERIMENT=1 go build --ldflags $(LDFLAGS) -o $(GOPATH)/bin/mc
 	@mkdir -p $(HOME)/.mc
 
 coverage:
