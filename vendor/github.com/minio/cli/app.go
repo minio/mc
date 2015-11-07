@@ -19,8 +19,10 @@ import (
 type App struct {
 	// The name of the program. Defaults to os.Args[0]
 	Name string
-	// Description of the program.
+	// Usage of the program.
 	Usage string
+	// Description of the program.
+	Description string
 	// Version of the program
 	Version string
 	// List of commands to execute
