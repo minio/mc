@@ -65,7 +65,7 @@ EXAMPLES:
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
    7. List incompletely uploaded files for a given bucket
-      $ mc ls incomplete s3/miniocloud
+      $ mc ls s3/miniocloud incomplete
       [2015-10-19 22:28:02 PDT]     0B bin/
 
 `,
@@ -126,8 +126,8 @@ func mainList(ctx *cli.Context) {
 
 	var targetURLs []string
 	var err *probe.Error
-	if args.First() == "incomplete" {
-		targetURLs, err = args2URLs(args.Tail())
+	if args.Last() == "incomplete" {
+		targetURLs, err = args2URLs(args.Head())
 		fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
 		for _, targetURL := range targetURLs {
 			// if recursive strip off the "..."
