@@ -27,7 +27,7 @@ import (
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/httptracer"
-	"github.com/minio/minio-go-legacy"
+	"github.com/minio/minio-go"
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
@@ -48,6 +48,7 @@ func New(config *client.Config) (client.Client, *probe.Error) {
 		SecretAccessKey: config.SecretAccessKey,
 		Transport:       transport,
 		Endpoint:        u.Scheme + u.SchemeSeparator + u.Host,
+		Signature:       minio.SignatureV2,
 	}
 	s3Conf.AccessKeyID = config.AccessKeyID
 	s3Conf.SecretAccessKey = config.SecretAccessKey
