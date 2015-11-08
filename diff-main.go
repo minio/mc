@@ -99,7 +99,7 @@ func mainDiff(ctx *cli.Context) {
 	for diff := range doDiff(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		fatalIf(diff.Error.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
 
-		Prints("%s\n", diff)
+		printMsg(diff)
 	}
 }
 

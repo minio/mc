@@ -75,24 +75,24 @@ func listSessions() *probe.Error {
 	// sort sessions based on time
 	sort.Sort(bySessionWhen(bySessions))
 	for _, session := range bySessions {
-		Prints("%s\n", session)
+		printMsg(session)
 	}
 	return nil
 }
 
-// ClearSessionMessage container for clearing session messages
-type ClearSessionMessage struct {
+// clearSessionMessage container for clearing session messages
+type clearSessionMessage struct {
 	Status    string `json:"success"`
 	SessionID string `json:"sessionId"`
 }
 
 // String colorized clear session message
-func (c ClearSessionMessage) String() string {
+func (c clearSessionMessage) String() string {
 	return console.Colorize("ClearSession", "Session ‘"+c.SessionID+"’ cleared successfully")
 }
 
 // JSON jsonified clear session message
-func (c ClearSessionMessage) JSON() string {
+func (c clearSessionMessage) JSON() string {
 	clearSessionJSONBytes, err := json.Marshal(c)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
@@ -107,10 +107,7 @@ func clearSession(sid string) {
 
 			fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
 
-			Prints("%s\n", ClearSessionMessage{
-				Status:    "success",
-				SessionID: sid,
-			})
+			printMsg(clearSessionMessage{Status: "success", SessionID: sid})
 		}
 		return
 	}
@@ -124,10 +121,7 @@ func clearSession(sid string) {
 
 	if session != nil {
 		fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
-		Prints("%s\n", ClearSessionMessage{
-			Status:    "success",
-			SessionID: sid,
-		})
+		printMsg(clearSessionMessage{Status: "success", SessionID: sid})
 	}
 }
 

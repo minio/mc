@@ -287,7 +287,7 @@ func rmPrinterFuncGenerate() rmPrinterFunc {
 	}
 	return func(msg rmMessage) {
 		if globalJSONFlag || globalQuietFlag {
-			Prints("%s\n", msg)
+			printMsg(msg)
 			return
 		}
 		scanBar(msg.Name)

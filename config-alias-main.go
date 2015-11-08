@@ -56,15 +56,15 @@ EXAMPLES:
 `,
 }
 
-// AliasMessage container for content message structure
-type AliasMessage struct {
+// aliasMessage container for content message structure
+type aliasMessage struct {
 	op    string
 	Alias string `json:"alias"`
 	URL   string `json:"url,omitempty"`
 }
 
 // String colorized alias message
-func (a AliasMessage) String() string {
+func (a aliasMessage) String() string {
 	if a.op == "list" {
 		message := console.Colorize("Alias", fmt.Sprintf("[%s] <- ", a.Alias))
 		message += console.Colorize("URL", fmt.Sprintf("%s", a.URL))
@@ -81,7 +81,7 @@ func (a AliasMessage) String() string {
 }
 
 // JSON jsonified alias message
-func (a AliasMessage) JSON() string {
+func (a aliasMessage) JSON() string {
 	jsonMessageBytes, e := json.Marshal(a)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -165,11 +165,7 @@ func listAliases() {
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV5)
 	for k, v := range newConf.Aliases {
-		Prints("%s\n", AliasMessage{
-			op:    "list",
-			Alias: k,
-			URL:   v,
-		})
+		printMsg(aliasMessage{op: "list", Alias: k, URL: v})
 	}
 }
 
@@ -200,10 +196,7 @@ func removeAlias(alias string) {
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(alias), "Unable to save alias ‘"+alias+"’.")
 
-	Prints("%s\n", AliasMessage{
-		op:    "remove",
-		Alias: alias,
-	})
+	printMsg(aliasMessage{op: "remove", Alias: alias})
 }
 
 // addAlias - add new aliases
@@ -236,9 +229,5 @@ func addAlias(alias, url string) {
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(alias, url), "Unable to save alias ‘"+alias+"’.")
 
-	Prints("%s\n", AliasMessage{
-		op:    "add",
-		Alias: alias,
-		URL:   url,
-	})
+	printMsg(aliasMessage{op: "add", Alias: alias, URL: url})
 }

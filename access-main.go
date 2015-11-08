@@ -59,8 +59,8 @@ EXAMPLES:
 `,
 }
 
-// AccessMessage is container for access command on bucket success and failure messages
-type AccessMessage struct {
+// accessMessage is container for access command on bucket success and failure messages
+type accessMessage struct {
 	Operation string      `json:"operation"`
 	Status    string      `json:"status"`
 	Bucket    string      `json:"bucket"`
@@ -68,7 +68,7 @@ type AccessMessage struct {
 }
 
 // String colorized access message
-func (s AccessMessage) String() string {
+func (s accessMessage) String() string {
 	if s.Operation == "set" {
 		return console.Colorize("Access", "Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
 	}
@@ -80,7 +80,7 @@ func (s AccessMessage) String() string {
 }
 
 // JSON jsonified access message
-func (s AccessMessage) JSON() string {
+func (s accessMessage) JSON() string {
 	accessJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
@@ -146,7 +146,7 @@ func mainAccess(ctx *cli.Context) {
 
 			fatalIf(doSetAccess(targetURL, perms).Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
 
-			Prints("%s\n", AccessMessage{
+			printMsg(accessMessage{
 				Operation: "set",
 				Status:    "success",
 				Bucket:    targetURL,
@@ -159,7 +159,7 @@ func mainAccess(ctx *cli.Context) {
 			perms, err := doGetAccess(targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")
 
-			Prints("%s\n", AccessMessage{
+			printMsg(accessMessage{
 				Operation: "get",
 				Status:    "success",
 				Bucket:    targetURL,

@@ -177,7 +177,7 @@ func getExperimentalUpdate() {
 	if latest.After(current) {
 		updateMessage.Update = true
 	}
-	Prints("%s\n", updateMessage)
+	printMsg(updateMessage)
 }
 
 func getReleaseUpdate() {
@@ -219,5 +219,5 @@ func getReleaseUpdate() {
 	if latest.After(current) {
 		updateMessage.Update = true
 	}
-	Prints("%s\n", updateMessage)
+	printMsg(updateMessage)
 }

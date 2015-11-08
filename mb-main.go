@@ -49,19 +49,19 @@ EXAMPLES:
 `,
 }
 
-// MakeBucketMessage is container for make bucket success and failure messages
-type MakeBucketMessage struct {
+// makeBucketMessage is container for make bucket success and failure messages
+type makeBucketMessage struct {
 	Status string `json:"status"`
 	Bucket string `json:"bucket"`
 }
 
 // String colorized make bucket message
-func (s MakeBucketMessage) String() string {
+func (s makeBucketMessage) String() string {
 	return console.Colorize("MakeBucket", "Bucket created successfully  ‘"+s.Bucket+"’")
 }
 
 // JSON jsonified make bucket message
-func (s MakeBucketMessage) JSON() string {
+func (s makeBucketMessage) JSON() string {
 	makeBucketJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
@@ -105,23 +105,14 @@ func mainMakeBucket(ctx *cli.Context) {
 	for _, arg := range ctx.Args() {
 		targetURL := getAliasURL(arg, config.Aliases)
 
-		fatalIf(doMakeBucket(targetURL).Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
-		Prints("%s\n", MakeBucketMessage{
-			Status: "success",
-			Bucket: targetURL,
-		})
-	}
-}
+		// Instantiate client for URL.
+		clnt, err := url2Client(targetURL)
+		fatalIf(err.Trace(targetURL), "Invalid target target ‘"+targetURL+"’.")
 
-// doMakeBucket -
-func doMakeBucket(targetURL string) *probe.Error {
-	clnt, err := url2Client(targetURL)
-	if err != nil {
-		return err.Trace(targetURL)
+		// Make bucket.
+		fatalIf(clnt.MakeBucket().Trace(), "Unable to make bucket ‘"+targetURL+"’.")
+
+		// Successfully created a bucket.
+		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
 	}
-	err = clnt.MakeBucket()
-	if err != nil {
-		return err.Trace(targetURL)
-	}
-	return nil
 }

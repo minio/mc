@@ -136,7 +136,7 @@ func doShareDownloadURL(targetURL string, recursive bool, expires time.Duration)
 			Date:    shareDate,
 			Message: shareMessageV3,
 		})
-		Prints("%s\n", shareMessage)
+		printMsg(shareMessage)
 	}
 	saveSharedURLsV3(sURLs)
 	return nil

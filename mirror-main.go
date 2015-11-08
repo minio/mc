@@ -62,19 +62,19 @@ EXAMPLES:
 `,
 }
 
-// MirrorMessage container for file mirror messages
-type MirrorMessage struct {
+// mirrorMessage container for file mirror messages
+type mirrorMessage struct {
 	Source  string   `json:"source"`
 	Targets []string `json:"targets"`
 }
 
 // String colorized mirror message
-func (m MirrorMessage) String() string {
+func (m mirrorMessage) String() string {
 	return console.Colorize("Mirror", fmt.Sprintf("‘%s’ -> ‘%s’", m.Source, m.Targets))
 }
 
 // JSON jsonified mirror message
-func (m MirrorMessage) JSON() string {
+func (m mirrorMessage) JSON() string {
 	mirrorMessageBytes, e := json.Marshal(m)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -115,7 +115,7 @@ func doMirror(sURLs mirrorURLs, progressReader interface{}, mirrorQueueCh <-chan
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		Prints("%s\n", MirrorMessage{
+		printMsg(mirrorMessage{
 			Source:  sURLs.SourceContent.Name,
 			Targets: targetURLs,
 		})

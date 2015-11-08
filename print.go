@@ -18,17 +18,17 @@ package main
 
 import "github.com/minio/mc/pkg/console"
 
-// Message interface for all structured messages implementing JSON(), String() methods
-type Message interface {
+// message interface for all structured messages implementing JSON(), String() methods.
+type message interface {
 	JSON() string
 	String() string
 }
 
-// Prints print wrapper for Message interface, implementing both JSON() and String() methods
-func Prints(format string, message Message) {
+// printMsg prints message string or JSON structure depending on the type of output console.
+func printMsg(msg message) {
 	if !globalJSONFlag {
-		console.Printf(format, message.String())
-		return
+		console.Println(msg.String())
+	} else {
+		console.Println(msg.JSON())
 	}
-	console.Printf(format, message.JSON())
 }

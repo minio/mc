@@ -45,8 +45,8 @@ EXAMPLES:
 `,
 }
 
-// HostMessage container for content message structure
-type HostMessage struct {
+// hostMessage container for content message structure
+type hostMessage struct {
 	op              string
 	Host            string `json:"host"`
 	AccessKeyID     string `json:"accessKeyId,omitempty"`
@@ -55,7 +55,7 @@ type HostMessage struct {
 }
 
 // String colorized host message
-func (a HostMessage) String() string {
+func (a hostMessage) String() string {
 	if a.op == "list" {
 		message := console.Colorize("Host", fmt.Sprintf("[%s] ", a.Host))
 		if a.AccessKeyID != "" || a.SecretAccessKey != "" {
@@ -76,7 +76,7 @@ func (a HostMessage) String() string {
 }
 
 // JSON jsonified host message
-func (a HostMessage) JSON() string {
+func (a hostMessage) JSON() string {
 	jsonMessageBytes, e := json.Marshal(a)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -163,15 +163,8 @@ func listHosts() {
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV5)
 	for k, v := range newConf.Hosts {
-		Prints("%s\n", HostMessage{
-			op:              "list",
-			Host:            k,
-			AccessKeyID:     v.AccessKeyID,
-			SecretAccessKey: v.SecretAccessKey,
-			API:             v.API,
-		})
+		printMsg(hostMessage{op: "list", Host: k, AccessKeyID: v.AccessKeyID, SecretAccessKey: v.SecretAccessKey, API: v.API})
 	}
-
 }
 
 func removeHost(hostGlob string) {
@@ -200,10 +193,7 @@ func removeHost(hostGlob string) {
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(hostGlob), "Unable to save host glob ‘"+hostGlob+"’.")
 
-	Prints("%s\n", HostMessage{
-		op:   "remove",
-		Host: hostGlob,
-	})
+	printMsg(hostMessage{op: "remove", Host: hostGlob})
 }
 
 // isValidSecretKey - validate secret key
@@ -265,7 +255,7 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
 	err = writeConfig(newConfig)
 	fatalIf(err.Trace(hostGlob), "Unable to save host glob ‘"+hostGlob+"’.")
 
-	Prints("%s\n", HostMessage{
+	printMsg(hostMessage{
 		op:              "add",
 		Host:            hostGlob,
 		AccessKeyID:     accessKeyID,

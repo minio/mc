@@ -147,7 +147,7 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 		if multipleArgs && parentContent.Type.IsDir() {
 			contentCh.Content.Name = filepath.Join(parentContent.Name, strings.TrimPrefix(contentCh.Content.Name, parentContent.Name))
 		}
-		Prints("%s\n", parseContent(contentCh.Content))
+		printMsg(parseContent(contentCh.Content))
 	}
 	if err != nil {
 		return err.Trace()
@@ -190,7 +190,7 @@ func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.E
 		if multipleArgs && parentContent.Type.IsDir() {
 			contentCh.Content.Name = filepath.Join(parentContent.Name, strings.TrimPrefix(contentCh.Content.Name, parentContent.Name))
 		}
-		Prints("%s\n", parseContent(contentCh.Content))
+		printMsg(parseContent(contentCh.Content))
 	}
 	if err != nil {
 		return err.Trace()
