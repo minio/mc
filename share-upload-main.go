@@ -51,6 +51,7 @@ EXAMPLES:
 `,
 }
 
+// checkShareUploadSyntaxt - check share upload command arguments
 func checkShareUploadSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 	if !args.Present() || args.First() == "help" {
@@ -68,13 +69,17 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 	}
 }
 
+// main for share upload command.
 func mainShareUpload(ctx *cli.Context) {
+	// setup share data folder and file.
+	shareDataSetup()
+	// set share command theme.
+	setSharePalette(ctx.GlobalString("colors"))
+	// check input arguments.
+	checkShareUploadSyntax(ctx)
+
 	var expires time.Duration
 	var err error
-	shareDataDirSetup()
-	checkShareUploadSyntax(ctx)
-	setSharePalette(ctx.GlobalString("colors"))
-
 	args := ctx.Args()
 	config := mustGetMcConfig()
 	if strings.TrimSpace(args.Get(1)) == "" {
@@ -92,7 +97,7 @@ func mainShareUpload(ctx *cli.Context) {
 	fatalIf(e.Trace(targetURL), "Unable to generate URL for upload.")
 }
 
-// doShareURL share files from target
+// doShareUploadURL uploads files to the target.
 func doShareUploadURL(targetURL string, recursive bool, expires time.Duration, contentType string) *probe.Error {
 	shareDate := time.Now().UTC()
 	sURLs, err := loadSharedURLsV3()
@@ -113,24 +118,21 @@ func doShareUploadURL(targetURL string, recursive bool, expires time.Duration, c
 		Key = Key + recursiveSeparator
 		m["key"] = m["key"] + "<FILE>"
 	}
-	shareMessage := ShareMessage{
+	var shareMsg interface{}
+	shareMsg = shareMessage{
 		Expiry:     expires,
 		UploadInfo: m,
 		Key:        Key,
 	}
-	shareMessageV3 := ShareMessageV3{
-		Expiry:     expires,
-		UploadInfo: m,
-		Key:        Key,
-	}
+	shareMsgV3 := shareMessageV3(shareMsg.(shareMessage))
 	sURLs.URLs = append(sURLs.URLs, struct {
 		Date    time.Time
-		Message ShareMessageV3
+		Message shareMessageV3
 	}{
 		Date:    shareDate,
-		Message: shareMessageV3,
+		Message: shareMsgV3,
 	})
-	printMsg(shareMessage)
+	printMsg(shareMsg.(shareMessage))
 	saveSharedURLsV3(sURLs)
 	return nil
 }

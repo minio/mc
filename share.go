@@ -30,18 +30,47 @@ import (
 	"github.com/minio/minio-xl/pkg/quick"
 )
 
-func shareDataDirSetup() {
+// create shared data folder and file if they doesn't exist.
+func shareDataSetup() {
 	if !isSharedURLsDataDirExists() {
 		shareDir, err := getSharedURLsDataDir()
 		fatalIf(err.Trace(), "Unable to get shared URL data folder.")
 
 		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared URL data folder ‘"+shareDir+"’.")
+		console.Infof("Successfully created ‘%s’ \n", shareDir)
 	}
 	if !isSharedURLsDataFileExists() {
 		shareFile, err := getSharedURLsDataFile()
 		fatalIf(err.Trace(), "Unable to get shared URL data file")
 
 		fatalIf(createSharedURLsDataFile().Trace(), "Unable to create shared URL data file ‘"+shareFile+"’.")
+		console.Infof("Successfully created ‘%s’ \n", shareFile)
+	}
+}
+
+// set share command theme
+func setSharePalette(style string) {
+	console.SetCustomPalette(map[string]*color.Color{
+		"Share":   color.New(color.FgGreen, color.Bold),
+		"Expires": color.New(color.FgRed, color.Bold),
+		"URL":     color.New(color.FgCyan, color.Bold),
+		"File":    color.New(color.FgRed, color.Bold),
+	})
+
+	if style == "light" {
+		console.SetCustomPalette(map[string]*color.Color{
+			"Share":   color.New(color.FgWhite, color.Bold),
+			"Expires": color.New(color.FgWhite, color.Bold),
+			"URL":     color.New(color.FgWhite, color.Bold),
+			"File":    color.New(color.FgWhite, color.Bold),
+		})
+		return
+	}
+
+	/// Add more styles here
+	if style == "nocolor" {
+		// All coloring options exhausted, setting nocolor safely
+		console.SetNoColor()
 	}
 }
 
@@ -55,7 +84,6 @@ func migrateSharedURLsV1ToV2() {
 	if !isSharedURLsDataFileExists() {
 		return
 	}
-
 	// try to load latest version if possible
 	sURLsV2, err := loadSharedURLsV2()
 	if err != nil {
@@ -73,10 +101,10 @@ func migrateSharedURLsV1ToV2() {
 				value.Message.Key = key
 				entry := struct {
 					Date    time.Time
-					Message ShareMessageV2
+					Message shareMessageV2
 				}{
 					Date: value.Date,
-					Message: ShareMessageV2{
+					Message: shareMessageV2{
 						Expiry: value.Message.Expiry,
 						URL:    value.Message.URL,
 						Key:    value.Message.Key,
@@ -107,7 +135,6 @@ func migrateSharedURLsV2ToV3() {
 	if v3 {
 		return
 	}
-
 	// try to load V2 if possible
 	sURLsV2, err := loadSharedURLsV2()
 	fatalIf(err.Trace(), "Unable to load shared url version ‘1.1.0’.")
@@ -118,10 +145,10 @@ func migrateSharedURLsV2ToV3() {
 	for _, value := range sURLsV2.URLs {
 		entry := struct {
 			Date    time.Time
-			Message ShareMessageV3
+			Message shareMessageV3
 		}{
 			Date: value.Date,
-			Message: ShareMessageV3{
+			Message: shareMessageV3{
 				Expiry:      value.Message.Expiry,
 				DownloadURL: value.Message.URL,
 				Key:         value.Message.Key,
@@ -130,7 +157,7 @@ func migrateSharedURLsV2ToV3() {
 		sURLsV3.URLs = append(sURLsV3.URLs, entry)
 	}
 	err = saveSharedURLsV3(sURLsV3)
-	fatalIf(err.Trace(), "Unable to save new shared url version ‘1.2.0’.")
+	fatalIf(err.Trace(), "Unable to save new shared url version ‘3’.")
 }
 
 func getSharedURLsDataDir() (string, *probe.Error) {
@@ -196,9 +223,13 @@ func createSharedURLsDataFile() *probe.Error {
 func isObjectKeyPresent(url string) bool {
 	u := client.NewURL(url)
 	path := u.Path
-	match, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
-	switch {
-	case match == true:
+	matchS3, _ := filepath.Match("*.s3*.amazonaws.com", u.Host)
+	if matchS3 {
+		hostSplits := strings.SplitN(u.Host, ".", 2)
+		path = string(u.Separator) + hostSplits[0] + u.Path
+	}
+	matchGcs, _ := filepath.Match("*.storage.googleapis.com", u.Host)
+	if matchGcs {
 		hostSplits := strings.SplitN(u.Host, ".", 2)
 		path = string(u.Separator) + hostSplits[0] + u.Path
 	}
@@ -216,28 +247,4 @@ func isObjectKeyPresent(url string) bool {
 		return true
 	}
 	return false
-}
-
-func setSharePalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"Share":   color.New(color.FgGreen, color.Bold),
-		"Expires": color.New(color.FgRed, color.Bold),
-		"URL":     color.New(color.FgCyan, color.Bold),
-		"File":    color.New(color.FgRed, color.Bold),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"Share":   color.New(color.FgWhite, color.Bold),
-			"Expires": color.New(color.FgWhite, color.Bold),
-			"URL":     color.New(color.FgWhite, color.Bold),
-			"File":    color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-	/// Add more styles here
-
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
-		console.SetNoColor()
-	}
 }

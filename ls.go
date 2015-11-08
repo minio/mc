@@ -36,29 +36,29 @@ const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
 
-// ContentMessage container for content message structure.
-type ContentMessage struct {
+// contentMessage container for content message structure.
+type contentMessage struct {
 	Filetype string    `json:"type"`
 	Time     time.Time `json:"lastModified"`
 	Size     int64     `json:"size"`
-	Name     string    `json:"name"`
+	Key      string    `json:"key"`
 }
 
 // String colorized string message
-func (c ContentMessage) String() string {
+func (c contentMessage) String() string {
 	message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
 	message = message + console.Colorize("Size", fmt.Sprintf("%6s ", humanize.IBytes(uint64(c.Size))))
 	message = func() string {
 		if c.Filetype == "folder" {
-			return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Name))
+			return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Key))
 		}
-		return message + console.Colorize("File", fmt.Sprintf("%s", c.Name))
+		return message + console.Colorize("File", fmt.Sprintf("%s", c.Key))
 	}()
 	return message
 }
 
 // JSON jsonified content message
-func (c ContentMessage) JSON() string {
+func (c contentMessage) JSON() string {
 	jsonMessageBytes, e := json.Marshal(c)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -66,8 +66,8 @@ func (c ContentMessage) JSON() string {
 }
 
 // parseContent parse client Content container into printer struct.
-func parseContent(c *client.Content) ContentMessage {
-	content := ContentMessage{}
+func parseContent(c *client.Content) contentMessage {
+	content := contentMessage{}
 	content.Time = c.Time.Local()
 
 	// guess file type
@@ -80,7 +80,7 @@ func parseContent(c *client.Content) ContentMessage {
 
 	content.Size = c.Size
 	// Convert OS Type to match console file printing style.
-	content.Name = func() string {
+	content.Key = func() string {
 		switch {
 		case runtime.GOOS == "windows":
 			c.URL.Path = strings.Replace(c.URL.Path, "/", "\\", -1)
@@ -103,7 +103,7 @@ func parseContent(c *client.Content) ContentMessage {
 
 // trimContent to fancify the output for directories
 //
-// TODO: Find a way to simplify this facification.
+// TODO: Find a way to simplify this fancification.
 func trimContent(parentContent, childContent *client.Content, recursive bool) *client.Content {
 	if recursive {
 		// If recursive remove the unnecessary '/', in the beginning
@@ -147,7 +147,8 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}
-	for contentCh := range clnt.List(recursive, false) {
+	isIncomplete := false // do not list incomplete uploads
+	for contentCh := range clnt.List(recursive, isIncomplete) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
 			// handle this specifically for filesystem
@@ -175,8 +176,9 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 			err = contentCh.Err.Trace()
 			break
 		}
-		contentCh.Content = trimContent(parentContent, contentCh.Content, recursive)
-		printMsg(parseContent(contentCh.Content))
+		trimmedContent := trimContent(parentContent, contentCh.Content, recursive)
+		parsedContent := parseContent(trimmedContent)
+		printMsg(parsedContent)
 	}
 	if err != nil {
 		return err.Trace()
@@ -192,7 +194,8 @@ func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.E
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}
-	for contentCh := range clnt.List(recursive, true) {
+	isIncomplete := true // list only incomplete uploads
+	for contentCh := range clnt.List(recursive, isIncomplete) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
 			// handle this specifically for filesystem
@@ -216,8 +219,9 @@ func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.E
 			err = contentCh.Err.Trace()
 			break
 		}
-		contentCh.Content = trimContent(parentContent, contentCh.Content, recursive)
-		printMsg(parseContent(contentCh.Content))
+		trimmedContent := trimContent(parentContent, contentCh.Content, recursive)
+		parsedContent := parseContent(trimmedContent)
+		printMsg(parsedContent)
 	}
 	if err != nil {
 		return err.Trace()

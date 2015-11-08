@@ -50,21 +50,27 @@ EXAMPLES:
 `,
 }
 
-// Updates container to hold updates json
-type Updates struct {
+// update URL endpoints.
+const (
+	mcUpdateURL       = "https://dl.minio.io:9000/updates/updates.json"
+	mcExperimentalURL = "https://dl.minio.io:9000/updates/experimental.json"
+)
+
+// mcUpdates container to hold updates json.
+type mcUpdates struct {
 	BuildDate string
 	Platforms map[string]string
 }
 
-// UpdateMessage container to hold update messages
-type UpdateMessage struct {
+// updateMessage container to hold update messages.
+type updateMessage struct {
 	Update   bool   `json:"update"`
 	Download string `json:"downloadURL"`
 	Version  string `json:"version"`
 }
 
-// String colorized update message
-func (u UpdateMessage) String() string {
+// String colorized update message.
+func (u updateMessage) String() string {
 	if u.Update {
 		var msg string
 		if runtime.GOOS == "windows" {
@@ -79,19 +85,15 @@ func (u UpdateMessage) String() string {
 	return console.Colorize("UpdateMessage", "You are already running the most recent version of ‘mc’.")
 }
 
-// JSON jsonified update message
-func (u UpdateMessage) JSON() string {
+// JSON jsonified update message.
+func (u updateMessage) JSON() string {
 	updateMessageJSONBytes, err := json.Marshal(u)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 
 	return string(updateMessageJSONBytes)
 }
 
-const (
-	mcUpdateURL       = "https://dl.minio.io:9000/updates/updates.json"
-	mcExperimentalURL = "https://dl.minio.io:9000/updates/experimental.json"
-)
-
+// check valid input arguments.
 func checkUpdateSyntax(ctx *cli.Context) {
 	if ctx.Args().First() == "help" || !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
@@ -102,6 +104,7 @@ func checkUpdateSyntax(ctx *cli.Context) {
 	}
 }
 
+// set update command theme.
 func setUpdatePalette(style string) {
 	console.SetCustomPalette(map[string]*color.Color{
 		"UpdateMessage": color.New(color.FgGreen, color.Bold),
@@ -112,17 +115,18 @@ func setUpdatePalette(style string) {
 		})
 		return
 	}
-	/// Add more styles here
+	/// Add more styles here.
 	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
+		// All coloring options exhausted, setting nocolor safely.
 		console.SetNoColor()
 	}
 }
 
-// mainUpdate -
+// main for update command.
 func mainUpdate(ctx *cli.Context) {
+	// check input arguments
 	checkUpdateSyntax(ctx)
-
+	// set theme
 	setUpdatePalette(ctx.GlobalString("colors"))
 
 	arg := strings.TrimSpace(ctx.Args().First())
@@ -134,6 +138,7 @@ func mainUpdate(ctx *cli.Context) {
 	}
 }
 
+// verify new updates for experimentals.
 func getExperimentalUpdate() {
 	clnt, err := url2Client(mcExperimentalURL)
 	fatalIf(err.Trace(mcExperimentalURL), "Unable to initalize experimental URL.")
@@ -152,7 +157,7 @@ func getExperimentalUpdate() {
 		fatalIf(errDummy().Trace(), "Experimental updates not supported for custom build. Version field is empty. Please download official releases from https://minio.io/#mc")
 	}
 
-	var experimentals Updates
+	var experimentals mcUpdates
 	decoder := json.NewDecoder(data)
 	e = decoder.Decode(&experimentals)
 	fatalIf(probe.NewError(e), "Unable to decode experimental update notification.")
@@ -170,16 +175,17 @@ func getExperimentalUpdate() {
 		string(mcExperimentalURLParse.Separator) +
 		experimentals.Platforms[runtime.GOOS])
 
-	updateMessage := UpdateMessage{
+	updateMsg := updateMessage{
 		Download: downloadURL,
 		Version:  mcVersion,
 	}
 	if latest.After(current) {
-		updateMessage.Update = true
+		updateMsg.Update = true
 	}
-	printMsg(updateMessage)
+	printMsg(updateMsg)
 }
 
+// verify updates for releases.
 func getReleaseUpdate() {
 	clnt, err := url2Client(mcUpdateURL)
 	fatalIf(err.Trace(mcUpdateURL), "Unable to initalize update URL.")
@@ -198,7 +204,7 @@ func getReleaseUpdate() {
 		fatalIf(errDummy().Trace(), "Updates not supported for custom build. Version field is empty. Please download official releases from https://minio.io/#mc")
 	}
 
-	var updates Updates
+	var updates mcUpdates
 	decoder := json.NewDecoder(data)
 	e = decoder.Decode(&updates)
 	fatalIf(probe.NewError(e), "Unable to decode update notification.")
@@ -212,12 +218,12 @@ func getReleaseUpdate() {
 
 	mcUpdateURLParse := clnt.GetURL()
 	downloadURL := mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS]
-	updateMessage := UpdateMessage{
+	updateMsg := updateMessage{
 		Download: downloadURL,
 		Version:  mcVersion,
 	}
 	if latest.After(current) {
-		updateMessage.Update = true
+		updateMsg.Update = true
 	}
-	printMsg(updateMessage)
+	printMsg(updateMsg)
 }

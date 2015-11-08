@@ -42,14 +42,7 @@ EXAMPLES:
 `,
 }
 
-func mainShareList(ctx *cli.Context) {
-	shareDataDirSetup()
-	setSharePalette(ctx.GlobalString("colors"))
-	err := doShareList()
-	fatalIf(err.Trace(), "Unable to list shared URLs.")
-}
-
-// doShareList list shared url's
+// doShareList list shared url's.
 func doShareList() *probe.Error {
 	sURLs, err := loadSharedURLsV3()
 	if err != nil {
@@ -110,4 +103,14 @@ func doShareList() *probe.Error {
 		return err.Trace()
 	}
 	return nil
+}
+
+// main for share list.
+func mainShareList(ctx *cli.Context) {
+	// setup share data folder and file.
+	shareDataSetup()
+	// set share command theme.
+	setSharePalette(ctx.GlobalString("colors"))
+	err := doShareList()
+	fatalIf(err.Trace(), "Unable to list shared URLs.")
 }

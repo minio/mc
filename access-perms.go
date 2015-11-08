@@ -16,7 +16,7 @@
 
 package main
 
-// isValidAccessPERM - is provided acl string supported
+// isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {
 	switch true {
 	case b.isPrivate():
@@ -32,10 +32,10 @@ func (b accessPerms) isValidAccessPERM() bool {
 	}
 }
 
-// accessPerms - access level access control
+// accessPerms - access level.
 type accessPerms string
 
-// different types of ACL's currently supported for accesss
+// different types of Access perm's currently supported by accesss command.
 const (
 	accessPrivate    = accessPerms("private")
 	accessReadOnly   = accessPerms("readonly")
@@ -59,6 +59,7 @@ func (b accessPerms) String() string {
 	return "private"
 }
 
+// convert acl's to access perms
 func aclToPerms(acl string) accessPerms {
 	switch acl {
 	case "private":
@@ -74,22 +75,22 @@ func aclToPerms(acl string) accessPerms {
 	}
 }
 
-// IsPrivate - is acl Private
+// isPrivate - is acl Private.
 func (b accessPerms) isPrivate() bool {
 	return b == accessPrivate
 }
 
-// IsPublicRead - is acl PublicRead
+// isPublicRead - is acl PublicRead.
 func (b accessPerms) isReadOnly() bool {
 	return b == accessReadOnly
 }
 
-// IsPublicReadWrite - is acl PublicReadWrite
+// isPublicReadWrite - is acl PublicReadWrite.
 func (b accessPerms) isPublic() bool {
 	return b == accessPublic
 }
 
-// IsAuthorized - is acl AuthorizedRead
+// isAuthorized - is acl AuthorizedRead.
 func (b accessPerms) isAuthorized() bool {
 	return b == accessAuthorized
 }

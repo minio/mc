@@ -86,7 +86,7 @@ EXAMPLES:
 
 // Structured message depending on the type of console.
 type rmMessage struct {
-	URL string `json:"name"`
+	URL string `json:"url"`
 }
 
 // Colorized message for console printing.
