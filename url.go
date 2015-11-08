@@ -29,6 +29,20 @@ const (
 	recursiveSeparator = "..."
 )
 
+// just like filepath.Dir but always has a trailing url.Seperator
+func url2Dir(urlStr string) string {
+	url := client.NewURL(urlStr)
+	if strings.HasSuffix(urlStr, string(url.Separator)) {
+		return urlStr
+	}
+	lastIndex := strings.LastIndex(urlStr, string(url.Separator))
+	dirname := urlStr[:lastIndex+1]
+	if dirname == "" {
+		return "."
+	}
+	return dirname
+}
+
 // urlJoinPath Join a path to existing URL.
 func urlJoinPath(url1, url2 string) string {
 	u1 := client.NewURL(url1)

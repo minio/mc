@@ -106,11 +106,9 @@ func getContent(ch <-chan client.ContentOnChannel) (c *client.Content) {
 			// ignore directories
 			continue
 		}
-
 		c = rv.Content
 		break
 	}
-
 	return
 }
 
@@ -142,6 +140,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 	if strings.HasSuffix(newSourceURL, "/") == false {
 		newSourceURL = newSourceURL + "/"
 	}
+
 	sourceClient, err := url2Client(newSourceURL)
 	if err != nil {
 		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceURL)}
