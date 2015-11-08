@@ -28,10 +28,10 @@ import (
 
 func genLDFlags(version string) string {
 	var ldflagsStr string
-	ldflagsStr = "\"-X main.mcVersion=" + version + " "
+	ldflagsStr = "-X main.mcVersion=" + version + " "
 	ldflagsStr = ldflagsStr + "-X main.mcReleaseTag=" + releaseTag(version) + " "
 	ldflagsStr = ldflagsStr + "-X main.mcCommitID=" + commitID() + " "
-	ldflagsStr = ldflagsStr + "-X main.mcShortCommitID=" + commitID()[:12] + "\""
+	ldflagsStr = ldflagsStr + "-X main.mcShortCommitID=" + commitID()[:12]
 	return ldflagsStr
 }
 

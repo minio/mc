@@ -28,7 +28,7 @@ build_script:
   - go test -race github.com/minio/mc/pkg...
   - go run buildscripts/gen-ldflags.go > temp.txt
   - set /p LDFLAGS=<temp.txt
-  - go build -ldflags=%LDFLAGS% -o %GOPATH%\bin\mc.exe
+  - go build -ldflags="%LDFLAGS%" -o %GOPATH%\bin\mc.exe
 
 # to disable automatic tests
 test: off
