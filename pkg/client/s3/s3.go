@@ -351,17 +351,15 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 				return
 			}
 			content := new(client.Content)
+			url := *c.hostURL
+			url.Path = filepath.Join(url.Path, strings.TrimPrefix(object.Stat.Key, o))
 			switch {
 			case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
 				// We need to keep the trailing Separator, do not use filepath.Join()
-				url := *c.hostURL
-				url.Path = url.Path + object.Stat.Key
 				content.URL = url
 				content.Time = time.Now()
 				content.Type = os.ModeDir
 			default:
-				url := *c.hostURL
-				url.Path = filepath.Join(url.Path, object.Stat.Key)
 				content.URL = url
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.Initiated
@@ -481,17 +479,15 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 					return
 				}
 				content := new(client.Content)
+				url := *c.hostURL
+				url.Path = filepath.Join(url.Path, strings.TrimPrefix(object.Stat.Key, o))
 				switch {
 				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
 					// We need to keep the trailing Separator, do not use filepath.Join()
-					url := *c.hostURL
-					url.Path = strings.TrimSuffix(url.Path, string(c.hostURL.Separator)) + string(c.hostURL.Separator) + strings.TrimPrefix(object.Stat.Key, o)
 					content.URL = url
 					content.Time = time.Now()
 					content.Type = os.ModeDir
 				default:
-					url := *c.hostURL
-					url.Path = filepath.Join(url.Path, strings.TrimPrefix(object.Stat.Key, o))
 					content.URL = url
 					content.Size = object.Stat.Size
 					content.Time = object.Stat.LastModified

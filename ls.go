@@ -101,6 +101,32 @@ func parseContent(c *client.Content) ContentMessage {
 	return content
 }
 
+// trimContent to fancify the output for directories
+func trimContent(parentContent, childContent *client.Content, recursive bool) *client.Content {
+	if recursive {
+		trimmedContent := new(client.Content)
+		trimmedContent = childContent
+		if strings.Index(childContent.URL.Path, string(childContent.URL.Separator)) == 0 {
+			trimmedContent.URL.Path = trimmedContent.URL.Path[1:]
+			return trimmedContent
+		}
+		return trimmedContent
+	}
+	if parentContent.Type.IsDir() {
+		trimmedContent := new(client.Content)
+		trimmedContent = childContent
+		if parentContent.URL.Path == string(parentContent.URL.Separator) {
+			trimmedContent.URL.Path = strings.TrimPrefix(childContent.URL.Path, parentContent.URL.Path)
+			return trimmedContent
+		}
+		trimPrefixContentPath := parentContent.URL.Path[:strings.LastIndex(parentContent.URL.Path,
+			string(parentContent.URL.Separator))+1]
+		trimmedContent.URL.Path = strings.TrimPrefix(childContent.URL.Path, trimPrefixContentPath)
+		return trimmedContent
+	}
+	return childContent
+}
+
 // doList - list all entities inside a folder.
 func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 	var err *probe.Error
@@ -137,19 +163,7 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 			err = contentCh.Err.Trace()
 			break
 		}
-		// if not recursive trim prefixes
-		if !recursive {
-			if parentContent.Type.IsDir() {
-				prefix := func() string {
-					trimmedPrefix := strings.TrimSuffix(parentContent.URL.Path, string(parentContent.URL.Separator)) + string(parentContent.URL.Separator)
-					if trimmedPrefix == string(parentContent.URL.Path) {
-						return ""
-					}
-					return trimmedPrefix
-				}()
-				contentCh.Content.URL.Path = strings.TrimPrefix(contentCh.Content.URL.Path, prefix)
-			}
-		}
+		contentCh.Content = trimContent(parentContent, contentCh.Content, recursive)
 		printMsg(parseContent(contentCh.Content))
 	}
 	if err != nil {
@@ -161,6 +175,11 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 // doListIncomplete - list all incomplete uploads entities inside a folder.
 func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 	var err *probe.Error
+	var parentContent *client.Content
+	_, parentContent, err = url2Stat(clnt.GetURL().String())
+	if err != nil {
+		return err.Trace(clnt.GetURL().String())
+	}
 	for contentCh := range clnt.List(recursive, true) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
@@ -185,6 +204,7 @@ func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.E
 			err = contentCh.Err.Trace()
 			break
 		}
+		contentCh.Content = trimContent(parentContent, contentCh.Content, recursive)
 		printMsg(parseContent(contentCh.Content))
 	}
 	if err != nil {
