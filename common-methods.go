@@ -184,6 +184,7 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 	return nil, errInitClient(urlStr).Trace()
 }
 
+// url2Client - convenience wrapper for getNewClient
 func url2Client(url string) (client.Client, *probe.Error) {
 	urlconfig, err := getHostConfig(url)
 	if err != nil {

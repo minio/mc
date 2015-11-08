@@ -64,10 +64,14 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 	}
 }
 
+// main for share download.
 func mainShareDownload(ctx *cli.Context) {
-	shareDataDirSetup()
-	checkShareDownloadSyntax(ctx)
+	// setup share data folder and file.
+	shareDataSetup()
+	// set share command theme.
 	setSharePalette(ctx.GlobalString("colors"))
+	// check input arguments.
+	checkShareDownloadSyntax(ctx)
 
 	args := ctx.Args()
 	config := mustGetMcConfig()
@@ -119,24 +123,21 @@ func doShareDownloadURL(targetURL string, recursive bool, expires time.Duration)
 		if err != nil {
 			return err.Trace()
 		}
-		shareMessage := ShareMessage{
+		var shareMsg interface{}
+		shareMsg = shareMessage{
 			Expiry:      expires,
 			DownloadURL: sharedURL,
 			Key:         newClnt.GetURL().String(),
 		}
-		shareMessageV3 := ShareMessageV3{
-			Expiry:      expires,
-			DownloadURL: sharedURL,
-			Key:         newClnt.GetURL().String(),
-		}
+		shareMsgV3 := shareMessageV3(shareMsg.(shareMessage))
 		sURLs.URLs = append(sURLs.URLs, struct {
 			Date    time.Time
-			Message ShareMessageV3
+			Message shareMessageV3
 		}{
 			Date:    shareDate,
-			Message: shareMessageV3,
+			Message: shareMsgV3,
 		})
-		printMsg(shareMessage)
+		printMsg(shareMsg.(shareMessage))
 	}
 	saveSharedURLsV3(sURLs)
 	return nil

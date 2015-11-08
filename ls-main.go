@@ -71,6 +71,7 @@ EXAMPLES:
 `,
 }
 
+// checkListSyntax - validate all the passed arguments
 func checkListSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 	if !ctx.Args().Present() {
@@ -90,6 +91,7 @@ func checkListSyntax(ctx *cli.Context) {
 	}
 }
 
+// setListPalette - set ls output theme
 func setListPalette(style string) {
 	console.SetCustomPalette(map[string]*color.Color{
 		"File": color.New(color.FgWhite),
@@ -106,7 +108,7 @@ func setListPalette(style string) {
 		})
 		return
 	}
-	/// Add more styles here
+	/// Add more styles here if needed
 	if style == "nocolor" {
 		// All coloring options exhausted, setting nocolor safely
 		console.SetNoColor()
@@ -115,11 +117,14 @@ func setListPalette(style string) {
 
 // mainList - is a handler for mc ls command
 func mainList(ctx *cli.Context) {
+	// set theme for 'ls'
 	setListPalette(ctx.GlobalString("colors"))
+
+	// check 'ls' cli arguments
 	checkListSyntax(ctx)
 
 	args := ctx.Args()
-	// Operating system tool behavior
+	// mimic operating system tool behavior
 	if globalMimicFlag && !ctx.Args().Present() {
 		args = []string{"."}
 	}

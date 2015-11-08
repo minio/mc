@@ -23,12 +23,9 @@ import (
 	"unicode/utf8"
 )
 
-// validAliasName regex validation.
-var validAliasName = regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$")
-
-// Check if it is an aliased URL.
+// isValidAliasName - Check if aliasName is a valid alias.
 func isValidAliasName(aliasName string) bool {
-	return validAliasName.MatchString(aliasName)
+	return regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$").MatchString(aliasName)
 }
 
 // getAliasURL expands aliased (name/path) to full URL, used by url-parser.

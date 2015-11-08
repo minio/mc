@@ -52,29 +52,29 @@ COMMANDS:
 `,
 }
 
-// ShareMessageV1 ...
-type ShareMessageV1 struct {
+// structured share command messages version '1'
+type shareMessageV1 struct {
 	Expiry time.Duration `json:"expiry"`
 	URL    string        `json:"url"`
 	Key    string        `json:"keyName"`
 }
 
-// ShareMessageV2 ...
-type ShareMessageV2 ShareMessageV1
+// structured share command messages version '2'
+type shareMessageV2 shareMessageV1
 
-// ShareMessageV3 ...
-type ShareMessageV3 struct {
+// structured share command messages version '3'
+type shareMessageV3 struct {
 	Expiry      time.Duration     `json:"expiry"`
 	DownloadURL string            `json:"downloadUrl,omitempty"`
 	UploadInfo  map[string]string `json:"uploadInfo,omitempty"`
 	Key         string            `json:"keyName"`
 }
 
-// ShareMessage ...
-type ShareMessage ShareMessageV3
+// shareMessage this points to latest share command message structure.
+type shareMessage shareMessageV3
 
 // String - regular colorized message
-func (s ShareMessage) String() string {
+func (s shareMessage) String() string {
 	if len(s.DownloadURL) > 0 {
 		return console.Colorize("Share", fmt.Sprintf("%s", s.DownloadURL))
 	}
@@ -96,7 +96,7 @@ func (s ShareMessage) String() string {
 }
 
 // JSON json message for share command
-func (s ShareMessage) JSON() string {
+func (s shareMessage) JSON() string {
 	var shareMessageBytes []byte
 	var err error
 	if len(s.DownloadURL) > 0 {
@@ -144,7 +144,7 @@ func (s ShareMessage) JSON() string {
 	return string(shareMessageBytes)
 }
 
-// mainShare - is a handler for mc share command
+// mainShare - main handler for mc share command
 func mainShare(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowAppHelp(ctx)

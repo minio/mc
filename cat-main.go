@@ -78,27 +78,25 @@ func checkCatSyntax(ctx *cli.Context) {
 
 // catURL displays contents of a URL to stdout.
 func catURL(sourceURL string) *probe.Error {
-	config := mustGetMcConfig()
-	URL := getAliasURL(sourceURL, config.Aliases)
-
 	var reader io.ReadCloser
-	switch URL {
+	switch sourceURL {
 	case "-":
 		reader = ioutil.NopCloser(bufio.NewReader(os.Stdin))
 	default:
-		sourceClnt, err := url2Client(URL)
+		sourceClnt, err := url2Client(sourceURL)
 		if err != nil {
-			return err.Trace(URL)
+			return err.Trace(sourceURL)
 		}
-		// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
+		// Ignore size, since os.Stat() would not return proper size all the
+		// time for local filesystem for example /proc files.
 		reader, _, err = sourceClnt.Get(0, 0)
 		if err != nil {
-			return err.Trace(URL)
+			return err.Trace(sourceURL)
 		}
 	}
 	defer reader.Close()
 
-	return catOut(reader).Trace(URL)
+	return catOut(reader).Trace(sourceURL)
 }
 
 // catOut reads from reader stream and writes to stdout.
@@ -149,8 +147,12 @@ func mainCat(ctx *cli.Context) {
 			}
 		}
 	}
+
 	// Convert arguments to URLs: expand alias, fix format...
-	for _, arg := range args {
-		fatalIf(catURL(arg).Trace(arg), "Unable to read from ‘"+arg+"’.")
+	URLs, err := args2URLs(args)
+	fatalIf(err.Trace(args...), "Unable to parse arguments.")
+
+	for _, url := range URLs {
+		fatalIf(catURL(url).Trace(url), "Unable to read from ‘"+url+"’.")
 	}
 }

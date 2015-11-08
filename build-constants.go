@@ -17,8 +17,12 @@
 package main
 
 var (
-	mcVersion       = "UNOFFICIAL.GOGET"
-	mcReleaseTag    = "UNOFFICIAL.GOGET"
-	mcCommitID      = "UNOFFICIAL.GOGET"
+	// mcVersion - version time.RFC3339.
+	mcVersion = "UNOFFICIAL.GOGET"
+	// mcReleaseTag - release tag in TAG.%Y-%m-%dT%H-%M-%SZ.
+	mcReleaseTag = "UNOFFICIAL.GOGET"
+	// mcCommitID - latest commit id.
+	mcCommitID = "UNOFFICIAL.GOGET"
+	// mcShortCommitID - first 12 characters from mcCommitID.
 	mcShortCommitID = mcCommitID[:]
 )
