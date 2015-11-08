@@ -24,17 +24,23 @@ import (
 )
 
 func (s *TestSuite) TestMbAndAccess(c *C) {
-	perr := doMakeBucket(server.URL + "/bucket")
-	c.Assert(perr, IsNil)
 
-	perr = doSetAccess(server.URL+"/bucket", "public-read-write")
-	c.Assert(perr, IsNil)
+	// Instantiate client for URL.
+	clnt, err := url2Client(server.URL + "/bucket")
+	c.Assert(err, IsNil)
 
-	perr = doSetAccess(server.URL+"/bucket", "invalid")
-	c.Assert(perr, Not(IsNil))
+	// Make bucket.
+	err = clnt.MakeBucket()
+	c.Assert(err, IsNil)
 
-	perm, perr := doGetAccess(server.URL + "/bucket")
-	c.Assert(perr, IsNil)
+	err = doSetAccess(server.URL+"/bucket", "public-read-write")
+	c.Assert(err, IsNil)
+
+	err = doSetAccess(server.URL+"/bucket", "invalid")
+	c.Assert(err, Not(IsNil))
+
+	perm, err := doGetAccess(server.URL + "/bucket")
+	c.Assert(err, IsNil)
 	c.Assert(perm.isPrivate(), Equals, true)
 }
 

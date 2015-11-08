@@ -66,20 +66,20 @@ EXAMPLES:
 `,
 }
 
-// CopyMessage container for file copy messages
-type CopyMessage struct {
+// copyMessage container for file copy messages
+type copyMessage struct {
 	Source string `json:"source"`
 	Target string `json:"target"`
 	Length int64  `json:"length"`
 }
 
 // String colorized copy message
-func (c CopyMessage) String() string {
+func (c copyMessage) String() string {
 	return console.Colorize("Copy", fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target))
 }
 
 // JSON jsonified copy message
-func (c CopyMessage) JSON() string {
+func (c copyMessage) JSON() string {
 	copyMessageBytes, err := json.Marshal(c)
 	fatalIf(probe.NewError(err), "Failed to marshal copy message.")
 
@@ -115,7 +115,7 @@ func doCopy(cpURLs copyURLs, progressReader interface{}, cpQueue <-chan bool, wg
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
-		Prints("%s\n", CopyMessage{
+		printMsg(copyMessage{
 			Source: cpURLs.SourceContent.Name,
 			Target: cpURLs.TargetContent.Name,
 			Length: cpURLs.SourceContent.Size,
