@@ -67,7 +67,7 @@ func (s *TestSuite) TestRemove(c *C) {
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "rm", filepath.Join(root, "..."), "force"})
+	err = app.Run([]string{os.Args[0], "rm", "--force", filepath.Join(root, "...")})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
