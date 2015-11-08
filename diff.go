@@ -137,7 +137,7 @@ func doDiffObjects(firstURL, secondURL string, ch chan DiffMessage) {
 		}
 		return
 	}
-	if firstContent.Name == secondContent.Name {
+	if firstContent.URL.String() == secondContent.URL.String() {
 		return
 	}
 	switch {
@@ -169,19 +169,25 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 	for contentCh := range firstClnt.List(false, false) {
 		if contentCh.Err != nil {
 			ch <- DiffMessage{
-				Error: contentCh.Err.Trace(firstClnt.URL().String()),
+				Error: contentCh.Err.Trace(firstClnt.GetURL().String()),
 			}
 			return
 		}
-		newFirstURL := urlJoinPath(firstClnt.URL().String(), contentCh.Content.Name)
-		newSecondURL := urlJoinPath(secondClnt.URL().String(), contentCh.Content.Name)
-		_, newFirstContent, errFirst := url2Stat(newFirstURL)
-		_, newSecondContent, errSecond := url2Stat(newSecondURL)
+		newFirstURLStr := contentCh.Content.URL.String()
+
+		// Construct the second URL
+		newSecondURL := secondClnt.GetURL()
+		// Need to verify the same path from first URL, copy it here
+		newSecondURL.Path = contentCh.Content.URL.Path
+		newSecondURLStr := newSecondURL.String()
+
+		_, newFirstContent, errFirst := url2Stat(newFirstURLStr)
+		_, newSecondContent, errSecond := url2Stat(newSecondURLStr)
 		switch {
 		case errFirst == nil && errSecond != nil:
 			ch <- DiffMessage{
-				FirstURL:  newFirstURL,
-				SecondURL: newSecondURL,
+				FirstURL:  newFirstURLStr,
+				SecondURL: newSecondURLStr,
 				Diff:      "only-in-first",
 			}
 			continue
@@ -190,8 +196,8 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 			case newFirstContent.Type.IsDir():
 				if !newSecondContent.Type.IsDir() {
 					ch <- DiffMessage{
-						FirstURL:  newFirstURL,
-						SecondURL: newSecondURL,
+						FirstURL:  newFirstURLStr,
+						SecondURL: newSecondURLStr,
 						Diff:      "type",
 					}
 				}
@@ -199,21 +205,21 @@ func dodiff(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 			case newFirstContent.Type.IsRegular():
 				if !newSecondContent.Type.IsRegular() {
 					ch <- DiffMessage{
-						FirstURL:  newFirstURL,
-						SecondURL: newSecondURL,
+						FirstURL:  newFirstURLStr,
+						SecondURL: newSecondURLStr,
 						Diff:      "type",
 					}
 					continue
 				}
-				doDiffObjects(newFirstURL, newSecondURL, ch)
+				doDiffObjects(newFirstURLStr, newSecondURLStr, ch)
 			}
 		}
 	} // End of for-loop
 }
 
 func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
-	firstURLDelimited := firstClnt.URL().String()
-	secondURLDelimited := secondClnt.URL().String()
+	firstURLDelimited := firstClnt.GetURL().String()
+	secondURLDelimited := secondClnt.GetURL().String()
 	if strings.HasSuffix(firstURLDelimited, "/") == false {
 		firstURLDelimited = firstURLDelimited + "/"
 	}
@@ -249,13 +255,16 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 			f, fok = <-fch
 			continue
 		}
-		firstURL := firstURLDelimited + f.Content.Name
-		secondURL := secondURLDelimited + f.Content.Name
+		url := f.Content.URL
+		firstURLStr := url.String()
+		secondURL := secondClnt.GetURL()
+		secondURL.Path = url.Path
+		secondURLStr := secondURL.String()
 		if sok == false {
 			// Second list reached EOF
 			ch <- DiffMessage{
-				FirstURL:  firstURL,
-				SecondURL: secondURL,
+				FirstURL:  firstURLStr,
+				SecondURL: secondURLStr,
 				Diff:      "only-in-first",
 			}
 			f, fok = <-fch
@@ -272,42 +281,42 @@ func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
 		}
 		fC := f.Content
 		sC := s.Content
-		if fC.Name == sC.Name {
+		if fC.URL.Path == sC.URL.Path {
 			if fC.Type.IsRegular() {
 				if !sC.Type.IsRegular() {
 					ch <- DiffMessage{
-						FirstURL:  firstURL,
-						SecondURL: secondURL,
+						FirstURL:  firstURLStr,
+						SecondURL: secondURLStr,
 						Diff:      "type",
 					}
 				}
 			} else if fC.Type.IsDir() {
 				if !sC.Type.IsDir() {
 					ch <- DiffMessage{
-						FirstURL:  firstURL,
-						SecondURL: secondURL,
+						FirstURL:  firstURLStr,
+						SecondURL: secondURLStr,
 						Diff:      "type",
 					}
 				}
 			} else if fC.Size != sC.Size {
 				ch <- DiffMessage{
-					FirstURL:  firstURL,
-					SecondURL: secondURL,
+					FirstURL:  firstURLStr,
+					SecondURL: secondURLStr,
 					Diff:      "size",
 				}
 			}
 			f, fok = <-fch
 			s, sok = <-sch
 		}
-		if fC.Name < sC.Name {
+		if fC.URL.Path < sC.URL.Path {
 			ch <- DiffMessage{
-				FirstURL:  firstURL,
-				SecondURL: secondURL,
+				FirstURL:  firstURLStr,
+				SecondURL: secondURLStr,
 				Diff:      "only-in-first",
 			}
 			f, fok = <-fch
 		}
-		if fC.Name > sC.Name {
+		if fC.URL.Path > sC.URL.Path {
 			s, sok = <-sch
 		}
 	}

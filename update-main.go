@@ -164,7 +164,7 @@ func getExperimentalUpdate() {
 		fatalIf(errDummy().Trace(), "Unable to validate any experimental update available at this time. Please open an issue at https://github.com/minio/mc/issues")
 	}
 
-	mcExperimentalURLParse := clnt.URL()
+	mcExperimentalURLParse := clnt.GetURL()
 	downloadURL := (mcExperimentalURLParse.Scheme + "://" +
 		mcExperimentalURLParse.Host +
 		string(mcExperimentalURLParse.Separator) +
@@ -210,7 +210,7 @@ func getReleaseUpdate() {
 		fatalIf(errDummy().Trace(), "Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues")
 	}
 
-	mcUpdateURLParse := clnt.URL()
+	mcUpdateURLParse := clnt.GetURL()
 	downloadURL := mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS]
 	updateMessage := UpdateMessage{
 		Download: downloadURL,

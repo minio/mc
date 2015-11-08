@@ -31,7 +31,7 @@ import (
 )
 
 type fsClient struct {
-	Path string
+	PathURL *client.URL
 }
 
 // New - instantiate a new fs client
@@ -40,23 +40,23 @@ func New(path string) (client.Client, *probe.Error) {
 		return nil, probe.NewError(client.EmptyPath{})
 	}
 	return &fsClient{
-		Path: normalizePath(path),
+		PathURL: client.NewURL(normalizePath(path)),
 	}, nil
 }
 
 // URL get url
-func (f *fsClient) URL() *client.URL {
-	return client.NewURL(f.Path)
+func (f *fsClient) GetURL() client.URL {
+	return *f.PathURL
 }
 
 /// Object operations
 
 // fsStat - wrapper function to get file stat
 func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
-	fpath := f.Path
+	fpath := f.PathURL.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
+	if strings.HasSuffix(fpath, string(f.PathURL.Separator)) {
 		fpath = fpath + "."
 	}
 	// Resolve symlinks
@@ -102,8 +102,8 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 
 // Put - create a new file
 func (f *fsClient) Put(size int64, data io.Reader) *probe.Error {
-	objectDir, _ := filepath.Split(f.Path)
-	objectPath := f.Path
+	objectDir, _ := filepath.Split(f.PathURL.Path)
+	objectPath := f.PathURL.Path
 	if objectDir != "" {
 		if err := os.MkdirAll(objectDir, 0700); err != nil {
 			return probe.NewError(err)
@@ -134,13 +134,13 @@ func (f *fsClient) Put(size int64, data io.Reader) *probe.Error {
 
 // get - download an object from bucket
 func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
-	body, err := os.Open(f.Path)
+	body, err := os.Open(f.PathURL.Path)
 	if err != nil {
 		return nil, 0, probe.NewError(err)
 	}
 	content, perr := f.getFSMetadata()
 	if perr != nil {
-		return nil, content.Size, perr.Trace(f.Path)
+		return nil, content.Size, perr.Trace(f.PathURL.Path)
 	}
 	return body, content.Size, nil
 }
@@ -161,10 +161,10 @@ func (f *fsClient) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error
 		return nil, 0, probe.NewError(client.InvalidRange{Offset: offset})
 	}
 
-	tmppath := f.Path
+	tmppath := f.PathURL.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(tmppath, string(f.URL().Separator)) {
+	if strings.HasSuffix(tmppath, string(f.PathURL.Separator)) {
 		tmppath = tmppath + "."
 	}
 
@@ -179,7 +179,7 @@ func (f *fsClient) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error
 	if offset == 0 && length == 0 {
 		return f.get()
 	}
-	body, err := os.Open(f.Path)
+	body, err := os.Open(f.PathURL.Path)
 	if err != nil {
 		return nil, length, probe.NewError(err)
 
@@ -195,7 +195,7 @@ func (f *fsClient) Remove(incomplete bool) *probe.Error {
 	if incomplete {
 		return nil
 	}
-	err := os.Remove(f.Path)
+	err := os.Remove(f.PathURL.Path)
 	return probe.NewError(err)
 }
 
@@ -220,10 +220,11 @@ func (f *fsClient) List(recursive, incomplete bool) <-chan client.ContentOnChann
 func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 
-	fpath := f.Path
+	pathURL := *f.PathURL
+	fpath := pathURL.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(f.URL().Separator)) {
+	if strings.HasSuffix(fpath, string(pathURL.Separator)) {
 		fpath = fpath + "."
 	}
 
@@ -231,7 +232,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
-			Err:     err.Trace(f.Path),
+			Err:     err.Trace(fpath),
 		}
 		return
 	}
@@ -279,9 +280,11 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 							}
 							continue
 						}
+						pathURL := *f.PathURL
+						pathURL.Path = filepath.Join(pathURL.Path, lfi.Name())
 						contentCh <- client.ContentOnChannel{
 							Content: &client.Content{
-								Name: lfi.Name(),
+								URL:  pathURL,
 								Time: lfi.ModTime(),
 								Size: lfi.Size(),
 								Type: lfi.Mode(),
@@ -313,8 +316,10 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 				}
 			}
 			if fi.Mode().IsRegular() || fi.Mode().IsDir() {
+				pathURL := *f.PathURL
+				pathURL.Path = filepath.Join(pathURL.Path, fi.Name())
 				content := &client.Content{
-					Name: fi.Name(),
+					URL:  pathURL,
 					Time: fi.ModTime(),
 					Size: fi.Size(),
 					Type: fi.Mode(),
@@ -327,7 +332,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		}
 	default:
 		content := &client.Content{
-			Name: f.Path,
+			URL:  pathURL,
 			Time: fst.ModTime(),
 			Size: fst.Size(),
 			Type: fst.Mode(),
@@ -343,9 +348,10 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	defer close(contentCh)
 	var dirName string
 	var filePrefix string
+	pathURL := *f.PathURL
 	visitFS := func(fp string, fi os.FileInfo, err error) error {
 		// if file path ends with os.PathSeparator and equals to root path, skip it.
-		if strings.HasSuffix(fp, string(f.URL().Separator)) {
+		if strings.HasSuffix(fp, string(pathURL.Separator)) {
 			if fp == dirName {
 				return nil
 			}
@@ -392,9 +398,11 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 						}
 						return nil
 					}
+					pathURL := *f.PathURL
+					pathURL.Path = filepath.Join(pathURL.Path, dirName)
 					contentCh <- client.ContentOnChannel{
 						Content: &client.Content{
-							Name: strings.TrimPrefix(fp, dirName),
+							URL:  pathURL,
 							Time: lfi.ModTime(),
 							Size: lfi.Size(),
 							Type: lfi.Mode(),
@@ -428,9 +436,11 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 							}
 							return nil
 						}
+						pathURL := *f.PathURL
+						pathURL.Path = filepath.Join(pathURL.Path, dirName)
 						contentCh <- client.ContentOnChannel{
 							Content: &client.Content{
-								Name: strings.TrimPrefix(fp, dirName),
+								URL:  pathURL,
 								Time: lfi.ModTime(),
 								Size: lfi.Size(),
 								Type: lfi.Mode(),
@@ -464,7 +474,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		}
 		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
 			content := &client.Content{
-				Name: strings.TrimPrefix(fp, dirName),
+				URL:  *client.NewURL(fp),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 				Type: fi.Mode(),
@@ -479,18 +489,18 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	// No prefix to be filtered by default.
 	filePrefix = ""
 	// if f.Path ends with os.PathSeparator - assuming it to be a directory and moving on.
-	if strings.HasSuffix(f.Path, string(f.URL().Separator)) {
-		dirName = f.Path
+	if strings.HasSuffix(pathURL.Path, string(pathURL.Separator)) {
+		dirName = pathURL.Path
 	} else {
 		// if not a directory, take base path to navigate through WalkFunc.
-		dirName = filepath.Dir(f.Path)
-		if !strings.HasSuffix(dirName, string(f.URL().Separator)) {
+		dirName = filepath.Dir(pathURL.Path)
+		if !strings.HasSuffix(dirName, string(pathURL.Separator)) {
 			// basepath truncates the os.PathSeparator, add it deligently - useful for trimming
 			// file path inside WalkFunc
-			dirName = dirName + string(f.URL().Separator)
+			dirName = dirName + string(pathURL.Separator)
 		}
 		// filePrefix is kept for filtering incoming contents through WalkFunc.
-		filePrefix = f.Path
+		filePrefix = pathURL.Path
 	}
 	err := filepath.Walk(dirName, visitFS)
 	if err != nil {
@@ -503,7 +513,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 
 // MakeBucket - create a new bucket
 func (f *fsClient) MakeBucket() *probe.Error {
-	err := os.MkdirAll(f.Path, 0775)
+	err := os.MkdirAll(f.PathURL.Path, 0775)
 	if err != nil {
 		return probe.NewError(err)
 	}
@@ -527,7 +537,7 @@ func (f *fsClient) getFSMetadata() (content *client.Content, err *probe.Error) {
 		return nil, err.Trace()
 	}
 	content = new(client.Content)
-	content.Name = f.Path
+	content.URL = *f.PathURL
 	content.Size = st.Size()
 	content.Time = st.ModTime()
 	content.Type = st.Mode()

@@ -259,6 +259,5 @@ func (s *MySuite) TestStatObject(c *C) {
 
 	content, perr := fsc.Stat()
 	c.Assert(perr, IsNil)
-	c.Assert(content.Name, Equals, objectPath)
 	c.Assert(content.Size, Equals, int64(dataLen))
 }

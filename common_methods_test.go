@@ -58,7 +58,6 @@ func (s *TestSuite) TestCommonMethods(c *C) {
 
 	_, content, err := url2Stat(objectPathServer)
 	c.Assert(err, IsNil)
-	c.Assert(content.Name, Equals, "object1")
 	c.Assert(content.Type.IsRegular(), Equals, true)
 
 	_, _, err = getSource(objectPathServer + "invalid")

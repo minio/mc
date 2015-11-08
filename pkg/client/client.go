@@ -46,8 +46,8 @@ type Client interface {
 	// Delete operations
 	Remove(incomplete bool) *probe.Error
 
-	// URL returns back internal url
-	URL() *URL
+	// GetURL returns back internal url
+	GetURL() URL
 }
 
 // ContentOnChannel - List contents on channel
@@ -58,7 +58,7 @@ type ContentOnChannel struct {
 
 // Content container for content metadata
 type Content struct {
-	Name string
+	URL  URL
 	Time time.Time
 	Size int64
 	Type os.FileMode
@@ -68,6 +68,7 @@ type Content struct {
 type Config struct {
 	AccessKeyID     string
 	SecretAccessKey string
+	Signature       string
 	HostURL         string
 	AppName         string
 	AppVersion      string

@@ -118,7 +118,7 @@ func NewURL(urlStr string) *URL {
 }
 
 // String convert URL into its canonical form.
-func (u *URL) String() string {
+func (u URL) String() string {
 	var buf bytes.Buffer
 	// if fileystem no translation needed, return as is.
 	if u.Type == Filesystem {

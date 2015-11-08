@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/minio/cli"
@@ -66,7 +67,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
 
 	if !srcContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(srcContent.Name, srcContent.Type.String()), fmt.Sprintf("Source ‘%s’ is not a folder. Only folders are supported by mirror.", srcURL))
+		fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source ‘%s’ is not a folder. Only folders are supported by mirror.", srcURL))
 	}
 
 	if len(tgtURLs) == 0 && tgtURLs == nil {
@@ -126,7 +127,7 @@ func getTargetContent(srcContent *client.Content, targetContent *client.Content,
 	}
 
 	for ; c != nil; c = getContent(targetCh) {
-		if srcContent.Name <= c.Name {
+		if srcContent.URL.Path <= c.URL.Path {
 			break
 		}
 	}
@@ -162,7 +163,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 			return
 		}
 		// special case, be extremely careful before changing this behavior - will lead to data loss
-		newTargetURL := strings.TrimSuffix(targetURL, string(targetClient.URL().Separator)) + string(targetClient.URL().Separator)
+		newTargetURL := strings.TrimSuffix(targetURL, string(targetClient.GetURL().Separator)) + string(targetClient.GetURL().Separator)
 		targetClient, err = url2Client(newTargetURL)
 		if err != nil {
 			mirrorURLsCh <- mirrorURLs{Error: err.Trace(newTargetURL)}
@@ -185,8 +186,9 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 			targetContents[i] = getTargetContent(srcContent, targetContents[i], targetChs[i])
 
 			// either target reached EOF or target does not have source content
-			if targetContents[i] == nil || srcContent.Name != targetContents[i].Name {
-				mirrorTargets = append(mirrorTargets, &client.Content{Name: newTargetURLs[i] + srcContent.Name})
+			if targetContents[i] == nil || srcContent.URL.Path != targetContents[i].URL.Path {
+				targetURL := client.NewURL(filepath.Join(newTargetURLs[i], srcContent.URL.Path))
+				mirrorTargets = append(mirrorTargets, &client.Content{URL: *targetURL})
 				continue
 			}
 
@@ -194,7 +196,8 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 			if srcContent.Type.IsRegular() && targetContents[i].Type.IsRegular() {
 				// but size mismatches
 				if srcContent.Size != targetContents[i].Size {
-					mirrorTargets = append(mirrorTargets, &client.Content{Name: newTargetURLs[i] + srcContent.Name})
+					targetURL := client.NewURL(filepath.Join(newTargetURLs[i], srcContent.URL.Path))
+					mirrorTargets = append(mirrorTargets, &client.Content{URL: *targetURL})
 				}
 				continue
 			}
@@ -203,7 +206,6 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 			// TODO: add error
 		}
 		if len(mirrorTargets) > 0 {
-			srcContent.Name = newSourceURL + srcContent.Name
 			mirrorURLsCh <- mirrorURLs{
 				SourceContent:  srcContent,
 				TargetContents: mirrorTargets,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package s3v2
+package s3
 
 // bucketHandler is an http.Handler that verifies bucket responses and validates incoming requests
 import (
@@ -143,13 +143,12 @@ func (s *MySuite) TestBucketOperations(c *C) {
 	err = s3c.SetBucketAccess("public-read-write")
 	c.Assert(err, IsNil)
 
-	conf.HostURL = server.URL + string(s3c.URL().Separator)
+	conf.HostURL = server.URL + string(s3c.GetURL().Separator)
 	s3c, err = New(conf)
 	c.Assert(err, IsNil)
 
 	for content := range s3c.List(false, false) {
 		c.Assert(content.Err, IsNil)
-		c.Assert(content.Content.Name, Equals, "bucket")
 		c.Assert(content.Content.Type.IsDir(), Equals, true)
 	}
 
@@ -159,7 +158,6 @@ func (s *MySuite) TestBucketOperations(c *C) {
 
 	for content := range s3c.List(false, false) {
 		c.Assert(content.Err, IsNil)
-		c.Assert(content.Content.Name, Equals, "object")
 		c.Assert(content.Content.Type.IsRegular(), Equals, true)
 	}
 }
@@ -182,7 +180,6 @@ func (s *MySuite) TestObjectOperations(c *C) {
 
 	content, err := s3c.Stat()
 	c.Assert(err, IsNil)
-	c.Assert(content.Name, Equals, "object")
 	c.Assert(content.Size, Equals, int64(len(object.data)))
 	c.Assert(content.Type.IsRegular(), Equals, true)
 

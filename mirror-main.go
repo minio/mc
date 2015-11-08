@@ -95,28 +95,28 @@ func doMirror(sURLs mirrorURLs, progressReader interface{}, mirrorQueueCh <-chan
 	}
 
 	if !globalQuietFlag && !globalJSONFlag {
-		progressReader.(*barSend).SetCaption(sURLs.SourceContent.Name + ": ")
+		progressReader.(*barSend).SetCaption(sURLs.SourceContent.URL.String() + ": ")
 	}
 
-	reader, length, err := getSource(sURLs.SourceContent.Name)
+	reader, length, err := getSource(sURLs.SourceContent.URL.String())
 	if err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
 			progressReader.(*barSend).ErrorGet(int64(length))
 		}
-		sURLs.Error = err.Trace(sURLs.SourceContent.Name)
+		sURLs.Error = err.Trace(sURLs.SourceContent.URL.String())
 		statusCh <- sURLs
 		return
 	}
 
 	var targetURLs []string
 	for _, targetContent := range sURLs.TargetContents {
-		targetURLs = append(targetURLs, targetContent.Name)
+		targetURLs = append(targetURLs, targetContent.URL.String())
 	}
 
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
 		printMsg(mirrorMessage{
-			Source:  sURLs.SourceContent.Name,
+			Source:  sURLs.SourceContent.URL.String(),
 			Targets: targetURLs,
 		})
 		newReader = progressReader.(*accounter).NewProxyReader(reader)
@@ -189,7 +189,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuietFlag && !globalJSONFlag {
-				scanBar(sURLs.SourceContent.Name)
+				scanBar(sURLs.SourceContent.URL.String())
 			}
 
 			totalBytes += sURLs.SourceContent.Size
@@ -252,14 +252,14 @@ func doMirrorSession(session *sessionV2) {
 					return
 				}
 				if sURLs.Error == nil {
-					session.Header.LastCopied = sURLs.SourceContent.Name
+					session.Header.LastCopied = sURLs.SourceContent.URL.String()
 					session.Save()
 				} else {
 					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
 					if !globalQuietFlag && !globalJSONFlag {
 						console.Eraseline()
 					}
-					errorIf(sURLs.Error.Trace(), fmt.Sprintf("Failed to mirror ‘%s’.", sURLs.SourceContent.Name))
+					errorIf(sURLs.Error.Trace(), fmt.Sprintf("Failed to mirror ‘%s’.", sURLs.SourceContent.URL.String()))
 					// all the cases which are handled where session should be saved are contained in the following
 					// switch case, we shouldn't be saving sessions for all errors since some errors might need to be
 					// reported to user properly.
@@ -293,7 +293,7 @@ func doMirrorSession(session *sessionV2) {
 		for scanner.Scan() {
 			var sURLs mirrorURLs
 			json.Unmarshal([]byte(scanner.Text()), &sURLs)
-			if isCopied(sURLs.SourceContent.Name) {
+			if isCopied(sURLs.SourceContent.URL.String()) {
 				doMirrorFake(sURLs, progressReader)
 			} else {
 				// Wait for other mirror routines to

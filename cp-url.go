@@ -235,8 +235,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 		return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
 	}
 	// All OK.. We can proceed. Type A
-	sourceContent.Name = sourceURL
-	return copyURLs{SourceContent: sourceContent, TargetContent: &client.Content{Name: targetURL}}
+	return copyURLs{SourceContent: sourceContent, TargetContent: &client.Content{URL: *client.NewURL(targetURL)}}
 }
 
 // SINGLE SOURCE - Type B: copy(f, d) -> copy(f, d/f) -> A
@@ -304,19 +303,9 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			}
 
 			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-			sourceURLParse := client.NewURL(sourceURL)
-			targetURLParse := client.NewURL(targetURL)
-
-			sourceURLDelimited := sourceURLParse.String()[:strings.LastIndex(sourceURLParse.String(),
-				string(sourceURLParse.Separator))+1]
-			sourceContentName := sourceContent.Content.Name
-			sourceContentURL := sourceURLDelimited + sourceContentName
-			sourceContentParse := client.NewURL(sourceContentURL)
-
-			// Construct target path from recursive path of source without its prefix dir.
-			newTargetURLParse := *targetURLParse
-			newTargetURLParse.Path = filepath.Join(newTargetURLParse.Path, sourceContentName)
-			copyURLsCh <- prepareCopyURLsTypeA(sourceContentParse.String(), newTargetURLParse.String())
+			newTargetURL := client.NewURL(targetURL)
+			newTargetURL.Path = filepath.Join(newTargetURL.Path, sourceContent.Content.URL.Path)
+			copyURLsCh <- prepareCopyURLsTypeA(sourceContent.Content.URL.String(), newTargetURL.String())
 		}
 	}(sourceURL, targetURL, copyURLsCh)
 	return copyURLsCh
