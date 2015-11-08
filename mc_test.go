@@ -52,8 +52,8 @@ func (s *TestSuite) SetUpSuite(c *C) {
 	// do not set it elsewhere, leads to data races since this is a global flag
 	globalQuietFlag = true // quiet is set to turn of progress bar
 
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	tmpDir, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 
 	// For windows the path is slightly different.
 	if runtime.GOOS == "windows" {
@@ -63,11 +63,11 @@ func (s *TestSuite) SetUpSuite(c *C) {
 	}
 	setMcConfigDir(customConfigDir)
 
-	perr := createMcConfigDir()
-	c.Assert(perr, IsNil)
+	err := createMcConfigDir()
+	c.Assert(err, IsNil)
 
-	config, perr := newConfig()
-	c.Assert(perr, IsNil)
+	config, err := newConfig()
+	c.Assert(err, IsNil)
 
 	config.Data().(*configV5).Hosts["127.0.0.1:*"] = hostConfig{
 		AccessKeyID:     "WLGDGYAQYIGI833EV05A",
@@ -75,11 +75,11 @@ func (s *TestSuite) SetUpSuite(c *C) {
 		API:             "S3v4",
 	}
 
-	perr = writeConfig(config)
-	c.Assert(perr, IsNil)
+	err = writeConfig(config)
+	c.Assert(err, IsNil)
 
-	perr = createSessionDir()
-	c.Assert(perr, IsNil)
+	err = createSessionDir()
+	c.Assert(err, IsNil)
 
 	app = registerApp()
 }
@@ -105,21 +105,21 @@ func (s *TestSuite) TestGetNewClient(c *C) {
 }
 
 func (s *TestSuite) TestNewConfigV5(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "mc-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "mc-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
-	conf, perr := newConfig()
-	c.Assert(perr, IsNil)
+	conf, err := newConfig()
+	c.Assert(err, IsNil)
 	configFile := filepath.Join(root, "config.json")
-	perr = conf.Save(configFile)
-	c.Assert(perr, IsNil)
+	err = conf.Save(configFile)
+	c.Assert(err, IsNil)
 
 	confNew := newConfigV5()
-	config, perr := quick.New(confNew)
-	c.Assert(perr, IsNil)
-	perr = config.Load(configFile)
-	c.Assert(perr, IsNil)
+	config, err := quick.New(confNew)
+	c.Assert(err, IsNil)
+	err = config.Load(configFile)
+	c.Assert(err, IsNil)
 	data := config.Data().(*configV5)
 
 	type aliases struct {

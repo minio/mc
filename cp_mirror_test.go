@@ -72,8 +72,8 @@ func (s *TestSuite) TestMirror(c *C) {
 		objectPath := filepath.Join(source, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		perr := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(perr, IsNil)
+		err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
 	}
 
 	// reset back
@@ -107,8 +107,8 @@ func (s *TestSuite) TestCopy(c *C) {
 		objectPath := filepath.Join(source, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		perr := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(perr, IsNil)
+		err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
 	}
 
 	// reset back

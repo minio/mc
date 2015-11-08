@@ -32,59 +32,59 @@ func (s *TestSuite) TestValidSessionID(c *C) {
 }
 
 func (s *TestSuite) TestSession(c *C) {
-	perr := createSessionDir()
-	c.Assert(perr, IsNil)
+	err := createSessionDir()
+	c.Assert(err, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
 
 	session := newSessionV2()
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 
-	perr = session.Close()
-	c.Assert(perr, IsNil)
+	err = session.Close()
+	c.Assert(err, IsNil)
 
-	savedSession, perr := loadSessionV2(session.SessionID)
-	c.Assert(perr, IsNil)
+	savedSession, err := loadSessionV2(session.SessionID)
+	c.Assert(err, IsNil)
 	c.Assert(session.SessionID, Equals, savedSession.SessionID)
 
-	perr = savedSession.Close()
-	c.Assert(perr, IsNil)
+	err = savedSession.Close()
+	c.Assert(err, IsNil)
 
-	perr = savedSession.Delete()
-	c.Assert(perr, IsNil)
+	err = savedSession.Delete()
+	c.Assert(err, IsNil)
 }
 
 func (s *TestSuite) TestSessionContext(c *C) {
-	err := app.Run([]string{os.Args[0], "session", "list"})
-	c.Assert(err, IsNil)
+	e := app.Run([]string{os.Args[0], "session", "list"})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "session", "clear", "all"})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "session", "clear", "all"})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "session", "resume", "invalid"})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "session", "resume", "invalid"})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "session", "clear", "invalid"})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "session", "clear", "invalid"})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false
 
-	perr := createSessionDir()
-	c.Assert(perr, IsNil)
+	err := createSessionDir()
+	c.Assert(err, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
 
 	// reset back
@@ -94,13 +94,13 @@ func (s *TestSuite) TestSessionContext(c *C) {
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 
-	perr = session.Save()
-	c.Assert(perr, IsNil)
+	err = session.Save()
+	c.Assert(err, IsNil)
 
 	c.Assert(session.Close(), IsNil)
 
-	err = app.Run([]string{os.Args[0], "session", "clear", session.SessionID})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "session", "clear", session.SessionID})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
