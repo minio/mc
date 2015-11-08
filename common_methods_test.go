@@ -28,8 +28,8 @@ import (
 
 func (s *TestSuite) TestCommonMethods(c *C) {
 	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object1")
@@ -40,42 +40,42 @@ func (s *TestSuite) TestCommonMethods(c *C) {
 	objectPathServer := server.URL + "/bucket/object1"
 	data := "hello"
 	dataLen := len(data)
-	perr := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
-	perr = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
+	err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
+	err = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
 
 	c.Assert(isTargetURLDir(objectPathServer), Equals, false)
 	c.Assert(isTargetURLDir(server.URL+"/bucket"), Equals, true)
 
-	reader, size, perr := getSource(objectPathServer)
-	c.Assert(perr, IsNil)
+	reader, size, err := getSource(objectPathServer)
+	c.Assert(err, IsNil)
 	c.Assert(size, Not(Equals), 0)
 	var results bytes.Buffer
-	_, err = io.CopyN(&results, reader, int64(size))
-	c.Assert(err, IsNil)
+	_, e = io.CopyN(&results, reader, int64(size))
+	c.Assert(e, IsNil)
 	c.Assert([]byte(data), DeepEquals, results.Bytes())
 
-	_, content, perr := url2Stat(objectPathServer)
-	c.Assert(perr, IsNil)
+	_, content, err := url2Stat(objectPathServer)
+	c.Assert(err, IsNil)
 	c.Assert(content.Name, Equals, "object1")
 	c.Assert(content.Type.IsRegular(), Equals, true)
 
-	_, _, perr = getSource(objectPathServer + "invalid")
-	c.Assert(perr, Not(IsNil))
+	_, _, err = getSource(objectPathServer + "invalid")
+	c.Assert(err, Not(IsNil))
 
-	_, _, perr = url2Stat(objectPath + "invalid")
-	c.Assert(perr, Not(IsNil))
+	_, _, err = url2Stat(objectPath + "invalid")
+	c.Assert(err, Not(IsNil))
 
-	_, perr = url2Client(objectPathServer)
-	c.Assert(perr, IsNil)
+	_, err = url2Client(objectPathServer)
+	c.Assert(err, IsNil)
 
-	_, perr = url2Client(objectPathServer)
-	c.Assert(perr, IsNil)
+	_, err = url2Client(objectPathServer)
+	c.Assert(err, IsNil)
 
-	_, perr = url2Client("http://test.minio.io" + "/bucket/fail")
-	c.Assert(perr, Not(IsNil))
+	_, err = url2Client("http://test.minio.io" + "/bucket/fail")
+	c.Assert(err, Not(IsNil))
 
-	_, perr = url2Client("http://test.minio.io" + "/bucket/fail")
-	c.Assert(perr, Not(IsNil))
+	_, err = url2Client("http://test.minio.io" + "/bucket/fail")
+	c.Assert(err, Not(IsNil))
 }

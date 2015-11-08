@@ -24,63 +24,61 @@ import (
 	"strconv"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio-xl/pkg/probe"
 	. "gopkg.in/check.v1"
 )
 
 func (s *TestSuite) TestLSContext(c *C) {
 	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
-	var perr *probe.Error
 	for i := 0; i < 10; i++ {
 		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(perr, IsNil)
+		err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
 	}
 
 	for i := 0; i < 10; i++ {
 		objectPath := server.URL + "/bucket/object" + strconv.Itoa(i)
 		data := "hello"
 		dataLen := len(data)
-		perr := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(perr, IsNil)
+		err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
 	}
 
-	err = app.Run([]string{os.Args[0], "ls", root})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "ls", root})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsError, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "ls", root + "..."})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "ls", root + "..."})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsError, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "ls", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "ls", server.URL + "/bucket"})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsError, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "ls", server.URL + "/bucket..."})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "ls", server.URL + "/bucket..."})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsError, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "ls", server.URL + "/invalid"})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "ls", server.URL + "/invalid"})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
