@@ -223,10 +223,10 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	if object != "" {
 		metadata, err := c.api.StatObject(bucket, object)
 		if err != nil {
+			c.mu.Unlock()
 			errResponse := minio.ToErrorResponse(err)
 			if errResponse != nil {
 				if errResponse.Code == "NoSuchKey" {
-					c.mu.Unlock()
 					for content := range c.List(false, false) {
 						if content.Err != nil {
 							return nil, content.Err.Trace()
@@ -238,7 +238,6 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 					}
 				}
 			}
-			c.mu.Unlock()
 			return nil, probe.NewError(err)
 		}
 		objectMetadata.URL = *c.hostURL
@@ -318,6 +317,7 @@ func (c *s3Client) List(recursive, incomplete bool) <-chan client.ContentOnChann
 
 func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
+	// get bucket and object from URL
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
@@ -352,7 +352,8 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 			}
 			content := new(client.Content)
 			url := *c.hostURL
-			url.Path = filepath.Join(url.Path, strings.TrimPrefix(object.Stat.Key, o))
+			// join bucket with - incoming object key
+			url.Path = filepath.Join(b, object.Stat.Key)
 			switch {
 			case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
 				// We need to keep the trailing Separator, do not use filepath.Join()
@@ -375,6 +376,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 
 func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
+	// get bucket and object from URL
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
@@ -396,7 +398,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 				}
 				content := new(client.Content)
 				url := *c.hostURL
-				url.Path = filepath.Join(url.Path, bucket.Stat.Name, object.Stat.Key)
+				url.Path = filepath.Join(bucket.Stat.Name, object.Stat.Key)
 				content.URL = url
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.Initiated
@@ -417,7 +419,8 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 				return
 			}
 			url := *c.hostURL
-			url.Path = filepath.Join(url.Path, object.Stat.Key)
+			// join bucket and incoming object key
+			url.Path = filepath.Join(b, object.Stat.Key)
 			content := new(client.Content)
 			content.URL = url
 			content.Size = object.Stat.Size
@@ -433,6 +436,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 
 func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
+	// get bucket and object from URL
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
@@ -480,7 +484,8 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				}
 				content := new(client.Content)
 				url := *c.hostURL
-				url.Path = filepath.Join(url.Path, strings.TrimPrefix(object.Stat.Key, o))
+				// join bucket and incoming object key
+				url.Path = filepath.Join(b, object.Stat.Key)
 				switch {
 				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
 					// We need to keep the trailing Separator, do not use filepath.Join()
@@ -504,6 +509,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 
 func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
+	// get bucket and object from URL
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
@@ -547,7 +553,8 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			}
 			content := new(client.Content)
 			url := *c.hostURL
-			url.Path = filepath.Join(url.Path, strings.TrimPrefix(object.Stat.Key, o))
+			// join bucket and incoming object key
+			url.Path = filepath.Join(b, object.Stat.Key)
 			content.URL = url
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified

@@ -102,28 +102,40 @@ func parseContent(c *client.Content) ContentMessage {
 }
 
 // trimContent to fancify the output for directories
+//
+// TODO: Find a way to simplify this facification.
 func trimContent(parentContent, childContent *client.Content, recursive bool) *client.Content {
 	if recursive {
+		// If recursive remove the unnecessary '/', in the beginning
 		trimmedContent := new(client.Content)
 		trimmedContent = childContent
 		if strings.Index(childContent.URL.Path, string(childContent.URL.Separator)) == 0 {
-			trimmedContent.URL.Path = trimmedContent.URL.Path[1:]
+			if len(trimmedContent.URL.Path) > 0 {
+				trimmedContent.URL.Path = trimmedContent.URL.Path[1:]
+			}
 			return trimmedContent
 		}
 		return trimmedContent
 	}
+	// If parentContent is a directory, use it to trim the sub-folders
 	if parentContent.Type.IsDir() {
+		// Allocate a new client.Content for trimmed output
 		trimmedContent := new(client.Content)
 		trimmedContent = childContent
 		if parentContent.URL.Path == string(parentContent.URL.Separator) {
-			trimmedContent.URL.Path = strings.TrimPrefix(childContent.URL.Path, parentContent.URL.Path)
+			trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, parentContent.URL.Path)
 			return trimmedContent
 		}
+		// If the beginning of the trimPrefix is a URL.Separator ignore it.
+		trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, string(trimmedContent.URL.Separator))
 		trimPrefixContentPath := parentContent.URL.Path[:strings.LastIndex(parentContent.URL.Path,
 			string(parentContent.URL.Separator))+1]
-		trimmedContent.URL.Path = strings.TrimPrefix(childContent.URL.Path, trimPrefixContentPath)
+		// If the beginning of the trimPrefix is a URL.Separator ignore it.
+		trimPrefixContentPath = strings.TrimPrefix(trimPrefixContentPath, string(parentContent.URL.Separator))
+		trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, trimPrefixContentPath)
 		return trimmedContent
 	}
+	// if the target is a file, no more trimming needed return back as is.
 	return childContent
 }
 
