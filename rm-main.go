@@ -28,179 +28,156 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+// rm specific flags.
+var (
+	forceFlag = cli.BoolFlag{
+		Name:  "force",
+		Usage: "force a dangerous remove operation.",
+	}
+
+	incompleteFlag = cli.BoolFlag{
+		Name:  "incomplete, I",
+		Usage: "remove incomplete uploads.",
+	}
+)
+
 // remove a file or folder.
 var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "Remove file or bucket [WARNING: Use with care].",
 	Action: mainRm,
+	Flags:  []cli.Flag{forceFlag, incompleteFlag},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [incomplete] [force]
+   mc {{.Name}} [OPTIONS] TARGET [TARGET ...]
 
-   incomplete - remove incomplete uploads
-   force      - force recursive remove
+OPTIONS:
+   --force      - Force a dangerous remove operation.
+   --incomplete - Remove incomplete uploads.
 
 EXAMPLES:
-   1. Remove a file on Cloud storage
+   1. Remove an object.
      $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/file01.mp3
 
-   2. Remove a folder recursively on Cloud storage
-     $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/... force
+   2. Remove a file.
+      $ mc {{.Name}} 1999/old-backup.tgz
 
-   3. Remove a bucket on Minio cloud storage
-     $ mc {{.Name}} https://play.minio.io:9000/mongodb-backup
+   3. Remove contents of a folder recursively.
+     $ mc {{.Name}} --force https://s3.amazonaws.com/jazz-songs/louis/... 
 
-   4. Remove incomplete upload of a file on Cloud storage:
-      $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/file01.mp3 incomplete
+   4  Remove contents of a folder recursively and folder itself.
+      $ mc {{.Name}} old/photos...
 
-   5. Remove incomplete uploads of folder recursively on Cloud storage
-      $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/... incomplete force
+   5. Remove a bucket and all its contents recursively.
+     $ mc {{.Name}} --force https://s3.amazonaws.com/jazz-songs... 
 
+   6. Remove all matching objects with this prefix.
+     $ mc {{.Name}} --force https://s3.amazonaws.com/ogg/gunmetal... 
+
+   7. Cancel an incomplete upload of an object.
+      $ mc {{.Name}} --incomplete https://s3.amazonaws.com/jazz-songs/louis/file01.mp3 
+
+   8. Remove all incomplete uploads recursively matching this prefix.
+      $ mc {{.Name}} --incomplete --force https://s3.amazonaws.com/jazz-songs/louis/... 
 `,
 }
 
-type rmListOnChannel struct {
-	keyName string
-	err     *probe.Error
-}
-
+// Structured message depending on the type of console.
 type rmMessage struct {
-	Name string `json:"name"`
+	URL string `json:"name"`
 }
 
-func (msg rmMessage) String() string {
-	return console.Colorize("Remove", fmt.Sprintf("removed ‘%s’", msg.Name))
+// Colorized message for console printing.
+func (r rmMessage) String() string {
+	return console.Colorize("Remove", fmt.Sprintf("Removed ‘%s’.", r.URL))
 }
 
-func (msg rmMessage) JSON() string {
-	msgBytes, err := json.Marshal(msg)
-	fatalIf(probe.NewError(err), "Failed to marshal remove message.")
+// JSON'ified message for scripting.
+func (r rmMessage) JSON() string {
+	msgBytes, err := json.Marshal(r)
+	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }
 
-func rmList(url string) <-chan rmListOnChannel {
-	rmListCh := make(chan rmListOnChannel)
-	clnt, err := url2Client(url)
-	if err != nil {
-		rmListCh <- rmListOnChannel{
-			keyName: "",
-			err:     err.Trace(url),
-		}
-		return rmListCh
+// Validate command line arguments.
+func checkRmSyntax(ctx *cli.Context) {
+	args := ctx.Args()
+
+	help := ctx.GlobalBool("help")
+	isForce := ctx.Bool("force")
+
+	if !args.Present() || help {
+		exitCode := 1
+		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
 	}
-	in := clnt.List(true, false)
-	var depthFirst func(currentDir string) (*client.Content, bool)
-	depthFirst = func(currentDir string) (*client.Content, bool) {
-		entry, ok := <-in
-		for {
-			if entry.Err != nil {
-				rmListCh <- rmListOnChannel{
-					keyName: "",
-					err:     entry.Err,
-				}
-				return nil, false
-			}
-			if !ok || !strings.HasPrefix(entry.Content.URL.Path, currentDir) {
-				return entry.Content, ok
-			}
-			if entry.Content.Type.IsRegular() {
-				rmListCh <- rmListOnChannel{
-					keyName: entry.Content.URL.String(),
-					err:     nil,
-				}
-			}
-			if entry.Content.Type.IsDir() {
-				var content *client.Content
-				content, ok = depthFirst(entry.Content.URL.String())
-				rmListCh <- rmListOnChannel{
-					keyName: entry.Content.URL.String(),
-					err:     nil,
-				}
-				entry = client.ContentOnChannel{
-					Content: content,
-					Err:     nil,
-				}
-				continue
-			}
-			entry, ok = <-in
+
+	URLs, err := args2URLs(args)
+	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
+
+	// If input validation fails then provide context sensitive help without displaying generic help message.
+	// The context sensitive help is shown per argument instead of all arguments to keep the help display
+	// as well as the code simple. Also most of the times there will be just one arg
+	for _, url := range URLs {
+		u := client.NewURL(url)
+		if strings.HasSuffix(url, string(u.Separator)) {
+			fatalIf(errDummy().Trace(),
+				"‘"+url+"’ is a folder. To remove this folder recursively, please try ‘"+url+"...’ as argument.")
+		}
+		if isURLRecursive(url) && !isForce {
+			fatalIf(errDummy().Trace(),
+				"Recursive removal requires --force option. Please review carefully before performing this operation.")
 		}
 	}
-	go func() {
-		depthFirst("")
-		close(rmListCh)
-	}()
-	return rmListCh
 }
 
-func rmSingle(url string, rmPrint rmPrinterFunc) {
+// Remove a single object.
+func rm(url string, isIncomplete bool) {
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(url), "Unable to get client object for "+url+".")
+		errorIf(err.Trace(url), "Invalid URL ‘"+url+"’.")
 		return
 	}
-	err = clnt.Remove(false)
-	if err == nil {
-		rmPrint(rmMessage{url})
-	}
-	errorIf(err.Trace(url), "Unable to remove "+url+".")
-}
 
-func rmAll(url string, rmPrint rmPrinterFunc) {
-	for rmListCh := range rmList(url) {
-		if rmListCh.err != nil {
-			// if rmList throws an error die here.
-			fatalIf(rmListCh.err.Trace(), "Unable to list : "+url+" .")
-		}
-		newClnt, err := url2Client(rmListCh.keyName)
-		if err != nil {
-			errorIf(err.Trace(rmListCh.keyName), "Unable to create client object : "+rmListCh.keyName+" .")
-			continue
-		}
-		err = newClnt.Remove(false)
-		if err == nil {
-			rmPrint(rmMessage{rmListCh.keyName})
-		}
-		errorIf(err.Trace(rmListCh.keyName), "Unable to remove : "+rmListCh.keyName+" .")
+	if err = clnt.Remove(isIncomplete); err != nil {
+		fatalIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
 	}
 
+	printMsg(rmMessage{url})
 }
 
-func rmIncompleteUpload(url string, rmPrint rmPrinterFunc) {
+// Remove all objects recursively.
+func rmAll(url string, isIncomplete bool) {
+	// Initialize new client.
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(), "Unable to get client object for "+url+" .")
-		return
+		errorIf(err.Trace(url), "Invalid URL ‘"+url+"’.")
+		return // End of journey.
 	}
-	err = clnt.Remove(true)
-	if err == nil {
-		rmPrint(rmMessage{url})
-	}
-	errorIf(err.Trace(), "Unable to remove "+url+" .")
-}
 
-func rmAllIncompleteUploads(url string, rmPrint rmPrinterFunc) {
-	clnt, err := url2Client(url)
-	if err != nil {
-		errorIf(err.Trace(url), "Unable to get client object for "+url+" .")
-		return
-	}
-	for entry := range clnt.List(true, true) {
-		newURL := entry.Content.URL
-		newClnt, err := url2Client(newURL.String())
-		if err != nil {
-			errorIf(err.Trace(newURL.String()), "Unable to create client object : "+newURL.String()+" .")
-			continue
+	recursive := false // Disable recursion and only list this folder's contents.
+	for entry := range clnt.List(recursive, isIncomplete) {
+		if entry.Err != nil {
+			errorIf(entry.Err.Trace(url), "Unable to list ‘"+url+"’.")
+			return // End of journey.
 		}
-		err = newClnt.Remove(true)
-		if err == nil {
-			rmPrint(rmMessage{newURL.String()})
+
+		if entry.Content.Type.IsDir() {
+			// Add separator at the end to remove all its contents.
+			url := entry.Content.URL.String()
+			u := client.NewURL(url)
+			url = url + string(u.Separator)
+
+			// Recursively remove contents of this directory.
+			rmAll(url, isIncomplete)
 		}
-		errorIf(err.Trace(newURL.String()), "Unable to remove : "+newURL.String()+" .")
+		// Regular type.
+		rm(entry.Content.URL.String(), isIncomplete)
 	}
 }
 
+// set theme for rm command.
 func setRmPalette(style string) {
 	console.SetCustomPalette(map[string]*color.Color{
 		"Remove": color.New(color.FgGreen, color.Bold),
@@ -218,124 +195,52 @@ func setRmPalette(style string) {
 	}
 }
 
-func checkRmSyntax(ctx *cli.Context) {
-	args := ctx.Args()
-
-	var force bool
-	var incomplete bool
-	if !args.Present() || args.First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "rm", 1) // last argument is exit code.
-	}
-	if len(args) == 1 && args.Get(0) == "force" {
-		return
-	}
-	if len(args) == 2 && args.Get(0) == "force" && args.Get(1) == "incomplete" ||
-		len(args) == 2 && args.Get(1) == "force" && args.Get(0) == "incomplete" {
-		return
-	}
-	if args.Last() == "force" {
-		force = true
-		args = args[:len(args)-1]
-	}
-	if args.Last() == "incomplete" {
-		incomplete = true
-		args = args[:len(args)-1]
-	}
-
-	// By this time we have sanitized the input args and now we have only the URLs parse them properly
-	// and validate.
-	URLs, err := args2URLs(args)
-	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
-
-	// If input validation fails then provide context sensitive help without displaying generic help message.
-	// The context sensitive help is shown per argument instead of all arguments to keep the help display
-	// as well as the code simple. Also most of the times there will be just one arg
-	for _, url := range URLs {
-		u := client.NewURL(url)
-		var helpStr string
-		if strings.HasSuffix(url, string(u.Separator)) {
-			if incomplete {
-				helpStr = "Usage : mc rm " + url + recursiveSeparator + " incomplete force"
-			} else {
-				helpStr = "Usage : mc rm " + url + recursiveSeparator + " force"
-			}
-			fatalIf(errDummy().Trace(), helpStr)
-		}
-		if isURLRecursive(url) && !force {
-			if incomplete {
-				helpStr = "Usage : mc rm " + url + " incomplete force"
-			} else {
-				helpStr = "Usage : mc rm " + url + " force"
-			}
-			fatalIf(errDummy().Trace(), helpStr)
-		}
-	}
-}
-
-type rmPrinterFunc func(rmMessage)
-
-func rmPrinterFuncGenerate() rmPrinterFunc {
-	var scanBar scanBarFunc
-	if !globalJSONFlag && !globalQuietFlag {
-		scanBar = scanBarFactory()
-	}
-	return func(msg rmMessage) {
-		if globalJSONFlag || globalQuietFlag {
-			printMsg(msg)
-			return
-		}
-		scanBar(msg.Name)
-	}
-}
-
+// main for rm command.
 func mainRm(ctx *cli.Context) {
 	checkRmSyntax(ctx)
-	var incomplete bool
-	var force bool
 
+	// rm specific flags.
+	isForce := ctx.Bool("force")
+	isIncomplete := ctx.Bool("incomplete")
+
+	// Set theme.
 	setRmPalette(ctx.GlobalString("colors"))
 
-	args := ctx.Args()
-	if len(args) != 1 {
-		if len(args) == 2 && args.Get(0) == "force" && args.Get(1) == "incomplete" ||
-			len(args) == 2 && args.Get(0) == "incomplete" && args.Get(1) == "force" {
-			args = args[:]
-		} else {
-			if args.Last() == "force" {
-				force = true
-				args = args[:len(args)-1]
-			}
-			if args.Last() == "incomplete" {
-				incomplete = true
-				args = args[:len(args)-1]
-			}
-		}
-	}
-
-	URLs, err := args2URLs(args)
+	// Parse args.
+	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
 
-	rmPrint := rmPrinterFuncGenerate()
-
-	// execute for incomplete
-	if incomplete {
-		for _, url := range URLs {
-			if isURLRecursive(url) && force {
-				rmAllIncompleteUploads(stripRecursiveURL(url), rmPrint)
-			} else {
-				rmIncompleteUpload(url, rmPrint)
-			}
-		}
-		return
-	}
+	// Support multiple targets.
 	for _, url := range URLs {
-		if isURLRecursive(url) && force {
-			rmAll(stripRecursiveURL(url), rmPrint)
+		if isURLRecursive(url) && isForce {
+			url := stripRecursiveURL(url)
+			removeTopFolder := false
+
+			// find if the URL is dir or not.
+			_, content, err := url2Stat(url)
+			fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
+
+			if content.Type.IsDir() {
+				/* Determine whether to remove the top folder or only its
+				contents. If the URL does not end with a separator, then
+				include the top folder as well, otherwise not. */
+				u := client.NewURL(url)
+				if !strings.HasSuffix(url, string(u.Separator)) {
+					// Add separator at the end to remove all its contents.
+					url = url + string(u.Separator)
+					// Remember to remove the top most folder.
+					removeTopFolder = true
+				}
+			}
+			// Remove contents of this folder.
+			rmAll(url, isIncomplete)
+			if removeTopFolder {
+				// Remove top folder as well.
+				rm(url, isIncomplete)
+			}
+
 		} else {
-			rmSingle(url, rmPrint)
+			rm(url, isIncomplete)
 		}
-	}
-	if !globalJSONFlag && !globalQuietFlag {
-		console.Eraseline()
 	}
 }
