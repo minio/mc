@@ -140,7 +140,7 @@ func trimContent(parentContent, childContent *client.Content, recursive bool) *c
 }
 
 // doList - list all entities inside a folder.
-func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
+func doList(clnt client.Client, recursive bool) *probe.Error {
 	var err *probe.Error
 	var parentContent *client.Content
 	_, parentContent, err = url2Stat(clnt.GetURL().String())
@@ -187,7 +187,7 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 }
 
 // doListIncomplete - list all incomplete uploads entities inside a folder.
-func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
+func doListIncomplete(clnt client.Client, recursive bool) *probe.Error {
 	var err *probe.Error
 	var parentContent *client.Content
 	_, parentContent, err = url2Stat(clnt.GetURL().String())
