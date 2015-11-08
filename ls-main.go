@@ -136,7 +136,7 @@ func mainList(ctx *cli.Context) {
 			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
 			err = doListIncomplete(clnt, isURLRecursive(targetURL), len(targetURLs) > 1)
-			fatalIf(err.Trace(clnt.URL().String()), "Unable to list target ‘"+clnt.URL().String()+"’.")
+			fatalIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
 		}
 	} else {
 		targetURLs, err = args2URLs(args)
@@ -148,7 +148,7 @@ func mainList(ctx *cli.Context) {
 			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
 			err = doList(clnt, isURLRecursive(targetURL), len(targetURLs) > 1)
-			fatalIf(err.Trace(clnt.URL().String()), "Unable to list target ‘"+clnt.URL().String()+"’.")
+			fatalIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
 		}
 	}
 

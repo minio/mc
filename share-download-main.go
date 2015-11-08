@@ -110,7 +110,7 @@ func doShareDownloadURL(targetURL string, recursive bool, expires time.Duration)
 			return contentCh.Err.Trace()
 		}
 		var newClnt client.Client
-		newClnt, err = url2Client(getNewTargetURL(clnt.URL(), contentCh.Content.Name))
+		newClnt, err = url2Client(contentCh.Content.URL.String())
 		if err != nil {
 			return err.Trace()
 		}
@@ -122,12 +122,12 @@ func doShareDownloadURL(targetURL string, recursive bool, expires time.Duration)
 		shareMessage := ShareMessage{
 			Expiry:      expires,
 			DownloadURL: sharedURL,
-			Key:         newClnt.URL().String(),
+			Key:         newClnt.GetURL().String(),
 		}
 		shareMessageV3 := ShareMessageV3{
 			Expiry:      expires,
 			DownloadURL: sharedURL,
-			Key:         newClnt.URL().String(),
+			Key:         newClnt.GetURL().String(),
 		}
 		sURLs.URLs = append(sURLs.URLs, struct {
 			Date    time.Time

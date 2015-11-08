@@ -192,31 +192,6 @@ func createSharedURLsDataFile() *probe.Error {
 	return nil
 }
 
-func getNewTargetURL(targetParser *client.URL, name string) string {
-	match, _ := filepath.Match("*.s3*.amazonaws.com", targetParser.Host)
-	if match {
-		targetParser.Path = string(targetParser.Separator) + name
-	} else {
-		targetParser.Path = string(targetParser.Separator) + path2Bucket(targetParser) + string(targetParser.Separator) + name
-	}
-	return targetParser.String()
-}
-
-// this code is necessary since, share only operates on cloud storage URLs not filesystem
-func path2Bucket(u *client.URL) (bucketName string) {
-	pathSplits := strings.SplitN(u.Path, "?", 2)
-	splits := strings.SplitN(pathSplits[0], string(u.Separator), 3)
-	switch len(splits) {
-	case 0, 1:
-		bucketName = ""
-	case 2:
-		bucketName = splits[1]
-	case 3:
-		bucketName = splits[1]
-	}
-	return bucketName
-}
-
 // this code is necessary since, share only operates on cloud storage URLs not filesystem
 func isObjectKeyPresent(url string) bool {
 	u := client.NewURL(url)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package s3v4
+package s3
 
 import (
 	"errors"
@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/minio/mc/pkg/client"
@@ -32,6 +33,7 @@ import (
 )
 
 type s3Client struct {
+	mu      *sync.Mutex
 	api     minio.API
 	hostURL *client.URL
 }
@@ -41,13 +43,24 @@ func New(config *client.Config) (client.Client, *probe.Error) {
 	u := client.NewURL(config.HostURL)
 	transport := http.DefaultTransport
 	if config.Debug == true {
-		transport = httptracer.GetNewTraceTransport(NewTrace(), http.DefaultTransport)
+		if config.Signature == "S3v4" {
+			transport = httptracer.GetNewTraceTransport(NewTraceV4(), http.DefaultTransport)
+		}
+		if config.Signature == "S3v2" {
+			transport = httptracer.GetNewTraceTransport(NewTraceV2(), http.DefaultTransport)
+		}
 	}
 	s3Conf := minio.Config{
 		AccessKeyID:     config.AccessKeyID,
 		SecretAccessKey: config.SecretAccessKey,
 		Transport:       transport,
 		Endpoint:        u.Scheme + u.SchemeSeparator + u.Host,
+		Signature: func() minio.SignatureType {
+			if config.Signature == "S3v2" {
+				return minio.SignatureV2
+			}
+			return minio.SignatureV4
+		}(),
 	}
 	s3Conf.AccessKeyID = config.AccessKeyID
 	s3Conf.SecretAccessKey = config.SecretAccessKey
@@ -58,12 +71,12 @@ func New(config *client.Config) (client.Client, *probe.Error) {
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
-	return &s3Client{api: api, hostURL: u}, nil
+	return &s3Client{api: api, hostURL: u, mu: new(sync.Mutex)}, nil
 }
 
-// URL get url
-func (c *s3Client) URL() *client.URL {
-	return c.hostURL
+// GetURL get url
+func (c *s3Client) GetURL() client.URL {
+	return *c.hostURL
 }
 
 // Get - get object
@@ -192,6 +205,7 @@ func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
 
 // Stat - send a 'HEAD' on a bucket or object to get its metadata
 func (c *s3Client) Stat() (*client.Content, *probe.Error) {
+	c.mu.Lock()
 	objectMetadata := new(client.Content)
 	bucket, object := c.url2BucketAndObject()
 	switch {
@@ -199,10 +213,12 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	case bucket == "" && object == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
+				c.mu.Unlock()
 				return nil, probe.NewError(bucket.Err)
 			}
 		}
-		return &client.Content{Type: os.ModeDir}, nil
+		c.mu.Unlock()
+		return &client.Content{URL: *c.hostURL, Type: os.ModeDir}, nil
 	}
 	if object != "" {
 		metadata, err := c.api.StatObject(bucket, object)
@@ -210,32 +226,37 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 			errResponse := minio.ToErrorResponse(err)
 			if errResponse != nil {
 				if errResponse.Code == "NoSuchKey" {
+					c.mu.Unlock()
 					for content := range c.List(false, false) {
 						if content.Err != nil {
 							return nil, content.Err.Trace()
 						}
+						content.Content.URL = *c.hostURL
 						content.Content.Type = os.ModeDir
-						content.Content.Name = object
 						content.Content.Size = 0
 						return content.Content, nil
 					}
 				}
 			}
+			c.mu.Unlock()
 			return nil, probe.NewError(err)
 		}
-		objectMetadata.Name = metadata.Key
+		objectMetadata.URL = *c.hostURL
 		objectMetadata.Time = metadata.LastModified
 		objectMetadata.Size = metadata.Size
 		objectMetadata.Type = os.FileMode(0664)
+		c.mu.Unlock()
 		return objectMetadata, nil
 	}
 	err := c.api.BucketExists(bucket)
 	if err != nil {
+		c.mu.Unlock()
 		return nil, probe.NewError(err)
 	}
 	bucketMetadata := new(client.Content)
-	bucketMetadata.Name = bucket
+	bucketMetadata.URL = *c.hostURL
 	bucketMetadata.Type = os.ModeDir
+	c.mu.Unlock()
 	return bucketMetadata, nil
 }
 
@@ -246,9 +267,13 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 	//
 	// For the time being this check is introduced for S3,
 	// if you have custom virtual styled hosts please. list them below
-	match, _ := filepath.Match("*.s3*.amazonaws.com", c.hostURL.Host)
-	switch {
-	case match == true:
+	matchS3, _ := filepath.Match("*.s3*.amazonaws.com", c.hostURL.Host)
+	if matchS3 {
+		hostSplits := strings.SplitN(c.hostURL.Host, ".", 2)
+		path = string(c.hostURL.Separator) + hostSplits[0] + c.hostURL.Path
+	}
+	matchGoogle, _ := filepath.Match("*.storage.googleapis.com", c.hostURL.Host)
+	if matchGoogle {
 		hostSplits := strings.SplitN(c.hostURL.Host, ".", 2)
 		path = string(c.hostURL.Separator) + hostSplits[0] + c.hostURL.Path
 	}
@@ -271,6 +296,9 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 
 // List - list at delimited path, if not recursive
 func (c *s3Client) List(recursive, incomplete bool) <-chan client.ContentOnChannel {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	contentCh := make(chan client.ContentOnChannel)
 	if incomplete {
 		if recursive {
@@ -301,8 +329,10 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 				}
 				return
 			}
+			url := *c.hostURL
+			url.Path = filepath.Join(url.Path, bucket.Stat.Name)
 			content := new(client.Content)
-			content.Name = bucket.Stat.Name
+			content.URL = url
 			content.Size = 0
 			content.Time = bucket.Stat.CreationDate
 			content.Type = os.ModeDir
@@ -321,17 +351,18 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 				return
 			}
 			content := new(client.Content)
-			normalizedPrefix := strings.TrimSuffix(o, string(c.hostURL.Separator)) + string(c.hostURL.Separator)
-			normalizedKey := object.Stat.Key
-			if normalizedPrefix != object.Stat.Key && strings.HasPrefix(object.Stat.Key, normalizedPrefix) {
-				normalizedKey = strings.TrimPrefix(object.Stat.Key, normalizedPrefix)
-			}
-			content.Name = normalizedKey
 			switch {
 			case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
+				// We need to keep the trailing Separator, do not use filepath.Join()
+				url := *c.hostURL
+				url.Path = url.Path + object.Stat.Key
+				content.URL = url
 				content.Time = time.Now()
 				content.Type = os.ModeDir
 			default:
+				url := *c.hostURL
+				url.Path = filepath.Join(url.Path, object.Stat.Key)
+				content.URL = url
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.Initiated
 				content.Type = os.ModeTemporary
@@ -366,7 +397,9 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 					return
 				}
 				content := new(client.Content)
-				content.Name = filepath.Join(bucket.Stat.Name, object.Stat.Key)
+				url := *c.hostURL
+				url.Path = filepath.Join(url.Path, bucket.Stat.Name, object.Stat.Key)
+				content.URL = url
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.Initiated
 				content.Type = os.ModeTemporary
@@ -385,22 +418,10 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 				}
 				return
 			}
+			url := *c.hostURL
+			url.Path = filepath.Join(url.Path, object.Stat.Key)
 			content := new(client.Content)
-			normalizedKey := object.Stat.Key
-			switch {
-			case o == "":
-				// if no prefix provided and also URL is not delimited then we add bucket back into object name
-				if strings.LastIndex(c.hostURL.Path, string(c.hostURL.Separator)) == 0 {
-					if c.hostURL.String()[:strings.LastIndex(c.hostURL.String(), string(c.hostURL.Separator))+1] != b {
-						normalizedKey = filepath.Join(b, object.Stat.Key)
-					}
-				}
-			default:
-				if strings.HasSuffix(o, string(c.hostURL.Separator)) {
-					normalizedKey = strings.TrimPrefix(object.Stat.Key, o)
-				}
-			}
-			content.Name = normalizedKey
+			content.URL = url
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.Initiated
 			content.Type = os.ModeTemporary
@@ -425,8 +446,10 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				}
 				return
 			}
+			url := *c.hostURL
+			url.Path = filepath.Join(url.Path, bucket.Stat.Name)
 			content := new(client.Content)
-			content.Name = bucket.Stat.Name
+			content.URL = url
 			content.Size = 0
 			content.Time = bucket.Stat.CreationDate
 			content.Type = os.ModeDir
@@ -440,7 +463,7 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 		switch err.(type) {
 		case nil:
 			content := new(client.Content)
-			content.Name = metadata.Key
+			content.URL = *c.hostURL
 			content.Time = metadata.LastModified
 			content.Size = metadata.Size
 			content.Type = os.FileMode(0664)
@@ -458,17 +481,18 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 					return
 				}
 				content := new(client.Content)
-				normalizedPrefix := strings.TrimSuffix(o, string(c.hostURL.Separator)) + string(c.hostURL.Separator)
-				normalizedKey := object.Stat.Key
-				if normalizedPrefix != object.Stat.Key && strings.HasPrefix(object.Stat.Key, normalizedPrefix) {
-					normalizedKey = strings.TrimPrefix(object.Stat.Key, normalizedPrefix)
-				}
-				content.Name = normalizedKey
 				switch {
 				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
+					// We need to keep the trailing Separator, do not use filepath.Join()
+					url := *c.hostURL
+					url.Path = strings.TrimSuffix(url.Path, string(c.hostURL.Separator)) + string(c.hostURL.Separator) + strings.TrimPrefix(object.Stat.Key, o)
+					content.URL = url
 					content.Time = time.Now()
 					content.Type = os.ModeDir
 				default:
+					url := *c.hostURL
+					url.Path = filepath.Join(url.Path, strings.TrimPrefix(object.Stat.Key, o))
+					content.URL = url
 					content.Size = object.Stat.Size
 					content.Time = object.Stat.LastModified
 					content.Type = os.FileMode(0664)
@@ -504,7 +528,9 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 					return
 				}
 				content := new(client.Content)
-				content.Name = filepath.Join(bucket.Stat.Name, object.Stat.Key)
+				url := *c.hostURL
+				url.Path = filepath.Join(url.Path, bucket.Stat.Name, object.Stat.Key)
+				content.URL = url
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.LastModified
 				content.Type = os.FileMode(0664)
@@ -524,21 +550,9 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return
 			}
 			content := new(client.Content)
-			normalizedKey := object.Stat.Key
-			switch {
-			case o == "":
-				// if no prefix provided and also URL is not delimited then we add bucket back into object name
-				if strings.LastIndex(c.hostURL.Path, string(c.hostURL.Separator)) == 0 {
-					if c.hostURL.String()[:strings.LastIndex(c.hostURL.String(), string(c.hostURL.Separator))+1] != b {
-						normalizedKey = filepath.Join(b, object.Stat.Key)
-					}
-				}
-			default:
-				if strings.HasSuffix(o, string(c.hostURL.Separator)) {
-					normalizedKey = strings.TrimPrefix(object.Stat.Key, o)
-				}
-			}
-			content.Name = normalizedKey
+			url := *c.hostURL
+			url.Path = filepath.Join(url.Path, strings.TrimPrefix(object.Stat.Key, o))
+			content.URL = url
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
 			content.Type = os.FileMode(0664)

@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -84,20 +83,20 @@ func parseContent(c *client.Content) ContentMessage {
 	content.Name = func() string {
 		switch {
 		case runtime.GOOS == "windows":
-			c.Name = strings.Replace(c.Name, "/", "\\", -1)
-			c.Name = strings.TrimSuffix(c.Name, "\\")
+			c.URL.Path = strings.Replace(c.URL.Path, "/", "\\", -1)
+			c.URL.Path = strings.TrimSuffix(c.URL.Path, "\\")
 		default:
-			c.Name = strings.TrimSuffix(c.Name, "/")
+			c.URL.Path = strings.TrimSuffix(c.URL.Path, "/")
 		}
 		if c.Type.IsDir() {
 			switch {
 			case runtime.GOOS == "windows":
-				return fmt.Sprintf("%s\\", c.Name)
+				return fmt.Sprintf("%s\\", c.URL.Path)
 			default:
-				return fmt.Sprintf("%s/", c.Name)
+				return fmt.Sprintf("%s/", c.URL.Path)
 			}
 		}
-		return c.Name
+		return c.URL.Path
 	}()
 	return content
 }
@@ -106,15 +105,9 @@ func parseContent(c *client.Content) ContentMessage {
 func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 	var err *probe.Error
 	var parentContent *client.Content
-	urlStr := clnt.URL().String()
-	parentDir := url2Dir(urlStr)
-	parentClnt, err := url2Client(parentDir)
+	_, parentContent, err = url2Stat(clnt.GetURL().String())
 	if err != nil {
-		return err.Trace(clnt.URL().String())
-	}
-	parentContent, err = parentClnt.Stat()
-	if err != nil {
-		return err.Trace(clnt.URL().String())
+		return err.Trace(clnt.GetURL().String())
 	}
 	for contentCh := range clnt.List(recursive, false) {
 		if contentCh.Err != nil {
@@ -144,8 +137,18 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 			err = contentCh.Err.Trace()
 			break
 		}
-		if multipleArgs && parentContent.Type.IsDir() {
-			contentCh.Content.Name = filepath.Join(parentContent.Name, strings.TrimPrefix(contentCh.Content.Name, parentContent.Name))
+		// if not recursive trim prefixes
+		if !recursive {
+			if parentContent.Type.IsDir() {
+				prefix := func() string {
+					trimmedPrefix := strings.TrimSuffix(parentContent.URL.Path, string(parentContent.URL.Separator)) + string(parentContent.URL.Separator)
+					if trimmedPrefix == string(parentContent.URL.Path) {
+						return ""
+					}
+					return trimmedPrefix
+				}()
+				contentCh.Content.URL.Path = strings.TrimPrefix(contentCh.Content.URL.Path, prefix)
+			}
 		}
 		printMsg(parseContent(contentCh.Content))
 	}
@@ -158,11 +161,6 @@ func doList(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 // doListIncomplete - list all incomplete uploads entities inside a folder.
 func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.Error {
 	var err *probe.Error
-	var parentContent *client.Content
-	parentContent, err = clnt.Stat()
-	if err != nil {
-		return err.Trace(clnt.URL().String())
-	}
 	for contentCh := range clnt.List(recursive, true) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
@@ -186,9 +184,6 @@ func doListIncomplete(clnt client.Client, recursive, multipleArgs bool) *probe.E
 			}
 			err = contentCh.Err.Trace()
 			break
-		}
-		if multipleArgs && parentContent.Type.IsDir() {
-			contentCh.Content.Name = filepath.Join(parentContent.Name, strings.TrimPrefix(contentCh.Content.Name, parentContent.Name))
 		}
 		printMsg(parseContent(contentCh.Content))
 	}

@@ -100,10 +100,10 @@ func doCopy(cpURLs copyURLs, progressReader interface{}, cpQueue <-chan bool, wg
 	}
 
 	if !globalQuietFlag && !globalJSONFlag {
-		progressReader.(*barSend).SetCaption(cpURLs.SourceContent.Name + ": ")
+		progressReader.(*barSend).SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
-	reader, length, err := getSource(cpURLs.SourceContent.Name)
+	reader, length, err := getSource(cpURLs.SourceContent.URL.String())
 	if err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
 			progressReader.(*barSend).ErrorGet(length)
@@ -116,8 +116,8 @@ func doCopy(cpURLs copyURLs, progressReader interface{}, cpQueue <-chan bool, wg
 	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
 		printMsg(copyMessage{
-			Source: cpURLs.SourceContent.Name,
-			Target: cpURLs.TargetContent.Name,
+			Source: cpURLs.SourceContent.URL.String(),
+			Target: cpURLs.TargetContent.URL.String(),
 			Length: cpURLs.SourceContent.Size,
 		})
 		newReader = progressReader.(*accounter).NewProxyReader(reader)
@@ -127,7 +127,7 @@ func doCopy(cpURLs copyURLs, progressReader interface{}, cpQueue <-chan bool, wg
 	}
 	defer newReader.Close()
 
-	if err := putTarget(cpURLs.TargetContent.Name, length, newReader); err != nil {
+	if err := putTarget(cpURLs.TargetContent.URL.String(), length, newReader); err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
 			progressReader.(*barSend).ErrorPut(length)
 		}
@@ -195,7 +195,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuietFlag && !globalJSONFlag {
-				scanBar(cpURLs.SourceContent.Name)
+				scanBar(cpURLs.SourceContent.URL.String())
 			}
 
 			totalBytes += cpURLs.SourceContent.Size
@@ -258,14 +258,14 @@ func doCopySession(session *sessionV2) {
 					return
 				}
 				if cpURLs.Error == nil {
-					session.Header.LastCopied = cpURLs.SourceContent.Name
+					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
 					session.Save()
 				} else {
 					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
 					if !globalQuietFlag && !globalJSONFlag {
 						console.Eraseline()
 					}
-					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.Name))
+					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
 					// all the cases which are handled where session should be saved are contained in the following
 					// switch case, we shouldn't be saving sessions for all errors since some errors might need to be
 					// reported to user properly.
@@ -298,7 +298,7 @@ func doCopySession(session *sessionV2) {
 		for scanner.Scan() {
 			var cpURLs copyURLs
 			json.Unmarshal([]byte(scanner.Text()), &cpURLs)
-			if isCopied(cpURLs.SourceContent.Name) {
+			if isCopied(cpURLs.SourceContent.URL.String()) {
 				doCopyFake(cpURLs, progressReader)
 			} else {
 				// Wait for other copy routines to
