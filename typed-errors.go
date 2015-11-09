@@ -65,7 +65,4 @@ var (
 	errSourceIsDir = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Source ‘" + URL + "’ is a folder.")).Untrace()
 	}
-	errNotAnObject = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("‘" + URL + "’ is not an object.")).Untrace()
-	}
 )

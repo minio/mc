@@ -48,7 +48,6 @@ USAGE:
 COMMANDS:
   {{range .Commands}}{{ .Name }}{{ "\t" }}{{.Usage}}
   {{end}}
-
 `,
 }
 

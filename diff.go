@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
@@ -31,17 +32,18 @@ import (
 //   Valid cases
 //   =======================
 //   1: diff(f, f) -> diff(f, f)
-//   2: diff(f, d) -> copy(f, d/f) -> 1
-//   3: diff(d1..., d2) -> []diff(d1/f, d2/f) -> []1
+//   2: diff(f, d) -> diff(f, d/f) -> 1
+//   3. diff(d1, d2) -> []diff(d1/f, d2/f) -> []1
+//   4: diff(d1..., d2) -> []diff(d1/f, d2/f) -> []1
 //
-//   InValid cases
+//   Invalid cases
 //   =======================
-//   1. diff(d1..., d2) -> INVALID
+//   1. diff(d1..., d2/f) -> INVALID
 //   2. diff(d1..., d2...) -> INVALID
 //
 
-// DiffMessage json container for diff messages
-type DiffMessage struct {
+// diffMessage json container for diff messages
+type diffMessage struct {
 	FirstURL  string       `json:"first"`
 	SecondURL string       `json:"second"`
 	Diff      string       `json:"diff"`
@@ -49,284 +51,151 @@ type DiffMessage struct {
 }
 
 // String colorized diff message
-func (d DiffMessage) String() string {
+func (d diffMessage) String() string {
 	msg := ""
 	switch d.Diff {
 	case "only-in-first":
-		msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
+		msg = console.Colorize("DiffMessage",
+			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
 	case "type":
-		msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
+		msg = console.Colorize("DiffMessage",
+			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
 	case "size":
-		msg = console.Colorize("DiffMessage", "‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
+		msg = console.Colorize("DiffMessage",
+			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
 	default:
-		fatalIf(errDummy().Trace(), "Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
+		fatalIf(errDummy().Trace(),
+			"Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
 	}
 	return msg
 
 }
 
 // JSON jsonified diff message
-func (d DiffMessage) JSON() string {
+func (d diffMessage) JSON() string {
 	diffJSONBytes, err := json.Marshal(d)
-	fatalIf(probe.NewError(err), "Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+d.Diff+"’.")
-
+	fatalIf(probe.NewError(err),
+		"Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+d.Diff+"’.")
 	return string(diffJSONBytes)
 }
 
-func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan DiffMessage) {
-	defer close(ch)
-	firstClnt, firstContent, err := url2Stat(firstURL)
-	if err != nil {
-		ch <- DiffMessage{
-			Error: err.Trace(firstURL),
-		}
-		return
-	}
-	secondClnt, secondContent, err := url2Stat(secondURL)
-	if err != nil {
-		ch <- DiffMessage{
-			Error: err.Trace(secondURL),
-		}
-		return
-	}
-	if firstContent.Type.IsRegular() {
-		switch {
-		case secondContent.Type.IsDir():
-			newSecondURL := urlJoinPath(secondURL, firstURL)
-			doDiffObjects(firstURL, newSecondURL, ch)
-		case !secondContent.Type.IsRegular():
-			ch <- DiffMessage{
-				FirstURL:  firstURL,
-				SecondURL: secondURL,
-				Diff:      "type",
-			}
-			return
-		case secondContent.Type.IsRegular():
-			doDiffObjects(firstURL, secondURL, ch)
-		}
-	}
-	if firstContent.Type.IsDir() {
-		switch {
-		case !secondContent.Type.IsDir():
-			ch <- DiffMessage{
-				FirstURL:  firstURL,
-				SecondURL: secondURL,
-				Diff:      "type",
-			}
-			return
-		default:
-			doDiffDirs(firstClnt, secondClnt, recursive, ch)
-		}
-	}
-}
-
-// doDiffObjects - Diff two object URLs
-func doDiffObjects(firstURL, secondURL string, ch chan DiffMessage) {
-	_, firstContent, errFirst := url2Stat(firstURL)
-	_, secondContent, errSecond := url2Stat(secondURL)
-
-	switch {
-	case errFirst != nil && errSecond == nil:
-		ch <- DiffMessage{
-			Error: errFirst.Trace(firstURL, secondURL),
-		}
-		return
-	case errFirst == nil && errSecond != nil:
-		ch <- DiffMessage{
-			Error: errSecond.Trace(firstURL, secondURL),
-		}
-		return
-	}
+// diffObjects - diff two incoming object contents, this is the most basic types.
+//
+// 1: diff(f, f) -> diff(f, f) -> VALID
+// 2: diff(f, d) -> diff(f, d/f) -> VALID
+func diffObjects(firstContent, secondContent *client.Content) *diffMessage {
 	if firstContent.URL.String() == secondContent.URL.String() {
-		return
+		return nil
 	}
-	switch {
-	case firstContent.Type.IsRegular():
-		if !secondContent.Type.IsRegular() {
-			ch <- DiffMessage{
-				FirstURL:  firstURL,
-				SecondURL: secondURL,
-				Diff:      "type",
+	if firstContent.Type.IsRegular() && secondContent.Type.IsRegular() {
+		if firstContent.Size != secondContent.Size {
+			return &diffMessage{
+				FirstURL:  firstContent.URL.String(),
+				SecondURL: secondContent.URL.String(),
+				Diff:      "size",
 			}
 		}
-	default:
-		ch <- DiffMessage{
-			Error: errNotAnObject(firstURL).Trace(),
-		}
-		return
+		return nil
 	}
-
-	if firstContent.Size != secondContent.Size {
-		ch <- DiffMessage{
-			FirstURL:  firstURL,
-			SecondURL: secondURL,
-			Diff:      "size",
+	if firstContent.Type.IsRegular() && secondContent.Type.IsDir() {
+		newSecondURLStr := urlJoinPath(secondContent.URL.String(), firstContent.URL.String())
+		_, newSecondContent, err := url2Stat(newSecondURLStr)
+		if err != nil {
+			return &diffMessage{
+				FirstURL:  firstContent.URL.String(),
+				SecondURL: newSecondURLStr,
+				Diff:      "only-in-first",
+			}
+		}
+		if firstContent.Size != newSecondContent.Size {
+			return &diffMessage{
+				FirstURL:  firstContent.URL.String(),
+				SecondURL: newSecondContent.URL.String(),
+				Diff:      "size",
+			}
+		}
+		return nil
+	}
+	if firstContent.Type.IsRegular() && !secondContent.Type.IsRegular() {
+		return &diffMessage{
+			FirstURL:  firstContent.URL.String(),
+			SecondURL: secondContent.URL.String(),
+			Diff:      "type",
 		}
 	}
+	return nil
 }
 
-func dodiff(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
-	for contentCh := range firstClnt.List(false, false) {
+// diffFolders - diff of contents of two folders only top level content.
+//
+// 3: diff(d1, d2) -> []diff(d1/f, d2/f) -> VALID
+func diffFolders(firstClnt, secondClnt client.Client, outCh chan<- diffMessage) {
+	recursive := false
+	// Range on the List to consume incoming content
+	for contentCh := range firstClnt.List(recursive, false) {
 		if contentCh.Err != nil {
-			ch <- DiffMessage{
+			outCh <- diffMessage{
 				Error: contentCh.Err.Trace(firstClnt.GetURL().String()),
 			}
-			return
+			continue
 		}
-		newFirstURLStr := contentCh.Content.URL.String()
-
-		// Construct the second URL
+		// Store incoming content
+		newFirstContent := contentCh.Content
+		newFirstURLStr := newFirstContent.URL.String()
+		// Construct the second URL.
 		newSecondURL := secondClnt.GetURL()
-		// Need to verify the same path from first URL, copy it here
-		newSecondURL.Path = contentCh.Content.URL.Path
+		// Need to verify the same path from first URL, construct the second URL
+		newSecondURL.Path = filepath.Join(newSecondURL.Path, filepath.Base(contentCh.Content.URL.Path))
 		newSecondURLStr := newSecondURL.String()
-
-		_, newFirstContent, errFirst := url2Stat(newFirstURLStr)
-		_, newSecondContent, errSecond := url2Stat(newSecondURLStr)
-		switch {
-		case errFirst == nil && errSecond != nil:
-			ch <- DiffMessage{
+		// Send a stat to verify
+		_, newSecondContent, err := url2Stat(newSecondURLStr)
+		if err != nil {
+			outCh <- diffMessage{
 				FirstURL:  newFirstURLStr,
 				SecondURL: newSecondURLStr,
 				Diff:      "only-in-first",
 			}
 			continue
-		case errFirst == nil && errSecond == nil:
-			switch {
-			case newFirstContent.Type.IsDir():
-				if !newSecondContent.Type.IsDir() {
-					ch <- DiffMessage{
-						FirstURL:  newFirstURLStr,
-						SecondURL: newSecondURLStr,
-						Diff:      "type",
-					}
-				}
-				continue
-			case newFirstContent.Type.IsRegular():
-				if !newSecondContent.Type.IsRegular() {
-					ch <- DiffMessage{
-						FirstURL:  newFirstURLStr,
-						SecondURL: newSecondURLStr,
-						Diff:      "type",
-					}
-					continue
-				}
-				doDiffObjects(newFirstURLStr, newSecondURLStr, ch)
-			}
 		}
-	} // End of for-loop
+		diffMsg := diffObjects(newFirstContent, newSecondContent)
+		if diffMsg != nil {
+			outCh <- *diffMsg
+			continue
+		}
+	} // Reached EOF
 }
 
-func dodiffRecursive(firstClnt, secondClnt client.Client, ch chan DiffMessage) {
-	firstURLDelimited := firstClnt.GetURL().String()
-	secondURLDelimited := secondClnt.GetURL().String()
-	if strings.HasSuffix(firstURLDelimited, "/") == false {
-		firstURLDelimited = firstURLDelimited + "/"
-	}
-	if strings.HasSuffix(secondURLDelimited, "/") == false {
-		secondURLDelimited = secondURLDelimited + "/"
-	}
-	firstClnt, err := url2Client(firstURLDelimited)
-	if err != nil {
-		ch <- DiffMessage{Error: err.Trace()}
-		return
-	}
-	secondClnt, err = url2Client(secondURLDelimited)
-	if err != nil {
-		ch <- DiffMessage{Error: err.Trace()}
-		return
-	}
-
-	fch := firstClnt.List(true, false)
-	sch := secondClnt.List(true, false)
-	f, fok := <-fch
-	s, sok := <-sch
-	for {
-		if fok == false {
-			break
-		}
-		if f.Err != nil {
-			ch <- DiffMessage{Error: f.Err.Trace()}
+// diffFoldersRecursive diff folders for all files recursively.
+//
+// 4: diff(d1..., d2) -> []diff(d1/f, d2/f) -> VALID.
+func diffFoldersRecursive(firstClnt, secondClnt client.Client, outCh chan<- diffMessage) {
+	recursive := true
+	firstListCh := firstClnt.List(recursive, false) // Copy first list channel.
+	for firstContentCh := range firstListCh {
+		if firstContentCh.Err != nil {
+			outCh <- diffMessage{Error: firstContentCh.Err.Trace()}
 			continue
 		}
-		if f.Content.Type.IsDir() {
-			// skip directories
-			// there is no concept of directories on S3
-			f, fok = <-fch
+		if firstContentCh.Content.Type.IsDir() {
+			// Skip directories there is no concept of directories on S3.
 			continue
 		}
-		url := f.Content.URL
-		firstURLStr := url.String()
+		firstContent := firstContentCh.Content
 		secondURL := secondClnt.GetURL()
-		secondURL.Path = url.Path
-		secondURLStr := secondURL.String()
-		if sok == false {
-			// Second list reached EOF
-			ch <- DiffMessage{
-				FirstURL:  firstURLStr,
-				SecondURL: secondURLStr,
+		secondURL.Path = filepath.Join(secondURL.Path,
+			strings.TrimPrefix(firstContent.URL.Path, url2Dir(firstClnt.GetURL().Path)))
+		_, secondContent, err := url2Stat(secondURL.String())
+		if err != nil {
+			outCh <- diffMessage{
+				FirstURL:  firstContent.URL.String(),
+				SecondURL: secondURL.String(),
 				Diff:      "only-in-first",
 			}
-			f, fok = <-fch
 			continue
 		}
-		if s.Err != nil {
-			ch <- DiffMessage{Error: s.Err.Trace()}
+		if diffMsg := diffObjects(firstContent, secondContent); diffMsg != nil {
+			outCh <- *diffMsg
 			continue
-		}
-		if s.Content.Type.IsDir() {
-			// skip directories
-			s, sok = <-sch
-			continue
-		}
-		fC := f.Content
-		sC := s.Content
-		if fC.URL.Path == sC.URL.Path {
-			if fC.Type.IsRegular() {
-				if !sC.Type.IsRegular() {
-					ch <- DiffMessage{
-						FirstURL:  firstURLStr,
-						SecondURL: secondURLStr,
-						Diff:      "type",
-					}
-				}
-			} else if fC.Type.IsDir() {
-				if !sC.Type.IsDir() {
-					ch <- DiffMessage{
-						FirstURL:  firstURLStr,
-						SecondURL: secondURLStr,
-						Diff:      "type",
-					}
-				}
-			} else if fC.Size != sC.Size {
-				ch <- DiffMessage{
-					FirstURL:  firstURLStr,
-					SecondURL: secondURLStr,
-					Diff:      "size",
-				}
-			}
-			f, fok = <-fch
-			s, sok = <-sch
-		}
-		if fC.URL.Path < sC.URL.Path {
-			ch <- DiffMessage{
-				FirstURL:  firstURLStr,
-				SecondURL: secondURLStr,
-				Diff:      "only-in-first",
-			}
-			f, fok = <-fch
-		}
-		if fC.URL.Path > sC.URL.Path {
-			s, sok = <-sch
 		}
 	}
-}
-
-// doDiffDirs - Diff two Dir URLs
-func doDiffDirs(firstClnt, secondClnt client.Client, recursive bool, ch chan DiffMessage) {
-	if recursive {
-		dodiffRecursive(firstClnt, secondClnt, ch)
-		return
-	}
-	dodiff(firstClnt, secondClnt, ch)
 }

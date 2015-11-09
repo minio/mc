@@ -50,7 +50,7 @@ func (s *TestSuite) TestDiffObjects(c *C) {
 	perr = putTarget(objectPath2, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(perr, IsNil)
 
-	for diff := range doDiff(objectPath1, objectPath2, false) {
+	for diff := range doDiffMain(objectPath1, objectPath2, false) {
 		c.Assert(diff.Error, IsNil)
 	}
 }
@@ -82,7 +82,7 @@ func (s *TestSuite) TestDiffDirs(c *C) {
 		c.Assert(perr, IsNil)
 	}
 
-	for diff := range doDiff(root1, root2, false) {
+	for diff := range doDiffMain(root1, root2, false) {
 		c.Assert(diff.Error, IsNil)
 	}
 }
