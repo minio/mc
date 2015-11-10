@@ -75,14 +75,14 @@ func setDiffPalette(style string) {
 		})
 		return
 	}
-	/// Add more styles here
+	/// Add more styles here.
 	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
+		// All coloring options exhausted, setting nocolor safely.
 		console.SetNoColor()
 	}
 }
 
-// mainDiff - is a handler for mc diff command
+// mainDiff main for 'diff'.
 func mainDiff(ctx *cli.Context) {
 	checkDiffSyntax(ctx)
 
@@ -96,16 +96,57 @@ func mainDiff(ctx *cli.Context) {
 	secondURL := getAliasURL(secondArg, config.Aliases)
 
 	newFirstURL := stripRecursiveURL(firstURL)
-	for diff := range doDiff(newFirstURL, secondURL, isURLRecursive(firstURL)) {
+	for diff := range doDiffMain(newFirstURL, secondURL, isURLRecursive(firstURL)) {
 		fatalIf(diff.Error.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
-
 		printMsg(diff)
 	}
 }
 
-// doDiff - Execute the diff command
-func doDiff(firstURL, secondURL string, recursive bool) <-chan DiffMessage {
-	ch := make(chan DiffMessage, 10000)
+// doDiffMain runs the diff.
+func doDiffMain(firstURL, secondURL string, recursive bool) <-chan diffMessage {
+	ch := make(chan diffMessage, 10000)
 	go doDiffInRoutine(firstURL, secondURL, recursive, ch)
 	return ch
+}
+
+// doDiffInRoutine run diff in a go-routine sending back messages over all channel.
+func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diffMessage) {
+	defer close(ch)
+	firstClnt, firstContent, err := url2Stat(firstURL)
+	if err != nil {
+		ch <- diffMessage{
+			Error: err.Trace(firstURL),
+		}
+		return
+	}
+	secondClnt, secondContent, err := url2Stat(secondURL)
+	if err != nil {
+		ch <- diffMessage{
+			Error: err.Trace(secondURL),
+		}
+		return
+	}
+	// if first target is a folder and second target is not then throw a type mismatch
+	if firstContent.Type.IsDir() && !secondContent.Type.IsDir() {
+		ch <- diffMessage{
+			FirstURL:  firstContent.URL.String(),
+			SecondURL: secondContent.URL.String(),
+			Diff:      "type",
+		}
+		return
+	}
+	// if first target is a regular file, handle basic cases
+	if firstContent.Type.IsRegular() {
+		diffMsg := diffObjects(firstContent, secondContent)
+		if diffMsg != nil {
+			ch <- *diffMsg
+		}
+		return
+	}
+	// definitely first and second target are folders
+	if recursive {
+		diffFoldersRecursive(firstClnt, secondClnt, ch)
+		return
+	}
+	diffFolders(firstClnt, secondClnt, ch)
 }

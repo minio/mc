@@ -554,7 +554,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			content := new(client.Content)
 			url := *c.hostURL
 			// join bucket and incoming object key
-			url.Path = filepath.Join(b, object.Stat.Key)
+			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
 			content.URL = url
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
