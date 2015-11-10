@@ -41,11 +41,14 @@ EXAMPLES:
    1. Create a bucket on Amazon S3 cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/public-document-store
 
-   3. Make a folder on local filesystem with space characters
+   2. Make a folder on local filesystem with space characters
       $ mc {{.Name}} 'My Documents'
 
    3. Create a bucket on Minio cloud storage.
       $ mc {{.Name}} https://play.minio.io:9000/mongodb-backup
+
+   4. Create a bucket on Google Cloud Storage.
+      $ mc {{.Name}} https://storage.googleapis.com/miniocloud
 `,
 }
 

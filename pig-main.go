@@ -39,14 +39,15 @@ EXAMPLES:
    1. Write contents of stdin to an object on Amazon S3 cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/personalbuck/meeting-notes.txt
 
-   2. Concatinate part files to an object on Amazon S3 cloud storage.
-      $ cat part1.img part2.img | mc {{.Name}} https://s3.amazonaws.com/ferenginar/gnuos.iso
+   2. Concatinate part files to an object on Amazon S3 cloud storage and Google Cloud Storage.
+      $ cat part1.img part2.img | mc {{.Name}} https://s3.amazonaws.com/ferenginar/gnuos.iso https://storage.googleapis.com/miniocloud/gnuos.iso
 
    3. Stream MySQL database dump to Amazon S3 directly.
       $ mysqldump -u root -p ******* accountsdb | mc {{.Name}} https://s3.amazonaws.com/ferenginar/backups/accountsdb-oct-9-2015.sql
 
    4. Stream a zip file to two object storage servers simultaneously.
-      $ cat ~/myphotos.zip | mc {{.Name}} https://s3.amazonaws.com/mybucket/photos.zip  https://minio.mystartup.io:9000/backup/photos.zip 
+      $ cat ~/myphotos.zip | mc {{.Name}} https://s3.amazonaws.com/mybucket/photos.zip  https://minio.mystartup.io:9000/backup/photos.zip
+
 `,
 }
 

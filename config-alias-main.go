@@ -42,15 +42,18 @@ USAGE:
    OPERATION = add | list | remove
 
 EXAMPLES:
-   1. Add aliases for a URL
+   1. Add aliases for Amazon S3.
       $ mc config {{.Name}} add mcloud https://s3.amazonaws.com/miniocloud
       $ mc ls mcloud
-      $ mc cp /bin/true mcloud/true
 
-   2. List all aliased URLs.
+   2. Add aliases for Google Cloud Storage.
+      $ mc config {{.Name}} add gcscloud https://storage.googleapis.com/miniocloud
+      $ mc ls gcscloud
+
+   3. List all aliased URLs.
       $ mc config {{.Name}} list
 
-   3. Remove an alias
+   4. Remove an alias
       $ mc config {{.Name}} remove zek
 
 `,
