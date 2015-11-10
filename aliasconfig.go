@@ -28,12 +28,19 @@ func isValidAliasName(aliasName string) bool {
 	return regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$").MatchString(aliasName)
 }
 
+// normalizeAliasedURL - remove any preceding separators
+func normalizeAliasedURL(aliasedURL string) string {
+	aliasedURL = strings.TrimPrefix(aliasedURL, string(os.PathSeparator))
+	return aliasedURL
+}
+
 // getAliasURL expands aliased (name/path) to full URL, used by url-parser.
 func getAliasURL(aliasedURL string, aliases map[string]string) string {
+	normalizedAliasURL := normalizeAliasedURL(aliasedURL)
 	for aliasName, aliasValue := range aliases {
-		if strings.HasPrefix(aliasedURL, aliasName) {
+		if strings.HasPrefix(normalizedAliasURL, aliasName) {
 			// Match found. Expand it.
-			splits := strings.SplitN(aliasedURL, aliasName, 2)
+			splits := strings.SplitN(normalizedAliasURL, aliasName, 2)
 			if len(splits) == 1 {
 				return aliasedURL // Not an aliased URL. Return as is.
 			}
