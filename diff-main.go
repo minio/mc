@@ -97,9 +97,20 @@ func mainDiff(ctx *cli.Context) {
 
 	newFirstURL := stripRecursiveURL(firstURL)
 	for diff := range doDiffMain(newFirstURL, secondURL, isURLRecursive(firstURL)) {
+		if diff.Error != nil {
+			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
+			if !globalQuietFlag && !globalJSONFlag {
+				console.Eraseline()
+			}
+		}
 		fatalIf(diff.Error.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
 		printMsg(diff)
 	}
+	// Print in new line and adjust to top so that we don't print over the ongoing scan bar
+	if !globalQuietFlag && !globalJSONFlag {
+		console.Eraseline()
+	}
+	console.Println(console.Colorize("DiffMessage", "Done."))
 }
 
 // doDiffMain runs the diff.
