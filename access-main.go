@@ -56,6 +56,9 @@ EXAMPLES:
 
    4. Get bucket permissions.
       $ mc {{.Name}} get https://s3.amazonaws.com/shared
+
+   5. Get bucket permissions.
+      $ mc {{.Name}} get https://storage.googleapis.com/miniocloud
 `,
 }
 

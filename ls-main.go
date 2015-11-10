@@ -44,9 +44,10 @@ EXAMPLES:
       [2015-01-15 00:05:40 PST]     0B zek/
 
    2. List buckets from Amazon S3 cloud storage and recursively list objects from Minio cloud storage.
-      $ mc {{.Name}} https://s3.amazonaws.com/ https://play.minio.io:9000/backup/...
+      $ mc {{.Name}} https://s3.amazonaws.com/ https://play.minio.io:9000/backup/... https://storage.googleapis.com
       2015-01-15 00:05:40 PST     0B zek/
-      2015-03-31 14:46:33 PDT  55MiB 2006-Mar-1/backup.tar.gz
+      2015-03-31 14:46:33 PDT  55MiB backup.tar.gz
+      2015-04-15 20:11:22 PST     0B miniocloud
 
    3. List files recursively on local filesystem on Windows.
       $ mc {{.Name}} C:\Users\Worf\...
