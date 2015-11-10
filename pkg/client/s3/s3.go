@@ -34,7 +34,7 @@ import (
 
 type s3Client struct {
 	mu      *sync.Mutex
-	api     minio.API
+	api     minio.CloudStorageAPI
 	hostURL *client.URL
 }
 

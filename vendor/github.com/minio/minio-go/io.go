@@ -1,16 +1,38 @@
+/*
+ * Minio Go Library for Amazon S3 Compatible Cloud Storage (C) 2015 Minio, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package minio
 
 import "io"
 
-// ReadSeekCloser wraps an io.Reader returning a ReaderSeekerCloser
-func ReadSeekCloser(r io.Reader) ReaderSeekerCloser {
-	return ReaderSeekerCloser{r}
+type readSeekCloser struct {
+	r io.Reader
 }
 
-// ReaderSeekerCloser represents a reader that can also delegate io.Seeker and
-// io.Closer interfaces to the underlying object if available.
-type ReaderSeekerCloser struct {
-	r io.Reader
+// NewReadSeekCloser wraps an io.Reader returning a ReadSeekCloser
+func NewReadSeekCloser(r io.Reader) ReadSeekCloser {
+	return &readSeekCloser{r}
+}
+
+// ReadSeekCloser is the container
+// that groups the basic Seek and Close methods.
+type ReadSeekCloser interface {
+	io.Reader
+	io.Closer
+	io.Seeker
 }
 
 // Read reads up to len(p) bytes into p.  It returns the number of bytes
@@ -27,7 +49,9 @@ type ReaderSeekerCloser struct {
 // a non-zero number of bytes at the end of the input stream may
 // return either err == EOF or err == nil.  The next Read should
 // return 0, EOF.
-func (r ReaderSeekerCloser) Read(p []byte) (int, error) {
+//
+// If no io.Reader found nothing will be done.
+func (r *readSeekCloser) Read(p []byte) (int, error) {
 	switch t := r.r.(type) {
 	case io.Reader:
 		return t.Read(p)
@@ -43,8 +67,8 @@ func (r ReaderSeekerCloser) Read(p []byte) (int, error) {
 //
 // Seeking to an offset before the start of the file is an error.
 //
-// If the ReaderSeekerCloser is not an io.Seeker nothing will be done.
-func (r ReaderSeekerCloser) Seek(offset int64, whence int) (int64, error) {
+// If no io.Seeker found nothing will be done.
+func (r *readSeekCloser) Seek(offset int64, whence int) (int64, error) {
 	switch t := r.r.(type) {
 	case io.Seeker:
 		return t.Seek(offset, whence)
@@ -52,13 +76,13 @@ func (r ReaderSeekerCloser) Seek(offset int64, whence int) (int64, error) {
 	return int64(0), nil
 }
 
-// Close closes the ReaderSeekerCloser.
+// Close closes the ReadSeekCloser.
 //
 // The behavior of Close after the first call is undefined.
 // Specific implementations may document their own behavior.
 //
-// If the ReaderSeekerCloser is not an io.Closer nothing will be done.
-func (r ReaderSeekerCloser) Close() error {
+// If no io.Closer found nothing will be done.
+func (r *readSeekCloser) Close() error {
 	switch t := r.r.(type) {
 	case io.Closer:
 		return t.Close()

@@ -22,8 +22,8 @@ import (
 	"io"
 )
 
-// part - message structure for results from the MultiPart
-type part struct {
+// piece - container for each piece
+type piece struct {
 	MD5Sum     []byte
 	ReadSeeker io.ReadSeeker
 	Err        error
@@ -31,33 +31,32 @@ type part struct {
 	Num        int // part number
 }
 
-// skipPart - skipping uploaded parts
-type skipPart struct {
-	md5sum     []byte
-	partNumber int
+// skipPiece - container for skip piece
+type skipPiece struct {
+	md5sum      []byte
+	pieceNumber int
 }
 
-// chopper reads from io.Reader, partitions the data into chunks of given chunksize, and sends
-// each chunk as io.ReadSeeker to the caller over a channel
+// chopper reads from io.Reader, partitions the data into pieces of given pieceSize, and sends
+// each piece as io.ReadSeeker to the caller over a channel
 //
-// This method runs until an EOF or error occurs. If an error occurs,
-// the method sends the error over the channel and returns.
-// Before returning, the channel is always closed.
+// This method runs until an EOF or an error occurs. Before returning, the channel is always closed.
 //
-// additionally this function also skips list of parts if provided
-func chopper(reader io.Reader, chunkSize int64, skipParts []skipPart) <-chan part {
-	ch := make(chan part, 3)
-	go chopperInRoutine(reader, chunkSize, skipParts, ch)
+// Additionally this function also skips list of pieces if provided
+func chopper(reader io.Reader, pieceSize int64, skipPieces []skipPiece) <-chan piece {
+	ch := make(chan piece, 3)
+	go chopperInRoutine(reader, pieceSize, skipPieces, ch)
 	return ch
 }
 
-func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, ch chan part) {
+func chopperInRoutine(reader io.Reader, pieceSize int64, skipPieces []skipPiece, ch chan<- piece) {
 	defer close(ch)
-	p := make([]byte, chunkSize)
+	p := make([]byte, pieceSize)
 	n, err := io.ReadFull(reader, p)
-	if err == io.EOF || err == io.ErrUnexpectedEOF { // short read, only single part return
+	if err == io.EOF || err == io.ErrUnexpectedEOF {
+		// short read, only single piece return.
 		m := md5.Sum(p[0:n])
-		ch <- part{
+		ch <- piece{
 			MD5Sum:     m[:],
 			ReadSeeker: bytes.NewReader(p[0:n]),
 			Err:        nil,
@@ -66,24 +65,24 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 		}
 		return
 	}
-	// catastrophic error send error and return
+	// unknown error considered catastrophic error, return here.
 	if err != nil {
-		ch <- part{
+		ch <- piece{
 			ReadSeeker: nil,
 			Err:        err,
 			Num:        0,
 		}
 		return
 	}
-	// send the first part
+	// send the first piece
 	var num = 1
 	md5SumBytes := md5.Sum(p)
-	sp := skipPart{
-		partNumber: num,
-		md5sum:     md5SumBytes[:],
+	sp := skipPiece{
+		pieceNumber: num,
+		md5sum:      md5SumBytes[:],
 	}
-	if !isPartNumberUploaded(sp, skipParts) {
-		ch <- part{
+	if !isPieceNumberUploaded(sp, skipPieces) {
+		ch <- piece{
 			MD5Sum:     md5SumBytes[:],
 			ReadSeeker: bytes.NewReader(p),
 			Err:        nil,
@@ -93,11 +92,11 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 	}
 	for err == nil {
 		var n int
-		p := make([]byte, chunkSize)
+		p := make([]byte, pieceSize)
 		n, err = io.ReadFull(reader, p)
 		if err != nil {
 			if err != io.EOF && err != io.ErrUnexpectedEOF { // catastrophic error
-				ch <- part{
+				ch <- piece{
 					ReadSeeker: nil,
 					Err:        err,
 					Num:        0,
@@ -107,14 +106,14 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 		}
 		num++
 		md5SumBytes := md5.Sum(p[0:n])
-		sp := skipPart{
-			partNumber: num,
-			md5sum:     md5SumBytes[:],
+		sp := skipPiece{
+			pieceNumber: num,
+			md5sum:      md5SumBytes[:],
 		}
-		if isPartNumberUploaded(sp, skipParts) {
+		if isPieceNumberUploaded(sp, skipPieces) {
 			continue
 		}
-		ch <- part{
+		ch <- piece{
 			MD5Sum:     md5SumBytes[:],
 			ReadSeeker: bytes.NewReader(p[0:n]),
 			Err:        nil,
@@ -125,10 +124,10 @@ func chopperInRoutine(reader io.Reader, chunkSize int64, skipParts []skipPart, c
 	}
 }
 
-// to verify if partNumber is part of the skip part list
-func isPartNumberUploaded(part skipPart, skipParts []skipPart) bool {
-	for _, p := range skipParts {
-		if p.partNumber == part.partNumber && bytes.Equal(p.md5sum, part.md5sum) {
+// to verify if piece is already uploaded
+func isPieceNumberUploaded(piece skipPiece, skipPieces []skipPiece) bool {
+	for _, p := range skipPieces {
+		if p.pieceNumber == piece.pieceNumber && bytes.Equal(p.md5sum, piece.md5sum) {
 			return true
 		}
 	}
