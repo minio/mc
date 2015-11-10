@@ -49,17 +49,16 @@ type ErrorResponse struct {
 // ToErrorResponse returns parsed ErrorResponse struct, if input is nil or not ErrorResponse return value is nil
 // this fuction is useful when some one wants to dig deeper into the error structures over the network.
 //
-// for example:
+// For example:
 //
 //   import s3 "github.com/minio/minio-go"
 //   ...
 //   ...
-//   ..., err := s3.GetObject(...)
+//   reader, stat, err := s3.GetObject(...)
 //   if err != nil {
 //      resp := s3.ToErrorResponse(err)
 //      fmt.Println(resp.ToXML())
 //   }
-//   ...
 //   ...
 func ToErrorResponse(err error) *ErrorResponse {
 	switch err := err.(type) {

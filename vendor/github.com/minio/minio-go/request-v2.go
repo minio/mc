@@ -1,5 +1,5 @@
 /*
- * Minio Go Library for Amazon S3 Legacy v2 Signature Compatible Cloud Storage (C) 2015 Minio, Inc.
+ * Minio Go Library for Amazon S3 Compatible Cloud Storage (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,9 @@ import (
 	"time"
 )
 
+// PreSignV2 - presign the request in following style.
 // https://${S3_BUCKET}.s3.amazonaws.com/${S3_OBJECT}?AWSAccessKeyId=${S3_ACCESS_KEY}&Expires=${TIMESTAMP}&Signature=${SIGNATURE}
-func (r *request) PreSignV2() (string, error) {
+func (r *Request) PreSignV2() (string, error) {
 	if r.config.AccessKeyID == "" || r.config.SecretAccessKey == "" {
 		return "", errors.New("presign requires accesskey and secretkey")
 	}
@@ -68,7 +69,8 @@ func (r *request) PreSignV2() (string, error) {
 	return r.req.URL.String(), nil
 }
 
-func (r *request) PostPresignSignatureV2(policyBase64 string) string {
+// PostPresignSignatureV2 - presigned signature for PostPolicy request
+func (r *Request) PostPresignSignatureV2(policyBase64 string) string {
 	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
 	hm.Write([]byte(policyBase64))
 	signature := base64.StdEncoding.EncodeToString(hm.Sum(nil))
@@ -91,24 +93,24 @@ func (r *request) PostPresignSignatureV2(policyBase64 string) string {
 //
 // CanonicalizedProtocolHeaders = <described below>
 
-// SignV2 the request before Do() (version 2.0)
-func (r *request) SignV2() {
-	// Add date if not present
+// SignV2 sign the request before Do() (AWS Signature Version 2).
+func (r *Request) SignV2() {
+	// Add date if not present.
 	if date := r.Get("Date"); date == "" {
-		r.Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		r.Set("X-Amz-Date", time.Now().UTC().Format(http.TimeFormat))
 	}
-	// Calculate HMAC for secretAccessKey
+	// Calculate HMAC for secretAccessKey.
 	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
 	hm.Write([]byte(r.getStringToSignV2()))
 
-	// prepare auth header
+	// prepare auth header.
 	authHeader := new(bytes.Buffer)
 	authHeader.WriteString(fmt.Sprintf("AWS %s:", r.config.AccessKeyID))
 	encoder := base64.NewEncoder(base64.StdEncoding, authHeader)
 	encoder.Write(hm.Sum(nil))
 	encoder.Close()
 
-	// Set Authorization header
+	// Set Authorization header.
 	r.req.Header.Set("Authorization", authHeader.String())
 }
 
@@ -117,32 +119,34 @@ func (r *request) SignV2() {
 // StringToSign = HTTP-Verb + "\n" +
 // 	 Content-MD5 + "\n" +
 //	 Content-Type + "\n" +
-//	 Date + "\n" +
+//	 Date(X-Amz-Date) + "\n" +
 //	 CanonicalizedProtocolHeaders +
 //	 CanonicalizedResource;
-func (r *request) getStringToSignV2() string {
+func (r *Request) getStringToSignV2() string {
 	buf := new(bytes.Buffer)
-	// write standard headers
+	// write standard headers.
 	r.writeDefaultHeaders(buf)
-	// write canonicalized protocol headers if any
+	// write canonicalized protocol headers if any.
 	r.writeCanonicalizedHeaders(buf)
-	// write canonicalized Query resources if any
+	// write canonicalized Query resources if any.
 	r.writeCanonicalizedResource(buf)
 	return buf.String()
 }
 
-func (r *request) writeDefaultHeaders(buf *bytes.Buffer) {
+// writeDefaultHeader - write all default necessary headers
+func (r *Request) writeDefaultHeaders(buf *bytes.Buffer) {
 	buf.WriteString(r.req.Method)
 	buf.WriteByte('\n')
 	buf.WriteString(r.req.Header.Get("Content-MD5"))
 	buf.WriteByte('\n')
 	buf.WriteString(r.req.Header.Get("Content-Type"))
 	buf.WriteByte('\n')
-	buf.WriteString(r.req.Header.Get("Date"))
+	buf.WriteString(r.req.Header.Get("X-Amz-Date"))
 	buf.WriteByte('\n')
 }
 
-func (r *request) writeCanonicalizedHeaders(buf *bytes.Buffer) {
+// writeCanonicalizedHeaders - write canonicalized headers.
+func (r *Request) writeCanonicalizedHeaders(buf *bytes.Buffer) {
 	var protoHeaders []string
 	vals := make(map[string][]string)
 	for k, vv := range r.req.Header {
@@ -205,7 +209,7 @@ var resourceList = []string{
 // CanonicalizedResource = [ "/" + Bucket ] +
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
-func (r *request) writeCanonicalizedResource(buf *bytes.Buffer) error {
+func (r *Request) writeCanonicalizedResource(buf *bytes.Buffer) error {
 	requestURL := r.req.URL
 	if r.config.isVirtualStyle {
 		for k, v := range regions {
@@ -223,7 +227,7 @@ func (r *request) writeCanonicalizedResource(buf *bytes.Buffer) error {
 	if requestURL.RawQuery != "" {
 		var n int
 		vals, _ := url.ParseQuery(requestURL.RawQuery)
-		// loop through all the supported resourceList
+		// loop through all the supported resourceList.
 		for _, resource := range resourceList {
 			if vv, ok := vals[resource]; ok && len(vv) > 0 {
 				n++

@@ -28,9 +28,9 @@ import (
 	"strconv"
 )
 
-// listMultipartUploadsRequest wrapper creates a new listMultipartUploads request
-func (a apiCore) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*request, error) {
-	// resourceQuery - get resources properly escaped and lined up before using them in http request
+// listMultipartUploadsRequest wrapper creates a new listMultipartUploads request.
+func (a apiCore) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, prefix, delimiter string, maxuploads int) (*Request, error) {
+	// resourceQuery get resources properly escaped and lined up before using them in http request.
 	resourceQuery := func() (string, error) {
 		switch {
 		case keymarker != "":
@@ -64,13 +64,14 @@ func (a apiCore) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, 
 	return r, nil
 }
 
-// listMultipartUploads - (List Multipart Uploads) - Lists some or all (up to 1000) in-progress multipart uploads in a bucket.
+// listMultipartUploads - (List Multipart Uploads).
+//   - Lists some or all (up to 1000) in-progress multipart uploads in a bucket.
 //
 // You can use the request parameters as selection criteria to return a subset of the uploads in a bucket.
-// request paramters :-
+// request paramters. :-
 // ---------
-// ?key-marker - Specifies the multipart upload after which listing should begin
-// ?upload-id-marker - Together with key-marker specifies the multipart upload after which listing should begin
+// ?key-marker - Specifies the multipart upload after which listing should begin.
+// ?upload-id-marker - Together with key-marker specifies the multipart upload after which listing should begin.
 // ?delimiter - A delimiter is a character you use to group keys.
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-uploads - Sets the maximum number of multipart uploads returned in the response body.
@@ -94,12 +95,12 @@ func (a apiCore) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix,
 	if err != nil {
 		return listMultipartUploadsResult, err
 	}
-	// close body while returning, along with any error
+	// close body while returning, along with any error.
 	return listMultipartUploadsResult, nil
 }
 
-// initiateMultipartRequest wrapper creates a new initiateMultiPart request
-func (a apiCore) initiateMultipartRequest(bucket, object string) (*request, error) {
+// initiateMultipartRequest wrapper creates a new initiateMultiPart request.
+func (a apiCore) initiateMultipartRequest(bucket, object string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "POST",
@@ -108,7 +109,7 @@ func (a apiCore) initiateMultipartRequest(bucket, object string) (*request, erro
 	return newRequest(op, a.config, nil)
 }
 
-// initiateMultipartUpload initiates a multipart upload and returns an upload ID
+// initiateMultipartUpload initiates a multipart upload and returns an upload ID.
 func (a apiCore) initiateMultipartUpload(bucket, object string) (initiateMultipartUploadResult, error) {
 	req, err := a.initiateMultipartRequest(bucket, object)
 	if err != nil {
@@ -132,8 +133,8 @@ func (a apiCore) initiateMultipartUpload(bucket, object string) (initiateMultipa
 	return initiateMultipartUploadResult, nil
 }
 
-// completeMultipartUploadRequest wrapper creates a new CompleteMultipartUpload request
-func (a apiCore) completeMultipartUploadRequest(bucket, object, uploadID string, complete completeMultipartUpload) (*request, error) {
+// completeMultipartUploadRequest wrapper creates a new CompleteMultipartUpload request.
+func (a apiCore) completeMultipartUploadRequest(bucket, object, uploadID string, complete completeMultipartUpload) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "POST",
@@ -185,8 +186,8 @@ func (a apiCore) completeMultipartUpload(bucket, object, uploadID string, c comp
 	return completeMultipartUploadResult, nil
 }
 
-// abortMultipartUploadRequest wrapper creates a new AbortMultipartUpload request
-func (a apiCore) abortMultipartUploadRequest(bucket, object, uploadID string) (*request, error) {
+// abortMultipartUploadRequest wrapper creates a new AbortMultipartUpload request.
+func (a apiCore) abortMultipartUploadRequest(bucket, object, uploadID string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
@@ -195,7 +196,7 @@ func (a apiCore) abortMultipartUploadRequest(bucket, object, uploadID string) (*
 	return newRequest(op, a.config, nil)
 }
 
-// abortMultipartUpload aborts a multipart upload for the given uploadID, all parts are deleted
+// abortMultipartUpload aborts a multipart upload for the given uploadID, all parts are deleted.
 func (a apiCore) abortMultipartUpload(bucket, object, uploadID string) error {
 	req, err := a.abortMultipartUploadRequest(bucket, object, uploadID)
 	if err != nil {
@@ -208,7 +209,7 @@ func (a apiCore) abortMultipartUpload(bucket, object, uploadID string) error {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusNoContent {
-			// Abort has no response body, handle it
+			// Abort has no response body, handle it.
 			var errorResponse ErrorResponse
 			switch resp.StatusCode {
 			case http.StatusNotFound:
@@ -239,9 +240,9 @@ func (a apiCore) abortMultipartUpload(bucket, object, uploadID string) error {
 	return nil
 }
 
-// listObjectPartsRequest wrapper creates a new ListObjectParts request
-func (a apiCore) listObjectPartsRequest(bucket, object, uploadID string, partNumberMarker, maxParts int) (*request, error) {
-	// resourceQuery - get resources properly escaped and lined up before using them in http request
+// listObjectPartsRequest wrapper creates a new ListObjectParts request.
+func (a apiCore) listObjectPartsRequest(bucket, object, uploadID string, partNumberMarker, maxParts int) (*Request, error) {
+	// resourceQuery - get resources properly escaped and lined up before using them in http request.
 	resourceQuery := func() string {
 		var partNumberMarkerStr string
 		switch {
@@ -258,7 +259,8 @@ func (a apiCore) listObjectPartsRequest(bucket, object, uploadID string, partNum
 	return newRequest(op, a.config, nil)
 }
 
-// listObjectParts (List Parts) - lists some or all (up to 1000) parts that have been uploaded for a specific multipart upload
+// listObjectParts (List Parts)
+//     - lists some or all (up to 1000) parts that have been uploaded for a specific multipart upload
 //
 // You can use the request parameters as selection criteria to return a subset of the uploads in a bucket.
 // request paramters :-
@@ -287,18 +289,20 @@ func (a apiCore) listObjectParts(bucket, object, uploadID string, partNumberMark
 	return listObjectPartsResult, nil
 }
 
-// uploadPartRequest wrapper creates a new UploadPart request
-func (a apiCore) uploadPartRequest(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*request, error) {
+// uploadPartRequest wrapper creates a new UploadPart request.
+func (a apiCore) uploadPartRequest(bucket, object, uploadID string,
+	md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
-		HTTPPath:   separator + bucket + separator + object + "?partNumber=" + strconv.Itoa(partNumber) + "&uploadId=" + uploadID,
+		HTTPPath: separator + bucket + separator + object +
+			"?partNumber=" + strconv.Itoa(partNumber) + "&uploadId=" + uploadID,
 	}
 	r, err := newRequest(op, a.config, body)
 	if err != nil {
 		return nil, err
 	}
-	// set Content-MD5 as base64 encoded md5
+	// set Content-MD5 as base64 encoded md5.
 	if md5SumBytes != nil {
 		r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
 	}
@@ -307,7 +311,8 @@ func (a apiCore) uploadPartRequest(bucket, object, uploadID string, md5SumBytes 
 }
 
 // uploadPart uploads a part in a multipart upload.
-func (a apiCore) uploadPart(bucket, object, uploadID string, md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
+func (a apiCore) uploadPart(bucket, object, uploadID string,
+	md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
 	req, err := a.uploadPartRequest(bucket, object, uploadID, md5SumBytes, partNumber, size, body)
 	if err != nil {
 		return completePart{}, err
@@ -316,7 +321,7 @@ func (a apiCore) uploadPart(bucket, object, uploadID string, md5SumBytes []byte,
 	cPart.PartNumber = partNumber
 	cPart.ETag = "\"" + hex.EncodeToString(md5SumBytes) + "\""
 
-	// initiate the request
+	// initiate the request.
 	resp, err := req.Do()
 	defer closeResp(resp)
 	if err != nil {
