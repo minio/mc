@@ -97,7 +97,7 @@ func (r *Request) PostPresignSignatureV2(policyBase64 string) string {
 func (r *Request) SignV2() {
 	// Add date if not present.
 	if date := r.Get("Date"); date == "" {
-		r.Set("X-Amz-Date", time.Now().UTC().Format(http.TimeFormat))
+		r.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	}
 	// Calculate HMAC for secretAccessKey.
 	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
@@ -119,7 +119,7 @@ func (r *Request) SignV2() {
 // StringToSign = HTTP-Verb + "\n" +
 // 	 Content-MD5 + "\n" +
 //	 Content-Type + "\n" +
-//	 Date(X-Amz-Date) + "\n" +
+//	 Date + "\n" +
 //	 CanonicalizedProtocolHeaders +
 //	 CanonicalizedResource;
 func (r *Request) getStringToSignV2() string {
@@ -141,7 +141,7 @@ func (r *Request) writeDefaultHeaders(buf *bytes.Buffer) {
 	buf.WriteByte('\n')
 	buf.WriteString(r.req.Header.Get("Content-Type"))
 	buf.WriteByte('\n')
-	buf.WriteString(r.req.Header.Get("X-Amz-Date"))
+	buf.WriteString(r.req.Header.Get("Date"))
 	buf.WriteByte('\n')
 }
 

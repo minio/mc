@@ -11,6 +11,7 @@ List of supported cloud storage providers.
    - Minio
 
  - AWS Signature Version 2
+   - Google Cloud Storage (Compatibility Mode) 
    - Openstack Swift + Swift3 middleware
    - Ceph Object Gateway
    - Riak CS
