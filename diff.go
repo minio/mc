@@ -169,6 +169,10 @@ func diffFolders(firstClnt, secondClnt client.Client, outCh chan<- diffMessage) 
 //
 // 4: diff(d1..., d2) -> []diff(d1/f, d2/f) -> VALID.
 func diffFoldersRecursive(firstClnt, secondClnt client.Client, outCh chan<- diffMessage) {
+	var scanBar scanBarFunc
+	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
+		scanBar = scanBarFactory()
+	}
 	recursive := true
 	firstListCh := firstClnt.List(recursive, false) // Copy first list channel.
 	for firstContentCh := range firstListCh {
@@ -196,6 +200,9 @@ func diffFoldersRecursive(firstClnt, secondClnt client.Client, outCh chan<- diff
 		if diffMsg := diffObjects(firstContent, secondContent); diffMsg != nil {
 			outCh <- *diffMsg
 			continue
+		}
+		if !globalQuietFlag && !globalJSONFlag { // set up progress bar
+			scanBar(firstContent.URL.String())
 		}
 	}
 }
