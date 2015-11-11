@@ -472,7 +472,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return err
 			}
 		}
-		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
+		if fi.Mode().IsRegular() {
 			content := &client.Content{
 				URL:  *client.NewURL(fp),
 				Time: fi.ModTime(),

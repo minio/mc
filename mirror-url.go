@@ -126,11 +126,11 @@ func getTargetContent(srcContent *client.Content, targetContent *client.Content,
 	for ; c != nil; c = getContent(targetCh) {
 		// Remove prefix so that we can properly validate.
 		targetURL := strings.TrimPrefix(c.URL.Path, targetClnt.GetURL().Path)
-		if srcContent.URL.Path <= targetURL {
+		sourceURL := strings.TrimPrefix(srcContent.URL.Path, string(srcContent.URL.Separator))
+		if sourceURL <= targetURL {
 			break
 		}
 	}
-
 	return
 }
 

@@ -117,21 +117,16 @@ func (s *MySuite) TestList(c *C) {
 	}
 
 	c.Assert(err, IsNil)
-	c.Assert(len(contents), Equals, 5)
+	c.Assert(len(contents), Equals, 3)
 
 	var regularFiles int
-	var folders int
 	for _, content := range contents {
 		if content.Type.IsRegular() {
 			regularFiles++
 			continue
 		}
-		if content.Type.IsDir() {
-			folders++
-		}
 	}
 	c.Assert(regularFiles, Equals, 3)
-	c.Assert(folders, Equals, 2)
 }
 
 func (s *MySuite) TestPutBucket(c *C) {
