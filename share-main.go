@@ -148,4 +148,6 @@ func mainShare(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowAppHelp(ctx)
 	}
+
+	// sub-commands like "upload" and "download" have their own main.
 }

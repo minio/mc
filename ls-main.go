@@ -92,34 +92,13 @@ func checkListSyntax(ctx *cli.Context) {
 	}
 }
 
-// setListPalette - set ls output theme
-func setListPalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"File": color.New(color.FgWhite),
-		"Dir":  color.New(color.FgCyan, color.Bold),
-		"Size": color.New(color.FgYellow),
-		"Time": color.New(color.FgGreen),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"File": color.New(color.FgWhite, color.Bold),
-			"Dir":  color.New(color.FgWhite, color.Bold),
-			"Size": color.New(color.FgWhite, color.Bold),
-			"Time": color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-	/// Add more styles here if needed
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
-		console.SetNoColor()
-	}
-}
-
 // mainList - is a handler for mc ls command
 func mainList(ctx *cli.Context) {
-	// set theme for 'ls'
-	setListPalette(ctx.GlobalString("colors"))
+	// Additional command speific theme customization.
+	console.SetColor("File", color.New(color.FgWhite))
+	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
+	console.SetColor("Size", color.New(color.FgYellow))
+	console.SetColor("Time", color.New(color.FgGreen))
 
 	// check 'ls' cli arguments
 	checkListSyntax(ctx)

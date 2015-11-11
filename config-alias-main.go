@@ -117,46 +117,6 @@ func checkConfigAliasSyntax(ctx *cli.Context) {
 	}
 }
 
-func setConfigAliasPalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"Alias":        color.New(color.FgCyan, color.Bold),
-		"AliasMessage": color.New(color.FgGreen, color.Bold),
-		"URL":          color.New(color.FgWhite, color.Bold),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"Alias":        color.New(color.FgWhite, color.Bold),
-			"AliasMessage": color.New(color.FgWhite, color.Bold),
-			"URL":          color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-	/// Add more styles here
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
-		console.SetNoColor()
-	}
-}
-
-//
-func mainConfigAlias(ctx *cli.Context) {
-	checkConfigAliasSyntax(ctx)
-
-	setConfigAliasPalette(ctx.GlobalString("colors"))
-
-	arg := ctx.Args().First()
-	tailArgs := ctx.Args().Tail()
-
-	switch strings.TrimSpace(arg) {
-	case "add":
-		addAlias(tailArgs.Get(0), tailArgs.Get(1))
-	case "remove":
-		removeAlias(tailArgs.Get(0))
-	case "list":
-		listAliases()
-	}
-}
-
 func listAliases() {
 	config, err := newConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
@@ -233,4 +193,25 @@ func addAlias(alias, url string) {
 	fatalIf(err.Trace(alias, url), "Unable to save alias ‘"+alias+"’.")
 
 	printMsg(aliasMessage{op: "add", Alias: alias, URL: url})
+}
+
+func mainConfigAlias(ctx *cli.Context) {
+	checkConfigAliasSyntax(ctx)
+
+	// Additional customization speific to each command.
+	console.SetColor("Alias", color.New(color.FgCyan, color.Bold))
+	console.SetColor("AliasMessage", color.New(color.FgGreen, color.Bold))
+	console.SetColor("URL", color.New(color.FgWhite, color.Bold))
+
+	arg := ctx.Args().First()
+	tailArgs := ctx.Args().Tail()
+
+	switch strings.TrimSpace(arg) {
+	case "add":
+		addAlias(tailArgs.Get(0), tailArgs.Get(1))
+	case "remove":
+		removeAlias(tailArgs.Get(0))
+	case "list":
+		listAliases()
+	}
 }

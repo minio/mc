@@ -119,26 +119,34 @@ func checkAccessSyntax(ctx *cli.Context) {
 	}
 }
 
-func setAccessPalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"Access": color.New(color.FgGreen, color.Bold),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"Access": color.New(color.FgWhite, color.Bold),
-		})
+func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
+	clnt, err := url2Client(targetURL)
+	if err != nil {
+		return err.Trace(targetURL)
 	}
-	if style == "nocolor" {
-		// ALl coloring options exhausted, setting nocolor safely
-		console.SetNoColor()
+	if err = clnt.SetBucketAccess(targetPERMS.String()); err != nil {
+		return err.Trace(targetURL, targetPERMS.String())
 	}
+	return nil
+}
+
+func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
+	clnt, err := url2Client(targetURL)
+	if err != nil {
+		return "", err.Trace(targetURL)
+	}
+	acl, err := clnt.GetBucketAccess()
+	if err != nil {
+		return "", err.Trace(targetURL)
+	}
+	return aclToPerms(acl), nil
 }
 
 func mainAccess(ctx *cli.Context) {
 	checkAccessSyntax(ctx)
 
-	setAccessPalette(ctx.GlobalString("colors"))
-
+	// Additional command speific theme customization.
+	console.SetColor("Access", color.New(color.FgGreen, color.Bold))
 	config := mustGetMcConfig()
 
 	switch ctx.Args().Get(0) {
@@ -170,27 +178,4 @@ func mainAccess(ctx *cli.Context) {
 			})
 		}
 	}
-}
-
-func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
-	clnt, err := url2Client(targetURL)
-	if err != nil {
-		return err.Trace(targetURL)
-	}
-	if err = clnt.SetBucketAccess(targetPERMS.String()); err != nil {
-		return err.Trace(targetURL, targetPERMS.String())
-	}
-	return nil
-}
-
-func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
-	clnt, err := url2Client(targetURL)
-	if err != nil {
-		return "", err.Trace(targetURL)
-	}
-	acl, err := clnt.GetBucketAccess()
-	if err != nil {
-		return "", err.Trace(targetURL)
-	}
-	return aclToPerms(acl), nil
 }

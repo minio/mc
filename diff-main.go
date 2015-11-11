@@ -59,60 +59,6 @@ func checkDiffSyntax(ctx *cli.Context) {
 	}
 }
 
-func setDiffPalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"DiffMessage":     color.New(color.FgGreen, color.Bold),
-		"DiffOnlyInFirst": color.New(color.FgRed, color.Bold),
-		"DiffType":        color.New(color.FgYellow, color.Bold),
-		"DiffSize":        color.New(color.FgMagenta, color.Bold),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"DiffMessage":     color.New(color.FgWhite, color.Bold),
-			"DiffOnlyInFirst": color.New(color.FgWhite, color.Bold),
-			"DiffType":        color.New(color.FgWhite, color.Bold),
-			"DiffSize":        color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-	/// Add more styles here.
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely.
-		console.SetNoColor()
-	}
-}
-
-// mainDiff main for 'diff'.
-func mainDiff(ctx *cli.Context) {
-	checkDiffSyntax(ctx)
-
-	setDiffPalette(ctx.GlobalString("colors"))
-
-	config := mustGetMcConfig()
-	firstArg := ctx.Args().First()
-	secondArg := ctx.Args().Last()
-
-	firstURL := getAliasURL(firstArg, config.Aliases)
-	secondURL := getAliasURL(secondArg, config.Aliases)
-
-	newFirstURL := stripRecursiveURL(firstURL)
-	for diff := range doDiffMain(newFirstURL, secondURL, isURLRecursive(firstURL)) {
-		if diff.Error != nil {
-			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-			if !globalQuietFlag && !globalJSONFlag {
-				console.Eraseline()
-			}
-		}
-		fatalIf(diff.Error.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
-		printMsg(diff)
-	}
-	// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-	if !globalQuietFlag && !globalJSONFlag {
-		console.Eraseline()
-	}
-	console.Println(console.Colorize("DiffMessage", "Done."))
-}
-
 // doDiffMain runs the diff.
 func doDiffMain(firstURL, secondURL string, recursive bool) <-chan diffMessage {
 	ch := make(chan diffMessage, 10000)
@@ -160,4 +106,39 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diffMes
 		return
 	}
 	diffFolders(firstClnt, secondClnt, ch)
+}
+
+// mainDiff main for 'diff'.
+func mainDiff(ctx *cli.Context) {
+	checkDiffSyntax(ctx)
+
+	// Additional command speific theme customization.
+	console.SetColor("DiffMessage", color.New(color.FgGreen, color.Bold))
+	console.SetColor("DiffOnlyInFirst", color.New(color.FgRed, color.Bold))
+	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
+	console.SetColor("DiffSize", color.New(color.FgMagenta, color.Bold))
+
+	config := mustGetMcConfig()
+	firstArg := ctx.Args().First()
+	secondArg := ctx.Args().Last()
+
+	firstURL := getAliasURL(firstArg, config.Aliases)
+	secondURL := getAliasURL(secondArg, config.Aliases)
+
+	newFirstURL := stripRecursiveURL(firstURL)
+	for diff := range doDiffMain(newFirstURL, secondURL, isURLRecursive(firstURL)) {
+		if diff.Error != nil {
+			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
+			if !globalQuietFlag && !globalJSONFlag {
+				console.Eraseline()
+			}
+		}
+		fatalIf(diff.Error.Trace(newFirstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
+		printMsg(diff)
+	}
+	// Print in new line and adjust to top so that we don't print over the ongoing scan bar
+	if !globalQuietFlag && !globalJSONFlag {
+		console.Eraseline()
+	}
+	console.Println(console.Colorize("DiffMessage", "Done."))
 }

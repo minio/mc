@@ -73,8 +73,10 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 func mainShareUpload(ctx *cli.Context) {
 	// setup share data folder and file.
 	shareDataSetup()
-	// set share command theme.
-	setSharePalette(ctx.GlobalString("colors"))
+
+	// Additional command speific theme customization.
+	shareSetColor()
+
 	// check input arguments.
 	checkShareUploadSyntax(ctx)
 

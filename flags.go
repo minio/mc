@@ -39,9 +39,9 @@ var (
 		Usage: "Suppress chatty console output.",
 	}
 
-	mimicFlag = cli.BoolFlag{
-		Name:  "mimic",
-		Usage: "Behave like operating system tools. Use with shell aliases.",
+	colorsFlag = cli.BoolFlag{
+		Name:  "no-color",
+		Usage: "Disable color theme.",
 	}
 
 	jsonFlag = cli.BoolFlag{
@@ -54,10 +54,9 @@ var (
 		Usage: "Enable debugging output.",
 	}
 
-	colorsFlag = cli.StringFlag{
-		Name:  "colors",
-		Value: "dark",
-		Usage: "Choose type of console coloring. Available options are [‘dark’, ‘light’, ‘nocolor’]",
+	mimicFlag = cli.BoolFlag{
+		Name:  "mimic",
+		Usage: "Behave like operating system tools. Use with shell aliases.",
 	}
 
 	// Add your new flags starting here

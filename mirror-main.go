@@ -312,27 +312,11 @@ func doMirrorSession(session *sessionV2) {
 	wg.Wait()
 }
 
-func setMirrorPalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"Mirror": color.New(color.FgGreen, color.Bold),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"Mirror": color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-	/// Add more styles here
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
-		console.SetNoColor()
-	}
-}
-
 func mainMirror(ctx *cli.Context) {
 	checkMirrorSyntax(ctx)
 
-	setMirrorPalette(ctx.GlobalString("colors"))
+	// Additional command speific theme customization.
+	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
 	var e error
 	session := newSessionV2()

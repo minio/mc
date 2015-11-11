@@ -177,24 +177,6 @@ func rmAll(url string, isIncomplete bool) {
 	}
 }
 
-// set theme for rm command.
-func setRmPalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"Remove": color.New(color.FgGreen, color.Bold),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"Remove": color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-	/// Add more styles here
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
-		console.SetNoColor()
-	}
-}
-
 // main for rm command.
 func mainRm(ctx *cli.Context) {
 	checkRmSyntax(ctx)
@@ -203,8 +185,8 @@ func mainRm(ctx *cli.Context) {
 	isForce := ctx.Bool("force")
 	isIncomplete := ctx.Bool("incomplete")
 
-	// Set theme.
-	setRmPalette(ctx.GlobalString("colors"))
+	// Set color.
+	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 
 	// Parse args.
 	URLs, err := args2URLs(ctx.Args())
