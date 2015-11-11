@@ -25,10 +25,10 @@ import (
 )
 
 // Display contents of a file.
-var pigCmd = cli.Command{
-	Name:   "pig",
-	Usage:  "Write contents of stdin to files. Pig is the opposite of cat command.",
-	Action: mainPig,
+var pipeCmd = cli.Command{
+	Name:   "pipe",
+	Usage:  "Write contents of stdin to one or more targets. Pipe is the opposite of cat command.",
+	Action: mainPipe,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -51,15 +51,15 @@ EXAMPLES:
 `,
 }
 
-// checkPigSyntax performs command-line input validation for pig command.
-func checkPigSyntax(ctx *cli.Context) {
+// checkPipeSyntax performs command-line input validation for pipe command.
+func checkPipeSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "pig", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "pipe", 1) // last argument is exit code
 	}
 }
 
-// pig writes contents of stdin a collection of URLs.
-func pig(targetURLs []string) *probe.Error {
+// pipe writes contents of stdin a collection of URLs.
+func pipe(targetURLs []string) *probe.Error {
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
 	err := putTargets(targetURLs, 0, os.Stdin)
@@ -74,14 +74,14 @@ func pig(targetURLs []string) *probe.Error {
 	return err.Trace()
 }
 
-// mainPig is the main entry point for pig command.
-func mainPig(ctx *cli.Context) {
-	checkPigSyntax(ctx)
+// mainPipe is the main entry point for pipe command.
+func mainPipe(ctx *cli.Context) {
+	checkPipeSyntax(ctx)
 
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
 
-	err = pig(URLs)
+	err = pipe(URLs)
 	fatalIf(err.Trace(URLs...), "Unable to write to one or more targets.")
 }
