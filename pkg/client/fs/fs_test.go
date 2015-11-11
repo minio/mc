@@ -117,15 +117,21 @@ func (s *MySuite) TestList(c *C) {
 	}
 
 	c.Assert(err, IsNil)
-	c.Assert(len(contents), Equals, 3)
+	c.Assert(len(contents), Equals, 5)
 
 	var regularFiles int
+	var regularDirs int
 	for _, content := range contents {
 		if content.Type.IsRegular() {
 			regularFiles++
 			continue
 		}
+		if content.Type.IsDir() {
+			regularDirs++
+			continue
+		}
 	}
+	c.Assert(regularDirs, Equals, 2)
 	c.Assert(regularFiles, Equals, 3)
 }
 
