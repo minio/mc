@@ -366,7 +366,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		if !strings.HasPrefix(fp, filePrefix) &&
 			!strings.HasPrefix(filePrefix, fp) {
 			if fi.IsDir() {
-				return filepath.SkipDir
+				return ErrSkipDir
 			}
 			return nil
 		}
@@ -472,7 +472,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				return err
 			}
 		}
-		if fi.Mode().IsRegular() {
+		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
 			content := &client.Content{
 				URL:  *client.NewURL(fp),
 				Time: fi.ModTime(),
@@ -502,7 +502,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		// filePrefix is kept for filtering incoming contents through WalkFunc.
 		filePrefix = pathURL.Path
 	}
-	err := filepath.Walk(dirName, visitFS)
+	err := Walk(dirName, visitFS)
 	if err != nil {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
