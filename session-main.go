@@ -57,16 +57,16 @@ EXAMPLES:
 }
 
 // bySessionWhen is a type for sorting session metadata by time
-type bySessionWhen []*sessionV2
+type bySessionWhen []*sessionV3
 
 func (b bySessionWhen) Len() int           { return len(b) }
 func (b bySessionWhen) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b bySessionWhen) Less(i, j int) bool { return b[i].Header.When.Before(b[j].Header.When) }
 
 func listSessions() *probe.Error {
-	var bySessions []*sessionV2
+	var bySessions []*sessionV3
 	for _, sid := range getSessionIDs() {
-		s, err := loadSessionV2(sid)
+		s, err := loadSessionV3(sid)
 		if err != nil {
 			return err.Trace()
 		}
@@ -76,6 +76,7 @@ func listSessions() *probe.Error {
 	sort.Sort(bySessionWhen(bySessions))
 	for _, session := range bySessions {
 		printMsg(session)
+		session.Close()
 	}
 	return nil
 }
@@ -102,7 +103,7 @@ func (c clearSessionMessage) JSON() string {
 func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
-			session, err := loadSessionV2(sid)
+			session, err := loadSessionV3(sid)
 			fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’.")
 
 			fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
@@ -116,7 +117,7 @@ func clearSession(sid string) {
 		fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
 	}
 
-	session, err := loadSessionV2(sid)
+	session, err := loadSessionV3(sid)
 	fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’.")
 
 	if session != nil {
@@ -125,7 +126,7 @@ func clearSession(sid string) {
 	}
 }
 
-func sessionExecute(s *sessionV2) {
+func sessionExecute(s *sessionV3) {
 	switch s.Header.CommandType {
 	case "cp":
 		doCopySession(s)
@@ -180,7 +181,7 @@ func mainSession(ctx *cli.Context) {
 			fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
 		}
 
-		s, err := loadSessionV2(sid)
+		s, err := loadSessionV3(sid)
 		fatalIf(err.Trace(sid), "Unable to load session.")
 
 		// extra check for testing purposes

@@ -19,15 +19,9 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"os"
-	"strings"
-	"sync"
 	"time"
 
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/minio-xl/pkg/quick"
 )
@@ -56,186 +50,8 @@ type sessionV2Header struct {
 	TotalObjects int       `json:"total-objects"`
 }
 
-// SessionMessage container for session messages
-type SessionMessage struct {
-	SessionID   string    `json:"sessionid"`
-	Time        time.Time `json:"time"`
-	CommandType string    `json:"command-type"`
-	CommandArgs []string  `json:"command-args"`
-}
-
-// sessionV2
-type sessionV2 struct {
-	Header    *sessionV2Header
-	SessionID string
-	mutex     *sync.Mutex
-	DataFP    *sessionDataFP
-	sigCh     bool
-}
-
-type sessionDataFP struct {
-	dirty bool
-	*os.File
-}
-
-func (file *sessionDataFP) Write(p []byte) (int, error) {
-	file.dirty = true
-	return file.File.Write(p)
-}
-
-// String colorized session message
-func (s sessionV2) String() string {
-	message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
-	message = message + console.Colorize("SessionTime", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
-	message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
-	return message
-}
-
-// JSON jsonified session message
-func (s sessionV2) JSON() string {
-	sessionMesage := SessionMessage{
-		SessionID:   s.SessionID,
-		Time:        s.Header.When.Local(),
-		CommandType: s.Header.CommandType,
-		CommandArgs: s.Header.CommandArgs,
-	}
-	sessionBytes, e := json.Marshal(sessionMesage)
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(sessionBytes)
-}
-
-// newSessionV2 provides a new session
-func newSessionV2() *sessionV2 {
-	s := &sessionV2{}
-	s.Header = &sessionV2Header{}
-	s.Header.Version = "1.1.0"
-	// map of command and files copied
-	s.Header.CommandArgs = nil
-	s.Header.When = time.Now().UTC()
-	s.mutex = new(sync.Mutex)
-	s.SessionID = newRandomID(8)
-
-	sessionDataFile, perr := getSessionDataFile(s.SessionID)
-	fatalIf(perr.Trace(s.SessionID), "Unable to create session data file \""+sessionDataFile+"\".")
-
-	dataFile, err := os.Create(sessionDataFile)
-	fatalIf(probe.NewError(err), "Unable to create session data file \""+sessionDataFile+"\".")
-
-	s.DataFP = &sessionDataFP{false, dataFile}
-	return s
-}
-
-// String printer for SessionV2
-func (s sessionV2) Info() {
-	console.Infoln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
-}
-
-func gracefulSessionSave(session *sessionV2) {
-	session.Close()
-	session.Info()
-	os.Exit(0)
-}
-
-// HasData provides true if this is a session resume, false otherwise.
-func (s sessionV2) HasData() bool {
-	if s.Header.LastCopied == "" {
-		return false
-	}
-	return true
-}
-
-// NewDataReader provides reader interface to session data file.
-func (s *sessionV2) NewDataReader() io.Reader {
-	// DataFP is always intitialized, either via new or load functions.
-	s.DataFP.Seek(0, os.SEEK_SET)
-	return io.Reader(s.DataFP)
-}
-
-// NewDataReader provides writer interface to session data file.
-func (s *sessionV2) NewDataWriter() io.Writer {
-	// DataFP is always intitialized, either via new or load functions.
-	s.DataFP.Seek(0, os.SEEK_SET)
-	return io.Writer(s.DataFP)
-}
-
-// Save this session
-func (s *sessionV2) Save() *probe.Error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	if s.DataFP.dirty {
-		if err := s.DataFP.Sync(); err != nil {
-			return probe.NewError(err)
-		}
-		s.DataFP.dirty = false
-	}
-
-	qs, err := quick.New(s.Header)
-	if err != nil {
-		return err.Trace(s.SessionID)
-	}
-
-	sessionFile, err := getSessionFile(s.SessionID)
-	if err != nil {
-		return err.Trace(s.SessionID)
-	}
-	return qs.Save(sessionFile).Trace()
-}
-
-// Close ends this session and removes all associated session files.
-func (s *sessionV2) Close() *probe.Error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	if err := s.DataFP.Close(); err != nil {
-		return probe.NewError(err)
-	}
-
-	qs, err := quick.New(s.Header)
-	if err != nil {
-		return err.Trace()
-	}
-
-	sessionFile, err := getSessionFile(s.SessionID)
-	if err != nil {
-		return err.Trace(s.SessionID)
-	}
-	return qs.Save(sessionFile).Trace()
-}
-
-// Delete removes all the session files.
-func (s *sessionV2) Delete() *probe.Error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	if s.DataFP != nil {
-		name := s.DataFP.Name()
-		// close file pro-actively before deleting
-		// ignore any error, it could be possibly that
-		// the file is closed already
-		s.DataFP.Close()
-
-		err := os.Remove(name)
-		if err != nil {
-			return probe.NewError(err)
-		}
-	}
-
-	sessionFile, err := getSessionFile(s.SessionID)
-	if err != nil {
-		return err.Trace(s.SessionID)
-	}
-
-	if err := os.Remove(sessionFile); err != nil {
-		return probe.NewError(err)
-	}
-
-	return nil
-}
-
 // loadSession - reads session file if exists and re-initiates internal variables
-func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
+func loadSessionV2(sid string) (*sessionV2Header, *probe.Error) {
 	if !isSessionDirExists() {
 		return nil, errInvalidArgument().Trace()
 	}
@@ -243,60 +59,18 @@ func loadSessionV2(sid string) (*sessionV2, *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(sid)
 	}
-
 	if _, err := os.Stat(sessionFile); err != nil {
 		return nil, probe.NewError(err)
 	}
-
-	s := &sessionV2{}
-	s.Header = &sessionV2Header{}
-	s.SessionID = sid
-	s.Header.Version = "1.1.0"
-	qs, err := quick.New(s.Header)
+	sessionHeader := &sessionV2Header{}
+	sessionHeader.Version = "1.1.0"
+	qs, err := quick.New(sessionHeader)
 	if err != nil {
-		return nil, err.Trace(sid, s.Header.Version)
+		return nil, err.Trace(sid, sessionHeader.Version)
 	}
 	err = qs.Load(sessionFile)
 	if err != nil {
-		return nil, err.Trace(sid, s.Header.Version)
+		return nil, err.Trace(sid, sessionHeader.Version)
 	}
-
-	s.mutex = new(sync.Mutex)
-	s.Header = qs.Data().(*sessionV2Header)
-
-	sessionDataFile, err := getSessionDataFile(s.SessionID)
-	if err != nil {
-		return nil, err.Trace(sid, s.Header.Version)
-	}
-
-	var e error
-	dataFile, e := os.Open(sessionDataFile)
-	fatalIf(probe.NewError(e), "Unable to open session data file \""+sessionDataFile+"\".")
-
-	s.DataFP = &sessionDataFP{false, dataFile}
-
-	return s, nil
-}
-
-// Create a factory function to simplify checking if an
-// object has been copied or not.
-// isCopied(URL) -> true or false
-func isCopiedFactory(lastCopied string) func(string) bool {
-	copied := true // closure
-	return func(sourceURL string) bool {
-		if sourceURL == "" {
-			fatalIf(errInvalidArgument().Trace(), "Empty source argument passed.")
-		}
-		if lastCopied == "" {
-			return false
-		}
-
-		if copied {
-			if lastCopied == sourceURL {
-				copied = false // from next call onwards we say false.
-			}
-			return true
-		}
-		return false
-	}
+	return sessionHeader, nil
 }

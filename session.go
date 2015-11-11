@@ -27,6 +27,9 @@ import (
 func migrateSession() {
 	// Migrate session V1 to V2
 	migrateSessionV1ToV2()
+
+	// Migrate session V2 to V3
+	migrateSessionV2ToV3()
 }
 
 func createSessionDir() *probe.Error {

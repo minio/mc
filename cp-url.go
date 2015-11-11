@@ -73,18 +73,15 @@ func checkCopySyntax(ctx *cli.Context) {
 	if isURLRecursive(tgtURL) {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
 	}
-	// scope locally
-	{
-		url := client.NewURL(tgtURL)
-		if url.Host != "" {
-			// This check is for type URL.
-			if url.Path == string(url.Separator) {
-				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
-			}
-			if strings.Count(url.Path, "/") < 2 {
-				if err := bucketExists(tgtURL); err != nil {
-					fatalIf(err.Trace(), fmt.Sprintf("Unable to stat target ‘%s’.", tgtURL))
-				}
+	url := client.NewURL(tgtURL)
+	if url.Host != "" {
+		// This check is for type URL.
+		if url.Path == string(url.Separator) {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+		}
+		if strings.Count(url.Path, "/") < 2 {
+			if err := bucketExists(tgtURL); err != nil {
+				fatalIf(err.Trace(), fmt.Sprintf("Unable to stat target ‘%s’.", tgtURL))
 			}
 		}
 	}
@@ -234,6 +231,12 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 		// Source is not a regular file
 		return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
 	}
+
+	_, _, err = url2Stat(targetURL)
+	if err == nil && !cpForceFlag {
+		return copyURLs{Error: errOverWriteNotAllowed(targetURL).Trace()}
+	}
+
 	// All OK.. We can proceed. Type A
 	return copyURLs{SourceContent: sourceContent, TargetContent: &client.Content{URL: *client.NewURL(targetURL)}}
 }
@@ -306,6 +309,13 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			newTargetURL := client.NewURL(targetURL)
 			newTargetURL.Path = filepath.Join(newTargetURL.Path,
 				strings.TrimPrefix(sourceContent.Content.URL.Path, url2Dir(sourceURL)))
+
+			// verify if destination exists, and cpForceFlag is not set do not proceed.
+			_, _, err := url2Stat(newTargetURL.String())
+			if err == nil && !cpForceFlag {
+				copyURLsCh <- copyURLs{Error: errOverWriteNotAllowed(newTargetURL.String()).Trace()}
+				return
+			}
 			copyURLsCh <- prepareCopyURLsTypeA(sourceContent.Content.URL.String(), newTargetURL.String())
 		}
 	}(sourceURL, targetURL, copyURLsCh)

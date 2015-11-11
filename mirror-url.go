@@ -159,7 +159,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 		}
 		// targets have to be directory.
 		if !targetContent.Type.IsDir() {
-			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(targetURL).Trace()}
+			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(targetURL).Trace(newSourceURL)}
 			return
 		}
 		// special case, be extremely careful before changing this behavior - will lead to data loss.
@@ -190,25 +190,38 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 			if targetContents[i] != nil {
 				newTargetURLPath = strings.TrimPrefix(targetContents[i].URL.Path, targetClients[i].GetURL().Path)
 			}
+			// Trim any preceding separators.
+			newSourceURLPath := strings.TrimPrefix(srcContent.URL.Path, string(srcContent.URL.Separator))
 			// either target reached EOF or target does not have source content.
-			if targetContents[i] == nil || srcContent.URL.Path != newTargetURLPath {
+			if targetContents[i] == nil || newSourceURLPath != newTargetURLPath {
 				targetURL := client.NewURL(urlJoinPath(newTargetURLs[i], srcContent.URL.String()))
 				mirrorTargets = append(mirrorTargets, &client.Content{URL: *targetURL})
 				continue
 			}
 
-			// source and target have same content
-			if srcContent.Type.IsRegular() && targetContents[i].Type.IsRegular() {
-				// but size mismatches
-				if srcContent.Size != targetContents[i].Size {
-					targetURL := client.NewURL(urlJoinPath(newTargetURLs[i], srcContent.URL.String()))
-					mirrorTargets = append(mirrorTargets, &client.Content{URL: *targetURL})
+			if newSourceURLPath == newTargetURLPath {
+				// source and target have same content type.
+				if srcContent.Type.IsRegular() && targetContents[i].Type.IsRegular() {
+					if srcContent.Size != targetContents[i].Size {
+						if !mirrorForceFlag {
+							mirrorURLsCh <- mirrorURLs{
+								Error: errOverWriteNotAllowed(targetContents[i].URL.String()).Trace(srcContent.URL.String()),
+							}
+							continue
+						}
+						targetURL := client.NewURL(urlJoinPath(newTargetURLs[i], srcContent.URL.String()))
+						mirrorTargets = append(mirrorTargets, &client.Content{URL: *targetURL})
+					}
+					continue
 				}
-				continue
+				if srcContent.Type.IsRegular() && !targetContents[i].Type.IsRegular() {
+					// but type mismatches, error condition fail and continue.
+					mirrorURLsCh <- mirrorURLs{
+						Error: errInvalidTarget(targetContents[i].URL.String()).Trace(srcContent.URL.String()),
+					}
+					continue
+				}
 			}
-
-			// source and target have different content type
-			// TODO: add error
 		}
 		if len(mirrorTargets) > 0 {
 			mirrorURLsCh <- mirrorURLs{
