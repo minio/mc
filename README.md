@@ -6,12 +6,12 @@
 
 ``mc`` implements the following commands
 ```
-  ls		  List files and folders.
-  mb		  Make a bucket or folder.
-  cat		  Display contents of a file.
-  rm		  Remove file or bucket.
-  pipe	  Write contents of stdin to one or more targets. Pipe is the opposite of cat command.
-  cp		  Copy files and folders from many sources to a single destination.
+  ls        List files and folders.
+  mb		Make a bucket or folder.
+  cat		Display contents of a file.
+  rm		Remove file or bucket.
+  pipe	    Write contents of stdin to one or more targets. Pipe is the opposite of cat command.
+  cp		Copy files and folders from many sources to a single destination.
   mirror	Mirror folders recursively from a single source to many destinations.
   session	Manage sessions for cp and mirror.
   share		Share documents via URL.
