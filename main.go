@@ -22,13 +22,45 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/pb"
 	"github.com/olekukonko/ts"
 )
+
+// Help template for mc
+var mcHelpTemplate = `NAME:
+  {{.Name}} - {{.Usage}}
+
+USAGE:
+  {{.Name}} {{if .Flags}}[global flags] {{end}}command{{if .Flags}} [command flags]{{end}} [arguments...]
+
+COMMANDS:
+  {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+  {{end}}{{if .Flags}}
+GLOBAL FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}{{end}}
+VERSION:
+  ` + mcVersion +
+	`{{ "\n"}}{{range $key, $value := ExtraInfo}}
+{{$key}}:
+  {{$value}}
+{{end}}`
+
+// Default handler for missing commands.
+func commandNotFound(ctx *cli.Context, command string) {
+	msg := fmt.Sprintf("‘%s’ is not a mc command. See ‘mc help’.", command)
+	closestCommands := findClosestCommands(command)
+	if len(closestCommands) > 0 {
+		msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
+		for _, cmd := range closestCommands {
+			msg += fmt.Sprintf("        ‘%s’\n", cmd)
+		}
+	}
+	fatalIf(errDummy().Trace(), msg)
+}
 
 // Check for sane config environment early on and gracefully report.
 func checkConfig() {
@@ -76,12 +108,15 @@ func registerBefore(ctx *cli.Context) error {
 	globalMimicFlag = ctx.GlobalBool("mimic")
 	globalDebugFlag = ctx.GlobalBool("debug")
 	globalJSONFlag = ctx.GlobalBool("json")
+
 	if globalDebugFlag {
 		console.NoDebugPrint = false
 	}
 
-	// Set theme.
-	setMainPalette(ctx.GlobalString("colors"))
+	// Disable color themes.
+	if ctx.GlobalBool("no-color") == true {
+		console.SetColorOff()
+	}
 
 	// Verify golang runtime
 	verifyMCRuntime()
@@ -134,64 +169,9 @@ func registerApp() *cli.App {
 	app.Commands = commands
 	app.Flags = flags
 	app.Author = "Minio.io"
-	app.CustomAppHelpTemplate = `NAME:
-  {{.Name}} - {{.Usage}}
-
-USAGE:
-  {{.Name}} {{if .Flags}}[global flags] {{end}}command{{if .Flags}} [command flags]{{end}} [arguments...]
-
-COMMANDS:
-  {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-  {{end}}{{if .Flags}}
-GLOBAL FLAGS:
-  {{range .Flags}}{{.}}
-  {{end}}{{end}}
-VERSION:
-  ` + mcVersion +
-		`{{ "\n"}}{{range $key, $value := ExtraInfo}}
-{{$key}}:
-  {{$value}}
-{{end}}`
-	app.CommandNotFound = func(ctx *cli.Context, command string) {
-		msg := fmt.Sprintf("‘%s’ is not a mc command. See ‘mc help’.", command)
-		closestCommands := findClosestCommands(command)
-		if len(closestCommands) > 0 {
-			msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
-			for _, cmd := range closestCommands {
-				msg += fmt.Sprintf("        ‘%s’\n", cmd)
-			}
-		}
-		fatalIf(errDummy().Trace(), msg)
-
-	}
+	app.CustomAppHelpTemplate = mcHelpTemplate
+	app.CommandNotFound = commandNotFound // handler function declared above.
 	return app
-}
-
-func setMainPalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"Debug":  color.New(color.FgWhite, color.Faint, color.Italic),
-		"Fatal":  color.New(color.FgRed, color.Italic, color.Bold),
-		"Error":  color.New(color.FgYellow, color.Italic),
-		"Info":   color.New(color.FgGreen, color.Bold),
-		"Print":  color.New(),
-		"PrintC": color.New(color.FgGreen, color.Bold),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"Debug":  color.New(color.FgWhite, color.Faint, color.Italic),
-			"Fatal":  color.New(color.FgWhite, color.Italic, color.Bold),
-			"Error":  color.New(color.FgWhite, color.Italic, color.Bold),
-			"Info":   color.New(color.FgWhite, color.Bold),
-			"Print":  color.New(),
-			"PrintC": color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-	/// Add more styles here
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
-		console.SetNoColor()
-	}
 }
 
 func main() {

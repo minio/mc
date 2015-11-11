@@ -142,9 +142,9 @@ func getFixedWidth(width, percent int) int {
 
 // newProgressBar - instantiate a pbBar.
 func newProgressBar(total int64) *barSend {
-	console.SetCustomPalette(map[string]*color.Color{
-		"Bar": color.New(color.FgGreen, color.Bold),
-	})
+	// Progress bar speific theme customization.
+	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
+
 	cmdCh := make(chan barMsg)
 	finishCh := make(chan bool)
 	go func(total int64, cmdCh <-chan barMsg, finishCh chan<- bool) {

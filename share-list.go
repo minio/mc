@@ -109,8 +109,10 @@ func doShareList() *probe.Error {
 func mainShareList(ctx *cli.Context) {
 	// setup share data folder and file.
 	shareDataSetup()
-	// set share command theme.
-	setSharePalette(ctx.GlobalString("colors"))
+
+	// Additional command speific theme customization.
+	shareSetColor()
+
 	err := doShareList()
 	fatalIf(err.Trace(), "Unable to list shared URLs.")
 }

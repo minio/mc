@@ -68,8 +68,10 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 func mainShareDownload(ctx *cli.Context) {
 	// setup share data folder and file.
 	shareDataSetup()
-	// set share command theme.
-	setSharePalette(ctx.GlobalString("colors"))
+
+	// Additional command speific theme customization.
+	shareSetColor()
+
 	// check input arguments.
 	checkShareDownloadSyntax(ctx)
 

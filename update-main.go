@@ -104,30 +104,13 @@ func checkUpdateSyntax(ctx *cli.Context) {
 	}
 }
 
-// set update command theme.
-func setUpdatePalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"UpdateMessage": color.New(color.FgGreen, color.Bold),
-	})
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"UpdateMessage": color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-	/// Add more styles here.
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely.
-		console.SetNoColor()
-	}
-}
-
 // main for update command.
 func mainUpdate(ctx *cli.Context) {
 	// check input arguments
 	checkUpdateSyntax(ctx)
-	// set theme
-	setUpdatePalette(ctx.GlobalString("colors"))
+
+	// Additional command speific theme customization.
+	console.SetColor("UpdateMessage", color.New(color.FgGreen, color.Bold))
 
 	arg := strings.TrimSpace(ctx.Args().First())
 	switch arg {

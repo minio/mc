@@ -30,6 +30,15 @@ import (
 	"github.com/minio/minio-xl/pkg/quick"
 )
 
+// shareSetColor sets colors share sub-commands.
+func shareSetColor() {
+	// Additional command speific theme customization.
+	console.SetColor("Share", color.New(color.FgGreen, color.Bold))
+	console.SetColor("Expires", color.New(color.FgRed, color.Bold))
+	console.SetColor("URL", color.New(color.FgCyan, color.Bold))
+	console.SetColor("File", color.New(color.FgRed, color.Bold))
+}
+
 // create shared data folder and file if they doesn't exist.
 func shareDataSetup() {
 	if !isSharedURLsDataDirExists() {
@@ -45,32 +54,6 @@ func shareDataSetup() {
 
 		fatalIf(createSharedURLsDataFile().Trace(), "Unable to create shared URL data file ‘"+shareFile+"’.")
 		console.Infof("Successfully created ‘%s’ \n", shareFile)
-	}
-}
-
-// set share command theme
-func setSharePalette(style string) {
-	console.SetCustomPalette(map[string]*color.Color{
-		"Share":   color.New(color.FgGreen, color.Bold),
-		"Expires": color.New(color.FgRed, color.Bold),
-		"URL":     color.New(color.FgCyan, color.Bold),
-		"File":    color.New(color.FgRed, color.Bold),
-	})
-
-	if style == "light" {
-		console.SetCustomPalette(map[string]*color.Color{
-			"Share":   color.New(color.FgWhite, color.Bold),
-			"Expires": color.New(color.FgWhite, color.Bold),
-			"URL":     color.New(color.FgWhite, color.Bold),
-			"File":    color.New(color.FgWhite, color.Bold),
-		})
-		return
-	}
-
-	/// Add more styles here
-	if style == "nocolor" {
-		// All coloring options exhausted, setting nocolor safely
-		console.SetNoColor()
 	}
 }
 
