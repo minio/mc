@@ -39,6 +39,12 @@ var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy files and folders from many sources to a single destination.",
 	Action: mainCopy,
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "force a dangerous remove operation.",
+		},
+	},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -65,6 +71,10 @@ EXAMPLES:
       $ mc {{.Name}} 'workdir/documents/May 2014...' s3/miniocloud
 `,
 }
+
+var (
+	cpForceFlag = false // cp specific force flag set via command line
+)
 
 // copyMessage container for file copy messages
 type copyMessage struct {
@@ -148,7 +158,7 @@ func doCopyFake(cURLs copyURLs, progressReader interface{}) {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
+func doPrepareCopyURLs(session *sessionV3, trapCh <-chan bool) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources, even the recursive URLs mixed in-between.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -164,6 +174,9 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
 		scanBar = scanBarFactory()
 	}
+
+	// will be true if '--force' is provided on the command line.
+	cpForceFlag = session.Header.CommandBoolFlag.Value
 
 	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
 	done := false
@@ -214,7 +227,7 @@ func doPrepareCopyURLs(session *sessionV2, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCopySession(session *sessionV2) {
+func doCopySession(session *sessionV3) {
 	trapCh := signalTrap(os.Interrupt, os.Kill)
 
 	if !session.HasData() {
@@ -323,15 +336,18 @@ func mainCopy(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	session := newSessionV2()
-
 	var e error
+	session := newSessionV3()
 	session.Header.CommandType = "cp"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {
 		session.Delete()
 		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
+
+	// If force flag is set save it with in session
+	session.Header.CommandBoolFlag.Key = "force"
+	session.Header.CommandBoolFlag.Value = ctx.Bool("force")
 
 	// extract URLs.
 	var err *probe.Error

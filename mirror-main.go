@@ -38,6 +38,12 @@ var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Mirror folders recursively from a single source to many destinations.",
 	Action: mainMirror,
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "force a dangerous remove operation.",
+		},
+	},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -61,6 +67,10 @@ EXAMPLES:
       $ mc {{.Name}} 'workdir/documents/Aug 2015' s3/miniocloud
 `,
 }
+
+var (
+	mirrorForceFlag = false // mirror specific force flag set via command line
+)
 
 // mirrorMessage container for file mirror messages
 type mirrorMessage struct {
@@ -148,7 +158,7 @@ func doMirrorFake(sURLs mirrorURLs, progressReader interface{}) {
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
-func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
+func doPrepareMirrorURLs(session *sessionV3, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURLs := session.Header.CommandArgs[1:]
 	var totalBytes int64
@@ -161,6 +171,9 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
 		scanBar = scanBarFactory()
 	}
+
+	// will be true if '--force' is provided on the command line.
+	mirrorForceFlag = session.Header.CommandBoolFlag.Value
 
 	URLsCh := prepareMirrorURLs(sourceURL, targetURLs)
 	done := false
@@ -208,7 +221,7 @@ func doPrepareMirrorURLs(session *sessionV2, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doMirrorSession(session *sessionV2) {
+func doMirrorSession(session *sessionV3) {
 	trapCh := signalTrap(os.Interrupt, os.Kill)
 
 	if !session.HasData() {
@@ -319,13 +332,17 @@ func mainMirror(ctx *cli.Context) {
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
 	var e error
-	session := newSessionV2()
+	session := newSessionV3()
 	session.Header.CommandType = "mirror"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {
 		session.Delete()
 		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
+
+	// If force flag is set save it with in session
+	session.Header.CommandBoolFlag.Key = "force"
+	session.Header.CommandBoolFlag.Value = ctx.Bool("force")
 
 	// extract URLs.
 	var err *probe.Error

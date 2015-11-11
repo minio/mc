@@ -36,14 +36,14 @@ func (s *TestSuite) TestSession(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
 
-	session := newSessionV2()
+	session := newSessionV3()
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 
 	err = session.Close()
 	c.Assert(err, IsNil)
 
-	savedSession, err := loadSessionV2(session.SessionID)
+	savedSession, err := loadSessionV3(session.SessionID)
 	c.Assert(err, IsNil)
 	c.Assert(session.SessionID, Equals, savedSession.SessionID)
 
@@ -90,7 +90,7 @@ func (s *TestSuite) TestSessionContext(c *C) {
 	// reset back
 	console.IsExited = false
 
-	session := newSessionV2()
+	session := newSessionV3()
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 
