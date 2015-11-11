@@ -143,7 +143,7 @@ func registerApp() *cli.App {
 	registerCmd(mbCmd)      // Make a bucket.
 	registerCmd(catCmd)     // Display contents of a file.
 	registerCmd(rmCmd)      // Remove a file or bucket
-	registerCmd(pigCmd)     // Write contents of stdin to a file.
+	registerCmd(pipeCmd)    // Write contents of stdin to a file.
 	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
 	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
 	registerCmd(sessionCmd) // Manage sessions for copy and mirror.

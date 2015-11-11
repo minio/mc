@@ -25,13 +25,13 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *TestSuite) TestPigFail(c *C) {
+func (s *TestSuite) TestPipeFail(c *C) {
 	/// filesystem
 	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(err, IsNil)
 	defer os.RemoveAll(root)
 
-	err = app.Run([]string{os.Args[0], "pig", server.URL + "/bucket/"})
+	err = app.Run([]string{os.Args[0], "pipe", server.URL + "/bucket/"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
