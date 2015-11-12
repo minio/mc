@@ -39,31 +39,28 @@ USAGE:
 
 EXAMPLES:
    1. Create a bucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} https://s3.amazonaws.com/public-document-store
+      $ mc {{.Name}} https://s3.amazonaws.com/mynewbucket
 
-   2. Make a folder on local filesystem with space characters
-      $ mc {{.Name}} 'My Documents'
-
-   3. Create a bucket on Minio cloud storage.
-      $ mc {{.Name}} https://play.minio.io:9000/mongodb-backup
-
-   4. Create a bucket on Google Cloud Storage.
+   2. Create a new bucket on Google Cloud Storage.
       $ mc {{.Name}} https://storage.googleapis.com/miniocloud
+
+   3. Create a new directory including its missing parents (equivalent to ‘mkdir -p’).
+      $ mc {{.Name}} /tmp/this/new/dir1
 `,
 }
 
-// makeBucketMessage is container for make bucket success and failure messages
+// makeBucketMessage is container for make bucket success and failure messages.
 type makeBucketMessage struct {
 	Status string `json:"status"`
 	Bucket string `json:"bucket"`
 }
 
-// String colorized make bucket message
+// String colorized make bucket message.
 func (s makeBucketMessage) String() string {
-	return console.Colorize("MakeBucket", "Bucket created successfully  ‘"+s.Bucket+"’")
+	return console.Colorize("MakeBucket", "Bucket created successfully ‘"+s.Bucket+"’.")
 }
 
-// JSON jsonified make bucket message
+// JSON jsonified make bucket message.
 func (s makeBucketMessage) JSON() string {
 	makeBucketJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
@@ -71,6 +68,7 @@ func (s makeBucketMessage) JSON() string {
 	return string(makeBucketJSONBytes)
 }
 
+// Validate command line arguments.
 func checkMakeBucketSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
@@ -82,7 +80,7 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainMakeBucket is the handler for mc mb command
+// mainMakeBucket is entry point for mb command.
 func mainMakeBucket(ctx *cli.Context) {
 	checkMakeBucketSyntax(ctx)
 
@@ -95,7 +93,7 @@ func mainMakeBucket(ctx *cli.Context) {
 
 		// Instantiate client for URL.
 		clnt, err := url2Client(targetURL)
-		fatalIf(err.Trace(targetURL), "Invalid target target ‘"+targetURL+"’.")
+		fatalIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
 
 		// Make bucket.
 		fatalIf(clnt.MakeBucket().Trace(), "Unable to make bucket ‘"+targetURL+"’.")
