@@ -23,7 +23,14 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio-xl/pkg/probe"
+)
+
+// ls specific flags.
+var (
+	lsFlagIncomplete = cli.BoolFlag{
+		Name:  "incomplete, I",
+		Usage: "remove incomplete uploads.",
+	}
 )
 
 // list files and folders.
@@ -31,11 +38,15 @@ var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "List files and folders.",
 	Action: mainList,
+	Flags:  []cli.Flag{lsFlagIncomplete},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET ...]
+   mc {{.Name}} [OPTIONS] TARGET [TARGET ...]
+
+OPTIONS:
+   --incomplete - List incomplete upload of objects.
 
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.
@@ -43,32 +54,32 @@ EXAMPLES:
       [2015-01-20 15:42:00 PST]     0B rom/
       [2015-01-15 00:05:40 PST]     0B zek/
 
-   2. List buckets from Amazon S3 cloud storage and recursively list objects from Minio cloud storage.
-      $ mc {{.Name}} https://s3.amazonaws.com/ https://play.minio.io:9000/backup/... https://storage.googleapis.com
+   2. List buckets and all its contents from Amazon S3 cloud storage recursively.
+      $ mc {{.Name}} https://s3.amazonaws.com/...
       2015-01-15 00:05:40 PST     0B zek/
       2015-03-31 14:46:33 PDT  55MiB backup.tar.gz
       2015-04-15 20:11:22 PST     0B miniocloud
 
-   3. List files recursively on local filesystem on Windows.
+   3. List files recursively on a local filesystem on Microsoft Windows.
       $ mc {{.Name}} C:\Users\Worf\...
       [2015-03-31 14:46:33 PDT] 15.00MiB Gowron\Khitomer Conference Details.pdf
+      ...
 
-   4. List files with non english characters on Amazon S3 cloud storage.
+   4. List files with non-English characters on Amazon S3 cloud storage.
       $ mc ls s3/andoria/本...
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
-   5. List files with space characters on Amazon S3 cloud storage. 
+   5. List folders with space separated names on Amazon S3 cloud storage. 
       $ mc ls 's3/miniocloud/Community Files/'
       [2015-05-19 17:28:22 PDT]    41B 本語.md
     
-   6. Behave like operating system tool ‘ls’, used for shell aliases.
+   6. Behave like an operating system ‘ls’. [HINT: Add it to your shell alias].
       $ mc --mimic ls
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
-   7. List incompletely uploaded files for a given bucket
-      $ mc ls s3/miniocloud incomplete
-      [2015-10-19 22:28:02 PDT]     0B bin/
-
+   7. List incomplete uploads of objects on Amazon S3.
+      $ mc ls --incomplete s3/mybucket
+      [2015-10-19 22:28:02 PDT]     32MiB backup/server112-11Nov15.tgz
 `,
 }
 
@@ -104,37 +115,22 @@ func mainList(ctx *cli.Context) {
 	checkListSyntax(ctx)
 
 	args := ctx.Args()
+	isIncomplete := ctx.Bool("incomplete")
+
 	// mimic operating system tool behavior
 	if globalMimicFlag && !ctx.Args().Present() {
 		args = []string{"."}
 	}
 
-	var targetURLs []string
-	var err *probe.Error
-	if args.Last() == "incomplete" {
-		targetURLs, err = args2URLs(args.Head())
-		fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
-		for _, targetURL := range targetURLs {
-			// if recursive strip off the "..."
-			var clnt client.Client
-			clnt, err = url2Client(stripRecursiveURL(targetURL))
-			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
+	targetURLs, err := args2URLs(args.Head())
+	fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
+	for _, targetURL := range targetURLs {
+		// if recursive strip off the "..."
+		var clnt client.Client
+		clnt, err = url2Client(stripRecursiveURL(targetURL))
+		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
-			err = doListIncomplete(clnt, isURLRecursive(targetURL))
-			fatalIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
-		}
-	} else {
-		targetURLs, err = args2URLs(args)
-		fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
-		for _, targetURL := range targetURLs {
-			// if recursive strip off the "..."
-			var clnt client.Client
-			clnt, err = url2Client(stripRecursiveURL(targetURL))
-			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
-
-			err = doList(clnt, isURLRecursive(targetURL))
-			fatalIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
-		}
+		err = doList(clnt, isURLRecursive(targetURL), isIncomplete)
+		fatalIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
 	}
-
 }

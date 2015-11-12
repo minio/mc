@@ -30,12 +30,12 @@ import (
 
 // rm specific flags.
 var (
-	forceFlag = cli.BoolFlag{
+	rmFlagForce = cli.BoolFlag{
 		Name:  "force",
 		Usage: "force a dangerous remove operation.",
 	}
 
-	incompleteFlag = cli.BoolFlag{
+	rmFlagIncomplete = cli.BoolFlag{
 		Name:  "incomplete, I",
 		Usage: "remove incomplete uploads.",
 	}
@@ -46,7 +46,7 @@ var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "Remove file or bucket [WARNING: Use with care].",
 	Action: mainRm,
-	Flags:  []cli.Flag{forceFlag, incompleteFlag},
+	Flags:  []cli.Flag{rmFlagForce, rmFlagIncomplete},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -105,10 +105,10 @@ func (r rmMessage) JSON() string {
 func checkRmSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 
-	help := ctx.GlobalBool("help")
+	ishelp := ctx.GlobalBool("help")
 	isForce := ctx.Bool("force")
 
-	if !args.Present() || help {
+	if !args.Present() || ishelp {
 		exitCode := 1
 		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
 	}
@@ -156,8 +156,8 @@ func rmAll(url string, isIncomplete bool) {
 		return // End of journey.
 	}
 
-	recursive := false // Disable recursion and only list this folder's contents.
-	for entry := range clnt.List(recursive, isIncomplete) {
+	isRecursive := false // Disable recursion and only list this folder's contents.
+	for entry := range clnt.List(isRecursive, isIncomplete) {
 		if entry.Err != nil {
 			errorIf(entry.Err.Trace(url), "Unable to list ‘"+url+"’.")
 			return // End of journey.
