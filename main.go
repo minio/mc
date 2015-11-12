@@ -138,7 +138,7 @@ func findClosestCommands(command string) []string {
 }
 
 func registerApp() *cli.App {
-	// Register all the commands
+	// Register all the commands (refer flags.go)
 	registerCmd(lsCmd)      // List contents of a bucket.
 	registerCmd(mbCmd)      // Make a bucket.
 	registerCmd(catCmd)     // Display contents of a file.
@@ -154,7 +154,7 @@ func registerApp() *cli.App {
 	registerCmd(updateCmd)  // Check for new software updates.
 	registerCmd(versionCmd) // Print version.
 
-	// register all the flags
+	// register all the flags (refer flags.go)
 	registerFlag(configFlag) // Path to configuration folder.
 	registerFlag(quietFlag)  // Suppress chatty console output.
 	registerFlag(mimicFlag)  // Behave like operating system tools. Use with shell aliases.

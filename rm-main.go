@@ -32,7 +32,7 @@ import (
 var (
 	rmFlagForce = cli.BoolFlag{
 		Name:  "force",
-		Usage: "force a dangerous remove operation.",
+		Usage: "Force a dangerous remove operation.",
 	}
 
 	rmFlagIncomplete = cli.BoolFlag{

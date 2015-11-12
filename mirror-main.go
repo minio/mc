@@ -33,22 +33,28 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+// mirror specific flags.
+var (
+	mirrorFlagForce = cli.BoolFlag{
+		Name:  "force",
+		Usage: "Force overwrite of an existing target(s).",
+	}
+)
+
 //  Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Mirror folders recursively from a single source to many destinations.",
 	Action: mainMirror,
-	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force",
-			Usage: "force a dangerous remove operation.",
-		},
-	},
+	Flags:  []cli.Flag{mirrorFlagForce},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} SOURCE TARGET [TARGET...]
+   mc {{.Name}} [OPTIONS] SOURCE TARGET [TARGET...]
+
+OPTIONS:
+   --force - Force overwrite of an existing target(s).
 
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
@@ -59,17 +65,11 @@ EXAMPLES:
 
    3. Mirror a bucket from aliased Amazon S3 cloud storage to multiple folders on Windows.
       $ mc {{.Name}} s3/documents/2014/ C:\backup\2014 C:\shared\volume\backup\2014
-
-   4. Mirror a local folder of non english character recursively to Amazon s3 cloud storage and Minio cloud storage.
-      $ mc {{.Name}} 本語/ s3/mylocaldocuments play/backup
-
-   5. Mirror a local folder with space characters to Amazon s3 cloud storage
-      $ mc {{.Name}} 'workdir/documents/Aug 2015' s3/miniocloud
 `,
 }
 
 var (
-	mirrorForceFlag = false // mirror specific force flag set via command line
+	mirrorIsForce = false // mirror specific force flag set via command line
 )
 
 // mirrorMessage container for file mirror messages
@@ -173,7 +173,7 @@ func doPrepareMirrorURLs(session *sessionV3, trapCh <-chan bool) {
 	}
 
 	// will be true if '--force' is provided on the command line.
-	mirrorForceFlag = session.Header.CommandBoolFlag.Value
+	mirrorIsForce = session.Header.CommandBoolFlag.Value
 
 	URLsCh := prepareMirrorURLs(sourceURL, targetURLs)
 	done := false
@@ -221,6 +221,7 @@ func doPrepareMirrorURLs(session *sessionV3, trapCh <-chan bool) {
 	session.Save()
 }
 
+// Session'fied mirror command.
 func doMirrorSession(session *sessionV3) {
 	trapCh := signalTrap(os.Interrupt, os.Kill)
 
@@ -325,6 +326,7 @@ func doMirrorSession(session *sessionV3) {
 	wg.Wait()
 }
 
+// Main entry point for mirror command.
 func mainMirror(ctx *cli.Context) {
 	checkMirrorSyntax(ctx)
 
