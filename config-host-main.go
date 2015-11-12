@@ -133,7 +133,13 @@ func mainConfigHost(ctx *cli.Context) {
 }
 
 func listHosts() {
-	config, err := newConfig()
+	conf := new(configV6)
+	conf.Version = globalMCConfigVersion
+	// make sure to allocate map's otherwise Golang
+	// exits silently without providing any errors
+	conf.Hosts = make(map[string]hostConfig)
+	conf.Aliases = make(map[string]string)
+	config, err := quick.New(conf)
 	fatalIf(err.Trace(), "Failed to initialize ‘quick’ configuration data structure.")
 
 	configPath := mustGetMcConfigPath()
