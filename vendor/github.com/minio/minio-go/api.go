@@ -1070,10 +1070,6 @@ func (a API) removeIncompleteUploadInRoutine(bucket, object string, errorCh chan
 		errorCh <- err
 		return
 	}
-	if err := invalidObjectError(object); err != nil {
-		errorCh <- err
-		return
-	}
 	listMultipartUplResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
 		errorCh <- err
