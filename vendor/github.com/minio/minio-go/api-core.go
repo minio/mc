@@ -566,7 +566,12 @@ func (a apiCore) presignedPostPolicy(p *PostPolicy) map[string]string {
 	if r.config.Signature.isV2() {
 		policyBase64 := p.base64()
 		p.formData["policy"] = policyBase64
-		p.formData["AWSAccessKeyId"] = r.config.AccessKeyID
+		// for all other regions set this value to be 'AWSAccessKeyId'.
+		if r.config.Region != "google" {
+			p.formData["AWSAccessKeyId"] = r.config.AccessKeyID
+		} else {
+			p.formData["GoogleAccessId"] = r.config.AccessKeyID
+		}
 		p.formData["signature"] = r.PostPresignSignatureV2(policyBase64)
 		return p.formData
 	}

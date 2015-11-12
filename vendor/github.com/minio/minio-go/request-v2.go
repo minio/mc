@@ -61,7 +61,11 @@ func (r *Request) PreSignV2() (string, error) {
 	hm.Write([]byte(signText))
 
 	query := r.req.URL.Query()
-	query.Set("AWSAccessKeyId", r.config.AccessKeyID)
+	if r.config.Region != "google" {
+		query.Set("AWSAccessKeyId", r.config.AccessKeyID)
+	} else {
+		query.Set("GoogleAccessId", r.config.AccessKeyID)
+	}
 	query.Set("Expires", strconv.FormatInt(epochExpires, 10))
 	query.Set("Signature", base64.StdEncoding.EncodeToString(hm.Sum(nil)))
 	r.req.URL.RawQuery = query.Encode()
