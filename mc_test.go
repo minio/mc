@@ -69,7 +69,7 @@ func (s *TestSuite) SetUpSuite(c *C) {
 	config, err := newConfig()
 	c.Assert(err, IsNil)
 
-	config.Data().(*configV5).Hosts["127.0.0.1:*"] = hostConfig{
+	config.Data().(*configV6).Hosts["127.0.0.1:*"] = hostConfig{
 		AccessKeyID:     "WLGDGYAQYIGI833EV05A",
 		SecretAccessKey: "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF",
 		API:             "S3v4",
@@ -104,7 +104,7 @@ func (s *TestSuite) TestGetNewClient(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *TestSuite) TestNewConfigV5(c *C) {
+func (s *TestSuite) TestNewConfigV6(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "mc-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
@@ -115,12 +115,12 @@ func (s *TestSuite) TestNewConfigV5(c *C) {
 	err = conf.Save(configFile)
 	c.Assert(err, IsNil)
 
-	confNew := newConfigV5()
+	confNew := newConfigV6()
 	config, err := quick.New(confNew)
 	c.Assert(err, IsNil)
 	err = config.Load(configFile)
 	c.Assert(err, IsNil)
-	data := config.Data().(*configV5)
+	data := config.Data().(*configV6)
 
 	type aliases struct {
 		name string
@@ -152,7 +152,8 @@ func (s *TestSuite) TestNewConfigV5(c *C) {
 		"127.0.0.1:*",
 		"play.minio.io:9000",
 		"dl.minio.io:9000",
-		"s3*.amazonaws.com",
+		"*s3*amazonaws.com",
+		"*storage.googleapis.com",
 	}
 	for _, host := range wantHosts {
 		_, ok := data.Hosts[host]

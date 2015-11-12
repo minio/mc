@@ -141,7 +141,7 @@ func listHosts() {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV5)
+	newConf := config.Data().(*configV6)
 	for k, v := range newConf.Hosts {
 		printMsg(hostMessage{op: "list", Host: k, AccessKeyID: v.AccessKeyID, SecretAccessKey: v.SecretAccessKey, API: v.API})
 	}
@@ -162,7 +162,7 @@ func removeHost(hostGlob string) {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV5)
+	newConf := config.Data().(*configV6)
 	if _, ok := newConf.Hosts[hostGlob]; !ok {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Host glob ‘%s’ does not exist.", hostGlob))
 	}
@@ -223,7 +223,7 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
 		}
 	}
 	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV5)
+	newConf := config.Data().(*configV6)
 	newConf.Hosts[hostGlob] = hostConfig{
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
