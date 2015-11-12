@@ -230,6 +230,60 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 
 	fst, err := f.fsStat()
 	if err != nil {
+		if os.IsNotExist(err.ToGoError()) {
+			dir, err := os.Open(filepath.Dir(fpath))
+			if err != nil {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     probe.NewError(err),
+				}
+			}
+			files, err := dir.Readdir(-1)
+			if err != nil {
+				contentCh <- client.ContentOnChannel{
+					Content: nil,
+					Err:     probe.NewError(err),
+				}
+				return
+			}
+			for _, fi := range files {
+				file := filepath.Join(dir.Name(), fi.Name())
+				if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+					st, err := os.Stat(file)
+					if err != nil {
+						contentCh <- client.ContentOnChannel{
+							Content: nil,
+							Err:     probe.NewError(err),
+						}
+					}
+					if strings.HasPrefix(file, fpath) {
+						contentCh <- client.ContentOnChannel{
+							Content: &client.Content{
+								URL:  *client.NewURL(file),
+								Time: st.ModTime(),
+								Size: st.Size(),
+								Type: st.Mode(),
+							},
+							Err: nil,
+						}
+						continue
+					}
+				}
+				if strings.HasPrefix(file, fpath) {
+					contentCh <- client.ContentOnChannel{
+						Content: &client.Content{
+							URL:  *client.NewURL(file),
+							Time: fi.ModTime(),
+							Size: fi.Size(),
+							Type: fi.Mode(),
+						},
+						Err: nil,
+					}
+				}
+			}
+			return
+		}
+		// if os.IsNotExit() fails we return genuine error back to the caller.
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
 			Err:     err.Trace(fpath),

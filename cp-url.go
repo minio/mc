@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -150,6 +151,20 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
 	_, srcContent, err := url2Stat(srcURL)
+	if err != nil {
+		// if file not found it could be that user has provided a valid
+		// prefix, populate parent content properly and set error to nil.
+		// if at all the prefix doesn't exist eventually 'List' will handle
+		// it properly.
+		if os.IsNotExist(err.ToGoError()) {
+			// set the err back to nil consciously.
+			err = nil
+			// fill in srcContent for subsequent verification.
+			srcContent = new(client.Content)
+			srcContent.URL = *client.NewURL(srcURL)
+			srcContent.Type = os.ModeDir
+		}
+	}
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
@@ -280,11 +295,30 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 
 		// add `/` after trimming off `...` to emulate folders
 		sourceURL = stripRecursiveURL(sourceURL)
-		sourceClient, sourceContent, err := url2Stat(sourceURL)
+		sourceClient, err := url2Client(sourceURL)
 		if err != nil {
-			// Source does not exist or insufficient privileges.
+			// Source initialization failed.
 			copyURLsCh <- copyURLs{Error: err.Trace(sourceURL)}
 			return
+		}
+		_, sourceContent, err := url2Stat(sourceURL)
+		if err != nil {
+			// if file not found it could be that user has provided a valid
+			// prefix, populate parent content properly and set error to nil.
+			// if at all the prefix doesn't exist eventually 'List' will handle
+			// it properly.
+			if os.IsNotExist(err.ToGoError()) {
+				// set the err back to nil consciously.
+				err = nil
+				// fill sourceContent with source client data.
+				sourceContent = new(client.Content)
+				sourceContent.URL = sourceClient.GetURL()
+				sourceContent.Type = os.ModeDir
+			} else {
+				// Source does not exist or insufficient privileges.
+				copyURLsCh <- copyURLs{Error: err.Trace(sourceURL)}
+				return
+			}
 		}
 
 		if !sourceContent.Type.IsDir() {

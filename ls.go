@@ -142,9 +142,21 @@ func trimContent(parentContent, childContent *client.Content, recursive bool) *c
 func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 	_, parentContent, err := url2Stat(clnt.GetURL().String())
 	if err != nil {
-		return err.Trace(clnt.GetURL().String())
+		// if file not found it could be that user has provided a valid
+		// prefix, populate parent content properly and set error to nil.
+		// if at all the prefix doesn't exist eventually 'List' will handle
+		// it properly.
+		if os.IsNotExist(err.ToGoError()) {
+			// set the err back to nil consciously.
+			err = nil
+			// fill parentContent with input client
+			parentContent = new(client.Content)
+			parentContent.URL = clnt.GetURL()
+			parentContent.Type = os.ModeDir
+		} else {
+			return err.Trace(clnt.GetURL().String())
+		}
 	}
-
 	for contentCh := range clnt.List(isRecursive, isIncomplete) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
