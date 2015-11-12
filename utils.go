@@ -18,6 +18,7 @@ package main
 
 import (
 	"math/rand"
+	"path/filepath"
 	"time"
 )
 
@@ -31,4 +32,10 @@ func newRandomID(n int) string {
 		sid[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(sid)
+}
+
+func isBucketVirtualStyle(host string) bool {
+	s3Virtual, _ := filepath.Match("*.s3*.amazonaws.com", host)
+	googleVirtual, _ := filepath.Match("*.storage.googleapis.com", host)
+	return s3Virtual || googleVirtual
 }
