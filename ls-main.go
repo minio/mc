@@ -66,20 +66,21 @@ EXAMPLES:
       ...
 
    4. List files with non-English characters on Amazon S3 cloud storage.
-      $ mc ls s3/andoria/本...
+      $ mc {{.Name}} s3/andoria/本...
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
    5. List folders with space separated names on Amazon S3 cloud storage. 
-      $ mc ls 's3/miniocloud/Community Files/'
+      $ mc {{.Name}} 's3/miniocloud/Community Files/'
       [2015-05-19 17:28:22 PDT]    41B 本語.md
     
-   6. Behave like an operating system ‘ls’. [HINT: Add it to your shell alias].
-      $ mc --mimic ls
+   6. Behave like operating system ‘ls’ tool. Useful for aliasing.
+      $ alias ls='mc --mimic ls'
+      $ {{.Name}}
       [2015-05-19 17:28:22 PDT]    41B 本語.md
 
-   7. List incomplete uploads of objects on Amazon S3.
-      $ mc ls --incomplete s3/mybucket
-      [2015-10-19 22:28:02 PDT]     32MiB backup/server112-11Nov15.tgz
+   7. List incomplete (previously failed) uploads of objects on Amazon S3. 
+      $ mc {{.Name}} --incomplete s3/mybucket
+      [2015-10-19 22:28:02 PDT]     41MiB backup/server112-11Nov15.tgz
 `,
 }
 
