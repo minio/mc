@@ -340,16 +340,37 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 				}
 				return
 			}
-			url := *c.hostURL
-			url.Path = filepath.Join(url.Path, bucket.Stat.Name)
-			content := new(client.Content)
-			content.URL = url
-			content.Size = 0
-			content.Time = bucket.Stat.CreationDate
-			content.Type = os.ModeDir
-			contentCh <- client.ContentOnChannel{
-				Content: content,
-				Err:     nil,
+			for object := range c.api.ListIncompleteUploads(bucket.Stat.Name, o, false) {
+				if object.Err != nil {
+					contentCh <- client.ContentOnChannel{
+						Content: nil,
+						Err:     probe.NewError(object.Err),
+					}
+					return
+				}
+				content := new(client.Content)
+				url := *c.hostURL
+				// join bucket with - incoming object key
+				url.Path = filepath.Join(string(url.Separator), bucket.Stat.Name, object.Stat.Key)
+				if c.virtualStyle {
+					url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+				}
+				switch {
+				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
+					// We need to keep the trailing Separator, do not use filepath.Join()
+					content.URL = url
+					content.Time = time.Now()
+					content.Type = os.ModeDir
+				default:
+					content.URL = url
+					content.Size = object.Stat.Size
+					content.Time = object.Stat.Initiated
+					content.Type = os.ModeTemporary
+				}
+				contentCh <- client.ContentOnChannel{
+					Content: content,
+					Err:     nil,
+				}
 			}
 		}
 	default:
