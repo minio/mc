@@ -21,12 +21,19 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/minio-xl/pkg/quick"
 )
+
+type configV6 struct {
+	Version string                `json:"version"`
+	Aliases map[string]string     `json:"alias"`
+	Hosts   map[string]hostConfig `json:"hosts"`
+}
 
 type configV5 struct {
 	Version string                `json:"version"`
@@ -137,7 +144,7 @@ func mustGetMcConfigPath() string {
 }
 
 // getMcConfig - reads configuration file and returns config
-func getMcConfig() (*configV5, *probe.Error) {
+func getMcConfig() (*configV6, *probe.Error) {
 	if !isMcConfigExists() {
 		return nil, errInvalidArgument().Trace()
 	}
@@ -149,10 +156,10 @@ func getMcConfig() (*configV5, *probe.Error) {
 
 	// Cached in private global variable.
 	if v := cache.Get(); v != nil { // Use previously cached config.
-		return v.(quick.Config).Data().(*configV5), nil
+		return v.(quick.Config).Data().(*configV6), nil
 	}
 
-	conf := new(configV5)
+	conf := new(configV6)
 	conf.Version = globalMCConfigVersion
 	qconf, err := quick.New(conf)
 	if err != nil {
@@ -164,11 +171,11 @@ func getMcConfig() (*configV5, *probe.Error) {
 		return nil, err.Trace()
 	}
 	cache.Put(qconf)
-	return qconf.Data().(*configV5), nil
+	return qconf.Data().(*configV6), nil
 }
 
 // mustGetMcConfig - reads configuration file and returns configs, exits on error
-func mustGetMcConfig() *configV5 {
+func mustGetMcConfig() *configV6 {
 	config, err := getMcConfig()
 	fatalIf(err.Trace(), "Unable to read mc configuration.")
 	return config
@@ -216,6 +223,8 @@ func migrateConfig() {
 	migrateConfigV3ToV4()
 	// Migrate config V4 to V5
 	migrateConfigV4ToV5()
+	// Migrate config V5 to V6
+	migrateConfigV5ToV6()
 }
 
 func fixConfig() {
@@ -376,7 +385,7 @@ func migrateConfigV4ToV5() {
 		return
 	}
 	mcConfigV4, err := quick.Load(mustGetMcConfigPath(), newConfigV4())
-	fatalIf(err.Trace(), "Unable to load mc config V2.")
+	fatalIf(err.Trace(), "Unable to load mc config V4.")
 
 	// update to newer version
 	if mcConfigV4.Version() == "4" {
@@ -390,7 +399,7 @@ func migrateConfigV4ToV5() {
 				API:             "S3v4",
 			}
 		}
-		confV5.Version = globalMCConfigVersion
+		confV5.Version = "5"
 
 		mcNewConfigV5, err := quick.New(confV5)
 		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘5’.")
@@ -399,6 +408,45 @@ func migrateConfigV4ToV5() {
 		fatalIf(err.Trace(), "Unable to save config version ‘5’.")
 
 		console.Infof("Successfully migrated %s from version ‘4’ to version ‘5’.\n", mustGetMcConfigPath())
+	}
+}
+
+// Migrate config version ‘4’ to ‘5’
+func migrateConfigV5ToV6() {
+	if !isMcConfigExists() {
+		return
+	}
+	mcConfigV5, err := quick.Load(mustGetMcConfigPath(), newConfigV5())
+	fatalIf(err.Trace(), "Unable to load mc config V5.")
+
+	// update to newer version
+	if mcConfigV5.Version() == "5" {
+		confV6 := new(configV6)
+		confV6.Aliases = mcConfigV5.Data().(*configV5).Aliases
+		confV6.Aliases["gcs"] = "https://storage.googleapis.com"
+		confV6.Hosts = make(map[string]hostConfig)
+		for host, hostConf := range mcConfigV5.Data().(*configV5).Hosts {
+			confV6.Hosts[host] = hostConf
+		}
+		for host, hostConf := range confV6.Hosts {
+			if strings.Contains(host, "s3") {
+				confV6.Hosts["*s3*amazonaws.com"] = hostConf
+				break
+			}
+		}
+		confV6.Hosts["*storage.googleapis.com"] = hostConfig{
+			AccessKeyID:     globalAccessKeyID,
+			SecretAccessKey: globalSecretAccessKey,
+			API:             "S3v2",
+		}
+		confV6.Version = globalMCConfigVersion
+		mcNewConfigV6, err := quick.New(confV6)
+		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘6’.")
+
+		err = mcNewConfigV6.Save(mustGetMcConfigPath())
+		fatalIf(err.Trace(), "Unable to save config version ‘6’.")
+
+		console.Infof("Successfully migrated %s from version ‘5’ to version ‘6’.\n", mustGetMcConfigPath())
 	}
 }
 
@@ -529,6 +577,16 @@ func newConfigV4() *configV4 {
 
 func newConfigV5() *configV5 {
 	conf := new(configV5)
+	conf.Version = "5"
+	// make sure to allocate map's otherwise Golang
+	// exits silently without providing any errors
+	conf.Hosts = make(map[string]hostConfig)
+	conf.Aliases = make(map[string]string)
+	return conf
+}
+
+func newConfigV6() *configV6 {
+	conf := new(configV6)
 	conf.Version = globalMCConfigVersion
 	// make sure to allocate map's otherwise Golang
 	// exits silently without providing any errors
@@ -545,6 +603,12 @@ func newConfigV5() *configV5 {
 		AccessKeyID:     globalAccessKeyID,
 		SecretAccessKey: globalSecretAccessKey,
 		API:             "S3v4",
+	}
+
+	googlHostConf := hostConfig{
+		AccessKeyID:     globalAccessKeyID,
+		SecretAccessKey: globalSecretAccessKey,
+		API:             "S3v2",
 	}
 
 	// Your example host config
@@ -569,15 +633,16 @@ func newConfigV5() *configV5 {
 	conf.Hosts[globalExampleHostURL] = exampleHostConf
 	conf.Hosts["localhost:*"] = localHostConfig
 	conf.Hosts["127.0.0.1:*"] = localHostConfig
-	conf.Hosts["s3*.amazonaws.com"] = s3HostConf
-	conf.Hosts["*.s3*.amazonaws.com"] = s3HostConf
-	conf.Hosts["play.minio.io:9000"] = playHostConfig
 	conf.Hosts["dl.minio.io:9000"] = dlHostConfig
+	conf.Hosts["*s3*amazonaws.com"] = s3HostConf
+	conf.Hosts["play.minio.io:9000"] = playHostConfig
+	conf.Hosts["*storage.googleapis.com"] = googlHostConf
 
 	aliases := make(map[string]string)
 	aliases["s3"] = "https://s3.amazonaws.com"
-	aliases["play"] = "https://play.minio.io:9000"
 	aliases["dl"] = "https://dl.minio.io:9000"
+	aliases["gcs"] = "https://storage.googleapis.com"
+	aliases["play"] = "https://play.minio.io:9000"
 	aliases["localhost"] = "http://localhost:9000"
 	conf.Aliases = aliases
 	return conf
@@ -585,7 +650,7 @@ func newConfigV5() *configV5 {
 
 // newConfig - get new config interface
 func newConfig() (config quick.Config, err *probe.Error) {
-	config, err = quick.New(newConfigV5())
+	config, err = quick.New(newConfigV6())
 	if err != nil {
 		return nil, err.Trace()
 	}
