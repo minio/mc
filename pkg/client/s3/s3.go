@@ -33,9 +33,10 @@ import (
 )
 
 type s3Client struct {
-	mu      *sync.Mutex
-	api     minio.CloudStorageAPI
-	hostURL *client.URL
+	mu           *sync.Mutex
+	api          minio.CloudStorageAPI
+	hostURL      *client.URL
+	virtualStyle bool
 }
 
 // New returns an initialized s3Client structure. if debug use a internal trace transport
@@ -62,16 +63,18 @@ func New(config *client.Config) (client.Client, *probe.Error) {
 			return minio.SignatureV4
 		}(),
 	}
-	s3Conf.AccessKeyID = config.AccessKeyID
-	s3Conf.SecretAccessKey = config.SecretAccessKey
-	s3Conf.Transport = transport
 	s3Conf.SetUserAgent(config.AppName, config.AppVersion, config.AppComments...)
-	s3Conf.Endpoint = u.Scheme + u.SchemeSeparator + u.Host
 	api, err := minio.New(s3Conf)
 	if err != nil {
 		return nil, probe.NewError(err)
 	}
-	return &s3Client{api: api, hostURL: u, mu: new(sync.Mutex)}, nil
+	s3Clnt := &s3Client{
+		mu:           new(sync.Mutex),
+		api:          api,
+		hostURL:      u,
+		virtualStyle: isVirtualHostStyle(u.Host),
+	}
+	return s3Clnt, nil
 }
 
 // GetURL get url
@@ -259,6 +262,20 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	return bucketMetadata, nil
 }
 
+// Figure out if the URL is of 'virtual host' style.
+// Currently only supported hosts with virtual style are Amazon S3 and Google Cloud Storage.
+func isVirtualHostStyle(hostURL string) bool {
+	matchS3, _ := filepath.Match("*.s3*.amazonaws.com", hostURL)
+	if matchS3 {
+		return true
+	}
+	matchGoogle, _ := filepath.Match("*.storage.googleapis.com", hostURL)
+	if matchGoogle {
+		return true
+	}
+	return false
+}
+
 // url2BucketAndObject gives bucketName and objectName from URL path
 func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 	path := c.hostURL.Path
@@ -266,13 +283,7 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 	//
 	// For the time being this check is introduced for S3,
 	// if you have custom virtual styled hosts please. list them below
-	matchS3, _ := filepath.Match("*.s3*.amazonaws.com", c.hostURL.Host)
-	if matchS3 {
-		hostSplits := strings.SplitN(c.hostURL.Host, ".", 2)
-		path = string(c.hostURL.Separator) + hostSplits[0] + c.hostURL.Path
-	}
-	matchGoogle, _ := filepath.Match("*.storage.googleapis.com", c.hostURL.Host)
-	if matchGoogle {
+	if c.virtualStyle {
 		hostSplits := strings.SplitN(c.hostURL.Host, ".", 2)
 		path = string(c.hostURL.Separator) + hostSplits[0] + c.hostURL.Path
 	}
@@ -353,7 +364,10 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 			content := new(client.Content)
 			url := *c.hostURL
 			// join bucket with - incoming object key
-			url.Path = filepath.Join(b, object.Stat.Key)
+			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
+			if c.virtualStyle {
+				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+			}
 			switch {
 			case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
 				// We need to keep the trailing Separator, do not use filepath.Join()
@@ -398,7 +412,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 				}
 				content := new(client.Content)
 				url := *c.hostURL
-				url.Path = filepath.Join(bucket.Stat.Name, object.Stat.Key)
+				url.Path = filepath.Join(url.Path, bucket.Stat.Name, object.Stat.Key)
 				content.URL = url
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.Initiated
@@ -420,7 +434,10 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 			}
 			url := *c.hostURL
 			// join bucket and incoming object key
-			url.Path = filepath.Join(b, object.Stat.Key)
+			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
+			if c.virtualStyle {
+				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+			}
 			content := new(client.Content)
 			content.URL = url
 			content.Size = object.Stat.Size
@@ -485,7 +502,10 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				content := new(client.Content)
 				url := *c.hostURL
 				// join bucket and incoming object key
-				url.Path = filepath.Join(b, object.Stat.Key)
+				url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
+				if c.virtualStyle {
+					url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+				}
 				switch {
 				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
 					// We need to keep the trailing Separator, do not use filepath.Join()
@@ -553,8 +573,12 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			}
 			content := new(client.Content)
 			url := *c.hostURL
-			// join bucket and incoming object key
+			// join bucket and incoming object key.
 			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
+			// if virtualStyle replace the url.Path back.
+			if c.virtualStyle {
+				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+			}
 			content.URL = url
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
