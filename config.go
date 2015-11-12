@@ -426,11 +426,19 @@ func migrateConfigV5ToV6() {
 		confV6.Aliases["gcs"] = "https://storage.googleapis.com"
 		confV6.Hosts = make(map[string]hostConfig)
 		for host, hostConf := range mcConfigV5.Data().(*configV5).Hosts {
-			confV6.Hosts[host] = hostConf
+			confV6.Hosts[host] = hostConfig{
+				AccessKeyID:     hostConf.AccessKeyID,
+				SecretAccessKey: hostConf.SecretAccessKey,
+				API:             hostConf.API,
+			}
 		}
 		for host, hostConf := range confV6.Hosts {
 			if strings.Contains(host, "s3") {
-				confV6.Hosts["*s3*amazonaws.com"] = hostConf
+				confV6.Hosts["*s3*amazonaws.com"] = hostConfig{
+					AccessKeyID:     hostConf.AccessKeyID,
+					SecretAccessKey: hostConf.SecretAccessKey,
+					API:             hostConf.API,
+				}
 				break
 			}
 		}
