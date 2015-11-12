@@ -79,7 +79,11 @@ func (s shareMessage) String() string {
 	}
 	var key string
 	URL := client.NewURL(s.Key)
-	postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator) + s.UploadInfo["bucket"] + " "
+	postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator)
+	if !isBucketVirtualStyle(URL.Host) {
+		postURL = postURL + s.UploadInfo["bucket"]
+	}
+	postURL = postURL + " "
 	curlCommand := "curl " + postURL
 	for k, v := range s.UploadInfo {
 		if k == "key" {
@@ -111,7 +115,11 @@ func (s shareMessage) JSON() string {
 	} else {
 		var key string
 		URL := client.NewURL(s.Key)
-		postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator) + s.UploadInfo["bucket"] + " "
+		postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator)
+		if !isBucketVirtualStyle(URL.Host) {
+			postURL = postURL + s.UploadInfo["bucket"]
+		}
+		postURL = postURL + " "
 		curlCommand := "curl " + postURL
 		for k, v := range s.UploadInfo {
 			if k == "key" {
