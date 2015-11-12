@@ -31,7 +31,6 @@ import (
 )
 
 /// ls - related internal functions
-
 const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
@@ -102,18 +101,18 @@ func parseContent(c *client.Content) contentMessage {
 }
 
 // trimContent to fancify the output for directories
-//
-// TODO: Find a way to simplify this fancification.
 func trimContent(parentContent, childContent *client.Content, recursive bool) *client.Content {
 	if recursive {
-		// If recursive remove the unnecessary '/', in the beginning
+		// If recursive remove the unnecessary parentContent prefix. '/', in the beginning
 		trimmedContent := new(client.Content)
 		trimmedContent = childContent
-		if strings.Index(childContent.URL.Path, string(childContent.URL.Separator)) == 0 {
+		if strings.HasSuffix(parentContent.URL.Path, string(parentContent.URL.Separator)) {
+			trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, parentContent.URL.Path)
+		}
+		if strings.Index(trimmedContent.URL.Path, string(trimmedContent.URL.Separator)) == 0 {
 			if len(trimmedContent.URL.Path) > 0 {
 				trimmedContent.URL.Path = trimmedContent.URL.Path[1:]
 			}
-			return trimmedContent
 		}
 		return trimmedContent
 	}
