@@ -218,7 +218,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 				// source and target have same content type.
 				if srcContent.Type.IsRegular() && targetContents[i].Type.IsRegular() {
 					if srcContent.Size != targetContents[i].Size {
-						if !mirrorForceFlag {
+						if !mirrorIsForce {
 							mirrorURLsCh <- mirrorURLs{
 								Error: errOverWriteNotAllowed(targetContents[i].URL.String()).Trace(srcContent.URL.String()),
 							}

@@ -29,7 +29,7 @@ import (
 var (
 	lsFlagIncomplete = cli.BoolFlag{
 		Name:  "incomplete, I",
-		Usage: "remove incomplete uploads.",
+		Usage: "Remove incomplete uploads.",
 	}
 )
 

@@ -248,7 +248,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	}
 
 	_, _, err = url2Stat(targetURL)
-	if err == nil && !cpForceFlag {
+	if err == nil && !cpIsForce {
 		return copyURLs{Error: errOverWriteNotAllowed(targetURL).Trace()}
 	}
 
@@ -344,9 +344,9 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			newTargetURL.Path = filepath.Join(newTargetURL.Path,
 				strings.TrimPrefix(sourceContent.Content.URL.Path, url2Dir(sourceURL)))
 
-			// verify if destination exists, and cpForceFlag is not set do not proceed.
+			// verify if destination exists, and cpIsForce is not set do not proceed.
 			_, _, err := url2Stat(newTargetURL.String())
-			if err == nil && !cpForceFlag {
+			if err == nil && !cpIsForce {
 				copyURLsCh <- copyURLs{Error: errOverWriteNotAllowed(newTargetURL.String()).Trace()}
 				return
 			}

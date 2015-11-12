@@ -34,46 +34,52 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
-// Copy files and folders from many sources to a single destination.
+// cp specific flags.
+var (
+	cpFlagForce = cli.BoolFlag{
+		Name:  "force",
+		Usage: "Force overwrite of an existing target(s).",
+	}
+)
+
+// Copy command.
 var cpCmd = cli.Command{
 	Name:   "cp",
-	Usage:  "Copy files and folders from many sources to a single destination.",
+	Usage:  "Copy one or more objects to a target.",
 	Action: mainCopy,
-	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force",
-			Usage: "force a dangerous remove operation.",
-		},
-	},
+	Flags:  []cli.Flag{cpFlagForce},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} SOURCE [SOURCE...] TARGET
+   mc {{.Name}} [OPTIONS] SOURCE [SOURCE...] TARGET
+
+OPTIONS:
+   --force - Force overwrite of an existing target(s).
 
 EXAMPLES:
-   1. Copy list of objects from local file system to Amazon S3 cloud storage.
+   1. Copy a list of objects from local file system to Amazon S3 cloud storage.
       $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/
 
    2. Copy a bucket recursively from Minio cloud storage to Amazon S3 cloud storage.
-      $ mc {{.Name}} https://play.minio.io:9000/photos/burningman2011... https://s3.amazonaws.com/private-photos/burningman/
+      $ mc {{.Name}} https://play.minio.io:9000/photobucket/burningman2011... https://s3.amazonaws.com/mybucket/
 
    3. Copy multiple local folders recursively to Minio cloud storage.
       $ mc {{.Name}} backup/2014/... backup/2015/... https://play.minio.io:9000/archive/
 
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
-      $ mc {{.Name}} s3/documents/2014/... C:\backup\2014
+      $ mc {{.Name}} s3/documents/2014/... C:\Backups\2014
 
-   5. Copy an object of non english characters to Amazon S3 cloud storage.
-      $ mc {{.Name}} 本語 s3/andoria/本語
+   5. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
+      $ mc {{.Name}} 本語 s3/andoria/
 
-   6. Copy local folder with space characters to Amazon S3 cloud storage.
+   6. Copy a local folder with space separated characters to Amazon S3 cloud storage.
       $ mc {{.Name}} 'workdir/documents/May 2014...' s3/miniocloud
 `,
 }
 
 var (
-	cpForceFlag = false // cp specific force flag set via command line
+	cpIsForce = false // cp specific force flag set via command line
 )
 
 // copyMessage container for file copy messages
@@ -176,7 +182,7 @@ func doPrepareCopyURLs(session *sessionV3, trapCh <-chan bool) {
 	}
 
 	// will be true if '--force' is provided on the command line.
-	cpForceFlag = session.Header.CommandBoolFlag.Value
+	cpIsForce = session.Header.CommandBoolFlag.Value
 
 	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
 	done := false
@@ -329,7 +335,7 @@ func doCopySession(session *sessionV3) {
 	wg.Wait()
 }
 
-// mainCopy is bound to sub-command
+// mainCopy is the entry point for cp command.
 func mainCopy(ctx *cli.Context) {
 	checkCopySyntax(ctx)
 
