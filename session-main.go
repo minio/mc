@@ -89,7 +89,7 @@ type clearSessionMessage struct {
 
 // String colorized clear session message
 func (c clearSessionMessage) String() string {
-	return console.Colorize("ClearSession", "Session ‘"+c.SessionID+"’ cleared successfully")
+	return console.Colorize("ClearSession", "Session ‘"+c.SessionID+"’ cleared successfully.")
 }
 
 // JSON jsonified clear session message
@@ -190,12 +190,12 @@ func mainSession(ctx *cli.Context) {
 		}
 
 		savedCwd, e := os.Getwd()
-		fatalIf(probe.NewError(e), "Unable to verify your current working folder.")
+		fatalIf(probe.NewError(e), "Unable to determine current working folder.")
 
 		if s.Header.RootPath != "" {
 			// chdir to RootPath
 			e = os.Chdir(s.Header.RootPath)
-			fatalIf(probe.NewError(e), "Unable to change our folder to root path while resuming session.")
+			fatalIf(probe.NewError(e), "Unable to change working folder to root path while resuming session.")
 		}
 		sessionExecute(s)
 		err = s.Close()
@@ -206,7 +206,7 @@ func mainSession(ctx *cli.Context) {
 
 		// chdir back to saved path
 		e = os.Chdir(savedCwd)
-		fatalIf(probe.NewError(e), "Unable to change our folder to saved path ‘"+savedCwd+"’.")
+		fatalIf(probe.NewError(e), "Unable to change working folder to saved path ‘"+savedCwd+"’.")
 
 	// purge a requested pending session, if "all" purge everything
 	case "clear":

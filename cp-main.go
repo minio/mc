@@ -293,16 +293,16 @@ func doCopySession(session *sessionV3) {
 					// handle more errors and save the session.
 					switch cpURLs.Error.ToGoError().(type) {
 					case *net.OpError:
-						gracefulSessionSave(session)
+						session.CloseAndDie()
 					case net.Error:
-						gracefulSessionSave(session)
+						session.CloseAndDie()
 					}
 				}
 			case <-trapCh: // Receive interrupt notification.
 				if !globalQuietFlag && !globalJSONFlag {
 					console.Eraseline()
 				}
-				gracefulSessionSave(session)
+				session.CloseAndDie()
 			}
 		}
 	}()

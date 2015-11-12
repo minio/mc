@@ -63,6 +63,7 @@ func loadSessionV2(sid string) (*sessionV2Header, *probe.Error) {
 		return nil, probe.NewError(err)
 	}
 	sessionHeader := &sessionV2Header{}
+	// V2 is actually v1.1. We later moved to a serial single digit version.
 	sessionHeader.Version = "1.1.0"
 	qs, err := quick.New(sessionHeader)
 	if err != nil {

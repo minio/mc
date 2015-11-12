@@ -35,6 +35,7 @@ import (
 func migrateSessionV2ToV3() {
 	for _, sid := range getSessionIDs() {
 		oldSessionV2Header, err := loadSessionV2(sid)
+		// 1.1.0 intermediate version number is actually v2.
 		fatalIf(err.Trace(sid), "Unable to load version ‘1.1.0’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		if oldSessionV2Header.Version == "3" {
 			return
@@ -160,17 +161,6 @@ func newSessionV3() *sessionV3 {
 	return s
 }
 
-// String printer for SessionV3
-func (s sessionV3) Info() {
-	console.Infoln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
-}
-
-func gracefulSessionSave(session *sessionV3) {
-	session.Close()
-	session.Info()
-	os.Exit(0)
-}
-
 // HasData provides true if this is a session resume, false otherwise.
 func (s sessionV3) HasData() bool {
 	if s.Header.LastCopied == "" {
@@ -266,6 +256,13 @@ func (s *sessionV3) Delete() *probe.Error {
 	}
 
 	return nil
+}
+
+// Close a session and exit.
+func (s sessionV3) CloseAndDie() {
+	s.Close()
+	console.Infoln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
+	os.Exit(0)
 }
 
 // loadSessionV3 - reads session file if exists and re-initiates internal variables
