@@ -34,7 +34,7 @@ var mcHelpTemplate = `NAME:
   {{.Name}} - {{.Usage}}
 
 USAGE:
-  {{.Name}} {{if .Flags}}[global flags] {{end}}command{{if .Flags}} [command flags]{{end}} [arguments...]
+  {{.Name}} {{if .Flags}}[GLOBAL FLAGS] {{end}}command{{if .Flags}} [COMMAND FLAGS]{{end}} [ARGUMENTS...]
 
 COMMANDS:
   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}

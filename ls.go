@@ -139,15 +139,13 @@ func trimContent(parentContent, childContent *client.Content, recursive bool) *c
 }
 
 // doList - list all entities inside a folder.
-func doList(clnt client.Client, recursive bool) *probe.Error {
-	var err *probe.Error
-	var parentContent *client.Content
-	_, parentContent, err = url2Stat(clnt.GetURL().String())
+func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
+	_, parentContent, err := url2Stat(clnt.GetURL().String())
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}
-	isIncomplete := false // do not list incomplete uploads
-	for contentCh := range clnt.List(recursive, isIncomplete) {
+
+	for contentCh := range clnt.List(isRecursive, isIncomplete) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
 			// handle this specifically for filesystem
@@ -175,50 +173,7 @@ func doList(clnt client.Client, recursive bool) *probe.Error {
 			err = contentCh.Err.Trace()
 			break
 		}
-		trimmedContent := trimContent(parentContent, contentCh.Content, recursive)
-		parsedContent := parseContent(trimmedContent)
-		printMsg(parsedContent)
-	}
-	if err != nil {
-		return err.Trace()
-	}
-	return nil
-}
-
-// doListIncomplete - list all incomplete uploads entities inside a folder.
-func doListIncomplete(clnt client.Client, recursive bool) *probe.Error {
-	var err *probe.Error
-	var parentContent *client.Content
-	_, parentContent, err = url2Stat(clnt.GetURL().String())
-	if err != nil {
-		return err.Trace(clnt.GetURL().String())
-	}
-	isIncomplete := true // list only incomplete uploads
-	for contentCh := range clnt.List(recursive, isIncomplete) {
-		if contentCh.Err != nil {
-			switch contentCh.Err.ToGoError().(type) {
-			// handle this specifically for filesystem
-			case client.BrokenSymlink:
-				errorIf(contentCh.Err.Trace(), "Unable to list broken link.")
-				continue
-			case client.TooManyLevelsSymlink:
-				errorIf(contentCh.Err.Trace(), "Unable to list too many levels link.")
-				continue
-			}
-			if os.IsNotExist(contentCh.Err.ToGoError()) || os.IsPermission(contentCh.Err.ToGoError()) {
-				if contentCh.Content != nil {
-					if contentCh.Content.Type.IsDir() && (contentCh.Content.Type&os.ModeSymlink == os.ModeSymlink) {
-						errorIf(contentCh.Err.Trace(), "Unable to list broken folder link.")
-						continue
-					}
-				}
-				errorIf(contentCh.Err.Trace(), "Unable to list.")
-				continue
-			}
-			err = contentCh.Err.Trace()
-			break
-		}
-		trimmedContent := trimContent(parentContent, contentCh.Content, recursive)
+		trimmedContent := trimContent(parentContent, contentCh.Content, isRecursive)
 		parsedContent := parseContent(trimmedContent)
 		printMsg(parsedContent)
 	}
