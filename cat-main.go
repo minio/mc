@@ -42,24 +42,18 @@ USAGE:
    mc {{.Name}} SOURCE [SOURCE...]
 
 EXAMPLES:
-   1. Concantenate an object from Amazon S3 cloud storage to mplayer standard input.
+   1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
       $ mc {{.Name}} https://s3.amazonaws.com/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
 
    2. Concantenate contents of file1.txt and stdin to standard output.
       $ mc {{.Name}} file1.txt - > file.txt
 
-   3. Concantenate multiple files from the local filesystem to standard output.
+   3. Concantenate multiple files to one.
       $ mc {{.Name}} part.* > complete.img
 
-   4. Concatenate a non english file name from Amazon S3 cloud storage.
-      $ mc {{.Name}} s3/andoria/本語 > /tmp/本語
-
-   5. Behave like operating system ‘cat’ tool. Useful for alias cat='mc --mimic cat'.
-      $ echo "Hello, World!" | mc --mimic {{.Name}}
-      Hello, World!
-
-   6. Concantenate an object with space characters from Amazon S3 cloud storage.
-      $ mc {{.Name}} 's3/miniocloud/Readme First.txt' | head -1
+   4. Behave like operating system ‘cat’ tool. Useful for aliasing.
+      $ alias {{.Name}}='mc --mimic {{.Name}}'
+      $ {{.Name}} /etc/issue.txt
 `,
 }
 
@@ -101,10 +95,6 @@ func catURL(sourceURL string) *probe.Error {
 
 // catOut reads from reader stream and writes to stdout.
 func catOut(r io.Reader) *probe.Error {
-	// Do not forget to flush after stdout.
-	//	out := bufio.NewWriter(os.Stdout)
-	//	defer out.Flush()
-
 	// Read till EOF.
 	if _, err := io.Copy(os.Stdout, r); err != nil {
 		switch e := err.(type) {
