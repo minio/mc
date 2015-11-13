@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -74,6 +73,7 @@ func checkCopySyntax(ctx *cli.Context) {
 	if isURLRecursive(tgtURL) {
 		fatalIf(errDummy().Trace(), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", tgtURL))
 	}
+
 	url := client.NewURL(tgtURL)
 	if url.Host != "" {
 		// This check is for type URL.
@@ -81,6 +81,7 @@ func checkCopySyntax(ctx *cli.Context) {
 			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 		}
 	}
+
 	switch guessCopyURLType(srcURLs, tgtURL) {
 	case copyURLsTypeA: // File -> File.
 		checkCopySyntaxTypeA(srcURLs, tgtURL)
@@ -102,7 +103,6 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	}
 	srcURL := srcURLs[0]
 	_, srcContent, err := url2Stat(srcURL)
-
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 	if srcContent.Type.IsDir() {
@@ -146,7 +146,6 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
-
 	srcContent, err := url2Content(srcURL)
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
@@ -167,15 +166,12 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 	for _, srcURL := range srcURLs {
 		if isURLRecursive(srcURL) {
 			srcURL = stripRecursiveURL(srcURL)
-			_, srcContent, err := url2Stat(srcURL)
+			srcContent, err := url2Content(srcURL)
 			fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 			if !srcContent.Type.IsDir() { // Ellipses is supported only for folders.
 				fatalIf(errInvalidArgument().Trace(srcURL), "Source ‘"+srcURL+"’ is not a folder.")
 			}
-		} else { // Regular URL.
-			_, _, err := url2Stat(srcURL)
-			fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 		}
 	}
 	_, tgtContent, err := url2Stat(tgtURL)
@@ -242,6 +238,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 		// Source does not exist or insufficient privileges.
 		return copyURLs{Error: err.Trace(sourceURL)}
 	}
+
 	if !sourceContent.Type.IsRegular() {
 		if sourceContent.Type.IsDir() {
 			return copyURLs{Error: errSourceIsDir(sourceURL).Trace()}
@@ -251,12 +248,10 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 	}
 
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-	{
-		sourceURLParse := client.NewURL(sourceURL)
-		targetURLParse := client.NewURL(targetURL)
-		targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
-		return prepareCopyURLsTypeA(sourceURL, targetURLParse.String())
-	}
+	sourceURLParse := client.NewURL(sourceURL)
+	targetURLParse := client.NewURL(targetURL)
+	targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceURLParse.Path))
+	return prepareCopyURLsTypeA(sourceURL, targetURLParse.String())
 }
 
 // SINGLE SOURCE - Type C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
@@ -277,31 +272,6 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 		if err != nil {
 			// Source initialization failed.
 			copyURLsCh <- copyURLs{Error: err.Trace(sourceURL)}
-			return
-		}
-		_, sourceContent, err := url2Stat(sourceURL)
-		if err != nil {
-			// if file not found it could be that user has provided a valid
-			// prefix, populate parent content properly and set error to nil.
-			// if at all the prefix doesn't exist eventually 'List' will handle
-			// it properly.
-			if os.IsNotExist(err.ToGoError()) {
-				// set the err back to nil consciously.
-				err = nil
-				// fill sourceContent with source client data.
-				sourceContent = new(client.Content)
-				sourceContent.URL = sourceClient.GetURL()
-				sourceContent.Type = os.ModeDir
-			} else {
-				// Source does not exist or insufficient privileges.
-				copyURLsCh <- copyURLs{Error: err.Trace(sourceURL)}
-				return
-			}
-		}
-
-		if !sourceContent.Type.IsDir() {
-			// Source is not a dir.
-			copyURLsCh <- copyURLs{Error: errSourceIsNotDir(sourceURL).Trace()}
 			return
 		}
 

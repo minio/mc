@@ -230,13 +230,12 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 			errResponse := minio.ToErrorResponse(err)
 			if errResponse != nil {
 				if errResponse.Code == "NoSuchKey" {
-					// append "/" to the object name and see if we can list anything
-					// if so, we consider it as a directory
-					dirName := object
-					if !strings.HasSuffix(dirName, string(c.hostURL.Separator)) {
-						dirName += string(c.hostURL.Separator)
-					}
-					for objectStat := range c.api.ListObjects(bucket, dirName, false) {
+					// Append "/" to the object name proactively and see if the Listing
+					// produces an output. If yes, then we treat it as a directory.
+					prefixName := object
+					// Trim any trailing separators and add it.
+					prefixName = strings.TrimSuffix(prefixName, string(c.hostURL.Separator)) + string(c.hostURL.Separator)
+					for objectStat := range c.api.ListObjects(bucket, prefixName, false) {
 						if objectStat.Err != nil {
 							return nil, probe.NewError(objectStat.Err)
 						}
