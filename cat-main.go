@@ -126,18 +126,13 @@ func mainCat(ctx *cli.Context) {
 		return
 	}
 
-	// if Args contain ‘-’, we need to preserve its order specially.
-	args := []string(ctx.Args())
-	if ctx.Args().First() == "-" {
-		for i, arg := range os.Args {
-			if arg == "cat" {
-				// Overwrite ctx.Args with os.Args.
-				args = os.Args[i+1:]
-				break
-			}
-		}
+	// ctx.Args() doesn't preserve the order when one of the arguments is '-'.
+	// simply use os.Args to preserve the order.
+	args := cli.Args(os.Args)
+	if args.Tail().First() == "cat" {
+		// Skip the first two arguments of args to get Tail() of Tail()
+		args = args.Tail().Tail()
 	}
-
 	// Convert arguments to URLs: expand alias, fix format...
 	URLs, err := args2URLs(args)
 	fatalIf(err.Trace(args...), "Unable to parse arguments.")
