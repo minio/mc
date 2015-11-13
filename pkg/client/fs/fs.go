@@ -76,10 +76,10 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	}
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, probe.NewError(client.PathNotFound{Path: fpath})
+			return nil, probe.NewError(client.PathNotFound{Path: f.PathURL.Path})
 		}
 		if os.IsPermission(err) {
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
+			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		return nil, probe.NewError(err)
 	}
@@ -99,10 +99,10 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	}
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, probe.NewError(client.PathNotFound{Path: fpath})
+			return nil, probe.NewError(client.PathNotFound{Path: f.PathURL.Path})
 		}
 		if os.IsPermission(err) {
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
+			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		return nil, probe.NewError(err)
 	}
@@ -181,10 +181,10 @@ func (f *fsClient) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error
 	_, err := filepath.EvalSymlinks(tmppath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, length, probe.NewError(client.PathNotFound{Path: tmppath})
+			return nil, length, probe.NewError(client.PathNotFound{Path: f.PathURL.Path})
 		}
 		if os.IsPermission(err) {
-			return nil, length, probe.NewError(client.PathInsufficientPermission{Path: tmppath})
+			return nil, length, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		return nil, length, probe.NewError(err)
 	}
