@@ -196,12 +196,3 @@ func url2Client(url string) (client.Client, *probe.Error) {
 	}
 	return client, nil
 }
-
-// bucketExists returns error
-func bucketExists(URL string) *probe.Error {
-	_, _, err := url2Stat(URL)
-	if err != nil {
-		return err.Trace()
-	}
-	return nil
-}

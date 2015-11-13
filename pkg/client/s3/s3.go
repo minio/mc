@@ -266,14 +266,8 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 // Currently only supported hosts with virtual style are Amazon S3 and Google Cloud Storage.
 func isVirtualHostStyle(hostURL string) bool {
 	matchS3, _ := filepath.Match("*.s3*.amazonaws.com", hostURL)
-	if matchS3 {
-		return true
-	}
 	matchGoogle, _ := filepath.Match("*.storage.googleapis.com", hostURL)
-	if matchGoogle {
-		return true
-	}
-	return false
+	return matchS3 || matchGoogle
 }
 
 // url2BucketAndObject gives bucketName and objectName from URL path
@@ -284,8 +278,15 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 	// For the time being this check is introduced for S3,
 	// if you have custom virtual styled hosts please. list them below
 	if c.virtualStyle {
-		hostSplits := strings.SplitN(c.hostURL.Host, ".", 2)
-		path = string(c.hostURL.Separator) + hostSplits[0] + c.hostURL.Path
+		var bucket string
+		hostIndex := strings.Index(c.hostURL.Host, "s3")
+		if hostIndex == -1 {
+			hostIndex = strings.Index(c.hostURL.Host, "storage.googleapis")
+		}
+		if hostIndex > 0 {
+			bucket = c.hostURL.Host[:hostIndex-1]
+			path = string(c.hostURL.Separator) + bucket + c.hostURL.Path
+		}
 	}
 	splits := strings.SplitN(path, string(c.hostURL.Separator), 3)
 	switch len(splits) {
