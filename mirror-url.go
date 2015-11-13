@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/minio/cli"
@@ -63,21 +62,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	/****** Generic rules *******/
 	// Recursive source URL.
 	newSrcURL := stripRecursiveURL(srcURL)
-	_, srcContent, err := url2Stat(newSrcURL)
-	if err != nil {
-		// if file not found it could be that user has provided a valid
-		// prefix, populate parent content properly and set error to nil.
-		// if at all the prefix doesn't exist eventually 'List' will handle
-		// it properly.
-		if os.IsNotExist(err.ToGoError()) {
-			// set the err back to nil consciously.
-			err = nil
-			// fill srcContent for subsequent verification.
-			srcContent = new(client.Content)
-			srcContent.URL = *client.NewURL(newSrcURL)
-			srcContent.Type = os.ModeDir
-		}
-	}
+	srcContent, err := url2Content(newSrcURL)
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
 
 	if !srcContent.Type.IsDir() {
