@@ -29,7 +29,7 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
-/// ls - related internal functions
+// printDate - human friendly formatted date.
 const (
 	printDate = "2006-01-02 15:04:05 MST"
 )
@@ -42,7 +42,7 @@ type contentMessage struct {
 	Key      string    `json:"key"`
 }
 
-// String colorized string message
+// String colorized string message.
 func (c contentMessage) String() string {
 	message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
 	message = message + console.Colorize("Size", fmt.Sprintf("%6s ", humanize.IBytes(uint64(c.Size))))
@@ -55,7 +55,7 @@ func (c contentMessage) String() string {
 	return message
 }
 
-// JSON jsonified content message
+// JSON jsonified content message.
 func (c contentMessage) JSON() string {
 	jsonMessageBytes, e := json.Marshal(c)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -68,7 +68,7 @@ func parseContent(c *client.Content) contentMessage {
 	content := contentMessage{}
 	content.Time = c.Time.Local()
 
-	// guess file type
+	// guess file type.
 	content.Filetype = func() string {
 		if c.Type.IsDir() {
 			return "folder"
@@ -80,6 +80,7 @@ func parseContent(c *client.Content) contentMessage {
 	// Convert OS Type to match console file printing style.
 	content.Key = func() string {
 		switch {
+		// for windows make sure to print in 'windows' specific style.
 		case runtime.GOOS == "windows":
 			c.URL.Path = strings.Replace(c.URL.Path, "/", "\\", -1)
 			c.URL.Path = strings.TrimSuffix(c.URL.Path, "\\")
@@ -88,6 +89,7 @@ func parseContent(c *client.Content) contentMessage {
 		}
 		if c.Type.IsDir() {
 			switch {
+			// for windows make sure to print in 'windows' specific style.
 			case runtime.GOOS == "windows":
 				return fmt.Sprintf("%s\\", c.URL.Path)
 			default:
@@ -99,10 +101,10 @@ func parseContent(c *client.Content) contentMessage {
 	return content
 }
 
-// trimContent to fancify the output for directories
+// trimContent to fancify the output for directories.
 func trimContent(parentContent, childContent *client.Content, recursive bool) *client.Content {
 	if recursive {
-		// If recursive remove the unnecessary parentContent prefix. '/', in the beginning
+		// If recursive remove the unnecessary parentContent prefix. '/', in the beginning.
 		trimmedContent := new(client.Content)
 		trimmedContent = childContent
 		if strings.HasSuffix(parentContent.URL.Path, string(parentContent.URL.Separator)) {
@@ -115,9 +117,9 @@ func trimContent(parentContent, childContent *client.Content, recursive bool) *c
 		}
 		return trimmedContent
 	}
-	// If parentContent is a directory, use it to trim the sub-folders
+	// If parentContent is a directory, use it to trim the sub-folders.
 	if parentContent.Type.IsDir() {
-		// Allocate a new client.Content for trimmed output
+		// Allocate a new client.Content for trimmed output.
 		trimmedContent := new(client.Content)
 		trimmedContent = childContent
 		if parentContent.URL.Path == string(parentContent.URL.Separator) {
@@ -146,7 +148,7 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 	for contentCh := range clnt.List(isRecursive, isIncomplete) {
 		if contentCh.Err != nil {
 			switch contentCh.Err.ToGoError().(type) {
-			// handle this specifically for filesystem
+			// handle this specifically for filesystem related errors.
 			case client.BrokenSymlink:
 				errorIf(contentCh.Err.Trace(), "Unable to list broken link.")
 				continue
@@ -154,7 +156,7 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 				errorIf(contentCh.Err.Trace(), "Unable to list too many levels link.")
 				continue
 			case client.PathNotFound:
-				errorIf(contentCh.Err.Trace(), "Unable to list missing broken folder link.")
+				errorIf(contentCh.Err.Trace(), "Unable to list folder.")
 				continue
 			case client.PathInsufficientPermission:
 				errorIf(contentCh.Err.Trace(), "Unable to list folder.")
@@ -163,8 +165,11 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 			err = contentCh.Err.Trace()
 			break
 		}
+		// trim incoming content based on if its recursive or not.
 		trimmedContent := trimContent(parentContent, contentCh.Content, isRecursive)
+		// parse trimmed content into printable form.
 		parsedContent := parseContent(trimmedContent)
+		// print colorized or jsonized content info.
 		printMsg(parsedContent)
 	}
 	if err != nil {
