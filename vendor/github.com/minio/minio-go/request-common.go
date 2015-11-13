@@ -157,7 +157,7 @@ func getURLEncodedPath(pathName string) string {
 func (op *operation) getRequestURL(config Config) (url string) {
 	// parse URL for the combination of HTTPServer + HTTPPath
 	url = op.HTTPServer + separator
-	if !config.isVirtualStyle {
+	if !config.isVirtualHostedStyle {
 		url += path2Bucket(op.HTTPPath)
 	}
 	objectName := getURLEncodedPath(path2Object(op.HTTPPath))

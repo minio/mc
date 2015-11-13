@@ -96,7 +96,6 @@ type ObjectMultipartStat struct {
 var regions = map[string]string{
 	"s3-fips-us-gov-west-1.amazonaws.com": "us-gov-west-1",
 	"s3.amazonaws.com":                    "us-east-1",
-	"s3-external-1.amazonaws.com":         "us-east-1",
 	"s3-us-west-1.amazonaws.com":          "us-west-1",
 	"s3-us-west-2.amazonaws.com":          "us-west-2",
 	"s3-eu-west-1.amazonaws.com":          "eu-west-1",
@@ -179,9 +178,9 @@ type Config struct {
 
 	/// Internal options
 	// use SetUserAgent append to default, useful when minio-go is used with in your application
-	userAgent      string
-	isUserAgentSet bool // allow user agent's to be set only once
-	isVirtualStyle bool // set when virtual hostnames are on
+	userAgent            string
+	isUserAgentSet       bool // allow user agent's to be set only once
+	isVirtualHostedStyle bool // set when virtual hostnames are on
 }
 
 // Global constants
@@ -208,10 +207,10 @@ type API struct {
 	apiCore
 }
 
-func isBucketVirtualStyle(host string) bool {
-	s3Virtual, _ := filepath.Match("*.s3*.amazonaws.com", host)
-	googleVirtual, _ := filepath.Match("*.storage.googleapis.com", host)
-	return s3Virtual || googleVirtual
+func isVirtualHostedStyle(host string) bool {
+	isS3VirtualHost, _ := filepath.Match("*.s3*.amazonaws.com", host)
+	isGoogleVirtualHost, _ := filepath.Match("*.storage.googleapis.com", host)
+	return isS3VirtualHost || isGoogleVirtualHost
 }
 
 // New - instantiate minio client API with your input Config{}.
@@ -220,59 +219,84 @@ func New(config Config) (CloudStorageAPI, error) {
 	if err != nil {
 		return API{}, err
 	}
-	config.isVirtualStyle = isBucketVirtualStyle(u.Host)
-	config.SetUserAgent(LibraryName, LibraryVersion, runtime.GOOS, runtime.GOARCH)
-	config.isUserAgentSet = false // default
-	region, err := getBucketRegion(config)
-	if err != nil {
-		return API{}, err
+	config.isVirtualHostedStyle = isVirtualHostedStyle(u.Host)
+	// if not region is set, procure it from getBucketRegion if possible.
+	if config.Region == "" {
+		config = setBucketRegion(config)
 	}
-	config.Region = region
 	if config.Region == "google" {
 		config.Signature = SignatureV2 // Google cloud storage is signature V2
 	}
+	config.SetUserAgent(LibraryName, LibraryVersion, runtime.GOOS, runtime.GOARCH)
+	config.isUserAgentSet = false // default
 	return API{apiCore{&config}}, nil
 }
 
-// getBucketRegion returns the region
-func getBucketRegion(config Config) (string, error) {
-	if config.Region != "" {
-		return config.Region, nil
-	}
-
+// setBucketRegion fetches the region and constructs a proper endpoint
+func setBucketRegion(config Config) Config {
 	u, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return "", err
+		return config
 	}
 
-	if !isBucketVirtualStyle(u.Host) {
-		return getRegion(u.Host), nil
+	if !config.isVirtualHostedStyle {
+		config.Region = getRegion(u.Host)
+		return config
 	}
 
-	hostSplits := strings.SplitN(u.Host, ".", 2)
-	bucket := hostSplits[0]
-	host := hostSplits[1]
+	var bucket, host string
+	hostIndex := strings.Index(u.Host, "s3")
+	if hostIndex == -1 {
+		hostIndex = strings.Index(u.Host, "storage.googleapis.com")
+	}
+	if hostIndex > 0 {
+		host = u.Host[hostIndex:]
+		bucket = u.Host[:hostIndex-1]
+	}
 
 	genericGoogle, _ := filepath.Match("*.storage.googleapis.com", u.Host)
-	genericS3, _ := filepath.Match("*.s3.amazonaws.com", u.Host)
-
-	if !genericGoogle && !genericS3 {
-		return getRegion(host), nil
-	}
-
 	if genericGoogle {
 		// returning standard region for google for now, can be changed in future
 		// to query for region in case it is useful
-		return getRegion(host), nil
+		config.Region = getRegion(host)
+		return config
+	}
+	genericS3, _ := filepath.Match("*.s3.amazonaws.com", u.Host)
+	if !genericS3 {
+		config.Region = getRegion(host)
+		return config
 	}
 
 	// query aws s3 for the region for case of bucketName.s3.amazonaws.com
 	u.Host = host
-	config.Endpoint = u.String()
-	config.Region = getRegion(u.Host)
-	config.isVirtualStyle = false
-	s3api := API{apiCore{&config}}
-	return s3api.getBucketLocation(bucket)
+	tempConfig := Config{}
+	tempConfig.AccessKeyID = config.AccessKeyID
+	tempConfig.SecretAccessKey = config.SecretAccessKey
+	tempConfig.Endpoint = u.String()
+	tempConfig.Region = getRegion(u.Host)
+	tempConfig.isVirtualHostedStyle = false
+	s3api := API{apiCore{&tempConfig}}
+	region, err := s3api.getBucketLocation(bucket)
+	if err != nil {
+		config.Region = getRegion(host)
+		return config
+	}
+	if region == "" {
+		if genericS3 || genericGoogle {
+			region = "us-east-1"
+		}
+	}
+	config.Region = region
+	for k, v := range regions {
+		if region == v {
+			host = k
+		}
+	}
+	newURL := new(url.URL)
+	newURL.Host = bucket + "." + host
+	newURL.Scheme = u.Scheme
+	config.Endpoint = newURL.String()
+	return config
 }
 
 // PresignedPostPolicy return POST form data that can be used for object upload.

@@ -44,7 +44,7 @@ func (r *Request) PreSignV2() (string, error) {
 	}
 	epochExpires := d.Unix() + r.expires
 	var path string
-	if r.config.isVirtualStyle {
+	if r.config.isVirtualHostedStyle {
 		for k, v := range regions {
 			if v == r.config.Region {
 				path = "/" + strings.TrimSuffix(r.req.URL.Host, "."+k)
@@ -215,7 +215,7 @@ var resourceList = []string{
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
 func (r *Request) writeCanonicalizedResource(buf *bytes.Buffer) error {
 	requestURL := r.req.URL
-	if r.config.isVirtualStyle {
+	if r.config.isVirtualHostedStyle {
 		for k, v := range regions {
 			if v == r.config.Region {
 				path := "/" + strings.TrimSuffix(requestURL.Host, "."+k)
