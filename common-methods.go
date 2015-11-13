@@ -196,3 +196,19 @@ func url2Client(url string) (client.Client, *probe.Error) {
 	}
 	return client, nil
 }
+
+func prefixExists(url string) bool {
+	clnt, err := url2Client(url)
+	if err != nil {
+		errorIf(err.Trace(url), "Invalid URL ‘"+url+"’.")
+	}
+	isRecursive := true
+	isIncomplete := false
+	for entry := range clnt.List(isRecursive, isIncomplete) {
+		if entry.Err != nil {
+			return false
+		}
+		return true
+	}
+	return false
+}
