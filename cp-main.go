@@ -34,28 +34,16 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
-// cp specific flags.
-var (
-	cpFlagForce = cli.BoolFlag{
-		Name:  "force",
-		Usage: "Force overwrite of an existing target(s).",
-	}
-)
-
 // Copy command.
 var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy one or more objects to a target.",
 	Action: mainCopy,
-	Flags:  []cli.Flag{cpFlagForce},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
    mc {{.Name}} [OPTIONS] SOURCE [SOURCE...] TARGET
-
-OPTIONS:
-   --force - Force overwrite of an existing target(s).
 
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
@@ -77,10 +65,6 @@ EXAMPLES:
       $ mc {{.Name}} 'workdir/documents/May 2014...' s3/miniocloud
 `,
 }
-
-var (
-	cpIsForce = false // cp specific force flag set via command line
-)
 
 // copyMessage container for file copy messages
 type copyMessage struct {
@@ -180,9 +164,6 @@ func doPrepareCopyURLs(session *sessionV3, trapCh <-chan bool) {
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
 		scanBar = scanBarFactory()
 	}
-
-	// will be true if '--force' is provided on the command line.
-	cpIsForce = session.Header.CommandBoolFlag.Value
 
 	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
 	done := false
@@ -350,10 +331,6 @@ func mainCopy(ctx *cli.Context) {
 		session.Delete()
 		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
-
-	// If force flag is set save it with in session
-	session.Header.CommandBoolFlag.Key = "force"
-	session.Header.CommandBoolFlag.Value = ctx.Bool("force")
 
 	// extract URLs.
 	var err *probe.Error
