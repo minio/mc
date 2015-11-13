@@ -30,45 +30,13 @@ func (e APINotImplemented) Error() string {
 	return "‘" + e.API + "’ feature " + "is not implemented for ‘" + e.APIType + "’"
 }
 
-// UnexpectedError - unexpected error
-type UnexpectedError GenericError
-
-func (e UnexpectedError) Error() string {
-	return "Unexpected error, please report this error at https://github.com/minio/mc/issues"
-}
-
-// InvalidArgument - bad arguments provided
-type InvalidArgument GenericError
-
-func (e InvalidArgument) Error() string {
-	return "Invalid argument"
-}
-
 // InvalidRange - invalid range requested
 type InvalidRange struct {
 	Offset int64
 }
 
 func (e InvalidRange) Error() string {
-	return "invalid range offset: " + strconv.FormatInt(e.Offset, 10)
-}
-
-// InvalidACLType - invalid acl type
-type InvalidACLType struct {
-	ACL string
-}
-
-func (e InvalidACLType) Error() string {
-	return "invalid acl type: " + e.ACL
-}
-
-// InvalidMaxKeys - invalid maxkeys provided
-type InvalidMaxKeys struct {
-	MaxKeys int
-}
-
-func (e InvalidMaxKeys) Error() string {
-	return "invalid maxkeys: " + strconv.Itoa(e.MaxKeys)
+	return "Invalid range offset: " + strconv.FormatInt(e.Offset, 10)
 }
 
 // GenericBucketError - generic bucket operations error
@@ -80,7 +48,7 @@ type GenericBucketError struct {
 type BucketExists GenericBucketError
 
 func (e BucketExists) Error() string {
-	return "bucket " + e.Bucket + " exists"
+	return "Bucket #" + e.Bucket + " exists"
 }
 
 // InvalidBucketName - bucket name invalid (http://goo.gl/wJlzDz)
@@ -105,25 +73,18 @@ func (e ObjectAlreadyExists) Error() string {
 	return "Object #" + e.Object + " already exists."
 }
 
-// ObjectNotFound - object requested does not exist
-type ObjectNotFound GenericObjectError
-
-func (e ObjectNotFound) Error() string {
-	return "object " + e.Object + " not found in bucket " + e.Bucket
-}
-
 // InvalidObjectName - object requested is invalid
 type InvalidObjectName GenericObjectError
 
 func (e InvalidObjectName) Error() string {
-	return "object " + e.Object + "at" + e.Bucket + "is invalid"
+	return "Object #" + e.Object + " at " + e.Bucket + " is invalid"
 }
 
 // ObjectExists - object exists
 type ObjectExists GenericObjectError
 
 func (e ObjectExists) Error() string {
-	return "object " + e.Object + " exists"
+	return "Object #" + e.Object + " exists"
 }
 
 // GenericError - generic error
@@ -138,19 +99,26 @@ func (e InvalidQueryURL) Error() string {
 	return "Invalid query URL: " + e.URL
 }
 
-// GenericFileError - generic file error
+// GenericFileError - generic file error.
 type GenericFileError struct {
 	Path string
 }
 
-// NotFound (ENOENT) - file not found
-type NotFound GenericFileError
+// PathNotFound (ENOENT) - file not found.
+type PathNotFound GenericFileError
 
-func (e NotFound) Error() string {
+func (e PathNotFound) Error() string {
 	return "Requested file ‘" + e.Path + "’ not found"
 }
 
-// BrokenSymlink (ENOTENT) - file has broken symlink
+// PathInsufficientPermission (EPERM) - permission denied.
+type PathInsufficientPermission GenericFileError
+
+func (e PathInsufficientPermission) Error() string {
+	return "Insufficient permissions to access this file ‘" + e.Path + "’"
+}
+
+// BrokenSymlink (ENOTENT) - file has broken symlink.
 type BrokenSymlink GenericFileError
 
 func (e BrokenSymlink) Error() string {

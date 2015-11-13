@@ -143,23 +143,11 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	if len(srcURLs) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments to copy command.")
 	}
+
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
-	_, srcContent, err := url2Stat(srcURL)
-	if err != nil {
-		// if file not found it could be that user has provided a valid
-		// prefix, populate parent content properly and set error to nil.
-		// if at all the prefix doesn't exist eventually 'List' will handle
-		// it properly.
-		if os.IsNotExist(err.ToGoError()) {
-			// set the err back to nil consciously.
-			err = nil
-			// fill in srcContent for subsequent verification.
-			srcContent = new(client.Content)
-			srcContent.URL = *client.NewURL(srcURL)
-			srcContent.Type = os.ModeDir
-		}
-	}
+
+	srcContent, err := url2Content(srcURL)
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 
 	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.

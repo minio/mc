@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -140,22 +139,9 @@ func trimContent(parentContent, childContent *client.Content, recursive bool) *c
 
 // doList - list all entities inside a folder.
 func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
-	_, parentContent, err := url2Stat(clnt.GetURL().String())
+	parentContent, err := url2Content(clnt.GetURL().String())
 	if err != nil {
-		// if file not found it could be that user has provided a valid
-		// prefix, populate parent content properly and set error to nil.
-		// if at all the prefix doesn't exist eventually 'List' will handle
-		// it properly.
-		if os.IsNotExist(err.ToGoError()) {
-			// set the err back to nil consciously.
-			err = nil
-			// fill parentContent with input client
-			parentContent = new(client.Content)
-			parentContent.URL = clnt.GetURL()
-			parentContent.Type = os.ModeDir
-		} else {
-			return err.Trace(clnt.GetURL().String())
-		}
+		return err.Trace(clnt.GetURL().String())
 	}
 	for contentCh := range clnt.List(isRecursive, isIncomplete) {
 		if contentCh.Err != nil {
@@ -167,20 +153,12 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 			case client.TooManyLevelsSymlink:
 				errorIf(contentCh.Err.Trace(), "Unable to list too many levels link.")
 				continue
-			}
-			if os.IsNotExist(contentCh.Err.ToGoError()) || os.IsPermission(contentCh.Err.ToGoError()) {
-				if contentCh.Content != nil {
-					if contentCh.Content.Type.IsDir() {
-						if contentCh.Content.Type&os.ModeSymlink == os.ModeSymlink {
-							errorIf(contentCh.Err.Trace(), "Unable to list broken folder link.")
-							continue
-						}
-						errorIf(contentCh.Err.Trace(), "Unable to list folder.")
-					}
-				} else {
-					errorIf(contentCh.Err.Trace(), "Unable to list.")
-					continue
-				}
+			case client.PathNotFound:
+				errorIf(contentCh.Err.Trace(), "Unable to list missing broken folder link.")
+				continue
+			case client.PathInsufficientPermission:
+				errorIf(contentCh.Err.Trace(), "Unable to list folder.")
+				continue
 			}
 			err = contentCh.Err.Trace()
 			break

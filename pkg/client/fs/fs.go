@@ -75,6 +75,12 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 		}
 	}
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, probe.NewError(client.PathNotFound{Path: fpath})
+		}
+		if os.IsPermission(err) {
+			return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
+		}
 		return nil, probe.NewError(err)
 	}
 	st, err := os.Stat(fpath)
@@ -91,10 +97,13 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 			return lst, nil
 		}
 	}
-	if os.IsNotExist(err) {
-		return nil, probe.NewError(client.NotFound{Path: fpath})
-	}
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, probe.NewError(client.PathNotFound{Path: fpath})
+		}
+		if os.IsPermission(err) {
+			return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
+		}
 		return nil, probe.NewError(err)
 	}
 	return st, nil
@@ -170,10 +179,13 @@ func (f *fsClient) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error
 
 	// Resolve symlinks
 	_, err := filepath.EvalSymlinks(tmppath)
-	if os.IsNotExist(err) {
-		return nil, length, probe.NewError(err)
-	}
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, length, probe.NewError(client.PathNotFound{Path: tmppath})
+		}
+		if os.IsPermission(err) {
+			return nil, length, probe.NewError(client.PathInsufficientPermission{Path: tmppath})
+		}
 		return nil, length, probe.NewError(err)
 	}
 	if offset == 0 && length == 0 {
@@ -466,7 +478,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 				} else {
 					contentCh <- client.ContentOnChannel{
 						Content: nil,
-						Err:     probe.NewError(err),
+						Err:     probe.NewError(client.PathInsufficientPermission{Path: fp}),
 					}
 				}
 				return nil

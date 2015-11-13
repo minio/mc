@@ -239,6 +239,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 						content.Content.Size = 0
 						return content.Content, nil
 					}
+					return nil, probe.NewError(client.PathNotFound{Path: c.hostURL.Path})
 				}
 			}
 			return nil, probe.NewError(err)
