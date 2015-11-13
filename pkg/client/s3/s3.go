@@ -230,14 +230,20 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 			errResponse := minio.ToErrorResponse(err)
 			if errResponse != nil {
 				if errResponse.Code == "NoSuchKey" {
-					for content := range c.List(false, false) {
-						if content.Err != nil {
-							return nil, content.Err.Trace()
+					// append "/" to the object name and see if we can list anything
+					// if so, we consider it as a directory
+					dirName := object
+					if !strings.HasSuffix(dirName, string(c.hostURL.Separator)) {
+						dirName += string(c.hostURL.Separator)
+					}
+					for objectStat := range c.api.ListObjects(bucket, dirName, false) {
+						if objectStat.Err != nil {
+							return nil, probe.NewError(objectStat.Err)
 						}
-						content.Content.URL = *c.hostURL
-						content.Content.Type = os.ModeDir
-						content.Content.Size = 0
-						return content.Content, nil
+						content := client.Content{}
+						content.URL = *c.hostURL
+						content.Type = os.ModeDir
+						return &content, nil
 					}
 					return nil, probe.NewError(client.PathNotFound{Path: c.hostURL.Path})
 				}

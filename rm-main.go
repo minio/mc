@@ -65,22 +65,22 @@ EXAMPLES:
       $ mc {{.Name}} 1999/old-backup.tgz
 
    3. Remove contents of a folder recursively.
-     $ mc {{.Name}} --force https://s3.amazonaws.com/jazz-songs/louis/... 
+     $ mc {{.Name}} --force https://s3.amazonaws.com/jazz-songs/louis/...
 
    4  Remove contents of a folder recursively and folder itself.
       $ mc {{.Name}} old/photos...
 
    5. Remove a bucket and all its contents recursively.
-     $ mc {{.Name}} --force https://s3.amazonaws.com/jazz-songs... 
+     $ mc {{.Name}} --force https://s3.amazonaws.com/jazz-songs...
 
    6. Remove all matching objects with this prefix.
-     $ mc {{.Name}} --force https://s3.amazonaws.com/ogg/gunmetal... 
+     $ mc {{.Name}} --force https://s3.amazonaws.com/ogg/gunmetal...
 
    7. Cancel an incomplete upload of an object.
-      $ mc {{.Name}} --incomplete https://s3.amazonaws.com/jazz-songs/louis/file01.mp3 
+      $ mc {{.Name}} --incomplete https://s3.amazonaws.com/jazz-songs/louis/file01.mp3
 
    8. Remove all incomplete uploads recursively matching this prefix.
-      $ mc {{.Name}} --incomplete --force https://s3.amazonaws.com/jazz-songs/louis/... 
+      $ mc {{.Name}} --incomplete --force https://s3.amazonaws.com/jazz-songs/louis/...
 `,
 }
 
@@ -155,7 +155,6 @@ func rmAll(url string, isIncomplete bool) {
 		errorIf(err.Trace(url), "Invalid URL ‘"+url+"’.")
 		return // End of journey.
 	}
-
 	isRecursive := false // Disable recursion and only list this folder's contents.
 	for entry := range clnt.List(isRecursive, isIncomplete) {
 		if entry.Err != nil {
@@ -197,12 +196,13 @@ func mainRm(ctx *cli.Context) {
 		if isURLRecursive(url) && isForce {
 			url := stripRecursiveURL(url)
 			removeTopFolder := false
-
 			// find if the URL is dir or not.
 			_, content, err := url2Stat(url)
-			fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
+			if err != nil && !prefixExists(url) {
+				fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
+			}
 
-			if content.Type.IsDir() {
+			if err == nil && content.Type.IsDir() {
 				/* Determine whether to remove the top folder or only its
 				contents. If the URL does not end with a separator, then
 				include the top folder as well, otherwise not. */

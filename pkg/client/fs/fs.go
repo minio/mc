@@ -242,7 +242,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 
 	fst, err := f.fsStat()
 	if err != nil {
-		if os.IsNotExist(err.ToGoError()) {
+		if _, ok := err.ToGoError().(client.PathNotFound); ok {
 			dir, err := os.Open(filepath.Dir(fpath))
 			if err != nil {
 				contentCh <- client.ContentOnChannel{
