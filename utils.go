@@ -18,8 +18,14 @@ package main
 
 import (
 	"math/rand"
+	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"time"
+
+	"github.com/minio/minio-xl/pkg/probe"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -38,4 +44,22 @@ func isBucketVirtualStyle(host string) bool {
 	s3Virtual, _ := filepath.Match("*.s3*.amazonaws.com", host)
 	googleVirtual, _ := filepath.Match("*.storage.googleapis.com", host)
 	return s3Virtual || googleVirtual
+}
+
+// user.Current is not implemented on 32bit, falling back and using a workaround instead.
+func userCurrent() (*user.User, *probe.Error) {
+	if runtime.GOARCH == "386" && runtime.GOOS == "linux" {
+		return &user.User{
+			Uid:      strconv.Itoa(os.Getuid()),
+			Gid:      strconv.Itoa(os.Getgid()),
+			Username: os.Getenv("USER"),
+			Name:     os.Getenv("USER"),
+			HomeDir:  os.Getenv("HOME"),
+		}, nil
+	}
+	user, err := user.Current()
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+	return user, nil
 }

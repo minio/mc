@@ -18,7 +18,6 @@ package main
 
 import (
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -93,9 +92,9 @@ func getMcConfigDir() (string, *probe.Error) {
 	if mcCustomConfigDir != "" {
 		return mcCustomConfigDir, nil
 	}
-	u, err := user.Current()
+	u, err := userCurrent()
 	if err != nil {
-		return "", probe.NewError(err)
+		return "", err.Trace()
 	}
 	// For windows the path is slightly different
 	switch runtime.GOOS {
