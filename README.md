@@ -26,30 +26,44 @@
 
 #### GNU/Linux
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Sept/linux-amd64/mc
+##### 64bit
+
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/linux-amd64/mc
+
+##### 32bit 
+
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/linux-386/mc
+
+##### Arm32
+
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/linux-arm/mc
 
 ~~~
-$ wget https://dl.minio.io:9000/updates/2015/Sept/linux-amd64/mc
 $ chmod +x mc
-$ ./mc
+$ ./mc help
 ~~~
 
 #### OS X
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Sept/darwin-amd64/mc
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/darwin-amd64/mc
 
 ~~~
-$ curl https://dl.minio.io:9000/updates/2015/Sept/darwin-amd64/mc > mc
-$ chmod +x mc
-$ ./mc
+$ chmod 755 mc
+$ ./mc help
 ~~~
 
-#### Windows
+#### Windows 64bit and 32bit
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Sept/windows-amd64/mc.exe
+##### 64 bit
+
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/windows-amd64/mc.exe
+
+##### 32 bit 
+
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/windows-386/mc.exe
 
 ~~~
-C:\Users\Username\Downloads> mc.exe
+C:\Users\Username\Downloads> mc.exe help
 ~~~
 
 #### Source
