@@ -66,11 +66,11 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
 
 	if !srcContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source ‘%s’ is not a folder. Only folders are supported by mirror.", srcURL))
+		fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source ‘%s’ is not a folder. Only folders are supported by mirror command.", srcURL))
 	}
 
 	if len(tgtURLs) == 0 && tgtURLs == nil {
-		fatalIf(errInvalidArgument().Trace(), "Invalid number of target arguments to mirror command.")
+		fatalIf(errInvalidArgument().Trace(), "Invalid target arguments to mirror command.")
 	}
 
 	for _, tgtURL := range tgtURLs {

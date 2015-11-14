@@ -63,9 +63,6 @@ var (
 		return probe.NewError(errors.New("Source ‘" + URL + "’ is not recursive.")).Untrace()
 	}
 
-	errSourceIsNotDir = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Source ‘" + URL + "’ is not a folder.")).Untrace()
-	}
 	errSourceIsDir = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Source ‘" + URL + "’ is a folder.")).Untrace()
 	}

@@ -295,7 +295,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			}
 			return
 		}
-		// if os.IsNotExit() fails we return genuine error back to the caller.
+		// if client.PathNotFound fails we return genuine error back to the caller.
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
 			Err:     err.Trace(fpath),
