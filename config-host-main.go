@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -205,6 +206,16 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
 	if strings.TrimSpace(hostGlob) == "" {
 		fatalIf(errDummy().Trace(), "Unable to proceed, empty arguments provided.")
 	}
+	if len(accessKeyID) != 0 {
+		if !isValidAccessKey(accessKeyID) {
+			fatalIf(errInvalidArgument().Trace(), "Invalid access key id provided.")
+		}
+	}
+	if len(secretAccessKey) != 0 {
+		if !isValidSecretKey(secretAccessKey) {
+			fatalIf(errInvalidArgument().Trace(), "Invalid secret access key provided.")
+		}
+	}
 	if strings.TrimSpace(api) == "" {
 		api = "S3v4"
 	}
@@ -218,23 +229,27 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
 	err = config.Load(configPath)
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
-	if len(accessKeyID) != 0 {
-		if !isValidAccessKey(accessKeyID) {
-			fatalIf(errInvalidArgument().Trace(), "Invalid access key id provided.")
-		}
-	}
-	if len(secretAccessKey) != 0 {
-		if !isValidSecretKey(secretAccessKey) {
-			fatalIf(errInvalidArgument().Trace(), "Invalid secret access key provided.")
-		}
-	}
-	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV6)
-	newConf.Hosts[hostGlob] = hostConfig{
-		AccessKeyID:     accessKeyID,
-		SecretAccessKey: secretAccessKey,
-		API:             api,
+	for globURL := range newConf.Hosts {
+		match, err := filepath.Match(globURL, hostGlob)
+		if err != nil {
+			fatalIf(errInvalidGlobURL(globURL, hostGlob).Trace(), "Unable to match.")
+		}
+		if match {
+			newConf.Hosts[globURL] = hostConfig{
+				AccessKeyID:     accessKeyID,
+				SecretAccessKey: secretAccessKey,
+				API:             api,
+			}
+		} else {
+			newConf.Hosts[hostGlob] = hostConfig{
+				AccessKeyID:     accessKeyID,
+				SecretAccessKey: secretAccessKey,
+				API:             api,
+			}
+		}
 	}
+
 	newConfig, err := quick.New(newConf)
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
 

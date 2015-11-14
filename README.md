@@ -1,6 +1,6 @@
 # Minio Client (mc) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-``mc`` provides minimal tools to work with Amazon S3 compatible cloud storage and filesystems. It has features like resumable partial uploads, progress bar, parallel copy. ``mc`` is written in golang and released under [Apache license v2](./LICENSE).
+``mc`` provides minimal tools to work with Amazon S3 compatible cloud storage and filesystems. It has features like resumable uploads, progress bar, parallel copy. ``mc`` is written in golang and released under [Apache license v2](./LICENSE).
 
 ## Commands
 
@@ -78,22 +78,27 @@ Minio cloud storage server is hosted at ``https://play.minio.io:9000`` for publi
 
 ## Configuring mc for Amazon S3
 
-Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html). 
+Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
 
 Once you have them update your ``~/.mc/config.json`` configuration file.
 ```
-$ mc config host add <your_s3_endpoint> <your_access_key> <your_secret_key> S3v4
+$ mc config host add <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v4
 ```
 
-NOTE: ``S3v4`` is default unless specified. 
+Example
+```
+$ mc config host add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+```
+
+NOTE: ``S3v4`` is default if not specified.
 
 ## Configure mc for Google Cloud Storage
 
-Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys). 
+Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys).
 
 Once you have them update your ``~/./mc/config.json`` configuration file.
 ```
-$ mc config host add storage.googleapis.com <your_access_key> <your_secret_key> S3v2
+$ mc config host add storage.googleapis.com <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v2
 ```
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version ``2``, so you have to pick - ``S3v2``
