@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"net/http"
 	"runtime"
 	"strings"
 	"time"
@@ -145,7 +144,7 @@ func getExperimentalUpdate() {
 	e = decoder.Decode(&experimentals)
 	fatalIf(probe.NewError(e), "Unable to decode experimental update notification.")
 
-	latest, e := time.Parse(http.TimeFormat, experimentals.BuildDate)
+	latest, e := time.Parse(time.RFC3339, experimentals.BuildDate)
 	fatalIf(probe.NewError(e), "Unable to parse BuildDate.")
 
 	if latest.IsZero() {
@@ -153,10 +152,10 @@ func getExperimentalUpdate() {
 	}
 
 	mcExperimentalURLParse := clnt.GetURL()
-	downloadURL := (mcExperimentalURLParse.Scheme + "://" +
-		mcExperimentalURLParse.Host +
-		string(mcExperimentalURLParse.Separator) +
-		experimentals.Platforms[runtime.GOOS])
+	downloadURL := (mcExperimentalURLParse.Scheme +
+		string(mcExperimentalURLParse.SchemeSeparator) +
+		mcExperimentalURLParse.Host + string(mcExperimentalURLParse.Separator) +
+		experimentals.Platforms[runtime.GOOS+"-"+runtime.GOARCH])
 
 	updateMsg := updateMessage{
 		Download: downloadURL,
@@ -192,7 +191,7 @@ func getReleaseUpdate() {
 	e = decoder.Decode(&updates)
 	fatalIf(probe.NewError(e), "Unable to decode update notification.")
 
-	latest, e := time.Parse(http.TimeFormat, updates.BuildDate)
+	latest, e := time.Parse(time.RFC3339, updates.BuildDate)
 	fatalIf(probe.NewError(e), "Unable to parse BuildDate.")
 
 	if latest.IsZero() {
@@ -200,7 +199,11 @@ func getReleaseUpdate() {
 	}
 
 	mcUpdateURLParse := clnt.GetURL()
-	downloadURL := mcUpdateURLParse.Scheme + "://" + mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) + updates.Platforms[runtime.GOOS]
+	downloadURL := mcUpdateURLParse.Scheme +
+		string(mcUpdateURLParse.SchemeSeparator) +
+		mcUpdateURLParse.Host + string(mcUpdateURLParse.Separator) +
+		updates.Platforms[runtime.GOOS+"-"+runtime.GOARCH]
+
 	updateMsg := updateMessage{
 		Download: downloadURL,
 		Version:  mcVersion,
