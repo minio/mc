@@ -62,10 +62,12 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	/****** Generic rules *******/
 	// Recursive source URL.
 	newSrcURL := stripRecursiveURL(srcURL)
-	srcContent, err := url2Content(newSrcURL)
-	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
+	_, srcContent, err := url2Stat(newSrcURL)
+	if err != nil && !prefixExists(newSrcURL) {
+		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
+	}
 
-	if !srcContent.Type.IsDir() {
+	if err == nil && !srcContent.Type.IsDir() {
 		fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source ‘%s’ is not a folder. Only folders are supported by mirror command.", srcURL))
 	}
 

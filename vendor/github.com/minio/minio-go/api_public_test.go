@@ -196,13 +196,6 @@ func TestObjectOperations(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error")
 	}
-	err = a.RemoveObject("bucket", "object1")
-	if err == nil {
-		t.Fatal("Error")
-	}
-	if err.Error() != "The specified key does not exist." {
-		t.Fatal("Error")
-	}
 }
 
 func TestPresignedURL(t *testing.T) {

@@ -23,6 +23,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,20 +34,21 @@ const (
 	separator = "/"
 )
 
-// apiCore container to hold unexported internal functions.
-type apiCore struct {
+// s3API container to hold unexported internal functions.
+type s3API struct {
 	config *Config
 }
 
 // closeResp close non nil response with any response Body.
 func closeResp(resp *http.Response) {
 	if resp != nil && resp.Body != nil {
+		io.Copy(ioutil.Discard, resp.Body)
 		resp.Body.Close()
 	}
 }
 
 // putBucketRequest wrapper creates a new putBucket request.
-func (a apiCore) putBucketRequest(bucket, acl, location string) (*Request, error) {
+func (a s3API) putBucketRequest(bucket, acl, location string) (*Request, error) {
 	var r *Request
 	var err error
 	op := &operation{
@@ -121,7 +123,7 @@ func (a apiCore) putBucketRequest(bucket, acl, location string) (*Request, error
 // ------------------
 // [ us-west-1 | us-west-2 | eu-west-1 | eu-central-1 | ap-southeast-1 | ap-northeast-1 | ap-southeast-2 | sa-east-1 ]
 // Default - US standard
-func (a apiCore) putBucket(bucket, acl, location string) error {
+func (a s3API) putBucket(bucket, acl, location string) error {
 	req, err := a.putBucketRequest(bucket, acl, location)
 	if err != nil {
 		return err
@@ -140,7 +142,7 @@ func (a apiCore) putBucket(bucket, acl, location string) error {
 }
 
 // putBucketRequestACL wrapper creates a new putBucketACL request.
-func (a apiCore) putBucketACLRequest(bucket, acl string) (*Request, error) {
+func (a s3API) putBucketACLRequest(bucket, acl string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
@@ -155,7 +157,7 @@ func (a apiCore) putBucketACLRequest(bucket, acl string) (*Request, error) {
 }
 
 // putBucketACL set the permissions on an existing bucket using Canned ACL's.
-func (a apiCore) putBucketACL(bucket, acl string) error {
+func (a s3API) putBucketACL(bucket, acl string) error {
 	req, err := a.putBucketACLRequest(bucket, acl)
 	if err != nil {
 		return err
@@ -174,7 +176,7 @@ func (a apiCore) putBucketACL(bucket, acl string) error {
 }
 
 // getBucketACLRequest wrapper creates a new getBucketACL request.
-func (a apiCore) getBucketACLRequest(bucket string) (*Request, error) {
+func (a s3API) getBucketACLRequest(bucket string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -188,7 +190,7 @@ func (a apiCore) getBucketACLRequest(bucket string) (*Request, error) {
 }
 
 // getBucketACL get the acl information on an existing bucket.
-func (a apiCore) getBucketACL(bucket string) (accessControlPolicy, error) {
+func (a s3API) getBucketACL(bucket string) (accessControlPolicy, error) {
 	req, err := a.getBucketACLRequest(bucket)
 	if err != nil {
 		return accessControlPolicy{}, err
@@ -226,7 +228,7 @@ func (a apiCore) getBucketACL(bucket string) (accessControlPolicy, error) {
 }
 
 // getBucketLocationRequest wrapper creates a new getBucketLocation request.
-func (a apiCore) getBucketLocationRequest(bucket string) (*Request, error) {
+func (a s3API) getBucketLocationRequest(bucket string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -240,7 +242,7 @@ func (a apiCore) getBucketLocationRequest(bucket string) (*Request, error) {
 }
 
 // getBucketLocation uses location subresource to return a bucket's region.
-func (a apiCore) getBucketLocation(bucket string) (string, error) {
+func (a s3API) getBucketLocation(bucket string) (string, error) {
 	req, err := a.getBucketLocationRequest(bucket)
 	if err != nil {
 		return "", err
@@ -264,7 +266,7 @@ func (a apiCore) getBucketLocation(bucket string) (string, error) {
 }
 
 // listObjectsRequest wrapper creates a new listObjects request.
-func (a apiCore) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*Request, error) {
+func (a s3API) listObjectsRequest(bucket, marker, prefix, delimiter string, maxkeys int) (*Request, error) {
 	// resourceQuery - get resources properly escaped and lined up before using them in http request.
 	resourceQuery := func() (*string, error) {
 		switch {
@@ -307,7 +309,7 @@ func (a apiCore) listObjectsRequest(bucket, marker, prefix, delimiter string, ma
 // ?delimiter - A delimiter is a character you use to group keys.
 // ?prefix - Limits the response to keys that begin with the specified prefix.
 // ?max-keys - Sets the maximum number of keys returned in the response body.
-func (a apiCore) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (listBucketResult, error) {
+func (a s3API) listObjects(bucket, marker, prefix, delimiter string, maxkeys int) (listBucketResult, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return listBucketResult{}, err
 	}
@@ -335,7 +337,7 @@ func (a apiCore) listObjects(bucket, marker, prefix, delimiter string, maxkeys i
 }
 
 // headBucketRequest wrapper creates a new headBucket request.
-func (a apiCore) headBucketRequest(bucket string) (*Request, error) {
+func (a s3API) headBucketRequest(bucket string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "HEAD",
@@ -345,7 +347,7 @@ func (a apiCore) headBucketRequest(bucket string) (*Request, error) {
 }
 
 // headBucket useful to determine if a bucket exists and you have permission to access it.
-func (a apiCore) headBucket(bucket string) error {
+func (a s3API) headBucket(bucket string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -395,7 +397,7 @@ func (a apiCore) headBucket(bucket string) error {
 }
 
 // deleteBucketRequest wrapper creates a new deleteBucket request.
-func (a apiCore) deleteBucketRequest(bucket string) (*Request, error) {
+func (a s3API) deleteBucketRequest(bucket string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
@@ -409,7 +411,7 @@ func (a apiCore) deleteBucketRequest(bucket string) (*Request, error) {
 // NOTE: -
 //  All objects (including all object versions and delete markers)
 //  in the bucket must be deleted before successfully attempting this request.
-func (a apiCore) deleteBucket(bucket string) error {
+func (a s3API) deleteBucket(bucket string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -468,7 +470,7 @@ func (a apiCore) deleteBucket(bucket string) error {
 /// Object Read/Write/Stat Operations
 
 // putObjectUnAuthenticatedRequest - putObjectUnauthenticated request.
-func (a apiCore) putObjectUnAuthenticatedRequest(bucket, object, contentType string,
+func (a s3API) putObjectUnAuthenticatedRequest(bucket, object, contentType string,
 	size int64, body io.Reader) (*Request, error) {
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
@@ -490,7 +492,7 @@ func (a apiCore) putObjectUnAuthenticatedRequest(bucket, object, contentType str
 
 // putObjectUnAuthenticated - add an object to a bucket anonymously.
 // NOTE: You must have WRITE permissions on a bucket to add an object to it. Bucket should have 'public-read-write' ACL.
-func (a apiCore) putObjectUnAuthenticated(bucket, object, contentType string,
+func (a s3API) putObjectUnAuthenticated(bucket, object, contentType string,
 	size int64, body io.Reader) (ObjectStat, error) {
 	req, err := a.putObjectUnAuthenticatedRequest(bucket, object, contentType, size, body)
 	if err != nil {
@@ -512,7 +514,7 @@ func (a apiCore) putObjectUnAuthenticated(bucket, object, contentType string,
 }
 
 // putObjectRequest wrapper creates a new PutObject request.
-func (a apiCore) putObjectRequest(bucket, object, contentType string,
+func (a s3API) putObjectRequest(bucket, object, contentType string,
 	md5SumBytes []byte, size int64, body io.ReadSeeker) (*Request, error) {
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
@@ -537,7 +539,7 @@ func (a apiCore) putObjectRequest(bucket, object, contentType string,
 
 // putObject - add an object to a bucket.
 // NOTE: You must have WRITE permissions on a bucket to add an object to it.
-func (a apiCore) putObject(bucket, object, contentType string,
+func (a s3API) putObject(bucket, object, contentType string,
 	md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
 	req, err := a.putObjectRequest(bucket, object, contentType, md5SumBytes, size, body)
 	if err != nil {
@@ -559,7 +561,7 @@ func (a apiCore) putObject(bucket, object, contentType string,
 }
 
 // presignedPostPolicy - generate post form data.
-func (a apiCore) presignedPostPolicy(p *PostPolicy) map[string]string {
+func (a s3API) presignedPostPolicy(p *PostPolicy) map[string]string {
 	t := time.Now().UTC()
 	r := new(Request)
 	r.config = a.config
@@ -601,7 +603,7 @@ func (a apiCore) presignedPostPolicy(p *PostPolicy) map[string]string {
 }
 
 // presignedPutObject - generate presigned PUT url.
-func (a apiCore) presignedPutObject(bucket, object string, expires int64) (string, error) {
+func (a s3API) presignedPutObject(bucket, object string, expires int64) (string, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
@@ -618,7 +620,7 @@ func (a apiCore) presignedPutObject(bucket, object string, expires int64) (strin
 }
 
 // presignedGetObjectRequest - presigned get object request
-func (a apiCore) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*Request, error) {
+func (a s3API) presignedGetObjectRequest(bucket, object string, expires, offset, length int64) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -640,7 +642,7 @@ func (a apiCore) presignedGetObjectRequest(bucket, object string, expires, offse
 }
 
 // presignedGetObject - generate presigned get object URL.
-func (a apiCore) presignedGetObject(bucket, object string, expires, offset, length int64) (string, error) {
+func (a s3API) presignedGetObject(bucket, object string, expires, offset, length int64) (string, error) {
 	if err := invalidArgumentError(object); err != nil {
 		return "", err
 	}
@@ -655,7 +657,7 @@ func (a apiCore) presignedGetObject(bucket, object string, expires, offset, leng
 }
 
 // getObjectRequest wrapper creates a new getObject request.
-func (a apiCore) getObjectRequest(bucket, object string, offset, length int64) (*Request, error) {
+func (a s3API) getObjectRequest(bucket, object string, offset, length int64) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -684,7 +686,7 @@ func (a apiCore) getObjectRequest(bucket, object string, offset, length int64) (
 //
 // For more information about the HTTP Range header.
 // go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a apiCore) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
+func (a s3API) getObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
 	if err := invalidArgumentError(object); err != nil {
 		return nil, ObjectStat{}, err
 	}
@@ -730,7 +732,7 @@ func (a apiCore) getObject(bucket, object string, offset, length int64) (io.Read
 }
 
 // deleteObjectRequest wrapper creates a new deleteObject request.
-func (a apiCore) deleteObjectRequest(bucket, object string) (*Request, error) {
+func (a s3API) deleteObjectRequest(bucket, object string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "DELETE",
@@ -740,7 +742,7 @@ func (a apiCore) deleteObjectRequest(bucket, object string) (*Request, error) {
 }
 
 // deleteObject deletes a given object from a bucket.
-func (a apiCore) deleteObject(bucket, object string) error {
+func (a s3API) deleteObject(bucket, object string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
@@ -756,43 +758,14 @@ func (a apiCore) deleteObject(bucket, object string) error {
 	if err != nil {
 		return err
 	}
-	if resp != nil {
-		if resp.StatusCode != http.StatusNoContent {
-			var errorResponse ErrorResponse
-			switch resp.StatusCode {
-			case http.StatusNotFound:
-				errorResponse = ErrorResponse{
-					Code:      "NoSuchKey",
-					Message:   "The specified key does not exist.",
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
-				}
-			case http.StatusForbidden:
-				errorResponse = ErrorResponse{
-					Code:      "AccessDenied",
-					Message:   "Access Denied.",
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
-				}
-			default:
-				errorResponse = ErrorResponse{
-					Code:      resp.Status,
-					Message:   resp.Status,
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
-				}
-			}
-			return errorResponse
-		}
-	}
+	// DeleteObject always responds with http '204' even for
+	// objects which do not exist. So no need to handle them
+	// specifically.
 	return nil
 }
 
 // headObjectRequest wrapper creates a new headObject request.
-func (a apiCore) headObjectRequest(bucket, object string) (*Request, error) {
+func (a s3API) headObjectRequest(bucket, object string) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "HEAD",
@@ -802,7 +775,7 @@ func (a apiCore) headObjectRequest(bucket, object string) (*Request, error) {
 }
 
 // headObject retrieves metadata from an object without returning the object itself.
-func (a apiCore) headObject(bucket, object string) (ObjectStat, error) {
+func (a s3API) headObject(bucket, object string) (ObjectStat, error) {
 	if err := invalidBucketError(bucket); err != nil {
 		return ObjectStat{}, err
 	}
@@ -887,7 +860,7 @@ func (a apiCore) headObject(bucket, object string) (ObjectStat, error) {
 /// Service Operations.
 
 // listBucketRequest wrapper creates a new listBuckets request.
-func (a apiCore) listBucketsRequest() (*Request, error) {
+func (a s3API) listBucketsRequest() (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "GET",
@@ -897,7 +870,7 @@ func (a apiCore) listBucketsRequest() (*Request, error) {
 }
 
 // listBuckets list of all buckets owned by the authenticated sender of the request.
-func (a apiCore) listBuckets() (listAllMyBucketsResult, error) {
+func (a s3API) listBuckets() (listAllMyBucketsResult, error) {
 	req, err := a.listBucketsRequest()
 	if err != nil {
 		return listAllMyBucketsResult{}, err

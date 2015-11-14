@@ -146,10 +146,11 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
-	srcContent, err := url2Content(srcURL)
-	fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
-
-	if srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
+	_, srcContent, err := url2Stat(srcURL)
+	if err != nil && !prefixExists(srcURL) {
+		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
+	}
+	if err == nil && srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
 		fatalIf(errInvalidArgument().Trace(), "Source ‘"+srcURL+"’ is not a folder.")
 	}
 	_, tgtContent, err := url2Stat(tgtURL)
@@ -166,10 +167,11 @@ func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 	for _, srcURL := range srcURLs {
 		if isURLRecursive(srcURL) {
 			srcURL = stripRecursiveURL(srcURL)
-			srcContent, err := url2Content(srcURL)
-			fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
-
-			if !srcContent.Type.IsDir() { // Ellipses is supported only for folders.
+			_, srcContent, err := url2Stat(srcURL)
+			if err != nil && !prefixExists(srcURL) {
+				fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
+			}
+			if err == nil && !srcContent.Type.IsDir() { // Ellipses is supported only for folders.
 				fatalIf(errInvalidArgument().Trace(srcURL), "Source ‘"+srcURL+"’ is not a folder.")
 			}
 		}

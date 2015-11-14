@@ -185,22 +185,22 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 }
 
 // url2Client - convenience wrapper for getNewClient
-func url2Client(url string) (client.Client, *probe.Error) {
-	urlconfig, err := getHostConfig(url)
+func url2Client(urlStr string) (client.Client, *probe.Error) {
+	urlConfig, err := getHostConfig(urlStr)
 	if err != nil {
-		return nil, err.Trace(url)
+		return nil, err.Trace(urlStr)
 	}
-	client, err := getNewClient(url, urlconfig)
+	client, err := getNewClient(urlStr, urlConfig)
 	if err != nil {
-		return nil, err.Trace(url)
+		return nil, err.Trace(urlStr)
 	}
 	return client, nil
 }
 
-func prefixExists(url string) bool {
-	clnt, err := url2Client(url)
+func prefixExists(urlStr string) bool {
+	clnt, err := url2Client(urlStr)
 	if err != nil {
-		errorIf(err.Trace(url), "Invalid URL ‘"+url+"’.")
+		return false
 	}
 	isRecursive := true
 	isIncomplete := false
