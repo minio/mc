@@ -233,8 +233,8 @@ func (c *Config) setBucketRegion() {
 	tempConfig.Endpoint = u.String()
 	tempConfig.Region = getRegion(u.Host)
 	tempConfig.isVirtualHostedStyle = false
-	s3api := API{apiCore{&tempConfig}}
-	region, err := s3api.getBucketLocation(bucket)
+	s3API := API{s3API{&tempConfig}}
+	region, err := s3API.getBucketLocation(bucket)
 	if err != nil {
 		c.Region = getRegion(host)
 		return
@@ -282,7 +282,7 @@ func (c *Config) SetUserAgent(name string, version string, comments ...string) {
 
 // API is a container which delegates methods that comply with CloudStorageAPI interface.
 type API struct {
-	apiCore
+	s3API
 }
 
 func isVirtualHostedStyle(host string) bool {
@@ -308,7 +308,7 @@ func New(config Config) (CloudStorageAPI, error) {
 	}
 	config.SetUserAgent(LibraryName, LibraryVersion, runtime.GOOS, runtime.GOARCH)
 	config.isUserAgentSet = false // default
-	return API{apiCore{&config}}, nil
+	return API{s3API{&config}}, nil
 }
 
 // PresignedPostPolicy return POST form data that can be used for object upload.

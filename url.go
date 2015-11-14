@@ -17,7 +17,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -103,20 +102,19 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 
 // url2Content returns content info for URL.
 func url2Content(urlStr string) (content *client.Content, err *probe.Error) {
-	_, content, err = url2Stat(urlStr)
-	if err == nil {
-		return
+	clnt, err := url2Client(urlStr)
+	if err != nil {
+		return nil, err.Trace(urlStr)
 	}
-	switch err.ToGoError().(type) {
-	// if file not found it could be that user has provided a valid
-	// prefix, populate parent content properly and set error to nil.
-	// if at all the prefix doesn't exist eventually 'List' will handle it properly.
-	case client.PathNotFound:
-		// fill content with input url
-		content = new(client.Content)
-		content.URL = *client.NewURL(urlStr)
-		content.Type = os.ModeDir
-		return content, nil
+	isRecursive := false
+	isIncomplete := false
+	for entry := range clnt.List(isRecursive, isIncomplete) {
+		if entry.Err != nil {
+			return nil, entry.Err.Trace(urlStr)
+		}
+		if strings.HasPrefix(entry.Content.URL.Path, clnt.GetURL().Path) {
+			return entry.Content, nil
+		}
 	}
-	return nil, err.Trace(urlStr)
+	return nil, errDummy().Trace(urlStr)
 }
