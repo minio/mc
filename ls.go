@@ -102,13 +102,13 @@ func parseContent(c *client.Content) contentMessage {
 }
 
 // trimContent to fancify the output for directories.
-func trimContent(parentContent, childContent *client.Content, recursive bool) *client.Content {
+func trimContent(parentContentDir, childContent *client.Content, recursive bool) *client.Content {
 	if recursive {
-		// If recursive remove the unnecessary parentContent prefix. '/', in the beginning.
+		// If recursive remove the unnecessary parentContentDir prefix. '/', in the beginning.
 		trimmedContent := new(client.Content)
 		trimmedContent = childContent
-		if strings.HasSuffix(parentContent.URL.Path, string(parentContent.URL.Separator)) {
-			trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, parentContent.URL.Path)
+		if strings.HasSuffix(parentContentDir.URL.Path, string(parentContentDir.URL.Separator)) {
+			trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, parentContentDir.URL.Path)
 		}
 		if strings.Index(trimmedContent.URL.Path, string(trimmedContent.URL.Separator)) == 0 {
 			if len(trimmedContent.URL.Path) > 0 {
@@ -117,21 +117,21 @@ func trimContent(parentContent, childContent *client.Content, recursive bool) *c
 		}
 		return trimmedContent
 	}
-	// If parentContent is a directory, use it to trim the sub-folders.
-	if parentContent.Type.IsDir() {
+	// If parentContentDir is a directory, use it to trim the sub-folders.
+	if parentContentDir.Type.IsDir() {
 		// Allocate a new client.Content for trimmed output.
 		trimmedContent := new(client.Content)
 		trimmedContent = childContent
-		if parentContent.URL.Path == string(parentContent.URL.Separator) {
-			trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, parentContent.URL.Path)
+		if parentContentDir.URL.Path == string(parentContentDir.URL.Separator) {
+			trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, parentContentDir.URL.Path)
 			return trimmedContent
 		}
 		// If the beginning of the trimPrefix is a URL.Separator ignore it.
 		trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, string(trimmedContent.URL.Separator))
-		trimPrefixContentPath := parentContent.URL.Path[:strings.LastIndex(parentContent.URL.Path,
-			string(parentContent.URL.Separator))+1]
+		trimPrefixContentPath := parentContentDir.URL.Path[:strings.LastIndex(parentContentDir.URL.Path,
+			string(parentContentDir.URL.Separator))+1]
 		// If the beginning of the trimPrefix is a URL.Separator ignore it.
-		trimPrefixContentPath = strings.TrimPrefix(trimPrefixContentPath, string(parentContent.URL.Separator))
+		trimPrefixContentPath = strings.TrimPrefix(trimPrefixContentPath, string(parentContentDir.URL.Separator))
 		trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, trimPrefixContentPath)
 		return trimmedContent
 	}
@@ -141,7 +141,8 @@ func trimContent(parentContent, childContent *client.Content, recursive bool) *c
 
 // doList - list all entities inside a folder.
 func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
-	parentContent, err := url2Content(clnt.GetURL().String())
+	// parentContentDir is verified prefix of clnt URL used for trimming purposes.
+	parentContentDir, err := url2DirContent(clnt.GetURL().String())
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}
@@ -166,7 +167,7 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 			break
 		}
 		// trim incoming content based on if its recursive or not.
-		trimmedContent := trimContent(parentContent, contentCh.Content, isRecursive)
+		trimmedContent := trimContent(parentContentDir, contentCh.Content, isRecursive)
 		// parse trimmed content into printable form.
 		parsedContent := parseContent(trimmedContent)
 		// print colorized or jsonized content info.
