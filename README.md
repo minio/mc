@@ -6,18 +6,18 @@
 
 ``mc`` implements the following commands
 ```
-  ls        List files and folders.
+  ls		List files and folders.
   mb		Make a bucket or folder.
   cat		Display contents of a file.
-  rm		Remove file or bucket.
-  pipe	    Write contents of stdin to one or more targets. Pipe is the opposite of cat command.
-  cp		Copy files and folders from many sources to a single destination.
+  rm		Remove file or bucket [WARNING: Use with care].
+  pipe		Write contents of stdin to one or more targets. Pipe is the opposite of cat command.
+  cp		Copy one or more objects to a target.
   mirror	Mirror folders recursively from a single source to many destinations.
-  session	Manage sessions for cp and mirror.
-  share		Share documents via URL.
+  session	Manage saved sessions of cp and mirror operations.
+  share		Download and upload documents.
   diff		Compute differences between two files or folders.
   access	Set or get access permissions.
-  config	Collection of config management commands.
+  config	Manage ‘mc’ configuration.
   update	Check for new software updates.
   version	Print version.
 ```
@@ -26,17 +26,11 @@
 
 #### GNU/Linux
 
-##### 64bit
+Download ``mc`` for:
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/linux-amd64/mc
-
-##### 32bit 
-
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/linux-386/mc
-
-##### Arm32
-
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/linux-arm/mc
+- ``64-bit Intel`` from https://dl.minio.io:9000/updates/2015/Nov/linux-amd64/mc
+- ``32-bit Intel`` from https://dl.minio.io:9000/updates/2015/Nov/linux-386/mc
+- ``32-bit ARM`` from https://dl.minio.io:9000/updates/2015/Nov/linux-arm/mc
 
 ~~~
 $ chmod +x mc
@@ -52,21 +46,21 @@ $ chmod 755 mc
 $ ./mc help
 ~~~
 
-#### Windows 64bit and 32bit
+#### Microsoft Windows
 
-##### 64 bit
+Download ``mc`` for:
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/windows-amd64/mc.exe
-
-##### 32 bit 
-
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/windows-386/mc.exe
+- ``64-bit`` from https://dl.minio.io:9000/updates/2015/Nov/windows-amd64/mc.exe
+- ``32-bit`` from https://dl.minio.io:9000/updates/2015/Nov/windows-386/mc.exe
 
 ~~~
 C:\Users\Username\Downloads> mc.exe help
 ~~~
 
 #### Source
+<blockquote>
+NOTE:  Source installation is intended for only developers and advanced users. ‘mc update’ continous delivery mechanism is not supported for ‘go get’ based binary builds. Please download official releases from https://minio.io/#mc.
+</blockquote>
 
 If you do not have a working Golang environment, please follow [Install Golang](./INSTALLGO.md).
 
@@ -76,7 +70,7 @@ $ go get -u github.com/minio/mc
 
 ## Public Minio Server
 
-Minio server is hosted at ``https://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible cloud storage. Minio runs in memory mode with auto expiry of objects in about an hour.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys.
+Minio cloud storage server is hosted at ``https://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible cloud storage. Minio runs with filesystem backend with auto-expiry for objects in about 24 hours.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys.
 
 ## How to use mc?
 
