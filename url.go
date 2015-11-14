@@ -17,6 +17,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -100,8 +101,8 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 	return client, content, nil
 }
 
-// url2Content returns content info for URL.
-func url2Content(urlStr string) (content *client.Content, err *probe.Error) {
+// url2DirContent returns directory content info for a URL.
+func url2DirContent(urlStr string) (content *client.Content, err *probe.Error) {
 	clnt, err := url2Client(urlStr)
 	if err != nil {
 		return nil, err.Trace(urlStr)
@@ -113,7 +114,10 @@ func url2Content(urlStr string) (content *client.Content, err *probe.Error) {
 			return nil, entry.Err.Trace(urlStr)
 		}
 		if strings.HasPrefix(entry.Content.URL.Path, clnt.GetURL().Path) {
-			return entry.Content, nil
+			content := new(client.Content)
+			content.URL = clnt.GetURL()
+			content.Type = os.ModeDir
+			return content, nil
 		}
 	}
 	return nil, errDummy().Trace(urlStr)
