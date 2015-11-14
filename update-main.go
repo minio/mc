@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"runtime"
 	"strings"
 	"time"
@@ -145,7 +146,10 @@ func getExperimentalUpdate() {
 	fatalIf(probe.NewError(e), "Unable to decode experimental update notification.")
 
 	latest, e := time.Parse(time.RFC3339, experimentals.BuildDate)
-	fatalIf(probe.NewError(e), "Unable to parse BuildDate.")
+	if e != nil {
+		latest, e = time.Parse(http.TimeFormat, experimentals.BuildDate)
+		fatalIf(probe.NewError(e), "Unable to parse BuildDate.")
+	}
 
 	if latest.IsZero() {
 		fatalIf(errDummy().Trace(), "Unable to validate any experimental update available at this time. Please open an issue at https://github.com/minio/mc/issues")
@@ -192,7 +196,10 @@ func getReleaseUpdate() {
 	fatalIf(probe.NewError(e), "Unable to decode update notification.")
 
 	latest, e := time.Parse(time.RFC3339, updates.BuildDate)
-	fatalIf(probe.NewError(e), "Unable to parse BuildDate.")
+	if e != nil {
+		latest, e = time.Parse(http.TimeFormat, updates.BuildDate)
+		fatalIf(probe.NewError(e), "Unable to parse BuildDate.")
+	}
 
 	if latest.IsZero() {
 		fatalIf(errDummy().Trace(), "Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues")
