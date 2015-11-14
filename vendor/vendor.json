@@ -29,8 +29,8 @@
 		},
 		{
 			"path": "github.com/minio/minio-go",
-			"revision": "8d76e3db295dbc5e46697f75907c8eedfa50cce3",
-			"revisionTime": "2015-11-13T19:31:33-08:00"
+			"revision": "5eb302c71339c00f6a895f2dca133395227c0fae",
+			"revisionTime": "2015-11-13T19:53:11-08:00"
 		},
 		{
 			"path": "github.com/minio/minio-xl/pkg/probe",
