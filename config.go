@@ -432,9 +432,17 @@ func migrateConfigV5ToV6() {
 				API:             hostConf.API,
 			}
 		}
+		var s3Conf hostConfig
 		for host, hostConf := range confV6.Hosts {
 			if strings.Contains(host, "s3") {
-				confV6.Hosts["*s3*amazonaws.com"] = hostConfig{
+				if (hostConf.AccessKeyID == globalAccessKeyID) ||
+					(hostConf.SecretAccessKey == globalSecretAccessKey) {
+					delete(confV6.Hosts, host)
+				}
+				if hostConf.AccessKeyID == "" || hostConf.SecretAccessKey == "" {
+					delete(confV6.Hosts, host)
+				}
+				s3Conf = hostConfig{
 					AccessKeyID:     hostConf.AccessKeyID,
 					SecretAccessKey: hostConf.SecretAccessKey,
 					API:             hostConf.API,
@@ -442,6 +450,7 @@ func migrateConfigV5ToV6() {
 				break
 			}
 		}
+		confV6.Hosts["*s3*amazonaws.com"] = s3Conf
 		confV6.Hosts["*storage.googleapis.com"] = hostConfig{
 			AccessKeyID:     globalAccessKeyID,
 			SecretAccessKey: globalSecretAccessKey,
