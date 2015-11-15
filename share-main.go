@@ -17,14 +17,10 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"strings"
-	"time"
+	"os"
+	"path/filepath"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 )
@@ -32,7 +28,7 @@ import (
 // Share documents via URL.
 var shareCmd = cli.Command{
 	Name:   "share",
-	Usage:  "Download and upload documents.",
+	Usage:  "Generate URL for sharing.",
 	Action: mainShare,
 	Subcommands: []cli.Command{
 		shareDownload,
@@ -51,104 +47,21 @@ COMMANDS:
 `,
 }
 
-// structured share command messages version '1'
-type shareMessageV1 struct {
-	Expiry time.Duration `json:"expiry"`
-	URL    string        `json:"url"`
-	Key    string        `json:"keyName"`
-}
+// migrateShare migrate to newest version sequentially
+func migrateShare() {
 
-// structured share command messages version '2'
-type shareMessageV2 shareMessageV1
-
-// structured share command messages version '3'
-type shareMessageV3 struct {
-	Expiry      time.Duration     `json:"expiry"`
-	DownloadURL string            `json:"downloadUrl,omitempty"`
-	UploadInfo  map[string]string `json:"uploadInfo,omitempty"`
-	Key         string            `json:"keyName"`
-}
-
-// shareMessage this points to latest share command message structure.
-type shareMessage shareMessageV3
-
-// String - regular colorized message
-func (s shareMessage) String() string {
-	if len(s.DownloadURL) > 0 {
-		return console.Colorize("Share", fmt.Sprintf("%s", s.DownloadURL))
-	}
-	var key string
-	URL := client.NewURL(s.Key)
-	postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator)
-	if !isBucketVirtualStyle(URL.Host) {
-		postURL = postURL + s.UploadInfo["bucket"]
-	}
-	postURL = postURL + " "
-	curlCommand := "curl " + postURL
-	for k, v := range s.UploadInfo {
-		if k == "key" {
-			key = v
-			continue
-		}
-		curlCommand = curlCommand + fmt.Sprintf("-F %s=%s ", k, v)
-	}
-	curlCommand = curlCommand + fmt.Sprintf("-F key=%s ", key) + "-F file=@<FILE> "
-	emphasize := console.Colorize("File", "<FILE>")
-	curlCommand = strings.Replace(curlCommand, "<FILE>", emphasize, -1)
-	return console.Colorize("Share", fmt.Sprintf("%s", curlCommand))
-}
-
-// JSON json message for share command
-func (s shareMessage) JSON() string {
-	var shareMessageBytes []byte
-	var err error
-	if len(s.DownloadURL) > 0 {
-		shareMessageBytes, err = json.Marshal(struct {
-			Expiry      humanizedTime `json:"expiry"`
-			DownloadURL string        `json:"downloadUrl"`
-			Key         string        `json:"keyName"`
-		}{
-			Expiry:      timeDurationToHumanizedTime(s.Expiry),
-			DownloadURL: s.DownloadURL,
-			Key:         s.Key,
-		})
-	} else {
-		var key string
-		URL := client.NewURL(s.Key)
-		postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator)
-		if !isBucketVirtualStyle(URL.Host) {
-			postURL = postURL + s.UploadInfo["bucket"]
-		}
-		postURL = postURL + " "
-		curlCommand := "curl " + postURL
-		for k, v := range s.UploadInfo {
-			if k == "key" {
-				key = v
-				continue
-			}
-			curlCommand = curlCommand + fmt.Sprintf("-F %s=%s ", k, v)
-		}
-		curlCommand = curlCommand + fmt.Sprintf("-F key=%s ", key) + "-F file=@<FILE> "
-
-		shareMessageBytes, err = json.Marshal(struct {
-			Expiry        humanizedTime `json:"expiry"`
-			UploadCommand string        `json:"uploadCommand"`
-			Key           string        `json:"keyName"`
-		}{
-			Expiry:        timeDurationToHumanizedTime(s.Expiry),
-			UploadCommand: curlCommand,
-			Key:           s.Key,
-		})
+	if !isShareDirExists() {
+		return
 	}
 
-	fatalIf(probe.NewError(err), "Failed to marshal into JSON.")
-
-	// json encoding escapes ampersand into its unicode character which is not usable directly for share
-	// and fails with cloud storage. convert them back so that they are usable
-	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
-	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u003c"), []byte("<"), -1)
-	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u003e"), []byte(">"), -1)
-	return string(shareMessageBytes)
+	// Shared URLs are now managed by sub-commands. So delete any old URLs file if found.
+	oldShareFile := filepath.Join(mustGetShareDir(), "urls.json")
+	if _, e := os.Stat(oldShareFile); e == nil {
+		// Old file exits.
+		e := os.Remove(oldShareFile)
+		fatalIf(probe.NewError(e), "Unable to delete old ‘"+oldShareFile+"’.")
+		console.Infof("Removed older version of share ‘%s’ file.\n", oldShareFile)
+	}
 }
 
 // mainShare - main handler for mc share command

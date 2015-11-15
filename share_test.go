@@ -26,28 +26,28 @@ import (
 func (s *TestSuite) TestShareFailure(c *C) {
 	objectURL := server.URL + "/bucket/object1"
 
-	// invalid duration format ``1hr``
-	err := app.Run([]string{os.Args[0], "share", "download", objectURL, "1hr"})
+	// Invalid duration format ``1hr``.
+	err := app.Run([]string{os.Args[0], "share", "download", "--expire=1hr", objectURL})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
-	// reset back
+	// Reset back.
 	console.IsExited = false
 
-	// too high duration 169h, maximum is 168h i.e 7days.
-	err = app.Run([]string{os.Args[0], "share", "download", objectURL, "169hr"})
+	// Too high duration 169h, maximum is 168h i.e 7days.
+	err = app.Run([]string{os.Args[0], "share", "download", "--expire=169hr", objectURL})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
-	// reset back
+	// Reset back
 	console.IsExited = false
 
-	// too low duration 0s, minimum required is 1s.
-	err = app.Run([]string{os.Args[0], "share", "download", objectURL, "0s"})
+	// Too low duration 0s, minimum required is 1s.
+	err = app.Run([]string{os.Args[0], "share", "download", "--expire=0s", objectURL})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
-	// reset back
+	// Reset back.
 	console.IsExited = false
 }
 
@@ -58,13 +58,13 @@ func (s *TestSuite) TestShareSuccess(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
-	// reset back
+	// Reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "share", "download", objectURL, "1h"})
+	err = app.Run([]string{os.Args[0], "share", "download", "--expire=1h", objectURL})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
-	// reset back
+	// Reset back
 	console.IsExited = false
 }

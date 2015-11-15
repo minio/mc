@@ -77,7 +77,7 @@ func migrate() {
 	// Migrate session files if any.
 	migrateSession()
 	// Migrate shared urls if any.
-	migrateSharedURLs()
+	migrateShare()
 }
 
 // Get os/arch/platform specific information.
