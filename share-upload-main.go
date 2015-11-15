@@ -162,6 +162,7 @@ func mainShareUpload(ctx *cli.Context) {
 
 	args := ctx.Args()
 	config := mustGetMcConfig()
+	// if recursive strip off the "..."
 	url := stripRecursiveURL(args.First())
 	isRecursive := isURLRecursive(args.First())
 	expireArg := ctx.String("expire")

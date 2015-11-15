@@ -56,21 +56,29 @@ func checkShareListSyntax(ctx *cli.Context) {
 
 // doShareList list shared url's.
 func doShareList(cmd string) *probe.Error {
+	if cmd != "upload" && cmd != "download" {
+		return probe.NewError(fmt.Errorf("Unknown argument ‘%s’ passed.", cmd))
+	}
+
+	// Fetch defaults.
+	uploadsFile := getShareUploadsFile()
+	downloadsFile := getShareDownloadsFile()
+
 	// Load previously saved upload-shares.
 	shareDB := newShareDBV1()
-	switch cmd {
-	case "upload":
-		err := shareDB.Load(getShareUploadsFile())
-		if err != nil {
-			return err.Trace(getShareUploadsFile())
+
+	// if upload - read uploads file.
+	if cmd == "upload" {
+		if err := shareDB.Load(uploadsFile); err != nil {
+			return err.Trace(uploadsFile)
 		}
-	case "download":
-		err := shareDB.Load(getShareDownloadsFile())
-		if err != nil {
-			return err.Trace(getShareDownloadsFile())
+	}
+
+	// if download - read downloads file.
+	if cmd == "download" {
+		if err := shareDB.Load(downloadsFile); err != nil {
+			return err.Trace(downloadsFile)
 		}
-	default:
-		return probe.NewError(fmt.Errorf("Unknown argument ‘%s’ passed.", cmd))
 	}
 
 	// Print previously shared entries.
