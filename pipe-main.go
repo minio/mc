@@ -49,7 +49,7 @@ EXAMPLES:
 
 // checkPipeSyntax performs command-line input validation for pipe command.
 func checkPipeSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "pipe", 1) // last argument is exit code
 	}
 }

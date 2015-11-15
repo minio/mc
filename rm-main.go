@@ -104,11 +104,9 @@ func (r rmMessage) JSON() string {
 // Validate command line arguments.
 func checkRmSyntax(ctx *cli.Context) {
 	args := ctx.Args()
-
-	ishelp := ctx.GlobalBool("help")
 	isForce := ctx.Bool("force")
 
-	if !args.Present() || ishelp {
+	if !args.Present() {
 		exitCode := 1
 		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
 	}

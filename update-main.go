@@ -95,7 +95,7 @@ func (u updateMessage) JSON() string {
 
 // check valid input arguments.
 func checkUpdateSyntax(ctx *cli.Context) {
-	if ctx.Args().First() == "help" || !ctx.Args().Present() {
+	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "update", 1) // last argument is exit code
 	}
 	arg := strings.TrimSpace(ctx.Args().First())

@@ -70,7 +70,7 @@ func (s makeBucketMessage) JSON() string {
 
 // Validate command line arguments.
 func checkMakeBucketSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
 	for _, arg := range ctx.Args() {

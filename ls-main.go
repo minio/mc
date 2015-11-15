@@ -51,36 +51,25 @@ OPTIONS:
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/
-      [2015-01-20 15:42:00 PST]     0B rom/
-      [2015-01-15 00:05:40 PST]     0B zek/
 
    2. List buckets and all its contents from Amazon S3 cloud storage recursively.
       $ mc {{.Name}} https://s3.amazonaws.com/...
-      2015-01-15 00:05:40 PST     0B zek/
-      2015-03-31 14:46:33 PDT  55MiB backup.tar.gz
-      2015-04-15 20:11:22 PST     0B miniocloud
 
    3. List files recursively on a local filesystem on Microsoft Windows.
       $ mc {{.Name}} C:\Users\Worf\...
-      [2015-03-31 14:46:33 PDT] 15.00MiB Gowron\Khitomer Conference Details.pdf
-      ...
 
    4. List files with non-English characters on Amazon S3 cloud storage.
       $ mc {{.Name}} s3/andoria/本...
-      [2015-05-19 17:28:22 PDT]    41B 本語.md
 
    5. List folders with space separated names on Amazon S3 cloud storage. 
       $ mc {{.Name}} 's3/miniocloud/Community Files/'
-      [2015-05-19 17:28:22 PDT]    41B 本語.md
     
    6. Behave like operating system ‘ls’ tool. Useful for aliasing.
       $ alias ls='mc --mimic ls'
       $ {{.Name}}
-      [2015-05-19 17:28:22 PDT]    41B 本語.md
 
    7. List incomplete (previously failed) uploads of objects on Amazon S3. 
       $ mc {{.Name}} --incomplete s3/mybucket
-      [2015-10-19 22:28:02 PDT]     41MiB backup/server112-11Nov15.tgz
 `,
 }
 
@@ -94,9 +83,7 @@ func checkListSyntax(ctx *cli.Context) {
 			cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
 		}
 	}
-	if ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
-	}
+
 	for _, arg := range args {
 		if strings.TrimSpace(arg) == "" {
 			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")

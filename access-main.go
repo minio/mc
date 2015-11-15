@@ -91,13 +91,13 @@ func (s accessMessage) JSON() string {
 }
 
 func checkAccessSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
 	}
-	switch ctx.Args().Get(0) {
+	switch ctx.Args().First() {
 	case "set":
 		if len(ctx.Args().Tail()) < 2 {
 			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code

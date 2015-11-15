@@ -46,7 +46,7 @@ EXAMPLES:
 }
 
 func checkDiffSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 || ctx.Args().First() == "help" {
+	if len(ctx.Args()) != 2 {
 		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
 	}
 	for _, arg := range ctx.Args() {

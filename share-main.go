@@ -42,14 +42,13 @@ USAGE:
   {{.Name}} command [arguments...]
 
 COMMANDS:
-  {{range .Commands}}{{ .Name }}{{ "\t" }}{{.Usage}}
+  {{range .Subcommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
   {{end}}
 `,
 }
 
 // migrateShare migrate to newest version sequentially
 func migrateShare() {
-
 	if !isShareDirExists() {
 		return
 	}

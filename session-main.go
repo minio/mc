@@ -136,7 +136,7 @@ func sessionExecute(s *sessionV3) {
 }
 
 func checkSessionSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) < 1 || ctx.Args().First() == "help" {
+	if len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
 	}
 	if strings.TrimSpace(ctx.Args().First()) == "" {

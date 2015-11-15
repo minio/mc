@@ -41,10 +41,6 @@ USAGE:
 }
 
 func mainVersion(ctx *cli.Context) {
-	if ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
-	}
-
 	// Additional command speific theme customization.
 	console.SetColor("Version", color.New(color.FgGreen, color.Bold))
 

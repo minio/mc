@@ -58,7 +58,7 @@ const (
 //   C: copy(*, d...)
 //
 func checkCopySyntax(ctx *cli.Context) {
-	if len(ctx.Args()) < 2 || ctx.Args().First() == "help" {
+	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code.
 	}
 	// extract URLs.
