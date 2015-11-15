@@ -57,7 +57,7 @@ func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe
 	return sourceClnt.Get(0, 0)
 }
 
-// putTarget writes to URL from reader. If length=0, read until EOF.
+// putTarget writes to URL from reader. If length=-1, read until EOF.
 func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
 	targetClnt, err := url2Client(targetURL)
 	if err != nil {
@@ -70,7 +70,7 @@ func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
 	return nil
 }
 
-// putTargets writes to URL from reader. If length=0, read until EOF.
+// putTargets writes to URL from reader. If length=-1, read until EOF.
 func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Error {
 	var tgtReaders []*io.PipeReader
 	var tgtWriters []*io.PipeWriter
@@ -98,7 +98,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 		multiTgtWriter := io.MultiWriter(writers...)
 		var e error
 		switch length {
-		case 0:
+		case -1:
 			_, e = io.Copy(multiTgtWriter, reader)
 		default:
 			_, e = io.CopyN(multiTgtWriter, reader, length)

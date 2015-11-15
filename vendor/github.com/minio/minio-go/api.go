@@ -640,7 +640,18 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 //
 // You must have WRITE permissions on a bucket to create an object.
 //
-// This version of PutObject automatically does multipart for more than 5MB worth of data.
+// - For size lesser than 5MB PutObject automatically does single Put operation.
+// - For size equal to 0Bytes PutObject automatically does single Put operation.
+// - For size larger than 5MB PutObject automatically does resumable multipart operation.
+// - For size input as -1 PutObject treats it as a stream and does multipart operation until
+//   input stream reaches EOF.
+//
+// NOTE: if you are using Google Cloud Storage. Then there is no resumable multipart
+// upload support yet. Currently PutObject will behave like a single PUT operation and would
+// only upload for file sizes upto maximum 5GB. (maximum limit for single PUT operation).
+//
+// For un-authenticated requests S3 doesn't allow multipart upload, so we fall back to single
+// PUT operation.
 func (a API) PutObject(bucket, object, contentType string, size int64, data io.Reader) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
@@ -677,7 +688,7 @@ func (a API) PutObject(bucket, object, contentType string, size int64, data io.R
 		return nil
 	}
 	switch {
-	case size < minimumPartSize && size > 0:
+	case size < minimumPartSize && size >= 0:
 		// Single Part use case, use PutObject directly.
 		for part := range chopper(data, minimumPartSize, nil) {
 			if part.Err != nil {
@@ -697,7 +708,7 @@ func (a API) PutObject(bucket, object, contentType string, size int64, data io.R
 			}
 			return nil
 		}
-	default:
+	case size >= minimumPartSize || size == -1:
 		var inProgress bool
 		var inProgressUploadID string
 		for mpUpload := range a.listMultipartUploadsRecursive(bucket, object) {
