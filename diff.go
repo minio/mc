@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
@@ -126,83 +125,51 @@ func diffObjects(firstContent, secondContent *client.Content) *diffMessage {
 	return nil
 }
 
-// diffFolders - diff of contents of two folders only top level content.
-//
-// 3: diff(d1, d2) -> []diff(d1/f, d2/f) -> VALID
-func diffFolders(firstClnt, secondClnt client.Client, outCh chan<- diffMessage) {
-	recursive := false
-	// Range on the List to consume incoming content
-	for contentCh := range firstClnt.List(recursive, false) {
-		if contentCh.Err != nil {
-			outCh <- diffMessage{
-				Error: contentCh.Err.Trace(firstClnt.GetURL().String()),
-			}
-			continue
-		}
-		// Store incoming content
-		newFirstContent := contentCh.Content
-		newFirstURLStr := newFirstContent.URL.String()
-		// Construct the second URL.
-		newSecondURL := secondClnt.GetURL()
-		// Need to verify the same path from first URL, construct the second URL
-		newSecondURL.Path = filepath.Join(newSecondURL.Path, filepath.Base(contentCh.Content.URL.Path))
-		newSecondURLStr := newSecondURL.String()
-		// Send a stat to verify
-		_, newSecondContent, err := url2Stat(newSecondURLStr)
-		if err != nil {
-			outCh <- diffMessage{
-				FirstURL:  newFirstURLStr,
-				SecondURL: newSecondURLStr,
-				Diff:      "only-in-first",
-			}
-			continue
-		}
-		diffMsg := diffObjects(newFirstContent, newSecondContent)
-		if diffMsg != nil {
-			outCh <- *diffMsg
-			continue
-		}
-	} // Reached EOF
-}
-
-// diffFoldersRecursive diff folders for all files recursively.
-//
-// 4: diff(d1..., d2) -> []diff(d1/f, d2/f) -> VALID.
-func diffFoldersRecursive(firstClnt, secondClnt client.Client, outCh chan<- diffMessage) {
-	var scanBar scanBarFunc
-	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
-		scanBar = scanBarFactory()
+// calculate difference between two folders
+// recursive - indicates whether the difference should be calculated at the top
+// level or if it should recurse into sub-directories
+func diffFolders(sourceURL string, targetURL string, recursive bool, outCh chan<- diffMessage) {
+	// source and targets are always directories
+	sourceSeparator := string(client.NewURL(sourceURL).Separator)
+	if !strings.HasSuffix(sourceURL, sourceSeparator) {
+		sourceURL = sourceURL + sourceSeparator
 	}
-	recursive := true
-	firstListCh := firstClnt.List(recursive, false) // Copy first list channel.
-	for firstContentCh := range firstListCh {
-		if firstContentCh.Err != nil {
-			outCh <- diffMessage{Error: firstContentCh.Err.Trace()}
+	targetSeparator := string(client.NewURL(targetURL).Separator)
+	if !strings.HasSuffix(targetURL, targetSeparator) {
+		targetURL = targetURL + targetSeparator
+	}
+
+	sourceClient, err := url2Client(sourceURL)
+	if err != nil {
+		outCh <- diffMessage{Error: err.Trace(sourceURL)}
+		return
+	}
+	difference, err := objectDifferenceFactory(targetURL, recursive)
+	if err != nil {
+		outCh <- diffMessage{Error: err.Trace(targetURL)}
+		return
+	}
+	for sourceContent := range sourceClient.List(recursive, false) {
+		if sourceContent.Err != nil {
+			outCh <- diffMessage{Error: sourceContent.Err.Trace()}
 			continue
 		}
-		if firstContentCh.Content.Type.IsDir() {
-			// Skip directories there is no concept of directories on S3.
+		if sourceContent.Content.Type.IsDir() {
 			continue
 		}
-		firstContent := firstContentCh.Content
-		secondURL := secondClnt.GetURL()
-		secondURL.Path = filepath.Join(secondURL.Path,
-			strings.TrimPrefix(firstContent.URL.Path, url2Dir(firstClnt.GetURL().Path)))
-		_, secondContent, err := url2Stat(secondURL.String())
+		suffix := strings.TrimPrefix(sourceContent.Content.URL.String(), sourceURL)
+		differ, err := difference(suffix, sourceContent.Content.Type, sourceContent.Content.Size)
 		if err != nil {
-			outCh <- diffMessage{
-				FirstURL:  firstContent.URL.String(),
-				SecondURL: secondURL.String(),
-				Diff:      "only-in-first",
-			}
+			outCh <- diffMessage{Error: err.Trace()}
 			continue
 		}
-		if diffMsg := diffObjects(firstContent, secondContent); diffMsg != nil {
-			outCh <- *diffMsg
+		if differ == differNone {
 			continue
 		}
-		if !globalQuietFlag && !globalJSONFlag { // set up progress bar
-			scanBar(firstContent.URL.String())
+		outCh <- diffMessage{
+			FirstURL:  sourceContent.Content.URL.String(),
+			SecondURL: urlJoinPath(targetURL, suffix),
+			Diff:      differ,
 		}
 	}
 }
