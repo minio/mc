@@ -69,11 +69,8 @@ func (s *MySuite) TestList(c *C) {
 		contents = append(contents, contentCh.Content)
 	}
 	c.Assert(perr, IsNil)
-	c.Assert(len(contents), Equals, 2)
-
-	for _, content := range contents {
-		c.Assert(content.Type.IsRegular(), Equals, true)
-	}
+	c.Assert(len(contents), Equals, 1)
+	c.Assert(contents[0].Type.IsDir(), Equals, true)
 
 	objectPath = filepath.Join(root, "test1/newObject1")
 	fsc, perr = fs.New(objectPath)
@@ -94,15 +91,8 @@ func (s *MySuite) TestList(c *C) {
 		contents = append(contents, contentCh.Content)
 	}
 	c.Assert(perr, IsNil)
-	c.Assert(len(contents), Equals, 3)
-
-	for _, content := range contents {
-		// skip previous regular files
-		if content.Type.IsRegular() {
-			continue
-		}
-		c.Assert(content.Type.IsDir(), Equals, true)
-	}
+	c.Assert(len(contents), Equals, 1)
+	c.Assert(contents[0].Type.IsDir(), Equals, true)
 
 	fsc, perr = fs.New(root)
 	c.Assert(err, IsNil)

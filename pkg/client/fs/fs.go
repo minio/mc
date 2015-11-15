@@ -241,11 +241,6 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 
 	pathURL := *f.PathURL
 	fpath := pathURL.Path
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(pathURL.Separator)) {
-		fpath = fpath + "."
-	}
 
 	fst, err := f.fsStat()
 	if err != nil {
@@ -308,6 +303,21 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		contentCh <- client.ContentOnChannel{
 			Content: nil,
 			Err:     err.Trace(fpath),
+		}
+		return
+	}
+
+	// if the directory doesn't end with a separator, do not traverse it.
+	if !strings.HasSuffix(fpath, string(pathURL.Separator)) && fst.Mode().IsDir() {
+		content := &client.Content{
+			URL:  pathURL,
+			Time: fst.ModTime(),
+			Size: fst.Size(),
+			Type: fst.Mode(),
+		}
+		contentCh <- client.ContentOnChannel{
+			Content: content,
+			Err:     nil,
 		}
 		return
 	}
