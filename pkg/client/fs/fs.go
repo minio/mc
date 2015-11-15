@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -229,6 +230,12 @@ func (f *fsClient) List(recursive, incomplete bool) <-chan client.ContentOnChann
 	return contentCh
 }
 
+type byName []os.FileInfo
+
+func (b byName) Len() int           { return len(b) }
+func (b byName) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b byName) Less(i, j int) bool { return b[i].Name() < b[j].Name() }
+
 func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	defer close(contentCh)
 
@@ -258,6 +265,8 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 				}
 				return
 			}
+			// NOTE: This will be slow for large directories.
+			sort.Sort(byName(files))
 			for _, fi := range files {
 				file := filepath.Join(dir.Name(), fi.Name())
 				if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
@@ -328,6 +337,8 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			}
 			return
 		}
+		// NOTE: This will be slow for large directories.
+		sort.Sort(byName(files))
 		for _, file := range files {
 			fi := file
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
