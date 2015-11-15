@@ -18,6 +18,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/minio/cli"
@@ -98,137 +100,129 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func getContent(ch <-chan client.ContentOnChannel) (c *client.Content) {
-	for rv := range ch {
-		if rv.Err != nil {
-			continue
-		}
-		if rv.Content.Type.IsDir() {
-			// ignore directories.
-			continue
-		}
-		c = rv.Content
-		break
-	}
-	return
-}
+// isAvailable function checks if the suffix is available on the target
+type isAvailableFunc func(string, os.FileMode, int64) (bool, *probe.Error)
 
-func getTargetContent(srcContent *client.Content, targetContent *client.Content, targetCh <-chan client.ContentOnChannel, targetClnt client.Client) (c *client.Content) {
-	if srcContent == nil {
-		// nothing to do for empty source content.
-		return
+func getIsAvailable(url string) (isAvailableFunc, *probe.Error) {
+	clnt, err := url2Client(url)
+	if err != nil {
+		return nil, err.Trace(url)
 	}
+	isRecursive := true
+	isIncomplete := false
+	ch := clnt.List(isRecursive, isIncomplete)
+	current := url
+	reachedEOF := false
+	ok := false
+	var content client.ContentOnChannel
 
-	if targetContent == nil {
-		c = getContent(targetCh)
-	} else {
-		c = targetContent
-	}
-
-	for ; c != nil; c = getContent(targetCh) {
-		// Remove prefix so that we can properly validate.
-		targetURL := strings.TrimPrefix(c.URL.Path, targetClnt.GetURL().Path)
-		sourceURL := strings.TrimPrefix(srcContent.URL.Path, string(srcContent.URL.Separator))
-		if sourceURL <= targetURL {
-			break
+	isAvailable := func(suffix string, srcType os.FileMode, srcSize int64) (bool, *probe.Error) {
+		if reachedEOF {
+			// would mean the suffix is not on target
+			return false, nil
+		}
+		expected := urlJoinPath(url, suffix)
+		for {
+			if expected < current {
+				return false, nil // not available in the target
+			}
+			if expected == current {
+				tgtType := content.Content.Type
+				tgtSize := content.Content.Size
+				if srcType.IsRegular() && !tgtType.IsRegular() {
+					// Type differes. Source is never a directory
+					return false, errInvalidTarget(current)
+				}
+				if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
+					// regular files differing in size
+					if !mirrorIsForce {
+						return false, errOverWriteNotAllowed(current)
+					}
+					return false, nil
+				}
+				return true, nil // available in the target
+			}
+			content, ok = <-ch
+			if content.Err != nil {
+				return false, content.Err.Trace()
+			}
+			if !ok {
+				reachedEOF = true
+				return false, nil
+			}
+			current = content.Content.URL.String()
 		}
 	}
-	return
+	return isAvailable, nil
 }
 
 func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan<- mirrorURLs) {
 	defer close(mirrorURLsCh)
+	sourceURL = stripRecursiveURL(sourceURL)
+	sourceBaseDir := ""
 
-	newSourceURL := stripRecursiveURL(sourceURL)
-	if strings.HasSuffix(newSourceURL, "/") == false {
-		newSourceURL = newSourceURL + "/"
+	// source and targets are always directories
+	sourceSeparator := string(client.NewURL(sourceURL).Separator)
+	if !strings.HasSuffix(sourceURL, sourceSeparator) {
+		// if source is dir1/dir2/dir3 and target is dir4/dir5/dir6 then we should copy dir3/* into dir4/dir5/dir6/dir3/
+		// if source is dir1/dir2/dir3/ and target is dir4/dir5/dir6 then we should copy dir3/* into dir4/dir5/dir6/
+		// sourceBaseDir is used later for this purpose
+		sourceBaseDir = filepath.Base(sourceURL)
+		sourceURL = sourceURL + sourceSeparator
+	}
+	for i, url := range targetURLs {
+		targetSeparator := string(client.NewURL(url).Separator)
+		if !strings.HasSuffix(url, targetSeparator) {
+			targetURLs[i] = url + targetSeparator
+		}
 	}
 
-	sourceClient, err := url2Client(newSourceURL)
+	targetAvailable := make([]isAvailableFunc, len(targetURLs))
+
+	for i := range targetURLs {
+		var err *probe.Error
+		targetAvailable[i], err = getIsAvailable(targetURLs[i])
+		if err != nil {
+			mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
+			return
+		}
+	}
+
+	sourceClient, err := url2Client(sourceURL)
 	if err != nil {
-		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceURL)}
+		mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
 		return
 	}
 
-	targetLen := len(targetURLs)
-	newTargetURLs := make([]string, targetLen)
-	targetClients := make([]client.Client, targetLen)
-	for i, targetURL := range targetURLs {
-		targetClient, targetContent, err := url2Stat(targetURL)
-		if err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetURL)}
-			return
+	for sourceContent := range sourceClient.List(true, false) {
+		if sourceContent.Err != nil {
+			mirrorURLsCh <- mirrorURLs{Error: sourceContent.Err.Trace()}
+			continue
 		}
-		// targets have to be directory.
-		if !targetContent.Type.IsDir() {
-			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(targetURL).Trace(newSourceURL)}
-			return
+		if sourceContent.Content.Type.IsDir() {
+			continue
 		}
-		// special case, be extremely careful before changing this behavior - will lead to data loss.
-		newTargetURL := strings.TrimSuffix(targetURL, string(targetClient.GetURL().Separator)) + string(targetClient.GetURL().Separator)
-		targetClient, err = url2Client(newTargetURL)
-		if err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: err.Trace(newTargetURL)}
-			return
+		suffix := strings.TrimPrefix(sourceContent.Content.URL.String(), sourceURL)
+		if sourceBaseDir != "" {
+			suffix = urlJoinPath(sourceBaseDir, suffix)
 		}
-		targetClients[i] = targetClient
-		newTargetURLs[i] = newTargetURL
-	}
-
-	targetChs := make([]<-chan client.ContentOnChannel, targetLen)
-	for i, targetClient := range targetClients {
-		targetChs[i] = targetClient.List(true, false)
-	}
-	targetContents := make([]*client.Content, targetLen)
-
-	srcCh := sourceClient.List(true, false)
-	for srcContent := getContent(srcCh); srcContent != nil; srcContent = getContent(srcCh) {
-		var mirrorTargets []*client.Content
-		for i := range targetChs {
-			targetContents[i] = getTargetContent(srcContent, targetContents[i], targetChs[i], targetClients[i])
-
-			// Remove prefix so that we can properly validate.
-			var newTargetURLPath string
-			if targetContents[i] != nil {
-				newTargetURLPath = strings.TrimPrefix(targetContents[i].URL.Path, targetClients[i].GetURL().Path)
-			}
-			// Trim any preceding separators.
-			newSourceURLPath := strings.TrimPrefix(srcContent.URL.Path, string(srcContent.URL.Separator))
-			// either target reached EOF or target does not have source content.
-			if targetContents[i] == nil || newSourceURLPath != newTargetURLPath {
-				targetURL := client.NewURL(urlJoinPath(newTargetURLs[i], srcContent.URL.String()))
-				mirrorTargets = append(mirrorTargets, &client.Content{URL: *targetURL})
+		targetContents := []*client.Content{}
+		for i, isAvailable := range targetAvailable {
+			available, err := isAvailable(suffix, sourceContent.Content.Type, sourceContent.Content.Size)
+			if err != nil {
+				mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
 				continue
 			}
-
-			if newSourceURLPath == newTargetURLPath {
-				// source and target have same content type.
-				if srcContent.Type.IsRegular() && targetContents[i].Type.IsRegular() {
-					if srcContent.Size != targetContents[i].Size {
-						if !mirrorIsForce {
-							mirrorURLsCh <- mirrorURLs{
-								Error: errOverWriteNotAllowed(targetContents[i].URL.String()).Trace(srcContent.URL.String()),
-							}
-							continue
-						}
-						targetURL := client.NewURL(urlJoinPath(newTargetURLs[i], srcContent.URL.String()))
-						mirrorTargets = append(mirrorTargets, &client.Content{URL: *targetURL})
-					}
-					continue
-				}
-				if srcContent.Type.IsRegular() && !targetContents[i].Type.IsRegular() {
-					// but type mismatches, error condition fail and continue.
-					mirrorURLsCh <- mirrorURLs{
-						Error: errInvalidTarget(targetContents[i].URL.String()).Trace(srcContent.URL.String()),
-					}
-					continue
-				}
+			if !available {
+				targetPath := urlJoinPath(targetURLs[i], suffix)
+				targetContent := client.Content{URL: *client.NewURL(targetPath)}
+				targetContents = append(targetContents, &targetContent)
 			}
 		}
-		if len(mirrorTargets) > 0 {
+		if len(targetContents) > 0 {
 			mirrorURLsCh <- mirrorURLs{
-				SourceContent:  srcContent,
-				TargetContents: mirrorTargets,
+				SourceContent:  sourceContent.Content,
+				TargetContents: targetContents,
 			}
 		}
 	}
