@@ -36,39 +36,44 @@ var versionCmd = cli.Command{
 
 USAGE:
    mc {{.Name}}
-
 `,
+}
+
+// Structured message depending on the type of console.
+type versionMessage struct {
+	Version struct {
+		Value  string `json:"value"`
+		Format string `json:"format"`
+	} `json:"version"`
+	ReleaseTag string `json:"releaseTag"`
+	CommitID   string `json:"commitID"`
+}
+
+// Colorized message for console printing.
+func (v versionMessage) String() string {
+	return console.Colorize("Version", fmt.Sprintf("Version: %s\n", v.Version.Value)) +
+		console.Colorize("ReleaseTag", fmt.Sprintf("Release-tag: %s\n", v.ReleaseTag)) +
+		console.Colorize("CommitID", fmt.Sprintf("Commit-id: %s", v.CommitID))
+}
+
+// JSON'ified message for scripting.
+func (v versionMessage) JSON() string {
+	msgBytes, e := json.Marshal(v)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
 }
 
 func mainVersion(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Version", color.New(color.FgGreen, color.Bold))
+	console.SetColor("ReleaseTag", color.New(color.FgGreen))
+	console.SetColor("CommitID", color.New(color.FgGreen))
 
-	if globalJSONFlag {
-		tB, e := json.Marshal(
-			struct {
-				CommitID string `json:"commitId"`
-				Version  struct {
-					Value  string `json:"value"`
-					Format string `json:"format"`
-				} `json:"version"`
-			}{
-				CommitID: mcCommitID,
-				Version: struct {
-					Value  string `json:"value"`
-					Format string `json:"format"`
-				}{
-					Value:  mcVersion,
-					Format: "RFC3339",
-				},
-			},
-		)
-		fatalIf(probe.NewError(e), "Unable to construct version string.")
-		console.Println(string(tB))
-		return
-	}
-	msg := console.Colorize("Version", fmt.Sprintf("Version: %s\n", mcVersion))
-	msg += console.Colorize("Version", fmt.Sprintf("Release-Tag: %s\n", mcReleaseTag))
-	msg += console.Colorize("Version", fmt.Sprintf("Commit-ID: %s", mcCommitID))
-	console.Println(msg)
+	verMsg := versionMessage{}
+	verMsg.CommitID = mcCommitID
+	verMsg.ReleaseTag = mcReleaseTag
+	verMsg.Version.Value = mcVersion
+	verMsg.Version.Format = "RFC3339"
+
+	printMsg(verMsg)
 }
