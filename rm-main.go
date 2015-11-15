@@ -96,8 +96,8 @@ func (r rmMessage) String() string {
 
 // JSON'ified message for scripting.
 func (r rmMessage) JSON() string {
-	msgBytes, err := json.Marshal(r)
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+	msgBytes, e := json.Marshal(r)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }
 
