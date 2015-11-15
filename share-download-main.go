@@ -102,19 +102,20 @@ func doShareDownloadURL(targetURL string, recursive bool, expiry time.Duration) 
 	incomplete := false
 	for content := range clnt.List(recursive, incomplete) {
 		if content.Err != nil {
-			return content.Err.Trace()
+			return content.Err.Trace(clnt.GetURL().String())
 		}
 
 		objectURL := content.Content.URL.String()
 		newClnt, err := url2Client(objectURL)
 		if err != nil {
-			return err.Trace()
+			return err.Trace(objectURL)
 		}
 
 		// Generate share URL.
 		shareURL, err := newClnt.ShareDownload(expiry)
 		if err != nil {
-			return err.Trace()
+			// add objectURL and expiry as part of the trace arguments.
+			return err.Trace(objectURL, "expiry="+expiry.String())
 		}
 
 		// Make new entries to shareDB.
@@ -146,6 +147,7 @@ func mainShareDownload(ctx *cli.Context) {
 	// Extract arguments.
 	config := mustGetMcConfig()
 	args := ctx.Args()
+	// if recursive strip off the "..."
 	url := stripRecursiveURL(args.First())
 	isRecursive := isURLRecursive(args.First())
 	expiry := shareDefaultExpiry
@@ -156,9 +158,7 @@ func mainShareDownload(ctx *cli.Context) {
 		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
 	}
 
-	targetURL := getAliasURL(stripRecursiveURL(url), config.Aliases) // Expand alias.
-
-	// if recursive strip off the "..."
-	err := doShareDownloadURL(stripRecursiveURL(targetURL), isRecursive, expiry)
+	targetURL := getAliasURL(url, config.Aliases) // Expand alias.
+	err := doShareDownloadURL(targetURL, isRecursive, expiry)
 	fatalIf(err.Trace(targetURL), "Unable to share target ‘"+args.First()+"’.")
 }
