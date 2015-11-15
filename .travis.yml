@@ -1,6 +1,6 @@
 language: go
 script:
-- make test GOFLAGS="-race"
+- make test
 go:
 - 1.5.1
 sudo: false
