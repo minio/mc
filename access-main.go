@@ -44,7 +44,6 @@ DESCRIPTION:
    {{.Description}}{{end}}
 
 EXAMPLES:
-
    1. Set bucket to "private" on Amazon S3 cloud storage.
       $ mc {{.Name}} set private https://s3.amazonaws.com/burningman2011
 

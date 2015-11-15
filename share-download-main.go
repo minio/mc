@@ -32,23 +32,23 @@ var shareDownload = cli.Command{
 	Action: mainShareDownload,
 	Flags:  []cli.Flag{shareFlagExpire},
 	CustomHelpTemplate: `NAME:
-    mc share {{.Name}} - {{.Usage}}
+   mc share {{.Name}} - {{.Usage}}
 
- USAGE:
-    mc share {{.Name}} [OPTIONS] TARGET
+USAGE:
+   mc share {{.Name}} [OPTIONS] TARGET
 
- OPTIONS:
+OPTIONS:
   {{range .Flags}}{{.}}
   {{end}}
- EXAMPLES:
-    1. Generate URL for sharing, with a default expiry of 7 days.
-       $ mc share {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
+EXAMPLES:
+   1. Generate URL for sharing, with a default expiry of 7 days.
+      $ mc share {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
-    2. Generate URL for sharing, with an expiry of 10 minutes.
-       $ mc share {{.Name}} --expire=10m https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
+   2. Generate URL for sharing, with an expiry of 10 minutes.
+      $ mc share {{.Name}} --expire=10m https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
-    3. Generate list of URLs for sharing a folder recursively, with an expiry of 5 days each.
-       $ mc share {{.Name}} --expire=120h https://s3.amazonaws.com/backup...
+   3. Generate list of URLs for sharing a folder recursively, with an expiry of 5 days each.
+      $ mc share {{.Name}} --expire=120h https://s3.amazonaws.com/backup...
 `,
 }
 
