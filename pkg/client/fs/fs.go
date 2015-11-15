@@ -144,13 +144,13 @@ func (f *fsClient) Put(size int64, data io.Reader) *probe.Error {
 
 // get - download an object from bucket
 func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
-	body, err := os.Open(f.PathURL.Path)
-	if err != nil {
-		return nil, 0, probe.NewError(err)
+	body, e := os.Open(f.PathURL.Path)
+	if e != nil {
+		return nil, 0, probe.NewError(e)
 	}
-	content, perr := f.getFSMetadata()
-	if perr != nil {
-		return nil, content.Size, perr.Trace(f.PathURL.Path)
+	content, err := f.getFSMetadata()
+	if err != nil {
+		return nil, content.Size, err.Trace(f.PathURL.Path)
 	}
 	return body, content.Size, nil
 }
@@ -452,10 +452,12 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		// 2. when fp is /usr/bin/subdir and prefix is /usr/bi
 		if !strings.HasPrefix(fp, filePrefix) &&
 			!strings.HasPrefix(filePrefix, fp) {
-			if fi.IsDir() {
-				return ErrSkipDir
+			if err == nil {
+				if fi.IsDir() {
+					return ErrSkipDir
+				}
+				return nil
 			}
-			return nil
 		}
 
 		// Skip when fp is /usr and prefix is /usr/bi

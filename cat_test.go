@@ -29,8 +29,8 @@ import (
 
 func (s *TestSuite) TestCat(c *C) {
 	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object1")
@@ -38,11 +38,11 @@ func (s *TestSuite) TestCat(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	var perr *probe.Error
-	perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
-	perr = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
+	var err *probe.Error
+	err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
+	err = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
 
 	var sourceURLs []string
 	sourceURLs = append(sourceURLs, objectPath)

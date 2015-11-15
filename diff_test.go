@@ -30,25 +30,25 @@ import (
 
 func (s *TestSuite) TestDiffObjects(c *C) {
 	/// filesystem
-	root1, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	root1, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root1)
 
-	root2, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	root2, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root2)
 
 	objectPath1 := filepath.Join(root1, "object1")
 	data := "hello"
 	dataLen := len(data)
-	perr := putTarget(objectPath1, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
+	err := putTarget(objectPath1, int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
 
 	objectPath2 := filepath.Join(root2, "object1")
 	data = "hello"
 	dataLen = len(data)
-	perr = putTarget(objectPath2, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
+	err = putTarget(objectPath2, int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
 
 	for diff := range doDiffMain(objectPath1, objectPath2, false) {
 		c.Assert(diff.Error, IsNil)
@@ -57,29 +57,29 @@ func (s *TestSuite) TestDiffObjects(c *C) {
 
 func (s *TestSuite) TestDiffDirs(c *C) {
 	/// filesystem
-	root1, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	root1, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root1)
 
-	root2, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	root2, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root2)
 
-	var perr *probe.Error
+	var err *probe.Error
 	for i := 0; i < 10; i++ {
 		objectPath := filepath.Join(root1, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(perr, IsNil)
+		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
 	}
 
 	for i := 0; i < 10; i++ {
 		objectPath := filepath.Join(root2, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(perr, IsNil)
+		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
 	}
 
 	for diff := range doDiffMain(root1, root2, false) {
