@@ -139,6 +139,7 @@ func findClosestCommands(command string) []string {
 
 func registerApp() *cli.App {
 	// Register all the commands (refer flags.go)
+	registerCmd(helpCmd)    // List contents of a bucket.
 	registerCmd(lsCmd)      // List contents of a bucket.
 	registerCmd(mbCmd)      // Make a bucket.
 	registerCmd(catCmd)     // Display contents of a file.

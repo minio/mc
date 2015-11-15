@@ -51,7 +51,7 @@ COMMANDS:
 
 // mainConfig is the handle for "mc config" command. provides sub-commands which write configuration data in json format to config file.
 func mainConfig(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+	if !ctx.Args().Present() {
 		cli.ShowAppHelp(ctx)
 	}
 }

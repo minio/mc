@@ -59,7 +59,7 @@ EXAMPLES:
 
 // checkCatSyntax performs command-line input validation for cat command.
 func checkCatSyntax(ctx *cli.Context) {
-	if (!ctx.Args().Present() && !globalMimicFlag) || ctx.Args().First() == "help" {
+	if !ctx.Args().Present() && !globalMimicFlag {
 		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
 	}
 
