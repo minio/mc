@@ -17,57 +17,125 @@
 package main
 
 import (
-	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
 // Share documents via URL.
 var shareDownload = cli.Command{
 	Name:   "download",
-	Usage:  "Generate URL to download documents.",
+	Usage:  "Generate URLs for download access.",
 	Action: mainShareDownload,
+	Flags:  []cli.Flag{shareFlagExpire},
 	CustomHelpTemplate: `NAME:
     mc share {{.Name}} - {{.Usage}}
 
  USAGE:
-    mc share {{.Name}} download TARGET [DURATION]
+    mc share {{.Name}} [OPTIONS] TARGET
 
-    DURATION = NN[h|m|s] [DEFAULT=168h]
-
+ OPTIONS:
+  {{range .Flags}}{{.}}
+  {{end}}
  EXAMPLES:
     1. Generate URL for sharing, with a default expiry of 7 days.
        $ mc share {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
     2. Generate URL for sharing, with an expiry of 10 minutes.
-       $ mc share {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz 10m
+       $ mc share {{.Name}} --expire=10m https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
-    3. Generate list of URLs for sharing a folder recursively, with expiration of 5 days each.
-       $ mc share {{.Name}} https://s3.amazonaws.com/backup... 120h
-
-    4. Generate URL with space characters for sharing, with an expiry of 5 seconds.
-       $ mc share {{.Name}} s3/miniocloud/nothing-like-anything 5s
-
+    3. Generate list of URLs for sharing a folder recursively, with an expiry of 5 days each.
+       $ mc share {{.Name}} --expire=120h https://s3.amazonaws.com/backup...
 `,
 }
 
+// checkShareDownloadSyntax - validate command-line args.
 func checkShareDownloadSyntax(ctx *cli.Context) {
 	args := ctx.Args()
-	if !args.Present() || args.First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "download", 1) // last argument is exit code
+	if !args.Present() {
+		cli.ShowCommandHelpAndExit(ctx, "download", 1) // last argument is exit code.
 	}
-	if len(args) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "download", 1) // last argument is exit code
+
+	if !isURLRecursive(args.First()) {
+		url := stripRecursiveURL(args.First())
+		if strings.HasSuffix(url, "/") {
+			fatalIf(errDummy().Trace(), fmt.Sprintf("To grant access to an entire folder, you may use ‘%s’.", url+recursiveSeparator))
+		}
 	}
+
+	// Parse expiry.
+	expiry := shareDefaultExpiry
+	expireArg := ctx.String("expire")
+	if expireArg != "" {
+		var e error
+		expiry, e = time.ParseDuration(expireArg)
+		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+	}
+
+	// Validate expiry.
+	if expiry.Seconds() < 1 {
+		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be lesser than 1 second.")
+	}
+	if expiry.Seconds() > 604800 {
+		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
+	}
+}
+
+// doShareURL share files from target
+func doShareDownloadURL(targetURL string, recursive bool, expiry time.Duration) *probe.Error {
+	clnt, err := url2Client(targetURL)
+	if err != nil {
+		return err.Trace()
+	}
+
+	// Load previously saved upload-shares. Add new entries and write it back.
+	shareDB := newShareDBV1()
+	err = shareDB.Load(getShareDownloadsFile())
+	if err != nil {
+		return err.Trace()
+	}
+
+	// Generate share URL for each target.
+	incomplete := false
+	for content := range clnt.List(recursive, incomplete) {
+		if content.Err != nil {
+			return content.Err.Trace()
+		}
+
+		objectURL := content.Content.URL.String()
+		newClnt, err := url2Client(objectURL)
+		if err != nil {
+			return err.Trace()
+		}
+
+		// Generate share URL.
+		shareURL, err := newClnt.ShareDownload(expiry)
+		if err != nil {
+			return err.Trace()
+		}
+
+		// Make new entries to shareDB.
+		contentType := "" // Not useful for download shares.
+		shareDB.Set(objectURL, shareURL, expiry, contentType)
+		printMsg(shareMesssage{
+			ObjectURL:   objectURL,
+			ShareURL:    shareURL,
+			TimeLeft:    expiry,
+			ContentType: contentType,
+		})
+	}
+
+	// Save downloads and return.
+	return shareDB.Save(getShareDownloadsFile())
 }
 
 // main for share download.
 func mainShareDownload(ctx *cli.Context) {
-	// setup share data folder and file.
-	shareDataSetup()
+	// Initialize share config folder.
+	initShareConfig()
 
 	// Additional command speific theme customization.
 	shareSetColor()
@@ -75,72 +143,22 @@ func mainShareDownload(ctx *cli.Context) {
 	// check input arguments.
 	checkShareDownloadSyntax(ctx)
 
-	args := ctx.Args()
+	// Extract arguments.
 	config := mustGetMcConfig()
-	url := args.Get(0)
-	// default expiration is 7days
-	expires := time.Duration(604800) * time.Second
-	if len(args) == 2 {
-		var err error
-		expires, err = time.ParseDuration(args.Get(1))
-		fatalIf(probe.NewError(err), "Unable to parse time argument.")
+	args := ctx.Args()
+	url := stripRecursiveURL(args.First())
+	isRecursive := isURLRecursive(args.First())
+	expiry := shareDefaultExpiry
+	expireArg := ctx.String("expire")
+	if expireArg != "" {
+		var e error
+		expiry, e = time.ParseDuration(expireArg)
+		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
 	}
 
-	targetURL := getAliasURL(url, config.Aliases)
+	targetURL := getAliasURL(stripRecursiveURL(url), config.Aliases) // Expand alias.
+
 	// if recursive strip off the "..."
-	err := doShareDownloadURL(stripRecursiveURL(targetURL), isURLRecursive(targetURL), expires)
-	fatalIf(err.Trace(targetURL), "Unable to generate URL for download.")
-	return
-}
-
-// doShareURL share files from target
-func doShareDownloadURL(targetURL string, recursive bool, expires time.Duration) *probe.Error {
-	shareDate := time.Now().UTC()
-	sURLs, err := loadSharedURLsV3()
-	if err != nil {
-		return err.Trace()
-	}
-	var clnt client.Client
-	clnt, err = url2Client(targetURL)
-	if err != nil {
-		return err.Trace()
-	}
-	if expires.Seconds() < 1 {
-		return probe.NewError(errors.New("Too low expires, expiration cannot be less than 1 second."))
-	}
-	if expires.Seconds() > 604800 {
-		return probe.NewError(errors.New("Too high expires, expiration cannot be larger than 7 days."))
-	}
-	for contentCh := range clnt.List(recursive, false) {
-		if contentCh.Err != nil {
-			return contentCh.Err.Trace()
-		}
-		var newClnt client.Client
-		newClnt, err = url2Client(contentCh.Content.URL.String())
-		if err != nil {
-			return err.Trace()
-		}
-		var sharedURL string
-		sharedURL, err = newClnt.ShareDownload(expires)
-		if err != nil {
-			return err.Trace()
-		}
-		var shareMsg interface{}
-		shareMsg = shareMessage{
-			Expiry:      expires,
-			DownloadURL: sharedURL,
-			Key:         newClnt.GetURL().String(),
-		}
-		shareMsgV3 := shareMessageV3(shareMsg.(shareMessage))
-		sURLs.URLs = append(sURLs.URLs, struct {
-			Date    time.Time
-			Message shareMessageV3
-		}{
-			Date:    shareDate,
-			Message: shareMsgV3,
-		})
-		printMsg(shareMsg.(shareMessage))
-	}
-	saveSharedURLsV3(sURLs)
-	return nil
+	err := doShareDownloadURL(stripRecursiveURL(targetURL), isRecursive, expiry)
+	fatalIf(err.Trace(targetURL), "Unable to share target ‘"+args.First()+"’.")
 }

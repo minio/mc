@@ -93,6 +93,7 @@ func checkGolangRuntimeVersion() {
 func verifyMCRuntime() {
 	checkGolangRuntimeVersion()
 
+	// .mc config folder.
 	if !isMcConfigExists() {
 		err := createMcConfigDir()
 		fatalIf(err.Trace(), "Unable to create ‘mc’ config folder.")
@@ -105,10 +106,14 @@ func verifyMCRuntime() {
 
 		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}
+
+	// .mc/session folder.
 	if !isSessionDirExists() {
-		fatalIf(createSessionDir().Trace(), "Unable to create session dir.")
+		fatalIf(createSessionDir().Trace(), "Unable to create session config folder.")
 	}
-	if !isSharedURLsDataDirExists() {
-		fatalIf(createSharedURLsDataDir().Trace(), "Unable to create shared url datadir.")
+
+	// .mc/share folder.
+	if !isShareDirExists() {
+		initShareConfig()
 	}
 }
