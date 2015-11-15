@@ -57,8 +57,9 @@ func checkPipeSyntax(ctx *cli.Context) {
 // pipe writes contents of stdin a collection of URLs.
 func pipe(targetURLs []string) *probe.Error {
 	// Stream from stdin to multiple objects until EOF.
-	// Ignore size, since os.Stat() would not return proper size all the time for local filesystem for example /proc files.
-	err := putTargets(targetURLs, 0, os.Stdin)
+	// Ignore size, since os.Stat() would not return proper size all the time
+	// for local filesystem for example /proc files.
+	err := putTargets(targetURLs, -1, os.Stdin)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
