@@ -38,10 +38,13 @@ USAGE:
 
 EXAMPLES:
    1. Compare foo.ogg on a local filesystem with bar.ogg on Amazon AWS cloud storage.
-      $ mc {{.Name}} foo.ogg https://s3.amazonaws.com/jukebox/bar.ogg
+      $ mc {{.Name}} foo.ogg https://bucketName.s3.amazonaws.com/jukebox/bar.ogg
 
-   2. Compare two different folders on a local filesystem.
+   2. Compare two different folders on a local filesystem with out recursion.
       $ mc {{.Name}} ~/Photos /Media/Backup/Photos
+
+   2. Compare two different folders recursively.
+      $ mc {{.Name}} ~/Photos/... https://bucketName.s3.amazonaws.com/Photos
 `,
 }
 
@@ -69,14 +72,14 @@ func doDiffMain(firstURL, secondURL string, recursive bool) <-chan diffMessage {
 // doDiffInRoutine run diff in a go-routine sending back messages over all channel.
 func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diffMessage) {
 	defer close(ch)
-	firstClnt, firstContent, err := url2Stat(firstURL)
+	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
 		ch <- diffMessage{
 			Error: err.Trace(firstURL),
 		}
 		return
 	}
-	secondClnt, secondContent, err := url2Stat(secondURL)
+	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
 		ch <- diffMessage{
 			Error: err.Trace(secondURL),
@@ -100,12 +103,7 @@ func doDiffInRoutine(firstURL, secondURL string, recursive bool, ch chan diffMes
 		}
 		return
 	}
-	// definitely first and second target are folders
-	if recursive {
-		diffFoldersRecursive(firstClnt, secondClnt, ch)
-		return
-	}
-	diffFolders(firstClnt, secondClnt, ch)
+	diffFolders(firstURL, secondURL, recursive, ch)
 }
 
 // mainDiff main for 'diff'.
@@ -140,5 +138,4 @@ func mainDiff(ctx *cli.Context) {
 	if !globalQuietFlag && !globalJSONFlag {
 		console.Eraseline()
 	}
-	console.Println(console.Colorize("DiffMessage", "Done."))
 }

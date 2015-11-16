@@ -59,30 +59,47 @@ func (s *TestSuite) TestDiffDirs(c *C) {
 	/// filesystem
 	root1, e := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(e, IsNil)
+	subDir1 := filepath.Join(root1, "subDir")
+	e = os.Mkdir(subDir1, 0755)
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root1)
 
 	root2, e := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(e, IsNil)
+	subDir2 := filepath.Join(root2, "subDir")
+	e = os.Mkdir(subDir2, 0755)
 	defer os.RemoveAll(root2)
 
 	var err *probe.Error
 	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(root1, "object"+strconv.Itoa(i))
+		objectPath1 := filepath.Join(root1, "object"+strconv.Itoa(i))
+		objectPath2 := filepath.Join(subDir1, "object"+strconv.Itoa(i))
+
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		err = putTarget(objectPath1, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
+		err = putTarget(objectPath2, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
 
 	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(root2, "object"+strconv.Itoa(i))
+		objectPath1 := filepath.Join(root2, "object"+strconv.Itoa(i))
+		objectPath2 := filepath.Join(subDir2, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		err = putTarget(objectPath1, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
+		err = putTarget(objectPath2, int64(dataLen), bytes.NewReader([]byte(data)))
 		c.Assert(err, IsNil)
 	}
 
+	// non-recursive
 	for diff := range doDiffMain(root1, root2, false) {
+		c.Assert(diff.Error, IsNil)
+	}
+	// recursive
+	for diff := range doDiffMain(root1, root2, true) {
 		c.Assert(diff.Error, IsNil)
 	}
 }
