@@ -34,39 +34,40 @@ var (
 // Display contents of a file.
 var pipeCmd = cli.Command{
 	Name:   "pipe",
-	Usage:  "Write contents of stdin to one or more targets. Pipe is the opposite of cat command.",
+	Usage:  "Write contents of stdin to one or more targets. When no target is specified, it writes to stdout.",
 	Action: mainPipe,
 	Flags:  []cli.Flag{pipeFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET...]
+   mc {{.Name}} [TARGET...]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Write contents of stdin to an object on Amazon S3 cloud storage.
+   1. Write contents of stdin to a file on local filesystem.
+      $ mc {{.Name}} /tmp/hello-world.go
+
+   2. Write contents of stdin to an object on Amazon S3 cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/personalbuck/meeting-notes.txt
 
-   2. Copy an ISO image to an object on Amazon S3 cloud storage and Google Cloud Storage simultaneously.
+   3. Copy an ISO image to an object on Amazon S3 cloud storage and Google Cloud Storage simultaneously.
       $ cat debian-8.2.iso | mc {{.Name}} https://s3.amazonaws.com/ferenginar/gnuos.iso https://storage.googleapis.com/miniocloud/gnuos.iso
 
-   3. Stream MySQL database dump to Amazon S3 directly.
+   4. Stream MySQL database dump to Amazon S3 directly.
       $ mysqldump -u root -p ******* accountsdb | mc {{.Name}} https://s3.amazonaws.com/ferenginar/backups/accountsdb-oct-9-2015.sql
 `,
 }
 
-// checkPipeSyntax performs command-line input validation for pipe command.
-func checkPipeSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "pipe", 1) // last argument is exit code
-	}
-}
-
 // pipe writes contents of stdin a collection of URLs.
 func pipe(targetURLs []string) *probe.Error {
+	if len(targetURLs) == 0 {
+		// When no target is specified, pipe cat's stdin to stdout.
+		return catOut(os.Stderr).Trace()
+	}
+
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
@@ -84,8 +85,6 @@ func pipe(targetURLs []string) *probe.Error {
 
 // mainPipe is the main entry point for pipe command.
 func mainPipe(ctx *cli.Context) {
-	checkPipeSyntax(ctx)
-
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
