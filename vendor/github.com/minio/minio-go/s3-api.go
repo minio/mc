@@ -177,6 +177,19 @@ func (a s3API) putBucketACL(bucket, acl string) error {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == http.StatusMovedPermanently {
+				region, _ := a.getBucketLocation(bucket)
+				endPoint := getEndpoint(region)
+				errorResponse := ErrorResponse{
+					Code:            "PermanentRedirect",
+					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+				}
+				return errorResponse
+			}
 			return BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
@@ -210,6 +223,19 @@ func (a s3API) getBucketACL(bucket string) (accessControlPolicy, error) {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == http.StatusMovedPermanently {
+				region, _ := a.getBucketLocation(bucket)
+				endPoint := getEndpoint(region)
+				errorResponse := ErrorResponse{
+					Code:            "PermanentRedirect",
+					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+				}
+				return accessControlPolicy{}, errorResponse
+			}
 			return accessControlPolicy{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
@@ -333,6 +359,19 @@ func (a s3API) listObjects(bucket, marker, prefix, delimiter string, maxkeys int
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == http.StatusMovedPermanently {
+				region, _ := a.getBucketLocation(bucket)
+				endPoint := getEndpoint(region)
+				errorResponse := ErrorResponse{
+					Code:            "PermanentRedirect",
+					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+				}
+				return listBucketResult{}, errorResponse
+			}
 			return listBucketResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
@@ -449,6 +488,17 @@ func (a s3API) deleteBucket(bucket string) error {
 		if resp.StatusCode != http.StatusNoContent {
 			var errorResponse ErrorResponse
 			switch resp.StatusCode {
+			case http.StatusMovedPermanently:
+				region, _ := a.getBucketLocation(bucket)
+				endPoint := getEndpoint(region)
+				errorResponse = ErrorResponse{
+					Code:            "PermanentRedirect",
+					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+				}
 			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
 					Code:            "NoSuchBucket",
@@ -530,6 +580,20 @@ func (a s3API) putObjectUnAuthenticated(bucket, object, contentType string,
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
+			// handle 301 sepcifically in case of wrong regions during path style.
+			if resp.StatusCode == http.StatusMovedPermanently {
+				region, _ := a.getBucketLocation(bucket)
+				endPoint := getEndpoint(region)
+				errorResponse := ErrorResponse{
+					Code:            "PermanentRedirect",
+					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+				}
+				return ObjectStat{}, errorResponse
+			}
 			return ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
@@ -577,6 +641,20 @@ func (a s3API) putObject(bucket, object, contentType string,
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
+			// handle 301 sepcifically in case of wrong regions during path style.
+			if resp.StatusCode == http.StatusMovedPermanently {
+				region, _ := a.getBucketLocation(bucket)
+				endPoint := getEndpoint(region)
+				errorResponse := ErrorResponse{
+					Code:            "PermanentRedirect",
+					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+				}
+				return ObjectStat{}, errorResponse
+			}
 			return ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
 	}
@@ -725,8 +803,22 @@ func (a s3API) getObject(bucket, object string, offset, length int64) (io.ReadCl
 	}
 	if resp != nil {
 		switch resp.StatusCode {
+		// for HTTP status 200 and 204 are valid cases.
 		case http.StatusOK:
 		case http.StatusPartialContent:
+		// handle 301 sepcifically in case of wrong regions during path style.
+		case http.StatusMovedPermanently:
+			region, _ := a.getBucketLocation(bucket)
+			endPoint := getEndpoint(region)
+			errorResponse := ErrorResponse{
+				Code:            "PermanentRedirect",
+				Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
+				Resource:        separator + bucket,
+				RequestID:       resp.Header.Get("x-amz-request-id"),
+				HostID:          resp.Header.Get("x-amz-id-2"),
+				AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+			}
+			return nil, ObjectStat{}, errorResponse
 		default:
 			return nil, ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
 		}
@@ -821,6 +913,17 @@ func (a s3API) headObject(bucket, object string) (ObjectStat, error) {
 		if resp.StatusCode != http.StatusOK {
 			var errorResponse ErrorResponse
 			switch resp.StatusCode {
+			case http.StatusMovedPermanently:
+				region, _ := a.getBucketLocation(bucket)
+				endPoint := getEndpoint(region)
+				errorResponse = ErrorResponse{
+					Code:            "PermanentRedirect",
+					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+				}
 			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
 					Code:            "NoSuchKey",
