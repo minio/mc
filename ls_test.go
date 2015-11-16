@@ -76,11 +76,4 @@ func (s *TestSuite) TestLSContext(c *C) {
 
 	// reset back
 	console.IsExited = false
-
-	e = app.Run([]string{os.Args[0], "ls", server.URL + "/invalid"})
-	c.Assert(e, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	// reset back
-	console.IsExited = false
 }

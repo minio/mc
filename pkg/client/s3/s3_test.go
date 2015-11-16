@@ -158,6 +158,15 @@ func (s *MySuite) TestBucketOperations(c *C) {
 
 	for content := range s3c.List(false, false) {
 		c.Assert(content.Err, IsNil)
+		c.Assert(content.Content.Type.IsDir(), Equals, true)
+	}
+
+	conf.HostURL = server.URL + "/bucket/"
+	s3c, err = New(conf)
+	c.Assert(err, IsNil)
+
+	for content := range s3c.List(false, false) {
+		c.Assert(content.Err, IsNil)
 		c.Assert(content.Content.Type.IsRegular(), Equals, true)
 	}
 }
