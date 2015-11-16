@@ -112,3 +112,53 @@ func getSessionFileV1(sid string) (string, *probe.Error) {
 
 	return sessionFile, nil
 }
+
+// migrateSessionV1ToV2 migrates all session files from v1 to v2.
+// This function should be called from the main early on.
+func migrateSessionV1ToV2() {
+	for _, sid := range getSessionIDsV1() {
+		sessionFileV1, err := getSessionFileV1(sid)
+		fatalIf(err.Trace(sid), "Unable to determine session file for ‘"+sid+"’.")
+
+		e := os.Remove(sessionFileV1)
+		fatalIf(probe.NewError(e), "Migration failed. Unable to remove old session file ‘"+sessionFileV1+"’.")
+	}
+}
+
+// sessionV2Header
+type sessionV2Header struct {
+	Version      string    `json:"version"`
+	When         time.Time `json:"time"`
+	RootPath     string    `json:"working-folder"`
+	CommandType  string    `json:"command-type"`
+	CommandArgs  []string  `json:"cmd-args"`
+	LastCopied   string    `json:"last-copied"`
+	TotalBytes   int64     `json:"total-bytes"`
+	TotalObjects int       `json:"total-objects"`
+}
+
+// loadSession - reads session file if exists and re-initiates internal variables
+func loadSessionV2(sid string) (*sessionV2Header, *probe.Error) {
+	if !isSessionDirExists() {
+		return nil, errInvalidArgument().Trace()
+	}
+	sessionFile, err := getSessionFile(sid)
+	if err != nil {
+		return nil, err.Trace(sid)
+	}
+	if _, err := os.Stat(sessionFile); err != nil {
+		return nil, probe.NewError(err)
+	}
+	sessionHeader := &sessionV2Header{}
+	// V2 is actually v1.1. We later moved to a serial single digit version.
+	sessionHeader.Version = "1.1.0"
+	qs, err := quick.New(sessionHeader)
+	if err != nil {
+		return nil, err.Trace(sid, sessionHeader.Version)
+	}
+	err = qs.Load(sessionFile)
+	if err != nil {
+		return nil, err.Trace(sid, sessionHeader.Version)
+	}
+	return sessionHeader, nil
+}
