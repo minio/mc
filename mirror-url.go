@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/minio/cli"
@@ -101,16 +100,10 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan<- mirrorURLs) {
 	defer close(mirrorURLsCh)
-	sourceURL = stripRecursiveURL(sourceURL)
-	sourceBaseDir := ""
 
 	// source and targets are always directories
 	sourceSeparator := string(client.NewURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
-		// if source is dir1/dir2/dir3 and target is dir4/dir5/dir6 then we should copy dir3/* into dir4/dir5/dir6/dir3/
-		// if source is dir1/dir2/dir3/ and target is dir4/dir5/dir6 then we should copy dir3/* into dir4/dir5/dir6/
-		// sourceBaseDir is used later for this purpose
-		sourceBaseDir = filepath.Base(sourceURL)
 		sourceURL = sourceURL + sourceSeparator
 	}
 	for i, url := range targetURLs {
@@ -125,7 +118,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 
 	for i := range targetURLs {
 		var err *probe.Error
-		objectDifferenceArray[i], err = objectDifferenceFactory(targetURLs[i], true)
+		objectDifferenceArray[i], err = objectDifferenceFactory(targetURLs[i])
 		if err != nil {
 			mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
 			return
@@ -147,9 +140,6 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 			continue
 		}
 		suffix := strings.TrimPrefix(sourceContent.Content.URL.String(), sourceURL)
-		if sourceBaseDir != "" {
-			suffix = urlJoinPath(sourceBaseDir, suffix)
-		}
 		targetContents := []*client.Content{}
 		for i, difference := range objectDifferenceArray {
 			differ, err := difference(suffix, sourceContent.Content.Type, sourceContent.Content.Size)
