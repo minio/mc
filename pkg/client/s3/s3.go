@@ -505,6 +505,21 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 				Err:     nil,
 			}
 		}
+	case b != "" && !strings.HasSuffix(c.hostURL.Path, string(c.hostURL.Separator)) && o == "":
+		err := c.api.BucketExists(b)
+		if err != nil {
+			contentCh <- client.ContentOnChannel{
+				Content: nil,
+				Err:     probe.NewError(err),
+			}
+		}
+		content := new(client.Content)
+		content.URL = *c.hostURL
+		content.Type = os.ModeDir
+		contentCh <- client.ContentOnChannel{
+			Content: content,
+			Err:     nil,
+		}
 	default:
 		metadata, err := c.api.StatObject(b, o)
 		switch err.(type) {
