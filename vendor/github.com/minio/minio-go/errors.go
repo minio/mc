@@ -45,7 +45,7 @@ type ErrorResponse struct {
 	RequestID string `xml:"RequestId"`
 	HostID    string `xml:"HostId"`
 
-	// This is a new undocumented field
+	// This is a new undocumented field, set only if available.
 	AmzBucketRegion string
 }
 
