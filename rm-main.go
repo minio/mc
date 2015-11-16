@@ -37,7 +37,7 @@ var (
 
 	rmFlagIncomplete = cli.BoolFlag{
 		Name:  "incomplete, I",
-		Usage: "remove incomplete uploads.",
+		Usage: "Remove an incomplete upload(s).",
 	}
 )
 
@@ -51,12 +51,11 @@ var rmCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [OPTIONS] TARGET [TARGET ...]
+   mc {{.Name}} [FLAGS] TARGET [TARGET ...]
 
-OPTIONS:
-   --force      - Force a dangerous remove operation.
-   --incomplete - Remove incomplete uploads.
-
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Remove an object.
      $ mc {{.Name}} https://s3.amazonaws.com/jazz-songs/louis/file01.mp3

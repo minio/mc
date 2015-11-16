@@ -51,11 +51,11 @@ var mirrorCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [OPTIONS] SOURCE TARGET [TARGET...]
+   mc {{.Name}} [FLAGS] SOURCE TARGET [TARGET...]
 
-OPTIONS:
-   --force - Force overwrite of an existing target(s).
-
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
       $ mc {{.Name}} https://play.minio.io:9000/photos/2014 https://s3.amazonaws.com/backup-photos

@@ -30,7 +30,7 @@ import "github.com/minio/cli"
 //
 var configCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Manage ‘mc’ configuration.",
+	Usage:  "Manage configuration file.",
 	Action: mainConfig,
 	Subcommands: []cli.Command{
 		configAliasCmd,
@@ -38,20 +38,24 @@ var configCmd = cli.Command{
 		configVersionCmd,
 	},
 	CustomHelpTemplate: `NAME:
-  {{.Name}} - {{.Usage}}
+  mc {{.Name}} - {{.Usage}}
 
 USAGE:
-  {{.Name}} {{if .Flags}}[global flags] {{end}}command{{if .Flags}} [command flags]{{end}} [arguments...]
+  mc {{.Name}} COMMAND
 
 COMMANDS:
-  {{range .Commands}}{{ .Name }}{{ "\t" }}{{.Usage}}
+  {{range .Subcommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
   {{end}}
 `,
 }
 
 // mainConfig is the handle for "mc config" command. provides sub-commands which write configuration data in json format to config file.
 func mainConfig(ctx *cli.Context) {
-	if !ctx.Args().Present() {
-		cli.ShowAppHelp(ctx)
+	if ctx.Args().First() != "" { // command help.
+		cli.ShowCommandHelp(ctx, ctx.Args().First())
+	} else { // mc help.
+		cli.ShowSubcommandHelp(ctx)
 	}
+
+	// sub-commands like "upload" and "download" have their own main.
 }

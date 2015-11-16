@@ -36,10 +36,10 @@ var shareCmd = cli.Command{
 		shareList,
 	},
 	CustomHelpTemplate: `NAME:
-   {{.Name}} - {{.Usage}}
+   mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   {{.Name}} command [arguments...]
+   mc {{.Name}} [COMMAND]
 
 COMMANDS:
   {{range .Subcommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
@@ -65,8 +65,10 @@ func migrateShare() {
 
 // mainShare - main handler for mc share command
 func mainShare(ctx *cli.Context) {
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
-		cli.ShowAppHelp(ctx)
+	if ctx.Args().First() != "" { // command help.
+		cli.ShowCommandHelp(ctx, ctx.Args().First())
+	} else { // mc help.
+		cli.ShowSubcommandHelp(ctx)
 	}
 
 	// sub-commands like "upload" and "download" have their own main.
