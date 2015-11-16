@@ -87,7 +87,7 @@ func url2DirContent(urlStr string) (content *client.Content, err *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(urlStr)
 	}
-	if clnt.GetURL().Path == string(clnt.GetURL().Separator) {
+	if clnt.GetURL().Path == string(clnt.GetURL().Separator) || clnt.GetURL().Path == "." {
 		content := new(client.Content)
 		content.URL = clnt.GetURL()
 		content.Type = os.ModeDir
