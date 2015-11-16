@@ -260,8 +260,6 @@ func doMirrorSession(session *sessionV3) {
 				if !ok { // We are done here. Top level function has returned.
 					if !globalQuietFlag && !globalJSONFlag {
 						progressReader.(*barSend).Finish()
-					} else {
-						console.Println(console.Colorize("Mirror", progressReader.(*accounter).Finish()))
 					}
 					return
 				}
