@@ -70,6 +70,9 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 		if os.IsPermission(err) {
 			lfi, lerr := os.Lstat(fpath)
 			if lerr != nil {
+				if os.IsPermission(lerr) {
+					return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
+				}
 				return nil, probe.NewError(lerr)
 			}
 			return lfi, nil
@@ -93,6 +96,9 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 		if os.IsPermission(err) {
 			lst, lerr := os.Lstat(fpath)
 			if lerr != nil {
+				if os.IsPermission(lerr) {
+					return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
+				}
 				return nil, probe.NewError(lerr)
 			}
 			return lst, nil
@@ -308,7 +314,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 	}
 
 	// if the directory doesn't end with a separator, do not traverse it.
-	if !strings.HasSuffix(fpath, string(pathURL.Separator)) && fst.Mode().IsDir() {
+	if !strings.HasSuffix(fpath, string(pathURL.Separator)) && fst.Mode().IsDir() && fpath != "." {
 		content := &client.Content{
 			URL:  pathURL,
 			Time: fst.ModTime(),
@@ -359,8 +365,16 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 					// carry special meaning on windows
 					// - which cannot be accessed with regular operations
 					if runtime.GOOS == "windows" {
-						lfi, lerr := os.Lstat(filepath.Join(dir.Name(), fi.Name()))
+						newPath := filepath.Join(dir.Name(), fi.Name())
+						lfi, lerr := os.Lstat(newPath)
 						if lerr != nil {
+							if os.IsPermission(lerr) {
+								contentCh <- client.ContentOnChannel{
+									Content: nil,
+									Err:     probe.NewError(client.PathInsufficientPermission{Path: newPath}),
+								}
+								continue
+							}
 							contentCh <- client.ContentOnChannel{
 								Content: nil,
 								Err:     probe.NewError(lerr),
@@ -376,7 +390,7 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 								Size: lfi.Size(),
 								Type: lfi.Mode(),
 							},
-							Err: probe.NewError(err),
+							Err: probe.NewError(client.PathInsufficientPermission{Path: pathURL.Path}),
 						}
 						continue
 					} else {
@@ -519,6 +533,13 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 						// - which cannot be accessed with regular operations
 						lfi, lerr := os.Lstat(fp)
 						if lerr != nil {
+							if os.IsPermission(lerr) {
+								contentCh <- client.ContentOnChannel{
+									Content: nil,
+									Err:     probe.NewError(client.PathInsufficientPermission{Path: fp}),
+								}
+								return nil
+							}
 							contentCh <- client.ContentOnChannel{
 								Content: nil,
 								Err:     probe.NewError(lerr),
