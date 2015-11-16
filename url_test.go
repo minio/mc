@@ -47,3 +47,8 @@ func (s *TestSuite) TestStripRecursiveURL(c *C) {
 	url = stripRecursiveURL("http://s3.mycompany.io/test...")
 	c.Assert(url, Equals, "http://s3.mycompany.io/test")
 }
+
+func (s *TestSuite) TestURL2DirContent(c *C) {
+	_, err := url2DirContent(".")
+	c.Assert(err, IsNil)
+}

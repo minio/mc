@@ -42,7 +42,7 @@ var shareDownload = cli.Command{
    mc share {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc share {{.Name}} [OPTIONS] TARGET
+   mc share {{.Name}} [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
   {{range .Flags}}{{.}}
@@ -66,10 +66,13 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "download", 1) // last argument is exit code.
 	}
 
-	if !isURLRecursive(args.First()) {
-		url := stripRecursiveURL(args.First())
-		if strings.HasSuffix(url, "/") {
-			fatalIf(errDummy().Trace(), fmt.Sprintf("To grant access to an entire folder, you may use ‘%s’.", url+recursiveSeparator))
+	// Validate each argument.
+	for _, arg := range ctx.Args() {
+		if !isURLRecursive(arg) {
+			// Check if any folder arg requires recursive operator.
+			if strings.HasSuffix(arg, "/") {
+				fatalIf(errDummy().Trace(), fmt.Sprintf("To grant access to an entire folder, you may use ‘%s’.", arg+recursiveSeparator))
+			}
 		}
 	}
 
@@ -153,19 +156,21 @@ func mainShareDownload(ctx *cli.Context) {
 
 	// Extract arguments.
 	config := mustGetMcConfig()
-	args := ctx.Args()
-	// if recursive strip off the "..."
-	url := stripRecursiveURL(args.First())
-	isRecursive := isURLRecursive(args.First())
-	expiry := shareDefaultExpiry
-	expireArg := ctx.String("expire")
-	if expireArg != "" {
-		var e error
-		expiry, e = time.ParseDuration(expireArg)
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
-	}
 
-	targetURL := getAliasURL(url, config.Aliases) // Expand alias.
-	err := doShareDownloadURL(targetURL, isRecursive, expiry)
-	fatalIf(err.Trace(targetURL), "Unable to share target ‘"+args.First()+"’.")
+	for _, arg := range ctx.Args() {
+		// if recursive strip off the "..."
+		url := stripRecursiveURL(arg)
+		isRecursive := isURLRecursive(arg)
+		expiry := shareDefaultExpiry
+		expireArg := ctx.String("expire")
+		if expireArg != "" {
+			var e error
+			expiry, e = time.ParseDuration(expireArg)
+			fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		}
+
+		targetURL := getAliasURL(url, config.Aliases) // Expand alias.
+		err := doShareDownloadURL(targetURL, isRecursive, expiry)
+		fatalIf(err.Trace(targetURL), "Unable to share target ‘"+arg+"’.")
+	}
 }

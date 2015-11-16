@@ -44,7 +44,7 @@ var shareUpload = cli.Command{
    mc share {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc share {{.Name}} [OPTIONS] TARGET
+   mc share {{.Name}} [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
   {{range .Flags}}{{.}}
@@ -68,10 +68,13 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "upload", 1) // last argument is exit code.
 	}
 
-	if !isURLRecursive(args.First()) {
-		url := stripRecursiveURL(args.First())
-		if strings.HasSuffix(url, "/") {
-			fatalIf(errDummy().Trace(), fmt.Sprintf("To grant access to an entire folder, you may use ‘%s’.", url+recursiveSeparator))
+	// Validate each argument.
+	for _, arg := range ctx.Args() {
+		if !isURLRecursive(arg) {
+			// Check if any folder arg requires recursive operator.
+			if strings.HasSuffix(arg, "/") {
+				fatalIf(errDummy().Trace(), fmt.Sprintf("To grant access to an entire folder, you may use ‘%s’.", arg+recursiveSeparator))
+			}
 		}
 	}
 
@@ -167,22 +170,23 @@ func mainShareUpload(ctx *cli.Context) {
 	// check input arguments.
 	checkShareUploadSyntax(ctx)
 
-	args := ctx.Args()
-	config := mustGetMcConfig()
-	// if recursive strip off the "..."
-	url := stripRecursiveURL(args.First())
-	isRecursive := isURLRecursive(args.First())
-	expireArg := ctx.String("expire")
-	expiry := shareDefaultExpiry
-	contentType := ctx.String("content-type")
+	for _, arg := range ctx.Args() {
+		config := mustGetMcConfig()
+		// if recursive strip off the "..."
+		url := stripRecursiveURL(arg)
+		isRecursive := isURLRecursive(arg)
+		expireArg := ctx.String("expire")
+		expiry := shareDefaultExpiry
+		contentType := ctx.String("content-type")
 
-	if expireArg != "" {
-		var e error
-		expiry, e = time.ParseDuration(expireArg)
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		if expireArg != "" {
+			var e error
+			expiry, e = time.ParseDuration(expireArg)
+			fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		}
+
+		targetURL := getAliasURL(url, config.Aliases)
+		err := doShareUploadURL(targetURL, isRecursive, expiry, contentType)
+		fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+arg+"’.")
 	}
-
-	targetURL := getAliasURL(url, config.Aliases)
-	err := doShareUploadURL(targetURL, isRecursive, expiry, contentType)
-	fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload.")
 }
