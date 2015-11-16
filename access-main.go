@@ -38,10 +38,8 @@ USAGE:
    mc {{.Name}} set PERMISSION TARGET [TARGET ...]
    mc {{.Name}} get TARGET [TARGET ...]
 
-   PERMISSION = private | readonly | public | authorized {{if .Description}}
-
-DESCRIPTION:
-   {{.Description}}{{end}}
+PERMISSION:
+   Allowed permissions are: [private, readonly, public, authorized].
 
 EXAMPLES:
    1. Set bucket to "private" on Amazon S3 cloud storage.
@@ -148,9 +146,9 @@ func mainAccess(ctx *cli.Context) {
 	console.SetColor("Access", color.New(color.FgGreen, color.Bold))
 	config := mustGetMcConfig()
 
-	switch ctx.Args().Get(0) {
+	switch ctx.Args().First() {
 	case "set":
-		perms := accessPerms(ctx.Args().Tail().Get(0))
+		perms := accessPerms(ctx.Args().Tail().First())
 		for _, arg := range ctx.Args().Tail().Tail() {
 			targetURL := getAliasURL(arg, config.Aliases)
 
