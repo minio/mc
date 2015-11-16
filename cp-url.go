@@ -290,8 +290,10 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string) <-chan copyURLs {
 			}
 
 			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-			newSourceURL := sourceContent.Content.URL.String()
-			newSourceSuffix := strings.TrimPrefix(newSourceURL, sourceURL)
+			srcURL := sourceClient.GetURL()
+			newSourceURL := sourceContent.Content.URL
+			newSourceSuffix := strings.TrimPrefix(newSourceURL.Path,
+				srcURL.Path[:strings.LastIndex(srcURL.Path, string(srcURL.Separator))])
 			newTargetURL := urlJoinPath(targetURL, newSourceSuffix)
 			copyURLsCh <- prepareCopyURLsTypeA(sourceContent.Content.URL.String(), newTargetURL)
 		}
