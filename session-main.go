@@ -41,17 +41,17 @@ USAGE:
    mc {{.Name}} resume SESSION-ID
    mc {{.Name}} clear SESSION-ID
 
-   SESSION-ID = $SESSION | all
+SESSION-ID:
+   SESSION - Session can either be $SESSION-ID or "all".
 
 EXAMPLES:
-   1. List sessions
+   1. List sessions.
       $ mc {{.Name}} list
-      ygVIpSJs -> [2015-08-29 15:25:12 PDT] cp /usr/bin... test
 
-   2. Resume session
+   2. Resume session.
       $ mc {{.Name}} resume ygVIpSJs
 
-   3. Clear session
+   3. Clear session.
       $ mc {{.Name}} clear ygVIpSJs
 `,
 }

@@ -43,11 +43,11 @@ var lsCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [OPTIONS] TARGET [TARGET ...]
+   mc {{.Name}} [FLAGS] TARGET [TARGET ...]
 
-OPTIONS:
-   --incomplete - List incomplete upload of objects.
-
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/

@@ -38,18 +38,8 @@ EXAMPLES:
 `,
 }
 
-// Validate command line arguments.
-func checkHelpSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) > 1 { // Accepts a maximum of 1 argument.
-		exitCode := 1
-		cli.ShowCommandHelpAndExit(ctx, "help", exitCode)
-	}
-}
-
 // main for help command.
 func mainHelp(ctx *cli.Context) {
-	checkHelpSyntax(ctx)
-
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())
 	} else { // mc help.

@@ -43,7 +43,7 @@ var cpCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [OPTIONS] SOURCE [SOURCE...] TARGET
+   mc {{.Name}} SOURCE [SOURCE...] TARGET
 
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
