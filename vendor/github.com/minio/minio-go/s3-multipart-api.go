@@ -214,24 +214,30 @@ func (a s3API) abortMultipartUpload(bucket, object, uploadID string) error {
 			switch resp.StatusCode {
 			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
-					Code:      "NoSuchUpload",
-					Message:   "The specified multipart upload does not exist.",
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
+					Code:            "NoSuchUpload",
+					Message:         "The specified multipart upload does not exist.",
+					Resource:        separator + bucket + separator + object,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
-					Code:      "AccessDenied",
-					Message:   "Access Denied.",
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
+					Code:            "AccessDenied",
+					Message:         "Access Denied.",
+					Resource:        separator + bucket + separator + object,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			default:
 				errorResponse = ErrorResponse{
-					Code:      resp.Status,
-					Message:   "Unknown error, please report this at https://github.com/minio/minio-go-legacy/issues.",
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
+					Code:            resp.Status,
+					Message:         "Unknown error, please report this at https://github.com/minio/minio-go-legacy/issues.",
+					Resource:        separator + bucket + separator + object,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			}
 			return errorResponse
