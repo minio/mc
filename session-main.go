@@ -28,11 +28,19 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	sessionFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of session",
+	}
+)
+
 // Manage sessions for cp and mirror.
 var sessionCmd = cli.Command{
 	Name:   "session",
 	Usage:  "Manage saved sessions of cp and mirror operations.",
 	Action: mainSession,
+	Flags:  []cli.Flag{sessionFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -44,6 +52,9 @@ USAGE:
 SESSION-ID:
    SESSION - Session can either be $SESSION-ID or "all".
 
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. List sessions.
       $ mc {{.Name}} list

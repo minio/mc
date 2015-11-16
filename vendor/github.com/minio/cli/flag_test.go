@@ -10,39 +10,15 @@ import (
 	"github.com/minio/cli"
 )
 
-var boolFlagTests = []struct {
-	name     string
-	expected string
-}{
-	{"help", "--help\t"},
-	{"h", "-h\t"},
-}
-
-func TestBoolFlagHelpOutput(t *testing.T) {
-
-	for _, test := range boolFlagTests {
-		flag := cli.BoolFlag{Name: test.name}
-		output := flag.String()
-
-		if output != test.expected {
-			t.Errorf("%s does not match %s", output, test.expected)
-		}
-	}
-}
-
 var stringFlagTests = []struct {
 	name     string
 	value    string
 	expected string
 }{
-	{"help", "", "--help \t"},
-	{"h", "", "-h \t"},
-	{"h", "", "-h \t"},
 	{"test", "Something", "--test \"Something\"\t"},
 }
 
 func TestStringFlagHelpOutput(t *testing.T) {
-
 	for _, test := range stringFlagTests {
 		flag := cli.StringFlag{Name: test.name, Value: test.value}
 		output := flag.String()
@@ -71,21 +47,6 @@ var stringSliceFlagTests = []struct {
 	value    *cli.StringSlice
 	expected string
 }{
-	{"help", func() *cli.StringSlice {
-		s := &cli.StringSlice{}
-		s.Set("")
-		return s
-	}(), "--help [--help option --help option]\t"},
-	{"h", func() *cli.StringSlice {
-		s := &cli.StringSlice{}
-		s.Set("")
-		return s
-	}(), "-h [-h option -h option]\t"},
-	{"h", func() *cli.StringSlice {
-		s := &cli.StringSlice{}
-		s.Set("")
-		return s
-	}(), "-h [-h option -h option]\t"},
 	{"test", func() *cli.StringSlice {
 		s := &cli.StringSlice{}
 		s.Set("Something")
@@ -94,7 +55,6 @@ var stringSliceFlagTests = []struct {
 }
 
 func TestStringSliceFlagHelpOutput(t *testing.T) {
-
 	for _, test := range stringSliceFlagTests {
 		flag := cli.StringSliceFlag{Name: test.name, Value: test.value}
 		output := flag.String()
@@ -118,80 +78,11 @@ func TestStringSliceFlagWithEnvVarHelpOutput(t *testing.T) {
 	}
 }
 
-var intFlagTests = []struct {
-	name     string
-	expected string
-}{
-	{"help", "--help \"0\"\t"},
-	{"h", "-h \"0\"\t"},
-}
-
-func TestIntFlagHelpOutput(t *testing.T) {
-
-	for _, test := range intFlagTests {
-		flag := cli.IntFlag{Name: test.name}
-		output := flag.String()
-
-		if output != test.expected {
-			t.Errorf("%s does not match %s", output, test.expected)
-		}
-	}
-}
-
-func TestIntFlagWithEnvVarHelpOutput(t *testing.T) {
-	os.Clearenv()
-	os.Setenv("APP_BAR", "2")
-	for _, test := range intFlagTests {
-		flag := cli.IntFlag{Name: test.name, EnvVar: "APP_BAR"}
-		output := flag.String()
-
-		if !strings.HasSuffix(output, " [$APP_BAR]") {
-			t.Errorf("%s does not end with [$APP_BAR]", output)
-		}
-	}
-}
-
-var durationFlagTests = []struct {
-	name     string
-	expected string
-}{
-	{"help", "--help \"0\"\t"},
-	{"h", "-h \"0\"\t"},
-}
-
-func TestDurationFlagHelpOutput(t *testing.T) {
-
-	for _, test := range durationFlagTests {
-		flag := cli.DurationFlag{Name: test.name}
-		output := flag.String()
-
-		if output != test.expected {
-			t.Errorf("%s does not match %s", output, test.expected)
-		}
-	}
-}
-
-func TestDurationFlagWithEnvVarHelpOutput(t *testing.T) {
-	os.Clearenv()
-	os.Setenv("APP_BAR", "2h3m6s")
-	for _, test := range durationFlagTests {
-		flag := cli.DurationFlag{Name: test.name, EnvVar: "APP_BAR"}
-		output := flag.String()
-
-		if !strings.HasSuffix(output, " [$APP_BAR]") {
-			t.Errorf("%s does not end with [$APP_BAR]", output)
-		}
-	}
-}
-
 var intSliceFlagTests = []struct {
 	name     string
 	value    *cli.IntSlice
 	expected string
 }{
-	{"help", &cli.IntSlice{}, "--help [--help option --help option]\t"},
-	{"h", &cli.IntSlice{}, "-h [-h option -h option]\t"},
-	{"h", &cli.IntSlice{}, "-h [-h option -h option]\t"},
 	{"test", func() *cli.IntSlice {
 		i := &cli.IntSlice{}
 		i.Set("9")
@@ -200,7 +91,6 @@ var intSliceFlagTests = []struct {
 }
 
 func TestIntSliceFlagHelpOutput(t *testing.T) {
-
 	for _, test := range intSliceFlagTests {
 		flag := cli.IntSliceFlag{Name: test.name, Value: test.value}
 		output := flag.String()
@@ -224,39 +114,6 @@ func TestIntSliceFlagWithEnvVarHelpOutput(t *testing.T) {
 	}
 }
 
-var float64FlagTests = []struct {
-	name     string
-	expected string
-}{
-	{"help", "--help \"0\"\t"},
-	{"h", "-h \"0\"\t"},
-}
-
-func TestFloat64FlagHelpOutput(t *testing.T) {
-
-	for _, test := range float64FlagTests {
-		flag := cli.Float64Flag{Name: test.name}
-		output := flag.String()
-
-		if output != test.expected {
-			t.Errorf("%s does not match %s", output, test.expected)
-		}
-	}
-}
-
-func TestFloat64FlagWithEnvVarHelpOutput(t *testing.T) {
-	os.Clearenv()
-	os.Setenv("APP_BAZ", "99.4")
-	for _, test := range float64FlagTests {
-		flag := cli.Float64Flag{Name: test.name, EnvVar: "APP_BAZ"}
-		output := flag.String()
-
-		if !strings.HasSuffix(output, " [$APP_BAZ]") {
-			t.Errorf("%s does not end with [$APP_BAZ]", output)
-		}
-	}
-}
-
 var genericFlagTests = []struct {
 	name     string
 	value    cli.Generic
@@ -267,7 +124,6 @@ var genericFlagTests = []struct {
 }
 
 func TestGenericFlagHelpOutput(t *testing.T) {
-
 	for _, test := range genericFlagTests {
 		flag := cli.GenericFlag{Name: test.name, Value: test.value, Usage: "test flag"}
 		output := flag.String()

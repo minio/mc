@@ -34,17 +34,28 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	cpFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of cp",
+	}
+)
+
 // Copy command.
 var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy one or more objects to a target.",
 	Action: mainCopy,
+	Flags:  []cli.Flag{cpFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
    mc {{.Name}} SOURCE [SOURCE...] TARGET
 
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
       $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/

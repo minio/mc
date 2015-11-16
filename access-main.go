@@ -26,11 +26,19 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	accessFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of access",
+	}
+)
+
 // Set access permissions.
 var accessCmd = cli.Command{
 	Name:   "access",
 	Usage:  "Set or get access permissions.",
 	Action: mainAccess,
+	Flags:  []cli.Flag{accessFlagHelp},
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 
@@ -41,6 +49,9 @@ USAGE:
 PERMISSION:
    Allowed permissions are: [private, readonly, public, authorized].
 
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Set bucket to "private" on Amazon S3 cloud storage.
       $ mc {{.Name}} set private https://s3.amazonaws.com/burningman2011

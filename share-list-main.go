@@ -31,6 +31,7 @@ var shareList = cli.Command{
 	Action: mainShareList,
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} COMMAND - {{.Usage}}
+
 COMMAND:
    upload:   list previously shared access to uploads.
    download: list previously shared access to downloads.

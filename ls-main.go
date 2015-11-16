@@ -31,6 +31,10 @@ var (
 		Name:  "incomplete, I",
 		Usage: "Remove incomplete uploads.",
 	}
+	lsFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of ls",
+	}
 )
 
 // list files and folders.
@@ -38,7 +42,7 @@ var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "List files and folders.",
 	Action: mainList,
-	Flags:  []cli.Flag{lsFlagIncomplete},
+	Flags:  []cli.Flag{lsFlagIncomplete, lsFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -64,11 +68,7 @@ EXAMPLES:
    5. List folders with space separated names on Amazon S3 cloud storage. 
       $ mc {{.Name}} 's3/miniocloud/Community Files/'
     
-   6. Behave like operating system ‘ls’ tool. Useful for aliasing.
-      $ alias ls='mc --mimic ls'
-      $ {{.Name}}
-
-   7. List incomplete (previously failed) uploads of objects on Amazon S3. 
+   6. List incomplete (previously failed) uploads of objects on Amazon S3. 
       $ mc {{.Name}} --incomplete s3/mybucket
 `,
 }
@@ -77,13 +77,8 @@ EXAMPLES:
 func checkListSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 	if !ctx.Args().Present() {
-		if globalMimicFlag {
-			args = []string{"."}
-		} else {
-			cli.ShowCommandHelpAndExit(ctx, "ls", 1) // last argument is exit code
-		}
+		args = []string{"."}
 	}
-
 	for _, arg := range args {
 		if strings.TrimSpace(arg) == "" {
 			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
@@ -106,7 +101,7 @@ func mainList(ctx *cli.Context) {
 	isIncomplete := ctx.Bool("incomplete")
 
 	// mimic operating system tool behavior
-	if globalMimicFlag && !ctx.Args().Present() {
+	if !ctx.Args().Present() {
 		args = []string{"."}
 	}
 

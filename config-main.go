@@ -28,24 +28,36 @@ import "github.com/minio/cli"
 //   so to avoid taking credentials over cli arguments. It is a security precaution
 //   ----
 //
+
+var (
+	configFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of config",
+	}
+)
+
 var configCmd = cli.Command{
 	Name:   "config",
 	Usage:  "Manage configuration file.",
 	Action: mainConfig,
+	Flags:  []cli.Flag{configFlagHelp},
 	Subcommands: []cli.Command{
 		configAliasCmd,
 		configHostCmd,
 		configVersionCmd,
 	},
 	CustomHelpTemplate: `NAME:
-  mc {{.Name}} - {{.Usage}}
+   {{.Name}} - {{.Usage}}
 
 USAGE:
-  mc {{.Name}} COMMAND
+   {{.Name}} COMMAND
 
-COMMANDS:
-  {{range .Subcommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+FLAGS:
+  {{range .Flags}}{{.}}
   {{end}}
+COMMANDS:
+   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+   {{end}}
 `,
 }
 
@@ -53,8 +65,9 @@ COMMANDS:
 func mainConfig(ctx *cli.Context) {
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())
-	} else { // mc help.
-		cli.ShowSubcommandHelp(ctx)
+	} else {
+		// command with Subcommands is an App.
+		cli.ShowAppHelp(ctx)
 	}
 
 	// sub-commands like "upload" and "download" have their own main.

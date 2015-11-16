@@ -24,11 +24,19 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	configVersionFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of config version",
+	}
+)
+
 // Print config version.
 var configVersionCmd = cli.Command{
 	Name:   "version",
 	Usage:  "Print config version.",
 	Action: mainConfigVersion,
+	Flags:  []cli.Flag{configVersionFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}
 

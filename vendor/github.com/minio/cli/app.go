@@ -31,10 +31,6 @@ type App struct {
 	Flags []Flag
 	// Boolean to enable bash completion commands
 	EnableBashCompletion bool
-	// Boolean to hide built-in help command
-	HideHelp bool
-	// Boolean to hide built-in version flag
-	HideVersion bool
 	// An action to execute when the bash-completion flag is set
 	BashComplete func(context *Context)
 	// An action to execute before any subcommands are run, but after the context is ready
@@ -85,8 +81,8 @@ func NewApp() *App {
 		Name:         os.Args[0],
 		Usage:        "A new cli application",
 		Version:      "0.0.0",
-		BashComplete: DefaultAppComplete,
 		Action:       helpCommand.Action,
+		BashComplete: DefaultAppComplete,
 		Compiled:     mustCompileTime(),
 		Writer:       os.Stdout,
 	}
@@ -119,10 +115,6 @@ func (a *App) getNewContext(arguments []string) (*Context, error) {
 
 // Run - Entry point to the cli app. Parses the arguments slice and routes to the proper flag/args combination
 func (a *App) Run(arguments []string) (err error) {
-	// Comment this out as its not going to be used
-	// if a.Author != "" || a.Email != "" {
-	// a.Authors = append(a.Authors, Author{Name: a.Author, Email: a.Email})
-	//}
 	if HelpPrinter == nil {
 		defer func() {
 			HelpPrinter = nil
@@ -152,21 +144,9 @@ func (a *App) Run(arguments []string) (err error) {
 		}
 	}
 
-	// append help to commands
-	if a.Command(helpCommand.Name) == nil && !a.HideHelp {
-		a.Commands = append(a.Commands, helpCommand)
-		if (HelpFlag != BoolFlag{}) {
-			a.appendFlag(HelpFlag)
-		}
-	}
-
-	//append version/help flags
+	// append version/help flags
 	if a.EnableBashCompletion {
 		a.appendFlag(BashCompletionFlag)
-	}
-
-	if !a.HideVersion {
-		a.appendFlag(VersionFlag)
 	}
 
 	context, err := a.getNewContext(arguments)
@@ -217,16 +197,6 @@ func (a *App) RunAndExitOnError() {
 
 // RunAsSubcommand - Invokes the subcommand given the context, parses ctx.Args() to generate command-specific flags
 func (a *App) RunAsSubcommand(ctx *Context) (err error) {
-	// append help to commands
-	if len(a.Commands) > 0 {
-		if a.Command(helpCommand.Name) == nil && !a.HideHelp {
-			a.Commands = append(a.Commands, helpCommand)
-			if (HelpFlag != BoolFlag{}) {
-				a.appendFlag(HelpFlag)
-			}
-		}
-	}
-
 	// append flags
 	if a.EnableBashCompletion {
 		a.appendFlag(BashCompletionFlag)
@@ -300,7 +270,6 @@ func (a *App) RunAsSubcommand(ctx *Context) (err error) {
 
 	// Run default Action
 	a.Action(context)
-
 	return nil
 }
 

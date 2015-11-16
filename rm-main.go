@@ -39,6 +39,11 @@ var (
 		Name:  "incomplete, I",
 		Usage: "Remove an incomplete upload(s).",
 	}
+
+	rmFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of rm",
+	}
 )
 
 // remove a file or folder.
@@ -46,7 +51,7 @@ var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "Remove file or bucket [WARNING: Use with care].",
 	Action: mainRm,
-	Flags:  []cli.Flag{rmFlagForce, rmFlagIncomplete},
+	Flags:  []cli.Flag{rmFlagForce, rmFlagIncomplete, rmFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
