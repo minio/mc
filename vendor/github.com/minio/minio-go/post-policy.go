@@ -14,11 +14,12 @@ const expirationDateFormat = "2006-01-02T15:04:05.999Z"
 // policyCondition explanation: http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
 //
 // Example:
-//  policyCondition {
-//      matchType: "$eq",
-//      key: "$Content-Type",
-//      value: "image/png",
-//  }
+//
+//   policyCondition {
+//       matchType: "$eq",
+//       key: "$Content-Type",
+//       value: "image/png",
+//   }
 //
 type policyCondition struct {
 	matchType string
@@ -51,7 +52,7 @@ func NewPostPolicy() *PostPolicy {
 // SetExpires expiration time
 func (p *PostPolicy) SetExpires(t time.Time) error {
 	if t.IsZero() {
-		return errors.New("time input invalid")
+		return errors.New("No expiry time set.")
 	}
 	p.expiration = t
 	return nil
@@ -60,7 +61,7 @@ func (p *PostPolicy) SetExpires(t time.Time) error {
 // SetKey Object name
 func (p *PostPolicy) SetKey(key string) error {
 	if strings.TrimSpace(key) == "" || key == "" {
-		return errors.New("key invalid")
+		return errors.New("Object name is not specified.")
 	}
 	policyCond := policyCondition{
 		matchType: "eq",
@@ -77,7 +78,7 @@ func (p *PostPolicy) SetKey(key string) error {
 // SetKeyStartsWith Object name that can start with
 func (p *PostPolicy) SetKeyStartsWith(keyStartsWith string) error {
 	if strings.TrimSpace(keyStartsWith) == "" || keyStartsWith == "" {
-		return errors.New("key-starts-with invalid")
+		return errors.New("Object prefix is not specified.")
 	}
 	policyCond := policyCondition{
 		matchType: "starts-with",
@@ -94,7 +95,7 @@ func (p *PostPolicy) SetKeyStartsWith(keyStartsWith string) error {
 // SetBucket bucket name
 func (p *PostPolicy) SetBucket(bucket string) error {
 	if strings.TrimSpace(bucket) == "" || bucket == "" {
-		return errors.New("bucket invalid")
+		return errors.New("Bucket name is not specified.")
 	}
 	policyCond := policyCondition{
 		matchType: "eq",
@@ -111,7 +112,7 @@ func (p *PostPolicy) SetBucket(bucket string) error {
 // SetContentType content-type
 func (p *PostPolicy) SetContentType(contentType string) error {
 	if strings.TrimSpace(contentType) == "" || contentType == "" {
-		return errors.New("contentType invalid")
+		return errors.New("No content type specified.")
 	}
 	policyCond := policyCondition{
 		matchType: "eq",
@@ -125,16 +126,16 @@ func (p *PostPolicy) SetContentType(contentType string) error {
 	return nil
 }
 
-// SetContentLength - set new min and max content legnth condition
+// SetContentLength - set new min and max content length condition
 func (p *PostPolicy) SetContentLength(min, max int) error {
 	if min > max {
-		return errors.New("minimum cannot be bigger than maximum")
+		return errors.New("Content length minimum-limit is larger than maximum-limit.")
 	}
 	if min < 0 {
-		return errors.New("minimum cannot be negative")
+		return errors.New("Content length minimum-limit is negative.")
 	}
 	if max < 0 {
-		return errors.New("maximum cannot be negative")
+		return errors.New("Content length maximum-limit is negative")
 	}
 	p.contentLengthRange.min = min
 	p.contentLengthRange.max = max
@@ -144,7 +145,7 @@ func (p *PostPolicy) SetContentLength(min, max int) error {
 // addNewPolicy - internal helper to validate adding new policies
 func (p *PostPolicy) addNewPolicy(policyCond policyCondition) error {
 	if policyCond.matchType == "" || policyCond.condition == "" || policyCond.value == "" {
-		return errors.New("policy invalid")
+		return errors.New("Policy fields empty.")
 	}
 	p.conditions = append(p.conditions, policyCond)
 	return nil
