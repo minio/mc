@@ -42,7 +42,7 @@ var (
 
 	rmFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of rm",
+		Usage: "Help of rm.",
 	}
 )
 

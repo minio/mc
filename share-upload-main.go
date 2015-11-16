@@ -30,7 +30,7 @@ import (
 var (
 	shareFlagUploadHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of share download",
+		Usage: "Help of share download.",
 	}
 )
 

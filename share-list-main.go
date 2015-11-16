@@ -24,11 +24,19 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	shareFlagListHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of share list.",
+	}
+)
+
 // Share documents via URL.
 var shareList = cli.Command{
 	Name:   "list",
 	Usage:  "List previously shared objects and folders.",
 	Action: mainShareList,
+	Flags:  []cli.Flag{shareFlagListHelp},
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} COMMAND - {{.Usage}}
 

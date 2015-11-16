@@ -31,7 +31,7 @@ import (
 var (
 	configAliasFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of config alias",
+		Usage: "Help of config alias.",
 	}
 )
 

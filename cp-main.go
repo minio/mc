@@ -37,7 +37,7 @@ import (
 var (
 	cpFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of cp",
+		Usage: "Help of cp.",
 	}
 )
 

@@ -28,6 +28,11 @@ var flags = []cli.Flag{}
 var commandsTree = newTrie()
 
 var (
+	helpFlag = cli.BoolFlag{
+		Name:  "help",
+		Usage: "Help for mc.",
+	}
+
 	configFlag = cli.StringFlag{
 		Name:  "config-folder, C",
 		Value: mustGetMcConfigDir(),

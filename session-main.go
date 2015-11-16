@@ -31,7 +31,7 @@ import (
 var (
 	sessionFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of session",
+		Usage: "Help of session.",
 	}
 )
 

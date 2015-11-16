@@ -32,7 +32,7 @@ import "github.com/minio/cli"
 var (
 	configFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of config",
+		Usage: "Help of config.",
 	}
 )
 
