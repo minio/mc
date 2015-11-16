@@ -154,6 +154,7 @@ func registerApp() *cli.App {
 	registerCmd(versionCmd) // Print version.
 
 	// register all the flags (refer flags.go)
+	registerFlag(helpFlag)   // Show help.
 	registerFlag(configFlag) // Path to configuration folder.
 	registerFlag(quietFlag)  // Suppress chatty console output.
 	registerFlag(jsonFlag)   // Enable json formatted output.

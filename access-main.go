@@ -29,7 +29,7 @@ import (
 var (
 	accessFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of access",
+		Usage: "Help of access.",
 	}
 )
 

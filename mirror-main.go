@@ -41,7 +41,7 @@ var (
 	}
 	mirrorFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of mirror",
+		Usage: "Help of mirror.",
 	}
 )
 

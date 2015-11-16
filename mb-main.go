@@ -29,7 +29,7 @@ import (
 var (
 	mbFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of mb",
+		Usage: "Help of mb.",
 	}
 )
 

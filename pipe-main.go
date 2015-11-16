@@ -27,7 +27,7 @@ import (
 var (
 	pipeFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Help of pipe",
+		Usage: "Help of pipe.",
 	}
 )
 
