@@ -25,25 +25,36 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	shareFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of share",
+	}
+)
+
 // Share documents via URL.
 var shareCmd = cli.Command{
 	Name:   "share",
 	Usage:  "Generate URL for sharing.",
 	Action: mainShare,
+	Flags:  []cli.Flag{shareFlagHelp},
 	Subcommands: []cli.Command{
 		shareDownload,
 		shareUpload,
 		shareList,
 	},
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [COMMAND]
+   {{.Name}} [COMMAND]
 
-COMMANDS:
-  {{range .Subcommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+FLAGS:
+  {{range .Flags}}{{.}}
   {{end}}
+COMMANDS:
+   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+   {{end}}
 `,
 }
 
@@ -68,7 +79,7 @@ func mainShare(ctx *cli.Context) {
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())
 	} else { // mc help.
-		cli.ShowSubcommandHelp(ctx)
+		cli.ShowAppHelp(ctx)
 	}
 
 	// sub-commands like "upload" and "download" have their own main.

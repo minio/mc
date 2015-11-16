@@ -26,17 +26,28 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	mbFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of mb",
+	}
+)
+
 // make a bucket or folder.
 var mbCmd = cli.Command{
 	Name:   "mb",
 	Usage:  "Make a bucket or folder.",
 	Action: mainMakeBucket,
+	Flags:  []cli.Flag{mbFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
    mc {{.Name}} TARGET [TARGET ...]
 
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Create a bucket on Amazon S3 cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/mynewbucket

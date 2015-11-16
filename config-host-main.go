@@ -14,9 +14,17 @@ import (
 	"github.com/minio/minio-xl/pkg/quick"
 )
 
+var (
+	configHostFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of config host",
+	}
+)
+
 var configHostCmd = cli.Command{
 	Name:   "host",
 	Usage:  "List, modify and remove hosts in configuration file.",
+	Flags:  []cli.Flag{configHostFlagHelp},
 	Action: mainConfigHost,
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}

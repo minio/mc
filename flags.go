@@ -54,11 +54,6 @@ var (
 		Usage: "Enable debugging output.",
 	}
 
-	mimicFlag = cli.BoolFlag{
-		Name:  "mimic",
-		Usage: "Behave like operating system tools. Use with shell aliases.",
-	}
-
 	// Add your new flags starting here
 )
 

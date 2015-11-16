@@ -25,12 +25,19 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	shareFlagDownloadHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of share download",
+	}
+)
+
 // Share documents via URL.
 var shareDownload = cli.Command{
 	Name:   "download",
 	Usage:  "Generate URLs for download access.",
 	Action: mainShareDownload,
-	Flags:  []cli.Flag{shareFlagExpire},
+	Flags:  []cli.Flag{shareFlagExpire, shareFlagDownloadHelp},
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
 

@@ -16,7 +16,6 @@
 
 package main
 
-// listAliases - list alias
 import (
 	"encoding/json"
 	"fmt"
@@ -29,10 +28,18 @@ import (
 	"github.com/minio/minio-xl/pkg/quick"
 )
 
+var (
+	configAliasFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of config alias",
+	}
+)
+
 var configAliasCmd = cli.Command{
 	Name:   "alias",
 	Usage:  "List, modify and remove aliases in configuration file.",
 	Action: mainConfigAlias,
+	Flags:  []cli.Flag{configAliasFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}
 

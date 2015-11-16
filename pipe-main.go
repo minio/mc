@@ -24,17 +24,28 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	pipeFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of pipe",
+	}
+)
+
 // Display contents of a file.
 var pipeCmd = cli.Command{
 	Name:   "pipe",
 	Usage:  "Write contents of stdin to one or more targets. Pipe is the opposite of cat command.",
 	Action: mainPipe,
+	Flags:  []cli.Flag{pipeFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
    mc {{.Name}} TARGET [TARGET...]
 
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Write contents of stdin to an object on Amazon S3 cloud storage.
       $ mc {{.Name}} https://s3.amazonaws.com/personalbuck/meeting-notes.txt

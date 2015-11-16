@@ -34,6 +34,11 @@ var (
 		Name:  "experimental, E",
 		Usage: "Check experimental update.",
 	}
+
+	updateFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help for update.",
+	}
 )
 
 // Check for new software updates.
@@ -41,7 +46,7 @@ var updateCmd = cli.Command{
 	Name:   "update",
 	Usage:  "Check for a new software update.",
 	Action: mainUpdate,
-	Flags:  []cli.Flag{updateFlagExperimental},
+	Flags:  []cli.Flag{updateFlagExperimental, updateFlagHelp},
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 

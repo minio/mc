@@ -105,7 +105,6 @@ func getSystemData() map[string]string {
 func registerBefore(ctx *cli.Context) error {
 	setMcConfigDir(ctx.GlobalString("config-folder"))
 	globalQuietFlag = ctx.GlobalBool("quiet")
-	globalMimicFlag = ctx.GlobalBool("mimic")
 	globalDebugFlag = ctx.GlobalBool("debug")
 	globalJSONFlag = ctx.GlobalBool("json")
 
@@ -139,7 +138,6 @@ func findClosestCommands(command string) []string {
 
 func registerApp() *cli.App {
 	// Register all the commands (refer flags.go)
-	registerCmd(helpCmd)    // List contents of a bucket.
 	registerCmd(lsCmd)      // List contents of a bucket.
 	registerCmd(mbCmd)      // Make a bucket.
 	registerCmd(catCmd)     // Display contents of a file.
@@ -158,15 +156,12 @@ func registerApp() *cli.App {
 	// register all the flags (refer flags.go)
 	registerFlag(configFlag) // Path to configuration folder.
 	registerFlag(quietFlag)  // Suppress chatty console output.
-	registerFlag(mimicFlag)  // Behave like operating system tools. Use with shell aliases.
 	registerFlag(jsonFlag)   // Enable json formatted output.
 	registerFlag(debugFlag)  // Enable debugging output.
 	registerFlag(colorsFlag) // Choose different styles of console coloring.
 
 	app := cli.NewApp()
 	app.Usage = "Minio Client for cloud storage and filesystems."
-	// hide --version flag, version is a command
-	app.HideVersion = true
 	app.Commands = commands
 	app.Flags = flags
 	app.Author = "Minio.io"

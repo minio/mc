@@ -26,16 +26,28 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	versionFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help for version.",
+	}
+)
+
 // Print version.
 var versionCmd = cli.Command{
 	Name:   "version",
 	Usage:  "Print version.",
 	Action: mainVersion,
+	Flags:  []cli.Flag{versionFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
    mc {{.Name}}
+
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 `,
 }
 

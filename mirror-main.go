@@ -39,6 +39,10 @@ var (
 		Name:  "force",
 		Usage: "Force overwrite of an existing target(s).",
 	}
+	mirrorFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of mirror",
+	}
 )
 
 //  Mirror folders recursively from a single source to many destinations
@@ -46,7 +50,7 @@ var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Mirror folders recursively from a single source to many destinations.",
 	Action: mainMirror,
-	Flags:  []cli.Flag{mirrorFlagForce},
+	Flags:  []cli.Flag{mirrorFlagForce, mirrorFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

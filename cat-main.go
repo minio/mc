@@ -30,17 +30,28 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+var (
+	catFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of cat",
+	}
+)
+
 // Display contents of a file.
 var catCmd = cli.Command{
 	Name:   "cat",
 	Usage:  "Display contents of a file.",
 	Action: mainCat,
+	Flags:  []cli.Flag{catFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
    mc {{.Name}} SOURCE [SOURCE...]
 
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
       $ mc {{.Name}} https://s3.amazonaws.com/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
@@ -51,19 +62,16 @@ EXAMPLES:
    3. Concantenate multiple files to one.
       $ mc {{.Name}} part.* > complete.img
 
-   4. Behave like operating system ‘cat’ tool. Useful for aliasing.
-      $ alias {{.Name}}='mc --mimic {{.Name}}'
-      $ {{.Name}} /etc/issue.txt
 `,
 }
 
 // checkCatSyntax performs command-line input validation for cat command.
 func checkCatSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() && !globalMimicFlag {
-		cli.ShowCommandHelpAndExit(ctx, "cat", 1) // last argument is exit code
+	args := ctx.Args()
+	if !args.Present() {
+		args = []string{"-"}
 	}
-
-	for _, arg := range ctx.Args() {
+	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") && len(arg) > 1 {
 			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag ‘%s’ passed.", arg))
 		}
@@ -116,7 +124,7 @@ func mainCat(ctx *cli.Context) {
 	checkCatSyntax(ctx)
 
 	stdinMode := false
-	if globalMimicFlag && !ctx.Args().Present() {
+	if !ctx.Args().Present() {
 		stdinMode = true
 	}
 

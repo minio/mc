@@ -1,7 +1,6 @@
 package cli_test
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -64,38 +63,6 @@ func ExampleAppSubcommand() {
 	app.Run(os.Args)
 	// Output:
 	// Hello, Jeremy
-}
-
-func ExampleAppHelp() {
-	// set args for examples sake
-	os.Args = []string{"greet", "h", "describeit"}
-
-	app := cli.NewApp()
-	app.Name = "greet"
-	app.Flags = []cli.Flag{
-		cli.StringFlag{Name: "name", Value: "bob", Usage: "a name to say"},
-	}
-	app.Commands = []cli.Command{
-		{
-			Name:        "describeit",
-			Aliases:     []string{"d"},
-			Usage:       "use it to see a description",
-			Description: "This is how we describe describeit the function",
-			Action: func(c *cli.Context) {
-				fmt.Printf("i like to describe things")
-			},
-		},
-	}
-	app.Run(os.Args)
-	// Output:
-	// NAME:
-	//    describeit - use it to see a description
-	//
-	// USAGE:
-	//    command describeit [arguments...]
-	//
-	// DESCRIPTION:
-	//    This is how we describe describeit the function
 }
 
 func TestApp_Run(t *testing.T) {
@@ -474,61 +441,6 @@ func TestApp_AfterFunc(t *testing.T) {
 
 	if subcommandRun == false {
 		t.Errorf("Subcommand not executed when expected")
-	}
-}
-
-func TestAppNoHelpFlag(t *testing.T) {
-	oldFlag := cli.HelpFlag
-	defer func() {
-		cli.HelpFlag = oldFlag
-	}()
-
-	cli.HelpFlag = cli.BoolFlag{}
-
-	app := cli.NewApp()
-	err := app.Run([]string{"test", "-h"})
-
-	if err != flag.ErrHelp {
-		t.Errorf("expected error about missing help flag, but got: %s (%T)", err, err)
-	}
-}
-
-func TestAppHelpPrinter(t *testing.T) {
-	oldPrinter := cli.HelpPrinter
-	defer func() {
-		cli.HelpPrinter = oldPrinter
-	}()
-
-	var wasCalled = false
-	cli.HelpPrinter = func(template string, data interface{}) {
-		wasCalled = true
-	}
-
-	app := cli.NewApp()
-	app.Run([]string{"-h"})
-
-	if wasCalled == false {
-		t.Errorf("Help printer expected to be called, but was not")
-	}
-}
-
-func TestAppVersionPrinter(t *testing.T) {
-	oldPrinter := cli.VersionPrinter
-	defer func() {
-		cli.VersionPrinter = oldPrinter
-	}()
-
-	var wasCalled = false
-	cli.VersionPrinter = func(c *cli.Context) {
-		wasCalled = true
-	}
-
-	app := cli.NewApp()
-	ctx := cli.NewContext(app, nil, nil)
-	cli.ShowVersion(ctx)
-
-	if wasCalled == false {
-		t.Errorf("Version printer expected to be called, but was not")
 	}
 }
 

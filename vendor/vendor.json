@@ -24,8 +24,8 @@
 		},
 		{
 			"path": "github.com/minio/cli",
-			"revision": "deb83e228f8fd55ca51942e0de0ec09665b3f63c",
-			"revisionTime": "2015-11-06T16:14:14-08:00"
+			"revision": "df3a039fccb1829c39db22b5d3b0fd10effbac2d",
+			"revisionTime": "2015-11-15T19:40:41-08:00"
 		},
 		{
 			"path": "github.com/minio/minio-go",
