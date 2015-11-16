@@ -36,71 +36,71 @@ type MySuite struct{}
 var _ = Suite(&MySuite{})
 
 func (s *MySuite) TestList(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object1")
-	fsc, perr := fs.New(objectPath)
+	fsc, err := fs.New(objectPath)
 	c.Assert(err, IsNil)
 
 	data := "hello"
 	dataLen := len(data)
 
-	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	objectPath = filepath.Join(root, "object2")
-	fsc, perr = fs.New(objectPath)
+	fsc, err = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
-	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	fsc, perr = fs.New(root)
+	fsc, err = fs.New(root)
 	c.Assert(err, IsNil)
 
 	var contents []*client.Content
 	for contentCh := range fsc.List(false, false) {
 		if contentCh.Err != nil {
-			perr = contentCh.Err
+			err = contentCh.Err
 			break
 		}
 		contents = append(contents, contentCh.Content)
 	}
-	c.Assert(perr, IsNil)
+	c.Assert(err, IsNil)
 	c.Assert(len(contents), Equals, 1)
 	c.Assert(contents[0].Type.IsDir(), Equals, true)
 
 	objectPath = filepath.Join(root, "test1/newObject1")
-	fsc, perr = fs.New(objectPath)
+	fsc, err = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
-	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	fsc, perr = fs.New(root)
+	fsc, err = fs.New(root)
 	c.Assert(err, IsNil)
 
 	contents = nil
 	for contentCh := range fsc.List(false, false) {
 		if contentCh.Err != nil {
-			perr = contentCh.Err
+			err = contentCh.Err
 			break
 		}
 		contents = append(contents, contentCh.Content)
 	}
-	c.Assert(perr, IsNil)
+	c.Assert(err, IsNil)
 	c.Assert(len(contents), Equals, 1)
 	c.Assert(contents[0].Type.IsDir(), Equals, true)
 
-	fsc, perr = fs.New(root)
+	fsc, err = fs.New(root)
 	c.Assert(err, IsNil)
 
 	contents = nil
 	for contentCh := range fsc.List(true, false) {
 		if contentCh.Err != nil {
-			perr = contentCh.Err
+			err = contentCh.Err
 			break
 		}
 		contents = append(contents, contentCh.Content)
@@ -126,129 +126,129 @@ func (s *MySuite) TestList(c *C) {
 }
 
 func (s *MySuite) TestPutBucket(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsc, perr := fs.New(bucketPath)
-	c.Assert(perr, IsNil)
-	perr = fsc.MakeBucket()
-	c.Assert(perr, IsNil)
+	fsc, err := fs.New(bucketPath)
+	c.Assert(err, IsNil)
+	err = fsc.MakeBucket()
+	c.Assert(err, IsNil)
 }
 
 func (s *MySuite) TestStatBucket(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
 
-	fsc, perr := fs.New(bucketPath)
-	c.Assert(perr, IsNil)
-	perr = fsc.MakeBucket()
-	c.Assert(perr, IsNil)
-	_, perr = fsc.Stat()
-	c.Assert(perr, IsNil)
+	fsc, err := fs.New(bucketPath)
+	c.Assert(err, IsNil)
+	err = fsc.MakeBucket()
+	c.Assert(err, IsNil)
+	_, err = fsc.Stat()
+	c.Assert(err, IsNil)
 }
 
 func (s *MySuite) TestBucketACLFails(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsc, perr := fs.New(bucketPath)
-	c.Assert(perr, IsNil)
-	perr = fsc.MakeBucket()
-	c.Assert(perr, IsNil)
+	fsc, err := fs.New(bucketPath)
+	c.Assert(err, IsNil)
+	err = fsc.MakeBucket()
+	c.Assert(err, IsNil)
 
-	perr = fsc.SetBucketAccess("private")
-	c.Assert(perr, Not(IsNil))
+	err = fsc.SetBucketAccess("private")
+	c.Assert(err, Not(IsNil))
 
-	_, perr = fsc.GetBucketAccess()
-	c.Assert(perr, Not(IsNil))
+	_, err = fsc.GetBucketAccess()
+	c.Assert(err, Not(IsNil))
 }
 
 func (s *MySuite) TestPut(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, perr := fs.New(objectPath)
-	c.Assert(perr, IsNil)
+	fsc, err := fs.New(objectPath)
+	c.Assert(err, IsNil)
 
 	data := "hello"
 	dataLen := len(data)
 
-	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
+	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
 }
 
 func (s *MySuite) TestGet(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, perr := fs.New(objectPath)
-	c.Assert(perr, IsNil)
+	fsc, err := fs.New(objectPath)
+	c.Assert(err, IsNil)
 
 	data := "hello"
 	dataLen := len(data)
 
-	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
-
-	reader, size, perr := fsc.Get(0, 0)
-	c.Assert(perr, IsNil)
-	var results bytes.Buffer
-	_, err = io.CopyN(&results, reader, int64(size))
+	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
+
+	reader, size, err := fsc.Get(0, 0)
+	c.Assert(err, IsNil)
+	var results bytes.Buffer
+	_, e = io.CopyN(&results, reader, int64(size))
+	c.Assert(e, IsNil)
 	c.Assert([]byte(data), DeepEquals, results.Bytes())
 
 }
 
 func (s *MySuite) TestGetRange(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, perr := fs.New(objectPath)
-	c.Assert(perr, IsNil)
+	fsc, err := fs.New(objectPath)
+	c.Assert(err, IsNil)
 
 	data := "hello world"
 	dataLen := len(data)
 
-	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
-
-	reader, size, perr := fsc.Get(0, 5)
-	c.Assert(perr, IsNil)
-	var results bytes.Buffer
-	_, err = io.CopyN(&results, reader, int64(size))
+	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
+
+	reader, size, err := fsc.Get(0, 5)
+	c.Assert(err, IsNil)
+	var results bytes.Buffer
+	_, e = io.CopyN(&results, reader, int64(size))
+	c.Assert(e, IsNil)
 	c.Assert([]byte("hello"), DeepEquals, results.Bytes())
 }
 
 func (s *MySuite) TestStatObject(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "fs-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsc, perr := fs.New(objectPath)
-	c.Assert(perr, IsNil)
+	fsc, err := fs.New(objectPath)
+	c.Assert(err, IsNil)
 
 	data := "hello"
 	dataLen := len(data)
 
-	perr = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
+	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	c.Assert(err, IsNil)
 
-	content, perr := fsc.Stat()
-	c.Assert(perr, IsNil)
+	content, err := fsc.Stat()
+	c.Assert(err, IsNil)
 	c.Assert(content.Size, Equals, int64(dataLen))
 }

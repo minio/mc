@@ -30,20 +30,20 @@ import (
 
 func (s *TestSuite) TestRemove(c *C) {
 	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
+	root, e := ioutil.TempDir(os.TempDir(), "cmd-")
+	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object1")
 	data := "hello"
 	dataLen := len(data)
 
-	var perr *probe.Error
-	perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(perr, IsNil)
-
-	err = app.Run([]string{os.Args[0], "rm", objectPath})
+	var err *probe.Error
+	err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
+
+	e = app.Run([]string{os.Args[0], "rm", objectPath})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsError, Equals, false)
 
 	// reset back
@@ -53,22 +53,22 @@ func (s *TestSuite) TestRemove(c *C) {
 		objectPath := filepath.Join(root, "object"+strconv.Itoa(i))
 		data := "hello"
 		dataLen := len(data)
-		perr = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(perr, IsNil)
+		err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+		c.Assert(err, IsNil)
 	}
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "rm", filepath.Join(root, "...")})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "rm", filepath.Join(root, "...")})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "rm", "--force", filepath.Join(root, "...")})
-	c.Assert(err, IsNil)
+	e = app.Run([]string{os.Args[0], "rm", "--force", filepath.Join(root, "...")})
+	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back

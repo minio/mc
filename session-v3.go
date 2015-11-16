@@ -151,11 +151,11 @@ func newSessionV3() *sessionV3 {
 	s.mutex = new(sync.Mutex)
 	s.SessionID = newRandomID(8)
 
-	sessionDataFile, perr := getSessionDataFile(s.SessionID)
-	fatalIf(perr.Trace(s.SessionID), "Unable to create session data file \""+sessionDataFile+"\".")
+	sessionDataFile, err := getSessionDataFile(s.SessionID)
+	fatalIf(err.Trace(s.SessionID), "Unable to create session data file \""+sessionDataFile+"\".")
 
-	dataFile, err := os.Create(sessionDataFile)
-	fatalIf(probe.NewError(err), "Unable to create session data file \""+sessionDataFile+"\".")
+	dataFile, e := os.Create(sessionDataFile)
+	fatalIf(probe.NewError(e), "Unable to create session data file \""+sessionDataFile+"\".")
 
 	s.DataFP = &sessionDataFP{false, dataFile}
 	return s

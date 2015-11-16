@@ -32,8 +32,8 @@ import (
 // Check if the target URL represents folder. It may or may not exist yet.
 func isTargetURLDir(targetURL string) bool {
 	targetURLParse := client.NewURL(targetURL)
-	_, targetContent, perr := url2Stat(targetURL)
-	if perr != nil {
+	_, targetContent, err := url2Stat(targetURL)
+	if err != nil {
 		if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
 			return false
 		}
