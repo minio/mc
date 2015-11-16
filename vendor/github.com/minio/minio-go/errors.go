@@ -44,6 +44,9 @@ type ErrorResponse struct {
 	Resource  string
 	RequestID string `xml:"RequestId"`
 	HostID    string `xml:"HostId"`
+
+	// This is a new undocumented field
+	AmzBucketRegion string
 }
 
 // ToErrorResponse returns parsed ErrorResponse struct, if input is nil or not ErrorResponse return value is nil

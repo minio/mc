@@ -224,11 +224,12 @@ func (a s3API) getBucketACL(bucket string) (accessControlPolicy, error) {
 	}
 	if policy.AccessControlList.Grant == nil {
 		errorResponse := ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Access control Grant list is empty, please report this at https://github.com/minio/minio-go/issues.",
-			Resource:  separator + bucket,
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
+			Code:            "InternalError",
+			Message:         "Access control Grant list is empty, please report this at https://github.com/minio/minio-go/issues.",
+			Resource:        separator + bucket,
+			RequestID:       resp.Header.Get("x-amz-request-id"),
+			HostID:          resp.Header.Get("x-amz-id-2"),
+			AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 		}
 		return accessControlPolicy{}, errorResponse
 	}
@@ -373,29 +374,41 @@ func (a s3API) headBucket(bucket string) error {
 			// Head has no response body, handle it.
 			var errorResponse ErrorResponse
 			switch resp.StatusCode {
+			case http.StatusMovedPermanently:
+				errorResponse = ErrorResponse{
+					Code:            "PermanentRedirect",
+					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + getEndpoint(resp.Header.Get("x-amz-bucket-region")) + ". Send all future requests to this endpoint.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
+				}
 			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
-					Code:      "NoSuchBucket",
-					Message:   "The specified bucket does not exist.",
-					Resource:  separator + bucket,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            "NoSuchBucket",
+					Message:         "The specified bucket does not exist.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
-					Code:      "AccessDenied",
-					Message:   "Access Denied.",
-					Resource:  separator + bucket,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            "AccessDenied",
+					Message:         "Access Denied.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			default:
 				errorResponse = ErrorResponse{
-					Code:      resp.Status,
-					Message:   resp.Status,
-					Resource:  separator + bucket,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            resp.Status,
+					Message:         resp.Status,
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			}
 			return errorResponse
@@ -438,35 +451,39 @@ func (a s3API) deleteBucket(bucket string) error {
 			switch resp.StatusCode {
 			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
-					Code:      "NoSuchBucket",
-					Message:   "The specified bucket does not exist.",
-					Resource:  separator + bucket,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            "NoSuchBucket",
+					Message:         "The specified bucket does not exist.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
-					Code:      "AccessDenied",
-					Message:   "Access Denied.",
-					Resource:  separator + bucket,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            "AccessDenied",
+					Message:         "Access Denied.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			case http.StatusConflict:
 				errorResponse = ErrorResponse{
-					Code:      "Conflict",
-					Message:   "Bucket not empty.",
-					Resource:  separator + bucket,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            "Conflict",
+					Message:         "Bucket not empty.",
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			default:
 				errorResponse = ErrorResponse{
-					Code:      resp.Status,
-					Message:   resp.Status,
-					Resource:  separator + bucket,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            resp.Status,
+					Message:         resp.Status,
+					Resource:        separator + bucket,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			}
 			return errorResponse
@@ -718,10 +735,11 @@ func (a s3API) getObject(bucket, object string, offset, length int64) (io.ReadCl
 	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	if err != nil {
 		return nil, ObjectStat{}, ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go/issues.",
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
+			Code:            "InternalError",
+			Message:         "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go/issues.",
+			RequestID:       resp.Header.Get("x-amz-request-id"),
+			HostID:          resp.Header.Get("x-amz-id-2"),
+			AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 		}
 	}
 	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
@@ -805,27 +823,30 @@ func (a s3API) headObject(bucket, object string) (ObjectStat, error) {
 			switch resp.StatusCode {
 			case http.StatusNotFound:
 				errorResponse = ErrorResponse{
-					Code:      "NoSuchKey",
-					Message:   "The specified key does not exist.",
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            "NoSuchKey",
+					Message:         "The specified key does not exist.",
+					Resource:        separator + bucket + separator + object,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			case http.StatusForbidden:
 				errorResponse = ErrorResponse{
-					Code:      "AccessDenied",
-					Message:   "Access Denied.",
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            "AccessDenied",
+					Message:         "Access Denied.",
+					Resource:        separator + bucket + separator + object,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 			default:
 				errorResponse = ErrorResponse{
-					Code:      resp.Status,
-					Message:   resp.Status,
-					Resource:  separator + bucket + separator + object,
-					RequestID: resp.Header.Get("x-amz-request-id"),
-					HostID:    resp.Header.Get("x-amz-id-2"),
+					Code:            resp.Status,
+					Message:         resp.Status,
+					Resource:        separator + bucket + separator + object,
+					RequestID:       resp.Header.Get("x-amz-request-id"),
+					HostID:          resp.Header.Get("x-amz-id-2"),
+					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 				}
 
 			}
@@ -836,19 +857,21 @@ func (a s3API) headObject(bucket, object string) (ObjectStat, error) {
 	size, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
 		return ObjectStat{}, ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go/issues.",
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
+			Code:            "InternalError",
+			Message:         "Content-Length not recognized, please report this issue at https://github.com/minio/minio-go/issues.",
+			RequestID:       resp.Header.Get("x-amz-request-id"),
+			HostID:          resp.Header.Get("x-amz-id-2"),
+			AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 		}
 	}
 	date, err := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	if err != nil {
 		return ObjectStat{}, ErrorResponse{
-			Code:      "InternalError",
-			Message:   "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go/issues.",
-			RequestID: resp.Header.Get("x-amz-request-id"),
-			HostID:    resp.Header.Get("x-amz-id-2"),
+			Code:            "InternalError",
+			Message:         "Last-Modified time format not recognized, please report this issue at https://github.com/minio/minio-go/issues.",
+			RequestID:       resp.Header.Get("x-amz-request-id"),
+			HostID:          resp.Header.Get("x-amz-id-2"),
+			AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 		}
 	}
 	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
@@ -892,10 +915,11 @@ func (a s3API) listBuckets() (listAllMyBucketsResult, error) {
 		// for un-authenticated requests, amazon sends a redirect handle it.
 		if resp.StatusCode == http.StatusTemporaryRedirect {
 			return listAllMyBucketsResult{}, ErrorResponse{
-				Code:      "AccessDenied",
-				Message:   "Anonymous access is forbidden for this operation.",
-				RequestID: resp.Header.Get("x-amz-request-id"),
-				HostID:    resp.Header.Get("x-amz-id-2"),
+				Code:            "AccessDenied",
+				Message:         "Anonymous access is forbidden for this operation.",
+				RequestID:       resp.Header.Get("x-amz-request-id"),
+				HostID:          resp.Header.Get("x-amz-id-2"),
+				AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
 			}
 		}
 		if resp.StatusCode != http.StatusOK {

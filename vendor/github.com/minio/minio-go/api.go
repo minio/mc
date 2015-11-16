@@ -120,6 +120,16 @@ func getRegion(host string) (region string) {
 	return "milkyway"
 }
 
+// getEndpoint returns a endpoint based on its region.
+func getEndpoint(region string) (endpoint string) {
+	for h, r := range regions {
+		if r == region {
+			return h
+		}
+	}
+	return "s3.amazonaws.com"
+}
+
 // SignatureType is type of Authorization requested for a given HTTP request.
 type SignatureType int
 
@@ -169,10 +179,10 @@ type Config struct {
 	// certs which are not part of standard certificate authority follow this
 	// example:-
 	//
-	//  tr := &http.Transport{
-	//          TLSClientConfig:    &tls.Config{RootCAs: pool},
-	//          DisableCompression: true,
-	//  }
+	//   tr := &http.Transport{
+	//           TLSClientConfig:    &tls.Config{RootCAs: pool},
+	//           DisableCompression: true,
+	//   }
 	//
 	Transport http.RoundTripper
 
@@ -251,7 +261,7 @@ func (c *Config) setBucketRegion() {
 	return
 }
 
-// Construct final endpoint based on region, bucket and scheme
+// setEndpoint - construct final endpoint based on region, bucket and scheme
 func (c *Config) setEndpoint(region, bucket, scheme string) {
 	var host string
 	for k, v := range regions {
@@ -259,7 +269,7 @@ func (c *Config) setEndpoint(region, bucket, scheme string) {
 			host = k
 		}
 	}
-	// Construct the new URL endpoint based on the region.
+	// construct the new URL endpoint based on the region.
 	newURL := new(url.URL)
 	newURL.Host = bucket + "." + host
 	newURL.Scheme = scheme
@@ -327,9 +337,8 @@ func (a API) PresignedPostPolicy(p *PostPolicy) (map[string]string, error) {
 
 /// Object operations.
 
-/// Expires maximum is 7days - ie. 604800 and minimum is 1.
-
 // PresignedPutObject get a presigned URL to upload an object.
+// Expires maximum is 7days - ie. 604800 and minimum is 1.
 func (a API) PresignedPutObject(bucket, object string, expires time.Duration) (string, error) {
 	expireSeconds := int64(expires / time.Second)
 	if expireSeconds < 1 || expireSeconds > 604800 {
@@ -640,11 +649,11 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 //
 // You must have WRITE permissions on a bucket to create an object.
 //
-// - For size lesser than 5MB PutObject automatically does single Put operation.
-// - For size equal to 0Bytes PutObject automatically does single Put operation.
-// - For size larger than 5MB PutObject automatically does resumable multipart operation.
-// - For size input as -1 PutObject treats it as a stream and does multipart operation until
-//   input stream reaches EOF.
+//  - For size lesser than 5MB PutObject automatically does single Put operation.
+//  - For size equal to 0Bytes PutObject automatically does single Put operation.
+//  - For size larger than 5MB PutObject automatically does resumable multipart operation.
+//  - For size input as -1 PutObject treats it as a stream and does multipart operation until
+//    input stream reaches EOF.
 //
 // NOTE: if you are using Google Cloud Storage. Then there is no resumable multipart
 // upload support yet. Currently PutObject will behave like a single PUT operation and would
@@ -1134,8 +1143,7 @@ func (a API) listBucketsInRoutine(ch chan<- BucketStatCh) {
 
 // ListBuckets list of all buckets owned by the authenticated sender of the request.
 //
-//   This call requires explicit authentication, no anonymous
-//   requests are allowed for listing buckets
+// This call requires explicit authentication, no anonymous requests are allowed for listing buckets.
 //
 //   api := client.New(....)
 //   for message := range api.ListBuckets() {
@@ -1197,8 +1205,8 @@ func (a API) removeIncompleteUploadInRoutine(bucket, object string, errorCh chan
 	}
 }
 
-// RemoveIncompleteUpload - abort a specific in progress active multipart upload
-//   requires explicit authentication, no anonymous requests are allowed for multipart API
+// RemoveIncompleteUpload - abort a specific in progress active multipart upload.
+// Requires explicit authentication, no anonymous requests are allowed for multipart API.
 func (a API) RemoveIncompleteUpload(bucket, object string) <-chan error {
 	errorCh := make(chan error)
 	go a.removeIncompleteUploadInRoutine(bucket, object, errorCh)
