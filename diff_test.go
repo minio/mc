@@ -28,33 +28,6 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *TestSuite) TestDiffObjects(c *C) {
-	/// filesystem
-	root1, e := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(e, IsNil)
-	defer os.RemoveAll(root1)
-
-	root2, e := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(e, IsNil)
-	defer os.RemoveAll(root2)
-
-	objectPath1 := filepath.Join(root1, "object1")
-	data := "hello"
-	dataLen := len(data)
-	err := putTarget(objectPath1, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
-
-	objectPath2 := filepath.Join(root2, "object1")
-	data = "hello"
-	dataLen = len(data)
-	err = putTarget(objectPath2, int64(dataLen), bytes.NewReader([]byte(data)))
-	c.Assert(err, IsNil)
-
-	for diff := range doDiffMain(objectPath1, objectPath2, false) {
-		c.Assert(diff.Error, IsNil)
-	}
-}
-
 func (s *TestSuite) TestDiffDirs(c *C) {
 	/// filesystem
 	root1, e := ioutil.TempDir(os.TempDir(), "cmd-")
@@ -94,12 +67,7 @@ func (s *TestSuite) TestDiffDirs(c *C) {
 		c.Assert(err, IsNil)
 	}
 
-	// non-recursive
-	for diff := range doDiffMain(root1, root2, false) {
-		c.Assert(diff.Error, IsNil)
-	}
-	// recursive
-	for diff := range doDiffMain(root1, root2, true) {
+	for diff := range doDiffMain(root1, root2) {
 		c.Assert(diff.Error, IsNil)
 	}
 }
@@ -108,20 +76,6 @@ func (s *TestSuite) TestDiffContext(c *C) {
 	err := app.Run([]string{os.Args[0], "diff", server.URL + "/bucket", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
-
-	// reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "diff", server.URL + "/bucket...", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
-
-	// reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "diff", server.URL + "/invalid", server.URL + "/invalid..."})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false
