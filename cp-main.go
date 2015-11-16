@@ -261,11 +261,14 @@ func doCopySession(session *sessionV3) {
 			select {
 			case cpURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
-					if !globalQuietFlag && !globalJSONFlag {
-						progressReader.(*barSend).Finish()
-					} else {
-						console.Println(console.Colorize("Copy", progressReader.(*accounter).Finish()))
+					if globalJSONFlag {
+						return
 					}
+					if globalQuietFlag {
+						console.Println(console.Colorize("Copy", progressReader.(*accounter).Finish()))
+						return
+					}
+					progressReader.(*barSend).Finish()
 					return
 				}
 				if cpURLs.Error == nil {
