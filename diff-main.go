@@ -32,7 +32,7 @@ import (
 var diffCmd = cli.Command{
 	Name:        "diff",
 	Usage:       "Compute differences between two folders.",
-	Description: "NOTE: This command *DOES NOT* check for content similarity, which means objects with same size, but different content will not be spotted.",
+	Description: "Diff only lists missing objects or objects with size differences. It *DOES NOT* compare contents. i.e. Objects of same name and size, but differ in contents are not noticed.",
 	Action:      mainDiff,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -40,12 +40,15 @@ var diffCmd = cli.Command{
 USAGE:
    mc {{.Name}} FIRST SECOND
 
-EXAMPLES:
-   1. Compare two different folders on a local filesystem.
-      $ mc {{.Name}} ~/Photos /Media/Backup/Photos
+DESCRIPTION:
+   {{.Description}}
 
-   2. Compare a local folder with a folder on cloud storage.
+EXAMPLES:
+   1. Compare a local folder with a folder on Amazon S3 cloud storage.
       $ mc {{.Name}} ~/Photos https://s3.amazonaws.com/MyBucket/Photos
+
+   2. Compare two different folders on a local filesystem.
+      $ mc {{.Name}} ~/Photos /Media/Backup/Photos
 `,
 }
 
@@ -154,7 +157,7 @@ func doDiffMain(firstURL, secondURL string) <-chan diffMessage {
 func mainDiff(ctx *cli.Context) {
 	checkDiffSyntax(ctx)
 
-	// Additional command speific theme customization.
+	// Additional command specific theme customization.
 	console.SetColor("DiffMessage", color.New(color.FgGreen, color.Bold))
 	console.SetColor("DiffOnlyInFirst", color.New(color.FgRed, color.Bold))
 	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
@@ -169,17 +172,17 @@ func mainDiff(ctx *cli.Context) {
 
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
-		fatalIf(err.Trace(), fmt.Sprintf("Unable to stat '%s'", firstURL))
+		fatalIf(err.Trace(), fmt.Sprintf("Unable to stat '%s'.", firstURL))
 	}
 	if !firstContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("‘%s’ is not a folder", firstURL))
+		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("‘%s’ is not a folder.", firstURL))
 	}
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
-		fatalIf(err.Trace(), fmt.Sprintf("Unable to stat '%s'", secondURL))
+		fatalIf(err.Trace(), fmt.Sprintf("Unable to stat '%s'.", secondURL))
 	}
 	if !secondContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("‘%s’ is not a folder", secondURL))
+		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
 	}
 
 	for diff := range doDiffMain(firstURL, secondURL) {
