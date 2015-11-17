@@ -132,35 +132,32 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}
-	for contentCh := range clnt.List(isRecursive, isIncomplete) {
-		if contentCh.Err != nil {
-			switch contentCh.Err.ToGoError().(type) {
+	for content := range clnt.List(isRecursive, isIncomplete) {
+		if content.Err != nil {
+			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
 			case client.BrokenSymlink:
-				errorIf(contentCh.Err.Trace(), "Unable to list broken link.")
+				errorIf(content.Err.Trace(), "Unable to list broken link.")
 				continue
 			case client.TooManyLevelsSymlink:
-				errorIf(contentCh.Err.Trace(), "Unable to list too many levels link.")
+				errorIf(content.Err.Trace(), "Unable to list too many levels link.")
 				continue
 			case client.PathNotFound:
-				errorIf(contentCh.Err.Trace(), "Unable to list folder.")
+				errorIf(content.Err.Trace(), "Unable to list folder.")
 				continue
 			case client.PathInsufficientPermission:
-				errorIf(contentCh.Err.Trace(), "Unable to list folder.")
+				errorIf(content.Err.Trace(), "Unable to list folder.")
 				continue
 			}
-			err = contentCh.Err.Trace()
-			break
+			errorIf(content.Err.Trace(), "Unable to list folder.")
+			continue
 		}
 		// trim incoming content based on if its recursive or not.
-		trimmedContent := trimContent(parentContentDir, contentCh.Content)
+		trimmedContent := trimContent(parentContentDir, content)
 		// parse trimmed content into printable form.
 		parsedContent := parseContent(trimmedContent)
 		// print colorized or jsonized content info.
 		printMsg(parsedContent)
-	}
-	if err != nil {
-		return err.Trace()
 	}
 	return nil
 }

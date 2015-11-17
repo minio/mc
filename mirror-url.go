@@ -131,13 +131,13 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 			mirrorURLsCh <- mirrorURLs{Error: sourceContent.Err.Trace()}
 			continue
 		}
-		if sourceContent.Content.Type.IsDir() {
+		if sourceContent.Type.IsDir() {
 			continue
 		}
-		suffix := strings.TrimPrefix(sourceContent.Content.URL.String(), sourceURL)
+		suffix := strings.TrimPrefix(sourceContent.URL.String(), sourceURL)
 		targetContents := []*client.Content{}
 		for i, difference := range objectDifferenceArray {
-			differ, err := difference(suffix, sourceContent.Content.Type, sourceContent.Content.Size)
+			differ, err := difference(suffix, sourceContent.Type, sourceContent.Size)
 			if err != nil {
 				mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
 				continue
@@ -152,7 +152,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 			}
 			if differ == differSize && !mirrorIsForce {
 				// size differs and force not set
-				mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(sourceContent.Content.URL.String())}
+				mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(sourceContent.URL.String())}
 				continue
 			}
 			// either available only in source or size differs and force is set
@@ -162,7 +162,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 		}
 		if len(targetContents) > 0 {
 			mirrorURLsCh <- mirrorURLs{
-				SourceContent:  sourceContent.Content,
+				SourceContent:  sourceContent,
 				TargetContents: targetContents,
 			}
 		}

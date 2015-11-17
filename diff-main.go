@@ -134,11 +134,11 @@ func doDiffMain(firstURL, secondURL string) <-chan diffMessage {
 				ch <- diffMessage{Error: sourceContent.Err.Trace()}
 				continue
 			}
-			if sourceContent.Content.Type.IsDir() {
+			if sourceContent.Type.IsDir() {
 				continue
 			}
-			suffix := strings.TrimPrefix(sourceContent.Content.URL.String(), firstURL)
-			differ, err := difference(suffix, sourceContent.Content.Type, sourceContent.Content.Size)
+			suffix := strings.TrimPrefix(sourceContent.URL.String(), firstURL)
+			differ, err := difference(suffix, sourceContent.Type, sourceContent.Size)
 			if err != nil {
 				ch <- diffMessage{Error: err.Trace()}
 				continue
@@ -147,7 +147,7 @@ func doDiffMain(firstURL, secondURL string) <-chan diffMessage {
 				continue
 			}
 			ch <- diffMessage{
-				FirstURL:  sourceContent.Content.URL.String(),
+				FirstURL:  sourceContent.URL.String(),
 				SecondURL: urlJoinPath(secondURL, suffix),
 				Diff:      differ,
 			}

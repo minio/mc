@@ -135,18 +135,16 @@ func checkRmSyntax(ctx *cli.Context) {
 }
 
 // Remove a single object.
-func rm(url string, isIncomplete bool) {
+func rm(url string, isIncomplete bool) *probe.Error {
 	clnt, err := url2Client(url)
 	if err != nil {
-		errorIf(err.Trace(url), "Invalid URL ‘"+url+"’.")
-		return
+		return err.Trace(url)
 	}
 
 	if err = clnt.Remove(isIncomplete); err != nil {
-		fatalIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
+		return err.Trace(url)
 	}
-
-	printMsg(rmMessage{url})
+	return nil
 }
 
 // Remove all objects recursively.
@@ -164,9 +162,9 @@ func rmAll(url string, isIncomplete bool) {
 			return // End of journey.
 		}
 
-		if entry.Content.Type.IsDir() {
+		if entry.Type.IsDir() {
 			// Add separator at the end to remove all its contents.
-			url := entry.Content.URL.String()
+			url := entry.URL.String()
 			u := client.NewURL(url)
 			url = url + string(u.Separator)
 
@@ -174,7 +172,12 @@ func rmAll(url string, isIncomplete bool) {
 			rmAll(url, isIncomplete)
 		}
 		// Regular type.
-		rm(entry.Content.URL.String(), isIncomplete)
+		err := rm(entry.URL.String(), isIncomplete)
+		if err != nil {
+			errorIf(err.Trace(entry.URL.String()), "Unable to remove ‘"+entry.URL.String()+"’.")
+			continue
+		}
+		printMsg(rmMessage{entry.URL.String()})
 	}
 }
 
@@ -220,11 +223,21 @@ func mainRm(ctx *cli.Context) {
 			rmAll(url, isIncomplete)
 			if removeTopFolder {
 				// Remove top folder as well.
-				rm(url, isIncomplete)
+				err := rm(url, isIncomplete)
+				if err != nil {
+					errorIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
+					continue
+				}
+				printMsg(rmMessage{url})
 			}
 
 		} else {
-			rm(url, isIncomplete)
+			err := rm(url, isIncomplete)
+			if err != nil {
+				errorIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
+				continue
+			}
+			printMsg(rmMessage{url})
 		}
 	}
 }

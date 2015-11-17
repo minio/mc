@@ -93,7 +93,7 @@ func url2DirContent(urlStr string) (content *client.Content, err *probe.Error) {
 		if entry.Err != nil {
 			return nil, entry.Err.Trace(urlStr)
 		}
-		if strings.HasPrefix(entry.Content.URL.Path, clnt.GetURL().Path) {
+		if strings.HasPrefix(entry.URL.Path, clnt.GetURL().Path) {
 			content := new(client.Content)
 			content.URL = clnt.GetURL()
 			content.Type = os.ModeDir
