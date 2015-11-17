@@ -91,7 +91,6 @@ func (b barSend) Finish() {
 	defer close(b.opCh)
 	b.opCh <- barMsg{Op: pbBarFinish}
 	<-b.finishCh
-	console.Println()
 }
 
 func cursorAnimate() <-chan rune {
