@@ -45,68 +45,53 @@ func (s *TestSuite) TestMbAndAccess(c *C) {
 }
 
 func (s *TestSuite) TestMBContext(c *C) {
-	console.IsExited = false
-
 	err := app.Run([]string{os.Args[0], "mb", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
+	c.Assert(console.IsError, Equals, false)
 
 	// reset back
-	console.IsExited = false
+	console.IsError = false
 
 	err = app.Run([]string{os.Args[0], "mb", server.URL + "/$.bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
+	c.Assert(console.IsError, Equals, true)
 
 	// reset back
-	console.IsExited = false
+	console.IsError = false
 }
 
 func (s *TestSuite) TestAccessContext(c *C) {
-	console.IsExited = false
-
 	err := app.Run([]string{os.Args[0], "access", "set", "private", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
+	c.Assert(console.IsError, Equals, false)
 
 	// reset back
-	console.IsExited = false
+	console.IsError = false
 
 	err = app.Run([]string{os.Args[0], "access", "set", "public", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
+	c.Assert(console.IsError, Equals, false)
 
 	// reset back
-	console.IsExited = false
+	console.IsError = false
 
 	err = app.Run([]string{os.Args[0], "access", "set", "readonly", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
+	c.Assert(console.IsError, Equals, false)
 
 	// reset back
-	console.IsExited = false
+	console.IsError = false
 
 	err = app.Run([]string{os.Args[0], "access", "set", "authorized", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
+	c.Assert(console.IsError, Equals, false)
 
 	// reset back
-	console.IsExited = false
+	console.IsError = false
 
 	err = app.Run([]string{os.Args[0], "access", "set", "invalid", server.URL + "/bucket"})
 	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-	// reset back
-	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "access", "get", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
-	// reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "access", "get", server.URL + "/invalid"})
-	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 	// reset back
 	console.IsExited = false

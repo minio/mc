@@ -114,6 +114,9 @@ func mainList(ctx *cli.Context) {
 		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
 		err = doList(clnt, isURLRecursive(targetURL), isIncomplete)
-		fatalIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
+		if err != nil {
+			errorIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
+			continue
+		}
 	}
 }

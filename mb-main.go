@@ -107,7 +107,12 @@ func mainMakeBucket(ctx *cli.Context) {
 		fatalIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
 
 		// Make bucket.
-		fatalIf(clnt.MakeBucket().Trace(), "Unable to make bucket ‘"+targetURL+"’.")
+		err = clnt.MakeBucket()
+		// Upon error print error and continue.
+		if err != nil {
+			errorIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+			continue
+		}
 
 		// Successfully created a bucket.
 		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
