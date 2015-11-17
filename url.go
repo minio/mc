@@ -87,12 +87,6 @@ func url2DirContent(urlStr string) (content *client.Content, err *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(urlStr)
 	}
-	if clnt.GetURL().Path == string(clnt.GetURL().Separator) || clnt.GetURL().Path == "." {
-		content := new(client.Content)
-		content.URL = clnt.GetURL()
-		content.Type = os.ModeDir
-		return content, nil
-	}
 	isRecursive := false
 	isIncomplete := false
 	for entry := range clnt.List(isRecursive, isIncomplete) {
@@ -106,5 +100,8 @@ func url2DirContent(urlStr string) (content *client.Content, err *probe.Error) {
 			return content, nil
 		}
 	}
-	return nil, errDummy().Trace(urlStr)
+	content = new(client.Content)
+	content.URL = clnt.GetURL()
+	content.Type = os.ModeDir
+	return content, nil
 }
