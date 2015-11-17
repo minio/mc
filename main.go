@@ -34,7 +34,7 @@ var mcHelpTemplate = `NAME:
   {{.Name}} - {{.Usage}}
 
 USAGE:
-  {{.Name}} {{if .Flags}}[GLOBAL FLAGS] {{end}}command{{if .Flags}} [COMMAND FLAGS]{{end}} [ARGUMENTS...]
+  {{.Name}} {{if .Flags}}[FLAGS] {{end}}COMMAND{{if .Flags}} [COMMAND FLAGS]{{end}} [ARGUMENTS...]
 
 COMMANDS:
   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
@@ -141,14 +141,14 @@ func registerApp() *cli.App {
 	registerCmd(lsCmd)      // List contents of a bucket.
 	registerCmd(mbCmd)      // Make a bucket.
 	registerCmd(catCmd)     // Display contents of a file.
-	registerCmd(rmCmd)      // Remove a file or bucket
 	registerCmd(pipeCmd)    // Write contents of stdin to a file.
+	registerCmd(shareCmd)   // Share documents via URL.
 	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
 	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
-	registerCmd(sessionCmd) // Manage sessions for copy and mirror.
-	registerCmd(shareCmd)   // Share documents via URL.
 	registerCmd(diffCmd)    // Computer differences between two files or folders.
+	registerCmd(rmCmd)      // Remove a file or bucket
 	registerCmd(accessCmd)  // Set access permissions.
+	registerCmd(sessionCmd) // Manage sessions for copy and mirror.
 	registerCmd(configCmd)  // Configure minio client.
 	registerCmd(updateCmd)  // Check for new software updates.
 	registerCmd(versionCmd) // Print version.

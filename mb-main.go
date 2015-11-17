@@ -43,7 +43,7 @@ var mbCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} TARGET [TARGET ...]
+   mc {{.Name}} [FLAGS] TARGET [TARGET...]
 
 FLAGS:
   {{range .Flags}}{{.}}

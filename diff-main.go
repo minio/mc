@@ -37,12 +37,15 @@ var diffCmd = cli.Command{
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
-USAGE:
-   mc {{.Name}} FIRST SECOND
-
 DESCRIPTION:
    {{.Description}}
 
+USAGE:
+   mc {{.Name}} [FLAGS] FIRST SECOND
+
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Compare a local folder with a folder on Amazon S3 cloud storage.
       $ mc {{.Name}} ~/Photos https://s3.amazonaws.com/MyBucket/Photos

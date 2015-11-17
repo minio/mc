@@ -47,7 +47,7 @@ var catCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} SOURCE [SOURCE...]
+   mc {{.Name}} [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
   {{range .Flags}}{{.}}

@@ -44,10 +44,16 @@ var configAliasCmd = cli.Command{
    mc config {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc config {{.Name}} OPERATION [ARGS...]
+   mc config {{.Name}} [FLAGS] OPERATION [ARGS...]
 
-   OPERATION = add | list | remove
+OPERATION:
+   remove   Remove a alias.
+   list     List all aliases.
+   add      Add new alias.
 
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Add aliases for Amazon S3.
       $ mc config {{.Name}} add mcloud https://s3.amazonaws.com/miniocloud

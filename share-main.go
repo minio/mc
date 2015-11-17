@@ -47,7 +47,7 @@ var shareCmd = cli.Command{
    {{.Name}} - {{.Usage}}
 
 USAGE:
-   {{.Name}} [COMMAND]
+   {{.Name}} [FLAGS] COMMAND
 
 FLAGS:
   {{range .Flags}}{{.}}
