@@ -27,6 +27,10 @@ import (
 
 // ls specific flags.
 var (
+	lsFlagRecursive = cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "List recursively.",
+	}
 	lsFlagIncomplete = cli.BoolFlag{
 		Name:  "incomplete, I",
 		Usage: "Remove incomplete uploads.",
@@ -42,7 +46,7 @@ var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "List files and folders.",
 	Action: mainList,
-	Flags:  []cli.Flag{lsFlagIncomplete, lsFlagHelp},
+	Flags:  []cli.Flag{lsFlagRecursive, lsFlagIncomplete, lsFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -57,13 +61,13 @@ EXAMPLES:
       $ mc {{.Name}} https://s3.amazonaws.com/
 
    2. List buckets and all its contents from Amazon S3 cloud storage recursively.
-      $ mc {{.Name}} https://s3.amazonaws.com/...
+      $ mc {{.Name}} --recursive https://s3.amazonaws.com/
 
    3. List files recursively on a local filesystem on Microsoft Windows.
-      $ mc {{.Name}} C:\Users\Worf\...
+      $ mc {{.Name}} --recursive C:\Users\Worf\
 
    4. List files with non-English characters on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3/andoria/本...
+      $ mc {{.Name}} s3/andoria/本
 
    5. List folders with space separated names on Amazon S3 cloud storage. 
       $ mc {{.Name}} 's3/miniocloud/Community Files/'
@@ -98,6 +102,7 @@ func mainList(ctx *cli.Context) {
 	checkListSyntax(ctx)
 
 	args := ctx.Args()
+	isRecursive := ctx.Bool("recursive")
 	isIncomplete := ctx.Bool("incomplete")
 
 	// mimic operating system tool behavior
@@ -108,12 +113,11 @@ func mainList(ctx *cli.Context) {
 	targetURLs, err := args2URLs(args.Head())
 	fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
 	for _, targetURL := range targetURLs {
-		// if recursive strip off the "..."
 		var clnt client.Client
-		clnt, err = url2Client(stripRecursiveURL(targetURL))
+		clnt, err = url2Client(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
-		err = doList(clnt, isURLRecursive(targetURL), isIncomplete)
+		err = doList(clnt, isRecursive, isIncomplete)
 		if err != nil {
 			errorIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
 			continue
