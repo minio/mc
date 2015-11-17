@@ -79,7 +79,7 @@ func (s *TestSuite) TestMirror(c *C) {
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "mirror", filepath.Join(source, "..."), target})
+	err = app.Run([]string{os.Args[0], "mirror", source, target})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
