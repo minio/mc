@@ -157,6 +157,9 @@ func (c *s3Client) Put(size int64, data io.Reader) *probe.Error {
 			if errResponse.Code == "MethodNotAllowed" {
 				return probe.NewError(client.ObjectAlreadyExists{Object: object})
 			}
+			if errResponse.Code == "InvalidArgument" {
+				return probe.NewError(client.ObjectMissing{})
+			}
 		}
 		return probe.NewError(err)
 	}
