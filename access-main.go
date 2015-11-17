@@ -163,8 +163,12 @@ func mainAccess(ctx *cli.Context) {
 		for _, arg := range ctx.Args().Tail().Tail() {
 			targetURL := getAliasURL(arg, config.Aliases)
 
-			fatalIf(doSetAccess(targetURL, perms).Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
-
+			err := doSetAccess(targetURL, perms)
+			// Upon error, print and continue.
+			if err != nil {
+				errorIf(err.Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+				continue
+			}
 			printMsg(accessMessage{
 				Operation: "set",
 				Status:    "success",
@@ -176,8 +180,10 @@ func mainAccess(ctx *cli.Context) {
 		for _, arg := range ctx.Args().Tail() {
 			targetURL := getAliasURL(arg, config.Aliases)
 			perms, err := doGetAccess(targetURL)
-			fatalIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")
-
+			if err != nil {
+				errorIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")
+				continue
+			}
 			printMsg(accessMessage{
 				Operation: "get",
 				Status:    "success",
