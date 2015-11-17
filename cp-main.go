@@ -52,7 +52,7 @@ var cpCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} SOURCE [SOURCE...] TARGET
+   mc {{.Name}} [FLAGS] SOURCE [SOURCE...] TARGET
 
 FLAGS:
   {{range .Flags}}{{.}}

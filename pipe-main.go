@@ -41,7 +41,7 @@ var pipeCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [TARGET...]
+   mc {{.Name}} [FLAGS] [TARGET...]
 
 FLAGS:
   {{range .Flags}}{{.}}

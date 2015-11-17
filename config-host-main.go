@@ -32,8 +32,14 @@ var configHostCmd = cli.Command{
 USAGE:
    mc config {{.Name}} OPERATION [ARGS...]
 
-   OPERATION = add | list | remove
+OPERATION:
+   remove   Remove a host.
+   list     list all hosts.
+   add      Add new host.
 
+FLAGS:
+  {{range .Flags}}{{.}}
+  {{end}}
 EXAMPLES:
    1. Add host configuration for a URL, using default signature V4. For security reasons turn off bash history
       $ set +o history

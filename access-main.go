@@ -43,8 +43,8 @@ var accessCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} set PERMISSION TARGET [TARGET ...]
-   mc {{.Name}} get TARGET [TARGET ...]
+   mc {{.Name}} [FLAGS] set PERMISSION TARGET [TARGET ...]
+   mc {{.Name}} [FLAGS] get TARGET [TARGET ...]
 
 PERMISSION:
    Allowed permissions are: [private, readonly, public, authorized].

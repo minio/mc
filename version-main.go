@@ -43,7 +43,7 @@ var versionCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}}
+   mc {{.Name}} [FLAGS]
 
 FLAGS:
   {{range .Flags}}{{.}}

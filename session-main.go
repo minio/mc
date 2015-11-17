@@ -45,9 +45,12 @@ var sessionCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} list
-   mc {{.Name}} resume SESSION-ID
-   mc {{.Name}} clear SESSION-ID
+   mc {{.Name}} [FLAGS] OPERATION [ARG]
+
+OPERATION:
+   resume   Resume a previously saved session.
+   clear    Clear a previously saved session.
+   list     List all previously saved sessions.
 
 SESSION-ID:
    SESSION - Session can either be $SESSION-ID or "all".
