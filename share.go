@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -64,9 +65,12 @@ func (s shareMesssage) String() string {
 	if s.ContentType != "" {
 		msg += console.Colorize("Content-type", fmt.Sprintf("Content-Type: %s\n", s.ContentType))
 	}
-	msg += console.Colorize("Share", fmt.Sprintf("Share: %s\n", s.ShareURL))
 
-	return msg // + "\n" // Separate each entry with a new-line.
+	// Highlight <FILE> specially. "share upload" sub-commands uses this identifier.
+	shareURL := strings.Replace(s.ShareURL, "<FILE>", console.Colorize("File", "<FILE>"), 1)
+	msg += console.Colorize("Share", fmt.Sprintf("Share: %s\n", shareURL))
+
+	return msg
 }
 
 // JSON - JSONified message for scripting.

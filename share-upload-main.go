@@ -23,7 +23,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
@@ -103,18 +102,18 @@ func makeCurlCmd(key string, uploadInfo map[string]string) string {
 	if !isBucketVirtualStyle(URL.Host) {
 		postURL = postURL + uploadInfo["bucket"]
 	}
-	postURL = postURL + " "
+	postURL += " "
 	curlCommand := "curl " + postURL
 	for k, v := range uploadInfo {
 		if k == "key" {
 			key = v
 			continue
 		}
-		curlCommand = curlCommand + fmt.Sprintf("-F %s=%s ", k, v)
+		curlCommand += fmt.Sprintf("-F %s=%s ", k, v)
 	}
-	curlCommand = curlCommand + fmt.Sprintf("-F key=%s ", key) + "-F file=@<FILE> "
-	emphasize := console.Colorize("File", "<FILE>")
-	return strings.Replace(curlCommand, "<FILE>", emphasize, -1)
+	curlCommand += fmt.Sprintf("-F key=%s ", key) // Object name.
+	curlCommand += "-F file=@<FILE>"              // File to upload.
+	return curlCommand
 }
 
 // save shared URL to disk.
