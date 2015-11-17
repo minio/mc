@@ -32,6 +32,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/pb"
 )
 
 var (
@@ -97,8 +98,28 @@ func (c copyMessage) JSON() string {
 	return string(copyMessageBytes)
 }
 
+// copyStatMessage container for copy accounting message
+type copyStatMessage struct {
+	Total       int64
+	Transferred int64
+	Speed       float64
+}
+
+// copyStatMessage copy accounting message
+func (c copyStatMessage) String() string {
+	speedBox := pb.FormatBytes(int64(c.Speed))
+	if speedBox == "" {
+		speedBox = "0 MB"
+	} else {
+		speedBox = speedBox + "/s"
+	}
+	message := fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.FormatBytes(c.Total),
+		pb.FormatBytes(c.Transferred), speedBox)
+	return message
+}
+
 // doCopy - Copy a singe file from source to destination
-func doCopy(cpURLs copyURLs, progressReader interface{}, cpQueue <-chan bool, wg *sync.WaitGroup, statusCh chan<- copyURLs) {
+func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounter, cpQueue <-chan bool, wg *sync.WaitGroup, statusCh chan<- copyURLs) {
 	defer wg.Done() // Notify that this copy routine is done.
 	defer func() {
 		<-cpQueue
@@ -111,13 +132,13 @@ func doCopy(cpURLs copyURLs, progressReader interface{}, cpQueue <-chan bool, wg
 	}
 
 	if !globalQuietFlag && !globalJSONFlag {
-		progressReader.(*barSend).SetCaption(cpURLs.SourceContent.URL.String() + ": ")
+		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
 	reader, length, err := getSource(cpURLs.SourceContent.URL.String())
 	if err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
-			progressReader.(*barSend).ErrorGet(length)
+			progressReader.ErrorGet(length)
 		}
 		cpURLs.Error = err.Trace()
 		statusCh <- cpURLs
@@ -131,16 +152,23 @@ func doCopy(cpURLs copyURLs, progressReader interface{}, cpQueue <-chan bool, wg
 			Target: cpURLs.TargetContent.URL.String(),
 			Length: cpURLs.SourceContent.Size,
 		})
-		newReader = progressReader.(*accounter).NewProxyReader(reader)
+		// No accounting necessary for JSON output.
+		if globalJSONFlag {
+			newReader = reader
+		}
+		// Proxy reader to accounting reader only during quiet mode.
+		if globalQuietFlag {
+			newReader = accountingReader.NewProxyReader(reader)
+		}
 	} else {
 		// set up progress
-		newReader = progressReader.(*barSend).NewProxyReader(reader)
+		newReader = progressReader.NewProxyReader(reader)
 	}
 	defer newReader.Close()
 
 	if err := putTarget(cpURLs.TargetContent.URL.String(), length, newReader); err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
-			progressReader.(*barSend).ErrorPut(length)
+			progressReader.ErrorPut(length)
 		}
 		cpURLs.Error = err.Trace()
 		statusCh <- cpURLs
@@ -152,9 +180,9 @@ func doCopy(cpURLs copyURLs, progressReader interface{}, cpQueue <-chan bool, wg
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cURLs copyURLs, progressReader interface{}) {
+func doCopyFake(cURLs copyURLs, progressReader *barSend) {
 	if !globalQuietFlag && !globalJSONFlag {
-		progressReader.(*barSend).Progress(cURLs.SourceContent.Size)
+		progressReader.Progress(cURLs.SourceContent.Size)
 	}
 }
 
@@ -232,11 +260,13 @@ func doCopySession(session *sessionV3) {
 		doPrepareCopyURLs(session, trapCh)
 	}
 
-	var progressReader interface{}
+	// Enable accounting reader by default.
+	accntReader := newAccounter(session.Header.TotalBytes)
+
+	// Enable progress bar reader only during default mode.
+	var progressReader *barSend
 	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
 		progressReader = newProgressBar(session.Header.TotalBytes)
-	} else {
-		progressReader = newAccounter(session.Header.TotalBytes)
 	}
 
 	// Prepare URL scanner from session data file.
@@ -262,9 +292,16 @@ func doCopySession(session *sessionV3) {
 			case cpURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
 					if !globalQuietFlag && !globalJSONFlag {
-						progressReader.(*barSend).Finish()
-					} else {
-						console.Println(console.Colorize("Copy", progressReader.(*accounter).Finish()))
+						progressReader.Finish()
+					}
+					if globalQuietFlag {
+						accntStat := accntReader.Stat()
+						cpStatMessage := copyStatMessage{
+							Total:       accntStat.Total,
+							Transferred: accntStat.Transferred,
+							Speed:       accntStat.Speed,
+						}
+						console.Println(console.Colorize("Copy", cpStatMessage.String()))
 					}
 					return
 				}
@@ -319,7 +356,7 @@ func doCopySession(session *sessionV3) {
 				// Account for each copy routines we start.
 				copyWg.Add(1)
 				// Do copying in background concurrently.
-				go doCopy(cpURLs, progressReader, cpQueue, copyWg, statusCh)
+				go doCopy(cpURLs, progressReader, accntReader, cpQueue, copyWg, statusCh)
 			}
 		}
 		copyWg.Wait()
