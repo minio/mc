@@ -125,16 +125,23 @@ func (e BrokenSymlink) Error() string {
 	return "Requested file ‘" + e.Path + "’ has broken symlink"
 }
 
-// TooManyLevelsSymlink (ELOOP) - file has too many levels of symlinks
+// TooManyLevelsSymlink (ELOOP) - file has too many levels of symlinks.
 type TooManyLevelsSymlink GenericFileError
 
 func (e TooManyLevelsSymlink) Error() string {
 	return "Requested file ‘" + e.Path + "’ has too many levels of symlinks"
 }
 
-// EmptyPath (EINVAL) - invalid argument
+// EmptyPath (EINVAL) - invalid argument.
 type EmptyPath struct{}
 
 func (e EmptyPath) Error() string {
 	return "Invalid path, path cannot be empty"
+}
+
+// ObjectMissing (EINVAL) - object key missing.
+type ObjectMissing struct{}
+
+func (e ObjectMissing) Error() string {
+	return "Object key is missing, object key cannot be empty"
 }
