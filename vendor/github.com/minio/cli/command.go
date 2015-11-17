@@ -86,7 +86,11 @@ func (c Command) Run(ctx *Context) error {
 	}
 
 	if err != nil {
-		fmt.Fprint(ctx.App.Writer, "Incorrect Usage.\n\n")
+		if len(ctx.Args().Tail()) > 1 {
+			fmt.Fprint(ctx.App.Writer, fmt.Sprintf("Unknown flags. ‘%s’\n\n", strings.Join(ctx.Args().Tail(), ", ")))
+		} else {
+			fmt.Fprint(ctx.App.Writer, fmt.Sprintf("Unknown flag. ‘%s’\n\n", ctx.Args().Tail()[0]))
+		}
 		ShowCommandHelp(ctx, c.Name)
 		fmt.Fprintln(ctx.App.Writer)
 		return err
