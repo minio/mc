@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	"net"
 	"os"
@@ -96,7 +95,7 @@ func (m mirrorMessage) JSON() string {
 }
 
 // doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
-func doMirror(sURLs mirrorURLs, progressReader interface{}, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
+func doMirror(sURLs mirrorURLs, progressReader *barSend, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
 	defer wg.Done() // Notify that this copy routine is done.
 	defer func() {
 		<-mirrorQueueCh
@@ -109,13 +108,13 @@ func doMirror(sURLs mirrorURLs, progressReader interface{}, mirrorQueueCh <-chan
 	}
 
 	if !globalQuietFlag && !globalJSONFlag {
-		progressReader.(*barSend).SetCaption(sURLs.SourceContent.URL.String() + ": ")
+		progressReader.SetCaption(sURLs.SourceContent.URL.String() + ": ")
 	}
 
 	reader, length, err := getSource(sURLs.SourceContent.URL.String())
 	if err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
-			progressReader.(*barSend).ErrorGet(int64(length))
+			progressReader.ErrorGet(int64(length))
 		}
 		sURLs.Error = err.Trace(sURLs.SourceContent.URL.String())
 		statusCh <- sURLs
@@ -127,23 +126,20 @@ func doMirror(sURLs mirrorURLs, progressReader interface{}, mirrorQueueCh <-chan
 		targetURLs = append(targetURLs, targetContent.URL.String())
 	}
 
-	var newReader io.ReadCloser
 	if globalQuietFlag || globalJSONFlag {
 		printMsg(mirrorMessage{
 			Source:  sURLs.SourceContent.URL.String(),
 			Targets: targetURLs,
 		})
-		newReader = progressReader.(*accounter).NewProxyReader(reader)
-	} else {
-		// set up progress
-		newReader = progressReader.(*barSend).NewProxyReader(reader)
 	}
+	// set up progress
+	newReader := progressReader.NewProxyReader(reader)
 	defer newReader.Close()
 
 	err = putTargets(targetURLs, length, newReader)
 	if err != nil {
 		if !globalQuietFlag && !globalJSONFlag {
-			progressReader.(*barSend).ErrorPut(int64(length))
+			progressReader.ErrorPut(int64(length))
 		}
 		sURLs.Error = err.Trace(targetURLs...)
 		statusCh <- sURLs
@@ -155,10 +151,8 @@ func doMirror(sURLs mirrorURLs, progressReader interface{}, mirrorQueueCh <-chan
 }
 
 // doMirrorFake - Perform a fake mirror to update the progress bar appropriately.
-func doMirrorFake(sURLs mirrorURLs, progressReader interface{}) {
-	if !globalDebugFlag && !globalJSONFlag {
-		progressReader.(*barSend).Progress(sURLs.SourceContent.Size)
-	}
+func doMirrorFake(sURLs mirrorURLs, progressReader *barSend) {
+	progressReader.Progress(sURLs.SourceContent.Size)
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
@@ -234,12 +228,7 @@ func doMirrorSession(session *sessionV3) {
 	}
 
 	// Set up progress bar.
-	var progressReader interface{}
-	if !globalQuietFlag && !globalJSONFlag {
-		progressReader = newProgressBar(session.Header.TotalBytes)
-	} else {
-		progressReader = newAccounter(session.Header.TotalBytes)
-	}
+	progressReader := newProgressBar(session.Header.TotalBytes, globalJSONFlag || globalQuietFlag)
 
 	// Prepare URL scanner from session data file.
 	scanner := bufio.NewScanner(session.NewDataReader())
@@ -262,10 +251,13 @@ func doMirrorSession(session *sessionV3) {
 			select {
 			case sURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
-					if !globalQuietFlag && !globalJSONFlag {
-						progressReader.(*barSend).Finish()
-					} else {
-						console.Println(console.Colorize("Mirror", progressReader.(*accounter).Finish()))
+					if globalQuietFlag {
+						console.Println(console.Colorize("Mirror", progressReader.Stats().String()))
+						return
+					}
+					if !globalJSONFlag {
+						progressReader.Finish()
+						return
 					}
 					return
 				}
