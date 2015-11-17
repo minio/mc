@@ -103,7 +103,8 @@ func doShareDownloadURL(targetURL string, recursive bool, expiry time.Duration) 
 
 	// Load previously saved upload-shares. Add new entries and write it back.
 	shareDB := newShareDBV1()
-	err = shareDB.Load(getShareDownloadsFile())
+	shareDownloadsFile := getShareDownloadsFile()
+	err = shareDB.Load(shareDownloadsFile)
 	if err != nil {
 		return err.Trace()
 	}
@@ -114,8 +115,11 @@ func doShareDownloadURL(targetURL string, recursive bool, expiry time.Duration) 
 		if content.Err != nil {
 			return content.Err.Trace(clnt.GetURL().String())
 		}
-
-		objectURL := content.Content.URL.String()
+		// if any incoming directories, we don't need to calculate.
+		if content.Type.IsDir() {
+			continue
+		}
+		objectURL := content.URL.String()
 		newClnt, err := url2Client(objectURL)
 		if err != nil {
 			return err.Trace(objectURL)
@@ -140,7 +144,7 @@ func doShareDownloadURL(targetURL string, recursive bool, expiry time.Duration) 
 	}
 
 	// Save downloads and return.
-	return shareDB.Save(getShareDownloadsFile())
+	return shareDB.Save(shareDownloadsFile)
 }
 
 // main for share download.
@@ -171,6 +175,6 @@ func mainShareDownload(ctx *cli.Context) {
 
 		targetURL := getAliasURL(url, config.Aliases) // Expand alias.
 		err := doShareDownloadURL(targetURL, isRecursive, expiry)
-		fatalIf(err.Trace(targetURL), "Unable to share target ‘"+arg+"’.")
+		errorIf(err.Trace(targetURL), "Unable to share target ‘"+arg+"’.")
 	}
 }

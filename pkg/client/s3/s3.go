@@ -312,11 +312,11 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 /// Bucket API operations
 
 // List - list at delimited path, if not recursive
-func (c *s3Client) List(recursive, incomplete bool) <-chan client.ContentOnChannel {
+func (c *s3Client) List(recursive, incomplete bool) <-chan *client.Content {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	contentCh := make(chan client.ContentOnChannel)
+	contentCh := make(chan *client.Content)
 	if incomplete {
 		if recursive {
 			go c.listIncompleteRecursiveInRoutine(contentCh)
@@ -333,7 +333,7 @@ func (c *s3Client) List(recursive, incomplete bool) <-chan client.ContentOnChann
 	return contentCh
 }
 
-func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChannel) {
+func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
 	// get bucket and object from URL
 	b, o := c.url2BucketAndObject()
@@ -341,17 +341,15 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 	case b == "" && o == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(bucket.Err),
+				contentCh <- &client.Content{
+					Err: probe.NewError(bucket.Err),
 				}
 				return
 			}
 			for object := range c.api.ListIncompleteUploads(bucket.Stat.Name, o, false) {
 				if object.Err != nil {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(object.Err),
+					contentCh <- &client.Content{
+						Err: probe.NewError(object.Err),
 					}
 					return
 				}
@@ -374,18 +372,14 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 					content.Time = object.Stat.Initiated
 					content.Type = os.ModeTemporary
 				}
-				contentCh <- client.ContentOnChannel{
-					Content: content,
-					Err:     nil,
-				}
+				contentCh <- content
 			}
 		}
 	default:
 		for object := range c.api.ListIncompleteUploads(b, o, false) {
 			if object.Err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(object.Err),
+				contentCh <- &client.Content{
+					Err: probe.NewError(object.Err),
 				}
 				return
 			}
@@ -408,15 +402,12 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan client.ContentOnChanne
 				content.Time = object.Stat.Initiated
 				content.Type = os.ModeTemporary
 			}
-			contentCh <- client.ContentOnChannel{
-				Content: content,
-				Err:     nil,
-			}
+			contentCh <- content
 		}
 	}
 }
 
-func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
+func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
 	// get bucket and object from URL
 	b, o := c.url2BucketAndObject()
@@ -424,17 +415,15 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 	case b == "" && o == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(bucket.Err),
+				contentCh <- &client.Content{
+					Err: probe.NewError(bucket.Err),
 				}
 				return
 			}
 			for object := range c.api.ListIncompleteUploads(bucket.Stat.Name, o, true) {
 				if object.Err != nil {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(object.Err),
+					contentCh <- &client.Content{
+						Err: probe.NewError(object.Err),
 					}
 					return
 				}
@@ -445,18 +434,14 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.Initiated
 				content.Type = os.ModeTemporary
-				contentCh <- client.ContentOnChannel{
-					Content: content,
-					Err:     nil,
-				}
+				contentCh <- content
 			}
 		}
 	default:
 		for object := range c.api.ListIncompleteUploads(b, o, true) {
 			if object.Err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(object.Err),
+				contentCh <- &client.Content{
+					Err: probe.NewError(object.Err),
 				}
 				return
 			}
@@ -471,15 +456,12 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan client.Conten
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.Initiated
 			content.Type = os.ModeTemporary
-			contentCh <- client.ContentOnChannel{
-				Content: content,
-				Err:     nil,
-			}
+			contentCh <- content
 		}
 	}
 }
 
-func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
+func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
 	// get bucket and object from URL
 	b, o := c.url2BucketAndObject()
@@ -487,9 +469,8 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 	case b == "" && o == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(bucket.Err),
+				contentCh <- &client.Content{
+					Err: probe.NewError(bucket.Err),
 				}
 				return
 			}
@@ -500,26 +481,19 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 			content.Size = 0
 			content.Time = bucket.Stat.CreationDate
 			content.Type = os.ModeDir
-			contentCh <- client.ContentOnChannel{
-				Content: content,
-				Err:     nil,
-			}
+			contentCh <- content
 		}
 	case b != "" && !strings.HasSuffix(c.hostURL.Path, string(c.hostURL.Separator)) && o == "":
 		err := c.api.BucketExists(b)
 		if err != nil {
-			contentCh <- client.ContentOnChannel{
-				Content: nil,
-				Err:     probe.NewError(err),
+			contentCh <- &client.Content{
+				Err: probe.NewError(err),
 			}
 		}
 		content := new(client.Content)
 		content.URL = *c.hostURL
 		content.Type = os.ModeDir
-		contentCh <- client.ContentOnChannel{
-			Content: content,
-			Err:     nil,
-		}
+		contentCh <- content
 	default:
 		metadata, err := c.api.StatObject(b, o)
 		switch err.(type) {
@@ -529,16 +503,12 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 			content.Time = metadata.LastModified
 			content.Size = metadata.Size
 			content.Type = os.FileMode(0664)
-			contentCh <- client.ContentOnChannel{
-				Content: content,
-				Err:     nil,
-			}
+			contentCh <- content
 		default:
 			for object := range c.api.ListObjects(b, o, false) {
 				if object.Err != nil {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(object.Err),
+					contentCh <- &client.Content{
+						Err: probe.NewError(object.Err),
 					}
 					return
 				}
@@ -561,16 +531,13 @@ func (c *s3Client) listInRoutine(contentCh chan client.ContentOnChannel) {
 					content.Time = object.Stat.LastModified
 					content.Type = os.FileMode(0664)
 				}
-				contentCh <- client.ContentOnChannel{
-					Content: content,
-					Err:     nil,
-				}
+				contentCh <- content
 			}
 		}
 	}
 }
 
-func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
+func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
 	// get bucket and object from URL
 	b, o := c.url2BucketAndObject()
@@ -578,41 +545,41 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	case b == "" && o == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(bucket.Err),
+				contentCh <- &client.Content{
+					Err: probe.NewError(bucket.Err),
 				}
 				return
 			}
+			bucketURL := *c.hostURL
+			bucketURL.Path = filepath.Join(bucketURL.Path, bucket.Stat.Name)
+			contentCh <- &client.Content{
+				URL:  bucketURL,
+				Type: os.ModeDir,
+			}
 			for object := range c.api.ListObjects(bucket.Stat.Name, o, true) {
 				if object.Err != nil {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(object.Err),
+					contentCh <- &client.Content{
+						Err: probe.NewError(object.Err),
 					}
-					return
+					continue
 				}
 				content := new(client.Content)
-				url := *c.hostURL
-				url.Path = filepath.Join(url.Path, bucket.Stat.Name, object.Stat.Key)
-				content.URL = url
+				objectURL := *c.hostURL
+				objectURL.Path = filepath.Join(objectURL.Path, bucket.Stat.Name, object.Stat.Key)
+				content.URL = objectURL
 				content.Size = object.Stat.Size
 				content.Time = object.Stat.LastModified
 				content.Type = os.FileMode(0664)
-				contentCh <- client.ContentOnChannel{
-					Content: content,
-					Err:     nil,
-				}
+				contentCh <- content
 			}
 		}
 	default:
 		for object := range c.api.ListObjects(b, o, true) {
 			if object.Err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(object.Err),
+				contentCh <- &client.Content{
+					Err: probe.NewError(object.Err),
 				}
-				return
+				continue
 			}
 			content := new(client.Content)
 			url := *c.hostURL
@@ -626,10 +593,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			content.Size = object.Stat.Size
 			content.Time = object.Stat.LastModified
 			content.Type = os.FileMode(0664)
-			contentCh <- client.ContentOnChannel{
-				Content: content,
-				Err:     nil,
-			}
+			contentCh <- content
 		}
 	}
 }

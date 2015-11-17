@@ -49,7 +49,7 @@ func objectDifferenceFactory(targetURL string) (objectDifference, *probe.Error) 
 	current := targetURL
 	reachedEOF := false
 	ok := false
-	var content client.ContentOnChannel
+	var content *client.Content
 
 	difference := func(suffix string, srcType os.FileMode, srcSize int64) (string, *probe.Error) {
 		if reachedEOF {
@@ -62,8 +62,8 @@ func objectDifferenceFactory(targetURL string) (objectDifference, *probe.Error) 
 				return differOnlyFirst, nil // not available in the target
 			}
 			if expected == current {
-				tgtType := content.Content.Type
-				tgtSize := content.Content.Size
+				tgtType := content.Type
+				tgtSize := content.Size
 				if srcType.IsRegular() && !tgtType.IsRegular() {
 					// Type differes. Source is never a directory
 					return differType, nil
@@ -75,14 +75,14 @@ func objectDifferenceFactory(targetURL string) (objectDifference, *probe.Error) 
 				return differNone, nil // available in the target
 			}
 			content, ok = <-ch
-			if content.Err != nil {
-				return "", content.Err.Trace()
-			}
 			if !ok {
 				reachedEOF = true
 				return differOnlyFirst, nil
 			}
-			current = content.Content.URL.String()
+			if content.Err != nil {
+				return "", content.Err.Trace()
+			}
+			current = content.URL.String()
 		}
 	}
 	return difference, nil

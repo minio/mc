@@ -61,12 +61,12 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	var contents []*client.Content
-	for contentCh := range fsc.List(false, false) {
-		if contentCh.Err != nil {
-			err = contentCh.Err
+	for content := range fsc.List(false, false) {
+		if content.Err != nil {
+			err = content.Err
 			break
 		}
-		contents = append(contents, contentCh.Content)
+		contents = append(contents, content)
 	}
 	c.Assert(err, IsNil)
 	c.Assert(len(contents), Equals, 1)
@@ -83,12 +83,12 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	contents = nil
-	for contentCh := range fsc.List(false, false) {
-		if contentCh.Err != nil {
-			err = contentCh.Err
+	for content := range fsc.List(false, false) {
+		if content.Err != nil {
+			err = content.Err
 			break
 		}
-		contents = append(contents, contentCh.Content)
+		contents = append(contents, content)
 	}
 	c.Assert(err, IsNil)
 	c.Assert(len(contents), Equals, 1)
@@ -98,12 +98,12 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	contents = nil
-	for contentCh := range fsc.List(true, false) {
-		if contentCh.Err != nil {
-			err = contentCh.Err
+	for content := range fsc.List(true, false) {
+		if content.Err != nil {
+			err = content.Err
 			break
 		}
-		contents = append(contents, contentCh.Content)
+		contents = append(contents, content)
 	}
 
 	c.Assert(err, IsNil)

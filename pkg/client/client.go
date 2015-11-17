@@ -28,7 +28,7 @@ import (
 type Client interface {
 	// Common operations
 	Stat() (content *Content, err *probe.Error)
-	List(recursive, incomplete bool) <-chan ContentOnChannel
+	List(recursive, incomplete bool) <-chan *Content
 
 	// Bucket operations
 	MakeBucket() *probe.Error
@@ -50,18 +50,13 @@ type Client interface {
 	GetURL() URL
 }
 
-// ContentOnChannel - List contents on channel
-type ContentOnChannel struct {
-	Content *Content
-	Err     *probe.Error
-}
-
 // Content container for content metadata
 type Content struct {
 	URL  URL
 	Time time.Time
 	Size int64
 	Type os.FileMode
+	Err  *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html

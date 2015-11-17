@@ -219,8 +219,8 @@ func (f *fsClient) Remove(incomplete bool) *probe.Error {
 }
 
 // List - list files and folders
-func (f *fsClient) List(recursive, incomplete bool) <-chan client.ContentOnChannel {
-	contentCh := make(chan client.ContentOnChannel)
+func (f *fsClient) List(recursive, incomplete bool) <-chan *client.Content {
+	contentCh := make(chan *client.Content)
 	if incomplete {
 		go func() {
 			defer close(contentCh)
@@ -242,7 +242,7 @@ func (b byName) Len() int           { return len(b) }
 func (b byName) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b byName) Less(i, j int) bool { return b[i].Name() < b[j].Name() }
 
-func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
+func (f *fsClient) listInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
 
 	pathURL := *f.PathURL
@@ -253,17 +253,12 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		if _, ok := err.ToGoError().(client.PathNotFound); ok {
 			dir, err := os.Open(filepath.Dir(fpath))
 			if err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(err),
-				}
+				contentCh <- &client.Content{Err: probe.NewError(err)}
+				return
 			}
 			files, err := dir.Readdir(-1)
 			if err != nil {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(err),
-				}
+				contentCh <- &client.Content{Err: probe.NewError(err)}
 				return
 			}
 			// NOTE: This will be slow for large directories.
@@ -273,57 +268,44 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 				if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 					st, err := os.Stat(file)
 					if err != nil {
-						contentCh <- client.ContentOnChannel{
-							Content: nil,
-							Err:     probe.NewError(err),
-						}
+						contentCh <- &client.Content{Err: probe.NewError(err)}
 					}
 					if strings.HasPrefix(file, fpath) {
-						contentCh <- client.ContentOnChannel{
-							Content: &client.Content{
-								URL:  *client.NewURL(file),
-								Time: st.ModTime(),
-								Size: st.Size(),
-								Type: st.Mode(),
-							},
-							Err: nil,
+						contentCh <- &client.Content{
+							URL:  *client.NewURL(file),
+							Time: st.ModTime(),
+							Size: st.Size(),
+							Type: st.Mode(),
+							Err:  nil,
 						}
 						continue
 					}
 				}
 				if strings.HasPrefix(file, fpath) {
-					contentCh <- client.ContentOnChannel{
-						Content: &client.Content{
-							URL:  *client.NewURL(file),
-							Time: fi.ModTime(),
-							Size: fi.Size(),
-							Type: fi.Mode(),
-						},
-						Err: nil,
+					contentCh <- &client.Content{
+						URL:  *client.NewURL(file),
+						Time: fi.ModTime(),
+						Size: fi.Size(),
+						Type: fi.Mode(),
+						Err:  nil,
 					}
 				}
 			}
 			return
 		}
 		// if client.PathNotFound fails we return genuine error back to the caller.
-		contentCh <- client.ContentOnChannel{
-			Content: nil,
-			Err:     err.Trace(fpath),
-		}
+		contentCh <- &client.Content{Err: err.Trace(fpath)}
 		return
 	}
 
 	// if the directory doesn't end with a separator, do not traverse it.
 	if !strings.HasSuffix(fpath, string(pathURL.Separator)) && fst.Mode().IsDir() && fpath != "." {
-		content := &client.Content{
+		contentCh <- &client.Content{
 			URL:  pathURL,
 			Time: fst.ModTime(),
 			Size: fst.Size(),
 			Type: fst.Mode(),
-		}
-		contentCh <- client.ContentOnChannel{
-			Content: content,
-			Err:     nil,
+			Err:  nil,
 		}
 		return
 	}
@@ -337,20 +319,14 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 		// quantities of files
 		dir, err := os.Open(fpath)
 		if err != nil {
-			contentCh <- client.ContentOnChannel{
-				Content: nil,
-				Err:     probe.NewError(err),
-			}
+			contentCh <- &client.Content{Err: probe.NewError(err)}
 			return
 		}
 		defer dir.Close()
 
 		files, err := dir.Readdir(-1)
 		if err != nil {
-			contentCh <- client.ContentOnChannel{
-				Content: nil,
-				Err:     probe.NewError(err),
-			}
+			contentCh <- &client.Content{Err: probe.NewError(err)}
 			return
 		}
 		// NOTE: This will be slow for large directories.
@@ -369,49 +345,40 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 						lfi, lerr := os.Lstat(newPath)
 						if lerr != nil {
 							if os.IsPermission(lerr) {
-								contentCh <- client.ContentOnChannel{
-									Content: nil,
-									Err:     probe.NewError(client.PathInsufficientPermission{Path: newPath}),
+								contentCh <- &client.Content{
+									Err: probe.NewError(client.PathInsufficientPermission{Path: newPath}),
 								}
 								continue
 							}
-							contentCh <- client.ContentOnChannel{
-								Content: nil,
-								Err:     probe.NewError(lerr),
+							contentCh <- &client.Content{
+								Err: probe.NewError(lerr),
 							}
 							continue
 						}
 						pathURL := *f.PathURL
 						pathURL.Path = filepath.Join(pathURL.Path, lfi.Name())
-						contentCh <- client.ContentOnChannel{
-							Content: &client.Content{
-								URL:  pathURL,
-								Time: lfi.ModTime(),
-								Size: lfi.Size(),
-								Type: lfi.Mode(),
-							},
-							Err: probe.NewError(client.PathInsufficientPermission{Path: pathURL.Path}),
+						contentCh <- &client.Content{
+							URL:  pathURL,
+							Time: lfi.ModTime(),
+							Size: lfi.Size(),
+							Type: lfi.Mode(),
+							Err:  probe.NewError(client.PathInsufficientPermission{Path: pathURL.Path}),
 						}
 						continue
 					} else {
-						contentCh <- client.ContentOnChannel{
-							Content: nil,
-							Err:     probe.NewError(err),
-						}
+						contentCh <- &client.Content{Err: probe.NewError(err)}
 						continue
 					}
 				}
 				if os.IsNotExist(err) {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(client.BrokenSymlink{Path: file.Name()}),
+					contentCh <- &client.Content{
+						Err: probe.NewError(client.BrokenSymlink{Path: file.Name()}),
 					}
 					continue
 				}
 				if err != nil {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(err),
+					contentCh <- &client.Content{
+						Err: probe.NewError(err),
 					}
 					continue
 				}
@@ -419,33 +386,27 @@ func (f *fsClient) listInRoutine(contentCh chan client.ContentOnChannel) {
 			if fi.Mode().IsRegular() || fi.Mode().IsDir() {
 				pathURL := *f.PathURL
 				pathURL.Path = filepath.Join(pathURL.Path, fi.Name())
-				content := &client.Content{
+				contentCh <- &client.Content{
 					URL:  pathURL,
 					Time: fi.ModTime(),
 					Size: fi.Size(),
 					Type: fi.Mode(),
-				}
-				contentCh <- client.ContentOnChannel{
-					Content: content,
-					Err:     nil,
+					Err:  nil,
 				}
 			}
 		}
 	default:
-		content := &client.Content{
+		contentCh <- &client.Content{
 			URL:  pathURL,
 			Time: fst.ModTime(),
 			Size: fst.Size(),
 			Type: fst.Mode(),
-		}
-		contentCh <- client.ContentOnChannel{
-			Content: content,
-			Err:     nil,
+			Err:  nil,
 		}
 	}
 }
 
-func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel) {
+func (f *fsClient) listRecursiveInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
 	var dirName string
 	var filePrefix string
@@ -464,26 +425,30 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 		// we should not skip file or directory during two situations: (ex. mc ls /usr/bi...)
 		// 1. when fp is /usr and prefix is /usr/bi
 		// 2. when fp is /usr/bin/subdir and prefix is /usr/bi
-		if !strings.HasPrefix(fp, filePrefix) &&
-			!strings.HasPrefix(filePrefix, fp) {
-			if err == nil {
-				if fi.IsDir() {
-					return ErrSkipDir
+		// 3. Do not check filePrefix if its '.'
+		if filePrefix != "." {
+			if !strings.HasPrefix(fp, filePrefix) &&
+				!strings.HasPrefix(filePrefix, fp) {
+				if err == nil {
+					if fi.IsDir() {
+						return ErrSkipDir
+					}
+					return nil
 				}
-				return nil
 			}
-		}
-
-		// Skip when fp is /usr and prefix is /usr/bi
-		if !strings.HasPrefix(fp, filePrefix) {
-			return nil
+			// Skip when fp is /usr and prefix is /usr/bi
+			// Do not check filePrefix if its '.'
+			if filePrefix != "." {
+				if !strings.HasPrefix(fp, filePrefix) {
+					return nil
+				}
+			}
 		}
 
 		if err != nil {
 			if strings.Contains(err.Error(), "operation not permitted") {
-				contentCh <- client.ContentOnChannel{
-					Content: nil,
-					Err:     probe.NewError(err),
+				contentCh <- &client.Content{
+					Err: probe.NewError(err),
 				}
 				return nil
 			}
@@ -495,27 +460,23 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 					// - which cannot be accessed with regular operations
 					lfi, lerr := os.Lstat(fp)
 					if lerr != nil {
-						contentCh <- client.ContentOnChannel{
-							Content: nil,
-							Err:     probe.NewError(lerr),
+						contentCh <- &client.Content{
+							Err: probe.NewError(lerr),
 						}
 						return nil
 					}
 					pathURL := *f.PathURL
 					pathURL.Path = filepath.Join(pathURL.Path, dirName)
-					contentCh <- client.ContentOnChannel{
-						Content: &client.Content{
-							URL:  pathURL,
-							Time: lfi.ModTime(),
-							Size: lfi.Size(),
-							Type: lfi.Mode(),
-						},
-						Err: probe.NewError(err),
+					contentCh <- &client.Content{
+						URL:  pathURL,
+						Time: lfi.ModTime(),
+						Size: lfi.Size(),
+						Type: lfi.Mode(),
+						Err:  probe.NewError(err),
 					}
 				} else {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(client.PathInsufficientPermission{Path: fp}),
+					contentCh <- &client.Content{
+						Err: probe.NewError(client.PathInsufficientPermission{Path: fp}),
 					}
 				}
 				return nil
@@ -534,48 +495,41 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 						lfi, lerr := os.Lstat(fp)
 						if lerr != nil {
 							if os.IsPermission(lerr) {
-								contentCh <- client.ContentOnChannel{
-									Content: nil,
-									Err:     probe.NewError(client.PathInsufficientPermission{Path: fp}),
+								contentCh <- &client.Content{
+									Err: probe.NewError(client.PathInsufficientPermission{Path: fp}),
 								}
 								return nil
 							}
-							contentCh <- client.ContentOnChannel{
-								Content: nil,
-								Err:     probe.NewError(lerr),
+							contentCh <- &client.Content{
+								Err: probe.NewError(lerr),
 							}
 							return nil
 						}
 						pathURL := *f.PathURL
 						pathURL.Path = filepath.Join(pathURL.Path, dirName)
-						contentCh <- client.ContentOnChannel{
-							Content: &client.Content{
-								URL:  pathURL,
-								Time: lfi.ModTime(),
-								Size: lfi.Size(),
-								Type: lfi.Mode(),
-							},
-							Err: probe.NewError(err),
+						contentCh <- &client.Content{
+							URL:  pathURL,
+							Time: lfi.ModTime(),
+							Size: lfi.Size(),
+							Type: lfi.Mode(),
+							Err:  probe.NewError(err),
 						}
 						return nil
 					}
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(err),
+					contentCh <- &client.Content{
+						Err: probe.NewError(err),
 					}
 					return nil
 				}
 				if os.IsNotExist(err) { // ignore broken symlinks
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(client.BrokenSymlink{Path: fp}),
+					contentCh <- &client.Content{
+						Err: probe.NewError(client.BrokenSymlink{Path: fp}),
 					}
 					return nil
 				}
 				if strings.Contains(err.Error(), "too many levels of symbolic links") {
-					contentCh <- client.ContentOnChannel{
-						Content: nil,
-						Err:     probe.NewError(client.TooManyLevelsSymlink{Path: fp}),
+					contentCh <- &client.Content{
+						Err: probe.NewError(client.TooManyLevelsSymlink{Path: fp}),
 					}
 					return nil
 				}
@@ -583,15 +537,12 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 			}
 		}
 		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
-			content := &client.Content{
+			contentCh <- &client.Content{
 				URL:  *client.NewURL(fp),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 				Type: fi.Mode(),
-			}
-			contentCh <- client.ContentOnChannel{
-				Content: content,
-				Err:     nil,
+				Err:  nil,
 			}
 		}
 		return nil
@@ -614,9 +565,8 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan client.ContentOnChannel
 	}
 	err := Walk(dirName, visitFS)
 	if err != nil {
-		contentCh <- client.ContentOnChannel{
-			Content: nil,
-			Err:     probe.NewError(err),
+		contentCh <- &client.Content{
+			Err: probe.NewError(err),
 		}
 	}
 }
