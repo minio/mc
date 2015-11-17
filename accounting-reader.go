@@ -17,13 +17,10 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/minio/pb"
 )
 
 type accountingReader struct {
@@ -57,19 +54,14 @@ func newAccounter(total int64) *accounter {
 	return acct
 }
 
-func (a *accounter) write(current int64) string {
-	var speedBox string
+func (a *accounter) write(current int64) float64 {
 	fromStart := time.Now().Sub(a.startTime)
 	currentFromStart := current - a.startValue
-
 	if currentFromStart > 0 {
 		speed := float64(currentFromStart) / (float64(fromStart) / float64(time.Second))
-		speedBox = pb.FormatBytes(int64(speed))
+		return speed
 	}
-	if speedBox == "" {
-		speedBox = "0 MB"
-	}
-	return speedBox + "/s"
+	return 0.0
 }
 
 func (a *accounter) writer() {
@@ -84,14 +76,21 @@ func (a *accounter) writer() {
 	}
 }
 
-func (a *accounter) Finish() string {
-	var message string
+type accountStat struct {
+	Total       int64
+	Transferred int64
+	Speed       float64
+}
+
+func (a *accounter) Stat() accountStat {
+	var acntStat accountStat
 	a.finishOnce.Do(func() {
 		close(a.isFinished)
-		message = fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.FormatBytes(a.Total),
-			pb.FormatBytes(a.current), a.write(atomic.LoadInt64(&a.current)))
+		acntStat.Total = a.Total
+		acntStat.Transferred = a.current
+		acntStat.Speed = a.write(atomic.LoadInt64(&a.current))
 	})
-	return message
+	return acntStat
 }
 
 func (a *accounter) Update() {
