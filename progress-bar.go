@@ -23,11 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
-	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/pb"
-	"github.com/olekukonko/ts"
 
 	"github.com/minio/mc/pkg/console"
 )
@@ -62,16 +59,48 @@ type barMsg struct {
 	Arg interface{}
 }
 
+type barStats struct {
+	total       int64
+	transferred int64
+	speed       float64
+}
+
+func (stats barStats) String() string {
+	var speedBox string
+	if stats.speed > 0 {
+		speedBox = pb.FormatBytes(int64(stats.speed))
+	}
+	if speedBox == "" {
+		speedBox = "0 MB"
+	}
+	speedBox = speedBox + "/s"
+	return fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.FormatBytes(stats.total),
+		pb.FormatBytes(stats.transferred), speedBox)
+}
+
 type barSend struct {
-	opCh     chan<- barMsg
-	finishCh <-chan bool
+	opCh        chan<- barMsg
+	finishCh    <-chan bool
+	total       int64
+	transferred int64
+	startTime   time.Time
+}
+
+func (b barSend) Stats() barStats {
+	fromStart := time.Now().Sub(b.startTime)
+	var speed float64
+	if b.transferred > 0 {
+		speed = float64(b.transferred) / (float64(fromStart) / float64(time.Second))
+	}
+	return barStats{b.total, b.transferred, speed}
 }
 
 func (b *barSend) NewProxyReader(r io.ReadCloser) *proxyReader {
 	return &proxyReader{r, b}
 }
 
-func (b barSend) Progress(progress int64) {
+func (b *barSend) Progress(progress int64) {
+	b.transferred = b.transferred + progress
 	b.opCh <- barMsg{Op: pbBarProgress, Arg: progress}
 }
 
@@ -141,7 +170,7 @@ func getFixedWidth(width, percent int) int {
 }
 
 // newProgressBar - instantiate a pbBar.
-func newProgressBar(total int64) *barSend {
+func newProgressBar(total int64, quiet bool) *barSend {
 	// Progress bar speific theme customization.
 	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
 
@@ -156,7 +185,9 @@ func newProgressBar(total int64) *barSend {
 		bar.NotPrint = true
 		bar.ShowSpeed = true
 		bar.Callback = func(s string) {
-			console.Print(console.Colorize("Bar", "\r"+s))
+			if !quiet {
+				console.Print(console.Colorize("Bar", "\r"+s))
+			}
 		}
 		switch runtime.GOOS {
 		case "linux":
@@ -197,53 +228,5 @@ func newProgressBar(total int64) *barSend {
 			}
 		}
 	}(total, cmdCh, finishCh)
-	return &barSend{cmdCh, finishCh}
-}
-
-/******************************** Scan Bar ************************************/
-// fixateScanBar truncates long text to fit within the terminal size.
-func fixateScanBar(text string, width int) string {
-	if len([]rune(text)) > width {
-		// Trim text to fit within the screen
-		trimSize := len([]rune(text)) - width + 3 //"..."
-		if trimSize < len([]rune(text)) {
-			text = "..." + text[trimSize:]
-		}
-	}
-	return text
-}
-
-// Progress bar function report objects being scaned.
-type scanBarFunc func(string)
-
-// scanBarFactory returns a progress bar function to report URL scanning.
-func scanBarFactory() scanBarFunc {
-	prevLineSize := 0
-	prevSource := ""
-	fileCount := 0
-	termSize, err := ts.GetSize()
-	if err != nil {
-		fatalIf(probe.NewError(err), "Unable to get terminal size. Please use --quiet option.")
-	}
-	termWidth := termSize.Col()
-	cursorCh := cursorAnimate()
-
-	return func(source string) {
-		scanPrefix := fmt.Sprintf("[%s] %s ", humanize.Comma(int64(fileCount)), string(<-cursorCh))
-		cmnPrefix := commonPrefix(source, prevSource)
-		eraseLen := prevLineSize - len([]rune(scanPrefix+cmnPrefix))
-		if eraseLen < 1 {
-			eraseLen = 0
-		}
-		if prevLineSize != 0 { // erase previous line
-			console.PrintC("\r" + scanPrefix + cmnPrefix + strings.Repeat(" ", eraseLen))
-		}
-
-		source = fixateScanBar(source, termWidth-len([]rune(scanPrefix))-1)
-		barText := scanPrefix + source
-		console.PrintC("\r" + barText)
-		prevSource = source
-		prevLineSize = len([]rune(barText))
-		fileCount++
-	}
+	return &barSend{cmdCh, finishCh, total, 0, time.Now()}
 }
