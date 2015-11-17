@@ -198,6 +198,10 @@ func consolePrint(tag string, c *color.Color, a ...interface{}) {
 
 	switch tag {
 	case "Debug":
+		// if no arguments are given do not invoke debug printer.
+		if len(a) == 0 {
+			return
+		}
 		output := color.Output
 		color.Output = stderrColoredOutput
 		if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -211,6 +215,10 @@ func consolePrint(tag string, c *color.Color, a ...interface{}) {
 	case "Fatal":
 		fallthrough
 	case "Error":
+		// if no arguments are given do not invoke fatal and error printer.
+		if len(a) == 0 {
+			return
+		}
 		output := color.Output
 		color.Output = stderrColoredOutput
 		if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -222,6 +230,10 @@ func consolePrint(tag string, c *color.Color, a ...interface{}) {
 		}
 		color.Output = output
 	case "Info":
+		// if no arguments are given do not invoke info printer.
+		if len(a) == 0 {
+			return
+		}
 		if isatty.IsTerminal(os.Stdout.Fd()) {
 			c.Print(ProgramName() + ": ")
 			c.Print(a...)
@@ -245,6 +257,10 @@ func consolePrintf(tag string, c *color.Color, format string, a ...interface{}) 
 
 	switch tag {
 	case "Debug":
+		// if no arguments are given do not invoke debug printer.
+		if len(a) == 0 {
+			return
+		}
 		output := color.Output
 		color.Output = stderrColoredOutput
 		if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -258,6 +274,10 @@ func consolePrintf(tag string, c *color.Color, format string, a ...interface{}) 
 	case "Fatal":
 		fallthrough
 	case "Error":
+		// if no arguments are given do not invoke fatal and error printer.
+		if len(a) == 0 {
+			return
+		}
 		output := color.Output
 		color.Output = stderrColoredOutput
 		if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -269,6 +289,10 @@ func consolePrintf(tag string, c *color.Color, format string, a ...interface{}) 
 		}
 		color.Output = output
 	case "Info":
+		// if no arguments are given do not invoke info printer.
+		if len(a) == 0 {
+			return
+		}
 		if isatty.IsTerminal(os.Stdout.Fd()) {
 			c.Print(ProgramName() + ": ")
 			c.Printf(format, a...)
@@ -292,6 +316,10 @@ func consolePrintln(tag string, c *color.Color, a ...interface{}) {
 
 	switch tag {
 	case "Debug":
+		// if no arguments are given do not invoke debug printer.
+		if len(a) == 0 {
+			return
+		}
 		output := color.Output
 		color.Output = stderrColoredOutput
 		if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -305,6 +333,10 @@ func consolePrintln(tag string, c *color.Color, a ...interface{}) {
 	case "Fatal":
 		fallthrough
 	case "Error":
+		// if no arguments are given do not invoke fatal and error printer.
+		if len(a) == 0 {
+			return
+		}
 		output := color.Output
 		color.Output = stderrColoredOutput
 		if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -316,6 +348,10 @@ func consolePrintln(tag string, c *color.Color, a ...interface{}) {
 		}
 		color.Output = output
 	case "Info":
+		// if no arguments are given do not invoke info printer.
+		if len(a) == 0 {
+			return
+		}
 		if isatty.IsTerminal(os.Stdout.Fd()) {
 			c.Print(ProgramName() + ": ")
 			c.Println(a...)
