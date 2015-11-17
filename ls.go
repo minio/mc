@@ -102,21 +102,7 @@ func parseContent(c *client.Content) contentMessage {
 }
 
 // trimContent to fancify the output for directories.
-func trimContent(parentContentDir, childContent *client.Content, recursive bool) *client.Content {
-	if recursive {
-		// If recursive remove the unnecessary parentContentDir prefix. '/', in the beginning.
-		trimmedContent := new(client.Content)
-		trimmedContent = childContent
-		if strings.HasSuffix(parentContentDir.URL.Path, string(parentContentDir.URL.Separator)) {
-			trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, parentContentDir.URL.Path)
-		}
-		if strings.Index(trimmedContent.URL.Path, string(trimmedContent.URL.Separator)) == 0 {
-			if len(trimmedContent.URL.Path) > 0 {
-				trimmedContent.URL.Path = trimmedContent.URL.Path[1:]
-			}
-		}
-		return trimmedContent
-	}
+func trimContent(parentContentDir, childContent *client.Content) *client.Content {
 	// If parentContentDir is a directory, use it to trim the sub-folders.
 	if parentContentDir.Type.IsDir() {
 		// Allocate a new client.Content for trimmed output.
@@ -167,7 +153,7 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 			break
 		}
 		// trim incoming content based on if its recursive or not.
-		trimmedContent := trimContent(parentContentDir, contentCh.Content, isRecursive)
+		trimmedContent := trimContent(parentContentDir, contentCh.Content)
 		// parse trimmed content into printable form.
 		parsedContent := parseContent(trimmedContent)
 		// print colorized or jsonized content info.
