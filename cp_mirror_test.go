@@ -85,14 +85,6 @@ func (s *TestSuite) TestMirror(c *C) {
 
 	// reset back
 	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "mirror", source + "..", filepath.Join(target, "random")})
-	c.Assert(err, IsNil)
-	// in case of invalid arguments both are set
-	c.Assert(console.IsExited, Equals, true)
-
-	// reset back
-	console.IsExited = false
 }
 
 func (s *TestSuite) TestCopy(c *C) {

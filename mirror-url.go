@@ -90,14 +90,6 @@ func checkMirrorSyntax(ctx *cli.Context) {
 				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 			}
 		}
-
-		_, content, err := url2Stat(tgtURL)
-		fatalIf(err.Trace(tgtURL), "Unable to stat target ‘"+tgtURL+"’.")
-		if content != nil {
-			if !content.Type.IsDir() {
-				fatalIf(errInvalidArgument().Trace(), "Target ‘"+tgtURL+"’ is not a folder.")
-			}
-		}
 	}
 }
 
