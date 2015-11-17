@@ -146,12 +146,9 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 
 	srcURL := srcURLs[0]
 	srcURL = stripRecursiveURL(srcURL)
-	_, srcContent, err := url2Stat(srcURL)
+	_, _, err := url2Stat(srcURL)
 	if err != nil && !prefixExists(srcURL) {
 		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
-	}
-	if err == nil && srcContent.Type.IsRegular() { // Ellipses is supported only for folders.
-		fatalIf(errInvalidArgument().Trace(), "Source ‘"+srcURL+"’ is not a folder.")
 	}
 	_, tgtContent, err := url2Stat(tgtURL)
 	// Target exist?.
