@@ -97,7 +97,11 @@ func (a *App) getNewContext(arguments []string) (*Context, error) {
 
 	err := set.Parse(arguments[1:])
 	if err != nil {
-		fmt.Fprintf(a.Writer, "Incorrect Usage.\n\n")
+		if len(arguments[1:]) > 1 {
+			fmt.Fprint(a.Writer, fmt.Sprintf("Unknown flags. ‘%s’\n\n", strings.Join(arguments[1:], ", ")))
+		} else {
+			fmt.Fprint(a.Writer, fmt.Sprintf("Unknown flag. ‘%s’\n\n", strings.Join(arguments[1:], ", ")))
+		}
 		ShowAppHelp(context)
 		fmt.Fprintln(a.Writer)
 		return nil, err
@@ -221,7 +225,11 @@ func (a *App) RunAsSubcommand(ctx *Context) (err error) {
 	}
 
 	if err != nil {
-		fmt.Fprintf(a.Writer, "Incorrect Usage.\n\n")
+		if len(ctx.Args().Tail()) > 1 {
+			fmt.Fprint(a.Writer, fmt.Sprintf("Unknown flags. ‘%s’\n\n", strings.Join(ctx.Args().Tail(), ", ")))
+		} else {
+			fmt.Fprint(a.Writer, fmt.Sprintf("Unknown flag. ‘%s’\n\n", ctx.Args().Tail()[0]))
+		}
 		ShowSubcommandHelp(context)
 		return err
 	}
@@ -263,7 +271,7 @@ func (a *App) RunAsSubcommand(ctx *Context) (err error) {
 		if c != nil {
 			return c.Run(context)
 		}
-		fmt.Fprintf(a.Writer, "Incorrect Usage.\n\n")
+		fmt.Fprint(ctx.App.Writer, fmt.Sprintf("Unknown flag. ‘%s’\n\n", name))
 		ShowSubcommandHelp(context)
 		return errors.New("Command not found")
 	}
