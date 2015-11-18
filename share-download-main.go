@@ -17,8 +17,6 @@
 package main
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -30,6 +28,10 @@ var (
 		Name:  "help, h",
 		Usage: "Help of share download",
 	}
+	shareFlagRecursive = cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "Share all objects recursively.",
+	}
 )
 
 // Share documents via URL.
@@ -37,7 +39,7 @@ var shareDownload = cli.Command{
 	Name:   "download",
 	Usage:  "Generate URLs for download access.",
 	Action: mainShareDownload,
-	Flags:  []cli.Flag{shareFlagExpire, shareFlagDownloadHelp},
+	Flags:  []cli.Flag{shareFlagRecursive, shareFlagExpire, shareFlagDownloadHelp},
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
 
@@ -48,14 +50,17 @@ OPTIONS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Generate URL for sharing, with a default expiry of 7 days.
+   1. Share this object with 7 days default expiry.
       $ mc share {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
-   2. Generate URL for sharing, with an expiry of 10 minutes.
+   2. Share this object with 10 minutes expiry.
       $ mc share {{.Name}} --expire=10m https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
-   3. Generate list of URLs for sharing a folder recursively, with an expiry of 5 days each.
-      $ mc share {{.Name}} --expire=120h https://s3.amazonaws.com/backup...
+   3. Share all objects under this folder with 5 days expiry.
+      $ mc share {{.Name}} --expire=120h https://s3.amazonaws.com/backup/
+
+   4. Share all objects under this folder and all its sub-folders with 5 days expiry.
+      $ mc share {{.Name}} --recursive --expire=120h https://s3.amazonaws.com/backup/
 `,
 }
 
@@ -64,16 +69,6 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 	if !args.Present() {
 		cli.ShowCommandHelpAndExit(ctx, "download", 1) // last argument is exit code.
-	}
-
-	// Validate each argument.
-	for _, arg := range ctx.Args() {
-		if !isURLRecursive(arg) {
-			// Check if any folder arg requires recursive operator.
-			if strings.HasSuffix(arg, "/") {
-				fatalIf(errDummy().Trace(), fmt.Sprintf("To grant access to an entire folder, you may use ‘%s’.", arg+recursiveSeparator))
-			}
-		}
 	}
 
 	// Parse expiry.
@@ -92,10 +87,18 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 	if expiry.Seconds() > 604800 {
 		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
 	}
+
+	for _, arg := range ctx.Args() {
+		config := mustGetMcConfig()
+		url := getAliasURL(arg, config.Aliases) // Expand alias.
+		_, _, err := url2Stat(url)
+		fatalIf(err.Trace(url), "Unable to stat ‘"+arg+"’.")
+	}
+
 }
 
 // doShareURL share files from target
-func doShareDownloadURL(targetURL string, recursive bool, expiry time.Duration) *probe.Error {
+func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration) *probe.Error {
 	clnt, err := url2Client(targetURL)
 	if err != nil {
 		return err.Trace()
@@ -111,7 +114,7 @@ func doShareDownloadURL(targetURL string, recursive bool, expiry time.Duration) 
 
 	// Generate share URL for each target.
 	incomplete := false
-	for content := range clnt.List(recursive, incomplete) {
+	for content := range clnt.List(isRecursive, incomplete) {
 		if content.Err != nil {
 			return content.Err.Trace(clnt.GetURL().String())
 		}
@@ -160,21 +163,17 @@ func mainShareDownload(ctx *cli.Context) {
 
 	// Extract arguments.
 	config := mustGetMcConfig()
+	isRecursive := ctx.Bool("recursive")
+	expiry := shareDefaultExpiry
+	if ctx.String("expire") != "" {
+		var e error
+		expiry, e = time.ParseDuration(ctx.String("expire"))
+		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+ctx.String("expire")+"’.")
+	}
 
-	for _, arg := range ctx.Args() {
-		// if recursive strip off the "..."
-		url := stripRecursiveURL(arg)
-		isRecursive := isURLRecursive(arg)
-		expiry := shareDefaultExpiry
-		expireArg := ctx.String("expire")
-		if expireArg != "" {
-			var e error
-			expiry, e = time.ParseDuration(expireArg)
-			fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
-		}
-
+	for _, url := range ctx.Args() {
 		targetURL := getAliasURL(url, config.Aliases) // Expand alias.
 		err := doShareDownloadURL(targetURL, isRecursive, expiry)
-		errorIf(err.Trace(targetURL), "Unable to share target ‘"+arg+"’.")
+		errorIf(err.Trace(targetURL), "Unable to share target ‘"+url+"’.")
 	}
 }

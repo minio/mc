@@ -68,6 +68,19 @@ func args2URLs(args []string) ([]string, *probe.Error) {
 	return URLs, nil
 }
 
+// url2Client - convenience wrapper for getNewClient
+func url2Client(urlStr string) (client.Client, *probe.Error) {
+	urlConfig, err := getHostConfig(urlStr)
+	if err != nil {
+		return nil, err.Trace(urlStr)
+	}
+	client, err := getNewClient(urlStr, urlConfig)
+	if err != nil {
+		return nil, err.Trace(urlStr)
+	}
+	return client, nil
+}
+
 // url2Stat returns stat info for URL.
 func url2Stat(urlStr string) (client client.Client, content *client.Content, err *probe.Error) {
 	client, err = url2Client(urlStr)
@@ -104,4 +117,21 @@ func url2DirContent(urlStr string) (content *client.Content, err *probe.Error) {
 	content.URL = clnt.GetURL()
 	content.Type = os.ModeDir
 	return content, nil
+}
+
+// Check if object key prefix exists
+func prefixExists(urlStr string) bool {
+	clnt, err := url2Client(urlStr)
+	if err != nil {
+		return false
+	}
+	isRecursive := true
+	isIncomplete := false
+	for entry := range clnt.List(isRecursive, isIncomplete) {
+		if entry.Err != nil {
+			return false
+		}
+		return true
+	}
+	return false
 }

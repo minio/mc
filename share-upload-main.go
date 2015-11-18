@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -67,19 +66,10 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "upload", 1) // last argument is exit code.
 	}
 
-	// Validate each argument.
-	for _, arg := range ctx.Args() {
-		if !isURLRecursive(arg) {
-			// Check if any folder arg requires recursive operator.
-			if strings.HasSuffix(arg, "/") {
-				fatalIf(errDummy().Trace(), fmt.Sprintf("To grant access to an entire folder, you may use ‘%s’.", arg+recursiveSeparator))
-			}
-		}
-	}
-
 	// Parse expiry.
-	expireArg := ctx.String("expire")
+	// isRecursive := ctx.Bool("recursive")
 	expiry := shareDefaultExpiry
+	expireArg := ctx.String("expire")
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
@@ -93,6 +83,14 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 	if expiry.Seconds() > 604800 {
 		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
 	}
+
+	for _, arg := range ctx.Args() {
+		config := mustGetMcConfig()
+		url := getAliasURL(arg, config.Aliases) // Expand alias.
+		_, _, err := url2Stat(url)
+		fatalIf(err.Trace(url), "Unable to stat ‘"+arg+"’.")
+	}
+
 }
 
 // makeCurlCmd constructs curl command-line.
@@ -169,23 +167,20 @@ func mainShareUpload(ctx *cli.Context) {
 	// check input arguments.
 	checkShareUploadSyntax(ctx)
 
-	for _, arg := range ctx.Args() {
-		config := mustGetMcConfig()
-		// if recursive strip off the "..."
-		url := stripRecursiveURL(arg)
-		isRecursive := isURLRecursive(arg)
-		expireArg := ctx.String("expire")
-		expiry := shareDefaultExpiry
-		contentType := ctx.String("content-type")
+	isRecursive := ctx.Bool("recursive")
+	config := mustGetMcConfig()
+	expireArg := ctx.String("expire")
+	expiry := shareDefaultExpiry
+	contentType := ctx.String("content-type")
+	if expireArg != "" {
+		var e error
+		expiry, e = time.ParseDuration(expireArg)
+		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+	}
 
-		if expireArg != "" {
-			var e error
-			expiry, e = time.ParseDuration(expireArg)
-			fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
-		}
-
+	for _, url := range ctx.Args() {
 		targetURL := getAliasURL(url, config.Aliases)
 		err := doShareUploadURL(targetURL, isRecursive, expiry, contentType)
-		fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+arg+"’.")
+		fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+url+"’.")
 	}
 }
