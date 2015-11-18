@@ -113,56 +113,56 @@ func (d diffMessage) JSON() string {
 }
 
 // doDiffMain runs the diff.
-func doDiffMain(firstURL, secondURL string) <-chan diffMessage {
-	ch := make(chan diffMessage, 10000)
-	go func() {
-		defer close(ch)
-		// source and targets are always directories
-		sourceSeparator := string(client.NewURL(firstURL).Separator)
-		if !strings.HasSuffix(firstURL, sourceSeparator) {
-			firstURL = firstURL + sourceSeparator
-		}
-		targetSeparator := string(client.NewURL(secondURL).Separator)
-		if !strings.HasSuffix(secondURL, targetSeparator) {
-			secondURL = secondURL + targetSeparator
-		}
+func doDiffMain(firstURL, secondURL string) {
+	// source and targets are always directories
+	sourceSeparator := string(client.NewURL(firstURL).Separator)
+	if !strings.HasSuffix(firstURL, sourceSeparator) {
+		firstURL = firstURL + sourceSeparator
+	}
+	targetSeparator := string(client.NewURL(secondURL).Separator)
+	if !strings.HasSuffix(secondURL, targetSeparator) {
+		secondURL = secondURL + targetSeparator
+	}
 
-		firstClient, err := url2Client(firstURL)
+	firstClient, err := url2Client(firstURL)
+	if err != nil {
+		fatalIf(err.Trace(firstURL, secondURL), fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
+	}
+	difference, err := objectDifferenceFactory(secondURL)
+	if err != nil {
+		fatalIf(err.Trace(secondURL), fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
+	}
+	isRecursive := true
+	isIncomplete := false
+	for sourceContent := range firstClient.List(isRecursive, isIncomplete) {
+		if sourceContent.Err != nil {
+			switch sourceContent.Err.ToGoError().(type) {
+			// handle this specifically for filesystem related errors.
+			case client.BrokenSymlink, client.TooManyLevelsSymlink, client.PathNotFound, client.PathInsufficientPermission:
+				errorIf(sourceContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
+			default:
+				fatalIf(sourceContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
+			}
+			continue
+		}
+		if sourceContent.Type.IsDir() {
+			continue
+		}
+		suffix := strings.TrimPrefix(sourceContent.URL.String(), firstURL)
+		differ, err := difference(suffix, sourceContent.Type, sourceContent.Size)
 		if err != nil {
-			ch <- diffMessage{Error: err.Trace(firstURL)}
-			return
+			errorIf(sourceContent.Err.Trace(), fmt.Sprintf("Failed on '%s'", urlJoinPath(secondURL, suffix)))
+			continue
 		}
-		difference, err := objectDifferenceFactory(secondURL)
-		if err != nil {
-			ch <- diffMessage{Error: err.Trace(secondURL)}
-			return
+		if differ == differNone {
+			continue
 		}
-		isRecursive := true
-		for sourceContent := range firstClient.List(isRecursive, false) {
-			if sourceContent.Err != nil {
-				ch <- diffMessage{Error: sourceContent.Err.Trace()}
-				continue
-			}
-			if sourceContent.Type.IsDir() {
-				continue
-			}
-			suffix := strings.TrimPrefix(sourceContent.URL.String(), firstURL)
-			differ, err := difference(suffix, sourceContent.Type, sourceContent.Size)
-			if err != nil {
-				ch <- diffMessage{Error: err.Trace()}
-				continue
-			}
-			if differ == differNone {
-				continue
-			}
-			ch <- diffMessage{
-				FirstURL:  sourceContent.URL.String(),
-				SecondURL: urlJoinPath(secondURL, suffix),
-				Diff:      differ,
-			}
-		}
-	}()
-	return ch
+		printMsg(diffMessage{
+			FirstURL:  sourceContent.URL.String(),
+			SecondURL: urlJoinPath(secondURL, suffix),
+			Diff:      differ,
+		})
+	}
 }
 
 // mainDiff main for 'diff'.
@@ -196,19 +196,5 @@ func mainDiff(ctx *cli.Context) {
 	if !secondContent.Type.IsDir() {
 		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
 	}
-
-	for diff := range doDiffMain(firstURL, secondURL) {
-		if diff.Error != nil {
-			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-			if !globalQuietFlag && !globalJSONFlag {
-				console.Eraseline()
-			}
-		}
-		fatalIf(diff.Error.Trace(firstURL, secondURL), "Failed to diff ‘"+firstURL+"’ and ‘"+secondURL+"’.")
-		printMsg(diff)
-	}
-	// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-	if !globalQuietFlag && !globalJSONFlag {
-		console.Eraseline()
-	}
+	doDiffMain(firstURL, secondURL)
 }
