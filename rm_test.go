@@ -60,14 +60,14 @@ func (s *TestSuite) TestRemove(c *C) {
 	// reset back
 	console.IsExited = false
 
-	e = app.Run([]string{os.Args[0], "rm", filepath.Join(root, "...")})
+	e = app.Run([]string{os.Args[0], "rm", "--recursive", root})
 	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
 	// reset back
 	console.IsExited = false
 
-	e = app.Run([]string{os.Args[0], "rm", "--force", filepath.Join(root, "...")})
+	app.Run([]string{os.Args[0], "rm", "--recursive", "--force", root})
 	c.Assert(e, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
