@@ -183,32 +183,3 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 	}
 	return nil, errInitClient(urlStr).Trace()
 }
-
-// url2Client - convenience wrapper for getNewClient
-func url2Client(urlStr string) (client.Client, *probe.Error) {
-	urlConfig, err := getHostConfig(urlStr)
-	if err != nil {
-		return nil, err.Trace(urlStr)
-	}
-	client, err := getNewClient(urlStr, urlConfig)
-	if err != nil {
-		return nil, err.Trace(urlStr)
-	}
-	return client, nil
-}
-
-func prefixExists(urlStr string) bool {
-	clnt, err := url2Client(urlStr)
-	if err != nil {
-		return false
-	}
-	isRecursive := true
-	isIncomplete := false
-	for entry := range clnt.List(isRecursive, isIncomplete) {
-		if entry.Err != nil {
-			return false
-		}
-		return true
-	}
-	return false
-}

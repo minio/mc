@@ -42,7 +42,6 @@ var (
 		Name:  "content-type, T",
 		Usage: "Speific content-type to allow.",
 	}
-
 	shareFlagExpire = cli.StringFlag{
 		Name:  "expire, E",
 		Value: "168h",
