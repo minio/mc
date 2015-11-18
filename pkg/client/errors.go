@@ -27,7 +27,7 @@ type APINotImplemented struct {
 }
 
 func (e APINotImplemented) Error() string {
-	return "‘" + e.API + "’ feature " + "is not implemented for ‘" + e.APIType + "’"
+	return "‘" + e.API + "’ feature " + "is not implemented for ‘" + e.APIType + "’."
 }
 
 // InvalidRange - invalid range requested
@@ -36,7 +36,7 @@ type InvalidRange struct {
 }
 
 func (e InvalidRange) Error() string {
-	return "Invalid range offset: " + strconv.FormatInt(e.Offset, 10)
+	return "Invalid range offset: " + strconv.FormatInt(e.Offset, 10) + " ."
 }
 
 // GenericBucketError - generic bucket operations error
@@ -48,14 +48,21 @@ type GenericBucketError struct {
 type BucketExists GenericBucketError
 
 func (e BucketExists) Error() string {
-	return "Bucket #" + e.Bucket + " exists"
+	return "Bucket #" + e.Bucket + " exists."
 }
 
 // InvalidBucketName - bucket name invalid (http://goo.gl/wJlzDz)
 type InvalidBucketName GenericBucketError
 
 func (e InvalidBucketName) Error() string {
-	return "Invalid bucketname [" + e.Bucket + "], please read http://goo.gl/wJlzDz"
+	return "Invalid bucketname [" + e.Bucket + "], please read http://goo.gl/wJlzDz."
+}
+
+// BucketNameEmpty - bucket name empty (http://goo.gl/wJlzDz)
+type BucketNameEmpty struct{}
+
+func (e BucketNameEmpty) Error() string {
+	return "Bucket name cannot be empty."
 }
 
 // GenericObjectError - generic object operations error
@@ -77,26 +84,14 @@ func (e ObjectAlreadyExists) Error() string {
 type InvalidObjectName GenericObjectError
 
 func (e InvalidObjectName) Error() string {
-	return "Object #" + e.Object + " at " + e.Bucket + " is invalid"
+	return "Object #" + e.Object + " at " + e.Bucket + " is invalid."
 }
 
-// ObjectExists - object exists
-type ObjectExists GenericObjectError
+// BucketNameTopLevel - generic error
+type BucketNameTopLevel struct{}
 
-func (e ObjectExists) Error() string {
-	return "Object #" + e.Object + " exists"
-}
-
-// GenericError - generic error
-type GenericError struct{}
-
-// InvalidQueryURL - generic error
-type InvalidQueryURL struct {
-	URL string
-}
-
-func (e InvalidQueryURL) Error() string {
-	return "Invalid query URL: " + e.URL
+func (e BucketNameTopLevel) Error() string {
+	return "Buckets can only be created at the top level."
 }
 
 // GenericFileError - generic file error.
