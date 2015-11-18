@@ -17,7 +17,7 @@
 package main
 
 import (
-	"path/filepath"
+	"strings"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio-xl/pkg/probe"
@@ -48,12 +48,8 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 	if _, ok := config.Hosts[url.Host]; ok {
 		return config.Hosts[url.Host], nil
 	}
-	for globURL, hostCfg := range config.Hosts {
-		match, err := filepath.Match(globURL, url.Host)
-		if err != nil {
-			return hostConfig{}, errInvalidGlobURL(globURL, URL).Trace()
-		}
-		if match {
+	for savedURL, hostCfg := range config.Hosts {
+		if strings.HasSuffix(url.Host, savedURL) {
 			return hostCfg, nil
 		}
 	}

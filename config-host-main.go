@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -216,8 +215,8 @@ func isValidAccessKey(accessKeyID string) bool {
 }
 
 // addHost - add new host
-func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
-	if strings.TrimSpace(hostGlob) == "" {
+func addHost(newHost, accessKeyID, secretAccessKey, api string) {
+	if strings.TrimSpace(newHost) == "" {
 		fatalIf(errDummy().Trace(), "Unable to proceed, empty arguments provided.")
 	}
 	if len(accessKeyID) != 0 {
@@ -244,19 +243,15 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 
 	newConf := config.Data().(*configV6)
-	for globURL := range newConf.Hosts {
-		match, err := filepath.Match(globURL, hostGlob)
-		if err != nil {
-			fatalIf(errInvalidGlobURL(globURL, hostGlob).Trace(), "Unable to match.")
-		}
-		if match {
-			newConf.Hosts[globURL] = hostConfig{
+	for savedHost := range newConf.Hosts {
+		if savedHost == newHost {
+			newConf.Hosts[savedHost] = hostConfig{
 				AccessKeyID:     accessKeyID,
 				SecretAccessKey: secretAccessKey,
 				API:             api,
 			}
 		} else {
-			newConf.Hosts[hostGlob] = hostConfig{
+			newConf.Hosts[newHost] = hostConfig{
 				AccessKeyID:     accessKeyID,
 				SecretAccessKey: secretAccessKey,
 				API:             api,
@@ -268,11 +263,11 @@ func addHost(hostGlob, accessKeyID, secretAccessKey, api string) {
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
 
 	err = writeConfig(newConfig)
-	fatalIf(err.Trace(hostGlob), "Unable to save host glob ‘"+hostGlob+"’.")
+	fatalIf(err.Trace(newHost), "Unable to save new host ‘"+newHost+"’.")
 
 	printMsg(hostMessage{
 		op:              "add",
-		Host:            hostGlob,
+		Host:            newHost,
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
 		API:             api,
