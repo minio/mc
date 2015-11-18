@@ -225,7 +225,7 @@ func newConfigV6() *configV6 {
 	aliases["dl"] = "https://dl.minio.io:9000"
 	aliases["gcs"] = "https://storage.googleapis.com"
 	aliases["play"] = "https://play.minio.io:9000"
-	aliases["localhost"] = "http://localhost:9000"
+	aliases["local"] = "http://localhost:9000"
 	conf.Aliases = aliases
 	return conf
 }

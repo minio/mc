@@ -137,7 +137,7 @@ func (s *TestSuite) TestNewConfigV6(c *C) {
 			"https://play.minio.io:9000",
 		},
 		{
-			"localhost",
+			"local",
 			"http://localhost:9000",
 		},
 	}
@@ -182,7 +182,7 @@ func (s *TestSuite) TestHostConfig(c *C) {
 }
 
 func (s *TestSuite) TestArgs2URL(c *C) {
-	URLs := []string{"localhost", "s3", "play", "playgo", "play.go", "https://s3-us-west-2.amazonaws.com"}
+	URLs := []string{"local", "s3", "play", "playgo", "play.go", "https://s3-us-west-2.amazonaws.com"}
 	expandedURLs, err := args2URLs(URLs)
 	c.Assert(err, IsNil)
 	c.Assert(expandedURLs[0], Equals, "http://localhost:9000")
