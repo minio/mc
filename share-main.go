@@ -58,7 +58,7 @@ COMMANDS:
 `,
 }
 
-// migrateShare migrate to newest version sequentially
+// migrateShare migrate to newest version sequentially.
 func migrateShare() {
 	if !isShareDirExists() {
 		return
@@ -74,7 +74,7 @@ func migrateShare() {
 	}
 }
 
-// mainShare - main handler for mc share command
+// mainShare - main handler for mc share command.
 func mainShare(ctx *cli.Context) {
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())
@@ -82,5 +82,5 @@ func mainShare(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 	}
 
-	// sub-commands like "upload" and "download" have their own main.
+	// Sub-commands like "upload" and "download" have their own main.
 }

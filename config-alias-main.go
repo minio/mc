@@ -56,18 +56,18 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Add aliases for Amazon S3.
-      $ mc config {{.Name}} add mcloud https://s3.amazonaws.com/miniocloud
+      $ mc config {{.Name}} add mcloud https://miniocloud.s3.amazonaws.com
       $ mc ls mcloud
 
    2. Add aliases for Google Cloud Storage.
-      $ mc config {{.Name}} add gcscloud https://storage.googleapis.com/miniocloud
+      $ mc config {{.Name}} add gcscloud https://miniocloud.storage.googleapis.com
       $ mc ls gcscloud
 
    3. List all aliased URLs.
       $ mc config {{.Name}} list
 
    4. Remove an alias
-      $ mc config {{.Name}} remove zek
+      $ mc config {{.Name}} remove mcloud
 
 `,
 }

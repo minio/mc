@@ -119,14 +119,16 @@ func getReleaseUpdate(updateURL string) {
 	fatalIf(err.Trace(updateURL), "Unable to read from update URL ‘"+updateURL+"’.")
 
 	if mcVersion == "UNOFFICIAL.GOGET" {
-		fatalIf(errDummy().Trace(mcVersion), "Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#mc")
+		fatalIf(errDummy().Trace(mcVersion),
+			"Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#mc")
 	}
 
 	current, e := time.Parse(time.RFC3339, mcVersion)
 	fatalIf(probe.NewError(e), "Unable to parse version string as time.")
 
 	if current.IsZero() {
-		fatalIf(errDummy().Trace(), "Updates not supported for custom builds. Version field is empty. Please download official releases from https://minio.io/#mc")
+		fatalIf(errDummy().Trace(),
+			"Updates not supported for custom builds. Version field is empty. Please download official releases from https://minio.io/#mc")
 	}
 
 	var updates mcUpdates
@@ -141,7 +143,8 @@ func getReleaseUpdate(updateURL string) {
 	}
 
 	if latest.IsZero() {
-		fatalIf(errDummy().Trace(), "Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues")
+		fatalIf(errDummy().Trace(),
+			"Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues")
 	}
 
 	updateURLParse := clnt.GetURL()

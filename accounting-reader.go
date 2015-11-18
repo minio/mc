@@ -23,11 +23,13 @@ import (
 	"time"
 )
 
+// accountingReader - implements and inherits io.ReadCloser interface for accounter.
 type accountingReader struct {
 	io.ReadCloser
 	acct *accounter
 }
 
+// accounter keeps tabs of ongoing data transfer information.
 type accounter struct {
 	current int64
 
@@ -40,7 +42,7 @@ type accounter struct {
 	isFinished   chan struct{}
 }
 
-// Instantiate a new accounter
+// Instantiate a new accounter.
 func newAccounter(total int64) *accounter {
 	acct := &accounter{
 		Total:        total,
@@ -54,6 +56,7 @@ func newAccounter(total int64) *accounter {
 	return acct
 }
 
+// write calculate the final speed.
 func (a *accounter) write(current int64) float64 {
 	fromStart := time.Now().Sub(a.startTime)
 	currentFromStart := current - a.startValue
@@ -64,6 +67,7 @@ func (a *accounter) write(current int64) float64 {
 	return 0.0
 }
 
+// writer update new accounting data for a specified refreshRate.
 func (a *accounter) writer() {
 	a.Update()
 	for {
@@ -76,12 +80,14 @@ func (a *accounter) writer() {
 	}
 }
 
+// accountStat cantainer for current stats captured.
 type accountStat struct {
 	Total       int64
 	Transferred int64
 	Speed       float64
 }
 
+// Stat provides current stats captured.
 func (a *accounter) Stat() accountStat {
 	var acntStat accountStat
 	a.finishOnce.Do(func() {
@@ -93,6 +99,7 @@ func (a *accounter) Stat() accountStat {
 	return acntStat
 }
 
+// Update update with new values loaded atomically.
 func (a *accounter) Update() {
 	c := atomic.LoadInt64(&a.current)
 	if c != a.currentValue {
@@ -101,14 +108,17 @@ func (a *accounter) Update() {
 	}
 }
 
+// Add add to current values atomically.
 func (a *accounter) Add(n int64) int64 {
 	return atomic.AddInt64(&a.current, n)
 }
 
+// Instantiate a new proxy reader for accounter.
 func (a *accounter) NewProxyReader(r io.ReadCloser) *accountingReader {
 	return &accountingReader{r, a}
 }
 
+// Read implement Reader which internally updates current value.
 func (a *accountingReader) Read(p []byte) (n int, err error) {
 	n, err = a.ReadCloser.Read(p)
 	if err != nil {

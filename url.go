@@ -24,7 +24,7 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
-// ``...`` recursiveSeparator
+// ``...`` recursiveSeparator.
 const (
 	recursiveSeparator = "..."
 )
@@ -68,7 +68,7 @@ func args2URLs(args []string) ([]string, *probe.Error) {
 	return URLs, nil
 }
 
-// url2Client - convenience wrapper for getNewClient
+// url2Client - convenience wrapper for getNewClient.
 func url2Client(urlStr string) (client.Client, *probe.Error) {
 	urlConfig, err := getHostConfig(urlStr)
 	if err != nil {
@@ -119,7 +119,7 @@ func url2DirContent(urlStr string) (content *client.Content, err *probe.Error) {
 	return content, nil
 }
 
-// Check if object key prefix exists
+// Check if object key prefix exists.
 func prefixExists(urlStr string) bool {
 	clnt, err := url2Client(urlStr)
 	if err != nil {

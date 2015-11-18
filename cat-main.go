@@ -128,7 +128,7 @@ func mainCat(ctx *cli.Context) {
 		stdinMode = true
 	}
 
-	// handle std input data
+	// handle std input data.
 	if stdinMode {
 		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from standard input.")
 		return
@@ -146,7 +146,7 @@ func mainCat(ctx *cli.Context) {
 		}
 	}
 
-	// Convert arguments to URLs: expand alias, fix format...
+	// Convert arguments to URLs: expand alias, fix format.
 	URLs, err := args2URLs(args)
 	fatalIf(err.Trace(args...), "Unable to parse arguments.")
 

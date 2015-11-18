@@ -49,7 +49,7 @@ VERSION:
   {{$value}}
 {{end}}`
 
-// Default handler for missing commands.
+// Function invoked when invalid command is passed.
 func commandNotFound(ctx *cli.Context, command string) {
 	msg := fmt.Sprintf("‘%s’ is not a mc command. See ‘mc help’.", command)
 	closestCommands := findClosestCommands(command)
@@ -64,7 +64,7 @@ func commandNotFound(ctx *cli.Context, command string) {
 
 // Check for sane config environment early on and gracefully report.
 func checkConfig() {
-	// Ensures config file is sane
+	// Ensures config file is sane.
 	_, err := getMcConfig()
 	fatalIf(err.Trace(), "Unable to access configuration file.")
 }
@@ -81,7 +81,7 @@ func migrate() {
 }
 
 // Get os/arch/platform specific information.
-// Returns a map of current os/arch/platform/memstats
+// Returns a map of current os/arch/platform/memstats.
 func getSystemData() map[string]string {
 	host, e := os.Hostname()
 	fatalIf(probe.NewError(e), "Unable to determine the hostname.")
@@ -117,17 +117,19 @@ func registerBefore(ctx *cli.Context) error {
 		console.SetColorOff()
 	}
 
-	// Verify golang runtime
+	// Verify golang runtime.
 	verifyMCRuntime()
 
 	// Migrate any old version of config / state files to newer format.
 	migrate()
 
-	// Checkconfig if it can be read
+	// Checkconfig if it can be read.
 	checkConfig()
+
 	return nil
 }
 
+// findClosestCommands to match a given string with commands trie tree.
 func findClosestCommands(command string) []string {
 	var closestCommands []string
 	for _, value := range commandsTree.PrefixMatch(command) {
