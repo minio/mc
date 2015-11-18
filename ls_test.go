@@ -56,7 +56,7 @@ func (s *TestSuite) TestLSContext(c *C) {
 	// reset back
 	console.IsExited = false
 
-	e = app.Run([]string{os.Args[0], "ls", root + "..."})
+	e = app.Run([]string{os.Args[0], "ls", "--recursive", root})
 	c.Assert(e, IsNil)
 	c.Assert(console.IsError, Equals, false)
 
@@ -70,7 +70,7 @@ func (s *TestSuite) TestLSContext(c *C) {
 	// reset back
 	console.IsExited = false
 
-	e = app.Run([]string{os.Args[0], "ls", server.URL + "/bucket..."})
+	e = app.Run([]string{os.Args[0], "ls", "--recursive", server.URL + "/bucket"})
 	c.Assert(e, IsNil)
 	c.Assert(console.IsError, Equals, false)
 
