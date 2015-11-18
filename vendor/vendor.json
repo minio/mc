@@ -33,14 +33,19 @@
 			"revisionTime": "2015-11-16T12:27:52-08:00"
 		},
 		{
+			"path": "github.com/minio/minio-xl/pkg/atomic",
+			"revision": "008404af67dcf66bdde580245cd43951b425ed39",
+			"revisionTime": "2015-11-17T16:21:42-08:00"
+		},
+		{
 			"path": "github.com/minio/minio-xl/pkg/probe",
 			"revision": "a7b8623fd546965505f18172717393f5de4139a2",
 			"revisionTime": "2015-10-25T03:03:43-07:00"
 		},
 		{
 			"path": "github.com/minio/minio-xl/pkg/quick",
-			"revision": "c6e98ee0f2bd750e516e468b04dffe6419654aa6",
-			"revisionTime": "2015-10-16T11:34:25-07:00"
+			"revision": "008404af67dcf66bdde580245cd43951b425ed39",
+			"revisionTime": "2015-11-17T16:21:42-08:00"
 		},
 		{
 			"path": "github.com/minio/pb",
