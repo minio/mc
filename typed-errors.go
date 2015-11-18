@@ -66,4 +66,8 @@ var (
 	errSourceIsDir = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Source ‘" + URL + "’ is a folder.")).Untrace()
 	}
+
+	errSourceTargetSame = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Source and target URL can not be same : " + URL)).Untrace()
+	}
 )
