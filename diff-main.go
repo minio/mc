@@ -28,17 +28,23 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+// diff specific flags.
+var (
+	diffFlagHelp = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Help of diff.",
+	}
+)
+
 // Compute differences between two files or folders.
 var diffCmd = cli.Command{
 	Name:        "diff",
 	Usage:       "Compute differences between two folders.",
 	Description: "Diff only lists missing objects or objects with size differences. It *DOES NOT* compare contents. i.e. Objects of same name and size, but differ in contents are not noticed.",
 	Action:      mainDiff,
+	Flags:       []cli.Flag{diffFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
-
-DESCRIPTION:
-   {{.Description}}
 
 USAGE:
    mc {{.Name}} [FLAGS] FIRST SECOND
@@ -46,6 +52,9 @@ USAGE:
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
+DESCRIPTION:
+   {{.Description}}
+
 EXAMPLES:
    1. Compare a local folder with a folder on Amazon S3 cloud storage.
       $ mc {{.Name}} ~/Photos https://s3.amazonaws.com/MyBucket/Photos
