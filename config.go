@@ -213,12 +213,11 @@ func newConfigV6() *configV6 {
 	}
 
 	conf.Hosts[globalExampleHostURL] = exampleHostConf
-	conf.Hosts["localhost:*"] = localHostConfig
-	conf.Hosts["127.0.0.1:*"] = localHostConfig
+	conf.Hosts["localhost:9000"] = localHostConfig
 	conf.Hosts["dl.minio.io:9000"] = dlHostConfig
-	conf.Hosts["*s3*amazonaws.com"] = s3HostConf
+	conf.Hosts["s3.amazonaws.com"] = s3HostConf
 	conf.Hosts["play.minio.io:9000"] = playHostConfig
-	conf.Hosts["*storage.googleapis.com"] = googlHostConf
+	conf.Hosts["storage.googleapis.com"] = googlHostConf
 
 	aliases := make(map[string]string)
 	aliases["s3"] = "https://s3.amazonaws.com"

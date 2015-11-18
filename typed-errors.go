@@ -35,10 +35,6 @@ var (
 		return probe.NewError(errors.New("Source argument list is empty.")).Untrace()
 	}
 
-	errInvalidGlobURL = func(glob, request string) *probe.Error {
-		return probe.NewError(errors.New("Error reading glob URL ‘" + glob + "’ while comparing with ‘" + request + "’.")).Untrace()
-	}
-
 	errNoMatchingHost = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("No matching host found for the given URL ‘" + URL + "’.")).Untrace()
 	}

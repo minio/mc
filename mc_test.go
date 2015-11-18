@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/quick"
 	. "gopkg.in/check.v1"
@@ -69,12 +71,14 @@ func (s *TestSuite) SetUpSuite(c *C) {
 	config, err := newConfig()
 	c.Assert(err, IsNil)
 
-	config.Data().(*configV6).Hosts["127.0.0.1:*"] = hostConfig{
+	url := client.NewURL(server.URL)
+	config.Data().(*configV6).Hosts[url.Host] = hostConfig{
 		AccessKeyID:     "WLGDGYAQYIGI833EV05A",
 		SecretAccessKey: "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF",
 		API:             "S3v4",
 	}
 
+	fmt.Println(config.Data().(*configV6).Hosts)
 	err = writeConfig(config)
 	c.Assert(err, IsNil)
 
@@ -148,12 +152,11 @@ func (s *TestSuite) TestNewConfigV6(c *C) {
 	}
 
 	wantHosts := []string{
-		"localhost:*",
-		"127.0.0.1:*",
+		"localhost:9000",
 		"play.minio.io:9000",
 		"dl.minio.io:9000",
-		"*s3*amazonaws.com",
-		"*storage.googleapis.com",
+		"s3.amazonaws.com",
+		"storage.googleapis.com",
 	}
 	for _, host := range wantHosts {
 		_, ok := data.Hosts[host]
