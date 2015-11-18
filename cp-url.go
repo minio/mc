@@ -224,7 +224,10 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 		// Source is not a regular file
 		return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
 	}
-
+	if sourceURL == targetURL {
+		// source and target can not be same
+		return copyURLs{Error: errSourceTargetSame(sourceURL).Trace()}
+	}
 	// All OK.. We can proceed. Type A
 	return copyURLs{SourceContent: sourceContent, TargetContent: &client.Content{URL: *client.NewURL(targetURL)}}
 }
