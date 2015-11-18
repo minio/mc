@@ -41,6 +41,10 @@ var (
 		Name:  "incomplete, I",
 		Usage: "Remove an incomplete upload(s).",
 	}
+	rmFlagFake = cli.BoolFlag{
+		Name:  "fake",
+		Usage: "Perform a fake remove operation.",
+	}
 	rmFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
 		Usage: "Help of rm.",
@@ -52,7 +56,7 @@ var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "Remove file or bucket [WARNING: Use with care].",
 	Action: mainRm,
-	Flags:  []cli.Flag{rmFlagRecursive, rmFlagForce, rmFlagIncomplete, rmFlagHelp},
+	Flags:  []cli.Flag{rmFlagRecursive, rmFlagForce, rmFlagIncomplete, rmFlagFake, rmFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -117,20 +121,25 @@ func checkRmSyntax(ctx *cli.Context) {
 }
 
 // Remove a single object.
-func rm(url string, isIncomplete bool) *probe.Error {
+func rm(url string, isIncomplete, isFake bool) *probe.Error {
 	clnt, err := url2Client(url)
 	if err != nil {
 		return err.Trace(url)
 	}
 
+	if isFake { // It is a fake remove. Return success.
+		return nil
+	}
+
 	if err = clnt.Remove(isIncomplete); err != nil {
 		return err.Trace(url)
 	}
+
 	return nil
 }
 
 // Remove all objects recursively.
-func rmAll(url string, isRecursive, isIncomplete bool) {
+func rmAll(url string, isRecursive, isIncomplete, isFake bool) {
 	// Initialize new client.
 	clnt, err := url2Client(url)
 	if err != nil {
@@ -153,11 +162,11 @@ func rmAll(url string, isRecursive, isIncomplete bool) {
 			url.Path = strings.TrimSuffix(entry.URL.Path, string(entry.URL.Separator)) + string(entry.URL.Separator)
 
 			// Recursively remove contents of this directory.
-			rmAll(url.String(), isRecursive, isIncomplete)
+			rmAll(url.String(), isRecursive, isIncomplete, isFake)
 		}
 
 		// Regular type.
-		if err = rm(entry.URL.String(), isIncomplete); err != nil {
+		if err = rm(entry.URL.String(), isIncomplete, isFake); err != nil {
 			errorIf(err.Trace(entry.URL.String()), "Unable to remove ‘"+entry.URL.String()+"’.")
 			continue
 		}
@@ -173,6 +182,7 @@ func mainRm(ctx *cli.Context) {
 	isForce := ctx.Bool("force")
 	isIncomplete := ctx.Bool("incomplete")
 	isRecursive := ctx.Bool("recursive")
+	isFake := ctx.Bool("fake")
 
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
@@ -184,9 +194,9 @@ func mainRm(ctx *cli.Context) {
 	// Support multiple targets.
 	for _, url := range URLs {
 		if isRecursive && isForce {
-			rmAll(url, isRecursive, isIncomplete)
+			rmAll(url, isRecursive, isIncomplete, isFake)
 		} else {
-			if err := rm(url, isIncomplete); err != nil {
+			if err := rm(url, isIncomplete, isFake); err != nil {
 				errorIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
 			}
 			printMsg(rmMessage{url})
