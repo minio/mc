@@ -89,7 +89,8 @@ EXAMPLES:
 
 // Structured message depending on the type of console.
 type rmMessage struct {
-	URL string `json:"url"`
+	Status string `json:"status"`
+	URL    string `json:"url"`
 }
 
 // Colorized message for console printing.
@@ -170,7 +171,7 @@ func rmAll(url string, isRecursive, isIncomplete, isFake bool) {
 			errorIf(err.Trace(entry.URL.String()), "Unable to remove ‘"+entry.URL.String()+"’.")
 			continue
 		}
-		printMsg(rmMessage{entry.URL.String()})
+		printMsg(rmMessage{Status: "success", URL: entry.URL.String()})
 	}
 }
 
@@ -200,7 +201,7 @@ func mainRm(ctx *cli.Context) {
 				errorIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
 				continue
 			}
-			printMsg(rmMessage{url})
+			printMsg(rmMessage{Status: "success", URL: url})
 		}
 	}
 }

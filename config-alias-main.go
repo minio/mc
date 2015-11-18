@@ -74,9 +74,10 @@ EXAMPLES:
 
 // aliasMessage container for content message structure
 type aliasMessage struct {
-	op    string
-	Alias string `json:"alias"`
-	URL   string `json:"url,omitempty"`
+	op     string
+	Status string `json:"status"`
+	Alias  string `json:"alias"`
+	URL    string `json:"url,omitempty"`
 }
 
 // String colorized alias message
@@ -98,6 +99,7 @@ func (a aliasMessage) String() string {
 
 // JSON jsonified alias message
 func (a aliasMessage) JSON() string {
+	a.Status = "success"
 	jsonMessageBytes, e := json.Marshal(a)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 

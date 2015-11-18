@@ -79,6 +79,7 @@ type mcUpdates struct {
 
 // updateMessage container to hold update messages.
 type updateMessage struct {
+	Status   string `json:"status"`
 	Update   bool   `json:"update"`
 	Download string `json:"downloadURL"`
 	Version  string `json:"version"`
@@ -89,7 +90,6 @@ func (u updateMessage) String() string {
 	if !u.Update {
 		return console.Colorize("Update", "You are already running the most recent version of ‘mc’.")
 	}
-
 	var msg string
 	if runtime.GOOS == "windows" {
 		msg = "mc.exe cp " + u.Download + " .\\mc.exe"
@@ -103,6 +103,7 @@ func (u updateMessage) String() string {
 
 // JSON jsonified update message.
 func (u updateMessage) JSON() string {
+	u.Status = "success"
 	updateMessageJSONBytes, err := json.Marshal(u)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
 

@@ -36,6 +36,7 @@ const (
 
 // contentMessage container for content message structure.
 type contentMessage struct {
+	Status   string    `json:"status"`
 	Filetype string    `json:"type"`
 	Time     time.Time `json:"lastModified"`
 	Size     int64     `json:"size"`
@@ -57,6 +58,7 @@ func (c contentMessage) String() string {
 
 // JSON jsonified content message.
 func (c contentMessage) JSON() string {
+	c.Status = "success"
 	jsonMessageBytes, e := json.Marshal(c)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 

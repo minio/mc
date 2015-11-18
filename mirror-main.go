@@ -80,6 +80,7 @@ var (
 
 // mirrorMessage container for file mirror messages
 type mirrorMessage struct {
+	Status  string   `json:"status"`
 	Source  string   `json:"source"`
 	Targets []string `json:"targets"`
 }
@@ -91,6 +92,7 @@ func (m mirrorMessage) String() string {
 
 // JSON jsonified mirror message
 func (m mirrorMessage) JSON() string {
+	m.Status = "success"
 	mirrorMessageBytes, e := json.Marshal(m)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
