@@ -20,8 +20,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/minio-xl/pkg/quick"
 )
@@ -238,6 +240,58 @@ func newConfig() (config quick.Config, err *probe.Error) {
 	return config, nil
 }
 
+func fixConfigV6() {
+	if !isMcConfigExists() {
+		return
+	}
+	config, err := quick.New(newConfigV6())
+	fatalIf(err.Trace(), "Unable to initialize config.")
+
+	err = config.Load(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to load config.")
+
+	if config.Data().(*configV6).Version == "6" {
+		newConfig := new(configV6)
+		newConfig.Aliases = make(map[string]string)
+		newConfig.Hosts = make(map[string]hostConfig)
+		newConfig.Version = "6"
+		newConfig.Aliases = config.Data().(*configV6).Aliases
+		for host, hostCfg := range config.Data().(*configV6).Hosts {
+			if strings.Contains(host, "*s3*") || strings.Contains(host, "*.s3*") {
+				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
+				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "s3*") {
+				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
+				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "*storage.googleapis.com") {
+				console.Infoln("Found glob url, replacing " + host + " with storage.googleapis.com")
+				newConfig.Hosts["storage.googleapis.com"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "localhost:*") {
+				console.Infoln("Found glob url, replacing " + host + " with localhost:9000")
+				newConfig.Hosts["localhost:9000"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "127.0.0.1:*") {
+				console.Infoln("Found glob url, replacing " + host + " with 127.0.0.1:9000")
+				newConfig.Hosts["127.0.0.1:9000"] = hostCfg
+				continue
+			}
+			newConfig.Hosts[host] = hostCfg
+		}
+		newConf, err := quick.New(newConfig)
+		fatalIf(err.Trace(), "Unable to initialize newly fixed config.")
+
+		err = newConf.Save(mustGetMcConfigPath())
+		fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
+	}
+}
+
 func migrateConfig() {
 	// Migrate config V1 to V101
 	migrateConfigV1ToV101()
@@ -256,4 +310,6 @@ func migrateConfig() {
 func fixConfig() {
 	// Fix config V3
 	fixConfigV3()
+	// Fix config V6
+	fixConfigV6()
 }

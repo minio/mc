@@ -300,12 +300,12 @@ func migrateConfigV5ToV6() {
 	}
 }
 
-// Fix config version ‘3’, by removing broken struct tags
+// Fix config version ‘3’, by removing broken struct tags.
 func fixConfigV3() {
 	if !isMcConfigExists() {
 		return
 	}
-	// brokenConfigV3 broken config between version 3
+	// brokenConfigV3 broken config between version 3.
 	type brokenConfigV3 struct {
 		Version string
 		ACL     string
@@ -326,7 +326,7 @@ func fixConfigV3() {
 	mcConfigV3, err := quick.Load(mustGetMcConfigPath(), conf)
 	fatalIf(err.Trace(), "Unable to load config.")
 
-	// Update to newer version
+	// Update to newer version.
 	if len(mcConfigV3.Data().(*brokenConfigV3).Aliases) != 0 || mcConfigV3.Data().(*brokenConfigV3).ACL != "" || mcConfigV3.Data().(*brokenConfigV3).Access != "" && mcConfigV3.Version() == "3" {
 		confV3 := new(configV3)
 		confV3.Aliases = mcConfigV3.Data().(*brokenConfigV3).Aliases
