@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
@@ -86,6 +87,16 @@ func checkListSyntax(ctx *cli.Context) {
 	for _, arg := range args {
 		if strings.TrimSpace(arg) == "" {
 			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+		}
+	}
+	// extract URLs.
+	URLs, err := args2URLs(ctx.Args())
+	fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("One or more unknown URL types passed."))
+
+	for _, url := range URLs {
+		_, _, err := url2Stat(url)
+		if err != nil && !prefixExists(url) {
+			fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
 		}
 	}
 }
