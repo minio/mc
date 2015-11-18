@@ -198,6 +198,7 @@ func mainRm(ctx *cli.Context) {
 		} else {
 			if err := rm(url, isIncomplete, isFake); err != nil {
 				errorIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
+				continue
 			}
 			printMsg(rmMessage{url})
 		}
