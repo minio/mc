@@ -220,8 +220,8 @@ func mainRm(ctx *cli.Context) {
 			}
 			// Remove contents of this folder.
 			rmAll(url, isIncomplete)
-			// url will be '.' for arguments which will be just '...'
-			if removeTopFolder && url != "." && url != ".." {
+			// Ignore url's './', '../' .
+			if removeTopFolder && url != "./" && url != "../" {
 				// Remove top folder as well.
 				err := rm(url, isIncomplete)
 				if err != nil {
