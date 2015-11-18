@@ -67,9 +67,13 @@ func (s *TestSuite) TestDiffDirs(c *C) {
 		c.Assert(err, IsNil)
 	}
 
-	for diff := range doDiffMain(root1, root2) {
-		c.Assert(diff.Error, IsNil)
-	}
+	e = app.Run([]string{os.Args[0], "diff", root1, root2})
+	c.Assert(e, IsNil)
+	c.Assert(console.IsError, Equals, false)
+	c.Assert(console.IsExited, Equals, false)
+
+	// reset back
+	console.IsExited = false
 }
 
 func (s *TestSuite) TestDiffContext(c *C) {
