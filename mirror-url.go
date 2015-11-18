@@ -90,6 +90,11 @@ func checkMirrorSyntax(ctx *cli.Context) {
 				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 			}
 		}
+		_, _, err = url2Stat(tgtURL)
+		// we die on any error other than client.PathNotFound - destination directory need not exist.
+		if _, ok := err.ToGoError().(client.PathNotFound); !ok {
+			fatalIf(err.Trace(), fmt.Sprintf("Unable to stat %s", tgtURL))
+		}
 	}
 }
 
