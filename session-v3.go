@@ -85,8 +85,9 @@ type sessionV3Header struct {
 	TotalObjects int    `json:"totalObjects"`
 }
 
-// SessionMessage container for session messages
-type SessionMessage struct {
+// sessionMessage container for session messages
+type sessionMessage struct {
+	Status      string    `json:"status"`
 	SessionID   string    `json:"sessionId"`
 	Time        time.Time `json:"time"`
 	CommandType string    `json:"commandType"`
@@ -122,13 +123,14 @@ func (s sessionV3) String() string {
 
 // JSON jsonified session message
 func (s sessionV3) JSON() string {
-	sessionMesage := SessionMessage{
+	sessionMsg := sessionMessage{
 		SessionID:   s.SessionID,
 		Time:        s.Header.When.Local(),
 		CommandType: s.Header.CommandType,
 		CommandArgs: s.Header.CommandArgs,
 	}
-	sessionBytes, e := json.Marshal(sessionMesage)
+	sessionMsg.Status = "success"
+	sessionBytes, e := json.Marshal(sessionMsg)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(sessionBytes)

@@ -53,6 +53,7 @@ FLAGS:
 
 // Structured message depending on the type of console.
 type versionMessage struct {
+	Status  string `json:"status"`
 	Version struct {
 		Value  string `json:"value"`
 		Format string `json:"format"`
@@ -70,6 +71,7 @@ func (v versionMessage) String() string {
 
 // JSON'ified message for scripting.
 func (v versionMessage) JSON() string {
+	v.Status = "success"
 	msgBytes, e := json.Marshal(v)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)

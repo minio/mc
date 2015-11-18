@@ -51,6 +51,7 @@ var (
 
 // Structured share command message.
 type shareMesssage struct {
+	Status      string        `json:"status"`
 	ObjectURL   string        `json:"url"`
 	ShareURL    string        `json:"share"`
 	TimeLeft    time.Duration `json:"timeLeft"`
@@ -74,6 +75,7 @@ func (s shareMesssage) String() string {
 
 // JSON - JSONified message for scripting.
 func (s shareMesssage) JSON() string {
+	s.Status = "success"
 	shareMessageBytes, e := json.Marshal(s)
 	fatalIf(probe.NewError(e), "Failed to marshal into JSON.")
 

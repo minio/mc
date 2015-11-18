@@ -24,51 +24,20 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
-// ErrorMessage container for error messages
-type ErrorMessage struct {
+// causeMessage container for golang error messages
+type causeMessage struct {
+	Message string `json:"message"`
+	Error   error  `json:"error"`
+}
+
+// errorMessage container for error messages
+type errorMessage struct {
 	Message   string             `json:"message"`
-	Cause     error              `json:"cause"`
+	Cause     causeMessage       `json:"cause"`
 	Type      string             `json:"type"`
 	CallTrace []probe.TracePoint `json:"trace,omitempty"`
 	SysInfo   map[string]string  `json:"sysinfo"`
 }
-
-// fatalIfMultiple wrapper function which takes error message map and selectively prints stack frames if available on debug
-// fatalIfMultiple is implemented to handle multiple argument validation.
-/*
-func fatalIfMultiple(errMsgMap map[string]*probe.Error) {
-	if errMsgMap == nil {
-		return
-	}
-	for msg, err := range errMsgMap {
-		if globalJSONFlag {
-			errorMessage := ErrorMessage{
-				Message: msg,
-				Type:    "error",
-				Cause:   err.ToGoError(),
-				SysInfo: err.SysInfo,
-			}
-			if globalDebugFlag {
-				errorMessage.CallTrace = err.CallTrace
-			}
-			json, err := json.Marshal(struct {
-				Error ErrorMessage `json:"error"`
-			}{
-				Error: errorMessage,
-			})
-			if err != nil {
-				console.Fatalln(probe.NewError(err))
-			}
-			console.Println(string(json))
-		}
-		if !globalDebugFlag {
-			console.Errorln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
-		}
-		console.Errorln(fmt.Sprintf("%s %s", msg, err))
-	}
-	console.Fatalln()
-}
-*/
 
 // fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
 func fatalIf(err *probe.Error, msg string) {
@@ -76,19 +45,24 @@ func fatalIf(err *probe.Error, msg string) {
 		return
 	}
 	if globalJSONFlag {
-		errorMessage := ErrorMessage{
+		errorMsg := errorMessage{
 			Message: msg,
 			Type:    "fatal",
-			Cause:   err.ToGoError(),
+			Cause: causeMessage{
+				Message: err.ToGoError().Error(),
+				Error:   err.ToGoError(),
+			},
 			SysInfo: err.SysInfo,
 		}
 		if globalDebugFlag {
-			errorMessage.CallTrace = err.CallTrace
+			errorMsg.CallTrace = err.CallTrace
 		}
 		json, err := json.Marshal(struct {
-			Error ErrorMessage `json:"error"`
+			Status string       `json:"status"`
+			Error  errorMessage `json:"error"`
 		}{
-			Error: errorMessage,
+			Status: "error",
+			Error:  errorMsg,
 		})
 		if err != nil {
 			console.Fatalln(probe.NewError(err))
@@ -108,19 +82,24 @@ func errorIf(err *probe.Error, msg string) {
 		return
 	}
 	if globalJSONFlag {
-		errorMessage := ErrorMessage{
+		errorMsg := errorMessage{
 			Message: msg,
 			Type:    "error",
-			Cause:   err.ToGoError(),
+			Cause: causeMessage{
+				Message: err.ToGoError().Error(),
+				Error:   err.ToGoError(),
+			},
 			SysInfo: err.SysInfo,
 		}
 		if globalDebugFlag {
-			errorMessage.CallTrace = err.CallTrace
+			errorMsg.CallTrace = err.CallTrace
 		}
 		json, err := json.Marshal(struct {
-			Error ErrorMessage `json:"error"`
+			Status string       `json:"status"`
+			Error  errorMessage `json:"error"`
 		}{
-			Error: errorMessage,
+			Status: "error",
+			Error:  errorMsg,
 		})
 		if err != nil {
 			console.Fatalln(probe.NewError(err))

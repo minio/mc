@@ -81,6 +81,7 @@ EXAMPLES:
 
 // copyMessage container for file copy messages
 type copyMessage struct {
+	Status string `json:"status"`
 	Source string `json:"source"`
 	Target string `json:"target"`
 	Length int64  `json:"length"`
@@ -93,6 +94,7 @@ func (c copyMessage) String() string {
 
 // JSON jsonified copy message
 func (c copyMessage) JSON() string {
+	c.Status = "success"
 	copyMessageBytes, err := json.Marshal(c)
 	fatalIf(probe.NewError(err), "Failed to marshal copy message.")
 

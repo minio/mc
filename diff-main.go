@@ -77,6 +77,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 
 // diffMessage json container for diff messages
 type diffMessage struct {
+	Status    string       `json:"status"`
 	FirstURL  string       `json:"first"`
 	SecondURL string       `json:"second"`
 	Diff      string       `json:"diff"`
@@ -106,6 +107,7 @@ func (d diffMessage) String() string {
 
 // JSON jsonified diff message
 func (d diffMessage) JSON() string {
+	d.Status = "success"
 	diffJSONBytes, err := json.Marshal(d)
 	fatalIf(probe.NewError(err),
 		"Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+d.Diff+"’.")

@@ -62,6 +62,7 @@ EXAMPLES:
 // hostMessage container for content message structure
 type hostMessage struct {
 	op              string
+	Status          string `json:"status"`
 	Host            string `json:"host"`
 	AccessKeyID     string `json:"accessKeyId,omitempty"`
 	SecretAccessKey string `json:"secretAccessKey,omitempty"`
@@ -91,6 +92,7 @@ func (a hostMessage) String() string {
 
 // JSON jsonified host message
 func (a hostMessage) JSON() string {
+	a.Status = "success"
 	jsonMessageBytes, e := json.Marshal(a)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
