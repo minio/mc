@@ -17,7 +17,6 @@
 package s3
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -170,10 +169,10 @@ func (c *s3Client) Put(size int64, data io.Reader) *probe.Error {
 func (c *s3Client) MakeBucket() *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
+		return probe.NewError(client.BucketNameTopLevel{})
 	}
 	if bucket == "" {
-		return probe.NewError(errors.New("Bucket name is empty."))
+		return probe.NewError(client.BucketNameEmpty{})
 	}
 
 	err := c.api.MakeBucket(bucket, minio.BucketACL("private"))
@@ -187,7 +186,10 @@ func (c *s3Client) MakeBucket() *probe.Error {
 func (c *s3Client) GetBucketAccess() (acl string, error *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return "", probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
+		return "", probe.NewError(client.InvalidBucketName{Bucket: filepath.Join(bucket, object)})
+	}
+	if bucket == "" {
+		return "", probe.NewError(client.BucketNameEmpty{})
 	}
 	bucketACL, err := c.api.GetBucketACL(bucket)
 	if err != nil {
@@ -200,7 +202,10 @@ func (c *s3Client) GetBucketAccess() (acl string, error *probe.Error) {
 func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return probe.NewError(client.InvalidQueryURL{URL: c.hostURL.String()})
+		return probe.NewError(client.InvalidBucketName{Bucket: filepath.Join(bucket, object)})
+	}
+	if bucket == "" {
+		return probe.NewError(client.BucketNameEmpty{})
 	}
 	err := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
 	if err != nil {
