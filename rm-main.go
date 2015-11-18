@@ -164,15 +164,14 @@ func rmAll(url string, isIncomplete bool) {
 
 		if entry.Type.IsDir() {
 			// Add separator at the end to remove all its contents.
-			url := entry.URL.String()
-			u := client.NewURL(url)
-			url = url + string(u.Separator)
+			url := entry.URL
+			url.Path = strings.TrimSuffix(entry.URL.Path, string(entry.URL.Separator)) + string(entry.URL.Separator)
 
 			// Recursively remove contents of this directory.
-			rmAll(url, isIncomplete)
+			rmAll(url.String(), isIncomplete)
 		}
 		// Regular type.
-		err := rm(entry.URL.String(), isIncomplete)
+		err = rm(entry.URL.String(), isIncomplete)
 		if err != nil {
 			errorIf(err.Trace(entry.URL.String()), "Unable to remove ‘"+entry.URL.String()+"’.")
 			continue
@@ -208,9 +207,9 @@ func mainRm(ctx *cli.Context) {
 			}
 
 			if err == nil && content.Type.IsDir() {
-				/* Determine whether to remove the top folder or only its
-				contents. If the URL does not end with a separator, then
-				include the top folder as well, otherwise not. */
+				// Determine whether to remove the top folder or only its
+				// contents. If the URL does not end with a separator, then
+				// include the top folder as well, otherwise not.
 				u := client.NewURL(url)
 				if !strings.HasSuffix(url, string(u.Separator)) {
 					// Add separator at the end to remove all its contents.
@@ -221,7 +220,8 @@ func mainRm(ctx *cli.Context) {
 			}
 			// Remove contents of this folder.
 			rmAll(url, isIncomplete)
-			if removeTopFolder {
+			// url will be '.' for arguments which will be just '...'
+			if removeTopFolder && url != "." && url != ".." {
 				// Remove top folder as well.
 				err := rm(url, isIncomplete)
 				if err != nil {
