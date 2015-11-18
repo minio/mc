@@ -122,11 +122,17 @@ func (f *fsClient) Put(size int64, data io.Reader) *probe.Error {
 	objectPath := f.PathURL.Path
 	if objectDir != "" {
 		if err := os.MkdirAll(objectDir, 0700); err != nil {
+			if os.IsPermission(err) {
+				return probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
+			}
 			return probe.NewError(err)
 		}
 	}
 	fs, err := os.Create(objectPath)
 	if err != nil {
+		if os.IsPermission(err) {
+			return probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
+		}
 		return probe.NewError(err)
 	}
 	defer fs.Close()
