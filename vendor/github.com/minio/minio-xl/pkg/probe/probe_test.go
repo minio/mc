@@ -44,7 +44,7 @@ func testDummy2() *probe.Error {
 
 func (s *MySuite) TestProbe(c *C) {
 	probe.Init() // Set project's root source path.
-	probe.SetAppInfo("Release-Tag", "RELEASE.Sat-19-Sep-2015-06-15-16-GMT")
+	probe.SetAppInfo("Commit-ID", "7390cc957239")
 	es := testDummy2().Trace("TopOfStack")
 	// Uncomment the following Println to visually test probe call trace.
 	// fmt.Println("Expecting a simulated error here.", es)
