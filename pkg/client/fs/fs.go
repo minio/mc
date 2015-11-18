@@ -152,6 +152,9 @@ func (f *fsClient) Put(size int64, data io.Reader) *probe.Error {
 func (f *fsClient) get() (io.ReadCloser, int64, *probe.Error) {
 	body, e := os.Open(f.PathURL.Path)
 	if e != nil {
+		if os.IsPermission(e) {
+			return nil, 0, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
+		}
 		return nil, 0, probe.NewError(e)
 	}
 	content, err := f.getFSMetadata()
