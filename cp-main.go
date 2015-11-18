@@ -22,14 +22,15 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/pb"
@@ -254,7 +255,7 @@ func doPrepareCopyURLs(session *sessionV3, trapCh <-chan bool) {
 }
 
 func doCopySession(session *sessionV3) {
-	trapCh := signalTrap(os.Interrupt, os.Kill)
+	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
 		doPrepareCopyURLs(session, trapCh)
@@ -314,18 +315,20 @@ func doCopySession(session *sessionV3) {
 						console.Eraseline()
 					}
 					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
-					// all the cases which are handled where session should be saved are contained in the following
-					// switch case, we shouldn't be saving sessions for all errors since some errors might need to be
-					// reported to user properly.
-					//
-					// All other critical cases should be handled properly gracefully
-					// handle more errors and save the session.
+					// for all non critical errors we can continue for the remaining files
 					switch cpURLs.Error.ToGoError().(type) {
-					case *net.OpError:
-						session.CloseAndDie()
-					case net.Error:
-						session.CloseAndDie()
+					// handle this specifically for filesystem related errors.
+					case client.BrokenSymlink:
+						continue
+					case client.TooManyLevelsSymlink:
+						continue
+					case client.PathNotFound:
+						continue
+					case client.PathInsufficientPermission:
+						continue
 					}
+					// for critical errors we should exit. Session can be resumed after the user figures out the problem
+					session.CloseAndDie()
 				}
 			case <-trapCh: // Receive interrupt notification.
 				if !globalQuietFlag && !globalJSONFlag {
