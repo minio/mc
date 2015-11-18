@@ -22,6 +22,7 @@ import (
 	"time"
 )
 
+// humanizedTime container to capture humanized time.
 type humanizedTime struct {
 	Days    int64 `json:"days,omitempty"`
 	Hours   int64 `json:"hours,omitempty"`
@@ -43,6 +44,7 @@ func (r humanizedTime) String() string {
 	return fmt.Sprintf("%d days %d hours %d minutes %d seconds", r.Days, r.Hours, r.Minutes, r.Seconds)
 }
 
+// timeDurationToHumanizedTime convert golang time.Duration to a custom more readable humanizedTime.
 func timeDurationToHumanizedTime(duration time.Duration) humanizedTime {
 	r := humanizedTime{}
 	if duration.Seconds() < 60.0 {

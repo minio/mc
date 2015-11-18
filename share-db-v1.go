@@ -25,6 +25,7 @@ import (
 	"github.com/minio/minio-xl/pkg/quick"
 )
 
+// shareEntryV1 - container for each download/upload entries.
 type shareEntryV1 struct {
 	URL         string        `json:"share"` // Object URL.
 	Date        time.Time     `json:"date"`

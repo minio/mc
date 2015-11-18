@@ -30,7 +30,7 @@ import (
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-// newRandomID generates a random id of regular lower case and uppercase english characters
+// newRandomID generates a random id of regular lower case and uppercase english characters.
 func newRandomID(n int) string {
 	rand.Seed(time.Now().UTC().UnixNano())
 	sid := make([]rune, n)
@@ -40,6 +40,7 @@ func newRandomID(n int) string {
 	return string(sid)
 }
 
+// isBucketVirtualStyle is host virtual bucket style?.
 func isBucketVirtualStyle(host string) bool {
 	s3Virtual, _ := filepath.Match("*.s3*.amazonaws.com", host)
 	googleVirtual, _ := filepath.Match("*.storage.googleapis.com", host)
@@ -48,6 +49,7 @@ func isBucketVirtualStyle(host string) bool {
 
 // user.Current is not implemented on 32bit, falling back and using a workaround instead.
 func userCurrent() (*user.User, *probe.Error) {
+	// Remove this check if golang fixes their code to support 32bit properly for user.Current.
 	if runtime.GOARCH == "386" && runtime.GOOS == "linux" {
 		return &user.User{
 			Uid:      strconv.Itoa(os.Getuid()),

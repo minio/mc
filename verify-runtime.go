@@ -27,15 +27,18 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+// minGolangRuntimeVersion minimum golang runtime version required for 'mc'.
 var minGolangRuntimeVersion = "1.5.1"
 
-// following code handles the current Golang release styles, we might have to update them in future
-// if golang community divulges from the below formatting style.
+// Following code handles the current Golang release styles.
+// We might have to update them in future, if golang community
+// divulges from the below release styles.
 const (
 	betaRegexp = "beta[0-9]"
 	rcRegexp   = "rc[0-9]"
 )
 
+// getNormalizedGolangVersion normalize golang version, handles beta, rc and stable releases.
 func getNormalizedGolangVersion() string {
 	version := strings.TrimPrefix(runtime.Version(), "go")
 	br := regexp.MustCompile(betaRegexp)
@@ -47,20 +50,24 @@ func getNormalizedGolangVersion() string {
 	return version
 }
 
+// version struct captures the semantic versions.
 type version struct {
 	major, minor, patch string
 }
 
+// String stringify version.
 func (v1 version) String() string {
 	return fmt.Sprintf("%s%s%s", v1.major, v1.minor, v1.patch)
 }
 
+// Version return integer version of String().
 func (v1 version) Version() int {
 	ver, e := strconv.Atoi(v1.String())
 	fatalIf(probe.NewError(e), "Unable to convert version string to an integer.")
 	return ver
 }
 
+// LessThan figure out if the input version is lesser than current version.
 func (v1 version) LessThan(v2 version) bool {
 	if v1.Version() < v2.Version() {
 		return true
@@ -68,6 +75,7 @@ func (v1 version) LessThan(v2 version) bool {
 	return false
 }
 
+// newVersion convert an input semantic version style string into version struct.
 func newVersion(v string) version {
 	ver := version{}
 	verSlice := strings.Split(v, ".")
@@ -81,6 +89,7 @@ func newVersion(v string) version {
 	return ver
 }
 
+// checkGolangRuntimeVersion - verify currently compiled runtime version.
 func checkGolangRuntimeVersion() {
 	v1 := newVersion(getNormalizedGolangVersion())
 	v2 := newVersion(minGolangRuntimeVersion)
@@ -90,10 +99,11 @@ func checkGolangRuntimeVersion() {
 	}
 }
 
+// verifyMCRuntime - verify 'mc' compiled runtime version.
 func verifyMCRuntime() {
 	checkGolangRuntimeVersion()
 
-	// .mc config folder.
+	// Check if mc config exists.
 	if !isMcConfigExists() {
 		err := createMcConfigDir()
 		fatalIf(err.Trace(), "Unable to create ‘mc’ config folder.")
@@ -107,12 +117,12 @@ func verifyMCRuntime() {
 		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}
 
-	// .mc/session folder.
+	// Check if mc session folder exists.
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session config folder.")
 	}
 
-	// .mc/share folder.
+	// Check if mc share folder exists.
 	if !isShareDirExists() {
 		initShareConfig()
 	}

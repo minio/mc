@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	// Default expiry is 7 days (168h)
+	// Default expiry is 7 days (168h).
 	shareDefaultExpiry = time.Duration(604800) * time.Second
 )
 
@@ -79,9 +79,9 @@ func (s shareMesssage) JSON() string {
 	shareMessageBytes, e := json.Marshal(s)
 	fatalIf(probe.NewError(e), "Failed to marshal into JSON.")
 
-	/*JSON encoding escapes ampersand into its unicode character
-	which is not usable directly for share and fails with cloud
-	storage. convert them back so that they are usable. */
+	// JSON encoding escapes ampersand into its unicode character
+	// which is not usable directly for share and fails with cloud
+	// storage. convert them back so that they are usable.
 	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u0026"), []byte("&"), -1)
 	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u003c"), []byte("<"), -1)
 	shareMessageBytes = bytes.Replace(shareMessageBytes, []byte("\\u003e"), []byte(">"), -1)
@@ -111,7 +111,7 @@ func getShareDir() (string, *probe.Error) {
 	return sharedURLsDataDir, nil
 }
 
-// Get share dir name or die. (NOTE: This ‘Die’ approach is only OK for mc like tools.)
+// Get share dir name or die. (NOTE: This ‘Die’ approach is only OK for mc like tools.).
 func mustGetShareDir() string {
 	shareDir, err := getShareDir()
 	fatalIf(err.Trace(), "Unable to determine share folder.")
@@ -144,7 +144,7 @@ func getShareDownloadsFile() string {
 	return filepath.Join(mustGetShareDir(), "downloads.json")
 }
 
-// Check if share uploads file exists?
+// Check if share uploads file exists?.
 func isShareUploadsExists() bool {
 	if _, e := os.Stat(getShareUploadsFile()); e != nil {
 		return false
@@ -152,7 +152,7 @@ func isShareUploadsExists() bool {
 	return true
 }
 
-// Check if share downloads file exists?
+// Check if share downloads file exists?.
 func isShareDownloadsExists() bool {
 	if _, e := os.Stat(getShareDownloadsFile()); e != nil {
 		return false
@@ -174,19 +174,22 @@ func initShareDownloadsFile() *probe.Error {
 func initShareConfig() {
 	// Share directory.
 	if !isShareDirExists() {
-		fatalIf(createShareDir().Trace(), "Failed to create share ‘"+mustGetShareDir()+"’ folder.")
+		fatalIf(createShareDir().Trace(),
+			"Failed to create share ‘"+mustGetShareDir()+"’ folder.")
 		console.Infof("Successfully created ‘%s’.\n", mustGetShareDir())
 	}
 
 	// Uploads share file.
 	if !isShareUploadsExists() {
-		fatalIf(initShareUploadsFile().Trace(), "Failed to initialize share uploads ‘"+getShareUploadsFile()+"’ file.")
+		fatalIf(initShareUploadsFile().Trace(),
+			"Failed to initialize share uploads ‘"+getShareUploadsFile()+"’ file.")
 		console.Infof("Initialized share uploads ‘%s’ file.\n", getShareUploadsFile())
 	}
 
 	// Downloads share file.
 	if !isShareDownloadsExists() {
-		fatalIf(initShareDownloadsFile().Trace(), "Failed to initialize share downloads ‘"+getShareDownloadsFile()+"’ file.")
+		fatalIf(initShareDownloadsFile().Trace(),
+			"Failed to initialize share downloads ‘"+getShareDownloadsFile()+"’ file.")
 		console.Infof("Initialized share downloads ‘%s’ file.\n", getShareDownloadsFile())
 	}
 }

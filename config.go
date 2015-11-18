@@ -240,6 +240,7 @@ func newConfig() (config quick.Config, err *probe.Error) {
 	return config, nil
 }
 
+// fixConfigV6 - fix all the unnecessary glob URLs present in existing config version 6.
 func fixConfigV6() {
 	if !isMcConfigExists() {
 		return
@@ -263,6 +264,11 @@ func fixConfigV6() {
 				continue
 			}
 			if strings.Contains(host, "s3*") {
+				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
+				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "*amazonaws.com") || strings.Contains(host, "*.amazonaws.com") {
 				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
 				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
 				continue

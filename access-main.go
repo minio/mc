@@ -36,15 +36,15 @@ var (
 // Set access permissions.
 var accessCmd = cli.Command{
 	Name:   "access",
-	Usage:  "Set or get access permissions.",
+	Usage:  "Manage bucket access permissions.",
 	Action: mainAccess,
 	Flags:  []cli.Flag{accessFlagHelp},
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] set PERMISSION TARGET [TARGET ...]
-   mc {{.Name}} [FLAGS] get TARGET [TARGET ...]
+   mc {{.Name}} [FLAGS] set PERMISSION TARGET [TARGET...]
+   mc {{.Name}} [FLAGS] get TARGET [TARGET...]
 
 PERMISSION:
    Allowed permissions are: [private, readonly, public, authorized].
@@ -70,7 +70,7 @@ EXAMPLES:
 `,
 }
 
-// accessMessage is container for access command on bucket success and failure messages
+// accessMessage is container for access command on bucket success and failure messages.
 type accessMessage struct {
 	Operation string      `json:"operation"`
 	Status    string      `json:"status"`
@@ -78,19 +78,21 @@ type accessMessage struct {
 	Perms     accessPerms `json:"permission"`
 }
 
-// String colorized access message
+// String colorized access message.
 func (s accessMessage) String() string {
 	if s.Operation == "set" {
-		return console.Colorize("Access", "Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
+		return console.Colorize("Access",
+			"Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
 	}
 	if s.Operation == "get" {
-		return console.Colorize("Access", "Access permission for ‘"+s.Bucket+"’"+" is ‘"+string(s.Perms)+"’")
+		return console.Colorize("Access",
+			"Access permission for ‘"+s.Bucket+"’"+" is ‘"+string(s.Perms)+"’")
 	}
 	// nothing to print
 	return ""
 }
 
-// JSON jsonified access message
+// JSON jsonified access message.
 func (s accessMessage) JSON() string {
 	accessJSONBytes, err := json.Marshal(s)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
@@ -98,22 +100,23 @@ func (s accessMessage) JSON() string {
 	return string(accessJSONBytes)
 }
 
+// checkAccessSyntax check for incoming syntax.
 func checkAccessSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
 	}
 	if len(ctx.Args()) < 2 {
-		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
 	}
 	switch ctx.Args().First() {
 	case "set":
 		if len(ctx.Args().Tail()) < 2 {
-			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
+			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
 		}
 		perms := accessPerms(ctx.Args().Tail().Get(0))
 		if !perms.isValidAccessPERM() {
 			fatalIf(errDummy().Trace(),
-				"Unrecognized permission ‘"+perms.String()+"’. Allowed values are [private, public, readonly].")
+				"Unrecognized permission ‘"+perms.String()+"’. Allowed values are [private, public, readonly, authorized].")
 		}
 		for _, arg := range ctx.Args().Tail().Tail() {
 			if strings.TrimSpace(arg) == "" {
@@ -122,11 +125,12 @@ func checkAccessSyntax(ctx *cli.Context) {
 		}
 	case "get":
 		if len(ctx.Args().Tail()) < 1 {
-			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code
+			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
 		}
 	}
 }
 
+// doSetAccess do set access.
 func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
 	clnt, err := url2Client(targetURL)
 	if err != nil {
@@ -138,6 +142,7 @@ func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
 	return nil
 }
 
+// doGetAccess do get access.
 func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
 	clnt, err := url2Client(targetURL)
 	if err != nil {
@@ -166,12 +171,13 @@ func mainAccess(ctx *cli.Context) {
 			err := doSetAccess(targetURL, perms)
 			// Upon error, print and continue.
 			if err != nil {
-				errorIf(err.Trace(targetURL, string(perms)), "Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+				errorIf(err.Trace(targetURL, string(perms)),
+					"Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
 				continue
 			}
 			printMsg(accessMessage{
-				Operation: "set",
 				Status:    "success",
+				Operation: "set",
 				Bucket:    targetURL,
 				Perms:     perms,
 			})
@@ -185,8 +191,8 @@ func mainAccess(ctx *cli.Context) {
 				continue
 			}
 			printMsg(accessMessage{
-				Operation: "get",
 				Status:    "success",
+				Operation: "get",
 				Bucket:    targetURL,
 				Perms:     perms,
 			})

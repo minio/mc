@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
+// This file implements a simple trie tree to be used for 'mc' cli commands.
 package main
 
-// This package borrows idea from - https://godoc.org/golang.org/x/text/internal/triegen
+// This package borrows idea from - https://godoc.org/golang.org/x/text/internal/triegen.
 
-// Trie trie container
+// Trie is a trie container.
 type Trie struct {
 	root *trieNode
 	size int
 }
 
-// newTrie get new trie
+// newTrie create a new trie.
 func newTrie() *Trie {
 	return &Trie{
 		root: newTrieNode(),
@@ -32,13 +33,14 @@ func newTrie() *Trie {
 	}
 }
 
-// trieNode trie tree node container carries value and children
+// trieNode trie tree node container carries value and children.
 type trieNode struct {
 	exists bool
 	value  interface{}
-	child  map[rune]*trieNode // runes as child
+	child  map[rune]*trieNode // runes as child.
 }
 
+// newTrieNode create a new trie node.
 func newTrieNode() *trieNode {
 	return &trieNode{
 		exists: false,
@@ -47,7 +49,7 @@ func newTrieNode() *trieNode {
 	}
 }
 
-// Insert insert a key
+// Insert insert a key.
 func (t *Trie) Insert(key string) {
 	curNode := t.root
 	for _, v := range key {
@@ -58,15 +60,15 @@ func (t *Trie) Insert(key string) {
 	}
 
 	if !curNode.exists {
-		// increment when new rune child is added
+		// increment when new rune child is added.
 		t.size++
 		curNode.exists = true
 	}
-	// value is stored for retrieval in future
+	// value is stored for retrieval in future.
 	curNode.value = key
 }
 
-// PrefixMatch - prefix match
+// PrefixMatch - prefix match.
 func (t *Trie) PrefixMatch(key string) []interface{} {
 	node, _ := t.findNode(key)
 	if node != nil {
@@ -75,7 +77,7 @@ func (t *Trie) PrefixMatch(key string) []interface{} {
 	return []interface{}{}
 }
 
-// walk the tree
+// walk the tree.
 func (t *Trie) walk(node *trieNode) (ret []interface{}) {
 	if node.exists {
 		ret = append(ret, node.value)
@@ -86,7 +88,7 @@ func (t *Trie) walk(node *trieNode) (ret []interface{}) {
 	return
 }
 
-// find nodes corresponding to key
+// find nodes corresponding to key.
 func (t *Trie) findNode(key string) (node *trieNode, index int) {
 	curNode := t.root
 	f := false

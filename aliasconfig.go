@@ -28,7 +28,7 @@ func isValidAliasName(aliasName string) bool {
 	return regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]+$").MatchString(aliasName)
 }
 
-// normalizeAliasedURL - remove any preceding separators
+// normalizeAliasedURL - remove any preceding separators.
 func normalizeAliasedURL(aliasedURL string) string {
 	aliasedURL = strings.TrimPrefix(aliasedURL, string(os.PathSeparator))
 	return aliasedURL

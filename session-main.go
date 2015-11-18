@@ -70,13 +70,14 @@ EXAMPLES:
 `,
 }
 
-// bySessionWhen is a type for sorting session metadata by time
+// bySessionWhen is a type for sorting session metadata by time.
 type bySessionWhen []*sessionV3
 
 func (b bySessionWhen) Len() int           { return len(b) }
 func (b bySessionWhen) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b bySessionWhen) Less(i, j int) bool { return b[i].Header.When.Before(b[j].Header.When) }
 
+// listSessions list all current sessions.
 func listSessions() *probe.Error {
 	var bySessions []*sessionV3
 	for _, sid := range getSessionIDs() {
@@ -86,7 +87,7 @@ func listSessions() *probe.Error {
 		}
 		bySessions = append(bySessions, s)
 	}
-	// sort sessions based on time
+	// sort sessions based on time.
 	sort.Sort(bySessionWhen(bySessions))
 	for _, session := range bySessions {
 		printMsg(session)
@@ -95,18 +96,18 @@ func listSessions() *probe.Error {
 	return nil
 }
 
-// clearSessionMessage container for clearing session messages
+// clearSessionMessage container for clearing session messages.
 type clearSessionMessage struct {
 	Status    string `json:"success"`
 	SessionID string `json:"sessionId"`
 }
 
-// String colorized clear session message
+// String colorized clear session message.
 func (c clearSessionMessage) String() string {
 	return console.Colorize("ClearSession", "Session ‘"+c.SessionID+"’ cleared successfully.")
 }
 
-// JSON jsonified clear session message
+// JSON jsonified clear session message.
 func (c clearSessionMessage) JSON() string {
 	clearSessionJSONBytes, err := json.Marshal(c)
 	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
@@ -114,6 +115,7 @@ func (c clearSessionMessage) JSON() string {
 	return string(clearSessionJSONBytes)
 }
 
+// clearSession clear sessions.
 func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
@@ -127,7 +129,7 @@ func clearSession(sid string) {
 		return
 	}
 
-	if !isSession(sid) {
+	if !isSessionExists(sid) {
 		fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
 	}
 
@@ -186,28 +188,25 @@ func mainSession(ctx *cli.Context) {
 	}
 
 	switch strings.TrimSpace(ctx.Args().First()) {
-	// list resumable sessions
+	// list all resumable sessions.
 	case "list":
 		fatalIf(listSessions().Trace(), "Unable to list sessions.")
 	case "resume":
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
-		if !isSession(sid) {
+		if !isSessionExists(sid) {
 			fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
 		}
-
 		s, err := loadSessionV3(sid)
 		fatalIf(err.Trace(sid), "Unable to load session.")
-
-		// extra check for testing purposes
+		// extra check for testing purposes.
 		if s == nil {
 			return
 		}
-
 		savedCwd, e := os.Getwd()
 		fatalIf(probe.NewError(e), "Unable to determine current working folder.")
 
 		if s.Header.RootPath != "" {
-			// chdir to RootPath
+			// change folder to RootPath.
 			e = os.Chdir(s.Header.RootPath)
 			fatalIf(probe.NewError(e), "Unable to change working folder to root path while resuming session.")
 		}
@@ -218,11 +217,11 @@ func mainSession(ctx *cli.Context) {
 		err = s.Delete()
 		fatalIf(err.Trace(), "Unable to clear session files properly.")
 
-		// chdir back to saved path
+		// change folder back to saved path.
 		e = os.Chdir(savedCwd)
 		fatalIf(probe.NewError(e), "Unable to change working folder to saved path ‘"+savedCwd+"’.")
 
-	// purge a requested pending session, if "all" purge everything
+	// purge a requested pending session, if "all" purge everything.
 	case "clear":
 		clearSession(strings.TrimSpace(ctx.Args().Tail().First()))
 	}

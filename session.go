@@ -24,14 +24,16 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+// migrateSession migrates all previous migration to latest.
 func migrateSession() {
-	// Migrate session V1 to V2
+	// Migrate session V1 to V2.
 	migrateSessionV1ToV2()
 
-	// Migrate session V2 to V3
+	// Migrate session V2 to V3.
 	migrateSessionV2ToV3()
 }
 
+// createSessionDir - create session directory.
 func createSessionDir() *probe.Error {
 	sessionDir, err := getSessionDir()
 	if err != nil {
@@ -44,6 +46,7 @@ func createSessionDir() *probe.Error {
 	return nil
 }
 
+// getSessionDir - get session directory.
 func getSessionDir() (string, *probe.Error) {
 	configDir, err := getMcConfigDir()
 	if err != nil {
@@ -54,6 +57,7 @@ func getSessionDir() (string, *probe.Error) {
 	return sessionDir, nil
 }
 
+// isSessionDirExists - verify if session directory exists.
 func isSessionDirExists() bool {
 	sessionDir, err := getSessionDir()
 	fatalIf(err.Trace(), "Unable to determine session folder.")
@@ -64,6 +68,7 @@ func isSessionDirExists() bool {
 	return true
 }
 
+// getSessionFile - get current session file.
 func getSessionFile(sid string) (string, *probe.Error) {
 	sessionDir, err := getSessionDir()
 	if err != nil {
@@ -74,7 +79,8 @@ func getSessionFile(sid string) (string, *probe.Error) {
 	return sessionFile, nil
 }
 
-func isSession(sid string) bool {
+// isSessionExists verifies if given session exists.
+func isSessionExists(sid string) bool {
 	sessionFile, err := getSessionFile(sid)
 	fatalIf(err.Trace(sid), "Unable to determine session filename for ‘"+sid+"’.")
 
@@ -85,6 +91,7 @@ func isSession(sid string) bool {
 	return true // Session exists.
 }
 
+// getSessionDataFile - get session data file for a given session.
 func getSessionDataFile(sid string) (string, *probe.Error) {
 	sessionDir, err := getSessionDir()
 	if err != nil {
@@ -95,6 +102,7 @@ func getSessionDataFile(sid string) (string, *probe.Error) {
 	return sessionDataFile, nil
 }
 
+// getSessionIDs - get all active sessions.
 func getSessionIDs() (sids []string) {
 	sessionDir, err := getSessionDir()
 	fatalIf(err.Trace(), "Unable to access session folder.")

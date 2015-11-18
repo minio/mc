@@ -16,12 +16,12 @@
 
 package main
 
-// signalTrap traps the registered signals and notifies the caller.
 import (
 	"os"
 	"os/signal"
 )
 
+// signalTrap traps the registered signals and notifies the caller.
 func signalTrap(sig ...os.Signal) <-chan bool {
 	// channel to notify the caller.
 	trapCh := make(chan bool, 1)
@@ -35,10 +35,10 @@ func signalTrap(sig ...os.Signal) <-chan bool {
 		// receive notifications of the specified signals.
 		signal.Notify(sigCh, sig...)
 
-		// Wait for the signal
+		// Wait for the signal.
 		<-sigCh
 
-		// Notify the caller
+		// Notify the caller.
 		trapCh <- true
 	}(trapCh)
 

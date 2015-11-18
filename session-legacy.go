@@ -31,6 +31,7 @@ import (
 	"github.com/minio/minio-xl/pkg/quick"
 )
 
+// sessionV1 legacy session version definition.
 type sessionV1 struct {
 	Version     string          `json:"version"`
 	Started     time.Time       `json:"started"`
@@ -42,6 +43,7 @@ type sessionV1 struct {
 	Lock *sync.Mutex `json:"-"`
 }
 
+// Stringify session data.
 func (s sessionV1) String() string {
 	message := console.Colorize("Time", fmt.Sprintf("[%s] ", s.Started.Local().Format(printDate)))
 	message = message + console.Colorize("SessionID", fmt.Sprintf("%s", s.SessionID))
@@ -49,7 +51,7 @@ func (s sessionV1) String() string {
 	return message
 }
 
-// loadSession - reads session file if exists and re-initiates internal variables
+// loadSessionV1 - reads session file if exists and re-initiates internal variables.
 func loadSessionV1(sid string) (*sessionV1, *probe.Error) {
 	if !isSessionDirExists() {
 		return nil, probe.NewError(errors.New("Session folder does not exist."))
@@ -62,7 +64,7 @@ func loadSessionV1(sid string) (*sessionV1, *probe.Error) {
 
 	s := new(sessionV1)
 	s.Version = "1.0.0"
-	// map of command and files copied
+	// map of command and files copied.
 	s.URLs = nil
 	s.Lock = new(sync.Mutex)
 	s.Files = make(map[string]bool)
@@ -77,6 +79,7 @@ func loadSessionV1(sid string) (*sessionV1, *probe.Error) {
 	return qs.Data().(*sessionV1), nil
 }
 
+// getSessionIDsV1 get session ids version 1.
 func getSessionIDsV1() (sids []string) {
 	sessionDir, err := getSessionDir()
 	fatalIf(err.Trace(), "Unable to determine session folder.")
@@ -99,6 +102,7 @@ func getSessionIDsV1() (sids []string) {
 	return sids
 }
 
+// getSessionFileV1 get version 1 session file.
 func getSessionFileV1(sid string) (string, *probe.Error) {
 	sessionDir, err := getSessionDir()
 	if err != nil {
@@ -125,7 +129,7 @@ func migrateSessionV1ToV2() {
 	}
 }
 
-// sessionV2Header
+// sessionV2Header new session version 2 header.
 type sessionV2Header struct {
 	Version      string    `json:"version"`
 	When         time.Time `json:"time"`
@@ -137,7 +141,7 @@ type sessionV2Header struct {
 	TotalObjects int       `json:"total-objects"`
 }
 
-// loadSession - reads session file if exists and re-initiates internal variables
+// loadSessionV2 - reads session file if exists and re-initiates internal variables.
 func loadSessionV2(sid string) (*sessionV2Header, *probe.Error) {
 	if !isSessionDirExists() {
 		return nil, errInvalidArgument().Trace()
@@ -150,7 +154,7 @@ func loadSessionV2(sid string) (*sessionV2Header, *probe.Error) {
 		return nil, probe.NewError(err)
 	}
 	sessionHeader := &sessionV2Header{}
-	// V2 is actually v1.1. We later moved to a serial single digit version.
+	// V2 is actually v1.1. We have moved to a serial single digit version.
 	sessionHeader.Version = "1.1.0"
 	qs, err := quick.New(sessionHeader)
 	if err != nil {
