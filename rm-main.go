@@ -56,7 +56,13 @@ var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "Remove file or bucket [WARNING: Use with care].",
 	Action: mainRm,
-	Flags:  []cli.Flag{rmFlagRecursive, rmFlagForce, rmFlagIncomplete, rmFlagFake, rmFlagHelp},
+	Flags: []cli.Flag{
+		rmFlagRecursive,
+		rmFlagForce,
+		rmFlagIncomplete,
+		rmFlagFake,
+		rmFlagHelp,
+	},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -77,7 +83,7 @@ EXAMPLES:
      $ mc {{.Name}} --force --recursive https://s3.amazonaws.com/jazz-songs/louis/
 
    4. Remove all matching objects with this prefix.
-     $ mc {{.Name}} --force --force https://s3.amazonaws.com/ogg/gunmetal
+     $ mc {{.Name}} --force https://s3.amazonaws.com/ogg/gunmetal
 
    5. Drop an incomplete upload of an object.
       $ mc {{.Name}} --incomplete https://s3.amazonaws.com/jazz-songs/louis/file01.mp3
