@@ -952,13 +952,20 @@ func (a API) listIncompleteUploadsInRoutine(bucket, prefix string, recursive boo
 				return
 			}
 			for _, objectSt := range result.Uploads {
-				objectSt.Size, err = a.getTotalMultipartSize(bucket, objectSt.Key, objectSt.UploadID)
-				if err != nil {
-					ch <- ObjectMultipartStatCh{
-						Stat: ObjectMultipartStat{},
-						Err:  err,
-					}
-				}
+				//
+				// NOTE:
+				//
+				// Enable this as a configurable option if necessary in future
+				// if needed, otherwise its safe to keep this off by default.
+				// getTotalMultipartSize can make listing incomplete uploads slower.
+				//
+				// objectSt.Size, err = a.getTotalMultipartSize(bucket, objectSt.Key, objectSt.UploadID)
+				// if err != nil {
+				//	 ch <- ObjectMultipartStatCh{
+				//		 Stat: ObjectMultipartStat{},
+				//		 Err:  err,
+				// 	 }
+				// }
 				ch <- ObjectMultipartStatCh{
 					Stat: objectSt,
 					Err:  nil,

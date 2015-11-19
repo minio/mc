@@ -11,7 +11,7 @@ List of supported cloud storage providers.
    - Minio
 
  - AWS Signature Version 2
-   - Google Cloud Storage (Compatibility Mode) 
+   - Google Cloud Storage (Compatibility Mode)
    - Openstack Swift + Swift3 middleware
    - Ceph Object Gateway
    - Riak CS
@@ -24,41 +24,9 @@ $ go get github.com/minio/minio-go
 
 ## Example
 
-### ListBuckets() - AWS Signature Version 4.
+### ListBuckets()
 
-This example shows how to List your buckets with default AWS Signature Version 4.
-
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/minio/minio-go"
-)
-
-func main() {
-	config := minio.Config{
-		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
-		SecretAccessKey: "YOUR-PASSWORD-HERE",
-		Endpoint:        "https://s3.amazonaws.com",
-	}
-	s3Client, err := minio.New(config)
-	if err != nil {
-	    log.Fatalln(err)
-	}
-	for bucket := range s3Client.ListBuckets() {
-		if bucket.Err != nil {
-			log.Fatalln(bucket.Err)
-		}
-		log.Println(bucket.Stat)
-	}
-}
-```
-
-### ListBuckets() - AWS Signature Version 2.
-
-This example shows how to List your buckets with AWS Signature Version 2.
+This example shows how to List your buckets.
 
 ```go
 package main
@@ -74,8 +42,11 @@ func main() {
 		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
 		SecretAccessKey: "YOUR-PASSWORD-HERE",
 		Endpoint:        "https://s3.amazonaws.com",
-		Signature:       minio.SignatureV2,        
 	}
+
+	// Default is Signature Version 4. To enable Signature Version 2 do the following.
+	// config.Signature = minio.SignatureV2
+        
 	s3Client, err := minio.New(config)
 	if err != nil {
 	    log.Fatalln(err)
@@ -92,31 +63,27 @@ func main() {
 ## Documentation
 
 ### Bucket Level
-* [MakeBucket(bucket, acl) error](examples/s3-v4/makebucket.go)
-* [BucketExists(bucket) error](examples/s3-v4/bucketexists.go)
-* [RemoveBucket(bucket) error](examples/s3-v4/removebucket.go)
-* [GetBucketACL(bucket) (BucketACL, error)](examples/s3-v4/getbucketacl.go)
-* [SetBucketACL(bucket, BucketACL) error)](examples/s3-v4/setbucketacl.go)
-* [ListBuckets() <-chan BucketStat](examples/s3-v4/listbuckets.go)
-* [ListObjects(bucket, prefix, recursive) <-chan ObjectStat](examples/s3-v4/listobjects.go)
-* [ListIncompleteUploads(bucket, prefix, recursive) <-chan ObjectMultipartStat](examples/s3-v4/listincompleteuploads.go)
+* [MakeBucket(bucket, acl) error](examples/s3/makebucket.go)
+* [BucketExists(bucket) error](examples/s3/bucketexists.go)
+* [RemoveBucket(bucket) error](examples/s3/removebucket.go)
+* [GetBucketACL(bucket) (BucketACL, error)](examples/s3/getbucketacl.go)
+* [SetBucketACL(bucket, BucketACL) error)](examples/s3/setbucketacl.go)
+* [ListBuckets() <-chan BucketStat](examples/s3/listbuckets.go)
+* [ListObjects(bucket, prefix, recursive) <-chan ObjectStat](examples/s3/listobjects.go)
+* [ListIncompleteUploads(bucket, prefix, recursive) <-chan ObjectMultipartStat](examples/s3/listincompleteuploads.go)
 
 ### Object Level
-* [PutObject(bucket, object, size, io.Reader) error](examples/s3-v4/putobject.go)
-* [GetObject(bucket, object) (io.Reader, ObjectStat, error)](examples/s3-v4/getobject.go)
-* [GetPartialObject(bucket, object, offset, length) (io.Reader, ObjectStat, error)](examples/s3-v4/getpartialobject.go)
-* [StatObject(bucket, object) (ObjectStat, error)](examples/s3-v4/statobject.go)
-* [RemoveObject(bucket, object) error](examples/s3-v4/removeobject.go)
-* [RemoveIncompleteUpload(bucket, object) <-chan error](examples/s3-v4/removeincompleteupload.go)
+* [PutObject(bucket, object, size, io.Reader) error](examples/s3/putobject.go)
+* [GetObject(bucket, object) (io.Reader, ObjectStat, error)](examples/s3/getobject.go)
+* [GetPartialObject(bucket, object, offset, length) (io.Reader, ObjectStat, error)](examples/s3/getpartialobject.go)
+* [StatObject(bucket, object) (ObjectStat, error)](examples/s3/statobject.go)
+* [RemoveObject(bucket, object) error](examples/s3/removeobject.go)
+* [RemoveIncompleteUpload(bucket, object) <-chan error](examples/s3/removeincompleteupload.go)
 
 ### Presigned Bucket/Object Level
-* [PresignedGetObject(bucket, object, time.Duration) (string, error)](examples/s3-v4/presignedgetobject.go)
-* [PresignedPutObject(bucket, object, time.Duration) (string, error)](examples/s3-v4/presignedputobject.go)
-* [PresignedPostPolicy(NewPostPolicy()) (map[string]string, error)](examples/s3-v4/presignedpostpolicy.go)
-
-## Additional Documentation
-
-More examples with AWS Signature Version 2 can be found [here](examples/s3-v2)
+* [PresignedGetObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedgetobject.go)
+* [PresignedPutObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedputobject.go)
+* [PresignedPostPolicy(NewPostPolicy()) (map[string]string, error)](examples/s3/presignedpostpolicy.go)
 
 ### API Reference
 
