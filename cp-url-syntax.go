@@ -76,14 +76,6 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	if !srcContent.Type.IsRegular() {
 		fatalIf(errInvalidArgument().Trace(), "Source ‘"+srcURL+"’ is not a file.")
 	}
-
-	// Check target.
-	_, tgtContent, err := url2Stat(tgtURL)
-	fatalIf(err.Trace(srcURL), "Unable to stat target ‘"+tgtURL+"’.")
-
-	if !tgtContent.Type.IsRegular() {
-		fatalIf(errInvalidArgument().Trace(), "Target ‘"+tgtURL+"’ is not a file.")
-	}
 }
 
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid dir.
