@@ -103,7 +103,7 @@ func (a *App) getNewContext(arguments []string) (*Context, error) {
 			fmt.Fprint(a.Writer, fmt.Sprintf("Unknown flag. ‘%s’\n\n", strings.Join(arguments[1:], ", ")))
 		}
 		ShowAppHelp(context)
-		fmt.Fprintln(a.Writer)
+		fmt.Fprint(a.Writer, "")
 		return nil, err
 
 	}
@@ -111,7 +111,7 @@ func (a *App) getNewContext(arguments []string) (*Context, error) {
 	if nerr != nil {
 		fmt.Fprintln(a.Writer, nerr)
 		ShowAppHelp(context)
-		fmt.Fprintln(a.Writer)
+		fmt.Fprint(a.Writer, "")
 		return nil, nerr
 	}
 	return context, nil
@@ -220,7 +220,7 @@ func (a *App) RunAsSubcommand(ctx *Context) (err error) {
 		} else {
 			ShowCommandHelp(ctx, context.Args().First())
 		}
-		fmt.Fprintln(a.Writer)
+		fmt.Fprint(a.Writer, "")
 		return nerr
 	}
 
