@@ -109,7 +109,7 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 
 	srcURL := srcURLs[0]
 	_, _, err := url2Stat(srcURL)
-	if err != nil && !prefixExists(srcURL) {
+	if err != nil && !isURLPrefixExists(srcURL) {
 		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 	}
 
