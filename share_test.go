@@ -50,21 +50,3 @@ func (s *TestSuite) TestShareFailure(c *C) {
 	// Reset back.
 	console.IsExited = false
 }
-
-func (s *TestSuite) TestShareSuccess(c *C) {
-	objectURL := server.URL + "/bucket/object1"
-
-	err := app.Run([]string{os.Args[0], "share", "download", objectURL})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
-
-	// Reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "share", "download", "--expire=1h", objectURL})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
-
-	// Reset back
-	console.IsExited = false
-}
