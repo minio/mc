@@ -36,7 +36,12 @@ import (
 	"github.com/minio/pb"
 )
 
+// cp command flags.
 var (
+	cpFlagRecursive = cli.BoolFlag{
+		Name:  "recursive, r",
+		Usage: "Copy recursively.",
+	}
 	cpFlagHelp = cli.BoolFlag{
 		Name:  "help, h",
 		Usage: "Help of cp.",
@@ -48,7 +53,7 @@ var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy one or more objects to a target.",
 	Action: mainCopy,
-	Flags:  []cli.Flag{cpFlagHelp},
+	Flags:  []cli.Flag{cpFlagRecursive, cpFlagHelp},
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -62,20 +67,20 @@ EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
       $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/
 
-   2. Copy a bucket recursively from Minio cloud storage to Amazon S3 cloud storage.
-      $ mc {{.Name}} https://play.minio.io:9000/photobucket/burningman2011... https://s3.amazonaws.com/mybucket/
+   2. Copy a folder recursively from Minio cloud storage to Amazon S3 cloud storage.
+      $ mc {{.Name}} --recursive https://play.minio.io:9000/mybucket/burningman2011/ https://s3.amazonaws.com/mybucket/
 
    3. Copy multiple local folders recursively to Minio cloud storage.
-      $ mc {{.Name}} backup/2014/... backup/2015/... https://play.minio.io:9000/archive/
+      $ mc {{.Name}} --recursive backup/2014/ backup/2015/ https://play.minio.io:9000/archive/
 
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
-      $ mc {{.Name}} s3/documents/2014/... C:\Backups\2014
+      $ mc {{.Name}} --recursive s3/documents/2014/ C:\Backups\2014
 
    5. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
       $ mc {{.Name}} 本語 s3/andoria/
 
    6. Copy a local folder with space separated characters to Amazon S3 cloud storage.
-      $ mc {{.Name}} 'workdir/documents/May 2014...' s3/miniocloud
+      $ mc {{.Name}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
 `,
 }
 
@@ -190,14 +195,17 @@ func doCopyFake(cURLs copyURLs, progressReader *barSend) {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV4, trapCh <-chan bool) {
+func doPrepareCopyURLs(session *sessionV5, trapCh <-chan bool) {
 	// Separate source and target. 'cp' can take only one target,
-	// but any number of sources, even the recursive URLs mixed in-between.
+	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
 	targetURL := session.Header.CommandArgs[len(session.Header.CommandArgs)-1] // Last one is target
 
 	var totalBytes int64
 	var totalObjects int
+
+	// Access recursive flag inside the session header.
+	isRecursive := session.Header.CommandBoolFlags["recursive"]
 
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
@@ -207,7 +215,7 @@ func doPrepareCopyURLs(session *sessionV4, trapCh <-chan bool) {
 		scanBar = scanBarFactory()
 	}
 
-	URLsCh := prepareCopyURLs(sourceURLs, targetURL)
+	URLsCh := prepareCopyURLs(sourceURLs, targetURL, isRecursive)
 	done := false
 
 	for done == false {
@@ -256,7 +264,7 @@ func doPrepareCopyURLs(session *sessionV4, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCopySession(session *sessionV4) {
+func doCopySession(session *sessionV5) {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
@@ -376,19 +384,19 @@ func mainCopy(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	var e error
-	session := newSessionV4()
+	session := newSessionV5()
 	session.Header.CommandType = "cp"
-	session.Header.RootPath, e = os.Getwd()
-	if e != nil {
+	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")
+
+	var e error
+	if session.Header.RootPath, e = os.Getwd(); e != nil {
 		session.Delete()
 		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
 
 	// extract URLs.
 	var err *probe.Error
-	session.Header.CommandArgs, err = args2URLs(ctx.Args())
-	if err != nil {
+	if session.Header.CommandArgs, err = args2URLs(ctx.Args()); err != nil {
 		session.Delete()
 		fatalIf(err.Trace(), "One or more unknown URL types passed.")
 	}

@@ -74,10 +74,6 @@ EXAMPLES:
 `,
 }
 
-var (
-	mirrorIsForce = false // mirror specific force flag set via command line
-)
-
 // mirrorMessage container for file mirror messages
 type mirrorMessage struct {
 	Status  string   `json:"status"`
@@ -191,7 +187,7 @@ func doMirrorFake(sURLs mirrorURLs, progressReader *barSend) {
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
-func doPrepareMirrorURLs(session *sessionV4, trapCh <-chan bool) {
+func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURLs := session.Header.CommandArgs[1:]
 	var totalBytes int64
@@ -205,14 +201,7 @@ func doPrepareMirrorURLs(session *sessionV4, trapCh <-chan bool) {
 		scanBar = scanBarFactory()
 	}
 
-	// will be true if '--force' is provided on the command line.
-	if len(session.Header.CommandBoolFlag) > 0 {
-		if session.Header.CommandBoolFlag[0].Key == "force" {
-			mirrorIsForce = session.Header.CommandBoolFlag[0].Value
-		}
-	}
-
-	URLsCh := prepareMirrorURLs(sourceURL, targetURLs)
+	URLsCh := prepareMirrorURLs(sourceURL, targetURLs, isForce)
 	done := false
 	for done == false {
 		select {
@@ -259,11 +248,12 @@ func doPrepareMirrorURLs(session *sessionV4, trapCh <-chan bool) {
 }
 
 // Session'fied mirror command.
-func doMirrorSession(session *sessionV4) {
+func doMirrorSession(session *sessionV5) {
+	isForce := session.Header.CommandBoolFlags["force"]
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
-		doPrepareMirrorURLs(session, trapCh)
+		doPrepareMirrorURLs(session, isForce, trapCh)
 	}
 
 	// Enable accounting reader by default.
@@ -380,7 +370,7 @@ func mainMirror(ctx *cli.Context) {
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
 	var e error
-	session := newSessionV4()
+	session := newSessionV5()
 	session.Header.CommandType = "mirror"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {
@@ -389,7 +379,8 @@ func mainMirror(ctx *cli.Context) {
 	}
 
 	// If force flag is set save it with in session
-	session.Header.CommandBoolFlag = []cmdBoolFlag{{Key: "force", Value: ctx.Bool("force")}}
+	isForce := ctx.Bool("force")
+	session.Header.CommandBoolFlags["force"] = isForce
 
 	// extract URLs.
 	var err *probe.Error

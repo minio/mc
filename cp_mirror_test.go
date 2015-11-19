@@ -29,33 +29,52 @@ import (
 )
 
 func (s *TestSuite) TestCopyURLType(c *C) {
+	// Valid Types.
 	sourceURLs := []string{server.URL + "/bucket/object1"}
 	targetURL := server.URL + "/bucket/test"
-	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeA)
+	isRecursive := false
+	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeA)
 
 	sourceURLs = []string{server.URL + "/bucket/object1"}
 	targetURL = server.URL + "/bucket"
-	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeB)
+	isRecursive = false
+	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeB)
 
-	sourceURLs = []string{server.URL + "/bucket/..."}
+	sourceURLs = []string{server.URL + "/bucket/"}
 	targetURL = server.URL + "/bucket"
-	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeC)
+	isRecursive = true
+	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeC)
 
-	sourceURLs = []string{server.URL + "/bucket/...", server.URL + "/bucket/..."}
-	targetURL = server.URL + "/bucket/test"
-	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeD)
-
-	sourceURLs = []string{}
+	sourceURLs = []string{server.URL + "/bucket/test1.txt", server.URL + "/bucket/test2.txt"}
 	targetURL = server.URL + "/bucket"
-	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
+	isRecursive = false
+	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeD)
 
-	sourceURLs = nil
-	targetURL = server.URL + "/bucket"
-	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
+	//   * INVALID RULES
+	//   =========================
+	//   copy(d, f)
+	//   copy(d..., f)
+	//   copy([]f, f)
 
-	sourceURLs = []string{server.URL + "/bucket/...", server.URL + "/bucket/..."}
+	sourceURLs = []string{"/test/"}
+	targetURL = server.URL + "/bucket/test.txt"
+	isRecursive = false
+	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeInvalid)
+
+	sourceURLs = []string{"/test/"}
+	targetURL = server.URL + "/bucket/test.txt"
+	isRecursive = true
+	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeInvalid)
+
+	sourceURLs = []string{"/test/test1.txt", "/test/test2.txt"}
+	targetURL = server.URL + "/bucket/test.txt"
+	isRecursive = false
+	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeInvalid)
+
+	sourceURLs = []string{server.URL + "/bucket/", server.URL + "/bucket/"}
 	targetURL = ""
-	c.Assert(guessCopyURLType(sourceURLs, targetURL), Equals, copyURLsTypeInvalid)
+	isRecursive = false
+	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeInvalid)
 }
 
 func (s *TestSuite) TestMirror(c *C) {
@@ -107,7 +126,7 @@ func (s *TestSuite) TestCopy(c *C) {
 	target := filepath.Join(source, "random")
 	defer os.RemoveAll(target)
 
-	err = app.Run([]string{os.Args[0], "cp", filepath.Join(source, "..."), target})
+	err = app.Run([]string{os.Args[0], "cp", "--recursive", source, target})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
