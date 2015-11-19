@@ -31,6 +31,9 @@ func migrateSession() {
 
 	// Migrate session V2 to V3.
 	migrateSessionV2ToV3()
+
+	// Migrate session V3 to V4.
+	migrateSessionV3ToV4()
 }
 
 // createSessionDir - create session directory.

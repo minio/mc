@@ -191,7 +191,7 @@ func doMirrorFake(sURLs mirrorURLs, progressReader *barSend) {
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
-func doPrepareMirrorURLs(session *sessionV3, trapCh <-chan bool) {
+func doPrepareMirrorURLs(session *sessionV4, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURLs := session.Header.CommandArgs[1:]
 	var totalBytes int64
@@ -206,7 +206,11 @@ func doPrepareMirrorURLs(session *sessionV3, trapCh <-chan bool) {
 	}
 
 	// will be true if '--force' is provided on the command line.
-	mirrorIsForce = session.Header.CommandBoolFlag.Value
+	if len(session.Header.CommandBoolFlag) > 0 {
+		if session.Header.CommandBoolFlag[0].Key == "force" {
+			mirrorIsForce = session.Header.CommandBoolFlag[0].Value
+		}
+	}
 
 	URLsCh := prepareMirrorURLs(sourceURL, targetURLs)
 	done := false
@@ -255,7 +259,7 @@ func doPrepareMirrorURLs(session *sessionV3, trapCh <-chan bool) {
 }
 
 // Session'fied mirror command.
-func doMirrorSession(session *sessionV3) {
+func doMirrorSession(session *sessionV4) {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
@@ -376,7 +380,7 @@ func mainMirror(ctx *cli.Context) {
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
 	var e error
-	session := newSessionV3()
+	session := newSessionV4()
 	session.Header.CommandType = "mirror"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {
@@ -385,8 +389,7 @@ func mainMirror(ctx *cli.Context) {
 	}
 
 	// If force flag is set save it with in session
-	session.Header.CommandBoolFlag.Key = "force"
-	session.Header.CommandBoolFlag.Value = ctx.Bool("force")
+	session.Header.CommandBoolFlag = []cmdBoolFlag{cmdBoolFlag{Key: "force", Value: ctx.Bool("force")}}
 
 	// extract URLs.
 	var err *probe.Error
