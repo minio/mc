@@ -92,7 +92,7 @@ func (c Command) Run(ctx *Context) error {
 			fmt.Fprint(ctx.App.Writer, fmt.Sprintf("Unknown flag. ‘%s’\n\n", ctx.Args().Tail()[0]))
 		}
 		ShowCommandHelp(ctx, c.Name)
-		fmt.Fprintln(ctx.App.Writer)
+		fmt.Fprint(ctx.App.Writer, "")
 		return err
 	}
 
@@ -101,7 +101,7 @@ func (c Command) Run(ctx *Context) error {
 		fmt.Fprintln(ctx.App.Writer, nerr)
 		fmt.Fprintln(ctx.App.Writer)
 		ShowCommandHelp(ctx, c.Name)
-		fmt.Fprintln(ctx.App.Writer)
+		fmt.Fprint(ctx.App.Writer, "")
 		return nerr
 	}
 	context := NewContext(ctx.App, set, ctx.globalSet)
