@@ -55,22 +55,25 @@ func migrateSessionV3ToV4() {
 	}
 }
 
+// cmdBoolFlag boolean flag container for a command.
 type cmdBoolFlag struct {
 	Key   string
 	Value bool
 }
 
+// cmdIntFlag int flag container for a command.
 type cmdIntFlag struct {
 	Key   string
 	Value int
 }
 
+// cmdStringFlag string flag container for a command.
 type cmdStringFlag struct {
 	Key   string
 	Value string
 }
 
-// sessionV4Header
+// sessionV4Header for resumable sessions.
 type sessionV4Header struct {
 	Version           string          `json:"version"`
 	When              time.Time       `json:"time"`
@@ -94,7 +97,7 @@ type sessionMessage struct {
 	CommandArgs []string  `json:"commandArgs"`
 }
 
-// sessionV4
+// sessionV4 resumable session container.
 type sessionV4 struct {
 	Header    *sessionV4Header
 	SessionID string
@@ -103,6 +106,7 @@ type sessionV4 struct {
 	sigCh     bool
 }
 
+// sessionDataFP data file pointer.
 type sessionDataFP struct {
 	dirty bool
 	*os.File
@@ -113,7 +117,7 @@ func (file *sessionDataFP) Write(p []byte) (int, error) {
 	return file.File.Write(p)
 }
 
-// String colorized session message
+// String colorized session message.
 func (s sessionV4) String() string {
 	message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
 	message = message + console.Colorize("SessionTime", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
@@ -121,7 +125,7 @@ func (s sessionV4) String() string {
 	return message
 }
 
-// JSON jsonified session message
+// JSON jsonified session message.
 func (s sessionV4) JSON() string {
 	sessionMsg := sessionMessage{
 		SessionID:   s.SessionID,
@@ -136,16 +140,16 @@ func (s sessionV4) JSON() string {
 	return string(sessionBytes)
 }
 
-// newSessionV4 provides a new session
+// newSessionV4 provides a new session.
 func newSessionV4() *sessionV4 {
 	s := &sessionV4{}
 	s.Header = &sessionV4Header{}
 	s.Header.Version = "4"
-	// map of command and files copied
+	// map of command and files copied.
 	s.Header.CommandArgs = nil
-	s.Header.CommandBoolFlag = []cmdBoolFlag{cmdBoolFlag{Key: "", Value: false}}
-	s.Header.CommandIntFlag = []cmdIntFlag{cmdIntFlag{Key: "", Value: 0}}
-	s.Header.CommandStringFlag = []cmdStringFlag{cmdStringFlag{Key: "", Value: ""}}
+	s.Header.CommandBoolFlag = []cmdBoolFlag{{Key: "", Value: false}}
+	s.Header.CommandIntFlag = []cmdIntFlag{{Key: "", Value: 0}}
+	s.Header.CommandStringFlag = []cmdStringFlag{{Key: "", Value: ""}}
 	s.Header.When = time.Now().UTC()
 	s.mutex = new(sync.Mutex)
 	s.SessionID = newRandomID(8)
@@ -182,7 +186,7 @@ func (s *sessionV4) NewDataWriter() io.Writer {
 	return io.Writer(s.DataFP)
 }
 
-// Save this session
+// Save this session.
 func (s *sessionV4) Save() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

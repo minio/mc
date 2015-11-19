@@ -389,7 +389,7 @@ func mainMirror(ctx *cli.Context) {
 	}
 
 	// If force flag is set save it with in session
-	session.Header.CommandBoolFlag = []cmdBoolFlag{cmdBoolFlag{Key: "force", Value: ctx.Bool("force")}}
+	session.Header.CommandBoolFlag = []cmdBoolFlag{{Key: "force", Value: ctx.Bool("force")}}
 
 	// extract URLs.
 	var err *probe.Error
