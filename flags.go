@@ -29,7 +29,7 @@ var commandsTree = newTrie()
 
 var (
 	helpFlag = cli.BoolFlag{
-		Name:  "help",
+		Name:  "help, h",
 		Usage: "Help for mc.",
 	}
 

@@ -9,16 +9,16 @@
   ls		List files and folders.
   mb		Make a bucket or folder.
   cat		Display contents of a file.
-  rm		Remove file or bucket [WARNING: Use with care].
-  pipe		Write contents of stdin to one or more targets. Pipe is the opposite of cat command.
+  pipe		Write contents of stdin to one or more targets. When no target is specified, it writes to stdout.
+  share		Generate URL for sharing.
   cp		Copy one or more objects to a target.
   mirror	Mirror folders recursively from a single source to many destinations.
+  diff		Compute differences between two folders.
+  rm		Remove file or bucket [WARNING: Use with care].
+  access	Manage bucket access permissions.
   session	Manage saved sessions of cp and mirror operations.
-  share		Download and upload documents.
-  diff		Compute differences between two files or folders.
-  access	Set or get access permissions.
-  config	Manage ‘mc’ configuration.
-  update	Check for new software updates.
+  config	Manage configuration file.
+  update	Check for a new software update.
   version	Print version.
 ```
 
