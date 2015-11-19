@@ -55,15 +55,14 @@ func stripRecursiveURL(urlStr string) string {
 
 // args2URLs extracts source and target URLs from command-line args.
 func args2URLs(args []string) ([]string, *probe.Error) {
-	config, err := getMcConfig()
-	if err != nil {
-		return nil, err.Trace()
-
-	}
 	// Convert arguments to URLs: expand alias, fix format...
 	URLs := []string{}
 	for _, arg := range args {
-		URLs = append(URLs, getAliasURL(arg, config.Aliases))
+		aliasedURL, err := getAliasURL(arg)
+		if err != nil {
+			return nil, err.Trace(arg)
+		}
+		URLs = append(URLs, aliasedURL)
 	}
 	return URLs, nil
 }

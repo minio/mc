@@ -71,10 +71,4 @@ func (s *TestSuite) TestCommonMethods(c *C) {
 
 	_, err = url2Client(objectPathServer)
 	c.Assert(err, IsNil)
-
-	_, err = url2Client("http://test.minio.io" + "/bucket/fail")
-	c.Assert(err, Not(IsNil))
-
-	_, err = url2Client("http://test.minio.io" + "/bucket/fail")
-	c.Assert(err, Not(IsNil))
 }

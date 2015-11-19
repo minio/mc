@@ -21,6 +21,9 @@ import (
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/minio/mc/pkg/client"
+	"github.com/minio/minio-xl/pkg/probe"
 )
 
 // isValidAliasName - Check if aliasName is a valid alias.
@@ -35,25 +38,38 @@ func normalizeAliasedURL(aliasedURL string) string {
 }
 
 // getAliasURL expands aliased (name/path) to full URL, used by url-parser.
-func getAliasURL(aliasedURL string, aliases map[string]string) string {
+func getAliasURL(aliasedURL string) (string, *probe.Error) {
+	config, err := getMcConfig()
+	if err != nil {
+		return aliasedURL, err.Trace(aliasedURL)
+	}
+	if strings.HasPrefix(aliasedURL, "https") || strings.HasPrefix(aliasedURL, "http") {
+		return aliasedURL, nil
+	}
+	for hostURL := range config.Hosts {
+		url := client.NewURL(hostURL)
+		if strings.Contains(aliasedURL, url.Host) {
+			return url.Scheme + url.SchemeSeparator + aliasedURL, nil
+		}
+	}
 	normalizedAliasURL := normalizeAliasedURL(aliasedURL)
-	for aliasName, aliasValue := range aliases {
+	for aliasName, aliasValue := range config.Aliases {
 		if strings.HasPrefix(normalizedAliasURL, aliasName) {
 			// Match found. Expand it.
 			splits := strings.SplitN(normalizedAliasURL, aliasName, 2)
 			if len(splits) == 1 {
-				return aliasedURL // Not an aliased URL. Return as is.
+				return aliasedURL, nil // Not an aliased URL. Return as is.
 			}
 			if len(splits[0]) == 0 && len(splits[1]) == 0 {
-				return aliasValue // exact match.
+				return aliasValue, nil // exact match.
 			}
 			_, sepLen := utf8.DecodeRuneInString(splits[1])
 			if sepLen == 1 && !os.IsPathSeparator(splits[1][0]) && splits[1] != recursiveSeparator {
-				return aliasedURL // Do not expand for whole strings with alias prefix.
+				return aliasedURL, nil // Do not expand for whole strings with alias prefix.
 			}
 			// Matched, but path needs to be joined.
-			return urlJoinPath(aliasValue, splits[1])
+			return urlJoinPath(aliasValue, splits[1]), nil
 		}
 	}
-	return aliasedURL // No matching alias found. Return as is.
+	return aliasedURL, nil // No matching alias found. Return as is.
 }

@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -29,7 +28,6 @@ import (
 	"net/http/httptest"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/quick"
 	. "gopkg.in/check.v1"
@@ -71,14 +69,12 @@ func (s *TestSuite) SetUpSuite(c *C) {
 	config, err := newConfig()
 	c.Assert(err, IsNil)
 
-	url := client.NewURL(server.URL)
-	config.Data().(*configV6).Hosts[url.Host] = hostConfig{
+	config.Data().(*configV6).Hosts[server.URL] = hostConfig{
 		AccessKeyID:     "WLGDGYAQYIGI833EV05A",
 		SecretAccessKey: "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF",
 		API:             "S3v4",
 	}
 
-	fmt.Println(config.Data().(*configV6).Hosts)
 	err = writeConfig(config)
 	c.Assert(err, IsNil)
 
@@ -152,11 +148,11 @@ func (s *TestSuite) TestNewConfigV6(c *C) {
 	}
 
 	wantHosts := []string{
-		"localhost:9000",
-		"play.minio.io:9000",
-		"dl.minio.io:9000",
-		"s3.amazonaws.com",
-		"storage.googleapis.com",
+		"http://localhost:9000",
+		"https://play.minio.io:9000",
+		"https://dl.minio.io:9000",
+		"https://s3.amazonaws.com",
+		"https://storage.googleapis.com",
 	}
 	for _, host := range wantHosts {
 		_, ok := data.Hosts[host]
@@ -170,21 +166,6 @@ func (s *TestSuite) TestHostConfig(c *C) {
 	c.Assert(hostcfg.AccessKeyID, Equals, globalAccessKeyID)
 	c.Assert(hostcfg.SecretAccessKey, Equals, globalSecretAccessKey)
 	c.Assert(hostcfg.API, Equals, "S3v4")
-
-	_, err = getHostConfig("http://test.minio.io")
-	c.Assert(err, Not(IsNil))
-}
-
-func (s *TestSuite) TestArgs2URL(c *C) {
-	URLs := []string{"local", "s3", "play", "playgo", "play.go", "https://s3-us-west-2.amazonaws.com"}
-	expandedURLs, err := args2URLs(URLs)
-	c.Assert(err, IsNil)
-	c.Assert(expandedURLs[0], Equals, "http://localhost:9000")
-	c.Assert(expandedURLs[1], Equals, "https://s3.amazonaws.com")
-	c.Assert(expandedURLs[2], Equals, "https://play.minio.io:9000")
-	c.Assert(expandedURLs[3], Equals, "playgo")  // Has no corresponding alias. So expect same value.
-	c.Assert(expandedURLs[4], Equals, "play.go") // Has no corresponding alias. So expect same value.
-	c.Assert(expandedURLs[5], Equals, "https://s3-us-west-2.amazonaws.com")
 }
 
 func (s *TestSuite) TestValidPERMS(c *C) {
@@ -255,26 +236,25 @@ func (s *TestSuite) TestIsvalidAliasName(c *C) {
 }
 
 func (s *TestSuite) TestEmptyExpansions(c *C) {
-	url := getAliasURL("hello", nil)
+	url, err := getAliasURL("hello")
+	c.Assert(err, IsNil)
 	c.Assert(url, Equals, "hello")
 
-	url = getAliasURL("minio://hello", nil)
+	url, err = getAliasURL("minio://hello")
+	c.Assert(err, IsNil)
 	c.Assert(url, Equals, "minio://hello")
 
-	url = getAliasURL("$#\\", nil)
+	url, err = getAliasURL("$#\\")
+	c.Assert(err, IsNil)
 	c.Assert(url, Equals, "$#\\")
 
-	url = getAliasURL("foo/bar", map[string]string{"foo": "http://foo"})
-	c.Assert(url, Equals, "http://foo/bar")
-
-	url = getAliasURL("myfoo/bar", nil)
+	url, err = getAliasURL("myfoo/bar")
+	c.Assert(err, IsNil)
 	c.Assert(url, Equals, "myfoo/bar")
 
-	url = getAliasURL("", nil)
+	url, err = getAliasURL("")
+	c.Assert(err, IsNil)
 	c.Assert(url, Equals, "")
-
-	url = getAliasURL("hello", nil)
-	c.Assert(url, Equals, "hello")
 }
 
 func (s *TestSuite) TestHumanizedTime(c *C) {
