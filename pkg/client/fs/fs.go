@@ -311,13 +311,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *client.Content) {
 	// Now if the file exists and doesn't end with a separator ('/') do not traverse it.
 	// If the directory doesn't end with a separator, do not traverse it.
 	if !strings.HasSuffix(fpath, string(pathURL.Separator)) && fst.Mode().IsDir() && fpath != "." {
-		contentCh <- &client.Content{
-			URL:  pathURL,
-			Time: fst.ModTime(),
-			Size: fst.Size(),
-			Type: fst.Mode(),
-			Err:  nil,
-		}
+		f.listPrefixes(fpath, contentCh)
 		return
 	}
 

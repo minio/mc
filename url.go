@@ -17,7 +17,6 @@
 package main
 
 import (
-	"os"
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
@@ -91,31 +90,6 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 		return nil, nil, err.Trace(urlStr)
 	}
 	return client, content, nil
-}
-
-// url2DirContent returns directory content info for a URL.
-func url2DirContent(urlStr string) (content *client.Content, err *probe.Error) {
-	clnt, err := url2Client(urlStr)
-	if err != nil {
-		return nil, err.Trace(urlStr)
-	}
-	isRecursive := false
-	isIncomplete := false
-	for entry := range clnt.List(isRecursive, isIncomplete) {
-		if entry.Err != nil {
-			return nil, entry.Err.Trace(urlStr)
-		}
-		if strings.HasPrefix(entry.URL.Path, clnt.GetURL().Path) {
-			content := new(client.Content)
-			content.URL = clnt.GetURL()
-			content.Type = os.ModeDir
-			return content, nil
-		}
-	}
-	content = new(client.Content)
-	content.URL = clnt.GetURL()
-	content.Type = os.ModeDir
-	return content, nil
 }
 
 // Check if object key prefix exists.
