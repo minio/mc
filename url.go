@@ -17,15 +17,8 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio-xl/pkg/probe"
-)
-
-// ``...`` recursiveSeparator.
-const (
-	recursiveSeparator = "..."
 )
 
 // urlJoinPath Join a path to existing URL.

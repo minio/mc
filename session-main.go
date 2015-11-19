@@ -18,6 +18,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -177,6 +178,20 @@ func checkSessionSyntax(ctx *cli.Context) {
 	}
 }
 
+// findClosestSessions to match a given string with sessions trie tree.
+func findClosestSessions(session string) []string {
+	sessionsTree := newTrie() // Allocate a new trie for sessions strings.
+	for _, sid := range getSessionIDs() {
+		sessionsTree.Insert(sid)
+	}
+	var closestSessions []string
+	for _, value := range sessionsTree.PrefixMatch(session) {
+		closestSessions = append(closestSessions, value.(string))
+	}
+	sort.Strings(closestSessions)
+	return closestSessions
+}
+
 func mainSession(ctx *cli.Context) {
 	checkSessionSyntax(ctx)
 
@@ -197,7 +212,17 @@ func mainSession(ctx *cli.Context) {
 	case "resume":
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
 		if !isSessionExists(sid) {
-			fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
+			closestSessions := findClosestSessions(sid)
+			errorMsg := "Session ‘" + sid + "’ not found."
+			if len(closestSessions) > 0 {
+				errorMsg += fmt.Sprintf("\n\nDid you mean?\n")
+				for _, session := range closestSessions {
+					errorMsg += fmt.Sprintf("        ‘mc resume session %s’", session)
+					// break on the first one, it is good enough.
+					break
+				}
+			}
+			fatalIf(errDummy().Trace(sid), errorMsg)
 		}
 		s, err := loadSessionV5(sid)
 		fatalIf(err.Trace(sid), "Unable to load session.")
@@ -225,7 +250,6 @@ func mainSession(ctx *cli.Context) {
 		// change folder back to saved path.
 		e = os.Chdir(savedCwd)
 		fatalIf(probe.NewError(e), "Unable to change working folder to saved path ‘"+savedCwd+"’.")
-
 	// purge a requested pending session, if "all" purge everything.
 	case "clear":
 		clearSession(strings.TrimSpace(ctx.Args().Tail().First()))

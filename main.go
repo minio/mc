@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 
 	"github.com/minio/cli"
@@ -55,8 +56,13 @@ func commandNotFound(ctx *cli.Context, command string) {
 	closestCommands := findClosestCommands(command)
 	if len(closestCommands) > 0 {
 		msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
-		for _, cmd := range closestCommands {
-			msg += fmt.Sprintf("        ‘%s’\n", cmd)
+		if len(closestCommands) == 1 {
+			cmd := closestCommands[0]
+			msg += fmt.Sprintf("        ‘%s’", cmd)
+		} else {
+			for _, cmd := range closestCommands {
+				msg += fmt.Sprintf("        ‘%s’\n", cmd)
+			}
 		}
 	}
 	fatalIf(errDummy().Trace(), msg)
@@ -135,6 +141,7 @@ func findClosestCommands(command string) []string {
 	for _, value := range commandsTree.PrefixMatch(command) {
 		closestCommands = append(closestCommands, value.(string))
 	}
+	sort.Strings(closestCommands)
 	return closestCommands
 }
 
