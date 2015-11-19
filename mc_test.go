@@ -164,15 +164,6 @@ func (s *TestSuite) TestNewConfigV6(c *C) {
 	}
 }
 
-func (s *TestSuite) TestRecursiveURL(c *C) {
-	c.Assert(isURLRecursive("url..."), Equals, true)
-	c.Assert(isURLRecursive("url.."), Equals, false)
-	c.Assert(stripRecursiveURL("url..."), Equals, "url")
-	c.Assert(stripRecursiveURL("url.."), Equals, "url..")
-	c.Assert(stripRecursiveURL("..."), Equals, ".")
-	c.Assert(stripRecursiveURL("...url"), Equals, "...url")
-}
-
 func (s *TestSuite) TestHostConfig(c *C) {
 	hostcfg, err := getHostConfig("https://s3.amazonaws.com")
 	c.Assert(err, IsNil)
