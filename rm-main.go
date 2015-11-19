@@ -115,6 +115,16 @@ func checkRmSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
 	}
 
+	if !isRecursive {
+		URLs, err := args2URLs(ctx.Args())
+		fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
+		for _, url := range URLs {
+			if _, _, err := url2Stat(url); err != nil {
+				fatalIf(err.Trace(url), "Unable to stat.")
+			}
+		}
+	}
+
 	if isRecursive && !isForce {
 		fatalIf(errDummy().Trace(),
 			"Recursive removal requires --force option. Please review carefully before performing this *DANGEROUS* operation.")
