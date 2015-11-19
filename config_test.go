@@ -52,7 +52,14 @@ func (s *TestSuite) TestConfigAliasContext(c *C) {
 func (s *TestSuite) TestConfigHostContext(c *C) {
 	console.IsExited = false
 
-	err := app.Run([]string{os.Args[0], "config", "host", "add", "*test.io", "invalid", "invalid"})
+	err := app.Run([]string{os.Args[0],
+		"config",
+		"host",
+		"add",
+		"*test.io",
+		"AKIKJAA5BMMU2RHO6IBB",
+		"V7f1CCwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr9",
+	})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 

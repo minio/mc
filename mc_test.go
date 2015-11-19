@@ -160,14 +160,6 @@ func (s *TestSuite) TestNewConfigV6(c *C) {
 	}
 }
 
-func (s *TestSuite) TestHostConfig(c *C) {
-	hostcfg, err := getHostConfig("https://s3.amazonaws.com")
-	c.Assert(err, IsNil)
-	c.Assert(hostcfg.AccessKeyID, Equals, globalAccessKeyID)
-	c.Assert(hostcfg.SecretAccessKey, Equals, globalSecretAccessKey)
-	c.Assert(hostcfg.API, Equals, "S3v4")
-}
-
 func (s *TestSuite) TestValidPERMS(c *C) {
 	perms := accessPerms("private")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
