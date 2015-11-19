@@ -64,7 +64,7 @@ func getAliasURL(aliasedURL string) (string, *probe.Error) {
 				return aliasValue, nil // exact match.
 			}
 			_, sepLen := utf8.DecodeRuneInString(splits[1])
-			if sepLen == 1 && !os.IsPathSeparator(splits[1][0]) && splits[1] != recursiveSeparator {
+			if sepLen == 1 && !os.IsPathSeparator(splits[1][0]) {
 				return aliasedURL, nil // Do not expand for whole strings with alias prefix.
 			}
 			// Matched, but path needs to be joined.
