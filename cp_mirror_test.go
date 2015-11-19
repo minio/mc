@@ -112,15 +112,6 @@ func (s *TestSuite) TestCopy(c *C) {
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "cp", filepath.Join(source, ".."), target})
-	c.Assert(err, IsNil)
-	// in case of invalid arguments both are set
-	c.Assert(console.IsError, Equals, true)
-	c.Assert(console.IsExited, Equals, true)
-
-	// reset back
 	console.IsError = false
 	console.IsExited = false
 }
