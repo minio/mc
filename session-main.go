@@ -67,6 +67,9 @@ EXAMPLES:
 
    3. Clear session.
       $ mc {{.Name}} clear ygVIpSJs
+
+   4. Clear session.
+      $ mc {{.Name}} clear all
 `,
 }
 
