@@ -37,8 +37,3 @@ func (s *TestSuite) TestURLJoinPath(c *C) {
 	url = urlJoinPath(url1, url2)
 	c.Assert(url, Equals, "http://s3.mycompany.io/dev/mybucket/bin/")
 }
-
-func (s *TestSuite) TestURL2DirContent(c *C) {
-	_, err := url2DirContent(".")
-	c.Assert(err, IsNil)
-}

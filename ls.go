@@ -103,38 +103,16 @@ func parseContent(c *client.Content) contentMessage {
 	return content
 }
 
-// trimContent to fancify the output for directories.
-func trimContent(parentContentDir, childContent *client.Content) *client.Content {
-	// If parentContentDir is a directory, use it to trim the sub-folders.
-	if parentContentDir.Type.IsDir() {
-		// Allocate a new client.Content for trimmed output.
-		trimmedContent := new(client.Content)
-		trimmedContent = childContent
-		if parentContentDir.URL.Path == string(parentContentDir.URL.Separator) {
-			trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, parentContentDir.URL.Path)
-			return trimmedContent
-		}
-		// If the beginning of the trimPrefix is a URL.Separator ignore it.
-		trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, string(trimmedContent.URL.Separator))
-		trimPrefixContentPath := parentContentDir.URL.Path[:strings.LastIndex(parentContentDir.URL.Path,
-			string(parentContentDir.URL.Separator))+1]
-		// If the beginning of the trimPrefix is a URL.Separator ignore it.
-		trimPrefixContentPath = strings.TrimPrefix(trimPrefixContentPath, string(parentContentDir.URL.Separator))
-		trimmedContent.URL.Path = strings.TrimPrefix(trimmedContent.URL.Path, trimPrefixContentPath)
-		return trimmedContent
-	}
-	// if the target is a file, no more trimming needed return back as is.
-	return childContent
-}
-
 // doList - list all entities inside a folder.
 func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
-	// parentContentDir is verified prefix of clnt URL used for trimming purposes.
-	parentContentDir, err := url2DirContent(clnt.GetURL().String())
-	if err != nil {
-		return err.Trace(clnt.GetURL().String())
+	prefixPath := clnt.GetURL().Path
+	separator := string(clnt.GetURL().Separator)
+	if !strings.HasSuffix(prefixPath, separator) {
+		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
+
 	for content := range clnt.List(isRecursive, isIncomplete) {
+		// fmt.Println(content)
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
@@ -154,10 +132,10 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 			errorIf(content.Err.Trace(), "Unable to list folder.")
 			continue
 		}
-		// trim incoming content based on if its recursive or not.
-		trimmedContent := trimContent(parentContentDir, content)
-		// parse trimmed content into printable form.
-		parsedContent := parseContent(trimmedContent)
+		contentURL := content.URL.Path
+		contentURL = strings.TrimPrefix(contentURL, prefixPath)
+		content.URL.Path = contentURL
+		parsedContent := parseContent(content)
 		// print colorized or jsonized content info.
 		printMsg(parsedContent)
 	}
