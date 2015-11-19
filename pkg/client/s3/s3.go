@@ -17,10 +17,12 @@
 package s3
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -183,8 +185,12 @@ func (c *s3Client) MakeBucket() *probe.Error {
 	if object != "" {
 		return probe.NewError(client.BucketNameTopLevel{})
 	}
-	if bucket == "" {
-		return probe.NewError(client.BucketNameEmpty{})
+	if len(bucket) < 3 || len(bucket) > 63 {
+		return probe.NewError(errors.New("Bucket name should be more than 3 characters and less than 64 characters"))
+	}
+	match, _ := regexp.MatchString("^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", bucket)
+	if !match {
+		return probe.NewError(errors.New("Bucket name can contain alphabet, '-' and numbers, but first character should be an alphabet"))
 	}
 
 	err := c.api.MakeBucket(bucket, minio.BucketACL("private"))
