@@ -129,6 +129,106 @@ func migrateSessionV1ToV2() {
 	}
 }
 
+func migrateSessionV2ToV3() {
+	for _, sid := range getSessionIDs() {
+		oldSessionV2Header, err := loadSessionV2(sid)
+		// 1.1.0 intermediate version number is actually v2.
+		fatalIf(err.Trace(sid), "Unable to load version ‘1.1.0’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		if oldSessionV2Header.Version == "4" {
+			return
+		}
+		sessionFile, err := getSessionFile(sid)
+		fatalIf(err.Trace(sid), "Unable to get session file.")
+
+		sessionDataFile, err := getSessionDataFile(sid)
+		fatalIf(err.Trace(sid), "Unable to get session data file.")
+
+		if e := os.Remove(sessionFile); e != nil {
+			fatalIf(probe.NewError(e), "Unable to remove version 2 session files.")
+		}
+		if e := os.Remove(sessionDataFile); e != nil {
+			fatalIf(probe.NewError(e), "Unable to remove version 2 session data files.")
+		}
+	}
+}
+
+// sessionV3Header
+type sessionV3Header struct {
+	Version         string    `json:"version"`
+	When            time.Time `json:"time"`
+	RootPath        string    `json:"workingFolder"`
+	CommandType     string    `json:"commandType"`
+	CommandArgs     []string  `json:"cmdArgs"`
+	CommandBoolFlag struct {
+		Key   string
+		Value bool
+	} `json:"cmdBoolFlag"`
+	CommandIntFlag struct {
+		Key   string
+		Value int
+	} `json:"cmdIntFlag"`
+	CommandStringFlag struct {
+		Key   string
+		Value string
+	} `json:"cmdStringFlag"`
+	LastCopied   string `json:"lastCopied"`
+	TotalBytes   int64  `json:"totalBytes"`
+	TotalObjects int    `json:"totalObjects"`
+}
+
+// sessionV3
+type sessionV3 struct {
+	Header    *sessionV3Header
+	SessionID string
+	mutex     *sync.Mutex
+	DataFP    *sessionDataFP
+	sigCh     bool
+}
+
+// loadSessionV3 - reads session file if exists and re-initiates internal variables
+func loadSessionV3(sid string) (*sessionV3, *probe.Error) {
+	if !isSessionDirExists() {
+		return nil, errInvalidArgument().Trace()
+	}
+	sessionFile, err := getSessionFile(sid)
+	if err != nil {
+		return nil, err.Trace(sid)
+	}
+
+	if _, err := os.Stat(sessionFile); err != nil {
+		return nil, probe.NewError(err)
+	}
+
+	s := &sessionV3{}
+	s.Header = &sessionV3Header{}
+	s.SessionID = sid
+	s.Header.Version = "3"
+	qs, err := quick.New(s.Header)
+	if err != nil {
+		return nil, err.Trace(sid, s.Header.Version)
+	}
+	err = qs.Load(sessionFile)
+	if err != nil {
+		return nil, err.Trace(sid, s.Header.Version)
+	}
+
+	s.mutex = new(sync.Mutex)
+	s.Header = qs.Data().(*sessionV3Header)
+
+	sessionDataFile, err := getSessionDataFile(s.SessionID)
+	if err != nil {
+		return nil, err.Trace(sid, s.Header.Version)
+	}
+
+	var e error
+	dataFile, e := os.Open(sessionDataFile)
+	fatalIf(probe.NewError(e), "Unable to open session data file \""+sessionDataFile+"\".")
+
+	s.DataFP = &sessionDataFP{false, dataFile}
+
+	return s, nil
+}
+
 // sessionV2Header new session version 2 header.
 type sessionV2Header struct {
 	Version      string    `json:"version"`

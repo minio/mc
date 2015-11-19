@@ -190,7 +190,7 @@ func doCopyFake(cURLs copyURLs, progressReader *barSend) {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV3, trapCh <-chan bool) {
+func doPrepareCopyURLs(session *sessionV4, trapCh <-chan bool) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources, even the recursive URLs mixed in-between.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -256,7 +256,7 @@ func doPrepareCopyURLs(session *sessionV3, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCopySession(session *sessionV3) {
+func doCopySession(session *sessionV4) {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
@@ -377,7 +377,7 @@ func mainCopy(ctx *cli.Context) {
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
 	var e error
-	session := newSessionV3()
+	session := newSessionV4()
 	session.Header.CommandType = "cp"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {

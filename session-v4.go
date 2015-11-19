@@ -32,57 +32,57 @@ import (
 	"github.com/minio/minio-xl/pkg/quick"
 )
 
-func migrateSessionV2ToV3() {
+func migrateSessionV3ToV4() {
 	for _, sid := range getSessionIDs() {
-		oldSessionV2Header, err := loadSessionV2(sid)
-		// 1.1.0 intermediate version number is actually v2.
-		fatalIf(err.Trace(sid), "Unable to load version ‘1.1.0’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
-		if oldSessionV2Header.Version == "3" {
+		oldSessionV3, err := loadSessionV3(sid)
+		fatalIf(err.Trace(sid), "Unable to load version ‘3’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		if oldSessionV3.Header.Version == "4" {
 			return
 		}
-		newSessionV3Header := &sessionV3Header{}
-		newSessionV3Header.Version = "3"
-		newSessionV3Header.When = oldSessionV2Header.When
-		newSessionV3Header.RootPath = oldSessionV2Header.RootPath
-		newSessionV3Header.CommandType = oldSessionV2Header.CommandType
-		newSessionV3Header.CommandArgs = oldSessionV2Header.CommandArgs
-		newSessionV3Header.LastCopied = oldSessionV2Header.LastCopied
-		newSessionV3Header.TotalBytes = oldSessionV2Header.TotalBytes
-		newSessionV3Header.TotalObjects = oldSessionV2Header.TotalObjects
-
-		qs, err := quick.New(newSessionV3Header)
-		fatalIf(err.Trace(sid), "Unable to initialize quick config.")
 
 		sessionFile, err := getSessionFile(sid)
 		fatalIf(err.Trace(sid), "Unable to get session file.")
 
-		err = qs.Save(sessionFile)
-		fatalIf(err.Trace(sid), "Saving new session file for version ‘3’ failed.")
+		sessionDataFile, err := getSessionDataFile(sid)
+		fatalIf(err.Trace(sid), "Unable to get session data file.")
+
+		if e := os.Remove(sessionFile); e != nil {
+			fatalIf(probe.NewError(e), "Unable to remove version 2 session files.")
+		}
+		if e := os.Remove(sessionDataFile); e != nil {
+			fatalIf(probe.NewError(e), "Unable to remove version 2 session data files.")
+		}
 	}
 }
 
-// sessionV3Header
-type sessionV3Header struct {
-	Version         string    `json:"version"`
-	When            time.Time `json:"time"`
-	RootPath        string    `json:"workingFolder"`
-	CommandType     string    `json:"commandType"`
-	CommandArgs     []string  `json:"cmdArgs"`
-	CommandBoolFlag struct {
-		Key   string
-		Value bool
-	} `json:"cmdBoolFlag"`
-	CommandIntFlag struct {
-		Key   string
-		Value int
-	} `json:"cmdIntFlag"`
-	CommandStringFlag struct {
-		Key   string
-		Value string
-	} `json:"cmdStringFlag"`
-	LastCopied   string `json:"lastCopied"`
-	TotalBytes   int64  `json:"totalBytes"`
-	TotalObjects int    `json:"totalObjects"`
+type cmdBoolFlag struct {
+	Key   string
+	Value bool
+}
+
+type cmdIntFlag struct {
+	Key   string
+	Value int
+}
+
+type cmdStringFlag struct {
+	Key   string
+	Value string
+}
+
+// sessionV4Header
+type sessionV4Header struct {
+	Version           string          `json:"version"`
+	When              time.Time       `json:"time"`
+	RootPath          string          `json:"workingFolder"`
+	CommandType       string          `json:"commandType"`
+	CommandArgs       []string        `json:"cmdArgs"`
+	CommandBoolFlag   []cmdBoolFlag   `json:"cmdBoolFlag"`
+	CommandIntFlag    []cmdIntFlag    `json:"cmdIntFlag"`
+	CommandStringFlag []cmdStringFlag `json:"cmdStringFlag"`
+	LastCopied        string          `json:"lastCopied"`
+	TotalBytes        int64           `json:"totalBytes"`
+	TotalObjects      int             `json:"totalObjects"`
 }
 
 // sessionMessage container for session messages
@@ -94,9 +94,9 @@ type sessionMessage struct {
 	CommandArgs []string  `json:"commandArgs"`
 }
 
-// sessionV3
-type sessionV3 struct {
-	Header    *sessionV3Header
+// sessionV4
+type sessionV4 struct {
+	Header    *sessionV4Header
 	SessionID string
 	mutex     *sync.Mutex
 	DataFP    *sessionDataFP
@@ -114,7 +114,7 @@ func (file *sessionDataFP) Write(p []byte) (int, error) {
 }
 
 // String colorized session message
-func (s sessionV3) String() string {
+func (s sessionV4) String() string {
 	message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
 	message = message + console.Colorize("SessionTime", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
 	message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
@@ -122,7 +122,7 @@ func (s sessionV3) String() string {
 }
 
 // JSON jsonified session message
-func (s sessionV3) JSON() string {
+func (s sessionV4) JSON() string {
 	sessionMsg := sessionMessage{
 		SessionID:   s.SessionID,
 		Time:        s.Header.When.Local(),
@@ -136,19 +136,16 @@ func (s sessionV3) JSON() string {
 	return string(sessionBytes)
 }
 
-// newSessionV3 provides a new session
-func newSessionV3() *sessionV3 {
-	s := &sessionV3{}
-	s.Header = &sessionV3Header{}
-	s.Header.Version = "3"
+// newSessionV4 provides a new session
+func newSessionV4() *sessionV4 {
+	s := &sessionV4{}
+	s.Header = &sessionV4Header{}
+	s.Header.Version = "4"
 	// map of command and files copied
 	s.Header.CommandArgs = nil
-	s.Header.CommandBoolFlag.Key = ""
-	s.Header.CommandBoolFlag.Value = false
-	s.Header.CommandIntFlag.Key = ""
-	s.Header.CommandIntFlag.Value = 0
-	s.Header.CommandStringFlag.Key = ""
-	s.Header.CommandStringFlag.Value = ""
+	s.Header.CommandBoolFlag = []cmdBoolFlag{cmdBoolFlag{Key: "", Value: false}}
+	s.Header.CommandIntFlag = []cmdIntFlag{cmdIntFlag{Key: "", Value: 0}}
+	s.Header.CommandStringFlag = []cmdStringFlag{cmdStringFlag{Key: "", Value: ""}}
 	s.Header.When = time.Now().UTC()
 	s.mutex = new(sync.Mutex)
 	s.SessionID = newRandomID(8)
@@ -164,7 +161,7 @@ func newSessionV3() *sessionV3 {
 }
 
 // HasData provides true if this is a session resume, false otherwise.
-func (s sessionV3) HasData() bool {
+func (s sessionV4) HasData() bool {
 	if s.Header.LastCopied == "" {
 		return false
 	}
@@ -172,21 +169,21 @@ func (s sessionV3) HasData() bool {
 }
 
 // NewDataReader provides reader interface to session data file.
-func (s *sessionV3) NewDataReader() io.Reader {
+func (s *sessionV4) NewDataReader() io.Reader {
 	// DataFP is always intitialized, either via new or load functions.
 	s.DataFP.Seek(0, os.SEEK_SET)
 	return io.Reader(s.DataFP)
 }
 
 // NewDataReader provides writer interface to session data file.
-func (s *sessionV3) NewDataWriter() io.Writer {
+func (s *sessionV4) NewDataWriter() io.Writer {
 	// DataFP is always intitialized, either via new or load functions.
 	s.DataFP.Seek(0, os.SEEK_SET)
 	return io.Writer(s.DataFP)
 }
 
 // Save this session
-func (s *sessionV3) Save() *probe.Error {
+func (s *sessionV4) Save() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -210,7 +207,7 @@ func (s *sessionV3) Save() *probe.Error {
 }
 
 // Close ends this session and removes all associated session files.
-func (s *sessionV3) Close() *probe.Error {
+func (s *sessionV4) Close() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -231,7 +228,7 @@ func (s *sessionV3) Close() *probe.Error {
 }
 
 // Delete removes all the session files.
-func (s *sessionV3) Delete() *probe.Error {
+func (s *sessionV4) Delete() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -261,14 +258,14 @@ func (s *sessionV3) Delete() *probe.Error {
 }
 
 // Close a session and exit.
-func (s sessionV3) CloseAndDie() {
+func (s sessionV4) CloseAndDie() {
 	s.Close()
 	console.Infoln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
 	os.Exit(0)
 }
 
-// loadSessionV3 - reads session file if exists and re-initiates internal variables
-func loadSessionV3(sid string) (*sessionV3, *probe.Error) {
+// loadSessionV4 - reads session file if exists and re-initiates internal variables
+func loadSessionV4(sid string) (*sessionV4, *probe.Error) {
 	if !isSessionDirExists() {
 		return nil, errInvalidArgument().Trace()
 	}
@@ -281,10 +278,10 @@ func loadSessionV3(sid string) (*sessionV3, *probe.Error) {
 		return nil, probe.NewError(err)
 	}
 
-	s := &sessionV3{}
-	s.Header = &sessionV3Header{}
+	s := &sessionV4{}
+	s.Header = &sessionV4Header{}
 	s.SessionID = sid
-	s.Header.Version = "3"
+	s.Header.Version = "4"
 	qs, err := quick.New(s.Header)
 	if err != nil {
 		return nil, err.Trace(sid, s.Header.Version)
@@ -295,7 +292,7 @@ func loadSessionV3(sid string) (*sessionV3, *probe.Error) {
 	}
 
 	s.mutex = new(sync.Mutex)
-	s.Header = qs.Data().(*sessionV3Header)
+	s.Header = qs.Data().(*sessionV4Header)
 
 	sessionDataFile, err := getSessionDataFile(s.SessionID)
 	if err != nil {
