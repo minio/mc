@@ -31,6 +31,7 @@ import (
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
+// S3 client
 type s3Client struct {
 	mu           *sync.Mutex
 	api          minio.CloudStorageAPI
@@ -38,7 +39,7 @@ type s3Client struct {
 	virtualStyle bool
 }
 
-// New returns an initialized s3Client structure. if debug use a internal trace transport
+// New returns an initialized s3Client structure. if debug use a internal trace transport.
 func New(config *client.Config) (client.Client, *probe.Error) {
 	u := client.NewURL(config.HostURL)
 	transport := http.DefaultTransport
@@ -76,12 +77,12 @@ func New(config *client.Config) (client.Client, *probe.Error) {
 	return s3Clnt, nil
 }
 
-// GetURL get url
+// GetURL get url.
 func (c *s3Client) GetURL() client.URL {
 	return *c.hostURL
 }
 
-// Get - get object
+// Get - get object.
 func (c *s3Client) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	reader, metadata, err := c.api.GetPartialObject(bucket, object, offset, length)
@@ -91,7 +92,7 @@ func (c *s3Client) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error
 	return reader, metadata.Size, nil
 }
 
-// Remove - remove object or bucket
+// Remove - remove object or bucket.
 func (c *s3Client) Remove(incomplete bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if incomplete {
@@ -107,7 +108,7 @@ func (c *s3Client) Remove(incomplete bool) *probe.Error {
 	return probe.NewError(err)
 }
 
-// Share - get a usable get object url to share
+// ShareDownload - get a usable presigned object url to share.
 func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	presignedURL, err := c.api.PresignedGetObject(bucket, object, expires)
@@ -117,6 +118,7 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	return presignedURL, nil
 }
 
+// ShareUpload - get data for presigned post http form upload.
 func (c *s3Client) ShareUpload(recursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	p := minio.NewPostPolicy()
@@ -124,7 +126,7 @@ func (c *s3Client) ShareUpload(recursive bool, expires time.Duration, contentTyp
 		return nil, probe.NewError(err)
 	}
 	if strings.TrimSpace(contentType) != "" || contentType != "" {
-		// No need to verify for error here, since we have stripped out spaces
+		// No need to verify for error here, since we have stripped out spaces.
 		p.SetContentType(contentType)
 	}
 	if err := p.SetBucket(bucket); err != nil {
@@ -143,11 +145,12 @@ func (c *s3Client) ShareUpload(recursive bool, expires time.Duration, contentTyp
 	return m, probe.NewError(err)
 }
 
-// Put - put object
+// Put - put object.
 func (c *s3Client) Put(size int64, data io.Reader) *probe.Error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
-	// invidual parts are properly verified
+	// invidual parts are properly verified fully in transit and also upon completion
+	// of the multipart request.
 	bucket, object := c.url2BucketAndObject()
 	err := c.api.PutObject(bucket, object, "application/octet-stream", size, data)
 	if err != nil {
@@ -165,7 +168,7 @@ func (c *s3Client) Put(size int64, data io.Reader) *probe.Error {
 	return nil
 }
 
-// MakeBucket - make a new bucket
+// MakeBucket - make a new bucket.
 func (c *s3Client) MakeBucket() *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
@@ -182,7 +185,7 @@ func (c *s3Client) MakeBucket() *probe.Error {
 	return nil
 }
 
-// GetBucketAccess get canned acl on a bucket
+// GetBucketAccess get acl on a bucket.
 func (c *s3Client) GetBucketAccess() (acl string, error *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
@@ -198,7 +201,7 @@ func (c *s3Client) GetBucketAccess() (acl string, error *probe.Error) {
 	return bucketACL.String(), nil
 }
 
-// SetBucketAccess set canned acl on a bucket
+// SetBucketAccess set acl on a bucket
 func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
@@ -214,13 +217,13 @@ func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
 	return nil
 }
 
-// Stat - send a 'HEAD' on a bucket or object to get its metadata
+// Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
 func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	c.mu.Lock()
 	objectMetadata := new(client.Content)
 	bucket, object := c.url2BucketAndObject()
 	switch {
-	// valid case for s3/...
+	// valid case for '-r s3/'
 	case bucket == "" && object == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
@@ -284,13 +287,14 @@ func isVirtualHostStyle(hostURL string) bool {
 	return matchS3 || matchGoogle
 }
 
-// url2BucketAndObject gives bucketName and objectName from URL path
+// url2BucketAndObject gives bucketName and objectName from URL path.
 func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 	path := c.hostURL.Path
-	// Convert any virtual host styled requests
+	// Convert any virtual host styled requests.
 	//
 	// For the time being this check is introduced for S3,
-	// if you have custom virtual styled hosts please. list them below
+	// If you have custom virtual styled hosts please.
+	// List them below.
 	if c.virtualStyle {
 		var bucket string
 		hostIndex := strings.Index(c.hostURL.Host, "s3")
@@ -317,9 +321,9 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 	return bucketName, objectName
 }
 
-/// Bucket API operations
+/// Bucket API operations.
 
-// List - list at delimited path, if not recursive
+// List - list at delimited path, if not recursive.
 func (c *s3Client) List(recursive, incomplete bool) <-chan *client.Content {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -343,7 +347,7 @@ func (c *s3Client) List(recursive, incomplete bool) <-chan *client.Content {
 
 func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
-	// get bucket and object from URL
+	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
@@ -363,14 +367,14 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 				}
 				content := new(client.Content)
 				url := *c.hostURL
-				// join bucket with - incoming object key
+				// Join bucket with - incoming object key.
 				url.Path = filepath.Join(string(url.Separator), bucket.Stat.Name, object.Stat.Key)
 				if c.virtualStyle {
 					url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
 				}
 				switch {
 				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
-					// We need to keep the trailing Separator, do not use filepath.Join()
+					// We need to keep the trailing Separator, do not use filepath.Join().
 					content.URL = url
 					content.Time = time.Now()
 					content.Type = os.ModeDir
@@ -393,14 +397,14 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 			}
 			content := new(client.Content)
 			url := *c.hostURL
-			// join bucket with - incoming object key
+			// Join bucket with - incoming object key.
 			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
 			if c.virtualStyle {
 				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
 			}
 			switch {
 			case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
-				// We need to keep the trailing Separator, do not use filepath.Join()
+				// We need to keep the trailing Separator, do not use filepath.Join().
 				content.URL = url
 				content.Time = time.Now()
 				content.Type = os.ModeDir
@@ -417,7 +421,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 
 func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
-	// get bucket and object from URL
+	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
@@ -454,7 +458,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 				return
 			}
 			url := *c.hostURL
-			// join bucket and incoming object key
+			// Join bucket and incoming object key.
 			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
 			if c.virtualStyle {
 				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
@@ -471,7 +475,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 
 func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
-	// get bucket and object from URL
+	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
@@ -522,14 +526,14 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 				}
 				content := new(client.Content)
 				url := *c.hostURL
-				// join bucket and incoming object key
+				// Join bucket and incoming object key.
 				url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
 				if c.virtualStyle {
 					url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
 				}
 				switch {
 				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
-					// We need to keep the trailing Separator, do not use filepath.Join()
+					// We need to keep the trailing Separator, do not use filepath.Join().
 					content.URL = url
 					content.Time = time.Now()
 					content.Type = os.ModeDir
@@ -547,7 +551,7 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 
 func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 	defer close(contentCh)
-	// get bucket and object from URL
+	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
@@ -591,9 +595,9 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 			}
 			content := new(client.Content)
 			url := *c.hostURL
-			// join bucket and incoming object key.
+			// Join bucket and incoming object key.
 			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
-			// if virtualStyle replace the url.Path back.
+			// If virtualStyle replace the url.Path back.
 			if c.virtualStyle {
 				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
 			}
