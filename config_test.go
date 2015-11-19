@@ -63,7 +63,7 @@ func (s *TestSuite) TestConfigHostContext(c *C) {
 		"config",
 		"host",
 		"add",
-		"*my-example.com",
+		"http://my-example.com",
 		"AKIKJAA5BMMU2RHO6IBB",
 		"V7f1CCwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr9",
 		"S3v2",
@@ -74,14 +74,14 @@ func (s *TestSuite) TestConfigHostContext(c *C) {
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "config", "host", "remove", "*my-example.com"})
+	err = app.Run([]string{os.Args[0], "config", "host", "remove", "http://my-example.com"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, false)
 
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "config", "host", "remove", "dl.minio.io:9000"})
+	err = app.Run([]string{os.Args[0], "config", "host", "remove", "http://dl.minio.io:9000"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 

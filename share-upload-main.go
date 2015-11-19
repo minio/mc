@@ -84,13 +84,13 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
 	}
 
-	for _, arg := range ctx.Args() {
-		config := mustGetMcConfig()
-		url := getAliasURL(arg, config.Aliases) // Expand alias.
-		_, _, err := url2Stat(url)
-		fatalIf(err.Trace(url), "Unable to stat ‘"+arg+"’.")
-	}
+	URLs, err := args2URLs(ctx.Args()) // expand alias.
+	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
 
+	for _, url := range URLs {
+		_, _, err := url2Stat(url)
+		fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
+	}
 }
 
 // makeCurlCmd constructs curl command-line.
@@ -168,7 +168,6 @@ func mainShareUpload(ctx *cli.Context) {
 	checkShareUploadSyntax(ctx)
 
 	isRecursive := ctx.Bool("recursive")
-	config := mustGetMcConfig()
 	expireArg := ctx.String("expire")
 	expiry := shareDefaultExpiry
 	contentType := ctx.String("content-type")
@@ -178,9 +177,11 @@ func mainShareUpload(ctx *cli.Context) {
 		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
 	}
 
-	for _, url := range ctx.Args() {
-		targetURL := getAliasURL(url, config.Aliases)
+	URLs, err := args2URLs(ctx.Args()) // expand alias.
+	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
+
+	for _, targetURL := range URLs {
 		err := doShareUploadURL(targetURL, isRecursive, expiry, contentType)
-		fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+url+"’.")
+		fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+targetURL+"’.")
 	}
 }

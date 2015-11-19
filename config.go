@@ -23,6 +23,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/minio-xl/pkg/quick"
@@ -131,13 +132,6 @@ func getMcConfig() (*configV6, *probe.Error) {
 	return qconf.Data().(*configV6), nil
 }
 
-// mustGetMcConfig - reads configuration file and returns configs, exits on error
-func mustGetMcConfig() *configV6 {
-	config, err := getMcConfig()
-	fatalIf(err.Trace(), "Unable to read mc configuration.")
-	return config
-}
-
 // isMcConfigExists xreturns err if config doesn't exist
 func isMcConfigExists() bool {
 	configFile, err := getMcConfigPath()
@@ -215,11 +209,11 @@ func newConfigV6() *configV6 {
 	}
 
 	conf.Hosts[globalExampleHostURL] = exampleHostConf
-	conf.Hosts["localhost:9000"] = localHostConfig
-	conf.Hosts["dl.minio.io:9000"] = dlHostConfig
-	conf.Hosts["s3.amazonaws.com"] = s3HostConf
-	conf.Hosts["play.minio.io:9000"] = playHostConfig
-	conf.Hosts["storage.googleapis.com"] = googlHostConf
+	conf.Hosts["http://localhost:9000"] = localHostConfig
+	conf.Hosts["https://dl.minio.io:9000"] = dlHostConfig
+	conf.Hosts["https://s3.amazonaws.com"] = s3HostConf
+	conf.Hosts["https://play.minio.io:9000"] = playHostConfig
+	conf.Hosts["https://storage.googleapis.com"] = googlHostConf
 
 	aliases := make(map[string]string)
 	aliases["s3"] = "https://s3.amazonaws.com"
@@ -240,6 +234,63 @@ func newConfig() (config quick.Config, err *probe.Error) {
 	return config, nil
 }
 
+func fixConfigV6ForHosts() {
+	if !isMcConfigExists() {
+		return
+	}
+	config, err := quick.New(newConfigV6())
+	fatalIf(err.Trace(), "Unable to initialize config.")
+
+	err = config.Load(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to load config.")
+
+	if config.Data().(*configV6).Version == "6" {
+		newConfig := new(configV6)
+		newConfig.Aliases = make(map[string]string)
+		newConfig.Hosts = make(map[string]hostConfig)
+		newConfig.Version = "6"
+		newConfig.Aliases = config.Data().(*configV6).Aliases
+
+		url := new(client.URL)
+		for host, hostCfg := range config.Data().(*configV6).Hosts {
+			// Already fixed - move on.
+			if strings.HasPrefix(host, "https") || strings.HasPrefix(host, "http") {
+				newConfig.Hosts[host] = hostCfg
+				continue
+			}
+			if host == "s3.amazonaws.com" || host == "storage.googleapis.com" {
+				console.Infoln("Found hosts, replacing " + host + " with https://" + host)
+				url.Host = host
+				url.Scheme = "https"
+				url.SchemeSeparator = "://"
+				newConfig.Hosts[url.String()] = hostCfg
+				delete(newConfig.Hosts, host)
+			}
+			if host == "localhost:9000" || host == "127.0.0.1:9000" {
+				console.Infoln("Found hosts, replacing " + host + " with http://" + host)
+				url.Host = host
+				url.Scheme = "http"
+				url.SchemeSeparator = "://"
+				newConfig.Hosts[url.String()] = hostCfg
+				delete(newConfig.Hosts, host)
+			}
+			if host == "play.minio.io:9000" || host == "dl.minio.io:9000" {
+				console.Infoln("Found hosts, replacing " + host + " with https://" + host)
+				url.Host = host
+				url.Scheme = "https"
+				url.SchemeSeparator = "://"
+				newConfig.Hosts[url.String()] = hostCfg
+				delete(newConfig.Hosts, host)
+			}
+		}
+		newConf, err := quick.New(newConfig)
+		fatalIf(err.Trace(), "Unable to initialize newly fixed config.")
+
+		err = newConf.Save(mustGetMcConfigPath())
+		fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
+	}
+}
+
 // fixConfigV6 - fix all the unnecessary glob URLs present in existing config version 6.
 func fixConfigV6() {
 	if !isMcConfigExists() {
@@ -258,6 +309,10 @@ func fixConfigV6() {
 		newConfig.Version = "6"
 		newConfig.Aliases = config.Data().(*configV6).Aliases
 		for host, hostCfg := range config.Data().(*configV6).Hosts {
+			if strings.HasPrefix(host, "https") || strings.HasPrefix(host, "http") {
+				newConfig.Hosts[host] = hostCfg
+				continue
+			}
 			if strings.Contains(host, "*s3*") || strings.Contains(host, "*.s3*") {
 				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
 				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
@@ -318,4 +373,6 @@ func fixConfig() {
 	fixConfigV3()
 	// Fix config V6
 	fixConfigV6()
+	// Fix config V6 for hosts
+	fixConfigV6ForHosts()
 }

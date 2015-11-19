@@ -88,13 +88,13 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
 	}
 
-	for _, arg := range ctx.Args() {
-		config := mustGetMcConfig()
-		url := getAliasURL(arg, config.Aliases) // Expand alias.
-		_, _, err := url2Stat(url)
-		fatalIf(err.Trace(url), "Unable to stat ‘"+arg+"’.")
-	}
+	URLs, err := args2URLs(ctx.Args()) // expand alias.
+	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
 
+	for _, url := range URLs {
+		_, _, err := url2Stat(url)
+		fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
+	}
 }
 
 // doShareURL share files from target.
@@ -162,7 +162,6 @@ func mainShareDownload(ctx *cli.Context) {
 	checkShareDownloadSyntax(ctx)
 
 	// Extract arguments.
-	config := mustGetMcConfig()
 	isRecursive := ctx.Bool("recursive")
 	expiry := shareDefaultExpiry
 	if ctx.String("expire") != "" {
@@ -171,9 +170,11 @@ func mainShareDownload(ctx *cli.Context) {
 		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+ctx.String("expire")+"’.")
 	}
 
-	for _, url := range ctx.Args() {
-		targetURL := getAliasURL(url, config.Aliases) // Expand alias.
+	URLs, err := args2URLs(ctx.Args()) // expand alias.
+	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
+
+	for _, targetURL := range URLs {
 		err := doShareDownloadURL(targetURL, isRecursive, expiry)
-		errorIf(err.Trace(targetURL), "Unable to share target ‘"+url+"’.")
+		fatalIf(err.Trace(targetURL), "Unable to share target ‘"+targetURL+"’.")
 	}
 }

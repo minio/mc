@@ -177,26 +177,25 @@ func mainDiff(ctx *cli.Context) {
 	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
 	console.SetColor("DiffSize", color.New(color.FgMagenta, color.Bold))
 
-	config := mustGetMcConfig()
-	firstArg := ctx.Args().First()
-	secondArg := ctx.Args().Last()
+	URLs, err := args2URLs(ctx.Args())
+	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args 2 URLs")
 
-	firstURL := getAliasURL(firstArg, config.Aliases)
-	secondURL := getAliasURL(secondArg, config.Aliases)
+	firstURL := URLs[0]
+	secondURL := URLs[1]
 
 	_, firstContent, err := url2Stat(firstURL)
 	if err != nil {
-		fatalIf(err.Trace(), fmt.Sprintf("Unable to stat '%s'.", firstURL))
+		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
 	}
 	if !firstContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("‘%s’ is not a folder.", firstURL))
+		fatalIf(errInvalidArgument().Trace(firstURL), fmt.Sprintf("‘%s’ is not a folder.", firstURL))
 	}
 	_, secondContent, err := url2Stat(secondURL)
 	if err != nil {
-		fatalIf(err.Trace(), fmt.Sprintf("Unable to stat '%s'.", secondURL))
+		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
 	}
 	if !secondContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
+		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
 	}
 	doDiffMain(firstURL, secondURL)
 }

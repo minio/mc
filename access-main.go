@@ -160,14 +160,15 @@ func mainAccess(ctx *cli.Context) {
 
 	// Additional command speific theme customization.
 	console.SetColor("Access", color.New(color.FgGreen, color.Bold))
-	config := mustGetMcConfig()
 
 	switch ctx.Args().First() {
 	case "set":
 		perms := accessPerms(ctx.Args().Tail().First())
-		for _, arg := range ctx.Args().Tail().Tail() {
-			targetURL := getAliasURL(arg, config.Aliases)
 
+		URLs, err := args2URLs(ctx.Args().Tail().Tail())
+		fatalIf(err.Trace(ctx.Args().Tail().Tail()...), "Unable to convert args 2 URLs.")
+
+		for _, targetURL := range URLs {
 			err := doSetAccess(targetURL, perms)
 			// Upon error, print and continue.
 			if err != nil {
@@ -183,8 +184,10 @@ func mainAccess(ctx *cli.Context) {
 			})
 		}
 	case "get":
-		for _, arg := range ctx.Args().Tail() {
-			targetURL := getAliasURL(arg, config.Aliases)
+		URLs, err := args2URLs(ctx.Args().Tail())
+		fatalIf(err.Trace(ctx.Args().Tail()...), "Unable to convert args 2 URLs.")
+
+		for _, targetURL := range URLs {
 			perms, err := doGetAccess(targetURL)
 			if err != nil {
 				errorIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")

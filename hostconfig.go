@@ -47,12 +47,13 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 		return hostCfg, nil
 	}
 	// if host is exact return quickly.
-	if _, ok := config.Hosts[url.Host]; ok {
-		return config.Hosts[url.Host], nil
+	if _, ok := config.Hosts[url.String()]; ok {
+		return config.Hosts[url.String()], nil
 	}
 	// if host matches a suffix return.
-	for savedURL, hostCfg := range config.Hosts {
-		if strings.HasSuffix(url.Host, savedURL) {
+	for savedURLStr, hostCfg := range config.Hosts {
+		savedURL := client.NewURL(savedURLStr)
+		if strings.HasSuffix(url.Host, savedURL.Host) {
 			return hostCfg, nil
 		}
 	}

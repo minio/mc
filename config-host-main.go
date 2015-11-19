@@ -8,6 +8,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/minio-xl/pkg/quick"
@@ -42,19 +43,19 @@ FLAGS:
 EXAMPLES:
    1. Add host configuration for a URL, using default signature V4. For security reasons turn off bash history
       $ set +o history
-      $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+      $ mc config {{.Name}} add https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
       $ set -o history
 
    2. Add host configuration for a URL, using signature V2. For security reasons turn off bash history
       $ set +o history
-      $ mc config {{.Name}} add storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
+      $ mc config {{.Name}} add https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
       $ set -o history
 
    3. List all hosts.
       $ mc config {{.Name}} list
 
    4. Remove host config.
-      $ mc config {{.Name}} remove s3.amazonaws.com
+      $ mc config {{.Name}} remove https://s3.amazonaws.com
 
 `,
 }
@@ -147,7 +148,6 @@ func mainConfigHost(ctx *cli.Context) {
 		listHosts()
 	}
 }
-
 func listHosts() {
 	conf := new(configV6)
 	conf.Version = globalMCConfigVersion
@@ -169,12 +169,12 @@ func listHosts() {
 	}
 }
 
-func removeHost(hostGlob string) {
-	if strings.TrimSpace(hostGlob) == "" {
-		fatalIf(errDummy().Trace(), "Alias or URL cannot be empty.")
+func removeHost(hostURL string) {
+	if !isValidHostURL(hostURL) {
+		fatalIf(errDummy().Trace(hostURL), "Invalid host URL: ‘"+hostURL+"’ provided. Valid options are [https://example.test.io, https://bucket.s3.amazonaws.com].")
 	}
-	if strings.TrimSpace(hostGlob) == "dl.minio.io:9000" {
-		fatalIf(errDummy().Trace(), "‘"+hostGlob+"’ is reserved hostname and cannot be removed.")
+	if strings.TrimSpace(hostURL) == "https://dl.minio.io:9000" {
+		fatalIf(errDummy().Trace(hostURL), "‘"+hostURL+"’ is reserved hostname and cannot be removed.")
 	}
 	config, err := newConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
@@ -185,17 +185,78 @@ func removeHost(hostGlob string) {
 
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV6)
-	if _, ok := newConf.Hosts[hostGlob]; !ok {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Host glob ‘%s’ does not exist.", hostGlob))
+	if _, ok := newConf.Hosts[hostURL]; !ok {
+		fatalIf(errDummy().Trace(hostURL), fmt.Sprintf("Host url ‘%s’ does not exist.", hostURL))
 	}
-	delete(newConf.Hosts, hostGlob)
+	delete(newConf.Hosts, hostURL)
 
 	newConfig, err := quick.New(newConf)
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
 	err = writeConfig(newConfig)
-	fatalIf(err.Trace(hostGlob), "Unable to save host glob ‘"+hostGlob+"’.")
+	fatalIf(err.Trace(hostURL), "Unable to save host url ‘"+hostURL+"’.")
 
-	printMsg(hostMessage{op: "remove", Host: hostGlob})
+	printMsg(hostMessage{op: "remove", Host: hostURL})
+}
+
+// addHost - add new host url.
+func addHost(newHostURL, accessKeyID, secretAccessKey, api string) {
+	if !isValidHostURL(newHostURL) {
+		fatalIf(errDummy().Trace(newHostURL),
+			"Invalid host URL: ‘"+newHostURL+"’ provided. Valid options are [https://example.test.io, https://bucket.s3.amazonaws.com].")
+	}
+	if len(accessKeyID) != 0 {
+		if !isValidAccessKey(accessKeyID) {
+			fatalIf(errInvalidArgument().Trace(accessKeyID), "Invalid access key id provided.")
+		}
+	}
+	if len(secretAccessKey) != 0 {
+		if !isValidSecretKey(secretAccessKey) {
+			fatalIf(errInvalidArgument().Trace(secretAccessKey), "Invalid secret access key provided.")
+		}
+	}
+	if strings.TrimSpace(api) == "" {
+		api = "S3v4"
+	}
+	if strings.TrimSpace(api) != "S3v2" && strings.TrimSpace(api) != "S3v4" {
+		fatalIf(errInvalidArgument().Trace(), "Unrecognized version name provided, supported inputs are ‘S3v4’, ‘S3v2’.")
+	}
+	config, err := newConfig()
+	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
+
+	configPath := mustGetMcConfigPath()
+	err = config.Load(configPath)
+	fatalIf(err.Trace(configPath), "Unable to load config path.")
+
+	newConf := config.Data().(*configV6)
+	for savedHost := range newConf.Hosts {
+		if savedHost == newHostURL {
+			newConf.Hosts[savedHost] = hostConfig{
+				AccessKeyID:     accessKeyID,
+				SecretAccessKey: secretAccessKey,
+				API:             api,
+			}
+		} else {
+			newConf.Hosts[newHostURL] = hostConfig{
+				AccessKeyID:     accessKeyID,
+				SecretAccessKey: secretAccessKey,
+				API:             api,
+			}
+		}
+	}
+
+	newConfig, err := quick.New(newConf)
+	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
+
+	err = writeConfig(newConfig)
+	fatalIf(err.Trace(newHostURL), "Unable to save new host url ‘"+newHostURL+"’.")
+
+	printMsg(hostMessage{
+		op:              "add",
+		Host:            newHostURL,
+		AccessKeyID:     accessKeyID,
+		SecretAccessKey: secretAccessKey,
+		API:             api,
+	})
 }
 
 // isValidSecretKey - validate secret key
@@ -216,62 +277,17 @@ func isValidAccessKey(accessKeyID string) bool {
 	return regex.MatchString(accessKeyID)
 }
 
-// addHost - add new host
-func addHost(newHost, accessKeyID, secretAccessKey, api string) {
-	if strings.TrimSpace(newHost) == "" {
-		fatalIf(errDummy().Trace(), "Unable to proceed, empty arguments provided.")
+// isValidHostURL - validate input host url.
+func isValidHostURL(hostURL string) bool {
+	if strings.TrimSpace(hostURL) == "" {
+		return false
 	}
-	if len(accessKeyID) != 0 {
-		if !isValidAccessKey(accessKeyID) {
-			fatalIf(errInvalidArgument().Trace(), "Invalid access key id provided.")
-		}
+	url := client.NewURL(hostURL)
+	if url.Scheme != "https" && url.Scheme != "http" {
+		return false
 	}
-	if len(secretAccessKey) != 0 {
-		if !isValidSecretKey(secretAccessKey) {
-			fatalIf(errInvalidArgument().Trace(), "Invalid secret access key provided.")
-		}
+	if url.Path != "" && url.Path != "/" {
+		return false
 	}
-	if strings.TrimSpace(api) == "" {
-		api = "S3v4"
-	}
-	if strings.TrimSpace(api) != "S3v2" && strings.TrimSpace(api) != "S3v4" {
-		fatalIf(errInvalidArgument().Trace(), "Unrecognized version name provided, supported inputs are ‘S3v4’, ‘S3v2’")
-	}
-	config, err := newConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
-
-	configPath := mustGetMcConfigPath()
-	err = config.Load(configPath)
-	fatalIf(err.Trace(configPath), "Unable to load config path")
-
-	newConf := config.Data().(*configV6)
-	for savedHost := range newConf.Hosts {
-		if savedHost == newHost {
-			newConf.Hosts[savedHost] = hostConfig{
-				AccessKeyID:     accessKeyID,
-				SecretAccessKey: secretAccessKey,
-				API:             api,
-			}
-		} else {
-			newConf.Hosts[newHost] = hostConfig{
-				AccessKeyID:     accessKeyID,
-				SecretAccessKey: secretAccessKey,
-				API:             api,
-			}
-		}
-	}
-
-	newConfig, err := quick.New(newConf)
-	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
-
-	err = writeConfig(newConfig)
-	fatalIf(err.Trace(newHost), "Unable to save new host ‘"+newHost+"’.")
-
-	printMsg(hostMessage{
-		op:              "add",
-		Host:            newHost,
-		AccessKeyID:     accessKeyID,
-		SecretAccessKey: secretAccessKey,
-		API:             api,
-	})
+	return true
 }

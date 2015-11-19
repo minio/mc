@@ -98,10 +98,10 @@ func mainMakeBucket(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("MakeBucket", color.New(color.FgGreen, color.Bold))
 
-	config := mustGetMcConfig()
-	for _, arg := range ctx.Args() {
-		targetURL := getAliasURL(arg, config.Aliases)
+	URLs, err := args2URLs(ctx.Args())
+	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
 
+	for _, targetURL := range URLs {
 		// Instantiate client for URL.
 		clnt, err := url2Client(targetURL)
 		fatalIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
