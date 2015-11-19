@@ -95,7 +95,7 @@ func checkListSyntax(ctx *cli.Context) {
 
 	for _, url := range URLs {
 		_, _, err := url2Stat(url)
-		if err != nil && !prefixExists(url) {
+		if err != nil && !isURLPrefixExists(url) {
 			fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
 		}
 	}

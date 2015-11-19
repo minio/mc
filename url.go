@@ -30,7 +30,7 @@ func urlJoinPath(url1, url2 string) string {
 
 // args2URLs extracts source and target URLs from command-line args.
 func args2URLs(args []string) ([]string, *probe.Error) {
-	// Convert arguments to URLs: expand alias, fix format...
+	// convert arguments to URLs: expand alias, fix format...
 	URLs := []string{}
 	for _, arg := range args {
 		aliasedURL, err := getAliasURL(arg)
@@ -42,7 +42,7 @@ func args2URLs(args []string) ([]string, *probe.Error) {
 	return URLs, nil
 }
 
-// url2Client - convenience wrapper for getNewClient.
+// url2Client convenience wrapper for getNewClient.
 func url2Client(urlStr string) (client.Client, *probe.Error) {
 	urlConfig, err := getHostConfig(urlStr)
 	if err != nil {
@@ -68,9 +68,9 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 	return client, content, nil
 }
 
-// Check if object key prefix exists.
-func prefixExists(urlStr string) bool {
-	clnt, err := url2Client(urlStr)
+// isURLPrefixExists - check if object key prefix exists.
+func isURLPrefixExists(urlPrefix string) bool {
+	clnt, err := url2Client(urlPrefix)
 	if err != nil {
 		return false
 	}

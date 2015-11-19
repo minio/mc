@@ -61,7 +61,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 	/****** Generic rules *******/
 	_, srcContent, err := url2Stat(srcURL)
-	if err != nil && !prefixExists(srcURL) {
+	if err != nil && !isURLPrefixExists(srcURL) {
 		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 	}
 
