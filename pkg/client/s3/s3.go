@@ -87,6 +87,12 @@ func (c *s3Client) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error
 	bucket, object := c.url2BucketAndObject()
 	reader, metadata, err := c.api.GetPartialObject(bucket, object, offset, length)
 	if err != nil {
+		errResponse := minio.ToErrorResponse(err)
+		if errResponse != nil {
+			if errResponse.Code == "AccessDenied" {
+				return nil, 0, probe.NewError(client.PathInsufficientPermission{Path: c.hostURL.String()})
+			}
+		}
 		return nil, length, probe.NewError(err)
 	}
 	return reader, metadata.Size, nil
@@ -156,6 +162,9 @@ func (c *s3Client) Put(size int64, data io.Reader) *probe.Error {
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse != nil {
+			if errResponse.Code == "AccessDenied" {
+				return probe.NewError(client.PathInsufficientPermission{Path: c.hostURL.String()})
+			}
 			if errResponse.Code == "MethodNotAllowed" {
 				return probe.NewError(client.ObjectAlreadyExists{Object: object})
 			}
