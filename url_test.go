@@ -38,16 +38,6 @@ func (s *TestSuite) TestURLJoinPath(c *C) {
 	c.Assert(url, Equals, "http://s3.mycompany.io/dev/mybucket/bin/")
 }
 
-func (s *TestSuite) TestStripRecursiveURL(c *C) {
-	// Strip ‘...’ excluding trailing ‘/’
-	url := stripRecursiveURL("http://s3.mycompany.io/dev/...")
-	c.Assert(url, Equals, "http://s3.mycompany.io/dev/")
-
-	// Strip ‘...‘
-	url = stripRecursiveURL("http://s3.mycompany.io/test...")
-	c.Assert(url, Equals, "http://s3.mycompany.io/test")
-}
-
 func (s *TestSuite) TestURL2DirContent(c *C) {
 	_, err := url2DirContent(".")
 	c.Assert(err, IsNil)

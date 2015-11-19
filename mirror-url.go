@@ -52,14 +52,6 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "mirror", 1) // last argument is exit code.
 	}
 
-	// Check if any of the arg is recursive type.
-	for _, arg := range ctx.Args() {
-		// Recursive URLs are not allowed in target.
-		if isURLRecursive(arg) {
-			fatalIf(errDummy().Trace(), fmt.Sprintf("Recursive option is not supported for target ‘%s’ argument.", arg))
-		}
-	}
-
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
@@ -68,11 +60,9 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	tgtURLs := URLs[1:]
 
 	/****** Generic rules *******/
-	// Recursive source URL.
-	newSrcURL := stripRecursiveURL(srcURL)
-	_, srcContent, err := url2Stat(newSrcURL)
-	if err != nil && !prefixExists(newSrcURL) {
-		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+newSrcURL+"’.")
+	_, srcContent, err := url2Stat(srcURL)
+	if err != nil && !prefixExists(srcURL) {
+		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 	}
 
 	if err == nil && !srcContent.Type.IsDir() {
