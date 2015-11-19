@@ -88,7 +88,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan<- mirrorURLs) {
+func deltaSourceTargets(sourceURL string, targetURLs []string, isForce bool, mirrorURLsCh chan<- mirrorURLs) {
 	defer close(mirrorURLsCh)
 
 	// source and targets are always directories
@@ -145,7 +145,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 				mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(suffix)}
 				continue
 			}
-			if differ == differSize && !mirrorIsForce {
+			if differ == differSize && !isForce {
 				// size differs and force not set
 				mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(sourceContent.URL.String())}
 				continue
@@ -164,8 +164,8 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, mirrorURLsCh chan
 	}
 }
 
-func prepareMirrorURLs(sourceURL string, targetURLs []string) <-chan mirrorURLs {
+func prepareMirrorURLs(sourceURL string, targetURLs []string, isForce bool) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
-	go deltaSourceTargets(sourceURL, targetURLs, mirrorURLsCh)
+	go deltaSourceTargets(sourceURL, targetURLs, isForce, mirrorURLsCh)
 	return mirrorURLsCh
 }

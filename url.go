@@ -35,23 +35,6 @@ func urlJoinPath(url1, url2 string) string {
 	return client.JoinURLs(u1, u2).String()
 }
 
-// isURLRecursive - find out if requested url is recursive.
-func isURLRecursive(urlStr string) bool {
-	return strings.HasSuffix(urlStr, recursiveSeparator)
-}
-
-// stripRecursiveURL - Strip "..." from the URL if present.
-func stripRecursiveURL(urlStr string) string {
-	if !isURLRecursive(urlStr) {
-		return urlStr
-	}
-	urlStr = strings.TrimSuffix(urlStr, recursiveSeparator)
-	if urlStr == "" {
-		urlStr = "."
-	}
-	return urlStr
-}
-
 // args2URLs extracts source and target URLs from command-line args.
 func args2URLs(args []string) ([]string, *probe.Error) {
 	// Convert arguments to URLs: expand alias, fix format...

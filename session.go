@@ -26,14 +26,8 @@ import (
 
 // migrateSession migrates all previous migration to latest.
 func migrateSession() {
-	// Migrate session V1 to V2.
-	migrateSessionV1ToV2()
-
-	// Migrate session V2 to V3.
-	migrateSessionV2ToV3()
-
-	// Migrate session V3 to V4.
-	migrateSessionV3ToV4()
+	// We no longer support sessions older than v5. They will be removed.
+	migrateSessionV4ToV5()
 }
 
 // createSessionDir - create session directory.

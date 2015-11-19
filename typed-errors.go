@@ -31,10 +31,6 @@ var (
 		return probe.NewError(errors.New("Invalid arguments provided, cannot proceed.")).Untrace()
 	}
 
-	errSourceListEmpty = func() *probe.Error {
-		return probe.NewError(errors.New("Source argument list is empty.")).Untrace()
-	}
-
 	errNoMatchingHost = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("No matching host found for the given URL ‘" + URL + "’.")).Untrace()
 	}
@@ -53,10 +49,6 @@ var (
 
 	errOverWriteNotAllowed = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Overwrite not allowed for ‘" + URL + "’. Use ‘--force’ to override this behavior."))
-	}
-
-	errSourceNotRecursive = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Source ‘" + URL + "’ is not recursive.")).Untrace()
 	}
 
 	errSourceIsDir = func(URL string) *probe.Error {
