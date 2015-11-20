@@ -51,13 +51,13 @@ EXAMPLES:
       $ mc {{.Name}} /tmp/hello-world.go
 
    2. Write contents of stdin to an object on Amazon S3 cloud storage.
-      $ mc {{.Name}} https://s3.amazonaws.com/personalbuck/meeting-notes.txt
+      $ mc {{.Name}} s3.amazonaws.com/personalbuck/meeting-notes.txt
 
    3. Copy an ISO image to an object on Amazon S3 cloud storage and Google Cloud Storage simultaneously.
-      $ cat debian-8.2.iso | mc {{.Name}} https://s3.amazonaws.com/ferenginar/gnuos.iso https://storage.googleapis.com/miniocloud/gnuos.iso
+      $ cat debian-8.2.iso | mc {{.Name}} s3.amazonaws.com/ferenginar/gnuos.iso storage.googleapis.com/miniocloud/gnuos.iso
 
    4. Stream MySQL database dump to Amazon S3 directly.
-      $ mysqldump -u root -p ******* accountsdb | mc {{.Name}} https://s3.amazonaws.com/ferenginar/backups/accountsdb-oct-9-2015.sql
+      $ mysqldump -u root -p ******* accountsdb | mc {{.Name}} s3.amazonaws.com/ferenginar/backups/accountsdb-oct-9-2015.sql
 `,
 }
 

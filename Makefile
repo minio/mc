@@ -70,6 +70,10 @@ pkg-update:
 pkg-remove:
 	@GO15VENDOREXPERIMENT=1 govendor remove $(PKG)
 
+release: build
+	@MINIO_RELEASE=OFFICIAL GO15VENDOREXPERIMENT=1 go build --ldflags $(BUILD_LDFLAGS) -o $(GOPATH)/bin/mc
+	@mkdir -p $(HOME)/.mc
+
 install: gomake-all
 
 clean:

@@ -49,13 +49,13 @@ OPTIONS:
   {{end}}
 EXAMPLES:
    1. Generate a curl command to allow upload access for a single object. Command expires after 7 days (default).
-      $ mc share {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
+      $ mc share {{.Name}} s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
    2. Generate a curl command to allow upload access to a folder. Command expires in 120 hours.
-      $ mc share {{.Name}} --expire=120h https://s3.amazonaws.com/backup/2007-Mar-2/...
+      $ mc share {{.Name}} --expire=120h s3.amazonaws.com/backup/2007-Mar-2/...
 
    3. Generate a curl command to allow upload access of only '.png' images to a folder. Command expires in 2 hours.
-      $ mc share {{.Name}} --expire=2h --content-type=image/png https://s3.amazonaws.com/backup/2007-Mar-2/...
+      $ mc share {{.Name}} --expire=2h --content-type=image/png s3.amazonaws.com/backup/2007-Mar-2/...
 `,
 }
 

@@ -65,13 +65,13 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
-      $ mc {{.Name}} Music/*.ogg https://s3.amazonaws.com/jukebox/
+      $ mc {{.Name}} Music/*.ogg s3.amazonaws.com/jukebox/
 
    2. Copy a folder recursively from Minio cloud storage to Amazon S3 cloud storage.
-      $ mc {{.Name}} --recursive https://play.minio.io:9000/mybucket/burningman2011/ https://s3.amazonaws.com/mybucket/
+      $ mc {{.Name}} --recursive play.minio.io:9000/mybucket/burningman2011/ s3.amazonaws.com/mybucket/
 
    3. Copy multiple local folders recursively to Minio cloud storage.
-      $ mc {{.Name}} --recursive backup/2014/ backup/2015/ https://play.minio.io:9000/archive/
+      $ mc {{.Name}} --recursive backup/2014/ backup/2015/ play.minio.io:9000/archive/
 
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
       $ mc {{.Name}} --recursive s3/documents/2014/ C:\Backups\2014
