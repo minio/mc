@@ -66,25 +66,25 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) c
 		if err != nil {
 			return copyURLsTypeInvalid
 		}
-		if sourceContent.Type.IsDir() { // If source is a Dir, it is Type C.
+
+		// If recursion is ON, it is type C.
+		// If source is a folder, it is Type C.
+		if sourceContent.Type.IsDir() || isRecursive {
 			return copyURLsTypeC
 		}
 
-		switch {
-		case isRecursive: // If recursion is ON, it is type C.
-			return copyURLsTypeC
-		case isTargetURLDir(targetURL): // If not type C and target is a dir, it is Type B
+		// If target is a folder, it is Type B.
+		if isTargetURLDir(targetURL) {
 			return copyURLsTypeB
-		default:
-			return copyURLsTypeA // else Type A.
 		}
+		// else Type A.
+		return copyURLsTypeA
 	}
 
-	// Multiple source args and taget is a dir. It is Type D.
+	// Multiple source args and target is a folder. It is Type D.
 	if isTargetURLDir(targetURL) {
 		return copyURLsTypeD
 	}
-
 	return copyURLsTypeInvalid
 }
 

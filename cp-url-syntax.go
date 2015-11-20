@@ -49,17 +49,19 @@ func checkCopySyntax(ctx *cli.Context) {
 		}
 	}
 
-	switch guessCopyURLType(srcURLs, tgtURL, isRecursive) {
+	// Guess CopyURLsType based on source and target URLs.
+	copyURLsType := guessCopyURLType(srcURLs, tgtURL, isRecursive)
+	switch copyURLsType {
 	case copyURLsTypeA: // File -> File.
 		checkCopySyntaxTypeA(srcURLs, tgtURL)
 	case copyURLsTypeB: // File -> Folder.
 		checkCopySyntaxTypeB(srcURLs, tgtURL)
 	case copyURLsTypeC: // Folder... -> Folder.
-		checkCopySyntaxTypeC(srcURLs, tgtURL)
-	case copyURLsTypeD: // File | Folder... -> Folder.
+		checkCopySyntaxTypeC(srcURLs, tgtURL, isRecursive)
+	case copyURLsTypeD: // File1...FileN -> Folder.
 		checkCopySyntaxTypeD(srcURLs, tgtURL)
 	default:
-		fatalIf(errInvalidArgument().Trace(), "Invalid arguments.")
+		fatalIf(errInvalidArgument().Trace(), "Guessing CopyURLsType failed, Invalid arguments provided.")
 	}
 }
 
@@ -78,7 +80,7 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 	}
 }
 
-// checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid dir.
+// checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid folder.
 func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 	// Check source.
 	if len(srcURLs) != 1 {
@@ -100,17 +102,21 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 	}
 }
 
-// checkCopySyntaxTypeC verifies if the source is a valid recursive dir and target is a valid dir.
-func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
+// checkCopySyntaxTypeC verifies if the source is a valid recursive dir and target is a valid folder.
+func checkCopySyntaxTypeC(srcURLs []string, tgtURL string, isRecursive bool) {
 	// Check source.
 	if len(srcURLs) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 	}
 
 	srcURL := srcURLs[0]
-	_, _, err := url2Stat(srcURL)
+	_, srcContent, err := url2Stat(srcURL)
 	if err != nil && !isURLPrefixExists(srcURL) {
 		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
+	}
+
+	if srcContent.Type.IsDir() && !isRecursive {
+		fatalIf(errInvalidArgument().Trace(srcURL), "To copy a folder requires --recursive option.")
 	}
 
 	// Check target.
@@ -121,7 +127,7 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string) {
 	}
 }
 
-// checkCopySyntaxTypeD verifies if the source is a valid list of files and target is a valid dir.
+// checkCopySyntaxTypeD verifies if the source is a valid list of files and target is a valid folder.
 func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
 	// Check source.
 	for _, srcURL := range srcURLs {
