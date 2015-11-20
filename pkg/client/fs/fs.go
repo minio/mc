@@ -255,13 +255,66 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *client.Content)
 		contentCh <- &client.Content{Err: probe.NewError(err)}
 		return
 	}
+	pathURL := *f.PathURL
 	for _, fi := range files {
 		file := filepath.Join(dirName, fi.Name())
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			st, err := os.Stat(file)
 			if err != nil {
-				contentCh <- &client.Content{Err: probe.NewError(err)}
-				return
+				if os.IsPermission(err) {
+					// On windows there are folder symlinks
+					// which are called junction files which
+					// carry special meaning on windows
+					// - which cannot be accessed with regular operations
+					if runtime.GOOS == "windows" {
+						newPath := filepath.Join(prefix, fi.Name())
+						lfi, lerr := os.Lstat(newPath)
+						if lerr != nil {
+							if os.IsPermission(lerr) {
+								contentCh <- &client.Content{
+									Err: probe.NewError(client.PathInsufficientPermission{Path: newPath}),
+								}
+								continue
+							}
+							if os.IsNotExist(lerr) {
+								contentCh <- &client.Content{
+									Err: probe.NewError(client.BrokenSymlink{Path: pathURL.Path}),
+								}
+								continue
+							}
+							contentCh <- &client.Content{
+								Err: probe.NewError(lerr),
+							}
+							continue
+						}
+						pathURL.Path = filepath.Join(pathURL.Path, lfi.Name())
+						contentCh <- &client.Content{
+							URL:  pathURL,
+							Time: lfi.ModTime(),
+							Size: lfi.Size(),
+							Type: lfi.Mode(),
+							Err:  probe.NewError(client.PathInsufficientPermission{Path: pathURL.Path}),
+						}
+						continue
+					} else {
+						contentCh <- &client.Content{
+							Err: probe.NewError(client.PathInsufficientPermission{Path: pathURL.Path}),
+						}
+						continue
+					}
+				}
+				if os.IsNotExist(err) {
+					contentCh <- &client.Content{
+						Err: probe.NewError(client.BrokenSymlink{Path: pathURL.Path}),
+					}
+					continue
+				}
+				if err != nil {
+					contentCh <- &client.Content{
+						Err: probe.NewError(err),
+					}
+					continue
+				}
 			}
 			if strings.HasPrefix(file, prefix) {
 				contentCh <- &client.Content{
@@ -358,7 +411,9 @@ func (f *fsClient) listInRoutine(contentCh chan<- *client.Content) {
 						}
 						continue
 					} else {
-						contentCh <- &client.Content{Err: probe.NewError(err)}
+						contentCh <- &client.Content{
+							Err: probe.NewError(client.PathInsufficientPermission{Path: pathURL.Path}),
+						}
 						continue
 					}
 				}
