@@ -51,16 +51,16 @@ OPTIONS:
   {{end}}
 EXAMPLES:
    1. Share this object with 7 days default expiry.
-      $ mc share {{.Name}} https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
+      $ mc share {{.Name}} s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
    2. Share this object with 10 minutes expiry.
-      $ mc share {{.Name}} --expire=10m https://s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
+      $ mc share {{.Name}} --expire=10m s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
 
    3. Share all objects under this folder with 5 days expiry.
-      $ mc share {{.Name}} --expire=120h https://s3.amazonaws.com/backup/
+      $ mc share {{.Name}} --expire=120h s3.amazonaws.com/backup/
 
    4. Share all objects under this folder and all its sub-folders with 5 days expiry.
-      $ mc share {{.Name}} --recursive --expire=120h https://s3.amazonaws.com/backup/
+      $ mc share {{.Name}} --recursive --expire=120h s3.amazonaws.com/backup/
 `,
 }
 

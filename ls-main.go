@@ -59,10 +59,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.
-      $ mc {{.Name}} https://s3.amazonaws.com/
+      $ mc {{.Name}} s3.amazonaws.com
 
    2. List buckets and all its contents from Amazon S3 cloud storage recursively.
-      $ mc {{.Name}} --recursive https://s3.amazonaws.com/
+      $ mc {{.Name}} --recursive s3.amazonaws.com
 
    3. List files recursively on a local filesystem on Microsoft Windows.
       $ mc {{.Name}} --recursive C:\Users\Worf\

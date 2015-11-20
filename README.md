@@ -72,10 +72,6 @@ $ go get -u github.com/minio/mc
 
 Minio cloud storage server is hosted at ``https://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible cloud storage. Minio runs with filesystem backend with auto-expiry for objects in about 24 hours.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys.
 
-## How to use mc?
-
-[![asciicast](https://asciinema.org/a/21576.png)](https://asciinema.org/a/21576?async)
-
 ## Configuring mc for Amazon S3
 
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).

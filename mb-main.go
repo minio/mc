@@ -50,10 +50,13 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Create a bucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} https://s3.amazonaws.com/mynewbucket
+      $ mc {{.Name}} s3.amazonaws.com/mynewbucket
 
    2. Create a new bucket on Google Cloud Storage.
-      $ mc {{.Name}} https://storage.googleapis.com/miniocloud
+      $ mc {{.Name}} storage.googleapis.com/miniocloud
+
+   3. Create a new bucket on Amazon S3 cloud storage, using virtual bucket request.
+      $ mc {{.Name}} ferenginar.s3.amazonaws.com
 
    3. Create a new directory including its missing parents (equivalent to ‘mkdir -p’).
       $ mc {{.Name}} /tmp/this/new/dir1

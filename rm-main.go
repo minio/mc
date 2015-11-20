@@ -77,19 +77,19 @@ EXAMPLES:
       $ mc {{.Name}} 1999/old-backup.tgz
 
    2. Remove contents of a folder, excluding its sub-folders.
-     $ mc {{.Name}} --force https://s3.amazonaws.com/jazz-songs/louis/
+     $ mc {{.Name}} --force s3.amazonaws.com/jazz-songs/louis/
 
    3. Remove contents of a folder recursively.
-     $ mc {{.Name}} --force --recursive https://s3.amazonaws.com/jazz-songs/louis/
+     $ mc {{.Name}} --force --recursive s3.amazonaws.com/jazz-songs/louis/
 
    4. Remove all matching objects with this prefix.
-     $ mc {{.Name}} --force https://s3.amazonaws.com/ogg/gunmetal
+     $ mc {{.Name}} --force s3.amazonaws.com/ogg/gunmetal
 
    5. Drop an incomplete upload of an object.
-      $ mc {{.Name}} --incomplete https://s3.amazonaws.com/jazz-songs/louis/file01.mp3
+      $ mc {{.Name}} --incomplete s3.amazonaws.com/jazz-songs/louis/file01.mp3
 
    6. Drop all incomplete uploads recursively matching this prefix.
-      $ mc {{.Name}} --incomplete --force --recursive https://s3.amazonaws.com/jazz-songs/louis/
+      $ mc {{.Name}} --incomplete --force --recursive s3.amazonaws.com/jazz-songs/louis/
 `,
 }
 

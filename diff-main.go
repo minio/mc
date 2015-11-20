@@ -57,7 +57,7 @@ DESCRIPTION:
 
 EXAMPLES:
    1. Compare a local folder with a folder on Amazon S3 cloud storage.
-      $ mc {{.Name}} ~/Photos https://s3.amazonaws.com/MyBucket/Photos
+      $ mc {{.Name}} ~/Photos s3.amazonaws.com/MyBucket/Photos
 
    2. Compare two different folders on a local filesystem.
       $ mc {{.Name}} ~/Photos /Media/Backup/Photos

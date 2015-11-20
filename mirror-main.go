@@ -64,10 +64,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} https://play.minio.io:9000/photos/2014 https://s3.amazonaws.com/backup-photos
+      $ mc {{.Name}} play.minio.io:9000/photos/2014 s3.amazonaws.com/backup-photos
 
    2. Mirror a local folder recursively to Minio cloud storage, Amazon S3 cloud storage and Google Cloud Storage.
-      $ mc {{.Name}} backup/ https://play.minio.io:9000/archive https://s3.amazonaws.com/archive https://storage.googleapis.com/miniocloud
+      $ mc {{.Name}} backup/ play.minio.io:9000/archive s3.amazonaws.com/archive storage.googleapis.com/miniocloud
 
    3. Mirror a bucket from aliased Amazon S3 cloud storage to multiple folders on Windows.
       $ mc {{.Name}} s3/documents/2014/ C:\backup\2014 C:\shared\volume\backup\2014

@@ -43,19 +43,19 @@ FLAGS:
 EXAMPLES:
    1. Add host configuration for a URL, using default signature V4. For security reasons turn off bash history
       $ set +o history
-      $ mc config {{.Name}} add https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+      $ mc config {{.Name}} add s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
       $ set -o history
 
    2. Add host configuration for a URL, using signature V2. For security reasons turn off bash history
       $ set +o history
-      $ mc config {{.Name}} add https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
+      $ mc config {{.Name}} add storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
       $ set -o history
 
    3. List all hosts.
       $ mc config {{.Name}} list
 
    4. Remove host config.
-      $ mc config {{.Name}} remove https://s3.amazonaws.com
+      $ mc config {{.Name}} remove s3.amazonaws.com
 
 `,
 }
@@ -171,9 +171,9 @@ func listHosts() {
 
 func removeHost(hostURL string) {
 	if !isValidHostURL(hostURL) {
-		fatalIf(errDummy().Trace(hostURL), "Invalid host URL: ‘"+hostURL+"’ provided. Valid options are [https://example.test.io, https://bucket.s3.amazonaws.com].")
+		fatalIf(errDummy().Trace(hostURL), "Invalid host URL: ‘"+hostURL+"’ provided. Valid options are [http://example.test.io, https://bucket.s3.amazonaws.com].")
 	}
-	if strings.TrimSpace(hostURL) == "https://dl.minio.io:9000" {
+	if strings.TrimSpace(hostURL) == "dl.minio.io:9000" {
 		fatalIf(errDummy().Trace(hostURL), "‘"+hostURL+"’ is reserved hostname and cannot be removed.")
 	}
 	config, err := newConfig()
@@ -202,7 +202,7 @@ func removeHost(hostURL string) {
 func addHost(newHostURL, accessKeyID, secretAccessKey, api string) {
 	if !isValidHostURL(newHostURL) {
 		fatalIf(errDummy().Trace(newHostURL),
-			"Invalid host URL: ‘"+newHostURL+"’ provided. Valid options are [https://example.test.io, https://bucket.s3.amazonaws.com].")
+			"Invalid host URL: ‘"+newHostURL+"’ provided. Valid options are [example.test.io, bucket.s3.amazonaws.com].")
 	}
 	if len(accessKeyID) != 0 {
 		if !isValidAccessKey(accessKeyID) {

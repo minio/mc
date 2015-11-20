@@ -54,19 +54,19 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Set bucket to "private" on Amazon S3 cloud storage.
-      $ mc {{.Name}} set private https://s3.amazonaws.com/burningman2011
+      $ mc {{.Name}} set private s3.amazonaws.com/burningman2011
 
    2. Set bucket to "public" on Amazon S3 cloud storage.
-      $ mc {{.Name}} set public https://s3.amazonaws.com/shared
+      $ mc {{.Name}} set public s3.amazonaws.com/shared
 
    3. Set bucket to "authenticated" on Amazon S3 cloud storage to provide read access to IAM Authenticated Users group.
-      $ mc {{.Name}} set authorized https://s3.amazonaws.com/shared-authenticated
+      $ mc {{.Name}} set authorized s3.amazonaws.com/shared-authenticated
 
    4. Get bucket permissions.
-      $ mc {{.Name}} get https://s3.amazonaws.com/shared
+      $ mc {{.Name}} get s3.amazonaws.com/shared
 
    5. Get bucket permissions.
-      $ mc {{.Name}} get https://storage.googleapis.com/miniocloud
+      $ mc {{.Name}} get storage.googleapis.com/miniocloud
 `,
 }
 
