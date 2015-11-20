@@ -86,7 +86,7 @@ func checkListSyntax(ctx *cli.Context) {
 	}
 	for _, arg := range args {
 		if strings.TrimSpace(arg) == "" {
-			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+			fatalIf(errInvalidArgument().Trace(args...), "Unable to validate empty argument.")
 		}
 	}
 	// extract URLs.

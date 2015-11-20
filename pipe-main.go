@@ -63,7 +63,7 @@ EXAMPLES:
 
 // pipe writes contents of stdin a collection of URLs.
 func pipe(targetURLs []string) *probe.Error {
-	if len(targetURLs) == 0 {
+	if len(targetURLs) == 0 || targetURLs == nil {
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin).Trace()
 	}
@@ -80,7 +80,7 @@ func pipe(targetURLs []string) *probe.Error {
 			return nil
 		}
 	}
-	return err.Trace()
+	return err.Trace(targetURLs...)
 }
 
 // mainPipe is the main entry point for pipe command.

@@ -133,13 +133,13 @@ func saveSharedURL(objectURL string, shareURL string, expiry time.Duration, cont
 func doShareUploadURL(objectURL string, recursive bool, expiry time.Duration, contentType string) *probe.Error {
 	clnt, err := url2Client(objectURL)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(objectURL)
 	}
 
 	// Generate pre-signed access info.
 	uploadInfo, err := clnt.ShareUpload(recursive, expiry, contentType)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(objectURL, "expiry="+expiry.String(), "contentType="+contentType)
 	}
 
 	// Generate curl command.

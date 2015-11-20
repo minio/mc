@@ -300,7 +300,7 @@ func fixConfigV6() {
 	fatalIf(err.Trace(), "Unable to initialize config.")
 
 	err = config.Load(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to load config.")
+	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to load config.")
 
 	if config.Data().(*configV6).Version == "6" {
 		newConfig := new(configV6)

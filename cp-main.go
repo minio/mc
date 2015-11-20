@@ -148,7 +148,7 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		if !globalQuietFlag && !globalJSONFlag {
 			progressReader.ErrorGet(length)
 		}
-		cpURLs.Error = err.Trace()
+		cpURLs.Error = err.Trace(cpURLs.SourceContent.URL.String())
 		statusCh <- cpURLs
 		return
 	}
@@ -178,7 +178,7 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		if !globalQuietFlag && !globalJSONFlag {
 			progressReader.ErrorPut(length)
 		}
-		cpURLs.Error = err.Trace()
+		cpURLs.Error = err.Trace(cpURLs.TargetContent.URL.String())
 		statusCh <- cpURLs
 		return
 	}
@@ -324,7 +324,8 @@ func doCopySession(session *sessionV5) {
 					if !globalQuietFlag && !globalJSONFlag {
 						console.Eraseline()
 					}
-					errorIf(cpURLs.Error.Trace(), fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
+					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
+						fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
 					// for all non critical errors we can continue for the remaining files
 					switch cpURLs.Error.ToGoError().(type) {
 					// handle this specifically for filesystem related errors.
@@ -398,7 +399,7 @@ func mainCopy(ctx *cli.Context) {
 	var err *probe.Error
 	if session.Header.CommandArgs, err = args2URLs(ctx.Args()); err != nil {
 		session.Delete()
-		fatalIf(err.Trace(), "One or more unknown URL types passed.")
+		fatalIf(err.Trace(ctx.Args()...), "One or more unknown URL types passed.")
 	}
 
 	doCopySession(session)

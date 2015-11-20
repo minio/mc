@@ -52,7 +52,7 @@ func isTargetURLDir(targetURL string) bool {
 func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe.Error) {
 	sourceClnt, err := url2Client(sourceURL)
 	if err != nil {
-		return nil, 0, err.Trace()
+		return nil, 0, err.Trace(sourceURL)
 	}
 	return sourceClnt.Get(0, 0)
 }
@@ -127,7 +127,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 				defer reader.Close()
 				err := targetClient.Put(length, reader)
 				if err != nil {
-					errorCh <- err.Trace()
+					errorCh <- err.Trace(targetClient.GetURL().String())
 					return
 				}
 			}(tgtClient, tgtReader, errorCh)
@@ -171,15 +171,15 @@ func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) 
 
 		s3Client, err := s3.New(s3Config)
 		if err != nil {
-			return nil, err.Trace()
+			return nil, err.Trace(urlStr)
 		}
 		return s3Client, nil
 	case client.Filesystem:
 		fsClient, err := fs.New(urlStr)
 		if err != nil {
-			return nil, err.Trace()
+			return nil, err.Trace(urlStr)
 		}
 		return fsClient, nil
 	}
-	return nil, errInitClient(urlStr).Trace()
+	return nil, errInitClient(urlStr).Trace(urlStr)
 }
