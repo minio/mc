@@ -582,6 +582,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 			contentCh <- &client.Content{
 				URL:  bucketURL,
 				Type: os.ModeDir,
+				Time: bucket.Stat.CreationDate,
 			}
 			for object := range c.api.ListObjects(bucket.Stat.Name, o, true) {
 				if object.Err != nil {
