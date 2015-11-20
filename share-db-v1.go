@@ -96,7 +96,7 @@ func (s *shareDBV1) Load(filename string) *probe.Error {
 	// Initialize and load using quick package.
 	qs, err := quick.New(newShareDBV1())
 	if err != nil {
-		return err.Trace()
+		return err.Trace(filename)
 	}
 	err = qs.Load(filename)
 	if err != nil {
@@ -120,7 +120,7 @@ func (s shareDBV1) save(filename string) *probe.Error {
 	// Initialize a new quick file.
 	qs, err := quick.New(s)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(filename)
 	}
 	return qs.Save(filename).Trace(filename)
 }

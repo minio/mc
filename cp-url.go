@@ -93,7 +93,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) c
 func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	if sourceURL == targetURL {
 		// source and target can not be same
-		return copyURLs{Error: errSourceTargetSame(sourceURL).Trace()}
+		return copyURLs{Error: errSourceTargetSame(sourceURL).Trace(sourceURL)}
 	}
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil {
@@ -102,7 +102,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	}
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file
-		return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
+		return copyURLs{Error: errInvalidSource(sourceURL).Trace(sourceURL)}
 	}
 	// All OK.. We can proceed. Type A
 	return makeCopyContentTypeA(sourceContent, targetURL)
@@ -124,10 +124,10 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 
 	if !sourceContent.Type.IsRegular() {
 		if sourceContent.Type.IsDir() {
-			return copyURLs{Error: errSourceIsDir(sourceURL).Trace()}
+			return copyURLs{Error: errSourceIsDir(sourceURL).Trace(sourceURL)}
 		}
 		// Source is not a regular file.
-		return copyURLs{Error: errInvalidSource(sourceURL).Trace()}
+		return copyURLs{Error: errInvalidSource(sourceURL).Trace(sourceURL)}
 	}
 
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
@@ -158,7 +158,7 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string, isRecursive bool) <-chan 
 		for sourceContent := range sourceClient.List(isRecursive, false) {
 			if sourceContent.Err != nil {
 				// Listing failed.
-				copyURLsCh <- copyURLs{Error: sourceContent.Err.Trace()}
+				copyURLsCh <- copyURLs{Error: sourceContent.Err.Trace(sourceClient.GetURL().String())}
 				continue
 			}
 
@@ -218,7 +218,7 @@ func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool) <-
 				copyURLsCh <- cURLs
 			}
 		default:
-			copyURLsCh <- copyURLs{Error: errInvalidArgument().Trace()}
+			copyURLsCh <- copyURLs{Error: errInvalidArgument().Trace(sourceURLs...)}
 		}
 	}(sourceURLs, targetURL, copyURLsCh)
 

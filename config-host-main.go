@@ -109,16 +109,16 @@ func checkConfigHostSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "host", 1) // last argument is exit code
 	}
 	if len(ctx.Args().Tail()) > 4 {
-		fatalIf(errDummy().Trace(), "Incorrect number of arguments to host command")
+		fatalIf(errDummy().Trace(ctx.Args().Tail()...), "Incorrect number of arguments to host command")
 	}
 	switch strings.TrimSpace(ctx.Args().First()) {
 	case "add":
 		if len(ctx.Args().Tail()) < 3 || len(ctx.Args().Tail()) > 4 {
-			fatalIf(errInvalidArgument().Trace(), "Incorrect number of arguments for add host command.")
+			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...), "Incorrect number of arguments for add host command.")
 		}
 	case "remove":
 		if len(ctx.Args().Tail()) != 1 {
-			fatalIf(errInvalidArgument().Trace(), "Incorrect number of arguments for remove host command.")
+			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...), "Incorrect number of arguments for remove host command.")
 		}
 	case "list":
 	default:
@@ -218,7 +218,7 @@ func addHost(newHostURL, accessKeyID, secretAccessKey, api string) {
 		api = "S3v4"
 	}
 	if strings.TrimSpace(api) != "S3v2" && strings.TrimSpace(api) != "S3v4" {
-		fatalIf(errInvalidArgument().Trace(), "Unrecognized version name provided, supported inputs are ‘S3v4’, ‘S3v2’.")
+		fatalIf(errInvalidArgument().Trace(api), "Unrecognized version name provided, supported inputs are ‘S3v4’, ‘S3v2’.")
 	}
 	config, err := newConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")

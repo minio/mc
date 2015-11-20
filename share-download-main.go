@@ -101,7 +101,7 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration) *probe.Error {
 	clnt, err := url2Client(targetURL)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(targetURL)
 	}
 
 	// Load previously saved upload-shares. Add new entries and write it back.
@@ -109,7 +109,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 	shareDownloadsFile := getShareDownloadsFile()
 	err = shareDB.Load(shareDownloadsFile)
 	if err != nil {
-		return err.Trace()
+		return err.Trace(shareDownloadsFile)
 	}
 
 	// Generate share URL for each target.

@@ -127,7 +127,7 @@ func getReleaseUpdate(updateURL string) {
 	fatalIf(probe.NewError(e), "Unable to parse version string as time.")
 
 	if current.IsZero() {
-		fatalIf(errDummy().Trace(),
+		fatalIf(errDummy().Trace(mcVersion),
 			"Updates not supported for custom builds. Version field is empty. Please download official releases from https://minio.io/#mc")
 	}
 
@@ -143,7 +143,7 @@ func getReleaseUpdate(updateURL string) {
 	}
 
 	if latest.IsZero() {
-		fatalIf(errDummy().Trace(),
+		fatalIf(errDummy().Trace(mcVersion),
 			"Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues")
 	}
 

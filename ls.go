@@ -117,19 +117,19 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
 			case client.BrokenSymlink:
-				errorIf(content.Err.Trace(), "Unable to list broken link.")
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list broken link.")
 				continue
 			case client.TooManyLevelsSymlink:
-				errorIf(content.Err.Trace(), "Unable to list too many levels link.")
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list too many levels link.")
 				continue
 			case client.PathNotFound:
-				errorIf(content.Err.Trace(), "Unable to list folder.")
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			case client.PathInsufficientPermission:
-				errorIf(content.Err.Trace(), "Unable to list folder.")
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			}
-			errorIf(content.Err.Trace(), "Unable to list folder.")
+			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			continue
 		}
 		contentURL := content.URL.Path

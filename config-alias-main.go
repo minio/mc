@@ -115,16 +115,16 @@ func checkConfigAliasSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "alias", 1) // last argument is exit code
 	}
 	if len(ctx.Args().Tail()) > 2 {
-		fatalIf(errDummy().Trace(), "Incorrect number of arguments to alias command")
+		fatalIf(errDummy().Trace(ctx.Args().Tail()...), "Incorrect number of arguments to alias command")
 	}
 	switch strings.TrimSpace(ctx.Args().Get(0)) {
 	case "add":
 		if len(ctx.Args().Tail()) != 2 {
-			fatalIf(errInvalidArgument().Trace(), "Incorrect number of arguments for add alias command.")
+			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...), "Incorrect number of arguments for add alias command.")
 		}
 	case "remove":
 		if len(ctx.Args().Tail()) != 1 {
-			fatalIf(errInvalidArgument().Trace(), "Incorrect number of arguments for remove alias command.")
+			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...), "Incorrect number of arguments for remove alias command.")
 		}
 	case "list":
 	default:
@@ -159,13 +159,13 @@ func removeAlias(alias string) {
 	err = config.Load(configPath)
 	fatalIf(err.Trace(configPath), "Unable to load config path")
 	if !isValidAliasName(alias) {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
+		fatalIf(errDummy().Trace(alias), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
 	}
 
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV6)
 	if _, ok := newConf.Aliases[alias]; !ok {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias ‘%s’ does not exist.", alias))
+		fatalIf(errDummy().Trace(alias), fmt.Sprintf("Alias ‘%s’ does not exist.", alias))
 	}
 	delete(newConf.Aliases, alias)
 
@@ -186,19 +186,19 @@ func addAlias(alias, url string) {
 	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
 
 	err = config.Load(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to load config path")
+	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to load config path")
 
 	url = strings.TrimSuffix(url, "/")
 	if !strings.HasPrefix(url, "http") {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Invalid alias URL ‘%s’. Valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com.", url))
+		fatalIf(errDummy().Trace(url), fmt.Sprintf("Invalid alias URL ‘%s’. Valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com.", url))
 	}
 	if !isValidAliasName(alias) {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
+		fatalIf(errDummy().Trace(alias), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
 	}
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV6)
 	if oldURL, ok := newConf.Aliases[alias]; ok {
-		fatalIf(errDummy().Trace(), fmt.Sprintf("Alias ‘%s’ already exists for ‘%s’.", alias, oldURL))
+		fatalIf(errDummy().Trace(alias), fmt.Sprintf("Alias ‘%s’ already exists for ‘%s’.", alias, oldURL))
 	}
 	newConf.Aliases[alias] = url
 	newConfig, err := quick.New(newConf)

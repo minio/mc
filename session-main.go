@@ -87,7 +87,7 @@ func listSessions() *probe.Error {
 	for _, sid := range getSessionIDs() {
 		s, err := loadSessionV5(sid)
 		if err != nil {
-			return err.Trace()
+			return err.Trace(sid)
 		}
 		bySessions = append(bySessions, s)
 	}
@@ -134,7 +134,7 @@ func clearSession(sid string) {
 	}
 
 	if !isSessionExists(sid) {
-		fatalIf(errDummy().Trace(), "Session ‘"+sid+"’ not found.")
+		fatalIf(errDummy().Trace(sid), "Session ‘"+sid+"’ not found.")
 	}
 
 	session, err := loadSessionV5(sid)
@@ -167,11 +167,11 @@ func checkSessionSyntax(ctx *cli.Context) {
 	case "list":
 	case "resume":
 		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
-			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Unable to validate empty argument.")
 		}
 	case "clear":
 		if strings.TrimSpace(ctx.Args().Tail().First()) == "" {
-			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Unable to validate empty argument.")
 		}
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "session", 1) // last argument is exit code
@@ -208,7 +208,7 @@ func mainSession(ctx *cli.Context) {
 	switch strings.TrimSpace(ctx.Args().First()) {
 	// list all resumable sessions.
 	case "list":
-		fatalIf(listSessions().Trace(), "Unable to list sessions.")
+		fatalIf(listSessions().Trace(ctx.Args()...), "Unable to list sessions.")
 	case "resume":
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
 		if !isSessionExists(sid) {

@@ -70,7 +70,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 	}
 	for _, arg := range ctx.Args() {
 		if strings.TrimSpace(arg) == "" {
-			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
+			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Unable to validate empty argument.")
 		}
 	}
 }
@@ -98,7 +98,7 @@ func (d diffMessage) String() string {
 		msg = console.Colorize("DiffMessage",
 			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
 	default:
-		fatalIf(errDummy().Trace(),
+		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
 			"Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
 	}
 	return msg
@@ -132,7 +132,7 @@ func doDiffMain(firstURL, secondURL string) {
 	}
 	difference, err := objectDifferenceFactory(secondURL)
 	if err != nil {
-		fatalIf(err.Trace(secondURL), fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
+		fatalIf(err.Trace(firstURL, secondURL), fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
 	isRecursive := true
 	isIncomplete := false
@@ -153,7 +153,8 @@ func doDiffMain(firstURL, secondURL string) {
 		suffix := strings.TrimPrefix(sourceContent.URL.String(), firstURL)
 		differ, err := difference(suffix, sourceContent.Type, sourceContent.Size)
 		if err != nil {
-			errorIf(sourceContent.Err.Trace(), fmt.Sprintf("Failed on '%s'", urlJoinPath(secondURL, suffix)))
+			errorIf(sourceContent.Err.Trace(secondURL, suffix),
+				fmt.Sprintf("Failed on '%s'", urlJoinPath(secondURL, suffix)))
 			continue
 		}
 		if differ == differNone {

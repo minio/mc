@@ -77,13 +77,14 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		url := client.NewURL(tgtURL)
 		if url.Host != "" {
 			if url.Path == string(url.Separator) {
-				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+				fatalIf(errInvalidArgument().Trace(tgtURL),
+					fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 			}
 		}
 		_, _, err = url2Stat(tgtURL)
 		// we die on any error other than client.PathNotFound - destination directory need not exist.
 		if _, ok := err.ToGoError().(client.PathNotFound); !ok {
-			fatalIf(err.Trace(), fmt.Sprintf("Unable to stat %s", tgtURL))
+			fatalIf(err.Trace(tgtURL), fmt.Sprintf("Unable to stat %s", tgtURL))
 		}
 	}
 }
@@ -110,7 +111,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, isForce bool, mir
 		var err *probe.Error
 		objectDifferenceArray[i], err = objectDifferenceFactory(targetURLs[i])
 		if err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
+			mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetURLs...)}
 			return
 		}
 	}
@@ -123,7 +124,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, isForce bool, mir
 
 	for sourceContent := range sourceClient.List(true, false) {
 		if sourceContent.Err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: sourceContent.Err.Trace()}
+			mirrorURLsCh <- mirrorURLs{Error: sourceContent.Err.Trace(sourceClient.GetURL().String())}
 			continue
 		}
 		if sourceContent.Type.IsDir() {
@@ -134,7 +135,7 @@ func deltaSourceTargets(sourceURL string, targetURLs []string, isForce bool, mir
 		for i, difference := range objectDifferenceArray {
 			differ, err := difference(suffix, sourceContent.Type, sourceContent.Size)
 			if err != nil {
-				mirrorURLsCh <- mirrorURLs{Error: err.Trace()}
+				mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceContent.URL.String())}
 				continue
 			}
 			if differ == differNone {

@@ -34,7 +34,7 @@ type hostConfig struct {
 func getHostConfig(URL string) (hostConfig, *probe.Error) {
 	config, err := getMcConfig()
 	if err != nil {
-		return hostConfig{}, err.Trace()
+		return hostConfig{}, err.Trace(URL)
 	}
 	url := client.NewURL(URL)
 	// No host matching or keys needed for filesystem requests.
@@ -58,5 +58,5 @@ func getHostConfig(URL string) (hostConfig, *probe.Error) {
 		}
 	}
 	// return error if cannot be matched.
-	return hostConfig{}, errNoMatchingHost(URL).Trace()
+	return hostConfig{}, errNoMatchingHost(URL).Trace(URL)
 }
