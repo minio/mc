@@ -44,7 +44,7 @@ func fatalIf(err *probe.Error, msg string) {
 	if err == nil {
 		return
 	}
-	if globalJSONFlag {
+	if globalJSON {
 		errorMsg := errorMessage{
 			Message: msg,
 			Type:    "fatal",
@@ -54,7 +54,7 @@ func fatalIf(err *probe.Error, msg string) {
 			},
 			SysInfo: err.SysInfo,
 		}
-		if globalDebugFlag {
+		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
 		}
 		json, err := json.Marshal(struct {
@@ -70,7 +70,7 @@ func fatalIf(err *probe.Error, msg string) {
 		console.Println(string(json))
 		console.Fatalln()
 	}
-	if !globalDebugFlag {
+	if !globalDebug {
 		console.Fatalln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
 	}
 	console.Fatalln(fmt.Sprintf("%s %s", msg, err))
@@ -81,7 +81,7 @@ func errorIf(err *probe.Error, msg string) {
 	if err == nil {
 		return
 	}
-	if globalJSONFlag {
+	if globalJSON {
 		errorMsg := errorMessage{
 			Message: msg,
 			Type:    "error",
@@ -91,7 +91,7 @@ func errorIf(err *probe.Error, msg string) {
 			},
 			SysInfo: err.SysInfo,
 		}
-		if globalDebugFlag {
+		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
 		}
 		json, err := json.Marshal(struct {
@@ -107,7 +107,7 @@ func errorIf(err *probe.Error, msg string) {
 		console.Println(string(json))
 		return
 	}
-	if !globalDebugFlag {
+	if !globalDebug {
 		console.Errorln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
 		return
 	}

@@ -17,11 +17,7 @@
 // This package contains all the global variables and constants. ONLY TO BE ACCESSED VIA GET/SET FUNCTIONS.
 package main
 
-var (
-	globalQuietFlag = false // Quiet flag set via command line
-	globalJSONFlag  = false // Json flag set via command line
-	globalDebugFlag = false // Debug flag set via command line
-)
+import "github.com/minio/mc/pkg/console"
 
 // mc configuration related constants.
 const (
@@ -44,3 +40,29 @@ const (
 	// default host
 	globalExampleHostURL = "YOUR-EXAMPLE.COM"
 )
+
+var (
+	globalQuiet   = false // Quiet flag set via command line
+	globalJSON    = false // Json flag set via command line
+	globalDebug   = false // Debug flag set via command line
+	globalNoColor = false // Debug flag set via command line
+	// WHEN YOU ADD NEXT GLOBAL FLAG, MAKE SURE TO ALSO UPDATE SESSION CODE AND CODE BELOW.
+)
+
+// Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
+func setGlobals(quiet, debug, json, noColor bool) {
+	globalQuiet = quiet
+	globalDebug = debug
+	globalJSON = json
+	globalNoColor = noColor
+
+	// Enable debug messages if requested.
+	if globalDebug == true {
+		console.DebugPrint = true
+	}
+
+	// Disable colorified messages if requested.
+	if globalNoColor == true {
+		console.SetColorOff()
+	}
+}

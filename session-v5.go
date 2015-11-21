@@ -127,6 +127,50 @@ func (s sessionV5) JSON() string {
 	return string(sessionBytes)
 }
 
+// loadSessionV5 - reads session file if exists and re-initiates internal variables
+func loadSessionV5(sid string) (*sessionV5, *probe.Error) {
+	if !isSessionDirExists() {
+		return nil, errInvalidArgument().Trace()
+	}
+	sessionFile, err := getSessionFile(sid)
+	if err != nil {
+		return nil, err.Trace(sid)
+	}
+
+	if _, err := os.Stat(sessionFile); err != nil {
+		return nil, probe.NewError(err)
+	}
+
+	s := &sessionV5{}
+	s.Header = &sessionV5Header{}
+	s.SessionID = sid
+	s.Header.Version = "5"
+	qs, err := quick.New(s.Header)
+	if err != nil {
+		return nil, err.Trace(sid, s.Header.Version)
+	}
+	err = qs.Load(sessionFile)
+	if err != nil {
+		return nil, err.Trace(sid, s.Header.Version)
+	}
+
+	s.mutex = new(sync.Mutex)
+	s.Header = qs.Data().(*sessionV5Header)
+
+	sessionDataFile, err := getSessionDataFile(s.SessionID)
+	if err != nil {
+		return nil, err.Trace(sid, s.Header.Version)
+	}
+
+	var e error
+	dataFile, e := os.Open(sessionDataFile)
+	fatalIf(probe.NewError(e), "Unable to open session data file \""+sessionDataFile+"\".")
+
+	s.DataFP = &sessionDataFP{false, dataFile}
+
+	return s, nil
+}
+
 // newSessionV5 provides a new session.
 func newSessionV5() *sessionV5 {
 	s := &sessionV5{}
@@ -151,6 +195,10 @@ func newSessionV5() *sessionV5 {
 	fatalIf(probe.NewError(e), "Unable to create session data file \""+sessionDataFile+"\".")
 
 	s.DataFP = &sessionDataFP{false, dataFile}
+
+	// Capture state of global flags.
+	s.setGlobals()
+
 	return s
 }
 
@@ -200,11 +248,23 @@ func (s *sessionV5) Save() *probe.Error {
 	return qs.Save(sessionFile).Trace(sessionFile)
 }
 
+// setGlobals captures the state of global variables into session header.
+// Used by newSession.
+func (s *sessionV5) setGlobals() {
+	s.Header.GlobalBoolFlags["quiet"] = globalQuiet
+	s.Header.GlobalBoolFlags["debug"] = globalDebug
+	s.Header.GlobalBoolFlags["json"] = globalJSON
+	s.Header.GlobalBoolFlags["noColor"] = globalNoColor
+}
+
 // RestoreGlobals restores the state of global variables.
-func (s *sessionV5) RestoreGlobals() {
-	globalQuietFlag = s.Header.GlobalBoolFlags["quiet"]
-	globalJSONFlag = s.Header.GlobalBoolFlags["json"]
-	globalDebugFlag = s.Header.GlobalBoolFlags["debug"]
+// Used by resumeSession.
+func (s sessionV5) restoreGlobals() {
+	quiet := s.Header.GlobalBoolFlags["quiet"]
+	debug := s.Header.GlobalBoolFlags["debug"]
+	json := s.Header.GlobalBoolFlags["json"]
+	noColor := s.Header.GlobalBoolFlags["noColor"]
+	setGlobals(quiet, debug, json, noColor)
 }
 
 // Close ends this session and removes all associated session files.
@@ -263,50 +323,6 @@ func (s sessionV5) CloseAndDie() {
 	s.Close()
 	console.Infoln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
 	os.Exit(0)
-}
-
-// loadSessionV5 - reads session file if exists and re-initiates internal variables
-func loadSessionV5(sid string) (*sessionV5, *probe.Error) {
-	if !isSessionDirExists() {
-		return nil, errInvalidArgument().Trace()
-	}
-	sessionFile, err := getSessionFile(sid)
-	if err != nil {
-		return nil, err.Trace(sid)
-	}
-
-	if _, err := os.Stat(sessionFile); err != nil {
-		return nil, probe.NewError(err)
-	}
-
-	s := &sessionV5{}
-	s.Header = &sessionV5Header{}
-	s.SessionID = sid
-	s.Header.Version = "5"
-	qs, err := quick.New(s.Header)
-	if err != nil {
-		return nil, err.Trace(sid, s.Header.Version)
-	}
-	err = qs.Load(sessionFile)
-	if err != nil {
-		return nil, err.Trace(sid, s.Header.Version)
-	}
-
-	s.mutex = new(sync.Mutex)
-	s.Header = qs.Data().(*sessionV5Header)
-
-	sessionDataFile, err := getSessionDataFile(s.SessionID)
-	if err != nil {
-		return nil, err.Trace(sid, s.Header.Version)
-	}
-
-	var e error
-	dataFile, e := os.Open(sessionDataFile)
-	fatalIf(probe.NewError(e), "Unable to open session data file \""+sessionDataFile+"\".")
-
-	s.DataFP = &sessionDataFP{false, dataFile}
-
-	return s, nil
 }
 
 // Create a factory function to simplify checking if an

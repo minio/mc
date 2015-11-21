@@ -139,13 +139,13 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		return
 	}
 
-	if !globalQuietFlag && !globalJSONFlag {
+	if !globalQuiet && !globalJSON {
 		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
 	reader, length, err := getSource(cpURLs.SourceContent.URL.String())
 	if err != nil {
-		if !globalQuietFlag && !globalJSONFlag {
+		if !globalQuiet && !globalJSON {
 			progressReader.ErrorGet(length)
 		}
 		cpURLs.Error = err.Trace(cpURLs.SourceContent.URL.String())
@@ -154,18 +154,18 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 	}
 
 	var newReader io.ReadCloser
-	if globalQuietFlag || globalJSONFlag {
+	if globalQuiet || globalJSON {
 		printMsg(copyMessage{
 			Source: cpURLs.SourceContent.URL.String(),
 			Target: cpURLs.TargetContent.URL.String(),
 			Length: cpURLs.SourceContent.Size,
 		})
 		// No accounting necessary for JSON output.
-		if globalJSONFlag {
+		if globalJSON {
 			newReader = reader
 		}
 		// Proxy reader to accounting reader only during quiet mode.
-		if globalQuietFlag {
+		if globalQuiet {
 			newReader = accountingReader.NewProxyReader(reader)
 		}
 	} else {
@@ -175,7 +175,7 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 	defer newReader.Close()
 
 	if err := putTarget(cpURLs.TargetContent.URL.String(), length, newReader); err != nil {
-		if !globalQuietFlag && !globalJSONFlag {
+		if !globalQuiet && !globalJSON {
 			progressReader.ErrorPut(length)
 		}
 		cpURLs.Error = err.Trace(cpURLs.TargetContent.URL.String())
@@ -189,7 +189,7 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
 func doCopyFake(cURLs copyURLs, progressReader *barSend) {
-	if !globalQuietFlag && !globalJSONFlag {
+	if !globalQuiet && !globalJSON {
 		progressReader.Progress(cURLs.SourceContent.Size)
 	}
 }
@@ -211,7 +211,7 @@ func doPrepareCopyURLs(session *sessionV5, trapCh <-chan bool) {
 	dataFP := session.NewDataWriter()
 
 	var scanBar scanBarFunc
-	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
+	if !globalQuiet && !globalJSON { // set up progress bar
 		scanBar = scanBarFactory()
 	}
 
@@ -227,7 +227,7 @@ func doPrepareCopyURLs(session *sessionV5, trapCh <-chan bool) {
 			}
 			if cpURLs.Error != nil {
 				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-				if !globalQuietFlag && !globalJSONFlag {
+				if !globalQuiet && !globalJSON {
 					console.Eraseline()
 				}
 				if strings.Contains(cpURLs.Error.ToGoError().Error(), " is a folder.") {
@@ -244,7 +244,7 @@ func doPrepareCopyURLs(session *sessionV5, trapCh <-chan bool) {
 				fatalIf(probe.NewError(err), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
-			if !globalQuietFlag && !globalJSONFlag {
+			if !globalQuiet && !globalJSON {
 				scanBar(cpURLs.SourceContent.URL.String())
 			}
 
@@ -252,7 +252,7 @@ func doPrepareCopyURLs(session *sessionV5, trapCh <-chan bool) {
 			totalObjects++
 		case <-trapCh:
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-			if !globalQuietFlag && !globalJSONFlag {
+			if !globalQuiet && !globalJSON {
 				console.Eraseline()
 			}
 			session.Delete() // If we are interrupted during the URL scanning, we drop the session.
@@ -276,7 +276,7 @@ func doCopySession(session *sessionV5) {
 
 	// Enable progress bar reader only during default mode.
 	var progressReader *barSend
-	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
+	if !globalQuiet && !globalJSON { // set up progress bar
 		progressReader = newProgressBar(session.Header.TotalBytes)
 	}
 
@@ -302,10 +302,10 @@ func doCopySession(session *sessionV5) {
 			select {
 			case cpURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
-					if !globalQuietFlag && !globalJSONFlag {
+					if !globalQuiet && !globalJSON {
 						progressReader.Finish()
 					}
-					if globalQuietFlag {
+					if globalQuiet {
 						accntStat := accntReader.Stat()
 						cpStatMessage := copyStatMessage{
 							Total:       accntStat.Total,
@@ -321,7 +321,7 @@ func doCopySession(session *sessionV5) {
 					session.Save()
 				} else {
 					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
-					if !globalQuietFlag && !globalJSONFlag {
+					if !globalQuiet && !globalJSON {
 						console.Eraseline()
 					}
 					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
@@ -342,7 +342,7 @@ func doCopySession(session *sessionV5) {
 					session.CloseAndDie()
 				}
 			case <-trapCh: // Receive interrupt notification.
-				if !globalQuietFlag && !globalJSONFlag {
+				if !globalQuiet && !globalJSON {
 					console.Eraseline()
 				}
 				session.CloseAndDie()
