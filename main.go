@@ -24,7 +24,6 @@ import (
 	"strconv"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/pb"
 	"github.com/olekukonko/ts"
@@ -110,18 +109,12 @@ func getSystemData() map[string]string {
 
 func registerBefore(ctx *cli.Context) error {
 	setMcConfigDir(ctx.GlobalString("config-folder"))
-	globalQuietFlag = ctx.GlobalBool("quiet")
-	globalDebugFlag = ctx.GlobalBool("debug")
-	globalJSONFlag = ctx.GlobalBool("json")
 
-	if globalDebugFlag {
-		console.NoDebugPrint = false
-	}
-
-	// Disable color themes.
-	if ctx.GlobalBool("no-color") == true {
-		console.SetColorOff()
-	}
+	// Set global states from global flags.
+	setGlobals(ctx.GlobalBool("quiet"),
+		ctx.GlobalBool("debug"),
+		ctx.GlobalBool("json"),
+		ctx.GlobalBool("no-color"))
 
 	// Verify golang runtime.
 	verifyMCRuntime()
@@ -190,10 +183,10 @@ func main() {
 
 	app.ExtraInfo = func() map[string]string {
 		if _, e := ts.GetSize(); e != nil {
-			globalQuietFlag = true
+			globalQuiet = true
 		}
 
-		if globalDebugFlag {
+		if globalDebug {
 			return getSystemData()
 		}
 		return make(map[string]string)

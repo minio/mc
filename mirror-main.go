@@ -128,13 +128,13 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 		return
 	}
 
-	if !globalQuietFlag && !globalJSONFlag {
+	if !globalQuiet && !globalJSON {
 		progressReader.SetCaption(sURLs.SourceContent.URL.String() + ": ")
 	}
 
 	reader, length, err := getSource(sURLs.SourceContent.URL.String())
 	if err != nil {
-		if !globalQuietFlag && !globalJSONFlag {
+		if !globalQuiet && !globalJSON {
 			progressReader.ErrorGet(int64(length))
 		}
 		sURLs.Error = err.Trace(sURLs.SourceContent.URL.String())
@@ -148,15 +148,15 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 	}
 
 	var newReader io.ReadCloser
-	if globalQuietFlag || globalJSONFlag {
+	if globalQuiet || globalJSON {
 		printMsg(mirrorMessage{
 			Source:  sURLs.SourceContent.URL.String(),
 			Targets: targetURLs,
 		})
-		if globalJSONFlag {
+		if globalJSON {
 			newReader = reader
 		}
-		if globalQuietFlag {
+		if globalQuiet {
 			newReader = accountingReader.NewProxyReader(reader)
 		}
 	} else {
@@ -167,7 +167,7 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 
 	err = putTargets(targetURLs, length, newReader)
 	if err != nil {
-		if !globalQuietFlag && !globalJSONFlag {
+		if !globalQuiet && !globalJSON {
 			progressReader.ErrorPut(int64(length))
 		}
 		sURLs.Error = err.Trace(targetURLs...)
@@ -181,7 +181,7 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 
 // doMirrorFake - Perform a fake mirror to update the progress bar appropriately.
 func doMirrorFake(sURLs mirrorURLs, progressReader *barSend) {
-	if !globalDebugFlag && !globalJSONFlag {
+	if !globalDebug && !globalJSON {
 		progressReader.Progress(sURLs.SourceContent.Size)
 	}
 }
@@ -197,7 +197,7 @@ func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
 	dataFP := session.NewDataWriter()
 
 	var scanBar scanBarFunc
-	if !globalQuietFlag && !globalJSONFlag { // set up progress bar
+	if !globalQuiet && !globalJSON { // set up progress bar
 		scanBar = scanBarFactory()
 	}
 
@@ -212,7 +212,7 @@ func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
 			}
 			if sURLs.Error != nil {
 				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-				if !globalQuietFlag && !globalJSONFlag {
+				if !globalQuiet && !globalJSON {
 					console.Eraseline()
 				}
 				errorIf(sURLs.Error.Trace(), "Unable to prepare URLs for mirroring.")
@@ -227,7 +227,7 @@ func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
 				fatalIf(probe.NewError(err), "Unable to marshal URLs into JSON.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
-			if !globalQuietFlag && !globalJSONFlag {
+			if !globalQuiet && !globalJSON {
 				scanBar(sURLs.SourceContent.URL.String())
 			}
 
@@ -235,7 +235,7 @@ func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
 			totalObjects++
 		case <-trapCh:
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-			if !globalQuietFlag && !globalJSONFlag {
+			if !globalQuiet && !globalJSON {
 				console.Eraseline()
 			}
 			session.Delete() // If we are interrupted during the URL scanning, we drop the session.
@@ -261,7 +261,7 @@ func doMirrorSession(session *sessionV5) {
 
 	// Set up progress bar.
 	var progressReader *barSend
-	if !globalQuietFlag && !globalJSONFlag {
+	if !globalQuiet && !globalJSON {
 		progressReader = newProgressBar(session.Header.TotalBytes)
 	}
 
@@ -286,7 +286,7 @@ func doMirrorSession(session *sessionV5) {
 			select {
 			case sURLs, ok := <-statusCh: // Receive status.
 				if !ok { // We are done here. Top level function has returned.
-					if !globalQuietFlag && !globalJSONFlag {
+					if !globalQuiet && !globalJSON {
 						progressReader.Finish()
 					} else {
 						accntStat := accntReader.Stat()
@@ -304,7 +304,7 @@ func doMirrorSession(session *sessionV5) {
 					session.Save()
 				} else {
 					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
-					if !globalQuietFlag && !globalJSONFlag {
+					if !globalQuiet && !globalJSON {
 						console.Eraseline()
 					}
 					errorIf(sURLs.Error.Trace(), fmt.Sprintf("Failed to mirror ‘%s’.", sURLs.SourceContent.URL.String()))
@@ -325,7 +325,7 @@ func doMirrorSession(session *sessionV5) {
 				}
 			case <-trapCh: // Receive interrupt notification.
 				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
-				if !globalQuietFlag && !globalJSONFlag {
+				if !globalQuiet && !globalJSON {
 					console.Eraseline()
 				}
 				session.CloseAndDie()

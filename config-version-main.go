@@ -61,7 +61,7 @@ func mainConfigVersion(ctx *cli.Context) {
 	// convert interface{} back to its original struct
 	newConf := config.Data().(*configV6)
 	type Version string
-	if globalJSONFlag {
+	if globalJSON {
 		tB, e := json.Marshal(
 			struct {
 				Version Version `json:"version"`

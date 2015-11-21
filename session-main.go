@@ -230,7 +230,7 @@ func mainSession(ctx *cli.Context) {
 		fatalIf(errDummy().Trace(), "Loaded session is nil.")
 
 		// Restore the state of global variables from this previous session.
-		s.RestoreGlobals()
+		s.restoreGlobals()
 
 		savedCwd, e := os.Getwd()
 		fatalIf(probe.NewError(e), "Unable to determine current working folder.")

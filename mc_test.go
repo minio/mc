@@ -50,7 +50,7 @@ func (s *TestSuite) SetUpSuite(c *C) {
 	console.IsTesting = true
 
 	// do not set it elsewhere, leads to data races since this is a global flag
-	globalQuietFlag = true // quiet is set to turn of progress bar
+	globalQuiet = true // quiet is set to turn of progress bar
 
 	tmpDir, e := ioutil.TempDir(os.TempDir(), "cmd-")
 	c.Assert(e, IsNil)

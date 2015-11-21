@@ -29,9 +29,9 @@ import (
 )
 
 var (
-	// NoDebugPrint defines if the input should be printed in debug or not. By default it's set to true.
-	NoDebugPrint = true
-	// IsTesting this flag indicates if IsExited should be set or not, false by default.
+	// DebugPrint enables/disables console debug printing.
+	DebugPrint = false
+	// IsTesting this flag indicates if IsExited should be set or not.
 	IsTesting = false
 	// IsExited sets this boolean value if Fatal is called when IsTesting is enabled.
 	IsExited = false
@@ -153,21 +153,21 @@ var (
 	// Debug prints a debug message without a new line
 	// Debug prints a debug message.
 	Debug = func(data ...interface{}) {
-		if !NoDebugPrint {
+		if !DebugPrint {
 			consolePrint("Debug", Theme["Debug"], data...)
 		}
 	}
 
 	// Debugf prints a debug message with a new line.
 	Debugf = func(format string, data ...interface{}) {
-		if !NoDebugPrint {
+		if !DebugPrint {
 			consolePrintf("Debug", Theme["Debug"], format, data...)
 		}
 	}
 
 	// Debugln prints a debug message with a new line.
 	Debugln = func(data ...interface{}) {
-		if !NoDebugPrint {
+		if !DebugPrint {
 			consolePrintln("Debug", Theme["Debug"], data...)
 		}
 	}

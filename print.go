@@ -26,7 +26,7 @@ type message interface {
 
 // printMsg prints message string or JSON structure depending on the type of output console.
 func printMsg(msg message) {
-	if !globalJSONFlag {
+	if !globalJSON {
 		console.Println(msg.String())
 	} else {
 		console.Println(msg.JSON())
