@@ -19,9 +19,153 @@ package main
 import (
 	"strings"
 
+	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/quick"
 )
+
+func migrateConfig() {
+	// Migrate config V1 to V101
+	migrateConfigV1ToV101()
+	// Migrate config V101 to V2
+	migrateConfigV101ToV2()
+	// Migrate config V2 to V3
+	migrateConfigV2ToV3()
+	// Migrate config V3 to V4
+	migrateConfigV3ToV4()
+	// Migrate config V4 to V5
+	migrateConfigV4ToV5()
+	// Migrate config V5 to V6
+	migrateConfigV5ToV6()
+}
+
+func fixConfig() {
+	// Fix config V3
+	fixConfigV3()
+	// Fix config V6
+	fixConfigV6()
+	// Fix config V6 for hosts
+	fixConfigV6ForHosts()
+}
+
+func fixConfigV6ForHosts() {
+	if !isMcConfigExists() {
+		return
+	}
+	config, err := quick.New(newConfigV6())
+	fatalIf(err.Trace(), "Unable to initialize config.")
+
+	err = config.Load(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to load config.")
+
+	if config.Data().(*configV6).Version == "6" {
+		newConfig := new(configV6)
+		newConfig.Aliases = make(map[string]string)
+		newConfig.Hosts = make(map[string]hostConfig)
+		newConfig.Version = "6"
+		newConfig.Aliases = config.Data().(*configV6).Aliases
+
+		url := new(client.URL)
+		for host, hostCfg := range config.Data().(*configV6).Hosts {
+			// Already fixed - move on.
+			if strings.HasPrefix(host, "https") || strings.HasPrefix(host, "http") {
+				newConfig.Hosts[host] = hostCfg
+				continue
+			}
+			if host == "s3.amazonaws.com" || host == "storage.googleapis.com" {
+				console.Infoln("Found hosts, replacing " + host + " with https://" + host)
+				url.Host = host
+				url.Scheme = "https"
+				url.SchemeSeparator = "://"
+				newConfig.Hosts[url.String()] = hostCfg
+				delete(newConfig.Hosts, host)
+			}
+			if host == "localhost:9000" || host == "127.0.0.1:9000" {
+				console.Infoln("Found hosts, replacing " + host + " with http://" + host)
+				url.Host = host
+				url.Scheme = "http"
+				url.SchemeSeparator = "://"
+				newConfig.Hosts[url.String()] = hostCfg
+				delete(newConfig.Hosts, host)
+			}
+			if host == "play.minio.io:9000" || host == "dl.minio.io:9000" {
+				console.Infoln("Found hosts, replacing " + host + " with https://" + host)
+				url.Host = host
+				url.Scheme = "https"
+				url.SchemeSeparator = "://"
+				newConfig.Hosts[url.String()] = hostCfg
+				delete(newConfig.Hosts, host)
+			}
+		}
+		newConf, err := quick.New(newConfig)
+		fatalIf(err.Trace(), "Unable to initialize newly fixed config.")
+
+		err = newConf.Save(mustGetMcConfigPath())
+		fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
+	}
+}
+
+// fixConfigV6 - fix all the unnecessary glob URLs present in existing config version 6.
+func fixConfigV6() {
+	if !isMcConfigExists() {
+		return
+	}
+	config, err := quick.New(newConfigV6())
+	fatalIf(err.Trace(), "Unable to initialize config.")
+
+	err = config.Load(mustGetMcConfigPath())
+	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to load config.")
+
+	if config.Data().(*configV6).Version == "6" {
+		newConfig := new(configV6)
+		newConfig.Aliases = make(map[string]string)
+		newConfig.Hosts = make(map[string]hostConfig)
+		newConfig.Version = "6"
+		newConfig.Aliases = config.Data().(*configV6).Aliases
+		for host, hostCfg := range config.Data().(*configV6).Hosts {
+			if strings.HasPrefix(host, "https") || strings.HasPrefix(host, "http") {
+				newConfig.Hosts[host] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "*s3*") || strings.Contains(host, "*.s3*") {
+				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
+				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "s3*") {
+				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
+				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "*amazonaws.com") || strings.Contains(host, "*.amazonaws.com") {
+				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
+				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "*storage.googleapis.com") {
+				console.Infoln("Found glob url, replacing " + host + " with storage.googleapis.com")
+				newConfig.Hosts["storage.googleapis.com"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "localhost:*") {
+				console.Infoln("Found glob url, replacing " + host + " with localhost:9000")
+				newConfig.Hosts["localhost:9000"] = hostCfg
+				continue
+			}
+			if strings.Contains(host, "127.0.0.1:*") {
+				console.Infoln("Found glob url, replacing " + host + " with 127.0.0.1:9000")
+				newConfig.Hosts["127.0.0.1:9000"] = hostCfg
+				continue
+			}
+			newConfig.Hosts[host] = hostCfg
+		}
+		newConf, err := quick.New(newConfig)
+		fatalIf(err.Trace(), "Unable to initialize newly fixed config.")
+
+		err = newConf.Save(mustGetMcConfigPath())
+		fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
+	}
+}
 
 type configV5 struct {
 	Version string                `json:"version"`

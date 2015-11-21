@@ -88,7 +88,7 @@ func (s *TestSuite) TestConfigHostContext(c *C) {
 	// reset back
 	console.IsExited = false
 
-	err = app.Run([]string{os.Args[0], "config", "host", "remove", "http://dl.minio.io:9000"})
+	err = app.Run([]string{os.Args[0], "config", "host", "remove", "https://dl.minio.io:9000"})
 	c.Assert(err, IsNil)
 	c.Assert(console.IsExited, Equals, true)
 
