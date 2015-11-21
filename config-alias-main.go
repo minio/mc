@@ -25,7 +25,6 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
-	"github.com/minio/minio-xl/pkg/quick"
 )
 
 var (
@@ -106,6 +105,44 @@ func (a aliasMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
+// checkConfigAliasAddSyntax validate 'config alias add' input arguments.
+func checkConfigAliasAddSyntax(ctx *cli.Context) {
+	if len(ctx.Args().Tail()) != 2 {
+		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
+			"Incorrect number of arguments for add alias command.")
+	}
+	aliasName := ctx.Args().Tail().Get(0)
+	aliasedURL := ctx.Args().Tail().Get(1)
+	if aliasName == "" || aliasedURL == "" {
+		fatalIf(errDummy().Trace(), "Alias or URL cannot be empty.")
+	}
+	aliasedURL = strings.TrimSuffix(aliasedURL, "/")
+	if !strings.HasPrefix(aliasedURL, "http") {
+		fatalIf(errDummy().Trace(aliasedURL),
+			fmt.Sprintf("Invalid alias URL ‘%s’. Valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com.", aliasedURL))
+	}
+	if !isValidAliasName(aliasName) {
+		fatalIf(errDummy().Trace(aliasName),
+			fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", aliasName))
+	}
+}
+
+// checkConfigAliasRemoveSyntax validate 'config alias remove' input argument.
+func checkConfigAliasRemoveSyntax(ctx *cli.Context) {
+	if len(ctx.Args().Tail()) != 1 {
+		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
+			"Incorrect number of arguments for remove alias command.")
+	}
+	aliasName := ctx.Args().Tail().Get(0)
+	if strings.TrimSpace(aliasName) == "" {
+		fatalIf(errDummy().Trace(), "Alias or URL cannot be empty.")
+	}
+	if !isValidAliasName(aliasName) {
+		fatalIf(errDummy().Trace(aliasName),
+			fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", aliasName))
+	}
+}
+
 func checkConfigAliasSyntax(ctx *cli.Context) {
 	// show help if nothing is set
 	if !ctx.Args().Present() || ctx.Args().First() == "help" {
@@ -119,95 +156,13 @@ func checkConfigAliasSyntax(ctx *cli.Context) {
 	}
 	switch strings.TrimSpace(ctx.Args().Get(0)) {
 	case "add":
-		if len(ctx.Args().Tail()) != 2 {
-			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...), "Incorrect number of arguments for add alias command.")
-		}
+		checkConfigAliasAddSyntax(ctx)
 	case "remove":
-		if len(ctx.Args().Tail()) != 1 {
-			fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...), "Incorrect number of arguments for remove alias command.")
-		}
+		checkConfigAliasRemoveSyntax(ctx)
 	case "list":
 	default:
 		cli.ShowCommandHelpAndExit(ctx, "alias", 1) // last argument is exit code
 	}
-}
-
-func listAliases() {
-	config, err := newConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
-
-	configPath := mustGetMcConfigPath()
-	err = config.Load(configPath)
-	fatalIf(err.Trace(configPath), "Unable to load config path")
-
-	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV6)
-	for k, v := range newConf.Aliases {
-		printMsg(aliasMessage{op: "list", Alias: k, URL: v})
-	}
-}
-
-// removeAlias - remove alias
-func removeAlias(alias string) {
-	if strings.TrimSpace(alias) == "" {
-		fatalIf(errDummy().Trace(), "Alias or URL cannot be empty.")
-	}
-	config, err := newConfig()
-	fatalIf(err.Trace(), "Failed to initialize ‘quick’ configuration data structure.")
-
-	configPath := mustGetMcConfigPath()
-	err = config.Load(configPath)
-	fatalIf(err.Trace(configPath), "Unable to load config path")
-	if !isValidAliasName(alias) {
-		fatalIf(errDummy().Trace(alias), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
-	}
-
-	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV6)
-	if _, ok := newConf.Aliases[alias]; !ok {
-		fatalIf(errDummy().Trace(alias), fmt.Sprintf("Alias ‘%s’ does not exist.", alias))
-	}
-	delete(newConf.Aliases, alias)
-
-	newConfig, err := quick.New(newConf)
-	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
-	err = writeConfig(newConfig)
-	fatalIf(err.Trace(alias), "Unable to save alias ‘"+alias+"’.")
-
-	printMsg(aliasMessage{op: "remove", Alias: alias})
-}
-
-// addAlias - add new aliases
-func addAlias(alias, url string) {
-	if alias == "" || url == "" {
-		fatalIf(errDummy().Trace(), "Alias or URL cannot be empty.")
-	}
-	config, err := newConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
-
-	err = config.Load(mustGetMcConfigPath())
-	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to load config path")
-
-	url = strings.TrimSuffix(url, "/")
-	if !strings.HasPrefix(url, "http") {
-		fatalIf(errDummy().Trace(url), fmt.Sprintf("Invalid alias URL ‘%s’. Valid examples are: http://s3.amazonaws.com, https://yourbucket.example.com.", url))
-	}
-	if !isValidAliasName(alias) {
-		fatalIf(errDummy().Trace(alias), fmt.Sprintf("Alias name ‘%s’ is invalid, valid examples are: mybucket, Area51, Grand-Nagus", alias))
-	}
-	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV6)
-	if oldURL, ok := newConf.Aliases[alias]; ok {
-		fatalIf(errDummy().Trace(alias), fmt.Sprintf("Alias ‘%s’ already exists for ‘%s’.", alias, oldURL))
-	}
-	newConf.Aliases[alias] = url
-	newConfig, err := quick.New(newConf)
-	fatalIf(err.Trace(globalMCConfigVersion), "Failed to initialize ‘quick’ configuration data structure.")
-
-	err = writeConfig(newConfig)
-	fatalIf(err.Trace(alias, url), "Unable to save alias ‘"+alias+"’.")
-
-	printMsg(aliasMessage{op: "add", Alias: alias, URL: url})
 }
 
 func mainConfigAlias(ctx *cli.Context) {
@@ -223,10 +178,52 @@ func mainConfigAlias(ctx *cli.Context) {
 
 	switch strings.TrimSpace(arg) {
 	case "add":
-		addAlias(tailArgs.Get(0), tailArgs.Get(1))
+		// add alias name.
+		aliasName := tailArgs.Get(0)
+		aliasedURL := tailArgs.Get(1)
+		addAlias(aliasName, aliasedURL)
 	case "remove":
-		removeAlias(tailArgs.Get(0))
+		// remove alias name.
+		aliasName := tailArgs.Get(0)
+		removeAlias(aliasName)
 	case "list":
+		// list all aliases.
 		listAliases()
+	}
+}
+
+// addAlias - adds an alias entry.
+func addAlias(aliasName, aliasedURL string) {
+	conf, err := loadConfigV6()
+	fatalIf(err.Trace(), "Unable to load config version ‘6’.")
+
+	conf.Aliases[aliasName] = aliasedURL
+
+	err = saveConfigV6(conf)
+	fatalIf(err.Trace(aliasName, aliasedURL), "Unable to update aliases in config version ‘6’.")
+
+	printMsg(aliasMessage{op: "add", Alias: aliasName, URL: aliasedURL})
+}
+
+// removeAlias - remove a alias.
+func removeAlias(aliasName string) {
+	conf, err := loadConfigV6()
+	fatalIf(err.Trace(), "Unable to load config version ‘6’.")
+
+	delete(conf.Aliases, aliasName)
+
+	err = saveConfigV6(conf)
+	fatalIf(err.Trace(aliasName), "Unable to save deleted alias in config version ‘6’.")
+
+	printMsg(aliasMessage{op: "remove", Alias: aliasName})
+}
+
+// listAliases - list aliases.
+func listAliases() {
+	conf, err := loadConfigV6()
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘6’")
+
+	for aliasName, aliasedURL := range conf.Aliases {
+		printMsg(aliasMessage{op: "list", Alias: aliasName, URL: aliasedURL})
 	}
 }
