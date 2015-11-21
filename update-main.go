@@ -46,7 +46,7 @@ var updateCmd = cli.Command{
 	Name:   "update",
 	Usage:  "Check for a new software update.",
 	Action: mainUpdate,
-	Flags:  []cli.Flag{updateFlagExperimental, updateFlagHelp},
+	Flags:  append(globalFlags, updateFlagExperimental, updateFlagHelp),
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 

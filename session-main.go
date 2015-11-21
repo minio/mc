@@ -41,7 +41,7 @@ var sessionCmd = cli.Command{
 	Name:   "session",
 	Usage:  "Manage saved sessions of cp and mirror operations.",
 	Action: mainSession,
-	Flags:  []cli.Flag{sessionFlagHelp},
+	Flags:  append(globalFlags, sessionFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

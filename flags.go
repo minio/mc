@@ -21,54 +21,36 @@ import "github.com/minio/cli"
 // Collection of mc commands currently supported
 var commands = []cli.Command{}
 
-// Collection of mc flags currently supported
-var flags = []cli.Flag{}
-
 // Collection of mc commands currently supported in a trie tree
 var commandsTree = newTrie()
 
-var (
-	helpFlag = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help for mc.",
-	}
-
-	configFlag = cli.StringFlag{
+// Collection of mc flags currently supported
+var globalFlags = []cli.Flag{
+	cli.StringFlag{
 		Name:  "config-folder, C",
 		Value: mustGetMcConfigDir(),
 		Usage: "Path to configuration folder.",
-	}
-
-	quietFlag = cli.BoolFlag{
+	},
+	cli.BoolFlag{
 		Name:  "quiet, q",
 		Usage: "Suppress chatty console output.",
-	}
-
-	colorsFlag = cli.BoolFlag{
+	},
+	cli.BoolFlag{
 		Name:  "no-color",
 		Usage: "Disable color theme.",
-	}
-
-	jsonFlag = cli.BoolFlag{
+	},
+	cli.BoolFlag{
 		Name:  "json",
 		Usage: "Enable json formatted output.",
-	}
-
-	debugFlag = cli.BoolFlag{
+	},
+	cli.BoolFlag{
 		Name:  "debug",
 		Usage: "Enable debugging output.",
-	}
-
-	// Add your new flags starting here
-)
+	},
+}
 
 // registerCmd registers a cli command
 func registerCmd(cmd cli.Command) {
 	commands = append(commands, cmd)
 	commandsTree.Insert(cmd.Name)
-}
-
-// registerFlag registers a cli flag
-func registerFlag(flag cli.Flag) {
-	flags = append(flags, flag)
 }

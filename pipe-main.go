@@ -36,7 +36,7 @@ var pipeCmd = cli.Command{
 	Name:   "pipe",
 	Usage:  "Write contents of stdin to one or more targets. When no target is specified, it writes to stdout.",
 	Action: mainPipe,
-	Flags:  []cli.Flag{pipeFlagHelp},
+	Flags:  append(globalFlags, pipeFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

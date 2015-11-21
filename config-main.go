@@ -40,7 +40,7 @@ var configCmd = cli.Command{
 	Name:   "config",
 	Usage:  "Manage configuration file.",
 	Action: mainConfig,
-	Flags:  []cli.Flag{configFlagHelp},
+	Flags:  append(globalFlags, configFlagHelp),
 	Subcommands: []cli.Command{
 		configAliasCmd,
 		configHostCmd,

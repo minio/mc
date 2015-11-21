@@ -42,7 +42,7 @@ var catCmd = cli.Command{
 	Name:   "cat",
 	Usage:  "Display contents of a file.",
 	Action: mainCat,
-	Flags:  []cli.Flag{catFlagHelp},
+	Flags:  append(globalFlags, catFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

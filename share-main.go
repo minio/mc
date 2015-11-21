@@ -37,7 +37,7 @@ var shareCmd = cli.Command{
 	Name:   "share",
 	Usage:  "Generate URL for sharing.",
 	Action: mainShare,
-	Flags:  []cli.Flag{shareFlagHelp},
+	Flags:  append(globalFlags, shareFlagHelp),
 	Subcommands: []cli.Command{
 		shareDownload,
 		shareUpload,

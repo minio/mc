@@ -56,13 +56,7 @@ var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "Remove file or bucket [WARNING: Use with care].",
 	Action: mainRm,
-	Flags: []cli.Flag{
-		rmFlagRecursive,
-		rmFlagForce,
-		rmFlagIncomplete,
-		rmFlagFake,
-		rmFlagHelp,
-	},
+	Flags:  append(globalFlags, rmFlagRecursive, rmFlagForce, rmFlagIncomplete, rmFlagFake, rmFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

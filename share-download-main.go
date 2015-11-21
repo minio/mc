@@ -39,7 +39,7 @@ var shareDownload = cli.Command{
 	Name:   "download",
 	Usage:  "Generate URLs for download access.",
 	Action: mainShareDownload,
-	Flags:  []cli.Flag{shareFlagRecursive, shareFlagExpire, shareFlagDownloadHelp},
+	Flags:  append(globalFlags, shareFlagRecursive, shareFlagExpire, shareFlagDownloadHelp),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
 

@@ -38,7 +38,7 @@ var accessCmd = cli.Command{
 	Name:   "access",
 	Usage:  "Manage bucket access permissions.",
 	Action: mainAccess,
-	Flags:  []cli.Flag{accessFlagHelp},
+	Flags:  append(globalFlags, accessFlagHelp),
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 

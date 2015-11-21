@@ -38,7 +38,7 @@ var (
 var configHostCmd = cli.Command{
 	Name:   "host",
 	Usage:  "List, modify and remove hosts in configuration file.",
-	Flags:  []cli.Flag{configHostFlagHelp},
+	Flags:  append(globalFlags, configHostFlagHelp),
 	Action: mainConfigHost,
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}

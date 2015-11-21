@@ -42,7 +42,7 @@ var diffCmd = cli.Command{
 	Usage:       "Compute differences between two folders.",
 	Description: "Diff only lists missing objects or objects with size differences. It *DOES NOT* compare contents. i.e. Objects of same name and size, but differ in contents are not noticed.",
 	Action:      mainDiff,
-	Flags:       []cli.Flag{diffFlagHelp},
+	Flags:       append(globalFlags, diffFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
