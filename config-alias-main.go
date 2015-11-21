@@ -178,50 +178,47 @@ func mainConfigAlias(ctx *cli.Context) {
 
 	switch strings.TrimSpace(arg) {
 	case "add":
-		// add alias name.
 		aliasName := tailArgs.Get(0)
 		aliasedURL := tailArgs.Get(1)
-		addAlias(aliasName, aliasedURL)
+		addAlias(aliasName, aliasedURL) // add alias name for aliased URL.
 	case "remove":
-		// remove alias name.
 		aliasName := tailArgs.Get(0)
-		removeAlias(aliasName)
+		removeAlias(aliasName) // remove alias name.
 	case "list":
-		// list all aliases.
-		listAliases()
+		listAliases() // list all aliases.
 	}
 }
 
 // addAlias - adds an alias entry.
 func addAlias(aliasName, aliasedURL string) {
-	conf, err := loadConfigV6()
-	fatalIf(err.Trace(), "Unable to load config version ‘6’.")
+	conf, err := loadMcConfig()
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
 
 	conf.Aliases[aliasName] = aliasedURL
 
-	err = saveConfigV6(conf)
-	fatalIf(err.Trace(aliasName, aliasedURL), "Unable to update aliases in config version ‘6’.")
+	err = saveMcConfig(conf)
+	fatalIf(err.Trace(aliasName, aliasedURL), "Unable to update aliases in config version ‘"+globalMCConfigVersion+"’.")
 
 	printMsg(aliasMessage{op: "add", Alias: aliasName, URL: aliasedURL})
 }
 
 // removeAlias - remove a alias.
 func removeAlias(aliasName string) {
-	conf, err := loadConfigV6()
-	fatalIf(err.Trace(), "Unable to load config version ‘6’.")
+	conf, err := loadMcConfig()
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
 
 	delete(conf.Aliases, aliasName)
 
-	err = saveConfigV6(conf)
-	fatalIf(err.Trace(aliasName), "Unable to save deleted alias in config version ‘6’.")
+	err = saveMcConfig(conf)
+	fatalIf(err.Trace(aliasName), "Unable to save deleted alias in config version ‘"+globalMCConfigVersion+"’.")
 
 	printMsg(aliasMessage{op: "remove", Alias: aliasName})
 }
 
 // listAliases - list aliases.
 func listAliases() {
-	conf, err := loadConfigV6()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘6’")
+	conf, err := loadMcConfig()
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’")
 
 	for aliasName, aliasedURL := range conf.Aliases {
 		printMsg(aliasMessage{op: "list", Alias: aliasName, URL: aliasedURL})

@@ -17,6 +17,8 @@
 package main
 
 import (
+	"sync"
+
 	"github.com/minio/minio-xl/pkg/probe"
 	"github.com/minio/minio-xl/pkg/quick"
 )
@@ -27,6 +29,9 @@ type configV6 struct {
 	Aliases map[string]string     `json:"alias"`
 	Hosts   map[string]hostConfig `json:"hosts"`
 }
+
+// cached variables should *NEVER* be accessed directly from outside this file.
+var cache sync.Pool
 
 // newConfigV6 - new config version '6'.
 func newConfigV6() *configV6 {
@@ -114,7 +119,7 @@ func loadConfigV6() (*configV6, *probe.Error) {
 
 	// Cached in private global variable.
 	if v := cache.Get(); v != nil { // Use previously cached config.
-		return v.(quick.Config).Data().(*configV6), nil
+		return v.(*configV6), nil
 	}
 
 	conf := new(configV6)
@@ -128,7 +133,10 @@ func loadConfigV6() (*configV6, *probe.Error) {
 	if err != nil {
 		return nil, err.Trace()
 	}
-	cache.Put(qconf)
 
-	return qconf.Data().(*configV6), nil
+	config := qconf.Data().(*configV6)
+	// Save in sync pool.
+	cache.Put(config)
+
+	return config, nil
 }

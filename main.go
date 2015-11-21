@@ -70,8 +70,8 @@ func commandNotFound(ctx *cli.Context, command string) {
 // Check for sane config environment early on and gracefully report.
 func checkConfig() {
 	// Ensures config file is sane.
-	_, err := getMcConfig()
-	fatalIf(err.Trace(), "Unable to access configuration file.")
+	_, err := loadMcConfig()
+	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to access configuration file.")
 }
 
 func migrate() {

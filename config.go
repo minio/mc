@@ -20,19 +20,17 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 
 	"github.com/minio/minio-xl/pkg/probe"
-	"github.com/minio/minio-xl/pkg/quick"
 )
 
-// cached variables should *NEVER* be accessed directly from outside this file.
-var cache sync.Pool
-
-// customConfigDir contains the whole path to config dir. Only access via get/set functions.
+// mcCustomConfigDir contains the whole path to config dir. Only access via get/set functions.
 var mcCustomConfigDir string
 
-// setMcConfigDir - construct minio client config folder.
+// mcCustomConfigPath contains the whole path to config file. Only access via get/set functions.
+var mcCustomConfigPath string
+
+// setMcConfigDir - set a custom minio client config folder.
 func setMcConfigDir(configDir string) {
 	mcCustomConfigDir = configDir
 }
@@ -77,6 +75,9 @@ func createMcConfigDir() *probe.Error {
 
 // getMcConfigPath - construct minio client configuration path
 func getMcConfigPath() (string, *probe.Error) {
+	if mcCustomConfigPath != "" {
+		return mcCustomConfigPath, nil
+	}
 	dir, err := getMcConfigDir()
 	if err != nil {
 		return "", err.Trace()
@@ -92,8 +93,13 @@ func mustGetMcConfigPath() string {
 	return path
 }
 
-// getMcConfig - reads configuration file and returns config
-func getMcConfig() (*configV6, *probe.Error) {
+// newMcConfig - initializes a new version '6' config.
+func newMcConfig() *configV6 {
+	return newConfigV6()
+}
+
+// loadMcConfig - reads configuration file and returns config.
+func loadMcConfig() (*configV6, *probe.Error) {
 	conf, err := loadConfigV6()
 	if err != nil {
 		return nil, err.Trace()
@@ -101,7 +107,19 @@ func getMcConfig() (*configV6, *probe.Error) {
 	return conf, nil
 }
 
-// isMcConfigExists xreturns err if config doesn't exist
+// saveMcConfig - saves configuration file and returns error if any.
+func saveMcConfig(config *configV6) *probe.Error {
+	if config == nil {
+		return errInvalidArgument().Trace()
+	}
+	err := createMcConfigDir()
+	if err != nil {
+		return err.Trace(mustGetMcConfigDir())
+	}
+	return saveConfigV6(config).Trace(mustGetMcConfigPath())
+}
+
+// isMcConfigExists returns err if config doesn't exist.
 func isMcConfigExists() bool {
 	configFile, err := getMcConfigPath()
 	if err != nil {
@@ -111,32 +129,4 @@ func isMcConfigExists() bool {
 		return false
 	}
 	return true
-}
-
-// writeConfig - write configuration file
-func writeConfig(config quick.Config) *probe.Error {
-	if config == nil {
-		return errInvalidArgument().Trace()
-	}
-	err := createMcConfigDir()
-	if err != nil {
-		return err.Trace()
-	}
-	configPath, err := getMcConfigPath()
-	if err != nil {
-		return err.Trace()
-	}
-	if err := config.Save(configPath); err != nil {
-		return err.Trace()
-	}
-	return nil
-}
-
-// newConfig - get new config interface.
-func newConfig() (config quick.Config, err *probe.Error) {
-	config, err = quick.New(newConfigV6())
-	if err != nil {
-		return nil, err.Trace()
-	}
-	return config, nil
 }

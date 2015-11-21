@@ -51,25 +51,19 @@ func mainConfigVersion(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
 	}
 
-	config, err := newConfig()
-	fatalIf(err.Trace(), "Failed to initialize ‘quick’ configuration data structure.")
+	config, err := loadMcConfig()
+	fatalIf(err.Trace(), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
 
-	configPath := mustGetMcConfigPath()
-	err = config.Load(configPath)
-	fatalIf(err.Trace(configPath), "Unable to load config path")
-
-	// convert interface{} back to its original struct
-	newConf := config.Data().(*configV6)
 	type Version string
 	if globalJSON {
 		tB, e := json.Marshal(
 			struct {
 				Version Version `json:"version"`
-			}{Version: Version(newConf.Version)},
+			}{Version: Version(config.Version)},
 		)
 		fatalIf(probe.NewError(e), "Unable to construct version string.")
 		console.Println(string(tB))
 		return
 	}
-	console.Println(newConf.Version)
+	console.Println(config.Version)
 }
