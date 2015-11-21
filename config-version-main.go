@@ -36,7 +36,7 @@ var configVersionCmd = cli.Command{
 	Name:   "version",
 	Usage:  "Print config version.",
 	Action: mainConfigVersion,
-	Flags:  []cli.Flag{configVersionFlagHelp},
+	Flags:  append(globalFlags, configVersionFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}
 

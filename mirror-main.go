@@ -52,7 +52,7 @@ var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Mirror folders recursively from a single source to many destinations.",
 	Action: mainMirror,
-	Flags:  []cli.Flag{mirrorFlagForce, mirrorFlagHelp},
+	Flags:  append(globalFlags, mirrorFlagForce, mirrorFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

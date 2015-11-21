@@ -38,7 +38,7 @@ var mbCmd = cli.Command{
 	Name:   "mb",
 	Usage:  "Make a bucket or folder.",
 	Action: mainMakeBucket,
-	Flags:  []cli.Flag{mbFlagHelp},
+	Flags:  append(globalFlags, mbFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

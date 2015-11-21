@@ -36,7 +36,7 @@ var shareList = cli.Command{
 	Name:   "list",
 	Usage:  "List previously shared objects and folders.",
 	Action: mainShareList,
-	Flags:  []cli.Flag{shareFlagListHelp},
+	Flags:  append(globalFlags, shareFlagListHelp),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} COMMAND - {{.Usage}}
 

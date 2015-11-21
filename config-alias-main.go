@@ -38,7 +38,7 @@ var configAliasCmd = cli.Command{
 	Name:   "alias",
 	Usage:  "List, modify and remove aliases in configuration file.",
 	Action: mainConfigAlias,
-	Flags:  []cli.Flag{configAliasFlagHelp},
+	Flags:  append(globalFlags, configAliasFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}
 

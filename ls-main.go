@@ -47,7 +47,7 @@ var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "List files and folders.",
 	Action: mainList,
-	Flags:  []cli.Flag{lsFlagRecursive, lsFlagIncomplete, lsFlagHelp},
+	Flags:  append(globalFlags, lsFlagRecursive, lsFlagIncomplete, lsFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

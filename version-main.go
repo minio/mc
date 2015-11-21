@@ -38,7 +38,7 @@ var versionCmd = cli.Command{
 	Name:   "version",
 	Usage:  "Print version.",
 	Action: mainVersion,
-	Flags:  []cli.Flag{versionFlagHelp},
+	Flags:  append(globalFlags, versionFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

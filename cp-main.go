@@ -53,7 +53,7 @@ var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy one or more objects to a target.",
 	Action: mainCopy,
-	Flags:  []cli.Flag{cpFlagRecursive, cpFlagHelp},
+	Flags:  append(globalFlags, cpFlagRecursive, cpFlagHelp),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

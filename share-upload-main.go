@@ -37,7 +37,7 @@ var shareUpload = cli.Command{
 	Name:   "upload",
 	Usage:  "Generate ‘curl’ command to upload objects without requiring access/secret keys.",
 	Action: mainShareUpload,
-	Flags:  []cli.Flag{shareFlagExpire, shareFlagContentType, shareFlagUploadHelp},
+	Flags:  append(globalFlags, shareFlagExpire, shareFlagContentType, shareFlagUploadHelp),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
 

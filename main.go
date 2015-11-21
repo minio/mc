@@ -110,12 +110,6 @@ func getSystemData() map[string]string {
 func registerBefore(ctx *cli.Context) error {
 	setMcConfigDir(ctx.GlobalString("config-folder"))
 
-	// Set global states from global flags.
-	setGlobals(ctx.GlobalBool("quiet"),
-		ctx.GlobalBool("debug"),
-		ctx.GlobalBool("json"),
-		ctx.GlobalBool("no-color"))
-
 	// Verify golang runtime.
 	verifyMCRuntime()
 
@@ -155,18 +149,9 @@ func registerApp() *cli.App {
 	registerCmd(updateCmd)  // Check for new software updates.
 	registerCmd(versionCmd) // Print version.
 
-	// register all the flags (refer flags.go)
-	registerFlag(helpFlag)   // Show help.
-	registerFlag(configFlag) // Path to configuration folder.
-	registerFlag(quietFlag)  // Suppress chatty console output.
-	registerFlag(jsonFlag)   // Enable json formatted output.
-	registerFlag(debugFlag)  // Enable debugging output.
-	registerFlag(colorsFlag) // Choose different styles of console coloring.
-
 	app := cli.NewApp()
 	app.Usage = "Minio Client for cloud storage and filesystems."
 	app.Commands = commands
-	app.Flags = flags
 	app.Author = "Minio.io"
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.CommandNotFound = commandNotFound // handler function declared above.
