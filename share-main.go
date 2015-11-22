@@ -76,6 +76,9 @@ func migrateShare() {
 
 // mainShare - main handler for mc share command.
 func mainShare(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())
 	} else { // mc help.

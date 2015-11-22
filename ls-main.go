@@ -112,10 +112,14 @@ func mainList(ctx *cli.Context) {
 	// check 'ls' cli arguments
 	checkListSyntax(ctx)
 
-	args := ctx.Args()
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// Set command flags from context.
 	isRecursive := ctx.Bool("recursive")
 	isIncomplete := ctx.Bool("incomplete")
 
+	args := ctx.Args()
 	// mimic operating system tool behavior
 	if !ctx.Args().Present() {
 		args = []string{"."}

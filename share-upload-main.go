@@ -167,6 +167,10 @@ func mainShareUpload(ctx *cli.Context) {
 	// check input arguments.
 	checkShareUploadSyntax(ctx)
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// Set command flags from context.
 	isRecursive := ctx.Bool("recursive")
 	expireArg := ctx.String("expire")
 	expiry := shareDefaultExpiry

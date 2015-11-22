@@ -110,6 +110,9 @@ func mainShareList(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	shareSetColor()
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	// Initialize share config folder.
 	initShareConfig()
 

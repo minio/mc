@@ -223,6 +223,9 @@ func mainConfigHost(ctx *cli.Context) {
 	console.SetColor("AccessKeyID", color.New(color.FgBlue, color.Bold))
 	console.SetColor("SecretAccessKey", color.New(color.FgRed, color.Bold))
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()
 

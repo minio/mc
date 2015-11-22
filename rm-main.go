@@ -107,6 +107,10 @@ func (r rmMessage) JSON() string {
 
 // Validate command line arguments.
 func checkRmSyntax(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// Set command flags from context.
 	isForce := ctx.Bool("force")
 	isRecursive := ctx.Bool("recursive")
 

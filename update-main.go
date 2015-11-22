@@ -168,6 +168,9 @@ func mainUpdate(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Update", color.New(color.FgGreen, color.Bold))
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	// Check for update.
 	if ctx.Bool("experimental") {
 		getReleaseUpdate(mcUpdateExperimentalURL)

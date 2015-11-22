@@ -161,6 +161,9 @@ func mainAccess(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Access", color.New(color.FgGreen, color.Bold))
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	switch ctx.Args().First() {
 	case "set":
 		perms := accessPerms(ctx.Args().Tail().First())

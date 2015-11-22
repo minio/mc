@@ -378,7 +378,10 @@ func mainMirror(ctx *cli.Context) {
 		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
 
-	// If force flag is set save it with in session
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// Set command flags from context.
 	isForce := ctx.Bool("force")
 	session.Header.CommandBoolFlags["force"] = isForce
 

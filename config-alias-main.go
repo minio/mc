@@ -165,30 +165,6 @@ func checkConfigAliasSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainConfigAlias(ctx *cli.Context) {
-	checkConfigAliasSyntax(ctx)
-
-	// Additional customization speific to each command.
-	console.SetColor("Alias", color.New(color.FgCyan, color.Bold))
-	console.SetColor("AliasMessage", color.New(color.FgGreen, color.Bold))
-	console.SetColor("URL", color.New(color.FgWhite, color.Bold))
-
-	arg := ctx.Args().First()
-	tailArgs := ctx.Args().Tail()
-
-	switch strings.TrimSpace(arg) {
-	case "add":
-		aliasName := tailArgs.Get(0)
-		aliasedURL := tailArgs.Get(1)
-		addAlias(aliasName, aliasedURL) // add alias name for aliased URL.
-	case "remove":
-		aliasName := tailArgs.Get(0)
-		removeAlias(aliasName) // remove alias name.
-	case "list":
-		listAliases() // list all aliases.
-	}
-}
-
 // addAlias - adds an alias entry.
 func addAlias(aliasName, aliasedURL string) {
 	conf, err := loadMcConfig()
@@ -222,5 +198,32 @@ func listAliases() {
 
 	for aliasName, aliasedURL := range conf.Aliases {
 		printMsg(aliasMessage{op: "list", Alias: aliasName, URL: aliasedURL})
+	}
+}
+
+func mainConfigAlias(ctx *cli.Context) {
+	checkConfigAliasSyntax(ctx)
+
+	// Additional customization speific to each command.
+	console.SetColor("Alias", color.New(color.FgCyan, color.Bold))
+	console.SetColor("AliasMessage", color.New(color.FgGreen, color.Bold))
+	console.SetColor("URL", color.New(color.FgWhite, color.Bold))
+
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	arg := ctx.Args().First()
+	tailArgs := ctx.Args().Tail()
+
+	switch strings.TrimSpace(arg) {
+	case "add":
+		aliasName := tailArgs.Get(0)
+		aliasedURL := tailArgs.Get(1)
+		addAlias(aliasName, aliasedURL) // add alias name for aliased URL.
+	case "remove":
+		aliasName := tailArgs.Get(0)
+		removeAlias(aliasName) // remove alias name.
+	case "list":
+		listAliases() // list all aliases.
 	}
 }

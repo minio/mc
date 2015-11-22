@@ -385,6 +385,9 @@ func mainCopy(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	session := newSessionV5()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")

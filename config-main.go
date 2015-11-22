@@ -63,6 +63,9 @@ COMMANDS:
 
 // mainConfig is the handle for "mc config" command. provides sub-commands which write configuration data in json format to config file.
 func mainConfig(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())
 	} else {

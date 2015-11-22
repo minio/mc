@@ -17,7 +17,10 @@
 // This package contains all the global variables and constants. ONLY TO BE ACCESSED VIA GET/SET FUNCTIONS.
 package main
 
-import "github.com/minio/mc/pkg/console"
+import (
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
+)
 
 // mc configuration related constants.
 const (
@@ -65,4 +68,13 @@ func setGlobals(quiet, debug, json, noColor bool) {
 	if globalNoColor == true {
 		console.SetColorOff()
 	}
+}
+
+// Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
+func setGlobalsFromContext(ctx *cli.Context) {
+	quiet := ctx.Bool("quiet")
+	debug := ctx.Bool("debug")
+	json := ctx.Bool("json")
+	noColor := ctx.Bool("no-color")
+	setGlobals(quiet, debug, json, noColor)
 }
