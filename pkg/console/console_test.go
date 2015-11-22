@@ -40,12 +40,3 @@ func (s *MySuite) TestLock(c *C) {
 	Print("") // Test for deadlocks.
 	Unlock()
 }
-
-func (s *MySuite) TestTesting(c *C) {
-	// Enable testing
-	IsTesting = true
-	Fatalln("THIS IS A TEST MESSAGE. PLEASE INGORE.")
-	c.Assert(IsExited, Equals, true)
-	// reset back
-	IsExited = false
-}

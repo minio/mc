@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/probe"
 	. "gopkg.in/check.v1"
 )
@@ -53,20 +52,4 @@ func (s *TestSuite) TestCat(c *C) {
 
 	objectPath = filepath.Join(root, "object2")
 	c.Assert(catURL(objectPath), Not(IsNil))
-}
-
-func (s *TestSuite) TestCatContext(c *C) {
-	err := app.Run([]string{os.Args[0], "cat", server.URL + "/bucket/object1"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
-
-	// reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "cat", server.URL + "/invalid"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	// reset back
-	console.IsExited = false
 }

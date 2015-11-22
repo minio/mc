@@ -15,26 +15,3 @@
  */
 
 package main
-
-import (
-	"io/ioutil"
-	"os"
-
-	"github.com/minio/mc/pkg/console"
-
-	. "gopkg.in/check.v1"
-)
-
-func (s *TestSuite) TestPipeFail(c *C) {
-	/// filesystem
-	root, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-
-	err = app.Run([]string{os.Args[0], "pipe", server.URL + "/bucket/"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	// reset back
-	console.IsExited = false
-}

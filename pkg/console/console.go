@@ -31,12 +31,6 @@ import (
 var (
 	// DebugPrint enables/disables console debug printing.
 	DebugPrint = false
-	// IsTesting this flag indicates if IsExited should be set or not.
-	IsTesting = false
-	// IsExited sets this boolean value if Fatal is called when IsTesting is enabled.
-	IsExited = false
-	// IsError sets this boolean value if Error is called when IsTesting is enabled.
-	IsError = false
 
 	// Used by the caller to print multiple lines atomically. Exposed by Lock/Unlock methods.
 	publicMutex = &sync.Mutex{}
@@ -69,66 +63,39 @@ var (
 		return
 	}
 
-	// fatalQuitRoutine called after fatal message printing.
-	// by the user specific version.
-	fatalQuitRoutine = func() {
-		if !IsTesting {
-			os.Exit(1)
-		}
-		defer func() {
-			IsExited = true
-		}()
-	}
-
 	// Fatal print a error message and exit.
 	Fatal = func(data ...interface{}) {
 		consolePrint("Fatal", Theme["Fatal"], data...)
-		fatalQuitRoutine()
 		return
 	}
 
 	// Fatalf print a error message with a format specified and exit.
 	Fatalf = func(format string, data ...interface{}) {
 		consolePrintf("Fatal", Theme["Fatal"], format, data...)
-		fatalQuitRoutine()
 		return
 	}
 
 	// Fatalln print a error message with a new line and exit.
 	Fatalln = func(data ...interface{}) {
 		consolePrintln("Fatal", Theme["Fatal"], data...)
-		fatalQuitRoutine()
 		return
-	}
-
-	// errorQuitRoutine called after error message printing
-	// by the user specific version.
-	errorQuitRoutine = func() {
-		if IsTesting {
-			defer func() {
-				IsError = true
-			}()
-		}
 	}
 
 	// Error prints a error message.
 	Error = func(data ...interface{}) {
 		consolePrint("Error", Theme["Error"], data...)
-		errorQuitRoutine()
 		return
 	}
 
 	// Errorf print a error message with a format specified.
 	Errorf = func(format string, data ...interface{}) {
 		consolePrintf("Error", Theme["Error"], format, data...)
-		errorQuitRoutine()
 		return
 	}
 
 	// Errorln prints a error message with a new line.
 	Errorln = func(data ...interface{}) {
 		consolePrintln("Error", Theme["Error"], data...)
-		errorQuitRoutine()
 		return
 	}
 
