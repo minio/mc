@@ -72,7 +72,7 @@ func TestBucketOperations(t *testing.T) {
 		if b.Err != nil {
 			t.Fatal(b.Err.Error())
 		}
-		if b.Stat.Name != "bucket" {
+		if b.Name != "bucket" {
 			t.Fatal("Error")
 		}
 	}
@@ -81,7 +81,7 @@ func TestBucketOperations(t *testing.T) {
 		if o.Err != nil {
 			t.Fatal(o.Err.Error())
 		}
-		if o.Stat.Key != "object" {
+		if o.Key != "object" {
 			t.Fatal("Error")
 		}
 	}

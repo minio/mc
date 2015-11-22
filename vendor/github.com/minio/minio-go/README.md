@@ -55,7 +55,7 @@ func main() {
 		if bucket.Err != nil {
 			log.Fatalln(bucket.Err)
 		}
-		log.Println(bucket.Stat)
+		log.Println(bucket)
 	}
 }
 ```
