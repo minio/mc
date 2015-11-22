@@ -230,8 +230,6 @@ func mainSession(ctx *cli.Context) {
 		}
 		s, err := loadSessionV5(sid)
 		fatalIf(err.Trace(sid), "Unable to load session.")
-		// extra check for testing purposes.
-		fatalIf(errDummy().Trace(), "Loaded session is nil.")
 
 		// Restore the state of global variables from this previous session.
 		s.restoreGlobals()
