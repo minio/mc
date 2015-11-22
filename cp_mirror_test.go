@@ -16,17 +16,7 @@
 
 package main
 
-import (
-	"bytes"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
-
-	"github.com/minio/mc/pkg/console"
-
-	. "gopkg.in/check.v1"
-)
+import . "gopkg.in/check.v1"
 
 func (s *TestSuite) TestCopyURLType(c *C) {
 	// Valid Types.
@@ -75,62 +65,4 @@ func (s *TestSuite) TestCopyURLType(c *C) {
 	targetURL = ""
 	isRecursive = false
 	c.Assert(guessCopyURLType(sourceURLs, targetURL, isRecursive), Equals, copyURLsTypeInvalid)
-}
-
-func (s *TestSuite) TestMirror(c *C) {
-	/// filesystem
-	source, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(source)
-
-	target, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(target)
-
-	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(source, "object"+strconv.Itoa(i))
-		data := "hello"
-		dataLen := len(data)
-		err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(err, IsNil)
-	}
-
-	// reset back
-	console.IsExited = false
-
-	err = app.Run([]string{os.Args[0], "mirror", source, target})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
-
-	// reset back
-	console.IsExited = false
-}
-
-func (s *TestSuite) TestCopy(c *C) {
-	/// filesystem
-	source, err := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(source)
-
-	for i := 0; i < 10; i++ {
-		objectPath := filepath.Join(source, "object"+strconv.Itoa(i))
-		data := "hello"
-		dataLen := len(data)
-		err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
-		c.Assert(err, IsNil)
-	}
-
-	// reset back
-	console.IsExited = false
-
-	target := filepath.Join(source, "random")
-	defer os.RemoveAll(target)
-
-	err = app.Run([]string{os.Args[0], "cp", "--recursive", source, target})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
-
-	// reset back
-	console.IsError = false
-	console.IsExited = false
 }

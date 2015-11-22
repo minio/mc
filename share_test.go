@@ -15,38 +15,3 @@
  */
 
 package main
-
-import (
-	"os"
-
-	"github.com/minio/mc/pkg/console"
-	. "gopkg.in/check.v1"
-)
-
-func (s *TestSuite) TestShareFailure(c *C) {
-	objectURL := server.URL + "/bucket/object1"
-
-	// Invalid duration format ``1hr``.
-	err := app.Run([]string{os.Args[0], "share", "download", "--expire=1hr", objectURL})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	// Reset back.
-	console.IsExited = false
-
-	// Too high duration 169h, maximum is 168h i.e 7days.
-	err = app.Run([]string{os.Args[0], "share", "download", "--expire=169hr", objectURL})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	// Reset back
-	console.IsExited = false
-
-	// Too low duration 0s, minimum required is 1s.
-	err = app.Run([]string{os.Args[0], "share", "download", "--expire=0s", objectURL})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, true)
-
-	// Reset back.
-	console.IsExited = false
-}

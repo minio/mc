@@ -16,15 +16,9 @@
 
 package main
 
-import (
-	"os"
-
-	"github.com/minio/mc/pkg/console"
-	. "gopkg.in/check.v1"
-)
+import . "gopkg.in/check.v1"
 
 func (s *TestSuite) TestMbAndAccess(c *C) {
-
 	// Instantiate client for URL.
 	clnt, err := url2Client(server.URL + "/bucket")
 	c.Assert(err, IsNil)
@@ -42,57 +36,4 @@ func (s *TestSuite) TestMbAndAccess(c *C) {
 	perm, err := doGetAccess(server.URL + "/bucket")
 	c.Assert(err, IsNil)
 	c.Assert(perm.isPrivate(), Equals, true)
-}
-
-func (s *TestSuite) TestMBContext(c *C) {
-	err := app.Run([]string{os.Args[0], "mb", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, false)
-
-	// reset back
-	console.IsError = false
-
-	err = app.Run([]string{os.Args[0], "mb", server.URL + "/$.bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, true)
-
-	// reset back
-	console.IsError = false
-}
-
-func (s *TestSuite) TestAccessContext(c *C) {
-	err := app.Run([]string{os.Args[0], "access", "set", "private", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, false)
-
-	// reset back
-	console.IsError = false
-
-	err = app.Run([]string{os.Args[0], "access", "set", "public", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, false)
-
-	// reset back
-	console.IsError = false
-
-	err = app.Run([]string{os.Args[0], "access", "set", "readonly", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, false)
-
-	// reset back
-	console.IsError = false
-
-	err = app.Run([]string{os.Args[0], "access", "set", "authorized", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsError, Equals, false)
-
-	// reset back
-	console.IsError = false
-
-	err = app.Run([]string{os.Args[0], "access", "set", "invalid", server.URL + "/bucket"})
-	c.Assert(err, IsNil)
-
-	c.Assert(console.IsExited, Equals, true)
-	// reset back
-	console.IsExited = false
 }

@@ -28,7 +28,6 @@ import (
 	"net/http/httptest"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	. "gopkg.in/check.v1"
 )
 
@@ -46,7 +45,6 @@ var app *cli.App
 func (s *TestSuite) SetUpSuite(c *C) {
 	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
 	server = httptest.NewServer(objectAPI)
-	console.IsTesting = true
 
 	// do not set it elsewhere, leads to data races since this is a global flag
 	globalQuiet = true // quiet is set to turn of progress bar
@@ -265,17 +263,6 @@ func (s *TestSuite) TestHumanizedTime(c *C) {
 
 	hTime = timeDurationToHumanizedTime(time.Duration(24) * time.Hour)
 	c.Assert(hTime.Days, Not(Equals), int64(0))
-}
-
-func (s *TestSuite) TestVersionContext(c *C) {
-	console.IsExited = false
-
-	err := app.Run([]string{os.Args[0], "version"})
-	c.Assert(err, IsNil)
-	c.Assert(console.IsExited, Equals, false)
-
-	// reset back
-	console.IsExited = false
 }
 
 func (s *TestSuite) TestCommonPrefix(c *C) {
