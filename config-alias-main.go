@@ -202,15 +202,16 @@ func listAliases() {
 }
 
 func mainConfigAlias(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check 'config alias' cli arguments.
 	checkConfigAliasSyntax(ctx)
 
 	// Additional customization speific to each command.
 	console.SetColor("Alias", color.New(color.FgCyan, color.Bold))
 	console.SetColor("AliasMessage", color.New(color.FgGreen, color.Bold))
 	console.SetColor("URL", color.New(color.FgWhite, color.Bold))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()

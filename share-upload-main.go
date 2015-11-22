@@ -158,17 +158,17 @@ func doShareUploadURL(objectURL string, recursive bool, expiry time.Duration, co
 
 // main for share upload command.
 func mainShareUpload(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check input arguments.
+	checkShareUploadSyntax(ctx)
+
 	// Initialize share config folder.
 	initShareConfig()
 
 	// Additional command speific theme customization.
 	shareSetColor()
-
-	// check input arguments.
-	checkShareUploadSyntax(ctx)
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// Set command flags from context.
 	isRecursive := ctx.Bool("recursive")

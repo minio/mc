@@ -156,13 +156,14 @@ func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
 }
 
 func mainAccess(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check 'access' cli arguments.
 	checkAccessSyntax(ctx)
 
 	// Additional command speific theme customization.
 	console.SetColor("Access", color.New(color.FgGreen, color.Bold))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	switch ctx.Args().First() {
 	case "set":

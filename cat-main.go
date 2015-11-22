@@ -121,10 +121,11 @@ func catOut(r io.Reader) *probe.Error {
 
 // mainCat is the main entry point for cat command.
 func mainCat(ctx *cli.Context) {
-	checkCatSyntax(ctx)
-
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
+
+	// check 'cat' cli arguments.
+	checkCatSyntax(ctx)
 
 	// Set command flags from context.
 	stdinMode := false

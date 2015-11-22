@@ -66,18 +66,21 @@ var (
 	// Fatal print a error message and exit.
 	Fatal = func(data ...interface{}) {
 		consolePrint("Fatal", Theme["Fatal"], data...)
+		os.Exit(1)
 		return
 	}
 
 	// Fatalf print a error message with a format specified and exit.
 	Fatalf = func(format string, data ...interface{}) {
 		consolePrintf("Fatal", Theme["Fatal"], format, data...)
+		os.Exit(1)
 		return
 	}
 
 	// Fatalln print a error message with a new line and exit.
 	Fatalln = func(data ...interface{}) {
 		consolePrintln("Fatal", Theme["Fatal"], data...)
+		os.Exit(1)
 		return
 	}
 

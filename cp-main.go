@@ -380,13 +380,14 @@ func doCopySession(session *sessionV5) {
 
 // mainCopy is the entry point for cp command.
 func mainCopy(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check 'copy' cli arguments.
 	checkCopySyntax(ctx)
 
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	session := newSessionV5()
 	session.Header.CommandType = "cp"

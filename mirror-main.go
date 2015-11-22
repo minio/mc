@@ -364,6 +364,10 @@ func doMirrorSession(session *sessionV5) {
 
 // Main entry point for mirror command.
 func mainMirror(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check 'mirror' cli arguments.
 	checkMirrorSyntax(ctx)
 
 	// Additional command speific theme customization.
@@ -377,9 +381,6 @@ func mainMirror(ctx *cli.Context) {
 		session.Delete()
 		fatalIf(probe.NewError(e), "Unable to get current working folder.")
 	}
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// Set command flags from context.
 	isForce := ctx.Bool("force")

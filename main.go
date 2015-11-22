@@ -170,7 +170,6 @@ func main() {
 		if _, e := ts.GetSize(); e != nil {
 			globalQuiet = true
 		}
-
 		if globalDebug {
 			return getSystemData()
 		}
