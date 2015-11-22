@@ -39,7 +39,7 @@ func normalizeAliasedURL(aliasedURL string) string {
 
 // getAliasURL expands aliased (name/path) to full URL, used by url-parser.
 func getAliasURL(aliasedURL string) (string, *probe.Error) {
-	config, err := getMcConfig()
+	config, err := loadMcConfig()
 	if err != nil {
 		return aliasedURL, err.Trace(aliasedURL)
 	}

@@ -32,7 +32,7 @@ type hostConfig struct {
 
 // getHostConfig retrieves host specific configuration such as access keys, signature type.
 func getHostConfig(URL string) (hostConfig, *probe.Error) {
-	config, err := getMcConfig()
+	config, err := loadMcConfig()
 	if err != nil {
 		return hostConfig{}, err.Trace(URL)
 	}

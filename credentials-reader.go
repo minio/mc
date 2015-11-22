@@ -24,6 +24,7 @@ package main
 import (
 	"encoding/csv"
 	"io"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -43,6 +44,35 @@ func newCSVReader(r io.Reader) *csvReader {
 		csv.NewReader(r),
 	}
 }
+
+// credential - struct to read from a CSV file.
+type credential struct {
+	Name            string
+	AccessKeyID     string
+	SecretAccessKey string
+}
+
+// getCredentials - get credentials file.
+func getCredentials(credentialsFile string) ([]credential, *probe.Error) {
+	reader, e := os.Open(credentialsFile)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+	creds := []credential{}
+	// skip the first line of the csv file, usually csv header.
+	skipLine := 1
+	if err := newCSVReader(reader).Unmarshal(&creds, skipLine); err != nil {
+		return nil, err.Trace(credentialsFile)
+	}
+	if len(creds) == 0 {
+		return nil, errInvalidArgument().Trace(credentialsFile)
+	}
+	return creds, nil
+}
+
+//// CSV reader block.
+
+/// CSV read errors.
 
 // An invalidUnmarshalError describes an invalid argument passed to Unmarshal.
 // (The argument to Unmarshal must be a non-nil pointer.)
@@ -69,6 +99,8 @@ type unmarshalTypeError struct {
 func (e *unmarshalTypeError) Error() string {
 	return "csv: cannot unmarshal into Go value of type " + e.Type.String()
 }
+
+/// CSV Unmarshaler.
 
 // Unmarshal - unmarshal everything into the input struct.
 func (r *csvReader) Unmarshal(v interface{}, skipLine int) (err *probe.Error) {

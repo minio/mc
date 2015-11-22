@@ -105,14 +105,8 @@ func verifyMCRuntime() {
 
 	// Check if mc config exists.
 	if !isMcConfigExists() {
-		err := createMcConfigDir()
-		fatalIf(err.Trace(), "Unable to create ‘mc’ config folder.")
-
-		config, err := newConfig()
-		fatalIf(err.Trace(), "Unable to initialize newConfig.")
-
-		err = writeConfig(config)
-		fatalIf(err.Trace(), "Unable to write newConfig.")
+		err := saveMcConfig(newMcConfig())
+		fatalIf(err.Trace(), "Unable to save new mc config.")
 
 		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
 	}

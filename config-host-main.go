@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -65,10 +64,13 @@ EXAMPLES:
       $ mc config {{.Name}} add https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
       $ set -o history
 
-   3. List all hosts.
+   3. Add host configuration for a URL by importing credentials csv file.
+      $ mc config {{.Name}} import https://s3.amazonaws.com credentials.csv
+
+   4. List all hosts.
       $ mc config {{.Name}} list
 
-   4. Remove host config.
+   5. Remove host config.
       $ mc config {{.Name}} remove https://s3.amazonaws.com
 
 `,
@@ -114,7 +116,31 @@ func (a hostMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// checkConfigHostImportSyntax - check config host import syntax.
+func checkConfigHostSyntax(ctx *cli.Context) {
+	// show help if nothing is set
+	if !ctx.Args().Present() || ctx.Args().First() == "help" {
+		cli.ShowCommandHelpAndExit(ctx, "host", 1) // last argument is exit code
+	}
+	if strings.TrimSpace(ctx.Args().First()) == "" {
+		cli.ShowCommandHelpAndExit(ctx, "host", 1) // last argument is exit code
+	}
+	if len(ctx.Args().Tail()) > 4 {
+		fatalIf(errDummy().Trace(ctx.Args().Tail()...), "Incorrect number of arguments to host command")
+	}
+	switch strings.TrimSpace(ctx.Args().First()) {
+	case "add":
+		checkConfigHostAddSyntax(ctx)
+	case "import":
+		checkConfigHostImportSyntax(ctx)
+	case "remove":
+		checkConfigHostRemoveSyntax(ctx)
+	case "list":
+	default:
+		cli.ShowCommandHelpAndExit(ctx, "host", 1) // last argument is exit code
+	}
+}
+
+// checkConfigHostImportSyntax - verifies input arguments to 'config host import'.
 func checkConfigHostImportSyntax(ctx *cli.Context) {
 	tailArgs := ctx.Args().Tail()
 	if len(ctx.Args().Tail()) < 2 || len(ctx.Args().Tail()) > 3 {
@@ -142,7 +168,7 @@ func checkConfigHostImportSyntax(ctx *cli.Context) {
 	}
 }
 
-// checkConfigHostAddSyntax - check config host add syntax.
+// checkConfigHostAddSyntax - verifies input arguments to 'config host add'.
 func checkConfigHostAddSyntax(ctx *cli.Context) {
 	tailArgs := ctx.Args().Tail()
 	if len(ctx.Args().Tail()) < 3 || len(ctx.Args().Tail()) > 4 {
@@ -155,17 +181,11 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 	api := tailArgs.Get(3)
 	if !isValidHostURL(newHostURL) {
 		fatalIf(errDummy().Trace(newHostURL),
-			"Invalid host URL: ‘"+newHostURL+"’ provided. Valid options are [http://example.test.io, https://bucket.s3.amazonaws.com].")
+			"Invalid host URL: ‘"+newHostURL+"’. Valid options are [http://example.test.io, https://bucket.s3.amazonaws.com].")
 	}
-	if len(accessKeyID) != 0 {
-		if !isValidAccessKey(accessKeyID) {
-			fatalIf(errInvalidArgument().Trace(accessKeyID), "Invalid access key id provided.")
-		}
-	}
-	if len(secretAccessKey) != 0 {
-		if !isValidSecretKey(secretAccessKey) {
-			fatalIf(errInvalidArgument().Trace(secretAccessKey), "Invalid secret access key provided.")
-		}
+	if !isValidKeys(accessKeyID, secretAccessKey) {
+		fatalIf(errInvalidArgument().Trace(accessKeyID, secretAccessKey),
+			"Invalid access key id/secret access key for ‘"+newHostURL+"’")
 	}
 	if strings.TrimSpace(api) == "" {
 		api = "S3v4"
@@ -176,7 +196,7 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 	}
 }
 
-// checkConfigHostRemoveSyntax - check config host remove syntax.
+// checkConfigHostRemoveSyntax - verifies input arguments to 'config host remove'.
 func checkConfigHostRemoveSyntax(ctx *cli.Context) {
 	tailArgs := ctx.Args().Tail()
 	if len(ctx.Args().Tail()) != 1 {
@@ -190,30 +210,6 @@ func checkConfigHostRemoveSyntax(ctx *cli.Context) {
 	if strings.TrimSpace(tailArgs.Get(0)) == "https://dl.minio.io:9000" {
 		fatalIf(errDummy().Trace(tailArgs.Get(0)),
 			"‘"+tailArgs.Get(0)+"’ is reserved hostname and cannot be removed.")
-	}
-}
-
-func checkConfigHostSyntax(ctx *cli.Context) {
-	// show help if nothing is set
-	if !ctx.Args().Present() || ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "host", 1) // last argument is exit code
-	}
-	if strings.TrimSpace(ctx.Args().First()) == "" {
-		cli.ShowCommandHelpAndExit(ctx, "host", 1) // last argument is exit code
-	}
-	if len(ctx.Args().Tail()) > 4 {
-		fatalIf(errDummy().Trace(ctx.Args().Tail()...), "Incorrect number of arguments to host command")
-	}
-	switch strings.TrimSpace(ctx.Args().First()) {
-	case "add":
-		checkConfigHostAddSyntax(ctx)
-	case "import":
-		checkConfigHostImportSyntax(ctx)
-	case "remove":
-		checkConfigHostRemoveSyntax(ctx)
-	case "list":
-	default:
-		cli.ShowCommandHelpAndExit(ctx, "host", 1) // last argument is exit code
 	}
 }
 
@@ -232,7 +228,6 @@ func mainConfigHost(ctx *cli.Context) {
 
 	// Switch case through commands.
 	switch strings.TrimSpace(arg) {
-	// Add a host with specified credentials.
 	case "add":
 		hostURL := tailArgs.Get(0)
 		accessKeyID := tailArgs.Get(1)
@@ -246,43 +241,42 @@ func mainConfigHost(ctx *cli.Context) {
 			SecretAccessKey: secretAccessKey,
 			API:             api,
 		}
-		addHost(hostURL, hostCfg)
-	// Import credentials through a CSV file for a host.
+		addHost(hostURL, hostCfg) // Add a host with specified credentials.
 	case "import":
 		hostURL := tailArgs.Get(0)
-		credentials := tailArgs.Get(1)
+		credentialsFile := tailArgs.Get(1)
 		api := tailArgs.Get(2)
 		if strings.TrimSpace(api) == "" {
 			api = "S3v4"
 		}
-		creds := getCredentials(credentials)
+		creds, err := getCredentials(credentialsFile)
+		fatalIf(err.Trace(credentialsFile), "Unable to unmarshal CSV credentials file ‘"+credentialsFile+"’")
+
 		var hostCfg hostConfig
 		hostCfg = hostConfig{
 			AccessKeyID:     creds[0].AccessKeyID,
 			SecretAccessKey: creds[0].SecretAccessKey,
 			API:             api,
 		}
-		addHost(hostURL, hostCfg)
-	// Remove a host.
+		addHost(hostURL, hostCfg) // Import credentials through a CSV file for a host.
 	case "remove":
 		hostURL := tailArgs.Get(0)
-		removeHost(hostURL)
-	// List all configured hosts.
+		removeHost(hostURL) // Remove a host.
 	case "list":
-		listHosts()
+		listHosts() // List all configured hosts.
 	}
 }
 
 // addHost - add a host config.
 func addHost(hostURL string, hostCfg hostConfig) {
-	conf, err := loadConfigV6()
-	fatalIf(err.Trace(), "Unable to load config version ‘6’.")
+	conf, err := loadMcConfig()
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
 
 	// Add new host.
 	conf.Hosts[hostURL] = hostCfg
 
-	err = saveConfigV6(conf)
-	fatalIf(err.Trace(hostURL), "Unable to update hosts in config version ‘6’.")
+	err = saveMcConfig(conf)
+	fatalIf(err.Trace(hostURL), "Unable to update hosts in config version ‘"+globalMCConfigVersion+"’.")
 
 	printMsg(hostMessage{
 		op:              "add",
@@ -295,22 +289,22 @@ func addHost(hostURL string, hostCfg hostConfig) {
 
 // removeHost - removes a host.
 func removeHost(hostURL string) {
-	conf, err := loadConfigV6()
-	fatalIf(err.Trace(), "Unable to load config version ‘6’.")
+	conf, err := loadMcConfig()
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
 
 	// Remove host.
 	delete(conf.Hosts, hostURL)
 
-	err = saveConfigV6(conf)
-	fatalIf(err.Trace(hostURL), "Unable to save deleted hosts in config version ‘6’.")
+	err = saveMcConfig(conf)
+	fatalIf(err.Trace(hostURL), "Unable to save deleted hosts in config version ‘"+globalMCConfigVersion+"’.")
 
 	printMsg(hostMessage{op: "remove", Host: hostURL})
 }
 
 // listHosts - list all host URLs.
 func listHosts() {
-	conf, err := loadConfigV6()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘6’")
+	conf, err := loadMcConfig()
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’")
 
 	for k, v := range conf.Hosts {
 		printMsg(hostMessage{
@@ -321,30 +315,4 @@ func listHosts() {
 			API:             v.API,
 		})
 	}
-}
-
-// credential - struct to read from a CSV file.
-type credential struct {
-	Name            string
-	AccessKeyID     string
-	SecretAccessKey string
-}
-
-// getCredentials - get credentials file.
-func getCredentials(credentialsFile string) []credential {
-	reader, err := os.Open(credentialsFile)
-	if err != nil {
-		fatalIf(probe.NewError(err), "Unable to open credentials file "+credentialsFile+".")
-	}
-	creds := []credential{}
-	// skip the first line of the csv file, usually csv header.
-	skipLine := 1
-	if err := newCSVReader(reader).Unmarshal(&creds, skipLine); err != nil {
-		fatalIf(err.Trace(credentialsFile), "Unable to read credentials file "+credentialsFile)
-	}
-	if len(creds) == 0 {
-		fatalIf(errDummy().Trace(credentialsFile),
-			"Invalid credentials file provided, need to have alteast single field.")
-	}
-	return creds
 }

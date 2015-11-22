@@ -29,7 +29,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio-xl/pkg/quick"
 	. "gopkg.in/check.v1"
 )
 
@@ -66,16 +65,14 @@ func (s *TestSuite) SetUpSuite(c *C) {
 	err := createMcConfigDir()
 	c.Assert(err, IsNil)
 
-	config, err := newConfig()
-	c.Assert(err, IsNil)
-
-	config.Data().(*configV6).Hosts[server.URL] = hostConfig{
+	config := newMcConfig()
+	config.Hosts[server.URL] = hostConfig{
 		AccessKeyID:     "WLGDGYAQYIGI833EV05A",
 		SecretAccessKey: "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF",
 		API:             "S3v4",
 	}
 
-	err = writeConfig(config)
+	err = saveMcConfig(config)
 	c.Assert(err, IsNil)
 
 	err = createSessionDir()
@@ -104,23 +101,27 @@ func (s *TestSuite) TestGetNewClient(c *C) {
 	c.Assert(err, IsNil)
 }
 
+// setMcConfigPath - set a custom minio client config path.
+func setMcConfigPath(configPath string) {
+	mcCustomConfigPath = configPath
+}
+
 func (s *TestSuite) TestNewConfigV6(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "mc-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
-	conf, err := newConfig()
-	c.Assert(err, IsNil)
-	configFile := filepath.Join(root, "config.json")
-	err = conf.Save(configFile)
+	conf := newMcConfig()
+	configFile := filepath.Join(root, globalMCConfigFile)
+	setMcConfigPath(configFile)
+
+	err := saveMcConfig(conf)
 	c.Assert(err, IsNil)
 
-	confNew := newConfigV6()
-	config, err := quick.New(confNew)
+	data, err := loadMcConfig()
 	c.Assert(err, IsNil)
-	err = config.Load(configFile)
-	c.Assert(err, IsNil)
-	data := config.Data().(*configV6)
+
+	setMcConfigPath("")
 
 	type aliases struct {
 		name string
