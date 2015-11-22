@@ -51,6 +51,9 @@ func mainConfigVersion(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
 	}
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	config, err := loadMcConfig()
 	fatalIf(err.Trace(), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
 

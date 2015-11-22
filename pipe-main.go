@@ -85,6 +85,9 @@ func pipe(targetURLs []string) *probe.Error {
 
 // mainPipe is the main entry point for pipe command.
 func mainPipe(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	// extract URLs.
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")

@@ -83,6 +83,9 @@ func mainVersion(ctx *cli.Context) {
 	console.SetColor("ReleaseTag", color.New(color.FgGreen))
 	console.SetColor("CommitID", color.New(color.FgGreen))
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	verMsg := versionMessage{}
 	verMsg.CommitID = mcCommitID
 	verMsg.ReleaseTag = mcReleaseTag

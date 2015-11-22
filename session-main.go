@@ -201,6 +201,9 @@ func mainSession(ctx *cli.Context) {
 	console.SetColor("SessionTime", color.New(color.FgGreen))
 	console.SetColor("ClearSession", color.New(color.FgGreen, color.Bold))
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session folder.")
 	}

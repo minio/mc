@@ -123,6 +123,10 @@ func catOut(r io.Reader) *probe.Error {
 func mainCat(ctx *cli.Context) {
 	checkCatSyntax(ctx)
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// Set command flags from context.
 	stdinMode := false
 	if !ctx.Args().Present() {
 		stdinMode = true

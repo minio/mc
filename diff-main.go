@@ -178,6 +178,9 @@ func mainDiff(ctx *cli.Context) {
 	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
 	console.SetColor("DiffSize", color.New(color.FgMagenta, color.Bold))
 
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args 2 URLs")
 
