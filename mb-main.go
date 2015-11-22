@@ -96,13 +96,14 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 
 // mainMakeBucket is entry point for mb command.
 func mainMakeBucket(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check 'mb' cli arguments.
 	checkMakeBucketSyntax(ctx)
 
 	// Additional command speific theme customization.
 	console.SetColor("MakeBucket", color.New(color.FgGreen, color.Bold))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")

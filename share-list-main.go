@@ -104,14 +104,14 @@ func doShareList(cmd string) *probe.Error {
 
 // main entry point for share list.
 func mainShareList(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	// validate command-line args.
 	checkShareListSyntax(ctx)
 
 	// Additional command speific theme customization.
 	shareSetColor()
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// Initialize share config folder.
 	initShareConfig()

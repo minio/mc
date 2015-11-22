@@ -42,15 +42,10 @@ var configVersionCmd = cli.Command{
 
 USAGE:
    mc config {{.Name}}
-
 `,
 }
 
 func mainConfigVersion(ctx *cli.Context) {
-	if ctx.Args().First() == "help" {
-		cli.ShowCommandHelpAndExit(ctx, "version", 1) // last argument is exit code
-	}
-
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 

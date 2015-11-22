@@ -109,18 +109,18 @@ func mainList(ctx *cli.Context) {
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("Time", color.New(color.FgGreen))
 
-	// check 'ls' cli arguments
-	checkListSyntax(ctx)
-
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
+
+	// check 'ls' cli arguments.
+	checkListSyntax(ctx)
 
 	// Set command flags from context.
 	isRecursive := ctx.Bool("recursive")
 	isIncomplete := ctx.Bool("incomplete")
 
 	args := ctx.Args()
-	// mimic operating system tool behavior
+	// mimic operating system tool behavior.
 	if !ctx.Args().Present() {
 		args = []string{"."}
 	}

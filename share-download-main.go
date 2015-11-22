@@ -152,17 +152,17 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 
 // main for share download.
 func mainShareDownload(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check input arguments.
+	checkShareDownloadSyntax(ctx)
+
 	// Initialize share config folder.
 	initShareConfig()
 
 	// Additional command speific theme customization.
 	shareSetColor()
-
-	// check input arguments.
-	checkShareDownloadSyntax(ctx)
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// Set command flags from context.
 	isRecursive := ctx.Bool("recursive")

@@ -73,5 +73,5 @@ func mainConfig(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 	}
 
-	// sub-commands like "upload" and "download" have their own main.
+	// Sub-commands like "host" and "alias" have their own main.
 }

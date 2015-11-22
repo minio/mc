@@ -78,13 +78,13 @@ func (v versionMessage) JSON() string {
 }
 
 func mainVersion(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
 	// Additional command speific theme customization.
 	console.SetColor("Version", color.New(color.FgGreen, color.Bold))
 	console.SetColor("ReleaseTag", color.New(color.FgGreen))
 	console.SetColor("CommitID", color.New(color.FgGreen))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	verMsg := versionMessage{}
 	verMsg.CommitID = mcCommitID

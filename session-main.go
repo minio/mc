@@ -193,6 +193,10 @@ func findClosestSessions(session string) []string {
 }
 
 func mainSession(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check 'session' cli arguments.
 	checkSessionSyntax(ctx)
 
 	// Additional command speific theme customization.
@@ -200,9 +204,6 @@ func mainSession(ctx *cli.Context) {
 	console.SetColor("SessionID", color.New(color.FgYellow, color.Bold))
 	console.SetColor("SessionTime", color.New(color.FgGreen))
 	console.SetColor("ClearSession", color.New(color.FgGreen, color.Bold))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session folder.")

@@ -214,6 +214,10 @@ func checkConfigHostRemoveSyntax(ctx *cli.Context) {
 }
 
 func mainConfigHost(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check 'config host' cli arguments.
 	checkConfigHostSyntax(ctx)
 
 	// Additional command speific theme customization.
@@ -222,9 +226,6 @@ func mainConfigHost(ctx *cli.Context) {
 	console.SetColor("HostMessage", color.New(color.FgGreen, color.Bold))
 	console.SetColor("AccessKeyID", color.New(color.FgBlue, color.Bold))
 	console.SetColor("SecretAccessKey", color.New(color.FgRed, color.Bold))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	arg := ctx.Args().First()
 	tailArgs := ctx.Args().Tail()

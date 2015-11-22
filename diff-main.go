@@ -170,6 +170,10 @@ func doDiffMain(firstURL, secondURL string) {
 
 // mainDiff main for 'diff'.
 func mainDiff(ctx *cli.Context) {
+	// Set global flags from context.
+	setGlobalsFromContext(ctx)
+
+	// check 'diff' cli arguments.
 	checkDiffSyntax(ctx)
 
 	// Additional command specific theme customization.
@@ -177,9 +181,6 @@ func mainDiff(ctx *cli.Context) {
 	console.SetColor("DiffOnlyInFirst", color.New(color.FgRed, color.Bold))
 	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
 	console.SetColor("DiffSize", color.New(color.FgMagenta, color.Bold))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args 2 URLs")
