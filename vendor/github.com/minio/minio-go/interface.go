@@ -30,9 +30,9 @@ type CloudStorageAPI interface {
 	SetBucketACL(bucket string, cannedACL BucketACL) error
 	GetBucketACL(bucket string) (BucketACL, error)
 
-	ListBuckets() <-chan BucketStatCh
-	ListObjects(bucket, prefix string, recursive bool) <-chan ObjectStatCh
-	ListIncompleteUploads(bucket, prefix string, recursive bool) <-chan ObjectMultipartStatCh
+	ListBuckets() <-chan BucketStat
+	ListObjects(bucket, prefix string, recursive bool) <-chan ObjectStat
+	ListIncompleteUploads(bucket, prefix string, recursive bool) <-chan ObjectMultipartStat
 
 	// Object Read/Write/Stat operations
 	GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error)

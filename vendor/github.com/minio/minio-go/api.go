@@ -31,30 +31,14 @@ import (
 	"time"
 )
 
-// BucketStatCh - bucket metadata struct sent over read channel.
-type BucketStatCh struct {
-	Stat BucketStat
-	Err  error
-}
-
-// ObjectStatCh - object metadata struct sent over read channel.
-type ObjectStatCh struct {
-	Stat ObjectStat
-	Err  error
-}
-
-// ObjectMultipartStatCh - multipart object metadata struct sent over read channel.
-type ObjectMultipartStatCh struct {
-	Stat ObjectMultipartStat
-	Err  error
-}
-
 // BucketStat container for bucket metadata.
 type BucketStat struct {
 	// The name of the bucket.
 	Name string
 	// Date the bucket was created.
 	CreationDate time.Time
+	// Error
+	Err error
 }
 
 // ObjectStat container for object metadata.
@@ -72,6 +56,8 @@ type ObjectStat struct {
 
 	// The class of storage used to store the object.
 	StorageClass string
+
+	Err error
 }
 
 // ObjectMultipartStat container for multipart object metadata.
@@ -90,6 +76,8 @@ type ObjectMultipartStat struct {
 
 	// Upload ID that identifies the multipart upload.
 	UploadID string `xml:"UploadId"`
+
+	Err error
 }
 
 // s3 region map used by bucket location constraint if necessary.
@@ -500,33 +488,23 @@ func (a API) newObjectUpload(bucket, object, contentType string, size int64, dat
 	return nil
 }
 
-// partMetadatCh - individual part metadata struct over read channel
-type partMetadataCh struct {
-	Metadata partMetadata
-	Err      error
-}
-
-func (a API) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partMetadataCh {
-	partCh := make(chan partMetadataCh, 1000)
+func (a API) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partMetadata {
+	partCh := make(chan partMetadata, 1000)
 	go a.listObjectPartsRecursiveInRoutine(bucket, object, uploadID, partCh)
 	return partCh
 }
 
-func (a API) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, ch chan<- partMetadataCh) {
+func (a API) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, ch chan<- partMetadata) {
 	defer close(ch)
 	listObjPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
 	if err != nil {
-		ch <- partMetadataCh{
-			Metadata: partMetadata{},
-			Err:      err,
+		ch <- partMetadata{
+			Err: err,
 		}
 		return
 	}
 	for _, uploadedPart := range listObjPartsResult.Parts {
-		ch <- partMetadataCh{
-			Metadata: uploadedPart,
-			Err:      nil,
-		}
+		ch <- uploadedPart
 	}
 	for {
 		if !listObjPartsResult.IsTruncated {
@@ -535,17 +513,13 @@ func (a API) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, 
 		listObjPartsResult, err = a.listObjectParts(bucket, object,
 			uploadID, listObjPartsResult.NextPartNumberMarker, 1000)
 		if err != nil {
-			ch <- partMetadataCh{
-				Metadata: partMetadata{},
-				Err:      err,
+			ch <- partMetadata{
+				Err: err,
 			}
 			return
 		}
 		for _, uploadedPart := range listObjPartsResult.Parts {
-			ch <- partMetadataCh{
-				Metadata: uploadedPart,
-				Err:      nil,
-			}
+			ch <- uploadedPart
 		}
 	}
 }
@@ -557,7 +531,7 @@ func (a API) getTotalMultipartSize(bucket, object, uploadID string) (int64, erro
 		if part.Err != nil {
 			return 0, part.Err
 		}
-		size += part.Metadata.Size
+		size += part.Size
 	}
 	return size, nil
 }
@@ -572,17 +546,17 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 			return part.Err
 		}
 		var completedPart completePart
-		completedPart.PartNumber = part.Metadata.PartNumber
-		completedPart.ETag = part.Metadata.ETag
+		completedPart.PartNumber = part.PartNumber
+		completedPart.ETag = part.ETag
 		completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completedPart)
-		md5SumBytes, err := hex.DecodeString(strings.Trim(part.Metadata.ETag, "\"")) // trim off the odd double quotes
+		md5SumBytes, err := hex.DecodeString(strings.Trim(part.ETag, "\"")) // trim off the odd double quotes
 		if err != nil {
 			return err
 		}
-		totalLength += part.Metadata.Size
+		totalLength += part.Size
 		skipPieces = append(skipPieces, skipPiece{
 			md5sum:      md5SumBytes,
-			pieceNumber: part.Metadata.PartNumber,
+			pieceNumber: part.PartNumber,
 		})
 	}
 
@@ -724,9 +698,9 @@ func (a API) PutObject(bucket, object, contentType string, size int64, data io.R
 			if mpUpload.Err != nil {
 				return mpUpload.Err
 			}
-			if mpUpload.Metadata.Key == object {
+			if mpUpload.Key == object {
 				inProgress = true
-				inProgressUploadID = mpUpload.Metadata.UploadID
+				inProgressUploadID = mpUpload.UploadID
 				break
 			}
 		}
@@ -879,32 +853,23 @@ func (a API) RemoveBucket(bucket string) error {
 	return a.deleteBucket(bucket)
 }
 
-type multiPartUploadCh struct {
-	Metadata ObjectMultipartStat
-	Err      error
-}
-
-func (a API) listMultipartUploadsRecursive(bucket, object string) <-chan multiPartUploadCh {
-	ch := make(chan multiPartUploadCh, 1000)
+func (a API) listMultipartUploadsRecursive(bucket, object string) <-chan ObjectMultipartStat {
+	ch := make(chan ObjectMultipartStat, 1000)
 	go a.listMultipartUploadsRecursiveInRoutine(bucket, object, ch)
 	return ch
 }
 
-func (a API) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch chan<- multiPartUploadCh) {
+func (a API) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch chan<- ObjectMultipartStat) {
 	defer close(ch)
 	listMultipartUplResult, err := a.listMultipartUploads(bucket, "", "", object, "", 1000)
 	if err != nil {
-		ch <- multiPartUploadCh{
-			Metadata: ObjectMultipartStat{},
-			Err:      err,
+		ch <- ObjectMultipartStat{
+			Err: err,
 		}
 		return
 	}
 	for _, multiPartUpload := range listMultipartUplResult.Uploads {
-		ch <- multiPartUploadCh{
-			Metadata: multiPartUpload,
-			Err:      nil,
-		}
+		ch <- multiPartUpload
 	}
 	for {
 		if !listMultipartUplResult.IsTruncated {
@@ -913,28 +878,23 @@ func (a API) listMultipartUploadsRecursiveInRoutine(bucket, object string, ch ch
 		listMultipartUplResult, err = a.listMultipartUploads(bucket,
 			listMultipartUplResult.NextKeyMarker, listMultipartUplResult.NextUploadIDMarker, object, "", 1000)
 		if err != nil {
-			ch <- multiPartUploadCh{
-				Metadata: ObjectMultipartStat{},
-				Err:      err,
+			ch <- ObjectMultipartStat{
+				Err: err,
 			}
 			return
 		}
 		for _, multiPartUpload := range listMultipartUplResult.Uploads {
-			ch <- multiPartUploadCh{
-				Metadata: multiPartUpload,
-				Err:      nil,
-			}
+			ch <- multiPartUpload
 		}
 	}
 }
 
 // listIncompleteUploadsInRoutine is an internal goroutine function called for listing objects.
-func (a API) listIncompleteUploadsInRoutine(bucket, prefix string, recursive bool, ch chan<- ObjectMultipartStatCh) {
+func (a API) listIncompleteUploadsInRoutine(bucket, prefix string, recursive bool, ch chan<- ObjectMultipartStat) {
 	defer close(ch)
 	if err := invalidBucketError(bucket); err != nil {
-		ch <- ObjectMultipartStatCh{
-			Stat: ObjectMultipartStat{},
-			Err:  err,
+		ch <- ObjectMultipartStat{
+			Err: err,
 		}
 		return
 	}
@@ -945,31 +905,20 @@ func (a API) listIncompleteUploadsInRoutine(bucket, prefix string, recursive boo
 		for {
 			result, err := a.listMultipartUploads(bucket, multipartMarker, uploadIDMarker, prefix, "", 1000)
 			if err != nil {
-				ch <- ObjectMultipartStatCh{
-					Stat: ObjectMultipartStat{},
-					Err:  err,
+				ch <- ObjectMultipartStat{
+					Err: err,
 				}
 				return
 			}
 			for _, objectSt := range result.Uploads {
-				//
-				// NOTE:
-				//
-				// Enable this as a configurable option if necessary in future
-				// if needed, otherwise its safe to keep this off by default.
-				// getTotalMultipartSize can make listing incomplete uploads slower.
-				//
-				// objectSt.Size, err = a.getTotalMultipartSize(bucket, objectSt.Key, objectSt.UploadID)
-				// if err != nil {
-				//	 ch <- ObjectMultipartStatCh{
-				//		 Stat: ObjectMultipartStat{},
-				//		 Err:  err,
-				// 	 }
-				// }
-				ch <- ObjectMultipartStatCh{
-					Stat: objectSt,
-					Err:  nil,
+				// NOTE: getTotalMultipartSize can make listing incomplete uploads slower.
+				objectSt.Size, err = a.getTotalMultipartSize(bucket, objectSt.Key, objectSt.UploadID)
+				if err != nil {
+					ch <- ObjectMultipartStat{
+						Err: err,
+					}
 				}
+				ch <- objectSt
 				multipartMarker = result.NextKeyMarker
 				uploadIDMarker = result.NextUploadIDMarker
 			}
@@ -983,9 +932,8 @@ func (a API) listIncompleteUploadsInRoutine(bucket, prefix string, recursive boo
 		for {
 			result, err := a.listMultipartUploads(bucket, multipartMarker, uploadIDMarker, prefix, "/", 1000)
 			if err != nil {
-				ch <- ObjectMultipartStatCh{
-					Stat: ObjectMultipartStat{},
-					Err:  err,
+				ch <- ObjectMultipartStat{
+					Err: err,
 				}
 				return
 			}
@@ -994,24 +942,17 @@ func (a API) listIncompleteUploadsInRoutine(bucket, prefix string, recursive boo
 			for _, objectSt := range result.Uploads {
 				objectSt.Size, err = a.getTotalMultipartSize(bucket, objectSt.Key, objectSt.UploadID)
 				if err != nil {
-					ch <- ObjectMultipartStatCh{
-						Stat: ObjectMultipartStat{},
-						Err:  err,
+					ch <- ObjectMultipartStat{
+						Err: err,
 					}
 				}
-				ch <- ObjectMultipartStatCh{
-					Stat: objectSt,
-					Err:  nil,
-				}
+				ch <- objectSt
 			}
 			for _, prefix := range result.CommonPrefixes {
 				object := ObjectMultipartStat{}
 				object.Key = prefix.Prefix
 				object.Size = 0
-				ch <- ObjectMultipartStatCh{
-					Stat: object,
-					Err:  nil,
-				}
+				ch <- object
 			}
 			if !result.IsTruncated {
 				break
@@ -1031,23 +972,22 @@ func (a API) listIncompleteUploadsInRoutine(bucket, prefix string, recursive boo
 //   api := client.New(....)
 //   recursive := true
 //   for message := range api.ListIncompleteUploads("mytestbucket", "starthere", recursive) {
-//       fmt.Println(message.Stat)
+//       fmt.Println(message)
 //   }
 //
-func (a API) ListIncompleteUploads(bucket, prefix string, recursive bool) <-chan ObjectMultipartStatCh {
-	ch := make(chan ObjectMultipartStatCh, 1000)
-	go a.listIncompleteUploadsInRoutine(bucket, prefix, recursive, ch)
-	return ch
+func (a API) ListIncompleteUploads(bucket, prefix string, recursive bool) <-chan ObjectMultipartStat {
+	objectMultipartStatCh := make(chan ObjectMultipartStat, 1000)
+	go a.listIncompleteUploadsInRoutine(bucket, prefix, recursive, objectMultipartStatCh)
+	return objectMultipartStatCh
 }
 
 // listObjectsInRoutine is an internal goroutine function called for listing objects.
 // This function feeds data into channel.
-func (a API) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan<- ObjectStatCh) {
+func (a API) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan<- ObjectStat) {
 	defer close(ch)
 	if err := invalidBucketError(bucket); err != nil {
-		ch <- ObjectStatCh{
-			Stat: ObjectStat{},
-			Err:  err,
+		ch <- ObjectStat{
+			Err: err,
 		}
 		return
 	}
@@ -1057,17 +997,13 @@ func (a API) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan
 		for {
 			result, err := a.listObjects(bucket, marker, prefix, "", 1000)
 			if err != nil {
-				ch <- ObjectStatCh{
-					Stat: ObjectStat{},
-					Err:  err,
+				ch <- ObjectStat{
+					Err: err,
 				}
 				return
 			}
 			for _, object := range result.Contents {
-				ch <- ObjectStatCh{
-					Stat: object,
-					Err:  nil,
-				}
+				ch <- object
 				marker = object.Key
 			}
 			if !result.IsTruncated {
@@ -1079,27 +1015,20 @@ func (a API) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan
 		for {
 			result, err := a.listObjects(bucket, marker, prefix, "/", 1000)
 			if err != nil {
-				ch <- ObjectStatCh{
-					Stat: ObjectStat{},
-					Err:  err,
+				ch <- ObjectStat{
+					Err: err,
 				}
 				return
 			}
 			marker = result.NextMarker
 			for _, object := range result.Contents {
-				ch <- ObjectStatCh{
-					Stat: object,
-					Err:  nil,
-				}
+				ch <- object
 			}
 			for _, prefix := range result.CommonPrefixes {
 				object := ObjectStat{}
 				object.Key = prefix.Prefix
 				object.Size = 0
-				ch <- ObjectStatCh{
-					Stat: object,
-					Err:  nil,
-				}
+				ch <- object
 			}
 			if !result.IsTruncated {
 				break
@@ -1119,32 +1048,28 @@ func (a API) listObjectsInRoutine(bucket, prefix string, recursive bool, ch chan
 //   api := client.New(....)
 //   recursive := true
 //   for message := range api.ListObjects("mytestbucket", "starthere", recursive) {
-//       fmt.Println(message.Stat)
+//       fmt.Println(message)
 //   }
 //
-func (a API) ListObjects(bucket string, prefix string, recursive bool) <-chan ObjectStatCh {
-	ch := make(chan ObjectStatCh, 1000)
+func (a API) ListObjects(bucket string, prefix string, recursive bool) <-chan ObjectStat {
+	ch := make(chan ObjectStat, 1000)
 	go a.listObjectsInRoutine(bucket, prefix, recursive, ch)
 	return ch
 }
 
 // listBucketsInRoutine is an internal go routine function called for listing buckets
 // This function feeds data into channel
-func (a API) listBucketsInRoutine(ch chan<- BucketStatCh) {
+func (a API) listBucketsInRoutine(ch chan<- BucketStat) {
 	defer close(ch)
 	listAllMyBucketListResults, err := a.listBuckets()
 	if err != nil {
-		ch <- BucketStatCh{
-			Stat: BucketStat{},
-			Err:  err,
+		ch <- BucketStat{
+			Err: err,
 		}
 		return
 	}
 	for _, bucket := range listAllMyBucketListResults.Buckets.Bucket {
-		ch <- BucketStatCh{
-			Stat: bucket,
-			Err:  nil,
-		}
+		ch <- bucket
 	}
 }
 
@@ -1154,11 +1079,11 @@ func (a API) listBucketsInRoutine(ch chan<- BucketStatCh) {
 //
 //   api := client.New(....)
 //   for message := range api.ListBuckets() {
-//       fmt.Println(message.Stat)
+//       fmt.Println(message)
 //   }
 //
-func (a API) ListBuckets() <-chan BucketStatCh {
-	ch := make(chan BucketStatCh, 100)
+func (a API) ListBuckets() <-chan BucketStat {
+	ch := make(chan BucketStat, 100)
 	go a.listBucketsInRoutine(ch)
 	return ch
 }

@@ -103,6 +103,9 @@ type partMetadata struct {
 
 	// Size of the uploaded part data.
 	Size int64
+
+	// Error
+	Err error
 }
 
 // listObjectPartsResult container for ListObjectParts response.

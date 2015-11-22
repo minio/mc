@@ -373,7 +373,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 				}
 				return
 			}
-			for object := range c.api.ListIncompleteUploads(bucket.Stat.Name, o, false) {
+			for object := range c.api.ListIncompleteUploads(bucket.Name, o, false) {
 				if object.Err != nil {
 					contentCh <- &client.Content{
 						Err: probe.NewError(object.Err),
@@ -383,20 +383,20 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 				content := new(client.Content)
 				url := *c.hostURL
 				// Join bucket with - incoming object key.
-				url.Path = filepath.Join(string(url.Separator), bucket.Stat.Name, object.Stat.Key)
+				url.Path = filepath.Join(string(url.Separator), bucket.Name, object.Key)
 				if c.virtualStyle {
-					url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+					url.Path = filepath.Join(string(url.Separator), object.Key)
 				}
 				switch {
-				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
+				case strings.HasSuffix(object.Key, string(c.hostURL.Separator)):
 					// We need to keep the trailing Separator, do not use filepath.Join().
 					content.URL = url
 					content.Time = time.Now()
 					content.Type = os.ModeDir
 				default:
 					content.URL = url
-					content.Size = object.Stat.Size
-					content.Time = object.Stat.Initiated
+					content.Size = object.Size
+					content.Time = object.Initiated
 					content.Type = os.ModeTemporary
 				}
 				contentCh <- content
@@ -413,20 +413,20 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 			content := new(client.Content)
 			url := *c.hostURL
 			// Join bucket with - incoming object key.
-			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
+			url.Path = filepath.Join(string(url.Separator), b, object.Key)
 			if c.virtualStyle {
-				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+				url.Path = filepath.Join(string(url.Separator), object.Key)
 			}
 			switch {
-			case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
+			case strings.HasSuffix(object.Key, string(c.hostURL.Separator)):
 				// We need to keep the trailing Separator, do not use filepath.Join().
 				content.URL = url
 				content.Time = time.Now()
 				content.Type = os.ModeDir
 			default:
 				content.URL = url
-				content.Size = object.Stat.Size
-				content.Time = object.Stat.Initiated
+				content.Size = object.Size
+				content.Time = object.Initiated
 				content.Type = os.ModeTemporary
 			}
 			contentCh <- content
@@ -447,7 +447,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 				}
 				return
 			}
-			for object := range c.api.ListIncompleteUploads(bucket.Stat.Name, o, true) {
+			for object := range c.api.ListIncompleteUploads(bucket.Name, o, true) {
 				if object.Err != nil {
 					contentCh <- &client.Content{
 						Err: probe.NewError(object.Err),
@@ -456,10 +456,10 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 				}
 				content := new(client.Content)
 				url := *c.hostURL
-				url.Path = filepath.Join(url.Path, bucket.Stat.Name, object.Stat.Key)
+				url.Path = filepath.Join(url.Path, bucket.Name, object.Key)
 				content.URL = url
-				content.Size = object.Stat.Size
-				content.Time = object.Stat.Initiated
+				content.Size = object.Size
+				content.Time = object.Initiated
 				content.Type = os.ModeTemporary
 				contentCh <- content
 			}
@@ -474,14 +474,14 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 			}
 			url := *c.hostURL
 			// Join bucket and incoming object key.
-			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
+			url.Path = filepath.Join(string(url.Separator), b, object.Key)
 			if c.virtualStyle {
-				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+				url.Path = filepath.Join(string(url.Separator), object.Key)
 			}
 			content := new(client.Content)
 			content.URL = url
-			content.Size = object.Stat.Size
-			content.Time = object.Stat.Initiated
+			content.Size = object.Size
+			content.Time = object.Initiated
 			content.Type = os.ModeTemporary
 			contentCh <- content
 		}
@@ -502,11 +502,11 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 				return
 			}
 			url := *c.hostURL
-			url.Path = filepath.Join(url.Path, bucket.Stat.Name)
+			url.Path = filepath.Join(url.Path, bucket.Name)
 			content := new(client.Content)
 			content.URL = url
 			content.Size = 0
-			content.Time = bucket.Stat.CreationDate
+			content.Time = bucket.CreationDate
 			content.Type = os.ModeDir
 			contentCh <- content
 		}
@@ -542,20 +542,20 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 				content := new(client.Content)
 				url := *c.hostURL
 				// Join bucket and incoming object key.
-				url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
+				url.Path = filepath.Join(string(url.Separator), b, object.Key)
 				if c.virtualStyle {
-					url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+					url.Path = filepath.Join(string(url.Separator), object.Key)
 				}
 				switch {
-				case strings.HasSuffix(object.Stat.Key, string(c.hostURL.Separator)):
+				case strings.HasSuffix(object.Key, string(c.hostURL.Separator)):
 					// We need to keep the trailing Separator, do not use filepath.Join().
 					content.URL = url
 					content.Time = time.Now()
 					content.Type = os.ModeDir
 				default:
 					content.URL = url
-					content.Size = object.Stat.Size
-					content.Time = object.Stat.LastModified
+					content.Size = object.Size
+					content.Time = object.LastModified
 					content.Type = os.FileMode(0664)
 				}
 				contentCh <- content
@@ -578,13 +578,13 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 				return
 			}
 			bucketURL := *c.hostURL
-			bucketURL.Path = filepath.Join(bucketURL.Path, bucket.Stat.Name)
+			bucketURL.Path = filepath.Join(bucketURL.Path, bucket.Name)
 			contentCh <- &client.Content{
 				URL:  bucketURL,
 				Type: os.ModeDir,
-				Time: bucket.Stat.CreationDate,
+				Time: bucket.CreationDate,
 			}
-			for object := range c.api.ListObjects(bucket.Stat.Name, o, true) {
+			for object := range c.api.ListObjects(bucket.Name, o, true) {
 				if object.Err != nil {
 					contentCh <- &client.Content{
 						Err: probe.NewError(object.Err),
@@ -593,10 +593,10 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 				}
 				content := new(client.Content)
 				objectURL := *c.hostURL
-				objectURL.Path = filepath.Join(objectURL.Path, bucket.Stat.Name, object.Stat.Key)
+				objectURL.Path = filepath.Join(objectURL.Path, bucket.Name, object.Key)
 				content.URL = objectURL
-				content.Size = object.Stat.Size
-				content.Time = object.Stat.LastModified
+				content.Size = object.Size
+				content.Time = object.LastModified
 				content.Type = os.FileMode(0664)
 				contentCh <- content
 			}
@@ -612,14 +612,14 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 			content := new(client.Content)
 			url := *c.hostURL
 			// Join bucket and incoming object key.
-			url.Path = filepath.Join(string(url.Separator), b, object.Stat.Key)
+			url.Path = filepath.Join(string(url.Separator), b, object.Key)
 			// If virtualStyle replace the url.Path back.
 			if c.virtualStyle {
-				url.Path = filepath.Join(string(url.Separator), object.Stat.Key)
+				url.Path = filepath.Join(string(url.Separator), object.Key)
 			}
 			content.URL = url
-			content.Size = object.Stat.Size
-			content.Time = object.Stat.LastModified
+			content.Size = object.Size
+			content.Time = object.LastModified
 			content.Type = os.FileMode(0664)
 			contentCh <- content
 		}

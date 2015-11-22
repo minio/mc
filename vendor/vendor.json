@@ -29,8 +29,8 @@
 		},
 		{
 			"path": "github.com/minio/minio-go",
-			"revision": "71e410bd65a1a18da39d7f7d2881f6e5af2b6bde",
-			"revisionTime": "2015-11-18T20:45:40-08:00"
+			"revision": "577f4282e75b8552bdf754afd8003165ee3cc14d",
+			"revisionTime": "2015-11-20T16:01:24-08:00"
 		},
 		{
 			"path": "github.com/minio/minio-xl/pkg/atomic",
