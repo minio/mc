@@ -121,7 +121,7 @@ func mainList(ctx *cli.Context) {
 		args = []string{"."}
 	}
 
-	targetURLs, err := args2URLs(args.Head())
+	targetURLs, err := args2URLs(args)
 	fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
 	for _, targetURL := range targetURLs {
 		var clnt client.Client
