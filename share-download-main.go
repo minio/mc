@@ -28,7 +28,7 @@ var (
 		Name:  "help, h",
 		Usage: "Help of share download",
 	}
-	shareFlagRecursive = cli.BoolFlag{
+	shareFlagDownloadRecursive = cli.BoolFlag{
 		Name:  "recursive, r",
 		Usage: "Share all objects recursively.",
 	}
@@ -39,7 +39,7 @@ var shareDownload = cli.Command{
 	Name:   "download",
 	Usage:  "Generate URLs for download access.",
 	Action: mainShareDownload,
-	Flags:  append(globalFlags, shareFlagRecursive, shareFlagExpire, shareFlagDownloadHelp),
+	Flags:  append(globalFlags, shareFlagExpire, shareFlagDownloadHelp, shareFlagDownloadRecursive),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
 
