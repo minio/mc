@@ -65,7 +65,7 @@ NOTE:  Source installation is intended for only developers and advanced users. â
 If you do not have a working Golang environment, please follow [Install Golang](./INSTALLGO.md).
 
 ```sh
-$ go get -u github.com/minio/mc
+$ GO15VENDOREXPERIMENT=1 go get -u github.com/minio/mc
 ```
 
 ## Public Minio Server

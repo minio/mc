@@ -66,7 +66,7 @@ func (s shareMesssage) String() string {
 		msg += console.Colorize("Content-type", fmt.Sprintf("Content-Type: %s\n", s.ContentType))
 	}
 
-	// Highlight <FILE> specially. "share upload" sub-commands uses this identifier.
+	// Highlight <FILE> specifically. "share upload" sub-commands use this identifier.
 	shareURL := strings.Replace(s.ShareURL, "<FILE>", console.Colorize("File", "<FILE>"), 1)
 	msg += console.Colorize("Share", fmt.Sprintf("Share: %s\n", shareURL))
 
