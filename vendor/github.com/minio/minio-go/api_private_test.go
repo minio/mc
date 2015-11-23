@@ -68,7 +68,7 @@ func TestGetRegion(t *testing.T) {
 		t.Fatalf("Error")
 	}
 	region = getRegion("localhost:9000")
-	if region != "milkyway" {
+	if region != "us-east-1" {
 		t.Fatalf("Error")
 	}
 }

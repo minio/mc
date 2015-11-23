@@ -104,8 +104,7 @@ func getRegion(host string) (region string) {
 		return regions[host]
 	}
 	// Region cannot be empty according to Amazon S3 for AWS Signature Version 4.
-	// So we will in-turn address all the four quadrants of our galaxy.
-	return "milkyway"
+	return "us-east-1"
 }
 
 // getEndpoint returns a endpoint based on its region.
@@ -642,18 +641,14 @@ func (a API) PutObject(bucket, object, contentType string, size int64, data io.R
 	if err := invalidArgumentError(object); err != nil {
 		return err
 	}
-	// for un-authenticated requests do not initiated multipart operation.
-	//
-	// NOTE: this behavior is only kept valid for S3, since S3 doesn't
-	// allow unauthenticated multipart requests.
-	if a.config.Region != "milkyway" {
-		if a.config.AccessKeyID == "" || a.config.SecretAccessKey == "" {
-			_, err := a.putObjectUnAuthenticated(bucket, object, contentType, size, data)
-			if err != nil {
-				return err
-			}
-			return nil
+	// for un-authenticated requests do not initiate multipart operation.
+	// NOTE: S3 doesn't allow unauthenticated multipart requests.
+	if a.config.AccessKeyID == "" || a.config.SecretAccessKey == "" {
+		_, err := a.putObjectUnAuthenticated(bucket, object, contentType, size, data)
+		if err != nil {
+			return err
 		}
+		return nil
 	}
 	// Special handling just for Google Cloud Storage.
 	// TODO - we should remove this in future when we fully implement Resumable object upload.
@@ -756,9 +751,6 @@ func (a API) MakeBucket(bucket string, acl BucketACL) error {
 		return invalidArgumentError("")
 	}
 	location := a.config.Region
-	if location == "milkyway" {
-		location = ""
-	}
 	if location == "us-east-1" {
 		location = ""
 	}
