@@ -40,7 +40,8 @@ func checkCopySyntax(ctx *cli.Context) {
 	tgtURL := URLs[len(URLs)-1]
 	isRecursive := ctx.Bool("recursive")
 
-	/****** Generic rules *******/
+	/****** Generic Invalid Rules *******/
+	// Check if bucket name is passed for URL type arguments.
 	url := client.NewURL(tgtURL)
 	if url.Host != "" {
 		// This check is for type URL.
@@ -129,17 +130,8 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string, isRecursive bool) {
 
 // checkCopySyntaxTypeD verifies if the source is a valid list of files and target is a valid folder.
 func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
-	// Check source.
-	for _, srcURL := range srcURLs {
-		_, srcContent, err := url2Stat(srcURL)
-		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
-
-		if !srcContent.Type.IsRegular() {
-			fatalIf(errInvalidArgument().Trace(), "Source ‘"+srcURL+"’ is not a file.")
-		}
-	}
-
-	// Check target.
+	// Source can be anything: file, dir, dir...
+	// Check target if it is a dir
 	if _, tgtContent, err := url2Stat(tgtURL); err == nil {
 		if !tgtContent.Type.IsDir() {
 			fatalIf(errInvalidArgument().Trace(tgtURL), "Target ‘"+tgtURL+"’ is not a folder.")
