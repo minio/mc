@@ -20,7 +20,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio-xl/pkg/probe"
@@ -62,10 +61,6 @@ func getAliasURL(aliasedURL string) (string, *probe.Error) {
 			}
 			if len(splits[0]) == 0 && len(splits[1]) == 0 {
 				return aliasValue, nil // exact match.
-			}
-			_, sepLen := utf8.DecodeRuneInString(splits[1])
-			if sepLen == 1 && !os.IsPathSeparator(splits[1][0]) {
-				return aliasedURL, nil // Do not expand for whole strings with alias prefix.
 			}
 			// Matched, but path needs to be joined.
 			return urlJoinPath(aliasValue, splits[1]), nil
