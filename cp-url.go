@@ -39,15 +39,13 @@ type copyURLsType uint8
 //   A: copy(f, f) -> copy(f, f)
 //   B: copy(f, d) -> copy(f, d/f) -> []A
 //   C: copy(d1..., d2) -> []copy(f, d2/d1/f) -> []A
-//   D: copy([]f, d) -> []B -> []A
+//   D: copy([]f, d) -> []B
 
-//
 //   * INVALID RULES
 //   =========================
 //   copy(d, f)
 //   copy(d..., f)
-//   copy([]f, f)
-//'
+//   copy([](f|d)..., f)
 
 const (
 	copyURLsTypeInvalid copyURLsType = iota
@@ -85,6 +83,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) c
 	if isTargetURLDir(targetURL) {
 		return copyURLsTypeD
 	}
+
 	return copyURLsTypeInvalid
 }
 
@@ -186,14 +185,16 @@ func makeCopyContentTypeC(sourceURL client.URL, sourceContent *client.Content, t
 	return makeCopyContentTypeA(sourceContent, newTargetURL)
 }
 
-// MULTI-SOURCE - Type D: copy([]f, d) -> []B
-// prepareCopyURLsTypeD - prepares target and source URLs for copying.
-func prepareCopyURLsTypeD(sourceURLs []string, targetURL string) <-chan copyURLs {
+// MULTI-SOURCE - Type D: copy([](f|d...), d) -> []B
+// prepareCopyURLsTypeE - prepares target and source URLs for copying.
+func prepareCopyURLsTypeD(sourceURLs []string, targetURL string, isRecursive bool) <-chan copyURLs {
 	copyURLsCh := make(chan copyURLs)
 	go func(sourceURLs []string, targetURL string, copyURLsCh chan copyURLs) {
 		defer close(copyURLsCh)
 		for _, sourceURL := range sourceURLs {
-			copyURLsCh <- prepareCopyURLsTypeB(sourceURL, targetURL)
+			for cpURLs := range prepareCopyURLsTypeC(sourceURL, targetURL, isRecursive) {
+				copyURLsCh <- cpURLs
+			}
 		}
 	}(sourceURLs, targetURL, copyURLsCh)
 	return copyURLsCh
@@ -214,7 +215,7 @@ func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool) <-
 				copyURLsCh <- cURLs
 			}
 		case copyURLsTypeD:
-			for cURLs := range prepareCopyURLsTypeD(sourceURLs, targetURL) {
+			for cURLs := range prepareCopyURLsTypeD(sourceURLs, targetURL, isRecursive) {
 				copyURLsCh <- cURLs
 			}
 		default:
