@@ -110,13 +110,14 @@ func checkRmSyntax(ctx *cli.Context) {
 	// Set command flags from context.
 	isForce := ctx.Bool("force")
 	isRecursive := ctx.Bool("recursive")
+	isIncomplete := ctx.Bool("incomplete")
 
 	if !ctx.Args().Present() {
 		exitCode := 1
 		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
 	}
 
-	if !isRecursive {
+	if !isRecursive && !isIncomplete {
 		URLs, err := args2URLs(ctx.Args())
 		fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
 		for _, url := range URLs {
