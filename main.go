@@ -29,6 +29,15 @@ import (
 	"github.com/olekukonko/ts"
 )
 
+var (
+	mcFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Show help.",
+		},
+	}
+)
+
 // Help template for mc
 var mcHelpTemplate = `NAME:
   {{.Name}} - {{.Usage}}
@@ -116,6 +125,9 @@ func registerBefore(ctx *cli.Context) error {
 	// Migrate any old version of config / state files to newer format.
 	migrate()
 
+	// Set global flags.
+	setGlobalsFromContext(ctx)
+
 	// Checkconfig if it can be read.
 	checkConfig()
 
@@ -153,6 +165,7 @@ func registerApp() *cli.App {
 	app.Usage = "Minio Client for cloud storage and filesystems."
 	app.Commands = commands
 	app.Author = "Minio.io"
+	app.Flags = append(mcFlags, globalFlags...)
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.CommandNotFound = commandNotFound // handler function declared above.
 	return app
