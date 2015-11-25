@@ -123,21 +123,21 @@ var (
 	// Debug prints a debug message without a new line
 	// Debug prints a debug message.
 	Debug = func(data ...interface{}) {
-		if !DebugPrint {
+		if DebugPrint {
 			consolePrint("Debug", Theme["Debug"], data...)
 		}
 	}
 
 	// Debugf prints a debug message with a new line.
 	Debugf = func(format string, data ...interface{}) {
-		if !DebugPrint {
+		if DebugPrint {
 			consolePrintf("Debug", Theme["Debug"], format, data...)
 		}
 	}
 
 	// Debugln prints a debug message with a new line.
 	Debugln = func(data ...interface{}) {
-		if !DebugPrint {
+		if DebugPrint {
 			consolePrintln("Debug", Theme["Debug"], data...)
 		}
 	}
