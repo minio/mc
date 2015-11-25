@@ -34,7 +34,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "Recursively upload any object matching the prefix recursively.",
+			Usage: "Recursively upload any object matching the prefix.",
 		},
 		shareFlagExpire,
 		shareFlagContentType,
@@ -66,8 +66,8 @@ EXAMPLES:
    3. Generate a curl command to allow upload access of only '.png' images to a folder. Command expires in 2 hours.
       $ mc share {{.Name}} --expire=2h --content-type=image/png s3.amazonaws.com/backup/2007-Mar-2/
 
-   4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup'. Command expires in 2 hours.
-      $ mc share {{.Name}} --recursive --expire=2h s3.amazonaws.com/backup/2007-Mar-2/backup
+   4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup/'. Command expires in 2 hours.
+      $ mc share {{.Name}} --recursive --expire=2h s3.amazonaws.com/backup/2007-Mar-2/backup/
 `,
 }
 
@@ -78,9 +78,12 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "upload", 1) // last argument is exit code.
 	}
 
+	// Set command flags from context.
+	isRecursive := ctx.Bool("recursive")
+	expireArg := ctx.String("expire")
+
 	// Parse expiry.
 	expiry := shareDefaultExpiry
-	expireArg := ctx.String("expire")
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
@@ -89,18 +92,28 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 
 	// Validate expiry.
 	if expiry.Seconds() < 1 {
-		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be lesser than 1 second.")
+		fatalIf(errDummy().Trace(expiry.String()),
+			"Expiry cannot be lesser than 1 second.")
 	}
 	if expiry.Seconds() > 604800 {
-		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
+		fatalIf(errDummy().Trace(expiry.String()),
+			"Expiry cannot be larger than 7 days.")
 	}
 
-	_, err := args2URLs(ctx.Args()) // expand alias.
+	URLs, err := args2URLs(ctx.Args()) // expand alias.
 	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
+
+	for _, targetURL := range URLs {
+		url := client.NewURL(targetURL)
+		if strings.HasSuffix(targetURL, string(url.Separator)) && !isRecursive {
+			fatalIf(errInvalidArgument().Trace(targetURL),
+				"Use --recursive option to generate curl command for prefixes.")
+		}
+	}
 }
 
 // makeCurlCmd constructs curl command-line.
-func makeCurlCmd(key string, startsWith bool, uploadInfo map[string]string) string {
+func makeCurlCmd(key string, isRecursive bool, uploadInfo map[string]string) string {
 	URL := client.NewURL(key)
 	postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator)
 	if !isBucketVirtualStyle(URL.Host) {
@@ -116,14 +129,10 @@ func makeCurlCmd(key string, startsWith bool, uploadInfo map[string]string) stri
 		curlCommand += fmt.Sprintf("-F %s=%s ", k, v)
 	}
 	// If key starts with is enabled prefix it with the output.
-	if startsWith {
-		curlCommand += fmt.Sprintf("-F key=%s<KEY> ", key) // Object name.
+	if isRecursive {
+		curlCommand += fmt.Sprintf("-F key=%s<NAME> ", key) // Object name.
 	} else {
-		if strings.HasSuffix(key, string(URL.Separator)) {
-			curlCommand += fmt.Sprintf("-F key=%s<KEY> ", key) // Object name.
-		} else {
-			curlCommand += fmt.Sprintf("-F key=%s ", key) // Object name.
-		}
+		curlCommand += fmt.Sprintf("-F key=%s ", key) // Object name.
 	}
 	curlCommand += "-F file=@<FILE>" // File to upload.
 	return curlCommand
@@ -145,20 +154,20 @@ func saveSharedURL(objectURL string, shareURL string, expiry time.Duration, cont
 }
 
 // doShareUploadURL uploads files to the target.
-func doShareUploadURL(objectURL string, startsWith bool, expiry time.Duration, contentType string) *probe.Error {
+func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, contentType string) *probe.Error {
 	clnt, err := url2Client(objectURL)
 	if err != nil {
 		return err.Trace(objectURL)
 	}
 
 	// Generate pre-signed access info.
-	uploadInfo, err := clnt.ShareUpload(startsWith, expiry, contentType)
+	uploadInfo, err := clnt.ShareUpload(isRecursive, expiry, contentType)
 	if err != nil {
 		return err.Trace(objectURL, "expiry="+expiry.String(), "contentType="+contentType)
 	}
 
 	// Generate curl command.
-	curlCmd := makeCurlCmd(objectURL, startsWith, uploadInfo)
+	curlCmd := makeCurlCmd(objectURL, isRecursive, uploadInfo)
 
 	printMsg(shareMesssage{
 		ObjectURL:   objectURL,
@@ -186,7 +195,7 @@ func mainShareUpload(ctx *cli.Context) {
 	shareSetColor()
 
 	// Set command flags from context.
-	startsWith := ctx.Bool("starts-with")
+	isRecursive := ctx.Bool("recursive")
 	expireArg := ctx.String("expire")
 	expiry := shareDefaultExpiry
 	contentType := ctx.String("content-type")
@@ -200,7 +209,7 @@ func mainShareUpload(ctx *cli.Context) {
 	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
 
 	for _, targetURL := range URLs {
-		err := doShareUploadURL(targetURL, startsWith, expiry, contentType)
+		err := doShareUploadURL(targetURL, isRecursive, expiry, contentType)
 		fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+targetURL+"’.")
 	}
 }

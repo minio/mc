@@ -68,6 +68,9 @@ func (s shareMesssage) String() string {
 
 	// Highlight <FILE> specifically. "share upload" sub-commands use this identifier.
 	shareURL := strings.Replace(s.ShareURL, "<FILE>", console.Colorize("File", "<FILE>"), 1)
+	// Highlight <KEY> specifically for recursive operation.
+	shareURL = strings.Replace(shareURL, "<NAME>", console.Colorize("File", "<NAME>"), 1)
+
 	msg += console.Colorize("Share", fmt.Sprintf("Share: %s\n", shareURL))
 
 	return msg
