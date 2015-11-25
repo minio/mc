@@ -25,9 +25,11 @@ import (
 )
 
 var (
-	pipeFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of pipe.",
+	pipeFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of pipe.",
+		},
 	}
 )
 
@@ -36,7 +38,7 @@ var pipeCmd = cli.Command{
 	Name:   "pipe",
 	Usage:  "Write contents of stdin to one or more targets. When no target is specified, it writes to stdout.",
 	Action: mainPipe,
-	Flags:  append(globalFlags, pipeFlagHelp),
+	Flags:  append(pipeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

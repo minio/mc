@@ -37,13 +37,15 @@ import (
 
 // mirror specific flags.
 var (
-	mirrorFlagForce = cli.BoolFlag{
-		Name:  "force",
-		Usage: "Force overwrite of an existing target(s).",
-	}
-	mirrorFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of mirror.",
+	mirrorFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of mirror.",
+		},
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "Force overwrite of an existing target(s).",
+		},
 	}
 )
 
@@ -52,7 +54,7 @@ var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Mirror folders recursively from a single source to many destinations.",
 	Action: mainMirror,
-	Flags:  append(globalFlags, mirrorFlagForce, mirrorFlagHelp),
+	Flags:  append(mirrorFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

@@ -27,9 +27,11 @@ import (
 )
 
 var (
-	accessFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of access.",
+	accessFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of access.",
+		},
 	}
 )
 
@@ -38,7 +40,7 @@ var accessCmd = cli.Command{
 	Name:   "access",
 	Usage:  "Manage bucket access permissions.",
 	Action: mainAccess,
-	Flags:  append(globalFlags, accessFlagHelp),
+	Flags:  append(accessFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 

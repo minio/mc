@@ -38,13 +38,15 @@ import (
 
 // cp command flags.
 var (
-	cpFlagRecursive = cli.BoolFlag{
-		Name:  "recursive, r",
-		Usage: "Copy recursively.",
-	}
-	cpFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of cp.",
+	cpFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of cp.",
+		},
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "Copy recursively.",
+		},
 	}
 )
 
@@ -53,7 +55,7 @@ var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy one or more objects to a target.",
 	Action: mainCopy,
-	Flags:  append(globalFlags, cpFlagRecursive, cpFlagHelp),
+	Flags:  append(cpFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

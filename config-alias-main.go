@@ -28,9 +28,11 @@ import (
 )
 
 var (
-	configAliasFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of config alias.",
+	configAliasFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of config alias.",
+		},
 	}
 )
 
@@ -38,7 +40,7 @@ var configAliasCmd = cli.Command{
 	Name:   "alias",
 	Usage:  "List, modify and remove aliases in configuration file.",
 	Action: mainConfigAlias,
-	Flags:  append(globalFlags, configAliasFlagHelp),
+	Flags:  append(configAliasFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}
 

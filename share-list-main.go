@@ -25,9 +25,11 @@ import (
 )
 
 var (
-	shareFlagListHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of share list.",
+	shareListFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of share list.",
+		},
 	}
 )
 
@@ -36,7 +38,7 @@ var shareList = cli.Command{
 	Name:   "list",
 	Usage:  "List previously shared objects and folders.",
 	Action: mainShareList,
-	Flags:  append(globalFlags, shareFlagListHelp),
+	Flags:  append(shareListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} COMMAND - {{.Usage}}
 

@@ -28,17 +28,19 @@ import (
 
 // ls specific flags.
 var (
-	lsFlagRecursive = cli.BoolFlag{
-		Name:  "recursive, r",
-		Usage: "List recursively.",
-	}
-	lsFlagIncomplete = cli.BoolFlag{
-		Name:  "incomplete, I",
-		Usage: "Remove incomplete uploads.",
-	}
-	lsFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of ls.",
+	lsFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of ls.",
+		},
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "List recursively.",
+		},
+		cli.BoolFlag{
+			Name:  "incomplete, I",
+			Usage: "Remove incomplete uploads.",
+		},
 	}
 )
 
@@ -47,7 +49,7 @@ var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "List files and folders.",
 	Action: mainList,
-	Flags:  append(globalFlags, lsFlagRecursive, lsFlagIncomplete, lsFlagHelp),
+	Flags:  append(lsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

@@ -30,9 +30,11 @@ import (
 
 // diff specific flags.
 var (
-	diffFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of diff.",
+	diffFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of diff.",
+		},
 	}
 )
 
@@ -42,7 +44,7 @@ var diffCmd = cli.Command{
 	Usage:       "Compute differences between two folders.",
 	Description: "Diff only lists missing objects or objects with size differences. It *DOES NOT* compare contents. i.e. Objects of same name and size, but differ in contents are not noticed.",
 	Action:      mainDiff,
-	Flags:       append(globalFlags, diffFlagHelp),
+	Flags:       append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

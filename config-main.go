@@ -30,9 +30,11 @@ import "github.com/minio/cli"
 //
 
 var (
-	configFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of config.",
+	configFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of config.",
+		},
 	}
 )
 
@@ -40,7 +42,7 @@ var configCmd = cli.Command{
 	Name:   "config",
 	Usage:  "Manage configuration file.",
 	Action: mainConfig,
-	Flags:  append(globalFlags, configFlagHelp),
+	Flags:  append(configFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		configAliasCmd,
 		configHostCmd,

@@ -29,25 +29,27 @@ import (
 
 // rm specific flags.
 var (
-	rmFlagRecursive = cli.BoolFlag{
-		Name:  "recursive, r",
-		Usage: "Remove recursively.",
-	}
-	rmFlagForce = cli.BoolFlag{
-		Name:  "force",
-		Usage: "Force a dangerous remove operation.",
-	}
-	rmFlagIncomplete = cli.BoolFlag{
-		Name:  "incomplete, I",
-		Usage: "Remove an incomplete upload(s).",
-	}
-	rmFlagFake = cli.BoolFlag{
-		Name:  "fake",
-		Usage: "Perform a fake remove operation.",
-	}
-	rmFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of rm.",
+	rmFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of rm.",
+		},
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "Remove recursively.",
+		},
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "Force a dangerous remove operation.",
+		},
+		cli.BoolFlag{
+			Name:  "incomplete, I",
+			Usage: "Remove an incomplete upload(s).",
+		},
+		cli.BoolFlag{
+			Name:  "fake",
+			Usage: "Perform a fake remove operation.",
+		},
 	}
 )
 
@@ -56,7 +58,7 @@ var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "Remove file or bucket [WARNING: Use with care].",
 	Action: mainRm,
-	Flags:  append(globalFlags, rmFlagRecursive, rmFlagForce, rmFlagIncomplete, rmFlagFake, rmFlagHelp),
+	Flags:  append(rmFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

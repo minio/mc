@@ -31,9 +31,11 @@ import (
 )
 
 var (
-	catFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of cat",
+	catFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of cat",
+		},
 	}
 )
 
@@ -42,7 +44,7 @@ var catCmd = cli.Command{
 	Name:   "cat",
 	Usage:  "Display contents of a file.",
 	Action: mainCat,
-	Flags:  append(globalFlags, catFlagHelp),
+	Flags:  append(catFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

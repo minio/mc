@@ -28,16 +28,18 @@ import (
 )
 
 var (
-	configHostFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of config host",
+	configHostFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of config host",
+		},
 	}
 )
 
 var configHostCmd = cli.Command{
 	Name:   "host",
 	Usage:  "List, modify and remove hosts in configuration file.",
-	Flags:  append(globalFlags, configHostFlagHelp),
+	Flags:  append(configHostFlags, globalFlags...),
 	Action: mainConfigHost,
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}

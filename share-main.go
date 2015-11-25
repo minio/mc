@@ -26,9 +26,11 @@ import (
 )
 
 var (
-	shareFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of share.",
+	shareFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of share.",
+		},
 	}
 )
 
@@ -37,7 +39,7 @@ var shareCmd = cli.Command{
 	Name:   "share",
 	Usage:  "Generate URL for sharing.",
 	Action: mainShare,
-	Flags:  append(globalFlags, shareFlagHelp),
+	Flags:  append(shareFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		shareDownload,
 		shareUpload,

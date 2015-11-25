@@ -27,13 +27,17 @@ import (
 )
 
 var (
-	shareFlagUploadHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of share download.",
-	}
-	shareFlagUploadStartsWith = cli.BoolFlag{
-		Name:  "starts-with",
-		Usage: "Enable to upload to a particular key prefix.",
+	shareUploadFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of share download.",
+		},
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "Recursively upload any object matching the prefix recursively.",
+		},
+		shareFlagExpire,
+		shareFlagContentType,
 	}
 )
 
@@ -42,7 +46,7 @@ var shareUpload = cli.Command{
 	Name:   "upload",
 	Usage:  "Generate ‘curl’ command to upload objects without requiring access/secret keys.",
 	Action: mainShareUpload,
-	Flags:  append(globalFlags, shareFlagExpire, shareFlagContentType, shareFlagUploadHelp, shareFlagUploadStartsWith),
+	Flags:  append(shareUploadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
 
@@ -62,8 +66,8 @@ EXAMPLES:
    3. Generate a curl command to allow upload access of only '.png' images to a folder. Command expires in 2 hours.
       $ mc share {{.Name}} --expire=2h --content-type=image/png s3.amazonaws.com/backup/2007-Mar-2/
 
-   4. Generate a curl command to allow upload access of only objects with key prefix 'backup'. Command expires in 2 hours.
-      $ mc share {{.Name}} --starts-with --expire=2h s3.amazonaws.com/backup/2007-Mar-2/backup
+   4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup'. Command expires in 2 hours.
+      $ mc share {{.Name}} --recursive --expire=2h s3.amazonaws.com/backup/2007-Mar-2/backup
 `,
 }
 
