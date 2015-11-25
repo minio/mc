@@ -27,9 +27,11 @@ import (
 )
 
 var (
-	mbFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of mb.",
+	mbFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of mb.",
+		},
 	}
 )
 
@@ -38,7 +40,7 @@ var mbCmd = cli.Command{
 	Name:   "mb",
 	Usage:  "Make a bucket or folder.",
 	Action: mainMakeBucket,
-	Flags:  append(globalFlags, mbFlagHelp),
+	Flags:  append(mbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

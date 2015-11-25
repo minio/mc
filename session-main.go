@@ -30,9 +30,11 @@ import (
 )
 
 var (
-	sessionFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of session.",
+	sessionFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of session.",
+		},
 	}
 )
 
@@ -41,7 +43,7 @@ var sessionCmd = cli.Command{
 	Name:   "session",
 	Usage:  "Manage saved sessions of cp and mirror operations.",
 	Action: mainSession,
-	Flags:  append(globalFlags, sessionFlagHelp),
+	Flags:  append(sessionFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 

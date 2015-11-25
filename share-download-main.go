@@ -24,13 +24,16 @@ import (
 )
 
 var (
-	shareFlagDownloadHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of share download",
-	}
-	shareFlagDownloadRecursive = cli.BoolFlag{
-		Name:  "recursive, r",
-		Usage: "Share all objects recursively.",
+	shareDownloadFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of share download",
+		},
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "Share all objects recursively.",
+		},
+		shareFlagExpire,
 	}
 )
 
@@ -39,7 +42,7 @@ var shareDownload = cli.Command{
 	Name:   "download",
 	Usage:  "Generate URLs for download access.",
 	Action: mainShareDownload,
-	Flags:  append(globalFlags, shareFlagExpire, shareFlagDownloadHelp, shareFlagDownloadRecursive),
+	Flags:  append(shareDownloadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
 

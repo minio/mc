@@ -30,14 +30,15 @@ import (
 
 // command specific flags.
 var (
-	updateFlagExperimental = cli.BoolFlag{
-		Name:  "experimental, E",
-		Usage: "Check experimental update.",
-	}
-
-	updateFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help for update.",
+	updateFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help for update.",
+		},
+		cli.BoolFlag{
+			Name:  "experimental, E",
+			Usage: "Check experimental update.",
+		},
 	}
 )
 
@@ -46,7 +47,7 @@ var updateCmd = cli.Command{
 	Name:   "update",
 	Usage:  "Check for a new software update.",
 	Action: mainUpdate,
-	Flags:  append(globalFlags, updateFlagExperimental, updateFlagHelp),
+	Flags:  append(updateFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 

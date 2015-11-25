@@ -25,9 +25,11 @@ import (
 )
 
 var (
-	configVersionFlagHelp = cli.BoolFlag{
-		Name:  "help, h",
-		Usage: "Help of config version",
+	configVersionFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "Help of config version",
+		},
 	}
 )
 
@@ -36,7 +38,7 @@ var configVersionCmd = cli.Command{
 	Name:   "version",
 	Usage:  "Print config version.",
 	Action: mainConfigVersion,
-	Flags:  append(globalFlags, configVersionFlagHelp),
+	Flags:  append(configVersionFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}
 
