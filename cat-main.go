@@ -17,11 +17,9 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"syscall"
@@ -82,10 +80,10 @@ func checkCatSyntax(ctx *cli.Context) {
 
 // catURL displays contents of a URL to stdout.
 func catURL(sourceURL string) *probe.Error {
-	var reader io.ReadCloser
+	var reader io.ReadSeeker
 	switch sourceURL {
 	case "-":
-		reader = ioutil.NopCloser(bufio.NewReader(os.Stdin))
+		reader = os.Stdin
 	default:
 		sourceClnt, err := url2Client(sourceURL)
 		if err != nil {
@@ -93,13 +91,11 @@ func catURL(sourceURL string) *probe.Error {
 		}
 		// Ignore size, since os.Stat() would not return proper size all the
 		// time for local filesystem for example /proc files.
-		reader, _, err = sourceClnt.Get(0, 0)
+		reader, err = sourceClnt.Get(0, 0)
 		if err != nil {
 			return err.Trace(sourceURL)
 		}
 	}
-	defer reader.Close()
-
 	return catOut(reader).Trace(sourceURL)
 }
 

@@ -17,38 +17,50 @@
 package minio
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 )
 
-// operation - rest operation
+// operation - rest operation.
 type operation struct {
 	HTTPServer string
 	HTTPMethod string
 	HTTPPath   string
 }
 
-// Request - a http request
+// Request - a http request.
 type Request struct {
 	req     *http.Request
 	config  *Config
-	body    io.ReadSeeker
 	expires int64
 }
 
-// Do - start the request
+// requestMetadata a http request metadata.
+type requestMetadata struct {
+	body               io.ReadCloser
+	contentType        string
+	contentLength      int64
+	sha256PayloadBytes []byte
+	md5SumPayloadBytes []byte
+}
+
+// Do - start the request.
 func (r *Request) Do() (resp *http.Response, err error) {
-	if r.config.AccessKeyID != "" && r.config.SecretAccessKey != "" {
+	// if not an anonymous request, calculate relevant signature.
+	if !r.config.isAnonymous() {
 		if r.config.Signature.isV2() {
+			// if signature version '2' requested, use that.
 			r.SignV2()
 		}
 		if r.config.Signature.isV4() || r.config.Signature.isLatest() {
-			r.SignV4()
+			// Not a presigned request, set behavior to default.
+			presign := false
+			r.SignV4(presign)
 		}
 	}
 	transport := http.DefaultTransport
@@ -66,16 +78,17 @@ func (r *Request) Do() (resp *http.Response, err error) {
 	return transport.RoundTrip(r.req)
 }
 
-// Set - set additional headers if any
+// Set - set additional headers if any.
 func (r *Request) Set(key, value string) {
 	r.req.Header.Set(key, value)
 }
 
-// Get - get header values
+// Get - get header values.
 func (r *Request) Get(key string) string {
 	return r.req.Header.Get(key)
 }
 
+// path2BucketAndObject - extract bucket and object names from URL path.
 func path2BucketAndObject(path string) (bucketName, objectName string) {
 	pathSplits := strings.SplitN(path, "?", 2)
 	splits := strings.SplitN(pathSplits[0], separator, 3)
@@ -154,6 +167,7 @@ func getURLEncodedPath(pathName string) string {
 	return encodedPathname
 }
 
+// getRequetURL - get a properly encoded request URL.
 func (op *operation) getRequestURL(config Config) (url string) {
 	// parse URL for the combination of HTTPServer + HTTPPath
 	url = op.HTTPServer + separator
@@ -202,63 +216,17 @@ func newPresignedRequest(op *operation, config *Config, expires int64) (*Request
 	// set UserAgent
 	req.Header.Set("User-Agent", config.userAgent)
 
-	// set Accept header for response encoding style, if available
-	if config.AcceptType != "" {
-		req.Header.Set("Accept", config.AcceptType)
-	}
-
 	// save for subsequent use
 	r := new(Request)
 	r.config = config
 	r.expires = expires
 	r.req = req
-	r.body = nil
-
-	return r, nil
-}
-
-// newUnauthenticatedRequest - instantiate a new unauthenticated request
-func newUnauthenticatedRequest(op *operation, config *Config, body io.Reader) (*Request, error) {
-	// if no method default to POST
-	method := op.HTTPMethod
-	if method == "" {
-		method = "POST"
-	}
-
-	u := op.getRequestURL(*config)
-
-	// get a new HTTP request, for the requested method
-	req, err := http.NewRequest(method, u, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// set UserAgent
-	req.Header.Set("User-Agent", config.userAgent)
-
-	// set Accept header for response encoding style, if available
-	if config.AcceptType != "" {
-		req.Header.Set("Accept", config.AcceptType)
-	}
-
-	// add body
-	switch {
-	case body == nil:
-		req.Body = nil
-	default:
-		req.Body = ioutil.NopCloser(body)
-	}
-
-	// save for subsequent use
-	r := new(Request)
-	r.req = req
-	r.config = config
 
 	return r, nil
 }
 
 // newRequest - instantiate a new request
-func newRequest(op *operation, config *Config, body io.ReadSeeker) (*Request, error) {
+func newRequest(op *operation, config *Config, metadata requestMetadata) (*Request, error) {
 	// if no method default to POST
 	method := op.HTTPMethod
 	if method == "" {
@@ -275,24 +243,39 @@ func newRequest(op *operation, config *Config, body io.ReadSeeker) (*Request, er
 	// set UserAgent
 	req.Header.Set("User-Agent", config.userAgent)
 
-	// set Accept header for response encoding style, if available
-	if config.AcceptType != "" {
-		req.Header.Set("Accept", config.AcceptType)
-	}
-
 	// add body
 	switch {
-	case body == nil:
+	case metadata.body == nil:
 		req.Body = nil
 	default:
-		req.Body = ioutil.NopCloser(body)
+		req.Body = metadata.body
 	}
 
 	// save for subsequent use
 	r := new(Request)
 	r.config = config
 	r.req = req
-	r.body = body
 
+	// Set contentType for the request.
+	if metadata.contentType != "" {
+		r.Set("Content-Type", metadata.contentType)
+	}
+
+	// set incoming content-length.
+	if metadata.contentLength > 0 {
+		r.req.ContentLength = metadata.contentLength
+	}
+
+	// set sha256 sum for signature calculation only with signature version '4'.
+	if r.config.Signature.isV4() || r.config.Signature.isLatest() {
+		r.Set("X-Amz-Content-Sha256", hex.EncodeToString(sum256([]byte{})))
+		if metadata.sha256PayloadBytes != nil {
+			r.Set("X-Amz-Content-Sha256", hex.EncodeToString(metadata.sha256PayloadBytes))
+		}
+	}
+	// set md5Sum for in transit corruption detection.
+	if metadata.md5SumPayloadBytes != nil {
+		r.Set("Content-MD5", base64.StdEncoding.EncodeToString(metadata.md5SumPayloadBytes))
+	}
 	return r, nil
 }

@@ -21,7 +21,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"sync"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/client/fs"
@@ -49,27 +48,28 @@ func isTargetURLDir(targetURL string) bool {
 }
 
 // getSource gets a reader from URL
-func getSource(sourceURL string) (reader io.ReadCloser, length int64, err *probe.Error) {
+func getSource(sourceURL string) (reader io.ReadSeeker, err *probe.Error) {
 	sourceClnt, err := url2Client(sourceURL)
 	if err != nil {
-		return nil, 0, err.Trace(sourceURL)
+		return nil, err.Trace(sourceURL)
 	}
 	return sourceClnt.Get(0, 0)
 }
 
 // putTarget writes to URL from reader. If length=-1, read until EOF.
-func putTarget(targetURL string, length int64, reader io.Reader) *probe.Error {
+func putTarget(targetURL string, reader io.ReadSeeker) *probe.Error {
 	targetClnt, err := url2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
-	err = targetClnt.Put(length, reader)
+	err = targetClnt.Put(reader)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
 	return nil
 }
 
+/*
 // putTargets writes to URL from reader. If length=-1, read until EOF.
 func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Error {
 	var tgtReaders []*io.PipeReader
@@ -143,6 +143,7 @@ func putTargets(targetURLs []string, length int64, reader io.Reader) *probe.Erro
 
 	return nil // success.
 }
+*/
 
 // getNewClient gives a new client interface
 func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) {

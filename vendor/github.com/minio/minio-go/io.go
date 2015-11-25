@@ -16,23 +16,37 @@
 
 package minio
 
-import "io"
+import (
+	"io"
+	"io/ioutil"
+	"os"
+	"sync"
+)
 
-type readSeekCloser struct {
-	r io.Reader
+type objectReadSeeker struct {
+	// mutex.
+	mutex *sync.Mutex
+
+	s3API      API
+	reader     io.ReadCloser
+	isRead     bool
+	stat       ObjectStat
+	offset     int64
+	bucketName string
+	objectName string
 }
 
-// NewReadSeekCloser wraps an io.Reader returning a ReadSeekCloser
-func NewReadSeekCloser(r io.Reader) ReadSeekCloser {
-	return &readSeekCloser{r}
-}
-
-// ReadSeekCloser is the container
-// that groups the basic Seek and Close methods.
-type ReadSeekCloser interface {
-	io.Reader
-	io.Closer
-	io.Seeker
+// newObjectReadSeeker wraps getObject request returning a io.ReadSeeker.
+func newObjectReadSeeker(api API, bucket, object string) *objectReadSeeker {
+	return &objectReadSeeker{
+		mutex:      new(sync.Mutex),
+		reader:     nil,
+		isRead:     false,
+		s3API:      api,
+		offset:     0,
+		bucketName: bucket,
+		objectName: object,
+	}
 }
 
 // Read reads up to len(p) bytes into p.  It returns the number of bytes
@@ -49,14 +63,30 @@ type ReadSeekCloser interface {
 // a non-zero number of bytes at the end of the input stream may
 // return either err == EOF or err == nil.  The next Read should
 // return 0, EOF.
-//
-// If no io.Reader found nothing will be done.
-func (r *readSeekCloser) Read(p []byte) (int, error) {
-	switch t := r.r.(type) {
-	case io.Reader:
-		return t.Read(p)
+func (r *objectReadSeeker) Read(p []byte) (int, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if !r.isRead {
+		reader, _, err := r.s3API.getObject(r.bucketName, r.objectName, r.offset, 0)
+		if err != nil {
+			return 0, err
+		}
+		r.reader = reader
+		r.isRead = true
 	}
-	return 0, nil
+	n, err := r.reader.Read(p)
+	if err == io.EOF {
+		io.Copy(ioutil.Discard, r.reader)
+		r.reader.Close()
+		return n, err
+	}
+	if err != nil {
+		io.Copy(ioutil.Discard, r.reader)
+		r.reader.Close()
+		return 0, err
+	}
+	return n, nil
 }
 
 // Seek sets the offset for the next Read or Write to offset,
@@ -66,26 +96,51 @@ func (r *readSeekCloser) Read(p []byte) (int, error) {
 // start of the file and an error, if any.
 //
 // Seeking to an offset before the start of the file is an error.
-//
-// If no io.Seeker found nothing will be done.
-func (r *readSeekCloser) Seek(offset int64, whence int) (int64, error) {
-	switch t := r.r.(type) {
-	case io.Seeker:
-		return t.Seek(offset, whence)
-	}
-	return int64(0), nil
+// TODO: whence value of '1' and '2' are not implemented yet.
+func (r *objectReadSeeker) Seek(offset int64, whence int) (int64, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.offset = offset
+	return offset, nil
 }
 
-// Close closes the ReadSeekCloser.
-//
-// The behavior of Close after the first call is undefined.
-// Specific implementations may document their own behavior.
-//
-// If no io.Closer found nothing will be done.
-func (r *readSeekCloser) Close() error {
-	switch t := r.r.(type) {
-	case io.Closer:
-		return t.Close()
+// Stat returns the ObjectStat structure describing object. If there is any error it will be of type ErrorResponse.
+func (r *objectReadSeeker) Stat() (ObjectStat, error) {
+	objectSt, err := r.s3API.headObject(r.bucketName, r.objectName)
+	r.stat = objectSt
+	return r.stat, err
+}
+
+// tempFile - temporary file.
+type tempFile struct {
+	*os.File
+	mutex *sync.Mutex
+}
+
+// newTemplFile returns a new unused file.
+func newTempFile(prefix string) (*tempFile, error) {
+	file, err := ioutil.TempFile("/tmp", prefix)
+	if err != nil {
+		return nil, err
+	}
+	return &tempFile{
+		File:  file,
+		mutex: new(sync.Mutex),
+	}, nil
+}
+
+// Close - closer.
+func (t *tempFile) Close() error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	if t.File != nil {
+		if err := t.File.Close(); err != nil {
+			return err
+		}
+		if err := os.Remove(t.File.Name()); err != nil {
+			return err
+		}
+		t.File = nil
 	}
 	return nil
 }

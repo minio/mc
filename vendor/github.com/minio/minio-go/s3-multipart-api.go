@@ -18,12 +18,9 @@ package minio
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 )
@@ -57,7 +54,7 @@ func (a s3API) listMultipartUploadsRequest(bucket, keymarker, uploadIDMarker, pr
 		HTTPMethod: "GET",
 		HTTPPath:   separator + bucket + query,
 	}
-	r, err := newRequest(op, a.config, nil)
+	r, err := newRequest(op, a.config, requestMetadata{})
 	if err != nil {
 		return nil, err
 	}
@@ -87,15 +84,14 @@ func (a s3API) listMultipartUploads(bucket, keymarker, uploadIDMarker, prefix, d
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listMultipartUploadsResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return listMultipartUploadsResult{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	listMultipartUploadsResult := listMultipartUploadsResult{}
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &listMultipartUploadsResult)
+	err = xmlDecoder(resp.Body, &listMultipartUploadsResult)
 	if err != nil {
 		return listMultipartUploadsResult, err
 	}
-	// close body while returning, along with any error.
 	return listMultipartUploadsResult, nil
 }
 
@@ -106,7 +102,7 @@ func (a s3API) initiateMultipartRequest(bucket, object string) (*Request, error)
 		HTTPMethod: "POST",
 		HTTPPath:   separator + bucket + separator + object + "?uploads",
 	}
-	return newRequest(op, a.config, nil)
+	return newRequest(op, a.config, requestMetadata{})
 }
 
 // initiateMultipartUpload initiates a multipart upload and returns an upload ID.
@@ -122,11 +118,11 @@ func (a s3API) initiateMultipartUpload(bucket, object string) (initiateMultipart
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return initiateMultipartUploadResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return initiateMultipartUploadResult{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	initiateMultipartUploadResult := initiateMultipartUploadResult{}
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &initiateMultipartUploadResult)
+	err = xmlDecoder(resp.Body, &initiateMultipartUploadResult)
 	if err != nil {
 		return initiateMultipartUploadResult, err
 	}
@@ -140,25 +136,20 @@ func (a s3API) completeMultipartUploadRequest(bucket, object, uploadID string, c
 		HTTPMethod: "POST",
 		HTTPPath:   separator + bucket + separator + object + "?uploadId=" + uploadID,
 	}
-	var completeMultipartUploadBytes []byte
-	var err error
-	switch {
-	case a.config.AcceptType == "application/xml":
-		completeMultipartUploadBytes, err = xml.Marshal(complete)
-	case a.config.AcceptType == "application/json":
-		completeMultipartUploadBytes, err = json.Marshal(complete)
-	default:
-		completeMultipartUploadBytes, err = xml.Marshal(complete)
-	}
+	completeMultipartUploadBytes, err := xml.Marshal(complete)
 	if err != nil {
 		return nil, err
 	}
-	completeMultipartUploadBuffer := bytes.NewReader(completeMultipartUploadBytes)
-	r, err := newRequest(op, a.config, completeMultipartUploadBuffer)
+	completeMultipartUploadBuffer := bytes.NewBuffer(completeMultipartUploadBytes)
+	rmetadata := requestMetadata{
+		body:               ioutil.NopCloser(completeMultipartUploadBuffer),
+		contentLength:      int64(completeMultipartUploadBuffer.Len()),
+		sha256PayloadBytes: sum256(completeMultipartUploadBuffer.Bytes()),
+	}
+	r, err := newRequest(op, a.config, rmetadata)
 	if err != nil {
 		return nil, err
 	}
-	r.req.ContentLength = int64(completeMultipartUploadBuffer.Len())
 	return r, nil
 }
 
@@ -175,11 +166,11 @@ func (a s3API) completeMultipartUpload(bucket, object, uploadID string, c comple
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return completeMultipartUploadResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return completeMultipartUploadResult{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	completeMultipartUploadResult := completeMultipartUploadResult{}
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &completeMultipartUploadResult)
+	err = xmlDecoder(resp.Body, &completeMultipartUploadResult)
 	if err != nil {
 		return completeMultipartUploadResult, err
 	}
@@ -193,7 +184,7 @@ func (a s3API) abortMultipartUploadRequest(bucket, object, uploadID string) (*Re
 		HTTPMethod: "DELETE",
 		HTTPPath:   separator + bucket + separator + object + "?uploadId=" + uploadID,
 	}
-	return newRequest(op, a.config, nil)
+	return newRequest(op, a.config, requestMetadata{})
 }
 
 // abortMultipartUpload aborts a multipart upload for the given uploadID, all parts are deleted.
@@ -262,7 +253,7 @@ func (a s3API) listObjectPartsRequest(bucket, object, uploadID string, partNumbe
 		HTTPMethod: "GET",
 		HTTPPath:   separator + bucket + separator + object + resourceQuery(),
 	}
-	return newRequest(op, a.config, nil)
+	return newRequest(op, a.config, requestMetadata{})
 }
 
 // listObjectParts (List Parts)
@@ -284,11 +275,11 @@ func (a s3API) listObjectParts(bucket, object, uploadID string, partNumberMarker
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return listObjectPartsResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return listObjectPartsResult{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	listObjectPartsResult := listObjectPartsResult{}
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &listObjectPartsResult)
+	err = xmlDecoder(resp.Body, &listObjectPartsResult)
 	if err != nil {
 		return listObjectPartsResult, err
 	}
@@ -296,36 +287,32 @@ func (a s3API) listObjectParts(bucket, object, uploadID string, partNumberMarker
 }
 
 // uploadPartRequest wrapper creates a new UploadPart request.
-func (a s3API) uploadPartRequest(bucket, object, uploadID string,
-	md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (*Request, error) {
+func (a s3API) uploadPartRequest(bucket, object, uploadID string, uploadingPart partMetadata) (*Request, error) {
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
 		HTTPPath: separator + bucket + separator + object +
-			"?partNumber=" + strconv.Itoa(partNumber) + "&uploadId=" + uploadID,
+			"?partNumber=" + strconv.Itoa(uploadingPart.Number) + "&uploadId=" + uploadID,
 	}
-	r, err := newRequest(op, a.config, body)
+	rmetadata := requestMetadata{
+		body:               uploadingPart.ReadCloser,
+		contentLength:      uploadingPart.Size,
+		sha256PayloadBytes: uploadingPart.Sha256Sum,
+		md5SumPayloadBytes: uploadingPart.MD5Sum,
+	}
+	r, err := newRequest(op, a.config, rmetadata)
 	if err != nil {
 		return nil, err
 	}
-	// set Content-MD5 as base64 encoded md5.
-	if md5SumBytes != nil {
-		r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
-	}
-	r.req.ContentLength = size
 	return r, nil
 }
 
 // uploadPart uploads a part in a multipart upload.
-func (a s3API) uploadPart(bucket, object, uploadID string,
-	md5SumBytes []byte, partNumber int, size int64, body io.ReadSeeker) (completePart, error) {
-	req, err := a.uploadPartRequest(bucket, object, uploadID, md5SumBytes, partNumber, size, body)
+func (a s3API) uploadPart(bucket, object, uploadID string, uploadingPart partMetadata) (completePart, error) {
+	req, err := a.uploadPartRequest(bucket, object, uploadID, uploadingPart)
 	if err != nil {
 		return completePart{}, err
 	}
-	cPart := completePart{}
-	cPart.PartNumber = partNumber
-	cPart.ETag = "\"" + hex.EncodeToString(md5SumBytes) + "\""
 
 	// initiate the request.
 	resp, err := req.Do()
@@ -335,8 +322,11 @@ func (a s3API) uploadPart(bucket, object, uploadID string,
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return completePart{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return completePart{}, BodyToErrorResponse(resp.Body)
 		}
 	}
+	cPart := completePart{}
+	cPart.PartNumber = uploadingPart.Number
+	cPart.ETag = resp.Header.Get("ETag")
 	return cPart, nil
 }

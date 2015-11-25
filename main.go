@@ -146,13 +146,13 @@ func findClosestCommands(command string) []string {
 
 func registerApp() *cli.App {
 	// Register all the commands (refer flags.go)
-	registerCmd(lsCmd)      // List contents of a bucket.
-	registerCmd(mbCmd)      // Make a bucket.
-	registerCmd(catCmd)     // Display contents of a file.
-	registerCmd(pipeCmd)    // Write contents of stdin to a file.
-	registerCmd(shareCmd)   // Share documents via URL.
-	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
-	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
+	registerCmd(lsCmd)  // List contents of a bucket.
+	registerCmd(mbCmd)  // Make a bucket.
+	registerCmd(catCmd) // Display contents of a file.
+	//	registerCmd(pipeCmd)    // Write contents of stdin to a file.
+	registerCmd(shareCmd) // Share documents via URL.
+	registerCmd(cpCmd)    // Copy objects and files from multiple sources to single destination.
+	//	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
 	registerCmd(diffCmd)    // Computer differences between two files or folders.
 	registerCmd(rmCmd)      // Remove a file or bucket
 	registerCmd(accessCmd)  // Set access permissions.

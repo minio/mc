@@ -25,7 +25,7 @@ import (
 
 // accountingReader - implements and inherits io.ReadCloser interface for accounter.
 type accountingReader struct {
-	io.ReadCloser
+	io.ReadSeeker
 	acct *accounter
 }
 
@@ -114,16 +114,26 @@ func (a *accounter) Add(n int64) int64 {
 }
 
 // Instantiate a new proxy reader for accounter.
-func (a *accounter) NewProxyReader(r io.ReadCloser) *accountingReader {
+func (a *accounter) NewProxyReader(r io.ReadSeeker) *accountingReader {
 	return &accountingReader{r, a}
 }
 
 // Read implement Reader which internally updates current value.
 func (a *accountingReader) Read(p []byte) (n int, err error) {
-	n, err = a.ReadCloser.Read(p)
+	n, err = a.ReadSeeker.Read(p)
 	if err != nil {
 		return
 	}
 	a.acct.Add(int64(n))
+	return
+}
+
+// Seek implement Seeker.
+func (a *accountingReader) Seek(offset int64, whence int) (n int64, err error) {
+	n, err = a.ReadSeeker.Seek(offset, whence)
+	if err != nil {
+		return
+	}
+	a.acct.Add(n)
 	return
 }

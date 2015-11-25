@@ -73,9 +73,9 @@ func main() {
 * [ListIncompleteUploads(bucket, prefix, recursive) <-chan ObjectMultipartStat](examples/s3/listincompleteuploads.go)
 
 ### Object Level
-* [PutObject(bucket, object, size, io.Reader) error](examples/s3/putobject.go)
-* [GetObject(bucket, object) (io.Reader, ObjectStat, error)](examples/s3/getobject.go)
-* [GetPartialObject(bucket, object, offset, length) (io.Reader, ObjectStat, error)](examples/s3/getpartialobject.go)
+* [PutObject(bucket, object, contentType, io.ReadSeeker) error](examples/s3/putobject.go)
+* [GetObject(bucket, object) (io.ReadSeeker, error)](examples/s3/getobject.go)
+* [GetPartialObject(bucket, object, offset, length) (io.ReadSeeker, error)](examples/s3/getpartialobject.go)
 * [StatObject(bucket, object) (ObjectStat, error)](examples/s3/statobject.go)
 * [RemoveObject(bucket, object) error](examples/s3/removeobject.go)
 * [RemoveIncompleteUpload(bucket, object) <-chan error](examples/s3/removeincompleteupload.go)

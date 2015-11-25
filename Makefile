@@ -39,11 +39,11 @@ lint:
 
 cyclo:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 gocyclo -over 30 .
+	@GO15VENDOREXPERIMENT=1 gocyclo -over 40 .
 
 deadcode:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 deadcode
+	#@GO15VENDOREXPERIMENT=1 deadcode
 
 build: verifiers
 	@echo "Installing mc:"

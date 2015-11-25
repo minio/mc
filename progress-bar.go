@@ -42,20 +42,27 @@ const (
 
 // proxyReader progress bar proxy reader for barSend inherits io.ReadCloser.
 type proxyReader struct {
-	io.ReadCloser
+	io.ReadSeeker
 	bar *barSend
 }
 
 // Read proxy Read sends progress for each Read operation.
 func (r *proxyReader) Read(p []byte) (n int, err error) {
-	n, err = r.ReadCloser.Read(p)
+	n, err = r.ReadSeeker.Read(p)
+	if err != nil {
+		return
+	}
 	r.bar.Progress(int64(n))
 	return
 }
 
-// Close proxy Close closes the internal ReadCloser.
-func (r *proxyReader) Close() (err error) {
-	return r.ReadCloser.Close()
+func (r *proxyReader) Seek(offset int64, whence int) (n int64, err error) {
+	n, err = r.ReadSeeker.Seek(offset, whence)
+	if err != nil {
+		return
+	}
+	r.bar.Progress(n)
+	return
 }
 
 // barMsg progress bar message for a given operation.
@@ -71,7 +78,7 @@ type barSend struct {
 }
 
 // Instantiate a new progress bar proxy reader.
-func (b *barSend) NewProxyReader(r io.ReadCloser) *proxyReader {
+func (b *barSend) NewProxyReader(r io.ReadSeeker) *proxyReader {
 	return &proxyReader{r, b}
 }
 

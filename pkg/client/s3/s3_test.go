@@ -184,7 +184,7 @@ func (s *MySuite) TestObjectOperations(c *C) {
 	s3c, err := New(conf)
 	c.Assert(err, IsNil)
 
-	err = s3c.Put(int64(len(object.data)), bytes.NewReader(object.data))
+	err = s3c.Put(bytes.NewReader(object.data))
 	c.Assert(err, IsNil)
 
 	content, err := s3c.Stat()
@@ -192,12 +192,10 @@ func (s *MySuite) TestObjectOperations(c *C) {
 	c.Assert(content.Size, Equals, int64(len(object.data)))
 	c.Assert(content.Type.IsRegular(), Equals, true)
 
-	reader, size, err := s3c.Get(0, 0)
-	c.Assert(size, Equals, int64(len(object.data)))
-
+	reader, err := s3c.Get(0, 0)
 	var buffer bytes.Buffer
 	{
-		_, err := io.CopyN(&buffer, reader, int64(size))
+		_, err := io.Copy(&buffer, reader)
 		c.Assert(err, IsNil)
 		c.Assert(buffer.Bytes(), DeepEquals, object.data)
 	}

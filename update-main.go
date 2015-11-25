@@ -116,7 +116,7 @@ func getReleaseUpdate(updateURL string) {
 	clnt, err := url2Client(updateURL)
 	fatalIf(err.Trace(updateURL), "Unable to initalize update URL.")
 
-	data, _, err := clnt.Get(0, 0)
+	data, err := clnt.Get(0, 0)
 	fatalIf(err.Trace(updateURL), "Unable to read from update URL ‘"+updateURL+"’.")
 
 	if mcVersion == "UNOFFICIAL.GOGET" {
