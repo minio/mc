@@ -24,5 +24,5 @@ var (
 	// mcCommitID - latest commit id.
 	mcCommitID = "UNOFFICIAL.GOGET"
 	// mcShortCommitID - first 12 characters from mcCommitID.
-	mcShortCommitID = mcCommitID[:]
+	mcShortCommitID = mcCommitID[:12]
 )
