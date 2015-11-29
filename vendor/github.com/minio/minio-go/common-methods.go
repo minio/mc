@@ -17,43 +17,17 @@
 package minio
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/xml"
 	"io"
-	"os"
 )
 
 // xmlDecoder provide decoded value in xml.
 func xmlDecoder(body io.Reader, v interface{}) error {
 	d := xml.NewDecoder(body)
 	return d.Decode(v)
-}
-
-// getReaderSize provides size of io.ReadSeeker, return -1 after exhausting all conditions.
-func getReaderSize(data io.ReadSeeker) (int64, error) {
-	var size int64
-	switch ft := data.(type) {
-	case *os.File:
-		st, err := ft.Stat()
-		if err != nil {
-			return 0, err
-		}
-		size = st.Size()
-	case *objectReadSeeker:
-		st, err := ft.Stat()
-		if err != nil {
-			return 0, err
-		}
-		size = st.Size
-	case *bytes.Reader:
-		size = ft.Size()
-	default:
-		return -1, nil
-	}
-	return size, nil
 }
 
 // sum256 calculate sha256 sum for an input byte array.

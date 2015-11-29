@@ -184,7 +184,7 @@ func (s *MySuite) TestObjectOperations(c *C) {
 	s3c, err := New(conf)
 	c.Assert(err, IsNil)
 
-	err = s3c.Put(bytes.NewReader(object.data))
+	err = s3c.Put(bytes.NewReader(object.data), int64(len(object.data)))
 	c.Assert(err, IsNil)
 
 	content, err := s3c.Stat()
