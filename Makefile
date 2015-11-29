@@ -43,7 +43,7 @@ cyclo:
 
 deadcode:
 	@echo "Running $@:"
-	#@GO15VENDOREXPERIMENT=1 deadcode
+	@GO15VENDOREXPERIMENT=1 deadcode
 
 build: verifiers
 	@echo "Installing mc:"

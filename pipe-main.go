@@ -1,5 +1,3 @@
-package main
-
 /*
  * Minio Client, (C) 2015 Minio, Inc.
  *
@@ -14,6 +12,7 @@ package main
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ */
 
 package main
 
@@ -37,14 +36,14 @@ var (
 // Display contents of a file.
 var pipeCmd = cli.Command{
 	Name:   "pipe",
-	Usage:  "Write contents of stdin to one or more targets. When no target is specified, it writes to stdout.",
+	Usage:  "Write contents of stdin to one target. When no target is specified, it writes to stdout.",
 	Action: mainPipe,
 	Flags:  append(pipeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] [TARGET...]
+   mc {{.Name}} [FLAGS] TARGET
 
 FLAGS:
   {{range .Flags}}{{.}}
@@ -57,7 +56,7 @@ EXAMPLES:
       $ mc {{.Name}} s3.amazonaws.com/personalbuck/meeting-notes.txt
 
    3. Copy an ISO image to an object on Amazon S3 cloud storage and Google Cloud Storage simultaneously.
-      $ cat debian-8.2.iso | mc {{.Name}} s3.amazonaws.com/ferenginar/gnuos.iso storage.googleapis.com/miniocloud/gnuos.iso
+      $ cat debian-8.2.iso | mc {{.Name}} s3.amazonaws.com/ferenginar/gnuos.iso
 
    4. Stream MySQL database dump to Amazon S3 directly.
       $ mysqldump -u root -p ******* accountsdb | mc {{.Name}} s3.amazonaws.com/ferenginar/backups/accountsdb-oct-9-2015.sql
@@ -65,8 +64,8 @@ EXAMPLES:
 }
 
 // pipe writes contents of stdin a collection of URLs.
-func pipe(targetURLs []string) *probe.Error {
-	if len(targetURLs) == 0 || targetURLs == nil {
+func pipe(targetURL string) *probe.Error {
+	if len(targetURL) == 0 || targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin).Trace()
 	}
@@ -74,7 +73,7 @@ func pipe(targetURLs []string) *probe.Error {
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
-	err := putTargets(targetURLs, -1, os.Stdin)
+	err := putTarget(targetURL, os.Stdin, -1)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
@@ -83,7 +82,7 @@ func pipe(targetURLs []string) *probe.Error {
 			return nil
 		}
 	}
-	return err.Trace(targetURLs...)
+	return err.Trace(targetURL)
 }
 
 // mainPipe is the main entry point for pipe command.
@@ -95,7 +94,6 @@ func mainPipe(ctx *cli.Context) {
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
 
-	err = pipe(URLs)
+	err = pipe(URLs[0])
 	fatalIf(err.Trace(URLs...), "Unable to write to one or more targets.")
 }
-*/
