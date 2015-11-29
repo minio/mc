@@ -1,3 +1,5 @@
+package main
+
 /*
  * Minio Client, (C) 2015 Minio, Inc.
  *
@@ -12,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+
 
 package main
 
@@ -134,10 +136,10 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 		progressReader.SetCaption(sURLs.SourceContent.URL.String() + ": ")
 	}
 
-	reader, length, err := getSource(sURLs.SourceContent.URL.String())
+	reader, err := getSource(sURLs.SourceContent.URL.String())
 	if err != nil {
 		if !globalQuiet && !globalJSON {
-			progressReader.ErrorGet(int64(length))
+			progressReader.ErrorGet(int64(sURLs.SourceContent.Size))
 		}
 		sURLs.Error = err.Trace(sURLs.SourceContent.URL.String())
 		statusCh <- sURLs
@@ -399,3 +401,4 @@ func mainMirror(ctx *cli.Context) {
 	doMirrorSession(session)
 	session.Delete()
 }
+*/

@@ -145,17 +145,17 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
-	reader, length, err := getSource(cpURLs.SourceContent.URL.String())
+	reader, err := getSource(cpURLs.SourceContent.URL.String())
 	if err != nil {
 		if !globalQuiet && !globalJSON {
-			progressReader.ErrorGet(length)
+			progressReader.ErrorGet(cpURLs.SourceContent.Size)
 		}
 		cpURLs.Error = err.Trace(cpURLs.SourceContent.URL.String())
 		statusCh <- cpURLs
 		return
 	}
 
-	var newReader io.ReadCloser
+	var newReader io.ReadSeeker
 	if globalQuiet || globalJSON {
 		printMsg(copyMessage{
 			Source: cpURLs.SourceContent.URL.String(),
@@ -174,11 +174,9 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		// set up progress
 		newReader = progressReader.NewProxyReader(reader)
 	}
-	defer newReader.Close()
-
-	if err := putTarget(cpURLs.TargetContent.URL.String(), length, newReader); err != nil {
+	if err := putTarget(cpURLs.TargetContent.URL.String(), newReader); err != nil {
 		if !globalQuiet && !globalJSON {
-			progressReader.ErrorPut(length)
+			progressReader.ErrorPut(cpURLs.TargetContent.Size)
 		}
 		cpURLs.Error = err.Trace(cpURLs.TargetContent.URL.String())
 		statusCh <- cpURLs

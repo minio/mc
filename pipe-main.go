@@ -1,3 +1,5 @@
+package main
+
 /*
  * Minio Client, (C) 2015 Minio, Inc.
  *
@@ -12,7 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
 
 package main
 
@@ -97,3 +98,4 @@ func mainPipe(ctx *cli.Context) {
 	err = pipe(URLs)
 	fatalIf(err.Trace(URLs...), "Unable to write to one or more targets.")
 }
+*/

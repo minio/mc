@@ -35,9 +35,9 @@ type CloudStorageAPI interface {
 	ListIncompleteUploads(bucket, prefix string, recursive bool) <-chan ObjectMultipartStat
 
 	// Object Read/Write/Stat operations
-	GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error)
-	GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error)
-	PutObject(bucket, object, contentType string, size int64, data io.Reader) error
+	GetObject(bucket, object string) (io.ReadSeeker, error)
+	GetPartialObject(bucket, object string, offset, length int64) (io.ReadSeeker, error)
+	PutObject(bucket, object, contentType string, data io.ReadSeeker) error
 	StatObject(bucket, object string) (ObjectStat, error)
 	RemoveObject(bucket, object string) error
 	RemoveIncompleteUpload(bucket, object string) <-chan error

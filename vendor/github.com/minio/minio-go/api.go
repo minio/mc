@@ -17,68 +17,18 @@
 package minio
 
 import (
-	"encoding/hex"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
-
-// BucketStat container for bucket metadata.
-type BucketStat struct {
-	// The name of the bucket.
-	Name string
-	// Date the bucket was created.
-	CreationDate time.Time
-	// Error
-	Err error
-}
-
-// ObjectStat container for object metadata.
-type ObjectStat struct {
-	ETag         string
-	Key          string
-	LastModified time.Time
-	Size         int64
-	ContentType  string
-
-	Owner struct {
-		DisplayName string
-		ID          string
-	}
-
-	// The class of storage used to store the object.
-	StorageClass string
-
-	Err error
-}
-
-// ObjectMultipartStat container for multipart object metadata.
-type ObjectMultipartStat struct {
-	// Date and time at which the multipart upload was initiated.
-	Initiated time.Time `type:"timestamp" timestampFormat:"iso8601"`
-
-	Initiator initiator
-	Owner     owner
-
-	StorageClass string
-
-	// Key of the object for which the multipart upload was initiated.
-	Key  string
-	Size int64
-
-	// Upload ID that identifies the multipart upload.
-	UploadID string `xml:"UploadId"`
-
-	Err error
-}
 
 // s3 region map used by bucket location constraint if necessary.
 var regions = map[string]string{
@@ -154,8 +104,6 @@ type Config struct {
 	// Optional field. If empty, region is determined automatically.
 	// Set to override default behavior.
 	Region string
-	// Specify this to get server response in non XML style if server supports it
-	AcceptType string
 
 	/// Really Advanced options
 	//
@@ -185,6 +133,14 @@ const (
 	LibraryName    = "minio-go"
 	LibraryVersion = "0.2.5"
 )
+
+// isAnonymous - True if config doesn't have access and secret keys.
+func (c *Config) isAnonymous() bool {
+	if c.AccessKeyID != "" && c.SecretAccessKey != "" {
+		return false
+	}
+	return true
+}
 
 // setBucketRegion fetches the region and updates config,
 // additionally it also constructs a proper endpoint based on that region.
@@ -344,15 +300,15 @@ func (a API) PresignedGetObject(bucket, object string, expires time.Duration) (s
 }
 
 // GetObject retrieve object. retrieves full object, if you need ranges use GetPartialObject.
-func (a API) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error) {
+func (a API) GetObject(bucket, object string) (io.ReadSeeker, error) {
 	if err := invalidBucketError(bucket); err != nil {
-		return nil, ObjectStat{}, err
+		return nil, err
 	}
 	if err := invalidObjectError(object); err != nil {
-		return nil, ObjectStat{}, err
+		return nil, err
 	}
 	// get object
-	return a.getObject(bucket, object, 0, 0)
+	return newObjectReadSeeker(a, bucket, object), nil
 }
 
 // GetPartialObject retrieve partial object.
@@ -360,15 +316,15 @@ func (a API) GetObject(bucket, object string) (io.ReadCloser, ObjectStat, error)
 // Takes range arguments to download the specified range bytes of an object.
 // Setting offset and length = 0 will download the full object.
 // For more information about the HTTP Range header, go to http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.
-func (a API) GetPartialObject(bucket, object string, offset, length int64) (io.ReadCloser, ObjectStat, error) {
+func (a API) GetPartialObject(bucket, object string, offset, length int64) (io.ReadSeeker, error) {
 	if err := invalidBucketError(bucket); err != nil {
-		return nil, ObjectStat{}, err
+		return nil, err
 	}
 	if err := invalidObjectError(object); err != nil {
-		return nil, ObjectStat{}, err
+		return nil, err
 	}
 	// get partial object.
-	return a.getObject(bucket, object, offset, length)
+	return newObjectReadSeeker(a, bucket, object), nil
 }
 
 // completedParts is a wrapper to make parts sortable by their part numbers.
@@ -418,14 +374,14 @@ func calculatePartSize(objectSize int64) int64 {
 }
 
 // Initiate a fresh multipart upload
-func (a API) newObjectUpload(bucket, object, contentType string, size int64, data io.Reader) error {
+func (a API) newObjectUpload(bucket, object, contentType string, size int64, data io.ReadSeeker) error {
+	// Initiate a new multipart upload request.
 	initMultipartUploadResult, err := a.initiateMultipartUpload(bucket, object)
 	if err != nil {
 		return err
 	}
 	uploadID := initMultipartUploadResult.UploadID
 	complMultipartUpload := completeMultipartUpload{}
-	var totalLength int64
 
 	// Calculate optimal part size for a given size.
 	partSize := calculatePartSize(size)
@@ -438,42 +394,32 @@ func (a API) newObjectUpload(bucket, object, contentType string, size int64, dat
 	// Allocate a new wait group
 	wg := new(sync.WaitGroup)
 
-	for p := range chopper(data, partSize, nil) {
-		// This check is primarily for last part.
-		// This verifies if the part.Len was an unexpected read i.e if we lost few bytes.
-		if p.Len < partSize && size > 0 {
-			expectedPartLen := size - totalLength
-			if expectedPartLen != p.Len {
-				return ErrorResponse{
-					Code:     "UnexpectedShortRead",
-					Message:  "Data read ‘" + strconv.FormatInt(expectedPartLen, 10) + "’ is not equal to expected size ‘" + strconv.FormatInt(p.Len, 10) + "’",
-					Resource: separator + bucket + separator + object,
-				}
-			}
-		}
+	partNumber := 1
+	for part := range partsManager(data, partSize) {
 		// Limit to 4 parts a given time.
 		mpQueueCh <- struct{}{}
 		// Account for all parts uploaded simultaneousy.
 		wg.Add(1)
-		go func(errCh chan<- error, mpQueueCh <-chan struct{}, p piece) {
+		part.Number = partNumber
+		go func(errCh chan<- error, mpQueueCh <-chan struct{}, part partMetadata) {
 			defer wg.Done()
 			defer func() {
 				<-mpQueueCh
 			}()
-			if p.Err != nil {
-				errCh <- p.Err
+			if part.Err != nil {
+				errCh <- part.Err
 				return
 			}
 			var complPart completePart
-			complPart, err = a.uploadPart(bucket, object, uploadID, p.MD5Sum, p.Num, p.Len, p.ReadSeeker)
+			complPart, err = a.uploadPart(bucket, object, uploadID, part)
 			if err != nil {
 				errCh <- err
 				return
 			}
 			complMultipartUpload.Parts = append(complMultipartUpload.Parts, complPart)
 			errCh <- nil
-		}(errCh, mpQueueCh, p)
-		totalLength += p.Len
+		}(errCh, mpQueueCh, part)
+		partNumber++
 	}
 	wg.Wait()
 	if err := <-errCh; err != nil {
@@ -487,38 +433,38 @@ func (a API) newObjectUpload(bucket, object, contentType string, size int64, dat
 	return nil
 }
 
-func (a API) listObjectPartsRecursive(bucket, object, uploadID string) <-chan partMetadata {
-	partCh := make(chan partMetadata, 1000)
-	go a.listObjectPartsRecursiveInRoutine(bucket, object, uploadID, partCh)
-	return partCh
+func (a API) listObjectPartsRecursive(bucket, object, uploadID string) <-chan objectPartMetadata {
+	objectPartCh := make(chan objectPartMetadata, 1000)
+	go a.listObjectPartsRecursiveInRoutine(bucket, object, uploadID, objectPartCh)
+	return objectPartCh
 }
 
-func (a API) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, ch chan<- partMetadata) {
+func (a API) listObjectPartsRecursiveInRoutine(bucket, object, uploadID string, ch chan<- objectPartMetadata) {
 	defer close(ch)
 	listObjPartsResult, err := a.listObjectParts(bucket, object, uploadID, 0, 1000)
 	if err != nil {
-		ch <- partMetadata{
+		ch <- objectPartMetadata{
 			Err: err,
 		}
 		return
 	}
-	for _, uploadedPart := range listObjPartsResult.Parts {
-		ch <- uploadedPart
+	for _, uploadedObjectPart := range listObjPartsResult.ObjectParts {
+		ch <- uploadedObjectPart
 	}
 	for {
 		if !listObjPartsResult.IsTruncated {
 			break
 		}
-		listObjPartsResult, err = a.listObjectParts(bucket, object,
-			uploadID, listObjPartsResult.NextPartNumberMarker, 1000)
+		nextPartNumberMarker := listObjPartsResult.NextPartNumberMarker
+		listObjPartsResult, err = a.listObjectParts(bucket, object, uploadID, nextPartNumberMarker, 1000)
 		if err != nil {
-			ch <- partMetadata{
+			ch <- objectPartMetadata{
 				Err: err,
 			}
 			return
 		}
-		for _, uploadedPart := range listObjPartsResult.Parts {
-			ch <- uploadedPart
+		for _, uploadedObjectPart := range listObjPartsResult.ObjectParts {
+			ch <- uploadedObjectPart
 		}
 	}
 }
@@ -536,27 +482,24 @@ func (a API) getTotalMultipartSize(bucket, object, uploadID string) (int64, erro
 }
 
 // continue previously interrupted multipart upload object at `uploadID`
-func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, data io.Reader) error {
-	var skipPieces []skipPiece
+func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, data io.ReadSeeker) error {
+	var seekOffset int64
+	partNumber := 1
 	completeMultipartUpload := completeMultipartUpload{}
-	var totalLength int64
-	for part := range a.listObjectPartsRecursive(bucket, object, uploadID) {
-		if part.Err != nil {
-			return part.Err
+	for objPart := range a.listObjectPartsRecursive(bucket, object, uploadID) {
+		if objPart.Err != nil {
+			return objPart.Err
+		}
+		// partNumbers are sorted in listObjectParts.
+		if partNumber != objPart.PartNumber {
+			break
 		}
 		var completedPart completePart
-		completedPart.PartNumber = part.PartNumber
-		completedPart.ETag = part.ETag
+		completedPart.PartNumber = objPart.PartNumber
+		completedPart.ETag = objPart.ETag
 		completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completedPart)
-		md5SumBytes, err := hex.DecodeString(strings.Trim(part.ETag, "\"")) // trim off the odd double quotes
-		if err != nil {
-			return err
-		}
-		totalLength += part.Size
-		skipPieces = append(skipPieces, skipPiece{
-			md5sum:      md5SumBytes,
-			pieceNumber: part.PartNumber,
-		})
+		seekOffset += objPart.Size // Add seek Offset for future Seek to skip entries.
+		partNumber++               // Update partNumber sequentially to verify and skip.
 	}
 
 	// Calculate the optimal part size for a given size.
@@ -570,41 +513,33 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 	// Allocate a new wait group.
 	wg := new(sync.WaitGroup)
 
-	for p := range chopper(data, partSize, skipPieces) {
-		// This check is primarily for last part.
-		// This verifies if the part.Len was an unexpected read i.e if we lost few bytes.
-		if p.Len < partSize && size > 0 {
-			expectedPartLen := size - totalLength
-			if expectedPartLen != p.Len {
-				return ErrorResponse{
-					Code:     "UnexpectedShortRead",
-					Message:  "Data read ‘" + strconv.FormatInt(expectedPartLen, 10) + "’ is not equal to expected size ‘" + strconv.FormatInt(p.Len, 10) + "’",
-					Resource: separator + bucket + separator + object,
-				}
-			}
-		}
+	if _, err := data.Seek(seekOffset, 0); err != nil {
+		return err
+	}
+	for part := range partsManager(data, partSize) {
 		// Limit to 4 parts a given time.
 		mpQueueCh <- struct{}{}
 		// Account for all parts uploaded simultaneousy.
 		wg.Add(1)
-		go func(errCh chan<- error, mpQueueCh <-chan struct{}, p piece) {
+		part.Number = partNumber
+		go func(errCh chan<- error, mpQueueCh <-chan struct{}, part partMetadata) {
 			defer wg.Done()
 			defer func() {
 				<-mpQueueCh
 			}()
-			if p.Err != nil {
-				errCh <- p.Err
+			if part.Err != nil {
+				errCh <- part.Err
 				return
 			}
-			completedPart, err := a.uploadPart(bucket, object, uploadID, p.MD5Sum, p.Num, p.Len, p.ReadSeeker)
+			complPart, err := a.uploadPart(bucket, object, uploadID, part)
 			if err != nil {
 				errCh <- err
 				return
 			}
-			completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, completedPart)
+			completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, complPart)
 			errCh <- nil
-		}(errCh, mpQueueCh, p)
-		totalLength += p.Len
+		}(errCh, mpQueueCh, part)
+		partNumber++
 	}
 	wg.Wait()
 	if err := <-errCh; err != nil {
@@ -626,7 +561,8 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 //  - For size equal to 0Bytes PutObject automatically does single Put operation.
 //  - For size larger than 5MB PutObject automatically does resumable multipart operation.
 //  - For size input as -1 PutObject treats it as a stream and does multipart operation until
-//    input stream reaches EOF.
+//    input stream reaches EOF. Maximum object size that can be uploaded through this operation
+//    will be 5GB.
 //
 // NOTE: if you are using Google Cloud Storage. Then there is no resumable multipart
 // upload support yet. Currently PutObject will behave like a single PUT operation and would
@@ -634,17 +570,31 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 //
 // For un-authenticated requests S3 doesn't allow multipart upload, so we fall back to single
 // PUT operation.
-func (a API) PutObject(bucket, object, contentType string, size int64, data io.Reader) error {
+func (a API) PutObject(bucket, object, contentType string, data io.ReadSeeker) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	if err := invalidArgumentError(object); err != nil {
 		return err
 	}
-	// for un-authenticated requests do not initiate multipart operation.
-	// NOTE: S3 doesn't allow unauthenticated multipart requests.
-	if a.config.AccessKeyID == "" || a.config.SecretAccessKey == "" {
-		_, err := a.putObjectUnAuthenticated(bucket, object, contentType, size, data)
+	size, err := getReaderSize(data)
+	if err != nil {
+		return err
+	}
+	// NOTE: S3 doesn't allow anonymous multipart requests.
+	if a.config.isAnonymous() && size == -1 {
+		return invalidArgumentError("")
+	}
+	// For anonymous requests do not initiate multipart operation.
+	if a.config.isAnonymous() {
+		putObjMetadata := putObjectMetadata{
+			MD5Sum:      nil,
+			Sha256Sum:   nil,
+			ReadCloser:  ioutil.NopCloser(data),
+			Size:        size,
+			ContentType: contentType,
+		}
+		_, err := a.putObject(bucket, object, putObjMetadata)
 		if err != nil {
 			return err
 		}
@@ -660,32 +610,42 @@ func (a API) PutObject(bucket, object, contentType string, size int64, data io.R
 				Resource: separator + bucket + separator + object,
 			}
 		}
-		if _, err := a.putObject(bucket, object, contentType, nil, size, NewReadSeekCloser(data)); err != nil {
+		putObjMetadata := putObjectMetadata{
+			MD5Sum:      nil,
+			Sha256Sum:   nil,
+			ReadCloser:  ioutil.NopCloser(data),
+			Size:        size,
+			ContentType: contentType,
+		}
+		// NOTE: with Google Cloud Storage, Content-MD5 is deliberately skipped.
+		if _, err := a.putObject(bucket, object, putObjMetadata); err != nil {
 			return err
 		}
 		return nil
 	}
 	switch {
 	case size < minimumPartSize && size >= 0:
-		// Single Part use case, use PutObject directly.
-		for part := range chopper(data, minimumPartSize, nil) {
-			if part.Err != nil {
-				return part.Err
-			}
-			// This verifies if the part.Len was an unexpected read i.e if we lost few bytes
-			if part.Len != size {
-				return ErrorResponse{
-					Code:     "MethodUnexpectedEOF",
-					Message:  "Data read is less than the requested size",
-					Resource: separator + bucket + separator + object,
-				}
-			}
-			_, err := a.putObject(bucket, object, contentType, part.MD5Sum, part.Len, part.ReadSeeker)
-			if err != nil {
-				return err
-			}
-			return nil
+		dataBytes, err := ioutil.ReadAll(data)
+		if err != nil {
+			return err
 		}
+		// Seek back the data to its original position.
+		if _, err := data.Seek(0, 0); err != nil {
+			return err
+		}
+		putObjMetadata := putObjectMetadata{
+			MD5Sum:      sumMD5(dataBytes),
+			Sha256Sum:   sum256(dataBytes),
+			ReadCloser:  ioutil.NopCloser(data),
+			Size:        size,
+			ContentType: contentType,
+		}
+		// Single Part use case, use PutObject directly.
+		_, err = a.putObject(bucket, object, putObjMetadata)
+		if err != nil {
+			return err
+		}
+		return nil
 	case size >= minimumPartSize || size == -1:
 		var inProgress bool
 		var inProgressUploadID string

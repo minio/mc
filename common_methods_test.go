@@ -39,29 +39,24 @@ func (s *TestSuite) TestCommonMethods(c *C) {
 
 	objectPathServer := server.URL + "/bucket/object1"
 	data := "hello"
-	dataLen := len(data)
-	err := putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+	err := putTarget(objectPath, bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
-	err = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(objectPathServer, bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	c.Assert(isTargetURLDir(objectPathServer), Equals, false)
 	c.Assert(isTargetURLDir(server.URL+"/bucket"), Equals, true)
 
-	reader, size, err := getSource(objectPathServer)
+	reader, err := getSource(objectPathServer)
 	c.Assert(err, IsNil)
-	c.Assert(size, Not(Equals), 0)
 	var results bytes.Buffer
-	_, e = io.CopyN(&results, reader, int64(size))
+	_, e = io.Copy(&results, reader)
 	c.Assert(e, IsNil)
 	c.Assert([]byte(data), DeepEquals, results.Bytes())
 
 	_, content, err := url2Stat(objectPathServer)
 	c.Assert(err, IsNil)
 	c.Assert(content.Type.IsRegular(), Equals, true)
-
-	_, _, err = getSource(objectPathServer + "invalid")
-	c.Assert(err, Not(IsNil))
 
 	_, _, err = url2Stat(objectPath + "invalid")
 	c.Assert(err, Not(IsNil))

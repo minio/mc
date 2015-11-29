@@ -18,8 +18,6 @@ package minio
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -64,38 +62,34 @@ func (a s3API) putBucketRequest(bucket, acl, location string) (*Request, error) 
 		HTTPMethod: "PUT",
 		HTTPPath:   separator + bucket,
 	}
-	var createBucketConfigBuffer *bytes.Reader
+	var createBucketConfigBuffer *bytes.Buffer
 	// If location is set use it and create proper bucket configuration.
 	switch {
 	case location != "":
 		createBucketConfig := new(createBucketConfiguration)
 		createBucketConfig.Location = location
-		var createBucketConfigBytes []byte
-		switch {
-		case a.config.AcceptType == "application/xml":
-			createBucketConfigBytes, err = xml.Marshal(createBucketConfig)
-		case a.config.AcceptType == "application/json":
-			createBucketConfigBytes, err = json.Marshal(createBucketConfig)
-		default:
-			createBucketConfigBytes, err = xml.Marshal(createBucketConfig)
-		}
+		createBucketConfigBytes, err := xml.Marshal(createBucketConfig)
 		if err != nil {
 			return nil, err
 		}
-		createBucketConfigBuffer = bytes.NewReader(createBucketConfigBytes)
+		createBucketConfigBuffer = bytes.NewBuffer(createBucketConfigBytes)
 	}
 	switch {
 	case createBucketConfigBuffer == nil:
-		r, err = newRequest(op, a.config, nil)
+		r, err = newRequest(op, a.config, requestMetadata{})
 		if err != nil {
 			return nil, err
 		}
 	default:
-		r, err = newRequest(op, a.config, createBucketConfigBuffer)
+		rmetadata := requestMetadata{
+			body:               ioutil.NopCloser(createBucketConfigBuffer),
+			contentLength:      int64(createBucketConfigBuffer.Len()),
+			sha256PayloadBytes: sum256(createBucketConfigBuffer.Bytes()),
+		}
+		r, err = newRequest(op, a.config, rmetadata)
 		if err != nil {
 			return nil, err
 		}
-		r.req.ContentLength = int64(createBucketConfigBuffer.Len())
 	}
 	// by default bucket is private
 	switch {
@@ -143,7 +137,7 @@ func (a s3API) putBucket(bucket, acl, location string) error {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return BodyToErrorResponse(resp.Body)
 		}
 	}
 	return nil
@@ -156,7 +150,7 @@ func (a s3API) putBucketACLRequest(bucket, acl string) (*Request, error) {
 		HTTPMethod: "PUT",
 		HTTPPath:   separator + bucket + "?acl",
 	}
-	req, err := newRequest(op, a.config, nil)
+	req, err := newRequest(op, a.config, requestMetadata{})
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +184,7 @@ func (a s3API) putBucketACL(bucket, acl string) error {
 				}
 				return errorResponse
 			}
-			return BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return BodyToErrorResponse(resp.Body)
 		}
 	}
 	return nil
@@ -203,7 +197,7 @@ func (a s3API) getBucketACLRequest(bucket string) (*Request, error) {
 		HTTPMethod: "GET",
 		HTTPPath:   separator + bucket + "?acl",
 	}
-	req, err := newRequest(op, a.config, nil)
+	req, err := newRequest(op, a.config, requestMetadata{})
 	if err != nil {
 		return nil, err
 	}
@@ -236,11 +230,11 @@ func (a s3API) getBucketACL(bucket string) (accessControlPolicy, error) {
 				}
 				return accessControlPolicy{}, errorResponse
 			}
-			return accessControlPolicy{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return accessControlPolicy{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	policy := accessControlPolicy{}
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &policy)
+	err = xmlDecoder(resp.Body, &policy)
 	if err != nil {
 		return accessControlPolicy{}, err
 	}
@@ -269,7 +263,7 @@ func (a s3API) getBucketLocationRequest(bucket string) (*Request, error) {
 		HTTPMethod: "GET",
 		HTTPPath:   separator + bucket + "?location",
 	}
-	req, err := newRequest(op, a.config, nil)
+	req, err := newRequest(op, a.config, requestMetadata{})
 	if err != nil {
 		return nil, err
 	}
@@ -289,11 +283,11 @@ func (a s3API) getBucketLocation(bucket string) (string, error) {
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return "", BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return "", BodyToErrorResponse(resp.Body)
 		}
 	}
 	var locationConstraint string
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &locationConstraint)
+	err = xmlDecoder(resp.Body, &locationConstraint)
 	if err != nil {
 		return "", err
 	}
@@ -326,7 +320,7 @@ func (a s3API) listObjectsRequest(bucket, marker, prefix, delimiter string, maxk
 		HTTPMethod: "GET",
 		HTTPPath:   separator + bucket + *query,
 	}
-	r, err := newRequest(op, a.config, nil)
+	r, err := newRequest(op, a.config, requestMetadata{})
 	if err != nil {
 		return nil, err
 	}
@@ -372,11 +366,11 @@ func (a s3API) listObjects(bucket, marker, prefix, delimiter string, maxkeys int
 				}
 				return listBucketResult{}, errorResponse
 			}
-			return listBucketResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return listBucketResult{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	listBucketResult := listBucketResult{}
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &listBucketResult)
+	err = xmlDecoder(resp.Body, &listBucketResult)
 	if err != nil {
 		return listBucketResult, err
 	}
@@ -391,7 +385,7 @@ func (a s3API) headBucketRequest(bucket string) (*Request, error) {
 		HTTPMethod: "HEAD",
 		HTTPPath:   separator + bucket,
 	}
-	return newRequest(op, a.config, nil)
+	return newRequest(op, a.config, requestMetadata{})
 }
 
 // headBucket useful to determine if a bucket exists and you have permission to access it.
@@ -463,7 +457,7 @@ func (a s3API) deleteBucketRequest(bucket string) (*Request, error) {
 		HTTPMethod: "DELETE",
 		HTTPPath:   separator + bucket,
 	}
-	return newRequest(op, a.config, nil)
+	return newRequest(op, a.config, requestMetadata{})
 }
 
 // deleteBucket deletes the bucket named in the URI.
@@ -544,93 +538,34 @@ func (a s3API) deleteBucket(bucket string) error {
 
 /// Object Read/Write/Stat Operations
 
-// putObjectUnAuthenticatedRequest - putObjectUnauthenticated request.
-func (a s3API) putObjectUnAuthenticatedRequest(bucket, object, contentType string,
-	size int64, body io.Reader) (*Request, error) {
-	if strings.TrimSpace(contentType) == "" {
-		contentType = "application/octet-stream"
-	}
-	op := &operation{
-		HTTPServer: a.config.Endpoint,
-		HTTPMethod: "PUT",
-		HTTPPath:   separator + bucket + separator + object,
-	}
-	r, err := newUnauthenticatedRequest(op, a.config, body)
-	if err != nil {
-		return nil, err
-	}
-	// Content-MD5 is not set, since its not calculated.
-	r.Set("Content-Type", contentType)
-	r.req.ContentLength = size
-	return r, nil
-}
-
-// putObjectUnAuthenticated - add an object to a bucket anonymously.
-// NOTE: You must have WRITE permissions on a bucket to add an object to it. Bucket should have 'public-read-write' ACL.
-func (a s3API) putObjectUnAuthenticated(bucket, object, contentType string,
-	size int64, body io.Reader) (ObjectStat, error) {
-	req, err := a.putObjectUnAuthenticatedRequest(bucket, object, contentType, size, body)
-	if err != nil {
-		return ObjectStat{}, err
-	}
-	resp, err := req.Do()
-	defer closeResp(resp)
-	if err != nil {
-		return ObjectStat{}, err
-	}
-	if resp != nil {
-		if resp.StatusCode != http.StatusOK {
-			// handle 301 sepcifically in case of wrong regions during path style.
-			if resp.StatusCode == http.StatusMovedPermanently {
-				region, _ := a.getBucketLocation(bucket)
-				endPoint := getEndpoint(region)
-				errorResponse := ErrorResponse{
-					Code:            "PermanentRedirect",
-					Message:         "The bucket you are attempting to access must be addressed using the specified endpoint https://" + endPoint + ". Send all future requests to this endpoint.",
-					Resource:        separator + bucket,
-					RequestID:       resp.Header.Get("x-amz-request-id"),
-					HostID:          resp.Header.Get("x-amz-id-2"),
-					AmzBucketRegion: resp.Header.Get("x-amz-bucket-region"),
-				}
-				return ObjectStat{}, errorResponse
-			}
-			return ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
-		}
-	}
-	var metadata ObjectStat
-	metadata.ETag = strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
-	return metadata, nil
-}
-
 // putObjectRequest wrapper creates a new PutObject request.
-func (a s3API) putObjectRequest(bucket, object, contentType string,
-	md5SumBytes []byte, size int64, body io.ReadSeeker) (*Request, error) {
-	if strings.TrimSpace(contentType) == "" {
-		contentType = "application/octet-stream"
+func (a s3API) putObjectRequest(bucket, object string, putObjMetadata putObjectMetadata) (*Request, error) {
+	if strings.TrimSpace(putObjMetadata.ContentType) == "" {
+		putObjMetadata.ContentType = "application/octet-stream"
 	}
 	op := &operation{
 		HTTPServer: a.config.Endpoint,
 		HTTPMethod: "PUT",
 		HTTPPath:   separator + bucket + separator + object,
 	}
-	r, err := newRequest(op, a.config, body)
+	rmetadata := requestMetadata{
+		body:               putObjMetadata.ReadCloser,
+		contentLength:      putObjMetadata.Size,
+		contentType:        putObjMetadata.ContentType,
+		sha256PayloadBytes: putObjMetadata.Sha256Sum,
+		md5SumPayloadBytes: putObjMetadata.MD5Sum,
+	}
+	r, err := newRequest(op, a.config, rmetadata)
 	if err != nil {
 		return nil, err
 	}
-	// set Content-MD5 as base64 encoded md5.
-	if md5SumBytes != nil {
-		r.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5SumBytes))
-	}
-	r.Set("Content-Type", contentType)
-	r.req.ContentLength = size
 	return r, nil
 }
 
 // putObject - add an object to a bucket.
 // NOTE: You must have WRITE permissions on a bucket to add an object to it.
-func (a s3API) putObject(bucket, object, contentType string,
-	md5SumBytes []byte, size int64, body io.ReadSeeker) (ObjectStat, error) {
-	req, err := a.putObjectRequest(bucket, object, contentType, md5SumBytes, size, body)
+func (a s3API) putObject(bucket, object string, putObjMetadata putObjectMetadata) (ObjectStat, error) {
+	req, err := a.putObjectRequest(bucket, object, putObjMetadata)
 	if err != nil {
 		return ObjectStat{}, err
 	}
@@ -655,7 +590,7 @@ func (a s3API) putObject(bucket, object, contentType string,
 				}
 				return ObjectStat{}, errorResponse
 			}
-			return ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return ObjectStat{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	var metadata ObjectStat
@@ -766,7 +701,7 @@ func (a s3API) getObjectRequest(bucket, object string, offset, length int64) (*R
 		HTTPMethod: "GET",
 		HTTPPath:   separator + bucket + separator + object,
 	}
-	r, err := newRequest(op, a.config, nil)
+	r, err := newRequest(op, a.config, requestMetadata{})
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +755,7 @@ func (a s3API) getObject(bucket, object string, offset, length int64) (io.ReadCl
 			}
 			return nil, ObjectStat{}, errorResponse
 		default:
-			return nil, ObjectStat{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return nil, ObjectStat{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	md5sum := strings.Trim(resp.Header.Get("ETag"), "\"") // trim off the odd double quotes
@@ -856,7 +791,7 @@ func (a s3API) deleteObjectRequest(bucket, object string) (*Request, error) {
 		HTTPMethod: "DELETE",
 		HTTPPath:   separator + bucket + separator + object,
 	}
-	return newRequest(op, a.config, nil)
+	return newRequest(op, a.config, requestMetadata{})
 }
 
 // deleteObject deletes a given object from a bucket.
@@ -889,7 +824,7 @@ func (a s3API) headObjectRequest(bucket, object string) (*Request, error) {
 		HTTPMethod: "HEAD",
 		HTTPPath:   separator + bucket + separator + object,
 	}
-	return newRequest(op, a.config, nil)
+	return newRequest(op, a.config, requestMetadata{})
 }
 
 // headObject retrieves metadata from an object without returning the object itself.
@@ -1000,7 +935,7 @@ func (a s3API) listBucketsRequest() (*Request, error) {
 		HTTPMethod: "GET",
 		HTTPPath:   separator,
 	}
-	return newRequest(op, a.config, nil)
+	return newRequest(op, a.config, requestMetadata{})
 }
 
 // listBuckets list of all buckets owned by the authenticated sender of the request.
@@ -1026,11 +961,11 @@ func (a s3API) listBuckets() (listAllMyBucketsResult, error) {
 			}
 		}
 		if resp.StatusCode != http.StatusOK {
-			return listAllMyBucketsResult{}, BodyToErrorResponse(resp.Body, a.config.AcceptType)
+			return listAllMyBucketsResult{}, BodyToErrorResponse(resp.Body)
 		}
 	}
 	listAllMyBucketsResult := listAllMyBucketsResult{}
-	err = acceptTypeDecoder(resp.Body, a.config.AcceptType, &listAllMyBucketsResult)
+	err = xmlDecoder(resp.Body, &listAllMyBucketsResult)
 	if err != nil {
 		return listAllMyBucketsResult, err
 	}

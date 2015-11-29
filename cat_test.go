@@ -35,12 +35,11 @@ func (s *TestSuite) TestCat(c *C) {
 	objectPath := filepath.Join(root, "object1")
 	objectPathServer := server.URL + "/bucket/object1"
 	data := "hello"
-	dataLen := len(data)
 
 	var err *probe.Error
-	err = putTarget(objectPath, int64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(objectPath, bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
-	err = putTarget(objectPathServer, int64(dataLen), bytes.NewReader([]byte(data)))
+	err = putTarget(objectPathServer, bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	var sourceURLs []string

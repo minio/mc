@@ -36,8 +36,8 @@ type Client interface {
 	SetBucketAccess(access string) *probe.Error
 
 	// I/O operations
-	Get(offset, length int64) (body io.ReadCloser, size int64, err *probe.Error)
-	Put(size int64, data io.Reader) *probe.Error
+	Get(offset, length int64) (body io.ReadSeeker, err *probe.Error)
+	Put(data io.ReadSeeker) *probe.Error
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)

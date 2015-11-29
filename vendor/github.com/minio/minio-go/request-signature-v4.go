@@ -69,23 +69,43 @@ var ignoredHeaders = map[string]bool{
 	"User-Agent":     true,
 }
 
+// getSigningKey hmac seed to calculate final signature
+func getSigningKey(secret, region string, t time.Time) []byte {
+	date := sumHMAC([]byte("AWS4"+secret), []byte(t.Format(yyyymmdd)))
+	regionbytes := sumHMAC(date, []byte(region))
+	service := sumHMAC(regionbytes, []byte("s3"))
+	signingKey := sumHMAC(service, []byte("aws4_request"))
+	return signingKey
+}
+
+// getSignature final signature in hexadecimal form
+func getSignature(signingKey []byte, stringToSign string) string {
+	return hex.EncodeToString(sumHMAC(signingKey, []byte(stringToSign)))
+}
+
+// getScope generate a string of a specific date, an AWS region, and a service
+func getScope(region string, t time.Time) string {
+	scope := strings.Join([]string{
+		t.Format(yyyymmdd),
+		region,
+		"s3",
+		"aws4_request",
+	}, "/")
+	return scope
+}
+
+// getCredential generate a credential string
+func getCredential(accessKeyID, region string, t time.Time) string {
+	scope := getScope(region, t)
+	return accessKeyID + "/" + scope
+}
+
 // getHashedPayload get the hexadecimal value of the SHA256 hash of the request payload
 func (r *Request) getHashedPayload() string {
-	hash := func() string {
-		switch {
-		case r.expires != 0:
-			return "UNSIGNED-PAYLOAD"
-		case r.body == nil:
-			return hex.EncodeToString(sum256([]byte{}))
-		default:
-			sum256Bytes, _ := sum256Reader(r.body)
-			return hex.EncodeToString(sum256Bytes)
-		}
+	if r.expires != 0 {
+		return "UNSIGNED-PAYLOAD"
 	}
-	hashedPayload := hash()
-	if hashedPayload != "UNSIGNED-PAYLOAD" {
-		r.req.Header.Set("X-Amz-Content-Sha256", hashedPayload)
-	}
+	hashedPayload := r.req.Header.Get("X-Amz-Content-Sha256")
 	return hashedPayload
 }
 
@@ -149,7 +169,7 @@ func (r *Request) getSignedHeaders() string {
 //  <SignedHeaders>\n
 //  <HashedPayload>
 //
-func (r *Request) getCanonicalRequest(hashedPayload string) string {
+func (r *Request) getCanonicalRequest() string {
 	r.req.URL.RawQuery = strings.Replace(r.req.URL.Query().Encode(), "+", "%20", -1)
 	canonicalRequest := strings.Join([]string{
 		r.req.Method,
@@ -157,7 +177,7 @@ func (r *Request) getCanonicalRequest(hashedPayload string) string {
 		r.req.URL.RawQuery,
 		r.getCanonicalHeaders(),
 		r.getSignedHeaders(),
-		hashedPayload,
+		r.getHashedPayload(),
 	}, "\n")
 	return canonicalRequest
 }
@@ -173,10 +193,33 @@ func (r *Request) getStringToSignV4(canonicalRequest string, t time.Time) string
 // PreSignV4 presign the request, in accordance with
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html.
 func (r *Request) PreSignV4() (string, error) {
-	if r.config.AccessKeyID == "" && r.config.SecretAccessKey == "" {
-		return "", errors.New("presign requires accesskey and secretkey")
+	if r.config.isAnonymous() {
+		return "", errors.New("presigning cannot be done with anonymous credentials")
 	}
-	r.SignV4()
+	// Initial time.
+	t := time.Now().UTC()
+
+	// Get all signed headers.
+	signedHeaders := r.getSignedHeaders()
+	// Get string to sign from canonical request.
+	stringToSign := r.getStringToSignV4(r.getCanonicalRequest(), t)
+
+	// get credential string.
+	credential := getCredential(r.config.AccessKeyID, r.config.Region, t)
+	// get hmac signing key.
+	signingKey := getSigningKey(r.config.SecretAccessKey, r.config.Region, t)
+	// calculate signature.
+	signature := getSignature(signingKey, stringToSign)
+
+	query := r.req.URL.Query()
+	query.Set("X-Amz-Algorithm", authHeader)
+	query.Set("X-Amz-Date", t.Format(iso8601DateFormat))
+	query.Set("X-Amz-Expires", strconv.FormatInt(r.expires, 10))
+	query.Set("X-Amz-SignedHeaders", signedHeaders)
+	query.Set("X-Amz-Credential", credential)
+	r.req.URL.RawQuery = query.Encode()
+	r.req.URL.RawQuery += "&X-Amz-Signature=" + signature
+
 	return r.req.URL.String(), nil
 }
 
@@ -189,45 +232,30 @@ func (r *Request) PostPresignSignatureV4(policyBase64 string, t time.Time) strin
 
 // SignV4 sign the request before Do(), in accordance with
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html.
-func (r *Request) SignV4() {
-	query := r.req.URL.Query()
-	if r.expires != 0 {
-		query.Set("X-Amz-Algorithm", authHeader)
-	}
+func (r *Request) SignV4(presign bool) {
+	// Initial time.
 	t := time.Now().UTC()
-	// Add date if not present
-	if r.expires != 0 {
-		query.Set("X-Amz-Date", t.Format(iso8601DateFormat))
-		query.Set("X-Amz-Expires", strconv.FormatInt(r.expires, 10))
-	} else {
-		r.Set("X-Amz-Date", t.Format(iso8601DateFormat))
-	}
+	// Set x-amz-date.
+	r.Set("X-Amz-Date", t.Format(iso8601DateFormat))
 
-	hashedPayload := r.getHashedPayload()
+	// Get all signed headers.
 	signedHeaders := r.getSignedHeaders()
-	if r.expires != 0 {
-		query.Set("X-Amz-SignedHeaders", signedHeaders)
-	}
+	// Get string to sign from canonical request.
+	stringToSign := r.getStringToSignV4(r.getCanonicalRequest(), t)
+
+	// get credential string.
 	credential := getCredential(r.config.AccessKeyID, r.config.Region, t)
-	if r.expires != 0 {
-		query.Set("X-Amz-Credential", credential)
-		r.req.URL.RawQuery = query.Encode()
-	}
-	canonicalRequest := r.getCanonicalRequest(hashedPayload)
-	stringToSign := r.getStringToSignV4(canonicalRequest, t)
+	// get hmac signing key.
 	signingKey := getSigningKey(r.config.SecretAccessKey, r.config.Region, t)
+	// calculate signature.
 	signature := getSignature(signingKey, stringToSign)
 
-	if r.expires != 0 {
-		r.req.URL.RawQuery += "&X-Amz-Signature=" + signature
-	} else {
-		// final Authorization header
-		parts := []string{
-			authHeader + " Credential=" + credential,
-			"SignedHeaders=" + signedHeaders,
-			"Signature=" + signature,
-		}
-		auth := strings.Join(parts, ", ")
-		r.Set("Authorization", auth)
+	// if regular request, construct the final authorization header.
+	parts := []string{
+		authHeader + " Credential=" + credential,
+		"SignedHeaders=" + signedHeaders,
+		"Signature=" + signature,
 	}
+	auth := strings.Join(parts, ", ")
+	r.Set("Authorization", auth)
 }

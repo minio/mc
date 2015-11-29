@@ -34,16 +34,16 @@ import (
 // PreSignV2 - presign the request in following style.
 // https://${S3_BUCKET}.s3.amazonaws.com/${S3_OBJECT}?AWSAccessKeyId=${S3_ACCESS_KEY}&Expires=${TIMESTAMP}&Signature=${SIGNATURE}
 func (r *Request) PreSignV2() (string, error) {
-	if r.config.AccessKeyID == "" || r.config.SecretAccessKey == "" {
-		return "", errors.New("presign requires accesskey and secretkey")
+	if r.config.isAnonymous() {
+		return "", errors.New("presigning cannot be done with anonymous credentials")
 	}
-	// Add date if not present
 	d := time.Now().UTC()
+	// Add date if not present
 	if date := r.Get("Date"); date == "" {
 		r.Set("Date", d.Format(http.TimeFormat))
 	}
-	epochExpires := d.Unix() + r.expires
 	var path string
+	// Encode URL path.
 	if r.config.isVirtualHostedStyle {
 		for k, v := range regions {
 			if v == r.config.Region {
@@ -56,18 +56,28 @@ func (r *Request) PreSignV2() (string, error) {
 	} else {
 		path = getURLEncodedPath(r.req.URL.Path)
 	}
-	signText := fmt.Sprintf("%s\n\n\n%d\n%s", r.req.Method, epochExpires, path)
+
+	// Find epoch expires when the request will expire.
+	epochExpires := d.Unix() + r.expires
+
+	// get string to sign.
+	stringToSign := fmt.Sprintf("%s\n\n\n%d\n%s", r.req.Method, epochExpires, path)
 	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
-	hm.Write([]byte(signText))
+	hm.Write([]byte(stringToSign))
+	// calculate signature.
+	signature := base64.StdEncoding.EncodeToString(hm.Sum(nil))
 
 	query := r.req.URL.Query()
-	if r.config.Region != "google" {
-		query.Set("AWSAccessKeyId", r.config.AccessKeyID)
-	} else {
+	// Handle specially for Google Cloud Storage.
+	if r.config.Region == "google" {
 		query.Set("GoogleAccessId", r.config.AccessKeyID)
+	} else {
+		query.Set("AWSAccessKeyId", r.config.AccessKeyID)
 	}
+
+	// Fill in Expires and Signature for presigned query.
 	query.Set("Expires", strconv.FormatInt(epochExpires, 10))
-	query.Set("Signature", base64.StdEncoding.EncodeToString(hm.Sum(nil)))
+	query.Set("Signature", signature)
 	r.req.URL.RawQuery = query.Encode()
 
 	return r.req.URL.String(), nil
@@ -99,15 +109,20 @@ func (r *Request) PostPresignSignatureV2(policyBase64 string) string {
 
 // SignV2 sign the request before Do() (AWS Signature Version 2).
 func (r *Request) SignV2() {
+	// Initial time.
+	d := time.Now().UTC()
+
 	// Add date if not present.
 	if date := r.Get("Date"); date == "" {
-		r.Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		r.Set("Date", d.Format(http.TimeFormat))
 	}
-	// Calculate HMAC for secretAccessKey.
-	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
-	hm.Write([]byte(r.getStringToSignV2()))
 
-	// prepare auth header.
+	// Calculate HMAC for secretAccessKey.
+	stringToSign := r.getStringToSignV2()
+	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
+	hm.Write([]byte(stringToSign))
+
+	// Prepare auth header.
 	authHeader := new(bytes.Buffer)
 	authHeader.WriteString(fmt.Sprintf("AWS %s:", r.config.AccessKeyID))
 	encoder := base64.NewEncoder(base64.StdEncoding, authHeader)

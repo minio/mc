@@ -160,7 +160,7 @@ func TestObjectOperations(t *testing.T) {
 		t.Fatal("Error")
 	}
 	data := []byte("Hello, World")
-	err = a.PutObject("bucket", "object", "", int64(len(data)), bytes.NewReader(data))
+	err = a.PutObject("bucket", "object", "", bytes.NewReader(data))
 	if err != nil {
 		t.Fatal("Error")
 	}
@@ -175,14 +175,8 @@ func TestObjectOperations(t *testing.T) {
 		t.Fatal("Error")
 	}
 
-	reader, metadata, err := a.GetObject("bucket", "object")
+	reader, err := a.GetObject("bucket", "object")
 	if err != nil {
-		t.Fatal("Error")
-	}
-	if metadata.Key != "object" {
-		t.Fatal("Error")
-	}
-	if metadata.ETag != "9af2f8218b150c351ad802c6f3d66abe" {
 		t.Fatal("Error")
 	}
 
@@ -244,7 +238,7 @@ func TestPresignedURL(t *testing.T) {
 func TestErrorResponse(t *testing.T) {
 	errorResponse := []byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message><Resource>/mybucket/myphoto.jpg</Resource><RequestId>F19772218238A85A</RequestId><HostId>GuWkjyviSiGHizehqpmsD1ndz5NClSP19DOT+s2mv7gXGQ8/X1lhbDGiIJEXpGFD</HostId></Error>")
 	errorReader := bytes.NewReader(errorResponse)
-	err := minio.BodyToErrorResponse(errorReader, "application/xml")
+	err := minio.BodyToErrorResponse(errorReader)
 	if err == nil {
 		t.Fatal("Error")
 	}

@@ -85,19 +85,19 @@ func (c *s3Client) GetURL() client.URL {
 }
 
 // Get - get object.
-func (c *s3Client) Get(offset, length int64) (io.ReadCloser, int64, *probe.Error) {
+func (c *s3Client) Get(offset, length int64) (io.ReadSeeker, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	reader, metadata, err := c.api.GetPartialObject(bucket, object, offset, length)
+	reader, err := c.api.GetPartialObject(bucket, object, offset, length)
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse != nil {
 			if errResponse.Code == "AccessDenied" {
-				return nil, 0, probe.NewError(client.PathInsufficientPermission{Path: c.hostURL.String()})
+				return nil, probe.NewError(client.PathInsufficientPermission{Path: c.hostURL.String()})
 			}
 		}
-		return nil, length, probe.NewError(err)
+		return nil, probe.NewError(err)
 	}
-	return reader, metadata.Size, nil
+	return reader, nil
 }
 
 // Remove - remove object or bucket.
@@ -154,21 +154,25 @@ func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 }
 
 // Put - put object.
-func (c *s3Client) Put(size int64, data io.Reader) *probe.Error {
+func (c *s3Client) Put(data io.ReadSeeker) *probe.Error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified fully in transit and also upon completion
 	// of the multipart request.
 	bucket, object := c.url2BucketAndObject()
-	err := c.api.PutObject(bucket, object, "application/octet-stream", size, data)
+	err := c.api.PutObject(bucket, object, "application/octet-stream", data)
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse != nil {
 			if errResponse.Code == "AccessDenied" {
-				return probe.NewError(client.PathInsufficientPermission{Path: c.hostURL.String()})
+				return probe.NewError(client.PathInsufficientPermission{
+					Path: c.hostURL.String(),
+				})
 			}
 			if errResponse.Code == "MethodNotAllowed" {
-				return probe.NewError(client.ObjectAlreadyExists{Object: object})
+				return probe.NewError(client.ObjectAlreadyExists{
+					Object: object,
+				})
 			}
 			if errResponse.Code == "InvalidArgument" {
 				return probe.NewError(client.ObjectMissing{})

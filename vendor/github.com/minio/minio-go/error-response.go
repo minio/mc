@@ -96,9 +96,9 @@ func (e ErrorResponse) Error() string {
 }
 
 // BodyToErrorResponse returns a new encoded ErrorResponse structure
-func BodyToErrorResponse(errBody io.Reader, acceptType string) error {
+func BodyToErrorResponse(errBody io.Reader) error {
 	var errorResponse ErrorResponse
-	err := acceptTypeDecoder(errBody, acceptType, &errorResponse)
+	err := xmlDecoder(errBody, &errorResponse)
 	if err != nil {
 		return err
 	}

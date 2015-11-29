@@ -153,7 +153,7 @@ func sessionExecute(s *sessionV5) {
 	case "cp":
 		doCopySession(s)
 	case "mirror":
-		doMirrorSession(s)
+		//doMirrorSession(s)
 	}
 }
 

@@ -45,16 +45,15 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 
 	data := "hello"
-	dataLen := len(data)
 
-	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	objectPath = filepath.Join(root, "object2")
 	fsc, err = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
-	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	fsc, err = fs.New(root)
@@ -76,7 +75,7 @@ func (s *MySuite) TestList(c *C) {
 	fsc, err = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
-	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	fsc, err = fs.New(root)
@@ -180,9 +179,7 @@ func (s *MySuite) TestPut(c *C) {
 	c.Assert(err, IsNil)
 
 	data := "hello"
-	dataLen := len(data)
-
-	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 }
 
@@ -196,15 +193,14 @@ func (s *MySuite) TestGet(c *C) {
 	c.Assert(err, IsNil)
 
 	data := "hello"
-	dataLen := len(data)
 
-	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	reader, size, err := fsc.Get(0, 0)
+	reader, err := fsc.Get(0, 0)
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
-	_, e = io.CopyN(&results, reader, int64(size))
+	_, e = io.Copy(&results, reader)
 	c.Assert(e, IsNil)
 	c.Assert([]byte(data), DeepEquals, results.Bytes())
 
@@ -220,15 +216,14 @@ func (s *MySuite) TestGetRange(c *C) {
 	c.Assert(err, IsNil)
 
 	data := "hello world"
-	dataLen := len(data)
 
-	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
-	reader, size, err := fsc.Get(0, 5)
+	reader, err := fsc.Get(0, 5)
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
-	_, e = io.CopyN(&results, reader, int64(size))
+	_, e = io.Copy(&results, reader)
 	c.Assert(e, IsNil)
 	c.Assert([]byte("hello"), DeepEquals, results.Bytes())
 }
@@ -245,7 +240,7 @@ func (s *MySuite) TestStatObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.Put(int64(dataLen), bytes.NewReader([]byte(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)))
 	c.Assert(err, IsNil)
 
 	content, err := fsc.Stat()
