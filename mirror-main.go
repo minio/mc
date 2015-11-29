@@ -1,5 +1,3 @@
-package main
-
 /*
  * Minio Client, (C) 2015 Minio, Inc.
  *
@@ -14,7 +12,7 @@ package main
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-
+ */
 
 package main
 
@@ -54,14 +52,14 @@ var (
 //  Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
-	Usage:  "Mirror folders recursively from a single source to many destinations.",
+	Usage:  "Mirror folders recursively from a single source to single destination.",
 	Action: mainMirror,
 	Flags:  append(mirrorFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] SOURCE TARGET [TARGET...]
+   mc {{.Name}} [FLAGS] SOURCE TARGET
 
 FLAGS:
   {{range .Flags}}{{.}}
@@ -70,24 +68,24 @@ EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
       $ mc {{.Name}} play.minio.io:9000/photos/2014 s3.amazonaws.com/backup-photos
 
-   2. Mirror a local folder recursively to Minio cloud storage, Amazon S3 cloud storage and Google Cloud Storage.
-      $ mc {{.Name}} backup/ play.minio.io:9000/archive s3.amazonaws.com/archive storage.googleapis.com/miniocloud
+   2. Mirror a local folder recursively to Amazon S3 cloud storage.
+      $ mc {{.Name}} backup/ s3.amazonaws.com/archive
 
-   3. Mirror a bucket from aliased Amazon S3 cloud storage to multiple folders on Windows.
-      $ mc {{.Name}} s3/documents/2014/ C:\backup\2014 C:\shared\volume\backup\2014
+   3. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
+      $ mc {{.Name}} s3/documents/2014/ C:\backup\2014
 `,
 }
 
 // mirrorMessage container for file mirror messages
 type mirrorMessage struct {
-	Status  string   `json:"status"`
-	Source  string   `json:"source"`
-	Targets []string `json:"targets"`
+	Status string `json:"status"`
+	Source string `json:"source"`
+	Target string `json:"target"`
 }
 
 // String colorized mirror message
 func (m mirrorMessage) String() string {
-	return console.Colorize("Mirror", fmt.Sprintf("‘%s’ -> ‘%s’", m.Source, m.Targets))
+	return console.Colorize("Mirror", fmt.Sprintf("‘%s’ -> ‘%s’", m.Source, m.Target))
 }
 
 // JSON jsonified mirror message
@@ -132,30 +130,29 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 		return
 	}
 
+	targetURL := sURLs.TargetContent.URL.String()
+	sourceURL := sURLs.SourceContent.URL.String()
+	length := sURLs.SourceContent.Size
+
 	if !globalQuiet && !globalJSON {
-		progressReader.SetCaption(sURLs.SourceContent.URL.String() + ": ")
+		progressReader.SetCaption(sourceURL + ": ")
 	}
 
-	reader, err := getSource(sURLs.SourceContent.URL.String())
+	reader, err := getSource(sourceURL)
 	if err != nil {
 		if !globalQuiet && !globalJSON {
-			progressReader.ErrorGet(int64(sURLs.SourceContent.Size))
+			progressReader.ErrorGet(length)
 		}
-		sURLs.Error = err.Trace(sURLs.SourceContent.URL.String())
+		sURLs.Error = err.Trace(sourceURL)
 		statusCh <- sURLs
 		return
 	}
 
-	var targetURLs []string
-	for _, targetContent := range sURLs.TargetContents {
-		targetURLs = append(targetURLs, targetContent.URL.String())
-	}
-
-	var newReader io.ReadCloser
+	var newReader io.ReadSeeker
 	if globalQuiet || globalJSON {
 		printMsg(mirrorMessage{
-			Source:  sURLs.SourceContent.URL.String(),
-			Targets: targetURLs,
+			Source: sourceURL,
+			Target: targetURL,
 		})
 		if globalJSON {
 			newReader = reader
@@ -167,14 +164,12 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 		// set up progress
 		newReader = progressReader.NewProxyReader(reader)
 	}
-	defer newReader.Close()
-
-	err = putTargets(targetURLs, length, newReader)
+	err = putTarget(targetURL, newReader, length)
 	if err != nil {
 		if !globalQuiet && !globalJSON {
-			progressReader.ErrorPut(int64(length))
+			progressReader.ErrorPut(length)
 		}
-		sURLs.Error = err.Trace(targetURLs...)
+		sURLs.Error = err.Trace(targetURL)
 		statusCh <- sURLs
 		return
 	}
@@ -193,7 +188,7 @@ func doMirrorFake(sURLs mirrorURLs, progressReader *barSend) {
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
 func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
-	targetURLs := session.Header.CommandArgs[1:]
+	targetURL := session.Header.CommandArgs[1]
 	var totalBytes int64
 	var totalObjects int
 
@@ -205,7 +200,7 @@ func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
 		scanBar = scanBarFactory()
 	}
 
-	URLsCh := prepareMirrorURLs(sourceURL, targetURLs, isForce)
+	URLsCh := prepareMirrorURLs(sourceURL, targetURL, isForce)
 	done := false
 	for done == false {
 		select {
@@ -401,4 +396,3 @@ func mainMirror(ctx *cli.Context) {
 	doMirrorSession(session)
 	session.Delete()
 }
-*/
