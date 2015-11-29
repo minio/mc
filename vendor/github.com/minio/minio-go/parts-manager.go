@@ -27,13 +27,13 @@ import (
 // temporary file which deletes itself upon Close().
 //
 // This method runs until an EOF or an error occurs. Before returning, the channel is always closed.
-func partsManager(reader io.Reader, partSize int64) <-chan partMetadata {
+func partsManager(reader io.Reader, partSize int64, isEnableSha256Sum bool) <-chan partMetadata {
 	ch := make(chan partMetadata, 3)
-	go partsManagerInRoutine(reader, partSize, ch)
+	go partsManagerInRoutine(reader, partSize, isEnableSha256Sum, ch)
 	return ch
 }
 
-func partsManagerInRoutine(reader io.Reader, partSize int64, ch chan<- partMetadata) {
+func partsManagerInRoutine(reader io.Reader, partSize int64, isEnableSha256Sum bool, ch chan<- partMetadata) {
 	defer close(ch)
 	tmpFile, err := newTempFile("multiparts$")
 	if err != nil {
@@ -46,8 +46,11 @@ func partsManagerInRoutine(reader io.Reader, partSize int64, ch chan<- partMetad
 	var hashSha256 hash.Hash
 	var writer io.Writer
 	hashMD5 = md5.New()
-	hashSha256 = sha256.New()
-	mwwriter := io.MultiWriter(hashMD5, hashSha256)
+	mwwriter := io.MultiWriter(hashMD5)
+	if isEnableSha256Sum {
+		hashSha256 = sha256.New()
+		mwwriter = io.MultiWriter(hashMD5, hashSha256)
+	}
 	writer = io.MultiWriter(tmpFile, mwwriter)
 	n, err := io.CopyN(writer, reader, partSize)
 	if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -55,13 +58,16 @@ func partsManagerInRoutine(reader io.Reader, partSize int64, ch chan<- partMetad
 		tmpFile.Seek(0, 0)
 
 		// short read, only single partMetadata return.
-		ch <- partMetadata{
+		partMdata := partMetadata{
 			MD5Sum:     hashMD5.Sum(nil),
-			Sha256Sum:  hashSha256.Sum(nil),
 			ReadCloser: tmpFile,
 			Size:       n,
 			Err:        nil,
 		}
+		if isEnableSha256Sum {
+			partMdata.Sha256Sum = hashSha256.Sum(nil)
+		}
+		ch <- partMdata
 		return
 	}
 	// unknown error considered catastrophic error, return here.
@@ -73,13 +79,16 @@ func partsManagerInRoutine(reader io.Reader, partSize int64, ch chan<- partMetad
 	}
 	// Seek back to beginning.
 	tmpFile.Seek(0, 0)
-	ch <- partMetadata{
+	partMdata := partMetadata{
 		MD5Sum:     hashMD5.Sum(nil),
-		Sha256Sum:  hashSha256.Sum(nil),
 		ReadCloser: tmpFile,
 		Size:       n,
 		Err:        nil,
 	}
+	if isEnableSha256Sum {
+		partMdata.Sha256Sum = hashSha256.Sum(nil)
+	}
+	ch <- partMdata
 	for err == nil {
 		var n int64
 		tmpFile, err = newTempFile("multiparts$")
@@ -90,8 +99,11 @@ func partsManagerInRoutine(reader io.Reader, partSize int64, ch chan<- partMetad
 			return
 		}
 		hashMD5 = md5.New()
-		hashSha256 = sha256.New()
-		mwwriter := io.MultiWriter(hashMD5, hashSha256)
+		mwwriter := io.MultiWriter(hashMD5)
+		if isEnableSha256Sum {
+			hashSha256 = sha256.New()
+			mwwriter = io.MultiWriter(hashMD5, hashSha256)
+		}
 		writer = io.MultiWriter(tmpFile, mwwriter)
 		n, err = io.CopyN(writer, reader, partSize)
 		if err != nil {
@@ -104,12 +116,15 @@ func partsManagerInRoutine(reader io.Reader, partSize int64, ch chan<- partMetad
 		}
 		// Seek back to beginning.
 		tmpFile.Seek(0, 0)
-		ch <- partMetadata{
+		partMdata := partMetadata{
 			MD5Sum:     hashMD5.Sum(nil),
-			Sha256Sum:  hashSha256.Sum(nil),
 			ReadCloser: tmpFile,
 			Size:       n,
 			Err:        nil,
 		}
+		if isEnableSha256Sum {
+			partMdata.Sha256Sum = hashSha256.Sum(nil)
+		}
+		ch <- partMdata
 	}
 }

@@ -57,12 +57,12 @@ func getSource(sourceURL string) (reader io.ReadSeeker, err *probe.Error) {
 }
 
 // putTarget writes to URL from reader. If length=-1, read until EOF.
-func putTarget(targetURL string, reader io.ReadSeeker) *probe.Error {
+func putTarget(targetURL string, reader io.ReadSeeker, size int64) *probe.Error {
 	targetClnt, err := url2Client(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
-	err = targetClnt.Put(reader)
+	err = targetClnt.Put(reader, size)
 	if err != nil {
 		return err.Trace(targetURL)
 	}

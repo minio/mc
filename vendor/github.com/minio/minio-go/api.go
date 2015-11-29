@@ -17,6 +17,7 @@
 package minio
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -25,6 +26,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -362,6 +364,10 @@ var maxConcurrentQueue int64 = 4
 // special case where it happens to be that partSize is indeed bigger than the
 // maximum part size just return maxPartSize.
 func calculatePartSize(objectSize int64) int64 {
+	// if object size is -1 choose part size as 5GB.
+	if objectSize == -1 {
+		return maxPartSize
+	}
 	// make sure last part has enough buffer and handle this poperly.
 	partSize := (objectSize / (maxParts - 1))
 	if partSize > minimumPartSize {
@@ -395,7 +401,11 @@ func (a API) newObjectUpload(bucket, object, contentType string, size int64, dat
 	wg := new(sync.WaitGroup)
 
 	partNumber := 1
-	for part := range partsManager(data, partSize) {
+	var isEnableSha256Sum bool
+	if a.config.Signature.isV4() {
+		isEnableSha256Sum = true
+	}
+	for part := range partsManager(data, partSize, isEnableSha256Sum) {
 		// Limit to 4 parts a given time.
 		mpQueueCh <- struct{}{}
 		// Account for all parts uploaded simultaneousy.
@@ -516,7 +526,11 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 	if _, err := data.Seek(seekOffset, 0); err != nil {
 		return err
 	}
-	for part := range partsManager(data, partSize) {
+	var isEnableSha256Sum bool
+	if a.config.Signature.isV4() {
+		isEnableSha256Sum = true
+	}
+	for part := range partsManager(data, partSize, isEnableSha256Sum) {
 		// Limit to 4 parts a given time.
 		mpQueueCh <- struct{}{}
 		// Account for all parts uploaded simultaneousy.
@@ -562,7 +576,7 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 //  - For size larger than 5MB PutObject automatically does resumable multipart operation.
 //  - For size input as -1 PutObject treats it as a stream and does multipart operation until
 //    input stream reaches EOF. Maximum object size that can be uploaded through this operation
-//    will be 5GB.
+//    will be 5TB.
 //
 // NOTE: if you are using Google Cloud Storage. Then there is no resumable multipart
 // upload support yet. Currently PutObject will behave like a single PUT operation and would
@@ -570,43 +584,51 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 //
 // For un-authenticated requests S3 doesn't allow multipart upload, so we fall back to single
 // PUT operation.
-func (a API) PutObject(bucket, object, contentType string, data io.ReadSeeker) error {
+func (a API) PutObject(bucket, object, contentType string, data io.ReadSeeker, size int64) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
 	if err := invalidArgumentError(object); err != nil {
 		return err
 	}
-	size, err := getReaderSize(data)
-	if err != nil {
-		return err
-	}
 	// NOTE: S3 doesn't allow anonymous multipart requests.
-	if a.config.isAnonymous() && size == -1 {
-		return invalidArgumentError("")
-	}
-	// For anonymous requests do not initiate multipart operation.
-	if a.config.isAnonymous() {
-		putObjMetadata := putObjectMetadata{
-			MD5Sum:      nil,
-			Sha256Sum:   nil,
-			ReadCloser:  ioutil.NopCloser(data),
-			Size:        size,
-			ContentType: contentType,
+	if strings.Contains(a.config.Endpoint, "amazonaws.com") || strings.Contains(a.config.Endpoint, "googleapis.com") {
+		if a.config.isAnonymous() {
+			if size == -1 {
+				return ErrorResponse{
+					Code:     "NotImplemented",
+					Message:  "For Anonymous requests Content-Length cannot be '-1'.",
+					Resource: separator + bucket + separator + object,
+				}
+			}
+			if size > maxPartSize {
+				return ErrorResponse{
+					Code:     "EntityTooLarge",
+					Message:  "Your proposed upload exceeds the maximum allowed object size '5GB' for single PUT operation.",
+					Resource: separator + bucket + separator + object,
+				}
+			}
+			// For anonymous requests, we will not calculate sha256 and md5sum.
+			putObjMetadata := putObjectMetadata{
+				MD5Sum:      nil,
+				Sha256Sum:   nil,
+				ReadCloser:  ioutil.NopCloser(data),
+				Size:        size,
+				ContentType: contentType,
+			}
+			_, err := a.putObject(bucket, object, putObjMetadata)
+			if err != nil {
+				return err
+			}
 		}
-		_, err := a.putObject(bucket, object, putObjMetadata)
-		if err != nil {
-			return err
-		}
-		return nil
 	}
 	// Special handling just for Google Cloud Storage.
 	// TODO - we should remove this in future when we fully implement Resumable object upload.
-	if a.config.Region == "google" {
+	if strings.Contains(a.config.Endpoint, "googleapis.com") {
 		if size > maxPartSize {
 			return ErrorResponse{
 				Code:     "EntityTooLarge",
-				Message:  "Your proposed upload exceeds the maximum allowed object size.",
+				Message:  "Your proposed upload exceeds the maximum allowed object size '5GB' for single PUT operation.",
 				Resource: separator + bucket + separator + object,
 			}
 		}
@@ -629,14 +651,17 @@ func (a API) PutObject(bucket, object, contentType string, data io.ReadSeeker) e
 		if err != nil {
 			return err
 		}
-		// Seek back the data to its original position.
-		if _, err := data.Seek(0, 0); err != nil {
-			return err
+		if int64(len(dataBytes)) != size {
+			return ErrorResponse{
+				Code:     "UnexpectedShortRead",
+				Message:  "Data read ‘" + strconv.FormatInt(int64(len(dataBytes)), 10) + "’ is not equal to expected size ‘" + strconv.FormatInt(size, 10) + "’",
+				Resource: separator + bucket + separator + object,
+			}
 		}
 		putObjMetadata := putObjectMetadata{
 			MD5Sum:      sumMD5(dataBytes),
 			Sha256Sum:   sum256(dataBytes),
-			ReadCloser:  ioutil.NopCloser(data),
+			ReadCloser:  ioutil.NopCloser(bytes.NewReader(dataBytes)),
 			Size:        size,
 			ContentType: contentType,
 		}

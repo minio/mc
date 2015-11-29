@@ -120,7 +120,7 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 }
 
 // Put - create a new file.
-func (f *fsClient) Put(data io.ReadSeeker) *probe.Error {
+func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 	objectDir, _ := filepath.Split(f.PathURL.Path)
 	objectPath := f.PathURL.Path
 	objectPartPath := objectPath + partSuffix
@@ -159,7 +159,7 @@ func (f *fsClient) Put(data io.ReadSeeker) *probe.Error {
 		}
 		return probe.NewError(e)
 	}
-	_, e = io.Copy(partFile, data)
+	_, e = io.CopyN(partFile, data, size)
 	if e != nil {
 		return probe.NewError(e)
 	}

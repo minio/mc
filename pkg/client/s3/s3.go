@@ -154,13 +154,13 @@ func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 }
 
 // Put - put object.
-func (c *s3Client) Put(data io.ReadSeeker) *probe.Error {
+func (c *s3Client) Put(data io.ReadSeeker, size int64) *probe.Error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified fully in transit and also upon completion
 	// of the multipart request.
 	bucket, object := c.url2BucketAndObject()
-	err := c.api.PutObject(bucket, object, "application/octet-stream", data)
+	err := c.api.PutObject(bucket, object, "application/octet-stream", data, size)
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse != nil {

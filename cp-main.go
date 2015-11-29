@@ -174,9 +174,9 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		// set up progress
 		newReader = progressReader.NewProxyReader(reader)
 	}
-	if err := putTarget(cpURLs.TargetContent.URL.String(), newReader); err != nil {
+	if err := putTarget(cpURLs.TargetContent.URL.String(), newReader, cpURLs.SourceContent.Size); err != nil {
 		if !globalQuiet && !globalJSON {
-			progressReader.ErrorPut(cpURLs.TargetContent.Size)
+			progressReader.ErrorPut(cpURLs.SourceContent.Size)
 		}
 		cpURLs.Error = err.Trace(cpURLs.TargetContent.URL.String())
 		statusCh <- cpURLs

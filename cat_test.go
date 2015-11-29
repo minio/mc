@@ -37,9 +37,9 @@ func (s *TestSuite) TestCat(c *C) {
 	data := "hello"
 
 	var err *probe.Error
-	err = putTarget(objectPath, bytes.NewReader([]byte(data)))
+	err = putTarget(objectPath, bytes.NewReader([]byte(data)), int64(len(data)))
 	c.Assert(err, IsNil)
-	err = putTarget(objectPathServer, bytes.NewReader([]byte(data)))
+	err = putTarget(objectPathServer, bytes.NewReader([]byte(data)), int64(len(data)))
 	c.Assert(err, IsNil)
 
 	var sourceURLs []string
