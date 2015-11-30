@@ -106,6 +106,13 @@ func (e PathNotFound) Error() string {
 	return "Requested file ‘" + e.Path + "’ not found"
 }
 
+// PathIsDir (EISDIR) - file is a folder.
+type PathIsDir GenericFileError
+
+func (e PathIsDir) Error() string {
+	return "Requested file ‘" + e.Path + "’ is folder."
+}
+
 // PathInsufficientPermission (EPERM) - permission denied.
 type PathInsufficientPermission GenericFileError
 
