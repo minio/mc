@@ -75,9 +75,11 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 	url := client.NewURL(tgtURL)
 	if url.Host != "" {
-		if url.Path == string(url.Separator) {
-			fatalIf(errInvalidArgument().Trace(tgtURL),
-				fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+		if !isURLVirtualHostStyle(url.Host) {
+			if url.Path == string(url.Separator) {
+				fatalIf(errInvalidArgument().Trace(tgtURL),
+					fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+			}
 		}
 	}
 	_, _, err = url2Stat(tgtURL)
