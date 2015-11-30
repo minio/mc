@@ -35,14 +35,14 @@ func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
 
 	// calculate length without color coding, due to ANSI color characters padded to actual
 	// string the final length is wrong than the original string length.
-	line1Str := fmt.Sprintf("  Update available: ")
-	line2Str := fmt.Sprintf("  Run \"%s\" to update. ", updateString)
+	line1Str := fmt.Sprintf("  New update available, please execute the following command to update: ")
+	line2Str := fmt.Sprintf("  %s ", updateString)
 	line1Length := len(line1Str)
 	line2Length := len(line2Str)
 
 	// populate lines with color coding.
 	line1InColor := line1Str
-	line2InColor := fmt.Sprintf("  Run \"%s\" to update. ", cyan(updateString))
+	line2InColor := fmt.Sprintf("  %s ", cyan(updateString))
 
 	// calculate the rectangular box size.
 	maxContentWidth := int(math.Max(float64(line1Length), float64(line2Length)))
