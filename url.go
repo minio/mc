@@ -17,9 +17,17 @@
 package main
 
 import (
+	"path/filepath"
+
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio-xl/pkg/probe"
 )
+
+func isURLVirtualHostStyle(hostURL string) bool {
+	matchS3, _ := filepath.Match("*.s3*.amazonaws.com", hostURL)
+	matchGoogle, _ := filepath.Match("*.storage.googleapis.com", hostURL)
+	return matchS3 || matchGoogle
+}
 
 // urlJoinPath Join a path to existing URL.
 func urlJoinPath(url1, url2 string) string {
