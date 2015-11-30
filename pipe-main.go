@@ -63,7 +63,14 @@ EXAMPLES:
 `,
 }
 
-// pipe writes contents of stdin a collection of URLs.
+// Validate command line arguments.
+func checkPipeSyntax(ctx *cli.Context) {
+	if !ctx.Args().Present() || len(ctx.Args()) != 1 {
+		exitCode := 1
+		cli.ShowCommandHelpAndExit(ctx, "pipe", exitCode)
+	}
+}
+
 func pipe(targetURL string) *probe.Error {
 	if len(targetURL) == 0 || targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
@@ -87,6 +94,9 @@ func pipe(targetURL string) *probe.Error {
 
 // mainPipe is the main entry point for pipe command.
 func mainPipe(ctx *cli.Context) {
+	// Check cmd args.
+	checkPipeSyntax(ctx)
+
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
