@@ -18,6 +18,8 @@ List of supported cloud storage providers.
 
 ## Install
 
+If you do not have a working Golang environment, please follow [Install Golang](./INSTALLGO.md).
+
 ```sh
 $ go get github.com/minio/minio-go
 ```
@@ -39,14 +41,14 @@ import (
 
 func main() {
 	config := minio.Config{
+		Endpoint:        "https://s3.amazonaws.com",
 		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
 		SecretAccessKey: "YOUR-PASSWORD-HERE",
-		Endpoint:        "https://s3.amazonaws.com",
 	}
 
 	// Default is Signature Version 4. To enable Signature Version 2 do the following.
 	// config.Signature = minio.SignatureV2
-        
+
 	s3Client, err := minio.New(config)
 	if err != nil {
 	    log.Fatalln(err)
@@ -62,27 +64,27 @@ func main() {
 
 ## Documentation
 
-### Bucket Level
-* [MakeBucket(bucket, acl) error](examples/s3/makebucket.go)
-* [BucketExists(bucket) error](examples/s3/bucketexists.go)
-* [RemoveBucket(bucket) error](examples/s3/removebucket.go)
-* [GetBucketACL(bucket) (BucketACL, error)](examples/s3/getbucketacl.go)
-* [SetBucketACL(bucket, BucketACL) error)](examples/s3/setbucketacl.go)
+### Bucket Operations.
+* [MakeBucket(bucketName, BucketACL) error](examples/s3/makebucket.go)
+* [BucketExists(bucketName) error](examples/s3/bucketexists.go)
+* [RemoveBucket(bucketName) error](examples/s3/removebucket.go)
+* [GetBucketACL(bucketName) (BucketACL, error)](examples/s3/getbucketacl.go)
+* [SetBucketACL(bucketName, BucketACL) error)](examples/s3/setbucketacl.go)
 * [ListBuckets() <-chan BucketStat](examples/s3/listbuckets.go)
-* [ListObjects(bucket, prefix, recursive) <-chan ObjectStat](examples/s3/listobjects.go)
-* [ListIncompleteUploads(bucket, prefix, recursive) <-chan ObjectMultipartStat](examples/s3/listincompleteuploads.go)
+* [ListObjects(bucketName, prefix, recursive) <-chan ObjectStat](examples/s3/listobjects.go)
+* [ListIncompleteUploads(bucketName, prefix, recursive) <-chan ObjectMultipartStat](examples/s3/listincompleteuploads.go)
 
-### Object Level
-* [PutObject(bucket, object, contentType, io.ReadSeeker) error](examples/s3/putobject.go)
-* [GetObject(bucket, object) (io.ReadSeeker, error)](examples/s3/getobject.go)
-* [GetPartialObject(bucket, object, offset, length) (io.ReadSeeker, error)](examples/s3/getpartialobject.go)
-* [StatObject(bucket, object) (ObjectStat, error)](examples/s3/statobject.go)
-* [RemoveObject(bucket, object) error](examples/s3/removeobject.go)
-* [RemoveIncompleteUpload(bucket, object) <-chan error](examples/s3/removeincompleteupload.go)
+### Object Operations.
+* [PutObject(bucketName, objectName, contentType, io.ReadSeeker) error](examples/s3/putobject.go)
+* [GetObject(bucketName, objectName) (io.ReadSeeker, error)](examples/s3/getobject.go)
+* [GetPartialObject(bucketName, objectName, offset, length) (io.ReadSeeker, error)](examples/s3/getpartialobject.go)
+* [StatObject(bucketName, objectName) (ObjectStat, error)](examples/s3/statobject.go)
+* [RemoveObject(bucketName, objectName) error](examples/s3/removeobject.go)
+* [RemoveIncompleteUpload(bucketName, objectName) <-chan error](examples/s3/removeincompleteupload.go)
 
-### Presigned Bucket/Object Level
-* [PresignedGetObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedgetobject.go)
-* [PresignedPutObject(bucket, object, time.Duration) (string, error)](examples/s3/presignedputobject.go)
+### Presigned Operations.
+* [PresignedGetObject(bucketName, objectName, time.Duration) (string, error)](examples/s3/presignedgetobject.go)
+* [PresignedPutObject(bucketName, objectName, time.Duration) (string, error)](examples/s3/presignedputobject.go)
 * [PresignedPostPolicy(NewPostPolicy()) (map[string]string, error)](examples/s3/presignedpostpolicy.go)
 
 ### API Reference

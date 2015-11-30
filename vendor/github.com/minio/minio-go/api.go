@@ -146,15 +146,15 @@ func (c *Config) isAnonymous() bool {
 
 // setBucketRegion fetches the region and updates config,
 // additionally it also constructs a proper endpoint based on that region.
-func (c *Config) setBucketRegion() {
+func (c *Config) setBucketRegion() error {
 	u, err := url.Parse(c.Endpoint)
 	if err != nil {
-		return
+		return err
 	}
 
 	if !c.isVirtualHostedStyle {
 		c.Region = getRegion(u.Host)
-		return
+		return nil
 	}
 
 	var bucket, host string
@@ -172,12 +172,12 @@ func (c *Config) setBucketRegion() {
 		// returning standard region for google for now, can be changed in future
 		// to query for region in case it is useful
 		c.Region = getRegion(host)
-		return
+		return nil
 	}
 	genericS3, _ := filepath.Match("*.s3.amazonaws.com", u.Host)
 	if !genericS3 {
 		c.Region = getRegion(host)
-		return
+		return nil
 	}
 
 	// query aws s3 for the region for case of bucketName.s3.amazonaws.com
@@ -191,8 +191,7 @@ func (c *Config) setBucketRegion() {
 	s3API := API{s3API{&tempConfig}}
 	region, err := s3API.getBucketLocation(bucket)
 	if err != nil {
-		c.Region = getRegion(host)
-		return
+		return err
 	}
 	// if region returned from getBucketLocation is null
 	// and if genericS3 is enabled - set back to 'us-east-1'.
@@ -203,7 +202,7 @@ func (c *Config) setBucketRegion() {
 	}
 	c.Region = region
 	c.setEndpoint(region, bucket, u.Scheme)
-	return
+	return nil
 }
 
 // setEndpoint - construct final endpoint based on region, bucket and scheme
@@ -255,7 +254,9 @@ func New(config Config) (CloudStorageAPI, error) {
 	config.isVirtualHostedStyle = isVirtualHostedStyle(u.Host)
 	// if not region is set, procure it from getBucketRegion if possible.
 	if config.Region == "" {
-		config.setBucketRegion()
+		if err := config.setBucketRegion(); err != nil {
+			return API{}, err
+		}
 	}
 	/// Google cloud storage should be set to signature V2, force it if not.
 	if config.Region == "google" && config.Signature != SignatureV2 {
@@ -584,7 +585,7 @@ func (a API) continueObjectUpload(bucket, object, uploadID string, size int64, d
 //
 // For un-authenticated requests S3 doesn't allow multipart upload, so we fall back to single
 // PUT operation.
-func (a API) PutObject(bucket, object, contentType string, data io.ReadSeeker, size int64) error {
+func (a API) PutObject(bucket, object string, data io.ReadSeeker, size int64, contentType string) error {
 	if err := invalidBucketError(bucket); err != nil {
 		return err
 	}
