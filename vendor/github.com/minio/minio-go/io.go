@@ -119,7 +119,7 @@ type tempFile struct {
 
 // newTemplFile returns a new unused file.
 func newTempFile(prefix string) (*tempFile, error) {
-	file, err := ioutil.TempFile("/tmp", prefix)
+	file, err := ioutil.TempFile(os.TempDir(), prefix)
 	if err != nil {
 		return nil, err
 	}
