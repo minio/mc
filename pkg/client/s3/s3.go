@@ -160,7 +160,7 @@ func (c *s3Client) Put(data io.ReadSeeker, size int64) *probe.Error {
 	// invidual parts are properly verified fully in transit and also upon completion
 	// of the multipart request.
 	bucket, object := c.url2BucketAndObject()
-	err := c.api.PutObject(bucket, object, "application/octet-stream", data, size)
+	err := c.api.PutObject(bucket, object, data, size, "application/octet-stream")
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse != nil {

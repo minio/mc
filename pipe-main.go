@@ -84,10 +84,20 @@ func pipe(targetURL string) *probe.Error {
 	return err.Trace(targetURL)
 }
 
+// check pipe input arguments.
+func checkPipeSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) > 1 {
+		cli.ShowCommandHelpAndExit(ctx, "pipe", 1) // last argument is exit code.
+	}
+}
+
 // mainPipe is the main entry point for pipe command.
 func mainPipe(ctx *cli.Context) {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
+
+	// validate pipe input arguments.
+	checkPipeSyntax(ctx)
 
 	if len(ctx.Args()) == 0 {
 		err := pipe("")

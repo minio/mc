@@ -48,7 +48,7 @@ func (m mirrorURLs) isEmpty() bool {
 
 // checkMirrorSyntax(URLs []string)
 func checkMirrorSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) < 2 {
+	if len(ctx.Args()) != 2 {
 		cli.ShowCommandHelpAndExit(ctx, "mirror", 1) // last argument is exit code.
 	}
 
