@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
@@ -93,9 +94,15 @@ func (u updateMessage) String() string {
 	}
 	var msg string
 	if runtime.GOOS == "windows" {
-		msg = "mc.exe cp " + u.Download + " .\\mc.exe"
+		// verify if the mc binary exists in the current directory.
+		// In such cases do not overwrite it.
+		if _, e := os.Stat(".\\mc.exe"); e == nil {
+			msg = "Download " + u.Download
+		} else {
+			msg = "mc.exe cp " + u.Download + " .\\mc.exe"
+		}
 	} else {
-		msg = "mc cp " + u.Download + " ./mc.new; chmod 755 ./mc.new"
+		msg = "mc cp " + u.Download + " mc; chmod 755 mc"
 	}
 	msg, err := colorizeUpdateMessage(msg)
 	fatalIf(err.Trace(msg), "Unable to colorize experimental update notification string ‘"+msg+"’.")
