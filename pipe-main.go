@@ -43,7 +43,7 @@ var pipeCmd = cli.Command{
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] TARGET
+   mc {{.Name}} [FLAGS] [TARGET]
 
 FLAGS:
   {{range .Flags}}{{.}}
@@ -63,16 +63,8 @@ EXAMPLES:
 `,
 }
 
-// Validate command line arguments.
-func checkPipeSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() || len(ctx.Args()) != 1 {
-		exitCode := 1
-		cli.ShowCommandHelpAndExit(ctx, "pipe", exitCode)
-	}
-}
-
 func pipe(targetURL string) *probe.Error {
-	if len(targetURL) == 0 || targetURL == "" {
+	if targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin).Trace()
 	}
@@ -94,16 +86,17 @@ func pipe(targetURL string) *probe.Error {
 
 // mainPipe is the main entry point for pipe command.
 func mainPipe(ctx *cli.Context) {
-	// Check cmd args.
-	checkPipeSyntax(ctx)
-
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
-	// extract URLs.
-	URLs, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
-
-	err = pipe(URLs[0])
-	fatalIf(err.Trace(URLs...), "Unable to write to one or more targets.")
+	if len(ctx.Args()) == 0 {
+		err := pipe("")
+		fatalIf(err.Trace("stdout"), "Unable to write to one or more targets.")
+	} else {
+		// extract URLs.
+		URLs, err := args2URLs(ctx.Args())
+		fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
+		err = pipe(URLs[0])
+		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
+	}
 }

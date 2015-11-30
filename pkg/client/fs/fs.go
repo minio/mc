@@ -121,9 +121,13 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 
 // Put - create a new file.
 func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
+	// Extract dir name.
 	objectDir, _ := filepath.Split(f.PathURL.Path)
 	objectPath := f.PathURL.Path
+
+	// Write to a temporary file "object.part.mc" before commiting.
 	objectPartPath := objectPath + partSuffix
+
 	if objectDir != "" {
 		// Create any missing top level directories.
 		if e := os.MkdirAll(objectDir, 0700); e != nil {
@@ -135,22 +139,9 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 			return probe.NewError(e)
 		}
 	}
-	var partFile *os.File
-	st, e := os.Stat(objectPath + partSuffix)
-	if e != nil {
-		if !os.IsNotExist(e) {
-			return probe.NewError(e)
-		}
-		partFile, e = os.OpenFile(objectPartPath, os.O_CREATE|os.O_WRONLY, 0600)
-	} else {
-		if st != nil {
-			// Seek to the location where the previous copy was left off.
-			if _, e = data.Seek(st.Size(), 0); e != nil {
-				return probe.NewError(e)
-			}
-		}
-		partFile, e = os.OpenFile(objectPartPath, os.O_APPEND|os.O_WRONLY, 0600)
-	}
+
+	// If exists, open in append mode. If not create it the part file.
+	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if e != nil {
 		if os.IsPermission(e) {
 			return probe.NewError(client.PathInsufficientPermission{
@@ -159,11 +150,19 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 		}
 		return probe.NewError(e)
 	}
-	_, e = io.CopyN(partFile, data, size)
+
+	// Write to the part file.
+	if size < 0 { // Read till EOF.
+		_, e = io.Copy(partFile, data)
+	} else { // Read till N bytes.
+		_, e = io.CopyN(partFile, data, size)
+	}
 	if e != nil {
 		return probe.NewError(e)
 	}
 	partFile.Close()
+
+	// Safely completed put. Now commit by renaming to actual filename.
 	if e = os.Rename(objectPartPath, objectPath); e != nil {
 		return probe.NewError(e)
 	}
