@@ -125,6 +125,24 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 	objectDir, _ := filepath.Split(f.PathURL.Path)
 	objectPath := f.PathURL.Path
 
+	// Verify if destination already exists.
+	st, e := os.Stat(objectPath)
+	if e == nil {
+		// If the destination exists and is a directory.
+		if st.IsDir() {
+			return probe.NewError(client.PathIsDir{
+				Path: objectPath,
+			})
+		}
+	}
+
+	// Proceed if file does not exist. return for all other errors.
+	if e != nil {
+		if !os.IsNotExist(e) {
+			return probe.NewError(e)
+		}
+	}
+
 	// Write to a temporary file "object.part.mc" before commiting.
 	objectPartPath := objectPath + partSuffix
 
@@ -150,6 +168,15 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 		}
 		return probe.NewError(e)
 	}
+
+	// Get stat to get the current size.
+	partSt, e := partFile.Stat()
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	// Seek to current position for incoming reader.
+	data.Seek(partSt.Size(), 0)
 
 	// Write to the part file.
 	if size < 0 { // Read till EOF.
