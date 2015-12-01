@@ -56,61 +56,6 @@ func (f *fsClient) GetURL() client.URL {
 
 /// Object operations.
 
-// handle windows symlinks - eg: junction files.
-func (f *fsClient) handleWindowsSymlinks(fpath string) (os.FileInfo, *probe.Error) {
-	// On windows there are directory symlinks which are called junction files.
-	// These files carry special meaning on windows they cannot be,
-	// accessed with regular operations.
-	lfi, le := os.Lstat(fpath)
-	if le != nil {
-		if os.IsPermission(le) {
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
-		}
-		if os.IsNotExist(le) {
-			return nil, probe.NewError(client.PathNotFound{Path: fpath})
-		}
-		return nil, probe.NewError(le)
-	}
-	return lfi, nil
-}
-
-// fsStat - wrapper function to get file stat.
-func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
-	fpath := f.PathURL.Path
-	// Golang strips trailing / if you clean(..) or
-	// EvalSymlinks(..). Adding '.' prevents it from doing so.
-	if strings.HasSuffix(fpath, string(f.PathURL.Separator)) {
-		fpath = fpath + "."
-	}
-	fpath, e := filepath.EvalSymlinks(fpath)
-	if e != nil {
-		if os.IsPermission(e) {
-			if runtime.GOOS == "windows" {
-				return f.handleWindowsSymlinks(fpath)
-			}
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
-		}
-		if os.IsNotExist(e) {
-			return nil, probe.NewError(client.PathNotFound{Path: f.PathURL.Path})
-		}
-		return nil, probe.NewError(e)
-	}
-	st, e := os.Stat(fpath)
-	if e != nil {
-		if os.IsPermission(e) {
-			if runtime.GOOS == "windows" {
-				return f.handleWindowsSymlinks(fpath)
-			}
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
-		}
-		if os.IsNotExist(e) {
-			return nil, probe.NewError(client.PathNotFound{Path: f.PathURL.Path})
-		}
-		return nil, probe.NewError(e)
-	}
-	return st, nil
-}
-
 // Put - create a new file.
 func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 	// Extract dir name.
@@ -141,24 +86,16 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 	if objectDir != "" {
 		// Create any missing top level directories.
 		if e := os.MkdirAll(objectDir, 0700); e != nil {
-			if os.IsPermission(e) {
-				return probe.NewError(client.PathInsufficientPermission{
-					Path: f.PathURL.Path,
-				})
-			}
-			return probe.NewError(e)
+			err := f.toClientError(e, f.PathURL.Path)
+			return err.Trace(f.PathURL.Path)
 		}
 	}
 
 	// If exists, open in append mode. If not create it the part file.
 	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if e != nil {
-		if os.IsPermission(e) {
-			return probe.NewError(client.PathInsufficientPermission{
-				Path: f.PathURL.Path,
-			})
-		}
-		return probe.NewError(e)
+		err := f.toClientError(e, f.PathURL.Path)
+		return err.Trace(f.PathURL.Path)
 	}
 
 	// Get stat to get the current size.
@@ -177,13 +114,16 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 		_, e = io.CopyN(partFile, data, size)
 	}
 	if e != nil {
-		return probe.NewError(e)
+		err := f.toClientError(e, objectPartPath)
+		return err.Trace(objectPartPath)
 	}
+	// Close the file before rename.
 	partFile.Close()
 
 	// Safely completed put. Now commit by renaming to actual filename.
 	if e = os.Rename(objectPartPath, objectPath); e != nil {
-		return probe.NewError(e)
+		err := f.toClientError(e, objectPath)
+		return err.Trace(objectPartPath, objectPath)
 	}
 	return nil
 }
@@ -204,20 +144,6 @@ func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentTy
 	})
 }
 
-// get - convenience wrapper.
-func (f *fsClient) get() (io.ReadSeeker, *probe.Error) {
-	body, e := os.Open(f.PathURL.Path)
-	if e != nil {
-		if os.IsPermission(e) {
-			return nil, probe.NewError(client.PathInsufficientPermission{
-				Path: f.PathURL.Path,
-			})
-		}
-		return nil, probe.NewError(e)
-	}
-	return body, nil
-}
-
 // Get download an full or part object from bucket.
 // returns a reader, length and nil for no errors.
 func (f *fsClient) Get(offset, length int64) (io.ReadSeeker, *probe.Error) {
@@ -235,25 +161,16 @@ func (f *fsClient) Get(offset, length int64) (io.ReadSeeker, *probe.Error) {
 	// Resolve symlinks.
 	_, e := filepath.EvalSymlinks(tmppath)
 	if e != nil {
-		if os.IsNotExist(e) {
-			return nil, probe.NewError(client.PathNotFound{
-				Path: f.PathURL.Path,
-			})
-		}
-		if os.IsPermission(e) {
-			return nil, probe.NewError(client.PathInsufficientPermission{
-				Path: f.PathURL.Path,
-			})
-		}
-		return nil, probe.NewError(e)
-	}
-	if offset == 0 && length == 0 {
-		return f.get()
+		err := f.toClientError(e, f.PathURL.Path)
+		return nil, err.Trace(f.PathURL.Path)
 	}
 	body, e := os.Open(f.PathURL.Path)
 	if e != nil {
-		return nil, probe.NewError(e)
-
+		err := f.toClientError(e, f.PathURL.Path)
+		return nil, err.Trace(f.PathURL.Path)
+	}
+	if offset == 0 && length == 0 {
+		return body, nil
 	}
 	return io.NewSectionReader(body, offset, length), nil
 }
@@ -264,7 +181,8 @@ func (f *fsClient) Remove(incomplete bool) *probe.Error {
 		return nil
 	}
 	e := os.Remove(f.PathURL.Path)
-	return probe.NewError(e)
+	err := f.toClientError(e, f.PathURL.Path)
+	return err.Trace(f.PathURL.Path)
 }
 
 // List - list files and folders.
@@ -284,7 +202,10 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *client.Content,
 	dirName := filepath.Dir(prefix)
 	files, e := ioutil.ReadDir(dirName)
 	if e != nil {
-		contentCh <- &client.Content{Err: probe.NewError(e)}
+		err := f.toClientError(e, dirName)
+		contentCh <- &client.Content{
+			Err: err.Trace(dirName),
+		}
 		return
 	}
 	pathURL := *f.PathURL
@@ -729,8 +650,8 @@ func (f *fsClient) SetBucketAccess(acl string) *probe.Error {
 	return probe.NewError(client.APINotImplemented{API: "SetBucketAccess", APIType: "filesystem"})
 }
 
-// getFSMetadata - get metadata for files and folders.
-func (f *fsClient) getFSMetadata() (content *client.Content, err *probe.Error) {
+// Stat - get metadata from path.
+func (f *fsClient) Stat() (content *client.Content, err *probe.Error) {
 	st, err := f.fsStat()
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
@@ -741,9 +662,4 @@ func (f *fsClient) getFSMetadata() (content *client.Content, err *probe.Error) {
 	content.Time = st.ModTime()
 	content.Type = st.Mode()
 	return content, nil
-}
-
-// Stat - get metadata from path.
-func (f *fsClient) Stat() (content *client.Content, err *probe.Error) {
-	return f.getFSMetadata()
 }
