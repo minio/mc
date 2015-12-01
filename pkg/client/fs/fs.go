@@ -56,6 +56,24 @@ func (f *fsClient) GetURL() client.URL {
 
 /// Object operations.
 
+// handle windows symlinks - eg: junction files.
+func (f *fsClient) handleWindowsSymlinks(fpath string) (os.FileInfo, *probe.Error) {
+	// On windows there are directory symlinks which are called junction files.
+	// These files carry special meaning on windows they cannot be,
+	// accessed with regular operations.
+	lfi, le := os.Lstat(fpath)
+	if le != nil {
+		if os.IsPermission(le) {
+			return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
+		}
+		if os.IsNotExist(le) {
+			return nil, probe.NewError(client.PathNotFound{Path: fpath})
+		}
+		return nil, probe.NewError(le)
+	}
+	return lfi, nil
+}
+
 // fsStat - wrapper function to get file stat.
 func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	fpath := f.PathURL.Path
@@ -64,29 +82,16 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	if strings.HasSuffix(fpath, string(f.PathURL.Separator)) {
 		fpath = fpath + "."
 	}
-	// Resolve symlinks.
 	fpath, e := filepath.EvalSymlinks(fpath)
 	if e != nil {
 		if os.IsPermission(e) {
 			if runtime.GOOS == "windows" {
-				// On windows there are directory symlinks which are called junction files.
-				// These files carry special meaning on windows they cannot be,
-				// accessed with regular operations.
-				lfi, le := os.Lstat(fpath)
-				if le != nil {
-					if os.IsPermission(le) {
-						return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
-					}
-					return nil, probe.NewError(le)
-				}
-				return lfi, nil
+				return f.handleWindowsSymlinks(fpath)
 			}
+			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		if os.IsNotExist(e) {
 			return nil, probe.NewError(client.PathNotFound{Path: f.PathURL.Path})
-		}
-		if os.IsPermission(e) {
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		return nil, probe.NewError(e)
 	}
@@ -94,25 +99,12 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	if e != nil {
 		if os.IsPermission(e) {
 			if runtime.GOOS == "windows" {
-				// On windows there are directory symlinks which are called junction files.
-				// These files carry special meaning on windows they cannot be,
-				// accessed with regular operations.
-				lst, le := os.Lstat(fpath)
-				if le != nil {
-					if os.IsPermission(le) {
-						return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
-					}
-					return nil, probe.NewError(le)
-				}
-				return lst, nil
+				return f.handleWindowsSymlinks(fpath)
 			}
-			return nil, probe.NewError(e)
+			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		if os.IsNotExist(e) {
 			return nil, probe.NewError(client.PathNotFound{Path: f.PathURL.Path})
-		}
-		if os.IsPermission(e) {
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		return nil, probe.NewError(e)
 	}
@@ -308,26 +300,10 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *client.Content,
 					// - which cannot be accessed with regular operations
 					if runtime.GOOS == "windows" {
 						newPath := filepath.Join(prefix, fi.Name())
-						lfi, le := os.Lstat(newPath)
+						lfi, le := f.handleWindowsSymlinks(newPath)
 						if le != nil {
-							if os.IsPermission(le) {
-								contentCh <- &client.Content{
-									Err: probe.NewError(client.PathInsufficientPermission{
-										Path: newPath,
-									}),
-								}
-								continue
-							}
-							if os.IsNotExist(le) {
-								contentCh <- &client.Content{
-									Err: probe.NewError(client.BrokenSymlink{
-										Path: pathURL.Path,
-									}),
-								}
-								continue
-							}
 							contentCh <- &client.Content{
-								Err: probe.NewError(le),
+								Err: le.Trace(newPath),
 							}
 							continue
 						}
@@ -464,16 +440,10 @@ func (f *fsClient) listInRoutine(contentCh chan<- *client.Content, incomplete bo
 					// - which cannot be accessed with regular operations
 					if runtime.GOOS == "windows" {
 						newPath := filepath.Join(fpath, fi.Name())
-						lfi, le := os.Lstat(newPath)
+						lfi, le := f.handleWindowsSymlinks(newPath)
 						if le != nil {
-							if os.IsPermission(le) {
-								contentCh <- &client.Content{
-									Err: probe.NewError(client.PathInsufficientPermission{Path: newPath}),
-								}
-								continue
-							}
 							contentCh <- &client.Content{
-								Err: probe.NewError(le),
+								Err: le.Trace(newPath),
 							}
 							continue
 						}
@@ -607,13 +577,10 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *client.Content, incomp
 			}
 			if os.IsPermission(e) {
 				if runtime.GOOS == "windows" {
-					// On windows there are folder symlinks which are called junction files.
-					// These files carry special meaning on windows which cannot be
-					// accessed with regular operations.
-					lfi, le := os.Lstat(fp)
+					lfi, le := f.handleWindowsSymlinks(fp)
 					if le != nil {
 						contentCh <- &client.Content{
-							Err: probe.NewError(le),
+							Err: le.Trace(fp),
 						}
 						return nil
 					}
@@ -649,19 +616,10 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *client.Content, incomp
 			if e != nil {
 				if os.IsPermission(e) {
 					if runtime.GOOS == "windows" {
-						// On windows there are folder symlinks which are called junction files.
-						// These files carry special meaning on windows which cannot be
-						// accessed with regular operations.
-						lfi, le := os.Lstat(fp)
+						lfi, le := f.handleWindowsSymlinks(fp)
 						if le != nil {
-							if os.IsPermission(le) {
-								contentCh <- &client.Content{
-									Err: probe.NewError(client.PathInsufficientPermission{Path: fp}),
-								}
-								return nil
-							}
 							contentCh <- &client.Content{
-								Err: probe.NewError(le),
+								Err: le.Trace(fp),
 							}
 							return nil
 						}
