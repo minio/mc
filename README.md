@@ -28,9 +28,9 @@
 
 Download ``mc`` for:
 
-- ``64-bit Intel`` from https://dl.minio.io:9000/updates/2015/Nov/linux-amd64/mc
-- ``32-bit Intel`` from https://dl.minio.io:9000/updates/2015/Nov/linux-386/mc
-- ``32-bit ARM`` from https://dl.minio.io:9000/updates/2015/Nov/linux-arm/mc
+- ``64-bit Intel`` from https://dl.minio.io:9000/updates/2015/Dec/linux-amd64/mc
+- ``32-bit Intel`` from https://dl.minio.io:9000/updates/2015/Dec/linux-386/mc
+- ``32-bit ARM`` from https://dl.minio.io:9000/updates/2015/Dec/linux-arm/mc
 
 ~~~
 $ chmod +x mc
@@ -39,7 +39,7 @@ $ ./mc help
 
 #### OS X
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Nov/darwin-amd64/mc
+Download ``mc`` from https://dl.minio.io:9000/updates/2015/Dec/darwin-amd64/mc
 
 ~~~
 $ chmod 755 mc
@@ -50,8 +50,8 @@ $ ./mc help
 
 Download ``mc`` for:
 
-- ``64-bit`` from https://dl.minio.io:9000/updates/2015/Nov/windows-amd64/mc.exe
-- ``32-bit`` from https://dl.minio.io:9000/updates/2015/Nov/windows-386/mc.exe
+- ``64-bit`` from https://dl.minio.io:9000/updates/2015/Dec/windows-amd64/mc.exe
+- ``32-bit`` from https://dl.minio.io:9000/updates/2015/Dec/windows-386/mc.exe
 
 ~~~
 C:\Users\Username\Downloads> mc.exe help
