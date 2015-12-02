@@ -14,14 +14,22 @@ environment:
 # scripts that run after cloning repository
 install:
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
-  - rd C:\Go /s /q
-  - appveyor DownloadFile https://storage.googleapis.com/golang/go1.5.1.windows-amd64.zip
-  - 7z x go1.5.1.windows-amd64.zip -oC:\ >nul
   - go version
   - go env
+  - go get -u github.com/golang/lint/golint
+  - go get -u golang.org/x/tools/cmd/vet
+  - go get -u github.com/fzipp/gocyclo
+  - go get -u github.com/remyoudompheng/go-misc/deadcode
 
 # to run your custom scripts instead of automatic MSBuild
 build_script:
+  - go tool vet -all ./pkg
+  - go tool vet -shadow=true ./pkg
+  - gofmt -s -l pkg
+  - golint .
+  - golint github.com/minio/mc/pkg...
+  - gocyclo -over 40 .
+  - deadcode
   - go test -race .
   - go test -race github.com/minio/mc/pkg...
   - go run buildscripts/gen-ldflags.go > temp.txt
