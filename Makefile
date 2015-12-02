@@ -72,6 +72,9 @@ pkg-remove:
 
 install: gomake-all
 
+release:
+	@./release.sh
+
 clean:
 	@rm -fv cover.out
 	@rm -fv mc
