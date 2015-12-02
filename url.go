@@ -77,13 +77,13 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 }
 
 // isURLPrefixExists - check if object key prefix exists.
-func isURLPrefixExists(urlPrefix string) bool {
+func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 	clnt, err := url2Client(urlPrefix)
 	if err != nil {
 		return false
 	}
 	isRecursive := true
-	isIncomplete := false
+	isIncomplete := incomplete
 	for entry := range clnt.List(isRecursive, isIncomplete) {
 		if entry.Err != nil {
 			return false
