@@ -199,17 +199,13 @@ func (r *Request) PreSignV4() (string, error) {
 	// Initial time.
 	t := time.Now().UTC()
 
-	// Get all signed headers.
-	signedHeaders := r.getSignedHeaders()
-	// Get string to sign from canonical request.
-	stringToSign := r.getStringToSignV4(r.getCanonicalRequest(), t)
-
 	// get credential string.
 	credential := getCredential(r.config.AccessKeyID, r.config.Region, t)
 	// get hmac signing key.
 	signingKey := getSigningKey(r.config.SecretAccessKey, r.config.Region, t)
-	// calculate signature.
-	signature := getSignature(signingKey, stringToSign)
+
+	// Get all signed headers.
+	signedHeaders := r.getSignedHeaders()
 
 	query := r.req.URL.Query()
 	query.Set("X-Amz-Algorithm", authHeader)
@@ -218,6 +214,12 @@ func (r *Request) PreSignV4() (string, error) {
 	query.Set("X-Amz-SignedHeaders", signedHeaders)
 	query.Set("X-Amz-Credential", credential)
 	r.req.URL.RawQuery = query.Encode()
+
+	// Get string to sign from canonical request.
+	stringToSign := r.getStringToSignV4(r.getCanonicalRequest(), t)
+	// calculate signature.
+	signature := getSignature(signingKey, stringToSign)
+
 	r.req.URL.RawQuery += "&X-Amz-Signature=" + signature
 
 	return r.req.URL.String(), nil
