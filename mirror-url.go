@@ -61,7 +61,9 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 	/****** Generic rules *******/
 	_, srcContent, err := url2Stat(srcURL)
-	if err != nil && !isURLPrefixExists(srcURL) {
+	// incomplete uploads are not necessary for copy operation, no need to verify for them.
+	isIncomplete := false
+	if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
 		fatalIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
 	}
 

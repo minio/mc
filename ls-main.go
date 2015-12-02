@@ -95,9 +95,11 @@ func checkListSyntax(ctx *cli.Context) {
 	URLs, err := args2URLs(ctx.Args())
 	fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("One or more unknown URL types passed."))
 
+	isIncomplete := ctx.Bool("incomplete")
+
 	for _, url := range URLs {
 		_, _, err := url2Stat(url)
-		if err != nil && !isURLPrefixExists(url) {
+		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
 		}
 	}
