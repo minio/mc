@@ -33,10 +33,10 @@ func isValidAliasName(aliasName string) bool {
 
 // normalizeAliasedURL - remove any preceding separators.
 func normalizeAliasedURL(aliasedURL string) string {
-	aliasedURL = strings.TrimPrefix(aliasedURL, string(os.PathSeparator))
 	if runtime.GOOS == "windows" {
 		aliasedURL = strings.Replace(aliasedURL, "/", "\\", -1)
 	}
+	aliasedURL = strings.TrimPrefix(aliasedURL, string(os.PathSeparator))
 	return aliasedURL
 }
 
@@ -59,15 +59,12 @@ func getAliasURL(aliasedURL string) (string, *probe.Error) {
 	for aliasName, aliasValue := range config.Aliases {
 		if strings.HasPrefix(normalizedAliasURL, aliasName) {
 			// Match found. Expand it.
-			if !strings.HasSuffix(normalizedAliasURL, string(os.PathSeparator)) {
+			if !strings.Contains(normalizedAliasURL, string(os.PathSeparator)) {
 				return aliasValue, nil
 			}
 			splits := strings.SplitN(normalizedAliasURL, string(os.PathSeparator), 2)
 			if len(splits) == 1 {
 				return aliasedURL, nil // Not an aliased URL. Return as is.
-			}
-			if splits[0] == normalizedAliasURL {
-				return aliasValue, nil // exact match.
 			}
 			// Matched, but path needs to be joined.
 			return urlJoinPath(aliasValue, splits[1]), nil
