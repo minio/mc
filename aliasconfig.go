@@ -19,6 +19,7 @@ package main
 import (
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
@@ -33,6 +34,9 @@ func isValidAliasName(aliasName string) bool {
 // normalizeAliasedURL - remove any preceding separators.
 func normalizeAliasedURL(aliasedURL string) string {
 	aliasedURL = strings.TrimPrefix(aliasedURL, string(os.PathSeparator))
+	if runtime.GOOS == "windows" {
+		aliasedURL = strings.Replace(aliasedURL, "/", "\\", -1)
+	}
 	return aliasedURL
 }
 
@@ -55,11 +59,14 @@ func getAliasURL(aliasedURL string) (string, *probe.Error) {
 	for aliasName, aliasValue := range config.Aliases {
 		if strings.HasPrefix(normalizedAliasURL, aliasName) {
 			// Match found. Expand it.
-			splits := strings.SplitN(normalizedAliasURL, aliasName, 2)
+			if !strings.HasSuffix(normalizedAliasURL, string(os.PathSeparator)) {
+				return aliasValue, nil
+			}
+			splits := strings.SplitN(normalizedAliasURL, string(os.PathSeparator), 2)
 			if len(splits) == 1 {
 				return aliasedURL, nil // Not an aliased URL. Return as is.
 			}
-			if len(splits[0]) == 0 && len(splits[1]) == 0 {
+			if splits[0] == normalizedAliasURL {
 				return aliasValue, nil // exact match.
 			}
 			// Matched, but path needs to be joined.
