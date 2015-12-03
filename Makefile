@@ -72,6 +72,10 @@ pkg-remove:
 
 install: gomake-all
 
+all-tests: test
+	# TODO disable them for now.
+	#@./tests/test-minio.sh
+
 release:
 	@./release.sh
 
