@@ -46,14 +46,14 @@ func (s *MySuite) TestList(c *C) {
 
 	data := "hello"
 
-	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)), "application/octet-stream")
 	c.Assert(err, IsNil)
 
 	objectPath = filepath.Join(root, "object2")
 	fsc, err = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
-	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)), "application/octet-stream")
 	c.Assert(err, IsNil)
 
 	fsc, err = fs.New(root)
@@ -75,7 +75,7 @@ func (s *MySuite) TestList(c *C) {
 	fsc, err = fs.New(objectPath)
 	c.Assert(err, IsNil)
 
-	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)), "application/octet-stream")
 	c.Assert(err, IsNil)
 
 	fsc, err = fs.New(root)
@@ -179,7 +179,7 @@ func (s *MySuite) TestPut(c *C) {
 	c.Assert(err, IsNil)
 
 	data := "hello"
-	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)), "application/octet-stream")
 	c.Assert(err, IsNil)
 }
 
@@ -194,7 +194,7 @@ func (s *MySuite) TestGet(c *C) {
 
 	data := "hello"
 
-	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)), "application/octet-stream")
 	c.Assert(err, IsNil)
 
 	reader, err := fsc.Get(0, 0)
@@ -217,7 +217,7 @@ func (s *MySuite) TestGetRange(c *C) {
 
 	data := "hello world"
 
-	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)), "application/octet-stream")
 	c.Assert(err, IsNil)
 
 	reader, err := fsc.Get(0, 5)
@@ -240,7 +240,7 @@ func (s *MySuite) TestStatObject(c *C) {
 	data := "hello"
 	dataLen := len(data)
 
-	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)))
+	err = fsc.Put(bytes.NewReader([]byte(data)), int64(len(data)), "application/octet-stream")
 	c.Assert(err, IsNil)
 
 	content, err := fsc.Stat()

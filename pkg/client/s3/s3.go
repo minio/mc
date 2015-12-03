@@ -66,9 +66,9 @@ func New(config *client.Config) (client.Client, *probe.Error) {
 		}(),
 	}
 	s3Conf.SetUserAgent(config.AppName, config.AppVersion, config.AppComments...)
-	api, err := minio.New(s3Conf)
-	if err != nil {
-		return nil, probe.NewError(err)
+	api, e := minio.New(s3Conf)
+	if e != nil {
+		return nil, probe.NewError(e)
 	}
 	s3Clnt := &s3Client{
 		mu:           new(sync.Mutex),
@@ -87,15 +87,15 @@ func (c *s3Client) GetURL() client.URL {
 // Get - get object.
 func (c *s3Client) Get(offset, length int64) (io.ReadSeeker, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	reader, err := c.api.GetPartialObject(bucket, object, offset, length)
-	if err != nil {
-		errResponse := minio.ToErrorResponse(err)
+	reader, e := c.api.GetPartialObject(bucket, object, offset, length)
+	if e != nil {
+		errResponse := minio.ToErrorResponse(e)
 		if errResponse != nil {
 			if errResponse.Code == "AccessDenied" {
 				return nil, probe.NewError(client.PathInsufficientPermission{Path: c.hostURL.String()})
 			}
 		}
-		return nil, probe.NewError(err)
+		return nil, probe.NewError(e)
 	}
 	return reader, nil
 }
@@ -107,21 +107,21 @@ func (c *s3Client) Remove(incomplete bool) *probe.Error {
 		errCh := c.api.RemoveIncompleteUpload(bucket, object)
 		return probe.NewError(<-errCh)
 	}
-	var err error
+	var e error
 	if object == "" {
-		err = c.api.RemoveBucket(bucket)
+		e = c.api.RemoveBucket(bucket)
 	} else {
-		err = c.api.RemoveObject(bucket, object)
+		e = c.api.RemoveObject(bucket, object)
 	}
-	return probe.NewError(err)
+	return probe.NewError(e)
 }
 
 // ShareDownload - get a usable presigned object url to share.
 func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	presignedURL, err := c.api.PresignedGetObject(bucket, object, expires)
-	if err != nil {
-		return "", probe.NewError(err)
+	presignedURL, e := c.api.PresignedGetObject(bucket, object, expires)
+	if e != nil {
+		return "", probe.NewError(e)
 	}
 	return presignedURL, nil
 }
@@ -130,39 +130,42 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	p := minio.NewPostPolicy()
-	if err := p.SetExpires(time.Now().UTC().Add(expires)); err != nil {
-		return nil, probe.NewError(err)
+	if e := p.SetExpires(time.Now().UTC().Add(expires)); e != nil {
+		return nil, probe.NewError(e)
 	}
 	if strings.TrimSpace(contentType) != "" || contentType != "" {
 		// No need to verify for error here, since we have stripped out spaces.
 		p.SetContentType(contentType)
 	}
-	if err := p.SetBucket(bucket); err != nil {
-		return nil, probe.NewError(err)
+	if e := p.SetBucket(bucket); e != nil {
+		return nil, probe.NewError(e)
 	}
 	if isRecursive {
-		if err := p.SetKeyStartsWith(object); err != nil {
-			return nil, probe.NewError(err)
+		if e := p.SetKeyStartsWith(object); e != nil {
+			return nil, probe.NewError(e)
 		}
 	} else {
-		if err := p.SetKey(object); err != nil {
-			return nil, probe.NewError(err)
+		if e := p.SetKey(object); e != nil {
+			return nil, probe.NewError(e)
 		}
 	}
-	m, err := c.api.PresignedPostPolicy(p)
-	return m, probe.NewError(err)
+	m, e := c.api.PresignedPostPolicy(p)
+	return m, probe.NewError(e)
 }
 
 // Put - put object.
-func (c *s3Client) Put(data io.ReadSeeker, size int64) *probe.Error {
+func (c *s3Client) Put(data io.ReadSeeker, size int64, contentType string) *probe.Error {
 	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
 	// for a multipart upload and there is no need to cross verify,
 	// invidual parts are properly verified fully in transit and also upon completion
 	// of the multipart request.
 	bucket, object := c.url2BucketAndObject()
-	err := c.api.PutObject(bucket, object, data, size, "application/octet-stream")
-	if err != nil {
-		errResponse := minio.ToErrorResponse(err)
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	e := c.api.PutObject(bucket, object, data, size, contentType)
+	if e != nil {
+		errResponse := minio.ToErrorResponse(e)
 		if errResponse != nil {
 			if errResponse.Code == "AccessDenied" {
 				return probe.NewError(client.PathInsufficientPermission{
@@ -178,7 +181,7 @@ func (c *s3Client) Put(data io.ReadSeeker, size int64) *probe.Error {
 				return probe.NewError(client.ObjectMissing{})
 			}
 		}
-		return probe.NewError(err)
+		return probe.NewError(e)
 	}
 	return nil
 }
@@ -197,15 +200,15 @@ func (c *s3Client) MakeBucket() *probe.Error {
 		return probe.NewError(errors.New("Bucket name can contain alphabet, '-' and numbers, but first character should be an alphabet"))
 	}
 
-	err := c.api.MakeBucket(bucket, minio.BucketACL("private"))
-	if err != nil {
-		return probe.NewError(err)
+	e := c.api.MakeBucket(bucket, minio.BucketACL("private"))
+	if e != nil {
+		return probe.NewError(e)
 	}
 	return nil
 }
 
 // GetBucketAccess get acl on a bucket.
-func (c *s3Client) GetBucketAccess() (acl string, error *probe.Error) {
+func (c *s3Client) GetBucketAccess() (acl string, err *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		return "", probe.NewError(client.InvalidBucketName{Bucket: filepath.Join(bucket, object)})
@@ -213,9 +216,9 @@ func (c *s3Client) GetBucketAccess() (acl string, error *probe.Error) {
 	if bucket == "" {
 		return "", probe.NewError(client.BucketNameEmpty{})
 	}
-	bucketACL, err := c.api.GetBucketACL(bucket)
-	if err != nil {
-		return "", probe.NewError(err)
+	bucketACL, e := c.api.GetBucketACL(bucket)
+	if e != nil {
+		return "", probe.NewError(e)
 	}
 	return bucketACL.String(), nil
 }
@@ -229,9 +232,9 @@ func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
 	if bucket == "" {
 		return probe.NewError(client.BucketNameEmpty{})
 	}
-	err := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
-	if err != nil {
-		return probe.NewError(err)
+	e := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
+	if e != nil {
+		return probe.NewError(e)
 	}
 	return nil
 }
@@ -242,7 +245,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	objectMetadata := new(client.Content)
 	bucket, object := c.url2BucketAndObject()
 	switch {
-	// valid case for '-r s3/'
+	// valid case for 'ls -r s3/'
 	case bucket == "" && object == "":
 		for bucket := range c.api.ListBuckets() {
 			if bucket.Err != nil {
@@ -254,10 +257,10 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 		return &client.Content{URL: *c.hostURL, Type: os.ModeDir}, nil
 	}
 	if object != "" {
-		metadata, err := c.api.StatObject(bucket, object)
-		if err != nil {
+		metadata, e := c.api.StatObject(bucket, object)
+		if e != nil {
 			c.mu.Unlock()
-			errResponse := minio.ToErrorResponse(err)
+			errResponse := minio.ToErrorResponse(e)
 			if errResponse != nil {
 				if errResponse.Code == "NoSuchKey" {
 					// Append "/" to the object name proactively and see if the Listing
@@ -277,7 +280,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 					return nil, probe.NewError(client.PathNotFound{Path: c.hostURL.Path})
 				}
 			}
-			return nil, probe.NewError(err)
+			return nil, probe.NewError(e)
 		}
 		objectMetadata.URL = *c.hostURL
 		objectMetadata.Time = metadata.LastModified
@@ -286,10 +289,10 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 		c.mu.Unlock()
 		return objectMetadata, nil
 	}
-	err := c.api.BucketExists(bucket)
-	if err != nil {
+	e := c.api.BucketExists(bucket)
+	if e != nil {
 		c.mu.Unlock()
-		return nil, probe.NewError(err)
+		return nil, probe.NewError(e)
 	}
 	bucketMetadata := new(client.Content)
 	bucketMetadata.URL = *c.hostURL
@@ -515,10 +518,10 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 			contentCh <- content
 		}
 	case b != "" && !strings.HasSuffix(c.hostURL.Path, string(c.hostURL.Separator)) && o == "":
-		err := c.api.BucketExists(b)
-		if err != nil {
+		e := c.api.BucketExists(b)
+		if e != nil {
 			contentCh <- &client.Content{
-				Err: probe.NewError(err),
+				Err: probe.NewError(e),
 			}
 		}
 		content := new(client.Content)
@@ -526,8 +529,8 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 		content.Type = os.ModeDir
 		contentCh <- content
 	default:
-		metadata, err := c.api.StatObject(b, o)
-		switch err.(type) {
+		metadata, e := c.api.StatObject(b, o)
+		switch e.(type) {
 		case nil:
 			content := new(client.Content)
 			content.URL = *c.hostURL
