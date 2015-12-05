@@ -37,7 +37,7 @@ type Client interface {
 
 	// I/O operations
 	Get(offset, length int64) (body io.ReadSeeker, err *probe.Error)
-	Put(data io.ReadSeeker, size int64) *probe.Error
+	Put(data io.ReadSeeker, size int64, contentType string) *probe.Error
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)

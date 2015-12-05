@@ -57,7 +57,10 @@ func (f *fsClient) GetURL() client.URL {
 /// Object operations.
 
 // Put - create a new file.
-func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
+func (f *fsClient) Put(data io.ReadSeeker, size int64, contentType string) *probe.Error {
+	// ContentType is not handled on purpose.
+	// For filesystem this is a redundant information.
+
 	// Extract dir name.
 	objectDir, _ := filepath.Split(f.PathURL.Path)
 	objectPath := f.PathURL.Path
@@ -82,7 +85,6 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64) *probe.Error {
 
 	// Write to a temporary file "object.part.mc" before commiting.
 	objectPartPath := objectPath + partSuffix
-
 	if objectDir != "" {
 		// Create any missing top level directories.
 		if e := os.MkdirAll(objectDir, 0700); e != nil {
@@ -641,7 +643,7 @@ func (f *fsClient) MakeBucket() *probe.Error {
 }
 
 // GetBucketACL - get bucket access.
-func (f *fsClient) GetBucketAccess() (acl string, error *probe.Error) {
+func (f *fsClient) GetBucketAccess() (acl string, err *probe.Error) {
 	return "", probe.NewError(client.APINotImplemented{API: "GetBucketAccess", APIType: "filesystem"})
 }
 

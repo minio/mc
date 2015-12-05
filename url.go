@@ -18,9 +18,11 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio/pkg/contentdb"
 )
 
 func isURLVirtualHostStyle(hostURL string) bool {
@@ -91,4 +93,16 @@ func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 		return true
 	}
 	return false
+}
+
+// guessURLContentType - guess content-type of the URL.
+// on failure just return 'application/octet-stream'.
+func guessURLContentType(urlStr string) string {
+	url := client.NewURL(urlStr)
+	extension := strings.TrimPrefix(filepath.Ext(url.Path), ".")
+	contentType, e := contentdb.Lookup(extension)
+	if e != nil {
+		return "application/octet-stream"
+	}
+	return contentType
 }

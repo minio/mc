@@ -62,7 +62,8 @@ func putTarget(targetURL string, reader io.ReadSeeker, size int64) *probe.Error 
 	if err != nil {
 		return err.Trace(targetURL)
 	}
-	err = targetClnt.Put(reader, size)
+	contentType := guessURLContentType(targetURL)
+	err = targetClnt.Put(reader, size, contentType)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
