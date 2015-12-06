@@ -113,7 +113,7 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64, contentType string) *prob
 	if size < 0 { // Read till EOF.
 		_, e = io.Copy(partFile, data)
 	} else { // Read till N bytes.
-		_, e = io.CopyN(partFile, data, size)
+		_, e = io.CopyN(partFile, data, size-partSt.Size())
 	}
 	if e != nil {
 		err := f.toClientError(e, objectPartPath)
