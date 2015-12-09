@@ -47,9 +47,19 @@ func isBucketVirtualStyle(host string) bool {
 	return s3Virtual || googleVirtual
 }
 
-// user.Current is not implemented on 32bit, falling back and using a workaround instead.
+// Workaround for docker images with fully static binary and 32bit linux operating systems.
+// For static binaries NSS library will not be a part of the static binary hence user.Current() fails.
+// For 32bit linux CGO is not enabled so it will not provide linux specific codebase.
+// This code is taken from the minio project:
+// (https://github.com/minio/minio/blob/8046b24b975a26d659bda12797a30631bb427e8f/utils.go#L60-L85)
 func userCurrent() (*user.User, *probe.Error) {
-	// Remove this check if golang fixes their code to support 32bit properly for user.Current.
+	if os.Getenv("DOCKERIMAGE") == "1" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return nil, probe.NewError(err)
+		}
+		return &user.User{Uid: "0", Gid: "0", Username: "root", Name: "root", HomeDir: wd}, nil
+	}
 	if runtime.GOARCH == "386" && runtime.GOOS == "linux" {
 		return &user.User{
 			Uid:      strconv.Itoa(os.Getuid()),
