@@ -22,6 +22,7 @@ import (
 	"runtime"
 
 	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio/pkg/user"
 )
 
 // mcCustomConfigDir contains the whole path to config dir. Only access via get/set functions.
@@ -40,16 +41,16 @@ func getMcConfigDir() (string, *probe.Error) {
 	if mcCustomConfigDir != "" {
 		return mcCustomConfigDir, nil
 	}
-	u, err := userCurrent()
-	if err != nil {
-		return "", err.Trace()
+	homeDir, e := user.HomeDir()
+	if e != nil {
+		return "", probe.NewError(e)
 	}
 	// For windows the path is slightly different
 	switch runtime.GOOS {
 	case "windows":
-		return filepath.Join(u.HomeDir, globalMCConfigWindowsDir), nil
+		return filepath.Join(homeDir, globalMCConfigWindowsDir), nil
 	default:
-		return filepath.Join(u.HomeDir, globalMCConfigDir), nil
+		return filepath.Join(homeDir, globalMCConfigDir), nil
 	}
 }
 
