@@ -53,6 +53,11 @@
 			"revisionTime": "2015-12-03T01:11:14-08:00"
 		},
 		{
+			"path": "github.com/minio/minio/pkg/user",
+			"revision": "71876688282283e8af374bd8592c7d33c547df4d",
+			"revisionTime": "2015-12-07T14:59:57-08:00"
+		},
+		{
 			"path": "github.com/minio/pb",
 			"revision": "6a97c3b0da073f974e0b8d1ac1bc42c0a7adca46",
 			"revisionTime": "2015-08-12T18:13:54-07:00"
