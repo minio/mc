@@ -97,10 +97,6 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	// Find alias and expanded URL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	if sourceURL == targetURL {
-		// source and target can not be same
-		return copyURLs{Error: errSourceTargetSame(sourceURL).Trace(sourceURL)}
-	}
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
@@ -109,6 +105,10 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	if !sourceContent.Type.IsRegular() {
 		// Source is not a regular file
 		return copyURLs{Error: errInvalidSource(sourceURL).Trace(sourceURL)}
+	}
+	if sourceContent.URL.String() == targetURL {
+		// source and target can not be same
+		return copyURLs{Error: errSourceTargetSame(sourceURL).Trace(sourceURL)}
 	}
 
 	// All OK.. We can proceed. Type A

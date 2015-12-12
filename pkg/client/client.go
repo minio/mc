@@ -31,13 +31,13 @@ type Client interface {
 	List(recursive, incomplete bool) <-chan *Content
 
 	// Bucket operations
-	MakeBucket() *probe.Error
+	MakeBucket(region string) *probe.Error
 	GetBucketAccess() (access string, error *probe.Error)
 	SetBucketAccess(access string) *probe.Error
 
 	// I/O operations
-	Get(offset, length int64) (body io.ReadSeeker, err *probe.Error)
-	Put(data io.ReadSeeker, size int64, contentType string) *probe.Error
+	Get() (reader io.Reader, err *probe.Error)
+	Put(reader io.Reader, size int64, contentType string, progress io.Reader) (n int64, err *probe.Error)
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)

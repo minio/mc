@@ -100,7 +100,6 @@ func shareSetColor() {
 	console.SetColor("Content-type", color.New(color.FgBlue))
 	console.SetColor("Share", color.New(color.FgGreen))
 	console.SetColor("File", color.New(color.FgRed, color.Bold))
-
 }
 
 // Get share dir name.

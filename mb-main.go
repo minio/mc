@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -31,6 +30,11 @@ var (
 		cli.BoolFlag{
 			Name:  "help, h",
 			Usage: "Help of mb.",
+		},
+		cli.StringFlag{
+			Name:  "region",
+			Value: "us-east-1",
+			Usage: "Specify bucket region. Defaults to ‘us-east-1’.",
 		},
 	}
 )
@@ -57,7 +61,10 @@ EXAMPLES:
    2. Create a new bucket on Google Cloud Storage.
       $ mc {{.Name}} gcs/miniocloud
 
-   3. Create a new directory including its missing parents (equivalent to ‘mkdir -p’).
+   4. Create a new bucket on Amazon S3 cloud storage in region ‘us-west-2’.
+      $ mc {{.Name}} --region=us-west-2 s3/myregionbucket
+
+   5. Create a new directory including its missing parents (equivalent to ‘mkdir -p’).
       $ mc {{.Name}} /tmp/this/new/dir1
 `,
 }
@@ -66,6 +73,7 @@ EXAMPLES:
 type makeBucketMessage struct {
 	Status string `json:"status"`
 	Bucket string `json:"bucket"`
+	Region string `json:"region"`
 }
 
 // String colorized make bucket message.
@@ -86,10 +94,8 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
-	for _, arg := range ctx.Args() {
-		if strings.TrimSpace(arg) == "" {
-			fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
-		}
+	if len(ctx.Args()) != 1 {
+		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Incorrect number of arguments for mb command.")
 	}
 }
 
@@ -104,20 +110,18 @@ func mainMakeBucket(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("MakeBucket", color.New(color.FgGreen, color.Bold))
 
-	for _, targetURL := range ctx.Args() {
-		// Instantiate client for URL.
-		clnt, err := newClient(targetURL)
-		fatalIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
+	// save region.
+	region := ctx.String("region")
 
-		// Make bucket.
-		err = clnt.MakeBucket()
-		// Upon error print error and continue.
-		if err != nil {
-			errorIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
-			continue
-		}
+	targetURL := ctx.Args().First()
+	// Instantiate client for URL.
+	clnt, err := newClient(targetURL)
+	fatalIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
 
-		// Successfully created a bucket.
-		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
-	}
+	// Make bucket.
+	err = clnt.MakeBucket(region)
+	fatalIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+
+	// Successfully created a bucket.
+	printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
 }

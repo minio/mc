@@ -20,7 +20,7 @@ $ mc --help
     - Push to the branch (git push origin my-new-feature)
     - Create new Pull Request
 
-* If you have additional dependencies for ``mc``, ``mc`` manages its depedencies using [govendor](https://github.com/kardianos/govendor)
+* If you have additional dependencies for ``mc``, ``mc`` manages its dependencies using [govendor](https://github.com/kardianos/govendor)
     - Run `go get foo/bar`
     - Edit your code to import foo/bar
     - Run `make pkg-add PKG=foo/bar` from top-level folder

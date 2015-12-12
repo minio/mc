@@ -67,7 +67,16 @@ func (t TraceV4) Request(req *http.Request) (err error) {
 
 // Response - Trace HTTP Response
 func (t TraceV4) Response(res *http.Response) (err error) {
-	resTrace, err := httputil.DumpResponse(res, false) // Only display header
+	var resTrace []byte
+	// For errors we make sure to dump response body as well.
+	if res.StatusCode != http.StatusOK &&
+		res.StatusCode != http.StatusPartialContent &&
+		res.StatusCode != http.StatusNoContent {
+		resTrace, err = httputil.DumpResponse(res, true)
+	} else {
+		// Only display header
+		resTrace, err = httputil.DumpResponse(res, false)
+	}
 	if err == nil {
 		console.Debug(string(resTrace))
 	}

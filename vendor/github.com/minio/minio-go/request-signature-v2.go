@@ -21,7 +21,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -31,61 +30,78 @@ import (
 	"time"
 )
 
-// PreSignV2 - presign the request in following style.
-// https://${S3_BUCKET}.s3.amazonaws.com/${S3_OBJECT}?AWSAccessKeyId=${S3_ACCESS_KEY}&Expires=${TIMESTAMP}&Signature=${SIGNATURE}
-func (r *Request) PreSignV2() (string, error) {
-	if r.config.isAnonymous() {
-		return "", errors.New("presigning cannot be done with anonymous credentials")
+// Signature and API related constants.
+const (
+	signV2Algorithm = "AWS"
+)
+
+// Encode input URL path to URL encoded path.
+func encodeURL2Path(u *url.URL) (path string) {
+	// Encode URL path.
+	if strings.HasSuffix(u.Host, ".s3.amazonaws.com") {
+		path = "/" + strings.TrimSuffix(u.Host, ".s3.amazonaws.com")
+		path += u.Path
+		path = urlEncodePath(path)
+		return
+	}
+	if strings.HasSuffix(u.Host, ".storage.googleapis.com") {
+		path = "/" + strings.TrimSuffix(u.Host, ".storage.googleapis.com")
+		path += u.Path
+		path = urlEncodePath(path)
+		return
+	}
+	path = urlEncodePath(u.Path)
+	return
+}
+
+// preSignV2 - presign the request in following style.
+// https://${S3_BUCKET}.s3.amazonaws.com/${S3_OBJECT}?AWSAccessKeyId=${S3_ACCESS_KEY}&Expires=${TIMESTAMP}&Signature=${SIGNATURE}.
+func preSignV2(req http.Request, accessKeyID, secretAccessKey string, expires int64) *http.Request {
+	// Presign is not needed for anonymous credentials.
+	if accessKeyID == "" || secretAccessKey == "" {
+		return &req
 	}
 	d := time.Now().UTC()
-	// Add date if not present
-	if date := r.Get("Date"); date == "" {
-		r.Set("Date", d.Format(http.TimeFormat))
+	// Add date if not present.
+	if date := req.Header.Get("Date"); date == "" {
+		req.Header.Set("Date", d.Format(http.TimeFormat))
 	}
-	var path string
-	// Encode URL path.
-	if r.config.isVirtualHostedStyle {
-		for k, v := range regions {
-			if v == r.config.Region {
-				path = "/" + strings.TrimSuffix(r.req.URL.Host, "."+k)
-				path += r.req.URL.Path
-				path = getURLEncodedPath(path)
-				break
-			}
-		}
-	} else {
-		path = getURLEncodedPath(r.req.URL.Path)
-	}
+
+	// Get encoded URL path.
+	path := encodeURL2Path(req.URL)
 
 	// Find epoch expires when the request will expire.
-	epochExpires := d.Unix() + r.expires
+	epochExpires := d.Unix() + expires
 
-	// get string to sign.
-	stringToSign := fmt.Sprintf("%s\n\n\n%d\n%s", r.req.Method, epochExpires, path)
-	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
+	// Get string to sign.
+	stringToSign := fmt.Sprintf("%s\n\n\n%d\n%s", req.Method, epochExpires, path)
+	hm := hmac.New(sha1.New, []byte(secretAccessKey))
 	hm.Write([]byte(stringToSign))
-	// calculate signature.
+
+	// Calculate signature.
 	signature := base64.StdEncoding.EncodeToString(hm.Sum(nil))
 
-	query := r.req.URL.Query()
+	query := req.URL.Query()
 	// Handle specially for Google Cloud Storage.
-	if r.config.Region == "google" {
-		query.Set("GoogleAccessId", r.config.AccessKeyID)
+	if strings.Contains(req.URL.Host, ".storage.googleapis.com") {
+		query.Set("GoogleAccessId", accessKeyID)
 	} else {
-		query.Set("AWSAccessKeyId", r.config.AccessKeyID)
+		query.Set("AWSAccessKeyId", accessKeyID)
 	}
 
 	// Fill in Expires and Signature for presigned query.
 	query.Set("Expires", strconv.FormatInt(epochExpires, 10))
 	query.Set("Signature", signature)
-	r.req.URL.RawQuery = query.Encode()
 
-	return r.req.URL.String(), nil
+	// Encode query and save.
+	req.URL.RawQuery = query.Encode()
+	return &req
 }
 
-// PostPresignSignatureV2 - presigned signature for PostPolicy request
-func (r *Request) PostPresignSignatureV2(policyBase64 string) string {
-	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
+// postPresignSignatureV2 - presigned signature for PostPolicy
+// request.
+func postPresignSignatureV2(policyBase64, secretAccessKey string) string {
+	hm := hmac.New(sha1.New, []byte(secretAccessKey))
 	hm.Write([]byte(policyBase64))
 	signature := base64.StdEncoding.EncodeToString(hm.Sum(nil))
 	return signature
@@ -107,30 +123,37 @@ func (r *Request) PostPresignSignatureV2(policyBase64 string) string {
 //
 // CanonicalizedProtocolHeaders = <described below>
 
-// SignV2 sign the request before Do() (AWS Signature Version 2).
-func (r *Request) SignV2() {
+// signV2 sign the request before Do() (AWS Signature Version 2).
+func signV2(req http.Request, accessKeyID, secretAccessKey string) *http.Request {
+	// Signature calculation is not needed for anonymous credentials.
+	if accessKeyID == "" || secretAccessKey == "" {
+		return &req
+	}
+
 	// Initial time.
 	d := time.Now().UTC()
 
 	// Add date if not present.
-	if date := r.Get("Date"); date == "" {
-		r.Set("Date", d.Format(http.TimeFormat))
+	if date := req.Header.Get("Date"); date == "" {
+		req.Header.Set("Date", d.Format(http.TimeFormat))
 	}
 
 	// Calculate HMAC for secretAccessKey.
-	stringToSign := r.getStringToSignV2()
-	hm := hmac.New(sha1.New, []byte(r.config.SecretAccessKey))
+	stringToSign := getStringToSignV2(req)
+	hm := hmac.New(sha1.New, []byte(secretAccessKey))
 	hm.Write([]byte(stringToSign))
 
 	// Prepare auth header.
 	authHeader := new(bytes.Buffer)
-	authHeader.WriteString(fmt.Sprintf("AWS %s:", r.config.AccessKeyID))
+	authHeader.WriteString(fmt.Sprintf("%s %s:", signV2Algorithm, accessKeyID))
 	encoder := base64.NewEncoder(base64.StdEncoding, authHeader)
 	encoder.Write(hm.Sum(nil))
 	encoder.Close()
 
 	// Set Authorization header.
-	r.req.Header.Set("Authorization", authHeader.String())
+	req.Header.Set("Authorization", authHeader.String())
+
+	return &req
 }
 
 // From the Amazon docs:
@@ -141,35 +164,35 @@ func (r *Request) SignV2() {
 //	 Date + "\n" +
 //	 CanonicalizedProtocolHeaders +
 //	 CanonicalizedResource;
-func (r *Request) getStringToSignV2() string {
+func getStringToSignV2(req http.Request) string {
 	buf := new(bytes.Buffer)
-	// write standard headers.
-	r.writeDefaultHeaders(buf)
-	// write canonicalized protocol headers if any.
-	r.writeCanonicalizedHeaders(buf)
-	// write canonicalized Query resources if any.
-	r.writeCanonicalizedResource(buf)
+	// Write standard headers.
+	writeDefaultHeaders(buf, req)
+	// Write canonicalized protocol headers if any.
+	writeCanonicalizedHeaders(buf, req)
+	// Write canonicalized Query resources if any.
+	writeCanonicalizedResource(buf, req)
 	return buf.String()
 }
 
 // writeDefaultHeader - write all default necessary headers
-func (r *Request) writeDefaultHeaders(buf *bytes.Buffer) {
-	buf.WriteString(r.req.Method)
+func writeDefaultHeaders(buf *bytes.Buffer, req http.Request) {
+	buf.WriteString(req.Method)
 	buf.WriteByte('\n')
-	buf.WriteString(r.req.Header.Get("Content-MD5"))
+	buf.WriteString(req.Header.Get("Content-MD5"))
 	buf.WriteByte('\n')
-	buf.WriteString(r.req.Header.Get("Content-Type"))
+	buf.WriteString(req.Header.Get("Content-Type"))
 	buf.WriteByte('\n')
-	buf.WriteString(r.req.Header.Get("Date"))
+	buf.WriteString(req.Header.Get("Date"))
 	buf.WriteByte('\n')
 }
 
 // writeCanonicalizedHeaders - write canonicalized headers.
-func (r *Request) writeCanonicalizedHeaders(buf *bytes.Buffer) {
+func writeCanonicalizedHeaders(buf *bytes.Buffer, req http.Request) {
 	var protoHeaders []string
 	vals := make(map[string][]string)
-	for k, vv := range r.req.Header {
-		// all the AMZ and GOOG headers should be lowercase
+	for k, vv := range req.Header {
+		// All the AMZ headers should be lowercase
 		lk := strings.ToLower(k)
 		if strings.HasPrefix(lk, "x-amz") {
 			protoHeaders = append(protoHeaders, lk)
@@ -228,38 +251,33 @@ var resourceList = []string{
 // CanonicalizedResource = [ "/" + Bucket ] +
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
-func (r *Request) writeCanonicalizedResource(buf *bytes.Buffer) error {
-	requestURL := r.req.URL
-	if r.config.isVirtualHostedStyle {
-		for k, v := range regions {
-			if v == r.config.Region {
-				path := "/" + strings.TrimSuffix(requestURL.Host, "."+k)
-				path += requestURL.Path
-				buf.WriteString(getURLEncodedPath(path))
-				break
-			}
-		}
-	} else {
-		buf.WriteString(getURLEncodedPath(requestURL.Path))
-	}
+func writeCanonicalizedResource(buf *bytes.Buffer, req http.Request) error {
+	// Save request URL.
+	requestURL := req.URL
+
+	// Get encoded URL path.
+	path := encodeURL2Path(requestURL)
+	buf.WriteString(path)
+
 	sort.Strings(resourceList)
 	if requestURL.RawQuery != "" {
 		var n int
 		vals, _ := url.ParseQuery(requestURL.RawQuery)
-		// loop through all the supported resourceList.
+		// Verify if any sub resource queries are present, if yes
+		// canonicallize them.
 		for _, resource := range resourceList {
 			if vv, ok := vals[resource]; ok && len(vv) > 0 {
 				n++
-				// first element
+				// First element
 				switch n {
 				case 1:
 					buf.WriteByte('?')
-				// the rest
+				// The rest
 				default:
 					buf.WriteByte('&')
 				}
 				buf.WriteString(resource)
-				// request parameters
+				// Request parameters
 				if len(vv[0]) > 0 {
 					buf.WriteByte('=')
 					buf.WriteString(url.QueryEscape(vv[0]))

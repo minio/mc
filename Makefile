@@ -39,7 +39,8 @@ lint:
 
 cyclo:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 gocyclo -over 40 .
+	@GO15VENDOREXPERIMENT=1 gocyclo -over 40 *.go
+	@GO15VENDOREXPERIMENT=1 gocyclo -over 40 pkg
 
 deadcode:
 	@echo "Running $@:"

@@ -63,7 +63,7 @@ func newBrokenConfigV3() *brokenConfigV3 {
 // Fix config version ‘3’. Some v3 config files are written without
 // proper hostConfig JSON tags. They may also contain unused ACL and
 // Access fields. Rewrite the hostConfig with proper fields using JSON
-// tags and drop the unsed (ACL, Access) fields.
+// tags and drop the unused (ACL, Access) fields.
 func fixConfigV3() {
 	if !isMcConfigExists() {
 		return

@@ -99,7 +99,11 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 
 // doShareURL share files from target.
 func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration) *probe.Error {
-	clnt, err := newClient(targetURL)
+	targetAlias, targetURLFull, _, err := expandAlias(targetURL)
+	if err != nil {
+		return err.Trace(targetURL)
+	}
+	clnt, err := newClientFromAlias(targetAlias, targetURLFull)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
@@ -123,7 +127,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 			continue
 		}
 		objectURL := content.URL.String()
-		newClnt, err := newClient(objectURL)
+		newClnt, err := newClientFromAlias(targetAlias, objectURL)
 		if err != nil {
 			return err.Trace(objectURL)
 		}

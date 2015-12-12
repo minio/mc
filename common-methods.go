@@ -33,6 +33,10 @@ func isTargetURLDir(targetURL string) bool {
 	targetURLParse := client.NewURL(targetURL)
 	_, targetContent, err := url2Stat(targetURL)
 	if err != nil {
+		_, aliasedTargetURL, _ := mustExpandAlias(targetURL)
+		if aliasedTargetURL == targetURL {
+			return false
+		}
 		if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
 			return false
 		}
@@ -48,44 +52,49 @@ func isTargetURLDir(targetURL string) bool {
 }
 
 // getSource gets a reader from URL.
-func getSource(urlStr string) (reader io.ReadSeeker, err *probe.Error) {
+func getSourceStream(urlStr string) (reader io.Reader, err *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return nil, err.Trace(urlStr)
 	}
-	return getSourceFromAlias(alias, urlStrFull)
+	return getSourceStreamFromAlias(alias, urlStrFull)
 }
 
-// getSourceFromAlias gets a reader from URL.
-func getSourceFromAlias(alias string, urlStr string) (reader io.ReadSeeker, err *probe.Error) {
+// getSourceStreamFromAlias gets a reader from URL.
+func getSourceStreamFromAlias(alias string, urlStr string) (reader io.Reader, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return nil, err.Trace(alias, urlStr)
 	}
-	return sourceClnt.Get(0, 0)
-}
-
-// putTarget writes to URL from reader. If length=-1, read until EOF.
-func putTarget(urlStr string, reader io.ReadSeeker, size int64) *probe.Error {
-	alias, urlStrFull, _, err := expandAlias(urlStr)
+	reader, err = sourceClnt.Get()
 	if err != nil {
-		return err
+		return nil, err.Trace(alias, urlStr)
 	}
-	return putTargetFromAlias(alias, urlStrFull, reader, size)
+	return reader, nil
 }
 
-// putTargetFromAlias writes to URL from reader. If length=-1, read until EOF.
-func putTargetFromAlias(alias string, urlStr string, reader io.ReadSeeker, size int64) *probe.Error {
+// putTargetStreamFromAlias writes to URL from Reader.
+func putTargetStreamFromAlias(alias string, urlStr string, reader io.Reader, size int64, progress io.Reader) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
-		return err.Trace(alias, urlStr)
+		return 0, err.Trace(alias, urlStr)
 	}
 	contentType := guessURLContentType(urlStr)
-	err = targetClnt.Put(reader, size, contentType)
+	var n int64
+	n, err = targetClnt.Put(reader, size, contentType, progress)
 	if err != nil {
-		return err.Trace(alias, urlStr)
+		return n, err.Trace(alias, urlStr)
 	}
-	return nil
+	return n, nil
+}
+
+// putTargetStream writes to URL from reader. If length=-1, read until EOF.
+func putTargetStream(urlStr string, reader io.Reader, size int64) (int64, *probe.Error) {
+	alias, urlStrFull, _, err := expandAlias(urlStr)
+	if err != nil {
+		return 0, err.Trace(alias, urlStr)
+	}
+	return putTargetStreamFromAlias(alias, urlStrFull, reader, size, nil)
 }
 
 // newClientFromAlias gives a new client interface for matching

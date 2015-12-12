@@ -2,16 +2,16 @@ package minio
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
 
-// expirationDateFormat date format for expiration key in json policy
+// expirationDateFormat date format for expiration key in json policy.
 const expirationDateFormat = "2006-01-02T15:04:05.999Z"
 
-// policyCondition explanation: http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
+// policyCondition explanation:
+// http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
 //
 // Example:
 //
@@ -27,21 +27,25 @@ type policyCondition struct {
 	value     string
 }
 
-// PostPolicy provides strict static type conversion and validation for Amazon S3's POST policy JSON string.
+// PostPolicy - Provides strict static type conversion and validation
+// for Amazon S3's POST policy JSON string.
 type PostPolicy struct {
-	expiration time.Time         // expiration date and time of the POST policy.
-	conditions []policyCondition // collection of different policy conditions.
-	// contentLengthRange minimum and maximum allowable size for the uploaded content.
+	// Expiration date and time of the POST policy.
+	expiration time.Time
+	// Collection of different policy conditions.
+	conditions []policyCondition
+	// ContentLengthRange minimum and maximum allowable size for the
+	// uploaded content.
 	contentLengthRange struct {
-		min int
-		max int
+		min int64
+		max int64
 	}
 
-	// Post form data
+	// Post form data.
 	formData map[string]string
 }
 
-// NewPostPolicy instantiate new post policy
+// NewPostPolicy - Instantiate new post policy.
 func NewPostPolicy() *PostPolicy {
 	p := &PostPolicy{}
 	p.conditions = make([]policyCondition, 0)
@@ -49,19 +53,19 @@ func NewPostPolicy() *PostPolicy {
 	return p
 }
 
-// SetExpires expiration time
+// SetExpires - Sets expiration time for the new policy.
 func (p *PostPolicy) SetExpires(t time.Time) error {
 	if t.IsZero() {
-		return errors.New("No expiry time set.")
+		return ErrInvalidArgument("No expiry time set.")
 	}
 	p.expiration = t
 	return nil
 }
 
-// SetKey Object name
+// SetKey - Sets an object name for the policy based upload.
 func (p *PostPolicy) SetKey(key string) error {
 	if strings.TrimSpace(key) == "" || key == "" {
-		return errors.New("Object name is not specified.")
+		return ErrInvalidArgument("Object name is empty.")
 	}
 	policyCond := policyCondition{
 		matchType: "eq",
@@ -75,10 +79,11 @@ func (p *PostPolicy) SetKey(key string) error {
 	return nil
 }
 
-// SetKeyStartsWith Object name that can start with
+// SetKeyStartsWith - Sets an object name that an policy based upload
+// can start with.
 func (p *PostPolicy) SetKeyStartsWith(keyStartsWith string) error {
 	if strings.TrimSpace(keyStartsWith) == "" || keyStartsWith == "" {
-		return errors.New("Object prefix is not specified.")
+		return ErrInvalidArgument("Object prefix is empty.")
 	}
 	policyCond := policyCondition{
 		matchType: "starts-with",
@@ -92,27 +97,28 @@ func (p *PostPolicy) SetKeyStartsWith(keyStartsWith string) error {
 	return nil
 }
 
-// SetBucket bucket name
-func (p *PostPolicy) SetBucket(bucket string) error {
-	if strings.TrimSpace(bucket) == "" || bucket == "" {
-		return errors.New("Bucket name is not specified.")
+// SetBucket - Sets bucket at which objects will be uploaded to.
+func (p *PostPolicy) SetBucket(bucketName string) error {
+	if strings.TrimSpace(bucketName) == "" || bucketName == "" {
+		return ErrInvalidArgument("Bucket name is empty.")
 	}
 	policyCond := policyCondition{
 		matchType: "eq",
 		condition: "$bucket",
-		value:     bucket,
+		value:     bucketName,
 	}
 	if err := p.addNewPolicy(policyCond); err != nil {
 		return err
 	}
-	p.formData["bucket"] = bucket
+	p.formData["bucket"] = bucketName
 	return nil
 }
 
-// SetContentType content-type
+// SetContentType - Sets content-type of the object for this policy
+// based upload.
 func (p *PostPolicy) SetContentType(contentType string) error {
 	if strings.TrimSpace(contentType) == "" || contentType == "" {
-		return errors.New("No content type specified.")
+		return ErrInvalidArgument("No content type specified.")
 	}
 	policyCond := policyCondition{
 		matchType: "eq",
@@ -126,37 +132,38 @@ func (p *PostPolicy) SetContentType(contentType string) error {
 	return nil
 }
 
-// SetContentLength - set new min and max content length condition
-func (p *PostPolicy) SetContentLength(min, max int) error {
+// SetContentLengthRange - Set new min and max content length
+// condition for all incoming uploads.
+func (p *PostPolicy) SetContentLengthRange(min, max int64) error {
 	if min > max {
-		return errors.New("Content length minimum-limit is larger than maximum-limit.")
+		return ErrInvalidArgument("Minimum limit is larger than maximum limit.")
 	}
 	if min < 0 {
-		return errors.New("Content length minimum-limit is negative.")
+		return ErrInvalidArgument("Minimum limit cannot be negative.")
 	}
 	if max < 0 {
-		return errors.New("Content length maximum-limit is negative")
+		return ErrInvalidArgument("Maximum limit cannot be negative.")
 	}
 	p.contentLengthRange.min = min
 	p.contentLengthRange.max = max
 	return nil
 }
 
-// addNewPolicy - internal helper to validate adding new policies
+// addNewPolicy - internal helper to validate adding new policies.
 func (p *PostPolicy) addNewPolicy(policyCond policyCondition) error {
 	if policyCond.matchType == "" || policyCond.condition == "" || policyCond.value == "" {
-		return errors.New("Policy fields empty.")
+		return ErrInvalidArgument("Policy fields are empty.")
 	}
 	p.conditions = append(p.conditions, policyCond)
 	return nil
 }
 
-// Stringer interface for printing in pretty manner
+// Stringer interface for printing policy in json formatted string.
 func (p PostPolicy) String() string {
 	return string(p.marshalJSON())
 }
 
-// marshalJSON provides Marshalled JSON
+// marshalJSON - Provides Marshalled JSON in bytes.
 func (p PostPolicy) marshalJSON() []byte {
 	expirationStr := `"expiration":"` + p.expiration.Format(expirationDateFormat) + `"`
 	var conditionsStr string
@@ -178,7 +185,7 @@ func (p PostPolicy) marshalJSON() []byte {
 	return []byte(retStr)
 }
 
-// base64 produces base64 of PostPolicy's Marshalled json
+// base64 - Produces base64 of PostPolicy's Marshalled json.
 func (p PostPolicy) base64() string {
 	return base64.StdEncoding.EncodeToString(p.marshalJSON())
 }

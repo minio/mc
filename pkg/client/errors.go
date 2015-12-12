@@ -16,7 +16,10 @@
 
 package client
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 /// Collection of standard errors
 
@@ -36,7 +39,7 @@ type InvalidRange struct {
 }
 
 func (e InvalidRange) Error() string {
-	return "Invalid range offset: " + strconv.FormatInt(e.Offset, 10) + " ."
+	return "Invalid range offset: ‘" + strconv.FormatInt(e.Offset, 10) + "’."
 }
 
 // GenericBucketError - generic bucket operations error
@@ -44,18 +47,25 @@ type GenericBucketError struct {
 	Bucket string
 }
 
-// BucketExists - bucket exists
+// BucketDoesNotExist - bucket does not exist.
+type BucketDoesNotExist GenericBucketError
+
+func (e BucketDoesNotExist) Error() string {
+	return "Bucket ‘" + e.Bucket + "’ does not exist."
+}
+
+// BucketExists - bucket exists.
 type BucketExists GenericBucketError
 
 func (e BucketExists) Error() string {
-	return "Bucket #" + e.Bucket + " exists."
+	return "Bucket ‘" + e.Bucket + "’ exists."
 }
 
 // InvalidBucketName - bucket name invalid (http://goo.gl/wJlzDz)
 type InvalidBucketName GenericBucketError
 
 func (e InvalidBucketName) Error() string {
-	return "Invalid bucketname [" + e.Bucket + "], please read http://goo.gl/wJlzDz."
+	return "Invalid bucketname [‘" + e.Bucket + "’], please read http://goo.gl/wJlzDz."
 }
 
 // BucketNameEmpty - bucket name empty (http://goo.gl/wJlzDz)
@@ -77,14 +87,14 @@ type ObjectAlreadyExists struct {
 }
 
 func (e ObjectAlreadyExists) Error() string {
-	return "Object #" + e.Object + " already exists."
+	return "Object ‘" + e.Object + "’ already exists."
 }
 
 // InvalidObjectName - object requested is invalid
 type InvalidObjectName GenericObjectError
 
 func (e InvalidObjectName) Error() string {
-	return "Object #" + e.Object + " at " + e.Bucket + " is invalid."
+	return "Object ‘" + e.Object + "’ at ‘" + e.Bucket + "’ is invalid."
 }
 
 // BucketNameTopLevel - generic error
@@ -106,11 +116,11 @@ func (e PathNotFound) Error() string {
 	return "Requested file ‘" + e.Path + "’ not found"
 }
 
-// PathIsDir (EISDIR) - file is a folder.
-type PathIsDir GenericFileError
+// PathIsNotRegular (ENOTREG) - file is not a regular file.
+type PathIsNotRegular GenericFileError
 
-func (e PathIsDir) Error() string {
-	return "Requested file ‘" + e.Path + "’ is folder."
+func (e PathIsNotRegular) Error() string {
+	return "Requested file ‘" + e.Path + "’ is not a regular file."
 }
 
 // PathInsufficientPermission (EPERM) - permission denied.
@@ -146,4 +156,34 @@ type ObjectMissing struct{}
 
 func (e ObjectMissing) Error() string {
 	return "Object key is missing, object key cannot be empty"
+}
+
+// UnexpectedShortWrite - write wrote less bytes than expected.
+type UnexpectedShortWrite struct {
+	InputSize int
+	WriteSize int
+}
+
+func (e UnexpectedShortWrite) Error() string {
+	msg := fmt.Sprintf("Wrote less data than requested. Expected ‘%d’ bytes, but only wrote ‘%d’ bytes.", e.InputSize, e.WriteSize)
+	return msg
+}
+
+// UnexpectedEOF (EPIPE) - reader closed prematurely.
+type UnexpectedEOF struct {
+	TotalSize    int64
+	TotalWritten int64
+}
+
+func (e UnexpectedEOF) Error() string {
+	msg := fmt.Sprintf("Input reader closed pre-maturely. Expected ‘%d’ bytes, but only received ‘%d’ bytes.", e.TotalSize, e.TotalWritten)
+	return msg
+}
+
+// UnexpectedExcessRead - reader wrote more data than requested.
+type UnexpectedExcessRead UnexpectedEOF
+
+func (e UnexpectedExcessRead) Error() string {
+	msg := fmt.Sprintf("Received excess data on input reader. Expected only ‘%d’ bytes, but received ‘%d’ bytes.", e.TotalSize, e.TotalWritten)
+	return msg
 }

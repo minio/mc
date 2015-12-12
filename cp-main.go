@@ -21,10 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -129,20 +127,14 @@ func (c copyStatMessage) String() string {
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounter, cpQueue <-chan bool, wg *sync.WaitGroup, statusCh chan<- copyURLs) {
-	defer wg.Done() // Notify that this copy routine is done.
-	defer func() {
-		<-cpQueue
-	}()
-
+func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *accounter) copyURLs {
 	if cpURLs.Error != nil {
-		cpURLs.Error.Trace()
-		statusCh <- cpURLs
-		return
+		cpURLs.Error = cpURLs.Error.Trace()
+		return cpURLs
 	}
 
 	if !globalQuiet && !globalJSON {
-		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
+		progressReader = progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
 	sourceAlias := cpURLs.SourceAlias
@@ -151,17 +143,13 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 	targetURL := cpURLs.TargetContent.URL
 	length := cpURLs.SourceContent.Size
 
-	reader, err := getSourceFromAlias(sourceAlias, sourceURL.String())
+	reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
 	if err != nil {
-		if !globalQuiet && !globalJSON {
-			progressReader.ErrorGet(length)
-		}
 		cpURLs.Error = err.Trace(sourceURL.String())
-		statusCh <- cpURLs
-		return
+		return cpURLs
 	}
 
-	var newReader io.ReadSeeker
+	var progress io.Reader
 	if globalQuiet || globalJSON {
 		sourcePath := filepath.Join(sourceAlias, sourceURL.Path)
 		targetPath := filepath.Join(targetAlias, targetURL.Path)
@@ -169,37 +157,29 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 			Source: sourcePath,
 			Target: targetPath,
 		})
-		// No accounting necessary for JSON output.
-		if globalJSON {
-			newReader = reader
-		}
 		// Proxy reader to accounting reader only during quiet mode.
-		if globalQuiet {
-			newReader = accountingReader.NewProxyReader(reader)
+		if globalQuiet || globalJSON {
+			progress = accountingReader
 		}
 	} else {
-		// set up progress
-		newReader = progressReader.NewProxyReader(reader)
+		// Set up progress reader.
+		progress = progressReader.ProgressBar
 	}
-	err = putTargetFromAlias(targetAlias, targetURL.String(), newReader, length)
+	_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
 	if err != nil {
-		if !globalQuiet && !globalJSON {
-			progressReader.ErrorPut(length)
-		}
 		cpURLs.Error = err.Trace(targetURL.String())
-		statusCh <- cpURLs
-		return
+		return cpURLs
 	}
-
 	cpURLs.Error = nil // just for safety
-	statusCh <- cpURLs
+	return cpURLs
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cURLs copyURLs, progressReader *barSend) {
+func doCopyFake(cpURLs copyURLs, progressReader *progressBar) copyURLs {
 	if !globalQuiet && !globalJSON {
-		progressReader.Progress(cURLs.SourceContent.Size)
+		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
 	}
+	return cpURLs
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
@@ -229,7 +209,7 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 	for done == false {
 		select {
 		case cpURLs, ok := <-URLsCh:
-			if !ok { // Done with URL prepration
+			if !ok { // Done with URL preparation
 				done = true
 				break
 			}
@@ -282,61 +262,57 @@ func doCopySession(session *sessionV6) {
 	// Enable accounting reader by default.
 	accntReader := newAccounter(session.Header.TotalBytes)
 
-	// Enable progress bar reader only during default mode.
-	var progressReader *barSend
-	if !globalQuiet && !globalJSON { // set up progress bar
-		progressReader = newProgressBar(session.Header.TotalBytes)
-	}
-
 	// Prepare URL scanner from session data file.
-	scanner := bufio.NewScanner(session.NewDataReader())
+	urlScanner := bufio.NewScanner(session.NewDataReader())
 	// isCopied returns true if an object has been already copied
 	// or not. This is useful when we resume from a session.
 	isCopied := isCopiedFactory(session.Header.LastCopied)
 
-	wg := new(sync.WaitGroup)
-	// Limit number of copy routines based on available CPU resources.
-	cpQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-	defer close(cpQueue)
+	// Enable progress bar reader only during default mode.
+	var progressReader *progressBar
+	if !globalQuiet && !globalJSON { // set up progress bar
+		progressReader = newProgressBar(session.Header.TotalBytes)
+	}
 
-	// Status channel for receiveing copy return status.
-	statusCh := make(chan copyURLs)
+	// Wait on status of doCopy() operation.
+	var statusCh = make(chan copyURLs)
 
-	// Go routine to monitor doCopy status and signal traps.
+	// Add a wait group.
+	var wg = new(sync.WaitGroup)
 	wg.Add(1)
+
+	// Go routine to monitor signal traps if any.
 	go func() {
 		defer wg.Done()
 		for {
 			select {
-			case cpURLs, ok := <-statusCh: // Receive status.
-				if !ok { // We are done here. Top level function has returned.
-					if !globalQuiet && !globalJSON {
-						progressReader.Finish()
-					}
-					if globalQuiet {
-						accntStat := accntReader.Stat()
-						cpStatMessage := copyStatMessage{
-							Total:       accntStat.Total,
-							Transferred: accntStat.Transferred,
-							Speed:       accntStat.Speed,
-						}
-						console.Println(console.Colorize("Copy", cpStatMessage.String()))
-					}
+			case <-trapCh:
+				// Receive interrupt notification.
+				if !globalQuiet && !globalJSON {
+					console.Eraseline()
+				}
+				session.CloseAndDie()
+			case cpURLs, ok := <-statusCh:
+				// Status channel is closed, we should return.
+				if !ok {
 					return
 				}
 				if cpURLs.Error == nil {
 					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
 					session.Save()
 				} else {
-					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
+					// Print in new line and adjust to top so that we
+					// don't print over the ongoing progress bar.
 					if !globalQuiet && !globalJSON {
 						console.Eraseline()
 					}
 					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
 						fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
-					// for all non critical errors we can continue for the remaining files
+					// For all non critical errors we can continue for the
+					// remaining files.
 					switch cpURLs.Error.ToGoError().(type) {
-					// handle this specifically for filesystem related errors.
+					// Handle this specifically for filesystem related
+					// errors.
 					case client.BrokenSymlink:
 						continue
 					case client.TooManyLevelsSymlink:
@@ -345,45 +321,52 @@ func doCopySession(session *sessionV6) {
 						continue
 					case client.PathInsufficientPermission:
 						continue
+					case client.ObjectAlreadyExists:
+						continue
+					case client.BucketDoesNotExist:
+						continue
 					}
-					// for critical errors we should exit. Session can be resumed after the user figures out the problem
+					// For critical errors we should exit. Session
+					// can be resumed after the user figures out
+					// the  problem.
 					session.CloseAndDie()
 				}
-			case <-trapCh: // Receive interrupt notification.
-				if !globalQuiet && !globalJSON {
-					console.Eraseline()
-				}
-				session.CloseAndDie()
 			}
 		}
 	}()
 
-	// Go routine to perform concurrently copying.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		copyWg := new(sync.WaitGroup)
-		defer close(statusCh)
+	// Loop through all urls.
+	for urlScanner.Scan() {
+		var cpURLs copyURLs
+		// Unmarshal copyURLs from each line.
+		json.Unmarshal([]byte(urlScanner.Text()), &cpURLs)
 
-		for scanner.Scan() {
-			var cpURLs copyURLs
-			json.Unmarshal([]byte(scanner.Text()), &cpURLs)
-			if isCopied(cpURLs.SourceContent.URL.String()) {
-				doCopyFake(cpURLs, progressReader)
-			} else {
-				// Wait for other copy routines to
-				// complete. We only have limited CPU
-				// and network resources.
-				cpQueue <- true
-				// Account for each copy routines we start.
-				copyWg.Add(1)
-				// Do copying in background concurrently.
-				go doCopy(cpURLs, progressReader, accntReader, cpQueue, copyWg, statusCh)
-			}
+		// Verify if previously copied, notify progress bar.
+		if isCopied(cpURLs.SourceContent.URL.String()) {
+			statusCh <- doCopyFake(cpURLs, progressReader)
+		} else {
+			statusCh <- doCopy(cpURLs, progressReader, accntReader)
 		}
-		copyWg.Wait()
-	}()
+	}
+
+	// Close the goroutine.
+	close(statusCh)
+
+	// Wait for the goroutines to finish.
 	wg.Wait()
+
+	if !globalQuiet && !globalJSON {
+		progressReader.ProgressBar.Finish()
+	}
+	if globalQuiet {
+		accntStat := accntReader.Stat()
+		cpStatMessage := copyStatMessage{
+			Total:       accntStat.Total,
+			Transferred: accntStat.Transferred,
+			Speed:       accntStat.Speed,
+		}
+		console.Println(console.Colorize("Copy", cpStatMessage.String()))
+	}
 }
 
 // mainCopy is the entry point for cp command.

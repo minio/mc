@@ -28,87 +28,77 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
-// pbBar type of operation.
-type pbBar int
-
-// collection of different progress bar operations.
-const (
-	pbBarProgress pbBar = iota
-	pbBarFinish
-	pbBarPutError
-	pbBarGetError
-	pbBarSetCaption
-)
-
-// proxyReader progress bar proxy reader for barSend inherits io.ReadCloser.
-type proxyReader struct {
-	io.ReadSeeker
-	bar *barSend
+// progress extender.
+type progressBar struct {
+	ProgressBar  *pb.ProgressBar
+	reader       io.Reader
+	readerLength int64
+	bytesRead    int64
+	isResume     bool
 }
 
-// Read proxy Read sends progress for each Read operation.
-func (r *proxyReader) Read(p []byte) (n int, err error) {
-	n, err = r.ReadSeeker.Read(p)
-	if err != nil {
-		if err != io.EOF {
-			return
-		}
+// newProgressBar - instantiate a progress bar.
+func newProgressBar(total int64) *progressBar {
+	// Progress bar speific theme customization.
+	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
+
+	pgbar := progressBar{}
+
+	// get the new original progress bar.
+	bar := pb.New64(total)
+
+	// Set new human friendly print units.
+	bar.SetUnits(pb.U_BYTES)
+
+	// Refresh rate for progress bar is set to 125 milliseconds.
+	bar.SetRefreshRate(time.Millisecond * 125)
+
+	// Do not print a newline by default handled, it is handled manually.
+	bar.NotPrint = true
+
+	// Show current speed is true.
+	bar.ShowSpeed = true
+
+	// Custom callback with colorized bar.
+	bar.Callback = func(s string) {
+		console.Print(console.Colorize("Bar", "\r"+s))
 	}
-	r.bar.Progress(int64(n))
-	return
-}
 
-func (r *proxyReader) Seek(offset int64, whence int) (n int64, err error) {
-	n, err = r.ReadSeeker.Seek(offset, whence)
-	if err != nil {
-		return
+	// Use different unicodes for Linux, OS X and Windows.
+	switch runtime.GOOS {
+	case "linux":
+		// Need to add '\x00' as delimiter for unicode characters.
+		bar.Format("┃\x00▓\x00█\x00░\x00┃")
+	case "darwin":
+		// Need to add '\x00' as delimiter for unicode characters.
+		bar.Format(" \x00▓\x00 \x00░\x00 ")
+	default:
+		// Default to non unicode characters.
+		bar.Format("[=> ]")
 	}
-	r.bar.Progress(n)
-	return
+
+	// Start the progress bar.
+	if bar.Total > 0 {
+		bar.Start()
+	}
+
+	// Copy for future
+	pgbar.ProgressBar = bar
+
+	// Return new progress bar here.
+	return &pgbar
 }
 
-// barMsg progress bar message for a given operation.
-type barMsg struct {
-	Op  pbBar
-	Arg interface{}
+// Set caption.
+func (p *progressBar) SetCaption(caption string) *progressBar {
+	caption = fixateBarCaption(caption, getFixedWidth(p.ProgressBar.GetWidth(), 18))
+	p.ProgressBar.Prefix(caption)
+	return p
 }
 
-// barSend implements various methods for progress bar operation.
-type barSend struct {
-	opCh     chan<- barMsg
-	finishCh <-chan bool
-}
-
-// Instantiate a new progress bar proxy reader.
-func (b *barSend) NewProxyReader(r io.ReadSeeker) *proxyReader {
-	return &proxyReader{r, b}
-}
-
-// Progress send current progress message.
-func (b barSend) Progress(progress int64) {
-	b.opCh <- barMsg{Op: pbBarProgress, Arg: progress}
-}
-
-// ErrorPut send message for error in put operation.
-func (b barSend) ErrorPut(size int64) {
-	b.opCh <- barMsg{Op: pbBarPutError, Arg: size}
-}
-
-// ErrorGet send message for error in get operation.
-func (b barSend) ErrorGet(size int64) {
-	b.opCh <- barMsg{Op: pbBarGetError, Arg: size}
-}
-
-// SetCaption set an additional prefix/caption for an active progress bar.
-func (b *barSend) SetCaption(c string) {
-	b.opCh <- barMsg{Op: pbBarSetCaption, Arg: c}
-}
-
-// Finish finishes the progress bar and closes the message channel.
-func (b barSend) Finish() {
-	defer close(b.opCh)
-	b.opCh <- barMsg{Op: pbBarFinish}
-	<-b.finishCh
+func (p *progressBar) Set64(length int64) *progressBar {
+	p.ProgressBar = p.ProgressBar.Set64(length)
+	return p
 }
 
 // cursorAnimate - returns a animated rune through read channel for every read.
@@ -124,9 +114,9 @@ func cursorAnimate() <-chan rune {
 		// cursors = "←↖↑↗→↘↓↙"
 		// cursors = "◴◷◶◵"
 		// cursors = "◰◳◲◱"
+		//cursors = "⣾⣽⣻⢿⡿⣟⣯⣷"
 	case "darwin":
 		cursors = "◐◓◑◒"
-		//cursors = "⣾⣽⣻⢿⡿⣟⣯⣷"
 	default:
 		cursors = "|/-\\"
 	}
@@ -158,84 +148,4 @@ func fixateBarCaption(caption string, width int) string {
 // getFixedWidth - get a fixed width based for a given percentage.
 func getFixedWidth(width, percent int) int {
 	return width * percent / 100
-}
-
-// newProgressBar - instantiate a progress bar.
-func newProgressBar(total int64) *barSend {
-	// Progress bar speific theme customization.
-	console.SetColor("Bar", color.New(color.FgGreen, color.Bold))
-
-	cmdCh := make(chan barMsg)
-	finishCh := make(chan bool)
-	go func(total int64, cmdCh <-chan barMsg, finishCh chan<- bool) {
-		var started bool         // has the progress bar started? default is false.
-		var totalBytesRead int64 // total amounts of bytes read
-
-		// get the new original progress bar.
-		bar := pb.New64(total)
-		bar.SetUnits(pb.U_BYTES)
-
-		// refresh rate for progress bar is set to 125 milliseconds.
-		bar.SetRefreshRate(time.Millisecond * 125)
-
-		// Do not print a newline by default handled, it is handled manually.
-		bar.NotPrint = true
-
-		// Show current speed is true.
-		bar.ShowSpeed = true
-
-		// Custom callback with colorized bar.
-		bar.Callback = func(s string) {
-			console.Print(console.Colorize("Bar", "\r"+s))
-		}
-
-		// Use different unicodes for Linux, OS X and Windows.
-		switch runtime.GOOS {
-		case "linux":
-			bar.Format("┃▓█░┃")
-			// bar.Format("█▓▒░█")
-		case "darwin":
-			bar.Format(" ▓ ░ ")
-		default:
-			bar.Format("[=> ]")
-		}
-
-		// Look for incoming progress bar messages.
-		for msg := range cmdCh {
-			switch msg.Op {
-			case pbBarSetCaption:
-				// Sets a new caption prefixed along with progress bar.
-				bar.Prefix(fixateBarCaption(msg.Arg.(string), getFixedWidth(bar.GetWidth(), 18)))
-			case pbBarProgress:
-				// Initializes the progerss bar, if already started bumps up the totalBytes.
-				if bar.Total > 0 && !started {
-					started = true
-					bar.Start()
-				}
-				if msg.Arg.(int64) > 0 {
-					totalBytesRead += msg.Arg.(int64)
-					bar.Add64(msg.Arg.(int64))
-				}
-			case pbBarPutError:
-				// Negates any put error of size from totalBytes.
-				if totalBytesRead > msg.Arg.(int64) {
-					bar.Set64(totalBytesRead - msg.Arg.(int64))
-				}
-			case pbBarGetError:
-				// Retains any size transferred but failed.
-				if msg.Arg.(int64) > 0 {
-					bar.Add64(msg.Arg.(int64))
-				}
-			case pbBarFinish:
-				// Progress finishes here.
-				if started {
-					bar.Finish()
-				}
-				// All done send true.
-				finishCh <- true
-				return
-			}
-		}
-	}(total, cmdCh, finishCh)
-	return &barSend{cmdCh, finishCh}
 }

@@ -113,21 +113,13 @@ func checkRmSyntax(ctx *cli.Context) {
 	// Set command flags from context.
 	isForce := ctx.Bool("force")
 	isRecursive := ctx.Bool("recursive")
-	isIncomplete := ctx.Bool("incomplete")
 
 	if !ctx.Args().Present() {
 		exitCode := 1
 		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
 	}
 
-	if !isRecursive && !isIncomplete {
-		for _, url := range ctx.Args() {
-			if _, _, err := url2Stat(url); err != nil {
-				fatalIf(err.Trace(url), "Unable to stat.")
-			}
-		}
-	}
-
+	// For all recursive operations make sure to check for 'force' flag.
 	if isRecursive && !isForce {
 		fatalIf(errDummy().Trace(),
 			"Recursive removal requires --force option. Please review carefully before performing this *DANGEROUS* operation.")
