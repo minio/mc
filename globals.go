@@ -41,7 +41,7 @@ const (
 	globalSecretAccessKey = "YOUR-SECRET-ACCESS-KEY-HERE"
 
 	// default host
-	globalExampleHostURL = "YOUR-EXAMPLE.COM"
+	globalExampleHostURL = "http://YOUR-EXAMPLE.COM"
 )
 
 var (
