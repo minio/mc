@@ -66,21 +66,23 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} play.minio.io:9000/photos/2014 s3.amazonaws.com/backup-photos
+      $ mc {{.Name}} play/photos/2014 s3/backup-photos
 
    2. Mirror a local folder recursively to Amazon S3 cloud storage.
-      $ mc {{.Name}} backup/ s3.amazonaws.com/archive
+      $ mc {{.Name}} backup/ s3/archive
 
    3. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
-      $ mc {{.Name}} s3/documents/2014/ C:\backup\2014
+      $ mc {{.Name}} s3\documents\2014\ C:\backup\2014
 `,
 }
 
 // mirrorMessage container for file mirror messages
 type mirrorMessage struct {
-	Status string `json:"status"`
-	Source string `json:"source"`
-	Target string `json:"target"`
+	Status      string `json:"status"`
+	SourceAlias string `json:"sourceAlias,omitempty"`
+	Source      string `json:"source"`
+	TargetAlias string `json:"targetAlias,omitempty"`
+	Target      string `json:"target"`
 }
 
 // String colorized mirror message
@@ -130,15 +132,17 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 		return
 	}
 
-	targetURL := sURLs.TargetContent.URL.String()
+	sourceAlias := sURLs.SourceAlias
 	sourceURL := sURLs.SourceContent.URL.String()
+	targetAlias := sURLs.TargetAlias
+	targetURL := sURLs.TargetContent.URL.String()
 	length := sURLs.SourceContent.Size
 
 	if !globalQuiet && !globalJSON {
 		progressReader.SetCaption(sourceURL + ": ")
 	}
 
-	reader, err := getSource(sourceURL)
+	reader, err := getSourceFromAlias(sourceAlias, sourceURL)
 	if err != nil {
 		if !globalQuiet && !globalJSON {
 			progressReader.ErrorGet(length)
@@ -151,8 +155,10 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 	var newReader io.ReadSeeker
 	if globalQuiet || globalJSON {
 		printMsg(mirrorMessage{
-			Source: sourceURL,
-			Target: targetURL,
+			SourceAlias: sourceAlias,
+			Source:      sourceURL,
+			TargetAlias: targetAlias,
+			Target:      targetURL,
 		})
 		if globalJSON {
 			newReader = reader
@@ -164,7 +170,7 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 		// set up progress
 		newReader = progressReader.NewProxyReader(reader)
 	}
-	err = putTarget(targetURL, newReader, length)
+	err = putTargetFromAlias(targetAlias, targetURL, newReader, length)
 	if err != nil {
 		if !globalQuiet && !globalJSON {
 			progressReader.ErrorPut(length)
@@ -186,7 +192,7 @@ func doMirrorFake(sURLs mirrorURLs, progressReader *barSend) {
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
-func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
+func doPrepareMirrorURLs(session *sessionV6, isForce bool, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURL := session.Header.CommandArgs[1]
 	var totalBytes int64
@@ -247,7 +253,7 @@ func doPrepareMirrorURLs(session *sessionV5, isForce bool, trapCh <-chan bool) {
 }
 
 // Session'fied mirror command.
-func doMirrorSession(session *sessionV5) {
+func doMirrorSession(session *sessionV6) {
 	isForce := session.Header.CommandBoolFlags["force"]
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
@@ -373,7 +379,7 @@ func mainMirror(ctx *cli.Context) {
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
 	var e error
-	session := newSessionV5()
+	session := newSessionV6()
 	session.Header.CommandType = "mirror"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {
@@ -386,13 +392,7 @@ func mainMirror(ctx *cli.Context) {
 	session.Header.CommandBoolFlags["force"] = isForce
 
 	// extract URLs.
-	var err *probe.Error
-	session.Header.CommandArgs, err = args2URLs(ctx.Args())
-	if err != nil {
-		session.Delete()
-		fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("One or more unknown argument types found in ‘%s’.", ctx.Args()))
-	}
-
+	session.Header.CommandArgs = ctx.Args()
 	doMirrorSession(session)
 	session.Delete()
 }

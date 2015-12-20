@@ -52,13 +52,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Create a bucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3.amazonaws.com/mynewbucket
+      $ mc {{.Name}} s3/mynewbucket
 
    2. Create a new bucket on Google Cloud Storage.
-      $ mc {{.Name}} storage.googleapis.com/miniocloud
-
-   3. Create a new bucket on Amazon S3 cloud storage, using virtual bucket request.
-      $ mc {{.Name}} ferenginar.s3.amazonaws.com
+      $ mc {{.Name}} gcs/miniocloud
 
    3. Create a new directory including its missing parents (equivalent to ‘mkdir -p’).
       $ mc {{.Name}} /tmp/this/new/dir1
@@ -107,12 +104,9 @@ func mainMakeBucket(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("MakeBucket", color.New(color.FgGreen, color.Bold))
 
-	URLs, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
-
-	for _, targetURL := range URLs {
+	for _, targetURL := range ctx.Args() {
 		// Instantiate client for URL.
-		clnt, err := url2Client(targetURL)
+		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
 
 		// Make bucket.

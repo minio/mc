@@ -44,9 +44,7 @@ var configCmd = cli.Command{
 	Action: mainConfig,
 	Flags:  append(configFlags, globalFlags...),
 	Subcommands: []cli.Command{
-		configAliasCmd,
 		configHostCmd,
-		configVersionCmd,
 	},
 	CustomHelpTemplate: `NAME:
    {{.Name}} - {{.Usage}}

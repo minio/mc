@@ -17,6 +17,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -38,36 +39,9 @@ func urlJoinPath(url1, url2 string) string {
 	return client.JoinURLs(u1, u2).String()
 }
 
-// args2URLs extracts source and target URLs from command-line args.
-func args2URLs(args []string) ([]string, *probe.Error) {
-	// convert arguments to URLs: expand alias, fix format...
-	URLs := []string{}
-	for _, arg := range args {
-		aliasedURL, err := getAliasURL(arg)
-		if err != nil {
-			return nil, err.Trace(arg)
-		}
-		URLs = append(URLs, aliasedURL)
-	}
-	return URLs, nil
-}
-
-// url2Client convenience wrapper for getNewClient.
-func url2Client(urlStr string) (client.Client, *probe.Error) {
-	urlConfig, err := getHostConfig(urlStr)
-	if err != nil {
-		return nil, err.Trace(urlStr)
-	}
-	client, err := getNewClient(urlStr, urlConfig)
-	if err != nil {
-		return nil, err.Trace(urlStr)
-	}
-	return client, nil
-}
-
 // url2Stat returns stat info for URL.
 func url2Stat(urlStr string) (client client.Client, content *client.Content, err *probe.Error) {
-	client, err = url2Client(urlStr)
+	client, err = newClient(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
@@ -78,9 +52,25 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 	return client, content, nil
 }
 
+// url2Alias separates alias and path from the URL. Aliased URL is of the form [/]alias/path/to/blah. If
+func url2Alias(aliasedURL string) (alias, path string) {
+	urlStr := aliasedURL
+
+	// Remove "/" prefix before alias, if any.
+	urlStr = strings.TrimPrefix(urlStr, string(os.PathSeparator))
+
+	// Remove everything after alias (i.e. after "/").
+	urlParts := strings.SplitN(urlStr, string(os.PathSeparator), 2)
+	if len(urlParts) == 2 {
+		// Convert windows style path separator to Unix style.
+		return urlParts[0], urlParts[1]
+	}
+	return urlParts[0], ""
+}
+
 // isURLPrefixExists - check if object key prefix exists.
 func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
-	clnt, err := url2Client(urlPrefix)
+	clnt, err := newClient(urlPrefix)
 	if err != nil {
 		return false
 	}

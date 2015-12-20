@@ -56,19 +56,19 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Set bucket to "private" on Amazon S3 cloud storage.
-      $ mc {{.Name}} set private s3.amazonaws.com/burningman2011
+      $ mc {{.Name}} set private s3/burningman2011
 
    2. Set bucket to "public" on Amazon S3 cloud storage.
-      $ mc {{.Name}} set public s3.amazonaws.com/shared
+      $ mc {{.Name}} set public s3/shared
 
    3. Set bucket to "authenticated" on Amazon S3 cloud storage to provide read access to IAM Authenticated Users group.
-      $ mc {{.Name}} set authorized s3.amazonaws.com/shared-authenticated
+      $ mc {{.Name}} set authorized s3/shared-authenticated
 
    4. Get bucket permissions.
-      $ mc {{.Name}} get s3.amazonaws.com/shared
+      $ mc {{.Name}} get s3/shared
 
    5. Get bucket permissions.
-      $ mc {{.Name}} get storage.googleapis.com/miniocloud
+      $ mc {{.Name}} get gcs/miniocloud
 `,
 }
 
@@ -134,7 +134,7 @@ func checkAccessSyntax(ctx *cli.Context) {
 
 // doSetAccess do set access.
 func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
-	clnt, err := url2Client(targetURL)
+	clnt, err := newClient(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
 	}
@@ -146,7 +146,7 @@ func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
 
 // doGetAccess do get access.
 func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
-	clnt, err := url2Client(targetURL)
+	clnt, err := newClient(targetURL)
 	if err != nil {
 		return "", err.Trace(targetURL)
 	}
@@ -170,10 +170,7 @@ func mainAccess(ctx *cli.Context) {
 	switch ctx.Args().First() {
 	case "set":
 		perms := accessPerms(ctx.Args().Tail().First())
-
-		URLs, err := args2URLs(ctx.Args().Tail().Tail())
-		fatalIf(err.Trace(ctx.Args().Tail().Tail()...), "Unable to convert args 2 URLs.")
-
+		URLs := ctx.Args().Tail().Tail()
 		for _, targetURL := range URLs {
 			err := doSetAccess(targetURL, perms)
 			// Upon error, print and continue.
@@ -190,9 +187,7 @@ func mainAccess(ctx *cli.Context) {
 			})
 		}
 	case "get":
-		URLs, err := args2URLs(ctx.Args().Tail())
-		fatalIf(err.Trace(ctx.Args().Tail()...), "Unable to convert args 2 URLs.")
-
+		URLs := ctx.Args().Tail()
 		for _, targetURL := range URLs {
 			perms, err := doGetAccess(targetURL)
 			if err != nil {

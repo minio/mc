@@ -108,7 +108,7 @@ func verifyMCRuntime() {
 		err := saveMcConfig(newMcConfig())
 		fatalIf(err.Trace(), "Unable to save new mc config.")
 
-		console.Infoln("Configuration written to [" + mustGetMcConfigPath() + "]. Please update your access credentials.")
+		console.Infoln("Configuration written to ‘" + mustGetMcConfigPath() + "’. Please update your access credentials.")
 	}
 
 	// Check if mc session folder exists.

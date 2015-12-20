@@ -39,7 +39,7 @@ const (
 // between sourceURL and targetURL
 // for usage reference check diff and mirror commands
 func objectDifferenceFactory(targetURL string) (objectDifference, *probe.Error) {
-	clnt, err := url2Client(targetURL)
+	clnt, err := newClient(targetURL)
 	if err != nil {
 		return nil, err.Trace(targetURL)
 	}

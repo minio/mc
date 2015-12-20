@@ -59,7 +59,7 @@ DESCRIPTION:
 
 EXAMPLES:
    1. Compare a local folder with a folder on Amazon S3 cloud storage.
-      $ mc {{.Name}} ~/Photos s3.amazonaws.com/MyBucket/Photos
+      $ mc {{.Name}} ~/Photos s3/MyBucket/Photos
 
    2. Compare two different folders on a local filesystem.
       $ mc {{.Name}} ~/Photos /Media/Backup/Photos
@@ -128,7 +128,7 @@ func doDiffMain(firstURL, secondURL string) {
 		secondURL = secondURL + targetSeparator
 	}
 
-	firstClient, err := url2Client(firstURL)
+	firstClient, err := newClient(firstURL)
 	if err != nil {
 		fatalIf(err.Trace(firstURL, secondURL), fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
@@ -184,9 +184,7 @@ func mainDiff(ctx *cli.Context) {
 	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
 	console.SetColor("DiffSize", color.New(color.FgMagenta, color.Bold))
 
-	URLs, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args 2 URLs")
-
+	URLs := ctx.Args()
 	firstURL := URLs[0]
 	secondURL := URLs[1]
 

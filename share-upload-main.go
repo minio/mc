@@ -58,16 +58,16 @@ OPTIONS:
   {{end}}
 EXAMPLES:
    1. Generate a curl command to allow upload access for a single object. Command expires in 7 days (default).
-      $ mc share {{.Name}} s3.amazonaws.com/backup/2006-Mar-1/backup.tar.gz
+      $ mc share {{.Name}} s3/backup/2006-Mar-1/backup.tar.gz
 
    2. Generate a curl command to allow upload access to a folder. Command expires in 120 hours.
-      $ mc share {{.Name}} --expire=120h s3.amazonaws.com/backup/2007-Mar-2/
+      $ mc share {{.Name}} --expire=120h s3/backup/2007-Mar-2/
 
    3. Generate a curl command to allow upload access of only '.png' images to a folder. Command expires in 2 hours.
-      $ mc share {{.Name}} --expire=2h --content-type=image/png s3.amazonaws.com/backup/2007-Mar-2/
+      $ mc share {{.Name}} --expire=2h --content-type=image/png s3/backup/2007-Mar-2/
 
    4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup/'. Command expires in 2 hours.
-      $ mc share {{.Name}} --recursive --expire=2h s3.amazonaws.com/backup/2007-Mar-2/backup/
+      $ mc share {{.Name}} --recursive --expire=2h s3/backup/2007-Mar-2/backup/
 `,
 }
 
@@ -100,10 +100,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 			"Expiry cannot be larger than 7 days.")
 	}
 
-	URLs, err := args2URLs(ctx.Args()) // expand alias.
-	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
-
-	for _, targetURL := range URLs {
+	for _, targetURL := range ctx.Args() {
 		url := client.NewURL(targetURL)
 		if strings.HasSuffix(targetURL, string(url.Separator)) && !isRecursive {
 			fatalIf(errInvalidArgument().Trace(targetURL),
@@ -155,7 +152,7 @@ func saveSharedURL(objectURL string, shareURL string, expiry time.Duration, cont
 
 // doShareUploadURL uploads files to the target.
 func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, contentType string) *probe.Error {
-	clnt, err := url2Client(objectURL)
+	clnt, err := newClient(objectURL)
 	if err != nil {
 		return err.Trace(objectURL)
 	}
@@ -205,10 +202,7 @@ func mainShareUpload(ctx *cli.Context) {
 		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
 	}
 
-	URLs, err := args2URLs(ctx.Args()) // expand alias.
-	fatalIf(err.Trace(ctx.Args()...), "Unable to convert args to URLs.")
-
-	for _, targetURL := range URLs {
+	for _, targetURL := range ctx.Args() {
 		err := doShareUploadURL(targetURL, isRecursive, expiry, contentType)
 		fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+targetURL+"’.")
 	}

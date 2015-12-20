@@ -47,65 +47,86 @@ func isTargetURLDir(targetURL string) bool {
 	return true
 }
 
-// getSource gets a reader from URL
-func getSource(sourceURL string) (reader io.ReadSeeker, err *probe.Error) {
-	sourceClnt, err := url2Client(sourceURL)
+// getSource gets a reader from URL.
+func getSource(urlStr string) (reader io.ReadSeeker, err *probe.Error) {
+	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
-		return nil, err.Trace(sourceURL)
+		return nil, err.Trace(urlStr)
+	}
+	return getSourceFromAlias(alias, urlStrFull)
+}
+
+// getSourceFromAlias gets a reader from URL.
+func getSourceFromAlias(alias string, urlStr string) (reader io.ReadSeeker, err *probe.Error) {
+	sourceClnt, err := newClientFromAlias(alias, urlStr)
+	if err != nil {
+		return nil, err.Trace(alias, urlStr)
 	}
 	return sourceClnt.Get(0, 0)
 }
 
 // putTarget writes to URL from reader. If length=-1, read until EOF.
-func putTarget(targetURL string, reader io.ReadSeeker, size int64) *probe.Error {
-	targetClnt, err := url2Client(targetURL)
+func putTarget(urlStr string, reader io.ReadSeeker, size int64) *probe.Error {
+	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
-		return err.Trace(targetURL)
+		return err
 	}
-	contentType := guessURLContentType(targetURL)
+	return putTargetFromAlias(alias, urlStrFull, reader, size)
+}
+
+// putTargetFromAlias writes to URL from reader. If length=-1, read until EOF.
+func putTargetFromAlias(alias string, urlStr string, reader io.ReadSeeker, size int64) *probe.Error {
+	targetClnt, err := newClientFromAlias(alias, urlStr)
+	if err != nil {
+		return err.Trace(alias, urlStr)
+	}
+	contentType := guessURLContentType(urlStr)
 	err = targetClnt.Put(reader, size, contentType)
 	if err != nil {
-		return err.Trace(targetURL)
+		return err.Trace(alias, urlStr)
 	}
 	return nil
 }
 
-// getNewClient gives a new client interface
-func getNewClient(urlStr string, auth hostConfig) (client.Client, *probe.Error) {
-	url := client.NewURL(urlStr)
-	switch url.Type {
-	case client.Object: // Minio and S3 compatible cloud storage
-		s3Config := new(client.Config)
-		s3Config.AccessKeyID = func() string {
-			if auth.AccessKeyID == globalAccessKeyID {
-				return ""
-			}
-			return auth.AccessKeyID
-		}()
-		s3Config.SecretAccessKey = func() string {
-			if auth.SecretAccessKey == globalSecretAccessKey {
-				return ""
-			}
-			return auth.SecretAccessKey
-		}()
-		s3Config.Signature = auth.API
-		s3Config.AppName = "Minio"
-		s3Config.AppVersion = mcVersion
-		s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
-		s3Config.HostURL = urlStr
-		s3Config.Debug = globalDebug
-
-		s3Client, err := s3.New(s3Config)
-		if err != nil {
-			return nil, err.Trace(urlStr)
-		}
-		return s3Client, nil
-	case client.Filesystem:
+// newClientFromAlias gives a new client interface for matching
+// alias entry in the mc config file. If no matching host config entry
+// is found, fs client is returned.
+func newClientFromAlias(alias string, urlStr string) (client.Client, *probe.Error) {
+	hostCfg := mustGetHostConfig(alias)
+	if hostCfg == nil {
+		// No matching host config. So we treat it like a
+		// filesystem.
 		fsClient, err := fs.New(urlStr)
 		if err != nil {
-			return nil, err.Trace(urlStr)
+			return nil, err.Trace(alias, urlStr)
 		}
 		return fsClient, nil
 	}
-	return nil, errInitClient(urlStr).Trace(urlStr)
+
+	// We have a valid alias and hostConfig. We populate the
+	// credentials from the match found in the config file.
+	s3Config := new(client.Config)
+	s3Config.AccessKey = hostCfg.AccessKey
+	s3Config.SecretKey = hostCfg.SecretKey
+	s3Config.Signature = hostCfg.API
+	s3Config.AppName = "Minio"
+	s3Config.AppVersion = mcVersion
+	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
+	s3Config.HostURL = urlStr
+	s3Config.Debug = globalDebug
+
+	s3Client, err := s3.New(s3Config)
+	if err != nil {
+		return nil, err.Trace(alias, urlStr)
+	}
+	return s3Client, nil
+}
+
+// newClient gives a new client interface
+func newClient(urlStr string) (client.Client, *probe.Error) {
+	alias, urlStrFull, _, err := expandAlias(urlStr)
+	if err != nil {
+		return nil, err.Trace(urlStr)
+	}
+	return newClientFromAlias(alias, urlStrFull)
 }

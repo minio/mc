@@ -67,16 +67,16 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
-      $ mc {{.Name}} Music/*.ogg s3.amazonaws.com/jukebox/
+      $ mc {{.Name}} Music/*.ogg s3/jukebox/
 
    2. Copy a folder recursively from Minio cloud storage to Amazon S3 cloud storage.
-      $ mc {{.Name}} --recursive play.minio.io:9000/mybucket/burningman2011/ s3.amazonaws.com/mybucket/
+      $ mc {{.Name}} --recursive play/mybucket/burningman2011/ s3/mybucket/
 
    3. Copy multiple local folders recursively to Minio cloud storage.
-      $ mc {{.Name}} --recursive backup/2014/ backup/2015/ play.minio.io:9000/archive/
+      $ mc {{.Name}} --recursive backup/2014/ backup/2015/ play/archive/
 
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
-      $ mc {{.Name}} --recursive s3/documents/2014/ C:\Backups\2014
+      $ mc {{.Name}} --recursive s3\documents\2014\ C:\Backups\2014
 
    5. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
       $ mc {{.Name}} 本語 s3/andoria/
@@ -88,10 +88,12 @@ EXAMPLES:
 
 // copyMessage container for file copy messages
 type copyMessage struct {
-	Status string `json:"status"`
-	Source string `json:"source"`
-	Target string `json:"target"`
-	Length int64  `json:"length"`
+	Status      string `json:"status"`
+	SourceAlias string `json:"sourceAlias,omitempty"`
+	Source      string `json:"source"`
+	TargetAlias string `json:"targetAlias,omitempty"`
+	Target      string `json:"target"`
+	Length      int64  `json:"length"`
 }
 
 // String colorized copy message
@@ -145,7 +147,7 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
-	reader, err := getSource(cpURLs.SourceContent.URL.String())
+	reader, err := getSourceFromAlias(cpURLs.SourceAlias, cpURLs.SourceContent.URL.String())
 	if err != nil {
 		if !globalQuiet && !globalJSON {
 			progressReader.ErrorGet(cpURLs.SourceContent.Size)
@@ -158,9 +160,11 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 	var newReader io.ReadSeeker
 	if globalQuiet || globalJSON {
 		printMsg(copyMessage{
-			Source: cpURLs.SourceContent.URL.String(),
-			Target: cpURLs.TargetContent.URL.String(),
-			Length: cpURLs.SourceContent.Size,
+			SourceAlias: cpURLs.SourceAlias,
+			Source:      cpURLs.SourceContent.URL.String(),
+			TargetAlias: cpURLs.TargetAlias,
+			Target:      cpURLs.TargetContent.URL.String(),
+			Length:      cpURLs.SourceContent.Size,
 		})
 		// No accounting necessary for JSON output.
 		if globalJSON {
@@ -195,7 +199,7 @@ func doCopyFake(cURLs copyURLs, progressReader *barSend) {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV5, trapCh <-chan bool) {
+func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -264,7 +268,7 @@ func doPrepareCopyURLs(session *sessionV5, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCopySession(session *sessionV5) {
+func doCopySession(session *sessionV6) {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
@@ -389,7 +393,7 @@ func mainCopy(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	session := newSessionV5()
+	session := newSessionV6()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")
 
@@ -400,12 +404,7 @@ func mainCopy(ctx *cli.Context) {
 	}
 
 	// extract URLs.
-	var err *probe.Error
-	if session.Header.CommandArgs, err = args2URLs(ctx.Args()); err != nil {
-		session.Delete()
-		fatalIf(err.Trace(ctx.Args()...), "One or more unknown URL types passed.")
-	}
-
+	session.Header.CommandArgs = ctx.Args()
 	doCopySession(session)
 	session.Delete()
 }

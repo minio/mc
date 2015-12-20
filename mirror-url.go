@@ -26,7 +26,9 @@ import (
 )
 
 type mirrorURLs struct {
+	SourceAlias   string
 	SourceContent *client.Content
+	TargetAlias   string
 	TargetContent *client.Content
 	Error         *probe.Error `json:"-"`
 }
@@ -53,9 +55,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 
 	// extract URLs.
-	URLs, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
-
+	URLs := ctx.Args()
 	srcURL := URLs[0]
 	tgtURL := URLs[1]
 
@@ -92,6 +92,10 @@ func checkMirrorSyntax(ctx *cli.Context) {
 }
 
 func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirrorURLsCh chan<- mirrorURLs) {
+	// Extract alias before fiddling with the URL.
+	sourceAlias, _, _ := mustExpandAlias(sourceURL)
+	targetAlias, _, _ := mustExpandAlias(targetURL)
+
 	defer close(mirrorURLsCh)
 
 	// source and targets are always directories
@@ -110,7 +114,7 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 		return
 	}
 
-	sourceClient, err := url2Client(sourceURL)
+	sourceClient, err := newClient(sourceURL)
 	if err != nil {
 		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceURL)}
 		return
@@ -147,7 +151,9 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 		targetPath := urlJoinPath(targetURL, suffix)
 		targetContent := &client.Content{URL: *client.NewURL(targetPath)}
 		mirrorURLsCh <- mirrorURLs{
+			SourceAlias:   sourceAlias,
 			SourceContent: sourceContent,
+			TargetAlias:   targetAlias,
 			TargetContent: targetContent,
 		}
 	}

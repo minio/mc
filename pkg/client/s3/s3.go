@@ -54,8 +54,8 @@ func New(config *client.Config) (client.Client, *probe.Error) {
 		}
 	}
 	s3Conf := minio.Config{
-		AccessKeyID:     config.AccessKeyID,
-		SecretAccessKey: config.SecretAccessKey,
+		AccessKeyID:     config.AccessKey,
+		SecretAccessKey: config.SecretKey,
 		Transport:       transport,
 		Endpoint:        u.Scheme + u.SchemeSeparator + u.Host,
 		Signature: func() minio.SignatureType {

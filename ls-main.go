@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
@@ -61,20 +60,20 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3.amazonaws.com
+      $ mc {{.Name}} s3
 
    2. List buckets and all its contents from Amazon S3 cloud storage recursively.
-      $ mc {{.Name}} --recursive s3.amazonaws.com
+      $ mc {{.Name}} --recursive s3
 
-   3. List files recursively on a local filesystem on Microsoft Windows.
+   3. List all contents of mybucket on Amazon S3 cloud storage.
+      $ mc {{.Name}} s3/mybucket/
+
+   4. List all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
+      $ mc {{.Name}} s3\mybucket\
+
+   5. List files recursively on a local filesystem on Microsoft Windows.
       $ mc {{.Name}} --recursive C:\Users\Worf\
 
-   4. List files with non-English characters on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3/andoria/本
-
-   5. List folders with space separated names on Amazon S3 cloud storage. 
-      $ mc {{.Name}} 's3/miniocloud/Community Files/'
-    
    6. List incomplete (previously failed) uploads of objects on Amazon S3. 
       $ mc {{.Name}} --incomplete s3/mybucket
 `,
@@ -92,9 +91,7 @@ func checkListSyntax(ctx *cli.Context) {
 		}
 	}
 	// extract URLs.
-	URLs, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("One or more unknown URL types passed."))
-
+	URLs := ctx.Args()
 	isIncomplete := ctx.Bool("incomplete")
 
 	for _, url := range URLs {
@@ -129,11 +126,9 @@ func mainList(ctx *cli.Context) {
 		args = []string{"."}
 	}
 
-	targetURLs, err := args2URLs(args)
-	fatalIf(err.Trace(args...), "One or more unknown URL types passed.")
-	for _, targetURL := range targetURLs {
+	for _, targetURL := range args {
 		var clnt client.Client
-		clnt, err = url2Client(targetURL)
+		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
 		err = doList(clnt, isRecursive, isIncomplete)

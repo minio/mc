@@ -24,7 +24,7 @@ import (
 
 // mc configuration related constants.
 const (
-	globalMCConfigVersion = "6"
+	globalMCConfigVersion = "7"
 
 	globalMCConfigDir        = ".mc/"
 	globalMCConfigWindowsDir = "mc\\"
@@ -33,15 +33,6 @@ const (
 	// session config and shared urls related constants
 	globalSessionDir        = "session"
 	globalSharedURLsDataDir = "share"
-
-	// default access and secret key
-	// do not pass accesskeyid and secretaccesskey through cli
-	// users should manually edit them, add a stub entry
-	globalAccessKeyID     = "YOUR-ACCESS-KEY-ID-HERE"
-	globalSecretAccessKey = "YOUR-SECRET-ACCESS-KEY-HERE"
-
-	// default host
-	globalExampleHostURL = "http://YOUR-EXAMPLE.COM"
 )
 
 var (

@@ -54,7 +54,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
-      $ mc {{.Name}} s3.amazonaws.com/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
+      $ mc {{.Name}} s3/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
 
    2. Concantenate contents of file1.txt and stdin to standard output.
       $ mc {{.Name}} file1.txt - > file.txt
@@ -85,14 +85,10 @@ func catURL(sourceURL string) *probe.Error {
 	case "-":
 		reader = os.Stdin
 	default:
-		sourceClnt, err := url2Client(sourceURL)
-		if err != nil {
-			return err.Trace(sourceURL)
-		}
 		// Ignore size, since os.Stat() would not return proper size all the
 		// time for local filesystem for example /proc files.
-		reader, err = sourceClnt.Get(0, 0)
-		if err != nil {
+		var err *probe.Error
+		if reader, err = getSource(sourceURL); err != nil {
 			return err.Trace(sourceURL)
 		}
 	}
@@ -150,10 +146,7 @@ func mainCat(ctx *cli.Context) {
 	}
 
 	// Convert arguments to URLs: expand alias, fix format.
-	URLs, err := args2URLs(args)
-	fatalIf(err.Trace(args...), "Unable to parse arguments.")
-
-	for _, url := range URLs {
+	for _, url := range args {
 		fatalIf(catURL(url).Trace(url), "Unable to read from ‘"+url+"’.")
 	}
 }

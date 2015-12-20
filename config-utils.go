@@ -8,29 +8,21 @@ import (
 )
 
 // isValidSecretKey - validate secret key.
-func isValidSecretKey(secretAccessKey string) bool {
-	if secretAccessKey == "" {
+func isValidSecretKey(secretKey string) bool {
+	if secretKey == "" {
 		return true
 	}
 	regex := regexp.MustCompile("^.{40}$")
-	return regex.MatchString(secretAccessKey)
+	return regex.MatchString(secretKey)
 }
 
 // isValidAccessKey - validate access key.
-func isValidAccessKey(accessKeyID string) bool {
-	if accessKeyID == "" {
+func isValidAccessKey(accessKey string) bool {
+	if accessKey == "" {
 		return true
 	}
 	regex := regexp.MustCompile("^[A-Z0-9\\-\\.\\_\\~]{20}$")
-	return regex.MatchString(accessKeyID)
-}
-
-// isValidKeys validates both access and secret key.
-func isValidKeys(accessKeyID, secretAccessKey string) bool {
-	if isValidAccessKey(accessKeyID) && isValidSecretKey(secretAccessKey) {
-		return true
-	}
-	return false
+	return regex.MatchString(accessKey)
 }
 
 // isValidHostURL - validate input host url.
