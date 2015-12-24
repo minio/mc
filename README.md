@@ -28,9 +28,9 @@
 
 Download ``mc`` for:
 
-- ``64-bit Intel`` from https://dl.minio.io:9000/updates/2015/Dec/linux-amd64/mc
-- ``32-bit Intel`` from https://dl.minio.io:9000/updates/2015/Dec/linux-386/mc
-- ``32-bit ARM`` from https://dl.minio.io:9000/updates/2015/Dec/linux-arm/mc
+- ``64-bit Intel`` from https://dl.minio.io/client/mc/release/linux-amd64/mc
+- ``32-bit Intel`` from https://dl.minio.io/client/mc/release/linux-386/mc
+- ``32-bit ARM`` from https://dl.minio.io/client/mc/release/linux-arm/mc
 
 ~~~
 $ chmod +x mc
@@ -39,7 +39,7 @@ $ ./mc help
 
 #### OS X
 
-Download ``mc`` from https://dl.minio.io:9000/updates/2015/Dec/darwin-amd64/mc
+Download ``mc`` from https://dl.minio.io/client/mc/release/darwin-amd64/mc
 
 ~~~
 $ chmod 755 mc
@@ -50,8 +50,8 @@ $ ./mc help
 
 Download ``mc`` for:
 
-- ``64-bit`` from https://dl.minio.io:9000/updates/2015/Dec/windows-amd64/mc.exe
-- ``32-bit`` from https://dl.minio.io:9000/updates/2015/Dec/windows-386/mc.exe
+- ``64-bit`` from https://dl.minio.io/client/mc/release/windows-amd64/mc.exe
+- ``32-bit`` from https://dl.minio.io/client/mc/release/windows-386/mc.exe
 
 ~~~
 C:\Users\Username\Downloads> mc.exe help
@@ -92,7 +92,7 @@ NOTE: ``S3v4`` is default if not specified.
 
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys).
 
-Once you have them update your ``~/./mc/config.json`` configuration file.
+Once you have them update your ``~/.mc/config.json`` configuration file.
 ```
 $ mc config host add https://storage.googleapis.com <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v2
 ```
