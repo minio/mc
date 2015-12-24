@@ -18,9 +18,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -69,15 +71,9 @@ EXAMPLES:
 
 // update URL endpoints.
 const (
-	mcUpdateStableURL       = "https://dl.minio.io:9000/updates/updates.json"
-	mcUpdateExperimentalURL = "https://dl.minio.io:9000/updates/experimental.json"
+	mcUpdateStableURL       = "https://dl.minio.io/client/mc/release"
+	mcUpdateExperimentalURL = "https://dl.minio.io/client/mc/experimental"
 )
-
-// mcUpdates container to hold updates json.
-type mcUpdates struct {
-	BuildDate string
-	Platforms map[string]string
-}
 
 // updateMessage container to hold update messages.
 type updateMessage struct {
@@ -94,15 +90,9 @@ func (u updateMessage) String() string {
 	}
 	var msg string
 	if runtime.GOOS == "windows" {
-		// verify if the mc binary exists in the current directory.
-		// In such cases do not overwrite it.
-		if _, e := os.Stat(".\\mc.exe"); e == nil {
-			msg = "Download " + u.Download
-		} else {
-			msg = "mc.exe cp " + u.Download + " .\\mc.exe"
-		}
+		msg = "Download " + u.Download
 	} else {
-		msg = "mc cp " + u.Download + " mc; chmod 755 mc"
+		msg = "Download " + u.Download
 	}
 	msg, err := colorizeUpdateMessage(msg)
 	fatalIf(err.Trace(msg), "Unable to colorize experimental update notification string ‘"+msg+"’.")
@@ -118,49 +108,72 @@ func (u updateMessage) JSON() string {
 	return string(updateMessageJSONBytes)
 }
 
+func parseReleaseData(data string) (time.Time, *probe.Error) {
+	releaseStr := strings.Fields(data)
+	if len(releaseStr) < 2 {
+		return time.Time{}, probe.NewError(errors.New("Update data malformed"))
+	}
+	releaseDate := releaseStr[1]
+	releaseDateSplits := strings.SplitN(releaseDate, ".", 3)
+	if len(releaseDateSplits) < 3 {
+		return time.Time{}, probe.NewError(errors.New("Update data malformed"))
+	}
+	if releaseDateSplits[0] != "mc" {
+		return time.Time{}, probe.NewError(errors.New("Update data malformed, missing mc tag"))
+	}
+	if releaseDateSplits[1] != "OFFICIAL" {
+		return time.Time{}, probe.NewError(errors.New("Update data malformed, missing OFFICIAL tag"))
+	}
+	dateSplits := strings.SplitN(releaseDateSplits[2], "T", 2)
+	if len(dateSplits) < 2 {
+		return time.Time{}, probe.NewError(errors.New("Update data malformed, not in modified RFC3359 form"))
+	}
+	dateSplits[1] = strings.Replace(dateSplits[1], "-", ":", -1)
+	date := strings.Join(dateSplits, "T")
+
+	parsedDate, e := time.Parse(time.RFC3339, date)
+	if e != nil {
+		return time.Time{}, probe.NewError(e)
+	}
+	return parsedDate, nil
+}
+
 // verify updates for releases.
 func getReleaseUpdate(updateURL string) {
-	clnt, err := url2Client(updateURL)
-	fatalIf(err.Trace(updateURL), "Unable to initalize update URL.")
-
-	data, err := clnt.Get(0, 0)
-	fatalIf(err.Trace(updateURL), "Unable to read from update URL ‘"+updateURL+"’.")
+	newUpdateURL := updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH + "/mc.shasum"
+	data, e := http.Get(newUpdateURL)
+	fatalIf(probe.NewError(e), "Unable to read from update URL ‘"+newUpdateURL+"’.")
 
 	if mcVersion == "UNOFFICIAL.GOGET" {
-		fatalIf(errDummy().Trace(mcVersion),
-			"Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#mc")
+		fatalIf(errDummy().Trace(newUpdateURL),
+			"Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#minio")
 	}
 
 	current, e := time.Parse(time.RFC3339, mcVersion)
 	fatalIf(probe.NewError(e), "Unable to parse version string as time.")
 
 	if current.IsZero() {
-		fatalIf(errDummy().Trace(mcVersion),
-			"Updates not supported for custom builds. Version field is empty. Please download official releases from https://minio.io/#mc")
+		fatalIf(errDummy().Trace(newUpdateURL),
+			"Updates not supported for custom builds. Version field is empty. Please download official releases from https://minio.io/#minio")
 	}
 
-	var updates mcUpdates
-	decoder := json.NewDecoder(data)
-	e = decoder.Decode(&updates)
-	fatalIf(probe.NewError(e), "Unable to decode update notification.")
+	body, e := ioutil.ReadAll(data.Body)
+	fatalIf(probe.NewError(e), "Fetching updates failed. Please try again.")
 
-	latest, e := time.Parse(time.RFC3339, updates.BuildDate)
-	if e != nil {
-		latest, e = time.Parse(http.TimeFormat, updates.BuildDate)
-		fatalIf(probe.NewError(e), "Unable to parse BuildDate.")
-	}
+	latest, err := parseReleaseData(string(body))
+	fatalIf(err.Trace(newUpdateURL), "Please report this issue at https://github.com/minio/mc/issues.")
 
 	if latest.IsZero() {
-		fatalIf(errDummy().Trace(mcVersion),
+		fatalIf(errDummy().Trace(newUpdateURL),
 			"Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues")
 	}
 
-	updateURLParse := clnt.GetURL()
-	downloadURL := updateURLParse.Scheme +
-		string(updateURLParse.SchemeSeparator) +
-		updateURLParse.Host + string(updateURLParse.Separator) +
-		updates.Platforms[runtime.GOOS+"-"+runtime.GOARCH]
-
+	var downloadURL string
+	if runtime.GOOS == "windows" {
+		downloadURL = updateURL + runtime.GOOS + "-" + runtime.GOARCH + "/mc.exe"
+	} else {
+		downloadURL = updateURL + runtime.GOOS + "-" + runtime.GOARCH + "/mc"
+	}
 	updateMsg := updateMessage{
 		Download: downloadURL,
 		Version:  mcVersion,
