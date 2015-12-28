@@ -73,19 +73,19 @@ EXAMPLES:
       $ mc {{.Name}} 1999/old-backup.tgz
 
    2. Remove contents of a folder, excluding its sub-folders.
-     $ mc {{.Name}} --force s3.amazonaws.com/jazz-songs/louis/
+     $ mc {{.Name}} --force s3/jazz-songs/louis/
 
    3. Remove contents of a folder recursively.
-     $ mc {{.Name}} --force --recursive s3.amazonaws.com/jazz-songs/louis/
+     $ mc {{.Name}} --force --recursive s3/jazz-songs/louis/
 
    4. Remove all matching objects with this prefix.
-     $ mc {{.Name}} --force s3.amazonaws.com/ogg/gunmetal
+     $ mc {{.Name}} --force s3/ogg/gunmetal
 
    5. Drop an incomplete upload of an object.
-      $ mc {{.Name}} --incomplete s3.amazonaws.com/jazz-songs/louis/file01.mp3
+      $ mc {{.Name}} --incomplete s3/jazz-songs/louis/file01.mp3
 
    6. Drop all incomplete uploads recursively matching this prefix.
-      $ mc {{.Name}} --incomplete --force --recursive s3.amazonaws.com/jazz-songs/louis/
+      $ mc {{.Name}} --incomplete --force --recursive s3/jazz-songs/louis/
 `,
 }
 
@@ -120,9 +120,7 @@ func checkRmSyntax(ctx *cli.Context) {
 	}
 
 	if !isRecursive && !isIncomplete {
-		URLs, err := args2URLs(ctx.Args())
-		fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
-		for _, url := range URLs {
+		for _, url := range ctx.Args() {
 			if _, _, err := url2Stat(url); err != nil {
 				fatalIf(err.Trace(url), "Unable to stat.")
 			}
@@ -137,7 +135,7 @@ func checkRmSyntax(ctx *cli.Context) {
 
 // Remove a single object.
 func rm(url string, isIncomplete, isFake bool) *probe.Error {
-	clnt, err := url2Client(url)
+	clnt, err := newClient(url)
 	if err != nil {
 		return err.Trace(url)
 	}
@@ -156,7 +154,7 @@ func rm(url string, isIncomplete, isFake bool) *probe.Error {
 // Remove all objects recursively.
 func rmAll(url string, isRecursive, isIncomplete, isFake bool) {
 	// Initialize new client.
-	clnt, err := url2Client(url)
+	clnt, err := newClient(url)
 	if err != nil {
 		errorIf(err.Trace(url), "Invalid URL ‘"+url+"’.")
 		return // End of journey.
@@ -206,12 +204,8 @@ func mainRm(ctx *cli.Context) {
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 
-	// Parse args.
-	URLs, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(ctx.Args()...), "Unable to parse arguments.")
-
 	// Support multiple targets.
-	for _, url := range URLs {
+	for _, url := range ctx.Args() {
 		if isRecursive && isForce {
 			rmAll(url, isRecursive, isIncomplete, isFake)
 		} else {

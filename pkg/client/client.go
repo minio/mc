@@ -61,12 +61,12 @@ type Content struct {
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Config struct {
-	AccessKeyID     string
-	SecretAccessKey string
-	Signature       string
-	HostURL         string
-	AppName         string
-	AppVersion      string
-	AppComments     []string
-	Debug           bool
+	AccessKey   string
+	SecretKey   string
+	Signature   string
+	HostURL     string
+	AppName     string
+	AppVersion  string
+	AppComments []string
+	Debug       bool
 }

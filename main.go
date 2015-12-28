@@ -31,6 +31,7 @@ import (
 )
 
 var (
+	// global flags for mc.
 	mcFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
@@ -87,10 +88,13 @@ func checkConfig() {
 func migrate() {
 	// Fix broken config files if any.
 	fixConfig()
+
 	// Migrate config files if any.
 	migrateConfig()
+
 	// Migrate session files if any.
 	migrateSession()
+
 	// Migrate shared urls if any.
 	migrateShare()
 }

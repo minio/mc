@@ -29,11 +29,9 @@ func checkCopySyntax(ctx *cli.Context) {
 	}
 
 	// extract URLs.
-	URLs, err := args2URLs(ctx.Args())
-	fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("Argument parsing failed."))
-
+	URLs := ctx.Args()
 	if len(URLs) < 2 {
-		fatalIf(err.Trace(ctx.Args()...), fmt.Sprintf("Unable to parse source and target arguments."))
+		fatalIf(errDummy().Trace(ctx.Args()...), fmt.Sprintf("Unable to parse source and target arguments."))
 	}
 
 	srcURLs := URLs[:len(URLs)-1]
@@ -53,7 +51,10 @@ func checkCopySyntax(ctx *cli.Context) {
 	}
 
 	// Guess CopyURLsType based on source and target URLs.
-	copyURLsType := guessCopyURLType(srcURLs, tgtURL, isRecursive)
+	copyURLsType, err := guessCopyURLType(srcURLs, tgtURL, isRecursive)
+	if err != nil {
+		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of copy operation.")
+	}
 	switch copyURLsType {
 	case copyURLsTypeA: // File -> File.
 		checkCopySyntaxTypeA(srcURLs, tgtURL)
@@ -64,7 +65,7 @@ func checkCopySyntax(ctx *cli.Context) {
 	case copyURLsTypeD: // File1...FileN -> Folder.
 		checkCopySyntaxTypeD(srcURLs, tgtURL)
 	default:
-		fatalIf(errInvalidArgument().Trace(), "Guessing CopyURLsType failed, Invalid arguments provided.")
+		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of copy operation.")
 	}
 }
 

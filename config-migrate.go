@@ -17,13 +17,14 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio-xl/pkg/quick"
 )
 
+// migrate config files from the any older version to the latest.
 func migrateConfig() {
 	// Migrate config V1 to V101
 	migrateConfigV1ToV101()
@@ -37,544 +38,343 @@ func migrateConfig() {
 	migrateConfigV4ToV5()
 	// Migrate config V5 to V6
 	migrateConfigV5ToV6()
+	// Migrate config V6 to V7
+	migrateConfigV6ToV7()
 }
 
-func fixConfig() {
-	// Fix config V3
-	fixConfigV3()
-	// Fix config V6
-	fixConfigV6()
-	// Fix config V6 for hosts
-	fixConfigV6ForHosts()
-}
-
-func fixConfigV6ForHosts() {
-	if !isMcConfigExists() {
-		return
-	}
-	config, err := quick.New(newConfigV6())
-	fatalIf(err.Trace(), "Unable to initialize config.")
-
-	err = config.Load(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to load config.")
-
-	if config.Data().(*configV6).Version == "6" {
-		newConfig := new(configV6)
-		newConfig.Aliases = make(map[string]string)
-		newConfig.Hosts = make(map[string]hostConfig)
-		newConfig.Version = "6"
-		newConfig.Aliases = config.Data().(*configV6).Aliases
-
-		url := new(client.URL)
-		for host, hostCfg := range config.Data().(*configV6).Hosts {
-			// Already fixed - move on.
-			if strings.HasPrefix(host, "https") || strings.HasPrefix(host, "http") {
-				newConfig.Hosts[host] = hostCfg
-				continue
-			}
-			if host == "s3.amazonaws.com" || host == "storage.googleapis.com" {
-				console.Infoln("Found hosts, replacing " + host + " with https://" + host)
-				url.Host = host
-				url.Scheme = "https"
-				url.SchemeSeparator = "://"
-				newConfig.Hosts[url.String()] = hostCfg
-				delete(newConfig.Hosts, host)
-			}
-			if host == "localhost:9000" || host == "127.0.0.1:9000" {
-				console.Infoln("Found hosts, replacing " + host + " with http://" + host)
-				url.Host = host
-				url.Scheme = "http"
-				url.SchemeSeparator = "://"
-				newConfig.Hosts[url.String()] = hostCfg
-				delete(newConfig.Hosts, host)
-			}
-			if host == "play.minio.io:9000" || host == "dl.minio.io:9000" {
-				console.Infoln("Found hosts, replacing " + host + " with https://" + host)
-				url.Host = host
-				url.Scheme = "https"
-				url.SchemeSeparator = "://"
-				newConfig.Hosts[url.String()] = hostCfg
-				delete(newConfig.Hosts, host)
-			}
-		}
-		newConf, err := quick.New(newConfig)
-		fatalIf(err.Trace(), "Unable to initialize newly fixed config.")
-
-		err = newConf.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
-	}
-}
-
-// fixConfigV6 - fix all the unnecessary glob URLs present in existing config version 6.
-func fixConfigV6() {
-	if !isMcConfigExists() {
-		return
-	}
-	config, err := quick.New(newConfigV6())
-	fatalIf(err.Trace(), "Unable to initialize config.")
-
-	err = config.Load(mustGetMcConfigPath())
-	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to load config.")
-
-	if config.Data().(*configV6).Version == "6" {
-		newConfig := new(configV6)
-		newConfig.Aliases = make(map[string]string)
-		newConfig.Hosts = make(map[string]hostConfig)
-		newConfig.Version = "6"
-		newConfig.Aliases = config.Data().(*configV6).Aliases
-		for host, hostCfg := range config.Data().(*configV6).Hosts {
-			if strings.HasPrefix(host, "https") || strings.HasPrefix(host, "http") {
-				newConfig.Hosts[host] = hostCfg
-				continue
-			}
-			if strings.Contains(host, "*s3*") || strings.Contains(host, "*.s3*") {
-				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
-				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
-				continue
-			}
-			if strings.Contains(host, "s3*") {
-				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
-				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
-				continue
-			}
-			if strings.Contains(host, "*amazonaws.com") || strings.Contains(host, "*.amazonaws.com") {
-				console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
-				newConfig.Hosts["s3.amazonaws.com"] = hostCfg
-				continue
-			}
-			if strings.Contains(host, "*storage.googleapis.com") {
-				console.Infoln("Found glob url, replacing " + host + " with storage.googleapis.com")
-				newConfig.Hosts["storage.googleapis.com"] = hostCfg
-				continue
-			}
-			if strings.Contains(host, "localhost:*") {
-				console.Infoln("Found glob url, replacing " + host + " with localhost:9000")
-				newConfig.Hosts["localhost:9000"] = hostCfg
-				continue
-			}
-			if strings.Contains(host, "127.0.0.1:*") {
-				console.Infoln("Found glob url, replacing " + host + " with 127.0.0.1:9000")
-				newConfig.Hosts["127.0.0.1:9000"] = hostCfg
-				continue
-			}
-			newConfig.Hosts[host] = hostCfg
-		}
-		newConf, err := quick.New(newConfig)
-		fatalIf(err.Trace(), "Unable to initialize newly fixed config.")
-
-		err = newConf.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
-	}
-}
-
-type configV5 struct {
-	Version string                `json:"version"`
-	Aliases map[string]string     `json:"alias"`
-	Hosts   map[string]hostConfig `json:"hosts"`
-}
-
-type configV4 struct {
-	Version string            `json:"version"`
-	Aliases map[string]string `json:"alias"`
-	Hosts   map[string]struct {
-		AccessKeyID     string `json:"accessKeyId"`
-		SecretAccessKey string `json:"secretAccessKey"`
-		Signature       string `json:"signature"`
-	} `json:"hosts"`
-}
-
-type configV3 struct {
-	Version string            `json:"version"`
-	Aliases map[string]string `json:"alias"`
-	// custom anonymous struct is necessary from version to 3 to version 4
-	// since hostConfig{} has changed to camelcase fields for unmarshal
-	Hosts map[string]struct {
-		AccessKeyID     string `json:"access-key-id"`
-		SecretAccessKey string `json:"secret-access-key"`
-	} `json:"hosts"`
-}
-
-type configV2 struct {
-	Version string
-	Aliases map[string]string
-	// custom anonymous struct is necessary from version to 2 to version 3
-	// since hostConfig{} has changed to lower case fields for unmarshal
-	Hosts map[string]struct {
-		AccessKeyID     string
-		SecretAccessKey string
-	}
-}
-
-// for backward compatibility
-type configV101 configV2
-type configV1 configV2
-
-// Migrate from config version ‘1.0’ to ‘1.0.1’
+// Migrate from config version 1.0 to 1.0.1. Populate example entries and save it back.
 func migrateConfigV1ToV101() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcConfigV1, err := quick.Load(mustGetMcConfigPath(), newConfigV1())
+	mcCfgV1, err := quick.Load(mustGetMcConfigPath(), newConfigV1())
 	fatalIf(err.Trace(), "Unable to load config version ‘1’.")
 
-	// update to newer version
-	if mcConfigV1.Version() == "1.0.0" {
-		confV101 := mcConfigV1.Data().(*configV1)
-		confV101.Version = "1.0.1"
-
-		localHostConfig := struct {
-			AccessKeyID     string
-			SecretAccessKey string
-		}{}
-		localHostConfig.AccessKeyID = ""
-		localHostConfig.SecretAccessKey = ""
-
-		s3HostConf := struct {
-			AccessKeyID     string
-			SecretAccessKey string
-		}{}
-		s3HostConf.AccessKeyID = globalAccessKeyID
-		s3HostConf.SecretAccessKey = globalSecretAccessKey
-
-		if _, ok := confV101.Hosts["localhost:*"]; !ok {
-			confV101.Hosts["localhost:*"] = localHostConfig
-		}
-		if _, ok := confV101.Hosts["127.0.0.1:*"]; !ok {
-			confV101.Hosts["127.0.0.1:*"] = localHostConfig
-		}
-		if _, ok := confV101.Hosts["*.s3*.amazonaws.com"]; !ok {
-			confV101.Hosts["*.s3*.amazonaws.com"] = s3HostConf
-		}
-
-		mcNewConfigV101, err := quick.New(confV101)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘1.0.1’.")
-
-		err = mcNewConfigV101.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘1.0.1’.")
-
-		console.Infof("Successfully migrated %s from version ‘1.0.0’ to version ‘1.0.1’.\n", mustGetMcConfigPath())
+	// If loaded config version does not match 1.0.0, we do nothing.
+	if mcCfgV1.Version() != "1.0.0" {
+		return
 	}
+
+	// 1.0.1 is compatible to 1.0.0. We are just adding new entries.
+	cfgV101 := newConfigV101()
+
+	// Copy aliases.
+	for k, v := range mcCfgV1.Data().(*configV1).Aliases {
+		cfgV101.Aliases[k] = v
+	}
+
+	// Copy hosts.
+	for k, hostCfgV1 := range mcCfgV1.Data().(*configV1).Hosts {
+		cfgV101.Hosts[k] = hostConfigV101{
+			AccessKeyID:     hostCfgV1.AccessKeyID,
+			SecretAccessKey: hostCfgV1.SecretAccessKey,
+		}
+	}
+
+	// Example localhost entry.
+	if _, ok := cfgV101.Hosts["localhost:*"]; !ok {
+		cfgV101.Hosts["localhost:*"] = hostConfigV101{}
+	}
+
+	// Example loopback IP entry.
+	if _, ok := cfgV101.Hosts["127.0.0.1:*"]; !ok {
+		cfgV101.Hosts["127.0.0.1:*"] = hostConfigV101{}
+	}
+
+	// Example AWS entry.
+	// Look for glob string (not glob match). We used to support glob based key matching earlier.
+	if _, ok := cfgV101.Hosts["*.s3*.amazonaws.com"]; !ok {
+		cfgV101.Hosts["*.s3*.amazonaws.com"] = hostConfigV101{
+			AccessKeyID:     "YOUR-ACCESS-KEY-ID-HERE",
+			SecretAccessKey: "YOUR-SECRET-ACCESS-KEY-HERE",
+		}
+	}
+
+	// Save the new config back to the disk.
+	mcCfgV101, err := quick.New(cfgV101)
+	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘1.0.1’.")
+	err = mcCfgV101.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config version ‘1.0.1’.")
+
+	console.Infof("Successfully migrated %s from version ‘1.0.0’ to version ‘1.0.1’.\n", mustGetMcConfigPath())
 }
 
-// Migrate from config ‘1.0.1’ to ‘2’
+// Migrate from config ‘1.0.1’ to ‘2’. Drop semantic versioning and move to integer versioning. No other changes.
 func migrateConfigV101ToV2() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcConfigV101, err := quick.Load(mustGetMcConfigPath(), newConfigV101())
+	mcCfgV101, err := quick.Load(mustGetMcConfigPath(), newConfigV101())
 	fatalIf(err.Trace(), "Unable to load config version ‘1.0.1’.")
 
 	// update to newer version
-	if mcConfigV101.Version() == "1.0.1" {
-		confV2 := mcConfigV101.Data().(*configV101)
-		confV2.Version = "2"
-
-		mcNewConfigV2, err := quick.New(confV2)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘2’.")
-
-		err = mcNewConfigV2.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘2’.")
-
-		console.Infof("Successfully migrated %s from version ‘1.0.1’ to version ‘2’.\n", mustGetMcConfigPath())
+	if mcCfgV101.Version() != "1.0.1" {
+		return
 	}
+
+	cfgV2 := newConfigV2()
+
+	// Copy aliases.
+	for k, v := range mcCfgV101.Data().(*configV101).Aliases {
+		cfgV2.Aliases[k] = v
+	}
+
+	// Copy hosts.
+	for k, hostCfgV101 := range mcCfgV101.Data().(*configV101).Hosts {
+		cfgV2.Hosts[k] = hostConfigV2{
+			AccessKeyID:     hostCfgV101.AccessKeyID,
+			SecretAccessKey: hostCfgV101.SecretAccessKey,
+		}
+	}
+
+	mcCfgV2, err := quick.New(cfgV2)
+	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘2’.")
+
+	err = mcCfgV2.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config version ‘2’.")
+
+	console.Infof("Successfully migrated %s from version ‘1.0.1’ to version ‘2’.\n", mustGetMcConfigPath())
 }
 
-// Migrate from config ‘2’ to ‘3’
+// Migrate from config ‘2’ to ‘3’. Use ‘-’ separated names for
+// hostConfig using struct json tags.
 func migrateConfigV2ToV3() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcConfigV2, err := quick.Load(mustGetMcConfigPath(), newConfigV2())
+
+	mcCfgV2, err := quick.Load(mustGetMcConfigPath(), newConfigV2())
 	fatalIf(err.Trace(), "Unable to load mc config V2.")
 
 	// update to newer version
-	if mcConfigV2.Version() == "2" {
-		confV3 := new(configV3)
-		confV3.Aliases = mcConfigV2.Data().(*configV2).Aliases
-		confV3.Hosts = make(map[string]struct {
-			AccessKeyID     string `json:"access-key-id"`
-			SecretAccessKey string `json:"secret-access-key"`
-		})
-		for host, hostConf := range mcConfigV2.Data().(*configV2).Hosts {
-			newHostConf := struct {
-				AccessKeyID     string `json:"access-key-id"`
-				SecretAccessKey string `json:"secret-access-key"`
-			}{}
-			newHostConf.AccessKeyID = hostConf.AccessKeyID
-			newHostConf.SecretAccessKey = hostConf.SecretAccessKey
-			confV3.Hosts[host] = newHostConf
-		}
-		confV3.Version = "3"
-
-		mcNewConfigV3, err := quick.New(confV3)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘3’.")
-
-		err = mcNewConfigV3.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘3’.")
-
-		console.Infof("Successfully migrated %s from version ‘2’ to version ‘3’.\n", mustGetMcConfigPath())
+	if mcCfgV2.Version() != "2" {
+		return
 	}
+
+	cfgV3 := newConfigV3()
+
+	// Copy aliases.
+	for k, v := range mcCfgV2.Data().(*configV2).Aliases {
+		cfgV3.Aliases[k] = v
+	}
+
+	// Copy hosts.
+	for k, hostCfgV2 := range mcCfgV2.Data().(*configV2).Hosts {
+		// New hostConfV3 uses struct json tags.
+		cfgV3.Hosts[k] = hostConfigV3{
+			AccessKeyID:     hostCfgV2.AccessKeyID,
+			SecretAccessKey: hostCfgV2.SecretAccessKey,
+		}
+	}
+
+	mcNewCfgV3, err := quick.New(cfgV3)
+	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘3’.")
+
+	err = mcNewCfgV3.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config version ‘3’.")
+
+	console.Infof("Successfully migrated %s from version ‘2’ to version ‘3’.\n", mustGetMcConfigPath())
 }
 
-// Migrate from config version ‘3’ to ‘4’
+// Migrate from config version ‘3’ to ‘4’. Introduce API Signature
+// field in host config. Also Use JavaScript notation for field names.
 func migrateConfigV3ToV4() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcConfigV3, err := quick.Load(mustGetMcConfigPath(), newConfigV3())
+	mcCfgV3, err := quick.Load(mustGetMcConfigPath(), newConfigV3())
 	fatalIf(err.Trace(), "Unable to load mc config V2.")
 
 	// update to newer version
-	if mcConfigV3.Version() == "3" {
-		confV4 := new(configV4)
-		confV4.Aliases = mcConfigV3.Data().(*configV3).Aliases
-		confV4.Hosts = make(map[string]struct {
-			AccessKeyID     string `json:"accessKeyId"`
-			SecretAccessKey string `json:"secretAccessKey"`
-			Signature       string `json:"signature"`
-		})
-		for host, hostConf := range mcConfigV3.Data().(*configV3).Hosts {
-			confV4.Hosts[host] = struct {
-				AccessKeyID     string `json:"accessKeyId"`
-				SecretAccessKey string `json:"secretAccessKey"`
-				Signature       string `json:"signature"`
-			}{
-				AccessKeyID:     hostConf.AccessKeyID,
-				SecretAccessKey: hostConf.SecretAccessKey,
-				Signature:       "v4",
-			}
-		}
-		confV4.Version = "4"
-
-		mcNewConfigV4, err := quick.New(confV4)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘4’.")
-
-		err = mcNewConfigV4.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘4’.")
-
-		console.Infof("Successfully migrated %s from version ‘3’ to version ‘4’.\n", mustGetMcConfigPath())
+	if mcCfgV3.Version() != "3" {
+		return
 	}
+
+	cfgV4 := newConfigV4()
+	for k, v := range mcCfgV3.Data().(*configV3).Aliases {
+		cfgV4.Aliases[k] = v
+	}
+	// New hostConfig has API signature. All older entries were V4
+	// only. So it is safe to assume V4 as default for all older
+	// entries.
+	// HostConfigV4 als uses JavaScript naming notation for struct JSON tags.
+	for host, hostCfgV3 := range mcCfgV3.Data().(*configV3).Hosts {
+		cfgV4.Hosts[host] = hostConfigV4{
+			AccessKeyID:     hostCfgV3.AccessKeyID,
+			SecretAccessKey: hostCfgV3.SecretAccessKey,
+			Signature:       "v4",
+		}
+	}
+
+	mcNewCfgV4, err := quick.New(cfgV4)
+	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘4’.")
+
+	err = mcNewCfgV4.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config version ‘4’.")
+
+	console.Infof("Successfully migrated %s from version ‘3’ to version ‘4’.\n", mustGetMcConfigPath())
+
 }
 
-// Migrate config version ‘4’ to ‘5’
+// Migrate config version ‘4’ to ‘5’. Rename hostConfigV4.Signature  -> hostConfigV5.API.
 func migrateConfigV4ToV5() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcConfigV4, err := quick.Load(mustGetMcConfigPath(), newConfigV4())
+	mcCfgV4, err := quick.Load(mustGetMcConfigPath(), newConfigV4())
 	fatalIf(err.Trace(), "Unable to load mc config V4.")
 
 	// update to newer version
-	if mcConfigV4.Version() == "4" {
-		confV5 := new(configV5)
-		confV5.Aliases = mcConfigV4.Data().(*configV4).Aliases
-		confV5.Hosts = make(map[string]hostConfig)
-		for host, hostConf := range mcConfigV4.Data().(*configV4).Hosts {
-			confV5.Hosts[host] = hostConfig{
-				AccessKeyID:     hostConf.AccessKeyID,
-				SecretAccessKey: hostConf.SecretAccessKey,
-				API:             "S3v4",
-			}
-		}
-		confV5.Version = "5"
-
-		mcNewConfigV5, err := quick.New(confV5)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘5’.")
-
-		err = mcNewConfigV5.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘5’.")
-
-		console.Infof("Successfully migrated %s from version ‘4’ to version ‘5’.\n", mustGetMcConfigPath())
+	if mcCfgV4.Version() != "4" {
+		return
 	}
+
+	cfgV5 := newConfigV5()
+	for k, v := range mcCfgV4.Data().(*configV4).Aliases {
+		cfgV5.Aliases[k] = v
+	}
+	for host, hostCfgV4 := range mcCfgV4.Data().(*configV4).Hosts {
+		cfgV5.Hosts[host] = hostConfigV5{
+			AccessKeyID:     hostCfgV4.AccessKeyID,
+			SecretAccessKey: hostCfgV4.SecretAccessKey,
+			API:             "v4", // Rename from .Signature to .API
+		}
+	}
+
+	mcNewCfgV5, err := quick.New(cfgV5)
+	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘5’.")
+
+	err = mcNewCfgV5.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config version ‘5’.")
+
+	console.Infof("Successfully migrated %s from version ‘4’ to version ‘5’.\n", mustGetMcConfigPath())
 }
 
-// Migrate config version ‘4’ to ‘5’
+// Migrate config version ‘5’ to ‘6’. Add google cloud storage servers
+// to host config. Also remove "." from s3 aws glob rule.
 func migrateConfigV5ToV6() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcConfigV5, err := quick.Load(mustGetMcConfigPath(), newConfigV5())
+	mcCfgV5, err := quick.Load(mustGetMcConfigPath(), newConfigV5())
 	fatalIf(err.Trace(), "Unable to load mc config V5.")
 
 	// update to newer version
-	if mcConfigV5.Version() == "5" {
-		confV6 := new(configV6)
-		confV6.Aliases = mcConfigV5.Data().(*configV5).Aliases
-		confV6.Aliases["gcs"] = "https://storage.googleapis.com"
-		confV6.Hosts = make(map[string]hostConfig)
-		for host, hostConf := range mcConfigV5.Data().(*configV5).Hosts {
-			confV6.Hosts[host] = hostConfig{
-				AccessKeyID:     hostConf.AccessKeyID,
-				SecretAccessKey: hostConf.SecretAccessKey,
-				API:             hostConf.API,
-			}
-		}
-		var s3Conf hostConfig
-		for host, hostConf := range confV6.Hosts {
-			if strings.Contains(host, "s3") {
-				if (hostConf.AccessKeyID == globalAccessKeyID) ||
-					(hostConf.SecretAccessKey == globalSecretAccessKey) {
-					delete(confV6.Hosts, host)
-				}
-				if hostConf.AccessKeyID == "" || hostConf.SecretAccessKey == "" {
-					delete(confV6.Hosts, host)
-				}
-				s3Conf = hostConfig{
-					AccessKeyID:     hostConf.AccessKeyID,
-					SecretAccessKey: hostConf.SecretAccessKey,
-					API:             hostConf.API,
-				}
-				break
-			}
-		}
-		confV6.Hosts["*s3*amazonaws.com"] = s3Conf
-		confV6.Hosts["*storage.googleapis.com"] = hostConfig{
-			AccessKeyID:     globalAccessKeyID,
-			SecretAccessKey: globalSecretAccessKey,
-			API:             "S3v2",
-		}
-		confV6.Version = globalMCConfigVersion
-		mcNewConfigV6, err := quick.New(confV6)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘6’.")
-
-		err = mcNewConfigV6.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘6’.")
-
-		console.Infof("Successfully migrated %s from version ‘5’ to version ‘6’.\n", mustGetMcConfigPath())
+	if mcCfgV5.Version() != "5" {
+		return
 	}
+
+	cfgV6 := newConfigV6()
+
+	// Add new Google Cloud Storage alias.
+	cfgV6.Aliases["gcs"] = "https://storage.googleapis.com"
+
+	for k, v := range mcCfgV5.Data().(*configV5).Aliases {
+		cfgV6.Aliases[k] = v
+	}
+
+	// Add defaults.
+	cfgV6.Hosts["*s3*amazonaws.com"] = hostConfigV6{
+		AccessKeyID:     "YOUR-ACCESS-KEY-ID-HERE",
+		SecretAccessKey: "YOUR-SECRET-ACCESS-KEY-HERE",
+		API:             "S3v4",
+	}
+	cfgV6.Hosts["*storage.googleapis.com"] = hostConfigV6{
+		AccessKeyID:     "YOUR-ACCESS-KEY-ID-HERE",
+		SecretAccessKey: "YOUR-SECRET-ACCESS-KEY-HERE",
+		API:             "S3v2",
+	}
+
+	for host, hostCfgV5 := range mcCfgV5.Data().(*configV5).Hosts {
+		// Find any matching s3 entry and copy keys from it to newer generalized glob entry.
+		if strings.Contains(host, "s3") {
+			if (hostCfgV5.AccessKeyID == "YOUR-ACCESS-KEY-ID-HERE") ||
+				(hostCfgV5.SecretAccessKey == "YOUR-SECRET-ACCESS-KEY-HERE") ||
+				hostCfgV5.AccessKeyID == "" ||
+				hostCfgV5.SecretAccessKey == "" {
+				continue // Skip defaults.
+			}
+			// Now we have real keys set by the user. Copy
+			// them over to newer glob rule.
+			// Original host entry has "." in the glob rule.
+			host = "*s3*amazonaws.com" // Use this glob entry.
+		}
+
+		cfgV6.Hosts[host] = hostConfigV6{
+			AccessKeyID:     hostCfgV5.AccessKeyID,
+			SecretAccessKey: hostCfgV5.SecretAccessKey,
+			API:             hostCfgV5.API,
+		}
+	}
+
+	mcNewCfgV6, err := quick.New(cfgV6)
+	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘6’.")
+
+	err = mcNewCfgV6.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config version ‘6’.")
+
+	console.Infof("Successfully migrated %s from version ‘5’ to version ‘6’.\n", mustGetMcConfigPath())
 }
 
-// Fix config version ‘3’, by removing broken struct tags.
-func fixConfigV3() {
+// Migrate config version ‘6’ to ‘7'. Remove alias map and introduce
+// named Host config. Also no more glob match for host config entries.
+func migrateConfigV6ToV7() {
 	if !isMcConfigExists() {
 		return
 	}
-	// brokenConfigV3 broken config between version 3.
-	type brokenConfigV3 struct {
-		Version string
-		ACL     string
-		Access  string
-		Aliases map[string]string
-		Hosts   map[string]struct {
-			AccessKeyID     string
-			SecretAccessKey string
+
+	mcCfgV6, err := quick.Load(mustGetMcConfigPath(), newConfigV6())
+	fatalIf(err.Trace(), "Unable to load mc config V6.")
+
+	if mcCfgV6.Version() != "6" {
+		return
+	}
+
+	cfgV7 := newConfigV7()
+	aliasIndex := 0
+	// We dropped alias support in v7. We only need to migrate host configs.
+	for host, hostCfgV6 := range mcCfgV6.Data().(*configV6).Hosts {
+		if hostCfgV6.AccessKeyID == "YOUR-ACCESS-KEY-ID-HERE" ||
+			hostCfgV6.SecretAccessKey == "YOUR-SECRET-ACCESS-KEY-HERE" ||
+			hostCfgV6.AccessKeyID == "" ||
+			hostCfgV6.SecretAccessKey == "" {
+			// Ignore default entries. configV7.loadDefaults() will re-insert them back.
+		} else if host == "https://s3.amazonaws.com" {
+			// Only one entry can exist for "s3" domain.
+			cfgV7.Hosts["s3"] = hostConfigV7{
+				URL:       host,
+				AccessKey: hostCfgV6.AccessKeyID,
+				SecretKey: hostCfgV6.SecretAccessKey,
+				API:       hostCfgV6.API,
+			}
+		} else if host == "https://storage.googleapis.com" {
+			// Only one entry can exist for "gcs" domain.
+			cfgV7.Hosts["gcs"] = hostConfigV7{
+				URL:       host,
+				AccessKey: hostCfgV6.AccessKeyID,
+				SecretKey: hostCfgV6.SecretAccessKey,
+				API:       hostCfgV6.API,
+			}
+		} else {
+			// Assign a generic "cloud1", cloud2..." key
+			// for all other entries that has valid keys set.
+			alias := fmt.Sprintf("cloud%d", aliasIndex)
+			aliasIndex++
+			cfgV7.Hosts[alias] = hostConfigV7{
+				URL:       host,
+				AccessKey: hostCfgV6.AccessKeyID,
+				SecretKey: hostCfgV6.SecretAccessKey,
+				API:       hostCfgV6.API,
+			}
 		}
 	}
-	conf := new(brokenConfigV3)
-	conf.Aliases = make(map[string]string)
-	conf.Hosts = make(map[string]struct {
-		AccessKeyID     string
-		SecretAccessKey string
-	})
+	// Load default settings.
+	cfgV7.loadDefaults()
+	mcNewCfgV7, err := quick.New(cfgV7)
+	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘7’.")
 
-	mcConfigV3, err := quick.Load(mustGetMcConfigPath(), conf)
-	fatalIf(err.Trace(), "Unable to load config.")
+	err = mcNewCfgV7.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config version ‘7’.")
 
-	// Update to newer version.
-	if len(mcConfigV3.Data().(*brokenConfigV3).Aliases) != 0 || mcConfigV3.Data().(*brokenConfigV3).ACL != "" || mcConfigV3.Data().(*brokenConfigV3).Access != "" && mcConfigV3.Version() == "3" {
-		confV3 := new(configV3)
-		confV3.Aliases = mcConfigV3.Data().(*brokenConfigV3).Aliases
-		confV3.Hosts = make(map[string]struct {
-			AccessKeyID     string `json:"access-key-id"`
-			SecretAccessKey string `json:"secret-access-key"`
-		})
-		for host, hostConf := range mcConfigV3.Data().(*brokenConfigV3).Hosts {
-			newHostConf := struct {
-				AccessKeyID     string `json:"access-key-id"`
-				SecretAccessKey string `json:"secret-access-key"`
-			}{}
-			newHostConf.AccessKeyID = hostConf.AccessKeyID
-			newHostConf.SecretAccessKey = hostConf.SecretAccessKey
-			confV3.Hosts[host] = newHostConf
-		}
-		confV3.Version = "3"
-
-		mcNewConfigV3, err := quick.New(confV3)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘3’.")
-
-		err = mcNewConfigV3.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘3’.")
-
-		console.Infof("Successfully fixed %s broken config for version ‘3’.\n", mustGetMcConfigPath())
-	}
-}
-
-// newConfigV1() - get new config version 1.0.0
-func newConfigV1() *configV1 {
-	conf := new(configV1)
-	conf.Version = "1.0.0"
-	// make sure to allocate map's otherwise Golang
-	// exits silently without providing any errors
-	conf.Hosts = make(map[string]struct {
-		AccessKeyID     string
-		SecretAccessKey string
-	})
-	conf.Aliases = make(map[string]string)
-	return conf
-}
-
-// newConfigV101() - get new config version 1.0.1
-func newConfigV101() *configV101 {
-	conf := new(configV101)
-	conf.Version = "1.0.1"
-	// make sure to allocate map's otherwise Golang
-	// exits silently without providing any errors
-	conf.Hosts = make(map[string]struct {
-		AccessKeyID     string
-		SecretAccessKey string
-	})
-	conf.Aliases = make(map[string]string)
-	return conf
-}
-
-// newConfigV2() - get new config version 2
-func newConfigV2() *configV2 {
-	conf := new(configV2)
-	conf.Version = "2"
-	// make sure to allocate map's otherwise Golang
-	// exits silently without providing any errors
-	conf.Hosts = make(map[string]struct {
-		AccessKeyID     string
-		SecretAccessKey string
-	})
-	conf.Aliases = make(map[string]string)
-	return conf
-}
-
-// newConfigV3 - get new config version 3
-func newConfigV3() *configV3 {
-	conf := new(configV3)
-	conf.Version = "3"
-	// make sure to allocate map's otherwise Golang
-	// exits silently without providing any errors
-	conf.Hosts = make(map[string]struct {
-		AccessKeyID     string `json:"access-key-id"`
-		SecretAccessKey string `json:"secret-access-key"`
-	})
-	conf.Aliases = make(map[string]string)
-	return conf
-}
-
-func newConfigV4() *configV4 {
-	conf := new(configV4)
-	conf.Version = "4"
-	// make sure to allocate map's otherwise Golang
-	// exits silently without providing any errors
-	conf.Hosts = make(map[string]struct {
-		AccessKeyID     string `json:"accessKeyId"`
-		SecretAccessKey string `json:"secretAccessKey"`
-		Signature       string `json:"signature"`
-	})
-	conf.Aliases = make(map[string]string)
-	return conf
-}
-
-func newConfigV5() *configV5 {
-	conf := new(configV5)
-	conf.Version = "5"
-	// make sure to allocate map's otherwise Golang
-	// exits silently without providing any errors
-	conf.Hosts = make(map[string]hostConfig)
-	conf.Aliases = make(map[string]string)
-	return conf
+	console.Infof("Successfully migrated %s from version ‘6’ to version ‘7’.\n", mustGetMcConfigPath())
 }

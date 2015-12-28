@@ -35,10 +35,6 @@ var (
 		return probe.NewError(errors.New("No matching host found for the given URL ‘" + URL + "’.")).Untrace()
 	}
 
-	errInitClient = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Unable to initialize client for URL ‘" + URL + "’.")).Untrace()
-	}
-
 	errInvalidSource = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Invalid source ‘" + URL + "’.")).Untrace()
 	}

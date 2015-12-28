@@ -17,11 +17,8 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"testing"
 	"time"
 
@@ -43,120 +40,9 @@ var server *httptest.Server
 var app *cli.App
 
 func (s *TestSuite) SetUpSuite(c *C) {
-	objectAPI := objectAPIHandler(objectAPIHandler{lock: &sync.Mutex{}, bucket: "bucket", object: make(map[string][]byte)})
-	server = httptest.NewServer(objectAPI)
-
-	// do not set it elsewhere, leads to data races since this is a global flag
-	globalQuiet = true // quiet is set to turn of progress bar
-
-	tmpDir, e := ioutil.TempDir(os.TempDir(), "cmd-")
-	c.Assert(e, IsNil)
-
-	// For windows the path is slightly different.
-	if runtime.GOOS == "windows" {
-		customConfigDir = filepath.Join(tmpDir, globalMCConfigWindowsDir)
-	} else {
-		customConfigDir = filepath.Join(tmpDir, globalMCConfigDir)
-	}
-	setMcConfigDir(customConfigDir)
-
-	err := createMcConfigDir()
-	c.Assert(err, IsNil)
-
-	config := newMcConfig()
-	config.Hosts[server.URL] = hostConfig{
-		AccessKeyID:     "WLGDGYAQYIGI833EV05A",
-		SecretAccessKey: "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF",
-		API:             "S3v4",
-	}
-
-	err = saveMcConfig(config)
-	c.Assert(err, IsNil)
-
-	err = createSessionDir()
-	c.Assert(err, IsNil)
-
-	app = registerApp()
 }
 
 func (s *TestSuite) TearDownSuite(c *C) {
-	os.RemoveAll(customConfigDir)
-	if server != nil {
-		server.Close()
-	}
-}
-
-func (s *TestSuite) TestGetNewClient(c *C) {
-	_, err := getNewClient("http://example.com/bucket1", hostConfig{})
-	c.Assert(err, IsNil)
-	_, err = getNewClient("https://example.com/bucket1", hostConfig{})
-	c.Assert(err, IsNil)
-	_, err = getNewClient("C:\\Users\\Administrator\\MyDocuments", hostConfig{})
-	c.Assert(err, IsNil)
-	_, err = getNewClient("/usr/bin/pandoc", hostConfig{})
-	c.Assert(err, IsNil)
-	_, err = getNewClient("pkg/client", hostConfig{})
-	c.Assert(err, IsNil)
-}
-
-// setMcConfigPath - set a custom minio client config path.
-func setMcConfigPath(configPath string) {
-	mcCustomConfigPath = configPath
-}
-
-func (s *TestSuite) TestNewConfigV6(c *C) {
-	root, e := ioutil.TempDir(os.TempDir(), "mc-")
-	c.Assert(e, IsNil)
-	defer os.RemoveAll(root)
-
-	conf := newMcConfig()
-	configFile := filepath.Join(root, globalMCConfigFile)
-	setMcConfigPath(configFile)
-
-	err := saveMcConfig(conf)
-	c.Assert(err, IsNil)
-
-	data, err := loadMcConfig()
-	c.Assert(err, IsNil)
-
-	setMcConfigPath("")
-
-	type aliases struct {
-		name string
-		url  string
-	}
-
-	wantAliases := []aliases{
-		{
-			"s3",
-			"https://s3.amazonaws.com",
-		},
-		{
-			"play",
-			"https://play.minio.io:9000",
-		},
-		{
-			"local",
-			"http://localhost:9000",
-		},
-	}
-	for _, alias := range wantAliases {
-		url, ok := data.Aliases[alias.name]
-		c.Assert(ok, Equals, true)
-		c.Assert(url, Equals, alias.url)
-	}
-
-	wantHosts := []string{
-		"http://localhost:9000",
-		"https://play.minio.io:9000",
-		"https://dl.minio.io:9000",
-		"https://s3.amazonaws.com",
-		"https://storage.googleapis.com",
-	}
-	for _, host := range wantHosts {
-		_, ok := data.Hosts[host]
-		c.Assert(ok, Equals, true)
-	}
 }
 
 func (s *TestSuite) TestValidPERMS(c *C) {
@@ -182,18 +68,7 @@ func (s *TestSuite) TestInvalidPERMS(c *C) {
 func (s *TestSuite) TestGetMcConfigDir(c *C) {
 	dir, err := getMcConfigDir()
 	c.Assert(err, IsNil)
-	switch runtime.GOOS {
-	case "linux":
-		fallthrough
-	case "freebsd":
-		fallthrough
-	case "darwin":
-		c.Assert(dir, Equals, customConfigDir)
-	case "windows":
-		c.Assert(dir, Equals, customConfigDir)
-	default:
-		c.Fail()
-	}
+	c.Assert(dir, Not(Equals), "")
 	c.Assert(mustGetMcConfigDir(), Equals, dir)
 }
 
@@ -216,36 +91,14 @@ func (s *TestSuite) TestGetMcConfigPath(c *C) {
 }
 
 func (s *TestSuite) TestIsvalidAliasName(c *C) {
-	c.Check(isValidAliasName("helloWorld0"), Equals, true)
-	c.Check(isValidAliasName("h0SFD2k24Fdsa"), Equals, true)
-	c.Check(isValidAliasName("fdslka-4"), Equals, true)
-	c.Check(isValidAliasName("fdslka-"), Equals, true)
-	c.Check(isValidAliasName("helloWorld$"), Equals, false)
-	c.Check(isValidAliasName("h0SFD2k2#Fdsa"), Equals, false)
-	c.Check(isValidAliasName("0dslka-4"), Equals, false)
-	c.Check(isValidAliasName("-fdslka"), Equals, false)
-}
-
-func (s *TestSuite) TestEmptyExpansions(c *C) {
-	url, err := getAliasURL("hello")
-	c.Assert(err, IsNil)
-	c.Assert(url, Equals, "hello")
-
-	url, err = getAliasURL("minio://hello")
-	c.Assert(err, IsNil)
-	c.Assert(url, Equals, "minio://hello")
-
-	url, err = getAliasURL("$#\\")
-	c.Assert(err, IsNil)
-	c.Assert(url, Equals, "$#\\")
-
-	url, err = getAliasURL("myfoo/bar")
-	c.Assert(err, IsNil)
-	c.Assert(url, Equals, "myfoo/bar")
-
-	url, err = getAliasURL("")
-	c.Assert(err, IsNil)
-	c.Assert(url, Equals, "")
+	c.Check(isValidAlias("helloWorld0"), Equals, true)
+	c.Check(isValidAlias("h0SFD2k24Fdsa"), Equals, true)
+	c.Check(isValidAlias("fdslka-4"), Equals, true)
+	c.Check(isValidAlias("fdslka-"), Equals, true)
+	c.Check(isValidAlias("helloWorld$"), Equals, false)
+	c.Check(isValidAlias("h0SFD2k2#Fdsa"), Equals, false)
+	c.Check(isValidAlias("0dslka-4"), Equals, false)
+	c.Check(isValidAlias("-fdslka"), Equals, false)
 }
 
 func (s *TestSuite) TestHumanizedTime(c *C) {
@@ -276,9 +129,4 @@ func (s *TestSuite) TestVersions(c *C) {
 	v2 := newVersion("1.5.0")
 	c.Assert(v2.LessThan(v1), Equals, true)
 	c.Assert(v1.LessThan(v2), Equals, false)
-}
-
-func (s *TestSuite) TestApp(c *C) {
-	err := app.Run([]string{""})
-	c.Assert(err, IsNil)
 }
