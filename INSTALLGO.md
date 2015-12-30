@@ -27,6 +27,9 @@ export GOROOT=${HOME}/bin/go
 export GOPATH=${HOME}/go
 export PATH=$PATH:${HOME}/bin/go/bin:${GOPATH}/bin
 ```
+
+##### Source the new enviornment
+
 ```sh
 $ source ~/.bashrc
 ```
