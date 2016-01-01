@@ -18,6 +18,7 @@ package s3
 
 import (
 	"errors"
+	"hash/fnv"
 	"io"
 	"net/http"
 	"os"
@@ -41,43 +42,74 @@ type s3Client struct {
 	virtualStyle bool
 }
 
-// New returns an initialized s3Client structure. if debug use a internal trace transport.
-func New(config *client.Config) (client.Client, *probe.Error) {
-	u := client.NewURL(config.HostURL)
-	transport := http.DefaultTransport
-	if config.Debug == true {
-		if config.Signature == "S3v4" {
-			transport = httptracer.GetNewTraceTransport(NewTraceV4(), http.DefaultTransport)
-		}
-		if config.Signature == "S3v2" {
-			transport = httptracer.GetNewTraceTransport(NewTraceV2(), http.DefaultTransport)
-		}
-	}
-	s3Conf := minio.Config{
-		AccessKeyID:     config.AccessKey,
-		SecretAccessKey: config.SecretKey,
-		Transport:       transport,
-		Endpoint:        u.Scheme + u.SchemeSeparator + u.Host,
-		Signature: func() minio.SignatureType {
-			if config.Signature == "S3v2" {
-				return minio.SignatureV2
+// newFactory encloses New function with client cache.
+func newFactory() func(config *client.Config) (client.Client, *probe.Error) {
+	clientCache := make(map[uint32]minio.CloudStorageAPI)
+	mutex := &sync.Mutex{}
+
+	// Return New function.
+	return func(config *client.Config) (client.Client, *probe.Error) {
+		u := client.NewURL(config.HostURL)
+		transport := http.DefaultTransport
+		if config.Debug == true {
+			if config.Signature == "S3v4" {
+				transport = httptracer.GetNewTraceTransport(NewTraceV4(), http.DefaultTransport)
 			}
-			return minio.SignatureV4
-		}(),
+			if config.Signature == "S3v2" {
+				transport = httptracer.GetNewTraceTransport(NewTraceV2(), http.DefaultTransport)
+			}
+		}
+
+		// New S3 configuration.
+		s3Conf := minio.Config{
+			AccessKeyID:     config.AccessKey,
+			SecretAccessKey: config.SecretKey,
+			Transport:       transport,
+			Endpoint:        u.Scheme + u.SchemeSeparator + u.Host,
+			Signature: func() minio.SignatureType {
+				if config.Signature == "S3v2" {
+					return minio.SignatureV2
+				}
+				return minio.SignatureV4
+			}(),
+		}
+
+		s3Conf.SetUserAgent(config.AppName, config.AppVersion, config.AppComments...)
+
+		// Generate a hash out of s3Conf.
+		confHash := fnv.New32a()
+		confHash.Write([]byte(s3Conf.Endpoint + s3Conf.AccessKeyID + s3Conf.SecretAccessKey))
+		confSum := confHash.Sum32()
+
+		// Lookup previous cache by hash.
+		mutex.Lock()
+		defer mutex.Unlock()
+		var api minio.CloudStorageAPI
+		found := false
+		if api, found = clientCache[confSum]; !found {
+			// Not found. Instantiate a new minio client.
+			var e error
+			api, e = minio.New(s3Conf)
+			if e != nil {
+				return nil, probe.NewError(e)
+			}
+			// Cache the new minio client with hash of config as key.
+			clientCache[confSum] = api
+		}
+
+		s3Clnt := &s3Client{
+			mu:           new(sync.Mutex),
+			api:          api,
+			hostURL:      u,
+			virtualStyle: isVirtualHostStyle(u.Host),
+		}
+		return s3Clnt, nil
 	}
-	s3Conf.SetUserAgent(config.AppName, config.AppVersion, config.AppComments...)
-	api, e := minio.New(s3Conf)
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-	s3Clnt := &s3Client{
-		mu:           new(sync.Mutex),
-		api:          api,
-		hostURL:      u,
-		virtualStyle: isVirtualHostStyle(u.Host),
-	}
-	return s3Clnt, nil
 }
+
+// New returns an initialized s3Client structure. If debug is enabled,
+// it also enables an internal trace transport.
+var New = newFactory()
 
 // GetURL get url.
 func (c *s3Client) GetURL() client.URL {
