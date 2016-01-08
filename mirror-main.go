@@ -23,6 +23,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"syscall"
@@ -78,11 +79,9 @@ EXAMPLES:
 
 // mirrorMessage container for file mirror messages
 type mirrorMessage struct {
-	Status      string `json:"status"`
-	SourceAlias string `json:"sourceAlias,omitempty"`
-	Source      string `json:"source"`
-	TargetAlias string `json:"targetAlias,omitempty"`
-	Target      string `json:"target"`
+	Status string `json:"status"`
+	Source string `json:"source"`
+	Target string `json:"target"`
 }
 
 // String colorized mirror message
@@ -133,32 +132,32 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 	}
 
 	sourceAlias := sURLs.SourceAlias
-	sourceURL := sURLs.SourceContent.URL.String()
+	sourceURL := sURLs.SourceContent.URL
 	targetAlias := sURLs.TargetAlias
-	targetURL := sURLs.TargetContent.URL.String()
+	targetURL := sURLs.TargetContent.URL
 	length := sURLs.SourceContent.Size
 
 	if !globalQuiet && !globalJSON {
-		progressReader.SetCaption(sourceURL + ": ")
+		progressReader.SetCaption(sourceURL.String() + ": ")
 	}
 
-	reader, err := getSourceFromAlias(sourceAlias, sourceURL)
+	reader, err := getSourceFromAlias(sourceAlias, sourceURL.String())
 	if err != nil {
 		if !globalQuiet && !globalJSON {
 			progressReader.ErrorGet(length)
 		}
-		sURLs.Error = err.Trace(sourceURL)
+		sURLs.Error = err.Trace(sourceURL.String())
 		statusCh <- sURLs
 		return
 	}
 
 	var newReader io.ReadSeeker
 	if globalQuiet || globalJSON {
+		sourcePath := filepath.Join(sourceAlias, sourceURL.Path)
+		targetPath := filepath.Join(targetAlias, targetURL.Path)
 		printMsg(mirrorMessage{
-			SourceAlias: sourceAlias,
-			Source:      sourceURL,
-			TargetAlias: targetAlias,
-			Target:      targetURL,
+			Source: sourcePath,
+			Target: targetPath,
 		})
 		if globalJSON {
 			newReader = reader
@@ -170,12 +169,12 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 		// set up progress
 		newReader = progressReader.NewProxyReader(reader)
 	}
-	err = putTargetFromAlias(targetAlias, targetURL, newReader, length)
+	err = putTargetFromAlias(targetAlias, targetURL.String(), newReader, length)
 	if err != nil {
 		if !globalQuiet && !globalJSON {
 			progressReader.ErrorPut(length)
 		}
-		sURLs.Error = err.Trace(targetURL)
+		sURLs.Error = err.Trace(targetURL.String())
 		statusCh <- sURLs
 		return
 	}

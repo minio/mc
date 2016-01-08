@@ -109,7 +109,7 @@ func newClientFromAlias(alias string, urlStr string) (client.Client, *probe.Erro
 	s3Config.AccessKey = hostCfg.AccessKey
 	s3Config.SecretKey = hostCfg.SecretKey
 	s3Config.Signature = hostCfg.API
-	s3Config.AppName = "Minio"
+	s3Config.AppName = "mc"
 	s3Config.AppVersion = mcVersion
 	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 	s3Config.HostURL = urlStr

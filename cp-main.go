@@ -23,6 +23,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -88,12 +89,9 @@ EXAMPLES:
 
 // copyMessage container for file copy messages
 type copyMessage struct {
-	Status      string `json:"status"`
-	SourceAlias string `json:"sourceAlias,omitempty"`
-	Source      string `json:"source"`
-	TargetAlias string `json:"targetAlias,omitempty"`
-	Target      string `json:"target"`
-	Length      int64  `json:"length"`
+	Status string `json:"status"`
+	Source string `json:"source"`
+	Target string `json:"target"`
 }
 
 // String colorized copy message
@@ -147,24 +145,29 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
-	reader, err := getSourceFromAlias(cpURLs.SourceAlias, cpURLs.SourceContent.URL.String())
+	sourceAlias := cpURLs.SourceAlias
+	sourceURL := cpURLs.SourceContent.URL
+	targetAlias := cpURLs.TargetAlias
+	targetURL := cpURLs.TargetContent.URL
+	length := cpURLs.SourceContent.Size
+
+	reader, err := getSourceFromAlias(sourceAlias, sourceURL.String())
 	if err != nil {
 		if !globalQuiet && !globalJSON {
-			progressReader.ErrorGet(cpURLs.SourceContent.Size)
+			progressReader.ErrorGet(length)
 		}
-		cpURLs.Error = err.Trace(cpURLs.SourceContent.URL.String())
+		cpURLs.Error = err.Trace(sourceURL.String())
 		statusCh <- cpURLs
 		return
 	}
 
 	var newReader io.ReadSeeker
 	if globalQuiet || globalJSON {
+		sourcePath := filepath.Join(sourceAlias, sourceURL.Path)
+		targetPath := filepath.Join(targetAlias, targetURL.Path)
 		printMsg(copyMessage{
-			SourceAlias: cpURLs.SourceAlias,
-			Source:      cpURLs.SourceContent.URL.String(),
-			TargetAlias: cpURLs.TargetAlias,
-			Target:      cpURLs.TargetContent.URL.String(),
-			Length:      cpURLs.SourceContent.Size,
+			Source: sourcePath,
+			Target: targetPath,
 		})
 		// No accounting necessary for JSON output.
 		if globalJSON {
@@ -178,11 +181,12 @@ func doCopy(cpURLs copyURLs, progressReader *barSend, accountingReader *accounte
 		// set up progress
 		newReader = progressReader.NewProxyReader(reader)
 	}
-	if err := putTarget(cpURLs.TargetContent.URL.String(), newReader, cpURLs.SourceContent.Size); err != nil {
+	err = putTargetFromAlias(targetAlias, targetURL.String(), newReader, length)
+	if err != nil {
 		if !globalQuiet && !globalJSON {
-			progressReader.ErrorPut(cpURLs.SourceContent.Size)
+			progressReader.ErrorPut(length)
 		}
-		cpURLs.Error = err.Trace(cpURLs.TargetContent.URL.String())
+		cpURLs.Error = err.Trace(targetURL.String())
 		statusCh <- cpURLs
 		return
 	}

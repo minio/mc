@@ -94,7 +94,8 @@ func checkMirrorSyntax(ctx *cli.Context) {
 func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirrorURLsCh chan<- mirrorURLs) {
 	// Extract alias before fiddling with the URL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
-	targetAlias, _, _ := mustExpandAlias(targetURL)
+	// Find alias and expanded URL
+	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
 	defer close(mirrorURLsCh)
 
