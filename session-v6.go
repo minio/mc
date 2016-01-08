@@ -168,6 +168,9 @@ func loadSessionV6(sid string) (*sessionV6, *probe.Error) {
 
 	s.DataFP = &sessionDataFP{false, dataFile}
 
+	// Restore the state of global variables from this previous session.
+	s.restoreGlobals()
+
 	return s, nil
 }
 

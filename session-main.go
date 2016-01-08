@@ -195,10 +195,10 @@ func findClosestSessions(session string) []string {
 }
 
 func mainSession(ctx *cli.Context) {
-	// Set global flags from context.
+	// Set new global values from context.
 	setGlobalsFromContext(ctx)
 
-	// check 'session' cli arguments.
+	// Check 'session' cli arguments.
 	checkSessionSyntax(ctx)
 
 	// Additional command speific theme customization.
@@ -212,8 +212,9 @@ func mainSession(ctx *cli.Context) {
 	}
 
 	switch strings.TrimSpace(ctx.Args().First()) {
-	// list all resumable sessions.
+	// List all resumable sessions.
 	case "list":
+		// List all sessions.
 		fatalIf(listSessions().Trace(ctx.Args()...), "Unable to list sessions.")
 	case "resume":
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
@@ -224,7 +225,7 @@ func mainSession(ctx *cli.Context) {
 				errorMsg += fmt.Sprintf("\n\nDid you mean?\n")
 				for _, session := range closestSessions {
 					errorMsg += fmt.Sprintf("        ‘mc resume session %s’", session)
-					// break on the first one, it is good enough.
+					// Break on the first one, it is good enough.
 					break
 				}
 			}
@@ -233,14 +234,29 @@ func mainSession(ctx *cli.Context) {
 		s, err := loadSessionV6(sid)
 		fatalIf(err.Trace(sid), "Unable to load session.")
 
-		// Restore the state of global variables from this previous session.
-		s.restoreGlobals()
+		// Update flags conditionally.
+		if ctx.IsSet("json") || ctx.GlobalIsSet("json") {
+			globalJSON = ctx.Bool("json") || ctx.GlobalBool("json")
+			s.Header.GlobalBoolFlags["json"] = globalJSON
+		}
+		if ctx.IsSet("quiet") || ctx.GlobalIsSet("quiet") {
+			globalQuiet = ctx.Bool("quiet") || ctx.GlobalBool("quiet")
+			s.Header.GlobalBoolFlags["quiet"] = globalQuiet
+		}
+		if ctx.IsSet("debug") || ctx.GlobalIsSet("debug") {
+			globalDebug = ctx.Bool("debug") || ctx.GlobalBool("debug")
+			s.Header.GlobalBoolFlags["debug"] = globalDebug
+		}
+		if ctx.IsSet("no-color") || ctx.GlobalIsSet("no-color") {
+			globalNoColor = ctx.Bool("no-color") || ctx.GlobalBool("no-color")
+			s.Header.GlobalBoolFlags["noColor"] = globalNoColor
+		}
 
 		savedCwd, e := os.Getwd()
 		fatalIf(probe.NewError(e), "Unable to determine current working folder.")
 
 		if s.Header.RootPath != "" {
-			// change folder to RootPath.
+			// Change folder to RootPath.
 			e = os.Chdir(s.Header.RootPath)
 			fatalIf(probe.NewError(e), "Unable to change working folder to root path while resuming session.")
 		}
@@ -251,10 +267,10 @@ func mainSession(ctx *cli.Context) {
 		err = s.Delete()
 		fatalIf(err.Trace(), "Unable to clear session files properly.")
 
-		// change folder back to saved path.
+		// Change folder back to saved path.
 		e = os.Chdir(savedCwd)
 		fatalIf(probe.NewError(e), "Unable to change working folder to saved path ‘"+savedCwd+"’.")
-	// purge a requested pending session, if "all" purge everything.
+	// Purge a requested pending session, if "all" purge everything.
 	case "clear":
 		clearSession(strings.TrimSpace(ctx.Args().Tail().First()))
 	}
