@@ -34,7 +34,7 @@ Download ``mc`` for:
 
 ~~~
 $ chmod +x mc
-$ ./mc help
+$ ./mc --help
 ~~~
 
 #### OS X
@@ -43,7 +43,7 @@ Download ``mc`` from https://dl.minio.io/client/mc/release/darwin-amd64/mc
 
 ~~~
 $ chmod 755 mc
-$ ./mc help
+$ ./mc --help
 ~~~
 
 #### Microsoft Windows
@@ -54,7 +54,7 @@ Download ``mc`` for:
 - ``32-bit`` from https://dl.minio.io/client/mc/release/windows-386/mc.exe
 
 ~~~
-C:\Users\Username\Downloads> mc.exe help
+C:\Users\Username\Downloads> mc.exe --help
 ~~~
 
 #### Source
