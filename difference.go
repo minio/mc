@@ -38,10 +38,10 @@ const (
 // objectDifferenceFactory returns objectDifference function to check for difference
 // between sourceURL and targetURL
 // for usage reference check diff and mirror commands
-func objectDifferenceFactory(targetURL string) (objectDifference, *probe.Error) {
-	clnt, err := newClient(targetURL)
+func objectDifferenceFactory(targetAlias, targetURL string) (objectDifference, *probe.Error) {
+	clnt, err := newClientFromAlias(targetAlias, targetURL)
 	if err != nil {
-		return nil, err.Trace(targetURL)
+		return nil, err.Trace(targetAlias, targetURL)
 	}
 	isIncomplete := false
 	isRecursive := true

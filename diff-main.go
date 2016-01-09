@@ -66,17 +66,6 @@ EXAMPLES:
 `,
 }
 
-func checkDiffSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
-	}
-	for _, arg := range ctx.Args() {
-		if strings.TrimSpace(arg) == "" {
-			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Unable to validate empty argument.")
-		}
-	}
-}
-
 // diffMessage json container for diff messages
 type diffMessage struct {
 	Status    string       `json:"status"`
@@ -116,9 +105,45 @@ func (d diffMessage) JSON() string {
 	return string(diffJSONBytes)
 }
 
+func checkDiffSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 2 {
+		cli.ShowCommandHelpAndExit(ctx, "diff", 1) // last argument is exit code
+	}
+	for _, arg := range ctx.Args() {
+		if strings.TrimSpace(arg) == "" {
+			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Unable to validate empty argument.")
+		}
+	}
+	URLs := ctx.Args()
+	firstURL := URLs[0]
+	secondURL := URLs[1]
+
+	// Diff only works between two directories, verify them below.
+
+	// Verify if firstURL is accessible.
+	_, firstContent, err := url2Stat(firstURL)
+	if err != nil {
+		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
+	}
+	// Verify if its a directory.
+	if !firstContent.Type.IsDir() {
+		fatalIf(errInvalidArgument().Trace(firstURL), fmt.Sprintf("‘%s’ is not a folder.", firstURL))
+	}
+
+	// Verify if secondURL is accessible.
+	_, secondContent, err := url2Stat(secondURL)
+	if err != nil {
+		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
+	}
+	// Verify if its a directory.
+	if !secondContent.Type.IsDir() {
+		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
+	}
+}
+
 // doDiffMain runs the diff.
 func doDiffMain(firstURL, secondURL string) {
-	// source and targets are always directories
+	// Source and targets are always directories
 	sourceSeparator := string(client.NewURL(firstURL).Separator)
 	if !strings.HasSuffix(firstURL, sourceSeparator) {
 		firstURL = firstURL + sourceSeparator
@@ -128,20 +153,26 @@ func doDiffMain(firstURL, secondURL string) {
 		secondURL = secondURL + targetSeparator
 	}
 
-	firstClient, err := newClient(firstURL)
+	// Expand aliased urls.
+	firstAlias, firstURL, _ := mustExpandAlias(firstURL)
+	secondAlias, secondURL, _ := mustExpandAlias(secondURL)
+
+	firstClient, err := newClientFromAlias(firstAlias, firstURL)
 	if err != nil {
-		fatalIf(err.Trace(firstURL, secondURL), fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
+		fatalIf(err.Trace(firstAlias, firstURL, secondAlias, secondURL),
+			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
-	difference, err := objectDifferenceFactory(secondURL)
+	difference, err := objectDifferenceFactory(secondAlias, secondURL)
 	if err != nil {
-		fatalIf(err.Trace(firstURL, secondURL), fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
+		fatalIf(err.Trace(firstAlias, firstURL, secondAlias, secondURL),
+			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
 	isRecursive := true
 	isIncomplete := false
 	for sourceContent := range firstClient.List(isRecursive, isIncomplete) {
 		if sourceContent.Err != nil {
 			switch sourceContent.Err.ToGoError().(type) {
-			// handle this specifically for filesystem related errors.
+			// Handle this specifically for filesystem related errors.
 			case client.BrokenSymlink, client.TooManyLevelsSymlink, client.PathNotFound, client.PathInsufficientPermission:
 				errorIf(sourceContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
 			default:
@@ -188,19 +219,5 @@ func mainDiff(ctx *cli.Context) {
 	firstURL := URLs[0]
 	secondURL := URLs[1]
 
-	_, firstContent, err := url2Stat(firstURL)
-	if err != nil {
-		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
-	}
-	if !firstContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(firstURL), fmt.Sprintf("‘%s’ is not a folder.", firstURL))
-	}
-	_, secondContent, err := url2Stat(secondURL)
-	if err != nil {
-		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
-	}
-	if !secondContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
-	}
 	doDiffMain(firstURL, secondURL)
 }
