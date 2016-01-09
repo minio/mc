@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -134,10 +135,10 @@ func checkRmSyntax(ctx *cli.Context) {
 }
 
 // Remove a single object.
-func rm(url string, isIncomplete, isFake bool) *probe.Error {
-	clnt, err := newClient(url)
+func rm(targetAlias, targetURL string, isIncomplete, isFake bool) *probe.Error {
+	clnt, err := newClientFromAlias(targetAlias, targetURL)
 	if err != nil {
-		return err.Trace(url)
+		return err.Trace(targetURL)
 	}
 
 	if isFake { // It is a fake remove. Return success.
@@ -145,18 +146,18 @@ func rm(url string, isIncomplete, isFake bool) *probe.Error {
 	}
 
 	if err = clnt.Remove(isIncomplete); err != nil {
-		return err.Trace(url)
+		return err.Trace(targetURL)
 	}
 
 	return nil
 }
 
 // Remove all objects recursively.
-func rmAll(url string, isRecursive, isIncomplete, isFake bool) {
+func rmAll(targetAlias, targetURL string, isRecursive, isIncomplete, isFake bool) {
 	// Initialize new client.
-	clnt, err := newClient(url)
+	clnt, err := newClientFromAlias(targetAlias, targetURL)
 	if err != nil {
-		errorIf(err.Trace(url), "Invalid URL ‘"+url+"’.")
+		errorIf(err.Trace(targetURL), "Invalid URL ‘"+targetURL+"’.")
 		return // End of journey.
 	}
 
@@ -165,7 +166,7 @@ func rmAll(url string, isRecursive, isIncomplete, isFake bool) {
 	nonRecursive := false
 	for entry := range clnt.List(nonRecursive, isIncomplete) {
 		if entry.Err != nil {
-			errorIf(entry.Err.Trace(url), "Unable to list ‘"+url+"’.")
+			errorIf(entry.Err.Trace(targetURL), "Unable to list ‘"+targetURL+"’.")
 			return // End of journey.
 		}
 
@@ -175,15 +176,17 @@ func rmAll(url string, isRecursive, isIncomplete, isFake bool) {
 			url.Path = strings.TrimSuffix(entry.URL.Path, string(entry.URL.Separator)) + string(entry.URL.Separator)
 
 			// Recursively remove contents of this directory.
-			rmAll(url.String(), isRecursive, isIncomplete, isFake)
+			rmAll(targetAlias, url.String(), isRecursive, isIncomplete, isFake)
 		}
 
 		// Regular type.
-		if err = rm(entry.URL.String(), isIncomplete, isFake); err != nil {
+		if err = rm(targetAlias, entry.URL.String(), isIncomplete, isFake); err != nil {
 			errorIf(err.Trace(entry.URL.String()), "Unable to remove ‘"+entry.URL.String()+"’.")
 			continue
 		}
-		printMsg(rmMessage{Status: "success", URL: entry.URL.String()})
+		// Construct user facing message and path.
+		entryPath := filepath.Join(targetAlias, entry.URL.Path)
+		printMsg(rmMessage{Status: "success", URL: entryPath})
 	}
 }
 
@@ -206,10 +209,11 @@ func mainRm(ctx *cli.Context) {
 
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
+		targetAlias, targetURL, _ := mustExpandAlias(url)
 		if isRecursive && isForce {
-			rmAll(url, isRecursive, isIncomplete, isFake)
+			rmAll(targetAlias, targetURL, isRecursive, isIncomplete, isFake)
 		} else {
-			if err := rm(url, isIncomplete, isFake); err != nil {
+			if err := rm(targetAlias, targetURL, isIncomplete, isFake); err != nil {
 				errorIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
 				continue
 			}
