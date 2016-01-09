@@ -50,7 +50,9 @@ type proxyReader struct {
 func (r *proxyReader) Read(p []byte) (n int, err error) {
 	n, err = r.ReadSeeker.Read(p)
 	if err != nil {
-		return
+		if err != io.EOF {
+			return
+		}
 	}
 	r.bar.Progress(int64(n))
 	return

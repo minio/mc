@@ -94,7 +94,8 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) (
 func prepareCopyURLsTypeA(sourceURL string, targetURL string) copyURLs {
 	// Extract alias before fiddling with the URL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
-	targetAlias, _, _ := mustExpandAlias(targetURL)
+	// Find alias and expanded URL.
+	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
 	if sourceURL == targetURL {
 		// source and target can not be same
@@ -129,7 +130,8 @@ func makeCopyContentTypeA(sourceAlias string, sourceContent *client.Content, tar
 func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 	// Extract alias before fiddling with the URL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
-	targetAlias, _, _ := mustExpandAlias(targetURL)
+	// Find alias and expanded URL.
+	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
 	_, sourceContent, err := url2Stat(sourceURL)
 	if err != nil {
@@ -162,7 +164,8 @@ func makeCopyContentTypeB(sourceAlias string, sourceContent *client.Content, tar
 func prepareCopyURLsTypeC(sourceURL, targetURL string, isRecursive bool) <-chan copyURLs {
 	// Extract alias before fiddling with the URL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
-	targetAlias, _, _ := mustExpandAlias(targetURL)
+	// Find alias and expanded URL.
+	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
 	copyURLsCh := make(chan copyURLs)
 	go func(sourceURL, targetURL string, copyURLsCh chan copyURLs) {
