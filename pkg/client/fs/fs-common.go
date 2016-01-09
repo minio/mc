@@ -62,11 +62,11 @@ func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
 	if e != nil {
 		if os.IsPermission(e) {
 			if runtime.GOOS == "windows" {
-				return f.handleWindowsSymlinks(fpath)
+				return f.handleWindowsSymlinks(f.PathURL.Path)
 			}
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: fpath})
+			return nil, probe.NewError(client.PathInsufficientPermission{Path: f.PathURL.Path})
 		}
-		err := f.toClientError(e, fpath)
+		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(fpath)
 	}
 	st, e := os.Stat(fpath)
