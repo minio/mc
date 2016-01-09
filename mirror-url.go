@@ -92,13 +92,6 @@ func checkMirrorSyntax(ctx *cli.Context) {
 }
 
 func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirrorURLsCh chan<- mirrorURLs) {
-	// Extract alias before fiddling with the URL.
-	sourceAlias, _, _ := mustExpandAlias(sourceURL)
-	// Find alias and expanded URL
-	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
-
-	defer close(mirrorURLsCh)
-
 	// source and targets are always directories
 	sourceSeparator := string(client.NewURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -109,21 +102,29 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 		targetURL = targetURL + targetSeparator
 	}
 
-	objectDifferenceTarget, err := objectDifferenceFactory(targetURL)
+	// Extract alias and expanded URL
+	sourceAlias, sourceURL, _ := mustExpandAlias(sourceURL)
+	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
+
+	defer close(mirrorURLsCh)
+
+	objectDifferenceTarget, err := objectDifferenceFactory(targetAlias, targetURL)
 	if err != nil {
-		mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetURL)}
+		mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetAlias, targetURL)}
 		return
 	}
 
-	sourceClient, err := newClient(sourceURL)
+	sourceClient, err := newClientFromAlias(sourceAlias, sourceURL)
 	if err != nil {
-		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceURL)}
+		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceAlias, sourceURL)}
 		return
 	}
 
 	for sourceContent := range sourceClient.List(true, false) {
 		if sourceContent.Err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: sourceContent.Err.Trace(sourceClient.GetURL().String())}
+			mirrorURLsCh <- mirrorURLs{
+				Error: sourceContent.Err.Trace(sourceClient.GetURL().String()),
+			}
 			continue
 		}
 		if sourceContent.Type.IsDir() {
