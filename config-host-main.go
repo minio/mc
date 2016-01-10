@@ -134,7 +134,8 @@ func checkConfigHostSyntax(ctx *cli.Context) {
 // checkConfigHostAddSyntax - verifies input arguments to 'config host add'.
 func checkConfigHostAddSyntax(ctx *cli.Context) {
 	tailArgs := ctx.Args().Tail()
-	if len(ctx.Args().Tail()) != 5 {
+	tailsArgsNr := len(tailArgs)
+	if tailsArgsNr < 4 || tailsArgsNr > 5 {
 		fatalIf(errInvalidArgument().Trace(ctx.Args().Tail()...),
 			"Incorrect number of arguments for host add command.")
 	}
