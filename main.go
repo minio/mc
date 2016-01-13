@@ -146,6 +146,16 @@ func findClosestCommands(command string) []string {
 		closestCommands = append(closestCommands, value.(string))
 	}
 	sort.Strings(closestCommands)
+	// Suggest other close commands - allow missed, wrongly added and even transposed characters
+	for _, value := range commandsTree.walk(commandsTree.root) {
+		if sort.SearchStrings(closestCommands, value.(string)) < len(closestCommands) {
+			continue
+		}
+		// 2 is arbitrary and represents the max allowed number of typed errors
+		if DamerauLevenshteinDistance(command, value.(string)) < 2 {
+			closestCommands = append(closestCommands, value.(string))
+		}
+	}
 	return closestCommands
 }
 
