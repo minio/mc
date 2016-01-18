@@ -78,12 +78,12 @@ Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](ht
 
 Once you have them update your ``~/.mc/config.json`` configuration file.
 ```
-$ mc config host add <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v4
+$ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v4
 ```
 
 Example
 ```
-$ mc config host add https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+$ mc config host add mys3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
 NOTE: ``S3v4`` is default if not specified.
@@ -94,7 +94,7 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 
 Once you have them update your ``~/.mc/config.json`` configuration file.
 ```
-$ mc config host add https://storage.googleapis.com <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v2
+$ mc config host add <ALIAS> https://storage.googleapis.com <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v2
 ```
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version ``2``, so you have to pick - ``S3v2``
