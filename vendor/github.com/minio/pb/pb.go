@@ -1,3 +1,4 @@
+// Simple console progress bars
 package pb
 
 import (
@@ -42,7 +43,7 @@ func New64(total int64) *ProgressBar {
 		ShowFinalTime: true,
 		Units:         U_NO,
 		ManualUpdate:  false,
-		isFinish:      make(chan struct{}),
+		finish:        make(chan struct{}),
 		currentValue:  -1,
 	}
 	return pb.Format(FORMAT)
@@ -78,7 +79,8 @@ type ProgressBar struct {
 	ManualUpdate                     bool
 
 	finishOnce sync.Once //Guards isFinish
-	isFinish   chan struct{}
+	finish     chan struct{}
+	isFinish   bool
 
 	startTime    time.Time
 	startValue   int64
@@ -86,11 +88,15 @@ type ProgressBar struct {
 
 	prefix, postfix string
 
+	lastPrint string
+
 	BarStart string
 	BarEnd   string
 	Empty    string
 	Current  string
 	CurrentN string
+
+	AlwaysUpdate bool
 }
 
 // Start print
@@ -146,8 +152,14 @@ func (pb *ProgressBar) Postfix(postfix string) *ProgressBar {
 
 // Set custom format for bar
 // Example: bar.Format("[=>_]")
+// Example: bar.Format("[\x00=\x00>\x00-\x00]") // \x00 is the delimiter
 func (pb *ProgressBar) Format(format string) *ProgressBar {
-	formatEntries := strings.Split(format, "")
+	var formatEntries []string
+	if len(format) == 5 {
+		formatEntries = strings.Split(format, "")
+	} else {
+		formatEntries = strings.Split(format, "\x00")
+	}
 	if len(formatEntries) == 5 {
 		pb.BarStart = formatEntries[0]
 		pb.BarEnd = formatEntries[4]
@@ -190,11 +202,12 @@ func (pb *ProgressBar) SetWidth(width int) *ProgressBar {
 func (pb *ProgressBar) Finish() {
 	//Protect multiple calls
 	pb.finishOnce.Do(func() {
-		close(pb.isFinish)
+		close(pb.finish)
 		pb.write(atomic.LoadInt64(&pb.current))
 		if !pb.NotPrint {
 			fmt.Println()
 		}
+		pb.isFinish = true
 	})
 }
 
@@ -247,7 +260,7 @@ func (pb *ProgressBar) write(current int64) {
 	fromStart := time.Now().Sub(pb.startTime)
 	currentFromStart := current - pb.startValue
 	select {
-	case <-pb.isFinish:
+	case <-pb.finish:
 		if pb.ShowFinalTime {
 			left := (fromStart / time.Second) * time.Second
 			timeLeftBox = left.String()
@@ -268,7 +281,7 @@ func (pb *ProgressBar) write(current int64) {
 		speedBox = Format(int64(speed), pb.Units) + "/s "
 	}
 
-	barWidth := utf8.RuneCountInString(countersBox + pb.BarStart + pb.BarEnd + percentBox + timeLeftBox + speedBox + pb.prefix + pb.postfix)
+	barWidth := escapeAwareRuneCountInString(countersBox + pb.BarStart + pb.BarEnd + percentBox + timeLeftBox + speedBox + pb.prefix + pb.postfix)
 	// bar
 	if pb.ShowBar {
 		size := width - barWidth
@@ -308,11 +321,12 @@ func (pb *ProgressBar) write(current int64) {
 
 	// check len
 	out = pb.prefix + countersBox + barBox + percentBox + speedBox + timeLeftBox + pb.postfix
-	if utf8.RuneCountInString(out) < width {
+	if escapeAwareRuneCountInString(out) < width {
 		end = strings.Repeat(" ", width-utf8.RuneCountInString(out))
 	}
 
 	// and print!
+	pb.lastPrint = out + end
 	switch {
 	case pb.Output != nil:
 		fmt.Fprint(pb.Output, "\r"+out+end)
@@ -340,10 +354,14 @@ func (pb *ProgressBar) GetWidth() int {
 // Write the current state of the progressbar
 func (pb *ProgressBar) Update() {
 	c := atomic.LoadInt64(&pb.current)
-	if c != pb.currentValue {
+	if pb.AlwaysUpdate || c != pb.currentValue {
 		pb.write(c)
 		pb.currentValue = c
 	}
+}
+
+func (pb *ProgressBar) GOString() string {
+	return pb.lastPrint
 }
 
 // Internal loop for writing progressbar
@@ -351,7 +369,7 @@ func (pb *ProgressBar) writer() {
 	pb.Update()
 	for {
 		select {
-		case <-pb.isFinish:
+		case <-pb.finish:
 			return
 		case <-time.After(pb.RefreshRate):
 			pb.Update()

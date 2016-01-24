@@ -4,11 +4,10 @@ package pb
 
 import (
 	"github.com/olekukonko/ts"
+	"os"
 )
 
-func bold(str string) string {
-	return str
-}
+var tty = os.Stdin
 
 func terminalWidth() (int, error) {
 	size, err := ts.GetSize()

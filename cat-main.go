@@ -80,7 +80,7 @@ func checkCatSyntax(ctx *cli.Context) {
 
 // catURL displays contents of a URL to stdout.
 func catURL(sourceURL string) *probe.Error {
-	var reader io.ReadSeeker
+	var reader io.Reader
 	switch sourceURL {
 	case "-":
 		reader = os.Stdin
@@ -88,7 +88,7 @@ func catURL(sourceURL string) *probe.Error {
 		// Ignore size, since os.Stat() would not return proper size all the
 		// time for local filesystem for example /proc files.
 		var err *probe.Error
-		if reader, err = getSource(sourceURL); err != nil {
+		if reader, err = getSourceStream(sourceURL); err != nil {
 			return err.Trace(sourceURL)
 		}
 	}

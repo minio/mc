@@ -17,17 +17,10 @@
 package main
 
 import (
-	"io"
 	"sync"
 	"sync/atomic"
 	"time"
 )
-
-// accountingReader - implements and inherits io.ReadCloser interface for accounter.
-type accountingReader struct {
-	io.ReadSeeker
-	acct *accounter
-}
 
 // accounter keeps tabs of ongoing data transfer information.
 type accounter struct {
@@ -108,32 +101,20 @@ func (a *accounter) Update() {
 	}
 }
 
-// Add add to current values atomically.
+// Set sets the current value atomically.
+func (a *accounter) Set(n int64) *accounter {
+	atomic.StoreInt64(&a.current, n)
+	return a
+}
+
+// Add add to current value atomically.
 func (a *accounter) Add(n int64) int64 {
 	return atomic.AddInt64(&a.current, n)
 }
 
-// Instantiate a new proxy reader for accounter.
-func (a *accounter) NewProxyReader(r io.ReadSeeker) *accountingReader {
-	return &accountingReader{r, a}
-}
-
-// Read implement Reader which internally updates current value.
-func (a *accountingReader) Read(p []byte) (n int, err error) {
-	n, err = a.ReadSeeker.Read(p)
-	if err != nil {
-		return
-	}
-	a.acct.Add(int64(n))
-	return
-}
-
-// Seek implement Seeker.
-func (a *accountingReader) Seek(offset int64, whence int) (n int64, err error) {
-	n, err = a.ReadSeeker.Seek(offset, whence)
-	if err != nil {
-		return
-	}
-	a.acct.Add(n)
+// Read implements Reader which internally updates current value.
+func (a *accounter) Read(p []byte) (n int, err error) {
+	n = len(p)
+	a.Add(int64(n))
 	return
 }

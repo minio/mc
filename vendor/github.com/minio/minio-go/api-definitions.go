@@ -16,53 +16,56 @@
 
 package minio
 
-import (
-	"io"
-	"time"
-)
+import "time"
 
-// BucketStat container for bucket metadata.
-type BucketStat struct {
+// BucketInfo container for bucket metadata.
+type BucketInfo struct {
 	// The name of the bucket.
-	Name string
+	Name string `json:"name"`
 	// Date the bucket was created.
-	CreationDate time.Time
-	// Error
-	Err error
+	CreationDate time.Time `json:"creationDate"`
 }
 
-// ObjectStat container for object metadata.
-type ObjectStat struct {
-	ETag         string
-	Key          string
-	LastModified time.Time
-	Size         int64
-	ContentType  string
+// ObjectInfo container for object metadata.
+type ObjectInfo struct {
+	// An ETag is optionally set to md5sum of an object.  In case of multipart objects,
+	// ETag is of the form MD5SUM-N where MD5SUM is md5sum of all individual md5sums of
+	// each parts concatenated into one string.
+	ETag string `json:"etag"`
 
+	Key          string `json:"name"`            // Name of the object
+	LastModified time.Time `json:"lastModified"` // Date and time the object was last modified.
+	Size         int64 `json:"size"`             // Size in bytes of the object.
+	ContentType  string `json:"contentType"`     // A standard MIME type describing the format of the object data.
+
+	// Owner name.
 	Owner struct {
-		DisplayName string
-		ID          string
-	}
+		DisplayName string `json:"name"`
+		ID          string `json:"id"`
+	} `json:"owner"`
 
 	// The class of storage used to store the object.
-	StorageClass string
+	StorageClass string `json:"storageClass"`
 
 	// Error
-	Err error
+	Err error `json:"-"`
 }
 
-// ObjectMultipartStat container for multipart object metadata.
-type ObjectMultipartStat struct {
+// ObjectMultipartInfo container for multipart object metadata.
+type ObjectMultipartInfo struct {
 	// Date and time at which the multipart upload was initiated.
 	Initiated time.Time `type:"timestamp" timestampFormat:"iso8601"`
 
 	Initiator initiator
 	Owner     owner
 
+	// The type of storage to use for the object. Defaults to 'STANDARD'.
 	StorageClass string
 
 	// Key of the object for which the multipart upload was initiated.
-	Key  string
+	Key string
+
+	// Size in bytes of the object.
 	Size int64
 
 	// Upload ID that identifies the multipart upload.
@@ -70,25 +73,4 @@ type ObjectMultipartStat struct {
 
 	// Error
 	Err error
-}
-
-// partMetadata - container for each partMetadata.
-type partMetadata struct {
-	MD5Sum     []byte
-	Sha256Sum  []byte
-	ReadCloser io.ReadCloser
-	Size       int64
-	Number     int // partMetadata number.
-
-	// Error
-	Err error
-}
-
-// putObjectMetadata - container for each single PUT operation.
-type putObjectMetadata struct {
-	MD5Sum      []byte
-	Sha256Sum   []byte
-	ReadCloser  io.ReadCloser
-	Size        int64
-	ContentType string
 }

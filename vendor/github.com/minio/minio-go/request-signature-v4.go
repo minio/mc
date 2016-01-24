@@ -19,7 +19,6 @@ package minio
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"net/http"
 	"sort"
 	"strconv"
@@ -27,36 +26,43 @@ import (
 	"time"
 )
 
-// signature and API related constants.
+// Signature and API related constants.
 const (
-	authHeader        = "AWS4-HMAC-SHA256"
+	signV4Algorithm   = "AWS4-HMAC-SHA256"
 	iso8601DateFormat = "20060102T150405Z"
 	yyyymmdd          = "20060102"
 )
 
 ///
-/// Excerpts from @lsegal - https://github.com/aws/aws-sdk-js/issues/659#issuecomment-120477258.
+/// Excerpts from @lsegal -
+/// https://github.com/aws/aws-sdk-js/issues/659#issuecomment-120477258.
 ///
 ///  User-Agent:
 ///
-///      This is ignored from signing because signing this causes problems with generating pre-signed URLs
-///      (that are executed by other agents) or when customers pass requests through proxies, which may
-///      modify the user-agent.
+///      This is ignored from signing because signing this causes
+///      problems with generating pre-signed URLs (that are executed
+///      by other agents) or when customers pass requests through
+///      proxies, which may modify the user-agent.
 ///
 ///  Content-Length:
 ///
-///      This is ignored from signing because generating a pre-signed URL should not provide a content-length
-///      constraint, specifically when vending a S3 pre-signed PUT URL. The corollary to this is that when
-///      sending regular requests (non-pre-signed), the signature contains a checksum of the body, which
-///      implicitly validates the payload length (since changing the number of bytes would change the checksum)
+///      This is ignored from signing because generating a pre-signed
+///      URL should not provide a content-length constraint,
+///      specifically when vending a S3 pre-signed PUT URL. The
+///      corollary to this is that when sending regular requests
+///      (non-pre-signed), the signature contains a checksum of the
+///      body, which implicitly validates the payload length (since
+///      changing the number of bytes would change the checksum)
 ///      and therefore this header is not valuable in the signature.
 ///
 ///  Content-Type:
 ///
-///      Signing this header causes quite a number of problems in browser environments, where browsers
-///      like to modify and normalize the content-type header in different ways. There is more information
-///      on this in https://github.com/aws/aws-sdk-js/issues/244. Avoiding this field simplifies logic
-///      and reduces the possibility of future bugs
+///      Signing this header causes quite a number of problems in
+///      browser environments, where browsers like to modify and
+///      normalize the content-type header in different ways. There is
+///      more information on this in https://goo.gl/2E9gyy. Avoiding
+///      this field simplifies logic and reduces the possibility of
+///      future bugs.
 ///
 ///  Authorization:
 ///
@@ -69,51 +75,55 @@ var ignoredHeaders = map[string]bool{
 	"User-Agent":     true,
 }
 
-// getSigningKey hmac seed to calculate final signature
-func getSigningKey(secret, region string, t time.Time) []byte {
+// getSigningKey hmac seed to calculate final signature.
+func getSigningKey(secret, loc string, t time.Time) []byte {
 	date := sumHMAC([]byte("AWS4"+secret), []byte(t.Format(yyyymmdd)))
-	regionbytes := sumHMAC(date, []byte(region))
-	service := sumHMAC(regionbytes, []byte("s3"))
+	location := sumHMAC(date, []byte(loc))
+	service := sumHMAC(location, []byte("s3"))
 	signingKey := sumHMAC(service, []byte("aws4_request"))
 	return signingKey
 }
 
-// getSignature final signature in hexadecimal form
+// getSignature final signature in hexadecimal form.
 func getSignature(signingKey []byte, stringToSign string) string {
 	return hex.EncodeToString(sumHMAC(signingKey, []byte(stringToSign)))
 }
 
-// getScope generate a string of a specific date, an AWS region, and a service
-func getScope(region string, t time.Time) string {
+// getScope generate a string of a specific date, an AWS region, and a
+// service.
+func getScope(location string, t time.Time) string {
 	scope := strings.Join([]string{
 		t.Format(yyyymmdd),
-		region,
+		location,
 		"s3",
 		"aws4_request",
 	}, "/")
 	return scope
 }
 
-// getCredential generate a credential string
-func getCredential(accessKeyID, region string, t time.Time) string {
-	scope := getScope(region, t)
+// getCredential generate a credential string.
+func getCredential(accessKeyID, location string, t time.Time) string {
+	scope := getScope(location, t)
 	return accessKeyID + "/" + scope
 }
 
-// getHashedPayload get the hexadecimal value of the SHA256 hash of the request payload
-func (r *Request) getHashedPayload() string {
-	if r.expires != 0 {
-		return "UNSIGNED-PAYLOAD"
+// getHashedPayload get the hexadecimal value of the SHA256 hash of
+// the request payload.
+func getHashedPayload(req http.Request) string {
+	hashedPayload := req.Header.Get("X-Amz-Content-Sha256")
+	if hashedPayload == "" {
+		// Presign does not have a payload, use S3 recommended value.
+		hashedPayload = "UNSIGNED-PAYLOAD"
 	}
-	hashedPayload := r.req.Header.Get("X-Amz-Content-Sha256")
 	return hashedPayload
 }
 
-// getCanonicalHeaders generate a list of request headers for signature.
-func (r *Request) getCanonicalHeaders() string {
+// getCanonicalHeaders generate a list of request headers for
+// signature.
+func getCanonicalHeaders(req http.Request) string {
 	var headers []string
 	vals := make(map[string][]string)
-	for k, vv := range r.req.Header {
+	for k, vv := range req.Header {
 		if _, ok := ignoredHeaders[http.CanonicalHeaderKey(k)]; ok {
 			continue // ignored header
 		}
@@ -124,12 +134,14 @@ func (r *Request) getCanonicalHeaders() string {
 	sort.Strings(headers)
 
 	var buf bytes.Buffer
+	// Save all the headers in canonical form <header>:<value> newline
+	// separated for each header.
 	for _, k := range headers {
 		buf.WriteString(k)
 		buf.WriteByte(':')
 		switch {
 		case k == "host":
-			buf.WriteString(r.req.URL.Host)
+			buf.WriteString(req.URL.Host)
 			fallthrough
 		default:
 			for idx, v := range vals[k] {
@@ -145,12 +157,13 @@ func (r *Request) getCanonicalHeaders() string {
 }
 
 // getSignedHeaders generate all signed request headers.
-// i.e alphabetically sorted, semicolon-separated list of lowercase request header names
-func (r *Request) getSignedHeaders() string {
+// i.e lexically sorted, semicolon-separated list of lowercase
+// request header names.
+func getSignedHeaders(req http.Request) string {
 	var headers []string
-	for k := range r.req.Header {
+	for k := range req.Header {
 		if _, ok := ignoredHeaders[http.CanonicalHeaderKey(k)]; ok {
-			continue // ignored header
+			continue // Ignored header found continue.
 		}
 		headers = append(headers, strings.ToLower(k))
 	}
@@ -168,96 +181,123 @@ func (r *Request) getSignedHeaders() string {
 //  <CanonicalHeaders>\n
 //  <SignedHeaders>\n
 //  <HashedPayload>
-//
-func (r *Request) getCanonicalRequest() string {
-	r.req.URL.RawQuery = strings.Replace(r.req.URL.Query().Encode(), "+", "%20", -1)
+func getCanonicalRequest(req http.Request) string {
+	req.URL.RawQuery = strings.Replace(req.URL.Query().Encode(), "+", "%20", -1)
 	canonicalRequest := strings.Join([]string{
-		r.req.Method,
-		getURLEncodedPath(r.req.URL.Path),
-		r.req.URL.RawQuery,
-		r.getCanonicalHeaders(),
-		r.getSignedHeaders(),
-		r.getHashedPayload(),
+		req.Method,
+		urlEncodePath(req.URL.Path),
+		req.URL.RawQuery,
+		getCanonicalHeaders(req),
+		getSignedHeaders(req),
+		getHashedPayload(req),
 	}, "\n")
 	return canonicalRequest
 }
 
 // getStringToSign a string based on selected query values.
-func (r *Request) getStringToSignV4(canonicalRequest string, t time.Time) string {
-	stringToSign := authHeader + "\n" + t.Format(iso8601DateFormat) + "\n"
-	stringToSign = stringToSign + getScope(r.config.Region, t) + "\n"
+func getStringToSignV4(t time.Time, location, canonicalRequest string) string {
+	stringToSign := signV4Algorithm + "\n" + t.Format(iso8601DateFormat) + "\n"
+	stringToSign = stringToSign + getScope(location, t) + "\n"
 	stringToSign = stringToSign + hex.EncodeToString(sum256([]byte(canonicalRequest)))
 	return stringToSign
 }
 
-// PreSignV4 presign the request, in accordance with
+// preSignV4 presign the request, in accordance with
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html.
-func (r *Request) PreSignV4() (string, error) {
-	if r.config.isAnonymous() {
-		return "", errors.New("presigning cannot be done with anonymous credentials")
+func preSignV4(req http.Request, accessKeyID, secretAccessKey, location string, expires int64) *http.Request {
+	// Presign is not needed for anonymous credentials.
+	if accessKeyID == "" || secretAccessKey == "" {
+		return &req
 	}
+
 	// Initial time.
 	t := time.Now().UTC()
 
-	// get credential string.
-	credential := getCredential(r.config.AccessKeyID, r.config.Region, t)
-	// get hmac signing key.
-	signingKey := getSigningKey(r.config.SecretAccessKey, r.config.Region, t)
+	// Get credential string.
+	credential := getCredential(accessKeyID, location, t)
 
 	// Get all signed headers.
-	signedHeaders := r.getSignedHeaders()
+	signedHeaders := getSignedHeaders(req)
 
-	query := r.req.URL.Query()
-	query.Set("X-Amz-Algorithm", authHeader)
+	// Set URL query.
+	query := req.URL.Query()
+	query.Set("X-Amz-Algorithm", signV4Algorithm)
 	query.Set("X-Amz-Date", t.Format(iso8601DateFormat))
-	query.Set("X-Amz-Expires", strconv.FormatInt(r.expires, 10))
+	query.Set("X-Amz-Expires", strconv.FormatInt(expires, 10))
 	query.Set("X-Amz-SignedHeaders", signedHeaders)
 	query.Set("X-Amz-Credential", credential)
-	r.req.URL.RawQuery = query.Encode()
+	req.URL.RawQuery = query.Encode()
+
+	// Get canonical request.
+	canonicalRequest := getCanonicalRequest(req)
 
 	// Get string to sign from canonical request.
-	stringToSign := r.getStringToSignV4(r.getCanonicalRequest(), t)
-	// calculate signature.
+	stringToSign := getStringToSignV4(t, location, canonicalRequest)
+
+	// Gext hmac signing key.
+	signingKey := getSigningKey(secretAccessKey, location, t)
+
+	// Calculate signature.
 	signature := getSignature(signingKey, stringToSign)
 
-	r.req.URL.RawQuery += "&X-Amz-Signature=" + signature
+	// Add signature header to RawQuery.
+	req.URL.RawQuery += "&X-Amz-Signature=" + signature
 
-	return r.req.URL.String(), nil
+	return &req
 }
 
-// PostPresignSignatureV4 - presigned signature for PostPolicy requests.
-func (r *Request) PostPresignSignatureV4(policyBase64 string, t time.Time) string {
-	signingkey := getSigningKey(r.config.SecretAccessKey, r.config.Region, t)
+// postPresignSignatureV4 - presigned signature for PostPolicy
+// requests.
+func postPresignSignatureV4(policyBase64 string, t time.Time, secretAccessKey, location string) string {
+	// Get signining key.
+	signingkey := getSigningKey(secretAccessKey, location, t)
+	// Calculate signature.
 	signature := getSignature(signingkey, policyBase64)
 	return signature
 }
 
-// SignV4 sign the request before Do(), in accordance with
+// signV4 sign the request before Do(), in accordance with
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html.
-func (r *Request) SignV4(presign bool) {
+func signV4(req http.Request, accessKeyID, secretAccessKey, location string) *http.Request {
+	// Signature calculation is not needed for anonymous credentials.
+	if accessKeyID == "" || secretAccessKey == "" {
+		return &req
+	}
+
 	// Initial time.
 	t := time.Now().UTC()
+
 	// Set x-amz-date.
-	r.Set("X-Amz-Date", t.Format(iso8601DateFormat))
+	req.Header.Set("X-Amz-Date", t.Format(iso8601DateFormat))
+
+	// Get canonical request.
+	canonicalRequest := getCanonicalRequest(req)
+
+	// Get string to sign from canonical request.
+	stringToSign := getStringToSignV4(t, location, canonicalRequest)
+
+	// Get hmac signing key.
+	signingKey := getSigningKey(secretAccessKey, location, t)
+
+	// Get credential string.
+	credential := getCredential(accessKeyID, location, t)
 
 	// Get all signed headers.
-	signedHeaders := r.getSignedHeaders()
-	// Get string to sign from canonical request.
-	stringToSign := r.getStringToSignV4(r.getCanonicalRequest(), t)
+	signedHeaders := getSignedHeaders(req)
 
-	// get credential string.
-	credential := getCredential(r.config.AccessKeyID, r.config.Region, t)
-	// get hmac signing key.
-	signingKey := getSigningKey(r.config.SecretAccessKey, r.config.Region, t)
-	// calculate signature.
+	// Calculate signature.
 	signature := getSignature(signingKey, stringToSign)
 
-	// if regular request, construct the final authorization header.
+	// If regular request, construct the final authorization header.
 	parts := []string{
-		authHeader + " Credential=" + credential,
+		signV4Algorithm + " Credential=" + credential,
 		"SignedHeaders=" + signedHeaders,
 		"Signature=" + signature,
 	}
+
+	// Set authorization header.
 	auth := strings.Join(parts, ", ")
-	r.Set("Authorization", auth)
+	req.Header.Set("Authorization", auth)
+
+	return &req
 }

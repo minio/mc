@@ -28,7 +28,7 @@ build_script:
   - gofmt -s -l pkg
   - golint .
   - golint github.com/minio/mc/pkg...
-  - gocyclo -over 40 .
+  - gocyclo -over 40 pkg
   - deadcode
   - go test -race .
   - go test -race github.com/minio/mc/pkg...

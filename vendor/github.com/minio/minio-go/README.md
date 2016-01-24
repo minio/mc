@@ -40,23 +40,20 @@ import (
 )
 
 func main() {
-	config := minio.Config{
-		Endpoint:        "https://s3.amazonaws.com",
-		AccessKeyID:     "YOUR-ACCESS-KEY-HERE",
-		SecretAccessKey: "YOUR-PASSWORD-HERE",
-	}
+	// Requests are always secure (HTTPS) by default. Set insecure=true to enable insecure (HTTP) access.
+	// This boolean value is the last argument for New().
 
-	// Default is Signature Version 4. To enable Signature Version 2 do the following.
-	// config.Signature = minio.SignatureV2
-
-	s3Client, err := minio.New(config)
+	// New returns an Amazon S3 compatible client object. API copatibality (v2 or v4) is automatically
+	// determined based on the Endpoint value.
+	s3Client, err := minio.New("s3.amazonaws.com", "YOUR-ACCESS-KEY-HERE", "YOUR-SECRET-KEY-HERE", false)
 	if err != nil {
 	    log.Fatalln(err)
 	}
-	for bucket := range s3Client.ListBuckets() {
-		if bucket.Err != nil {
-			log.Fatalln(bucket.Err)
-		}
+	buckets, err := s3Client.ListBuckets()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for _, bucket := range buckets {
 		log.Println(bucket)
 	}
 }
@@ -65,22 +62,25 @@ func main() {
 ## Documentation
 
 ### Bucket Operations.
-* [MakeBucket(bucketName, BucketACL) error](examples/s3/makebucket.go)
+* [MakeBucket(bucketName, BucketACL, location) error](examples/s3/makebucket.go)
 * [BucketExists(bucketName) error](examples/s3/bucketexists.go)
 * [RemoveBucket(bucketName) error](examples/s3/removebucket.go)
 * [GetBucketACL(bucketName) (BucketACL, error)](examples/s3/getbucketacl.go)
 * [SetBucketACL(bucketName, BucketACL) error)](examples/s3/setbucketacl.go)
-* [ListBuckets() <-chan BucketStat](examples/s3/listbuckets.go)
-* [ListObjects(bucketName, prefix, recursive) <-chan ObjectStat](examples/s3/listobjects.go)
-* [ListIncompleteUploads(bucketName, prefix, recursive) <-chan ObjectMultipartStat](examples/s3/listincompleteuploads.go)
+* [ListBuckets() []BucketInfo](examples/s3/listbuckets.go)
+* [ListObjects(bucketName, objectPrefix, recursive, chan<- struct{}) <-chan ObjectInfo](examples/s3/listobjects.go)
+* [ListIncompleteUploads(bucketName, prefix, recursive, chan<- struct{}) <-chan ObjectMultipartInfo](examples/s3/listincompleteuploads.go)
 
 ### Object Operations.
-* [PutObject(bucketName, objectName, contentType, io.ReadSeeker) error](examples/s3/putobject.go)
-* [GetObject(bucketName, objectName) (io.ReadSeeker, error)](examples/s3/getobject.go)
-* [GetPartialObject(bucketName, objectName, offset, length) (io.ReadSeeker, error)](examples/s3/getpartialobject.go)
-* [StatObject(bucketName, objectName) (ObjectStat, error)](examples/s3/statobject.go)
+* [PutObject(bucketName, objectName, io.Reader, contentType) error](examples/s3/putobject.go)
+* [GetObject(bucketName, objectName) (*Object, error)](examples/s3/getobject.go)
+* [StatObject(bucketName, objectName) (ObjectInfo, error)](examples/s3/statobject.go)
 * [RemoveObject(bucketName, objectName) error](examples/s3/removeobject.go)
 * [RemoveIncompleteUpload(bucketName, objectName) <-chan error](examples/s3/removeincompleteupload.go)
+
+### File Object Operations.
+* [FPutObject(bucketName, objectName, filePath, contentType) (size, error)](examples/s3/fputobject.go)
+* [FGetObject(bucketName, objectName, filePath) error](examples/s3/fgetobject.go)
 
 ### Presigned Operations.
 * [PresignedGetObject(bucketName, objectName, time.Duration) (string, error)](examples/s3/presignedgetobject.go)

@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 
 	"github.com/minio/mc/pkg/client"
+	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/minio-xl/pkg/probe"
 )
 
@@ -57,7 +58,7 @@ func (f *fsClient) GetURL() client.URL {
 /// Object operations.
 
 // Put - create a new file.
-func (f *fsClient) Put(data io.ReadSeeker, size int64, contentType string) *probe.Error {
+func (f *fsClient) Put(reader io.Reader, size int64, contentType string, progress io.Reader) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
 
@@ -68,9 +69,9 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64, contentType string) *prob
 	// Verify if destination already exists.
 	st, e := os.Stat(objectPath)
 	if e == nil {
-		// If the destination exists and is a directory.
-		if st.IsDir() {
-			return probe.NewError(client.PathIsDir{
+		// If the destination exists and is not a regular file.
+		if !st.Mode().IsRegular() {
+			return 0, probe.NewError(client.PathIsNotRegular{
 				Path: objectPath,
 			})
 		}
@@ -79,17 +80,17 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64, contentType string) *prob
 	// Proceed if file does not exist. return for all other errors.
 	if e != nil {
 		if !os.IsNotExist(e) {
-			return probe.NewError(e)
+			return 0, probe.NewError(e)
 		}
 	}
 
-	// Write to a temporary file "object.part.mc" before commiting.
+	// Write to a temporary file "object.part.mc" before committ.
 	objectPartPath := objectPath + partSuffix
 	if objectDir != "" {
 		// Create any missing top level directories.
 		if e := os.MkdirAll(objectDir, 0700); e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
-			return err.Trace(f.PathURL.Path)
+			return 0, err.Trace(f.PathURL.Path)
 		}
 	}
 
@@ -97,37 +98,121 @@ func (f *fsClient) Put(data io.ReadSeeker, size int64, contentType string) *prob
 	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
-		return err.Trace(f.PathURL.Path)
+		return 0, err.Trace(f.PathURL.Path)
 	}
 
 	// Get stat to get the current size.
 	partSt, e := partFile.Stat()
 	if e != nil {
-		return probe.NewError(e)
-	}
-
-	// Seek to current position for incoming reader.
-	data.Seek(partSt.Size(), 0)
-
-	// Write to the part file.
-	if size < 0 { // Read till EOF.
-		_, e = io.Copy(partFile, data)
-	} else { // Read till N bytes.
-		_, e = io.CopyN(partFile, data, size-partSt.Size())
-	}
-	if e != nil {
 		err := f.toClientError(e, objectPartPath)
-		return err.Trace(objectPartPath)
+		return 0, err.Trace(objectPartPath)
 	}
-	// Close the file before rename.
-	partFile.Close()
 
+	var totalWritten int64
+	// Current file offset.
+	var currentOffset = partSt.Size()
+
+	// Reflect and verify if incoming reader implements ReaderAt.
+	readerAt, ok := reader.(io.ReaderAt)
+	if ok {
+		// Notify the progress bar if any till current size.
+		if progress != nil {
+			if _, e = io.CopyN(ioutil.Discard, progress, currentOffset); e != nil {
+				return 0, probe.NewError(e)
+			}
+		}
+		// Allocate buffer of 10MiB once.
+		readAtBuffer := make([]byte, 10*1024*1024)
+
+		// Loop through all offsets on incoming io.ReaderAt and write
+		// to the destination.
+		for {
+			readAtSize, re := readerAt.ReadAt(readAtBuffer, currentOffset)
+			if re != nil && re != io.EOF {
+				// For any errors other than io.EOF, we return error
+				// and breakout.
+				err := f.toClientError(re, objectPartPath)
+				return 0, err.Trace(objectPartPath)
+			}
+			writtenSize, we := partFile.Write(readAtBuffer[:readAtSize])
+			if we != nil {
+				err := f.toClientError(we, objectPartPath)
+				return 0, err.Trace(objectPartPath)
+			}
+			// read size and subsequent write differ, a possible
+			// corruption return here.
+			if readAtSize != writtenSize {
+				// Unexpected write (less data was written than expected).
+				return 0, probe.NewError(client.UnexpectedShortWrite{
+					InputSize: readAtSize,
+					WriteSize: writtenSize,
+				})
+			}
+			// Notify the progress bar if any for written size.
+			if progress != nil {
+				if _, e = io.CopyN(ioutil.Discard, progress, int64(writtenSize)); e != nil {
+					return totalWritten, probe.NewError(e)
+				}
+			}
+			currentOffset += int64(writtenSize)
+			// Once we see io.EOF we break out of the loop.
+			if re == io.EOF {
+				break
+			}
+		}
+		// Save currently copied total into totalWritten.
+		totalWritten = currentOffset
+	} else {
+		reader = hookreader.NewHook(reader, progress)
+		// Discard bytes until currentOffset.
+		if _, e = io.CopyN(ioutil.Discard, reader, currentOffset); e != nil {
+			return 0, probe.NewError(e)
+		}
+		var n int64
+		n, e = io.Copy(partFile, reader)
+		if e != nil {
+			return 0, probe.NewError(e)
+		}
+		// Save currently copied total into totalWritten.
+		totalWritten = n + currentOffset
+	}
+
+	// Close the input reader as well, if possible.
+	closer, ok := reader.(io.Closer)
+	if ok {
+		if e := closer.Close(); e != nil {
+			return totalWritten, probe.NewError(e)
+		}
+	}
+
+	// Close the file before rename.
+	if e := partFile.Close(); e != nil {
+		return totalWritten, probe.NewError(e)
+	}
+
+	// Following verification is needed only for input size greater than '0'.
+	if size > 0 {
+		// Unexpected EOF reached (less data was written than expected).
+		if totalWritten < size {
+			return totalWritten, probe.NewError(client.UnexpectedEOF{
+				TotalSize:    size,
+				TotalWritten: totalWritten,
+			})
+		}
+		// Unexpected ExcessRead (more data was written than expected).
+		if totalWritten > size {
+			return totalWritten, probe.NewError(client.UnexpectedExcessRead{
+				TotalSize:    size,
+				TotalWritten: totalWritten,
+			})
+		}
+	}
 	// Safely completed put. Now commit by renaming to actual filename.
 	if e = os.Rename(objectPartPath, objectPath); e != nil {
 		err := f.toClientError(e, objectPath)
-		return err.Trace(objectPartPath, objectPath)
+		return totalWritten, err.Trace(objectPartPath, objectPath)
 	}
-	return nil
+	return totalWritten, nil
 }
 
 // ShareDownload - share download not implemented for filesystem.
@@ -146,13 +231,9 @@ func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentTy
 	})
 }
 
-// Get download an full or part object from bucket.
-// returns a reader, length and nil for no errors.
-func (f *fsClient) Get(offset, length int64) (io.ReadSeeker, *probe.Error) {
-	if offset < 0 || length < 0 {
-		return nil, probe.NewError(client.InvalidRange{Offset: offset})
-	}
-
+// GetPartial download a part object from bucket.
+// sets err for any errors, reader is nil for errors.
+func (f *fsClient) Get() (io.Reader, *probe.Error) {
 	tmppath := f.PathURL.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
@@ -166,15 +247,12 @@ func (f *fsClient) Get(offset, length int64) (io.ReadSeeker, *probe.Error) {
 		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(f.PathURL.Path)
 	}
-	body, e := os.Open(f.PathURL.Path)
+	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(f.PathURL.Path)
 	}
-	if offset == 0 && length == 0 {
-		return body, nil
-	}
-	return io.NewSectionReader(body, offset, length), nil
+	return fileData, nil
 }
 
 // Remove - remove the path.
@@ -379,7 +457,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *client.Content, incomplete bo
 								continue
 							}
 						}
-						pathURL := *f.PathURL
+						pathURL = *f.PathURL
 						pathURL.Path = filepath.Join(pathURL.Path, lfi.Name())
 						contentCh <- &client.Content{
 							URL:  pathURL,
@@ -419,7 +497,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *client.Content, incomplete bo
 						continue
 					}
 				}
-				pathURL := *f.PathURL
+				pathURL = *f.PathURL
 				pathURL.Path = filepath.Join(pathURL.Path, fi.Name())
 				contentCh <- &client.Content{
 					URL:  pathURL,
@@ -634,7 +712,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *client.Content, incomp
 }
 
 // MakeBucket - create a new bucket.
-func (f *fsClient) MakeBucket() *probe.Error {
+func (f *fsClient) MakeBucket(region string) *probe.Error {
 	e := os.MkdirAll(f.PathURL.Path, 0775)
 	if e != nil {
 		return probe.NewError(e)

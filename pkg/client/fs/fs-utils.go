@@ -112,7 +112,7 @@ func walk(path string, info os.FileInfo, walkFn WalkFunc) error {
 		filename := filepath.Join(path, name)
 		fileInfo, err := os.Lstat(filename)
 		if err != nil {
-			if err := walkFn(filename, fileInfo, err); err != nil && err != ErrSkipDir && err != ErrSkipFile {
+			if err = walkFn(filename, fileInfo, err); err != nil && err != ErrSkipDir && err != ErrSkipFile {
 				return err
 			}
 		} else {

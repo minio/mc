@@ -163,6 +163,9 @@ func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, 
 		return err.Trace(objectURL, "expiry="+expiry.String(), "contentType="+contentType)
 	}
 
+	// Get the new expanded url.
+	objectURL = clnt.GetURL().String()
+
 	// Generate curl command.
 	curlCmd := makeCurlCmd(objectURL, isRecursive, uploadInfo)
 

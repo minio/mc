@@ -21,10 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"syscall"
 
@@ -119,16 +117,10 @@ func (c mirrorStatMessage) String() string {
 }
 
 // doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
-func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accounter, mirrorQueueCh <-chan bool, wg *sync.WaitGroup, statusCh chan<- mirrorURLs) {
-	defer wg.Done() // Notify that this copy routine is done.
-	defer func() {
-		<-mirrorQueueCh
-	}()
-
+func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *accounter) mirrorURLs {
 	if sURLs.Error != nil { // Errorneous sURLs passed.
 		sURLs.Error = sURLs.Error.Trace()
-		statusCh <- sURLs
-		return
+		return sURLs
 	}
 
 	sourceAlias := sURLs.SourceAlias
@@ -138,20 +130,16 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 	length := sURLs.SourceContent.Size
 
 	if !globalQuiet && !globalJSON {
-		progressReader.SetCaption(sourceURL.String() + ": ")
+		progressReader = progressReader.SetCaption(sourceURL.String() + ": ")
 	}
 
-	reader, err := getSourceFromAlias(sourceAlias, sourceURL.String())
+	reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
 	if err != nil {
-		if !globalQuiet && !globalJSON {
-			progressReader.ErrorGet(length)
-		}
 		sURLs.Error = err.Trace(sourceURL.String())
-		statusCh <- sURLs
-		return
+		return sURLs
 	}
 
-	var newReader io.ReadSeeker
+	var progress io.Reader
 	if globalQuiet || globalJSON {
 		sourcePath := filepath.Join(sourceAlias, sourceURL.Path)
 		targetPath := filepath.Join(targetAlias, targetURL.Path)
@@ -159,35 +147,29 @@ func doMirror(sURLs mirrorURLs, progressReader *barSend, accountingReader *accou
 			Source: sourcePath,
 			Target: targetPath,
 		})
-		if globalJSON {
-			newReader = reader
-		}
-		if globalQuiet {
-			newReader = accountingReader.NewProxyReader(reader)
+		if globalQuiet || globalJSON {
+			progress = accountingReader
 		}
 	} else {
-		// set up progress
-		newReader = progressReader.NewProxyReader(reader)
+		// Set up progress bar.
+		progress = progressReader.ProgressBar
 	}
-	err = putTargetFromAlias(targetAlias, targetURL.String(), newReader, length)
+	_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
 	if err != nil {
-		if !globalQuiet && !globalJSON {
-			progressReader.ErrorPut(length)
-		}
 		sURLs.Error = err.Trace(targetURL.String())
-		statusCh <- sURLs
-		return
+		return sURLs
 	}
 
 	sURLs.Error = nil // just for safety
-	statusCh <- sURLs
+	return sURLs
 }
 
 // doMirrorFake - Perform a fake mirror to update the progress bar appropriately.
-func doMirrorFake(sURLs mirrorURLs, progressReader *barSend) {
+func doMirrorFake(sURLs mirrorURLs, progressReader *progressBar) mirrorURLs {
 	if !globalDebug && !globalJSON {
-		progressReader.Progress(sURLs.SourceContent.Size)
+		progressReader.ProgressBar.Add64(sURLs.SourceContent.Size)
 	}
+	return sURLs
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
@@ -264,57 +246,57 @@ func doMirrorSession(session *sessionV6) {
 	accntReader := newAccounter(session.Header.TotalBytes)
 
 	// Set up progress bar.
-	var progressReader *barSend
+	var progressReader *progressBar
 	if !globalQuiet && !globalJSON {
 		progressReader = newProgressBar(session.Header.TotalBytes)
 	}
 
 	// Prepare URL scanner from session data file.
-	scanner := bufio.NewScanner(session.NewDataReader())
+	urlScanner := bufio.NewScanner(session.NewDataReader())
+
 	// isCopied returns true if an object has been already copied
 	// or not. This is useful when we resume from a session.
 	isCopied := isCopiedFactory(session.Header.LastCopied)
 
-	wg := new(sync.WaitGroup)
-	// Limit numner of mirror routines based on available CPU resources.
-	mirrorQueue := make(chan bool, int(math.Max(float64(runtime.NumCPU())-1, 1)))
-	defer close(mirrorQueue)
-	// Status channel for receiveing mirror return status.
-	statusCh := make(chan mirrorURLs)
+	// Wait on status of doMirror() operation.
+	var statusCh = make(chan mirrorURLs)
 
-	// Go routine to monitor doMirror status and signal traps.
+	// Add a wait group for the below go-routine.
+	var wg = new(sync.WaitGroup)
 	wg.Add(1)
+
+	// Go routine to monitor signal traps if any.
 	go func() {
 		defer wg.Done()
 		for {
 			select {
-			case sURLs, ok := <-statusCh: // Receive status.
-				if !ok { // We are done here. Top level function has returned.
-					if !globalQuiet && !globalJSON {
-						progressReader.Finish()
-					} else {
-						accntStat := accntReader.Stat()
-						mrStatMessage := mirrorStatMessage{
-							Total:       accntStat.Total,
-							Transferred: accntStat.Transferred,
-							Speed:       accntStat.Speed,
-						}
-						console.Println(console.Colorize("Mirror", mrStatMessage.String()))
-					}
+			case <-trapCh:
+				// Receive interrupt notification.
+				if !globalQuiet && !globalJSON {
+					console.Eraseline()
+				}
+				session.CloseAndDie()
+			case sURLs, ok := <-statusCh:
+				// Status channel is closed, we should return.
+				if !ok {
 					return
 				}
 				if sURLs.Error == nil {
 					session.Header.LastCopied = sURLs.SourceContent.URL.String()
 					session.Save()
 				} else {
-					// Print in new line and adjust to top so that we don't print over the ongoing progress bar
+					// Print in new line and adjust to top so that we
+					// don't print over the ongoing progress bar.
 					if !globalQuiet && !globalJSON {
 						console.Eraseline()
 					}
-					errorIf(sURLs.Error.Trace(), fmt.Sprintf("Failed to mirror ‘%s’.", sURLs.SourceContent.URL.String()))
-					// for all non critical errors we can continue for the remaining files
+					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+						fmt.Sprintf("Failed to copy ‘%s’.", sURLs.SourceContent.URL.String()))
+					// For all non critical errors we can continue for the
+					// remaining files.
 					switch sURLs.Error.ToGoError().(type) {
-					// handle this specifically for filesystem related errors.
+					// Handle this specifically for filesystem related
+					// errors.
 					case client.BrokenSymlink:
 						continue
 					case client.TooManyLevelsSymlink:
@@ -323,47 +305,50 @@ func doMirrorSession(session *sessionV6) {
 						continue
 					case client.PathInsufficientPermission:
 						continue
+					case client.ObjectAlreadyExists:
+						continue
+					case client.BucketDoesNotExist:
+						continue
 					}
-					// for critical errors we should exit. Session can be resumed after the user figures out the problem
+					// For critical errors we should exit. Session
+					// can be resumed after the user figures out
+					// the  problem.
 					session.CloseAndDie()
 				}
-			case <-trapCh: // Receive interrupt notification.
-				// Print in new line and adjust to top so that we don't print over the ongoing progress bar
-				if !globalQuiet && !globalJSON {
-					console.Eraseline()
-				}
-				session.CloseAndDie()
 			}
 		}
 	}()
 
-	// Go routine to perform concurrently mirroring.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		mirrorWg := new(sync.WaitGroup)
-		defer close(statusCh)
-
-		for scanner.Scan() {
-			var sURLs mirrorURLs
-			json.Unmarshal([]byte(scanner.Text()), &sURLs)
-			if isCopied(sURLs.SourceContent.URL.String()) {
-				doMirrorFake(sURLs, progressReader)
-			} else {
-				// Wait for other mirror routines to
-				// complete. We only have limited CPU
-				// and network resources.
-				mirrorQueue <- true
-				// Account for each mirror routines we start.
-				mirrorWg.Add(1)
-				// Do mirroring in background concurrently.
-				go doMirror(sURLs, progressReader, accntReader, mirrorQueue, mirrorWg, statusCh)
-			}
+	// Loop through all urls.
+	for urlScanner.Scan() {
+		var sURLs mirrorURLs
+		// Unmarshal copyURLs from each line.
+		json.Unmarshal([]byte(urlScanner.Text()), &sURLs)
+		// Verify if previously copied, notify progress bar.
+		if isCopied(sURLs.SourceContent.URL.String()) {
+			statusCh <- doMirrorFake(sURLs, progressReader)
+		} else {
+			statusCh <- doMirror(sURLs, progressReader, accntReader)
 		}
-		mirrorWg.Wait()
-	}()
+	}
 
+	// Close the goroutine.
+	close(statusCh)
+
+	// Wait for the goroutines to finish.
 	wg.Wait()
+
+	if !globalQuiet && !globalJSON {
+		progressReader.ProgressBar.Finish()
+	} else {
+		accntStat := accntReader.Stat()
+		mrStatMessage := mirrorStatMessage{
+			Total:       accntStat.Total,
+			Transferred: accntStat.Transferred,
+			Speed:       accntStat.Speed,
+		}
+		console.Println(console.Colorize("Mirror", mrStatMessage.String()))
+	}
 }
 
 // Main entry point for mirror command.

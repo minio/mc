@@ -59,7 +59,7 @@ C:\Users\Username\Downloads> mc.exe --help
 
 #### Source
 <blockquote>
-NOTE:  Source installation is intended for only developers and advanced users. ‘mc update’ continous delivery mechanism is not supported for ‘go get’ based binary builds. Please download official releases from https://minio.io/#mc.
+NOTE:  Source installation is intended for only developers and advanced users. ‘mc update’ continuous delivery mechanism is not supported for ‘go get’ based binary builds. Please download official releases from https://minio.io/#mc.
 </blockquote>
 
 If you do not have a working Golang environment, please follow [Install Golang](./INSTALLGO.md).
