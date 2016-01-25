@@ -170,9 +170,9 @@ func getReleaseUpdate(updateURL string) {
 
 	var downloadURL string
 	if runtime.GOOS == "windows" {
-		downloadURL = updateURL + runtime.GOOS + "-" + runtime.GOARCH + "/mc.exe"
+		downloadURL = updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH + "/mc.exe"
 	} else {
-		downloadURL = updateURL + runtime.GOOS + "-" + runtime.GOARCH + "/mc"
+		downloadURL = updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH + "/mc"
 	}
 	updateMsg := updateMessage{
 		Download: downloadURL,
