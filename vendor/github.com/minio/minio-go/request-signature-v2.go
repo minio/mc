@@ -251,10 +251,9 @@ var resourceList = []string{
 // CanonicalizedResource = [ "/" + Bucket ] +
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
-func writeCanonicalizedResource(buf *bytes.Buffer, req http.Request) error {
+func writeCanonicalizedResource(buf *bytes.Buffer, req http.Request) {
 	// Save request URL.
 	requestURL := req.URL
-
 	// Get encoded URL path.
 	path := encodeURL2Path(requestURL)
 	buf.WriteString(path)
@@ -285,5 +284,4 @@ func writeCanonicalizedResource(buf *bytes.Buffer, req http.Request) error {
 			}
 		}
 	}
-	return nil
 }

@@ -101,7 +101,7 @@ func (c Client) makeBucketRequest(bucketName string, acl BucketACL, location str
 			targetURL.Path = "/"
 		} else {
 			// If not fall back to using path style.
-			targetURL.Path = "/" + bucketName
+			targetURL.Path = "/" + bucketName + "/"
 		}
 	}
 

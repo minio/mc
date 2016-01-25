@@ -243,7 +243,12 @@ func (pb *ProgressBar) write(current int64) {
 
 	// percents
 	if pb.ShowPercent {
-		percent := float64(current) / (float64(pb.Total) / float64(100))
+		var percent float64
+		if pb.Total > 0 {
+			percent = float64(current) / (float64(pb.Total) / float64(100))
+		} else {
+			percent = float64(current) / float64(100)
+		}
 		percentBox = fmt.Sprintf(" %.02f %% ", percent)
 	}
 
@@ -262,14 +267,25 @@ func (pb *ProgressBar) write(current int64) {
 	select {
 	case <-pb.finish:
 		if pb.ShowFinalTime {
-			left := (fromStart / time.Second) * time.Second
+			var left time.Duration
+			if pb.Total > 0 {
+				left = (fromStart / time.Second) * time.Second
+			} else {
+				left = (time.Duration(currentFromStart) / time.Second) * time.Second
+			}
 			timeLeftBox = left.String()
 		}
 	default:
 		if pb.ShowTimeLeft && currentFromStart > 0 {
 			perEntry := fromStart / time.Duration(currentFromStart)
-			left := time.Duration(pb.Total-currentFromStart) * perEntry
-			left = (left / time.Second) * time.Second
+			var left time.Duration
+			if pb.Total > 0 {
+				left = time.Duration(pb.Total-currentFromStart) * perEntry
+				left = (left / time.Second) * time.Second
+			} else {
+				left = time.Duration(currentFromStart) * perEntry
+				left = (left / time.Second) * time.Second
+			}
 			timeLeftBox = left.String()
 		}
 	}
@@ -301,10 +317,8 @@ func (pb *ProgressBar) write(current int64) {
 				} else if curCount > 0 {
 					barBox += strings.Repeat(pb.Current, curCount-1) + pb.CurrentN
 				}
-
 				barBox += strings.Repeat(pb.Empty, emptCount) + pb.BarEnd
 			} else {
-
 				barBox = pb.BarStart
 				pos := size - int(current)%int(size)
 				if pos-1 > 0 {

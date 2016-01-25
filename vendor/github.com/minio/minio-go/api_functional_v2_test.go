@@ -370,6 +370,57 @@ func TestResumableFPutObjectV2(t *testing.T) {
 	}
 }
 
+// Tests various bucket supported formats.
+func TestMakeBucketRegionsV2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping functional tests for short runs")
+	}
+
+	// Seed random based on current time.
+	rand.Seed(time.Now().Unix())
+
+	// Connect and make sure bucket exists.
+	c, err := minio.New(
+		"s3.amazonaws.com",
+		os.Getenv("ACCESS_KEY"),
+		os.Getenv("SECRET_KEY"),
+		false,
+	)
+	if err != nil {
+		t.Fatal("Error:", err)
+	}
+
+	// Enable tracing, write to stderr.
+	// c.TraceOn(os.Stderr)
+
+	// Set user agent.
+	c.SetAppInfo("Minio-go-FunctionalTest", "0.1.0")
+
+	// Generate a new random bucket name.
+	bucketName := randString(60, rand.NewSource(time.Now().UnixNano()))
+
+	// Make a new bucket in 'eu-central-1'.
+	if err = c.MakeBucket(bucketName, "private", "eu-central-1"); err != nil {
+		t.Fatal("Error:", err, bucketName)
+	}
+
+	if err = c.RemoveBucket(bucketName); err != nil {
+		t.Fatal("Error:", err, bucketName)
+	}
+
+	// Make a new bucket with '.' in its name, in 'us-west-2'. This
+	// request is internally staged into a path style instead of
+	// virtual host style.
+	if err = c.MakeBucket(bucketName+".withperiod", "private", "us-west-2"); err != nil {
+		t.Fatal("Error:", err, bucketName+".withperiod")
+	}
+
+	// Remove the newly created bucket.
+	if err = c.RemoveBucket(bucketName + ".withperiod"); err != nil {
+		t.Fatal("Error:", err, bucketName+".withperiod")
+	}
+}
+
 // Tests resumable put object multipart upload.
 func TestResumablePutObjectV2(t *testing.T) {
 	if testing.Short() {
