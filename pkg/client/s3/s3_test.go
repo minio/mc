@@ -51,7 +51,7 @@ func (h bucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			response := []byte("<ListAllMyBucketsResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Buckets><Bucket><Name>bucket</Name><CreationDate>2015-05-20T23:05:09.230Z</CreationDate></Bucket></Buckets><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner></ListAllMyBucketsResult>")
 			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
 			w.Write(response)
-		case r.URL.Path == "/bucket":
+		case r.URL.Path == "/bucket/":
 			// Handler for incoming ListObjects request.
 			response := []byte("<ListBucketResult xmlns=\"http://doc.s3.amazonaws.com/2006-03-01\"><Contents><ETag>259d04a13802ae09c7e41be50ccc6baa</ETag><Key>object</Key><LastModified>2015-05-21T18:24:21.097Z</LastModified><Size>22061</Size><Owner><ID>minio</ID><DisplayName>minio</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Delimiter></Delimiter><EncodingType></EncodingType><IsTruncated>false</IsTruncated><Marker></Marker><MaxKeys>1000</MaxKeys><Name>testbucket</Name><NextMarker></NextMarker><Prefix></Prefix></ListBucketResult>")
 			w.Header().Set("Content-Length", strconv.Itoa(len(response)))
@@ -150,7 +150,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		// Handler for list multipart upload request.
 		if _, ok := r.URL.Query()["uploads"]; ok {
-			if r.URL.Path == "/bucket" {
+			if r.URL.Path == "/bucket/" {
 				response := []byte("<ListMultipartUploadsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Bucket>bucket</Bucket><KeyMarker/><UploadIdMarker/><NextKeyMarker/><NextUploadIdMarker/><EncodingType/><MaxUploads>1000</MaxUploads><IsTruncated>false</IsTruncated><Prefix/><Delimiter/></ListMultipartUploadsResult>")
 				w.Header().Set("Content-Length", strconv.Itoa(len(response)))
 				w.Write(response)
@@ -178,7 +178,7 @@ var _ = Suite(&MySuite{})
 // Test bucket operations.
 func (s *MySuite) TestBucketOperations(c *C) {
 	bucket := bucketHandler(bucketHandler{
-		resource: "/bucket",
+		resource: "/bucket/",
 	})
 	server := httptest.NewServer(bucket)
 	defer server.Close()
