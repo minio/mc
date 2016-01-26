@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -38,8 +39,11 @@ const (
 // Encode input URL path to URL encoded path.
 func encodeURL2Path(u *url.URL) (path string) {
 	// Encode URL path.
-	if strings.HasSuffix(u.Host, ".s3.amazonaws.com") {
-		path = "/" + strings.TrimSuffix(u.Host, ".s3.amazonaws.com")
+	if isS3, _ := filepath.Match("*.s3*.amazonaws.com", u.Host); isS3 {
+		hostSplits := strings.SplitN(u.Host, ".", 4)
+		// First element is the bucket name.
+		bucketName := hostSplits[0]
+		path = "/" + bucketName
 		path += u.Path
 		path = urlEncodePath(path)
 		return
