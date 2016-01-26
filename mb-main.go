@@ -83,8 +83,8 @@ func (s makeBucketMessage) String() string {
 
 // JSON jsonified make bucket message.
 func (s makeBucketMessage) JSON() string {
-	makeBucketJSONBytes, err := json.Marshal(s)
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+	makeBucketJSONBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(makeBucketJSONBytes)
 }

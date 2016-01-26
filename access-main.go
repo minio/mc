@@ -96,8 +96,8 @@ func (s accessMessage) String() string {
 
 // JSON jsonified access message.
 func (s accessMessage) JSON() string {
-	accessJSONBytes, err := json.Marshal(s)
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+	accessJSONBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(accessJSONBytes)
 }

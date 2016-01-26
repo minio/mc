@@ -280,7 +280,7 @@ func (f *fsClient) List(recursive, incomplete bool) <-chan *client.Content {
 // listPrefixes - list all files for any given prefix.
 func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *client.Content, incomplete bool) {
 	dirName := filepath.Dir(prefix)
-	files, e := ioutil.ReadDir(dirName)
+	files, e := readDir(dirName)
 	if e != nil {
 		err := f.toClientError(e, dirName)
 		contentCh <- &client.Content{
@@ -425,7 +425,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *client.Content, incomplete bo
 	// If we really see the directory.
 	switch fst.Mode().IsDir() {
 	case true:
-		files, e := ioutil.ReadDir(fpath)
+		files, e := readDir(fpath)
 		if err != nil {
 			contentCh <- &client.Content{Err: probe.NewError(e)}
 			return
@@ -555,7 +555,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *client.Content, incomp
 				!strings.HasPrefix(filePrefix, fp) {
 				if e == nil {
 					if fi.IsDir() {
-						return ErrSkipDir
+						return errSkipDir
 					}
 					return nil
 				}
@@ -702,8 +702,8 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *client.Content, incomp
 		// filePrefix is kept for filtering incoming contents through WalkFunc.
 		filePrefix = pathURL.Path
 	}
-	// Walks invokes our custom function.
-	e := Walk(dirName, visitFS)
+	// walks invokes our custom function.
+	e := walk(dirName, visitFS)
 	if e != nil {
 		contentCh <- &client.Content{
 			Err: probe.NewError(e),

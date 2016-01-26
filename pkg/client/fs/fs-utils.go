@@ -23,12 +23,47 @@ import (
 	"sort"
 )
 
+// byDirName implements sort.Interface.
+type byDirName []os.FileInfo
+
+func (f byDirName) Len() int { return len(f) }
+func (f byDirName) Less(i, j int) bool {
+	// For directory add an ending separator fortrue lexical order.
+	if f[i].Mode().IsDir() {
+		return f[i].Name()+string(os.PathSeparator) < f[j].Name()
+	}
+	// For directory add an ending separator for true lexical order.
+	if f[j].Mode().IsDir() {
+		return f[i].Name() < f[j].Name()+string(os.PathSeparator)
+	}
+	return f[i].Name() < f[j].Name()
+}
+func (f byDirName) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
+
+// readDir reads the directory named by dirname and returns
+// a list of sorted directory entries.
+func readDir(dirname string) ([]os.FileInfo, error) {
+	f, e := os.Open(dirname)
+	if e != nil {
+		return nil, e
+	}
+	list, e := f.Readdir(-1)
+	if e != nil {
+		return nil, e
+	}
+	if e = f.Close(); e != nil {
+		return nil, e
+	}
+	sort.Sort(byDirName(list))
+	return list, nil
+}
+
 // readDirNames reads the directory named by dirname and returns
 // a sorted list of directory entries.
 func readDirNames(dirname string) ([]string, error) {
-	names, err := readDirUnsortedNames(dirname)
-	if err != nil {
-		return nil, err
+	names, e := readDirUnsortedNames(dirname)
+	if e != nil {
+		return nil, e
 	}
 	sort.Strings(names)
 	return names, nil
@@ -45,15 +80,19 @@ func getRealName(info os.FileInfo) string {
 	return info.Name()
 }
 
+// readDirUnsortedNames reads the directory named by dirname and
+// return a unsorted list of directory entries.
 func readDirUnsortedNames(dirname string) ([]string, error) {
-	f, err := os.Open(dirname)
-	if err != nil {
-		return nil, err
+	f, e := os.Open(dirname)
+	if e != nil {
+		return nil, e
 	}
-	nameInfos, err := f.Readdir(-1)
-	f.Close()
-	if err != nil {
-		return nil, err
+	nameInfos, e := f.Readdir(-1)
+	if e != nil {
+		return nil, e
+	}
+	if e = f.Close(); e != nil {
+		return nil, e
 	}
 	var names []string
 	for _, nameInfo := range nameInfos {
@@ -62,14 +101,14 @@ func readDirUnsortedNames(dirname string) ([]string, error) {
 	return names, nil
 }
 
-// Walk walks the file tree rooted at root, calling walkFn for each file or
+// walk walks the file tree rooted at root, calling walkFn for each file or
 // directory in the tree, including root.
-func Walk(root string, walkFn WalkFunc) error {
-	info, err := os.Lstat(root)
-	if err != nil {
-		return walkFn(root, nil, err)
+func walk(root string, walkFn walkFunc) error {
+	info, e := os.Lstat(root)
+	if e != nil {
+		return walkFn(root, nil, e)
 	}
-	return walk(root, info, walkFn)
+	return walkInternal(root, info, walkFn)
 }
 
 // WalkFunc is the type of the function called for each file or directory
@@ -77,51 +116,51 @@ func Walk(root string, walkFn WalkFunc) error {
 // prefix; that is, if Walk is called with "dir", which is a directory
 // containing the file "a", the walk function will be called with argument
 // "dir/a". The info argument is the os.FileInfo for the named path.
-type WalkFunc func(path string, info os.FileInfo, err error) error
+type walkFunc func(path string, info os.FileInfo, e error) error
 
 // ErrSkipDir is used as a return value from WalkFuncs to indicate that
 // the directory named in the call is to be skipped. It is not returned
 // as an error by any function.
-var ErrSkipDir = errors.New("skip this directory")
+var errSkipDir = errors.New("skip this directory")
 
 // ErrSkipFile is used as a return value from WalkFuncs to indicate that
 // the file named in the call is to be skipped. It is not returned
 // as an error by any function.
-var ErrSkipFile = errors.New("skip this file")
+var errSkipFile = errors.New("skip this file")
 
-// walk recursively descends path, calling w.
-func walk(path string, info os.FileInfo, walkFn WalkFunc) error {
-	err := walkFn(path, info, nil)
-	if err != nil {
-		if info.Mode().IsDir() && err == ErrSkipDir {
+// walkInternal recursively descends path, calling w.
+func walkInternal(path string, info os.FileInfo, walkFn walkFunc) error {
+	e := walkFn(path, info, nil)
+	if e != nil {
+		if info.Mode().IsDir() && e == errSkipDir {
 			return nil
 		}
-		if info.Mode().IsRegular() && err == ErrSkipFile {
+		if info.Mode().IsRegular() && e == errSkipFile {
 			return nil
 		}
-		return err
+		return e
 	}
 	if !info.IsDir() {
 		return nil
 	}
-	names, err := readDirNames(path)
-	if err != nil {
-		return walkFn(path, info, err)
+	names, e := readDirNames(path)
+	if e != nil {
+		return walkFn(path, info, e)
 	}
 	for _, name := range names {
 		filename := filepath.Join(path, name)
-		fileInfo, err := os.Lstat(filename)
-		if err != nil {
-			if err = walkFn(filename, fileInfo, err); err != nil && err != ErrSkipDir && err != ErrSkipFile {
-				return err
+		fileInfo, e := os.Lstat(filename)
+		if e != nil {
+			if e = walkFn(filename, fileInfo, e); e != nil && e != errSkipDir && e != errSkipFile {
+				return e
 			}
 		} else {
-			err = walk(filename, fileInfo, walkFn)
-			if err != nil {
-				if err == ErrSkipDir || err == ErrSkipFile {
+			e = walkInternal(filename, fileInfo, walkFn)
+			if e != nil {
+				if e == errSkipDir || e == errSkipFile {
 					return nil
 				}
-				return err
+				return e
 			}
 		}
 	}

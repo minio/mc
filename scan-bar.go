@@ -47,9 +47,9 @@ func scanBarFactory() scanBarFunc {
 	prevLineSize := 0
 	prevSource := ""
 	fileCount := 0
-	termSize, err := ts.GetSize()
-	if err != nil {
-		fatalIf(probe.NewError(err), "Unable to get terminal size. Please use --quiet option.")
+	termSize, e := ts.GetSize()
+	if e != nil {
+		fatalIf(probe.NewError(e), "Unable to get terminal size. Please use --quiet option.")
 	}
 	termWidth := termSize.Col()
 	cursorCh := cursorAnimate()

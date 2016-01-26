@@ -98,16 +98,16 @@ func catURL(sourceURL string) *probe.Error {
 // catOut reads from reader stream and writes to stdout.
 func catOut(r io.Reader) *probe.Error {
 	// Read till EOF.
-	if _, err := io.Copy(os.Stdout, r); err != nil {
-		switch e := err.(type) {
+	if _, e := io.Copy(os.Stdout, r); e != nil {
+		switch e := e.(type) {
 		case *os.PathError:
 			if e.Err == syscall.EPIPE {
 				// stdout closed by the user. Gracefully exit.
 				return nil
 			}
-			return probe.NewError(err)
+			return probe.NewError(e)
 		default:
-			return probe.NewError(err)
+			return probe.NewError(e)
 		}
 	}
 	return nil

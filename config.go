@@ -69,8 +69,8 @@ func createMcConfigDir() *probe.Error {
 	if err != nil {
 		return err.Trace()
 	}
-	if err := os.MkdirAll(p, 0700); err != nil {
-		return probe.NewError(err)
+	if e := os.MkdirAll(p, 0700); e != nil {
+		return probe.NewError(e)
 	}
 	return nil
 }
@@ -142,7 +142,7 @@ func isMcConfigExists() bool {
 	if err != nil {
 		return false
 	}
-	if _, err := os.Stat(configFile); err != nil {
+	if _, e := os.Stat(configFile); e != nil {
 		return false
 	}
 	return true

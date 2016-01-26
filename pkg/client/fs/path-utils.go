@@ -1,4 +1,4 @@
-// +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris
+// +build !windows
 
 /*
  * Minio Client (C) 2015 Minio, Inc.

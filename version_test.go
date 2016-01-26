@@ -24,6 +24,6 @@ import (
 )
 
 func (s *TestSuite) TestVersion(c *C) {
-	_, err := time.Parse(mcVersion, http.TimeFormat)
-	c.Assert(err, NotNil)
+	_, e := time.Parse(mcVersion, http.TimeFormat)
+	c.Assert(e, NotNil)
 }

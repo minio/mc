@@ -115,8 +115,8 @@ func (c clearSessionMessage) String() string {
 
 // JSON jsonified clear session message.
 func (c clearSessionMessage) JSON() string {
-	clearSessionJSONBytes, err := json.Marshal(c)
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+	clearSessionJSONBytes, e := json.Marshal(c)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(clearSessionJSONBytes)
 }

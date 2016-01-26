@@ -99,8 +99,8 @@ func (d diffMessage) String() string {
 // JSON jsonified diff message
 func (d diffMessage) JSON() string {
 	d.Status = "success"
-	diffJSONBytes, err := json.Marshal(d)
-	fatalIf(probe.NewError(err),
+	diffJSONBytes, e := json.Marshal(d)
+	fatalIf(probe.NewError(e),
 		"Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+d.Diff+"’.")
 	return string(diffJSONBytes)
 }

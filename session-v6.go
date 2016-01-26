@@ -137,8 +137,8 @@ func loadSessionV6(sid string) (*sessionV6, *probe.Error) {
 		return nil, err.Trace(sid)
 	}
 
-	if _, err := os.Stat(sessionFile); err != nil {
-		return nil, probe.NewError(err)
+	if _, e := os.Stat(sessionFile); e != nil {
+		return nil, probe.NewError(e)
 	}
 
 	s := &sessionV6{}
@@ -300,9 +300,8 @@ func (s *sessionV6) Delete() *probe.Error {
 		// the file is closed already
 		s.DataFP.Close()
 
-		err := os.Remove(name)
-		if err != nil {
-			return probe.NewError(err)
+		if e := os.Remove(name); e != nil {
+			return probe.NewError(e)
 		}
 	}
 
@@ -311,8 +310,8 @@ func (s *sessionV6) Delete() *probe.Error {
 		return err.Trace(s.SessionID)
 	}
 
-	if err := os.Remove(sessionFile); err != nil {
-		return probe.NewError(err)
+	if e := os.Remove(sessionFile); e != nil {
+		return probe.NewError(e)
 	}
 
 	return nil
