@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -130,11 +131,15 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			continue
 		}
-		contentURL := content.URL.Path
+		// Convert any os specific delimiters to "/".
+		contentURL := filepath.ToSlash(content.URL.Path)
+		prefixPath = filepath.ToSlash(prefixPath)
+
+		// Trim prefix path from the content path.
 		contentURL = strings.TrimPrefix(contentURL, prefixPath)
 		content.URL.Path = contentURL
 		parsedContent := parseContent(content)
-		// print colorized or jsonized content info.
+		// Print colorized or jsonized content info.
 		printMsg(parsedContent)
 	}
 	return nil
