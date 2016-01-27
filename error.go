@@ -57,15 +57,15 @@ func fatalIf(err *probe.Error, msg string) {
 		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
 		}
-		json, err := json.Marshal(struct {
+		json, e := json.Marshal(struct {
 			Status string       `json:"status"`
 			Error  errorMessage `json:"error"`
 		}{
 			Status: "error",
 			Error:  errorMsg,
 		})
-		if err != nil {
-			console.Fatalln(probe.NewError(err))
+		if e != nil {
+			console.Fatalln(probe.NewError(e))
 		}
 		console.Println(string(json))
 		console.Fatalln()
@@ -94,15 +94,15 @@ func errorIf(err *probe.Error, msg string) {
 		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
 		}
-		json, err := json.Marshal(struct {
+		json, e := json.Marshal(struct {
 			Status string       `json:"status"`
 			Error  errorMessage `json:"error"`
 		}{
 			Status: "error",
 			Error:  errorMsg,
 		})
-		if err != nil {
-			console.Fatalln(probe.NewError(err))
+		if e != nil {
+			console.Fatalln(probe.NewError(e))
 		}
 		console.Println(string(json))
 		return

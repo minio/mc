@@ -207,10 +207,10 @@ func doPrepareMirrorURLs(session *sessionV6, isForce bool, trapCh <-chan bool) {
 			if sURLs.isEmpty() {
 				break
 			}
-			jsonData, err := json.Marshal(sURLs)
-			if err != nil {
+			jsonData, e := json.Marshal(sURLs)
+			if e != nil {
 				session.Delete()
-				fatalIf(probe.NewError(err), "Unable to marshal URLs into JSON.")
+				fatalIf(probe.NewError(e), "Unable to marshal URLs into JSON.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuiet && !globalJSON {

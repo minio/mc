@@ -100,8 +100,8 @@ func (c copyMessage) String() string {
 // JSON jsonified copy message
 func (c copyMessage) JSON() string {
 	c.Status = "success"
-	copyMessageBytes, err := json.Marshal(c)
-	fatalIf(probe.NewError(err), "Failed to marshal copy message.")
+	copyMessageBytes, e := json.Marshal(c)
+	fatalIf(probe.NewError(e), "Failed to marshal copy message.")
 
 	return string(copyMessageBytes)
 }
@@ -226,10 +226,10 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 				break
 			}
 
-			jsonData, err := json.Marshal(cpURLs)
-			if err != nil {
+			jsonData, e := json.Marshal(cpURLs)
+			if e != nil {
 				session.Delete()
-				fatalIf(probe.NewError(err), "Unable to prepare URL for copying. Error in JSON marshaling.")
+				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuiet && !globalJSON {

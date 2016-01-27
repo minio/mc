@@ -89,8 +89,8 @@ func (s *shareDBV1) Load(filename string) *probe.Error {
 	defer s.mutex.Unlock()
 
 	// Check if the db file exist.
-	if _, err := os.Stat(filename); err != nil {
-		return probe.NewError(err)
+	if _, e := os.Stat(filename); e != nil {
+		return probe.NewError(e)
 	}
 
 	// Initialize and load using quick package.

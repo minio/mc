@@ -138,14 +138,13 @@ func (h objectAPIHandler) putHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		length, err := strconv.Atoi(r.Header.Get("Content-Length"))
-		if err != nil {
+		length, e := strconv.Atoi(r.Header.Get("Content-Length"))
+		if e != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		var buffer bytes.Buffer
-		_, err = io.CopyN(&buffer, r.Body, int64(length))
-		if err != nil {
+		if _, e = io.CopyN(&buffer, r.Body, int64(length)); e != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

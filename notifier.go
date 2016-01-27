@@ -50,9 +50,9 @@ func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
 	line2Rest := maxContentWidth - line2Length
 
 	// Fetch terminal size to calculate optimal box size.
-	terminal, err := ts.GetSize()
-	if err != nil {
-		return "", probe.NewError(err)
+	terminal, e := ts.GetSize()
+	if e != nil {
+		return "", probe.NewError(e)
 	}
 
 	var message string

@@ -102,8 +102,8 @@ func (u updateMessage) String() string {
 // JSON jsonified update message.
 func (u updateMessage) JSON() string {
 	u.Status = "success"
-	updateMessageJSONBytes, err := json.Marshal(u)
-	fatalIf(probe.NewError(err), "Unable to marshal into JSON.")
+	updateMessageJSONBytes, e := json.Marshal(u)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(updateMessageJSONBytes)
 }
