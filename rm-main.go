@@ -177,7 +177,7 @@ func rmAll(targetAlias, targetURL string, isRecursive, isIncomplete, isFake bool
 			continue
 		}
 		// Construct user facing message and path.
-		entryPath := filepath.Join(targetAlias, entry.URL.Path)
+		entryPath := filepath.ToSlash(filepath.Join(targetAlias, entry.URL.Path))
 		printMsg(rmMessage{Status: "success", URL: entryPath})
 	}
 }

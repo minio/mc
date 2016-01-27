@@ -141,8 +141,8 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 
 	var progress io.Reader
 	if globalQuiet || globalJSON {
-		sourcePath := filepath.Join(sourceAlias, sourceURL.Path)
-		targetPath := filepath.Join(targetAlias, targetURL.Path)
+		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
+		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(mirrorMessage{
 			Source: sourcePath,
 			Target: targetPath,

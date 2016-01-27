@@ -120,28 +120,12 @@ func NewURL(urlStr string) *URL {
 // JoinURLs join two input urls and returns a url
 func JoinURLs(url1, url2 *URL) *URL {
 	var url1Path, url2Path string
-	url1Path = url1.Path
-	url2Path = url2.Path
-	if runtime.GOOS == "windows" {
-		url1Path = strings.Replace(url1.Path, "\\", "/", -1)
-		url2Path = strings.Replace(url2.Path, "\\", "/", -1)
-	}
-	if url1.Type == Object {
-		if strings.HasSuffix(url1Path, "/") {
-			url1.Path = url1Path + strings.TrimPrefix(url2Path, "/")
-		} else {
-			url1.Path = url1Path + "/" + strings.TrimPrefix(url2Path, "/")
-		}
-	}
-	if url1.Type == Filesystem {
-		if strings.HasSuffix(url1Path, "/") {
-			url1.Path = url1Path + strings.TrimPrefix(url2Path, "/")
-		} else {
-			url1.Path = url1Path + "/" + strings.TrimPrefix(url2Path, "/")
-		}
-		if runtime.GOOS == "windows" {
-			url1.Path = strings.Replace(url1.Path, "/", "\\", -1)
-		}
+	url1Path = filepath.ToSlash(url1.Path)
+	url2Path = filepath.ToSlash(url2.Path)
+	if strings.HasSuffix(url1Path, "/") {
+		url1.Path = url1Path + strings.TrimPrefix(url2Path, "/")
+	} else {
+		url1.Path = url1Path + "/" + strings.TrimPrefix(url2Path, "/")
 	}
 	return url1
 }
