@@ -17,7 +17,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -52,15 +51,19 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 	return client, content, nil
 }
 
-// url2Alias separates alias and path from the URL. Aliased URL is of the form [/]alias/path/to/blah. If
+// url2Alias separates alias and path from the URL. Aliased URL is of
+// the form [/]alias/path/to/blah.
 func url2Alias(aliasedURL string) (alias, path string) {
 	urlStr := aliasedURL
 
-	// Remove "/" prefix before alias, if any.
-	urlStr = strings.TrimPrefix(urlStr, string(os.PathSeparator))
+	// Convert '/' on windows to filepath.Separator.
+	urlStr = filepath.FromSlash(urlStr)
 
-	// Remove everything after alias (i.e. after "/").
-	urlParts := strings.SplitN(urlStr, string(os.PathSeparator), 2)
+	// Remove '/' prefix before alias, if any.
+	urlStr = strings.TrimPrefix(urlStr, string(filepath.Separator))
+
+	// Remove everything after alias (i.e. after '/').
+	urlParts := strings.SplitN(urlStr, string(filepath.Separator), 2)
 	if len(urlParts) == 2 {
 		// Convert windows style path separator to Unix style.
 		return urlParts[0], urlParts[1]
