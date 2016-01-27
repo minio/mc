@@ -155,7 +155,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 func makeCopyContentTypeB(sourceAlias string, sourceContent *client.Content, targetAlias string, targetURL string) copyURLs {
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	targetURLParse := client.NewURL(targetURL)
-	targetURLParse.Path = filepath.Join(targetURLParse.Path, filepath.Base(sourceContent.URL.Path))
+	targetURLParse.Path = filepath.ToSlash(filepath.Join(targetURLParse.Path, filepath.Base(sourceContent.URL.Path)))
 	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, targetURLParse.String())
 }
 
@@ -200,9 +200,10 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string, isRecursive bool) <-chan 
 func makeCopyContentTypeC(sourceAlias string, sourceURL client.URL, sourceContent *client.Content, targetAlias string, targetURL string) copyURLs {
 	newSourceURL := sourceContent.URL
 	pathSeparatorIndex := strings.LastIndex(sourceURL.Path, string(sourceURL.Separator))
-	newSourceSuffix := newSourceURL.Path
+	newSourceSuffix := filepath.ToSlash(newSourceURL.Path)
 	if pathSeparatorIndex > 1 {
-		newSourceSuffix = strings.TrimPrefix(newSourceURL.Path, sourceURL.Path[:pathSeparatorIndex])
+		sourcePrefix := filepath.ToSlash(sourceURL.Path[:pathSeparatorIndex])
+		newSourceSuffix = strings.TrimPrefix(newSourceSuffix, sourcePrefix)
 	}
 	newTargetURL := urlJoinPath(targetURL, newSourceSuffix)
 	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, newTargetURL)
