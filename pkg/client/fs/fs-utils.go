@@ -30,11 +30,11 @@ func (f byDirName) Len() int { return len(f) }
 func (f byDirName) Less(i, j int) bool {
 	// For directory add an ending separator fortrue lexical order.
 	if f[i].Mode().IsDir() {
-		return f[i].Name()+string(os.PathSeparator) < f[j].Name()
+		return f[i].Name()+string(filepath.Separator) < f[j].Name()
 	}
 	// For directory add an ending separator for true lexical order.
 	if f[j].Mode().IsDir() {
-		return f[i].Name() < f[j].Name()+string(os.PathSeparator)
+		return f[i].Name() < f[j].Name()+string(filepath.Separator)
 	}
 	return f[i].Name() < f[j].Name()
 }
@@ -75,7 +75,7 @@ func readDirNames(dirname string) ([]string, error) {
 func getRealName(info os.FileInfo) string {
 	if info.IsDir() {
 		// Make sure directory has its end separator.
-		return info.Name() + string(os.PathSeparator)
+		return info.Name() + string(filepath.Separator)
 	}
 	return info.Name()
 }

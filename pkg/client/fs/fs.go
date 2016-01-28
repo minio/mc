@@ -535,7 +535,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *client.Content, incomp
 	var filePrefix string
 	pathURL := *f.PathURL
 	visitFS := func(fp string, fi os.FileInfo, e error) error {
-		// If file path ends with os.PathSeparator and equals to root path, skip it.
+		// If file path ends with filepath.Separator and equals to root path, skip it.
 		if strings.HasSuffix(fp, string(pathURL.Separator)) {
 			if fp == dirName {
 				return nil
@@ -688,14 +688,14 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *client.Content, incomp
 	}
 	// No prefix to be filtered by default.
 	filePrefix = ""
-	// if f.Path ends with os.PathSeparator - assuming it to be a directory and moving on.
+	// if f.Path ends with filepath.Separator - assuming it to be a directory and moving on.
 	if strings.HasSuffix(pathURL.Path, string(pathURL.Separator)) {
 		dirName = pathURL.Path
 	} else {
 		// if not a directory, take base path to navigate through WalkFunc.
 		dirName = filepath.Dir(pathURL.Path)
 		if !strings.HasSuffix(dirName, string(pathURL.Separator)) {
-			// basepath truncates the os.PathSeparator,
+			// basepath truncates the filepath.Separator,
 			// add it deligently useful for trimming file path inside WalkFunc
 			dirName = dirName + string(pathURL.Separator)
 		}

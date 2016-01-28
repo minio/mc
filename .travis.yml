@@ -16,6 +16,10 @@ go:
 - 1.5.2
 - 1.5.3
 
+script:
+- diff -au <(gofmt -d *.go) <(printf "")
+- diff -au <(gofmt -d pkg) <(printf "")
+
 notifications:
   slack:
     secure: McinxQ4R/Yu2r/U8lVsdAIQ195Rf+3/Ku6DViWyqLHsTt5fTnVrSfbIKs8vy0t2A0bRLO6zv2xOSMWjfiimZLPMgMbMqLtTFEzUzB8RZyx2n2xgmL8q3gjXcLA3vkBreaRYCzJzX6DjvrxRfhyOg+BQHpLpACWik3FS/7VIdDCI=
