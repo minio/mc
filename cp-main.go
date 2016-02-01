@@ -356,9 +356,10 @@ func doCopySession(session *sessionV6) {
 	wg.Wait()
 
 	if !globalQuiet && !globalJSON {
-		progressReader.ProgressBar.Finish()
-	}
-	if globalQuiet {
+		if progressReader.ProgressBar.Total > 0 {
+			progressReader.ProgressBar.Finish()
+		}
+	} else {
 		accntStat := accntReader.Stat()
 		cpStatMessage := copyStatMessage{
 			Total:       accntStat.Total,
