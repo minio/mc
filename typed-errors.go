@@ -31,6 +31,10 @@ var (
 		return probe.NewError(errors.New("Invalid arguments provided, cannot proceed.")).Untrace()
 	}
 
+	errInvalidAliasedURL = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Use ‘mc config host add mycloud " + URL + " ...’ to add an alias. Use the alias for S3 operations.")).Untrace()
+	}
+
 	errNoMatchingHost = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("No matching host found for the given URL ‘" + URL + "’.")).Untrace()
 	}

@@ -19,6 +19,7 @@ package main
 import (
 	"io"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -131,11 +132,19 @@ func newClientFromAlias(alias string, urlStr string) (client.Client, *probe.Erro
 	return s3Client, nil
 }
 
+// urlRgx - verify if aliased url is real URL.
+var urlRgx = regexp.MustCompile("^https?://")
+
 // newClient gives a new client interface
-func newClient(urlStr string) (client.Client, *probe.Error) {
-	alias, urlStrFull, _, err := expandAlias(urlStr)
+func newClient(aliasedURL string) (client.Client, *probe.Error) {
+	alias, urlStrFull, hostCfg, err := expandAlias(aliasedURL)
 	if err != nil {
-		return nil, err.Trace(urlStr)
+		return nil, err.Trace(aliasedURL)
+	}
+	// Verify if the aliasedURL is a real URL, fail in those cases
+	// indicating the user to add alias.
+	if hostCfg == nil && urlRgx.MatchString(aliasedURL) {
+		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
 	}
 	return newClientFromAlias(alias, urlStrFull)
 }

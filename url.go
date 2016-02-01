@@ -54,6 +54,7 @@ func url2Stat(urlStr string) (client client.Client, content *client.Content, err
 // url2Alias separates alias and path from the URL. Aliased URL is of
 // the form [/]alias/path/to/blah.
 func url2Alias(aliasedURL string) (alias, path string) {
+	// Save aliased url.
 	urlStr := aliasedURL
 
 	// Convert '/' on windows to filepath.Separator.
