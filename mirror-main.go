@@ -339,7 +339,9 @@ func doMirrorSession(session *sessionV6) {
 	wg.Wait()
 
 	if !globalQuiet && !globalJSON {
-		progressReader.ProgressBar.Finish()
+		if progressReader.ProgressBar.Total > 0 {
+			progressReader.ProgressBar.Finish()
+		}
 	} else {
 		accntStat := accntReader.Stat()
 		mrStatMessage := mirrorStatMessage{
