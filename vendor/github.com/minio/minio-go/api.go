@@ -478,7 +478,7 @@ func (c Client) makeTargetURL(bucketName, objectName, bucketLocation string, que
 	}
 	// If there are any query values, add them to the end.
 	if len(queryValues) > 0 {
-		urlStr = urlStr + "?" + queryValues.Encode()
+		urlStr = urlStr + "?" + queryEncode(queryValues)
 	}
 	u, err := url.Parse(urlStr)
 	if err != nil {
