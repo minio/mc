@@ -51,15 +51,6 @@ func newFactory() func(config *client.Config) (client.Client, *probe.Error) {
 	return func(config *client.Config) (client.Client, *probe.Error) {
 		// Creates a parsed URL.
 		targetURL := client.NewURL(config.HostURL)
-		transport := http.DefaultTransport
-		if config.Debug == true {
-			if config.Signature == "S3v4" {
-				transport = httptracer.GetNewTraceTransport(NewTraceV4(), http.DefaultTransport)
-			}
-			if config.Signature == "S3v2" {
-				transport = httptracer.GetNewTraceTransport(NewTraceV2(), http.DefaultTransport)
-			}
-		}
 		// By default enable HTTPs.
 		inSecure := false
 		if targetURL.Scheme == "http" {
@@ -116,8 +107,18 @@ func newFactory() func(config *client.Config) (client.Client, *probe.Error) {
 		}
 		// Set app info.
 		api.SetAppInfo(config.AppName, config.AppVersion)
-		// Set custom transport.
-		api.SetCustomTransport(transport)
+
+		if config.Debug {
+			transport := http.DefaultTransport
+			if config.Signature == "S3v4" {
+				transport = httptracer.GetNewTraceTransport(NewTraceV4(), http.DefaultTransport)
+			}
+			if config.Signature == "S3v2" {
+				transport = httptracer.GetNewTraceTransport(NewTraceV2(), http.DefaultTransport)
+			}
+			// Set custom transport.
+			api.SetCustomTransport(transport)
+		}
 
 		// Store the new api object.
 		s3Clnt.api = api
@@ -283,10 +284,10 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 	switch {
 	// valid case for 'ls -r s3/'
 	case bucket == "" && object == "":
-		_, err := c.api.ListBuckets()
-		if err != nil {
+		_, e := c.api.ListBuckets()
+		if e != nil {
 			c.mutex.Unlock()
-			return nil, probe.NewError(err)
+			return nil, probe.NewError(e)
 		}
 		c.mutex.Unlock()
 		return &client.Content{URL: *c.targetURL, Type: os.ModeDir}, nil

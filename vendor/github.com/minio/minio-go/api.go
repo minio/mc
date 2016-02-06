@@ -325,6 +325,12 @@ func (c Client) do(req *http.Request) (*http.Response, error) {
 	// execute the request.
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		// Handle this specifically for now until future Golang
+		// versions fix this issue properly.
+		urlErr, ok := err.(*url.Error)
+		if ok && strings.Contains(urlErr.Err.Error(), "EOF") {
+			return nil, fmt.Errorf("Connection closed by foreign host %s. Retry again.", urlErr.URL)
+		}
 		return resp, err
 	}
 	// If trace is enabled, dump http request and response.
