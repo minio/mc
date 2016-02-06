@@ -25,7 +25,6 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/minio-xl/pkg/probe"
-	"github.com/minio/minio/pkg/contentdb"
 	"github.com/minio/pb"
 	"github.com/olekukonko/ts"
 )
@@ -191,7 +190,6 @@ func main() {
 	probe.SetAppInfo("Release-Tag", mcReleaseTag)
 	probe.SetAppInfo("Commit", mcShortCommitID)
 
-	contentdb.Init() // Load contentdb into memory.
 	app := registerApp()
 	app.Before = registerBefore
 
