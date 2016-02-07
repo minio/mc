@@ -48,11 +48,6 @@
 			"revisionTime": "2015-11-17T22:59:41-08:00"
 		},
 		{
-			"path": "github.com/minio/minio/pkg/contentdb",
-			"revision": "bed528d5696872b03dd32d63599f5b9ed82cb361",
-			"revisionTime": "2015-12-03T01:11:14-08:00"
-		},
-		{
 			"path": "github.com/minio/minio/pkg/user",
 			"revision": "71876688282283e8af374bd8592c7d33c547df4d",
 			"revisionTime": "2015-12-07T14:59:57-08:00"
