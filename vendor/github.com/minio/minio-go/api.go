@@ -522,7 +522,7 @@ type CloudStorageClient interface {
 	PutObjectWithProgress(bucketName, objectName string, reader io.Reader, contentType string, progress io.Reader) (n int64, err error)
 
 	// Presigned operations.
-	PresignedGetObject(bucketName, objectName string, expires time.Duration) (presignedURL string, err error)
+	PresignedGetObject(bucketName, objectName string, expires time.Duration, reqParams url.Values) (presignedURL string, err error)
 	PresignedPutObject(bucketName, objectName string, expires time.Duration) (presignedURL string, err error)
 	PresignedPostPolicy(*PostPolicy) (formData map[string]string, err error)
 
