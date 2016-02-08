@@ -144,7 +144,7 @@ func getReleaseUpdate(updateURL string) {
 	data, e := http.Get(newUpdateURL)
 	fatalIf(probe.NewError(e), "Unable to read from update URL ‘"+newUpdateURL+"’.")
 
-	if mcVersion == "UNOFFICIAL.GOGET" {
+	if strings.HasPrefix(mcVersion, "DEVELOPMENT.GOGET") {
 		fatalIf(errDummy().Trace(newUpdateURL),
 			"Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#minio")
 	}
