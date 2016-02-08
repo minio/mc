@@ -21,6 +21,7 @@ import (
 	"hash/fnv"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -690,7 +691,9 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 // ShareDownload - get a usable presigned object url to share.
 func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	presignedURL, e := c.api.PresignedGetObject(bucket, object, expires)
+	// No additional request parameters are set for the time being.
+	reqParams := make(url.Values)
+	presignedURL, e := c.api.PresignedGetObject(bucket, object, expires, reqParams)
 	if e != nil {
 		return "", probe.NewError(e)
 	}
