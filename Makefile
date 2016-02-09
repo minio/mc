@@ -1,16 +1,14 @@
 LDFLAGS := $(shell go run buildscripts/gen-ldflags.go)
-BUILD_LDFLAGS := '$(LDFLAGS)'
 
 all: install
 
 checkdeps:
 	@echo "Checking deps:"
-	@(env bash $(PWD)/buildscripts/checkdeps.sh)
+	@(env bash buildscripts/checkdeps.sh)
 
 checkgopath:
 	@echo "Checking if project is at ${GOPATH}"
 	@for mcpath in $(echo ${GOPATH} | sed 's/:/\n/g'); do if [ ! -d ${mcpath}/src/github.com/minio/mc ]; then echo "Project not found in ${mcpath}, please follow instructions provided at https://github.com/minio/minio/blob/master/CONTRIBUTING.md#setup-your-minio-github-repository" && exit 1; fi done
-	@echo "BUILD_LDFLAGS: ${BUILD_LDFLAGS}"
 
 getdeps: checkdeps checkgopath
 	@go get github.com/golang/lint/golint && echo "Installed golint:"
@@ -55,7 +53,7 @@ test: verifiers
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build
-	@GO15VENDOREXPERIMENT=1 go build --ldflags $(BUILD_LDFLAGS) -o $(GOPATH)/bin/mc
+	@GO15VENDOREXPERIMENT=1 go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/mc
 	@mkdir -p $(HOME)/.mc
 
 coverage:
@@ -77,9 +75,13 @@ all-tests: test
 	# TODO disable them for now.
 	#@./tests/test-minio.sh
 
-release:
-	@./release.sh
+release: verifiers
+	@MC_RELEASE=RELEASE GO15VENDOREXPERIMENT=1 $(env bash buildscripts/build.sh)
+
+experimental: verifiers
+	@MC_RELEASE=EXPERIMENTAL GO15VENDOREXPERIMENT=1 $(env bash buildscripts/build.sh)
 
 clean:
 	@rm -fv cover.out
 	@rm -fv mc
+	@rm -frv release

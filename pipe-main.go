@@ -55,7 +55,7 @@ EXAMPLES:
    2. Write contents of stdin to an object on Amazon S3 cloud storage.
       $ mc {{.Name}} s3/personalbuck/meeting-notes.txt
 
-   3. Copy an ISO image to an object on Amazon S3 cloud storage and Google Cloud Storage simultaneously.
+   3. Copy an ISO image to an object on Amazon S3 cloud storage.
       $ cat debian-8.2.iso | mc {{.Name}} s3/ferenginar/gnuos.iso
 
    4. Stream MySQL database dump to Amazon S3 directly.
