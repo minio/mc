@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/minio/minio-xl/pkg/probe"
-	"github.com/olekukonko/ts"
+	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/pb"
 )
 
 // colorizeUpdateMessage - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier.
@@ -49,15 +49,13 @@ func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
 	line1Rest := maxContentWidth - line1Length
 	line2Rest := maxContentWidth - line2Length
 
-	// Fetch terminal size to calculate optimal box size.
-	terminal, e := ts.GetSize()
+	termWidth, e := pb.GetTerminalWidth()
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-
 	var message string
 	switch {
-	case len(line2Str) > terminal.Col():
+	case len(line2Str) > termWidth:
 		message = "\n" + line1InColor + "\n" + line2InColor + "\n"
 	default:
 		// on windows terminal turn off unicode characters.

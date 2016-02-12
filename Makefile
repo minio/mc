@@ -32,17 +32,17 @@ fmt:
 	@GO15VENDOREXPERIMENT=1 gofmt -s -l pkg
 lint:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 golint .
-	@GO15VENDOREXPERIMENT=1 golint github.com/minio/mc/pkg...
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint .
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/pkg...
 
 cyclo:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 gocyclo -over 40 *.go
-	@GO15VENDOREXPERIMENT=1 gocyclo -over 40 pkg
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 *.go
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 pkg
 
 deadcode:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 deadcode
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/deadcode
 
 build: verifiers
 	@echo "Installing mc:"
@@ -61,13 +61,16 @@ coverage:
 	@go tool cover -html=cover.out && echo "Visit your browser"
 
 pkg-add:
-	@GO15VENDOREXPERIMENT=1 govendor add $(PKG)
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor add $(PKG)
 
 pkg-update:
-	@GO15VENDOREXPERIMENT=1 govendor update $(PKG)
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor update $(PKG)
 
 pkg-remove:
-	@GO15VENDOREXPERIMENT=1 govendor remove $(PKG)
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor remove $(PKG)
+
+pkg-list:
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor list
 
 install: gomake-all
 
@@ -76,12 +79,12 @@ all-tests: test
 	#@./tests/test-minio.sh
 
 release: verifiers
-	@MC_RELEASE=RELEASE GO15VENDOREXPERIMENT=1 $(env bash buildscripts/build.sh)
+	@MC_RELEASE=RELEASE GO15VENDOREXPERIMENT=1 ./buildscripts/build.sh
 
 experimental: verifiers
-	@MC_RELEASE=EXPERIMENTAL GO15VENDOREXPERIMENT=1 $(env bash buildscripts/build.sh)
+	@MC_RELEASE=EXPERIMENTAL GO15VENDOREXPERIMENT=1 ./buildscripts/build.sh
 
 clean:
-	@rm -fv cover.out
-	@rm -fv mc
-	@rm -frv release
+	@rm -f cover.out
+	@rm -f mc
+	@rm -fr release

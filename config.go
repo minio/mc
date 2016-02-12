@@ -22,8 +22,8 @@ import (
 	"regexp"
 	"runtime"
 
-	"github.com/minio/minio-xl/pkg/probe"
-	"github.com/minio/minio/pkg/user"
+	"github.com/minio/go-homedir"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // mcCustomConfigDir contains the whole path to config dir. Only access via get/set functions.
@@ -42,7 +42,7 @@ func getMcConfigDir() (string, *probe.Error) {
 	if mcCustomConfigDir != "" {
 		return mcCustomConfigDir, nil
 	}
-	homeDir, e := user.HomeDir()
+	homeDir, e := homedir.Dir()
 	if e != nil {
 		return "", probe.NewError(e)
 	}

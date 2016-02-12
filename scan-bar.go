@@ -22,8 +22,8 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio-xl/pkg/probe"
-	"github.com/olekukonko/ts"
+	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/pb"
 )
 
 /******************************** Scan Bar ************************************/
@@ -47,13 +47,11 @@ func scanBarFactory() scanBarFunc {
 	prevLineSize := 0
 	prevSource := ""
 	fileCount := 0
-	termSize, e := ts.GetSize()
-	if e != nil {
-		fatalIf(probe.NewError(e), "Unable to get terminal size. Please use --quiet option.")
-	}
-	termWidth := termSize.Col()
-	cursorCh := cursorAnimate()
+	termWidth, e := pb.GetTerminalWidth()
+	fatalIf(probe.NewError(e), "Unable to get terminal size. Please use --quiet option.")
 
+	// Cursor animate channel.
+	cursorCh := cursorAnimate()
 	return func(source string) {
 		scanPrefix := fmt.Sprintf("[%s] %s ", humanize.Comma(int64(fileCount)), string(<-cursorCh))
 		cmnPrefix := commonPrefix(source, prevSource)

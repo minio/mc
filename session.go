@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // migrateSession migrates all previous migration to latest.

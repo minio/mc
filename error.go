@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // causeMessage container for golang error messages
