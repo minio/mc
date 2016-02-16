@@ -75,7 +75,7 @@ func (p *Pool) print(first bool) bool {
 			isFinished = false
 		}
 		bar.Update()
-		out += fmt.Sprintf("\r%s\n", bar.GOString())
+		out += fmt.Sprintf("\r%s\n", bar.String())
 	}
 	fmt.Print(out)
 	return isFinished

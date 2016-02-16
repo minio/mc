@@ -24,9 +24,8 @@ import (
 	"strconv"
 
 	"github.com/minio/cli"
-	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/pb"
-	"github.com/olekukonko/ts"
 )
 
 var (
@@ -194,7 +193,7 @@ func main() {
 	app.Before = registerBefore
 
 	app.ExtraInfo = func() map[string]string {
-		if _, e := ts.GetSize(); e != nil {
+		if _, e := pb.GetTerminalWidth(); e != nil {
 			globalQuiet = true
 		}
 		if globalDebug {

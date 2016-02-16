@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // toClientError error constructs a typed client error for known filesystem errors.

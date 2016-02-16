@@ -23,7 +23,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 var (

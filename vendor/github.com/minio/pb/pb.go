@@ -45,6 +45,7 @@ func New64(total int64) *ProgressBar {
 		ManualUpdate:  false,
 		finish:        make(chan struct{}),
 		currentValue:  -1,
+		mu:            new(sync.Mutex),
 	}
 	return pb.Format(FORMAT)
 }
@@ -78,6 +79,10 @@ type ProgressBar struct {
 	ForceWidth                       bool
 	ManualUpdate                     bool
 
+	// default width for unit numbers and time box
+	UnitsWidth   int
+	TimeBoxWidth int
+
 	finishOnce sync.Once //Guards isFinish
 	finish     chan struct{}
 	isFinish   bool
@@ -88,6 +93,7 @@ type ProgressBar struct {
 
 	prefix, postfix string
 
+	mu        *sync.Mutex
 	lastPrint string
 
 	BarStart string
@@ -108,7 +114,8 @@ func (pb *ProgressBar) Start() *ProgressBar {
 		pb.ShowPercent = false
 	}
 	if !pb.ManualUpdate {
-		go pb.writer()
+		pb.Update() // Initial printing of the bar before running the bar refresher.
+		go pb.refresher()
 	}
 	return pb
 }
@@ -249,15 +256,15 @@ func (pb *ProgressBar) write(current int64) {
 		} else {
 			percent = float64(current) / float64(100)
 		}
-		percentBox = fmt.Sprintf(" %.02f %% ", percent)
+		percentBox = fmt.Sprintf(" %6.02f %% ", percent)
 	}
 
 	// counters
 	if pb.ShowCounters {
 		if pb.Total > 0 {
-			countersBox = fmt.Sprintf("%s / %s ", Format(current, pb.Units), Format(pb.Total, pb.Units))
+			countersBox = fmt.Sprintf("%s / %s ", Format(current, pb.Units, pb.UnitsWidth), Format(pb.Total, pb.Units, pb.UnitsWidth))
 		} else {
-			countersBox = Format(current, pb.Units) + " / ? "
+			countersBox = Format(current, pb.Units, pb.UnitsWidth) + " / ? "
 		}
 	}
 
@@ -286,15 +293,19 @@ func (pb *ProgressBar) write(current int64) {
 				left = time.Duration(currentFromStart) * perEntry
 				left = (left / time.Second) * time.Second
 			}
-			timeLeftBox = left.String()
+			timeLeftBox = FormatDuration(left)
 		}
+	}
+
+	if len(timeLeftBox) < pb.TimeBoxWidth {
+		timeLeftBox = fmt.Sprintf("%s%s", strings.Repeat(" ", pb.TimeBoxWidth-len(timeLeftBox)), timeLeftBox)
 	}
 
 	// speed
 	if pb.ShowSpeed && currentFromStart > 0 {
 		fromStart := time.Now().Sub(pb.startTime)
 		speed := float64(currentFromStart) / (float64(fromStart) / float64(time.Second))
-		speedBox = Format(int64(speed), pb.Units) + "/s "
+		speedBox = Format(int64(speed), pb.Units, pb.UnitsWidth) + "/s "
 	}
 
 	barWidth := escapeAwareRuneCountInString(countersBox + pb.BarStart + pb.BarEnd + percentBox + timeLeftBox + speedBox + pb.prefix + pb.postfix)
@@ -340,8 +351,12 @@ func (pb *ProgressBar) write(current int64) {
 	}
 
 	// and print!
+	pb.mu.Lock()
 	pb.lastPrint = out + end
+	pb.mu.Unlock()
 	switch {
+	case pb.isFinish:
+		return
 	case pb.Output != nil:
 		fmt.Fprint(pb.Output, "\r"+out+end)
 	case pb.Callback != nil:
@@ -349,6 +364,11 @@ func (pb *ProgressBar) write(current int64) {
 	case !pb.NotPrint:
 		fmt.Print("\r" + out + end)
 	}
+}
+
+// GetTerminalWidth - returns terminal width for all platforms.
+func GetTerminalWidth() (int, error) {
+	return terminalWidth()
 }
 
 func (pb *ProgressBar) GetWidth() int {
@@ -374,13 +394,12 @@ func (pb *ProgressBar) Update() {
 	}
 }
 
-func (pb *ProgressBar) GOString() string {
+func (pb *ProgressBar) String() string {
 	return pb.lastPrint
 }
 
-// Internal loop for writing progressbar
-func (pb *ProgressBar) writer() {
-	pb.Update()
+// Internal loop for refreshing the progressbar
+func (pb *ProgressBar) refresher() {
 	for {
 		select {
 		case <-pb.finish:

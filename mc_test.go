@@ -76,11 +76,7 @@ func (s *TestSuite) TestGetMcConfigPath(c *C) {
 	dir, err := getMcConfigPath()
 	c.Assert(err, IsNil)
 	switch runtime.GOOS {
-	case "linux":
-		fallthrough
-	case "freebsd":
-		fallthrough
-	case "darwin":
+	case "linux", "freebsd", "darwin", "solaris":
 		c.Assert(dir, Equals, filepath.Join(mustGetMcConfigDir(), "config.json"))
 	case "windows":
 		c.Assert(dir, Equals, filepath.Join(mustGetMcConfigDir(), "config.json"))

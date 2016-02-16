@@ -9,8 +9,8 @@
 		},
 		{
 			"path": "github.com/fatih/color",
-			"revision": "f773d4c806cc8e4a5749d6a35e2a4bbcd71443d6",
-			"revisionTime": "2015-08-04T08:17:43+03:00"
+			"revision": "7a5857db0b2752a436d8461d88c42dea0ee191c0",
+			"revisionTime": "2016-02-12T11:24:09+02:00"
 		},
 		{
 			"path": "github.com/fatih/structs",
@@ -18,9 +18,14 @@
 			"revisionTime": "2015-08-20T22:35:37-07:00"
 		},
 		{
+			"path": "github.com/mattn/go-colorable",
+			"revision": "9fdad7c47650b7d2e1da50644c1f4ba7f172f252",
+			"revisionTime": "2016-02-10T09:18:57+09:00"
+		},
+		{
 			"path": "github.com/mattn/go-isatty",
-			"revision": "7fcbc72f853b92b5720db4a6b8482be612daef24",
-			"revisionTime": "2015-08-14T09:26:29+09:00"
+			"revision": "56b76bdf51f7708750eac80fa38b952bb9f32639",
+			"revisionTime": "2015-12-11T09:06:21+09:00"
 		},
 		{
 			"path": "github.com/minio/cli",
@@ -28,33 +33,33 @@
 			"revisionTime": "2015-11-18T20:00:48-08:00"
 		},
 		{
+			"path": "github.com/minio/go-homedir",
+			"revision": "d682a8f0cf139663a984ff12528da460ca963de9",
+			"revisionTime": "2015-10-24T22:24:27-07:00"
+		},
+		{
 			"path": "github.com/minio/minio-go",
 			"revision": "280f16a52008d3ebba1bd64398b9b082e6738386",
 			"revisionTime": "2016-02-07T03:45:25-08:00"
 		},
 		{
-			"path": "github.com/minio/minio-xl/pkg/atomic",
-			"revision": "a32fbc1006b4a09176c91f57d22e87faff22a423",
-			"revisionTime": "2015-11-17T22:59:41-08:00"
+			"path": "github.com/minio/minio/pkg/atomic",
+			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
+			"revisionTime": "2016-02-11T15:54:02-08:00"
 		},
 		{
-			"path": "github.com/minio/minio-xl/pkg/probe",
-			"revision": "a32fbc1006b4a09176c91f57d22e87faff22a423",
-			"revisionTime": "2015-11-17T22:59:41-08:00"
+			"path": "github.com/minio/minio/pkg/probe",
+			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
+			"revisionTime": "2016-02-11T15:54:02-08:00"
 		},
 		{
-			"path": "github.com/minio/minio-xl/pkg/quick",
-			"revision": "a32fbc1006b4a09176c91f57d22e87faff22a423",
-			"revisionTime": "2015-11-17T22:59:41-08:00"
-		},
-		{
-			"path": "github.com/minio/minio/pkg/user",
-			"revision": "4e328d7b2cdec323820ad90c83dcc0dffa7900f7",
-			"revisionTime": "2016-02-08T01:59:02-08:00"
+			"path": "github.com/minio/minio/pkg/quick",
+			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
+			"revisionTime": "2016-02-11T15:54:02-08:00"
 		},
 		{
 			"path": "github.com/minio/pb",
-			"revision": "ebf84553b05b6afbd47274497a1d7b7861100398",
+			"revision": "9c7ed8cbd7b5461796dafdfc25acdd80d137eda7",
 			"revisionTime": "2016-01-25T00:47:32-08:00"
 		},
 		{
@@ -63,9 +68,9 @@
 			"revisionTime": "2014-04-12T15:01:45-07:00"
 		},
 		{
-			"path": "github.com/shiena/ansicolor",
-			"revision": "a5e2b567a4dd6cc74545b8a4f27c9d63b9e7735b",
-			"revisionTime": "2015-07-19T16:15:31+09:00"
+			"path": "golang.org/x/sys/unix",
+			"revision": "50c6bc5e4292a1d4e65c6e9be5f53be28bcbe28e",
+			"revisionTime": "2016-02-04T14:46:46-08:00"
 		},
 		{
 			"path": "gopkg.in/check.v1",

@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/minio/mc/pkg/client"
-	"github.com/minio/minio-xl/pkg/probe"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // objectDifference function finds the difference between object on source and target

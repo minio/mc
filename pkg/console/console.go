@@ -24,8 +24,8 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
-	"github.com/shiena/ansicolor"
 )
 
 var (
@@ -37,7 +37,7 @@ var (
 	// Used internally by console.
 	privateMutex = &sync.Mutex{}
 
-	stderrColoredOutput = ansicolor.NewAnsiColorWriter(os.Stderr)
+	stderrColoredOutput = colorable.NewColorableStderr()
 
 	// Print prints a message.
 	Print = func(data ...interface{}) {
