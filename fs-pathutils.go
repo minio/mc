@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package fs
+package main
 
 func normalizePath(path string) string {
 	return path

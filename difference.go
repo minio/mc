@@ -19,7 +19,6 @@ package main
 import (
 	"os"
 
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -49,7 +48,7 @@ func objectDifferenceFactory(targetAlias, targetURL string) (objectDifference, *
 	current := targetURL
 	reachedEOF := false
 	ok := false
-	var content *client.Content
+	var content *clientContent
 
 	difference := func(suffix string, srcType os.FileMode, srcSize int64) (string, *probe.Error) {
 		if reachedEOF {

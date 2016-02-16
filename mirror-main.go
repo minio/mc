@@ -28,7 +28,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/pb"
@@ -297,17 +296,17 @@ func doMirrorSession(session *sessionV6) {
 					switch sURLs.Error.ToGoError().(type) {
 					// Handle this specifically for filesystem related
 					// errors.
-					case client.BrokenSymlink:
+					case BrokenSymlink:
 						continue
-					case client.TooManyLevelsSymlink:
+					case TooManyLevelsSymlink:
 						continue
-					case client.PathNotFound:
+					case PathNotFound:
 						continue
-					case client.PathInsufficientPermission:
+					case PathInsufficientPermission:
 						continue
-					case client.ObjectAlreadyExists:
+					case ObjectAlreadyExists:
 						continue
-					case client.BucketDoesNotExist:
+					case BucketDoesNotExist:
 						continue
 					}
 					// For critical errors we should exit. Session

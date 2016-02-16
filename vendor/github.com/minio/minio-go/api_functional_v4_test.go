@@ -1045,7 +1045,13 @@ func TestFunctional(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error: ", err)
 	}
-	httpClient := &http.Client{}
+	httpClient := &http.Client{
+		// Setting a sensible time out of 30secs to wait for response
+		// headers. Request is pro-actively cancelled after 30secs
+		// with no response.
+		Timeout:   30 * time.Second,
+		Transport: http.DefaultTransport,
+	}
 	resp, err = httpClient.Do(req)
 	if err != nil {
 		t.Fatal("Error: ", err)

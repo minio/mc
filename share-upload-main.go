@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -101,7 +100,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 	}
 
 	for _, targetURL := range ctx.Args() {
-		url := client.NewURL(targetURL)
+		url := newURL(targetURL)
 		if strings.HasSuffix(targetURL, string(url.Separator)) && !isRecursive {
 			fatalIf(errInvalidArgument().Trace(targetURL),
 				"Use --recursive option to generate curl command for prefixes.")
@@ -111,7 +110,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 
 // makeCurlCmd constructs curl command-line.
 func makeCurlCmd(key string, isRecursive bool, uploadInfo map[string]string) string {
-	URL := client.NewURL(key)
+	URL := newURL(key)
 	postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator)
 	if !isBucketVirtualStyle(URL.Host) {
 		postURL = postURL + uploadInfo["bucket"]

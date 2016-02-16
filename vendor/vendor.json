@@ -39,13 +39,18 @@
 		},
 		{
 			"path": "github.com/minio/minio-go",
-			"revision": "280f16a52008d3ebba1bd64398b9b082e6738386",
-			"revisionTime": "2016-02-07T03:45:25-08:00"
+			"revision": "5576cd0f5a276b64973239ebe172aa8d2380f950",
+			"revisionTime": "2016-02-15T17:55:49-08:00"
 		},
 		{
 			"path": "github.com/minio/minio/pkg/atomic",
 			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
 			"revisionTime": "2016-02-11T15:54:02-08:00"
+		},
+		{
+			"path": "github.com/minio/minio/pkg/ioutils",
+			"revision": "eed0149657017f134fa8dacae9026bb816342a48",
+			"revisionTime": "2016-02-15T17:42:39-08:00"
 		},
 		{
 			"path": "github.com/minio/minio/pkg/probe",

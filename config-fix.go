@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/quick"
 )
@@ -132,7 +131,7 @@ func fixConfigV6ForHosts() {
 		newCfgV6.Aliases[k] = v
 	}
 
-	url := new(client.URL)
+	url := &clientURL{}
 	// Copy hosts.
 	for host, hostCfgV6 := range brokenMcCfgV6.Data().(*configV6).Hosts {
 		// Already fixed - Copy and move on.

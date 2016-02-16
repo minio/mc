@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 )
 
 func checkCopySyntax(ctx *cli.Context) {
@@ -40,7 +39,7 @@ func checkCopySyntax(ctx *cli.Context) {
 
 	/****** Generic Invalid Rules *******/
 	// Check if bucket name is passed for URL type arguments.
-	url := client.NewURL(tgtURL)
+	url := newURL(tgtURL)
 	if url.Host != "" {
 		// This check is for type URL.
 		if !isURLVirtualHostStyle(url.Host) {
