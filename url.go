@@ -17,13 +17,152 @@
 package main
 
 import (
+	"bytes"
 	"mime"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/probe"
 )
+
+// url client url structure
+type clientURL struct {
+	Type            clientURLType
+	Scheme          string
+	Host            string
+	Path            string
+	SchemeSeparator string
+	Separator       rune
+}
+
+// clientURLType - enum of different url types
+type clientURLType int
+
+// enum types
+const (
+	objectStorage = iota // Minio and S3 compatible cloud storage
+	fileSystem           // POSIX compatible file systems
+)
+
+// Maybe rawurl is of the form scheme:path. (Scheme must be [a-zA-Z][a-zA-Z0-9+-.]*)
+// If so, return scheme, path; else return "", rawurl.
+func getScheme(rawurl string) (scheme, path string) {
+	urlSplits := strings.Split(rawurl, "://")
+	if len(urlSplits) == 2 {
+		scheme, uri := urlSplits[0], "//"+urlSplits[1]
+		// ignore numbers in scheme
+		validScheme := regexp.MustCompile("^[a-zA-Z]+$")
+		if uri != "" {
+			if validScheme.MatchString(scheme) {
+				return scheme, uri
+			}
+		}
+	}
+	return "", rawurl
+}
+
+// Assuming s is of the form [s delimiter s].
+// If so, return s, [delimiter]s or return s, s if cutdelimiter == true
+// If no delimiter found return s, "".
+func splitSpecial(s string, delimiter string, cutdelimiter bool) (string, string) {
+	i := strings.Index(s, delimiter)
+	if i < 0 {
+		// if delimiter not found return as is.
+		return s, ""
+	}
+	// if delimiter should be removed, remove it.
+	if cutdelimiter {
+		return s[0:i], s[i+len(delimiter):]
+	}
+	// return split strings with delimiter
+	return s[0:i], s[i:]
+}
+
+// getHost - extract host from authority string, we do not support ftp style username@ yet.
+func getHost(authority string) (host string) {
+	i := strings.LastIndex(authority, "@")
+	if i >= 0 {
+		// TODO support, username@password style userinfo, useful for ftp support.
+		return
+	}
+	return authority
+}
+
+// newURL returns an abstracted URL for filesystems and object storage.
+func newURL(urlStr string) *clientURL {
+	scheme, rest := getScheme(urlStr)
+	rest, _ = splitSpecial(rest, "?", true)
+	if strings.HasPrefix(rest, "//") {
+		// if rest has '//' prefix, skip them
+		var authority string
+		authority, rest = splitSpecial(rest[2:], "/", false)
+		if rest == "" {
+			rest = "/"
+		}
+		host := getHost(authority)
+		if host != "" && (scheme == "http" || scheme == "https") {
+			return &clientURL{
+				Scheme:          scheme,
+				Type:            objectStorage,
+				Host:            host,
+				Path:            rest,
+				SchemeSeparator: "://",
+				Separator:       '/',
+			}
+		}
+	}
+	return &clientURL{
+		Type:      fileSystem,
+		Path:      rest,
+		Separator: filepath.Separator,
+	}
+}
+
+// joinURLs join two input urls and returns a url
+func joinURLs(url1, url2 *clientURL) *clientURL {
+	var url1Path, url2Path string
+	url1Path = filepath.ToSlash(url1.Path)
+	url2Path = filepath.ToSlash(url2.Path)
+	if strings.HasSuffix(url1Path, "/") {
+		url1.Path = url1Path + strings.TrimPrefix(url2Path, "/")
+	} else {
+		url1.Path = url1Path + "/" + strings.TrimPrefix(url2Path, "/")
+	}
+	return url1
+}
+
+// String convert URL into its canonical form.
+func (u clientURL) String() string {
+	var buf bytes.Buffer
+	// if fileSystem no translation needed, return as is.
+	if u.Type == fileSystem {
+		return u.Path
+	}
+	// if objectStorage convert from any non standard paths to a supported URL path style.
+	if u.Type == objectStorage {
+		buf.WriteString(u.Scheme)
+		buf.WriteByte(':')
+		buf.WriteString("//")
+		if h := u.Host; h != "" {
+			buf.WriteString(h)
+		}
+		switch runtime.GOOS {
+		case "windows":
+			if u.Path != "" && u.Path[0] != '\\' && u.Host != "" && u.Path[0] != '/' {
+				buf.WriteByte('/')
+			}
+			buf.WriteString(strings.Replace(u.Path, "\\", "/", -1))
+		default:
+			if u.Path != "" && u.Path[0] != '/' && u.Host != "" {
+				buf.WriteByte('/')
+			}
+			buf.WriteString(u.Path)
+		}
+	}
+	return buf.String()
+}
 
 func isURLVirtualHostStyle(hostURL string) bool {
 	matchS3, _ := filepath.Match("*.s3*.amazonaws.com", hostURL)
@@ -33,13 +172,13 @@ func isURLVirtualHostStyle(hostURL string) bool {
 
 // urlJoinPath Join a path to existing URL.
 func urlJoinPath(url1, url2 string) string {
-	u1 := client.NewURL(url1)
-	u2 := client.NewURL(url2)
-	return client.JoinURLs(u1, u2).String()
+	u1 := newURL(url1)
+	u2 := newURL(url2)
+	return joinURLs(u1, u2).String()
 }
 
 // url2Stat returns stat info for URL.
-func url2Stat(urlStr string) (client client.Client, content *client.Content, err *probe.Error) {
+func url2Stat(urlStr string) (client Client, content *clientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
@@ -92,7 +231,7 @@ func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 // guessURLContentType - guess content-type of the URL.
 // on failure just return 'application/octet-stream'.
 func guessURLContentType(urlStr string) string {
-	url := client.NewURL(urlStr)
+	url := newURL(urlStr)
 	contentType := mime.TypeByExtension(filepath.Ext(url.Path))
 	if contentType == "" {
 		contentType = "application/octet-stream"

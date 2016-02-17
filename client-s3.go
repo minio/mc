@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package s3
+package main
 
 import (
 	"errors"
@@ -29,7 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/probe"
@@ -38,27 +37,27 @@ import (
 // S3 client
 type s3Client struct {
 	mutex        *sync.Mutex
-	targetURL    *client.URL
-	api          minio.CloudStorageClient
+	targetURL    *clientURL
+	api          *minio.Client
 	virtualStyle bool
 }
 
 // newFactory encloses New function with client cache.
-func newFactory() func(config *client.Config) (client.Client, *probe.Error) {
-	clientCache := make(map[uint32]minio.CloudStorageClient)
+func newFactory() func(config *Config) (Client, *probe.Error) {
+	clientCache := make(map[uint32]*minio.Client)
 	mutex := &sync.Mutex{}
 
 	// Return New function.
-	return func(config *client.Config) (client.Client, *probe.Error) {
+	return func(config *Config) (Client, *probe.Error) {
 		// Creates a parsed URL.
-		targetURL := client.NewURL(config.HostURL)
+		targetURL := newURL(config.HostURL)
 		// By default enable HTTPs.
 		inSecure := false
 		if targetURL.Scheme == "http" {
 			inSecure = true
 		}
 
-		// Instantiate s3 client.
+		// Instantiate s3
 		s3Clnt := &s3Client{}
 		// Allocate a new mutex.
 		s3Clnt.mutex = new(sync.Mutex)
@@ -88,10 +87,10 @@ func newFactory() func(config *client.Config) (client.Client, *probe.Error) {
 		// Lookup previous cache by hash.
 		mutex.Lock()
 		defer mutex.Unlock()
-		var api minio.CloudStorageClient
+		var api *minio.Client
 		found := false
 		if api, found = clientCache[confSum]; !found {
-			// Not found. Instantiate a new minio client.
+			// Not found. Instantiate a new minio
 			var e error
 			if config.Signature == "S3v2" {
 				// if Signature version '2' use NewV2 directly.
@@ -112,10 +111,10 @@ func newFactory() func(config *client.Config) (client.Client, *probe.Error) {
 		if config.Debug {
 			transport := http.DefaultTransport
 			if config.Signature == "S3v4" {
-				transport = httptracer.GetNewTraceTransport(NewTraceV4(), http.DefaultTransport)
+				transport = httptracer.GetNewTraceTransport(newTraceV4(), http.DefaultTransport)
 			}
 			if config.Signature == "S3v2" {
-				transport = httptracer.GetNewTraceTransport(NewTraceV2(), http.DefaultTransport)
+				transport = httptracer.GetNewTraceTransport(newTraceV2(), http.DefaultTransport)
 			}
 			// Set custom transport.
 			api.SetCustomTransport(transport)
@@ -128,12 +127,12 @@ func newFactory() func(config *client.Config) (client.Client, *probe.Error) {
 	}
 }
 
-// New returns an initialized s3Client structure. If debug is enabled,
+// s3New returns an initialized s3Client structure. If debug is enabled,
 // it also enables an internal trace transport.
-var New = newFactory()
+var s3New = newFactory()
 
 // GetURL get url.
-func (c *s3Client) GetURL() client.URL {
+func (c *s3Client) GetURL() clientURL {
 	return *c.targetURL
 }
 
@@ -144,7 +143,7 @@ func (c *s3Client) Get() (io.Reader, *probe.Error) {
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {
-			return nil, probe.NewError(client.PathInsufficientPermission{Path: c.targetURL.String()})
+			return nil, probe.NewError(PathInsufficientPermission{Path: c.targetURL.String()})
 		}
 		return nil, probe.NewError(e)
 	}
@@ -165,28 +164,28 @@ func (c *s3Client) Put(reader io.Reader, size int64, contentType string, progres
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {
-			return n, probe.NewError(client.UnexpectedEOF{
+			return n, probe.NewError(UnexpectedEOF{
 				TotalSize:    size,
 				TotalWritten: n,
 			})
 		}
 		if errResponse.Code == "AccessDenied" {
-			return n, probe.NewError(client.PathInsufficientPermission{
+			return n, probe.NewError(PathInsufficientPermission{
 				Path: c.targetURL.String(),
 			})
 		}
 		if errResponse.Code == "MethodNotAllowed" {
-			return n, probe.NewError(client.ObjectAlreadyExists{
+			return n, probe.NewError(ObjectAlreadyExists{
 				Object: object,
 			})
 		}
 		if errResponse.Code == "NoSuchBucket" {
-			return n, probe.NewError(client.BucketDoesNotExist{
+			return n, probe.NewError(BucketDoesNotExist{
 				Bucket: bucket,
 			})
 		}
 		if errResponse.Code == "InvalidArgument" {
-			return n, probe.NewError(client.ObjectMissing{})
+			return n, probe.NewError(ObjectMissing{})
 		}
 		return n, probe.NewError(e)
 	}
@@ -233,7 +232,7 @@ func isValidBucketName(bucketName string) *probe.Error {
 func (c *s3Client) MakeBucket(region string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return probe.NewError(client.BucketNameTopLevel{})
+		return probe.NewError(BucketNameTopLevel{})
 	}
 	if err := isValidBucketName(bucket); err != nil {
 		return err.Trace(bucket)
@@ -249,10 +248,10 @@ func (c *s3Client) MakeBucket(region string) *probe.Error {
 func (c *s3Client) GetBucketAccess() (acl string, err *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return "", probe.NewError(client.InvalidBucketName{Bucket: filepath.Join(bucket, object)})
+		return "", probe.NewError(InvalidBucketName{Bucket: filepath.Join(bucket, object)})
 	}
 	if bucket == "" {
-		return "", probe.NewError(client.BucketNameEmpty{})
+		return "", probe.NewError(BucketNameEmpty{})
 	}
 	bucketACL, e := c.api.GetBucketACL(bucket)
 	if e != nil {
@@ -265,10 +264,10 @@ func (c *s3Client) GetBucketAccess() (acl string, err *probe.Error) {
 func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
-		return probe.NewError(client.InvalidBucketName{Bucket: filepath.Join(bucket, object)})
+		return probe.NewError(InvalidBucketName{Bucket: filepath.Join(bucket, object)})
 	}
 	if bucket == "" {
-		return probe.NewError(client.BucketNameEmpty{})
+		return probe.NewError(BucketNameEmpty{})
 	}
 	e := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
 	if e != nil {
@@ -278,9 +277,9 @@ func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
 }
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
-func (c *s3Client) Stat() (*client.Content, *probe.Error) {
+func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	c.mutex.Lock()
-	objectMetadata := new(client.Content)
+	objectMetadata := &clientContent{}
 	bucket, object := c.url2BucketAndObject()
 	switch {
 	// valid case for 'ls -r s3/'
@@ -291,7 +290,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 			return nil, probe.NewError(e)
 		}
 		c.mutex.Unlock()
-		return &client.Content{URL: *c.targetURL, Type: os.ModeDir}, nil
+		return &clientContent{URL: *c.targetURL, Type: os.ModeDir}, nil
 	}
 	if object != "" {
 		metadata, e := c.api.StatObject(bucket, object)
@@ -309,12 +308,12 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 					if objectStat.Err != nil {
 						return nil, probe.NewError(objectStat.Err)
 					}
-					content := client.Content{}
+					content := clientContent{}
 					content.URL = *c.targetURL
 					content.Type = os.ModeDir
 					return &content, nil
 				}
-				return nil, probe.NewError(client.PathNotFound{Path: c.targetURL.Path})
+				return nil, probe.NewError(PathNotFound{Path: c.targetURL.Path})
 			}
 			return nil, probe.NewError(e)
 		}
@@ -330,7 +329,7 @@ func (c *s3Client) Stat() (*client.Content, *probe.Error) {
 		c.mutex.Unlock()
 		return nil, probe.NewError(e)
 	}
-	bucketMetadata := new(client.Content)
+	bucketMetadata := &clientContent{}
 	bucketMetadata.URL = *c.targetURL
 	bucketMetadata.Type = os.ModeDir
 	c.mutex.Unlock()
@@ -390,11 +389,11 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 /// Bucket API operations.
 
 // List - list at delimited path, if not recursive.
-func (c *s3Client) List(recursive, incomplete bool) <-chan *client.Content {
+func (c *s3Client) List(recursive, incomplete bool) <-chan *clientContent {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	contentCh := make(chan *client.Content)
+	contentCh := make(chan *clientContent)
 	if incomplete {
 		if recursive {
 			go c.listIncompleteRecursiveInRoutine(contentCh)
@@ -411,7 +410,7 @@ func (c *s3Client) List(recursive, incomplete bool) <-chan *client.Content {
 	return contentCh
 }
 
-func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
+func (c *s3Client) listIncompleteInRoutine(contentCh chan *clientContent) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -419,7 +418,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets()
 		if err != nil {
-			contentCh <- &client.Content{
+			contentCh <- &clientContent{
 				Err: probe.NewError(err),
 			}
 			return
@@ -428,12 +427,12 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 		for _, bucket := range buckets {
 			for object := range c.api.ListIncompleteUploads(bucket.Name, o, isRecursive, nil) {
 				if object.Err != nil {
-					contentCh <- &client.Content{
+					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
 					return
 				}
-				content := new(client.Content)
+				content := &clientContent{}
 				url := *c.targetURL
 				// Join bucket with - incoming object key.
 				url.Path = filepath.Join(string(url.Separator), bucket.Name, object.Key)
@@ -459,12 +458,12 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 		isRecursive := false
 		for object := range c.api.ListIncompleteUploads(b, o, isRecursive, nil) {
 			if object.Err != nil {
-				contentCh <- &client.Content{
+				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
 				return
 			}
-			content := new(client.Content)
+			content := &clientContent{}
 			url := *c.targetURL
 			// Join bucket with - incoming object key.
 			url.Path = filepath.Join(string(url.Separator), b, object.Key)
@@ -488,7 +487,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *client.Content) {
 	}
 }
 
-func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Content) {
+func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientContent) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -496,7 +495,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets()
 		if err != nil {
-			contentCh <- &client.Content{
+			contentCh <- &clientContent{
 				Err: probe.NewError(err),
 			}
 			return
@@ -505,14 +504,14 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 		for _, bucket := range buckets {
 			for object := range c.api.ListIncompleteUploads(bucket.Name, o, isRecursive, nil) {
 				if object.Err != nil {
-					contentCh <- &client.Content{
+					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
 					return
 				}
 				url := *c.targetURL
 				url.Path = filepath.Join(url.Path, bucket.Name, object.Key)
-				content := new(client.Content)
+				content := &clientContent{}
 				content.URL = url
 				content.Size = object.Size
 				content.Time = object.Initiated
@@ -524,7 +523,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 		isRecursive := true
 		for object := range c.api.ListIncompleteUploads(b, o, isRecursive, nil) {
 			if object.Err != nil {
-				contentCh <- &client.Content{
+				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
 				return
@@ -535,7 +534,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 			if c.virtualStyle {
 				url.Path = filepath.Join(string(url.Separator), object.Key)
 			}
-			content := new(client.Content)
+			content := &clientContent{}
 			content.URL = url
 			content.Size = object.Size
 			content.Time = object.Initiated
@@ -545,7 +544,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *client.Conte
 	}
 }
 
-func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
+func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -553,7 +552,7 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets()
 		if err != nil {
-			contentCh <- &client.Content{
+			contentCh <- &clientContent{
 				Err: probe.NewError(err),
 			}
 			return
@@ -561,7 +560,7 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 		for _, bucket := range buckets {
 			url := *c.targetURL
 			url.Path = filepath.Join(url.Path, bucket.Name)
-			content := new(client.Content)
+			content := &clientContent{}
 			content.URL = url
 			content.Size = 0
 			content.Time = bucket.CreationDate
@@ -571,11 +570,11 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 	case b != "" && !strings.HasSuffix(c.targetURL.Path, string(c.targetURL.Separator)) && o == "":
 		e := c.api.BucketExists(b)
 		if e != nil {
-			contentCh <- &client.Content{
+			contentCh <- &clientContent{
 				Err: probe.NewError(e),
 			}
 		}
-		content := new(client.Content)
+		content := &clientContent{}
 		content.URL = *c.targetURL
 		content.Type = os.ModeDir
 		contentCh <- content
@@ -583,7 +582,7 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 		metadata, e := c.api.StatObject(b, o)
 		switch e.(type) {
 		case nil:
-			content := new(client.Content)
+			content := &clientContent{}
 			content.URL = *c.targetURL
 			content.Time = metadata.LastModified
 			content.Size = metadata.Size
@@ -593,12 +592,12 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 			isRecursive := false
 			for object := range c.api.ListObjects(b, o, isRecursive, nil) {
 				if object.Err != nil {
-					contentCh <- &client.Content{
+					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
 					return
 				}
-				content := new(client.Content)
+				content := &clientContent{}
 				url := *c.targetURL
 				// Join bucket and incoming object key.
 				url.Path = filepath.Join(string(url.Separator), b, object.Key)
@@ -623,7 +622,7 @@ func (c *s3Client) listInRoutine(contentCh chan *client.Content) {
 	}
 }
 
-func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
+func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -631,7 +630,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 	case b == "" && o == "":
 		buckets, err := c.api.ListBuckets()
 		if err != nil {
-			contentCh <- &client.Content{
+			contentCh <- &clientContent{
 				Err: probe.NewError(err),
 			}
 			return
@@ -639,7 +638,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 		for _, bucket := range buckets {
 			bucketURL := *c.targetURL
 			bucketURL.Path = filepath.Join(bucketURL.Path, bucket.Name)
-			contentCh <- &client.Content{
+			contentCh <- &clientContent{
 				URL:  bucketURL,
 				Type: os.ModeDir,
 				Time: bucket.CreationDate,
@@ -647,12 +646,12 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 			isRecursive := true
 			for object := range c.api.ListObjects(bucket.Name, o, isRecursive, nil) {
 				if object.Err != nil {
-					contentCh <- &client.Content{
+					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
 					continue
 				}
-				content := new(client.Content)
+				content := &clientContent{}
 				objectURL := *c.targetURL
 				objectURL.Path = filepath.Join(objectURL.Path, bucket.Name, object.Key)
 				content.URL = objectURL
@@ -666,12 +665,12 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *client.Content) {
 		isRecursive := true
 		for object := range c.api.ListObjects(b, o, isRecursive, nil) {
 			if object.Err != nil {
-				contentCh <- &client.Content{
+				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
 				continue
 			}
-			content := new(client.Content)
+			content := &clientContent{}
 			url := *c.targetURL
 			// Join bucket and incoming object key.
 			url.Path = filepath.Join(string(url.Separator), b, object.Key)

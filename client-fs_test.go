@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fs_test
+package main
 
 import (
 	"bytes"
@@ -22,28 +22,19 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"testing"
 
-	"github.com/minio/mc/pkg/client"
-	"github.com/minio/mc/pkg/client/fs"
 	. "gopkg.in/check.v1"
 )
 
-func Test(t *testing.T) { TestingT(t) }
-
-type MySuite struct{}
-
-var _ = Suite(&MySuite{})
-
 // Test list files in a folder.
-func (s *MySuite) TestList(c *C) {
+func (s *TestSuite) TestList(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	// Create multiple files.
 	objectPath := filepath.Join(root, "object1")
-	fsClient, err := fs.New(objectPath)
+	fsClient, err := fsNew(objectPath)
 	c.Assert(err, IsNil)
 
 	data := "hello"
@@ -55,7 +46,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(n, Equals, int64(len(data)))
 
 	objectPath = filepath.Join(root, "object2")
-	fsClient, err = fs.New(objectPath)
+	fsClient, err = fsNew(objectPath)
 	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
@@ -63,11 +54,11 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	fsClient, err = fs.New(root)
+	fsClient, err = fsNew(root)
 	c.Assert(err, IsNil)
 
 	// Verify previously create files and list them.
-	var contents []*client.Content
+	var contents []*clientContent
 	for content := range fsClient.List(false, false) {
 		if content.Err != nil {
 			err = content.Err
@@ -81,7 +72,7 @@ func (s *MySuite) TestList(c *C) {
 
 	// Create another file.
 	objectPath = filepath.Join(root, "test1/newObject1")
-	fsClient, err = fs.New(objectPath)
+	fsClient, err = fsNew(objectPath)
 	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
@@ -89,7 +80,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	fsClient, err = fs.New(root)
+	fsClient, err = fsNew(root)
 	c.Assert(err, IsNil)
 
 	contents = nil
@@ -105,7 +96,7 @@ func (s *MySuite) TestList(c *C) {
 	c.Assert(len(contents), Equals, 1)
 	c.Assert(contents[0].Type.IsDir(), Equals, true)
 
-	fsClient, err = fs.New(root)
+	fsClient, err = fsNew(root)
 	c.Assert(err, IsNil)
 
 	contents = nil
@@ -139,27 +130,27 @@ func (s *MySuite) TestList(c *C) {
 }
 
 // Test put bucket aka 'mkdir()' operation.
-func (s *MySuite) TestPutBucket(c *C) {
+func (s *TestSuite) TestPutBucket(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsClient, err := fs.New(bucketPath)
+	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
 	err = fsClient.MakeBucket("us-east-1")
 	c.Assert(err, IsNil)
 }
 
 // Test stat bucket aka 'stat()' operation.
-func (s *MySuite) TestStatBucket(c *C) {
+func (s *TestSuite) TestStatBucket(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
 
-	fsClient, err := fs.New(bucketPath)
+	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
 	err = fsClient.MakeBucket("us-east-1")
 	c.Assert(err, IsNil)
@@ -168,13 +159,13 @@ func (s *MySuite) TestStatBucket(c *C) {
 }
 
 // Test bucket acl fails for directories.
-func (s *MySuite) TestBucketACLFails(c *C) {
+func (s *TestSuite) TestBucketACLFails(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsClient, err := fs.New(bucketPath)
+	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
 	err = fsClient.MakeBucket("us-east-1")
 	c.Assert(err, IsNil)
@@ -187,13 +178,13 @@ func (s *MySuite) TestBucketACLFails(c *C) {
 }
 
 // Test creating a file.
-func (s *MySuite) TestPut(c *C) {
+func (s *TestSuite) TestPut(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsClient, err := fs.New(objectPath)
+	fsClient, err := fsNew(objectPath)
 	c.Assert(err, IsNil)
 
 	data := "hello"
@@ -205,13 +196,13 @@ func (s *MySuite) TestPut(c *C) {
 }
 
 // Test read a file.
-func (s *MySuite) TestGet(c *C) {
+func (s *TestSuite) TestGet(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsClient, err := fs.New(objectPath)
+	fsClient, err := fsNew(objectPath)
 	c.Assert(err, IsNil)
 
 	data := "hello"
@@ -231,13 +222,13 @@ func (s *MySuite) TestGet(c *C) {
 }
 
 // Test get range in a file.
-func (s *MySuite) TestGetRange(c *C) {
+func (s *TestSuite) TestGetRange(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsClient, err := fs.New(objectPath)
+	fsClient, err := fsNew(objectPath)
 	c.Assert(err, IsNil)
 
 	data := "hello world"
@@ -260,13 +251,13 @@ func (s *MySuite) TestGetRange(c *C) {
 }
 
 // Test stat file.
-func (s *MySuite) TestStatObject(c *C) {
+func (s *TestSuite) TestStatObject(c *C) {
 	root, e := ioutil.TempDir(os.TempDir(), "fs-")
 	c.Assert(e, IsNil)
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsClient, err := fs.New(objectPath)
+	fsClient, err := fsNew(objectPath)
 	c.Assert(err, IsNil)
 
 	data := "hello"

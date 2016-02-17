@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-package client
+package main
 
-import (
-	"fmt"
-	"strconv"
-)
+import "fmt"
 
 /// Collection of standard errors
 
@@ -31,15 +28,6 @@ type APINotImplemented struct {
 
 func (e APINotImplemented) Error() string {
 	return "‘" + e.API + "’ feature " + "is not implemented for ‘" + e.APIType + "’."
-}
-
-// InvalidRange - invalid range requested
-type InvalidRange struct {
-	Offset int64
-}
-
-func (e InvalidRange) Error() string {
-	return "Invalid range offset: ‘" + strconv.FormatInt(e.Offset, 10) + "’."
 }
 
 // GenericBucketError - generic bucket operations error
@@ -75,12 +63,6 @@ func (e BucketNameEmpty) Error() string {
 	return "Bucket name cannot be empty."
 }
 
-// GenericObjectError - generic object operations error
-type GenericObjectError struct {
-	Bucket string
-	Object string
-}
-
 // ObjectAlreadyExists - typed return for MethodNotAllowed
 type ObjectAlreadyExists struct {
 	Object string
@@ -88,13 +70,6 @@ type ObjectAlreadyExists struct {
 
 func (e ObjectAlreadyExists) Error() string {
 	return "Object ‘" + e.Object + "’ already exists."
-}
-
-// InvalidObjectName - object requested is invalid
-type InvalidObjectName GenericObjectError
-
-func (e InvalidObjectName) Error() string {
-	return "Object ‘" + e.Object + "’ at ‘" + e.Bucket + "’ is invalid."
 }
 
 // BucketNameTopLevel - generic error

@@ -23,15 +23,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/minio/mc/pkg/client"
-	"github.com/minio/mc/pkg/client/fs"
-	"github.com/minio/mc/pkg/client/s3"
 	"github.com/minio/minio/pkg/probe"
 )
 
 // Check if the target URL represents folder. It may or may not exist yet.
 func isTargetURLDir(targetURL string) bool {
-	targetURLParse := client.NewURL(targetURL)
+	targetURLParse := newURL(targetURL)
 	_, targetContent, err := url2Stat(targetURL)
 	if err != nil {
 		_, aliasedTargetURL, _ := mustExpandAlias(targetURL)
@@ -101,12 +98,12 @@ func putTargetStream(urlStr string, reader io.Reader, size int64) (int64, *probe
 // newClientFromAlias gives a new client interface for matching
 // alias entry in the mc config file. If no matching host config entry
 // is found, fs client is returned.
-func newClientFromAlias(alias string, urlStr string) (client.Client, *probe.Error) {
+func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
 	hostCfg := mustGetHostConfig(alias)
 	if hostCfg == nil {
 		// No matching host config. So we treat it like a
 		// filesystem.
-		fsClient, err := fs.New(urlStr)
+		fsClient, err := fsNew(urlStr)
 		if err != nil {
 			return nil, err.Trace(alias, urlStr)
 		}
@@ -115,7 +112,7 @@ func newClientFromAlias(alias string, urlStr string) (client.Client, *probe.Erro
 
 	// We have a valid alias and hostConfig. We populate the
 	// credentials from the match found in the config file.
-	s3Config := new(client.Config)
+	s3Config := new(Config)
 	s3Config.AccessKey = hostCfg.AccessKey
 	s3Config.SecretKey = hostCfg.SecretKey
 	s3Config.Signature = hostCfg.API
@@ -125,7 +122,7 @@ func newClientFromAlias(alias string, urlStr string) (client.Client, *probe.Erro
 	s3Config.HostURL = urlStr
 	s3Config.Debug = globalDebug
 
-	s3Client, err := s3.New(s3Config)
+	s3Client, err := s3New(s3Config)
 	if err != nil {
 		return nil, err.Trace(alias, urlStr)
 	}
@@ -136,7 +133,7 @@ func newClientFromAlias(alias string, urlStr string) (client.Client, *probe.Erro
 var urlRgx = regexp.MustCompile("^https?://")
 
 // newClient gives a new client interface
-func newClient(aliasedURL string) (client.Client, *probe.Error) {
+func newClient(aliasedURL string) (Client, *probe.Error) {
 	alias, urlStrFull, hostCfg, err := expandAlias(aliasedURL)
 	if err != nil {
 		return nil, err.Trace(aliasedURL)

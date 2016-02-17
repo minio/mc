@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package s3
+package main
 
 // bucketHandler is an http.Handler that verifies bucket responses and validates incoming requests
 import (
@@ -23,10 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
-	"testing"
 	"time"
-
-	"github.com/minio/mc/pkg/client"
 
 	. "gopkg.in/check.v1"
 )
@@ -168,26 +165,20 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Test(t *testing.T) { TestingT(t) }
-
-type MySuite struct{}
-
-var _ = Suite(&MySuite{})
-
 // Test bucket operations.
-func (s *MySuite) TestBucketOperations(c *C) {
+func (s *TestSuite) TestBucketOperations(c *C) {
 	bucket := bucketHandler(bucketHandler{
 		resource: "/bucket/",
 	})
 	server := httptest.NewServer(bucket)
 	defer server.Close()
 
-	conf := new(client.Config)
+	conf := new(Config)
 	conf.HostURL = server.URL + bucket.resource
 	conf.AccessKey = "WLGDGYAQYIGI833EV05A"
 	conf.SecretKey = "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"
 	conf.Signature = "S3v4"
-	s3c, err := New(conf)
+	s3c, err := s3New(conf)
 	c.Assert(err, IsNil)
 
 	err = s3c.MakeBucket("us-east-1")
@@ -197,7 +188,7 @@ func (s *MySuite) TestBucketOperations(c *C) {
 	c.Assert(err, IsNil)
 
 	conf.HostURL = server.URL + string(s3c.GetURL().Separator)
-	s3c, err = New(conf)
+	s3c, err = s3New(conf)
 	c.Assert(err, IsNil)
 
 	for content := range s3c.List(false, false) {
@@ -206,7 +197,7 @@ func (s *MySuite) TestBucketOperations(c *C) {
 	}
 
 	conf.HostURL = server.URL + "/bucket"
-	s3c, err = New(conf)
+	s3c, err = s3New(conf)
 	c.Assert(err, IsNil)
 
 	for content := range s3c.List(false, false) {
@@ -215,7 +206,7 @@ func (s *MySuite) TestBucketOperations(c *C) {
 	}
 
 	conf.HostURL = server.URL + "/bucket/"
-	s3c, err = New(conf)
+	s3c, err = s3New(conf)
 	c.Assert(err, IsNil)
 
 	for content := range s3c.List(false, false) {
@@ -225,7 +216,7 @@ func (s *MySuite) TestBucketOperations(c *C) {
 }
 
 // Test all object operations.
-func (s *MySuite) TestObjectOperations(c *C) {
+func (s *TestSuite) TestObjectOperations(c *C) {
 	object := objectHandler(objectHandler{
 		resource: "/bucket/object",
 		data:     []byte("Hello, World"),
@@ -233,12 +224,12 @@ func (s *MySuite) TestObjectOperations(c *C) {
 	server := httptest.NewServer(object)
 	defer server.Close()
 
-	conf := new(client.Config)
+	conf := new(Config)
 	conf.HostURL = server.URL + object.resource
 	conf.AccessKey = "WLGDGYAQYIGI833EV05A"
 	conf.SecretKey = "BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"
 	conf.Signature = "S3v4"
-	s3c, err := New(conf)
+	s3c, err := s3New(conf)
 	c.Assert(err, IsNil)
 
 	var reader io.Reader

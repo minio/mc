@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
@@ -67,7 +66,7 @@ func (c contentMessage) JSON() string {
 }
 
 // parseContent parse client Content container into printer struct.
-func parseContent(c *client.Content) contentMessage {
+func parseContent(c *clientContent) contentMessage {
 	content := contentMessage{}
 	content.Time = c.Time.Local()
 
@@ -105,7 +104,7 @@ func parseContent(c *client.Content) contentMessage {
 }
 
 // doList - list all entities inside a folder.
-func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
+func doList(clnt Client, isRecursive, isIncomplete bool) *probe.Error {
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
 	if !strings.HasSuffix(prefixPath, separator) {
@@ -115,16 +114,16 @@ func doList(clnt client.Client, isRecursive, isIncomplete bool) *probe.Error {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
-			case client.BrokenSymlink:
+			case BrokenSymlink:
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list broken link.")
 				continue
-			case client.TooManyLevelsSymlink:
+			case TooManyLevelsSymlink:
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list too many levels link.")
 				continue
-			case client.PathNotFound:
+			case PathNotFound:
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
-			case client.PathInsufficientPermission:
+			case PathInsufficientPermission:
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			}

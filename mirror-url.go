@@ -21,15 +21,14 @@ import (
 	"strings"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/minio/pkg/probe"
 )
 
 type mirrorURLs struct {
 	SourceAlias   string
-	SourceContent *client.Content
+	SourceContent *clientContent
 	TargetAlias   string
-	TargetContent *client.Content
+	TargetContent *clientContent
 	Error         *probe.Error `json:"-"`
 }
 
@@ -75,7 +74,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		fatalIf(errInvalidArgument().Trace(), "Invalid target arguments to mirror command.")
 	}
 
-	url := client.NewURL(tgtURL)
+	url := newURL(tgtURL)
 	if url.Host != "" {
 		if !isURLVirtualHostStyle(url.Host) {
 			if url.Path == string(url.Separator) {
@@ -85,19 +84,19 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		}
 	}
 	_, _, err = url2Stat(tgtURL)
-	// we die on any error other than client.PathNotFound - destination directory need not exist.
-	if _, ok := err.ToGoError().(client.PathNotFound); !ok {
+	// we die on any error other than PathNotFound - destination directory need not exist.
+	if _, ok := err.ToGoError().(PathNotFound); !ok {
 		fatalIf(err.Trace(tgtURL), fmt.Sprintf("Unable to stat %s", tgtURL))
 	}
 }
 
 func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirrorURLsCh chan<- mirrorURLs) {
 	// source and targets are always directories
-	sourceSeparator := string(client.NewURL(sourceURL).Separator)
+	sourceSeparator := string(newURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
 		sourceURL = sourceURL + sourceSeparator
 	}
-	targetSeparator := string(client.NewURL(targetURL).Separator)
+	targetSeparator := string(newURL(targetURL).Separator)
 	if !strings.HasSuffix(targetURL, targetSeparator) {
 		targetURL = targetURL + targetSeparator
 	}
@@ -151,7 +150,7 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 		}
 		// either available only in source or size differs and force is set
 		targetPath := urlJoinPath(targetURL, suffix)
-		targetContent := &client.Content{URL: *client.NewURL(targetPath)}
+		targetContent := &clientContent{URL: *newURL(targetPath)}
 		mirrorURLsCh <- mirrorURLs{
 			SourceAlias:   sourceAlias,
 			SourceContent: sourceContent,

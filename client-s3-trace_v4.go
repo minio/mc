@@ -14,35 +14,44 @@
  * limitations under the License.
  */
 
-package s3
+package main
 
 import (
 	"net/http"
 	"net/http/httputil"
+	"regexp"
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/httptracer"
 )
 
-// TraceV2 - tracing structure
-type TraceV2 struct{}
+// traceV4 - tracing structure for signature version '4'.
+type traceV4 struct{}
 
-// NewTraceV2 - initialize Trace structure
-func NewTraceV2() httptracer.HTTPTracer {
-	return TraceV2{}
+// newTraceV4 - initialize Trace structure
+func newTraceV4() httptracer.HTTPTracer {
+	return traceV4{}
 }
 
 // Request - Trace HTTP Request
-func (t TraceV2) Request(req *http.Request) (err error) {
+func (t traceV4) Request(req *http.Request) (err error) {
 	origAuth := req.Header.Get("Authorization")
 
 	if strings.TrimSpace(origAuth) != "" {
-		// Authorization (S3 v2 signature) Format:
-		// Authorization: AWS AKIAJVA5BMMU2RHO6IO1:Y10YHUZ0DTUterAUI6w3XKX7Iqk=
+		// Authorization (S3 v4 signature) Format:
+		// Authorization: AWS4-HMAC-SHA256 Credential=AKIAJNACEGBGMXBHLEZA/20150524/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=bbfaa693c626021bcb5f911cd898a1a30206c1fad6bad1e0eb89e282173bd24c
+
+		// Strip out accessKeyID from: Credential=<access-key-id>/<date>/<aws-region>/<aws-service>/aws4_request
+		regCred := regexp.MustCompile("Credential=([A-Z0-9]+)/")
+		newAuth := regCred.ReplaceAllString(origAuth, "Credential=**REDACTED**/")
+
+		// Strip out 256-bit signature from: Signature=<256-bit signature>
+		regSign := regexp.MustCompile("Signature=([[0-9a-f]+)")
+		newAuth = regSign.ReplaceAllString(newAuth, "Signature=**REDACTED**")
 
 		// Set a temporary redacted auth
-		req.Header.Set("Authorization", "AWS **REDACTED**:**REDACTED**")
+		req.Header.Set("Authorization", newAuth)
 
 		var reqTrace []byte
 		reqTrace, err = httputil.DumpRequestOut(req, false) // Only display header
@@ -57,7 +66,7 @@ func (t TraceV2) Request(req *http.Request) (err error) {
 }
 
 // Response - Trace HTTP Response
-func (t TraceV2) Response(res *http.Response) (err error) {
+func (t traceV4) Response(res *http.Response) (err error) {
 	var resTrace []byte
 	// For errors we make sure to dump response body as well.
 	if res.StatusCode != http.StatusOK &&

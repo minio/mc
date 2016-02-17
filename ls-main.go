@@ -21,7 +21,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/client"
 	"github.com/minio/mc/pkg/console"
 )
 
@@ -127,7 +126,7 @@ func mainList(ctx *cli.Context) {
 	}
 
 	for _, targetURL := range args {
-		var clnt client.Client
+		var clnt Client
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 

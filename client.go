@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package client
+package main
 
 import (
 	"io"
@@ -27,8 +27,8 @@ import (
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat() (content *Content, err *probe.Error)
-	List(recursive, incomplete bool) <-chan *Content
+	Stat() (content *clientContent, err *probe.Error)
+	List(recursive, incomplete bool) <-chan *clientContent
 
 	// Bucket operations
 	MakeBucket(region string) *probe.Error
@@ -47,12 +47,12 @@ type Client interface {
 	Remove(incomplete bool) *probe.Error
 
 	// GetURL returns back internal url
-	GetURL() URL
+	GetURL() clientURL
 }
 
 // Content container for content metadata
-type Content struct {
-	URL  URL
+type clientContent struct {
+	URL  clientURL
 	Time time.Time
 	Size int64
 	Type os.FileMode
