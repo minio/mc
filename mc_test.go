@@ -121,7 +121,7 @@ func (s *TestSuite) TestCommonPrefix(c *C) {
 }
 
 func (s *TestSuite) TestVersions(c *C) {
-	v1 := newVersion("1.5.1")
+	v1 := newVersion("1.6")
 	v2 := newVersion("1.5.0")
 	c.Assert(v2.LessThan(v1), Equals, true)
 	c.Assert(v1.LessThan(v2), Equals, false)
