@@ -36,6 +36,14 @@ type RoundTripTrace struct {
 	Transport http.RoundTripper // HTTP transport that needs to be intercepted
 }
 
+// CancelRequest implements functinality to cancel an underlying request.
+func (t RoundTripTrace) CancelRequest(req *http.Request) {
+	transport, ok := t.Transport.(*http.Transport)
+	if ok {
+		transport.CancelRequest(req)
+	}
+}
+
 // RoundTrip executes user provided request and response hooks for each HTTP call.
 func (t RoundTripTrace) RoundTrip(req *http.Request) (res *http.Response, err error) {
 	timeStamp := time.Now()

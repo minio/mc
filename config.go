@@ -29,9 +29,6 @@ import (
 // mcCustomConfigDir contains the whole path to config dir. Only access via get/set functions.
 var mcCustomConfigDir string
 
-// mcCustomConfigPath contains the whole path to config file. Only access via get/set functions.
-var mcCustomConfigPath string
-
 // setMcConfigDir - set a custom minio client config folder.
 func setMcConfigDir(configDir string) {
 	mcCustomConfigDir = configDir
@@ -46,13 +43,14 @@ func getMcConfigDir() (string, *probe.Error) {
 	if e != nil {
 		return "", probe.NewError(e)
 	}
+	var configDir string
 	// For windows the path is slightly different
-	switch runtime.GOOS {
-	case "windows":
-		return filepath.Join(homeDir, globalMCConfigWindowsDir), nil
-	default:
-		return filepath.Join(homeDir, globalMCConfigDir), nil
+	if runtime.GOOS == "windows" {
+		configDir = filepath.Join(homeDir, globalMCConfigWindowsDir)
+	} else {
+		configDir = filepath.Join(homeDir, globalMCConfigDir)
 	}
+	return configDir, nil
 }
 
 // mustGetMcConfigDir - construct minio client config folder or fail
@@ -77,8 +75,8 @@ func createMcConfigDir() *probe.Error {
 
 // getMcConfigPath - construct minio client configuration path
 func getMcConfigPath() (string, *probe.Error) {
-	if mcCustomConfigPath != "" {
-		return mcCustomConfigPath, nil
+	if mcCustomConfigDir != "" {
+		return filepath.Join(mcCustomConfigDir, globalMCConfigFile), nil
 	}
 	dir, err := getMcConfigDir()
 	if err != nil {
