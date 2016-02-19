@@ -108,10 +108,10 @@ func getSystemData() map[string]string {
 	memstats := &runtime.MemStats{}
 	runtime.ReadMemStats(memstats)
 	mem := fmt.Sprintf("Used: %s | Allocated: %s | UsedHeap: %s | AllocatedHeap: %s",
-		pb.FormatBytes(int64(memstats.Alloc)),
-		pb.FormatBytes(int64(memstats.TotalAlloc)),
-		pb.FormatBytes(int64(memstats.HeapAlloc)),
-		pb.FormatBytes(int64(memstats.HeapSys)))
+		pb.Format(int64(memstats.Alloc)).To(pb.U_BYTES),
+		pb.Format(int64(memstats.TotalAlloc)).To(pb.U_BYTES),
+		pb.Format(int64(memstats.HeapAlloc)).To(pb.U_BYTES),
+		pb.Format(int64(memstats.HeapSys)).To(pb.U_BYTES))
 	platform := fmt.Sprintf("Host: %s | OS: %s | Arch: %s", host, runtime.GOOS, runtime.GOARCH)
 	goruntime := fmt.Sprintf("Version: %s | CPUs: %s", runtime.Version(), strconv.Itoa(runtime.NumCPU()))
 	return map[string]string{

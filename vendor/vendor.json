@@ -64,8 +64,8 @@
 		},
 		{
 			"path": "github.com/minio/pb",
-			"revision": "9c7ed8cbd7b5461796dafdfc25acdd80d137eda7",
-			"revisionTime": "2016-01-25T00:47:32-08:00"
+			"revision": "897f5fe4fea2d4f8f4dc07b7ede55a0489e26a00",
+			"revisionTime": "2016-02-19T09:37:49+03:00"
 		},
 		{
 			"path": "github.com/olekukonko/ts",
