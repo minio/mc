@@ -57,6 +57,24 @@ Download ``mc`` for:
 C:\Users\Username\Downloads> mc.exe --help
 ~~~
 
+#### Solaris/Illumos
+
+Download ``mc`` from https://dl.minio.io/client/mc/release/solaris-amd64/mc
+
+~~~
+$ chmod 755 mc
+$ ./mc --help
+~~~
+
+#### FreeBSD
+
+Download ``mc`` from https://dl.minio.io/client/mc/release/freebsd-amd64/mc
+
+~~~
+$ chmod 755 mc
+$ ./mc --help
+~~~
+
 #### Source
 <blockquote>
 NOTE:  Source installation is intended for only developers and advanced users. ‘mc update’ continuous delivery mechanism is not supported for ‘go get’ based binary builds. Please download official releases from https://minio.io/#mc.
