@@ -121,8 +121,9 @@ func parseReleaseData(data string) (time.Time, *probe.Error) {
 	if releaseDateSplits[0] != "mc" {
 		return time.Time{}, probe.NewError(errors.New("Update data malformed, missing mc tag"))
 	}
-	if releaseDateSplits[1] != "OFFICIAL" {
-		return time.Time{}, probe.NewError(errors.New("Update data malformed, missing OFFICIAL tag"))
+	// "OFFICIAL" tag is still kept for backward compatibility, we should remove this for the next release.
+	if releaseDateSplits[1] != "RELEASE" && releaseDateSplits[1] != "OFFICIAL" {
+		return time.Time{}, probe.NewError(errors.New("Update data malformed, missing RELEASE tag"))
 	}
 	dateSplits := strings.SplitN(releaseDateSplits[2], "T", 2)
 	if len(dateSplits) < 2 {
