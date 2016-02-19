@@ -104,14 +104,14 @@ type mirrorStatMessage struct {
 
 // mirrorStatMessage mirror accounting message
 func (c mirrorStatMessage) String() string {
-	speedBox := pb.FormatBytes(int64(c.Speed))
+	speedBox := pb.Format(int64(c.Speed)).To(pb.U_BYTES).String()
 	if speedBox == "" {
 		speedBox = "0 MB"
 	} else {
 		speedBox = speedBox + "/s"
 	}
-	message := fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.FormatBytes(c.Total),
-		pb.FormatBytes(c.Transferred), speedBox)
+	message := fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.Format(c.Total).To(pb.U_BYTES),
+		pb.Format(c.Transferred).To(pb.U_BYTES), speedBox)
 	return message
 }
 
