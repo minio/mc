@@ -2,15 +2,12 @@ LDFLAGS := $(shell go run buildscripts/gen-ldflags.go)
 
 all: install
 
-checkdeps:
+checks:
 	@echo "Checking deps:"
 	@(env bash buildscripts/checkdeps.sh)
+	@(env bash buildscripts/checkgopath.sh)
 
-checkgopath:
-	@echo "Checking if project is at ${GOPATH}"
-	@for mcpath in $(echo ${GOPATH} | sed 's/:/\n/g'); do if [ ! -d ${mcpath}/src/github.com/minio/mc ]; then echo "Project not found in ${mcpath}, please follow instructions provided at https://github.com/minio/minio/blob/master/CONTRIBUTING.md#setup-your-minio-github-repository" && exit 1; fi done
-
-getdeps: checkdeps checkgopath
+getdeps: checks
 	@go get github.com/golang/lint/golint && echo "Installed golint:"
 	@go get golang.org/x/tools/cmd/vet && echo "Installed vet:"
 	@go get github.com/fzipp/gocyclo && echo "Installed gocyclo:"
