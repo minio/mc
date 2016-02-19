@@ -28,7 +28,7 @@ import (
 )
 
 // minGolangRuntimeVersion minimum golang runtime version required for 'mc'.
-var minGolangRuntimeVersion = "1.5.1"
+var minGolangRuntimeVersion = "1.6"
 
 // Following code handles the current Golang release styles.
 // We might have to update them in future, if golang community
@@ -95,7 +95,7 @@ func checkGolangRuntimeVersion() {
 	v2 := newVersion(minGolangRuntimeVersion)
 	if v1.LessThan(v2) {
 		fatalIf(errDummy().Trace(getNormalizedGolangVersion(), minGolangRuntimeVersion),
-			"Old Golang runtime version ‘"+v1.String()+"’ detected., ‘mc’ requires minimum go1.5.1 or later.")
+			"Old Golang runtime version ‘"+v1.String()+"’ detected., ‘mc’ requires minimum go1.6 or later.")
 	}
 }
 

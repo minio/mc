@@ -7,15 +7,15 @@ This installation guide is based on Ubuntu 14.04+ on x86-64 platform.
 $ sudo apt-get install git build-essential
 ```
 
-##### Install Go 1.5+
+##### Install Go 1.6+
 
-Download Go 1.5+ from [https://golang.org/dl/](https://golang.org/dl/).
+Download Go 1.6+ from [https://golang.org/dl/](https://golang.org/dl/).
 
 ```sh
-$ wget https://storage.googleapis.com/golang/go1.5.1.linux-amd64.tar.gz
+$ wget https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz
 $ mkdir -p ${HOME}/bin/
 $ mkdir -p ${HOME}/go/
-$ tar -C ${HOME}/bin/ -xzf go1.5.1.linux-amd64.tar.gz
+$ tar -C ${HOME}/bin/ -xzf go1.6.linux-amd64.tar.gz
 ```
 ##### Setup GOROOT and GOPATH
 
@@ -53,7 +53,7 @@ $ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/maste
 $ brew install git python
 ```
 
-##### Install Go 1.5+
+##### Install Go 1.6+
 
 Install golang binaries using `brew`
 

@@ -13,8 +13,7 @@ env:
 - ARCH=i686
 
 go:
-- 1.5.2
-- 1.5.3
+- 1.6
 
 script:
 - diff -au <(gofmt -d *.go) <(printf "")
