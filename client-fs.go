@@ -89,7 +89,7 @@ func (f *fsClient) Put(reader io.Reader, size int64, contentType string, progres
 	objectPartPath := objectPath + partSuffix
 	if objectDir != "" {
 		// Create any missing top level directories.
-		if e := os.MkdirAll(objectDir, 0700); e != nil {
+		if e = os.MkdirAll(objectDir, 0700); e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
 			return 0, err.Trace(f.PathURL.Path)
 		}
@@ -181,13 +181,13 @@ func (f *fsClient) Put(reader io.Reader, size int64, contentType string, progres
 	// Close the input reader as well, if possible.
 	closer, ok := reader.(io.Closer)
 	if ok {
-		if e := closer.Close(); e != nil {
+		if e = closer.Close(); e != nil {
 			return totalWritten, probe.NewError(e)
 		}
 	}
 
 	// Close the file before rename.
-	if e := partFile.Close(); e != nil {
+	if e = partFile.Close(); e != nil {
 		return totalWritten, probe.NewError(e)
 	}
 
@@ -623,7 +623,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 						}
 						return nil
 					}
-					pathURL := *f.PathURL
+					pathURL = *f.PathURL
 					pathURL.Path = filepath.Join(pathURL.Path, dirName)
 					if incomplete {
 						if !strings.HasSuffix(lfi.Name(), partSuffix) {
@@ -662,7 +662,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 							}
 							return nil
 						}
-						pathURL := *f.PathURL
+						pathURL = *f.PathURL
 						pathURL.Path = filepath.Join(pathURL.Path, dirName)
 						if incomplete {
 							if !strings.HasSuffix(lfi.Name(), partSuffix) {
