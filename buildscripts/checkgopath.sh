@@ -19,8 +19,9 @@ _init() {
 
     shopt -s extglob
 
-    PWD=$(env pwd)
-    GOPATH=$(go env GOPATH)
+    # Fetch real paths instead of symlinks before comparing them
+    PWD=$(env pwd -P)
+    GOPATH=$(realpath $(go env GOPATH))
 }
 
 main() {
