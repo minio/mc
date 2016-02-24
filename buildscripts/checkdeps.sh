@@ -150,6 +150,9 @@ is_supported_os() {
         "SunOS")
 	    supported=1
             ;;
+        "FreeBSD")
+            supported=1
+	    ;;
         "*")
 	    supported=0
 	    ;;
@@ -163,7 +166,7 @@ is_supported_os() {
 is_supported_arch() {
     local supported
     case ${UNAME##* } in
-        "x86_64")
+        "x86_64" | "amd64")
             supported=1
             ;;
         "arm"*)
