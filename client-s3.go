@@ -550,10 +550,10 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 	b, o := c.url2BucketAndObject()
 	switch {
 	case b == "" && o == "":
-		buckets, err := c.api.ListBuckets()
-		if err != nil {
+		buckets, e := c.api.ListBuckets()
+		if e != nil {
 			contentCh <- &clientContent{
-				Err: probe.NewError(err),
+				Err: probe.NewError(e),
 			}
 			return
 		}
@@ -568,16 +568,23 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 			contentCh <- content
 		}
 	case b != "" && !strings.HasSuffix(c.targetURL.Path, string(c.targetURL.Separator)) && o == "":
-		e := c.api.BucketExists(b)
+		buckets, e := c.api.ListBuckets()
 		if e != nil {
 			contentCh <- &clientContent{
 				Err: probe.NewError(e),
 			}
 		}
-		content := &clientContent{}
-		content.URL = *c.targetURL
-		content.Type = os.ModeDir
-		contentCh <- content
+		for _, bucket := range buckets {
+			if bucket.Name == b {
+				content := &clientContent{}
+				content.URL = *c.targetURL
+				content.Size = 0
+				content.Time = bucket.CreationDate
+				content.Type = os.ModeDir
+				contentCh <- content
+				break
+			}
+		}
 	default:
 		metadata, e := c.api.StatObject(b, o)
 		switch e.(type) {
