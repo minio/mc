@@ -300,19 +300,25 @@ func (s *sessionV6) Delete() *probe.Error {
 		// the file is closed already
 		s.DataFP.Close()
 
+		// Remove the data file.
 		if e := os.Remove(name); e != nil {
 			return probe.NewError(e)
 		}
 	}
 
+	// Fetch the session file.
 	sessionFile, err := getSessionFile(s.SessionID)
 	if err != nil {
 		return err.Trace(s.SessionID)
 	}
 
+	// Remove session file
 	if e := os.Remove(sessionFile); e != nil {
 		return probe.NewError(e)
 	}
+
+	// Remove session backup file if any, ignore any error.
+	os.Remove(sessionFile + ".old")
 
 	return nil
 }

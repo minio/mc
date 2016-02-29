@@ -15,6 +15,11 @@
 # limitations under the License.
 #
 
+## use a portable implementation here `realpath` doesn't exist on Darwin/OS X.
+realpath() {
+    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+}
+
 _init() {
 
     shopt -s extglob
