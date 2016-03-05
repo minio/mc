@@ -107,19 +107,27 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 
 	defer close(mirrorURLsCh)
 
-	objectDifferenceTarget, err := objectDifferenceFactory(targetAlias, targetURL)
-	if err != nil {
-		mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetAlias, targetURL)}
-		return
-	}
-
 	sourceClient, err := newClientFromAlias(sourceAlias, sourceURL)
 	if err != nil {
 		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceAlias, sourceURL)}
 		return
 	}
 
-	for sourceContent := range sourceClient.List(true, false) {
+	targetClnt, err := newClientFromAlias(targetAlias, targetURL)
+	if err != nil {
+		mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetAlias, targetURL)}
+		return
+	}
+
+	// Setup object difference.
+	objectDifferenceTarget := objectDifferenceFactory(targetClnt)
+
+	// Set default values for listing.
+	isRecursive := true   // recursive is always true for diff.
+	isIncomplete := false // we will not compare any incomplete objects.
+
+	// List all the sources, compare using 'objectDifference' function.
+	for sourceContent := range sourceClient.List(isRecursive, isIncomplete) {
 		if sourceContent.Err != nil {
 			mirrorURLsCh <- mirrorURLs{
 				Error: sourceContent.Err.Trace(sourceClient.GetURL().String()),
@@ -129,8 +137,8 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 		if sourceContent.Type.IsDir() {
 			continue
 		}
-		suffix := strings.TrimPrefix(sourceContent.URL.String(), sourceURL)
-		differ, err := objectDifferenceTarget(suffix, sourceContent.Type, sourceContent.Size)
+		sourceSuffix := strings.TrimPrefix(sourceContent.URL.String(), sourceURL)
+		differ, err := objectDifferenceTarget(targetURL, sourceSuffix, sourceContent.Type, sourceContent.Size)
 		if err != nil {
 			mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceContent.URL.String())}
 			continue
@@ -140,7 +148,7 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 			continue
 		}
 		if differ == differType {
-			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(suffix)}
+			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(sourceSuffix)}
 			continue
 		}
 		if differ == differSize && !isForce {
@@ -149,7 +157,7 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 			continue
 		}
 		// either available only in source or size differs and force is set
-		targetPath := urlJoinPath(targetURL, suffix)
+		targetPath := urlJoinPath(targetURL, sourceSuffix)
 		targetContent := &clientContent{URL: *newURL(targetPath)}
 		mirrorURLsCh <- mirrorURLs{
 			SourceAlias:   sourceAlias,

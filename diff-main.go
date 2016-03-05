@@ -124,6 +124,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 	if err != nil {
 		fatalIf(err.Trace(firstURL), fmt.Sprintf("Unable to stat '%s'.", firstURL))
 	}
+
 	// Verify if its a directory.
 	if !firstContent.Type.IsDir() {
 		fatalIf(errInvalidArgument().Trace(firstURL), fmt.Sprintf("‘%s’ is not a folder.", firstURL))
@@ -134,6 +135,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 	if err != nil {
 		fatalIf(err.Trace(secondURL), fmt.Sprintf("Unable to stat '%s'.", secondURL))
 	}
+
 	// Verify if its a directory.
 	if !secondContent.Type.IsDir() {
 		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
@@ -161,40 +163,49 @@ func doDiffMain(firstURL, secondURL string) {
 		fatalIf(err.Trace(firstAlias, firstURL, secondAlias, secondURL),
 			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
-	difference, err := objectDifferenceFactory(secondAlias, secondURL)
+
+	secondClient, err := newClientFromAlias(secondAlias, secondURL)
 	if err != nil {
 		fatalIf(err.Trace(firstAlias, firstURL, secondAlias, secondURL),
 			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
-	isRecursive := true
-	isIncomplete := false
-	for sourceContent := range firstClient.List(isRecursive, isIncomplete) {
-		if sourceContent.Err != nil {
-			switch sourceContent.Err.ToGoError().(type) {
+
+	// Setup object difference function.
+	difference := objectDifferenceFactory(secondClient)
+
+	// Set default values for listing.
+	isRecursive := true   // recursive is always true for diff.
+	isIncomplete := false // we will not compare any incomplete objects.
+
+	// List all the elements on first URL and compare with
+	// 'difference' function.
+	for firstContent := range firstClient.List(isRecursive, isIncomplete) {
+		if firstContent.Err != nil {
+			switch firstContent.Err.ToGoError().(type) {
 			// Handle this specifically for filesystem related errors.
 			case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
-				errorIf(sourceContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
+				errorIf(firstContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
 			default:
-				fatalIf(sourceContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
+				fatalIf(firstContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
 			}
 			continue
 		}
-		if sourceContent.Type.IsDir() {
+		if firstContent.Type.IsDir() {
 			continue
 		}
-		suffix := strings.TrimPrefix(sourceContent.URL.String(), firstURL)
-		differ, err := difference(suffix, sourceContent.Type, sourceContent.Size)
+		firstSuffix := strings.TrimPrefix(firstContent.URL.String(), firstURL)
+		differ, err := difference(secondURL, firstSuffix, firstContent.Type, firstContent.Size)
 		if err != nil {
-			errorIf(sourceContent.Err.Trace(secondURL, suffix),
-				fmt.Sprintf("Failed on '%s'", urlJoinPath(secondURL, suffix)))
+			errorIf(firstContent.Err.Trace(secondURL, firstSuffix),
+				fmt.Sprintf("Failed on '%s'", urlJoinPath(secondURL, firstSuffix)))
 			continue
 		}
 		if differ == differNone {
 			continue
 		}
 		printMsg(diffMessage{
-			FirstURL:  sourceContent.URL.String(),
-			SecondURL: urlJoinPath(secondURL, suffix),
+			FirstURL:  firstContent.URL.String(),
+			SecondURL: urlJoinPath(secondURL, firstSuffix),
 			Diff:      differ,
 		})
 	}

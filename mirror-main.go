@@ -294,8 +294,7 @@ func doMirrorSession(session *sessionV6) {
 					// For all non critical errors we can continue for the
 					// remaining files.
 					switch sURLs.Error.ToGoError().(type) {
-					// Handle this specifically for filesystem related
-					// errors.
+					// Handle this specifically for filesystem related errors.
 					case BrokenSymlink:
 						continue
 					case TooManyLevelsSymlink:
@@ -311,7 +310,7 @@ func doMirrorSession(session *sessionV6) {
 					}
 					// For critical errors we should exit. Session
 					// can be resumed after the user figures out
-					// the  problem.
+					// the problem.
 					session.CloseAndDie()
 				}
 			}
