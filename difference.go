@@ -22,10 +22,10 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// objectDifference function finds the difference between object on source and target
-// it takes suffix string, type and size on the source
-// objectDifferenceFactory returns objectDifference function
-type objectDifference func(string, os.FileMode, int64) (string, *probe.Error)
+// objectDifference function finds the difference between object on
+// source and target it takes suffix string, type and size on the
+// source objectDifferenceFactory returns objectDifference function
+type objectDifference func(string, string, os.FileMode, int64) (string, *probe.Error)
 
 const (
 	differSize      string = "size"          // differs in size
@@ -37,24 +37,20 @@ const (
 // objectDifferenceFactory returns objectDifference function to check for difference
 // between sourceURL and targetURL
 // for usage reference check diff and mirror commands
-func objectDifferenceFactory(targetAlias, targetURL string) (objectDifference, *probe.Error) {
-	clnt, err := newClientFromAlias(targetAlias, targetURL)
-	if err != nil {
-		return nil, err.Trace(targetAlias, targetURL)
-	}
+func objectDifferenceFactory(targetClnt Client) objectDifference {
 	isIncomplete := false
 	isRecursive := true
-	ch := clnt.List(isRecursive, isIncomplete)
-	current := targetURL
+	ch := targetClnt.List(isRecursive, isIncomplete)
 	reachedEOF := false
 	ok := false
 	var content *clientContent
 
-	difference := func(suffix string, srcType os.FileMode, srcSize int64) (string, *probe.Error) {
+	return func(targetURL string, suffix string, srcType os.FileMode, srcSize int64) (string, *probe.Error) {
 		if reachedEOF {
 			// would mean the suffix is not on target
 			return differOnlyFirst, nil
 		}
+		current := targetURL
 		expected := urlJoinPath(targetURL, suffix)
 		for {
 			if expected < current {
@@ -84,5 +80,4 @@ func objectDifferenceFactory(targetAlias, targetURL string) (objectDifference, *
 			current = content.URL.String()
 		}
 	}
-	return difference, nil
 }
