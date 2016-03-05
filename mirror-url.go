@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minio Client (C) 2015, 2016 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirrorURLsCh chan<- mirrorURLs) {
+func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake bool, mirrorURLsCh chan<- mirrorURLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -151,8 +151,8 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(sourceSuffix)}
 			continue
 		}
-		if differ == differSize && !isForce {
-			// size differs and force not set
+		if differ == differSize && !isForce && !isFake {
+			// Size differs and force not set
 			mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(sourceContent.URL.String())}
 			continue
 		}
@@ -168,8 +168,8 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, mirror
 	}
 }
 
-func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool) <-chan mirrorURLs {
+func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
-	go deltaSourceTargets(sourceURL, targetURL, isForce, mirrorURLsCh)
+	go deltaSourceTargets(sourceURL, targetURL, isForce, isFake, mirrorURLsCh)
 	return mirrorURLsCh
 }
