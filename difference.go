@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/minio/minio/pkg/probe"
 )
@@ -25,18 +26,21 @@ import (
 // objectDifference function finds the difference between object on
 // source and target it takes suffix string, type and size on the
 // source objectDifferenceFactory returns objectDifference function
-type objectDifference func(string, string, os.FileMode, int64) (string, *probe.Error)
+type objectDifference func(string, string, os.FileMode, int64, time.Time) (differType, *probe.Error)
+
+// differType difference in type.
+type differType string
 
 const (
-	differSize      string = "size"          // differs in size
-	differOnlyFirst string = "only-in-first" // only on source
-	differType      string = "type"          // differs in type, ex file/directory
-	differNone      string = ""              // does not differ
+	differInSize  differType = "size"          // differs in size
+	differInTime             = "time"          // differs in time
+	differInFirst            = "only-in-first" // only on first source
+	differInType             = "type"          // differs in type, exfile/directory
+	differInNone             = ""              // does not differ
 )
 
 // objectDifferenceFactory returns objectDifference function to check for difference
-// between sourceURL and targetURL
-// for usage reference check diff and mirror commands
+// between sourceURL and targetURL, for usage reference check diff and mirror commands.
 func objectDifferenceFactory(targetClnt Client) objectDifference {
 	isIncomplete := false
 	isRecursive := true
@@ -45,34 +49,39 @@ func objectDifferenceFactory(targetClnt Client) objectDifference {
 	ok := false
 	var content *clientContent
 
-	return func(targetURL string, suffix string, srcType os.FileMode, srcSize int64) (string, *probe.Error) {
+	return func(targetURL string, srcSuffix string, srcType os.FileMode, srcSize int64, srcTime time.Time) (differType, *probe.Error) {
 		if reachedEOF {
-			// would mean the suffix is not on target
-			return differOnlyFirst, nil
+			// Would mean the suffix is not on target.
+			return differInFirst, nil
 		}
 		current := targetURL
-		expected := urlJoinPath(targetURL, suffix)
+		expected := urlJoinPath(targetURL, srcSuffix)
 		for {
 			if expected < current {
-				return differOnlyFirst, nil // not available in the target
+				return differInFirst, nil // Not available in the target.
 			}
 			if expected == current {
 				tgtType := content.Type
 				tgtSize := content.Size
+				tgtTime := content.Time
 				if srcType.IsRegular() && !tgtType.IsRegular() {
-					// Type differes. Source is never a directory
-					return differType, nil
+					// Type differes. Source is never a directory.
+					return differInType, nil
 				}
 				if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
-					// regular files differing in size
-					return differSize, nil
+					// Regular files differing in size.
+					return differInSize, nil
 				}
-				return differNone, nil // available in the target
+				if (srcType.IsRegular() && tgtType.IsRegular()) && srcTime.After(tgtTime) {
+					// Regular files differing in time.
+					return differInTime, nil
+				}
+				return differInNone, nil // Available in the target.
 			}
 			content, ok = <-ch
 			if !ok {
 				reachedEOF = true
-				return differOnlyFirst, nil
+				return differInFirst, nil
 			}
 			if content.Err != nil {
 				return "", content.Err.Trace()
