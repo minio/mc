@@ -39,8 +39,8 @@
 		},
 		{
 			"path": "github.com/minio/minio-go",
-			"revision": "5576cd0f5a276b64973239ebe172aa8d2380f950",
-			"revisionTime": "2016-02-15T17:55:49-08:00"
+			"revision": "a4c6c439feb53e1aad083f0a3f0083a047092c17",
+			"revisionTime": "2016-03-10T10:12:11-08:00"
 		},
 		{
 			"path": "github.com/minio/minio/pkg/atomic",
@@ -64,8 +64,8 @@
 		},
 		{
 			"path": "github.com/minio/pb",
-			"revision": "897f5fe4fea2d4f8f4dc07b7ede55a0489e26a00",
-			"revisionTime": "2016-02-19T09:37:49+03:00"
+			"revision": "1bf13e09a92ebfb601916804694e3a67e7e92da2",
+			"revisionTime": "2016-03-09T18:02:02-08:00"
 		},
 		{
 			"path": "github.com/olekukonko/ts",
