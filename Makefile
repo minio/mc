@@ -84,4 +84,5 @@ experimental: verifiers
 clean:
 	@rm -f cover.out
 	@rm -f mc
+	@find . -name '*.test' | xargs rm -fv
 	@rm -fr release
