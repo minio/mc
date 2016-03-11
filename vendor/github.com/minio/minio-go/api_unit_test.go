@@ -26,6 +26,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 type customReader struct{}
@@ -594,6 +595,34 @@ func TestValidEndpointURL(t *testing.T) {
 		}
 		if valid != w.valid {
 			t.Fatal("Error")
+		}
+	}
+}
+
+// Tests expontential backoff logic
+func TestExponentialBackoff(t *testing.T) {
+	want := []time.Duration{
+		time.Second,
+		time.Second * 2,
+		time.Second * 4,
+		time.Second * 8,
+		time.Second * 16,
+		time.Second * 20,
+		time.Second * 20, // cap at 20s
+	}
+	for i, w := range want {
+		got := exponentialBackoffWait(time.Second, i, time.Second*20, NoJitter)
+		if got != w {
+			t.Fatalf("Error: jitter: NoJitter, %v, got %v, want %v", i, got, w)
+		}
+	}
+	for _, jitter := range []float64{0.2, 0.5, MaxJitter} {
+		for i, w := range want {
+			got := exponentialBackoffWait(time.Second, i, time.Second*20, jitter)
+			min := w - time.Duration(float64(w)*jitter)
+			if got < min || got > w {
+				t.Fatalf("Error: jitter: %v, %v, got %v, want [%v, %v]", jitter, i, got, min, w)
+			}
 		}
 	}
 }
