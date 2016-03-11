@@ -138,20 +138,20 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake
 			continue
 		}
 		sourceSuffix := strings.TrimPrefix(sourceContent.URL.String(), sourceURL)
-		differ, err := objectDifferenceTarget(targetURL, sourceSuffix, sourceContent.Type, sourceContent.Size)
+		differ, err := objectDifferenceTarget(targetURL, sourceSuffix, sourceContent.Type, sourceContent.Size, sourceContent.Time)
 		if err != nil {
 			mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceContent.URL.String())}
 			continue
 		}
-		if differ == differNone {
-			// no difference, continue
+		if differ == differInNone {
+			// No difference, continue.
 			continue
 		}
-		if differ == differType {
+		if differ == differInType {
 			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(sourceSuffix)}
 			continue
 		}
-		if differ == differSize && !isForce && !isFake {
+		if differ == differInSize && !isForce && !isFake {
 			// Size differs and force not set
 			mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(sourceContent.URL.String())}
 			continue

@@ -70,7 +70,7 @@ type diffMessage struct {
 	Status    string       `json:"status"`
 	FirstURL  string       `json:"first"`
 	SecondURL string       `json:"second"`
-	Diff      string       `json:"diff"`
+	Diff      differType   `json:"diff"`
 	Error     *probe.Error `json:"error,omitempty"`
 }
 
@@ -78,15 +78,18 @@ type diffMessage struct {
 func (d diffMessage) String() string {
 	msg := ""
 	switch d.Diff {
-	case "only-in-first":
+	case differInFirst:
 		msg = console.Colorize("DiffMessage",
 			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
-	case "type":
+	case differInType:
 		msg = console.Colorize("DiffMessage",
 			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
-	case "size":
+	case differInSize:
 		msg = console.Colorize("DiffMessage",
 			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
+	case differInTime:
+		msg = console.Colorize("DiffMessage",
+			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffTime", " - differ in modified time.")
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
 			"Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
@@ -100,7 +103,7 @@ func (d diffMessage) JSON() string {
 	d.Status = "success"
 	diffJSONBytes, e := json.Marshal(d)
 	fatalIf(probe.NewError(e),
-		"Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+d.Diff+"’.")
+		"Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+string(d.Diff)+"’.")
 	return string(diffJSONBytes)
 }
 
@@ -194,13 +197,13 @@ func doDiffMain(firstURL, secondURL string) {
 			continue
 		}
 		firstSuffix := strings.TrimPrefix(firstContent.URL.String(), firstURL)
-		differ, err := difference(secondURL, firstSuffix, firstContent.Type, firstContent.Size)
+		differ, err := difference(secondURL, firstSuffix, firstContent.Type, firstContent.Size, firstContent.Time)
 		if err != nil {
 			errorIf(firstContent.Err.Trace(secondURL, firstSuffix),
 				fmt.Sprintf("Failed on '%s'", urlJoinPath(secondURL, firstSuffix)))
 			continue
 		}
-		if differ == differNone {
+		if differ == differInNone {
 			continue
 		}
 		printMsg(diffMessage{
@@ -224,6 +227,7 @@ func mainDiff(ctx *cli.Context) {
 	console.SetColor("DiffOnlyInFirst", color.New(color.FgRed, color.Bold))
 	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
 	console.SetColor("DiffSize", color.New(color.FgMagenta, color.Bold))
+	console.SetColor("DiffTime", color.New(color.FgYellow, color.Bold))
 
 	URLs := ctx.Args()
 	firstURL := URLs[0]
