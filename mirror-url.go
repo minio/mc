@@ -90,7 +90,9 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake bool, mirrorURLsCh chan<- mirrorURLs) {
+func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, mirrorURLsCh chan<- mirrorURLs) {
+	defer close(mirrorURLsCh)
+
 	// source and targets are always directories
 	sourceSeparator := string(newURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -105,60 +107,52 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake
 	sourceAlias, sourceURL, _ := mustExpandAlias(sourceURL)
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	defer close(mirrorURLsCh)
-
 	sourceClient, err := newClientFromAlias(sourceAlias, sourceURL)
 	if err != nil {
 		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceAlias, sourceURL)}
 		return
 	}
 
-	targetClnt, err := newClientFromAlias(targetAlias, targetURL)
+	targetClient, err := newClientFromAlias(targetAlias, targetURL)
 	if err != nil {
 		mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetAlias, targetURL)}
 		return
 	}
 
-	// Setup object difference.
-	objectDifferenceTarget := objectDifferenceFactory(targetClnt)
-
-	// Set default values for listing.
-	isRecursive := true   // recursive is always true for diff.
-	isIncomplete := false // we will not compare any incomplete objects.
-
-	// List all the sources, compare using 'objectDifference' function.
-	for sourceContent := range sourceClient.List(isRecursive, isIncomplete) {
-		if sourceContent.Err != nil {
+	for d := range differenceCh(sourceClient, targetClient) {
+		if d.err != nil {
 			mirrorURLsCh <- mirrorURLs{
-				Error: sourceContent.Err.Trace(sourceClient.GetURL().String()),
+				Error: d.err.Trace(sourceURL, targetURL),
 			}
 			continue
 		}
-		if sourceContent.Type.IsDir() {
+		differ := d.dType
+		if isRemove && isForce && differ == differInTime || differ == differInSize {
+			// Do not attempt to list files for removal if they happen
+			// to differ in time and size.
 			continue
 		}
-		sourceSuffix := strings.TrimPrefix(sourceContent.URL.String(), sourceURL)
-		differ, err := objectDifferenceTarget(targetURL, sourceSuffix, sourceContent.Type, sourceContent.Size, sourceContent.Time)
-		if err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceContent.URL.String())}
+		if isRemove && isForce && differ == differInSecond {
+			// mirrorURLsCh <- mirrorURLs{}
 			continue
 		}
-		if differ == differInNone {
+		if differ == differInNone || differ == differInSecond {
 			// No difference, continue.
 			continue
 		}
 		if differ == differInType {
-			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(sourceSuffix)}
+			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(d.targetURL)}
 			continue
 		}
 		if differ == differInSize && !isForce && !isFake {
 			// Size differs and force not set
-			mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(sourceContent.URL.String())}
+			mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(d.sourceURL)}
 			continue
 		}
 		// either available only in source or size differs and force is set
-		targetPath := urlJoinPath(targetURL, sourceSuffix)
-		targetContent := &clientContent{URL: *newURL(targetPath)}
+		sourceContent := d.sourceContent
+		sourceSuffix := strings.TrimPrefix(sourceContent.URL.String(), sourceURL)
+		targetContent := &clientContent{URL: *newURL(urlJoinPath(targetURL, sourceSuffix))}
 		mirrorURLsCh <- mirrorURLs{
 			SourceAlias:   sourceAlias,
 			SourceContent: sourceContent,
@@ -168,8 +162,8 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake
 	}
 }
 
-func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool) <-chan mirrorURLs {
+func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
-	go deltaSourceTargets(sourceURL, targetURL, isForce, isFake, mirrorURLsCh)
+	go deltaSourceTargets(sourceURL, targetURL, isForce, isFake, isRemove, mirrorURLsCh)
 	return mirrorURLsCh
 }

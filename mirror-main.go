@@ -42,11 +42,15 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "force",
-			Usage: "Force overwrite of an existing target(s).",
+			Usage: "Force overwrite of an existing target.",
 		},
 		cli.BoolFlag{
 			Name:  "fake",
 			Usage: "Perform a fake mirror operation.",
+		},
+		cli.BoolFlag{
+			Name:  "remove",
+			Usage: "Removes extraneous files from target.",
 		},
 	}
 )
@@ -67,10 +71,10 @@ FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
+   1. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage.
       $ mc {{.Name}} play/photos/2014 s3/backup-photos
 
-   2. Mirror a local folder recursively to Amazon S3 cloud storage.
+   2. Mirror a local folder to Amazon S3 cloud storage.
       $ mc {{.Name}} backup/ s3/archive
 
    3. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
@@ -81,6 +85,12 @@ EXAMPLES:
 
    5. Fake mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage.
       $ mc {{.Name}} --fake play/photos/2014 s3/backup-photos/2014
+
+   6. Fake delete extraneous files on Amazon S3 cloud storage, while mirroring local folder.
+      $ mc {{.Name}} --fake --force --remove backup/ s3/miniocloud/backup
+
+   7. Mirror a local folder and delete extraneous files on Amazon S3 cloud storage.
+      $ mc {{.Name}} --force --remove Pictures/2014 s3/miniocloud/2014
 
 `,
 }
@@ -183,7 +193,7 @@ func doMirrorFake(sURLs mirrorURLs, progressReader *progressBar) mirrorURLs {
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
-func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, trapCh <-chan bool) {
+func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, isRemove bool, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURL := session.Header.CommandArgs[1]
 	var totalBytes int64
@@ -197,7 +207,7 @@ func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, trapCh <
 		scanBar = scanBarFactory()
 	}
 
-	URLsCh := prepareMirrorURLs(sourceURL, targetURL, isForce, isFake)
+	URLsCh := prepareMirrorURLs(sourceURL, targetURL, isForce, isFake, isRemove)
 	done := false
 	for done == false {
 		select {
@@ -247,12 +257,13 @@ func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, trapCh <
 func doMirrorSession(session *sessionV6) {
 	isForce := session.Header.CommandBoolFlags["force"]
 	isFake := session.Header.CommandBoolFlags["fake"]
+	isRemove := session.Header.CommandBoolFlags["remove"]
 
 	// Initialize signal trap.
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
-		doPrepareMirrorURLs(session, isForce, isFake, trapCh)
+		doPrepareMirrorURLs(session, isForce, isFake, isRemove, trapCh)
 	}
 
 	// Enable accounting reader by default.
@@ -394,8 +405,10 @@ func mainMirror(ctx *cli.Context) {
 	// Set command flags from context.
 	isForce := ctx.Bool("force")
 	isFake := ctx.Bool("fake")
+	isRemove := ctx.Bool("remove")
 	session.Header.CommandBoolFlags["force"] = isForce
 	session.Header.CommandBoolFlags["fake"] = isFake
+	session.Header.CommandBoolFlags["remove"] = isRemove
 
 	// extract URLs.
 	session.Header.CommandArgs = ctx.Args()
