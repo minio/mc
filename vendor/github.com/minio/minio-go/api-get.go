@@ -140,8 +140,9 @@ func (c Client) GetObject(bucketName, objectName string) (*Object, error) {
 	if err := isValidObjectName(objectName); err != nil {
 		return nil, err
 	}
-	// Send an explicit info to get the actual object size.
-	objectInfo, err := c.StatObject(bucketName, objectName)
+
+	// Start the request as soon Get is initiated.
+	httpReader, objectInfo, err := c.getObject(bucketName, objectName, 0, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +154,7 @@ func (c Client) GetObject(bucketName, objectName string) (*Object, error) {
 	// Create done channel.
 	doneCh := make(chan struct{})
 
-	// This routine feeds partial object data as and when the caller
-	// reads.
+	// This routine feeds partial object data as and when the caller reads.
 	go func() {
 		defer close(reqCh)
 		defer close(resCh)
@@ -167,27 +167,27 @@ func (c Client) GetObject(bucketName, objectName string) (*Object, error) {
 				return
 			// Request message.
 			case req := <-reqCh:
-				// Get shortest length.
-				// NOTE: Last remaining bytes are usually smaller than
-				// req.Buffer size. Use that as the final length.
-				// Don't use Math.min() here to avoid converting int64 to float64
-				length := int64(len(req.Buffer))
-				if objectInfo.Size-req.Offset < length {
-					length = objectInfo.Size - req.Offset
-				}
-				httpReader, _, err := c.getObject(bucketName, objectName, req.Offset, int64(length))
-				if err != nil {
-					resCh <- readResponse{
-						Error: err,
+				// Offset changes fetch the new object at an Offset.
+				if req.DidOffsetChange {
+					// Read from offset.
+					httpReader, _, err = c.getObject(bucketName, objectName, req.Offset, 0)
+					if err != nil {
+						resCh <- readResponse{
+							Error: err,
+						}
+						return
 					}
-					return
 				}
+
+				// Read at least req.Buffer bytes, if not we have
+				// reached our EOF.
 				size, err := io.ReadFull(httpReader, req.Buffer)
 				if err == io.ErrUnexpectedEOF {
 					// If an EOF happens after reading some but not
 					// all the bytes ReadFull returns ErrUnexpectedEOF
 					err = io.EOF
 				}
+				// Reply back how much was read.
 				resCh <- readResponse{
 					Size:  int(size),
 					Error: err,
@@ -208,8 +208,9 @@ type readResponse struct {
 // Read request message container to communicate with internal
 // go-routine.
 type readRequest struct {
-	Buffer []byte
-	Offset int64 // readAt offset.
+	Buffer          []byte
+	Offset          int64 // readAt offset.
+	DidOffsetChange bool
 }
 
 // Object represents an open object. It implements Read, ReadAt,
@@ -222,6 +223,7 @@ type Object struct {
 	reqCh      chan<- readRequest
 	resCh      <-chan readResponse
 	doneCh     chan<- struct{}
+	prevOffset int64
 	currOffset int64
 	objectInfo ObjectInfo
 
@@ -244,7 +246,7 @@ func (o *Object) Read(b []byte) (n int, err error) {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
 
-	// Previous prevErr is which was saved in previous operation.
+	// prevErr is previous error saved from previous operation.
 	if o.prevErr != nil || o.isClosed {
 		return 0, o.prevErr
 	}
@@ -254,13 +256,27 @@ func (o *Object) Read(b []byte) (n int, err error) {
 		return 0, io.EOF
 	}
 
-	// Send current information over control channel to indicate we
-	// are ready.
+	// Send current information over control channel to indicate we are ready.
 	reqMsg := readRequest{}
-
-	// Send the offset and pointer to the buffer over the channel.
+	// Send the pointer to the buffer over the channel.
 	reqMsg.Buffer = b
-	reqMsg.Offset = o.currOffset
+
+	// Verify if offset has changed and currOffset is greater than
+	// previous offset. Perhaps due to Seek().
+	offsetChange := o.prevOffset - o.currOffset
+	if offsetChange < 0 {
+		offsetChange = -offsetChange
+	}
+	if offsetChange > 0 {
+		// Fetch the new reader at the current offset again.
+		reqMsg.Offset = o.currOffset
+		reqMsg.DidOffsetChange = true
+	} else {
+		// No offset changes no need to fetch new reader, continue
+		// reading.
+		reqMsg.DidOffsetChange = false
+		reqMsg.Offset = 0
+	}
 
 	// Send read request over the control channel.
 	o.reqCh <- reqMsg
@@ -273,6 +289,9 @@ func (o *Object) Read(b []byte) (n int, err error) {
 
 	// Update current offset.
 	o.currOffset += bytesRead
+
+	// Save the current offset as previous offset.
+	o.prevOffset = o.currOffset
 
 	if dataMsg.Error == nil {
 		// If currOffset read is equal to objectSize
@@ -317,7 +336,7 @@ func (o *Object) ReadAt(b []byte, offset int64) (n int, err error) {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
 
-	// prevErr is which was saved in previous operation.
+	// prevErr is error which was saved in previous operation.
 	if o.prevErr != nil || o.isClosed {
 		return 0, o.prevErr
 	}
@@ -334,7 +353,16 @@ func (o *Object) ReadAt(b []byte, offset int64) (n int, err error) {
 
 	// Send the offset and pointer to the buffer over the channel.
 	reqMsg.Buffer = b
-	reqMsg.Offset = offset
+
+	// For ReadAt offset always changes, minor optimization where
+	// offset same as currOffset we don't change the offset.
+	reqMsg.DidOffsetChange = offset != o.currOffset
+	if reqMsg.DidOffsetChange {
+		// Set new offset.
+		reqMsg.Offset = offset
+		// Save new offset as current offset.
+		o.currOffset = offset
+	}
 
 	// Send read request over the control channel.
 	o.reqCh <- reqMsg
@@ -345,10 +373,16 @@ func (o *Object) ReadAt(b []byte, offset int64) (n int, err error) {
 	// Bytes read.
 	bytesRead := int64(dataMsg.Size)
 
+	// Update current offset.
+	o.currOffset += bytesRead
+
+	// Save current offset as previous offset before returning.
+	o.prevOffset = o.currOffset
+
 	if dataMsg.Error == nil {
-		// If offset+bytes read is equal to objectSize
+		// If currentOffset is equal to objectSize
 		// we have reached end of file, we return io.EOF.
-		if offset+bytesRead == o.objectInfo.Size {
+		if o.currOffset >= o.objectInfo.Size {
 			return dataMsg.Size, io.EOF
 		}
 		return dataMsg.Size, nil
@@ -378,7 +412,7 @@ func (o *Object) Seek(offset int64, whence int) (n int64, err error) {
 	defer o.mutex.Unlock()
 
 	if o.prevErr != nil {
-		// At EOF seeking is legal, for any other errors we return.
+		// At EOF seeking is legal allow only io.EOF, for any other errors we return.
 		if o.prevErr != io.EOF {
 			return 0, o.prevErr
 		}
@@ -388,6 +422,11 @@ func (o *Object) Seek(offset int64, whence int) (n int64, err error) {
 	if offset < 0 && whence != 2 {
 		return 0, ErrInvalidArgument(fmt.Sprintf("Negative position not allowed for %d.", whence))
 	}
+
+	// Save current offset as previous offset.
+	o.prevOffset = o.currOffset
+
+	// Switch through whence.
 	switch whence {
 	default:
 		return 0, ErrInvalidArgument(fmt.Sprintf("Invalid whence %d", whence))

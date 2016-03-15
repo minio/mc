@@ -1,6 +1,6 @@
 {
 	"comment": "",
-	"ignore": "",
+	"ignore": "appengine test",
 	"package": [
 		{
 			"path": "github.com/dustin/go-humanize",
@@ -39,8 +39,8 @@
 		},
 		{
 			"path": "github.com/minio/minio-go",
-			"revision": "a4c6c439feb53e1aad083f0a3f0083a047092c17",
-			"revisionTime": "2016-03-10T10:12:11-08:00"
+			"revision": "90ddaf563d06ffb99697b98f1165c9ef93425426",
+			"revisionTime": "2016-03-13T01:34:49-08:00"
 		},
 		{
 			"path": "github.com/minio/minio/pkg/atomic",

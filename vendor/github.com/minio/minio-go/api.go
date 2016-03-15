@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -30,6 +31,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -57,9 +59,12 @@ type Client struct {
 	httpClient     *http.Client
 	bucketLocCache *bucketLocationCache
 
-	// Advanced functionality
+	// Advanced functionality.
 	isTraceEnabled bool
 	traceOutput    io.Writer
+
+	// Random seed.
+	random *rand.Rand
 }
 
 // Global constants.
@@ -120,6 +125,29 @@ func New(endpoint string, accessKeyID, secretAccessKey string, insecure bool) (*
 	return clnt, nil
 }
 
+// lockedRandSource provides protected rand source, implements rand.Source interface.
+type lockedRandSource struct {
+	lk  sync.Mutex
+	src rand.Source
+}
+
+// Int63 returns a non-negative pseudo-random 63-bit integer as an
+// int64.
+func (r *lockedRandSource) Int63() (n int64) {
+	r.lk.Lock()
+	n = r.src.Int63()
+	r.lk.Unlock()
+	return
+}
+
+// Seed uses the provided seed value to initialize the generator to a
+// deterministic state.
+func (r *lockedRandSource) Seed(seed int64) {
+	r.lk.Lock()
+	r.src.Seed(seed)
+	r.lk.Unlock()
+}
+
 func privateNew(endpoint, accessKeyID, secretAccessKey string, insecure bool) (*Client, error) {
 	// construct endpoint.
 	endpointURL, err := getEndpointURL(endpoint, insecure)
@@ -147,7 +175,11 @@ func privateNew(endpoint, accessKeyID, secretAccessKey string, insecure bool) (*
 		Transport: http.DefaultTransport,
 	}
 
+	// Instantiae bucket location cache.
 	clnt.bucketLocCache = newBucketLocationCache()
+
+	// Introduce a new locked random seed.
+	clnt.random = rand.New(&lockedRandSource{src: rand.NewSource(time.Now().UTC().UnixNano())})
 
 	// Return.
 	return clnt, nil
@@ -384,7 +416,7 @@ func (c Client) executeMethod(method string, metadata requestMetadata) (res *htt
 	// error until maxRetries have been exhausted, retry attempts are
 	// performed after waiting for a given period of time in a
 	// binomial fashion.
-	for range newRetryTimer(MaxRetry, time.Second, time.Second*30, MaxJitter) {
+	for range c.newRetryTimer(MaxRetry, time.Second, time.Second*30, MaxJitter) {
 		if isRetryable {
 			// Seek back to beginning for each attempt.
 			if _, err = bodySeeker.Seek(0, 0); err != nil {
@@ -435,6 +467,12 @@ func (c Client) executeMethod(method string, metadata requestMetadata) (res *htt
 		if isS3CodeRetryable(errResponse.Code) {
 			continue // Retry.
 		}
+
+		// Verify if http status code is retryable.
+		if isHTTPStatusRetryable(res.StatusCode) {
+			continue // Retry.
+		}
+
 		// For all other cases break out of the retry loop.
 		break
 	}
