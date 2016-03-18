@@ -454,6 +454,15 @@ func (c Client) executeMethod(method string, metadata requestMetadata) (res *htt
 			}
 		}
 
+		// Read the body to be saved later.
+		errBodyBytes, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+		// Save the body.
+		errBodySeeker := bytes.NewReader(errBodyBytes)
+		res.Body = ioutil.NopCloser(errBodySeeker)
+
 		// For errors verify if its retryable otherwise fail quickly.
 		errResponse := ToErrorResponse(httpRespToErrorResponse(res, metadata.bucketName, metadata.objectName))
 		// Bucket region if set in error response, we can retry the
@@ -472,6 +481,10 @@ func (c Client) executeMethod(method string, metadata requestMetadata) (res *htt
 		if isHTTPStatusRetryable(res.StatusCode) {
 			continue // Retry.
 		}
+
+		// Save the body back again.
+		errBodySeeker.Seek(0, 0) // Seek back to starting point.
+		res.Body = ioutil.NopCloser(errBodySeeker)
 
 		// For all other cases break out of the retry loop.
 		break
@@ -560,7 +573,7 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 
 	// set md5Sum for content protection.
 	if metadata.contentMD5Bytes != nil {
-		req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(metadata.contentMD5Bytes))
+		req.Header.Set("Content-Md5", base64.StdEncoding.EncodeToString(metadata.contentMD5Bytes))
 	}
 
 	// Sign the request for all authenticated requests.

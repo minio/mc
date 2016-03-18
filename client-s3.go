@@ -237,39 +237,33 @@ func (c *s3Client) MakeBucket(region string) *probe.Error {
 	if err := isValidBucketName(bucket); err != nil {
 		return err.Trace(bucket)
 	}
-	e := c.api.MakeBucket(bucket, minio.BucketACL("private"), region)
+	e := c.api.MakeBucket(bucket, region)
 	if e != nil {
 		return probe.NewError(e)
 	}
 	return nil
 }
 
-// GetBucketAccess get acl on a bucket.
-func (c *s3Client) GetBucketAccess() (acl string, err *probe.Error) {
+// GetAccess get access policy permissions.
+func (c *s3Client) GetAccess() (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	if object != "" {
-		return "", probe.NewError(InvalidBucketName{Bucket: filepath.Join(bucket, object)})
-	}
 	if bucket == "" {
 		return "", probe.NewError(BucketNameEmpty{})
 	}
-	bucketACL, e := c.api.GetBucketACL(bucket)
+	bucketPolicy, e := c.api.GetBucketPolicy(bucket, object)
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-	return bucketACL.String(), nil
+	return string(bucketPolicy), nil
 }
 
-// SetBucketAccess set acl on a bucket
-func (c *s3Client) SetBucketAccess(acl string) *probe.Error {
+// SetAccess set access policy permissions.
+func (c *s3Client) SetAccess(bucketPolicy string) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
-	if object != "" {
-		return probe.NewError(InvalidBucketName{Bucket: filepath.Join(bucket, object)})
-	}
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
-	e := c.api.SetBucketACL(bucket, minio.BucketACL(acl))
+	e := c.api.SetBucketPolicy(bucket, object, minio.BucketPolicy(bucketPolicy))
 	if e != nil {
 		return probe.NewError(e)
 	}

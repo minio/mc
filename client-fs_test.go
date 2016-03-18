@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	. "gopkg.in/check.v1"
 )
@@ -170,11 +171,14 @@ func (s *TestSuite) TestBucketACLFails(c *C) {
 	err = fsClient.MakeBucket("us-east-1")
 	c.Assert(err, IsNil)
 
-	err = fsClient.SetBucketAccess("private")
-	c.Assert(err, Not(IsNil))
+	// On windows setting permissions is not supported.
+	if runtime.GOOS != "windows" {
+		err = fsClient.SetAccess("readonly")
+		c.Assert(err, IsNil)
 
-	_, err = fsClient.GetBucketAccess()
-	c.Assert(err, Not(IsNil))
+		_, err = fsClient.GetAccess()
+		c.Assert(err, IsNil)
+	}
 }
 
 // Test creating a file.

@@ -758,14 +758,59 @@ func (f *fsClient) MakeBucket(region string) *probe.Error {
 	return nil
 }
 
-// GetBucketACL - get bucket access.
-func (f *fsClient) GetBucketAccess() (acl string, err *probe.Error) {
-	return "", probe.NewError(APINotImplemented{API: "GetBucketAccess", APIType: "filesystem"})
+// GetAccess - get access policy permissions.
+func (f *fsClient) GetAccess() (access string, err *probe.Error) {
+	// For windows this feature is not implemented.
+	if runtime.GOOS == "windows" {
+		return "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
+	}
+	st, err := f.fsStat()
+	if err != nil {
+		return "", err.Trace(f.PathURL.String())
+	}
+	if !st.Mode().IsDir() {
+		return "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
+	}
+	switch {
+	case st.Mode() == os.FileMode(0777):
+		return "readwrite", nil
+	case st.Mode() == os.FileMode(0555):
+		return "readonly", nil
+	case st.Mode() == os.FileMode(0333):
+		return "writeonly", nil
+	}
+	return "none", nil
 }
 
-// SetBucketAccess - set bucket access.
-func (f *fsClient) SetBucketAccess(acl string) *probe.Error {
-	return probe.NewError(APINotImplemented{API: "SetBucketAccess", APIType: "filesystem"})
+// SetAccess - set access policy permissions.
+func (f *fsClient) SetAccess(access string) *probe.Error {
+	// For windows this feature is not implemented.
+	if runtime.GOOS == "windows" {
+		return probe.NewError(APINotImplemented{API: "SetAccess", APIType: "filesystem"})
+	}
+	st, err := f.fsStat()
+	if err != nil {
+		return err.Trace(f.PathURL.String())
+	}
+	if !st.Mode().IsDir() {
+		return probe.NewError(APINotImplemented{API: "SetAccess", APIType: "filesystem"})
+	}
+	var mode os.FileMode
+	switch access {
+	case "readonly":
+		mode = os.FileMode(0555)
+	case "writeonly":
+		mode = os.FileMode(0333)
+	case "readwrite":
+		mode = os.FileMode(0777)
+	case "none":
+		mode = os.FileMode(0755)
+	}
+	e := os.Chmod(f.PathURL.Path, mode)
+	if e != nil {
+		return probe.NewError(e)
+	}
+	return nil
 }
 
 // Stat - get metadata from path.

@@ -20,115 +20,89 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 )
 
-// GetBucketACL - Get the permissions on an existing bucket.
-//
-// Returned values are:
-//
-//  private - Owner gets full access.
-//  public-read - Owner gets full access, others get read access.
-//  public-read-write - Owner gets full access, others get full access
-//  too.
-//  authenticated-read - Owner gets full access, authenticated users
-//  get read access.
-func (c Client) GetBucketACL(bucketName string) (BucketACL, error) {
+// GetBucketPolicy - get bucket policy at a given path.
+func (c Client) GetBucketPolicy(bucketName, objectPrefix string) (bucketPolicy BucketPolicy, err error) {
 	// Input validation.
 	if err := isValidBucketName(bucketName); err != nil {
-		return "", err
+		return BucketPolicyNone, err
 	}
+	if err := isValidObjectPrefix(objectPrefix); err != nil {
+		return BucketPolicyNone, err
+	}
+	policy, err := c.getBucketPolicy(bucketName, objectPrefix)
+	if err != nil {
+		return BucketPolicyNone, err
+	}
+	if policy.Statements == nil {
+		return BucketPolicyNone, nil
+	}
+	if isBucketPolicyReadWrite(policy.Statements, bucketName, objectPrefix) {
+		return BucketPolicyReadWrite, nil
+	} else if isBucketPolicyWriteOnly(policy.Statements, bucketName, objectPrefix) {
+		return BucketPolicyWriteOnly, nil
+	} else if isBucketPolicyReadOnly(policy.Statements, bucketName, objectPrefix) {
+		return BucketPolicyReadOnly, nil
+	}
+	return BucketPolicyNone, nil
+}
 
-	// Set acl query.
+func (c Client) getBucketPolicy(bucketName string, objectPrefix string) (BucketAccessPolicy, error) {
+	// Input validation.
+	if err := isValidBucketName(bucketName); err != nil {
+		return BucketAccessPolicy{}, err
+	}
+	if err := isValidObjectPrefix(objectPrefix); err != nil {
+		return BucketAccessPolicy{}, err
+	}
+	// Get resources properly escaped and lined up before
+	// using them in http request.
 	urlValues := make(url.Values)
-	urlValues.Set("acl", "")
+	urlValues.Set("policy", "")
 
-	// Execute GET acl on bucketName.
+	// Execute GET on bucket to list objects.
 	resp, err := c.executeMethod("GET", requestMetadata{
 		bucketName:  bucketName,
 		queryValues: urlValues,
 	})
 	defer closeResponse(resp)
 	if err != nil {
-		return "", err
+		return BucketAccessPolicy{}, err
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return "", httpRespToErrorResponse(resp, bucketName, "")
-		}
-	}
-
-	// Decode access control policy.
-	policy := accessControlPolicy{}
-	err = xmlDecoder(resp.Body, &policy)
-	if err != nil {
-		return "", err
-	}
-
-	// We need to avoid following de-serialization check for Google
-	// Cloud Storage. On Google Cloud Storage "private" canned ACL's
-	// policy do not have grant list. Treat it as a valid case, check
-	// for all other vendors.
-	if !isGoogleEndpoint(c.endpointURL) {
-		if policy.AccessControlList.Grant == nil {
-			errorResponse := ErrorResponse{
-				Code:       "InternalError",
-				Message:    "Access control Grant list is empty. " + reportIssue,
-				BucketName: bucketName,
-				RequestID:  resp.Header.Get("x-amz-request-id"),
-				HostID:     resp.Header.Get("x-amz-id-2"),
-				Region:     resp.Header.Get("x-amz-bucket-region"),
+			errResponse := httpRespToErrorResponse(resp, bucketName, "")
+			if ToErrorResponse(errResponse).Code == "NoSuchBucketPolicy" {
+				return BucketAccessPolicy{Version: "2012-10-17"}, nil
 			}
-			return "", errorResponse
+			return BucketAccessPolicy{}, errResponse
 		}
 	}
-
-	// Boolean cues to indentify right canned acls.
-	var publicRead, publicWrite, authenticatedRead bool
-
-	// Handle grants.
-	grants := policy.AccessControlList.Grant
-	for _, g := range grants {
-		if g.Grantee.URI == "" && g.Permission == "FULL_CONTROL" {
-			continue
-		}
-		if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AuthenticatedUsers" && g.Permission == "READ" {
-			authenticatedRead = true
-			break
-		} else if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "WRITE" {
-			publicWrite = true
-		} else if g.Grantee.URI == "http://acs.amazonaws.com/groups/global/AllUsers" && g.Permission == "READ" {
-			publicRead = true
-		}
+	// Read access policy up to maxAccessPolicySize.
+	// http://docs.aws.amazon.com/AmazonS3/latest/dev/access-policy-language-overview.html
+	// bucket policies are limited to 20KB in size, using a limit reader.
+	bucketPolicyBuf, err := ioutil.ReadAll(io.LimitReader(resp.Body, maxAccessPolicySize))
+	if err != nil {
+		return BucketAccessPolicy{}, err
 	}
-
-	// Verify if acl is authenticated read.
-	if authenticatedRead {
-		return BucketACL("authenticated-read"), nil
+	policy, err := unMarshalBucketPolicy(bucketPolicyBuf)
+	if err != nil {
+		return BucketAccessPolicy{}, err
 	}
-	// Verify if acl is private.
-	if !publicWrite && !publicRead {
-		return BucketACL("private"), nil
+	// Sort the policy actions and resources for convenience.
+	for _, statement := range policy.Statements {
+		sort.Strings(statement.Actions)
+		sort.Strings(statement.Resources)
 	}
-	// Verify if acl is public-read.
-	if !publicWrite && publicRead {
-		return BucketACL("public-read"), nil
-	}
-	// Verify if acl is public-read-write.
-	if publicRead && publicWrite {
-		return BucketACL("public-read-write"), nil
-	}
-
-	return "", ErrorResponse{
-		Code:       "NoSuchBucketPolicy",
-		Message:    "The specified bucket does not have a bucket policy.",
-		BucketName: bucketName,
-		RequestID:  "minio",
-	}
+	return policy, nil
 }
 
 // GetObject - returns an seekable, readable object.

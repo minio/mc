@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -35,40 +34,38 @@ var (
 	}
 )
 
-// Set access permissions.
+// Set public access permissions.
 var accessCmd = cli.Command{
 	Name:   "access",
-	Usage:  "Manage bucket access permissions.",
+	Usage:  "Set public access permissions.",
 	Action: mainAccess,
 	Flags:  append(accessFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] set PERMISSION TARGET [TARGET...]
-   mc {{.Name}} [FLAGS] get TARGET [TARGET...]
+   mc {{.Name}} [FLAGS] PERMISSION TARGET
+   mc {{.Name}} [FLAGS] TARGET
 
 PERMISSION:
-   Allowed permissions are: [private, readonly, public, authorized].
+   Allowed permissions are: [none, readonly, readwrite, writeonly].
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Set bucket to "private" on Amazon S3 cloud storage.
-      $ mc {{.Name}} set private s3/burningman2011
+   1. Set bucket to "readonly" on Amazon S3 cloud storage.
+      $ mc {{.Name}} readonly s3/burningman2011
 
-   2. Set bucket to "public" on Amazon S3 cloud storage.
-      $ mc {{.Name}} set public s3/shared
+   2. Set bucket to "readwrite" on Amazon S3 cloud storage.
+      $ mc {{.Name}} readwrite s3/shared
 
-   3. Set bucket to "authenticated" on Amazon S3 cloud storage to provide read access to IAM Authenticated Users group.
-      $ mc {{.Name}} set authorized s3/shared-authenticated
+   3. Set bucket to "writeonly" on Amazon S3 cloud storage.
+      $ mc {{.Name}} writeonly s3/incoming
 
    4. Get bucket permissions.
-      $ mc {{.Name}} get s3/shared
+      $ mc {{.Name}} s3/shared
 
-   5. Get bucket permissions.
-      $ mc {{.Name}} get gcs/miniocloud
 `,
 }
 
@@ -107,28 +104,18 @@ func checkAccessSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
 	}
-	if len(ctx.Args()) < 2 {
+	if len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
 	}
-	switch ctx.Args().First() {
-	case "set":
-		if len(ctx.Args().Tail()) < 2 {
-			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
-		}
-		perms := accessPerms(ctx.Args().Tail().Get(0))
+	if len(ctx.Args()) == 2 {
+		perms := accessPerms(ctx.Args().Get(0))
 		if !perms.isValidAccessPERM() {
 			fatalIf(errDummy().Trace(),
-				"Unrecognized permission ‘"+perms.String()+"’. Allowed values are [private, public, readonly, authorized].")
+				"Unrecognized permission ‘"+string(perms)+"’. Allowed values are [none, readonly, readwrite, writeonly].")
 		}
-		for _, arg := range ctx.Args().Tail().Tail() {
-			if strings.TrimSpace(arg) == "" {
-				fatalIf(errInvalidArgument().Trace(), "Unable to validate empty argument.")
-			}
-		}
-	case "get":
-		if len(ctx.Args().Tail()) < 1 {
-			cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
-		}
+	}
+	if len(ctx.Args()) < 1 {
+		cli.ShowCommandHelpAndExit(ctx, "access", 1) // last argument is exit code.
 	}
 }
 
@@ -138,8 +125,8 @@ func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
 	if err != nil {
 		return err.Trace(targetURL)
 	}
-	if err = clnt.SetBucketAccess(targetPERMS.String()); err != nil {
-		return err.Trace(targetURL, targetPERMS.String())
+	if err = clnt.SetAccess(string(targetPERMS)); err != nil {
+		return err.Trace(targetURL, string(targetPERMS))
 	}
 	return nil
 }
@@ -150,11 +137,11 @@ func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
 	if err != nil {
 		return "", err.Trace(targetURL)
 	}
-	acl, err := clnt.GetBucketAccess()
+	perm, err := clnt.GetAccess()
 	if err != nil {
 		return "", err.Trace(targetURL)
 	}
-	return aclToPerms(acl), nil
+	return accessPerms(perm), nil
 }
 
 func mainAccess(ctx *cli.Context) {
@@ -167,39 +154,28 @@ func mainAccess(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Access", color.New(color.FgGreen, color.Bold))
 
-	switch ctx.Args().First() {
-	case "set":
-		perms := accessPerms(ctx.Args().Tail().First())
-		URLs := ctx.Args().Tail().Tail()
-		for _, targetURL := range URLs {
-			err := doSetAccess(targetURL, perms)
-			// Upon error, print and continue.
-			if err != nil {
-				errorIf(err.Trace(targetURL, string(perms)),
-					"Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
-				continue
-			}
-			printMsg(accessMessage{
-				Status:    "success",
-				Operation: "set",
-				Bucket:    targetURL,
-				Perms:     perms,
-			})
-		}
-	case "get":
-		URLs := ctx.Args().Tail()
-		for _, targetURL := range URLs {
-			perms, err := doGetAccess(targetURL)
-			if err != nil {
-				errorIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")
-				continue
-			}
-			printMsg(accessMessage{
-				Status:    "success",
-				Operation: "get",
-				Bucket:    targetURL,
-				Perms:     perms,
-			})
-		}
+	perms := accessPerms(ctx.Args().First())
+	if perms.isValidAccessPERM() {
+		targetURL := ctx.Args().Last()
+		err := doSetAccess(targetURL, perms)
+		// Upon error exit.
+		fatalIf(err.Trace(targetURL, string(perms)),
+			"Unable to set access permission ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+		printMsg(accessMessage{
+			Status:    "success",
+			Operation: "set",
+			Bucket:    targetURL,
+			Perms:     perms,
+		})
+	} else {
+		targetURL := ctx.Args().First()
+		perms, err := doGetAccess(targetURL)
+		fatalIf(err.Trace(targetURL), "Unable to get access permission for ‘"+targetURL+"’.")
+		printMsg(accessMessage{
+			Status:    "success",
+			Operation: "get",
+			Bucket:    targetURL,
+			Perms:     perms,
+		})
 	}
 }

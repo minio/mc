@@ -46,18 +46,18 @@ func (s *TestSuite) TearDownSuite(c *C) {
 }
 
 func (s *TestSuite) TestValidPERMS(c *C) {
-	perms := accessPerms("private")
+	perms := accessPerms("none")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(perms.String(), Equals, "private")
-	perms = accessPerms("public")
+	c.Assert(string(perms), Equals, "none")
+	perms = accessPerms("readwrite")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(perms.String(), Equals, "public-read-write")
+	c.Assert(string(perms), Equals, "readwrite")
 	perms = accessPerms("readonly")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(perms.String(), Equals, "public-read")
-	perms = accessPerms("authorized")
+	c.Assert(string(perms), Equals, "readonly")
+	perms = accessPerms("writeonly")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(perms.String(), Equals, "authenticated-read")
+	c.Assert(string(perms), Equals, "writeonly")
 }
 
 func (s *TestSuite) TestInvalidPERMS(c *C) {

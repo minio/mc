@@ -18,79 +18,20 @@ package main
 
 // isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {
-	switch true {
-	case b.isPrivate():
-		fallthrough
-	case b.isReadOnly():
-		fallthrough
-	case b.isPublic():
-		fallthrough
-	case b.isAuthorized():
+	switch b {
+	case accessNone, accessReadOnly, accessReadWrite, accessWriteOnly:
 		return true
-	default:
-		return false
 	}
+	return false
 }
 
 // accessPerms - access level.
 type accessPerms string
 
-// different types of Access perm's currently supported by accesss command.
+// different types of Access perm's currently supported by access command.
 const (
-	accessPrivate    = accessPerms("private")
-	accessReadOnly   = accessPerms("readonly")
-	accessPublic     = accessPerms("public")
-	accessAuthorized = accessPerms("authorized")
+	accessNone      = accessPerms("none")
+	accessReadOnly  = accessPerms("readonly")
+	accessReadWrite = accessPerms("readwrite")
+	accessWriteOnly = accessPerms("writeonly")
 )
-
-func (b accessPerms) String() string {
-	if !b.isValidAccessPERM() {
-		return string(b)
-	}
-	if b.isReadOnly() {
-		return "public-read"
-	}
-	if b.isPublic() {
-		return "public-read-write"
-	}
-	if b.isAuthorized() {
-		return "authenticated-read"
-	}
-	return "private"
-}
-
-// convert acl's to access perms
-func aclToPerms(acl string) accessPerms {
-	switch acl {
-	case "private":
-		return accessPerms("private")
-	case "public-read":
-		return accessPerms("readonly")
-	case "public-read-write":
-		return accessPerms("public")
-	case "authenticated-read":
-		return accessPerms("authorized")
-	default:
-		return accessPerms(acl)
-	}
-}
-
-// isPrivate - is acl Private.
-func (b accessPerms) isPrivate() bool {
-	return b == accessPrivate
-}
-
-// isPublicRead - is acl PublicRead.
-func (b accessPerms) isReadOnly() bool {
-	return b == accessReadOnly
-}
-
-// isPublicReadWrite - is acl PublicReadWrite.
-func (b accessPerms) isPublic() bool {
-	return b == accessPublic
-}
-
-// isAuthorized - is acl AuthorizedRead.
-func (b accessPerms) isAuthorized() bool {
-	return b == accessAuthorized
-}
