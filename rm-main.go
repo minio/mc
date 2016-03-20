@@ -113,6 +113,7 @@ func checkRmSyntax(ctx *cli.Context) {
 	// Set command flags from context.
 	isForce := ctx.Bool("force")
 	isRecursive := ctx.Bool("recursive")
+	isFake := ctx.Bool("fake")
 
 	if !ctx.Args().Present() {
 		exitCode := 1
@@ -120,7 +121,7 @@ func checkRmSyntax(ctx *cli.Context) {
 	}
 
 	// For all recursive operations make sure to check for 'force' flag.
-	if isRecursive && !isForce {
+	if isRecursive && !isForce && !isFake {
 		fatalIf(errDummy().Trace(),
 			"Recursive removal requires --force option. Please review carefully before performing this *DANGEROUS* operation.")
 	}
@@ -202,7 +203,7 @@ func mainRm(ctx *cli.Context) {
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
 		targetAlias, targetURL, _ := mustExpandAlias(url)
-		if isRecursive && isForce {
+		if isRecursive && isForce || isFake {
 			rmAll(targetAlias, targetURL, isRecursive, isIncomplete, isFake)
 		} else {
 			if err := rm(targetAlias, targetURL, isIncomplete, isFake); err != nil {
