@@ -58,11 +58,11 @@ FLAGS:
 EXAMPLES:
    1. Add Amazon S3 storage service under "myphotos" alias. For security reasons turn off bash history momentarily.
       $ set +o history
-      $ mc config {{.Name}} add myphotos https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+      $ mc config {{.Name}} add myphotos https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
       $ set -o history
 
    2. Add Google Cloud Storage service under "goodisk" alias.
-      $ mc config {{.Name}} add goodisk  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
+      $ mc config {{.Name}} add goodisk  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
 
    3. List all hosts.
       $ mc config {{.Name}} list
@@ -217,7 +217,7 @@ func mainConfigHost(ctx *cli.Context) {
 		if strings.TrimSpace(api) == "" {
 			api = "S3v4"
 		}
-		hostCfg := hostConfigV7{
+		hostCfg := hostConfigV8{
 			URL:       url,
 			AccessKey: accessKey,
 			SecretKey: secretKey,
@@ -233,23 +233,23 @@ func mainConfigHost(ctx *cli.Context) {
 }
 
 // addHost - add a host config.
-func addHost(alias string, hostCfgV7 hostConfigV7) {
-	mcCfgV7, err := loadMcConfig()
+func addHost(alias string, hostCfgV8 hostConfigV8) {
+	mcCfgV8, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config ‘"+mustGetMcConfigPath()+"’.")
 
 	// Add new host.
-	mcCfgV7.Hosts[alias] = hostCfgV7
+	mcCfgV8.Hosts[alias] = hostCfgV8
 
-	err = saveMcConfig(mcCfgV7)
+	err = saveMcConfig(mcCfgV8)
 	fatalIf(err.Trace(alias), "Unable to update hosts in config version ‘"+mustGetMcConfigPath()+"’.")
 
 	printMsg(hostMessage{
 		op:        "add",
 		Alias:     alias,
-		URL:       hostCfgV7.URL,
-		AccessKey: hostCfgV7.AccessKey,
-		SecretKey: hostCfgV7.SecretKey,
-		API:       hostCfgV7.API,
+		URL:       hostCfgV8.URL,
+		AccessKey: hostCfgV8.AccessKey,
+		SecretKey: hostCfgV8.SecretKey,
+		API:       hostCfgV8.API,
 	})
 }
 

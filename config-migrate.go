@@ -40,6 +40,8 @@ func migrateConfig() {
 	migrateConfigV5ToV6()
 	// Migrate config V6 to V7
 	migrateConfigV6ToV7()
+	// Migrate config V7 to V8
+	migrateConfigV7ToV8()
 }
 
 // Migrate from config version 1.0 to 1.0.1. Populate example entries and save it back.
@@ -377,4 +379,43 @@ func migrateConfigV6ToV7() {
 	fatalIf(err.Trace(), "Unable to save config version ‘7’.")
 
 	console.Infof("Successfully migrated %s from version ‘6’ to version ‘7’.\n", mustGetMcConfigPath())
+}
+
+// Migrate config version ‘7’ to ‘8'. Remove hosts
+// 'play.minio.io:9002' and 'dl.minio.io:9000'.
+func migrateConfigV7ToV8() {
+	if !isMcConfigExists() {
+		return
+	}
+
+	mcCfgV7, err := quick.Load(mustGetMcConfigPath(), newConfigV7())
+	fatalIf(err.Trace(), "Unable to load mc config V7.")
+
+	if mcCfgV7.Version() != "7" {
+		return
+	}
+
+	cfgV8 := newConfigV8()
+	// We dropped alias support in v7. We only need to migrate host configs.
+	for host, hostCfgV7 := range mcCfgV7.Data().(*configV7).Hosts {
+		// Ignore 'player', 'play' and 'dl' aliases.
+		if host == "player" || host == "dl" || host == "play" {
+			continue
+		}
+		hostCfgV8 := hostConfigV8{}
+		hostCfgV8.URL = hostCfgV7.URL
+		hostCfgV8.AccessKey = hostCfgV7.AccessKey
+		hostCfgV8.SecretKey = hostCfgV7.SecretKey
+		hostCfgV8.API = hostCfgV7.API
+		cfgV8.Hosts[host] = hostCfgV8
+	}
+	// Load default settings.
+	cfgV8.loadDefaults()
+	mcNewCfgV8, err := quick.New(cfgV8)
+	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘8’.")
+
+	err = mcNewCfgV8.Save(mustGetMcConfigPath())
+	fatalIf(err.Trace(), "Unable to save config version ‘8’.")
+
+	console.Infof("Successfully migrated %s from version ‘7’ to version ‘8’.\n", mustGetMcConfigPath())
 }

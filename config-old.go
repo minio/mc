@@ -160,5 +160,85 @@ func newConfigV6() *configV6 {
 	return conf
 }
 
-/////////////////// Config V7 ///////////////////
+/////////////////// Config V6 ///////////////////
+// hostConfig configuration of a host - version '7'.
+type hostConfigV7 struct {
+	URL       string `json:"url"`
+	AccessKey string `json:"accessKey"`
+	SecretKey string `json:"secretKey"`
+	API       string `json:"api"`
+}
+
+// configV7 config version.
+type configV7 struct {
+	Version string                  `json:"version"`
+	Hosts   map[string]hostConfigV7 `json:"hosts"`
+}
+
+// newConfigV7 - new config version '7'.
+func newConfigV7() *configV7 {
+	cfg := new(configV7)
+	cfg.Version = globalMCConfigVersion
+	cfg.Hosts = make(map[string]hostConfigV7)
+	return cfg
+}
+
+func (c *configV7) loadDefaults() {
+	// Minio server running locally.
+	c.setHost("local", hostConfigV7{
+		URL:       "http://localhost:9000",
+		AccessKey: "",
+		SecretKey: "",
+		API:       "S3v4",
+	})
+
+	// Amazon S3 cloud storage service.
+	c.setHost("s3", hostConfigV7{
+		URL:       "https://s3.amazonaws.com",
+		AccessKey: defaultAccessKey,
+		SecretKey: defaultSecretKey,
+		API:       "S3v4",
+	})
+
+	// Google cloud storage service.
+	c.setHost("gcs", hostConfigV7{
+		URL:       "https://storage.googleapis.com",
+		AccessKey: defaultAccessKey,
+		SecretKey: defaultSecretKey,
+		API:       "S3v2",
+	})
+
+	// Minio anonymous server for demo.
+	c.setHost("play", hostConfigV7{
+		URL:       "https://play.minio.io:9000",
+		AccessKey: "",
+		SecretKey: "",
+		API:       "S3v4",
+	})
+
+	// Minio demo server with public secret and access keys.
+	c.setHost("player", hostConfigV7{
+		URL:       "https://play.minio.io:9002",
+		AccessKey: "Q3AM3UQ867SPQQA43P2F",
+		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+		API:       "S3v4",
+	})
+
+	// Minio public download service.
+	c.setHost("dl", hostConfigV7{
+		URL:       "https://dl.minio.io:9000",
+		AccessKey: "",
+		SecretKey: "",
+		API:       "S3v4",
+	})
+}
+
+// SetHost sets host config if not empty.
+func (c *configV7) setHost(alias string, cfg hostConfigV7) {
+	if _, ok := c.Hosts[alias]; !ok {
+		c.Hosts[alias] = cfg
+	}
+}
+
+/////////////////// Config V8 ///////////////////
 // RESERVED FOR FUTURE
