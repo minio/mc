@@ -24,7 +24,7 @@ import (
 
 // mc configuration related constants.
 const (
-	globalMCConfigVersion = "7"
+	globalMCConfigVersion = "8"
 
 	globalMCConfigDir        = ".mc/"
 	globalMCConfigWindowsDir = "mc\\"
