@@ -57,13 +57,6 @@ func (h bucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == "PUT":
 		switch {
 		case r.URL.Path == h.resource:
-			// Handler for incoming SetBucketACL request.
-			_, ok := r.URL.Query()["acl"]
-			if ok {
-				if r.Header.Get("x-amz-acl") != "public-read-write" {
-					w.WriteHeader(http.StatusNotImplemented)
-				}
-			}
 			w.WriteHeader(http.StatusOK)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
@@ -182,9 +175,6 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	c.Assert(err, IsNil)
 
 	err = s3c.MakeBucket("us-east-1")
-	c.Assert(err, IsNil)
-
-	err = s3c.SetBucketAccess("public-read-write")
 	c.Assert(err, IsNil)
 
 	conf.HostURL = server.URL + string(s3c.GetURL().Separator)

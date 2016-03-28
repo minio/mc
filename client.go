@@ -32,8 +32,10 @@ type Client interface {
 
 	// Bucket operations
 	MakeBucket(region string) *probe.Error
-	GetBucketAccess() (access string, error *probe.Error)
-	SetBucketAccess(access string) *probe.Error
+
+	// Access policy operations.
+	GetAccess() (access string, error *probe.Error)
+	SetAccess(access string) *probe.Error
 
 	// I/O operations
 	Get() (reader io.Reader, err *probe.Error)
