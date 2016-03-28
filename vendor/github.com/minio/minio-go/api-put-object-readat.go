@@ -155,7 +155,7 @@ func (c Client) putObjectMultipartFromReadAt(bucketName, objectName string, read
 		var reader io.Reader
 		// Update progress reader appropriately to the latest offset
 		// as we read from the source.
-		reader = newHook(bytes.NewReader(tmpBuffer.Bytes()), progress)
+		reader = newHook(tmpBuffer, progress)
 
 		// Proceed to upload the part.
 		var objPart objectPart

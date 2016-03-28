@@ -157,7 +157,7 @@ __Arguments__
 
 __Example__
 ```go
-err := s3Client.SetBucketPolicy("mybucket", "myprefix", "readwrite")
+err := s3Client.SetBucketPolicy("mybucket", "myprefix", BucketPolicyReadWrite)
 if err != nil {
     fmt.Println(err)
     return
