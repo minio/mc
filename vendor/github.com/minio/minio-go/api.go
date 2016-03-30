@@ -220,6 +220,13 @@ func (c *Client) SetCustomTransport(customHTTPTransport http.RoundTripper) {
 	}
 }
 
+// SetClientTimeout - set http client timeout.
+func (c *Client) SetClientTimeout(timeout time.Duration) {
+	if c.httpClient != nil {
+		c.httpClient.Timeout = timeout
+	}
+}
+
 // TraceOn - enable HTTP tracing.
 func (c *Client) TraceOn(outputStream io.Writer) {
 	// if outputStream is nil then default to os.Stdout.
@@ -498,7 +505,6 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 	if method == "" {
 		method = "POST"
 	}
-
 	// Gather location only if bucketName is present.
 	location := "us-east-1" // Default all other requests to "us-east-1".
 	if metadata.bucketName != "" {
