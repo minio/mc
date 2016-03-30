@@ -119,7 +119,8 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			// Set custom transport.
 			api.SetCustomTransport(transport)
 		}
-
+		// ListObjects on a prefix with 10 million entries takes around 8 minutes.
+		api.SetClientTimeout(8 * time.Minute)
 		// Store the new api object.
 		s3Clnt.api = api
 
