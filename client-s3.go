@@ -161,6 +161,9 @@ func (c *s3Client) Put(reader io.Reader, size int64, contentType string, progres
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
+	if bucket == "" {
+		return 0, probe.NewError(BucketNameEmpty{})
+	}
 	n, e := c.api.PutObjectWithProgress(bucket, object, reader, contentType, progress)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
@@ -185,7 +188,12 @@ func (c *s3Client) Put(reader io.Reader, size int64, contentType string, progres
 				Bucket: bucket,
 			})
 		}
-		if errResponse.Code == "InvalidArgument" {
+		if errResponse.Code == "InvalidBucketName" {
+			return n, probe.NewError(BucketInvalid{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
 			return n, probe.NewError(ObjectMissing{})
 		}
 		return n, probe.NewError(e)
@@ -276,59 +284,52 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	c.mutex.Lock()
 	objectMetadata := &clientContent{}
 	bucket, object := c.url2BucketAndObject()
-	switch {
-	// valid case for 'ls -r s3/'
-	case bucket == "" && object == "":
-		_, e := c.api.ListBuckets()
+	// Bucket name cannot be empty, stat on URL has no meaning.
+	if bucket == "" {
+		c.mutex.Unlock()
+		return nil, probe.NewError(BucketNameEmpty{})
+	} else if object == "" {
+		e := c.api.BucketExists(bucket)
 		if e != nil {
 			c.mutex.Unlock()
 			return nil, probe.NewError(e)
 		}
+		bucketMetadata := &clientContent{}
+		bucketMetadata.URL = *c.targetURL
+		bucketMetadata.Type = os.ModeDir
 		c.mutex.Unlock()
-		return &clientContent{URL: *c.targetURL, Type: os.ModeDir}, nil
+		return bucketMetadata, nil
 	}
-	if object != "" {
-		metadata, e := c.api.StatObject(bucket, object)
-		if e != nil {
-			c.mutex.Unlock()
-			errResponse := minio.ToErrorResponse(e)
-			if errResponse.Code == "NoSuchKey" {
-				// Append "/" to the object name proactively and see if the Listing
-				// produces an output. If yes, then we treat it as a directory.
-				prefixName := object
-				// Trim any trailing separators and add it.
-				prefixName = strings.TrimSuffix(prefixName, string(c.targetURL.Separator)) + string(c.targetURL.Separator)
-				isRecursive := false
-				for objectStat := range c.api.ListObjects(bucket, prefixName, isRecursive, nil) {
-					if objectStat.Err != nil {
-						return nil, probe.NewError(objectStat.Err)
-					}
-					content := clientContent{}
-					content.URL = *c.targetURL
-					content.Type = os.ModeDir
-					return &content, nil
-				}
-				return nil, probe.NewError(PathNotFound{Path: c.targetURL.Path})
-			}
-			return nil, probe.NewError(e)
-		}
-		objectMetadata.URL = *c.targetURL
-		objectMetadata.Time = metadata.LastModified
-		objectMetadata.Size = metadata.Size
-		objectMetadata.Type = os.FileMode(0664)
-		c.mutex.Unlock()
-		return objectMetadata, nil
-	}
-	e := c.api.BucketExists(bucket)
+	metadata, e := c.api.StatObject(bucket, object)
 	if e != nil {
 		c.mutex.Unlock()
+		errResponse := minio.ToErrorResponse(e)
+		if errResponse.Code == "NoSuchKey" {
+			// Append "/" to the object name proactively and see if the Listing
+			// produces an output. If yes, then we treat it as a directory.
+			prefixName := object
+			// Trim any trailing separators and add it.
+			prefixName = strings.TrimSuffix(prefixName, string(c.targetURL.Separator)) + string(c.targetURL.Separator)
+			isRecursive := false
+			for objectStat := range c.api.ListObjects(bucket, prefixName, isRecursive, nil) {
+				if objectStat.Err != nil {
+					return nil, probe.NewError(objectStat.Err)
+				}
+				content := clientContent{}
+				content.URL = *c.targetURL
+				content.Type = os.ModeDir
+				return &content, nil
+			}
+			return nil, probe.NewError(PathNotFound{Path: c.targetURL.Path})
+		}
 		return nil, probe.NewError(e)
 	}
-	bucketMetadata := &clientContent{}
-	bucketMetadata.URL = *c.targetURL
-	bucketMetadata.Type = os.ModeDir
+	objectMetadata.URL = *c.targetURL
+	objectMetadata.Time = metadata.LastModified
+	objectMetadata.Size = metadata.Size
+	objectMetadata.Type = os.FileMode(0664)
 	c.mutex.Unlock()
-	return bucketMetadata, nil
+	return objectMetadata, nil
 }
 
 func isAmazon(host string) bool {

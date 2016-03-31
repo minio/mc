@@ -309,17 +309,9 @@ func doMirrorSession(session *sessionV6) {
 					// remaining files.
 					switch sURLs.Error.ToGoError().(type) {
 					// Handle this specifically for filesystem related errors.
-					case BrokenSymlink:
+					case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
 						continue
-					case TooManyLevelsSymlink:
-						continue
-					case PathNotFound:
-						continue
-					case PathInsufficientPermission:
-						continue
-					case ObjectAlreadyExists:
-						continue
-					case BucketDoesNotExist:
+					case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, BucketDoesNotExist, BucketInvalid:
 						continue
 					}
 					// For critical errors we should exit. Session

@@ -56,6 +56,15 @@ func (e BucketNameEmpty) Error() string {
 	return "Bucket name cannot be empty."
 }
 
+// BucketInvalid - bucket name invalid.
+type BucketInvalid struct {
+	Bucket string
+}
+
+func (e BucketInvalid) Error() string {
+	return "Bucket name " + e.Bucket + " not valid."
+}
+
 // ObjectAlreadyExists - typed return for MethodNotAllowed
 type ObjectAlreadyExists struct {
 	Object string
