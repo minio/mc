@@ -86,7 +86,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	_, _, err = url2Stat(tgtURL)
 	// we die on any error other than PathNotFound - destination directory need not exist.
 	if _, ok := err.ToGoError().(PathNotFound); !ok {
-		fatalIf(err.Trace(tgtURL), fmt.Sprintf("Unable to stat %s", tgtURL))
+		fatalIf(err.Trace(tgtURL), fmt.Sprintf("Unable to stat target ‘%s’.", tgtURL))
 	}
 }
 
