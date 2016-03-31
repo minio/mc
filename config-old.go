@@ -178,7 +178,7 @@ type configV7 struct {
 // newConfigV7 - new config version '7'.
 func newConfigV7() *configV7 {
 	cfg := new(configV7)
-	cfg.Version = globalMCConfigVersion
+	cfg.Version = "7"
 	cfg.Hosts = make(map[string]hostConfigV7)
 	return cfg
 }

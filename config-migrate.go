@@ -334,8 +334,24 @@ func migrateConfigV6ToV7() {
 
 	cfgV7 := newConfigV7()
 	aliasIndex := 0
+
+	// old Aliases.
+	oldAliases := mcCfgV6.Data().(*configV6).Aliases
+
 	// We dropped alias support in v7. We only need to migrate host configs.
 	for host, hostCfgV6 := range mcCfgV6.Data().(*configV6).Hosts {
+		// Look through old aliases, if found any matching save those entries.
+		for aliasName, aliasedHost := range oldAliases {
+			if aliasedHost == host {
+				cfgV7.Hosts[aliasName] = hostConfigV7{
+					URL:       host,
+					AccessKey: hostCfgV6.AccessKeyID,
+					SecretKey: hostCfgV6.SecretAccessKey,
+					API:       hostCfgV6.API,
+				}
+				continue
+			}
+		}
 		if hostCfgV6.AccessKeyID == "YOUR-ACCESS-KEY-ID-HERE" ||
 			hostCfgV6.SecretAccessKey == "YOUR-SECRET-ACCESS-KEY-HERE" ||
 			hostCfgV6.AccessKeyID == "" ||
