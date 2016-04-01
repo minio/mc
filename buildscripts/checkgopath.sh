@@ -15,18 +15,13 @@
 # limitations under the License.
 #
 
-## use a portable implementation here `realpath` doesn't exist on Darwin/OS X.
-realpath() {
-    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
-}
-
 _init() {
 
     shopt -s extglob
 
     # Fetch real paths instead of symlinks before comparing them
     PWD=$(env pwd -P)
-    GOPATH=$(realpath $(go env GOPATH))
+    GOPATH=$(cd "$(go env GOPATH)" ; env pwd -P)
 }
 
 main() {
