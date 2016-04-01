@@ -75,13 +75,10 @@ go_build() {
         cd "$release_str/$os-$arch"
         $ZIP -r $release_real_zip $(basename $package) $(basename $package).shasum
         cd -
-    elif [ $os == "linux" ]; then
+    else
         cd "$release_str/$os-$arch"
         $TAR -czf $release_real_tgz $(basename $package) $(basename $package).shasum
         cd -
-    else
-        echo "$os operating system is not supported."
-        exit 1
     fi
 }
 
