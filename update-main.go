@@ -141,8 +141,27 @@ func parseReleaseData(data string) (time.Time, *probe.Error) {
 
 // verify updates for releases.
 func getReleaseUpdate(updateURL string) {
-	newUpdateURL := updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH + "/mc.shasum"
-	data, e := http.Get(newUpdateURL)
+	// Construct a new update url.
+	newUpdateURLPrefix := updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH
+	newUpdateURL := newUpdateURLPrefix + "/mc.shasum"
+
+	// Instantiate a new client with 1 sec timeout.
+	client := &http.Client{
+		Timeout: 500 * time.Millisecond,
+	}
+
+	// Get the downloadURL.
+	var downloadURL string
+	switch runtime.GOOS {
+	case "windows", "darwin":
+		// For windows and darwin.
+		downloadURL = newUpdateURLPrefix + "/mc.zip"
+	default:
+		// For all other operating systems.
+		downloadURL = newUpdateURLPrefix + "/mc.tar.gz"
+	}
+
+	data, e := client.Get(newUpdateURL)
 	fatalIf(probe.NewError(e), "Unable to read from update URL ‘"+newUpdateURL+"’.")
 
 	if strings.HasPrefix(mcVersion, "DEVELOPMENT.GOGET") {
@@ -169,12 +188,6 @@ func getReleaseUpdate(updateURL string) {
 			"Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues")
 	}
 
-	var downloadURL string
-	if runtime.GOOS == "windows" {
-		downloadURL = updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH + "/mc.exe"
-	} else {
-		downloadURL = updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH + "/mc"
-	}
 	updateMsg := updateMessage{
 		Download: downloadURL,
 		Version:  mcVersion,
