@@ -24,6 +24,10 @@ import (
 
 // mc configuration related constants.
 const (
+	minGoVersion = ">= 1.6" // mc requires at least Go v1.6
+)
+
+const (
 	globalMCConfigVersion = "8"
 
 	globalMCConfigDir        = ".mc/"

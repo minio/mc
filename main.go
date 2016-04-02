@@ -24,6 +24,7 @@ import (
 	"strconv"
 
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/pb"
 )
@@ -121,19 +122,44 @@ func getSystemData() map[string]string {
 	}
 }
 
-func registerBefore(ctx *cli.Context) error {
-	setMcConfigDir(ctx.GlobalString("config-folder"))
+// initMC - initialize 'mc'.
+func initMC() {
+	// Check if mc config exists.
+	if !isMcConfigExists() {
+		err := saveMcConfig(newMcConfig())
+		fatalIf(err.Trace(), "Unable to save new mc config.")
 
-	// Verify golang runtime.
-	verifyMCRuntime()
+		console.Infoln("Configuration written to ‘" + mustGetMcConfigPath() + "’. Please update your access credentials.")
+	}
+
+	// Check if mc session folder exists.
+	if !isSessionDirExists() {
+		fatalIf(createSessionDir().Trace(), "Unable to create session config folder.")
+	}
+
+	// Check if mc share folder exists.
+	if !isShareDirExists() {
+		initShareConfig()
+	}
+}
+
+func registerBefore(ctx *cli.Context) error {
+	// Check if mc was compiled using a supported version of Golang.
+	checkGoVersion()
+
+	// Set the config folder.
+	setMcConfigDir(ctx.GlobalString("config-folder"))
 
 	// Migrate any old version of config / state files to newer format.
 	migrate()
 
+	// Initialize default config files.
+	initMC()
+
 	// Set global flags.
 	setGlobalsFromContext(ctx)
 
-	// Checkconfig if it can be read.
+	// Check if config can be read.
 	checkConfig()
 
 	return nil

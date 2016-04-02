@@ -24,6 +24,7 @@ import (
 
 	"net/http/httptest"
 
+	"github.com/hashicorp/go-version"
 	"github.com/minio/cli"
 	. "gopkg.in/check.v1"
 )
@@ -121,8 +122,9 @@ func (s *TestSuite) TestCommonPrefix(c *C) {
 }
 
 func (s *TestSuite) TestVersions(c *C) {
-	v1 := newVersion("1.6")
-	v2 := newVersion("1.5.0")
-	c.Assert(v2.LessThan(v1), Equals, true)
-	c.Assert(v1.LessThan(v2), Equals, false)
+	v1, e := version.NewVersion("1.6")
+	c.Assert(e, IsNil)
+	v2, e := version.NewConstraint(">= 1.5.0")
+	c.Assert(e, IsNil)
+	c.Assert(v2.Check(v1), Equals, true)
 }
