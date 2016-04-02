@@ -18,6 +18,11 @@
 			"revisionTime": "2015-08-20T22:35:37-07:00"
 		},
 		{
+			"path": "github.com/hashicorp/go-version",
+			"revision": "2e7f5ea8e27bb3fdf9baa0881d16757ac4637332",
+			"revisionTime": "2016-02-13T16:24:39-08:00"
+		},
+		{
 			"path": "github.com/mattn/go-colorable",
 			"revision": "9fdad7c47650b7d2e1da50644c1f4ba7f172f252",
 			"revisionTime": "2016-02-10T09:18:57+09:00"
