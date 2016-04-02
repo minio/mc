@@ -97,7 +97,7 @@ func isValidBucket(bucket string) bool {
 	if bucket[0] == '.' || bucket[len(bucket)-1] == '.' {
 		return false
 	}
-	if match, _ := regexp.MatchString("\\.\\.", bucket); match == true {
+	if match, _ := regexp.MatchString("\\.\\.", bucket); match {
 		return false
 	}
 	// We don't support buckets with '.' in them

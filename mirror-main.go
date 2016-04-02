@@ -199,7 +199,7 @@ func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, trapCh <
 
 	URLsCh := prepareMirrorURLs(sourceURL, targetURL, isForce, isFake)
 	done := false
-	for done == false {
+	for !done {
 		select {
 		case sURLs, ok := <-URLsCh:
 			if !ok { // Done with URL prepration
