@@ -176,7 +176,7 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 
 // doMirrorFake - Perform a fake mirror to update the progress bar appropriately.
 func doMirrorFake(sURLs mirrorURLs, progressReader *progressBar) mirrorURLs {
-	if !globalDebug && !globalJSON {
+	if !globalDebug && !globalJSON && !globalQuiet {
 		progressReader.ProgressBar.Add64(sURLs.SourceContent.Size)
 	}
 	return sURLs
