@@ -332,6 +332,8 @@ func doMirrorSession(session *sessionV6) {
 		// Verify if previously copied, notify progress bar.
 		if isCopied(sURLs.SourceContent.URL.String()) {
 			isFake = true
+		} else {
+			isFake = false
 		}
 		statusCh <- doMirror(sURLs, progressReader, accntReader, isFake)
 	}
