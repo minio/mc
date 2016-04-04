@@ -55,12 +55,12 @@ func setGlobals(quiet, debug, json, noColor bool) {
 	globalNoColor = noColor
 
 	// Enable debug messages if requested.
-	if globalDebug == true {
+	if globalDebug {
 		console.DebugPrint = true
 	}
 
 	// Disable colorified messages if requested.
-	if globalNoColor == true {
+	if globalNoColor {
 		console.SetColorOff()
 	}
 }

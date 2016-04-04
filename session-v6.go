@@ -204,10 +204,7 @@ func newSessionV6() *sessionV6 {
 
 // HasData provides true if this is a session resume, false otherwise.
 func (s sessionV6) HasData() bool {
-	if s.Header.LastCopied == "" {
-		return false
-	}
-	return true
+	return s.Header.LastCopied != ""
 }
 
 // NewDataReader provides reader interface to session data file.

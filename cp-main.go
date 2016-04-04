@@ -204,8 +204,7 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 
 	URLsCh := prepareCopyURLs(sourceURLs, targetURL, isRecursive)
 	done := false
-
-	for done == false {
+	for !done {
 		select {
 		case cpURLs, ok := <-URLsCh:
 			if !ok { // Done with URL preparation
