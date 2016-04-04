@@ -127,7 +127,7 @@ func (c mirrorStatMessage) String() string {
 }
 
 // doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
-func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *accounter) mirrorURLs {
+func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *accounter, isFake bool) mirrorURLs {
 	if sURLs.Error != nil { // Errorneous sURLs passed.
 		sURLs.Error = sURLs.Error.Trace()
 		return sURLs
@@ -141,12 +141,6 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 
 	if !globalQuiet && !globalJSON {
 		progressReader = progressReader.SetCaption(sourceURL.String() + ": ")
-	}
-
-	reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
-	if err != nil {
-		sURLs.Error = err.Trace(sourceURL.String())
-		return sURLs
 	}
 
 	var progress io.Reader
@@ -164,6 +158,21 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 		// Set up progress bar.
 		progress = progressReader.ProgressBar
 	}
+
+	if isFake {
+		if !globalDebug && !globalJSON && !globalQuiet {
+			progressReader.ProgressBar.Add64(sURLs.SourceContent.Size)
+		}
+		sURLs.Error = nil
+		return sURLs
+	}
+
+	reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
+	if err != nil {
+		sURLs.Error = err.Trace(sourceURL.String())
+		return sURLs
+	}
+
 	_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
 	if err != nil {
 		sURLs.Error = err.Trace(targetURL.String())
@@ -171,14 +180,6 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 	}
 
 	sURLs.Error = nil // just for safety
-	return sURLs
-}
-
-// doMirrorFake - Perform a fake mirror to update the progress bar appropriately.
-func doMirrorFake(sURLs mirrorURLs, progressReader *progressBar) mirrorURLs {
-	if !globalDebug && !globalJSON && !globalQuiet {
-		progressReader.ProgressBar.Add64(sURLs.SourceContent.Size)
-	}
 	return sURLs
 }
 
@@ -330,16 +331,9 @@ func doMirrorSession(session *sessionV6) {
 		json.Unmarshal([]byte(urlScanner.Text()), &sURLs)
 		// Verify if previously copied, notify progress bar.
 		if isCopied(sURLs.SourceContent.URL.String()) {
-			statusCh <- doMirrorFake(sURLs, progressReader)
-		} else {
-			// Mirror is initiated if its not a fake run.
-			if !isFake {
-				statusCh <- doMirror(sURLs, progressReader, accntReader)
-			} else {
-				// fake Mirror is initiated if its a fake run.
-				statusCh <- doMirrorFake(sURLs, progressReader)
-			}
+			isFake = true
 		}
+		statusCh <- doMirror(sURLs, progressReader, accntReader, isFake)
 	}
 
 	// Close the goroutine.
