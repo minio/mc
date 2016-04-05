@@ -111,7 +111,8 @@ func loadMcConfigFactory() func() (*configV8, *probe.Error) {
 	}
 }
 
-var loadMcConfig = loadMcConfigFactory()
+// loadMcConfig - returns configuration, initialized later.
+var loadMcConfig func() (*configV8, *probe.Error)
 
 // saveMcConfig - saves configuration file and returns error if any.
 func saveMcConfig(config *configV8) *probe.Error {
