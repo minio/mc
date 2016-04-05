@@ -127,7 +127,7 @@ func (c mirrorStatMessage) String() string {
 }
 
 // doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
-func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *accounter, isFake bool) mirrorURLs {
+func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *accounter, fakeMirror bool) mirrorURLs {
 	if sURLs.Error != nil { // Errorneous sURLs passed.
 		sURLs.Error = sURLs.Error.Trace()
 		return sURLs
@@ -159,9 +159,13 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 		progress = progressReader.ProgressBar
 	}
 
-	if isFake {
-		if !globalDebug && !globalJSON && !globalQuiet {
+	// For a fake mirror make sure we update respective progress bars
+	// and accounting readers under relevant conditions.
+	if fakeMirror {
+		if !globalJSON && !globalQuiet {
 			progressReader.ProgressBar.Add64(sURLs.SourceContent.Size)
+		} else {
+			accountingReader.Add(sURLs.SourceContent.Size)
 		}
 		sURLs.Error = nil
 		return sURLs
@@ -329,13 +333,11 @@ func doMirrorSession(session *sessionV6) {
 		var sURLs mirrorURLs
 		// Unmarshal copyURLs from each line.
 		json.Unmarshal([]byte(urlScanner.Text()), &sURLs)
-		// Verify if previously copied, notify progress bar.
-		if isCopied(sURLs.SourceContent.URL.String()) {
-			isFake = true
-		} else {
-			isFake = false
-		}
-		statusCh <- doMirror(sURLs, progressReader, accntReader, isFake)
+		// Verify if previously copied or if its a fake mirror, set
+		// fake mirror accordingly.
+		fakeMirror := isCopied(sURLs.SourceContent.URL.String()) || isFake
+		// Perform mirror operation.
+		statusCh <- doMirror(sURLs, progressReader, accntReader, fakeMirror)
 	}
 
 	// Close the goroutine.
