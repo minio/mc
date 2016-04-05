@@ -48,7 +48,7 @@ func scanBarFactory() scanBarFunc {
 	prevSource := ""
 	fileCount := 0
 	termWidth, e := pb.GetTerminalWidth()
-	fatalIf(probe.NewError(e), "Unable to get terminal size. Please use --quiet option.")
+	fatalIf(probe.NewError(e), "Unable to get terminal size. Please use --no-progressbar option.")
 
 	// Cursor animate channel.
 	cursorCh := cursorAnimate()

@@ -40,7 +40,7 @@ const (
 )
 
 var (
-	globalQuiet   = false // Quiet flag set via command line
+	globalNoBar   = false // No Progress Bar flag set via command line
 	globalJSON    = false // Json flag set via command line
 	globalDebug   = false // Debug flag set via command line
 	globalNoColor = false // Debug flag set via command line
@@ -48,8 +48,8 @@ var (
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor bool) {
-	globalQuiet = quiet
+func setGlobals(noBar, debug, json, noColor bool) {
+	globalNoBar = noBar
 	globalDebug = debug
 	globalJSON = json
 	globalNoColor = noColor
@@ -67,9 +67,9 @@ func setGlobals(quiet, debug, json, noColor bool) {
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
 func setGlobalsFromContext(ctx *cli.Context) {
-	quiet := ctx.Bool("quiet") || ctx.GlobalBool("quiet")
+	noBar := ctx.Bool("no-progressbar") || ctx.GlobalBool("no-progressbar")
 	debug := ctx.Bool("debug") || ctx.GlobalBool("debug")
 	json := ctx.Bool("json") || ctx.GlobalBool("json")
 	noColor := ctx.Bool("no-color") || ctx.GlobalBool("no-color")
-	setGlobals(quiet, debug, json, noColor)
+	setGlobals(noBar, debug, json, noColor)
 }

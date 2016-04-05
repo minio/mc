@@ -132,7 +132,7 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 		return cpURLs
 	}
 
-	if !globalQuiet && !globalJSON {
+	if !globalNoBar && !globalJSON {
 		progressReader = progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
@@ -149,15 +149,15 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 	}
 
 	var progress io.Reader
-	if globalQuiet || globalJSON {
+	if globalNoBar || globalJSON {
 		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(copyMessage{
 			Source: sourcePath,
 			Target: targetPath,
 		})
-		// Proxy reader to accounting reader only during quiet mode.
-		if globalQuiet || globalJSON {
+		// Proxy reader to accounting reader only during progress bar mode.
+		if globalNoBar || globalJSON {
 			progress = accountingReader
 		}
 	} else {
@@ -175,14 +175,14 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
 func doCopyFake(cpURLs copyURLs, progressReader *progressBar) copyURLs {
-	if !globalQuiet && !globalJSON {
+	if !globalNoBar && !globalJSON {
 		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
 	}
 	return cpURLs
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
+func doPrepareCopyURLs(session *sessionV7, trapCh <-chan bool) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -198,7 +198,7 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 	dataFP := session.NewDataWriter()
 
 	var scanBar scanBarFunc
-	if !globalQuiet && !globalJSON { // set up progress bar
+	if !globalNoBar && !globalJSON { // set up progress bar
 		scanBar = scanBarFactory()
 	}
 
@@ -213,7 +213,7 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 			}
 			if cpURLs.Error != nil {
 				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-				if !globalQuiet && !globalJSON {
+				if !globalNoBar && !globalJSON {
 					console.Eraseline()
 				}
 				if strings.Contains(cpURLs.Error.ToGoError().Error(), " is a folder.") {
@@ -230,7 +230,7 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
-			if !globalQuiet && !globalJSON {
+			if !globalNoBar && !globalJSON {
 				scanBar(cpURLs.SourceContent.URL.String())
 			}
 
@@ -238,7 +238,7 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 			totalObjects++
 		case <-trapCh:
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-			if !globalQuiet && !globalJSON {
+			if !globalNoBar && !globalJSON {
 				console.Eraseline()
 			}
 			session.Delete() // If we are interrupted during the URL scanning, we drop the session.
@@ -250,7 +250,7 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCopySession(session *sessionV6) {
+func doCopySession(session *sessionV7) {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
@@ -268,7 +268,7 @@ func doCopySession(session *sessionV6) {
 
 	// Enable progress bar reader only during default mode.
 	var progressReader *progressBar
-	if !globalQuiet && !globalJSON { // set up progress bar
+	if !globalNoBar && !globalJSON { // set up progress bar
 		progressReader = newProgressBar(session.Header.TotalBytes)
 	}
 
@@ -286,7 +286,7 @@ func doCopySession(session *sessionV6) {
 			select {
 			case <-trapCh:
 				// Receive interrupt notification.
-				if !globalQuiet && !globalJSON {
+				if !globalNoBar && !globalJSON {
 					console.Eraseline()
 				}
 				session.CloseAndDie()
@@ -301,7 +301,7 @@ func doCopySession(session *sessionV6) {
 				} else {
 					// Print in new line and adjust to top so that we
 					// don't print over the ongoing progress bar.
-					if !globalQuiet && !globalJSON {
+					if !globalNoBar && !globalJSON {
 						console.Eraseline()
 					}
 					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
@@ -353,7 +353,7 @@ func doCopySession(session *sessionV6) {
 	// Wait for the goroutines to finish.
 	wg.Wait()
 
-	if !globalQuiet && !globalJSON {
+	if !globalNoBar && !globalJSON {
 		if progressReader.ProgressBar.Get() > 0 {
 			progressReader.ProgressBar.Finish()
 		}
@@ -379,7 +379,7 @@ func mainCopy(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	session := newSessionV6()
+	session := newSessionV7()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")
 

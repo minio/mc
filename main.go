@@ -222,7 +222,7 @@ func main() {
 
 	app.ExtraInfo = func() map[string]string {
 		if _, e := pb.GetTerminalWidth(); e != nil {
-			globalQuiet = true
+			globalNoBar = true
 		}
 		if globalDebug {
 			return getSystemData()
