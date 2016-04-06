@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"runtime"
@@ -82,8 +83,23 @@ func checkConfig() {
 	// Refresh the config once.
 	loadMcConfig = loadMcConfigFactory()
 	// Ensures config file is sane.
-	_, err := loadMcConfig()
+	config, err := loadMcConfig()
+	// Verify if the path is accesible before validating the config
 	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to access configuration file.")
+
+	// Validate and print error messges
+	ok, errMsgs := validateConfigFile(config)
+	if !ok {
+		var errorMsg bytes.Buffer
+		for index, errMsg := range errMsgs {
+			// Print atmost 10 errors
+			if index > 10 {
+				break
+			}
+			errorMsg.WriteString(errMsg + "\n")
+		}
+		console.Fatalln(errorMsg.String())
+	}
 }
 
 func migrate() {
