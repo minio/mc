@@ -19,6 +19,7 @@ package main
 import (
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -41,6 +42,13 @@ const (
 	partSuffix = ".part.minio"
 )
 
+var ( // GOOS specific ignore list.
+	ignoreFiles = map[string][]string{
+		"darwin": []string{".DS_Store"},
+		// "default": []string{""},
+	}
+)
+
 // fsNew - instantiate a new fs
 func fsNew(path string) (Client, *probe.Error) {
 	if strings.TrimSpace(path) == "" {
@@ -49,6 +57,27 @@ func fsNew(path string) (Client, *probe.Error) {
 	return &fsClient{
 		PathURL: newURL(normalizePath(path)),
 	}, nil
+}
+
+// isIgnoredFile returns true if 'filename' is on the exclude list.
+func isIgnoredFile(filename string) bool {
+	matchFile := path.Base(filename)
+
+	// OS specific ignore list.
+	for _, ignoredFile := range ignoreFiles[runtime.GOOS] {
+		if ignoredFile == matchFile {
+			return true
+		}
+	}
+
+	// Default ignore list for all OSes.
+	for _, ignoredFile := range ignoreFiles["default"] {
+		if ignoredFile == matchFile {
+			return true
+		}
+	}
+
+	return false
 }
 
 // URL get url.
@@ -85,7 +114,7 @@ func (f *fsClient) Put(reader io.Reader, size int64, contentType string, progres
 		}
 	}
 
-	// Write to a temporary file "object.part.mc" before committ.
+	// Write to a temporary file "object.part.mc" before commit.
 	objectPartPath := objectPath + partSuffix
 	if objectDir != "" {
 		// Create any missing top level directories.
@@ -328,6 +357,11 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 	}
 	pathURL := *f.PathURL
 	for _, fi := range files {
+		// Skip ignored files.
+		if isIgnoredFile(fi.Name()) {
+			continue
+		}
+
 		file := filepath.Join(dirName, fi.Name())
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 			st, e := os.Stat(file)
@@ -537,6 +571,12 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 				}
 				pathURL = *f.PathURL
 				pathURL.Path = filepath.Join(pathURL.Path, fi.Name())
+
+				// Skip ignored files.
+				if isIgnoredFile(fi.Name()) {
+					continue
+				}
+
 				contentCh <- &clientContent{
 					URL:  pathURL,
 					Time: fi.ModTime(),
