@@ -9,12 +9,12 @@ checks:
 
 getdeps: checks
 	@go get github.com/golang/lint/golint && echo "Installed golint:"
-	@go get golang.org/x/tools/cmd/vet && echo "Installed vet:"
 	@go get github.com/fzipp/gocyclo && echo "Installed gocyclo:"
 	@go get github.com/remyoudompheng/go-misc/deadcode && echo "Installed deadcode:"
+	@go get github.com/client9/misspell/cmd/misspell && echo "Installed misspell:"
 
 # verifiers: getdeps vet fmt lint cyclo deadcode
-verifiers: getdeps vet fmt lint cyclo deadcode
+verifiers: vet fmt lint cyclo deadcode spelling
 
 vet:
 	@echo "Running $@:"
@@ -22,6 +22,10 @@ vet:
 	@GO15VENDOREXPERIMENT=1 go tool vet -all ./pkg
 	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true *.go
 	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./pkg
+
+spelling:
+	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell *.go
+	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell pkg/**/*
 
 fmt:
 	@echo "Running $@:"
@@ -41,7 +45,7 @@ deadcode:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/deadcode
 
-build: verifiers
+build: getdeps verifiers
 	@echo "Installing mc:"
 
 test: verifiers
