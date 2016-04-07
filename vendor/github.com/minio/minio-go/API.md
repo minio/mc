@@ -35,6 +35,7 @@ s3Client can be used to perform operations on S3 storage. APIs are described bel
 
 * [`GetObject`](#GetObject)
 * [`PutObject`](#PutObject)
+* [`CopyObject`](#CopyObject)
 * [`StatObject`](#StatObject)
 * [`RemoveObject`](#RemoveObject)
 * [`RemoveIncompleteUpload`](#RemoveIncompleteUpload)
@@ -322,6 +323,42 @@ if err != nil {
 defer file.Close()
 
 n, err := s3Client.PutObject("my-bucketname", "my-objectname", object, "application/octet-stream")
+if err != nil {
+    fmt.Println(err)
+    return
+}
+```
+
+---------------------------------------
+<a name="CopyObject">
+#### CopyObject(bucketName, objectName, objectSource, conditions)
+Copy a source object into a new object with the provided name in the provided bucket.
+
+__Arguments__
+* `bucketName` _string_: name of the bucket
+* `objectName` _string_: name of the object
+* `objectSource` _string_: name of the object source.
+* `conditions` _CopyConditions_: Collection of supported CopyObject conditions. ['x-amz-copy-source', 'x-amz-copy-source-if-match', 'x-amz-copy-source-if-none-match', 'x-amz-copy-source-if-unmodified-since', 'x-amz-copy-source-if-modified-since']
+
+__Example__
+```go
+// All following conditions are allowed and can be combined together.
+
+// Set copy conditions.
+var copyConds = minio.NewCopyConditions()
+// Set modified condition, copy object modified since 2014 April.
+copyConds.SetModified(time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC))
+
+// Set unmodified condition, copy object unmodified since 2014 April.
+// copyConds.SetUnmodified(time.Date(2014, time.April, 0, 0, 0, 0, 0, time.UTC))
+
+// Set matching ETag condition, copy object which matches the following ETag.
+// copyConds.SetMatchETag("31624deb84149d2f8ef9c385918b653a")
+
+// Set matching ETag except condition, copy object which does not match the following ETag.
+// copyConds.SetMatchETagExcept("31624deb84149d2f8ef9c385918b653a")
+
+err := s3Client.CopyObject("my-bucketname", "my-objectname", "/my-sourcebucketname/my-sourceobjectname", copyConds)
 if err != nil {
     fmt.Println(err)
     return

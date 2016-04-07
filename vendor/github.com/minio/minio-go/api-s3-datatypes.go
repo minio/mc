@@ -96,6 +96,12 @@ type initiator struct {
 	DisplayName string
 }
 
+// copyObjectResult container for copy object response.
+type copyObjectResult struct {
+	ETag         string
+	LastModified string // time string format "2006-01-02T15:04:05.000Z"
+}
+
 // objectPart container for particular part of an object.
 type objectPart struct {
 	// Part number identifies the part.
