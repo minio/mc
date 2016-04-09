@@ -92,7 +92,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		if api, found = clientCache[confSum]; !found {
 			// Not found. Instantiate a new minio
 			var e error
-			if config.Signature == "S3v2" {
+			if strings.ToUpper(config.Signature) == "S3V2" {
 				// if Signature version '2' use NewV2 directly.
 				api, e = minio.NewV2(hostName, config.AccessKey, config.SecretKey, inSecure)
 			} else {

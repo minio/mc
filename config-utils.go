@@ -53,3 +53,13 @@ func isValidHostURL(hostURL string) bool {
 	}
 	return true
 }
+
+// isValidAPI - Validates if API signature string of supported type.
+func isValidAPI(api string) bool {
+	switch strings.ToLower(api) {
+	case "s3v2", "s3v4":
+		return true
+	default:
+		return false
+	}
+}
