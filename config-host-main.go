@@ -165,11 +165,9 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 			"Invalid secret key ‘"+secretKey+"’.")
 	}
 
-	switch api {
-	case "S3v2", "S3v4", "":
-	default:
+	if api != "" && !isValidAPI(api) { // Empty value set to default "S3v4".
 		fatalIf(errInvalidArgument().Trace(api),
-			"Unrecognized API signature. Valid options are ‘[ S3v4, S3v2 ]’.")
+			"Unrecognized API signature. Valid options are ‘[S3v4, S3v2]’.")
 	}
 }
 
@@ -214,7 +212,7 @@ func mainConfigHost(ctx *cli.Context) {
 		accessKey := args.Get(2)
 		secretKey := args.Get(3)
 		api := args.Get(4)
-		if strings.TrimSpace(api) == "" {
+		if api == "" {
 			api = "S3v4"
 		}
 		hostCfg := hostConfigV8{
