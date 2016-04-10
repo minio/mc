@@ -115,7 +115,7 @@ func newURL(urlStr string) *clientURL {
 	}
 	return &clientURL{
 		Type:      fileSystem,
-		Path:      rest,
+		Path:      urlStr,
 		Separator: filepath.Separator,
 	}
 }
