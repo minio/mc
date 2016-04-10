@@ -46,7 +46,7 @@ func isValidHostURL(hostURL string) bool {
 	if strings.TrimSpace(hostURL) == "" {
 		return false
 	}
-	url := newURL(hostURL)
+	url := newClientURL(hostURL)
 	if url.Scheme != "https" && url.Scheme != "http" {
 		return false
 	}

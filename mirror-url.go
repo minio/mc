@@ -74,7 +74,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		fatalIf(errInvalidArgument().Trace(), "Invalid target arguments to mirror command.")
 	}
 
-	url := newURL(tgtURL)
+	url := newClientURL(tgtURL)
 	if url.Host != "" {
 		if !isURLVirtualHostStyle(url.Host) {
 			if url.Path == string(url.Separator) {
@@ -92,11 +92,11 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake bool, mirrorURLsCh chan<- mirrorURLs) {
 	// source and targets are always directories
-	sourceSeparator := string(newURL(sourceURL).Separator)
+	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
 		sourceURL = sourceURL + sourceSeparator
 	}
-	targetSeparator := string(newURL(targetURL).Separator)
+	targetSeparator := string(newClientURL(targetURL).Separator)
 	if !strings.HasSuffix(targetURL, targetSeparator) {
 		targetURL = targetURL + targetSeparator
 	}
@@ -158,7 +158,7 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake
 		}
 		// either available only in source or size differs and force is set
 		targetPath := urlJoinPath(targetURL, sourceSuffix)
-		targetContent := &clientContent{URL: *newURL(targetPath)}
+		targetContent := &clientContent{URL: *newClientURL(targetPath)}
 		mirrorURLsCh <- mirrorURLs{
 			SourceAlias:   sourceAlias,
 			SourceContent: sourceContent,

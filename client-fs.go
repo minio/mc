@@ -55,7 +55,7 @@ func fsNew(path string) (Client, *probe.Error) {
 		return nil, probe.NewError(EmptyPath{})
 	}
 	return &fsClient{
-		PathURL: newURL(normalizePath(path)),
+		PathURL: newClientURL(normalizePath(path)),
 	}, nil
 }
 
@@ -435,7 +435,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 					}
 				}
 				contentCh <- &clientContent{
-					URL:  *newURL(file),
+					URL:  *newClientURL(file),
 					Time: st.ModTime(),
 					Size: st.Size(),
 					Type: st.Mode(),
@@ -455,7 +455,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 				}
 			}
 			contentCh <- &clientContent{
-				URL:  *newURL(file),
+				URL:  *newClientURL(file),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 				Type: fi.Mode(),
@@ -755,7 +755,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 				}
 			}
 			contentCh <- &clientContent{
-				URL:  *newURL(fp),
+				URL:  *newClientURL(fp),
 				Time: fi.ModTime(),
 				Size: fi.Size(),
 				Type: fi.Mode(),

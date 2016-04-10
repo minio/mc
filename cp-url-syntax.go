@@ -39,7 +39,7 @@ func checkCopySyntax(ctx *cli.Context) {
 
 	/****** Generic Invalid Rules *******/
 	// Check if bucket name is passed for URL type arguments.
-	url := newURL(tgtURL)
+	url := newClientURL(tgtURL)
 	if url.Host != "" {
 		// This check is for type URL.
 		if !isURLVirtualHostStyle(url.Host) {

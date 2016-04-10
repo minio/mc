@@ -148,11 +148,11 @@ func checkDiffSyntax(ctx *cli.Context) {
 // doDiffMain runs the diff.
 func doDiffMain(firstURL, secondURL string) {
 	// Source and targets are always directories
-	sourceSeparator := string(newURL(firstURL).Separator)
+	sourceSeparator := string(newClientURL(firstURL).Separator)
 	if !strings.HasSuffix(firstURL, sourceSeparator) {
 		firstURL = firstURL + sourceSeparator
 	}
-	targetSeparator := string(newURL(secondURL).Separator)
+	targetSeparator := string(newClientURL(secondURL).Separator)
 	if !strings.HasSuffix(secondURL, targetSeparator) {
 		secondURL = secondURL + targetSeparator
 	}

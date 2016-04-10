@@ -29,7 +29,7 @@ import (
 
 // Check if the target URL represents folder. It may or may not exist yet.
 func isTargetURLDir(targetURL string) bool {
-	targetURLParse := newURL(targetURL)
+	targetURLParse := newClientURL(targetURL)
 	_, targetContent, err := url2Stat(targetURL)
 	if err != nil {
 		_, aliasedTargetURL, _ := mustExpandAlias(targetURL)

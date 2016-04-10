@@ -50,7 +50,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 	// Return New function.
 	return func(config *Config) (Client, *probe.Error) {
 		// Creates a parsed URL.
-		targetURL := newURL(config.HostURL)
+		targetURL := newClientURL(config.HostURL)
 		// By default enable HTTPs.
 		inSecure := false
 		if targetURL.Scheme == "http" {
