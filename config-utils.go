@@ -21,6 +21,8 @@ import (
 	"strings"
 )
 
+var validAPIs = []string{"S3v4", "S3v2"}
+
 // isValidSecretKey - validate secret key.
 func isValidSecretKey(secretKey string) bool {
 	if secretKey == "" {
