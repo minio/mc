@@ -81,6 +81,9 @@ func (d diffMessage) String() string {
 	case differInFirst:
 		msg = console.Colorize("DiffMessage",
 			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
+	case differInSecond:
+		msg = console.Colorize("DiffMessage",
+			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInSecond", " - only in second.")
 	case differInType:
 		msg = console.Colorize("DiffMessage",
 			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
@@ -162,54 +165,31 @@ func doDiffMain(firstURL, secondURL string) {
 	secondAlias, secondURL, _ := mustExpandAlias(secondURL)
 
 	firstClient, err := newClientFromAlias(firstAlias, firstURL)
-	if err != nil {
-		fatalIf(err.Trace(firstAlias, firstURL, secondAlias, secondURL),
-			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
-	}
+	fatalIf(err.Trace(firstAlias, firstURL, secondAlias, secondURL),
+		fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 
 	secondClient, err := newClientFromAlias(secondAlias, secondURL)
-	if err != nil {
-		fatalIf(err.Trace(firstAlias, firstURL, secondAlias, secondURL),
-			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
-	}
+	fatalIf(err.Trace(firstAlias, firstURL, secondAlias, secondURL),
+		fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 
 	// Setup object difference function.
-	difference := objectDifferenceFactory(secondClient)
-
-	// Set default values for listing.
-	isRecursive := true   // recursive is always true for diff.
-	isIncomplete := false // we will not compare any incomplete objects.
-
-	// List all the elements on first URL and compare with
-	// 'difference' function.
-	for firstContent := range firstClient.List(isRecursive, isIncomplete) {
-		if firstContent.Err != nil {
-			switch firstContent.Err.ToGoError().(type) {
+	for d := range differenceCh(firstClient, secondClient) {
+		if d.err != nil {
+			switch d.err.ToGoError().(type) {
 			// Handle this specifically for filesystem related errors.
 			case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
-				errorIf(firstContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
+				errorIf(d.err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
 			default:
-				fatalIf(firstContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
+				fatalIf(d.err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
 			}
-			continue
 		}
-		if firstContent.Type.IsDir() {
-			continue
-		}
-		firstSuffix := strings.TrimPrefix(firstContent.URL.String(), firstURL)
-		differ, err := difference(secondURL, firstSuffix, firstContent.Type, firstContent.Size, firstContent.Time)
-		if err != nil {
-			errorIf(firstContent.Err.Trace(secondURL, firstSuffix),
-				fmt.Sprintf("Failed on '%s'", urlJoinPath(secondURL, firstSuffix)))
-			continue
-		}
-		if differ == differInNone {
+		if d.dType == differInNone {
 			continue
 		}
 		printMsg(diffMessage{
-			FirstURL:  firstContent.URL.String(),
-			SecondURL: urlJoinPath(secondURL, firstSuffix),
-			Diff:      differ,
+			FirstURL:  d.sourceURL,
+			SecondURL: d.targetURL,
+			Diff:      d.dType,
 		})
 	}
 }
@@ -225,6 +205,7 @@ func mainDiff(ctx *cli.Context) {
 	// Additional command specific theme customization.
 	console.SetColor("DiffMessage", color.New(color.FgGreen, color.Bold))
 	console.SetColor("DiffOnlyInFirst", color.New(color.FgRed, color.Bold))
+	console.SetColor("DiffOnlyInSecond", color.New(color.FgRed, color.Bold))
 	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
 	console.SetColor("DiffSize", color.New(color.FgMagenta, color.Bold))
 	console.SetColor("DiffTime", color.New(color.FgYellow, color.Bold))

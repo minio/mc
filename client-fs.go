@@ -744,7 +744,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 				return e
 			}
 		}
-		if fi.Mode().IsRegular() || fi.Mode().IsDir() {
+		if fi.Mode().IsRegular() {
 			if incomplete {
 				if !strings.HasSuffix(fi.Name(), partSuffix) {
 					return nil

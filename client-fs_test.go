@@ -111,22 +111,16 @@ func (s *TestSuite) TestList(c *C) {
 	}
 
 	c.Assert(err, IsNil)
-	c.Assert(len(contents), Equals, 5)
+	c.Assert(len(contents), Equals, 3)
 
 	var regularFiles int
-	var regularDirs int
 	// Test number of expected files and directories.
 	for _, content := range contents {
 		if content.Type.IsRegular() {
 			regularFiles++
 			continue
 		}
-		if content.Type.IsDir() {
-			regularDirs++
-			continue
-		}
 	}
-	c.Assert(regularDirs, Equals, 2)
 	c.Assert(regularFiles, Equals, 3)
 }
 

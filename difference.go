@@ -17,76 +17,150 @@
 package main
 
 import (
-	"os"
-	"time"
+	"strings"
 
 	"github.com/minio/minio/pkg/probe"
 )
-
-// objectDifference function finds the difference between object on
-// source and target it takes suffix string, type and size on the
-// source objectDifferenceFactory returns objectDifference function
-type objectDifference func(string, string, os.FileMode, int64, time.Time) (differType, *probe.Error)
 
 // differType difference in type.
 type differType string
 
 const (
-	differInSize  differType = "size"          // differs in size
-	differInTime             = "time"          // differs in time
-	differInFirst            = "only-in-first" // only on first source
-	differInType             = "type"          // differs in type, exfile/directory
-	differInNone             = ""              // does not differ
+	differInSize   differType = "size"           // differs in size
+	differInTime              = "time"           // differs in time
+	differInFirst             = "only-in-first"  // only on first source
+	differInSecond            = "only-in-second" // only on second source
+	differInType              = "type"           // differs in type, exfile/directory
+	differInNone              = ""               // does not differ
 )
 
-// objectDifferenceFactory returns objectDifference function to check for difference
-// between sourceURL and targetURL, for usage reference check diff and mirror commands.
-func objectDifferenceFactory(targetClnt Client) objectDifference {
+type differCh struct {
+	dType         differType
+	sourceURL     string
+	targetURL     string
+	sourceContent *clientContent
+	targetContent *clientContent
+	err           *probe.Error
+}
+
+func differenceCh(sourceClnt Client, targetClnt Client) <-chan differCh {
+	dCh := make(chan differCh)
 	isIncomplete := false
 	isRecursive := true
-	ch := targetClnt.List(isRecursive, isIncomplete)
-	reachedEOF := false
-	ok := false
-	var content *clientContent
-
-	return func(targetURL string, srcSuffix string, srcType os.FileMode, srcSize int64, srcTime time.Time) (differType, *probe.Error) {
-		if reachedEOF {
-			// Would mean the suffix is not on target.
-			return differInFirst, nil
-		}
-		current := targetURL
-		expected := urlJoinPath(targetURL, srcSuffix)
+	targetCh := targetClnt.List(isRecursive, isIncomplete)
+	sourceCh := sourceClnt.List(isRecursive, isIncomplete)
+	targetURL := targetClnt.GetURL().String()
+	sourceURL := sourceClnt.GetURL().String()
+	go func() {
+		defer close(dCh)
 		for {
-			if expected < current {
-				return differInFirst, nil // Not available in the target.
+			sourceContent, sourceOK := <-sourceCh
+			targetContent, targetOK := <-targetCh
+			if !sourceOK && !targetOK {
+				break
 			}
-			if expected == current {
-				tgtType := content.Type
-				tgtSize := content.Size
-				tgtTime := content.Time
+			if sourceContent != nil && sourceContent.Err != nil {
+				dCh <- differCh{
+					err: sourceContent.Err.Trace(sourceURL, targetURL),
+				}
+				break
+			}
+			if targetContent != nil && targetContent.Err != nil {
+				dCh <- differCh{
+					err: targetContent.Err.Trace(sourceURL, targetURL),
+				}
+				break
+			}
+			var sourceSuffix, targetSuffix string
+			if sourceContent != nil {
+				sourceSuffix = strings.TrimPrefix(sourceContent.URL.String(), sourceURL)
+			}
+			if targetContent != nil {
+				targetSuffix = strings.TrimPrefix(targetContent.URL.String(), targetURL)
+			}
+			if sourceContent != nil && targetContent == nil {
+				dCh <- differCh{
+					dType:         differInFirst,
+					sourceURL:     sourceContent.URL.String(),
+					targetURL:     urlJoinPath(targetURL, sourceSuffix),
+					sourceContent: sourceContent,
+					err:           nil,
+				}
+				continue
+			}
+			if targetContent != nil && sourceContent == nil {
+				dCh <- differCh{
+					dType:         differInSecond,
+					sourceURL:     urlJoinPath(sourceURL, targetSuffix),
+					targetURL:     targetContent.URL.String(),
+					targetContent: targetContent,
+					err:           nil,
+				}
+				continue
+			}
+			if targetSuffix < sourceSuffix {
+				dCh <- differCh{
+					dType:         differInSecond,
+					sourceURL:     urlJoinPath(sourceURL, sourceSuffix),
+					targetURL:     urlJoinPath(targetURL, targetSuffix),
+					sourceContent: sourceContent,
+					targetContent: targetContent,
+					err:           nil,
+				}
+			} else if sourceSuffix < targetSuffix {
+				dCh <- differCh{
+					dType:         differInFirst,
+					sourceURL:     urlJoinPath(sourceURL, sourceSuffix),
+					targetURL:     urlJoinPath(targetURL, targetSuffix),
+					sourceContent: sourceContent,
+					targetContent: targetContent,
+					err:           nil,
+				}
+			}
+			if sourceSuffix == targetSuffix {
+				tgtType := targetContent.Type
+				srcType := sourceContent.Type
 				if srcType.IsRegular() && !tgtType.IsRegular() {
-					// Type differes. Source is never a directory.
-					return differInType, nil
+					// Type differs. Source is never a directory.
+					dCh <- differCh{
+						dType:         differInType,
+						sourceURL:     urlJoinPath(sourceURL, sourceSuffix),
+						targetURL:     urlJoinPath(targetURL, targetSuffix),
+						sourceContent: sourceContent,
+						targetContent: targetContent,
+						err:           nil,
+					}
+					continue
 				}
+				tgtSize := targetContent.Size
+				srcSize := sourceContent.Size
 				if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
-					// Regular files differing in size.
-					return differInSize, nil
+					// Same type, differs in size.
+					dCh <- differCh{
+						dType:         differInSize,
+						sourceURL:     urlJoinPath(sourceURL, sourceSuffix),
+						targetURL:     urlJoinPath(targetURL, targetSuffix),
+						sourceContent: sourceContent,
+						targetContent: targetContent,
+						err:           nil,
+					}
+					continue
 				}
+				tgtTime := targetContent.Time
+				srcTime := sourceContent.Time
 				if (srcType.IsRegular() && tgtType.IsRegular()) && srcTime.After(tgtTime) {
-					// Regular files differing in time.
-					return differInTime, nil
+					// Same type, differs in time.
+					dCh <- differCh{
+						dType:         differInTime,
+						sourceURL:     urlJoinPath(sourceURL, sourceSuffix),
+						targetURL:     urlJoinPath(targetURL, targetSuffix),
+						sourceContent: sourceContent,
+						targetContent: targetContent,
+						err:           nil,
+					}
 				}
-				return differInNone, nil // Available in the target.
 			}
-			content, ok = <-ch
-			if !ok {
-				reachedEOF = true
-				return differInFirst, nil
-			}
-			if content.Err != nil {
-				return "", content.Err.Trace()
-			}
-			current = content.URL.String()
 		}
-	}
+	}()
+	return dCh
 }
