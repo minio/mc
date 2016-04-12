@@ -112,6 +112,11 @@ type copyStatMessage struct {
 	Speed       float64
 }
 
+const (
+	// 5GiB.
+	fiveGB = 5 * 1024 * 1024 * 1024
+)
+
 // copyStatMessage copy accounting message
 func (c copyStatMessage) String() string {
 	speedBox := pb.Format(int64(c.Speed)).To(pb.U_BYTES).String()
@@ -142,12 +147,6 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 	targetURL := cpURLs.TargetContent.URL
 	length := cpURLs.SourceContent.Size
 
-	reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
-	if err != nil {
-		cpURLs.Error = err.Trace(sourceURL.String())
-		return cpURLs
-	}
-
 	var progress io.Reader
 	if globalQuiet || globalJSON {
 		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
@@ -163,6 +162,37 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 	} else {
 		// Set up progress reader.
 		progress = progressReader.ProgressBar
+	}
+	// If source size is <= 5GB and operation is across same server type try to use Copy.
+	if length <= fiveGB && (sourceURL.Type == targetURL.Type) {
+		// FS -> FS Copy includes alias in path.
+		if sourceURL.Type == fileSystem {
+			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
+			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, progress)
+			if err != nil {
+				cpURLs.Error = err.Trace(sourceURL.String())
+				return cpURLs
+			}
+			cpURLs.Error = nil
+			return cpURLs
+		}
+		// If source/target are object storage their aliases must be the same
+		if sourceURL.Type == objectStorage && (sourceAlias == targetAlias) {
+			// Do not include alias inside path for ObjStore -> ObjStore.
+			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, progress)
+			if err != nil {
+				cpURLs.Error = err.Trace(sourceURL.String())
+				return cpURLs
+			}
+			cpURLs.Error = nil
+			return cpURLs
+		}
+	}
+	// Standard GET/PUT for size > 5GB.
+	reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
+	if err != nil {
+		cpURLs.Error = err.Trace(sourceURL.String())
+		return cpURLs
 	}
 	_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
 	if err != nil {

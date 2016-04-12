@@ -320,3 +320,25 @@ func (s *TestSuite) TestStatObject(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(content.Size, Equals, int64(dataLen))
 }
+
+// Test copy.
+func (s *TestSuite) TestCopy(c *C) {
+	root, e := ioutil.TempDir(os.TempDir(), "fs-")
+	c.Assert(e, IsNil)
+	defer os.RemoveAll(root)
+	sourcePath := filepath.Join(root, "source")
+	targetPath := filepath.Join(root, "target")
+	fsClientTarget, err := fsNew(targetPath)
+	fsClientSource, err := fsNew(sourcePath)
+	c.Assert(err, IsNil)
+
+	data := "hello world"
+	var reader io.Reader
+	reader = bytes.NewReader([]byte(data))
+	n, err := fsClientSource.Put(reader, int64(len(data)), "application/octet-stream", nil)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, int64(len(data)))
+
+	err = fsClientTarget.Copy(sourcePath, int64(len(data)), nil)
+	c.Assert(err, IsNil)
+}

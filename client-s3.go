@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"io/ioutil"
+
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/probe"
@@ -149,6 +151,46 @@ func (c *s3Client) Get() (io.Reader, *probe.Error) {
 		return nil, probe.NewError(e)
 	}
 	return reader, nil
+}
+
+// Copy - copy object
+func (c *s3Client) Copy(source string, size int64, progress io.Reader) *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	// Empty copy conditions
+	copyConds := minio.NewCopyConditions()
+	e := c.api.CopyObject(bucket, object, source, copyConds)
+	if e != nil {
+		errResponse := minio.ToErrorResponse(e)
+		if errResponse.Code == "AccessDenied" {
+			return probe.NewError(PathInsufficientPermission{
+				Path: c.targetURL.String(),
+			})
+		}
+		if errResponse.Code == "NoSuchBucket" {
+			return probe.NewError(BucketDoesNotExist{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "InvalidBucketName" {
+			return probe.NewError(BucketInvalid{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
+			return probe.NewError(ObjectMissing{})
+		}
+		return probe.NewError(e)
+	}
+	// Successful copy update progress bar if there is one.
+	if progress != nil {
+		if _, e := io.CopyN(ioutil.Discard, progress, size); e != nil {
+			return probe.NewError(e)
+		}
+	}
+	return nil
 }
 
 // Put - put object.

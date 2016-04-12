@@ -196,7 +196,32 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 		sURLs.Error = nil
 		return sURLs
 	}
-
+	// If source size is <= 5GB and operation is across same server type try to use Copy.
+	if length <= fiveGB && (sourceURL.Type == targetURL.Type) {
+		// FS -> FS Copy includes alias in path.
+		if sourceURL.Type == fileSystem {
+			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
+			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, progress)
+			if err != nil {
+				sURLs.Error = err.Trace(sourceURL.String())
+				return sURLs
+			}
+			sURLs.Error = nil
+			return sURLs
+		}
+		// If source/target are object storage their aliases must be the same
+		if sourceURL.Type == objectStorage && (sourceAlias == targetAlias) {
+			// Do not include alias inside path for ObjStore -> ObjStore.
+			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, progress)
+			if err != nil {
+				sURLs.Error = err.Trace(sourceURL.String())
+				return sURLs
+			}
+			sURLs.Error = nil
+			return sURLs
+		}
+	}
+	// Standard GET/PUT for size > 5GB
 	reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
 	if err != nil {
 		sURLs.Error = err.Trace(sourceURL.String())

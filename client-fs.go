@@ -261,6 +261,90 @@ func (f *fsClient) ShareUpload(startsWith bool, expires time.Duration, contentTy
 	})
 }
 
+// readFile reads and returns the data inside the file located
+// at the provided filepath.
+func readFile(fpath string) (io.ReadCloser, error) {
+	// Golang strips trailing / if you clean(..) or
+	// EvalSymlinks(..). Adding '.' prevents it from doing so.
+	if strings.HasSuffix(fpath, "/") {
+		fpath = fpath + "."
+	}
+	fpath, e := filepath.EvalSymlinks(fpath)
+	if e != nil {
+		return nil, e
+	}
+	fileData, e := os.Open(fpath)
+	if e != nil {
+		return nil, e
+	}
+	return fileData, nil
+}
+
+// createFile creates an empty file at the provided filepath
+// if one does not exist already.
+func createFile(fpath string) (io.WriteCloser, error) {
+	st, e := os.Stat(fpath)
+	// If destination exists but is not regular.
+	if e == nil && !st.Mode().IsRegular() {
+		return nil, PathIsNotRegular{Path: fpath}
+	}
+	// If file exists already.
+	if e != nil && !os.IsNotExist(e) {
+		return nil, e
+	}
+	file, e := os.Create(fpath)
+	if e != nil {
+		return nil, e
+	}
+	return file, nil
+}
+
+// Copy - copy data from source to destination
+func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Error {
+	// Don't use f.Get() f.Put() directly. Instead use readFile and createFile
+	destination := f.PathURL.Path
+	if destination == source { // Cannot copy file into itself
+		return errOverWriteNotAllowed(destination).Trace(destination)
+	}
+	rc, e := readFile(source)
+	if e != nil {
+		err := f.toClientError(e, destination)
+		return err.Trace(destination)
+	}
+	defer rc.Close()
+	wc, e := createFile(destination)
+	if e != nil {
+		err := f.toClientError(e, destination)
+		return err.Trace(destination)
+	}
+	defer wc.Close()
+	reader := hookreader.NewHook(rc, progress)
+	// Perform copy
+	n, e := io.CopyN(wc, reader, size) // e == nil only if n != size
+	// Only check size related errors if size is positive
+	if size > 0 {
+		if n < size { // Unexpected early EOF
+			return probe.NewError(UnexpectedEOF{
+				TotalSize:    size,
+				TotalWritten: n,
+			})
+		}
+		if n > size { // Unexpected ExcessRead
+			return probe.NewError(UnexpectedExcessRead{
+				TotalSize:    size,
+				TotalWritten: n,
+			})
+		}
+	}
+	// Successful copy update progress bar if there is one.
+	if progress != nil {
+		if _, e := io.CopyN(ioutil.Discard, reader, size); e != nil {
+			return probe.NewError(e)
+		}
+	}
+	return nil
+}
+
 // GetPartial download a part object from bucket.
 // sets err for any errors, reader is nil for errors.
 func (f *fsClient) Get() (io.Reader, *probe.Error) {
