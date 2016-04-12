@@ -17,7 +17,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/minio/minio/pkg/probe"
@@ -32,11 +34,11 @@ type objectDifference func(string, string, os.FileMode, int64, time.Time) (diffe
 type differType string
 
 const (
-	differInSize  differType = "size"          // differs in size
-	differInTime             = "time"          // differs in time
-	differInFirst            = "only-in-first" // only on first source
-	differInType             = "type"          // differs in type, exfile/directory
-	differInNone             = ""              // does not differ
+	differInSize   differType = "size"           // differs in size
+	differInFirst             = "only-in-first"  // only in source
+	differInSecond            = "only-in-second" // only in target
+	differInType              = "type"           // differs in type, exfile/directory
+	differInNone              = ""               // does not differ
 )
 
 // objectDifferenceFactory returns objectDifference function to check for difference
@@ -63,7 +65,6 @@ func objectDifferenceFactory(targetClnt Client) objectDifference {
 			if expected == current {
 				tgtType := content.Type
 				tgtSize := content.Size
-				tgtTime := content.Time
 				if srcType.IsRegular() && !tgtType.IsRegular() {
 					// Type differes. Source is never a directory.
 					return differInType, nil
@@ -71,10 +72,6 @@ func objectDifferenceFactory(targetClnt Client) objectDifference {
 				if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
 					// Regular files differing in size.
 					return differInSize, nil
-				}
-				if (srcType.IsRegular() && tgtType.IsRegular()) && srcTime.After(tgtTime) {
-					// Regular files differing in time.
-					return differInTime, nil
 				}
 				return differInNone, nil // Available in the target.
 			}
@@ -89,4 +86,130 @@ func objectDifferenceFactory(targetClnt Client) objectDifference {
 			current = content.URL.String()
 		}
 	}
+}
+
+func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL string) (d chan diffMessage) {
+
+	var (
+		srcEOF, tgtEOF       bool
+		srcOk, tgtOk         bool
+		srcCtnt, tgtCtnt     *clientContent
+		srcSuffix, tgtSuffix string
+	)
+
+	isIncomplete := false
+	isRecursive := true
+	srcCh := sourceClnt.List(isRecursive, isIncomplete)
+	tgtCh := targetClnt.List(isRecursive, isIncomplete)
+
+	d = make(chan diffMessage, 1000)
+
+	go func() {
+
+		srcCtnt, srcOk = <-srcCh
+		tgtCtnt, tgtOk = <-tgtCh
+
+		for {
+			srcEOF = !srcOk
+			tgtEOF = !tgtOk
+
+			// No objects from source AND target: Finish
+			if srcEOF && tgtEOF {
+				close(d)
+				break
+			}
+
+			if !srcEOF && srcCtnt.Err != nil {
+				switch srcCtnt.Err.ToGoError().(type) {
+				// Handle this specifically for filesystem related errors.
+				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
+					errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
+				default:
+					fatalIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
+				}
+				srcCtnt, srcOk = <-srcCh
+				continue
+			}
+
+			if !tgtEOF && tgtCtnt.Err != nil {
+				switch tgtCtnt.Err.ToGoError().(type) {
+				// Handle this specifically for filesystem related errors.
+				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
+					errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
+				default:
+					fatalIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
+				}
+				tgtCtnt, tgtOk = <-tgtCh
+				continue
+			}
+
+			// If source doesn't have objects anymore, comparison becomes obvious
+			if srcEOF {
+				d <- diffMessage{
+					SecondURL: tgtCtnt.URL.String(),
+					Diff:      differInSecond,
+				}
+				tgtCtnt, tgtOk = <-tgtCh
+				continue
+			}
+
+			// The same for target
+			if tgtEOF {
+				d <- diffMessage{
+					FirstURL: srcCtnt.URL.String(),
+					Diff:     differInFirst,
+				}
+				srcCtnt, srcOk = <-srcCh
+				continue
+			}
+
+			srcSuffix = strings.TrimPrefix(srcCtnt.URL.String(), sourceURL)
+			tgtSuffix = strings.TrimPrefix(tgtCtnt.URL.String(), targetURL)
+
+			current := urlJoinPath(targetURL, srcSuffix)
+			expected := urlJoinPath(targetURL, tgtSuffix)
+
+			if expected > current {
+				d <- diffMessage{
+					FirstURL: srcCtnt.URL.String(),
+					Diff:     differInFirst,
+				}
+				srcCtnt, srcOk = <-srcCh
+				continue
+			}
+			if expected == current {
+				srcType, tgtType := srcCtnt.Type, tgtCtnt.Type
+				srcSize, tgtSize := srcCtnt.Size, tgtCtnt.Size
+				if srcType.IsRegular() && !tgtType.IsRegular() ||
+					!srcType.IsRegular() && tgtType.IsRegular() {
+					// Type differes. Source is never a directory.
+					d <- diffMessage{
+						FirstURL:  srcCtnt.URL.String(),
+						SecondURL: tgtCtnt.URL.String(),
+						Diff:      differInType,
+					}
+				} else if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
+					// Regular files differing in size.
+					d <- diffMessage{
+						FirstURL:  srcCtnt.URL.String(),
+						SecondURL: tgtCtnt.URL.String(),
+						Diff:      differInSize,
+					}
+				}
+				// No differ
+				srcCtnt, srcOk = <-srcCh
+				tgtCtnt, tgtOk = <-tgtCh
+				continue
+			}
+			// Differ in second
+			d <- diffMessage{
+				SecondURL: tgtCtnt.URL.String(),
+				Diff:      differInSecond,
+			}
+			tgtCtnt, tgtOk = <-tgtCh
+			continue
+		}
+	}()
+
+	return d
 }
