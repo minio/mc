@@ -44,7 +44,7 @@ const (
 
 var ( // GOOS specific ignore list.
 	ignoreFiles = map[string][]string{
-		"darwin": []string{".DS_Store"},
+		"darwin": {".DS_Store"},
 		// "default": []string{""},
 	}
 )

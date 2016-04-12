@@ -216,7 +216,7 @@ func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 	if err != nil {
 		return false
 	}
-	isRecursive := true
+	isRecursive := false
 	isIncomplete := incomplete
 	for entry := range clnt.List(isRecursive, isIncomplete) {
 		return entry.Err == nil
