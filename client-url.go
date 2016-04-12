@@ -90,10 +90,9 @@ func getHost(authority string) (host string) {
 	return authority
 }
 
-// newURL returns an abstracted URL for filesystems and object storage.
-func newURL(urlStr string) *clientURL {
+// newClientURL returns an abstracted URL for filesystems and object storage.
+func newClientURL(urlStr string) *clientURL {
 	scheme, rest := getScheme(urlStr)
-	rest, _ = splitSpecial(rest, "?", true)
 	if strings.HasPrefix(rest, "//") {
 		// if rest has '//' prefix, skip them
 		var authority string
@@ -115,7 +114,7 @@ func newURL(urlStr string) *clientURL {
 	}
 	return &clientURL{
 		Type:      fileSystem,
-		Path:      urlStr,
+		Path:      rest,
 		Separator: filepath.Separator,
 	}
 }
@@ -172,8 +171,8 @@ func isURLVirtualHostStyle(hostURL string) bool {
 
 // urlJoinPath Join a path to existing URL.
 func urlJoinPath(url1, url2 string) string {
-	u1 := newURL(url1)
-	u2 := newURL(url2)
+	u1 := newClientURL(url1)
+	u2 := newClientURL(url2)
 	return joinURLs(u1, u2).String()
 }
 
@@ -228,7 +227,7 @@ func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 // guessURLContentType - guess content-type of the URL.
 // on failure just return 'application/octet-stream'.
 func guessURLContentType(urlStr string) string {
-	url := newURL(urlStr)
+	url := newClientURL(urlStr)
 	contentType := mime.TypeByExtension(filepath.Ext(url.Path))
 	if contentType == "" {
 		contentType = "application/octet-stream"

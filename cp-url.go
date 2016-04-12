@@ -120,7 +120,7 @@ func makeCopyContentTypeA(sourceAlias string, sourceContent *clientContent, targ
 		SourceAlias:   sourceAlias,
 		SourceContent: sourceContent,
 		TargetAlias:   targetAlias,
-		TargetContent: &clientContent{URL: *newURL(targetURL)},
+		TargetContent: &clientContent{URL: *newClientURL(targetURL)},
 	}
 }
 
@@ -153,7 +153,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) copyURLs {
 // makeCopyContentTypeB - CopyURLs content for copying.
 func makeCopyContentTypeB(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string) copyURLs {
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-	targetURLParse := newURL(targetURL)
+	targetURLParse := newClientURL(targetURL)
 	targetURLParse.Path = filepath.ToSlash(filepath.Join(targetURLParse.Path, filepath.Base(sourceContent.URL.Path)))
 	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, targetURLParse.String())
 }

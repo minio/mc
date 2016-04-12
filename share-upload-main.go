@@ -100,7 +100,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 	}
 
 	for _, targetURL := range ctx.Args() {
-		url := newURL(targetURL)
+		url := newClientURL(targetURL)
 		if strings.HasSuffix(targetURL, string(url.Separator)) && !isRecursive {
 			fatalIf(errInvalidArgument().Trace(targetURL),
 				"Use --recursive option to generate curl command for prefixes.")
@@ -110,7 +110,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 
 // makeCurlCmd constructs curl command-line.
 func makeCurlCmd(key string, isRecursive bool, uploadInfo map[string]string) string {
-	URL := newURL(key)
+	URL := newClientURL(key)
 	postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator)
 	if !isBucketVirtualStyle(URL.Host) {
 		postURL = postURL + uploadInfo["bucket"]

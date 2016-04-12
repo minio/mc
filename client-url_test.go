@@ -18,6 +18,20 @@ package main
 
 import . "gopkg.in/check.v1"
 
+// TestURL - tests url parsing and fields.
+func (s *TestSuite) TestURL(c *C) {
+	urlStr := "foo?.go"
+	url := newClientURL(urlStr)
+	c.Assert(url.Path, Equals, "foo?.go")
+
+	urlStr = "https://s3.amazonaws.com/mybucket/foo?.go"
+	url = newClientURL(urlStr)
+	c.Assert(url.Scheme, Equals, "https")
+	c.Assert(url.Host, Equals, "s3.amazonaws.com")
+	c.Assert(url.Path, Equals, "/mybucket/foo?.go")
+}
+
+// TestURLJoinPath - tests joining two different urls.
 func (s *TestSuite) TestURLJoinPath(c *C) {
 	// Join two URLs
 	url1 := "http://s3.mycompany.io/dev"
