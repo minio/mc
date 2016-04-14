@@ -18,78 +18,39 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
-	"time"
-
-	"github.com/minio/minio/pkg/probe"
 )
-
-// objectDifference function finds the difference between object on
-// source and target it takes suffix string, type and size on the
-// source objectDifferenceFactory returns objectDifference function
-type objectDifference func(string, string, os.FileMode, int64, time.Time) (differType, *probe.Error)
 
 // differType difference in type.
-type differType string
+type differType int
 
 const (
-	differInSize   differType = "size"           // differs in size
-	differInFirst             = "only-in-first"  // only in source
-	differInSecond            = "only-in-second" // only in target
-	differInType              = "type"           // differs in type, exfile/directory
-	differInNone              = ""               // does not differ
+	differInNone   differType = iota // does not differ
+	differInSize                     // differs in size
+	differInType                     // only in source
+	differInFirst                    // only in target
+	differInSecond                   // differs in type, exfile/directory
 )
 
-// objectDifferenceFactory returns objectDifference function to check for difference
-// between sourceURL and targetURL, for usage reference check diff and mirror commands.
-func objectDifferenceFactory(targetClnt Client) objectDifference {
-	isIncomplete := false
-	isRecursive := true
-	ch := targetClnt.List(isRecursive, isIncomplete)
-	reachedEOF := false
-	ok := false
-	var content *clientContent
-
-	return func(targetURL string, srcSuffix string, srcType os.FileMode, srcSize int64, srcTime time.Time) (differType, *probe.Error) {
-		if reachedEOF {
-			// Would mean the suffix is not on target.
-			return differInFirst, nil
-		}
-		current := targetURL
-		expected := urlJoinPath(targetURL, srcSuffix)
-		for {
-			if expected < current {
-				return differInFirst, nil // Not available in the target.
-			}
-			if expected == current {
-				tgtType := content.Type
-				tgtSize := content.Size
-				if srcType.IsRegular() && !tgtType.IsRegular() {
-					// Type differes. Source is never a directory.
-					return differInType, nil
-				}
-				if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
-					// Regular files differing in size.
-					return differInSize, nil
-				}
-				return differInNone, nil // Available in the target.
-			}
-			content, ok = <-ch
-			if !ok {
-				reachedEOF = true
-				return differInFirst, nil
-			}
-			if content.Err != nil {
-				return "", content.Err.Trace()
-			}
-			current = content.URL.String()
-		}
+func (d differType) String() string {
+	switch d {
+	case differInNone:
+		return ""
+	case differInSize:
+		return "size"
+	case differInType:
+		return "type"
+	case differInFirst:
+		return "only-in-first"
+	case differInSecond:
+		return "only-in-second"
 	}
+	return "unknown"
 }
 
-func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL string) (d chan diffMessage) {
-
+// objectDifference function finds the difference between all objects
+// recursively in sorted order from source and target.
+func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
 	var (
 		srcEOF, tgtEOF       bool
 		srcOk, tgtOk         bool
@@ -97,12 +58,13 @@ func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL
 		srcSuffix, tgtSuffix string
 	)
 
-	isIncomplete := false
-	isRecursive := true
+	// Set default values for listing.
+	isRecursive := true   // recursive is always true for diff.
+	isIncomplete := false // we will not compare any incomplete objects.
 	srcCh := sourceClnt.List(isRecursive, isIncomplete)
 	tgtCh := targetClnt.List(isRecursive, isIncomplete)
 
-	d = make(chan diffMessage, 1000)
+	diffCh = make(chan diffMessage, 1000)
 
 	go func() {
 
@@ -115,7 +77,7 @@ func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL
 
 			// No objects from source AND target: Finish
 			if srcEOF && tgtEOF {
-				close(d)
+				close(diffCh)
 				break
 			}
 
@@ -145,9 +107,10 @@ func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL
 
 			// If source doesn't have objects anymore, comparison becomes obvious
 			if srcEOF {
-				d <- diffMessage{
-					SecondURL: tgtCtnt.URL.String(),
-					Diff:      differInSecond,
+				diffCh <- diffMessage{
+					SecondURL:     tgtCtnt.URL.String(),
+					Diff:          differInSecond,
+					secondContent: tgtCtnt,
 				}
 				tgtCtnt, tgtOk = <-tgtCh
 				continue
@@ -155,9 +118,10 @@ func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL
 
 			// The same for target
 			if tgtEOF {
-				d <- diffMessage{
-					FirstURL: srcCtnt.URL.String(),
-					Diff:     differInFirst,
+				diffCh <- diffMessage{
+					FirstURL:     srcCtnt.URL.String(),
+					Diff:         differInFirst,
+					firstContent: srcCtnt,
 				}
 				srcCtnt, srcOk = <-srcCh
 				continue
@@ -170,9 +134,10 @@ func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL
 			expected := urlJoinPath(targetURL, tgtSuffix)
 
 			if expected > current {
-				d <- diffMessage{
-					FirstURL: srcCtnt.URL.String(),
-					Diff:     differInFirst,
+				diffCh <- diffMessage{
+					FirstURL:     srcCtnt.URL.String(),
+					Diff:         differInFirst,
+					firstContent: srcCtnt,
 				}
 				srcCtnt, srcOk = <-srcCh
 				continue
@@ -183,17 +148,21 @@ func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL
 				if srcType.IsRegular() && !tgtType.IsRegular() ||
 					!srcType.IsRegular() && tgtType.IsRegular() {
 					// Type differes. Source is never a directory.
-					d <- diffMessage{
-						FirstURL:  srcCtnt.URL.String(),
-						SecondURL: tgtCtnt.URL.String(),
-						Diff:      differInType,
+					diffCh <- diffMessage{
+						FirstURL:      srcCtnt.URL.String(),
+						SecondURL:     tgtCtnt.URL.String(),
+						Diff:          differInType,
+						firstContent:  srcCtnt,
+						secondContent: tgtCtnt,
 					}
 				} else if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
 					// Regular files differing in size.
-					d <- diffMessage{
-						FirstURL:  srcCtnt.URL.String(),
-						SecondURL: tgtCtnt.URL.String(),
-						Diff:      differInSize,
+					diffCh <- diffMessage{
+						FirstURL:      srcCtnt.URL.String(),
+						SecondURL:     tgtCtnt.URL.String(),
+						Diff:          differInSize,
+						firstContent:  srcCtnt,
+						secondContent: tgtCtnt,
 					}
 				}
 				// No differ
@@ -202,14 +171,15 @@ func objectDifferenceNewImpl(sourceClnt, targetClnt Client, sourceURL, targetURL
 				continue
 			}
 			// Differ in second
-			d <- diffMessage{
-				SecondURL: tgtCtnt.URL.String(),
-				Diff:      differInSecond,
+			diffCh <- diffMessage{
+				SecondURL:     tgtCtnt.URL.String(),
+				Diff:          differInSecond,
+				secondContent: tgtCtnt,
 			}
 			tgtCtnt, tgtOk = <-tgtCh
 			continue
 		}
 	}()
 
-	return d
+	return diffCh
 }
