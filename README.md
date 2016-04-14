@@ -28,21 +28,21 @@
 
 Download ``mc`` for:
 
-- ``64-bit Intel`` from https://dl.minio.io/client/mc/release/linux-amd64/mc.tar.gz
-- ``32-bit Intel`` from https://dl.minio.io/client/mc/release/linux-386/mc.tar.gz
-- ``32-bit ARM`` from https://dl.minio.io/client/mc/release/linux-arm/mc.tar.gz
+- ``64-bit Intel`` from https://dl.minio.io/client/mc/release/linux-amd64/mc
+- ``32-bit Intel`` from https://dl.minio.io/client/mc/release/linux-386/mc
+- ``32-bit ARM`` from https://dl.minio.io/client/mc/release/linux-arm/mc
 
 ~~~
-$ tar -xzf mc.tar.gz
+$ chmod 755 mc
 $ ./mc --help
 ~~~
 
 #### OS X
 
-Download ``mc`` from https://dl.minio.io/client/mc/release/darwin-amd64/mc.zip
+Download ``mc`` from https://dl.minio.io/client/mc/release/darwin-amd64/mc
 
 ~~~
-$ unzip mc.zip
+$ chmod 755 mc
 $ ./mc --help
 ~~~
 
@@ -50,8 +50,8 @@ $ ./mc --help
 
 Download ``mc`` for:
 
-- ``64-bit`` from https://dl.minio.io/client/mc/release/windows-amd64/mc.zip
-- ``32-bit`` from https://dl.minio.io/client/mc/release/windows-386/mc.zip
+- ``64-bit`` from https://dl.minio.io/client/mc/release/windows-amd64/mc.exe
+- ``32-bit`` from https://dl.minio.io/client/mc/release/windows-386/mc.exe
 
 Extract the downloaded zip file.
 
@@ -61,19 +61,19 @@ C:\Users\Username\Downloads> mc.exe --help
 
 #### Solaris/Illumos
 
-Download ``mc`` from https://dl.minio.io/client/mc/release/solaris-amd64/mc.tar.gz
+Download ``mc`` from https://dl.minio.io/client/mc/release/solaris-amd64/mc
 
 ~~~
-$ tar -xzf mc.tar.gz
+$ chmod 755 mc
 $ ./mc --help
 ~~~
 
 #### FreeBSD
 
-Download ``mc`` from https://dl.minio.io/client/mc/release/freebsd-amd64/mc.tar.gz
+Download ``mc`` from https://dl.minio.io/client/mc/release/freebsd-amd64/mc
 
 ~~~
-$ tar -xzf mc.tar.gz
+$ chmod 755 mc
 $ ./mc --help
 ~~~
 

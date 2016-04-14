@@ -28,10 +28,7 @@ _init() {
     ## System binaries
     CP=`which cp`
     SHASUM=`which shasum`
-    GZIP=`which gzip`
-    ZIP=`which zip`
     SED=`which sed`
-    TAR=`which tar`
 }
 
 go_build() {
@@ -48,9 +45,6 @@ go_build() {
     release_real_bin="$release_str/$os-$arch/$(basename $package)"
     # Release shasum name
     release_shasum="$release_str/$os-$arch/$(basename $package).shasum"
-    # Release zip file.
-    release_real_zip="$(basename $package).zip"
-    release_real_tgz="$(basename $package).tar.gz"
 
     # Go build to build the binary.
     GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin
@@ -65,21 +59,6 @@ go_build() {
     # Calculate shasum
     shasum_str=$(${SHASUM} ${release_bin})
     echo ${shasum_str} | $SED "s/$release_str\/$os-$arch\///g" > $release_shasum
-
-    # Create a compressed file.
-    if [ $os == "windows" ]; then
-        cd "$release_str/$os-$arch"
-        $ZIP -r $release_real_zip $(basename $package).exe $(basename $package).shasum
-        cd -
-    elif [ $os == "darwin" ]; then
-        cd "$release_str/$os-$arch"
-        $ZIP -r $release_real_zip $(basename $package) $(basename $package).shasum
-        cd -
-    else
-        cd "$release_str/$os-$arch"
-        $TAR -czf $release_real_tgz $(basename $package) $(basename $package).shasum
-        cd -
-    fi
 }
 
 main() {

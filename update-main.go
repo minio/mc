@@ -153,12 +153,12 @@ func getReleaseUpdate(updateURL string) {
 	// Get the downloadURL.
 	var downloadURL string
 	switch runtime.GOOS {
-	case "windows", "darwin":
+	case "windows":
 		// For windows and darwin.
-		downloadURL = newUpdateURLPrefix + "/mc.zip"
+		downloadURL = newUpdateURLPrefix + "/mc.exe"
 	default:
 		// For all other operating systems.
-		downloadURL = newUpdateURLPrefix + "/mc.tar.gz"
+		downloadURL = newUpdateURLPrefix + "/mc"
 	}
 
 	data, e := client.Get(newUpdateURL)
