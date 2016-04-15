@@ -298,10 +298,9 @@ func (f *fsClient) Remove(incomplete bool) *probe.Error {
 // List - list files and folders.
 func (f *fsClient) List(recursive, incomplete bool) <-chan *clientContent {
 	contentCh := make(chan *clientContent)
-	switch recursive {
-	case true:
+	if recursive {
 		go f.listRecursiveInRoutine(contentCh, incomplete)
-	default:
+	} else {
 		go f.listInRoutine(contentCh, incomplete)
 	}
 	return contentCh
