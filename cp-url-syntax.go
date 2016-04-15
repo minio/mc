@@ -38,6 +38,14 @@ func checkCopySyntax(ctx *cli.Context) {
 	isRecursive := ctx.Bool("recursive")
 
 	/****** Generic Invalid Rules *******/
+	// Verify if source(s) exists.
+	for _, srcURL := range srcURLs {
+		_, _, err := url2Stat(srcURL)
+		if err != nil {
+			fatalIf(err.Trace(srcURL), fmt.Sprintf("Unable to stat '%s'.", srcURL))
+		}
+	}
+
 	// Check if bucket name is passed for URL type arguments.
 	url := newClientURL(tgtURL)
 	if url.Host != "" {
