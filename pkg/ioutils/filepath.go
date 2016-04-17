@@ -60,7 +60,7 @@ func (f byName) Less(i, j int) bool {
 	}
 
 	n2 := f[j].Name()
-	if f[i].IsDir() {
+	if f[j].IsDir() {
 		n2 = n2 + string(os.PathSeparator)
 	}
 
