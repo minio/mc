@@ -48,7 +48,7 @@ deadcode:
 build: getdeps verifiers
 	@echo "Installing mc:"
 
-test: verifiers
+test: getdeps verifiers
 	@echo "Running all testing:"
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) ./
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
