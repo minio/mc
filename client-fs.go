@@ -29,7 +29,7 @@ import (
 	"io/ioutil"
 
 	"github.com/minio/mc/pkg/hookreader"
-	"github.com/minio/minio/pkg/ioutils"
+	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/minio/pkg/probe"
 )
 
