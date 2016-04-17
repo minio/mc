@@ -36,8 +36,11 @@ func (m mirrorURLs) isEmpty() bool {
 	if m.SourceContent == nil && m.TargetContent == nil && m.Error == nil {
 		return true
 	}
-	if m.SourceContent.Size == 0 && m.TargetContent == nil && m.Error == nil {
-		return true
+	// If remove flag is set then sourceContent is usually nil.
+	if m.SourceContent != nil {
+		if m.SourceContent.Size == 0 && m.TargetContent == nil && m.Error == nil {
+			return true
+		}
 	}
 	return false
 }
@@ -90,7 +93,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, mirrorURLsCh chan<- mirrorURLs) {
+func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, mirrorURLsCh chan<- mirrorURLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -157,13 +160,25 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				TargetAlias:   targetAlias,
 				TargetContent: targetContent,
 			}
-		} // else if diffMsg.Diff == differInSecond {
-		// Add for bi-directional mirror.
+		} else if diffMsg.Diff == differInSecond && isRemove {
+			if !isForce && !isFake {
+				// Object removal not allowed if force is not set.
+				mirrorURLsCh <- mirrorURLs{
+					Error: errDeleteNotAllowed(diffMsg.SecondURL),
+				}
+				continue
+			}
+			mirrorURLsCh <- mirrorURLs{
+				TargetAlias:   targetAlias,
+				TargetContent: diffMsg.secondContent,
+			}
+		}
 	}
 }
 
-func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool) <-chan mirrorURLs {
+// Prepares urls that need to be copied or removed based on requested options.
+func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
-	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, mirrorURLsCh)
+	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, isRemove, mirrorURLsCh)
 	return mirrorURLsCh
 }

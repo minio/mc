@@ -48,6 +48,10 @@ var (
 			Name:  "fake",
 			Usage: "Perform a fake mirror operation.",
 		},
+		cli.BoolFlag{
+			Name:  "remove",
+			Usage: "Remove extraneous file(s) on target.",
+		},
 	}
 )
 
@@ -82,6 +86,9 @@ EXAMPLES:
    5. Fake mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage.
       $ mc {{.Name}} --fake play/photos/2014 s3/backup-photos/2014
 
+   6. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
+      files on Amazon S3 cloud storage. NOTE: '--remove' is only supported with '--force'.
+      $ mc {{.Name}} --force --remove play/photos/2014 s3/backup-photos/2014
 `,
 }
 
@@ -124,6 +131,25 @@ func (c mirrorStatMessage) String() string {
 	message := fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.Format(c.Total).To(pb.U_BYTES),
 		pb.Format(c.Transferred).To(pb.U_BYTES), speedBox)
 	return message
+}
+
+// doRemove - removes files on target.
+func doRemove(sURLs mirrorURLs, fakeRemove bool) mirrorURLs {
+	targetAlias := sURLs.TargetAlias
+	targetURL := sURLs.TargetContent.URL
+
+	// We are not removing incomplete uploads.
+	isIncomplete := false
+
+	// Remove extraneous file on target.
+	err := rm(targetAlias, targetURL.String(), isIncomplete, fakeRemove)
+	if err != nil {
+		sURLs.Error = err.Trace(targetAlias, targetURL.String())
+		return sURLs
+	}
+
+	sURLs.Error = nil // just for safety
+	return sURLs
 }
 
 // doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
@@ -188,7 +214,7 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
-func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, trapCh <-chan bool) {
+func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, isRemove bool, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURL := session.Header.CommandArgs[1]
 	var totalBytes int64
@@ -202,7 +228,7 @@ func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, trapCh <
 		scanBar = scanBarFactory()
 	}
 
-	URLsCh := prepareMirrorURLs(sourceURL, targetURL, isForce, isFake)
+	URLsCh := prepareMirrorURLs(sourceURL, targetURL, isForce, isFake, isRemove)
 	done := false
 	for !done {
 		select {
@@ -229,10 +255,18 @@ func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, trapCh <
 			}
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuiet && !globalJSON {
-				scanBar(sURLs.SourceContent.URL.String())
+				// Source content is empty if removal is requested,
+				// put targetContent on to scan bar.
+				if sURLs.SourceContent != nil {
+					scanBar(sURLs.SourceContent.URL.String())
+				} else if sURLs.TargetContent != nil && isRemove {
+					scanBar(sURLs.TargetContent.URL.String())
+				}
 			}
-
-			totalBytes += sURLs.SourceContent.Size
+			// Remember totalBytes only for mirror not for removal,
+			if sURLs.SourceContent != nil {
+				totalBytes += sURLs.SourceContent.Size
+			}
 			totalObjects++
 		case <-trapCh:
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
@@ -252,12 +286,13 @@ func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, trapCh <
 func doMirrorSession(session *sessionV6) {
 	isForce := session.Header.CommandBoolFlags["force"]
 	isFake := session.Header.CommandBoolFlags["fake"]
+	isRemove := session.Header.CommandBoolFlags["remove"]
 
 	// Initialize signal trap.
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
-		doPrepareMirrorURLs(session, isForce, isFake, trapCh)
+		doPrepareMirrorURLs(session, isForce, isFake, isRemove, trapCh)
 	}
 
 	// Enable accounting reader by default.
@@ -300,8 +335,20 @@ func doMirrorSession(session *sessionV6) {
 					return
 				}
 				if sURLs.Error == nil {
-					session.Header.LastCopied = sURLs.SourceContent.URL.String()
-					session.Save()
+					if sURLs.SourceContent != nil {
+						session.Header.LastCopied = sURLs.SourceContent.URL.String()
+						session.Save()
+					} else if sURLs.TargetContent != nil && isRemove {
+						// Construct user facing message and path.
+						targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
+						if !globalQuiet && !globalJSON {
+							console.Eraseline()
+						}
+						printMsg(rmMessage{
+							Status: "success",
+							URL:    targetPath,
+						})
+					}
 				} else {
 					// Print in new line and adjust to top so that we
 					// don't print over the ongoing progress bar.
@@ -331,13 +378,20 @@ func doMirrorSession(session *sessionV6) {
 	// Loop through all urls and mirror.
 	for urlScanner.Scan() {
 		var sURLs mirrorURLs
+
 		// Unmarshal copyURLs from each line.
 		json.Unmarshal([]byte(urlScanner.Text()), &sURLs)
-		// Verify if previously copied or if its a fake mirror, set
-		// fake mirror accordingly.
-		fakeMirror := isCopied(sURLs.SourceContent.URL.String()) || isFake
-		// Perform mirror operation.
-		statusCh <- doMirror(sURLs, progressReader, accntReader, fakeMirror)
+
+		if sURLs.SourceContent != nil {
+			// Verify if previously copied or if its a fake mirror, set
+			// fake mirror accordingly.
+			fakeMirror := isCopied(sURLs.SourceContent.URL.String()) || isFake
+			// Perform mirror operation.
+			statusCh <- doMirror(sURLs, progressReader, accntReader, fakeMirror)
+		} else if sURLs.TargetContent != nil && isRemove {
+			// Perform remove operation.
+			statusCh <- doRemove(sURLs, isFake)
+		}
 	}
 
 	// Close the goroutine.
@@ -384,8 +438,10 @@ func mainMirror(ctx *cli.Context) {
 	// Set command flags from context.
 	isForce := ctx.Bool("force")
 	isFake := ctx.Bool("fake")
+	isRemove := ctx.Bool("remove")
 	session.Header.CommandBoolFlags["force"] = isForce
 	session.Header.CommandBoolFlags["fake"] = isFake
+	session.Header.CommandBoolFlags["remove"] = isRemove
 
 	// extract URLs.
 	session.Header.CommandArgs = ctx.Args()
