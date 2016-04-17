@@ -32,14 +32,14 @@ import (
 	"github.com/minio/minio/pkg/quick"
 )
 
-func migrateSessionV5ToV6() {
+func migrateSessionV6ToV7() {
 	for _, sid := range getSessionIDs() {
-		sessionV6, err := loadSessionV6(sid)
-		fatalIf(err.Trace(sid), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
-		if sessionV6.Header.Version == "6" { // It is new format.
+		sessionV7, err := loadSessionV7(sid)
+		fatalIf(err.Trace(sid), "Unable to load version ‘7’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		if sessionV7.Header.Version == "7" { // It is new format.
 			return
 		}
-		/*** Remove all session files older than v6 ***/
+		/*** Remove all session files older than v7 ***/
 
 		sessionFile, err := getSessionFile(sid)
 		fatalIf(err.Trace(sid), "Unable to get session file.")
@@ -47,18 +47,18 @@ func migrateSessionV5ToV6() {
 		sessionDataFile, err := getSessionDataFile(sid)
 		fatalIf(err.Trace(sid), "Unable to get session data file.")
 
-		console.Println("Removing unsupported session file ‘" + sessionFile + "’ version ‘" + sessionV6.Header.Version + "’.")
+		console.Println("Removing unsupported session file ‘" + sessionFile + "’ version ‘" + sessionV7.Header.Version + "’.")
 		if e := os.Remove(sessionFile); e != nil {
-			fatalIf(probe.NewError(e), "Unable to remove version ‘"+sessionV6.Header.Version+"’ session file ‘"+sessionFile+"’.")
+			fatalIf(probe.NewError(e), "Unable to remove version ‘"+sessionV7.Header.Version+"’ session file ‘"+sessionFile+"’.")
 		}
 		if e := os.Remove(sessionDataFile); e != nil {
-			fatalIf(probe.NewError(e), "Unable to remove version ‘"+sessionV6.Header.Version+"’ session data file ‘"+sessionDataFile+"’.")
+			fatalIf(probe.NewError(e), "Unable to remove version ‘"+sessionV7.Header.Version+"’ session data file ‘"+sessionDataFile+"’.")
 		}
 	}
 }
 
-// sessionV6Header for resumable sessions.
-type sessionV6Header struct {
+// sessionV7Header for resumable sessions.
+type sessionV7Header struct {
 	Version            string            `json:"version"`
 	When               time.Time         `json:"time"`
 	RootPath           string            `json:"workingFolder"`
@@ -84,9 +84,9 @@ type sessionMessage struct {
 	CommandArgs []string  `json:"commandArgs"`
 }
 
-// sessionV6 resumable session container.
-type sessionV6 struct {
-	Header    *sessionV6Header
+// sessionV7 resumable session container.
+type sessionV7 struct {
+	Header    *sessionV7Header
 	SessionID string
 	mutex     *sync.Mutex
 	DataFP    *sessionDataFP
@@ -105,7 +105,7 @@ func (file *sessionDataFP) Write(p []byte) (int, error) {
 }
 
 // String colorized session message.
-func (s sessionV6) String() string {
+func (s sessionV7) String() string {
 	message := console.Colorize("SessionID", fmt.Sprintf("%s -> ", s.SessionID))
 	message = message + console.Colorize("SessionTime", fmt.Sprintf("[%s]", s.Header.When.Local().Format(printDate)))
 	message = message + console.Colorize("Command", fmt.Sprintf(" %s %s", s.Header.CommandType, strings.Join(s.Header.CommandArgs, " ")))
@@ -113,7 +113,7 @@ func (s sessionV6) String() string {
 }
 
 // JSON jsonified session message.
-func (s sessionV6) JSON() string {
+func (s sessionV7) JSON() string {
 	sessionMsg := sessionMessage{
 		SessionID:   s.SessionID,
 		Time:        s.Header.When.Local(),
@@ -127,8 +127,8 @@ func (s sessionV6) JSON() string {
 	return string(sessionBytes)
 }
 
-// loadSessionV6 - reads session file if exists and re-initiates internal variables
-func loadSessionV6(sid string) (*sessionV6, *probe.Error) {
+// loadSessionV7 - reads session file if exists and re-initiates internal variables
+func loadSessionV7(sid string) (*sessionV7, *probe.Error) {
 	if !isSessionDirExists() {
 		return nil, errInvalidArgument().Trace()
 	}
@@ -141,8 +141,8 @@ func loadSessionV6(sid string) (*sessionV6, *probe.Error) {
 		return nil, probe.NewError(e)
 	}
 
-	s := &sessionV6{}
-	s.Header = &sessionV6Header{}
+	s := &sessionV7{}
+	s.Header = &sessionV7Header{}
 	s.SessionID = sid
 	s.Header.Version = "5"
 	qs, err := quick.New(s.Header)
@@ -155,7 +155,7 @@ func loadSessionV6(sid string) (*sessionV6, *probe.Error) {
 	}
 
 	s.mutex = new(sync.Mutex)
-	s.Header = qs.Data().(*sessionV6Header)
+	s.Header = qs.Data().(*sessionV7Header)
 
 	sessionDataFile, err := getSessionDataFile(s.SessionID)
 	if err != nil {
@@ -171,11 +171,11 @@ func loadSessionV6(sid string) (*sessionV6, *probe.Error) {
 	return s, nil
 }
 
-// newSessionV6 provides a new session.
-func newSessionV6() *sessionV6 {
-	s := &sessionV6{}
-	s.Header = &sessionV6Header{}
-	s.Header.Version = "6"
+// newSessionV7 provides a new session.
+func newSessionV7() *sessionV7 {
+	s := &sessionV7{}
+	s.Header = &sessionV7Header{}
+	s.Header.Version = "7"
 	// map of command and files copied.
 	s.Header.GlobalBoolFlags = make(map[string]bool)
 	s.Header.GlobalIntFlags = make(map[string]int)
@@ -203,26 +203,26 @@ func newSessionV6() *sessionV6 {
 }
 
 // HasData provides true if this is a session resume, false otherwise.
-func (s sessionV6) HasData() bool {
+func (s sessionV7) HasData() bool {
 	return s.Header.LastCopied != ""
 }
 
 // NewDataReader provides reader interface to session data file.
-func (s *sessionV6) NewDataReader() io.Reader {
+func (s *sessionV7) NewDataReader() io.Reader {
 	// DataFP is always intitialized, either via new or load functions.
 	s.DataFP.Seek(0, os.SEEK_SET)
 	return io.Reader(s.DataFP)
 }
 
 // NewDataReader provides writer interface to session data file.
-func (s *sessionV6) NewDataWriter() io.Writer {
+func (s *sessionV7) NewDataWriter() io.Writer {
 	// DataFP is always intitialized, either via new or load functions.
 	s.DataFP.Seek(0, os.SEEK_SET)
 	return io.Writer(s.DataFP)
 }
 
 // Save this session.
-func (s *sessionV6) Save() *probe.Error {
+func (s *sessionV7) Save() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -247,8 +247,8 @@ func (s *sessionV6) Save() *probe.Error {
 
 // setGlobals captures the state of global variables into session header.
 // Used by newSession.
-func (s *sessionV6) setGlobals() {
-	s.Header.GlobalBoolFlags["quiet"] = globalQuiet
+func (s *sessionV7) setGlobals() {
+	s.Header.GlobalBoolFlags["no-progressbar"] = globalNoBar
 	s.Header.GlobalBoolFlags["debug"] = globalDebug
 	s.Header.GlobalBoolFlags["json"] = globalJSON
 	s.Header.GlobalBoolFlags["noColor"] = globalNoColor
@@ -256,16 +256,16 @@ func (s *sessionV6) setGlobals() {
 
 // RestoreGlobals restores the state of global variables.
 // Used by resumeSession.
-func (s sessionV6) restoreGlobals() {
-	quiet := s.Header.GlobalBoolFlags["quiet"]
+func (s sessionV7) restoreGlobals() {
+	noBar := s.Header.GlobalBoolFlags["no-progressbar"]
 	debug := s.Header.GlobalBoolFlags["debug"]
 	json := s.Header.GlobalBoolFlags["json"]
 	noColor := s.Header.GlobalBoolFlags["noColor"]
-	setGlobals(quiet, debug, json, noColor)
+	setGlobals(noBar, debug, json, noColor)
 }
 
 // Close ends this session and removes all associated session files.
-func (s *sessionV6) Close() *probe.Error {
+func (s *sessionV7) Close() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -286,7 +286,7 @@ func (s *sessionV6) Close() *probe.Error {
 }
 
 // Delete removes all the session files.
-func (s *sessionV6) Delete() *probe.Error {
+func (s *sessionV7) Delete() *probe.Error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -321,7 +321,7 @@ func (s *sessionV6) Delete() *probe.Error {
 }
 
 // Close a session and exit.
-func (s sessionV6) CloseAndDie() {
+func (s sessionV7) CloseAndDie() {
 	s.Close()
 	console.Fatalln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
 }

@@ -32,7 +32,7 @@ var globalFlags = []cli.Flag{
 		Usage: "Path to configuration folder.",
 	},
 	cli.BoolFlag{
-		Name:  "quiet, q",
+		Name:  "no-progressbar, n",
 		Usage: "Suppress chatty console output.",
 	},
 	cli.BoolFlag{
