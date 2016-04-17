@@ -67,11 +67,13 @@ EXAMPLES:
 
 // diffMessage json container for diff messages
 type diffMessage struct {
-	Status    string       `json:"status"`
-	FirstURL  string       `json:"first"`
-	SecondURL string       `json:"second"`
-	Diff      differType   `json:"diff"`
-	Error     *probe.Error `json:"error,omitempty"`
+	Status        string       `json:"status"`
+	FirstURL      string       `json:"first"`
+	SecondURL     string       `json:"second"`
+	Diff          differType   `json:"diff"`
+	Error         *probe.Error `json:"error,omitempty"`
+	firstContent  *clientContent
+	secondContent *clientContent
 }
 
 // String colorized diff message
@@ -173,8 +175,9 @@ func doDiffMain(firstURL, secondURL string) {
 			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
 
-	for differ := range objectDifferenceNewImpl(firstClient, secondClient, firstURL, secondURL) {
-		printMsg(differ)
+	// Diff first and second urls.
+	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL) {
+		printMsg(diffMsg)
 	}
 }
 
