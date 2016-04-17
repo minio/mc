@@ -67,11 +67,13 @@ EXAMPLES:
 
 // diffMessage json container for diff messages
 type diffMessage struct {
-	Status    string       `json:"status"`
-	FirstURL  string       `json:"first"`
-	SecondURL string       `json:"second"`
-	Diff      differType   `json:"diff"`
-	Error     *probe.Error `json:"error,omitempty"`
+	Status        string       `json:"status"`
+	FirstURL      string       `json:"first"`
+	SecondURL     string       `json:"second"`
+	Diff          differType   `json:"diff"`
+	Error         *probe.Error `json:"error,omitempty"`
+	firstContent  *clientContent
+	secondContent *clientContent
 }
 
 // String colorized diff message
@@ -80,16 +82,16 @@ func (d diffMessage) String() string {
 	switch d.Diff {
 	case differInFirst:
 		msg = console.Colorize("DiffMessage",
-			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
+			"‘"+d.FirstURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
+	case differInSecond:
+		msg = console.Colorize("DiffMessage",
+			"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInSecond", " - only in second.")
 	case differInType:
 		msg = console.Colorize("DiffMessage",
 			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
 	case differInSize:
 		msg = console.Colorize("DiffMessage",
 			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
-	case differInTime:
-		msg = console.Colorize("DiffMessage",
-			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffTime", " - differ in modified time.")
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
 			"Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
@@ -173,44 +175,9 @@ func doDiffMain(firstURL, secondURL string) {
 			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
 
-	// Setup object difference function.
-	difference := objectDifferenceFactory(secondClient)
-
-	// Set default values for listing.
-	isRecursive := true   // recursive is always true for diff.
-	isIncomplete := false // we will not compare any incomplete objects.
-
-	// List all the elements on first URL and compare with
-	// 'difference' function.
-	for firstContent := range firstClient.List(isRecursive, isIncomplete) {
-		if firstContent.Err != nil {
-			switch firstContent.Err.ToGoError().(type) {
-			// Handle this specifically for filesystem related errors.
-			case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
-				errorIf(firstContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
-			default:
-				fatalIf(firstContent.Err.Trace(firstURL, secondURL), fmt.Sprintf("Failed on '%s'", firstURL))
-			}
-			continue
-		}
-		if firstContent.Type.IsDir() {
-			continue
-		}
-		firstSuffix := strings.TrimPrefix(firstContent.URL.String(), firstURL)
-		differ, err := difference(secondURL, firstSuffix, firstContent.Type, firstContent.Size, firstContent.Time)
-		if err != nil {
-			errorIf(firstContent.Err.Trace(secondURL, firstSuffix),
-				fmt.Sprintf("Failed on '%s'", urlJoinPath(secondURL, firstSuffix)))
-			continue
-		}
-		if differ == differInNone {
-			continue
-		}
-		printMsg(diffMessage{
-			FirstURL:  firstContent.URL.String(),
-			SecondURL: urlJoinPath(secondURL, firstSuffix),
-			Diff:      differ,
-		})
+	// Diff first and second urls.
+	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL) {
+		printMsg(diffMsg)
 	}
 }
 

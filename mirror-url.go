@@ -90,7 +90,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake bool, mirrorURLsCh chan<- mirrorURLs) {
+func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, mirrorURLsCh chan<- mirrorURLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -107,7 +107,7 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake
 
 	defer close(mirrorURLsCh)
 
-	sourceClient, err := newClientFromAlias(sourceAlias, sourceURL)
+	sourceClnt, err := newClientFromAlias(sourceAlias, sourceURL)
 	if err != nil {
 		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceAlias, sourceURL)}
 		return
@@ -119,57 +119,51 @@ func deltaSourceTargets(sourceURL string, targetURL string, isForce bool, isFake
 		return
 	}
 
-	// Setup object difference.
-	objectDifferenceTarget := objectDifferenceFactory(targetClnt)
-
-	// Set default values for listing.
-	isRecursive := true   // recursive is always true for diff.
-	isIncomplete := false // we will not compare any incomplete objects.
-
-	// List all the sources, compare using 'objectDifference' function.
-	for sourceContent := range sourceClient.List(isRecursive, isIncomplete) {
-		if sourceContent.Err != nil {
-			mirrorURLsCh <- mirrorURLs{
-				Error: sourceContent.Err.Trace(sourceClient.GetURL().String()),
-			}
-			continue
-		}
-		if sourceContent.Type.IsDir() {
-			continue
-		}
-		sourceSuffix := strings.TrimPrefix(sourceContent.URL.String(), sourceURL)
-		differ, err := objectDifferenceTarget(targetURL, sourceSuffix, sourceContent.Type, sourceContent.Size, sourceContent.Time)
-		if err != nil {
-			mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceContent.URL.String())}
-			continue
-		}
-		if differ == differInNone {
+	// List both source and target, compare and return values through channel.
+	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
+		if diffMsg.Diff == differInNone {
 			// No difference, continue.
 			continue
-		}
-		if differ == differInType {
-			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(sourceSuffix)}
+		} else if diffMsg.Diff == differInType {
+			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(diffMsg.SecondURL)}
 			continue
-		}
-		if differ == differInSize && !isForce && !isFake {
-			// Size differs and force not set
-			mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(sourceContent.URL.String())}
+		} else if diffMsg.Diff == differInSize {
+			if !isForce && !isFake {
+				// Size differs and force not set
+				mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
+				continue
+			}
+			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
+			// Either available only in source or size differs and force is set
+			targetPath := urlJoinPath(targetURL, sourceSuffix)
+			sourceContent := diffMsg.firstContent
+			targetContent := &clientContent{URL: *newClientURL(targetPath)}
+			mirrorURLsCh <- mirrorURLs{
+				SourceAlias:   sourceAlias,
+				SourceContent: sourceContent,
+				TargetAlias:   targetAlias,
+				TargetContent: targetContent,
+			}
 			continue
-		}
-		// either available only in source or size differs and force is set
-		targetPath := urlJoinPath(targetURL, sourceSuffix)
-		targetContent := &clientContent{URL: *newClientURL(targetPath)}
-		mirrorURLsCh <- mirrorURLs{
-			SourceAlias:   sourceAlias,
-			SourceContent: sourceContent,
-			TargetAlias:   targetAlias,
-			TargetContent: targetContent,
-		}
+		} else if diffMsg.Diff == differInFirst {
+			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
+			// Either available only in source or size differs and force is set
+			targetPath := urlJoinPath(targetURL, sourceSuffix)
+			sourceContent := diffMsg.firstContent
+			targetContent := &clientContent{URL: *newClientURL(targetPath)}
+			mirrorURLsCh <- mirrorURLs{
+				SourceAlias:   sourceAlias,
+				SourceContent: sourceContent,
+				TargetAlias:   targetAlias,
+				TargetContent: targetContent,
+			}
+		} // else if diffMsg.Diff == differInSecond {
+		// Add for bi-directional mirror.
 	}
 }
 
 func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
-	go deltaSourceTargets(sourceURL, targetURL, isForce, isFake, mirrorURLsCh)
+	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, mirrorURLsCh)
 	return mirrorURLsCh
 }
