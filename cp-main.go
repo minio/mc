@@ -182,7 +182,7 @@ func doCopyFake(cpURLs copyURLs, progressReader *progressBar) copyURLs {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
+func doPrepareCopyURLs(session *sessionV7, trapCh <-chan bool) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -250,7 +250,7 @@ func doPrepareCopyURLs(session *sessionV6, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCopySession(session *sessionV6) {
+func doCopySession(session *sessionV7) {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	if !session.HasData() {
@@ -264,7 +264,7 @@ func doCopySession(session *sessionV6) {
 	urlScanner := bufio.NewScanner(session.NewDataReader())
 	// isCopied returns true if an object has been already copied
 	// or not. This is useful when we resume from a session.
-	isCopied := isCopiedFactory(session.Header.LastCopied)
+	isCopied := isLastFactory(session.Header.LastCopied)
 
 	// Enable progress bar reader only during default mode.
 	var progressReader *progressBar
@@ -379,7 +379,7 @@ func mainCopy(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
-	session := newSessionV6()
+	session := newSessionV7()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")
 

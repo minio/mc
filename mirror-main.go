@@ -214,7 +214,7 @@ func doMirror(sURLs mirrorURLs, progressReader *progressBar, accountingReader *a
 }
 
 // doPrepareMirrorURLs scans the source URL and prepares a list of objects for mirroring.
-func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, isRemove bool, trapCh <-chan bool) {
+func doPrepareMirrorURLs(session *sessionV7, isForce bool, isFake bool, isRemove bool, trapCh <-chan bool) {
 	sourceURL := session.Header.CommandArgs[0] // first one is source.
 	targetURL := session.Header.CommandArgs[1]
 	var totalBytes int64
@@ -283,7 +283,7 @@ func doPrepareMirrorURLs(session *sessionV6, isForce bool, isFake bool, isRemove
 }
 
 // Session'fied mirror command.
-func doMirrorSession(session *sessionV6) {
+func doMirrorSession(session *sessionV7) {
 	isForce := session.Header.CommandBoolFlags["force"]
 	isFake := session.Header.CommandBoolFlags["fake"]
 	isRemove := session.Header.CommandBoolFlags["remove"]
@@ -309,7 +309,11 @@ func doMirrorSession(session *sessionV6) {
 
 	// isCopied returns true if an object has been already copied
 	// or not. This is useful when we resume from a session.
-	isCopied := isCopiedFactory(session.Header.LastCopied)
+	isCopied := isLastFactory(session.Header.LastCopied)
+
+	// isRemoved returns true if an object has been already removed or
+	// not. This is useful when we resume from a session.
+	isRemoved := isLastFactory(session.Header.LastRemoved)
 
 	// Wait on status of doMirror() operation.
 	var statusCh = make(chan mirrorURLs)
@@ -339,6 +343,9 @@ func doMirrorSession(session *sessionV6) {
 						session.Header.LastCopied = sURLs.SourceContent.URL.String()
 						session.Save()
 					} else if sURLs.TargetContent != nil && isRemove {
+						session.Header.LastRemoved = sURLs.TargetContent.URL.String()
+						session.Save()
+
 						// Construct user facing message and path.
 						targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
 						if !globalQuiet && !globalJSON {
@@ -395,8 +402,9 @@ func doMirrorSession(session *sessionV6) {
 			// Perform mirror operation.
 			statusCh <- doMirror(sURLs, progressReader, accntReader, fakeMirror)
 		} else if sURLs.TargetContent != nil && isRemove {
+			fakeRemove := isRemoved(sURLs.TargetContent.URL.String()) || isFake
 			// Perform remove operation.
-			statusCh <- doRemove(sURLs, isFake)
+			statusCh <- doRemove(sURLs, fakeRemove)
 		}
 	}
 
@@ -433,7 +441,7 @@ func mainMirror(ctx *cli.Context) {
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
 	var e error
-	session := newSessionV6()
+	session := newSessionV7()
 	session.Header.CommandType = "mirror"
 	session.Header.RootPath, e = os.Getwd()
 	if e != nil {
