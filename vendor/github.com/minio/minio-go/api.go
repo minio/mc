@@ -505,8 +505,18 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 	if method == "" {
 		method = "POST"
 	}
+
+	// Default all requests to "us-east-1" or "cn-north-1" (china region)
+	location := "us-east-1"
+	if isAmazonChinaEndpoint(c.endpointURL) {
+		// For china specifically we need to set everything to
+		// cn-north-1 for now, there is no easier way until AWS S3
+		// provides a cleaner compatible API across "us-east-1" and
+		// China region.
+		location = "cn-north-1"
+	}
+
 	// Gather location only if bucketName is present.
-	location := "us-east-1" // Default all other requests to "us-east-1".
 	if metadata.bucketName != "" {
 		location, err = c.getBucketLocation(metadata.bucketName)
 		if err != nil {
@@ -648,6 +658,5 @@ func (c Client) makeTargetURL(bucketName, objectName, bucketLocation string, que
 	if err != nil {
 		return nil, err
 	}
-
 	return u, nil
 }

@@ -18,6 +18,7 @@ package minio
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 )
 
@@ -389,4 +390,99 @@ func unMarshalBucketPolicy(bucketPolicyBuf []byte) (BucketAccessPolicy, error) {
 		policy.Statements = append(policy.Statements, statement)
 	}
 	return policy, nil
+}
+
+// Identifies the policy type from policy Statements.
+func identifyPolicyType(policy BucketAccessPolicy, bucketName, objectPrefix string) (bucketPolicy BucketPolicy) {
+	if policy.Statements == nil {
+		return BucketPolicyNone
+	}
+	if isBucketPolicyReadWrite(policy.Statements, bucketName, objectPrefix) {
+		return BucketPolicyReadWrite
+	} else if isBucketPolicyWriteOnly(policy.Statements, bucketName, objectPrefix) {
+		return BucketPolicyWriteOnly
+	} else if isBucketPolicyReadOnly(policy.Statements, bucketName, objectPrefix) {
+		return BucketPolicyReadOnly
+	}
+	return BucketPolicyNone
+}
+
+// Generate policy statements for various bucket policies.
+// refer to http://docs.aws.amazon.com/AmazonS3/latest/dev/access-policy-language-overview.html
+// for more details about statement fields.
+func generatePolicyStatement(bucketPolicy BucketPolicy, bucketName, objectPrefix string) ([]Statement, error) {
+	if !bucketPolicy.isValidBucketPolicy() {
+		return []Statement{}, ErrInvalidArgument(fmt.Sprintf("Invalid bucket policy provided. %s", bucketPolicy))
+	}
+	var statements []Statement
+	if bucketPolicy == BucketPolicyNone {
+		return []Statement{}, nil
+	} else if bucketPolicy == BucketPolicyReadWrite {
+		// Get read-write policy.
+		statements = setReadWriteStatement(bucketName, objectPrefix)
+	} else if bucketPolicy == BucketPolicyReadOnly {
+		// Get read only policy.
+		statements = setReadOnlyStatement(bucketName, objectPrefix)
+	} else if bucketPolicy == BucketPolicyWriteOnly {
+		// Return Write only policy.
+		statements = setWriteOnlyStatement(bucketName, objectPrefix)
+	}
+	return statements, nil
+}
+
+// Obtain statements for read-write BucketPolicy.
+func setReadWriteStatement(bucketName, objectPrefix string) []Statement {
+	bucketResourceStatement := Statement{}
+	objectResourceStatement := Statement{}
+	statements := []Statement{}
+
+	bucketResourceStatement.Effect = "Allow"
+	bucketResourceStatement.Principal.AWS = []string{"*"}
+	bucketResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName)}
+	bucketResourceStatement.Actions = readWriteBucketActions
+	objectResourceStatement.Effect = "Allow"
+	objectResourceStatement.Principal.AWS = []string{"*"}
+	objectResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName+"/"+objectPrefix+"*")}
+	objectResourceStatement.Actions = readWriteObjectActions
+	// Save the read write policy.
+	statements = append(statements, bucketResourceStatement, objectResourceStatement)
+	return statements
+}
+
+// Obtain statements for read only BucketPolicy.
+func setReadOnlyStatement(bucketName, objectPrefix string) []Statement {
+	bucketResourceStatement := Statement{}
+	objectResourceStatement := Statement{}
+	statements := []Statement{}
+
+	bucketResourceStatement.Effect = "Allow"
+	bucketResourceStatement.Principal.AWS = []string{"*"}
+	bucketResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName)}
+	bucketResourceStatement.Actions = readOnlyBucketActions
+	objectResourceStatement.Effect = "Allow"
+	objectResourceStatement.Principal.AWS = []string{"*"}
+	objectResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName+"/"+objectPrefix+"*")}
+	objectResourceStatement.Actions = readOnlyObjectActions
+	// Save the read only policy.
+	statements = append(statements, bucketResourceStatement, objectResourceStatement)
+	return statements
+}
+
+// Obtain statements for write only BucketPolicy.
+func setWriteOnlyStatement(bucketName, objectPrefix string) []Statement {
+	bucketResourceStatement := Statement{}
+	objectResourceStatement := Statement{}
+	statements := []Statement{}
+	// Write only policy.
+	bucketResourceStatement.Effect = "Allow"
+	bucketResourceStatement.Principal.AWS = []string{"*"}
+	bucketResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName)}
+	bucketResourceStatement.Actions = writeOnlyBucketActions
+	objectResourceStatement.Effect = "Allow"
+	objectResourceStatement.Principal.AWS = []string{"*"}
+	objectResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName+"/"+objectPrefix+"*")}
+	objectResourceStatement.Actions = writeOnlyObjectActions
+	// Save the write only policy.
+	statements = append(statements, bucketResourceStatement, objectResourceStatement)
+	return statements
 }

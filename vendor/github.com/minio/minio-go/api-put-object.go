@@ -38,7 +38,7 @@ func getReaderSize(reader io.Reader) (size int64, err error) {
 			if lenFn.Kind() == reflect.Func {
 				// Call the 'Size' function and save its return value.
 				result = lenFn.Call([]reflect.Value{})
-				if result != nil && len(result) == 1 {
+				if len(result) == 1 {
 					lenValue := result[0]
 					if lenValue.IsValid() {
 						switch lenValue.Kind() {

@@ -168,45 +168,12 @@ func (c Client) SetBucketPolicy(bucketName string, objectPrefix string, bucketPo
 	// Remove any previous policies at this path.
 	policy.Statements = removeBucketPolicyStatement(policy.Statements, bucketName, objectPrefix)
 
-	bucketResourceStatement := &Statement{}
-	objectResourceStatement := &Statement{}
-	if bucketPolicy == BucketPolicyReadWrite {
-		// Read write policy.
-		bucketResourceStatement.Effect = "Allow"
-		bucketResourceStatement.Principal.AWS = []string{"*"}
-		bucketResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName)}
-		bucketResourceStatement.Actions = readWriteBucketActions
-		objectResourceStatement.Effect = "Allow"
-		objectResourceStatement.Principal.AWS = []string{"*"}
-		objectResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName+"/"+objectPrefix+"*")}
-		objectResourceStatement.Actions = readWriteObjectActions
-		// Save the read write policy.
-		policy.Statements = append(policy.Statements, *bucketResourceStatement, *objectResourceStatement)
-	} else if bucketPolicy == BucketPolicyReadOnly {
-		// Read only policy.
-		bucketResourceStatement.Effect = "Allow"
-		bucketResourceStatement.Principal.AWS = []string{"*"}
-		bucketResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName)}
-		bucketResourceStatement.Actions = readOnlyBucketActions
-		objectResourceStatement.Effect = "Allow"
-		objectResourceStatement.Principal.AWS = []string{"*"}
-		objectResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName+"/"+objectPrefix+"*")}
-		objectResourceStatement.Actions = readOnlyObjectActions
-		// Save the read only policy.
-		policy.Statements = append(policy.Statements, *bucketResourceStatement, *objectResourceStatement)
-	} else if bucketPolicy == BucketPolicyWriteOnly {
-		// Write only policy.
-		bucketResourceStatement.Effect = "Allow"
-		bucketResourceStatement.Principal.AWS = []string{"*"}
-		bucketResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName)}
-		bucketResourceStatement.Actions = writeOnlyBucketActions
-		objectResourceStatement.Effect = "Allow"
-		objectResourceStatement.Principal.AWS = []string{"*"}
-		objectResourceStatement.Resources = []string{fmt.Sprintf("%s%s", awsResourcePrefix, bucketName+"/"+objectPrefix+"*")}
-		objectResourceStatement.Actions = writeOnlyObjectActions
-		// Save the write only policy.
-		policy.Statements = append(policy.Statements, *bucketResourceStatement, *objectResourceStatement)
+	// generating []Statement for the given bucketPolicy.
+	statements, err := generatePolicyStatement(bucketPolicy, bucketName, objectPrefix)
+	if err != nil {
+		return err
 	}
+	policy.Statements = append(policy.Statements, statements...)
 	// Save the updated policies.
 	return c.putBucketPolicy(bucketName, policy)
 }
