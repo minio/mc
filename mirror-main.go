@@ -355,8 +355,14 @@ func doMirrorSession(session *sessionV6) {
 					if !globalQuiet && !globalJSON {
 						console.Eraseline()
 					}
-					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy ‘%s’.", sURLs.SourceContent.URL.String()))
+					if sURLs.SourceContent != nil {
+						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+							fmt.Sprintf("Failed to copy ‘%s’.", sURLs.SourceContent.URL.String()))
+					} else {
+						// When sURLs.SourceContent is nil, we know that we have an error related to removing
+						errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
+							fmt.Sprintf("Failed to remove ‘%s’.", sURLs.TargetContent.URL.String()))
+					}
 					// For all non critical errors we can continue for the
 					// remaining files.
 					switch sURLs.Error.ToGoError().(type) {
