@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
@@ -65,13 +66,21 @@ func migrateSessionV6ToV7() {
 	}
 }
 
+// Migrate session version '5' to version '6', all older sessions are
+// in-fact removed and not migrated. All session files from '6' and
+// above should be migrated - See: migrateSessionV6ToV7().
 func migrateSessionV5ToV6() {
 	for _, sid := range getSessionIDs() {
 		sV6Header, err := loadSessionV6Header(sid)
 		fatalIf(err.Trace(sid), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
-		if sV6Header.Version == "6" { // It is new format.
+
+		sessionVersion, e := strconv.Atoi(sV6Header.Version)
+		fatalIf(probe.NewError(e), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+
+		if sessionVersion > 5 { // It is new format.
 			continue
 		}
+
 		/*** Remove all session files older than v6 ***/
 
 		sessionFile, err := getSessionFile(sid)

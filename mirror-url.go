@@ -124,13 +124,14 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 
 	// List both source and target, compare and return values through channel.
 	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
-		if diffMsg.Diff == differInNone {
+		switch diffMsg.Diff {
+		case differInNone:
 			// No difference, continue.
 			continue
-		} else if diffMsg.Diff == differInType {
+		case differInType:
 			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(diffMsg.SecondURL)}
 			continue
-		} else if diffMsg.Diff == differInSize {
+		case differInSize:
 			if !isForce && !isFake {
 				// Size differs and force not set
 				mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
@@ -148,7 +149,7 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				TargetContent: targetContent,
 			}
 			continue
-		} else if diffMsg.Diff == differInFirst {
+		case differInFirst:
 			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
 			// Either available only in source or size differs and force is set
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
@@ -160,18 +161,26 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				TargetAlias:   targetAlias,
 				TargetContent: targetContent,
 			}
-		} else if diffMsg.Diff == differInSecond && isRemove {
-			if !isForce && !isFake {
-				// Object removal not allowed if force is not set.
-				mirrorURLsCh <- mirrorURLs{
-					Error: errDeleteNotAllowed(diffMsg.SecondURL),
+		case differInSecond:
+			if isRemove {
+				if !isForce && !isFake {
+					// Object removal not allowed if force is not set.
+					mirrorURLsCh <- mirrorURLs{
+						Error: errDeleteNotAllowed(diffMsg.SecondURL),
+					}
+					continue
 				}
-				continue
+				mirrorURLsCh <- mirrorURLs{
+					TargetAlias:   targetAlias,
+					TargetContent: diffMsg.secondContent,
+				}
 			}
+			continue
+		default:
 			mirrorURLsCh <- mirrorURLs{
-				TargetAlias:   targetAlias,
-				TargetContent: diffMsg.secondContent,
+				Error: errUnrecognizedDiffType(diffMsg.Diff).Trace(diffMsg.FirstURL, diffMsg.SecondURL),
 			}
+			continue
 		}
 	}
 }
