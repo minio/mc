@@ -25,10 +25,10 @@ import (
 // supportedGetReqParams - supported request parameters for GET
 // presigned request.
 var supportedGetReqParams = map[string]struct{}{
-	"response-expires":             struct{}{},
-	"response-content-type":        struct{}{},
-	"response-cache-control":       struct{}{},
-	"response-content-disposition": struct{}{},
+	"response-expires":             {},
+	"response-content-type":        {},
+	"response-cache-control":       {},
+	"response-content-disposition": {},
 }
 
 // presignURL - Returns a presigned URL for an input 'method'.
