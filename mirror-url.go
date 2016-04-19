@@ -36,8 +36,11 @@ func (m mirrorURLs) isEmpty() bool {
 	if m.SourceContent == nil && m.TargetContent == nil && m.Error == nil {
 		return true
 	}
-	if m.SourceContent.Size == 0 && m.TargetContent == nil && m.Error == nil {
-		return true
+	// If remove flag is set then sourceContent is usually nil.
+	if m.SourceContent != nil {
+		if m.SourceContent.Size == 0 && m.TargetContent == nil && m.Error == nil {
+			return true
+		}
 	}
 	return false
 }
@@ -90,7 +93,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, mirrorURLsCh chan<- mirrorURLs) {
+func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, mirrorURLsCh chan<- mirrorURLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -121,13 +124,14 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 
 	// List both source and target, compare and return values through channel.
 	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
-		if diffMsg.Diff == differInNone {
+		switch diffMsg.Diff {
+		case differInNone:
 			// No difference, continue.
 			continue
-		} else if diffMsg.Diff == differInType {
+		case differInType:
 			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(diffMsg.SecondURL)}
 			continue
-		} else if diffMsg.Diff == differInSize {
+		case differInSize:
 			if !isForce && !isFake {
 				// Size differs and force not set
 				mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
@@ -145,7 +149,7 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				TargetContent: targetContent,
 			}
 			continue
-		} else if diffMsg.Diff == differInFirst {
+		case differInFirst:
 			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
 			// Either available only in source or size differs and force is set
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
@@ -157,13 +161,33 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				TargetAlias:   targetAlias,
 				TargetContent: targetContent,
 			}
-		} // else if diffMsg.Diff == differInSecond {
-		// Add for bi-directional mirror.
+		case differInSecond:
+			if isRemove {
+				if !isForce && !isFake {
+					// Object removal not allowed if force is not set.
+					mirrorURLsCh <- mirrorURLs{
+						Error: errDeleteNotAllowed(diffMsg.SecondURL),
+					}
+					continue
+				}
+				mirrorURLsCh <- mirrorURLs{
+					TargetAlias:   targetAlias,
+					TargetContent: diffMsg.secondContent,
+				}
+			}
+			continue
+		default:
+			mirrorURLsCh <- mirrorURLs{
+				Error: errUnrecognizedDiffType(diffMsg.Diff).Trace(diffMsg.FirstURL, diffMsg.SecondURL),
+			}
+			continue
+		}
 	}
 }
 
-func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool) <-chan mirrorURLs {
+// Prepares urls that need to be copied or removed based on requested options.
+func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool) <-chan mirrorURLs {
 	mirrorURLsCh := make(chan mirrorURLs)
-	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, mirrorURLsCh)
+	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, isRemove, mirrorURLsCh)
 	return mirrorURLsCh
 }

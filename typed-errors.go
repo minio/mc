@@ -31,6 +31,10 @@ var (
 		return probe.NewError(errors.New("Invalid arguments provided, cannot proceed.")).Untrace()
 	}
 
+	errUnrecognizedDiffType = func(diff differType) *probe.Error {
+		return probe.NewError(errors.New("Unrecognized diffType: " + diff.String() + " provided.")).Untrace()
+	}
+
 	errInvalidAliasedURL = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Use ‘mc config host add mycloud " + URL + " ...’ to add an alias. Use the alias for S3 operations.")).Untrace()
 	}
@@ -51,6 +55,9 @@ var (
 		return probe.NewError(errors.New("Overwrite not allowed for ‘" + URL + "’. Use ‘--force’ to override this behavior."))
 	}
 
+	errDeleteNotAllowed = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("Delete not allowed for ‘" + URL + "’. Use ‘--force’ to override this behavior."))
+	}
 	errSourceIsDir = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Source ‘" + URL + "’ is a folder.")).Untrace()
 	}

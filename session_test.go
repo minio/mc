@@ -34,14 +34,14 @@ func (s *TestSuite) TestSession(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
 
-	session := newSessionV6()
+	session := newSessionV7()
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 
 	err = session.Close()
 	c.Assert(err, IsNil)
 
-	savedSession, err := loadSessionV6(session.SessionID)
+	savedSession, err := loadSessionV7(session.SessionID)
 	c.Assert(err, IsNil)
 	c.Assert(session.SessionID, Equals, savedSession.SessionID)
 

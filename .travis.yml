@@ -16,7 +16,8 @@ go:
 - 1.6
 
 script:
-- make
+- make test
+- make test GOFLAGS="-race"
 - diff -au <(gofmt -d *.go) <(printf "")
 - diff -au <(gofmt -d pkg) <(printf "")
 

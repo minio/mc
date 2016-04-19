@@ -28,6 +28,9 @@ import (
 func migrateSession() {
 	// We no longer support sessions older than v5. They will be removed.
 	migrateSessionV5ToV6()
+
+	// Migrate V6 to V7.
+	migrateSessionV6ToV7()
 }
 
 // createSessionDir - create session directory.
