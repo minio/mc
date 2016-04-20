@@ -61,6 +61,26 @@ func (s *TestSuite) TestValidPERMS(c *C) {
 	c.Assert(string(perms), Equals, "writeonly")
 }
 
+// Tests valid and invalid secret keys.
+func (s *TestSuite) TestValidSecretKeys(c *C) {
+	c.Assert(isValidSecretKey("password"), Equals, true)
+	c.Assert(isValidSecretKey("BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"), Equals, true)
+
+	c.Assert(isValidSecretKey("aaa"), Equals, false)
+	c.Assert(isValidSecretKey("password%%"), Equals, false)
+}
+
+// Tests valid and invalid access keys.
+func (s *TestSuite) TestValidAccessKeys(c *C) {
+	c.Assert(isValidAccessKey("c67W2-r4MAyAYScRl"), Equals, true)
+	c.Assert(isValidAccessKey("EXOb76bfeb1234562iu679f11588"), Equals, true)
+	c.Assert(isValidAccessKey("BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"), Equals, true)
+	c.Assert(isValidAccessKey("admin"), Equals, true)
+
+	c.Assert(isValidAccessKey("aaa"), Equals, false)
+	c.Assert(isValidAccessKey("$$%%%%%3333"), Equals, false)
+}
+
 func (s *TestSuite) TestInvalidPERMS(c *C) {
 	perms := accessPerms("invalid")
 	c.Assert(perms.isValidAccessPERM(), Equals, false)

@@ -28,8 +28,8 @@ func isValidSecretKey(secretKey string) bool {
 	if secretKey == "" {
 		return true
 	}
-	regex := regexp.MustCompile(`^.{40}$`)
-	return regex.MatchString(secretKey)
+	regex := regexp.MustCompile(`.{8,40}$`)
+	return regex.MatchString(secretKey) && !strings.ContainsAny(secretKey, "$%^~`!|&*#@")
 }
 
 // isValidAccessKey - validate access key.
@@ -37,8 +37,8 @@ func isValidAccessKey(accessKey string) bool {
 	if accessKey == "" {
 		return true
 	}
-	regex := regexp.MustCompile(`^[A-Z0-9\\-\\.\\_\\~]{20}$`)
-	return regex.MatchString(accessKey)
+	regex := regexp.MustCompile(`.{5,40}$`)
+	return regex.MatchString(accessKey) && !strings.ContainsAny(accessKey, "$%^~`!|&*#@")
 }
 
 // isValidHostURL - validate input host url.
