@@ -623,6 +623,11 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 			return nil
 		}
 
+		// Ignore files from ignore list.
+		if isIgnoredFile(fi.Name()) {
+			return nil
+		}
+
 		/// In following situations we need to handle listing properly.
 		// - When filepath is '/usr' and prefix is '/usr/bi'
 		// - When filepath is '/usr/bin/subdir' and prefix is '/usr/bi'
