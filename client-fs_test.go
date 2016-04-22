@@ -128,6 +128,51 @@ func (s *TestSuite) TestList(c *C) {
 	}
 	c.Assert(regularDirs, Equals, 0)
 	c.Assert(regularFiles, Equals, 3)
+
+	// Create an ignored file and list to verify if its ignored.
+	objectPath = filepath.Join(root, "test1/.DS_Store")
+	fsClient, err = fsNew(objectPath)
+
+	reader = bytes.NewReader([]byte(data))
+	n, err = fsClient.Put(reader, int64(len(data)), "application/octet-stream", nil)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, int64(len(data)))
+
+	fsClient, err = fsNew(root)
+	c.Assert(err, IsNil)
+
+	contents = nil
+	// List recursively all files and verify.
+	for content := range fsClient.List(true, false) {
+		if content.Err != nil {
+			err = content.Err
+			break
+		}
+		contents = append(contents, content)
+	}
+
+	c.Assert(err, IsNil)
+	switch runtime.GOOS {
+	case "darwin":
+		c.Assert(len(contents), Equals, 3)
+	default:
+		c.Assert(len(contents), Equals, 4)
+	}
+
+	regularFiles = 0
+	// Test number of expected files.
+	for _, content := range contents {
+		if content.Type.IsRegular() {
+			regularFiles++
+			continue
+		}
+	}
+	switch runtime.GOOS {
+	case "darwin":
+		c.Assert(regularFiles, Equals, 3)
+	default:
+		c.Assert(regularFiles, Equals, 4)
+	}
 }
 
 // Test put bucket aka 'mkdir()' operation.
