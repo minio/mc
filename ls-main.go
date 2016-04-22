@@ -96,6 +96,11 @@ func checkListSyntax(ctx *cli.Context) {
 	for _, url := range URLs {
 		_, _, err := url2Stat(url)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
+			// Bucket name empty is a valid error for 'ls myminio',
+			// treat it as such.
+			if _, ok := err.ToGoError().(BucketNameEmpty); ok {
+				continue
+			}
 			fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
 		}
 	}
