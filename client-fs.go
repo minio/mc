@@ -292,6 +292,9 @@ func createFile(fpath string) (io.WriteCloser, error) {
 	if e != nil && !os.IsNotExist(e) {
 		return nil, e
 	}
+	if e = os.MkdirAll(filepath.Dir(fpath), 0775); e != nil {
+		return nil, e
+	}
 	file, e := os.Create(fpath)
 	if e != nil {
 		return nil, e
@@ -334,12 +337,6 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Er
 				TotalSize:    size,
 				TotalWritten: n,
 			})
-		}
-	}
-	// Successful copy update progress bar if there is one.
-	if progress != nil {
-		if _, e := io.CopyN(ioutil.Discard, reader, size); e != nil {
-			return probe.NewError(e)
 		}
 	}
 	return nil
