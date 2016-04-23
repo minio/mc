@@ -40,6 +40,7 @@ type Client interface {
 	// I/O operations
 	Get() (reader io.Reader, err *probe.Error)
 	Put(reader io.Reader, size int64, contentType string, progress io.Reader) (n int64, err *probe.Error)
+	Copy(source string, size int64, progress io.Reader) *probe.Error
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)
