@@ -1,5 +1,5 @@
 /*
- * Minio Client, (C) 2015 Minio, Inc.
+ * Minio Client, (C) 2015, 2016 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ var (
 // Set public access permissions.
 var accessCmd = cli.Command{
 	Name:   "access",
-	Usage:  "Set public access permissions.",
+	Usage:  "Set public access permissions on bucket or prefix.",
 	Action: mainAccess,
 	Flags:  append(accessFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
@@ -63,7 +63,10 @@ EXAMPLES:
    3. Set bucket to "writeonly" on Amazon S3 cloud storage.
       $ mc {{.Name}} writeonly s3/incoming
 
-   4. Get bucket permissions.
+   4. Set a prefix to "readwrite" on Amazon S3 cloud storage.
+      $ mc {{.Name}} readwrite s3/public-commons/images
+
+   5. Get bucket permissions.
       $ mc {{.Name}} s3/shared
 
 `,
