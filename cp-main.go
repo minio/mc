@@ -173,31 +173,40 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 				cpURLs.Error = err.Trace(sourceURL.String())
 				return cpURLs
 			}
-			cpURLs.Error = nil
-			return cpURLs
-		}
-		// If source/target are object storage their aliases must be the same
-		if sourceURL.Type == objectStorage && (sourceAlias == targetAlias) {
-			// Do not include alias inside path for ObjStore -> ObjStore.
-			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, progress)
-			if err != nil {
-				cpURLs.Error = err.Trace(sourceURL.String())
-				return cpURLs
+		} else if sourceURL.Type == objectStorage {
+			// If source/target are object storage their aliases must be the same.
+			if sourceAlias == targetAlias {
+				// Do not include alias inside path for ObjStore -> ObjStore.
+				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, progress)
+				if err != nil {
+					cpURLs.Error = err.Trace(sourceURL.String())
+					return cpURLs
+				}
+			} else {
+				reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
+				if err != nil {
+					cpURLs.Error = err.Trace(sourceURL.String())
+					return cpURLs
+				}
+				_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
+				if err != nil {
+					cpURLs.Error = err.Trace(targetURL.String())
+					return cpURLs
+				}
 			}
-			cpURLs.Error = nil
+		}
+	} else {
+		// Standard GET/PUT for size > 5GB.
+		reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
+		if err != nil {
+			cpURLs.Error = err.Trace(sourceURL.String())
 			return cpURLs
 		}
-	}
-	// Standard GET/PUT for size > 5GB.
-	reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
-	if err != nil {
-		cpURLs.Error = err.Trace(sourceURL.String())
-		return cpURLs
-	}
-	_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
-	if err != nil {
-		cpURLs.Error = err.Trace(targetURL.String())
-		return cpURLs
+		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
+		if err != nil {
+			cpURLs.Error = err.Trace(targetURL.String())
+			return cpURLs
+		}
 	}
 	cpURLs.Error = nil // just for safety
 	return cpURLs
