@@ -84,7 +84,7 @@ type accessMessage struct {
 func (s accessMessage) String() string {
 	if s.Operation == "set" {
 		return console.Colorize("Access",
-			"Set access permission ‘"+string(s.Perms)+"’ updated successfully for ‘"+s.Bucket+"’")
+			"Access permission for ‘"+s.Bucket+"’ is set to ‘"+string(s.Perms)+"’")
 	}
 	if s.Operation == "get" {
 		return console.Colorize("Access",
