@@ -92,6 +92,16 @@ func (c Client) getBucketLocation(bucketName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	location, err := processBucketLocationResponse(resp, bucketName)
+	if err != nil {
+		return "", err
+	}
+	c.bucketLocCache.Set(bucketName, location)
+	return location, nil
+}
+
+// processes the getBucketLocation http response from the server.
+func processBucketLocationResponse(resp *http.Response, bucketName string) (bucketLocation string, err error) {
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
 			err = httpRespToErrorResponse(resp, bucketName, "")
@@ -125,7 +135,6 @@ func (c Client) getBucketLocation(bucketName string) (string, error) {
 	}
 
 	// Save the location into cache.
-	c.bucketLocCache.Set(bucketName, location)
 
 	// Return.
 	return location, nil
