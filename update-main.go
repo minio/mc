@@ -145,9 +145,9 @@ func getReleaseUpdate(updateURL string) {
 	newUpdateURLPrefix := updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH
 	newUpdateURL := newUpdateURLPrefix + "/mc.shasum"
 
-	// Instantiate a new client with 1 sec timeout.
+	// Instantiate a new client with 3 sec timeout.
 	client := &http.Client{
-		Timeout: 500 * time.Millisecond,
+		Timeout: 3000 * time.Millisecond,
 	}
 
 	// Get the downloadURL.
