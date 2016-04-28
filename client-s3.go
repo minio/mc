@@ -148,6 +148,19 @@ func (c *s3Client) Get() (io.Reader, *probe.Error) {
 		if errResponse.Code == "AccessDenied" {
 			return nil, probe.NewError(PathInsufficientPermission{Path: c.targetURL.String()})
 		}
+		if errResponse.Code == "NoSuchBucket" {
+			return nil, probe.NewError(BucketDoesNotExist{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "InvalidBucketName" {
+			return nil, probe.NewError(BucketInvalid{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
+			return nil, probe.NewError(ObjectMissing{})
+		}
 		return nil, probe.NewError(e)
 	}
 	return reader, nil
