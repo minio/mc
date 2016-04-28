@@ -348,19 +348,10 @@ func doCopySession(session *sessionV7) {
 					// For all non critical errors we can continue for the
 					// remaining files.
 					switch cpURLs.Error.ToGoError().(type) {
-					// Handle this specifically for filesystem related
-					// errors.
-					case BrokenSymlink:
+					// Handle this specifically for filesystem related errors.
+					case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
 						continue
-					case TooManyLevelsSymlink:
-						continue
-					case PathNotFound:
-						continue
-					case PathInsufficientPermission:
-						continue
-					case ObjectAlreadyExists:
-						continue
-					case BucketDoesNotExist:
+					case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, BucketDoesNotExist, BucketInvalid:
 						continue
 					}
 					// For critical errors we should exit. Session
