@@ -240,6 +240,60 @@ func (s sessionV7) restoreGlobals() {
 	setGlobals(quiet, debug, json, noColor)
 }
 
+// IsModified - returns if in memory session header has changed from
+// its on disk value.
+func (s *sessionV7) isModified(sessionFile string) (bool, *probe.Error) {
+	qs, err := quick.New(s.Header)
+	if err != nil {
+		return false, err.Trace(s.SessionID)
+	}
+
+	var currentHeader = &sessionV7Header{}
+	currentQS, err := quick.Load(sessionFile, currentHeader)
+	if err != nil {
+		// If session does not exist for the first, return modified to
+		// be true.
+		if os.IsNotExist(err.ToGoError()) {
+			return true, nil
+		}
+		// For all other errors return.
+		return false, err.Trace(s.SessionID)
+	}
+
+	changedFields, err := qs.DeepDiff(currentQS)
+	if err != nil {
+		return false, err.Trace(s.SessionID)
+	}
+
+	// Returns true if there are changed entries.
+	return len(changedFields) > 0, nil
+}
+
+// save - wrapper for quick.Save and saves only if sessionHeader is
+// modified.
+func (s *sessionV7) save() *probe.Error {
+	sessionFile, err := getSessionFile(s.SessionID)
+	if err != nil {
+		return err.Trace(s.SessionID)
+	}
+
+	// Verify if sessionFile is modified.
+	modified, err := s.isModified(sessionFile)
+	if err != nil {
+		return err.Trace(s.SessionID)
+	}
+	// Header is modified, we save it.
+	if modified {
+		qs, err := quick.New(s.Header)
+		if err != nil {
+			return err.Trace(s.SessionID)
+		}
+		// Save an return.
+		return qs.Save(sessionFile).Trace(sessionFile)
+	}
+	return nil
+}
+
 // Close ends this session and removes all associated session files.
 func (s *sessionV7) Close() *probe.Error {
 	s.mutex.Lock()
@@ -249,16 +303,8 @@ func (s *sessionV7) Close() *probe.Error {
 		return probe.NewError(err)
 	}
 
-	qs, err := quick.New(s.Header)
-	if err != nil {
-		return err.Trace()
-	}
-
-	sessionFile, err := getSessionFile(s.SessionID)
-	if err != nil {
-		return err.Trace(s.SessionID)
-	}
-	return qs.Save(sessionFile).Trace(sessionFile)
+	// Attempt to save the header if modified.
+	return s.save()
 }
 
 // Delete removes all the session files.

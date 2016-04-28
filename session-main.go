@@ -87,17 +87,17 @@ func (b bySessionWhen) Less(i, j int) bool { return b[i].Header.When.Before(b[j]
 func listSessions() *probe.Error {
 	var bySessions []*sessionV7
 	for _, sid := range getSessionIDs() {
-		s, err := loadSessionV7(sid)
+		session, err := loadSessionV7(sid)
 		if err != nil {
 			return err.Trace(sid)
 		}
-		bySessions = append(bySessions, s)
+		session.Close() // Session close right here.
+		bySessions = append(bySessions, session)
 	}
 	// sort sessions based on time.
 	sort.Sort(bySessionWhen(bySessions))
 	for _, session := range bySessions {
 		printMsg(session)
-		session.Close()
 	}
 	return nil
 }
