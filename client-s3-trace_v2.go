@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -57,19 +58,34 @@ func (t traceV2) Request(req *http.Request) (err error) {
 }
 
 // Response - Trace HTTP Response
-func (t traceV2) Response(res *http.Response) (err error) {
-	var resTrace []byte
+func (t traceV2) Response(resp *http.Response) (err error) {
+	var respTrace []byte
 	// For errors we make sure to dump response body as well.
-	if res.StatusCode != http.StatusOK &&
-		res.StatusCode != http.StatusPartialContent &&
-		res.StatusCode != http.StatusNoContent {
-		resTrace, err = httputil.DumpResponse(res, true)
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusPartialContent &&
+		resp.StatusCode != http.StatusNoContent {
+		respTrace, err = httputil.DumpResponse(resp, true)
 	} else {
-		// Only display header
-		resTrace, err = httputil.DumpResponse(res, false)
+		// WORKAROUND for https://github.com/golang/go/issues/13942.
+		// httputil.DumpResponse does not print response headers for
+		// all successful calls which have response ContentLength set
+		// to zero. Keep this workaround until the above bug is fixed.
+		if resp.ContentLength == 0 {
+			var buffer bytes.Buffer
+			if err = resp.Header.Write(&buffer); err != nil {
+				return err
+			}
+			respTrace = buffer.Bytes()
+			respTrace = append(respTrace, []byte("\r\n")...)
+		} else {
+			respTrace, err = httputil.DumpResponse(resp, false)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	if err == nil {
-		console.Debug(string(resTrace))
+		console.Debug(string(respTrace))
 	}
 	return err
 }
