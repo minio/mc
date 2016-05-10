@@ -38,6 +38,9 @@ func signalTrap(sig ...os.Signal) <-chan bool {
 		// Wait for the signal.
 		<-sigCh
 
+		// Once signal has been received stop signal Notify handler.
+		signal.Stop(sigCh)
+
 		// Notify the caller.
 		trapCh <- true
 	}(trapCh)
