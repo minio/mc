@@ -37,6 +37,9 @@ const (
 	// session config and shared urls related constants
 	globalSessionDir        = "session"
 	globalSharedURLsDataDir = "share"
+
+	// Profile directory for dumping profiler outputs.
+	globalProfileDir = "profile"
 )
 
 var (
