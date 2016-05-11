@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
@@ -28,6 +29,7 @@ import (
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/pb"
+	"github.com/pkg/profile"
 )
 
 var (
@@ -228,7 +230,23 @@ func registerApp() *cli.App {
 	return app
 }
 
+// mustGetProfilePath must get location that the profile will be written to.
+func mustGetProfileDir() string {
+	return filepath.Join(mustGetMcConfigDir(), globalProfileDir)
+}
+
 func main() {
+	// Enable profiling supported modes are [cpu, mem, block].
+	// ``MC_PROFILER`` supported options are [cpu, mem, block].
+	switch os.Getenv("MC_PROFILER") {
+	case "cpu":
+		defer profile.Start(profile.CPUProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
+	case "mem":
+		defer profile.Start(profile.MemProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
+	case "block":
+		defer profile.Start(profile.BlockProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
+	}
+
 	probe.Init() // Set project's root source path.
 	probe.SetAppInfo("Release-Tag", mcReleaseTag)
 	probe.SetAppInfo("Commit", mcShortCommitID)

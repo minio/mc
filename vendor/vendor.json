@@ -78,6 +78,11 @@
 			"revisionTime": "2014-04-12T15:01:45-07:00"
 		},
 		{
+			"path": "github.com/pkg/profile",
+			"revision": "19396ecfda37c1c9ddaa52019adca59d582e4832",
+			"revisionTime": "2016-03-15T12:21:13+11:00"
+		},
+		{
 			"path": "golang.org/x/sys/unix",
 			"revision": "50c6bc5e4292a1d4e65c6e9be5f53be28bcbe28e",
 			"revisionTime": "2016-02-04T14:46:46-08:00"
