@@ -37,19 +37,6 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-var (
-	mcDefaultTransport = http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-		//Default ExpectContinueTimeout is 1sec
-		ExpectContinueTimeout: 3 * time.Second,
-	}
-)
-
 // S3 client
 type s3Client struct {
 	mutex        *sync.Mutex
@@ -137,6 +124,16 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		} else {
 			// We are using our own http.Transport value to have timeouts different from default
 			// where necessary.
+			mcDefaultTransport := http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				Dial: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).Dial,
+				TLSHandshakeTimeout: 10 * time.Second,
+				//Default ExpectContinueTimeout is 1sec
+				ExpectContinueTimeout: 3 * time.Second,
+			}
 			api.SetCustomTransport(&mcDefaultTransport)
 		}
 		// Store the new api object.
