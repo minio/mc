@@ -20,6 +20,7 @@ import (
 	"errors"
 	"hash/fnv"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -34,6 +35,19 @@ import (
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/probe"
+)
+
+var (
+	mcDefaultTransport = http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		//Default ExpectContinueTimeout is 1sec
+		ExpectContinueTimeout: 3 * time.Second,
+	}
 )
 
 // S3 client
@@ -120,9 +134,11 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			}
 			// Set custom transport.
 			api.SetCustomTransport(transport)
+		} else {
+			// We are using our own http.Transport value to have timeouts different from default
+			// where necessary.
+			api.SetCustomTransport(&mcDefaultTransport)
 		}
-		// ListObjects on a prefix with 10 million entries takes around 8 minutes.
-		api.SetClientTimeout(8 * time.Minute)
 		// Store the new api object.
 		s3Clnt.api = api
 
