@@ -135,6 +135,15 @@ func mainList(ctx *cli.Context) {
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
+		st, err := clnt.Stat()
+		fatalIf(err.Trace(targetURL), "Unable to stat target ‘"+targetURL+"’.")
+
+		if st.Type.IsDir() {
+			targetURL = targetURL + string(clnt.GetURL().Separator)
+			clnt, err = newClient(targetURL)
+			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
+		}
+
 		err = doList(clnt, isRecursive, isIncomplete)
 		if err != nil {
 			errorIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
