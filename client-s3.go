@@ -37,6 +37,21 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
+// Default Transport for S3 clients in mc
+var (
+	mcDefaultTransport = http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		//Default ExpectContinueTimeout is 1sec
+		ExpectContinueTimeout: 3 * time.Second,
+		ResponseHeaderTimeout: 3 * time.Second,
+	}
+)
+
 // S3 client
 type s3Client struct {
 	mutex        *sync.Mutex
@@ -105,38 +120,27 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			if e != nil {
 				return nil, probe.NewError(e)
 			}
+			if config.Debug {
+				transport := http.DefaultTransport
+				if config.Signature == "S3v4" {
+					transport = httptracer.GetNewTraceTransport(newTraceV4(), http.DefaultTransport)
+				}
+				if config.Signature == "S3v2" {
+					transport = httptracer.GetNewTraceTransport(newTraceV2(), http.DefaultTransport)
+				}
+				// Set custom transport.
+				api.SetCustomTransport(transport)
+			} else {
+				// We are using our own http.Transport value to have timeouts different from default
+				// where necessary.
+				api.SetCustomTransport(&mcDefaultTransport)
+			}
 			// Cache the new minio client with hash of config as key.
 			clientCache[confSum] = api
 		}
 		// Set app info.
 		api.SetAppInfo(config.AppName, config.AppVersion)
 
-		if config.Debug {
-			transport := http.DefaultTransport
-			if config.Signature == "S3v4" {
-				transport = httptracer.GetNewTraceTransport(newTraceV4(), http.DefaultTransport)
-			}
-			if config.Signature == "S3v2" {
-				transport = httptracer.GetNewTraceTransport(newTraceV2(), http.DefaultTransport)
-			}
-			// Set custom transport.
-			api.SetCustomTransport(transport)
-		} else {
-			// We are using our own http.Transport value to have timeouts different from default
-			// where necessary.
-			mcDefaultTransport := http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-				Dial: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}).Dial,
-				TLSHandshakeTimeout: 10 * time.Second,
-				//Default ExpectContinueTimeout is 1sec
-				ExpectContinueTimeout: 3 * time.Second,
-				ResponseHeaderTimeout: 3 * time.Second,
-			}
-			api.SetCustomTransport(&mcDefaultTransport)
-		}
 		// Store the new api object.
 		s3Clnt.api = api
 
