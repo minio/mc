@@ -768,7 +768,7 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-	return presignedURL, nil
+	return presignedURL.String(), nil
 }
 
 // ShareUpload - get data for presigned post http form upload.
@@ -794,6 +794,6 @@ func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 			return nil, probe.NewError(e)
 		}
 	}
-	m, e := c.api.PresignedPostPolicy(p)
+	_, m, e := c.api.PresignedPostPolicy(p)
 	return m, probe.NewError(e)
 }
