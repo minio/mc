@@ -20,6 +20,7 @@ import (
 	"errors"
 	"hash/fnv"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -54,9 +55,9 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		// Creates a parsed URL.
 		targetURL := newClientURL(config.HostURL)
 		// By default enable HTTPs.
-		inSecure := false
+		secure := true
 		if targetURL.Scheme == "http" {
-			inSecure = true
+			secure = false
 		}
 
 		// Instantiate s3
@@ -96,10 +97,10 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			var e error
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				// if Signature version '2' use NewV2 directly.
-				api, e = minio.NewV2(hostName, config.AccessKey, config.SecretKey, inSecure)
+				api, e = minio.NewV2(hostName, config.AccessKey, config.SecretKey, secure)
 			} else {
 				// if Signature version '4' use NewV4 directly.
-				api, e = minio.NewV4(hostName, config.AccessKey, config.SecretKey, inSecure)
+				api, e = minio.NewV4(hostName, config.AccessKey, config.SecretKey, secure)
 			}
 			if e != nil {
 				return nil, probe.NewError(e)
@@ -120,9 +121,22 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			}
 			// Set custom transport.
 			api.SetCustomTransport(transport)
+		} else {
+			// We are using our own http.Transport value to have timeouts different from default
+			// where necessary.
+			mcDefaultTransport := http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				Dial: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).Dial,
+				TLSHandshakeTimeout: 10 * time.Second,
+				//Default ExpectContinueTimeout is 1sec
+				ExpectContinueTimeout: 3 * time.Second,
+				ResponseHeaderTimeout: 3 * time.Second,
+			}
+			api.SetCustomTransport(&mcDefaultTransport)
 		}
-		// ListObjects on a prefix with 10 million entries takes around 8 minutes.
-		api.SetClientTimeout(8 * time.Minute)
 		// Store the new api object.
 		s3Clnt.api = api
 
@@ -754,7 +768,7 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-	return presignedURL, nil
+	return presignedURL.String(), nil
 }
 
 // ShareUpload - get data for presigned post http form upload.
@@ -780,6 +794,6 @@ func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 			return nil, probe.NewError(e)
 		}
 	}
-	m, e := c.api.PresignedPostPolicy(p)
+	_, m, e := c.api.PresignedPostPolicy(p)
 	return m, probe.NewError(e)
 }
