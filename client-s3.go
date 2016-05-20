@@ -133,6 +133,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				TLSHandshakeTimeout: 10 * time.Second,
 				//Default ExpectContinueTimeout is 1sec
 				ExpectContinueTimeout: 3 * time.Second,
+				ResponseHeaderTimeout: 3 * time.Second,
 			}
 			api.SetCustomTransport(&mcDefaultTransport)
 		}
