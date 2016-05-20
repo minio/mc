@@ -55,9 +55,9 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		// Creates a parsed URL.
 		targetURL := newClientURL(config.HostURL)
 		// By default enable HTTPs.
-		inSecure := false
+		secure := true
 		if targetURL.Scheme == "http" {
-			inSecure = true
+			secure = false
 		}
 
 		// Instantiate s3
@@ -97,10 +97,10 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			var e error
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				// if Signature version '2' use NewV2 directly.
-				api, e = minio.NewV2(hostName, config.AccessKey, config.SecretKey, inSecure)
+				api, e = minio.NewV2(hostName, config.AccessKey, config.SecretKey, secure)
 			} else {
 				// if Signature version '4' use NewV4 directly.
-				api, e = minio.NewV4(hostName, config.AccessKey, config.SecretKey, inSecure)
+				api, e = minio.NewV4(hostName, config.AccessKey, config.SecretKey, secure)
 			}
 			if e != nil {
 				return nil, probe.NewError(e)
