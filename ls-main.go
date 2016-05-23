@@ -137,8 +137,11 @@ func mainList(ctx *cli.Context) {
 
 		var st *clientContent
 		if st, err = clnt.Stat(); err != nil {
+			switch err.ToGoError().(type) {
+			case BucketNameEmpty:
 			// For aliases like ``mc ls s3`` it's acceptable to receive BucketNameEmpty error.
-			if _, bucketEmpty := err.Cause.(BucketNameEmpty); !bucketEmpty {
+			// Nothing to do.
+			default:
 				fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 			}
 		} else if st.Type.IsDir() {
