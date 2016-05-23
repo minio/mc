@@ -89,9 +89,10 @@ func listSessions() *probe.Error {
 	for _, sid := range getSessionIDs() {
 		session, err := loadSessionV7(sid)
 		if err != nil {
-			return err.Trace(sid)
+			continue // Skip 'broken' session during listing
+		} else {
+			session.Close() // Session close right here.
 		}
-		session.Close() // Session close right here.
 		bySessions = append(bySessions, session)
 	}
 	// sort sessions based on time.
@@ -110,7 +111,15 @@ type clearSessionMessage struct {
 
 // String colorized clear session message.
 func (c clearSessionMessage) String() string {
-	return console.Colorize("ClearSession", "Session ‘"+c.SessionID+"’ cleared successfully.")
+	msg := "Session ‘" + c.SessionID + "’"
+	var colorizedMsg string
+	switch c.Status {
+	case "success":
+		colorizedMsg = console.Colorize("ClearSession", msg+" cleared succesfully.")
+	case "forced":
+		colorizedMsg = console.Colorize("ClearSession", msg+" cleared forcefully.")
+	}
+	return colorizedMsg
 }
 
 // JSON jsonified clear session message.
@@ -140,7 +149,12 @@ func clearSession(sid string) {
 	}
 
 	session, err := loadSessionV7(sid)
-	fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’.")
+	if err != nil {
+		removeSessionFile(sid)
+		removeSessionDataFile(sid)
+		printMsg(clearSessionMessage{Status: "forced", SessionID: sid})
+		return
+	}
 
 	if session != nil {
 		fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")

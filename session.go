@@ -115,3 +115,19 @@ func getSessionIDs() (sids []string) {
 	}
 	return sids
 }
+
+func removeSessionFile(sid string) {
+	sessionFile, err := getSessionFile(sid)
+	if err != nil {
+		return
+	}
+	os.Remove(sessionFile)
+}
+
+func removeSessionDataFile(sid string) {
+	dataFile, err := getSessionDataFile(sid)
+	if err != nil {
+		return
+	}
+	os.Remove(dataFile)
+}

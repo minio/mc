@@ -17,6 +17,7 @@
 package main
 
 import (
+	"os"
 	"regexp"
 
 	. "gopkg.in/check.v1"
@@ -37,9 +38,12 @@ func (s *TestSuite) TestSession(c *C) {
 	session := newSessionV7()
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
+	_, e := os.Stat(session.DataFP.Name())
+	c.Assert(e, IsNil)
 
 	err = session.Close()
 	c.Assert(err, IsNil)
+	c.Assert(isSessionExists(session.SessionID), Equals, true)
 
 	savedSession, err := loadSessionV7(session.SessionID)
 	c.Assert(err, IsNil)
@@ -50,4 +54,7 @@ func (s *TestSuite) TestSession(c *C) {
 
 	err = savedSession.Delete()
 	c.Assert(err, IsNil)
+	c.Assert(isSessionExists(session.SessionID), Equals, false)
+	_, e = os.Stat(session.DataFP.Name())
+	c.Assert(e, NotNil)
 }
