@@ -135,10 +135,13 @@ func mainList(ctx *cli.Context) {
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 
-		st, err := clnt.Stat()
-		fatalIf(err.Trace(targetURL), "Unable to stat target ‘"+targetURL+"’.")
-
-		if st.Type.IsDir() {
+		var st *clientContent
+		if st, err = clnt.Stat(); err != nil {
+			// For aliases like ``mc ls s3`` it's acceptable to receive BucketNameEmpty error.
+			if _, bucketEmpty := err.Cause.(BucketNameEmpty); !bucketEmpty {
+				fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
+			}
+		} else if st.Type.IsDir() {
 			targetURL = targetURL + string(clnt.GetURL().Separator)
 			clnt, err = newClient(targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
