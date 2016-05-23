@@ -90,9 +90,8 @@ func listSessions() *probe.Error {
 		session, err := loadSessionV7(sid)
 		if err != nil {
 			continue // Skip 'broken' session during listing
-		} else {
-			session.Close() // Session close right here.
 		}
+		session.Close() // Session close right here.
 		bySessions = append(bySessions, session)
 	}
 	// sort sessions based on time.
@@ -150,6 +149,8 @@ func clearSession(sid string) {
 
 	session, err := loadSessionV7(sid)
 	if err != nil {
+		// `mc session clear <broken-session-id>` assumes that user is aware that the session is unuseful
+		// and wants the associated session files to be removed
 		removeSessionFile(sid)
 		removeSessionDataFile(sid)
 		printMsg(clearSessionMessage{Status: "forced", SessionID: sid})
