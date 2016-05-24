@@ -115,3 +115,21 @@ func getSessionIDs() (sids []string) {
 	}
 	return sids
 }
+
+// removeSessionFile - remove the session file, ending with .json
+func removeSessionFile(sid string) {
+	sessionFile, err := getSessionFile(sid)
+	if err != nil {
+		return
+	}
+	os.Remove(sessionFile)
+}
+
+// removeSessionDataFile - remove the session data file, ending with .data
+func removeSessionDataFile(sid string) {
+	dataFile, err := getSessionDataFile(sid)
+	if err != nil {
+		return
+	}
+	os.Remove(dataFile)
+}

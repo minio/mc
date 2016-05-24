@@ -138,10 +138,10 @@ func loadSessionV7(sid string) (*sessionV7, *probe.Error) {
 		return nil, err.Trace(sid, s.Header.Version)
 	}
 
-	var e error
 	dataFile, e := os.Open(sessionDataFile)
-	fatalIf(probe.NewError(e), "Unable to open session data file \""+sessionDataFile+"\".")
-
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
 	s.DataFP = &sessionDataFP{false, dataFile}
 
 	return s, nil
