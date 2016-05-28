@@ -145,7 +145,9 @@ func mainList(ctx *cli.Context) {
 				fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 			}
 		} else if st.Type.IsDir() {
-			targetURL = targetURL + string(clnt.GetURL().Separator)
+			if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
+				targetURL = targetURL + string(clnt.GetURL().Separator)
+			}
 			clnt, err = newClient(targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 		}
