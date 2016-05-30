@@ -43,10 +43,10 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "AAF7RJL0VyzNA2Sraqc3frechJA=",
+			"checksumSHA1": "QHR5sfmPMTzDeOUjxw1bW3ipS4g=",
 			"path": "github.com/minio/minio-go",
-			"revision": "ec61681ad172f3f0818685a20c535c2f1a7de2ac",
-			"revisionTime": "2016-05-19T11:05:51Z"
+			"revision": "28fb30ae06c8cb43fb5dabd66930d7c4a19bb520",
+			"revisionTime": "2016-05-27T08:59:22Z"
 		},
 		{
 			"path": "github.com/minio/minio/pkg/atomic",
