@@ -88,9 +88,12 @@ If you do not have a working Golang environment, please follow [Install Golang](
 $ GO15VENDOREXPERIMENT=1 go get -u github.com/minio/mc
 ```
 
-## Public Minio Server
-
-Minio cloud storage server is hosted at ``https://play.minio.io:9000`` for public use. This service is primarily intended for developers and users to familiarize themselves with Amazon S3 compatible cloud storage. Minio runs with filesystem backend with auto-expiry for objects in about 24 hours.  No account signup is required, which means S3 compatible tools and applications can access this service without access and secret keys.
+## Minio Test Server
+Minio test server is hosted at ``https://play.minio.io:9000`` for public use. `mc` is pre-configured to use this service as 'play' alias. Access and secret keys for this server is saved in your `~/.mc/config.json`.
+```
+$ ./mc mb play/myownbucket
+$ ./mc ls play
+```
 
 ## Configuring mc for Amazon S3
 
@@ -98,12 +101,12 @@ Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](ht
 
 Once you have them update your ``~/.mc/config.json`` configuration file.
 ```
-$ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v4
+$ ./mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v4
 ```
 
 Example
 ```
-$ mc config host add mys3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+$ ./mc config host add mys3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
 NOTE: ``S3v4`` is default if not specified.
@@ -114,13 +117,10 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 
 Once you have them update your ``~/.mc/config.json`` configuration file.
 ```
-$ mc config host add <ALIAS> https://storage.googleapis.com <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v2
+$ ./mc config host add <ALIAS> https://storage.googleapis.com <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> S3v2
 ```
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version ``2``, so you have to pick - ``S3v2``
 
 ## Contribute to Minio Client
 Please follow Minio [Contributor's Guide](./CONTRIBUTING.md)
-
-### Jobs
-If you think in Lisp or Haskell and hack in go, you would blend right in. Send your github link to callhome@minio.io.
