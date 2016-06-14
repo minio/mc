@@ -14,7 +14,7 @@ import (
 func main() {
     secure := true // Make HTTPS requests by default.
     s3Client, err := minio.New("s3.amazonaws.com", "YOUR-ACCESSKEYID", "YOUR-SECRETACCESSKEY", secure)
-    if err !!= nil {
+    if err != nil {
         fmt.Println(err)
         return
     }
@@ -68,6 +68,9 @@ __Parameters__
 * `bucketName` _string_ - Name of the bucket.
 * `location` _string_ - region valid values are _us-west-1_, _us-west-2_,  _eu-west-1_, _eu-central-1_, _ap-southeast-1_, _ap-northeast-1_, _ap-southeast-2_, _sa-east-1_
 
+__Return Values__
+* `err` _error_
+
 __Example__
 ```go
 err := s3Client.MakeBucket("mybucket", "us-west-1")
@@ -82,9 +85,11 @@ fmt.Println("Successfully created mybucket.")
 #### ListBuckets() ([]BucketInfo, error)
 Lists all buckets.
 
-`bucketList` lists bucket in the format:
-* `bucket.Name` _string_: bucket name
-* `bucket.CreationDate` time.Time : date when bucket was created
+__Return Values__
+* `buckets` _[]BucketInfo_ : array of `BucketInfo` objects that contain:
+  * `Name` _string_ : name of the bucket
+  * `CreationDate` _time.Time_ : date the bucket was created
+* `err` _error_
 
 __Example__
 ```go
@@ -105,6 +110,9 @@ Check if bucket exists.
 __Parameters__
 * `bucketName` _string_ : name of the bucket
 
+__Return Values__
+* `err` _error_
+
 __Example__
 ```go
 err := s3Client.BucketExists("mybucket")
@@ -121,6 +129,9 @@ Remove a bucket.
 __Parameters__
 * `bucketName` _string_ : name of the bucket
 
+__Return Values__
+* `err` _error_
+
 __Example__
 ```go
 err := s3Client.RemoveBucket("mybucket")
@@ -131,12 +142,16 @@ if err != nil {
 ```
 ---------------------------------------
 <a name="GetBucketPolicy">
-#### GetBucketPolicy(bucketName string, objectPrefix string) error
+#### GetBucketPolicy(bucketName string, objectPrefix string) (BucketPolicy, error)
 Get access permissions on a bucket or a prefix.
 
 __Parameters__
 * `bucketName` _string_ : name of the bucket
 * `objectPrefix` _string_ : name of the object prefix
+
+__Return Values__
+* `bucketPolicy` _BucketPolicy_ : string that contains: 'none', 'readonly', 'readwrite', or 'writeonly'
+* `err` _error_
 
 __Example__
 ```go
@@ -157,6 +172,9 @@ __Parameters__
 * `objectPrefix` _string_ : name of the object prefix
 * `policy` _BucketPolicy_: policy can be _BucketPolicyNone_, _BucketPolicyReadOnly_, _BucketPolicyReadWrite_, _BucketPolicyWriteOnly_
 
+__Return Values__
+* `err` _error_
+
 __Example__
 ```go
 err := s3Client.SetBucketPolicy("mybucket", "myprefix", BucketPolicyReadWrite)
@@ -173,6 +191,9 @@ Remove existing permissions on bucket or an object prefix.
 __Parameters__
 * `bucketName` _string_: name of the bucket
 * `objectPrefix` _string_ : name of the object prefix
+
+__Return Values__
+* `err` _error_
 
 __Example__
 ```go
@@ -194,7 +215,7 @@ __Parameters__
 * `recursive` _bool_: `true` indicates recursive style listing and `false` indicates directory style listing delimited by '/'
 * `doneCh`   chan struct{} : channel for pro-actively closing the internal go routine
 
-__Return Value__
+__Return Values__
 * `<-chan ObjectInfo` _chan ObjectInfo_: Read channel for all the objects in the bucket, the object is of the format:
   * `objectInfo.Key` _string_: name of the object
   * `objectInfo.Size` _int64_: size of the object
@@ -232,7 +253,7 @@ __Parameters__
 * `recursive` bool: directory style listing when false, recursive listing when true
 * `doneCh`   chan struct{} : channel for pro-actively closing the internal go routine
 
-__Return Value__
+__Return Values__
 * `<-chan ObjectMultipartInfo` _chan ObjectMultipartInfo_ : emits multipart objects of the format:
   * `multiPartObjInfo.Key` _string_: name of the incomplete object
   * `multiPartObjInfo.UploadID` _string_: upload ID of the incomplete object
@@ -267,8 +288,8 @@ __Parameters__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 
-__Return Value__
-* `object` _*Object_ : _Object_ represents object reader.
+__Return Values__
+* `object` _*Object_ : represents object reader.
 
 __Example__
 ```go
@@ -294,6 +315,9 @@ __Parameters__
 * `objectName` _string_: name of the object
 * `filePath` _string_: path to which the object data will be written to
 
+__Return Values__
+* `err` _error_
+
 __Example__
 ```go
 err := s3Client.FGetObject("mybucket", "photo.jpg", "/tmp/photo.jpg")
@@ -304,7 +328,7 @@ if err != nil {
 ```
 ---------------------------------------
 <a name="PutObject">
-#### PutObject(bucketName string, objectName string, reader io.Reader, contentType string) (n int, err error)
+#### PutObject(bucketName string, objectName string, reader io.Reader, contentType string) (int64, error)
 Upload contents from `io.Reader` to objectName.
 
 __Parameters__
@@ -312,6 +336,10 @@ __Parameters__
 * `objectName` _string_: name of the object
 * `reader` _io.Reader_: Any golang object implementing io.Reader
 * `contentType` _string_: content type of the object.
+
+__Return Values__
+* `totalUploadedSize` _int64_: Size in bytes of uploaded file
+* `err` _error_
 
 __Example__
 ```go
@@ -340,6 +368,9 @@ __Parameters__
 * `objectSource` _string_: name of the object source.
 * `conditions` _CopyConditions_: Collection of supported CopyObject conditions. ['x-amz-copy-source', 'x-amz-copy-source-if-match', 'x-amz-copy-source-if-none-match', 'x-amz-copy-source-if-unmodified-since', 'x-amz-copy-source-if-modified-since']
 
+__Return Values__
+* `err` _error_
+
 __Example__
 ```go
 // All following conditions are allowed and can be combined together.
@@ -367,7 +398,7 @@ if err != nil {
 
 ---------------------------------------
 <a name="FPutObject">
-#### FPutObject(bucketName string, objectName string, filePath string, contentType string) error
+#### FPutObject(bucketName string, objectName string, filePath string, contentType string) (int64, error)
 Uploads the object using contents from a file
 
 __Parameters__
@@ -375,6 +406,10 @@ __Parameters__
 * `objectName` _string_: name of the object
 * `filePath` _string_: file path of the file to be uploaded
 * `contentType` _string_: content type of the object
+
+__Return Values__
+* `totalUploadedSize` _int64_: Size in bytes of uploaded file
+* `err`: _error_
 
 __Example__
 ```go
@@ -393,12 +428,13 @@ __Parameters__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 
-__Return Value__
-   `objInfo`   _ObjectInfo_ : object stat info for following format:
+__Return Values__
+* `objInfo`   _ObjectInfo_ : object stat info for following format:
   * `objInfo.Size` _int64_: size of the object
   * `objInfo.ETag` _string_: etag of the object
   * `objInfo.ContentType` _string_: Content-Type of the object
   * `objInfo.LastModified` _string_: modified time stamp
+* `err` _error_
 
 __Example__
 ```go
@@ -418,6 +454,9 @@ __Parameters__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 
+__Return Values__
+* `err` _error_
+
 __Example__
 ```go
 err := s3Client.RemoveObject("mybucket", "photo.jpg")
@@ -434,6 +473,9 @@ Remove an partially uploaded object.
 __Parameters__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
+
+__Return Values__
+* `err` _error_
 
 __Example__
 ```go
@@ -455,6 +497,10 @@ __Parameters__
 * `objectName` _string_: name of the object.
 * `expiry` _time.Duration_: expiry in seconds.
 * `reqParams` _url.Values_ : additional response header overrides supports _response-expires_, _response-content-type_, _response-cache-control_, _response-content-disposition_
+
+__Return Values__
+* `url` _*url.URL_ : Presigned URL for GET on an object
+* `err` _error_
 
 __Example__
 ```go
@@ -482,6 +528,10 @@ __Parameters__
 * `bucketName` _string_: name of the bucket
 * `objectName` _string_: name of the object
 * `expiry` _time.Duration_: expiry in seconds
+
+__Return Values__
+* `url` _*url.URL_ : Presigned URL for PUT on an object
+* `err` _error
 
 __Example__
 ```go
