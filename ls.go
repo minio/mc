@@ -126,6 +126,9 @@ func doList(clnt Client, isRecursive, isIncomplete bool) *probe.Error {
 			case PathInsufficientPermission:
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
+			case ObjectOnGlacier:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "")
+				continue
 			}
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			continue

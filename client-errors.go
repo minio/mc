@@ -74,6 +74,15 @@ func (e ObjectAlreadyExists) Error() string {
 	return "Object ‘" + e.Object + "’ already exists."
 }
 
+// ObjectOnGlacier - object is of storage class glacier.
+type ObjectOnGlacier struct {
+	Object string
+}
+
+func (e ObjectOnGlacier) Error() string {
+	return "Object ‘" + e.Object + "’ is on Glacier storage."
+}
+
 // BucketNameTopLevel - generic error
 type BucketNameTopLevel struct{}
 

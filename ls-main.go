@@ -37,7 +37,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
-			Usage: "Remove incomplete uploads.",
+			Usage: "List incomplete uploads.",
 		},
 	}
 )

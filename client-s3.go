@@ -678,6 +678,19 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 	}
 }
 
+// S3 offers a range of storage classes designed for
+// different use cases, following list captures these.
+const (
+	// General purpose.
+	// s3StorageClassStandard = "STANDARD"
+	// Infrequent access.
+	// s3StorageClassInfrequent = "STANDARD_IA"
+	// Reduced redundancy access.
+	// s3StorageClassRedundancy = "REDUCED_REDUNDANCY"
+	// Archive access.
+	s3StorageClassGlacier = "GLACIER"
+)
+
 func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 	defer close(contentCh)
 	// get bucket and object from URL.
@@ -701,6 +714,13 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 			}
 			isRecursive := true
 			for object := range c.api.ListObjects(bucket.Name, o, isRecursive, nil) {
+				// Return error if we encountered glacier object and continue.
+				if object.StorageClass == s3StorageClassGlacier {
+					contentCh <- &clientContent{
+						Err: probe.NewError(ObjectOnGlacier{object.Key}),
+					}
+					continue
+				}
 				if object.Err != nil {
 					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
