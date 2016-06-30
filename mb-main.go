@@ -66,6 +66,9 @@ EXAMPLES:
 
    5. Create a new directory including its missing parents (equivalent to ‘mkdir -p’).
       $ mc {{.Name}} /tmp/this/new/dir1
+
+   6. Create multiple directories including its missing parents (behavior similar to ‘mkdir -p’).
+      $ mc {{.Name}} /mnt/sdb/mydisk /mnt/sdc/mydisk /mnt/sdd/mydisk
 `,
 }
 
@@ -94,9 +97,6 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
-	if len(ctx.Args()) != 1 {
-		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Incorrect number of arguments for mb command.")
-	}
 }
 
 // mainMakeBucket is entry point for mb command.
@@ -110,18 +110,20 @@ func mainMakeBucket(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("MakeBucket", color.New(color.FgGreen, color.Bold))
 
-	// save region.
+	// Save region.
 	region := ctx.String("region")
 
-	targetURL := ctx.Args().First()
-	// Instantiate client for URL.
-	clnt, err := newClient(targetURL)
-	fatalIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
+	for i := range ctx.Args() {
+		targetURL := ctx.Args().Get(i)
+		// Instantiate client for URL.
+		clnt, err := newClient(targetURL)
+		errorIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
 
-	// Make bucket.
-	err = clnt.MakeBucket(region)
-	fatalIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+		// Make bucket.
+		err = clnt.MakeBucket(region)
+		errorIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
 
-	// Successfully created a bucket.
-	printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
+		// Successfully created a bucket.
+		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
+	}
 }
