@@ -68,7 +68,7 @@ $ chmod 755 mc
 $ ./mc --help
 ```
 ## 3. Add a Cloud Storage Service
-*Note: If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to [Step 4](#TestYourSetup).*
+*Note: If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to **Step 4**. *
 
 To add one or more Amazon S3 compatible hosts, please follow the instructions below. `mc` stores all its configuration information in ``~/.mc/config.json`` file.
 
@@ -120,6 +120,7 @@ alias pipe='mc pipe'
 
 - [Minio Client Complete Guide](/docs/minio-client-complete-guide)
 - [Minio Quickstart Guide](/docs/minio)
+
 ## 7. Contribute
 [Contributors Guide](./CONTRIBUTING.md)
 
