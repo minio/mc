@@ -163,8 +163,8 @@ func (c Client) SetBucketPolicy(bucketName string, objectPrefix string, bucketPo
 	}
 	// For bucket policy set to 'none' we need to remove the policy.
 	if bucketPolicy == BucketPolicyNone && policy.Statements == nil {
-		// No policies to set, return success.
-		return nil
+		// No policy exists on the given prefix so return with ErrNoSuchBucketPolicy.
+		return ErrNoSuchBucketPolicy(fmt.Sprintf("No policy exists on %s/%s", bucketName, objectPrefix))
 	}
 	// Remove any previous policies at this path.
 	statements := removeBucketPolicyStatement(policy.Statements, bucketName, objectPrefix)
@@ -176,10 +176,19 @@ func (c Client) SetBucketPolicy(bucketName string, objectPrefix string, bucketPo
 	}
 	statements = append(statements, generatedStatements...)
 
-	// No change in the statements indicates an attempt of setting 'none' on a prefix
-	// which doesn't have a pre-existing policy.
+	// No change in the statements indicates either an attempt of setting 'none'
+	// on a prefix which doesn't have a pre-existing policy, or setting a policy
+	// on a prefix which already has the same policy.
 	if reflect.DeepEqual(policy.Statements, statements) {
-		return ErrNoSuchBucketPolicy(fmt.Sprintf("No policy exists on %s/%s", bucketName, objectPrefix))
+		// If policy being set is 'none' return an error, otherwise return nil to
+		// prevent the unnecessary request from being sent
+		var err error
+		if bucketPolicy == BucketPolicyNone {
+			err = ErrNoSuchBucketPolicy(fmt.Sprintf("No policy exists on %s/%s", bucketName, objectPrefix))
+		} else {
+			err = nil
+		}
+		return err
 	}
 
 	policy.Statements = statements

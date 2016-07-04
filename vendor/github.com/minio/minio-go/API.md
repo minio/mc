@@ -433,7 +433,7 @@ __Return Values__
   * `objInfo.Size` _int64_: size of the object
   * `objInfo.ETag` _string_: etag of the object
   * `objInfo.ContentType` _string_: Content-Type of the object
-  * `objInfo.LastModified` _string_: modified time stamp
+  * `objInfo.LastModified` _time.Time_: modified time stamp
 * `err` _error_
 
 __Example__

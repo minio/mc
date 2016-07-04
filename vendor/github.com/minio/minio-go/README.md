@@ -5,7 +5,7 @@ The Minio Golang Client SDK provides simple APIs to access any Amazon S3 compati
 - AWS Signature Version 4
    - Amazon S3
    - Minio
- - AWS Signature Version 2
+- AWS Signature Version 2
    - Google Cloud Storage (Compatibility Mode)
    - Openstack Swift + Swift3 middleware
    - Ceph Object Gateway
@@ -21,10 +21,18 @@ This document assumes that you have a working [Golang](https://docs.minio.io/doc
 ```sh
 $ go get -u github.com/minio/minio-go
 ```
-## Quick Start Example - File Uploader
-This example program connects to an object storage server, makes a bucket on the server and then uploads a file to the bucket.
+## Initialize Minio Client
+You need four items in order to connect to Minio object storage server.
 
-You need four items in order to connect to an object storage server.
+
+
+| Params  | Description| 
+| :---         |     :---     |
+| endpoint   | URL to object storage service.   | 
+| accessKeyID | Access key is like user ID that uniquely identifies your account. |   
+| secretAccessKey | Secret key is the password to your account. |
+|secure | Set this value to 'true' to enable secure (HTTPS) access. |
+
 
 ```go
 package main
@@ -48,12 +56,12 @@ func main() {
 }
 ```
 
-| Params     | Description |  
-| :------- | :------------ |  
-| endpoint| URL to object storage service. |  
-| accessKeyID | Access key is like user ID that uniquely identifies your account.   |   
-| secretAccessKey| Secret key is the password to your account.|
-|secure|Set this value to 'true' to enable secure (HTTPS) access.|
+## Quick Start Example - File Uploader
+This example program connects to an object storage server, makes a bucket on the server and then uploads a file to the bucket.
+
+
+
+
 We will use the Minio server running at [https://play.minio.io:9000](https://play.minio.io:9000) in this example. Feel free to use this service for testing and development. Access credentials shown in this example are open to the public.
 
 #### FileUploader.go
@@ -106,18 +114,6 @@ $ mc ls play/mymusic/
 The full API Reference is available here. 
 * [Complete API Reference](https://docs.minio.io/docs/golang-client-api-reference)
 
-
-### Object Operations.
-* [PutObject(bucketName, objectName, io.Reader, contentType) (int, error)](examples/s3/putobject.go)
-* [GetObject(bucketName, objectName) (*Object, error)](examples/s3/getobject.go)
-* [StatObject(bucketName, objectName) (ObjectInfo, error)](examples/s3/statobject.go)
-* [RemoveObject(bucketName, objectName) error](examples/s3/removeobject.go)
-* [RemoveIncompleteUpload(bucketName, objectName) <-chan error](examples/s3/removeincompleteupload.go)
-
-### File Object Operations.
-* [FPutObject(bucketName, objectName, filePath, contentType) (size, error)](examples/s3/fputobject.go)
-* [FGetObject(bucketName, objectName, filePath) error](examples/s3/fgetobject.go)
-
 ### API Reference : Bucket Operations
 * [`MakeBucket`](https://docs.minio.io/docs/golang-client-api-reference#MakeBucket)
 * [`ListBuckets`](https://docs.minio.io/docs/golang-client-api-reference#ListBuckets)
@@ -130,6 +126,11 @@ The full API Reference is available here.
 * [`SetBucketPolicy`](https://docs.minio.io/docs/golang-client-api-reference#SetBucketPolicy)
 * [`GetBucketPolicy`](https://docs.minio.io/docs/golang-client-api-reference#GetBucketPolicy)
 * [`RemoveBucketPolicy`](https://docs.minio.io/docs/golang-client-api-reference#RemoveBucketPolicy)
+
+### API Reference : File Object Operations
+* [`FPutObject`](https://docs.minio.io/docs/golang-client-api-reference#FPutObject)
+* [`FGetObject`](https://docs.minio.io/docs/golang-client-api-reference#FPutObject)
+* [`CopyObject`](https://docs.minio.io/docs/golang-client-api-reference#CopyObject)
 
 ### API Reference : Object Operations
 * [`GetObject`](https://docs.minio.io/docs/golang-client-api-reference#GetObject)
@@ -147,7 +148,6 @@ The full API Reference is available here.
 ## Full Examples
 
 #### Full Examples : Bucket Operations
-
 * [listbuckets.go](./examples/s3/listbuckets.go)
 * [listobjects.go](./examples/s3/listobjects.go)
 * [bucketexists.go](./examples/s3/bucketexists.go)
@@ -160,8 +160,12 @@ The full API Reference is available here.
 * [getbucketpolicy.go](./examples/s3/getbucketpolicy.go)
 * [removebucketpolicy.go](./examples/s3/removebucketpolicy.go)
  
-#### Full Examples : Object Operations
+#### Full Examples : File Object Operations
+* [fputobject.go](./examples/s3/fputobject.go)
+* [fgetobject.go](./examples/s3/fgetobject.go)
+* [copyobject.go](./examples/s3/copyobject.go)
 
+#### Full Examples : Object Operations
 * [putobject.go](./examples/s3/putobject.go)
 * [getobject.go](./examples/s3/getobject.go)
 * [listobjects.go](./examples/s3/listobjects.go)
