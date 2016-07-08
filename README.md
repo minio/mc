@@ -118,8 +118,8 @@ alias pipe='mc pipe'
 ```
 ## 6. Explore Further
 
-- [Minio Client Complete Guide](/docs/minio-client-complete-guide)
-- [Minio Quickstart Guide](/docs/minio)
+- [Minio Client Complete Guide](https://docs.minio.io/docs/minio-client-complete-guide)
+- [Minio Quickstart Guide](https://docs.minio.io/docs/minio)
 
 ## 7. Contribute
 [Contributors Guide](./CONTRIBUTING.md)
