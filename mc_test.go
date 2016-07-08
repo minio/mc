@@ -50,15 +50,15 @@ func (s *TestSuite) TestValidPERMS(c *C) {
 	perms := accessPerms("none")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
 	c.Assert(string(perms), Equals, "none")
-	perms = accessPerms("readwrite")
+	perms = accessPerms("both")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(string(perms), Equals, "readwrite")
-	perms = accessPerms("readonly")
+	c.Assert(string(perms), Equals, "both")
+	perms = accessPerms("download")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(string(perms), Equals, "readonly")
-	perms = accessPerms("writeonly")
+	c.Assert(string(perms), Equals, "download")
+	perms = accessPerms("upload")
 	c.Assert(perms.isValidAccessPERM(), Equals, true)
-	c.Assert(string(perms), Equals, "writeonly")
+	c.Assert(string(perms), Equals, "upload")
 }
 
 // Tests valid and invalid secret keys.
