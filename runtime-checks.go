@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/hashicorp/go-version"
 	"github.com/minio/mc/pkg/console"
@@ -26,8 +27,15 @@ import (
 
 // check if minimum Go version is met.
 func checkGoVersion() {
-	// Current version.
-	curVersion, e := version.NewVersion(runtime.Version()[2:])
+	runtimeVersion := runtime.Version()
+
+	// Checking version is always successful with go tip
+	if strings.HasPrefix(runtimeVersion, "devel") {
+		return
+	}
+
+	// Parsing golang version
+	curVersion, e := version.NewVersion(runtimeVersion[2:])
 	if e != nil {
 		console.Fatalln("Unable to determine current go version.", e)
 	}
