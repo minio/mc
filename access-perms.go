@@ -19,7 +19,7 @@ package main
 // isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {
 	switch b {
-	case accessNone, accessReadOnly, accessReadWrite, accessWriteOnly:
+	case accessNone, accessDownload, accessUpload, accessBoth:
 		return true
 	}
 	return false
@@ -28,10 +28,10 @@ func (b accessPerms) isValidAccessPERM() bool {
 // accessPerms - access level.
 type accessPerms string
 
-// different types of Access perm's currently supported by access command.
+// different types of Access perm's currently supported by policy command.
 const (
-	accessNone      = accessPerms("none")
-	accessReadOnly  = accessPerms("readonly")
-	accessReadWrite = accessPerms("readwrite")
-	accessWriteOnly = accessPerms("writeonly")
+	accessNone     = accessPerms("none")
+	accessDownload = accessPerms("download")
+	accessUpload   = accessPerms("upload")
+	accessBoth     = accessPerms("both")
 )
