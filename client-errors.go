@@ -74,6 +74,15 @@ func (e ObjectAlreadyExists) Error() string {
 	return "Object ‘" + e.Object + "’ already exists."
 }
 
+// ObjectAlreadyExistsAsDirectory - typed return for XMinioObjectExistsAsDirectory
+type ObjectAlreadyExistsAsDirectory struct {
+	Object string
+}
+
+func (e ObjectAlreadyExistsAsDirectory) Error() string {
+	return "Object ‘" + e.Object + "’ already exists as directory."
+}
+
 // ObjectOnGlacier - object is of storage class glacier.
 type ObjectOnGlacier struct {
 	Object string
