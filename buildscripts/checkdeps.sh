@@ -76,6 +76,14 @@ check_version() {
 
     local IFS=.
     local i ver1=($1) ver2=($2)
+
+    if [ "$ver1" = "devel" ]; then
+	    return 1
+    fi
+    if [ "$ver2" = "devel" ]; then
+	    return 2
+    fi
+
     # fill empty fields in ver1 with zeros
     for ((i=${#ver1[@]}; i<${#ver2[@]}; i++)); do
         ver1[i]=0
@@ -85,12 +93,6 @@ check_version() {
             # fill empty fields in ver2 with zeros
             ver2[i]=0
         fi
-	if [ "$ver1" = "devel" ]; then
-		return 1
-	fi
-	if [ "$ver2" = "devel" ]; then
-		return 2
-	fi
         if ((10#${ver1[i]} > 10#${ver2[i]})); then
             return 1
         fi
@@ -191,7 +193,7 @@ is_supported_arch() {
 }
 
 check_deps() {
-    check_version "$(env go version 2>/dev/null | sed 's/^.* \(devel\|go[0-9.]*\).*$/\1/' | sed 's/go\([0-9.]*\)$/\1/')" "${GO_VERSION}"
+    check_version "$(env go version 2>/dev/null | awk '{print $3}' | sed 's/go\([0-9.]*\)$/\1/')" "${GO_VERSION}"
     if [ $? -ge 2 ]; then
         MISSING="${MISSING} golang(>=${GO_VERSION})"
     fi
