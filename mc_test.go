@@ -135,12 +135,6 @@ func (s *TestSuite) TestHumanizedTime(c *C) {
 	c.Assert(hTime.Days, Not(Equals), int64(0))
 }
 
-func (s *TestSuite) TestCommonPrefix(c *C) {
-	c.Assert(commonPrefix("/usr", "/usr/local"), Equals, "/usr")
-	c.Assert(commonPrefix("/uabbf", "/ursfad/ccc"), Equals, "/u")
-	c.Assert(commonPrefix("/usr/local/lib", "/usr/local/test"), Equals, "/usr/local/")
-}
-
 func (s *TestSuite) TestVersions(c *C) {
 	v1, e := version.NewVersion("1.6")
 	c.Assert(e, IsNil)

@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014-2016 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,7 @@ import (
 	"github.com/minio/pb"
 )
 
-/******************************** Scan Bar ************************************/
-// fixateScanBar truncates long text to fit within the terminal size.
+// fixateScanBar truncates or stretches text to fit within the terminal size.
 func fixateScanBar(text string, width int) string {
 	if len([]rune(text)) > width {
 		// Trim text to fit within the screen
@@ -35,6 +34,8 @@ func fixateScanBar(text string, width int) string {
 		if trimSize < len([]rune(text)) {
 			text = "..." + text[trimSize:]
 		}
+	} else {
+		text += strings.Repeat(" ", width-len([]rune(text)))
 	}
 	return text
 }
@@ -44,8 +45,6 @@ type scanBarFunc func(string)
 
 // scanBarFactory returns a progress bar function to report URL scanning.
 func scanBarFactory() scanBarFunc {
-	prevLineSize := 0
-	prevSource := ""
 	fileCount := 0
 	termWidth, e := pb.GetTerminalWidth()
 	fatalIf(probe.NewError(e), "Unable to get terminal size. Please use --quiet option.")
@@ -54,20 +53,9 @@ func scanBarFactory() scanBarFunc {
 	cursorCh := cursorAnimate()
 	return func(source string) {
 		scanPrefix := fmt.Sprintf("[%s] %s ", humanize.Comma(int64(fileCount)), string(<-cursorCh))
-		cmnPrefix := commonPrefix(source, prevSource)
-		eraseLen := prevLineSize - len([]rune(scanPrefix+cmnPrefix))
-		if eraseLen < 1 {
-			eraseLen = 0
-		}
-		if prevLineSize != 0 { // erase previous line
-			console.PrintC("\r" + scanPrefix + cmnPrefix + strings.Repeat(" ", eraseLen))
-		}
-
-		source = fixateScanBar(source, termWidth-len([]rune(scanPrefix))-1)
+		source = fixateScanBar(source, termWidth-len([]rune(scanPrefix)))
 		barText := scanPrefix + source
-		console.PrintC("\r" + barText)
-		prevSource = source
-		prevLineSize = len([]rune(barText))
+		console.PrintC("\r" + barText + "\r")
 		fileCount++
 	}
 }
