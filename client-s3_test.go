@@ -228,11 +228,6 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(object.data)))
 
-	content, err := s3c.Stat()
-	c.Assert(err, IsNil)
-	c.Assert(content.Size, Equals, int64(len(object.data)))
-	c.Assert(content.Type.IsRegular(), Equals, true)
-
 	reader, err = s3c.Get()
 	var buffer bytes.Buffer
 	{
