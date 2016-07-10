@@ -79,7 +79,7 @@ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY
 Alias is simply a short name to you cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
 
 ### Example - Minio Cloud Storage
-Minio server displays URL, access and secret keys. 
+Minio server displays URL, access and secret keys.
 ```sh
 $ mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 ```
@@ -123,13 +123,3 @@ alias pipe='mc pipe'
 
 ## 7. Contribute
 [Contributors Guide](./CONTRIBUTING.md)
-
-
-
-
-
-
-
-
-
-
