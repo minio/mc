@@ -340,53 +340,37 @@ func (c *s3Client) SetAccess(bucketPolicy string) *probe.Error {
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
 func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	objectMetadata := &clientContent{}
 	bucket, object := c.url2BucketAndObject()
 	// Bucket name cannot be empty, stat on URL has no meaning.
 	if bucket == "" {
-		c.mutex.Unlock()
 		return nil, probe.NewError(BucketNameEmpty{})
 	} else if object == "" {
 		e := c.api.BucketExists(bucket)
 		if e != nil {
-			c.mutex.Unlock()
 			return nil, probe.NewError(e)
 		}
 		bucketMetadata := &clientContent{}
 		bucketMetadata.URL = *c.targetURL
 		bucketMetadata.Type = os.ModeDir
-		c.mutex.Unlock()
 		return bucketMetadata, nil
 	}
-	metadata, e := c.api.StatObject(bucket, object)
-	if e != nil {
-		c.mutex.Unlock()
-		errResponse := minio.ToErrorResponse(e)
-		if errResponse.Code == "NoSuchKey" {
-			// Append "/" to the object name proactively and see if the Listing
-			// produces an output. If yes, then we treat it as a directory.
-			prefixName := object
-			// Trim any trailing separators and add it.
-			prefixName = strings.TrimSuffix(prefixName, string(c.targetURL.Separator)) + string(c.targetURL.Separator)
-			isRecursive := false
-			for objectStat := range c.api.ListObjects(bucket, prefixName, isRecursive, nil) {
-				if objectStat.Err != nil {
-					return nil, probe.NewError(objectStat.Err)
-				}
-				content := clientContent{}
-				content.URL = *c.targetURL
-				content.Type = os.ModeDir
-				return &content, nil
-			}
-			return nil, probe.NewError(PathNotFound{Path: c.targetURL.Path})
+	isRecursive := false
+	for objectStat := range c.api.ListObjects(bucket, object, isRecursive, nil) {
+		if objectStat.Err != nil {
+			return nil, probe.NewError(objectStat.Err)
 		}
-		return nil, probe.NewError(e)
+		if objectStat.Key == object {
+			objectMetadata.URL = *c.targetURL
+			objectMetadata.Time = objectStat.LastModified
+			objectMetadata.Size = objectStat.Size
+			objectMetadata.Type = os.FileMode(0664)
+			return objectMetadata, nil
+		}
 	}
 	objectMetadata.URL = *c.targetURL
-	objectMetadata.Time = metadata.LastModified
-	objectMetadata.Size = metadata.Size
-	objectMetadata.Type = os.FileMode(0664)
-	c.mutex.Unlock()
+	objectMetadata.Type = os.ModeDir
 	return objectMetadata, nil
 }
 
@@ -640,45 +624,34 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 			}
 		}
 	default:
-		metadata, e := c.api.StatObject(b, o)
-		switch e.(type) {
-		case nil:
-			content := &clientContent{}
-			content.URL = *c.targetURL
-			content.Time = metadata.LastModified
-			content.Size = metadata.Size
-			content.Type = os.FileMode(0664)
-			contentCh <- content
-		default:
-			isRecursive := false
-			for object := range c.api.ListObjects(b, o, isRecursive, nil) {
-				if object.Err != nil {
-					contentCh <- &clientContent{
-						Err: probe.NewError(object.Err),
-					}
-					return
+		isRecursive := false
+		for object := range c.api.ListObjects(b, o, isRecursive, nil) {
+			if object.Err != nil {
+				contentCh <- &clientContent{
+					Err: probe.NewError(object.Err),
 				}
-				content := &clientContent{}
-				url := *c.targetURL
-				// Join bucket and incoming object key.
-				url.Path = filepath.Join(string(url.Separator), b, object.Key)
-				if c.virtualStyle {
-					url.Path = filepath.Join(string(url.Separator), object.Key)
-				}
-				switch {
-				case strings.HasSuffix(object.Key, string(c.targetURL.Separator)):
-					// We need to keep the trailing Separator, do not use filepath.Join().
-					content.URL = url
-					content.Time = time.Now()
-					content.Type = os.ModeDir
-				default:
-					content.URL = url
-					content.Size = object.Size
-					content.Time = object.LastModified
-					content.Type = os.FileMode(0664)
-				}
-				contentCh <- content
+				return
 			}
+			content := &clientContent{}
+			url := *c.targetURL
+			// Join bucket and incoming object key.
+			url.Path = filepath.Join(string(url.Separator), b, object.Key)
+			if c.virtualStyle {
+				url.Path = filepath.Join(string(url.Separator), object.Key)
+			}
+			switch {
+			case strings.HasSuffix(object.Key, string(c.targetURL.Separator)):
+				// We need to keep the trailing Separator, do not use filepath.Join().
+				content.URL = url
+				content.Time = time.Now()
+				content.Type = os.ModeDir
+			default:
+				content.URL = url
+				content.Size = object.Size
+				content.Time = object.LastModified
+				content.Type = os.FileMode(0664)
+			}
+			contentCh <- content
 		}
 	}
 }
