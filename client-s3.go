@@ -236,6 +236,11 @@ func (c *s3Client) Put(reader io.Reader, size int64, contentType string, progres
 				Object: object,
 			})
 		}
+		if errResponse.Code == "XMinioObjectExistsAsDirectory" {
+			return n, probe.NewError(ObjectAlreadyExistsAsDirectory{
+				Object: object,
+			})
+		}
 		if errResponse.Code == "NoSuchBucket" {
 			return n, probe.NewError(BucketDoesNotExist{
 				Bucket: bucket,

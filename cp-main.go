@@ -352,7 +352,7 @@ func doCopySession(session *sessionV7) {
 					case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
 						continue
 					// Handle these specifically for object storage related errors.
-					case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
+					case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
 						continue
 					}
 					// For critical errors we should exit. Session
