@@ -117,11 +117,17 @@ func mainMakeBucket(ctx *cli.Context) {
 		targetURL := ctx.Args().Get(i)
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
-		errorIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
+		if err != nil {
+			errorIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
+			continue
+		}
 
 		// Make bucket.
 		err = clnt.MakeBucket(region)
-		errorIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+		if err != nil {
+			errorIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+			continue
+		}
 
 		// Successfully created a bucket.
 		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
