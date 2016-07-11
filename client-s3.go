@@ -368,10 +368,11 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 			objectMetadata.Type = os.FileMode(0664)
 			return objectMetadata, nil
 		}
+		objectMetadata.URL = *c.targetURL
+		objectMetadata.Type = os.ModeDir
+		return objectMetadata, nil
 	}
-	objectMetadata.URL = *c.targetURL
-	objectMetadata.Type = os.ModeDir
-	return objectMetadata, nil
+	return nil, probe.NewError(ObjectMissing{})
 }
 
 func isAmazon(host string) bool {
