@@ -357,6 +357,12 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 		return bucketMetadata, nil
 	}
 	isRecursive := false
+
+	// Remove trailing slashes needed for the following ListObjects call.
+	// In addition, Stat() will be as smart as the client fs version and will
+	// facilitate the work of the upper layers
+	object = strings.TrimRight(object, string(c.targetURL.Separator))
+
 	for objectStat := range c.api.ListObjects(bucket, object, isRecursive, nil) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
@@ -368,9 +374,11 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 			objectMetadata.Type = os.FileMode(0664)
 			return objectMetadata, nil
 		}
-		objectMetadata.URL = *c.targetURL
-		objectMetadata.Type = os.ModeDir
-		return objectMetadata, nil
+		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
+			objectMetadata.URL = *c.targetURL
+			objectMetadata.Type = os.ModeDir
+			return objectMetadata, nil
+		}
 	}
 	return nil, probe.NewError(ObjectMissing{})
 }
