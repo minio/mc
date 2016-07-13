@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cheggaaa/pb"
 	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
-	"github.com/minio/pb"
 )
 
 // fixateScanBar truncates or stretches text to fit within the terminal size.

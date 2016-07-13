@@ -22,9 +22,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
 	"github.com/minio/minio/pkg/probe"
-	"github.com/minio/pb"
 )
 
 // colorizeUpdateMessage - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier.

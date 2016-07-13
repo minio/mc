@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
-	"github.com/minio/pb"
 
 	"github.com/minio/mc/pkg/console"
 )

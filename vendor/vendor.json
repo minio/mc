@@ -3,6 +3,12 @@
 	"ignore": "appengine test",
 	"package": [
 		{
+			"checksumSHA1": "ZmA6OcfNtZE6MsJlvzJ8uZK0N9I=",
+			"path": "github.com/cheggaaa/pb",
+			"revision": "73ae1d68fe0bd482ab11913a9828634f795b987f",
+			"revisionTime": "2016-07-13T10:44:25Z"
+		},
+		{
 			"path": "github.com/dustin/go-humanize",
 			"revision": "1c212aae1d02984808182b98b0da7a3e07e4c770",
 			"revisionTime": "2015-08-09T13:14:05-07:00"
@@ -67,11 +73,6 @@
 			"path": "github.com/minio/minio/pkg/quick",
 			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
 			"revisionTime": "2016-02-11T15:54:02-08:00"
-		},
-		{
-			"path": "github.com/minio/pb",
-			"revision": "1bf13e09a92ebfb601916804694e3a67e7e92da2",
-			"revisionTime": "2016-03-09T18:02:02-08:00"
 		},
 		{
 			"path": "github.com/olekukonko/ts",
