@@ -61,13 +61,19 @@ coverage:
 	@GO15VENDOREXPERIMENT=1 go test -race -coverprofile=cover.out ./
 	@go tool cover -html=cover.out && echo "Visit your browser"
 
-pkg-add:
+
+pkg-validate-arg-%: ;
+ifndef PKG
+	$(error Usage: make $(@:pkg-validate-arg-%=pkg-%) PKG=pkg_name)
+endif
+
+pkg-add: pkg-validate-arg-add
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor add $(PKG)
 
-pkg-update:
+pkg-update: pkg-validate-arg-update
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor update $(PKG)
 
-pkg-remove:
+pkg-remove: pkg-validate-arg-remove
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor remove $(PKG)
 
 pkg-list:
