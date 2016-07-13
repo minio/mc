@@ -6,7 +6,7 @@ Simple progress bar for console programs.
 ## Installation
 
 ```
-go get github.com/cheggaaa/pb
+go get gopkg.in/cheggaaa/pb.v1
 ```   
 
 ## Usage   
@@ -15,7 +15,7 @@ go get github.com/cheggaaa/pb
 package main
 
 import (
-	"github.com/cheggaaa/pb"
+	"gopkg.in/cheggaaa/pb.v1"
 	"time"
 )
 
@@ -112,6 +112,8 @@ writer := io.MultiWriter(w, bar)
 
 // and copy
 io.Copy(writer, r)
+
+bar.Finish()
 ```
 
 ## Custom Progress Bar Look-and-feel
@@ -122,8 +124,6 @@ bar.Format("<.- >")
 
 ## Multiple Progress Bars (experimental and unstable)
 
-#####Multiple bars do not works at Windows!!!
-
 Do not print to terminal while pool is active.
 
 ```go
@@ -131,36 +131,39 @@ package main
 
 import (
     "math/rand"
-    "github.com/cheggaaa/pb"    
     "sync"
     "time"
+
+    "gopkg.in/cheggaaa/pb.v1"
 )
 
-// create bars
-first := pb.New(200).Prefix("First ")
-second := pb.New(200).Prefix("Second ")
-third := pb.New(200).Prefix("Third ")
-// start pool
-pool, err := pb.StartPool(first, second, third)
-if err != nil {
-	panic(err)
+func main() {
+    // create bars
+    first := pb.New(200).Prefix("First ")
+    second := pb.New(200).Prefix("Second ")
+    third := pb.New(200).Prefix("Third ")
+    // start pool
+    pool, err := pb.StartPool(first, second, third)
+    if err != nil {
+        panic(err)
+    }
+    // update bars
+    wg := new(sync.WaitGroup)
+    for _, bar := range []*pb.ProgressBar{first, second, third} {
+        wg.Add(1)
+        go func(cb *pb.ProgressBar) {
+            for n := 0; n < 200; n++ {
+                cb.Increment()
+                time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
+            }
+            cb.Finish()
+            wg.Done()
+        }(bar)
+    }
+    wg.Wait()
+    // close pool
+    pool.Stop()
 }
-// update bars
-wg := new(sync.WaitGroup)
-for _, bar := range []*pb.ProgressBar{first, second, third} {
-	wg.Add(1)
-	go func(cb *pb.ProgressBar) {
-		for n := 0; n < 200; n++ {
-			cb.Increment()
-			time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
-		}
-		cb.Finish()
-		wg.Done()
-	}(bar)
-}
-wg.Wait()
-// close pool
-pool.Stop()
 ```
 
 The result will be as follows:
