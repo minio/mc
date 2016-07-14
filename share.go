@@ -95,7 +95,7 @@ func (s shareMesssage) JSON() string {
 // shareSetColor sets colors share sub-commands.
 func shareSetColor() {
 	// Additional command speific theme customization.
-	console.SetColor("URL", color.New(color.FgWhite, color.Bold))
+	console.SetColor("URL", color.New(color.Bold))
 	console.SetColor("Expire", color.New(color.FgCyan))
 	console.SetColor("Content-type", color.New(color.FgBlue))
 	console.SetColor("Share", color.New(color.FgGreen))

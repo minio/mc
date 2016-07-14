@@ -108,8 +108,8 @@ func checkListSyntax(ctx *cli.Context) {
 
 // mainList - is a handler for mc ls command
 func mainList(ctx *cli.Context) {
-	// Additional command speific theme customization.
-	console.SetColor("File", color.New(color.FgWhite))
+	// Additional command specific theme customization.
+	console.SetColor("File", color.New(color.Bold))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("Time", color.New(color.FgGreen))
