@@ -53,7 +53,7 @@ type Client struct {
 		appName    string
 		appVersion string
 	}
-	endpointURL *url.URL
+	endpointURL string
 
 	// Needs allocation.
 	httpClient     *http.Client
@@ -164,7 +164,7 @@ func privateNew(endpoint, accessKeyID, secretAccessKey string, secure bool) (*Cl
 	}
 
 	// Save endpoint URL, user agent for future uses.
-	clnt.endpointURL = endpointURL
+	clnt.endpointURL = endpointURL.String()
 
 	// Instantiate http client and bucket location cache.
 	clnt.httpClient = &http.Client{
@@ -621,14 +621,18 @@ func (c Client) setUserAgent(req *http.Request) {
 // makeTargetURL make a new target url.
 func (c Client) makeTargetURL(bucketName, objectName, bucketLocation string, queryValues url.Values) (*url.URL, error) {
 	// Save host.
-	host := c.endpointURL.Host
+	url, err := url.Parse(c.endpointURL)
+	if err != nil {
+		return nil, err
+	}
+	host := url.Host
 	// For Amazon S3 endpoint, try to fetch location based endpoint.
 	if isAmazonEndpoint(c.endpointURL) {
 		// Fetch new host based on the bucket location.
 		host = getS3Endpoint(bucketLocation)
 	}
 	// Save scheme.
-	scheme := c.endpointURL.Scheme
+	scheme := url.Scheme
 
 	urlStr := scheme + "://" + host + "/"
 	// Make URL only if bucketName is available, otherwise use the

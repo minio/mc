@@ -88,7 +88,10 @@ func (c Client) makeBucketRequest(bucketName string, location string) (*http.Req
 	// is the preferred method here. The final location of the
 	// 'bucket' is provided through XML LocationConstraint data with
 	// the request.
-	targetURL := *c.endpointURL
+	targetURL, err := url.Parse(c.endpointURL)
+	if err != nil {
+		return nil, err
+	}
 	targetURL.Path = "/" + bucketName + "/"
 
 	// get a new HTTP request for the method.
