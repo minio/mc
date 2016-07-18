@@ -12,7 +12,7 @@ cp            Copy one or more objects to a target.
 mirror        Mirror folders recursively from a single source to single destination.
 diff          Compute differences between two folders.
 rm            Remove file or bucket [WARNING: Use with care].
-access        Manage bucket access permissions.
+policy        Set public policy on bucket or prefix.
 session       Manage saved sessions of cp and mirror operations.
 config        Manage configuration file.
 update        Check for a new software update.
@@ -36,7 +36,7 @@ version       Print version.
 
 Source installation is intended only for developers and advanced users. `mc update` command does not support upgrading from source based installation. Please download official releases from https://minio.io/downloads/#minio-client.
 
-If you do not have a working Golang environment, please follow [How to install Golang](./INSTALLGO.md).
+If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
 ```sh
 $ go get -u github.com/minio/mc
