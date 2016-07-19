@@ -49,12 +49,6 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "G6QXGfja2wLChq/ApguwR45Ry94=",
-			"path": "github.com/minio/minio-go",
-			"revision": "7f5706b303743c9b9c5f4ad251cf6e9a4f2cb85e",
-			"revisionTime": "2016-07-06T15:17:45-07:00"
-		},
-		{
 			"path": "github.com/minio/minio/pkg/atomic",
 			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
 			"revisionTime": "2016-02-11T15:54:02-08:00"
@@ -93,6 +87,12 @@
 			"path": "gopkg.in/check.v1",
 			"revision": "11d3bc7aa68e238947792f30573146a3231fc0f1",
 			"revisionTime": "2015-07-29T10:04:31+02:00"
+		},
+		{
+			"checksumSHA1": "7pGoaoZPTuaFdy0Ckk0O34H4ZiU=",
+			"path": "gopkg.in/minio/minio-go.v2",
+			"revision": "90a23af7b846415aa04f1489891eb3bcdd75a351",
+			"revisionTime": "2016-07-19T07:26:08Z"
 		}
 	],
 	"rootPath": "github.com/minio/mc"

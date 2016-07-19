@@ -120,12 +120,12 @@ The full API Reference is available here.
 * [`BucketExists`](https://docs.minio.io/docs/golang-client-api-reference#BucketExists)
 * [`RemoveBucket`](https://docs.minio.io/docs/golang-client-api-reference#RemoveBucket)
 * [`ListObjects`](https://docs.minio.io/docs/golang-client-api-reference#ListObjects)
+* ListObjectsV2
 * [`ListIncompleteUploads`](https://docs.minio.io/docs/golang-client-api-reference#ListIncompleteUploads)
 
-### API Reference : Bucket policy  Operations
+### API Reference : Bucket policy Operations
 * [`SetBucketPolicy`](https://docs.minio.io/docs/golang-client-api-reference#SetBucketPolicy)
 * [`GetBucketPolicy`](https://docs.minio.io/docs/golang-client-api-reference#GetBucketPolicy)
-* [`RemoveBucketPolicy`](https://docs.minio.io/docs/golang-client-api-reference#RemoveBucketPolicy)
 
 ### API Reference : File Object Operations
 * [`FPutObject`](https://docs.minio.io/docs/golang-client-api-reference#FPutObject)
@@ -158,7 +158,6 @@ The full API Reference is available here.
 #### Full Examples : Bucket policy Operations
 * [setbucketpolicy.go](./examples/s3/setbucketpolicy.go)
 * [getbucketpolicy.go](./examples/s3/getbucketpolicy.go)
-* [removebucketpolicy.go](./examples/s3/removebucketpolicy.go)
  
 #### Full Examples : File Object Operations
 * [fputobject.go](./examples/s3/fputobject.go)
@@ -169,6 +168,7 @@ The full API Reference is available here.
 * [putobject.go](./examples/s3/putobject.go)
 * [getobject.go](./examples/s3/getobject.go)
 * [listobjects.go](./examples/s3/listobjects.go)
+* [listobjectsV2.go](./examples/s3/listobjectsV2.go)
 * [removeobject.go](./examples/s3/removeobject.go)
 * [statobject.go](./examples/s3/statobject.go)
 

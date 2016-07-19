@@ -244,3 +244,26 @@ func (c Client) putBucketPolicy(bucketName string, policy BucketAccessPolicy) er
 	}
 	return nil
 }
+
+// Removes all policies on a bucket.
+func (c Client) removeBucketPolicy(bucketName string) error {
+	// Input validation.
+	if err := isValidBucketName(bucketName); err != nil {
+		return err
+	}
+	// Get resources properly escaped and lined up before
+	// using them in http request.
+	urlValues := make(url.Values)
+	urlValues.Set("policy", "")
+
+	// Execute DELETE on objectName.
+	resp, err := c.executeMethod("DELETE", requestMetadata{
+		bucketName:  bucketName,
+		queryValues: urlValues,
+	})
+	defer closeResponse(resp)
+	if err != nil {
+		return err
+	}
+	return nil
+}

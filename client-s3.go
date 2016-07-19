@@ -32,8 +32,8 @@ import (
 	"io/ioutil"
 
 	"github.com/minio/mc/pkg/httptracer"
-	"github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/probe"
+	"gopkg.in/minio/minio-go.v2"
 )
 
 // S3 client
