@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/ioutil"
 	"math"
 	"os"
 )
@@ -201,9 +202,9 @@ func (c Client) getUploadID(bucketName, objectName, contentType string) (uploadI
 
 // computeHash - Calculates hashes for an input read Seeker.
 func computeHash(hashAlgorithms map[string]hash.Hash, hashSums map[string][]byte, reader io.ReadSeeker) (size int64, err error) {
-	var hashWriter io.Writer
+	hashWriter := ioutil.Discard
 	for _, v := range hashAlgorithms {
-		hashWriter = io.MultiWriter(v)
+		hashWriter = io.MultiWriter(hashWriter, v)
 	}
 
 	// If no buffer is provided, no need to allocate just use io.Copy.
