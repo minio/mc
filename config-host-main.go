@@ -90,8 +90,8 @@ func (h hostMessage) String() string {
 		message := console.Colorize("Alias", fmt.Sprintf("%s: ", h.Alias))
 		message += console.Colorize("URL", fmt.Sprintf("%s", h.URL))
 		if h.AccessKey != "" || h.SecretKey != "" {
-			message += " | " + console.Colorize("AccessKey", fmt.Sprintf("<- %s,", h.AccessKey))
-			message += " | " + console.Colorize("SecretKey", fmt.Sprintf(" %s,", h.SecretKey))
+			message += " <- " + console.Colorize("AccessKey", fmt.Sprintf(" %s", h.AccessKey))
+			message += " | " + console.Colorize("SecretKey", fmt.Sprintf(" %s", h.SecretKey))
 			message += " | " + console.Colorize("API", fmt.Sprintf(" %s", h.API))
 		}
 		return message
