@@ -7,11 +7,14 @@ Please go through this link [Maintainer Responsibility](https://gist.github.com/
 ### Setup your mc Github Repository
 
 Fork [mc upstream](https://github.com/minio/mc/fork) source repository to your own personal repository.
-```bash
+
+```sh
+
 $ mkdir -p $GOPATH/src/github.com/minio
 $ cd $GOPATH/src/github.com/minio
 $ git clone https://github.com/$USER_ID/mc
 $ 
+
 ```
 
 ``mc`` uses [govendor](https://github.com/kardianos/govendor) for its dependency management.
