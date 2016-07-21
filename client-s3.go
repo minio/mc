@@ -32,8 +32,8 @@ import (
 	"io/ioutil"
 
 	"github.com/minio/mc/pkg/httptracer"
-	"github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/probe"
+	"gopkg.in/minio/minio-go.v2"
 )
 
 // S3 client
@@ -43,6 +43,11 @@ type s3Client struct {
 	api          *minio.Client
 	virtualStyle bool
 }
+
+const (
+	amazonHostName = "s3.amazonaws.com"
+	googleHostName = "storage.googleapis.com"
+)
 
 // newFactory encloses New function with client cache.
 func newFactory() func(config *Config) (Client, *probe.Error) {
@@ -73,11 +78,11 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		if s3Clnt.virtualStyle {
 			// If Amazon URL replace it with 's3.amazonaws.com'
 			if isAmazon(hostName) {
-				hostName = "s3.amazonaws.com"
+				hostName = amazonHostName
 			}
 			// If Google URL replace it with 'storage.googleapis.com'
 			if isGoogle(hostName) {
-				hostName = "storage.googleapis.com"
+				hostName = googleHostName
 			}
 		}
 
@@ -337,6 +342,14 @@ func (c *s3Client) SetAccess(bucketPolicy string) *probe.Error {
 	return nil
 }
 
+// listObjectWrapper - select ObjectList version depending on the target hostname
+func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, doneCh chan struct{}) <-chan minio.ObjectInfo {
+	if c.targetURL.Host == amazonHostName {
+		return c.api.ListObjectsV2(bucket, object, isRecursive, doneCh)
+	}
+	return c.api.ListObjects(bucket, object, isRecursive, doneCh)
+}
+
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
 func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	c.mutex.Lock()
@@ -363,7 +376,7 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	// facilitate the work of the upper layers
 	object = strings.TrimRight(object, string(c.targetURL.Separator))
 
-	for objectStat := range c.api.ListObjects(bucket, object, isRecursive, nil) {
+	for objectStat := range c.listObjectWrapper(bucket, object, isRecursive, nil) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
@@ -634,7 +647,7 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 		}
 	default:
 		isRecursive := false
-		for object := range c.api.ListObjects(b, o, isRecursive, nil) {
+		for object := range c.listObjectWrapper(b, o, isRecursive, nil) {
 			if object.Err != nil {
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
@@ -700,7 +713,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 				Time: bucket.CreationDate,
 			}
 			isRecursive := true
-			for object := range c.api.ListObjects(bucket.Name, o, isRecursive, nil) {
+			for object := range c.listObjectWrapper(bucket.Name, o, isRecursive, nil) {
 				// Return error if we encountered glacier object and continue.
 				if object.StorageClass == s3StorageClassGlacier {
 					contentCh <- &clientContent{
@@ -726,7 +739,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 		}
 	default:
 		isRecursive := true
-		for object := range c.api.ListObjects(b, o, isRecursive, nil) {
+		for object := range c.listObjectWrapper(b, o, isRecursive, nil) {
 			if object.Err != nil {
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
