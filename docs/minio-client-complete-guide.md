@@ -48,7 +48,7 @@ $ go get -u github.com/minio/mc
 
 ## 2. Run Minio Client
 
-### 1. GNU/Linux
+### GNU/Linux
 
 ```sh
 
@@ -57,7 +57,7 @@ $ ./mc --help
 
 ```
 
-### 2. OS X
+### OS X
 
 ```sh
 
@@ -66,7 +66,7 @@ $ ./mc --help
 
 ```
 
-### 3. Microsoft Windows
+### Microsoft Windows
 
 ```sh
 
@@ -74,7 +74,7 @@ C:\Users\Username\Downloads> mc.exe --help
 
 ```
 
-### 4. Solaris/Illumos
+### Solaris/Illumos
 
 ```sh
 
@@ -83,7 +83,7 @@ $ ./mc --help
 
 ```
 
-### 5. FreeBSD
+### FreeBSD
 
 ```sh
 
