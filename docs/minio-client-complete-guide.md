@@ -38,7 +38,7 @@ version       Print version.
 
 Source installation is intended only for developers and advanced users. `mc update` command does not support upgrading from source based installation. Please download official releases from https://minio.io/downloads/#minio-client.
 
-If you do not have a working Golang environment, please follow [How to install Golang](./INSTALLGO.md).
+If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
 ```sh
 
