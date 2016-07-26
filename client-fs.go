@@ -368,9 +368,6 @@ func (f *fsClient) Get() (io.Reader, *probe.Error) {
 
 // Remove - remove the path.
 func (f *fsClient) Remove(incomplete bool) *probe.Error {
-	if incomplete {
-		return nil
-	}
 	e := os.Remove(f.PathURL.Path)
 	err := f.toClientError(e, f.PathURL.Path)
 	return err.Trace(f.PathURL.Path)
