@@ -16,11 +16,16 @@
 
 package command
 
+// todo(nl5887):
+// quiet should be really quiet
+// hide progress bar -> no-progress
+
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +49,14 @@ var (
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "Copy recursively.",
+		},
+		cli.BoolFlag{
+			Name:  "skip-copy",
+			Usage: "Skip copy (useful for only monitor)",
+		},
+		cli.BoolFlag{
+			Name:  "monitor, m",
+			Usage: "Monitor and apply changes.",
 		},
 	}
 )
@@ -131,14 +144,11 @@ func (c copyStatMessage) String() string {
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *accounter) copyURLs {
+func (cs *copySession) doCopy(cpURLs copyURLs) copyURLs {
+	// why?
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
-	}
-
-	if !globalQuiet && !globalJSON {
-		progressReader = progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
 	sourceAlias := cpURLs.SourceAlias
@@ -147,7 +157,10 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 	targetURL := cpURLs.TargetContent.URL
 	length := cpURLs.SourceContent.Size
 
-	var progress io.Reader
+	cs.pb.SetCaption(sourceURL.String() + ": ")
+
+	var progress io.Reader = cs.pr
+
 	if globalQuiet || globalJSON {
 		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
@@ -155,14 +168,8 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 			Source: sourcePath,
 			Target: targetPath,
 		})
-		// Proxy reader to accounting reader only during quiet mode.
-		if globalQuiet || globalJSON {
-			progress = accountingReader
-		}
-	} else {
-		// Set up progress reader.
-		progress = progressReader.ProgressBar
 	}
+
 	// If source size is <= 5GB and operation is across same server type try to use Copy.
 	if length <= fiveGB && (sourceURL.Type == targetURL.Type) {
 		// FS -> FS Copy includes alias in path.
@@ -212,191 +219,380 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 	return cpURLs
 }
 
-// doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cpURLs copyURLs, progressReader *progressBar) copyURLs {
-	if !globalQuiet && !globalJSON {
-		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
-	}
-	return cpURLs
+type copySession struct {
+	*sessionV7
+
+	trapCh <-chan bool
+
+	statusCh  chan copyURLs
+	harvestCh chan copyURLs
+	errorCh   chan *probe.Error
+
+	watcher *watcher
+	queue   *Queue
+
+	// mutex for shutdown
+	m *sync.Mutex
+
+	wgStatus *sync.WaitGroup
+	wgCopy   *sync.WaitGroup
+
+	// TODO(nl5887): accounter and pb should use same interface
+	// these functions can be optimised more by fixing the
+	// print and erase issue.
+	accountingReader *accounter
+	pb               *progressBar
+	pr               io.Reader
+	scanBar          scanBarFunc
+	eraseLine        func()
+
+	sourceURLs []string
+	targetURL  string
 }
 
-// doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV7, trapCh <-chan bool) {
-	// Separate source and target. 'cp' can take only one target,
-	// but any number of sources.
-	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
-	targetURL := session.Header.CommandArgs[len(session.Header.CommandArgs)-1] // Last one is target
+func newCopySession(session *sessionV7) *copySession {
+	pb := newProgressBar(0)
+	args := session.Header.CommandArgs
+
+	cs := copySession{
+		trapCh:    signalTrap(os.Interrupt, syscall.SIGTERM),
+		sessionV7: session,
+
+		statusCh:  make(chan copyURLs),
+		harvestCh: make(chan copyURLs),
+		errorCh:   make(chan *probe.Error),
+
+		watcher: NewWatcher(),
+
+		// we're using a queue instead of a channel, this allows us to gracefully
+		// stop. if we're using a channel and want to trap a signal, the channel
+		// the backlog of fs events will be send on a closed channel.
+		queue: NewQueue(session),
+
+		wgStatus: new(sync.WaitGroup),
+		wgCopy:   new(sync.WaitGroup),
+		m:        new(sync.Mutex),
+
+		accountingReader: newAccounter(0),
+		pb:               pb,
+		pr:               pb,
+
+		sourceURLs: args[:len(args)-1],
+		targetURL:  args[len(args)-1], // Last one is target
+
+		scanBar: discardScanBarFactory,
+		eraseLine: func() {
+		},
+	}
+
+	return &cs
+}
+
+// Go routine to update session status
+func (cs *copySession) startStatus() {
+	cs.wgStatus.Add(1)
+
+	go func() {
+		defer cs.wgStatus.Done()
+
+		for cpURLs := range cs.statusCh {
+			if cpURLs.Error != nil {
+				// Print in new line and adjust to top so that we
+				// don't print over the ongoing progress bar.
+				errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
+					fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
+
+				// For all non critical errors we can continue for the
+				// remaining files.
+				switch cpURLs.Error.ToGoError().(type) {
+				// Handle this specifically for filesystem related errors.
+				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
+					continue
+				// Handle these specifically for object storage related errors.
+				case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
+					continue
+				}
+
+				// For critical errors we should exit. Session
+				// can be resumed after the user figures out
+				// the  problem. We know that
+				// there are no current copy actions, because
+				// we're not multi threading now.
+
+				// this issue could be separated using separate
+				// error channel instead of using cpURLs.Error
+				cs.CloseAndDie()
+			}
+
+			// finished harvesting urls, save queue to session data
+			if err := cs.queue.Save(cs.NewDataWriter()); err != nil {
+				fatalIf(probe.NewError(err), "Unable to save queue.")
+			}
+
+			cs.Header.LastCopied = cpURLs.SourceContent.URL.String()
+			cs.Save()
+		}
+	}()
+}
+
+func (cs *copySession) startCopy(wait bool) {
+	cs.wgCopy.Add(1)
+
+	go func() {
+		defer cs.wgCopy.Done()
+
+		for {
+			if !wait {
+			} else if err := cs.queue.Wait(); err != nil {
+				break
+			}
+
+			cpURLs := cs.queue.Pop()
+			if cpURLs == nil {
+				break
+			}
+
+			cs.statusCh <- cs.doCopy(*(cpURLs).(*copyURLs))
+		}
+	}()
+}
+
+// this goroutine will watch for notifications, and add modified objects to the queue
+func (cs *copySession) watch() {
+	for {
+		select {
+		case event, ok := <-cs.watcher.Events():
+			if !ok {
+				// channel closed
+				return
+			}
+
+			targetURL := cs.targetURL
+			if rel, err := filepath.Rel(event.Client.GetURL().Path, event.Path); err == nil {
+				targetURL = filepath.Join(targetURL, filepath.Dir(rel))
+			}
+
+			cpURLs := prepareCopyURLsTypeB(event.Path, targetURL)
+			if cpURLs.Error != nil {
+				cs.statusCh <- cpURLs
+				continue
+			}
+
+			if err := cs.queue.Push(&cpURLs); err != nil {
+				// will throw an error if already queue, ignoring this error
+				continue
+			}
+
+			// adjust total, because we want to show progress of the items stiil
+			// queued to be copied.
+			cs.pb.SetTotal(cs.pb.Total + cpURLs.SourceContent.Size).Update()
+		case err := <-cs.watcher.Errors():
+			errorIf(err,
+				fmt.Sprintf("Got error during monitoring."))
+		}
+	}
+}
+
+func (cs *copySession) watchSourceURLs(recursive bool) *probe.Error {
+	for _, url := range cs.sourceURLs {
+		if sourceClient, err := newClient(url); err != nil {
+			return err
+		} else if err := cs.watcher.Join(sourceClient, recursive /*, events to monitor here*/); err != nil {
+			return err
+		} else {
+			// no errors, all set.
+		}
+	}
+
+	return nil
+}
+func (cs *copySession) harvestSessionUrls() {
+	defer close(cs.harvestCh)
+
+	urlScanner := bufio.NewScanner(cs.NewDataReader())
+	for urlScanner.Scan() {
+		var cpURLs copyURLs
+
+		if err := json.Unmarshal([]byte(urlScanner.Text()), &cpURLs); err != nil {
+			cs.errorCh <- probe.NewError(err)
+			continue
+		}
+
+		cs.harvestCh <- cpURLs
+	}
+
+	if err := urlScanner.Err(); err != nil {
+		cs.errorCh <- probe.NewError(err)
+	}
+}
+
+func (cs *copySession) harvestSourceUrls(recursive bool) {
+	defer close(cs.harvestCh)
+
+	URLsCh := prepareCopyURLs(cs.sourceURLs, cs.targetURL, recursive)
+
+	for cpURLs := range URLsCh {
+		cs.harvestCh <- cpURLs
+	}
+}
+
+func (cs *copySession) harvest(recursive bool) {
+	if cs.HasData() {
+		// resume previous session, harvest urls from session
+		go cs.harvestSessionUrls()
+	} else {
+		// harvest urls from source urls
+		go cs.harvestSourceUrls(recursive)
+	}
 
 	var totalBytes int64
 	var totalObjects int
 
-	// Access recursive flag inside the session header.
-	isRecursive := session.Header.CommandBoolFlags["recursive"]
-
-	// Create a session data file to store the processed URLs.
-	dataFP := session.NewDataWriter()
-
-	var scanBar scanBarFunc
-	if !globalQuiet && !globalJSON { // set up progress bar
-		scanBar = scanBarFactory()
-	}
-
-	URLsCh := prepareCopyURLs(sourceURLs, targetURL, isRecursive)
-	done := false
-	for !done {
+loop:
+	for {
 		select {
-		case cpURLs, ok := <-URLsCh:
-			if !ok { // Done with URL preparation
-				done = true
-				break
+		case cpURLs, ok := <-cs.harvestCh:
+			if !ok {
+				// finished harvesting urls
+				break loop
 			}
+
 			if cpURLs.Error != nil {
-				// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-				if !globalQuiet && !globalJSON {
-					console.Eraseline()
-				}
+				cs.eraseLine()
+
 				if strings.Contains(cpURLs.Error.ToGoError().Error(), " is a folder.") {
 					errorIf(cpURLs.Error.Trace(), "Folder cannot be copied. Please use ‘...’ suffix.")
 				} else {
 					errorIf(cpURLs.Error.Trace(), "Unable to prepare URL for copying.")
 				}
-				break
+
+				continue
 			}
 
-			jsonData, e := json.Marshal(cpURLs)
-			if e != nil {
-				session.Delete()
-				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
-			}
-			fmt.Fprintln(dataFP, string(jsonData))
-			if !globalQuiet && !globalJSON {
-				scanBar(cpURLs.SourceContent.URL.String())
-			}
+			cs.scanBar(cpURLs.SourceContent.URL.String())
+
+			cs.queue.Push(&cpURLs)
 
 			totalBytes += cpURLs.SourceContent.Size
 			totalObjects++
-		case <-trapCh:
-			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
-			if !globalQuiet && !globalJSON {
-				console.Eraseline()
-			}
-			session.Delete() // If we are interrupted during the URL scanning, we drop the session.
-			os.Exit(0)
+		case err := <-cs.errorCh:
+			cs.eraseLine()
+			fatalIf(err, "Unable to harvest URL for copying.")
+		case <-cs.trapCh:
+			cs.eraseLine()
+			console.Println(console.Colorize("Copy", "Abort"))
+			return
 		}
 	}
-	session.Header.TotalBytes = totalBytes
-	session.Header.TotalObjects = totalObjects
-	session.Save()
+
+	// finished harvesting urls, save queue to session data
+	if err := cs.queue.Save(cs.NewDataWriter()); err != nil {
+		fatalIf(probe.NewError(err), "Unable to save queue.")
+	}
+
+	// update session file and save
+	cs.Header.TotalBytes = totalBytes
+	cs.Header.TotalObjects = totalObjects
+	cs.Save()
+
+	// update progressbar and accounting reader
+	cs.pb.Total = totalBytes
+	cs.accountingReader.Total = totalBytes
 }
 
-func doCopySession(session *sessionV7) {
-	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
+// when using a struct for copying, we could save a lot of passing of variables
+func (cs *copySession) copy() {
+	monitor := cs.Header.CommandBoolFlags["monitor"]
+	skipCopy := cs.Header.CommandBoolFlags["skip-copy"]
+	recursive := cs.Header.CommandBoolFlags["recursive"]
 
-	if !session.HasData() {
-		doPrepareCopyURLs(session, trapCh)
+	// todo(nl5887): we can do this better
+	if globalQuiet {
+		cs.pb.Output = ioutil.Discard
+	} else if globalJSON {
+		cs.pb.Output = ioutil.Discard
+	} else {
+		// Enable progress bar reader only during default mode
+		cs.scanBar = scanBarFactory()
+		cs.eraseLine = console.Eraseline
 	}
 
-	// Enable accounting reader by default.
-	accntReader := newAccounter(session.Header.TotalBytes)
-
-	// Prepare URL scanner from session data file.
-	urlScanner := bufio.NewScanner(session.NewDataReader())
-	// isCopied returns true if an object has been already copied
-	// or not. This is useful when we resume from a session.
-	isCopied := isLastFactory(session.Header.LastCopied)
-
-	// Enable progress bar reader only during default mode.
-	var progressReader *progressBar
-	if !globalQuiet && !globalJSON { // set up progress bar
-		progressReader = newProgressBar(session.Header.TotalBytes)
+	if skipCopy {
+		// we want to skip copy, so don't harvest urls.
+	} else {
+		cs.harvest(recursive)
 	}
 
-	// Wait on status of doCopy() operation.
-	var statusCh = make(chan copyURLs)
-
-	// Add a wait group.
-	var wg = new(sync.WaitGroup)
-	wg.Add(1)
-
-	// Go routine to monitor signal traps if any.
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-trapCh:
-				// Receive interrupt notification.
-				if !globalQuiet && !globalJSON {
-					console.Eraseline()
-				}
-				session.CloseAndDie()
-			case cpURLs, ok := <-statusCh:
-				// Status channel is closed, we should return.
-				if !ok {
-					return
-				}
-				if cpURLs.Error == nil {
-					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
-					session.Save()
-				} else {
-					// Print in new line and adjust to top so that we
-					// don't print over the ongoing progress bar.
-					if !globalQuiet && !globalJSON {
-						console.Eraseline()
-					}
-					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
-					// For all non critical errors we can continue for the
-					// remaining files.
-					switch cpURLs.Error.ToGoError().(type) {
-					// Handle this specifically for filesystem related errors.
-					case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
-						continue
-					// Handle these specifically for object storage related errors.
-					case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
-						continue
-					}
-					// For critical errors we should exit. Session
-					// can be resumed after the user figures out
-					// the  problem.
-					session.CloseAndDie()
-				}
+	// global quiet shows stats once and a while, I think quiet should be really
+	// quiet, and have something like no-progress
+	if globalQuiet {
+		defer func() {
+			accntStat := cs.accountingReader.Stat()
+			cpStatMessage := copyStatMessage{
+				Total:       accntStat.Total,
+				Transferred: accntStat.Transferred,
+				Speed:       accntStat.Speed,
 			}
-		}
+			console.Println(console.Colorize("Copy", cpStatMessage.String()))
+		}()
+
+		cs.pr = cs.accountingReader
+	}
+
+	// now we want to start the progress bar
+	cs.pb.Start()
+	defer cs.pb.Finish()
+
+	cs.startStatus()
+
+	go func() {
+		// on SIGTERM shutdown and stop
+		<-cs.trapCh
+
+		cs.shutdown()
+		cs.CloseAndDie()
 	}()
 
-	// Loop through all urls.
-	for urlScanner.Scan() {
-		var cpURLs copyURLs
-		// Unmarshal copyURLs from each line.
-		json.Unmarshal([]byte(urlScanner.Text()), &cpURLs)
-
-		// Verify if previously copied, notify progress bar.
-		if isCopied(cpURLs.SourceContent.URL.String()) {
-			statusCh <- doCopyFake(cpURLs, progressReader)
-		} else {
-			statusCh <- doCopy(cpURLs, progressReader, accntReader)
+	// monitor mode will watch the source folders for changes,
+	// and queue them for copying. Monitor mode can be stopped
+	// only by SIGTERM.
+	if monitor {
+		if err := cs.watchSourceURLs(recursive); err != nil {
+			fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 		}
-	}
 
-	// Close the goroutine.
-	close(statusCh)
+		cs.startCopy(true)
 
-	// Wait for the goroutines to finish.
-	wg.Wait()
+		cs.watch()
 
-	if !globalQuiet && !globalJSON {
-		if progressReader.ProgressBar.Get() > 0 {
-			progressReader.ProgressBar.Finish()
-		}
+		// don't let monitor finish, only on SIGTERM
+		done := make(chan bool)
+		<-done
 	} else {
-		accntStat := accntReader.Stat()
-		cpStatMessage := copyStatMessage{
-			Total:       accntStat.Total,
-			Transferred: accntStat.Transferred,
-			Speed:       accntStat.Speed,
-		}
-		console.Println(console.Colorize("Copy", cpStatMessage.String()))
+		cs.startCopy(false)
+
+		// wait for copy to finish
+		cs.wgCopy.Wait()
+		cs.shutdown()
 	}
+}
+
+func (cs *copySession) shutdown() {
+	// make sure only one shutdown can be active
+	cs.m.Lock()
+
+	cs.watcher.Stop()
+
+	// stop queue, prevent new copy actions
+	cs.queue.Close()
+
+	// wait for current copy action to finish
+	cs.wgCopy.Wait()
+
+	close(cs.statusCh)
+
+	// copy sends status message, wait for status
+	cs.wgStatus.Wait()
 }
 
 // mainCopy is the entry point for cp command.
@@ -413,6 +609,8 @@ func mainCopy(ctx *cli.Context) {
 	session := newSessionV7()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")
+	session.Header.CommandBoolFlags["monitor"] = ctx.Bool("monitor")
+	session.Header.CommandBoolFlags["skip-copy"] = ctx.Bool("skip-copy")
 
 	var e error
 	if session.Header.RootPath, e = os.Getwd(); e != nil {
@@ -422,6 +620,12 @@ func mainCopy(ctx *cli.Context) {
 
 	// extract URLs.
 	session.Header.CommandArgs = ctx.Args()
-	doCopySession(session)
-	session.Delete()
+
+	cs := newCopySession(session)
+
+	// delete will be run when terminating normally,
+	// on SIGTERM it won't execute
+	defer cs.Delete()
+
+	cs.copy()
 }

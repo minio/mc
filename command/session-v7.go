@@ -194,6 +194,7 @@ func (s *sessionV7) NewDataReader() io.Reader {
 func (s *sessionV7) NewDataWriter() io.Writer {
 	// DataFP is always intitialized, either via new or load functions.
 	s.DataFP.Seek(0, os.SEEK_SET)
+	s.DataFP.Truncate(0)
 	return io.Writer(s.DataFP)
 }
 

@@ -31,6 +31,15 @@ type copyURLs struct {
 	Error         *probe.Error `json:"-"`
 }
 
+func (m *copyURLs) Equal(o interface{}) bool {
+	if n, ok := o.(*copyURLs); !ok {
+		// not a copyURLs
+		return false
+	} else {
+		return m.SourceContent.URL == n.SourceContent.URL
+	}
+}
+
 type copyURLsType uint8
 
 //   NOTE: All the parse rules should reduced to A: Copy(Source, Target).
@@ -230,6 +239,7 @@ func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool) <-
 		defer close(copyURLsCh)
 		cpType, err := guessCopyURLType(sourceURLs, targetURL, isRecursive)
 		fatalIf(err.Trace(), "Unable to guess the type of copy operation.")
+
 		switch cpType {
 		case copyURLsTypeA:
 			copyURLsCh <- prepareCopyURLsTypeA(sourceURLs[0], targetURL)

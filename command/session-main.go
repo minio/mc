@@ -168,7 +168,8 @@ func sessionExecute(s *sessionV7) {
 	case "cp":
 		doCopySession(s)
 	case "mirror":
-		doMirrorSession(s)
+		ms := newMirrorSession(s)
+		ms.mirror()
 	}
 }
 
