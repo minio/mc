@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -33,7 +34,8 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio/pkg/probe"
-	"gopkg.in/minio/minio-go.v2"
+	// todo(nl5887): http://gopkg.in/minio/minio-go.v2
+	"github.com/minio/minio-go"
 )
 
 // S3 client
@@ -140,6 +142,93 @@ var s3New = newFactory()
 // GetURL get url.
 func (c *s3Client) GetURL() clientURL {
 	return *c.targetURL
+}
+
+type watchObject struct {
+	events chan Event
+	errors chan *probe.Error
+	done   chan bool
+}
+
+func (w *watchObject) Events() chan Event {
+	return w.events
+}
+
+func (w *watchObject) Errors() chan *probe.Error {
+	return w.errors
+}
+
+func (w *watchObject) Close() {
+	close(w.done)
+}
+
+func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
+	eventChan := make(chan Event)
+	errorChan := make(chan *probe.Error)
+	doneChan := make(chan bool)
+
+	bucket, _ := c.url2BucketAndObject()
+
+	// todo(nl5887): correct arn creation
+	accountARN := minio.NewArn("minio", "lambda", "us-east-1", "1", "minio")
+
+	// enable bucket notifications
+	lc := minio.NewNotificationConfig(accountARN)
+	lc.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
+	mb := minio.BucketNotification{}
+	mb.AddLambda(lc)
+	c.api.SetBucketNotification(bucket, mb)
+
+	// Create a done channel to control 'ListObjects' go routine.
+	doneCh := make(chan struct{})
+	go func() {
+		<-doneChan
+
+		close(doneCh)
+		close(eventChan)
+		close(errorChan)
+	}()
+
+	eventsCh := c.api.ListenBucketNotification(bucket, accountARN, doneCh)
+	go func() {
+		for {
+			if notificationInfo, ok := <-eventsCh; !ok {
+				return
+			} else if notificationInfo.Err != nil {
+				errorChan <- probe.NewError(notificationInfo.Err)
+			} else {
+				for _, record := range notificationInfo.Records {
+					key := record.S3.Object.Key
+
+					// copy targeturl to source and update path
+					source := *c.targetURL
+					source.Path = path.Join(source.Path, key)
+
+					if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
+						eventChan <- Event{
+							Path:   source.String(),
+							Client: c,
+							Type:   EventCreate,
+						}
+					} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
+						eventChan <- Event{
+							Path:   source.String(),
+							Client: c,
+							Type:   EventRemove,
+						}
+					} else {
+						// ignore other events
+					}
+				}
+			}
+		}
+	}()
+
+	return &watchObject{
+		events: eventChan,
+		errors: errorChan,
+		done:   doneChan,
+	}, nil
 }
 
 // Get - get object.

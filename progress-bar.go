@@ -30,7 +30,7 @@ import (
 
 // progress extender.
 type progressBar struct {
-	ProgressBar  *pb.ProgressBar
+	*pb.ProgressBar
 	reader       io.Reader
 	readerLength int64
 	bytesRead    int64
@@ -98,6 +98,11 @@ func (p *progressBar) SetCaption(caption string) *progressBar {
 
 func (p *progressBar) Set64(length int64) *progressBar {
 	p.ProgressBar = p.ProgressBar.Set64(length)
+	return p
+}
+
+func (p *progressBar) SetTotal(total int64) *progressBar {
+	p.ProgressBar.Total = total
 	return p
 }
 

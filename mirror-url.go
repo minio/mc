@@ -32,6 +32,39 @@ type mirrorURLs struct {
 	Error         *probe.Error `json:"-"`
 }
 
+func (m mirrorURLs) WithError(err *probe.Error) mirrorURLs {
+	m.Error = err
+	return m
+}
+
+func (m mirrorURLs) Equal(o interface{}) bool {
+	n, ok := o.(mirrorURLs)
+	if !ok {
+		// not a mirrorURLs
+		return false
+	}
+
+	if m.SourceContent == nil && n.SourceContent == nil {
+	} else if m.SourceContent != nil && n.SourceContent == nil {
+		return false
+	} else if m.SourceContent == nil && n.SourceContent != nil {
+		return false
+	} else if m.SourceContent.URL != n.SourceContent.URL {
+		return false
+	}
+
+	if m.TargetContent == nil && n.TargetContent == nil {
+	} else if m.TargetContent != nil && n.TargetContent == nil {
+		return false
+	} else if m.TargetContent == nil && n.TargetContent != nil {
+		return false
+	} else if m.TargetContent.URL != n.TargetContent.URL {
+		return false
+	}
+
+	return true
+}
+
 func (m mirrorURLs) isEmpty() bool {
 	if m.SourceContent == nil && m.TargetContent == nil && m.Error == nil {
 		return true
@@ -163,6 +196,7 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 			}
 		case differInSecond:
 			if isRemove {
+				// todo(nl5887): I'd all force and fake checks to the the actual mirror / harvest
 				if !isForce && !isFake {
 					// Object removal not allowed if force is not set.
 					mirrorURLsCh <- mirrorURLs{
