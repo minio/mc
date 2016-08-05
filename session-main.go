@@ -114,7 +114,7 @@ func (c clearSessionMessage) String() string {
 	var colorizedMsg string
 	switch c.Status {
 	case "success":
-		colorizedMsg = console.Colorize("ClearSession", msg+" cleared succesfully.")
+		colorizedMsg = console.Colorize("ClearSession", msg+" cleared successfully.")
 	case "forced":
 		colorizedMsg = console.Colorize("ClearSession", msg+" cleared forcefully.")
 	}
