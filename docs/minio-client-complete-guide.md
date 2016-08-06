@@ -30,7 +30,7 @@ version       Print version.
 ||32-bit ARM|https://dl.minio.io/client/mc/release/linux-arm/mc|
 |Apple OS X|64-bit Intel|https://dl.minio.io/client/mc/release/darwin-amd64/mc|
 |Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe|
-||32-bit|https://dl.minio.io/server/minio/release/windows-386/minio.exe|
+||32-bit|https://dl.minio.io/client/mc/release/windows-386/mc.exe |
 |FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc|
 |Solaris/Illumos|64-bit|https://dl.minio.io/client/mc/release/solaris-amd64/mc|
 
