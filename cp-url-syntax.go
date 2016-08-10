@@ -40,14 +40,9 @@ func checkCopySyntax(ctx *cli.Context) {
 	/****** Generic Invalid Rules *******/
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
-		_, sourceContent, err := url2Stat(srcURL)
+		_, _, err := url2Stat(srcURL)
 		if err != nil {
 			fatalIf(err.Trace(srcURL), fmt.Sprintf("Unable to stat '%s'.", srcURL))
-		}
-
-		if !ctx.Bool("monitor") {
-		} else if sourceContent.URL.Type != fileSystem {
-			fatalIf(errInvalidArgument().Trace(), "Monitor mode currently only supported on file system.")
 		}
 	}
 

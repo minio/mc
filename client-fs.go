@@ -116,12 +116,17 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 
 				switch {
 				case event.Op&fsnotify.Create == fsnotify.Create:
+					// we want new created folders to be watched as well
 					if i, err := os.Stat(event.Name); err != nil {
+						if os.IsNotExist(err) {
+							continue
+						}
+
 						errorChan <- probe.NewError(err)
 					} else if !i.IsDir() {
 						// we want files
 					} else if !recursive {
-						// we don't want to monitor recursively
+						// we don't want to watch recursively
 						continue
 					} else if err := watcher.Add(event.Name); err == nil {
 						// now watching created folder
