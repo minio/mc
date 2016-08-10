@@ -33,9 +33,8 @@ import (
 	"io/ioutil"
 
 	"github.com/minio/mc/pkg/httptracer"
-	"github.com/minio/minio/pkg/probe"
-	// todo(nl5887): http://gopkg.in/minio/minio-go.v2
 	"github.com/minio/minio-go"
+	"github.com/minio/minio/pkg/probe"
 )
 
 // S3 client
@@ -170,7 +169,7 @@ func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
 
 	// todo(nl5887): correct arn creation
-	accountARN := minio.NewArn("minio", "lambda", "us-east-1", "1", "minio")
+	accountARN := minio.NewArn("minio", "lambda", "us-east-1", "mc", "lambda")
 
 	// enable bucket notifications
 	lc := minio.NewNotificationConfig(accountARN)
@@ -191,34 +190,33 @@ func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
 
 	eventsCh := c.api.ListenBucketNotification(bucket, accountARN, doneCh)
 	go func() {
-		for {
-			if notificationInfo, ok := <-eventsCh; !ok {
-				return
-			} else if notificationInfo.Err != nil {
+		for notificationInfo := range eventsCh {
+			if notificationInfo.Err != nil {
 				errorChan <- probe.NewError(notificationInfo.Err)
-			} else {
-				for _, record := range notificationInfo.Records {
-					key := record.S3.Object.Key
+				continue
+			}
 
-					// copy targeturl to source and update path
-					source := *c.targetURL
-					source.Path = path.Join(source.Path, key)
+			for _, record := range notificationInfo.Records {
+				key := record.S3.Object.Key
 
-					if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
-						eventChan <- Event{
-							Path:   source.String(),
-							Client: c,
-							Type:   EventCreate,
-						}
-					} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
-						eventChan <- Event{
-							Path:   source.String(),
-							Client: c,
-							Type:   EventRemove,
-						}
-					} else {
-						// ignore other events
+				// copy targeturl to source and update path
+				source := *c.targetURL
+				source.Path = path.Join(source.Path, key)
+
+				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
+					eventChan <- Event{
+						Path:   source.String(),
+						Client: c,
+						Type:   EventCreate,
 					}
+				} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
+					eventChan <- Event{
+						Path:   source.String(),
+						Client: c,
+						Type:   EventRemove,
+					}
+				} else {
+					// ignore other events
 				}
 			}
 		}
