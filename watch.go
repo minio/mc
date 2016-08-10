@@ -23,24 +23,30 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
+// EventType is the type of the event that occured
 type EventType uint8
 
 const (
+	// EventCreate notifies when a new object has been created
 	EventCreate EventType = iota
+	// EventRemove notifies when a new object has been deleted
 	EventRemove
 )
 
+// Event contains the information of the event that occured
 type Event struct {
 	Path   string
 	Client Client
 	Type   EventType
 }
 
+// ClientWatcher is the interface being implemented by the different clients
 type ClientWatcher interface {
 	Watch(recursive bool) (*watchObject, *probe.Error)
 }
 
-type watcher struct {
+// Watcher can be used to have one or multiple clients watch for notifications
+type Watcher struct {
 	errorsChan chan *probe.Error
 	eventsChan chan Event
 
@@ -48,8 +54,9 @@ type watcher struct {
 	wg sync.WaitGroup
 }
 
-func NewWatcher() *watcher {
-	return &watcher{
+// NewWatcher creates a new watcher
+func NewWatcher() *Watcher {
+	return &Watcher{
 		errorsChan: make(chan *probe.Error),
 		eventsChan: make(chan Event),
 
@@ -57,15 +64,18 @@ func NewWatcher() *watcher {
 	}
 }
 
-func (w *watcher) Errors() chan *probe.Error {
+// Errors returns a channel which will receive errors
+func (w *Watcher) Errors() chan *probe.Error {
 	return w.errorsChan
 }
 
-func (w *watcher) Events() chan Event {
+// Events returns a channel which will receive events
+func (w *Watcher) Events() chan Event {
 	return w.eventsChan
 }
 
-func (w *watcher) Stop() {
+// Stop watcher
+func (w *Watcher) Stop() {
 	// close all running goroutines
 	for _, wo := range w.o {
 		wo.Close()
@@ -77,15 +87,18 @@ func (w *watcher) Stop() {
 	close(w.eventsChan)
 }
 
-func (w *watcher) Watching() bool {
+// Watching returns if the watcher is watching for notifications
+func (w *Watcher) Watching() bool {
 	return (len(w.o) > 0)
 }
 
-func (w *watcher) Wait() {
+// Wait for watcher to wait
+func (w *Watcher) Wait() {
 	w.wg.Wait()
 }
 
-func (w *watcher) Join(client Client, recursive bool) *probe.Error {
+// Join the watcher with client
+func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 	cw, ok := client.(ClientWatcher)
 	if !ok {
 		return probe.NewError(fmt.Errorf("Client has no Watcher interface."))

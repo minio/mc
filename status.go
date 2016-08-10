@@ -5,8 +5,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Implements a simple status interface that can be used in quit mode or with progressbar.
-
+// Status implements a interface that can be used in quit mode or with progressbar.
 type Status interface {
 	Println(data ...interface{})
 	Add(int64) Status
@@ -26,63 +25,50 @@ type Status interface {
 	fatalIf(err *probe.Error, msg string)
 }
 
-func NewQuitStatus() Status {
-	return &QuitStatus{
+// NewQuietStatus returns a quiet status object
+func NewQuietStatus() Status {
+	return &QuietStatus{
 		newAccounter(0),
 	}
 }
 
-type QuitStatus struct {
+// QuietStatus will only show the progress and summary
+type QuietStatus struct {
 	*accounter
 }
 
-func (s *QuitStatus) Read(p []byte) (n int, err error) {
-	return s.accounter.Read(p)
+// Read implements the io.Reader interface
+func (qs *QuietStatus) Read(p []byte) (n int, err error) {
+	return qs.accounter.Read(p)
 }
 
-func (s *ProgressStatus) Read(p []byte) (n int, err error) {
-	return s.progressBar.Read(p)
+// SetTotal sets the total of the progressbar, ignored for quietstatus
+func (qs *QuietStatus) SetTotal(v int64) Status {
+	qs.accounter.Total = v
+	return qs
 }
 
-func (s *QuitStatus) SetTotal(v int64) Status {
-	s.accounter.Total = v
-	return s
+// SetCaption sets the caption of the progressbar, ignored for quietstatus
+func (qs *QuietStatus) SetCaption(s string) {
 }
 
-func (qs *QuitStatus) SetCaption(s string) {
+// Total returns the total number of bytes
+func (qs *QuietStatus) Total() int64 {
+	return qs.accounter.Total
 }
 
-func (s *QuitStatus) Total() int64 {
-	return s.accounter.Total
+// Add bytes to current number of bytes
+func (qs *QuietStatus) Add(v int64) Status {
+	qs.accounter.Add(v)
+	return qs
 }
 
-func (ps *ProgressStatus) SetCaption(s string) {
-	ps.progressBar.SetCaption(s)
+// Println prints line, ignored for quietstatus
+func (qs *QuietStatus) Println(data ...interface{}) {
 }
 
-func (s *ProgressStatus) Total() int64 {
-	return s.progressBar.Total
-}
-
-func (s *ProgressStatus) SetTotal(v int64) Status {
-	s.progressBar.Total = v
-	return s
-}
-
-func (s *QuitStatus) Add(v int64) Status {
-	s.accounter.Add(v)
-	return s
-}
-
-func (s *ProgressStatus) Add(v int64) Status {
-	s.progressBar.Add64(v)
-	return s
-}
-
-func (s *QuitStatus) Println(data ...interface{}) {
-}
-
-func (s *QuitStatus) PrintMsg(msg message) {
+// PrintMsg prints message
+func (qs *QuietStatus) PrintMsg(msg message) {
 	if !globalJSON {
 		console.Println(msg.String())
 	} else {
@@ -90,11 +76,13 @@ func (s *QuitStatus) PrintMsg(msg message) {
 	}
 }
 
-func (s *QuitStatus) Start() {
+// Start is ignored for quietstatus
+func (qs *QuietStatus) Start() {
 }
 
-func (s *QuitStatus) Finish() {
-	accntStat := s.accounter.Stat()
+// Finish displays the accounting summary
+func (qs *QuietStatus) Finish() {
+	accntStat := qs.accounter.Stat()
 	cpStatMessage := mirrorStatMessage{
 		Total:       accntStat.Total,
 		Transferred: accntStat.Transferred,
@@ -104,59 +92,94 @@ func (s *QuitStatus) Finish() {
 	console.Println(console.Colorize("Mirror", cpStatMessage.String()))
 }
 
-func (s *QuitStatus) Update() {
+// Update is ignored for quietstatus
+func (qs *QuietStatus) Update() {
 }
 
-func (s *QuitStatus) errorIf(err *probe.Error, msg string) {
+func (qs *QuietStatus) errorIf(err *probe.Error, msg string) {
 	errorIf(err, msg)
 }
 
-func (s *QuitStatus) fatalIf(err *probe.Error, msg string) {
+func (qs *QuietStatus) fatalIf(err *probe.Error, msg string) {
 	fatalIf(err, msg)
 }
 
+// NewProgressStatus returns a progress status object
 func NewProgressStatus() Status {
 	return &ProgressStatus{
 		newProgressBar(0),
 	}
 }
 
+// ProgressStatus shows a progressbar
 type ProgressStatus struct {
 	*progressBar
 }
 
-func (s *ProgressStatus) Println(data ...interface{}) {
+// Read implements the io.Reader interface
+func (ps *ProgressStatus) Read(p []byte) (n int, err error) {
+	return ps.progressBar.Read(p)
+}
+
+// SetCaption sets the caption of the progressbar
+func (ps *ProgressStatus) SetCaption(s string) {
+	ps.progressBar.SetCaption(s)
+}
+
+// Total returns the total number of bytes
+func (ps *ProgressStatus) Total() int64 {
+	return ps.progressBar.Total
+}
+
+// SetTotal sets the total of the progressbar
+func (ps *ProgressStatus) SetTotal(v int64) Status {
+	ps.progressBar.Total = v
+	return ps
+}
+
+// Add bytes to current number of bytes
+func (ps *ProgressStatus) Add(v int64) Status {
+	ps.progressBar.Add64(v)
+	return ps
+}
+
+// Println prints line, ignored for quietstatus
+func (ps *ProgressStatus) Println(data ...interface{}) {
 	console.Eraseline()
 	console.Println(data...)
 }
 
-func (s *ProgressStatus) PrintMsg(msg message) {
+// PrintMsg prints message
+func (ps *ProgressStatus) PrintMsg(msg message) {
 }
 
-func (s *ProgressStatus) Start() {
-	s.progressBar.Start()
+// Start is ignored for quietstatus
+func (ps *ProgressStatus) Start() {
+	ps.progressBar.Start()
 }
 
-func (s *ProgressStatus) Finish() {
-	s.progressBar.Finish()
+// Finish displays the accounting summary
+func (ps *ProgressStatus) Finish() {
+	ps.progressBar.Finish()
 }
 
-func (s *ProgressStatus) Update() {
-	s.progressBar.Update()
+// Update is ignored for quietstatus
+func (ps *ProgressStatus) Update() {
+	ps.progressBar.Update()
 }
 
-func (s *ProgressStatus) errorIf(err *probe.Error, msg string) {
+func (ps *ProgressStatus) errorIf(err *probe.Error, msg string) {
 	// remove progressbar
 	console.Eraseline()
 	errorIf(err, msg)
 
-	s.progressBar.Update()
+	ps.progressBar.Update()
 }
 
-func (s *ProgressStatus) fatalIf(err *probe.Error, msg string) {
+func (ps *ProgressStatus) fatalIf(err *probe.Error, msg string) {
 	// remove progressbar
 	console.Eraseline()
 	fatalIf(err, msg)
 
-	s.progressBar.Update()
+	ps.progressBar.Update()
 }
