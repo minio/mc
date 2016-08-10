@@ -447,10 +447,10 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	if bucket == "" {
 		return nil, probe.NewError(BucketNameEmpty{})
 	} else if object == "" {
-		e := c.api.BucketExists(bucket)
-		if e != nil {
+		if _, e := c.api.BucketExists(bucket); e != nil {
 			return nil, probe.NewError(e)
 		}
+
 		bucketMetadata := &clientContent{}
 		bucketMetadata.URL = *c.targetURL
 		bucketMetadata.Type = os.ModeDir
