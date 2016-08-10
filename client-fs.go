@@ -91,8 +91,10 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
+	var watcher *fsnotify.Watcher
+	if v, err := fsnotify.NewWatcher(); err == nil {
+		watcher = v
+	} else {
 		return nil, probe.NewError(err)
 	}
 
@@ -161,7 +163,7 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 				return ioutils.ErrSkipFile
 			}
 
-			if err = watcher.Add(fp); err != nil {
+			if err := watcher.Add(fp); err != nil {
 				return err
 			}
 
@@ -171,7 +173,7 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 		}
 	}
 
-	if err = watcher.Add(f.PathURL.Path); err != nil {
+	if err := watcher.Add(f.PathURL.Path); err != nil {
 		return nil, probe.NewError(err)
 	}
 

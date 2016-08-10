@@ -32,12 +32,12 @@ type copyURLs struct {
 }
 
 func (m *copyURLs) Equal(o interface{}) bool {
-	if n, ok := o.(*copyURLs); !ok {
-		// not a copyURLs
-		return false
-	} else {
+	if n, ok := o.(*copyURLs); ok {
 		return m.SourceContent.URL == n.SourceContent.URL
 	}
+
+	// not a copyURLs
+	return false
 }
 
 type copyURLsType uint8

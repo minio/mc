@@ -7,10 +7,13 @@ import (
 	"sync"
 )
 
+// Comparer is an interface for queued objects, used to identify duplicate objects
+// in queue.
 type Comparer interface {
 	Equal(interface{}) bool
 }
 
+// Queue allows objects to be queued on a first in first out base.
 type Queue struct {
 	a []interface{}
 
@@ -25,6 +28,7 @@ type Queue struct {
 	session *sessionV7
 }
 
+// NewQueue creates a new queue
 func NewQueue(session *sessionV7) *Queue {
 	return &Queue{
 		idleCh:  make(chan interface{}),
@@ -33,21 +37,24 @@ func NewQueue(session *sessionV7) *Queue {
 	}
 }
 
+// Save writes the current queue content to the writer
 func (q *Queue) Save(dst io.Writer) error {
 	q.m.Lock()
 	defer q.m.Unlock()
 
 	for i := q.i; i < q.j; i++ {
-		if jsonData, err := json.Marshal(q.a[i]); err != nil {
+		jsonData, err := json.Marshal(q.a[i])
+		if err != nil {
 			return err
-		} else {
-			fmt.Fprintln(dst, string(jsonData))
 		}
+
+		fmt.Fprintln(dst, string(jsonData))
 	}
 
 	return nil
 }
 
+// Wait for items to become available
 func (q *Queue) Wait() error {
 	q.m.Lock()
 
@@ -71,6 +78,7 @@ func (q *Queue) Wait() error {
 	return nil
 }
 
+// Close and disable the queue
 func (q *Queue) Close() {
 	q.m.Lock()
 	defer q.m.Unlock()
@@ -79,6 +87,7 @@ func (q *Queue) Close() {
 	close(q.idleCh)
 }
 
+// Pop the first object on the queue
 func (q *Queue) Pop() interface{} {
 	q.m.Lock()
 	defer q.m.Unlock()
@@ -106,14 +115,18 @@ func (q *Queue) grow(n int) {
 	q.a = a
 }
 
+// ErrObjectAlreadyQueued occurs when the object being pushed already exists
+// in the queue
 var ErrObjectAlreadyQueued = fmt.Errorf("Object already queued.")
 
+// Count returns the number of items in the queue
 func (q *Queue) Count() int {
 	q.m.Lock()
 	defer q.m.Unlock()
-	return len(q.a)
+	return q.j - q.i
 }
 
+// Push a new object to the queue
 func (q *Queue) Push(u interface{}) error {
 	q.m.Lock()
 	defer q.m.Unlock()

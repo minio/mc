@@ -106,7 +106,7 @@ type mirrorSession struct {
 	harvestCh chan mirrorURLs
 	errorCh   chan *probe.Error
 
-	watcher *watcher
+	watcher *Watcher
 	queue   *Queue
 
 	// mutex for shutdown
@@ -379,10 +379,10 @@ func (ms *mirrorSession) watch() {
 			// this code seems complicated, it will change the expanded alias back to the alias
 			// again, by replacing the sourceUrlFull with the sourceAlias. This url will be
 			// used to mirror.
-			sourceAlias, sourceUrlFull, _ := mustExpandAlias(ms.sourceURLs)
+			sourceAlias, sourceURLFull, _ := mustExpandAlias(ms.sourceURLs)
 			sourceURL := newClientURL(event.Path)
 
-			aliasedPath := strings.Replace(event.Path, sourceUrlFull, ms.sourceURLs, -1)
+			aliasedPath := strings.Replace(event.Path, sourceURLFull, ms.sourceURLs, -1)
 
 			// build target path, it is the relative of the event.Path with the sourceUrl
 			// joined to the targetURL.
@@ -650,9 +650,9 @@ func (ms *mirrorSession) shutdown() {
 func newMirrorSession(session *sessionV7) *mirrorSession {
 	args := session.Header.CommandArgs
 
-	var status Status = NewProgressStatus()
+	var status = NewProgressStatus()
 	if globalQuiet || globalJSON {
-		status = NewQuitStatus()
+		status = NewQuietStatus()
 	}
 
 	ms := mirrorSession{
