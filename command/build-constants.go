@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package main
+package command
 
-import (
-	command "github.com/minio/mc/command"
+var (
+	// mcVersion - version time.RFC3339.
+	mcVersion = "DEVELOPMENT.GOGET"
+	// mcReleaseTag - release tag in TAG.%Y-%m-%dT%H-%M-%SZ.
+	mcReleaseTag = "DEVELOPMENT.GOGET"
+	// mcCommitID - latest commit id.
+	mcCommitID = "DEVELOPMENT.GOGET"
+	// mcShortCommitID - first 12 characters from mcCommitID.
+	mcShortCommitID = mcCommitID[:12]
 )
-
-func main() {
-	command.Main()
-}
