@@ -1,4 +1,5 @@
 cover.out
+*.bak
 mc
 *~
 *.test
