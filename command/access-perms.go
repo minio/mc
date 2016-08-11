@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,24 @@
  * limitations under the License.
  */
 
-package main
+package ocmmand
 
-import (
-	command "github.com/minio/mc/command"
-)
-
-func main() {
-	command.Main()
+// isValidAccessPERM - is provided access perm string supported.
+func (b accessPerms) isValidAccessPERM() bool {
+	switch b {
+	case accessNone, accessDownload, accessUpload, accessBoth:
+		return true
+	}
+	return false
 }
+
+// accessPerms - access level.
+type accessPerms string
+
+// different types of Access perm's currently supported by policy command.
+const (
+	accessNone     = accessPerms("none")
+	accessDownload = accessPerms("download")
+	accessUpload   = accessPerms("upload")
+	accessBoth     = accessPerms("both")
+)

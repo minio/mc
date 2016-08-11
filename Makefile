@@ -19,27 +19,33 @@ verifiers: vet fmt lint cyclo deadcode spelling
 vet:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 go tool vet -all *.go
-	@GO15VENDOREXPERIMENT=1 go tool vet -all ./src
+	@GO15VENDOREXPERIMENT=1 go tool vet -all ./command
+	@GO15VENDOREXPERIMENT=1 go tool vet -all ./pkg
 	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true *.go
-	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./src
+	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./command
+	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./pkg
 
 spelling:
 	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell *.go
-	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell src/**/*
+	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell command/**/*
+	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell pkg/**/*
 
 fmt:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 gofmt -s -l *.go
-	@GO15VENDOREXPERIMENT=1 gofmt -s -l src
+	@GO15VENDOREXPERIMENT=1 gofmt -s -l command
+	@GO15VENDOREXPERIMENT=1 gofmt -s -l pkg
 lint:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint .
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/src...
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/command
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/pkg...
 
 cyclo:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 *.go
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 src
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 command
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 pkg
 
 deadcode:
 	@echo "Running $@:"
@@ -51,7 +57,8 @@ build: getdeps verifiers
 test: getdeps verifiers
 	@echo "Running all testing:"
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) ./
-	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/src...
+	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/command
+	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build
 	@GO15VENDOREXPERIMENT=1 go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/mc
