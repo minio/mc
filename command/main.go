@@ -266,35 +266,3 @@ func registerApp() *cli.App {
 func mustGetProfileDir() string {
 	return filepath.Join(mustGetMcConfigDir(), globalProfileDir)
 }
-
-func main() {
-	// Enable profiling supported modes are [cpu, mem, block].
-	// ``MC_PROFILER`` supported options are [cpu, mem, block].
-	switch os.Getenv("MC_PROFILER") {
-	case "cpu":
-		defer profile.Start(profile.CPUProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
-	case "mem":
-		defer profile.Start(profile.MemProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
-	case "block":
-		defer profile.Start(profile.BlockProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
-	}
-
-	probe.Init() // Set project's root source path.
-	probe.SetAppInfo("Release-Tag", mcReleaseTag)
-	probe.SetAppInfo("Commit", mcShortCommitID)
-
-	app := registerApp()
-	app.Before = registerBefore
-
-	app.ExtraInfo = func() map[string]string {
-		if _, e := pb.GetTerminalWidth(); e != nil {
-			globalQuiet = true
-		}
-		if globalDebug {
-			return getSystemData()
-		}
-		return make(map[string]string)
-	}
-
-	app.RunAndExitOnError()
-}
