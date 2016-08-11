@@ -224,8 +224,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, progress)
 			if err != nil {
-				sURLs.Error = err.Trace(sourceURL.String())
-				return sURLs
+				return sURLs.WithError(err.Trace(sourceURL.String()))
 			}
 		} else if sourceURL.Type == objectStorage {
 			if sourceAlias == targetAlias {
@@ -233,19 +232,16 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 				// Do not include alias inside path for ObjStore -> ObjStore.
 				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, progress)
 				if err != nil {
-					sURLs.Error = err.Trace(sourceURL.String())
-					return sURLs
+					return sURLs.WithError(err.Trace(sourceURL.String()))
 				}
 			} else {
 				reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
 				if err != nil {
-					sURLs.Error = err.Trace(sourceURL.String())
-					return sURLs
+					return sURLs.WithError(err.Trace(sourceURL.String()))
 				}
 				_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
 				if err != nil {
-					sURLs.Error = err.Trace(targetURL.String())
-					return sURLs
+					return sURLs.WithError(err.Trace(targetURL.String()))
 				}
 			}
 		}
@@ -253,17 +249,15 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 		// Standard GET/PUT for size > 5GB
 		reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
 		if err != nil {
-			sURLs.Error = err.Trace(sourceURL.String())
-			return sURLs
+			return sURLs.WithError(err.Trace(sourceURL.String()))
 		}
 		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
 		if err != nil {
-			sURLs.Error = err.Trace(targetURL.String())
-			return sURLs
+			return sURLs.WithError(err.Trace(targetURL.String()))
 		}
 	}
-	sURLs.Error = nil // just for safety
-	return sURLs
+
+	return sURLs.WithError(nil)
 }
 
 // Go routine to update session status
