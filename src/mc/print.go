@@ -14,12 +14,21 @@
  * limitations under the License.
  */
 
-package main
+package mc
 
-import (
-	mc "github.com/minio/mc/src/mc"
-)
+import "github.com/minio/mc/src/console"
 
-func main() {
-	mc.New().RunAndExitOnError()
+// message interface for all structured messages implementing JSON(), String() methods.
+type message interface {
+	JSON() string
+	String() string
+}
+
+// printMsg prints message string or JSON structure depending on the type of output console.
+func printMsg(msg message) {
+	if !globalJSON {
+		console.Println(msg.String())
+	} else {
+		console.Println(msg.JSON())
+	}
 }
