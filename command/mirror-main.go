@@ -113,7 +113,8 @@ type mirrorSession struct {
 	m *sync.Mutex
 
 	wgStatus *sync.WaitGroup
-	wgCopy   *sync.WaitGroup
+
+	wgMirror *sync.WaitGroup
 
 	status  Status
 	scanBar scanBarFunc
@@ -331,10 +332,10 @@ func (ms *mirrorSession) startStatus() {
 func (ms *mirrorSession) startMirror(wait bool) {
 	isRemove := ms.Header.CommandBoolFlags["remove"]
 
-	ms.wgCopy.Add(1)
+	ms.wgMirror.Add(1)
 
 	go func() {
-		defer ms.wgCopy.Done()
+		defer ms.wgMirror.Done()
 
 		for {
 			if !wait {
@@ -618,7 +619,7 @@ func (ms *mirrorSession) mirror() {
 		ms.startMirror(false)
 
 		// wait for copy to finish
-		ms.wgCopy.Wait()
+		ms.wgMirror.Wait()
 		ms.shutdown()
 	}
 }
@@ -633,7 +634,7 @@ func (ms *mirrorSession) shutdown() {
 	ms.queue.Close()
 
 	// wait for current copy action to finish
-	ms.wgCopy.Wait()
+	ms.wgMirror.Wait()
 
 	close(ms.statusCh)
 
@@ -665,7 +666,7 @@ func newMirrorSession(session *sessionV7) *mirrorSession {
 		queue: NewQueue(session),
 
 		wgStatus: new(sync.WaitGroup),
-		wgCopy:   new(sync.WaitGroup),
+		wgMirror: new(sync.WaitGroup),
 		m:        new(sync.Mutex),
 
 		status:  status,
