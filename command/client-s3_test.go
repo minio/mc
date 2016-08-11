@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ocmmand
+package command
 
 // bucketHandler is an http.Handler that verifies bucket responses and validates incoming requests
 import (

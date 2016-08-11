@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package ocmmand
+package command
 
 import (
 	"path/filepath"

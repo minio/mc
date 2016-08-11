@@ -15,7 +15,7 @@
  */
 
 // This file implements a simple trie tree to be used for 'mc' cli commands.
-package ocmmand
+package command
 
 // This package borrows idea from - https://godoc.org/golang.org/x/text/internal/triegen.
 

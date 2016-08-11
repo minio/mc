@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ocmmand
+package command
 
 import (
 	"net/http"

@@ -15,7 +15,7 @@
  */
 
 // This package contains all the global variables and constants. ONLY TO BE ACCESSED VIA GET/SET FUNCTIONS.
-package ocmmand
+package command
 
 import (
 	"github.com/minio/cli"

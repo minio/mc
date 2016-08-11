@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ocmmand
+package command
 
 // isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {

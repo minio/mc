@@ -16,7 +16,7 @@
 
 // Session V2 - Version 2 stores session header and session data in
 // two separate files. Session data contains fully prepared URL list.
-package ocmmand
+package command
 
 import (
 	"encoding/json"

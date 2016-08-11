@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ocmmand
+package command
 
 /////////////////// Config V1 ///////////////////
 type hostConfigV1 struct {
