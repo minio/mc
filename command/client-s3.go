@@ -173,7 +173,10 @@ func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
 	lc.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
 	mb := minio.BucketNotification{}
 	mb.AddLambda(lc)
-	c.api.SetBucketNotification(bucket, mb)
+
+	if err := c.api.SetBucketNotification(bucket, mb); err != nil {
+		return nil, probe.NewError(err)
+	}
 
 	// Create a done channel to control 'ListObjects' go routine.
 	doneCh := make(chan struct{})
