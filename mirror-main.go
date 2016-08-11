@@ -102,8 +102,8 @@ type mirrorSession struct {
 
 	trapCh <-chan bool
 
-	statusCh  chan mirrorURLs
-	harvestCh chan mirrorURLs
+	statusCh  chan URLs
+	harvestCh chan URLs
 	errorCh   chan *probe.Error
 
 	watcher *Watcher
@@ -164,7 +164,7 @@ func (c mirrorStatMessage) String() string {
 }
 
 // doRemove - removes files on target.
-func (ms *mirrorSession) doRemove(sURLs mirrorURLs) mirrorURLs {
+func (ms *mirrorSession) doRemove(sURLs URLs) URLs {
 	isFake := ms.Header.CommandBoolFlags["fake"]
 	if isFake {
 		return sURLs.WithError(nil)
@@ -185,8 +185,8 @@ func (ms *mirrorSession) doRemove(sURLs mirrorURLs) mirrorURLs {
 	return sURLs.WithError(nil)
 }
 
-// doMirror - Mirror an object to multiple destination. mirrorURLs status contains a copy of sURLs and error if any.
-func (ms *mirrorSession) doMirror(sURLs mirrorURLs) mirrorURLs {
+// doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
+func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 	isFake := ms.Header.CommandBoolFlags["fake"]
 
 	if sURLs.Error != nil { // Errorneous sURLs passed.
@@ -353,7 +353,7 @@ func (ms *mirrorSession) startMirror(wait bool) {
 				break
 			}
 
-			sURLs := v.(mirrorURLs)
+			sURLs := v.(URLs)
 
 			if sURLs.SourceContent != nil {
 				ms.statusCh <- ms.doMirror(sURLs)
@@ -404,7 +404,7 @@ func (ms *mirrorSession) watch() {
 			if event.Type == EventCreate {
 				// we are checking if a destination file exists now, and if we only
 				// overwrite it when force is enabled.
-				mirrorURL := mirrorURLs{
+				mirrorURL := URLs{
 					SourceAlias:   sourceAlias,
 					SourceContent: &clientContent{URL: *sourceURL},
 					TargetAlias:   targetAlias,
@@ -436,7 +436,7 @@ func (ms *mirrorSession) watch() {
 					// already exists on destination and we don't force
 				}
 			} else if event.Type == EventRemove {
-				mirrorURL := mirrorURLs{
+				mirrorURL := URLs{
 					SourceAlias:   sourceAlias,
 					SourceContent: nil,
 					TargetAlias:   targetAlias,
@@ -472,7 +472,7 @@ func (ms *mirrorSession) harvestSessionUrls() {
 
 	urlScanner := bufio.NewScanner(ms.NewDataReader())
 	for urlScanner.Scan() {
-		var urls mirrorURLs
+		var urls URLs
 
 		if err := json.Unmarshal([]byte(urlScanner.Text()), &urls); err != nil {
 			ms.errorCh <- probe.NewError(err)
@@ -659,8 +659,8 @@ func newMirrorSession(session *sessionV7) *mirrorSession {
 		trapCh:    signalTrap(os.Interrupt, syscall.SIGTERM),
 		sessionV7: session,
 
-		statusCh:  make(chan mirrorURLs),
-		harvestCh: make(chan mirrorURLs),
+		statusCh:  make(chan URLs),
+		harvestCh: make(chan URLs),
 		errorCh:   make(chan *probe.Error),
 
 		watcher: NewWatcher(),

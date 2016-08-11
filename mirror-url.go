@@ -21,62 +21,7 @@ import (
 	"strings"
 
 	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/probe"
 )
-
-type mirrorURLs struct {
-	SourceAlias   string
-	SourceContent *clientContent
-	TargetAlias   string
-	TargetContent *clientContent
-	Error         *probe.Error `json:"-"`
-}
-
-func (m mirrorURLs) WithError(err *probe.Error) mirrorURLs {
-	m.Error = err
-	return m
-}
-
-func (m mirrorURLs) Equal(o interface{}) bool {
-	n, ok := o.(mirrorURLs)
-	if !ok {
-		// not a mirrorURLs
-		return false
-	}
-
-	if m.SourceContent == nil && n.SourceContent == nil {
-	} else if m.SourceContent != nil && n.SourceContent == nil {
-		return false
-	} else if m.SourceContent == nil && n.SourceContent != nil {
-		return false
-	} else if m.SourceContent.URL != n.SourceContent.URL {
-		return false
-	}
-
-	if m.TargetContent == nil && n.TargetContent == nil {
-	} else if m.TargetContent != nil && n.TargetContent == nil {
-		return false
-	} else if m.TargetContent == nil && n.TargetContent != nil {
-		return false
-	} else if m.TargetContent.URL != n.TargetContent.URL {
-		return false
-	}
-
-	return true
-}
-
-func (m mirrorURLs) isEmpty() bool {
-	if m.SourceContent == nil && m.TargetContent == nil && m.Error == nil {
-		return true
-	}
-	// If remove flag is set then sourceContent is usually nil.
-	if m.SourceContent != nil {
-		if m.SourceContent.Size == 0 && m.TargetContent == nil && m.Error == nil {
-			return true
-		}
-	}
-	return false
-}
 
 //
 //   * MIRROR ARGS - VALID CASES
@@ -126,7 +71,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, mirrorURLsCh chan<- mirrorURLs) {
+func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, URLsCh chan<- URLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -141,17 +86,17 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 	sourceAlias, sourceURL, _ := mustExpandAlias(sourceURL)
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	defer close(mirrorURLsCh)
+	defer close(URLsCh)
 
 	sourceClnt, err := newClientFromAlias(sourceAlias, sourceURL)
 	if err != nil {
-		mirrorURLsCh <- mirrorURLs{Error: err.Trace(sourceAlias, sourceURL)}
+		URLsCh <- URLs{Error: err.Trace(sourceAlias, sourceURL)}
 		return
 	}
 
 	targetClnt, err := newClientFromAlias(targetAlias, targetURL)
 	if err != nil {
-		mirrorURLsCh <- mirrorURLs{Error: err.Trace(targetAlias, targetURL)}
+		URLsCh <- URLs{Error: err.Trace(targetAlias, targetURL)}
 		return
 	}
 
@@ -162,12 +107,12 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 			// No difference, continue.
 			continue
 		case differInType:
-			mirrorURLsCh <- mirrorURLs{Error: errInvalidTarget(diffMsg.SecondURL)}
+			URLsCh <- URLs{Error: errInvalidTarget(diffMsg.SecondURL)}
 			continue
 		case differInSize:
 			if !isForce && !isFake {
 				// Size differs and force not set
-				mirrorURLsCh <- mirrorURLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
+				URLsCh <- URLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
 				continue
 			}
 			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
@@ -175,7 +120,7 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
 			sourceContent := diffMsg.firstContent
 			targetContent := &clientContent{URL: *newClientURL(targetPath)}
-			mirrorURLsCh <- mirrorURLs{
+			URLsCh <- URLs{
 				SourceAlias:   sourceAlias,
 				SourceContent: sourceContent,
 				TargetAlias:   targetAlias,
@@ -188,7 +133,7 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
 			sourceContent := diffMsg.firstContent
 			targetContent := &clientContent{URL: *newClientURL(targetPath)}
-			mirrorURLsCh <- mirrorURLs{
+			URLsCh <- URLs{
 				SourceAlias:   sourceAlias,
 				SourceContent: sourceContent,
 				TargetAlias:   targetAlias,
@@ -199,19 +144,19 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				// todo(nl5887): I'd all force and fake checks to the the actual mirror / harvest
 				if !isForce && !isFake {
 					// Object removal not allowed if force is not set.
-					mirrorURLsCh <- mirrorURLs{
+					URLsCh <- URLs{
 						Error: errDeleteNotAllowed(diffMsg.SecondURL),
 					}
 					continue
 				}
-				mirrorURLsCh <- mirrorURLs{
+				URLsCh <- URLs{
 					TargetAlias:   targetAlias,
 					TargetContent: diffMsg.secondContent,
 				}
 			}
 			continue
 		default:
-			mirrorURLsCh <- mirrorURLs{
+			URLsCh <- URLs{
 				Error: errUnrecognizedDiffType(diffMsg.Diff).Trace(diffMsg.FirstURL, diffMsg.SecondURL),
 			}
 			continue
@@ -220,8 +165,8 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 }
 
 // Prepares urls that need to be copied or removed based on requested options.
-func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool) <-chan mirrorURLs {
-	mirrorURLsCh := make(chan mirrorURLs)
-	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, isRemove, mirrorURLsCh)
-	return mirrorURLsCh
+func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool) <-chan URLs {
+	URLsCh := make(chan URLs)
+	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, isRemove, URLsCh)
+	return URLsCh
 }
