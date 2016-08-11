@@ -98,22 +98,36 @@ EXAMPLES:
 }
 
 type mirrorSession struct {
+	// embeds the session struct
 	*sessionV7
 
+	// the channel to trap SIGKILL signals
 	trapCh <-chan bool
 
-	statusCh  chan URLs
+	// channel for status messages
+	statusCh chan URLs
+	// channel for urls to harvest
 	harvestCh chan URLs
-	errorCh   chan *probe.Error
+	// channel for errors
+	errorCh chan *probe.Error
 
+	// the global watcher object, which receives notifications of created
+	// and deleted files
 	watcher *Watcher
-	queue   *Queue
 
-	// mutex for shutdown
+	// the queue of objects to be created or removed
+	queue *Queue
+
+	// mutex for shutdown, this prevents the shutdown
+	// to be initiated multiple times
 	m *sync.Mutex
 
+	// waitgroup for status goroutine, waits till all status
+	// messages have been written and received
 	wgStatus *sync.WaitGroup
 
+	// waitgroup for mirror goroutine, waits till all
+	// mirror actions have been completed
 	wgMirror *sync.WaitGroup
 
 	status  Status
@@ -265,6 +279,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 func (ms *mirrorSession) startStatus() {
 	ms.wgStatus.Add(1)
 
+	// wait for status messages on statusChan, show error messages and write the current queue to session
 	go func() {
 		defer ms.wgStatus.Done()
 
@@ -334,6 +349,8 @@ func (ms *mirrorSession) startMirror(wait bool) {
 
 	ms.wgMirror.Add(1)
 
+	// wait for new urls to mirror or delete in the queue, and
+	// run the actual mirror or remove.
 	go func() {
 		defer ms.wgMirror.Done()
 
@@ -584,6 +601,8 @@ func (ms *mirrorSession) mirror() {
 	// start the status go routine
 	ms.startStatus()
 
+	// wait for trap signal to close properly and show message if there are
+	// items queued left to resume the session.
 	go func() {
 		// on SIGTERM shutdown and stop
 		<-ms.trapCh

@@ -40,6 +40,15 @@ type Event struct {
 	Type   EventType
 }
 
+type watchObject struct {
+	// events will be put on this chan
+	events chan Event
+	// errors will be put on this chan
+	errors chan *probe.Error
+	// will stop the watcher goroutines
+	done chan bool
+}
+
 // ClientWatcher is the interface being implemented by the different clients
 type ClientWatcher interface {
 	Watch(recursive bool) (*watchObject, *probe.Error)
@@ -47,10 +56,15 @@ type ClientWatcher interface {
 
 // Watcher can be used to have one or multiple clients watch for notifications
 type Watcher struct {
+	// all errors will be added to this chan
 	errorsChan chan *probe.Error
+	// all events will be added to this chan
 	eventsChan chan Event
 
-	o  []*watchObject
+	// array of watchers joined
+	o []*watchObject
+
+	// all watchers joining will enter this waitgroup
 	wg sync.WaitGroup
 }
 
@@ -113,6 +127,9 @@ func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 
 	// join monitoring waitgroup
 	w.wg.Add(1)
+
+	// wait for events and errors of individual client watchers
+	// and sent then to eventsChan and errorsChan
 	go func() {
 		defer w.wg.Done()
 

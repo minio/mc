@@ -98,6 +98,7 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 		return nil, probe.NewError(err)
 	}
 
+	// wait for doneChan to close the watcher, eventChan and errorChan
 	go func() {
 		<-doneChan
 
@@ -106,6 +107,8 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 		close(errorChan)
 	}()
 
+	// get fsnotify notifications for events and errors, and sent them
+	// using eventChan and errorChan
 	go func() {
 		for {
 			select {

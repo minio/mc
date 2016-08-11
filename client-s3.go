@@ -143,20 +143,17 @@ func (c *s3Client) GetURL() clientURL {
 	return *c.targetURL
 }
 
-type watchObject struct {
-	events chan Event
-	errors chan *probe.Error
-	done   chan bool
-}
-
+// Events returns the chan recieving events
 func (w *watchObject) Events() chan Event {
 	return w.events
 }
 
+// Errors returns the chan recieving errors
 func (w *watchObject) Errors() chan *probe.Error {
 	return w.errors
 }
 
+// Close the watcher, will stop all goroutines
 func (w *watchObject) Close() {
 	close(w.done)
 }
@@ -180,6 +177,8 @@ func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
 
 	// Create a done channel to control 'ListObjects' go routine.
 	doneCh := make(chan struct{})
+
+	// wait for doneChan to close the other channels
 	go func() {
 		<-doneChan
 
@@ -189,6 +188,8 @@ func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
 	}()
 
 	eventsCh := c.api.ListenBucketNotification(bucket, accountARN, doneCh)
+
+	// wait for events to occur and sent them through the eventChan and errorChan
 	go func() {
 		for notificationInfo := range eventsCh {
 			if notificationInfo.Err != nil {
