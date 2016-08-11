@@ -23,7 +23,7 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// EventType is the type of the event that occured
+// EventType is the type of the event that occurred
 type EventType uint8
 
 const (
@@ -33,7 +33,7 @@ const (
 	EventRemove
 )
 
-// Event contains the information of the event that occured
+// Event contains the information of the event that occurred
 type Event struct {
 	Path   string
 	Client Client

@@ -143,12 +143,12 @@ func (c *s3Client) GetURL() clientURL {
 	return *c.targetURL
 }
 
-// Events returns the chan recieving events
+// Events returns the chan receiving events
 func (w *watchObject) Events() chan Event {
 	return w.events
 }
 
-// Errors returns the chan recieving errors
+// Errors returns the chan receiving errors
 func (w *watchObject) Errors() chan *probe.Error {
 	return w.errors
 }
