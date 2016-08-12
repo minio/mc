@@ -43,9 +43,6 @@ func fixateScanBar(text string, width int) string {
 // Progress bar function report objects being scaned.
 type scanBarFunc func(string)
 
-func discardScanBarFactory(s string) {
-}
-
 // scanBarFactory returns a progress bar function to report URL scanning.
 func scanBarFactory() scanBarFunc {
 	fileCount := 0

@@ -664,6 +664,8 @@ func (ms *mirrorSession) shutdown() {
 func newMirrorSession(session *sessionV7) *mirrorSession {
 	args := session.Header.CommandArgs
 
+	// we'll define the status to use here,
+	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
 	if globalQuiet || globalJSON {
 		status = NewQuietStatus()
@@ -688,8 +690,10 @@ func newMirrorSession(session *sessionV7) *mirrorSession {
 		wgMirror: new(sync.WaitGroup),
 		m:        new(sync.Mutex),
 
-		status:  status,
-		scanBar: discardScanBarFactory,
+		status: status,
+		// scanbar starts with no action
+		scanBar: func(s string) {
+		},
 
 		sourceURLs: args[0],
 		targetURL:  args[len(args)-1], // Last one is target
