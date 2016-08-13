@@ -56,7 +56,7 @@ GLOBAL FLAGS:
   {{range .Flags}}{{.}}
   {{end}}{{end}}
 VERSION:
-  ` + mcVersion +
+  ` + MCVersion +
 	`{{ "\n"}}{{range $key, $value := ExtraInfo}}
 {{$key}}:
   {{$value}}
@@ -76,8 +76,8 @@ func Main() {
 	}
 
 	probe.Init() // Set project's root source path.
-	probe.SetAppInfo("Release-Tag", mcReleaseTag)
-	probe.SetAppInfo("Commit", mcShortCommitID)
+	probe.SetAppInfo("Release-Tag", MCReleaseTag)
+	probe.SetAppInfo("Commit", MCShortCommitID)
 
 	app := registerApp()
 	app.Before = registerBefore
