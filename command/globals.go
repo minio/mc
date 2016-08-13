@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// This package contains all the global variables and constants. ONLY TO BE ACCESSED VIA GET/SET FUNCTIONS.
+// Package command contains all the global variables and constants. ONLY TO BE ACCESSED VIA GET/SET FUNCTIONS.
 package command
 
 import (

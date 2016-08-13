@@ -1,5 +1,5 @@
 /*
- * Minio Client, (C) 2015 Minio, Inc.
+ * Minio Client, (C) 2015, 2016 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Session V2 - Version 2 stores session header and session data in
+// Package command - session V7 - Version 7 stores session header and session data in
 // two separate files. Session data contains fully prepared URL list.
 package command
 

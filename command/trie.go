@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014, 2015, 2016 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// This file implements a simple trie tree to be used for 'mc' cli commands.
+// Package command - This file implements a simple trie tree to be used for 'mc' cli commands.
 package command
 
 // This package borrows idea from - https://godoc.org/golang.org/x/text/internal/triegen.

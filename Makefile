@@ -26,8 +26,8 @@ vet:
 	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./pkg
 
 spelling:
-	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell *.go
-	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell command/**/*
+	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell *
+	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell command/*
 	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell pkg/**/*
 
 fmt:
@@ -38,12 +38,11 @@ fmt:
 lint:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint .
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/command
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/command...
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/pkg...
 
 cyclo:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 *.go
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 command
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 pkg
 
@@ -56,17 +55,12 @@ build: getdeps verifiers
 
 test: getdeps verifiers
 	@echo "Running all testing:"
-	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) ./
-	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/command
+	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/command...
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build
 	@GO15VENDOREXPERIMENT=1 go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/mc
 	@mkdir -p $(HOME)/.mc
-
-coverage:
-	@GO15VENDOREXPERIMENT=1 go test -race -coverprofile=cover.out ./
-	@go tool cover -html=cover.out && echo "Visit your browser"
 
 
 pkg-validate-arg-%: ;
