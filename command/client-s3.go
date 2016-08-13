@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -32,8 +33,8 @@ import (
 	"io/ioutil"
 
 	"github.com/minio/mc/pkg/httptracer"
+	"github.com/minio/minio-go"
 	"github.com/minio/minio/pkg/probe"
-	"gopkg.in/minio/minio-go.v2"
 )
 
 // S3 client
@@ -140,6 +141,96 @@ var s3New = newFactory()
 // GetURL get url.
 func (c *s3Client) GetURL() clientURL {
 	return *c.targetURL
+}
+
+// Events returns the chan receiving events
+func (w *watchObject) Events() chan Event {
+	return w.events
+}
+
+// Errors returns the chan receiving errors
+func (w *watchObject) Errors() chan *probe.Error {
+	return w.errors
+}
+
+// Close the watcher, will stop all goroutines
+func (w *watchObject) Close() {
+	close(w.done)
+}
+
+func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
+	eventChan := make(chan Event)
+	errorChan := make(chan *probe.Error)
+	doneChan := make(chan bool)
+
+	bucket, _ := c.url2BucketAndObject()
+
+	// todo(nl5887): correct arn creation
+	accountARN := minio.NewArn("minio", "lambda", "us-east-1", "mc", "lambda")
+
+	// enable bucket notifications
+	lc := minio.NewNotificationConfig(accountARN)
+	lc.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
+	mb := minio.BucketNotification{}
+	mb.AddLambda(lc)
+
+	if err := c.api.SetBucketNotification(bucket, mb); err != nil {
+		return nil, probe.NewError(err)
+	}
+
+	// Create a done channel to control 'ListObjects' go routine.
+	doneCh := make(chan struct{})
+
+	// wait for doneChan to close the other channels
+	go func() {
+		<-doneChan
+
+		close(doneCh)
+		close(eventChan)
+		close(errorChan)
+	}()
+
+	eventsCh := c.api.ListenBucketNotification(bucket, accountARN, doneCh)
+
+	// wait for events to occur and sent them through the eventChan and errorChan
+	go func() {
+		for notificationInfo := range eventsCh {
+			if notificationInfo.Err != nil {
+				errorChan <- probe.NewError(notificationInfo.Err)
+				continue
+			}
+
+			for _, record := range notificationInfo.Records {
+				key := record.S3.Object.Key
+
+				// copy targeturl to source and update path
+				source := *c.targetURL
+				source.Path = path.Join(source.Path, key)
+
+				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
+					eventChan <- Event{
+						Path:   source.String(),
+						Client: c,
+						Type:   EventCreate,
+					}
+				} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
+					eventChan <- Event{
+						Path:   source.String(),
+						Client: c,
+						Type:   EventRemove,
+					}
+				} else {
+					// ignore other events
+				}
+			}
+		}
+	}()
+
+	return &watchObject{
+		events: eventChan,
+		errors: errorChan,
+		done:   doneChan,
+	}, nil
 }
 
 // Get - get object.
@@ -360,10 +451,12 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	if bucket == "" {
 		return nil, probe.NewError(BucketNameEmpty{})
 	} else if object == "" {
-		e := c.api.BucketExists(bucket)
-		if e != nil {
+		if exists, e := c.api.BucketExists(bucket); e != nil {
 			return nil, probe.NewError(e)
+		} else if !exists {
+			return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 		}
+
 		bucketMetadata := &clientContent{}
 		bucketMetadata.URL = *c.targetURL
 		bucketMetadata.Type = os.ModeDir

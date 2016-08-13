@@ -131,7 +131,7 @@ func (c copyStatMessage) String() string {
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *accounter) copyURLs {
+func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounter) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -213,7 +213,7 @@ func doCopy(cpURLs copyURLs, progressReader *progressBar, accountingReader *acco
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cpURLs copyURLs, progressReader *progressBar) copyURLs {
+func doCopyFake(cpURLs URLs, progressReader *progressBar) URLs {
 	if !globalQuiet && !globalJSON {
 		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
 	}
@@ -312,7 +312,7 @@ func doCopySession(session *sessionV7) {
 	}
 
 	// Wait on status of doCopy() operation.
-	var statusCh = make(chan copyURLs)
+	var statusCh = make(chan URLs)
 
 	// Add a wait group.
 	var wg = new(sync.WaitGroup)
@@ -352,7 +352,7 @@ func doCopySession(session *sessionV7) {
 					case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
 						continue
 					// Handle these specifically for object storage related errors.
-					case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
+					case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
 						continue
 					}
 					// For critical errors we should exit. Session
@@ -366,7 +366,7 @@ func doCopySession(session *sessionV7) {
 
 	// Loop through all urls.
 	for urlScanner.Scan() {
-		var cpURLs copyURLs
+		var cpURLs URLs
 		// Unmarshal copyURLs from each line.
 		json.Unmarshal([]byte(urlScanner.Text()), &cpURLs)
 
