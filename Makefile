@@ -51,7 +51,6 @@ deadcode:
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/deadcode
 
 build: getdeps verifiers
-	@echo "Installing mc:"
 
 test: getdeps verifiers
 	@echo "Running all testing:"
@@ -59,9 +58,13 @@ test: getdeps verifiers
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build
+	@echo "Installing mc:"
 	@GO15VENDOREXPERIMENT=1 go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/mc
 	@mkdir -p $(HOME)/.mc
 
+coverage: getdeps verifiers
+	@echo "Running all coverage:"
+	@GO15VENDOREXPERIMENT=1 ./buildscripts/go-coverage.sh
 
 pkg-validate-arg-%: ;
 ifndef PKG
