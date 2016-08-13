@@ -87,12 +87,6 @@
 			"path": "gopkg.in/check.v1",
 			"revision": "11d3bc7aa68e238947792f30573146a3231fc0f1",
 			"revisionTime": "2015-07-29T10:04:31+02:00"
-		},
-		{
-			"checksumSHA1": "LcrCCf7vVASsQ8ET/2T2igCLlnk=",
-			"path": "gopkg.in/minio/minio-go.v2",
-			"revision": "9f282f76643244430e3d0b69dc7285628a8db8a7",
-			"revisionTime": "2016-07-19T21:19:03Z"
 		}
 	],
 	"rootPath": "github.com/minio/mc"
