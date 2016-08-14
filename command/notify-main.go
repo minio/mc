@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package main
+package command
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/probe"
 )
 
 var (
@@ -78,31 +78,37 @@ func mainNotify(ctx *cli.Context) {
 	path := args[0]
 
 	region := ctx.String("account-region")
-	accountId := ctx.String("account-id")
+	accountID := ctx.String("account-id")
 
-	client, pErr := newClient(path)
+	s3Client, pErr := newClient(path)
 	if pErr != nil {
 		fatalIf(pErr.Trace(), "Cannot parse the provided url.")
 	}
 
-	// For the moment, we only support s3
-	s3Client, ok := client.(*s3Client)
-	if !ok {
-		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
-	}
-
 	// Start watching on events
-	notificationCh, err := s3Client.Watch(region, accountId, nil)
-	fatalIf(probe.NewError(err), "Cannot watch on the specified bucket.")
+	wo, err := s3Client.Watch(watchParams{accountRegion: region, accountID: accountID, recursive: false})
 
-	// Print all notifications as we receive them
-	for notification := range notificationCh {
-		if notification.Err != nil {
-			// Ignore errors
-			continue
+	fatalIf(err, "Cannot watch on the specified bucket.")
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case event, ok := <-wo.Events():
+				if !ok {
+					return
+				}
+				fmt.Printf("%s\t%s\n", event.Type, event.Path)
+			case err, ok := <-wo.Errors():
+				if !ok {
+					return
+				}
+				fmt.Printf("Error received: ", err)
+			}
 		}
-		for _, info := range notification.Records {
-			fmt.Printf("%s\t%s\t%s\n", info.EventName, info.S3.Bucket.Name, info.S3.Object.Key)
-		}
-	}
+	}()
+
+	wg.Wait()
 }

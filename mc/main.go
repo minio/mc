@@ -250,6 +250,7 @@ func registerApp() *cli.App {
 	registerCmd(sessionCmd) // Manage sessions for copy and mirror.
 	registerCmd(configCmd)  // Configure minio client.
 	registerCmd(updateCmd)  // Check for new software updates.
+	registerCmd(notifyCmd)  // Add notify cmd
 	registerCmd(versionCmd) // Print version.
 
 	app := cli.NewApp()

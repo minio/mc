@@ -158,15 +158,14 @@ func (w *watchObject) Close() {
 	close(w.done)
 }
 
-func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
+func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan Event)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 
 	bucket, _ := c.url2BucketAndObject()
 
-	// todo(nl5887): correct arn creation
-	accountARN := minio.NewArn("minio", "lambda", "us-east-1", "mc", "lambda")
+	accountARN := minio.NewArn("minio", "lambda", params.accountRegion, params.accountID, "lambda")
 
 	// enable bucket notifications
 	lc := minio.NewNotificationConfig(accountARN)
@@ -178,7 +177,6 @@ func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
 		return nil, probe.NewError(err)
 	}
 
-	// Create a done channel to control 'ListObjects' go routine.
 	doneCh := make(chan struct{})
 
 	// wait for doneChan to close the other channels
@@ -894,33 +892,4 @@ func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 	}
 	_, m, e := c.api.PresignedPostPolicy(p)
 	return m, probe.NewError(e)
-}
-
-// Export minio.NotificationInfo
-type NotificationInfo minio.NotificationInfo
-
-// Listening on a bucket notifications for all minio events
-func (c *s3Client) Watch(region, accountId string, doneCh <-chan struct{}) (chan NotificationInfo, error) {
-	notifyCh := make(chan NotificationInfo)
-	bucket, _ := c.url2BucketAndObject()
-
-	// Ask the server to report all S3 operations
-	lambdaArn := minio.NewArn("minio", "lambda", region, accountId, "lambda")
-	lambdaConfig := minio.NewNotificationConfig(lambdaArn)
-	lambdaConfig.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
-
-	bucketNotification := minio.BucketNotification{}
-	bucketNotification.AddLambda(lambdaConfig)
-	err := c.api.SetBucketNotification(bucket, bucketNotification)
-	if err != nil {
-		return nil, err
-	}
-
-	// Start listening
-	go func() {
-		for notification := range c.api.ListenBucketNotification(bucket, lambdaArn, doneCh) {
-			notifyCh <- NotificationInfo(notification)
-		}
-	}()
-	return notifyCh, nil
 }
