@@ -451,12 +451,13 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	if bucket == "" {
 		return nil, probe.NewError(BucketNameEmpty{})
 	} else if object == "" {
-		if exists, e := c.api.BucketExists(bucket); e != nil {
+		exists, e := c.api.BucketExists(bucket)
+		if e != nil {
 			return nil, probe.NewError(e)
-		} else if !exists {
+		}
+		if !exists {
 			return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 		}
-
 		bucketMetadata := &clientContent{}
 		bucketMetadata.URL = *c.targetURL
 		bucketMetadata.Type = os.ModeDir
@@ -893,4 +894,33 @@ func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 	}
 	_, m, e := c.api.PresignedPostPolicy(p)
 	return m, probe.NewError(e)
+}
+
+// Export minio.NotificationInfo
+type NotificationInfo minio.NotificationInfo
+
+// Listening on a bucket notifications for all minio events
+func (c *s3Client) Watch(region, accountId string, doneCh <-chan struct{}) (chan NotificationInfo, error) {
+	notifyCh := make(chan NotificationInfo)
+	bucket, _ := c.url2BucketAndObject()
+
+	// Ask the server to report all S3 operations
+	lambdaArn := minio.NewArn("minio", "lambda", region, accountId, "lambda")
+	lambdaConfig := minio.NewNotificationConfig(lambdaArn)
+	lambdaConfig.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
+
+	bucketNotification := minio.BucketNotification{}
+	bucketNotification.AddLambda(lambdaConfig)
+	err := c.api.SetBucketNotification(bucket, bucketNotification)
+	if err != nil {
+		return nil, err
+	}
+
+	// Start listening
+	go func() {
+		for notification := range c.api.ListenBucketNotification(bucket, lambdaArn, doneCh) {
+			notifyCh <- NotificationInfo(notification)
+		}
+	}()
+	return notifyCh, nil
 }
