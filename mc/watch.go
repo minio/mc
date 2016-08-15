@@ -19,25 +19,33 @@ package mc
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/minio/minio/pkg/probe"
 )
 
 // EventType is the type of the event that occurred
-type EventType uint8
+type EventType string
 
 const (
 	// EventCreate notifies when a new object has been created
-	EventCreate EventType = iota
+	EventCreate EventType = "ObjectCreated"
 	// EventRemove notifies when a new object has been deleted
-	EventRemove
+	EventRemove = "ObjectRemoved"
 )
 
 // Event contains the information of the event that occurred
 type Event struct {
-	Path   string
-	Client Client
-	Type   EventType
+	Time   time.Time `json:"time"`
+	Path   string    `json:"path"`
+	Client Client    `json:"-"`
+	Type   EventType `json:"type"`
+}
+
+type watchParams struct {
+	accountID     string
+	accountRegion string
+	recursive     bool
 }
 
 type watchObject struct {
@@ -51,7 +59,7 @@ type watchObject struct {
 
 // ClientWatcher is the interface being implemented by the different clients
 type ClientWatcher interface {
-	Watch(recursive bool) (*watchObject, *probe.Error)
+	Watch(params watchParams) (*watchObject, *probe.Error)
 }
 
 // Watcher can be used to have one or multiple clients watch for notifications
@@ -118,7 +126,7 @@ func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 		return probe.NewError(fmt.Errorf("Client has no Watcher interface."))
 	}
 
-	wo, err := cw.Watch(recursive)
+	wo, err := cw.Watch(watchParams{recursive: recursive})
 	if err != nil {
 		return err
 	}

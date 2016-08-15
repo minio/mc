@@ -46,6 +46,9 @@ type Client interface {
 	ShareDownload(expires time.Duration) (string, *probe.Error)
 	ShareUpload(bool, time.Duration, string) (map[string]string, *probe.Error)
 
+	// Watch events
+	Watch(params watchParams) (*watchObject, *probe.Error)
+
 	// Delete operations
 	Remove(incomplete bool) *probe.Error
 

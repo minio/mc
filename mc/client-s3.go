@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -158,27 +157,49 @@ func (w *watchObject) Close() {
 	close(w.done)
 }
 
-func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
+// Enable/Disable lambda bucket notification
+func (c *s3Client) ToogleLambdaNotificationStatus(enable bool, region, accountID string) *probe.Error {
+
+	bucket, _ := c.url2BucketAndObject()
+
+	if err := isValidBucketName(bucket); err != nil {
+		return err
+	}
+
+	mb, err := c.api.GetBucketNotification(bucket)
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	accountARN := minio.NewArn("minio", "lambda", region, accountID, "lambda")
+
+	if enable {
+		// Enable lambda bucket notification
+		lc := minio.NewNotificationConfig(accountARN)
+		lc.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
+		mb.AddLambda(lc)
+	} else {
+		// Remove lambda bucket notification
+		mb.RemoveLambdaByArn(accountARN)
+	}
+
+	// Set the new bucket configuration
+	if err := c.api.SetBucketNotification(bucket, mb); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan Event)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 
 	bucket, _ := c.url2BucketAndObject()
-
-	// todo(nl5887): correct arn creation
-	accountARN := minio.NewArn("minio", "lambda", "us-east-1", "mc", "lambda")
-
-	// enable bucket notifications
-	lc := minio.NewNotificationConfig(accountARN)
-	lc.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
-	mb := minio.BucketNotification{}
-	mb.AddLambda(lc)
-
-	if err := c.api.SetBucketNotification(bucket, mb); err != nil {
-		return nil, probe.NewError(err)
+	if err := isValidBucketName(bucket); err != nil {
+		return nil, err
 	}
 
-	// Create a done channel to control 'ListObjects' go routine.
 	doneCh := make(chan struct{})
 
 	// wait for doneChan to close the other channels
@@ -190,6 +211,7 @@ func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
 		close(errorChan)
 	}()
 
+	accountARN := minio.NewArn("minio", "lambda", params.accountRegion, params.accountID, "lambda")
 	eventsCh := c.api.ListenBucketNotification(bucket, accountARN, doneCh)
 
 	// wait for events to occur and sent them through the eventChan and errorChan
@@ -201,21 +223,22 @@ func (c *s3Client) Watch(recursive bool) (*watchObject, *probe.Error) {
 			}
 
 			for _, record := range notificationInfo.Records {
+				bucketName := record.S3.Bucket.Name
 				key := record.S3.Object.Key
 
-				// copy targeturl to source and update path
-				source := *c.targetURL
-				source.Path = path.Join(source.Path, key)
+				source := bucketName + "/" + key
 
 				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
 					eventChan <- Event{
-						Path:   source.String(),
+						Time:   time.Now(),
+						Path:   source,
 						Client: c,
 						Type:   EventCreate,
 					}
 				} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
 					eventChan <- Event{
-						Path:   source.String(),
+						Time:   time.Now(),
+						Path:   source,
 						Client: c,
 						Type:   EventRemove,
 					}
@@ -451,12 +474,13 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 	if bucket == "" {
 		return nil, probe.NewError(BucketNameEmpty{})
 	} else if object == "" {
-		if exists, e := c.api.BucketExists(bucket); e != nil {
+		exists, e := c.api.BucketExists(bucket)
+		if e != nil {
 			return nil, probe.NewError(e)
-		} else if !exists {
+		}
+		if !exists {
 			return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 		}
-
 		bucketMetadata := &clientContent{}
 		bucketMetadata.URL = *c.targetURL
 		bucketMetadata.Type = os.ModeDir

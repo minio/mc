@@ -86,7 +86,7 @@ func (f *fsClient) GetURL() clientURL {
 	return *f.PathURL
 }
 
-func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
+func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan Event)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
@@ -128,7 +128,7 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 						errorChan <- probe.NewError(err)
 					} else if !i.IsDir() {
 						// we want files
-					} else if !recursive {
+					} else if !params.recursive {
 						// we don't want to watch recursively
 						continue
 					} else if err := watcher.Add(event.Name); err == nil {
@@ -143,12 +143,14 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 					fallthrough
 				case event.Op&fsnotify.Write == fsnotify.Write:
 					eventChan <- Event{
+						Time:   time.Now(),
 						Path:   event.Name,
 						Client: f,
 						Type:   EventCreate,
 					}
 				case event.Op&fsnotify.Remove == fsnotify.Remove:
 					eventChan <- Event{
+						Time:   time.Now(),
 						Path:   event.Name,
 						Client: f,
 						Type:   EventRemove,
@@ -165,7 +167,7 @@ func (f *fsClient) Watch(recursive bool) (*watchObject, *probe.Error) {
 	}()
 
 	// add recursive folders
-	if recursive {
+	if params.recursive {
 		if err := ioutils.FTW(f.PathURL.Path, func(fp string, fi os.FileInfo, e error) error {
 			if !fi.IsDir() {
 				return ioutils.ErrSkipFile
