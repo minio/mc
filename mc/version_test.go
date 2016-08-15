@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,16 @@
  * limitations under the License.
  */
 
-package main
+package mc
 
-import mc "github.com/minio/mc/mc"
+import (
+	"net/http"
+	"time"
 
-func main() {
-	mc.Main()
+	. "gopkg.in/check.v1"
+)
+
+func (s *TestSuite) TestVersion(c *C) {
+	_, e := time.Parse(MCVersion, http.TimeFormat)
+	c.Assert(e, NotNil)
 }
