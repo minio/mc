@@ -5,7 +5,7 @@
 # 1. Pass a variable as stdin
 # 2. Assert result returned by mc cat is the same
 # 3. Repeat the same for mc pipe with no arguments
-# 4. Take a random string to test for non existant files
+# 4. Take a random string to test for non existent files
 
 dummy_string="asdasd"
 
