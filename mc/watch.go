@@ -19,25 +19,27 @@ package mc
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/minio/minio/pkg/probe"
 )
 
 // EventType is the type of the event that occurred
-type EventType uint8
+type EventType string
 
 const (
 	// EventCreate notifies when a new object has been created
-	EventCreate EventType = iota
+	EventCreate EventType = "ObjectCreated"
 	// EventRemove notifies when a new object has been deleted
-	EventRemove
+	EventRemove = "ObjectRemoved"
 )
 
 // Event contains the information of the event that occurred
 type Event struct {
-	Path   string
-	Client Client
-	Type   EventType
+	Time   time.Time `json:"time"`
+	Path   string    `json:"path"`
+	Client Client    `json:"-"`
+	Type   EventType `json:"type"`
 }
 
 type watchParams struct {

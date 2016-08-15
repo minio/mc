@@ -246,11 +246,11 @@ func registerApp() *cli.App {
 	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
 	registerCmd(diffCmd)    // Computer differences between two files or folders.
 	registerCmd(rmCmd)      // Remove a file or bucket
+	registerCmd(notifyCmd)  // Add notify cmd
 	registerCmd(policyCmd)  // Set policy permissions.
 	registerCmd(sessionCmd) // Manage sessions for copy and mirror.
 	registerCmd(configCmd)  // Configure minio client.
 	registerCmd(updateCmd)  // Check for new software updates.
-	registerCmd(notifyCmd)  // Add notify cmd
 	registerCmd(versionCmd) // Print version.
 
 	app := cli.NewApp()

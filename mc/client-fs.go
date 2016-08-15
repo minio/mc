@@ -143,12 +143,14 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 					fallthrough
 				case event.Op&fsnotify.Write == fsnotify.Write:
 					eventChan <- Event{
+						Time:   time.Now(),
 						Path:   event.Name,
 						Client: f,
 						Type:   EventCreate,
 					}
 				case event.Op&fsnotify.Remove == fsnotify.Remove:
 					eventChan <- Event{
+						Time:   time.Now(),
 						Path:   event.Name,
 						Client: f,
 						Type:   EventRemove,
