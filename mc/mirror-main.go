@@ -88,12 +88,14 @@ EXAMPLES:
    4. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--force' to overwrite destination.
       $ mc {{.Name}} --force s3/miniocloud miniocloud-backup
 
-   5. Fake mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} --fake play/photos/2014 s3/backup-photos/2014
-
-   6. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
+   5. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
       files on Amazon S3 cloud storage. NOTE: '--remove' is only supported with '--force'.
       $ mc {{.Name}} --force --remove play/photos/2014 s3/backup-photos/2014
+
+   6. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
+      new objects and uploads them.
+      $ mc {{.Name}} --force --remove --watch /var/lib/backups play/backups
+
 `,
 }
 
@@ -133,8 +135,8 @@ type mirrorSession struct {
 	status  Status
 	scanBar scanBarFunc
 
-	sourceURLs string
-	targetURL  string
+	sourceURL string
+	targetURL string
 }
 
 // mirrorMessage container for file mirror messages
@@ -303,7 +305,9 @@ func (ms *mirrorSession) startStatus() {
 				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
 					continue
 				// Handle these specifically for object storage related errors.
-				case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
+				case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists:
+					continue
+				case ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
 					continue
 				}
 
@@ -391,21 +395,15 @@ func (ms *mirrorSession) watch() {
 			// this code seems complicated, it will change the expanded alias back to the alias
 			// again, by replacing the sourceUrlFull with the sourceAlias. This url will be
 			// used to mirror.
-			sourceAlias, sourceURLFull, _ := mustExpandAlias(ms.sourceURLs)
+			sourceAlias, sourceURLFull, _ := mustExpandAlias(ms.sourceURL)
 			sourceURL := newClientURL(event.Path)
 
-			aliasedPath := strings.Replace(event.Path, sourceURLFull, ms.sourceURLs, -1)
+			aliasedPath := strings.Replace(event.Path, sourceURLFull, ms.sourceURL, -1)
 
 			// build target path, it is the relative of the event.Path with the sourceUrl
 			// joined to the targetURL.
-			targetPath := ms.targetURL
-			if rel, err := filepath.Rel(event.Client.GetURL().Path, newClientURL(event.Path).Path); err == nil {
-				targetPath = filepath.Join(targetPath, rel)
-			} else {
-				ms.status.errorIf(probe.NewError(err),
-					fmt.Sprintf("Got error during monitoring."))
-				continue
-			}
+			sourceSuffix := strings.TrimPrefix(event.Path, sourceURLFull)
+			targetPath := urlJoinPath(ms.targetURL, sourceSuffix)
 
 			// newClient needs the unexpanded  path, newCLientURL needs the expanded path
 			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
@@ -462,23 +460,27 @@ func (ms *mirrorSession) watch() {
 			}
 
 		case err := <-ms.watcher.Errors():
-			errorIf(err,
-				fmt.Sprintf("Got error during monitoring."))
+			errorIf(err, "Unexpected error during monitoring.")
 		}
 	}
 }
 
-func (ms *mirrorSession) watchSourceURLs(recursive bool) *probe.Error {
-	if sourceClient, err := newClient(ms.sourceURLs); err != nil {
-		return err
-	} else if err := ms.watcher.Join(sourceClient, recursive /*, events to monitor here*/); err != nil {
-		return err
-	} else {
-		// no errors, all set.
-	}
-
-	return nil
+func (ms *mirrorSession) unwatchSourceURL(recursive bool) *probe.Error {
+	sourceClient, err := newClient(ms.sourceURL)
+	if err == nil {
+		return ms.watcher.Unjoin(sourceClient, recursive)
+	} // Failed to initialize client.
+	return err
 }
+
+func (ms *mirrorSession) watchSourceURL(recursive bool) *probe.Error {
+	sourceClient, err := newClient(ms.sourceURL)
+	if err == nil {
+		return ms.watcher.Join(sourceClient, recursive)
+	} // Failed to initialize client.
+	return err
+}
+
 func (ms *mirrorSession) harvestSessionUrls() {
 	defer close(ms.harvestCh)
 
@@ -506,7 +508,7 @@ func (ms *mirrorSession) harvestSourceUrls(recursive bool) {
 
 	defer close(ms.harvestCh)
 
-	URLsCh := prepareMirrorURLs(ms.sourceURLs, ms.targetURL, isForce, isFake, isRemove)
+	URLsCh := prepareMirrorURLs(ms.sourceURL, ms.targetURL, isForce, isFake, isRemove)
 	for url := range URLsCh {
 		ms.harvestCh <- url
 	}
@@ -609,6 +611,9 @@ func (ms *mirrorSession) mirror() {
 
 		ms.shutdown()
 
+		// Remove watches on source url.
+		ms.unwatchSourceURL(true)
+
 		// no items left, just stop
 		if ms.queue.Count() == 0 {
 			ms.Delete()
@@ -623,7 +628,7 @@ func (ms *mirrorSession) mirror() {
 	// and queue them for copying. Monitor mode can be stopped
 	// only by SIGTERM.
 	if watch {
-		if err := ms.watchSourceURLs(true); err != nil {
+		if err := ms.watchSourceURL(true); err != nil {
 			ms.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 		}
 
@@ -643,6 +648,7 @@ func (ms *mirrorSession) mirror() {
 	}
 }
 
+// Called upon signal trigger.
 func (ms *mirrorSession) shutdown() {
 	// make sure only one shutdown can be active
 	ms.m.Lock()
@@ -679,7 +685,7 @@ func newMirrorSession(session *sessionV7) *mirrorSession {
 		harvestCh: make(chan URLs),
 		errorCh:   make(chan *probe.Error),
 
-		watcher: NewWatcher(),
+		watcher: NewWatcher(session.Header.When),
 
 		// we're using a queue instead of a channel, this allows us to gracefully
 		// stop. if we're using a channel and want to trap a signal, the channel
@@ -695,8 +701,8 @@ func newMirrorSession(session *sessionV7) *mirrorSession {
 		scanBar: func(s string) {
 		},
 
-		sourceURLs: args[0],
-		targetURL:  args[len(args)-1], // Last one is target
+		sourceURL: args[0],
+		targetURL: args[len(args)-1], // Last one is target
 	}
 
 	return &ms

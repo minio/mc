@@ -86,6 +86,12 @@ func (f *fsClient) GetURL() clientURL {
 	return *f.PathURL
 }
 
+// Unwatch - not implemented for fs, on purpose.
+func (f *fsClient) Unwatch(params watchParams) *probe.Error {
+	return nil
+}
+
+// Watches for all fs events on an input path.
 func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan Event)
 	errorChan := make(chan *probe.Error)
