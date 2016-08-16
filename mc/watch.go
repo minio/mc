@@ -57,13 +57,10 @@ type watchObject struct {
 	done chan bool
 }
 
-// ClientWatcher is the interface being implemented by the different clients
-type ClientWatcher interface {
-	Watch(params watchParams) (*watchObject, *probe.Error)
-}
-
 // Watcher can be used to have one or multiple clients watch for notifications
 type Watcher struct {
+	sessionStartTime time.Time
+
 	// all errors will be added to this chan
 	errorsChan chan *probe.Error
 	// all events will be added to this chan
@@ -77,12 +74,12 @@ type Watcher struct {
 }
 
 // NewWatcher creates a new watcher
-func NewWatcher() *Watcher {
+func NewWatcher(sessionStartTime time.Time) *Watcher {
 	return &Watcher{
-		errorsChan: make(chan *probe.Error),
-		eventsChan: make(chan Event),
-
-		o: []*watchObject{},
+		sessionStartTime: sessionStartTime,
+		errorsChan:       make(chan *probe.Error),
+		eventsChan:       make(chan Event),
+		o:                []*watchObject{},
 	}
 }
 
@@ -119,14 +116,24 @@ func (w *Watcher) Wait() {
 	w.wg.Wait()
 }
 
+// Unjoin the watcher from client.
+func (w *Watcher) Unjoin(client Client, recursive bool) *probe.Error {
+	err := client.Unwatch(watchParams{
+		recursive: recursive,
+		accountID: fmt.Sprintf("%d", w.sessionStartTime.Unix()),
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Join the watcher with client
 func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
-	cw, ok := client.(ClientWatcher)
-	if !ok {
-		return probe.NewError(fmt.Errorf("Client has no Watcher interface."))
-	}
-
-	wo, err := cw.Watch(watchParams{recursive: recursive})
+	wo, err := client.Watch(watchParams{
+		recursive: recursive,
+		accountID: fmt.Sprintf("%d", w.sessionStartTime.Unix()),
+	})
 	if err != nil {
 		return err
 	}

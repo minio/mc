@@ -19,6 +19,7 @@ package minio
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -125,6 +126,7 @@ func (c Client) ListenBucketNotification(bucketName string, accountArn Arn, done
 	go func(notificationInfoCh chan<- NotificationInfo) {
 		defer close(notificationInfoCh)
 
+		// Validate the bucket name.
 		if err := isValidBucketName(bucketName); err != nil {
 			notificationInfoCh <- NotificationInfo{
 				Err: err,
@@ -132,53 +134,68 @@ func (c Client) ListenBucketNotification(bucketName string, accountArn Arn, done
 			return
 		}
 
-		urlValues := make(url.Values)
-		urlValues.Set("notificationARN", accountArn.String())
+		// Continously run and listen on bucket notification.
+		for {
+			urlValues := make(url.Values)
+			urlValues.Set("notificationARN", accountArn.String())
 
-		// Execute GET on bucket to list objects.
-		resp, err := c.executeMethod("GET", requestMetadata{
-			bucketName:  bucketName,
-			queryValues: urlValues,
-		})
-		if err != nil {
-			notificationInfoCh <- NotificationInfo{
-				Err: err,
-			}
-			return
-		}
-
-		// Validate http response, upon error return quickly.
-		if resp.StatusCode != http.StatusOK {
-			errResponse := httpRespToErrorResponse(resp, bucketName, "")
-			notificationInfoCh <- NotificationInfo{
-				Err: errResponse,
-			}
-			return
-		}
-
-		// Initialize a new bufio scanner, to read line by line.
-		bio := bufio.NewScanner(resp.Body)
-
-		// Close the response body.
-		defer resp.Body.Close()
-
-		// Unmarshal each line, returns marshalled values.
-		for bio.Scan() {
-			var notificationInfo NotificationInfo
-			buf := bio.Bytes()
-			if err = json.Unmarshal(buf, &notificationInfo); err != nil {
+			// Execute GET on bucket to list objects.
+			resp, err := c.executeMethod("GET", requestMetadata{
+				bucketName:  bucketName,
+				queryValues: urlValues,
+			})
+			if err != nil {
 				notificationInfoCh <- NotificationInfo{
 					Err: err,
 				}
 				return
 			}
-			// Send notifications on channel only if there are events received.
-			if len(notificationInfo.Records) > 0 {
-				select {
-				case notificationInfoCh <- notificationInfo:
-				case <-doneCh:
+
+			// Validate http response, upon error return quickly.
+			if resp.StatusCode != http.StatusOK {
+				errResponse := httpRespToErrorResponse(resp, bucketName, "")
+				notificationInfoCh <- NotificationInfo{
+					Err: errResponse,
+				}
+				return
+			}
+
+			// Initialize a new bufio scanner, to read line by line.
+			bio := bufio.NewScanner(resp.Body)
+
+			// Close the response body.
+			defer resp.Body.Close()
+
+			// Unmarshal each line, returns marshalled values.
+			for bio.Scan() {
+				var notificationInfo NotificationInfo
+				if err = json.Unmarshal(bio.Bytes(), &notificationInfo); err != nil {
+					notificationInfoCh <- NotificationInfo{
+						Err: err,
+					}
 					return
 				}
+				// Send notifications on channel only if there are events received.
+				if len(notificationInfo.Records) > 0 {
+					select {
+					case notificationInfoCh <- notificationInfo:
+					case <-doneCh:
+						return
+					}
+				}
+			}
+			// Look for any underlying errors.
+			if err = bio.Err(); err != nil {
+				// For an unexpected connection drop from server, we close the body
+				// and re-connect.
+				if err == io.ErrUnexpectedEOF {
+					resp.Body.Close()
+					continue
+				}
+				notificationInfoCh <- NotificationInfo{
+					Err: err,
+				}
+				return
 			}
 		}
 	}(notificationInfoCh)

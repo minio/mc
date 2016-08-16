@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -190,14 +191,92 @@ func (c *s3Client) ToogleLambdaNotificationStatus(enable bool, region, accountID
 	return nil
 }
 
+// Unwatch de-registers all bucket notification events for a given accountID.
+func (c *s3Client) Unwatch(params watchParams) *probe.Error {
+	// Extract bucket and object.
+	bucket, _ := c.url2BucketAndObject()
+	if err := isValidBucketName(bucket); err != nil {
+		return err
+	}
+
+	// Fetch the bucket location.
+	location, e := c.api.GetBucketLocation(bucket)
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	// Fetch any existing bucket notification on the bucket.
+	nConfig, e := c.api.GetBucketNotification(bucket)
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	// Construct account ARN.
+	accountARN := minio.NewArn("minio", "sns", location, params.accountID, "listen")
+
+	// Remove account ARN if any.
+	nConfig.RemoveTopicByArn(accountARN)
+
+	// Set back the new sets of notifications.
+	e = c.api.SetBucketNotification(bucket, nConfig)
+	if e != nil {
+		return probe.NewError(e)
+	}
+
+	// Success.
+	return nil
+}
+
+// Start watching on all bucket events for a given account ID.
 func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan Event)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 
-	bucket, _ := c.url2BucketAndObject()
+	// Extract bucket and object.
+	bucket, object := c.url2BucketAndObject()
 	if err := isValidBucketName(bucket); err != nil {
 		return nil, err
+	}
+
+	// Fetch the bucket location.
+	location, e := c.api.GetBucketLocation(bucket)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+
+	// Fetch any existing bucket notification on the bucket.
+	nConfig, e := c.api.GetBucketNotification(bucket)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+
+	accountARN := minio.NewArn("minio", "sns", location, params.accountID, "listen")
+	// If there are no SNS topics configured, configure the first one.
+	shouldSetNotification := len(nConfig.TopicConfigs) == 0
+	if !shouldSetNotification {
+		// Assume we are going to set bucket notification.
+		shouldSetNotification = true
+		// We found previously configured SNS topics, validate if current account-id is same.
+		for _, topicConfig := range nConfig.TopicConfigs {
+			if topicConfig.Topic == accountARN.String() {
+				shouldSetNotification = false
+				break
+			}
+		}
+	}
+	// Flag set to set the notification.
+	if shouldSetNotification {
+		topicConfig := minio.NewNotificationConfig(accountARN)
+		topicConfig.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
+		if object != "" {
+			topicConfig.AddFilterPrefix(object)
+		}
+		nConfig.AddTopic(topicConfig)
+		e = c.api.SetBucketNotification(bucket, nConfig)
+		if e != nil {
+			return nil, probe.NewError(e)
+		}
 	}
 
 	doneCh := make(chan struct{})
@@ -211,7 +290,7 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 		close(errorChan)
 	}()
 
-	accountARN := minio.NewArn("minio", "lambda", params.accountRegion, params.accountID, "lambda")
+	// Start listening on all bucket events.
 	eventsCh := c.api.ListenBucketNotification(bucket, accountARN, doneCh)
 
 	// wait for events to occur and sent them through the eventChan and errorChan
@@ -224,21 +303,25 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 
 			for _, record := range notificationInfo.Records {
 				bucketName := record.S3.Bucket.Name
-				key := record.S3.Object.Key
+				key, e := url.QueryUnescape(record.S3.Object.Key)
+				if e != nil {
+					errorChan <- probe.NewError(e)
+					continue
+				}
 
-				source := bucketName + "/" + key
-
+				u := *c.targetURL
+				u.Path = path.Join(string(u.Separator), bucketName, key)
 				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
 					eventChan <- Event{
 						Time:   time.Now(),
-						Path:   source,
+						Path:   u.String(),
 						Client: c,
 						Type:   EventCreate,
 					}
 				} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
 					eventChan <- Event{
 						Time:   time.Now(),
-						Path:   source,
+						Path:   u.String(),
 						Client: c,
 						Type:   EventRemove,
 					}
