@@ -43,9 +43,11 @@ type Event struct {
 }
 
 type watchParams struct {
-	accountID     string
-	accountRegion string
-	recursive     bool
+	accountID string
+	prefix    string
+	suffix    string
+	events    string
+	recursive bool
 }
 
 type watchObject struct {

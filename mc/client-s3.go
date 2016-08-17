@@ -158,39 +158,6 @@ func (w *watchObject) Close() {
 	close(w.done)
 }
 
-// Enable/Disable lambda bucket notification
-func (c *s3Client) ToogleLambdaNotificationStatus(enable bool, region, accountID string) *probe.Error {
-
-	bucket, _ := c.url2BucketAndObject()
-
-	if err := isValidBucketName(bucket); err != nil {
-		return err
-	}
-
-	mb, err := c.api.GetBucketNotification(bucket)
-	if err != nil {
-		return probe.NewError(err)
-	}
-
-	accountARN := minio.NewArn("minio", "lambda", region, accountID, "lambda")
-
-	if enable {
-		// Enable lambda bucket notification
-		lc := minio.NewNotificationConfig(accountARN)
-		lc.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
-		mb.AddLambda(lc)
-	} else {
-		// Remove lambda bucket notification
-		mb.RemoveLambdaByArn(accountARN)
-	}
-
-	// Set the new bucket configuration
-	if err := c.api.SetBucketNotification(bucket, mb); err != nil {
-		return probe.NewError(err)
-	}
-	return nil
-}
-
 // Unwatch de-registers all bucket notification events for a given accountID.
 func (c *s3Client) Unwatch(params watchParams) *probe.Error {
 	// Extract bucket and object.
@@ -225,6 +192,190 @@ func (c *s3Client) Unwatch(params watchParams) *probe.Error {
 
 	// Success.
 	return nil
+}
+
+// Add bucket notification
+func (c *s3Client) AddNotificationConfig(arn, events, prefix, suffix string) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	if err := isValidBucketName(bucket); err != nil {
+		return err
+	}
+	fields := strings.Split(arn, ":")
+	if len(fields) != 6 {
+		return errInvalidArgument()
+	}
+
+	mb, err := c.api.GetBucketNotification(bucket)
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	accountArn := minio.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
+	lc := minio.NewNotificationConfig(accountArn)
+
+	// Configure events
+	switch events {
+	case "put":
+		lc.AddEvents(minio.ObjectCreatedAll)
+	case "remove":
+		lc.AddEvents(minio.ObjectRemovedAll)
+	case "all":
+		lc.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
+	default:
+		return errInvalidArgument()
+	}
+
+	if prefix != "" {
+		lc.AddFilterPrefix(prefix)
+	}
+	if suffix != "" {
+		lc.AddFilterSuffix(suffix)
+	}
+
+	switch fields[2] {
+	case "sns":
+		mb.AddTopic(lc)
+	case "sqs":
+		mb.AddQueue(lc)
+	case "lambda":
+		mb.AddLambda(lc)
+	default:
+		return errInvalidArgument()
+	}
+
+	// Set the new bucket configuration
+	if err := c.api.SetBucketNotification(bucket, mb); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+// Remove bucket notification
+func (c *s3Client) RemoveNotificationConfig(arn string) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+	if err := isValidBucketName(bucket); err != nil {
+		return err
+	}
+
+	// Remove all notification configs if arn is empty
+	if arn == "" {
+		if err := c.api.RemoveAllBucketNotification(bucket); err != nil {
+			return probe.NewError(err)
+		}
+		return nil
+	}
+
+	mb, err := c.api.GetBucketNotification(bucket)
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	fields := strings.Split(arn, ":")
+	if len(fields) != 6 {
+		return errInvalidArgument()
+	}
+	accountArn := minio.NewArn(fields[1], fields[2], fields[3], fields[4], fields[5])
+
+	switch fields[2] {
+	case "sns":
+		mb.RemoveTopicByArn(accountArn)
+	case "sqs":
+		mb.RemoveQueueByArn(accountArn)
+	case "lambda":
+		mb.RemoveLambdaByArn(accountArn)
+	default:
+		return errInvalidArgument()
+	}
+
+	// Set the new bucket configuration
+	if err := c.api.SetBucketNotification(bucket, mb); err != nil {
+		return probe.NewError(err)
+	}
+	return nil
+}
+
+type notificationConfig struct {
+	ID     string   `json:"id"`
+	Arn    string   `json:"arn"`
+	Events []string `json:"events"`
+	Prefix string   `json:"prefix"`
+	Suffix string   `json:"suffix"`
+}
+
+// List notification configs
+func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *probe.Error) {
+	var configs []notificationConfig
+	bucket, _ := c.url2BucketAndObject()
+	if err := isValidBucketName(bucket); err != nil {
+		return nil, err
+	}
+
+	mb, err := c.api.GetBucketNotification(bucket)
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+
+	// Generate pretty event names from event types
+	prettyEventNames := func(eventsTypes []minio.NotificationEventType) []string {
+		var result []string
+		for _, eventType := range eventsTypes {
+			result = append(result, string(eventType))
+		}
+		return result
+	}
+
+	getFilters := func(config minio.NotificationConfig) (string, string) {
+		prefix := ""
+		suffix := ""
+		for _, filter := range config.Filter.S3Key.FilterRules {
+			if strings.ToLower(filter.Name) == "prefix" {
+				prefix = filter.Value
+			}
+			if strings.ToLower(filter.Name) == "suffix" {
+				suffix = filter.Value
+			}
+
+		}
+		return prefix, suffix
+	}
+
+	for _, config := range mb.TopicConfigs {
+		if arn != "" && config.Topic != arn {
+			continue
+		}
+		prefix, suffix := getFilters(config.NotificationConfig)
+		configs = append(configs, notificationConfig{ID: config.Id,
+			Arn:    config.Topic,
+			Events: prettyEventNames(config.Events),
+			Prefix: prefix,
+			Suffix: suffix})
+	}
+
+	for _, config := range mb.QueueConfigs {
+		if arn != "" && config.Queue != arn {
+			continue
+		}
+		prefix, suffix := getFilters(config.NotificationConfig)
+		configs = append(configs, notificationConfig{ID: config.Id,
+			Arn:    config.Queue,
+			Events: prettyEventNames(config.Events),
+			Prefix: prefix,
+			Suffix: suffix})
+	}
+
+	for _, config := range mb.LambdaConfigs {
+		if arn != "" && config.Lambda != arn {
+			continue
+		}
+		prefix, suffix := getFilters(config.NotificationConfig)
+		configs = append(configs, notificationConfig{ID: config.Id,
+			Arn:    config.Lambda,
+			Events: prettyEventNames(config.Events),
+			Prefix: prefix,
+			Suffix: suffix})
+	}
+
+	return configs, nil
 }
 
 // Start watching on all bucket events for a given account ID.
@@ -268,9 +419,27 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	// Flag set to set the notification.
 	if shouldSetNotification {
 		topicConfig := minio.NewNotificationConfig(accountARN)
-		topicConfig.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
-		if object != "" {
+		switch params.events {
+		case "put":
+			topicConfig.AddEvents(minio.ObjectCreatedAll)
+		case "remove":
+			topicConfig.AddEvents(minio.ObjectRemovedAll)
+		case "all":
+			topicConfig.AddEvents(minio.ObjectCreatedAll, minio.ObjectRemovedAll)
+		default:
+			return nil, errInvalidArgument()
+		}
+		if object != "" && params.prefix != "" {
+			return nil, errInvalidArgument()
+		}
+		if object != "" && params.prefix == "" {
 			topicConfig.AddFilterPrefix(object)
+		}
+		if params.prefix != "" {
+			topicConfig.AddFilterPrefix(params.prefix)
+		}
+		if params.suffix != "" {
+			topicConfig.AddFilterSuffix(params.suffix)
 		}
 		nConfig.AddTopic(topicConfig)
 		e = c.api.SetBucketNotification(bucket, nConfig)

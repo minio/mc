@@ -18,7 +18,11 @@ package mc
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -27,101 +31,105 @@ import (
 )
 
 var (
-	notifyListenFlags = []cli.Flag{
+	listenFlags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "account-region",
-			Value: "us-east-1",
-			Usage: "Specify notification region. Defaults to ‘us-east-1’.",
+			Name:  "events",
+			Value: "all",
+			Usage: "Filter specific type of events. Could be `put` or `delete` or `all`. Defaults is all",
 		},
 		cli.StringFlag{
-			Name:  "account-id",
-			Value: "mc",
-			Usage: "Specify notification account id. Defaults to ‘mc’.",
+			Name:  "prefix",
+			Usage: "Filter events associated to the specified prefix",
 		},
-		cli.BoolFlag{
-			Name:  "recursive",
-			Usage: "Indicate if we should watch events in sub-directories.",
+		cli.StringFlag{
+			Name:  "suffix",
+			Usage: "Filter events associated to the specified suffix",
 		},
 	}
 )
 
-var notifyListenCmd = cli.Command{
+var listenCmd = cli.Command{
 	Name:   "listen",
 	Usage:  "Print realtime bucket notification.",
-	Action: mainNotifyListen,
-	Flags:  append(notifyListenFlags, globalFlags...),
+	Action: mainListen,
+	Flags:  append(listenFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc notify {{.Name}} - {{.Usage}}
+   mc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc notify {{.Name}} [FLAGS]
+   mc {{.Name}} [FLAGS]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Watch new S3 operations on a minio server
-      $ mc notify {{.Name}} myminio/testbucket
+      $ mc {{.Name}} myminio/testbucket
 
-   2. Watch new events on a specific region and account id
-      $ mc notify {{.Name}} myminio/testbucket --account-region us-west-2 --account-id 81132344
+   2. Watch new events on a specific parameters
+      $ mc {{.Name}} myminio/testbucket --prefix "output/"
 `,
 }
 
-// checkNotifyListenSyntax - validate all the passed arguments
-func checkNotifyListenSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
+// checkListenSyntax - validate all the passed arguments
+func checkListenSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "listen", 1) // last argument is exit code
 	}
 }
 
-// notifyListenMessage container to hold one event notification
-type notifyListenMessage struct {
+// listenMessage container to hold one event notification
+type listenMessage struct {
 	Status string `json:"status"`
-	Event  Event  `json:"event"`
+	Event  Event  `json:"events"`
 }
 
-// JSON jsonified update message.
-func (u notifyListenMessage) JSON() string {
+func (u listenMessage) JSON() string {
 	u.Status = "success"
-	notifyMessageJSONBytes, e := json.Marshal(u)
+	listenMessageJSONBytes, e := json.Marshal(u)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(notifyMessageJSONBytes)
+	return string(listenMessageJSONBytes)
 }
 
-func (u notifyListenMessage) String() string {
+func (u listenMessage) String() string {
 	msg := console.Colorize("Time", u.Event.Time.String()+"\t")
 	msg += console.Colorize("EventType", u.Event.Type+"\t")
 	msg += console.Colorize("ObjectName", u.Event.Path)
 	return msg
 }
 
-func mainNotifyListen(ctx *cli.Context) {
-
+func mainListen(ctx *cli.Context) {
 	console.SetColor("Time", color.New(color.FgYellow, color.Bold))
 	console.SetColor("EventType", color.New(color.FgCyan, color.Bold))
 	console.SetColor("EventName", color.New(color.Bold))
 
 	setGlobalsFromContext(ctx)
-
-	checkNotifyListenSyntax(ctx)
+	checkListenSyntax(ctx)
 
 	args := ctx.Args()
 	path := args[0]
 
-	region := ctx.String("account-region")
-	accountID := ctx.String("account-id")
 	recursive := ctx.Bool("recursive")
+	events := ctx.String("events")
+	prefix := ctx.String("prefix")
+	suffix := ctx.String("suffix")
 
 	s3Client, pErr := newClient(path)
 	if pErr != nil {
 		fatalIf(pErr.Trace(), "Cannot parse the provided url.")
 	}
 
-	// Start watching on events
-	wo, err := s3Client.Watch(watchParams{recursive: recursive, accountRegion: region, accountID: accountID})
+	params := watchParams{recursive: recursive,
+		accountID: fmt.Sprintf("%d", time.Now().Unix()),
+		events:    events,
+		prefix:    prefix,
+		suffix:    suffix}
 
+	// Start watching on events
+	wo, err := s3Client.Watch(params)
 	fatalIf(err, "Cannot watch on the specified bucket.")
+
+	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -129,11 +137,14 @@ func mainNotifyListen(ctx *cli.Context) {
 		defer wg.Done()
 		for {
 			select {
+			case <-trapCh:
+				s3Client.Unwatch(params)
+				return
 			case event, ok := <-wo.Events():
 				if !ok {
 					return
 				}
-				msg := notifyListenMessage{Event: event}
+				msg := listenMessage{Event: event}
 				printMsg(msg)
 			case err, ok := <-wo.Errors():
 				if !ok {
