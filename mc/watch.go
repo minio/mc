@@ -36,16 +36,19 @@ const (
 
 // Event contains the information of the event that occurred
 type Event struct {
-	Time   time.Time `json:"time"`
+	Time   string    `json:"time"`
+	Size   int64     `json:"size"`
 	Path   string    `json:"path"`
 	Client Client    `json:"-"`
 	Type   EventType `json:"type"`
 }
 
 type watchParams struct {
-	accountID     string
-	accountRegion string
-	recursive     bool
+	accountID string
+	prefix    string
+	suffix    string
+	events    []string
+	recursive bool
 }
 
 type watchObject struct {
@@ -55,6 +58,21 @@ type watchObject struct {
 	errors chan *probe.Error
 	// will stop the watcher goroutines
 	done chan bool
+}
+
+// Events returns the chan receiving events
+func (w *watchObject) Events() chan Event {
+	return w.events
+}
+
+// Errors returns the chan receiving errors
+func (w *watchObject) Errors() chan *probe.Error {
+	return w.errors
+}
+
+// Close the watcher, will stop all goroutines
+func (w *watchObject) Close() {
+	close(w.done)
 }
 
 // Watcher can be used to have one or multiple clients watch for notifications

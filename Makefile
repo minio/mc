@@ -26,7 +26,7 @@ vet:
 	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./pkg
 
 spelling:
-	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell *
+	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell *.go
 	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell mc/*
 	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell pkg/**/*
 

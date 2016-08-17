@@ -13,6 +13,8 @@ cp            Copy one or more objects to a target.
 mirror        Mirror folders recursively from a single source to single destination.
 diff          Compute differences between two folders.
 rm            Remove file or bucket [WARNING: Use with care].
+events        Manage bucket notification.
+watch         Watch for events on object storage and filesystem.
 policy	      Set public policy on bucket or prefix.
 session       Manage saved sessions of cp and mirror operations.
 config        Manage configuration file.
@@ -294,6 +296,16 @@ Use this option to set a custom config path.
       <td align="left">
          <a href="#diff">
             <strong>diff</strong> - Diff buckets
+         </a>
+      </td>
+      <td align="left">
+         <a href="#watch">
+            <strong>watch</strong> - Watch for events
+         </a>
+      </td>
+      <td align="left">
+         <a href="#events">
+            <strong>events</strong> - Manage events on your buckets.
          </a>
       </td>
    </tr>
@@ -650,6 +662,100 @@ $  mc diff localdir play/mybucket
 
 ```
 
+<a name="watch"></a>
+### Command `watch` - Watch for events object storage and filesystem.
+
+``watch`` provides a convenient way to watch on various types of event notifications on object
+storage and filesystem.
+
+```sh
+
+USAGE:
+   mc watch [FLAGS]
+
+FLAGS:
+   --help, -h                           Help of events.
+
+```
+
+*Example: Watch for all events on object storage*
+
+```sh
+
+$ mc watch play/testbucket
+[2016-08-18T00:51:29.735Z] 2.7KiB ObjectCreated https://play.minio.io:9000/testbucket/CONTRIBUTING.md
+[2016-08-18T00:51:29.780Z]  1009B ObjectCreated https://play.minio.io:9000/testbucket/MAINTAINERS.md
+[2016-08-18T00:51:29.839Z] 6.9KiB ObjectCreated https://play.minio.io:9000/testbucket/README.md
+
+```
+
+*Example: Watch for all events on local directory*
+
+```sh
+
+$ mc watch ~/Photos
+[2016-08-17T17:54:19.565Z] 3.7MiB ObjectCreated /home/minio/Downloads/tmp/5467026530_a8611b53f9_o.jpg
+[2016-08-17T17:54:19.565Z] 3.7MiB ObjectCreated /home/minio/Downloads/tmp/5467026530_a8611b53f9_o.jpg
+...
+[2016-08-17T17:54:19.565Z] 7.5MiB ObjectCreated /home/minio/Downloads/tmp/8771468997_89b762d104_o.jpg
+
+```
+
+<a name="events"></a>
+### Command `events` - Manage bucket event notification.
+
+``events`` provides a convenient way to configure various types of event notifications on a bucket.
+
+```sh
+
+USAGE:
+   mc events [FLAGS] COMMAND
+
+COMMANDS:
+   add          Add new bucket notification.
+   remove       Remove a bucket notification. With '--force' can remove all bucket notifications.
+   list         List bucket notifications.
+
+FLAGS:
+   --help, -h                           Help of events.
+```
+
+*Example: List all configured bucket notifications*
+
+```sh
+
+$ mc events list s3/andoria
+MyTopic        arn:aws:sns:us-west-2:804065449417:TestTopic    s3:ObjectCreated:*,s3:ObjectRemoved:*   suffix:.jpg
+
+```
+
+*Example: Add a new 'sqs' notification resource only to notify on ObjectCreated event*
+
+```sh
+
+$ mc events add s3/andoria arn:aws:sqs:us-west-2:444455556666:your-queue --events put
+
+```
+
+*Example: Add a new 'sqs' notification resource with filters*
+
+Add `prefix` and `suffix` filtering rules for `sqs` notification resource.
+
+```sh
+
+
+$ mc events add s3/andoria arn:aws:sqs:us-west-2:444455556666:your-queue --prefix photos/ --suffix .jpg
+
+```
+
+*Example: Remove a 'sqs' notification resource*
+
+```sh
+
+$ mc events remove s3/andoria arn:aws:sqs:us-west-2:444455556666:your-queue
+
+```
+
 <a name="policy"></a>
 ### Command `policy` - Manage bucket policies
 Manage anonymous bucket policies to a bucket and its contents
@@ -679,7 +785,6 @@ Access permission for ‘s3/andoria/myphotos/2020/bots/’ is ‘none’
 ```
 
 *Example : Set anonymous bucket policy to download only*
-
 Set anonymous bucket policy  for *andoria/myphotos/2020/bots/* sub-directory to download only
 
 ```sh
@@ -779,7 +884,7 @@ Add Minio server access and secret keys to config file host entry. Note that, th
 
 $ set +o history
 $ mc config host add myminio http://localhost:9000 OMQAGGOL63D7UNVQFY8X GcY5RHNmnEWvD/1QxD3spEIGj+Vt9L7eHaAaBTkJ
-$ set +o history
+$ set -o history
 
 ```
 

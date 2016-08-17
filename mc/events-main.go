@@ -19,22 +19,23 @@ package mc
 import "github.com/minio/cli"
 
 var (
-	notifyFlags = []cli.Flag{
+	eventsFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of notify.",
+			Usage: "Help of events.",
 		},
 	}
 )
 
-var notifyCmd = cli.Command{
-	Name:   "notify",
-	Usage:  "Manage bucket notification operations",
-	Action: mainNotify,
-	Flags:  append(notifyFlags, globalFlags...),
+var eventsCmd = cli.Command{
+	Name:   "events",
+	Usage:  "Manage bucket notification.",
+	Action: mainEvents,
+	Flags:  append(eventsFlags, globalFlags...),
 	Subcommands: []cli.Command{
-		notifyServiceCmd,
-		notifyListenCmd,
+		eventsAddCmd,
+		eventsRemoveCmd,
+		eventsListCmd,
 	},
 	CustomHelpTemplate: `NAME:
    {{.Name}} - {{.Usage}}
@@ -51,8 +52,8 @@ COMMANDS:
 `,
 }
 
-// mainNotify is the handle for "mc notify" command.
-func mainNotify(ctx *cli.Context) {
+// mainEvents is the handle for "mc events" command.
+func mainEvents(ctx *cli.Context) {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -63,5 +64,5 @@ func mainNotify(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 	}
 
-	// Sub-commands like "listen", "enable" and "disable" have their own main.
+	// Sub-commands like "add", "remove", "list" have their own main.
 }

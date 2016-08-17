@@ -113,6 +113,8 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 		close(errorChan)
 	}()
 
+	timeFormatFS := "2006-01-02T15:04:05.000Z"
+
 	// get fsnotify notifications for events and errors, and sent them
 	// using eventChan and errorChan
 	go func() {
@@ -122,15 +124,15 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 				if !ok {
 					return
 				}
-
+				var i os.FileInfo
 				switch {
 				case event.Op&fsnotify.Create == fsnotify.Create:
 					// we want new created folders to be watched as well
-					if i, err := os.Stat(event.Name); err != nil {
+					var err error
+					if i, err = os.Stat(event.Name); err != nil {
 						if os.IsNotExist(err) {
 							continue
 						}
-
 						errorChan <- probe.NewError(err)
 					} else if !i.IsDir() {
 						// we want files
@@ -145,18 +147,31 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 						errorChan <- probe.NewError(err)
 						continue
 					}
-
-					fallthrough
-				case event.Op&fsnotify.Write == fsnotify.Write:
 					eventChan <- Event{
-						Time:   time.Now(),
+						Time:   time.Now().Format(timeFormatFS),
+						Size:   i.Size(),
+						Path:   event.Name,
+						Client: f,
+						Type:   EventCreate,
+					}
+				case event.Op&fsnotify.Write == fsnotify.Write:
+					var err error
+					if i, err = os.Stat(event.Name); err != nil {
+						if os.IsNotExist(err) {
+							continue
+						}
+						errorChan <- probe.NewError(err)
+					}
+					eventChan <- Event{
+						Time:   time.Now().Format(timeFormatFS),
+						Size:   i.Size(),
 						Path:   event.Name,
 						Client: f,
 						Type:   EventCreate,
 					}
 				case event.Op&fsnotify.Remove == fsnotify.Remove:
 					eventChan <- Event{
-						Time:   time.Now(),
+						Time:   time.Now().Format(timeFormatFS),
 						Path:   event.Name,
 						Client: f,
 						Type:   EventRemove,
