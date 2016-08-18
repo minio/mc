@@ -155,7 +155,7 @@ func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
 
 	s3Config.Signature = hostCfg.API
 	s3Config.AppName = "mc"
-	s3Config.AppVersion = MCVersion
+	s3Config.AppVersion = Version
 	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 	s3Config.HostURL = urlStr
 	s3Config.Debug = globalDebug

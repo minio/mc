@@ -164,12 +164,12 @@ func getReleaseUpdate(updateURL string) {
 	data, e := client.Get(newUpdateURL)
 	fatalIf(probe.NewError(e), "Unable to read from update URL ‘"+newUpdateURL+"’.")
 
-	if strings.HasPrefix(MCVersion, "DEVELOPMENT.GOGET") {
+	if strings.HasPrefix(Version, "DEVELOPMENT.GOGET") {
 		fatalIf(errDummy().Trace(newUpdateURL),
 			"Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#minio")
 	}
 
-	current, e := time.Parse(time.RFC3339, MCVersion)
+	current, e := time.Parse(time.RFC3339, Version)
 	fatalIf(probe.NewError(e), "Unable to parse version string as time.")
 
 	if current.IsZero() {
@@ -190,7 +190,7 @@ func getReleaseUpdate(updateURL string) {
 
 	updateMsg := updateMessage{
 		Download: downloadURL,
-		Version:  MCVersion,
+		Version:  Version,
 	}
 	if latest.After(current) {
 		updateMsg.Update = true

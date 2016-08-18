@@ -89,9 +89,9 @@ func mainVersion(ctx *cli.Context) {
 	console.SetColor("CommitID", color.New(color.FgGreen))
 
 	verMsg := versionMessage{}
-	verMsg.CommitID = MCCommitID
-	verMsg.ReleaseTag = MCReleaseTag
-	verMsg.Version.Value = MCVersion
+	verMsg.CommitID = CommitID
+	verMsg.ReleaseTag = ReleaseTag
+	verMsg.Version.Value = Version
 	verMsg.Version.Format = "RFC3339"
 
 	printMsg(verMsg)
