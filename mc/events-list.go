@@ -18,6 +18,7 @@ package mc
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -76,24 +77,27 @@ func (u eventsListMessage) JSON() string {
 }
 
 func (u eventsListMessage) String() string {
-	msg := console.Colorize("Events", u.ID+"\t"+u.Arn+"\t")
+	msg := console.Colorize("ARN", fmt.Sprintf("%s   ", u.Arn))
 	for i, event := range u.Events {
 		msg += console.Colorize("Events", event)
 		if i != len(u.Events)-1 {
 			msg += ","
 		}
 	}
+	msg += console.Colorize("Filter", fmt.Sprintf("   Filter: "))
 	if u.Prefix != "" {
-		msg += "\tprefix:" + u.Prefix
+		msg += console.Colorize("Filter", fmt.Sprintf("prefix=\"%s\"", u.Prefix))
 	}
 	if u.Suffix != "" {
-		msg += "\tsuffix:" + u.Suffix
+		msg += console.Colorize("Filter", fmt.Sprintf("suffix=\"%s\"", u.Suffix))
 	}
 	return msg
 }
 
 func mainEventsList(ctx *cli.Context) {
-	console.SetColor("Events", color.New(color.FgGreen, color.Bold))
+	console.SetColor("ARN", color.New(color.FgGreen, color.Bold))
+	console.SetColor("Events", color.New(color.FgCyan, color.Bold))
+	console.SetColor("Filter", color.New(color.Bold))
 
 	setGlobalsFromContext(ctx)
 	checkEventsListSyntax(ctx)
