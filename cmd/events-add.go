@@ -30,7 +30,7 @@ var (
 	eventsAddFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "events",
-			Value: "put,remove",
+			Value: "put,delete",
 			Usage: "Filter specific type of events. Defaults to all events.",
 		},
 		cli.StringFlag{
