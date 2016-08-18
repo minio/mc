@@ -19,31 +19,31 @@ verifiers: vet fmt lint cyclo deadcode spelling
 vet:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 go tool vet -all *.go
-	@GO15VENDOREXPERIMENT=1 go tool vet -all ./mc
+	@GO15VENDOREXPERIMENT=1 go tool vet -all ./cmd
 	@GO15VENDOREXPERIMENT=1 go tool vet -all ./pkg
 	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true *.go
-	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./mc
+	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./cmd
 	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./pkg
 
 spelling:
 	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell *.go
-	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell mc/*
+	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell cmd/*
 	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell pkg/**/*
 
 fmt:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 gofmt -s -l *.go
-	@GO15VENDOREXPERIMENT=1 gofmt -s -l mc
+	@GO15VENDOREXPERIMENT=1 gofmt -s -l cmd
 	@GO15VENDOREXPERIMENT=1 gofmt -s -l pkg
 lint:
 	@echo "Running $@:"
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint .
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/mc...
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/cmd...
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/pkg...
 
 cyclo:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 mc
+	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 cmd
 	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 pkg
 
 deadcode:
@@ -54,7 +54,7 @@ build: getdeps verifiers
 
 test: getdeps verifiers
 	@echo "Running all testing:"
-	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/mc...
+	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/cmd...
 	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build

@@ -1,8 +1,10 @@
+// +build windows
+
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2015 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * you may not use this fs except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -14,10 +16,20 @@
  * limitations under the License.
  */
 
-package main
+package cmd
 
-import mc "github.com/minio/mc/cmd"
+import (
+	"path/filepath"
+	"syscall"
+)
 
-func main() {
-	mc.Main()
+func normalizePath(path string) string {
+	if filepath.VolumeName(path) == "" && filepath.HasPrefix(path, "\\") {
+		var err error
+		path, err = syscall.FullPath(path)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return path
 }
