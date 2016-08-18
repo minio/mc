@@ -246,105 +246,15 @@ Use this option to set a custom config path.
 
 ## 7. Commands
 
-<table>
- <tbody>
-   <tr>
-      <td align="left">
-         <a href="#ls">
-            <strong>ls</strong> - List buckets and objects
-         </a>
-      </td>
-      <td align="left">
-         <a href="#mb">
-            <strong>mb</strong> - Make a bucket
-         </a>
-      </td>
-      <td align="left">
-         <a href="#cat">
-            <strong>cat</strong> - Concatenate an object
-         </a>
-      </td>
-   </tr>
-   <tr>
-      <td align="left">
-         <a href="#cp">
-            <strong>cp</strong> - Copy objects
-         </a>
-      </td>
-      <td align="left">
-         <a href="#rm">
-            <strong>rm</strong> - Remove objects
-         </a>
-      </td>
-      <td align="left">
-         <a href="#pipe">
-            <strong>pipe</strong> - Pipe to an object
-         </a>
-      </td>
-   </tr>
-   <tr>
-      <td align="left">
-         <a href="#share">
-            <strong>share</strong> - Share access
-         </a>
-      </td>
-      <td align="left">
-         <a href="#mirror">
-            <strong>mirror</strong> - Mirror buckets
-         </a>
-      </td>
-      <td align="left">
-         <a href="#diff">
-            <strong>diff</strong> - Diff buckets
-         </a>
-      </td>
-   </tr>
-   <tr>
-      <td align="left">
-         <a href="#policy">
-            <strong>policy</strong> - Set public policy on bucket or prefix
-         </a>
-      </td>
-      <td align="left">
-         <a href="#session">
-            <strong>session</strong> - Manage saved sessions
-         </a>
-      </td>
-      <td align="left">
-         <a href="#config">
-            <strong>config</strong> - Manage config file
-         </a>
-      </td>
-   </tr>
-   <tr>
-      <td align="left">
-         <a href="#watch">
-            <strong>watch</strong> - Watch for events
-         </a>
-      </td>
-      <td align="left">
-         <a href="#events">
-            <strong>events</strong> - Manage events on your buckets.
-         </a>
-      </td>
-   </tr>
-   <tr>
-      <td align="left">
-         <a href="#update">
-            <strong>update</strong> - Manage software updates
-         </a>
-      </td>
-      <td align="left">
-         <a href="#version">
-            <strong>version</strong> - Show version
-         </a>
-      </td>
-      <td>
-      </td>
-   </tr>
- </tbody>
-</table>
-<a name="ls"> </a>
+|   |   | |
+|:---|:---|:---|
+|[**ls** - List buckets and objects](#ls)   |[**mb** - Make a bucket](#mb)   | [**cat** - Concatenate an object](#cat)  |
+|[**cp** - Copy objects](#cp)   | [**rm** - Remove objects](#rm)  | [**pipe** - Pipe to an object](#pipe)  |
+| [**share** - Share access](#share)  |[**mirror** - Mirror buckets](#mirror)   |[**diff** - Diff buckets](#diff)   |
+|[**policy** - Set public policy on bucket or prefix](#policy)   |[**session** - Manage saved sessions](#session)   | [**config** - Manage config file](#config)  |
+| [**watch** - Watch for events](#watch)   | [**events** - Manage events on your buckets](#events)   |   | 
+| [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  |   |
+
 
 ###  Command `ls` - List Objects
 
