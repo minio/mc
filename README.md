@@ -13,7 +13,9 @@ cp            Copy one or more objects to a target.
 mirror        Mirror folders recursively from a single source to single destination.
 diff          Compute differences between two folders.
 rm            Remove file or bucket [WARNING: Use with care].
-policy        Set public policy on bucket or prefix.
+events        Manage bucket notification.
+watch         Watch for events on object storage and filesystem.
+policy	      Set public policy on bucket or prefix.
 session       Manage saved sessions of cp and mirror operations.
 config        Manage configuration file.
 update        Check for a new software update.
