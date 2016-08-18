@@ -298,16 +298,6 @@ Use this option to set a custom config path.
             <strong>diff</strong> - Diff buckets
          </a>
       </td>
-      <td align="left">
-         <a href="#watch">
-            <strong>watch</strong> - Watch for events
-         </a>
-      </td>
-      <td align="left">
-         <a href="#events">
-            <strong>events</strong> - Manage events on your buckets.
-         </a>
-      </td>
    </tr>
    <tr>
       <td align="left">
@@ -323,6 +313,18 @@ Use this option to set a custom config path.
       <td align="left">
          <a href="#config">
             <strong>config</strong> - Manage config file
+         </a>
+      </td>
+   </tr>
+   <tr>
+      <td align="left">
+         <a href="#watch">
+            <strong>watch</strong> - Watch for events
+         </a>
+      </td>
+      <td align="left">
+         <a href="#events">
+            <strong>events</strong> - Manage events on your buckets.
          </a>
       </td>
    </tr>
