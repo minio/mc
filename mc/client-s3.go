@@ -34,6 +34,7 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/pkg/policy"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -690,7 +691,7 @@ func (c *s3Client) SetAccess(bucketPolicy string) *probe.Error {
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
-	e := c.api.SetBucketPolicy(bucket, object, minio.BucketPolicy(bucketPolicy))
+	e := c.api.SetBucketPolicy(bucket, object, policy.BucketPolicy(bucketPolicy))
 	if e != nil {
 		return probe.NewError(e)
 	}

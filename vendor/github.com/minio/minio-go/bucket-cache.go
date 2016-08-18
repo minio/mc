@@ -25,7 +25,7 @@ import (
 	"sync"
 )
 
-// bucketLocationCache - Provides simple mechansim to hold bucket
+// bucketLocationCache - Provides simple mechanism to hold bucket
 // locations in memory.
 type bucketLocationCache struct {
 	// mutex is used for handling the concurrent

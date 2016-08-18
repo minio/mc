@@ -71,6 +71,18 @@ func (set StringSet) FuncMatch(matchFn func(string, string) bool, matchString st
 	return nset
 }
 
+// ApplyFunc - returns new set containing each value processed by 'applyFn'.
+// A 'applyFn' should accept element in a set as a argument and return
+// a processed string.  The function can do any logic to return a processed
+// string.
+func (set StringSet) ApplyFunc(applyFn func(string) string) StringSet {
+	nset := NewStringSet()
+	for k := range set {
+		nset.Add(applyFn(k))
+	}
+	return nset
+}
+
 // Equals - checks whether given set is equal to current set or not.
 func (set StringSet) Equals(sset StringSet) bool {
 	// If length of set is not equal to length of given set, the
@@ -172,4 +184,13 @@ func CreateStringSet(sl ...string) StringSet {
 		set.Add(k)
 	}
 	return set
+}
+
+// CopyStringSet - returns copy of given set.
+func CopyStringSet(set StringSet) StringSet {
+	nset := NewStringSet()
+	for k, v := range set {
+		nset[k] = v
+	}
+	return nset
 }

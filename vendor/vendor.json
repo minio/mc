@@ -49,10 +49,22 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "4TwE8a1CRfxopbchnRBdDCHZ6rA=",
+			"checksumSHA1": "xk/h/ltr8Er0d0tEFcwLjKUReBE=",
 			"path": "github.com/minio/minio-go",
-			"revision": "7f874569b7d80cf98fdb2a581ac47344107eab60",
-			"revisionTime": "2016-08-16T03:55:40Z"
+			"revision": "9e734013294ab153b0bdbe182738bcddd46f1947",
+			"revisionTime": "2016-08-18T00:31:20Z"
+		},
+		{
+			"checksumSHA1": "0OZaeJPgMlA2Txn+1yeAIwEpJvM=",
+			"path": "github.com/minio/minio-go/pkg/policy",
+			"revision": "9e734013294ab153b0bdbe182738bcddd46f1947",
+			"revisionTime": "2016-08-18T00:31:20Z"
+		},
+		{
+			"checksumSHA1": "A8QOw1aWwc+RtjGozY0XeS5varo=",
+			"path": "github.com/minio/minio-go/pkg/set",
+			"revision": "9e734013294ab153b0bdbe182738bcddd46f1947",
+			"revisionTime": "2016-08-18T00:31:20Z"
 		},
 		{
 			"path": "github.com/minio/minio/pkg/atomic",
