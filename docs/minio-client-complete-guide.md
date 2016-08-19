@@ -623,9 +623,10 @@ USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --help, -h					 Help of mirror.
-  --force				         Force overwrite of an existing target(s).
-  --fake					 Perform a fake mirror operation.
+  --help, -h					Help of mirror.
+  --force					    Force overwrite of an existing target(s).
+  --fake					    Perform a fake mirror operation.
+  --watch, -w					Watch and mirror for changes.
 
 ``` 
 
@@ -635,6 +636,15 @@ FLAGS:
 
 $ mc mirror localdir/ play/mybucket
 localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 73 B/s 0
+
+```
+
+*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000*
+
+```sh
+
+$ mc mirror -w localdir play/mybucket
+localdir/new.txt:  10 MB / 10 MB  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 1 MB/s 15s
 
 ```
 
