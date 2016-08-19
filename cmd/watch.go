@@ -150,6 +150,7 @@ func (w *Watcher) Unjoin(client Client, recursive bool) *probe.Error {
 func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 	wo, err := client.Watch(watchParams{
 		recursive: recursive,
+		events:    []string{"put", "delete"},
 		accountID: fmt.Sprintf("%d", w.sessionStartTime.Unix()),
 	})
 	if err != nil {
