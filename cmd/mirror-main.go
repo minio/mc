@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -210,7 +209,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 		return sURLs.WithError(sURLs.Error.Trace())
 	}
 
-	// For a fake mirror make sure we update respective progress bars
+	//s For a fake mirror make sure we update respective progress bars
 	// and accounting readers under relevant conditions.
 	if isFake {
 		ms.status.Add(sURLs.SourceContent.Size)
@@ -222,8 +221,6 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 	targetAlias := sURLs.TargetAlias
 	targetURL := sURLs.TargetContent.URL
 	length := sURLs.SourceContent.Size
-
-	var progress io.Reader = ms.status
 
 	ms.status.SetCaption(sourceURL.String() + ": ")
 
@@ -239,7 +236,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 		// FS -> FS Copy includes alias in path.
 		if sourceURL.Type == fileSystem {
 			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
-			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, progress)
+			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, ms.status)
 			if err != nil {
 				return sURLs.WithError(err.Trace(sourceURL.String()))
 			}
@@ -247,7 +244,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 			if sourceAlias == targetAlias {
 				// If source/target are object storage their aliases must be the same
 				// Do not include alias inside path for ObjStore -> ObjStore.
-				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, progress)
+				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, ms.status)
 				if err != nil {
 					return sURLs.WithError(err.Trace(sourceURL.String()))
 				}
@@ -256,7 +253,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 				if err != nil {
 					return sURLs.WithError(err.Trace(sourceURL.String()))
 				}
-				_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
+				_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, ms.status)
 				if err != nil {
 					return sURLs.WithError(err.Trace(targetURL.String()))
 				}
@@ -268,7 +265,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 		if err != nil {
 			return sURLs.WithError(err.Trace(sourceURL.String()))
 		}
-		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
+		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, ms.status)
 		if err != nil {
 			return sURLs.WithError(err.Trace(targetURL.String()))
 		}
@@ -369,7 +366,10 @@ func (ms *mirrorSession) startMirror(wait bool) {
 				break
 			}
 
-			sURLs := v.(URLs)
+			sURLs, ok := v.(URLs)
+			if !ok {
+				fatalIf(errInvalidArgument(), fmt.Sprintf("URLs type not found, %#v", v))
+			}
 
 			if sURLs.SourceContent != nil {
 				ms.statusCh <- ms.doMirror(sURLs)
@@ -420,30 +420,66 @@ func (ms *mirrorSession) watch() {
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 				}
-
-				if sourceClient, err := newClient(aliasedPath); err != nil {
-					// cannot create sourceclient
-					ms.statusCh <- mirrorURL.WithError(err)
+				if event.Size == 0 {
+					sourceClient, err := newClient(aliasedPath)
+					if err != nil {
+						// cannot create sourceclient
+						ms.statusCh <- mirrorURL.WithError(err)
+						continue
+					}
+					sourceContent, err := sourceClient.Stat()
+					if err != nil {
+						// source doesn't exist anymore
+						ms.statusCh <- mirrorURL.WithError(err)
+						continue
+					}
+					targetClient, err := newClient(targetPath)
+					if err != nil {
+						// cannot create targetclient
+						ms.statusCh <- mirrorURL.WithError(err)
+						return
+					}
+					shouldQueue := false
+					if !isForce {
+						_, err = targetClient.Stat()
+						if err == nil {
+							continue
+						} // doesn't exist
+						shouldQueue = true
+					}
+					if shouldQueue || isForce {
+						if e := ms.queue.Push(mirrorURL); e != nil {
+							// will throw an error if already queue, ignoring this error
+							continue
+						}
+						// adjust total, because we want to show progress of the items stiil
+						// queued to be copied.
+						ms.status.SetTotal(ms.status.Total() + sourceContent.Size).Update()
+					}
 					continue
-				} else if sourceContent, err := sourceClient.Stat(); err != nil {
-					// source doesn't exist anymore
-					ms.statusCh <- mirrorURL.WithError(err)
-					continue
-				} else if targetClient, err := newClient(targetPath); err != nil {
-					// cannot create targetclient
-					ms.statusCh <- mirrorURL.WithError(err)
-				} else if _, err := targetClient.Stat(); err != nil || isForce {
-					// doesn't exist or force copy
-					if err := ms.queue.Push(mirrorURL); err != nil {
+				}
+				shouldQueue := false
+				if !isForce {
+					targetClient, err := newClient(targetPath)
+					if err != nil {
+						// cannot create targetclient
+						ms.statusCh <- mirrorURL.WithError(err)
+						return
+					}
+					_, err = targetClient.Stat()
+					if err == nil {
+						continue
+					} // doesn't exist
+					shouldQueue = true
+				}
+				if shouldQueue || isForce {
+					mirrorURL.SourceContent.Size = event.Size
+					if e := ms.queue.Push(mirrorURL); e != nil {
 						// will throw an error if already queue, ignoring this error
 						continue
 					}
-
-					// adjust total, because we want to show progress of the items stiil
-					// queued to be copied.
-					ms.status.SetTotal(ms.status.Total() + sourceContent.Size).Update()
-				} else {
-					// already exists on destination and we don't force
+					// adjust total, because we want to show progress of the items stiil queued to be copied.
+					ms.status.SetTotal(ms.status.Total() + event.Size).Update()
 				}
 			} else if event.Type == EventRemove {
 				mirrorURL := URLs{
@@ -452,7 +488,6 @@ func (ms *mirrorSession) watch() {
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 				}
-
 				if err := ms.queue.Push(mirrorURL); err != nil {
 					// will throw an error if already queue, ignoring this error
 					continue
