@@ -59,13 +59,13 @@ func loadSessionV6Header(sid string) (*sessionV6Header, *probe.Error) {
 
 	sV6Header := &sessionV6Header{}
 	sV6Header.Version = "6"
-	qs, err := quick.New(sV6Header)
-	if err != nil {
-		return nil, err.Trace(sid, sV6Header.Version)
+	qs, e := quick.New(sV6Header)
+	if e != nil {
+		return nil, probe.NewError(e).Trace(sid, sV6Header.Version)
 	}
-	err = qs.Load(sessionFile)
-	if err != nil {
-		return nil, err.Trace(sid, sV6Header.Version)
+	e = qs.Load(sessionFile)
+	if e != nil {
+		return nil, probe.NewError(e).Trace(sid, sV6Header.Version)
 	}
 
 	sV6Header = qs.Data().(*sessionV6Header)

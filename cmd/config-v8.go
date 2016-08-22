@@ -113,8 +113,8 @@ func loadConfigV8() (*configV8, *probe.Error) {
 		return nil, errInvalidArgument().Trace()
 	}
 
-	mcCfgV8, err := quick.Load(mustGetMcConfigPath(), newConfigV8())
-	fatalIf(err.Trace(), "Unable to load mc config file ‘"+mustGetMcConfigPath()+"’.")
+	mcCfgV8, e := quick.Load(mustGetMcConfigPath(), newConfigV8())
+	fatalIf(probe.NewError(e), "Unable to load mc config file ‘"+mustGetMcConfigPath()+"’.")
 
 	cfgV8 := mcCfgV8.Data().(*configV8)
 
@@ -129,13 +129,17 @@ func saveConfigV8(cfgV8 *configV8) *probe.Error {
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 
-	qs, err := quick.New(cfgV8)
-	if err != nil {
-		return err.Trace()
+	qs, e := quick.New(cfgV8)
+	if e != nil {
+		return probe.NewError(e)
 	}
 
 	// update the cache.
 	cacheCfgV8 = cfgV8
 
-	return qs.Save(mustGetMcConfigPath()).Trace(mustGetMcConfigPath())
+	e = qs.Save(mustGetMcConfigPath())
+	if e != nil {
+		return probe.NewError(e).Trace(mustGetMcConfigPath())
+	}
+	return nil
 }

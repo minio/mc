@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/minio/pkg/quick"
 )
 
@@ -68,8 +69,8 @@ func fixConfigV3() {
 		return
 	}
 	brokenCfgV3 := newBrokenConfigV3()
-	brokenMcCfgV3, err := quick.Load(mustGetMcConfigPath(), brokenCfgV3)
-	fatalIf(err.Trace(), "Unable to load config.")
+	brokenMcCfgV3, e := quick.Load(mustGetMcConfigPath(), brokenCfgV3)
+	fatalIf(probe.NewError(e), "Unable to load config.")
 
 	if brokenMcCfgV3.Version() != "3" {
 		return
@@ -100,11 +101,11 @@ func fixConfigV3() {
 	// We blindly drop ACL and Access fields from the broken config v3.
 
 	if isMutated {
-		mcNewConfigV3, err := quick.New(cfgV3)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘3’.")
+		mcNewConfigV3, e := quick.New(cfgV3)
+		fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘3’.")
 
-		err = mcNewConfigV3.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘3’.")
+		e = mcNewConfigV3.Save(mustGetMcConfigPath())
+		fatalIf(probe.NewError(e), "Unable to save config version ‘3’.")
 
 		console.Infof("Successfully fixed %s broken config for version ‘3’.\n", mustGetMcConfigPath())
 	}
@@ -116,8 +117,8 @@ func fixConfigV6ForHosts() {
 		return
 	}
 
-	brokenMcCfgV6, err := quick.Load(mustGetMcConfigPath(), newConfigV6())
-	fatalIf(err.Trace(), "Unable to load config.")
+	brokenMcCfgV6, e := quick.Load(mustGetMcConfigPath(), newConfigV6())
+	fatalIf(probe.NewError(e), "Unable to load config.")
 
 	if brokenMcCfgV6.Version() != "6" {
 		return
@@ -156,11 +157,11 @@ func fixConfigV6ForHosts() {
 
 	if isMutated {
 		// Save the new config back to the disk.
-		mcCfgV6, err := quick.New(newCfgV6)
-		fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘v6’.")
+		mcCfgV6, e := quick.New(newCfgV6)
+		fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘v6’.")
 
-		err = mcCfgV6.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(), "Unable to save config version ‘v6’.")
+		e = mcCfgV6.Save(mustGetMcConfigPath())
+		fatalIf(probe.NewError(e), "Unable to save config version ‘v6’.")
 	}
 }
 
@@ -169,11 +170,11 @@ func fixConfigV6() {
 	if !isMcConfigExists() {
 		return
 	}
-	config, err := quick.New(newConfigV6())
-	fatalIf(err.Trace(), "Unable to initialize config.")
+	config, e := quick.New(newConfigV6())
+	fatalIf(probe.NewError(e), "Unable to initialize config.")
 
-	err = config.Load(mustGetMcConfigPath())
-	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to load config.")
+	e = config.Load(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e).Trace(mustGetMcConfigPath()), "Unable to load config.")
 
 	if config.Data().(*configV6).Version != "6" {
 		return
@@ -187,7 +188,7 @@ func fixConfigV6() {
 	newConfig.Aliases = config.Data().(*configV6).Aliases
 	for host, hostCfg := range config.Data().(*configV6).Hosts {
 		if strings.Contains(host, "*") {
-			fatalIf(err.Trace(),
+			fatalIf(errInvalidArgument(),
 				fmt.Sprintf("Glob style ‘*’ pattern matching is no longer supported. Please fix ‘%s’ entry manually.", host))
 		}
 		if strings.Contains(host, "*s3*") || strings.Contains(host, "*.s3*") {
@@ -231,11 +232,11 @@ func fixConfigV6() {
 	}
 
 	if isMutated {
-		newConf, err := quick.New(newConfig)
-		fatalIf(err.Trace(), "Unable to initialize newly fixed config.")
+		newConf, e := quick.New(newConfig)
+		fatalIf(probe.NewError(e), "Unable to initialize newly fixed config.")
 
-		err = newConf.Save(mustGetMcConfigPath())
-		fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
+		e = newConf.Save(mustGetMcConfigPath())
+		fatalIf(probe.NewError(e).Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
 		console.Infof("Successfully fixed %s broken config for version ‘6’.\n", mustGetMcConfigPath())
 	}
 }

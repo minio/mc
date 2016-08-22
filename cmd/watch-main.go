@@ -45,11 +45,15 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "prefix",
-			Usage: "Filter events for a prefix",
+			Usage: "Filter events for a prefix.",
 		},
 		cli.StringFlag{
 			Name:  "suffix",
-			Usage: "Filter events for a suffix",
+			Usage: "Filter events for a suffix.",
+		},
+		cli.BoolFlag{
+			Name:  "recursive",
+			Usage: "Recursively watch for events.",
 		},
 	}
 )
@@ -130,21 +134,23 @@ func mainWatch(ctx *cli.Context) {
 	args := ctx.Args()
 	path := args[0]
 
-	recursive := ctx.Bool("recursive")
 	prefix := ctx.String("prefix")
 	suffix := ctx.String("suffix")
 	events := strings.Split(ctx.String("events"), ",")
+	recursive := ctx.Bool("recursive")
 
 	s3Client, pErr := newClient(path)
 	if pErr != nil {
 		fatalIf(pErr.Trace(), "Cannot parse the provided url.")
 	}
 
-	params := watchParams{recursive: recursive,
+	params := watchParams{
+		recursive: recursive,
 		accountID: fmt.Sprintf("%d", time.Now().Unix()),
 		events:    events,
 		prefix:    prefix,
-		suffix:    suffix}
+		suffix:    suffix,
+	}
 
 	// Start watching on events
 	wo, err := s3Client.Watch(params)
@@ -152,10 +158,17 @@ func mainWatch(ctx *cli.Context) {
 
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
+	// Initialize.. waitgroup to track the go-routine.
 	wg := sync.WaitGroup{}
+
+	// Increment wait group to wait subsequent routine.
 	wg.Add(1)
+
+	// Start routine to watching on events.
 	go func() {
 		defer wg.Done()
+
+		// Wait for all events.
 		for {
 			select {
 			case <-trapCh:
@@ -177,5 +190,6 @@ func mainWatch(ctx *cli.Context) {
 		}
 	}()
 
+	// Wait on the routine to be finished or exit.
 	wg.Wait()
 }

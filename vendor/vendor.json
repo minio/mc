@@ -67,34 +67,32 @@
 			"revisionTime": "2016-08-18T00:31:20Z"
 		},
 		{
-			"path": "github.com/minio/minio/pkg/atomic",
-			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
-			"revisionTime": "2016-02-11T15:54:02-08:00"
-		},
-		{
-			"path": "github.com/minio/minio/pkg/ioutils",
-			"revision": "eed0149657017f134fa8dacae9026bb816342a48",
-			"revisionTime": "2016-02-15T17:42:39-08:00"
-		},
-		{
 			"path": "github.com/minio/minio/pkg/probe",
 			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
 			"revisionTime": "2016-02-11T15:54:02-08:00"
 		},
 		{
+			"checksumSHA1": "5r3V/rzpVqjJvzE/K5sR2LHEteM=",
 			"path": "github.com/minio/minio/pkg/quick",
-			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
-			"revisionTime": "2016-02-11T15:54:02-08:00"
+			"revision": "0060549addd566b2ac568891efa1579be3024a97",
+			"revisionTime": "2016-08-14T22:47:51Z"
 		},
 		{
-			"path": "github.com/olekukonko/ts",
-			"revision": "ecf753e7c962639ab5a1fb46f7da627d4c0a04b8",
-			"revisionTime": "2014-04-12T15:01:45-07:00"
+			"checksumSHA1": "O6ZN3stsUedljMyE04RWaQkuB2I=",
+			"path": "github.com/minio/minio/pkg/safe",
+			"revision": "0060549addd566b2ac568891efa1579be3024a97",
+			"revisionTime": "2016-08-14T22:47:51Z"
 		},
 		{
 			"path": "github.com/pkg/profile",
 			"revision": "19396ecfda37c1c9ddaa52019adca59d582e4832",
 			"revisionTime": "2016-03-15T12:21:13+11:00"
+		},
+		{
+			"checksumSHA1": "/abwKdBJAuQjcFK+AXfdmmbTIp8=",
+			"path": "github.com/rjeczalik/notify",
+			"revision": "7e20c15e6693a7d6ad269a94b70ed68bc4a875a7",
+			"revisionTime": "2016-08-20T12:36:22Z"
 		},
 		{
 			"path": "golang.org/x/sys/unix",
