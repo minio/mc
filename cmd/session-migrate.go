@@ -58,11 +58,11 @@ func migrateSessionV6ToV7() {
 		sV7Header.TotalBytes = sV6Header.TotalBytes
 		sV7Header.TotalObjects = sV6Header.TotalObjects
 
-		qs, err := quick.New(sV7Header)
-		fatalIf(err.Trace(sid), "Unable to initialize quick config for session '7' header.")
+		qs, e := quick.New(sV7Header)
+		fatalIf(probe.NewError(e).Trace(sid), "Unable to initialize quick config for session '7' header.")
 
-		err = qs.Save(sessionFile)
-		fatalIf(err.Trace(sid, sessionFile), "Unable to migrate session from '6' to '7'.")
+		e = qs.Save(sessionFile)
+		fatalIf(probe.NewError(e).Trace(sid, sessionFile), "Unable to migrate session from '6' to '7'.")
 
 		console.Println("Successfully migrated ‘" + sessionFile + "’ from version ‘" + sV6Header.Version + "’ to " + "‘" + sV7Header.Version + "’.")
 	}

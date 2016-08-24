@@ -121,13 +121,13 @@ func loadSessionV7(sid string) (*sessionV7, *probe.Error) {
 	s.Header = &sessionV7Header{}
 	s.SessionID = sid
 	s.Header.Version = "7"
-	qs, err := quick.New(s.Header)
-	if err != nil {
-		return nil, err.Trace(sid, s.Header.Version)
+	qs, e := quick.New(s.Header)
+	if e != nil {
+		return nil, probe.NewError(e).Trace(sid, s.Header.Version)
 	}
-	err = qs.Load(sessionFile)
-	if err != nil {
-		return nil, err.Trace(sid, s.Header.Version)
+	e = qs.Load(sessionFile)
+	if e != nil {
+		return nil, probe.NewError(e).Trace(sid, s.Header.Version)
 	}
 
 	s.mutex = new(sync.Mutex)
@@ -212,16 +212,20 @@ func (s *sessionV7) Save() *probe.Error {
 		s.DataFP.dirty = false
 	}
 
-	qs, err := quick.New(s.Header)
-	if err != nil {
-		return err.Trace(s.SessionID)
+	qs, e := quick.New(s.Header)
+	if e != nil {
+		return probe.NewError(e).Trace(s.SessionID)
 	}
 
 	sessionFile, err := getSessionFile(s.SessionID)
 	if err != nil {
 		return err.Trace(s.SessionID)
 	}
-	return qs.Save(sessionFile).Trace(sessionFile)
+	e = qs.Save(sessionFile)
+	if e != nil {
+		return probe.NewError(e).Trace(sessionFile)
+	}
+	return nil
 }
 
 // setGlobals captures the state of global variables into session header.
@@ -246,26 +250,26 @@ func (s sessionV7) restoreGlobals() {
 // IsModified - returns if in memory session header has changed from
 // its on disk value.
 func (s *sessionV7) isModified(sessionFile string) (bool, *probe.Error) {
-	qs, err := quick.New(s.Header)
-	if err != nil {
-		return false, err.Trace(s.SessionID)
+	qs, e := quick.New(s.Header)
+	if e != nil {
+		return false, probe.NewError(e).Trace(s.SessionID)
 	}
 
 	var currentHeader = &sessionV7Header{}
-	currentQS, err := quick.Load(sessionFile, currentHeader)
-	if err != nil {
+	currentQS, e := quick.Load(sessionFile, currentHeader)
+	if e != nil {
 		// If session does not exist for the first, return modified to
 		// be true.
-		if os.IsNotExist(err.ToGoError()) {
+		if os.IsNotExist(e) {
 			return true, nil
 		}
 		// For all other errors return.
-		return false, err.Trace(s.SessionID)
+		return false, probe.NewError(e).Trace(s.SessionID)
 	}
 
-	changedFields, err := qs.DeepDiff(currentQS)
-	if err != nil {
-		return false, err.Trace(s.SessionID)
+	changedFields, e := qs.DeepDiff(currentQS)
+	if e != nil {
+		return false, probe.NewError(e).Trace(s.SessionID)
 	}
 
 	// Returns true if there are changed entries.
@@ -287,12 +291,15 @@ func (s *sessionV7) save() *probe.Error {
 	}
 	// Header is modified, we save it.
 	if modified {
-		qs, err := quick.New(s.Header)
-		if err != nil {
-			return err.Trace(s.SessionID)
+		qs, e := quick.New(s.Header)
+		if e != nil {
+			return probe.NewError(e).Trace(s.SessionID)
 		}
 		// Save an return.
-		return qs.Save(sessionFile).Trace(sessionFile)
+		e = qs.Save(sessionFile)
+		if e != nil {
+			return probe.NewError(e).Trace(sessionFile)
+		}
 	}
 	return nil
 }

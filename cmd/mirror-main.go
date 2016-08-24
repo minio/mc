@@ -725,7 +725,7 @@ func newMirrorSession(session *sessionV7) *mirrorSession {
 		// we're using a queue instead of a channel, this allows us to gracefully
 		// stop. if we're using a channel and want to trap a signal, the channel
 		// the backlog of fs events will be send on a closed channel.
-		queue: NewQueue(session),
+		queue: NewQueue(),
 
 		wgStatus: new(sync.WaitGroup),
 		wgMirror: new(sync.WaitGroup),

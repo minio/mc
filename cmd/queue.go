@@ -40,16 +40,13 @@ type Queue struct {
 	idleCh chan interface{}
 
 	closed bool
-
-	session *sessionV7
 }
 
 // NewQueue creates a new queue
-func NewQueue(session *sessionV7) *Queue {
+func NewQueue() *Queue {
 	return &Queue{
-		idleCh:  make(chan interface{}),
-		closed:  false,
-		session: session,
+		idleCh: make(chan interface{}),
+		closed: false,
 	}
 }
 

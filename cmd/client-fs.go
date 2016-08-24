@@ -28,10 +28,10 @@ import (
 
 	"io/ioutil"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/rjeczalik/notify"
 )
 
 // filesystem client
@@ -96,117 +96,86 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan Event)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
+	// Make the channel buffered to ensure no event is dropped. Notify will drop
+	// an event if the receiver is not able to keep up the sending pace.
+	neventChan := make(chan notify.EventInfo, 1)
 
-	var watcher *fsnotify.Watcher
-	if v, err := fsnotify.NewWatcher(); err == nil {
-		watcher = v
-	} else {
-		return nil, probe.NewError(err)
+	var fsEvents []notify.Event
+	for _, event := range params.events {
+		switch event {
+		case "put":
+			fsEvents = append(fsEvents, EventTypePut...)
+		case "delete":
+			fsEvents = append(fsEvents, EventTypeDelete...)
+		default:
+			return nil, errInvalidArgument().Trace(event)
+		}
+	}
+
+	// Set up a watchpoint listening for events within a directory tree rooted
+	// at current working directory. Dispatch remove events to c.
+	recursivePath := f.PathURL.Path
+	if params.recursive {
+		recursivePath = f.PathURL.Path + "..."
+	}
+	if e := notify.Watch(recursivePath, neventChan, fsEvents...); e != nil {
+		return nil, probe.NewError(e)
 	}
 
 	// wait for doneChan to close the watcher, eventChan and errorChan
 	go func() {
 		<-doneChan
 
-		watcher.Close()
 		close(eventChan)
 		close(errorChan)
+		notify.Stop(neventChan)
 	}()
 
 	timeFormatFS := "2006-01-02T15:04:05.000Z"
 
-	// get fsnotify notifications for events and errors, and sent them
+	// Get fsnotify notifications for events and errors, and sent them
 	// using eventChan and errorChan
 	go func() {
 		for {
 			select {
-			case event, ok := <-watcher.Events:
+			case event, ok := <-neventChan:
 				if !ok {
 					return
 				}
 				var i os.FileInfo
-				switch {
-				case event.Op&fsnotify.Create == fsnotify.Create:
-					// we want new created folders to be watched as well
-					var err error
-					if i, err = os.Stat(event.Name); err != nil {
-						if os.IsNotExist(err) {
+				if IsPutEvent(event.Event()) {
+					// Look for any writes, send a response to indicate a full copy.
+					var e error
+					i, e = os.Stat(event.Path())
+					if e != nil {
+						if os.IsNotExist(e) {
 							continue
 						}
-						errorChan <- probe.NewError(err)
-					} else if !i.IsDir() {
+						errorChan <- probe.NewError(e)
+						continue
+					}
+					if i.IsDir() {
 						// we want files
-					} else if !params.recursive {
-						// we don't want to watch recursively
-						continue
-					} else if err := watcher.Add(event.Name); err == nil {
-						// now watching created folder
-						continue
-					} else {
-						// watching folder failed, send error
-						errorChan <- probe.NewError(err)
 						continue
 					}
 					eventChan <- Event{
 						Time:   time.Now().Format(timeFormatFS),
 						Size:   i.Size(),
-						Path:   event.Name,
+						Path:   event.Path(),
 						Client: f,
 						Type:   EventCreate,
 					}
-				case event.Op&fsnotify.Write == fsnotify.Write:
-					var err error
-					if i, err = os.Stat(event.Name); err != nil {
-						if os.IsNotExist(err) {
-							continue
-						}
-						errorChan <- probe.NewError(err)
-					}
+				} else if IsDeleteEvent(event.Event()) {
 					eventChan <- Event{
 						Time:   time.Now().Format(timeFormatFS),
-						Size:   i.Size(),
-						Path:   event.Name,
-						Client: f,
-						Type:   EventCreate,
-					}
-				case event.Op&fsnotify.Remove == fsnotify.Remove:
-					eventChan <- Event{
-						Time:   time.Now().Format(timeFormatFS),
-						Path:   event.Name,
+						Path:   event.Path(),
 						Client: f,
 						Type:   EventRemove,
 					}
 				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-
-				errorChan <- probe.NewError(err)
 			}
 		}
 	}()
-
-	// add recursive folders
-	if params.recursive {
-		if err := ioutils.FTW(f.PathURL.Path, func(fp string, fi os.FileInfo, e error) error {
-			if !fi.IsDir() {
-				return ioutils.ErrSkipFile
-			}
-
-			if err := watcher.Add(fp); err != nil {
-				return err
-			}
-
-			return nil
-		}); err != nil {
-			return nil, probe.NewError(err)
-		}
-	}
-
-	if err := watcher.Add(f.PathURL.Path); err != nil {
-		return nil, probe.NewError(err)
-	}
 
 	return &watchObject{
 		events: eventChan,

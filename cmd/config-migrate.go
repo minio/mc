@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/minio/pkg/quick"
 )
 
@@ -49,8 +50,8 @@ func migrateConfigV1ToV101() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV1, err := quick.Load(mustGetMcConfigPath(), newConfigV1())
-	fatalIf(err.Trace(), "Unable to load config version ‘1’.")
+	mcCfgV1, e := quick.Load(mustGetMcConfigPath(), newConfigV1())
+	fatalIf(probe.NewError(e), "Unable to load config version ‘1’.")
 
 	// If loaded config version does not match 1.0.0, we do nothing.
 	if mcCfgV1.Version() != "1.0.0" {
@@ -93,10 +94,10 @@ func migrateConfigV1ToV101() {
 	}
 
 	// Save the new config back to the disk.
-	mcCfgV101, err := quick.New(cfgV101)
-	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘1.0.1’.")
-	err = mcCfgV101.Save(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to save config version ‘1.0.1’.")
+	mcCfgV101, e := quick.New(cfgV101)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘1.0.1’.")
+	e = mcCfgV101.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version ‘1.0.1’.")
 
 	console.Infof("Successfully migrated %s from version ‘1.0.0’ to version ‘1.0.1’.\n", mustGetMcConfigPath())
 }
@@ -106,8 +107,8 @@ func migrateConfigV101ToV2() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV101, err := quick.Load(mustGetMcConfigPath(), newConfigV101())
-	fatalIf(err.Trace(), "Unable to load config version ‘1.0.1’.")
+	mcCfgV101, e := quick.Load(mustGetMcConfigPath(), newConfigV101())
+	fatalIf(probe.NewError(e), "Unable to load config version ‘1.0.1’.")
 
 	// update to newer version
 	if mcCfgV101.Version() != "1.0.1" {
@@ -129,11 +130,11 @@ func migrateConfigV101ToV2() {
 		}
 	}
 
-	mcCfgV2, err := quick.New(cfgV2)
-	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘2’.")
+	mcCfgV2, e := quick.New(cfgV2)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘2’.")
 
-	err = mcCfgV2.Save(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to save config version ‘2’.")
+	e = mcCfgV2.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version ‘2’.")
 
 	console.Infof("Successfully migrated %s from version ‘1.0.1’ to version ‘2’.\n", mustGetMcConfigPath())
 }
@@ -145,8 +146,8 @@ func migrateConfigV2ToV3() {
 		return
 	}
 
-	mcCfgV2, err := quick.Load(mustGetMcConfigPath(), newConfigV2())
-	fatalIf(err.Trace(), "Unable to load mc config V2.")
+	mcCfgV2, e := quick.Load(mustGetMcConfigPath(), newConfigV2())
+	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
 
 	// update to newer version
 	if mcCfgV2.Version() != "2" {
@@ -169,11 +170,11 @@ func migrateConfigV2ToV3() {
 		}
 	}
 
-	mcNewCfgV3, err := quick.New(cfgV3)
-	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘3’.")
+	mcNewCfgV3, e := quick.New(cfgV3)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘3’.")
 
-	err = mcNewCfgV3.Save(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to save config version ‘3’.")
+	e = mcNewCfgV3.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version ‘3’.")
 
 	console.Infof("Successfully migrated %s from version ‘2’ to version ‘3’.\n", mustGetMcConfigPath())
 }
@@ -184,8 +185,8 @@ func migrateConfigV3ToV4() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV3, err := quick.Load(mustGetMcConfigPath(), newConfigV3())
-	fatalIf(err.Trace(), "Unable to load mc config V2.")
+	mcCfgV3, e := quick.Load(mustGetMcConfigPath(), newConfigV3())
+	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
 
 	// update to newer version
 	if mcCfgV3.Version() != "3" {
@@ -208,11 +209,11 @@ func migrateConfigV3ToV4() {
 		}
 	}
 
-	mcNewCfgV4, err := quick.New(cfgV4)
-	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘4’.")
+	mcNewCfgV4, e := quick.New(cfgV4)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘4’.")
 
-	err = mcNewCfgV4.Save(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to save config version ‘4’.")
+	e = mcNewCfgV4.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version ‘4’.")
 
 	console.Infof("Successfully migrated %s from version ‘3’ to version ‘4’.\n", mustGetMcConfigPath())
 
@@ -223,8 +224,8 @@ func migrateConfigV4ToV5() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV4, err := quick.Load(mustGetMcConfigPath(), newConfigV4())
-	fatalIf(err.Trace(), "Unable to load mc config V4.")
+	mcCfgV4, e := quick.Load(mustGetMcConfigPath(), newConfigV4())
+	fatalIf(probe.NewError(e), "Unable to load mc config V4.")
 
 	// update to newer version
 	if mcCfgV4.Version() != "4" {
@@ -243,11 +244,11 @@ func migrateConfigV4ToV5() {
 		}
 	}
 
-	mcNewCfgV5, err := quick.New(cfgV5)
-	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘5’.")
+	mcNewCfgV5, e := quick.New(cfgV5)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘5’.")
 
-	err = mcNewCfgV5.Save(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to save config version ‘5’.")
+	e = mcNewCfgV5.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version ‘5’.")
 
 	console.Infof("Successfully migrated %s from version ‘4’ to version ‘5’.\n", mustGetMcConfigPath())
 }
@@ -258,8 +259,8 @@ func migrateConfigV5ToV6() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV5, err := quick.Load(mustGetMcConfigPath(), newConfigV5())
-	fatalIf(err.Trace(), "Unable to load mc config V5.")
+	mcCfgV5, e := quick.Load(mustGetMcConfigPath(), newConfigV5())
+	fatalIf(probe.NewError(e), "Unable to load mc config V5.")
 
 	// update to newer version
 	if mcCfgV5.Version() != "5" {
@@ -309,11 +310,11 @@ func migrateConfigV5ToV6() {
 		}
 	}
 
-	mcNewCfgV6, err := quick.New(cfgV6)
-	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘6’.")
+	mcNewCfgV6, e := quick.New(cfgV6)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘6’.")
 
-	err = mcNewCfgV6.Save(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to save config version ‘6’.")
+	e = mcNewCfgV6.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version ‘6’.")
 
 	console.Infof("Successfully migrated %s from version ‘5’ to version ‘6’.\n", mustGetMcConfigPath())
 }
@@ -325,8 +326,8 @@ func migrateConfigV6ToV7() {
 		return
 	}
 
-	mcCfgV6, err := quick.Load(mustGetMcConfigPath(), newConfigV6())
-	fatalIf(err.Trace(), "Unable to load mc config V6.")
+	mcCfgV6, e := quick.Load(mustGetMcConfigPath(), newConfigV6())
+	fatalIf(probe.NewError(e), "Unable to load mc config V6.")
 
 	if mcCfgV6.Version() != "6" {
 		return
@@ -388,11 +389,11 @@ func migrateConfigV6ToV7() {
 	}
 	// Load default settings.
 	cfgV7.loadDefaults()
-	mcNewCfgV7, err := quick.New(cfgV7)
-	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘7’.")
+	mcNewCfgV7, e := quick.New(cfgV7)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘7’.")
 
-	err = mcNewCfgV7.Save(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to save config version ‘7’.")
+	e = mcNewCfgV7.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version ‘7’.")
 
 	console.Infof("Successfully migrated %s from version ‘6’ to version ‘7’.\n", mustGetMcConfigPath())
 }
@@ -404,8 +405,8 @@ func migrateConfigV7ToV8() {
 		return
 	}
 
-	mcCfgV7, err := quick.Load(mustGetMcConfigPath(), newConfigV7())
-	fatalIf(err.Trace(), "Unable to load mc config V7.")
+	mcCfgV7, e := quick.Load(mustGetMcConfigPath(), newConfigV7())
+	fatalIf(probe.NewError(e), "Unable to load mc config V7.")
 
 	if mcCfgV7.Version() != "7" {
 		return
@@ -427,11 +428,11 @@ func migrateConfigV7ToV8() {
 	}
 	// Load default settings.
 	cfgV8.loadDefaults()
-	mcNewCfgV8, err := quick.New(cfgV8)
-	fatalIf(err.Trace(), "Unable to initialize quick config for config version ‘8’.")
+	mcNewCfgV8, e := quick.New(cfgV8)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘8’.")
 
-	err = mcNewCfgV8.Save(mustGetMcConfigPath())
-	fatalIf(err.Trace(), "Unable to save config version ‘8’.")
+	e = mcNewCfgV8.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version ‘8’.")
 
 	console.Infof("Successfully migrated %s from version ‘7’ to version ‘8’.\n", mustGetMcConfigPath())
 }

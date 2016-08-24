@@ -94,13 +94,13 @@ func (s *shareDBV1) Load(filename string) *probe.Error {
 	}
 
 	// Initialize and load using quick package.
-	qs, err := quick.New(newShareDBV1())
-	if err != nil {
-		return err.Trace(filename)
+	qs, e := quick.New(newShareDBV1())
+	if e != nil {
+		return probe.NewError(e).Trace(filename)
 	}
-	err = qs.Load(filename)
-	if err != nil {
-		return err.Trace(filename)
+	e = qs.Load(filename)
+	if e != nil {
+		return probe.NewError(e).Trace(filename)
 	}
 
 	// Copy map over.
@@ -118,11 +118,14 @@ func (s *shareDBV1) Load(filename string) *probe.Error {
 // Persist share uploads to disk.
 func (s shareDBV1) save(filename string) *probe.Error {
 	// Initialize a new quick file.
-	qs, err := quick.New(s)
-	if err != nil {
-		return err.Trace(filename)
+	qs, e := quick.New(s)
+	if e != nil {
+		return probe.NewError(e).Trace(filename)
 	}
-	return qs.Save(filename).Trace(filename)
+	if e := qs.Save(filename); e != nil {
+		return probe.NewError(e).Trace(filename)
+	}
+	return nil
 }
 
 // Persist share uploads to disk.
