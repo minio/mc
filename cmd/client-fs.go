@@ -104,10 +104,9 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	for _, event := range params.events {
 		switch event {
 		case "put":
-			fsEvents = append(fsEvents, notify.Create)
-			fsEvents = append(fsEvents, notify.Write)
+			fsEvents = append(fsEvents, EventTypePut...)
 		case "delete":
-			fsEvents = append(fsEvents, notify.Remove)
+			fsEvents = append(fsEvents, EventTypeDelete...)
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
@@ -144,10 +143,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 					return
 				}
 				var i os.FileInfo
-				switch event.Event() {
-				case notify.Create:
-					fallthrough
-				case notify.Write:
+				if IsPutEvent(event.Event()) {
 					// Look for any writes, send a response to indicate a full copy.
 					var e error
 					i, e = os.Stat(event.Path())
@@ -169,7 +165,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 						Client: f,
 						Type:   EventCreate,
 					}
-				case notify.Remove:
+				} else if IsDeleteEvent(event.Event()) {
 					eventChan <- Event{
 						Time:   time.Now().Format(timeFormatFS),
 						Path:   event.Path(),
