@@ -68,6 +68,13 @@ $ ./mc --help
 
 ```
 
+``mc`` can also be downloaded via ``brew`` package manager.
+
+```sh
+$ brew install minio-mc
+$ mc --help
+```
+
 ### Microsoft Windows
 
 ```sh
