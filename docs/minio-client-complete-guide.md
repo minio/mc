@@ -36,6 +36,15 @@ version       Print version.
 |FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc|
 |Solaris/Illumos|64-bit|https://dl.minio.io/client/mc/release/solaris-amd64/mc|
 
+### Install from Homebrew
+
+Homebrew is package manager for OSX, please follow [Homebrew](http://brew.sh/) website for installation instructions.
+
+```sh
+$ brew install minio-mc
+$ mc --help
+```
+
 ### Install from Source
 
 Source installation is intended only for developers and advanced users. `mc update` command does not support upgrading from source based installation. Please download official releases from https://minio.io/downloads/#minio-client.
@@ -66,13 +75,6 @@ $ ./mc --help
 $ chmod 755 mc
 $ ./mc --help
 
-```
-
-#### Install via ``brew`` package manager
-
-```sh
-$ brew install minio-mc
-$ mc --help
 ```
 
 ### Microsoft Windows
