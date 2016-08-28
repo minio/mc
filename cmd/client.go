@@ -35,6 +35,7 @@ type Client interface {
 
 	// Access policy operations.
 	GetAccess() (access string, error *probe.Error)
+	GetAccessRules() (policyRules map[string]string, error *probe.Error)
 	SetAccess(access string) *probe.Error
 
 	// I/O operations

@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/xml"
+	"fmt"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -115,7 +116,6 @@ func (c Client) putObjectMultipartStream(bucketName, objectName string, reader i
 	tmpBuffer := new(bytes.Buffer)
 
 	for partNumber <= totalPartsCount {
-
 		// Choose hash algorithms to be calculated by hashCopyN, avoid sha256
 		// with non-v4 signature request or HTTPS connection
 		hashSums := make(map[string][]byte)
@@ -187,18 +187,15 @@ func (c Client) putObjectMultipartStream(bucketName, objectName string, reader i
 	}
 
 	// Loop over uploaded parts to save them in a Parts array before completing the multipart request.
-	for _, part := range partsInfo {
-		var complPart completePart
-		complPart.ETag = part.ETag
-		complPart.PartNumber = part.PartNumber
-		complMultipartUpload.Parts = append(complMultipartUpload.Parts, complPart)
-	}
-
-	if size > 0 {
-		// Verify if totalPartsCount is not equal to total list of parts.
-		if totalPartsCount != len(complMultipartUpload.Parts) {
-			return totalUploadedSize, ErrInvalidParts(partNumber, len(complMultipartUpload.Parts))
+	for i := 1; i <= totalPartsCount; i++ {
+		part, ok := partsInfo[i]
+		if !ok {
+			return 0, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", i))
 		}
+		complMultipartUpload.Parts = append(complMultipartUpload.Parts, completePart{
+			ETag:       part.ETag,
+			PartNumber: part.PartNumber,
+		})
 	}
 
 	// Sort all completed parts.

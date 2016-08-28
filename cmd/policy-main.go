@@ -72,6 +72,24 @@ EXAMPLES:
 `,
 }
 
+// policyRules contains policy rule
+type policyRules struct {
+	Resource string `json:"resource"`
+	Allow    string `json:"allow"`
+}
+
+// String colorized access message.
+func (s policyRules) String() string {
+	return console.Colorize("Policy", s.Resource+" => "+s.Allow+"")
+}
+
+// JSON jsonified policy message.
+func (s policyRules) JSON() string {
+	policyJSONBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(policyJSONBytes)
+}
+
 // policyMessage is container for policy command on bucket success and failure messages.
 type policyMessage struct {
 	Operation string      `json:"operation"`
@@ -110,7 +128,7 @@ func checkPolicySyntax(ctx *cli.Context) {
 	if len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code.
 	}
-	if len(ctx.Args()) == 2 {
+	if len(ctx.Args()) == 2 && ctx.Args().Get(0) != "list" {
 		perms := accessPerms(ctx.Args().Get(0))
 		if !perms.isValidAccessPERM() {
 			fatalIf(errDummy().Trace(),
@@ -170,6 +188,15 @@ func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
 	return policy, nil
 }
 
+// doGetAccessRules do get access rules.
+func doGetAccessRules(targetURL string) (r map[string]string, err *probe.Error) {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return map[string]string{}, err.Trace(targetURL)
+	}
+	return clnt.GetAccessRules()
+}
+
 func mainPolicy(ctx *cli.Context) {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
@@ -180,28 +207,39 @@ func mainPolicy(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Policy", color.New(color.FgGreen, color.Bold))
 
-	perms := accessPerms(ctx.Args().First())
-	if perms.isValidAccessPERM() {
+	if ctx.Args().First() == "list" {
 		targetURL := ctx.Args().Last()
-		err := doSetAccess(targetURL, perms)
-		// Upon error exit.
-		fatalIf(err.Trace(targetURL, string(perms)),
-			"Unable to set policy ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
-		printMsg(policyMessage{
-			Status:    "success",
-			Operation: "set",
-			Bucket:    targetURL,
-			Perms:     perms,
-		})
+		policies, err := doGetAccessRules(targetURL)
+		if err != nil {
+			fatalIf(err, "Cannot list policies.")
+		}
+		for k, v := range policies {
+			printMsg(policyRules{Resource: k, Allow: v})
+		}
 	} else {
-		targetURL := ctx.Args().First()
-		perms, err := doGetAccess(targetURL)
-		fatalIf(err.Trace(targetURL), "Unable to get policy for ‘"+targetURL+"’.")
-		printMsg(policyMessage{
-			Status:    "success",
-			Operation: "get",
-			Bucket:    targetURL,
-			Perms:     perms,
-		})
+		perms := accessPerms(ctx.Args().First())
+		if perms.isValidAccessPERM() {
+			targetURL := ctx.Args().Last()
+			err := doSetAccess(targetURL, perms)
+			// Upon error exit.
+			fatalIf(err.Trace(targetURL, string(perms)),
+				"Unable to set policy ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+			printMsg(policyMessage{
+				Status:    "success",
+				Operation: "set",
+				Bucket:    targetURL,
+				Perms:     perms,
+			})
+		} else {
+			targetURL := ctx.Args().First()
+			perms, err := doGetAccess(targetURL)
+			fatalIf(err.Trace(targetURL), "Unable to get policy for ‘"+targetURL+"’.")
+			printMsg(policyMessage{
+				Status:    "success",
+				Operation: "get",
+				Bucket:    targetURL,
+				Perms:     perms,
+			})
+		}
 	}
 }

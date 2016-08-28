@@ -151,7 +151,7 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 	var totalUploadedSize int64
 
 	// Complete multipart upload.
-	var completeMultipartUpload completeMultipartUpload
+	var complMultipartUpload completeMultipartUpload
 
 	// A map of all uploaded parts.
 	var partsInfo = make(map[int]objectPart)
@@ -236,21 +236,20 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 	}
 
 	// Loop over uploaded parts to save them in a Parts array before completing the multipart request.
-	for _, part := range partsInfo {
-		var complPart completePart
-		complPart.ETag = part.ETag
-		complPart.PartNumber = part.PartNumber
-		completeMultipartUpload.Parts = append(completeMultipartUpload.Parts, complPart)
-	}
-
-	// Verify if totalPartsCount is not equal to total list of parts.
-	if totalPartsCount != len(completeMultipartUpload.Parts) {
-		return totalUploadedSize, ErrInvalidParts(partNumber, len(completeMultipartUpload.Parts))
+	for i := 1; i <= totalPartsCount; i++ {
+		part, ok := partsInfo[i]
+		if !ok {
+			return totalUploadedSize, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", i))
+		}
+		complMultipartUpload.Parts = append(complMultipartUpload.Parts, completePart{
+			ETag:       part.ETag,
+			PartNumber: part.PartNumber,
+		})
 	}
 
 	// Sort all completed parts.
-	sort.Sort(completedParts(completeMultipartUpload.Parts))
-	_, err = c.completeMultipartUpload(bucketName, objectName, uploadID, completeMultipartUpload)
+	sort.Sort(completedParts(complMultipartUpload.Parts))
+	_, err = c.completeMultipartUpload(bucketName, objectName, uploadID, complMultipartUpload)
 	if err != nil {
 		return totalUploadedSize, err
 	}

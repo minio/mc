@@ -221,6 +221,9 @@ func (c Client) putObjectSingle(bucketName, objectName string, reader io.Reader,
 		}
 		defer tmpFile.Close()
 		size, err = hashCopyN(hashAlgos, hashSums, tmpFile, reader, size)
+		if err != nil {
+			return 0, err
+		}
 		// Seek back to beginning of the temporary file.
 		if _, err = tmpFile.Seek(0, 0); err != nil {
 			return 0, err
