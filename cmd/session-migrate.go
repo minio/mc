@@ -30,7 +30,10 @@ import (
 func migrateSessionV6ToV7() {
 	for _, sid := range getSessionIDs() {
 		sV6Header, err := loadSessionV6Header(sid)
-		if err != nil && !os.IsNotExist(err.ToGoError()) {
+		if err != nil {
+			if os.IsNotExist(err.ToGoError()) {
+				continue
+			}
 			fatalIf(err.Trace(sid), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		}
 		if sV6Header.Version == "7" { // It is new format.
@@ -74,7 +77,10 @@ func migrateSessionV6ToV7() {
 func migrateSessionV5ToV6() {
 	for _, sid := range getSessionIDs() {
 		sV6Header, err := loadSessionV6Header(sid)
-		if err != nil && !os.IsNotExist(err.ToGoError()) {
+		if err != nil {
+			if os.IsNotExist(err.ToGoError()) {
+				continue
+			}
 			fatalIf(err.Trace(sid), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		}
 
