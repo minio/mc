@@ -36,6 +36,15 @@ version       Print version.
 |FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc|
 |Solaris/Illumos|64-bit|https://dl.minio.io/client/mc/release/solaris-amd64/mc|
 
+### Install from Homebrew
+
+Install minio packages using [Homebrew](http://brew.sh/) 
+
+```sh
+$ brew install minio-mc
+$ mc --help
+```
+
 ### Install from Source
 
 Source installation is intended only for developers and advanced users. `mc update` command does not support upgrading from source based installation. Please download official releases from https://minio.io/downloads/#minio-client.
