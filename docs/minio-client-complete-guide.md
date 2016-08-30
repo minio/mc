@@ -38,7 +38,7 @@ version       Print version.
 
 ### Install from Homebrew
 
-Homebrew is package manager for OS X, please follow [Homebrew](http://brew.sh/) website for installation instructions.
+Install minio packages using [Homebrew](http://brew.sh/) 
 
 ```sh
 $ brew install minio-mc
