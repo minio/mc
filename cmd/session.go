@@ -31,6 +31,9 @@ func migrateSession() {
 
 	// Migrate V6 to V7.
 	migrateSessionV6ToV7()
+
+	// Migrate V7 to V8
+	migrateSessionV7ToV8()
 }
 
 // createSessionDir - create session directory.

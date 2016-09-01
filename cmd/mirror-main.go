@@ -100,7 +100,7 @@ EXAMPLES:
 
 type mirrorSession struct {
 	// embeds the session struct
-	*sessionV7
+	*sessionV8
 
 	// the channel to trap SIGKILL signals
 	trapCh <-chan bool
@@ -702,7 +702,7 @@ func (ms *mirrorSession) shutdown() {
 	ms.wgStatus.Wait()
 }
 
-func newMirrorSession(session *sessionV7) *mirrorSession {
+func newMirrorSession(session *sessionV8) *mirrorSession {
 	args := session.Header.CommandArgs
 
 	// we'll define the status to use here,
@@ -714,7 +714,7 @@ func newMirrorSession(session *sessionV7) *mirrorSession {
 
 	ms := mirrorSession{
 		trapCh:    signalTrap(os.Interrupt, syscall.SIGTERM),
-		sessionV7: session,
+		sessionV8: session,
 
 		statusCh:  make(chan URLs),
 		harvestCh: make(chan URLs),
@@ -754,7 +754,7 @@ func mainMirror(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
-	session := newSessionV7()
+	session := newSessionV8()
 	session.Header.CommandType = "mirror"
 
 	if v, err := os.Getwd(); err == nil {

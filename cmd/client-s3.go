@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"errors"
 	"hash/fnv"
 	"io"
@@ -111,17 +112,22 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			if e != nil {
 				return nil, probe.NewError(e)
 			}
+			transport := http.DefaultTransport
+			if config.Insecure {
+				transport = &http.Transport{
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				}
+			}
 			if config.Debug {
-				transport := http.DefaultTransport
 				if config.Signature == "S3v4" {
-					transport = httptracer.GetNewTraceTransport(newTraceV4(), http.DefaultTransport)
+					transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
 				}
 				if config.Signature == "S3v2" {
-					transport = httptracer.GetNewTraceTransport(newTraceV2(), http.DefaultTransport)
+					transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
 				}
 				// Set custom transport.
-				api.SetCustomTransport(transport)
 			}
+			api.SetCustomTransport(transport)
 			// Cache the new minio client with hash of config as key.
 			clientCache[confSum] = api
 		}

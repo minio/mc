@@ -87,5 +87,10 @@ func (t traceV2) Response(resp *http.Response) (err error) {
 	if err == nil {
 		console.Debug(string(respTrace))
 	}
+
+	if globalInsecure && resp.TLS != nil {
+		dumpTLSCertificates(resp.TLS)
+	}
+
 	return err
 }
