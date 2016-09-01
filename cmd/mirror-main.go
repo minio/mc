@@ -571,7 +571,6 @@ loop:
 				// finished harvesting urls
 				break loop
 			}
-
 			if sURLs.Error != nil {
 				if strings.Contains(sURLs.Error.ToGoError().Error(), " is a folder.") {
 					ms.status.errorIf(sURLs.Error.Trace(), "Folder cannot be copied. Please use ‘...’ suffix.")
@@ -708,8 +707,10 @@ func newMirrorSession(session *sessionV7) *mirrorSession {
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
-	if globalQuiet || globalJSON {
+	if globalQuiet {
 		status = NewQuietStatus()
+	} else if globalJSON {
+		status = NewDummyStatus()
 	}
 
 	ms := mirrorSession{

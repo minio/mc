@@ -389,13 +389,15 @@ func doCopySession(session *sessionV7) {
 			progressReader.ProgressBar.Finish()
 		}
 	} else {
-		accntStat := accntReader.Stat()
-		cpStatMessage := copyStatMessage{
-			Total:       accntStat.Total,
-			Transferred: accntStat.Transferred,
-			Speed:       accntStat.Speed,
+		if !globalJSON && globalQuiet {
+			accntStat := accntReader.Stat()
+			cpStatMessage := copyStatMessage{
+				Total:       accntStat.Total,
+				Transferred: accntStat.Transferred,
+				Speed:       accntStat.Speed,
+			}
+			console.Println(console.Colorize("Copy", cpStatMessage.String()))
 		}
-		console.Println(console.Colorize("Copy", cpStatMessage.String()))
 	}
 }
 
