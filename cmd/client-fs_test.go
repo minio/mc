@@ -132,6 +132,7 @@ func (s *TestSuite) TestList(c *C) {
 	// Create an ignored file and list to verify if its ignored.
 	objectPath = filepath.Join(root, "test1/.DS_Store")
 	fsClient, err = fsNew(objectPath)
+	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
 	n, err = fsClient.Put(reader, int64(len(data)), "application/octet-stream", nil)
@@ -329,6 +330,7 @@ func (s *TestSuite) TestCopy(c *C) {
 	sourcePath := filepath.Join(root, "source")
 	targetPath := filepath.Join(root, "target")
 	fsClientTarget, err := fsNew(targetPath)
+	c.Assert(err, IsNil)
 	fsClientSource, err := fsNew(sourcePath)
 	c.Assert(err, IsNil)
 

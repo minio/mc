@@ -422,7 +422,7 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Er
 	defer wc.Close()
 	reader := hookreader.NewHook(rc, progress)
 	// Perform copy
-	n, e := io.CopyN(wc, reader, size) // e == nil only if n != size
+	n, _ := io.CopyN(wc, reader, size) // e == nil only if n != size
 	// Only check size related errors if size is positive
 	if size > 0 {
 		if n < size { // Unexpected early EOF

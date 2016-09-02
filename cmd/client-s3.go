@@ -98,7 +98,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		mutex.Lock()
 		defer mutex.Unlock()
 		var api *minio.Client
-		found := false
+		var found bool
 		if api, found = clientCache[confSum]; !found {
 			// Not found. Instantiate a new minio
 			var e error

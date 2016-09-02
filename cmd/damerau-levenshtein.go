@@ -34,6 +34,7 @@ func minimum(integers []int) (minVal int) {
 // DamerauLevenshteinDistance calculates distance between two strings using an algorithm
 // described in https://en.wikipedia.org/wiki/Damerau-Levenshtein_distance
 func DamerauLevenshteinDistance(a string, b string) int {
+	var cost int
 	d := make([][]int, len(a)+1)
 	for i := 1; i <= len(a)+1; i++ {
 		d[i-1] = make([]int, len(b)+1)
@@ -46,7 +47,6 @@ func DamerauLevenshteinDistance(a string, b string) int {
 	}
 	for i := 1; i <= len(a); i++ {
 		for j := 1; j <= len(b); j++ {
-			cost := 0
 			if a[i-1] == b[j-1] {
 				cost = 0
 			} else {
