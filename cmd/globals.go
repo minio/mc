@@ -43,19 +43,21 @@ const (
 )
 
 var (
-	globalQuiet   = false // Quiet flag set via command line
-	globalJSON    = false // Json flag set via command line
-	globalDebug   = false // Debug flag set via command line
-	globalNoColor = false // Debug flag set via command line
+	globalQuiet    = false // Quiet flag set via command line
+	globalJSON     = false // Json flag set via command line
+	globalDebug    = false // Debug flag set via command line
+	globalNoColor  = false // No Color flag set via command line
+	globalInsecure = false // Insecure flag set via command line
 	// WHEN YOU ADD NEXT GLOBAL FLAG, MAKE SURE TO ALSO UPDATE SESSION CODE AND CODE BELOW.
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor bool) {
+func setGlobals(quiet, debug, json, noColor, insecure bool) {
 	globalQuiet = quiet
 	globalDebug = debug
 	globalJSON = json
 	globalNoColor = noColor
+	globalInsecure = insecure
 
 	// Enable debug messages if requested.
 	if globalDebug {
@@ -74,5 +76,6 @@ func setGlobalsFromContext(ctx *cli.Context) {
 	debug := ctx.Bool("debug") || ctx.GlobalBool("debug")
 	json := ctx.Bool("json") || ctx.GlobalBool("json")
 	noColor := ctx.Bool("no-color") || ctx.GlobalBool("no-color")
-	setGlobals(quiet, debug, json, noColor)
+	insecure := ctx.Bool("insecure") || ctx.GlobalBool("insecure")
+	setGlobals(quiet, debug, json, noColor, insecure)
 }

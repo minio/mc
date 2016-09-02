@@ -159,6 +159,7 @@ func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
 	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 	s3Config.HostURL = urlStr
 	s3Config.Debug = globalDebug
+	s3Config.Insecure = globalInsecure
 	s3Client, err := s3New(s3Config)
 	if err != nil {
 		return nil, err.Trace(alias, urlStr)

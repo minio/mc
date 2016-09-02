@@ -47,6 +47,10 @@ var globalFlags = []cli.Flag{
 		Name:  "debug",
 		Usage: "Enable debugging output.",
 	},
+	cli.BoolFlag{
+		Name:  "insecure",
+		Usage: "Skip SSL certificate verification.",
+	},
 }
 
 // registerCmd registers a cli command

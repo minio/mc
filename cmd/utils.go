@@ -17,9 +17,12 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"math/rand"
 	"path/filepath"
 	"time"
+
+	"github.com/minio/mc/pkg/console"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -39,4 +42,19 @@ func isBucketVirtualStyle(host string) bool {
 	s3Virtual, _ := filepath.Match("*.s3*.amazonaws.com", host)
 	googleVirtual, _ := filepath.Match("*.storage.googleapis.com", host)
 	return s3Virtual || googleVirtual
+}
+
+// dumpTlsCertificates prints some fields of the certificates received from the server.
+// Fields will be inspected by the user, so they must be conscise and useful
+func dumpTLSCertificates(t *tls.ConnectionState) {
+	for _, cert := range t.PeerCertificates {
+		console.Debugln("TLS Certificate found: ")
+		if len(cert.Issuer.Country) > 0 {
+			console.Debugln(" >> Country: " + cert.Issuer.Country[0])
+		}
+		if len(cert.Issuer.Organization) > 0 {
+			console.Debugln(" >> Organization: " + cert.Issuer.Organization[0])
+		}
+		console.Debugln(" >> Expires: " + cert.NotAfter.String())
+	}
 }

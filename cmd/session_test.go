@@ -35,7 +35,7 @@ func (s *TestSuite) TestSession(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
 
-	session := newSessionV7()
+	session := newSessionV8()
 	c.Assert(session.Header.CommandArgs, IsNil)
 	c.Assert(len(session.SessionID), Equals, 8)
 	_, e := os.Stat(session.DataFP.Name())
@@ -45,7 +45,7 @@ func (s *TestSuite) TestSession(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(isSessionExists(session.SessionID), Equals, true)
 
-	savedSession, err := loadSessionV7(session.SessionID)
+	savedSession, err := loadSessionV8(session.SessionID)
 	c.Assert(err, IsNil)
 	c.Assert(session.SessionID, Equals, savedSession.SessionID)
 

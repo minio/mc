@@ -25,6 +25,58 @@ import (
 	"github.com/minio/minio/pkg/quick"
 )
 
+// Migrates session header version '7' to '8'. The only
+// change was the adding of insecure global flag
+func migrateSessionV7ToV8() {
+	for _, sid := range getSessionIDs() {
+		sV7, err := loadSessionV7(sid)
+		if err != nil {
+			if os.IsNotExist(err.ToGoError()) {
+				continue
+			}
+			fatalIf(err.Trace(sid), "Unable to load version ‘7’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		}
+
+		sessionVersion, e := strconv.Atoi(sV7.Header.Version)
+		fatalIf(probe.NewError(e), "Unable to load version ‘7’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		if sessionVersion > 7 { // It is new format.
+			continue
+		}
+
+		sessionFile, err := getSessionFile(sid)
+		fatalIf(err.Trace(sid), "Unable to get session file.")
+
+		// Initialize v7 header and migrate to new config.
+		sV8Header := &sessionV8Header{}
+		sV8Header.Version = "8"
+		sV8Header.When = sV7.Header.When
+		sV8Header.RootPath = sV7.Header.RootPath
+		sV8Header.GlobalBoolFlags = sV7.Header.GlobalBoolFlags
+		sV8Header.GlobalIntFlags = sV7.Header.GlobalIntFlags
+		sV8Header.GlobalStringFlags = sV7.Header.GlobalStringFlags
+		sV8Header.CommandType = sV7.Header.CommandType
+		sV8Header.CommandArgs = sV7.Header.CommandArgs
+		sV8Header.CommandBoolFlags = sV7.Header.CommandBoolFlags
+		sV8Header.CommandIntFlags = sV7.Header.CommandIntFlags
+		sV8Header.CommandStringFlags = sV7.Header.CommandStringFlags
+		sV8Header.LastCopied = sV7.Header.LastCopied
+		sV8Header.LastRemoved = sV7.Header.LastRemoved
+		sV8Header.TotalBytes = sV7.Header.TotalBytes
+		sV8Header.TotalObjects = sV7.Header.TotalObjects
+
+		// Add insecure flag to the new V8 header
+		sV8Header.GlobalBoolFlags["insecure"] = false
+
+		qs, e := quick.New(sV8Header)
+		fatalIf(probe.NewError(e).Trace(sid), "Unable to initialize quick config for session '8' header.")
+
+		e = qs.Save(sessionFile)
+		fatalIf(probe.NewError(e).Trace(sid, sessionFile), "Unable to migrate session from '7' to '8'.")
+
+		console.Println("Successfully migrated ‘" + sessionFile + "’ from version ‘" + sV7.Header.Version + "’ to " + "‘" + sV8Header.Version + "’.")
+	}
+}
+
 // Migrates session header version '6' to '7'. Only change is
 // LastRemoved field which was added in version '7'.
 func migrateSessionV6ToV7() {
@@ -36,7 +88,10 @@ func migrateSessionV6ToV7() {
 			}
 			fatalIf(err.Trace(sid), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		}
-		if sV6Header.Version == "7" { // It is new format.
+
+		sessionVersion, e := strconv.Atoi(sV6Header.Version)
+		fatalIf(probe.NewError(e), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		if sessionVersion > 6 { // It is new format.
 			continue
 		}
 
@@ -86,7 +141,6 @@ func migrateSessionV5ToV6() {
 
 		sessionVersion, e := strconv.Atoi(sV6Header.Version)
 		fatalIf(probe.NewError(e), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
-
 		if sessionVersion > 5 { // It is new format.
 			continue
 		}
