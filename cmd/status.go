@@ -48,6 +48,66 @@ func NewQuietStatus() Status {
 	}
 }
 
+// NewDummyStatus returns a dummy status object
+func NewDummyStatus() Status {
+	return &DummyStatus{}
+}
+
+// DummyStatus will not show anything.
+type DummyStatus struct{}
+
+// Read implements the io.Reader interface
+func (ds *DummyStatus) Read(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
+// SetTotal sets the total of the progressbar, ignored for quietstatus
+func (ds *DummyStatus) SetTotal(v int64) Status {
+	return ds
+}
+
+// SetCaption sets the caption of the progressbar, ignored for quietstatus
+func (ds *DummyStatus) SetCaption(s string) {}
+
+// Total returns the total number of bytes
+func (ds *DummyStatus) Total() int64 {
+	return 0
+}
+
+// Add bytes to current number of bytes
+func (ds *DummyStatus) Add(v int64) Status {
+	return ds
+}
+
+// Println prints line, ignored for quietstatus
+func (ds *DummyStatus) Println(data ...interface{}) {}
+
+// PrintMsg prints message
+func (ds *DummyStatus) PrintMsg(msg message) {
+	if !globalJSON {
+		console.Println(msg.String())
+	} else {
+		console.Println(msg.JSON())
+	}
+}
+
+// Start is ignored for quietstatus
+func (ds *DummyStatus) Start() {}
+
+// Finish displays the accounting summary
+func (ds *DummyStatus) Finish() {}
+
+// Update is ignored for quietstatus
+func (ds *DummyStatus) Update() {}
+
+func (ds *DummyStatus) errorIf(err *probe.Error, msg string) {
+	errorIf(err, msg)
+}
+
+func (ds *DummyStatus) fatalIf(err *probe.Error, msg string) {
+	fatalIf(err, msg)
+}
+
 // QuietStatus will only show the progress and summary
 type QuietStatus struct {
 	*accounter
