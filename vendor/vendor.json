@@ -49,16 +49,16 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "xk/h/ltr8Er0d0tEFcwLjKUReBE=",
+			"checksumSHA1": "OA4WJ2M7K2pLCjxoHwy+9UvTDDo=",
 			"path": "github.com/minio/minio-go",
-			"revision": "9e734013294ab153b0bdbe182738bcddd46f1947",
-			"revisionTime": "2016-08-18T00:31:20Z"
+			"revision": "583c261267bc1022bb3e046c7d01c49d3f56edaa",
+			"revisionTime": "2016-09-03T08:42:23Z"
 		},
 		{
-			"checksumSHA1": "0OZaeJPgMlA2Txn+1yeAIwEpJvM=",
+			"checksumSHA1": "qTxOBp3GVxCC70ykb7Hxg6UgWwA=",
 			"path": "github.com/minio/minio-go/pkg/policy",
-			"revision": "9e734013294ab153b0bdbe182738bcddd46f1947",
-			"revisionTime": "2016-08-18T00:31:20Z"
+			"revision": "583c261267bc1022bb3e046c7d01c49d3f56edaa",
+			"revisionTime": "2016-09-03T08:42:23Z"
 		},
 		{
 			"checksumSHA1": "A8QOw1aWwc+RtjGozY0XeS5varo=",

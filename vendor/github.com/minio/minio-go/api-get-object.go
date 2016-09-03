@@ -36,16 +36,13 @@ func (c Client) GetObject(bucketName, objectName string) (*Object, error) {
 		return nil, err
 	}
 
-	// Start the request as soon Get is initiated.
-	httpReader, objectInfo, err := c.getObject(bucketName, objectName, 0, 0)
-	if err != nil {
-		return nil, err
-	}
-
+	var httpReader io.ReadCloser
+	var objectInfo ObjectInfo
+	var err error
 	// Create request channel.
-	reqCh := make(chan readRequest)
+	reqCh := make(chan getRequest)
 	// Create response channel.
-	resCh := make(chan readResponse)
+	resCh := make(chan getResponse)
 	// Create done channel.
 	doneCh := make(chan struct{})
 
@@ -61,58 +58,148 @@ func (c Client) GetObject(bucketName, objectName string) (*Object, error) {
 			case <-doneCh:
 				// Close the http response body before returning.
 				// This ends the connection with the server.
-				httpReader.Close()
+				if httpReader != nil {
+					httpReader.Close()
+				}
 				return
-			// Request message.
+
+			// Gather incoming request.
 			case req := <-reqCh:
-				// Offset changes fetch the new object at an Offset.
-				if req.DidOffsetChange {
-					if httpReader != nil {
-						// Close previously opened http reader.
-						httpReader.Close()
+				// If this is the first request we may not need to do a getObject request yet.
+				if req.isFirstReq {
+					// First request is a Read/ReadAt.
+					if req.isReadOp {
+						// Differentiate between wanting the whole object and just a range.
+						if req.isReadAt {
+							// If this is a ReadAt request only get the specified range.
+							// Range is set with respect to the offset and length of the buffer requested.
+							// Do not set objectInfo from the first readAt request because it will not get
+							// the whole object.
+							httpReader, _, err = c.getObject(bucketName, objectName, req.Offset, int64(len(req.Buffer)))
+						} else {
+							// First request is a Read request.
+							httpReader, objectInfo, err = c.getObject(bucketName, objectName, req.Offset, 0)
+						}
+						if err != nil {
+							resCh <- getResponse{
+								Error: err,
+							}
+							return
+						}
+						// Read at least firstReq.Buffer bytes, if not we have
+						// reached our EOF.
+						size, err := io.ReadFull(httpReader, req.Buffer)
+						if err == io.ErrUnexpectedEOF {
+							// If an EOF happens after reading some but not
+							// all the bytes ReadFull returns ErrUnexpectedEOF
+							err = io.EOF
+						}
+						// Send back the first response.
+						resCh <- getResponse{
+							objectInfo: objectInfo,
+							Size:       int(size),
+							Error:      err,
+							didRead:    true,
+						}
+					} else {
+						// First request is a Stat or Seek call.
+						// Only need to run a StatObject until an actual Read or ReadAt request comes through.
+						objectInfo, err = c.StatObject(bucketName, objectName)
+						if err != nil {
+							resCh <- getResponse{
+								Error: err,
+							}
+							// Exit the go-routine.
+							return
+						}
+						// Send back the first response.
+						resCh <- getResponse{
+							objectInfo: objectInfo,
+						}
 					}
-					// Read from offset.
-					httpReader, _, err = c.getObject(bucketName, objectName, req.Offset, 0)
+				} else if req.settingObjectInfo { // Request is just to get objectInfo.
+					objectInfo, err := c.StatObject(bucketName, objectName)
 					if err != nil {
-						resCh <- readResponse{
+						resCh <- getResponse{
 							Error: err,
 						}
+						// Exit the goroutine.
 						return
 					}
-				}
+					// Send back the objectInfo.
+					resCh <- getResponse{
+						objectInfo: objectInfo,
+					}
+				} else {
+					// Offset changes fetch the new object at an Offset.
+					// Because the httpReader may not be set by the first
+					// request if it was a stat or seek it must be checked
+					// if the object has been read or not to only initialize
+					// new ones when they haven't been already.
+					// All readAt requests are new requests.
+					if req.DidOffsetChange || !req.beenRead {
+						if httpReader != nil {
+							// Close previously opened http reader.
+							httpReader.Close()
+						}
+						// If this request is a readAt only get the specified range.
+						if req.isReadAt {
+							// Range is set with respect to the offset and length of the buffer requested.
+							httpReader, _, err = c.getObject(bucketName, objectName, req.Offset, int64(len(req.Buffer)))
+						} else {
+							httpReader, objectInfo, err = c.getObject(bucketName, objectName, req.Offset, 0)
+						}
+						if err != nil {
+							resCh <- getResponse{
+								Error: err,
+							}
+							return
+						}
+					}
 
-				// Read at least req.Buffer bytes, if not we have
-				// reached our EOF.
-				size, err := io.ReadFull(httpReader, req.Buffer)
-				if err == io.ErrUnexpectedEOF {
-					// If an EOF happens after reading some but not
-					// all the bytes ReadFull returns ErrUnexpectedEOF
-					err = io.EOF
-				}
-				// Reply back how much was read.
-				resCh <- readResponse{
-					Size:  int(size),
-					Error: err,
+					// Read at least req.Buffer bytes, if not we have
+					// reached our EOF.
+					size, err := io.ReadFull(httpReader, req.Buffer)
+					if err == io.ErrUnexpectedEOF {
+						// If an EOF happens after reading some but not
+						// all the bytes ReadFull returns ErrUnexpectedEOF
+						err = io.EOF
+					}
+					// Reply back how much was read.
+					resCh <- getResponse{
+						Size:       int(size),
+						Error:      err,
+						didRead:    true,
+						objectInfo: objectInfo,
+					}
 				}
 			}
 		}
 	}()
-	// Return the readerAt backed by routine.
-	return newObject(reqCh, resCh, doneCh, objectInfo), nil
+
+	// Create a newObject through the information sent back by reqCh.
+	return newObject(reqCh, resCh, doneCh), nil
 }
 
-// Read response message container to reply back for the request.
-type readResponse struct {
-	Size  int
-	Error error
-}
-
-// Read request message container to communicate with internal
+// get request message container to communicate with internal
 // go-routine.
-type readRequest struct {
-	Buffer          []byte
-	Offset          int64 // readAt offset.
-	DidOffsetChange bool
+type getRequest struct {
+	Buffer            []byte
+	Offset            int64 // readAt offset.
+	DidOffsetChange   bool  // Tracks the offset changes for Seek requests.
+	beenRead          bool  // Determines if this is the first time an object is being read.
+	isReadAt          bool  // Determines if this request is a request to a specific range
+	isReadOp          bool  // Determines if this request is a Read or Read/At request.
+	isFirstReq        bool  // Determines if this request is the first time an object is being accessed.
+	settingObjectInfo bool  // Determines if this request is to set the objectInfo of an object.
+}
+
+// get response message container to reply back for the request.
+type getResponse struct {
+	Size       int
+	Error      error
+	didRead    bool       // Lets subsequent calls know whether or not httpReader has been initiated.
+	objectInfo ObjectInfo // Used for the first request.
 }
 
 // Object represents an open object. It implements Read, ReadAt,
@@ -122,8 +209,8 @@ type Object struct {
 	mutex *sync.Mutex
 
 	// User allocated and defined.
-	reqCh      chan<- readRequest
-	resCh      <-chan readResponse
+	reqCh      chan<- getRequest
+	resCh      <-chan getResponse
 	doneCh     chan<- struct{}
 	prevOffset int64
 	currOffset int64
@@ -132,8 +219,60 @@ type Object struct {
 	// Keeps track of closed call.
 	isClosed bool
 
+	// Keeps track of if this is the first call.
+	isStarted bool
+
 	// Previous error saved for future calls.
 	prevErr error
+
+	// Keeps track of if this object has been read yet.
+	beenRead bool
+
+	// Keeps track of if objectInfo has been set yet.
+	objectInfoSet bool
+}
+
+// doGetRequest - sends and blocks on the firstReqCh and reqCh of an object.
+// Returns back the size of the buffer read, if anything was read, as well
+// as any error encountered. For all first requests sent on the object
+// it is also responsible for sending back the objectInfo.
+func (o *Object) doGetRequest(request getRequest) (getResponse, error) {
+	o.reqCh <- request
+	response := <-o.resCh
+	// This was the first request.
+	if !o.isStarted {
+		// The object has been operated on.
+		o.isStarted = true
+	}
+	// Set the objectInfo if the request was not readAt
+	// and it hasn't been set before.
+	if !o.objectInfoSet && !request.isReadAt {
+		o.objectInfo = response.objectInfo
+		o.objectInfoSet = true
+	}
+	// Set beenRead only if it has not been set before.
+	if !o.beenRead {
+		o.beenRead = response.didRead
+	}
+	// Return any error to the top level.
+	if response.Error != nil {
+		return response, response.Error
+	}
+	return response, nil
+}
+
+// setOffset - handles the setting of offsets for
+// Read/ReadAt/Seek requests.
+func (o *Object) setOffset(bytesRead int64) error {
+	// Update the currentOffset.
+	o.currOffset += bytesRead
+	// Save the current offset as previous offset.
+	o.prevOffset = o.currOffset
+
+	if o.currOffset >= o.objectInfo.Size {
+		return io.EOF
+	}
+	return nil
 }
 
 // Read reads up to len(p) bytes into p. It returns the number of
@@ -152,16 +291,17 @@ func (o *Object) Read(b []byte) (n int, err error) {
 	if o.prevErr != nil || o.isClosed {
 		return 0, o.prevErr
 	}
-
-	// If current offset has reached Size limit, return EOF.
-	if o.currOffset >= o.objectInfo.Size {
-		return 0, io.EOF
+	// Create a new request.
+	readReq := getRequest{
+		isReadOp: true,
+		beenRead: o.beenRead,
+		Buffer:   b,
 	}
 
-	// Send current information over control channel to indicate we are ready.
-	reqMsg := readRequest{}
-	// Send the pointer to the buffer over the channel.
-	reqMsg.Buffer = b
+	// Alert that this is the first request.
+	if !o.isStarted {
+		readReq.isFirstReq = true
+	}
 
 	// Verify if offset has changed and currOffset is greater than
 	// previous offset. Perhaps due to Seek().
@@ -171,42 +311,32 @@ func (o *Object) Read(b []byte) (n int, err error) {
 	}
 	if offsetChange > 0 {
 		// Fetch the new reader at the current offset again.
-		reqMsg.Offset = o.currOffset
-		reqMsg.DidOffsetChange = true
+		readReq.Offset = o.currOffset
+		readReq.DidOffsetChange = true
 	} else {
 		// No offset changes no need to fetch new reader, continue
 		// reading.
-		reqMsg.DidOffsetChange = false
-		reqMsg.Offset = 0
+		readReq.DidOffsetChange = false
+		readReq.Offset = 0
 	}
 
-	// Send read request over the control channel.
-	o.reqCh <- reqMsg
-
-	// Get data over the response channel.
-	dataMsg := <-o.resCh
+	// Send and receive from the first request.
+	response, err := o.doGetRequest(readReq)
+	if err != nil {
+		// Save the error.
+		o.prevErr = err
+		return response.Size, err
+	}
 
 	// Bytes read.
-	bytesRead := int64(dataMsg.Size)
+	bytesRead := int64(response.Size)
 
-	// Update current offset.
-	o.currOffset += bytesRead
-
-	// Save the current offset as previous offset.
-	o.prevOffset = o.currOffset
-
-	if dataMsg.Error == nil {
-		// If currOffset read is equal to objectSize
-		// We have reached end of file, we return io.EOF.
-		if o.currOffset >= o.objectInfo.Size {
-			return dataMsg.Size, io.EOF
-		}
-		return dataMsg.Size, nil
+	// Set the new offset.
+	err = o.setOffset(bytesRead)
+	if err != nil {
+		return response.Size, err
 	}
-
-	// Save any error.
-	o.prevErr = dataMsg.Error
-	return dataMsg.Size, dataMsg.Error
+	return response.Size, nil
 }
 
 // Stat returns the ObjectInfo structure describing object.
@@ -220,6 +350,21 @@ func (o *Object) Stat() (ObjectInfo, error) {
 
 	if o.prevErr != nil || o.isClosed {
 		return ObjectInfo{}, o.prevErr
+	}
+
+	// This is the first request.
+	if !o.isStarted || !o.objectInfoSet {
+		statReq := getRequest{
+			isFirstReq:        !o.isStarted,
+			settingObjectInfo: !o.objectInfoSet,
+		}
+
+		// Send the request and get the response.
+		_, err := o.doGetRequest(statReq)
+		if err != nil {
+			o.prevErr = err
+			return ObjectInfo{}, err
+		}
 	}
 
 	return o.objectInfo, nil
@@ -242,57 +387,55 @@ func (o *Object) ReadAt(b []byte, offset int64) (n int, err error) {
 	if o.prevErr != nil || o.isClosed {
 		return 0, o.prevErr
 	}
-
-	// if offset is greater than or equal to object size we return io.EOF.
-	// If offset is negative then we return io.EOF.
-	if offset < 0 || offset >= o.objectInfo.Size {
-		return 0, io.EOF
-	}
-
-	// Send current information over control channel to indicate we
-	// are ready.
-	reqMsg := readRequest{}
-
-	// Send the offset and pointer to the buffer over the channel.
-	reqMsg.Buffer = b
-
-	// For ReadAt offset always changes, minor optimization where
-	// offset same as currOffset we don't change the offset.
-	reqMsg.DidOffsetChange = offset != o.currOffset
-	if reqMsg.DidOffsetChange {
-		// Set new offset.
-		reqMsg.Offset = offset
-		// Save new offset as current offset.
-		o.currOffset = offset
-	}
-
-	// Send read request over the control channel.
-	o.reqCh <- reqMsg
-
-	// Get data over the response channel.
-	dataMsg := <-o.resCh
-
-	// Bytes read.
-	bytesRead := int64(dataMsg.Size)
-
-	// Update current offset.
-	o.currOffset += bytesRead
-
-	// Save current offset as previous offset before returning.
-	o.prevOffset = o.currOffset
-
-	if dataMsg.Error == nil {
-		// If currentOffset is equal to objectSize
-		// we have reached end of file, we return io.EOF.
-		if o.currOffset >= o.objectInfo.Size {
-			return dataMsg.Size, io.EOF
+	// Can only compare offsets to size when size has been set.
+	if o.objectInfoSet {
+		// If offset is negative than we return io.EOF.
+		// If offset is greater than or equal to object size we return io.EOF.
+		if offset >= o.objectInfo.Size || offset < 0 {
+			return 0, io.EOF
 		}
-		return dataMsg.Size, nil
 	}
 
-	// Save any error.
-	o.prevErr = dataMsg.Error
-	return dataMsg.Size, dataMsg.Error
+	// Create the new readAt request.
+	readAtReq := getRequest{
+		isReadOp:        true,
+		isReadAt:        true,
+		DidOffsetChange: true,       // Offset always changes.
+		beenRead:        o.beenRead, // Set if this is the first request to try and read.
+		Offset:          offset,     // Set the offset.
+		Buffer:          b,
+	}
+	// Alert that this is the first request.
+	if !o.isStarted {
+		readAtReq.isFirstReq = true
+	}
+
+	// Send and receive from the first request.
+	response, err := o.doGetRequest(readAtReq)
+	if err != nil {
+		// Save the error.
+		o.prevErr = err
+		return 0, err
+	}
+	// Bytes read.
+	bytesRead := int64(response.Size)
+	// There is no valid objectInfo yet
+	// 	to compare against for EOF.
+	if !o.objectInfoSet {
+		// Update the currentOffset.
+		o.currOffset += bytesRead
+		// Save the current offset as previous offset.
+		o.prevOffset = o.currOffset
+	} else {
+		// If this was not the first request update
+		// the offsets and compare against objectInfo
+		// for EOF.
+		err = o.setOffset(bytesRead)
+		if err != nil {
+			return response.Size, err
+		}
+	}
+	return response.Size, nil
 }
 
 // Seek sets the offset for the next Read or Write to offset,
@@ -325,6 +468,23 @@ func (o *Object) Seek(offset int64, whence int) (n int64, err error) {
 		return 0, ErrInvalidArgument(fmt.Sprintf("Negative position not allowed for %d.", whence))
 	}
 
+	// This is the first request. So before anything else
+	// get the ObjectInfo.
+	if !o.isStarted || !o.objectInfoSet {
+		// Create the new Seek request.
+		seekReq := getRequest{
+			isReadOp:   false,
+			Offset:     offset,
+			isFirstReq: true,
+		}
+		// Send and receive from the seek request.
+		_, err := o.doGetRequest(seekReq)
+		if err != nil {
+			// Save the error.
+			o.prevErr = err
+			return 0, err
+		}
+	}
 	// Save current offset as previous offset.
 	o.prevOffset = o.currOffset
 
@@ -391,13 +551,13 @@ func (o *Object) Close() (err error) {
 }
 
 // newObject instantiates a new *minio.Object*
-func newObject(reqCh chan<- readRequest, resCh <-chan readResponse, doneCh chan<- struct{}, objectInfo ObjectInfo) *Object {
+// ObjectInfo will be set by setObjectInfo
+func newObject(reqCh chan<- getRequest, resCh <-chan getResponse, doneCh chan<- struct{}) *Object {
 	return &Object{
-		mutex:      &sync.Mutex{},
-		reqCh:      reqCh,
-		resCh:      resCh,
-		doneCh:     doneCh,
-		objectInfo: objectInfo,
+		mutex:  &sync.Mutex{},
+		reqCh:  reqCh,
+		resCh:  resCh,
+		doneCh: doneCh,
 	}
 }
 
@@ -419,6 +579,7 @@ func (c Client) getObject(bucketName, objectName string, offset, length int64) (
 
 	customHeader := make(http.Header)
 	// Set ranges if length and offset are valid.
+	// See  https://tools.ietf.org/html/rfc7233#section-3.1 for reference.
 	if length > 0 && offset >= 0 {
 		customHeader.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	} else if offset > 0 && length == 0 {

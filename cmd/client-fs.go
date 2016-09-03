@@ -979,6 +979,14 @@ func (f *fsClient) MakeBucket(region string) *probe.Error {
 	return nil
 }
 
+// GetAccessRules - unsupported API
+func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
+	return map[string]string{}, probe.NewError(APINotImplemented{
+		API:     "ListBucketPolicies",
+		APIType: "filesystem",
+	})
+}
+
 // GetAccess - get access policy permissions.
 func (f *fsClient) GetAccess() (access string, err *probe.Error) {
 	// For windows this feature is not implemented.

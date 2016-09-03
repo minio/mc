@@ -201,16 +201,6 @@ func ErrInvalidObjectName(message string) error {
 	}
 }
 
-// ErrInvalidParts - Invalid number of parts.
-func ErrInvalidParts(expectedParts, uploadedParts int) error {
-	msg := fmt.Sprintf("Unexpected number of parts found Want %d, Got %d", expectedParts, uploadedParts)
-	return ErrorResponse{
-		Code:      "InvalidParts",
-		Message:   msg,
-		RequestID: "minio",
-	}
-}
-
 // ErrInvalidObjectPrefix - Invalid object prefix response is
 // similar to object name response.
 var ErrInvalidObjectPrefix = ErrInvalidObjectName
@@ -229,6 +219,16 @@ func ErrInvalidArgument(message string) error {
 func ErrNoSuchBucketPolicy(message string) error {
 	return ErrorResponse{
 		Code:      "NoSuchBucketPolicy",
+		Message:   message,
+		RequestID: "minio",
+	}
+}
+
+// ErrAPINotSupported - API not supported response
+// The specified API call is not supported
+func ErrAPINotSupported(message string) error {
+	return ErrorResponse{
+		Code:      "APINotSupported",
 		Message:   message,
 		RequestID: "minio",
 	}

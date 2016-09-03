@@ -678,6 +678,24 @@ func (c *s3Client) MakeBucket(region string) *probe.Error {
 	return nil
 }
 
+// GetAccessRules - get configured policies from the server
+func (c *s3Client) GetAccessRules() (map[string]string, *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return map[string]string{}, probe.NewError(BucketNameEmpty{})
+	}
+	policies := map[string]string{}
+	policyRules, err := c.api.ListBucketPolicies(bucket, object)
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+	// Hide policy data structure at this level
+	for k, v := range policyRules {
+		policies[k] = string(v)
+	}
+	return policies, nil
+}
+
 // GetAccess get access policy permissions.
 func (c *s3Client) GetAccess() (string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()

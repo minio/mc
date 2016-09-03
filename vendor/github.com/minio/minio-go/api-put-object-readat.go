@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
+	"fmt"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -187,22 +188,21 @@ func (c Client) putObjectMultipartFromReadAt(bucketName, objectName string, read
 	}
 
 	// Loop over uploaded parts to save them in a Parts array before completing the multipart request.
-	for _, part := range partsInfo {
-		var complPart completePart
-		complPart.ETag = part.ETag
-		complPart.PartNumber = part.PartNumber
+	for i := 1; i <= totalPartsCount; i++ {
+		part, ok := partsInfo[i]
+		if !ok {
+			return 0, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", i))
+		}
 		totalUploadedSize += part.Size
-		complMultipartUpload.Parts = append(complMultipartUpload.Parts, complPart)
+		complMultipartUpload.Parts = append(complMultipartUpload.Parts, completePart{
+			ETag:       part.ETag,
+			PartNumber: part.PartNumber,
+		})
 	}
 
 	// Verify if we uploaded all the data.
 	if totalUploadedSize != size {
 		return totalUploadedSize, ErrUnexpectedEOF(totalUploadedSize, size, bucketName, objectName)
-	}
-
-	// Verify if totalPartsCount is not equal to total list of parts.
-	if totalPartsCount != len(complMultipartUpload.Parts) {
-		return totalUploadedSize, ErrInvalidParts(totalPartsCount, len(complMultipartUpload.Parts))
 	}
 
 	// Sort all completed parts.
