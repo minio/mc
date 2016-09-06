@@ -19,6 +19,7 @@ package cmd
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -29,25 +30,26 @@ import (
 
 // Check if the target URL represents folder. It may or may not exist yet.
 func isTargetURLDir(targetURL string) bool {
-	targetURLParse := newClientURL(targetURL)
 	_, targetContent, err := url2Stat(targetURL)
-	if err != nil {
-		_, aliasedTargetURL, _ := mustExpandAlias(targetURL)
-		if aliasedTargetURL == targetURL {
-			return false
-		}
-		if targetURLParse.Path == string(targetURLParse.Separator) && targetURLParse.Scheme != "" {
-			return false
-		}
-		if strings.HasSuffix(targetURLParse.Path, string(targetURLParse.Separator)) {
-			return true
-		}
+	if err == nil {
+		return targetContent.Type.IsDir()
+	}
+	_, aliasedTargetURL, _ := mustExpandAlias(targetURL)
+	if aliasedTargetURL == targetURL {
 		return false
 	}
-	if !targetContent.Type.IsDir() { // Target is a dir.
+	// targetURL is an aliased path, continue guessing if the path
+	// is meant to point to a bucket or directory
+	pathURL := filepath.FromSlash(targetURL)
+	fields := strings.Split(pathURL, string(filepath.Separator))
+	switch len(fields) {
+	case 0, 1:
 		return false
+	case 2:
+		return true
+	default:
+		return strings.HasSuffix(pathURL, string(filepath.Separator))
 	}
-	return true
 }
 
 // getSource gets a reader from URL.
