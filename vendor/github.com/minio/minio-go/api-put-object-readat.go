@@ -90,8 +90,7 @@ func (c Client) putObjectMultipartFromReadAt(bucketName, objectName string, read
 		return 0, err
 	}
 
-	// Used for readability, lastPartNumber is always
-	// totalPartsCount.
+	// Used for readability, lastPartNumber is always totalPartsCount.
 	lastPartNumber := totalPartsCount
 
 	// partNumber always starts with '1'.
@@ -188,7 +187,7 @@ func (c Client) putObjectMultipartFromReadAt(bucketName, objectName string, read
 	}
 
 	// Loop over uploaded parts to save them in a Parts array before completing the multipart request.
-	for i := 1; i <= totalPartsCount; i++ {
+	for i := 1; i <= lastPartNumber; i++ {
 		part, ok := partsInfo[i]
 		if !ok {
 			return 0, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", i))
