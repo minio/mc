@@ -172,10 +172,13 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 		return 0, err
 	}
 
+	// Used for readability, lastPartNumber is always totalPartsCount.
+	lastPartNumber := totalPartsCount
+
 	// Part number always starts with '1'.
 	partNumber := 1
 
-	for partNumber <= totalPartsCount {
+	for partNumber <= lastPartNumber {
 		// Get a section reader on a particular offset.
 		sectionReader := io.NewSectionReader(fileReader, totalUploadedSize, partSize)
 
@@ -236,7 +239,7 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 	}
 
 	// Loop over uploaded parts to save them in a Parts array before completing the multipart request.
-	for i := 1; i <= totalPartsCount; i++ {
+	for i := 1; i <= lastPartNumber; i++ {
 		part, ok := partsInfo[i]
 		if !ok {
 			return totalUploadedSize, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", i))

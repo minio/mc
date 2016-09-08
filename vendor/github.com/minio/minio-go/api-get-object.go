@@ -322,8 +322,8 @@ func (o *Object) Read(b []byte) (n int, err error) {
 
 	// Send and receive from the first request.
 	response, err := o.doGetRequest(readReq)
-	if err != nil {
-		// Save the error.
+	if err != nil && err != io.EOF {
+		// Save the error for future calls.
 		o.prevErr = err
 		return response.Size, err
 	}
@@ -332,11 +332,15 @@ func (o *Object) Read(b []byte) (n int, err error) {
 	bytesRead := int64(response.Size)
 
 	// Set the new offset.
-	err = o.setOffset(bytesRead)
-	if err != nil {
-		return response.Size, err
+	oerr := o.setOffset(bytesRead)
+	if oerr != nil {
+		// Save the error for future calls.
+		o.prevErr = oerr
+		return response.Size, oerr
 	}
-	return response.Size, nil
+
+	// Return the response.
+	return response.Size, err
 }
 
 // Stat returns the ObjectInfo structure describing object.
@@ -348,7 +352,7 @@ func (o *Object) Stat() (ObjectInfo, error) {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
 
-	if o.prevErr != nil || o.isClosed {
+	if o.prevErr != nil && o.prevErr != io.EOF || o.isClosed {
 		return ObjectInfo{}, o.prevErr
 	}
 
@@ -387,6 +391,7 @@ func (o *Object) ReadAt(b []byte, offset int64) (n int, err error) {
 	if o.prevErr != nil || o.isClosed {
 		return 0, o.prevErr
 	}
+
 	// Can only compare offsets to size when size has been set.
 	if o.objectInfoSet {
 		// If offset is negative than we return io.EOF.
@@ -405,6 +410,7 @@ func (o *Object) ReadAt(b []byte, offset int64) (n int, err error) {
 		Offset:          offset,     // Set the offset.
 		Buffer:          b,
 	}
+
 	// Alert that this is the first request.
 	if !o.isStarted {
 		readAtReq.isFirstReq = true
@@ -412,10 +418,10 @@ func (o *Object) ReadAt(b []byte, offset int64) (n int, err error) {
 
 	// Send and receive from the first request.
 	response, err := o.doGetRequest(readAtReq)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		// Save the error.
 		o.prevErr = err
-		return 0, err
+		return response.Size, err
 	}
 	// Bytes read.
 	bytesRead := int64(response.Size)
@@ -430,12 +436,13 @@ func (o *Object) ReadAt(b []byte, offset int64) (n int, err error) {
 		// If this was not the first request update
 		// the offsets and compare against objectInfo
 		// for EOF.
-		err = o.setOffset(bytesRead)
-		if err != nil {
-			return response.Size, err
+		oerr := o.setOffset(bytesRead)
+		if oerr != nil {
+			o.prevErr = oerr
+			return response.Size, oerr
 		}
 	}
-	return response.Size, nil
+	return response.Size, err
 }
 
 // Seek sets the offset for the next Read or Write to offset,
