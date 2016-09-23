@@ -211,7 +211,12 @@ func mainPolicy(ctx *cli.Context) {
 		targetURL := ctx.Args().Last()
 		policies, err := doGetAccessRules(targetURL)
 		if err != nil {
-			fatalIf(err, "Cannot list policies.")
+			switch err.ToGoError().(type) {
+			case APINotImplemented:
+				fatalIf(err.Trace(), "Unable to list policies of a non S3 url ‘"+targetURL+"’.")
+			default:
+				fatalIf(err.Trace(targetURL), "Unable to list policies of target ‘"+targetURL+"’.")
+			}
 		}
 		for k, v := range policies {
 			printMsg(policyRules{Resource: k, Allow: v})
@@ -222,8 +227,17 @@ func mainPolicy(ctx *cli.Context) {
 			targetURL := ctx.Args().Last()
 			err := doSetAccess(targetURL, perms)
 			// Upon error exit.
-			fatalIf(err.Trace(targetURL, string(perms)),
-				"Unable to set policy ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+			if err != nil {
+				switch err.ToGoError().(type) {
+				case APINotImplemented:
+					fatalIf(err.Trace(), "Unable to set policy of a non S3 url ‘"+targetURL+"’.")
+				default:
+					fatalIf(err.Trace(targetURL, string(perms)),
+						"Unable to set policy ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+
+				}
+			}
+
 			printMsg(policyMessage{
 				Status:    "success",
 				Operation: "set",
@@ -233,7 +247,15 @@ func mainPolicy(ctx *cli.Context) {
 		} else {
 			targetURL := ctx.Args().First()
 			perms, err := doGetAccess(targetURL)
-			fatalIf(err.Trace(targetURL), "Unable to get policy for ‘"+targetURL+"’.")
+			if err != nil {
+				switch err.ToGoError().(type) {
+				case APINotImplemented:
+					fatalIf(err.Trace(), "Unable to get policy of a non S3 url ‘"+targetURL+"’.")
+				default:
+					fatalIf(err.Trace(targetURL), "Unable to get policy for ‘"+targetURL+"’.")
+				}
+			}
+
 			printMsg(policyMessage{
 				Status:    "success",
 				Operation: "get",
