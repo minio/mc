@@ -12,7 +12,7 @@ env:
 - ARCH=i686
 
 go:
-- 1.6.2
+- 1.7.1
 
 script:
 - make test GOFLAGS="-race"

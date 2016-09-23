@@ -24,7 +24,7 @@ import (
 
 // mc configuration related constants.
 const (
-	minGoVersion = ">= 1.6" // mc requires at least Go v1.6
+	minGoVersion = ">= 1.7.1" // mc requires at least Go v1.7.1
 )
 
 const (
