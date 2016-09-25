@@ -18,7 +18,9 @@ package cmd
 
 import (
 	"crypto/tls"
+	"io"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -57,4 +59,9 @@ func dumpTLSCertificates(t *tls.ConnectionState) {
 		}
 		console.Debugln(" >> Expires: " + cert.NotAfter.String())
 	}
+}
+
+// isStdIO checks if the input parameter is one of the standard input/output streams
+func isStdIO(reader io.Reader) bool {
+	return reader == os.Stdin || reader == os.Stdout || reader == os.Stderr
 }
