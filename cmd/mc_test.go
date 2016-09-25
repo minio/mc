@@ -136,9 +136,11 @@ func (s *TestSuite) TestHumanizedTime(c *C) {
 }
 
 func (s *TestSuite) TestVersions(c *C) {
-	v1, e := version.NewVersion("1.6")
+	v1, e := version.NewVersion("1.7.1")
+	v2, e := version.NewVersion("1.6.3")
 	c.Assert(e, IsNil)
-	v2, e := version.NewConstraint(">= 1.5.0")
+	constraint, e := version.NewConstraint(">= 1.7.1")
 	c.Assert(e, IsNil)
-	c.Assert(v2.Check(v1), Equals, true)
+	c.Assert(constraint.Check(v1), Equals, true)
+	c.Assert(constraint.Check(v2), Equals, false)
 }
