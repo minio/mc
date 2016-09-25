@@ -179,6 +179,13 @@ func mainShareDownload(ctx *cli.Context) {
 
 	for _, targetURL := range ctx.Args() {
 		err := doShareDownloadURL(targetURL, isRecursive, expiry)
-		fatalIf(err.Trace(targetURL), "Unable to share target ‘"+targetURL+"’.")
+		if err != nil {
+			switch err.ToGoError().(type) {
+			case APINotImplemented:
+				fatalIf(err.Trace(), "Unable to share a non S3 url ‘"+targetURL+"’.")
+			default:
+				fatalIf(err.Trace(targetURL), "Unable to share target ‘"+targetURL+"’.")
+			}
+		}
 	}
 }

@@ -206,6 +206,13 @@ func mainShareUpload(ctx *cli.Context) {
 
 	for _, targetURL := range ctx.Args() {
 		err := doShareUploadURL(targetURL, isRecursive, expiry, contentType)
-		fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+targetURL+"’.")
+		if err != nil {
+			switch err.ToGoError().(type) {
+			case APINotImplemented:
+				fatalIf(err.Trace(), "Unable to share a non S3 url ‘"+targetURL+"’.")
+			default:
+				fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+targetURL+"’.")
+			}
+		}
 	}
 }

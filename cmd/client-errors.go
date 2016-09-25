@@ -27,7 +27,7 @@ type APINotImplemented struct {
 }
 
 func (e APINotImplemented) Error() string {
-	return "‘" + e.API + "’ feature " + "is not implemented for ‘" + e.APIType + "’."
+	return "‘" + e.API + "’ is not supported for ‘" + e.APIType + "’."
 }
 
 // GenericBucketError - generic bucket operations error
