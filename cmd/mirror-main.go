@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
@@ -193,7 +194,7 @@ func (ms *mirrorSession) doRemove(sURLs URLs) URLs {
 	isIncomplete := false
 
 	// Remove extraneous file on target.
-	err := rm(targetAlias, targetURL.String(), isIncomplete, isFake)
+	err := rm(targetAlias, targetURL.String(), isIncomplete, isFake, time.Duration(0))
 	if err != nil {
 		return sURLs.WithError(err.Trace(targetAlias, targetURL.String()))
 	}

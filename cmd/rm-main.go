@@ -17,10 +17,15 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -28,12 +33,15 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
+// default older time.
+const defaultOlderTime = time.Hour
+
 // rm specific flags.
 var (
 	rmFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of rm.",
+			Usage: "Show this help.",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
@@ -44,12 +52,24 @@ var (
 			Usage: "Force a dangerous remove operation.",
 		},
 		cli.BoolFlag{
+			Name:  "prefix",
+			Usage: "Remove objects matching this prefix.",
+		},
+		cli.BoolFlag{
 			Name:  "incomplete, I",
 			Usage: "Remove an incomplete upload(s).",
 		},
 		cli.BoolFlag{
 			Name:  "fake",
 			Usage: "Perform a fake remove operation.",
+		},
+		cli.BoolFlag{
+			Name:  "stdin",
+			Usage: "Read object list from STDIN.",
+		},
+		cli.StringFlag{
+			Name:  "older",
+			Usage: "Remove object only if its created older than given time.",
 		},
 	}
 )
@@ -73,20 +93,23 @@ EXAMPLES:
    1. Remove a file.
       $ mc {{.Name}} 1999/old-backup.tgz
 
-   2. Remove contents of a folder, excluding its sub-folders.
-     $ mc {{.Name}} --force s3/jazz-songs/louis/
+   2. Remove all objects from music/ogg folder matching this prefix, excluding its sub-folders.
+      $ mc {{.Name}} --prefix s3/music/ogg/gunmetal
 
-   3. Remove contents of a folder recursively.
-     $ mc {{.Name}} --force --recursive s3/jazz-songs/louis/
+   3. Remove contents of a folder, excluding its sub-folders.
+      $ mc {{.Name}} --prefix s3/jazz-songs/louis/
 
-   4. Remove all matching objects with this prefix.
-     $ mc {{.Name}} --force s3/ogg/gunmetal
+   4. Remove contents of a folder recursively.
+      $ mc {{.Name}} --recursive s3/jazz-songs/louis/
 
    5. Drop an incomplete upload of an object.
-      $ mc {{.Name}} --incomplete s3/jazz-songs/louis/file01.mp3
+      $ mc {{.Name}} --incomplete s3/jazz-songs/louis/file01.mp4
 
-   6. Drop all incomplete uploads recursively matching this prefix.
-      $ mc {{.Name}} --incomplete --force --recursive s3/jazz-songs/louis/
+   6. Remove all matching objects whose names are read from STDIN.
+      $ mc {{.Name}} --force --stdin
+
+   7. Remove object only if its created older than one day.
+      $ mc {{.Name}} --force --older=24h s3/jazz-songs/louis/
 `,
 }
 
@@ -112,30 +135,41 @@ func (r rmMessage) JSON() string {
 func checkRmSyntax(ctx *cli.Context) {
 	// Set command flags from context.
 	isForce := ctx.Bool("force")
+	isPrefix := ctx.Bool("prefix")
 	isRecursive := ctx.Bool("recursive")
-	isFake := ctx.Bool("fake")
+	isStdin := ctx.Bool("stdin")
+	olderString := ctx.String("older")
 
-	if !ctx.Args().Present() {
+	if olderString != "" {
+		if older, err := time.ParseDuration(olderString); err != nil {
+			fatalIf(errDummy().Trace(), "Invalid older time format.")
+		} else if older < defaultOlderTime {
+			fatalIf(errDummy().Trace(), "older time should not be less than one hour.")
+		}
+
+		if !isStdin && !ctx.Args().Present() {
+			exitCode := 1
+			cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
+		}
+	}
+
+	if !ctx.Args().Present() && !isStdin {
 		exitCode := 1
 		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
 	}
 
 	// For all recursive operations make sure to check for 'force' flag.
-	if isRecursive && !isForce && !isFake {
+	if (isPrefix || isRecursive || isStdin) && !isForce {
 		fatalIf(errDummy().Trace(),
-			"Recursive removal requires --force option. Please review carefully before performing this *DANGEROUS* operation.")
+			"Removal requires --force option. This operational is irreversible. Please review carefully before performing this *DANGEROUS* operation.")
 	}
 }
 
 // Remove a single object.
-func rm(targetAlias, targetURL string, isIncomplete, isFake bool) *probe.Error {
+func rmObject(targetAlias, targetURL string, isIncomplete bool) *probe.Error {
 	clnt, err := newClientFromAlias(targetAlias, targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
-	}
-
-	if isFake { // It is a fake remove. Return success.
-		return nil
 	}
 
 	if err = clnt.Remove(isIncomplete); err != nil {
@@ -145,8 +179,39 @@ func rm(targetAlias, targetURL string, isIncomplete, isFake bool) *probe.Error {
 	return nil
 }
 
+// Remove a single object.
+func rm(targetAlias, targetURL string, isIncomplete, isFake bool, older time.Duration) *probe.Error {
+	clnt, err := newClientFromAlias(targetAlias, targetURL)
+	if err != nil {
+		return err.Trace(targetURL)
+	}
+
+	// Check whether object is created older than given time only if older is >= one hour.
+	if older >= defaultOlderTime {
+		info, err := clnt.Stat()
+		if err != nil {
+			return err.Trace(targetURL)
+		}
+
+		now := time.Now().UTC()
+		timeDiff := now.Sub(info.Time)
+		if timeDiff < older {
+			// time difference of info.Time with current time is less than older duration.
+			return nil
+		}
+	}
+
+	if !isFake {
+		if err := rmObject(targetAlias, targetURL, isIncomplete); err != nil {
+			return err.Trace(targetURL)
+		}
+	}
+
+	return nil
+}
+
 // Remove all objects recursively.
-func rmAll(targetAlias, targetURL string, isRecursive, isIncomplete, isFake bool) {
+func rmAll(targetAlias, targetURL, prefix string, isRecursive, isIncomplete, isFake bool, older time.Duration) {
 	// Initialize new client.
 	clnt, err := newClientFromAlias(targetAlias, targetURL)
 	if err != nil {
@@ -163,20 +228,38 @@ func rmAll(targetAlias, targetURL string, isRecursive, isIncomplete, isFake bool
 			return // End of journey.
 		}
 
+		if !strings.HasPrefix(path.Base(entry.URL.Path), prefix) {
+			// Skip the entry if it doesn't starts with the prefix.
+			continue
+		}
+
 		if entry.Type.IsDir() && isRecursive {
 			// Add separator at the end to remove all its contents.
 			url := entry.URL
 			url.Path = strings.TrimSuffix(entry.URL.Path, string(entry.URL.Separator)) + string(entry.URL.Separator)
 
 			// Recursively remove contents of this directory.
-			rmAll(targetAlias, url.String(), isRecursive, isIncomplete, isFake)
+			rmAll(targetAlias, url.String(), prefix, isRecursive, isIncomplete, isFake, older)
+		}
+
+		// Check whether object is created older than given time only if older is >= one hour.
+		if older >= defaultOlderTime {
+			now := time.Now().UTC()
+			timeDiff := now.Sub(entry.Time)
+			if timeDiff < older {
+				// time difference of info.Time with current time is less than older duration.
+				continue
+			}
 		}
 
 		// Regular type.
-		if err = rm(targetAlias, entry.URL.String(), isIncomplete, isFake); err != nil {
-			errorIf(err.Trace(entry.URL.String()), "Unable to remove ‘"+entry.URL.String()+"’.")
-			continue
+		if !isFake {
+			if err = rmObject(targetAlias, entry.URL.String(), isIncomplete); err != nil {
+				errorIf(err.Trace(entry.URL.String()), "Unable to remove ‘"+entry.URL.String()+"’.")
+				continue
+			}
 		}
+
 		// Construct user facing message and path.
 		entryPath := filepath.ToSlash(filepath.Join(targetAlias, entry.URL.Path))
 		printMsg(rmMessage{Status: "success", URL: entryPath})
@@ -193,20 +276,65 @@ func mainRm(ctx *cli.Context) {
 
 	// rm specific flags.
 	isForce := ctx.Bool("force")
+	isPrefix := ctx.Bool("prefix")
 	isIncomplete := ctx.Bool("incomplete")
 	isRecursive := ctx.Bool("recursive")
 	isFake := ctx.Bool("fake")
+	isStdin := ctx.Bool("stdin")
+	olderString := ctx.String("older")
+	older, _ := time.ParseDuration(olderString)
 
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
+		prefix := ""
+		if isPrefix {
+			if !strings.HasSuffix(url, "/") {
+				prefix = path.Base(url)
+				url = path.Dir(url) + "/"
+			} else if runtime.GOOS == "windows" && !strings.HasSuffix(url, `\`) {
+				prefix = path.Base(url)
+				url = path.Dir(url) + `\`
+			}
+		}
+
 		targetAlias, targetURL, _ := mustExpandAlias(url)
-		if isRecursive && isForce || isFake {
-			rmAll(targetAlias, targetURL, isRecursive, isIncomplete, isFake)
+		if (isPrefix || isRecursive) && isForce {
+			rmAll(targetAlias, targetURL, prefix, isRecursive, isIncomplete, isFake, older)
 		} else {
-			if err := rm(targetAlias, targetURL, isIncomplete, isFake); err != nil {
+			if err := rm(targetAlias, targetURL, isIncomplete, isFake, older); err != nil {
+				errorIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
+				continue
+			}
+			printMsg(rmMessage{Status: "success", URL: url})
+		}
+	}
+
+	if !isStdin {
+		return
+	}
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		url := scanner.Text()
+		prefix := ""
+		if isPrefix {
+			if strings.HasSuffix(url, "/") {
+				prefix = path.Base(url)
+				url = path.Dir(url)
+			} else if runtime.GOOS == "windows" && strings.HasSuffix(url, `\`) {
+				prefix = path.Base(url)
+				url = path.Dir(url)
+			}
+		}
+
+		targetAlias, targetURL, _ := mustExpandAlias(url)
+		if (isPrefix || isRecursive) && isForce {
+			rmAll(targetAlias, targetURL, prefix, isRecursive, isIncomplete, isFake, older)
+		} else {
+			if err := rm(targetAlias, targetURL, isIncomplete, isFake, older); err != nil {
 				errorIf(err.Trace(url), "Unable to remove ‘"+url+"’.")
 				continue
 			}
