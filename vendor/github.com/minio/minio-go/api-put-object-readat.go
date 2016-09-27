@@ -27,6 +27,13 @@ import (
 	"sort"
 )
 
+// uploadedPartRes - the response received from a part upload.
+type uploadedPartRes struct {
+	Error   error // Any error encountered while uploading the part.
+	PartNum int   // Number of the part uploaded.
+	Size    int64 // Size of the part uploaded.
+}
+
 // shouldUploadPartReadAt - verify if part should be uploaded.
 func shouldUploadPartReadAt(objPart objectPart, objectParts map[int]objectPart) bool {
 	// If part not found part should be uploaded.
@@ -93,106 +100,129 @@ func (c Client) putObjectMultipartFromReadAt(bucketName, objectName string, read
 	// Used for readability, lastPartNumber is always totalPartsCount.
 	lastPartNumber := totalPartsCount
 
-	// partNumber always starts with '1'.
-	partNumber := 1
+	// Declare a channel that sends the next part number to be uploaded.
+	// Buffered to 10000 because thats the maximum number of parts allowed
+	// by S3.
+	uploadPartsCh := make(chan int, 10000)
 
-	// Initialize a temporary buffer.
-	tmpBuffer := new(bytes.Buffer)
+	// Declare a channel that sends back the response of a part upload.
+	// Buffered to 10000 because thats the maximum number of parts allowed
+	// by S3.
+	uploadedPartsCh := make(chan uploadedPartRes, 10000)
 
-	// Read defaults to reading at 5MiB buffer.
-	readAtBuffer := make([]byte, optimalReadBufferSize)
+	// Send each part number to the channel to be processed.
+	for p := 1; p <= totalPartsCount; p++ {
+		uploadPartsCh <- p
+	}
+	close(uploadPartsCh)
 
-	// Upload all the missing parts.
-	for partNumber <= lastPartNumber {
-		// Verify object if its uploaded.
-		verifyObjPart := objectPart{
-			PartNumber: partNumber,
-			Size:       partSize,
-		}
-		// Special case if we see a last part number, save last part
-		// size as the proper part size.
-		if partNumber == lastPartNumber {
-			verifyObjPart = objectPart{
-				PartNumber: lastPartNumber,
-				Size:       lastPartSize,
-			}
-		}
+	// Receive each part number from the channel allowing three parallel uploads.
+	for w := 1; w <= 3; w++ {
+		go func() {
+			// Read defaults to reading at 5MiB buffer.
+			readAtBuffer := make([]byte, optimalReadBufferSize)
 
-		// Verify if part should be uploaded.
-		if !shouldUploadPartReadAt(verifyObjPart, partsInfo) {
-			// Increment part number when not uploaded.
-			partNumber++
-			if progress != nil {
-				// Update the progress reader for the skipped part.
-				if _, err = io.CopyN(ioutil.Discard, progress, verifyObjPart.Size); err != nil {
-					return 0, err
+			// Each worker will draw from the part channel and upload in parallel.
+			for partNumber := range uploadPartsCh {
+				// Declare a  new tmpBuffer.
+				tmpBuffer := new(bytes.Buffer)
+
+				// Verify object if its uploaded.
+				verifyObjPart := objectPart{
+					PartNumber: partNumber,
+					Size:       partSize,
+				}
+				// Special case if we see a last part number, save last part
+				// size as the proper part size.
+				if partNumber == lastPartNumber {
+					verifyObjPart.Size = lastPartSize
+				}
+
+				// Only upload the necessary parts. Otherwise return size through channel
+				// to update any progress bar.
+				if shouldUploadPartReadAt(verifyObjPart, partsInfo) {
+					// If partNumber was not uploaded we calculate the missing
+					// part offset and size. For all other part numbers we
+					// calculate offset based on multiples of partSize.
+					readOffset := int64(partNumber-1) * partSize
+					missingPartSize := partSize
+
+					// As a special case if partNumber is lastPartNumber, we
+					// calculate the offset based on the last part size.
+					if partNumber == lastPartNumber {
+						readOffset = (size - lastPartSize)
+						missingPartSize = lastPartSize
+					}
+
+					// Get a section reader on a particular offset.
+					sectionReader := io.NewSectionReader(reader, readOffset, missingPartSize)
+
+					// Choose the needed hash algorithms to be calculated by hashCopyBuffer.
+					// Sha256 is avoided in non-v4 signature requests or HTTPS connections
+					hashSums := make(map[string][]byte)
+					hashAlgos := make(map[string]hash.Hash)
+					hashAlgos["md5"] = md5.New()
+					if c.signature.isV4() && !c.secure {
+						hashAlgos["sha256"] = sha256.New()
+					}
+
+					var prtSize int64
+					prtSize, err = hashCopyBuffer(hashAlgos, hashSums, tmpBuffer, sectionReader, readAtBuffer)
+					if err != nil {
+						// Send the error back through the channel.
+						uploadedPartsCh <- uploadedPartRes{
+							Size:  0,
+							Error: err,
+						}
+						// Exit the goroutine.
+						return
+					}
+
+					// Proceed to upload the part.
+					var objPart objectPart
+					objPart, err = c.uploadPart(bucketName, objectName, uploadID, tmpBuffer, partNumber, hashSums["md5"], hashSums["sha256"], prtSize)
+					if err != nil {
+						uploadedPartsCh <- uploadedPartRes{
+							Size:  0,
+							Error: err,
+						}
+						// Exit the goroutine.
+						return
+					}
+					// Save successfully uploaded part metadata.
+					partsInfo[partNumber] = objPart
+				}
+				// Send successful part info through the channel.
+				uploadedPartsCh <- uploadedPartRes{
+					Size:    verifyObjPart.Size,
+					PartNum: partNumber,
+					Error:   nil,
 				}
 			}
-			continue
-		}
-
-		// If partNumber was not uploaded we calculate the missing
-		// part offset and size. For all other part numbers we
-		// calculate offset based on multiples of partSize.
-		readOffset := int64(partNumber-1) * partSize
-		missingPartSize := partSize
-
-		// As a special case if partNumber is lastPartNumber, we
-		// calculate the offset based on the last part size.
-		if partNumber == lastPartNumber {
-			readOffset = (size - lastPartSize)
-			missingPartSize = lastPartSize
-		}
-
-		// Get a section reader on a particular offset.
-		sectionReader := io.NewSectionReader(reader, readOffset, missingPartSize)
-
-		// Choose the needed hash algorithms to be calculated by hashCopyBuffer.
-		// Sha256 is avoided in non-v4 signature requests or HTTPS connections
-		hashSums := make(map[string][]byte)
-		hashAlgos := make(map[string]hash.Hash)
-		hashAlgos["md5"] = md5.New()
-		if c.signature.isV4() && !c.secure {
-			hashAlgos["sha256"] = sha256.New()
-		}
-
-		var prtSize int64
-		prtSize, err = hashCopyBuffer(hashAlgos, hashSums, tmpBuffer, sectionReader, readAtBuffer)
-		if err != nil {
-			return 0, err
-		}
-
-		var reader io.Reader
-		// Update progress reader appropriately to the latest offset
-		// as we read from the source.
-		reader = newHook(tmpBuffer, progress)
-
-		// Proceed to upload the part.
-		var objPart objectPart
-		objPart, err = c.uploadPart(bucketName, objectName, uploadID, reader, partNumber, hashSums["md5"], hashSums["sha256"], prtSize)
-		if err != nil {
-			// Reset the buffer upon any error.
-			tmpBuffer.Reset()
-			return 0, err
-		}
-
-		// Save successfully uploaded part metadata.
-		partsInfo[partNumber] = objPart
-
-		// Increment part number here after successful part upload.
-		partNumber++
-
-		// Reset the buffer.
-		tmpBuffer.Reset()
+		}()
 	}
 
-	// Loop over uploaded parts to save them in a Parts array before completing the multipart request.
-	for i := 1; i <= lastPartNumber; i++ {
-		part, ok := partsInfo[i]
-		if !ok {
-			return 0, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", i))
+	// Gather the responses as they occur and update any
+	// progress bar.
+	for u := 1; u <= totalPartsCount; u++ {
+		uploadRes := <-uploadedPartsCh
+		if uploadRes.Error != nil {
+			return totalUploadedSize, uploadRes.Error
 		}
-		totalUploadedSize += part.Size
+		// Retrieve each uploaded part and store it to be completed.
+		part, ok := partsInfo[uploadRes.PartNum]
+		if !ok {
+			return 0, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", uploadRes.PartNum))
+		}
+		// Update the totalUploadedSize.
+		totalUploadedSize += uploadRes.Size
+		// Update the progress bar if there is one.
+		if progress != nil {
+			if _, err = io.CopyN(ioutil.Discard, progress, uploadRes.Size); err != nil {
+				return totalUploadedSize, err
+			}
+		}
+		// Store the parts to be completed in order.
 		complMultipartUpload.Parts = append(complMultipartUpload.Parts, completePart{
 			ETag:       part.ETag,
 			PartNumber: part.PartNumber,

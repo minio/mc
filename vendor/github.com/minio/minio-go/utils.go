@@ -310,7 +310,14 @@ func isValidObjectPrefix(objectPrefix string) error {
 	return nil
 }
 
-// queryEncode - encodes query values in their URL encoded form.
+//expects ascii encoded strings - from output of urlEncodePath
+func percentEncodeSlash(s string) string {
+	return strings.Replace(s, "/", "%2F", -1)
+}
+
+// queryEncode - encodes query values in their URL encoded form. In
+// addition to the percent encoding performed by urlEncodePath() used
+// here, it also percent encodes '/' (forward slash)
 func queryEncode(v url.Values) string {
 	if v == nil {
 		return ""
@@ -323,13 +330,13 @@ func queryEncode(v url.Values) string {
 	sort.Strings(keys)
 	for _, k := range keys {
 		vs := v[k]
-		prefix := urlEncodePath(k) + "="
+		prefix := percentEncodeSlash(urlEncodePath(k)) + "="
 		for _, v := range vs {
 			if buf.Len() > 0 {
 				buf.WriteByte('&')
 			}
 			buf.WriteString(prefix)
-			buf.WriteString(urlEncodePath(v))
+			buf.WriteString(percentEncodeSlash(urlEncodePath(v)))
 		}
 	}
 	return buf.String()

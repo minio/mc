@@ -257,6 +257,7 @@ func writeCanonicalizedHeaders(buf *bytes.Buffer, req http.Request) {
 // have signature-related issues
 var resourceList = []string{
 	"acl",
+	"delete",
 	"location",
 	"logging",
 	"notification",
