@@ -344,31 +344,6 @@ func (c *s3Client) Unwatch(params watchParams) *probe.Error {
 	if err := isValidBucketName(bucket); err != nil {
 		return err
 	}
-
-	// Fetch the bucket location.
-	location, e := c.api.GetBucketLocation(bucket)
-	if e != nil {
-		return probe.NewError(e)
-	}
-
-	// Fetch any existing bucket notification on the bucket.
-	nConfig, e := c.api.GetBucketNotification(bucket)
-	if e != nil {
-		return probe.NewError(e)
-	}
-
-	// Construct account ARN.
-	accountARN := minio.NewArn("minio", "sns", location, params.accountID, "listen")
-
-	// Remove account ARN if any.
-	nConfig.RemoveTopicByArn(accountARN)
-
-	// Set back the new sets of notifications.
-	e = c.api.SetBucketNotification(bucket, nConfig)
-	if e != nil {
-		return probe.NewError(e)
-	}
-
 	// Success.
 	return nil
 }
@@ -385,62 +360,23 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 		return nil, err
 	}
 
-	// Fetch the bucket location.
-	location, e := c.api.GetBucketLocation(bucket)
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-
-	// Fetch any existing bucket notification on the bucket.
-	nConfig, e := c.api.GetBucketNotification(bucket)
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-
-	accountARN := minio.NewArn("minio", "sns", location, params.accountID, "listen")
-	// If there are no SNS topics configured, configure the first one.
-	shouldSetNotification := len(nConfig.TopicConfigs) == 0
-	if !shouldSetNotification {
-		// Assume we are going to set bucket notification.
-		shouldSetNotification = true
-		// We found previously configured SNS topics, validate if current account-id is same.
-		for _, topicConfig := range nConfig.TopicConfigs {
-			if topicConfig.Topic == accountARN.String() {
-				shouldSetNotification = false
-				break
-			}
-		}
-	}
 	// Flag set to set the notification.
-	if shouldSetNotification {
-		topicConfig := minio.NewNotificationConfig(accountARN)
-		for _, event := range params.events {
-			switch event {
-			case "put":
-				topicConfig.AddEvents(minio.ObjectCreatedAll)
-			case "delete":
-				topicConfig.AddEvents(minio.ObjectRemovedAll)
-			default:
-				return nil, errInvalidArgument().Trace(event)
-			}
+	var events []string
+	for _, event := range params.events {
+		switch event {
+		case "put":
+			events = append(events, string(minio.ObjectCreatedAll))
+		case "delete":
+			events = append(events, string(minio.ObjectRemovedAll))
+		default:
+			return nil, errInvalidArgument().Trace(event)
 		}
-		if object != "" && params.prefix != "" {
-			return nil, errInvalidArgument().Trace(params.prefix, object)
-		}
-		if object != "" && params.prefix == "" {
-			topicConfig.AddFilterPrefix(object)
-		}
-		if params.prefix != "" {
-			topicConfig.AddFilterPrefix(params.prefix)
-		}
-		if params.suffix != "" {
-			topicConfig.AddFilterSuffix(params.suffix)
-		}
-		nConfig.AddTopic(topicConfig)
-		e = c.api.SetBucketNotification(bucket, nConfig)
-		if e != nil {
-			return nil, probe.NewError(e)
-		}
+	}
+	if object != "" && params.prefix != "" {
+		return nil, errInvalidArgument().Trace(params.prefix, object)
+	}
+	if object != "" && params.prefix == "" {
+		params.prefix = object
 	}
 
 	doneCh := make(chan struct{})
@@ -455,7 +391,7 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	}()
 
 	// Start listening on all bucket events.
-	eventsCh := c.api.ListenBucketNotification(bucket, accountARN, doneCh)
+	eventsCh := c.api.ListenBucketNotification(bucket, params.prefix, params.suffix, events, doneCh)
 
 	// wait for events to occur and sent them through the eventChan and errorChan
 	go func() {

@@ -120,7 +120,7 @@ type NotificationInfo struct {
 }
 
 // ListenBucketNotification - listen on bucket notifications.
-func (c Client) ListenBucketNotification(bucketName string, accountArn Arn, doneCh <-chan struct{}) <-chan NotificationInfo {
+func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, events []string, doneCh <-chan struct{}) <-chan NotificationInfo {
 	notificationInfoCh := make(chan NotificationInfo, 1)
 	// Only success, start a routine to start reading line by line.
 	go func(notificationInfoCh chan<- NotificationInfo) {
@@ -135,7 +135,7 @@ func (c Client) ListenBucketNotification(bucketName string, accountArn Arn, done
 		}
 
 		// Check ARN partition to verify if listening bucket is supported
-		if accountArn.Partition != "minio" {
+		if isAmazonEndpoint(c.endpointURL) || isGoogleEndpoint(c.endpointURL) {
 			notificationInfoCh <- NotificationInfo{
 				Err: ErrAPINotSupported("Listening bucket notification is specific only to `minio` partitions"),
 			}
@@ -145,7 +145,9 @@ func (c Client) ListenBucketNotification(bucketName string, accountArn Arn, done
 		// Continously run and listen on bucket notification.
 		for {
 			urlValues := make(url.Values)
-			urlValues.Set("notificationARN", accountArn.String())
+			urlValues.Set("prefix", prefix)
+			urlValues.Set("suffix", suffix)
+			urlValues["events"] = events
 
 			// Execute GET on bucket to list objects.
 			resp, err := c.executeMethod("GET", requestMetadata{

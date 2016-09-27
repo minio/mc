@@ -16,7 +16,10 @@
 
 package minio
 
-import "io"
+import (
+	"io"
+	"strings"
+)
 
 // PutObjectWithProgress - With progress.
 func (c Client) PutObjectWithProgress(bucketName, objectName string, reader io.Reader, contentType string, progress io.Reader) (n int64, err error) {
@@ -91,7 +94,7 @@ func (c Client) PutObjectWithProgress(bucketName, objectName string, reader io.R
 		errResp := ToErrorResponse(err)
 		// Verify if multipart functionality is not available, if not
 		// fall back to single PutObject operation.
-		if errResp.Code == "AccessDenied" && errResp.Message == "Access Denied." {
+		if errResp.Code == "AccessDenied" && strings.Contains(errResp.Message, "Access Denied") {
 			// Verify if size of reader is greater than '5GiB'.
 			if size > maxSinglePutObjectSize {
 				return 0, ErrEntityTooLarge(size, maxSinglePutObjectSize, bucketName, objectName)
