@@ -140,14 +140,14 @@ func parseReleaseData(data string) (time.Time, *probe.Error) {
 }
 
 // verify updates for releases.
-func getReleaseUpdate(updateURL string) {
+func getReleaseUpdate(updateURL string) (updateMsg updateMessage, errMsg string, err *probe.Error) {
 	// Construct a new update url.
 	newUpdateURLPrefix := updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH
 	newUpdateURL := newUpdateURLPrefix + "/mc.shasum"
 
 	// Instantiate a new client with 3 sec timeout.
 	client := &http.Client{
-		Timeout: 3000 * time.Millisecond,
+		Timeout: 3 * time.Second,
 	}
 
 	// Get the downloadURL.
@@ -162,40 +162,57 @@ func getReleaseUpdate(updateURL string) {
 	}
 
 	data, e := client.Get(newUpdateURL)
-	fatalIf(probe.NewError(e), "Unable to read from update URL ‘"+newUpdateURL+"’.")
-
+	if e != nil {
+		err = probe.NewError(e)
+		errMsg = "Unable to read from update URL ‘" + newUpdateURL + "’."
+		return updateMessage{}, errMsg, err
+	}
 	if strings.HasPrefix(Version, "DEVELOPMENT.GOGET") {
-		fatalIf(errDummy().Trace(newUpdateURL),
-			"Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#minio")
+		err = errDummy().Trace(newUpdateURL)
+		errMsg = "Update mechanism is not supported for ‘go get’ based binary builds.  Please download official releases from https://minio.io/#minio"
+		return updateMessage{}, errMsg, err
 	}
 
 	current, e := time.Parse(time.RFC3339, Version)
-	fatalIf(probe.NewError(e), "Unable to parse version string as time.")
+	if e != nil {
+		err = probe.NewError(e)
+		errMsg = "Unable to parse version string as time."
+		return updateMessage{}, errMsg, err
+	}
 
 	if current.IsZero() {
-		fatalIf(errDummy().Trace(newUpdateURL),
-			"Updates not supported for custom builds. Version field is empty. Please download official releases from https://minio.io/#minio")
+		err = errDummy().Trace(newUpdateURL)
+		errMsg = "Updates not supported for custom builds. Version field is empty. Please download official releases from https://minio.io/#minio"
+		return updateMessage{}, errMsg, err
 	}
 
 	body, e := ioutil.ReadAll(data.Body)
-	fatalIf(probe.NewError(e), "Fetching updates failed. Please try again.")
-
-	latest, err := parseReleaseData(string(body))
-	fatalIf(err.Trace(newUpdateURL), "Please report this issue at https://github.com/minio/mc/issues.")
-
-	if latest.IsZero() {
-		fatalIf(errDummy().Trace(newUpdateURL),
-			"Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues")
+	if e != nil {
+		err = probe.NewError(e)
+		errMsg = "Fetching updates failed. Please try again."
+		return updateMessage{}, errMsg, err
 	}
 
-	updateMsg := updateMessage{
+	latest, err := parseReleaseData(string(body))
+	if err != nil {
+		errMsg = "Please report this issue at https://github.com/minio/mc/issues."
+		return updateMessage{}, errMsg, err.Trace(newUpdateURL)
+	}
+
+	if latest.IsZero() {
+		err = errDummy().Trace(newUpdateURL)
+		errMsg = "Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues"
+		return updateMessage{}, errMsg, err
+	}
+
+	updateMsg = updateMessage{
 		Download: downloadURL,
 		Version:  Version,
 	}
 	if latest.After(current) {
 		updateMsg.Update = true
 	}
-	printMsg(updateMsg)
+	return updateMsg, "", nil
 }
 
 // main entry point for update command.
@@ -206,10 +223,15 @@ func mainUpdate(ctx *cli.Context) {
 	// Additional command speific theme customization.
 	console.SetColor("Update", color.New(color.FgGreen, color.Bold))
 
+	var updateMsg updateMessage
+	var errMsg string
+	var err *probe.Error
 	// Check for update.
 	if ctx.Bool("experimental") {
-		getReleaseUpdate(mcUpdateExperimentalURL)
+		updateMsg, errMsg, err = getReleaseUpdate(mcUpdateExperimentalURL)
 	} else {
-		getReleaseUpdate(mcUpdateStableURL)
+		updateMsg, errMsg, err = getReleaseUpdate(mcUpdateStableURL)
 	}
+	fatalIf(err, errMsg)
+	printMsg(updateMsg)
 }

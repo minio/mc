@@ -24,6 +24,7 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio/cli"
@@ -255,6 +256,20 @@ func registerApp() *cli.App {
 	registerCmd(versionCmd) // Print version.
 
 	app := cli.NewApp()
+	app.Action = func(ctx *cli.Context) {
+		if strings.HasPrefix(Version, "RELEASE.") {
+			updateMsg, _, err := getReleaseUpdate(mcUpdateStableURL)
+			if err != nil {
+				// Ignore any errors during getReleaseUpdate() because
+				// the internet might not be available.
+				return
+			}
+			if updateMsg.Update {
+				printMsg(updateMsg)
+			}
+		}
+		cli.ShowAppHelp(ctx)
+	}
 	app.Usage = "Minio Client for cloud storage and filesystems."
 	app.Commands = commands
 	app.Author = "Minio.io"
