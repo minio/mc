@@ -562,7 +562,7 @@ localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 
 ```
 
-*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000*
+*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000. This command is only supported on Minio server not AWS S3*
 
 ```sh
 
