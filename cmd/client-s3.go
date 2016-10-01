@@ -1065,6 +1065,10 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 				}
 				continue
 			}
+			// Ignore S3 empty directories
+			if object.Size == 0 && strings.HasSuffix(object.Key, "/") {
+				continue
+			}
 			content := &clientContent{}
 			url := *c.targetURL
 			// Join bucket and incoming object key.
