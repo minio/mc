@@ -562,7 +562,7 @@ localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 
 ```
 
-*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000. This command is only supported on Minio server not AWS S3*
+*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000. This command is only supported on Minio server not AWS S3.*
 
 ```sh
 
@@ -639,7 +639,7 @@ $ mc watch ~/Photos
 <a name="events"></a>
 ### Command `events` - Manage bucket event notification.
 
-``events`` provides a convenient way to configure various types of event notifications on a bucket.
+``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be logged to AMQP, Redis and Elasticsearch backend. Minio configuration file ``~/.minio/config.json`` has more details. 
 
 ```sh
 
@@ -659,8 +659,8 @@ FLAGS:
 
 ```sh
 
-$ mc events list s3/andoria
-MyTopic        arn:aws:sns:us-west-2:804065449417:TestTopic    s3:ObjectCreated:*,s3:ObjectRemoved:*   suffix:.jpg
+$ mc events list play/andoria
+MyTopic        arn:minio:sns:us-east-1:1:TestTopic    s3:ObjectCreated:*,s3:ObjectRemoved:*   suffix:.jpg
 
 ```
 
@@ -668,7 +668,7 @@ MyTopic        arn:aws:sns:us-west-2:804065449417:TestTopic    s3:ObjectCreated:
 
 ```sh
 
-$ mc events add s3/andoria arn:aws:sqs:us-west-2:444455556666:your-queue --events put
+$ mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --events put
 
 ```
 
@@ -679,7 +679,7 @@ Add `prefix` and `suffix` filtering rules for `sqs` notification resource.
 ```sh
 
 
-$ mc events add s3/andoria arn:aws:sqs:us-west-2:444455556666:your-queue --prefix photos/ --suffix .jpg
+$ mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ --suffix .jpg
 
 ```
 
@@ -687,7 +687,7 @@ $ mc events add s3/andoria arn:aws:sqs:us-west-2:444455556666:your-queue --prefi
 
 ```sh
 
-$ mc events remove s3/andoria arn:aws:sqs:us-west-2:444455556666:your-queue
+$ mc events remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
 
 ```
 
@@ -710,33 +710,33 @@ FLAGS:
 ```   
 
 *Example: Show current anonymous bucket policy*
-Show current anonymous bucket policy for *andoria/myphotos/2020/bots/* sub-directory
+Show current anonymous bucket policy for *mybucket/myphotos/2020/* sub-directory
 
 ```sh
 
-$ mc policy s3/andoria/myphotos/2020/bots/
-Access permission for ‘s3/andoria/myphotos/2020/bots/’ is ‘none’
+$ mc policy play/mybucket/myphotos/2020/
+Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 
 ```
 
 *Example : Set anonymous bucket policy to download only*
-Set anonymous bucket policy  for *andoria/myphotos/2020/bots/* sub-directory to download only
+Set anonymous bucket policy  for *mybucket/myphotos/2020/* sub-directory and its objects to download only, objects are available for download at [https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname)
 
 ```sh
 
-$ mc policy download s3/andoria/myphotos/2020/bots/
-Access permission for ‘s3/andoria/myphotos/2020/bots/’ is set to 'download'
+$ mc policy download play/mybucket/myphotos/2020/
+Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 
 ```
 
 *Example : Remove current anonymous bucket policy*
 
-Remove any bucket policy for *andoria/myphotos/2020/bots/* sub-directory.
+Remove any bucket policy for *mybucket/myphotos/2020/* sub-directory.
 
 ```sh
 
-$ mc policy none s3/andoria/myphotos/2020/bots/
-Access permission for ‘s3/andoria/myphotos/2020/bots/’ is set to 'none'
+$ mc policy none play/mybucket/myphotos/2020/
+Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 
 ```
 
