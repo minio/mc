@@ -562,7 +562,7 @@ localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 
 ```
 
-*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000. This command is only supported on Minio server not AWS S3.*
+*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000.*
 
 ```sh
 
@@ -639,7 +639,7 @@ $ mc watch ~/Photos
 <a name="events"></a>
 ### Command `events` - Manage bucket event notification.
 
-``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be logged to AMQP, Redis and Elasticsearch backend. Minio configuration file ``~/.minio/config.json`` has more details. 
+``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostGres services. Minio configuration provides more details on how these services can be configured. 
 
 ```sh
 
@@ -720,7 +720,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 ```
 
 *Example : Set anonymous bucket policy to download only*
-Set anonymous bucket policy  for *mybucket/myphotos/2020/* sub-directory and its objects to download only, objects are available for download at [https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname)
+Set anonymous bucket policy  for *mybucket/myphotos/2020/* sub-directory and its objects to download only, Now your objects are publicly accessible at [https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname)
 
 ```sh
 
