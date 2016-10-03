@@ -639,7 +639,7 @@ $ mc watch ~/Photos
 <a name="events"></a>
 ### Command `events` - Manage bucket event notification.
 
-``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostGres services. Minio configuration provides more details on how these services can be configured. 
+``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. Minio configuration provides more details on how these services can be configured. 
 
 ```sh
 
