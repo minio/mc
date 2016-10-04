@@ -667,15 +667,16 @@ func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, do
 }
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
-func (c *s3Client) Stat() (*clientContent, *probe.Error) {
+func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	objectMetadata := &clientContent{}
 	bucket, object := c.url2BucketAndObject()
 	// Bucket name cannot be empty, stat on URL has no meaning.
 	if bucket == "" {
 		return nil, probe.NewError(BucketNameEmpty{})
-	} else if object == "" {
+	}
+
+	if object == "" {
 		exists, e := c.api.BucketExists(bucket)
 		if e != nil {
 			return nil, probe.NewError(e)
@@ -686,19 +687,47 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 		bucketMetadata := &clientContent{}
 		bucketMetadata.URL = *c.targetURL
 		bucketMetadata.Type = os.ModeDir
+
 		return bucketMetadata, nil
 	}
-	isRecursive := false
 
 	// Remove trailing slashes needed for the following ListObjects call.
 	// In addition, Stat() will be as smart as the client fs version and will
 	// facilitate the work of the upper layers
 	object = strings.TrimRight(object, string(c.targetURL.Separator))
+	nonRecursive := false
+	objectMetadata := &clientContent{}
 
-	for objectStat := range c.listObjectWrapper(bucket, object, isRecursive, nil) {
+	// If the request is for incomplete upload stat, handle it here.
+	if isIncomplete {
+		for objectMultipartInfo := range c.api.ListIncompleteUploads(bucket, object, nonRecursive, nil) {
+			if objectMultipartInfo.Err != nil {
+				return nil, probe.NewError(objectMultipartInfo.Err)
+			}
+
+			if objectMultipartInfo.Key == object {
+				objectMetadata.URL = *c.targetURL
+				objectMetadata.Time = objectMultipartInfo.Initiated
+				objectMetadata.Size = objectMultipartInfo.Size
+				objectMetadata.Type = os.FileMode(0664)
+				return objectMetadata, nil
+			}
+
+			if strings.HasSuffix(objectMultipartInfo.Key, string(c.targetURL.Separator)) {
+				objectMetadata.URL = *c.targetURL
+				objectMetadata.Type = os.ModeDir
+				return objectMetadata, nil
+			}
+		}
+
+		return nil, probe.NewError(ObjectMissing{})
+	}
+
+	for objectStat := range c.listObjectWrapper(bucket, object, nonRecursive, nil) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
+
 		if objectStat.Key == object {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Time = objectStat.LastModified
@@ -706,12 +735,14 @@ func (c *s3Client) Stat() (*clientContent, *probe.Error) {
 			objectMetadata.Type = os.FileMode(0664)
 			return objectMetadata, nil
 		}
+
 		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Type = os.ModeDir
 			return objectMetadata, nil
 		}
 	}
+
 	return nil, probe.NewError(ObjectMissing{})
 }
 

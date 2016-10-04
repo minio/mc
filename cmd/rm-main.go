@@ -188,7 +188,7 @@ func rm(targetAlias, targetURL string, isIncomplete, isFake bool, older time.Dur
 
 	// Check whether object is created older than given time only if older is >= one hour.
 	if older >= defaultOlderTime {
-		info, err := clnt.Stat()
+		info, err := clnt.Stat(isIncomplete)
 		if err != nil {
 			return err.Trace(targetURL)
 		}

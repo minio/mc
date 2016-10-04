@@ -1042,7 +1042,7 @@ func (f *fsClient) SetAccess(access string) *probe.Error {
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat() (content *clientContent, err *probe.Error) {
+func (f *fsClient) Stat(isIncomplete bool) (content *clientContent, err *probe.Error) {
 	st, err := f.fsStat()
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
