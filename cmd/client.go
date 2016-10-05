@@ -27,7 +27,7 @@ import (
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat() (content *clientContent, err *probe.Error)
+	Stat(isIncomplete bool) (content *clientContent, err *probe.Error)
 	List(recursive, incomplete bool) <-chan *clientContent
 
 	// Bucket operations

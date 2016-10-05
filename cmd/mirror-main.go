@@ -428,7 +428,7 @@ func (ms *mirrorSession) watch() {
 						ms.statusCh <- mirrorURL.WithError(err)
 						continue
 					}
-					sourceContent, err := sourceClient.Stat()
+					sourceContent, err := sourceClient.Stat(false)
 					if err != nil {
 						// source doesn't exist anymore
 						ms.statusCh <- mirrorURL.WithError(err)
@@ -442,7 +442,7 @@ func (ms *mirrorSession) watch() {
 					}
 					shouldQueue := false
 					if !isForce {
-						_, err = targetClient.Stat()
+						_, err = targetClient.Stat(false)
 						if err == nil {
 							continue
 						} // doesn't exist
@@ -467,7 +467,7 @@ func (ms *mirrorSession) watch() {
 						ms.statusCh <- mirrorURL.WithError(err)
 						return
 					}
-					_, err = targetClient.Stat()
+					_, err = targetClient.Stat(false)
 					if err == nil {
 						continue
 					} // doesn't exist

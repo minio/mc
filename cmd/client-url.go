@@ -182,7 +182,7 @@ func url2Stat(urlStr string) (client Client, content *clientContent, err *probe.
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
-	content, err = client.Stat()
+	content, err = client.Stat(false)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}
