@@ -279,10 +279,10 @@ USAGE:
    mc ls [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h			Help of ls.
-  --recursive, -r		List recursively.
-  --incomplete, -I		Remove incomplete uploads.
-
+  --help, -h				Help of ls.
+  --recursive, -r			List recursively.
+  --incomplete, -I			List incomplete uploads.
+  
 ```
 
 *Example: List all buckets on https://play.minio.io:9000.*
@@ -309,9 +309,9 @@ USAGE:
    mc mb [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --help, -h              Help of mb.
-  --region "us-east-1"    Specify bucket region. Defaults to ‘us-east-1’.
-
+  --help, -h				Help of mb.
+  --region "us-east-1"		Specify bucket region. Defaults to ‘us-east-1’.
+  
 ```
 
 *Example: Create a new bucket named "mybucket" on https://play.minio.io:9000.*
@@ -336,7 +336,7 @@ USAGE:
    mc cat [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
-  --help, -h					Help of cat
+  --help, -h				Help of cat.
 
 ```
 
@@ -359,7 +359,7 @@ USAGE:
    mc pipe [FLAGS] [TARGET]
 
 FLAGS:
-  --help, -h					Help of pipe.
+  --help, -h				Help of pipe.
 
 ```
 
@@ -406,11 +406,14 @@ USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h			Help of rm.
-  --recursive, -r		Remove recursively.
-  --force			Force a dangerous remove operation.
-  --incomplete, -I		Remove an incomplete upload(s).
-  --fake		        Perform a fake remove operation.
+  --help, -h				Show this help.
+  --recursive, -r			Remove recursively.
+  --force					Force a dangerous remove operation.
+  --prefix					Remove objects matching this prefix.
+  --incomplete, -I			Remove an incomplete upload(s).
+  --fake					Perform a fake remove operation.
+  --stdin					Read object list from STDIN.
+  --older 					Remove object only if its created older than given time.
 
 ```
 
@@ -442,6 +445,11 @@ Removed ‘play/mybucket/mydvd.iso’.
 Removed 'play/mybucket/backup.tgz’.
 
 ```
+*Example: Remove object only if its created older than one day.*
+
+```sh
+$ mc rm --force --older=24h play/mybucket/oldsongs
+```
 
 <a name="share"></a>
 ### Command `share` - Share Access
@@ -456,7 +464,7 @@ USAGE:
    mc share [FLAGS] COMMAND
 
 FLAGS:
-  --help, -h					Help of share.
+  --help, -h				Help of share.
   
 COMMANDS:
    download	  Generate URLs for download access.
@@ -477,7 +485,7 @@ USAGE:
 OPTIONS:
   --help, -h				Help of share download
   --recursive, -r			Share all objects recursively.
-  --expire, -E "168h"			Set expiry in NN[h|m|s].
+  --expire, -E "168h"		Set expiry in NN[h|m|s].
 
 ```
 
@@ -504,8 +512,8 @@ USAGE:
 OPTIONS:
   --help, -h				Help of share download.
   --recursive, -r			Recursively upload any object matching the prefix.
-  --expire, -E "168h"			Set expiry in NN[h|m|s].
-  --content-type, -T 			Speific content-type to allow.
+  --expire, -E "168h"		Set expiry in NN[h|m|s].
+  --content-type, -T 		Speific content-type to allow.
 
 ```
 
@@ -546,10 +554,10 @@ USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --help, -h					Help of mirror.
-  --force					    Force overwrite of an existing target(s).
-  --fake					    Perform a fake mirror operation.
-  --watch, -w					Watch and mirror for changes.
+  --help, -h				Help of mirror.
+  --force					Force overwrite of an existing target(s).
+  --fake					Perform a fake mirror operation.
+  --watch, -w				Watch and mirror for changes.
 
 ``` 
 
@@ -584,7 +592,7 @@ USAGE:
    mc diff [FLAGS] FIRST SECOND
 
 FLAGS:
-  --help, -h					Help of diff.
+  --help, -h				Help of diff.
 
 ```
 
@@ -609,7 +617,7 @@ USAGE:
    mc watch [FLAGS]
 
 FLAGS:
-   --help, -h                           Help of events.
+   --help, -h           Help of events.
 
 ```
 
@@ -652,7 +660,7 @@ COMMANDS:
    list         List bucket notifications.
 
 FLAGS:
-   --help, -h                           Help of events.
+   --help, -h               Help of events.
 ```
 
 *Example: List all configured bucket notifications*
@@ -751,15 +759,15 @@ USAGE:
    mc session [FLAGS] OPERATION [ARG]
 
 OPERATION:
-   resume   		  Resume a previously saved session.
-   clear       		  Clear a previously saved session.
-   list           	  List all previously saved sessions.
+   resume   		     Resume a previously saved session.
+   clear       		     Clear a previously saved session.
+   list           	     List all previously saved sessions.
 
 SESSION-ID:
    SESSION - Session can either be $SESSION-ID or "all".
 
 FLAGS:
-  --help, -h					Help of session.
+  --help, -h			Help of session.
 
 ```
 
@@ -807,7 +815,7 @@ OPERATION:
    list
 
 FLAGS:
-  --help, -h				Help of config host
+  --help, -h			Help of config host
 
 ```
 
@@ -834,8 +842,8 @@ USAGE:
    mc update [FLAGS]
 
 FLAGS:
-  --help, -h				Help for update.
-  --experimental, -E			Check experimental update.
+  --help, -h			Help for update.
+  --experimental, -E	Check experimental update.
 
 ```
 
@@ -859,7 +867,7 @@ USAGE:
    mc version [FLAGS]
 
 FLAGS:
-  --help, -h					Help for version.
+  --help, -h		Help for version.
 
 ```
  
