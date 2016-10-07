@@ -279,10 +279,10 @@ USAGE:
    mc ls [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h			Help of ls.
-  --recursive, -r		List recursively.
-  --incomplete, -I		Remove incomplete uploads.
-
+  --help, -h					Help of ls.
+  --recursive, -r				List recursively.
+  --incomplete, -I				List incomplete uploads.
+  
 ```
 
 *Example: List all buckets on https://play.minio.io:9000.*
@@ -309,9 +309,9 @@ USAGE:
    mc mb [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --help, -h              Help of mb.
-  --region "us-east-1"    Specify bucket region. Defaults to ‘us-east-1’.
-
+  --help, -h					Help of mb.
+  --region "us-east-1"			Specify bucket region. Defaults to ‘us-east-1’.
+  
 ```
 
 *Example: Create a new bucket named "mybucket" on https://play.minio.io:9000.*
@@ -336,7 +336,7 @@ USAGE:
    mc cat [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
-  --help, -h					Help of cat
+  --help, -h					Help of cat.
 
 ```
 
@@ -360,7 +360,6 @@ USAGE:
 
 FLAGS:
   --help, -h					Help of pipe.
-
 ```
 
 *Example: Stream MySQL database dump to Amazon S3 directly.*
@@ -382,8 +381,8 @@ USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
    
 FLAGS:
-  --help, -h				Help of cp.
-  --recursive, -r			Copy recursively.
+  --help, -h					Help of cp.
+  --recursive, -r				Copy recursively.
 
 ```
 
@@ -406,12 +405,14 @@ USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h			Help of rm.
-  --recursive, -r		Remove recursively.
-  --force			Force a dangerous remove operation.
-  --incomplete, -I		Remove an incomplete upload(s).
-  --fake		        Perform a fake remove operation.
-
+  --help, -h				Show this help.
+  --recursive, -r			Remove recursively.
+  --force					Force a dangerous remove operation.
+  --prefix					Remove objects matching this prefix.
+  --incomplete, -I			Remove an incomplete upload(s).
+  --fake					Perform a fake remove operation.
+  --stdin					Read object list from STDIN.
+  --older 					Remove object only if its created older than given time.
 ```
 
 *Example: Remove a single object.*
@@ -442,6 +443,11 @@ Removed ‘play/mybucket/mydvd.iso’.
 Removed 'play/mybucket/backup.tgz’.
 
 ```
+*Example: Remove object only if its created older than one day.*
+
+```sh
+$ mc rm --force --older=24h play/mybucket/oldsongs
+```
 
 <a name="share"></a>
 ### Command `share` - Share Access
@@ -457,7 +463,7 @@ USAGE:
 
 FLAGS:
   --help, -h					Help of share.
-  
+
 COMMANDS:
    download	  Generate URLs for download access.
    upload	  Generate ‘curl’ command to upload objects without requiring access/secret keys.
@@ -475,8 +481,8 @@ USAGE:
    mc share download [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
-  --help, -h				Help of share download
-  --recursive, -r			Share all objects recursively.
+  --help, -h					Help of share download.
+  --recursive, -r				Share all objects recursively.
   --expire, -E "168h"			Set expiry in NN[h|m|s].
 
 ```
@@ -502,10 +508,9 @@ USAGE:
    mc share upload [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
-  --help, -h				Help of share download.
-  --recursive, -r			Recursively upload any object matching the prefix.
+  --help, -h					Help of share upload.
+  --recursive, -r				Recursively upload any object matching the prefix.
   --expire, -E "168h"			Set expiry in NN[h|m|s].
-  --content-type, -T 			Speific content-type to allow.
 
 ```
 
@@ -546,10 +551,11 @@ USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --help, -h					Help of mirror.
-  --force					    Force overwrite of an existing target(s).
-  --fake					    Perform a fake mirror operation.
-  --watch, -w					Watch and mirror for changes.
+  --help, -h				Help of mirror.
+  --force					Force overwrite of an existing target(s).
+  --fake					Perform a fake mirror operation.
+  --watch, -w				Watch and mirror for changes.
+  --remove					Remove extraneous file(s) on target.
 
 ``` 
 
@@ -609,7 +615,11 @@ USAGE:
    mc watch [FLAGS]
 
 FLAGS:
-   --help, -h                           Help of events.
+   --help, -h					Help of watch.
+   --events "put,delete"		Filter specific type of events. Defaults to all events by default.
+   --prefix 					Filter events for a prefix.
+   --suffix 					Filter events for a suffix.
+   --recursive					Recursively watch for events.
 
 ```
 
@@ -652,7 +662,7 @@ COMMANDS:
    list         List bucket notifications.
 
 FLAGS:
-   --help, -h                           Help of events.
+   --help, -h					Help of events.
 ```
 
 *Example: List all configured bucket notifications*
@@ -705,7 +715,7 @@ PERMISSION:
    Allowed policies are: [none, download, upload, both].
 
 FLAGS:
-  --help, -h				Help of policy.
+  --help, -h					Help of policy.
 
 ```   
 
@@ -751,9 +761,9 @@ USAGE:
    mc session [FLAGS] OPERATION [ARG]
 
 OPERATION:
-   resume   		  Resume a previously saved session.
-   clear       		  Clear a previously saved session.
-   list           	  List all previously saved sessions.
+   resume   		     Resume a previously saved session.
+   clear       		     Clear a previously saved session.
+   list           	     List all previously saved sessions.
 
 SESSION-ID:
    SESSION - Session can either be $SESSION-ID or "all".
@@ -807,7 +817,7 @@ OPERATION:
    list
 
 FLAGS:
-  --help, -h				Help of config host
+  --help, -h					Help of config.
 
 ```
 
@@ -834,9 +844,8 @@ USAGE:
    mc update [FLAGS]
 
 FLAGS:
-  --help, -h				Help for update.
+  --help, -h					Help for update.
   --experimental, -E			Check experimental update.
-
 ```
 
 *Example: Check for an update.*
@@ -860,6 +869,7 @@ USAGE:
 
 FLAGS:
   --help, -h					Help for version.
+
 
 ```
  
