@@ -310,7 +310,7 @@ USAGE:
 
 FLAGS:
   --help, -h					Help of mb.
-  --region "us-east-1"				Specify bucket region. Defaults to ‘us-east-1’.
+  --region "us-east-1"			Specify bucket region. Defaults to ‘us-east-1’.
   
 ```
 
@@ -360,7 +360,6 @@ USAGE:
 
 FLAGS:
   --help, -h					Help of pipe.
-
 ```
 
 *Example: Stream MySQL database dump to Amazon S3 directly.*
@@ -406,11 +405,11 @@ USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h					Show this help.
-  --recursive, -r				Remove recursively.
+  --help, -h				Show this help.
+  --recursive, -r			Remove recursively.
   --force					Force a dangerous remove operation.
   --prefix					Remove objects matching this prefix.
-  --incomplete, -I				Remove an incomplete upload(s).
+  --incomplete, -I			Remove an incomplete upload(s).
   --fake					Perform a fake remove operation.
   --stdin					Read object list from STDIN.
   --older 					Remove object only if its created older than given time.
@@ -484,7 +483,7 @@ USAGE:
 OPTIONS:
   --help, -h					Help of share download.
   --recursive, -r				Share all objects recursively.
-  --expire, -E "168h"				Set expiry in NN[h|m|s].
+  --expire, -E "168h"			Set expiry in NN[h|m|s].
 
 ```
 
@@ -511,7 +510,7 @@ USAGE:
 OPTIONS:
   --help, -h					Help of share upload.
   --recursive, -r				Recursively upload any object matching the prefix.
-  --expire, -E "168h"				Set expiry in NN[h|m|s].
+  --expire, -E "168h"			Set expiry in NN[h|m|s].
 
 ```
 
@@ -552,10 +551,10 @@ USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --help, -h					Help of mirror.
+  --help, -h				Help of mirror.
   --force					Force overwrite of an existing target(s).
   --fake					Perform a fake mirror operation.
-  --watch, -w					Watch and mirror for changes.
+  --watch, -w				Watch and mirror for changes.
   --remove					Remove extraneous file(s) on target.
 
 ``` 
@@ -617,7 +616,7 @@ USAGE:
 
 FLAGS:
    --help, -h					Help of watch.
-   --events "put,delete"			Filter specific type of events. Defaults to all events by default.
+   --events "put,delete"		Filter specific type of events. Defaults to all events by default.
    --prefix 					Filter events for a prefix.
    --suffix 					Filter events for a suffix.
    --recursive					Recursively watch for events.
@@ -846,7 +845,7 @@ USAGE:
 
 FLAGS:
   --help, -h					Help for update.
-  --experimental, -E				Check experimental update.
+  --experimental, -E			Check experimental update.
 ```
 
 *Example: Check for an update.*
