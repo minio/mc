@@ -254,7 +254,12 @@ func rmAll(targetAlias, targetURL, prefix string, isRecursive, isIncomplete, isF
 
 		// Regular type.
 		if !isFake {
-			if err = rmObject(targetAlias, entry.URL.String(), isIncomplete); err != nil {
+			entryPath := entry.URL.String()
+			// Add '/' to force removing empty directories
+			if entry.Type.IsDir() {
+				entryPath += string(entry.URL.Separator)
+			}
+			if err = rmObject(targetAlias, entryPath, isIncomplete); err != nil {
 				errorIf(err.Trace(entry.URL.String()), "Unable to remove ‘"+entry.URL.String()+"’.")
 				continue
 			}
