@@ -1004,6 +1004,12 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 				}
 				return
 			}
+
+			// Avoid sending an empty directory when we are specifically listing it
+			if strings.HasSuffix(object.Key, string(c.targetURL.Separator)) && o == object.Key {
+				continue
+			}
+
 			content := &clientContent{}
 			url := *c.targetURL
 			// Join bucket and incoming object key.
