@@ -117,8 +117,8 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 	}
 
 	// Generate share URL for each target.
-	incomplete := false
-	for content := range clnt.List(isRecursive, incomplete) {
+	isIncomplete := false
+	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
 		if content.Err != nil {
 			return content.Err.Trace(clnt.GetURL().String())
 		}

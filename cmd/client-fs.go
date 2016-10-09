@@ -464,21 +464,48 @@ func (f *fsClient) Get() (io.Reader, *probe.Error) {
 	return fileData, nil
 }
 
-// Remove - remove the path.
-func (f *fsClient) Remove(incomplete bool) *probe.Error {
-	e := os.Remove(f.PathURL.Path)
-	err := f.toClientError(e, f.PathURL.Path)
-	return err.Trace(f.PathURL.Path)
+// Remove - remove entry read from clientContent channel.
+func (f *fsClient) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-chan *probe.Error {
+	errorCh := make(chan *probe.Error)
+
+	// Goroutine reads from contentCh and removes the entry in content.
+	go func() {
+		defer close(errorCh)
+
+		for content := range contentCh {
+			name := content.URL.Path
+			// Add partSuffix for incomplete uploads.
+			if isIncomplete {
+				name += partSuffix
+			}
+			if err := os.Remove(name); err != nil {
+				if os.IsPermission(err) {
+					// Ignore permission error.
+					errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
+				} else {
+					errorCh <- probe.NewError(err)
+					return
+				}
+			}
+		}
+	}()
+
+	return errorCh
 }
 
 // List - list files and folders.
-func (f *fsClient) List(recursive, incomplete bool) <-chan *clientContent {
+func (f *fsClient) List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent {
 	contentCh := make(chan *clientContent)
-	if recursive {
-		go f.listRecursiveInRoutine(contentCh, incomplete)
+	if isRecursive {
+		if showDir == DirNone {
+			go f.listRecursiveInRoutine(contentCh, isIncomplete)
+		} else {
+			go f.listDirOpt(contentCh, isIncomplete, showDir)
+		}
 	} else {
-		go f.listInRoutine(contentCh, incomplete)
+		go f.listInRoutine(contentCh, isIncomplete)
 	}
+
 	return contentCh
 }
 
@@ -649,7 +676,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 	pathURL := *f.PathURL
 	fpath := pathURL.Path
 
-	fst, err := f.fsStat()
+	fst, err := f.fsStat(false)
 	if err != nil {
 		if _, ok := err.ToGoError().(PathNotFound); ok {
 			// If file does not exist treat it like a prefix and list all prefixes if any.
@@ -778,6 +805,84 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 			Type: fst.Mode(),
 			Err:  nil,
 		}
+	}
+}
+
+// List files recursively using non-recursive mode.
+func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, dirOpt DirOpt) {
+	defer close(contentCh)
+
+	// Trim trailing / or \.
+	currentPath := f.PathURL.Path
+	currentPath = strings.TrimSuffix(currentPath, "/")
+	if runtime.GOOS == "windows" {
+		currentPath = strings.TrimSuffix(currentPath, `\`)
+	}
+
+	// Closure function reads currentPath and sends to contentCh. If a directory is found, it lists the directory content recursively.
+	var listDir func(currentPath string) bool
+	listDir = func(currentPath string) (isStop bool) {
+		files, err := readDir(currentPath)
+		if err != nil {
+			if os.IsPermission(err) {
+				contentCh <- &clientContent{Err: probe.NewError(PathInsufficientPermission{Path: currentPath})}
+				return false
+			}
+
+			contentCh <- &clientContent{Err: probe.NewError(err)}
+			return true
+		}
+
+		for _, file := range files {
+			name := filepath.Join(currentPath, file.Name())
+			content := clientContent{
+				URL:  *newClientURL(name),
+				Time: file.ModTime(),
+				Size: file.Size(),
+				Type: file.Mode(),
+				Err:  nil,
+			}
+			if file.Mode().IsDir() {
+				if dirOpt == DirFirst && !isIncomplete {
+					contentCh <- &content
+				}
+				if listDir(filepath.Join(name)) {
+					return true
+				}
+				if dirOpt == DirLast && !isIncomplete {
+					contentCh <- &content
+				}
+
+				continue
+			}
+
+			if isIncomplete {
+				// Ignore if file name does not end with partSuffix.
+				if !strings.HasSuffix(file.Name(), partSuffix) {
+					continue
+				}
+
+				// Strip partSuffix
+				name = strings.SplitAfter(name, partSuffix)[0]
+				content.URL = *newClientURL(name)
+			}
+
+			contentCh <- &content
+		}
+
+		return false
+	}
+
+	// listDir() does not send currentPath to contentCh.  We send it here depending on dirOpt.
+
+	if dirOpt == DirFirst && !isIncomplete {
+		contentCh <- &clientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
+	}
+
+	listDir(currentPath)
+
+	if dirOpt == DirLast && !isIncomplete {
+		contentCh <- &clientContent{URL: *newClientURL(currentPath), Type: os.ModeDir}
 	}
 }
 
@@ -992,7 +1097,7 @@ func (f *fsClient) GetAccess() (access string, err *probe.Error) {
 	if runtime.GOOS == "windows" {
 		return "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
 	}
-	st, err := f.fsStat()
+	st, err := f.fsStat(false)
 	if err != nil {
 		return "", err.Trace(f.PathURL.String())
 	}
@@ -1016,7 +1121,7 @@ func (f *fsClient) SetAccess(access string) *probe.Error {
 	if runtime.GOOS == "windows" {
 		return probe.NewError(APINotImplemented{API: "SetAccess", APIType: "filesystem"})
 	}
-	st, err := f.fsStat()
+	st, err := f.fsStat(false)
 	if err != nil {
 		return err.Trace(f.PathURL.String())
 	}
@@ -1043,7 +1148,7 @@ func (f *fsClient) SetAccess(access string) *probe.Error {
 
 // Stat - get metadata from path.
 func (f *fsClient) Stat(isIncomplete bool) (content *clientContent, err *probe.Error) {
-	st, err := f.fsStat()
+	st, err := f.fsStat(isIncomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
 	}
@@ -1080,8 +1185,11 @@ func (f *fsClient) handleWindowsSymlinks(fpath string) (os.FileInfo, *probe.Erro
 }
 
 // fsStat - wrapper function to get file stat.
-func (f *fsClient) fsStat() (os.FileInfo, *probe.Error) {
+func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 	fpath := f.PathURL.Path
+	if isIncomplete {
+		fpath += partSuffix
+	}
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
 	if strings.HasSuffix(fpath, string(f.PathURL.Separator)) {

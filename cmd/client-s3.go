@@ -567,21 +567,101 @@ func (c *s3Client) Put(reader io.Reader, size int64, contentType string, progres
 	return n, nil
 }
 
+// Remove incomplete uploads.
+func (c *s3Client) removeIncomplete(bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
+	removeObjectErrorCh := make(chan minio.RemoveObjectError)
+
+	// Goroutine reads from objectsCh and sends error to removeObjectErrorCh if any.
+	go func() {
+		defer close(removeObjectErrorCh)
+
+		for object := range objectsCh {
+			if err := c.api.RemoveIncompleteUpload(bucket, object); err != nil {
+				removeObjectErrorCh <- minio.RemoveObjectError{ObjectName: object, Err: err}
+			}
+		}
+	}()
+
+	return removeObjectErrorCh
+}
+
 // Remove - remove object or bucket.
-func (c *s3Client) Remove(incomplete bool) *probe.Error {
-	bucket, object := c.url2BucketAndObject()
-	// Remove only incomplete object.
-	if incomplete && object != "" {
-		e := c.api.RemoveIncompleteUpload(bucket, object)
-		return probe.NewError(e)
-	}
-	var e error
-	if object == "" {
-		e = c.api.RemoveBucket(bucket)
-	} else {
-		e = c.api.RemoveObject(bucket, object)
-	}
-	return probe.NewError(e)
+func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-chan *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+
+	errorCh := make(chan *probe.Error)
+	var bucketContent *clientContent
+
+	// Goroutine
+	// 1. calls removeIncomplete() for incomplete uploads or minio-go.RemoveObjects().
+	// 2. executes another Goroutine to copy contentCh to objectsCh.
+	// 3. reads statusCh and copies to errorCh.
+	go func() {
+		defer close(errorCh)
+
+		objectsCh := make(chan string)
+		var statusCh <-chan minio.RemoveObjectError
+		if isIncomplete {
+			statusCh = c.removeIncomplete(bucket, objectsCh)
+		} else {
+			statusCh = c.api.RemoveObjects(bucket, objectsCh)
+		}
+
+		// doneCh to control below Goroutine.
+		doneCh := make(chan struct{})
+		defer close(doneCh)
+
+		// Goroutine reads contentCh and copies to objectsCh.
+		go func() {
+			defer close(objectsCh)
+
+			for {
+				// Read from contentCh or doneCh.  If doneCh is read, exit the function.
+				var content *clientContent
+				var ok bool
+				select {
+				case content, ok = <-contentCh:
+					if !ok {
+						// Closed channel.
+						return
+					}
+				case <-doneCh:
+					return
+				}
+
+				// Convert content.URL.Path to objectName for objectsCh.
+				_, objectName := c.splitPath(content.URL.Path)
+				objectName = strings.TrimSuffix(objectName, string(c.targetURL.Separator))
+
+				// As object name is empty, we need to remove the bucket as well.
+				if objectName == "" {
+					bucketContent = content
+					continue
+				}
+
+				// Write to objectsCh or read doneCh. If doneCh is read, exit the function.
+				select {
+				case objectsCh <- objectName:
+				case <-doneCh:
+					return
+				}
+			}
+		}()
+
+		// Read statusCh and write to errorCh.
+		for removeStatus := range statusCh {
+			errorCh <- probe.NewError(removeStatus.Err)
+		}
+
+		// Remove bucket for regular objects.
+		if bucketContent != nil && !isIncomplete {
+			if err := c.api.RemoveBucket(bucket); err != nil {
+				errorCh <- probe.NewError(err)
+			}
+		}
+	}()
+
+	return errorCh
 }
 
 // We support '.' with bucket names but we fallback to using path
@@ -801,27 +881,62 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 	return bucketName, objectName
 }
 
+// splitPath split path into bucket and object.
+func (c *s3Client) splitPath(path string) (bucketName, objectName string) {
+	path = strings.TrimPrefix(path, string(c.targetURL.Separator))
+
+	// Handle path if its virtual style.
+	if c.virtualStyle {
+		hostIndex := strings.Index(c.targetURL.Host, "s3")
+		if hostIndex == -1 {
+			hostIndex = strings.Index(c.targetURL.Host, "storage.googleapis")
+		}
+		if hostIndex > 0 {
+			bucketName = c.targetURL.Host[:hostIndex-1]
+			objectName = path
+			return bucketName, objectName
+		}
+	}
+
+	tokens := strings.SplitN(path, string(c.targetURL.Separator), 2)
+	bucketName = tokens[0]
+	if len(tokens) == 2 {
+		objectName = tokens[1]
+	}
+
+	return bucketName, objectName
+}
+
 /// Bucket API operations.
 
 // List - list at delimited path, if not recursive.
-func (c *s3Client) List(recursive, incomplete bool) <-chan *clientContent {
+func (c *s3Client) List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	contentCh := make(chan *clientContent)
-	if incomplete {
-		if recursive {
-			go c.listIncompleteRecursiveInRoutine(contentCh)
+	if isIncomplete {
+		if isRecursive {
+			if showDir == DirNone {
+				go c.listIncompleteRecursiveInRoutine(contentCh)
+			} else {
+				go c.listIncompleteRecursiveInRoutineDirOpt(contentCh, showDir)
+			}
 		} else {
 			go c.listIncompleteInRoutine(contentCh)
 		}
 	} else {
-		if recursive {
-			go c.listRecursiveInRoutine(contentCh)
+		if isRecursive {
+			if showDir == DirNone {
+				go c.listRecursiveInRoutine(contentCh)
+			} else {
+				go c.listRecursiveInRoutineDirOpt(contentCh, showDir)
+			}
 		} else {
 			go c.listInRoutine(contentCh)
 		}
 	}
+
 	return contentCh
 }
 
@@ -956,6 +1071,224 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientConten
 			content.Type = os.ModeTemporary
 			contentCh <- content
 		}
+	}
+}
+
+// Convert objectMultipartInfo to clientContent
+func (c *s3Client) objectMultipartInfo2ClientContent(entry minio.ObjectMultipartInfo) clientContent {
+	bucket, _ := c.url2BucketAndObject()
+
+	content := clientContent{}
+	url := *c.targetURL
+	// Join bucket and incoming object key.
+	url.Path = filepath.Join(string(url.Separator), bucket, entry.Key)
+	if c.virtualStyle {
+		url.Path = filepath.Join(string(url.Separator), entry.Key)
+	}
+	content.URL = url
+	content.Size = entry.Size
+	content.Time = entry.Initiated
+
+	if strings.HasSuffix(entry.Key, "/") {
+		content.Type = os.ModeDir
+	} else {
+		content.Type = os.ModeTemporary
+	}
+
+	return content
+}
+
+// Recursively lists incomplete uploads.
+func (c *s3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *clientContent, dirOpt DirOpt) {
+	defer close(contentCh)
+
+	// Closure function reads list of incomplete uploads and sends to contentCh. If a directory is found, it lists
+	// incomplete uploads of the directory content recursively.
+	var listDir func(bucket, object string) bool
+	listDir = func(bucket, object string) (isStop bool) {
+		isRecursive := false
+		for entry := range c.api.ListIncompleteUploads(bucket, object, isRecursive, nil) {
+			if entry.Err != nil {
+				url := *c.targetURL
+				url.Path = filepath.Join(string(url.Separator), bucket, object)
+				if c.virtualStyle {
+					url.Path = filepath.Join(string(url.Separator), object)
+				}
+				contentCh <- &clientContent{URL: url, Err: probe.NewError(entry.Err)}
+
+				errResponse := minio.ToErrorResponse(entry.Err)
+				if errResponse.Code == "AccessDenied" {
+					continue
+				}
+
+				return true
+			}
+
+			content := c.objectMultipartInfo2ClientContent(entry)
+
+			// Handle if object.Key is a directory.
+			if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) {
+				if dirOpt == DirFirst {
+					contentCh <- &content
+				}
+				if listDir(bucket, entry.Key) {
+					return true
+				}
+				if dirOpt == DirLast {
+					contentCh <- &content
+				}
+			} else {
+				contentCh <- &content
+			}
+		}
+
+		return false
+	}
+
+	bucket, object := c.url2BucketAndObject()
+	listDir(bucket, object)
+}
+
+// Returns new path by joining path segments with URL path separator.
+func (c *s3Client) joinPath(segments ...string) string {
+	var retPath string
+	pathSep := string(c.targetURL.Separator)
+
+	for _, segment := range segments {
+		segment = strings.TrimPrefix(segment, pathSep)
+
+		if !strings.HasSuffix(retPath, pathSep) {
+			retPath += pathSep
+		}
+
+		retPath += segment
+	}
+
+	return retPath
+}
+
+// Convert objectInfo to clientContent
+func (c *s3Client) objectInfo2ClientContent(entry minio.ObjectInfo) clientContent {
+	bucket, _ := c.url2BucketAndObject()
+
+	content := clientContent{}
+	url := *c.targetURL
+	// Join bucket and incoming object key.
+	url.Path = c.joinPath(bucket, entry.Key)
+	// If virtualStyle replace the url.Path back.
+	if c.virtualStyle {
+		url.Path = c.joinPath(entry.Key)
+	}
+	content.URL = url
+	content.Size = entry.Size
+	content.Time = entry.LastModified
+
+	if strings.HasSuffix(entry.Key, "/") && entry.Size == 0 && entry.LastModified.IsZero() {
+		content.Type = os.ModeDir
+	} else {
+		content.Type = os.FileMode(0664)
+	}
+
+	return content
+}
+
+// Returns bucket stat info of current bucket.
+func (c *s3Client) bucketStat() clientContent {
+	bucketName, _ := c.url2BucketAndObject()
+
+	buckets, err := c.api.ListBuckets()
+	if err != nil {
+		return clientContent{Err: probe.NewError(err)}
+	}
+
+	for _, bucket := range buckets {
+		if bucket.Name == bucketName {
+			return clientContent{URL: *c.targetURL, Time: bucket.CreationDate, Type: os.ModeDir}
+		}
+	}
+
+	return clientContent{Err: probe.NewError(BucketDoesNotExist{Bucket: bucketName})}
+}
+
+// Recursively lists objects.
+func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, dirOpt DirOpt) {
+	defer close(contentCh)
+
+	// Closure function reads list objects and sends to contentCh. If a directory is found, it lists
+	// objects of the directory content recursively.
+	var listDir func(bucket, object string) bool
+	listDir = func(bucket, object string) (isStop bool) {
+		isRecursive := false
+		for entry := range c.listObjectWrapper(bucket, object, isRecursive, nil) {
+			if entry.Err != nil {
+				url := *c.targetURL
+				url.Path = c.joinPath(bucket, object)
+				if c.virtualStyle {
+					url.Path = c.joinPath(object)
+				}
+				contentCh <- &clientContent{URL: url, Err: probe.NewError(entry.Err)}
+
+				errResponse := minio.ToErrorResponse(entry.Err)
+				if errResponse.Code == "AccessDenied" {
+					continue
+				}
+
+				return true
+			}
+
+			content := c.objectInfo2ClientContent(entry)
+
+			// Handle if object.Key is a directory.
+			if content.Type.IsDir() {
+				if dirOpt == DirFirst {
+					contentCh <- &content
+				}
+				if listDir(bucket, entry.Key) {
+					return true
+				}
+				if dirOpt == DirLast {
+					contentCh <- &content
+				}
+			} else {
+				contentCh <- &content
+			}
+		}
+
+		return false
+	}
+
+	bucket, object := c.url2BucketAndObject()
+
+	var cContent *clientContent
+
+	// Get bucket stat if object is empty.
+	if object == "" {
+		content := c.bucketStat()
+		cContent = &content
+
+		if content.Err != nil {
+			contentCh <- cContent
+			return
+		}
+	} else if strings.HasSuffix(object, string(c.targetURL.Separator)) {
+		// Get stat of given object is a directory.
+		isIncomplete := false
+		content, perr := c.Stat(isIncomplete)
+		cContent = content
+		if perr != nil {
+			contentCh <- &clientContent{URL: *c.targetURL, Err: perr}
+			return
+		}
+	}
+
+	if cContent != nil && dirOpt == DirFirst {
+		contentCh <- cContent
+	}
+
+	listDir(bucket, object)
+
+	if cContent != nil && dirOpt == DirLast {
+		contentCh <- cContent
 	}
 }
 

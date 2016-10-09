@@ -24,11 +24,23 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
+// DirOpt - list directory option.
+type DirOpt int8
+
+const (
+	// DirNone - do not include directories in the list.
+	DirNone DirOpt = iota
+	// DirFirst - include directories before objects in the list.
+	DirFirst
+	// DirLast - include directories after objects in the list.
+	DirLast
+)
+
 // Client - client interface
 type Client interface {
 	// Common operations
 	Stat(isIncomplete bool) (content *clientContent, err *probe.Error)
-	List(recursive, incomplete bool) <-chan *clientContent
+	List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent
 
 	// Bucket operations
 	MakeBucket(region string) *probe.Error
@@ -52,7 +64,7 @@ type Client interface {
 	Unwatch(params watchParams) *probe.Error
 
 	// Delete operations
-	Remove(incomplete bool) *probe.Error
+	Remove(isIncomplete bool, contentCh <-chan *clientContent) (errorCh <-chan *probe.Error)
 
 	// GetURL returns back internal url
 	GetURL() clientURL
