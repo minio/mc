@@ -397,6 +397,16 @@ func (ms *mirrorSession) watch() {
 			// again, by replacing the sourceUrlFull with the sourceAlias. This url will be
 			// used to mirror.
 			sourceAlias, sourceURLFull, _ := mustExpandAlias(ms.sourceURL)
+
+			// If the passed source URL points to fs, fetch the absolute src path
+			// to correctly calculate targetPath
+			if sourceAlias == "" {
+				tmpSrcUrl, err := filepath.Abs(sourceURLFull)
+				if err == nil {
+					sourceURLFull = tmpSrcUrl
+				}
+			}
+
 			sourceURL := newClientURL(event.Path)
 
 			aliasedPath := strings.Replace(event.Path, sourceURLFull, ms.sourceURL, -1)
