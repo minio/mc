@@ -397,7 +397,12 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	go func() {
 		for notificationInfo := range eventsCh {
 			if notificationInfo.Err != nil {
-				errorChan <- probe.NewError(notificationInfo.Err)
+				if nErr, ok := notificationInfo.Err.(minio.ErrorResponse); ok && nErr.Code == "APINotSupported" {
+					errorChan <- probe.NewError(errors.New("The specified S3 target is not supported. " +
+						"Only Minio based storages provide monitoring feature."))
+				} else {
+					errorChan <- probe.NewError(notificationInfo.Err)
+				}
 				continue
 			}
 
