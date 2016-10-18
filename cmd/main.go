@@ -38,7 +38,7 @@ var (
 	mcFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Show help.",
+			Usage: "Show this help.",
 		},
 	}
 )

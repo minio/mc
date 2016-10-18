@@ -22,14 +22,14 @@ var (
 	eventsFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of events.",
+			Usage: "Show this help.",
 		},
 	}
 )
 
 var eventsCmd = cli.Command{
 	Name:   "events",
-	Usage:  "Manage bucket notification.",
+	Usage:  "Manage object notifications.",
 	Action: mainEvents,
 	Flags:  append(eventsFlags, globalFlags...),
 	Subcommands: []cli.Command{

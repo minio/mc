@@ -29,7 +29,7 @@ var (
 	shareUploadFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of share download.",
+			Usage: "Show this help.",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",

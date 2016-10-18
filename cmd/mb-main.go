@@ -29,7 +29,7 @@ var (
 	mbFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of mb.",
+			Usage: "Show this help.",
 		},
 		cli.StringFlag{
 			Name:  "region",
@@ -42,7 +42,7 @@ var (
 // make a bucket or folder.
 var mbCmd = cli.Command{
 	Name:   "mb",
-	Usage:  "Make a bucket or folder.",
+	Usage:  "Make a bucket or a folder.",
 	Action: mainMakeBucket,
 	Flags:  append(mbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

@@ -39,7 +39,7 @@ var (
 	cpFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of cp.",
+			Usage: "Show this help.",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
@@ -51,7 +51,7 @@ var (
 // Copy command.
 var cpCmd = cli.Command{
 	Name:   "cp",
-	Usage:  "Copy one or more objects to a target.",
+	Usage:  "Copy files and objects.",
 	Action: mainCopy,
 	Flags:  append(cpFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

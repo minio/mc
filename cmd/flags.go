@@ -41,15 +41,15 @@ var globalFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "json",
-		Usage: "Enable json formatted output.",
+		Usage: "Enable JSON formatted output.",
 	},
 	cli.BoolFlag{
 		Name:  "debug",
-		Usage: "Enable debugging output.",
+		Usage: "Enable debug output.",
 	},
 	cli.BoolFlag{
 		Name:  "insecure",
-		Usage: "Skip SSL certificate verification.",
+		Usage: "Disable SSL certificate verification.",
 	},
 }
 
