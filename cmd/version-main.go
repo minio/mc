@@ -30,7 +30,7 @@ var (
 	versionFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help for version.",
+			Usage: "Show this help.",
 		},
 	}
 )
@@ -38,7 +38,7 @@ var (
 // Print version.
 var versionCmd = cli.Command{
 	Name:   "version",
-	Usage:  "Print version.",
+	Usage:  "Print version info.",
 	Action: mainVersion,
 	Flags:  append(versionFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

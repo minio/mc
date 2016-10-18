@@ -31,7 +31,7 @@ var (
 	configHostFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of config host",
+			Usage: "Show this help.",
 		},
 	}
 )

@@ -36,7 +36,7 @@ var (
 	watchFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of watch.",
+			Usage: "Show this help.",
 		},
 		cli.StringFlag{
 			Name:  "events",
@@ -60,7 +60,7 @@ var (
 
 var watchCmd = cli.Command{
 	Name:   "watch",
-	Usage:  "Watch for events on object storage and filesystem.",
+	Usage:  "Watch for files and objects events.",
 	Action: mainWatch,
 	Flags:  append(watchFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

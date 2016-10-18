@@ -29,7 +29,7 @@ var (
 	lsFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of ls.",
+			Usage: "Show this help.",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",

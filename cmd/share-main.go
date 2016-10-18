@@ -29,7 +29,7 @@ var (
 	shareFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of share.",
+			Usage: "Show this help.",
 		},
 	}
 )

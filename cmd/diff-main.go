@@ -32,7 +32,7 @@ var (
 	diffFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of diff.",
+			Usage: "Show this help.",
 		},
 	}
 )
@@ -40,7 +40,7 @@ var (
 // Compute differences between two files or folders.
 var diffCmd = cli.Command{
 	Name:        "diff",
-	Usage:       "Compute differences between two folders.",
+	Usage:       "Show differences between two folders or buckets.",
 	Description: "Diff only lists missing objects or objects with size differences. It *DOES NOT* compare contents. i.e. Objects of same name and size, but differ in contents are not noticed.",
 	Action:      mainDiff,
 	Flags:       append(diffFlags, globalFlags...),

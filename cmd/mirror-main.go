@@ -39,7 +39,7 @@ var (
 	mirrorFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of mirror.",
+			Usage: "Show this help.",
 		},
 		cli.BoolFlag{
 			Name:  "force",
@@ -63,7 +63,7 @@ var (
 //  Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
-	Usage:  "Mirror folders recursively from a single source to single destination.",
+	Usage:  "Mirror buckets and folders.",
 	Action: mainMirror,
 	Flags:  append(mirrorFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

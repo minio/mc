@@ -33,14 +33,14 @@ var (
 	configFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of config.",
+			Usage: "Show this help.",
 		},
 	}
 )
 
 var configCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Manage configuration file.",
+	Usage:  "Manage mc configuration file.",
 	Action: mainConfig,
 	Flags:  append(configFlags, globalFlags...),
 	Subcommands: []cli.Command{

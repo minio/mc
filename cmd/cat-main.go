@@ -32,7 +32,7 @@ var (
 	catFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of cat",
+			Usage: "Show this help.",
 		},
 	}
 )
@@ -40,7 +40,7 @@ var (
 // Display contents of a file.
 var catCmd = cli.Command{
 	Name:   "cat",
-	Usage:  "Display contents of a file.",
+	Usage:  "Display file and object contents.",
 	Action: mainCat,
 	Flags:  append(catFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

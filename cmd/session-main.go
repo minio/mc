@@ -33,7 +33,7 @@ var (
 	sessionFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of session.",
+			Usage: "Show this help.",
 		},
 	}
 )
@@ -41,7 +41,7 @@ var (
 // Manage sessions for cp and mirror.
 var sessionCmd = cli.Command{
 	Name:   "session",
-	Usage:  "Manage saved sessions of cp and mirror operations.",
+	Usage:  "Manage saved sessions for cp and mirror commands.",
 	Action: mainSession,
 	Flags:  append(sessionFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

@@ -28,7 +28,7 @@ var (
 	pipeFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of pipe.",
+			Usage: "Show this help.",
 		},
 	}
 )
@@ -36,7 +36,7 @@ var (
 // Display contents of a file.
 var pipeCmd = cli.Command{
 	Name:   "pipe",
-	Usage:  "Write contents of stdin to one target. When no target is specified, it writes to stdout.",
+	Usage:  "Redirect STDIN to an object or file or STDOUT.",
 	Action: mainPipe,
 	Flags:  append(pipeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

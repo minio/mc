@@ -29,7 +29,7 @@ var (
 	policyFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
-			Usage: "Help of policy.",
+			Usage: "Show this help.",
 		},
 	}
 )
@@ -37,7 +37,7 @@ var (
 // Set public policy
 var policyCmd = cli.Command{
 	Name:   "policy",
-	Usage:  "Set public policy on bucket or prefix.",
+	Usage:  "Manage anonymous access to objects.",
 	Action: mainPolicy,
 	Flags:  append(policyFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
