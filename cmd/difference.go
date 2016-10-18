@@ -61,8 +61,8 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 	// Set default values for listing.
 	isRecursive := true   // recursive is always true for diff.
 	isIncomplete := false // we will not compare any incomplete objects.
-	srcCh := sourceClnt.List(isRecursive, isIncomplete)
-	tgtCh := targetClnt.List(isRecursive, isIncomplete)
+	srcCh := sourceClnt.List(isRecursive, isIncomplete, DirNone)
+	tgtCh := targetClnt.List(isRecursive, isIncomplete, DirNone)
 
 	diffCh = make(chan diffMessage, 1000)
 

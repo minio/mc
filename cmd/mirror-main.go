@@ -25,7 +25,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
@@ -187,17 +186,13 @@ func (ms *mirrorSession) doRemove(sURLs URLs) URLs {
 		return sURLs.WithError(nil)
 	}
 
-	targetAlias := sURLs.TargetAlias
 	targetURL := sURLs.TargetContent.URL
 
 	// We are not removing incomplete uploads.
 	isIncomplete := false
 
 	// Remove extraneous file on target.
-	err := rm(targetAlias, targetURL.String(), isIncomplete, isFake, time.Duration(0))
-	if err != nil {
-		return sURLs.WithError(err.Trace(targetAlias, targetURL.String()))
-	}
+	removeSingle(targetURL.String(), isIncomplete, isFake, 0)
 
 	return sURLs.WithError(nil)
 }
@@ -337,10 +332,7 @@ func (ms *mirrorSession) startStatus() {
 			} else if sURLs.TargetContent != nil {
 				// Construct user facing message and path.
 				targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
-				ms.status.PrintMsg(rmMessage{
-					Status: "success",
-					URL:    targetPath,
-				})
+				ms.status.PrintMsg(rmMessage{Key: targetPath})
 			}
 		}
 	}()
@@ -401,9 +393,9 @@ func (ms *mirrorSession) watch() {
 			// If the passed source URL points to fs, fetch the absolute src path
 			// to correctly calculate targetPath
 			if sourceAlias == "" {
-				tmpSrcUrl, err := filepath.Abs(sourceURLFull)
+				tmpSrcURL, err := filepath.Abs(sourceURLFull)
 				if err == nil {
-					sourceURLFull = tmpSrcUrl
+					sourceURLFull = tmpSrcURL
 				}
 			}
 
