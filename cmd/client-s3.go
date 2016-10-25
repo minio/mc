@@ -1474,28 +1474,31 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 }
 
 // ShareUpload - get data for presigned post http form upload.
-func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentType string) (map[string]string, *probe.Error) {
+func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	p := minio.NewPostPolicy()
 	if e := p.SetExpires(time.Now().UTC().Add(expires)); e != nil {
-		return nil, probe.NewError(e)
+		return "", nil, probe.NewError(e)
 	}
 	if strings.TrimSpace(contentType) != "" || contentType != "" {
 		// No need to verify for error here, since we have stripped out spaces.
 		p.SetContentType(contentType)
 	}
 	if e := p.SetBucket(bucket); e != nil {
-		return nil, probe.NewError(e)
+		return "", nil, probe.NewError(e)
 	}
 	if isRecursive {
 		if e := p.SetKeyStartsWith(object); e != nil {
-			return nil, probe.NewError(e)
+			return "", nil, probe.NewError(e)
 		}
 	} else {
 		if e := p.SetKey(object); e != nil {
-			return nil, probe.NewError(e)
+			return "", nil, probe.NewError(e)
 		}
 	}
-	_, m, e := c.api.PresignedPostPolicy(p)
-	return m, probe.NewError(e)
+	u, m, e := c.api.PresignedPostPolicy(p)
+	if e != nil {
+		return "", nil, probe.NewError(e)
+	}
+	return u.String(), m, nil
 }
