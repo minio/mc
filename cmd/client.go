@@ -57,7 +57,7 @@ type Client interface {
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)
-	ShareUpload(bool, time.Duration, string) (map[string]string, *probe.Error)
+	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)
 
 	// Watch events
 	Watch(params watchParams) (*watchObject, *probe.Error)

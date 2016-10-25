@@ -109,12 +109,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 }
 
 // makeCurlCmd constructs curl command-line.
-func makeCurlCmd(key string, isRecursive bool, uploadInfo map[string]string) string {
-	URL := newClientURL(key)
-	postURL := URL.Scheme + URL.SchemeSeparator + URL.Host + string(URL.Separator)
-	if !isBucketVirtualStyle(URL.Host) {
-		postURL = postURL + uploadInfo["bucket"]
-	}
+func makeCurlCmd(key, postURL string, isRecursive bool, uploadInfo map[string]string) (string, *probe.Error) {
 	postURL += " "
 	curlCommand := "curl " + postURL
 	for k, v := range uploadInfo {
@@ -131,7 +126,7 @@ func makeCurlCmd(key string, isRecursive bool, uploadInfo map[string]string) str
 		curlCommand += fmt.Sprintf("-F key=%s ", key) // Object name.
 	}
 	curlCommand += "-F file=@<FILE>" // File to upload.
-	return curlCommand
+	return curlCommand, nil
 }
 
 // save shared URL to disk.
@@ -157,7 +152,7 @@ func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, 
 	}
 
 	// Generate pre-signed access info.
-	uploadInfo, err := clnt.ShareUpload(isRecursive, expiry, contentType)
+	shareURL, uploadInfo, err := clnt.ShareUpload(isRecursive, expiry, contentType)
 	if err != nil {
 		return err.Trace(objectURL, "expiry="+expiry.String(), "contentType="+contentType)
 	}
@@ -166,7 +161,10 @@ func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, 
 	objectURL = clnt.GetURL().String()
 
 	// Generate curl command.
-	curlCmd := makeCurlCmd(objectURL, isRecursive, uploadInfo)
+	curlCmd, err := makeCurlCmd(objectURL, shareURL, isRecursive, uploadInfo)
+	if err != nil {
+		return err.Trace(objectURL)
+	}
 
 	printMsg(shareMesssage{
 		ObjectURL:   objectURL,
