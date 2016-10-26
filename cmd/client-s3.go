@@ -303,7 +303,7 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 			continue
 		}
 		prefix, suffix := getFilters(config.NotificationConfig)
-		configs = append(configs, notificationConfig{ID: config.Id,
+		configs = append(configs, notificationConfig{ID: config.ID,
 			Arn:    config.Topic,
 			Events: prettyEventNames(config.Events),
 			Prefix: prefix,
@@ -315,7 +315,7 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 			continue
 		}
 		prefix, suffix := getFilters(config.NotificationConfig)
-		configs = append(configs, notificationConfig{ID: config.Id,
+		configs = append(configs, notificationConfig{ID: config.ID,
 			Arn:    config.Queue,
 			Events: prettyEventNames(config.Events),
 			Prefix: prefix,
@@ -327,7 +327,7 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 			continue
 		}
 		prefix, suffix := getFilters(config.NotificationConfig)
-		configs = append(configs, notificationConfig{ID: config.Id,
+		configs = append(configs, notificationConfig{ID: config.ID,
 			Arn:    config.Lambda,
 			Events: prettyEventNames(config.Events),
 			Prefix: prefix,

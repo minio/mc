@@ -44,18 +44,17 @@ func isReadAt(reader io.Reader) (ok bool) {
 }
 
 // shouldUploadPart - verify if part should be uploaded.
-func shouldUploadPart(objPart objectPart, objectParts map[int]objectPart) bool {
+func shouldUploadPart(objPart objectPart, uploadReq uploadPartReq) bool {
 	// If part not found should upload the part.
-	uploadedPart, found := objectParts[objPart.PartNumber]
-	if !found {
+	if uploadReq.Part == nil {
 		return true
 	}
 	// if size mismatches should upload the part.
-	if objPart.Size != uploadedPart.Size {
+	if objPart.Size != uploadReq.Part.Size {
 		return true
 	}
 	// if md5sum mismatches should upload the part.
-	if objPart.ETag != uploadedPart.ETag {
+	if objPart.ETag != uploadReq.Part.ETag {
 		return true
 	}
 	return false

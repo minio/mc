@@ -178,14 +178,19 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 
 	// Create a channel to communicate which part to upload.
 	// Buffer this to 10000, the maximum number of parts allowed by S3.
-	uploadPartsCh := make(chan int, 10000)
+	uploadPartsCh := make(chan uploadPartReq, 10000)
 
 	// Just for readability.
 	lastPartNumber := totalPartsCount
 
 	// Send each part through the partUploadCh to be uploaded.
 	for p := 1; p <= totalPartsCount; p++ {
-		uploadPartsCh <- p
+		part, ok := partsInfo[p]
+		if ok {
+			uploadPartsCh <- uploadPartReq{PartNum: p, Part: &part}
+		} else {
+			uploadPartsCh <- uploadPartReq{PartNum: p, Part: nil}
+		}
 	}
 	close(uploadPartsCh)
 
@@ -193,7 +198,7 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 	for w := 1; w <= 3; w++ {
 		go func() {
 			// Deal with each part as it comes through the channel.
-			for partNumber := range uploadPartsCh {
+			for uploadReq := range uploadPartsCh {
 				// Add hash algorithms that need to be calculated by computeHash()
 				// In case of a non-v4 signature or https connection, sha256 is not needed.
 				hashAlgos := make(map[string]hash.Hash)
@@ -203,47 +208,50 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 					hashAlgos["sha256"] = sha256.New()
 				}
 
+				// If partNumber was not uploaded we calculate the missing
+				// part offset and size. For all other part numbers we
+				// calculate offset based on multiples of partSize.
+				readOffset := int64(uploadReq.PartNum-1) * partSize
+				missingPartSize := partSize
+
+				// As a special case if partNumber is lastPartNumber, we
+				// calculate the offset based on the last part size.
+				if uploadReq.PartNum == lastPartNumber {
+					readOffset = (fileSize - lastPartSize)
+					missingPartSize = lastPartSize
+				}
+
+				// Get a section reader on a particular offset.
+				sectionReader := io.NewSectionReader(fileReader, readOffset, missingPartSize)
+				var prtSize int64
+				var err error
+
+				prtSize, err = computeHash(hashAlgos, hashSums, sectionReader)
+				if err != nil {
+					uploadedPartsCh <- uploadedPartRes{
+						Error: err,
+					}
+					// Exit the goroutine.
+					return
+				}
+
 				// Create the part to be uploaded.
 				verifyObjPart := objectPart{
 					ETag:       hex.EncodeToString(hashSums["md5"]),
-					PartNumber: partNumber,
+					PartNumber: uploadReq.PartNum,
 					Size:       partSize,
 				}
+
 				// If this is the last part do not give it the full part size.
-				if partNumber == lastPartNumber {
+				if uploadReq.PartNum == lastPartNumber {
 					verifyObjPart.Size = lastPartSize
 				}
 
 				// Verify if part should be uploaded.
-				if shouldUploadPart(verifyObjPart, partsInfo) {
-					// If partNumber was not uploaded we calculate the missing
-					// part offset and size. For all other part numbers we
-					// calculate offset based on multiples of partSize.
-					readOffset := int64(partNumber-1) * partSize
-					missingPartSize := partSize
-
-					// As a special case if partNumber is lastPartNumber, we
-					// calculate the offset based on the last part size.
-					if partNumber == lastPartNumber {
-						readOffset = (fileSize - lastPartSize)
-						missingPartSize = lastPartSize
-					}
-
-					// Get a section reader on a particular offset.
-					sectionReader := io.NewSectionReader(fileReader, readOffset, missingPartSize)
-					var prtSize int64
-					prtSize, err = computeHash(hashAlgos, hashSums, sectionReader)
-					if err != nil {
-						uploadedPartsCh <- uploadedPartRes{
-							Error: err,
-						}
-						// Exit the goroutine.
-						return
-					}
-
+				if shouldUploadPart(verifyObjPart, uploadReq) {
 					// Proceed to upload the part.
 					var objPart objectPart
-					objPart, err = c.uploadPart(bucketName, objectName, uploadID, sectionReader, partNumber, hashSums["md5"], hashSums["sha256"], prtSize)
+					objPart, err = c.uploadPart(bucketName, objectName, uploadID, sectionReader, uploadReq.PartNum, hashSums["md5"], hashSums["sha256"], prtSize)
 					if err != nil {
 						uploadedPartsCh <- uploadedPartRes{
 							Error: err,
@@ -252,12 +260,13 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 						return
 					}
 					// Save successfully uploaded part metadata.
-					partsInfo[partNumber] = objPart
+					uploadReq.Part = &objPart
 				}
 				// Return through the channel the part size.
 				uploadedPartsCh <- uploadedPartRes{
 					Size:    verifyObjPart.Size,
-					PartNum: partNumber,
+					PartNum: uploadReq.PartNum,
+					Part:    uploadReq.Part,
 					Error:   nil,
 				}
 			}
@@ -271,8 +280,8 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 			return totalUploadedSize, uploadRes.Error
 		}
 		// Retrieve each uploaded part and store it to be completed.
-		part, ok := partsInfo[uploadRes.PartNum]
-		if !ok {
+		part := uploadRes.Part
+		if part == nil {
 			return totalUploadedSize, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", uploadRes.PartNum))
 		}
 		// Update the total uploaded size.
