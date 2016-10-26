@@ -78,17 +78,21 @@ func (c Client) StatObject(bucketName, objectName string) (ObjectInfo, error) {
 	md5sum := strings.TrimPrefix(resp.Header.Get("ETag"), "\"")
 	md5sum = strings.TrimSuffix(md5sum, "\"")
 
-	// Parse content length.
-	size, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
-	if err != nil {
-		return ObjectInfo{}, ErrorResponse{
-			Code:       "InternalError",
-			Message:    "Content-Length is invalid. " + reportIssue,
-			BucketName: bucketName,
-			Key:        objectName,
-			RequestID:  resp.Header.Get("x-amz-request-id"),
-			HostID:     resp.Header.Get("x-amz-id-2"),
-			Region:     resp.Header.Get("x-amz-bucket-region"),
+	// Content-Length is not valid for Google Cloud Storage, do not verify.
+	var size int64 = -1
+	if !isGoogleEndpoint(c.endpointURL) {
+		// Parse content length.
+		size, err = strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
+		if err != nil {
+			return ObjectInfo{}, ErrorResponse{
+				Code:       "InternalError",
+				Message:    "Content-Length is invalid. " + reportIssue,
+				BucketName: bucketName,
+				Key:        objectName,
+				RequestID:  resp.Header.Get("x-amz-request-id"),
+				HostID:     resp.Header.Get("x-amz-id-2"),
+				Region:     resp.Header.Get("x-amz-bucket-region"),
+			}
 		}
 	}
 	// Parse Last-Modified has http time format.

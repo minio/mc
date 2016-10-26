@@ -139,12 +139,14 @@ func (c Client) putObjectMultipartStream(bucketName, objectName string, reader i
 		// as we read from the source.
 		reader = newHook(tmpBuffer, progress)
 
+		part, ok := partsInfo[partNumber]
+
 		// Verify if part should be uploaded.
-		if shouldUploadPart(objectPart{
+		if ok && shouldUploadPart(objectPart{
 			ETag:       hex.EncodeToString(hashSums["md5"]),
 			PartNumber: partNumber,
 			Size:       prtSize,
-		}, partsInfo) {
+		}, uploadPartReq{PartNum: partNumber, Part: &part}) {
 			// Proceed to upload the part.
 			var objPart objectPart
 			objPart, err = c.uploadPart(bucketName, objectName, uploadID, reader, partNumber, hashSums["md5"], hashSums["sha256"], prtSize)
