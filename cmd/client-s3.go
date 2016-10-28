@@ -119,10 +119,9 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				}
 			}
 			if config.Debug {
-				if config.Signature == "S3v4" {
+				if strings.EqualFold(config.Signature, "S3v4") {
 					transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
-				}
-				if config.Signature == "S3v2" {
+				} else if strings.EqualFold(config.Signature, "S3v2") {
 					transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
 				}
 				// Set custom transport.
