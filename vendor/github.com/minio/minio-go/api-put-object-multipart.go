@@ -142,7 +142,7 @@ func (c Client) putObjectMultipartStream(bucketName, objectName string, reader i
 		part, ok := partsInfo[partNumber]
 
 		// Verify if part should be uploaded.
-		if ok && shouldUploadPart(objectPart{
+		if !ok || shouldUploadPart(objectPart{
 			ETag:       hex.EncodeToString(hashSums["md5"]),
 			PartNumber: partNumber,
 			Size:       prtSize,
