@@ -20,6 +20,7 @@ package minio
 // "cn-north-1" adds support for AWS China.
 var awsS3EndpointMap = map[string]string{
 	"us-east-1":      "s3.amazonaws.com",
+	"us-east-2":      "s3-us-east-2.amazonaws.com",
 	"us-west-2":      "s3-us-west-2.amazonaws.com",
 	"us-west-1":      "s3-us-west-1.amazonaws.com",
 	"eu-west-1":      "s3-eu-west-1.amazonaws.com",
