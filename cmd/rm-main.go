@@ -49,7 +49,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
-			Usage: "Remove an incomplete objects.",
+			Usage: "Remove incomplete uploads.",
 		},
 		cli.BoolFlag{
 			Name:  "fake",
