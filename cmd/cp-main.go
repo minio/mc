@@ -149,11 +149,9 @@ func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounte
 
 	var progress io.Reader
 	if globalQuiet || globalJSON {
-		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
-		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(copyMessage{
-			Source: sourcePath,
-			Target: targetPath,
+			Source: sourceURL.String(),
+			Target: targetURL.String(),
 		})
 		// Proxy reader to accounting reader only during quiet mode.
 		if globalQuiet || globalJSON {

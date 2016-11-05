@@ -219,12 +219,9 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 	length := sURLs.SourceContent.Size
 
 	ms.status.SetCaption(sourceURL.String() + ": ")
-
-	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
-	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 	ms.status.PrintMsg(mirrorMessage{
-		Source: sourcePath,
-		Target: targetPath,
+		Source: sourceURL.String(),
+		Target: targetURL.String(),
 	})
 
 	// If source size is <= 5GB and operation is across same server type try to use Copy.
