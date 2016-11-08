@@ -122,21 +122,35 @@ func (s policyMessage) JSON() string {
 
 // checkPolicySyntax check for incoming syntax.
 func checkPolicySyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
+	argsLength := len(ctx.Args())
+	// Always print a help message when we have extra arguments
+	if argsLength > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code.
 	}
-	if len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code.
+	// Always print a help message when no arguments specified
+	if argsLength < 1 {
+		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
 	}
-	if len(ctx.Args()) == 2 && ctx.Args().Get(0) != "list" {
-		perms := accessPerms(ctx.Args().Get(0))
-		if !perms.isValidAccessPERM() {
-			fatalIf(errDummy().Trace(),
-				"Unrecognized permission ‘"+string(perms)+"’. Allowed values are [none, download, upload, public].")
+
+	firstArg := ctx.Args().Get(0)
+
+	// More syntax checking
+	switch accessPerms(firstArg) {
+	case accessNone, accessDownload, accessUpload, accessPublic:
+		// Always expect two arguments when a policy permission is provided
+		if argsLength != 2 {
+			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
 		}
-	}
-	if len(ctx.Args()) < 1 {
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code.
+	case "list":
+		// Always expect an argument after list cmd
+		if argsLength != 2 {
+			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		}
+	default:
+		if argsLength == 2 {
+			fatalIf(errDummy().Trace(),
+				"Unrecognized permission ‘"+string(firstArg)+"’. Allowed values are [none, download, upload, public].")
+		}
 	}
 }
 
