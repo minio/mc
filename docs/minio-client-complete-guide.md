@@ -712,7 +712,7 @@ USAGE:
    mc policy [FLAGS] TARGET
 
 PERMISSION:
-   Allowed policies are: [none, download, upload, both].
+   Allowed policies are: [none, download, upload, public].
 
 FLAGS:
   --help, -h					Help of policy.

@@ -19,7 +19,7 @@ package cmd
 // isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {
 	switch b {
-	case accessNone, accessDownload, accessUpload, accessBoth:
+	case accessNone, accessDownload, accessUpload, accessPublic:
 		return true
 	}
 	return false
@@ -33,5 +33,5 @@ const (
 	accessNone     = accessPerms("none")
 	accessDownload = accessPerms("download")
 	accessUpload   = accessPerms("upload")
-	accessBoth     = accessPerms("both")
+	accessPublic   = accessPerms("public")
 )
