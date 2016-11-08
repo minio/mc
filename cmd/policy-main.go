@@ -48,7 +48,7 @@ USAGE:
    mc {{.Name}} [FLAGS] TARGET
 
 PERMISSION:
-   Allowed policies are: [none, download, upload, both].
+   Allowed policies are: [none, download, upload, public].
 
 FLAGS:
   {{range .Flags}}{{.}}
@@ -57,14 +57,14 @@ EXAMPLES:
    1. Set bucket to "download" on Amazon S3 cloud storage.
       $ mc {{.Name}} download s3/burningman2011
 
-   2. Set bucket to "both" on Amazon S3 cloud storage.
-      $ mc {{.Name}} both s3/shared
+   2. Set bucket to "public" on Amazon S3 cloud storage.
+      $ mc {{.Name}} public s3/shared
 
    3. Set bucket to "upload" on Amazon S3 cloud storage.
       $ mc {{.Name}} upload s3/incoming
 
-   4. Set a prefix to "both" on Amazon S3 cloud storage.
-      $ mc {{.Name}} both s3/public-commons/images
+   4. Set a prefix to "public" on Amazon S3 cloud storage.
+      $ mc {{.Name}} public s3/public-commons/images
 
    5. Get bucket permissions.
       $ mc {{.Name}} s3/shared
@@ -132,7 +132,7 @@ func checkPolicySyntax(ctx *cli.Context) {
 		perms := accessPerms(ctx.Args().Get(0))
 		if !perms.isValidAccessPERM() {
 			fatalIf(errDummy().Trace(),
-				"Unrecognized permission ‘"+string(perms)+"’. Allowed values are [none, download, upload, both].")
+				"Unrecognized permission ‘"+string(perms)+"’. Allowed values are [none, download, upload, public].")
 		}
 	}
 	if len(ctx.Args()) < 1 {
@@ -154,7 +154,7 @@ func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
 		policy = "readonly"
 	case accessUpload:
 		policy = "writeonly"
-	case accessBoth:
+	case accessPublic:
 		policy = "readwrite"
 	}
 	if err = clnt.SetAccess(policy); err != nil {
@@ -182,7 +182,7 @@ func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
 	case "writeonly":
 		policy = accessUpload
 	case "readwrite":
-		policy = accessBoth
+		policy = accessPublic
 	}
 
 	return policy, nil
