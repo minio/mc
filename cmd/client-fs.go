@@ -241,8 +241,10 @@ func (f *fsClient) Put(reader io.Reader, size int64, contentType string, progres
 	// Current file offset.
 	var currentOffset = partSt.Size()
 
-	// Verify if incoming reader implements ReaderAt.  Standard IO streams are excluded since their ReadAt() return illegal seek error
-	if readerAt, ok := reader.(io.ReaderAt); ok && !isStdIO(reader) {
+	// Use ReadAt() capability when reader implements it, but also avoid it in two cases:
+	// *) reader represents a standard input/output stream since they return illegal seek error when ReadAt() is invoked
+	// *) we know in advance that reader will provide zero length data
+	if readerAt, ok := reader.(io.ReaderAt); ok && !isStdIO(reader) && size > 0 {
 		// Notify the progress bar if any till current size.
 		if progress != nil {
 			if _, e = io.CopyN(ioutil.Discard, progress, currentOffset); e != nil {
