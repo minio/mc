@@ -671,7 +671,7 @@ var validBucketName = regexp.MustCompile(`^[a-z0-9][a-z0-9\.\-]{1,61}[a-z0-9]$`)
 //  - http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
 func isValidBucketName(bucketName string) *probe.Error {
 	if strings.TrimSpace(bucketName) == "" {
-		return probe.NewError(errors.New("Bucket name cannot be empty."))
+		return probe.NewError(errors.New("Bucket name cannot be empty"))
 	}
 	if len(bucketName) < 3 || len(bucketName) > 63 {
 		return probe.NewError(errors.New("Bucket name should be more than 3 characters and less than 64 characters"))

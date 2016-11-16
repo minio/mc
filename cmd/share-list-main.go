@@ -68,7 +68,7 @@ func checkShareListSyntax(ctx *cli.Context) {
 // doShareList list shared url's.
 func doShareList(cmd string) *probe.Error {
 	if cmd != "upload" && cmd != "download" {
-		return probe.NewError(fmt.Errorf("Unknown argument ‘%s’ passed.", cmd))
+		return probe.NewError(fmt.Errorf("Unknown argument ‘%s’ passed", cmd))
 	}
 
 	// Fetch defaults.
