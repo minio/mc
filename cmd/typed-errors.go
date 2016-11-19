@@ -28,7 +28,7 @@ var (
 	}
 
 	errInvalidArgument = func() *probe.Error {
-		return probe.NewError(errors.New("Invalid arguments provided, cannot proceed.")).Untrace()
+		return probe.NewError(errors.New("Invalid arguments provided, cannot proceed")).Untrace()
 	}
 
 	errUnrecognizedDiffType = func(diff differType) *probe.Error {

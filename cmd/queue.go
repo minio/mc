@@ -130,7 +130,7 @@ func (q *Queue) grow(n int) {
 
 // ErrObjectAlreadyQueued occurs when the object being pushed already exists
 // in the queue
-var ErrObjectAlreadyQueued = fmt.Errorf("Object already queued.")
+var ErrObjectAlreadyQueued = fmt.Errorf("Object already queued")
 
 // Count returns the number of items in the queue
 func (q *Queue) Count() int {

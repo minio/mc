@@ -95,9 +95,10 @@
 			"revisionTime": "2016-08-20T12:36:22Z"
 		},
 		{
+			"checksumSHA1": "KqecwXo3OO+p4N+E9RhlHvl9I+w=",
 			"path": "golang.org/x/sys/unix",
-			"revision": "50c6bc5e4292a1d4e65c6e9be5f53be28bcbe28e",
-			"revisionTime": "2016-02-04T14:46:46-08:00"
+			"revision": "b699b7032584f0953262cb2788a0ca19bb494703",
+			"revisionTime": "2016-11-10T11:58:56Z"
 		},
 		{
 			"path": "gopkg.in/check.v1",
