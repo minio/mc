@@ -134,7 +134,7 @@ check_golang_env() {
         new_go_binary_path=$(readlink ${go_binary_path})
     fi
 
-    if [[ !"$(dirname ${new_go_binary_path})" =~ *"${GOROOT%%*(/)}"* ]] ; then
+    if [[ ! "$(dirname ${new_go_binary_path})" =~ "${GOROOT}"* ]] ; then
         echo "The go binary found in your PATH configuration does not belong to the Go installation pointed by your GOROOT environment," \
             "please refer to Go installation document"
         echo "https://github.com/minio/mc/blob/master/INSTALLGO.md#install-go-13"
