@@ -86,9 +86,12 @@ EXAMPLES:
 
 // copyMessage container for file copy messages
 type copyMessage struct {
-	Status string `json:"status"`
-	Source string `json:"source"`
-	Target string `json:"target"`
+	Status     string `json:"status"`
+	Source     string `json:"source"`
+	Target     string `json:"target"`
+	Size       int64  `json:"size"`
+	TotalCount int64  `json:"totalCount"`
+	TotalSize  int64  `json:"totalSize"`
 }
 
 // String colorized copy message
@@ -152,8 +155,11 @@ func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounte
 		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(copyMessage{
-			Source: sourcePath,
-			Target: targetPath,
+			Source:     sourcePath,
+			Target:     targetPath,
+			Size:       length,
+			TotalCount: cpURLs.TotalCount,
+			TotalSize:  cpURLs.TotalSize,
 		})
 		// Proxy reader to accounting reader only during quiet mode.
 		if globalQuiet || globalJSON {
@@ -228,7 +234,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
 	targetURL := session.Header.CommandArgs[len(session.Header.CommandArgs)-1] // Last one is target
 
 	var totalBytes int64
-	var totalObjects int
+	var totalObjects int64
 
 	// Access recursive flag inside the session header.
 	isRecursive := session.Header.CommandBoolFlags["recursive"]
@@ -345,14 +351,7 @@ func doCopySession(session *sessionV8) {
 					}
 					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
 						fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
-					// For all non critical errors we can continue for the
-					// remaining files.
-					switch cpURLs.Error.ToGoError().(type) {
-					// Handle this specifically for filesystem related errors.
-					case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
-						continue
-					// Handle these specifically for object storage related errors.
-					case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
+					if isErrIgnored(cpURLs.Error) {
 						continue
 					}
 					// For critical errors we should exit. Session
@@ -369,6 +368,12 @@ func doCopySession(session *sessionV8) {
 		var cpURLs URLs
 		// Unmarshal copyURLs from each line.
 		json.Unmarshal([]byte(urlScanner.Text()), &cpURLs)
+
+		// Save total count.
+		cpURLs.TotalCount = session.Header.TotalObjects
+
+		// Save totalSize.
+		cpURLs.TotalSize = session.Header.TotalBytes
 
 		// Verify if previously copied, notify progress bar.
 		if isCopied(cpURLs.SourceContent.URL.String()) {

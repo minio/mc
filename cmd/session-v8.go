@@ -48,7 +48,7 @@ type sessionV8Header struct {
 	LastCopied         string            `json:"lastCopied"`
 	LastRemoved        string            `json:"lastRemoved"`
 	TotalBytes         int64             `json:"totalBytes"`
-	TotalObjects       int               `json:"totalObjects"`
+	TotalObjects       int64             `json:"totalObjects"`
 }
 
 // sessionMessage container for session messages
