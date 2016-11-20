@@ -134,18 +134,6 @@ func (w *Watcher) Wait() {
 	w.wg.Wait()
 }
 
-// Unjoin the watcher from client.
-func (w *Watcher) Unjoin(client Client, recursive bool) *probe.Error {
-	err := client.Unwatch(watchParams{
-		recursive: recursive,
-		accountID: fmt.Sprintf("%d", w.sessionStartTime.Unix()),
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // Join the watcher with client
 func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 	wo, err := client.Watch(watchParams{

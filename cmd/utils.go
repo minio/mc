@@ -28,18 +28,21 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-func isErrIgnored(err *probe.Error) bool {
+func isErrIgnored(err *probe.Error) (ignored bool) {
 	// For all non critical errors we can continue for the remaining files.
 	switch err.ToGoError().(type) {
+	// Handle these specifically for filesystem related errors.
 	case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
-		return true
+		ignored = true
 	// Handle these specifically for object storage related errors.
 	case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists:
-		return true
+		ignored = true
 	case ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
-		return true
+		ignored = true
+	default:
+		ignored = false
 	}
-	return false
+	return ignored
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

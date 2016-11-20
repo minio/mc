@@ -296,7 +296,9 @@ func (ms *mirrorSession) startStatus() {
 					errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
 						fmt.Sprintf("Failed to remove ‘%s’.", sURLs.TargetContent.URL.String()))
 				}
-
+				if ms.Header.CommandBoolFlags["watch"] {
+					continue
+				}
 				// For all non critical errors we can continue for the remaining files.
 				if isErrIgnored(sURLs.Error) {
 					continue
@@ -361,6 +363,12 @@ func (ms *mirrorSession) startMirror(wait bool) {
 			if !ok {
 				fatalIf(errInvalidArgument(), fmt.Sprintf("URLs type not found, %#v", v))
 			}
+
+			// Save total count.
+			sURLs.TotalCount = ms.Header.TotalObjects
+
+			// Save totalSize.
+			sURLs.TotalSize = ms.Header.TotalBytes
 
 			if sURLs.SourceContent != nil {
 				ms.statusCh <- ms.doMirror(sURLs)
@@ -449,6 +457,8 @@ func (ms *mirrorSession) watch() {
 						shouldQueue = true
 					}
 					if shouldQueue || isForce {
+						mirrorURL.TotalCount = ms.Header.TotalObjects
+						mirrorURL.TotalSize = ms.Header.TotalBytes
 						if e := ms.queue.Push(mirrorURL); e != nil {
 							// will throw an error if already queue, ignoring this error
 							continue
@@ -475,6 +485,8 @@ func (ms *mirrorSession) watch() {
 				}
 				if shouldQueue || isForce {
 					mirrorURL.SourceContent.Size = event.Size
+					mirrorURL.TotalCount = ms.Header.TotalObjects
+					mirrorURL.TotalSize = ms.Header.TotalBytes
 					if e := ms.queue.Push(mirrorURL); e != nil {
 						// will throw an error if already queue, ignoring this error
 						continue
@@ -489,6 +501,8 @@ func (ms *mirrorSession) watch() {
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 				}
+				mirrorURL.TotalCount = ms.Header.TotalObjects
+				mirrorURL.TotalSize = ms.Header.TotalBytes
 				if err := ms.queue.Push(mirrorURL); err != nil {
 					// will throw an error if already queue, ignoring this error
 					continue
@@ -499,14 +513,6 @@ func (ms *mirrorSession) watch() {
 			errorIf(err, "Unexpected error during monitoring.")
 		}
 	}
-}
-
-func (ms *mirrorSession) unwatchSourceURL(recursive bool) *probe.Error {
-	sourceClient, err := newClient(ms.sourceURL)
-	if err == nil {
-		return ms.watcher.Unjoin(sourceClient, recursive)
-	} // Failed to initialize client.
-	return err
 }
 
 func (ms *mirrorSession) watchSourceURL(recursive bool) *probe.Error {
@@ -529,12 +535,6 @@ func (ms *mirrorSession) harvestSessionUrls() {
 			continue
 		}
 
-		// Save total count.
-		urls.TotalCount = ms.Header.TotalObjects
-
-		// Save totalSize.
-		urls.TotalSize = ms.Header.TotalBytes
-
 		// Send harvested urls.
 		ms.harvestCh <- urls
 	}
@@ -548,11 +548,13 @@ func (ms *mirrorSession) harvestSourceUrls(recursive bool) {
 	isForce := ms.Header.CommandBoolFlags["force"]
 	isFake := ms.Header.CommandBoolFlags["fake"]
 	isRemove := ms.Header.CommandBoolFlags["remove"]
+	isWatch := ms.Header.CommandBoolFlags["watch"]
 
 	defer close(ms.harvestCh)
 
-	URLsCh := prepareMirrorURLs(ms.sourceURL, ms.targetURL, isForce, isFake, isRemove)
+	URLsCh := prepareMirrorURLs(ms.sourceURL, ms.targetURL, isForce, isFake, isRemove, isWatch)
 	for url := range URLsCh {
+		// Send harvested urls.
 		ms.harvestCh <- url
 	}
 }
@@ -585,7 +587,6 @@ loop:
 				} else {
 					ms.status.errorIf(sURLs.Error.Trace(), "Unable to prepare URL for copying.")
 				}
-
 				continue
 			}
 
@@ -602,7 +603,8 @@ loop:
 
 			totalObjects++
 		case err := <-ms.errorCh:
-			ms.status.fatalIf(err, "Unable to harvest URL for copying.")
+			ms.status.errorIf(err, "Unable to harvest URL for copying.")
+			continue
 		case <-ms.trapCh:
 			ms.status.Println(console.Colorize("Mirror", "Abort"))
 			return
@@ -651,18 +653,10 @@ func (ms *mirrorSession) mirror() {
 		// on SIGTERM shutdown and stop
 		<-ms.trapCh
 
+		// Shutdown gracefully.
 		ms.shutdown()
 
-		// Remove watches on source url.
-		ms.unwatchSourceURL(true)
-
-		// no items left, just stop
-		if ms.queue.Count() == 0 {
-			ms.Delete()
-			os.Exit(0)
-			return
-		}
-
+		// Save session and die.
 		ms.CloseAndDie()
 	}()
 
@@ -677,10 +671,6 @@ func (ms *mirrorSession) mirror() {
 		ms.startMirror(true)
 
 		ms.watch()
-
-		// don't let monitor finish, only on SIGTERM
-		done := make(chan bool)
-		<-done
 	} else {
 		ms.startMirror(false)
 
@@ -770,7 +760,6 @@ func mainMirror(ctx *cli.Context) {
 		session.Header.RootPath = v
 	} else {
 		session.Delete()
-
 		fatalIf(probe.NewError(err), "Unable to get current working folder.")
 	}
 
@@ -785,9 +774,9 @@ func mainMirror(ctx *cli.Context) {
 
 	ms := newMirrorSession(session)
 
-	// delete will be run when terminating normally,
-	// on SIGTERM it won't execute
-	defer ms.Delete()
-
+	// Mirroring.
 	ms.mirror()
+
+	// delete will be run when terminating normally,
+	ms.Delete()
 }

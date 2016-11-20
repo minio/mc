@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // GetBucketNotification - get bucket notification at a given path.
@@ -143,7 +144,14 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 		}
 
 		// Continously run and listen on bucket notification.
-		for {
+		// Create a done channel to control 'ListObjects' go routine.
+		retryDoneCh := make(chan struct{}, 1)
+
+		// Indicate to our routine to exit cleanly upon return.
+		defer close(retryDoneCh)
+
+		// Wait on the jitter retry loop.
+		for range c.newRetryTimerContinous(time.Second, time.Second*30, MaxJitter, retryDoneCh) {
 			urlValues := make(url.Values)
 			urlValues.Set("prefix", prefix)
 			urlValues.Set("suffix", suffix)
@@ -155,10 +163,7 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 				queryValues: urlValues,
 			})
 			if err != nil {
-				notificationInfoCh <- NotificationInfo{
-					Err: err,
-				}
-				return
+				continue
 			}
 
 			// Validate http response, upon error return quickly.
@@ -180,10 +185,7 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 			for bio.Scan() {
 				var notificationInfo NotificationInfo
 				if err = json.Unmarshal(bio.Bytes(), &notificationInfo); err != nil {
-					notificationInfoCh <- NotificationInfo{
-						Err: err,
-					}
-					return
+					continue
 				}
 				// Send notifications on channel only if there are events received.
 				if len(notificationInfo.Records) > 0 {
@@ -200,12 +202,7 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 				// and re-connect.
 				if err == io.ErrUnexpectedEOF {
 					resp.Body.Close()
-					continue
 				}
-				notificationInfoCh <- NotificationInfo{
-					Err: err,
-				}
-				return
 			}
 		}
 	}(notificationInfoCh)
