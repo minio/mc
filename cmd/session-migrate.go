@@ -62,7 +62,7 @@ func migrateSessionV7ToV8() {
 		sV8Header.LastCopied = sV7.Header.LastCopied
 		sV8Header.LastRemoved = sV7.Header.LastRemoved
 		sV8Header.TotalBytes = sV7.Header.TotalBytes
-		sV8Header.TotalObjects = sV7.Header.TotalObjects
+		sV8Header.TotalObjects = int64(sV7.Header.TotalObjects)
 
 		// Add insecure flag to the new V8 header
 		sV8Header.GlobalBoolFlags["insecure"] = false

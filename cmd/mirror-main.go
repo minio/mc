@@ -140,9 +140,12 @@ type mirrorSession struct {
 
 // mirrorMessage container for file mirror messages
 type mirrorMessage struct {
-	Status string `json:"status"`
-	Source string `json:"source"`
-	Target string `json:"target"`
+	Status     string `json:"status"`
+	Source     string `json:"source"`
+	Target     string `json:"target"`
+	Size       int64  `json:"size"`
+	TotalCount int64  `json:"totalCount"`
+	TotalSize  int64  `json:"totalSize"`
 }
 
 // String colorized mirror message
@@ -223,8 +226,11 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 	ms.status.PrintMsg(mirrorMessage{
-		Source: sourcePath,
-		Target: targetPath,
+		Source:     sourcePath,
+		Target:     targetPath,
+		Size:       length,
+		TotalCount: sURLs.TotalCount,
+		TotalSize:  sURLs.TotalSize,
 	})
 
 	// If source size is <= 5GB and operation is across same server type try to use Copy.
@@ -291,16 +297,8 @@ func (ms *mirrorSession) startStatus() {
 						fmt.Sprintf("Failed to remove ‘%s’.", sURLs.TargetContent.URL.String()))
 				}
 
-				// For all non critical errors we can continue for the
-				// remaining files.
-				switch sURLs.Error.ToGoError().(type) {
-				// Handle this specifically for filesystem related errors.
-				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
-					continue
-				// Handle these specifically for object storage related errors.
-				case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists:
-					continue
-				case ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
+				// For all non critical errors we can continue for the remaining files.
+				if isErrIgnored(sURLs.Error) {
 					continue
 				}
 
@@ -531,6 +529,13 @@ func (ms *mirrorSession) harvestSessionUrls() {
 			continue
 		}
 
+		// Save total count.
+		urls.TotalCount = ms.Header.TotalObjects
+
+		// Save totalSize.
+		urls.TotalSize = ms.Header.TotalBytes
+
+		// Send harvested urls.
 		ms.harvestCh <- urls
 	}
 
@@ -564,7 +569,7 @@ func (ms *mirrorSession) harvest(recursive bool) {
 	}
 
 	var totalBytes int64
-	var totalObjects int
+	var totalObjects int64
 
 loop:
 	for {

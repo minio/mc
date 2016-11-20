@@ -24,6 +24,8 @@ type URLs struct {
 	SourceContent *clientContent
 	TargetAlias   string
 	TargetContent *clientContent
+	TotalCount    int64
+	TotalSize     int64
 	Error         *probe.Error `json:"-"`
 }
 

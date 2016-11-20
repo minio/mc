@@ -82,14 +82,9 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 			}
 
 			if !srcEOF && srcCtnt.Err != nil {
-				switch srcCtnt.Err.ToGoError().(type) {
-				// Handle this specifically for filesystem related errors.
-				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
+				if isErrIgnored(srcCtnt.Err) {
 					errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
-				// Handle these specifically for object storage related errors.
-				case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
-					errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
-				default:
+				} else {
 					fatalIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
 				}
 				srcCtnt, srcOk = <-srcCh
@@ -97,14 +92,9 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 			}
 
 			if !tgtEOF && tgtCtnt.Err != nil {
-				switch tgtCtnt.Err.ToGoError().(type) {
-				// Handle this specifically for filesystem related errors.
-				case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
+				if isErrIgnored(tgtCtnt.Err) {
 					errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
-				// Handle these specifically for object storage related errors.
-				case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
-					errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
-				default:
+				} else {
 					fatalIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
 				}
 				tgtCtnt, tgtOk = <-tgtCh
