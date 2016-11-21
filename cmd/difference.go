@@ -50,7 +50,7 @@ func (d differType) String() string {
 
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
+func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string, watchMode bool) (diffCh chan diffMessage) {
 	var (
 		srcEOF, tgtEOF       bool
 		srcOk, tgtOk         bool
@@ -77,15 +77,17 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 
 			// No objects from source AND target: Finish
 			if srcEOF && tgtEOF {
-				close(diffCh)
-				break
+				if !watchMode {
+					close(diffCh)
+					break
+				}
 			}
 
 			if !srcEOF && srcCtnt.Err != nil {
 				if isErrIgnored(srcCtnt.Err) {
 					errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
 				} else {
-					fatalIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
+					errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
 				}
 				srcCtnt, srcOk = <-srcCh
 				continue
@@ -95,7 +97,7 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 				if isErrIgnored(tgtCtnt.Err) {
 					errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
 				} else {
-					fatalIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
+					errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
 				}
 				tgtCtnt, tgtOk = <-tgtCh
 				continue

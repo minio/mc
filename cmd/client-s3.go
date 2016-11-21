@@ -336,17 +336,6 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 	return configs, nil
 }
 
-// Unwatch de-registers all bucket notification events for a given accountID.
-func (c *s3Client) Unwatch(params watchParams) *probe.Error {
-	// Extract bucket and object.
-	bucket, _ := c.url2BucketAndObject()
-	if err := isValidBucketName(bucket); err != nil {
-		return err
-	}
-	// Success.
-	return nil
-}
-
 // Start watching on all bucket events for a given account ID.
 func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan Event)

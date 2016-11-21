@@ -103,11 +103,10 @@ func getReaderSize(reader io.Reader) (size int64, err error) {
 			// implement Seekable calls. Ignore them and treat
 			// them like a stream with unknown length.
 			switch st.Name() {
-			case "stdin":
-				fallthrough
-			case "stdout":
-				fallthrough
-			case "stderr":
+			case "stdin", "stdout", "stderr":
+				return
+			// Ignore read/write stream of os.Pipe() which have unknown length too.
+			case "|0", "|1":
 				return
 			}
 			size = st.Size()

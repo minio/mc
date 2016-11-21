@@ -151,6 +151,18 @@ func (r *lockedRandSource) Seed(seed int64) {
 	r.lk.Unlock()
 }
 
+// redirectHeaders copies all headers when following a redirect URL.
+// This won't be needed anymore from go 1.8 (https://github.com/golang/go/issues/4800)
+func redirectHeaders(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		return nil
+	}
+	for key, val := range via[0].Header {
+		req.Header[key] = val
+	}
+	return nil
+}
+
 func privateNew(endpoint, accessKeyID, secretAccessKey string, secure bool) (*Client, error) {
 	// construct endpoint.
 	endpointURL, err := getEndpointURL(endpoint, secure)
@@ -174,7 +186,8 @@ func privateNew(endpoint, accessKeyID, secretAccessKey string, secure bool) (*Cl
 
 	// Instantiate http client and bucket location cache.
 	clnt.httpClient = &http.Client{
-		Transport: http.DefaultTransport,
+		Transport:     http.DefaultTransport,
+		CheckRedirect: redirectHeaders,
 	}
 
 	// Instantiae bucket location cache.
@@ -364,20 +377,35 @@ func (c Client) dumpHTTP(req *http.Request, resp *http.Response) error {
 
 // do - execute http request.
 func (c Client) do(req *http.Request) (*http.Response, error) {
-	// do the request.
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		// Handle this specifically for now until future Golang
-		// versions fix this issue properly.
-		urlErr, ok := err.(*url.Error)
-		if ok && strings.Contains(urlErr.Err.Error(), "EOF") {
-			return nil, &url.Error{
-				Op:  urlErr.Op,
-				URL: urlErr.URL,
-				Err: fmt.Errorf("Connection closed by foreign host %s. Retry again.", urlErr.URL),
+	var resp *http.Response
+	var err error
+	// Do the request in a loop in case of 307 http is met since golang still doesn't
+	// handle properly this situation (https://github.com/golang/go/issues/7912)
+	for {
+		resp, err = c.httpClient.Do(req)
+		if err != nil {
+			// Handle this specifically for now until future Golang
+			// versions fix this issue properly.
+			urlErr, ok := err.(*url.Error)
+			if ok && strings.Contains(urlErr.Err.Error(), "EOF") {
+				return nil, &url.Error{
+					Op:  urlErr.Op,
+					URL: urlErr.URL,
+					Err: fmt.Errorf("Connection closed by foreign host %s. Retry again.", urlErr.URL),
+				}
 			}
+			return nil, err
 		}
-		return nil, err
+		// Redo the request with the new redirect url if http 307 is returned, quit the loop otherwise
+		if resp != nil && resp.StatusCode == http.StatusTemporaryRedirect {
+			newURL, err := url.Parse(resp.Header.Get("Location"))
+			if err != nil {
+				break
+			}
+			req.URL = newURL
+		} else {
+			break
+		}
 	}
 
 	// Response cannot be non-nil, report if its the case.

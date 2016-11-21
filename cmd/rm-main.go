@@ -101,7 +101,8 @@ EXAMPLES:
 
 // Structured message depending on the type of console.
 type rmMessage struct {
-	Key string `json:"key"`
+	Key  string `json:"key"`
+	Size int64  `json:"size"`
 }
 
 // Colorized message for console printing.
@@ -143,13 +144,12 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) {
 		return // End of journey.
 	}
 
+	content, pErr := clnt.Stat(isIncomplete)
+	if pErr != nil {
+		errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’.")
+		return
+	}
 	if older > 0 {
-		content, pErr := clnt.Stat(isIncomplete)
-		if pErr != nil {
-			errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’.")
-			return
-		}
-
 		// Check whether object is created older than given time.
 		now := time.Now().UTC()
 		timeDiff := now.Sub(content.Time)
@@ -159,7 +159,11 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) {
 		}
 	}
 
-	printMsg(rmMessage{Key: url})
+	printMsg(rmMessage{
+		Key:  url,
+		Size: content.Size,
+	})
+
 	if !isFake {
 		contentCh := make(chan *clientContent, 1)
 		contentCh <- &clientContent{URL: *newClientURL(targetURL)}
@@ -195,15 +199,13 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) {
 	isRecursive := true
 	for content := range clnt.List(isRecursive, isIncomplete, DirLast) {
 		isEmpty = false
-		pErr := content.Err
-		if pErr != nil {
-			errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’ recursively.")
-			switch pErr.ToGoError().(type) {
+		if content.Err != nil {
+			errorIf(content.Err.Trace(url), "Failed to remove ‘"+url+"’ recursively.")
+			switch content.Err.ToGoError().(type) {
 			case PathInsufficientPermission:
 				// Ignore Permission error.
 				continue
 			}
-
 			close(contentCh)
 			return
 		}
@@ -219,7 +221,11 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) {
 		}
 
 		urlString := content.URL.Path
-		printMsg(rmMessage{Key: targetAlias + urlString})
+		printMsg(rmMessage{
+			Key:  targetAlias + urlString,
+			Size: content.Size,
+		})
+
 		if !isFake {
 			sent := false
 			for sent == false {

@@ -172,8 +172,6 @@ func mainWatch(ctx *cli.Context) {
 		for {
 			select {
 			case <-trapCh:
-				s3Client.Unwatch(params)
-				return
 			case event, ok := <-wo.Events():
 				if !ok {
 					return

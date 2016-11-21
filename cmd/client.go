@@ -61,7 +61,6 @@ type Client interface {
 
 	// Watch events
 	Watch(params watchParams) (*watchObject, *probe.Error)
-	Unwatch(params watchParams) *probe.Error
 
 	// Delete operations
 	Remove(isIncomplete bool, contentCh <-chan *clientContent) (errorCh <-chan *probe.Error)
