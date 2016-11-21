@@ -246,12 +246,13 @@ func (f *fsClient) Put(reader io.Reader, size int64, contentType string, progres
 				return 0, probe.NewError(e)
 			}
 		}
+
 		// Allocate buffer of 10MiB once.
 		readAtBuffer := make([]byte, 10*1024*1024)
 
 		// Loop through all offsets on incoming io.ReaderAt and write
 		// to the destination.
-		for {
+		for currentOffset < size {
 			readAtSize, re := readerAt.ReadAt(readAtBuffer, currentOffset)
 			if re != nil && re != io.EOF {
 				// For any errors other than io.EOF, we return error
