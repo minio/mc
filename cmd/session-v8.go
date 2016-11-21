@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -358,7 +357,6 @@ func (s *sessionV8) Delete() *probe.Error {
 // Close a session and exit.
 func (s sessionV8) CloseAndDie() {
 	s.Close()
-	fmt.Println(string(debug.Stack()))
 	console.Fatalln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
 }
 
