@@ -16,52 +16,45 @@
 
 package cmd
 
-import (
-	"regexp"
-	"strings"
-)
+import "strings"
 
 var validAPIs = []string{"S3v4", "S3v2"}
 
-// isValidSecretKey - validate secret key.
-func isValidSecretKey(secretKey string) bool {
-	if secretKey == "" {
-		return true
-	}
-	regex := regexp.MustCompile(`.{8,40}$`)
-	return regex.MatchString(secretKey) && !strings.ContainsAny(secretKey, "$%^~`!|&*#@")
+const (
+	accessKeyMinLen = 5
+	accessKeyMaxLen = 20
+	secretKeyMinLen = 8
+	secretKeyMaxLen = 40
+)
+
+// isValidAccessKey - validate access key for right length.
+func isValidAccessKey(accessKey string) bool {
+	return len(accessKey) >= accessKeyMinLen && len(accessKey) <= accessKeyMaxLen
 }
 
-// isValidAccessKey - validate access key.
-func isValidAccessKey(accessKey string) bool {
-	if accessKey == "" {
-		return true
-	}
-	regex := regexp.MustCompile(`.{5,40}$`)
-	return regex.MatchString(accessKey) && !strings.ContainsAny(accessKey, "$%^~`!|&*#@")
+// isValidSecretKey - validate secret key for right length.
+func isValidSecretKey(secretKey string) bool {
+	return len(secretKey) >= secretKeyMinLen && len(secretKey) <= secretKeyMaxLen
 }
 
 // isValidHostURL - validate input host url.
-func isValidHostURL(hostURL string) bool {
-	if strings.TrimSpace(hostURL) == "" {
-		return false
+func isValidHostURL(hostURL string) (ok bool) {
+	if strings.TrimSpace(hostURL) != "" {
+		url := newClientURL(hostURL)
+		if url.Scheme == "https" || url.Scheme == "http" {
+			if url.Path == "/" {
+				ok = true
+			}
+		}
 	}
-	url := newClientURL(hostURL)
-	if url.Scheme != "https" && url.Scheme != "http" {
-		return false
-	}
-	if url.Path != "" && url.Path != "/" {
-		return false
-	}
-	return true
+	return ok
 }
 
 // isValidAPI - Validates if API signature string of supported type.
-func isValidAPI(api string) bool {
+func isValidAPI(api string) (ok bool) {
 	switch strings.ToLower(api) {
 	case "s3v2", "s3v4":
-		return true
-	default:
-		return false
+		ok = true
 	}
+	return ok
 }
