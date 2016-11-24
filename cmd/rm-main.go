@@ -117,25 +117,6 @@ func (r rmMessage) JSON() string {
 	return string(msgBytes)
 }
 
-// Validate command line arguments.
-func checkRmSyntax(ctx *cli.Context) {
-	// Set command flags from context.
-	isForce := ctx.Bool("force")
-	isRecursive := ctx.Bool("recursive")
-	isStdin := ctx.Bool("stdin")
-
-	if !ctx.Args().Present() && !isStdin {
-		exitCode := 1
-		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
-	}
-
-	// For all recursive operations make sure to check for 'force' flag.
-	if (isRecursive || isStdin) && !isForce {
-		fatalIf(errDummy().Trace(),
-			"Removal requires --force option. This operational is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
-	}
-}
-
 func removeSingle(url string, isIncomplete bool, isFake bool, older int) {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
@@ -261,6 +242,37 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) {
 	// As clnt.List() returns empty, we just send dummy value to behave like non-recursive.
 	if isEmpty {
 		printMsg(rmMessage{Key: url})
+	}
+}
+
+// Validate command line arguments.
+func checkRmSyntax(ctx *cli.Context) {
+	// Set command flags from context.
+	isForce := ctx.Bool("force")
+	isRecursive := ctx.Bool("recursive")
+	isStdin := ctx.Bool("stdin")
+
+	if !ctx.Args().Present() && !isStdin {
+		exitCode := 1
+		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
+	}
+
+	// For all recursive operations make sure to check for 'force' flag.
+	if (isRecursive || isStdin) && !isForce {
+		fatalIf(errDummy().Trace(),
+			"Removal requires --force option. This operational is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
+	}
+
+	for i := range ctx.Args() {
+		targetURL := ctx.Args().Get(i)
+		// Instantiate url for URL.
+		clnt, err := newClient(targetURL)
+		if err != nil {
+			fatalIf(err.Trace(targetURL), "Unable to initialize client.")
+		}
+		if clnt.GetURL().Path == "/" && clnt.GetURL().Host != "" {
+			fatalIf(errInvalidArgument().Trace(), "Empty argument not allowed.")
+		}
 	}
 }
 

@@ -130,8 +130,7 @@ func doList(clnt Client, isRecursive, isIncomplete bool) *probe.Error {
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "")
 				continue
 			}
-			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
-			continue
+			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 		}
 		// Convert any os specific delimiters to "/".
 		contentURL := filepath.ToSlash(content.URL.Path)

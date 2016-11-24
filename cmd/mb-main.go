@@ -97,6 +97,17 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "mb", 1) // last argument is exit code
 	}
+	for i := range ctx.Args() {
+		targetURL := ctx.Args().Get(i)
+		// Instantiate url for URL.
+		clnt, err := newClient(targetURL)
+		if err != nil {
+			fatalIf(err.Trace(targetURL), "Unable to initialize client.")
+		}
+		if clnt.GetURL().Path == "/" && clnt.GetURL().Host != "" {
+			fatalIf(errInvalidArgument().Trace(), "Empty argument not allowed.")
+		}
+	}
 }
 
 // mainMakeBucket is entry point for mb command.
@@ -121,14 +132,12 @@ func mainMakeBucket(ctx *cli.Context) {
 			errorIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
 			continue
 		}
-
 		// Make bucket.
 		err = clnt.MakeBucket(region)
 		if err != nil {
 			errorIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
 			continue
 		}
-
 		// Successfully created a bucket.
 		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
 	}
