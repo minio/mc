@@ -35,12 +35,7 @@ import (
 
 var (
 	// global flags for mc.
-	mcFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	mcFlags = []cli.Flag{}
 )
 
 // Help template for mc
@@ -91,7 +86,6 @@ func Main() {
 		}
 		return make(map[string]string)
 	}
-
 	app.RunAndExitOnError()
 }
 

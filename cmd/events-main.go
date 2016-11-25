@@ -19,12 +19,7 @@ package cmd
 import "github.com/minio/cli"
 
 var (
-	eventsFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	eventsFlags = []cli.Flag{}
 )
 
 var eventsCmd = cli.Command{
@@ -53,7 +48,7 @@ COMMANDS:
 }
 
 // mainEvents is the handle for "mc events" command.
-func mainEvents(ctx *cli.Context) {
+func mainEvents(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -64,5 +59,6 @@ func mainEvents(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 	}
 
+	return nil
 	// Sub-commands like "add", "remove", "list" have their own main.
 }

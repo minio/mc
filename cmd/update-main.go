@@ -35,10 +35,6 @@ import (
 var (
 	updateFlags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-		cli.BoolFlag{
 			Name:  "experimental, E",
 			Usage: "Check experimental update.",
 		},
@@ -216,7 +212,7 @@ func getReleaseUpdate(updateURL string) (updateMsg updateMessage, errMsg string,
 }
 
 // main entry point for update command.
-func mainUpdate(ctx *cli.Context) {
+func mainUpdate(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -234,4 +230,5 @@ func mainUpdate(ctx *cli.Context) {
 	}
 	fatalIf(err, errMsg)
 	printMsg(updateMsg)
+	return nil
 }

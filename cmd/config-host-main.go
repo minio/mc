@@ -28,12 +28,7 @@ import (
 )
 
 var (
-	configHostFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	configHostFlags = []cli.Flag{}
 )
 
 var configHostCmd = cli.Command{
@@ -186,7 +181,7 @@ func checkConfigHostRemoveSyntax(ctx *cli.Context) {
 	}
 }
 
-func mainConfigHost(ctx *cli.Context) {
+func mainConfigHost(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -228,6 +223,7 @@ func mainConfigHost(ctx *cli.Context) {
 	case "list":
 		listHosts() // List all configured hosts.
 	}
+	return nil
 }
 
 // addHost - add a host config.

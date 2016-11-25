@@ -28,10 +28,6 @@ import (
 var (
 	shareUploadFlags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "Recursively upload any object matching the prefix.",
 		},
@@ -178,7 +174,7 @@ func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, 
 }
 
 // main for share upload command.
-func mainShareUpload(ctx *cli.Context) {
+func mainShareUpload(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -213,4 +209,5 @@ func mainShareUpload(ctx *cli.Context) {
 			}
 		}
 	}
+	return nil
 }

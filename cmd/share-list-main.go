@@ -25,12 +25,7 @@ import (
 )
 
 var (
-	shareListFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Help of share list.",
-		},
-	}
+	shareListFlags = []cli.Flag{}
 )
 
 // Share documents via URL.
@@ -105,7 +100,7 @@ func doShareList(cmd string) *probe.Error {
 }
 
 // main entry point for share list.
-func mainShareList(ctx *cli.Context) {
+func mainShareList(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -120,4 +115,5 @@ func mainShareList(ctx *cli.Context) {
 
 	// List shares.
 	fatalIf(doShareList(ctx.Args().First()).Trace(), "Unable to list previously shared URLs.")
+	return nil
 }

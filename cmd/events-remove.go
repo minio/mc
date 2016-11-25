@@ -85,18 +85,18 @@ func (u eventsRemoveMessage) String() string {
 	return msg
 }
 
-func mainEventsRemove(ctx *cli.Context) {
+func mainEventsRemove(ctx *cli.Context) error {
 	console.SetColor("Events", color.New(color.FgGreen, color.Bold))
 
 	setGlobalsFromContext(ctx)
 	checkEventsRemoveSyntax(ctx)
 
 	args := ctx.Args()
-	path := args[0]
+	path := args.Get(0)
 
 	arn := ""
 	if len(args) == 2 {
-		arn = args[1]
+		arn = args.Get(1)
 	}
 
 	client, err := newClient(path)
@@ -112,4 +112,6 @@ func mainEventsRemove(ctx *cli.Context) {
 	err = s3Client.RemoveNotificationConfig(arn)
 	fatalIf(err, "Cannot enable notification on the specified bucket.")
 	printMsg(eventsRemoveMessage{})
+
+	return nil
 }

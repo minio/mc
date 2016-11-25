@@ -26,10 +26,6 @@ import (
 var (
 	shareDownloadFlags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "Share all objects recursively.",
 		},
@@ -155,7 +151,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 }
 
 // main for share download.
-func mainShareDownload(ctx *cli.Context) {
+func mainShareDownload(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -188,4 +184,5 @@ func mainShareDownload(ctx *cli.Context) {
 			}
 		}
 	}
+	return nil
 }

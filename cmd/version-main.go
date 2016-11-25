@@ -27,12 +27,7 @@ import (
 )
 
 var (
-	versionFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	versionFlags = []cli.Flag{}
 )
 
 // Print version.
@@ -79,7 +74,7 @@ func (v versionMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func mainVersion(ctx *cli.Context) {
+func mainVersion(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -95,4 +90,5 @@ func mainVersion(ctx *cli.Context) {
 	verMsg.Version.Format = "RFC3339"
 
 	printMsg(verMsg)
+	return nil
 }

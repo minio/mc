@@ -38,10 +38,6 @@ import (
 var (
 	cpFlags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "Copy recursively.",
 		},
@@ -407,7 +403,7 @@ func doCopySession(session *sessionV8) {
 }
 
 // mainCopy is the entry point for cp command.
-func mainCopy(ctx *cli.Context) {
+func mainCopy(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -431,4 +427,6 @@ func mainCopy(ctx *cli.Context) {
 	session.Header.CommandArgs = ctx.Args()
 	doCopySession(session)
 	session.Delete()
+
+	return nil
 }

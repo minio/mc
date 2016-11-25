@@ -40,6 +40,9 @@ const (
 
 	// Profile directory for dumping profiler outputs.
 	globalProfileDir = "profile"
+
+	// Global error exit status.
+	globalErrorExitStatus = 1
 )
 
 var (

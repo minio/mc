@@ -94,7 +94,7 @@ func (u eventsListMessage) String() string {
 	return msg
 }
 
-func mainEventsList(ctx *cli.Context) {
+func mainEventsList(ctx *cli.Context) error {
 	console.SetColor("ARN", color.New(color.FgGreen, color.Bold))
 	console.SetColor("Events", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Filter", color.New(color.Bold))
@@ -129,4 +129,6 @@ func mainEventsList(ctx *cli.Context) {
 			Arn:    config.Arn,
 			ID:     config.ID})
 	}
+
+	return nil
 }

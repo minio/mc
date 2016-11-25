@@ -26,12 +26,7 @@ import (
 )
 
 var (
-	shareFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	shareFlags = []cli.Flag{}
 )
 
 // Share documents via URL.
@@ -77,7 +72,7 @@ func migrateShare() {
 }
 
 // mainShare - main handler for mc share command.
-func mainShare(ctx *cli.Context) {
+func mainShare(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -87,5 +82,6 @@ func mainShare(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 	}
 
+	return nil
 	// Sub-commands like "upload" and "download" have their own main.
 }
