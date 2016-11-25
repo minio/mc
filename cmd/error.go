@@ -81,6 +81,8 @@ func errorIf(err *probe.Error, msg string) {
 	if err == nil {
 		return
 	}
+
+	// json flag set.
 	if globalJSON {
 		errorMsg := errorMessage{
 			Message: msg,
@@ -108,8 +110,10 @@ func errorIf(err *probe.Error, msg string) {
 		return
 	}
 	if !globalDebug {
+		// if debug flag is not set.
 		console.Errorln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
 		return
 	}
 	console.Errorln(fmt.Sprintf("%s %s", msg, err))
+
 }
