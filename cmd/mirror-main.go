@@ -242,7 +242,8 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 			if sourceAlias == targetAlias {
 				// If source/target are object storage their aliases must be the same
 				// Do not include alias inside path for ObjStore -> ObjStore.
-				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, ms.status)
+				sourcePath := filepath.ToSlash(sourceURL.Path)
+				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, ms.status)
 				if err != nil {
 					return sURLs.WithError(err.Trace(sourceURL.String()))
 				}

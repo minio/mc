@@ -179,7 +179,8 @@ func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounte
 			// If source/target are object storage their aliases must be the same.
 			if sourceAlias == targetAlias {
 				// Do not include alias inside path for ObjStore -> ObjStore.
-				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourceURL.Path, length, progress)
+				sourcePath := filepath.ToSlash(sourceURL.Path)
+				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, progress)
 				if err != nil {
 					cpURLs.Error = err.Trace(sourceURL.String())
 					return cpURLs
