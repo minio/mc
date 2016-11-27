@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"crypto/x509"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 )
@@ -33,6 +35,8 @@ const (
 	globalMCConfigDir        = ".mc/"
 	globalMCConfigWindowsDir = "mc\\"
 	globalMCConfigFile       = "config.json"
+	globalMCCertsDir         = "certs"
+	globalMCCAsDir           = "CAs"
 
 	// session config and shared urls related constants
 	globalSessionDir        = "session"
@@ -52,6 +56,11 @@ var (
 	globalNoColor  = false // No Color flag set via command line
 	globalInsecure = false // Insecure flag set via command line
 	// WHEN YOU ADD NEXT GLOBAL FLAG, MAKE SURE TO ALSO UPDATE SESSION CODE AND CODE BELOW.
+)
+
+var (
+	// CA root certificates, a nil value means system certs pool will be used
+	globalRootCAs *x509.CertPool
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.

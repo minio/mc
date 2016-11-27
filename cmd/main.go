@@ -186,6 +186,19 @@ func initMC() {
 	if !isShareDirExists() {
 		initShareConfig()
 	}
+
+	// Check if certs dir exists
+	if !isCertsDirExists() {
+		fatalIf(createCertsDir().Trace(), "Unable to create `CAs` folder.")
+	}
+
+	// Check if CAs dir exists
+	if !isCAsDirExists() {
+		fatalIf(createCAsDir().Trace(), "Unable to create `CAs` folder.")
+	}
+
+	// Load all authority certificates present in CAs dir
+	loadRootCAs()
 }
 
 func registerBefore(ctx *cli.Context) error {
