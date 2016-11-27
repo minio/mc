@@ -29,12 +29,7 @@ import (
 )
 
 var (
-	catFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	catFlags = []cli.Flag{}
 )
 
 // Display contents of a file.
@@ -114,7 +109,7 @@ func catOut(r io.Reader) *probe.Error {
 }
 
 // mainCat is the main entry point for cat command.
-func mainCat(ctx *cli.Context) {
+func mainCat(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -130,7 +125,7 @@ func mainCat(ctx *cli.Context) {
 	// handle std input data.
 	if stdinMode {
 		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from standard input.")
-		return
+		return nil
 	}
 
 	// if Args contain ‘-’, we need to preserve its order specially.
@@ -149,4 +144,5 @@ func mainCat(ctx *cli.Context) {
 	for _, url := range args {
 		fatalIf(catURL(url).Trace(url), "Unable to read from ‘"+url+"’.")
 	}
+	return nil
 }

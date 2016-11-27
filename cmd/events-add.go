@@ -91,7 +91,7 @@ func (u eventsAddMessage) String() string {
 	return msg
 }
 
-func mainEventsAdd(ctx *cli.Context) {
+func mainEventsAdd(ctx *cli.Context) error {
 	console.SetColor("Events", color.New(color.FgGreen, color.Bold))
 
 	setGlobalsFromContext(ctx)
@@ -118,4 +118,6 @@ func mainEventsAdd(ctx *cli.Context) {
 	err = s3Client.AddNotificationConfig(arn, events, prefix, suffix)
 	fatalIf(err, "Cannot enable notification on the specified bucket.")
 	printMsg(eventsAddMessage{})
+
+	return nil
 }

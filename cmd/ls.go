@@ -104,12 +104,13 @@ func parseContent(c *clientContent) contentMessage {
 }
 
 // doList - list all entities inside a folder.
-func doList(clnt Client, isRecursive, isIncomplete bool) *probe.Error {
+func doList(clnt Client, isRecursive, isIncomplete bool) error {
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
 	if !strings.HasSuffix(prefixPath, separator) {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
+	var cErr error
 	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -131,6 +132,7 @@ func doList(clnt Client, isRecursive, isIncomplete bool) *probe.Error {
 				continue
 			}
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
 		// Convert any os specific delimiters to "/".
@@ -144,5 +146,5 @@ func doList(clnt Client, isRecursive, isIncomplete bool) *probe.Error {
 		// Print colorized or jsonized content info.
 		printMsg(parsedContent)
 	}
-	return nil
+	return cErr
 }

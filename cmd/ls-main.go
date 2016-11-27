@@ -28,10 +28,6 @@ import (
 var (
 	lsFlags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "List recursively.",
 		},
@@ -107,7 +103,7 @@ func checkListSyntax(ctx *cli.Context) {
 }
 
 // mainList - is a handler for mc ls command
-func mainList(ctx *cli.Context) {
+func mainList(ctx *cli.Context) error {
 	// Additional command specific theme customization.
 	console.SetColor("File", color.New(color.Bold))
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
@@ -130,6 +126,7 @@ func mainList(ctx *cli.Context) {
 		args = []string{"."}
 	}
 
+	var cErr error
 	for _, targetURL := range args {
 		var clnt Client
 		clnt, err := newClient(targetURL)
@@ -151,11 +148,9 @@ func mainList(ctx *cli.Context) {
 			clnt, err = newClient(targetURL)
 			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
 		}
-
-		err = doList(clnt, isRecursive, isIncomplete)
-		if err != nil {
-			errorIf(err.Trace(clnt.GetURL().String()), "Unable to list target ‘"+clnt.GetURL().String()+"’.")
-			continue
+		if e := doList(clnt, isRecursive, isIncomplete); e != nil {
+			cErr = e
 		}
 	}
+	return cErr
 }

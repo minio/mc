@@ -34,10 +34,6 @@ import (
 
 var (
 	watchFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
 		cli.StringFlag{
 			Name:  "events",
 			Value: "put,delete",
@@ -122,7 +118,7 @@ func (u watchMessage) String() string {
 	return msg
 }
 
-func mainWatch(ctx *cli.Context) {
+func mainWatch(ctx *cli.Context) error {
 	console.SetColor("Time", color.New(color.FgGreen))
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("EventType", color.New(color.FgCyan, color.Bold))
@@ -190,4 +186,6 @@ func mainWatch(ctx *cli.Context) {
 
 	// Wait on the routine to be finished or exit.
 	wg.Wait()
+
+	return nil
 }

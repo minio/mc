@@ -27,10 +27,6 @@ import (
 
 var (
 	mbFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
 		cli.StringFlag{
 			Name:  "region",
 			Value: "us-east-1",
@@ -100,7 +96,7 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 }
 
 // mainMakeBucket is entry point for mb command.
-func mainMakeBucket(ctx *cli.Context) {
+func mainMakeBucket(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -113,12 +109,14 @@ func mainMakeBucket(ctx *cli.Context) {
 	// Save region.
 	region := ctx.String("region")
 
+	var cErr error
 	for i := range ctx.Args() {
 		targetURL := ctx.Args().Get(i)
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
 		if err != nil {
 			errorIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
+			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
 
@@ -126,10 +124,12 @@ func mainMakeBucket(ctx *cli.Context) {
 		err = clnt.MakeBucket(region)
 		if err != nil {
 			errorIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
 
 		// Successfully created a bucket.
 		printMsg(makeBucketMessage{Status: "success", Bucket: targetURL})
 	}
+	return cErr
 }

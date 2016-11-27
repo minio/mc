@@ -37,10 +37,6 @@ import (
 var (
 	mirrorFlags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-		cli.BoolFlag{
 			Name:  "force",
 			Usage: "Force overwrite of an existing target(s).",
 		},
@@ -744,7 +740,7 @@ func newMirrorSession(session *sessionV8) *mirrorSession {
 }
 
 // Main entry point for mirror command.
-func mainMirror(ctx *cli.Context) {
+func mainMirror(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -780,4 +776,6 @@ func mainMirror(ctx *cli.Context) {
 
 	// delete will be run when terminating normally,
 	ms.Delete()
+
+	return nil
 }

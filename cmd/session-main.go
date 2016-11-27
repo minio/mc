@@ -30,12 +30,7 @@ import (
 )
 
 var (
-	sessionFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	sessionFlags = []cli.Flag{}
 )
 
 // Manage sessions for cp and mirror.
@@ -210,7 +205,7 @@ func findClosestSessions(session string) []string {
 	return closestSessions
 }
 
-func mainSession(ctx *cli.Context) {
+func mainSession(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -274,4 +269,6 @@ func mainSession(ctx *cli.Context) {
 	case "clear":
 		clearSession(strings.TrimSpace(ctx.Args().Tail().First()))
 	}
+
+	return nil
 }

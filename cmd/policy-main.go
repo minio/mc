@@ -26,12 +26,7 @@ import (
 )
 
 var (
-	policyFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	policyFlags = []cli.Flag{}
 )
 
 // Set public policy
@@ -211,7 +206,7 @@ func doGetAccessRules(targetURL string) (r map[string]string, err *probe.Error) 
 	return clnt.GetAccessRules()
 }
 
-func mainPolicy(ctx *cli.Context) {
+func mainPolicy(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -278,4 +273,5 @@ func mainPolicy(ctx *cli.Context) {
 			})
 		}
 	}
+	return nil
 }

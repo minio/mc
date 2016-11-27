@@ -36,10 +36,6 @@ const Day = 24 * time.Hour
 var (
 	rmFlags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "Remove recursively.",
 		},
@@ -136,18 +132,18 @@ func checkRmSyntax(ctx *cli.Context) {
 	}
 }
 
-func removeSingle(url string, isIncomplete bool, isFake bool, older int) {
+func removeSingle(url string, isIncomplete bool, isFake bool, older int) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Invalid argument ‘"+url+"’.")
-		return // End of journey.
+		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
 	content, pErr := clnt.Stat(isIncomplete)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’.")
-		return
+		return exitStatus(globalErrorExitStatus)
 	}
 	if older > 0 {
 		// Check whether object is created older than given time.
@@ -155,7 +151,7 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) {
 		timeDiff := now.Sub(content.Time)
 		if timeDiff < (time.Duration(older) * Day) {
 			// time difference of info.Time with current time is less than older time.
-			return
+			return nil
 		}
 	}
 
@@ -178,18 +174,19 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) {
 					// Ignore Permission error.
 					continue
 				}
-				return
+				return exitStatus(globalErrorExitStatus)
 			}
 		}
 	}
+	return nil
 }
 
-func removeRecursive(url string, isIncomplete bool, isFake bool, older int) {
+func removeRecursive(url string, isIncomplete bool, isFake bool, older int) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’ recursively.")
-		return // End of journey.
+		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
 	contentCh := make(chan *clientContent)
@@ -207,7 +204,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) {
 				continue
 			}
 			close(contentCh)
-			return
+			return exitStatus(globalErrorExitStatus)
 		}
 
 		if older > 0 {
@@ -241,7 +238,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) {
 					}
 
 					close(contentCh)
-					return
+					return exitStatus(globalErrorExitStatus)
 				}
 			}
 		}
@@ -255,17 +252,18 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) {
 			// Ignore Permission error.
 			continue
 		}
-		return
+		return exitStatus(globalErrorExitStatus)
 	}
 
 	// As clnt.List() returns empty, we just send dummy value to behave like non-recursive.
 	if isEmpty {
 		printMsg(rmMessage{Key: url})
 	}
+	return nil
 }
 
 // main for rm command.
-func mainRm(ctx *cli.Context) {
+func mainRm(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -285,23 +283,22 @@ func mainRm(ctx *cli.Context) {
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
 		if isRecursive {
-			removeRecursive(url, isIncomplete, isFake, older)
-		} else {
-			removeSingle(url, isIncomplete, isFake, older)
-		}
+			return removeRecursive(url, isIncomplete, isFake, older)
+		} // else {
+		return removeSingle(url, isIncomplete, isFake, older)
 	}
 
 	if !isStdin {
-		return
+		return nil
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive {
-			removeRecursive(url, isIncomplete, isFake, older)
-		} else {
-			removeSingle(url, isIncomplete, isFake, older)
-		}
+			return removeRecursive(url, isIncomplete, isFake, older)
+		} // else {
+		return removeSingle(url, isIncomplete, isFake, older)
 	}
+	return nil
 }

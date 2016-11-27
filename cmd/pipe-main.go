@@ -25,12 +25,7 @@ import (
 )
 
 var (
-	pipeFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	pipeFlags = []cli.Flag{}
 )
 
 // Display contents of a file.
@@ -92,7 +87,7 @@ func checkPipeSyntax(ctx *cli.Context) {
 }
 
 // mainPipe is the main entry point for pipe command.
-func mainPipe(ctx *cli.Context) {
+func mainPipe(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -108,4 +103,7 @@ func mainPipe(ctx *cli.Context) {
 		err := pipe(URLs[0])
 		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
 	}
+
+	// Done.
+	return nil
 }

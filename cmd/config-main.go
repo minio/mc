@@ -30,12 +30,7 @@ import "github.com/minio/cli"
 //
 
 var (
-	configFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	configFlags = []cli.Flag{}
 )
 
 var configCmd = cli.Command{
@@ -62,7 +57,7 @@ COMMANDS:
 }
 
 // mainConfig is the handle for "mc config" command. provides sub-commands which write configuration data in json format to config file.
-func mainConfig(ctx *cli.Context) {
+func mainConfig(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -73,5 +68,6 @@ func mainConfig(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 	}
 
+	return nil
 	// Sub-commands like "host" and "alias" have their own main.
 }

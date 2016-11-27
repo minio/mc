@@ -29,12 +29,7 @@ import (
 
 // diff specific flags.
 var (
-	diffFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "help, h",
-			Usage: "Show this help.",
-		},
-	}
+	diffFlags = []cli.Flag{}
 )
 
 // Compute differences between two files or folders.
@@ -148,7 +143,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 }
 
 // doDiffMain runs the diff.
-func doDiffMain(firstURL, secondURL string) {
+func doDiffMain(firstURL, secondURL string) error {
 	// Source and targets are always directories
 	sourceSeparator := string(newClientURL(firstURL).Separator)
 	if !strings.HasSuffix(firstURL, sourceSeparator) {
@@ -181,10 +176,12 @@ func doDiffMain(firstURL, secondURL string) {
 	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL, watchMode) {
 		printMsg(diffMsg)
 	}
+
+	return nil
 }
 
 // mainDiff main for 'diff'.
-func mainDiff(ctx *cli.Context) {
+func mainDiff(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -199,8 +196,8 @@ func mainDiff(ctx *cli.Context) {
 	console.SetColor("DiffTime", color.New(color.FgYellow, color.Bold))
 
 	URLs := ctx.Args()
-	firstURL := URLs[0]
-	secondURL := URLs[1]
+	firstURL := URLs.Get(0)
+	secondURL := URLs.Get(1)
 
-	doDiffMain(firstURL, secondURL)
+	return doDiffMain(firstURL, secondURL)
 }
