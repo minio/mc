@@ -948,7 +948,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *clientContent) {
 					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
-					return
+					continue
 				}
 				content := &clientContent{}
 				url := *c.targetURL
@@ -979,7 +979,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *clientContent) {
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
-				return
+				continue
 			}
 			content := &clientContent{}
 			url := *c.targetURL
@@ -1025,7 +1025,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientConten
 					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
-					return
+					continue
 				}
 				url := *c.targetURL
 				url.Path = filepath.Join(url.Path, bucket.Name, object.Key)
@@ -1044,7 +1044,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientConten
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
-				return
+				continue
 			}
 			url := *c.targetURL
 			// Join bucket and incoming object key.
