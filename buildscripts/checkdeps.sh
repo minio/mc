@@ -198,7 +198,11 @@ is_supported_arch() {
 check_deps() {
     check_version "$(env go version 2>/dev/null | awk '{print $3}' | sed 's/go\([0-9.]*\)$/\1/')" "${GO_VERSION}"
     if [ $? -ge 2 ]; then
-        MISSING="${MISSING} golang(>=${GO_VERSION})"
+        # Check again without env command.
+        check_version "$(go version 2>/dev/null | sed 's/^.* go\([0-9.]*\).*$/\1/')" "${GO_VERSION}"
+        if [ $? -ge 2 ]; then
+            MISSING="${MISSING} golang(>=${GO_VERSION})"
+        fi
     fi
 
     check_version "$(env git --version 2>/dev/null | sed -e 's/^.* \([0-9.\].*\).*$/\1/' -e 's/^\([0-9.\]*\).*/\1/g')" "${GIT_VERSION}"
