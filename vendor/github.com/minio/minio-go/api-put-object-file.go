@@ -140,9 +140,8 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 		return 0, err
 	}
 
-	// Get upload id for an object, initiates a new multipart request
-	// if it cannot find any previously partially uploaded object.
-	uploadID, isNew, err := c.getUploadID(bucketName, objectName, contentType)
+	// Get the upload id of a previously partially uploaded object or initiate a new multipart upload
+	uploadID, partsInfo, err := c.getMpartUploadSession(bucketName, objectName, contentType)
 	if err != nil {
 		return 0, err
 	}
@@ -152,19 +151,6 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 
 	// Complete multipart upload.
 	var complMultipartUpload completeMultipartUpload
-
-	// A map of all uploaded parts.
-	var partsInfo = make(map[int]objectPart)
-
-	// If this session is a continuation of a previous session fetch all
-	// previously uploaded parts info.
-	if !isNew {
-		// Fetch previously upload parts and maximum part size.
-		partsInfo, err = c.listObjectParts(bucketName, objectName, uploadID)
-		if err != nil {
-			return 0, err
-		}
-	}
 
 	// Calculate the optimal parts info for a given size.
 	totalPartsCount, partSize, lastPartSize, err := optimalPartInfo(fileSize)
