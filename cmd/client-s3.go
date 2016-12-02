@@ -62,9 +62,9 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		// Creates a parsed URL.
 		targetURL := newClientURL(config.HostURL)
 		// By default enable HTTPs.
-		secure := true
+		useTLS := true
 		if targetURL.Scheme == "http" {
-			secure = false
+			useTLS = false
 		}
 
 		// Instantiate s3
@@ -104,20 +104,27 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			var e error
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				// if Signature version '2' use NewV2 directly.
-				api, e = minio.NewV2(hostName, config.AccessKey, config.SecretKey, secure)
+				api, e = minio.NewV2(hostName, config.AccessKey, config.SecretKey, useTLS)
 			} else {
 				// if Signature version '4' use NewV4 directly.
-				api, e = minio.NewV4(hostName, config.AccessKey, config.SecretKey, secure)
+				api, e = minio.NewV4(hostName, config.AccessKey, config.SecretKey, useTLS)
 			}
 			if e != nil {
 				return nil, probe.NewError(e)
 			}
+
 			transport := http.DefaultTransport
-			if config.Insecure {
+
+			if useTLS {
+				tlsConfig := &tls.Config{RootCAs: globalRootCAs}
+				if config.Insecure {
+					tlsConfig.InsecureSkipVerify = true
+				}
 				transport = &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+					TLSClientConfig: tlsConfig,
 				}
 			}
+
 			if config.Debug {
 				if strings.EqualFold(config.Signature, "S3v4") {
 					transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
