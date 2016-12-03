@@ -35,7 +35,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	// Create multiple files.
 	objectPath := filepath.Join(root, "object1")
-	fsClient, err := fsNew(objectPath)
+	fsClient, err := fsNew(objectPath, []string{})
 	c.Assert(err, IsNil)
 
 	data := "hello"
@@ -47,7 +47,7 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(n, Equals, int64(len(data)))
 
 	objectPath = filepath.Join(root, "object2")
-	fsClient, err = fsNew(objectPath)
+	fsClient, err = fsNew(objectPath, []string{})
 	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
@@ -55,7 +55,7 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	fsClient, err = fsNew(root)
+	fsClient, err = fsNew(root, []string{})
 	c.Assert(err, IsNil)
 
 	// Verify previously create files and list them.
@@ -73,7 +73,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	// Create another file.
 	objectPath = filepath.Join(root, "test1/newObject1")
-	fsClient, err = fsNew(objectPath)
+	fsClient, err = fsNew(objectPath, []string{})
 	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
@@ -81,7 +81,7 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	fsClient, err = fsNew(root)
+	fsClient, err = fsNew(root, []string{})
 	c.Assert(err, IsNil)
 
 	contents = nil
@@ -97,7 +97,7 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(len(contents), Equals, 1)
 	c.Assert(contents[0].Type.IsDir(), Equals, true)
 
-	fsClient, err = fsNew(root)
+	fsClient, err = fsNew(root, []string{})
 	c.Assert(err, IsNil)
 
 	contents = nil
@@ -131,7 +131,7 @@ func (s *TestSuite) TestList(c *C) {
 
 	// Create an ignored file and list to verify if its ignored.
 	objectPath = filepath.Join(root, "test1/.DS_Store")
-	fsClient, err = fsNew(objectPath)
+	fsClient, err = fsNew(objectPath, []string{"*.DS_Store"})
 	c.Assert(err, IsNil)
 
 	reader = bytes.NewReader([]byte(data))
@@ -139,7 +139,7 @@ func (s *TestSuite) TestList(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	fsClient, err = fsNew(root)
+	fsClient, err = fsNew(root, []string{})
 	c.Assert(err, IsNil)
 
 	contents = nil
@@ -183,7 +183,7 @@ func (s *TestSuite) TestPutBucket(c *C) {
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsClient, err := fsNew(bucketPath)
+	fsClient, err := fsNew(bucketPath, []string{})
 	c.Assert(err, IsNil)
 	err = fsClient.MakeBucket("us-east-1")
 	c.Assert(err, IsNil)
@@ -197,7 +197,7 @@ func (s *TestSuite) TestStatBucket(c *C) {
 
 	bucketPath := filepath.Join(root, "bucket")
 
-	fsClient, err := fsNew(bucketPath)
+	fsClient, err := fsNew(bucketPath, []string{})
 	c.Assert(err, IsNil)
 	err = fsClient.MakeBucket("us-east-1")
 	c.Assert(err, IsNil)
@@ -212,7 +212,7 @@ func (s *TestSuite) TestBucketACLFails(c *C) {
 	defer os.RemoveAll(root)
 
 	bucketPath := filepath.Join(root, "bucket")
-	fsClient, err := fsNew(bucketPath)
+	fsClient, err := fsNew(bucketPath, []string{})
 	c.Assert(err, IsNil)
 	err = fsClient.MakeBucket("us-east-1")
 	c.Assert(err, IsNil)
@@ -234,7 +234,7 @@ func (s *TestSuite) TestPut(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsClient, err := fsNew(objectPath)
+	fsClient, err := fsNew(objectPath, []string{})
 	c.Assert(err, IsNil)
 
 	data := "hello"
@@ -252,7 +252,7 @@ func (s *TestSuite) TestGet(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsClient, err := fsNew(objectPath)
+	fsClient, err := fsNew(objectPath, []string{})
 	c.Assert(err, IsNil)
 
 	data := "hello"
@@ -278,7 +278,7 @@ func (s *TestSuite) TestGetRange(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsClient, err := fsNew(objectPath)
+	fsClient, err := fsNew(objectPath, []string{})
 	c.Assert(err, IsNil)
 
 	data := "hello world"
@@ -307,7 +307,7 @@ func (s *TestSuite) TestStatObject(c *C) {
 	defer os.RemoveAll(root)
 
 	objectPath := filepath.Join(root, "object")
-	fsClient, err := fsNew(objectPath)
+	fsClient, err := fsNew(objectPath, []string{})
 	c.Assert(err, IsNil)
 
 	data := "hello"
@@ -329,9 +329,9 @@ func (s *TestSuite) TestCopy(c *C) {
 	defer os.RemoveAll(root)
 	sourcePath := filepath.Join(root, "source")
 	targetPath := filepath.Join(root, "target")
-	fsClientTarget, err := fsNew(targetPath)
+	fsClientTarget, err := fsNew(targetPath, []string{})
 	c.Assert(err, IsNil)
-	fsClientSource, err := fsNew(sourcePath)
+	fsClientSource, err := fsNew(sourcePath, []string{})
 	c.Assert(err, IsNil)
 
 	data := "hello world"
