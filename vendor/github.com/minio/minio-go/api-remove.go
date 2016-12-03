@@ -71,6 +71,13 @@ func (c Client) RemoveObject(bucketName, objectName string) error {
 	if err != nil {
 		return err
 	}
+	if resp != nil {
+		// if some unexpected error happened and max retry is reached, we want to let client know
+		if resp.StatusCode != http.StatusNoContent {
+			return httpRespToErrorResponse(resp, bucketName, objectName)
+		}
+	}
+
 	// DeleteObject always responds with http '204' even for
 	// objects which do not exist. So no need to handle them
 	// specifically.

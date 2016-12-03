@@ -3,16 +3,13 @@ language: go
 
 os:
 - linux
-- osx
-
-osx_image: xcode7.3
 
 env:
 - ARCH=x86_64
 - ARCH=i686
 
 go:
-- 1.7.1
+- 1.7.3
 
 script:
 - make test GOFLAGS="-race"
