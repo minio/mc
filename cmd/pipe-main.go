@@ -61,7 +61,7 @@ EXAMPLES:
 func pipe(targetURL string) *probe.Error {
 	if targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
-		return catOut(os.Stdin).Trace()
+		return catOut(os.Stdin, -1).Trace()
 	}
 
 	// Stream from stdin to multiple objects until EOF.

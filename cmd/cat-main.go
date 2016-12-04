@@ -76,24 +76,36 @@ func checkCatSyntax(ctx *cli.Context) {
 // catURL displays contents of a URL to stdout.
 func catURL(sourceURL string) *probe.Error {
 	var reader io.Reader
+	size := int64(-1)
 	switch sourceURL {
 	case "-":
 		reader = os.Stdin
 	default:
-		// Ignore size, since os.Stat() would not return proper size all the
-		// time for local filesystem for example /proc files.
 		var err *probe.Error
+		client, content, err := url2Stat(sourceURL)
+		if err != nil {
+			return err.Trace(sourceURL)
+		}
+		// Ignore size for filesystem objects since os.Stat() would not
+		// return proper size all the time, for example with /proc files.
+		if client.GetURL().Type == objectStorage {
+			size = content.Size
+		}
 		if reader, err = getSourceStream(sourceURL); err != nil {
 			return err.Trace(sourceURL)
 		}
 	}
-	return catOut(reader).Trace(sourceURL)
+	return catOut(reader, size).Trace(sourceURL)
 }
 
-// catOut reads from reader stream and writes to stdout.
-func catOut(r io.Reader) *probe.Error {
+// catOut reads from reader stream and writes to stdout. Also check the length of the
+// read bytes against size parameter (if not -1) and return the appropriate error
+func catOut(r io.Reader, size int64) *probe.Error {
+	var n int64
+	var e error
+
 	// Read till EOF.
-	if _, e := io.Copy(os.Stdout, r); e != nil {
+	if n, e = io.Copy(os.Stdout, r); e != nil {
 		switch e := e.(type) {
 		case *os.PathError:
 			if e.Err == syscall.EPIPE {
@@ -104,6 +116,18 @@ func catOut(r io.Reader) *probe.Error {
 		default:
 			return probe.NewError(e)
 		}
+	}
+	if size != -1 && n < size {
+		return probe.NewError(UnexpectedEOF{
+			TotalSize:    size,
+			TotalWritten: n,
+		})
+	}
+	if size != -1 && n > size {
+		return probe.NewError(UnexpectedEOF{
+			TotalSize:    size,
+			TotalWritten: n,
+		})
 	}
 	return nil
 }
@@ -124,7 +148,7 @@ func mainCat(ctx *cli.Context) error {
 
 	// handle std input data.
 	if stdinMode {
-		fatalIf(catOut(os.Stdin).Trace(), "Unable to read from standard input.")
+		fatalIf(catOut(os.Stdin, -1).Trace(), "Unable to read from standard input.")
 		return nil
 	}
 
