@@ -280,6 +280,14 @@ func (ms *mirrorSession) startStatus() {
 	// wait for status messages on statusChan, show error messages and write the current queue to session
 	go func() {
 		defer ms.wgStatus.Done()
+		defer func() {
+			// finished harvesting urls, save queue to session data
+			if err := ms.queue.Save(ms.NewDataWriter()); err != nil {
+				ms.status.fatalIf(probe.NewError(err), "Unable to save queue.")
+			}
+			// Flush harvested urls to disk.
+			ms.Save()
+		}()
 
 		for sURLs := range ms.statusCh {
 			if sURLs.Error != nil {
@@ -312,18 +320,11 @@ func (ms *mirrorSession) startStatus() {
 				ms.CloseAndDie()
 			}
 
-			// finished harvesting urls, save queue to session data
-			if err := ms.queue.Save(ms.NewDataWriter()); err != nil {
-				ms.status.fatalIf(probe.NewError(err), "Unable to save queue.")
-			}
-
 			if sURLs.SourceContent != nil {
 				ms.Header.LastCopied = sURLs.SourceContent.URL.String()
 			} else if sURLs.TargetContent != nil {
 				ms.Header.LastRemoved = sURLs.TargetContent.URL.String()
 			}
-
-			ms.Save()
 
 			if sURLs.SourceContent != nil {
 			} else if sURLs.TargetContent != nil {
@@ -331,6 +332,9 @@ func (ms *mirrorSession) startStatus() {
 				targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
 				ms.status.PrintMsg(rmMessage{Key: targetPath})
 			}
+
+			// Save before moving to the next one.
+			ms.Save()
 		}
 	}()
 }
@@ -709,7 +713,7 @@ func newMirrorSession(session *sessionV8) *mirrorSession {
 	}
 
 	ms := mirrorSession{
-		trapCh:    signalTrap(os.Interrupt, syscall.SIGTERM),
+		trapCh:    signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
 		sessionV8: session,
 
 		statusCh:  make(chan URLs),

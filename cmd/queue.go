@@ -60,7 +60,6 @@ func (q *Queue) Save(dst io.Writer) error {
 		if err != nil {
 			return err
 		}
-
 		fmt.Fprintln(dst, string(jsonData))
 	}
 
