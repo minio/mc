@@ -69,6 +69,7 @@ func checkEventsRemoveSyntax(ctx *cli.Context) {
 
 // eventsRemoveMessage container
 type eventsRemoveMessage struct {
+	ARN    string `json:"arn"`
 	Status string `json:"status"`
 }
 
@@ -81,7 +82,7 @@ func (u eventsRemoveMessage) JSON() string {
 }
 
 func (u eventsRemoveMessage) String() string {
-	msg := console.Colorize("Events", "Successfully accomplished.")
+	msg := console.Colorize("Events", "Successfully removed "+u.ARN)
 	return msg
 }
 
@@ -111,7 +112,7 @@ func mainEventsRemove(ctx *cli.Context) error {
 
 	err = s3Client.RemoveNotificationConfig(arn)
 	fatalIf(err, "Cannot enable notification on the specified bucket.")
-	printMsg(eventsRemoveMessage{})
+	printMsg(eventsRemoveMessage{ARN: arn})
 
 	return nil
 }

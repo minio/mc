@@ -75,7 +75,11 @@ func checkEventsAddSyntax(ctx *cli.Context) {
 
 // eventsAddMessage container
 type eventsAddMessage struct {
-	Status string `json:"status"`
+	ARN    string   `json:"arn"`
+	Events []string `json:"events"`
+	Prefix string   `json:"prefix"`
+	Suffix string   `json:"suffix"`
+	Status string   `json:"status"`
 }
 
 // JSON jsonified update message.
@@ -87,7 +91,7 @@ func (u eventsAddMessage) JSON() string {
 }
 
 func (u eventsAddMessage) String() string {
-	msg := console.Colorize("Events", "Successfully accomplished.")
+	msg := console.Colorize("Events", "Successfully added "+u.ARN)
 	return msg
 }
 
@@ -117,7 +121,12 @@ func mainEventsAdd(ctx *cli.Context) error {
 
 	err = s3Client.AddNotificationConfig(arn, events, prefix, suffix)
 	fatalIf(err, "Cannot enable notification on the specified bucket.")
-	printMsg(eventsAddMessage{})
+	printMsg(eventsAddMessage{
+		ARN:    arn,
+		Events: events,
+		Prefix: prefix,
+		Suffix: suffix,
+	})
 
 	return nil
 }
