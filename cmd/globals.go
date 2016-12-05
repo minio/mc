@@ -35,6 +35,7 @@ const (
 	globalMCConfigDir        = ".mc/"
 	globalMCConfigWindowsDir = "mc\\"
 	globalMCConfigFile       = "config.json"
+	globalMCIgnoreFile       = "mcignore"
 	globalMCCertsDir         = "certs"
 	globalMCCAsDir           = "CAs"
 
@@ -61,6 +62,9 @@ var (
 var (
 	// CA root certificates, a nil value means system certs pool will be used
 	globalRootCAs *x509.CertPool
+
+	// List of ignored files populated if `${HOME}/.mc/mcignore` is present.
+	globalIgnoredFiles []string
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.

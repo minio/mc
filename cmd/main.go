@@ -197,8 +197,16 @@ func initMC() {
 		fatalIf(createCAsDir().Trace(), "Unable to create `CAs` folder.")
 	}
 
+	// Check if ignore file exists.
+	if !isIgnoreFileExists() {
+		fatalIf(createIgnoreFile().Trace(), "Unable to create `mcignore` file.")
+	}
+
 	// Load all authority certificates present in CAs dir
 	loadRootCAs()
+
+	// Load list of all ignored files into memory.
+	loadIgnoredFiles()
 }
 
 func registerBefore(ctx *cli.Context) error {

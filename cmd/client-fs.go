@@ -19,7 +19,6 @@ package cmd
 import (
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -36,48 +35,40 @@ import (
 
 // filesystem client
 type fsClient struct {
-	PathURL *clientURL
+	PathURL      *clientURL
+	ignoredFiles []string
 }
 
 const (
 	partSuffix = ".part.minio"
 )
 
-var ( // GOOS specific ignore list.
-	ignoreFiles = map[string][]string{
-		"darwin": {".DS_Store"},
-		// "default": []string{""},
-	}
-)
-
 // fsNew - instantiate a new fs
-func fsNew(path string) (Client, *probe.Error) {
+func fsNew(path string, ignoredFiles []string) (Client, *probe.Error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, probe.NewError(EmptyPath{})
 	}
 	return &fsClient{
-		PathURL: newClientURL(normalizePath(path)),
+		PathURL:      newClientURL(normalizePath(path)),
+		ignoredFiles: ignoredFiles,
 	}, nil
 }
 
 // isIgnoredFile returns true if 'filename' is on the exclude list.
-func isIgnoredFile(filename string) bool {
-	matchFile := path.Base(filename)
+func isIgnoredFile(filename string, ignoredFiles []string) (ok bool) {
+	matchFile := filepath.Base(filename)
 
-	// OS specific ignore list.
-	for _, ignoredFile := range ignoreFiles[runtime.GOOS] {
-		if ignoredFile == matchFile {
+	// Ignored files.
+	for _, ignoredFile := range ignoredFiles {
+		matched, err := filepath.Match(ignoredFile, matchFile)
+		if err != nil {
+			panic(err)
+		}
+		// Filepath matched.
+		if matched {
 			return true
 		}
 	}
-
-	// Default ignore list for all OSes.
-	for _, ignoredFile := range ignoreFiles["default"] {
-		if ignoredFile == matchFile {
-			return true
-		}
-	}
-
 	return false
 }
 
@@ -136,6 +127,10 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 			case event, ok := <-neventChan:
 				if !ok {
 					return
+				}
+				// Check if the event on a path is ignored.
+				if isIgnoredFile(event.Path(), f.ignoredFiles) {
+					continue
 				}
 				var i os.FileInfo
 				if IsPutEvent(event.Event()) {
@@ -558,7 +553,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 	pathURL := *f.PathURL
 	for _, fi := range files {
 		// Skip ignored files.
-		if isIgnoredFile(fi.Name()) {
+		if isIgnoredFile(fi.Name(), f.ignoredFiles) {
 			continue
 		}
 
@@ -773,7 +768,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 				pathURL.Path = filepath.Join(pathURL.Path, fi.Name())
 
 				// Skip ignored files.
-				if isIgnoredFile(fi.Name()) {
+				if isIgnoredFile(fi.Name(), f.ignoredFiles) {
 					continue
 				}
 
@@ -903,7 +898,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 		}
 
 		// Ignore files from ignore list.
-		if isIgnoredFile(fi.Name()) {
+		if isIgnoredFile(fi.Name(), f.ignoredFiles) {
 			return nil
 		}
 

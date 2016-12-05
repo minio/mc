@@ -117,9 +117,8 @@ func copySourceStreamFromAlias(alias string, urlStr string, source string, size 
 func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
 	hostCfg := mustGetHostConfig(alias)
 	if hostCfg == nil {
-		// No matching host config. So we treat it like a
-		// filesystem.
-		fsClient, err := fsNew(urlStr)
+		// No matching host config. So we treat it like a filesystem.
+		fsClient, err := fsNew(urlStr, globalIgnoredFiles)
 		if err != nil {
 			return nil, err.Trace(alias, urlStr)
 		}
