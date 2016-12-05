@@ -45,8 +45,8 @@ const (
 
 var ( // GOOS specific ignore list.
 	ignoreFiles = map[string][]string{
-		"darwin": {".DS_Store"},
-		// "default": []string{""},
+		"darwin":  {"*.DS_Store"},
+		"default": {"*.part.minio"},
 	}
 )
 
@@ -66,14 +66,22 @@ func isIgnoredFile(filename string) bool {
 
 	// OS specific ignore list.
 	for _, ignoredFile := range ignoreFiles[runtime.GOOS] {
-		if ignoredFile == matchFile {
+		matched, err := filepath.Match(ignoredFile, matchFile)
+		if err != nil {
+			panic(err)
+		}
+		if matched {
 			return true
 		}
 	}
 
 	// Default ignore list for all OSes.
 	for _, ignoredFile := range ignoreFiles["default"] {
-		if ignoredFile == matchFile {
+		matched, err := filepath.Match(ignoredFile, matchFile)
+		if err != nil {
+			panic(err)
+		}
+		if matched {
 			return true
 		}
 	}
@@ -136,6 +144,9 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 			case event, ok := <-neventChan:
 				if !ok {
 					return
+				}
+				if isIgnoredFile(event.Path()) {
+					continue
 				}
 				var i os.FileInfo
 				if IsPutEvent(event.Event()) {

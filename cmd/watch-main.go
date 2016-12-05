@@ -168,6 +168,9 @@ func mainWatch(ctx *cli.Context) error {
 		for {
 			select {
 			case <-trapCh:
+				// Signal received we are done.
+				close(wo.done)
+				return
 			case event, ok := <-wo.Events():
 				if !ok {
 					return
@@ -178,7 +181,7 @@ func mainWatch(ctx *cli.Context) error {
 				if !ok {
 					return
 				}
-				fatalIf(err, "Cannot watch on events.")
+				errorIf(err, "Cannot watch on events.")
 				return
 			}
 		}
