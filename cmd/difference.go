@@ -50,7 +50,7 @@ func (d differType) String() string {
 
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string, watchMode bool) (diffCh chan diffMessage) {
+func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
 	var (
 		srcEOF, tgtEOF       bool
 		srcOk, tgtOk         bool
@@ -77,10 +77,8 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 
 			// No objects from source AND target: Finish
 			if srcEOF && tgtEOF {
-				if !watchMode {
-					close(diffCh)
-					break
-				}
+				close(diffCh)
+				break
 			}
 
 			if !srcEOF && srcCtnt.Err != nil {

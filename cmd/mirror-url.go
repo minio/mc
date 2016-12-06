@@ -76,7 +76,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, isWatch bool, URLsCh chan<- URLs) {
+func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, URLsCh chan<- URLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -106,7 +106,7 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 	}
 
 	// List both source and target, compare and return values through channel.
-	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL, isWatch) {
+	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
 		switch diffMsg.Diff {
 		case differInNone:
 			// No difference, continue.
@@ -170,8 +170,8 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 }
 
 // Prepares urls that need to be copied or removed based on requested options.
-func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool, isWatch bool, isRemove bool) <-chan URLs {
+func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool) <-chan URLs {
 	URLsCh := make(chan URLs)
-	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, isRemove, isWatch, URLsCh)
+	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, isRemove, URLsCh)
 	return URLsCh
 }

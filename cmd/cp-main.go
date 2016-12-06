@@ -111,11 +111,6 @@ type copyStatMessage struct {
 	Speed       float64
 }
 
-const (
-	// 5GiB.
-	fiveGB = 5 * 1024 * 1024 * 1024
-)
-
 // copyStatMessage copy accounting message
 func (c copyStatMessage) String() string {
 	speedBox := pb.Format(int64(c.Speed)).To(pb.U_BYTES).String()
@@ -165,54 +160,7 @@ func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounte
 		// Set up progress reader.
 		progress = progressReader.ProgressBar
 	}
-	// If source size is <= 5GB and operation is across same server type try to use Copy.
-	if length <= fiveGB && (sourceURL.Type == targetURL.Type) {
-		// FS -> FS Copy includes alias in path.
-		if sourceURL.Type == fileSystem {
-			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
-			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, progress)
-			if err != nil {
-				cpURLs.Error = err.Trace(sourceURL.String())
-				return cpURLs
-			}
-		} else if sourceURL.Type == objectStorage {
-			// If source/target are object storage their aliases must be the same.
-			if sourceAlias == targetAlias {
-				// Do not include alias inside path for ObjStore -> ObjStore.
-				sourcePath := filepath.ToSlash(sourceURL.Path)
-				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, progress)
-				if err != nil {
-					cpURLs.Error = err.Trace(sourceURL.String())
-					return cpURLs
-				}
-			} else {
-				reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
-				if err != nil {
-					cpURLs.Error = err.Trace(sourceURL.String())
-					return cpURLs
-				}
-				_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
-				if err != nil {
-					cpURLs.Error = err.Trace(targetURL.String())
-					return cpURLs
-				}
-			}
-		}
-	} else {
-		// Standard GET/PUT for size > 5GB.
-		reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
-		if err != nil {
-			cpURLs.Error = err.Trace(sourceURL.String())
-			return cpURLs
-		}
-		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
-		if err != nil {
-			cpURLs.Error = err.Trace(targetURL.String())
-			return cpURLs
-		}
-	}
-	cpURLs.Error = nil // just for safety
-	return cpURLs
+	return uploadSourceToTargetURL(cpURLs, progress)
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
@@ -293,7 +241,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
 }
 
 func doCopySession(session *sessionV8) {
-	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
+	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
 	if !session.HasData() {
 		doPrepareCopyURLs(session, trapCh)

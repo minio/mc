@@ -98,8 +98,8 @@ func putTargetStream(urlStr string, reader io.Reader, size int64) (int64, *probe
 	return putTargetStreamFromAlias(alias, urlStrFull, reader, size, nil)
 }
 
-// copyTargetStreamFromAlias copies to URL from source.
-func copySourceStreamFromAlias(alias string, urlStr string, source string, size int64, progress io.Reader) *probe.Error {
+// copySourceToTargetURL copies to targetURL from source.
+func copySourceToTargetURL(alias string, urlStr string, source string, size int64, progress io.Reader) *probe.Error {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)
@@ -109,6 +109,37 @@ func copySourceStreamFromAlias(alias string, urlStr string, source string, size 
 		return err.Trace(alias, urlStr)
 	}
 	return nil
+}
+
+// uploadSourceToTargetURL - uploads to targetURL from source.
+// optionally optimizes copy for object sizes <= 5GiB by using
+// server side copy operation.
+func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
+	sourceAlias := urls.SourceAlias
+	sourceURL := urls.SourceContent.URL
+	targetAlias := urls.TargetAlias
+	targetURL := urls.TargetContent.URL
+	length := urls.SourceContent.Size
+
+	// Optimize for server side copy if object is <= 5GiB and the host is same.
+	if length <= globalMaximumPutSize && sourceAlias == targetAlias {
+		sourcePath := filepath.ToSlash(sourceURL.Path)
+		err := copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length, progress)
+		if err != nil {
+			return urls.WithError(err.Trace(sourceURL.String()))
+		}
+	} else {
+		// Proceed with regular stream copy.
+		reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
+		if err != nil {
+			return urls.WithError(err.Trace(sourceURL.String()))
+		}
+		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
+		if err != nil {
+			return urls.WithError(err.Trace(targetURL.String()))
+		}
+	}
+	return urls.WithError(nil)
 }
 
 // newClientFromAlias gives a new client interface for matching

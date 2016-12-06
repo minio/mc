@@ -228,49 +228,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
-
-	// If source size is <= 5GB and operation is across same server type try to use Copy.
-	if length <= fiveGB && sourceURL.Type == targetURL.Type {
-		// FS -> FS Copy includes alias in path.
-		if sourceURL.Type == fileSystem {
-			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
-			err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, ms.status)
-			if err != nil {
-				return sURLs.WithError(err.Trace(sourceURL.String()))
-			}
-		} else if sourceURL.Type == objectStorage {
-			if sourceAlias == targetAlias {
-				// If source/target are object storage their aliases must be the same
-				// Do not include alias inside path for ObjStore -> ObjStore.
-				sourcePath := filepath.ToSlash(sourceURL.Path)
-				err := copySourceStreamFromAlias(targetAlias, targetURL.String(), sourcePath, length, ms.status)
-				if err != nil {
-					return sURLs.WithError(err.Trace(sourceURL.String()))
-				}
-			} else {
-				reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
-				if err != nil {
-					return sURLs.WithError(err.Trace(sourceURL.String()))
-				}
-				_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, ms.status)
-				if err != nil {
-					return sURLs.WithError(err.Trace(targetURL.String()))
-				}
-			}
-		}
-	} else {
-		// Standard GET/PUT for size > 5GB
-		reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
-		if err != nil {
-			return sURLs.WithError(err.Trace(sourceURL.String()))
-		}
-		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, ms.status)
-		if err != nil {
-			return sURLs.WithError(err.Trace(targetURL.String()))
-		}
-	}
-
-	return sURLs.WithError(nil)
+	return uploadSourceToTargetURL(sURLs, ms.status)
 }
 
 // Go routine to update session status
@@ -549,11 +507,10 @@ func (ms *mirrorSession) harvestSourceUrls(recursive bool) {
 	isForce := ms.Header.CommandBoolFlags["force"]
 	isFake := ms.Header.CommandBoolFlags["fake"]
 	isRemove := ms.Header.CommandBoolFlags["remove"]
-	isWatch := ms.Header.CommandBoolFlags["watch"]
 
 	defer close(ms.harvestCh)
 
-	URLsCh := prepareMirrorURLs(ms.sourceURL, ms.targetURL, isForce, isFake, isRemove, isWatch)
+	URLsCh := prepareMirrorURLs(ms.sourceURL, ms.targetURL, isForce, isFake, isRemove)
 	for url := range URLsCh {
 		// Send harvested urls.
 		ms.harvestCh <- url

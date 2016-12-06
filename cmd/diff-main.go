@@ -170,10 +170,8 @@ func doDiffMain(firstURL, secondURL string) error {
 			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
 
-	watchMode := false
-
 	// Diff first and second urls.
-	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL, watchMode) {
+	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL) {
 		printMsg(diffMsg)
 	}
 
