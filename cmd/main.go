@@ -257,6 +257,7 @@ func registerApp() *cli.App {
 	registerCmd(eventsCmd)  // Add events cmd
 	registerCmd(watchCmd)   // Add watch cmd
 	registerCmd(policyCmd)  // Set policy permissions.
+	registerCmd(adminCmd)   // Manage Minio servers
 	registerCmd(sessionCmd) // Manage sessions for copy and mirror.
 	registerCmd(configCmd)  // Configure minio client.
 	registerCmd(updateCmd)  // Check for new software updates.
