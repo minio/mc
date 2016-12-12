@@ -185,15 +185,15 @@ func (ms *mirrorSession) doRemove(sURLs URLs) URLs {
 		return sURLs.WithError(nil)
 	}
 
-	targetURL := sURLs.TargetContent.URL
-
 	// We are not removing incomplete uploads.
 	isIncomplete := false
 
-	// Remove extraneous file on target.
-	removeSingle(targetURL.String(), isIncomplete, isFake, 0)
+	// Construct proper path with alias.
+	targetWithAlias := filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path)
 
-	return sURLs.WithError(nil)
+	// Remove extraneous file on target.
+	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, isFake, 0))
+	return sURLs.WithError(err)
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
