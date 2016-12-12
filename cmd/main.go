@@ -280,6 +280,7 @@ func registerApp() *cli.App {
 	app.Usage = "Minio Client for cloud storage and filesystems."
 	app.Commands = commands
 	app.Author = "Minio.io"
+	app.Version = Version
 	app.Flags = append(mcFlags, globalFlags...)
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.CommandNotFound = commandNotFound // handler function declared above.
