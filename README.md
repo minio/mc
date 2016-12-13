@@ -40,7 +40,7 @@ version       Print version.
 
 Install minio packages using [Homebrew](http://brew.sh/)
 
-```sh
+```
 $ brew install minio-mc
 $ mc --help
 ```
@@ -51,7 +51,7 @@ Source installation is intended only for developers and advanced users. `mc upda
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
-```sh
+```
 
 $ go get -u github.com/minio/mc
 
@@ -62,7 +62,7 @@ $ go get -u github.com/minio/mc
 
 ### GNU/Linux
 
-```sh
+```
 
 $ chmod +x mc
 $ ./mc --help
@@ -71,7 +71,7 @@ $ ./mc --help
 
 ### OS X
 
-```sh
+```
 
 $ chmod 755 mc
 $ ./mc --help
@@ -80,7 +80,7 @@ $ ./mc --help
 
 ### Microsoft Windows
 
-```sh
+```
 
 C:\Users\Username\Downloads> mc.exe --help
 
@@ -88,7 +88,7 @@ C:\Users\Username\Downloads> mc.exe --help
 
 ### Solaris/Illumos
 
-```sh
+```
 
 $ chmod 755 mc
 $ ./mc --help
@@ -97,7 +97,7 @@ $ ./mc --help
 
 ### FreeBSD
 
-```sh
+```
 
 $ chmod 755 mc
 $ ./mc --help
@@ -112,7 +112,7 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 
 #### Usage
 
-```sh
+```
 
 mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
 
@@ -124,7 +124,7 @@ Alias is simply a short name to you cloud storage service. S3 end-point, access 
 
 Minio server displays URL, access and secret keys.
 
-```sh
+```
 
 $ mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 
@@ -133,7 +133,7 @@ $ mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo
 
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
 
-```sh
+```
 
 $ mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 
@@ -143,7 +143,7 @@ $ mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAc
 
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)
 
-```sh
+```
 
 $ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
 
@@ -159,7 +159,7 @@ NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have
 
 List all buckets from https://play.minio.io:9000
 
-```sh
+```
 
 $ mc ls play
 [2016-03-22 19:47:48 PDT]     0B my-bucketname/
@@ -173,7 +173,7 @@ $ mc ls play
 
 You may add shell aliases to override your common Unix tools.
 
-```sh
+```
 
 alias ls='mc ls'
 alias cp='mc cp'
