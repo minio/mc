@@ -8,7 +8,7 @@ Minio Client configurations are stored in file name ``.mc``.  It is a hidden fil
 **This how the structure of the directory looks like:**
 
 ```sh
-$ tree ~/.mc
+tree ~/.mc
 /home/supernova/.mc
 ├── config.json
 ├── session
@@ -18,13 +18,13 @@ $ tree ~/.mc
 ### Files and directories
 
 #### ``session`` directory
-``session`` directory keeps metadata information of all incomplete upload or mirror. You can run ``$ mc session list`` to list the same. 
+``session`` directory keeps metadata information of all incomplete upload or mirror. You can run ``mc session list`` to list the same. 
 
 #### ``config.json``
-config.json is the configuration file for Minio Client, it gets generated after you install and start Minio. All the credentials, endpoint information we add via ``$ mc config host`` are stored/modified here. 
+config.json is the configuration file for Minio Client, it gets generated after you install and start Minio. All the credentials, endpoint information we add via ``mc config host`` are stored/modified here. 
 
 ```sh
-$ cat config.json 
+cat config.json 
 {
 	"version": "8",
 	"hosts": {
@@ -70,7 +70,7 @@ $ cat config.json
 This file keeps previous config file version details.
 
 #### ``share`` directory
-``share`` directory keeps metadata information of all upload and download URL for objects which is used by  Minio client ``$ mc share`` command. 
+``share`` directory keeps metadata information of all upload and download URL for objects which is used by  Minio client ``mc share`` command. 
 
 ## Explore Further
 * [Minio Client Complete Guide](https://docs.minio.io/docs/minio-client-complete-guide)
