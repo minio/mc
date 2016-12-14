@@ -41,8 +41,8 @@ version       Print version.
 Install minio packages using [Homebrew](http://brew.sh/) 
 
 ```sh
-$ brew install minio-mc
-$ mc --help
+brew install minio-mc
+mc --help
 ```
 
 ### Install from Source
@@ -53,7 +53,7 @@ If you do not have a working Golang environment, please follow [How to install G
 
 ```sh
 
-$ go get -u github.com/minio/mc
+go get -u github.com/minio/mc
 
 ```
 
@@ -63,8 +63,8 @@ $ go get -u github.com/minio/mc
 
 ```sh
 
-$ chmod +x mc
-$ ./mc --help
+chmod +x mc
+./mc --help
 
 ```
 
@@ -72,8 +72,8 @@ $ ./mc --help
 
 ```sh
 
-$ chmod 755 mc
-$ ./mc --help
+chmod 755 mc
+./mc --help
 
 ```
 
@@ -81,7 +81,7 @@ $ ./mc --help
 
 ```sh
 
-C:\Users\Username\Downloads> mc.exe --help
+mc.exe --help
 
 ```
 
@@ -89,8 +89,8 @@ C:\Users\Username\Downloads> mc.exe --help
 
 ```sh
 
-$ chmod 755 mc
-$ ./mc --help
+chmod 755 mc
+./mc --help
 
 ```
 
@@ -98,8 +98,8 @@ $ ./mc --help
 
 ```sh
 
-$ chmod 755 mc
-$ ./mc --help
+chmod 755 mc
+./mc --help
 
 ```
 
@@ -126,7 +126,7 @@ Minio server displays URL, access and secret keys.
 
 ```sh
 
-$ mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
+mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 
 ```
 
@@ -136,7 +136,7 @@ Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](ht
 
 ```sh
 
-$ mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
+mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 
 ```
 
@@ -146,7 +146,7 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 
 ```sh
 
-$ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
+mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
 
 ```
 
@@ -162,7 +162,7 @@ List all buckets from https://play.minio.io:9000
 
 ```sh
 
-$ mc ls play
+mc ls play
 [2016-03-22 19:47:48 PDT]     0B my-bucketname/
 [2016-03-22 22:01:07 PDT]     0B mytestbucket/
 [2016-03-22 20:04:39 PDT]     0B mybucketname/
@@ -195,7 +195,7 @@ Debug option enables debug output to console.
 
 ```sh
 
-$ mc --debug ls play
+mc --debug ls play
 mc: <DEBUG> GET / HTTP/1.1
 Host: play.minio.io:9000
 User-Agent: Minio (darwin; amd64) minio-go/1.0.1 mc/2016-04-01T00:22:11Z
@@ -233,7 +233,7 @@ JSON option enables parseable output in JSON format.
 
 ```sh
 
-$ mc --json ls play
+mc --json ls play
 {"status":"success","type":"folder","lastModified":"2016-04-08T03:56:14.577+05:30","size":0,"key":"albums/"}
 {"status":"success","type":"folder","lastModified":"2016-04-04T16:11:45.349+05:30","size":0,"key":"backup/"}
 {"status":"success","type":"folder","lastModified":"2016-04-01T20:10:53.941+05:30","size":0,"key":"deebucket/"}
@@ -289,7 +289,7 @@ FLAGS:
 
 ```sh
 
-$ mc ls play
+mc ls play
 [2016-04-08 03:56:14 IST]     0B albums/
 [2016-04-04 16:11:45 IST]     0B backup/
 [2016-04-01 20:10:53 IST]     0B deebucket/
@@ -319,7 +319,7 @@ FLAGS:
 
 ```sh
 
-$ mc mb play/mybucket
+mc mb play/mybucket
 Bucket created successfully ‘play/mybucket’.
 
 ```
@@ -344,7 +344,7 @@ FLAGS:
 
 ```sh
 
-$ mc cat play/mybucket/myobject.txt
+mc cat play/mybucket/myobject.txt
 Hello Minio!!
 
 ```
@@ -366,7 +366,7 @@ FLAGS:
 
 ```sh
 
-$ mysqldump -u root -p ******* accountsdb | mc pipe s3/ferenginar/backups/accountsdb-oct-9-2015.sql
+mysqldump -u root -p ******* accountsdb | mc pipe s3/ferenginar/backups/accountsdb-oct-9-2015.sql
 
 ```
 
@@ -390,7 +390,7 @@ FLAGS:
 
 ```sh
 
-$ mc cp myobject.txt play/mybucket
+mc cp myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 
 ```
@@ -419,7 +419,7 @@ FLAGS:
 
 ```sh
 
-$ mc rm play/mybucket/myobject.txt
+mc rm play/mybucket/myobject.txt
 Removed ‘play/mybucket/myobject.txt’.
 
 ```
@@ -428,7 +428,7 @@ Removed ‘play/mybucket/myobject.txt’.
 
 ```sh
 
-$ mc rm --recursive --force play/myobject
+mc rm --recursive --force play/myobject
 Removed ‘play/myobject/newfile.txt’.
 Removed 'play/myobject/otherobject.txt’.
 
@@ -438,7 +438,7 @@ Removed 'play/myobject/otherobject.txt’.
 
 ```sh
 
-$ mc rm  --incomplete --recursive --force play/mybucket
+mc rm  --incomplete --recursive --force play/mybucket
 Removed ‘play/mybucket/mydvd.iso’.
 Removed 'play/mybucket/backup.tgz’.
 
@@ -446,7 +446,7 @@ Removed 'play/mybucket/backup.tgz’.
 *Example: Remove object only if its created older than one day.*
 
 ```sh
-$ mc rm --force --older=24h play/mybucket/oldsongs
+mc rm --force --older=24h play/mybucket/oldsongs
 ```
 
 <a name="share"></a>
@@ -491,7 +491,7 @@ OPTIONS:
 
 ```sh
 
-$ mc share download --expire 4h play/mybucket/myobject.txt
+mc share download --expire 4h play/mybucket/myobject.txt
 URL: https://play.minio.io:9000/mybucket/myobject.txt
 Expire: 0 days 4 hours 0 minutes 0 seconds
 Share: https://play.minio.io:9000/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
@@ -518,7 +518,7 @@ OPTIONS:
 
 ```sh
 
-$ mc share upload play/mybucket/myotherobject.txt
+mc share upload play/mybucket/myotherobject.txt
 URL: https://play.minio.io:9000/mybucket/myotherobject.txt
 Expire: 7 days 0 hours 0 minutes 0 seconds
 Share: curl https://play.minio.io:9000/mybucket -F x-amz-date=20160408T182356Z -F x-amz-signature=de343934bd0ba38bda0903813b5738f23dde67b4065ea2ec2e4e52f6389e51e1 -F bucket=mybucket -F policy=eyJleHBpcmF0aW9uIjoiMjAxNi0wNC0xNVQxODoyMzo1NS4wMDdaIiwiY29uZGl0aW9ucyI6W1siZXEiLCIkYnVja2V0IiwibXlidWNrZXQiXSxbImVxIiwiJGtleSIsIm15b3RoZXJvYmplY3QudHh0Il0sWyJlcSIsIiR4LWFtei1kYXRlIiwiMjAxNjA0MDhUMTgyMzU2WiJdLFsiZXEiLCIkeC1hbXotYWxnb3JpdGhtIiwiQVdTNC1ITUFDLVNIQTI1NiJdLFsiZXEiLCIkeC1hbXotY3JlZGVudGlhbCIsIlEzQU0zVVE4NjdTUFFRQTQzUDJGLzIwMTYwNDA4L3VzLWVhc3QtMS9zMy9hd3M0X3JlcXVlc3QiXV19 -F x-amz-algorithm=AWS4-HMAC-SHA256 -F x-amz-credential=Q3AM3UQ867SPQQA43P2F/20160408/us-east-1/s3/aws4_request -F key=myotherobject.txt -F file=@<FILE>
@@ -563,7 +563,7 @@ FLAGS:
 
 ```sh
 
-$ mc mirror localdir/ play/mybucket
+mc mirror localdir/ play/mybucket
 localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 73 B/s 0
 
 ```
@@ -572,7 +572,7 @@ localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 
 ```sh
 
-$ mc mirror -w localdir play/mybucket
+mc mirror -w localdir play/mybucket
 localdir/new.txt:  10 MB / 10 MB  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 1 MB/s 15s
 
 ```
@@ -598,7 +598,7 @@ FLAGS:
 
 ```sh
 
-$  mc diff localdir play/mybucket
+ mc diff localdir play/mybucket
 ‘localdir/notes.txt’ and ‘https://play.minio.io:9000/mybucket/notes.txt’ - only in first.
 
 ```
@@ -627,7 +627,7 @@ FLAGS:
 
 ```sh
 
-$ mc watch play/testbucket
+mc watch play/testbucket
 [2016-08-18T00:51:29.735Z] 2.7KiB ObjectCreated https://play.minio.io:9000/testbucket/CONTRIBUTING.md
 [2016-08-18T00:51:29.780Z]  1009B ObjectCreated https://play.minio.io:9000/testbucket/MAINTAINERS.md
 [2016-08-18T00:51:29.839Z] 6.9KiB ObjectCreated https://play.minio.io:9000/testbucket/README.md
@@ -638,7 +638,7 @@ $ mc watch play/testbucket
 
 ```sh
 
-$ mc watch ~/Photos
+mc watch ~/Photos
 [2016-08-17T17:54:19.565Z] 3.7MiB ObjectCreated /home/minio/Downloads/tmp/5467026530_a8611b53f9_o.jpg
 [2016-08-17T17:54:19.565Z] 3.7MiB ObjectCreated /home/minio/Downloads/tmp/5467026530_a8611b53f9_o.jpg
 ...
@@ -669,7 +669,7 @@ FLAGS:
 
 ```sh
 
-$ mc events list play/andoria
+mc events list play/andoria
 MyTopic        arn:minio:sns:us-east-1:1:TestTopic    s3:ObjectCreated:*,s3:ObjectRemoved:*   suffix:.jpg
 
 ```
@@ -678,7 +678,7 @@ MyTopic        arn:minio:sns:us-east-1:1:TestTopic    s3:ObjectCreated:*,s3:Obje
 
 ```sh
 
-$ mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --events put
+mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --events put
 
 ```
 
@@ -689,7 +689,7 @@ Add `prefix` and `suffix` filtering rules for `sqs` notification resource.
 ```sh
 
 
-$ mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ --suffix .jpg
+mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ --suffix .jpg
 
 ```
 
@@ -697,7 +697,7 @@ $ mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photo
 
 ```sh
 
-$ mc events remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
+mc events remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
 
 ```
 
@@ -724,7 +724,7 @@ Show current anonymous bucket policy for *mybucket/myphotos/2020/* sub-directory
 
 ```sh
 
-$ mc policy play/mybucket/myphotos/2020/
+mc policy play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 
 ```
@@ -734,7 +734,7 @@ Set anonymous bucket policy  for *mybucket/myphotos/2020/* sub-directory and its
 
 ```sh
 
-$ mc policy download play/mybucket/myphotos/2020/
+mc policy download play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 
 ```
@@ -745,7 +745,7 @@ Remove any bucket policy for *mybucket/myphotos/2020/* sub-directory.
 
 ```sh
 
-$ mc policy none play/mybucket/myphotos/2020/
+mc policy none play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 
 ```
@@ -777,7 +777,7 @@ FLAGS:
 
 ```sh
 
-$ mc session list
+mc session list
 IXWKjpQM -> [2016-04-08 19:11:14 IST] cp assets.go play/mybucket
 ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
 
@@ -787,7 +787,7 @@ ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
 
 ```sh
 
-$ mc session resume IXWKjpQM 
+mc session resume IXWKjpQM 
 ...assets.go: 1.68 KB / 1.68 KB  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 784 B/s 2s
 
 ```
@@ -827,9 +827,9 @@ Add Minio server access and secret keys to config file host entry. Note that, th
 
 ```sh
 
-$ set +o history
-$ mc config host add myminio http://localhost:9000 OMQAGGOL63D7UNVQFY8X GcY5RHNmnEWvD/1QxD3spEIGj+Vt9L7eHaAaBTkJ
-$ set -o history
+set +o history
+mc config host add myminio http://localhost:9000 OMQAGGOL63D7UNVQFY8X GcY5RHNmnEWvD/1QxD3spEIGj+Vt9L7eHaAaBTkJ
+set -o history
 
 ```
 
@@ -852,7 +852,7 @@ FLAGS:
 
 ```sh
 
-$ mc update
+mc update
 You are already running the most recent version of ‘mc’.
 
 ```
@@ -877,7 +877,7 @@ FLAGS:
  
 ```sh
 
-$ mc version
+mc version
 Version: 2016-04-01T00:22:11Z
 Release-tag: RELEASE.2016-04-01T00-22-11Z
 Commit-id: 12adf3be326f5b6610cdd1438f72dfd861597fce

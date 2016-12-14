@@ -41,8 +41,8 @@ version       Print version.
 Install minio packages using [Homebrew](http://brew.sh/)
 
 ```sh
-$ brew install minio-mc
-$ mc --help
+brew install minio-mc
+mc --help
 ```
 
 ### Install from Source
@@ -53,7 +53,7 @@ If you do not have a working Golang environment, please follow [How to install G
 
 ```sh
 
-$ go get -u github.com/minio/mc
+go get -u github.com/minio/mc
 
 ```
 
@@ -64,8 +64,8 @@ $ go get -u github.com/minio/mc
 
 ```sh
 
-$ chmod +x mc
-$ ./mc --help
+chmod +x mc
+./mc --help
 
 ```
 
@@ -73,8 +73,8 @@ $ ./mc --help
 
 ```sh
 
-$ chmod 755 mc
-$ ./mc --help
+chmod 755 mc
+./mc --help
 
 ```
 
@@ -82,7 +82,7 @@ $ ./mc --help
 
 ```sh
 
-C:\Users\Username\Downloads> mc.exe --help
+mc.exe --help
 
 ```
 
@@ -90,8 +90,8 @@ C:\Users\Username\Downloads> mc.exe --help
 
 ```sh
 
-$ chmod 755 mc
-$ ./mc --help
+chmod 755 mc
+./mc --help
 
 ```
 
@@ -99,8 +99,8 @@ $ ./mc --help
 
 ```sh
 
-$ chmod 755 mc
-$ ./mc --help
+chmod 755 mc
+./mc --help
 
 ```
 
@@ -126,7 +126,7 @@ Minio server displays URL, access and secret keys.
 
 ```sh
 
-$ mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
+mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 
 ```
 ### Example - Amazon S3 Cloud Storage
@@ -135,7 +135,7 @@ Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](ht
 
 ```sh
 
-$ mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
+mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 
 ```
 
@@ -145,7 +145,7 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 
 ```sh
 
-$ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
+mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
 
 ```
 
@@ -161,7 +161,7 @@ List all buckets from https://play.minio.io:9000
 
 ```sh
 
-$ mc ls play
+mc ls play
 [2016-03-22 19:47:48 PDT]     0B my-bucketname/
 [2016-03-22 22:01:07 PDT]     0B mytestbucket/
 [2016-03-22 20:04:39 PDT]     0B mybucketname/
