@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package minio
+package s3signer
 
 import (
 	"bytes"
@@ -58,9 +58,9 @@ func encodeURL2Path(u *url.URL) (path string) {
 	return
 }
 
-// preSignV2 - presign the request in following style.
+// PreSignV2 - presign the request in following style.
 // https://${S3_BUCKET}.s3.amazonaws.com/${S3_OBJECT}?AWSAccessKeyId=${S3_ACCESS_KEY}&Expires=${TIMESTAMP}&Signature=${SIGNATURE}.
-func preSignV2(req http.Request, accessKeyID, secretAccessKey string, expires int64) *http.Request {
+func PreSignV2(req http.Request, accessKeyID, secretAccessKey string, expires int64) *http.Request {
 	// Presign is not needed for anonymous credentials.
 	if accessKeyID == "" || secretAccessKey == "" {
 		return &req
@@ -104,9 +104,9 @@ func preSignV2(req http.Request, accessKeyID, secretAccessKey string, expires in
 	return &req
 }
 
-// postPresignSignatureV2 - presigned signature for PostPolicy
+// PostPresignSignatureV2 - presigned signature for PostPolicy
 // request.
-func postPresignSignatureV2(policyBase64, secretAccessKey string) string {
+func PostPresignSignatureV2(policyBase64, secretAccessKey string) string {
 	hm := hmac.New(sha1.New, []byte(secretAccessKey))
 	hm.Write([]byte(policyBase64))
 	signature := base64.StdEncoding.EncodeToString(hm.Sum(nil))
@@ -129,8 +129,8 @@ func postPresignSignatureV2(policyBase64, secretAccessKey string) string {
 //
 // CanonicalizedProtocolHeaders = <described below>
 
-// signV2 sign the request before Do() (AWS Signature Version 2).
-func signV2(req http.Request, accessKeyID, secretAccessKey string) *http.Request {
+// SignV2 sign the request before Do() (AWS Signature Version 2).
+func SignV2(req http.Request, accessKeyID, secretAccessKey string) *http.Request {
 	// Signature calculation is not needed for anonymous credentials.
 	if accessKeyID == "" || secretAccessKey == "" {
 		return &req

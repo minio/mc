@@ -20,6 +20,8 @@ import (
 	"errors"
 	"net/url"
 	"time"
+
+	"github.com/minio/minio-go/pkg/s3signer"
 )
 
 // supportedGetReqParams - supported request parameters for GET presigned request.
@@ -133,7 +135,7 @@ func (c Client) PresignedPostPolicy(p *PostPolicy) (u *url.URL, formData map[str
 			p.formData["AWSAccessKeyId"] = c.accessKeyID
 		}
 		// Sign the policy.
-		p.formData["signature"] = postPresignSignatureV2(policyBase64, c.secretAccessKey)
+		p.formData["signature"] = s3signer.PostPresignSignatureV2(policyBase64, c.secretAccessKey)
 		return u, p.formData, nil
 	}
 
@@ -156,7 +158,7 @@ func (c Client) PresignedPostPolicy(p *PostPolicy) (u *url.URL, formData map[str
 	}
 
 	// Add a credential policy.
-	credential := getCredential(c.accessKeyID, location, t)
+	credential := s3signer.GetCredential(c.accessKeyID, location, t)
 	if err = p.addNewPolicy(policyCondition{
 		matchType: "eq",
 		condition: "$x-amz-credential",
@@ -172,6 +174,6 @@ func (c Client) PresignedPostPolicy(p *PostPolicy) (u *url.URL, formData map[str
 	p.formData["x-amz-algorithm"] = signV4Algorithm
 	p.formData["x-amz-credential"] = credential
 	p.formData["x-amz-date"] = t.Format(iso8601DateFormat)
-	p.formData["x-amz-signature"] = postPresignSignatureV4(policyBase64, t, c.secretAccessKey, location)
+	p.formData["x-amz-signature"] = s3signer.PostPresignSignatureV4(policyBase64, t, c.secretAccessKey, location)
 	return u, p.formData, nil
 }

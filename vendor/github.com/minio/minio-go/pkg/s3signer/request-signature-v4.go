@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package minio
+package s3signer
 
 import (
 	"bytes"
@@ -101,8 +101,8 @@ func getScope(location string, t time.Time) string {
 	return scope
 }
 
-// getCredential generate a credential string.
-func getCredential(accessKeyID, location string, t time.Time) string {
+// GetCredential generate a credential string.
+func GetCredential(accessKeyID, location string, t time.Time) string {
 	scope := getScope(location, t)
 	return accessKeyID + "/" + scope
 }
@@ -202,9 +202,9 @@ func getStringToSignV4(t time.Time, location, canonicalRequest string) string {
 	return stringToSign
 }
 
-// preSignV4 presign the request, in accordance with
+// PreSignV4 presign the request, in accordance with
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html.
-func preSignV4(req http.Request, accessKeyID, secretAccessKey, location string, expires int64) *http.Request {
+func PreSignV4(req http.Request, accessKeyID, secretAccessKey, location string, expires int64) *http.Request {
 	// Presign is not needed for anonymous credentials.
 	if accessKeyID == "" || secretAccessKey == "" {
 		return &req
@@ -214,7 +214,7 @@ func preSignV4(req http.Request, accessKeyID, secretAccessKey, location string, 
 	t := time.Now().UTC()
 
 	// Get credential string.
-	credential := getCredential(accessKeyID, location, t)
+	credential := GetCredential(accessKeyID, location, t)
 
 	// Get all signed headers.
 	signedHeaders := getSignedHeaders(req)
@@ -246,9 +246,9 @@ func preSignV4(req http.Request, accessKeyID, secretAccessKey, location string, 
 	return &req
 }
 
-// postPresignSignatureV4 - presigned signature for PostPolicy
+// PostPresignSignatureV4 - presigned signature for PostPolicy
 // requests.
-func postPresignSignatureV4(policyBase64 string, t time.Time, secretAccessKey, location string) string {
+func PostPresignSignatureV4(policyBase64 string, t time.Time, secretAccessKey, location string) string {
 	// Get signining key.
 	signingkey := getSigningKey(secretAccessKey, location, t)
 	// Calculate signature.
@@ -256,9 +256,9 @@ func postPresignSignatureV4(policyBase64 string, t time.Time, secretAccessKey, l
 	return signature
 }
 
-// signV4 sign the request before Do(), in accordance with
+// SignV4 sign the request before Do(), in accordance with
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html.
-func signV4(req http.Request, accessKeyID, secretAccessKey, location string) *http.Request {
+func SignV4(req http.Request, accessKeyID, secretAccessKey, location string) *http.Request {
 	// Signature calculation is not needed for anonymous credentials.
 	if accessKeyID == "" || secretAccessKey == "" {
 		return &req
@@ -280,7 +280,7 @@ func signV4(req http.Request, accessKeyID, secretAccessKey, location string) *ht
 	signingKey := getSigningKey(secretAccessKey, location, t)
 
 	// Get credential string.
-	credential := getCredential(accessKeyID, location, t)
+	credential := GetCredential(accessKeyID, location, t)
 
 	// Get all signed headers.
 	signedHeaders := getSignedHeaders(req)

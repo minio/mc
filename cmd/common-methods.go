@@ -58,31 +58,30 @@ func getSourceStream(urlStr string) (reader io.Reader, err *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(urlStr)
 	}
-	return getSourceStreamFromAlias(alias, urlStrFull)
+	reader, _, err = getSourceStreamFromAlias(alias, urlStrFull)
+	return reader, err
 }
 
 // getSourceStreamFromAlias gets a reader from URL.
-func getSourceStreamFromAlias(alias string, urlStr string) (reader io.Reader, err *probe.Error) {
+func getSourceStreamFromAlias(alias string, urlStr string) (reader io.Reader, metadata map[string][]string, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
-		return nil, err.Trace(alias, urlStr)
+		return nil, nil, err.Trace(alias, urlStr)
 	}
-	reader, err = sourceClnt.Get()
+	reader, metadata, err = sourceClnt.Get()
 	if err != nil {
-		return nil, err.Trace(alias, urlStr)
+		return nil, nil, err.Trace(alias, urlStr)
 	}
-	return reader, nil
+	return reader, metadata, nil
 }
 
 // putTargetStreamFromAlias writes to URL from Reader.
-func putTargetStreamFromAlias(alias string, urlStr string, reader io.Reader, size int64, progress io.Reader) (int64, *probe.Error) {
+func putTargetStreamFromAlias(alias string, urlStr string, reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
-	contentType := guessURLContentType(urlStr)
-	var n int64
-	n, err = targetClnt.Put(reader, size, contentType, progress)
+	n, err := targetClnt.Put(reader, size, metadata, progress)
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
 	}
@@ -95,7 +94,11 @@ func putTargetStream(urlStr string, reader io.Reader, size int64) (int64, *probe
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
-	return putTargetStreamFromAlias(alias, urlStrFull, reader, size, nil)
+	contentType := guessURLContentType(urlStr)
+	metadata := map[string][]string{
+		"Content-Type": {contentType},
+	}
+	return putTargetStreamFromAlias(alias, urlStrFull, reader, size, metadata, nil)
 }
 
 // copySourceToTargetURL copies to targetURL from source.
@@ -130,11 +133,11 @@ func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
 		}
 	} else {
 		// Proceed with regular stream copy.
-		reader, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
+		reader, metadata, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
-		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, progress)
+		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, metadata, progress)
 		if err != nil {
 			return urls.WithError(err.Trace(targetURL.String()))
 		}

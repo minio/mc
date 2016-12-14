@@ -21,8 +21,15 @@ import (
 	"strings"
 )
 
-// PutObjectWithProgress - With progress.
+// PutObjectWithProgress - with progress.
 func (c Client) PutObjectWithProgress(bucketName, objectName string, reader io.Reader, contentType string, progress io.Reader) (n int64, err error) {
+	metaData := make(map[string][]string)
+	metaData["Content-Type"] = []string{contentType}
+	return c.PutObjectWithMetadata(bucketName, objectName, reader, metaData, progress)
+}
+
+// PutObjectWithMetadata - with metadata.
+func (c Client) PutObjectWithMetadata(bucketName, objectName string, reader io.Reader, metaData map[string][]string, progress io.Reader) (n int64, err error) {
 	// Input validation.
 	if err := isValidBucketName(bucketName); err != nil {
 		return 0, err
@@ -63,7 +70,7 @@ func (c Client) PutObjectWithProgress(bucketName, objectName string, reader io.R
 			return 0, ErrEntityTooLarge(size, maxSinglePutObjectSize, bucketName, objectName)
 		}
 		// Do not compute MD5 for Google Cloud Storage. Uploads up to 5GiB in size.
-		return c.putObjectNoChecksum(bucketName, objectName, reader, size, contentType, progress)
+		return c.putObjectNoChecksum(bucketName, objectName, reader, size, metaData, progress)
 	}
 
 	// NOTE: S3 doesn't allow anonymous multipart requests.
@@ -81,15 +88,15 @@ func (c Client) PutObjectWithProgress(bucketName, objectName string, reader io.R
 		}
 		// Do not compute MD5 for anonymous requests to Amazon
 		// S3. Uploads up to 5GiB in size.
-		return c.putObjectNoChecksum(bucketName, objectName, reader, size, contentType, progress)
+		return c.putObjectNoChecksum(bucketName, objectName, reader, size, metaData, progress)
 	}
 
 	// putSmall object.
 	if size < minPartSize && size >= 0 {
-		return c.putObjectSingle(bucketName, objectName, reader, size, contentType, progress)
+		return c.putObjectSingle(bucketName, objectName, reader, size, metaData, progress)
 	}
 	// For all sizes greater than 5MiB do multipart.
-	n, err = c.putObjectMultipart(bucketName, objectName, reader, size, contentType, progress)
+	n, err = c.putObjectMultipart(bucketName, objectName, reader, size, metaData, progress)
 	if err != nil {
 		errResp := ToErrorResponse(err)
 		// Verify if multipart functionality is not available, if not
@@ -100,7 +107,7 @@ func (c Client) PutObjectWithProgress(bucketName, objectName string, reader io.R
 				return 0, ErrEntityTooLarge(size, maxSinglePutObjectSize, bucketName, objectName)
 			}
 			// Fall back to uploading as single PutObject operation.
-			return c.putObjectSingle(bucketName, objectName, reader, size, contentType, progress)
+			return c.putObjectSingle(bucketName, objectName, reader, size, metaData, progress)
 		}
 		return n, err
 	}

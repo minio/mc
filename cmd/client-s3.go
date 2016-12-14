@@ -440,31 +440,37 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	}, nil
 }
 
-// Get - get object.
-func (c *s3Client) Get() (io.Reader, *probe.Error) {
+// Get - get object with metadata.
+func (c *s3Client) Get() (io.Reader, map[string][]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	reader, e := c.api.GetObject(bucket, object)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {
-			return nil, probe.NewError(PathInsufficientPermission{Path: c.targetURL.String()})
+			return nil, nil, probe.NewError(PathInsufficientPermission{Path: c.targetURL.String()})
 		}
 		if errResponse.Code == "NoSuchBucket" {
-			return nil, probe.NewError(BucketDoesNotExist{
+			return nil, nil, probe.NewError(BucketDoesNotExist{
 				Bucket: bucket,
 			})
 		}
 		if errResponse.Code == "InvalidBucketName" {
-			return nil, probe.NewError(BucketInvalid{
+			return nil, nil, probe.NewError(BucketInvalid{
 				Bucket: bucket,
 			})
 		}
 		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
-			return nil, probe.NewError(ObjectMissing{})
+			return nil, nil, probe.NewError(ObjectMissing{})
 		}
-		return nil, probe.NewError(e)
+		return nil, nil, probe.NewError(e)
 	}
-	return reader, nil
+	objInfo, e := reader.Stat()
+	if e != nil {
+		return nil, nil, probe.NewError(e)
+	}
+	metadata := objInfo.Metadata
+	metadata.Set("Content-Type", objInfo.ContentType)
+	return reader, metadata, nil
 }
 
 // Copy - copy object
@@ -507,20 +513,18 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader) *probe.Er
 	return nil
 }
 
-// Put - put object.
-func (c *s3Client) Put(reader io.Reader, size int64, contentType string, progress io.Reader) (int64, *probe.Error) {
-	// md5 is purposefully ignored since AmazonS3 does not return proper md5sum
-	// for a multipart upload and there is no need to cross verify,
-	// invidual parts are properly verified fully in transit and also upon completion
-	// of the multipart request.
+// Put - upload an object with custom metadata.
+func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	if contentType == "" {
-		contentType = "application/octet-stream"
+	_, ok := metadata["Content-Type"]
+	if !ok {
+		// Set content-type if not specified.
+		metadata["Content-Type"] = []string{"application/octet-stream"}
 	}
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
-	n, e := c.api.PutObjectWithProgress(bucket, object, reader, contentType, progress)
+	n, e := c.api.PutObjectWithMetadata(bucket, object, reader, metadata, progress)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {

@@ -63,7 +63,7 @@ func shouldUploadPartReadAt(objPart objectPart, uploadReq uploadPartReq) bool {
 // temporary files for staging all the data, these temporary files are
 // cleaned automatically when the caller i.e http client closes the
 // stream after uploading all the contents successfully.
-func (c Client) putObjectMultipartFromReadAt(bucketName, objectName string, reader io.ReaderAt, size int64, contentType string, progress io.Reader) (n int64, err error) {
+func (c Client) putObjectMultipartFromReadAt(bucketName, objectName string, reader io.ReaderAt, size int64, metaData map[string][]string, progress io.Reader) (n int64, err error) {
 	// Input validation.
 	if err := isValidBucketName(bucketName); err != nil {
 		return 0, err
@@ -73,7 +73,7 @@ func (c Client) putObjectMultipartFromReadAt(bucketName, objectName string, read
 	}
 
 	// Get the upload id of a previously partially uploaded object or initiate a new multipart upload
-	uploadID, partsInfo, err := c.getMpartUploadSession(bucketName, objectName, contentType)
+	uploadID, partsInfo, err := c.getMpartUploadSession(bucketName, objectName, metaData)
 	if err != nil {
 		return 0, err
 	}

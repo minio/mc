@@ -51,9 +51,11 @@ type Client interface {
 	SetAccess(access string) *probe.Error
 
 	// I/O operations
-	Get() (reader io.Reader, err *probe.Error)
-	Put(reader io.Reader, size int64, contentType string, progress io.Reader) (n int64, err *probe.Error)
 	Copy(source string, size int64, progress io.Reader) *probe.Error
+
+	// I/O operations with metadata.
+	Get() (reader io.Reader, metadata map[string][]string, err *probe.Error)
+	Put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (n int64, err *probe.Error)
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)

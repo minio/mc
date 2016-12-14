@@ -192,8 +192,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 
 /// Object operations.
 
-// Put - create a new file.
-func (f *fsClient) Put(reader io.Reader, size int64, contentType string, progress io.Reader) (int64, *probe.Error) {
+func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
 	// ContentType is not handled on purpose.
 	// For filesystem this is a redundant information.
 
@@ -352,6 +351,11 @@ func (f *fsClient) Put(reader io.Reader, size int64, contentType string, progres
 	return totalWritten, nil
 }
 
+// Put - create a new file with metadata.
+func (f *fsClient) Put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
+	return f.put(reader, size, nil, progress)
+}
+
 // ShareDownload - share download not implemented for filesystem.
 func (f *fsClient) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
@@ -449,9 +453,9 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Er
 	return nil
 }
 
-// GetPartial download a part object from bucket.
-// sets err for any errors, reader is nil for errors.
-func (f *fsClient) Get() (io.Reader, *probe.Error) {
+// get - get wrapper returning reader and additional metadata if any.
+// currently only returns metadata.
+func (f *fsClient) get() (io.Reader, map[string][]string, *probe.Error) {
 	tmppath := f.PathURL.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
@@ -463,14 +467,22 @@ func (f *fsClient) Get() (io.Reader, *probe.Error) {
 	_, e := filepath.EvalSymlinks(tmppath)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
-		return nil, err.Trace(f.PathURL.Path)
+		return nil, nil, err.Trace(f.PathURL.Path)
 	}
 	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
-		return nil, err.Trace(f.PathURL.Path)
+		return nil, nil, err.Trace(f.PathURL.Path)
 	}
-	return fileData, nil
+	metadata := map[string][]string{
+		"Content-Type": {guessURLContentType(f.PathURL.Path)},
+	}
+	return fileData, metadata, nil
+}
+
+// Get returns reader and any additional metadata.
+func (f *fsClient) Get() (io.Reader, map[string][]string, *probe.Error) {
+	return f.get()
 }
 
 // Remove - remove entry read from clientContent channel.
