@@ -33,11 +33,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/minio/minio-go/pkg/s3signer"
 )
 
 // Client implements Amazon S3 compatible methods.
 type Client struct {
 	///  Standard options.
+
+	// Parsed endpoint url provided by the user.
+	endpointURL url.URL
 
 	// AccessKeyID required for authorized requests.
 	accessKeyID string
@@ -53,7 +58,6 @@ type Client struct {
 		appName    string
 		appVersion string
 	}
-	endpointURL string
 
 	// Indicate whether we are using https or not
 	secure bool
@@ -116,8 +120,7 @@ func New(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*Cl
 	if err != nil {
 		return nil, err
 	}
-	// Google cloud storage should be set to signature V2, force it if
-	// not.
+	// Google cloud storage should be set to signature V2, force it if not.
 	if isGoogleEndpoint(clnt.endpointURL) {
 		clnt.signature = SignatureV2
 	}
@@ -182,7 +185,7 @@ func privateNew(endpoint, accessKeyID, secretAccessKey string, secure bool) (*Cl
 	clnt.secure = secure
 
 	// Save endpoint URL, user agent for future uses.
-	clnt.endpointURL = endpointURL.String()
+	clnt.endpointURL = *endpointURL
 
 	// Instantiate http client and bucket location cache.
 	clnt.httpClient = &http.Client{
@@ -495,6 +498,8 @@ func (c Client) executeMethod(method string, metadata requestMetadata) (res *htt
 
 		// Read the body to be saved later.
 		errBodyBytes, err := ioutil.ReadAll(res.Body)
+		// res.Body should be closed
+		closeResponse(res)
 		if err != nil {
 			return nil, err
 		}
@@ -578,10 +583,10 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 		}
 		if c.signature.isV2() {
 			// Presign URL with signature v2.
-			req = preSignV2(*req, c.accessKeyID, c.secretAccessKey, metadata.expires)
+			req = s3signer.PreSignV2(*req, c.accessKeyID, c.secretAccessKey, metadata.expires)
 		} else {
 			// Presign URL with signature v4.
-			req = preSignV4(*req, c.accessKeyID, c.secretAccessKey, location, metadata.expires)
+			req = s3signer.PreSignV4(*req, c.accessKeyID, c.secretAccessKey, location, metadata.expires)
 		}
 		return req, nil
 	}
@@ -638,10 +643,10 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 	if !c.anonymous {
 		if c.signature.isV2() {
 			// Add signature version '2' authorization header.
-			req = signV2(*req, c.accessKeyID, c.secretAccessKey)
+			req = s3signer.SignV2(*req, c.accessKeyID, c.secretAccessKey)
 		} else if c.signature.isV4() {
 			// Add signature version '4' authorization header.
-			req = signV4(*req, c.accessKeyID, c.secretAccessKey, location)
+			req = s3signer.SignV4(*req, c.accessKeyID, c.secretAccessKey, location)
 		}
 	}
 
@@ -659,19 +664,14 @@ func (c Client) setUserAgent(req *http.Request) {
 
 // makeTargetURL make a new target url.
 func (c Client) makeTargetURL(bucketName, objectName, bucketLocation string, queryValues url.Values) (*url.URL, error) {
-	// Save host.
-	url, err := url.Parse(c.endpointURL)
-	if err != nil {
-		return nil, err
-	}
-	host := url.Host
+	host := c.endpointURL.Host
 	// For Amazon S3 endpoint, try to fetch location based endpoint.
 	if isAmazonEndpoint(c.endpointURL) {
 		// Fetch new host based on the bucket location.
 		host = getS3Endpoint(bucketLocation)
 	}
 	// Save scheme.
-	scheme := url.Scheme
+	scheme := c.endpointURL.Scheme
 
 	urlStr := scheme + "://" + host + "/"
 	// Make URL only if bucketName is available, otherwise use the

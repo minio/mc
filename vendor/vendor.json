@@ -50,16 +50,22 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "pZ8dP8DPhCsSmAeZPUvbUYLfd8o=",
+			"checksumSHA1": "/057xLXT+4oqAvucT+iHwDqYOok=",
 			"path": "github.com/minio/minio-go",
-			"revision": "95231ceb23b6b961f00ff14f68a155a76afe49a9",
-			"revisionTime": "2016-11-27T19:47:22Z"
+			"revision": "d02caa62b9e1034f93a82d41da806651a666c5a3",
+			"revisionTime": "2016-12-14T00:10:05Z"
 		},
 		{
 			"checksumSHA1": "qTxOBp3GVxCC70ykb7Hxg6UgWwA=",
 			"path": "github.com/minio/minio-go/pkg/policy",
 			"revision": "583c261267bc1022bb3e046c7d01c49d3f56edaa",
 			"revisionTime": "2016-09-03T08:42:23Z"
+		},
+		{
+			"checksumSHA1": "l95EyvF0yFAItXsXYqsZ6g7yGy4=",
+			"path": "github.com/minio/minio-go/pkg/s3signer",
+			"revision": "d02caa62b9e1034f93a82d41da806651a666c5a3",
+			"revisionTime": "2016-12-14T00:10:05Z"
 		},
 		{
 			"checksumSHA1": "A8QOw1aWwc+RtjGozY0XeS5varo=",

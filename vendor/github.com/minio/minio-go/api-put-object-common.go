@@ -166,7 +166,7 @@ func hashCopyN(hashAlgorithms map[string]hash.Hash, hashSums map[string][]byte, 
 
 // getUploadID - fetch upload id if already present for an object name
 // or initiate a new request to fetch a new upload id.
-func (c Client) newUploadID(bucketName, objectName, contentType string) (uploadID string, err error) {
+func (c Client) newUploadID(bucketName, objectName string, metaData map[string][]string) (uploadID string, err error) {
 	// Input validation.
 	if err := isValidBucketName(bucketName); err != nil {
 		return "", err
@@ -175,13 +175,8 @@ func (c Client) newUploadID(bucketName, objectName, contentType string) (uploadI
 		return "", err
 	}
 
-	// Set content Type to default if empty string.
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
 	// Initiate multipart upload for an object.
-	initMultipartUploadResult, err := c.initiateMultipartUpload(bucketName, objectName, contentType)
+	initMultipartUploadResult, err := c.initiateMultipartUpload(bucketName, objectName, metaData)
 	if err != nil {
 		return "", err
 	}
@@ -190,7 +185,7 @@ func (c Client) newUploadID(bucketName, objectName, contentType string) (uploadI
 
 // getMpartUploadSession returns the upload id and the uploaded parts to continue a previous upload session
 // or initiate a new multipart session if no current one found
-func (c Client) getMpartUploadSession(bucketName, objectName, contentType string) (string, map[int]objectPart, error) {
+func (c Client) getMpartUploadSession(bucketName, objectName string, metaData map[string][]string) (string, map[int]objectPart, error) {
 	// A map of all uploaded parts.
 	var partsInfo map[int]objectPart
 	var err error
@@ -202,7 +197,7 @@ func (c Client) getMpartUploadSession(bucketName, objectName, contentType string
 
 	if uploadID == "" {
 		// Initiates a new multipart request
-		uploadID, err = c.newUploadID(bucketName, objectName, contentType)
+		uploadID, err = c.newUploadID(bucketName, objectName, metaData)
 		if err != nil {
 			return "", nil, err
 		}
@@ -213,7 +208,7 @@ func (c Client) getMpartUploadSession(bucketName, objectName, contentType string
 			// When the server returns NoSuchUpload even if its previouls acknowleged the existance of the upload id,
 			// initiate a new multipart upload
 			if respErr, ok := err.(ErrorResponse); ok && respErr.Code == "NoSuchUpload" {
-				uploadID, err = c.newUploadID(bucketName, objectName, contentType)
+				uploadID, err = c.newUploadID(bucketName, objectName, metaData)
 				if err != nil {
 					return "", nil, err
 				}

@@ -18,7 +18,6 @@ package minio
 
 import (
 	"bytes"
-	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
@@ -55,13 +54,6 @@ func sumMD5(data []byte) []byte {
 	return hash.Sum(nil)
 }
 
-// sumHMAC calculate hmac between two input byte array.
-func sumHMAC(key []byte, data []byte) []byte {
-	hash := hmac.New(sha256.New, key)
-	hash.Write(data)
-	return hash.Sum(nil)
-}
-
 // getEndpointURL - construct a new endpoint.
 func getEndpointURL(endpoint string, secure bool) (*url.URL, error) {
 	if strings.Contains(endpoint, ":") {
@@ -93,7 +85,7 @@ func getEndpointURL(endpoint string, secure bool) (*url.URL, error) {
 	}
 
 	// Validate incoming endpoint URL.
-	if err := isValidEndpointURL(endpointURL.String()); err != nil {
+	if err := isValidEndpointURL(*endpointURL); err != nil {
 		return nil, err
 	}
 	return endpointURL, nil
@@ -152,17 +144,19 @@ func closeResponse(resp *http.Response) {
 	}
 }
 
+// Sentinel URL is the default url value which is invalid.
+var sentinelURL = url.URL{}
+
 // isVirtualHostSupported - verifies if bucketName can be part of
 // virtual host. Currently only Amazon S3 and Google Cloud Storage
 // would support this.
-func isVirtualHostSupported(endpointURL string, bucketName string) bool {
-	url, err := url.Parse(endpointURL)
-	if err != nil {
+func isVirtualHostSupported(endpointURL url.URL, bucketName string) bool {
+	if endpointURL == sentinelURL {
 		return false
 	}
 	// bucketName can be valid but '.' in the hostname will fail SSL
 	// certificate validation. So do not use host-style for such buckets.
-	if url.Scheme == "https" && strings.Contains(bucketName, ".") {
+	if endpointURL.Scheme == "https" && strings.Contains(bucketName, ".") {
 		return false
 	}
 	// Return true for all other cases
@@ -170,18 +164,11 @@ func isVirtualHostSupported(endpointURL string, bucketName string) bool {
 }
 
 // Match if it is exactly Amazon S3 endpoint.
-func isAmazonEndpoint(endpointURL string) bool {
+func isAmazonEndpoint(endpointURL url.URL) bool {
 	if isAmazonChinaEndpoint(endpointURL) {
 		return true
 	}
-	url, err := url.Parse(endpointURL)
-	if err != nil {
-		return false
-	}
-	if url.Host == "s3.amazonaws.com" {
-		return true
-	}
-	return false
+	return endpointURL.Host == "s3.amazonaws.com"
 }
 
 // Match if it is exactly Amazon S3 China endpoint.
@@ -190,53 +177,35 @@ func isAmazonEndpoint(endpointURL string) bool {
 // the China (Beijing) Region. Customers with existing AWS credentials
 // will not be able to access resources in the new Region, and vice versa.
 // For more info https://aws.amazon.com/about-aws/whats-new/2013/12/18/announcing-the-aws-china-beijing-region/
-func isAmazonChinaEndpoint(endpointURL string) bool {
-	if endpointURL == "" {
+func isAmazonChinaEndpoint(endpointURL url.URL) bool {
+	if endpointURL == sentinelURL {
 		return false
 	}
-	url, err := url.Parse(endpointURL)
-	if err != nil {
-		return false
-	}
-	if url.Host == "s3.cn-north-1.amazonaws.com.cn" {
-		return true
-	}
-	return false
+	return endpointURL.Host == "s3.cn-north-1.amazonaws.com.cn"
 }
 
 // Match if it is exactly Google cloud storage endpoint.
-func isGoogleEndpoint(endpointURL string) bool {
-	if endpointURL == "" {
+func isGoogleEndpoint(endpointURL url.URL) bool {
+	if endpointURL == sentinelURL {
 		return false
 	}
-	url, err := url.Parse(endpointURL)
-	if err != nil {
-		return false
-	}
-	if url.Host == "storage.googleapis.com" {
-		return true
-	}
-	return false
+	return endpointURL.Host == "storage.googleapis.com"
 }
 
 // Verify if input endpoint URL is valid.
-func isValidEndpointURL(endpointURL string) error {
-	if endpointURL == "" {
+func isValidEndpointURL(endpointURL url.URL) error {
+	if endpointURL == sentinelURL {
 		return ErrInvalidArgument("Endpoint url cannot be empty.")
 	}
-	url, err := url.Parse(endpointURL)
-	if err != nil {
+	if endpointURL.Path != "/" && endpointURL.Path != "" {
 		return ErrInvalidArgument("Endpoint url cannot have fully qualified paths.")
 	}
-	if url.Path != "/" && url.Path != "" {
-		return ErrInvalidArgument("Endpoint url cannot have fully qualified paths.")
-	}
-	if strings.Contains(endpointURL, ".amazonaws.com") {
+	if strings.Contains(endpointURL.Host, ".amazonaws.com") {
 		if !isAmazonEndpoint(endpointURL) {
 			return ErrInvalidArgument("Amazon S3 endpoint should be 's3.amazonaws.com'.")
 		}
 	}
-	if strings.Contains(endpointURL, ".googleapis.com") {
+	if strings.Contains(endpointURL.Host, ".googleapis.com") {
 		if !isGoogleEndpoint(endpointURL) {
 			return ErrInvalidArgument("Google Cloud Storage endpoint should be 'storage.googleapis.com'.")
 		}
@@ -380,4 +349,27 @@ func urlEncodePath(pathName string) string {
 		}
 	}
 	return encodedPathname
+}
+
+// make a copy of http.Header
+func cloneHeader(h http.Header) http.Header {
+	h2 := make(http.Header, len(h))
+	for k, vv := range h {
+		vv2 := make([]string, len(vv))
+		copy(vv2, vv)
+		h2[k] = vv2
+	}
+	return h2
+}
+
+// Filter relevant response headers from
+// the HEAD, GET http response. The function takes
+// a list of headers which are filtered out and
+// returned as a new http header.
+func filterHeader(header http.Header, filterKeys []string) (filteredHeader http.Header) {
+	filteredHeader = cloneHeader(header)
+	for _, key := range filterKeys {
+		filteredHeader.Del(key)
+	}
+	return filteredHeader
 }

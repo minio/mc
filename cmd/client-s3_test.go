@@ -224,11 +224,13 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 
 	var reader io.Reader
 	reader = bytes.NewReader(object.data)
-	n, err := s3c.Put(reader, int64(len(object.data)), "application/octet-stream", nil)
+	n, err := s3c.Put(reader, int64(len(object.data)), map[string][]string{
+		"Content-Type": []string{"application/octet-stream"},
+	}, nil)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(object.data)))
 
-	reader, err = s3c.Get()
+	reader, _, err = s3c.Get()
 	c.Assert(err, IsNil)
 	var buffer bytes.Buffer
 	{
