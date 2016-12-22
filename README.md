@@ -74,8 +74,18 @@ chmod 755 mc
 
 ```
 
+## Solaris/Illumos
+### From Source
+
+```sh
+
+go get -u github.com/minio/mc
+mc --help
+
+```
+
 ## Install from Source
-Source installation is intended only for developers and advanced users. `mc update` command does not support upgrading from source based installation. Please download official releases from https://minio.io/downloads/#minio-client.
+Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://minio.io/downloads/#minio-client.
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
