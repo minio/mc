@@ -23,7 +23,7 @@ _init() {
     fi
 
     # List of supported architectures
-    SUPPORTED_OSARCH='linux/386 linux/amd64 linux/arm windows/386 windows/amd64 darwin/amd64 solaris/amd64 freebsd/amd64'
+    SUPPORTED_OSARCH='linux/386 linux/amd64 linux/arm windows/386 windows/amd64 freebsd/amd64'
 
     ## System binaries
     CP=`which cp`
@@ -46,8 +46,8 @@ go_build() {
     # Release shasum name
     release_shasum="$release_str/$os-$arch/$(basename $package).shasum"
 
-    # Go build to build the binary.
-    GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin
+    # Using `go build` to build the binary.
+    CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin
 
     # Create copy
     if [ $os == "windows" ]; then

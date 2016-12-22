@@ -23,30 +23,58 @@ version       Print version.
 
 ```
 
-## 1.  Download Minio Client
-
+## GNU/Linux
+### Binary Download
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
 |GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc|
 ||32-bit Intel|https://dl.minio.io/client/mc/release/linux-386/mc|
 ||32-bit ARM|https://dl.minio.io/client/mc/release/linux-arm/mc|
-|Apple OS X|64-bit Intel|https://dl.minio.io/client/mc/release/darwin-amd64/mc|
-|Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe|
-||32-bit|https://dl.minio.io/client/mc/release/windows-386/mc.exe |
-|FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc|
-|Solaris/Illumos|64-bit|https://dl.minio.io/client/mc/release/solaris-amd64/mc|
 
-### Install from Homebrew
+```sh
 
-Install minio packages using [Homebrew](http://brew.sh/)
+chmod +x mc
+./mc --help
+
+```
+
+## macOS
+### Homebrew
+Install mc packages using [Homebrew](http://brew.sh/)
 
 ```sh
 brew install minio-mc
 mc --help
+
 ```
 
-### Install from Source
+## Microsoft Windows
+### Binary Download
+| Platform | Architecture | URL |
+| ---------- | -------- |------|
+|Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe|
+||32-bit|https://dl.minio.io/client/mc/release/windows-386/mc.exe |
 
+```sh
+
+mc.exe --help
+
+```
+
+## FreeBSD
+### Binary Download
+| Platform | Architecture | URL |
+| ---------- | -------- |------|
+|FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc|
+
+```sh
+
+chmod 755 mc
+./mc --help
+
+```
+
+## Install from Source
 Source installation is intended only for developers and advanced users. `mc update` command does not support upgrading from source based installation. Please download official releases from https://minio.io/downloads/#minio-client.
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
@@ -57,60 +85,10 @@ go get -u github.com/minio/mc
 
 ```
 
-## 2. Run Minio Client
-
-
-### GNU/Linux
-
-```sh
-
-chmod +x mc
-./mc --help
-
-```
-
-### OS X
-
-```sh
-
-chmod 755 mc
-./mc --help
-
-```
-
-### Microsoft Windows
-
-```sh
-
-mc.exe --help
-
-```
-
-### Solaris/Illumos
-
-```sh
-
-chmod 755 mc
-./mc --help
-
-```
-
-### FreeBSD
-
-```sh
-
-chmod 755 mc
-./mc --help
-
-```
-
-## 3. Add a Cloud Storage Service
-
-Note: If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to **Step 4**.
+## Add a Cloud Storage Service
+If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to [everyday use](#everyday-use).
 
 To add one or more Amazon S3 compatible hosts, please follow the instructions below. `mc` stores all its configuration information in ``~/.mc/config.json`` file.
-
-#### Usage
 
 ```sh
 
@@ -121,7 +99,6 @@ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY
 Alias is simply a short name to you cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
 
 ### Example - Minio Cloud Storage
-
 Minio server displays URL, access and secret keys.
 
 ```sh
@@ -129,8 +106,8 @@ Minio server displays URL, access and secret keys.
 mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 
 ```
-### Example - Amazon S3 Cloud Storage
 
+### Example - Amazon S3 Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
 
 ```sh
@@ -140,7 +117,6 @@ mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo
 ```
 
 ### Example - Google Cloud Storage
-
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)
 
 ```sh
@@ -151,8 +127,7 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
-## 4. Test Your Setup
-
+## Test Your Setup
 `mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted Minio server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
 *Example:*
@@ -169,8 +144,8 @@ mc ls play
 [2016-03-20 09:08:36 PDT]     0B s3git-test/
 
 ```
-## 5. Everyday Use
-
+<a name="everyday-use"></a>
+## Everyday Use
 You may add shell aliases to override your common Unix tools.
 
 ```sh
@@ -182,11 +157,12 @@ alias mkdir='mc mb'
 alias pipe='mc pipe'
 
 ```
-## 6. Explore Further
 
+## Explore Further
 - [Minio Client Complete Guide](https://docs.minio.io/docs/minio-client-complete-guide)
 - [Minio Quickstart Guide](https://docs.minio.io/docs/minio-quickstart-guide)
+- [The Minio documentation website](https://docs.minio.io)
 
-## 7. Contribute
+## Contribute to Minio Project
+Please follow Minio [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
 
-[Contributors Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
