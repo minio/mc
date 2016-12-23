@@ -1125,12 +1125,13 @@ func (f *fsClient) GetAccess() (access string, err *probe.Error) {
 	if !st.Mode().IsDir() {
 		return "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
 	}
-	switch {
-	case st.Mode() == os.FileMode(0777):
+	// Mask with os.ModePerm to get only inode permissions
+	switch st.Mode() & os.ModePerm {
+	case os.FileMode(0777):
 		return "readwrite", nil
-	case st.Mode() == os.FileMode(0555):
+	case os.FileMode(0555):
 		return "readonly", nil
-	case st.Mode() == os.FileMode(0333):
+	case os.FileMode(0333):
 		return "writeonly", nil
 	}
 	return "none", nil
