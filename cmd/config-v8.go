@@ -104,7 +104,7 @@ func loadConfigV8() (*configV8, *probe.Error) {
 	cfgMutex.RLock()
 	defer cfgMutex.RUnlock()
 
-	// Cached in private global variable.
+	// If already cached, return the cached value.
 	if cacheCfgV8 != nil {
 		return cacheCfgV8, nil
 	}
@@ -113,14 +113,24 @@ func loadConfigV8() (*configV8, *probe.Error) {
 		return nil, errInvalidArgument().Trace()
 	}
 
-	mcCfgV8, e := quick.Load(mustGetMcConfigPath(), newConfigV8())
-	fatalIf(probe.NewError(e), "Unable to load mc config file ‘"+mustGetMcConfigPath()+"’.")
+	// Initialize a new config loader.
+	qc, e := quick.New(newConfigV8())
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
 
-	cfgV8 := mcCfgV8.Data().(*configV8)
+	// Load config at configPath, fails if config is not
+	// accessible, malformed or version missing.
+	if e = qc.Load(mustGetMcConfigPath()); e != nil {
+		return nil, probe.NewError(e)
+	}
 
-	// cache it.
+	cfgV8 := qc.Data().(*configV8)
+
+	// Cache config.
 	cacheCfgV8 = cfgV8
 
+	// Success.
 	return cfgV8, nil
 }
 

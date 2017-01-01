@@ -25,7 +25,7 @@ import (
 // Check if version of the config is valid
 func validateConfigVersion(config *configV8) (bool, string) {
 	if config.Version != globalMCConfigVersion {
-		return false, fmt.Sprintf("Config version %s does not match GlobalMCConfiguration %s.\n",
+		return false, fmt.Sprintf("Config version '%s' does not match mc config version '%s', please update your binary.\n",
 			config.Version, globalMCConfigVersion)
 	}
 	return true, ""
