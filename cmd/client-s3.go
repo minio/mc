@@ -567,7 +567,7 @@ func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string][]strin
 }
 
 // Remove incomplete uploads.
-func (c *s3Client) removeIncomplete(bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
+func (c *s3Client) removeIncompleteObjects(bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
 	removeObjectErrorCh := make(chan minio.RemoveObjectError)
 
 	// Goroutine reads from objectsCh and sends error to removeObjectErrorCh if any.
@@ -592,7 +592,8 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 	var bucketContent *clientContent
 
 	// Goroutine
-	// 1. calls removeIncomplete() for incomplete uploads or minio-go.RemoveObjects().
+	// 1. calls removeIncompleteObjects() for incomplete uploads
+	//    or minio-go.RemoveObjects().
 	// 2. executes another Goroutine to copy contentCh to objectsCh.
 	// 3. reads statusCh and copies to errorCh.
 	go func() {
@@ -601,7 +602,7 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 		objectsCh := make(chan string)
 		var statusCh <-chan minio.RemoveObjectError
 		if isIncomplete {
-			statusCh = c.removeIncomplete(bucket, objectsCh)
+			statusCh = c.removeIncompleteObjects(bucket, objectsCh)
 		} else {
 			statusCh = c.api.RemoveObjects(bucket, objectsCh)
 		}
@@ -630,7 +631,15 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 
 				// Convert content.URL.Path to objectName for objectsCh.
 				_, objectName := c.splitPath(content.URL.Path)
-				objectName = strings.TrimSuffix(objectName, string(c.targetURL.Separator))
+
+				// Currently only supported hosts with virtual style
+				// are Amazon S3 and Google Cloud Storage.
+				// which also support objects with "/" as delimiter.
+				// Skip trimming "/" and let the server reply error
+				// if any.
+				if !c.virtualStyle {
+					objectName = strings.TrimSuffix(objectName, string(c.targetURL.Separator))
+				}
 
 				// As object name is empty, we need to remove the bucket as well.
 				if objectName == "" {
@@ -841,7 +850,8 @@ func isGoogle(host string) bool {
 }
 
 // Figure out if the URL is of 'virtual host' style.
-// Currently only supported hosts with virtual style are Amazon S3 and Google Cloud Storage.
+// Currently only supported hosts with virtual style
+// are Amazon S3 and Google Cloud Storage.
 func isVirtualHostStyle(host string) bool {
 	return isAmazon(host) || isGoogle(host)
 }
