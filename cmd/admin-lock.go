@@ -19,17 +19,17 @@ package cmd
 import "github.com/minio/cli"
 
 var (
-	adminFlags = []cli.Flag{}
+	adminLockFlags = []cli.Flag{}
 )
 
-var adminCmd = cli.Command{
-	Name:   "admin",
-	Usage:  "Manage Minio servers.",
-	Action: mainAdmin,
-	Flags:  append(adminFlags, globalFlags...),
+var adminLockCmd = cli.Command{
+	Name:   "lock",
+	Usage:  "Control locks in servers.",
+	Action: mainAdminLock,
+	Flags:  append(adminLockFlags, globalFlags...),
 	Subcommands: []cli.Command{
-		adminServiceCmd,
-		adminLockCmd,
+		adminLockListCmd,
+		adminLockClearCmd,
 	},
 	CustomHelpTemplate: `NAME:
    {{.Name}} - {{.Usage}}
@@ -46,8 +46,8 @@ COMMANDS:
 `,
 }
 
-// mainAdmin is the handle for "mc admin" command.
-func mainAdmin(ctx *cli.Context) error {
+// mainAdminLock is the handle for "mc admin lock" command.
+func mainAdminLock(ctx *cli.Context) error {
 	// Set global flags from context.
 	setGlobalsFromContext(ctx)
 
@@ -59,5 +59,5 @@ func mainAdmin(ctx *cli.Context) error {
 	}
 
 	return nil
-	// Sub-commands like "service", "heal", "lock" have their own main.
+	// Sub-commands like "list", "unlock" have their own main.
 }

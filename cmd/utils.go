@@ -21,6 +21,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/minio/mc/pkg/console"
@@ -74,4 +75,15 @@ func dumpTLSCertificates(t *tls.ConnectionState) {
 // isStdIO checks if the input parameter is one of the standard input/output streams
 func isStdIO(reader io.Reader) bool {
 	return reader == os.Stdin || reader == os.Stdout || reader == os.Stderr
+}
+
+// splitStr splits a string into n parts, empty strings are added
+// if we are not able to reach n elements
+func splitStr(path, sep string, n int) []string {
+	splits := strings.SplitN(path, sep, n)
+	// Add empty strings if we found elements less than nr
+	for i := n - len(splits); i > 0; i-- {
+		splits = append(splits, "")
+	}
+	return splits
 }
