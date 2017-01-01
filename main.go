@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014, 2015, 2016 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-package main
+/*
+ * Below main package has canonical imports for 'go get' and 'go build'
+ * to work with all other clones of github.com/minio/mc repository. For
+ * more information refer https://golang.org/doc/go1.4#canonicalimports
+ */
+
+package main // import "github.com/minio/mc"
 
 import mc "github.com/minio/mc/cmd"
 
