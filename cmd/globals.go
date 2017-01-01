@@ -39,8 +39,9 @@ const (
 	globalMCCAsDir           = "CAs"
 
 	// session config and shared urls related constants
-	globalSessionDir        = "session"
-	globalSharedURLsDataDir = "share"
+	globalSessionDir           = "session"
+	globalSharedURLsDataDir    = "share"
+	globalSessionConfigVersion = "8"
 
 	// Profile directory for dumping profiler outputs.
 	globalProfileDir = "profile"

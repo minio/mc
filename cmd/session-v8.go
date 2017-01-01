@@ -20,6 +20,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -117,21 +118,34 @@ func loadSessionV8(sid string) (*sessionV8, *probe.Error) {
 		return nil, probe.NewError(e)
 	}
 
-	s := &sessionV8{}
-	s.Header = &sessionV8Header{}
-	s.SessionID = sid
-	s.Header.Version = "8"
+	// Initialize new session.
+	s := &sessionV8{
+		Header: &sessionV8Header{
+			Version: globalSessionConfigVersion,
+		},
+		SessionID: sid,
+	}
+
+	// Initialize session config loader.
 	qs, e := quick.New(s.Header)
 	if e != nil {
 		return nil, probe.NewError(e).Trace(sid, s.Header.Version)
 	}
-	e = qs.Load(sessionFile)
-	if e != nil {
+
+	if e = qs.Load(sessionFile); e != nil {
 		return nil, probe.NewError(e).Trace(sid, s.Header.Version)
 	}
 
+	// Validate if the version matches with expected current version.
+	sV8Header := qs.Data().(*sessionV8Header)
+	if sV8Header.Version != globalSessionConfigVersion {
+		msg := fmt.Sprintf("Session header version %s does not match mc session version %s.\n",
+			sV8Header.Version, globalSessionConfigVersion)
+		return nil, probe.NewError(errors.New(msg)).Trace(sid, sV8Header.Version)
+	}
+
 	s.mutex = new(sync.Mutex)
-	s.Header = qs.Data().(*sessionV8Header)
+	s.Header = sV8Header
 
 	sessionDataFile, err := getSessionDataFile(s.SessionID)
 	if err != nil {
@@ -151,7 +165,7 @@ func loadSessionV8(sid string) (*sessionV8, *probe.Error) {
 func newSessionV8() *sessionV8 {
 	s := &sessionV8{}
 	s.Header = &sessionV8Header{}
-	s.Header.Version = "8"
+	s.Header.Version = globalSessionConfigVersion
 	// map of command and files copied.
 	s.Header.GlobalBoolFlags = make(map[string]bool)
 	s.Header.GlobalIntFlags = make(map[string]int)

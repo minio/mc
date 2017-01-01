@@ -48,7 +48,7 @@ func migrateSessionV7ToV8() {
 
 		// Initialize v7 header and migrate to new config.
 		sV8Header := &sessionV8Header{}
-		sV8Header.Version = "8"
+		sV8Header.Version = globalSessionConfigVersion
 		sV8Header.When = sV7.Header.When
 		sV8Header.RootPath = sV7.Header.RootPath
 		sV8Header.GlobalBoolFlags = sV7.Header.GlobalBoolFlags
