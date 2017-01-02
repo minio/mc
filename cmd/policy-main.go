@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -26,7 +27,12 @@ import (
 )
 
 var (
-	policyFlags = []cli.Flag{}
+	policyFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "recursive, r",
+			Usage: "List recursively.",
+		},
+	}
 )
 
 // Set public policy
@@ -63,6 +69,12 @@ EXAMPLES:
 
    5. Get bucket permissions.
       $ mc {{.Name}} s3/shared
+
+   6. List policies set to a specified bucket.
+      $ mc {{.Name}} list s3/shared
+
+   7. List public object URLs recursively.
+      $ mc {{.Name}} --recursive links s3/shared/
 
 `,
 }
@@ -115,6 +127,25 @@ func (s policyMessage) JSON() string {
 	return string(policyJSONBytes)
 }
 
+// policyLinksMessage is container for policy links command
+type policyLinksMessage struct {
+	Status string `json:"status"`
+	URL    string `json:"url"`
+}
+
+// String colorized access message.
+func (s policyLinksMessage) String() string {
+	return console.Colorize("Policy", string(s.URL))
+}
+
+// JSON jsonified policy message.
+func (s policyLinksMessage) JSON() string {
+	policyJSONBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(policyJSONBytes)
+}
+
 // checkPolicySyntax check for incoming syntax.
 func checkPolicySyntax(ctx *cli.Context) {
 	argsLength := len(ctx.Args())
@@ -141,6 +172,12 @@ func checkPolicySyntax(ctx *cli.Context) {
 		if argsLength != 2 {
 			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
 		}
+	case "links":
+		// Always expect an argument after links cmd
+		if argsLength != 2 {
+			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		}
+
 	default:
 		if argsLength == 2 {
 			fatalIf(errDummy().Trace(),
@@ -149,14 +186,10 @@ func checkPolicySyntax(ctx *cli.Context) {
 	}
 }
 
-// doSetAccess do set access.
-func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
-	clnt, err := newClient(targetURL)
-	if err != nil {
-		return err.Trace(targetURL)
-	}
+// Convert an accessPerms to a string recognizable by minio-go
+func accessPermToString(perm accessPerms) string {
 	policy := ""
-	switch targetPERMS {
+	switch perm {
 	case accessNone:
 		policy = "none"
 	case accessDownload:
@@ -166,10 +199,36 @@ func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
 	case accessPublic:
 		policy = "readwrite"
 	}
+	return policy
+}
+
+// doSetAccess do set access.
+func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return err.Trace(targetURL)
+	}
+	policy := accessPermToString(targetPERMS)
 	if err = clnt.SetAccess(policy); err != nil {
 		return err.Trace(targetURL, string(targetPERMS))
 	}
 	return nil
+}
+
+// Convert a minio-go permission to accessPerms type
+func stringToAccessPerm(perm string) accessPerms {
+	var policy accessPerms
+	switch perm {
+	case "none":
+		policy = accessNone
+	case "readonly":
+		policy = accessDownload
+	case "writeonly":
+		policy = accessUpload
+	case "readwrite":
+		policy = accessPublic
+	}
+	return policy
 }
 
 // doGetAccess do get access.
@@ -182,19 +241,7 @@ func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
 	if err != nil {
 		return "", err.Trace(targetURL)
 	}
-	var policy accessPerms
-	switch perm {
-	case "none":
-		policy = accessNone
-	case "readonly":
-		policy = accessDownload
-	case "writeonly":
-		policy = accessUpload
-	case "readwrite":
-		policy = accessPublic
-	}
-
-	return policy, nil
+	return stringToAccessPerm(perm), nil
 }
 
 // doGetAccessRules do get access rules.
@@ -204,6 +251,126 @@ func doGetAccessRules(targetURL string) (r map[string]string, err *probe.Error) 
 		return map[string]string{}, err.Trace(targetURL)
 	}
 	return clnt.GetAccessRules()
+}
+
+// Run policy list command
+func runPolicyListCmd(ctx *cli.Context) {
+	targetURL := ctx.Args().Last()
+	policies, err := doGetAccessRules(targetURL)
+	if err != nil {
+		switch err.ToGoError().(type) {
+		case APINotImplemented:
+			fatalIf(err.Trace(), "Unable to list policies of a non S3 url ‘"+targetURL+"’.")
+		default:
+			fatalIf(err.Trace(targetURL), "Unable to list policies of target ‘"+targetURL+"’.")
+		}
+	}
+	for k, v := range policies {
+		printMsg(policyRules{Resource: k, Allow: v})
+	}
+}
+
+// Run policy links command
+func runPolicyLinksCmd(ctx *cli.Context) {
+	// Get alias/bucket/prefix argument
+	targetURL := ctx.Args().Last()
+
+	// Fetch all policies associated to the passed url
+	policies, err := doGetAccessRules(targetURL)
+	if err != nil {
+		switch err.ToGoError().(type) {
+		case APINotImplemented:
+			fatalIf(err.Trace(), "Unable to list policies of a non S3 url ‘"+targetURL+"’.")
+		default:
+			fatalIf(err.Trace(targetURL), "Unable to list policies of target ‘"+targetURL+"’.")
+		}
+	}
+
+	// Extract alias from the passed argument, we'll need it to
+	// construct new pathes to list public objects
+	alias, path := url2Alias(targetURL)
+
+	isRecursive := ctx.Bool("recursive")
+	isIncomplete := false
+
+	// Iterate over policy rules to fetch public urls, then search
+	// for objects under those urls
+	for k, v := range policies {
+		// Trim the asterisk in policy rules
+		policyPath := strings.TrimSuffix(k, "*")
+		// Check if current policy prefix is related to the url passed by the user
+		if !strings.HasPrefix(policyPath, path) {
+			continue
+		}
+		// Check if the found policy has read permission
+		perm := stringToAccessPerm(v)
+		if perm != accessDownload && perm != accessPublic {
+			continue
+		}
+		// Construct the new path to search for public objects
+		newURL := alias + "/" + policyPath
+		clnt, err := newClient(newURL)
+		fatalIf(err.Trace(newURL), "Unable to initialize target ‘"+targetURL+"’.")
+		// Search for public objects
+		for content := range clnt.List(isRecursive, isIncomplete, DirFirst) {
+			if content.Err != nil {
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				continue
+			}
+			// Construct the message to be displayed to the user
+			msg := policyLinksMessage{
+				Status: "success",
+				URL:    content.URL.String(),
+			}
+			// Print the found object
+			printMsg(msg)
+		}
+	}
+}
+
+// Run policy cmd to fetch set permission
+func runPolicyCmd(ctx *cli.Context) {
+	perms := accessPerms(ctx.Args().First())
+	if perms.isValidAccessPERM() {
+		targetURL := ctx.Args().Last()
+		err := doSetAccess(targetURL, perms)
+		// Upon error exit.
+		if err != nil {
+			switch err.ToGoError().(type) {
+			case APINotImplemented:
+				fatalIf(err.Trace(), "Unable to set policy of a non S3 url ‘"+targetURL+"’.")
+			default:
+				fatalIf(err.Trace(targetURL, string(perms)),
+					"Unable to set policy ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+
+			}
+		}
+
+		printMsg(policyMessage{
+			Status:    "success",
+			Operation: "set",
+			Bucket:    targetURL,
+			Perms:     perms,
+		})
+	} else {
+		targetURL := ctx.Args().First()
+		perms, err := doGetAccess(targetURL)
+		if err != nil {
+			switch err.ToGoError().(type) {
+			case APINotImplemented:
+				fatalIf(err.Trace(), "Unable to get policy of a non S3 url ‘"+targetURL+"’.")
+			default:
+				fatalIf(err.Trace(targetURL), "Unable to get policy for ‘"+targetURL+"’.")
+			}
+		}
+
+		printMsg(policyMessage{
+			Status:    "success",
+			Operation: "get",
+			Bucket:    targetURL,
+			Perms:     perms,
+		})
+	}
 }
 
 func mainPolicy(ctx *cli.Context) error {
@@ -216,62 +383,16 @@ func mainPolicy(ctx *cli.Context) error {
 	// Additional command speific theme customization.
 	console.SetColor("Policy", color.New(color.FgGreen, color.Bold))
 
-	if ctx.Args().First() == "list" {
-		targetURL := ctx.Args().Last()
-		policies, err := doGetAccessRules(targetURL)
-		if err != nil {
-			switch err.ToGoError().(type) {
-			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to list policies of a non S3 url ‘"+targetURL+"’.")
-			default:
-				fatalIf(err.Trace(targetURL), "Unable to list policies of target ‘"+targetURL+"’.")
-			}
-		}
-		for k, v := range policies {
-			printMsg(policyRules{Resource: k, Allow: v})
-		}
-	} else {
-		perms := accessPerms(ctx.Args().First())
-		if perms.isValidAccessPERM() {
-			targetURL := ctx.Args().Last()
-			err := doSetAccess(targetURL, perms)
-			// Upon error exit.
-			if err != nil {
-				switch err.ToGoError().(type) {
-				case APINotImplemented:
-					fatalIf(err.Trace(), "Unable to set policy of a non S3 url ‘"+targetURL+"’.")
-				default:
-					fatalIf(err.Trace(targetURL, string(perms)),
-						"Unable to set policy ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
-
-				}
-			}
-
-			printMsg(policyMessage{
-				Status:    "success",
-				Operation: "set",
-				Bucket:    targetURL,
-				Perms:     perms,
-			})
-		} else {
-			targetURL := ctx.Args().First()
-			perms, err := doGetAccess(targetURL)
-			if err != nil {
-				switch err.ToGoError().(type) {
-				case APINotImplemented:
-					fatalIf(err.Trace(), "Unable to get policy of a non S3 url ‘"+targetURL+"’.")
-				default:
-					fatalIf(err.Trace(targetURL), "Unable to get policy for ‘"+targetURL+"’.")
-				}
-			}
-
-			printMsg(policyMessage{
-				Status:    "success",
-				Operation: "get",
-				Bucket:    targetURL,
-				Perms:     perms,
-			})
-		}
+	switch ctx.Args().First() {
+	case "list":
+		// policy list alias/bucket/prefix
+		runPolicyListCmd(ctx)
+	case "links":
+		// policy links alias/bucket/prefix
+		runPolicyLinksCmd(ctx)
+	default:
+		// policy [download|upload|public|] alias/bucket/prefix
+		runPolicyCmd(ctx)
 	}
 	return nil
 }
