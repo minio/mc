@@ -82,21 +82,13 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 			}
 
 			if !srcEOF && srcCtnt.Err != nil {
-				if isErrIgnored(srcCtnt.Err) {
-					errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
-				} else {
-					errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
-				}
+				errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
 				srcCtnt, srcOk = <-srcCh
 				continue
 			}
 
 			if !tgtEOF && tgtCtnt.Err != nil {
-				if isErrIgnored(tgtCtnt.Err) {
-					errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
-				} else {
-					errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
-				}
+				errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
 				tgtCtnt, tgtOk = <-tgtCh
 				continue
 			}

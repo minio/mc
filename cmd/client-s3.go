@@ -812,7 +812,6 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 				return objectMetadata, nil
 			}
 		}
-
 		return nil, probe.NewError(ObjectMissing{})
 	}
 
@@ -835,8 +834,32 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 			return objectMetadata, nil
 		}
 	}
-
-	return nil, probe.NewError(ObjectMissing{})
+	objectStat, e := c.api.StatObject(bucket, object)
+	if e != nil {
+		errResponse := minio.ToErrorResponse(e)
+		if errResponse.Code == "AccessDenied" {
+			return nil, probe.NewError(PathInsufficientPermission{Path: c.targetURL.String()})
+		}
+		if errResponse.Code == "NoSuchBucket" {
+			return nil, probe.NewError(BucketDoesNotExist{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "InvalidBucketName" {
+			return nil, probe.NewError(BucketInvalid{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
+			return nil, probe.NewError(ObjectMissing{})
+		}
+		return nil, probe.NewError(e)
+	}
+	objectMetadata.URL = *c.targetURL
+	objectMetadata.Time = objectStat.LastModified
+	objectMetadata.Size = objectStat.Size
+	objectMetadata.Type = os.FileMode(0664)
+	return objectMetadata, nil
 }
 
 func isAmazon(host string) bool {
