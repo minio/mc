@@ -53,11 +53,15 @@ FLAGS:
 EXAMPLES:
    1. Add Amazon S3 storage service under "myphotos" alias. For security reasons turn off bash history momentarily.
       $ set +o history
-      $ mc config {{.Name}} add myphotos https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+      $ mc config {{.Name}} add myphotos https://s3.amazonaws.com \
+                  BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
       $ set -o history
 
-   2. Add Google Cloud Storage service under "goodisk" alias.
-      $ mc config {{.Name}} add goodisk  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
+   2. Add Amazon S3 accelerated storage service under "accel" alias. For security reasons turn off bash history momentarily.
+      $ set +o history
+      $ mc config {{.Name}} add accel https://s3-accelerate.amazonaws.com \
+                  BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+      $ set -o history
 
    3. List all hosts.
       $ mc config {{.Name}} list

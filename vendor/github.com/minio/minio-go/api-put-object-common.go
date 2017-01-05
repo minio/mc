@@ -67,7 +67,7 @@ func shouldUploadPart(objPart objectPart, uploadReq uploadPartReq) bool {
 // object storage it will have the following parameters as constants.
 //
 //  maxPartsCount - 10000
-//  minPartSize - 5MiB
+//  minPartSize - 64MiB
 //  maxMultipartPutObjectSize - 5TiB
 //
 func optimalPartInfo(objectSize int64) (totalPartsCount int, partSize int64, lastPartSize int64, err error) {

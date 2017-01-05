@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/minio/minio-go/pkg/s3utils"
 )
 
 // BucketExists verify if bucket exists and you have permission to access it.
@@ -105,7 +107,7 @@ func (c Client) StatObject(bucketName, objectName string) (ObjectInfo, error) {
 
 	// Content-Length is not valid for Google Cloud Storage, do not verify.
 	var size int64 = -1
-	if !isGoogleEndpoint(c.endpointURL) {
+	if !s3utils.IsGoogleEndpoint(c.endpointURL) {
 		// Parse content length.
 		size, err = strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
 		if err != nil {

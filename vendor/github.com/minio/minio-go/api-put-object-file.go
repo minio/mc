@@ -28,6 +28,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/minio/minio-go/pkg/s3utils"
 )
 
 // FPutObject - Create an object in a bucket, with contents from file at filePath.
@@ -76,7 +78,7 @@ func (c Client) FPutObject(bucketName, objectName, filePath, contentType string)
 
 	// NOTE: Google Cloud Storage multipart Put is not compatible with Amazon S3 APIs.
 	// Current implementation will only upload a maximum of 5GiB to Google Cloud Storage servers.
-	if isGoogleEndpoint(c.endpointURL) {
+	if s3utils.IsGoogleEndpoint(c.endpointURL) {
 		if fileSize > int64(maxSinglePutObjectSize) {
 			return 0, ErrorResponse{
 				Code:       "NotImplemented",
@@ -90,7 +92,7 @@ func (c Client) FPutObject(bucketName, objectName, filePath, contentType string)
 	}
 
 	// NOTE: S3 doesn't allow anonymous multipart requests.
-	if isAmazonEndpoint(c.endpointURL) && c.anonymous {
+	if s3utils.IsAmazonEndpoint(c.endpointURL) && c.anonymous {
 		if fileSize > int64(maxSinglePutObjectSize) {
 			return 0, ErrorResponse{
 				Code:       "NotImplemented",

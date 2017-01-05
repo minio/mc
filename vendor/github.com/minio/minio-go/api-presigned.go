@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/pkg/s3signer"
+	"github.com/minio/minio-go/pkg/s3utils"
 )
 
 // supportedGetReqParams - supported request parameters for GET presigned request.
@@ -128,7 +129,7 @@ func (c Client) PresignedPostPolicy(p *PostPolicy) (u *url.URL, formData map[str
 		policyBase64 := p.base64()
 		p.formData["policy"] = policyBase64
 		// For Google endpoint set this value to be 'GoogleAccessId'.
-		if isGoogleEndpoint(c.endpointURL) {
+		if s3utils.IsGoogleEndpoint(c.endpointURL) {
 			p.formData["GoogleAccessId"] = c.accessKeyID
 		} else {
 			// For all other endpoints set this value to be 'AWSAccessKeyId'.

@@ -19,6 +19,8 @@ package minio
 import (
 	"io"
 	"strings"
+
+	"github.com/minio/minio-go/pkg/s3utils"
 )
 
 // PutObjectWithProgress - with progress.
@@ -57,7 +59,7 @@ func (c Client) PutObjectWithMetadata(bucketName, objectName string, reader io.R
 
 	// NOTE: Google Cloud Storage does not implement Amazon S3 Compatible multipart PUT.
 	// So we fall back to single PUT operation with the maximum limit of 5GiB.
-	if isGoogleEndpoint(c.endpointURL) {
+	if s3utils.IsGoogleEndpoint(c.endpointURL) {
 		if size <= -1 {
 			return 0, ErrorResponse{
 				Code:       "NotImplemented",
@@ -74,7 +76,7 @@ func (c Client) PutObjectWithMetadata(bucketName, objectName string, reader io.R
 	}
 
 	// NOTE: S3 doesn't allow anonymous multipart requests.
-	if isAmazonEndpoint(c.endpointURL) && c.anonymous {
+	if s3utils.IsAmazonEndpoint(c.endpointURL) && c.anonymous {
 		if size <= -1 {
 			return 0, ErrorResponse{
 				Code:       "NotImplemented",

@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/minio/minio-go/pkg/s3utils"
 )
 
 // GetBucketNotification - get bucket notification at a given path.
@@ -136,7 +138,7 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 		}
 
 		// Check ARN partition to verify if listening bucket is supported
-		if isAmazonEndpoint(c.endpointURL) || isGoogleEndpoint(c.endpointURL) {
+		if s3utils.IsAmazonEndpoint(c.endpointURL) || s3utils.IsGoogleEndpoint(c.endpointURL) {
 			notificationInfoCh <- NotificationInfo{
 				Err: ErrAPINotSupported("Listening bucket notification is specific only to `minio` partitions"),
 			}

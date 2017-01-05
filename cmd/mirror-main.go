@@ -200,7 +200,7 @@ func (ms *mirrorSession) doRemove(sURLs URLs) URLs {
 func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 	isFake := ms.Header.CommandBoolFlags["fake"]
 
-	if sURLs.Error != nil { // Errorneous sURLs passed.
+	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
 	}
 

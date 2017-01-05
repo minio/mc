@@ -50,10 +50,10 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "/057xLXT+4oqAvucT+iHwDqYOok=",
+			"checksumSHA1": "2FrFoR0UtufaCGRxM4UxP1fR3LM=",
 			"path": "github.com/minio/minio-go",
-			"revision": "d02caa62b9e1034f93a82d41da806651a666c5a3",
-			"revisionTime": "2016-12-14T00:10:05Z"
+			"revision": "952412b95ae05cced91069ddc97b108a675ca1d1",
+			"revisionTime": "2017-01-05T09:15:05Z"
 		},
 		{
 			"checksumSHA1": "qTxOBp3GVxCC70ykb7Hxg6UgWwA=",
@@ -68,10 +68,10 @@
 			"revisionTime": "2016-12-20T20:43:13Z"
 		},
 		{
-			"checksumSHA1": "bPvxFS1qu6W9lOqdt8aEfS5Sids=",
+			"checksumSHA1": "gRnCFKb4x83GBLVUZXoOjujd+U0=",
 			"path": "github.com/minio/minio-go/pkg/s3utils",
-			"revision": "532b920ff28900244a2ef7d07468003df36fe7c5",
-			"revisionTime": "2016-12-20T20:43:13Z"
+			"revision": "71a719f26784df5d9e6b71723fbe20f37f0ca33b",
+			"revisionTime": "2017-01-05T04:45:20Z"
 		},
 		{
 			"checksumSHA1": "A8QOw1aWwc+RtjGozY0XeS5varo=",
