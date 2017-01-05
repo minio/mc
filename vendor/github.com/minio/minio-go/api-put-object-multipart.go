@@ -66,7 +66,7 @@ func (c Client) putObjectMultipart(bucketName, objectName string, reader io.Read
 	return c.putObjectMultipartStream(bucketName, objectName, reader, size, metaData, progress)
 }
 
-// putObjectStream uploads files bigger than 5MiB, and also supports
+// putObjectStream uploads files bigger than 64MiB, and also supports
 // special case where size is unknown i.e '-1'.
 func (c Client) putObjectMultipartStream(bucketName, objectName string, reader io.Reader, size int64, metaData map[string][]string, progress io.Reader) (n int64, err error) {
 	// Input validation.

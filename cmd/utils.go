@@ -21,7 +21,6 @@ import (
 	"io"
 	"math/rand"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/minio/mc/pkg/console"
@@ -55,13 +54,6 @@ func newRandomID(n int) string {
 		sid[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(sid)
-}
-
-// isBucketVirtualStyle is host virtual bucket style?.
-func isBucketVirtualStyle(host string) bool {
-	s3Virtual, _ := filepath.Match("*.s3*.amazonaws.com", host)
-	googleVirtual, _ := filepath.Match("*.storage.googleapis.com", host)
-	return s3Virtual || googleVirtual
 }
 
 // dumpTlsCertificates prints some fields of the certificates received from the server.
