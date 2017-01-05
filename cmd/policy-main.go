@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"net/url"
 	"strings"
 
 	"github.com/fatih/color"
@@ -317,10 +318,16 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			}
+
+			// Encode public URL
+			u, e := url.Parse(content.URL.String())
+			errorIf(probe.NewError(e), "Unable to parse url `"+content.URL.String()+"`")
+			publicURL := u.String()
+
 			// Construct the message to be displayed to the user
 			msg := policyLinksMessage{
 				Status: "success",
-				URL:    content.URL.String(),
+				URL:    publicURL,
 			}
 			// Print the found object
 			printMsg(msg)
