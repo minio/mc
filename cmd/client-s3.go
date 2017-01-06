@@ -920,19 +920,8 @@ func (c *s3Client) url2BucketAndObject() (bucketName, objectName string) {
 			path = string(c.targetURL.Separator) + bucket + c.targetURL.Path
 		}
 	}
-	splits := strings.SplitN(path, string(c.targetURL.Separator), 3)
-	switch len(splits) {
-	case 0, 1:
-		bucketName = ""
-		objectName = ""
-	case 2:
-		bucketName = splits[1]
-		objectName = ""
-	case 3:
-		bucketName = splits[1]
-		objectName = splits[2]
-	}
-	return bucketName, objectName
+	tokens := splitStr(path, string(c.targetURL.Separator), 3)
+	return tokens[1], tokens[2]
 }
 
 // splitPath split path into bucket and object.
@@ -955,13 +944,8 @@ func (c *s3Client) splitPath(path string) (bucketName, objectName string) {
 		}
 	}
 
-	tokens := strings.SplitN(path, string(c.targetURL.Separator), 2)
-	bucketName = tokens[0]
-	if len(tokens) == 2 {
-		objectName = tokens[1]
-	}
-
-	return bucketName, objectName
+	tokens := splitStr(path, string(c.targetURL.Separator), 2)
+	return tokens[0], tokens[1]
 }
 
 /// Bucket API operations.
