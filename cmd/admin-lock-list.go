@@ -32,8 +32,8 @@ var (
 	adminLockListFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "older-than, o",
-			Usage: "Only show locks that are older than a specified time, i.e. 30s",
-			Value: "0s",
+			Usage: "Only show locks that are older than NN[h|m|s]. (default: \"24h\")",
+			Value: "24h",
 		},
 	}
 )
