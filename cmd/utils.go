@@ -21,6 +21,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -86,4 +87,45 @@ func splitStr(path, sep string, n int) []string {
 		splits = append(splits, "")
 	}
 	return splits
+}
+
+// buildConfig fetches config related to the specified alias
+// to create a new config structure
+func buildConfig(alias, urlStr string) *Config {
+	hostCfg := mustGetHostConfig(alias)
+	if hostCfg == nil {
+		return nil
+	}
+
+	// We have a valid alias and hostConfig. We populate the
+	// credentials from the match found in the config file.
+	s3Config := new(Config)
+
+	// Fetch keys from the environnement, otherwise, get them from the config file
+	keys := splitStr(os.Getenv("MC_SECRET_"+alias), ":", 2)
+	if isValidAccessKey(keys[0]) && isValidSecretKey(keys[1]) {
+		s3Config.AccessKey = keys[0]
+		s3Config.SecretKey = keys[1]
+	} else {
+		if keys[0] != "" {
+			console.Errorln("Access/Secret keys associated to `" + alias + "' " +
+				"are found in your environment but not suitable for use. " +
+				"Falling back to the standard config.")
+		}
+	}
+
+	if s3Config.AccessKey == "" {
+		s3Config.AccessKey = hostCfg.AccessKey
+		s3Config.SecretKey = hostCfg.SecretKey
+	}
+
+	s3Config.Signature = hostCfg.API
+	s3Config.AppName = "mc"
+	s3Config.AppVersion = Version
+	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
+	s3Config.HostURL = urlStr
+	s3Config.Debug = globalDebug
+	s3Config.Insecure = globalInsecure
+
+	return s3Config
 }

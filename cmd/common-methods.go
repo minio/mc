@@ -18,13 +18,10 @@ package cmd
 
 import (
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -149,8 +146,8 @@ func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
 // alias entry in the mc config file. If no matching host config entry
 // is found, fs client is returned.
 func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
-	hostCfg := mustGetHostConfig(alias)
-	if hostCfg == nil {
+	s3Config := buildConfig(alias, urlStr)
+	if s3Config == nil {
 		// No matching host config. So we treat it like a
 		// filesystem.
 		fsClient, err := fsNew(urlStr)
@@ -160,42 +157,6 @@ func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
 		return fsClient, nil
 	}
 
-	// We have a valid alias and hostConfig. We populate the
-	// credentials from the match found in the config file.
-	s3Config := new(Config)
-
-	// secretKey retrieved from the environement overrides the one
-	// present in the config file
-	keysPairEnv := os.Getenv("MC_SECRET_" + alias)
-	keysPairArray := strings.Split(keysPairEnv, ":")
-	var accessKeyEnv, secretKeyEnv string
-	if len(keysPairArray) >= 1 {
-		accessKeyEnv = keysPairArray[0]
-	}
-	if len(keysPairArray) >= 2 {
-		secretKeyEnv = keysPairArray[1]
-	}
-	if len(keysPairEnv) > 0 &&
-		isValidAccessKey(accessKeyEnv) && isValidSecretKey(secretKeyEnv) {
-		s3Config.AccessKey = accessKeyEnv
-		s3Config.SecretKey = secretKeyEnv
-	} else {
-		if len(keysPairEnv) > 0 {
-			console.Errorln("Access/Secret keys associated to `" + alias + "' " +
-				"are found in your environment but not suitable for use. " +
-				"Falling back to the standard config.")
-		}
-		s3Config.AccessKey = hostCfg.AccessKey
-		s3Config.SecretKey = hostCfg.SecretKey
-	}
-
-	s3Config.Signature = hostCfg.API
-	s3Config.AppName = "mc"
-	s3Config.AppVersion = Version
-	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
-	s3Config.HostURL = urlStr
-	s3Config.Debug = globalDebug
-	s3Config.Insecure = globalInsecure
 	s3Client, err := s3New(s3Config)
 	if err != nil {
 		return nil, err.Trace(alias, urlStr)
