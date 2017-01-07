@@ -9,7 +9,6 @@ clone_folder: c:\gopath\src\github.com\minio\mc
 # environment variables
 environment:
   GOPATH: c:\gopath
-  GO15VENDOREXPERIMENT: 1
 
 # scripts that run after cloning repository
 install:

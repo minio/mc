@@ -18,53 +18,53 @@ verifiers: vet fmt lint cyclo deadcode spelling
 
 vet:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 go tool vet -all *.go
-	@GO15VENDOREXPERIMENT=1 go tool vet -all ./cmd
-	@GO15VENDOREXPERIMENT=1 go tool vet -all ./pkg
-	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true *.go
-	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./cmd
-	@GO15VENDOREXPERIMENT=1 go tool vet -shadow=true ./pkg
+	@go tool vet -all *.go
+	@go tool vet -all ./cmd
+	@go tool vet -all ./pkg
+	@go tool vet -shadow=true *.go
+	@go tool vet -shadow=true ./cmd
+	@go tool vet -shadow=true ./pkg
 
 spelling:
-	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell *.go
-	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell cmd/*
-	@GO15VENDOREXPERIMENT=1 ${GOPATH}/bin/misspell pkg/**/*
+	@${GOPATH}/bin/misspell *.go
+	@${GOPATH}/bin/misspell cmd/*
+	@${GOPATH}/bin/misspell pkg/**/*
 
 fmt:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 gofmt -s -l *.go
-	@GO15VENDOREXPERIMENT=1 gofmt -s -l cmd
-	@GO15VENDOREXPERIMENT=1 gofmt -s -l pkg
+	@gofmt -s -l *.go
+	@gofmt -s -l cmd
+	@gofmt -s -l pkg
 lint:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint .
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/cmd...
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/golint github.com/minio/mc/pkg...
+	@$(GOPATH)/bin/golint .
+	@$(GOPATH)/bin/golint github.com/minio/mc/cmd...
+	@$(GOPATH)/bin/golint github.com/minio/mc/pkg...
 
 cyclo:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 cmd
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/gocyclo -over 40 pkg
+	@$(GOPATH)/bin/gocyclo -over 40 cmd
+	@$(GOPATH)/bin/gocyclo -over 40 pkg
 
 deadcode:
 	@echo "Running $@:"
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/deadcode
+	@$(GOPATH)/bin/deadcode
 
 build: getdeps verifiers
 
 test: getdeps verifiers
 	@echo "Running all testing:"
-	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/cmd...
-	@GO15VENDOREXPERIMENT=1 go test $(GOFLAGS) github.com/minio/mc/pkg...
+	@go test $(GOFLAGS) github.com/minio/mc/cmd...
+	@go test $(GOFLAGS) github.com/minio/mc/pkg...
 
 gomake-all: build
 	@echo "Installing mc:"
-	@GO15VENDOREXPERIMENT=1 go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/mc
+	@go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/mc
 	@mkdir -p $(HOME)/.mc
 
 coverage: getdeps verifiers
 	@echo "Running all coverage:"
-	@GO15VENDOREXPERIMENT=1 ./buildscripts/go-coverage.sh
+	@./buildscripts/go-coverage.sh
 
 pkg-validate-arg-%: ;
 ifndef PKG
@@ -72,16 +72,16 @@ ifndef PKG
 endif
 
 pkg-add: pkg-validate-arg-add
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor add $(PKG)
+	@$(GOPATH)/bin/govendor add $(PKG)
 
 pkg-update: pkg-validate-arg-update
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor update $(PKG)
+	@$(GOPATH)/bin/govendor update $(PKG)
 
 pkg-remove: pkg-validate-arg-remove
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor remove $(PKG)
+	@$(GOPATH)/bin/govendor remove $(PKG)
 
 pkg-list:
-	@GO15VENDOREXPERIMENT=1 $(GOPATH)/bin/govendor list
+	@$(GOPATH)/bin/govendor list
 
 install: gomake-all
 
@@ -90,10 +90,10 @@ all-tests: test
 	#@./tests/test-minio.sh
 
 release: verifiers
-	@MC_RELEASE=RELEASE GO15VENDOREXPERIMENT=1 ./buildscripts/build.sh
+	@MC_RELEASE=RELEASE ./buildscripts/build.sh
 
 experimental: verifiers
-	@MC_RELEASE=EXPERIMENTAL GO15VENDOREXPERIMENT=1 ./buildscripts/build.sh
+	@MC_RELEASE=EXPERIMENTAL ./buildscripts/build.sh
 
 clean:
 	@rm -f cover.out
