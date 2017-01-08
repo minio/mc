@@ -19,7 +19,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"time"
 
@@ -116,29 +115,10 @@ func mainAdminLockList(ctx *cli.Context) error {
 	olderThan, e := time.ParseDuration(ctx.String("older-than"))
 	fatalIf(probe.NewError(e), "Unable to parse the passed older-than flag.")
 
-	// Fetch the server's address stored in config
-	_, _, hostCfg, err := expandAlias(aliasedURL)
+	// Create a new Minio Admin Client
+	client, err := newAdminClient(aliasedURL)
 	if err != nil {
 		return err.ToGoError()
-	}
-
-	// Check if alias exists
-	if hostCfg == nil {
-		fatalIf(errInvalidAliasedURL(aliasedURL).Trace(aliasedURL), "The specified alias is not found.")
-	}
-
-	// Parse the server address
-	url, e := url.Parse(hostCfg.URL)
-	if e != nil {
-		return e
-	}
-
-	isSSL := (url.Scheme == "https")
-
-	// Create a new Minio Admin Client
-	client, e := madmin.New(url.Host, hostCfg.AccessKey, hostCfg.SecretKey, isSSL)
-	if e != nil {
-		return e
 	}
 
 	aliasedURL = filepath.ToSlash(aliasedURL)

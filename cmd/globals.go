@@ -69,11 +69,11 @@ var (
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
 func setGlobals(quiet, debug, json, noColor, insecure bool) {
-	globalQuiet = quiet
-	globalDebug = debug
-	globalJSON = json
-	globalNoColor = noColor
-	globalInsecure = insecure
+	globalQuiet = globalQuiet || quiet
+	globalDebug = globalDebug || debug
+	globalJSON = globalJSON || json
+	globalNoColor = globalNoColor || noColor
+	globalInsecure = globalInsecure || insecure
 
 	// Enable debug messages if requested.
 	if globalDebug {

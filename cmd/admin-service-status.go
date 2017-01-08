@@ -19,7 +19,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
@@ -96,29 +95,10 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Fetch the server's address stored in config
-	_, _, hostCfg, err := expandAlias(aliasedURL)
+	// Create a new Minio Admin Client
+	client, err := newAdminClient(aliasedURL)
 	if err != nil {
 		return err.ToGoError()
-	}
-
-	// Check if alias exists
-	if hostCfg == nil {
-		fatalIf(errInvalidAliasedURL(aliasedURL).Trace(aliasedURL), "The specified alias is not found.")
-	}
-
-	// Parse the server address
-	url, e := url.Parse(hostCfg.URL)
-	if e != nil {
-		return e
-	}
-
-	isSSL := (url.Scheme == "https")
-
-	// Create a new Minio Admin Client
-	client, e := madmin.New(url.Host, hostCfg.AccessKey, hostCfg.SecretKey, isSSL)
-	if e != nil {
-		return e
 	}
 
 	// Fetch the storage info of the specified Minio server
