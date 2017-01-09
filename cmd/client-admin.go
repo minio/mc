@@ -36,7 +36,10 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 	// Return New function.
 	return func(config *Config) (*madmin.AdminClient, *probe.Error) {
 		// Creates a parsed URL.
-		targetURL, _ := url.Parse(config.HostURL)
+		targetURL, e := url.Parse(config.HostURL)
+		if e != nil {
+			return nil, probe.NewError(e)
+		}
 		// By default enable HTTPs.
 		useTLS := true
 		if targetURL.Scheme == "http" {
@@ -99,7 +102,10 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 // alias entry in the mc config file. If no matching host config entry
 // is found, fs client is returned.
 func newAdminClientFromAlias(alias string, urlStr string) (*madmin.AdminClient, *probe.Error) {
-	s3Config := buildConfig(alias, urlStr)
+	s3Config, err := buildS3Config(alias, urlStr)
+	if err != nil {
+		return nil, err
+	}
 	s3Client, err := s3AdminNew(s3Config)
 	if err != nil {
 		return nil, err.Trace(alias, urlStr)

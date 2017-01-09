@@ -146,13 +146,13 @@ func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
 // alias entry in the mc config file. If no matching host config entry
 // is found, fs client is returned.
 func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
-	s3Config := buildConfig(alias, urlStr)
-	if s3Config == nil {
+	s3Config, err := buildS3Config(alias, urlStr)
+	if err != nil {
 		// No matching host config. So we treat it like a
 		// filesystem.
-		fsClient, err := fsNew(urlStr)
-		if err != nil {
-			return nil, err.Trace(alias, urlStr)
+		fsClient, fsErr := fsNew(urlStr)
+		if fsErr != nil {
+			return nil, fsErr.Trace(alias, urlStr)
 		}
 		return fsClient, nil
 	}
