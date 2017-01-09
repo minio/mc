@@ -117,9 +117,7 @@ func mainAdminLockList(ctx *cli.Context) error {
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
-	if err != nil {
-		return err.ToGoError()
-	}
+	fatalIf(err, "Cannot get a configured admin connection.")
 
 	aliasedURL = filepath.ToSlash(aliasedURL)
 

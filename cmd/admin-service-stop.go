@@ -68,9 +68,7 @@ func mainAdminServiceStop(ctx *cli.Context) error {
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
-	if err != nil {
-		return err.ToGoError()
-	}
+	fatalIf(err, "Cannot get a configured admin connection.")
 
 	// Stop the specified Minio server
 	e := client.ServiceStop()
