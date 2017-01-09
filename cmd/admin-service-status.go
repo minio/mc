@@ -21,7 +21,9 @@ import (
 	"fmt"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/fatih/color"
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
 	"github.com/minio/minio/pkg/probe"
 )
@@ -50,10 +52,37 @@ EXAMPLES:
 `,
 }
 
+// backendType - indicates the type of backend storage
+type backendType string
+
+const (
+	fsType = backendType("FS")
+	xlType = backendType("XL")
+)
+
+// fsBackend contains specific FS storage information
+type fsBackend struct {
+	Type backendType `json:"backendType"`
+}
+
+// xlBackend contains specific XL storage information
+type xlBackend struct {
+	Type         backendType `json:"backendType"`
+	OnlineDisks  int         `json:"onlineDisks"`
+	OfflineDisks int         `json:"offlineDisks"`
+}
+
+// backendStatus represents the overall information of all backend storage types
+type backendStatus struct {
+	Total   int64       `json:"total"`
+	Free    int64       `json:"free"`
+	Backend interface{} `json:"backend"`
+}
+
 // serviceStatusMessage container to hold service status information.
 type serviceStatusMessage struct {
-	Status      string                       `json:"status"`
-	StorageInfo madmin.ServiceStatusMetadata `json:"storageInfo"`
+	Status      string        `json:"status"`
+	StorageInfo backendStatus `json:"storageInfo"`
 }
 
 // String colorized service status message.
@@ -62,12 +91,10 @@ func (u serviceStatusMessage) String() string {
 		humanize.IBytes(uint64(u.StorageInfo.Total)),
 		humanize.IBytes(uint64(u.StorageInfo.Free)),
 	)
-	if u.StorageInfo.Backend.Type == madmin.XL {
-		msg += fmt.Sprintf(" Online Disks: %d, Offline Disks: %d\n",
-			u.StorageInfo.Backend.OnlineDisks,
-			u.StorageInfo.Backend.OfflineDisks)
+	if v, ok := u.StorageInfo.Backend.(xlBackend); ok {
+		msg += fmt.Sprintf(" Online Disks: %d, Offline Disks: %d.\n", v.OnlineDisks, v.OfflineDisks)
 	}
-	return msg
+	return console.Colorize("Service", msg)
 }
 
 // JSON jsonified service status Message message.
@@ -91,6 +118,8 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 	setGlobalsFromContext(ctx)
 	checkAdminServiceStatusSyntax(ctx)
 
+	console.SetColor("Service", color.New(color.FgGreen, color.Bold))
+
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
@@ -100,10 +129,27 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	// Fetch the storage info of the specified Minio server
-	status, e := client.ServiceStatus()
+	st, e := client.ServiceStatus()
 	fatalIf(probe.NewError(e), "Cannot get service status.")
 
-	printMsg(serviceStatusMessage{StorageInfo: status})
+	storageInfo := backendStatus{
+		Total: st.Total,
+		Free:  st.Free,
+	}
+
+	if st.Backend.Type == madmin.XL {
+		storageInfo.Backend = xlBackend{
+			Type:         xlType,
+			OnlineDisks:  st.Backend.OnlineDisks,
+			OfflineDisks: st.Backend.OfflineDisks,
+		}
+	} else {
+		storageInfo.Backend = fsBackend{
+			Type: fsType,
+		}
+	}
+
+	printMsg(serviceStatusMessage{StorageInfo: storageInfo})
 
 	return nil
 }
