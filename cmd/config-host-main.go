@@ -87,11 +87,11 @@ func (h hostMessage) String() string {
 	switch h.op {
 	case "list":
 		message := console.Colorize("Alias", fmt.Sprintf("%s: ", h.Alias))
-		message += console.Colorize("URL", fmt.Sprintf("%s", h.URL))
+		message += console.Colorize("URL", fmt.Sprintf("%-30.30s", h.URL))
 		if h.AccessKey != "" || h.SecretKey != "" {
-			message += " <- " + console.Colorize("AccessKey", fmt.Sprintf(" %s", h.AccessKey))
-			message += " | " + console.Colorize("SecretKey", fmt.Sprintf(" %s", h.SecretKey))
-			message += " | " + console.Colorize("API", fmt.Sprintf(" %s", h.API))
+			message += console.Colorize("AccessKey", fmt.Sprintf("  %-20.20s", h.AccessKey))
+			message += console.Colorize("SecretKey", fmt.Sprintf("  %-40.40s", h.SecretKey))
+			message += console.Colorize("API", fmt.Sprintf("  %.20s", h.API))
 		}
 		return message
 	case "remove":
@@ -269,11 +269,16 @@ func removeHost(alias string) {
 func listHosts() {
 	conf, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
-
+	var maxAlias = 0
+	for k := range conf.Hosts {
+		if len(k) > maxAlias {
+			maxAlias = len(k)
+		}
+	}
 	for k, v := range conf.Hosts {
 		printMsg(hostMessage{
 			op:        "list",
-			Alias:     k,
+			Alias:     fmt.Sprintf("%*.*s", maxAlias, maxAlias, k),
 			URL:       v.URL,
 			AccessKey: v.AccessKey,
 			SecretKey: v.SecretKey,
