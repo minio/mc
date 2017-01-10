@@ -19,6 +19,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/fatih/color"
@@ -265,24 +266,44 @@ func removeHost(alias string) {
 	printMsg(hostMessage{op: "remove", Alias: alias})
 }
 
+//byAlias is a collection satisfying sort.Interface
+type byAlias []hostMessage
+
+func (d byAlias) Len() int           { return len(d) }
+func (d byAlias) Swap(i, j int)      { d[i], d[j] = d[j], d[i] }
+func (d byAlias) Less(i, j int) bool { return d[i].Alias < d[j].Alias }
+
 // listHosts - list all host URLs.
 func listHosts() {
 	conf, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
+
 	var maxAlias = 0
 	for k := range conf.Hosts {
 		if len(k) > maxAlias {
 			maxAlias = len(k)
 		}
 	}
+  
+	var hosts []hostMessage
 	for k, v := range conf.Hosts {
-		printMsg(hostMessage{
+		hosts = append(hosts, hostMessage{
 			op:        "list",
-			Alias:     fmt.Sprintf("%*.*s", maxAlias, maxAlias, k),
+			Alias:     k,
 			URL:       v.URL,
 			AccessKey: v.AccessKey,
 			SecretKey: v.SecretKey,
 			API:       v.API,
 		})
+	}
+  
+  // Sort hosts by alias names lexically.
+	sort.Sort(byAlias(hosts))
+  
+  // Display all the hosts.
+	for _, host := range hosts {
+    // Format properly for alignment based on alias length.
+		host.Alias = fmt.Sprintf("%-*.*s", maxAlias, maxAlias, host.Alias)
+		printMsg(host)
 	}
 }
