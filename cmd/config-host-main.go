@@ -88,11 +88,11 @@ func (h hostMessage) String() string {
 	switch h.op {
 	case "list":
 		message := console.Colorize("Alias", fmt.Sprintf("%s: ", h.Alias))
-		message += console.Colorize("URL", fmt.Sprintf("%s", h.URL))
+		message += console.Colorize("URL", fmt.Sprintf("%-30.30s", h.URL))
 		if h.AccessKey != "" || h.SecretKey != "" {
-			message += " <- " + console.Colorize("AccessKey", fmt.Sprintf(" %s", h.AccessKey))
-			message += " | " + console.Colorize("SecretKey", fmt.Sprintf(" %s", h.SecretKey))
-			message += " | " + console.Colorize("API", fmt.Sprintf(" %s", h.API))
+			message += console.Colorize("AccessKey", fmt.Sprintf("  %-20.20s", h.AccessKey))
+			message += console.Colorize("SecretKey", fmt.Sprintf("  %-40.40s", h.SecretKey))
+			message += console.Colorize("API", fmt.Sprintf("  %.20s", h.API))
 		}
 		return message
 	case "remove":
@@ -284,9 +284,9 @@ func listHosts() {
 			maxAlias = len(k)
 		}
 	}
+  
 	var hosts []hostMessage
 	for k, v := range conf.Hosts {
-
 		hosts = append(hosts, hostMessage{
 			op:        "list",
 			Alias:     k,
@@ -296,8 +296,13 @@ func listHosts() {
 			API:       v.API,
 		})
 	}
+  
+  // Sort hosts by alias names lexically.
 	sort.Sort(byAlias(hosts))
+  
+  // Display all the hosts.
 	for _, host := range hosts {
+    // Format properly for alignment based on alias length.
 		host.Alias = fmt.Sprintf("%-*.*s", maxAlias, maxAlias, host.Alias)
 		printMsg(host)
 	}
