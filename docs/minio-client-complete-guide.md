@@ -412,7 +412,7 @@ FLAGS:
   --incomplete, -I			Remove an incomplete upload(s).
   --fake					Perform a fake remove operation.
   --stdin					Read object list from STDIN.
-  --older 					Remove object only if its created older than given time.
+  --older-than value        Remove objects older than N days. (default: 0)
 ```
 
 *Example: Remove a single object.*
@@ -446,7 +446,7 @@ Removed 'play/mybucket/backup.tgz’.
 *Example: Remove object only if its created older than one day.*
 
 ```sh
-mc rm --force --older=24h play/mybucket/oldsongs
+mc rm --force --older-than=1 play/mybucket/oldsongs
 ```
 
 <a name="share"></a>
