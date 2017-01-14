@@ -284,7 +284,7 @@ func listHosts() {
 			maxAlias = len(k)
 		}
 	}
-  
+
 	var hosts []hostMessage
 	for k, v := range conf.Hosts {
 		hosts = append(hosts, hostMessage{
@@ -296,13 +296,13 @@ func listHosts() {
 			API:       v.API,
 		})
 	}
-  
-  // Sort hosts by alias names lexically.
+
+	// Sort hosts by alias names lexically.
 	sort.Sort(byAlias(hosts))
-  
-  // Display all the hosts.
+
+	// Display all the hosts.
 	for _, host := range hosts {
-    // Format properly for alignment based on alias length.
+		// Format properly for alignment based on alias length.
 		host.Alias = fmt.Sprintf("%-*.*s", maxAlias, maxAlias, host.Alias)
 		printMsg(host)
 	}
