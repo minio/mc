@@ -94,7 +94,7 @@ func (u serviceStatusMessage) String() string {
 	if v, ok := u.StorageInfo.Backend.(xlBackend); ok {
 		msg += fmt.Sprintf(" Online Disks: %d, Offline Disks: %d.\n", v.OnlineDisks, v.OfflineDisks)
 	}
-	return console.Colorize("Service", msg)
+	return console.Colorize("ServiceStatus", msg)
 }
 
 // JSON jsonified service status Message message.
@@ -114,11 +114,13 @@ func checkAdminServiceStatusSyntax(ctx *cli.Context) {
 }
 
 func mainAdminServiceStatus(ctx *cli.Context) error {
-
+	// Set global values.
 	setGlobalsFromContext(ctx)
+
+	// Validate serivce status syntax.
 	checkAdminServiceStatusSyntax(ctx)
 
-	console.SetColor("Service", color.New(color.FgGreen, color.Bold))
+	console.SetColor("ServiceStatus", color.New(color.FgGreen, color.Bold))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()

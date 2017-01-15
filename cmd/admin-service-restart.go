@@ -17,24 +17,19 @@
 package cmd
 
 import (
-	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/probe"
-)
+	"encoding/json"
 
-var (
-	adminServiceRestartFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "all",
-			Usage: "Control all nodes in the cluster",
-		},
-	}
+	"github.com/fatih/color"
+	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio/pkg/probe"
 )
 
 var adminServiceRestartCmd = cli.Command{
 	Name:   "restart",
 	Usage:  "Restart a minio server",
 	Action: mainAdminServiceRestart,
-	Flags:  append(adminServiceRestartFlags, globalFlags...),
+	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
    mc admin service {{.Name}} - {{.Usage}}
 
@@ -50,6 +45,25 @@ EXAMPLES:
 `,
 }
 
+// serviceRestartMessage is container for make bucket success and failure messages.
+type serviceRestartMessage struct {
+	Status    string `json:"status"`
+	ServerURL string `json:"serverURL"`
+}
+
+// String colorized make bucket message.
+func (s serviceRestartMessage) String() string {
+	return console.Colorize("ServiceRestart", "Server restarted ‘"+s.ServerURL+"’ successfully.")
+}
+
+// JSON jsonified make bucket message.
+func (s serviceRestartMessage) JSON() string {
+	serviceRestartJSONBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(serviceRestartJSONBytes)
+}
+
 // checkAdminServiceRestartSyntax - validate all the passed arguments
 func checkAdminServiceRestartSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
@@ -58,9 +72,14 @@ func checkAdminServiceRestartSyntax(ctx *cli.Context) {
 }
 
 func mainAdminServiceRestart(ctx *cli.Context) error {
-
+	// Set global values from context.
 	setGlobalsFromContext(ctx)
+
+	// Validate serivce restart syntax.
 	checkAdminServiceRestartSyntax(ctx)
+
+	// Set color.
+	console.SetColor("ServiceRestart", color.New(color.FgGreen, color.Bold))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -70,8 +89,9 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	// Restart the specified Minio server
-	e := client.ServiceRestart()
-	fatalIf(probe.NewError(e), "Cannot restart server.")
+	fatalIf(probe.NewError(client.ServiceRestart()), "Cannot restart server.")
 
+	// Success..
+	printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
 	return nil
 }

@@ -18,22 +18,12 @@ package cmd
 
 import "github.com/minio/cli"
 
-var (
-	adminServiceFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "all",
-			Usage: "Control all nodes in the cluster",
-		},
-	}
-)
-
 var adminServiceCmd = cli.Command{
 	Name:   "service",
 	Usage:  "Control servers.",
 	Action: mainAdminService,
-	Flags:  append(adminServiceFlags, globalFlags...),
+	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminServiceStopCmd,
 		adminServiceRestartCmd,
 		adminServiceStatusCmd,
 	},
