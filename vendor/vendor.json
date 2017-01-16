@@ -39,9 +39,9 @@
 			"revisionTime": "2015-12-11T09:06:21+09:00"
 		},
 		{
-			"checksumSHA1": "4DYW5PdWgYVOFDVWm+vnu5T2OoE=",
+			"checksumSHA1": "+jYYwEFAR+NW42UwA/AeppFYTbs=",
 			"path": "github.com/minio/cli",
-			"revision": "9636d96501d1d89ea3827c9df770320544399422",
+			"revision": "bf72f027481f5fadaf8800f62c72904e6bd7a200",
 			"revisionTime": "2016-11-25T09:07:42Z"
 		},
 		{
