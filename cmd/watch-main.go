@@ -58,6 +58,7 @@ var watchCmd = cli.Command{
 	Name:   "watch",
 	Usage:  "Watch for files and objects events.",
 	Action: mainWatch,
+	Before: setGlobalsFromContext,
 	Flags:  append(watchFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -124,7 +125,6 @@ func mainWatch(ctx *cli.Context) error {
 	console.SetColor("EventType", color.New(color.FgCyan, color.Bold))
 	console.SetColor("ObjectName", color.New(color.Bold))
 
-	setGlobalsFromContext(ctx)
 	checkWatchSyntax(ctx)
 
 	args := ctx.Args()

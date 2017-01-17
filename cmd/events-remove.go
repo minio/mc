@@ -39,6 +39,7 @@ var eventsRemoveCmd = cli.Command{
 	Name:   "remove",
 	Usage:  "Remove a bucket notification. With '--force' can remove all bucket notifications.",
 	Action: mainEventsRemove,
+	Before: setGlobalsFromContext,
 	Flags:  append(eventsRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc events {{.Name}} - {{.Usage}}
@@ -89,7 +90,6 @@ func (u eventsRemoveMessage) String() string {
 func mainEventsRemove(ctx *cli.Context) error {
 	console.SetColor("Events", color.New(color.FgGreen, color.Bold))
 
-	setGlobalsFromContext(ctx)
 	checkEventsRemoveSyntax(ctx)
 
 	args := ctx.Args()

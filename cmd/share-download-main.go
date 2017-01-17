@@ -38,6 +38,7 @@ var shareDownload = cli.Command{
 	Name:   "download",
 	Usage:  "Generate URLs for download access.",
 	Action: mainShareDownload,
+	Before: setGlobalsFromContext,
 	Flags:  append(shareDownloadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
@@ -152,8 +153,6 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 
 // main for share download.
 func mainShareDownload(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check input arguments.
 	checkShareDownloadSyntax(ctx)

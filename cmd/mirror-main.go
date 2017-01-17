@@ -60,6 +60,7 @@ var mirrorCmd = cli.Command{
 	Name:   "mirror",
 	Usage:  "Mirror buckets and folders.",
 	Action: mainMirror,
+	Before: setGlobalsFromContext,
 	Flags:  append(mirrorFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -702,8 +703,6 @@ func newMirrorSession(session *sessionV8) *mirrorSession {
 
 // Main entry point for mirror command.
 func mainMirror(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'mirror' cli arguments.
 	checkMirrorSyntax(ctx)

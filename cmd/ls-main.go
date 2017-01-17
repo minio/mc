@@ -43,6 +43,7 @@ var lsCmd = cli.Command{
 	Name:   "ls",
 	Usage:  "List files and folders.",
 	Action: mainList,
+	Before: setGlobalsFromContext,
 	Flags:  append(lsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -109,9 +110,6 @@ func mainList(ctx *cli.Context) error {
 	console.SetColor("Dir", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Size", color.New(color.FgYellow))
 	console.SetColor("Time", color.New(color.FgGreen))
-
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'ls' cli arguments.
 	checkListSyntax(ctx)

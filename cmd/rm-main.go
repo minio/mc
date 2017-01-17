@@ -67,6 +67,7 @@ var rmCmd = cli.Command{
 	Name:   "rm",
 	Usage:  "Remove files and objects.",
 	Action: mainRm,
+	Before: setGlobalsFromContext,
 	Flags:  append(rmFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -264,8 +265,6 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 
 // main for rm command.
 func mainRm(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'rm' cli arguments.
 	checkRmSyntax(ctx)

@@ -37,6 +37,7 @@ var configCmd = cli.Command{
 	Name:   "config",
 	Usage:  "Manage mc configuration file.",
 	Action: mainConfig,
+	Before: setGlobalsFromContext,
 	Flags:  append(configFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		configHostCmd,
@@ -58,8 +59,6 @@ COMMANDS:
 
 // mainConfig is the handle for "mc config" command. provides sub-commands which write configuration data in json format to config file.
 func mainConfig(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())

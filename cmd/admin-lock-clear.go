@@ -40,6 +40,7 @@ var (
 var adminLockClearCmd = cli.Command{
 	Name:   "clear",
 	Usage:  "Clear locks hold in a given Minio server",
+	Before: setGlobalsFromContext,
 	Action: mainAdminLockClear,
 	Flags:  append(adminLockClearFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
@@ -104,7 +105,6 @@ func checkAdminLockClearSyntax(ctx *cli.Context) {
 
 func mainAdminLockClear(ctx *cli.Context) error {
 
-	setGlobalsFromContext(ctx)
 	checkAdminLockClearSyntax(ctx)
 
 	// Get the alias parameter from cli

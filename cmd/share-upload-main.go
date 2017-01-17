@@ -41,6 +41,7 @@ var shareUpload = cli.Command{
 	Name:   "upload",
 	Usage:  "Generate ‘curl’ command to upload objects without requiring access/secret keys.",
 	Action: mainShareUpload,
+	Before: setGlobalsFromContext,
 	Flags:  append(shareUploadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} - {{.Usage}}
@@ -175,8 +176,6 @@ func doShareUploadURL(objectURL string, isRecursive bool, expiry time.Duration, 
 
 // main for share upload command.
 func mainShareUpload(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check input arguments.
 	checkShareUploadSyntax(ctx)

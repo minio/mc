@@ -35,6 +35,7 @@ var versionCmd = cli.Command{
 	Name:   "version",
 	Usage:  "Print version info.",
 	Action: mainVersion,
+	Before: setGlobalsFromContext,
 	Flags:  append(versionFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -75,8 +76,6 @@ func (v versionMessage) JSON() string {
 }
 
 func mainVersion(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// Additional command speific theme customization.
 	console.SetColor("Version", color.New(color.FgGreen, color.Bold))

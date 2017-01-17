@@ -26,6 +26,7 @@ var adminCmd = cli.Command{
 	Name:   "admin",
 	Usage:  "Manage Minio servers.",
 	Action: mainAdmin,
+	Before: setGlobalsFromContext,
 	Flags:  append(adminFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		adminServiceCmd,
@@ -48,8 +49,6 @@ COMMANDS:
 
 // mainAdmin is the handle for "mc admin" command.
 func mainAdmin(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())

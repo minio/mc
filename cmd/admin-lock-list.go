@@ -41,6 +41,7 @@ var adminLockListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "Get the list of locks hold in a given Minio server",
 	Action: mainAdminLockList,
+	Before: setGlobalsFromContext,
 	Flags:  append(adminLockListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc admin lock {{.Name}} - {{.Usage}}
@@ -104,7 +105,6 @@ func checkAdminLockListSyntax(ctx *cli.Context) {
 
 func mainAdminLockList(ctx *cli.Context) error {
 
-	setGlobalsFromContext(ctx)
 	checkAdminLockListSyntax(ctx)
 
 	// Get the alias parameter from cli

@@ -26,6 +26,7 @@ var adminLockCmd = cli.Command{
 	Name:   "lock",
 	Usage:  "Control locks in servers.",
 	Action: mainAdminLock,
+	Before: setGlobalsFromContext,
 	Flags:  append(adminLockFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		adminLockListCmd,
@@ -48,8 +49,6 @@ COMMANDS:
 
 // mainAdminLock is the handle for "mc admin lock" command.
 func mainAdminLock(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())

@@ -29,6 +29,7 @@ var adminServiceRestartCmd = cli.Command{
 	Name:   "restart",
 	Usage:  "Restart a minio server",
 	Action: mainAdminServiceRestart,
+	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
    mc admin service {{.Name}} - {{.Usage}}
@@ -72,8 +73,6 @@ func checkAdminServiceRestartSyntax(ctx *cli.Context) {
 }
 
 func mainAdminServiceRestart(ctx *cli.Context) error {
-	// Set global values from context.
-	setGlobalsFromContext(ctx)
 
 	// Validate serivce restart syntax.
 	checkAdminServiceRestartSyntax(ctx)
