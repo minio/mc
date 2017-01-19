@@ -87,11 +87,12 @@ func setGlobals(quiet, debug, json, noColor, insecure bool) {
 }
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobalsFromContext(ctx *cli.Context) {
-	quiet := ctx.Bool("quiet") || ctx.GlobalBool("quiet")
-	debug := ctx.Bool("debug") || ctx.GlobalBool("debug")
-	json := ctx.Bool("json") || ctx.GlobalBool("json")
-	noColor := ctx.Bool("no-color") || ctx.GlobalBool("no-color")
-	insecure := ctx.Bool("insecure") || ctx.GlobalBool("insecure")
+func setGlobalsFromContext(ctx *cli.Context) error {
+	quiet := ctx.IsSet("quiet")
+	debug := ctx.IsSet("debug")
+	json := ctx.IsSet("json")
+	noColor := ctx.IsSet("no-color")
+	insecure := ctx.IsSet("insecure")
 	setGlobals(quiet, debug, json, noColor, insecure)
+	return nil
 }

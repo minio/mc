@@ -41,6 +41,7 @@ var policyCmd = cli.Command{
 	Name:   "policy",
 	Usage:  "Manage anonymous access to objects.",
 	Action: mainPolicy,
+	Before: setGlobalsFromContext,
 	Flags:  append(policyFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
@@ -381,8 +382,6 @@ func runPolicyCmd(ctx *cli.Context) {
 }
 
 func mainPolicy(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'policy' cli arguments.
 	checkPolicySyntax(ctx)

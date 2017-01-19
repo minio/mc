@@ -36,6 +36,7 @@ var adminServiceStatusCmd = cli.Command{
 	Name:   "status",
 	Usage:  "Get the status of a Minio server",
 	Action: mainAdminServiceStatus,
+	Before: setGlobalsFromContext,
 	Flags:  append(adminServiceStatusFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc admin service {{.Name}} - {{.Usage}}
@@ -114,8 +115,6 @@ func checkAdminServiceStatusSyntax(ctx *cli.Context) {
 }
 
 func mainAdminServiceStatus(ctx *cli.Context) error {
-	// Set global values.
-	setGlobalsFromContext(ctx)
 
 	// Validate serivce status syntax.
 	checkAdminServiceStatusSyntax(ctx)

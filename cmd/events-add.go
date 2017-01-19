@@ -48,6 +48,7 @@ var eventsAddCmd = cli.Command{
 	Name:   "add",
 	Usage:  "Add a new bucket notification.",
 	Action: mainEventsAdd,
+	Before: setGlobalsFromContext,
 	Flags:  append(eventsAddFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc events {{.Name}} - {{.Usage}}
@@ -98,7 +99,6 @@ func (u eventsAddMessage) String() string {
 func mainEventsAdd(ctx *cli.Context) error {
 	console.SetColor("Events", color.New(color.FgGreen, color.Bold))
 
-	setGlobalsFromContext(ctx)
 	checkEventsAddSyntax(ctx)
 
 	args := ctx.Args()

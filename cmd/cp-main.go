@@ -49,6 +49,7 @@ var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "Copy files and objects.",
 	Action: mainCopy,
+	Before: setGlobalsFromContext,
 	Flags:  append(cpFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -353,8 +354,6 @@ func doCopySession(session *sessionV8) {
 
 // mainCopy is the entry point for cp command.
 func mainCopy(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'copy' cli arguments.
 	checkCopySyntax(ctx)

@@ -33,6 +33,7 @@ var shareList = cli.Command{
 	Name:   "list",
 	Usage:  "List previously shared objects and folders.",
 	Action: mainShareList,
+	Before: setGlobalsFromContext,
 	Flags:  append(shareListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc share {{.Name}} COMMAND - {{.Usage}}
@@ -101,8 +102,6 @@ func doShareList(cmd string) *probe.Error {
 
 // main entry point for share list.
 func mainShareList(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// validate command-line args.
 	checkShareListSyntax(ctx)

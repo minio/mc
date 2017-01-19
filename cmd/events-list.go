@@ -34,6 +34,7 @@ var eventsListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "List bucket notifications.",
 	Action: mainEventsList,
+	Before: setGlobalsFromContext,
 	Flags:  append(eventsListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc events {{.Name}} - {{.Usage}}
@@ -99,7 +100,6 @@ func mainEventsList(ctx *cli.Context) error {
 	console.SetColor("Events", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Filter", color.New(color.Bold))
 
-	setGlobalsFromContext(ctx)
 	checkEventsListSyntax(ctx)
 
 	args := ctx.Args()

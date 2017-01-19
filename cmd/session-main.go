@@ -39,6 +39,7 @@ var sessionCmd = cli.Command{
 	Usage:  "Manage saved sessions for cp and mirror commands.",
 	Action: mainSession,
 	Flags:  append(sessionFlags, globalFlags...),
+	Before: setGlobalsFromContext,
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
 
@@ -206,8 +207,6 @@ func findClosestSessions(session string) []string {
 }
 
 func mainSession(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'session' cli arguments.
 	checkSessionSyntax(ctx)

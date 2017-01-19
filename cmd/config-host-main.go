@@ -37,6 +37,7 @@ var configHostCmd = cli.Command{
 	Usage:  "List, modify and remove hosts in configuration file.",
 	Flags:  append(configHostFlags, globalFlags...),
 	Action: mainConfigHost,
+	Before: setGlobalsFromContext,
 	CustomHelpTemplate: `NAME:
    mc config {{.Name}} - {{.Usage}}
 
@@ -187,8 +188,6 @@ func checkConfigHostRemoveSyntax(ctx *cli.Context) {
 }
 
 func mainConfigHost(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'config host' cli arguments.
 	checkConfigHostSyntax(ctx)

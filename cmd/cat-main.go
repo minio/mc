@@ -37,6 +37,7 @@ var catCmd = cli.Command{
 	Name:   "cat",
 	Usage:  "Display file and object contents.",
 	Action: mainCat,
+	Before: setGlobalsFromContext,
 	Flags:  append(catFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -134,8 +135,6 @@ func catOut(r io.Reader, size int64) *probe.Error {
 
 // mainCat is the main entry point for cat command.
 func mainCat(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'cat' cli arguments.
 	checkCatSyntax(ctx)

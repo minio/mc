@@ -46,6 +46,7 @@ var updateCmd = cli.Command{
 	Name:   "update",
 	Usage:  "Check for new mc update.",
 	Action: mainUpdate,
+	Before: setGlobalsFromContext,
 	Flags:  append(updateFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
    mc {{.Name}} - {{.Usage}}
@@ -213,8 +214,6 @@ func getReleaseUpdate(updateURL string) (updateMsg updateMessage, errMsg string,
 
 // main entry point for update command.
 func mainUpdate(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// Additional command speific theme customization.
 	console.SetColor("Update", color.New(color.FgGreen, color.Bold))

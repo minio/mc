@@ -40,6 +40,7 @@ var mbCmd = cli.Command{
 	Name:   "mb",
 	Usage:  "Make a bucket or a folder.",
 	Action: mainMakeBucket,
+	Before: setGlobalsFromContext,
 	Flags:  append(mbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -97,8 +98,6 @@ func checkMakeBucketSyntax(ctx *cli.Context) {
 
 // mainMakeBucket is entry point for mb command.
 func mainMakeBucket(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'mb' cli arguments.
 	checkMakeBucketSyntax(ctx)

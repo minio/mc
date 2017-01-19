@@ -34,6 +34,7 @@ var shareCmd = cli.Command{
 	Name:   "share",
 	Usage:  "Generate URL for sharing.",
 	Action: mainShare,
+	Before: setGlobalsFromContext,
 	Flags:  append(shareFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		shareDownload,
@@ -73,8 +74,6 @@ func migrateShare() {
 
 // mainShare - main handler for mc share command.
 func mainShare(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())

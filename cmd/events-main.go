@@ -26,6 +26,7 @@ var eventsCmd = cli.Command{
 	Name:   "events",
 	Usage:  "Manage object notifications.",
 	Action: mainEvents,
+	Before: setGlobalsFromContext,
 	Flags:  append(eventsFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		eventsAddCmd,
@@ -49,8 +50,6 @@ COMMANDS:
 
 // mainEvents is the handle for "mc events" command.
 func mainEvents(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())

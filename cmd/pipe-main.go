@@ -33,6 +33,7 @@ var pipeCmd = cli.Command{
 	Name:   "pipe",
 	Usage:  "Redirect STDIN to an object or file or STDOUT.",
 	Action: mainPipe,
+	Before: setGlobalsFromContext,
 	Flags:  append(pipeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -88,8 +89,6 @@ func checkPipeSyntax(ctx *cli.Context) {
 
 // mainPipe is the main entry point for pipe command.
 func mainPipe(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// validate pipe input arguments.
 	checkPipeSyntax(ctx)

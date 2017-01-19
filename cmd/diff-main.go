@@ -38,6 +38,7 @@ var diffCmd = cli.Command{
 	Usage:       "Show differences between two folders or buckets.",
 	Description: "Diff only lists missing objects or objects with size differences. It *DOES NOT* compare contents. i.e. Objects of same name and size, but differ in contents are not noticed.",
 	Action:      mainDiff,
+	Before:      setGlobalsFromContext,
 	Flags:       append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
    mc {{.Name}} - {{.Usage}}
@@ -180,8 +181,6 @@ func doDiffMain(firstURL, secondURL string) error {
 
 // mainDiff main for 'diff'.
 func mainDiff(ctx *cli.Context) error {
-	// Set global flags from context.
-	setGlobalsFromContext(ctx)
 
 	// check 'diff' cli arguments.
 	checkDiffSyntax(ctx)
