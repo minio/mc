@@ -68,19 +68,19 @@ EXAMPLES:
 
 // lockListMessage container to hold locks information.
 type lockListMessage struct {
-	Status   string                `json:"status"`
-	LockInfo madmin.VolumeLockInfo `json:"volumeLockInfo"`
+	Status string `json:"status"`
+	madmin.VolumeLockInfo
 }
 
 // String colorized service status message.
 func (u lockListMessage) String() string {
 	msg := fmt.Sprintf("%s/%s (LocksOnObject: %d, locksAcquiredOnObject: %d, totalBlockLocks:%d): ",
-		u.LockInfo.Bucket,
-		u.LockInfo.Object,
-		u.LockInfo.LocksOnObject,
-		u.LockInfo.LocksAcquiredOnObject,
-		u.LockInfo.TotalBlockedLocks)
-	for _, detail := range u.LockInfo.LockDetailsOnObject {
+		u.Bucket,
+		u.Object,
+		u.LocksOnObject,
+		u.LocksAcquiredOnObject,
+		u.TotalBlockedLocks)
+	for _, detail := range u.LockDetailsOnObject {
 		msg += fmt.Sprintf("  %+v", detail)
 	}
 	msg += "\n"
@@ -128,7 +128,7 @@ func mainAdminLockList(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e), "Cannot get lock status.")
 
 	for _, l := range locksInfo {
-		printMsg(lockListMessage{LockInfo: l})
+		printMsg(lockListMessage{VolumeLockInfo: l})
 	}
 
 	return nil
