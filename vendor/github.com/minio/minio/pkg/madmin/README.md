@@ -1,4 +1,4 @@
-# Minio Admin Library. [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# Minio Admin Library. [![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io)
 The Minio Admin Golang Client SDK provides APIs to manage Minio services.
 
 This quickstart guide will show you how to install the Minio Admin client SDK, connect to Minio admin service, and provide a walkthrough of a simple file uploader. 
@@ -105,16 +105,16 @@ go run service-status.go
 ### API Reference : Service Operations
 
 * [`ServiceStatus`](./API.md#ServiceStatus)
-* [`ServiceStop`](./API.md#ServiceStop)
 * [`ServiceRestart`](./API.md#ServiceRestart)
+* [`ServiceSetCredentials`](./API.md#ServiceSetCredentials)
 
 ## Full Examples
 
 #### Full Examples : Service Operations
 
 * [service-status.go](https://github.com/minio/minio/blob/master/pkg/madmin/examples/service-status.go)
-* [service-stop.go](https://github.com/minio/minio/blob/master/pkg/madmin/examples/service-stop.go)
 * [service-restart.go](https://github.com/minio/minio/blob/master/pkg/madmin/examples/service-restart.go)
+* [service-set-credentials.go](https://github.com/minio/minio/blob/master/pkg/madmin/examples/service-set-credentials.go)
 
 ## Contribute
 
