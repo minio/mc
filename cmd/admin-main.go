@@ -31,6 +31,7 @@ var adminCmd = cli.Command{
 	Subcommands: []cli.Command{
 		adminServiceCmd,
 		adminLockCmd,
+		adminHealCmd,
 	},
 	CustomHelpTemplate: `NAME:
    {{.Name}} - {{.Usage}}
