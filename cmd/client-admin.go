@@ -95,6 +95,9 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			// Set custom transport.
 			api.SetCustomTransport(transport)
 
+			// Set client timeout
+			api.SetTimeout(30 * time.Second)
+
 			// Set app info.
 			api.SetAppInfo(config.AppName, config.AppVersion)
 
