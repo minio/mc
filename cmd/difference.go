@@ -19,6 +19,9 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 // differType difference in type.
@@ -120,8 +123,26 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 
 			current := urlJoinPath(targetURL, srcSuffix)
 			expected := urlJoinPath(targetURL, tgtSuffix)
+			if !utf8.ValidString(srcSuffix) {
+				// Error. Keys must be valid UTF-8.
+				errorIf(errInvalidSource(current), fmt.Sprintf("'%s' is not valid UTF-8", srcSuffix))
+				srcCtnt, srcOk = <-srcCh
+				continue
+			}
+			if !utf8.ValidString(tgtSuffix) {
+				// Error. Keys must be valid UTF-8.
+				errorIf(errInvalidTarget(expected), fmt.Sprintf("'%s' is not valid UTF-8", tgtSuffix))
+				tgtCtnt, tgtOk = <-tgtCh
+				continue
+			}
 
-			if expected > current {
+			// Normalize to avoid situations where multiple byte representations are possible.
+			// e.g. 'ä' can be represented as precomposed U+00E4 (UTF-8 0xc3a4) or decomposed
+			// U+0061 U+0308 (UTF-8 0x61cc88).
+			normalizedCurrent := norm.NFC.String(current)
+			normalizedExpected := norm.NFC.String(expected)
+
+			if normalizedExpected > normalizedCurrent {
 				diffCh <- diffMessage{
 					FirstURL:     srcCtnt.URL.String(),
 					Diff:         differInFirst,
@@ -130,7 +151,7 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 				srcCtnt, srcOk = <-srcCh
 				continue
 			}
-			if expected == current {
+			if normalizedExpected == normalizedCurrent {
 				srcType, tgtType := srcCtnt.Type, tgtCtnt.Type
 				srcSize, tgtSize := srcCtnt.Size, tgtCtnt.Size
 				if srcType.IsRegular() && !tgtType.IsRegular() ||
