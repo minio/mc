@@ -21,6 +21,7 @@ import (
 	"errors"
 	"hash/fnv"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -117,16 +118,23 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				return nil, probe.NewError(e)
 			}
 
-			transport := http.DefaultTransport
+			// Keep TLS config.
+			tlsConfig := &tls.Config{RootCAs: globalRootCAs}
+			if config.Insecure {
+				tlsConfig.InsecureSkipVerify = true
+			}
 
-			if useTLS {
-				tlsConfig := &tls.Config{RootCAs: globalRootCAs}
-				if config.Insecure {
-					tlsConfig.InsecureSkipVerify = true
-				}
-				transport = &http.Transport{
-					TLSClientConfig: tlsConfig,
-				}
+			var transport http.RoundTripper = &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+				TLSClientConfig:       tlsConfig,
 			}
 
 			if config.Debug {
