@@ -128,17 +128,18 @@ func mainAdminHeal(ctx *cli.Context) error {
 	splits := splitStr(aliasedURL, "/", 3)
 	bucket, object := splits[1], splits[2]
 
-	// Heal format if bucket is not specified
+	var e error
+
+	// Heal format if bucket is not specified and quit immediately
 	if bucket == "" {
-		// TBD, Heal format - not ready yet
-		console.Println("Healing format is not implemented yet.")
+		e = client.HealFormat(isFake)
+		fatalIf(probe.NewError(e), "Cannot heal the specified storage format.")
 		return nil
 	}
 
 	// Heal the specified bucket
-	if e := client.HealBucket(bucket, isFake); e != nil {
-		fatalIf(probe.NewError(e), "Cannot repair bucket.")
-	}
+	e = client.HealBucket(bucket, isFake)
+	fatalIf(probe.NewError(e), "Cannot repair bucket.")
 
 	// Search for objects that need healing
 	doneCh := make(chan struct{})
@@ -148,18 +149,15 @@ func mainAdminHeal(ctx *cli.Context) error {
 	// Iterate over objects that need healing
 	for obj := range healObjectsCh {
 		// Return for any error
-		if obj.Err != nil {
-			fatalIf(probe.NewError(e), "Cannot list objects that need to be healed.")
-		}
+		fatalIf(probe.NewError(obj.Err), "Cannot list objects that need to be healed.")
 
 		// Check the heal status, and call heal object API only when an object can be healed
 		switch healInfo := *obj.HealObjectInfo; healInfo.Status {
 		case madmin.CanHeal:
 			// Heal Object
-			e := client.HealObject(bucket, obj.Key, isFake)
-			if e != nil {
-				errorIf(probe.NewError(e), "Cannot repair object: `"+obj.Key+"`")
-			}
+			e = client.HealObject(bucket, obj.Key, isFake)
+			errorIf(probe.NewError(e), "Cannot repair object: `"+obj.Key+"`")
+
 			// Print successful message
 			printMsg(healObjectMessage{Bucket: bucket, Object: obj})
 
