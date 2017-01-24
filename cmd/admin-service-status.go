@@ -19,6 +19,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -80,22 +81,38 @@ type backendStatus struct {
 	Backend interface{} `json:"backend"`
 }
 
+type serverVersion struct {
+	Version  string `json:"version"`
+	CommitID string `json:"commitID"`
+}
+
 // serviceStatusMessage container to hold service status information.
 type serviceStatusMessage struct {
-	Status      string        `json:"status"`
-	StorageInfo backendStatus `json:"storageInfo"`
+	Status        string        `json:"status"`
+	Service       bool          `json:"service"`
+	StorageInfo   backendStatus `json:"storageInfo"`
+	ServerVersion serverVersion `json:"server"`
 }
 
 // String colorized service status message.
-func (u serviceStatusMessage) String() string {
-	msg := fmt.Sprintf("Total: %s, Free: %s.",
+func (u serviceStatusMessage) String() (msg string) {
+	defer func() {
+		msg = console.Colorize("ServiceStatus", msg)
+	}()
+	// When service is offline
+	if !u.Service {
+		msg = "The server is offline."
+		return
+	}
+	// Online service, get backend information
+	msg = fmt.Sprintf("Total: %s, Free: %s.",
 		humanize.IBytes(uint64(u.StorageInfo.Total)),
 		humanize.IBytes(uint64(u.StorageInfo.Free)),
 	)
 	if v, ok := u.StorageInfo.Backend.(xlBackend); ok {
 		msg += fmt.Sprintf(" Online Disks: %d, Offline Disks: %d.\n", v.OnlineDisks, v.OfflineDisks)
 	}
-	return console.Colorize("ServiceStatus", msg)
+	return
 }
 
 // JSON jsonified service status Message message.
@@ -131,18 +148,42 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 
 	// Fetch the storage info of the specified Minio server
 	st, e := client.ServiceStatus()
-	fatalIf(probe.NewError(e), "Cannot get service status.")
 
-	storageInfo := backendStatus{
-		Total: st.Total,
-		Free:  st.Free,
+	// Check the availability of the server: online or offline. A server is considered
+	// offline if we can't get any response or we get a bad format response
+	var serviceOffline bool
+	switch v := e.(type) {
+	case *json.SyntaxError:
+		serviceOffline = true
+	case *url.Error:
+		if v.Timeout() {
+			serviceOffline = true
+		}
+	}
+	if serviceOffline {
+		printMsg(serviceStatusMessage{Service: false})
+		return nil
 	}
 
-	if st.Backend.Type == madmin.XL {
+	// If the error is not nil and not unrecognizable, just print it and exit
+	fatalIf(probe.NewError(e), "Cannot get service status.")
+
+	// Construct the version response
+	version := serverVersion{
+		Version:  st.ServerVersion.Version,
+		CommitID: st.ServerVersion.CommitID,
+	}
+
+	// Construct the backend status
+	storageInfo := backendStatus{
+		Total: st.StorageInfo.Total,
+		Free:  st.StorageInfo.Free,
+	}
+	if st.StorageInfo.Backend.Type == madmin.XL {
 		storageInfo.Backend = xlBackend{
 			Type:         xlType,
-			OnlineDisks:  st.Backend.OnlineDisks,
-			OfflineDisks: st.Backend.OfflineDisks,
+			OnlineDisks:  st.StorageInfo.Backend.OnlineDisks,
+			OfflineDisks: st.StorageInfo.Backend.OfflineDisks,
 		}
 	} else {
 		storageInfo.Backend = fsBackend{
@@ -150,7 +191,12 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 		}
 	}
 
-	printMsg(serviceStatusMessage{StorageInfo: storageInfo})
+	// Print the whole response
+	printMsg(serviceStatusMessage{
+		Service:       true,
+		StorageInfo:   storageInfo,
+		ServerVersion: version,
+	})
 
 	return nil
 }
