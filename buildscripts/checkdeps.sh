@@ -23,7 +23,8 @@ _init() {
     GIT_VERSION="1.0"
     GO_VERSION="1.7.1"
     OSX_VERSION="10.8"
-    UNAME=$(uname -sm)
+    KNAME=$(uname -s)
+    ARCH=$(uname -m)
 
     ## Check all dependencies are present
     MISSING=""
@@ -145,54 +146,40 @@ check_golang_env() {
     fi
 }
 
-is_supported_os() {
-    local supported
-    case ${UNAME%% *} in
-        "Linux")
-	    supported=1
+assert_is_supported_os() {
+    case "${KNAME}" in
+        Linux | FreeBSD )
+            return
             ;;
-        "Darwin")
+        Darwin )
             osx_host_version=$(env sw_vers -productVersion)
-            check_version "${osx_host_version}" "${OSX_VERSION}"
-            [[ $? -ge 2 ]] && die "Minimum OSX version supported is ${OSX_VERSION}"
-	    supported=1
-            ;;
-        "SunOS")
-	    supported=1
-            ;;
-        "FreeBSD")
-            supported=1
-	    ;;
-        "*")
-	    supported=0
-	    ;;
-    esac
-    if [ "x$supported" != "x1" ]; then
-        echo "Invalid os: ${UNAME} not supported"
-        exit 1;
-    fi
-}
-
-is_supported_arch() {
-    local supported
-    case ${UNAME##* } in
-        "x86_64" | "amd64")
-            supported=1
-            ;;
-        "arm"*)
-            supported=1
-            ;;
-        "i86pc"*)
-            supported=1
+            if ! check_minimum_version "${OSX_VERSION}" "${osx_host_version}"; then
+                echo "ERROR"
+                echo "OSX version '${osx_host_version}' not supported."
+                echo "Minimum supported version: ${OSX_VERSION}"
+                exit 1
+            fi
+            return
             ;;
         *)
-            supported=0
-            ;;
+            echo "ERROR"
+            echo "OS '${KNAME}' is not supported."
+            echo "Supported OS: [Linux, FreeBSD, Darwin]"
+            exit 1
     esac
-    if [ "x$supported" != "x1" ]; then
-        echo "Invalid arch: ${UNAME} not supported"
-        exit 1;
-    fi
+}
+
+assert_is_supported_arch() {
+    case "${ARCH}" in
+        x86_64 | amd64 | aarch64 | arm* )
+            return
+            ;;
+        *)
+            echo "ERROR"
+            echo "Arch '${ARCH}' not supported."
+            echo "Supported Arch: [x86_64, amd64, aarch64, arm*]"
+            exit 1
+    esac
 }
 
 check_deps() {
@@ -209,10 +196,10 @@ check_deps() {
 
 main() {
     echo -n "Check for supported arch.. "
-    is_supported_arch
+    assert_is_supported_arch
 
     echo -n "Check for supported os.. "
-    is_supported_os
+    assert_is_supported_os
 
     echo -n "Checking if proper environment variables are set.. "
     check_golang_env
