@@ -102,6 +102,9 @@ type mirrorSession struct {
 	// the channel to trap SIGKILL signals
 	trapCh <-chan bool
 
+	// Indicate if the current session file is removed from disk
+	saveOnDisk bool
+
 	// channel for status messages
 	statusCh chan URLs
 	// channel for urls to harvest
@@ -585,8 +588,7 @@ loop:
 }
 
 // when using a struct for copying, we could save a lot of passing of variables
-func (ms *mirrorSession) mirror() {
-	watch := ms.Header.CommandBoolFlags["watch"]
+func (ms *mirrorSession) mirror(watch bool) {
 	recursive := ms.Header.CommandBoolFlags["recursive"]
 
 	if globalQuiet {
@@ -596,46 +598,27 @@ func (ms *mirrorSession) mirror() {
 		ms.scanBar = scanBarFactory()
 	}
 
-	// harvest urls to copy
-	ms.harvest(recursive)
-
 	// now we want to start the progress bar
 	ms.status.Start()
-	defer ms.status.Finish()
 
 	// start the status go routine
 	ms.startStatus()
 
-	// wait for trap signal to close properly and show message if there are
-	// items queued left to resume the session.
-	go func() {
-		// on SIGTERM shutdown and stop
-		<-ms.trapCh
-
-		// Shutdown gracefully.
-		ms.shutdown()
-
-		// Save session and die.
-		ms.CloseAndDie()
-	}()
-
-	// monitor mode will watch the source folders for changes,
-	// and queue them for copying. Monitor mode can be stopped
-	// only by SIGTERM.
 	if watch {
+		// monitor mode will watch the source folders for changes,
+		// and queue them for copying. Monitor mode can be stopped
+		// only by SIGTERM.
 		if err := ms.watchSourceURL(true); err != nil {
 			ms.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 		}
-
 		ms.startMirror(true)
-
 		ms.watch()
 	} else {
+		// harvest urls to copy
+		ms.harvest(recursive)
 		ms.startMirror(false)
-
 		// wait for copy to finish
 		ms.wgMirror.Wait()
-		ms.shutdown()
 	}
 }
 
@@ -644,18 +627,31 @@ func (ms *mirrorSession) shutdown() {
 	// make sure only one shutdown can be active
 	ms.m.Lock()
 
+	// wait for current copy action to finish
+	ms.wgMirror.Wait()
+
+	// copy sends status message, wait for status
+	ms.wgStatus.Wait()
+
+	// Finish
+	ms.status.Finish()
+
 	ms.watcher.Stop()
 
 	// stop queue, prevent new copy actions
 	ms.queue.Close()
 
-	// wait for current copy action to finish
-	ms.wgMirror.Wait()
-
 	close(ms.statusCh)
+}
 
-	// copy sends status message, wait for status
-	ms.wgStatus.Wait()
+// CloseAndDie - save the session file and print its ID or simply
+// quit if saveOnDisk is not activated
+func (ms *mirrorSession) CloseAndDie() {
+	if ms.saveOnDisk {
+		ms.sessionV8.CloseAndDie()
+	} else {
+		os.Exit(0)
+	}
 }
 
 func newMirrorSession(session *sessionV8) *mirrorSession {
@@ -671,8 +667,9 @@ func newMirrorSession(session *sessionV8) *mirrorSession {
 	}
 
 	ms := mirrorSession{
-		trapCh:    signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
-		sessionV8: session,
+		trapCh:     signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
+		sessionV8:  session,
+		saveOnDisk: true,
 
 		statusCh:  make(chan URLs),
 		harvestCh: make(chan URLs),
@@ -699,6 +696,36 @@ func newMirrorSession(session *sessionV8) *mirrorSession {
 	}
 
 	return &ms
+}
+
+// doMirrorSession - run a mirror session task
+func doMirrorSession(ms *mirrorSession) {
+	// wait for trap signal to close properly and show message if there are
+	// items queued left to resume the session.
+	go func() {
+		// on SIGTERM shutdown and stop
+		<-ms.trapCh
+
+		// Save session and die.
+		ms.CloseAndDie()
+	}()
+
+	// Mirroring all objects first
+	ms.mirror(false)
+
+	// Remove session file when mirror terminating normally,
+	ms.Delete()
+
+	// No need to save again the session file
+	ms.saveOnDisk = false
+
+	// Watch new events if watch flag is enabled
+	if ms.Header.CommandBoolFlags["watch"] {
+		ms.mirror(true)
+	}
+
+	// Shutdown gracefully
+	ms.shutdown()
 }
 
 // Main entry point for mirror command.
@@ -729,13 +756,9 @@ func mainMirror(ctx *cli.Context) error {
 	// extract URLs.
 	session.Header.CommandArgs = ctx.Args()
 
+	// Construct a new mirror session object and execute it
 	ms := newMirrorSession(session)
-
-	// Mirroring.
-	ms.mirror()
-
-	// delete will be run when terminating normally,
-	ms.Delete()
+	doMirrorSession(ms)
 
 	return nil
 }
