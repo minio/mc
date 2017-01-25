@@ -19,6 +19,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/fatih/color"
@@ -59,6 +60,7 @@ USAGE:
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
+
 COMMANDS:
    {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}
@@ -99,10 +101,12 @@ func (u healObjectMessage) JSON() string {
 // checkAdminHealSyntax - validate all the passed arguments
 func checkAdminHealSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
+		cli.ShowSubcommandHelp(ctx)
+		os.Exit(1)
 	}
 }
 
+// mainAdminHeal - the entry function of heal command
 func mainAdminHeal(ctx *cli.Context) error {
 
 	// Check for command syntax
