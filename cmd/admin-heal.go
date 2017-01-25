@@ -160,7 +160,10 @@ func mainAdminHeal(ctx *cli.Context) error {
 		case madmin.CanHeal:
 			// Heal Object
 			e = client.HealObject(bucket, obj.Key, isFake)
-			errorIf(probe.NewError(e), "Cannot repair object: `"+obj.Key+"`")
+			if e != nil {
+				errorIf(probe.NewError(e), "Cannot repair object: `"+obj.Key+"`")
+				continue
+			}
 
 			// Print successful message
 			printMsg(healObjectMessage{Bucket: bucket, Object: obj})
