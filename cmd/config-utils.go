@@ -29,11 +29,17 @@ const (
 
 // isValidAccessKey - validate access key for right length.
 func isValidAccessKey(accessKey string) bool {
+	if accessKey == "" {
+		return true
+	}
 	return len(accessKey) >= accessKeyMinLen && len(accessKey) <= accessKeyMaxLen
 }
 
 // isValidSecretKey - validate secret key for right length.
 func isValidSecretKey(secretKey string) bool {
+	if secretKey == "" {
+		return true
+	}
 	return len(secretKey) >= secretKeyMinLen && len(secretKey) <= secretKeyMaxLen
 }
 
