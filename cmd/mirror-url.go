@@ -145,21 +145,17 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				TargetContent: targetContent,
 			}
 		case differInSecond:
-			if isRemove {
-				// todo(nl5887): I'd all force and fake checks to the the actual mirror / harvest
-				if !isForce && !isFake {
-					// Object removal not allowed if force is not set.
-					URLsCh <- URLs{
-						Error: errDeleteNotAllowed(diffMsg.SecondURL),
-					}
-					continue
-				}
-				URLsCh <- URLs{
-					TargetAlias:   targetAlias,
-					TargetContent: diffMsg.secondContent,
-				}
+			sourceSuffix := strings.TrimPrefix(diffMsg.SecondURL, targetURL)
+			// Either available only in target or size differs and force is set.
+			targetPath := urlJoinPath(sourceURL, sourceSuffix)
+			sourceContent := diffMsg.secondContent
+			targetContent := &clientContent{URL: *newClientURL(targetPath)}
+			URLsCh <- URLs{
+				SourceAlias:   sourceAlias,
+				SourceContent: sourceContent,
+				TargetAlias:   targetAlias,
+				TargetContent: targetContent,
 			}
-			continue
 		default:
 			URLsCh <- URLs{
 				Error: errUnrecognizedDiffType(diffMsg.Diff).Trace(diffMsg.FirstURL, diffMsg.SecondURL),

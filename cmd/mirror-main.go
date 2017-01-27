@@ -105,6 +105,7 @@ type mirrorJob struct {
 	// the global watcher object, which receives notifications of created
 	// and deleted files
 	watcher *Watcher
+
 	// the queue of objects to be created or removed
 	mirrorQueue chan URLs
 	// waitgroup for mirror goroutine, waits till all
