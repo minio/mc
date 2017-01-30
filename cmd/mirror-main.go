@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -25,6 +24,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
@@ -43,10 +43,6 @@ var (
 		cli.BoolFlag{
 			Name:  "fake",
 			Usage: "Perform a fake mirror operation.",
-		},
-		cli.BoolFlag{
-			Name:  "watch, w",
-			Usage: "Watch and mirror for changes.",
 		},
 		cli.BoolFlag{
 			Name:  "remove",
@@ -88,48 +84,51 @@ EXAMPLES:
       files on Amazon S3 cloud storage. NOTE: '--remove' is only supported with '--force'.
       $ mc {{.Name}} --force --remove play/photos/2014 s3/backup-photos/2014
 
-   6. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
-      new objects and uploads them.
-      $ mc {{.Name}} --force --remove --watch /var/lib/backups play/backups
-
 `,
 }
 
-type mirrorSession struct {
-	// embeds the session struct
-	*sessionV8
+type mirrorJob struct {
 
 	// the channel to trap SIGKILL signals
 	trapCh <-chan bool
 
-	// channel for status messages
-	statusCh chan URLs
-	// channel for urls to harvest
-	harvestCh chan URLs
+	// Hold context information
+	context *cli.Context
+
+	// mutex for shutdown, this prevents the shutdown
+	// to be initiated multiple times
+	m *sync.Mutex
+
 	// channel for errors
 	errorCh chan *probe.Error
 
 	// the global watcher object, which receives notifications of created
 	// and deleted files
 	watcher *Watcher
-
 	// the queue of objects to be created or removed
-	queue *Queue
-
-	// mutex for shutdown, this prevents the shutdown
-	// to be initiated multiple times
-	m *sync.Mutex
-
-	// waitgroup for status goroutine, waits till all status
-	// messages have been written and received
-	wgStatus *sync.WaitGroup
-
+	mirrorQueue chan URLs
 	// waitgroup for mirror goroutine, waits till all
 	// mirror actions have been completed
 	wgMirror *sync.WaitGroup
 
+	// waitgroup for harvest goroutine
+	wgHarvest *sync.WaitGroup
+	// channel to halt harvest routine
+	harvestStop chan bool
+	// channel for urls to harvest
+	harvestCh chan URLs
+
+	// Hold operation status information
 	status  Status
 	scanBar scanBarFunc
+	// waitgroup for status goroutine, waits till all status
+	// messages have been written and received
+	wgStatus *sync.WaitGroup
+	// channel for status messages
+	statusCh chan URLs
+
+	TotalObjects int64
+	TotalBytes   int64
 
 	sourceURL string
 	targetURL string
@@ -180,8 +179,8 @@ func (c mirrorStatMessage) String() string {
 }
 
 // doRemove - removes files on target.
-func (ms *mirrorSession) doRemove(sURLs URLs) URLs {
-	isFake := ms.Header.CommandBoolFlags["fake"]
+func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
+	isFake := mj.context.Bool("fake")
 	if isFake {
 		return sURLs.WithError(nil)
 	}
@@ -198,8 +197,8 @@ func (ms *mirrorSession) doRemove(sURLs URLs) URLs {
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
-func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
-	isFake := ms.Header.CommandBoolFlags["fake"]
+func (mj *mirrorJob) doMirror(sURLs URLs) URLs {
+	isFake := mj.context.Bool("fake")
 
 	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
@@ -208,7 +207,7 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 	//s For a fake mirror make sure we update respective progress bars
 	// and accounting readers under relevant conditions.
 	if isFake {
-		ms.status.Add(sURLs.SourceContent.Size)
+		mj.status.Add(sURLs.SourceContent.Size)
 		return sURLs.WithError(nil)
 	}
 
@@ -218,37 +217,32 @@ func (ms *mirrorSession) doMirror(sURLs URLs) URLs {
 	targetURL := sURLs.TargetContent.URL
 	length := sURLs.SourceContent.Size
 
-	ms.status.SetCaption(sourceURL.String() + ": ")
+	mj.status.SetCaption(sourceURL.String() + ": ")
 
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
-	ms.status.PrintMsg(mirrorMessage{
+	mj.status.PrintMsg(mirrorMessage{
 		Source:     sourcePath,
 		Target:     targetPath,
 		Size:       length,
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
-	return uploadSourceToTargetURL(sURLs, ms.status)
+	return uploadSourceToTargetURL(sURLs, mj.status)
 }
 
-// Go routine to update session status
-func (ms *mirrorSession) startStatus() {
-	ms.wgStatus.Add(1)
+// Go routine to update progress status
+func (mj *mirrorJob) startStatus() {
+	mj.wgStatus.Add(1)
 
-	// wait for status messages on statusChan, show error messages and write the current queue to session
+	// wait for status messages on statusChan, show error messages
 	go func() {
-		defer ms.wgStatus.Done()
-		defer func() {
-			// finished harvesting urls, save queue to session data
-			if err := ms.queue.Save(ms.NewDataWriter()); err != nil {
-				ms.status.fatalIf(probe.NewError(err), "Unable to save queue.")
-			}
-			// Flush harvested urls to disk.
-			ms.Save()
-		}()
+		// now we want to start the progress bar
+		mj.status.Start()
+		defer mj.status.Finish()
+		defer mj.wgStatus.Done()
 
-		for sURLs := range ms.statusCh {
+		for sURLs := range mj.statusCh {
 			if sURLs.Error != nil {
 				// Print in new line and adjust to top so that we
 				// don't print over the ongoing progress bar.
@@ -260,101 +254,60 @@ func (ms *mirrorSession) startStatus() {
 					errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
 						fmt.Sprintf("Failed to remove ‘%s’.", sURLs.TargetContent.URL.String()))
 				}
-				if ms.Header.CommandBoolFlags["watch"] {
-					continue
-				}
-				// For all non critical errors we can continue for the remaining files.
-				if isErrIgnored(sURLs.Error) {
-					continue
-				}
-
-				// For critical errors we should exit. Session
-				// can be resumed after the user figures out
-				// the  problem. We know that
-				// there are no current copy actions, because
-				// we're not multi threading now.
-
-				// this issue could be separated using separate
-				// error channel instead of using sURLs.Error
-				ms.CloseAndDie()
-			}
-
-			if sURLs.SourceContent != nil {
-				ms.Header.LastCopied = sURLs.SourceContent.URL.String()
-			} else if sURLs.TargetContent != nil {
-				ms.Header.LastRemoved = sURLs.TargetContent.URL.String()
 			}
 
 			if sURLs.SourceContent != nil {
 			} else if sURLs.TargetContent != nil {
 				// Construct user facing message and path.
 				targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
-				ms.status.PrintMsg(rmMessage{Key: targetPath})
+				mj.status.PrintMsg(rmMessage{Key: targetPath})
 			}
-
-			// Save before moving to the next one.
-			ms.Save()
 		}
 	}()
 }
 
-func (ms *mirrorSession) startMirror(wait bool) {
-	isRemove := ms.Header.CommandBoolFlags["remove"]
-
-	ms.wgMirror.Add(1)
-
+func (mj *mirrorJob) startMirror() {
+	isRemove := mj.context.Bool("remove")
+	mj.wgMirror.Add(1)
 	// wait for new urls to mirror or delete in the queue, and
 	// run the actual mirror or remove.
-	go func() {
-		defer ms.wgMirror.Done()
+	defer mj.wgMirror.Done()
 
-		for {
-			if !wait {
-			} else if err := ms.queue.Wait(); err != nil {
-				break
-			}
-
-			v := ms.queue.Pop()
-			if v == nil {
-				break
-			}
-
-			sURLs, ok := v.(URLs)
+loop:
+	for {
+		select {
+		case sURLs, ok := <-mj.mirrorQueue:
 			if !ok {
-				fatalIf(errInvalidArgument(), fmt.Sprintf("URLs type not found, %#v", v))
+				break loop
 			}
-
 			// Save total count.
-			sURLs.TotalCount = ms.Header.TotalObjects
-
+			sURLs.TotalCount = mj.TotalObjects
 			// Save totalSize.
-			sURLs.TotalSize = ms.Header.TotalBytes
-
+			sURLs.TotalSize = mj.TotalBytes
 			if sURLs.SourceContent != nil {
-				ms.statusCh <- ms.doMirror(sURLs)
+				mj.statusCh <- mj.doMirror(sURLs)
 			} else if sURLs.TargetContent != nil && isRemove {
-				ms.statusCh <- ms.doRemove(sURLs)
+				mj.statusCh <- mj.doRemove(sURLs)
 			}
 		}
-	}()
+	}
 }
 
 // this goroutine will watch for notifications, and add modified objects to the queue
-func (ms *mirrorSession) watch() {
-	isForce := ms.Header.CommandBoolFlags["force"]
+func (mj *mirrorJob) watch() {
+	isForce := mj.context.Bool("force")
 
 	for {
 		select {
-		case event, ok := <-ms.watcher.Events():
+		case event, ok := <-mj.watcher.Events():
 			if !ok {
 				// channel closed
 				return
 			}
-
-			// this code seems complicated, it will change the expanded alias back to the alias
+			// this code seemj complicated, it will change the expanded alias back to the alias
 			// again, by replacing the sourceUrlFull with the sourceAlias. This url will be
 			// used to mirror.
-			sourceAlias, sourceURLFull, _ := mustExpandAlias(ms.sourceURL)
+			sourceAlias, sourceURLFull, _ := mustExpandAlias(mj.sourceURL)
 
 			// If the passed source URL points to fs, fetch the absolute src path
 			// to correctly calculate targetPath
@@ -367,12 +320,12 @@ func (ms *mirrorSession) watch() {
 
 			sourceURL := newClientURL(event.Path)
 
-			aliasedPath := strings.Replace(event.Path, sourceURLFull, ms.sourceURL, -1)
+			aliasedPath := strings.Replace(event.Path, sourceURLFull, mj.sourceURL, -1)
 
 			// build target path, it is the relative of the event.Path with the sourceUrl
 			// joined to the targetURL.
 			sourceSuffix := strings.TrimPrefix(event.Path, sourceURLFull)
-			targetPath := urlJoinPath(ms.targetURL, sourceSuffix)
+			targetPath := urlJoinPath(mj.targetURL, sourceSuffix)
 
 			// newClient needs the unexpanded  path, newCLientURL needs the expanded path
 			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
@@ -393,19 +346,19 @@ func (ms *mirrorSession) watch() {
 					sourceClient, err := newClient(aliasedPath)
 					if err != nil {
 						// cannot create sourceclient
-						ms.statusCh <- mirrorURL.WithError(err)
+						mj.statusCh <- mirrorURL.WithError(err)
 						continue
 					}
 					sourceContent, err := sourceClient.Stat(false)
 					if err != nil {
 						// source doesn't exist anymore
-						ms.statusCh <- mirrorURL.WithError(err)
+						mj.statusCh <- mirrorURL.WithError(err)
 						continue
 					}
 					targetClient, err := newClient(targetPath)
 					if err != nil {
 						// cannot create targetclient
-						ms.statusCh <- mirrorURL.WithError(err)
+						mj.statusCh <- mirrorURL.WithError(err)
 						return
 					}
 					shouldQueue := false
@@ -417,15 +370,12 @@ func (ms *mirrorSession) watch() {
 						shouldQueue = true
 					}
 					if shouldQueue || isForce {
-						mirrorURL.TotalCount = ms.Header.TotalObjects
-						mirrorURL.TotalSize = ms.Header.TotalBytes
-						if e := ms.queue.Push(mirrorURL); e != nil {
-							// will throw an error if already queue, ignoring this error
-							continue
-						}
-						// adjust total, because we want to show progress of the items stiil
+						mirrorURL.TotalCount = mj.TotalObjects
+						mirrorURL.TotalSize = mj.TotalBytes
+						mj.mirrorQueue <- mirrorURL
+						// adjust total, because we want to show progress of the itemj stiil
 						// queued to be copied.
-						ms.status.SetTotal(ms.status.Total() + sourceContent.Size).Update()
+						mj.status.SetTotal(mj.status.Total() + sourceContent.Size).Update()
 					}
 					continue
 				}
@@ -434,7 +384,7 @@ func (ms *mirrorSession) watch() {
 					targetClient, err := newClient(targetPath)
 					if err != nil {
 						// cannot create targetclient
-						ms.statusCh <- mirrorURL.WithError(err)
+						mj.statusCh <- mirrorURL.WithError(err)
 						return
 					}
 					_, err = targetClient.Stat(false)
@@ -445,14 +395,11 @@ func (ms *mirrorSession) watch() {
 				}
 				if shouldQueue || isForce {
 					mirrorURL.SourceContent.Size = event.Size
-					mirrorURL.TotalCount = ms.Header.TotalObjects
-					mirrorURL.TotalSize = ms.Header.TotalBytes
-					if e := ms.queue.Push(mirrorURL); e != nil {
-						// will throw an error if already queue, ignoring this error
-						continue
-					}
-					// adjust total, because we want to show progress of the items stiil queued to be copied.
-					ms.status.SetTotal(ms.status.Total() + event.Size).Update()
+					mirrorURL.TotalCount = mj.TotalObjects
+					mirrorURL.TotalSize = mj.TotalBytes
+					mj.mirrorQueue <- mirrorURL
+					// adjust total, because we want to show progress of the itemj stiil queued to be copied.
+					mj.status.SetTotal(mj.status.Total() + event.Size).Update()
 				}
 			} else if event.Type == EventRemove {
 				mirrorURL := URLs{
@@ -461,73 +408,51 @@ func (ms *mirrorSession) watch() {
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 				}
-				mirrorURL.TotalCount = ms.Header.TotalObjects
-				mirrorURL.TotalSize = ms.Header.TotalBytes
-				if err := ms.queue.Push(mirrorURL); err != nil {
-					// will throw an error if already queue, ignoring this error
-					continue
-				}
+				mirrorURL.TotalCount = mj.TotalObjects
+				mirrorURL.TotalSize = mj.TotalBytes
+				mj.mirrorQueue <- mirrorURL
 			}
 
-		case err := <-ms.watcher.Errors():
+		case err := <-mj.watcher.Errors():
 			errorIf(err, "Unexpected error during monitoring.")
 		}
 	}
 }
 
-func (ms *mirrorSession) watchSourceURL(recursive bool) *probe.Error {
-	sourceClient, err := newClient(ms.sourceURL)
+func (mj *mirrorJob) watchSourceURL(recursive bool) *probe.Error {
+	sourceClient, err := newClient(mj.sourceURL)
 	if err == nil {
-		return ms.watcher.Join(sourceClient, recursive)
+		return mj.watcher.Join(sourceClient, recursive)
 	} // Failed to initialize client.
 	return err
 }
 
-func (ms *mirrorSession) harvestSessionUrls() {
-	defer close(ms.harvestCh)
+func (mj *mirrorJob) harvestSourceUrls(recursive bool) {
+	isForce := mj.context.Bool("force")
+	isFake := mj.context.Bool("fake")
+	isRemove := mj.context.Bool("remove")
 
-	urlScanner := bufio.NewScanner(ms.NewDataReader())
-	for urlScanner.Scan() {
-		var urls URLs
+	defer close(mj.harvestCh)
 
-		if err := json.Unmarshal([]byte(urlScanner.Text()), &urls); err != nil {
-			ms.errorCh <- probe.NewError(err)
-			continue
+	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, isForce, isFake, isRemove)
+	for {
+		select {
+		case <-mj.harvestStop:
+			return
+		case url := <-URLsCh:
+			// Send harvested urls.
+			mj.harvestCh <- url
 		}
-
-		// Send harvested urls.
-		ms.harvestCh <- urls
-	}
-
-	if err := urlScanner.Err(); err != nil {
-		ms.errorCh <- probe.NewError(err)
 	}
 }
 
-func (ms *mirrorSession) harvestSourceUrls(recursive bool) {
-	isForce := ms.Header.CommandBoolFlags["force"]
-	isFake := ms.Header.CommandBoolFlags["fake"]
-	isRemove := ms.Header.CommandBoolFlags["remove"]
+// Fetch urls that need to be mirrored
+func (mj *mirrorJob) harvest(recursive bool) {
+	mj.wgHarvest.Add(1)
+	defer mj.wgHarvest.Done()
 
-	defer close(ms.harvestCh)
-
-	URLsCh := prepareMirrorURLs(ms.sourceURL, ms.targetURL, isForce, isFake, isRemove)
-	for url := range URLsCh {
-		// Send harvested urls.
-		ms.harvestCh <- url
-	}
-}
-
-func (ms *mirrorSession) harvest(recursive bool) {
-	isRemove := ms.Header.CommandBoolFlags["remove"]
-
-	if ms.HasData() {
-		// resume previous session, harvest urls from session
-		go ms.harvestSessionUrls()
-	} else {
-		// harvest urls from source urls
-		go ms.harvestSourceUrls(recursive)
-	}
+	// harvest urls from source urls
+	go mj.harvestSourceUrls(recursive)
 
 	var totalBytes int64
 	var totalObjects int64
@@ -535,131 +460,115 @@ func (ms *mirrorSession) harvest(recursive bool) {
 loop:
 	for {
 		select {
-		case sURLs, ok := <-ms.harvestCh:
+		case sURLs, ok := <-mj.harvestCh:
 			if !ok {
 				// finished harvesting urls
 				break loop
 			}
 			if sURLs.Error != nil {
 				if strings.Contains(sURLs.Error.ToGoError().Error(), " is a folder.") {
-					ms.status.errorIf(sURLs.Error.Trace(), "Folder cannot be copied. Please use ‘...’ suffix.")
+					mj.status.errorIf(sURLs.Error.Trace(), "Folder cannot be copied. Please use ‘...’ suffix.")
 				} else {
-					ms.status.errorIf(sURLs.Error.Trace(), "Unable to prepare URL for copying.")
+					mj.status.errorIf(sURLs.Error.Trace(), "Unable to prepare URL for copying.")
 				}
 				continue
 			}
-
 			if sURLs.SourceContent != nil {
 				// copy
-				ms.scanBar(sURLs.SourceContent.URL.String())
 				totalBytes += sURLs.SourceContent.Size
-			} else if sURLs.TargetContent != nil && isRemove {
-				// delete
-				ms.scanBar(sURLs.TargetContent.URL.String())
 			}
-
-			ms.queue.Push(sURLs)
-
+			mj.mirrorQueue <- sURLs
 			totalObjects++
-		case err := <-ms.errorCh:
-			ms.status.errorIf(err, "Unable to harvest URL for copying.")
+
+			mj.status.SetTotal(totalBytes)
+
+		case err := <-mj.errorCh:
+			mj.status.errorIf(err, "Unable to harvest URL for copying.")
 			continue
-		case <-ms.trapCh:
-			ms.status.Println(console.Colorize("Mirror", "Abort"))
-			return
 		}
 	}
 
-	// finished harvesting urls, save queue to session data
-	if err := ms.queue.Save(ms.NewDataWriter()); err != nil {
-		ms.status.fatalIf(probe.NewError(err), "Unable to save queue.")
-	}
-
-	// update session file and save
-	ms.Header.TotalBytes = totalBytes
-	ms.Header.TotalObjects = totalObjects
-	ms.Save()
-
+	mj.TotalBytes = totalBytes
+	mj.TotalObjects = totalObjects
 	// update progressbar and accounting reader
-	ms.status.SetTotal(totalBytes)
+	mj.status.SetTotal(totalBytes)
 }
 
 // when using a struct for copying, we could save a lot of passing of variables
-func (ms *mirrorSession) mirror() {
-	watch := ms.Header.CommandBoolFlags["watch"]
-	recursive := ms.Header.CommandBoolFlags["recursive"]
+func (mj *mirrorJob) mirror() {
+	recursive := mj.context.Bool("recursive")
 
-	if globalQuiet {
-	} else if globalJSON {
+	if globalQuiet || globalJSON {
 	} else {
 		// Enable progress bar reader only during default mode
-		ms.scanBar = scanBarFactory()
+		mj.scanBar = scanBarFactory()
 	}
 
-	// harvest urls to copy
-	ms.harvest(recursive)
-
-	// now we want to start the progress bar
-	ms.status.Start()
-	defer ms.status.Finish()
-
 	// start the status go routine
-	ms.startStatus()
+	mj.startStatus()
 
-	// wait for trap signal to close properly and show message if there are
-	// items queued left to resume the session.
+	// harvest urls to copy
+	go mj.harvest(recursive)
+
+	// wait for trap signal to close properly
 	go func() {
 		// on SIGTERM shutdown and stop
-		<-ms.trapCh
+		<-mj.trapCh
 
 		// Shutdown gracefully.
-		ms.shutdown()
-
-		// Save session and die.
-		ms.CloseAndDie()
+		mj.shutdown()
 	}()
 
 	// monitor mode will watch the source folders for changes,
 	// and queue them for copying. Monitor mode can be stopped
 	// only by SIGTERM.
-	if watch {
-		if err := ms.watchSourceURL(true); err != nil {
-			ms.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
-		}
-
-		ms.startMirror(true)
-
-		ms.watch()
-	} else {
-		ms.startMirror(false)
-
-		// wait for copy to finish
-		ms.wgMirror.Wait()
-		ms.shutdown()
+	if err := mj.watchSourceURL(true); err != nil {
+		mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 	}
+
+	go mj.watch()
+
+	mj.startMirror()
+}
+
+func (mj *mirrorJob) stopWatcher() {
+	// Stop events watcher
+	mj.watcher.Stop()
+}
+
+func (mj *mirrorJob) stopHarvester() {
+	// Ask harvester to stop searching for new objects to mirror
+	close(mj.harvestStop)
+	mj.wgHarvest.Wait()
+}
+
+func (mj *mirrorJob) stopMirror() {
+	// wait for current copy action to finish and stop copying
+	close(mj.mirrorQueue)
+	mj.wgMirror.Wait()
+}
+
+func (mj *mirrorJob) stopStatus() {
+	// Gracefully stopping status
+	close(mj.statusCh)
+	mj.wgStatus.Wait()
+
 }
 
 // Called upon signal trigger.
-func (ms *mirrorSession) shutdown() {
+func (mj *mirrorJob) shutdown() {
 	// make sure only one shutdown can be active
-	ms.m.Lock()
+	mj.m.Lock()
 
-	ms.watcher.Stop()
-
-	// stop queue, prevent new copy actions
-	ms.queue.Close()
-
-	// wait for current copy action to finish
-	ms.wgMirror.Wait()
-
-	close(ms.statusCh)
-
-	// copy sends status message, wait for status
-	ms.wgStatus.Wait()
+	// Stop everthing
+	mj.stopWatcher()
+	mj.stopHarvester()
+	mj.stopMirror()
+	mj.stopStatus()
 }
 
-func newMirrorSession(session *sessionV8) *mirrorSession {
-	args := session.Header.CommandArgs
+func newMirrorJob(ctx *cli.Context) *mirrorJob {
+	args := ctx.Args()
 
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
@@ -670,72 +579,44 @@ func newMirrorSession(session *sessionV8) *mirrorSession {
 		status = NewDummyStatus()
 	}
 
-	ms := mirrorSession{
-		trapCh:    signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
-		sessionV8: session,
-
-		statusCh:  make(chan URLs),
-		harvestCh: make(chan URLs),
-		errorCh:   make(chan *probe.Error),
-
-		watcher: NewWatcher(session.Header.When),
-
-		// we're using a queue instead of a channel, this allows us to gracefully
-		// stop. if we're using a channel and want to trap a signal, the channel
-		// the backlog of fs events will be send on a closed channel.
-		queue: NewQueue(),
-
-		wgStatus: new(sync.WaitGroup),
-		wgMirror: new(sync.WaitGroup),
-		m:        new(sync.Mutex),
-
-		status: status,
-		// scanbar starts with no action
-		scanBar: func(s string) {
-		},
+	mj := mirrorJob{
+		context: ctx,
+		trapCh:  signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
+		m:       new(sync.Mutex),
 
 		sourceURL: args[0],
 		targetURL: args[len(args)-1], // Last one is target
+
+		errorCh: make(chan *probe.Error),
+
+		harvestStop: make(chan bool),
+		harvestCh:   make(chan URLs, 10000),
+		wgHarvest:   new(sync.WaitGroup),
+
+		status:   status,
+		scanBar:  func(s string) {},
+		statusCh: make(chan URLs),
+		wgStatus: new(sync.WaitGroup),
+
+		mirrorQueue: make(chan URLs, 1000),
+		wgMirror:    new(sync.WaitGroup),
+
+		watcher: NewWatcher(time.Now().UTC()),
 	}
 
-	return &ms
+	return &mj
 }
 
 // Main entry point for mirror command.
 func mainMirror(ctx *cli.Context) error {
-
 	// check 'mirror' cli arguments.
 	checkMirrorSyntax(ctx)
 
-	// Additional command speific theme customization.
+	// Additional command specific theme customization.
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
-	session := newSessionV8()
-	session.Header.CommandType = "mirror"
-
-	if v, err := os.Getwd(); err == nil {
-		session.Header.RootPath = v
-	} else {
-		session.Delete()
-		fatalIf(probe.NewError(err), "Unable to get current working folder.")
-	}
-
-	// Set command flags from context.
-	session.Header.CommandBoolFlags["force"] = ctx.Bool("force")
-	session.Header.CommandBoolFlags["fake"] = ctx.Bool("fake")
-	session.Header.CommandBoolFlags["watch"] = ctx.Bool("watch")
-	session.Header.CommandBoolFlags["remove"] = ctx.Bool("remove")
-
-	// extract URLs.
-	session.Header.CommandArgs = ctx.Args()
-
-	ms := newMirrorSession(session)
-
-	// Mirroring.
-	ms.mirror()
-
-	// delete will be run when terminating normally,
-	ms.Delete()
+	mj := newMirrorJob(ctx)
+	mj.mirror()
 
 	return nil
 }

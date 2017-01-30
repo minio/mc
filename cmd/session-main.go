@@ -163,9 +163,6 @@ func sessionExecute(s *sessionV8) {
 	switch s.Header.CommandType {
 	case "cp":
 		doCopySession(s)
-	case "mirror":
-		ms := newMirrorSession(s)
-		ms.mirror()
 	}
 }
 
