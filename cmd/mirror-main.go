@@ -560,7 +560,7 @@ func (mj *mirrorJob) shutdown() {
 	// make sure only one shutdown can be active
 	mj.m.Lock()
 
-	// Stop everthing
+	// Stop everything
 	mj.stopWatcher()
 	mj.stopHarvester()
 	mj.stopMirror()
