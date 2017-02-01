@@ -30,8 +30,8 @@ import (
 var (
 	adminLockListFlags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "older-than, o",
-			Usage: "Only show locks that are older than NN[h|m|s]. (default: \"24h\")",
+			Name:  "duration, d",
+			Usage: "Only show locks that are hold for longer than NN[h|m|s].",
 			Value: "24h",
 		},
 	}
@@ -58,7 +58,7 @@ EXAMPLES:
        $ mc admin lock {{.Name}} play/testbucket/
 
     2. List locks that are hold for more than 15 minutes.
-       $ mc admin lock {{.Name}} --older-than 15m play/testbucket/
+       $ mc admin lock {{.Name}} --duration 15m play/testbucket/
 
     3. List locks hold by all objects under dir prefix
        $ mc admin lock {{.Name}} play/testbucket/dir/
@@ -111,9 +111,9 @@ func mainAdminLockList(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Parse older-than flag
-	olderThan, e := time.ParseDuration(ctx.String("older-than"))
-	fatalIf(probe.NewError(e), "Unable to parse the passed older-than flag.")
+	// Parse duration flag
+	duration, e := time.ParseDuration(ctx.String("duration"))
+	fatalIf(probe.NewError(e), "Unable to parse the passed duration flag.")
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -124,7 +124,7 @@ func mainAdminLockList(ctx *cli.Context) error {
 	splits := splitStr(aliasedURL, "/", 3)
 
 	// Fetch the lock info related to a specified pair of bucket and prefix
-	locksInfo, e := client.ListLocks(splits[1], splits[2], olderThan)
+	locksInfo, e := client.ListLocks(splits[1], splits[2], duration)
 	fatalIf(probe.NewError(e), "Cannot get lock status.")
 
 	for _, l := range locksInfo {
