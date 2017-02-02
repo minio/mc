@@ -23,6 +23,29 @@ version       Print version.
 
 ```
 
+## Docker Container
+### Stable
+```
+docker pull minio/mc
+docker run minio/mc ls play
+```
+
+### Edge
+```
+docker pull minio/mc:edge
+docker run minio/mc ls play
+```
+
+## macOS
+### Homebrew
+Install mc packages using [Homebrew](http://brew.sh/)
+
+```sh
+brew install minio-mc
+mc --help
+
+```
+
 ## GNU/Linux
 ### Binary Download
 | Platform | Architecture | URL |
@@ -35,16 +58,6 @@ version       Print version.
 
 chmod +x mc
 ./mc --help
-
-```
-
-## macOS
-### Homebrew
-Install mc packages using [Homebrew](http://brew.sh/)
-
-```sh
-brew install minio-mc
-mc --help
 
 ```
 
