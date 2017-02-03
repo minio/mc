@@ -102,25 +102,17 @@ type mirrorJob struct {
 	// channel for errors
 	errorCh chan *probe.Error
 
+	// Contains if watcher is currently running.
+	watcherRunning bool
+
 	// the global watcher object, which receives notifications of created
 	// and deleted files
 	watcher *Watcher
-	// the queue of objects to be created or removed
-	mirrorQueue chan URLs
-	// waitgroup for mirror goroutine, waits till all
-	// mirror actions have been completed
-	wgMirror *sync.WaitGroup
-
-	// waitgroup for harvest goroutine
-	wgHarvest *sync.WaitGroup
-	// channel to halt harvest routine
-	harvestStop chan bool
-	// channel for urls to harvest
-	harvestCh chan URLs
 
 	// Hold operation status information
 	status  Status
 	scanBar scanBarFunc
+
 	// waitgroup for status goroutine, waits till all status
 	// messages have been written and received
 	wgStatus *sync.WaitGroup
@@ -266,36 +258,10 @@ func (mj *mirrorJob) startStatus() {
 	}()
 }
 
-func (mj *mirrorJob) startMirror() {
-	isRemove := mj.context.Bool("remove")
-	mj.wgMirror.Add(1)
-	// wait for new urls to mirror or delete in the queue, and
-	// run the actual mirror or remove.
-	defer mj.wgMirror.Done()
-
-loop:
-	for {
-		select {
-		case sURLs, ok := <-mj.mirrorQueue:
-			if !ok {
-				break loop
-			}
-			// Save total count.
-			sURLs.TotalCount = mj.TotalObjects
-			// Save totalSize.
-			sURLs.TotalSize = mj.TotalBytes
-			if sURLs.SourceContent != nil {
-				mj.statusCh <- mj.doMirror(sURLs)
-			} else if sURLs.TargetContent != nil && isRemove {
-				mj.statusCh <- mj.doRemove(sURLs)
-			}
-		}
-	}
-}
-
 // this goroutine will watch for notifications, and add modified objects to the queue
-func (mj *mirrorJob) watch() {
+func (mj *mirrorJob) watchMirror() {
 	isForce := mj.context.Bool("force")
+	isRemove := mj.context.Bool("remove")
 
 	for {
 		select {
@@ -304,9 +270,10 @@ func (mj *mirrorJob) watch() {
 				// channel closed
 				return
 			}
-			// this code seemj complicated, it will change the expanded alias back to the alias
-			// again, by replacing the sourceUrlFull with the sourceAlias. This url will be
-			// used to mirror.
+
+			// It will change the expanded alias back to the alias
+			// again, by replacing the sourceUrlFull with the sourceAlias.
+			// This url will be used to mirror.
 			sourceAlias, sourceURLFull, _ := mustExpandAlias(mj.sourceURL)
 
 			// If the passed source URL points to fs, fetch the absolute src path
@@ -319,7 +286,6 @@ func (mj *mirrorJob) watch() {
 			}
 
 			sourceURL := newClientURL(event.Path)
-
 			aliasedPath := strings.Replace(event.Path, sourceURLFull, mj.sourceURL, -1)
 
 			// build target path, it is the relative of the event.Path with the sourceUrl
@@ -331,8 +297,6 @@ func (mj *mirrorJob) watch() {
 			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
 			targetURL := newClientURL(expandedTargetPath)
 
-			// todo(nl5887): do we want all those actions here? those could cause the channels to
-			// block in case of large num of changes
 			if event.Type == EventCreate {
 				// we are checking if a destination file exists now, and if we only
 				// overwrite it when force is enabled.
@@ -372,10 +336,9 @@ func (mj *mirrorJob) watch() {
 					if shouldQueue || isForce {
 						mirrorURL.TotalCount = mj.TotalObjects
 						mirrorURL.TotalSize = mj.TotalBytes
-						mj.mirrorQueue <- mirrorURL
-						// adjust total, because we want to show progress of the itemj stiil
-						// queued to be copied.
+						// adjust total, because we want to show progress of the item still queued to be copied.
 						mj.status.SetTotal(mj.status.Total() + sourceContent.Size).Update()
+						mj.statusCh <- mj.doMirror(mirrorURL)
 					}
 					continue
 				}
@@ -397,9 +360,9 @@ func (mj *mirrorJob) watch() {
 					mirrorURL.SourceContent.Size = event.Size
 					mirrorURL.TotalCount = mj.TotalObjects
 					mirrorURL.TotalSize = mj.TotalBytes
-					mj.mirrorQueue <- mirrorURL
 					// adjust total, because we want to show progress of the itemj stiil queued to be copied.
 					mj.status.SetTotal(mj.status.Total() + event.Size).Update()
+					mj.statusCh <- mj.doMirror(mirrorURL)
 				}
 			} else if event.Type == EventRemove {
 				mirrorURL := URLs{
@@ -410,11 +373,20 @@ func (mj *mirrorJob) watch() {
 				}
 				mirrorURL.TotalCount = mj.TotalObjects
 				mirrorURL.TotalSize = mj.TotalBytes
-				mj.mirrorQueue <- mirrorURL
+				if mirrorURL.TargetContent != nil && isRemove && isForce {
+					mj.statusCh <- mj.doRemove(mirrorURL)
+				}
 			}
 
 		case err := <-mj.watcher.Errors():
-			errorIf(err, "Unexpected error during monitoring.")
+			switch err.ToGoError().(type) {
+			case APINotImplemented:
+				// Ignore error if API is not implemented.
+				mj.watcherRunning = false
+				return
+			default:
+				errorIf(err, "Unexpected error during monitoring.")
+			}
 		}
 	}
 }
@@ -427,43 +399,22 @@ func (mj *mirrorJob) watchSourceURL(recursive bool) *probe.Error {
 	return err
 }
 
-func (mj *mirrorJob) harvestSourceUrls(recursive bool) {
+// Fetch urls that need to be mirrored
+func (mj *mirrorJob) startMirror() {
+	var totalBytes int64
+	var totalObjects int64
+
 	isForce := mj.context.Bool("force")
 	isFake := mj.context.Bool("fake")
 	isRemove := mj.context.Bool("remove")
 
-	defer close(mj.harvestCh)
-
 	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, isForce, isFake, isRemove)
 	for {
 		select {
-		case <-mj.harvestStop:
-			return
-		case url := <-URLsCh:
-			// Send harvested urls.
-			mj.harvestCh <- url
-		}
-	}
-}
-
-// Fetch urls that need to be mirrored
-func (mj *mirrorJob) harvest(recursive bool) {
-	mj.wgHarvest.Add(1)
-	defer mj.wgHarvest.Done()
-
-	// harvest urls from source urls
-	go mj.harvestSourceUrls(recursive)
-
-	var totalBytes int64
-	var totalObjects int64
-
-loop:
-	for {
-		select {
-		case sURLs, ok := <-mj.harvestCh:
+		case sURLs, ok := <-URLsCh:
 			if !ok {
 				// finished harvesting urls
-				break loop
+				return
 			}
 			if sURLs.Error != nil {
 				if strings.Contains(sURLs.Error.ToGoError().Error(), " is a folder.") {
@@ -477,27 +428,30 @@ loop:
 				// copy
 				totalBytes += sURLs.SourceContent.Size
 			}
-			mj.mirrorQueue <- sURLs
-			totalObjects++
 
+			totalObjects++
+			mj.TotalBytes = totalBytes
+			mj.TotalObjects = totalObjects
 			mj.status.SetTotal(totalBytes)
 
-		case err := <-mj.errorCh:
-			mj.status.errorIf(err, "Unable to harvest URL for copying.")
-			continue
+			// Save total count.
+			sURLs.TotalCount = mj.TotalObjects
+			// Save totalSize.
+			sURLs.TotalSize = mj.TotalBytes
+
+			if sURLs.SourceContent != nil {
+				mj.statusCh <- mj.doMirror(sURLs)
+			} else if sURLs.TargetContent != nil && isRemove && isForce {
+				mj.statusCh <- mj.doRemove(sURLs)
+			}
+		case <-mj.trapCh:
+			os.Exit(0)
 		}
 	}
-
-	mj.TotalBytes = totalBytes
-	mj.TotalObjects = totalObjects
-	// update progressbar and accounting reader
-	mj.status.SetTotal(totalBytes)
 }
 
 // when using a struct for copying, we could save a lot of passing of variables
 func (mj *mirrorJob) mirror() {
-	recursive := mj.context.Bool("recursive")
-
 	if globalQuiet || globalJSON {
 	} else {
 		// Enable progress bar reader only during default mode
@@ -507,18 +461,6 @@ func (mj *mirrorJob) mirror() {
 	// start the status go routine
 	mj.startStatus()
 
-	// harvest urls to copy
-	go mj.harvest(recursive)
-
-	// wait for trap signal to close properly
-	go func() {
-		// on SIGTERM shutdown and stop
-		<-mj.trapCh
-
-		// Shutdown gracefully.
-		mj.shutdown()
-	}()
-
 	// monitor mode will watch the source folders for changes,
 	// and queue them for copying. Monitor mode can be stopped
 	// only by SIGTERM.
@@ -526,45 +468,16 @@ func (mj *mirrorJob) mirror() {
 		mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 	}
 
-	go mj.watch()
+	// Start watching and mirroring.
+	go mj.watchMirror()
 
+	// Start mirroring.
 	mj.startMirror()
-}
 
-func (mj *mirrorJob) stopWatcher() {
-	// Stop events watcher
-	mj.watcher.Stop()
-}
-
-func (mj *mirrorJob) stopHarvester() {
-	// Ask harvester to stop searching for new objects to mirror
-	close(mj.harvestStop)
-	mj.wgHarvest.Wait()
-}
-
-func (mj *mirrorJob) stopMirror() {
-	// wait for current copy action to finish and stop copying
-	close(mj.mirrorQueue)
-	mj.wgMirror.Wait()
-}
-
-func (mj *mirrorJob) stopStatus() {
-	// Gracefully stopping status
-	close(mj.statusCh)
-	mj.wgStatus.Wait()
-
-}
-
-// Called upon signal trigger.
-func (mj *mirrorJob) shutdown() {
-	// make sure only one shutdown can be active
-	mj.m.Lock()
-
-	// Stop everything
-	mj.stopWatcher()
-	mj.stopHarvester()
-	mj.stopMirror()
-	mj.stopStatus()
+	// Wait if watcher is running.
+	if mj.watcherRunning {
+		<-mj.trapCh
+	}
 }
 
 func newMirrorJob(ctx *cli.Context) *mirrorJob {
@@ -587,21 +500,12 @@ func newMirrorJob(ctx *cli.Context) *mirrorJob {
 		sourceURL: args[0],
 		targetURL: args[len(args)-1], // Last one is target
 
-		errorCh: make(chan *probe.Error),
-
-		harvestStop: make(chan bool),
-		harvestCh:   make(chan URLs, 10000),
-		wgHarvest:   new(sync.WaitGroup),
-
-		status:   status,
-		scanBar:  func(s string) {},
-		statusCh: make(chan URLs),
-		wgStatus: new(sync.WaitGroup),
-
-		mirrorQueue: make(chan URLs, 1000),
-		wgMirror:    new(sync.WaitGroup),
-
-		watcher: NewWatcher(time.Now().UTC()),
+		status:         status,
+		scanBar:        func(s string) {},
+		statusCh:       make(chan URLs),
+		wgStatus:       new(sync.WaitGroup),
+		watcherRunning: true,
+		watcher:        NewWatcher(time.Now().UTC()),
 	}
 
 	return &mj

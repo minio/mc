@@ -409,17 +409,25 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	// Start listening on all bucket events.
 	eventsCh := c.api.ListenBucketNotification(bucket, params.prefix, params.suffix, events, doneCh)
 
+	wo := &watchObject{
+		events: eventChan,
+		errors: errorChan,
+		done:   doneChan,
+	}
+
 	// wait for events to occur and sent them through the eventChan and errorChan
 	go func() {
+		defer wo.Close()
 		for notificationInfo := range eventsCh {
 			if notificationInfo.Err != nil {
 				if nErr, ok := notificationInfo.Err.(minio.ErrorResponse); ok && nErr.Code == "APINotSupported" {
-					errorChan <- probe.NewError(errors.New("The specified S3 target is not supported. " +
-						"Only Minio based storages provide monitoring feature."))
-				} else {
-					errorChan <- probe.NewError(notificationInfo.Err)
+					errorChan <- probe.NewError(APINotImplemented{
+						API:     "Watch",
+						APIType: c.targetURL.Scheme + "://" + c.targetURL.Host,
+					})
+					return
 				}
-				continue
+				errorChan <- probe.NewError(notificationInfo.Err)
 			}
 
 			for _, record := range notificationInfo.Records {
@@ -454,11 +462,7 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 		}
 	}()
 
-	return &watchObject{
-		events: eventChan,
-		errors: errorChan,
-		done:   doneChan,
-	}, nil
+	return wo, nil
 }
 
 // Get - get object with metadata.
