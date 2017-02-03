@@ -49,11 +49,8 @@ func checkCopySyntax(ctx *cli.Context) {
 	// Check if bucket name is passed for URL type arguments.
 	url := newClientURL(tgtURL)
 	if url.Host != "" {
-		// This check is for type URL.
-		if !isURLVirtualHostStyle(url.Host) {
-			if url.Path == string(url.Separator) {
-				fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
-			}
+		if url.Path == string(url.Separator) {
+			fatalIf(errInvalidArgument().Trace(), fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 		}
 	}
 
