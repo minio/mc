@@ -720,6 +720,7 @@ FLAGS:
 ```   
 
 *Example: Show current anonymous bucket policy*
+
 Show current anonymous bucket policy for *mybucket/myphotos/2020/* sub-directory
 
 ```sh
@@ -730,6 +731,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 ```
 
 *Example : Set anonymous bucket policy to download only*
+
 Set anonymous bucket policy  for *mybucket/myphotos/2020/* sub-directory and its objects to download only, Now your objects are publicly accessible at [https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname)
 
 ```sh
