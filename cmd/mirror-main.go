@@ -45,6 +45,10 @@ var (
 			Usage: "Perform a fake mirror operation.",
 		},
 		cli.BoolFlag{
+			Name:  "watch, w",
+			Usage: "Watch and mirror for changes.",
+		},
+		cli.BoolFlag{
 			Name:  "remove",
 			Usage: "Remove extraneous file(s) on target.",
 		},
@@ -84,6 +88,9 @@ EXAMPLES:
       files on Amazon S3 cloud storage. NOTE: '--remove' is only supported with '--force'.
       $ mc {{.Name}} --force --remove play/photos/2014 s3/backup-photos/2014
 
+   6. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
+      new objects and uploads them.
+      $ mc {{.Name}} --force --remove --watch /var/lib/backups play/backups
 `,
 }
 
@@ -461,21 +468,25 @@ func (mj *mirrorJob) mirror() {
 	// start the status go routine
 	mj.startStatus()
 
-	// monitor mode will watch the source folders for changes,
-	// and queue them for copying. Monitor mode can be stopped
-	// only by SIGTERM.
-	if err := mj.watchSourceURL(true); err != nil {
-		mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
-	}
+	// Starts additional watcher thread for watching for new events.
+	isWatch := mj.context.Bool("watch")
+	if isWatch {
+		// monitor mode will watch the source folders for changes,
+		// and queue them for copying. Monitor mode can be stopped
+		// only by SIGTERM.
+		if err := mj.watchSourceURL(true); err != nil {
+			mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
+		}
 
-	// Start watching and mirroring.
-	go mj.watchMirror()
+		// Start watching and mirroring.
+		go mj.watchMirror()
+	}
 
 	// Start mirroring.
 	mj.startMirror()
 
 	// Wait if watcher is running.
-	if mj.watcherRunning {
+	if mj.watcherRunning && isWatch {
 		<-mj.trapCh
 	}
 }
