@@ -181,7 +181,7 @@ func mainWatch(ctx *cli.Context) error {
 				if !ok {
 					return
 				}
-				errorIf(err, "Cannot watch on events.")
+				errorIf(err, "Unable to watch for events.")
 				return
 			}
 		}
