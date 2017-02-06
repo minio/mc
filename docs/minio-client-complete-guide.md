@@ -554,7 +554,6 @@ FLAGS:
   --help, -h				Help of mirror.
   --force					Force overwrite of an existing target(s).
   --fake					Perform a fake mirror operation.
-  --watch, -w				Watch and mirror for changes.
   --remove					Remove extraneous file(s) on target.
 
 ``` 
