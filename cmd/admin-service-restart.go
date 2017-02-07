@@ -54,7 +54,7 @@ type serviceRestartMessage struct {
 
 // String colorized make bucket message.
 func (s serviceRestartMessage) String() string {
-	return console.Colorize("ServiceRestart", "Server restarted ‘"+s.ServerURL+"’ successfully.")
+	return console.Colorize("ServiceRestart", "Restarted ‘"+s.ServerURL+"’ successfully.")
 }
 
 // JSON jsonified make bucket message.
