@@ -148,7 +148,7 @@ check_golang_env() {
 
 assert_is_supported_os() {
     case "${KNAME}" in
-        Linux | FreeBSD )
+        Linux | FreeBSD | OpenBSD )
             return
             ;;
         Darwin )
@@ -164,20 +164,20 @@ assert_is_supported_os() {
         *)
             echo "ERROR"
             echo "OS '${KNAME}' is not supported."
-            echo "Supported OS: [Linux, FreeBSD, Darwin]"
+            echo "Supported OS: [Linux, FreeBSD, OpenBSD, Darwin]"
             exit 1
     esac
 }
 
 assert_is_supported_arch() {
     case "${ARCH}" in
-        x86_64 | amd64 | aarch64 | arm* )
+        i386 | x86_64 | amd64 | aarch64 | arm* )
             return
             ;;
         *)
             echo "ERROR"
             echo "Arch '${ARCH}' not supported."
-            echo "Supported Arch: [x86_64, amd64, aarch64, arm*]"
+            echo "Supported Arch: [i386, x86_64, amd64, aarch64, arm*]"
             exit 1
     esac
 }
