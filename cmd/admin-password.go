@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016 Minio, Inc.
+ * Minio Client (C) 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,41 +22,41 @@ import (
 )
 
 var (
-	adminServiceCredsFlags = []cli.Flag{}
+	adminPasswordFlags = []cli.Flag{}
 )
 
-var adminServiceCredsCmd = cli.Command{
-	Name:   "creds",
-	Usage:  "Change credentials of a minio server or cluster",
-	Action: mainAdminServiceCreds,
-	Flags:  append(adminServiceCredsFlags, globalFlags...),
+var adminPasswordCmd = cli.Command{
+	Name:   "password",
+	Usage:  "Change server access and secret keys.",
+	Action: mainAdminPassword,
+	Flags:  append(adminPasswordFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc admin service {{.Name}} - {{.Usage}}
+   mc admin {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc admin service {{.Name}} ALIAS ACCESS_KEY SECRET_KEY
+   mc admin {{.Name}} ALIAS ACCESS_KEY SECRET_KEY
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
     1. Set new credentials of a Minio server represented by its alias 'play'.
-       $ mc admin service {{.Name}} play/ minio minio123
+       $ mc admin {{.Name}} play/ minio minio123
 `,
 }
 
-// checkAdminServiceCredsSyntax - validate all the passed arguments
-func checkAdminServiceCredsSyntax(ctx *cli.Context) {
+// checkAdminPasswordSyntax - validate all the passed arguments
+func checkAdminPasswordSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(ctx, "creds", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "password", 1) // last argument is exit code
 	}
 }
 
-func mainAdminServiceCreds(ctx *cli.Context) error {
+func mainAdminPassword(ctx *cli.Context) error {
 
 	setGlobalsFromContext(ctx)
 
-	checkAdminServiceCredsSyntax(ctx)
+	checkAdminPasswordSyntax(ctx)
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -68,7 +68,7 @@ func mainAdminServiceCreds(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	// Stop the specified Minio server
+	// Change the password of the specified Minio server
 	e := client.ServiceSetCredentials(accessKey, secretKey)
 	fatalIf(probe.NewError(e), "Unable to set new credentials to '"+aliasedURL+"'")
 
