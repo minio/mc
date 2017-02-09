@@ -279,25 +279,38 @@ func mainRm(ctx *cli.Context) error {
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 
+	var rerr error
+	var err error
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
 		if isRecursive {
-			return removeRecursive(url, isIncomplete, isFake, older)
-		} // else {
-		return removeSingle(url, isIncomplete, isFake, older)
+			err = removeRecursive(url, isIncomplete, isFake, older)
+		} else {
+			err = removeSingle(url, isIncomplete, isFake, older)
+		}
+
+		if rerr == nil {
+			rerr = err
+		}
 	}
 
 	if !isStdin {
-		return nil
+		return rerr
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive {
-			return removeRecursive(url, isIncomplete, isFake, older)
-		} // else {
-		return removeSingle(url, isIncomplete, isFake, older)
+			err = removeRecursive(url, isIncomplete, isFake, older)
+		} else {
+			err = removeSingle(url, isIncomplete, isFake, older)
+		}
+
+		if rerr == nil {
+			rerr = err
+		}
 	}
-	return nil
+
+	return rerr
 }
