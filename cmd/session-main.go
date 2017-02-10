@@ -27,6 +27,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio/pkg/trie"
 )
 
 var (
@@ -191,7 +192,7 @@ func checkSessionSyntax(ctx *cli.Context) {
 
 // findClosestSessions to match a given string with sessions trie tree.
 func findClosestSessions(session string) []string {
-	sessionsTree := newTrie() // Allocate a new trie for sessions strings.
+	sessionsTree := trie.NewTrie() // Allocate a new trie for sessions strings.
 	for _, sid := range getSessionIDs() {
 		sessionsTree.Insert(sid)
 	}
