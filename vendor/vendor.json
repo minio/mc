@@ -103,6 +103,12 @@
 			"revisionTime": "2016-08-14T22:47:51Z"
 		},
 		{
+			"checksumSHA1": "6XkX4S1uBycCm+SYcY7CRtuFtvc=",
+			"path": "github.com/minio/minio/pkg/trie",
+			"revision": "8912b6bf3b22ff668b6448742cd50e7b837182ec",
+			"revisionTime": "2017-02-10T19:51:41Z"
+		},
+		{
 			"path": "github.com/pkg/profile",
 			"revision": "19396ecfda37c1c9ddaa52019adca59d582e4832",
 			"revisionTime": "2016-03-15T12:21:13+11:00"

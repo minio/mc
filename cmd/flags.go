@@ -16,13 +16,16 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"github.com/minio/cli"
+	"github.com/minio/minio/pkg/trie"
+)
 
 // Collection of mc commands currently supported
 var commands = []cli.Command{}
 
 // Collection of mc commands currently supported in a trie tree
-var commandsTree = newTrie()
+var commandsTree = trie.NewTrie()
 
 // Collection of mc flags currently supported
 var globalFlags = []cli.Flag{
