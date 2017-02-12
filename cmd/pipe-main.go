@@ -36,26 +36,27 @@ var pipeCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(pipeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] [TARGET]
+   {{.HelpName}} [FLAGS] [TARGET]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Write contents of stdin to a file on local filesystem.
-      $ mc {{.Name}} /tmp/hello-world.go
+      $ {{.HelpName}} /tmp/hello-world.go
 
    2. Write contents of stdin to an object on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3/personalbuck/meeting-notes.txt
+      $ {{.HelpName}} s3/personalbuck/meeting-notes.txt
 
    3. Copy an ISO image to an object on Amazon S3 cloud storage.
-      $ cat debian-8.2.iso | mc {{.Name}} s3/ferenginar/gnuos.iso
+      $ cat debian-8.2.iso | {{.HelpName}} s3/ferenginar/gnuos.iso
 
    4. Stream MySQL database dump to Amazon S3 directly.
-      $ mysqldump -u root -p ******* accountsdb | mc {{.Name}} s3/ferenginar/backups/accountsdb-oct-9-2015.sql
+      $ mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/ferenginar/backups/accountsdb-oct-9-2015.sql
+
 `,
 }
 

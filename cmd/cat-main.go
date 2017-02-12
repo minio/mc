@@ -40,23 +40,23 @@ var catCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(catFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] SOURCE [SOURCE...]
+   {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
-      $ mc {{.Name}} s3/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
+      $ {{.HelpName}} s3/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
 
    2. Concantenate contents of file1.txt and stdin to standard output.
-      $ mc {{.Name}} file1.txt - > file.txt
+      $ {{.HelpName}} file1.txt - > file.txt
 
    3. Concantenate multiple files to one.
-      $ mc {{.Name}} part.* > complete.img
+      $ {{.HelpName}} part.* > complete.img
 
 `,
 }

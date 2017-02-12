@@ -32,17 +32,18 @@ var adminServiceRestartCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
-   mc admin service {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc admin service {{.Name}} ALIAS
+   {{.HelpName}} ALIAS
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
     1. Restart a Minio server represented by its alias 'play'.
-       $ mc admin service {{.Name}} play/
+       $ {{.HelpName}} play/
+
 `,
 }
 

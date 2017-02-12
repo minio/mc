@@ -42,10 +42,10 @@ var shareCmd = cli.Command{
 		shareList,
 	},
 	CustomHelpTemplate: `NAME:
-   {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.Name}} [FLAGS] COMMAND
+   {{.HelpName}} [FLAGS] COMMAND
 
 FLAGS:
   {{range .Flags}}{{.}}

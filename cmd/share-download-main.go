@@ -41,26 +41,27 @@ var shareDownload = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(shareDownloadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc share {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc share {{.Name}} [OPTIONS] TARGET [TARGET...]
+   {{.HelpName}} [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Share this object with 7 days default expiry.
-      $ mc share {{.Name}} s3/backup/2006-Mar-1/backup.tar.gz
+      $ {{.HelpName}} s3/backup/2006-Mar-1/backup.tar.gz
 
    2. Share this object with 10 minutes expiry.
-      $ mc share {{.Name}} --expire=10m s3/backup/2006-Mar-1/backup.tar.gz
+      $ {{.HelpName}} --expire=10m s3/backup/2006-Mar-1/backup.tar.gz
 
    3. Share all objects under this folder with 5 days expiry.
-      $ mc share {{.Name}} --expire=120h s3/backup/
+      $ {{.HelpName}} --expire=120h s3/backup/
 
    4. Share all objects under this folder and all its sub-folders with 5 days expiry.
-      $ mc share {{.Name}} --recursive --expire=120h s3/backup/
+      $ {{.HelpName}} --recursive --expire=120h s3/backup/
+
 `,
 }
 

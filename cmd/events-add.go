@@ -51,19 +51,21 @@ var eventsAddCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(eventsAddFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc events {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc events {{.Name}} ALIAS/BUCKET ARN [FLAGS]
+   {{.HelpName}} ALIAS/BUCKET ARN [FLAGS]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Enable bucket notification with a specific arn
-     $ mc events {{.Name}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
+     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
+
    2. Enable bucket notification with filters parameters
-     $ mc events {{.Name}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --events put,delete --prefix photos/ --suffix .jpg
+     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --events put,delete --prefix photos/ --suffix .jpg
+
 `,
 }
 

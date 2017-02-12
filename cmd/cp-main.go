@@ -52,32 +52,33 @@ var cpCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(cpFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] SOURCE [SOURCE...] TARGET
+   {{.HelpName}} [FLAGS] SOURCE [SOURCE...] TARGET
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
-      $ mc {{.Name}} Music/*.ogg s3/jukebox/
+      $ {{.HelpName}} Music/*.ogg s3/jukebox/
 
    2. Copy a folder recursively from Minio cloud storage to Amazon S3 cloud storage.
-      $ mc {{.Name}} --recursive play/mybucket/burningman2011/ s3/mybucket/
+      $ {{.HelpName}} --recursive play/mybucket/burningman2011/ s3/mybucket/
 
    3. Copy multiple local folders recursively to Minio cloud storage.
-      $ mc {{.Name}} --recursive backup/2014/ backup/2015/ play/archive/
+      $ {{.HelpName}} --recursive backup/2014/ backup/2015/ play/archive/
 
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
-      $ mc {{.Name}} --recursive s3\documents\2014\ C:\Backups\2014
+      $ {{.HelpName}} --recursive s3\documents\2014\ C:\Backups\2014
 
    5. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
-      $ mc {{.Name}} 本語 s3/andoria/
+      $ {{.HelpName}} 本語 s3/andoria/
 
    6. Copy a local folder with space separated characters to Amazon S3 cloud storage.
-      $ mc {{.Name}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
+      $ {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
+
 `,
 }
 

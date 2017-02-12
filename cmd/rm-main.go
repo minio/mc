@@ -70,29 +70,30 @@ var rmCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(rmFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] TARGET [TARGET ...]
+  {{.HelpName}} [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Remove a file.
-      $ mc {{.Name}} 1999/old-backup.tgz
+      $ {{.HelpName}} 1999/old-backup.tgz
 
    2. Remove all objects recursively.
-      $ mc {{.Name}} --recursive s3/jazz-songs/louis/
+      $ {{.HelpName}} --recursive s3/jazz-songs/louis/
 
    3. Remove all objects older than '90' days.
-      $ mc {{.Name}} --recursive --older-than=90 s3/jazz-songs/louis/
+      $ {{.HelpName}} --recursive --older-than=90 s3/jazz-songs/louis/
 
    4. Remove all objects read from STDIN.
-      $ mc {{.Name}} --force --stdin
+      $ {{.HelpName}} --force --stdin
 
    5. Drop all incomplete uploads on 'jazz-songs' bucket.
-      $ mc {{.Name}} --incomplete --recursive s3/jazz-songs/
+      $ {{.HelpName}} --incomplete --recursive s3/jazz-songs/
+
 `,
 }
 

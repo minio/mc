@@ -42,10 +42,10 @@ var sessionCmd = cli.Command{
 	Flags:  append(sessionFlags, globalFlags...),
 	Before: setGlobalsFromContext,
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] OPERATION [ARG]
+   {{.HelpName}} [FLAGS] OPERATION [ARG]
 
 OPERATION:
    resume   Resume a previously saved session.
@@ -60,16 +60,17 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. List sessions.
-      $ mc {{.Name}} list
+      $ {{.HelpName}} list
 
    2. Resume session.
-      $ mc {{.Name}} resume ygVIpSJs
+      $ {{.HelpName}} resume ygVIpSJs
 
    3. Clear session.
-      $ mc {{.Name}} clear ygVIpSJs
+      $ {{.HelpName}} clear ygVIpSJs
 
    4. Clear all sessions.
-      $ mc {{.Name}} clear all
+      $ {{.HelpName}} clear all
+
 `,
 }
 

@@ -49,20 +49,21 @@ var updateCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(updateFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS]
+   {{.HelpName}} [FLAGS]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Check for any new official release.
-      $ mc {{.Name}}
+      $ {{.HelpName}}
 
    2. Check for any new experimental release.
-      $ mc {{.Name}} --experimental
+      $ {{.HelpName}} --experimental
+
 `,
 }
 
