@@ -31,17 +31,18 @@ var adminPasswordCmd = cli.Command{
 	Action: mainAdminPassword,
 	Flags:  append(adminPasswordFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc admin {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc admin {{.Name}} ALIAS ACCESS_KEY SECRET_KEY
+   {{.HelpName}} ALIAS ACCESS_KEY SECRET_KEY
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
     1. Set new credentials of a Minio server represented by its alias 'play'.
-       $ mc admin {{.Name}} play/ minio minio123
+       $ {{.HelpName}} play/ minio minio123
+
 `,
 }
 

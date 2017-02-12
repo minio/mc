@@ -52,10 +52,10 @@ var adminHealCmd = cli.Command{
 		adminHealListCmd,
 	},
 	CustomHelpTemplate: `NAME:
-   {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.Name}} [FLAGS] COMMAND
+   {{.HelpName}} [FLAGS] COMMAND
 
 FLAGS:
   {{range .Flags}}{{.}}
@@ -64,14 +64,15 @@ FLAGS:
 COMMANDS:
    {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}
-
 EXAMPLES:
     1. Heal 'testbucket' in a Minio server represented by its alias 'play'.
-       $ mc admin {{.Name}} play/testbucket/
+       $ {{.HelpName}} play/testbucket/
+
     2. Heal all objects under 'dir' prefix 
-       $ mc admin {{.Name}} --recursive play/testbucket/dir/
+       $ {{.HelpName}} --recursive play/testbucket/dir/
+
     3. Issue a fake heal operation to see what the server could report
-       $ mc admin {{.Name}} --fake play/testbucket/dir/
+       $ {{.HelpName}} --fake play/testbucket/dir/
 
 `,
 }

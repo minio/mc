@@ -45,20 +45,20 @@ var adminHealListCmd = cli.Command{
 	Action: mainAdminHealList,
 	Flags:  append(adminHealListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc admin heal {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc admin heal {{.Name}} ALIAS/BUCKET/PREFIX
+   {{.HelpName}} ALIAS/BUCKET/PREFIX
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
-
 EXAMPLES:
     1. List objects than need to be healed related to 'testbucket' in a Minio server represented by its alias 'play'.
-       $ mc admin heal {{.Name}} play/testbucket/
+       $ {{.HelpName}} play/testbucket/
+
     2. Recursively list objects than need to be healed.
-       $ mc admin heal {{.Name}} --recursive play/
+       $ {{.HelpName}} --recursive play/
 
 `,
 }

@@ -44,24 +44,23 @@ var adminLockClearCmd = cli.Command{
 	Action: mainAdminLockClear,
 	Flags:  append(adminLockClearFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc admin lock {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc admin lock {{.Name}} ALIAS/BUCKET/PREFIX
+   {{.HelpName}} ALIAS/BUCKET/PREFIX
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
-
 EXAMPLES:
     1. Clear all locks hold by 'testbucket' in a Minio server represented by its alias 'play'.
-       $ mc admin lock {{.Name}} play/testbucket
+       $ {{.HelpName}} play/testbucket
 
     2. Clear all 'testbucket' locks that are older than 15 minutes.
-       $ mc admin lock {{.Name}} --duration 15m play/testbucket/
+       $ {{.HelpName}} --duration 15m play/testbucket/
 
     3. Clear all locks hold by all objects under 'dir' prefix
-       $ mc admin lock {{.Name}} play/testbucket/dir/
+       $ {{.HelpName}} play/testbucket/dir/
 
 `,
 }

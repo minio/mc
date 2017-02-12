@@ -46,32 +46,33 @@ var lsCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(lsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] TARGET [TARGET ...]
+   {{.HelpName}} [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3
+      $ {{.HelpName}} s3
 
    2. List buckets and all its contents from Amazon S3 cloud storage recursively.
-      $ mc {{.Name}} --recursive s3
+      $ {{.HelpName}} --recursive s3
 
    3. List all contents of mybucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3/mybucket/
+      $ {{.HelpName}} s3/mybucket/
 
    4. List all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
-      $ mc {{.Name}} s3\mybucket\
+      $ {{.HelpName}} s3\mybucket\
 
    5. List files recursively on a local filesystem on Microsoft Windows.
-      $ mc {{.Name}} --recursive C:\Users\Worf\
+      $ {{.HelpName}} --recursive C:\Users\Worf\
 
    6. List incomplete (previously failed) uploads of objects on Amazon S3. 
-      $ mc {{.Name}} --incomplete s3/mybucket
+      $ {{.HelpName}} --incomplete s3/mybucket
+
 `,
 }
 

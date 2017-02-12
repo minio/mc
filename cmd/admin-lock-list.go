@@ -44,24 +44,23 @@ var adminLockListCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(adminLockListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc admin lock {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc admin lock {{.Name}} ALIAS/BUCKET/PREFIX
+   {{.HelpName}} ALIAS/BUCKET/PREFIX
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
-
 EXAMPLES:
     1. List hold locks related to testbucket in a Minio server represented by its alias 'play'.
-       $ mc admin lock {{.Name}} play/testbucket/
+       $ {{.HelpName}} play/testbucket/
 
     2. List locks that are hold for more than 15 minutes.
-       $ mc admin lock {{.Name}} --duration 15m play/testbucket/
+       $ {{.HelpName}} --duration 15m play/testbucket/
 
     3. List locks hold by all objects under dir prefix
-       $ mc admin lock {{.Name}} play/testbucket/dir/
+       $ {{.HelpName}} play/testbucket/dir/
 
 `,
 }

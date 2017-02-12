@@ -35,10 +35,10 @@ var adminCmd = cli.Command{
 		adminHealCmd,
 	},
 	CustomHelpTemplate: `NAME:
-   {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.Name}} [FLAGS] COMMAND
+   {{.HelpName}} [FLAGS] COMMAND
 
 FLAGS:
   {{range .Flags}}{{.}}

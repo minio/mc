@@ -38,10 +38,10 @@ var versionCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(versionFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS]
+   {{.HelpName}} [FLAGS]
 
 FLAGS:
   {{range .Flags}}{{.}}

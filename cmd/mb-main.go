@@ -43,29 +43,30 @@ var mbCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(mbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] TARGET [TARGET...]
+   {{.HelpName}} [FLAGS] TARGET [TARGET...]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Create a bucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3/mynewbucket
+      $ {{.HelpName}} s3/mynewbucket
 
    2. Create a new bucket on Google Cloud Storage.
-      $ mc {{.Name}} gcs/miniocloud
+      $ {{.HelpName}} gcs/miniocloud
 
    4. Create a new bucket on Amazon S3 cloud storage in region ‘us-west-2’.
-      $ mc {{.Name}} --region=us-west-2 s3/myregionbucket
+      $ {{.HelpName}} --region=us-west-2 s3/myregionbucket
 
    5. Create a new directory including its missing parents (equivalent to ‘mkdir -p’).
-      $ mc {{.Name}} /tmp/this/new/dir1
+      $ {{.HelpName}} /tmp/this/new/dir1
 
    6. Create multiple directories including its missing parents (behavior similar to ‘mkdir -p’).
-      $ mc {{.Name}} /mnt/sdb/mydisk /mnt/sdc/mydisk /mnt/sdd/mydisk
+      $ {{.HelpName}} /mnt/sdb/mydisk /mnt/sdc/mydisk /mnt/sdd/mydisk
+
 `,
 }
 

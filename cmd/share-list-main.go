@@ -36,20 +36,21 @@ var shareList = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(shareListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc share {{.Name}} COMMAND - {{.Usage}}
+   {{.HelpName}} COMMAND - {{.Usage}}
 
 COMMAND:
    upload:   list previously shared access to uploads.
    download: list previously shared access to downloads.
 
 USAGE:
-   mc share {{.Name}}
+   {{.HelpName}}
 
 EXAMPLES:
    1. List previously shared downloads, that haven't expired yet.
-       $ mc share {{.Name}} download
+       $ {{.HelpName}} download
    2. List previously shared uploads, that haven't expired yet.
-       $ mc share {{.Name}} upload
+       $ {{.HelpName}} upload
+
 `,
 }
 

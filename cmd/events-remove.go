@@ -42,19 +42,21 @@ var eventsRemoveCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(eventsRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc events {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc events {{.Name}} ALIAS/BUCKET [ARN] [FLAGS]
+   {{.HelpName}} ALIAS/BUCKET [ARN] [FLAGS]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Remove bucket notification associated to a specific arn
-     $ mc events {{.Name}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
+     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
+
    2. Remove all bucket notifications. --force flag is mandatory here
-     $ mc events {{.Name}} myminio/mybucket --force
+     $ {{.HelpName}} myminio/mybucket --force
+
 `,
 }
 

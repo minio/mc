@@ -44,11 +44,11 @@ var policyCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(policyFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] PERMISSION TARGET
-   mc {{.Name}} [FLAGS] TARGET
+   {{.HelpName}} [FLAGS] PERMISSION TARGET
+   {{.HelpName}} [FLAGS] TARGET
 
 PERMISSION:
    Allowed policies are: [none, download, upload, public].
@@ -58,25 +58,25 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Set bucket to "download" on Amazon S3 cloud storage.
-      $ mc {{.Name}} download s3/burningman2011
+      $ {{.HelpName}} download s3/burningman2011
 
    2. Set bucket to "public" on Amazon S3 cloud storage.
-      $ mc {{.Name}} public s3/shared
+      $ {{.HelpName}} public s3/shared
 
    3. Set bucket to "upload" on Amazon S3 cloud storage.
-      $ mc {{.Name}} upload s3/incoming
+      $ {{.HelpName}} upload s3/incoming
 
    4. Set a prefix to "public" on Amazon S3 cloud storage.
-      $ mc {{.Name}} public s3/public-commons/images
+      $ {{.HelpName}} public s3/public-commons/images
 
    5. Get bucket permissions.
-      $ mc {{.Name}} s3/shared
+      $ {{.HelpName}} s3/shared
 
    6. List policies set to a specified bucket.
-      $ mc {{.Name}} list s3/shared
+      $ {{.HelpName}} list s3/shared
 
    7. List public object URLs recursively.
-      $ mc {{.Name}} --recursive links s3/shared/
+      $ {{.HelpName}} --recursive links s3/shared/
 
 `,
 }

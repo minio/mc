@@ -39,10 +39,10 @@ var configHostCmd = cli.Command{
 	Action: mainConfigHost,
 	Before: setGlobalsFromContext,
 	CustomHelpTemplate: `NAME:
-   mc config {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc config {{.Name}} OPERATION
+   {{.HelpName}} OPERATION
 
 OPERATION:
    add ALIAS URL ACCESS-KEY SECRET-KEY [API]
@@ -55,21 +55,22 @@ FLAGS:
 EXAMPLES:
    1. Add Amazon S3 storage service under "myphotos" alias. For security reasons turn off bash history momentarily.
       $ set +o history
-      $ mc config {{.Name}} add myphotos https://s3.amazonaws.com \
+      $ {{.HelpName}} add myphotos https://s3.amazonaws.com \
                   BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
       $ set -o history
 
    2. Add Amazon S3 accelerated storage service under "accel" alias. For security reasons turn off bash history momentarily.
       $ set +o history
-      $ mc config {{.Name}} add accel https://s3-accelerate.amazonaws.com \
+      $ {{.HelpName}} add accel https://s3-accelerate.amazonaws.com \
                   BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
       $ set -o history
 
    3. List all hosts.
-      $ mc config {{.Name}} list
+      $ {{.HelpName}} list
 
    4. Remove "goodisk" config.
-      $ mc config {{.Name}} remove goodisk
+      $ {{.HelpName}} remove goodisk
+
 `,
 }
 

@@ -61,29 +61,30 @@ var watchCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(watchFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS]
+   {{.HelpName}} [FLAGS]
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Watch new S3 operations on a minio server
-      $ mc {{.Name}} play/testbucket
+      $ {{.HelpName}} play/testbucket
 
    2. Watch new events for a specific prefix "output/"  on minio server.
-      $ mc {{.Name}} play/testbucket --prefix "output/"
+      $ {{.HelpName}} play/testbucket --prefix "output/"
 
    3. Watch new events for a specific suffix ".jpg" on minio server.
-      $ mc {{.Name}} play/testbucket --suffix ".jpg"
+      $ {{.HelpName}} play/testbucket --suffix ".jpg"
 
    4. Watch new events on a specific prefix and suffix on minio server.
-      $ mc {{.Name}} play/testbucket --suffix ".jpg" --prefix "photos/"
+      $ {{.HelpName}} play/testbucket --suffix ".jpg" --prefix "photos/"
 
    5. Watch for events on local directory.
-      $ mc {{.Name}} /usr/share
+      $ {{.HelpName}} /usr/share
+
 `,
 }
 

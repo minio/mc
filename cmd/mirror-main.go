@@ -63,34 +63,35 @@ var mirrorCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(mirrorFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] SOURCE TARGET
+   {{.HelpName}} [FLAGS] SOURCE TARGET
 
 FLAGS:
   {{range .Flags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} play/photos/2014 s3/backup-photos
+      $ {{.HelpName}} play/photos/2014 s3/backup-photos
 
    2. Mirror a local folder recursively to Amazon S3 cloud storage.
-      $ mc {{.Name}} backup/ s3/archive
+      $ {{.HelpName}} backup/ s3/archive
 
    3. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
-      $ mc {{.Name}} s3\documents\2014\ C:\backup\2014
+      $ {{.HelpName}} s3\documents\2014\ C:\backup\2014
 
    4. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--force' to overwrite destination.
-      $ mc {{.Name}} --force s3/miniocloud miniocloud-backup
+      $ {{.HelpName}} --force s3/miniocloud miniocloud-backup
 
    5. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
       files on Amazon S3 cloud storage. NOTE: '--remove' is only supported with '--force'.
-      $ mc {{.Name}} --force --remove play/photos/2014 s3/backup-photos/2014
+      $ {{.HelpName}} --force --remove play/photos/2014 s3/backup-photos/2014
 
    6. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
       new objects and uploads them.
-      $ mc {{.Name}} --force --remove --watch /var/lib/backups play/backups
+      $ {{.HelpName}} --force --remove --watch /var/lib/backups play/backups
+
 `,
 }
 
