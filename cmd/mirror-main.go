@@ -52,6 +52,15 @@ var (
 			Name:  "remove",
 			Usage: "Remove extraneous file(s) on target.",
 		},
+		cli.StringFlag{
+			Name:  "region",
+			Usage: "Specify which region to select when creating new buckets.",
+			Value: "us-east-1",
+		},
+		cli.BoolFlag{
+			Name:  "a",
+			Usage: "Preserve bucket policies rules.",
+		},
 	}
 )
 
@@ -100,9 +109,6 @@ type mirrorJob struct {
 	// the channel to trap SIGKILL signals
 	trapCh <-chan bool
 
-	// Hold context information
-	context *cli.Context
-
 	// mutex for shutdown, this prevents the shutdown
 	// to be initiated multiple times
 	m *sync.Mutex
@@ -132,6 +138,8 @@ type mirrorJob struct {
 
 	sourceURL string
 	targetURL string
+
+	isFake, isForce, isRemove, isWatch bool
 }
 
 // mirrorMessage container for file mirror messages
@@ -180,8 +188,7 @@ func (c mirrorStatMessage) String() string {
 
 // doRemove - removes files on target.
 func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
-	isFake := mj.context.Bool("fake")
-	if isFake {
+	if mj.isFake {
 		return sURLs.WithError(nil)
 	}
 
@@ -192,13 +199,12 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 	targetWithAlias := filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path)
 
 	// Remove extraneous file on target.
-	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, isFake, 0))
+	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, mj.isFake, 0))
 	return sURLs.WithError(err)
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
 func (mj *mirrorJob) doMirror(sURLs URLs) URLs {
-	isFake := mj.context.Bool("fake")
 
 	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
@@ -206,7 +212,7 @@ func (mj *mirrorJob) doMirror(sURLs URLs) URLs {
 
 	//s For a fake mirror make sure we update respective progress bars
 	// and accounting readers under relevant conditions.
-	if isFake {
+	if mj.isFake {
 		mj.status.Add(sURLs.SourceContent.Size)
 		return sURLs.WithError(nil)
 	}
@@ -268,8 +274,6 @@ func (mj *mirrorJob) startStatus() {
 
 // this goroutine will watch for notifications, and add modified objects to the queue
 func (mj *mirrorJob) watchMirror() {
-	isForce := mj.context.Bool("force")
-	isRemove := mj.context.Bool("remove")
 
 	for {
 		select {
@@ -334,14 +338,14 @@ func (mj *mirrorJob) watchMirror() {
 						return
 					}
 					shouldQueue := false
-					if !isForce {
+					if !mj.isForce {
 						_, err = targetClient.Stat(false)
 						if err == nil {
 							continue
 						} // doesn't exist
 						shouldQueue = true
 					}
-					if shouldQueue || isForce {
+					if shouldQueue || mj.isForce {
 						mirrorURL.TotalCount = mj.TotalObjects
 						mirrorURL.TotalSize = mj.TotalBytes
 						// adjust total, because we want to show progress of the item still queued to be copied.
@@ -351,7 +355,7 @@ func (mj *mirrorJob) watchMirror() {
 					continue
 				}
 				shouldQueue := false
-				if !isForce {
+				if !mj.isForce {
 					targetClient, err := newClient(targetPath)
 					if err != nil {
 						// cannot create targetclient
@@ -364,7 +368,7 @@ func (mj *mirrorJob) watchMirror() {
 					} // doesn't exist
 					shouldQueue = true
 				}
-				if shouldQueue || isForce {
+				if shouldQueue || mj.isForce {
 					mirrorURL.SourceContent.Size = event.Size
 					mirrorURL.TotalCount = mj.TotalObjects
 					mirrorURL.TotalSize = mj.TotalBytes
@@ -381,7 +385,7 @@ func (mj *mirrorJob) watchMirror() {
 				}
 				mirrorURL.TotalCount = mj.TotalObjects
 				mirrorURL.TotalSize = mj.TotalBytes
-				if mirrorURL.TargetContent != nil && isRemove && isForce {
+				if mirrorURL.TargetContent != nil && mj.isRemove && mj.isForce {
 					mj.statusCh <- mj.doRemove(mirrorURL)
 				}
 			}
@@ -407,16 +411,16 @@ func (mj *mirrorJob) watchSourceURL(recursive bool) *probe.Error {
 	return err
 }
 
+func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {
+	return mj.watcher.Join(sourceClient, true)
+}
+
 // Fetch urls that need to be mirrored
 func (mj *mirrorJob) startMirror() {
 	var totalBytes int64
 	var totalObjects int64
 
-	isForce := mj.context.Bool("force")
-	isFake := mj.context.Bool("fake")
-	isRemove := mj.context.Bool("remove")
-
-	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, isForce, isFake, isRemove)
+	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isForce, mj.isFake, mj.isRemove)
 	for {
 		select {
 		case sURLs, ok := <-URLsCh:
@@ -449,7 +453,7 @@ func (mj *mirrorJob) startMirror() {
 
 			if sURLs.SourceContent != nil {
 				mj.statusCh <- mj.doMirror(sURLs)
-			} else if sURLs.TargetContent != nil && isRemove && isForce {
+			} else if sURLs.TargetContent != nil && mj.isRemove && mj.isForce {
 				mj.statusCh <- mj.doRemove(sURLs)
 			}
 		case <-mj.trapCh:
@@ -470,31 +474,19 @@ func (mj *mirrorJob) mirror() {
 	mj.startStatus()
 
 	// Starts additional watcher thread for watching for new events.
-	isWatch := mj.context.Bool("watch")
-	if isWatch {
-		// monitor mode will watch the source folders for changes,
-		// and queue them for copying. Monitor mode can be stopped
-		// only by SIGTERM.
-		if err := mj.watchSourceURL(true); err != nil {
-			mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
-		}
-
-		// Start watching and mirroring.
+	if mj.isWatch {
 		go mj.watchMirror()
 	}
 
 	// Start mirroring.
 	mj.startMirror()
 
-	// Wait if watcher is running.
-	if mj.watcherRunning && isWatch {
+	if mj.isWatch {
 		<-mj.trapCh
 	}
 }
 
-func newMirrorJob(ctx *cli.Context) *mirrorJob {
-	args := ctx.Args()
-
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool) *mirrorJob {
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
@@ -505,12 +497,16 @@ func newMirrorJob(ctx *cli.Context) *mirrorJob {
 	}
 
 	mj := mirrorJob{
-		context: ctx,
-		trapCh:  signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
-		m:       new(sync.Mutex),
+		trapCh: signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
+		m:      new(sync.Mutex),
 
-		sourceURL: args[0],
-		targetURL: args[len(args)-1], // Last one is target
+		sourceURL: srcURL,
+		targetURL: dstURL,
+
+		isFake:   isFake,
+		isRemove: isRemove,
+		isWatch:  isWatch,
+		isForce:  isForce,
 
 		status:         status,
 		scanBar:        func(s string) {},
@@ -523,16 +519,116 @@ func newMirrorJob(ctx *cli.Context) *mirrorJob {
 	return &mj
 }
 
+// copyBucketPolicies - copy policies from source to dest
+func copyBucketPolicies(srcClt, dstClt Client, isForce bool) *probe.Error {
+	rules, err := srcClt.GetAccessRules()
+	if err != nil {
+		return err
+	}
+	// Set found rules to target bucket if permitted
+	for _, r := range rules {
+		originalRule, err := dstClt.GetAccess()
+		if err != nil {
+			return err
+		}
+		// Set rule only if it doesn't exist in the target bucket
+		// or force flag is activated
+		if originalRule == "none" || isForce {
+			err = dstClt.SetAccess(r)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// runMirror - mirrors all buckets to another S3 server
+func runMirror(srcURL, dstURL string, ctx *cli.Context) error {
+
+	// Create a new mirror job and execute it
+	mj := newMirrorJob(srcURL, dstURL,
+		ctx.Bool("fake"),
+		ctx.Bool("remove"),
+		ctx.Bool("watch"),
+		ctx.Bool("force"))
+
+	srcClt, err := newClient(srcURL)
+	fatalIf(err, "Unable to initialize `"+srcURL+"`")
+
+	dstClt, err := newClient(dstURL)
+	fatalIf(err, "Unable to initialize `"+srcURL+"`")
+
+	mirrorAllBuckets := (dstClt.GetURL().Type == objectStorage && dstClt.GetURL().Path == "/")
+
+	if mirrorAllBuckets {
+		// Synchronize buckets using dirDifference function
+		for d := range dirDifference(srcClt, dstClt, srcURL, dstURL) {
+			if d.Diff == differInSecond {
+				// Ignore buckets that only exist in target instance
+				continue
+			}
+
+			sourceSuffix := strings.TrimPrefix(d.FirstURL, srcClt.GetURL().String())
+
+			newSrcURL := srcURL + sourceSuffix
+			newTgtURL := dstURL + sourceSuffix
+
+			newSrcClt, _ := newClient(newSrcURL)
+			newDstClt, _ := newClient(newTgtURL)
+
+			if d.Diff == differInFirst {
+				// Bucket only exists in the source, create the same bucket in the destination
+				err := newDstClt.MakeBucket(ctx.String("region"))
+				if err != nil {
+					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`")
+					continue
+				}
+				// Copy policy rules from source to dest if flag is activated
+				if ctx.Bool("a") {
+					err := copyBucketPolicies(srcClt, dstClt, ctx.Bool("force"))
+					errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`")
+				}
+			}
+
+			if mj.isWatch {
+				// monitor mode will watch the source folders for changes,
+				// and queue them for copying.
+				if err := mj.watchURL(newSrcClt); err != nil {
+					mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
+				}
+			}
+		}
+	}
+
+	if !mirrorAllBuckets && mj.isWatch {
+		// monitor mode will watch the source folders for changes,
+		// and queue them for copying.
+		if err := mj.watchURL(srcClt); err != nil {
+			mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
+		}
+	}
+
+	mj.mirror()
+
+	return nil
+}
+
 // Main entry point for mirror command.
 func mainMirror(ctx *cli.Context) error {
+
 	// check 'mirror' cli arguments.
 	checkMirrorSyntax(ctx)
 
 	// Additional command specific theme customization.
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
 
-	mj := newMirrorJob(ctx)
-	mj.mirror()
+	args := ctx.Args()
+
+	srcURL := args[0]
+	tgtURL := args[1]
+
+	runMirror(srcURL, tgtURL, ctx)
 
 	return nil
 }

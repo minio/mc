@@ -51,9 +51,17 @@ func (d differType) String() string {
 	return "unknown"
 }
 
+func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
+	return difference(sourceClnt, targetClnt, sourceURL, targetURL, true, false, DirNone)
+}
+
+func dirDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
+	return difference(sourceClnt, targetClnt, sourceURL, targetURL, false, true, DirFirst)
+}
+
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
+func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
 	var (
 		srcEOF, tgtEOF       bool
 		srcOk, tgtOk         bool
@@ -62,10 +70,9 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 	)
 
 	// Set default values for listing.
-	isRecursive := true   // recursive is always true for diff.
 	isIncomplete := false // we will not compare any incomplete objects.
-	srcCh := sourceClnt.List(isRecursive, isIncomplete, DirNone)
-	tgtCh := targetClnt.List(isRecursive, isIncomplete, DirNone)
+	srcCh := sourceClnt.List(isRecursive, isIncomplete, dirOpt)
+	tgtCh := targetClnt.List(isRecursive, isIncomplete, dirOpt)
 
 	diffCh = make(chan diffMessage, 1000)
 
@@ -175,6 +182,15 @@ func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string
 					}
 				}
 				// No differ
+				if returnSimilar {
+					diffCh <- diffMessage{
+						FirstURL:      srcCtnt.URL.String(),
+						SecondURL:     tgtCtnt.URL.String(),
+						Diff:          differInNone,
+						firstContent:  srcCtnt,
+						secondContent: tgtCtnt,
+					}
+				}
 				srcCtnt, srcOk = <-srcCh
 				tgtCtnt, tgtOk = <-tgtCh
 				continue

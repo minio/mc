@@ -64,14 +64,6 @@ func checkMirrorSyntax(ctx *cli.Context) {
 				fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
 		}
 	}
-	_, _, err := url2Stat(tgtURL)
-	// we die on any error other than PathNotFound - destination directory need not exist.
-	switch err.ToGoError().(type) {
-	case PathNotFound:
-	case ObjectMissing:
-	default:
-		fatalIf(err.Trace(tgtURL), fmt.Sprintf("Unable to stat target ‘%s’.", tgtURL))
-	}
 }
 
 func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, URLsCh chan<- URLs) {
