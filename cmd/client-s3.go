@@ -1427,13 +1427,6 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 			return
 		}
 		for _, bucket := range buckets {
-			bucketURL := *c.targetURL
-			bucketURL.Path = c.joinPath(bucket.Name)
-			contentCh <- &clientContent{
-				URL:  bucketURL,
-				Type: os.ModeDir,
-				Time: bucket.CreationDate,
-			}
 			isRecursive := true
 			for object := range c.listObjectWrapper(bucket.Name, o, isRecursive, nil) {
 				// Return error if we encountered glacier object and continue.
