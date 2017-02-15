@@ -50,7 +50,7 @@ USAGE:
    {{.HelpName}} [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Generate a curl command to allow upload access for a single object. Command expires in 7 days (default).

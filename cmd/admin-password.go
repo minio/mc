@@ -37,7 +37,7 @@ USAGE:
    {{.HelpName}} ALIAS ACCESS_KEY SECRET_KEY
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
     1. Set new credentials of a Minio server represented by its alias 'play'.

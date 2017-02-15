@@ -58,7 +58,7 @@ USAGE:
    {{.HelpName}} [FLAGS] SOURCE [SOURCE...] TARGET
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.

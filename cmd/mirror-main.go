@@ -78,7 +78,7 @@ USAGE:
    {{.HelpName}} [FLAGS] SOURCE TARGET
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.

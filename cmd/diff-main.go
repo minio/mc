@@ -47,7 +47,7 @@ USAGE:
    mc {{.Name}} [FLAGS] FIRST SECOND
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
    {{.Description}}

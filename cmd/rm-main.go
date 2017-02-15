@@ -76,7 +76,7 @@ USAGE:
   {{.HelpName}} [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Remove a file.

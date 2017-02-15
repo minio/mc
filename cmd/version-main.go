@@ -44,7 +44,7 @@ USAGE:
    {{.HelpName}} [FLAGS]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 `,
 }

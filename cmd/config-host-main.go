@@ -50,7 +50,7 @@ OPERATION:
    list
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Add Amazon S3 storage service under "myphotos" alias. For security reasons turn off bash history momentarily.

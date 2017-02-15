@@ -42,7 +42,7 @@ USAGE:
    {{.HelpName}} [FLAGS] [TARGET]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Write contents of stdin to a file on local filesystem.

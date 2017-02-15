@@ -46,7 +46,7 @@ USAGE:
    {{.HelpName}} ALIAS
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
     1. Get storage information of a Minio server represented by its alias 'play'.

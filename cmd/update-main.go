@@ -55,7 +55,7 @@ USAGE:
    {{.HelpName}} [FLAGS]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Check for any new official release.

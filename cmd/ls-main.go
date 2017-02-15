@@ -52,7 +52,7 @@ USAGE:
    {{.HelpName}} [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.

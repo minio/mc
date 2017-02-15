@@ -46,7 +46,7 @@ USAGE:
    {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.

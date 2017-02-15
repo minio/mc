@@ -67,7 +67,7 @@ USAGE:
    {{.HelpName}} [FLAGS]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Watch new S3 operations on a minio server

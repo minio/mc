@@ -57,7 +57,7 @@ USAGE:
    {{.HelpName}} ALIAS/BUCKET ARN [FLAGS]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Enable bucket notification with a specific arn
