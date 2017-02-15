@@ -58,11 +58,11 @@ USAGE:
    {{.HelpName}} [FLAGS] COMMAND
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 
 COMMANDS:
-   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+   {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}
 EXAMPLES:
     1. Heal 'testbucket' in a Minio server represented by its alias 'play'.

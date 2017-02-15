@@ -56,7 +56,7 @@ SESSION-ID:
    SESSION - Session can either be $SESSION-ID or "all".
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. List sessions.

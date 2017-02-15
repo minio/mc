@@ -38,7 +38,7 @@ USAGE:
    {{.HelpName}} ALIAS
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
     1. Restart a Minio server represented by its alias 'play'.

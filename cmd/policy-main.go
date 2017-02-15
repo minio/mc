@@ -54,7 +54,7 @@ PERMISSION:
    Allowed policies are: [none, download, upload, public].
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Set bucket to "download" on Amazon S3 cloud storage.

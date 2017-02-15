@@ -43,13 +43,13 @@ var mcHelpTemplate = `NAME:
   {{.Name}} - {{.Usage}}
 
 USAGE:
-  {{.Name}} {{if .Flags}}[FLAGS] {{end}}COMMAND{{if .Flags}} [COMMAND FLAGS | -h]{{end}} [ARGUMENTS...]
+  {{.Name}} {{if .VisibleFlags}}[FLAGS] {{end}}COMMAND{{if .VisibleFlags}} [COMMAND FLAGS | -h]{{end}} [ARGUMENTS...]
 
 COMMANDS:
-  {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-  {{end}}{{if .Flags}}
+  {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+  {{end}}{{if .VisibleFlags}}
 GLOBAL FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 VERSION:
   ` + Version +

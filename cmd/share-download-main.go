@@ -47,7 +47,7 @@ USAGE:
    {{.HelpName}} [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Share this object with 7 days default expiry.

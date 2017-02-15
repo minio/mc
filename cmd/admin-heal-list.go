@@ -51,7 +51,7 @@ USAGE:
    {{.HelpName}} ALIAS/BUCKET/PREFIX
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
     1. List objects than need to be healed related to 'testbucket' in a Minio server represented by its alias 'play'.

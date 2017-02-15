@@ -50,7 +50,7 @@ USAGE:
    {{.HelpName}} ALIAS/BUCKET/PREFIX
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
     1. List hold locks related to testbucket in a Minio server represented by its alias 'play'.

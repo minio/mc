@@ -48,7 +48,7 @@ USAGE:
    {{.HelpName}} ALIAS/BUCKET [ARN] [FLAGS]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Remove bucket notification associated to a specific arn

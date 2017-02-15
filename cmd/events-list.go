@@ -43,7 +43,7 @@ USAGE:
    {{.HelpName}} ALIAS/BUCKET ARN [FLAGS]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. List notification configurations associated to a specific arn
