@@ -31,7 +31,7 @@ const (
 var (
 	// set once during first load.
 	cacheCfgV8 *configV8
-	// All access to mc config file should be synchronized.
+	// All access to minioc config file should be synchronized.
 	cfgMutex = &sync.RWMutex{}
 )
 
@@ -52,7 +52,7 @@ type configV8 struct {
 // newConfigV8 - new config version.
 func newConfigV8() *configV8 {
 	cfg := new(configV8)
-	cfg.Version = globalMCConfigVersion
+	cfg.Version = globalMINIOCConfigVersion
 	cfg.Hosts = make(map[string]hostConfigV8)
 	return cfg
 }
@@ -109,7 +109,7 @@ func loadConfigV8() (*configV8, *probe.Error) {
 		return cacheCfgV8, nil
 	}
 
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return nil, errInvalidArgument().Trace()
 	}
 
@@ -121,7 +121,7 @@ func loadConfigV8() (*configV8, *probe.Error) {
 
 	// Load config at configPath, fails if config is not
 	// accessible, malformed or version missing.
-	if e = qc.Load(mustGetMcConfigPath()); e != nil {
+	if e = qc.Load(mustGetMiniocConfigPath()); e != nil {
 		return nil, probe.NewError(e)
 	}
 
@@ -147,9 +147,9 @@ func saveConfigV8(cfgV8 *configV8) *probe.Error {
 	// update the cache.
 	cacheCfgV8 = cfgV8
 
-	e = qs.Save(mustGetMcConfigPath())
+	e = qs.Save(mustGetMiniocConfigPath())
 	if e != nil {
-		return probe.NewError(e).Trace(mustGetMcConfigPath())
+		return probe.NewError(e).Trace(mustGetMiniocConfigPath())
 	}
 	return nil
 }

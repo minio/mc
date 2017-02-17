@@ -21,7 +21,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minioc/pkg/console"
 )
 
 // ls specific flags.
@@ -70,7 +70,7 @@ EXAMPLES:
    5. List files recursively on a local filesystem on Microsoft Windows.
       $ {{.HelpName}} --recursive C:\Users\Worf\
 
-   6. List incomplete (previously failed) uploads of objects on Amazon S3. 
+   6. List incomplete (previously failed) uploads of objects on Amazon S3.
       $ {{.HelpName}} --incomplete s3/mybucket
 
 `,
@@ -104,7 +104,7 @@ func checkListSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainList - is a handler for mc ls command
+// mainList - is a handler for minioc ls command
 func mainList(ctx *cli.Context) error {
 	// Additional command specific theme customization.
 	console.SetColor("File", color.New(color.Bold))
@@ -135,7 +135,7 @@ func mainList(ctx *cli.Context) error {
 		if st, err = clnt.Stat(isIncomplete); err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
-			// For aliases like ``mc ls s3`` it's acceptable to receive BucketNameEmpty error.
+			// For aliases like ``minioc ls s3`` it's acceptable to receive BucketNameEmpty error.
 			// Nothing to do.
 			default:
 				fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")

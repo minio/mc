@@ -25,9 +25,9 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/minio/pkg/trie"
+	"github.com/minio/minioc/pkg/console"
 )
 
 var (
@@ -147,7 +147,7 @@ func clearSession(sid string) {
 
 	session, err := loadSessionV8(sid)
 	if err != nil {
-		// `mc session clear <broken-session-id>` assumes that user is aware that the session is unuseful
+		// `minioc session clear <broken-session-id>` assumes that user is aware that the session is unuseful
 		// and wants the associated session files to be removed
 		removeSessionFile(sid)
 		removeSessionDataFile(sid)
@@ -232,7 +232,7 @@ func mainSession(ctx *cli.Context) error {
 			if len(closestSessions) > 0 {
 				errorMsg += fmt.Sprintf("\n\nDid you mean?\n")
 				for _, session := range closestSessions {
-					errorMsg += fmt.Sprintf("        ‘mc resume session %s’", session)
+					errorMsg += fmt.Sprintf("        ‘minioc resume session %s’", session)
 					// break on the first one, it is good enough.
 					break
 				}

@@ -28,9 +28,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/minio/pkg/quick"
+	"github.com/minio/minioc/pkg/console"
 )
 
 // sessionV8Header for resumable sessions.
@@ -139,7 +139,7 @@ func loadSessionV8(sid string) (*sessionV8, *probe.Error) {
 	// Validate if the version matches with expected current version.
 	sV8Header := qs.Data().(*sessionV8Header)
 	if sV8Header.Version != globalSessionConfigVersion {
-		msg := fmt.Sprintf("Session header version %s does not match mc session version %s.\n",
+		msg := fmt.Sprintf("Session header version %s does not match minioc session version %s.\n",
 			sV8Header.Version, globalSessionConfigVersion)
 		return nil, probe.NewError(errors.New(msg)).Trace(sid, sV8Header.Version)
 	}
@@ -371,7 +371,7 @@ func (s *sessionV8) Delete() *probe.Error {
 // Close a session and exit.
 func (s sessionV8) CloseAndDie() {
 	s.Close()
-	console.Fatalln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
+	console.Fatalln("Session safely terminated. To resume session ‘minioc session resume " + s.SessionID + "’")
 }
 
 // Create a factory function to simplify checking if

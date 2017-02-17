@@ -35,7 +35,7 @@ var (
 
 var configCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Manage mc configuration file.",
+	Usage:  "Manage minioc configuration file.",
 	Action: mainConfig,
 	Before: setGlobalsFromContext,
 	Flags:  append(configFlags, globalFlags...),
@@ -57,7 +57,7 @@ COMMANDS:
 `,
 }
 
-// mainConfig is the handle for "mc config" command. provides sub-commands which write configuration data in json format to config file.
+// mainConfig is the handle for "minioc config" command. provides sub-commands which write configuration data in json format to config file.
 func mainConfig(ctx *cli.Context) error {
 
 	if ctx.Args().First() != "" { // command help.

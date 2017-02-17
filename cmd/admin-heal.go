@@ -24,9 +24,9 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/madmin"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 var (
@@ -68,7 +68,7 @@ EXAMPLES:
     1. Heal 'testbucket' in a Minio server represented by its alias 'play'.
        $ {{.HelpName}} play/testbucket/
 
-    2. Heal all objects under 'dir' prefix 
+    2. Heal all objects under 'dir' prefix
        $ {{.HelpName}} --recursive play/testbucket/dir/
 
     3. Issue a fake heal operation to see what the server could report

@@ -27,8 +27,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 // command specific flags.
@@ -44,7 +44,7 @@ var (
 // Check for new software updates.
 var updateCmd = cli.Command{
 	Name:   "update",
-	Usage:  "Check for new mc update.",
+	Usage:  "Check for new minioc update.",
 	Action: mainUpdate,
 	Before: setGlobalsFromContext,
 	Flags:  append(updateFlags, globalFlags...),
@@ -69,8 +69,8 @@ EXAMPLES:
 
 // update URL endpoints.
 const (
-	mcUpdateStableURL       = "https://dl.minio.io/client/mc/release"
-	mcUpdateExperimentalURL = "https://dl.minio.io/client/mc/experimental"
+	miniocUpdateStableURL       = "https://dl.minio.io/client/minioc/release"
+	miniocUpdateExperimentalURL = "https://dl.minio.io/client/minioc/experimental"
 )
 
 // updateMessage container to hold update messages.
@@ -84,7 +84,7 @@ type updateMessage struct {
 // String colorized update message.
 func (u updateMessage) String() string {
 	if !u.Update {
-		return console.Colorize("Update", "You are already running the most recent version of ‘mc’.")
+		return console.Colorize("Update", "You are already running the most recent version of ‘minioc’.")
 	}
 	var msg string
 	if runtime.GOOS == "windows" {
@@ -116,8 +116,8 @@ func parseReleaseData(data string) (time.Time, *probe.Error) {
 	if len(releaseDateSplits) < 3 {
 		return time.Time{}, probe.NewError(errors.New("Update data malformed"))
 	}
-	if releaseDateSplits[0] != "mc" {
-		return time.Time{}, probe.NewError(errors.New("Update data malformed, missing mc tag"))
+	if releaseDateSplits[0] != "minioc" {
+		return time.Time{}, probe.NewError(errors.New("Update data malformed, missing minioc tag"))
 	}
 	// "OFFICIAL" tag is still kept for backward compatibility, we should remove this for the next release.
 	if releaseDateSplits[1] != "RELEASE" && releaseDateSplits[1] != "OFFICIAL" {
@@ -141,7 +141,7 @@ func parseReleaseData(data string) (time.Time, *probe.Error) {
 func getReleaseUpdate(updateURL string) (updateMsg updateMessage, errMsg string, err *probe.Error) {
 	// Construct a new update url.
 	newUpdateURLPrefix := updateURL + "/" + runtime.GOOS + "-" + runtime.GOARCH
-	newUpdateURL := newUpdateURLPrefix + "/mc.shasum"
+	newUpdateURL := newUpdateURLPrefix + "/minioc.shasum"
 
 	// Instantiate a new client with 3 sec timeout.
 	client := &http.Client{
@@ -153,10 +153,10 @@ func getReleaseUpdate(updateURL string) (updateMsg updateMessage, errMsg string,
 	switch runtime.GOOS {
 	case "windows":
 		// For windows and darwin.
-		downloadURL = newUpdateURLPrefix + "/mc.exe"
+		downloadURL = newUpdateURLPrefix + "/minioc.exe"
 	default:
 		// For all other operating systems.
-		downloadURL = newUpdateURLPrefix + "/mc"
+		downloadURL = newUpdateURLPrefix + "/minioc"
 	}
 
 	data, e := client.Get(newUpdateURL)
@@ -193,13 +193,13 @@ func getReleaseUpdate(updateURL string) (updateMsg updateMessage, errMsg string,
 
 	latest, err := parseReleaseData(string(body))
 	if err != nil {
-		errMsg = "Please report this issue at https://github.com/minio/mc/issues."
+		errMsg = "Please report this issue at https://github.com/minio/minioc/issues."
 		return updateMessage{}, errMsg, err.Trace(newUpdateURL)
 	}
 
 	if latest.IsZero() {
 		err = errDummy().Trace(newUpdateURL)
-		errMsg = "Unable to validate any update available at this time. Please open an issue at https://github.com/minio/mc/issues"
+		errMsg = "Unable to validate any update available at this time. Please open an issue at https://github.com/minio/minioc/issues"
 		return updateMessage{}, errMsg, err
 	}
 
@@ -224,9 +224,9 @@ func mainUpdate(ctx *cli.Context) error {
 	var err *probe.Error
 	// Check for update.
 	if ctx.Bool("experimental") {
-		updateMsg, errMsg, err = getReleaseUpdate(mcUpdateExperimentalURL)
+		updateMsg, errMsg, err = getReleaseUpdate(miniocUpdateExperimentalURL)
 	} else {
-		updateMsg, errMsg, err = getReleaseUpdate(mcUpdateStableURL)
+		updateMsg, errMsg, err = getReleaseUpdate(miniocUpdateStableURL)
 	}
 	fatalIf(err, errMsg)
 	printMsg(updateMsg)

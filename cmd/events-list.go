@@ -22,8 +22,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 var (
@@ -47,7 +47,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. List notification configurations associated to a specific arn
-     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
+     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
 
    2. List all notification configurations
      $ {{.HelpName}} s3/mybucket

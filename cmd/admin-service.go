@@ -43,7 +43,7 @@ COMMANDS:
 `,
 }
 
-// mainAdmin is the handle for "mc admin service" command.
+// mainAdmin is the handle for "minioc admin service" command.
 func mainAdminService(ctx *cli.Context) error {
 
 	if ctx.Args().First() != "" { // command help.

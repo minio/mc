@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 var (
@@ -72,12 +72,12 @@ func migrateShare() {
 	}
 }
 
-// mainShare - main handler for mc share command.
+// mainShare - main handler for minioc share command.
 func mainShare(ctx *cli.Context) error {
 
 	if ctx.Args().First() != "" { // command help.
 		cli.ShowCommandHelp(ctx, ctx.Args().First())
-	} else { // mc help.
+	} else { // minioc help.
 		cli.ShowAppHelp(ctx)
 	}
 

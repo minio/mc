@@ -24,8 +24,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 var (
@@ -233,14 +233,14 @@ func mainConfigHost(ctx *cli.Context) error {
 
 // addHost - add a host config.
 func addHost(alias string, hostCfgV8 hostConfigV8) {
-	mcCfgV8, err := loadMcConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config ‘"+mustGetMcConfigPath()+"’.")
+	miniocCfgV8, err := loadMiniocConfig()
+	fatalIf(err.Trace(globalMINIOCConfigVersion), "Unable to load config ‘"+mustGetMiniocConfigPath()+"’.")
 
 	// Add new host.
-	mcCfgV8.Hosts[alias] = hostCfgV8
+	miniocCfgV8.Hosts[alias] = hostCfgV8
 
-	err = saveMcConfig(mcCfgV8)
-	fatalIf(err.Trace(alias), "Unable to update hosts in config version ‘"+mustGetMcConfigPath()+"’.")
+	err = saveMiniocConfig(miniocCfgV8)
+	fatalIf(err.Trace(alias), "Unable to update hosts in config version ‘"+mustGetMiniocConfigPath()+"’.")
 
 	printMsg(hostMessage{
 		op:        "add",
@@ -254,14 +254,14 @@ func addHost(alias string, hostCfgV8 hostConfigV8) {
 
 // removeHost - removes a host.
 func removeHost(alias string) {
-	conf, err := loadMcConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
+	conf, err := loadMiniocConfig()
+	fatalIf(err.Trace(globalMINIOCConfigVersion), "Unable to load config version ‘"+globalMINIOCConfigVersion+"’.")
 
 	// Remove host.
 	delete(conf.Hosts, alias)
 
-	err = saveMcConfig(conf)
-	fatalIf(err.Trace(alias), "Unable to save deleted hosts in config version ‘"+globalMCConfigVersion+"’.")
+	err = saveMiniocConfig(conf)
+	fatalIf(err.Trace(alias), "Unable to save deleted hosts in config version ‘"+globalMINIOCConfigVersion+"’.")
 
 	printMsg(hostMessage{op: "remove", Alias: alias})
 }
@@ -275,8 +275,8 @@ func (d byAlias) Less(i, j int) bool { return d[i].Alias < d[j].Alias }
 
 // listHosts - list all host URLs.
 func listHosts() {
-	conf, err := loadMcConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
+	conf, err := loadMiniocConfig()
+	fatalIf(err.Trace(globalMINIOCConfigVersion), "Unable to load config version ‘"+globalMINIOCConfigVersion+"’.")
 
 	var maxAlias = 0
 	for k := range conf.Hosts {

@@ -27,8 +27,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 const (
@@ -104,7 +104,7 @@ func shareSetColor() {
 
 // Get share dir name.
 func getShareDir() (string, *probe.Error) {
-	configDir, err := getMcConfigDir()
+	configDir, err := getMiniocConfigDir()
 	if err != nil {
 		return "", err.Trace()
 	}
@@ -113,7 +113,7 @@ func getShareDir() (string, *probe.Error) {
 	return sharedURLsDataDir, nil
 }
 
-// Get share dir name or die. (NOTE: This ‘Die’ approach is only OK for mc like tools.).
+// Get share dir name or die. (NOTE: This ‘Die’ approach is only OK for minioc like tools.).
 func mustGetShareDir() string {
 	shareDir, err := getShareDir()
 	fatalIf(err.Trace(), "Unable to determine share folder.")

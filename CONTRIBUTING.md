@@ -1,17 +1,17 @@
-### Setup your mc Github Repository
-Fork [mc upstream](https://github.com/minio/mc/fork) source repository to your own personal repository.
+### Setup your minioc Github Repository
+Fork [minioc upstream](https://github.com/minio/minioc/fork) source repository to your own personal repository.
 ```sh
 $ mkdir -p $GOPATH/src/github.com/minio
 $ cd $GOPATH/src/github.com/minio
-$ git clone https://github.com/$USER_ID/mc
-$ cd mc
+$ git clone https://github.com/$USER_ID/minioc
+$ cd minioc
 $ make
-$ mc --help
+$ minioc --help
 ```
 
 ###  Developer Guidelines
 
-``mc`` welcomes your contribution. To make the process as seamless as possible, we ask for the following:
+``minioc`` welcomes your contribution. To make the process as seamless as possible, we ask for the following:
 
 * Go ahead and fork the project and make your changes. We encourage pull requests to discuss code changes.
     - Fork it
@@ -20,12 +20,12 @@ $ mc --help
     - Push to the branch (git push origin my-new-feature)
     - Create new Pull Request
 
-* If you have additional dependencies for ``mc``, ``mc`` manages its dependencies using [govendor](https://github.com/kardianos/govendor)
+* If you have additional dependencies for ``minioc``, ``minioc`` manages its dependencies using [govendor](https://github.com/kardianos/govendor)
     - Run `go get foo/bar`
     - Edit your code to import foo/bar
     - Run `make pkg-add PKG=foo/bar` from top-level folder
 
-* If you have dependencies which needs to be removed from ``mc``
+* If you have dependencies which needs to be removed from ``minioc``
     - Edit your code to not import foo/bar
     - Run `make pkg-remove PKG=foo/bar` from top-level folder
 
@@ -36,5 +36,5 @@ $ mc --help
     - Make sure `make build` completes.
 
 * Read [Effective Go](https://github.com/golang/go/wiki/CodeReviewComments) article from Golang project
-    - `mc` project is conformant with Golang style
+    - `minioc` project is conformant with Golang style
     - if you happen to observe offending code, please feel free to send a pull request

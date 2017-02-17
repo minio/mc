@@ -38,8 +38,8 @@ fmt:
 lint:
 	@echo "Running $@:"
 	@$(GOPATH)/bin/golint .
-	@$(GOPATH)/bin/golint github.com/minio/mc/cmd...
-	@$(GOPATH)/bin/golint github.com/minio/mc/pkg...
+	@$(GOPATH)/bin/golint github.com/minio/minioc/cmd...
+	@$(GOPATH)/bin/golint github.com/minio/minioc/pkg...
 
 cyclo:
 	@echo "Running $@:"
@@ -54,13 +54,13 @@ build: getdeps verifiers
 
 test: getdeps verifiers
 	@echo "Running all testing:"
-	@go test $(GOFLAGS) github.com/minio/mc/cmd...
-	@go test $(GOFLAGS) github.com/minio/mc/pkg...
+	@go test $(GOFLAGS) github.com/minio/minioc/cmd...
+	@go test $(GOFLAGS) github.com/minio/minioc/pkg...
 
 gomake-all: build
-	@echo "Installing mc:"
-	@go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/mc
-	@mkdir -p $(HOME)/.mc
+	@echo "Installing minioc:"
+	@go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/minioc
+	@mkdir -p $(HOME)/.minioc
 
 coverage: getdeps verifiers
 	@echo "Running all coverage:"
@@ -90,13 +90,13 @@ all-tests: test
 	#@./tests/test-minio.sh
 
 release: verifiers
-	@MC_RELEASE=RELEASE ./buildscripts/build.sh
+	@MINIOC_RELEASE=RELEASE ./buildscripts/build.sh
 
 experimental: verifiers
-	@MC_RELEASE=EXPERIMENTAL ./buildscripts/build.sh
+	@MINIOC_RELEASE=EXPERIMENTAL ./buildscripts/build.sh
 
 clean:
 	@rm -f cover.out
-	@rm -f mc
+	@rm -f minioc
 	@find . -name '*.test' | xargs rm -fv
 	@rm -fr release

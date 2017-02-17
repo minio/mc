@@ -22,22 +22,22 @@ import (
 	"regexp"
 	"runtime"
 
-	"github.com/minio/go-homedir"
 	"github.com/minio/minio/pkg/probe"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
-// mcCustomConfigDir contains the whole path to config dir. Only access via get/set functions.
-var mcCustomConfigDir string
+// miniocCustomConfigDir contains the whole path to config dir. Only access via get/set functions.
+var miniocCustomConfigDir string
 
-// setMcConfigDir - set a custom minio client config folder.
-func setMcConfigDir(configDir string) {
-	mcCustomConfigDir = configDir
+// setMiniocConfigDir - set a custom minio client config folder.
+func setMiniocConfigDir(configDir string) {
+	miniocCustomConfigDir = configDir
 }
 
-// getMcConfigDir - construct minio client config folder.
-func getMcConfigDir() (string, *probe.Error) {
-	if mcCustomConfigDir != "" {
-		return mcCustomConfigDir, nil
+// getMiniocConfigDir - construct minio client config folder.
+func getMiniocConfigDir() (string, *probe.Error) {
+	if miniocCustomConfigDir != "" {
+		return miniocCustomConfigDir, nil
 	}
 	homeDir, e := homedir.Dir()
 	if e != nil {
@@ -46,24 +46,24 @@ func getMcConfigDir() (string, *probe.Error) {
 	var configDir string
 	// For windows the path is slightly different
 	if runtime.GOOS == "windows" {
-		configDir = filepath.Join(homeDir, globalMCConfigWindowsDir)
+		configDir = filepath.Join(homeDir, globalMINIOCConfigWindowsDir)
 	} else {
-		configDir = filepath.Join(homeDir, globalMCConfigDir)
+		configDir = filepath.Join(homeDir, globalMINIOCConfigDir)
 	}
 	return configDir, nil
 }
 
-// mustGetMcConfigDir - construct minio client config folder or fail
-func mustGetMcConfigDir() (configDir string) {
-	configDir, err := getMcConfigDir()
-	fatalIf(err.Trace(), "Unable to get mcConfigDir.")
+// mustGetMiniocConfigDir - construct minio client config folder or fail
+func mustGetMiniocConfigDir() (configDir string) {
+	configDir, err := getMiniocConfigDir()
+	fatalIf(err.Trace(), "Unable to get miniocConfigDir.")
 
 	return configDir
 }
 
-// createMcConfigDir - create minio client config folder
-func createMcConfigDir() *probe.Error {
-	p, err := getMcConfigDir()
+// createMiniocConfigDir - create minio client config folder
+func createMiniocConfigDir() *probe.Error {
+	p, err := getMiniocConfigDir()
 	if err != nil {
 		return err.Trace()
 	}
@@ -73,71 +73,71 @@ func createMcConfigDir() *probe.Error {
 	return nil
 }
 
-// getMcConfigPath - construct minio client configuration path
-func getMcConfigPath() (string, *probe.Error) {
-	if mcCustomConfigDir != "" {
-		return filepath.Join(mcCustomConfigDir, globalMCConfigFile), nil
+// getMiniocConfigPath - construct minio client configuration path
+func getMiniocConfigPath() (string, *probe.Error) {
+	if miniocCustomConfigDir != "" {
+		return filepath.Join(miniocCustomConfigDir, globalMINIOCConfigFile), nil
 	}
-	dir, err := getMcConfigDir()
+	dir, err := getMiniocConfigDir()
 	if err != nil {
 		return "", err.Trace()
 	}
-	return filepath.Join(dir, globalMCConfigFile), nil
+	return filepath.Join(dir, globalMINIOCConfigFile), nil
 }
 
-// mustGetMcConfigPath - similar to getMcConfigPath, ignores errors
-func mustGetMcConfigPath() string {
-	path, err := getMcConfigPath()
-	fatalIf(err.Trace(), "Unable to get mcConfigPath.")
+// mustGetMiniocConfigPath - similar to getMiniocConfigPath, ignores errors
+func mustGetMiniocConfigPath() string {
+	path, err := getMiniocConfigPath()
+	fatalIf(err.Trace(), "Unable to get miniocConfigPath.")
 
 	return path
 }
 
-// newMcConfig - initializes a new version '6' config.
-func newMcConfig() *configV8 {
+// newMiniocConfig - initializes a new version '6' config.
+func newMiniocConfig() *configV8 {
 	cfg := newConfigV8()
 	cfg.loadDefaults()
 	return cfg
 }
 
-// loadMcConfigCached - returns loadMcConfig with a closure for config cache.
-func loadMcConfigFactory() func() (*configV8, *probe.Error) {
+// loadMiniocConfigCached - returns loadMiniocConfig with a closure for config cache.
+func loadMiniocConfigFactory() func() (*configV8, *probe.Error) {
 	// Load once and cache in a closure.
 	cfgCache, err := loadConfigV8()
 
-	// loadMcConfig - reads configuration file and returns config.
+	// loadMiniocConfig - reads configuration file and returns config.
 	return func() (*configV8, *probe.Error) {
 		return cfgCache, err
 	}
 }
 
-// loadMcConfig - returns configuration, initialized later.
-var loadMcConfig func() (*configV8, *probe.Error)
+// loadMiniocConfig - returns configuration, initialized later.
+var loadMiniocConfig func() (*configV8, *probe.Error)
 
-// saveMcConfig - saves configuration file and returns error if any.
-func saveMcConfig(config *configV8) *probe.Error {
+// saveMiniocConfig - saves configuration file and returns error if any.
+func saveMiniocConfig(config *configV8) *probe.Error {
 	if config == nil {
 		return errInvalidArgument().Trace()
 	}
 
-	err := createMcConfigDir()
+	err := createMiniocConfigDir()
 	if err != nil {
-		return err.Trace(mustGetMcConfigDir())
+		return err.Trace(mustGetMiniocConfigDir())
 	}
 
 	// Save the config.
 	if err := saveConfigV8(config); err != nil {
-		return err.Trace(mustGetMcConfigPath())
+		return err.Trace(mustGetMiniocConfigPath())
 	}
 
 	// Refresh the config cache.
-	loadMcConfig = loadMcConfigFactory()
+	loadMiniocConfig = loadMiniocConfigFactory()
 	return nil
 }
 
-// isMcConfigExists returns err if config doesn't exist.
-func isMcConfigExists() bool {
-	configFile, err := getMcConfigPath()
+// isMiniocConfigExists returns err if config doesn't exist.
+func isMiniocConfigExists() bool {
+	configFile, err := getMiniocConfigPath()
 	if err != nil {
 		return false
 	}
@@ -154,14 +154,14 @@ func isValidAlias(alias string) bool {
 
 // getHostConfig retrieves host specific configuration such as access keys, signature type.
 func getHostConfig(alias string) (*hostConfigV8, *probe.Error) {
-	mcCfg, err := loadMcConfig()
+	miniocCfg, err := loadMiniocConfig()
 	if err != nil {
 		return nil, err.Trace(alias)
 	}
 
 	// if host is exact return quickly.
-	if _, ok := mcCfg.Hosts[alias]; ok {
-		hostCfg := mcCfg.Hosts[alias]
+	if _, ok := miniocCfg.Hosts[alias]; ok {
+		hostCfg := miniocCfg.Hosts[alias]
 		return &hostCfg, nil
 	}
 

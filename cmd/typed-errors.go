@@ -36,7 +36,7 @@ var (
 	}
 
 	errInvalidAliasedURL = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Use ‘mc config host add mycloud " + URL + " ...’ to add an alias. Use the alias for S3 operations.")).Untrace()
+		return probe.NewError(errors.New("Use ‘minioc config host add mycloud " + URL + " ...’ to add an alias. Use the alias for S3 operations.")).Untrace()
 	}
 
 	errNoMatchingHost = func(URL string) *probe.Error {

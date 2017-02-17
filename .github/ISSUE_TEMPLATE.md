@@ -4,8 +4,8 @@
 
 ## Steps to reproduce the behaviour
 
-## mc version
-- (paste output of `mc version`)
+## minioc version
+- (paste output of `minioc version`)
 
 ## System information
 
