@@ -8,11 +8,15 @@ clone_folder: c:\gopath\src\github.com\minio\mc
 
 # environment variables
 environment:
+  GOVERSION: 1.8
   GOPATH: c:\gopath
 
 # scripts that run after cloning repository
 install:
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
+  - rmdir c:\go /s /q
+  - appveyor DownloadFile https://storage.googleapis.com/golang/go%GOVERSION%.windows-amd64.zip
+  - 7z x go%GOVERSION%.windows-amd64.zip -y -oC:\ > NUL
   - go version
   - go env
 

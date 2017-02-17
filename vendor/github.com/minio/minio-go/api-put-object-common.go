@@ -161,7 +161,7 @@ func hashCopyN(hashAlgorithms map[string]hash.Hash, hashSums map[string][]byte, 
 	for k, v := range hashAlgorithms {
 		hashSums[k] = v.Sum(nil)
 	}
-	return size, err
+	return size, nil
 }
 
 // getUploadID - fetch upload id if already present for an object name
