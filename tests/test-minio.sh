@@ -43,9 +43,9 @@ function run_minio()
     minio --anonymous server "$MINIO_WORK_DIR" || fatal 1 "failed to run minio server."
 }
 
-function install_mc()
+function install_minioc()
 {
-    go_get github.com/minio/mc || fatal 2
+    go_get github.com/minio/minioc || fatal 2
 }
 
 function main()
@@ -58,7 +58,7 @@ function main()
         run_minio
     fi
 
-    msg "Running all mc tests."
+    msg "Running all minioc tests."
     for test_script in $TEST_CASE_DIR/*; do
         if [ -x "$test_script" ]; then
             "$test_script" "$@" || error "test $test_script failed."

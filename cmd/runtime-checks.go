@@ -21,8 +21,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/hashicorp/go-version"
-	"github.com/minio/mc/pkg/console"
+	version "github.com/hashicorp/go-version"
+	"github.com/minio/minioc/pkg/console"
 )
 
 // check if minimum Go version is met.

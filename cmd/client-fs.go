@@ -28,9 +28,9 @@ import (
 
 	"io/ioutil"
 
-	"github.com/minio/mc/pkg/hookreader"
-	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/hookreader"
+	"github.com/minio/minioc/pkg/ioutils"
 	"github.com/rjeczalik/notify"
 )
 
@@ -218,7 +218,7 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 		}
 	}
 
-	// Write to a temporary file "object.part.mc" before commit.
+	// Write to a temporary file "object.part.minioc" before commit.
 	objectPartPath := objectPath + partSuffix
 	if objectDir != "" {
 		// Create any missing top level directories.

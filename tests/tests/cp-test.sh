@@ -3,5 +3,5 @@
 server="$1"
 dir="$2"
 
-mc --json cp "$dir..." "$server/testbucket"
+minioc --json cp "$dir..." "$server/testbucket"
 # TODO: validate output

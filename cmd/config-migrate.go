@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/minio/pkg/quick"
+	"github.com/minio/minioc/pkg/console"
 )
 
 // migrate config files from the any older version to the latest.
@@ -47,14 +47,14 @@ func migrateConfig() {
 
 // Migrate from config version 1.0 to 1.0.1. Populate example entries and save it back.
 func migrateConfigV1ToV101() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
-	mcCfgV1, e := quick.Load(mustGetMcConfigPath(), newConfigV1())
+	miniocCfgV1, e := quick.Load(mustGetMiniocConfigPath(), newConfigV1())
 	fatalIf(probe.NewError(e), "Unable to load config version ‘1’.")
 
 	// If loaded config version does not match 1.0.0, we do nothing.
-	if mcCfgV1.Version() != "1.0.0" {
+	if miniocCfgV1.Version() != "1.0.0" {
 		return
 	}
 
@@ -62,12 +62,12 @@ func migrateConfigV1ToV101() {
 	cfgV101 := newConfigV101()
 
 	// Copy aliases.
-	for k, v := range mcCfgV1.Data().(*configV1).Aliases {
+	for k, v := range miniocCfgV1.Data().(*configV1).Aliases {
 		cfgV101.Aliases[k] = v
 	}
 
 	// Copy hosts.
-	for k, hostCfgV1 := range mcCfgV1.Data().(*configV1).Hosts {
+	for k, hostCfgV1 := range miniocCfgV1.Data().(*configV1).Hosts {
 		cfgV101.Hosts[k] = hostConfigV101{
 			AccessKeyID:     hostCfgV1.AccessKeyID,
 			SecretAccessKey: hostCfgV1.SecretAccessKey,
@@ -94,75 +94,75 @@ func migrateConfigV1ToV101() {
 	}
 
 	// Save the new config back to the disk.
-	mcCfgV101, e := quick.New(cfgV101)
+	miniocCfgV101, e := quick.New(cfgV101)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘1.0.1’.")
-	e = mcCfgV101.Save(mustGetMcConfigPath())
+	e = miniocCfgV101.Save(mustGetMiniocConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version ‘1.0.1’.")
 
-	console.Infof("Successfully migrated %s from version ‘1.0.0’ to version ‘1.0.1’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version ‘1.0.0’ to version ‘1.0.1’.\n", mustGetMiniocConfigPath())
 }
 
 // Migrate from config ‘1.0.1’ to ‘2’. Drop semantic versioning and move to integer versioning. No other changes.
 func migrateConfigV101ToV2() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
-	mcCfgV101, e := quick.Load(mustGetMcConfigPath(), newConfigV101())
+	miniocCfgV101, e := quick.Load(mustGetMiniocConfigPath(), newConfigV101())
 	fatalIf(probe.NewError(e), "Unable to load config version ‘1.0.1’.")
 
 	// update to newer version
-	if mcCfgV101.Version() != "1.0.1" {
+	if miniocCfgV101.Version() != "1.0.1" {
 		return
 	}
 
 	cfgV2 := newConfigV2()
 
 	// Copy aliases.
-	for k, v := range mcCfgV101.Data().(*configV101).Aliases {
+	for k, v := range miniocCfgV101.Data().(*configV101).Aliases {
 		cfgV2.Aliases[k] = v
 	}
 
 	// Copy hosts.
-	for k, hostCfgV101 := range mcCfgV101.Data().(*configV101).Hosts {
+	for k, hostCfgV101 := range miniocCfgV101.Data().(*configV101).Hosts {
 		cfgV2.Hosts[k] = hostConfigV2{
 			AccessKeyID:     hostCfgV101.AccessKeyID,
 			SecretAccessKey: hostCfgV101.SecretAccessKey,
 		}
 	}
 
-	mcCfgV2, e := quick.New(cfgV2)
+	miniocCfgV2, e := quick.New(cfgV2)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘2’.")
 
-	e = mcCfgV2.Save(mustGetMcConfigPath())
+	e = miniocCfgV2.Save(mustGetMiniocConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version ‘2’.")
 
-	console.Infof("Successfully migrated %s from version ‘1.0.1’ to version ‘2’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version ‘1.0.1’ to version ‘2’.\n", mustGetMiniocConfigPath())
 }
 
 // Migrate from config ‘2’ to ‘3’. Use ‘-’ separated names for
 // hostConfig using struct json tags.
 func migrateConfigV2ToV3() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
 
-	mcCfgV2, e := quick.Load(mustGetMcConfigPath(), newConfigV2())
-	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
+	miniocCfgV2, e := quick.Load(mustGetMiniocConfigPath(), newConfigV2())
+	fatalIf(probe.NewError(e), "Unable to load minioc config V2.")
 
 	// update to newer version
-	if mcCfgV2.Version() != "2" {
+	if miniocCfgV2.Version() != "2" {
 		return
 	}
 
 	cfgV3 := newConfigV3()
 
 	// Copy aliases.
-	for k, v := range mcCfgV2.Data().(*configV2).Aliases {
+	for k, v := range miniocCfgV2.Data().(*configV2).Aliases {
 		cfgV3.Aliases[k] = v
 	}
 
 	// Copy hosts.
-	for k, hostCfgV2 := range mcCfgV2.Data().(*configV2).Hosts {
+	for k, hostCfgV2 := range miniocCfgV2.Data().(*configV2).Hosts {
 		// New hostConfV3 uses struct json tags.
 		cfgV3.Hosts[k] = hostConfigV3{
 			AccessKeyID:     hostCfgV2.AccessKeyID,
@@ -170,38 +170,38 @@ func migrateConfigV2ToV3() {
 		}
 	}
 
-	mcNewCfgV3, e := quick.New(cfgV3)
+	miniocNewCfgV3, e := quick.New(cfgV3)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘3’.")
 
-	e = mcNewCfgV3.Save(mustGetMcConfigPath())
+	e = miniocNewCfgV3.Save(mustGetMiniocConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version ‘3’.")
 
-	console.Infof("Successfully migrated %s from version ‘2’ to version ‘3’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version ‘2’ to version ‘3’.\n", mustGetMiniocConfigPath())
 }
 
 // Migrate from config version ‘3’ to ‘4’. Introduce API Signature
 // field in host config. Also Use JavaScript notation for field names.
 func migrateConfigV3ToV4() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
-	mcCfgV3, e := quick.Load(mustGetMcConfigPath(), newConfigV3())
-	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
+	miniocCfgV3, e := quick.Load(mustGetMiniocConfigPath(), newConfigV3())
+	fatalIf(probe.NewError(e), "Unable to load minioc config V2.")
 
 	// update to newer version
-	if mcCfgV3.Version() != "3" {
+	if miniocCfgV3.Version() != "3" {
 		return
 	}
 
 	cfgV4 := newConfigV4()
-	for k, v := range mcCfgV3.Data().(*configV3).Aliases {
+	for k, v := range miniocCfgV3.Data().(*configV3).Aliases {
 		cfgV4.Aliases[k] = v
 	}
 	// New hostConfig has API signature. All older entries were V4
 	// only. So it is safe to assume V4 as default for all older
 	// entries.
 	// HostConfigV4 als uses JavaScript naming notation for struct JSON tags.
-	for host, hostCfgV3 := range mcCfgV3.Data().(*configV3).Hosts {
+	for host, hostCfgV3 := range miniocCfgV3.Data().(*configV3).Hosts {
 		cfgV4.Hosts[host] = hostConfigV4{
 			AccessKeyID:     hostCfgV3.AccessKeyID,
 			SecretAccessKey: hostCfgV3.SecretAccessKey,
@@ -209,34 +209,34 @@ func migrateConfigV3ToV4() {
 		}
 	}
 
-	mcNewCfgV4, e := quick.New(cfgV4)
+	miniocNewCfgV4, e := quick.New(cfgV4)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘4’.")
 
-	e = mcNewCfgV4.Save(mustGetMcConfigPath())
+	e = miniocNewCfgV4.Save(mustGetMiniocConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version ‘4’.")
 
-	console.Infof("Successfully migrated %s from version ‘3’ to version ‘4’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version ‘3’ to version ‘4’.\n", mustGetMiniocConfigPath())
 
 }
 
 // Migrate config version ‘4’ to ‘5’. Rename hostConfigV4.Signature  -> hostConfigV5.API.
 func migrateConfigV4ToV5() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
-	mcCfgV4, e := quick.Load(mustGetMcConfigPath(), newConfigV4())
-	fatalIf(probe.NewError(e), "Unable to load mc config V4.")
+	miniocCfgV4, e := quick.Load(mustGetMiniocConfigPath(), newConfigV4())
+	fatalIf(probe.NewError(e), "Unable to load minioc config V4.")
 
 	// update to newer version
-	if mcCfgV4.Version() != "4" {
+	if miniocCfgV4.Version() != "4" {
 		return
 	}
 
 	cfgV5 := newConfigV5()
-	for k, v := range mcCfgV4.Data().(*configV4).Aliases {
+	for k, v := range miniocCfgV4.Data().(*configV4).Aliases {
 		cfgV5.Aliases[k] = v
 	}
-	for host, hostCfgV4 := range mcCfgV4.Data().(*configV4).Hosts {
+	for host, hostCfgV4 := range miniocCfgV4.Data().(*configV4).Hosts {
 		cfgV5.Hosts[host] = hostConfigV5{
 			AccessKeyID:     hostCfgV4.AccessKeyID,
 			SecretAccessKey: hostCfgV4.SecretAccessKey,
@@ -244,26 +244,26 @@ func migrateConfigV4ToV5() {
 		}
 	}
 
-	mcNewCfgV5, e := quick.New(cfgV5)
+	miniocNewCfgV5, e := quick.New(cfgV5)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘5’.")
 
-	e = mcNewCfgV5.Save(mustGetMcConfigPath())
+	e = miniocNewCfgV5.Save(mustGetMiniocConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version ‘5’.")
 
-	console.Infof("Successfully migrated %s from version ‘4’ to version ‘5’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version ‘4’ to version ‘5’.\n", mustGetMiniocConfigPath())
 }
 
 // Migrate config version ‘5’ to ‘6’. Add google cloud storage servers
 // to host config. Also remove "." from s3 aws glob rule.
 func migrateConfigV5ToV6() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
-	mcCfgV5, e := quick.Load(mustGetMcConfigPath(), newConfigV5())
-	fatalIf(probe.NewError(e), "Unable to load mc config V5.")
+	miniocCfgV5, e := quick.Load(mustGetMiniocConfigPath(), newConfigV5())
+	fatalIf(probe.NewError(e), "Unable to load minioc config V5.")
 
 	// update to newer version
-	if mcCfgV5.Version() != "5" {
+	if miniocCfgV5.Version() != "5" {
 		return
 	}
 
@@ -272,7 +272,7 @@ func migrateConfigV5ToV6() {
 	// Add new Google Cloud Storage alias.
 	cfgV6.Aliases["gcs"] = "https://storage.googleapis.com"
 
-	for k, v := range mcCfgV5.Data().(*configV5).Aliases {
+	for k, v := range miniocCfgV5.Data().(*configV5).Aliases {
 		cfgV6.Aliases[k] = v
 	}
 
@@ -288,7 +288,7 @@ func migrateConfigV5ToV6() {
 		API:             "S3v2",
 	}
 
-	for host, hostCfgV5 := range mcCfgV5.Data().(*configV5).Hosts {
+	for host, hostCfgV5 := range miniocCfgV5.Data().(*configV5).Hosts {
 		// Find any matching s3 entry and copy keys from it to newer generalized glob entry.
 		if strings.Contains(host, "s3") {
 			if (hostCfgV5.AccessKeyID == "YOUR-ACCESS-KEY-ID-HERE") ||
@@ -310,26 +310,26 @@ func migrateConfigV5ToV6() {
 		}
 	}
 
-	mcNewCfgV6, e := quick.New(cfgV6)
+	miniocNewCfgV6, e := quick.New(cfgV6)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘6’.")
 
-	e = mcNewCfgV6.Save(mustGetMcConfigPath())
+	e = miniocNewCfgV6.Save(mustGetMiniocConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version ‘6’.")
 
-	console.Infof("Successfully migrated %s from version ‘5’ to version ‘6’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version ‘5’ to version ‘6’.\n", mustGetMiniocConfigPath())
 }
 
 // Migrate config version ‘6’ to ‘7'. Remove alias map and introduce
 // named Host config. Also no more glob match for host config entries.
 func migrateConfigV6ToV7() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
 
-	mcCfgV6, e := quick.Load(mustGetMcConfigPath(), newConfigV6())
-	fatalIf(probe.NewError(e), "Unable to load mc config V6.")
+	miniocCfgV6, e := quick.Load(mustGetMiniocConfigPath(), newConfigV6())
+	fatalIf(probe.NewError(e), "Unable to load minioc config V6.")
 
-	if mcCfgV6.Version() != "6" {
+	if miniocCfgV6.Version() != "6" {
 		return
 	}
 
@@ -337,10 +337,10 @@ func migrateConfigV6ToV7() {
 	aliasIndex := 0
 
 	// old Aliases.
-	oldAliases := mcCfgV6.Data().(*configV6).Aliases
+	oldAliases := miniocCfgV6.Data().(*configV6).Aliases
 
 	// We dropped alias support in v7. We only need to migrate host configs.
-	for host, hostCfgV6 := range mcCfgV6.Data().(*configV6).Hosts {
+	for host, hostCfgV6 := range miniocCfgV6.Data().(*configV6).Hosts {
 		// Look through old aliases, if found any matching save those entries.
 		for aliasName, aliasedHost := range oldAliases {
 			if aliasedHost == host {
@@ -389,32 +389,32 @@ func migrateConfigV6ToV7() {
 	}
 	// Load default settings.
 	cfgV7.loadDefaults()
-	mcNewCfgV7, e := quick.New(cfgV7)
+	miniocNewCfgV7, e := quick.New(cfgV7)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘7’.")
 
-	e = mcNewCfgV7.Save(mustGetMcConfigPath())
+	e = miniocNewCfgV7.Save(mustGetMiniocConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version ‘7’.")
 
-	console.Infof("Successfully migrated %s from version ‘6’ to version ‘7’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version ‘6’ to version ‘7’.\n", mustGetMiniocConfigPath())
 }
 
 // Migrate config version ‘7’ to ‘8'. Remove hosts
 // 'play.minio.io:9002' and 'dl.minio.io:9000'.
 func migrateConfigV7ToV8() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
 
-	mcCfgV7, e := quick.Load(mustGetMcConfigPath(), newConfigV7())
-	fatalIf(probe.NewError(e), "Unable to load mc config V7.")
+	miniocCfgV7, e := quick.Load(mustGetMiniocConfigPath(), newConfigV7())
+	fatalIf(probe.NewError(e), "Unable to load minioc config V7.")
 
-	if mcCfgV7.Version() != "7" {
+	if miniocCfgV7.Version() != "7" {
 		return
 	}
 
 	cfgV8 := newConfigV8()
 	// We dropped alias support in v7. We only need to migrate host configs.
-	for host, hostCfgV7 := range mcCfgV7.Data().(*configV7).Hosts {
+	for host, hostCfgV7 := range miniocCfgV7.Data().(*configV7).Hosts {
 		// Ignore 'player', 'play' and 'dl' aliases.
 		if host == "player" || host == "dl" || host == "play" {
 			continue
@@ -428,11 +428,11 @@ func migrateConfigV7ToV8() {
 	}
 	// Load default settings.
 	cfgV8.loadDefaults()
-	mcNewCfgV8, e := quick.New(cfgV8)
+	miniocNewCfgV8, e := quick.New(cfgV8)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘8’.")
 
-	e = mcNewCfgV8.Save(mustGetMcConfigPath())
+	e = miniocNewCfgV8.Save(mustGetMiniocConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version ‘8’.")
 
-	console.Infof("Successfully migrated %s from version ‘7’ to version ‘8’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version ‘7’ to version ‘8’.\n", mustGetMiniocConfigPath())
 }

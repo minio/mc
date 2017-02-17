@@ -21,22 +21,22 @@ import (
 	"crypto/x509"
 
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minioc/pkg/console"
 )
 
-// mc configuration related constants.
+// minioc configuration related constants.
 const (
-	minGoVersion = ">= 1.7.1" // mc requires at least Go v1.7.1
+	minGoVersion = ">= 1.7.1" // minioc requires at least Go v1.7.1
 )
 
 const (
-	globalMCConfigVersion = "8"
+	globalMINIOCConfigVersion = "8"
 
-	globalMCConfigDir        = ".mc/"
-	globalMCConfigWindowsDir = "mc\\"
-	globalMCConfigFile       = "config.json"
-	globalMCCertsDir         = "certs"
-	globalMCCAsDir           = "CAs"
+	globalMINIOCConfigDir        = ".minioc/"
+	globalMINIOCConfigWindowsDir = "minioc\\"
+	globalMINIOCConfigFile       = "config.json"
+	globalMINIOCCertsDir         = "certs"
+	globalMINIOCCAsDir           = "CAs"
 
 	// session config and shared urls related constants
 	globalSessionDir           = "session"

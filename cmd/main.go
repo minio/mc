@@ -28,18 +28,18 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 	"github.com/pkg/profile"
 )
 
 var (
-	// global flags for mc.
-	mcFlags = []cli.Flag{}
+	// global flags for minioc.
+	miniocFlags = []cli.Flag{}
 )
 
-// Help template for mc
-var mcHelpTemplate = `NAME:
+// Help template for minioc
+var miniocHelpTemplate = `NAME:
   {{.Name}} - {{.Usage}}
 
 USAGE:
@@ -58,11 +58,11 @@ VERSION:
   {{$value}}
 {{end}}`
 
-// Main starts mc application
+// Main starts minioc application
 func Main() {
 	// Enable profiling supported modes are [cpu, mem, block].
-	// ``MC_PROFILER`` supported options are [cpu, mem, block].
-	switch os.Getenv("MC_PROFILER") {
+	// ``MINIOC_PROFILER`` supported options are [cpu, mem, block].
+	switch os.Getenv("MINIOC_PROFILER") {
 	case "cpu":
 		defer profile.Start(profile.CPUProfile, profile.ProfilePath(mustGetProfileDir())).Stop()
 	case "mem":
@@ -91,7 +91,7 @@ func Main() {
 
 // Function invoked when invalid command is passed.
 func commandNotFound(ctx *cli.Context, command string) {
-	msg := fmt.Sprintf("‘%s’ is not a mc command. See ‘mc --help’.", command)
+	msg := fmt.Sprintf("‘%s’ is not a minioc command. See ‘minioc --help’.", command)
 	closestCommands := findClosestCommands(command)
 	if len(closestCommands) > 0 {
 		msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
@@ -110,11 +110,11 @@ func commandNotFound(ctx *cli.Context, command string) {
 // Check for sane config environment early on and gracefully report.
 func checkConfig() {
 	// Refresh the config once.
-	loadMcConfig = loadMcConfigFactory()
+	loadMiniocConfig = loadMiniocConfigFactory()
 	// Ensures config file is sane.
-	config, err := loadMcConfig()
+	config, err := loadMiniocConfig()
 	// Verify if the path is accesible before validating the config
-	fatalIf(err.Trace(mustGetMcConfigPath()), "Unable to access configuration file.")
+	fatalIf(err.Trace(mustGetMiniocConfigPath()), "Unable to access configuration file.")
 
 	// Validate and print error messges
 	ok, errMsgs := validateConfigFile(config)
@@ -167,22 +167,22 @@ func getSystemData() map[string]string {
 	}
 }
 
-// initMC - initialize 'mc'.
-func initMC() {
-	// Check if mc config exists.
-	if !isMcConfigExists() {
-		err := saveMcConfig(newMcConfig())
-		fatalIf(err.Trace(), "Unable to save new mc config.")
+// initMINIOC - initialize 'minioc'.
+func initMINIOC() {
+	// Check if minioc config exists.
+	if !isMiniocConfigExists() {
+		err := saveMiniocConfig(newMiniocConfig())
+		fatalIf(err.Trace(), "Unable to save new minioc config.")
 
-		console.Infoln("Configuration written to ‘" + mustGetMcConfigPath() + "’. Please update your access credentials.")
+		console.Infoln("Configuration written to ‘" + mustGetMiniocConfigPath() + "’. Please update your access credentials.")
 	}
 
-	// Check if mc session folder exists.
+	// Check if minioc session folder exists.
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session config folder.")
 	}
 
-	// Check if mc share folder exists.
+	// Check if minioc share folder exists.
 	if !isShareDirExists() {
 		initShareConfig()
 	}
@@ -202,17 +202,17 @@ func initMC() {
 }
 
 func registerBefore(ctx *cli.Context) error {
-	// Check if mc was compiled using a supported version of Golang.
+	// Check if minioc was compiled using a supported version of Golang.
 	checkGoVersion()
 
 	// Set the config folder.
-	setMcConfigDir(ctx.GlobalString("config-folder"))
+	setMiniocConfigDir(ctx.GlobalString("config-folder"))
 
 	// Migrate any old version of config / state files to newer format.
 	migrate()
 
 	// Initialize default config files.
-	initMC()
+	initMINIOC()
 
 	// Set global flags.
 	setGlobalsFromContext(ctx)
@@ -266,7 +266,7 @@ func registerApp() *cli.App {
 	app := cli.NewApp()
 	app.Action = func(ctx *cli.Context) {
 		if strings.HasPrefix(Version, "RELEASE.") {
-			updateMsg, _, err := getReleaseUpdate(mcUpdateStableURL)
+			updateMsg, _, err := getReleaseUpdate(miniocUpdateStableURL)
 			if err != nil {
 				// Ignore any errors during getReleaseUpdate() because
 				// the internet might not be available.
@@ -282,13 +282,13 @@ func registerApp() *cli.App {
 	app.Commands = commands
 	app.Author = "Minio.io"
 	app.Version = Version
-	app.Flags = append(mcFlags, globalFlags...)
-	app.CustomAppHelpTemplate = mcHelpTemplate
+	app.Flags = append(miniocFlags, globalFlags...)
+	app.CustomAppHelpTemplate = miniocHelpTemplate
 	app.CommandNotFound = commandNotFound // handler function declared above.
 	return app
 }
 
 // mustGetProfilePath must get location that the profile will be written to.
 func mustGetProfileDir() string {
-	return filepath.Join(mustGetMcConfigDir(), globalProfileDir)
+	return filepath.Join(mustGetMiniocConfigDir(), globalProfileDir)
 }

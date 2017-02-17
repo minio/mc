@@ -23,8 +23,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 // diff specific flags.
@@ -41,10 +41,10 @@ var diffCmd = cli.Command{
 	Before:      setGlobalsFromContext,
 	Flags:       append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+   minioc {{.Name}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] FIRST SECOND
+   minioc {{.Name}} [FLAGS] FIRST SECOND
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

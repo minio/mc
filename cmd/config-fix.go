@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
 	"github.com/minio/minio/pkg/quick"
+	"github.com/minio/minioc/pkg/console"
 )
 
 func fixConfig() {
@@ -65,24 +65,24 @@ func newBrokenConfigV3() *brokenConfigV3 {
 // Access fields. Rewrite the hostConfig with proper fields using JSON
 // tags and drop the unused (ACL, Access) fields.
 func fixConfigV3() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
 	brokenCfgV3 := newBrokenConfigV3()
-	brokenMcCfgV3, e := quick.Load(mustGetMcConfigPath(), brokenCfgV3)
+	brokenMiniocCfgV3, e := quick.Load(mustGetMiniocConfigPath(), brokenCfgV3)
 	fatalIf(probe.NewError(e), "Unable to load config.")
 
-	if brokenMcCfgV3.Version() != "3" {
+	if brokenMiniocCfgV3.Version() != "3" {
 		return
 	}
 
 	cfgV3 := newConfigV3()
 	isMutated := false
-	for k, v := range brokenMcCfgV3.Data().(*brokenConfigV3).Aliases {
+	for k, v := range brokenMiniocCfgV3.Data().(*brokenConfigV3).Aliases {
 		cfgV3.Aliases[k] = v
 	}
 
-	for host, brokenHostCfgV3 := range brokenMcCfgV3.Data().(*brokenConfigV3).Hosts {
+	for host, brokenHostCfgV3 := range brokenMiniocCfgV3.Data().(*brokenConfigV3).Hosts {
 
 		// If any of these fields contains any real value anytime,
 		// it means we have already fixed the broken configuration.
@@ -101,26 +101,26 @@ func fixConfigV3() {
 	// We blindly drop ACL and Access fields from the broken config v3.
 
 	if isMutated {
-		mcNewConfigV3, e := quick.New(cfgV3)
+		miniocNewConfigV3, e := quick.New(cfgV3)
 		fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘3’.")
 
-		e = mcNewConfigV3.Save(mustGetMcConfigPath())
+		e = miniocNewConfigV3.Save(mustGetMiniocConfigPath())
 		fatalIf(probe.NewError(e), "Unable to save config version ‘3’.")
 
-		console.Infof("Successfully fixed %s broken config for version ‘3’.\n", mustGetMcConfigPath())
+		console.Infof("Successfully fixed %s broken config for version ‘3’.\n", mustGetMiniocConfigPath())
 	}
 }
 
 // If the host key does not have http(s), fix it.
 func fixConfigV6ForHosts() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
 
-	brokenMcCfgV6, e := quick.Load(mustGetMcConfigPath(), newConfigV6())
+	brokenMiniocCfgV6, e := quick.Load(mustGetMiniocConfigPath(), newConfigV6())
 	fatalIf(probe.NewError(e), "Unable to load config.")
 
-	if brokenMcCfgV6.Version() != "6" {
+	if brokenMiniocCfgV6.Version() != "6" {
 		return
 	}
 
@@ -128,13 +128,13 @@ func fixConfigV6ForHosts() {
 	isMutated := false
 
 	// Copy aliases.
-	for k, v := range brokenMcCfgV6.Data().(*configV6).Aliases {
+	for k, v := range brokenMiniocCfgV6.Data().(*configV6).Aliases {
 		newCfgV6.Aliases[k] = v
 	}
 
 	url := &clientURL{}
 	// Copy hosts.
-	for host, hostCfgV6 := range brokenMcCfgV6.Data().(*configV6).Hosts {
+	for host, hostCfgV6 := range brokenMiniocCfgV6.Data().(*configV6).Hosts {
 		// Already fixed - Copy and move on.
 		if strings.HasPrefix(host, "https") || strings.HasPrefix(host, "http") {
 			newCfgV6.Hosts[host] = hostCfgV6
@@ -157,24 +157,24 @@ func fixConfigV6ForHosts() {
 
 	if isMutated {
 		// Save the new config back to the disk.
-		mcCfgV6, e := quick.New(newCfgV6)
+		miniocCfgV6, e := quick.New(newCfgV6)
 		fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘v6’.")
 
-		e = mcCfgV6.Save(mustGetMcConfigPath())
+		e = miniocCfgV6.Save(mustGetMiniocConfigPath())
 		fatalIf(probe.NewError(e), "Unable to save config version ‘v6’.")
 	}
 }
 
 // fixConfigV6 - fix all the unnecessary glob URLs present in existing config version 6.
 func fixConfigV6() {
-	if !isMcConfigExists() {
+	if !isMiniocConfigExists() {
 		return
 	}
 	config, e := quick.New(newConfigV6())
 	fatalIf(probe.NewError(e), "Unable to initialize config.")
 
-	e = config.Load(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e).Trace(mustGetMcConfigPath()), "Unable to load config.")
+	e = config.Load(mustGetMiniocConfigPath())
+	fatalIf(probe.NewError(e).Trace(mustGetMiniocConfigPath()), "Unable to load config.")
 
 	if config.Data().(*configV6).Version != "6" {
 		return
@@ -235,8 +235,8 @@ func fixConfigV6() {
 		newConf, e := quick.New(newConfig)
 		fatalIf(probe.NewError(e), "Unable to initialize newly fixed config.")
 
-		e = newConf.Save(mustGetMcConfigPath())
-		fatalIf(probe.NewError(e).Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
-		console.Infof("Successfully fixed %s broken config for version ‘6’.\n", mustGetMcConfigPath())
+		e = newConf.Save(mustGetMiniocConfigPath())
+		fatalIf(probe.NewError(e).Trace(mustGetMiniocConfigPath()), "Unable to save newly fixed config path.")
+		console.Infof("Successfully fixed %s broken config for version ‘6’.\n", mustGetMiniocConfigPath())
 	}
 }

@@ -48,7 +48,7 @@ COMMANDS:
 `,
 }
 
-// mainEvents is the handle for "mc events" command.
+// mainEvents is the handle for "minioc events" command.
 func mainEvents(ctx *cli.Context) error {
 
 	if ctx.Args().First() != "" { // command help.

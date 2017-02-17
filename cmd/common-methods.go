@@ -143,7 +143,7 @@ func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
 }
 
 // newClientFromAlias gives a new client interface for matching
-// alias entry in the mc config file. If no matching host config entry
+// alias entry in the minioc config file. If no matching host config entry
 // is found, fs client is returned.
 func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
 	s3Config, err := buildS3Config(alias, urlStr)

@@ -27,11 +27,11 @@ import (
 
 // getCertsDir - return the full path of certs dir
 func getCertsDir() (string, *probe.Error) {
-	p, err := getMcConfigDir()
+	p, err := getMiniocConfigDir()
 	if err != nil {
 		return "", err.Trace()
 	}
-	return filepath.Join(p, globalMCCertsDir), nil
+	return filepath.Join(p, globalMINIOCCertsDir), nil
 }
 
 // mustGetCertsDir - return the full path of certs dir or empty string when an error occurs
@@ -71,7 +71,7 @@ func getCAsDir() (string, *probe.Error) {
 	if err != nil {
 		return "", err.Trace()
 	}
-	return filepath.Join(p, globalMCCAsDir), nil
+	return filepath.Join(p, globalMINIOCCAsDir), nil
 }
 
 // mustGetCAsDir - return the full path of CAs dir or empty string when an error occurs

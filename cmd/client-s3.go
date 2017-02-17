@@ -33,11 +33,11 @@ import (
 
 	"io/ioutil"
 
-	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
 	"github.com/minio/minio-go/pkg/policy"
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/httptracer"
 )
 
 // S3 client

@@ -26,13 +26,13 @@ _init() {
 
 main() {
     echo "Checking if project is at ${GOPATH}"
-    for mc in $(echo ${GOPATH} | tr ':' ' '); do
-        if [ ! -d ${mc}/src/github.com/minio/mc ]; then
-            echo "Project not found in ${mc}, please follow instructions provided at https://github.com/minio/mc/blob/master/CONTRIBUTING.md#setup-your-mc-github-repository" \
+    for minioc in $(echo ${GOPATH} | tr ':' ' '); do
+        if [ ! -d ${minioc}/src/github.com/minio/minioc ]; then
+            echo "Project not found in ${minioc}, please follow instructions provided at https://github.com/minio/minioc/blob/master/CONTRIBUTING.md#setup-your-minioc-github-repository" \
                 && exit 1
         fi
-        if [ "x${mc}/src/github.com/minio/mc" != "x${PWD}" ]; then
-            echo "Build outside of ${mc}, two source checkouts found. Exiting." && exit 1
+        if [ "x${minioc}/src/github.com/minio/minioc" != "x${PWD}" ]; then
+            echo "Build outside of ${minioc}, two source checkouts found. Exiting." && exit 1
         fi
     done
 }

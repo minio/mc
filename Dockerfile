@@ -11,4 +11,4 @@ RUN \
 	rm -rf /go/pkg /go/src && \
 	apk del git
 
-ENTRYPOINT ["mc"]
+ENTRYPOINT ["minioc"]

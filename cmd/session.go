@@ -51,7 +51,7 @@ func createSessionDir() *probe.Error {
 
 // getSessionDir - get session directory.
 func getSessionDir() (string, *probe.Error) {
-	configDir, err := getMcConfigDir()
+	configDir, err := getMiniocConfigDir()
 	if err != nil {
 		return "", err.Trace()
 	}

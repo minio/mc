@@ -1,7 +1,7 @@
 // +build ignore
 
 /*
- * Mc Client (C) 2014, 2015, 2016 Minio, Inc.
+ * Minioc Client (C) 2014, 2015, 2016 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,17 +28,17 @@ import (
 
 func genLDFlags(version string) string {
 	var ldflagsStr string
-	ldflagsStr = "-X github.com/minio/mc/cmd.Version=" + version + " "
-	ldflagsStr = ldflagsStr + "-X github.com/minio/mc/cmd.ReleaseTag=" + releaseTag(version) + " "
-	ldflagsStr = ldflagsStr + "-X github.com/minio/mc/cmd.CommitID=" + commitID() + " "
-	ldflagsStr = ldflagsStr + "-X github.com/minio/mc/cmd.ShortCommitID=" + commitID()[:12]
+	ldflagsStr = "-X github.com/minio/minioc/cmd.Version=" + version + " "
+	ldflagsStr = ldflagsStr + "-X github.com/minio/minioc/cmd.ReleaseTag=" + releaseTag(version) + " "
+	ldflagsStr = ldflagsStr + "-X github.com/minio/minioc/cmd.CommitID=" + commitID() + " "
+	ldflagsStr = ldflagsStr + "-X github.com/minio/minioc/cmd.ShortCommitID=" + commitID()[:12]
 	return ldflagsStr
 }
 
 // genReleaseTag prints release tag to the console for easy git tagging.
 func releaseTag(version string) string {
 	relPrefix := "DEVELOPMENT"
-	if prefix := os.Getenv("MC_RELEASE"); prefix != "" {
+	if prefix := os.Getenv("MINIOC_RELEASE"); prefix != "" {
 		relPrefix = prefix
 	}
 

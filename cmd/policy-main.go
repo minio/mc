@@ -23,8 +23,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 var (

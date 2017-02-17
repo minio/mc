@@ -16,14 +16,14 @@
 
 /*
  * Below main package has canonical imports for 'go get' and 'go build'
- * to work with all other clones of github.com/minio/mc repository. For
+ * to work with all other clones of github.com/minio/minioc repository. For
  * more information refer https://golang.org/doc/go1.4#canonicalimports
  */
 
-package main // import "github.com/minio/mc"
+package main
 
-import mc "github.com/minio/mc/cmd"
+import minioc "github.com/minio/minioc/cmd"
 
 func main() {
-	mc.Main()
+	minioc.Main()
 }

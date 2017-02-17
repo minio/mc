@@ -26,8 +26,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/console"
 )
 
 func isErrIgnored(err *probe.Error) (ignored bool) {
@@ -103,7 +103,7 @@ func buildS3Config(alias, urlStr string) (*Config, *probe.Error) {
 	s3Config := new(Config)
 
 	// Fetch keys from the environnement, otherwise, get them from the config file
-	keys := splitStr(os.Getenv("MC_SECRET_"+alias), ":", 2)
+	keys := splitStr(os.Getenv("MINIOC_SECRET_"+alias), ":", 2)
 	if isValidAccessKey(keys[0]) && isValidSecretKey(keys[1]) {
 		s3Config.AccessKey = keys[0]
 		s3Config.SecretKey = keys[1]
@@ -121,7 +121,7 @@ func buildS3Config(alias, urlStr string) (*Config, *probe.Error) {
 	}
 
 	s3Config.Signature = hostCfg.API
-	s3Config.AppName = "mc"
+	s3Config.AppName = "minioc"
 	s3Config.AppVersion = Version
 	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 	s3Config.HostURL = urlStr

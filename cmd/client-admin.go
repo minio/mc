@@ -25,9 +25,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio/pkg/madmin"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minioc/pkg/httptracer"
 )
 
 // newAdminFactory encloses New function with client cache.
@@ -109,7 +109,7 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 }
 
 // newAdminClientFromAlias gives a new admin client interface for matching
-// alias entry in the mc config file. If no matching host config entry
+// alias entry in the minioc config file. If no matching host config entry
 // is found, fs client is returned.
 func newAdminClientFromAlias(alias string, urlStr string) (*madmin.AdminClient, *probe.Error) {
 	s3Config, err := buildS3Config(alias, urlStr)

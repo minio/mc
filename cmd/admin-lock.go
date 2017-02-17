@@ -47,7 +47,7 @@ COMMANDS:
 `,
 }
 
-// mainAdminLock is the handle for "mc admin lock" command.
+// mainAdminLock is the handle for "minioc admin lock" command.
 func mainAdminLock(ctx *cli.Context) error {
 
 	if ctx.Args().First() != "" { // command help.

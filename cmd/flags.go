@@ -21,17 +21,17 @@ import (
 	"github.com/minio/minio/pkg/trie"
 )
 
-// Collection of mc commands currently supported
+// Collection of minioc commands currently supported
 var commands = []cli.Command{}
 
-// Collection of mc commands currently supported in a trie tree
+// Collection of minioc commands currently supported in a trie tree
 var commandsTree = trie.NewTrie()
 
-// Collection of mc flags currently supported
+// Collection of minioc flags currently supported
 var globalFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "config-folder, C",
-		Value: mustGetMcConfigDir(),
+		Value: mustGetMiniocConfigDir(),
 		Usage: "Path to configuration folder.",
 	},
 	cli.BoolFlag{
