@@ -50,10 +50,10 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "2FrFoR0UtufaCGRxM4UxP1fR3LM=",
+			"checksumSHA1": "InJ8MZLIDbv2KJk2tiyHUHOuRHE=",
 			"path": "github.com/minio/minio-go",
-			"revision": "952412b95ae05cced91069ddc97b108a675ca1d1",
-			"revisionTime": "2017-01-05T09:15:05Z"
+			"revision": "7a3619e41885dcbcfafee193c10eb80530c2be53",
+			"revisionTime": "2017-02-17T20:03:45Z"
 		},
 		{
 			"checksumSHA1": "qTxOBp3GVxCC70ykb7Hxg6UgWwA=",

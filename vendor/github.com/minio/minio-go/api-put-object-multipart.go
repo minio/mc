@@ -114,9 +114,7 @@ func (c Client) putObjectMultipartStream(bucketName, objectName string, reader i
 		// Calculates hash sums while copying partSize bytes into tmpBuffer.
 		prtSize, rErr := hashCopyN(hashAlgos, hashSums, tmpBuffer, reader, partSize)
 		if rErr != nil {
-			if rErr != io.EOF {
-				return 0, rErr
-			}
+			return 0, rErr
 		}
 
 		var reader io.Reader

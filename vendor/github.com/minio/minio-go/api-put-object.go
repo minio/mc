@@ -209,6 +209,9 @@ func (c Client) putObjectSingle(bucketName, objectName string, reader io.Reader,
 		// Initialize a new temporary buffer.
 		tmpBuffer := new(bytes.Buffer)
 		size, err = hashCopyN(hashAlgos, hashSums, tmpBuffer, reader, size)
+		if err != nil {
+			return 0, err
+		}
 		reader = bytes.NewReader(tmpBuffer.Bytes())
 		tmpBuffer.Reset()
 	} else {
@@ -229,12 +232,7 @@ func (c Client) putObjectSingle(bucketName, objectName string, reader io.Reader,
 		}
 		reader = tmpFile
 	}
-	// Return error if its not io.EOF.
-	if err != nil {
-		if err != io.EOF {
-			return 0, err
-		}
-	}
+
 	// Execute put object.
 	st, err := c.putObjectDo(bucketName, objectName, reader, hashSums["md5"], hashSums["sha256"], size, metaData)
 	if err != nil {
