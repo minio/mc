@@ -272,6 +272,12 @@ func (mj *mirrorJob) startStatus() {
 	}()
 }
 
+// Stop status go routine, further updates could lead to a crash
+func (mj *mirrorJob) stopStatus() {
+	close(mj.statusCh)
+	mj.wgStatus.Wait()
+}
+
 // this goroutine will watch for notifications, and add modified objects to the queue
 func (mj *mirrorJob) watchMirror() {
 
@@ -484,6 +490,9 @@ func (mj *mirrorJob) mirror() {
 	if mj.isWatch {
 		<-mj.trapCh
 	}
+
+	// Wait until all progress bar updates are actually shown and quit.
+	mj.stopStatus()
 }
 
 func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool) *mirrorJob {
