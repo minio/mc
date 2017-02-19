@@ -222,14 +222,14 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	objectPartPath := objectPath + partSuffix
 	if objectDir != "" {
 		// Create any missing top level directories.
-		if e = os.MkdirAll(objectDir, 0700); e != nil {
+		if e = os.MkdirAll(objectDir, 0777); e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
 			return 0, err.Trace(f.PathURL.Path)
 		}
 	}
 
 	// If exists, open in append mode. If not create it the part file.
-	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return 0, err.Trace(f.PathURL.Path)
@@ -403,7 +403,7 @@ func createFile(fpath string) (io.WriteCloser, error) {
 	if e != nil && !os.IsNotExist(e) {
 		return nil, e
 	}
-	if e = os.MkdirAll(filepath.Dir(fpath), 0775); e != nil {
+	if e = os.MkdirAll(filepath.Dir(fpath), 0777); e != nil {
 		return nil, e
 	}
 	file, e := os.Create(fpath)
@@ -1097,7 +1097,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 
 // MakeBucket - create a new bucket.
 func (f *fsClient) MakeBucket(region string) *probe.Error {
-	e := os.MkdirAll(f.PathURL.Path, 0775)
+	e := os.MkdirAll(f.PathURL.Path, 0777)
 	if e != nil {
 		return probe.NewError(e)
 	}
