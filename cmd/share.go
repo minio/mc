@@ -61,7 +61,7 @@ type shareMesssage struct {
 // String - Themefied string message for console printing.
 func (s shareMesssage) String() string {
 	msg := console.Colorize("URL", fmt.Sprintf("URL: %s\n", s.ObjectURL))
-	msg += console.Colorize("Expire", fmt.Sprintf("Expire: %s\n", timeDurationToHumanizedTime(s.TimeLeft)))
+	msg += console.Colorize("Expire", fmt.Sprintf("Expire: %s\n", timeDurationToHumanizedDuration(s.TimeLeft)))
 	if s.ContentType != "" {
 		msg += console.Colorize("Content-type", fmt.Sprintf("Content-Type: %s\n", s.ContentType))
 	}

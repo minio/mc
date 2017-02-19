@@ -99,19 +99,19 @@ func (s *TestSuite) TestIsvalidAliasName(c *C) {
 }
 
 func (s *TestSuite) TestHumanizedTime(c *C) {
-	hTime := timeDurationToHumanizedTime(time.Duration(10) * time.Second)
+	hTime := timeDurationToHumanizedDuration(time.Duration(10) * time.Second)
 	c.Assert(hTime.Minutes, Equals, int64(0))
 	c.Assert(hTime.Hours, Equals, int64(0))
 	c.Assert(hTime.Days, Equals, int64(0))
 
-	hTime = timeDurationToHumanizedTime(time.Duration(10) * time.Minute)
+	hTime = timeDurationToHumanizedDuration(time.Duration(10) * time.Minute)
 	c.Assert(hTime.Hours, Equals, int64(0))
 	c.Assert(hTime.Days, Equals, int64(0))
 
-	hTime = timeDurationToHumanizedTime(time.Duration(10) * time.Hour)
+	hTime = timeDurationToHumanizedDuration(time.Duration(10) * time.Hour)
 	c.Assert(hTime.Days, Equals, int64(0))
 
-	hTime = timeDurationToHumanizedTime(time.Duration(24) * time.Hour)
+	hTime = timeDurationToHumanizedDuration(time.Duration(24) * time.Hour)
 	c.Assert(hTime.Days, Not(Equals), int64(0))
 }
 

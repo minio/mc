@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014, 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,26 +26,34 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-var (
-	versionFlags = []cli.Flag{}
-)
-
 // Print version.
 var versionCmd = cli.Command{
 	Name:   "version",
 	Usage:  "Print version info.",
 	Action: mainVersion,
 	Before: setGlobalsFromContext,
-	Flags:  append(versionFlags, globalFlags...),
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name:  "quiet, q",
+			Usage: "Suppress chatty console output.",
+		},
+		cli.BoolFlag{
+			Name:  "json",
+			Usage: "Enable JSON formatted output.",
+		},
+	},
 	CustomHelpTemplate: `NAME:
    {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS]
-
+   {{.HelpName}}{{if .VisibleFlags}} [FLAGS]{{end}}
+{{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}
+  {{end}}{{end}}
+EXAMPLES:
+   1. Prints the minio client version:
+       $ {{.HelpName}}
 `,
 }
 
@@ -88,6 +96,8 @@ func mainVersion(ctx *cli.Context) error {
 	verMsg.Version.Value = Version
 	verMsg.Version.Format = "RFC3339"
 
-	printMsg(verMsg)
+	if !globalQuiet {
+		printMsg(verMsg)
+	}
 	return nil
 }
