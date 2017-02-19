@@ -263,6 +263,16 @@ func registerApp() *cli.App {
 	registerCmd(updateCmd)  // Check for new software updates.
 	registerCmd(versionCmd) // Print version.
 
+	cli.HelpFlag = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Show help.",
+	}
+
+	cli.VersionFlag = cli.BoolFlag{
+		Name:  "version, v",
+		Usage: "Print the version.",
+	}
+
 	app := cli.NewApp()
 	app.Action = func(ctx *cli.Context) {
 		if strings.HasPrefix(Version, "RELEASE.") {

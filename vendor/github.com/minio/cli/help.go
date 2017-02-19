@@ -64,7 +64,7 @@ OPTIONS:
 // cli.go uses text/template to render templates. You can
 // render custom help text by setting this variable.
 var SubcommandHelpTemplate = `NAME:
-   {{.HelpName}} - {{.Usage}}
+   {{.HelpName}} - {{if .Description}}{{.Description}}{{else}}{{.Usage}}{{end}}
 
 USAGE:
    {{.HelpName}} command{{if .VisibleFlags}} [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
@@ -120,7 +120,7 @@ type helpPrinterCustom func(w io.Writer, templ string, data interface{}, customF
 // func(w io.Writer, templ string, data interface{})
 var HelpPrinter helpPrinter = printHelp
 
-// HelPrinterCustom is same as HelpPrinter but
+// HelpPrinterCustom is same as HelpPrinter but
 // takes a custom function for template function map.
 var HelpPrinterCustom helpPrinterCustom = printHelpCustom
 
@@ -134,18 +134,20 @@ func ShowAppHelpAndExit(c *Context, exitCode int) {
 }
 
 // ShowAppHelp is an action that displays the help.
-func ShowAppHelp(c *Context) error {
-	if c.App.CustomAppHelpTemplate != "" {
-		if c.App.ExtraInfo != nil {
-			HelpPrinterCustom(c.App.Writer, c.App.CustomAppHelpTemplate, c.App, map[string]interface{}{
-				"ExtraInfo": c.App.ExtraInfo,
-			})
-		} else {
-			HelpPrinter(c.App.Writer, c.App.CustomAppHelpTemplate, c.App)
-		}
-	} else {
+func ShowAppHelp(c *Context) (err error) {
+	if c.App.CustomAppHelpTemplate == "" {
 		HelpPrinter(c.App.Writer, AppHelpTemplate, c.App)
+		return
 	}
+	customAppData := func() map[string]interface{} {
+		if c.App.ExtraInfo == nil {
+			return nil
+		}
+		return map[string]interface{}{
+			"ExtraInfo": c.App.ExtraInfo,
+		}
+	}
+	HelpPrinterCustom(c.App.Writer, c.App.CustomAppHelpTemplate, c.App, customAppData())
 	return nil
 }
 
