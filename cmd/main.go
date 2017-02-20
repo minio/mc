@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio/cli"
@@ -243,6 +244,21 @@ func findClosestCommands(command string) []string {
 	return closestCommands
 }
 
+// Check for updates and print a notification message
+func checkUpdate(ctx *cli.Context) {
+	// Do not print update messages, if quiet flag is set.
+	if ctx.Bool("quiet") || ctx.GlobalBool("quiet") {
+		older, downloadURL, err := getUpdateInfo(1 * time.Second)
+		if err != nil {
+			// Its OK to ignore any errors during getUpdateInfo() here.
+			return
+		}
+		if older > time.Duration(0) {
+			console.Println(colorizeUpdateMessage(downloadURL, older))
+		}
+	}
+}
+
 func registerApp() *cli.App {
 	// Register all the commands (refer flags.go)
 	registerCmd(lsCmd)      // List contents of a bucket.
@@ -276,15 +292,8 @@ func registerApp() *cli.App {
 	app := cli.NewApp()
 	app.Action = func(ctx *cli.Context) {
 		if strings.HasPrefix(Version, "RELEASE.") {
-			updateMsg, _, err := getReleaseUpdate(mcUpdateStableURL)
-			if err != nil {
-				// Ignore any errors during getReleaseUpdate() because
-				// the internet might not be available.
-				return
-			}
-			if updateMsg.Update {
-				printMsg(updateMsg)
-			}
+			// Check for new updates from dl.minio.io.
+			checkUpdate(ctx)
 		}
 		cli.ShowAppHelp(ctx)
 	}
