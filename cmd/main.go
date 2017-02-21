@@ -284,11 +284,6 @@ func registerApp() *cli.App {
 		Usage: "Show help.",
 	}
 
-	cli.VersionFlag = cli.BoolFlag{
-		Name:  "version, v",
-		Usage: "Print the version.",
-	}
-
 	app := cli.NewApp()
 	app.Action = func(ctx *cli.Context) {
 		if strings.HasPrefix(Version, "RELEASE.") {
@@ -297,6 +292,8 @@ func registerApp() *cli.App {
 		}
 		cli.ShowAppHelp(ctx)
 	}
+	app.HideVersion = true
+	app.HideHelpCommand = true
 	app.Usage = "Minio Client for cloud storage and filesystems."
 	app.Commands = commands
 	app.Author = "Minio.io"
