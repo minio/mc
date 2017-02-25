@@ -34,11 +34,11 @@ func migrateSessionV7ToV8() {
 			if os.IsNotExist(err.ToGoError()) {
 				continue
 			}
-			fatalIf(err.Trace(sid), "Unable to load version ‘7’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+			fatalIf(err.Trace(sid), "Unable to load version `7`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		}
 
 		sessionVersion, e := strconv.Atoi(sV7.Header.Version)
-		fatalIf(probe.NewError(e), "Unable to load version ‘7’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		fatalIf(probe.NewError(e), "Unable to load version `7`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		if sessionVersion > 7 { // It is new format.
 			continue
 		}
@@ -73,7 +73,7 @@ func migrateSessionV7ToV8() {
 		e = qs.Save(sessionFile)
 		fatalIf(probe.NewError(e).Trace(sid, sessionFile), "Unable to migrate session from '7' to '8'.")
 
-		console.Println("Successfully migrated ‘" + sessionFile + "’ from version ‘" + sV7.Header.Version + "’ to " + "‘" + sV8Header.Version + "’.")
+		console.Println("Successfully migrated `" + sessionFile + "` from version `" + sV7.Header.Version + "` to " + "`" + sV8Header.Version + "`.")
 	}
 }
 
@@ -86,11 +86,11 @@ func migrateSessionV6ToV7() {
 			if os.IsNotExist(err.ToGoError()) {
 				continue
 			}
-			fatalIf(err.Trace(sid), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+			fatalIf(err.Trace(sid), "Unable to load version `6`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		}
 
 		sessionVersion, e := strconv.Atoi(sV6Header.Version)
-		fatalIf(probe.NewError(e), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		fatalIf(probe.NewError(e), "Unable to load version `6`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		if sessionVersion > 6 { // It is new format.
 			continue
 		}
@@ -122,7 +122,7 @@ func migrateSessionV6ToV7() {
 		e = qs.Save(sessionFile)
 		fatalIf(probe.NewError(e).Trace(sid, sessionFile), "Unable to migrate session from '6' to '7'.")
 
-		console.Println("Successfully migrated ‘" + sessionFile + "’ from version ‘" + sV6Header.Version + "’ to " + "‘" + sV7Header.Version + "’.")
+		console.Println("Successfully migrated `" + sessionFile + "` from version `" + sV6Header.Version + "` to " + "`" + sV7Header.Version + "`.")
 	}
 }
 
@@ -136,11 +136,11 @@ func migrateSessionV5ToV6() {
 			if os.IsNotExist(err.ToGoError()) {
 				continue
 			}
-			fatalIf(err.Trace(sid), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+			fatalIf(err.Trace(sid), "Unable to load version `6`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		}
 
 		sessionVersion, e := strconv.Atoi(sV6Header.Version)
-		fatalIf(probe.NewError(e), "Unable to load version ‘6’. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		fatalIf(probe.NewError(e), "Unable to load version `6`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		if sessionVersion > 5 { // It is new format.
 			continue
 		}
@@ -153,12 +153,12 @@ func migrateSessionV5ToV6() {
 		sessionDataFile, err := getSessionDataFile(sid)
 		fatalIf(err.Trace(sid), "Unable to get session data file.")
 
-		console.Println("Removing unsupported session file ‘" + sessionFile + "’ version ‘" + sV6Header.Version + "’.")
+		console.Println("Removing unsupported session file `" + sessionFile + "` version `" + sV6Header.Version + "`.")
 		if e := os.Remove(sessionFile); e != nil {
-			fatalIf(probe.NewError(e), "Unable to remove version ‘"+sV6Header.Version+"’ session file ‘"+sessionFile+"’.")
+			fatalIf(probe.NewError(e), "Unable to remove version `"+sV6Header.Version+"` session file `"+sessionFile+"`.")
 		}
 		if e := os.Remove(sessionDataFile); e != nil {
-			fatalIf(probe.NewError(e), "Unable to remove version ‘"+sV6Header.Version+"’ session data file ‘"+sessionDataFile+"’.")
+			fatalIf(probe.NewError(e), "Unable to remove version `"+sV6Header.Version+"` session data file `"+sessionDataFile+"`.")
 		}
 	}
 }

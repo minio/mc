@@ -108,7 +108,7 @@ type clearSessionMessage struct {
 
 // String colorized clear session message.
 func (c clearSessionMessage) String() string {
-	msg := "Session ‘" + c.SessionID + "’"
+	msg := "Session `" + c.SessionID + "`"
 	var colorizedMsg string
 	switch c.Status {
 	case "success":
@@ -132,9 +132,9 @@ func clearSession(sid string) {
 	if sid == "all" {
 		for _, sid := range getSessionIDs() {
 			session, err := loadSessionV8(sid)
-			fatalIf(err.Trace(sid), "Unable to load session ‘"+sid+"’.")
+			fatalIf(err.Trace(sid), "Unable to load session `"+sid+"`.")
 
-			fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
+			fatalIf(session.Delete().Trace(sid), "Unable to load session `"+sid+"`.")
 
 			printMsg(clearSessionMessage{Status: "success", SessionID: sid})
 		}
@@ -142,7 +142,7 @@ func clearSession(sid string) {
 	}
 
 	if !isSessionExists(sid) {
-		fatalIf(errDummy().Trace(sid), "Session ‘"+sid+"’ not found.")
+		fatalIf(errDummy().Trace(sid), "Session `"+sid+"` not found.")
 	}
 
 	session, err := loadSessionV8(sid)
@@ -156,7 +156,7 @@ func clearSession(sid string) {
 	}
 
 	if session != nil {
-		fatalIf(session.Delete().Trace(sid), "Unable to load session ‘"+sid+"’.")
+		fatalIf(session.Delete().Trace(sid), "Unable to load session `"+sid+"`.")
 		printMsg(clearSessionMessage{Status: "success", SessionID: sid})
 	}
 }
@@ -228,11 +228,11 @@ func mainSession(ctx *cli.Context) error {
 		sid := strings.TrimSpace(ctx.Args().Tail().First())
 		if !isSessionExists(sid) {
 			closestSessions := findClosestSessions(sid)
-			errorMsg := "Session ‘" + sid + "’ not found."
+			errorMsg := "Session `" + sid + "` not found."
 			if len(closestSessions) > 0 {
 				errorMsg += fmt.Sprintf("\n\nDid you mean?\n")
 				for _, session := range closestSessions {
-					errorMsg += fmt.Sprintf("        ‘mc resume session %s’", session)
+					errorMsg += fmt.Sprintf("        `mc resume session %s`", session)
 					// break on the first one, it is good enough.
 					break
 				}
@@ -262,7 +262,7 @@ func mainSession(ctx *cli.Context) error {
 
 		// change folder back to saved path.
 		e = os.Chdir(savedCwd)
-		fatalIf(probe.NewError(e), "Unable to change working folder to saved path ‘"+savedCwd+"’.")
+		fatalIf(probe.NewError(e), "Unable to change working folder to saved path `"+savedCwd+"`.")
 	// purge a requested pending session, if "all" purge everything.
 	case "clear":
 		clearSession(strings.TrimSpace(ctx.Args().Tail().First()))

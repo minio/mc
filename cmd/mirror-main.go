@@ -154,7 +154,7 @@ type mirrorMessage struct {
 
 // String colorized mirror message
 func (m mirrorMessage) String() string {
-	return console.Colorize("Mirror", fmt.Sprintf("‘%s’ -> ‘%s’", m.Source, m.Target))
+	return console.Colorize("Mirror", fmt.Sprintf("`%s` -> `%s`", m.Source, m.Target))
 }
 
 // JSON jsonified mirror message
@@ -254,11 +254,11 @@ func (mj *mirrorJob) startStatus() {
 				// don't print over the ongoing progress bar.
 				if sURLs.SourceContent != nil {
 					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy ‘%s’.", sURLs.SourceContent.URL.String()))
+						fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
 				} else {
 					// When sURLs.SourceContent is nil, we know that we have an error related to removing
 					errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
-						fmt.Sprintf("Failed to remove ‘%s’.", sURLs.TargetContent.URL.String()))
+						fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
 				}
 			}
 
@@ -436,7 +436,7 @@ func (mj *mirrorJob) startMirror() {
 			}
 			if sURLs.Error != nil {
 				if strings.Contains(sURLs.Error.ToGoError().Error(), " is a folder.") {
-					mj.status.errorIf(sURLs.Error.Trace(), "Folder cannot be copied. Please use ‘...’ suffix.")
+					mj.status.errorIf(sURLs.Error.Trace(), "Folder cannot be copied. Please use `...` suffix.")
 				} else {
 					mj.status.errorIf(sURLs.Error.Trace(), "Unable to prepare URL for copying.")
 				}

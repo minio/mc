@@ -98,9 +98,9 @@ func (h hostMessage) String() string {
 		}
 		return message
 	case "remove":
-		return console.Colorize("HostMessage", "Removed ‘"+h.Alias+"’ successfully.")
+		return console.Colorize("HostMessage", "Removed `"+h.Alias+"` successfully.")
 	case "add":
-		return console.Colorize("HostMessage", "Added ‘"+h.Alias+"’ successfully.")
+		return console.Colorize("HostMessage", "Added `"+h.Alias+"` successfully.")
 	default:
 		return ""
 	}
@@ -149,27 +149,27 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 	api := tailArgs.Get(4)
 
 	if !isValidAlias(alias) {
-		fatalIf(errDummy().Trace(alias), "Invalid alias ‘"+alias+"’.")
+		fatalIf(errDummy().Trace(alias), "Invalid alias `"+alias+"`.")
 	}
 
 	if !isValidHostURL(url) {
 		fatalIf(errDummy().Trace(url),
-			"Invalid URL ‘"+url+"’.")
+			"Invalid URL `"+url+"`.")
 	}
 
 	if !isValidAccessKey(accessKey) {
 		fatalIf(errInvalidArgument().Trace(accessKey),
-			"Invalid access key ‘"+accessKey+"’.")
+			"Invalid access key `"+accessKey+"`.")
 	}
 
 	if !isValidSecretKey(secretKey) {
 		fatalIf(errInvalidArgument().Trace(secretKey),
-			"Invalid secret key ‘"+secretKey+"’.")
+			"Invalid secret key `"+secretKey+"`.")
 	}
 
 	if api != "" && !isValidAPI(api) { // Empty value set to default "S3v4".
 		fatalIf(errInvalidArgument().Trace(api),
-			"Unrecognized API signature. Valid options are ‘[S3v4, S3v2]’.")
+			"Unrecognized API signature. Valid options are `[S3v4, S3v2]`.")
 	}
 }
 
@@ -184,7 +184,7 @@ func checkConfigHostRemoveSyntax(ctx *cli.Context) {
 
 	if !isValidAlias(tailArgs.Get(0)) {
 		fatalIf(errDummy().Trace(tailArgs.Get(0)),
-			"Invalid alias ‘"+tailArgs.Get(0)+"’.")
+			"Invalid alias `"+tailArgs.Get(0)+"`.")
 	}
 }
 
@@ -234,13 +234,13 @@ func mainConfigHost(ctx *cli.Context) error {
 // addHost - add a host config.
 func addHost(alias string, hostCfgV8 hostConfigV8) {
 	mcCfgV8, err := loadMcConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config ‘"+mustGetMcConfigPath()+"’.")
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config `"+mustGetMcConfigPath()+"`.")
 
 	// Add new host.
 	mcCfgV8.Hosts[alias] = hostCfgV8
 
 	err = saveMcConfig(mcCfgV8)
-	fatalIf(err.Trace(alias), "Unable to update hosts in config version ‘"+mustGetMcConfigPath()+"’.")
+	fatalIf(err.Trace(alias), "Unable to update hosts in config version `"+mustGetMcConfigPath()+"`.")
 
 	printMsg(hostMessage{
 		op:        "add",
@@ -255,13 +255,13 @@ func addHost(alias string, hostCfgV8 hostConfigV8) {
 // removeHost - removes a host.
 func removeHost(alias string) {
 	conf, err := loadMcConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
 
 	// Remove host.
 	delete(conf.Hosts, alias)
 
 	err = saveMcConfig(conf)
-	fatalIf(err.Trace(alias), "Unable to save deleted hosts in config version ‘"+globalMCConfigVersion+"’.")
+	fatalIf(err.Trace(alias), "Unable to save deleted hosts in config version `"+globalMCConfigVersion+"`.")
 
 	printMsg(hostMessage{op: "remove", Alias: alias})
 }
@@ -276,7 +276,7 @@ func (d byAlias) Less(i, j int) bool { return d[i].Alias < d[j].Alias }
 // listHosts - list all host URLs.
 func listHosts() {
 	conf, err := loadMcConfig()
-	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version ‘"+globalMCConfigVersion+"’.")
+	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
 
 	var maxAlias = 0
 	for k := range conf.Hosts {

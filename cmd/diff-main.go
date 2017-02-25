@@ -79,19 +79,19 @@ func (d diffMessage) String() string {
 	switch d.Diff {
 	case differInFirst:
 		msg = console.Colorize("DiffMessage",
-			"‘"+d.FirstURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
+			"`"+d.FirstURL+"`") + console.Colorize("DiffOnlyInFirst", " - only in first.")
 	case differInSecond:
 		msg = console.Colorize("DiffMessage",
-			"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInSecond", " - only in second.")
+			"`"+d.SecondURL+"`") + console.Colorize("DiffOnlyInSecond", " - only in second.")
 	case differInType:
 		msg = console.Colorize("DiffMessage",
-			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
+			"`"+d.FirstURL+"`"+" and "+"`"+d.SecondURL+"`") + console.Colorize("DiffType", " - differ in type.")
 	case differInSize:
 		msg = console.Colorize("DiffMessage",
-			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
+			"`"+d.FirstURL+"`"+" and "+"`"+d.SecondURL+"`") + console.Colorize("DiffSize", " - differ in size.")
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
-			"Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
+			"Unhandled difference between `"+d.FirstURL+"` and `"+d.SecondURL+"`.")
 	}
 	return msg
 
@@ -102,7 +102,7 @@ func (d diffMessage) JSON() string {
 	d.Status = "success"
 	diffJSONBytes, e := json.Marshal(d)
 	fatalIf(probe.NewError(e),
-		"Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+string(d.Diff)+"’.")
+		"Unable to marshal diff message `"+d.FirstURL+"`, `"+d.SecondURL+"` and `"+string(d.Diff)+"`.")
 	return string(diffJSONBytes)
 }
 
@@ -129,7 +129,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 
 	// Verify if its a directory.
 	if !firstContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(firstURL), fmt.Sprintf("‘%s’ is not a folder.", firstURL))
+		fatalIf(errInvalidArgument().Trace(firstURL), fmt.Sprintf("`%s` is not a folder.", firstURL))
 	}
 
 	// Verify if secondURL is accessible.
@@ -140,7 +140,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 
 	// Verify if its a directory.
 	if !secondContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
+		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("`%s` is not a folder.", secondURL))
 	}
 }
 

@@ -94,7 +94,7 @@ type copyMessage struct {
 
 // String colorized copy message
 func (c copyMessage) String() string {
-	return console.Colorize("Copy", fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target))
+	return console.Colorize("Copy", fmt.Sprintf("`%s` -> `%s`", c.Source, c.Target))
 }
 
 // JSON jsonified copy message
@@ -209,7 +209,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
 					console.Eraseline()
 				}
 				if strings.Contains(cpURLs.Error.ToGoError().Error(), " is a folder.") {
-					errorIf(cpURLs.Error.Trace(), "Folder cannot be copied. Please use ‘...’ suffix.")
+					errorIf(cpURLs.Error.Trace(), "Folder cannot be copied. Please use `...` suffix.")
 				} else {
 					errorIf(cpURLs.Error.Trace(), "Unable to prepare URL for copying.")
 				}
@@ -297,7 +297,7 @@ func doCopySession(session *sessionV8) {
 						console.Eraseline()
 					}
 					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
+						fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
 					if isErrIgnored(cpURLs.Error) {
 						continue
 					}

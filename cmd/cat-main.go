@@ -69,7 +69,7 @@ func checkCatSyntax(ctx *cli.Context) {
 	}
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") && len(arg) > 1 {
-			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag ‘%s’ passed.", arg))
+			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag `%s` passed.", arg))
 		}
 	}
 }
@@ -151,7 +151,7 @@ func mainCat(ctx *cli.Context) error {
 		return nil
 	}
 
-	// if Args contain ‘-’, we need to preserve its order specially.
+	// if Args contain `-`, we need to preserve its order specially.
 	args := []string(ctx.Args())
 	if ctx.Args().First() == "-" {
 		for i, arg := range os.Args {
@@ -165,7 +165,7 @@ func mainCat(ctx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
-		fatalIf(catURL(url).Trace(url), "Unable to read from ‘"+url+"’.")
+		fatalIf(catURL(url).Trace(url), "Unable to read from `"+url+"`.")
 	}
 	return nil
 }
