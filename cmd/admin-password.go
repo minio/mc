@@ -70,7 +70,7 @@ func mainAdminPassword(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	// Change the password of the specified Minio server
-	e := client.ServiceSetCredentials(accessKey, secretKey)
+	e := client.SetCredentials(accessKey, secretKey)
 	fatalIf(probe.NewError(e), "Unable to set new credentials to '"+aliasedURL+"'")
 
 	return nil

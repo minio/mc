@@ -36,13 +36,13 @@ func main() {
 
 ```
 
-| Service operations|LockInfo operations|Healing operations|
-|:---|:---|:---|
-|[`ServiceStatus`](#ServiceStatus)| [`ListLocks`](#ListLocks)| [`ListObjectsHeal`](#ListObjectsHeal)|
-|[`ServiceRestart`](#ServiceRestart)| [`ClearLocks`](#ClearLocks)| [`ListBucketsHeal`](#ListBucketsHeal)|
-| | |[`HealBucket`](#HealBucket) |
-| | |[`HealObject`](#HealObject)|
-| | |[`HealFormat`](#HealFormat)|
+| Service operations|LockInfo operations|Healing operations|Config operations| Misc |
+|:---|:---|:---|:---|:---|
+|[`ServiceStatus`](#ServiceStatus)| [`ListLocks`](#ListLocks)| [`ListObjectsHeal`](#ListObjectsHeal)|[`GetConfig`](#GetConfig)| [`SetCredentials`](#SetCredentials)|
+|[`ServiceRestart`](#ServiceRestart)| [`ClearLocks`](#ClearLocks)| [`ListBucketsHeal`](#ListBucketsHeal)|||
+| | |[`HealBucket`](#HealBucket) |||
+| | |[`HealObject`](#HealObject)|||
+| | |[`HealFormat`](#HealFormat)|||
 
 ## 1. Constructor
 <a name="Minio"></a>
@@ -82,9 +82,9 @@ Fetch service status, replies disk space used, backend type and total disks offl
 
 | Param | Type | Description |
 |---|---|---|
-|`backend.Type` | _BackendType_ | Type of backend used by the server currently only FS or XL. |
-|`backend.OnlineDisks`| _int_ | Total number of disks online (only applies to XL backend), is empty for FS. |
-|`backend.OfflineDisks` | _int_ | Total number of disks offline (only applies to XL backend), is empty for FS. |
+|`backend.Type` | _BackendType_ | Type of backend used by the server currently only FS or Erasure. |
+|`backend.OnlineDisks`| _int_ | Total number of disks online (only applies to Erasure backend), is empty for FS. |
+|`backend.OfflineDisks` | _int_ | Total number of disks offline (only applies to Erasure backend), is empty for FS. |
 |`backend.ReadQuorum` | _int_ | Current total read quorum threshold before reads will be unavailable, is empty for FS. |
 |`backend.WriteQuorum` | _int_ | Current total write quorum threshold before writes will be unavailable, is empty for FS. |
 
@@ -119,6 +119,9 @@ If successful restarts the running minio service, for distributed setup restarts
 	log.Printf("Success")
 
  ```
+
+## 3. Lock operations
+
 <a name="ListLocks"></a>
 ### ListLocks(bucket, prefix string, duration time.Duration) ([]VolumeLockInfo, error)
 If successful returns information on the list of locks held on ``bucket`` matching ``prefix`` for  longer than ``duration`` seconds.
@@ -148,6 +151,8 @@ __Example__
     log.Println("List of locks cleared: ", volLocks)
 
 ```
+
+## 4. Heal operations
 
 <a name="ListObjectsHeal"></a>
 ### ListObjectsHeal(bucket, prefix string, recursive bool, doneCh <-chan struct{}) (<-chan ObjectInfo, error)
@@ -272,3 +277,47 @@ __Example__
     log.Println("successfully healed storage format on available disks.")
 
 ```
+
+## 5. Config operations
+
+<a name="GetConfig"></a>
+### GetConfig() ([]byte, error)
+Get config.json of a minio setup.
+
+__Example__
+
+``` go
+    configBytes, err := madmClnt.GetConfig()
+    if err != nil {
+        log.Fatalf("failed due to: %v", err)
+    }
+
+    // Pretty-print config received as json.
+    var buf bytes.Buffer
+    err = json.Indent(buf, configBytes, "", "\t")
+    if err != nil {
+        log.Fatalf("failed due to: %v", err)
+    }
+
+    log.Println("config received successfully: ", string(buf.Bytes()))
+```
+
+## 6. Misc operations
+
+<a name="SetCredentials"></a>
+
+### SetCredentials() error 
+Set new credentials of a Minio setup.
+
+__Example__
+
+``` go
+    err = madmClnt.SetCredentials("YOUR-NEW-ACCESSKEY", "YOUR-NEW-SECRETKEY")
+    if err != nil {
+            log.Fatalln(err)
+    }
+    log.Println("New credentials successfully set.")
+
+```
+
+
