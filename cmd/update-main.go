@@ -77,7 +77,7 @@ type updateMessage struct {
 // String colorized update message.
 func (u updateMessage) String() string {
 	if u.olderThan == time.Duration(0) {
-		return console.Colorize("Update", "You are already running the most recent version of ‘mc’.")
+		return console.Colorize("Update", "You are already running the most recent version of `mc`.")
 	}
 	return colorizeUpdateMessage(u.Download, u.olderThan)
 }

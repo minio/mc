@@ -67,8 +67,8 @@ func migrateShare() {
 	if _, e := os.Stat(oldShareFile); e == nil {
 		// Old file exits.
 		e := os.Remove(oldShareFile)
-		fatalIf(probe.NewError(e), "Unable to delete old ‘"+oldShareFile+"’.")
-		console.Infof("Removed older version of share ‘%s’ file.\n", oldShareFile)
+		fatalIf(probe.NewError(e), "Unable to delete old `"+oldShareFile+"`.")
+		console.Infof("Removed older version of share `%s` file.\n", oldShareFile)
 	}
 }
 

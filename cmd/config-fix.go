@@ -60,7 +60,7 @@ func newBrokenConfigV3() *brokenConfigV3 {
 	return conf
 }
 
-// Fix config version ‘3’. Some v3 config files are written without
+// Fix config version `3`. Some v3 config files are written without
 // proper hostConfig JSON tags. They may also contain unused ACL and
 // Access fields. Rewrite the hostConfig with proper fields using JSON
 // tags and drop the unused (ACL, Access) fields.
@@ -102,12 +102,12 @@ func fixConfigV3() {
 
 	if isMutated {
 		mcNewConfigV3, e := quick.New(cfgV3)
-		fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘3’.")
+		fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `3`.")
 
 		e = mcNewConfigV3.Save(mustGetMcConfigPath())
-		fatalIf(probe.NewError(e), "Unable to save config version ‘3’.")
+		fatalIf(probe.NewError(e), "Unable to save config version `3`.")
 
-		console.Infof("Successfully fixed %s broken config for version ‘3’.\n", mustGetMcConfigPath())
+		console.Infof("Successfully fixed %s broken config for version `3`.\n", mustGetMcConfigPath())
 	}
 }
 
@@ -158,10 +158,10 @@ func fixConfigV6ForHosts() {
 	if isMutated {
 		// Save the new config back to the disk.
 		mcCfgV6, e := quick.New(newCfgV6)
-		fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘v6’.")
+		fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `v6`.")
 
 		e = mcCfgV6.Save(mustGetMcConfigPath())
-		fatalIf(probe.NewError(e), "Unable to save config version ‘v6’.")
+		fatalIf(probe.NewError(e), "Unable to save config version `v6`.")
 	}
 }
 
@@ -189,7 +189,7 @@ func fixConfigV6() {
 	for host, hostCfg := range config.Data().(*configV6).Hosts {
 		if strings.Contains(host, "*") {
 			fatalIf(errInvalidArgument(),
-				fmt.Sprintf("Glob style ‘*’ pattern matching is no longer supported. Please fix ‘%s’ entry manually.", host))
+				fmt.Sprintf("Glob style `*` pattern matching is no longer supported. Please fix `%s` entry manually.", host))
 		}
 		if strings.Contains(host, "*s3*") || strings.Contains(host, "*.s3*") {
 			console.Infoln("Found glob url, replacing " + host + " with s3.amazonaws.com")
@@ -237,6 +237,6 @@ func fixConfigV6() {
 
 		e = newConf.Save(mustGetMcConfigPath())
 		fatalIf(probe.NewError(e).Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
-		console.Infof("Successfully fixed %s broken config for version ‘6’.\n", mustGetMcConfigPath())
+		console.Infof("Successfully fixed %s broken config for version `6`.\n", mustGetMcConfigPath())
 	}
 }

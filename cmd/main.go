@@ -92,16 +92,16 @@ func Main() {
 
 // Function invoked when invalid command is passed.
 func commandNotFound(ctx *cli.Context, command string) {
-	msg := fmt.Sprintf("‘%s’ is not a mc command. See ‘mc --help’.", command)
+	msg := fmt.Sprintf("`%s` is not a mc command. See `mc --help`.", command)
 	closestCommands := findClosestCommands(command)
 	if len(closestCommands) > 0 {
 		msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
 		if len(closestCommands) == 1 {
 			cmd := closestCommands[0]
-			msg += fmt.Sprintf("        ‘%s’", cmd)
+			msg += fmt.Sprintf("        `%s`", cmd)
 		} else {
 			for _, cmd := range closestCommands {
-				msg += fmt.Sprintf("        ‘%s’\n", cmd)
+				msg += fmt.Sprintf("        `%s`\n", cmd)
 			}
 		}
 	}
@@ -175,7 +175,7 @@ func initMC() {
 		err := saveMcConfig(newMcConfig())
 		fatalIf(err.Trace(), "Unable to save new mc config.")
 
-		console.Infoln("Configuration written to ‘" + mustGetMcConfigPath() + "’. Please update your access credentials.")
+		console.Infoln("Configuration written to `" + mustGetMcConfigPath() + "`. Please update your access credentials.")
 	}
 
 	// Check if mc session folder exists.

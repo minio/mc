@@ -39,7 +39,7 @@ var (
 // Share documents via URL.
 var shareUpload = cli.Command{
 	Name:   "upload",
-	Usage:  "Generate ‘curl’ command to upload objects without requiring access/secret keys.",
+	Usage:  "Generate `curl` command to upload objects without requiring access/secret keys.",
 	Action: mainShareUpload,
 	Before: setGlobalsFromContext,
 	Flags:  append(shareUploadFlags, globalFlags...),
@@ -84,7 +84,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+expireArg+"`.")
 	}
 
 	// Validate expiry.
@@ -195,7 +195,7 @@ func mainShareUpload(ctx *cli.Context) error {
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+expireArg+"`.")
 	}
 
 	for _, targetURL := range ctx.Args() {
@@ -203,9 +203,9 @@ func mainShareUpload(ctx *cli.Context) error {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to share a non S3 url ‘"+targetURL+"’.")
+				fatalIf(err.Trace(), "Unable to share a non S3 url `"+targetURL+"`.")
 			default:
-				fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+targetURL+"’.")
+				fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload `"+targetURL+"`.")
 			}
 		}
 	}

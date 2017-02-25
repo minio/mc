@@ -30,7 +30,7 @@ var (
 		cli.StringFlag{
 			Name:  "region",
 			Value: "us-east-1",
-			Usage: "Specify bucket region. Defaults to ‘us-east-1’.",
+			Usage: "Specify bucket region. Defaults to `us-east-1`.",
 		},
 	}
 )
@@ -58,13 +58,13 @@ EXAMPLES:
    2. Create a new bucket on Google Cloud Storage.
       $ {{.HelpName}} gcs/miniocloud
 
-   4. Create a new bucket on Amazon S3 cloud storage in region ‘us-west-2’.
+   4. Create a new bucket on Amazon S3 cloud storage in region 'us-west-2'.
       $ {{.HelpName}} --region=us-west-2 s3/myregionbucket
 
-   5. Create a new directory including its missing parents (equivalent to ‘mkdir -p’).
+   5. Create a new directory including its missing parents (equivalent to 'mkdir -p').
       $ {{.HelpName}} /tmp/this/new/dir1
 
-   6. Create multiple directories including its missing parents (behavior similar to ‘mkdir -p’).
+   6. Create multiple directories including its missing parents (behavior similar to 'mkdir -p').
       $ {{.HelpName}} /mnt/sdb/mydisk /mnt/sdc/mydisk /mnt/sdd/mydisk
 
 `,
@@ -79,7 +79,7 @@ type makeBucketMessage struct {
 
 // String colorized make bucket message.
 func (s makeBucketMessage) String() string {
-	return console.Colorize("MakeBucket", "Bucket created successfully ‘"+s.Bucket+"’.")
+	return console.Colorize("MakeBucket", "Bucket created successfully `"+s.Bucket+"`.")
 }
 
 // JSON jsonified make bucket message.
@@ -115,7 +115,7 @@ func mainMakeBucket(ctx *cli.Context) error {
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
 		if err != nil {
-			errorIf(err.Trace(targetURL), "Invalid target ‘"+targetURL+"’.")
+			errorIf(err.Trace(targetURL), "Invalid target `"+targetURL+"`.")
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
@@ -123,7 +123,7 @@ func mainMakeBucket(ctx *cli.Context) error {
 		// Make bucket.
 		err = clnt.MakeBucket(region)
 		if err != nil {
-			errorIf(err.Trace(targetURL), "Unable to make bucket ‘"+targetURL+"’.")
+			errorIf(err.Trace(targetURL), "Unable to make bucket `"+targetURL+"`.")
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}

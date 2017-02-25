@@ -111,11 +111,11 @@ type policyMessage struct {
 func (s policyMessage) String() string {
 	if s.Operation == "set" {
 		return console.Colorize("Policy",
-			"Access permission for ‘"+s.Bucket+"’ is set to ‘"+string(s.Perms)+"’")
+			"Access permission for `"+s.Bucket+"` is set to `"+string(s.Perms)+"`")
 	}
 	if s.Operation == "get" {
 		return console.Colorize("Policy",
-			"Access permission for ‘"+s.Bucket+"’"+" is ‘"+string(s.Perms)+"’")
+			"Access permission for `"+s.Bucket+"`"+" is `"+string(s.Perms)+"`")
 	}
 	// nothing to print
 	return ""
@@ -183,7 +183,7 @@ func checkPolicySyntax(ctx *cli.Context) {
 	default:
 		if argsLength == 2 {
 			fatalIf(errDummy().Trace(),
-				"Unrecognized permission ‘"+string(firstArg)+"’. Allowed values are [none, download, upload, public].")
+				"Unrecognized permission `"+string(firstArg)+"`. Allowed values are [none, download, upload, public].")
 		}
 	}
 }
@@ -262,9 +262,9 @@ func runPolicyListCmd(ctx *cli.Context) {
 	if err != nil {
 		switch err.ToGoError().(type) {
 		case APINotImplemented:
-			fatalIf(err.Trace(), "Unable to list policies of a non S3 url ‘"+targetURL+"’.")
+			fatalIf(err.Trace(), "Unable to list policies of a non S3 url `"+targetURL+"`.")
 		default:
-			fatalIf(err.Trace(targetURL), "Unable to list policies of target ‘"+targetURL+"’.")
+			fatalIf(err.Trace(targetURL), "Unable to list policies of target `"+targetURL+"`.")
 		}
 	}
 	for k, v := range policies {
@@ -282,9 +282,9 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 	if err != nil {
 		switch err.ToGoError().(type) {
 		case APINotImplemented:
-			fatalIf(err.Trace(), "Unable to list policies of a non S3 url ‘"+targetURL+"’.")
+			fatalIf(err.Trace(), "Unable to list policies of a non S3 url `"+targetURL+"`.")
 		default:
-			fatalIf(err.Trace(targetURL), "Unable to list policies of target ‘"+targetURL+"’.")
+			fatalIf(err.Trace(targetURL), "Unable to list policies of target `"+targetURL+"`.")
 		}
 	}
 
@@ -312,7 +312,7 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 		// Construct the new path to search for public objects
 		newURL := alias + "/" + policyPath
 		clnt, err := newClient(newURL)
-		fatalIf(err.Trace(newURL), "Unable to initialize target ‘"+targetURL+"’.")
+		fatalIf(err.Trace(newURL), "Unable to initialize target `"+targetURL+"`.")
 		// Search for public objects
 		for content := range clnt.List(isRecursive, isIncomplete, DirFirst) {
 			if content.Err != nil {
@@ -346,10 +346,10 @@ func runPolicyCmd(ctx *cli.Context) {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to set policy of a non S3 url ‘"+targetURL+"’.")
+				fatalIf(err.Trace(), "Unable to set policy of a non S3 url `"+targetURL+"`.")
 			default:
 				fatalIf(err.Trace(targetURL, string(perms)),
-					"Unable to set policy ‘"+string(perms)+"’ for ‘"+targetURL+"’.")
+					"Unable to set policy `"+string(perms)+"` for `"+targetURL+"`.")
 
 			}
 		}
@@ -366,9 +366,9 @@ func runPolicyCmd(ctx *cli.Context) {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to get policy of a non S3 url ‘"+targetURL+"’.")
+				fatalIf(err.Trace(), "Unable to get policy of a non S3 url `"+targetURL+"`.")
 			default:
-				fatalIf(err.Trace(targetURL), "Unable to get policy for ‘"+targetURL+"’.")
+				fatalIf(err.Trace(targetURL), "Unable to get policy for `"+targetURL+"`.")
 			}
 		}
 

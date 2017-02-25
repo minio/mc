@@ -45,11 +45,11 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
-			errorIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
+			errorIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 		}
 
 		if err == nil && !srcContent.Type.IsDir() {
-			fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source ‘%s’ is not a folder. Only folders are supported by mirror command.", srcURL))
+			fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", srcURL))
 		}
 	}
 
@@ -61,7 +61,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	if url.Host != "" {
 		if url.Path == string(url.Separator) {
 			fatalIf(errInvalidArgument().Trace(tgtURL),
-				fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+				fmt.Sprintf("Target `%s` does not contain bucket name.", tgtURL))
 		}
 	}
 }

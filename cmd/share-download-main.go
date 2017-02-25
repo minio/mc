@@ -78,7 +78,7 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+expireArg+"`.")
 	}
 
 	// Validate expiry.
@@ -91,7 +91,7 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 
 	for _, url := range ctx.Args() {
 		_, _, err := url2Stat(url)
-		fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
+		fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 	}
 }
 
@@ -170,7 +170,7 @@ func mainShareDownload(ctx *cli.Context) error {
 	if ctx.String("expire") != "" {
 		var e error
 		expiry, e = time.ParseDuration(ctx.String("expire"))
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+ctx.String("expire")+"’.")
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+ctx.String("expire")+"`.")
 	}
 
 	for _, targetURL := range ctx.Args() {
@@ -178,9 +178,9 @@ func mainShareDownload(ctx *cli.Context) error {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to share a non S3 url ‘"+targetURL+"’.")
+				fatalIf(err.Trace(), "Unable to share a non S3 url `"+targetURL+"`.")
 			default:
-				fatalIf(err.Trace(targetURL), "Unable to share target ‘"+targetURL+"’.")
+				fatalIf(err.Trace(targetURL), "Unable to share target `"+targetURL+"`.")
 			}
 		}
 	}
