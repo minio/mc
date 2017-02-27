@@ -54,7 +54,6 @@ OPERATION:
 
 SESSION-ID:
   SESSION - Session can either be $SESSION-ID or "all".
-
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}

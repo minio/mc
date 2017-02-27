@@ -51,10 +51,10 @@ var eventsAddCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(eventsAddFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} ALIAS/BUCKET ARN [FLAGS]
+  {{.HelpName}} ALIAS/BUCKET ARN [FLAGS]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

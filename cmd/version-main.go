@@ -43,10 +43,10 @@ var versionCmd = cli.Command{
 		},
 	},
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}}{{if .VisibleFlags}} [FLAGS]{{end}}
+  {{.HelpName}}{{if .VisibleFlags}} [FLAGS]{{end}}
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}

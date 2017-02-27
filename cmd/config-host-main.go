@@ -39,15 +39,15 @@ var configHostCmd = cli.Command{
 	Action: mainConfigHost,
 	Before: setGlobalsFromContext,
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} OPERATION
+  {{.HelpName}} OPERATION
 
 OPERATION:
-   add ALIAS URL ACCESS-KEY SECRET-KEY [API]
-   remove ALIAS
-   list
+  add ALIAS URL ACCESS-KEY SECRET-KEY [API]
+  remove ALIAS
+  list
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

@@ -52,7 +52,6 @@ USAGE:
 
 PERMISSION:
   Allowed policies are: [none, download, upload, public].
-
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}

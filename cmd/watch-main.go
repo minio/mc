@@ -65,7 +65,6 @@ var watchCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [FLAGS]
-
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}

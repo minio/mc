@@ -45,7 +45,7 @@ var eventsRemoveCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} ALIAS/BUCKET [ARN] [FLAGS]
+  {{.HelpName}} ALIAS/BUCKET [ARN] [FLAGS]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
