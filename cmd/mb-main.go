@@ -47,7 +47,6 @@ var mbCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [FLAGS] TARGET [TARGET...]
-
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
