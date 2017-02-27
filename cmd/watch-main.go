@@ -61,14 +61,15 @@ var watchCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(watchFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS]
+  {{.HelpName}} [FLAGS]
 
+{{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}
+  {{end}}{{end}}
 EXAMPLES:
    1. Watch new S3 operations on a minio server
       $ {{.HelpName}} play/testbucket
@@ -84,7 +85,6 @@ EXAMPLES:
 
    5. Watch for events on local directory.
       $ {{.HelpName}} /usr/share
-
 `,
 }
 

@@ -44,10 +44,10 @@ var adminLockClearCmd = cli.Command{
 	Action: mainAdminLockClear,
 	Flags:  append(adminLockClearFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} ALIAS/BUCKET/PREFIX
+  {{.HelpName}} ALIAS/BUCKET/PREFIX
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

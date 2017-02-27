@@ -46,10 +46,10 @@ var lsCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(lsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] TARGET [TARGET ...]
+  {{.HelpName}} [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

@@ -28,31 +28,11 @@ var adminServiceCmd = cli.Command{
 		adminServiceRestartCmd,
 		adminServiceStatusCmd,
 	},
-	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
-
-USAGE:
-   {{.HelpName}} [FLAGS] COMMAND
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-COMMANDS:
-   {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}
-`,
 }
 
 // mainAdmin is the handle for "mc admin service" command.
 func mainAdminService(ctx *cli.Context) error {
-
-	if ctx.Args().First() != "" { // command help.
-		cli.ShowCommandHelp(ctx, ctx.Args().First())
-	} else {
-		// command with Subcommands is an App.
-		cli.ShowAppHelp(ctx)
-	}
-
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "status", "stop", "restart" have their own main.
+	// Sub-commands like "status", "restart" have their own main.
 }

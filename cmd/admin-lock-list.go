@@ -44,10 +44,10 @@ var adminLockListCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(adminLockListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} ALIAS/BUCKET/PREFIX
+  {{.HelpName}} ALIAS/BUCKET/PREFIX
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

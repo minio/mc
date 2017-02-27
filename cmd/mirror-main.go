@@ -72,10 +72,10 @@ var mirrorCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(mirrorFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] SOURCE TARGET
+  {{.HelpName}} [FLAGS] SOURCE TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

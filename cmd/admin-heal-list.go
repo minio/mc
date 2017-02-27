@@ -48,7 +48,7 @@ var adminHealListCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} ALIAS/BUCKET/PREFIX
+  {{.HelpName}} ALIAS/[BUCKET/][PREFIX/]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

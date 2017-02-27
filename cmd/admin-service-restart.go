@@ -32,10 +32,10 @@ var adminServiceRestartCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} ALIAS
+  {{.HelpName}} ALIAS
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

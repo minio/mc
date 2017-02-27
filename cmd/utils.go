@@ -18,7 +18,7 @@ package cmd
 
 import (
 	"crypto/tls"
-	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"os"
@@ -95,7 +95,7 @@ func splitStr(path, sep string, n int) []string {
 func buildS3Config(alias, urlStr string) (*Config, *probe.Error) {
 	hostCfg := mustGetHostConfig(alias)
 	if hostCfg == nil {
-		return nil, probe.NewError(errors.New("The specified alias cannot be found"))
+		return nil, probe.NewError(fmt.Errorf("The specified alias: %s not found", urlStr))
 	}
 
 	// We have a valid alias and hostConfig. We populate the

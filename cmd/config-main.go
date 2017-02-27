@@ -34,39 +34,20 @@ var (
 )
 
 var configCmd = cli.Command{
-	Name:   "config",
-	Usage:  "Manage mc configuration file.",
-	Action: mainConfig,
-	Before: setGlobalsFromContext,
-	Flags:  append(configFlags, globalFlags...),
+	Name:            "config",
+	Usage:           "Manage mc configuration file.",
+	Action:          mainConfig,
+	Before:          setGlobalsFromContext,
+	HideHelpCommand: true,
+	Flags:           append(configFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		configHostCmd,
 	},
-	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
-
-USAGE:
-   {{.HelpName}} [FLAGS] COMMAND
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-COMMANDS:
-   {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}
-`,
 }
 
 // mainConfig is the handle for "mc config" command. provides sub-commands which write configuration data in json format to config file.
 func mainConfig(ctx *cli.Context) error {
-
-	if ctx.Args().First() != "" { // command help.
-		cli.ShowCommandHelp(ctx, ctx.Args().First())
-	} else {
-		// command with Subcommands is an App.
-		cli.ShowAppHelp(ctx)
-	}
-
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 	// Sub-commands like "host" and "alias" have their own main.
 }
