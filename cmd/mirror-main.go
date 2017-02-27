@@ -133,6 +133,11 @@ type mirrorJob struct {
 	// channel for status messages
 	statusCh chan URLs
 
+	// Store last watch error
+	watchErr *probe.Error
+	// Store last mirror error
+	mirrorErr *probe.Error
+
 	TotalObjects int64
 	TotalBytes   int64
 
@@ -250,6 +255,8 @@ func (mj *mirrorJob) startStatus() {
 
 		for sURLs := range mj.statusCh {
 			if sURLs.Error != nil {
+				// Save last mirror error
+				mj.mirrorErr = sURLs.Error
 				// Print in new line and adjust to top so that we
 				// don't print over the ongoing progress bar.
 				if sURLs.SourceContent != nil {
@@ -397,6 +404,7 @@ func (mj *mirrorJob) watchMirror() {
 			}
 
 		case err := <-mj.watcher.Errors():
+			mj.watchErr = err
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
 				// Ignore error if API is not implemented.
@@ -553,7 +561,7 @@ func copyBucketPolicies(srcClt, dstClt Client, isForce bool) *probe.Error {
 }
 
 // runMirror - mirrors all buckets to another S3 server
-func runMirror(srcURL, dstURL string, ctx *cli.Context) error {
+func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL,
@@ -590,13 +598,17 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) error {
 				// Bucket only exists in the source, create the same bucket in the destination
 				err := newDstClt.MakeBucket(ctx.String("region"))
 				if err != nil {
+					mj.mirrorErr = err
 					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`")
 					continue
 				}
 				// Copy policy rules from source to dest if flag is activated
 				if ctx.Bool("a") {
 					err := copyBucketPolicies(srcClt, dstClt, ctx.Bool("force"))
-					errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`")
+					if err != nil {
+						mj.mirrorErr = err
+						errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`")
+					}
 				}
 			}
 
@@ -618,7 +630,16 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) error {
 		}
 	}
 
+	// Start mirroring job
 	mj.mirror()
+
+	// Check for errors during mirroring or watching to return
+	if mj.mirrorErr != nil {
+		return mj.mirrorErr
+	}
+	if mj.watchErr != nil {
+		return mj.watchErr
+	}
 
 	return nil
 }
@@ -637,7 +658,9 @@ func mainMirror(ctx *cli.Context) error {
 	srcURL := args[0]
 	tgtURL := args[1]
 
-	runMirror(srcURL, tgtURL, ctx)
+	if err := runMirror(srcURL, tgtURL, ctx); err != nil {
+		return exitStatus(globalErrorExitStatus)
+	}
 
 	return nil
 }
