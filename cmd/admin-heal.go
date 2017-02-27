@@ -42,28 +42,18 @@ var (
 	}
 )
 
-var adminHealCmd = cli.Command{
-	Name:   "heal",
-	Usage:  "Manage heal tasks.",
-	Before: setGlobalsFromContext,
-	Action: mainAdminHeal,
-	Flags:  append(adminHealFlags, globalFlags...),
-	Subcommands: []cli.Command{
-		adminHealListCmd,
-	},
-	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+var adminHealHelpTemplate = `NAME:
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] COMMAND
+  {{.HelpName}} [FLAGS] [COMMAND]
 
+COMMANDS:
+  {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+  {{end}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
-COMMANDS:
-   {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}
 EXAMPLES:
     1. Heal 'testbucket' in a Minio server represented by its alias 'play'.
        $ {{.HelpName}} play/testbucket/
@@ -74,7 +64,17 @@ EXAMPLES:
     3. Issue a fake heal operation to see what the server could report
        $ {{.HelpName}} --fake play/testbucket/dir/
 
-`,
+`
+var adminHealCmd = cli.Command{
+	Name:   "heal",
+	Usage:  "Manage heal tasks.",
+	Before: setGlobalsFromContext,
+	Action: mainAdminHeal,
+	Flags:  append(adminHealFlags, globalFlags...),
+	Subcommands: []cli.Command{
+		adminHealListCmd,
+	},
+	HideHelpCommand: true,
 }
 
 // healObjectMessage container to hold repair information.
@@ -102,7 +102,7 @@ func (u healObjectMessage) JSON() string {
 // checkAdminHealSyntax - validate all the passed arguments
 func checkAdminHealSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.ShowSubcommandHelp(ctx)
+		cli.HelpPrinter(ctx.App.Writer, adminHealHelpTemplate, ctx.App)
 		os.Exit(1)
 	}
 }
@@ -125,7 +125,8 @@ func mainAdminHeal(ctx *cli.Context) error {
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
-		return err.ToGoError()
+		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
+		return nil
 	}
 
 	// Compute bucket and object from the aliased URL
@@ -138,37 +139,38 @@ func mainAdminHeal(ctx *cli.Context) error {
 	// Heal format if bucket is not specified and quit immediately
 	if bucket == "" {
 		e = client.HealFormat(isFake)
-		fatalIf(probe.NewError(e), "Cannot heal the specified storage format.")
+		fatalIf(probe.NewError(e), "Cannot heal the disks.")
 		return nil
 	}
 
 	// Heal the specified bucket
 	e = client.HealBucket(bucket, isFake)
-	fatalIf(probe.NewError(e), "Cannot repair bucket.")
+	fatalIf(probe.NewError(e), "Cannot heal bucket.")
 
 	// Search for objects that need healing
 	doneCh := make(chan struct{})
 	healObjectsCh, e := client.ListObjectsHeal(bucket, object, isRecursive, doneCh)
-	fatalIf(probe.NewError(e), "Cannot list objects that need to be healed.")
+	fatalIf(probe.NewError(e), "Cannot list objects to be healed.")
 
 	// Iterate over objects that need healing
 	for obj := range healObjectsCh {
-		// Return for any error
-		fatalIf(probe.NewError(obj.Err), "Cannot list objects that need to be healed.")
+		// Continue to next object upon any error.
+		if obj.Err != nil {
+			errorIf(probe.NewError(obj.Err), "Cannot list objects to be healed.")
+			continue
+		}
 
 		// Check the heal status, and call heal object API only when an object can be healed
 		switch healInfo := *obj.HealObjectInfo; healInfo.Status {
 		case madmin.CanHeal:
 			// Heal Object
-			e = client.HealObject(bucket, obj.Key, isFake)
-			if e != nil {
+			if e = client.HealObject(bucket, obj.Key, isFake); e != nil {
 				errorIf(probe.NewError(e), "Cannot repair object: `"+obj.Key+"`")
 				continue
 			}
 
 			// Print successful message
 			printMsg(healObjectMessage{Bucket: bucket, Object: obj})
-
 		case madmin.QuorumUnavailable:
 			errorIf(errDummy().Trace(), obj.Key+" cannot be healed until quorum is available.")
 		case madmin.Corrupted:

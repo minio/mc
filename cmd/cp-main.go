@@ -52,10 +52,10 @@ var cpCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(cpFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] SOURCE [SOURCE...] TARGET
+  {{.HelpName}} [FLAGS] SOURCE [SOURCE...] TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

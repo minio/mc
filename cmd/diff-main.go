@@ -41,16 +41,16 @@ var diffCmd = cli.Command{
 	Before:      setGlobalsFromContext,
 	Flags:       append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] FIRST SECOND
+  {{.HelpName}} [FLAGS] FIRST SECOND
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-   {{.Description}}
+  {{.Description}}
 
 EXAMPLES:
    1. Compare a local folder with a folder on Amazon S3 cloud storage.
@@ -58,7 +58,6 @@ EXAMPLES:
 
    2. Compare two different folders on a local filesystem.
       $ {{.HelpName}} ~/Photos /Media/Backup/Photos
-
 `,
 }
 

@@ -43,14 +43,15 @@ var mbCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(mbFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] TARGET [TARGET...]
+  {{.HelpName}} [FLAGS] TARGET [TARGET...]
 
+{{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}
+  {{end}}{{end}}
 EXAMPLES:
    1. Create a bucket on Amazon S3 cloud storage.
       $ {{.HelpName}} s3/mynewbucket

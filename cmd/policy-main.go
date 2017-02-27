@@ -44,18 +44,19 @@ var policyCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(policyFlags, globalFlags...),
 	CustomHelpTemplate: `Name:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] PERMISSION TARGET
-   {{.HelpName}} [FLAGS] TARGET
+  {{.HelpName}} [FLAGS] PERMISSION TARGET
+  {{.HelpName}} [FLAGS] TARGET
 
 PERMISSION:
-   Allowed policies are: [none, download, upload, public].
+  Allowed policies are: [none, download, upload, public].
 
+{{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}
+  {{end}}{{end}}
 EXAMPLES:
    1. Set bucket to "download" on Amazon S3 cloud storage.
       $ {{.HelpName}} download s3/burningman2011

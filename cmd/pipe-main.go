@@ -1,5 +1,5 @@
 /*
- * Minio Client, (C) 2015 Minio, Inc.
+ * Minio Client, (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,10 +36,10 @@ var pipeCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(pipeFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] [TARGET]
+  {{.HelpName}} [FLAGS] [TARGET]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -56,7 +56,6 @@ EXAMPLES:
 
    4. Stream MySQL database dump to Amazon S3 directly.
       $ mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/ferenginar/backups/accountsdb-oct-9-2015.sql
-
 `,
 }
 

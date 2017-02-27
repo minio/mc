@@ -1,5 +1,5 @@
 /*
- * Minio Client, (C) 2015 Minio, Inc.
+ * Minio Client, (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,10 +40,10 @@ var catCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(catFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
+  {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

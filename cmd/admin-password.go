@@ -31,10 +31,10 @@ var adminPasswordCmd = cli.Command{
 	Action: mainAdminPassword,
 	Flags:  append(adminPasswordFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} ALIAS ACCESS_KEY SECRET_KEY
+  {{.HelpName}} ALIAS ACCESS_KEY SECRET_KEY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

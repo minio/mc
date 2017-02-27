@@ -23,42 +23,23 @@ var (
 )
 
 var adminCmd = cli.Command{
-	Name:   "admin",
-	Usage:  "Manage Minio servers.",
-	Action: mainAdmin,
-	Before: setGlobalsFromContext,
-	Flags:  append(adminFlags, globalFlags...),
+	Name:            "admin",
+	Usage:           "Manage Minio servers.",
+	Action:          mainAdmin,
+	HideHelpCommand: true,
+	Before:          setGlobalsFromContext,
+	Flags:           append(adminFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		adminServiceCmd,
 		adminPasswordCmd,
 		adminLockCmd,
 		adminHealCmd,
 	},
-	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
-
-USAGE:
-   {{.HelpName}} [FLAGS] COMMAND
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-COMMANDS:
-   {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}
-`,
 }
 
 // mainAdmin is the handle for "mc admin" command.
 func mainAdmin(ctx *cli.Context) error {
-
-	if ctx.Args().First() != "" { // command help.
-		cli.ShowCommandHelp(ctx, ctx.Args().First())
-	} else {
-		// command with Subcommands is an App.
-		cli.ShowAppHelp(ctx)
-	}
-
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 	// Sub-commands like "service", "heal", "lock" have their own main.
 }
