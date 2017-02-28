@@ -581,6 +581,9 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 	if mirrorAllBuckets {
 		// Synchronize buckets using dirDifference function
 		for d := range dirDifference(srcClt, dstClt, srcURL, dstURL) {
+			if d.Error != nil {
+				mj.status.fatalIf(d.Error, fmt.Sprintf("Failed to start monitoring."))
+			}
 			if d.Diff == differInSecond {
 				// Ignore buckets that only exist in target instance
 				continue

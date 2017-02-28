@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -81,24 +80,25 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 		srcCtnt, srcOk = <-srcCh
 		tgtCtnt, tgtOk = <-tgtCh
 
+		defer close(diffCh)
+
 		for {
 			srcEOF = !srcOk
 			tgtEOF = !tgtOk
 
 			// No objects from source AND target: Finish
 			if srcEOF && tgtEOF {
-				close(diffCh)
 				break
 			}
 
 			if !srcEOF && srcCtnt.Err != nil {
-				errorIf(srcCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", sourceURL))
+				diffCh <- diffMessage{Error: srcCtnt.Err.Trace(sourceURL, targetURL)}
 				srcCtnt, srcOk = <-srcCh
 				continue
 			}
 
 			if !tgtEOF && tgtCtnt.Err != nil {
-				errorIf(tgtCtnt.Err.Trace(sourceURL, targetURL), fmt.Sprintf("Failed on '%s'", targetURL))
+				diffCh <- diffMessage{Error: tgtCtnt.Err.Trace(sourceURL, targetURL)}
 				tgtCtnt, tgtOk = <-tgtCh
 				continue
 			}
@@ -132,13 +132,13 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 			expected := urlJoinPath(targetURL, tgtSuffix)
 			if !utf8.ValidString(srcSuffix) {
 				// Error. Keys must be valid UTF-8.
-				errorIf(errInvalidSource(current), fmt.Sprintf("'%s' is not valid UTF-8", srcSuffix))
+				diffCh <- diffMessage{Error: errInvalidSource(current).Trace()}
 				srcCtnt, srcOk = <-srcCh
 				continue
 			}
 			if !utf8.ValidString(tgtSuffix) {
 				// Error. Keys must be valid UTF-8.
-				errorIf(errInvalidTarget(expected), fmt.Sprintf("'%s' is not valid UTF-8", tgtSuffix))
+				diffCh <- diffMessage{Error: errInvalidTarget(expected).Trace()}
 				tgtCtnt, tgtOk = <-tgtCh
 				continue
 			}
