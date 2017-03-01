@@ -97,6 +97,10 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 
 	// List both source and target, compare and return values through channel.
 	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
+		if diffMsg.Error != nil {
+			errorIf(diffMsg.Error, "Unable to mirror objects.")
+			break
+		}
 		switch diffMsg.Diff {
 		case differInNone:
 			// No difference, continue.
