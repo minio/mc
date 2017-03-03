@@ -26,6 +26,7 @@ var adminConfigCmd = cli.Command{
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminConfigGetCmd,
+		adminConfigSetCmd,
 	},
 	HideHelpCommand: true,
 }
