@@ -159,6 +159,10 @@ func mainAdminHeal(ctx *cli.Context) error {
 			errorIf(probe.NewError(obj.Err), "Cannot list objects to be healed.")
 			continue
 		}
+		// Heal object info is nil skip it, must be a directory.
+		if obj.HealObjectInfo == nil {
+			continue
+		}
 
 		// Check the heal status, and call heal object API only when an object can be healed
 		switch healInfo := *obj.HealObjectInfo; healInfo.Status {

@@ -205,6 +205,10 @@ func mainAdminHealList(ctx *cli.Context) error {
 				errorIf(probe.NewError(obj.Err), "Cannot heal object `"+obj.Key+"`.")
 				continue
 			}
+			// Skip for non-recursive use case.
+			if obj.HealObjectInfo == nil {
+				continue
+			}
 			printMsg(healListMessage{Bucket: currBucket, Object: obj})
 		}
 	}
