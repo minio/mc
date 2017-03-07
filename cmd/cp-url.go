@@ -65,7 +65,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) (
 		}
 
 		// If target is a folder, it is Type B.
-		if isTargetURLDir(targetURL) {
+		if isAliasURLDir(targetURL) {
 			return copyURLsTypeB, nil
 		}
 		// else Type A.
@@ -73,7 +73,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) (
 	}
 
 	// Multiple source args and target is a folder. It is Type D.
-	if isTargetURLDir(targetURL) {
+	if isAliasURLDir(targetURL) {
 		return copyURLsTypeD, nil
 	}
 
