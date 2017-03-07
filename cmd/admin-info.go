@@ -107,20 +107,30 @@ func (u infoMessage) String() (msg string) {
 		msg = "The server is offline."
 		return
 	}
-	msg += fmt.Sprintf(" Version : %s\n", u.ServerInfo.Properties.Version)
-	msg += fmt.Sprintf("  Uptime : %s\n", timeDurationToHumanizedDuration(u.ServerInfo.Properties.Uptime))
-	msg += fmt.Sprintf("  Region : %s\n", u.ServerInfo.Properties.Region)
-	msg += fmt.Sprintf(" Network : Incoming %s, Outgoing %s\n",
+	msg += fmt.Sprintf("  Version : %s\n", u.ServerInfo.Properties.Version)
+	msg += fmt.Sprintf("   Uptime : %s\n", timeDurationToHumanizedDuration(u.ServerInfo.Properties.Uptime))
+	msg += fmt.Sprintf("   Region : %s\n", u.ServerInfo.Properties.Region)
+
+	sqsARNs := ""
+	for _, v := range u.ServerInfo.Properties.SQSARN {
+		sqsARNs += fmt.Sprintf("%s ", v)
+	}
+	if sqsARNs == "" {
+		sqsARNs = "<none>"
+	}
+	msg += fmt.Sprintf(" SQS ARNs : %s\n", sqsARNs)
+
+	msg += fmt.Sprintf("  Network : Incoming %s, Outgoing %s\n",
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalInputBytes),
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalOutputBytes))
 
 	// Online service, get backend information
-	msg += fmt.Sprintf(" Storage : Total %s, Free %s",
+	msg += fmt.Sprintf("  Storage : Total %s, Free %s",
 		humanize.IBytes(uint64(u.StorageInfo.Total)),
 		humanize.IBytes(uint64(u.StorageInfo.Free)),
 	)
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
-		msg += fmt.Sprintf(", Online Disks: %d, Offline Disks: %d\n", v.OnlineDisks, v.OfflineDisks)
+		msg += fmt.Sprintf(", Online Disks: %d, Offline Disks: %d", v.OnlineDisks, v.OfflineDisks)
 	}
 	return
 }
