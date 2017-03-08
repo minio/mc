@@ -158,14 +158,7 @@ func (qs *QuietStatus) Start() {
 
 // Finish displays the accounting summary
 func (qs *QuietStatus) Finish() {
-	accntStat := qs.accounter.Stat()
-	cpStatMessage := mirrorStatMessage{
-		Total:       accntStat.Total,
-		Transferred: accntStat.Transferred,
-		Speed:       accntStat.Speed,
-	}
-
-	console.Println(console.Colorize("Mirror", cpStatMessage.String()))
+	console.Println(console.Colorize("Mirror", qs.accounter.Stat().String()))
 }
 
 // Update is ignored for quietstatus

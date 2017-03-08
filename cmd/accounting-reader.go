@@ -17,9 +17,12 @@
 package cmd
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/cheggaaa/pb"
 )
 
 // accounter keeps tabs of ongoing data transfer information.
@@ -51,7 +54,7 @@ func newAccounter(total int64) *accounter {
 
 // write calculate the final speed.
 func (a *accounter) write(current int64) float64 {
-	fromStart := time.Now().Sub(a.startTime)
+	fromStart := time.Since(a.startTime)
 	currentFromStart := current - a.startValue
 	if currentFromStart > 0 {
 		speed := float64(currentFromStart) / (float64(fromStart) / float64(time.Second))
@@ -78,6 +81,18 @@ type accountStat struct {
 	Total       int64
 	Transferred int64
 	Speed       float64
+}
+
+func (c accountStat) String() string {
+	speedBox := pb.Format(int64(c.Speed)).To(pb.U_BYTES).String()
+	if speedBox == "" {
+		speedBox = "0 MB"
+	} else {
+		speedBox = speedBox + "/s"
+	}
+	message := fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.Format(c.Total).To(pb.U_BYTES),
+		pb.Format(c.Transferred).To(pb.U_BYTES), speedBox)
+	return message
 }
 
 // Stat provides current stats captured.

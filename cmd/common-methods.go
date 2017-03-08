@@ -42,26 +42,26 @@ func isAliasURLDir(aliasURL string) bool {
 	if expandedURL == aliasURL {
 		// This is an FS url, check if the url has a separator at the end
 		return strings.HasSuffix(aliasURL, string(filepath.Separator))
-	} else {
-		// This is an S3 url, then:
-		//   *) If alias format is specified, return false
-		//   *) If alias/bucket is specified, return true
-		//   *) If alias/bucket/prefix, check if prefix has
-		//	     has a trailing slash.
-		pathURL := filepath.ToSlash(aliasURL)
-		fields := strings.Split(pathURL, "/")
-		switch len(fields) {
-		// Nothing or alias format
-		case 0, 1:
-			return false
-		// alias/bucket format
-		case 2:
-			return true
-		// alias/bucket/prefix format
-		default:
-			return strings.HasSuffix(pathURL, "/")
-		}
 	}
+
+	// This is an S3 url, then:
+	//   *) If alias format is specified, return false
+	//   *) If alias/bucket is specified, return true
+	//   *) If alias/bucket/prefix, check if prefix has
+	//	     has a trailing slash.
+	pathURL := filepath.ToSlash(aliasURL)
+	fields := strings.Split(pathURL, "/")
+	switch len(fields) {
+	// Nothing or alias format
+	case 0, 1:
+		return false
+	// alias/bucket format
+	case 2:
+		return true
+	} // default case..
+
+	// alias/bucket/prefix format
+	return strings.HasSuffix(pathURL, "/")
 }
 
 // getSource gets a reader from URL.
