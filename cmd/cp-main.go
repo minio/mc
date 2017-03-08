@@ -342,13 +342,7 @@ func doCopySession(session *sessionV8) {
 		}
 	} else {
 		if !globalJSON && globalQuiet {
-			accntStat := accntReader.Stat()
-			cpStatMessage := copyStatMessage{
-				Total:       accntStat.Total,
-				Transferred: accntStat.Transferred,
-				Speed:       accntStat.Speed,
-			}
-			console.Println(console.Colorize("Copy", cpStatMessage.String()))
+			console.Println(console.Colorize("Copy", accntReader.Stat().String()))
 		}
 	}
 }

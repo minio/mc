@@ -227,7 +227,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 
 		if !isFake {
 			sent := false
-			for sent == false {
+			for !sent {
 				select {
 				case contentCh <- content:
 					sent = true

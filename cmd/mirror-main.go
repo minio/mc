@@ -26,7 +26,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -169,26 +168,6 @@ func (m mirrorMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(mirrorMessageBytes)
-}
-
-// mirrorStatMessage container for mirror accounting message
-type mirrorStatMessage struct {
-	Total       int64
-	Transferred int64
-	Speed       float64
-}
-
-// mirrorStatMessage mirror accounting message
-func (c mirrorStatMessage) String() string {
-	speedBox := pb.Format(int64(c.Speed)).To(pb.U_BYTES).String()
-	if speedBox == "" {
-		speedBox = "0 MB"
-	} else {
-		speedBox = speedBox + "/s"
-	}
-	message := fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.Format(c.Total).To(pb.U_BYTES),
-		pb.Format(c.Transferred).To(pb.U_BYTES), speedBox)
-	return message
 }
 
 // doRemove - removes files on target.

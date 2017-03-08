@@ -139,45 +139,39 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	// Get fsnotify notifications for events and errors, and sent them
 	// using eventChan and errorChan
 	go func() {
-		for {
-			select {
-			case event, ok := <-neventChan:
-				if !ok {
-					return
-				}
-				if isIgnoredFile(event.Path()) {
+		for event := range neventChan {
+			if isIgnoredFile(event.Path()) {
+				continue
+			}
+			var i os.FileInfo
+			if IsPutEvent(event.Event()) {
+				// Look for any writes, send a response to indicate a full copy.
+				var e error
+				i, e = os.Stat(event.Path())
+				if e != nil {
+					if os.IsNotExist(e) {
+						continue
+					}
+					errorChan <- probe.NewError(e)
 					continue
 				}
-				var i os.FileInfo
-				if IsPutEvent(event.Event()) {
-					// Look for any writes, send a response to indicate a full copy.
-					var e error
-					i, e = os.Stat(event.Path())
-					if e != nil {
-						if os.IsNotExist(e) {
-							continue
-						}
-						errorChan <- probe.NewError(e)
-						continue
-					}
-					if i.IsDir() {
-						// we want files
-						continue
-					}
-					eventChan <- Event{
-						Time:   time.Now().Format(timeFormatFS),
-						Size:   i.Size(),
-						Path:   event.Path(),
-						Client: f,
-						Type:   EventCreate,
-					}
-				} else if IsDeleteEvent(event.Event()) {
-					eventChan <- Event{
-						Time:   time.Now().Format(timeFormatFS),
-						Path:   event.Path(),
-						Client: f,
-						Type:   EventRemove,
-					}
+				if i.IsDir() {
+					// we want files
+					continue
+				}
+				eventChan <- Event{
+					Time:   time.Now().Format(timeFormatFS),
+					Size:   i.Size(),
+					Path:   event.Path(),
+					Client: f,
+					Type:   EventCreate,
+				}
+			} else if IsDeleteEvent(event.Event()) {
+				eventChan <- Event{
+					Time:   time.Now().Format(timeFormatFS),
+					Path:   event.Path(),
+					Client: f,
+					Type:   EventRemove,
 				}
 			}
 		}
