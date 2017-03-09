@@ -588,7 +588,7 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 	}
 
 	// Initialize a new HTTP request for the method.
-	req, err = http.NewRequest(method, targetURL.String(), metadata.contentBody)
+	req, err = http.NewRequest(method, targetURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -606,6 +606,11 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 			req = s3signer.PreSignV4(*req, c.accessKeyID, c.secretAccessKey, location, metadata.expires)
 		}
 		return req, nil
+	}
+
+	// Set content body if available.
+	if metadata.contentBody != nil {
+		req.Body = ioutil.NopCloser(metadata.contentBody)
 	}
 
 	// FIXME: Enable this when Google Cloud Storage properly supports 100-continue.
