@@ -320,6 +320,10 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 				continue
 			}
 
+			if content.Type.IsDir() && isRecursive {
+				continue
+			}
+
 			// Encode public URL
 			u, e := url.Parse(content.URL.String())
 			errorIf(probe.NewError(e), "Unable to parse url `"+content.URL.String()+"`")
