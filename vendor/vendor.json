@@ -80,10 +80,10 @@
 			"revisionTime": "2016-08-18T00:31:20Z"
 		},
 		{
-			"checksumSHA1": "U2PFIqUAO4PpfqYZhouq/7KCXkU=",
+			"checksumSHA1": "qFt4mCN7Nj3vwa9RtrVOIvqbEFA=",
 			"path": "github.com/minio/minio/pkg/madmin",
-			"revision": "e5d4e7aa9d7ba16bbf0c0fe135eb05102132b528",
-			"revisionTime": "2017-03-03T11:01:42Z"
+			"revision": "d8e515a396cabaae8b27fece79fe776956f6e972",
+			"revisionTime": "2017-03-18T17:05:16Z"
 		},
 		{
 			"path": "github.com/minio/minio/pkg/probe",

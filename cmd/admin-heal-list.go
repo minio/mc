@@ -35,6 +35,10 @@ var (
 			Name:  "recursive, r",
 			Usage: "List recursively.",
 		},
+		cli.BoolFlag{
+			Name:  "incomplete, I",
+			Usage: "List incomplete uploads",
+		},
 	}
 )
 
@@ -60,20 +64,36 @@ EXAMPLES:
     2. Recursively list objects than need to be healed.
        $ {{.HelpName}} --recursive play/
 
+	3. Recursively list incomplete uploads than need to be healed.
+       $ {{.HelpName}} --incomplete --recursive play/
+
 `,
 }
 
 // healListMessage container to hold heal information.
 type healListMessage struct {
-	Status string            `json:"status"`
-	Bucket string            `json:"bucket"`
-	Object madmin.ObjectInfo `json:"object"`
+	Status string             `json:"status"`
+	Bucket string             `json:"bucket"`
+	Object *madmin.ObjectInfo `json:"object"`
+	Upload *madmin.UploadInfo `json:"upload"`
 }
 
 // String colorized service status message.
 func (u healListMessage) String() string {
-	msg := fmt.Sprintf("Object: %s/%s, ", u.Bucket, u.Object.Key)
-	switch u.Object.HealObjectInfo.Status {
+	msg := ""
+	var healStatus madmin.HealStatus
+
+	// Check if we have object heal information
+	if u.Object != nil {
+		msg += fmt.Sprintf("Object: %s/%s, ", u.Bucket, u.Object.Key)
+		healStatus = u.Object.HealObjectInfo.Status
+	} else {
+		msg += fmt.Sprintf("Upload: %s/%s, ", u.Bucket, u.Upload.Key)
+		healStatus = u.Upload.HealUploadInfo.Status
+	}
+
+	// Print heal status
+	switch healStatus {
 	case madmin.CanHeal:
 		msg += "can be healed"
 	case madmin.Corrupted:
@@ -142,6 +162,7 @@ func mainAdminHealList(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 	isRecursive := ctx.Bool("recursive")
+	isIncomplete := ctx.Bool("incomplete")
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -197,19 +218,38 @@ func mainAdminHealList(ctx *cli.Context) error {
 	for _, currBucket := range buckets {
 		// Search for objects that need to be healed in the current bucket
 		doneCh := make(chan struct{})
-		listCh, e := client.ListObjectsHeal(currBucket, object, isRecursive, doneCh)
-		fatalIf(probe.NewError(e), "Cannot list heal objects.")
-		// Iterate over objects and print them when not errors
-		for obj := range listCh {
-			if obj.Err != nil {
-				errorIf(probe.NewError(obj.Err), "Cannot heal object `"+obj.Key+"`.")
-				continue
+
+		if isIncomplete {
+			listCh, e := client.ListUploadsHeal(currBucket, object, isRecursive, doneCh)
+			fatalIf(probe.NewError(e), "Cannot list heal uploads.")
+			// Iterate over uploads and print them when not errors
+			for upload := range listCh {
+				if upload.Err != nil {
+					errorIf(probe.NewError(upload.Err), "Cannot heal upload `"+upload.Key+"`.")
+					continue
+				}
+				// Skip for non-recursive use case.
+				if upload.HealUploadInfo == nil {
+					continue
+				}
+				printMsg(healListMessage{Bucket: currBucket, Upload: &upload})
 			}
-			// Skip for non-recursive use case.
-			if obj.HealObjectInfo == nil {
-				continue
+
+		} else {
+			listCh, e := client.ListObjectsHeal(currBucket, object, isRecursive, doneCh)
+			fatalIf(probe.NewError(e), "Cannot list heal objects.")
+			// Iterate over objects and print them when not errors
+			for obj := range listCh {
+				if obj.Err != nil {
+					errorIf(probe.NewError(obj.Err), "Cannot heal object `"+obj.Key+"`.")
+					continue
+				}
+				// Skip for non-recursive use case.
+				if obj.HealObjectInfo == nil {
+					continue
+				}
+				printMsg(healListMessage{Bucket: currBucket, Object: &obj})
 			}
-			printMsg(healListMessage{Bucket: currBucket, Object: obj})
 		}
 	}
 
