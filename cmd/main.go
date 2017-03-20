@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014, 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio/pkg/words"
 	"github.com/pkg/profile"
 )
 
@@ -237,7 +238,7 @@ func findClosestCommands(command string) []string {
 			continue
 		}
 		// 2 is arbitrary and represents the max allowed number of typed errors
-		if DamerauLevenshteinDistance(command, value.(string)) < 2 {
+		if words.DamerauLevenshteinDistance(command, value.(string)) < 2 {
 			closestCommands = append(closestCommands, value.(string))
 		}
 	}
