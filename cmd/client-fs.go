@@ -46,7 +46,7 @@ const (
 var ( // GOOS specific ignore list.
 	ignoreFiles = map[string][]string{
 		"darwin":  {"*.DS_Store"},
-		"default": {"*.part.minio"},
+		"default": {""},
 	}
 )
 
@@ -511,17 +511,41 @@ func (f *fsClient) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 // List - list files and folders.
 func (f *fsClient) List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent {
 	contentCh := make(chan *clientContent)
+	filteredCh := make(chan *clientContent)
+
 	if isRecursive {
 		if showDir == DirNone {
-			go f.listRecursiveInRoutine(contentCh, isIncomplete)
+			go f.listRecursiveInRoutine(contentCh)
 		} else {
 			go f.listDirOpt(contentCh, isIncomplete, showDir)
 		}
 	} else {
-		go f.listInRoutine(contentCh, isIncomplete)
+		go f.listInRoutine(contentCh)
 	}
 
-	return contentCh
+	// This function filters entries from any  listing go routine
+	// created previously. If isIncomplete is activated, we will
+	// only show partly uploaded files,
+	go func() {
+		for c := range contentCh {
+			if isIncomplete {
+				if !strings.HasSuffix(c.URL.Path, partSuffix) {
+					continue
+				}
+				// Strip part suffix
+				c.URL.Path = strings.Split(c.URL.Path, partSuffix)[0]
+			} else {
+				if strings.HasSuffix(c.URL.Path, partSuffix) {
+					continue
+				}
+			}
+			// Send to filtered channel
+			filteredCh <- c
+		}
+		defer close(filteredCh)
+	}()
+
+	return filteredCh
 }
 
 // byDirName implements sort.Interface.
@@ -562,7 +586,7 @@ func readDir(dirname string) ([]os.FileInfo, error) {
 }
 
 // listPrefixes - list all files for any given prefix.
-func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, incomplete bool) {
+func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) {
 	dirName := filepath.Dir(prefix)
 	files, e := readDir(dirName)
 	if e != nil {
@@ -607,15 +631,6 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 				}
 			}
 			if strings.HasPrefix(file, prefix) {
-				if incomplete {
-					if !strings.HasSuffix(st.Name(), partSuffix) {
-						continue
-					}
-				} else {
-					if strings.HasSuffix(st.Name(), partSuffix) {
-						continue
-					}
-				}
 				contentCh <- &clientContent{
 					URL:  *newClientURL(file),
 					Time: st.ModTime(),
@@ -627,15 +642,6 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 			}
 		}
 		if strings.HasPrefix(file, prefix) {
-			if incomplete {
-				if !strings.HasSuffix(fi.Name(), partSuffix) {
-					continue
-				}
-			} else {
-				if strings.HasSuffix(fi.Name(), partSuffix) {
-					continue
-				}
-			}
 			contentCh <- &clientContent{
 				URL:  *newClientURL(file),
 				Time: fi.ModTime(),
@@ -648,7 +654,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 	return
 }
 
-func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete bool) {
+func (f *fsClient) listInRoutine(contentCh chan<- *clientContent) {
 	// close the channel when the function returns.
 	defer close(contentCh)
 
@@ -661,7 +667,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 		if _, ok := err.ToGoError().(PathNotFound); ok {
 			// If file does not exist treat it like a prefix and list all prefixes if any.
 			prefix := fpath
-			f.listPrefixes(prefix, contentCh, incomplete)
+			f.listPrefixes(prefix, contentCh)
 			return
 		}
 		// For all other errors we return genuine error back to the caller.
@@ -672,7 +678,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 	// Now if the file exists and doesn't end with a separator ('/') do not traverse it.
 	// If the directory doesn't end with a separator, do not traverse it.
 	if !strings.HasSuffix(fpath, string(pathURL.Separator)) && fst.Mode().IsDir() && fpath != "." {
-		f.listPrefixes(fpath, contentCh, incomplete)
+		f.listPrefixes(fpath, contentCh)
 		return
 	}
 
@@ -708,15 +714,6 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 				}
 			}
 			if fi.Mode().IsRegular() || fi.Mode().IsDir() {
-				if incomplete {
-					if !strings.HasSuffix(fi.Name(), partSuffix) {
-						continue
-					}
-				} else {
-					if strings.HasSuffix(fi.Name(), partSuffix) {
-						continue
-					}
-				}
 				pathURL = *f.PathURL
 				pathURL.Path = filepath.Join(pathURL.Path, fi.Name())
 
@@ -735,15 +732,6 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 			}
 		}
 	default:
-		if incomplete {
-			if !strings.HasSuffix(fst.Name(), partSuffix) {
-				return
-			}
-		} else {
-			if strings.HasSuffix(fst.Name(), partSuffix) {
-				return
-			}
-		}
 		contentCh <- &clientContent{
 			URL:  pathURL,
 			Time: fst.ModTime(),
@@ -802,17 +790,6 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 				continue
 			}
 
-			if isIncomplete {
-				// Ignore if file name does not end with partSuffix.
-				if !strings.HasSuffix(file.Name(), partSuffix) {
-					continue
-				}
-
-				// Strip partSuffix
-				name = strings.SplitAfter(name, partSuffix)[0]
-				content.URL = *newClientURL(name)
-			}
-
 			contentCh <- &content
 		}
 
@@ -832,7 +809,7 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 	}
 }
 
-func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incomplete bool) {
+func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent) {
 	// close channels upon return.
 	defer close(contentCh)
 	var dirName string
@@ -920,15 +897,6 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 			}
 		}
 		if fi.Mode().IsRegular() {
-			if incomplete {
-				if !strings.HasSuffix(fi.Name(), partSuffix) {
-					return nil
-				}
-			} else {
-				if strings.HasSuffix(fi.Name(), partSuffix) {
-					return nil
-				}
-			}
 			contentCh <- &clientContent{
 				URL:  *newClientURL(fp),
 				Time: fi.ModTime(),
