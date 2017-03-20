@@ -584,47 +584,12 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 			st, e := os.Stat(file)
 			if e != nil {
 				if os.IsPermission(e) {
-					// On windows there are folder symlinks
-					// which are called junction files which
-					// carry special meaning on windows
-					// - which cannot be accessed with regular operations
-					if runtime.GOOS == "windows" {
-						newPath := filepath.Join(prefix, fi.Name())
-						lfi, le := f.handleWindowsSymlinks(newPath)
-						if le != nil {
-							contentCh <- &clientContent{
-								Err: le.Trace(newPath),
-							}
-							continue
-						}
-						if incomplete {
-							if !strings.HasSuffix(lfi.Name(), partSuffix) {
-								continue
-							}
-						} else {
-							if strings.HasSuffix(lfi.Name(), partSuffix) {
-								continue
-							}
-						}
-						pathURL.Path = filepath.Join(pathURL.Path, lfi.Name())
-						contentCh <- &clientContent{
-							URL:  pathURL,
-							Time: lfi.ModTime(),
-							Size: lfi.Size(),
-							Type: lfi.Mode(),
-							Err: probe.NewError(PathInsufficientPermission{
-								Path: pathURL.Path,
-							}),
-						}
-						continue
-					} else {
-						contentCh <- &clientContent{
-							Err: probe.NewError(PathInsufficientPermission{
-								Path: pathURL.Path,
-							}),
-						}
-						continue
+					contentCh <- &clientContent{
+						Err: probe.NewError(PathInsufficientPermission{
+							Path: pathURL.Path,
+						}),
 					}
+					continue
 				}
 				if os.IsNotExist(e) {
 					contentCh <- &clientContent{
@@ -724,44 +689,10 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fi, e = os.Stat(filepath.Join(fpath, fi.Name()))
 				if os.IsPermission(e) {
-					// On windows there are folder symlinks
-					// which are called junction files which
-					// carry special meaning on windows
-					// - which cannot be accessed with regular operations
-					if runtime.GOOS == "windows" {
-						newPath := filepath.Join(fpath, fi.Name())
-						lfi, le := f.handleWindowsSymlinks(newPath)
-						if le != nil {
-							contentCh <- &clientContent{
-								Err: le.Trace(newPath),
-							}
-							continue
-						}
-						if incomplete {
-							if !strings.HasSuffix(lfi.Name(), partSuffix) {
-								continue
-							}
-						} else {
-							if strings.HasSuffix(lfi.Name(), partSuffix) {
-								continue
-							}
-						}
-						pathURL = *f.PathURL
-						pathURL.Path = filepath.Join(pathURL.Path, lfi.Name())
-						contentCh <- &clientContent{
-							URL:  pathURL,
-							Time: lfi.ModTime(),
-							Size: lfi.Size(),
-							Type: lfi.Mode(),
-							Err:  probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
-						}
-						continue
-					} else {
-						contentCh <- &clientContent{
-							Err: probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
-						}
-						continue
+					contentCh <- &clientContent{
+						Err: probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
 					}
+					continue
 				}
 				if os.IsNotExist(e) {
 					contentCh <- &clientContent{
@@ -955,36 +886,8 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 				return nil
 			}
 			if os.IsPermission(e) {
-				if runtime.GOOS == "windows" {
-					lfi, le := f.handleWindowsSymlinks(fp)
-					if le != nil {
-						contentCh <- &clientContent{
-							Err: le.Trace(fp),
-						}
-						return nil
-					}
-					pathURL = *f.PathURL
-					pathURL.Path = filepath.Join(pathURL.Path, dirName)
-					if incomplete {
-						if !strings.HasSuffix(lfi.Name(), partSuffix) {
-							return nil
-						}
-					} else {
-						if strings.HasSuffix(lfi.Name(), partSuffix) {
-							return nil
-						}
-					}
-					contentCh <- &clientContent{
-						URL:  pathURL,
-						Time: lfi.ModTime(),
-						Size: lfi.Size(),
-						Type: lfi.Mode(),
-						Err:  probe.NewError(e),
-					}
-				} else {
-					contentCh <- &clientContent{
-						Err: probe.NewError(PathInsufficientPermission{Path: fp}),
-					}
+				contentCh <- &clientContent{
+					Err: probe.NewError(PathInsufficientPermission{Path: fp}),
 				}
 				return nil
 			}
@@ -994,34 +897,6 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 			fi, e = os.Stat(fp)
 			if e != nil {
 				if os.IsPermission(e) {
-					if runtime.GOOS == "windows" {
-						lfi, le := f.handleWindowsSymlinks(fp)
-						if le != nil {
-							contentCh <- &clientContent{
-								Err: le.Trace(fp),
-							}
-							return nil
-						}
-						pathURL = *f.PathURL
-						pathURL.Path = filepath.Join(pathURL.Path, dirName)
-						if incomplete {
-							if !strings.HasSuffix(lfi.Name(), partSuffix) {
-								return nil
-							}
-						} else {
-							if !strings.HasSuffix(lfi.Name(), partSuffix) {
-								return nil
-							}
-						}
-						contentCh <- &clientContent{
-							URL:  pathURL,
-							Time: lfi.ModTime(),
-							Size: lfi.Size(),
-							Type: lfi.Mode(),
-							Err:  probe.NewError(e),
-						}
-						return nil
-					}
 					contentCh <- &clientContent{
 						Err: probe.NewError(e),
 					}
@@ -1187,19 +1062,6 @@ func (f *fsClient) toClientError(e error, fpath string) *probe.Error {
 	return probe.NewError(e)
 }
 
-// handle windows symlinks - eg: junction files.
-func (f *fsClient) handleWindowsSymlinks(fpath string) (os.FileInfo, *probe.Error) {
-	// On windows there are directory symlinks which are called junction files.
-	// These files carry special meaning on windows they cannot be,
-	// accessed with regular operations.
-	file, e := os.Lstat(fpath)
-	if e != nil {
-		err := f.toClientError(e, fpath)
-		return nil, err.Trace(fpath)
-	}
-	return file, nil
-}
-
 // fsStat - wrapper function to get file stat.
 func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 	fpath := f.PathURL.Path
@@ -1223,9 +1085,6 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 	fpath, e = filepath.EvalSymlinks(fpath)
 	if e != nil {
 		if os.IsPermission(e) {
-			if runtime.GOOS == "windows" {
-				return f.handleWindowsSymlinks(f.PathURL.Path)
-			}
 			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		err := f.toClientError(e, f.PathURL.Path)
@@ -1235,9 +1094,6 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 	st, e = os.Stat(fpath)
 	if e != nil {
 		if os.IsPermission(e) {
-			if runtime.GOOS == "windows" {
-				return f.handleWindowsSymlinks(fpath)
-			}
 			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		if os.IsNotExist(e) {
