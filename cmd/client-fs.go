@@ -1203,15 +1203,24 @@ func (f *fsClient) handleWindowsSymlinks(fpath string) (os.FileInfo, *probe.Erro
 // fsStat - wrapper function to get file stat.
 func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 	fpath := f.PathURL.Path
+
+	// Check if the path corresponds to a directory and returns
+	// the successful result whether isIncomplete is specified or not.
+	st, e := os.Stat(fpath)
+	if e == nil && st.IsDir() {
+		return st, nil
+	}
+
 	if isIncomplete {
 		fpath += partSuffix
 	}
+
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
 	if strings.HasSuffix(fpath, string(f.PathURL.Separator)) {
 		fpath = fpath + "."
 	}
-	fpath, e := filepath.EvalSymlinks(fpath)
+	fpath, e = filepath.EvalSymlinks(fpath)
 	if e != nil {
 		if os.IsPermission(e) {
 			if runtime.GOOS == "windows" {
@@ -1222,7 +1231,8 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(fpath)
 	}
-	st, e := os.Stat(fpath)
+
+	st, e = os.Stat(fpath)
 	if e != nil {
 		if os.IsPermission(e) {
 			if runtime.GOOS == "windows" {
