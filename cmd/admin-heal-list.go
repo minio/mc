@@ -95,13 +95,12 @@ func (u healListMessage) String() string {
 	// Print heal status
 	switch healStatus {
 	case madmin.CanHeal:
-		msg += "can be healed"
+		msg += "can be healed."
 	case madmin.Corrupted:
-		msg += "cannot be healed"
+		msg += "cannot be healed."
 	case madmin.QuorumUnavailable:
-		msg += "quorum not available for healing"
+		msg += "quorum not available for healing."
 	}
-	msg += ".\n"
 	return console.Colorize("Heal", msg)
 }
 
