@@ -50,9 +50,9 @@ mc --help
 ### Binary Download
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
-|GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc|
-||32-bit Intel|https://dl.minio.io/client/mc/release/linux-386/mc|
-||32-bit ARM|https://dl.minio.io/client/mc/release/linux-arm/mc|
+|GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
+|         |32-bit Intel|https://dl.minio.io/client/mc/release/linux-386/mc |
+|         |32-bit ARM|https://dl.minio.io/client/mc/release/linux-arm/mc |
 
 ```sh
 
@@ -65,8 +65,8 @@ chmod +x mc
 ### Binary Download
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
-|Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe|
-||32-bit|https://dl.minio.io/client/mc/release/windows-386/mc.exe |
+|Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
+|                 |32-bit|https://dl.minio.io/client/mc/release/windows-386/mc.exe  |
 
 ```sh
 
@@ -78,7 +78,7 @@ mc.exe --help
 ### Binary Download
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
-|FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc|
+|FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc |
 
 ```sh
 
