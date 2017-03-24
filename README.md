@@ -3,7 +3,6 @@
 Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```
-
 ls            List files and folders.
 mb            Make a bucket or folder.
 cat           Display contents of a file.
@@ -20,7 +19,6 @@ session       Manage saved sessions of cp and mirror operations.
 config        Manage configuration file.
 update        Check for a new software update.
 version       Print version.
-
 ```
 
 ## Docker Container
@@ -55,10 +53,8 @@ mc --help
 |         |32-bit ARM|https://dl.minio.io/client/mc/release/linux-arm/mc |
 
 ```sh
-
 chmod +x mc
 ./mc --help
-
 ```
 
 ## Microsoft Windows
@@ -69,9 +65,7 @@ chmod +x mc
 |                 |32-bit|https://dl.minio.io/client/mc/release/windows-386/mc.exe  |
 
 ```sh
-
 mc.exe --help
-
 ```
 
 ## FreeBSD
@@ -81,20 +75,16 @@ mc.exe --help
 |FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc |
 
 ```sh
-
 chmod 755 mc
 ./mc --help
-
 ```
 
 ## Solaris/Illumos
 ### From Source
 
 ```sh
-
 go get -u github.com/minio/mc
 mc --help
-
 ```
 
 ## Install from Source
@@ -103,9 +93,7 @@ Source installation is intended only for developers and advanced users. `mc upda
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
 ```sh
-
 go get -u github.com/minio/mc
-
 ```
 
 ## Add a Cloud Storage Service
@@ -114,9 +102,7 @@ If you are planning to use `mc` only on POSIX compatible filesystems, you may sk
 To add one or more Amazon S3 compatible hosts, please follow the instructions below. `mc` stores all its configuration information in ``~/.mc/config.json`` file.
 
 ```sh
-
 mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
-
 ```
 
 Alias is simply a short name to you cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
@@ -125,27 +111,21 @@ Alias is simply a short name to you cloud storage service. S3 end-point, access 
 Minio server displays URL, access and secret keys.
 
 ```sh
-
 mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
-
 ```
 
 ### Example - Amazon S3 Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html).
 
 ```sh
-
 mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
-
 ```
 
 ### Example - Google Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)
 
 ```sh
-
 mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
-
 ```
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
@@ -158,27 +138,23 @@ NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have
 List all buckets from https://play.minio.io:9000
 
 ```sh
-
 mc ls play
 [2016-03-22 19:47:48 PDT]     0B my-bucketname/
 [2016-03-22 22:01:07 PDT]     0B mytestbucket/
 [2016-03-22 20:04:39 PDT]     0B mybucketname/
 [2016-01-28 17:23:11 PST]     0B newbucket/
 [2016-03-20 09:08:36 PDT]     0B s3git-test/
-
 ```
 <a name="everyday-use"></a>
 ## Everyday Use
 You may add shell aliases to override your common Unix tools.
 
 ```sh
-
 alias ls='mc ls'
 alias cp='mc cp'
 alias cat='mc cat'
 alias mkdir='mc mb'
 alias pipe='mc pipe'
-
 ```
 
 ## Explore Further
