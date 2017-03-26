@@ -19,11 +19,12 @@ package cmd
 import "github.com/minio/cli"
 
 var adminServiceCmd = cli.Command{
-	Name:   "service",
-	Usage:  "Control servers.",
-	Action: mainAdminService,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:            "service",
+	Usage:           "Control servers.",
+	Action:          mainAdminService,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
 	Subcommands: []cli.Command{
 		adminServiceRestartCmd,
 		adminServiceStatusCmd,
