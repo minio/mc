@@ -285,6 +285,12 @@ func registerApp() *cli.App {
 		Usage: "Show help.",
 	}
 
+	cli.BashCompletionFlag = cli.BoolFlag{
+		Name:   "compgen",
+		Usage:  "Enables bash-completion for all commands and subcommands.",
+		Hidden: true,
+	}
+
 	app := cli.NewApp()
 	app.Action = func(ctx *cli.Context) {
 		if strings.HasPrefix(Version, "RELEASE.") {
@@ -293,6 +299,7 @@ func registerApp() *cli.App {
 		}
 		cli.ShowAppHelp(ctx)
 	}
+
 	app.HideVersion = true
 	app.HideHelpCommand = true
 	app.Usage = "Minio Client for cloud storage and filesystems."
@@ -302,6 +309,8 @@ func registerApp() *cli.App {
 	app.Flags = append(mcFlags, globalFlags...)
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.CommandNotFound = commandNotFound // handler function declared above.
+	app.EnableBashCompletion = true
+
 	return app
 }
 

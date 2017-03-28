@@ -147,6 +147,8 @@ mc ls play
 ```
 <a name="everyday-use"></a>
 ## Everyday Use
+
+### Shell aliases
 You may add shell aliases to override your common Unix tools.
 
 ```sh
@@ -155,6 +157,20 @@ alias cp='mc cp'
 alias cat='mc cat'
 alias mkdir='mc mb'
 alias pipe='mc pipe'
+```
+
+### Shell autocompletion
+You may also download [`autocomplete/bash_autocomplete`](https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_complete) into `/etc/bash_completion.d/` and rename it to `mc`. Don't forget to source the file to make it active on your current shell.
+
+```sh
+sudo wget https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_complete -O /etc/bash_completion.d/mc
+source /etc/bash_completion.d/mc
+```
+
+```sh
+mc <TAB>
+admin    config   diff     ls       mirror   policy   session  update   watch
+cat      cp       events   mb       pipe     rm       share    version
 ```
 
 ## Explore Further
