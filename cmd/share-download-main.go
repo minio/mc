@@ -116,7 +116,32 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 
 	// Generate share URL for each target.
 	isIncomplete := false
-	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
+
+	// Channel which will receive objects whose URLs need to be shared
+	objectsCh := make(chan *clientContent)
+
+	if !isRecursive {
+		// Share thr url of only one exact prefix if it exists
+		content, err := clnt.Stat(isIncomplete)
+		if err != nil {
+			return err.Trace(clnt.GetURL().String())
+		}
+		go func() {
+			defer close(objectsCh)
+			objectsCh <- content
+		}()
+	} else {
+		// Recursive mode: Share list of objects
+		go func() {
+			defer close(objectsCh)
+			for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
+				objectsCh <- content
+			}
+		}()
+	}
+
+	// Iterate over all objects to generate share URL
+	for content := range objectsCh {
 		if content.Err != nil {
 			return content.Err.Trace(clnt.GetURL().String())
 		}
