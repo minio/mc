@@ -32,7 +32,7 @@ var adminCmd = cli.Command{
 	Subcommands: []cli.Command{
 		adminServiceCmd,
 		adminInfoCmd,
-		adminPasswordCmd,
+		adminCredsCmd,
 		adminConfigCmd,
 		adminLockCmd,
 		adminHealCmd,
