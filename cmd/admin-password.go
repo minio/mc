@@ -29,7 +29,7 @@ const credsCmdName = "credentials"
 
 var adminCredsCmd = cli.Command{
 	Name:   credsCmdName,
-	Usage:  "Change server access and secret keys.",
+	Usage:  "Change server access and secret keys",
 	Action: mainAdminCreds,
 	Flags:  append(adminCredsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:

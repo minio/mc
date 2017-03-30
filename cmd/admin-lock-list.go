@@ -31,7 +31,7 @@ var (
 	adminLockListFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "duration, d",
-			Usage: "Only show locks that are hold for longer than NN[h|m|s].",
+			Usage: "Only show locks that are held for longer than NN[h|m|s]",
 			Value: "24h",
 		},
 	}
@@ -39,7 +39,7 @@ var (
 
 var adminLockListCmd = cli.Command{
 	Name:   "list",
-	Usage:  "Get the list of locks hold in a given Minio server",
+	Usage:  "List locks held in a given Minio server",
 	Action: mainAdminLockList,
 	Before: setGlobalsFromContext,
 	Flags:  append(adminLockListFlags, globalFlags...),
@@ -53,13 +53,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. List hold locks related to testbucket in a Minio server represented by its alias 'play'.
+    1. List locks held on 'testbucket' in a Minio server with alias 'play'.
        $ {{.HelpName}} play/testbucket/
 
-    2. List locks that are hold for more than 15 minutes.
+    2. List locks held on 'testbucket' for more than 15 minutes.
        $ {{.HelpName}} --duration 15m play/testbucket/
 
-    3. List locks hold by all objects under dir prefix
+    3. List locks held on all objects under prefix 'dir'.
        $ {{.HelpName}} play/testbucket/dir/
 
 `,

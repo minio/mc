@@ -130,7 +130,7 @@ func checkRmSyntax(ctx *cli.Context) {
 	// For all recursive operations make sure to check for 'force' flag.
 	if (isRecursive || isStdin) && !isForce {
 		fatalIf(errDummy().Trace(),
-			"Removal requires --force option. This operational is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
+			"Removal requires --force option. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
 	}
 }
 
