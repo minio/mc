@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -59,28 +60,37 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Heal 'testbucket' in a Minio server represented by its alias 'play'.
+    1. To format newly replaced disks in a Minio server with alias 'play'
+       $ {{.HelpName}} play
+
+    2. Heal 'testbucket' in a Minio server with alias 'play'
        $ {{.HelpName}} play/testbucket/
 
-    2. Heal all objects under 'dir' prefix
+    3. Heal all objects under 'dir' prefix
        $ {{.HelpName}} --recursive play/testbucket/dir/
 
-    3. Heal all uploads under 'dir' prefix
+    4. Heal all uploads under 'dir' prefix
        $ {{.HelpName}} --incomplete --recursive play/testbucket/dir/
 
-    4. Issue a fake heal operation to see what the server could report
-       $ {{.HelpName}} --fake play/testbucket/dir/
+    5. Issue a fake heal operation to list all objects to be healed
+       $ {{.HelpName}} --fake play
+
+    6. Issue a fake heal operation to list all uploads to be healed
+       $ {{.HelpName}} --fake --incomplete play
+
+    7. Issue a fake heal operation to list all objects to be healed under 'dir' prefix
+       $ {{.HelpName}} --recursive --fake play/testbucket/dir/
+
+    8. Issue a fake heal operation to list all uploads to be healed under 'dir' prefix
+       $ {{.HelpName}} --incomplete --recursive --fake play/testbucket/dir/
 
 `
 var adminHealCmd = cli.Command{
-	Name:   "heal",
-	Usage:  "Manage heal tasks",
-	Before: setGlobalsFromContext,
-	Action: mainAdminHeal,
-	Flags:  append(adminHealFlags, globalFlags...),
-	Subcommands: []cli.Command{
-		adminHealListCmd,
-	},
+	Name:            "heal",
+	Usage:           "Manage heal tasks",
+	Before:          setGlobalsFromContext,
+	Action:          mainAdminHeal,
+	Flags:           append(adminHealFlags, globalFlags...),
 	HideHelpCommand: true,
 }
 
@@ -105,6 +115,79 @@ func (u healMessage) String() string {
 
 // JSON jsonified service status Message message.
 func (u healMessage) JSON() string {
+	u.Status = "success"
+	statusJSONBytes, e := json.Marshal(u)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(statusJSONBytes)
+}
+
+// healListMessage container to hold heal information.
+type healListMessage struct {
+	Status string             `json:"status"`
+	Bucket string             `json:"bucket"`
+	Object *madmin.ObjectInfo `json:"object"`
+	Upload *madmin.UploadInfo `json:"upload"`
+}
+
+// String colorized service status message.
+func (u healListMessage) String() string {
+	msg := ""
+	var healStatus madmin.HealStatus
+
+	// Check if we have object heal information
+	if u.Object != nil {
+		msg += fmt.Sprintf("Object: %s/%s, ", u.Bucket, u.Object.Key)
+		healStatus = u.Object.HealObjectInfo.Status
+	} else {
+		msg += fmt.Sprintf("Upload: %s/%s, ", u.Bucket, u.Upload.Key)
+		healStatus = u.Upload.HealUploadInfo.Status
+	}
+
+	// Print heal status
+	switch healStatus {
+	case madmin.CanHeal:
+		msg += "can be healed."
+	case madmin.Corrupted:
+		msg += "cannot be healed."
+	case madmin.QuorumUnavailable:
+		msg += "quorum not available for healing."
+	}
+	return console.Colorize("Heal", msg)
+}
+
+// JSON jsonified service status Message message.
+func (u healListMessage) JSON() string {
+	u.Status = "success"
+	statusJSONBytes, e := json.Marshal(u)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(statusJSONBytes)
+}
+
+// healBucketListMessage container to hold heal information.
+type healBucketListMessage struct {
+	Status string            `json:"status"`
+	Bucket madmin.BucketInfo `json:"bucket"`
+}
+
+// String colorized service status message.
+func (u healBucketListMessage) String() string {
+	msg := fmt.Sprintf("Bucket: `%s`, ", u.Bucket.Name)
+	switch u.Bucket.HealBucketInfo.Status {
+	case madmin.CanHeal:
+		msg += "can be healed"
+	case madmin.Corrupted:
+		msg += "cannot be healed"
+	case madmin.QuorumUnavailable:
+		msg += "quorum not available for healing"
+	}
+	msg += ".\n"
+	return console.Colorize("Heal", msg)
+}
+
+// JSON jsonified service status Message message.
+func (u healBucketListMessage) JSON() string {
 	u.Status = "success"
 	statusJSONBytes, e := json.Marshal(u)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -140,7 +223,11 @@ func healObjects(client *madmin.AdminClient, bucket, object string, isRecursive,
 			}
 
 			// Print successful message
-			printMsg(healMessage{Bucket: bucket, Object: &obj})
+			if isFake {
+				printMsg(healListMessage{Bucket: bucket, Object: &obj})
+			} else {
+				printMsg(healMessage{Bucket: bucket, Object: &obj})
+			}
 		case madmin.QuorumUnavailable:
 			errorIf(errDummy().Trace(), obj.Key+" cannot be healed until quorum is available.")
 		case madmin.Corrupted:
@@ -176,7 +263,11 @@ func healUploads(client *madmin.AdminClient, bucket, object string, isRecursive,
 				continue
 			}
 			// Print successful message
-			printMsg(healMessage{Bucket: bucket, Upload: &upload})
+			if isFake {
+				printMsg(healListMessage{Bucket: bucket, Upload: &upload})
+			} else {
+				printMsg(healMessage{Bucket: bucket, Upload: &upload})
+			}
 		case madmin.QuorumUnavailable:
 			errorIf(errDummy().Trace(), upload.Key+" cannot be healed until quorum is available.")
 		case madmin.Corrupted:
@@ -191,6 +282,72 @@ func checkAdminHealSyntax(ctx *cli.Context) {
 		cli.HelpPrinter(ctx.App.Writer, adminHealHelpTemplate, ctx.App)
 		os.Exit(1)
 	}
+}
+
+// listAllToBeHealed - list objects/uploads to be healed in the object
+// store with alias `aliasedURL`
+// - isIncomplete - if true we list uploads to be healed otherwise
+// list objects to be healed
+func listAllToBeHealed(client *madmin.AdminClient, aliasedURL string, isIncomplete bool) *probe.Error {
+	s3Client, err := newClient(aliasedURL)
+	if err != nil {
+		return err
+	}
+
+	recursive := false
+	incomplete := false
+	listCh := s3Client.List(recursive, incomplete, DirFirst)
+
+	var buckets []string
+	for content := range listCh {
+		// Trim the leading slash and add to the list of buckets
+		buckets = append(buckets,
+			strings.TrimPrefix(content.URL.Path, string(content.URL.Separator)))
+	}
+
+	// isRecursive is always true since we have empty object names
+	// when `mc admin heal --fake [-r] s1/` is invoked.
+	isRecursive := true
+
+	// Iterate over all computed buckets
+	for _, currBucket := range buckets {
+		// Search for objects that need to be healed in the current bucket
+		doneCh := make(chan struct{})
+
+		if isIncomplete {
+			listCh, e := client.ListUploadsHeal(currBucket, "", isRecursive, doneCh)
+			fatalIf(probe.NewError(e), "Cannot list heal uploads.")
+			// Iterate over uploads and print them when not errors
+			for upload := range listCh {
+				if upload.Err != nil {
+					errorIf(probe.NewError(upload.Err), "Cannot heal upload `"+upload.Key+"`.")
+					continue
+				}
+				// Skip for non-recursive use case.
+				if upload.HealUploadInfo == nil {
+					continue
+				}
+				printMsg(healListMessage{Bucket: currBucket, Upload: &upload})
+			}
+
+		} else {
+			listCh, e := client.ListObjectsHeal(currBucket, "", isRecursive, doneCh)
+			fatalIf(probe.NewError(e), "Cannot list heal objects.")
+			// Iterate over objects and print them when not errors
+			for obj := range listCh {
+				if obj.Err != nil {
+					errorIf(probe.NewError(obj.Err), "Cannot heal object `"+obj.Key+"`.")
+					continue
+				}
+				// Skip for non-recursive use case.
+				if obj.HealObjectInfo == nil {
+					continue
+				}
+				printMsg(healListMessage{Bucket: currBucket, Object: &obj})
+			}
+		}
+	}
+	return nil
 }
 
 // mainAdminHeal - the entry function of heal command
@@ -225,6 +382,13 @@ func mainAdminHeal(ctx *cli.Context) error {
 
 	// Heal format if bucket is not specified and quit immediately
 	if bucket == "" {
+		// If --fake was given, print all objects/uploads that
+		// need to be healed.
+		if isFake {
+			lErr := listAllToBeHealed(client, aliasedURL, isIncomplete)
+			fatalIf(lErr, "Unable to list all objects to be healed")
+			return nil
+		}
 		e = client.HealFormat(isFake)
 		fatalIf(probe.NewError(e), "Cannot heal the disks.")
 		return nil
