@@ -24,7 +24,7 @@ var (
 
 var adminLockCmd = cli.Command{
 	Name:   "lock",
-	Usage:  "Control locks in servers.",
+	Usage:  "Control locks in servers",
 	Action: mainAdminLock,
 	Before: setGlobalsFromContext,
 	Flags:  append(adminLockFlags, globalFlags...),

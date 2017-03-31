@@ -33,15 +33,15 @@ var (
 	adminHealFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "Heal recursively.",
+			Usage: "Heal recursively",
 		},
 		cli.BoolFlag{
 			Name:  "fake, k",
-			Usage: "Issue a fake heal operation.",
+			Usage: "Issue a fake heal operation",
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
-			Usage: "Heal uploads recursively.",
+			Usage: "Heal uploads recursively",
 		},
 	}
 )
@@ -62,10 +62,10 @@ EXAMPLES:
     1. Heal 'testbucket' in a Minio server represented by its alias 'play'.
        $ {{.HelpName}} play/testbucket/
 
-    2. Heal all objects under 'dir' prefix 
+    2. Heal all objects under 'dir' prefix
        $ {{.HelpName}} --recursive play/testbucket/dir/
 
-    3. Heal all uploads under 'dir' prefix 
+    3. Heal all uploads under 'dir' prefix
        $ {{.HelpName}} --incomplete --recursive play/testbucket/dir/
 
     4. Issue a fake heal operation to see what the server could report
@@ -74,7 +74,7 @@ EXAMPLES:
 `
 var adminHealCmd = cli.Command{
 	Name:   "heal",
-	Usage:  "Manage heal tasks.",
+	Usage:  "Manage heal tasks",
 	Before: setGlobalsFromContext,
 	Action: mainAdminHeal,
 	Flags:  append(adminHealFlags, globalFlags...),

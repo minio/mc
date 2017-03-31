@@ -22,14 +22,16 @@ import (
 )
 
 var (
-	adminPasswordFlags = []cli.Flag{}
+	adminCredsFlags = []cli.Flag{}
 )
 
-var adminPasswordCmd = cli.Command{
-	Name:   "password",
-	Usage:  "Change server access and secret keys.",
-	Action: mainAdminPassword,
-	Flags:  append(adminPasswordFlags, globalFlags...),
+const credsCmdName = "credentials"
+
+var adminCredsCmd = cli.Command{
+	Name:   credsCmdName,
+	Usage:  "Change server access and secret keys",
+	Action: mainAdminCreds,
+	Flags:  append(adminCredsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -46,30 +48,31 @@ EXAMPLES:
 `,
 }
 
-// checkAdminPasswordSyntax - validate all the passed arguments
-func checkAdminPasswordSyntax(ctx *cli.Context) {
+// checkAdminCredsSyntax - validate all the passed arguments
+func checkAdminCredsSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(ctx, "password", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, credsCmdName, 1) // last argument is exit code
 	}
 }
 
-func mainAdminPassword(ctx *cli.Context) error {
+func mainAdminCreds(ctx *cli.Context) error {
 
 	setGlobalsFromContext(ctx)
 
-	checkAdminPasswordSyntax(ctx)
+	checkAdminCredsSyntax(ctx)
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
-	aliasedURL := args.Get(0)
-	accessKey := args.Get(1)
-	secretKey := args.Get(2)
+	// TODO: if accessKey and secretKey are not supplied we should
+	// display the existing credentials. This needs GetCredentials
+	// support from Minio server.
+	accessKey, secretKey, aliasedURL := args.Get(0), args.Get(1), args.Get(2)
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	// Change the password of the specified Minio server
+	// Change the credentials of the specified Minio server
 	e := client.SetCredentials(accessKey, secretKey)
 	fatalIf(probe.NewError(e), "Unable to set new credentials to '"+aliasedURL+"'")
 

@@ -31,15 +31,19 @@ var (
 	adminLockClearFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "duration, d",
-			Usage: "Only show locks that are hold for longer than NN[h|m|s].",
+			Usage: "Only clear locks held for longer than NN[h|m|s]",
 			Value: "0s",
+		},
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "Force a clear lock operation",
 		},
 	}
 )
 
 var adminLockClearCmd = cli.Command{
 	Name:   "clear",
-	Usage:  "Clear locks hold in a given Minio server",
+	Usage:  "Clear locks held in a given Minio server",
 	Before: setGlobalsFromContext,
 	Action: mainAdminLockClear,
 	Flags:  append(adminLockClearFlags, globalFlags...),
@@ -53,14 +57,14 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Clear all locks hold by 'testbucket' in a Minio server represented by its alias 'play'.
-       $ {{.HelpName}} play/testbucket
+    1. Clear all locks held on 'testbucket' in a Minio server with alias 'play'.
+       $ {{.HelpName}} --force play/testbucket
 
-    2. Clear all 'testbucket' locks that are older than 15 minutes.
-       $ {{.HelpName}} --duration 15m play/testbucket/
+    2. Clear all 'testbucket' locks older than 15 minutes.
+       $ {{.HelpName}} --force --duration 15m play/testbucket/
 
-    3. Clear all locks hold by all objects under 'dir' prefix
-       $ {{.HelpName}} play/testbucket/dir/
+    3. Clear all locks held on all objects under prefix 'dir'.
+       $ {{.HelpName}} --force play/testbucket/dir/
 
 `,
 }
@@ -98,8 +102,17 @@ func (u lockClearMessage) JSON() string {
 // checkAdminLockClearSyntax - validate all the passed arguments
 func checkAdminLockClearSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "clear", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "clear", 1)
 	}
+
+	if isForce := ctx.Bool("force"); isForce {
+		return
+	}
+
+	fatalIf(errDummy().Trace(),
+		"Clearing locks requires --force option. This operation is "+
+			"*IRREVERSIBLE*. Please review carefully before"+
+			" performing this *DANGEROUS* operation.")
 }
 
 func mainAdminLockClear(ctx *cli.Context) error {

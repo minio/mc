@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var adminServiceCmd = cli.Command{
 	Name:            "service",
-	Usage:           "Control servers.",
+	Usage:           "Control servers",
 	Action:          mainAdminService,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,

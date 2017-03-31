@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var adminConfigCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Manage configuration file.",
+	Usage:  "Manage configuration file",
 	Action: mainAdminConfig,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
