@@ -18,8 +18,8 @@ package cmd
 
 import (
 	"bytes"
+	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"regexp"
 	"strings"
 
@@ -54,11 +54,17 @@ func (t traceV4) Request(req *http.Request) (err error) {
 		// Set a temporary redacted auth
 		req.Header.Set("Authorization", newAuth)
 
-		var reqTrace []byte
-		reqTrace, err = httputil.DumpRequestOut(req, false) // Only display header
-		if err == nil {
-			console.Debug(string(reqTrace))
+		// Store requests headers in buf
+		var buf bytes.Buffer
+		if err = req.Header.Write(&buf); err != nil {
+			return err
 		}
+
+		// Build debug and add headers
+		reqTrace := append(buf.Bytes(), []byte("\r\n")...)
+
+		// Print debug text
+		console.Debug(string(reqTrace))
 
 		// Undo
 		req.Header.Set("Authorization", origAuth)
@@ -68,35 +74,34 @@ func (t traceV4) Request(req *http.Request) (err error) {
 
 // Response - Trace HTTP Response
 func (t traceV4) Response(resp *http.Response) (err error) {
-	var respTrace []byte
+
+	// Store headers in buf
+	var buf bytes.Buffer
+	if err = resp.Header.Write(&buf); err != nil {
+		return err
+	}
+
+	// Build debug text and add headers
+	respTrace := append(buf.Bytes(), []byte("\r\n")...)
+
 	// For errors we make sure to dump response body as well.
 	if resp.StatusCode != http.StatusOK &&
 		resp.StatusCode != http.StatusPartialContent &&
 		resp.StatusCode != http.StatusNoContent {
-		respTrace, err = httputil.DumpResponse(resp, true)
-	} else {
-		// WORKAROUND for https://github.com/golang/go/issues/13942.
-		// httputil.DumpResponse does not print response headers for
-		// all successful calls which have response ContentLength set
-		// to zero. Keep this workaround until the above bug is fixed.
-		if resp.ContentLength == 0 {
-			var buffer bytes.Buffer
-			if err = resp.Header.Write(&buffer); err != nil {
-				return err
-			}
-			respTrace = buffer.Bytes()
-			respTrace = append(respTrace, []byte("\r\n")...)
-		} else {
-			respTrace, err = httputil.DumpResponse(resp, false)
-			if err != nil {
-				return err
-			}
+		// Load response body
+		respBody, rErr := ioutil.ReadAll(resp.Body)
+		if rErr != nil {
+			return rErr
 		}
-	}
-	if err == nil {
-		console.Debug(string(respTrace))
+		// Add response body to debug text
+		respTrace = append(respTrace, respBody...)
+		respTrace = append(respTrace, []byte("\r\n")...)
 	}
 
+	// Print debug text
+	console.Debug(string(respTrace))
+
+	// Print TLS certificates when applicable
 	if globalInsecure && resp.TLS != nil {
 		dumpTLSCertificates(resp.TLS)
 	}
