@@ -43,7 +43,7 @@ COMMAND:
    download: list previously shared access to downloads.
 
 USAGE:
-   {{.HelpName}}
+   {{.HelpName}} COMMAND
 
 EXAMPLES:
    1. List previously shared downloads, that haven't expired yet.
