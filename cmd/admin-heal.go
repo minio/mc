@@ -97,6 +97,7 @@ var adminHealCmd = cli.Command{
 // healMessage container to hold repair information.
 type healMessage struct {
 	Status string             `json:"status"`
+	Result madmin.HealResult  `json:"result"`
 	Bucket string             `json:"bucket"`
 	Object *madmin.ObjectInfo `json:"object"`
 	Upload *madmin.UploadInfo `json:"upload"`
@@ -104,12 +105,27 @@ type healMessage struct {
 
 // String colorized service status message.
 func (u healMessage) String() string {
+	allOfflineTmpl := "isn't healed since %d disks were offline"
+	allHealedTmpl := "is healed on all %d disks"
+	someHealedTmpl := "is healed on %d disks while %d disks were offline"
+
 	msg := ""
 	if u.Object != nil {
-		msg += fmt.Sprintf("Object %s/%s is healed.", u.Bucket, u.Object.Key)
+		msg = fmt.Sprintf("Object %s/%s ", u.Bucket, u.Object.Key)
 	} else {
-		msg += fmt.Sprintf("Upload %s/%s/%s is healed.", u.Bucket, u.Upload.Key, u.Upload.UploadID)
+		msg = fmt.Sprintf("Upload %s/%s/%s ", u.Bucket, u.Upload.Key, u.Upload.UploadID)
 	}
+
+	healed, offline := u.Result.HealedCount, u.Result.OfflineCount
+	switch {
+	case healed == 0:
+		msg += fmt.Sprintf(allOfflineTmpl, offline)
+	case offline == 0:
+		msg += fmt.Sprintf(allHealedTmpl, healed)
+	case healed > 0 && offline > 0:
+		msg += fmt.Sprintf(someHealedTmpl, healed, offline)
+	}
+
 	return console.Colorize("Heal", msg)
 }
 
@@ -148,6 +164,8 @@ func (u healListMessage) String() string {
 	switch healStatus {
 	case madmin.CanHeal:
 		msg += "can be healed."
+	case madmin.CanPartiallyHeal:
+		msg += "can be partially healed."
 	case madmin.Corrupted:
 		msg += "cannot be healed."
 	case madmin.QuorumUnavailable:
@@ -215,9 +233,10 @@ func healObjects(client *madmin.AdminClient, bucket, object string, isRecursive,
 
 		// Check the heal status, and call heal object API only when an object can be healed
 		switch healInfo := *obj.HealObjectInfo; healInfo.Status {
-		case madmin.CanHeal:
+		case madmin.CanHeal, madmin.CanPartiallyHeal:
 			// Heal Object
-			if e = client.HealObject(bucket, obj.Key, isFake); e != nil {
+			var healResult madmin.HealResult
+			if healResult, e = client.HealObject(bucket, obj.Key, isFake); e != nil {
 				errorIf(probe.NewError(e), "Cannot repair object: `"+obj.Key+"`")
 				continue
 			}
@@ -226,7 +245,7 @@ func healObjects(client *madmin.AdminClient, bucket, object string, isRecursive,
 			if isFake {
 				printMsg(healListMessage{Bucket: bucket, Object: &obj})
 			} else {
-				printMsg(healMessage{Bucket: bucket, Object: &obj})
+				printMsg(healMessage{Bucket: bucket, Object: &obj, Result: healResult})
 			}
 		case madmin.QuorumUnavailable:
 			errorIf(errDummy().Trace(), obj.Key+" cannot be healed until quorum is available.")
@@ -256,9 +275,10 @@ func healUploads(client *madmin.AdminClient, bucket, object string, isRecursive,
 
 		// Check the heal status, and call heal upload API only when an upload can be healed
 		switch healInfo := *upload.HealUploadInfo; healInfo.Status {
-		case madmin.CanHeal:
+		case madmin.CanHeal, madmin.CanPartiallyHeal:
 			// Heal Upload
-			if e = client.HealUpload(bucket, upload.Key, upload.UploadID, isFake); e != nil {
+			var healResult madmin.HealResult
+			if healResult, e = client.HealUpload(bucket, upload.Key, upload.UploadID, isFake); e != nil {
 				errorIf(probe.NewError(e), "Cannot repair upload: `"+upload.Key+"`")
 				continue
 			}
@@ -266,7 +286,7 @@ func healUploads(client *madmin.AdminClient, bucket, object string, isRecursive,
 			if isFake {
 				printMsg(healListMessage{Bucket: bucket, Upload: &upload})
 			} else {
-				printMsg(healMessage{Bucket: bucket, Upload: &upload})
+				printMsg(healMessage{Bucket: bucket, Upload: &upload, Result: healResult})
 			}
 		case madmin.QuorumUnavailable:
 			errorIf(errDummy().Trace(), upload.Key+" cannot be healed until quorum is available.")
