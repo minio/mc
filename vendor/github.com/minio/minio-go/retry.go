@@ -78,6 +78,9 @@ func (c Client) newRetryTimer(maxRetry int, unit time.Duration, cap time.Duratio
 
 // isNetErrorRetryable - is network error retryable.
 func isNetErrorRetryable(err error) bool {
+	if err == nil {
+		return false
+	}
 	switch err.(type) {
 	case net.Error:
 		switch err.(type) {
@@ -95,6 +98,9 @@ func isNetErrorRetryable(err error) bool {
 				return true
 			} else if strings.Contains(err.Error(), "i/o timeout") {
 				// If error is - tcp timeoutError, retry.
+				return true
+			} else if strings.Contains(err.Error(), "connection timed out") {
+				// If err is a net.Dial timeout, retry.
 				return true
 			}
 		}

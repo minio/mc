@@ -228,7 +228,7 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 				}
 
 				// Create the part to be uploaded.
-				verifyObjPart := objectPart{
+				verifyObjPart := ObjectPart{
 					ETag:       hex.EncodeToString(hashSums["md5"]),
 					PartNumber: uploadReq.PartNum,
 					Size:       partSize,
@@ -242,7 +242,7 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 				// Verify if part should be uploaded.
 				if shouldUploadPart(verifyObjPart, uploadReq) {
 					// Proceed to upload the part.
-					var objPart objectPart
+					var objPart ObjectPart
 					objPart, err = c.uploadPart(bucketName, objectName, uploadID, sectionReader, uploadReq.PartNum, hashSums["md5"], hashSums["sha256"], prtSize)
 					if err != nil {
 						uploadedPartsCh <- uploadedPartRes{
@@ -285,7 +285,7 @@ func (c Client) putObjectMultipartFromFile(bucketName, objectName string, fileRe
 			}
 		}
 		// Store the part to be completed.
-		complMultipartUpload.Parts = append(complMultipartUpload.Parts, completePart{
+		complMultipartUpload.Parts = append(complMultipartUpload.Parts, CompletePart{
 			ETag:       part.ETag,
 			PartNumber: part.PartNumber,
 		})

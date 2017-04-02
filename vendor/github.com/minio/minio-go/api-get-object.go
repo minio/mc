@@ -26,6 +26,29 @@ import (
 	"time"
 )
 
+// GetEncryptedObject deciphers and streams data stored in the server after applying a specifed encryption materiels
+func (c Client) GetEncryptedObject(bucketName, objectName string, encryptMaterials EncryptionMaterials) (io.Reader, error) {
+
+	if encryptMaterials == nil {
+		return nil, ErrInvalidArgument("Unable to recognize empty encryption properties")
+	}
+
+	// Fetch encrypted object
+	encReader, err := c.GetObject(bucketName, objectName)
+	if err != nil {
+		return nil, err
+	}
+	// Stat object to get its encryption metadata
+	st, err := encReader.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	encryptMaterials.SetupDecryptMode(encReader, st.Metadata)
+
+	return encryptMaterials, nil
+}
+
 // GetObject - returns an seekable, readable object.
 func (c Client) GetObject(bucketName, objectName string) (*Object, error) {
 	// Input validation.
