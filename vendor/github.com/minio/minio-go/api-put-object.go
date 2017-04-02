@@ -125,7 +125,7 @@ func getReaderSize(reader io.Reader) (size int64, err error) {
 
 // completedParts is a collection of parts sortable by their part numbers.
 // used for sorting the uploaded parts before completing the multipart request.
-type completedParts []completePart
+type completedParts []CompletePart
 
 func (a completedParts) Len() int           { return len(a) }
 func (a completedParts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
