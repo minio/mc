@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016 Minio, Inc.
+ * Minio Client (C) 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,41 +19,21 @@ package cmd
 import "github.com/minio/cli"
 
 var adminServiceCmd = cli.Command{
-	Name:   "service",
-	Usage:  "Control servers.",
-	Action: mainAdminService,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Name:            "service",
+	Usage:           "Control servers",
+	Action:          mainAdminService,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
 	Subcommands: []cli.Command{
 		adminServiceRestartCmd,
-		adminServiceCredsCmd,
 		adminServiceStatusCmd,
 	},
-	CustomHelpTemplate: `NAME:
-   {{.Name}} - {{.Usage}}
-
-USAGE:
-   {{.Name}} [FLAGS] COMMAND
-
-FLAGS:
-  {{range .Flags}}{{.}}
-  {{end}}
-COMMANDS:
-   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}
-`,
 }
 
 // mainAdmin is the handle for "mc admin service" command.
 func mainAdminService(ctx *cli.Context) error {
-
-	if ctx.Args().First() != "" { // command help.
-		cli.ShowCommandHelp(ctx, ctx.Args().First())
-	} else {
-		// command with Subcommands is an App.
-		cli.ShowAppHelp(ctx)
-	}
-
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "status", "stop", "restart" have their own main.
+	// Sub-commands like "status", "restart" have their own main.
 }

@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minio Client (C) 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,38 +21,44 @@ import (
 	"math"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
-	"github.com/minio/minio/pkg/probe"
 )
 
-// colorizeUpdateMessage - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier.
-func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
-	// initialize coloring
+// colorizeUpdateMessage - inspired from Yeoman project npm package https://github.com/yeoman/update-notifier
+func colorizeUpdateMessage(updateString string, newerThan time.Duration) string {
+	// Initialize coloring.
 	cyan := color.New(color.FgCyan, color.Bold).SprintFunc()
 	yellow := color.New(color.FgYellow, color.Bold).SprintfFunc()
 
-	// calculate length without color coding, due to ANSI color characters padded to actual
-	// string the final length is wrong than the original string length.
-	line1Str := fmt.Sprintf("  New update available, please execute the following command to update: ")
-	line2Str := fmt.Sprintf("  %s ", updateString)
+	// Calculate length without color coding, due to ANSI color
+	// characters padded to actual string the final length is wrong
+	// than the original string length.
+	hTime := timeDurationToHumanizedDuration(newerThan)
+	line1Str := fmt.Sprintf(" mc is %s old ", hTime.StringShort())
+	line2Str := fmt.Sprintf(" Update: %s ", updateString)
 	line1Length := len(line1Str)
 	line2Length := len(line2Str)
 
-	// populate lines with color coding.
-	line1InColor := line1Str
-	line2InColor := fmt.Sprintf("  %s ", cyan(updateString))
+	// Populate lines with color coding.
+	line1InColor := fmt.Sprintf(" mc is %s old ", yellow(hTime.StringShort()))
+	line2InColor := fmt.Sprintf(" Update: %s ", cyan(updateString))
 
 	// calculate the rectangular box size.
 	maxContentWidth := int(math.Max(float64(line1Length), float64(line2Length)))
 	line1Rest := maxContentWidth - line1Length
 	line2Rest := maxContentWidth - line2Length
 
-	termWidth, e := pb.GetTerminalWidth()
-	if e != nil {
-		return "", probe.NewError(e)
+	// termWidth is set to a default one to use when we are
+	// not able to calculate terminal width via OS syscalls
+	termWidth := 25
+
+	if width, err := pb.GetTerminalWidth(); err == nil {
+		termWidth = width
 	}
+
 	var message string
 	switch {
 	case len(line2Str) > termWidth:
@@ -80,6 +86,6 @@ func colorizeUpdateMessage(updateString string) (string, *probe.Error) {
 			sideBar + line2InColor + spacePaddingLine2 + sideBar + "\n" +
 			bottom + "\n"
 	}
-	// return the final message
-	return message, nil
+	// Return the final message.
+	return message
 }

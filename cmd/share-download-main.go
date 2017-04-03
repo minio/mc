@@ -41,26 +41,27 @@ var shareDownload = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(shareDownloadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc share {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc share {{.Name}} [OPTIONS] TARGET [TARGET...]
+   {{.HelpName}} [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Share this object with 7 days default expiry.
-      $ mc share {{.Name}} s3/backup/2006-Mar-1/backup.tar.gz
+      $ {{.HelpName}} s3/backup/2006-Mar-1/backup.tar.gz
 
    2. Share this object with 10 minutes expiry.
-      $ mc share {{.Name}} --expire=10m s3/backup/2006-Mar-1/backup.tar.gz
+      $ {{.HelpName}} --expire=10m s3/backup/2006-Mar-1/backup.tar.gz
 
    3. Share all objects under this folder with 5 days expiry.
-      $ mc share {{.Name}} --expire=120h s3/backup/
+      $ {{.HelpName}} --expire=120h s3/backup/
 
    4. Share all objects under this folder and all its sub-folders with 5 days expiry.
-      $ mc share {{.Name}} --recursive --expire=120h s3/backup/
+      $ {{.HelpName}} --recursive --expire=120h s3/backup/
+
 `,
 }
 
@@ -77,7 +78,7 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+expireArg+"`.")
 	}
 
 	// Validate expiry.
@@ -90,7 +91,7 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 
 	for _, url := range ctx.Args() {
 		_, _, err := url2Stat(url)
-		fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
+		fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 	}
 }
 
@@ -115,7 +116,32 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 
 	// Generate share URL for each target.
 	isIncomplete := false
-	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
+
+	// Channel which will receive objects whose URLs need to be shared
+	objectsCh := make(chan *clientContent)
+
+	if !isRecursive {
+		// Share thr url of only one exact prefix if it exists
+		content, err := clnt.Stat(isIncomplete)
+		if err != nil {
+			return err.Trace(clnt.GetURL().String())
+		}
+		go func() {
+			defer close(objectsCh)
+			objectsCh <- content
+		}()
+	} else {
+		// Recursive mode: Share list of objects
+		go func() {
+			defer close(objectsCh)
+			for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
+				objectsCh <- content
+			}
+		}()
+	}
+
+	// Iterate over all objects to generate share URL
+	for content := range objectsCh {
 		if content.Err != nil {
 			return content.Err.Trace(clnt.GetURL().String())
 		}
@@ -169,7 +195,7 @@ func mainShareDownload(ctx *cli.Context) error {
 	if ctx.String("expire") != "" {
 		var e error
 		expiry, e = time.ParseDuration(ctx.String("expire"))
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+ctx.String("expire")+"’.")
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+ctx.String("expire")+"`.")
 	}
 
 	for _, targetURL := range ctx.Args() {
@@ -177,9 +203,9 @@ func mainShareDownload(ctx *cli.Context) error {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to share a non S3 url ‘"+targetURL+"’.")
+				fatalIf(err.Trace(), "Unable to share a non S3 url `"+targetURL+"`.")
 			default:
-				fatalIf(err.Trace(targetURL), "Unable to share target ‘"+targetURL+"’.")
+				fatalIf(err.Trace(targetURL), "Unable to share target `"+targetURL+"`.")
 			}
 		}
 	}

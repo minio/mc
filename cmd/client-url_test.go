@@ -45,7 +45,7 @@ func (s *TestSuite) TestURLJoinPath(c *C) {
 	url = urlJoinPath(url1, url2)
 	c.Assert(url, Equals, "http://s3.mycompany.io/dev/mybucket/bin/zgrep")
 
-	// Check if it strips URL2's tailing ‘/’
+	// Check if it strips URL2's tailing `/`
 	url1 = "http://s3.mycompany.io/dev"
 	url2 = "mybucket/bin/"
 	url = urlJoinPath(url1, url2)

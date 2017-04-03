@@ -74,6 +74,9 @@ type Client struct {
 	// S3 specific accelerated endpoint.
 	s3AccelerateEndpoint string
 
+	// Region endpoint
+	region string
+
 	// Random seed.
 	random *rand.Rand
 }
@@ -81,7 +84,7 @@ type Client struct {
 // Global constants.
 const (
 	libraryName    = "minio-go"
-	libraryVersion = "2.0.3"
+	libraryVersion = "2.0.4"
 )
 
 // User Agent should always following the below style.
@@ -100,6 +103,7 @@ func NewV2(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*
 	if err != nil {
 		return nil, err
 	}
+
 	// Set to use signature version '2'.
 	clnt.signature = SignatureV2
 	return clnt, nil
@@ -112,26 +116,40 @@ func NewV4(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*
 	if err != nil {
 		return nil, err
 	}
+
 	// Set to use signature version '4'.
 	clnt.signature = SignatureV4
 	return clnt, nil
 }
 
-// New - instantiate minio client Client, adds automatic verification
-// of signature.
-func New(endpoint string, accessKeyID, secretAccessKey string, secure bool) (*Client, error) {
+// New - instantiate minio client Client, adds automatic verification of signature.
+func New(endpoint, accessKeyID, secretAccessKey string, secure bool) (*Client, error) {
+	return NewWithRegion(endpoint, accessKeyID, secretAccessKey, secure, "")
+}
+
+// NewWithRegion - instantiate minio client, with region configured. Unlike New(),
+// NewWithRegion avoids bucket-location lookup operations and it is slightly faster.
+// Use this function when if your application deals with single region.
+func NewWithRegion(endpoint, accessKeyID, secretAccessKey string, secure bool, region string) (*Client, error) {
 	clnt, err := privateNew(endpoint, accessKeyID, secretAccessKey, secure)
 	if err != nil {
 		return nil, err
 	}
+
 	// Google cloud storage should be set to signature V2, force it if not.
 	if s3utils.IsGoogleEndpoint(clnt.endpointURL) {
 		clnt.signature = SignatureV2
 	}
+
 	// If Amazon S3 set to signature v2.n
 	if s3utils.IsAmazonEndpoint(clnt.endpointURL) {
 		clnt.signature = SignatureV4
 	}
+
+	// Sets custom region, if region is empty bucket location cache is used automatically.
+	clnt.region = region
+
+	// Success..
 	return clnt, nil
 }
 
@@ -141,8 +159,7 @@ type lockedRandSource struct {
 	src rand.Source
 }
 
-// Int63 returns a non-negative pseudo-random 63-bit integer as an
-// int64.
+// Int63 returns a non-negative pseudo-random 63-bit integer as an int64.
 func (r *lockedRandSource) Int63() (n int64) {
 	r.lk.Lock()
 	n = r.src.Int63()
@@ -588,7 +605,7 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 	}
 
 	// Initialize a new HTTP request for the method.
-	req, err = http.NewRequest(method, targetURL.String(), nil)
+	req, err = http.NewRequest(method, targetURL.String(), metadata.contentBody)
 	if err != nil {
 		return nil, err
 	}
@@ -606,11 +623,6 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 			req = s3signer.PreSignV4(*req, c.accessKeyID, c.secretAccessKey, location, metadata.expires)
 		}
 		return req, nil
-	}
-
-	// Set content body if available.
-	if metadata.contentBody != nil {
-		req.Body = ioutil.NopCloser(metadata.contentBody)
 	}
 
 	// FIXME: Enable this when Google Cloud Storage properly supports 100-continue.

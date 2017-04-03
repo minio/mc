@@ -46,32 +46,33 @@ var lsCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(lsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] TARGET [TARGET ...]
+  {{.HelpName}} [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. List buckets on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3
+      $ {{.HelpName}} s3
 
    2. List buckets and all its contents from Amazon S3 cloud storage recursively.
-      $ mc {{.Name}} --recursive s3
+      $ {{.HelpName}} --recursive s3
 
    3. List all contents of mybucket on Amazon S3 cloud storage.
-      $ mc {{.Name}} s3/mybucket/
+      $ {{.HelpName}} s3/mybucket/
 
    4. List all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
-      $ mc {{.Name}} s3\mybucket\
+      $ {{.HelpName}} s3\mybucket\
 
    5. List files recursively on a local filesystem on Microsoft Windows.
-      $ mc {{.Name}} --recursive C:\Users\Worf\
+      $ {{.HelpName}} --recursive C:\Users\Worf\
 
    6. List incomplete (previously failed) uploads of objects on Amazon S3. 
-      $ mc {{.Name}} --incomplete s3/mybucket
+      $ {{.HelpName}} --incomplete s3/mybucket
+
 `,
 }
 
@@ -98,7 +99,7 @@ func checkListSyntax(ctx *cli.Context) {
 			if _, ok := err.ToGoError().(BucketNameEmpty); ok {
 				continue
 			}
-			fatalIf(err.Trace(url), "Unable to stat ‘"+url+"’.")
+			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
 	}
 }
@@ -128,7 +129,7 @@ func mainList(ctx *cli.Context) error {
 	for _, targetURL := range args {
 		var clnt Client
 		clnt, err := newClient(targetURL)
-		fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
+		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
 		var st *clientContent
 		if st, err = clnt.Stat(isIncomplete); err != nil {
@@ -137,14 +138,14 @@ func mainList(ctx *cli.Context) error {
 			// For aliases like ``mc ls s3`` it's acceptable to receive BucketNameEmpty error.
 			// Nothing to do.
 			default:
-				fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
+				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 			}
 		} else if st.Type.IsDir() {
 			if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
 				targetURL = targetURL + string(clnt.GetURL().Separator)
 			}
 			clnt, err = newClient(targetURL)
-			fatalIf(err.Trace(targetURL), "Unable to initialize target ‘"+targetURL+"’.")
+			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 		}
 		if e := doList(clnt, isRecursive, isIncomplete); e != nil {
 			cErr = e

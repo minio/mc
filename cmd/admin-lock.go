@@ -24,7 +24,7 @@ var (
 
 var adminLockCmd = cli.Command{
 	Name:   "lock",
-	Usage:  "Control locks in servers.",
+	Usage:  "Control locks in servers",
 	Action: mainAdminLock,
 	Before: setGlobalsFromContext,
 	Flags:  append(adminLockFlags, globalFlags...),
@@ -32,31 +32,12 @@ var adminLockCmd = cli.Command{
 		adminLockListCmd,
 		adminLockClearCmd,
 	},
-	CustomHelpTemplate: `NAME:
-   {{.Name}} - {{.Usage}}
-
-USAGE:
-   {{.Name}} [FLAGS] COMMAND
-
-FLAGS:
-  {{range .Flags}}{{.}}
-  {{end}}
-COMMANDS:
-   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}
-`,
+	HideHelpCommand: true,
 }
 
 // mainAdminLock is the handle for "mc admin lock" command.
 func mainAdminLock(ctx *cli.Context) error {
-
-	if ctx.Args().First() != "" { // command help.
-		cli.ShowCommandHelp(ctx, ctx.Args().First())
-	} else {
-		// command with Subcommands is an App.
-		cli.ShowAppHelp(ctx)
-	}
-
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 	// Sub-commands like "list", "unlock" have their own main.
 }

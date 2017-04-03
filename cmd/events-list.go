@@ -37,19 +37,21 @@ var eventsListCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(eventsListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc events {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc events {{.Name}} ALIAS/BUCKET ARN [FLAGS]
+  {{.HelpName}} ALIAS/BUCKET ARN [FLAGS]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. List notification configurations associated to a specific arn
-     $ mc events {{.Name}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
+     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
+
    2. List all notification configurations
-     $ mc events {{.Name}} s3/mybucket
+     $ {{.HelpName}} s3/mybucket
+
 `,
 }
 

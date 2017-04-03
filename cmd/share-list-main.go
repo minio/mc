@@ -36,20 +36,21 @@ var shareList = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(shareListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc share {{.Name}} COMMAND - {{.Usage}}
+   {{.HelpName}} COMMAND - {{.Usage}}
 
 COMMAND:
    upload:   list previously shared access to uploads.
    download: list previously shared access to downloads.
 
 USAGE:
-   mc share {{.Name}}
+   {{.HelpName}} COMMAND
 
 EXAMPLES:
    1. List previously shared downloads, that haven't expired yet.
-       $ mc share {{.Name}} download
+       $ {{.HelpName}} download
    2. List previously shared uploads, that haven't expired yet.
-       $ mc share {{.Name}} upload
+       $ {{.HelpName}} upload
+
 `,
 }
 
@@ -64,7 +65,7 @@ func checkShareListSyntax(ctx *cli.Context) {
 // doShareList list shared url's.
 func doShareList(cmd string) *probe.Error {
 	if cmd != "upload" && cmd != "download" {
-		return probe.NewError(fmt.Errorf("Unknown argument ‘%s’ passed", cmd))
+		return probe.NewError(fmt.Errorf("Unknown argument `%s` passed", cmd))
 	}
 
 	// Fetch defaults.

@@ -27,7 +27,7 @@ type APINotImplemented struct {
 }
 
 func (e APINotImplemented) Error() string {
-	return "‘" + e.API + "’ is not supported for ‘" + e.APIType + "’."
+	return "`" + e.API + "` is not supported for `" + e.APIType + "`."
 }
 
 // GenericBucketError - generic bucket operations error
@@ -39,14 +39,14 @@ type GenericBucketError struct {
 type BucketDoesNotExist GenericBucketError
 
 func (e BucketDoesNotExist) Error() string {
-	return "Bucket ‘" + e.Bucket + "’ does not exist."
+	return "Bucket `" + e.Bucket + "` does not exist."
 }
 
 // BucketExists - bucket exists.
 type BucketExists GenericBucketError
 
 func (e BucketExists) Error() string {
-	return "Bucket ‘" + e.Bucket + "’ exists."
+	return "Bucket `" + e.Bucket + "` exists."
 }
 
 // BucketNameEmpty - bucket name empty (http://goo.gl/wJlzDz)
@@ -71,7 +71,7 @@ type ObjectAlreadyExists struct {
 }
 
 func (e ObjectAlreadyExists) Error() string {
-	return "Object ‘" + e.Object + "’ already exists."
+	return "Object `" + e.Object + "` already exists."
 }
 
 // ObjectAlreadyExistsAsDirectory - typed return for XMinioObjectExistsAsDirectory
@@ -80,7 +80,7 @@ type ObjectAlreadyExistsAsDirectory struct {
 }
 
 func (e ObjectAlreadyExistsAsDirectory) Error() string {
-	return "Object ‘" + e.Object + "’ already exists as directory."
+	return "Object `" + e.Object + "` already exists as directory."
 }
 
 // ObjectOnGlacier - object is of storage class glacier.
@@ -89,7 +89,7 @@ type ObjectOnGlacier struct {
 }
 
 func (e ObjectOnGlacier) Error() string {
-	return "Object ‘" + e.Object + "’ is on Glacier storage."
+	return "Object `" + e.Object + "` is on Glacier storage."
 }
 
 // BucketNameTopLevel - generic error
@@ -108,35 +108,35 @@ type GenericFileError struct {
 type PathNotFound GenericFileError
 
 func (e PathNotFound) Error() string {
-	return "Requested file ‘" + e.Path + "’ not found"
+	return "Requested file `" + e.Path + "` not found"
 }
 
 // PathIsNotRegular (ENOTREG) - file is not a regular file.
 type PathIsNotRegular GenericFileError
 
 func (e PathIsNotRegular) Error() string {
-	return "Requested file ‘" + e.Path + "’ is not a regular file."
+	return "Requested file `" + e.Path + "` is not a regular file."
 }
 
 // PathInsufficientPermission (EPERM) - permission denied.
 type PathInsufficientPermission GenericFileError
 
 func (e PathInsufficientPermission) Error() string {
-	return "Insufficient permissions to access this file ‘" + e.Path + "’"
+	return "Insufficient permissions to access this file `" + e.Path + "`"
 }
 
 // BrokenSymlink (ENOTENT) - file has broken symlink.
 type BrokenSymlink GenericFileError
 
 func (e BrokenSymlink) Error() string {
-	return "Requested file ‘" + e.Path + "’ has broken symlink"
+	return "Requested file `" + e.Path + "` has broken symlink"
 }
 
 // TooManyLevelsSymlink (ELOOP) - file has too many levels of symlinks.
 type TooManyLevelsSymlink GenericFileError
 
 func (e TooManyLevelsSymlink) Error() string {
-	return "Requested file ‘" + e.Path + "’ has too many levels of symlinks"
+	return "Requested file `" + e.Path + "` has too many levels of symlinks"
 }
 
 // EmptyPath (EINVAL) - invalid argument.
@@ -160,7 +160,7 @@ type UnexpectedShortWrite struct {
 }
 
 func (e UnexpectedShortWrite) Error() string {
-	msg := fmt.Sprintf("Wrote less data than requested. Expected ‘%d’ bytes, but only wrote ‘%d’ bytes.", e.InputSize, e.WriteSize)
+	msg := fmt.Sprintf("Wrote less data than requested. Expected `%d` bytes, but only wrote `%d` bytes.", e.InputSize, e.WriteSize)
 	return msg
 }
 
@@ -171,7 +171,7 @@ type UnexpectedEOF struct {
 }
 
 func (e UnexpectedEOF) Error() string {
-	msg := fmt.Sprintf("Input reader closed pre-maturely. Expected ‘%d’ bytes, but only received ‘%d’ bytes.", e.TotalSize, e.TotalWritten)
+	msg := fmt.Sprintf("Input reader closed pre-maturely. Expected `%d` bytes, but only received `%d` bytes.", e.TotalSize, e.TotalWritten)
 	return msg
 }
 
@@ -179,6 +179,6 @@ func (e UnexpectedEOF) Error() string {
 type UnexpectedExcessRead UnexpectedEOF
 
 func (e UnexpectedExcessRead) Error() string {
-	msg := fmt.Sprintf("Received excess data on input reader. Expected only ‘%d’ bytes, but received ‘%d’ bytes.", e.TotalSize, e.TotalWritten)
+	msg := fmt.Sprintf("Received excess data on input reader. Expected only `%d` bytes, but received `%d` bytes.", e.TotalSize, e.TotalWritten)
 	return msg
 }

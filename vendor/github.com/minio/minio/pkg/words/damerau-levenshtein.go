@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014-2016 Minio, Inc.
+ * Minio Client (C) 2014, 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-package cmd
+package words
 
-import (
-	"math"
-)
+import "math"
 
 // Returns the minimum value of a slice of integers
 func minimum(integers []int) (minVal int) {

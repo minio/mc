@@ -1,5 +1,5 @@
 /*
- * Minio Client, (C) 2015 Minio, Inc.
+ * Minio Client, (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,23 +40,23 @@ var catCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(catFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] SOURCE [SOURCE...]
+  {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
-      $ mc {{.Name}} s3/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
+      $ {{.HelpName}} s3/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
 
    2. Concantenate contents of file1.txt and stdin to standard output.
-      $ mc {{.Name}} file1.txt - > file.txt
+      $ {{.HelpName}} file1.txt - > file.txt
 
    3. Concantenate multiple files to one.
-      $ mc {{.Name}} part.* > complete.img
+      $ {{.HelpName}} part.* > complete.img
 
 `,
 }
@@ -69,7 +69,7 @@ func checkCatSyntax(ctx *cli.Context) {
 	}
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") && len(arg) > 1 {
-			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag ‘%s’ passed.", arg))
+			fatalIf(probe.NewError(errors.New("")), fmt.Sprintf("Unknown flag `%s` passed.", arg))
 		}
 	}
 }
@@ -151,7 +151,7 @@ func mainCat(ctx *cli.Context) error {
 		return nil
 	}
 
-	// if Args contain ‘-’, we need to preserve its order specially.
+	// if Args contain `-`, we need to preserve its order specially.
 	args := []string(ctx.Args())
 	if ctx.Args().First() == "-" {
 		for i, arg := range os.Args {
@@ -165,7 +165,7 @@ func mainCat(ctx *cli.Context) error {
 
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
-		fatalIf(catURL(url).Trace(url), "Unable to read from ‘"+url+"’.")
+		fatalIf(catURL(url).Trace(url), "Unable to read from `"+url+"`.")
 	}
 	return nil
 }

@@ -41,23 +41,30 @@ var diffCmd = cli.Command{
 	Before:      setGlobalsFromContext,
 	Flags:       append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] FIRST SECOND
+  {{.HelpName}} [FLAGS] FIRST SECOND
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-   {{.Description}}
+  {{.Description}}
+
+OUTPUT:
+  Differences between source and destination are represented by mark notations with following meaning:
+    > - indicates file should be copied.
+    < - indicates file should be deleted.
+    ! - indicates file differs in size or type.
 
 EXAMPLES:
-   1. Compare a local folder with a folder on Amazon S3 cloud storage.
-      $ mc {{.Name}} ~/Photos s3/MyBucket/Photos
+  1. Compare a local folder with a folder on Amazon S3 cloud storage.
+     $ {{.HelpName}} ~/Photos s3/MyBucket/Photos
 
-   2. Compare two different folders on a local filesystem.
-      $ mc {{.Name}} ~/Photos /Media/Backup/Photos
+  2. Compare two different folders on a local filesystem.
+     $ {{.HelpName}} ~/Photos /Media/Backup/Photos
+
 `,
 }
 
@@ -77,20 +84,16 @@ func (d diffMessage) String() string {
 	msg := ""
 	switch d.Diff {
 	case differInFirst:
-		msg = console.Colorize("DiffMessage",
-			"‘"+d.FirstURL+"’") + console.Colorize("DiffOnlyInFirst", " - only in first.")
+		msg = console.Colorize("DiffOnlyInFirst", "< "+d.FirstURL)
 	case differInSecond:
-		msg = console.Colorize("DiffMessage",
-			"‘"+d.SecondURL+"’") + console.Colorize("DiffOnlyInSecond", " - only in second.")
+		msg = console.Colorize("DiffOnlyInSecond", "> "+d.SecondURL)
 	case differInType:
-		msg = console.Colorize("DiffMessage",
-			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffType", " - differ in type.")
+		msg = console.Colorize("DiffType", "! "+d.SecondURL)
 	case differInSize:
-		msg = console.Colorize("DiffMessage",
-			"‘"+d.FirstURL+"’"+" and "+"‘"+d.SecondURL+"’") + console.Colorize("DiffSize", " - differ in size.")
+		msg = console.Colorize("DiffSize", "! "+d.SecondURL)
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
-			"Unhandled difference between ‘"+d.FirstURL+"’ and ‘"+d.SecondURL+"’.")
+			"Unhandled difference between `"+d.FirstURL+"` and `"+d.SecondURL+"`.")
 	}
 	return msg
 
@@ -101,7 +104,7 @@ func (d diffMessage) JSON() string {
 	d.Status = "success"
 	diffJSONBytes, e := json.Marshal(d)
 	fatalIf(probe.NewError(e),
-		"Unable to marshal diff message ‘"+d.FirstURL+"’, ‘"+d.SecondURL+"’ and ‘"+string(d.Diff)+"’.")
+		"Unable to marshal diff message `"+d.FirstURL+"`, `"+d.SecondURL+"` and `"+string(d.Diff)+"`.")
 	return string(diffJSONBytes)
 }
 
@@ -128,7 +131,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 
 	// Verify if its a directory.
 	if !firstContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(firstURL), fmt.Sprintf("‘%s’ is not a folder.", firstURL))
+		fatalIf(errInvalidArgument().Trace(firstURL), fmt.Sprintf("`%s` is not a folder.", firstURL))
 	}
 
 	// Verify if secondURL is accessible.
@@ -139,7 +142,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 
 	// Verify if its a directory.
 	if !secondContent.Type.IsDir() {
-		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("‘%s’ is not a folder.", secondURL))
+		fatalIf(errInvalidArgument().Trace(secondURL), fmt.Sprintf("`%s` is not a folder.", secondURL))
 	}
 }
 
@@ -173,6 +176,10 @@ func doDiffMain(firstURL, secondURL string) error {
 
 	// Diff first and second urls.
 	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL) {
+		if diffMsg.Error != nil {
+			errorIf(diffMsg.Error, "Unable to calculate objects difference.")
+			break
+		}
 		printMsg(diffMsg)
 	}
 
@@ -187,10 +194,10 @@ func mainDiff(ctx *cli.Context) error {
 
 	// Additional command specific theme customization.
 	console.SetColor("DiffMessage", color.New(color.FgGreen, color.Bold))
-	console.SetColor("DiffOnlyInFirst", color.New(color.FgRed, color.Bold))
-	console.SetColor("DiffType", color.New(color.FgYellow, color.Bold))
-	console.SetColor("DiffSize", color.New(color.FgMagenta, color.Bold))
-	console.SetColor("DiffTime", color.New(color.FgYellow, color.Bold))
+	console.SetColor("DiffOnlyInFirst", color.New(color.FgRed))
+	console.SetColor("DiffOnlyInSecond", color.New(color.FgGreen))
+	console.SetColor("DiffType", color.New(color.FgMagenta))
+	console.SetColor("DiffSize", color.New(color.FgYellow, color.Bold))
 
 	URLs := ctx.Args()
 	firstURL := URLs.Get(0)

@@ -39,10 +39,10 @@
 			"revisionTime": "2015-12-11T09:06:21+09:00"
 		},
 		{
-			"checksumSHA1": "+jYYwEFAR+NW42UwA/AeppFYTbs=",
+			"checksumSHA1": "fUWokilZyc1QDKnIgCDJE8n1S9U=",
 			"path": "github.com/minio/cli",
-			"revision": "bf72f027481f5fadaf8800f62c72904e6bd7a200",
-			"revisionTime": "2016-11-25T09:07:42Z"
+			"revision": "b8ae5507c0ceceecc22d5dbd386b58fbd4fdce72",
+			"revisionTime": "2017-02-27T07:32:28Z"
 		},
 		{
 			"path": "github.com/minio/go-homedir",
@@ -50,10 +50,10 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "2FrFoR0UtufaCGRxM4UxP1fR3LM=",
+			"checksumSHA1": "q2mnNtdkxvuzEx8d5W0uCO0wmgI=",
 			"path": "github.com/minio/minio-go",
-			"revision": "952412b95ae05cced91069ddc97b108a675ca1d1",
-			"revisionTime": "2017-01-05T09:15:05Z"
+			"revision": "ef0dc7e81b008739bd2ab9cb5b5cfbdc22bf32a5",
+			"revisionTime": "2017-04-01T21:28:19Z"
 		},
 		{
 			"checksumSHA1": "qTxOBp3GVxCC70ykb7Hxg6UgWwA=",
@@ -80,10 +80,10 @@
 			"revisionTime": "2016-08-18T00:31:20Z"
 		},
 		{
-			"checksumSHA1": "/sSaCssOzqtaSoIFhV0V8SPW5nk=",
+			"checksumSHA1": "M7IzPNZncWn7ve14/YPF2HKhCko=",
 			"path": "github.com/minio/minio/pkg/madmin",
-			"revision": "f612a7dd8574ed98ac30ca0f3758f49fa5369635",
-			"revisionTime": "2017-02-01T19:46:49Z"
+			"revision": "97dc34fe06274894316a68e0e86e6c8cf498e21a",
+			"revisionTime": "2017-03-21T19:02:39Z"
 		},
 		{
 			"path": "github.com/minio/minio/pkg/probe",
@@ -103,15 +103,27 @@
 			"revisionTime": "2016-08-14T22:47:51Z"
 		},
 		{
+			"checksumSHA1": "6XkX4S1uBycCm+SYcY7CRtuFtvc=",
+			"path": "github.com/minio/minio/pkg/trie",
+			"revision": "8912b6bf3b22ff668b6448742cd50e7b837182ec",
+			"revisionTime": "2017-02-10T19:51:41Z"
+		},
+		{
+			"checksumSHA1": "+lLm3Uz721j8WzlV813lWiATrXM=",
+			"path": "github.com/minio/minio/pkg/words",
+			"revision": "7ebf11b20233d0eba0f1a28dbd124e7fdd44aee2",
+			"revisionTime": "2017-03-19T21:23:05Z"
+		},
+		{
 			"path": "github.com/pkg/profile",
 			"revision": "19396ecfda37c1c9ddaa52019adca59d582e4832",
 			"revisionTime": "2016-03-15T12:21:13+11:00"
 		},
 		{
-			"checksumSHA1": "zkOV0IhJDfliQY72Z8OCBRGPZIw=",
+			"checksumSHA1": "ZYLNe3yInOcxTtzu7ERLL2hoQxE=",
 			"path": "github.com/rjeczalik/notify",
-			"revision": "b8dab33f409f63a90858d0eff0da94ed1a692b66",
-			"revisionTime": "2017-01-17T22:12:36Z"
+			"revision": "41a86457b5eea072a7e6f40bbfaf94c8df41d3aa",
+			"revisionTime": "2017-03-01T20:33:46Z"
 		},
 		{
 			"checksumSHA1": "KqecwXo3OO+p4N+E9RhlHvl9I+w=",

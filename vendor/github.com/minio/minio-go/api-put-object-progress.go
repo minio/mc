@@ -30,6 +30,27 @@ func (c Client) PutObjectWithProgress(bucketName, objectName string, reader io.R
 	return c.PutObjectWithMetadata(bucketName, objectName, reader, metaData, progress)
 }
 
+// PutEncryptedObject - Encrypt and store object.
+func (c Client) PutEncryptedObject(bucketName, objectName string, reader io.Reader, encryptMaterials EncryptionMaterials, metaData map[string][]string, progress io.Reader) (n int64, err error) {
+
+	if encryptMaterials == nil {
+		return 0, ErrInvalidArgument("Unable to recognize empty encryption properties")
+	}
+
+	if err := encryptMaterials.SetupEncryptMode(reader); err != nil {
+		return 0, err
+	}
+
+	if metaData == nil {
+		metaData = make(map[string][]string)
+	}
+	for k, v := range encryptMaterials.GetHeaders() {
+		metaData[k] = v
+	}
+
+	return c.PutObjectWithMetadata(bucketName, objectName, encryptMaterials, metaData, progress)
+}
+
 // PutObjectWithMetadata - with metadata.
 func (c Client) PutObjectWithMetadata(bucketName, objectName string, reader io.Reader, metaData map[string][]string, progress io.Reader) (n int64, err error) {
 	// Input validation.

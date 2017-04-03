@@ -61,7 +61,7 @@ type shareMesssage struct {
 // String - Themefied string message for console printing.
 func (s shareMesssage) String() string {
 	msg := console.Colorize("URL", fmt.Sprintf("URL: %s\n", s.ObjectURL))
-	msg += console.Colorize("Expire", fmt.Sprintf("Expire: %s\n", timeDurationToHumanizedTime(s.TimeLeft)))
+	msg += console.Colorize("Expire", fmt.Sprintf("Expire: %s\n", timeDurationToHumanizedDuration(s.TimeLeft)))
 	if s.ContentType != "" {
 		msg += console.Colorize("Content-type", fmt.Sprintf("Content-Type: %s\n", s.ContentType))
 	}
@@ -113,7 +113,7 @@ func getShareDir() (string, *probe.Error) {
 	return sharedURLsDataDir, nil
 }
 
-// Get share dir name or die. (NOTE: This ‘Die’ approach is only OK for mc like tools.).
+// Get share dir name or die. (NOTE: This `Die` approach is only OK for mc like tools.).
 func mustGetShareDir() string {
 	shareDir, err := getShareDir()
 	fatalIf(err.Trace(), "Unable to determine share folder.")
@@ -177,21 +177,21 @@ func initShareConfig() {
 	// Share directory.
 	if !isShareDirExists() {
 		fatalIf(createShareDir().Trace(mustGetShareDir()),
-			"Failed to create share ‘"+mustGetShareDir()+"’ folder.")
-		console.Infof("Successfully created ‘%s’.\n", mustGetShareDir())
+			"Failed to create share `"+mustGetShareDir()+"` folder.")
+		console.Infof("Successfully created `%s`.\n", mustGetShareDir())
 	}
 
 	// Uploads share file.
 	if !isShareUploadsExists() {
 		fatalIf(initShareUploadsFile().Trace(getShareUploadsFile()),
-			"Failed to initialize share uploads ‘"+getShareUploadsFile()+"’ file.")
-		console.Infof("Initialized share uploads ‘%s’ file.\n", getShareUploadsFile())
+			"Failed to initialize share uploads `"+getShareUploadsFile()+"` file.")
+		console.Infof("Initialized share uploads `%s` file.\n", getShareUploadsFile())
 	}
 
 	// Downloads share file.
 	if !isShareDownloadsExists() {
 		fatalIf(initShareDownloadsFile().Trace(getShareDownloadsFile()),
-			"Failed to initialize share downloads ‘"+getShareDownloadsFile()+"’ file.")
-		console.Infof("Initialized share downloads ‘%s’ file.\n", getShareDownloadsFile())
+			"Failed to initialize share downloads `"+getShareDownloadsFile()+"` file.")
+		console.Infof("Initialized share downloads `%s` file.\n", getShareDownloadsFile())
 	}
 }

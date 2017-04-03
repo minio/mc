@@ -125,7 +125,7 @@ func getReaderSize(reader io.Reader) (size int64, err error) {
 
 // completedParts is a collection of parts sortable by their part numbers.
 // used for sorting the uploaded parts before completing the multipart request.
-type completedParts []completePart
+type completedParts []CompletePart
 
 func (a completedParts) Len() int           { return len(a) }
 func (a completedParts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -230,10 +230,8 @@ func (c Client) putObjectSingle(bucketName, objectName string, reader io.Reader,
 		reader = tmpFile
 	}
 	// Return error if its not io.EOF.
-	if err != nil {
-		if err != io.EOF {
-			return 0, err
-		}
+	if err != nil && err != io.EOF {
+		return 0, err
 	}
 	// Execute put object.
 	st, err := c.putObjectDo(bucketName, objectName, reader, hashSums["md5"], hashSums["sha256"], size, metaData)

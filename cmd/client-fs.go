@@ -46,7 +46,7 @@ const (
 var ( // GOOS specific ignore list.
 	ignoreFiles = map[string][]string{
 		"darwin":  {"*.DS_Store"},
-		"default": {"*.part.minio"},
+		"default": {""},
 	}
 )
 
@@ -139,45 +139,39 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	// Get fsnotify notifications for events and errors, and sent them
 	// using eventChan and errorChan
 	go func() {
-		for {
-			select {
-			case event, ok := <-neventChan:
-				if !ok {
-					return
-				}
-				if isIgnoredFile(event.Path()) {
+		for event := range neventChan {
+			if isIgnoredFile(event.Path()) {
+				continue
+			}
+			var i os.FileInfo
+			if IsPutEvent(event.Event()) {
+				// Look for any writes, send a response to indicate a full copy.
+				var e error
+				i, e = os.Stat(event.Path())
+				if e != nil {
+					if os.IsNotExist(e) {
+						continue
+					}
+					errorChan <- probe.NewError(e)
 					continue
 				}
-				var i os.FileInfo
-				if IsPutEvent(event.Event()) {
-					// Look for any writes, send a response to indicate a full copy.
-					var e error
-					i, e = os.Stat(event.Path())
-					if e != nil {
-						if os.IsNotExist(e) {
-							continue
-						}
-						errorChan <- probe.NewError(e)
-						continue
-					}
-					if i.IsDir() {
-						// we want files
-						continue
-					}
-					eventChan <- Event{
-						Time:   time.Now().Format(timeFormatFS),
-						Size:   i.Size(),
-						Path:   event.Path(),
-						Client: f,
-						Type:   EventCreate,
-					}
-				} else if IsDeleteEvent(event.Event()) {
-					eventChan <- Event{
-						Time:   time.Now().Format(timeFormatFS),
-						Path:   event.Path(),
-						Client: f,
-						Type:   EventRemove,
-					}
+				if i.IsDir() {
+					// we want files
+					continue
+				}
+				eventChan <- Event{
+					Time:   time.Now().Format(timeFormatFS),
+					Size:   i.Size(),
+					Path:   event.Path(),
+					Client: f,
+					Type:   EventCreate,
+				}
+			} else if IsDeleteEvent(event.Event()) {
+				eventChan <- Event{
+					Time:   time.Now().Format(timeFormatFS),
+					Path:   event.Path(),
+					Client: f,
+					Type:   EventRemove,
 				}
 			}
 		}
@@ -222,14 +216,14 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	objectPartPath := objectPath + partSuffix
 	if objectDir != "" {
 		// Create any missing top level directories.
-		if e = os.MkdirAll(objectDir, 0700); e != nil {
+		if e = os.MkdirAll(objectDir, 0777); e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
 			return 0, err.Trace(f.PathURL.Path)
 		}
 	}
 
 	// If exists, open in append mode. If not create it the part file.
-	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	partFile, e := os.OpenFile(objectPartPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
 		return 0, err.Trace(f.PathURL.Path)
@@ -403,7 +397,7 @@ func createFile(fpath string) (io.WriteCloser, error) {
 	if e != nil && !os.IsNotExist(e) {
 		return nil, e
 	}
-	if e = os.MkdirAll(filepath.Dir(fpath), 0775); e != nil {
+	if e = os.MkdirAll(filepath.Dir(fpath), 0777); e != nil {
 		return nil, e
 	}
 	file, e := os.Create(fpath)
@@ -517,17 +511,41 @@ func (f *fsClient) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 // List - list files and folders.
 func (f *fsClient) List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent {
 	contentCh := make(chan *clientContent)
+	filteredCh := make(chan *clientContent)
+
 	if isRecursive {
 		if showDir == DirNone {
-			go f.listRecursiveInRoutine(contentCh, isIncomplete)
+			go f.listRecursiveInRoutine(contentCh)
 		} else {
 			go f.listDirOpt(contentCh, isIncomplete, showDir)
 		}
 	} else {
-		go f.listInRoutine(contentCh, isIncomplete)
+		go f.listInRoutine(contentCh)
 	}
 
-	return contentCh
+	// This function filters entries from any  listing go routine
+	// created previously. If isIncomplete is activated, we will
+	// only show partly uploaded files,
+	go func() {
+		for c := range contentCh {
+			if isIncomplete {
+				if !strings.HasSuffix(c.URL.Path, partSuffix) {
+					continue
+				}
+				// Strip part suffix
+				c.URL.Path = strings.Split(c.URL.Path, partSuffix)[0]
+			} else {
+				if strings.HasSuffix(c.URL.Path, partSuffix) {
+					continue
+				}
+			}
+			// Send to filtered channel
+			filteredCh <- c
+		}
+		defer close(filteredCh)
+	}()
+
+	return filteredCh
 }
 
 // byDirName implements sort.Interface.
@@ -568,7 +586,7 @@ func readDir(dirname string) ([]os.FileInfo, error) {
 }
 
 // listPrefixes - list all files for any given prefix.
-func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, incomplete bool) {
+func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) {
 	dirName := filepath.Dir(prefix)
 	files, e := readDir(dirName)
 	if e != nil {
@@ -590,47 +608,12 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 			st, e := os.Stat(file)
 			if e != nil {
 				if os.IsPermission(e) {
-					// On windows there are folder symlinks
-					// which are called junction files which
-					// carry special meaning on windows
-					// - which cannot be accessed with regular operations
-					if runtime.GOOS == "windows" {
-						newPath := filepath.Join(prefix, fi.Name())
-						lfi, le := f.handleWindowsSymlinks(newPath)
-						if le != nil {
-							contentCh <- &clientContent{
-								Err: le.Trace(newPath),
-							}
-							continue
-						}
-						if incomplete {
-							if !strings.HasSuffix(lfi.Name(), partSuffix) {
-								continue
-							}
-						} else {
-							if strings.HasSuffix(lfi.Name(), partSuffix) {
-								continue
-							}
-						}
-						pathURL.Path = filepath.Join(pathURL.Path, lfi.Name())
-						contentCh <- &clientContent{
-							URL:  pathURL,
-							Time: lfi.ModTime(),
-							Size: lfi.Size(),
-							Type: lfi.Mode(),
-							Err: probe.NewError(PathInsufficientPermission{
-								Path: pathURL.Path,
-							}),
-						}
-						continue
-					} else {
-						contentCh <- &clientContent{
-							Err: probe.NewError(PathInsufficientPermission{
-								Path: pathURL.Path,
-							}),
-						}
-						continue
+					contentCh <- &clientContent{
+						Err: probe.NewError(PathInsufficientPermission{
+							Path: pathURL.Path,
+						}),
 					}
+					continue
 				}
 				if os.IsNotExist(e) {
 					contentCh <- &clientContent{
@@ -648,15 +631,6 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 				}
 			}
 			if strings.HasPrefix(file, prefix) {
-				if incomplete {
-					if !strings.HasSuffix(st.Name(), partSuffix) {
-						continue
-					}
-				} else {
-					if strings.HasSuffix(st.Name(), partSuffix) {
-						continue
-					}
-				}
 				contentCh <- &clientContent{
 					URL:  *newClientURL(file),
 					Time: st.ModTime(),
@@ -668,15 +642,6 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 			}
 		}
 		if strings.HasPrefix(file, prefix) {
-			if incomplete {
-				if !strings.HasSuffix(fi.Name(), partSuffix) {
-					continue
-				}
-			} else {
-				if strings.HasSuffix(fi.Name(), partSuffix) {
-					continue
-				}
-			}
 			contentCh <- &clientContent{
 				URL:  *newClientURL(file),
 				Time: fi.ModTime(),
@@ -689,7 +654,7 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent, 
 	return
 }
 
-func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete bool) {
+func (f *fsClient) listInRoutine(contentCh chan<- *clientContent) {
 	// close the channel when the function returns.
 	defer close(contentCh)
 
@@ -702,7 +667,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 		if _, ok := err.ToGoError().(PathNotFound); ok {
 			// If file does not exist treat it like a prefix and list all prefixes if any.
 			prefix := fpath
-			f.listPrefixes(prefix, contentCh, incomplete)
+			f.listPrefixes(prefix, contentCh)
 			return
 		}
 		// For all other errors we return genuine error back to the caller.
@@ -713,7 +678,7 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 	// Now if the file exists and doesn't end with a separator ('/') do not traverse it.
 	// If the directory doesn't end with a separator, do not traverse it.
 	if !strings.HasSuffix(fpath, string(pathURL.Separator)) && fst.Mode().IsDir() && fpath != "." {
-		f.listPrefixes(fpath, contentCh, incomplete)
+		f.listPrefixes(fpath, contentCh)
 		return
 	}
 
@@ -730,44 +695,10 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 				fi, e = os.Stat(filepath.Join(fpath, fi.Name()))
 				if os.IsPermission(e) {
-					// On windows there are folder symlinks
-					// which are called junction files which
-					// carry special meaning on windows
-					// - which cannot be accessed with regular operations
-					if runtime.GOOS == "windows" {
-						newPath := filepath.Join(fpath, fi.Name())
-						lfi, le := f.handleWindowsSymlinks(newPath)
-						if le != nil {
-							contentCh <- &clientContent{
-								Err: le.Trace(newPath),
-							}
-							continue
-						}
-						if incomplete {
-							if !strings.HasSuffix(lfi.Name(), partSuffix) {
-								continue
-							}
-						} else {
-							if strings.HasSuffix(lfi.Name(), partSuffix) {
-								continue
-							}
-						}
-						pathURL = *f.PathURL
-						pathURL.Path = filepath.Join(pathURL.Path, lfi.Name())
-						contentCh <- &clientContent{
-							URL:  pathURL,
-							Time: lfi.ModTime(),
-							Size: lfi.Size(),
-							Type: lfi.Mode(),
-							Err:  probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
-						}
-						continue
-					} else {
-						contentCh <- &clientContent{
-							Err: probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
-						}
-						continue
+					contentCh <- &clientContent{
+						Err: probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
 					}
+					continue
 				}
 				if os.IsNotExist(e) {
 					contentCh <- &clientContent{
@@ -783,15 +714,6 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 				}
 			}
 			if fi.Mode().IsRegular() || fi.Mode().IsDir() {
-				if incomplete {
-					if !strings.HasSuffix(fi.Name(), partSuffix) {
-						continue
-					}
-				} else {
-					if strings.HasSuffix(fi.Name(), partSuffix) {
-						continue
-					}
-				}
 				pathURL = *f.PathURL
 				pathURL.Path = filepath.Join(pathURL.Path, fi.Name())
 
@@ -810,15 +732,6 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, incomplete boo
 			}
 		}
 	default:
-		if incomplete {
-			if !strings.HasSuffix(fst.Name(), partSuffix) {
-				return
-			}
-		} else {
-			if strings.HasSuffix(fst.Name(), partSuffix) {
-				return
-			}
-		}
 		contentCh <- &clientContent{
 			URL:  pathURL,
 			Time: fst.ModTime(),
@@ -877,17 +790,6 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 				continue
 			}
 
-			if isIncomplete {
-				// Ignore if file name does not end with partSuffix.
-				if !strings.HasSuffix(file.Name(), partSuffix) {
-					continue
-				}
-
-				// Strip partSuffix
-				name = strings.SplitAfter(name, partSuffix)[0]
-				content.URL = *newClientURL(name)
-			}
-
 			contentCh <- &content
 		}
 
@@ -907,7 +809,7 @@ func (f *fsClient) listDirOpt(contentCh chan *clientContent, isIncomplete bool, 
 	}
 }
 
-func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incomplete bool) {
+func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent) {
 	// close channels upon return.
 	defer close(contentCh)
 	var dirName string
@@ -961,36 +863,8 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 				return nil
 			}
 			if os.IsPermission(e) {
-				if runtime.GOOS == "windows" {
-					lfi, le := f.handleWindowsSymlinks(fp)
-					if le != nil {
-						contentCh <- &clientContent{
-							Err: le.Trace(fp),
-						}
-						return nil
-					}
-					pathURL = *f.PathURL
-					pathURL.Path = filepath.Join(pathURL.Path, dirName)
-					if incomplete {
-						if !strings.HasSuffix(lfi.Name(), partSuffix) {
-							return nil
-						}
-					} else {
-						if strings.HasSuffix(lfi.Name(), partSuffix) {
-							return nil
-						}
-					}
-					contentCh <- &clientContent{
-						URL:  pathURL,
-						Time: lfi.ModTime(),
-						Size: lfi.Size(),
-						Type: lfi.Mode(),
-						Err:  probe.NewError(e),
-					}
-				} else {
-					contentCh <- &clientContent{
-						Err: probe.NewError(PathInsufficientPermission{Path: fp}),
-					}
+				contentCh <- &clientContent{
+					Err: probe.NewError(PathInsufficientPermission{Path: fp}),
 				}
 				return nil
 			}
@@ -1000,34 +874,6 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 			fi, e = os.Stat(fp)
 			if e != nil {
 				if os.IsPermission(e) {
-					if runtime.GOOS == "windows" {
-						lfi, le := f.handleWindowsSymlinks(fp)
-						if le != nil {
-							contentCh <- &clientContent{
-								Err: le.Trace(fp),
-							}
-							return nil
-						}
-						pathURL = *f.PathURL
-						pathURL.Path = filepath.Join(pathURL.Path, dirName)
-						if incomplete {
-							if !strings.HasSuffix(lfi.Name(), partSuffix) {
-								return nil
-							}
-						} else {
-							if !strings.HasSuffix(lfi.Name(), partSuffix) {
-								return nil
-							}
-						}
-						contentCh <- &clientContent{
-							URL:  pathURL,
-							Time: lfi.ModTime(),
-							Size: lfi.Size(),
-							Type: lfi.Mode(),
-							Err:  probe.NewError(e),
-						}
-						return nil
-					}
 					contentCh <- &clientContent{
 						Err: probe.NewError(e),
 					}
@@ -1051,15 +897,6 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 			}
 		}
 		if fi.Mode().IsRegular() {
-			if incomplete {
-				if !strings.HasSuffix(fi.Name(), partSuffix) {
-					return nil
-				}
-			} else {
-				if strings.HasSuffix(fi.Name(), partSuffix) {
-					return nil
-				}
-			}
 			contentCh <- &clientContent{
 				URL:  *newClientURL(fp),
 				Time: fi.ModTime(),
@@ -1097,7 +934,7 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, incompl
 
 // MakeBucket - create a new bucket.
 func (f *fsClient) MakeBucket(region string) *probe.Error {
-	e := os.MkdirAll(f.PathURL.Path, 0775)
+	e := os.MkdirAll(f.PathURL.Path, 0777)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -1193,47 +1030,38 @@ func (f *fsClient) toClientError(e error, fpath string) *probe.Error {
 	return probe.NewError(e)
 }
 
-// handle windows symlinks - eg: junction files.
-func (f *fsClient) handleWindowsSymlinks(fpath string) (os.FileInfo, *probe.Error) {
-	// On windows there are directory symlinks which are called junction files.
-	// These files carry special meaning on windows they cannot be,
-	// accessed with regular operations.
-	file, e := os.Lstat(fpath)
-	if e != nil {
-		err := f.toClientError(e, fpath)
-		return nil, err.Trace(fpath)
-	}
-	return file, nil
-}
-
 // fsStat - wrapper function to get file stat.
 func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 	fpath := f.PathURL.Path
+
+	// Check if the path corresponds to a directory and returns
+	// the successful result whether isIncomplete is specified or not.
+	st, e := os.Stat(fpath)
+	if e == nil && st.IsDir() {
+		return st, nil
+	}
+
 	if isIncomplete {
 		fpath += partSuffix
 	}
+
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
 	if strings.HasSuffix(fpath, string(f.PathURL.Separator)) {
 		fpath = fpath + "."
 	}
-	fpath, e := filepath.EvalSymlinks(fpath)
+	fpath, e = filepath.EvalSymlinks(fpath)
 	if e != nil {
 		if os.IsPermission(e) {
-			if runtime.GOOS == "windows" {
-				return f.handleWindowsSymlinks(f.PathURL.Path)
-			}
 			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(fpath)
 	}
-	st, e := os.Stat(fpath)
+
+	st, e = os.Stat(fpath)
 	if e != nil {
 		if os.IsPermission(e) {
-			if runtime.GOOS == "windows" {
-				return f.handleWindowsSymlinks(fpath)
-			}
 			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
 		}
 		if os.IsNotExist(e) {

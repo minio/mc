@@ -25,28 +25,43 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// Check if the target URL represents folder. It may or may not exist yet.
-func isTargetURLDir(targetURL string) bool {
-	_, targetContent, err := url2Stat(targetURL)
+// Check if the passed URL represents a folder. It may or may not exist yet.
+// If it exists, we can easily check if it is a folder, if it doesn't exist,
+// we can guess if the url is a folder from how it looks.
+func isAliasURLDir(aliasURL string) bool {
+	// If the target url exists, check if it is a directory
+	// and return immediately.
+	_, targetContent, err := url2Stat(aliasURL)
 	if err == nil {
 		return targetContent.Type.IsDir()
 	}
-	_, aliasedTargetURL, _ := mustExpandAlias(targetURL)
-	if aliasedTargetURL == targetURL {
-		return false
+
+	_, expandedURL, _ := mustExpandAlias(aliasURL)
+
+	// Check if targetURL is an FS or S3 aliased url
+	if expandedURL == aliasURL {
+		// This is an FS url, check if the url has a separator at the end
+		return strings.HasSuffix(aliasURL, string(filepath.Separator))
 	}
-	// targetURL is an aliased path, continue guessing if the path
-	// is meant to point to a bucket or directory
-	pathURL := filepath.FromSlash(targetURL)
-	fields := strings.Split(pathURL, string(filepath.Separator))
+
+	// This is an S3 url, then:
+	//   *) If alias format is specified, return false
+	//   *) If alias/bucket is specified, return true
+	//   *) If alias/bucket/prefix, check if prefix has
+	//	     has a trailing slash.
+	pathURL := filepath.ToSlash(aliasURL)
+	fields := strings.Split(pathURL, "/")
 	switch len(fields) {
+	// Nothing or alias format
 	case 0, 1:
 		return false
+	// alias/bucket format
 	case 2:
 		return true
-	default:
-		return strings.HasSuffix(pathURL, string(filepath.Separator))
-	}
+	} // default case..
+
+	// alias/bucket/prefix format
+	return strings.HasSuffix(pathURL, "/")
 }
 
 // getSource gets a reader from URL.

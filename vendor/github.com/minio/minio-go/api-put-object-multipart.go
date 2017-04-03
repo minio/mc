@@ -113,10 +113,8 @@ func (c Client) putObjectMultipartStream(bucketName, objectName string, reader i
 
 		// Calculates hash sums while copying partSize bytes into tmpBuffer.
 		prtSize, rErr := hashCopyN(hashAlgos, hashSums, tmpBuffer, reader, partSize)
-		if rErr != nil {
-			if rErr != io.EOF {
-				return 0, rErr
-			}
+		if rErr != nil && rErr != io.EOF {
+			return 0, rErr
 		}
 
 		var reader io.Reader
@@ -127,13 +125,13 @@ func (c Client) putObjectMultipartStream(bucketName, objectName string, reader i
 		part, ok := partsInfo[partNumber]
 
 		// Verify if part should be uploaded.
-		if !ok || shouldUploadPart(objectPart{
+		if !ok || shouldUploadPart(ObjectPart{
 			ETag:       hex.EncodeToString(hashSums["md5"]),
 			PartNumber: partNumber,
 			Size:       prtSize,
 		}, uploadPartReq{PartNum: partNumber, Part: &part}) {
 			// Proceed to upload the part.
-			var objPart objectPart
+			var objPart ObjectPart
 			objPart, err = c.uploadPart(bucketName, objectName, uploadID, reader, partNumber, hashSums["md5"], hashSums["sha256"], prtSize)
 			if err != nil {
 				// Reset the temporary buffer upon any error.
@@ -181,7 +179,7 @@ func (c Client) putObjectMultipartStream(bucketName, objectName string, reader i
 		if !ok {
 			return 0, ErrInvalidArgument(fmt.Sprintf("Missing part number %d", i))
 		}
-		complMultipartUpload.Parts = append(complMultipartUpload.Parts, completePart{
+		complMultipartUpload.Parts = append(complMultipartUpload.Parts, CompletePart{
 			ETag:       part.ETag,
 			PartNumber: part.PartNumber,
 		})
@@ -253,25 +251,25 @@ func (c Client) initiateMultipartUpload(bucketName, objectName string, metaData 
 }
 
 // uploadPart - Uploads a part in a multipart upload.
-func (c Client) uploadPart(bucketName, objectName, uploadID string, reader io.Reader, partNumber int, md5Sum, sha256Sum []byte, size int64) (objectPart, error) {
+func (c Client) uploadPart(bucketName, objectName, uploadID string, reader io.Reader, partNumber int, md5Sum, sha256Sum []byte, size int64) (ObjectPart, error) {
 	// Input validation.
 	if err := isValidBucketName(bucketName); err != nil {
-		return objectPart{}, err
+		return ObjectPart{}, err
 	}
 	if err := isValidObjectName(objectName); err != nil {
-		return objectPart{}, err
+		return ObjectPart{}, err
 	}
 	if size > maxPartSize {
-		return objectPart{}, ErrEntityTooLarge(size, maxPartSize, bucketName, objectName)
+		return ObjectPart{}, ErrEntityTooLarge(size, maxPartSize, bucketName, objectName)
 	}
 	if size <= -1 {
-		return objectPart{}, ErrEntityTooSmall(size, bucketName, objectName)
+		return ObjectPart{}, ErrEntityTooSmall(size, bucketName, objectName)
 	}
 	if partNumber <= 0 {
-		return objectPart{}, ErrInvalidArgument("Part number cannot be negative or equal to zero.")
+		return ObjectPart{}, ErrInvalidArgument("Part number cannot be negative or equal to zero.")
 	}
 	if uploadID == "" {
-		return objectPart{}, ErrInvalidArgument("UploadID cannot be empty.")
+		return ObjectPart{}, ErrInvalidArgument("UploadID cannot be empty.")
 	}
 
 	// Get resources properly escaped and lined up before using them in http request.
@@ -295,15 +293,15 @@ func (c Client) uploadPart(bucketName, objectName, uploadID string, reader io.Re
 	resp, err := c.executeMethod("PUT", reqMetadata)
 	defer closeResponse(resp)
 	if err != nil {
-		return objectPart{}, err
+		return ObjectPart{}, err
 	}
 	if resp != nil {
 		if resp.StatusCode != http.StatusOK {
-			return objectPart{}, httpRespToErrorResponse(resp, bucketName, objectName)
+			return ObjectPart{}, httpRespToErrorResponse(resp, bucketName, objectName)
 		}
 	}
 	// Once successfully uploaded, return completed part.
-	objPart := objectPart{}
+	objPart := ObjectPart{}
 	objPart.Size = size
 	objPart.PartNumber = partNumber
 	// Trim off the odd double quotes from ETag in the beginning and end.

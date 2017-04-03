@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014, 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/minio/pkg/words"
 	"github.com/pkg/profile"
 )
 
@@ -43,13 +45,13 @@ var mcHelpTemplate = `NAME:
   {{.Name}} - {{.Usage}}
 
 USAGE:
-  {{.Name}} {{if .Flags}}[FLAGS] {{end}}COMMAND{{if .Flags}} [COMMAND FLAGS | -h]{{end}} [ARGUMENTS...]
+  {{.Name}} {{if .VisibleFlags}}[FLAGS] {{end}}COMMAND{{if .VisibleFlags}} [COMMAND FLAGS | -h]{{end}} [ARGUMENTS...]
 
 COMMANDS:
-  {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-  {{end}}{{if .Flags}}
+  {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+  {{end}}{{if .VisibleFlags}}
 GLOBAL FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 VERSION:
   ` + Version +
@@ -91,16 +93,16 @@ func Main() {
 
 // Function invoked when invalid command is passed.
 func commandNotFound(ctx *cli.Context, command string) {
-	msg := fmt.Sprintf("‘%s’ is not a mc command. See ‘mc --help’.", command)
+	msg := fmt.Sprintf("`%s` is not a mc command. See `mc --help`.", command)
 	closestCommands := findClosestCommands(command)
 	if len(closestCommands) > 0 {
 		msg += fmt.Sprintf("\n\nDid you mean one of these?\n")
 		if len(closestCommands) == 1 {
 			cmd := closestCommands[0]
-			msg += fmt.Sprintf("        ‘%s’", cmd)
+			msg += fmt.Sprintf("        `%s`", cmd)
 		} else {
 			for _, cmd := range closestCommands {
-				msg += fmt.Sprintf("        ‘%s’\n", cmd)
+				msg += fmt.Sprintf("        `%s`\n", cmd)
 			}
 		}
 	}
@@ -174,7 +176,7 @@ func initMC() {
 		err := saveMcConfig(newMcConfig())
 		fatalIf(err.Trace(), "Unable to save new mc config.")
 
-		console.Infoln("Configuration written to ‘" + mustGetMcConfigPath() + "’. Please update your access credentials.")
+		console.Infoln("Configuration written to `" + mustGetMcConfigPath() + "`. Please update your access credentials.")
 	}
 
 	// Check if mc session folder exists.
@@ -231,16 +233,31 @@ func findClosestCommands(command string) []string {
 	}
 	sort.Strings(closestCommands)
 	// Suggest other close commands - allow missed, wrongly added and even transposed characters
-	for _, value := range commandsTree.walk(commandsTree.root) {
+	for _, value := range commandsTree.Walk(commandsTree.Root()) {
 		if sort.SearchStrings(closestCommands, value.(string)) < len(closestCommands) {
 			continue
 		}
 		// 2 is arbitrary and represents the max allowed number of typed errors
-		if DamerauLevenshteinDistance(command, value.(string)) < 2 {
+		if words.DamerauLevenshteinDistance(command, value.(string)) < 2 {
 			closestCommands = append(closestCommands, value.(string))
 		}
 	}
 	return closestCommands
+}
+
+// Check for updates and print a notification message
+func checkUpdate(ctx *cli.Context) {
+	// Do not print update messages, if quiet flag is set.
+	if ctx.Bool("quiet") || ctx.GlobalBool("quiet") {
+		older, downloadURL, err := getUpdateInfo(1 * time.Second)
+		if err != nil {
+			// Its OK to ignore any errors during getUpdateInfo() here.
+			return
+		}
+		if older > time.Duration(0) {
+			console.Println(colorizeUpdateMessage(downloadURL, older))
+		}
+	}
 }
 
 func registerApp() *cli.App {
@@ -263,21 +280,28 @@ func registerApp() *cli.App {
 	registerCmd(updateCmd)  // Check for new software updates.
 	registerCmd(versionCmd) // Print version.
 
+	cli.HelpFlag = cli.BoolFlag{
+		Name:  "help, h",
+		Usage: "Show help.",
+	}
+
+	cli.BashCompletionFlag = cli.BoolFlag{
+		Name:   "compgen",
+		Usage:  "Enables bash-completion for all commands and subcommands.",
+		Hidden: true,
+	}
+
 	app := cli.NewApp()
 	app.Action = func(ctx *cli.Context) {
 		if strings.HasPrefix(Version, "RELEASE.") {
-			updateMsg, _, err := getReleaseUpdate(mcUpdateStableURL)
-			if err != nil {
-				// Ignore any errors during getReleaseUpdate() because
-				// the internet might not be available.
-				return
-			}
-			if updateMsg.Update {
-				printMsg(updateMsg)
-			}
+			// Check for new updates from dl.minio.io.
+			checkUpdate(ctx)
 		}
 		cli.ShowAppHelp(ctx)
 	}
+
+	app.HideVersion = true
+	app.HideHelpCommand = true
 	app.Usage = "Minio Client for cloud storage and filesystems."
 	app.Commands = commands
 	app.Author = "Minio.io"
@@ -285,6 +309,8 @@ func registerApp() *cli.App {
 	app.Flags = append(mcFlags, globalFlags...)
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.CommandNotFound = commandNotFound // handler function declared above.
+	app.EnableBashCompletion = true
+
 	return app
 }
 

@@ -39,31 +39,32 @@ var (
 // Share documents via URL.
 var shareUpload = cli.Command{
 	Name:   "upload",
-	Usage:  "Generate ‘curl’ command to upload objects without requiring access/secret keys.",
+	Usage:  "Generate `curl` command to upload objects without requiring access/secret keys.",
 	Action: mainShareUpload,
 	Before: setGlobalsFromContext,
 	Flags:  append(shareUploadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc share {{.Name}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc share {{.Name}} [OPTIONS] TARGET [TARGET...]
+   {{.HelpName}} [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Generate a curl command to allow upload access for a single object. Command expires in 7 days (default).
-      $ mc share {{.Name}} s3/backup/2006-Mar-1/backup.tar.gz
+      $ {{.HelpName}} s3/backup/2006-Mar-1/backup.tar.gz
 
    2. Generate a curl command to allow upload access to a folder. Command expires in 120 hours.
-      $ mc share {{.Name}} --expire=120h s3/backup/2007-Mar-2/
+      $ {{.HelpName}} --expire=120h s3/backup/2007-Mar-2/
 
    3. Generate a curl command to allow upload access of only '.png' images to a folder. Command expires in 2 hours.
-      $ mc share {{.Name}} --expire=2h --content-type=image/png s3/backup/2007-Mar-2/
+      $ {{.HelpName}} --expire=2h --content-type=image/png s3/backup/2007-Mar-2/
 
    4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup/'. Command expires in 2 hours.
-      $ mc share {{.Name}} --recursive --expire=2h s3/backup/2007-Mar-2/backup/
+      $ {{.HelpName}} --recursive --expire=2h s3/backup/2007-Mar-2/backup/
+
 `,
 }
 
@@ -83,7 +84,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+expireArg+"`.")
 	}
 
 	// Validate expiry.
@@ -194,7 +195,7 @@ func mainShareUpload(ctx *cli.Context) error {
 	if expireArg != "" {
 		var e error
 		expiry, e = time.ParseDuration(expireArg)
-		fatalIf(probe.NewError(e), "Unable to parse expire=‘"+expireArg+"’.")
+		fatalIf(probe.NewError(e), "Unable to parse expire=`"+expireArg+"`.")
 	}
 
 	for _, targetURL := range ctx.Args() {
@@ -202,9 +203,9 @@ func mainShareUpload(ctx *cli.Context) error {
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to share a non S3 url ‘"+targetURL+"’.")
+				fatalIf(err.Trace(), "Unable to share a non S3 url `"+targetURL+"`.")
 			default:
-				fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload ‘"+targetURL+"’.")
+				fatalIf(err.Trace(targetURL), "Unable to generate curl command for upload `"+targetURL+"`.")
 			}
 		}
 	}

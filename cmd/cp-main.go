@@ -52,32 +52,33 @@ var cpCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(cpFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] SOURCE [SOURCE...] TARGET
+  {{.HelpName}} [FLAGS] SOURCE [SOURCE...] TARGET
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
-      $ mc {{.Name}} Music/*.ogg s3/jukebox/
+      $ {{.HelpName}} Music/*.ogg s3/jukebox/
 
    2. Copy a folder recursively from Minio cloud storage to Amazon S3 cloud storage.
-      $ mc {{.Name}} --recursive play/mybucket/burningman2011/ s3/mybucket/
+      $ {{.HelpName}} --recursive play/mybucket/burningman2011/ s3/mybucket/
 
    3. Copy multiple local folders recursively to Minio cloud storage.
-      $ mc {{.Name}} --recursive backup/2014/ backup/2015/ play/archive/
+      $ {{.HelpName}} --recursive backup/2014/ backup/2015/ play/archive/
 
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
-      $ mc {{.Name}} --recursive s3\documents\2014\ C:\Backups\2014
+      $ {{.HelpName}} --recursive s3\documents\2014\ C:\Backups\2014
 
    5. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
-      $ mc {{.Name}} 本語 s3/andoria/
+      $ {{.HelpName}} 本語 s3/andoria/
 
    6. Copy a local folder with space separated characters to Amazon S3 cloud storage.
-      $ mc {{.Name}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
+      $ {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
+
 `,
 }
 
@@ -93,7 +94,7 @@ type copyMessage struct {
 
 // String colorized copy message
 func (c copyMessage) String() string {
-	return console.Colorize("Copy", fmt.Sprintf("‘%s’ -> ‘%s’", c.Source, c.Target))
+	return console.Colorize("Copy", fmt.Sprintf("`%s` -> `%s`", c.Source, c.Target))
 }
 
 // JSON jsonified copy message
@@ -208,7 +209,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
 					console.Eraseline()
 				}
 				if strings.Contains(cpURLs.Error.ToGoError().Error(), " is a folder.") {
-					errorIf(cpURLs.Error.Trace(), "Folder cannot be copied. Please use ‘...’ suffix.")
+					errorIf(cpURLs.Error.Trace(), "Folder cannot be copied. Please use `...` suffix.")
 				} else {
 					errorIf(cpURLs.Error.Trace(), "Unable to prepare URL for copying.")
 				}
@@ -296,7 +297,7 @@ func doCopySession(session *sessionV8) {
 						console.Eraseline()
 					}
 					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy ‘%s’.", cpURLs.SourceContent.URL.String()))
+						fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
 					if isErrIgnored(cpURLs.Error) {
 						continue
 					}
@@ -341,13 +342,7 @@ func doCopySession(session *sessionV8) {
 		}
 	} else {
 		if !globalJSON && globalQuiet {
-			accntStat := accntReader.Stat()
-			cpStatMessage := copyStatMessage{
-				Total:       accntStat.Total,
-				Transferred: accntStat.Transferred,
-				Speed:       accntStat.Speed,
-			}
-			console.Println(console.Colorize("Copy", cpStatMessage.String()))
+			console.Println(console.Colorize("Copy", accntReader.Stat().String()))
 		}
 	}
 }

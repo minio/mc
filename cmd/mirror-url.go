@@ -45,11 +45,11 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
-			errorIf(err.Trace(srcURL), "Unable to stat source ‘"+srcURL+"’.")
+			errorIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 		}
 
 		if err == nil && !srcContent.Type.IsDir() {
-			fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source ‘%s’ is not a folder. Only folders are supported by mirror command.", srcURL))
+			fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", srcURL))
 		}
 	}
 
@@ -61,16 +61,8 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	if url.Host != "" {
 		if url.Path == string(url.Separator) {
 			fatalIf(errInvalidArgument().Trace(tgtURL),
-				fmt.Sprintf("Target ‘%s’ does not contain bucket name.", tgtURL))
+				fmt.Sprintf("Target `%s` does not contain bucket name.", tgtURL))
 		}
-	}
-	_, _, err := url2Stat(tgtURL)
-	// we die on any error other than PathNotFound - destination directory need not exist.
-	switch err.ToGoError().(type) {
-	case PathNotFound:
-	case ObjectMissing:
-	default:
-		fatalIf(err.Trace(tgtURL), fmt.Sprintf("Unable to stat target ‘%s’.", tgtURL))
 	}
 }
 
@@ -105,6 +97,10 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 
 	// List both source and target, compare and return values through channel.
 	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
+		if diffMsg.Error != nil {
+			errorIf(diffMsg.Error, "Unable to mirror objects.")
+			break
+		}
 		switch diffMsg.Diff {
 		case differInNone:
 			// No difference, continue.

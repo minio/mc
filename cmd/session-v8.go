@@ -371,7 +371,7 @@ func (s *sessionV8) Delete() *probe.Error {
 // Close a session and exit.
 func (s sessionV8) CloseAndDie() {
 	s.Close()
-	console.Fatalln("Session safely terminated. To resume session ‘mc session resume " + s.SessionID + "’")
+	console.Fatalln("Session safely terminated. To resume session `mc session resume " + s.SessionID + "`")
 }
 
 // Create a factory function to simplify checking if

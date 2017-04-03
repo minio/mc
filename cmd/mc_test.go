@@ -99,27 +99,27 @@ func (s *TestSuite) TestIsvalidAliasName(c *C) {
 }
 
 func (s *TestSuite) TestHumanizedTime(c *C) {
-	hTime := timeDurationToHumanizedTime(time.Duration(10) * time.Second)
+	hTime := timeDurationToHumanizedDuration(time.Duration(10) * time.Second)
 	c.Assert(hTime.Minutes, Equals, int64(0))
 	c.Assert(hTime.Hours, Equals, int64(0))
 	c.Assert(hTime.Days, Equals, int64(0))
 
-	hTime = timeDurationToHumanizedTime(time.Duration(10) * time.Minute)
+	hTime = timeDurationToHumanizedDuration(time.Duration(10) * time.Minute)
 	c.Assert(hTime.Hours, Equals, int64(0))
 	c.Assert(hTime.Days, Equals, int64(0))
 
-	hTime = timeDurationToHumanizedTime(time.Duration(10) * time.Hour)
+	hTime = timeDurationToHumanizedDuration(time.Duration(10) * time.Hour)
 	c.Assert(hTime.Days, Equals, int64(0))
 
-	hTime = timeDurationToHumanizedTime(time.Duration(24) * time.Hour)
+	hTime = timeDurationToHumanizedDuration(time.Duration(24) * time.Hour)
 	c.Assert(hTime.Days, Not(Equals), int64(0))
 }
 
 func (s *TestSuite) TestVersions(c *C) {
-	v1, e := version.NewVersion("1.7.1")
-	v2, e := version.NewVersion("1.6.3")
+	v1, e := version.NewVersion("1.8")
+	v2, e := version.NewVersion("1.7")
 	c.Assert(e, IsNil)
-	constraint, e := version.NewConstraint(">= 1.7.1")
+	constraint, e := version.NewConstraint(">= 1.8")
 	c.Assert(e, IsNil)
 	c.Assert(constraint.Check(v1), Equals, true)
 	c.Assert(constraint.Check(v2), Equals, false)

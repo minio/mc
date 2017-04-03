@@ -70,29 +70,30 @@ var rmCmd = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(rmFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   mc {{.Name}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   mc {{.Name}} [FLAGS] TARGET [TARGET ...]
+  {{.HelpName}} [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  {{range .Flags}}{{.}}
+  {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
    1. Remove a file.
-      $ mc {{.Name}} 1999/old-backup.tgz
+      $ {{.HelpName}} 1999/old-backup.tgz
 
    2. Remove all objects recursively.
-      $ mc {{.Name}} --recursive s3/jazz-songs/louis/
+      $ {{.HelpName}} --recursive s3/jazz-songs/louis/
 
    3. Remove all objects older than '90' days.
-      $ mc {{.Name}} --recursive --older-than=90 s3/jazz-songs/louis/
+      $ {{.HelpName}} --recursive --older-than=90 s3/jazz-songs/louis/
 
    4. Remove all objects read from STDIN.
-      $ mc {{.Name}} --force --stdin
+      $ {{.HelpName}} --force --stdin
 
    5. Drop all incomplete uploads on 'jazz-songs' bucket.
-      $ mc {{.Name}} --incomplete --recursive s3/jazz-songs/
+      $ {{.HelpName}} --incomplete --recursive s3/jazz-songs/
+
 `,
 }
 
@@ -104,7 +105,7 @@ type rmMessage struct {
 
 // Colorized message for console printing.
 func (r rmMessage) String() string {
-	return console.Colorize("Remove", fmt.Sprintf("Removing ‘%s’.", r.Key))
+	return console.Colorize("Remove", fmt.Sprintf("Removing `%s`.", r.Key))
 }
 
 // JSON'ified message for scripting.
@@ -129,7 +130,7 @@ func checkRmSyntax(ctx *cli.Context) {
 	// For all recursive operations make sure to check for 'force' flag.
 	if (isRecursive || isStdin) && !isForce {
 		fatalIf(errDummy().Trace(),
-			"Removal requires --force option. This operational is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
+			"Removal requires --force option. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
 	}
 }
 
@@ -137,13 +138,13 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(url), "Invalid argument ‘"+url+"’.")
+		errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
 	content, pErr := clnt.Stat(isIncomplete)
 	if pErr != nil {
-		errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’.")
+		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
 	if older > 0 {
@@ -169,7 +170,7 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) error {
 		errorCh := clnt.Remove(isIncomplete, contentCh)
 		for pErr := range errorCh {
 			if pErr != nil {
-				errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’.")
+				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 				switch pErr.ToGoError().(type) {
 				case PathInsufficientPermission:
 					// Ignore Permission error.
@@ -186,7 +187,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’ recursively.")
+		errorIf(pErr.Trace(url), "Failed to remove `"+url+"` recursively.")
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
@@ -198,7 +199,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 	for content := range clnt.List(isRecursive, isIncomplete, DirLast) {
 		isEmpty = false
 		if content.Err != nil {
-			errorIf(content.Err.Trace(url), "Failed to remove ‘"+url+"’ recursively.")
+			errorIf(content.Err.Trace(url), "Failed to remove `"+url+"` recursively.")
 			switch content.Err.ToGoError().(type) {
 			case PathInsufficientPermission:
 				// Ignore Permission error.
@@ -226,12 +227,12 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 
 		if !isFake {
 			sent := false
-			for sent == false {
+			for !sent {
 				select {
 				case contentCh <- content:
 					sent = true
 				case pErr := <-errorCh:
-					errorIf(pErr.Trace(urlString), "Failed to remove ‘"+urlString+"’.")
+					errorIf(pErr.Trace(urlString), "Failed to remove `"+urlString+"`.")
 					switch pErr.ToGoError().(type) {
 					case PathInsufficientPermission:
 						// Ignore Permission error.
@@ -247,7 +248,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 
 	close(contentCh)
 	for pErr := range errorCh {
-		errorIf(pErr.Trace(url), "Failed to remove ‘"+url+"’ recursively.")
+		errorIf(pErr.Trace(url), "Failed to remove `"+url+"` recursively.")
 		switch pErr.ToGoError().(type) {
 		case PathInsufficientPermission:
 			// Ignore Permission error.
@@ -279,25 +280,38 @@ func mainRm(ctx *cli.Context) error {
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 
+	var rerr error
+	var err error
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
 		if isRecursive {
-			return removeRecursive(url, isIncomplete, isFake, older)
-		} // else {
-		return removeSingle(url, isIncomplete, isFake, older)
+			err = removeRecursive(url, isIncomplete, isFake, older)
+		} else {
+			err = removeSingle(url, isIncomplete, isFake, older)
+		}
+
+		if rerr == nil {
+			rerr = err
+		}
 	}
 
 	if !isStdin {
-		return nil
+		return rerr
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive {
-			return removeRecursive(url, isIncomplete, isFake, older)
-		} // else {
-		return removeSingle(url, isIncomplete, isFake, older)
+			err = removeRecursive(url, isIncomplete, isFake, older)
+		} else {
+			err = removeSingle(url, isIncomplete, isFake, older)
+		}
+
+		if rerr == nil {
+			rerr = err
+		}
 	}
-	return nil
+
+	return rerr
 }

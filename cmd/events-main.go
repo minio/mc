@@ -23,41 +23,22 @@ var (
 )
 
 var eventsCmd = cli.Command{
-	Name:   "events",
-	Usage:  "Manage object notifications.",
-	Action: mainEvents,
-	Before: setGlobalsFromContext,
-	Flags:  append(eventsFlags, globalFlags...),
+	Name:            "events",
+	Usage:           "Manage object notifications.",
+	HideHelpCommand: true,
+	Action:          mainEvents,
+	Before:          setGlobalsFromContext,
+	Flags:           append(eventsFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		eventsAddCmd,
 		eventsRemoveCmd,
 		eventsListCmd,
 	},
-	CustomHelpTemplate: `NAME:
-   {{.Name}} - {{.Usage}}
-
-USAGE:
-   {{.Name}} [FLAGS] COMMAND
-
-FLAGS:
-  {{range .Flags}}{{.}}
-  {{end}}
-COMMANDS:
-   {{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}
-`,
 }
 
 // mainEvents is the handle for "mc events" command.
 func mainEvents(ctx *cli.Context) error {
-
-	if ctx.Args().First() != "" { // command help.
-		cli.ShowCommandHelp(ctx, ctx.Args().First())
-	} else {
-		// command with Subcommands is an App.
-		cli.ShowAppHelp(ctx)
-	}
-
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 	// Sub-commands like "add", "remove", "list" have their own main.
 }

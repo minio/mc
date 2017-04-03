@@ -26,7 +26,7 @@ import (
 
 // mc configuration related constants.
 const (
-	minGoVersion = ">= 1.7.1" // mc requires at least Go v1.7.1
+	minGoVersion = ">= 1.7.5" // mc requires at least Go v1.7.5
 )
 
 const (
@@ -51,6 +51,7 @@ const (
 
 	// Maximum size for a single PUT operation.
 	globalMaximumPutSize = 5 * 1024 * 1024 * 1024 // 5GiB.
+
 )
 
 var (

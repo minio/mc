@@ -51,7 +51,7 @@ func migrateConfigV1ToV101() {
 		return
 	}
 	mcCfgV1, e := quick.Load(mustGetMcConfigPath(), newConfigV1())
-	fatalIf(probe.NewError(e), "Unable to load config version ‘1’.")
+	fatalIf(probe.NewError(e), "Unable to load config version `1`.")
 
 	// If loaded config version does not match 1.0.0, we do nothing.
 	if mcCfgV1.Version() != "1.0.0" {
@@ -95,20 +95,20 @@ func migrateConfigV1ToV101() {
 
 	// Save the new config back to the disk.
 	mcCfgV101, e := quick.New(cfgV101)
-	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘1.0.1’.")
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `1.0.1`.")
 	e = mcCfgV101.Save(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e), "Unable to save config version ‘1.0.1’.")
+	fatalIf(probe.NewError(e), "Unable to save config version `1.0.1`.")
 
-	console.Infof("Successfully migrated %s from version ‘1.0.0’ to version ‘1.0.1’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version `1.0.0` to version `1.0.1`.\n", mustGetMcConfigPath())
 }
 
-// Migrate from config ‘1.0.1’ to ‘2’. Drop semantic versioning and move to integer versioning. No other changes.
+// Migrate from config `1.0.1` to `2`. Drop semantic versioning and move to integer versioning. No other changes.
 func migrateConfigV101ToV2() {
 	if !isMcConfigExists() {
 		return
 	}
 	mcCfgV101, e := quick.Load(mustGetMcConfigPath(), newConfigV101())
-	fatalIf(probe.NewError(e), "Unable to load config version ‘1.0.1’.")
+	fatalIf(probe.NewError(e), "Unable to load config version `1.0.1`.")
 
 	// update to newer version
 	if mcCfgV101.Version() != "1.0.1" {
@@ -131,15 +131,15 @@ func migrateConfigV101ToV2() {
 	}
 
 	mcCfgV2, e := quick.New(cfgV2)
-	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘2’.")
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `2`.")
 
 	e = mcCfgV2.Save(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e), "Unable to save config version ‘2’.")
+	fatalIf(probe.NewError(e), "Unable to save config version `2`.")
 
-	console.Infof("Successfully migrated %s from version ‘1.0.1’ to version ‘2’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version `1.0.1` to version `2`.\n", mustGetMcConfigPath())
 }
 
-// Migrate from config ‘2’ to ‘3’. Use ‘-’ separated names for
+// Migrate from config `2` to `3`. Use `-` separated names for
 // hostConfig using struct json tags.
 func migrateConfigV2ToV3() {
 	if !isMcConfigExists() {
@@ -171,15 +171,15 @@ func migrateConfigV2ToV3() {
 	}
 
 	mcNewCfgV3, e := quick.New(cfgV3)
-	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘3’.")
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `3`.")
 
 	e = mcNewCfgV3.Save(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e), "Unable to save config version ‘3’.")
+	fatalIf(probe.NewError(e), "Unable to save config version `3`.")
 
-	console.Infof("Successfully migrated %s from version ‘2’ to version ‘3’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version `2` to version `3`.\n", mustGetMcConfigPath())
 }
 
-// Migrate from config version ‘3’ to ‘4’. Introduce API Signature
+// Migrate from config version `3` to `4`. Introduce API Signature
 // field in host config. Also Use JavaScript notation for field names.
 func migrateConfigV3ToV4() {
 	if !isMcConfigExists() {
@@ -210,16 +210,16 @@ func migrateConfigV3ToV4() {
 	}
 
 	mcNewCfgV4, e := quick.New(cfgV4)
-	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘4’.")
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `4`.")
 
 	e = mcNewCfgV4.Save(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e), "Unable to save config version ‘4’.")
+	fatalIf(probe.NewError(e), "Unable to save config version `4`.")
 
-	console.Infof("Successfully migrated %s from version ‘3’ to version ‘4’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version `3` to version `4`.\n", mustGetMcConfigPath())
 
 }
 
-// Migrate config version ‘4’ to ‘5’. Rename hostConfigV4.Signature  -> hostConfigV5.API.
+// Migrate config version `4` to `5`. Rename hostConfigV4.Signature  -> hostConfigV5.API.
 func migrateConfigV4ToV5() {
 	if !isMcConfigExists() {
 		return
@@ -245,15 +245,15 @@ func migrateConfigV4ToV5() {
 	}
 
 	mcNewCfgV5, e := quick.New(cfgV5)
-	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘5’.")
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `5`.")
 
 	e = mcNewCfgV5.Save(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e), "Unable to save config version ‘5’.")
+	fatalIf(probe.NewError(e), "Unable to save config version `5`.")
 
-	console.Infof("Successfully migrated %s from version ‘4’ to version ‘5’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version `4` to version `5`.\n", mustGetMcConfigPath())
 }
 
-// Migrate config version ‘5’ to ‘6’. Add google cloud storage servers
+// Migrate config version `5` to `6`. Add google cloud storage servers
 // to host config. Also remove "." from s3 aws glob rule.
 func migrateConfigV5ToV6() {
 	if !isMcConfigExists() {
@@ -311,15 +311,15 @@ func migrateConfigV5ToV6() {
 	}
 
 	mcNewCfgV6, e := quick.New(cfgV6)
-	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘6’.")
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `6`.")
 
 	e = mcNewCfgV6.Save(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e), "Unable to save config version ‘6’.")
+	fatalIf(probe.NewError(e), "Unable to save config version `6`.")
 
-	console.Infof("Successfully migrated %s from version ‘5’ to version ‘6’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version `5` to version `6`.\n", mustGetMcConfigPath())
 }
 
-// Migrate config version ‘6’ to ‘7'. Remove alias map and introduce
+// Migrate config version `6` to `7'. Remove alias map and introduce
 // named Host config. Also no more glob match for host config entries.
 func migrateConfigV6ToV7() {
 	if !isMcConfigExists() {
@@ -390,15 +390,15 @@ func migrateConfigV6ToV7() {
 	// Load default settings.
 	cfgV7.loadDefaults()
 	mcNewCfgV7, e := quick.New(cfgV7)
-	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘7’.")
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `7`.")
 
 	e = mcNewCfgV7.Save(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e), "Unable to save config version ‘7’.")
+	fatalIf(probe.NewError(e), "Unable to save config version `7`.")
 
-	console.Infof("Successfully migrated %s from version ‘6’ to version ‘7’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version `6` to version `7`.\n", mustGetMcConfigPath())
 }
 
-// Migrate config version ‘7’ to ‘8'. Remove hosts
+// Migrate config version `7` to `8'. Remove hosts
 // 'play.minio.io:9002' and 'dl.minio.io:9000'.
 func migrateConfigV7ToV8() {
 	if !isMcConfigExists() {
@@ -429,10 +429,10 @@ func migrateConfigV7ToV8() {
 	// Load default settings.
 	cfgV8.loadDefaults()
 	mcNewCfgV8, e := quick.New(cfgV8)
-	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version ‘8’.")
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `8`.")
 
 	e = mcNewCfgV8.Save(mustGetMcConfigPath())
-	fatalIf(probe.NewError(e), "Unable to save config version ‘8’.")
+	fatalIf(probe.NewError(e), "Unable to save config version `8`.")
 
-	console.Infof("Successfully migrated %s from version ‘7’ to version ‘8’.\n", mustGetMcConfigPath())
+	console.Infof("Successfully migrated %s from version `7` to version `8`.\n", mustGetMcConfigPath())
 }

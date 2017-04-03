@@ -36,30 +36,30 @@ var (
 	}
 
 	errInvalidAliasedURL = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Use ‘mc config host add mycloud " + URL + " ...’ to add an alias. Use the alias for S3 operations.")).Untrace()
+		return probe.NewError(errors.New("Use `mc config host add mycloud " + URL + " ...` to add an alias. Use the alias for S3 operations.")).Untrace()
 	}
 
 	errNoMatchingHost = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("No matching host found for the given URL ‘" + URL + "’.")).Untrace()
+		return probe.NewError(errors.New("No matching host found for the given URL `" + URL + "`.")).Untrace()
 	}
 
 	errInvalidSource = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Invalid source ‘" + URL + "’.")).Untrace()
+		return probe.NewError(errors.New("Invalid source `" + URL + "`.")).Untrace()
 	}
 
 	errInvalidTarget = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Invalid target ‘" + URL + "’.")).Untrace()
+		return probe.NewError(errors.New("Invalid target `" + URL + "`.")).Untrace()
 	}
 
 	errOverWriteNotAllowed = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Overwrite not allowed for ‘" + URL + "’. Use ‘--force’ to override this behavior."))
+		return probe.NewError(errors.New("Overwrite not allowed for `" + URL + "`. Use `--force` to override this behavior."))
 	}
 
 	errDeleteNotAllowed = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Delete not allowed for ‘" + URL + "’. Use ‘--force’ to override this behavior."))
+		return probe.NewError(errors.New("Delete not allowed for `" + URL + "`. Use `--force` to override this behavior."))
 	}
 	errSourceIsDir = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Source ‘" + URL + "’ is a folder.")).Untrace()
+		return probe.NewError(errors.New("Source `" + URL + "` is a folder.")).Untrace()
 	}
 
 	errSourceTargetSame = func(URL string) *probe.Error {
