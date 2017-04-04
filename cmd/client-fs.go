@@ -101,7 +101,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	doneChan := make(chan bool)
 	// Make the channel buffered to ensure no event is dropped. Notify will drop
 	// an event if the receiver is not able to keep up the sending pace.
-	neventChan := make(chan notify.EventInfo, 1)
+	in, out := PipeChan(1000)
 
 	var fsEvents []notify.Event
 	for _, event := range params.events {
@@ -121,7 +121,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	if params.recursive {
 		recursivePath = f.PathURL.Path + "..."
 	}
-	if e := notify.Watch(recursivePath, neventChan, fsEvents...); e != nil {
+	if e := notify.Watch(recursivePath, in, fsEvents...); e != nil {
 		return nil, probe.NewError(e)
 	}
 
@@ -131,7 +131,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 
 		close(eventChan)
 		close(errorChan)
-		notify.Stop(neventChan)
+		notify.Stop(in)
 	}()
 
 	timeFormatFS := "2006-01-02T15:04:05.000Z"
@@ -139,7 +139,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	// Get fsnotify notifications for events and errors, and sent them
 	// using eventChan and errorChan
 	go func() {
-		for event := range neventChan {
+		for event := range out {
 			if isIgnoredFile(event.Path()) {
 				continue
 			}
