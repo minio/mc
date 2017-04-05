@@ -89,6 +89,7 @@ func (s *TestSuite) TestGetMcConfigPath(c *C) {
 
 func (s *TestSuite) TestIsvalidAliasName(c *C) {
 	c.Check(isValidAlias("helloWorld0"), Equals, true)
+	c.Check(isValidAlias("hello_World0"), Equals, true)
 	c.Check(isValidAlias("h0SFD2k24Fdsa"), Equals, true)
 	c.Check(isValidAlias("fdslka-4"), Equals, true)
 	c.Check(isValidAlias("fdslka-"), Equals, true)
