@@ -19,7 +19,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -47,15 +46,19 @@ var (
 	}
 )
 
-var adminHealHelpTemplate = `NAME:
+var adminHealCmd = cli.Command{
+	Name:            "heal",
+	Usage:           "Manage heal tasks",
+	Before:          setGlobalsFromContext,
+	Action:          mainAdminHeal,
+	Flags:           append(adminHealFlags, globalFlags...),
+	HideHelpCommand: true,
+	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] [COMMAND]
+  {{.HelpName}} [FLAGS] [ALIAS]
 
-COMMANDS:
-  {{range .VisibleCommands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-  {{end}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -84,14 +87,7 @@ EXAMPLES:
     8. Issue a fake heal operation to list all uploads to be healed under 'dir' prefix
        $ {{.HelpName}} --incomplete --recursive --fake play/testbucket/dir/
 
-`
-var adminHealCmd = cli.Command{
-	Name:            "heal",
-	Usage:           "Manage heal tasks",
-	Before:          setGlobalsFromContext,
-	Action:          mainAdminHeal,
-	Flags:           append(adminHealFlags, globalFlags...),
-	HideHelpCommand: true,
+`,
 }
 
 // healMessage container to hold repair information.
@@ -299,8 +295,7 @@ func healUploads(client *madmin.AdminClient, bucket, object string, isRecursive,
 // checkAdminHealSyntax - validate all the passed arguments
 func checkAdminHealSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		cli.HelpPrinter(ctx.App.Writer, adminHealHelpTemplate, ctx.App)
-		os.Exit(1)
+		cli.ShowCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
 	}
 }
 
