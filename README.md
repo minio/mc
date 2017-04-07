@@ -39,9 +39,8 @@ docker run minio/mc ls play
 Install mc packages using [Homebrew](http://brew.sh/)
 
 ```sh
-brew install minio-mc
+brew install minio/stable/mc
 mc --help
-
 ```
 
 ## GNU/Linux
