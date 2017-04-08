@@ -30,7 +30,7 @@ var (
 	eventsAddFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "events",
-			Value: "put,delete",
+			Value: "put,delete,get",
 			Usage: "Filter specific type of events. Defaults to all events.",
 		},
 		cli.StringFlag{
@@ -64,7 +64,7 @@ EXAMPLES:
      $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
 
    2. Enable bucket notification with filters parameters
-     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --events put,delete --prefix photos/ --suffix .jpg
+     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --events put,delete,get --prefix photos/ --suffix .jpg
 
 `,
 }

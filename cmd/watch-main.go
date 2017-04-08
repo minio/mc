@@ -36,7 +36,7 @@ var (
 	watchFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "events",
-			Value: "put,delete",
+			Value: "put,delete,get",
 			Usage: "Filter specific type of events. Defaults to all events by default.",
 		},
 		cli.StringFlag{
@@ -64,7 +64,7 @@ var watchCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS]
+  {{.HelpName}} PATH [FLAGS]
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -98,6 +98,7 @@ func checkWatchSyntax(ctx *cli.Context) {
 type watchMessage struct {
 	Status string `json:"status"`
 	Event  Event  `json:"events"`
+	Source Source `json:"source,omitempty"`
 }
 
 func (u watchMessage) JSON() string {
@@ -175,7 +176,10 @@ func mainWatch(ctx *cli.Context) error {
 				if !ok {
 					return
 				}
-				msg := watchMessage{Event: event}
+				msg := watchMessage{
+					Event:  event.Event,
+					Source: event.Source,
+				}
 				printMsg(msg)
 			case err, ok := <-wo.Errors():
 				if !ok {

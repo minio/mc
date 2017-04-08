@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -206,6 +206,8 @@ func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, su
 			nc.AddEvents(minio.ObjectCreatedAll)
 		case "delete":
 			nc.AddEvents(minio.ObjectRemovedAll)
+		case "get":
+			nc.AddEvents(minio.ObjectAccessedAll)
 		default:
 			return errInvalidArgument().Trace(events...)
 		}
@@ -366,7 +368,10 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 
 // Start watching on all bucket events for a given account ID.
 func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
-	eventChan := make(chan Event)
+	eventChan := make(chan struct {
+		Event  Event
+		Source Source
+	})
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 
@@ -384,6 +389,8 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 			events = append(events, string(minio.ObjectCreatedAll))
 		case "delete":
 			events = append(events, string(minio.ObjectRemovedAll))
+		case "get":
+			events = append(events, string(minio.ObjectAccessedAll))
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
@@ -441,22 +448,77 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 				u := *c.targetURL
 				u.Path = path.Join(string(u.Separator), bucketName, key)
 				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
-					eventChan <- Event{
-						Time:   record.EventTime,
-						Size:   record.S3.Object.Size,
-						Path:   u.String(),
-						Client: c,
-						Type:   EventCreate,
+					eventChan <- struct {
+						Event  Event
+						Source Source
+					}{
+						Event: Event{
+							Time:   record.EventTime,
+							Size:   record.S3.Object.Size,
+							Path:   u.String(),
+							Client: c,
+							Type:   EventCreate,
+						},
+						Source: Source{
+							IP:        record.Source.Host,
+							Port:      record.Source.Port,
+							UserAgent: record.Source.UserAgent,
+						},
 					}
+
 				} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
-					eventChan <- Event{
-						Time:   record.EventTime,
-						Path:   u.String(),
-						Client: c,
-						Type:   EventRemove,
+					eventChan <- struct {
+						Event  Event
+						Source Source
+					}{
+						Event: Event{
+							Time:   record.EventTime,
+							Path:   u.String(),
+							Client: c,
+							Type:   EventRemove,
+						},
+						Source: Source{
+							IP:        record.Source.Host,
+							Port:      record.Source.Port,
+							UserAgent: record.Source.UserAgent,
+						},
 					}
-				} else {
-					// ignore other events
+				} else if record.EventName == minio.ObjectAccessedGet {
+					eventChan <- struct {
+						Event  Event
+						Source Source
+					}{
+						Event: Event{
+							Time:   record.EventTime,
+							Size:   record.S3.Object.Size,
+							Path:   u.String(),
+							Client: c,
+							Type:   EventAccessedRead,
+						},
+						Source: Source{
+							IP:        record.Source.Host,
+							Port:      record.Source.Port,
+							UserAgent: record.Source.UserAgent,
+						},
+					}
+				} else if record.EventName == minio.ObjectAccessedHead {
+					eventChan <- struct {
+						Event  Event
+						Source Source
+					}{
+						Event: Event{
+							Time:   record.EventTime,
+							Size:   record.S3.Object.Size,
+							Path:   u.String(),
+							Client: c,
+							Type:   EventAccessedStat,
+						},
+						Source: Source{
+							IP:        record.Source.Host,
+							Port:      record.Source.Port,
+							UserAgent: record.Source.UserAgent,
+						},
+					}
 				}
 			}
 		}
