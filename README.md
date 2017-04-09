@@ -31,7 +31,7 @@ docker run minio/mc ls play
 ### Edge
 ```
 docker pull minio/mc:edge
-docker run minio/mc ls play
+docker run minio/mc:edge ls play
 ```
 
 ## macOS
