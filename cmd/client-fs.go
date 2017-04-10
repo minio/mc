@@ -96,10 +96,7 @@ func (f *fsClient) GetURL() clientURL {
 
 // Watches for all fs events on an input path.
 func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
-	eventChan := make(chan struct {
-		Event  Event
-		Source Source
-	})
+	eventChan := make(chan EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 	// Make the channel buffered to ensure no event is dropped. Notify will drop
@@ -164,50 +161,35 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 					// we want files
 					continue
 				}
-				eventChan <- struct {
-					Event  Event
-					Source Source
-				}{
-					Event: Event{
-						Time:   time.Now().Format(timeFormatFS),
-						Size:   i.Size(),
-						Path:   event.Path(),
-						Client: f,
-						Type:   EventCreate,
-					},
+				eventChan <- EventInfo{
+					Time:   time.Now().Format(timeFormatFS),
+					Size:   i.Size(),
+					Path:   event.Path(),
+					Client: f,
+					Type:   EventCreate,
 				}
 			} else if IsDeleteEvent(event.Event()) {
-				eventChan <- struct {
-					Event  Event
-					Source Source
-				}{
-					Event: Event{
-						Time:   time.Now().Format(timeFormatFS),
-						Path:   event.Path(),
-						Client: f,
-						Type:   EventRemove,
-					},
+				eventChan <- EventInfo{
+					Time:   time.Now().Format(timeFormatFS),
+					Path:   event.Path(),
+					Client: f,
+					Type:   EventRemove,
 				}
 			} else if IsGetEvent(event.Event()) {
-				eventChan <- struct {
-					Event  Event
-					Source Source
-				}{
-					Event: Event{
-						Time:   time.Now().Format(timeFormatFS),
-						Path:   event.Path(),
-						Client: f,
-						Type:   EventAccessed,
-					},
+				eventChan <- EventInfo{
+					Time:   time.Now().Format(timeFormatFS),
+					Path:   event.Path(),
+					Client: f,
+					Type:   EventAccessed,
 				}
 			}
 		}
 	}()
 
 	return &watchObject{
-		events: eventChan,
-		errors: errorChan,
-		done:   doneChan,
+		eventInfoChan: eventChan,
+		errorChan:     errorChan,
+		doneChan:      doneChan,
 	}, nil
 }
 
