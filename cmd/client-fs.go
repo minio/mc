@@ -96,7 +96,10 @@ func (f *fsClient) GetURL() clientURL {
 
 // Watches for all fs events on an input path.
 func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
-	eventChan := make(chan Event)
+	eventChan := make(chan struct {
+		Event  Event
+		Source Source
+	})
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 	// Make the channel buffered to ensure no event is dropped. Notify will drop
@@ -110,6 +113,8 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 			fsEvents = append(fsEvents, EventTypePut...)
 		case "delete":
 			fsEvents = append(fsEvents, EventTypeDelete...)
+		case "get":
+			fsEvents = append(fsEvents, EventTypeGet...)
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
@@ -159,19 +164,41 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 					// we want files
 					continue
 				}
-				eventChan <- Event{
-					Time:   time.Now().Format(timeFormatFS),
-					Size:   i.Size(),
-					Path:   event.Path(),
-					Client: f,
-					Type:   EventCreate,
+				eventChan <- struct {
+					Event  Event
+					Source Source
+				}{
+					Event: Event{
+						Time:   time.Now().Format(timeFormatFS),
+						Size:   i.Size(),
+						Path:   event.Path(),
+						Client: f,
+						Type:   EventCreate,
+					},
 				}
 			} else if IsDeleteEvent(event.Event()) {
-				eventChan <- Event{
-					Time:   time.Now().Format(timeFormatFS),
-					Path:   event.Path(),
-					Client: f,
-					Type:   EventRemove,
+				eventChan <- struct {
+					Event  Event
+					Source Source
+				}{
+					Event: Event{
+						Time:   time.Now().Format(timeFormatFS),
+						Path:   event.Path(),
+						Client: f,
+						Type:   EventRemove,
+					},
+				}
+			} else if IsGetEvent(event.Event()) {
+				eventChan <- struct {
+					Event  Event
+					Source Source
+				}{
+					Event: Event{
+						Time:   time.Now().Format(timeFormatFS),
+						Path:   event.Path(),
+						Client: f,
+						Type:   EventAccessed,
+					},
 				}
 			}
 		}

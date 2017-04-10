@@ -543,9 +543,9 @@ func (c Client) executeMethod(method string, metadata requestMetadata) (res *htt
 
 		// For errors verify if its retryable otherwise fail quickly.
 		errResponse := ToErrorResponse(httpRespToErrorResponse(res, metadata.bucketName, metadata.objectName))
-		// Bucket region if set in error response, we can retry the
-		// request with the new region.
-		if errResponse.Region != "" {
+		// Bucket region if set in error response and the error code dictates invalid region,
+		// we can retry the request with the new region.
+		if errResponse.Code == "InvalidRegion" && errResponse.Region != "" {
 			c.bucketLocCache.Set(metadata.bucketName, errResponse.Region)
 			continue // Retry.
 		}
@@ -623,14 +623,6 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 			req = s3signer.PreSignV4(*req, c.accessKeyID, c.secretAccessKey, location, metadata.expires)
 		}
 		return req, nil
-	}
-
-	// FIXME: Enable this when Google Cloud Storage properly supports 100-continue.
-	// Skip setting 'expect' header for Google Cloud Storage, there
-	// are some known issues - https://github.com/restic/restic/issues/520
-	if !s3utils.IsGoogleEndpoint(c.endpointURL) && c.s3AccelerateEndpoint == "" {
-		// Set 'Expect' header for the request.
-		req.Header.Set("Expect", "100-continue")
 	}
 
 	// Set 'User-Agent' header for the request.

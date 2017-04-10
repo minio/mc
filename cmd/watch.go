@@ -24,14 +24,20 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// EventType is the type of the event that occurred
+// EventType represents the type of the event occurred.
 type EventType string
 
 const (
-	// EventCreate notifies when a new object has been created
+	// EventCreate notifies when a new object is created
 	EventCreate EventType = "ObjectCreated"
-	// EventRemove notifies when a new object has been deleted
+	// EventRemove notifies when a new object is deleted
 	EventRemove = "ObjectRemoved"
+	// EventAccessed notifies when an object is accessed.
+	EventAccessed = "ObjectAccessed"
+	// EventAccessedRead notifies when an object is accessed (specifically read).
+	EventAccessedRead = "ObjectAccessed:Read"
+	// EventAccessedStat notifies when an object is accessed (specifically stat).
+	EventAccessedStat = "ObjectAccessed:Stat"
 )
 
 // Event contains the information of the event that occurred
@@ -41,6 +47,13 @@ type Event struct {
 	Path   string    `json:"path"`
 	Client Client    `json:"-"`
 	Type   EventType `json:"type"`
+}
+
+// Source obtains the information of the client which generated the event.
+type Source struct {
+	IP        string `json:"ip"`
+	Port      string `json:"port"`
+	UserAgent string `json:"userAgent"`
 }
 
 type watchParams struct {
@@ -53,7 +66,10 @@ type watchParams struct {
 
 type watchObject struct {
 	// events will be put on this chan
-	events chan Event
+	events chan struct {
+		Event  Event
+		Source Source
+	}
 	// errors will be put on this chan
 	errors chan *probe.Error
 	// will stop the watcher goroutines
@@ -61,7 +77,10 @@ type watchObject struct {
 }
 
 // Events returns the chan receiving events
-func (w *watchObject) Events() chan Event {
+func (w *watchObject) Events() chan struct {
+	Event  Event
+	Source Source
+} {
 	return w.events
 }
 
@@ -82,7 +101,10 @@ type Watcher struct {
 	// all errors will be added to this chan
 	errorsChan chan *probe.Error
 	// all events will be added to this chan
-	eventsChan chan Event
+	eventsChan chan struct {
+		Event  Event
+		Source Source
+	}
 
 	// array of watchers joined
 	o []*watchObject
@@ -96,8 +118,11 @@ func NewWatcher(sessionStartTime time.Time) *Watcher {
 	return &Watcher{
 		sessionStartTime: sessionStartTime,
 		errorsChan:       make(chan *probe.Error),
-		eventsChan:       make(chan Event),
-		o:                []*watchObject{},
+		eventsChan: make(chan struct {
+			Event  Event
+			Source Source
+		}),
+		o: []*watchObject{},
 	}
 }
 
@@ -107,7 +132,10 @@ func (w *Watcher) Errors() chan *probe.Error {
 }
 
 // Events returns a channel which will receive events
-func (w *Watcher) Events() chan Event {
+func (w *Watcher) Events() chan struct {
+	Event  Event
+	Source Source
+} {
 	return w.eventsChan
 }
 
