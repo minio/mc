@@ -49,6 +49,7 @@ var policyCmd = cli.Command{
 USAGE:
   {{.HelpName}} [FLAGS] PERMISSION TARGET
   {{.HelpName}} [FLAGS] TARGET
+  {{.HelpName}} list [FLAGS] TARGET
 
 PERMISSION:
   Allowed policies are: [none, download, upload, public].

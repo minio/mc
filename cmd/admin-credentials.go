@@ -36,7 +36,7 @@ var adminCredsCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS ACCESS_KEY SECRET_KEY
+  {{.HelpName}} TARGET ACCESS_KEY SECRET_KEY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

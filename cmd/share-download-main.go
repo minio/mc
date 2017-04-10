@@ -44,7 +44,7 @@ var shareDownload = cli.Command{
    {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [OPTIONS] TARGET [TARGET...]
+   {{.HelpName}} [FLAGS] TARGET [TARGET...]
 
 OPTIONS:
   {{range .VisibleFlags}}{{.}}
