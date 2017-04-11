@@ -41,7 +41,7 @@ version       Print version.
 Install minio packages using [Homebrew](http://brew.sh/) 
 
 ```sh
-brew install minio-mc
+brew install minio/stable/mc
 mc --help
 ```
 

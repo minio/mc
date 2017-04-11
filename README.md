@@ -39,7 +39,7 @@ docker run minio/mc:edge ls play
 Install mc packages using [Homebrew](http://brew.sh/)
 
 ```sh
-brew install minio-mc
+brew install minio/stable/mc
 mc --help
 ```
 
