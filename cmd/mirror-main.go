@@ -289,19 +289,19 @@ func (mj *mirrorJob) watchMirror() {
 				}
 			}
 
-			sourceURL := newClientURL(event.Event.Path)
-			aliasedPath := strings.Replace(event.Event.Path, sourceURLFull, mj.sourceURL, -1)
+			sourceURL := newClientURL(event.Path)
+			aliasedPath := strings.Replace(event.Path, sourceURLFull, mj.sourceURL, -1)
 
 			// build target path, it is the relative of the event.Path with the sourceUrl
 			// joined to the targetURL.
-			sourceSuffix := strings.TrimPrefix(event.Event.Path, sourceURLFull)
+			sourceSuffix := strings.TrimPrefix(event.Path, sourceURLFull)
 			targetPath := urlJoinPath(mj.targetURL, sourceSuffix)
 
 			// newClient needs the unexpanded  path, newCLientURL needs the expanded path
 			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
 			targetURL := newClientURL(expandedTargetPath)
 
-			if event.Event.Type == EventCreate {
+			if event.Type == EventCreate {
 				// we are checking if a destination file exists now, and if we only
 				// overwrite it when force is enabled.
 				mirrorURL := URLs{
@@ -310,7 +310,7 @@ func (mj *mirrorJob) watchMirror() {
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 				}
-				if event.Event.Size == 0 {
+				if event.Size == 0 {
 					sourceClient, err := newClient(aliasedPath)
 					if err != nil {
 						// cannot create sourceclient
@@ -361,14 +361,14 @@ func (mj *mirrorJob) watchMirror() {
 					shouldQueue = true
 				}
 				if shouldQueue || mj.isForce {
-					mirrorURL.SourceContent.Size = event.Event.Size
+					mirrorURL.SourceContent.Size = event.Size
 					mirrorURL.TotalCount = mj.TotalObjects
 					mirrorURL.TotalSize = mj.TotalBytes
 					// adjust total, because we want to show progress of the itemj stiil queued to be copied.
-					mj.status.SetTotal(mj.status.Total() + event.Event.Size).Update()
+					mj.status.SetTotal(mj.status.Total() + event.Size).Update()
 					mj.statusCh <- mj.doMirror(mirrorURL)
 				}
-			} else if event.Event.Type == EventRemove {
+			} else if event.Type == EventRemove {
 				mirrorURL := URLs{
 					SourceAlias:   sourceAlias,
 					SourceContent: nil,

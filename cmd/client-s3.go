@@ -368,10 +368,7 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 
 // Start watching on all bucket events for a given account ID.
 func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
-	eventChan := make(chan struct {
-		Event  Event
-		Source Source
-	})
+	eventChan := make(chan EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 
@@ -417,9 +414,9 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventsCh := c.api.ListenBucketNotification(bucket, params.prefix, params.suffix, events, doneCh)
 
 	wo := &watchObject{
-		events: eventChan,
-		errors: errorChan,
-		done:   doneChan,
+		eventInfoChan: eventChan,
+		errorChan:     errorChan,
+		doneChan:      doneChan,
 	}
 
 	// wait for events to occur and sent them through the eventChan and errorChan
@@ -448,76 +445,48 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 				u := *c.targetURL
 				u.Path = path.Join(string(u.Separator), bucketName, key)
 				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
-					eventChan <- struct {
-						Event  Event
-						Source Source
-					}{
-						Event: Event{
-							Time:   record.EventTime,
-							Size:   record.S3.Object.Size,
-							Path:   u.String(),
-							Client: c,
-							Type:   EventCreate,
-						},
-						Source: Source{
-							IP:        record.Source.Host,
-							Port:      record.Source.Port,
-							UserAgent: record.Source.UserAgent,
-						},
+					eventChan <- EventInfo{
+						Time:      record.EventTime,
+						Size:      record.S3.Object.Size,
+						Path:      u.String(),
+						Client:    c,
+						Type:      EventCreate,
+						Host:      record.Source.Host,
+						Port:      record.Source.Port,
+						UserAgent: record.Source.UserAgent,
 					}
 
 				} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
-					eventChan <- struct {
-						Event  Event
-						Source Source
-					}{
-						Event: Event{
-							Time:   record.EventTime,
-							Path:   u.String(),
-							Client: c,
-							Type:   EventRemove,
-						},
-						Source: Source{
-							IP:        record.Source.Host,
-							Port:      record.Source.Port,
-							UserAgent: record.Source.UserAgent,
-						},
+					eventChan <- EventInfo{
+						Time:      record.EventTime,
+						Path:      u.String(),
+						Client:    c,
+						Type:      EventRemove,
+						Host:      record.Source.Host,
+						Port:      record.Source.Port,
+						UserAgent: record.Source.UserAgent,
 					}
 				} else if record.EventName == minio.ObjectAccessedGet {
-					eventChan <- struct {
-						Event  Event
-						Source Source
-					}{
-						Event: Event{
-							Time:   record.EventTime,
-							Size:   record.S3.Object.Size,
-							Path:   u.String(),
-							Client: c,
-							Type:   EventAccessedRead,
-						},
-						Source: Source{
-							IP:        record.Source.Host,
-							Port:      record.Source.Port,
-							UserAgent: record.Source.UserAgent,
-						},
+					eventChan <- EventInfo{
+						Time:      record.EventTime,
+						Size:      record.S3.Object.Size,
+						Path:      u.String(),
+						Client:    c,
+						Type:      EventAccessedRead,
+						Host:      record.Source.Host,
+						Port:      record.Source.Port,
+						UserAgent: record.Source.UserAgent,
 					}
 				} else if record.EventName == minio.ObjectAccessedHead {
-					eventChan <- struct {
-						Event  Event
-						Source Source
-					}{
-						Event: Event{
-							Time:   record.EventTime,
-							Size:   record.S3.Object.Size,
-							Path:   u.String(),
-							Client: c,
-							Type:   EventAccessedStat,
-						},
-						Source: Source{
-							IP:        record.Source.Host,
-							Port:      record.Source.Port,
-							UserAgent: record.Source.UserAgent,
-						},
+					eventChan <- EventInfo{
+						Time:      record.EventTime,
+						Size:      record.S3.Object.Size,
+						Path:      u.String(),
+						Client:    c,
+						Type:      EventAccessedStat,
+						Host:      record.Source.Host,
+						Port:      record.Source.Port,
+						UserAgent: record.Source.UserAgent,
 					}
 				}
 			}
