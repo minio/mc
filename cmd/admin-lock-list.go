@@ -47,7 +47,7 @@ var adminLockListCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS/BUCKET/PREFIX
+  {{.HelpName}} [FLAGS] TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

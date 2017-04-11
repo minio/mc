@@ -38,7 +38,7 @@ var adminConfigSetCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS/
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

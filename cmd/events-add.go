@@ -54,7 +54,7 @@ var eventsAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS/BUCKET ARN [FLAGS]
+  {{.HelpName}} TARGET ARN [FLAGS]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
