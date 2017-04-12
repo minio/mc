@@ -1,4 +1,4 @@
-// +build darwin,freebsd,solaris
+// +build darwin freebsd solaris
 
 /*
  * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
