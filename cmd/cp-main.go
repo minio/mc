@@ -24,7 +24,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
 
 	"github.com/cheggaaa/pb"
@@ -242,7 +241,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
 	session.Save()
 }
 
-func doCopySession(session *sessionV8) {
+func doCopySession(session *sessionV8) error {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
 	if !session.HasData() {
@@ -267,74 +266,73 @@ func doCopySession(session *sessionV8) {
 	// Wait on status of doCopy() operation.
 	var statusCh = make(chan URLs)
 
-	// Add a wait group.
-	var wg = new(sync.WaitGroup)
-	wg.Add(1)
-
-	// Go routine to monitor signal traps if any.
 	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-trapCh:
-				// Receive interrupt notification.
+		// Loop through all urls.
+		for urlScanner.Scan() {
+			var cpURLs URLs
+			// Unmarshal copyURLs from each line.
+			json.Unmarshal([]byte(urlScanner.Text()), &cpURLs)
+
+			// Save total count.
+			cpURLs.TotalCount = session.Header.TotalObjects
+
+			// Save totalSize.
+			cpURLs.TotalSize = session.Header.TotalBytes
+
+			// Verify if previously copied, notify progress bar.
+			if isCopied(cpURLs.SourceContent.URL.String()) {
+				statusCh <- doCopyFake(cpURLs, progressReader)
+			} else {
+				statusCh <- doCopy(cpURLs, progressReader, accntReader)
+			}
+		}
+
+		// URLs feeding finished
+		close(statusCh)
+
+	}()
+
+	var retErr error
+
+loop:
+	for {
+		select {
+		case <-trapCh:
+			// Receive interrupt notification.
+			if !globalQuiet && !globalJSON {
+				console.Eraseline()
+			}
+			session.CloseAndDie()
+		case cpURLs, ok := <-statusCh:
+			// Status channel is closed, we should return.
+			if !ok {
+				break loop
+			}
+			if cpURLs.Error == nil {
+				session.Header.LastCopied = cpURLs.SourceContent.URL.String()
+				session.Save()
+			} else {
+
+				// Set exit status for any copy error
+				retErr = exitStatus(globalErrorExitStatus)
+
+				// Print in new line and adjust to top so that we
+				// don't print over the ongoing progress bar.
 				if !globalQuiet && !globalJSON {
 					console.Eraseline()
 				}
+				errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
+					fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
+				if isErrIgnored(cpURLs.Error) {
+					continue loop
+				}
+				// For critical errors we should exit. Session
+				// can be resumed after the user figures out
+				// the  problem.
 				session.CloseAndDie()
-			case cpURLs, ok := <-statusCh:
-				// Status channel is closed, we should return.
-				if !ok {
-					return
-				}
-				if cpURLs.Error == nil {
-					session.Header.LastCopied = cpURLs.SourceContent.URL.String()
-					session.Save()
-				} else {
-					// Print in new line and adjust to top so that we
-					// don't print over the ongoing progress bar.
-					if !globalQuiet && !globalJSON {
-						console.Eraseline()
-					}
-					errorIf(cpURLs.Error.Trace(cpURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy `%s`.", cpURLs.SourceContent.URL.String()))
-					if isErrIgnored(cpURLs.Error) {
-						continue
-					}
-					// For critical errors we should exit. Session
-					// can be resumed after the user figures out
-					// the  problem.
-					session.CloseAndDie()
-				}
 			}
 		}
-	}()
-
-	// Loop through all urls.
-	for urlScanner.Scan() {
-		var cpURLs URLs
-		// Unmarshal copyURLs from each line.
-		json.Unmarshal([]byte(urlScanner.Text()), &cpURLs)
-
-		// Save total count.
-		cpURLs.TotalCount = session.Header.TotalObjects
-
-		// Save totalSize.
-		cpURLs.TotalSize = session.Header.TotalBytes
-
-		// Verify if previously copied, notify progress bar.
-		if isCopied(cpURLs.SourceContent.URL.String()) {
-			statusCh <- doCopyFake(cpURLs, progressReader)
-		} else {
-			statusCh <- doCopy(cpURLs, progressReader, accntReader)
-		}
 	}
-
-	// Close the goroutine.
-	close(statusCh)
-
-	// Wait for the goroutines to finish.
-	wg.Wait()
 
 	if !globalQuiet && !globalJSON {
 		if progressReader.ProgressBar.Get() > 0 {
@@ -345,6 +343,8 @@ func doCopySession(session *sessionV8) {
 			console.Println(console.Colorize("Copy", accntReader.Stat().String()))
 		}
 	}
+
+	return retErr
 }
 
 // mainCopy is the entry point for cp command.
@@ -368,8 +368,8 @@ func mainCopy(ctx *cli.Context) error {
 
 	// extract URLs.
 	session.Header.CommandArgs = ctx.Args()
-	doCopySession(session)
+	e = doCopySession(session)
 	session.Delete()
 
-	return nil
+	return e
 }
