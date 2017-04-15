@@ -101,9 +101,10 @@ type healMessage struct {
 
 // String colorized service status message.
 func (u healMessage) String() string {
-	allOfflineTmpl := "isn't healed since %d disks were offline"
-	allHealedTmpl := "is healed on all %d disks"
-	someHealedTmpl := "is healed on %d disks while %d disks were offline"
+	healMsg := make(map[madmin.HealState]string)
+	healMsg[madmin.HealNone] = "isn't healed since all disks needing heal were offline"
+	healMsg[madmin.HealPartial] = "is healed on some disks while others were offline"
+	healMsg[madmin.HealOK] = "is healed on all disks needing heal"
 
 	msg := ""
 	if u.Object != nil {
@@ -112,15 +113,7 @@ func (u healMessage) String() string {
 		msg = fmt.Sprintf("Upload %s/%s/%s ", u.Bucket, u.Upload.Key, u.Upload.UploadID)
 	}
 
-	healed, offline := u.Result.HealedCount, u.Result.OfflineCount
-	switch {
-	case healed == 0:
-		msg += fmt.Sprintf(allOfflineTmpl, offline)
-	case offline == 0:
-		msg += fmt.Sprintf(allHealedTmpl, healed)
-	case healed > 0 && offline > 0:
-		msg += fmt.Sprintf(someHealedTmpl, healed, offline)
-	}
+	msg += healMsg[u.Result.State]
 
 	return console.Colorize("Heal", msg)
 }
