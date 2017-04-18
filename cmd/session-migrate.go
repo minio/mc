@@ -37,6 +37,9 @@ func migrateSessionV7ToV8() {
 			fatalIf(err.Trace(sid), "Unable to load version `7`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		}
 
+		// Close underlying session data file.
+		sV7.DataFP.Close()
+
 		sessionVersion, e := strconv.Atoi(sV7.Header.Version)
 		fatalIf(probe.NewError(e), "Unable to load version `7`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
 		if sessionVersion > 7 { // It is new format.
