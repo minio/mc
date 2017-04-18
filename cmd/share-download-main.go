@@ -89,9 +89,15 @@ func checkShareDownloadSyntax(ctx *cli.Context) {
 		fatalIf(errDummy().Trace(expiry.String()), "Expiry cannot be larger than 7 days.")
 	}
 
-	for _, url := range ctx.Args() {
-		_, _, err := url2Stat(url)
-		fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
+	// Validate if object exists only if the `--recursive` option was NOT specified
+	isRecursive := ctx.Bool("recursive")
+	if !isRecursive {
+		for _, url := range ctx.Args() {
+			_, _, err := url2Stat(url)
+			if err != nil {
+				fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
+			}
+		}
 	}
 }
 
