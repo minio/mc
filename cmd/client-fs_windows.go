@@ -31,13 +31,13 @@ var (
 
 // IsGetEvent checks if the event return is a get event.
 func IsGetEvent(event notify.Event) bool {
-	return event == notify.FileNotifyChangeLastAccess
+	return event&notify.FileNotifyChangeLastAccess != 0
 }
 
 // IsPutEvent checks if the event returned is a put event
 func IsPutEvent(event notify.Event) bool {
 	for _, ev := range EventTypePut {
-		if event == ev {
+		if event&ev != 0 {
 			return true
 		}
 	}
@@ -46,5 +46,5 @@ func IsPutEvent(event notify.Event) bool {
 
 // IsDeleteEvent checks if the event returned is a delete event
 func IsDeleteEvent(event notify.Event) bool {
-	return event == notify.Remove
+	return event&notify.Remove != 0
 }
