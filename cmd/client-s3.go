@@ -746,7 +746,7 @@ func isValidBucketName(bucketName string) *probe.Error {
 		return probe.NewError(errors.New("Bucket name should be more than 3 characters and less than 64 characters"))
 	}
 	if !validBucketName.MatchString(bucketName) {
-		return probe.NewError(errors.New("Bucket name can contain alphabet, '-' and numbers, but first character should be an alphabet or number"))
+		return probe.NewError(errors.New("Bucket names can only contain lowercase alpha characters `a-z`, numbers '0-9', or '-'. First/last character cannot be a '-'"))
 	}
 	return nil
 }
