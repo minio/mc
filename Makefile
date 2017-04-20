@@ -1,4 +1,5 @@
 LDFLAGS := $(shell go run buildscripts/gen-ldflags.go)
+BUILD_LDFLAGS := '$(LDFLAGS) -s -w'
 
 all: install
 
@@ -59,7 +60,7 @@ test: getdeps verifiers
 
 gomake-all: build
 	@echo "Installing mc:"
-	@go build --ldflags "$(LDFLAGS)" -o $(GOPATH)/bin/mc
+	@go build --ldflags $(BUILD_LDFLAGS) -o $(GOPATH)/bin/mc
 	@mkdir -p $(HOME)/.mc
 
 coverage: getdeps verifiers
