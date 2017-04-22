@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -29,7 +30,12 @@ import (
 
 // diff specific flags.
 var (
-	diffFlags = []cli.Flag{}
+	diffFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "size",
+			Usage: "Prints the diff in size from source and target",
+		},
+	}
 )
 
 // Compute differences between two files or folders.
@@ -74,9 +80,31 @@ type diffMessage struct {
 	FirstURL      string       `json:"first"`
 	SecondURL     string       `json:"second"`
 	Diff          differType   `json:"diff"`
+	FirstSize     int64        `json:"firstSize"`
+	SecondSize    int64        `json:"secondSize"`
 	Error         *probe.Error `json:"error,omitempty"`
 	firstContent  *clientContent
 	secondContent *clientContent
+}
+
+type diffTotalSize struct {
+	Status     string `json:"status"`
+	SourceSize int64  `json:"sourceSize"`
+	TargetSize int64  `json:"targetSize"`
+}
+
+func (t diffTotalSize) String() string {
+	msg := console.Colorize("DiffSize", fmt.Sprintf("SourceSize: %s TargetSize: %s",
+		humanize.IBytes(uint64(t.SourceSize)),
+		humanize.IBytes(uint64(t.TargetSize))))
+	return msg
+}
+
+func (t diffTotalSize) JSON() string {
+	t.Status = "success"
+	diffJSONBytes, e := json.Marshal(t)
+	fatalIf(probe.NewError(e), "Unable to marshal diff total size message")
+	return string(diffJSONBytes)
 }
 
 // String colorized diff message
@@ -147,7 +175,7 @@ func checkDiffSyntax(ctx *cli.Context) {
 }
 
 // doDiffMain runs the diff.
-func doDiffMain(firstURL, secondURL string) error {
+func doDiffMain(firstURL, secondURL string, isSize bool) error {
 	// Source and targets are always directories
 	sourceSeparator := string(newClientURL(firstURL).Separator)
 	if !strings.HasSuffix(firstURL, sourceSeparator) {
@@ -174,15 +202,26 @@ func doDiffMain(firstURL, secondURL string) error {
 			fmt.Sprintf("Failed to diff '%s' and '%s'", firstURL, secondURL))
 	}
 
+	var firstSize, secondSize int64
 	// Diff first and second urls.
 	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL) {
 		if diffMsg.Error != nil {
 			errorIf(diffMsg.Error, "Unable to calculate objects difference.")
 			break
 		}
+		if diffMsg.Diff == differInFirst {
+			firstSize += diffMsg.FirstSize
+		} else if diffMsg.Diff == differInSecond {
+			secondSize += diffMsg.SecondSize
+		}
 		printMsg(diffMsg)
 	}
-
+	if isSize {
+		printMsg(diffTotalSize{
+			SourceSize: firstSize,
+			TargetSize: secondSize,
+		})
+	}
 	return nil
 }
 
@@ -203,5 +242,7 @@ func mainDiff(ctx *cli.Context) error {
 	firstURL := URLs.Get(0)
 	secondURL := URLs.Get(1)
 
-	return doDiffMain(firstURL, secondURL)
+	isSize := ctx.Bool("size")
+
+	return doDiffMain(firstURL, secondURL, isSize)
 }

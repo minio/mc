@@ -108,6 +108,7 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 				diffCh <- diffMessage{
 					SecondURL:     tgtCtnt.URL.String(),
 					Diff:          differInSecond,
+					SecondSize:    tgtCtnt.Size,
 					secondContent: tgtCtnt,
 				}
 				tgtCtnt, tgtOk = <-tgtCh
@@ -119,6 +120,7 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 				diffCh <- diffMessage{
 					FirstURL:     srcCtnt.URL.String(),
 					Diff:         differInFirst,
+					FirstSize:    srcCtnt.Size,
 					firstContent: srcCtnt,
 				}
 				srcCtnt, srcOk = <-srcCh
@@ -153,6 +155,7 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 				diffCh <- diffMessage{
 					FirstURL:     srcCtnt.URL.String(),
 					Diff:         differInFirst,
+					FirstSize:    srcCtnt.Size,
 					firstContent: srcCtnt,
 				}
 				srcCtnt, srcOk = <-srcCh
@@ -163,7 +166,7 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 				srcSize, tgtSize := srcCtnt.Size, tgtCtnt.Size
 				if srcType.IsRegular() && !tgtType.IsRegular() ||
 					!srcType.IsRegular() && tgtType.IsRegular() {
-					// Type differes. Source is never a directory.
+					// Type differs. Source is never a directory.
 					diffCh <- diffMessage{
 						FirstURL:      srcCtnt.URL.String(),
 						SecondURL:     tgtCtnt.URL.String(),
@@ -172,11 +175,13 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 						secondContent: tgtCtnt,
 					}
 				} else if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
-					// Regular files differing in size.
+					// Regular files to differ in size.
 					diffCh <- diffMessage{
 						FirstURL:      srcCtnt.URL.String(),
 						SecondURL:     tgtCtnt.URL.String(),
 						Diff:          differInSize,
+						FirstSize:     srcCtnt.Size,
+						SecondSize:    tgtCtnt.Size,
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}
@@ -187,6 +192,8 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 						FirstURL:      srcCtnt.URL.String(),
 						SecondURL:     tgtCtnt.URL.String(),
 						Diff:          differInNone,
+						FirstSize:     srcCtnt.Size,
+						SecondSize:    tgtCtnt.Size,
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}
@@ -199,6 +206,7 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 			diffCh <- diffMessage{
 				SecondURL:     tgtCtnt.URL.String(),
 				Diff:          differInSecond,
+				SecondSize:    tgtCtnt.Size,
 				secondContent: tgtCtnt,
 			}
 			tgtCtnt, tgtOk = <-tgtCh
