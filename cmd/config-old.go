@@ -160,7 +160,7 @@ func newConfigV6() *configV6 {
 	return conf
 }
 
-/////////////////// Config V6 ///////////////////
+/////////////////// Config V7 ///////////////////
 // hostConfig configuration of a host - version '7'.
 type hostConfigV7 struct {
 	URL       string `json:"url"`
@@ -241,4 +241,70 @@ func (c *configV7) setHost(alias string, cfg hostConfigV7) {
 }
 
 /////////////////// Config V8 ///////////////////
+
+// hostConfig configuration of a host.
+type hostConfigV8 struct {
+	URL       string `json:"url"`
+	AccessKey string `json:"accessKey"`
+	SecretKey string `json:"secretKey"`
+	API       string `json:"api"`
+}
+
+// configV8 config version.
+type configV8 struct {
+	Version string                  `json:"version"`
+	Hosts   map[string]hostConfigV8 `json:"hosts"`
+}
+
+// newConfigV8 - new config version.
+func newConfigV8() *configV8 {
+	cfg := new(configV8)
+	cfg.Version = globalMCConfigVersion
+	cfg.Hosts = make(map[string]hostConfigV8)
+	return cfg
+}
+
+// SetHost sets host config if not empty.
+func (c *configV8) setHost(alias string, cfg hostConfigV8) {
+	if _, ok := c.Hosts[alias]; !ok {
+		c.Hosts[alias] = cfg
+	}
+}
+
+// load default values for missing entries.
+func (c *configV8) loadDefaults() {
+	// Minio server running locally.
+	c.setHost("local", hostConfigV8{
+		URL:       "http://localhost:9000",
+		AccessKey: "",
+		SecretKey: "",
+		API:       "S3v4",
+	})
+
+	// Amazon S3 cloud storage service.
+	c.setHost("s3", hostConfigV8{
+		URL:       "https://s3.amazonaws.com",
+		AccessKey: defaultAccessKey,
+		SecretKey: defaultSecretKey,
+		API:       "S3v4",
+	})
+
+	// Google cloud storage service.
+	c.setHost("gcs", hostConfigV8{
+		URL:       "https://storage.googleapis.com",
+		AccessKey: defaultAccessKey,
+		SecretKey: defaultSecretKey,
+		API:       "S3v2",
+	})
+
+	// Minio anonymous server for demo.
+	c.setHost("play", hostConfigV8{
+		URL:       "https://play.minio.io:9000",
+		AccessKey: "Q3AM3UQ867SPQQA43P2F",
+		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+		API:       "S3v4",
+	})
+}
+
+/////////////////// Config V9 ///////////////////
 // RESERVED FOR FUTURE

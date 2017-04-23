@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	encrypt "github.com/minio/minio-go/pkg/encrypt"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -82,13 +83,14 @@ type clientContent struct {
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
 type Config struct {
-	AccessKey   string
-	SecretKey   string
-	Signature   string
-	HostURL     string
-	AppName     string
-	AppVersion  string
-	AppComments []string
-	Debug       bool
-	Insecure    bool
+	AccessKey        string
+	SecretKey        string
+	Signature        string
+	HostURL          string
+	AppName          string
+	AppVersion       string
+	AppComments      []string
+	Debug            bool
+	Insecure         bool
+	encryptMaterials encrypt.Materials
 }

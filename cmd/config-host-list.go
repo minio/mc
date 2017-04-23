@@ -78,6 +78,7 @@ func mainConfigHostList(ctx *cli.Context) error {
 	console.SetColor("AccessKey", color.New(color.FgBlue))
 	console.SetColor("SecretKey", color.New(color.FgBlue))
 	console.SetColor("API", color.New(color.FgYellow))
+	console.SetColor("Encryption", color.New(color.FgYellow))
 
 	args := ctx.Args()
 	listHosts(args.Get(0)) // List all configured hosts.
@@ -111,32 +112,32 @@ func listHosts(alias string) {
 	conf, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config version `"+globalMCConfigVersion+"`.")
 
-	// If specific alias is requested, look for it and print.
-	if alias != "" {
-		if v, ok := conf.Hosts[alias]; ok {
-			printHosts(hostMessage{
-				op:        "list",
-				Alias:     alias,
-				URL:       v.URL,
-				AccessKey: v.AccessKey,
-				SecretKey: v.SecretKey,
-				API:       v.API,
-			})
-			return
-		}
-		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found")
-	}
-
 	var hosts []hostMessage
 	for k, v := range conf.Hosts {
+		if alias != "" && alias != k {
+			continue
+		}
+		encryptionAlgo := ""
+		switch {
+		case v.Encryption.AES.Enable:
+			encryptionAlgo = "AES"
+		case v.Encryption.RSA.Enable:
+			encryptionAlgo = "RSA"
+		}
+
 		hosts = append(hosts, hostMessage{
-			op:        "list",
-			Alias:     k,
-			URL:       v.URL,
-			AccessKey: v.AccessKey,
-			SecretKey: v.SecretKey,
-			API:       v.API,
+			op:         "list",
+			Alias:      k,
+			URL:        v.URL,
+			AccessKey:  v.AccessKey,
+			SecretKey:  v.SecretKey,
+			API:        v.API,
+			Encryption: encryptionAlgo,
 		})
+	}
+
+	if alias != "" && len(hosts) == 0 {
+		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found")
 	}
 
 	// Sort hosts by alias names lexically.
