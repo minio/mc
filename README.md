@@ -34,13 +34,13 @@ docker pull minio/mc:edge
 docker run minio/mc:edge ls play
 ```
 
-**Note:** These examples refer to the [_play_ environment](#test-your-setup). If you want to try the same commands against a different S3 compatible server, start the container this way:
+**Note:** Above examples run `mc` against Minio [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
 
 ```sh
 docker run -it --entrypoint=/bin/sh minio/mc
 ```
 
-then use the `mc config` command to [configure `mc`](#add-a-cloud-storage-service).
+then use the [`mc config` command](#add-a-cloud-storage-service).
 
 ## macOS
 ### Homebrew
