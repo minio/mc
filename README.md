@@ -34,6 +34,8 @@ docker pull minio/mc:edge
 docker run minio/mc:edge ls play
 ```
 
+**Note:** These examples refer to the _play_ environment, a public Minio server for testing pruposes. If you want to try the same commands against a different environment, check [Configure](#configure).
+
 ## macOS
 ### Homebrew
 Install mc packages using [Homebrew](http://brew.sh/)
@@ -94,6 +96,30 @@ If you do not have a working Golang environment, please follow [How to install G
 ```sh
 go get -u github.com/minio/mc
 ```
+
+## Configure
+
+By default `mc` is configured to interact with the _play_ environment, a public Minio server. If you want to configure a different server:
+
+```sh
+mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY>
+```
+
+You will be able to list buckets (i.e. `mc ls <ALIAS>`) or any other available operation.
+
+### Endpoint and credentials
+
+At startup, Minio server provides its endpoint, access key and secret key.
+
+### A note for Docker users
+
+If you are trying `mc` with Docker, keep in mind that each `docker run` invocation will start a new container, which is fine if you stick with the _play_ environment. Otherwise, you can start an interactive session with a single container:
+
+```sh
+docker run -it --entrypoint=/bin/sh minio/mc
+```
+
+This will start a shell in which you can execute `mc config` and other `mc` commands without prefixing them with `docker run minio/mc`. More importantly, any configuration done with `mc config` will be preserved until you exit from the shell.
 
 ## Add a Cloud Storage Service
 If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to [everyday use](#everyday-use).
