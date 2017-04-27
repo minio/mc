@@ -132,3 +132,15 @@ func lineTrunc(content string, maxLen int) string {
 	sndPart := string(runes[rlen-halfLen:])
 	return fstPart + "…" + sndPart
 }
+
+// isOlder returns true if the passed object is older than olderRef
+func isOlder(c *clientContent, olderRef int) bool {
+	objectAge := UTCNow().Sub(c.Time)
+	return objectAge < (time.Duration(olderRef) * Day)
+}
+
+// isNewer returns true if the passed object is newer than newerRef
+func isNewer(c *clientContent, newerRef int) bool {
+	objectAge := UTCNow().Sub(c.Time)
+	return objectAge > (time.Duration(newerRef) * Day)
+}
