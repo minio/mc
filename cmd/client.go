@@ -43,7 +43,7 @@ type Client interface {
 	List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent
 
 	// Bucket operations
-	MakeBucket(region string) *probe.Error
+	MakeBucket(region string, ignoreExisting bool) *probe.Error
 
 	// Access policy operations.
 	GetAccess() (access string, error *probe.Error)

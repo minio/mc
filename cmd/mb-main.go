@@ -32,6 +32,10 @@ var (
 			Value: "us-east-1",
 			Usage: "Specify bucket region. Defaults to `us-east-1`.",
 		},
+		cli.BoolFlag{
+			Name:  "ignore-existing, p",
+			Usage: "Ignore if bucket/directory already exists",
+		},
 	}
 )
 
@@ -108,6 +112,7 @@ func mainMakeBucket(ctx *cli.Context) error {
 
 	// Save region.
 	region := ctx.String("region")
+	ignoreExisting := ctx.Bool("p")
 
 	var cErr error
 	for i := range ctx.Args() {
@@ -121,7 +126,7 @@ func mainMakeBucket(ctx *cli.Context) error {
 		}
 
 		// Make bucket.
-		err = clnt.MakeBucket(region)
+		err = clnt.MakeBucket(region, ignoreExisting)
 		if err != nil {
 			errorIf(err.Trace(targetURL), "Unable to make bucket `"+targetURL+"`.")
 			cErr = exitStatus(globalErrorExitStatus)
