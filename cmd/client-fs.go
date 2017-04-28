@@ -942,7 +942,10 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent) {
 }
 
 // MakeBucket - create a new bucket.
-func (f *fsClient) MakeBucket(region string) *probe.Error {
+func (f *fsClient) MakeBucket(region string, ignoreExisting bool) *probe.Error {
+	// TODO: ignoreExisting has no effect currently. In the future, we want
+	// to call os.Mkdir() when ignoredExisting is disabled and os.MkdirAll()
+	// otherwise.
 	e := os.MkdirAll(f.PathURL.Path, 0777)
 	if e != nil {
 		return probe.NewError(e)

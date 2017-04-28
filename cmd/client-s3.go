@@ -752,7 +752,7 @@ func isValidBucketName(bucketName string) *probe.Error {
 }
 
 // MakeBucket - make a new bucket.
-func (c *s3Client) MakeBucket(region string) *probe.Error {
+func (c *s3Client) MakeBucket(region string, ignoreExisting bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		return probe.NewError(BucketNameTopLevel{})
@@ -762,6 +762,15 @@ func (c *s3Client) MakeBucket(region string) *probe.Error {
 	}
 	e := c.api.MakeBucket(bucket, region)
 	if e != nil {
+		// Ignore bucket already existing error when ignoreExisting flag is enabled
+		if ignoreExisting {
+			switch minio.ToErrorResponse(e).Code {
+			case "BucketAlreadyOwnedByYou":
+				fallthrough
+			case "BucketAlreadyExists":
+				return nil
+			}
+		}
 		return probe.NewError(e)
 	}
 	return nil

@@ -193,7 +193,7 @@ func (s *TestSuite) TestPutBucket(c *C) {
 	bucketPath := filepath.Join(root, "bucket")
 	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
-	err = fsClient.MakeBucket("us-east-1")
+	err = fsClient.MakeBucket("us-east-1", true)
 	c.Assert(err, IsNil)
 }
 
@@ -207,7 +207,7 @@ func (s *TestSuite) TestStatBucket(c *C) {
 
 	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
-	err = fsClient.MakeBucket("us-east-1")
+	err = fsClient.MakeBucket("us-east-1", true)
 	c.Assert(err, IsNil)
 	_, err = fsClient.Stat(false)
 	c.Assert(err, IsNil)
@@ -222,7 +222,7 @@ func (s *TestSuite) TestBucketACLFails(c *C) {
 	bucketPath := filepath.Join(root, "bucket")
 	fsClient, err := fsNew(bucketPath)
 	c.Assert(err, IsNil)
-	err = fsClient.MakeBucket("us-east-1")
+	err = fsClient.MakeBucket("us-east-1", true)
 	c.Assert(err, IsNil)
 
 	// On windows setting permissions is not supported.

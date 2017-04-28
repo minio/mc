@@ -578,7 +578,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 
 			if d.Diff == differInFirst {
 				// Bucket only exists in the source, create the same bucket in the destination
-				err := newDstClt.MakeBucket(ctx.String("region"))
+				err := newDstClt.MakeBucket(ctx.String("region"), false)
 				if err != nil {
 					mj.mirrorErr = err
 					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`")

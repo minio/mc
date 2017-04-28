@@ -174,7 +174,7 @@ func (s *TestSuite) TestBucketOperations(c *C) {
 	s3c, err := s3New(conf)
 	c.Assert(err, IsNil)
 
-	err = s3c.MakeBucket("us-east-1")
+	err = s3c.MakeBucket("us-east-1", true)
 	c.Assert(err, IsNil)
 
 	conf.HostURL = server.URL + string(s3c.GetURL().Separator)
