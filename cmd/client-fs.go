@@ -193,6 +193,20 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	}, nil
 }
 
+func isStreamFile(objectPath string) bool {
+	switch objectPath {
+	case os.DevNull:
+		fallthrough
+	case os.Stdin.Name():
+		fallthrough
+	case os.Stdout.Name():
+		fallthrough
+	case os.Stderr.Name():
+		return true
+	}
+	return false
+}
+
 /// Object operations.
 
 func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
@@ -203,29 +217,15 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	objectDir, _ := filepath.Split(f.PathURL.Path)
 	objectPath := f.PathURL.Path
 
-	// Verify if destination already exists.
-	st, e := os.Stat(objectPath)
-	if e == nil {
-		// If the destination exists and is not a regular file.
-		if !st.Mode().IsRegular() {
-			return 0, probe.NewError(PathIsNotRegular{
-				Path: objectPath,
-			})
-		}
-	}
-
-	// Proceed if file does not exist. return for all other errors.
-	if e != nil {
-		if !os.IsNotExist(e) {
-			return 0, probe.NewError(e)
-		}
-	}
-
-	// Write to a temporary file "object.part.mc" before commit.
+	avoidResumeUpload := isStreamFile(objectPath)
+	// Write to a temporary file "object.part.minio" before commit.
 	objectPartPath := objectPath + partSuffix
+	if avoidResumeUpload {
+		objectPartPath = objectPath
+	}
 	if objectDir != "" {
 		// Create any missing top level directories.
-		if e = os.MkdirAll(objectDir, 0777); e != nil {
+		if e := os.MkdirAll(objectDir, 0777); e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
 			return 0, err.Trace(f.PathURL.Path)
 		}
@@ -346,10 +346,12 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 			})
 		}
 	}
-	// Safely completed put. Now commit by renaming to actual filename.
-	if e = os.Rename(objectPartPath, objectPath); e != nil {
-		err := f.toClientError(e, objectPath)
-		return totalWritten, err.Trace(objectPartPath, objectPath)
+	if !avoidResumeUpload {
+		// Safely completed put. Now commit by renaming to actual filename.
+		if e = os.Rename(objectPartPath, objectPath); e != nil {
+			err := f.toClientError(e, objectPath)
+			return totalWritten, err.Trace(objectPartPath, objectPath)
+		}
 	}
 	return totalWritten, nil
 }
@@ -397,16 +399,7 @@ func readFile(fpath string) (io.ReadCloser, error) {
 // createFile creates an empty file at the provided filepath
 // if one does not exist already.
 func createFile(fpath string) (io.WriteCloser, error) {
-	st, e := os.Stat(fpath)
-	// If destination exists but is not regular.
-	if e == nil && !st.Mode().IsRegular() {
-		return nil, PathIsNotRegular{Path: fpath}
-	}
-	// If file exists already.
-	if e != nil && !os.IsNotExist(e) {
-		return nil, e
-	}
-	if e = os.MkdirAll(filepath.Dir(fpath), 0777); e != nil {
+	if e := os.MkdirAll(filepath.Dir(fpath), 0777); e != nil {
 		return nil, e
 	}
 	file, e := os.Create(fpath)
