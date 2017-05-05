@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -94,23 +95,46 @@ type ServerInfo struct {
 type infoMessage struct {
 	Status  string `json:"status"`
 	Service bool   `json:"service"`
+	Addr    string `json:"address"`
+	Err     string `json:"error"`
 	*ServerInfo
 }
 
 // String colorized service status message.
 func (u infoMessage) String() (msg string) {
 	defer func() {
-		msg = console.Colorize("Info", msg)
+		msg += "\n"
 	}()
+
+	dot := "●"
+
 	// When service is offline
 	if !u.Service {
-		msg = "The server is offline."
+		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), u.Addr)
+		msg += fmt.Sprintf("   Uptime : Server is %s", console.Colorize("InfoFail", "offline"))
 		return
 	}
-	msg += fmt.Sprintf("  Version : %s\n", u.ServerInfo.Properties.Version)
-	msg += fmt.Sprintf("   Uptime : %s\n", timeDurationToHumanizedDuration(u.ServerInfo.Properties.Uptime))
-	msg += fmt.Sprintf("   Region : %s\n", u.ServerInfo.Properties.Region)
 
+	// Print error if any and exit
+	if u.Err != "" {
+		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), u.Addr)
+		msg += fmt.Sprintf("   Uptime : Server is %s\n", console.Colorize("InfoFail", "offline"))
+		msg += fmt.Sprintf("    Error : %s", u.Err)
+		return
+	}
+
+	// Print server title
+	msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), u.Addr)
+
+	// Print server information
+
+	// Uptime
+	msg += fmt.Sprintf("   Uptime : %s since %s\n", console.Colorize("Info", "online"), humanize.Time(time.Now().UTC().Add(-u.ServerInfo.Properties.Uptime)))
+	// Version
+	msg += fmt.Sprintf("  Version : %s\n", u.ServerInfo.Properties.Version)
+	// Region
+	msg += fmt.Sprintf("   Region : %s\n", u.ServerInfo.Properties.Region)
+	// ARNs
 	sqsARNs := ""
 	for _, v := range u.ServerInfo.Properties.SQSARN {
 		sqsARNs += fmt.Sprintf("%s ", v)
@@ -119,12 +143,11 @@ func (u infoMessage) String() (msg string) {
 		sqsARNs = "<none>"
 	}
 	msg += fmt.Sprintf(" SQS ARNs : %s\n", sqsARNs)
-
+	// Incoming/outgoing
 	msg += fmt.Sprintf("  Network : Incoming %s, Outgoing %s\n",
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalInputBytes),
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalOutputBytes))
-
-	// Online service, get backend information
+	// Get storage information
 	msg += fmt.Sprintf("  Storage : Total %s, Free %s",
 		humanize.IBytes(uint64(u.StorageInfo.Total)),
 		humanize.IBytes(uint64(u.StorageInfo.Free)),
@@ -132,6 +155,7 @@ func (u infoMessage) String() (msg string) {
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
 		msg += fmt.Sprintf(", Online Disks: %d, Offline Disks: %d", v.OnlineDisks, v.OfflineDisks)
 	}
+
 	return
 }
 
@@ -156,6 +180,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 	checkAdminInfoSyntax(ctx)
 
 	console.SetColor("Info", color.New(color.FgGreen, color.Bold))
+	console.SetColor("InfoFail", color.New(color.FgRed, color.Bold))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -165,53 +190,68 @@ func mainAdminInfo(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	// Fetch the server info of the specified Minio server
-	serverInfo, e := client.ServerInfo()
+	// Fetch info of all servers (cluster or single server)
+	serversInfo, e := client.ServerInfo()
 
 	// Check the availability of the server: online or offline. A server is considered
 	// offline if we can't get any response or we get a bad format response
 	var serviceOffline bool
-	switch v := e.(type) {
+	switch e.(type) {
 	case *json.SyntaxError:
 		serviceOffline = true
 	case *url.Error:
-		if v.Timeout() {
-			serviceOffline = true
-		}
+		serviceOffline = true
 	}
+
 	if serviceOffline {
-		printMsg(infoMessage{Service: false})
+		printMsg(infoMessage{Addr: aliasedURL, Service: false})
 		return nil
 	}
 
 	// If the error is not nil and not unrecognizable, just print it and exit
 	fatalIf(probe.NewError(e), "Cannot get service status.")
 
-	// Construct the backend status
-	storageInfo := backendStatus{
-		Total: serverInfo.StorageInfo.Total,
-		Free:  serverInfo.StorageInfo.Free,
-	}
-	if serverInfo.StorageInfo.Backend.Type == madmin.Erasure {
-		storageInfo.Backend = xlBackend{
-			Type:         erasureType,
-			OnlineDisks:  serverInfo.StorageInfo.Backend.OnlineDisks,
-			OfflineDisks: serverInfo.StorageInfo.Backend.OfflineDisks,
+	for _, serverInfo := range serversInfo {
+		// Print the error if exists and jump to the next server
+		if serverInfo.Error != "" {
+			printMsg(infoMessage{
+				Service: true,
+				Addr:    serverInfo.Addr,
+				Err:     serverInfo.Error,
+			})
+			continue
 		}
-	} else {
-		storageInfo.Backend = fsBackend{
-			Type: fsType,
-		}
-	}
 
-	printMsg(infoMessage{
-		Service: true,
-		ServerInfo: &ServerInfo{
-			StorageInfo: storageInfo,
-			ConnStats:   serverInfo.ConnStats,
-			Properties:  serverInfo.Properties,
-		},
-	})
+		// Construct the backend status
+		storageInfo := backendStatus{
+			Total: serverInfo.Data.StorageInfo.Total,
+			Free:  serverInfo.Data.StorageInfo.Free,
+		}
+
+		if serverInfo.Data.StorageInfo.Backend.Type == madmin.Erasure {
+			storageInfo.Backend = xlBackend{
+				Type:         erasureType,
+				OnlineDisks:  serverInfo.Data.StorageInfo.Backend.OnlineDisks,
+				OfflineDisks: serverInfo.Data.StorageInfo.Backend.OfflineDisks,
+			}
+		} else {
+			storageInfo.Backend = fsBackend{
+				Type: fsType,
+			}
+		}
+
+		printMsg(infoMessage{
+			Service: true,
+			Addr:    serverInfo.Addr,
+			Err:     serverInfo.Error,
+			ServerInfo: &ServerInfo{
+				StorageInfo: storageInfo,
+				ConnStats:   serverInfo.Data.ConnStats,
+				Properties:  serverInfo.Data.Properties,
+			},
+		})
+
+	}
 
 	return nil
 }
