@@ -167,10 +167,10 @@ alias pipe='mc pipe'
 ```
 
 ### Shell autocompletion
-You may also download [`autocomplete/bash_autocomplete`](https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_complete) into `/etc/bash_completion.d/` and rename it to `mc`. Don't forget to source the file to make it active on your current shell.
+You may also download [`autocomplete/bash_autocomplete`](https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_autocomplete) into `/etc/bash_completion.d/` and rename it to `mc`. Don't forget to source the file to make it active on your current shell.
 
 ```sh
-sudo wget https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_complete -O /etc/bash_completion.d/mc
+sudo wget https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_autocomplete -O /etc/bash_completion.d/mc
 source /etc/bash_completion.d/mc
 ```
 
