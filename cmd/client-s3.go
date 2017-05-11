@@ -935,6 +935,10 @@ func isAmazon(host string) bool {
 	return s3utils.IsAmazonEndpoint(url.URL{Host: host})
 }
 
+func isAmazonChina(host string) bool {
+	return s3utils.IsAmazonChinaEndpoint(url.URL{Host: host})
+}
+
 func isAmazonAccelerated(host string) bool {
 	return host == "s3-accelerate.amazonaws.com"
 }
@@ -947,7 +951,7 @@ func isGoogle(host string) bool {
 // Currently only supported hosts with virtual style
 // are Amazon S3 and Google Cloud Storage.
 func isVirtualHostStyle(host string) bool {
-	return isAmazon(host) || isGoogle(host) || isAmazonAccelerated(host)
+	return isAmazon(host) && !isAmazonChina(host) || isGoogle(host) || isAmazonAccelerated(host)
 }
 
 // url2BucketAndObject gives bucketName and objectName from URL path.
