@@ -1538,7 +1538,7 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	p := minio.NewPostPolicy()
-	if e := p.SetExpires(time.Now().UTC().Add(expires)); e != nil {
+	if e := p.SetExpires(UTCNow().Add(expires)); e != nil {
 		return "", nil, probe.NewError(e)
 	}
 	if strings.TrimSpace(contentType) != "" || contentType != "" {

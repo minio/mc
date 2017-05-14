@@ -162,7 +162,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 					continue
 				}
 				eventChan <- EventInfo{
-					Time:   time.Now().Format(timeFormatFS),
+					Time:   UTCNow().Format(timeFormatFS),
 					Size:   i.Size(),
 					Path:   event.Path(),
 					Client: f,
@@ -170,14 +170,14 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 				}
 			} else if IsDeleteEvent(event.Event()) {
 				eventChan <- EventInfo{
-					Time:   time.Now().Format(timeFormatFS),
+					Time:   UTCNow().Format(timeFormatFS),
 					Path:   event.Path(),
 					Client: f,
 					Type:   EventRemove,
 				}
 			} else if IsGetEvent(event.Event()) {
 				eventChan <- EventInfo{
-					Time:   time.Now().Format(timeFormatFS),
+					Time:   UTCNow().Format(timeFormatFS),
 					Path:   event.Path(),
 					Client: f,
 					Type:   EventAccessed,

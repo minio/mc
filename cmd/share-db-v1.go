@@ -59,7 +59,7 @@ func (s *shareDBV1) Set(objectURL string, shareURL string, expiry time.Duration,
 
 	s.Shares[shareURL] = shareEntryV1{
 		URL:         objectURL,
-		Date:        time.Now().UTC(),
+		Date:        UTCNow(),
 		Expiry:      expiry,
 		ContentType: contentType,
 	}

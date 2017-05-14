@@ -24,7 +24,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -509,7 +508,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool
 		statusCh:       make(chan URLs),
 		wgStatus:       new(sync.WaitGroup),
 		watcherRunning: true,
-		watcher:        NewWatcher(time.Now().UTC()),
+		watcher:        NewWatcher(UTCNow()),
 	}
 
 	return &mj
