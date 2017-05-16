@@ -47,11 +47,16 @@ func isErrIgnored(err *probe.Error) (ignored bool) {
 	return ignored
 }
 
+// UTCNow - returns current UTC time.
+func UTCNow() time.Time {
+	return time.Now().UTC()
+}
+
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 // newRandomID generates a random id of regular lower case and uppercase english characters.
 func newRandomID(n int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
+	rand.Seed(UTCNow().UnixNano())
 	sid := make([]rune, n)
 	for i := range sid {
 		sid[i] = letters[rand.Intn(len(letters))]

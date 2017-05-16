@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
-	"time"
 
 	. "gopkg.in/check.v1"
 )
@@ -104,7 +103,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(len(h.data)))
-		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+		w.Header().Set("Last-Modified", UTCNow().Format(http.TimeFormat))
 		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
 		w.WriteHeader(http.StatusOK)
 	case r.Method == "POST":
@@ -151,7 +150,7 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(len(h.data)))
-		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+		w.Header().Set("Last-Modified", UTCNow().Format(http.TimeFormat))
 		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
 		w.WriteHeader(http.StatusOK)
 		io.Copy(w, bytes.NewReader(h.data))
