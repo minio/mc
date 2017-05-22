@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -554,7 +555,12 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 	dstClt, err := newClient(dstURL)
 	fatalIf(err, "Unable to initialize `"+srcURL+"`")
 
-	mirrorAllBuckets := (dstClt.GetURL().Type == objectStorage && dstClt.GetURL().Path == "/")
+	if ctx.Bool("a") && (srcClt.GetURL().Type != objectStorage || dstClt.GetURL().Type != objectStorage) {
+		fatalIf(errDummy(), "Synchronizing bucket policies is only possible when both source & target point to S3 servers")
+	}
+
+	mirrorAllBuckets := (srcClt.GetURL().Type == objectStorage && srcClt.GetURL().Path == "/") ||
+		(dstClt.GetURL().Type == objectStorage && dstClt.GetURL().Path == "/")
 
 	if mirrorAllBuckets {
 		// Synchronize buckets using dirDifference function
@@ -569,8 +575,8 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 
 			sourceSuffix := strings.TrimPrefix(d.FirstURL, srcClt.GetURL().String())
 
-			newSrcURL := srcURL + sourceSuffix
-			newTgtURL := dstURL + sourceSuffix
+			newSrcURL := path.Join(srcURL, sourceSuffix)
+			newTgtURL := path.Join(dstURL, sourceSuffix)
 
 			newSrcClt, _ := newClient(newSrcURL)
 			newDstClt, _ := newClient(newTgtURL)
