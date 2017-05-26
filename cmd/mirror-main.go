@@ -229,7 +229,6 @@ func (mj *mirrorJob) startStatus() {
 	go func() {
 		// now we want to start the progress bar
 		mj.status.Start()
-		defer mj.status.Finish()
 		defer mj.wgStatus.Done()
 
 		for sURLs := range mj.statusCh {
@@ -262,6 +261,7 @@ func (mj *mirrorJob) startStatus() {
 func (mj *mirrorJob) stopStatus() {
 	close(mj.statusCh)
 	mj.wgStatus.Wait()
+	mj.status.Finish()
 }
 
 // this goroutine will watch for notifications, and add modified objects to the queue
