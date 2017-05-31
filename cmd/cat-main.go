@@ -92,7 +92,7 @@ func catURL(sourceURL string) *probe.Error {
 		if client.GetURL().Type == objectStorage {
 			size = content.Size
 		}
-		if reader, err = getSourceStream(sourceURL); err != nil {
+		if reader, err = getSourceStreamFromURL(sourceURL); err != nil {
 			return err.Trace(sourceURL)
 		}
 	}

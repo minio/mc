@@ -274,7 +274,7 @@ func (s *TestSuite) TestGet(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	reader, _, err = fsClient.Get()
+	reader, err = fsClient.Get()
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
 	_, e = io.Copy(&results, reader)
@@ -302,7 +302,7 @@ func (s *TestSuite) TestGetRange(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	reader, _, err = fsClient.Get()
+	reader, err = fsClient.Get()
 	c.Assert(err, IsNil)
 	var results bytes.Buffer
 	buf := make([]byte, 5)

@@ -229,7 +229,7 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(object.data)))
 
-	reader, _, err = s3c.Get()
+	reader, err = s3c.Get()
 	c.Assert(err, IsNil)
 	var buffer bytes.Buffer
 	{
