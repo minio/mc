@@ -46,7 +46,6 @@ type EventInfo struct {
 	Time      string
 	Size      int64
 	Path      string
-	Client    Client
 	Type      EventType
 	Host      string
 	Port      string
