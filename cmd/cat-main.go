@@ -83,13 +83,13 @@ func catURL(sourceURL string) *probe.Error {
 		reader = os.Stdin
 	default:
 		var err *probe.Error
+		// Try to stat the object, the purpose is to extract the
+		// size of S3 object so we can check if the size of the
+		// downloaded object is equal to the original one. FS files
+		// are ignored since some of them have zero size though they
+		// have contents like files under /proc.
 		client, content, err := url2Stat(sourceURL)
-		if err != nil {
-			return err.Trace(sourceURL)
-		}
-		// Ignore size for filesystem objects since os.Stat() would not
-		// return proper size all the time, for example with /proc files.
-		if client.GetURL().Type == objectStorage {
+		if err == nil && client.GetURL().Type == objectStorage {
 			size = content.Size
 		}
 		if reader, err = getSourceStreamFromURL(sourceURL); err != nil {
