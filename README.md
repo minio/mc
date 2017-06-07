@@ -101,7 +101,10 @@ If you do not have a working Golang environment, please follow [How to install G
 
 ```sh
 go get -u github.com/minio/mc
+cd github.com/minio/mc
+make
 ```
+
 
 ## Add a Cloud Storage Service
 If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to [everyday use](#everyday-use).
