@@ -52,9 +52,9 @@ Source installation is intended only for developers and advanced users. `mc upda
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
 ```sh
-
-go get -u github.com/minio/mc
-
+go get -d github.com/minio/mc
+cd ${GOPATH}/src/github.com/minio/mc
+make
 ```
 
 ## 2. Run Minio Client
