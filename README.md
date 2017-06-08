@@ -100,8 +100,11 @@ Source installation is intended only for developers and advanced users. `mc upda
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
 ```sh
-go get -u github.com/minio/mc
+go get -d github.com/minio/mc
+cd ${GOPATH}/src/github.com/minio/mc
+make
 ```
+
 
 ## Add a Cloud Storage Service
 If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to [everyday use](#everyday-use).
