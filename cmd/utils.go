@@ -20,6 +20,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"runtime"
@@ -27,6 +29,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/minio-go/pkg/encrypt"
 	"github.com/minio/minio/pkg/probe"
 )
 
@@ -132,6 +135,41 @@ func buildS3Config(alias, urlStr string) (*Config, *probe.Error) {
 	s3Config.HostURL = urlStr
 	s3Config.Debug = globalDebug
 	s3Config.Insecure = globalInsecure
+
+	if hostCfg.Encryption.AES.Enable {
+		// Load the symmetric key and build encryption materiels which
+		// knows how to encrypt/decrypt the object
+		symKey := encrypt.NewSymmetricKey([]byte(hostCfg.Encryption.AES.Key))
+		cbcMaterials, err := encrypt.NewCBCSecureMaterials(symKey)
+		if err != nil {
+			return nil, probe.NewError(err)
+		}
+
+		s3Config.encryptMaterials = cbcMaterials
+
+	} else if hostCfg.Encryption.RSA.Enable {
+		// Load the public and private key and build encryption materiels which
+		// knows how to encrypt/decrypt the object
+		privateKey, err := ioutil.ReadFile(hostCfg.Encryption.RSA.PrivateKey)
+		if err != nil {
+			return nil, probe.NewError(err)
+		}
+		publicKey, err := ioutil.ReadFile(hostCfg.Encryption.RSA.PublicKey)
+		if err != nil {
+			return nil, probe.NewError(err)
+		}
+
+		assymKey, err := encrypt.NewAsymmetricKey(privateKey, publicKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cbcMaterials, err := encrypt.NewCBCSecureMaterials(assymKey)
+		if err != nil {
+			return nil, probe.NewError(err)
+		}
+
+		s3Config.encryptMaterials = cbcMaterials
+	}
 
 	return s3Config, nil
 }

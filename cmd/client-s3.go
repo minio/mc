@@ -35,6 +35,7 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/pkg/encrypt"
 	"github.com/minio/minio-go/pkg/policy"
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/pkg/probe"
@@ -42,10 +43,11 @@ import (
 
 // S3 client
 type s3Client struct {
-	mutex        *sync.Mutex
-	targetURL    *clientURL
-	api          *minio.Client
-	virtualStyle bool
+	mutex            *sync.Mutex
+	targetURL        *clientURL
+	api              *minio.Client
+	encryptMaterials encrypt.Materials
+	virtualStyle     bool
 }
 
 const (
@@ -163,6 +165,8 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 
 		// Store the new api object.
 		s3Clnt.api = api
+
+		s3Clnt.encryptMaterials = config.encryptMaterials
 
 		return s3Clnt, nil
 	}
@@ -495,7 +499,16 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 // Get - get object with metadata.
 func (c *s3Client) Get() (io.Reader, map[string][]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	reader, e := c.api.GetObject(bucket, object)
+
+	var reader io.Reader
+	var objInfo minio.ObjectInfo
+	var e error
+
+	if c.encryptMaterials != nil {
+		reader, e = c.api.GetEncryptedObject(bucket, object, c.encryptMaterials)
+	} else {
+		reader, e = c.api.GetObject(bucket, object)
+	}
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -513,7 +526,7 @@ func (c *s3Client) Get() (io.Reader, map[string][]string, *probe.Error) {
 		}
 		return nil, nil, probe.NewError(e)
 	}
-	objInfo, e := reader.Stat()
+	objInfo, e = c.api.StatObject(bucket, object)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {
@@ -580,7 +593,15 @@ func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string][]strin
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
-	n, e := c.api.PutObjectWithMetadata(bucket, object, reader, metadata, progress)
+	var n int64
+	var e error
+
+	if c.encryptMaterials != nil {
+		n, e = c.api.PutEncryptedObject(bucket, object, reader, c.encryptMaterials, metadata, progress)
+	} else {
+		n, e = c.api.PutObjectWithMetadata(bucket, object, reader, metadata, progress)
+	}
+
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {
@@ -866,7 +887,13 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 			if objectMultipartInfo.Key == object {
 				objectMetadata.URL = *c.targetURL
 				objectMetadata.Time = objectMultipartInfo.Initiated
-				objectMetadata.Size = objectMultipartInfo.Size
+				if c.encryptMaterials != nil {
+					// The target object is encrypted, we don't really know
+					// its true size.
+					objectMetadata.Size = -1
+				} else {
+					objectMetadata.Size = objectMultipartInfo.Size
+				}
 				objectMetadata.Type = os.FileMode(0664)
 				return objectMetadata, nil
 			}
@@ -888,7 +915,13 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 		if objectStat.Key == object {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Time = objectStat.LastModified
-			objectMetadata.Size = objectStat.Size
+			if c.encryptMaterials != nil {
+				// The target object is encrypted, we don't really know
+				// its true size.
+				objectMetadata.Size = -1
+			} else {
+				objectMetadata.Size = objectStat.Size
+			}
 			objectMetadata.Type = os.FileMode(0664)
 			return objectMetadata, nil
 		}
@@ -922,7 +955,14 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 	}
 	objectMetadata.URL = *c.targetURL
 	objectMetadata.Time = objectStat.LastModified
-	objectMetadata.Size = objectStat.Size
+	if c.encryptMaterials != nil {
+		// The target object is encrypted, we don't really know
+		// its true size.
+		objectMetadata.Size = -1
+	} else {
+		objectMetadata.Size = objectStat.Size
+	}
+
 	objectMetadata.Type = os.FileMode(0664)
 	return objectMetadata, nil
 }

@@ -30,7 +30,7 @@ const (
 )
 
 const (
-	globalMCConfigVersion = "8"
+	globalMCConfigVersion = "9"
 
 	globalMCConfigDir        = ".mc/"
 	globalMCConfigWindowsDir = "mc\\"
