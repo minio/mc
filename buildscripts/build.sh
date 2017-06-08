@@ -28,6 +28,7 @@ _init() {
     ## System binaries
     CP=`which cp`
     SHASUM=`which shasum`
+    SHA256SUM="${SHASUM} -a 256"
     SED=`which sed`
 }
 
@@ -43,58 +44,35 @@ go_build() {
     release_bin="$release_str/$os-$arch/$(basename $package).$release_tag"
     # Release binary downloadable name
     release_real_bin="$release_str/$os-$arch/$(basename $package)"
-    # Release shasum name
-    release_shasum="$release_str/$os-$arch/$(basename $package).shasum"
 
-  # Go build to build the binary.
-    if [ "${arch}" == "arm" ]; then
-        # Release binary downloadable name
-        release_real_bin_6="$release_str/$os-${arch}6vl/$(basename $package)"
+    # Release sha1sum name
+    release_shasum="$release_str/$os-$arch/$(basename $package).${release_tag}.shasum"
+    # Release sha1sum default
+    release_shasum_default="$release_str/$os-$arch/$(basename $package).shasum"
 
-        release_bin_6="$release_str/$os-${arch}6vl/$(basename $package).$release_tag"
-        ## Support building for ARM6vl
-        CGO_ENABLED=0 GOARM=6 GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin_6
+    # Release sha256sum name
+    release_sha256sum="$release_str/$os-$arch/$(basename $package).${release_tag}.sha256sum"
+    # Release sha256sum default
+    release_sha256sum_default="$release_str/$os-$arch/$(basename $package).sha256sum"
 
-        ## Copy
-        $CP -p $release_bin_6 $release_real_bin_6
+    CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin
 
-        # Release shasum name
-        release_shasum_6="$release_str/$os-${arch}6vl/$(basename $package).shasum"
-
-        # Calculate shasum
-        shasum_str=$(${SHASUM} ${release_bin_6})
-        echo ${shasum_str} | $SED "s/$release_str\/$os-${arch}6vl\///g" > $release_shasum_6
-
-        # Release binary downloadable name
-        release_real_bin_7="$release_str/$os-$arch/$(basename $package)"
-
-        release_bin_7="$release_str/$os-$arch/$(basename $package).$release_tag"
-        ## Support building for ARM7vl
-        CGO_ENABLED=0 GOARM=7 GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin_7
-
-        ## Copy
-        $CP -p $release_bin_7 $release_real_bin_7
-
-        # Release shasum name
-        release_shasum_7="$release_str/$os-$arch/$(basename $package).shasum"
-
-        # Calculate shasum
-        shasum_str=$(${SHASUM} ${release_bin_7})
-        echo ${shasum_str} | $SED "s/$release_str\/$os-$arch\///g" > $release_shasum_7
+    # Create copy
+    if [ $os == "windows" ]; then
+        $CP -p $release_bin ${release_real_bin}.exe
     else
-        CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin
-
-        # Create copy
-        if [ $os == "windows" ]; then
-            $CP -p $release_bin ${release_real_bin}.exe
-        else
-            $CP -p $release_bin $release_real_bin
-        fi
-
-        # Calculate shasum
-        shasum_str=$(${SHASUM} ${release_bin})
-        echo ${shasum_str} | $SED "s/$release_str\/$os-$arch\///g" > $release_shasum
+        $CP -p $release_bin $release_real_bin
     fi
+
+    # Calculate sha1sum
+    shasum_str=$(${SHASUM} ${release_bin})
+    echo ${shasum_str} | $SED "s/$release_str\/$os-$arch\///g" > $release_shasum
+    $CP -p $release_shasum $release_shasum_default
+
+    # Calculate sha256sum
+    sha256sum_str=$(${SHA256SUM} ${release_bin})
+    echo ${sha256sum_str} | $SED "s/$release_str\/$os-$arch\///g" > $release_sha256sum
+    $CP -p $release_sha256sum $release_sha256sum_default
 }
 
 main() {

@@ -200,7 +200,7 @@ func downloadReleaseData(releaseChecksumURL string, timeout time.Duration) (data
 
 // DownloadReleaseData - downloads release data from minio official server.
 func DownloadReleaseData(timeout time.Duration) (data string, err *probe.Error) {
-	return downloadReleaseData(mcReleaseURL+"mc.shasum", timeout)
+	return downloadReleaseData(mcReleaseURL+"mc.sha256sum", timeout)
 }
 
 func parseReleaseData(data string) (releaseTime time.Time, err *probe.Error) {
