@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -48,27 +47,41 @@ func mainConfigHost(ctx *cli.Context) error {
 
 // hostMessage container for content message structure
 type hostMessage struct {
-	op        string
-	Status    string `json:"status"`
-	Alias     string `json:"alias"`
-	URL       string `json:"URL"`
-	AccessKey string `json:"accessKey,omitempty"`
-	SecretKey string `json:"secretKey,omitempty"`
-	API       string `json:"api,omitempty"`
+	op          string
+	prettyPrint bool
+	Status      string `json:"status"`
+	Alias       string `json:"alias"`
+	URL         string `json:"URL"`
+	AccessKey   string `json:"accessKey,omitempty"`
+	SecretKey   string `json:"secretKey,omitempty"`
+	API         string `json:"api,omitempty"`
 }
 
-// String colorized host message
+// Print the config information of one alias, when prettyPrint flag
+// is activated, fields contents are cut and '...' will be added to
+// show a pretty table of all aliases configurations
 func (h hostMessage) String() string {
 	switch h.op {
 	case "list":
-		message := console.Colorize("Alias", fmt.Sprintf("%s: ", h.Alias))
-		message += console.Colorize("URL", fmt.Sprintf("%-30.30s", h.URL))
-		if h.AccessKey != "" || h.SecretKey != "" {
-			message += console.Colorize("AccessKey", fmt.Sprintf("  %-20.20s", h.AccessKey))
-			message += console.Colorize("SecretKey", fmt.Sprintf("  %-40.40s", h.SecretKey))
-			message += console.Colorize("API", fmt.Sprintf("  %.20s", h.API))
+		urlFieldMaxLen, apiFieldMaxLen := -1, -1
+		accessFieldMaxLen, secretFieldMaxLen := -1, -1
+		// Set cols width if prettyPrint flag is enabled
+		if h.prettyPrint {
+			urlFieldMaxLen = 30
+			accessFieldMaxLen = 20
+			secretFieldMaxLen = 40
+			apiFieldMaxLen = 5
 		}
-		return message
+
+		// Create a new pretty table with cols configuration
+		t := newPrettyTable("  ",
+			Field{"Alias", -1},
+			Field{"URL", urlFieldMaxLen},
+			Field{"AccessKey", accessFieldMaxLen},
+			Field{"SecretKey", secretFieldMaxLen},
+			Field{"API", apiFieldMaxLen},
+		)
+		return t.buildRow(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API)
 	case "remove":
 		return console.Colorize("HostMessage", "Removed `"+h.Alias+"` successfully.")
 	case "add":

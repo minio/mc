@@ -94,7 +94,12 @@ func printHosts(hosts ...hostMessage) {
 	}
 	for _, host := range hosts {
 		// Format properly for alignment based on alias length.
-		host.Alias = fmt.Sprintf("%-*.*s", maxAlias, maxAlias, host.Alias)
+		host.Alias = fmt.Sprintf("%-*.*s:", maxAlias, maxAlias, host.Alias)
+		if host.AccessKey == "" || host.SecretKey == "" {
+			host.AccessKey = ""
+			host.SecretKey = ""
+			host.API = ""
+		}
 		printMsg(host)
 	}
 }
@@ -115,12 +120,13 @@ func listHosts(alias string) {
 	if alias != "" {
 		if v, ok := conf.Hosts[alias]; ok {
 			printHosts(hostMessage{
-				op:        "list",
-				Alias:     alias,
-				URL:       v.URL,
-				AccessKey: v.AccessKey,
-				SecretKey: v.SecretKey,
-				API:       v.API,
+				op:          "list",
+				prettyPrint: false,
+				Alias:       alias,
+				URL:         v.URL,
+				AccessKey:   v.AccessKey,
+				SecretKey:   v.SecretKey,
+				API:         v.API,
 			})
 			return
 		}
@@ -130,12 +136,13 @@ func listHosts(alias string) {
 	var hosts []hostMessage
 	for k, v := range conf.Hosts {
 		hosts = append(hosts, hostMessage{
-			op:        "list",
-			Alias:     k,
-			URL:       v.URL,
-			AccessKey: v.AccessKey,
-			SecretKey: v.SecretKey,
-			API:       v.API,
+			op:          "list",
+			prettyPrint: true,
+			Alias:       k,
+			URL:         v.URL,
+			AccessKey:   v.AccessKey,
+			SecretKey:   v.SecretKey,
+			API:         v.API,
 		})
 	}
 
