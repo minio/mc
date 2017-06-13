@@ -129,11 +129,11 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	secretKey := args.Get(3)
 	api := args.Get(4)
 
-	urlHost, _ := urlpkg.Parse(url)
+	parsedURL, _ := urlpkg.Parse(url)
 
-	if isGoogle(urlHost.Host) {
+	if isGoogle(parsedURL.Host) {
 		if api == "S3v4" {
-			fatalIf(errInvalidArgument().Trace(api), "Unsupported API signature for url. Please use `mc config host add "+alias+" "+url+" "+accessKey+" "+secretKey+" S3v2` instead")
+			fatalIf(errInvalidArgument().Trace(api), "Unsupported API signature for url. Please use `mc config host add "+alias+" "+url+" "+accessKey+" "+secretKey+" S3v2` instead.")
 		}
 		api = "S3v2"
 	}
