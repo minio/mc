@@ -15,6 +15,7 @@ script:
 - make test GOFLAGS="-race"
 - make coverage
 - diff -au <(gofmt -d *.go) <(printf "")
+- diff -au <(gofmt -d cmd) <(printf "")
 - diff -au <(gofmt -d pkg) <(printf "")
 
 after_success:

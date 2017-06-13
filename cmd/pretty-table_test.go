@@ -30,15 +30,15 @@ func TestPrettyTable(t *testing.T) {
 		// Test 1: empty parameter, empty table
 		{"", []Field{}, []string{}, ""},
 		// Test 2: one field, without any specific customization
-		{"", []Field{Field{"", -1}}, []string{"abcd"}, "abcd"},
+		{"", []Field{{"", -1}}, []string{"abcd"}, "abcd"},
 		// Test 3: one field, without 5 chars len
-		{"", []Field{Field{"", 5}}, []string{"my-long-field"}, "my..."},
+		{"", []Field{{"", 5}}, []string{"my-long-field"}, "my..."},
 		// Test 4: one separator, one content
-		{" | ", []Field{Field{"", -1}}, []string{"abcd"}, "abcd"},
+		{" | ", []Field{{"", -1}}, []string{"abcd"}, "abcd"},
 		// Test 5: one separtor, multiple contents
-		{" | ", []Field{Field{"", -1}, Field{"", -1}, Field{"", -1}}, []string{"column1", "column2", "column3"}, "column1 | column2 | column3"},
+		{" | ", []Field{{"", -1}, {"", -1}, {"", -1}}, []string{"column1", "column2", "column3"}, "column1 | column2 | column3"},
 		// Test 6: multiple fields
-		{" | ", []Field{Field{"", 5}, Field{"", -1}}, []string{"144550032", "my long content that should not be cut"}, "14... | my long content that should not be cut"},
+		{" | ", []Field{{"", 5}, {"", -1}}, []string{"144550032", "my long content that should not be cut"}, "14... | my long content that should not be cut"},
 	}
 
 	for idx, testCase := range testCases {
