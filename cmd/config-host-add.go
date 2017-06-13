@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	urlpkg "net/url"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -126,6 +128,16 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	accessKey := args.Get(2)
 	secretKey := args.Get(3)
 	api := args.Get(4)
+
+	urlHost, _ := urlpkg.Parse(url)
+
+	if isGoogle(urlHost.Host) {
+		if api == "S3v4" {
+			fatalIf(errInvalidArgument().Trace(api), "Unsupported API signature for url. Please use `mc config host add "+alias+" "+url+" "+accessKey+" "+secretKey+" S3v2` instead")
+		}
+		api = "S3v2"
+	}
+
 	if api == "" {
 		api = "S3v4"
 	}
