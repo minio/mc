@@ -149,7 +149,7 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) error {
 	}
 	if older > 0 {
 		// Check whether object is created older than given time.
-		now := time.Now().UTC()
+		now := UTCNow()
 		timeDiff := now.Sub(content.Time)
 		if timeDiff < (time.Duration(older) * Day) {
 			// time difference of info.Time with current time is less than older time.
@@ -211,7 +211,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 
 		if older > 0 {
 			// Check whether object is created older than given time.
-			now := time.Now().UTC()
+			now := UTCNow()
 			timeDiff := now.Sub(content.Time)
 			if timeDiff < (time.Duration(older) * Day) {
 				// time difference of info.Time with current time is less than older time.

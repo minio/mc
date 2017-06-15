@@ -1,7 +1,7 @@
-// +build linux
+// +build windows
 
 /*
- * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
+ * Minio Client (C) 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -18,27 +18,20 @@
 
 package cmd
 
-import (
-	"github.com/rjeczalik/notify"
-)
+import "github.com/rjeczalik/notify"
 
 var (
-	// EventTypePut contains the notify events that will cause a put (write)
-	EventTypePut = []notify.Event{notify.InCloseWrite | notify.InMovedTo}
+	// EventTypePut contains the notify events that will cause a put (writer)
+	EventTypePut = []notify.Event{notify.Create, notify.Write, notify.Rename}
 	// EventTypeDelete contains the notify events that will cause a delete (remove)
-	EventTypeDelete = []notify.Event{notify.InDelete | notify.InDeleteSelf | notify.InMovedFrom}
+	EventTypeDelete = []notify.Event{notify.Remove}
 	// EventTypeGet contains the notify events that will cause a get (read)
-	EventTypeGet = []notify.Event{notify.InAccess | notify.InOpen}
+	EventTypeGet = []notify.Event{notify.FileNotifyChangeLastAccess}
 )
 
 // IsGetEvent checks if the event return is a get event.
 func IsGetEvent(event notify.Event) bool {
-	for _, ev := range EventTypeGet {
-		if event&ev != 0 {
-			return true
-		}
-	}
-	return false
+	return event&notify.FileNotifyChangeLastAccess != 0
 }
 
 // IsPutEvent checks if the event returned is a put event
@@ -53,10 +46,5 @@ func IsPutEvent(event notify.Event) bool {
 
 // IsDeleteEvent checks if the event returned is a delete event
 func IsDeleteEvent(event notify.Event) bool {
-	for _, ev := range EventTypeDelete {
-		if event&ev != 0 {
-			return true
-		}
-	}
-	return false
+	return event&notify.Remove != 0
 }

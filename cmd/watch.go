@@ -24,23 +24,32 @@ import (
 	"github.com/minio/minio/pkg/probe"
 )
 
-// EventType is the type of the event that occurred
+// EventType represents the type of the event occurred.
 type EventType string
 
 const (
-	// EventCreate notifies when a new object has been created
+	// EventCreate notifies when a new object is created
 	EventCreate EventType = "ObjectCreated"
-	// EventRemove notifies when a new object has been deleted
+	// EventRemove notifies when a new object is deleted
 	EventRemove = "ObjectRemoved"
+	// EventAccessed notifies when an object is accessed.
+	EventAccessed = "ObjectAccessed"
+	// EventAccessedRead notifies when an object is accessed (specifically read).
+	EventAccessedRead = "ObjectAccessed:Read"
+	// EventAccessedStat notifies when an object is accessed (specifically stat).
+	EventAccessedStat = "ObjectAccessed:Stat"
 )
 
-// Event contains the information of the event that occurred
-type Event struct {
-	Time   string    `json:"time"`
-	Size   int64     `json:"size"`
-	Path   string    `json:"path"`
-	Client Client    `json:"-"`
-	Type   EventType `json:"type"`
+// EventInfo contains the information of the event that occurred and the source
+// IP:PORT of the client which triggerred the event.
+type EventInfo struct {
+	Time      string
+	Size      int64
+	Path      string
+	Type      EventType
+	Host      string
+	Port      string
+	UserAgent string
 }
 
 type watchParams struct {
@@ -52,37 +61,37 @@ type watchParams struct {
 }
 
 type watchObject struct {
-	// events will be put on this chan
-	events chan Event
+	// eventInfo will be put on this chan
+	eventInfoChan chan EventInfo
 	// errors will be put on this chan
-	errors chan *probe.Error
+	errorChan chan *probe.Error
 	// will stop the watcher goroutines
-	done chan bool
+	doneChan chan bool
 }
 
 // Events returns the chan receiving events
-func (w *watchObject) Events() chan Event {
-	return w.events
+func (w *watchObject) Events() chan EventInfo {
+	return w.eventInfoChan
 }
 
 // Errors returns the chan receiving errors
 func (w *watchObject) Errors() chan *probe.Error {
-	return w.errors
+	return w.errorChan
 }
 
 // Close the watcher, will stop all goroutines
 func (w *watchObject) Close() {
-	close(w.done)
+	close(w.doneChan)
 }
 
 // Watcher can be used to have one or multiple clients watch for notifications
 type Watcher struct {
 	sessionStartTime time.Time
 
-	// all errors will be added to this chan
-	errorsChan chan *probe.Error
+	// all error will be added to this chan
+	errorChan chan *probe.Error
 	// all events will be added to this chan
-	eventsChan chan Event
+	eventInfoChan chan EventInfo
 
 	// array of watchers joined
 	o []*watchObject
@@ -95,20 +104,20 @@ type Watcher struct {
 func NewWatcher(sessionStartTime time.Time) *Watcher {
 	return &Watcher{
 		sessionStartTime: sessionStartTime,
-		errorsChan:       make(chan *probe.Error),
-		eventsChan:       make(chan Event),
+		errorChan:        make(chan *probe.Error),
+		eventInfoChan:    make(chan EventInfo),
 		o:                []*watchObject{},
 	}
 }
 
 // Errors returns a channel which will receive errors
 func (w *Watcher) Errors() chan *probe.Error {
-	return w.errorsChan
+	return w.errorChan
 }
 
 // Events returns a channel which will receive events
-func (w *Watcher) Events() chan Event {
-	return w.eventsChan
+func (w *Watcher) Events() chan EventInfo {
+	return w.eventInfoChan
 }
 
 // Stop watcher
@@ -120,8 +129,8 @@ func (w *Watcher) Stop() {
 
 	w.wg.Wait()
 
-	close(w.errorsChan)
-	close(w.eventsChan)
+	close(w.errorChan)
+	close(w.eventInfoChan)
 }
 
 // Watching returns if the watcher is watching for notifications
@@ -162,13 +171,13 @@ func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 					return
 				}
 
-				w.eventsChan <- event
+				w.eventInfoChan <- event
 			case err, ok := <-wo.Errors():
 				if !ok {
 					return
 				}
 
-				w.errorsChan <- err
+				w.errorChan <- err
 			}
 		}
 	}()

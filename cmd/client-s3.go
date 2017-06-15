@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -206,6 +206,8 @@ func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, su
 			nc.AddEvents(minio.ObjectCreatedAll)
 		case "delete":
 			nc.AddEvents(minio.ObjectRemovedAll)
+		case "get":
+			nc.AddEvents(minio.ObjectAccessedAll)
 		default:
 			return errInvalidArgument().Trace(events...)
 		}
@@ -366,7 +368,7 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 
 // Start watching on all bucket events for a given account ID.
 func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
-	eventChan := make(chan Event)
+	eventChan := make(chan EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 
@@ -384,6 +386,8 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 			events = append(events, string(minio.ObjectCreatedAll))
 		case "delete":
 			events = append(events, string(minio.ObjectRemovedAll))
+		case "get":
+			events = append(events, string(minio.ObjectAccessedAll))
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
@@ -410,9 +414,9 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventsCh := c.api.ListenBucketNotification(bucket, params.prefix, params.suffix, events, doneCh)
 
 	wo := &watchObject{
-		events: eventChan,
-		errors: errorChan,
-		done:   doneChan,
+		eventInfoChan: eventChan,
+		errorChan:     errorChan,
+		doneChan:      doneChan,
 	}
 
 	// wait for events to occur and sent them through the eventChan and errorChan
@@ -441,22 +445,45 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 				u := *c.targetURL
 				u.Path = path.Join(string(u.Separator), bucketName, key)
 				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
-					eventChan <- Event{
-						Time:   record.EventTime,
-						Size:   record.S3.Object.Size,
-						Path:   u.String(),
-						Client: c,
-						Type:   EventCreate,
+					eventChan <- EventInfo{
+						Time:      record.EventTime,
+						Size:      record.S3.Object.Size,
+						Path:      u.String(),
+						Type:      EventCreate,
+						Host:      record.Source.Host,
+						Port:      record.Source.Port,
+						UserAgent: record.Source.UserAgent,
 					}
+
 				} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
-					eventChan <- Event{
-						Time:   record.EventTime,
-						Path:   u.String(),
-						Client: c,
-						Type:   EventRemove,
+					eventChan <- EventInfo{
+						Time:      record.EventTime,
+						Path:      u.String(),
+						Type:      EventRemove,
+						Host:      record.Source.Host,
+						Port:      record.Source.Port,
+						UserAgent: record.Source.UserAgent,
 					}
-				} else {
-					// ignore other events
+				} else if record.EventName == minio.ObjectAccessedGet {
+					eventChan <- EventInfo{
+						Time:      record.EventTime,
+						Size:      record.S3.Object.Size,
+						Path:      u.String(),
+						Type:      EventAccessedRead,
+						Host:      record.Source.Host,
+						Port:      record.Source.Port,
+						UserAgent: record.Source.UserAgent,
+					}
+				} else if record.EventName == minio.ObjectAccessedHead {
+					eventChan <- EventInfo{
+						Time:      record.EventTime,
+						Size:      record.S3.Object.Size,
+						Path:      u.String(),
+						Type:      EventAccessedStat,
+						Host:      record.Source.Host,
+						Port:      record.Source.Port,
+						UserAgent: record.Source.UserAgent,
+					}
 				}
 			}
 		}
@@ -715,13 +742,13 @@ func isValidBucketName(bucketName string) *probe.Error {
 		return probe.NewError(errors.New("Bucket name should be more than 3 characters and less than 64 characters"))
 	}
 	if !validBucketName.MatchString(bucketName) {
-		return probe.NewError(errors.New("Bucket name can contain alphabet, '-' and numbers, but first character should be an alphabet or number"))
+		return probe.NewError(errors.New("Bucket names can only contain lowercase alpha characters `a-z`, numbers '0-9', or '-'. First/last character cannot be a '-'"))
 	}
 	return nil
 }
 
 // MakeBucket - make a new bucket.
-func (c *s3Client) MakeBucket(region string) *probe.Error {
+func (c *s3Client) MakeBucket(region string, ignoreExisting bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		return probe.NewError(BucketNameTopLevel{})
@@ -731,6 +758,15 @@ func (c *s3Client) MakeBucket(region string) *probe.Error {
 	}
 	e := c.api.MakeBucket(bucket, region)
 	if e != nil {
+		// Ignore bucket already existing error when ignoreExisting flag is enabled
+		if ignoreExisting {
+			switch minio.ToErrorResponse(e).Code {
+			case "BucketAlreadyOwnedByYou":
+				fallthrough
+			case "BucketAlreadyExists":
+				return nil
+			}
+		}
 		return probe.NewError(e)
 	}
 	return nil
@@ -895,6 +931,10 @@ func isAmazon(host string) bool {
 	return s3utils.IsAmazonEndpoint(url.URL{Host: host})
 }
 
+func isAmazonChina(host string) bool {
+	return s3utils.IsAmazonChinaEndpoint(url.URL{Host: host})
+}
+
 func isAmazonAccelerated(host string) bool {
 	return host == "s3-accelerate.amazonaws.com"
 }
@@ -907,7 +947,7 @@ func isGoogle(host string) bool {
 // Currently only supported hosts with virtual style
 // are Amazon S3 and Google Cloud Storage.
 func isVirtualHostStyle(host string) bool {
-	return isAmazon(host) || isGoogle(host) || isAmazonAccelerated(host)
+	return isAmazon(host) && !isAmazonChina(host) || isGoogle(host) || isAmazonAccelerated(host)
 }
 
 // url2BucketAndObject gives bucketName and objectName from URL path.
@@ -1494,7 +1534,7 @@ func (c *s3Client) ShareDownload(expires time.Duration) (string, *probe.Error) {
 func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentType string) (string, map[string]string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	p := minio.NewPostPolicy()
-	if e := p.SetExpires(time.Now().UTC().Add(expires)); e != nil {
+	if e := p.SetExpires(UTCNow().Add(expires)); e != nil {
 		return "", nil, probe.NewError(e)
 	}
 	if strings.TrimSpace(contentType) != "" || contentType != "" {

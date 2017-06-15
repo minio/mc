@@ -96,12 +96,12 @@ func (f *fsClient) GetURL() clientURL {
 
 // Watches for all fs events on an input path.
 func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
-	eventChan := make(chan Event)
+	eventChan := make(chan EventInfo)
 	errorChan := make(chan *probe.Error)
 	doneChan := make(chan bool)
 	// Make the channel buffered to ensure no event is dropped. Notify will drop
 	// an event if the receiver is not able to keep up the sending pace.
-	neventChan := make(chan notify.EventInfo, 1)
+	in, out := PipeChan(1000)
 
 	var fsEvents []notify.Event
 	for _, event := range params.events {
@@ -110,6 +110,8 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 			fsEvents = append(fsEvents, EventTypePut...)
 		case "delete":
 			fsEvents = append(fsEvents, EventTypeDelete...)
+		case "get":
+			fsEvents = append(fsEvents, EventTypeGet...)
 		default:
 			return nil, errInvalidArgument().Trace(event)
 		}
@@ -121,7 +123,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	if params.recursive {
 		recursivePath = f.PathURL.Path + "..."
 	}
-	if e := notify.Watch(recursivePath, neventChan, fsEvents...); e != nil {
+	if e := notify.Watch(recursivePath, in, fsEvents...); e != nil {
 		return nil, probe.NewError(e)
 	}
 
@@ -131,7 +133,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 
 		close(eventChan)
 		close(errorChan)
-		notify.Stop(neventChan)
+		notify.Stop(in)
 	}()
 
 	timeFormatFS := "2006-01-02T15:04:05.000Z"
@@ -139,7 +141,7 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	// Get fsnotify notifications for events and errors, and sent them
 	// using eventChan and errorChan
 	go func() {
-		for event := range neventChan {
+		for event := range out {
 			if isIgnoredFile(event.Path()) {
 				continue
 			}
@@ -159,29 +161,47 @@ func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 					// we want files
 					continue
 				}
-				eventChan <- Event{
-					Time:   time.Now().Format(timeFormatFS),
-					Size:   i.Size(),
-					Path:   event.Path(),
-					Client: f,
-					Type:   EventCreate,
+				eventChan <- EventInfo{
+					Time: UTCNow().Format(timeFormatFS),
+					Size: i.Size(),
+					Path: event.Path(),
+					Type: EventCreate,
 				}
 			} else if IsDeleteEvent(event.Event()) {
-				eventChan <- Event{
-					Time:   time.Now().Format(timeFormatFS),
-					Path:   event.Path(),
-					Client: f,
-					Type:   EventRemove,
+				eventChan <- EventInfo{
+					Time: UTCNow().Format(timeFormatFS),
+					Path: event.Path(),
+					Type: EventRemove,
+				}
+			} else if IsGetEvent(event.Event()) {
+				eventChan <- EventInfo{
+					Time: UTCNow().Format(timeFormatFS),
+					Path: event.Path(),
+					Type: EventAccessed,
 				}
 			}
 		}
 	}()
 
 	return &watchObject{
-		events: eventChan,
-		errors: errorChan,
-		done:   doneChan,
+		eventInfoChan: eventChan,
+		errorChan:     errorChan,
+		doneChan:      doneChan,
 	}, nil
+}
+
+func isStreamFile(objectPath string) bool {
+	switch objectPath {
+	case os.DevNull:
+		fallthrough
+	case os.Stdin.Name():
+		fallthrough
+	case os.Stdout.Name():
+		fallthrough
+	case os.Stderr.Name():
+		return true
+	}
+	return false
 }
 
 /// Object operations.
@@ -194,29 +214,15 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	objectDir, _ := filepath.Split(f.PathURL.Path)
 	objectPath := f.PathURL.Path
 
-	// Verify if destination already exists.
-	st, e := os.Stat(objectPath)
-	if e == nil {
-		// If the destination exists and is not a regular file.
-		if !st.Mode().IsRegular() {
-			return 0, probe.NewError(PathIsNotRegular{
-				Path: objectPath,
-			})
-		}
-	}
-
-	// Proceed if file does not exist. return for all other errors.
-	if e != nil {
-		if !os.IsNotExist(e) {
-			return 0, probe.NewError(e)
-		}
-	}
-
-	// Write to a temporary file "object.part.mc" before commit.
+	avoidResumeUpload := isStreamFile(objectPath)
+	// Write to a temporary file "object.part.minio" before commit.
 	objectPartPath := objectPath + partSuffix
+	if avoidResumeUpload {
+		objectPartPath = objectPath
+	}
 	if objectDir != "" {
 		// Create any missing top level directories.
-		if e = os.MkdirAll(objectDir, 0777); e != nil {
+		if e := os.MkdirAll(objectDir, 0777); e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
 			return 0, err.Trace(f.PathURL.Path)
 		}
@@ -337,10 +343,12 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 			})
 		}
 	}
-	// Safely completed put. Now commit by renaming to actual filename.
-	if e = os.Rename(objectPartPath, objectPath); e != nil {
-		err := f.toClientError(e, objectPath)
-		return totalWritten, err.Trace(objectPartPath, objectPath)
+	if !avoidResumeUpload {
+		// Safely completed put. Now commit by renaming to actual filename.
+		if e = os.Rename(objectPartPath, objectPath); e != nil {
+			err := f.toClientError(e, objectPath)
+			return totalWritten, err.Trace(objectPartPath, objectPath)
+		}
 	}
 	return totalWritten, nil
 }
@@ -388,16 +396,7 @@ func readFile(fpath string) (io.ReadCloser, error) {
 // createFile creates an empty file at the provided filepath
 // if one does not exist already.
 func createFile(fpath string) (io.WriteCloser, error) {
-	st, e := os.Stat(fpath)
-	// If destination exists but is not regular.
-	if e == nil && !st.Mode().IsRegular() {
-		return nil, PathIsNotRegular{Path: fpath}
-	}
-	// If file exists already.
-	if e != nil && !os.IsNotExist(e) {
-		return nil, e
-	}
-	if e = os.MkdirAll(filepath.Dir(fpath), 0777); e != nil {
+	if e := os.MkdirAll(filepath.Dir(fpath), 0777); e != nil {
 		return nil, e
 	}
 	file, e := os.Create(fpath)
@@ -933,7 +932,10 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent) {
 }
 
 // MakeBucket - create a new bucket.
-func (f *fsClient) MakeBucket(region string) *probe.Error {
+func (f *fsClient) MakeBucket(region string, ignoreExisting bool) *probe.Error {
+	// TODO: ignoreExisting has no effect currently. In the future, we want
+	// to call os.Mkdir() when ignoredExisting is disabled and os.MkdirAll()
+	// otherwise.
 	e := os.MkdirAll(f.PathURL.Path, 0777)
 	if e != nil {
 		return probe.NewError(e)

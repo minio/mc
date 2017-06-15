@@ -25,7 +25,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 type objectAPIHandler struct {
@@ -63,7 +62,7 @@ func (h objectAPIHandler) getHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(len(h.object[filepath.Base(r.URL.Path)])))
-		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+		w.Header().Set("Last-Modified", UTCNow().Format(http.TimeFormat))
 		w.Header().Set("ETag", "b1946ac92492d2347c6235b4d2611184")
 		w.WriteHeader(http.StatusOK)
 		io.Copy(w, bytes.NewReader(h.object[filepath.Base(r.URL.Path)]))
@@ -83,7 +82,7 @@ func (h objectAPIHandler) headHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	case r.URL.Path != "":
 		w.Header().Set("Content-Length", strconv.Itoa(len(h.object[filepath.Base(r.URL.Path)])))
-		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+		w.Header().Set("Last-Modified", UTCNow().Format(http.TimeFormat))
 		w.Header().Set("ETag", "b1946ac92492d2347c6235b4d2611184")
 		w.WriteHeader(http.StatusOK)
 		return

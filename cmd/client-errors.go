@@ -150,7 +150,7 @@ func (e EmptyPath) Error() string {
 type ObjectMissing struct{}
 
 func (e ObjectMissing) Error() string {
-	return "Object key is missing, object key cannot be empty"
+	return "Object does not exist"
 }
 
 // UnexpectedShortWrite - write wrote less bytes than expected.

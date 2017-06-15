@@ -45,7 +45,7 @@ var sessionCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] OPERATION [ARG]
+  {{.HelpName}} [FLAGS] OPERATION [SESSION-ID]
 
 OPERATION:
   resume   Resume a previously saved session.
@@ -134,7 +134,7 @@ func clearSession(sid string) {
 			session, err := loadSessionV8(sid)
 			fatalIf(err.Trace(sid), "Unable to load session `"+sid+"`.")
 
-			fatalIf(session.Delete().Trace(sid), "Unable to load session `"+sid+"`.")
+			fatalIf(session.Delete().Trace(sid), "Unable to remove session `"+sid+"`.")
 
 			printMsg(clearSessionMessage{Status: "success", SessionID: sid})
 		}
@@ -156,7 +156,7 @@ func clearSession(sid string) {
 	}
 
 	if session != nil {
-		fatalIf(session.Delete().Trace(sid), "Unable to load session `"+sid+"`.")
+		fatalIf(session.Delete().Trace(sid), "Unable to remove session `"+sid+"`.")
 		printMsg(clearSessionMessage{Status: "success", SessionID: sid})
 	}
 }

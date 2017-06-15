@@ -20,10 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cheggaaa/pb"
 	"github.com/dustin/go-humanize"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
 )
 
 // fixateScanBar truncates or stretches text to fit within the terminal size.
@@ -46,14 +44,12 @@ type scanBarFunc func(string)
 // scanBarFactory returns a progress bar function to report URL scanning.
 func scanBarFactory() scanBarFunc {
 	fileCount := 0
-	termWidth, e := pb.GetTerminalWidth()
-	fatalIf(probe.NewError(e), "Unable to get terminal size. Please use --quiet option.")
 
 	// Cursor animate channel.
 	cursorCh := cursorAnimate()
 	return func(source string) {
 		scanPrefix := fmt.Sprintf("[%s] %s ", humanize.Comma(int64(fileCount)), string(<-cursorCh))
-		source = fixateScanBar(source, termWidth-len([]rune(scanPrefix)))
+		source = fixateScanBar(source, globalTermWidth-len([]rune(scanPrefix)))
 		barText := scanPrefix + source
 		console.PrintC("\r" + barText + "\r")
 		fileCount++

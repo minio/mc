@@ -1,7 +1,7 @@
-// +build !linux
+// +build darwin freebsd solaris
 
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -21,32 +21,30 @@ package cmd
 import "github.com/rjeczalik/notify"
 
 var (
-	// EventTypePut contains the notify events that will cause a put
+	// EventTypePut contains the notify events that will cause a put (writer)
 	EventTypePut = []notify.Event{notify.Create, notify.Write, notify.Rename}
-	// EventTypeDelete contains the notify events that will cause a delete
+	// EventTypeDelete contains the notify events that will cause a delete (remove)
 	EventTypeDelete = []notify.Event{notify.Remove}
+	// EventTypeGet contains the notify events that will cause a get (read)
+	EventTypeGet = []notify.Event{} // On macOS, FreeBSD, Solaris this is not available.
 )
+
+// IsGetEvent checks if the event return is a get event.
+func IsGetEvent(event notify.Event) bool {
+	return false
+}
 
 // IsPutEvent checks if the event returned is a put event
 func IsPutEvent(event notify.Event) bool {
-	switch event {
-	case notify.Create:
-		return true
-	case notify.Rename:
-		return true
-	case notify.Write:
-		return true
+	for _, ev := range EventTypePut {
+		if event&ev != 0 {
+			return true
+		}
 	}
-
 	return false
 }
 
 // IsDeleteEvent checks if the event returned is a delete event
 func IsDeleteEvent(event notify.Event) bool {
-	switch event {
-	case notify.Remove:
-		return true
-	}
-
-	return false
+	return event&notify.Remove != 0
 }

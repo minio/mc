@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -229,7 +229,6 @@ func (mj *mirrorJob) startStatus() {
 	go func() {
 		// now we want to start the progress bar
 		mj.status.Start()
-		defer mj.status.Finish()
 		defer mj.wgStatus.Done()
 
 		for sURLs := range mj.statusCh {
@@ -262,6 +261,7 @@ func (mj *mirrorJob) startStatus() {
 func (mj *mirrorJob) stopStatus() {
 	close(mj.statusCh)
 	mj.wgStatus.Wait()
+	mj.status.Finish()
 }
 
 // this goroutine will watch for notifications, and add modified objects to the queue
@@ -509,7 +509,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool
 		statusCh:       make(chan URLs),
 		wgStatus:       new(sync.WaitGroup),
 		watcherRunning: true,
-		watcher:        NewWatcher(time.Now().UTC()),
+		watcher:        NewWatcher(UTCNow()),
 	}
 
 	return &mj
@@ -555,7 +555,12 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 	dstClt, err := newClient(dstURL)
 	fatalIf(err, "Unable to initialize `"+srcURL+"`")
 
-	mirrorAllBuckets := (dstClt.GetURL().Type == objectStorage && dstClt.GetURL().Path == "/")
+	if ctx.Bool("a") && (srcClt.GetURL().Type != objectStorage || dstClt.GetURL().Type != objectStorage) {
+		fatalIf(errDummy(), "Synchronizing bucket policies is only possible when both source & target point to S3 servers")
+	}
+
+	mirrorAllBuckets := (srcClt.GetURL().Type == objectStorage && srcClt.GetURL().Path == "/") ||
+		(dstClt.GetURL().Type == objectStorage && dstClt.GetURL().Path == "/")
 
 	if mirrorAllBuckets {
 		// Synchronize buckets using dirDifference function
@@ -570,15 +575,15 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 
 			sourceSuffix := strings.TrimPrefix(d.FirstURL, srcClt.GetURL().String())
 
-			newSrcURL := srcURL + sourceSuffix
-			newTgtURL := dstURL + sourceSuffix
+			newSrcURL := path.Join(srcURL, sourceSuffix)
+			newTgtURL := path.Join(dstURL, sourceSuffix)
 
 			newSrcClt, _ := newClient(newSrcURL)
 			newDstClt, _ := newClient(newTgtURL)
 
 			if d.Diff == differInFirst {
 				// Bucket only exists in the source, create the same bucket in the destination
-				err := newDstClt.MakeBucket(ctx.String("region"))
+				err := newDstClt.MakeBucket(ctx.String("region"), false)
 				if err != nil {
 					mj.mirrorErr = err
 					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`")

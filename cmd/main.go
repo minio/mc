@@ -77,12 +77,17 @@ func Main() {
 	probe.SetAppInfo("Release-Tag", ReleaseTag)
 	probe.SetAppInfo("Commit", ShortCommitID)
 
+	// Fetch terminal size, if not available, automatically
+	// set globalQuiet to true.
+	if w, e := pb.GetTerminalWidth(); e != nil {
+		globalQuiet = true
+	} else {
+		globalTermWidth = w
+	}
+
 	app := registerApp()
 	app.Before = registerBefore
 	app.ExtraInfo = func() map[string]string {
-		if _, e := pb.GetTerminalWidth(); e != nil {
-			globalQuiet = true
-		}
 		if globalDebug {
 			return getSystemData()
 		}

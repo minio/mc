@@ -31,17 +31,24 @@ docker run minio/mc ls play
 ### Edge
 ```
 docker pull minio/mc:edge
-docker run minio/mc ls play
+docker run minio/mc:edge ls play
 ```
+
+**Note:** Above examples run `mc` against Minio [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
+
+```sh
+docker run -it --entrypoint=/bin/sh minio/mc
+```
+
+then use the [`mc config` command](#add-a-cloud-storage-service).
 
 ## macOS
 ### Homebrew
 Install mc packages using [Homebrew](http://brew.sh/)
 
 ```sh
-brew install minio-mc
+brew install minio/stable/mc
 mc --help
-
 ```
 
 ## GNU/Linux
@@ -93,8 +100,11 @@ Source installation is intended only for developers and advanced users. `mc upda
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
 ```sh
-go get -u github.com/minio/mc
+go get -d github.com/minio/mc
+cd ${GOPATH}/src/github.com/minio/mc
+make
 ```
+
 
 ## Add a Cloud Storage Service
 If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to [everyday use](#everyday-use).
@@ -160,10 +170,10 @@ alias pipe='mc pipe'
 ```
 
 ### Shell autocompletion
-You may also download [`autocomplete/bash_autocomplete`](https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_complete) into `/etc/bash_completion.d/` and rename it to `mc`. Don't forget to source the file to make it active on your current shell.
+You may also download [`autocomplete/bash_autocomplete`](https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_autocomplete) into `/etc/bash_completion.d/` and rename it to `mc`. Don't forget to source the file to make it active on your current shell.
 
 ```sh
-sudo wget https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_complete -O /etc/bash_completion.d/mc
+sudo wget https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_autocomplete -O /etc/bash_completion.d/mc
 source /etc/bash_completion.d/mc
 ```
 

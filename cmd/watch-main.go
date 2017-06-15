@@ -36,7 +36,7 @@ var (
 	watchFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "events",
-			Value: "put,delete",
+			Value: "put,delete,get",
 			Usage: "Filter specific type of events. Defaults to all events by default.",
 		},
 		cli.StringFlag{
@@ -64,7 +64,7 @@ var watchCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS]
+  {{.HelpName}} PATH [FLAGS]
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -97,7 +97,17 @@ func checkWatchSyntax(ctx *cli.Context) {
 // watchMessage container to hold one event notification
 type watchMessage struct {
 	Status string `json:"status"`
-	Event  Event  `json:"events"`
+	Event  struct {
+		Time string    `json:"time"`
+		Size int64     `json:"size"`
+		Path string    `json:"path"`
+		Type EventType `json:"type"`
+	} `json:"events"`
+	Source struct {
+		Host      string `json:"host,omitempty"`
+		Port      string `json:"port,omitempty"`
+		UserAgent string `json:"userAgent,omitempty"`
+	} `json:"source,omitempty"`
 }
 
 func (u watchMessage) JSON() string {
@@ -169,13 +179,20 @@ func mainWatch(ctx *cli.Context) error {
 			select {
 			case <-trapCh:
 				// Signal received we are done.
-				close(wo.done)
+				close(wo.doneChan)
 				return
 			case event, ok := <-wo.Events():
 				if !ok {
 					return
 				}
-				msg := watchMessage{Event: event}
+				msg := watchMessage{}
+				msg.Event.Path = event.Path
+				msg.Event.Size = event.Size
+				msg.Event.Time = event.Time
+				msg.Event.Type = event.Type
+				msg.Source.Host = event.Host
+				msg.Source.Port = event.Port
+				msg.Source.UserAgent = event.UserAgent
 				printMsg(msg)
 			case err, ok := <-wo.Errors():
 				if !ok {
