@@ -1,5 +1,5 @@
 LDFLAGS := $(shell go run buildscripts/gen-ldflags.go)
-BUILD_LDFLAGS := '$(LDFLAGS) -s -w'
+BUILD_LDFLAGS := '$(LDFLAGS)'
 
 all: install
 
