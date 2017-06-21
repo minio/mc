@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"crypto/tls"
-	"errors"
 	"hash/fnv"
 	"io"
 	"net"
@@ -26,7 +25,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -180,10 +178,6 @@ func (c *s3Client) GetURL() clientURL {
 // Add bucket notification
 func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, suffix string) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
-	if err := isValidBucketName(bucket); err != nil {
-		return err
-	}
-
 	// Validate total fields in ARN.
 	fields := strings.Split(arn, ":")
 	if len(fields) != 6 {
@@ -240,10 +234,6 @@ func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, su
 // Remove bucket notification
 func (c *s3Client) RemoveNotificationConfig(arn string) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
-	if err := isValidBucketName(bucket); err != nil {
-		return err
-	}
-
 	// Remove all notification configs if arn is empty
 	if arn == "" {
 		if err := c.api.RemoveAllBucketNotification(bucket); err != nil {
@@ -293,10 +283,6 @@ type notificationConfig struct {
 func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *probe.Error) {
 	var configs []notificationConfig
 	bucket, _ := c.url2BucketAndObject()
-	if err := isValidBucketName(bucket); err != nil {
-		return nil, err
-	}
-
 	mb, e := c.api.GetBucketNotification(bucket)
 	if e != nil {
 		return nil, probe.NewError(e)
@@ -374,9 +360,6 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 
 	// Extract bucket and object.
 	bucket, object := c.url2BucketAndObject()
-	if err := isValidBucketName(bucket); err != nil {
-		return nil, err
-	}
 
 	// Flag set to set the notification.
 	var events []string
@@ -728,33 +711,11 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 	return errorCh
 }
 
-// We support '.' with bucket names but we fallback to using path
-// style requests instead for such buckets
-var validBucketName = regexp.MustCompile(`^[a-z0-9][a-z0-9\.\-]{1,61}[a-z0-9]$`)
-
-// isValidBucketName - verify bucket name in accordance with
-//  - http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html
-func isValidBucketName(bucketName string) *probe.Error {
-	if strings.TrimSpace(bucketName) == "" {
-		return probe.NewError(errors.New("Bucket name cannot be empty"))
-	}
-	if len(bucketName) < 3 || len(bucketName) > 63 {
-		return probe.NewError(errors.New("Bucket name should be more than 3 characters and less than 64 characters"))
-	}
-	if !validBucketName.MatchString(bucketName) {
-		return probe.NewError(errors.New("Bucket names can only contain lowercase alpha characters `a-z`, numbers '0-9', or '-'. First/last character cannot be a '-'"))
-	}
-	return nil
-}
-
 // MakeBucket - make a new bucket.
 func (c *s3Client) MakeBucket(region string, ignoreExisting bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if object != "" {
 		return probe.NewError(BucketNameTopLevel{})
-	}
-	if err := isValidBucketName(bucket); err != nil {
-		return err.Trace(bucket)
 	}
 	e := c.api.MakeBucket(bucket, region)
 	if e != nil {
