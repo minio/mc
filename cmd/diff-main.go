@@ -91,6 +91,8 @@ func (d diffMessage) String() string {
 		msg = console.Colorize("DiffType", "! "+d.SecondURL)
 	case differInSize:
 		msg = console.Colorize("DiffSize", "! "+d.SecondURL)
+	case differInTime:
+		msg = console.Colorize("DiffTime", "! "+d.SecondURL)
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
 			"Unhandled difference between `"+d.FirstURL+"` and `"+d.SecondURL+"`.")
@@ -198,6 +200,7 @@ func mainDiff(ctx *cli.Context) error {
 	console.SetColor("DiffOnlyInSecond", color.New(color.FgGreen))
 	console.SetColor("DiffType", color.New(color.FgMagenta))
 	console.SetColor("DiffSize", color.New(color.FgYellow, color.Bold))
+	console.SetColor("DiffTime", color.New(color.FgYellow, color.Bold))
 
 	URLs := ctx.Args()
 	firstURL := URLs.Get(0)

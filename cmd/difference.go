@@ -29,6 +29,7 @@ type differType int
 const (
 	differInNone   differType = iota // does not differ
 	differInSize                     // differs in size
+	differInTime                     // differs in time
 	differInType                     // only in source
 	differInFirst                    // only in target
 	differInSecond                   // differs in type, exfile/directory
@@ -40,6 +41,8 @@ func (d differType) String() string {
 		return ""
 	case differInSize:
 		return "size"
+	case differInTime:
+		return "time"
 	case differInType:
 		return "type"
 	case differInFirst:
@@ -161,9 +164,10 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 			if normalizedExpected == normalizedCurrent {
 				srcType, tgtType := srcCtnt.Type, tgtCtnt.Type
 				srcSize, tgtSize := srcCtnt.Size, tgtCtnt.Size
+				srcTime, tgtTime := srcCtnt.Time, tgtCtnt.Time
 				if srcType.IsRegular() && !tgtType.IsRegular() ||
 					!srcType.IsRegular() && tgtType.IsRegular() {
-					// Type differes. Source is never a directory.
+					// Type differs. Source is never a directory.
 					diffCh <- diffMessage{
 						FirstURL:      srcCtnt.URL.String(),
 						SecondURL:     tgtCtnt.URL.String(),
@@ -171,12 +175,23 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}
-				} else if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
+					continue
+				}
+				if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
 					// Regular files differing in size.
 					diffCh <- diffMessage{
 						FirstURL:      srcCtnt.URL.String(),
 						SecondURL:     tgtCtnt.URL.String(),
 						Diff:          differInSize,
+						firstContent:  srcCtnt,
+						secondContent: tgtCtnt,
+					}
+				} else if srcTime.After(tgtTime) {
+					// Regular files differing in timestamp.
+					diffCh <- diffMessage{
+						FirstURL:      srcCtnt.URL.String(),
+						SecondURL:     tgtCtnt.URL.String(),
+						Diff:          differInTime,
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}
