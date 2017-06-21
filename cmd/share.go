@@ -178,20 +178,26 @@ func initShareConfig() {
 	if !isShareDirExists() {
 		fatalIf(createShareDir().Trace(mustGetShareDir()),
 			"Failed to create share `"+mustGetShareDir()+"` folder.")
-		console.Infof("Successfully created `%s`.\n", mustGetShareDir())
+		if !globalQuiet && !globalJSON {
+			console.Infof("Successfully created `%s`.\n", mustGetShareDir())
+		}
 	}
 
 	// Uploads share file.
 	if !isShareUploadsExists() {
 		fatalIf(initShareUploadsFile().Trace(getShareUploadsFile()),
 			"Failed to initialize share uploads `"+getShareUploadsFile()+"` file.")
-		console.Infof("Initialized share uploads `%s` file.\n", getShareUploadsFile())
+		if !globalQuiet && !globalJSON {
+			console.Infof("Initialized share uploads `%s` file.\n", getShareUploadsFile())
+		}
 	}
 
 	// Downloads share file.
 	if !isShareDownloadsExists() {
 		fatalIf(initShareDownloadsFile().Trace(getShareDownloadsFile()),
 			"Failed to initialize share downloads `"+getShareDownloadsFile()+"` file.")
-		console.Infof("Initialized share downloads `%s` file.\n", getShareDownloadsFile())
+		if !globalQuiet && !globalJSON {
+			console.Infof("Initialized share downloads `%s` file.\n", getShareDownloadsFile())
+		}
 	}
 }

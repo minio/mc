@@ -181,7 +181,9 @@ func initMC() {
 		err := saveMcConfig(newMcConfig())
 		fatalIf(err.Trace(), "Unable to save new mc config.")
 
-		console.Infoln("Configuration written to `" + mustGetMcConfigPath() + "`. Please update your access credentials.")
+		if !globalQuiet && !globalJSON {
+			console.Infoln("Configuration written to `" + mustGetMcConfigPath() + "`. Please update your access credentials.")
+		}
 	}
 
 	// Check if mc session folder exists.
@@ -218,11 +220,11 @@ func registerBefore(ctx *cli.Context) error {
 	// Migrate any old version of config / state files to newer format.
 	migrate()
 
-	// Initialize default config files.
-	initMC()
-
 	// Set global flags.
 	setGlobalsFromContext(ctx)
+
+	// Initialize default config files.
+	initMC()
 
 	// Check if config can be read.
 	checkConfig()
