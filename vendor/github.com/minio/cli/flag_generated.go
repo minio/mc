@@ -2,6 +2,7 @@ package cli
 
 import (
 	"flag"
+	//"fmt"
 	"strconv"
 	"time"
 )
@@ -472,7 +473,9 @@ func (c *Context) GlobalString(name string) string {
 }
 
 func lookupString(name string, set *flag.FlagSet) string {
+	//fmt.Printf("Value of flag set %+v \n", set)
 	f := set.Lookup(name)
+	//fmt.Printf("The value of f %+v \n", f)
 	if f != nil {
 		parsed, err := f.Value.String(), error(nil)
 		if err != nil {
