@@ -5,7 +5,7 @@ _init() {
     LDFLAGS=$(go run buildscripts/gen-ldflags.go)
 
     # Extract release tag
-    release_tag=$(echo $LDFLAGS | awk {'print $4'} | cut -f2 -d=)
+    release_tag=$(echo $LDFLAGS | awk {'print $6'} | cut -f2 -d=)
 
     # Verify release tag.
     if [ -z "$release_tag" ]; then
@@ -55,6 +55,7 @@ go_build() {
     # Release sha256sum default
     release_sha256sum_default="$release_str/$os-$arch/$(basename $package).sha256sum"
 
+    # Go build to build the binary.
     CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin
 
     # Create copy
@@ -84,7 +85,7 @@ main() {
     done
 
     read -p "If you want to build for all, Just press Enter: " chosen_osarch
-    if [ "$chosen_osarch" = "" ]; then
+    if [ "$chosen_osarch" = "" ] || [ "$chosen_osarch" = "all" ]; then
         for each_osarch in ${SUPPORTED_OSARCH}; do
             go_build ${each_osarch}
         done
