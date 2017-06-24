@@ -30,7 +30,7 @@ import (
 // GetBucketNotification - get bucket notification at a given path.
 func (c Client) GetBucketNotification(bucketName string) (bucketNotification BucketNotification, err error) {
 	// Input validation.
-	if err := isValidBucketName(bucketName); err != nil {
+	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
 		return BucketNotification{}, err
 	}
 	notification, err := c.getBucketNotification(bucketName)
@@ -47,8 +47,9 @@ func (c Client) getBucketNotification(bucketName string) (BucketNotification, er
 
 	// Execute GET on bucket to list objects.
 	resp, err := c.executeMethod("GET", requestMetadata{
-		bucketName:  bucketName,
-		queryValues: urlValues,
+		bucketName:         bucketName,
+		queryValues:        urlValues,
+		contentSHA256Bytes: emptySHA256,
 	})
 
 	defer closeResponse(resp)
@@ -139,7 +140,7 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 		defer close(notificationInfoCh)
 
 		// Validate the bucket name.
-		if err := isValidBucketName(bucketName); err != nil {
+		if err := s3utils.CheckValidBucketName(bucketName); err != nil {
 			notificationInfoCh <- NotificationInfo{
 				Err: err,
 			}
@@ -154,7 +155,7 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 			return
 		}
 
-		// Continously run and listen on bucket notification.
+		// Continuously run and listen on bucket notification.
 		// Create a done channel to control 'ListObjects' go routine.
 		retryDoneCh := make(chan struct{}, 1)
 
@@ -170,8 +171,9 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 
 			// Execute GET on bucket to list objects.
 			resp, err := c.executeMethod("GET", requestMetadata{
-				bucketName:  bucketName,
-				queryValues: urlValues,
+				bucketName:         bucketName,
+				queryValues:        urlValues,
+				contentSHA256Bytes: emptySHA256,
 			})
 			if err != nil {
 				continue

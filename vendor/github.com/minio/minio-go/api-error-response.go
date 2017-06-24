@@ -134,6 +134,13 @@ func httpRespToErrorResponse(resp *http.Response, bucketName, objectName string)
 				Message:    "Bucket not empty.",
 				BucketName: bucketName,
 			}
+		case http.StatusPreconditionFailed:
+			errResp = ErrorResponse{
+				Code:       "PreconditionFailed",
+				Message:    s3ErrorResponseMap["PreconditionFailed"],
+				BucketName: bucketName,
+				Key:        objectName,
+			}
 		default:
 			errResp = ErrorResponse{
 				Code:       resp.Status,
@@ -153,6 +160,9 @@ func httpRespToErrorResponse(resp *http.Response, bucketName, objectName string)
 	}
 	if errResp.Region == "" {
 		errResp.Region = resp.Header.Get("x-amz-bucket-region")
+	}
+	if errResp.Code == "InvalidRegion" && errResp.Region != "" {
+		errResp.Message = fmt.Sprintf("Region does not match, expecting region '%s'.", errResp.Region)
 	}
 
 	// Save headers returned in the API XML error
