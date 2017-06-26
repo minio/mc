@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"io"
 	"os"
 	"path"
@@ -358,6 +360,70 @@ func (f *fsClient) Put(reader io.Reader, size int64, metadata map[string][]strin
 	return f.put(reader, size, nil, progress)
 }
 
+// encryptStream -
+func encryptStream(reader io.Reader, key string) (io.Reader, error) {
+	block, err := aes.NewCipher([]byte(key))
+	if err != nil {
+		return nil, err
+	}
+
+	// If the key is unique for each ciphertext, then it's ok to use a zero
+	// IV.
+	var iv [aes.BlockSize]byte
+	stream := cipher.NewOFB(block, iv[:])
+
+	encRD, encWR := io.Pipe()
+
+	writer := &cipher.StreamWriter{S: stream, W: encWR}
+
+	go func() {
+		// Copy the input file to the output file, encrypting as we go.
+		if _, err := io.Copy(writer, reader); err != nil {
+			encWR.CloseWithError(err)
+			return
+		}
+		encWR.Close()
+	}()
+
+	return encRD, nil
+}
+
+// decryptStream -
+func decryptStream(reader io.Reader, key string) (io.Reader, error) {
+	block, e := aes.NewCipher([]byte(key))
+	if e != nil {
+		return nil, e
+	}
+
+	// If the key is unique for each ciphertext, then it's ok to use a zero
+	// IV.
+	var iv [aes.BlockSize]byte
+	stream := cipher.NewOFB(block, iv[:])
+
+	decRD, decWR := io.Pipe()
+
+	streamReader := &cipher.StreamReader{S: stream, R: reader}
+	go func() {
+		// Copy the input file to the output file, encrypting as we go.
+		if _, err := io.Copy(decWR, streamReader); err != nil {
+			decWR.CloseWithError(err)
+			return
+		}
+		decWR.Close()
+	}()
+
+	return decRD, nil
+}
+
+// Put - create a new file with metadata.
+func (f *fsClient) PutEnc(reader io.Reader, size int64, metadata map[string][]string, key string, progress io.Reader) (int64, *probe.Error) {
+	encryptedStream, e := encryptStream(reader, key)
+	if e != nil {
+		return 0, probe.NewError(e)
+	}
+	return f.put(encryptedStream, -1, nil, progress)
+}
+
 // ShareDownload - share download not implemented for filesystem.
 func (f *fsClient) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
@@ -406,8 +472,16 @@ func createFile(fpath string) (io.WriteCloser, error) {
 	return file, nil
 }
 
-// Copy - copy data from source to destination
 func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Error {
+	return f.copy(source, size, "", progress)
+}
+
+func (f *fsClient) CopyEnc(source string, size int64, key string, progress io.Reader) *probe.Error {
+	return f.copy(source, size, key, progress)
+}
+
+// Copy - copy data from source to destination
+func (f *fsClient) copy(source string, size int64, key string, progress io.Reader) *probe.Error {
 	// Don't use f.Get() f.Put() directly. Instead use readFile and createFile
 	destination := f.PathURL.Path
 	if destination == source { // Cannot copy file into itself
@@ -419,15 +493,29 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Er
 		return err.Trace(destination)
 	}
 	defer rc.Close()
+
+	if key != "" {
+		stream, e := encryptStream(rc, key)
+		if e != nil {
+			err := f.toClientError(e, destination)
+			return err.Trace(destination)
+		}
+		rc = ioutil.NopCloser(stream)
+	}
+
 	wc, e := createFile(destination)
 	if e != nil {
 		err := f.toClientError(e, destination)
 		return err.Trace(destination)
 	}
 	defer wc.Close()
+
 	reader := hookreader.NewHook(rc, progress)
 	// Perform copy
-	n, _ := io.CopyN(wc, reader, size) // e == nil only if n != size
+	n, e := io.CopyN(wc, reader, size) // e == nil only if n != size
+	if e != nil {
+		return probe.NewError(e)
+	}
 	// Only check size related errors if size is positive
 	if size > 0 {
 		if n < size { // Unexpected early EOF
@@ -448,7 +536,9 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Er
 
 // get - get wrapper returning reader and additional metadata if any.
 // currently only returns metadata.
-func (f *fsClient) get() (io.Reader, map[string][]string, *probe.Error) {
+func (f *fsClient) get(key string) (io.Reader, map[string][]string, *probe.Error) {
+	var reader io.Reader
+
 	tmppath := f.PathURL.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
@@ -470,12 +560,25 @@ func (f *fsClient) get() (io.Reader, map[string][]string, *probe.Error) {
 	metadata := map[string][]string{
 		"Content-Type": {guessURLContentType(f.PathURL.Path)},
 	}
-	return fileData, metadata, nil
+	if key != "" {
+		reader, e = decryptStream(fileData, key)
+		if e != nil {
+			return nil, nil, probe.NewError(e)
+		}
+	} else {
+		reader = fileData
+	}
+	return reader, metadata, nil
 }
 
 // Get returns reader and any additional metadata.
 func (f *fsClient) Get() (io.Reader, map[string][]string, *probe.Error) {
-	return f.get()
+	return f.get("")
+}
+
+// Get returns reader and any additional metadata.
+func (f *fsClient) GetEnc(key string) (io.Reader, map[string][]string, *probe.Error) {
+	return f.get(key)
 }
 
 // Remove - remove entry read from clientContent channel.

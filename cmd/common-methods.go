@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"path/filepath"
 	"regexp"
@@ -65,22 +66,26 @@ func isAliasURLDir(aliasURL string) bool {
 }
 
 // getSource gets a reader from URL.
-func getSourceStream(urlStr string) (reader io.Reader, err *probe.Error) {
+func getSourceStream(urlStr string, key string) (reader io.Reader, err *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return nil, err.Trace(urlStr)
 	}
-	reader, _, err = getSourceStreamFromAlias(alias, urlStrFull)
+	reader, _, err = getSourceStreamFromAlias(alias, urlStrFull, key)
 	return reader, err
 }
 
 // getSourceStreamFromAlias gets a reader from URL.
-func getSourceStreamFromAlias(alias string, urlStr string) (reader io.Reader, metadata map[string][]string, err *probe.Error) {
+func getSourceStreamFromAlias(alias string, urlStr string, key string) (reader io.Reader, metadata map[string][]string, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
-	reader, metadata, err = sourceClnt.Get()
+	if key != "" {
+		reader, metadata, err = sourceClnt.GetEnc(key)
+	} else {
+		reader, metadata, err = sourceClnt.Get()
+	}
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
@@ -88,12 +93,20 @@ func getSourceStreamFromAlias(alias string, urlStr string) (reader io.Reader, me
 }
 
 // putTargetStreamFromAlias writes to URL from Reader.
-func putTargetStreamFromAlias(alias string, urlStr string, reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
+func putTargetStreamFromAlias(alias string, urlStr string, reader io.Reader, size int64, encryptKey string, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
+	var n int64
+	var err *probe.Error
+
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
-	n, err := targetClnt.Put(reader, size, metadata, progress)
+
+	if encryptKey != "" {
+		n, err = targetClnt.PutEnc(reader, size, metadata, encryptKey, progress)
+	} else {
+		n, err = targetClnt.Put(reader, size, metadata, progress)
+	}
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
 	}
@@ -110,16 +123,20 @@ func putTargetStream(urlStr string, reader io.Reader, size int64) (int64, *probe
 	metadata := map[string][]string{
 		"Content-Type": {contentType},
 	}
-	return putTargetStreamFromAlias(alias, urlStrFull, reader, size, metadata, nil)
+	return putTargetStreamFromAlias(alias, urlStrFull, reader, size, "", metadata, nil)
 }
 
 // copySourceToTargetURL copies to targetURL from source.
-func copySourceToTargetURL(alias string, urlStr string, source string, size int64, progress io.Reader) *probe.Error {
+func copySourceToTargetURL(alias string, urlStr string, source string, size int64, encryptKey string, progress io.Reader) *probe.Error {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
-	err = targetClnt.Copy(source, size, progress)
+	if encryptKey != "" {
+		err = targetClnt.CopyEnc(source, size, encryptKey, progress)
+	} else {
+		err = targetClnt.Copy(source, size, progress)
+	}
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
@@ -129,7 +146,7 @@ func copySourceToTargetURL(alias string, urlStr string, source string, size int6
 // uploadSourceToTargetURL - uploads to targetURL from source.
 // optionally optimizes copy for object sizes <= 5GiB by using
 // server side copy operation.
-func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
+func uploadSourceToTargetURL(urls URLs, encryptKey string, progress io.Reader) URLs {
 	sourceAlias := urls.SourceAlias
 	sourceURL := urls.SourceContent.URL
 	targetAlias := urls.TargetAlias
@@ -139,17 +156,18 @@ func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
 	// Optimize for server side copy if object is <= 5GiB and the host is same.
 	if length <= globalMaximumPutSize && sourceAlias == targetAlias {
 		sourcePath := filepath.ToSlash(sourceURL.Path)
-		err := copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length, progress)
+		err := copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length, encryptKey, progress)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
 	} else {
+		fmt.Printf("--\n")
 		// Proceed with regular stream copy.
-		reader, metadata, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String())
+		reader, metadata, err := getSourceStreamFromAlias(sourceAlias, sourceURL.String(), "")
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
-		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, metadata, progress)
+		_, err = putTargetStreamFromAlias(targetAlias, targetURL.String(), reader, length, encryptKey, metadata, progress)
 		if err != nil {
 			return urls.WithError(err.Trace(targetURL.String()))
 		}

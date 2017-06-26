@@ -40,6 +40,10 @@ var (
 			Name:  "recursive, r",
 			Usage: "Copy recursively.",
 		},
+		cli.StringFlag{
+			Name:  "encrypt-key",
+			Usage: "Encrypt data with the given key.",
+		},
 	}
 )
 
@@ -126,7 +130,7 @@ func (c copyStatMessage) String() string {
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounter) URLs {
+func doCopy(cpURLs URLs, encryptKey string, progressReader *progressBar, accountingReader *accounter) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -161,7 +165,7 @@ func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounte
 		// Set up progress reader.
 		progress = progressReader.ProgressBar
 	}
-	return uploadSourceToTargetURL(cpURLs, progress)
+	return uploadSourceToTargetURL(cpURLs, encryptKey, progress)
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
@@ -244,6 +248,8 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
 func doCopySession(session *sessionV8) error {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
+	encryptKey := session.Header.CommandStringFlags["encrypt-key"]
+
 	if !session.HasData() {
 		doPrepareCopyURLs(session, trapCh)
 	}
@@ -283,7 +289,7 @@ func doCopySession(session *sessionV8) error {
 			if isCopied(cpURLs.SourceContent.URL.String()) {
 				statusCh <- doCopyFake(cpURLs, progressReader)
 			} else {
-				statusCh <- doCopy(cpURLs, progressReader, accntReader)
+				statusCh <- doCopy(cpURLs, encryptKey, progressReader, accntReader)
 			}
 		}
 
@@ -359,6 +365,7 @@ func mainCopy(ctx *cli.Context) error {
 	session := newSessionV8()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")
+	session.Header.CommandStringFlags["encrypt-key"] = ctx.String("encrypt-key")
 
 	var e error
 	if session.Header.RootPath, e = os.Getwd(); e != nil {
