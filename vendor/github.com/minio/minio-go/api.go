@@ -87,7 +87,7 @@ type Client struct {
 // Global constants.
 const (
 	libraryName    = "minio-go"
-	libraryVersion = "2.1.0"
+	libraryVersion = "3.0.0"
 )
 
 // User Agent should always following the below style.
@@ -616,17 +616,8 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 		return nil, err
 	}
 
-	// Go net/http notoriously closes the request body.
-	// - The request Body, if non-nil, will be closed by the underlying Transport, even on errors.
-	// This can cause underlying *os.File seekers to fail, avoid that
-	// by making sure to wrap the closer as a nop.
-	var body io.ReadCloser
-	if metadata.contentBody != nil {
-		body = ioutil.NopCloser(metadata.contentBody)
-	}
-
 	// Initialize a new HTTP request for the method.
-	req, err = http.NewRequest(method, targetURL.String(), body)
+	req, err = http.NewRequest(method, targetURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -676,6 +667,16 @@ func (c Client) newRequest(method string, metadata requestMetadata) (req *http.R
 	// Set all headers.
 	for k, v := range metadata.customHeader {
 		req.Header.Set(k, v[0])
+	}
+
+	// Go net/http notoriously closes the request body.
+	// - The request Body, if non-nil, will be closed by the underlying Transport, even on errors.
+	// This can cause underlying *os.File seekers to fail, avoid that
+	// by making sure to wrap the closer as a nop.
+	if metadata.contentLength == 0 {
+		req.Body = nil
+	} else {
+		req.Body = ioutil.NopCloser(metadata.contentBody)
 	}
 
 	// Set incoming content-length.

@@ -501,14 +501,22 @@ func (c *s3Client) Get() (io.Reader, *probe.Error) {
 
 // Copy - copy object
 func (c *s3Client) Copy(source string, size int64, progress io.Reader) *probe.Error {
-	bucket, object := c.url2BucketAndObject()
-	if bucket == "" {
+	dstBucket, dstObject := c.url2BucketAndObject()
+	if dstBucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
-	// Empty copy conditions
-	copyConds := minio.NewCopyConditions()
-	e := c.api.CopyObject(bucket, object, source, copyConds)
+
+	tokens := splitStr(source, string(c.targetURL.Separator), 3)
+
+	// Source object
+	src := minio.NewSourceInfo(tokens[1], tokens[2], nil)
+
+	// Destination object
+	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, nil, nil)
 	if e != nil {
+		return probe.NewError(e)
+	}
+	if e = c.api.CopyObject(dst, src); e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {
 			return probe.NewError(PathInsufficientPermission{
@@ -517,12 +525,12 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader) *probe.Er
 		}
 		if errResponse.Code == "NoSuchBucket" {
 			return probe.NewError(BucketDoesNotExist{
-				Bucket: bucket,
+				Bucket: dstBucket,
 			})
 		}
 		if errResponse.Code == "InvalidBucketName" {
 			return probe.NewError(BucketInvalid{
-				Bucket: bucket,
+				Bucket: dstBucket,
 			})
 		}
 		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
@@ -550,7 +558,7 @@ func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string][]strin
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
-	n, e := c.api.PutObjectWithMetadata(bucket, object, reader, metadata, progress)
+	n, e := c.api.PutObjectWithSize(bucket, object, reader, size, metadata, progress)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {

@@ -48,10 +48,6 @@ const (
 
 	// Global error exit status.
 	globalErrorExitStatus = 1
-
-	// Maximum size for a single PUT operation.
-	globalMaximumPutSize = 5 * 1024 * 1024 * 1024 // 5GiB.
-
 )
 
 var (

@@ -90,10 +90,6 @@ func (h objectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		if !bytes.Equal(h.data, buffer.Bytes()) {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
 		w.Header().Set("ETag", "9af2f8218b150c351ad802c6f3d66abe")
 		w.WriteHeader(http.StatusOK)
 	case r.Method == "HEAD":
