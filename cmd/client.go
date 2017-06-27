@@ -57,6 +57,12 @@ type Client interface {
 	Get() (reader io.Reader, metadata map[string][]string, err *probe.Error)
 	Put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (n int64, err *probe.Error)
 
+	// I/O operations with metadata.
+	CopyEnc(source string, size int64, key string, progress io.Reader) *probe.Error
+
+	GetEnc(key string) (reader io.Reader, metadata map[string][]string, err *probe.Error)
+	PutEnc(reader io.Reader, size int64, metadata map[string][]string, key string, progress io.Reader) (n int64, err *probe.Error)
+
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)
 	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)

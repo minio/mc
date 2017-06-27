@@ -29,7 +29,12 @@ import (
 )
 
 var (
-	catFlags = []cli.Flag{}
+	catFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "encrypt-key",
+			Usage: "Encrypt data with the given key.",
+		},
+	}
 )
 
 // Display contents of a file.
@@ -75,7 +80,7 @@ func checkCatSyntax(ctx *cli.Context) {
 }
 
 // catURL displays contents of a URL to stdout.
-func catURL(sourceURL string) *probe.Error {
+func catURL(sourceURL string, encryptKey string) *probe.Error {
 	var reader io.Reader
 	size := int64(-1)
 	switch sourceURL {
@@ -92,7 +97,7 @@ func catURL(sourceURL string) *probe.Error {
 		if client.GetURL().Type == objectStorage {
 			size = content.Size
 		}
-		if reader, err = getSourceStream(sourceURL); err != nil {
+		if reader, err = getSourceStream(sourceURL, encryptKey); err != nil {
 			return err.Trace(sourceURL)
 		}
 	}
@@ -163,9 +168,11 @@ func mainCat(ctx *cli.Context) error {
 		}
 	}
 
+	encryptKey := ctx.String("encrypt-key")
+
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
-		fatalIf(catURL(url).Trace(url), "Unable to read from `"+url+"`.")
+		fatalIf(catURL(url, encryptKey).Trace(url), "Unable to read from `"+url+"`.")
 	}
 	return nil
 }

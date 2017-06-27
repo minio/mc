@@ -218,7 +218,7 @@ func (mj *mirrorJob) doMirror(sURLs URLs) URLs {
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
-	return uploadSourceToTargetURL(sURLs, mj.status)
+	return uploadSourceToTargetURL(sURLs, "", mj.status)
 }
 
 // Go routine to update progress status

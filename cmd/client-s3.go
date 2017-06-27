@@ -33,6 +33,7 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/pkg/encrypt"
 	"github.com/minio/minio-go/pkg/policy"
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/pkg/probe"
@@ -475,10 +476,30 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	return wo, nil
 }
 
-// Get - get object with metadata.
 func (c *s3Client) Get() (io.Reader, map[string][]string, *probe.Error) {
+	return c.get("")
+}
+
+func (c *s3Client) GetEnc(key string) (io.Reader, map[string][]string, *probe.Error) {
+	return c.get(key)
+}
+
+// Get - get object with metadata.
+func (c *s3Client) get(key string) (io.Reader, map[string][]string, *probe.Error) {
+	var reader io.Reader
+	var e error
+
 	bucket, object := c.url2BucketAndObject()
-	reader, e := c.api.GetObject(bucket, object)
+	if key != "" {
+		symmetricKey := encrypt.NewSymmetricKey([]byte(key))
+		cbcMaterials, err := encrypt.NewCBCSecureMaterials(symmetricKey)
+		if err != nil {
+			return nil, nil, probe.NewError(err)
+		}
+		reader, e = c.api.GetEncryptedObject(bucket, object, cbcMaterials)
+	} else {
+		reader, e = c.api.GetObject(bucket, object)
+	}
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -496,7 +517,7 @@ func (c *s3Client) Get() (io.Reader, map[string][]string, *probe.Error) {
 		}
 		return nil, nil, probe.NewError(e)
 	}
-	objInfo, e := reader.Stat()
+	objInfo, e := c.api.StatObject(bucket, object)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {
@@ -510,6 +531,10 @@ func (c *s3Client) Get() (io.Reader, map[string][]string, *probe.Error) {
 	metadata := objInfo.Metadata
 	metadata.Set("Content-Type", objInfo.ContentType)
 	return reader, metadata, nil
+}
+
+func (c *s3Client) CopyEnc(source string, size int64, key string, progress io.Reader) *probe.Error {
+	return c.Copy(source, size, progress)
 }
 
 // Copy - copy object
@@ -552,8 +577,15 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader) *probe.Er
 	return nil
 }
 
-// Put - upload an object with custom metadata.
 func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
+	return c.put(reader, size, "", metadata, progress)
+}
+func (c *s3Client) PutEnc(reader io.Reader, size int64, metadata map[string][]string, key string, progress io.Reader) (int64, *probe.Error) {
+	return c.put(reader, size, key, metadata, progress)
+}
+
+// Put - upload an object with custom metadata.
+func (c *s3Client) put(reader io.Reader, size int64, key string, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	_, ok := metadata["Content-Type"]
 	if !ok {
@@ -563,7 +595,21 @@ func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string][]strin
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
-	n, e := c.api.PutObjectWithMetadata(bucket, object, reader, metadata, progress)
+
+	var n int64
+	var e error
+
+	if key != "" {
+		symmetricKey := encrypt.NewSymmetricKey([]byte(key))
+		cbcMaterials, e := encrypt.NewCBCSecureMaterials(symmetricKey)
+		if e != nil {
+			return 0, probe.NewError(e)
+		}
+		n, e = c.api.PutEncryptedObject(bucket, object, reader, cbcMaterials, metadata, progress)
+	} else {
+		n, e = c.api.PutObjectWithMetadata(bucket, object, reader, metadata, progress)
+	}
+
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {
