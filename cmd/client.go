@@ -54,7 +54,7 @@ type Client interface {
 	Copy(source string, size int64, progress io.Reader) *probe.Error
 
 	// I/O operations with metadata.
-	Get() (reader io.Reader, metadata map[string][]string, err *probe.Error)
+	Get() (reader io.Reader, err *probe.Error)
 	Put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (n int64, err *probe.Error)
 
 	// I/O operations with expiration
@@ -73,11 +73,12 @@ type Client interface {
 
 // Content container for content metadata
 type clientContent struct {
-	URL  clientURL
-	Time time.Time
-	Size int64
-	Type os.FileMode
-	Err  *probe.Error
+	URL      clientURL
+	Time     time.Time
+	Size     int64
+	Type     os.FileMode
+	Metadata map[string][]string
+	Err      *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html

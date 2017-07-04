@@ -68,7 +68,7 @@ func pipe(targetURL string) *probe.Error {
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
-	_, err := putTargetStream(targetURL, os.Stdin, -1)
+	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:

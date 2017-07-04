@@ -446,9 +446,8 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Er
 	return nil
 }
 
-// get - get wrapper returning reader and additional metadata if any.
-// currently only returns metadata.
-func (f *fsClient) get() (io.Reader, map[string][]string, *probe.Error) {
+// get - get wrapper returning object reader.
+func (f *fsClient) get() (io.Reader, *probe.Error) {
 	tmppath := f.PathURL.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
@@ -460,21 +459,18 @@ func (f *fsClient) get() (io.Reader, map[string][]string, *probe.Error) {
 	_, e := filepath.EvalSymlinks(tmppath)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
-		return nil, nil, err.Trace(f.PathURL.Path)
+		return nil, err.Trace(f.PathURL.Path)
 	}
 	fileData, e := os.Open(f.PathURL.Path)
 	if e != nil {
 		err := f.toClientError(e, f.PathURL.Path)
-		return nil, nil, err.Trace(f.PathURL.Path)
+		return nil, err.Trace(f.PathURL.Path)
 	}
-	metadata := map[string][]string{
-		"Content-Type": {guessURLContentType(f.PathURL.Path)},
-	}
-	return fileData, metadata, nil
+	return fileData, nil
 }
 
 // Get returns reader and any additional metadata.
-func (f *fsClient) Get() (io.Reader, map[string][]string, *probe.Error) {
+func (f *fsClient) Get() (io.Reader, *probe.Error) {
 	return f.get()
 }
 
@@ -1018,6 +1014,9 @@ func (f *fsClient) Stat(isIncomplete bool) (content *clientContent, err *probe.E
 	content.Size = st.Size()
 	content.Time = st.ModTime()
 	content.Type = st.Mode()
+	content.Metadata = map[string][]string{
+		"Content-Type": {guessURLContentType(f.PathURL.Path)},
+	}
 	return content, nil
 }
 

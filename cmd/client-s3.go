@@ -476,40 +476,27 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 }
 
 // Get - get object with metadata.
-func (c *s3Client) Get() (io.Reader, map[string][]string, *probe.Error) {
+func (c *s3Client) Get() (io.Reader, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	reader, e := c.api.GetObject(bucket, object)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
-			return nil, nil, probe.NewError(BucketDoesNotExist{
+			return nil, probe.NewError(BucketDoesNotExist{
 				Bucket: bucket,
 			})
 		}
 		if errResponse.Code == "InvalidBucketName" {
-			return nil, nil, probe.NewError(BucketInvalid{
+			return nil, probe.NewError(BucketInvalid{
 				Bucket: bucket,
 			})
 		}
 		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
-			return nil, nil, probe.NewError(ObjectMissing{})
+			return nil, probe.NewError(ObjectMissing{})
 		}
-		return nil, nil, probe.NewError(e)
+		return nil, probe.NewError(e)
 	}
-	objInfo, e := reader.Stat()
-	if e != nil {
-		errResponse := minio.ToErrorResponse(e)
-		if errResponse.Code == "AccessDenied" {
-			return nil, nil, probe.NewError(PathInsufficientPermission{Path: c.targetURL.String()})
-		}
-		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
-			return nil, nil, probe.NewError(ObjectMissing{})
-		}
-		return nil, nil, probe.NewError(e)
-	}
-	metadata := objInfo.Metadata
-	metadata.Set("Content-Type", objInfo.ContentType)
-	return reader, metadata, nil
+	return reader, nil
 }
 
 // Copy - copy object
@@ -806,6 +793,7 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 		bucketMetadata := &clientContent{}
 		bucketMetadata.URL = *c.targetURL
 		bucketMetadata.Type = os.ModeDir
+		bucketMetadata.Metadata = map[string][]string{}
 
 		return bucketMetadata, nil
 	}
@@ -829,12 +817,14 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 				objectMetadata.Time = objectMultipartInfo.Initiated
 				objectMetadata.Size = objectMultipartInfo.Size
 				objectMetadata.Type = os.FileMode(0664)
+				objectMetadata.Metadata = map[string][]string{}
 				return objectMetadata, nil
 			}
 
 			if strings.HasSuffix(objectMultipartInfo.Key, string(c.targetURL.Separator)) {
 				objectMetadata.URL = *c.targetURL
 				objectMetadata.Type = os.ModeDir
+				objectMetadata.Metadata = map[string][]string{}
 				return objectMetadata, nil
 			}
 		}
@@ -851,12 +841,14 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 			objectMetadata.Time = objectStat.LastModified
 			objectMetadata.Size = objectStat.Size
 			objectMetadata.Type = os.FileMode(0664)
+			objectMetadata.Metadata = map[string][]string{}
 			return objectMetadata, nil
 		}
 
 		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Type = os.ModeDir
+			objectMetadata.Metadata = map[string][]string{}
 			return objectMetadata, nil
 		}
 	}
@@ -885,6 +877,11 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 	objectMetadata.Time = objectStat.LastModified
 	objectMetadata.Size = objectStat.Size
 	objectMetadata.Type = os.FileMode(0664)
+
+	metadata := objectStat.Metadata
+	metadata.Set("Content-Type", objectStat.ContentType)
+	objectMetadata.Metadata = metadata
+
 	return objectMetadata, nil
 }
 
