@@ -236,7 +236,7 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	}
 
 	// Get stat to get the current size.
-	partSt, e := partFile.Stat()
+	partSt, e := os.Stat(objectPartPath)
 	if e != nil {
 		err := f.toClientError(e, objectPartPath)
 		return 0, err.Trace(objectPartPath)
@@ -246,72 +246,32 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	// Current file offset.
 	var currentOffset = partSt.Size()
 
-	// Use ReadAt() capability when reader implements it, but also avoid it in two cases:
-	// *) reader represents a standard input/output stream since they return illegal seek error when ReadAt() is invoked
-	// *) we know in advance that reader will provide zero length data
-	if readerAt, ok := reader.(io.ReaderAt); ok && !isStdIO(reader) && size > 0 {
-		// Notify the progress bar if any till current size.
-		if progress != nil {
+	if !isStdIO(reader) && size > 0 {
+		reader = hookreader.NewHook(reader, progress)
+		if seeker, ok := reader.(io.Seeker); ok {
+			if _, e = seeker.Seek(currentOffset, 0); e != nil {
+				return 0, probe.NewError(e)
+			}
+			// Discard bytes until currentOffset.
 			if _, e = io.CopyN(ioutil.Discard, progress, currentOffset); e != nil {
 				return 0, probe.NewError(e)
 			}
 		}
-
-		// Allocate buffer of 10MiB once.
-		readAtBuffer := make([]byte, 10*1024*1024)
-
-		// Loop through all offsets on incoming io.ReaderAt and write
-		// to the destination.
-		for currentOffset < size {
-			readAtSize, re := readerAt.ReadAt(readAtBuffer, currentOffset)
-			if re != nil && re != io.EOF {
-				// For any errors other than io.EOF, we return error
-				// and breakout.
-				err := f.toClientError(re, objectPartPath)
-				return 0, err.Trace(objectPartPath)
-			}
-			writtenSize, we := partFile.Write(readAtBuffer[:readAtSize])
-			if we != nil {
-				err := f.toClientError(we, objectPartPath)
-				return 0, err.Trace(objectPartPath)
-			}
-			// read size and subsequent write differ, a possible
-			// corruption return here.
-			if readAtSize != writtenSize {
-				// Unexpected write (less data was written than expected).
-				return 0, probe.NewError(UnexpectedShortWrite{
-					InputSize: readAtSize,
-					WriteSize: writtenSize,
-				})
-			}
-			// Notify the progress bar if any for written size.
-			if progress != nil {
-				if _, e = io.CopyN(ioutil.Discard, progress, int64(writtenSize)); e != nil {
-					return totalWritten, probe.NewError(e)
-				}
-			}
-			currentOffset += int64(writtenSize)
-			// Once we see io.EOF we break out of the loop.
-			if re == io.EOF {
-				break
-			}
-		}
-		// Save currently copied total into totalWritten.
-		totalWritten = currentOffset
 	} else {
 		reader = hookreader.NewHook(reader, progress)
 		// Discard bytes until currentOffset.
 		if _, e = io.CopyN(ioutil.Discard, reader, currentOffset); e != nil {
 			return 0, probe.NewError(e)
 		}
-		var n int64
-		n, e = io.Copy(partFile, reader)
-		if e != nil {
-			return 0, probe.NewError(e)
-		}
-		// Save currently copied total into totalWritten.
-		totalWritten = n + currentOffset
 	}
+
+	n, e := io.Copy(partFile, reader)
+	if e != nil {
+		return 0, probe.NewError(e)
+	}
+
+	// Save currently copied total into totalWritten.
+	totalWritten = n + currentOffset
 
 	// Close the input reader as well, if possible.
 	closer, ok := reader.(io.Closer)

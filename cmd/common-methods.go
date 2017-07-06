@@ -144,8 +144,8 @@ func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
 	targetURL := urls.TargetContent.URL
 	length := urls.SourceContent.Size
 
-	// Optimize for server side copy if object is <= 5GiB and the host is same.
-	if length <= globalMaximumPutSize && sourceAlias == targetAlias {
+	// Optimize for server side copy if the host is same.
+	if sourceAlias == targetAlias {
 		sourcePath := filepath.ToSlash(sourceURL.Path)
 		err := copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length, progress)
 		if err != nil {

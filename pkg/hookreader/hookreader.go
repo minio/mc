@@ -22,9 +22,29 @@ package hookreader
 
 import "io"
 
+// hookReader hooks additional reader in the source stream. It is
+// useful for making progress bars. Second reader is appropriately
+// notified about the exact number of bytes read from the primary
+// source on each Read operation.
 type hookReader struct {
 	source io.Reader
 	hook   io.Reader
+}
+
+// Seek implements io.Seeker. Seeks source first, and if necessary
+// seeks hook if Seek method is appropriately found.
+func (hr *hookReader) Seek(offset int64, whence int) (n int64, err error) {
+	// Verify for source has embedded Seeker, use it.
+	sourceSeeker, ok := hr.source.(io.Seeker)
+	if ok {
+		return sourceSeeker.Seek(offset, whence)
+	}
+	// Verify if hook has embedded Seeker, use it.
+	hookSeeker, ok := hr.hook.(io.Seeker)
+	if ok {
+		return hookSeeker.Seek(offset, whence)
+	}
+	return n, nil
 }
 
 // Read implements io.Reader. Always reads from the source, the return
