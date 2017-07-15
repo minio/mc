@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/minio/cli"
+	"github.com/minio/mc/pkg/console"
 )
 
 func checkCopySyntax(ctx *cli.Context) {
@@ -42,7 +43,7 @@ func checkCopySyntax(ctx *cli.Context) {
 	for _, srcURL := range srcURLs {
 		_, _, err := url2Stat(srcURL)
 		if err != nil {
-			fatalIf(err.Trace(srcURL), fmt.Sprintf("Unable to stat '%s'.", srcURL))
+			console.Fatalf("Unable to validate source %s\n", srcURL)
 		}
 	}
 
