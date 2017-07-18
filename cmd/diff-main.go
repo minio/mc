@@ -35,14 +35,13 @@ var (
 // Compute differences between two files or folders.
 var diffCmd = cli.Command{
 	Name:        "diff",
-	Usage:       "Show differences between two folders or buckets.",
-	Description: "Diff only lists missing objects or objects with size differences. It *DOES NOT* compare contents. i.e. Objects of same name and size, but differ in contents are not noticed.",
+	Usage:       "List objects with size difference or missing between two folders or buckets.",
+	Description: "Diff only lists missing objects or objects with size differences. It *DOES NOT* compare contents. i.e. objects of same name and size, but differing in content are not noticed.",
 	Action:      mainDiff,
 	Before:      setGlobalsFromContext,
 	Flags:       append(diffFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-
 USAGE:
   {{.HelpName}} [FLAGS] FIRST SECOND
 
@@ -50,9 +49,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-  {{.Description}}
-
-OUTPUT:
+	{{.Description}}
   Differences between source and destination are represented by mark notations with following meaning:
     > - indicates file should be copied.
     < - indicates file should be deleted.
