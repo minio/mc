@@ -98,10 +98,10 @@
 			"revisionTime": "2017-10-28T03:50:25Z"
 		},
 		{
-			"checksumSHA1": "Z00ntXYcYqK9CjXD+tVgGwIZL1o=",
+			"checksumSHA1": "xTstp/S5boCvBWX0EcXs+DxVIQs=",
 			"path": "github.com/minio/minio/pkg/madmin",
-			"revision": "6dea8f13e5d3b3bfd2eb534b3f767b16a3292aa9",
-			"revisionTime": "2017-06-24T14:13:13Z"
+			"revision": "6c96e2375f294f0945b81ffcf3e0fae9fb45943e",
+			"revisionTime": "2017-07-10T16:59:49Z"
 		},
 		{
 			"checksumSHA1": "5r3V/rzpVqjJvzE/K5sR2LHEteM=",
@@ -173,6 +173,12 @@
 			"path": "golang.org/x/text/unicode/norm",
 			"revision": "11dbc599981ccdf4fb18802a28392a8bcf7a9395",
 			"revisionTime": "2017-01-12T23:38:57Z"
+		},
+		{
+			"checksumSHA1": "nD89PLkMqA5CakR8SoDuj3iQz1M=",
+			"path": "golang.org/x/tools/container/intsets",
+			"revision": "84a35ef54dff3c5596983e180ec10919fc432242",
+			"revisionTime": "2017-03-01T08:02:44Z"
 		},
 		{
 			"path": "gopkg.in/check.v1",
