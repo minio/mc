@@ -604,7 +604,7 @@ FLAGS:
 ```
 
 <a name="watch"></a>
-### Command `watch` - Watch for events object storage and filesystem.
+### Command `watch` - Watch for files and object storage events.
 
 ``watch`` provides a convenient way to watch on various types of event notifications on object
 storage and filesystem.
@@ -612,7 +612,7 @@ storage and filesystem.
 ```sh
 
 USAGE:
-   mc watch [FLAGS]
+   mc watch [FLAGS] PATH
 
 FLAGS:
    --help, -h					Help of watch.
