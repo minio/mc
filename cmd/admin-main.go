@@ -43,7 +43,7 @@ var adminCmd = cli.Command{
 }
 
 func mainAdminBefore(ctx *cli.Context) error {
-	color.Yellow("\t *** Warning:Experiment feature. Not Ready for Production ***")
+	color.Yellow("\t *** mc admin heal is EXPERIMENTAL ***")
 	return setGlobalsFromContext(ctx)
 }
 
