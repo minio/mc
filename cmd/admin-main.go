@@ -16,10 +16,7 @@
 
 package cmd
 
-import (
-	"github.com/fatih/color"
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
 var (
 	adminFlags = []cli.Flag{}
@@ -30,7 +27,7 @@ var adminCmd = cli.Command{
 	Usage:           "Manage Minio servers",
 	Action:          mainAdmin,
 	HideHelpCommand: true,
-	Before:          mainAdminBefore,
+	Before:          setGlobalsFromContext,
 	Flags:           append(adminFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		adminServiceCmd,
@@ -40,11 +37,6 @@ var adminCmd = cli.Command{
 		adminLockCmd,
 		adminHealCmd,
 	},
-}
-
-func mainAdminBefore(ctx *cli.Context) error {
-	color.Yellow("\t *** mc admin heal is EXPERIMENTAL ***")
-	return setGlobalsFromContext(ctx)
 }
 
 // mainAdmin is the handle for "mc admin" command.

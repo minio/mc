@@ -49,7 +49,7 @@ var (
 var adminHealCmd = cli.Command{
 	Name:            "heal",
 	Usage:           "Manage heal tasks",
-	Before:          setGlobalsFromContext,
+	Before:          adminHealBefore,
 	Action:          mainAdminHeal,
 	Flags:           append(adminHealFlags, globalFlags...),
 	HideHelpCommand: true,
@@ -97,6 +97,12 @@ type healMessage struct {
 	Bucket string             `json:"bucket"`
 	Object *madmin.ObjectInfo `json:"object"`
 	Upload *madmin.UploadInfo `json:"upload"`
+}
+
+// adminHealBefore used to provide users with temporary warning message
+func adminHealBefore(ctx *cli.Context) error {
+	color.Yellow("\t *** mc admin heal is EXPERIMENTAL ***")
+	return setGlobalsFromContext(ctx)
 }
 
 // String colorized service status message.
