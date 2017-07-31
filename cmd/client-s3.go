@@ -133,6 +133,13 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				TLSHandshakeTimeout:   10 * time.Second,
 				ExpectContinueTimeout: 1 * time.Second,
 				TLSClientConfig:       tlsConfig,
+				// Set this value so that the underlying transport round-tripper
+				// doesn't try to auto decode the body of objects with
+				// content-encoding set to `gzip`.
+				//
+				// Refer:
+				//    https://golang.org/src/net/http/transport.go?h=roundTrip#L1843
+				DisableCompression: true,
 			}
 
 			if config.Debug {

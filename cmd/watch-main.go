@@ -37,7 +37,7 @@ var (
 		cli.StringFlag{
 			Name:  "events",
 			Value: "put,delete,get",
-			Usage: "Filter specific type of events. Defaults to all events by default.",
+			Usage: "Filter specific types of events. Defaults to all events by default.",
 		},
 		cli.StringFlag{
 			Name:  "prefix",
@@ -64,7 +64,7 @@ var watchCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} PATH [FLAGS]
+  {{.HelpName}} [FLAGS] PATH
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -74,13 +74,13 @@ EXAMPLES:
       $ {{.HelpName}} play/testbucket
 
    2. Watch new events for a specific prefix "output/"  on minio server.
-      $ {{.HelpName}} play/testbucket --prefix "output/"
+      $ {{.HelpName}} --prefix "output/" play/testbucket
 
    3. Watch new events for a specific suffix ".jpg" on minio server.
-      $ {{.HelpName}} play/testbucket --suffix ".jpg"
+      $ {{.HelpName}} --suffix ".jpg" play/testbucket
 
    4. Watch new events on a specific prefix and suffix on minio server.
-      $ {{.HelpName}} play/testbucket --suffix ".jpg" --prefix "photos/"
+      $ {{.HelpName}} --suffix ".jpg" --prefix "photos/" play/testbucket
 
    5. Watch for events on local directory.
       $ {{.HelpName}} /usr/share
