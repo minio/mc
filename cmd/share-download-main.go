@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"strings"
 	"time"
 
 	"github.com/minio/cli"
@@ -57,9 +58,9 @@ EXAMPLES:
       $ {{.HelpName}} --expire=10m s3/backup/2006-Mar-1/backup.tar.gz
 
    3. Share all objects under this folder with 5 days expiry.
-      $ {{.HelpName}} --expire=120h s3/backup/
+      $ {{.HelpName}} --expire=120h s3/backup/2006-Mar-1/
 
-   4. Share all objects under this folder and all its sub-folders with 5 days expiry.
+   4. Share all objects under this bucket and all its folders and sub-folders with 5 days expiry.
       $ {{.HelpName}} --recursive --expire=120h s3/backup/
 
 `,
@@ -126,17 +127,24 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 	// Channel which will receive objects whose URLs need to be shared
 	objectsCh := make(chan *clientContent)
 
-	if !isRecursive {
-		// Share thr url of only one exact prefix if it exists
-		content, err := clnt.Stat(isIncomplete)
-		if err != nil {
-			return err.Trace(clnt.GetURL().String())
-		}
+	content, err := clnt.Stat(isIncomplete)
+	if err != nil {
+		return err.Trace(clnt.GetURL().String())
+	}
+
+	if !content.Type.IsDir() {
 		go func() {
 			defer close(objectsCh)
 			objectsCh <- content
 		}()
 	} else {
+		if !strings.HasSuffix(targetURLFull, string(clnt.GetURL().Separator)) {
+			targetURLFull = targetURLFull + string(clnt.GetURL().Separator)
+		}
+		clnt, err = newClientFromAlias(targetAlias, targetURLFull)
+		if err != nil {
+			return err.Trace(targetURLFull)
+		}
 		// Recursive mode: Share list of objects
 		go func() {
 			defer close(objectsCh)
