@@ -18,6 +18,8 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/minio/minio/pkg/probe"
 )
@@ -37,6 +39,21 @@ var (
 
 	errInvalidAliasedURL = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Use `mc config host add mycloud " + URL + " ...` to add an alias. Use the alias for S3 operations.")).Untrace()
+	}
+
+	errInvalidAlias = func(alias string) *probe.Error {
+		return probe.NewError(errors.New("Alias `" + alias + "` should have alphanumeric characters such as [helloWorld0, hello_World0, ...]"))
+	}
+
+	errInvalidURL = func(URL string) *probe.Error {
+		return probe.NewError(errors.New("URL `" + URL + "` for minio client should be of the form scheme://host[:port]/ without resource component."))
+	}
+
+	errInvalidAPISignature = func(api, url string) *probe.Error {
+		msg := fmt.Sprintf(
+			"Unrecognized API signature %s for host %s. Valid options are `[%s]`",
+			api, url, strings.Join(validAPIs, ", "))
+		return probe.NewError(errors.New(msg))
 	}
 
 	errNoMatchingHost = func(URL string) *probe.Error {

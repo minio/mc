@@ -134,7 +134,7 @@ func checkConfig() {
 			}
 			errorMsg.WriteString(errMsg + "\n")
 		}
-		console.Fatalln(errorMsg.String())
+		console.Fatal(errorMsg.String())
 	}
 }
 

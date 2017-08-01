@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 )
@@ -54,25 +53,13 @@ func validateConfigFile(config *configV8) (bool, []string) {
 func validateConfigHost(host hostConfigV8) (bool, []string) {
 	var validationSuccessful = true
 	var hostErrors []string
-	api := host.API
-	validAPI := isValidAPI(strings.ToLower(api))
-	if !validAPI {
-		var errorMsg bytes.Buffer
-		errorMsg.WriteString(fmt.Sprintf(
-			"%s API for host %s is not Valid. It is not part of any of the following APIs:\n",
-			api, host.URL))
-		for index, validAPI := range validAPIs {
-			errorMsg.WriteString(fmt.Sprintf("%d. %s\n", index+1, validAPI))
-		}
+	if !isValidAPI(strings.ToLower(host.API)) {
 		validationSuccessful = false
-		hostErrors = append(hostErrors, errorMsg.String())
+		hostErrors = append(hostErrors, errInvalidAPISignature(host.API, host.URL).ToGoError().Error())
 	}
-	url := host.URL
-	validURL := isValidHostURL(url)
-	if !validURL {
+	if !isValidHostURL(host.URL) {
 		validationSuccessful = false
-		msg := fmt.Sprintf("URL %s for host %s is not valid. Could not parse it.\n", url, host.URL)
-		hostErrors = append(hostErrors, msg)
+		hostErrors = append(hostErrors, errInvalidURL(host.URL).ToGoError().Error())
 	}
 	return validationSuccessful, hostErrors
 }
