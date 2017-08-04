@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,7 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/pkg/credentials"
 	"github.com/minio/minio-go/pkg/policy"
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/pkg/probe"
@@ -44,6 +46,7 @@ type s3Client struct {
 	targetURL    *clientURL
 	api          *minio.Client
 	virtualStyle bool
+	region       string
 }
 
 const (
@@ -91,7 +94,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				hostName = googleHostName
 			}
 		}
-
 		// Generate a hash out of s3Conf.
 		confHash := fnv.New32a()
 		confHash.Write([]byte(hostName + config.AccessKey + config.SecretKey))
@@ -103,15 +105,16 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		var api *minio.Client
 		var found bool
 		if api, found = clientCache[confSum]; !found {
+			// if Signature version '4' use NewV4 directly.
+			creds := credentials.NewStaticV4(config.AccessKey, config.SecretKey, "")
+			// if Signature version '2' use NewV2 directly.
+			if strings.ToUpper(config.Signature) == "S3V2" {
+				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
+			}
+			s3Clnt.region = getRegionFromHost(hostName)
 			// Not found. Instantiate a new minio
 			var e error
-			if strings.ToUpper(config.Signature) == "S3V2" {
-				// if Signature version '2' use NewV2 directly.
-				api, e = minio.NewV2(hostName, config.AccessKey, config.SecretKey, useTLS)
-			} else {
-				// if Signature version '4' use NewV4 directly.
-				api, e = minio.NewV4(hostName, config.AccessKey, config.SecretKey, useTLS)
-			}
+			api, e = minio.NewWithCredentials(hostName, creds, useTLS, s3Clnt.region)
 			if e != nil {
 				return nil, probe.NewError(e)
 			}
@@ -719,6 +722,9 @@ func (c *s3Client) MakeBucket(region string, ignoreExisting bool) *probe.Error {
 	if object != "" {
 		return probe.NewError(BucketNameTopLevel{})
 	}
+	if c.region != "" {
+		region = c.region
+	}
 	e := c.api.MakeBucket(bucket, region)
 	if e != nil {
 		// Ignore bucket already existing error when ignoreExisting flag is enabled
@@ -921,6 +927,20 @@ func isGoogle(host string) bool {
 // are Amazon S3 and Google Cloud Storage.
 func isVirtualHostStyle(host string) bool {
 	return isAmazon(host) && !isAmazonChina(host) || isGoogle(host) || isAmazonAccelerated(host)
+}
+
+// getRegionFromHost - parse region from host name if present.
+func getRegionFromHost(host string) (region string) {
+	region = ""
+	if s3utils.IsGoogleEndpoint(url.URL{Host: host}) || s3utils.IsAmazonGovCloudEndpoint(url.URL{Host: host}) || s3utils.IsAmazonChinaEndpoint(url.URL{Host: host}) {
+		return
+	}
+	re := regexp.MustCompile("s3[.-]?(.*?)\\.amazonaws\\.com$")
+	parts := re.FindStringSubmatch(host)
+	if len(parts) > 1 {
+		region = parts[1]
+	}
+	return
 }
 
 // url2BucketAndObject gives bucketName and objectName from URL path.
