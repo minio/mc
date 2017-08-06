@@ -72,12 +72,11 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 	api := args.Get(4)
 
 	if !isValidAlias(alias) {
-		fatalIf(errDummy().Trace(alias), "Invalid alias `"+alias+"`.")
+		fatalIf(errInvalidAlias(alias), "Invalid alias")
 	}
 
 	if !isValidHostURL(url) {
-		fatalIf(errDummy().Trace(url),
-			"Invalid URL `"+url+"`.")
+		fatalIf(errInvalidURL(url), "Invalid URL.")
 	}
 
 	if !isValidAccessKey(accessKey) {
