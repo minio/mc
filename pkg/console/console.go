@@ -19,6 +19,7 @@ package console
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"path/filepath"
@@ -352,4 +353,97 @@ func Unlock() {
 func ProgramName() string {
 	_, progName := filepath.Split(os.Args[0])
 	return progName
+}
+
+// Table - data to print in table format with fixed row widths.
+type Table struct {
+	Title string
+
+	// per-row colors
+	RowColors []*color.Color
+
+	// per-column align-right flag (aligns left by default)
+	AlignRight []bool
+}
+
+// NewTable - create a new Table instance. Takes per-row colors and
+// per-column right-align flags.
+func NewTable(title string, rowColors []*color.Color, alignRight []bool) *Table {
+	return &Table{title, rowColors, alignRight}
+}
+
+// DisplayTable - prints the table
+func (t *Table) DisplayTable(rows [][]string) error {
+	numRows := len(rows)
+	numCols := len(rows[0])
+	if numRows != len(t.RowColors) {
+		return fmt.Errorf("row count and row-colors mismatch")
+	}
+
+	// Compute max. column widths
+	maxColWidths := make([]int, numCols)
+	for _, row := range rows {
+		if len(row) != len(t.AlignRight) {
+			return fmt.Errorf("col count and align-right mismatch")
+		}
+		for i, v := range row {
+			if len([]rune(v)) > maxColWidths[i] {
+				maxColWidths[i] = len([]rune(v))
+			}
+		}
+	}
+
+	// Compute per-cell text with padding and alignment applied.
+	paddedText := make([][]string, numRows)
+	for r, row := range rows {
+		paddedText[r] = make([]string, numCols)
+		for c, cell := range row {
+			if t.AlignRight[c] {
+				fmtStr := fmt.Sprintf("%%%ds", maxColWidths[c])
+				paddedText[r][c] = fmt.Sprintf(fmtStr, cell)
+			} else {
+				extraWidth := maxColWidths[c] - len([]rune(cell))
+				fmtStr := fmt.Sprintf("%%s%%%ds", extraWidth)
+				paddedText[r][c] = fmt.Sprintf(fmtStr, cell, "")
+			}
+		}
+	}
+
+	// Draw table top border
+	segments := make([]string, numCols)
+	for i, c := range maxColWidths {
+		segments[i] = strings.Repeat("─", c+2)
+	}
+	border := fmt.Sprintf("┌%s┐", strings.Join(segments, "┬"))
+	// border = border[:1] + t.Title + border[len(t.Title)+1:]
+	if t.Title != "" {
+		fmt.Println(t.Title)
+	}
+	fmt.Println(border)
+
+	// Print the table with colors
+	for r, row := range paddedText {
+		fmt.Print("│ ")
+		for c, text := range row {
+			t.RowColors[r].Print(text)
+			if c != numCols-1 {
+				fmt.Print(" │ ")
+			}
+		}
+		fmt.Println(" │")
+	}
+
+	// Draw table bottom border
+	border = fmt.Sprintf("└%s┘", strings.Join(segments, "┴"))
+	fmt.Println(border)
+
+	return nil
+}
+
+// RewindLines - uses terminal escape symbols to clear and rewind
+// upwards on the console for `n` lines.
+func RewindLines(n int) {
+	for i := 0; i < n; i++ {
+		fmt.Printf("\033[1A\033[K")
+	}
 }
