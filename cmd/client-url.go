@@ -24,7 +24,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // url client url structure

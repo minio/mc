@@ -23,7 +23,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 var (
@@ -52,7 +52,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Remove bucket notification associated to a specific arn
-     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue 
+     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
 
    2. Remove all bucket notifications. --force flag is mandatory here
      $ {{.HelpName}} myminio/mybucket --force

@@ -16,7 +16,7 @@
 
 package cmd
 
-import "github.com/minio/minio/pkg/probe"
+import "github.com/minio/mc/pkg/probe"
 
 // URLs contains source and target urls
 type URLs struct {

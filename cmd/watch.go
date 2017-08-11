@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // EventType represents the type of the event occurred.

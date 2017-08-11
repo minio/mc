@@ -104,11 +104,6 @@
 			"revisionTime": "2017-06-24T14:13:13Z"
 		},
 		{
-			"path": "github.com/minio/minio/pkg/probe",
-			"revision": "f98675660bb2049dea7e39e5113f5af29b8f6815",
-			"revisionTime": "2016-02-11T15:54:02-08:00"
-		},
-		{
 			"checksumSHA1": "5r3V/rzpVqjJvzE/K5sR2LHEteM=",
 			"path": "github.com/minio/minio/pkg/quick",
 			"revision": "0060549addd566b2ac568891efa1579be3024a97",
