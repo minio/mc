@@ -5,3 +5,9 @@ cover.out
 release
 experimental
 coverage.txt
+.snap
+*.tar.bz2
+parts/
+prime/
+snap/.snapcraft/
+stage/
