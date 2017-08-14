@@ -18,7 +18,7 @@ package cmd
 
 import (
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // Status implements a interface that can be used in quit mode or with progressbar.

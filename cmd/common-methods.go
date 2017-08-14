@@ -22,7 +22,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // Check if the passed URL represents a folder. It may or may not exist yet.

@@ -19,7 +19,7 @@ package cmd
 import (
 	"sync"
 
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/quick"
 )
 

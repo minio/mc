@@ -30,7 +30,7 @@ import (
 
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/ioutils"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/rjeczalik/notify"
 )
 

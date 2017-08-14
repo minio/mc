@@ -19,7 +19,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 	. "gopkg.in/check.v1"
 )
 

@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 )
 
 var (

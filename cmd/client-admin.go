@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/httptracer"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
-	"github.com/minio/minio/pkg/probe"
 )
 
 // newAdminFactory encloses New function with client cache.

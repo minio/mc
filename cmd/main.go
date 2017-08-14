@@ -30,7 +30,7 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/minio/pkg/probe"
+	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/words"
 	"github.com/pkg/profile"
 )
