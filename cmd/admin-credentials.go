@@ -66,7 +66,8 @@ func mainAdminCreds(ctx *cli.Context) error {
 	// TODO: if accessKey and secretKey are not supplied we should
 	// display the existing credentials. This needs GetCredentials
 	// support from Minio server.
-	accessKey, secretKey, aliasedURL := args.Get(0), args.Get(1), args.Get(2)
+	aliasedURL := args.First()
+	accessKey, secretKey := args.Get(1), args.Get(2)
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
