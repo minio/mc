@@ -20,11 +20,13 @@ import (
 	"crypto/tls"
 	"hash/fnv"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -53,6 +55,20 @@ const (
 
 	googleHostName = "storage.googleapis.com"
 )
+
+// getNumMultiPartThreads gets the number of multipart threads to be used for mc cp/mirror functions
+// If not set, default to 4.
+func getNumMultiPartThreads() uint {
+	multipartThreadStr := os.Getenv("MC_MULTIPART_THREADS")
+	if multipartThreadStr != "" {
+		numThreads, err := strconv.ParseUint(multipartThreadStr, 10, 32)
+		if err != nil {
+			log.Fatal("MC_MULTIPART_THREADS must be a positive integer.")
+		}
+		return uint(numThreads)
+	}
+	return defaultMultipartThreadsNum
+}
 
 // newFactory encloses New function with client cache.
 func newFactory() func(config *Config) (Client, *probe.Error) {
@@ -165,7 +181,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			// Cache the new minio client with hash of config as key.
 			clientCache[confSum] = api
 		}
-
 		// Store the new api object.
 		s3Clnt.api = api
 
@@ -485,7 +500,7 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 // Get - get object with metadata.
 func (c *s3Client) Get() (io.Reader, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	reader, e := c.api.GetObject(bucket, object)
+	reader, e := c.api.GetObject(bucket, object, minio.GetObjectOptions{})
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "NoSuchBucket" {
@@ -555,17 +570,26 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader) *probe.Er
 }
 
 // Put - upload an object with custom metadata.
-func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
+func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	_, ok := metadata["Content-Type"]
-	if !ok {
+	contentType, ok := metadata["Content-Type"]
+	if ok {
+		delete(metadata, "Content-Type")
+	} else {
 		// Set content-type if not specified.
-		metadata["Content-Type"] = []string{"application/octet-stream"}
+		contentType = "application/octet-stream"
 	}
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
-	n, e := c.api.PutObjectWithSize(bucket, object, reader, size, metadata, progress)
+	numParallelThreads := getNumMultiPartThreads()
+	opts := minio.PutObjectOptions{
+		UserMetadata: metadata,
+		Progress:     progress,
+		NumThreads:   numParallelThreads,
+		ContentType:  contentType,
+	}
+	n, e := c.api.PutObject(bucket, object, reader, size, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {
@@ -867,7 +891,7 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 			return objectMetadata, nil
 		}
 	}
-	objectStat, e := c.api.StatObject(bucket, object)
+	objectStat, e := c.api.StatObject(bucket, object, minio.StatObjectOptions{})
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {

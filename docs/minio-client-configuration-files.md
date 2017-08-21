@@ -64,7 +64,7 @@ cat config.json
 
 ``version`` tells the version of the file.
 
-``hosts``  stores authenctication credentials which will be used by Minio Client.
+``hosts``  stores authentication credentials which will be used by Minio Client.
 
 #### ``config.json.old``
 This file keeps previous config file version details.

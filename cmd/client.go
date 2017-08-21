@@ -36,6 +36,9 @@ const (
 	DirLast
 )
 
+// Default number of multipart workers for a Put operation.
+const defaultMultipartThreadsNum = 4
+
 // Client - client interface
 type Client interface {
 	// Common operations
@@ -55,7 +58,7 @@ type Client interface {
 
 	// I/O operations with metadata.
 	Get() (reader io.Reader, err *probe.Error)
-	Put(reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (n int64, err *probe.Error)
+	Put(reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (n int64, err *probe.Error)
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)

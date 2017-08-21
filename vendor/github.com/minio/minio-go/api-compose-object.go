@@ -17,6 +17,7 @@
 package minio
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -243,11 +244,11 @@ func (s *SourceInfo) getProps(c Client) (size int64, etag string, userMeta map[s
 	// Get object info - need size and etag here. Also, decryption
 	// headers are added to the stat request if given.
 	var objInfo ObjectInfo
-	rh := NewGetReqHeaders()
+	opts := StatObjectOptions{}
 	for k, v := range s.decryptKey.getSSEHeaders(false) {
-		rh.Set(k, v)
+		opts.Set(k, v)
 	}
-	objInfo, err = c.statObject(s.bucket, s.object, rh)
+	objInfo, err = c.statObject(s.bucket, s.object, opts)
 	if err != nil {
 		err = fmt.Errorf("Could not stat object - %s/%s: %v", s.bucket, s.object, err)
 	} else {
@@ -265,10 +266,55 @@ func (s *SourceInfo) getProps(c Client) (size int64, etag string, userMeta map[s
 	return
 }
 
+// Low level implementation of CopyObject API, supports only upto 5GiB worth of copy.
+func (c Client) copyObjectDo(ctx context.Context, srcBucket, srcObject, destBucket, destObject string,
+	metadata map[string]string) (ObjectInfo, error) {
+
+	// Build headers.
+	headers := make(http.Header)
+
+	// Set all the metadata headers.
+	for k, v := range metadata {
+		headers.Set(k, v)
+	}
+
+	// Set the source header
+	headers.Set("x-amz-copy-source", s3utils.EncodePath(srcBucket+"/"+srcObject))
+
+	// Send upload-part-copy request
+	resp, err := c.executeMethod(ctx, "PUT", requestMetadata{
+		bucketName:   destBucket,
+		objectName:   destObject,
+		customHeader: headers,
+	})
+	defer closeResponse(resp)
+	if err != nil {
+		return ObjectInfo{}, err
+	}
+
+	// Check if we got an error response.
+	if resp.StatusCode != http.StatusOK {
+		return ObjectInfo{}, httpRespToErrorResponse(resp, srcBucket, srcObject)
+	}
+
+	cpObjRes := copyObjectResult{}
+	err = xmlDecoder(resp.Body, &cpObjRes)
+	if err != nil {
+		return ObjectInfo{}, err
+	}
+
+	objInfo := ObjectInfo{
+		Key:          destObject,
+		ETag:         strings.Trim(cpObjRes.ETag, "\""),
+		LastModified: cpObjRes.LastModified,
+	}
+	return objInfo, nil
+}
+
 // uploadPartCopy - helper function to create a part in a multipart
 // upload via an upload-part-copy request
 // https://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadUploadPartCopy.html
-func (c Client) uploadPartCopy(bucket, object, uploadID string, partNumber int,
+func (c Client) uploadPartCopy(ctx context.Context, bucket, object, uploadID string, partNumber int,
 	headers http.Header) (p CompletePart, err error) {
 
 	// Build query parameters
@@ -277,7 +323,7 @@ func (c Client) uploadPartCopy(bucket, object, uploadID string, partNumber int,
 	urlValues.Set("uploadId", uploadID)
 
 	// Send upload-part-copy request
-	resp, err := c.executeMethod("PUT", requestMetadata{
+	resp, err := c.executeMethod(ctx, "PUT", requestMetadata{
 		bucketName:   bucket,
 		objectName:   object,
 		customHeader: headers,
@@ -311,7 +357,7 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 	if len(srcs) < 1 || len(srcs) > maxPartsCount {
 		return ErrInvalidArgument("There must be as least one and up to 10000 source objects.")
 	}
-
+	ctx := context.Background()
 	srcSizes := make([]int64, len(srcs))
 	var totalSize, size, totalParts int64
 	var srcUserMeta map[string]string
@@ -396,7 +442,7 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 		}
 
 		// Send copy request
-		resp, err := c.executeMethod("PUT", requestMetadata{
+		resp, err := c.executeMethod(ctx, "PUT", requestMetadata{
 			bucketName:   dst.bucket,
 			objectName:   dst.object,
 			customHeader: h,
@@ -426,11 +472,11 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 	if len(userMeta) == 0 && len(srcs) == 1 {
 		metaMap = srcUserMeta
 	}
-	metaHeaders := make(map[string][]string)
+	metaHeaders := make(map[string]string)
 	for k, v := range metaMap {
-		metaHeaders[k] = append(metaHeaders[k], v)
+		metaHeaders[k] = v
 	}
-	uploadID, err := c.newUploadID(dst.bucket, dst.object, metaHeaders)
+	uploadID, err := c.newUploadID(ctx, dst.bucket, dst.object, PutObjectOptions{UserMetadata: metaHeaders})
 	if err != nil {
 		return fmt.Errorf("Error creating new upload: %v", err)
 	}
@@ -457,7 +503,7 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 				fmt.Sprintf("bytes=%d-%d", start, end))
 
 			// make upload-part-copy request
-			complPart, err := c.uploadPartCopy(dst.bucket,
+			complPart, err := c.uploadPartCopy(ctx, dst.bucket,
 				dst.object, uploadID, partIndex, h)
 			if err != nil {
 				return fmt.Errorf("Error in upload-part-copy - %v", err)
@@ -468,7 +514,7 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 	}
 
 	// 3. Make final complete-multipart request.
-	_, err = c.completeMultipartUpload(dst.bucket, dst.object, uploadID,
+	_, err = c.completeMultipartUpload(ctx, dst.bucket, dst.object, uploadID,
 		completeMultipartUpload{Parts: objParts})
 	if err != nil {
 		err = fmt.Errorf("Error in complete-multipart request - %v", err)

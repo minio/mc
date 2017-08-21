@@ -17,6 +17,7 @@
 package minio
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,7 +34,7 @@ func (c Client) BucketExists(bucketName string) (bool, error) {
 	}
 
 	// Execute HEAD on bucketName.
-	resp, err := c.executeMethod("HEAD", requestMetadata{
+	resp, err := c.executeMethod(context.Background(), "HEAD", requestMetadata{
 		bucketName:         bucketName,
 		contentSHA256Bytes: emptySHA256,
 	})
@@ -80,7 +81,7 @@ func extractObjMetadata(header http.Header) http.Header {
 }
 
 // StatObject verifies if object exists and you have permission to access.
-func (c Client) StatObject(bucketName, objectName string) (ObjectInfo, error) {
+func (c Client) StatObject(bucketName, objectName string, opts StatObjectOptions) (ObjectInfo, error) {
 	// Input validation.
 	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
 		return ObjectInfo{}, err
@@ -88,12 +89,11 @@ func (c Client) StatObject(bucketName, objectName string) (ObjectInfo, error) {
 	if err := s3utils.CheckValidObjectName(objectName); err != nil {
 		return ObjectInfo{}, err
 	}
-	reqHeaders := NewHeadReqHeaders()
-	return c.statObject(bucketName, objectName, reqHeaders)
+	return c.statObject(bucketName, objectName, opts)
 }
 
 // Lower level API for statObject supporting pre-conditions and range headers.
-func (c Client) statObject(bucketName, objectName string, reqHeaders RequestHeaders) (ObjectInfo, error) {
+func (c Client) statObject(bucketName, objectName string, opts StatObjectOptions) (ObjectInfo, error) {
 	// Input validation.
 	if err := s3utils.CheckValidBucketName(bucketName); err != nil {
 		return ObjectInfo{}, err
@@ -102,17 +102,12 @@ func (c Client) statObject(bucketName, objectName string, reqHeaders RequestHead
 		return ObjectInfo{}, err
 	}
 
-	customHeader := make(http.Header)
-	for k, v := range reqHeaders.Header {
-		customHeader[k] = v
-	}
-
 	// Execute HEAD on objectName.
-	resp, err := c.executeMethod("HEAD", requestMetadata{
+	resp, err := c.executeMethod(context.Background(), "HEAD", requestMetadata{
 		bucketName:         bucketName,
 		objectName:         objectName,
 		contentSHA256Bytes: emptySHA256,
-		customHeader:       customHeader,
+		customHeader:       opts.Header(),
 	})
 	defer closeResponse(resp)
 	if err != nil {
