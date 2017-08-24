@@ -1,4 +1,4 @@
-name: mc
+name: minio-client
 version: master
 summary: ls, cp, mkdir, mirror commands for filesystems and object storage.
 description: |
@@ -10,9 +10,10 @@ grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: devmode
 
 apps:
-  mc:
+  minio-client:
     command: mc
     plugs: [home, network, network-bind]
+    aliases: [mc]
 
 parts:
   mc:
