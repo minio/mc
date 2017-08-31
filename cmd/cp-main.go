@@ -58,7 +58,10 @@ USAGE:
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}
+	{{end}}
+ENVIRONMENT VARIABLES:
+	DEFAULT_MULTIPART_THREADS: To set number of multipart threads. By default it is 3.
+
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
       $ {{.HelpName}} Music/*.ogg s3/jukebox/

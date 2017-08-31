@@ -20,12 +20,14 @@ import (
 	"crypto/tls"
 	"hash/fnv"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -55,6 +57,19 @@ const (
 
 	googleHostName = "storage.googleapis.com"
 )
+
+// getNumMultiPartThreads gets the number of multipart threads to be used for mc cp/mirror functions
+func getNumMultiPartThreads() int {
+	multipartThreadStr := os.Getenv("DEFAULT_MULTIPART_THREADS")
+	if multipartThreadStr != "" {
+		numThreads, err := strconv.Atoi(multipartThreadStr)
+		if err != nil {
+			log.Fatal("DEFAULT_MULTIPART_THREADS must be an integer.")
+		}
+		return numThreads
+	}
+	return 0
+}
 
 // newFactory encloses New function with client cache.
 func newFactory() func(config *Config) (Client, *probe.Error) {
@@ -168,7 +183,9 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			// Cache the new minio client with hash of config as key.
 			clientCache[confSum] = api
 		}
-
+		if numParallelThreads := getNumMultiPartThreads(); numParallelThreads > 0 {
+			api.NumParallelWorkers = numParallelThreads
+		}
 		// Store the new api object.
 		s3Clnt.api = api
 
