@@ -25,7 +25,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -46,7 +45,6 @@ type s3Client struct {
 	targetURL    *clientURL
 	api          *minio.Client
 	virtualStyle bool
-	region       string
 }
 
 const (
@@ -111,10 +109,9 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
 			}
-			s3Clnt.region = getRegionFromHost(hostName)
 			// Not found. Instantiate a new minio
 			var e error
-			api, e = minio.NewWithCredentials(hostName, creds, useTLS, s3Clnt.region)
+			api, e = minio.NewWithCredentials(hostName, creds, useTLS, "")
 			if e != nil {
 				return nil, probe.NewError(e)
 			}
@@ -722,9 +719,6 @@ func (c *s3Client) MakeBucket(region string, ignoreExisting bool) *probe.Error {
 	if object != "" {
 		return probe.NewError(BucketNameTopLevel{})
 	}
-	if c.region != "" {
-		region = c.region
-	}
 	e := c.api.MakeBucket(bucket, region)
 	if e != nil {
 		// Ignore bucket already existing error when ignoreExisting flag is enabled
@@ -927,20 +921,6 @@ func isGoogle(host string) bool {
 // are Amazon S3 and Google Cloud Storage.
 func isVirtualHostStyle(host string) bool {
 	return isAmazon(host) && !isAmazonChina(host) || isGoogle(host) || isAmazonAccelerated(host)
-}
-
-// getRegionFromHost - parse region from host name if present.
-func getRegionFromHost(host string) (region string) {
-	region = ""
-	if s3utils.IsGoogleEndpoint(url.URL{Host: host}) || s3utils.IsAmazonGovCloudEndpoint(url.URL{Host: host}) || s3utils.IsAmazonChinaEndpoint(url.URL{Host: host}) {
-		return
-	}
-	re := regexp.MustCompile("s3[.-]?(.*?)\\.amazonaws\\.com$")
-	parts := re.FindStringSubmatch(host)
-	if len(parts) > 1 {
-		region = parts[1]
-	}
-	return
 }
 
 // url2BucketAndObject gives bucketName and objectName from URL path.

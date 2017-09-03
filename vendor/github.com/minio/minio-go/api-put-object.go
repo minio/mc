@@ -23,6 +23,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"strings"
 
@@ -180,6 +181,7 @@ func (c Client) PutObjectWithProgress(bucketName, objectName string, reader io.R
 	if err != nil {
 		return 0, err
 	}
+
 	return c.putObjectCommon(bucketName, objectName, reader, size, metadata, progress)
 }
 
@@ -203,7 +205,7 @@ func (c Client) putObjectCommon(bucketName, objectName string, reader io.Reader,
 	}
 
 	if size < 0 {
-		return c.putObjectMultipartStreamNoLength(bucketName, objectName, reader, size, metadata, progress)
+		return c.putObjectMultipartStreamNoLength(bucketName, objectName, reader, metadata, progress)
 	}
 
 	if size < minPartSize {
@@ -214,8 +216,8 @@ func (c Client) putObjectCommon(bucketName, objectName string, reader io.Reader,
 	return c.putObjectMultipartStream(bucketName, objectName, reader, size, metadata, progress)
 }
 
-func (c Client) putObjectMultipartStreamNoLength(bucketName, objectName string, reader io.Reader, size int64,
-	metadata map[string][]string, progress io.Reader) (n int64, err error) {
+func (c Client) putObjectMultipartStreamNoLength(bucketName, objectName string, reader io.Reader, metadata map[string][]string,
+	progress io.Reader) (n int64, err error) {
 	// Input validation.
 	if err = s3utils.CheckValidBucketName(bucketName); err != nil {
 		return 0, err
@@ -232,7 +234,7 @@ func (c Client) putObjectMultipartStreamNoLength(bucketName, objectName string, 
 	var complMultipartUpload completeMultipartUpload
 
 	// Calculate the optimal parts info for a given size.
-	totalPartsCount, partSize, _, err := optimalPartInfo(size)
+	totalPartsCount, partSize, _, err := optimalPartInfo(-1)
 	if err != nil {
 		return 0, err
 	}
@@ -252,57 +254,47 @@ func (c Client) putObjectMultipartStreamNoLength(bucketName, objectName string, 
 	// Part number always starts with '1'.
 	partNumber := 1
 
-	// Initialize a temporary buffer.
-	tmpBuffer := new(bytes.Buffer)
-
 	// Initialize parts uploaded map.
 	partsInfo := make(map[int]ObjectPart)
 
+	// Create a buffer.
+	buf := make([]byte, partSize)
+	defer debug.FreeOSMemory()
+
 	for partNumber <= totalPartsCount {
-		// Calculates hash sums while copying partSize bytes into tmpBuffer.
-		prtSize, rErr := io.CopyN(tmpBuffer, reader, partSize)
-		if rErr != nil && rErr != io.EOF {
+		length, rErr := io.ReadFull(reader, buf)
+		if rErr == io.EOF {
+			break
+		}
+		if rErr != nil && rErr != io.ErrUnexpectedEOF {
 			return 0, rErr
 		}
 
-		var reader io.Reader
 		// Update progress reader appropriately to the latest offset
 		// as we read from the source.
-		reader = newHook(tmpBuffer, progress)
+		rd := newHook(bytes.NewReader(buf[:length]), progress)
 
 		// Proceed to upload the part.
 		var objPart ObjectPart
-		objPart, err = c.uploadPart(bucketName, objectName, uploadID, reader, partNumber,
-			nil, nil, prtSize, metadata)
+		objPart, err = c.uploadPart(bucketName, objectName, uploadID, rd, partNumber,
+			nil, nil, int64(length), metadata)
 		if err != nil {
-			// Reset the temporary buffer upon any error.
-			tmpBuffer.Reset()
 			return totalUploadedSize, err
 		}
 
 		// Save successfully uploaded part metadata.
 		partsInfo[partNumber] = objPart
 
-		// Reset the temporary buffer.
-		tmpBuffer.Reset()
-
 		// Save successfully uploaded size.
-		totalUploadedSize += prtSize
+		totalUploadedSize += int64(length)
 
 		// Increment part number.
 		partNumber++
 
 		// For unknown size, Read EOF we break away.
 		// We do not have to upload till totalPartsCount.
-		if size < 0 && rErr == io.EOF {
+		if rErr == io.EOF {
 			break
-		}
-	}
-
-	// Verify if we uploaded all the data.
-	if size > 0 {
-		if totalUploadedSize != size {
-			return totalUploadedSize, ErrUnexpectedEOF(totalUploadedSize, size, bucketName, objectName)
 		}
 	}
 
