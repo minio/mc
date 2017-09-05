@@ -92,51 +92,56 @@ var findCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} PATH FLAG EXPRESSION [FLAG]
+  {{.HelpName}} PATH [FLAG...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+UNITS
+   --smaller, --larger flags accept human-readable case-insensitive number
+   suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+   MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+   units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+   also accepted. Without suffixes the unit is bytes.
+
+   --older, --newer flags accept the suffixes "d", "w", "m" and "y" to refer
+   to units of days, weeks, months and years respectively. With the standard
+   rate of conversion being 7 days in 1 week, 30 days in 1 month, and 365
+   days in one year.
+
 EXAMPLES:
-   1. Find all files named foo from all buckets.
-   	$ {{.HelpName}} s3 --name "file"
-   
-   2. Find all text files from mybucket.
-   	$ {{.HelpName}} s3/mybucket --name "*.txt"
-   
-   3. Print only the object names without the directory component under this bucket.
-   	$ {{.HelpName}} s3/bucket --name "*" -print {base}
-   
-   4. Copy all jpg files from AWS S3 photos bucket to minio play test bucket.
-   	$ {{.HelpName}} s3/photos --name "*.jpg" --exec "mc cp {} play/test"
+   01. Find all files named foo from all buckets.
+       $ {{.HelpName}} s3 --name "file"
 
-   5. Find all jpg images from any folder prefixed with album.
-   	$ {{.HelpName}} s3/photos --name "*.jpg" --path "*/album*/*"
-   
-   6. Find all jpgs, pngs, and gifs using regex
-   	$ {{.HelpName}} s3/photos --regex "(?i)\.(jpg|png|gif)$"
+   02. Find all text files from mybucket.
+       $ {{.HelpName}} s3/mybucket --name "*.txt"
 
-   7. Mirror all photos from s3 bucket *coninuously* from the s3 bucket to minio play test bucket.
-   	$ {{.HelpName}} s3/buck --name "*foo" --watch --exec "mc cp {} play/test"	
+   03. Print only the object names without the directory component under this bucket.
+       $ {{.HelpName}} s3/bucket --name "*" -print {base}
 
-   8. Generate self expiring urls (7 days), for all objects between 64 MB, and 1 GB in size. 
-   	$ {{.HelpName}} s3 --larger 64MB --smaller 1GB --print {url}
+   04. Copy all jpg files from AWS S3 photos bucket to minio play test bucket.
+       $ {{.HelpName}} s3/photos --name "*.jpg" --exec "mc cp {} play/test"
 
-   9. Find all files under the s3 bucket which were created within a week. 
-   	$ {{.HelpName}} s3/bucket --newer 1w
+   05. Find all jpg images from any folder prefixed with album.
+       $ {{.HelpName}} s3/photos --name "*.jpg" --path "*/album*/*"
+
+   06. Find all jpgs, pngs, and gifs using regex
+       $ {{.HelpName}} s3/photos --regex "(?i)\.(jpg|png|gif)$"
+
+   07. Mirror all photos from s3 bucket *coninuously* from the s3 bucket to minio play test bucket.
+       $ {{.HelpName}} s3/buck --name "*foo" --watch --exec "mc cp {} play/test"
+
+   08. Generate self expiring urls (7 days), for all objects between 64 MB, and 1 GB in size.
+       $ {{.HelpName}} s3 --larger 64MB --smaller 1GB --print {url}
+
+   09. Find all files under the s3 bucket which were created within a week.
+       $ {{.HelpName}} s3/bucket --newer 1w
 
    10. Find all files which were created more than 6 months ago ignoring files ending in jpg.
-   	$ {{.HelpName}} s3 --older 6m --ignore "*.jpg"
+       $ {{.HelpName}} s3 --older 6m --ignore "*.jpg"
 
-   11. List all objects up to 3 levels subdirectory deep. 
-   	$ {{.HelpName}} s3/bucket --maxdepth 3
-
-UNITS
-
-   --smaller, --larger flags accept human-readable case-insensitive number suffixes such as "k", "m", "g" and "t" referring to the metric units KB, MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is also accepted. Without suffixes the unit is bytes.
-
-   --older, --newer flags accept the suffixes "d", "w", "m" and "y" to refer to units of days, weeks, months and years respectively. With the standard rate of conversion being 7 days being in 1 week, 30 days in 1 month, and 365 days in one year.
-
+   11. List all objects up to 3 levels subdirectory deep.
+       $ {{.HelpName}} s3/bucket --maxdepth 3
 
 `,
 }
