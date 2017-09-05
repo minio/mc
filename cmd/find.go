@@ -432,14 +432,16 @@ func TimeHelper(pattern string) (int, error) {
 		"m": 30,
 		"y": 365,
 	}
-	i, err = strconv.Atoi(pattern)
-	if err != nil {
-		t = pattern[len(pattern)-2:]
-		i, err = strconv.Atoi(pattern[:len(pattern)-2])
-
+	if len(pattern) > 1 {
+		i, err = strconv.Atoi(pattern[:len(pattern)-1])
 		if err != nil {
-			return 0, err
+			t = pattern[len(pattern)-2:]
+			i, err = strconv.Atoi(pattern[:len(pattern)-2])
 
+			if err != nil {
+				return 0, err
+
+			}
 		}
 	}
 
