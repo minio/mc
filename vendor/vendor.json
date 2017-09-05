@@ -122,6 +122,12 @@
 			"revisionTime": "2017-02-10T19:51:41Z"
 		},
 		{
+			"checksumSHA1": "8g6v+ymjaYxCSzZc98CjSs7OXhM=",
+			"path": "github.com/minio/minio/pkg/wildcard",
+			"revision": "ec5293ce29ef03726c7174d9e3304bc156259c4e",
+			"revisionTime": "2017-07-24T19:46:37Z"
+		},
+		{
 			"checksumSHA1": "+lLm3Uz721j8WzlV813lWiATrXM=",
 			"path": "github.com/minio/minio/pkg/words",
 			"revision": "7ebf11b20233d0eba0f1a28dbd124e7fdd44aee2",
