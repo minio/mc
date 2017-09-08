@@ -432,17 +432,25 @@ func TimeHelper(pattern string) (int, error) {
 		"m": 30,
 		"y": 365,
 	}
+
+	// parse
 	i, err = strconv.Atoi(pattern)
-	if err != nil {
-		t = pattern[len(pattern)-2:]
-		i, err = strconv.Atoi(pattern[:len(pattern)-2])
 
-		if err != nil {
-			return 0, err
-
-		}
+	if err == nil {
+		return i, err
 	}
 
+	// if cant parse check for conversion multiplier
+	t = pattern[len(pattern)-1:]
+	i, err = strconv.Atoi(pattern[:len(pattern)-1])
+
+	// if still cant parse, user input is invalid, error will be
+	// thrown by method which called TimeHelper
+	if err != nil {
+		return 0, err
+	}
+
+	// if we reach this line, user has passed a valid alphanumeric string
 	return i * conversion[strings.ToLower(t)], nil
 }
 
