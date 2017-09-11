@@ -64,6 +64,15 @@ chmod +x mc
 ./mc --help
 ```
 
+### Snap
+You can install the latest `minio-client` [snap](https://snapcraft.io), and help testing the most recent changes of the master branch in [all the supported Linux distros](https://snapcraft.io/docs/core/install) with:
+
+```sh
+sudo snap install minio-client --edge --devmode
+```
+
+Every time a new version is pushed to the store, you will get it updated automatically.
+
 ## Microsoft Windows
 ### Binary Download
 | Platform | Architecture | URL |
