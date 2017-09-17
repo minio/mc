@@ -52,15 +52,19 @@ deadcode:
 	@$(GOPATH)/bin/deadcode
 
 build: getdeps verifiers
+	@echo "Running $@"
+	@go build --ldflags $(BUILD_LDFLAGS)
 
-test: getdeps verifiers
-	@echo "Running all testing"
+test: build
+	@echo "Running unit tests"
 	@go test $(GOFLAGS) github.com/minio/mc/cmd...
 	@go test $(GOFLAGS) github.com/minio/mc/pkg...
+	@echo "Running functional tests"
+	@(env bash $(PWD)/functional-tests.sh)
 
 gomake-all: build
 	@echo "Installing mc at $(GOPATH)/bin/mc"
-	@go build --ldflags $(BUILD_LDFLAGS) -o $(GOPATH)/bin/mc
+	@cp -af mc $(GOPATH)/bin/mc
 	@mkdir -p $(HOME)/.mc
 
 coverage: getdeps verifiers
@@ -89,12 +93,7 @@ pkg-list:
 
 install: gomake-all
 
-all-tests: test
-	# TODO disable them for now.
-	# @echo "Running all mc testing"
-	#@./tests/test-minio.sh
-
-release: verifiers
+release: test
 	@MC_RELEASE=RELEASE ./buildscripts/build.sh
 
 experimental: verifiers
