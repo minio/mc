@@ -36,7 +36,7 @@ var globalFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "quiet, q",
-		Usage: "Suppress chatty console output.",
+		Usage: "Disable progress bar display.",
 	},
 	cli.BoolFlag{
 		Name:  "no-color",
