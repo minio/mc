@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -43,21 +42,17 @@ import (
 
 // findMSG holds JSON and string values for printing
 type findMSG struct {
-	Path string `json:"path"`
+	contentMessage
 }
 
 // String calls tells the console what to print and how to print it
 func (f findMSG) String() string {
-	return console.Colorize("Find", f.Path)
+	return console.Colorize("Find", f.contentMessage.Key)
 }
 
 // JSON formats output to be JSON output
 func (f findMSG) JSON() string {
-	f.Path = "path"
-	jsonMessageBytes, e := json.Marshal(f)
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(jsonMessageBytes)
+	return f.contentMessage.JSON()
 }
 
 // nameMatch pattern matches off of the base of the filepath
@@ -79,10 +74,8 @@ func regexMatch(path, pattern string) (bool, error) {
 
 // doFindPrint prints the output in accordance with the supplied substitution arguments
 func doFindPrint(path string, ctx *cli.Context, fileContent contentMessage) {
-	printString := SubArgsHelper(ctx.String("print"), path, fileContent)
-	printMsg(findMSG{
-		Path: printString,
-	})
+	fileContent.Key = SubArgsHelper(ctx.String("print"), path, fileContent)
+	printMsg(findMSG{fileContent})
 }
 
 // doFindExec passes the users input along to the command line, also dealing with substitution arguments
@@ -165,14 +158,37 @@ func doFindSmallerSize(size int64, pattern string) bool {
 	return int64(i) > size
 }
 
-// DoFind is used to handle most of the users input
-func DoFind(clnt Client, ctx *cli.Context) {
+// doFind is used to handle most of the users input
+func doFind(clnt Client, ctx *cli.Context) {
 	pathnameParts := strings.SplitAfter(ctx.Args().Get(0), "/")
 	alias := strings.TrimSuffix(pathnameParts[0], "/")
 	_, err := getHostConfig(alias)
 
 	// iterate over all content which is within the given directory
 	for content := range clnt.List(true, false, DirNone) {
+		if content.Err != nil {
+			switch content.Err.ToGoError().(type) {
+			// handle this specifically for filesystem related errors.
+			case BrokenSymlink:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list broken link.")
+				continue
+			case TooManyLevelsSymlink:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list too many levels link.")
+				continue
+			case PathNotFound:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				continue
+			case PathInsufficientPermission:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				continue
+			case ObjectOnGlacier:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "")
+				continue
+			}
+			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+			continue
+		}
+
 		fileContent := parseContent(content)
 		filePath := fileContent.Key
 
@@ -220,9 +236,7 @@ func DoFind(clnt Client, ctx *cli.Context) {
 			if match && ctx.String("print") != "" {
 				doFindPrint(filePath, ctx, fileContent)
 			} else if match {
-				printMsg(findMSG{
-					Path: filePath,
-				})
+				printMsg(findMSG{fileContent})
 			}
 
 			if !ctx.Bool("watch") && match && ctx.String("exec") != "" {
@@ -355,9 +369,7 @@ func watchEvents(ctx *cli.Context, clnt Client, params watchParams, alias string
 				if match && ctx.String("print") != "" {
 					doFindExec(ctx, msg.Key, fileContent)
 				} else if match {
-					printMsg(findMSG{
-						Path: msg.Key,
-					})
+					printMsg(findMSG{msg})
 				}
 
 			case err, ok := <-watchObj.Errors():

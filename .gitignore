@@ -1,5 +1,4 @@
 cover.out
-./mc
 *~
 *.test
 release
@@ -11,3 +10,4 @@ parts/
 prime/
 snap/.snapcraft/
 stage/
+mc

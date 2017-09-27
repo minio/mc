@@ -87,6 +87,7 @@ var findCmd = cli.Command{
 	Name:   "find",
 	Usage:  "Finds files which match the given set of parameters.",
 	Action: mainFind,
+	Before: setGlobalsFromContext,
 	Flags:  append(findFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -189,7 +190,7 @@ func mainFind(ctx *cli.Context) error {
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize `"+targetURL+"`")
 
-		DoFind(clnt, ctx)
+		doFind(clnt, ctx)
 
 	}
 	return cErr
