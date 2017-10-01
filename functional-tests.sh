@@ -27,7 +27,8 @@
 # * For other, call this script with environment variables MINT_MODE,
 #   MINT_DATA_DIR, SERVER_ENDPOINT, ACCESS_KEY, SECRET_KEY and ENABLE_HTTPS. It
 #   uses mc executable binary in current working directory and uses given minio
-#   server to run tests.
+#   server to run tests. MINT_MODE is set by mint to specify what category of
+#   tests to run.
 #
 ################################################################################
 
@@ -437,7 +438,9 @@ function run_test()
     test_presigned_get_object
     test_cat_object
     test_mirror_list_objects
-    test_watch_object
+    if [ -z "$MINT_MODE" ]; then
+        test_watch_object
+    fi
 
     teardown
 }
