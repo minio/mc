@@ -135,8 +135,10 @@ function fail()
     return "$rv"
 }
 
-function assert_log_failure()
+function assert()
 {
+    expected_rv="$1"
+    shift
     start_time="$1"
     shift
     func_name="$1"
@@ -144,7 +146,7 @@ function assert_log_failure()
 
     err=$("$@")
     rv=$?
-    if [ "$rv" -ne 0 ]; then
+    if [ "$rv" -ne "$expected_rv" ]; then
         if [ -n "$MINT_MODE" ]; then
             err=$(python -c 'import sys,json; print(json.dumps(sys.stdin.read()))' <<<"$err")
             printf '{"name": "mc", "duration": "%d", "function": "%s", "status": "FAIL", "error": "%s"}\n' "$(get_duration "$start_time")" "$func_name" "$err"
@@ -156,6 +158,14 @@ function assert_log_failure()
     fi
 
     return 0
+}
+
+function assert_log_failure() {
+    assert 0 "$@"
+}
+
+function assert_log_success() {
+    assert 1 "$@"
 }
 
 function mc_cmd()
@@ -208,6 +218,16 @@ function test_make_bucket()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_make_bucket_error() {
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    bucket_name="MC-test%bucket%$RANDOM"
+    assert_log_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function setup()
 {
     start_time=$(get_time)
@@ -228,6 +248,17 @@ function test_put_object()
     object_name="mc-test-object-$RANDOM"
     assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
     assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_put_object_error()
+{
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+
+    object_long_name=$(printf "mc-test-object-%01100d" 1)
+    assert_log_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_long_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -393,10 +424,12 @@ function test_watch_object()
 function run_test()
 {
     test_make_bucket
+    test_make_bucket_error
 
     setup
 
     test_put_object
+    test_put_object_error
     test_put_object_multipart
     test_get_object
     test_get_object_multipart
