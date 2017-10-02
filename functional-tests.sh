@@ -160,11 +160,11 @@ function assert()
     return 0
 }
 
-function assert_log_failure() {
+function assert_success() {
     assert 0 "$@"
 }
 
-function assert_log_success() {
+function assert_failure() {
     assert 1 "$@"
 }
 
@@ -212,8 +212,8 @@ function test_make_bucket()
 
     start_time=$(get_time)
     bucket_name="mc-test-bucket-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -223,7 +223,7 @@ function test_make_bucket_error() {
 
     start_time=$(get_time)
     bucket_name="MC-test%bucket%$RANDOM"
-    assert_log_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -231,13 +231,13 @@ function test_make_bucket_error() {
 function setup()
 {
     start_time=$(get_time)
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${BUCKET_NAME}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${BUCKET_NAME}"
 }
 
 function teardown()
 {
     start_time=$(get_time)
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${BUCKET_NAME}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${BUCKET_NAME}"
 }
 
 function test_put_object()
@@ -246,8 +246,8 @@ function test_put_object()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -258,7 +258,7 @@ function test_put_object_error()
     start_time=$(get_time)
 
     object_long_name=$(printf "mc-test-object-%01100d" 1)
-    assert_log_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_long_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_long_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -269,8 +269,8 @@ function test_put_object_multipart()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_65_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_65_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -281,10 +281,10 @@ function test_get_object()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -295,10 +295,10 @@ function test_get_object_multipart()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_65_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_65_MB_MD5SUM" "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_65_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_65_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -311,14 +311,14 @@ function test_presigned_put_object()
     object_name="mc-test-object-$RANDOM"
 
     out=$("${MC_CMD[@]}" --json share upload "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}")
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" fail $? "unable to get presigned put object url"
+    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to get presigned put object url"
     upload=$(echo "$out" | jq -r .share | sed "s|<FILE>|$FILE_1_MB|g" | sed "s|curl|curl -sS|g")
     $upload >/dev/null 2>&1
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" fail $? "unable to upload $FILE_1_MB presigned put object url"
+    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to upload $FILE_1_MB presigned put object url"
 
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_65_MB_MD5SUM" "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_65_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -329,16 +329,16 @@ function test_presigned_get_object()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     out=$("${MC_CMD[@]}" --json share download "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}")
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" fail $? "unable to get presigned get object url"
+    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to get presigned get object url"
     download_url=$(echo "$out" | jq -r .share)
     curl --output "${object_name}.downloaded" -sS -X GET "$download_url"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" fail $? "unable to download $download_url"
+    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to download $download_url"
 
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -349,11 +349,11 @@ function test_cat_object()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
     "${MC_CMD[@]}" cat "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" fail $? "unable to download object using 'mc cat'"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to download object using 'mc cat'"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -365,13 +365,13 @@ function test_mirror_list_objects()
     start_time=$(get_time)
     bucket_name="mc-test-bucket-$RANDOM"
     object_name="mc-test-object-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd mirror "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
 
     diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}" | jq -r .key) >/dev/null 2>&1
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" fail $? "mirror and list differs"
+    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "mirror and list differs"
 
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -383,14 +383,14 @@ function test_watch_object()
     start_time=$(get_time)
     bucket_name="mc-test-bucket-$RANDOM"
     object_name="mc-test-object-$RANDOM"
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
 
     # start a process to watch on bucket
     "${MC_CMD[@]}" --json watch "${SERVER_ALIAS}/${bucket_name}" > "$WATCH_OUT_FILE" &
     watch_cmd_pid=$!
     sleep 1
 
-    ( assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket_name}/${object_name}" )
+    ( assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${bucket_name}/${object_name}" )
     rv=$?
     if [ "$rv" -ne 0 ]; then
         kill "$watch_cmd_pid"
@@ -400,10 +400,10 @@ function test_watch_object()
     sleep 1
     if ! jq -r .events.type "$WATCH_OUT_FILE" | grep -qi ObjectCreated; then
         kill "$watch_cmd_pid"
-        assert_log_failure "$start_time" "${FUNCNAME[0]}" fail 1 "ObjectCreated event not found"
+        assert_success "$start_time" "${FUNCNAME[0]}" fail 1 "ObjectCreated event not found"
     fi
 
-    ( assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bucket_name}/${object_name}" )
+    ( assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bucket_name}/${object_name}" )
     rv=$?
     if [ "$rv" -ne 0 ]; then
         kill "$watch_cmd_pid"
@@ -413,7 +413,7 @@ function test_watch_object()
     sleep 1
     if ! jq -r .events.type "$WATCH_OUT_FILE" | grep -qi ObjectRemoved; then
         kill "$watch_cmd_pid"
-        assert_log_failure "$start_time" "${FUNCNAME[0]}" fail 1 "ObjectRemoved event not found"
+        assert_success "$start_time" "${FUNCNAME[0]}" fail 1 "ObjectRemoved event not found"
     fi
 
     kill "$watch_cmd_pid"
@@ -490,7 +490,7 @@ function __init__()
         exit 1
     fi
 
-    assert_log_failure "$start_time" "${FUNCNAME[0]}" mc_cmd config host add "${SERVER_ALIAS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host add "${SERVER_ALIAS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
     set +e
 }
 
