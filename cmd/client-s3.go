@@ -54,8 +54,16 @@ const (
 	amazonHostName            = "s3.amazonaws.com"
 	amazonHostNameAccelerated = "s3-accelerate.amazonaws.com"
 
-	googleHostName = "storage.googleapis.com"
+	googleHostName            = "storage.googleapis.com"
+	serverEncryptionKeyPrefix = "x-amz-server-side-encryption"
 )
+
+// cseHeaders is list of client side encryption headers
+var cseHeaders = []string{
+	"X-Amz-Meta-X-Amz-Iv",
+	"X-Amz-Meta-X-Amz-Key",
+	"X-Amz-Meta-X-Amz-Matdesc",
+}
 
 // getNumMultiPartThreads gets the number of multipart threads to be used for mc cp/mirror functions
 // If not set, default to 4.
@@ -814,7 +822,7 @@ func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, do
 }
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
-func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
+func (c *s3Client) Stat(isIncomplete, isFetchMeta bool) (*clientContent, *probe.Error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	bucket, object := c.url2BucketAndObject()
@@ -834,8 +842,7 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 		bucketMetadata := &clientContent{}
 		bucketMetadata.URL = *c.targetURL
 		bucketMetadata.Type = os.ModeDir
-		bucketMetadata.Metadata = map[string][]string{}
-
+		bucketMetadata.Metadata = map[string]string{}
 		return bucketMetadata, nil
 	}
 
@@ -858,14 +865,17 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 				objectMetadata.Time = objectMultipartInfo.Initiated
 				objectMetadata.Size = objectMultipartInfo.Size
 				objectMetadata.Type = os.FileMode(0664)
-				objectMetadata.Metadata = map[string][]string{}
+				objectMetadata.Metadata = map[string]string{}
+				objectMetadata.EncryptionHeaders = map[string]string{}
 				return objectMetadata, nil
 			}
 
 			if strings.HasSuffix(objectMultipartInfo.Key, string(c.targetURL.Separator)) {
 				objectMetadata.URL = *c.targetURL
 				objectMetadata.Type = os.ModeDir
-				objectMetadata.Metadata = map[string][]string{}
+				objectMetadata.Metadata = map[string]string{}
+				objectMetadata.EncryptionHeaders = map[string]string{}
+
 				return objectMetadata, nil
 			}
 		}
@@ -876,24 +886,48 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
-
 		if objectStat.Key == object {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Time = objectStat.LastModified
 			objectMetadata.Size = objectStat.Size
 			objectMetadata.ETag = objectStat.ETag
 			objectMetadata.Type = os.FileMode(0664)
-			objectMetadata.Metadata = map[string][]string{}
+			objectMetadata.Metadata = map[string]string{}
+			objectMetadata.EncryptionHeaders = map[string]string{}
+			if isFetchMeta {
+				stat, err := c.getObjectStat(bucket, object)
+				if err != nil {
+					return nil, err
+				}
+				objectMetadata.Metadata = stat.Metadata
+				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
+			}
 			return objectMetadata, nil
 		}
 
 		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Type = os.ModeDir
-			objectMetadata.Metadata = map[string][]string{}
+
+			if isFetchMeta {
+				stat, err := c.getObjectStat(bucket, object)
+				if err != nil {
+					return nil, err
+				}
+				objectMetadata.ETag = stat.ETag
+				objectMetadata.Metadata = stat.Metadata
+				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
+			}
 			return objectMetadata, nil
 		}
 	}
+	return c.getObjectStat(bucket, object)
+}
+
+// getObjectStat returns the metadata of an object from a HEAD call.
+func (c *s3Client) getObjectStat(bucket, object string) (*clientContent, *probe.Error) {
+	objectMetadata := &clientContent{}
+
 	objectStat, e := c.api.StatObject(bucket, object, minio.StatObjectOptions{})
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
@@ -920,11 +954,28 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 	objectMetadata.Size = objectStat.Size
 	objectMetadata.ETag = objectStat.ETag
 	objectMetadata.Type = os.FileMode(0664)
-
-	metadata := objectStat.Metadata
-	metadata.Set("Content-Type", objectStat.ContentType)
-	objectMetadata.Metadata = metadata
-
+	objectMetadata.Metadata = map[string]string{}
+	objectMetadata.EncryptionHeaders = map[string]string{}
+	objectMetadata.Metadata["Content-Type"] = objectStat.ContentType
+	for k, v := range objectStat.Metadata {
+		isCSEHeader := false
+		for _, header := range cseHeaders {
+			if (strings.Compare(strings.ToLower(header), strings.ToLower(k)) == 0) ||
+				strings.HasPrefix(strings.ToLower(serverEncryptionKeyPrefix), strings.ToLower(k)) {
+				if len(v) > 0 {
+					objectMetadata.EncryptionHeaders[k] = v[0]
+				}
+				isCSEHeader = true
+				break
+			}
+		}
+		if !isCSEHeader {
+			if len(v) > 0 {
+				objectMetadata.Metadata[k] = v[0]
+			}
+		}
+	}
+	objectMetadata.ETag = objectStat.ETag
 	return objectMetadata, nil
 }
 
@@ -1346,7 +1397,8 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 	} else if strings.HasSuffix(object, string(c.targetURL.Separator)) {
 		// Get stat of given object is a directory.
 		isIncomplete := false
-		content, perr := c.Stat(isIncomplete)
+		isFetchMeta := false
+		content, perr := c.Stat(isIncomplete, isFetchMeta)
 		cContent = content
 		if perr != nil {
 			contentCh <- &clientContent{URL: *c.targetURL, Err: perr}

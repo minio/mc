@@ -287,6 +287,7 @@ func registerApp() *cli.App {
 	registerCmd(configCmd)  // Configure minio client.
 	registerCmd(updateCmd)  // Check for new software updates.
 	registerCmd(versionCmd) // Print version.
+	registerCmd(statCmd)    // Stat contents of a bucket/object
 
 	cli.HelpFlag = cli.BoolFlag{
 		Name:  "help, h",

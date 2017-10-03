@@ -1,7 +1,7 @@
-// +build linux
+// +build darwin
 
 /*
- * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
+ * Minio Client (C) 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.
@@ -19,31 +19,21 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"strings"
-
 	"github.com/pkg/xattr"
 	"github.com/rjeczalik/notify"
-
-	"unicode/utf8"
 )
 
 var (
-	// EventTypePut contains the notify events that will cause a put (write)
-	EventTypePut = []notify.Event{notify.InCloseWrite | notify.InMovedTo}
+	// EventTypePut contains the notify events that will cause a put (writer)
+	EventTypePut = []notify.Event{notify.Create, notify.Write, notify.Rename}
 	// EventTypeDelete contains the notify events that will cause a delete (remove)
-	EventTypeDelete = []notify.Event{notify.InDelete | notify.InDeleteSelf | notify.InMovedFrom}
+	EventTypeDelete = []notify.Event{notify.Remove}
 	// EventTypeGet contains the notify events that will cause a get (read)
-	EventTypeGet = []notify.Event{notify.InAccess | notify.InOpen}
+	EventTypeGet = []notify.Event{} // On macOS, FreeBSD, Solaris this is not available.
 )
 
 // IsGetEvent checks if the event return is a get event.
 func IsGetEvent(event notify.Event) bool {
-	for _, ev := range EventTypeGet {
-		if event&ev != 0 {
-			return true
-		}
-	}
 	return false
 }
 
@@ -59,12 +49,7 @@ func IsPutEvent(event notify.Event) bool {
 
 // IsDeleteEvent checks if the event returned is a delete event
 func IsDeleteEvent(event notify.Event) bool {
-	for _, ev := range EventTypeDelete {
-		if event&ev != 0 {
-			return true
-		}
-	}
-	return false
+	return event&notify.Remove != 0
 }
 
 // getXAttr fetches the extended attribute for a particular key on
@@ -74,10 +59,7 @@ func getXAttr(path, key string) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	if utf8.ValidString(string(data)) {
-		return string(data), nil
-	}
-	return hex.EncodeToString(data), nil
+	return string(data), nil
 }
 
 // getAllXattrs returns the extended attributes for a file if supported
@@ -92,14 +74,11 @@ func getAllXattrs(path string) (map[string]string, error) {
 		return nil, e
 	}
 	for _, key := range list {
-		// filter out system specific xattr
-		if strings.HasPrefix(key, "system.") {
-			continue
-		}
 		xMetadata[key], e = getXAttr(path, key)
 		if e != nil {
 			return nil, e
 		}
+
 	}
 	return xMetadata, nil
 }

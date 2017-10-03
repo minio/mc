@@ -965,7 +965,7 @@ func (f *fsClient) SetAccess(access string) *probe.Error {
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(isIncomplete bool) (content *clientContent, err *probe.Error) {
+func (f *fsClient) Stat(isIncomplete, isFetchMeta bool) (content *clientContent, err *probe.Error) {
 	st, err := f.fsStat(isIncomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
@@ -975,9 +975,15 @@ func (f *fsClient) Stat(isIncomplete bool) (content *clientContent, err *probe.E
 	content.Size = st.Size()
 	content.Time = st.ModTime()
 	content.Type = st.Mode()
-	content.Metadata = map[string][]string{
-		"Content-Type": {guessURLContentType(f.PathURL.Path)},
+	content.Metadata = map[string]string{
+		"Content-Type": guessURLContentType(f.PathURL.Path),
 	}
+	path := f.PathURL.String()
+	metaData, pErr := getAllXattrs(path)
+	if pErr != nil {
+		return content, nil
+	}
+	content.Metadata = metaData
 	return content, nil
 }
 

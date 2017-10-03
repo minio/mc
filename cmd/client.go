@@ -43,7 +43,7 @@ const defaultMultipartThreadsNum = 4
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat(isIncomplete bool) (content *clientContent, err *probe.Error)
+	Stat(isIncomplete, isFetchMeta bool) (content *clientContent, err *probe.Error)
 	List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent
 
 	// Bucket operations
@@ -77,13 +77,14 @@ type Client interface {
 
 // Content container for content metadata
 type clientContent struct {
-	URL      clientURL
-	Time     time.Time
-	Size     int64
-	Type     os.FileMode
-	ETag     string
-	Metadata map[string][]string
-	Err      *probe.Error
+	URL               clientURL
+	Time              time.Time
+	Size              int64
+	Type              os.FileMode
+	Metadata          map[string]string
+	ETag              string
+	EncryptionHeaders map[string]string
+	Err               *probe.Error
 }
 
 // Config - see http://docs.amazonwebservices.com/AmazonS3/latest/dev/index.html?RESTAuthentication.html
