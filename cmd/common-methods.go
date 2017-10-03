@@ -75,7 +75,7 @@ func getSourceStreamFromURL(urlStr string) (reader io.Reader, err *probe.Error) 
 }
 
 // getSourceStream gets a reader from URL.
-func getSourceStream(alias string, urlStr string, fetchStat bool) (reader io.Reader, metadata map[string][]string, err *probe.Error) {
+func getSourceStream(alias string, urlStr string, fetchStat bool) (reader io.Reader, metadata map[string]string, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
@@ -84,19 +84,23 @@ func getSourceStream(alias string, urlStr string, fetchStat bool) (reader io.Rea
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
-	metadata = map[string][]string{}
+	metadata = map[string]string{}
 	if fetchStat {
 		st, err := sourceClnt.Stat(false)
 		if err != nil {
 			return nil, nil, err.Trace(alias, urlStr)
 		}
-		metadata = st.Metadata
+		for k, v := range st.Metadata {
+			if len(v) > 0 {
+				metadata[k] = v[0]
+			}
+		}
 	}
 	return reader, metadata, nil
 }
 
 // putTargetStream writes to URL from Reader.
-func putTargetStream(alias string, urlStr string, reader io.Reader, size int64, metadata map[string][]string, progress io.Reader) (int64, *probe.Error) {
+func putTargetStream(alias string, urlStr string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
@@ -115,8 +119,8 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64) (int64,
 		return 0, err.Trace(alias, urlStr)
 	}
 	contentType := guessURLContentType(urlStr)
-	metadata := map[string][]string{
-		"Content-Type": {contentType},
+	metadata := map[string]string{
+		"Content-Type": contentType,
 	}
 	return putTargetStream(alias, urlStrFull, reader, size, metadata, nil)
 }
