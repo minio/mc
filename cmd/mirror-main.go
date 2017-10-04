@@ -60,6 +60,10 @@ var (
 			Name:  "a",
 			Usage: "Preserve bucket policies rules.",
 		},
+		cli.StringSliceFlag{
+			Name:  "exclude",
+			Usage: "Exclude the source file/object that matches the passed shell file name pattern.",
+		},
 	}
 )
 
@@ -102,6 +106,10 @@ EXAMPLES:
    6. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
       new objects and uploads them.
       $ {{.HelpName}} --force --remove --watch /var/lib/backups play/backups
+
+   7. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
+      Exclude all .* files and *.temp files when mirroring.
+      $ {{.HelpName}} --exclude ".*" --exclude "*.temp" s3/test ~/test
 
 `,
 }
@@ -147,6 +155,8 @@ type mirrorJob struct {
 	targetURL string
 
 	isFake, isForce, isRemove, isWatch bool
+
+	excludeOptions []string
 }
 
 // mirrorMessage container for file mirror messages
@@ -416,7 +426,7 @@ func (mj *mirrorJob) startMirror() {
 	var totalBytes int64
 	var totalObjects int64
 
-	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isForce, mj.isFake, mj.isRemove)
+	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isForce, mj.isFake, mj.isRemove, mj.excludeOptions)
 	for {
 		select {
 		case sURLs, ok := <-URLsCh:
@@ -485,7 +495,7 @@ func (mj *mirrorJob) mirror() {
 	mj.stopStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool, excludeOptions []string) *mirrorJob {
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
@@ -502,10 +512,11 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool
 		sourceURL: srcURL,
 		targetURL: dstURL,
 
-		isFake:   isFake,
-		isRemove: isRemove,
-		isWatch:  isWatch,
-		isForce:  isForce,
+		isFake:         isFake,
+		isRemove:       isRemove,
+		isWatch:        isWatch,
+		isForce:        isForce,
+		excludeOptions: excludeOptions,
 
 		status:         status,
 		scanBar:        func(s string) {},
@@ -550,7 +561,8 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 		ctx.Bool("fake"),
 		ctx.Bool("remove"),
 		ctx.Bool("watch"),
-		ctx.Bool("force"))
+		ctx.Bool("force"),
+		ctx.StringSlice("exclude"))
 
 	srcClt, err := newClient(srcURL)
 	fatalIf(err, "Unable to initialize `"+srcURL+"`")

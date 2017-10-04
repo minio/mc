@@ -20,6 +20,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	// golang does not support flat keys for path matching, find does
+	"github.com/minio/minio/pkg/wildcard"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -53,17 +55,26 @@ func (d differType) String() string {
 	return "unknown"
 }
 
-func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
-	return difference(sourceClnt, targetClnt, sourceURL, targetURL, true, false, DirNone)
+func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string, excludeOptions []string) (diffCh chan diffMessage) {
+	return difference(sourceClnt, targetClnt, sourceURL, targetURL, true, false, DirNone, excludeOptions)
 }
 
 func dirDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
-	return difference(sourceClnt, targetClnt, sourceURL, targetURL, false, true, DirFirst)
+	return difference(sourceClnt, targetClnt, sourceURL, targetURL, false, true, DirFirst, nil)
+}
+
+func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
+	for _, pattern := range excludeOptions {
+		if wildcard.Match(pattern, srcSuffix) {
+			return true
+		}
+	}
+	return false
 }
 
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
+func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRecursive, returnSimilar bool, dirOpt DirOpt, excludeOptions []string) (diffCh chan diffMessage) {
 	var (
 		srcEOF, tgtEOF       bool
 		srcOk, tgtOk         bool
@@ -117,6 +128,14 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 				continue
 			}
 
+			srcSuffix = strings.TrimPrefix(srcCtnt.URL.String(), sourceURL)
+
+			//Skip the objects that match the Exclude options provided
+			if matchExcludeOptions(excludeOptions, srcSuffix) {
+				srcCtnt, srcOk = <-srcCh
+				continue
+			}
+
 			// The same for target
 			if tgtEOF {
 				diffCh <- diffMessage{
@@ -128,11 +147,11 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 				continue
 			}
 
-			srcSuffix = strings.TrimPrefix(srcCtnt.URL.String(), sourceURL)
 			tgtSuffix = strings.TrimPrefix(tgtCtnt.URL.String(), targetURL)
 
 			current := urlJoinPath(targetURL, srcSuffix)
 			expected := urlJoinPath(targetURL, tgtSuffix)
+
 			if !utf8.ValidString(srcSuffix) {
 				// Error. Keys must be valid UTF-8.
 				diffCh <- diffMessage{Error: errInvalidSource(current).Trace()}
