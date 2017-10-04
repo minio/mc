@@ -17,12 +17,17 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"syscall"
+	"unicode"
+	"unicode/utf8"
+
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -59,6 +64,55 @@ EXAMPLES:
       $ {{.HelpName}} part.* > complete.img
 
 `,
+}
+
+// prettyStdout replaces some non printable characters
+// with <hex> format to be better viewable by the user
+type prettyStdout struct {
+	// Internal data to pretty-print
+	writer io.Writer
+	// Internal buffer which contains pretty printed
+	// form of binary (no printable) characters
+	buffer *bytes.Buffer
+}
+
+// newPrettyStdout returns an initialized prettyStdout struct
+func newPrettyStdout(w io.Writer) *prettyStdout {
+	return &prettyStdout{
+		writer: w,
+		buffer: bytes.NewBuffer([]byte{}),
+	}
+}
+
+// Read() returns pretty printed binary characters
+func (s prettyStdout) Write(input []byte) (int, error) {
+	inputLen := len(input)
+
+	// Convert no printable characters to '^?'
+	// and fill into s.buffer
+	for len(input) > 0 {
+		r, size := utf8.DecodeRune(input)
+		if unicode.IsPrint(r) || unicode.IsSpace(r) {
+			s.buffer.WriteRune(r)
+		} else {
+			s.buffer.WriteString("^?")
+		}
+		input = input[size:]
+	}
+
+	bufLen := s.buffer.Len()
+
+	// Copy all buffer content to the writer (stdout)
+	n, err := s.buffer.WriteTo(s.writer)
+	if err != nil {
+		return 0, err
+	}
+
+	if int(n) != bufLen {
+		return 0, errors.New("error when writing to stdout")
+	}
+
+	return inputLen, nil
 }
 
 // checkCatSyntax performs command-line input validation for cat command.
@@ -105,8 +159,19 @@ func catOut(r io.Reader, size int64) *probe.Error {
 	var n int64
 	var e error
 
+	var stdout io.Writer
+
+	// In case of a user showing the object content in a terminal,
+	// avoid printing control and other bad characters to avoid
+	// terminal session corruption
+	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+		stdout = newPrettyStdout(os.Stdout)
+	} else {
+		stdout = os.Stdout
+	}
+
 	// Read till EOF.
-	if n, e = io.Copy(os.Stdout, r); e != nil {
+	if n, e = io.Copy(stdout, r); e != nil {
 		switch e := e.(type) {
 		case *os.PathError:
 			if e.Err == syscall.EPIPE {
