@@ -64,10 +64,10 @@ USAGE:
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-	{{end}}
+  {{end}}
 ENVIRONMENT VARIABLES:
-	MC_MULTIPART_THREADS: To set number of multipart threads. By default it is 4.
-	MC_MULTIPART_DISABLE: To disable multipart uploads set to 1.
+  MC_MULTIPART_THREADS: To set number of multipart threads. By default it is 4.
+  MC_MULTIPART_DISABLE: To disable multipart uploads set to 1.
 
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
