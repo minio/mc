@@ -383,7 +383,10 @@ USAGE:
 FLAGS:
   --help, -h					Help of cp.
   --recursive, -r				Copy recursively.
-
+  
+ENVIRONMENT VARIABLES:
+    MC_MULTIPART_THREADS: To set number of multipart threads. By default it is 4.
+    MC_MULTIPART_DISABLE: To disable multipart uploads set to 1.
 ```
 
 *Example: Copy a text file to to an object storage.*
@@ -554,9 +557,14 @@ FLAGS:
   --help, -h				Help of mirror.
   --force					Force overwrite of an existing target(s).
   --fake					Perform a fake mirror operation.
-  --watch, -w                          Watch and mirror for changes.
+  --watch, -w				Watch and mirror for changes.
   --remove					Remove extraneous file(s) on target.
+  --region value			Specify which region to select when creating new buckets. (default: "us-east-1")
+  -a						Preserve bucket policies rules.
 
+ENVIRONMENT VARIABLES:
+    MC_MULTIPART_THREADS: To set number of multipart threads. By default it is 4.
+    MC_MULTIPART_DISABLE: To disable multipart uploads set to 1.
 ``` 
 
 *Example: Mirror a local directory to 'mybucket' on https://play.minio.io:9000.*

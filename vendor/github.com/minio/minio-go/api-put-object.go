@@ -25,6 +25,7 @@ import (
 	"runtime/debug"
 	"sort"
 	"strings"
+	"os"
 
 	"github.com/minio/minio-go/pkg/encrypt"
 	"github.com/minio/minio-go/pkg/s3utils"
@@ -126,6 +127,12 @@ func (c Client) putObjectCommon(ctx context.Context, bucketName, objectName stri
 	// Check for largest object size allowed.
 	if size > int64(maxMultipartPutObjectSize) {
 		return 0, ErrEntityTooLarge(size, maxMultipartPutObjectSize, bucketName, objectName)
+	}
+
+	// Disable the use of multipart uploads, useful when the destination s3 doesn't support multipart uploads
+	value := os.Getenv("MC_MULTIPART_DISABLE")
+	if value != "" && value != "0" {
+		return c.putObjectNoChecksum(ctx, bucketName, objectName, reader, size, opts)
 	}
 
 	// NOTE: Streaming signature is not supported by GCS.
