@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -53,7 +52,6 @@ type EventInfo struct {
 }
 
 type watchParams struct {
-	accountID string
 	prefix    string
 	suffix    string
 	events    []string
@@ -148,7 +146,6 @@ func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 	wo, err := client.Watch(watchParams{
 		recursive: recursive,
 		events:    []string{"put", "delete"},
-		accountID: fmt.Sprintf("%d", w.sessionStartTime.Unix()),
 	})
 	if err != nil {
 		return err

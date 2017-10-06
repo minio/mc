@@ -18,31 +18,18 @@ package cmd
 
 import (
 	"strings"
+	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/probe"
 )
 
-// find specific flags
+// List of all flags supported by find command.
 var (
 	findFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "name",
-			Usage: "Find object names matching wildcard pattern",
-		},
-		cli.StringFlag{
-			Name:  "path",
-			Usage: "Match directory names matching wildcard pattern",
-		},
-		cli.StringFlag{
-			Name:  "regex",
-			Usage: "Match directory and object name with PCRE regex pattern",
-		},
-		cli.StringFlag{
-			Name:  "print",
-			Usage: "Print in custom format to STDOUT (see FORMAT)",
-		},
 		cli.StringFlag{
 			Name:  "exec",
 			Usage: "Spawn an external process for each matching object (see FORMAT)",
@@ -50,6 +37,10 @@ var (
 		cli.StringFlag{
 			Name:  "ignore",
 			Usage: "Exclude objects matching the wildcard pattern",
+		},
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "Find object names matching wildcard pattern",
 		},
 		cli.StringFlag{
 			Name:  "newer",
@@ -60,6 +51,18 @@ var (
 			Usage: "Match all objects older than specified time in units (see UNITS)",
 		},
 		cli.StringFlag{
+			Name:  "path",
+			Usage: "Match directory names matching wildcard pattern",
+		},
+		cli.StringFlag{
+			Name:  "print",
+			Usage: "Print in custom format to STDOUT (see FORMAT)",
+		},
+		cli.StringFlag{
+			Name:  "regex",
+			Usage: "Match directory and object name with PCRE regex pattern",
+		},
+		cli.StringFlag{
 			Name:  "larger",
 			Usage: "Match all objects larger than specified size in units (see UNITS)",
 		},
@@ -67,17 +70,13 @@ var (
 			Name:  "smaller",
 			Usage: "Match all objects smaller than specified size in units (see UNITS)",
 		},
-		cli.StringFlag{
+		cli.UintFlag{
 			Name:  "maxdepth",
 			Usage: "Limit directory navigation to specified depth",
 		},
 		cli.BoolFlag{
 			Name:  "watch",
-			Usage: "Monitor specified location for newly created objects",
-		},
-		cli.BoolFlag{
-			Name:  "or",
-			Usage: "Changes the matching criteria from an \"and\" to an \"or\"",
+			Usage: "Monitor a specified path for newly created files and objects",
 		},
 	}
 )
@@ -163,24 +162,53 @@ EXAMPLES:
 // checkFindSyntax - validate the passed arguments
 func checkFindSyntax(ctx *cli.Context) {
 	args := ctx.Args()
-
-	// help message on [mc][find]
 	if !args.Present() {
-		cli.ShowCommandHelpAndExit(ctx, "find", 1)
+		args = []string{"./"} // No args just default to present directory.
+	} else if args.Get(0) == "." {
+		args[0] = "./" // If the arg is '.' treat it as './'.
 	}
 
-	if ctx.Bool("watch") && !strings.Contains(args[0], "/") {
-		console.Println("Users must specify a bucket name for watch")
-		console.Fatalln()
-	}
-
-	// verify that there are no empty arguments
 	for _, arg := range args {
 		if strings.TrimSpace(arg) == "" {
 			fatalIf(errInvalidArgument().Trace(args...), "Unable to validate empty argument.")
 		}
 	}
 
+	// Extract input URLs and validate.
+	for _, url := range args {
+		_, _, err := url2Stat(url)
+		if err != nil && !isURLPrefixExists(url, false) {
+			// Bucket name empty is a valid error for 'find myminio' unless we are using watch, treat it as such.
+			if _, ok := err.ToGoError().(BucketNameEmpty); ok && !ctx.Bool("watch") {
+				continue
+			}
+			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
+		}
+	}
+}
+
+// Find context is container to hold all parsed input arguments,
+// each parsed input is stored in its native typed form for
+// ease of repurposing.
+type findContext struct {
+	*cli.Context
+	execCmd       string
+	ignorePattern string
+	namePattern   string
+	pathPattern   string
+	regexPattern  string
+	maxDepth      uint
+	printFmt      string
+	olderThan     time.Time
+	newerThan     time.Time
+	largerSize    uint64
+	smallerSize   uint64
+	watch         bool
+
+	// Internal values
+	targetAlias string
+	targetURL   string
+	clnt        Client
 }
 
 // mainFind - handler for mc find commands
@@ -191,13 +219,59 @@ func mainFind(ctx *cli.Context) error {
 	checkFindSyntax(ctx)
 
 	args := ctx.Args()
-
-	if !ctx.Args().Present() {
-		args = []string{"."}
+	if !args.Present() {
+		args = []string{"./"} // Not args present default to present directory.
+	} else if args.Get(0) == "." {
+		args[0] = "./" // If the arg is '.' treat it as './'.
 	}
 
 	clnt, err := newClient(args[0])
-	fatalIf(err.Trace(args...), "Unable to initialize `"+args[0]+"`")
+	fatalIf(err.Trace(args...), "Unable to initialize `"+args[0]+"`.")
 
-	return doFind(args[0], clnt, ctx)
+	var olderThan, newerThan time.Time
+
+	if ctx.String("older") != "" {
+		olderThan, err = parseTime(ctx.String("older"))
+		fatalIf(err.Trace(ctx.String("older")), "Unable to parse input time.")
+	}
+	if ctx.String("newer") != "" {
+		newerThan, err = parseTime(ctx.String("newer"))
+		fatalIf(err.Trace(ctx.String("newer")), "Unable to parse input time.")
+	}
+
+	// Use 'e' to indicate Go error, this is a convention followed in `mc`. For probe.Error we call it
+	// 'err' and regular Go error is called as 'e'.
+	var e error
+	var largerSize, smallerSize uint64
+
+	if ctx.String("larger") != "" {
+		largerSize, e = humanize.ParseBytes(ctx.String("larger"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("larger")), "Unable to parse input bytes.")
+	}
+
+	if ctx.String("smaller") != "" {
+		smallerSize, e = humanize.ParseBytes(ctx.String("smaller"))
+		fatalIf(probe.NewError(e).Trace(ctx.String("smaller")), "Unable to parse input bytes.")
+	}
+
+	targetAlias, _, _, err := expandAlias(args[0])
+	fatalIf(err.Trace(args[0]), "Unable to expand alias.")
+
+	return doFind(&findContext{
+		Context:      ctx,
+		maxDepth:     ctx.Uint("maxdepth"),
+		execCmd:      ctx.String("exec"),
+		printFmt:     ctx.String("print"),
+		namePattern:  ctx.String("name"),
+		pathPattern:  ctx.String("path"),
+		regexPattern: ctx.String("regex"),
+		olderThan:    olderThan,
+		newerThan:    newerThan,
+		largerSize:   largerSize,
+		smallerSize:  smallerSize,
+		watch:        ctx.Bool("watch"),
+		targetAlias:  targetAlias,
+		targetURL:    args[0],
+		clnt:         clnt,
+	})
 }

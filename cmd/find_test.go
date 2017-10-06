@@ -21,6 +21,209 @@ import (
 	"time"
 )
 
+// Tests match find function with all supported inputs on
+// file pattern, size and time.
+func TestMatchFind(t *testing.T) {
+	// List of various contexts used in each tests,
+	// tests are run in the same order as this list.
+	var listFindContexts = []*findContext{
+		&findContext{
+			ignorePattern: "*.go",
+		},
+		&findContext{
+			namePattern: "console",
+		},
+		&findContext{
+			pathPattern: "*console*",
+		},
+		&findContext{
+			regexPattern: `^(\d+\.){3}\d+$`,
+		},
+		&findContext{
+			olderThan: time.Unix(12000, 0).UTC(),
+		},
+		&findContext{
+			newerThan: time.Unix(12000, 0).UTC(),
+		},
+		&findContext{
+			largerSize: 1024 * 1024,
+		},
+		&findContext{
+			smallerSize: 1024,
+		},
+		&findContext{
+			ignorePattern: "*.txt",
+		},
+		&findContext{},
+	}
+
+	var testCases = []struct {
+		content       contentMessage
+		expectedMatch bool
+	}{
+		// Matches ignore pattern, so match will be false - Test 1.
+		{
+			content: contentMessage{
+				Key: "pkg/console/console.go",
+			},
+			expectedMatch: false,
+		},
+		// Matches name pattern - Test 2.
+		{
+			content: contentMessage{
+				Key: "pkg/console/console.go",
+			},
+			expectedMatch: true,
+		},
+		// Matches path pattern - Test 3.
+		{
+			content: contentMessage{
+				Key: "pkg/console/console.go",
+			},
+			expectedMatch: true,
+		},
+		// Matches regex pattern - Test 4.
+		{
+			content: contentMessage{
+				Key: "192.168.1.1",
+			},
+			expectedMatch: true,
+		},
+		// Matches older than time - Test 5.
+		{
+			content: contentMessage{
+				Time: time.Unix(11999, 0).UTC(),
+			},
+			expectedMatch: true,
+		},
+		// Matches newer than time - Test 6.
+		{
+			content: contentMessage{
+				Time: time.Unix(12001, 0).UTC(),
+			},
+			expectedMatch: true,
+		},
+		// Matches size larger - Test 7.
+		{
+			content: contentMessage{
+				Size: 1024 * 1024 * 2,
+			},
+			expectedMatch: true,
+		},
+		// Matches size smaller - Test 8.
+		{
+			content: contentMessage{
+				Size: 1023,
+			},
+			expectedMatch: true,
+		},
+		// Does not match ignore pattern, so match will be true - Test 9.
+		{
+			content: contentMessage{
+				Key: "pkg/console/console.go",
+			},
+			expectedMatch: true,
+		},
+		// No matching inputs were provided, so nothing to match return value is true - Test 10.
+		{
+			content:       contentMessage{},
+			expectedMatch: true,
+		},
+	}
+
+	// Runs all the test cases and validate the expected conditions.
+	for i, testCase := range testCases {
+		gotMatch := matchFind(listFindContexts[i], testCase.content)
+		if testCase.expectedMatch != gotMatch {
+			t.Errorf("Test: %d, expected match %t, got %t", i+1, testCase.expectedMatch, gotMatch)
+		}
+	}
+}
+
+// Tests suffix strings trimmed off correctly at maxdepth.
+func TestSuffixTrimmingAtMaxDepth(t *testing.T) {
+	var testCases = []struct {
+		startPrefix     string
+		path            string
+		separator       string
+		maxDepth        uint
+		expectedNewPath string
+	}{
+		// Tests at max depth 0.
+		{
+			startPrefix:     "./",
+			path:            ".git/refs/remotes",
+			separator:       "/",
+			maxDepth:        0,
+			expectedNewPath: ".git/refs/remotes",
+		},
+		// Tests at max depth 1.
+		{
+			startPrefix:     "./",
+			path:            ".git/refs/remotes",
+			separator:       "/",
+			maxDepth:        1,
+			expectedNewPath: "./.git/",
+		},
+		// Tests at max depth 2.
+		{
+			startPrefix:     "./",
+			path:            ".git/refs/remotes",
+			separator:       "/",
+			maxDepth:        2,
+			expectedNewPath: "./.git/refs/",
+		},
+		// Tests at max depth 3.
+		{
+			startPrefix:     "./",
+			path:            ".git/refs/remotes",
+			separator:       "/",
+			maxDepth:        3,
+			expectedNewPath: "./.git/refs/remotes",
+		},
+		// Tests with startPrefix empty.
+		{
+			startPrefix:     "",
+			path:            ".git/refs/remotes",
+			separator:       "/",
+			maxDepth:        2,
+			expectedNewPath: ".git/refs/",
+		},
+		// Tests with separator empty.
+		{
+			startPrefix:     "",
+			path:            ".git/refs/remotes",
+			separator:       "",
+			maxDepth:        2,
+			expectedNewPath: ".g",
+		},
+		// Tests with nested startPrefix paths - 1.
+		{
+			startPrefix:     ".git/refs/",
+			path:            ".git/refs/remotes",
+			separator:       "/",
+			maxDepth:        1,
+			expectedNewPath: ".git/refs/remotes",
+		},
+		// Tests with nested startPrefix paths - 2.
+		{
+			startPrefix:     ".git/refs",
+			path:            ".git/refs/remotes",
+			separator:       "/",
+			maxDepth:        1,
+			expectedNewPath: ".git/refs/",
+		},
+	}
+
+	// Run all the test cases and validate for returned new path.
+	for i, testCase := range testCases {
+		gotNewPath := trimSuffixAtMaxDepth(testCase.startPrefix, testCase.path, testCase.separator, testCase.maxDepth)
+		if testCase.expectedNewPath != gotNewPath {
+			t.Errorf("Test: %d, expected path %s, got %s", i+1, testCase.expectedNewPath, gotNewPath)
+		}
+	}
+}
+
 // Tests matching functions for name, path and regex.
 func TestFindMatch(t *testing.T) {
 	// testFind is the structure used to contain params pertinent to find related tests
@@ -30,42 +233,50 @@ func TestFindMatch(t *testing.T) {
 	}
 
 	var basicTests = []testFind{
-		// Basic name and path tests
+		// Name match tests - success cases.
 		{"*.jpg", "carter.jpg", "name", true},
+		{"console", "pkg/console/console.go", "name", true},
+		{"console.go", "pkg/console/console.go", "name", true},
+		{"*XA==", "I/enjoy/morning/walks/XA==", "name ", true},
+		{"*parser", "/This/might/mess up./the/parser", "name", true},
+		{"*LTIxNDc0ODM2NDgvLTE=", "What/A/Naughty/String/LTIxNDc0ODM2NDgvLTE=", "name", true},
+		{"*", "/bla/bla/bla/ ", "name", true},
+
+		// Name match tests - failure cases.
 		{"*.jpg", "carter.jpeg", "name", false},
 		{"*/test/*", "/test/bob/likes/cake", "name", false},
-		{"*/test/*", "/test/bob/likes/cake", "path", true},
 		{"*test/*", "bob/test/likes/cake", "name", false},
-		{"*/test/*", "bob/test/likes/cake", "path", true},
 		{"*test/*", "bob/likes/test/cake", "name", false},
-
-		// More advanced name and path tests
 		{"*/test/*", "bob/likes/cake/test", "name", false},
 		{"*.jpg", ".jpg/elves/are/evil", "name", false},
-		{"*.jpg", ".jpg/elves/are/evil", "path", false},
-		{"*/test/*", "test1/test2/test3/test", "path", false},
-		{"*/ test /*", "test/test1/test2/test3/test", "path", false},
-		{"*/test/*", " test /I/have/Really/Long/hair", "path", false},
-		{"*XA==", "I/enjoy/morning/walks/XA==", "name ", true},
-		{"*XA==", "XA==/Height/is/a/social/construct", "path", false},
-		{"*W", "/Word//this/is a/trickyTest", "path", false},
-		{"*parser", "/This/might/mess up./the/parser", "name", true},
-		{"*", "/bla/bla/bla/ ", "name", true},
-		{"*LTIxNDc0ODM2NDgvLTE=", "What/A/Naughty/String/LTIxNDc0ODM2NDgvLTE=", "name", true},
-		{"LTIxNDc0ODM2NDgvLTE=", "LTIxNDc0ODM2NDgvLTE=/I/Am/One/Baaaaad/String", "path", false},
 		{"wq3YgNiB2ILYg9iE2IXYnNud3I/hoI7igIvigIzigI3igI7igI/igKrigKvigKzigK3igK7igaDi",
 			"An/Even/Bigger/String/wq3YgNiB2ILYg9iE2IXYnNud3I/hoI7igIvigIzigI3igI7igI/igKrigKvigKzigK3igK7igaDi", "name", false},
-		{"/", "funky/path/name", "path", false},
 		{"𝕿𝖍𝖊", "well/this/isAN/odd/font/THE", "name", false},
 		{"𝕿𝖍𝖊", "well/this/isAN/odd/font/The", "name", false},
 		{"𝕿𝖍𝖊", "well/this/isAN/odd/font/𝓣𝓱𝓮", "name", false},
 		{"𝕿𝖍𝖊", "what/a/strange/turn/of/events/𝓣he", "name", false},
 		{"𝕿𝖍𝖊", "well/this/isAN/odd/font/𝕿𝖍𝖊", "name", true},
 
-		// Regexp based.
+		// Path match tests - success cases.
+		{"*/test/*", "bob/test/likes/cake", "path", true},
+		{"*/test/*", "/test/bob/likes/cake", "path", true},
+
+		// Path match tests - failure cases.
+		{"*.jpg", ".jpg/elves/are/evil", "path", false},
+		{"*/test/*", "test1/test2/test3/test", "path", false},
+		{"*/ test /*", "test/test1/test2/test3/test", "path", false},
+		{"*/test/*", " test /I/have/Really/Long/hair", "path", false},
+		{"*XA==", "XA==/Height/is/a/social/construct", "path", false},
+		{"*W", "/Word//this/is a/trickyTest", "path", false},
+		{"LTIxNDc0ODM2NDgvLTE=", "LTIxNDc0ODM2NDgvLTE=/I/Am/One/Baaaaad/String", "path", false},
+		{"/", "funky/path/name", "path", false},
+
+		// Regexp based - success cases.
 		{"^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", "testbucket-1", "regex", true},
-		{"^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", "testbucket.", "regex", false},
 		{`^(\d+\.){3}\d+$`, "192.168.1.1", "regex", true},
+
+		// Regexp based - failure cases.
+		{"^[a-zA-Z][a-zA-Z0-9\\-]+[a-zA-Z0-9]$", "testbucket.", "regex", false},
 		{`^(\d+\.){3}\d+$`, "192.168.x.x", "regex", false},
 	}
 
