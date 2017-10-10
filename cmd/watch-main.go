@@ -23,7 +23,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -152,7 +151,6 @@ func mainWatch(ctx *cli.Context) error {
 
 	params := watchParams{
 		recursive: recursive,
-		accountID: fmt.Sprintf("%d", time.Now().Unix()),
 		events:    events,
 		prefix:    prefix,
 		suffix:    suffix,

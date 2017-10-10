@@ -18,20 +18,16 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 
@@ -55,7 +51,8 @@ func (f findMessage) JSON() string {
 }
 
 // nameMatch is similar to filepath.Match but only matches the
-// base path of the input.
+// base path of the input, if we couldn't find a match we
+// also proceed to look for similar strings alone and print it.
 //
 // pattern:
 // 	{ term }
@@ -74,6 +71,14 @@ func (f findMessage) JSON() string {
 func nameMatch(pattern, path string) bool {
 	matched, e := filepath.Match(pattern, filepath.Base(path))
 	errorIf(probe.NewError(e).Trace(pattern, path), "Unable to match with input pattern")
+	if !matched {
+		for _, pathComponent := range strings.Split(path, "/") {
+			matched = pathComponent == pattern
+			if matched {
+				break
+			}
+		}
+	}
 	return matched
 }
 
@@ -93,159 +98,180 @@ func regexMatch(pattern, path string) bool {
 	return matched
 }
 
-// olderThanMatch matches whether if the createTime is older than the allowed threshold.
-func olderThanMatch(threshold string, createTime time.Time) bool {
-	t, err := parseTime(threshold)
-	fatalIf(err.Trace(threshold), "Unable to parse input threshold value into time.Time")
-	return createTime.Before(t)
-}
-
-// newerThanMatch matches whether if the createTime is newer than the allowed threshold.
-func newerThanMatch(threshold string, createTime time.Time) bool {
-	t, err := parseTime(threshold)
-	fatalIf(err.Trace(threshold), "Unable to parse input threshold value into time.Time")
-	return createTime.After(t) || createTime.Equal(t)
-}
-
-// largerSizeMatch matches whether if the input size bytes is larger than the allowed threshold.
-func largerSizeMatch(bytesFmt string, size int64) bool {
-	i, e := humanize.ParseBytes(bytesFmt)
-	fatalIf(probe.NewError(e).Trace(bytesFmt), "Unable to parse input threshold value into size bytes")
-
-	return int64(i) < size
-}
-
-// smallerSizeMatch matches whether if the input size bytes is smaller than the allowed threshold.
-func smallerSizeMatch(bytesFmt string, size int64) bool {
-	i, e := humanize.ParseBytes(bytesFmt)
-	fatalIf(probe.NewError(e).Trace(bytesFmt), "Unable to parse input threshold value into size bytes")
-
-	return int64(i) > size
-}
-
-// doFindPrint prints the output in accordance with the supplied substitution arguments
-func doFindPrint(ctx *cli.Context, fileContent contentMessage) {
-	fileContent.Key = stringsReplace(ctx.String("print"), fileContent)
-	printMsg(findMessage{fileContent})
-}
-
-// doFindExec executes the input command line, additionally formats input
+// execFind executes the input command line, additionally formats input
 // for the command line in accordance with subsititution arguments.
-func doFindExec(ctx *cli.Context, fileContent contentMessage) {
-	commandString := stringsReplace(ctx.String("exec"), fileContent)
-	commandArgs := strings.Split(commandString, " ")
+func execFind(command string) {
+	commandArgs := strings.Split(command, " ")
 
 	cmd := exec.Command(commandArgs[0], commandArgs[1:]...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
 		console.Fatalln(err)
-		console.Fatalln()
 	}
-	console.Println(string(out.Bytes()))
+	console.Println(out.String())
 }
 
-// doFindWatch - enables listening on the input path, listens for all file/object
+// watchFind - enables listening on the input path, listens for all file/object
 // created actions. Asynchronously executes the input command line, also allows
 // formatting for the command line in accordance with subsititution arguments.
-func doFindWatch(ctx *cli.Context, path string) {
+func watchFind(ctx *findContext) {
+	// Watch is not enabled, return quickly.
+	if !ctx.watch {
+		return
+	}
 	params := watchParams{
 		recursive: true,
-		accountID: fmt.Sprintf("%d", time.Now().Unix()),
 		events:    []string{"put"},
 	}
+	watchObj, err := ctx.clnt.Watch(params)
+	fatalIf(err.Trace(ctx.targetAlias), "Cannot watch with given params")
 
-	// Extract the hostname alias from the path name if present
-	targetAlias, _, _, err := expandAlias(path)
-	fatalIf(err.Trace(path), "Unable to expand alias.")
+	// Enables users to kill using the control + c
+	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
 
-	clnt, content, err := url2Stat(path)
-	fatalIf(err.Trace(path), "Unable to lookup.")
+	// Loop until user CTRL-C the command line.
+	for {
+		select {
+		case <-trapCh:
+			console.Println()
+			close(watchObj.doneChan)
+			return
+		case event, ok := <-watchObj.Events():
+			if !ok {
+				return
+			}
 
-	fileContent := parseContent(content)
-	watchEventsFind(ctx, clnt, params, targetAlias, fileContent)
+			time, e := time.Parse(time.RFC822, event.Time)
+			if e != nil {
+				errorIf(probe.NewError(e).Trace(event.Time), "Unable to parse event time")
+				continue
+			}
+
+			find(ctx, contentMessage{
+				Key:  getAliasedPath(ctx, event.Path),
+				Time: time,
+				Size: event.Size,
+			})
+
+		case err, ok := <-watchObj.Errors():
+			if !ok {
+				return
+			}
+			errorIf(err, "Unable to watch for events.")
+			return
+		}
+	}
+}
+
+// Descend at most (a non-negative integer) levels of files
+// below the starting-prefix and trims the suffix. This function
+// returns path as is without manipulation if the maxDepth is 0
+// i.e (not set).
+func trimSuffixAtMaxDepth(startPrefix, path, separator string, maxDepth uint) string {
+	if maxDepth == 0 {
+		return path
+	}
+	// Remove the requested prefix from consideration, maxDepth is
+	// only considered for all other levels excluding the starting prefix.
+	path = strings.TrimPrefix(path, startPrefix)
+	pathComponents := strings.SplitAfter(path, separator)
+	if len(pathComponents) >= int(maxDepth) {
+		pathComponents = pathComponents[:maxDepth]
+	}
+	pathComponents = append([]string{startPrefix}, pathComponents...)
+	return strings.Join(pathComponents, "")
+}
+
+// Get aliased path used finally in printing, trim paths to ensure
+// that we have removed the fully qualified paths and original
+// start prefix (targetAlias) is retained. This function also honors
+// maxDepth if set then the resultant path will be trimmed at requested
+// maxDepth.
+func getAliasedPath(ctx *findContext, path string) string {
+	separator := string(ctx.clnt.GetURL().Separator)
+	prefixPath := ctx.clnt.GetURL().String()
+	var aliasedPath string
+	if ctx.targetAlias != "" {
+		aliasedPath = ctx.targetAlias + strings.TrimPrefix(path, prefixPath)
+	} else {
+		aliasedPath = path
+		// look for prefix path, if found filter at that, Watch calls
+		// for example always provide absolute path. So for relative
+		// prefixes we need to employ this kind of code.
+		if i := strings.Index(path, prefixPath); i > 0 {
+			aliasedPath = path[i:]
+		}
+	}
+	return trimSuffixAtMaxDepth(ctx.targetURL, aliasedPath, separator, ctx.maxDepth)
+}
+
+func find(ctx *findContext, fileContent contentMessage) {
+	// Maxdepth can modify the filepath to end as a directory prefix
+	// to be consistent with the find behavior, we wont list directories
+	// so any paths which end with a separator are ignored.
+	if strings.HasSuffix(fileContent.Key, string(ctx.clnt.GetURL().Separator)) {
+		return
+	}
+
+	// Match the incoming content, didn't match return.
+	if !matchFind(ctx, fileContent) {
+		return
+	} // For all matching content
+	// proceed to either exec, format the output string.
+	switch {
+	case ctx.execCmd != "":
+		execFind(stringsReplace(ctx.execCmd, fileContent))
+	case ctx.printFmt != "":
+		fileContent.Key = stringsReplace(ctx.printFmt, fileContent)
+	}
+	printMsg(findMessage{fileContent})
 }
 
 // doFind - find is main function body which interprets and executes
 // all the input parameters.
-func doFind(targetURL string, clnt Client, ctx *cli.Context) error {
-	targetAlias, _, _, err := expandAlias(targetURL)
-	fatalIf(err.Trace(targetURL), "Unable to expand alias")
+func doFind(ctx *findContext) error {
+	// If watch is enabled we will wait on the prefix perpetually
+	// for all I/O events until cancelled by user, if watch is not enabled
+	// following defer is a no-op.
+	defer watchFind(ctx)
 
-	separator := string(clnt.GetURL().Separator)
 	// iterate over all content which is within the given directory
-	for content := range clnt.List(true, false, DirNone) {
+	for content := range ctx.clnt.List(true, false, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.
 			case BrokenSymlink:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list broken link.")
+				errorIf(content.Err.Trace(ctx.clnt.GetURL().String()), "Unable to list broken link.")
 				continue
 			case TooManyLevelsSymlink:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list too many levels link.")
+				errorIf(content.Err.Trace(ctx.clnt.GetURL().String()), "Unable to list too many levels link.")
 				continue
 			case PathNotFound:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				errorIf(content.Err.Trace(ctx.clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			case PathInsufficientPermission:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				errorIf(content.Err.Trace(ctx.clnt.GetURL().String()), "Unable to list folder.")
 				continue
 			case ObjectOnGlacier:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "")
+				errorIf(content.Err.Trace(ctx.clnt.GetURL().String()), "")
 				continue
 			}
-			fatalIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+			fatalIf(content.Err.Trace(ctx.clnt.GetURL().String()), "Unable to list folder.")
 			continue
 		}
 
-		fileContent := parseContent(content)
-		if targetAlias != "" {
-			fileContent.Key = path.Join(targetAlias, fileContent.Key)
-		}
+		// Executes all the find functionalities.
+		find(ctx, contentMessage{
+			Key:  getAliasedPath(ctx, content.URL.String()),
+			Time: content.Time.Local(),
+			Size: content.Size,
+		})
 
-		if ctx.String("maxdepth") != "" {
-			maxDepth, e := strconv.Atoi(ctx.String("maxdepth"))
-			fatalIf(probe.NewError(e), "Error parsing string passed to flag maxdepth")
-
-			newPath := ""
-
-			// We are going to convert path into newPath based on the
-			// maxdepth value, split the strings at separator properly.
-			pathParts := strings.SplitAfter(fileContent.Key, separator)
-
-			// Check if max-depth is 2, but if the given object only
-			// has a maximum depth of 1 use that instead.
-			if (len(pathParts)-1) < maxDepth || maxDepth < 0 {
-				maxDepth = len(pathParts) - 1
-			}
-
-			// Construct new path based on the requested maxDepth.
-			for j := 0; j <= maxDepth; j++ {
-				newPath += pathParts[j]
-			}
-
-			fileContent.Key = newPath
-		}
-
-		// Maxdepth can modify the filepath to end as a directory prefix
-		// to be consistent with the find behavior, we wont list directories
-		// so any paths which end with a separator are ignored.
-		if strings.HasSuffix(fileContent.Key, separator) {
-			continue
-		}
-
-		match := doFindMatch(ctx, fileContent)
-		if !ctx.Bool("watch") && match && ctx.String("exec") != "" {
-			doFindExec(ctx, fileContent)
-		} else if match && ctx.String("print") != "" {
-			doFindPrint(ctx, fileContent)
-		} else if match {
-			printMsg(findMessage{fileContent})
-		}
-		if ctx.Bool("watch") {
-			doFindWatch(ctx, ctx.Args().Get(0))
-		}
 	}
+
+	// Success, notice watch will execute in defer only if enabled and this call
+	// will return after watch is cancelled.
 	return nil
 }
 
@@ -316,89 +342,33 @@ func stringsReplace(args string, fileContent contentMessage) string {
 	return str
 }
 
-// watchEventsFind used in conjunction with doFindWatch method to detect
-// and preform desired action when an object is created
-func watchEventsFind(ctx *cli.Context, clnt Client, params watchParams, alias string, fileContent contentMessage) {
-	watchObj, err := clnt.Watch(params)
-	fatalIf(err.Trace(alias), "Cannot watch with given params")
-
-	// enables users to kill using the control + c
-	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM)
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	// opens a channel of all content created on the server, any errors detected,
-	// and scanning for the user input (Control + C)
-	go func() {
-		defer wg.Done()
-
-		// loop until user kills the channel input
-		for {
-			select {
-			case <-trapCh:
-				console.Println()
-				close(watchObj.doneChan)
-				return
-			case event, ok := <-watchObj.Events():
-				if !ok {
-					return
-				}
-
-				time, _ := time.Parse(time.RFC822, event.Time)
-				fileContent := contentMessage{
-					Key:  alias + strings.TrimPrefix(event.Path, clnt.GetURL().String()),
-					Time: time,
-					Size: event.Size,
-				}
-
-				// check to see if the newly create object matches the given params
-				match := doFindMatch(ctx, fileContent)
-				if match && ctx.String("exec") != "" {
-					doFindExec(ctx, fileContent)
-				} else if match && ctx.String("print") != "" {
-					doFindPrint(ctx, fileContent)
-				} else if match {
-					printMsg(findMessage{fileContent})
-				}
-
-			case err, ok := <-watchObj.Errors():
-				if !ok {
-					return
-				}
-				errorIf(err, "Unable to watch for events.")
-				return
-			}
-		}
-	}()
-
-	wg.Wait()
-}
-
-// doFindMatch matches whether fileContent matches appropriately with standard
+// matchFind matches whether fileContent matches appropriately with standard
 // "pattern matching" flags requested by the user, such as "name", "path", "regex" ..etc.
-func doFindMatch(ctx *cli.Context, fileContent contentMessage) (match bool) {
+func matchFind(ctx *findContext, fileContent contentMessage) (match bool) {
 	match = true
-	if !ctx.Bool("or") {
-		if ctx.String("ignore") != "" {
-			match = !pathMatch(ctx.String("ignore"), fileContent.Key)
-		}
-		return match
+	if match && ctx.ignorePattern != "" {
+		match = !pathMatch(ctx.ignorePattern, fileContent.Key)
 	}
-	if ctx.String("name") != "" {
-		match = nameMatch(ctx.String("name"), fileContent.Key)
-	} else if ctx.String("path") != "" {
-		match = pathMatch(ctx.String("path"), fileContent.Key)
-	} else if ctx.String("regex") != "" {
-		match = regexMatch(ctx.String("regex"), fileContent.Key)
-	} else if ctx.String("older") != "" {
-		match = olderThanMatch(ctx.String("older"), fileContent.Time)
-	} else if ctx.String("newer") != "" {
-		match = newerThanMatch(ctx.String("newer"), fileContent.Time)
-	} else if ctx.String("larger") != "" {
-		match = largerSizeMatch(ctx.String("larger"), fileContent.Size)
-	} else if ctx.String("smaller") != "" {
-		match = smallerSizeMatch(ctx.String("smaller"), fileContent.Size)
+	if match && ctx.namePattern != "" {
+		match = nameMatch(ctx.namePattern, fileContent.Key)
+	}
+	if match && ctx.pathPattern != "" {
+		match = pathMatch(ctx.pathPattern, fileContent.Key)
+	}
+	if match && ctx.regexPattern != "" {
+		match = regexMatch(ctx.regexPattern, fileContent.Key)
+	}
+	if match && !ctx.olderThan.IsZero() {
+		match = fileContent.Time.Before(ctx.olderThan)
+	}
+	if match && !ctx.newerThan.IsZero() {
+		match = fileContent.Time.After(ctx.newerThan) || fileContent.Time.Equal(ctx.newerThan)
+	}
+	if match && ctx.largerSize > 0 {
+		match = int64(ctx.largerSize) < fileContent.Size
+	}
+	if match && ctx.smallerSize > 0 {
+		match = int64(ctx.smallerSize) > fileContent.Size
 	}
 	return match
 }
@@ -450,7 +420,7 @@ func getShareURL(path string) string {
 	fatalIf(err.Trace(path), "Unable to expand alias")
 
 	clnt, err := newClientFromAlias(targetAlias, targetURLFull)
-	fatalIf(err.Trace(targetAlias, targetURLFull), "Unable to newClientFromAlias")
+	fatalIf(err.Trace(targetAlias, targetURLFull), "Unable to initialize client instance from alias.")
 
 	content, err := clnt.Stat(false)
 	fatalIf(err.Trace(targetURLFull, targetAlias), "Unable to lookup file/object.")
