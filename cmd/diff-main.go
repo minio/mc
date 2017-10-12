@@ -174,7 +174,7 @@ func doDiffMain(firstURL, secondURL string) error {
 	}
 
 	// Diff first and second urls.
-	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL) {
+	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL, nil) {
 		if diffMsg.Error != nil {
 			errorIf(diffMsg.Error, "Unable to calculate objects difference.")
 			// Ignore error and proceed to next object.
