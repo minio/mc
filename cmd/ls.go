@@ -41,6 +41,7 @@ type contentMessage struct {
 	Time     time.Time `json:"lastModified"`
 	Size     int64     `json:"size"`
 	Key      string    `json:"key"`
+	ETag     string    `json:"etag"`
 }
 
 // String colorized string message.
@@ -79,6 +80,9 @@ func parseContent(c *clientContent) contentMessage {
 	}()
 
 	content.Size = c.Size
+	md5sum := strings.TrimPrefix(c.ETag, "\"")
+	md5sum = strings.TrimSuffix(md5sum, "\"")
+	content.ETag = md5sum
 	// Convert OS Type to match console file printing style.
 	content.Key = func() string {
 		switch {
