@@ -142,7 +142,7 @@ func watchFind(ctx *findContext) {
 				return
 			}
 
-			time, e := time.Parse(time.RFC822, event.Time)
+			time, e := time.Parse(time.RFC3339, event.Time)
 			if e != nil {
 				errorIf(probe.NewError(e).Trace(event.Time), "Unable to parse event time")
 				continue
