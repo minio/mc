@@ -193,7 +193,7 @@ func getAliasedPath(ctx *findContext, path string) string {
 	prefixPath := ctx.clnt.GetURL().String()
 	var aliasedPath string
 	if ctx.targetAlias != "" {
-		aliasedPath = ctx.targetAlias + strings.TrimPrefix(path, prefixPath)
+		aliasedPath = ctx.targetAlias + strings.TrimPrefix(path, ctx.targetFullURL)
 	} else {
 		aliasedPath = path
 		// look for prefix path, if found filter at that, Watch calls
@@ -346,17 +346,25 @@ func stringsReplace(args string, fileContent contentMessage) string {
 // "pattern matching" flags requested by the user, such as "name", "path", "regex" ..etc.
 func matchFind(ctx *findContext, fileContent contentMessage) (match bool) {
 	match = true
+	prefixPath := ctx.targetURL
+	// Add separator only if targetURL doesn't already have separator.
+	if !strings.HasPrefix(prefixPath, string(ctx.clnt.GetURL().Separator)) {
+		prefixPath = ctx.targetURL + string(ctx.clnt.GetURL().Separator)
+	}
+	// Trim the prefix such that we will apply file path matching techniques
+	// on path excluding the starting prefix.
+	path := strings.TrimPrefix(fileContent.Key, prefixPath)
 	if match && ctx.ignorePattern != "" {
-		match = !pathMatch(ctx.ignorePattern, fileContent.Key)
+		match = !pathMatch(ctx.ignorePattern, path)
 	}
 	if match && ctx.namePattern != "" {
-		match = nameMatch(ctx.namePattern, fileContent.Key)
+		match = nameMatch(ctx.namePattern, path)
 	}
 	if match && ctx.pathPattern != "" {
-		match = pathMatch(ctx.pathPattern, fileContent.Key)
+		match = pathMatch(ctx.pathPattern, path)
 	}
 	if match && ctx.regexPattern != "" {
-		match = regexMatch(ctx.regexPattern, fileContent.Key)
+		match = regexMatch(ctx.regexPattern, path)
 	}
 	if match && !ctx.olderThan.IsZero() {
 		match = fileContent.Time.Before(ctx.olderThan)

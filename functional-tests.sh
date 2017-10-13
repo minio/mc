@@ -377,6 +377,41 @@ function test_mirror_list_objects()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+## Tests find command with --older set to 1day, should be empty.
+function test_find_empty() {
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    bucket_name="mc-test-bucket-$RANDOM"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
+
+    # find --older 1 day should be empty, so we compare with empty string.
+    diff -bB <(echo "") <("${MC_CMD[@]}" --json find "${SERVER_ALIAS}/${bucket_name}" --older 1d | jq -r .key | sed "s/${SERVER_ALIAS}\/${bucket_name}\///g") >/dev/null 2>&1
+    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "mirror and list differs"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+## Tests find command, should list.
+function test_find() {
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    bucket_name="mc-test-bucket-$RANDOM"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
+
+    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json find "${SERVER_ALIAS}/${bucket_name}" | jq -r .key | sed "s/${SERVER_ALIAS}\/${bucket_name}\///g") >/dev/null 2>&1
+    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "mirror and list differs"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function test_watch_object()
 {
     show "${FUNCNAME[0]}"
@@ -438,6 +473,8 @@ function run_test()
     test_presigned_get_object
     test_cat_object
     test_mirror_list_objects
+    test_find
+    test_find_empty
     if [ -z "$MINT_MODE" ]; then
         test_watch_object
     fi
@@ -510,5 +547,5 @@ function main()
     exit "$rv"
 }
 
-__init__ "$@" 
+__init__ "$@"
 main "$@"

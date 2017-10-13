@@ -206,9 +206,10 @@ type findContext struct {
 	watch         bool
 
 	// Internal values
-	targetAlias string
-	targetURL   string
-	clnt        Client
+	targetAlias   string
+	targetURL     string
+	targetFullURL string
+	clnt          Client
 }
 
 // mainFind - handler for mc find commands
@@ -254,24 +255,30 @@ func mainFind(ctx *cli.Context) error {
 		fatalIf(probe.NewError(e).Trace(ctx.String("smaller")), "Unable to parse input bytes.")
 	}
 
-	targetAlias, _, _, err := expandAlias(args[0])
+	targetAlias, _, hostCfg, err := expandAlias(args[0])
 	fatalIf(err.Trace(args[0]), "Unable to expand alias.")
 
+	var targetFullURL string
+	if hostCfg != nil {
+		targetFullURL = hostCfg.URL
+	}
+
 	return doFind(&findContext{
-		Context:      ctx,
-		maxDepth:     ctx.Uint("maxdepth"),
-		execCmd:      ctx.String("exec"),
-		printFmt:     ctx.String("print"),
-		namePattern:  ctx.String("name"),
-		pathPattern:  ctx.String("path"),
-		regexPattern: ctx.String("regex"),
-		olderThan:    olderThan,
-		newerThan:    newerThan,
-		largerSize:   largerSize,
-		smallerSize:  smallerSize,
-		watch:        ctx.Bool("watch"),
-		targetAlias:  targetAlias,
-		targetURL:    args[0],
-		clnt:         clnt,
+		Context:       ctx,
+		maxDepth:      ctx.Uint("maxdepth"),
+		execCmd:       ctx.String("exec"),
+		printFmt:      ctx.String("print"),
+		namePattern:   ctx.String("name"),
+		pathPattern:   ctx.String("path"),
+		regexPattern:  ctx.String("regex"),
+		olderThan:     olderThan,
+		newerThan:     newerThan,
+		largerSize:    largerSize,
+		smallerSize:   smallerSize,
+		watch:         ctx.Bool("watch"),
+		targetAlias:   targetAlias,
+		targetURL:     args[0],
+		targetFullURL: targetFullURL,
+		clnt:          clnt,
 	})
 }
