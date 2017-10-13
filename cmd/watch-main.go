@@ -55,7 +55,7 @@ var (
 
 var watchCmd = cli.Command{
 	Name:   "watch",
-	Usage:  "Watch for files and objects events.",
+	Usage:  "Watch for file and object events.",
 	Action: mainWatch,
 	Before: setGlobalsFromContext,
 	Flags:  append(watchFlags, globalFlags...),

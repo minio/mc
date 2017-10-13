@@ -132,17 +132,17 @@ EXAMPLES:
    03. Print only the object names without the directory component under this bucket.
        $ {{.HelpName}} s3/bucket --name "*" -print {base}
 
-   04. Copy all jpg files from AWS S3 photos bucket to minio play test bucket.
-       $ {{.HelpName}} s3/photos --name "*.jpg" --exec "mc cp {} play/test"
+   04. Copy all jpeg files from AWS S3 "s3/photos" bucket to minio "play/photos" bucket.
+       $ {{.HelpName}} s3/photos --name "*.jpg" --exec "mc cp {} play/photos"
 
-   05. Find all jpg images from any folder prefixed with album.
+   05. Find all jpeg images from any folder prefixed with "album".
        $ {{.HelpName}} s3/photos --name "*.jpg" --path "*/album*/*"
 
-   06. Find all jpgs, pngs, and gifs using regex
+   06. Find all files with extensions jpeg, png, and gif using regex.
        $ {{.HelpName}} s3/photos --regex "(?i)\.(jpg|png|gif)$"
 
-   07. Mirror all photos from s3 bucket *coninuously* from the s3 bucket to minio play test bucket.
-       $ {{.HelpName}} s3/buck --name "*foo" --watch --exec "mc cp {} play/test"
+   07. Find all jpeg images from "s3/bucket" and copy to minio "play/bucket" *continuously*.
+       $ {{.HelpName}} s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
 
    08. Generate self expiring urls (7 days), for all objects between 64 MB, and 1 GB in size.
        $ {{.HelpName}} s3 --larger 64MB --smaller 1GB --print {url}

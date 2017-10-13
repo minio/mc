@@ -1,24 +1,26 @@
-# Minio Client Quickstart Guide [![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io)
+# Minio Client Quickstart Guide
+[![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io) [![Go Report Card](https://goreportcard.com/badge/minio/mc)](https://goreportcard.com/report/minio/mc) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/mc.svg?maxAge=604800)](https://hub.docker.com/r/minio/mc/) [![Snap Status](https://build.snapcraft.io/badge/minio/mc.svg)](https://build.snapcraft.io/user/minio/mc)
 
-Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
+Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff, find etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```
-ls            List files and folders.
-mb            Make a bucket or folder.
-cat           Display contents of a file.
-pipe          Write contents of stdin to target. When no target is specified, it writes to stdout.
-share         Generate URL for sharing.
-cp            Copy one or more objects to a target.
-mirror        Mirror folders recursively from a single source to single destination.
-diff          Compute differences between two folders.
-rm            Remove file or bucket [WARNING: Use with care].
-events        Manage bucket notification.
-watch         Watch for events on object storage and filesystem.
-policy	      Set public policy on bucket or prefix.
-session       Manage saved sessions of cp and mirror operations.
-config        Manage configuration file.
-update        Check for a new software update.
-version       Print version.
+ls       List files and folders.
+mb       Make a bucket or a folder.
+cat      Display file and object contents.
+pipe     Redirect STDIN to an object or file or STDOUT.
+share    Generate URL for sharing.
+cp       Copy files and objects.
+mirror   Mirror buckets and folders.
+find     Finds files which match the given set of parameters.
+diff     List objects with size difference or missing between two folders or buckets.
+rm       Remove files and objects.
+events   Manage object notifications.
+watch    Watch for file and object events.
+policy   Manage anonymous access to objects.
+session  Manage saved sessions for cp command.
+config   Manage mc configuration file.
+update   Check for a new software update.
+version  Print version info.
 ```
 
 ## Docker Container
@@ -56,8 +58,6 @@ mc --help
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
 |GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
-|         |32-bit Intel|https://dl.minio.io/client/mc/release/linux-386/mc |
-|         |32-bit ARM|https://dl.minio.io/client/mc/release/linux-arm/mc |
 
 ```sh
 chmod +x mc
@@ -78,29 +78,9 @@ Every time a new version is pushed to the store, you will get it updated automat
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
 |Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
-|                 |32-bit|https://dl.minio.io/client/mc/release/windows-386/mc.exe  |
 
 ```sh
 mc.exe --help
-```
-
-## FreeBSD
-### Binary Download
-| Platform | Architecture | URL |
-| ---------- | -------- |------|
-|FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc |
-
-```sh
-chmod 755 mc
-./mc --help
-```
-
-## Solaris/Illumos
-### From Source
-
-```sh
-go get -u github.com/minio/mc
-mc --help
 ```
 
 ## Install from Source
@@ -113,7 +93,6 @@ go get -d github.com/minio/mc
 cd ${GOPATH}/src/github.com/minio/mc
 make
 ```
-
 
 ## Add a Cloud Storage Service
 If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to [everyday use](#everyday-use).
@@ -199,4 +178,3 @@ cat      cp       events   mb       pipe     rm       share    version
 
 ## Contribute to Minio Project
 Please follow Minio [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
-

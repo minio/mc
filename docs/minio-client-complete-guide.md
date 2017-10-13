@@ -3,24 +3,23 @@
 Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```sh
-
-ls            List files and folders.
-mb            Make a bucket or folder.
-cat           Display contents of a file.
-pipe          Write contents of stdin to target. When no target is specified, it writes to stdout.
-share         Generate URL for sharing.
-cp            Copy one or more objects to a target.
-mirror        Mirror folders recursively from a single source to single destination.
-diff          Compute differences between two folders.
-rm            Remove file or bucket [WARNING: Use with care].
-events        Manage bucket notification.
-watch         Watch for events on object storage and filesystem.
-policy	      Set public policy on bucket or prefix.
-session       Manage saved sessions of cp and mirror operations.
-config        Manage configuration file.
-update        Check for a new software update.
-version       Print version.
-
+ls       List files and folders.
+mb       Make a bucket or a folder.
+cat      Display file and object contents.
+pipe     Redirect STDIN to an object or file or STDOUT.
+share    Generate URL for sharing.
+cp       Copy files and objects.
+mirror   Mirror buckets and folders.
+find     Finds files which match the given set of parameters.
+diff     List objects with size difference or missing between two folders or buckets.
+rm       Remove files and objects.
+events   Manage object notifications.
+watch    Watch for file and object events.
+policy   Manage anonymous access to objects.
+session  Manage saved sessions for cp command.
+config   Manage mc configuration file.
+update   Check for a new software update.
+version  Print version info.
 ```
 
 ## 1.  Download Minio Client
@@ -28,16 +27,10 @@ version       Print version.
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
 |GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc|
-||32-bit Intel|https://dl.minio.io/client/mc/release/linux-386/mc|
-||32-bit ARM|https://dl.minio.io/client/mc/release/linux-arm/mc|
 |Apple OS X|64-bit Intel|https://dl.minio.io/client/mc/release/darwin-amd64/mc|
 |Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe|
-||32-bit|https://dl.minio.io/client/mc/release/windows-386/mc.exe |
-|FreeBSD|64-bit|https://dl.minio.io/client/mc/release/freebsd-amd64/mc|
-|Solaris/Illumos|64-bit|https://dl.minio.io/client/mc/release/solaris-amd64/mc|
 
 ### Install from Homebrew
-
 Install minio packages using [Homebrew](http://brew.sh/) 
 
 ```sh
@@ -46,7 +39,6 @@ mc --help
 ```
 
 ### Install from Source
-
 Source installation is intended only for developers and advanced users. `mc update` command does not support upgrading from source based installation. Please download official releases from https://minio.io/downloads/#minio-client.
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
@@ -62,49 +54,24 @@ make
 ### GNU/Linux
 
 ```sh
-
 chmod +x mc
 ./mc --help
-
 ```
 
-### OS X
+### macOS
 
 ```sh
-
 chmod 755 mc
 ./mc --help
-
 ```
 
 ### Microsoft Windows
 
 ```sh
-
 mc.exe --help
-
-```
-
-### Solaris/Illumos
-
-```sh
-
-chmod 755 mc
-./mc --help
-
-```
-
-### FreeBSD
-
-```sh
-
-chmod 755 mc
-./mc --help
-
 ```
 
 ## 3. Add a Cloud Storage Service
-
 Note: If you are planning to use `mc` only on POSIX compatible filesystems, you may skip this step and proceed to **Step 4**.
 
 To add one or more Amazon S3 compatible hosts, please follow the instructions below. `mc` stores all its configuration information in ``~/.mc/config.json`` file.
@@ -120,7 +87,6 @@ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY
 Alias is simply a short name to you cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
 
 ### Example - Minio Cloud Storage
-
 Minio server displays URL, access and secret keys.
 
 
@@ -131,7 +97,6 @@ mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80
 ```
 
 ### Example - Amazon S3 Cloud Storage
-
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
 
 ```sh
@@ -141,7 +106,6 @@ mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo
 ```
 
 ### Example - Google Cloud Storage
-
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)
 
 ```sh
@@ -153,7 +117,6 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
 ## 4. Test Your Setup
-
 `mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted Minio server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
 *Example:*
@@ -172,7 +135,6 @@ mc ls play
 ```
 
 ## 5. Everyday Use
-
 You may add shell aliases to override your common Unix tools.
 
 ```sh
@@ -188,7 +150,6 @@ alias pipe='mc pipe'
 ## 6. Global Options
 
 ### Option [--debug]
-
 Debug option enables debug output to console. 
 
 *Example: Display verbose debug output for `ls` command.* 
@@ -226,7 +187,6 @@ mc: <DEBUG> Response Time:  1.220112837s
 ```
 
 ### Option [--json]
-
 JSON option enables parseable output in JSON format.
 
 *Example: List all buckets from Minio play service.*
@@ -242,35 +202,30 @@ mc --json ls play
 ```
 
 ### Option [--no-color]
-
 This option disables the color theme. It useful for dumb terminals.
 
 ### Option [--quiet]
-
 Quiet option suppress chatty console output.
 
 ### Option [--config-folder]
-
 Use this option to set a custom config path.
 
 ### Option [ --insecure]
-
 Skip SSL certificate verification.
 
 ## 7. Commands
 
 |   |   | |
 |:---|:---|:---|
-|[**ls** - List buckets and objects](#ls)   |[**mb** - Make a bucket](#mb)   | [**cat** - Concatenate an object](#cat)  |
-|[**cp** - Copy objects](#cp)   | [**rm** - Remove objects](#rm)  | [**pipe** - Pipe to an object](#pipe)  |
-| [**share** - Share access](#share)  |[**mirror** - Mirror buckets](#mirror)   |[**diff** - Diff buckets](#diff)   |
-|[**policy** - Set public policy on bucket or prefix](#policy)   |[**session** - Manage saved sessions](#session)   | [**config** - Manage config file](#config)  |
-| [**watch** - Watch for events](#watch)   | [**events** - Manage events on your buckets](#events)   |   | 
+|[**ls** - List buckets and objects](#ls)   |[**mb** - Make a bucket](#mb)  | [**cat** - Concatenate an object](#cat)  |
+|[**cp** - Copy objects](#cp) | [**rm** - Remove objects](#rm)  | [**pipe** - Pipe to an object](#pipe) |
+| [**share** - Share access](#share)  |[**mirror** - Mirror buckets](#mirror)  | [**find** - Find files and objects](#find) |
+| [**diff** - Diff buckets](#diff) |[**policy** - Set public policy on bucket or prefix](#policy)  |[**session** - Manage saved sessions](#session) |
+| [**config** - Manage config file](#config)  | [**watch** - Watch for events](#watch)  | [**events** - Manage events on your buckets](#events)  |
 | [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  |   |
 
 
 ###  Command `ls` - List Objects
-
 `ls` command lists files, objects and objects. Use `--incomplete` flag to list partially copied content.
 
 ```sh
@@ -279,9 +234,9 @@ USAGE:
    mc ls [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h					Help of ls.
-  --recursive, -r				List recursively.
-  --incomplete, -I				List incomplete uploads.
+  --help, -h                       Show help.
+  --recursive, -r		   List recursively.
+  --incomplete, -I		   List incomplete uploads.
   
 ```
 
@@ -309,8 +264,8 @@ USAGE:
    mc mb [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --help, -h					Help of mb.
-  --region "us-east-1"			Specify bucket region. Defaults to ‘us-east-1’.
+  --help, -h                       Show help.
+  --region "us-east-1"		   Specify bucket region. Defaults to ‘us-east-1’.
   
 ```
 
@@ -336,7 +291,7 @@ USAGE:
    mc cat [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
-  --help, -h					Help of cat.
+  --help, -h                       Show help.
 
 ```
 
@@ -381,8 +336,8 @@ USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
    
 FLAGS:
-  --help, -h					Help of cp.
-  --recursive, -r				Copy recursively.
+  --help, -h                       Show help.
+  --recursive, -r		   Copy recursively.
 
 ```
 
@@ -405,14 +360,14 @@ USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h				Show this help.
-  --recursive, -r			Remove recursively.
-  --force					Force a dangerous remove operation.
-  --prefix					Remove objects matching this prefix.
-  --incomplete, -I			Remove an incomplete upload(s).
-  --fake					Perform a fake remove operation.
-  --stdin					Read object list from STDIN.
-  --older-than value        Remove objects older than N days. (default: 0)
+  --help, -h                       Show help.
+  --recursive, -r	       	   Remove recursively.
+  --force			   Force a dangerous remove operation.
+  --prefix			   Remove objects matching this prefix.
+  --incomplete, -I		   Remove an incomplete upload(s).
+  --fake			   Perform a fake remove operation.
+  --stdin			   Read object list from STDIN.
+  --older-than value               Remove objects older than N days. (default: 0)
 ```
 
 *Example: Remove a single object.*
@@ -462,7 +417,7 @@ USAGE:
    mc share [FLAGS] COMMAND
 
 FLAGS:
-  --help, -h					Help of share.
+  --help, -h                       Show help.
 
 COMMANDS:
    download	  Generate URLs for download access.
@@ -472,7 +427,6 @@ COMMANDS:
 ```
 
 ### Sub-command `share download` - Share Download
-
 `share download` command generates URLs to download objects without requiring access and secret keys. Expiry option sets the maximum validity period (no more than 7 days), beyond which the access is revoked automatically.
 
 ```sh
@@ -481,9 +435,9 @@ USAGE:
    mc share download [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
-  --help, -h					Help of share download.
-  --recursive, -r				Share all objects recursively.
-  --expire, -E "168h"			Set expiry in NN[h|m|s].
+  --help, -h                       Show help.
+  --recursive, -r		   Share all objects recursively.
+  --expire, -E "168h"		   Set expiry in NN[h|m|s].
 
 ```
 
@@ -499,7 +453,6 @@ Share: https://play.minio.io:9000/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMA
 ```
 
 #### Sub-command `share upload` - Share Upload
-
 `share upload` command generates a ‘curl’ command to upload objects without requiring access/secret keys. Expiry option sets the maximum validity period (no more than 7 days), beyond which the access is revoked automatically. Content-type option restricts uploads to only certain type of files.
 
 ```sh
@@ -508,25 +461,22 @@ USAGE:
    mc share upload [OPTIONS] TARGET [TARGET...]
 
 OPTIONS:
-  --help, -h					Help of share upload.
-  --recursive, -r				Recursively upload any object matching the prefix.
-  --expire, -E "168h"			Set expiry in NN[h|m|s].
+  --help, -h                       Show help.
+  --recursive, -r   		   Recursively upload any object matching the prefix.
+  --expire, -E "168h"		   Set expiry in NN[h|m|s].
 
 ```
 
 *Example: Generate a `curl` command to enable upload access to `play/mybucket/myotherobject.txt`. User replaces `<FILE>` with the actual filename to upload*
 
 ```sh
-
 mc share upload play/mybucket/myotherobject.txt
 URL: https://play.minio.io:9000/mybucket/myotherobject.txt
 Expire: 7 days 0 hours 0 minutes 0 seconds
 Share: curl https://play.minio.io:9000/mybucket -F x-amz-date=20160408T182356Z -F x-amz-signature=de343934bd0ba38bda0903813b5738f23dde67b4065ea2ec2e4e52f6389e51e1 -F bucket=mybucket -F policy=eyJleHBpcmF0aW9uIjoiMjAxNi0wNC0xNVQxODoyMzo1NS4wMDdaIiwiY29uZGl0aW9ucyI6W1siZXEiLCIkYnVja2V0IiwibXlidWNrZXQiXSxbImVxIiwiJGtleSIsIm15b3RoZXJvYmplY3QudHh0Il0sWyJlcSIsIiR4LWFtei1kYXRlIiwiMjAxNjA0MDhUMTgyMzU2WiJdLFsiZXEiLCIkeC1hbXotYWxnb3JpdGhtIiwiQVdTNC1ITUFDLVNIQTI1NiJdLFsiZXEiLCIkeC1hbXotY3JlZGVudGlhbCIsIlEzQU0zVVE4NjdTUFFRQTQzUDJGLzIwMTYwNDA4L3VzLWVhc3QtMS9zMy9hd3M0X3JlcXVlc3QiXV19 -F x-amz-algorithm=AWS4-HMAC-SHA256 -F x-amz-credential=Q3AM3UQ867SPQQA43P2F/20160408/us-east-1/s3/aws4_request -F key=myotherobject.txt -F file=@<FILE>
-
 ```
 
 #### Sub-command `share list` - Share List
-
 `share list` command lists unexpired URLs that were previously shared
 
 ```sh
@@ -542,7 +492,6 @@ COMMAND:
 
 <a name="mirror"></a>
 ### Command `mirror` - Mirror Buckets
-
 `mirror` command is similar to `rsync`, except it synchronizes contents between filesystems and object storage.
 
 ```sh
@@ -551,11 +500,11 @@ USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --help, -h				Help of mirror.
-  --force					Force overwrite of an existing target(s).
-  --fake					Perform a fake mirror operation.
-  --watch, -w                          Watch and mirror for changes.
-  --remove					Remove extraneous file(s) on target.
+  --help, -h                       Show help.
+  --force			   Force overwrite of an existing target(s).
+  --fake			   Perform a fake mirror operation.
+  --watch, -w                      Watch and mirror for changes.
+  --remove			   Remove extraneous file(s) on target.
 
 ``` 
 
@@ -577,9 +526,29 @@ localdir/new.txt:  10 MB / 10 MB  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 
 ```
 
+<a name="find"></a>
+### Command `find` - Find files and objects
+``find`` command finds files which match the given set of parameters. It only lists the contents which match the given set of criteria.
+
+```sh
+USAGE:
+  mc find PATH [FLAG...]
+
+FLAGS:
+  --help, -h                       Show help.
+  --exec value                     Spawn an external process for each matching object (see FORMAT)
+  --name value                     Find object names matching wildcard pattern.
+  ...
+  ...
+```
+
+*Example: Find all jpeg images from s3 bucket and copy to minio "play/bucket" bucket continuously.*
+```sh
+mc find s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
+```
+
 <a name="diff"></a>
 ### Command `diff` - Show Difference
-
 ``diff`` command computes the differences between the two directories. It only lists the contents which are missing or which differ in size.
 
 It *DOES NOT* compare the contents, so it is possible that the objects which are of same name and of the same size, but have difference in contents are not detected. This way, it can perform high speed comparison on large volumes or between sites
@@ -587,11 +556,10 @@ It *DOES NOT* compare the contents, so it is possible that the objects which are
 ```sh
 
 USAGE:
-   mc diff [FLAGS] FIRST SECOND
+  mc diff [FLAGS] FIRST SECOND
 
 FLAGS:
-  --help, -h					Help of diff.
-
+  --help, -h                       Show help.
 ```
 
 *Example: Compare a local directory and a remote object storage.*
@@ -605,21 +573,20 @@ FLAGS:
 
 <a name="watch"></a>
 ### Command `watch` - Watch for files and object storage events.
-
 ``watch`` provides a convenient way to watch on various types of event notifications on object
 storage and filesystem.
 
 ```sh
 
 USAGE:
-   mc watch [FLAGS] PATH
+  mc watch [FLAGS] PATH
 
 FLAGS:
-   --help, -h					Help of watch.
-   --events "put,delete"		Filter specific type of events. Defaults to all events by default.
-   --prefix 					Filter events for a prefix.
-   --suffix 					Filter events for a suffix.
-   --recursive					Recursively watch for events.
+  --events value                   Filter specific types of events. Defaults to all events by default. (default: "put,delete,get")
+  --prefix value                   Filter events for a prefix.
+  --suffix value                   Filter events for a suffix.
+  --recursive                      Recursively watch for events.
+  --help, -h                       Show help.
 
 ```
 
@@ -648,21 +615,21 @@ mc watch ~/Photos
 
 <a name="events"></a>
 ### Command `events` - Manage bucket event notification.
-
 ``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. Minio configuration provides more details on how these services can be configured. 
 
 ```sh
 
 USAGE:
-   mc events [FLAGS] COMMAND
+  mc events COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-   add          Add new bucket notification.
-   remove       Remove a bucket notification. With '--force' can remove all bucket notifications.
-   list         List bucket notifications.
+  add     Add a new bucket notification.
+  remove  Remove a bucket notification. With '--force' can remove all bucket notifications.
+  list    List bucket notifications.
 
 FLAGS:
-   --help, -h					Help of events.
+  --help, -h                       Show help.
+
 ```
 
 *Example: List all configured bucket notifications*
@@ -688,7 +655,6 @@ Add `prefix` and `suffix` filtering rules for `sqs` notification resource.
 
 ```sh
 
-
 mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ --suffix .jpg
 
 ```
@@ -708,14 +674,15 @@ Manage anonymous bucket policies to a bucket and its contents
 ```sh
 
 USAGE:
-   mc policy [FLAGS] PERMISSION TARGET
-   mc policy [FLAGS] TARGET
+  mc policy [FLAGS] PERMISSION TARGET
+  mc policy [FLAGS] TARGET
+  mc policy list [FLAGS] TARGET
 
 PERMISSION:
-   Allowed policies are: [none, download, upload, public].
+  Allowed policies are: [none, download, upload, public].
 
 FLAGS:
-  --help, -h					Help of policy.
+  --help, -h                       Show help.
 
 ```   
 
@@ -754,24 +721,23 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 
 <a name="session"></a>
 ### Command `session` - Manage Sessions
-
 ``session`` command manages previously saved sessions for `cp` and `mirror` operations
 
 ```sh
 
 USAGE:
-   mc session [FLAGS] OPERATION [ARG]
+  mc session [FLAGS] OPERATION [ARG]
 
 OPERATION:
-   resume   		     Resume a previously saved session.
-   clear       		     Clear a previously saved session.
-   list           	     List all previously saved sessions.
+  resume   		     Resume a previously saved session.
+  clear       		     Clear a previously saved session.
+  list           	     List all previously saved sessions.
 
 SESSION-ID:
-   SESSION - Session can either be $SESSION-ID or "all".
+  SESSION - Session can either be $SESSION-ID or "all".
 
 FLAGS:
-  --help, -h					Help of session.
+  --help, -h                       Show help.
 
 ```
 
@@ -805,21 +771,20 @@ Session ‘ApwAxSwa’ cleared successfully.
 
 <a name="config"></a>
 ### Command `config` - Manage Config File
-
 `config host` command provides a convenient way to manage host entries in your config file `~/.mc/config.json`. It is also OK to edit the config file manually using a text editor.  
 
 ```sh
 
 USAGE:
-   mc config host OPERATION
+  mc config host OPERATION
 
 OPERATION:
-   add ALIAS URL ACCESS-KEY SECRET-KEY [API]
-   remove ALIAS
-   list
+  add ALIAS URL ACCESS-KEY SECRET-KEY [API]
+  remove ALIAS
+  list
 
 FLAGS:
-  --help, -h					Help of config.
+  --help, -h                       Show help.
 
 ```
 
@@ -837,17 +802,17 @@ set -o history
 
 <a name="update"></a>
 ### Command `update` - Software Updates
-
 Check for new software updates from [https://dl.minio.io](https://dl.minio.io). Experimental flag checks for unstable experimental releases primarily meant for testing purposes.
 
 ```sh
 
 USAGE:
-   mc update [FLAGS]
+  mc update [FLAGS]
 
 FLAGS:
-  --help, -h					Help for update.
-  --experimental, -E			Check experimental update.
+  --quiet, -q  Suppress chatty console output.
+  --json       Enable JSON formatted output.
+  --help, -h   Show help.
 ```
 
 *Example: Check for an update.*
@@ -861,17 +826,17 @@ You are already running the most recent version of ‘mc’.
 
 <a name="version"></a>
 ### Command `version` - Display Version
-
 Display the current version of `mc` installed
 
 ```sh
 
 USAGE:
-   mc version [FLAGS]
+  mc version [FLAGS]
 
 FLAGS:
-  --help, -h					Help for version.
-
+  --quiet, -q  Suppress chatty console output.
+  --json       Enable JSON formatted output.
+  --help, -h   Show help.
 
 ```
  
