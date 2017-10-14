@@ -23,7 +23,7 @@ _init() {
     fi
 
     # List of supported architectures
-    SUPPORTED_OSARCH='linux/amd64 windows/amd64'
+    SUPPORTED_OSARCH='linux/amd64 windows/amd64 darwin/amd64'
 
     ## System binaries
     CP=`which cp`
@@ -56,7 +56,7 @@ go_build() {
     release_sha256sum_default="$release_str/$os-$arch/$(basename $package).sha256sum"
 
     # Go build to build the binary.
-    CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build --ldflags "${LDFLAGS}" -o $release_bin
+    CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -tags kqueue --ldflags "${LDFLAGS}" -o $release_bin
 
     # Create copy
     if [ $os == "windows" ]; then

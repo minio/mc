@@ -53,12 +53,12 @@ deadcode:
 
 build: getdeps verifiers
 	@echo "Running $@"
-	@go build --ldflags $(BUILD_LDFLAGS)
+	@go build -tags kqueue --ldflags $(BUILD_LDFLAGS)
 
 test: build
 	@echo "Running unit tests"
-	@go test $(GOFLAGS) github.com/minio/mc/cmd...
-	@go test $(GOFLAGS) github.com/minio/mc/pkg...
+	@go test $(GOFLAGS) -tags kqueue github.com/minio/mc/cmd...
+	@go test $(GOFLAGS) -tags kqueue github.com/minio/mc/pkg...
 	@echo "Running functional tests"
 	@(env bash $(PWD)/functional-tests.sh)
 
