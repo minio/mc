@@ -879,6 +879,7 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Time = objectStat.LastModified
 			objectMetadata.Size = objectStat.Size
+			objectMetadata.ETag = objectStat.ETag
 			objectMetadata.Type = os.FileMode(0664)
 			objectMetadata.Metadata = map[string][]string{}
 			return objectMetadata, nil
@@ -915,6 +916,7 @@ func (c *s3Client) Stat(isIncomplete bool) (*clientContent, *probe.Error) {
 	objectMetadata.URL = *c.targetURL
 	objectMetadata.Time = objectStat.LastModified
 	objectMetadata.Size = objectStat.Size
+	objectMetadata.ETag = objectStat.ETag
 	objectMetadata.Type = os.FileMode(0664)
 
 	metadata := objectStat.Metadata
@@ -1252,6 +1254,7 @@ func (c *s3Client) objectInfo2ClientContent(entry minio.ObjectInfo) clientConten
 	url.Path = c.joinPath(bucket, entry.Key)
 	content.URL = url
 	content.Size = entry.Size
+	content.ETag = entry.ETag
 	content.Time = entry.LastModified
 
 	if strings.HasSuffix(entry.Key, "/") && entry.Size == 0 && entry.LastModified.IsZero() {
@@ -1429,6 +1432,7 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 			default:
 				content.URL = url
 				content.Size = object.Size
+				content.ETag = object.ETag
 				content.Time = object.LastModified
 				content.Type = os.FileMode(0664)
 			}
@@ -1484,6 +1488,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 				objectURL.Path = c.joinPath(bucket.Name, object.Key)
 				content.URL = objectURL
 				content.Size = object.Size
+				content.ETag = object.ETag
 				content.Time = object.LastModified
 				content.Type = os.FileMode(0664)
 				contentCh <- content
@@ -1508,6 +1513,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 			url.Path = c.joinPath(b, object.Key)
 			content.URL = url
 			content.Size = object.Size
+			content.ETag = object.ETag
 			content.Time = object.LastModified
 			content.Type = os.FileMode(0664)
 			contentCh <- content

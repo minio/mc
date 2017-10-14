@@ -80,6 +80,7 @@ type clientContent struct {
 	Time     time.Time
 	Size     int64
 	Type     os.FileMode
+	ETag     string
 	Metadata map[string][]string
 	Err      *probe.Error
 }
