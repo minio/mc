@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"path/filepath"
 	"regexp"
@@ -100,12 +101,12 @@ func getSourceStream(alias string, urlStr string, fetchStat bool) (reader io.Rea
 }
 
 // putTargetStream writes to URL from Reader.
-func putTargetStream(alias string, urlStr string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
+func putTargetStream(ctx context.Context, alias string, urlStr string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return 0, err.Trace(alias, urlStr)
 	}
-	n, err := targetClnt.Put(reader, size, metadata, progress)
+	n, err := targetClnt.Put(ctx, reader, size, metadata, progress)
 	if err != nil {
 		return n, err.Trace(alias, urlStr)
 	}
@@ -122,7 +123,7 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64) (int64,
 	metadata := map[string]string{
 		"Content-Type": contentType,
 	}
-	return putTargetStream(alias, urlStrFull, reader, size, metadata, nil)
+	return putTargetStream(context.Background(), alias, urlStrFull, reader, size, metadata, nil)
 }
 
 // copySourceToTargetURL copies to targetURL from source.
@@ -141,7 +142,7 @@ func copySourceToTargetURL(alias string, urlStr string, source string, size int6
 // uploadSourceToTargetURL - uploads to targetURL from source.
 // optionally optimizes copy for object sizes <= 5GiB by using
 // server side copy operation.
-func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
+func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader) URLs {
 	sourceAlias := urls.SourceAlias
 	sourceURL := urls.SourceContent.URL
 	targetAlias := urls.TargetAlias
@@ -161,7 +162,7 @@ func uploadSourceToTargetURL(urls URLs, progress io.Reader) URLs {
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
-		_, err = putTargetStream(targetAlias, targetURL.String(), reader, length, metadata, progress)
+		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, metadata, progress)
 		if err != nil {
 			return urls.WithError(err.Trace(targetURL.String()))
 		}

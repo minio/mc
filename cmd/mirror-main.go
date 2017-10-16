@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -201,7 +202,7 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
-func (mj *mirrorJob) doMirror(sURLs URLs) URLs {
+func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFunc, sURLs URLs) URLs {
 
 	if sURLs.Error != nil { // Erroneous sURLs passed.
 		return sURLs.WithError(sURLs.Error.Trace())
@@ -231,7 +232,7 @@ func (mj *mirrorJob) doMirror(sURLs URLs) URLs {
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
-	return uploadSourceToTargetURL(sURLs, mj.status)
+	return uploadSourceToTargetURL(ctx, sURLs, mj.status)
 }
 
 // Go routine to update progress status
@@ -278,7 +279,7 @@ func (mj *mirrorJob) stopStatus() {
 }
 
 // this goroutine will watch for notifications, and add modified objects to the queue
-func (mj *mirrorJob) watchMirror() {
+func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.CancelFunc) {
 
 	for {
 		select {
@@ -355,7 +356,7 @@ func (mj *mirrorJob) watchMirror() {
 						mirrorURL.TotalSize = mj.TotalBytes
 						// adjust total, because we want to show progress of the item still queued to be copied.
 						mj.status.SetTotal(mj.status.Total() + sourceContent.Size).Update()
-						mj.statusCh <- mj.doMirror(mirrorURL)
+						mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
 					}
 					continue
 				}
@@ -379,7 +380,7 @@ func (mj *mirrorJob) watchMirror() {
 					mirrorURL.TotalSize = mj.TotalBytes
 					// adjust total, because we want to show progress of the itemj stiil queued to be copied.
 					mj.status.SetTotal(mj.status.Total() + event.Size).Update()
-					mj.statusCh <- mj.doMirror(mirrorURL)
+					mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
 				}
 			} else if event.Type == EventRemove {
 				mirrorURL := URLs{
@@ -422,7 +423,7 @@ func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {
 }
 
 // Fetch urls that need to be mirrored
-func (mj *mirrorJob) startMirror() {
+func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.CancelFunc) {
 	var totalBytes int64
 	var totalObjects int64
 
@@ -458,18 +459,19 @@ func (mj *mirrorJob) startMirror() {
 			sURLs.TotalSize = mj.TotalBytes
 
 			if sURLs.SourceContent != nil {
-				mj.statusCh <- mj.doMirror(sURLs)
+				mj.statusCh <- mj.doMirror(ctx, cancelMirror, sURLs)
 			} else if sURLs.TargetContent != nil && mj.isRemove && mj.isForce {
 				mj.statusCh <- mj.doRemove(sURLs)
 			}
 		case <-mj.trapCh:
+			cancelMirror()
 			os.Exit(0)
 		}
 	}
 }
 
 // when using a struct for copying, we could save a lot of passing of variables
-func (mj *mirrorJob) mirror() {
+func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc) {
 	if globalQuiet || globalJSON {
 	} else {
 		// Enable progress bar reader only during default mode
@@ -481,11 +483,11 @@ func (mj *mirrorJob) mirror() {
 
 	// Starts additional watcher thread for watching for new events.
 	if mj.isWatch {
-		go mj.watchMirror()
+		go mj.watchMirror(ctx, cancelMirror)
 	}
 
 	// Start mirroring.
-	mj.startMirror()
+	mj.startMirror(ctx, cancelMirror)
 
 	if mj.isWatch {
 		<-mj.trapCh
@@ -631,9 +633,10 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 			mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 		}
 	}
-
+	ctxt, cancelMirror := context.WithCancel(context.Background())
+	defer cancelMirror()
 	// Start mirroring job
-	mj.mirror()
+	mj.mirror(ctxt, cancelMirror)
 
 	// Check for errors during mirroring or watching to return
 	if mj.mirrorErr != nil {

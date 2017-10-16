@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"crypto/tls"
 	"hash/fnv"
 	"io"
@@ -570,7 +571,7 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader) *probe.Er
 }
 
 // Put - upload an object with custom metadata.
-func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
+func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	contentType, ok := metadata["Content-Type"]
 	if ok {
@@ -589,7 +590,7 @@ func (c *s3Client) Put(reader io.Reader, size int64, metadata map[string]string,
 		NumThreads:   numParallelThreads,
 		ContentType:  contentType,
 	}
-	n, e := c.api.PutObject(bucket, object, reader, size, opts)
+	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "UnexpectedEOF" || e == io.EOF {

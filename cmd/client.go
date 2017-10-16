@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"os"
 	"time"
@@ -58,7 +59,7 @@ type Client interface {
 
 	// I/O operations with metadata.
 	Get() (reader io.Reader, err *probe.Error)
-	Put(reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (n int64, err *probe.Error)
+	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (n int64, err *probe.Error)
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)
