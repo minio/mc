@@ -42,7 +42,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. List sessions.
-	 $ {{.HelpName}}
+     $ {{.HelpName}}
 `,
 }
 
