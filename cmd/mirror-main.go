@@ -35,6 +35,10 @@ import (
 // mirror specific flags.
 var (
 	mirrorFlags = []cli.Flag{
+		cli.IntFlag{
+			Name:  "parallel",
+			Usage: "Number of parallel mirroring threads.",
+		},
 		cli.BoolFlag{
 			Name:  "force",
 			Usage: "Force overwrite of an existing target(s).",
@@ -153,6 +157,8 @@ type mirrorJob struct {
 
 	sourceURL string
 	targetURL string
+
+	parallel int
 
 	isFake, isForce, isRemove, isWatch bool
 
@@ -421,10 +427,39 @@ func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {
 	return mj.watcher.Join(sourceClient, true)
 }
 
+type mirrorType int
+
+const (
+	mirrorCopy = iota
+	mirrorRemove
+)
+
+type mirrorTask struct {
+	mirrorType mirrorType
+	url        URLs
+}
+
 // Fetch urls that need to be mirrored
 func (mj *mirrorJob) startMirror() {
 	var totalBytes int64
 	var totalObjects int64
+
+	queueCh := make(chan mirrorTask)
+	wg := &sync.WaitGroup{}
+
+	for i := 0; i < mj.parallel; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for task := range queueCh {
+				if task.mirrorType == mirrorCopy {
+					mj.statusCh <- mj.doMirror(task.url)
+				} else {
+					mj.statusCh <- mj.doRemove(task.url)
+				}
+			}
+		}()
+	}
 
 	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isForce, mj.isFake, mj.isRemove, mj.excludeOptions)
 	for {
@@ -458,14 +493,17 @@ func (mj *mirrorJob) startMirror() {
 			sURLs.TotalSize = mj.TotalBytes
 
 			if sURLs.SourceContent != nil {
-				mj.statusCh <- mj.doMirror(sURLs)
+				queueCh <- mirrorTask{mirrorCopy, sURLs}
 			} else if sURLs.TargetContent != nil && mj.isRemove && mj.isForce {
-				mj.statusCh <- mj.doRemove(sURLs)
+				queueCh <- mirrorTask{mirrorRemove, sURLs}
 			}
 		case <-mj.trapCh:
 			os.Exit(0)
 		}
 	}
+
+	close(queueCh)
+	wg.Wait()
 }
 
 // when using a struct for copying, we could save a lot of passing of variables
@@ -495,7 +533,7 @@ func (mj *mirrorJob) mirror() {
 	mj.stopStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool, excludeOptions []string) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool, parallel int, excludeOptions []string) *mirrorJob {
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
@@ -512,6 +550,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool
 		sourceURL: srcURL,
 		targetURL: dstURL,
 
+		parallel:       parallel,
 		isFake:         isFake,
 		isRemove:       isRemove,
 		isWatch:        isWatch,
@@ -562,6 +601,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 		ctx.Bool("remove"),
 		ctx.Bool("watch"),
 		ctx.Bool("force"),
+		ctx.Int("parallel"),
 		ctx.StringSlice("exclude"))
 
 	srcClt, err := newClient(srcURL)
