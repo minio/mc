@@ -93,8 +93,10 @@ func printHosts(hosts ...hostMessage) {
 		}
 	}
 	for _, host := range hosts {
-		// Format properly for alignment based on alias length.
-		host.Alias = fmt.Sprintf("%-*.*s:", maxAlias, maxAlias, host.Alias)
+		if !globalJSON {
+			// Format properly for alignment based on alias length only in non json mode.
+			host.Alias = fmt.Sprintf("%-*.*s:", maxAlias, maxAlias, host.Alias)
+		}
 		if host.AccessKey == "" || host.SecretKey == "" {
 			host.AccessKey = ""
 			host.SecretKey = ""

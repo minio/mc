@@ -181,6 +181,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			// Cache the new minio client with hash of config as key.
 			clientCache[confSum] = api
 		}
+
 		// Store the new api object.
 		s3Clnt.api = api
 
