@@ -17,11 +17,10 @@
 package cmd
 
 import (
-	urlpkg "net/url"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/probe"
 )
 
 var configHostAddCmd = cli.Command{
@@ -53,6 +52,14 @@ EXAMPLES:
      $ {{.HelpName}} mys3-accel https://s3-accelerate.amazonaws.com \
                  BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
      $ set -o history
+
+  3. Add Amazon S3 IAM temporary credentials with limited access, please make sure to override the signature probe by explicitly
+     providing the signature type.
+     $ set +o history
+     $ {{.HelpName}} mys3-iam https://s3.amazonaws.com \
+                 BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 s3v4
+     $ set -o history
+
 `,
 }
 
@@ -116,36 +123,79 @@ func addHost(alias string, hostCfgV8 hostConfigV8) {
 	})
 }
 
+func newS3Config(args cli.Args) (*Config, *probe.Error) {
+	var (
+		url       = args.Get(0)
+		accessKey = args.Get(1)
+		secretKey = args.Get(2)
+		api       = args.Get(3)
+	)
+
+	// If api is provided we do not auto probe signature, this is
+	// required in situations when signature type is provided by the user.
+	if api != "" {
+		return &Config{
+			AccessKey: accessKey,
+			SecretKey: secretKey,
+			Signature: api,
+			HostURL:   url,
+		}, nil
+	}
+
+	s3Config := &Config{
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+		Signature: "s3v4",
+		HostURL:   urlJoinPath(url, "probe-bucket-sign"),
+	}
+
+	s3Client, err := s3New(s3Config)
+	if err != nil {
+		return nil, err.Trace(args...)
+	}
+
+	if _, err = s3Client.Stat(false); err != nil {
+		switch err.ToGoError().(type) {
+		case BucketDoesNotExist:
+			// Bucket doesn't exist, means signature probing worked V4.
+		default:
+			// Attempt with signature v2, since v4 seem to have failed.
+			s3Config.Signature = "s3v2"
+			s3Client, err = s3New(s3Config)
+			if err != nil {
+				return nil, err.Trace(args...)
+			}
+			if _, err = s3Client.Stat(false); err != nil {
+				switch err.ToGoError().(type) {
+				case BucketDoesNotExist:
+					// Bucket doesn't exist, means signature probing worked with V2.
+				default:
+					return nil, err.Trace(args...)
+				}
+			}
+		}
+	}
+
+	// Set the host url with original URL.
+	s3Config.HostURL = url
+
+	// Success.
+	return s3Config, nil
+}
+
 func mainConfigHostAdd(ctx *cli.Context) error {
 	checkConfigHostAddSyntax(ctx)
 
 	console.SetColor("HostMessage", color.New(color.FgGreen))
 
-	args := ctx.Args()
-	alias := args.Get(0)
-	url := args.Get(1)
-	accessKey := args.Get(2)
-	secretKey := args.Get(3)
-	api := args.Get(4)
+	s3Config, err := newS3Config(ctx.Args().Tail())
+	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials")
 
-	parsedURL, _ := urlpkg.Parse(url)
-
-	if isGoogle(parsedURL.Host) {
-		if api == "S3v4" {
-			fatalIf(errInvalidArgument().Trace(api), "Unsupported API signature for url. Please use `mc config host add "+alias+" "+url+" "+accessKey+" "+secretKey+" S3v2` instead.")
-		}
-		api = "S3v2"
-	}
-
-	if api == "" {
-		api = "S3v4"
-	}
-	hostCfg := hostConfigV8{
-		URL:       url,
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		API:       api,
-	}
-	addHost(alias, hostCfg) // Add a host with specified credentials.
+	addHost(ctx.Args().Get(0), hostConfigV8{
+		URL:       s3Config.HostURL,
+		AccessKey: s3Config.AccessKey,
+		SecretKey: s3Config.SecretKey,
+		API:       s3Config.Signature,
+	}) // Add a host with specified credentials.
 	return nil
 }
