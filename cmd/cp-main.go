@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -138,7 +139,7 @@ func (c copyStatMessage) String() string {
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounter) URLs {
+func doCopy(ctx context.Context, cpURLs URLs, progressReader *progressBar, accountingReader *accounter) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -173,7 +174,7 @@ func doCopy(cpURLs URLs, progressReader *progressBar, accountingReader *accounte
 		// Set up progress reader.
 		progress = progressReader.ProgressBar
 	}
-	return uploadSourceToTargetURL(cpURLs, progress)
+	return uploadSourceToTargetURL(ctx, cpURLs, progress)
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
@@ -185,7 +186,7 @@ func doCopyFake(cpURLs URLs, progressReader *progressBar) URLs {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
+func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy context.CancelFunc) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -240,6 +241,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
 			totalBytes += cpURLs.SourceContent.Size
 			totalObjects++
 		case <-trapCh:
+			cancelCopy()
 			// Print in new line and adjust to top so that we don't print over the ongoing scan bar
 			if !globalQuiet && !globalJSON {
 				console.Eraseline()
@@ -256,8 +258,10 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool) {
 func doCopySession(session *sessionV8) error {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
+	ctx, cancelCopy := context.WithCancel(context.Background())
+	defer cancelCopy()
 	if !session.HasData() {
-		doPrepareCopyURLs(session, trapCh)
+		doPrepareCopyURLs(session, trapCh, cancelCopy)
 	}
 
 	// Enable accounting reader by default.
@@ -295,7 +299,7 @@ func doCopySession(session *sessionV8) error {
 				if !ok {
 					return
 				}
-				statusCh <- doCopy(cpURLs, progressReader, accntReader)
+				statusCh <- doCopy(ctx, cpURLs, progressReader, accntReader)
 				waitGroup.Done()
 			}
 		}()
@@ -338,6 +342,7 @@ loop:
 	for {
 		select {
 		case <-trapCh:
+			cancelCopy()
 			// Receive interrupt notification.
 			if !globalQuiet && !globalJSON {
 				console.Eraseline()

@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"os"
 	"path"
@@ -314,7 +315,7 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 }
 
 // Put - create a new file with metadata.
-func (f *fsClient) Put(reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
+func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
 	return f.put(reader, size, nil, progress)
 }
 
