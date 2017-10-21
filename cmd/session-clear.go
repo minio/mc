@@ -44,16 +44,20 @@ var sessionClear = cli.Command{
   
 USAGE:
   {{.HelpName}} SESSION-ID|all
+
+SESSION-ID:
+  SESSION - Session can either be $SESSION-ID or all
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Clear session.
-	 $ {{.HelpName}} ygVIpSJs
+     $ {{.HelpName}} ygVIpSJs
   2. Clear all sessions.
-	 $ {{.HelpName}} all
+     $ {{.HelpName}} all
   3. Forcefully clear an obsolete session.
-	 $ {{.HelpName}} ygVIpSJs --force
+     $ {{.HelpName}} ygVIpSJs --force
 `,
 }
 

@@ -91,7 +91,7 @@ var findCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} PATH [FLAG...]
+  {{.HelpName}} PATH [FLAGS]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

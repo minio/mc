@@ -64,6 +64,16 @@ chmod +x mc
 ./mc --help
 ```
 
+## Microsoft Windows
+### Binary Download
+| Platform | Architecture | URL |
+| ---------- | -------- |------|
+|Microsoft Windows|64-bit Intel|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
+
+```sh
+mc.exe --help
+```
+
 ### Snap
 You can install the latest `minio-client` [snap](https://snapcraft.io), and help testing the most recent changes of the master branch in [all the supported Linux distros](https://snapcraft.io/docs/core/install) with:
 
@@ -72,16 +82,6 @@ sudo snap install minio-client --edge --devmode
 ```
 
 Every time a new version is pushed to the store, you will get it updated automatically.
-
-## Microsoft Windows
-### Binary Download
-| Platform | Architecture | URL |
-| ---------- | -------- |------|
-|Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
-
-```sh
-mc.exe --help
-```
 
 ## Install from Source
 Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://minio.io/downloads/#minio-client.
@@ -155,6 +155,7 @@ alias cp='mc cp'
 alias cat='mc cat'
 alias mkdir='mc mb'
 alias pipe='mc pipe'
+alias find='mc find'
 ```
 
 ### Shell autocompletion

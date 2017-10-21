@@ -23,23 +23,64 @@ version  Print version info.
 ```
 
 ## 1.  Download Minio Client
+### Docker Stable
+```
+docker pull minio/mc
+docker run minio/mc ls play
+```
 
-| Platform | Architecture | URL |
-| ---------- | -------- |------|
-|GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc|
-|Apple OS X|64-bit Intel|https://dl.minio.io/client/mc/release/darwin-amd64/mc|
-|Microsoft Windows|64-bit|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe|
+### Docker Edge
+```
+docker pull minio/mc:edge
+docker run minio/mc:edge ls play
+```
 
-### Install from Homebrew
-Install minio packages using [Homebrew](http://brew.sh/) 
+**Note:** Above examples run `mc` against Minio [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
+
+```sh
+docker run -it --entrypoint=/bin/sh minio/mc
+```
+
+then use the [`mc config` command](#add-a-cloud-storage-service).
+
+### Homebrew (macOS)
+Install mc packages using [Homebrew](http://brew.sh/)
 
 ```sh
 brew install minio/stable/mc
 mc --help
 ```
 
+### Binary Download (GNU/Linux)
+| Platform | Architecture | URL |
+| ---------- | -------- |------|
+|GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
+
+```sh
+chmod +x mc
+./mc --help
+```
+
+### Binary Download (Microsoft Windows)
+| Platform | Architecture | URL |
+| ---------- | -------- |------|
+|Microsoft Windows|64-bit Intel|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
+
+```sh
+mc.exe --help
+```
+
+### Snap (GNU/Linux)
+You can install the latest `minio-client` [snap](https://snapcraft.io), and help testing the most recent changes of the master branch in [all the supported Linux distros](https://snapcraft.io/docs/core/install) with:
+
+```sh
+sudo snap install minio-client --edge --devmode
+```
+
+Every time a new version is pushed to the store, you will get it updated automatically.
+
 ### Install from Source
-Source installation is intended only for developers and advanced users. `mc update` command does not support upgrading from source based installation. Please download official releases from https://minio.io/downloads/#minio-client.
+Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://minio.io/downloads/#minio-client.
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
 
@@ -79,9 +120,7 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 #### Usage
 
 ```sh
-
 mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
-
 ```
 
 Alias is simply a short name to you cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
@@ -91,27 +130,21 @@ Minio server displays URL, access and secret keys.
 
 
 ```sh
-
 mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
-
 ```
 
 ### Example - Amazon S3 Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html).
 
 ```sh
-
 mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
-
 ```
 
 ### Example - Google Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)
 
 ```sh
-
 mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
-
 ```
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
@@ -124,27 +157,24 @@ NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have
 List all buckets from https://play.minio.io:9000
 
 ```sh
-
 mc ls play
 [2016-03-22 19:47:48 PDT]     0B my-bucketname/
 [2016-03-22 22:01:07 PDT]     0B mytestbucket/
 [2016-03-22 20:04:39 PDT]     0B mybucketname/
 [2016-01-28 17:23:11 PST]     0B newbucket/
 [2016-03-20 09:08:36 PDT]     0B s3git-test/
-
 ```
 
 ## 5. Everyday Use
 You may add shell aliases to override your common Unix tools.
 
 ```sh
-
 alias ls='mc ls'
 alias cp='mc cp'
 alias cat='mc cat'
 alias mkdir='mc mb'
 alias pipe='mc pipe'
-
+alias find='mc find'
 ```
 
 ## 6. Global Options
@@ -155,7 +185,6 @@ Debug option enables debug output to console.
 *Example: Display verbose debug output for `ls` command.* 
 
 ```sh
-
 mc --debug ls play
 mc: <DEBUG> GET / HTTP/1.1
 Host: play.minio.io:9000
@@ -183,7 +212,6 @@ mc: <DEBUG> Response Time:  1.220112837s
 [2016-04-04 16:11:45 IST]     0B backup/
 [2016-04-01 20:10:53 IST]     0B deebucket/
 [2016-03-28 21:53:49 IST]     0B guestbucket/
-
 ```
 
 ### Option [--json]
@@ -192,13 +220,11 @@ JSON option enables parseable output in JSON format.
 *Example: List all buckets from Minio play service.*
 
 ```sh
-
 mc --json ls play
 {"status":"success","type":"folder","lastModified":"2016-04-08T03:56:14.577+05:30","size":0,"key":"albums/"}
 {"status":"success","type":"folder","lastModified":"2016-04-04T16:11:45.349+05:30","size":0,"key":"backup/"}
 {"status":"success","type":"folder","lastModified":"2016-04-01T20:10:53.941+05:30","size":0,"key":"deebucket/"}
 {"status":"success","type":"folder","lastModified":"2016-03-28T21:53:49.217+05:30","size":0,"key":"guestbucket/"}
-
 ```
 
 ### Option [--no-color]
@@ -229,7 +255,6 @@ Skip SSL certificate verification.
 `ls` command lists files, objects and objects. Use `--incomplete` flag to list partially copied content.
 
 ```sh
-
 USAGE:
    mc ls [FLAGS] TARGET [TARGET ...]
 
@@ -237,29 +262,24 @@ FLAGS:
   --help, -h                       Show help.
   --recursive, -r		   List recursively.
   --incomplete, -I		   List incomplete uploads.
-  
 ```
 
 *Example: List all buckets on https://play.minio.io:9000.*
 
 ```sh
-
 mc ls play
 [2016-04-08 03:56:14 IST]     0B albums/
 [2016-04-04 16:11:45 IST]     0B backup/
 [2016-04-01 20:10:53 IST]     0B deebucket/
 [2016-03-28 21:53:49 IST]     0B guestbucket/
 [2016-04-08 20:58:18 IST]     0B mybucket/
-
 ```
 <a name="mb"></a>
 ### Command `mb` - Make a Bucket
-
 `mb` command creates a new bucket on an object storage. On a filesystem, it behaves like `mkdir -p` command. Bucket is equivalent of a drive or mount point in filesystems and should not be treated as folders. Minio does not place any limits on the number of buckets created per user. 
 On Amazon S3, each account is limited to 100 buckets. Please refer to [Buckets Restrictions and Limitations on S3](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) for more information.  
 
 ```sh
-
 USAGE:
    mc mb [FLAGS] TARGET [TARGET...]
 
@@ -273,43 +293,34 @@ FLAGS:
 
 
 ```sh
-
 mc mb play/mybucket
 Bucket created successfully ‘play/mybucket’.
-
 ```
 
 <a name="cat"></a>
 
 ### Command `cat` - Concatenate Objects
-
 `cat` command concatenates contents of a file or object to another. You may also use it to simply display the contents to stdout
 
 ```sh
-
 USAGE:
    mc cat [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
   --help, -h                       Show help.
-
 ```
 
 *Example: Display the contents of a text file `myobject.txt`*
 
 ```sh
-
 mc cat play/mybucket/myobject.txt
 Hello Minio!!
-
 ```
 <a name="pipe"></a>
 ### Command `pipe` - Pipe to Object
-
-``pipe`` command copies contents of stdin to a target. When no target is specified, it writes to stdout.
+`pipe` command copies contents of stdin to a target. When no target is specified, it writes to stdout.
 
 ```sh
-
 USAGE:
    mc pipe [FLAGS] [TARGET]
 
@@ -320,42 +331,33 @@ FLAGS:
 *Example: Stream MySQL database dump to Amazon S3 directly.*
 
 ```sh
-
 mysqldump -u root -p ******* accountsdb | mc pipe s3/ferenginar/backups/accountsdb-oct-9-2015.sql
-
 ```
 
 <a name="cp"></a>
 ### Command `cp` - Copy Objects
-
 `cp` command copies data from one or more sources to a target.  All copy operations to object storage are verified with MD5SUM checksums. Interrupted or failed copy operations can be resumed from the point of failure.
 
 ```sh
-
 USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
    
 FLAGS:
   --help, -h                       Show help.
   --recursive, -r		   Copy recursively.
-
 ```
 
 *Example: Copy a text file to to an object storage.*
 
 ```sh
-
 mc cp myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
-
 ```
 <a name="rm"></a>
 ### Command `rm` - Remove Buckets and Objects
-
 Use `rm` command to remove file or bucket
 
 ```sh
-
 USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
@@ -373,30 +375,24 @@ FLAGS:
 *Example: Remove a single object.*
 
 ```sh
-
 mc rm play/mybucket/myobject.txt
 Removed ‘play/mybucket/myobject.txt’.
-
 ```
 
 *Example: Recursively remove a bucket and all its contents. Since this is a dangerous operation, you must explicitly pass `--force` option.*
 
 ```sh
-
 mc rm --recursive --force play/myobject
 Removed ‘play/myobject/newfile.txt’.
 Removed 'play/myobject/otherobject.txt’.
-
 ```
 
 *Example: Remove all incompletely uploaded files from `mybucket`.*
 
 ```sh
-
 mc rm  --incomplete --recursive --force play/mybucket
 Removed ‘play/mybucket/mydvd.iso’.
 Removed 'play/mybucket/backup.tgz’.
-
 ```
 *Example: Remove object only if its created older than one day.*
 
@@ -406,13 +402,11 @@ mc rm --force --older-than=1 play/mybucket/oldsongs
 
 <a name="share"></a>
 ### Command `share` - Share Access
-
 `share` command securely grants upload or download access to object storage. This access is only temporary and it is safe to share with remote users and applications. If you want to grant permanent access, you may look at `mc policy` command instead.
 
 Generated URL has access credentials encoded in it. Any attempt to tamper the URL will invalidate the access. To understand how this mechanism works, please follow [Pre-Signed URL](http://docs.aws.amazon.com/AmazonS3/latest/dev/ShareObjectPreSignedURL.html) technique.
 
 ```sh
-
 USAGE:
    mc share [FLAGS] COMMAND
 
@@ -423,22 +417,19 @@ COMMANDS:
    download	  Generate URLs for download access.
    upload	  Generate ‘curl’ command to upload objects without requiring access/secret keys.
    list		  List previously shared objects and folders.
-
 ```
 
 ### Sub-command `share download` - Share Download
 `share download` command generates URLs to download objects without requiring access and secret keys. Expiry option sets the maximum validity period (no more than 7 days), beyond which the access is revoked automatically.
 
 ```sh
-
 USAGE:
-   mc share download [OPTIONS] TARGET [TARGET...]
+   mc share download [FLAGS] TARGET [TARGET...]
 
-OPTIONS:
+FLAGS:
   --help, -h                       Show help.
   --recursive, -r		   Share all objects recursively.
   --expire, -E "168h"		   Set expiry in NN[h|m|s].
-
 ```
 
 *Example: Grant temporary access to an object with 4 hours expiry limit.*
@@ -456,15 +447,13 @@ Share: https://play.minio.io:9000/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMA
 `share upload` command generates a ‘curl’ command to upload objects without requiring access/secret keys. Expiry option sets the maximum validity period (no more than 7 days), beyond which the access is revoked automatically. Content-type option restricts uploads to only certain type of files.
 
 ```sh
-
 USAGE:
-   mc share upload [OPTIONS] TARGET [TARGET...]
+   mc share upload [FLAGS] TARGET [TARGET...]
 
-OPTIONS:
+FLAGS:
   --help, -h                       Show help.
   --recursive, -r   		   Recursively upload any object matching the prefix.
   --expire, -E "168h"		   Set expiry in NN[h|m|s].
-
 ```
 
 *Example: Generate a `curl` command to enable upload access to `play/mybucket/myotherobject.txt`. User replaces `<FILE>` with the actual filename to upload*
@@ -480,14 +469,12 @@ Share: curl https://play.minio.io:9000/mybucket -F x-amz-date=20160408T182356Z -
 `share list` command lists unexpired URLs that were previously shared
 
 ```sh
-
 USAGE:
    mc share list COMMAND
 
 COMMAND:
    upload:   list previously shared access to uploads.
    download: list previously shared access to downloads.
-
 ```
 
 <a name="mirror"></a>
@@ -495,7 +482,6 @@ COMMAND:
 `mirror` command is similar to `rsync`, except it synchronizes contents between filesystems and object storage.
 
 ```sh
-
 USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
@@ -505,25 +491,20 @@ FLAGS:
   --fake			   Perform a fake mirror operation.
   --watch, -w                      Watch and mirror for changes.
   --remove			   Remove extraneous file(s) on target.
-
 ``` 
 
 *Example: Mirror a local directory to 'mybucket' on https://play.minio.io:9000.*
 
 ```sh
-
 mc mirror localdir/ play/mybucket
 localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 73 B/s 0
-
 ```
 
 *Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000.*
 
 ```sh
-
 mc mirror -w localdir play/mybucket
 localdir/new.txt:  10 MB / 10 MB  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 1 MB/s 15s
-
 ```
 
 <a name="find"></a>
@@ -532,7 +513,7 @@ localdir/new.txt:  10 MB / 10 MB  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 
 ```sh
 USAGE:
-  mc find PATH [FLAG...]
+  mc find PATH [FLAGS]
 
 FLAGS:
   --help, -h                       Show help.
@@ -554,7 +535,6 @@ mc find s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
 It *DOES NOT* compare the contents, so it is possible that the objects which are of same name and of the same size, but have difference in contents are not detected. This way, it can perform high speed comparison on large volumes or between sites
 
 ```sh
-
 USAGE:
   mc diff [FLAGS] FIRST SECOND
 
@@ -565,10 +545,8 @@ FLAGS:
 *Example: Compare a local directory and a remote object storage.*
 
 ```sh
-
  mc diff localdir play/mybucket
 ‘localdir/notes.txt’ and ‘https://play.minio.io:9000/mybucket/notes.txt’ - only in first.
-
 ```
 
 <a name="watch"></a>
@@ -577,7 +555,6 @@ FLAGS:
 storage and filesystem.
 
 ```sh
-
 USAGE:
   mc watch [FLAGS] PATH
 
@@ -587,30 +564,25 @@ FLAGS:
   --suffix value                   Filter events for a suffix.
   --recursive                      Recursively watch for events.
   --help, -h                       Show help.
-
 ```
 
 *Example: Watch for all events on object storage*
 
 ```sh
-
 mc watch play/testbucket
 [2016-08-18T00:51:29.735Z] 2.7KiB ObjectCreated https://play.minio.io:9000/testbucket/CONTRIBUTING.md
 [2016-08-18T00:51:29.780Z]  1009B ObjectCreated https://play.minio.io:9000/testbucket/MAINTAINERS.md
 [2016-08-18T00:51:29.839Z] 6.9KiB ObjectCreated https://play.minio.io:9000/testbucket/README.md
-
 ```
 
 *Example: Watch for all events on local directory*
 
 ```sh
-
 mc watch ~/Photos
 [2016-08-17T17:54:19.565Z] 3.7MiB ObjectCreated /home/minio/Downloads/tmp/5467026530_a8611b53f9_o.jpg
 [2016-08-17T17:54:19.565Z] 3.7MiB ObjectCreated /home/minio/Downloads/tmp/5467026530_a8611b53f9_o.jpg
 ...
 [2016-08-17T17:54:19.565Z] 7.5MiB ObjectCreated /home/minio/Downloads/tmp/8771468997_89b762d104_o.jpg
-
 ```
 
 <a name="events"></a>
@@ -618,7 +590,6 @@ mc watch ~/Photos
 ``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. Minio configuration provides more details on how these services can be configured. 
 
 ```sh
-
 USAGE:
   mc events COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
@@ -629,24 +600,19 @@ COMMANDS:
 
 FLAGS:
   --help, -h                       Show help.
-
 ```
 
 *Example: List all configured bucket notifications*
 
 ```sh
-
 mc events list play/andoria
 MyTopic        arn:minio:sns:us-east-1:1:TestTopic    s3:ObjectCreated:*,s3:ObjectRemoved:*   suffix:.jpg
-
 ```
 
 *Example: Add a new 'sqs' notification resource only to notify on ObjectCreated event*
 
 ```sh
-
 mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --events put
-
 ```
 
 *Example: Add a new 'sqs' notification resource with filters*
@@ -654,17 +620,13 @@ mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --events put
 Add `prefix` and `suffix` filtering rules for `sqs` notification resource.
 
 ```sh
-
 mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ --suffix .jpg
-
 ```
 
 *Example: Remove a 'sqs' notification resource*
 
 ```sh
-
 mc events remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
-
 ```
 
 <a name="policy"></a>
@@ -672,7 +634,6 @@ mc events remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
 Manage anonymous bucket policies to a bucket and its contents
 
 ```sh
-
 USAGE:
   mc policy [FLAGS] PERMISSION TARGET
   mc policy [FLAGS] TARGET
@@ -683,7 +644,6 @@ PERMISSION:
 
 FLAGS:
   --help, -h                       Show help.
-
 ```   
 
 *Example: Show current anonymous bucket policy*
@@ -691,10 +651,8 @@ FLAGS:
 Show current anonymous bucket policy for ``mybucket/myphotos/2020/`` sub-directory
 
 ```sh
-
 mc policy play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
-
 ```
 
 *Example : Set anonymous bucket policy to download only*
@@ -702,10 +660,8 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 Set anonymous bucket policy  for ``mybucket/myphotos/2020/`` sub-directory and its objects to ``download`` only. Now, objects under the sub-directory are publicly accessible. e.g ``mybucket/myphotos/2020/yourobjectname``is available at [https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname)
 
 ```sh
-
 mc policy download play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
-
 ```
 
 *Example : Remove current anonymous bucket policy*
@@ -713,10 +669,8 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 Remove any bucket policy for *mybucket/myphotos/2020/* sub-directory.
 
 ```sh
-
 mc policy none play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
-
 ```
 
 <a name="session"></a>
@@ -724,17 +678,13 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 ``session`` command manages previously saved sessions for `cp` and `mirror` operations
 
 ```sh
-
 USAGE:
-  mc session [FLAGS] OPERATION [ARG]
+  mc session COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
-OPERATION:
-  resume   		     Resume a previously saved session.
-  clear       		     Clear a previously saved session.
-  list           	     List all previously saved sessions.
-
-SESSION-ID:
-  SESSION - Session can either be $SESSION-ID or "all".
+COMMANDS:
+  list    List all previously saved sessions.
+  clear   Clear a previously saved session.
+  resume  Resume a previously saved session.
 
 FLAGS:
   --help, -h                       Show help.
@@ -744,29 +694,23 @@ FLAGS:
 *Example: List all previously saved sessions.*
 
 ```sh
-
 mc session list
 IXWKjpQM -> [2016-04-08 19:11:14 IST] cp assets.go play/mybucket
 ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
-
 ```
 
 *Example: Resume a previously saved session.*
 
 ```sh
-
 mc session resume IXWKjpQM 
 ...assets.go: 1.68 KB / 1.68 KB  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 784 B/s 2s
-
 ```
 
 *Example: Drop a previously saved session.*
 
 ```sh
-
-$mc session clear ApwAxSwa
+mc session clear ApwAxSwa
 Session ‘ApwAxSwa’ cleared successfully.
-
 ```
 
 <a name="config"></a>
@@ -774,18 +718,16 @@ Session ‘ApwAxSwa’ cleared successfully.
 `config host` command provides a convenient way to manage host entries in your config file `~/.mc/config.json`. It is also OK to edit the config file manually using a text editor.  
 
 ```sh
-
 USAGE:
-  mc config host OPERATION
+  mc config host COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
-OPERATION:
-  add ALIAS URL ACCESS-KEY SECRET-KEY [API]
-  remove ALIAS
-  list
+COMMANDS:
+  add, a      Add a new host to configuration file.
+  remove, rm  Remove a host from configuration file.
+  list, ls    Lists hosts in configuration file.
 
 FLAGS:
   --help, -h                       Show help.
-
 ```
 
 *Example: Manage Config File*
@@ -793,11 +735,9 @@ FLAGS:
 Add Minio server access and secret keys to config file host entry. Note that, the history feature of your shell may record these keys and pose a security risk. On `bash` shell, use `set -o` and `set +o` to disable and enable history feature momentarily.
 
 ```sh
-
 set +o history
 mc config host add myminio http://localhost:9000 OMQAGGOL63D7UNVQFY8X GcY5RHNmnEWvD/1QxD3spEIGj+Vt9L7eHaAaBTkJ
 set -o history
-
 ```
 
 <a name="update"></a>
@@ -805,7 +745,6 @@ set -o history
 Check for new software updates from [https://dl.minio.io](https://dl.minio.io). Experimental flag checks for unstable experimental releases primarily meant for testing purposes.
 
 ```sh
-
 USAGE:
   mc update [FLAGS]
 
@@ -818,10 +757,8 @@ FLAGS:
 *Example: Check for an update.*
 
 ```sh
-
 mc update
 You are already running the most recent version of ‘mc’.
-
 ```
 
 <a name="version"></a>
@@ -829,7 +766,6 @@ You are already running the most recent version of ‘mc’.
 Display the current version of `mc` installed
 
 ```sh
-
 USAGE:
   mc version [FLAGS]
 
@@ -837,16 +773,13 @@ FLAGS:
   --quiet, -q  Suppress chatty console output.
   --json       Enable JSON formatted output.
   --help, -h   Show help.
-
 ```
  
  *Example: Print version of mc.*
  
 ```sh
-
 mc version
 Version: 2016-04-01T00:22:11Z
 Release-tag: RELEASE.2016-04-01T00-22-11Z
 Commit-id: 12adf3be326f5b6610cdd1438f72dfd861597fce
-
 ```

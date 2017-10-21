@@ -38,14 +38,17 @@ var sessionResume = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [SESSION-ID/all]
+  {{.HelpName}} SESSION-ID
+
+SESSION-ID:
+  SESSION - Session is your previously saved $SESSION-ID
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Resume session. 
-	 $ {{.HelpName}} ygVIpSJs
+     $ {{.HelpName}} ygVIpSJs
 `,
 }
 
