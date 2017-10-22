@@ -149,8 +149,9 @@ function assert()
     rv=$?
     if [ "$rv" -ne "$expected_rv" ]; then
         if [ -n "$MINT_MODE" ]; then
-            err=$(python -c 'import sys,json; print(json.dumps(sys.stdin.read()))' <<<"$err")
-            printf '{"name": "mc", "duration": "%d", "function": "%s", "status": "FAIL", "error": "%s"}\n' "$(get_duration "$start_time")" "$func_name" "$err"
+            err=$(printf "$err" | python -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
+            ## err is already JSON string, no need to double quote
+            printf '{"name": "mc", "duration": "%d", "function": "%s", "status": "FAIL", "error": %s}\n' "$(get_duration "$start_time")" "$func_name" "$err"
         else
             echo "mc: $func_name: $err"
         fi
