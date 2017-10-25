@@ -1,14 +1,78 @@
 #!/bin/bash
 
-: ${PROG:=$(basename ${BASH_SOURCE})}
+global_flags="--config-folder --quiet --no-color --json --debug --insecure --help"
 
-_cli_bash_autocomplete() {
-     local cur opts base
-     COMPREPLY=()
-     cur="${COMP_WORDS[COMP_CWORD]}"
-     opts=$( ${COMP_WORDS[@]:0:$COMP_CWORD} --compgen )
-     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
-     return 0
+_aliases() {
+    aliases=$(mc config host list --json | jq -r .alias)
+    COMPREPLY=( $(compgen -W "${aliases[*]}" -S "/") )
+}
+
+_mc_ls() {
+    case "$cur" in
+        -*)
+            COMPREPLY=( $(compgen -W "${global_flags[*]} --recursive --incomplete" -- "$cur") )
+            ;;
+        *)
+            _filedir
+            files="${COMPREPLY[*]}"
+            _aliases
+            aliases="${COMPREPLY[*]}"
+            COMPREPLY=( $(compgen -W "$files $aliases" -- "$cur") )
+            ;;
+    esac
+}
+
+_mc_cp() {
+    case "$cur" in
+        -*)
+            COMPREPLY=( $(compgen -W "${global_flags[*]} --recursive --parallel" -- "$cur") )
+            ;;
+        *)
+            _filedir
+            COMPREPLY=( $(compgen -W "${COMPREPLY[*]}" -- "$cur") )
+            ;;
+    esac
+}
+
+_mc_rm() {
+    case "$cur" in
+        -*)
+            COMPREPLY=( $(compgen -W "${global_flags[*]} --recursive --force --incomplete --fake --stdin --older-than" -- "$cur") )
+            ;;
+        *)
+            _filedir
+            COMPREPLY=( $(compgen -W "${COMPREPLY[*]}" -- "$cur") )
+            ;;
+    esac
+}
+
+_mc_mirror() {
+    case "$cur" in
+        -*)
+            COMPREPLY=( $(compgen -W "${global_flags[*]} --force --fake --watch --remove --region -a --exclude" -- "$cur") )
+            ;;
+        *)
+            _filedir -d
+            dirs="${COMPREPLY[*]}"
+            _aliases
+            aliases="${COMPREPLY[*]}"
+            COMPREPLY=( $(compgen -W "$dirs $aliases" -- "$cur") )
+            ;;
+    esac
+}
+
+_mc() {
+    local cur prev
+    _init_completion || return
+    
+    opts=$( ${COMP_WORDS[@]:0:$COMP_CWORD} --compgen )
+    if [[ -n $opts ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    else
+        local completions_func=_mc_${prev/ /_}
+        declare -F $completions_func >/dev/null && $completions_func
+    fi
+    return 0
  }
 
- complete -F _cli_bash_autocomplete $PROG -q
+complete -F _mc mc
