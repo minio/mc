@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -37,14 +36,14 @@ type statMessage struct {
 	Size              int64             `json:"size"`
 	ETag              string            `json:"etag"`
 	Type              string            `json:"type"`
-	EncryptionHeaders map[string]string `json:"encryption"`
+	EncryptionHeaders map[string]string `json:"encryption,omitempty"`
 	Metadata          map[string]string `json:"metadata"`
 }
 
 // String colorized string message.
-func printStat(stat statMessage, maxKeyLen int) {
+func printStat(stat statMessage) {
 	// Format properly for alignment based on maxKey length
-	stat.Key = fmt.Sprintf("%-10s: %-*.*s", "Name", maxKeyLen, maxKeyLen, stat.Key)
+	stat.Key = fmt.Sprintf("%-10s: %s", "Name", stat.Key)
 	console.Println(console.Colorize("Name", stat.Key))
 	console.Println(fmt.Sprintf("%-10s: %s ", "Date", stat.Date.Format(printDate)))
 	console.Println(fmt.Sprintf("%-10s: %-6s ", "Size", humanize.IBytes(uint64(stat.Size))))
@@ -80,24 +79,6 @@ func printStat(stat statMessage, maxKeyLen int) {
 	console.Println()
 }
 
-// Prints all the stats.
-func printStats(stats ...statMessage) {
-	var maxKey = 0
-	for _, stat := range stats {
-		if len(stat.Key) > maxKey {
-			maxKey = len(stat.Key)
-		}
-	}
-
-	for _, stat := range stats {
-		if !globalJSON {
-			printStat(stat, maxKey)
-		} else {
-			console.Println(stat.JSON())
-		}
-	}
-}
-
 // JSON jsonified content message.
 func (c statMessage) JSON() string {
 	c.Status = "success"
@@ -107,8 +88,8 @@ func (c statMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// parseContent parse client Content container into printer struct.
-func parseStat(c *clientContent) statMessage {
+// parseStat parses client Content container into statMessage struct.
+func parseStat(targetAlias string, c *clientContent) statMessage {
 	content := statMessage{}
 	content.Date = c.Time.Local()
 	// guess file type.
@@ -119,45 +100,32 @@ func parseStat(c *clientContent) statMessage {
 		return "file"
 	}()
 	content.Size = c.Size
-	content.Key = getKey(c)
+	content.Key = targetAlias + getKey(c)
 	content.Metadata = c.Metadata
-	content.ETag = c.ETag
+	content.ETag = strings.TrimPrefix(c.ETag, "\"")
+	content.ETag = strings.TrimSuffix(content.ETag, "\"")
+
 	content.EncryptionHeaders = c.EncryptionHeaders
 	return content
 }
-func getKey(c *clientContent) string {
-	switch {
-	// for windows make sure to print in 'windows' specific style.
-	case runtime.GOOS == "windows":
-		c.URL.Path = strings.Replace(c.URL.Path, "/", "\\", -1)
-		c.URL.Path = strings.TrimSuffix(c.URL.Path, "\\")
-	default:
-		c.URL.Path = strings.TrimSuffix(c.URL.Path, "/")
-	}
-	if c.Type.IsDir() {
-		switch {
-		// for windows make sure to print in 'windows' specific style.
-		case runtime.GOOS == "windows":
-			return fmt.Sprintf("%s\\", c.URL.Path)
-		default:
-			return fmt.Sprintf("%s/", c.URL.Path)
-		}
-	}
-	return c.URL.Path
-}
 
 // doStat - list all entities inside a folder.
-func doStat(clnt Client, isRecursive bool, targetURL string) error {
+func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string) error {
 	if !isRecursive || !isAliasURLDir(targetURL) {
 		isIncomplete := false
-		isFetchMeta := true
-		if st, err := clnt.Stat(isIncomplete, isFetchMeta); err != nil {
+		fetchMeta := true
+		if st, err := clnt.Stat(isIncomplete, fetchMeta); err != nil {
 			switch err.ToGoError().(type) {
 			default:
 				fatalIf(err.Trace(targetURL), "Unable to initialize `"+targetURL+"`.")
 			}
 		} else {
-			printStats([]statMessage{parseStat(st)}...)
+			st := parseStat(targetAlias, st)
+			if !globalJSON {
+				printStat(st)
+			} else {
+				console.Println(st.JSON())
+			}
 			return nil
 		}
 	}
@@ -174,8 +142,7 @@ func doStat(clnt Client, isRecursive bool, targetURL string) error {
 	}
 	var cErr error
 	isIncomplete := false
-	var stats []statMessage
-
+	var prevStat *clientContent
 	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -206,17 +173,20 @@ func doStat(clnt Client, isRecursive bool, targetURL string) error {
 		// Trim prefix path from the content path.
 		contentURL = strings.TrimPrefix(contentURL, prefixPath)
 		content.URL.Path = contentURL
-		//parsedContent := parseStat(content)
 		_, stat, err := url2StatWithMetadata(targetURL+getKey(content), true)
 		if err != nil {
 			continue
 		}
-		stats = append(stats, parseStat(stat))
-
-	}
-	if len(stats) > 0 {
-		// Print colorized or jsonized content info.
-		printStats(stats...)
+		if stat != prevStat {
+			st := parseStat(targetAlias, stat)
+			if !globalJSON {
+				printStat(st)
+			} else {
+				console.Println(st.JSON())
+			}
+		} else {
+		}
+		prevStat = stat
 	}
 	return cErr
 }

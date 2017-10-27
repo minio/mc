@@ -34,40 +34,41 @@ var (
 	}
 )
 
-// stat contents of files and folders.
+// stat files and folders.
 var statCmd = cli.Command{
 	Name:   "stat",
-	Usage:  "Stat contents of objects",
+	Usage:  "Stat contents of objects.",
 	Action: mainStat,
 	Before: setGlobalsFromContext,
 	Flags:  append(statFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-	 {{.HelpName}} - {{.Usage}}
- 
- USAGE:
-	 {{.HelpName}} [FLAGS] TARGET [TARGET ...]
- 
- FLAGS:
-	 {{range .VisibleFlags}}{{.}}
-	 {{end}}
- EXAMPLES:
-		1. Stat all contents of mybucket on Amazon S3 cloud storage.
-			 $ {{.HelpName}} s3/mybucket/
- 
-		2. Stat all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
-			 $ {{.HelpName}} s3\mybucket\
- 
-		3. Stat files recursively on a local filesystem on Microsoft Windows.
-			 $ {{.HelpName}} --recursive C:\Users\Worf\
- `,
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET [TARGET ...]
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+   1. Stat all contents of mybucket on Amazon S3 cloud storage.
+      $ {{.HelpName}} s3/mybucket/
+
+   2. Stat all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
+      $ {{.HelpName}} s3\mybucket\
+
+   3. Stat files recursively on a local filesystem on Microsoft Windows.
+      $ {{.HelpName}} --recursive C:\Users\Worf\
+`,
 }
 
 // checkStatSyntax - validate all the passed arguments
 func checkStatSyntax(ctx *cli.Context) {
-	args := ctx.Args()
 	if !ctx.Args().Present() {
-		args = []string{"."}
+		cli.ShowCommandHelpAndExit(ctx, "stat", 1) // last argument is exit code
 	}
+
+	args := ctx.Args()
 	for _, arg := range args {
 		if strings.TrimSpace(arg) == "" {
 			fatalIf(errInvalidArgument().Trace(args...), "Unable to validate empty argument.")
@@ -113,11 +114,9 @@ func mainStat(ctx *cli.Context) error {
 		var clnt Client
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-		if isAliasURLDir(targetURL) && !isRecursive {
-			fatalIf(errInvalidArgument(), "Use --recursive option to stat by prefix")
-		}
 
-		return doStat(clnt, isRecursive, targetURL)
+		targetAlias, _, _ := mustExpandAlias(targetURL)
+		return doStat(clnt, isRecursive, targetAlias, targetURL)
 	}
 	return cErr
 

@@ -839,11 +839,8 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool) (*clientContent, *probe.
 		if !exists {
 			return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 		}
-		bucketMetadata := &clientContent{}
-		bucketMetadata.URL = *c.targetURL
-		bucketMetadata.Type = os.ModeDir
-		bucketMetadata.Metadata = map[string]string{}
-		return bucketMetadata, nil
+		bucketMetadata := c.bucketStat()
+		return &bucketMetadata, nil
 	}
 
 	// Remove trailing slashes needed for the following ListObjects call.
