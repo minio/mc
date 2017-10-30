@@ -26,8 +26,9 @@ var adminServiceCmd = cli.Command{
 	Flags:           globalFlags,
 	HideHelpCommand: true,
 	Subcommands: []cli.Command{
-		adminServiceRestartCmd,
 		adminServiceStatusCmd,
+		adminServiceRestartCmd,
+		adminServiceStopCmd,
 	},
 }
 
