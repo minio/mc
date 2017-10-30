@@ -122,7 +122,7 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 
 	// Call get config API
 	c, e := client.SetConfig(os.Stdin)
-	fatalIf(probe.NewError(e), "Cannot get server configuration file.")
+	fatalIf(probe.NewError(e), "Cannot set server configuration file.")
 
 	// Print set config result
 	printMsg(configSetMessage{

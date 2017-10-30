@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016 Minio, Inc.
+ * Minio Client (C) 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,10 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
-var adminServiceRestartCmd = cli.Command{
-	Name:   "restart",
-	Usage:  "Restart a minio server",
-	Action: mainAdminServiceRestart,
+var adminServiceStopCmd = cli.Command{
+	Name:   "stop",
+	Usage:  "Stop a minio server",
+	Action: mainAdminServiceStop,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -42,45 +42,45 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Restart a Minio server represented by its alias 'play'.
+    1. Stop a Minio server represented by its alias 'play'.
        $ {{.HelpName}} play/
 
 `,
 }
 
-// serviceRestartMessage is container for make bucket success and failure messages.
-type serviceRestartMessage struct {
+// serviceStopMessage is container for make bucket success and failure messages.
+type serviceStopMessage struct {
 	Status    string `json:"status"`
 	ServerURL string `json:"serverURL"`
 }
 
 // String colorized make bucket message.
-func (s serviceRestartMessage) String() string {
-	return console.Colorize("ServiceRestart", "Restarted `"+s.ServerURL+"` successfully.")
+func (s serviceStopMessage) String() string {
+	return console.Colorize("ServiceStop", "Stopped `"+s.ServerURL+"` successfully.")
 }
 
 // JSON jsonified make bucket message.
-func (s serviceRestartMessage) JSON() string {
-	serviceRestartJSONBytes, e := json.Marshal(s)
+func (s serviceStopMessage) JSON() string {
+	serviceStopJSONBytes, e := json.Marshal(s)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
-	return string(serviceRestartJSONBytes)
+	return string(serviceStopJSONBytes)
 }
 
-// checkAdminServiceRestartSyntax - validate all the passed arguments
-func checkAdminServiceRestartSyntax(ctx *cli.Context) {
+// checkAdminServiceStopSyntax - validate all the passed arguments
+func checkAdminServiceStopSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "restart", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "stop", 1) // last argument is exit code
 	}
 }
 
-func mainAdminServiceRestart(ctx *cli.Context) error {
+func mainAdminServiceStop(ctx *cli.Context) error {
 
-	// Validate serivce restart syntax.
-	checkAdminServiceRestartSyntax(ctx)
+	// Validate serivce stop syntax.
+	checkAdminServiceStopSyntax(ctx)
 
 	// Set color.
-	console.SetColor("ServiceRestart", color.New(color.FgGreen, color.Bold))
+	console.SetColor("ServiceStop", color.New(color.FgGreen, color.Bold))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -89,11 +89,11 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	// Restart the specified Minio server
-	fatalIf(probe.NewError(client.ServiceSendAction(
-		madmin.ServiceActionValueRestart)), "Cannot restart server.")
+	// Stop the specified Minio server
+	pErr := client.ServiceSendAction(madmin.ServiceActionValueStop)
+	fatalIf(probe.NewError(pErr), "Cannot stop server.")
 
 	// Success..
-	printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
+	printMsg(serviceStopMessage{Status: "success", ServerURL: aliasedURL})
 	return nil
 }
