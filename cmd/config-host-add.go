@@ -154,7 +154,7 @@ func newS3Config(args cli.Args) (*Config, *probe.Error) {
 		return nil, err.Trace(args...)
 	}
 
-	if _, err = s3Client.Stat(false); err != nil {
+	if _, err = s3Client.Stat(false, false); err != nil {
 		switch err.ToGoError().(type) {
 		case BucketDoesNotExist:
 			// Bucket doesn't exist, means signature probing worked V4.
@@ -165,7 +165,7 @@ func newS3Config(args cli.Args) (*Config, *probe.Error) {
 			if err != nil {
 				return nil, err.Trace(args...)
 			}
-			if _, err = s3Client.Stat(false); err != nil {
+			if _, err = s3Client.Stat(false, false); err != nil {
 				switch err.ToGoError().(type) {
 				case BucketDoesNotExist:
 					// Bucket doesn't exist, means signature probing worked with V2.

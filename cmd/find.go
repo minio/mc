@@ -430,7 +430,7 @@ func getShareURL(path string) string {
 	clnt, err := newClientFromAlias(targetAlias, targetURLFull)
 	fatalIf(err.Trace(targetAlias, targetURLFull), "Unable to initialize client instance from alias.")
 
-	content, err := clnt.Stat(false)
+	content, err := clnt.Stat(false, false)
 	fatalIf(err.Trace(targetURLFull, targetAlias), "Unable to lookup file/object.")
 
 	// Skip if its a directory.

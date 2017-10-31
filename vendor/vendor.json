@@ -139,6 +139,12 @@
 			"revisionTime": "2016-03-15T12:21:13+11:00"
 		},
 		{
+			"checksumSHA1": "Z/05vaKyPtED9YR98YqJZAZgWTQ=",
+			"path": "github.com/pkg/xattr",
+			"revision": "56ed87199ebaabcb1b3bfae3c1fb0affaabc3287",
+			"revisionTime": "2017-08-08T19:02:11Z"
+		},
+		{
 			"checksumSHA1": "ZYLNe3yInOcxTtzu7ERLL2hoQxE=",
 			"path": "github.com/rjeczalik/notify",
 			"revision": "41a86457b5eea072a7e6f40bbfaf94c8df41d3aa",

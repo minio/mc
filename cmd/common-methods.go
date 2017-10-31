@@ -87,14 +87,12 @@ func getSourceStream(alias string, urlStr string, fetchStat bool) (reader io.Rea
 	}
 	metadata = map[string]string{}
 	if fetchStat {
-		st, err := sourceClnt.Stat(false)
+		st, err := sourceClnt.Stat(false, false)
 		if err != nil {
 			return nil, nil, err.Trace(alias, urlStr)
 		}
 		for k, v := range st.Metadata {
-			if len(v) > 0 {
-				metadata[k] = v[0]
-			}
+			metadata[k] = v
 		}
 	}
 	return reader, metadata, nil

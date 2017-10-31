@@ -141,8 +141,8 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) error {
 		errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
-
-	content, pErr := clnt.Stat(isIncomplete)
+	isFetchMeta := false
+	content, pErr := clnt.Stat(isIncomplete, isFetchMeta)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)

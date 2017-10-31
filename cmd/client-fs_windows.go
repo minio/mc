@@ -48,3 +48,9 @@ func IsPutEvent(event notify.Event) bool {
 func IsDeleteEvent(event notify.Event) bool {
 	return event&notify.Remove != 0
 }
+
+// getAllXattrs returns the extended attributes for a file if supported
+// by the OS
+func getAllXattrs(path string) (map[string]string, error) {
+	return nil, nil
+}

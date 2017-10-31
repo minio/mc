@@ -1,4 +1,4 @@
-// +build darwin freebsd solaris
+// +build solaris
 
 /*
  * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
@@ -47,4 +47,10 @@ func IsPutEvent(event notify.Event) bool {
 // IsDeleteEvent checks if the event returned is a delete event
 func IsDeleteEvent(event notify.Event) bool {
 	return event&notify.Remove != 0
+}
+
+// getAtllXAttrs returns the extended attributes for a file if supported
+// by the OS
+func getAllXattrs(path string) (map[string]string, error) {
+	return nil, nil
 }
