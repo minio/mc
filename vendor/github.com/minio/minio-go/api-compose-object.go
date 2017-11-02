@@ -59,7 +59,7 @@ func (s *SSEInfo) getSSEHeaders(isCopySource bool) map[string]string {
 	return map[string]string{
 		"x-amz-" + cs + "server-side-encryption-customer-algorithm": s.algo,
 		"x-amz-" + cs + "server-side-encryption-customer-key":       base64.StdEncoding.EncodeToString(s.key),
-		"x-amz-" + cs + "server-side-encryption-customer-key-MD5":   base64.StdEncoding.EncodeToString(sumMD5(s.key)),
+		"x-amz-" + cs + "server-side-encryption-customer-key-MD5":   sumMD5Base64(s.key),
 	}
 }
 
@@ -116,7 +116,7 @@ func NewDestinationInfo(bucket, object string, encryptSSEC *SSEInfo,
 			k = k[len("x-amz-meta-"):]
 		}
 		if _, ok := m[k]; ok {
-			return d, fmt.Errorf("Cannot add both %s and x-amz-meta-%s keys as custom metadata", k, k)
+			return d, ErrInvalidArgument(fmt.Sprintf("Cannot add both %s and x-amz-meta-%s keys as custom metadata", k, k))
 		}
 		m[k] = v
 	}
@@ -250,7 +250,7 @@ func (s *SourceInfo) getProps(c Client) (size int64, etag string, userMeta map[s
 	}
 	objInfo, err = c.statObject(s.bucket, s.object, opts)
 	if err != nil {
-		err = fmt.Errorf("Could not stat object - %s/%s: %v", s.bucket, s.object, err)
+		err = ErrInvalidArgument(fmt.Sprintf("Could not stat object - %s/%s: %v", s.bucket, s.object, err))
 	} else {
 		size = objInfo.Size
 		etag = objInfo.ETag
@@ -366,7 +366,7 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 	for i, src := range srcs {
 		size, etag, srcUserMeta, err = src.getProps(c)
 		if err != nil {
-			return fmt.Errorf("Could not get source props for %s/%s: %v", src.bucket, src.object, err)
+			return err
 		}
 
 		// Error out if client side encryption is used in this source object when
@@ -478,7 +478,7 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 	}
 	uploadID, err := c.newUploadID(ctx, dst.bucket, dst.object, PutObjectOptions{UserMetadata: metaHeaders})
 	if err != nil {
-		return fmt.Errorf("Error creating new upload: %v", err)
+		return err
 	}
 
 	// 2. Perform copy part uploads
@@ -506,7 +506,7 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 			complPart, err := c.uploadPartCopy(ctx, dst.bucket,
 				dst.object, uploadID, partIndex, h)
 			if err != nil {
-				return fmt.Errorf("Error in upload-part-copy - %v", err)
+				return err
 			}
 			objParts = append(objParts, complPart)
 			partIndex++
@@ -517,9 +517,9 @@ func (c Client) ComposeObject(dst DestinationInfo, srcs []SourceInfo) error {
 	_, err = c.completeMultipartUpload(ctx, dst.bucket, dst.object, uploadID,
 		completeMultipartUpload{Parts: objParts})
 	if err != nil {
-		err = fmt.Errorf("Error in complete-multipart request - %v", err)
+		return err
 	}
-	return err
+	return nil
 }
 
 // partsRequired is ceiling(size / copyPartSize)

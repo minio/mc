@@ -38,8 +38,8 @@ func (c Client) RemoveBucket(bucketName string) error {
 	}
 	// Execute DELETE on bucket.
 	resp, err := c.executeMethod(context.Background(), "DELETE", requestMetadata{
-		bucketName:         bucketName,
-		contentSHA256Bytes: emptySHA256,
+		bucketName:       bucketName,
+		contentSHA256Hex: emptySHA256Hex,
 	})
 	defer closeResponse(resp)
 	if err != nil {
@@ -68,9 +68,9 @@ func (c Client) RemoveObject(bucketName, objectName string) error {
 	}
 	// Execute DELETE on objectName.
 	resp, err := c.executeMethod(context.Background(), "DELETE", requestMetadata{
-		bucketName:         bucketName,
-		objectName:         objectName,
-		contentSHA256Bytes: emptySHA256,
+		bucketName:       bucketName,
+		objectName:       objectName,
+		contentSHA256Hex: emptySHA256Hex,
 	})
 	defer closeResponse(resp)
 	if err != nil {
@@ -189,12 +189,12 @@ func (c Client) RemoveObjects(bucketName string, objectsCh <-chan string) <-chan
 			removeBytes := generateRemoveMultiObjectsRequest(batch)
 			// Execute GET on bucket to list objects.
 			resp, err := c.executeMethod(context.Background(), "POST", requestMetadata{
-				bucketName:         bucketName,
-				queryValues:        urlValues,
-				contentBody:        bytes.NewReader(removeBytes),
-				contentLength:      int64(len(removeBytes)),
-				contentMD5Bytes:    sumMD5(removeBytes),
-				contentSHA256Bytes: sum256(removeBytes),
+				bucketName:       bucketName,
+				queryValues:      urlValues,
+				contentBody:      bytes.NewReader(removeBytes),
+				contentLength:    int64(len(removeBytes)),
+				contentMD5Base64: sumMD5Base64(removeBytes),
+				contentSHA256Hex: sum256Hex(removeBytes),
 			})
 			if err != nil {
 				for _, b := range batch {
@@ -253,10 +253,10 @@ func (c Client) abortMultipartUpload(ctx context.Context, bucketName, objectName
 
 	// Execute DELETE on multipart upload.
 	resp, err := c.executeMethod(ctx, "DELETE", requestMetadata{
-		bucketName:         bucketName,
-		objectName:         objectName,
-		queryValues:        urlValues,
-		contentSHA256Bytes: emptySHA256,
+		bucketName:       bucketName,
+		objectName:       objectName,
+		queryValues:      urlValues,
+		contentSHA256Hex: emptySHA256Hex,
 	})
 	defer closeResponse(resp)
 	if err != nil {

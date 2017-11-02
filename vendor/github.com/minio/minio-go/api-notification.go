@@ -48,9 +48,9 @@ func (c Client) getBucketNotification(bucketName string) (BucketNotification, er
 
 	// Execute GET on bucket to list objects.
 	resp, err := c.executeMethod(context.Background(), "GET", requestMetadata{
-		bucketName:         bucketName,
-		queryValues:        urlValues,
-		contentSHA256Bytes: emptySHA256,
+		bucketName:       bucketName,
+		queryValues:      urlValues,
+		contentSHA256Hex: emptySHA256Hex,
 	})
 
 	defer closeResponse(resp)
@@ -172,9 +172,9 @@ func (c Client) ListenBucketNotification(bucketName, prefix, suffix string, even
 
 			// Execute GET on bucket to list objects.
 			resp, err := c.executeMethod(context.Background(), "GET", requestMetadata{
-				bucketName:         bucketName,
-				queryValues:        urlValues,
-				contentSHA256Bytes: emptySHA256,
+				bucketName:       bucketName,
+				queryValues:      urlValues,
+				contentSHA256Hex: emptySHA256Hex,
 			})
 			if err != nil {
 				continue
