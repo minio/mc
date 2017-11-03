@@ -56,20 +56,22 @@ func equalAssert(ok1, ok2 bool, t *testing.T) {
 
 // Tests valid and invalid secret keys.
 func TestValidSecretKeys(t *testing.T) {
-	equalAssert(isValidSecretKey("password"), true, t)
-	equalAssert(isValidSecretKey("BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"), true, t)
-
 	equalAssert(isValidSecretKey("aaa"), false, t)
+
+	equalAssert(isValidSecretKey(""), true, t)
+	equalAssert(isValidSecretKey("password"), true, t)
 	equalAssert(isValidSecretKey("password%%"), true, t)
+	equalAssert(isValidSecretKey("BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"), true, t)
 }
 
 // Tests valid and invalid access keys.
 func TestValidAccessKeys(t *testing.T) {
-	equalAssert(isValidAccessKey("c67W2-r4MAyAYScRl"), true, t)
-	equalAssert(isValidAccessKey("EXOb76bfeb1234562iu679f11588"), false, t)
-	equalAssert(isValidAccessKey("BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"), false, t)
-	equalAssert(isValidAccessKey("admin"), true, t)
-
 	equalAssert(isValidAccessKey("aaa"), false, t)
+
+	equalAssert(isValidAccessKey(""), true, t)
+	equalAssert(isValidAccessKey("admin"), true, t)
 	equalAssert(isValidAccessKey("$$%%%%%3333"), true, t)
+	equalAssert(isValidAccessKey("c67W2-r4MAyAYScRl"), true, t)
+	equalAssert(isValidAccessKey("EXOb76bfeb1234562iu679f11588"), true, t)
+	equalAssert(isValidAccessKey("BYvgJM101sHngl2uzjXS/OBF/aMxAN06JrJ3qJlF"), true, t)
 }
