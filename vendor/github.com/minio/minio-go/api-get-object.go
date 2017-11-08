@@ -612,10 +612,10 @@ func (c Client) getObject(ctx context.Context, bucketName, objectName string, op
 
 	// Execute GET on objectName.
 	resp, err := c.executeMethod(ctx, "GET", requestMetadata{
-		bucketName:         bucketName,
-		objectName:         objectName,
-		customHeader:       opts.Header(),
-		contentSHA256Bytes: emptySHA256,
+		bucketName:       bucketName,
+		objectName:       objectName,
+		customHeader:     opts.Header(),
+		contentSHA256Hex: emptySHA256Hex,
 	})
 	if err != nil {
 		return nil, ObjectInfo{}, err

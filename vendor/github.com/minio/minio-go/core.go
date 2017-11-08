@@ -60,7 +60,7 @@ func (c Core) CopyObject(sourceBucket, sourceObject, destBucket, destObject stri
 }
 
 // PutObject - Upload object. Uploads using single PUT call.
-func (c Core) PutObject(bucket, object string, data io.Reader, size int64, md5Sum, sha256Sum []byte, metadata map[string]string) (ObjectInfo, error) {
+func (c Core) PutObject(bucket, object string, data io.Reader, size int64, md5Base64, sha256Hex string, metadata map[string]string) (ObjectInfo, error) {
 	opts := PutObjectOptions{}
 	m := make(map[string]string)
 	for k, v := range metadata {
@@ -77,7 +77,7 @@ func (c Core) PutObject(bucket, object string, data io.Reader, size int64, md5Su
 		}
 	}
 	opts.UserMetadata = m
-	return c.putObjectDo(context.Background(), bucket, object, data, md5Sum, sha256Sum, size, opts)
+	return c.putObjectDo(context.Background(), bucket, object, data, md5Base64, sha256Hex, size, opts)
 }
 
 // NewMultipartUpload - Initiates new multipart upload and returns the new uploadID.
@@ -92,14 +92,14 @@ func (c Core) ListMultipartUploads(bucket, prefix, keyMarker, uploadIDMarker, de
 }
 
 // PutObjectPart - Upload an object part.
-func (c Core) PutObjectPart(bucket, object, uploadID string, partID int, data io.Reader, size int64, md5Sum, sha256Sum []byte) (ObjectPart, error) {
-	return c.PutObjectPartWithMetadata(bucket, object, uploadID, partID, data, size, md5Sum, sha256Sum, nil)
+func (c Core) PutObjectPart(bucket, object, uploadID string, partID int, data io.Reader, size int64, md5Base64, sha256Hex string) (ObjectPart, error) {
+	return c.PutObjectPartWithMetadata(bucket, object, uploadID, partID, data, size, md5Base64, sha256Hex, nil)
 }
 
 // PutObjectPartWithMetadata - upload an object part with additional request metadata.
 func (c Core) PutObjectPartWithMetadata(bucket, object, uploadID string, partID int, data io.Reader,
-	size int64, md5Sum, sha256Sum []byte, metadata map[string]string) (ObjectPart, error) {
-	return c.uploadPart(context.Background(), bucket, object, uploadID, data, partID, md5Sum, sha256Sum, size, metadata)
+	size int64, md5Base64, sha256Hex string, metadata map[string]string) (ObjectPart, error) {
+	return c.uploadPart(context.Background(), bucket, object, uploadID, data, partID, md5Base64, sha256Hex, size, metadata)
 }
 
 // ListObjectParts - List uploaded parts of an incomplete upload.x

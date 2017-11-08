@@ -18,7 +18,6 @@
 package minio
 
 import (
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"path"
@@ -209,11 +208,9 @@ func (c Client) getBucketLocationRequest(bucketName string) (*http.Request, erro
 	}
 
 	// Set sha256 sum for signature calculation only with signature version '4'.
-	var contentSha256 string
+	contentSha256 := emptySHA256Hex
 	if c.secure {
 		contentSha256 = unsignedPayload
-	} else {
-		contentSha256 = hex.EncodeToString(sum256([]byte{}))
 	}
 
 	req.Header.Set("X-Amz-Content-Sha256", contentSha256)

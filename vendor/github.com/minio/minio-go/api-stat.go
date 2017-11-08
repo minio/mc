@@ -35,8 +35,8 @@ func (c Client) BucketExists(bucketName string) (bool, error) {
 
 	// Execute HEAD on bucketName.
 	resp, err := c.executeMethod(context.Background(), "HEAD", requestMetadata{
-		bucketName:         bucketName,
-		contentSHA256Bytes: emptySHA256,
+		bucketName:       bucketName,
+		contentSHA256Hex: emptySHA256Hex,
 	})
 	defer closeResponse(resp)
 	if err != nil {
@@ -104,10 +104,10 @@ func (c Client) statObject(bucketName, objectName string, opts StatObjectOptions
 
 	// Execute HEAD on objectName.
 	resp, err := c.executeMethod(context.Background(), "HEAD", requestMetadata{
-		bucketName:         bucketName,
-		objectName:         objectName,
-		contentSHA256Bytes: emptySHA256,
-		customHeader:       opts.Header(),
+		bucketName:       bucketName,
+		objectName:       objectName,
+		contentSHA256Hex: emptySHA256Hex,
+		customHeader:     opts.Header(),
 	})
 	defer closeResponse(resp)
 	if err != nil {
