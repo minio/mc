@@ -22,9 +22,7 @@ var validAPIs = []string{"S3v4", "S3v2"}
 
 const (
 	accessKeyMinLen = 5
-	accessKeyMaxLen = 20
 	secretKeyMinLen = 8
-	secretKeyMaxLen = 100
 )
 
 // isValidAccessKey - validate access key for right length.
@@ -32,7 +30,7 @@ func isValidAccessKey(accessKey string) bool {
 	if accessKey == "" {
 		return true
 	}
-	return len(accessKey) >= accessKeyMinLen && len(accessKey) <= accessKeyMaxLen
+	return len(accessKey) >= accessKeyMinLen
 }
 
 // isValidSecretKey - validate secret key for right length.
@@ -40,7 +38,7 @@ func isValidSecretKey(secretKey string) bool {
 	if secretKey == "" {
 		return true
 	}
-	return len(secretKey) >= secretKeyMinLen && len(secretKey) <= secretKeyMaxLen
+	return len(secretKey) >= secretKeyMinLen
 }
 
 // isValidHostURL - validate input host url.
