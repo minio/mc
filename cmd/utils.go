@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -95,9 +97,68 @@ func splitStr(path, sep string, n int) []string {
 	return splits
 }
 
+// parse url usually obtained from env.
+func parseEnvURL(envURL string) (*url.URL, string, string, *probe.Error) {
+	u, e := url.Parse(envURL)
+	if e != nil {
+		return nil, "", "", probe.NewError(e).Trace(envURL)
+	}
+
+	var accessKey, secretKey string
+	// Check if username:password is provided in URL, with no
+	// access keys or secret we proceed and perform anonymous
+	// requests.
+	if u.User != nil {
+		accessKey = u.User.Username()
+		secretKey, _ = u.User.Password()
+	}
+
+	// Look for if URL has invalid values and return error.
+	if !((u.Scheme == "http" || u.Scheme == "https") &&
+		(u.Path == "/" || u.Path == "") && u.Opaque == "" &&
+		u.ForceQuery == false && u.RawQuery == "" && u.Fragment == "") {
+		return nil, "", "", errInvalidArgument().Trace(u.String())
+	}
+
+	// Now that we have validated the URL to be in expected style.
+	u.User = nil
+
+	return u, accessKey, secretKey, nil
+}
+
+func buildS3ConfigFromEnv(envURL string) (*Config, *probe.Error) {
+	u, accessKey, secretKey, err := parseEnvURL(envURL)
+	if err != nil {
+		return nil, err.Trace(envURL)
+	}
+
+	s3Config, err := newS3Config(cli.Args{u.String(), accessKey, secretKey})
+	if err != nil {
+		return nil, err.Trace(envURL)
+	}
+
+	s3Config.AppName = "mc"
+	s3Config.AppVersion = Version
+	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
+	s3Config.Debug = globalDebug
+	s3Config.Insecure = globalInsecure
+
+	return s3Config, nil
+}
+
+const mcEnvHostsPrefix = "MC_HOSTS_"
+
 // buildS3Config fetches config related to the specified alias
 // to create a new config structure
 func buildS3Config(alias, urlStr string) (*Config, *probe.Error) {
+	// Check if we can get the values from ENV, if not use from `config.json`.
+	if alias == "" {
+		alias, _ = url2Alias(urlStr)
+	}
+	if envConfig, ok := os.LookupEnv(mcEnvHostsPrefix + alias); ok {
+		return buildS3ConfigFromEnv(envConfig)
+	}
+
 	hostCfg := mustGetHostConfig(alias)
 	if hostCfg == nil {
 		return nil, probe.NewError(fmt.Errorf("The specified alias: %s not found", urlStr))
@@ -107,29 +168,13 @@ func buildS3Config(alias, urlStr string) (*Config, *probe.Error) {
 	// credentials from the match found in the config file.
 	s3Config := new(Config)
 
-	// Fetch keys from the environnement, otherwise, get them from the config file
-	keys := splitStr(os.Getenv("MC_SECRET_"+alias), ":", 2)
-	if isValidAccessKey(keys[0]) && isValidSecretKey(keys[1]) {
-		s3Config.AccessKey = keys[0]
-		s3Config.SecretKey = keys[1]
-	} else {
-		if keys[0] != "" {
-			console.Errorln("Access/Secret keys associated to `" + alias + "' " +
-				"are found in your environment but not suitable for use. " +
-				"Falling back to the standard config.")
-		}
-	}
-
-	if s3Config.AccessKey == "" {
-		s3Config.AccessKey = hostCfg.AccessKey
-		s3Config.SecretKey = hostCfg.SecretKey
-	}
-
+	s3Config.HostURL = urlStr
+	s3Config.AccessKey = hostCfg.AccessKey
+	s3Config.SecretKey = hostCfg.SecretKey
 	s3Config.Signature = hostCfg.API
 	s3Config.AppName = "mc"
 	s3Config.AppVersion = Version
 	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
-	s3Config.HostURL = urlStr
 	s3Config.Debug = globalDebug
 	s3Config.Insecure = globalInsecure
 
