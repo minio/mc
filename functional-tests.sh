@@ -317,6 +317,39 @@ function test_get_object_multipart()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_presigned_post_policy_error()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+
+    out=$("${MC_CMD[@]}" --json share upload "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}")
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to get presigned post policy and put object url"
+
+    # Extract share field of json output, and append object name to the URL
+    upload=$(echo "$out" | jq -r .share | sed "s|<FILE>|$FILE_1_MB|g" | sed "s|curl|curl -sS|g" | sed "s|${ENDPOINT}/${BUCKET_NAME}/|${ENDPOINT}/${BUCKET_NAME}/${object_name}|g")
+
+    # In case of virtual host style URL path, the previous replace would have failed.
+    # One of the following two commands will append the object name in that scenario.
+    upload=$(echo "$upload" | sed "s|http://${BUCKET_NAME}.${SERVER_ENDPOINT}/|http://${BUCKET_NAME}.${SERVER_ENDPOINT}/${object_name}|g")
+    upload=$(echo "$upload" | sed "s|https://${BUCKET_NAME}.${SERVER_ENDPOINT}/|https://${BUCKET_NAME}.${SERVER_ENDPOINT}/${object_name}|g")
+
+    ret=$($upload 2>&1 | grep -oP '(?<=Code>)[^<]+')
+    # Check if the command execution failed.
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unknown failure in upload of $FILE_1_MB using presigned post policy"
+    if [ -z "$ret" ]; then
+
+    # Check if the upload succeeded. We expect it to fail.
+    assert_failure "$start_time" "${FUNCNAME[0]}" show_on_success 0 "upload of $FILE_1_MB using presigned post policy should have failed"
+    fi
+
+    if [ "$ret" != "MethodNotAllowed" ]; then
+    assert_failure "$start_time" "${FUNCNAME[0]}" show_on_success 0 "upload of $FILE_1_MB using presigned post policy should have failed with MethodNotAllowed error, instead failed with $ret error"
+    fi
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function test_presigned_put_object()
 {
     show "${FUNCNAME[0]}"
@@ -509,6 +542,7 @@ function run_test()
     test_put_object_multipart
     test_get_object
     test_get_object_multipart
+    test_presigned_post_policy_error
     test_presigned_put_object
     test_presigned_get_object
     test_cat_object
