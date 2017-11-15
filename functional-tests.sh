@@ -124,7 +124,19 @@ function show()
     fi
 }
 
-function fail()
+function show_on_success()
+{
+    rv="$1"
+    shift
+
+    if [ "$rv" -eq 0 ]; then
+        echo "$@"
+    fi
+
+    return "$rv"
+}
+
+function show_on_failure()
 {
     rv="$1"
     shift
@@ -313,10 +325,10 @@ function test_presigned_put_object()
     object_name="mc-test-object-$RANDOM"
 
     out=$("${MC_CMD[@]}" --json share upload "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}")
-    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to get presigned put object url"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to get presigned put object url"
     upload=$(echo "$out" | jq -r .share | sed "s|<FILE>|$FILE_1_MB|g" | sed "s|curl|curl -sS|g")
     $upload >/dev/null 2>&1
-    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to upload $FILE_1_MB presigned put object url"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to upload $FILE_1_MB presigned put object url"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_65_MB_MD5SUM" "${object_name}.downloaded"
@@ -334,10 +346,10 @@ function test_presigned_get_object()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     out=$("${MC_CMD[@]}" --json share download "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}")
-    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to get presigned get object url"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to get presigned get object url"
     download_url=$(echo "$out" | jq -r .share)
     curl --output "${object_name}.downloaded" -sS -X GET "$download_url"
-    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to download $download_url"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download $download_url"
 
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
@@ -353,7 +365,7 @@ function test_cat_object()
     object_name="mc-test-object-$RANDOM"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
     "${MC_CMD[@]}" cat "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
-    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "unable to download object using 'mc cat'"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
@@ -371,7 +383,7 @@ function test_mirror_list_objects()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
 
     diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}" | jq -r .key) >/dev/null 2>&1
-    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "mirror and list differs"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
 
@@ -389,7 +401,7 @@ function test_find_empty() {
 
     # find --older 1 day should be empty, so we compare with empty string.
     diff -bB <(echo "") <("${MC_CMD[@]}" --json find "${SERVER_ALIAS}/${bucket_name}" --older 1d | jq -r .key | sed "s/${SERVER_ALIAS}\/${bucket_name}\///g") >/dev/null 2>&1
-    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "mirror and list differs"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
 
@@ -406,7 +418,7 @@ function test_find() {
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
 
     diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json find "${SERVER_ALIAS}/${bucket_name}" | jq -r .key | sed "s/${SERVER_ALIAS}\/${bucket_name}\///g") >/dev/null 2>&1
-    assert_success "$start_time" "${FUNCNAME[0]}" fail $? "mirror and list differs"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
 
@@ -437,7 +449,7 @@ function test_watch_object()
     sleep 1
     if ! jq -r .events.type "$WATCH_OUT_FILE" | grep -qi ObjectCreated; then
         kill "$watch_cmd_pid"
-        assert_success "$start_time" "${FUNCNAME[0]}" fail 1 "ObjectCreated event not found"
+        assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "ObjectCreated event not found"
     fi
 
     ( assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bucket_name}/${object_name}" )
@@ -450,7 +462,7 @@ function test_watch_object()
     sleep 1
     if ! jq -r .events.type "$WATCH_OUT_FILE" | grep -qi ObjectRemoved; then
         kill "$watch_cmd_pid"
-        assert_success "$start_time" "${FUNCNAME[0]}" fail 1 "ObjectRemoved event not found"
+        assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "ObjectRemoved event not found"
     fi
 
     kill "$watch_cmd_pid"
@@ -466,6 +478,8 @@ function test_config_host_add()
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host add "${SERVER_ALIAS}1" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host list "${SERVER_ALIAS}1"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
 }
 
 function test_config_host_add_error()
@@ -474,11 +488,13 @@ function test_config_host_add_error()
     start_time=$(get_time)
 
     out=$("${MC_CMD[@]}" --json config host add "${SERVER_ALIAS}1" "$ENDPOINT" "$ACCESS_KEY" "invalid-secret")
-    assert_failure "$start_time" "${FUNCNAME[0]}" fail $? "adding host should fail"
+    assert_failure "$start_time" "${FUNCNAME[0]}" show_on_success $? "adding host should fail"
     got_code=$(echo "$out" | jq -r .error.cause.error.Code)
     if [ "${got_code}" != "SignatureDoesNotMatch" ]; then
-        assert_failure "$start_time" "${FUNCNAME[0]}" fail 1 "incorrect error code ${got_code} returned by server"
+        assert_failure "$start_time" "${FUNCNAME[0]}" show_on_failure 1 "incorrect error code ${got_code} returned by server"
     fi
+
+    log_success "$start_time" "${FUNCNAME[0]}"
 }
 
 function run_test()
