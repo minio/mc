@@ -978,12 +978,19 @@ func (f *fsClient) Stat(isIncomplete, isFetchMeta bool) (content *clientContent,
 	content.Metadata = map[string]string{
 		"Content-Type": guessURLContentType(f.PathURL.Path),
 	}
-	path := f.PathURL.String()
-	metaData, pErr := getAllXattrs(path)
-	if pErr != nil {
-		return content, nil
+	// isFetchMeta is true only in the case of mc stat command which lists any extended attributes
+	// present for this object.
+	if isFetchMeta {
+		path := f.PathURL.String()
+		metaData, pErr := getAllXattrs(path)
+		if pErr != nil {
+			return content, nil
+		}
+		for k, v := range metaData {
+			content.Metadata[k] = v
+		}
 	}
-	content.Metadata = metaData
+
 	return content, nil
 }
 
