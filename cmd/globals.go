@@ -81,7 +81,7 @@ func setGlobals(quiet, debug, json, noColor, insecure bool) {
 	}
 
 	// Disable colorified messages if requested.
-	if globalNoColor {
+	if globalNoColor || globalQuiet {
 		console.SetColorOff()
 	}
 }
