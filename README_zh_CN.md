@@ -16,7 +16,7 @@ find     基于参数查找文件。
 diff     对两个文件夹或者存储桶比较差异。
 rm       删除文件和对象。
 events   管理对象通知。
-watch    箭筒文件和对象的事件。
+watch    监听文件和对象的事件。
 policy   管理访问策略。
 session  为cp命令管理保存的会话。
 config   管理mc配置文件。
@@ -87,7 +87,7 @@ sudo snap install minio-client --edge --devmode
 ## 通过源码安装
 通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从https://minio.io/downloads/#minio-client下载官方版本。
 
-如果您没有Golang环境，请按照 [如何安装Golang](https://docs.minio.io/docs/how-to-install-golang)。
+如果您没有Golang环境，请参照[如何安装Golang](https://docs.minio.io/docs/how-to-install-golang)。
 
 ```sh
 go get -d github.com/minio/mc
@@ -179,4 +179,4 @@ cat      cp       events   mb       pipe     rm       share    version
 - [Minio官方文档](https://docs.minio.io)
 
 ## 贡献
-Please follow Minio [Contributor's Guide](https://github.com/minio/mc/blob/master/docs/zh_CN/CONTRIBUTING.md)
+请遵守Minio[贡献者指南](https://github.com/minio/mc/blob/master/docs/zh_CN/CONTRIBUTING.md)

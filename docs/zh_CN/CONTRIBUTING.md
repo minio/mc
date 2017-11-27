@@ -20,7 +20,7 @@ $ mc --help
     - Push到你的远端 (git push origin my-new-feature)
     - 创建一个新的Pull Request
 
-* 如果你有``mc``的更多以来， ``mc``使用[govendor](https://github.com/kardianos/govendor)管理它的依赖。
+* 如果你有``mc``的更多依赖，``mc``使用[govendor](https://github.com/kardianos/govendor)管理它的依赖。
     - 运行`go get foo/bar`
     - 修改你的代码，引入foo/bar
     - 在根目录运行`make pkg-add PKG=foo/bar`

@@ -14,7 +14,7 @@ find     基于参数查找文件。
 diff     对两个文件夹或者存储桶比较差异。
 rm       删除文件和对象。
 events   管理对象通知。
-watch    箭筒文件和对象的事件。
+watch    监视文件和对象的事件。
 policy   管理访问策略。
 session  为cp命令管理保存的会话。
 config   管理mc配置文件。
@@ -80,7 +80,7 @@ sudo snap install minio-client --edge --devmode
 当一个新的版本发布时，你都会自动更新。
 
 ### 通过源码安装
-通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从https://minio.io/downloads/#minio-client下载官方版本。
+通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从[minio-client](https://minio.io/downloads/#minio-client)下载官方版本。
 
 如果您没有Golang环境，请按照 [如何安装Golang](https://docs.minio.io/docs/how-to-install-golang)。
 
@@ -150,11 +150,11 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 注意：Google云存储只支持旧版签名版本V2，所以你需要选择S3v2。
 
 ## 4. 验证
-`mc`预先配置了云存储服务URL：https://play.minio.io:9000，别名“play”。它是一个用于研发和测试的Minio服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
+`mc`预先配置了云存储服务URL：[https://play.minio.io:9000](https://play.minio.io:9000)，别名“play”。它是一个用于研发和测试的Minio服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
 
 *示例:*
 
-列出https://play.minio.io:9000上的所有存储桶。
+列出[https://play.minio.io:9000](https://play.minio.io:9000)上的所有存储桶。
 
 ```sh
 mc ls play
