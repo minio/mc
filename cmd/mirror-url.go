@@ -39,6 +39,12 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	srcURL := URLs[0]
 	tgtURL := URLs[1]
 
+	if ctx.Bool("force") && ctx.Bool("remove") {
+		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated please use `--overwrite` instead with `--remove` for the same functionality.")
+	} else if ctx.Bool("force") {
+		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated please use `--overwrite` instead for the same functionality.")
+	}
+
 	/****** Generic rules *******/
 	if !ctx.Bool("watch") {
 		_, srcContent, err := url2Stat(srcURL)
@@ -66,7 +72,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
-func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, excludeOptions []string, URLsCh chan<- URLs) {
+func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemove bool, excludeOptions []string, URLsCh chan<- URLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -105,13 +111,11 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 		switch diffMsg.Diff {
 		case differInNone:
 			// No difference, continue.
-			continue
 		case differInType:
 			URLsCh <- URLs{Error: errInvalidTarget(diffMsg.SecondURL)}
-			continue
 		case differInSize, differInTime:
-			if !isForce && !isFake {
-				// Size differs and force not set
+			if !isOverwrite && !isFake {
+				// Size or time differs but --overwrite not set.
 				URLsCh <- URLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
 				continue
 			}
@@ -126,10 +130,9 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				TargetAlias:   targetAlias,
 				TargetContent: targetContent,
 			}
-			continue
 		case differInFirst:
+			// Only in first, always copy.
 			sourceSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
-			// Either available only in source or size differs and force is set
 			targetPath := urlJoinPath(targetURL, sourceSuffix)
 			sourceContent := diffMsg.firstContent
 			targetContent := &clientContent{URL: *newClientURL(targetPath)}
@@ -140,33 +143,28 @@ func deltaSourceTarget(sourceURL string, targetURL string, isForce bool, isFake 
 				TargetContent: targetContent,
 			}
 		case differInSecond:
-			if isRemove {
-				// todo(nl5887): I'd all force and fake checks to the the actual mirror / harvest
-				if !isForce && !isFake {
-					// Object removal not allowed if force is not set.
-					URLsCh <- URLs{
-						Error: errDeleteNotAllowed(diffMsg.SecondURL),
-					}
-					continue
-				}
+			if !isRemove && !isFake {
+				// Object removal not allowed if --remove is not set.
 				URLsCh <- URLs{
-					TargetAlias:   targetAlias,
-					TargetContent: diffMsg.secondContent,
+					Error: errDeleteNotAllowed(diffMsg.SecondURL),
 				}
+				continue
 			}
-			continue
+			URLsCh <- URLs{
+				TargetAlias:   targetAlias,
+				TargetContent: diffMsg.secondContent,
+			}
 		default:
 			URLsCh <- URLs{
 				Error: errUnrecognizedDiffType(diffMsg.Diff).Trace(diffMsg.FirstURL, diffMsg.SecondURL),
 			}
-			continue
 		}
 	}
 }
 
 // Prepares urls that need to be copied or removed based on requested options.
-func prepareMirrorURLs(sourceURL string, targetURL string, isForce bool, isFake bool, isRemove bool, excludeOptions []string) <-chan URLs {
+func prepareMirrorURLs(sourceURL string, targetURL string, isFake, isOverwrite, isRemove bool, excludeOptions []string) <-chan URLs {
 	URLsCh := make(chan URLs)
-	go deltaSourceTarget(sourceURL, targetURL, isForce, isFake, isRemove, excludeOptions, URLsCh)
+	go deltaSourceTarget(sourceURL, targetURL, isFake, isOverwrite, isRemove, excludeOptions, URLsCh)
 	return URLsCh
 }

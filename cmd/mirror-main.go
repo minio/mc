@@ -37,8 +37,13 @@ import (
 var (
 	mirrorFlags = []cli.Flag{
 		cli.BoolFlag{
-			Name:  "force",
-			Usage: "Force overwrite of an existing target(s).",
+			Name:   "force",
+			Usage:  "Force allows forced overwrite or removal of file(s) on target(s).",
+			Hidden: true, // Hidden since this option is deprecated.
+		},
+		cli.BoolFlag{
+			Name:  "overwrite",
+			Usage: "Overwrite file(s) on target(s).",
 		},
 		cli.BoolFlag{
 			Name:  "fake",
@@ -50,7 +55,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "remove",
-			Usage: "Remove extraneous file(s) on target.",
+			Usage: "Remove extraneous file(s) on target(s).",
 		},
 		cli.StringFlag{
 			Name:  "region",
@@ -97,16 +102,16 @@ EXAMPLES:
    3. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
       $ {{.HelpName}} s3\documents\2014\ C:\backup\2014
 
-   4. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--force' to overwrite destination.
-      $ {{.HelpName}} --force s3/miniocloud miniocloud-backup
+   4. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--overwrite' to overwrite destination.
+      $ {{.HelpName}} --overwrite s3/miniocloud miniocloud-backup
 
    5. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
-      files on Amazon S3 cloud storage. NOTE: '--remove' is only supported with '--force'.
-      $ {{.HelpName}} --force --remove play/photos/2014 s3/backup-photos/2014
+      files on Amazon S3 cloud storage.
+      $ {{.HelpName}} --remove play/photos/2014 s3/backup-photos/2014
 
    6. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
-      new objects and uploads them.
-      $ {{.HelpName}} --force --remove --watch /var/lib/backups play/backups
+      new objects, uploads and removes extraneous files on Amazon S3 cloud storage.
+      $ {{.HelpName}} --remove --watch /var/lib/backups play/backups
 
    7. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
       Exclude all .* files and *.temp files when mirroring.
@@ -155,7 +160,7 @@ type mirrorJob struct {
 	sourceURL string
 	targetURL string
 
-	isFake, isForce, isRemove, isWatch bool
+	isFake, isRemove, isOverwrite, isWatch bool
 
 	excludeOptions []string
 }
@@ -344,14 +349,14 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						return
 					}
 					shouldQueue := false
-					if !mj.isForce {
+					if !mj.isOverwrite {
 						_, err = targetClient.Stat(false, false)
 						if err == nil {
 							continue
 						} // doesn't exist
 						shouldQueue = true
 					}
-					if shouldQueue || mj.isForce {
+					if shouldQueue || mj.isOverwrite {
 						mirrorURL.TotalCount = mj.TotalObjects
 						mirrorURL.TotalSize = mj.TotalBytes
 						// adjust total, because we want to show progress of the item still queued to be copied.
@@ -361,7 +366,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					continue
 				}
 				shouldQueue := false
-				if !mj.isForce {
+				if !mj.isOverwrite {
 					targetClient, err := newClient(targetPath)
 					if err != nil {
 						// cannot create targetclient
@@ -374,7 +379,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					} // doesn't exist
 					shouldQueue = true
 				}
-				if shouldQueue || mj.isForce {
+				if shouldQueue || mj.isOverwrite {
 					mirrorURL.SourceContent.Size = event.Size
 					mirrorURL.TotalCount = mj.TotalObjects
 					mirrorURL.TotalSize = mj.TotalBytes
@@ -391,7 +396,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 				}
 				mirrorURL.TotalCount = mj.TotalObjects
 				mirrorURL.TotalSize = mj.TotalBytes
-				if mirrorURL.TargetContent != nil && mj.isRemove && mj.isForce {
+				if mirrorURL.TargetContent != nil && mj.isRemove {
 					mj.statusCh <- mj.doRemove(mirrorURL)
 				}
 			}
@@ -427,7 +432,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 	var totalBytes int64
 	var totalObjects int64
 
-	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isForce, mj.isFake, mj.isRemove, mj.excludeOptions)
+	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, mj.excludeOptions)
 	for {
 		select {
 		case sURLs, ok := <-URLsCh:
@@ -460,7 +465,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 
 			if sURLs.SourceContent != nil {
 				mj.statusCh <- mj.doMirror(ctx, cancelMirror, sURLs)
-			} else if sURLs.TargetContent != nil && mj.isRemove && mj.isForce {
+			} else if sURLs.TargetContent != nil && mj.isRemove {
 				mj.statusCh <- mj.doRemove(sURLs)
 			}
 		case <-mj.trapCh:
@@ -497,7 +502,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	mj.stopStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool, excludeOptions []string) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string) *mirrorJob {
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
@@ -516,8 +521,8 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool
 
 		isFake:         isFake,
 		isRemove:       isRemove,
+		isOverwrite:    isOverwrite,
 		isWatch:        isWatch,
-		isForce:        isForce,
 		excludeOptions: excludeOptions,
 
 		status:         status,
@@ -532,7 +537,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isWatch, isForce bool
 }
 
 // copyBucketPolicies - copy policies from source to dest
-func copyBucketPolicies(srcClt, dstClt Client, isForce bool) *probe.Error {
+func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 	rules, err := srcClt.GetAccessRules()
 	if err != nil {
 		return err
@@ -545,7 +550,7 @@ func copyBucketPolicies(srcClt, dstClt Client, isForce bool) *probe.Error {
 		}
 		// Set rule only if it doesn't exist in the target bucket
 		// or force flag is activated
-		if originalRule == "none" || isForce {
+		if originalRule == "none" || isOverwrite {
 			err = dstClt.SetAccess(r)
 			if err != nil {
 				return err
@@ -557,13 +562,19 @@ func copyBucketPolicies(srcClt, dstClt Client, isForce bool) *probe.Error {
 
 // runMirror - mirrors all buckets to another S3 server
 func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
+	// This is kept for backward compatibility, `--force` means
+	// --overwrite.
+	isOverwrite := ctx.Bool("force")
+	if !isOverwrite {
+		isOverwrite = ctx.Bool("overwrite")
+	}
 
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL,
 		ctx.Bool("fake"),
 		ctx.Bool("remove"),
+		isOverwrite,
 		ctx.Bool("watch"),
-		ctx.Bool("force"),
 		ctx.StringSlice("exclude"))
 
 	srcClt, err := newClient(srcURL)
@@ -608,7 +619,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 				}
 				// Copy policy rules from source to dest if flag is activated
 				if ctx.Bool("a") {
-					err := copyBucketPolicies(srcClt, dstClt, ctx.Bool("force"))
+					err := copyBucketPolicies(srcClt, dstClt, isOverwrite)
 					if err != nil {
 						mj.mirrorErr = err
 						errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`")

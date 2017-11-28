@@ -372,7 +372,10 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Er
 	// Don't use f.Get() f.Put() directly. Instead use readFile and createFile
 	destination := f.PathURL.Path
 	if destination == source { // Cannot copy file into itself
-		return errOverWriteNotAllowed(destination).Trace(destination)
+		return probe.NewError(SameFile{
+			Source:      source,
+			Destination: destination,
+		})
 	}
 	rc, e := readFile(source)
 	if e != nil {
