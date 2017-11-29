@@ -109,7 +109,7 @@ func execFind(command string) {
 	if err := cmd.Run(); err != nil {
 		console.Fatalln(err)
 	}
-	console.Println(out.String())
+	console.Print(out.String())
 }
 
 // watchFind - enables listening on the input path, listens for all file/object
@@ -218,11 +218,13 @@ func find(ctx *findContext, fileContent contentMessage) {
 	if !matchFind(ctx, fileContent) {
 		return
 	} // For all matching content
+
 	// proceed to either exec, format the output string.
-	switch {
-	case ctx.execCmd != "":
+	if ctx.execCmd != "" {
 		execFind(stringsReplace(ctx.execCmd, fileContent))
-	case ctx.printFmt != "":
+		return
+	}
+	if ctx.printFmt != "" {
 		fileContent.Key = stringsReplace(ctx.printFmt, fileContent)
 	}
 	printMsg(findMessage{fileContent})
