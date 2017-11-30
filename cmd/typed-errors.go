@@ -69,12 +69,13 @@ var (
 	}
 
 	errOverWriteNotAllowed = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Overwrite not allowed for `" + URL + "`. Use `--force` to override this behavior."))
+		return probe.NewError(errors.New("Overwrite not allowed for `" + URL + "`. Use `--overwrite` to override this behavior."))
 	}
 
 	errDeleteNotAllowed = func(URL string) *probe.Error {
-		return probe.NewError(errors.New("Delete not allowed for `" + URL + "`. Use `--force` to override this behavior."))
+		return probe.NewError(errors.New("Delete not allowed for `" + URL + "`. Use `--remove` to override this behavior."))
 	}
+
 	errSourceIsDir = func(URL string) *probe.Error {
 		return probe.NewError(errors.New("Source `" + URL + "` is a folder.")).Untrace()
 	}
