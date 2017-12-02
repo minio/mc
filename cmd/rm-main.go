@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -41,7 +43,11 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "force",
-			Usage: "Force a dangerous remove operation.",
+			Usage: "Allow a recursive remove operation.",
+		},
+		cli.BoolFlag{
+			Name:  "dangerous",
+			Usage: "Allow site-wide removal of buckets and objects.",
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
@@ -82,16 +88,22 @@ EXAMPLES:
    1. Remove a file.
       $ {{.HelpName}} 1999/old-backup.tgz
 
-   2. Remove all objects recursively.
+   2. Remove all objects recursively from bucket 'jazz-songs' matching 'louis' prefix.
       $ {{.HelpName}} --recursive s3/jazz-songs/louis/
 
-   3. Remove all objects older than '90' days.
+   3. Remove all objects older than '90' days recursively from bucket 'jazz-songs' that match 'louis' prefix.
       $ {{.HelpName}} --recursive --older-than=90 s3/jazz-songs/louis/
 
    4. Remove all objects read from STDIN.
       $ {{.HelpName}} --force --stdin
 
-   5. Drop all incomplete uploads on 'jazz-songs' bucket.
+   5. Remove all buckets and objects recursively from S3 host
+      $ {{.HelpName}} --recursive --dangerous s3
+
+   6. Remove all buckets and objects older than '90' days recursively from host
+      $ {{.HelpName}} --recursive --dangerous --older-than=90 s3
+
+   7. Drop all incomplete uploads on 'jazz-songs' bucket.
       $ {{.HelpName}} --incomplete --recursive s3/jazz-songs/
 
 `,
@@ -121,7 +133,19 @@ func checkRmSyntax(ctx *cli.Context) {
 	isForce := ctx.Bool("force")
 	isRecursive := ctx.Bool("recursive")
 	isStdin := ctx.Bool("stdin")
-
+	isDangerous := ctx.Bool("dangerous")
+	isNamespaceRemoval := false
+	for _, url := range ctx.Args() {
+		// clean path for aliases like s3/.
+		//Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
+		url = filepath.ToSlash(filepath.Clean(url))
+		// namespace removal applies only for non FS. So filter out if passed url represents a directory
+		if !isAliasURLDir(url) {
+			_, path := url2Alias(url)
+			isNamespaceRemoval = (path == "")
+			break
+		}
+	}
 	if !ctx.Args().Present() && !isStdin {
 		exitCode := 1
 		cli.ShowCommandHelpAndExit(ctx, "rm", exitCode)
@@ -129,8 +153,16 @@ func checkRmSyntax(ctx *cli.Context) {
 
 	// For all recursive operations make sure to check for 'force' flag.
 	if (isRecursive || isStdin) && !isForce {
+		if isNamespaceRemoval {
+			fatalIf(errDummy().Trace(),
+				"This operation results in site-wide removal of buckets and objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
+		}
 		fatalIf(errDummy().Trace(),
 			"Removal requires --force option. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
+	}
+	if (isRecursive || isStdin) && isNamespaceRemoval && !isDangerous {
+		fatalIf(errDummy().Trace(),
+			"This operation results in site-wide removal of buckets and objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
 	}
 }
 
@@ -190,7 +222,6 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"` recursively.")
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
-
 	contentCh := make(chan *clientContent)
 	errorCh := clnt.Remove(isIncomplete, contentCh)
 
@@ -208,6 +239,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 			close(contentCh)
 			return exitStatus(globalErrorExitStatus)
 		}
+		urlString := content.URL.Path
 
 		if older > 0 {
 			// Check whether object is created older than given time.
@@ -218,13 +250,14 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 				continue
 			}
 		}
-
-		urlString := content.URL.Path
-		printMsg(rmMessage{
-			Key:  targetAlias + urlString,
-			Size: content.Size,
-		})
-
+		// list internally mimics recursive directory listing of object prefixes for s3 similar to FS.
+		// The rmMessage needs to be printed only for actual objects being deleted and not prefixes.
+		if !(content.Time.IsZero() && strings.HasSuffix(urlString, string(filepath.Separator))) {
+			printMsg(rmMessage{
+				Key:  targetAlias + urlString,
+				Size: content.Size,
+			})
+		}
 		if !isFake {
 			sent := false
 			for !sent {
@@ -238,7 +271,6 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 						// Ignore Permission error.
 						continue
 					}
-
 					close(contentCh)
 					return exitStatus(globalErrorExitStatus)
 				}
