@@ -68,7 +68,7 @@ var (
 		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
-			Usage: "Exclude the source file/object that matches the passed shell file name pattern.",
+			Usage: "Exclude file/object that matches the passed file name pattern.",
 		},
 	}
 )
@@ -314,6 +314,11 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			// build target path, it is the relative of the event.Path with the sourceUrl
 			// joined to the targetURL.
 			sourceSuffix := strings.TrimPrefix(event.Path, sourceURLFull)
+			//Skip the object, if it matches the Exclude options provided
+			if matchExcludeOptions(mj.excludeOptions, sourceSuffix) {
+				continue
+			}
+
 			targetPath := urlJoinPath(mj.targetURL, sourceSuffix)
 
 			// newClient needs the unexpanded  path, newCLientURL needs the expanded path

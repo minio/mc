@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/minio/cli"
+	"github.com/minio/minio/pkg/wildcard"
 )
 
 //
@@ -72,6 +73,15 @@ func checkMirrorSyntax(ctx *cli.Context) {
 	}
 }
 
+func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
+	for _, pattern := range excludeOptions {
+		if wildcard.Match(pattern, srcSuffix) {
+			return true
+		}
+	}
+	return false
+}
+
 func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemove bool, excludeOptions []string, URLsCh chan<- URLs) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
@@ -102,12 +112,25 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 	}
 
 	// List both source and target, compare and return values through channel.
-	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL, excludeOptions) {
+	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
 		if diffMsg.Error != nil {
 			errorIf(diffMsg.Error, "Unable to mirror objects.")
 			// Ignore error and proceed to next object.
 			continue
 		}
+
+		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
+		//Skip the source object if it matches the Exclude options provided
+		if matchExcludeOptions(excludeOptions, srcSuffix) {
+			continue
+		}
+
+		tgtSuffix := strings.TrimPrefix(diffMsg.SecondURL, targetURL)
+		//Skip the target object if it matches the Exclude options provided
+		if matchExcludeOptions(excludeOptions, tgtSuffix) {
+			continue
+		}
+
 		switch diffMsg.Diff {
 		case differInNone:
 			// No difference, continue.
