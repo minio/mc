@@ -135,7 +135,7 @@ EXAMPLES:
    04. Find all images with ".jpg" extension under "s3/photos", prefixed with "album".
        $ {{.HelpName}} s3/photos --name "*.jpg" --path "*/album*/*"
 
-   05. Find all images with ".jpg", ".png", and ".gif" extentions, using regex under "s3/photos".
+   05. Find all images with ".jpg", ".png", and ".gif" extensions, using regex under "s3/photos".
        $ {{.HelpName}} s3/photos --regex "(?i)\.(jpg|png|gif)$"
 
    06. Find all images with ".jpg" extension under "s3/bucket" and copy to "play/bucket" *continuously*.
