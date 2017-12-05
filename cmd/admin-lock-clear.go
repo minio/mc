@@ -110,7 +110,7 @@ func checkAdminLockClearSyntax(ctx *cli.Context) {
 	}
 
 	fatalIf(errDummy().Trace(),
-		"Clearing locks requires --force option. This operation is "+
+		"Clearing locks requires --force flag. This operation is "+
 			"*IRREVERSIBLE*. Please review carefully before"+
 			" performing this *DANGEROUS* operation.")
 }
