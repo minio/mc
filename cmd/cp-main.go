@@ -66,8 +66,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-ENVIRONMENT VARIABLES:
-  MC_MULTIPART_THREADS: To set number of multipart threads. By default it is 4.
 
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
