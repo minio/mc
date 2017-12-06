@@ -89,8 +89,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-ENVIRONMENT VARIABLES:
-  MC_MULTIPART_THREADS: To set number of multipart threads. By default it is 4.
 
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.

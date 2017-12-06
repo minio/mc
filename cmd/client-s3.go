@@ -21,13 +21,11 @@ import (
 	"crypto/tls"
 	"hash/fnv"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -63,20 +61,6 @@ var cseHeaders = []string{
 	"X-Amz-Meta-X-Amz-Iv",
 	"X-Amz-Meta-X-Amz-Key",
 	"X-Amz-Meta-X-Amz-Matdesc",
-}
-
-// getNumMultiPartThreads gets the number of multipart threads to be used for mc cp/mirror functions
-// If not set, default to 4.
-func getNumMultiPartThreads() uint {
-	multipartThreadStr := os.Getenv("MC_MULTIPART_THREADS")
-	if multipartThreadStr != "" {
-		numThreads, err := strconv.ParseUint(multipartThreadStr, 10, 32)
-		if err != nil {
-			log.Fatal("MC_MULTIPART_THREADS must be a positive integer.")
-		}
-		return uint(numThreads)
-	}
-	return defaultMultipartThreadsNum
 }
 
 // newFactory encloses New function with client cache.
@@ -592,11 +576,10 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
-	numParallelThreads := getNumMultiPartThreads()
 	opts := minio.PutObjectOptions{
 		UserMetadata: metadata,
 		Progress:     progress,
-		NumThreads:   numParallelThreads,
+		NumThreads:   defaultMultipartThreadsNum,
 		ContentType:  contentType,
 	}
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
