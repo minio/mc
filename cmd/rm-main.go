@@ -158,7 +158,7 @@ func checkRmSyntax(ctx *cli.Context) {
 				"This operation results in site-wide removal of buckets and objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
 		}
 		fatalIf(errDummy().Trace(),
-			"Removal requires --force option. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
+			"Removal requires --force flag. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
 	}
 	if (isRecursive || isStdin) && isNamespaceRemoval && !isDangerous {
 		fatalIf(errDummy().Trace(),

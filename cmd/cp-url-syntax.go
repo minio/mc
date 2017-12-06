@@ -127,7 +127,7 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string, isRecursive bool) {
 	}
 
 	if srcContent.Type.IsDir() && !isRecursive {
-		fatalIf(errInvalidArgument().Trace(srcURL), "To copy a folder requires --recursive option.")
+		fatalIf(errInvalidArgument().Trace(srcURL), "To copy a folder requires --recursive flag.")
 	}
 
 	// Check target.

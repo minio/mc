@@ -101,7 +101,7 @@ func checkShareUploadSyntax(ctx *cli.Context) {
 		url := newClientURL(targetURL)
 		if strings.HasSuffix(targetURL, string(url.Separator)) && !isRecursive {
 			fatalIf(errInvalidArgument().Trace(targetURL),
-				"Use --recursive option to generate curl command for prefixes.")
+				"Use --recursive flag to generate curl command for prefixes.")
 		}
 	}
 }
