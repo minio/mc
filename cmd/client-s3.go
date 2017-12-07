@@ -383,6 +383,40 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 	return configs, nil
 }
 
+//
+func (c *s3Client) Select(expression string) (<-chan []byte, *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	opts := minio.SelectObjectOptions{}
+	// Currently this is default we will fix this eventually.
+	opts.Input.RecordDelimiter = "\n"
+	opts.Input.FieldDelimiter = ","
+	opts.Input.FileHeaderInfo = "USE"
+	opts.Input.Comments = "#"
+	opts.Output.RecordDelimiter = "\n"
+	opts.Output.FieldDelimiter = ","
+	reader, e := c.api.SelectObjectContent(context.Background(), bucket, object, expression, opts)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+
+	// The below go function processes the eventstream and concurrently creates an
+	// io.reader
+	myChan := make(chan []byte)
+	go func() {
+		defer reader.Close()
+		defer close(myChan)
+		for event := range reader.Events() {
+			switch e := event.(type) {
+			case *minio.RecordEvent:
+				myChan <- e.Payload
+			case *minio.EndEvent:
+				return
+			}
+		}
+	}()
+	return myChan, nil
+}
+
 // Start watching on all bucket events for a given account ID.
 func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan EventInfo)

@@ -480,7 +480,7 @@ func (c Client) ComposeObjectWithProgress(dst DestinationInfo, srcs []SourceInfo
 				return err
 			}
 			if progress != nil {
-				io.CopyN(ioutil.Discard, progress, start+end-1)
+				io.CopyN(ioutil.Discard, progress, end-start+1)
 			}
 			objParts = append(objParts, complPart)
 			partIndex++

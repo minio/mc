@@ -22,6 +22,7 @@ session  Manage saved sessions for cp command.
 config   Manage mc configuration file.
 update   Check for a new software update.
 version  Print version info.
+select   Use SQL Select statement to query an object.
 ```
 
 ## 1.  Download Minio Client
@@ -149,8 +150,8 @@ export MC_HOSTS_<alias>=https://<Access Key>:<Secret Key>@<YOUR-S3-ENDPOINT>
 Example:
 ```sh
 export MC_HOSTS_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.minio.io:9000
-mc ls myalias 
-``` 
+mc ls myalias
+```
 ## 4. Test Your Setup
 `mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted Minio server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
@@ -251,6 +252,7 @@ Skip SSL certificate verification.
 | [**diff** - Diff buckets](#diff) |[**policy** - Set public policy on bucket or prefix](#policy)  |[**session** - Manage saved sessions](#session) |
 | [**config** - Manage config file](#config)  | [**watch** - Watch for events](#watch)  | [**events** - Manage events on your buckets](#events)  |
 | [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  | [**stat** - Stat contents of objects and folders](#stat) |
+|[**select** - Use SQL query on object](#select) | |
 
 
 ###  Command `ls` - List Objects
@@ -860,6 +862,25 @@ mc version
 Version: 2016-04-01T00:22:11Z
 Release-tag: RELEASE.2016-04-01T00-22-11Z
 Commit-id: 12adf3be326f5b6610cdd1438f72dfd861597fce
+```
+<a name="select"></a>
+### Command `Select` - Query Object
+Display the results of the SQL Select Query on the object.
+
+```sh
+USAGE:
+  mc select [FLAGS]
+
+FLAGS:
+  --expression SQL Select query.
+  --help, -h   Show help.
+```
+
+ *Example: Query rows where the last name is James from an S3 Object.*
+
+```sh
+mc select --expression "select first_name,last_name from S3OBJECT where last_name = 'James'AND first_name = 'Lebron'" s3/mybucket/mycsv.csv
+Lebron James
 ```
 <a name="stat"></a>
 ### Command `stat` - Stat contents of objects and folders
