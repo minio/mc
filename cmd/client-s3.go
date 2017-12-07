@@ -23,11 +23,13 @@ import (
 	"encoding/json"
 	"hash/fnv"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -382,6 +384,68 @@ func (c *s3Client) ListNotificationConfigs(arn string) ([]notificationConfig, *p
 	}
 
 	return configs, nil
+}
+
+// Supported content types
+var supportedContentTypes = []string{
+	"csv",
+	"json",
+	"gzip",
+	"bzip2",
+}
+
+func (c *s3Client) Select(expression, sseKey string) (io.ReadCloser, *probe.Error) {
+	bucket, object := c.url2BucketAndObject()
+	origContentType := mime.TypeByExtension(filepath.Ext(strings.TrimSuffix(strings.TrimSuffix(object, ".gz"), ".bz2")))
+	contentType := mime.TypeByExtension(filepath.Ext(object))
+	opts := minio.SelectObjectOptions{
+		Expression:     expression,
+		ExpressionType: minio.QueryExpressionTypeSQL,
+	}
+	if strings.Contains(origContentType, "csv") {
+		opts.InputSerialization = minio.SelectObjectInputSerialization{
+			CompressionType: minio.SelectCompressionNONE,
+			CSV: &minio.CSVInputOptions{
+				FileHeaderInfo:  minio.CSVFileHeaderInfoUse,
+				RecordDelimiter: "\n",
+				FieldDelimiter:  ",",
+			},
+		}
+		opts.OutputSerialization = minio.SelectObjectOutputSerialization{
+			CSV: &minio.CSVOutputOptions{
+				RecordDelimiter: "\n",
+				FieldDelimiter:  ",",
+			},
+		}
+	} else if strings.Contains(origContentType, "json") {
+		opts.InputSerialization = minio.SelectObjectInputSerialization{
+			CompressionType: minio.SelectCompressionNONE,
+			JSON: &minio.JSONInputOptions{
+				Type: minio.JSONLinesType,
+			},
+		}
+		opts.OutputSerialization = minio.SelectObjectOutputSerialization{
+			JSON: &minio.JSONOutputOptions{
+				RecordDelimiter: "\n",
+			},
+		}
+	}
+	if sseKey != "" {
+		key, err := encrypt.NewSSEC([]byte(sseKey))
+		if err == nil {
+			opts.ServerSideEncryption = key
+		}
+	}
+	if strings.Contains(contentType, "gzip") {
+		opts.InputSerialization.CompressionType = minio.SelectCompressionGZIP
+	} else if strings.Contains(contentType, "bzip") {
+		opts.InputSerialization.CompressionType = minio.SelectCompressionBZIP
+	}
+	reader, e := c.api.SelectObjectContent(context.Background(), bucket, object, opts)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+	return reader, nil
 }
 
 // Start watching on all bucket events for a given account ID.

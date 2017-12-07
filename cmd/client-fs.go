@@ -95,6 +95,11 @@ func (f *fsClient) GetURL() clientURL {
 	return *f.PathURL
 }
 
+// Select replies a stream of query results.
+func (f *fsClient) Select(expression, sseKey string) (io.ReadCloser, *probe.Error) {
+	return nil, probe.NewError(APINotImplemented{})
+}
+
 // Watches for all fs events on an input path.
 func (f *fsClient) Watch(params watchParams) (*watchObject, *probe.Error) {
 	eventChan := make(chan EventInfo)

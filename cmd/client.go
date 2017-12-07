@@ -58,6 +58,9 @@ type Client interface {
 	// I/O operations
 	Copy(source string, size int64, progress io.Reader, srcSSEKey, tgtSSEKey string) *probe.Error
 
+	// Runs select expression on object storage on specific files.
+	Select(expression string, sseKey string) (io.ReadCloser, *probe.Error)
+
 	// I/O operations with metadata.
 	Get(sseKey string) (reader io.Reader, err *probe.Error)
 	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sseKey string) (n int64, err *probe.Error)
