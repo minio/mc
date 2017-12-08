@@ -144,6 +144,8 @@ type mirrorJob struct {
 	// waitgroup for status goroutine, waits till all status
 	// messages have been written and received
 	wgStatus *sync.WaitGroup
+
+	queueCh chan func() URLs
 	// channel for status messages
 	statusCh chan URLs
 
@@ -435,13 +437,16 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 	var totalBytes int64
 	var totalObjects int64
 
+	parallel, queueCh := newParallelManager(mj.statusCh, mj.status)
+
 	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, mj.excludeOptions)
+
 	for {
 		select {
 		case sURLs, ok := <-URLsCh:
 			if !ok {
 				// finished harvesting urls
-				return
+				goto exit
 			}
 			if sURLs.Error != nil {
 				if strings.Contains(sURLs.Error.ToGoError().Error(), " is a folder.") {
@@ -467,15 +472,23 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 			sURLs.TotalSize = mj.TotalBytes
 
 			if sURLs.SourceContent != nil {
-				mj.statusCh <- mj.doMirror(ctx, cancelMirror, sURLs)
+				queueCh <- func() URLs {
+					return mj.doMirror(ctx, cancelMirror, sURLs)
+				}
 			} else if sURLs.TargetContent != nil && mj.isRemove {
-				mj.statusCh <- mj.doRemove(sURLs)
+				queueCh <- func() URLs {
+					return mj.doRemove(sURLs)
+				}
 			}
 		case <-mj.trapCh:
 			cancelMirror()
 			os.Exit(0)
 		}
 	}
+
+exit:
+	close(queueCh)
+	parallel.wait()
 }
 
 // when using a struct for copying, we could save a lot of passing of variables
@@ -531,6 +544,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch 
 		status:         status,
 		scanBar:        func(s string) {},
 		statusCh:       make(chan URLs),
+		queueCh:        make(chan func() URLs),
 		wgStatus:       new(sync.WaitGroup),
 		watcherRunning: true,
 		watcher:        NewWatcher(UTCNow()),

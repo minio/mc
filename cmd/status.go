@@ -25,6 +25,7 @@ import (
 type Status interface {
 	Println(data ...interface{})
 	Add(int64) Status
+	Get() int64
 	Start()
 	Finish()
 
@@ -59,6 +60,11 @@ type DummyStatus struct{}
 // Read implements the io.Reader interface
 func (ds *DummyStatus) Read(p []byte) (n int, err error) {
 	return len(p), nil
+}
+
+// Get implements Progress interface
+func (ds *DummyStatus) Get() int64 {
+	return 0
 }
 
 // SetTotal sets the total of the progressbar, ignored for quietstatus

@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
 
 	"github.com/cheggaaa/pb"
@@ -41,11 +40,6 @@ var (
 		cli.BoolFlag{
 			Name:  "recursive, r",
 			Usage: "Copy recursively.",
-		},
-		cli.UintFlag{
-			Name:  "parallel, p",
-			Usage: "Number of copies in parallel",
-			Value: 1,
 		},
 	}
 )
@@ -74,19 +68,16 @@ EXAMPLES:
    2. Copy a folder recursively from Minio cloud storage to Amazon S3 cloud storage.
       $ {{.HelpName}} --recursive play/mybucket/burningman2011/ s3/mybucket/
 
-   3. Copy a folder recursively from Minio cloud storage to Amazon S3 cloud storage in parallel.
-      $ {{.HelpName}} --recursive --parallel 10 play/mybucket/burningman2011/ s3/mybucket/
-
-   4. Copy multiple local folders recursively to Minio cloud storage.
+   3. Copy multiple local folders recursively to Minio cloud storage.
       $ {{.HelpName}} --recursive backup/2014/ backup/2015/ play/archive/
 
-   5. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
+   4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
       $ {{.HelpName}} --recursive s3\documents\2014\ C:\Backups\2014
 
-   6. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
+   5. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
       $ {{.HelpName}} 本語 s3/andoria/
 
-   7. Copy a local folder with space separated characters to Amazon S3 cloud storage.
+   6. Copy a local folder with space separated characters to Amazon S3 cloud storage.
       $ {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
 
 `,
@@ -136,15 +127,24 @@ func (c copyStatMessage) String() string {
 	return message
 }
 
+// Progress - an interface which describes current amount
+// of data written.
+type Progress interface {
+	Get() int64
+}
+
+// ProgressReader can be used to update the progress of
+// an on-going transfer progress.
+type ProgressReader interface {
+	io.Reader
+	Progress
+}
+
 // doCopy - Copy a singe file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, progressReader *progressBar, accountingReader *accounter) URLs {
+func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
-	}
-
-	if !globalQuiet && !globalJSON {
-		progressReader = progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
 	}
 
 	sourceAlias := cpURLs.SourceAlias
@@ -153,8 +153,9 @@ func doCopy(ctx context.Context, cpURLs URLs, progressReader *progressBar, accou
 	targetURL := cpURLs.TargetContent.URL
 	length := cpURLs.SourceContent.Size
 
-	var progress io.Reader
-	if globalQuiet || globalJSON {
+	if progressReader, ok := pg.(*progressBar); ok {
+		progressReader.SetCaption(cpURLs.SourceContent.URL.String() + ": ")
+	} else {
 		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
 		printMsg(copyMessage{
@@ -164,20 +165,13 @@ func doCopy(ctx context.Context, cpURLs URLs, progressReader *progressBar, accou
 			TotalCount: cpURLs.TotalCount,
 			TotalSize:  cpURLs.TotalSize,
 		})
-		// Proxy reader to accounting reader only during quiet mode.
-		if globalQuiet || globalJSON {
-			progress = accountingReader
-		}
-	} else {
-		// Set up progress reader.
-		progress = progressReader.ProgressBar
 	}
-	return uploadSourceToTargetURL(ctx, cpURLs, progress)
+	return uploadSourceToTargetURL(ctx, cpURLs, pg)
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
-func doCopyFake(cpURLs URLs, progressReader *progressBar) URLs {
-	if !globalQuiet && !globalJSON {
+func doCopyFake(cpURLs URLs, pg Progress) URLs {
+	if progressReader, ok := pg.(*progressBar); ok {
 		progressReader.ProgressBar.Add64(cpURLs.SourceContent.Size)
 	}
 	return cpURLs
@@ -262,46 +256,25 @@ func doCopySession(session *sessionV8) error {
 		doPrepareCopyURLs(session, trapCh, cancelCopy)
 	}
 
-	// Enable accounting reader by default.
-	accntReader := newAccounter(session.Header.TotalBytes)
-
 	// Prepare URL scanner from session data file.
 	urlScanner := bufio.NewScanner(session.NewDataReader())
 	// isCopied returns true if an object has been already copied
 	// or not. This is useful when we resume from a session.
 	isCopied := isLastFactory(session.Header.LastCopied)
 
-	// Number of parallel
-	parallel := 1
-	if session.Header.CommandIntFlags["parallel"] > 1 {
-		parallel = session.Header.CommandIntFlags["parallel"]
-	}
-	// Queue of doCopy() operation.
-	var queueCh = make(chan URLs, parallel)
-	// The number of waiting jobs
-	var waitGroup = &sync.WaitGroup{}
+	// Store a progress bar or an accounter
+	var pg ProgressReader
 
 	// Enable progress bar reader only during default mode.
-	var progressReader *progressBar
 	if !globalQuiet && !globalJSON { // set up progress bar
-		progressReader = newProgressBar(session.Header.TotalBytes)
+		pg = newProgressBar(session.Header.TotalBytes)
+	} else {
+		pg = newAccounter(session.Header.TotalBytes)
 	}
 
-	// Wait on status of doCopy() operation.
 	var statusCh = make(chan URLs)
 
-	for i := 0; i < parallel; i++ {
-		go func() {
-			for {
-				cpURLs, ok := <-queueCh
-				if !ok {
-					return
-				}
-				statusCh <- doCopy(ctx, cpURLs, progressReader, accntReader)
-				waitGroup.Done()
-			}
-		}()
-	}
+	p, queueCh := newParallelManager(statusCh, pg)
 
 	go func() {
 		// Loop through all urls.
@@ -318,18 +291,22 @@ func doCopySession(session *sessionV8) error {
 
 			// Verify if previously copied, notify progress bar.
 			if isCopied(cpURLs.SourceContent.URL.String()) {
-				statusCh <- doCopyFake(cpURLs, progressReader)
+				queueCh <- func() URLs {
+					return doCopyFake(cpURLs, pg)
+				}
 			} else {
-				waitGroup.Add(1)
-				queueCh <- cpURLs
+				queueCh <- func() URLs {
+					return doCopy(ctx, cpURLs, pg)
+				}
 			}
 		}
 
-		// Waiting to complete jobs
-		waitGroup.Wait()
-		// Close
-		close(queueCh)
 		// URLs feeding finished
+		close(queueCh)
+
+		// Wait for all tasks to be finished
+		p.wait()
+
 		close(statusCh)
 
 	}()
@@ -377,12 +354,12 @@ loop:
 		}
 	}
 
-	if !globalQuiet && !globalJSON {
+	if progressReader, ok := pg.(*progressBar); ok {
 		if progressReader.ProgressBar.Get() > 0 {
 			progressReader.ProgressBar.Finish()
 		}
 	} else {
-		if !globalJSON && globalQuiet {
+		if accntReader, ok := pg.(*accounter); ok {
 			console.Println(console.Colorize("Copy", accntReader.Stat().String()))
 		}
 	}
@@ -402,7 +379,6 @@ func mainCopy(ctx *cli.Context) error {
 	session := newSessionV8()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")
-	session.Header.CommandIntFlags["parallel"] = ctx.Int("parallel")
 
 	var e error
 	if session.Header.RootPath, e = os.Getwd(); e != nil {
