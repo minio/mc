@@ -135,6 +135,7 @@ func newS3Config(args cli.Args) (*Config, *probe.Error) {
 	// required in situations when signature type is provided by the user.
 	if api != "" {
 		return &Config{
+			Insecure:  globalInsecure,
 			AccessKey: accessKey,
 			SecretKey: secretKey,
 			Signature: api,
@@ -143,6 +144,7 @@ func newS3Config(args cli.Args) (*Config, *probe.Error) {
 	}
 
 	s3Config := &Config{
+		Insecure:  globalInsecure,
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		Signature: "s3v4",
