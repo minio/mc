@@ -57,10 +57,10 @@ EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
       $ {{.HelpName}} s3/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
 
-   2. Concantenate contents of file1.txt and stdin to standard output.
+   2. Concatenate contents of file1.txt and stdin to standard output.
       $ {{.HelpName}} file1.txt - > file.txt
 
-   3. Concantenate multiple files to one.
+   3. Concatenate multiple files to one.
       $ {{.HelpName}} part.* > complete.img
 
 `,
