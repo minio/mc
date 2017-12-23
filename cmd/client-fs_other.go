@@ -1,4 +1,4 @@
-// +build solaris
+// +build solaris openbsd
 
 /*
  * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
