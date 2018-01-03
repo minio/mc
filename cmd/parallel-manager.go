@@ -73,8 +73,8 @@ func (p *ParallelManager) addWorker() {
 	go func() {
 		for {
 			// Wait for jobs
-			fn := <-p.queueCh
-			if fn == nil {
+			fn, ok := <-p.queueCh
+			if !ok {
 				// No more tasks, quit
 				p.wg.Done()
 				return
