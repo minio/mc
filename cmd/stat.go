@@ -112,12 +112,6 @@ func parseStat(targetAlias string, c *clientContent) statMessage {
 // doStat - list all entities inside a folder.
 func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string) error {
 
-	if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
-		targetURL = targetURL + string(clnt.GetURL().Separator)
-	}
-	clnt, err := newClient(targetURL)
-	fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
 	if !strings.HasSuffix(prefixPath, separator) {
@@ -125,7 +119,6 @@ func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string) error 
 	}
 	var cErr error
 	isIncomplete := false
-	var prevStat *clientContent
 	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -164,16 +157,12 @@ func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string) error 
 		// Trim prefix path from the content path.
 		contentURL = strings.TrimPrefix(contentURL, prefixPath)
 		stat.URL.Path = contentURL
-		if stat != prevStat {
-			st := parseStat(targetAlias, stat)
-			if !globalJSON {
-				printStat(st)
-			} else {
-				console.Println(st.JSON())
-			}
+		st := parseStat(targetAlias, stat)
+		if !globalJSON {
+			printStat(st)
 		} else {
+			console.Println(st.JSON())
 		}
-		prevStat = stat
 	}
 	return cErr
 }

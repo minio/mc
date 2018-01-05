@@ -37,7 +37,7 @@ var (
 // stat files and folders.
 var statCmd = cli.Command{
 	Name:   "stat",
-	Usage:  "Stat contents of objects.",
+	Usage:  "Stat contents of objects and folders.",
 	Action: mainStat,
 	Before: setGlobalsFromContext,
 	Flags:  append(statFlags, globalFlags...),
