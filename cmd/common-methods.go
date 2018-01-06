@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
+	"golang.org/x/net/lex/httplex"
 )
 
 // Check if the passed URL represents a folder. It may or may not exist yet.
@@ -87,12 +88,15 @@ func getSourceStream(alias string, urlStr string, fetchStat bool) (reader io.Rea
 	}
 	metadata = map[string]string{}
 	if fetchStat {
-		st, err := sourceClnt.Stat(false, false)
+		st, err := sourceClnt.Stat(false, true)
 		if err != nil {
 			return nil, nil, err.Trace(alias, urlStr)
 		}
 		for k, v := range st.Metadata {
-			metadata[k] = v
+			if httplex.ValidHeaderFieldName(k) &&
+				httplex.ValidHeaderFieldValue(v) {
+				metadata[k] = v
+			}
 		}
 	}
 	return reader, metadata, nil
