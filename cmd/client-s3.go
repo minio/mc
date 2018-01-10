@@ -1438,7 +1438,7 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 			return
 		}
 		buckets = append(buckets, minio.BucketInfo{Name: bucket, CreationDate: content.Time})
-	} else if strings.HasSuffix(object, string(c.targetURL.Separator)) {
+	} else {
 		// Get stat of given object is a directory.
 		isIncomplete := false
 		isFetchMeta := false
