@@ -144,9 +144,6 @@ func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string) error 
 			continue
 		}
 		url := targetAlias + getKey(content)
-		if !isAliasURLDir(targetURL) {
-			url = content.URL.Path
-		}
 		_, stat, err := url2StatWithMetadata(url, true)
 		if err != nil {
 			stat = content
