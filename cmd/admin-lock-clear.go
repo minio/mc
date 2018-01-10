@@ -105,6 +105,13 @@ func checkAdminLockClearSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "clear", 1)
 	}
 
+	// Check if a bucket is specified.
+	aliasedURL := filepath.ToSlash(ctx.Args().Get(0))
+	splits := splitStr(aliasedURL, "/", 3)
+	if splits[1] == "" {
+		fatalIf(errBucketNotSpecified().Trace(aliasedURL), "Cannot clear locks.")
+	}
+
 	if isForce := ctx.Bool("force"); isForce {
 		return
 	}
@@ -132,7 +139,6 @@ func mainAdminLockClear(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	aliasedURL = filepath.ToSlash(aliasedURL)
-
 	splits := splitStr(aliasedURL, "/", 3)
 
 	// Clear locks related to a specified pair of bucket and prefix
