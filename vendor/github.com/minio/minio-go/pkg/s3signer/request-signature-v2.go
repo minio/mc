@@ -1,5 +1,6 @@
 /*
- * Minio Go Library for Amazon S3 Compatible Cloud Storage (C) 2015 Minio, Inc.
+ * Minio Go Library for Amazon S3 Compatible Cloud Storage
+ * Copyright 2015-2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,22 +40,23 @@ const (
 )
 
 // Encode input URL path to URL encoded path.
-func encodeURL2Path(u *url.URL) (path string) {
+func encodeURL2Path(req *http.Request) (path string) {
+	reqHost := getHostAddr(req)
 	// Encode URL path.
-	if isS3, _ := filepath.Match("*.s3*.amazonaws.com", u.Host); isS3 {
-		bucketName := u.Host[:strings.LastIndex(u.Host, ".s3")]
+	if isS3, _ := filepath.Match("*.s3*.amazonaws.com", reqHost); isS3 {
+		bucketName := reqHost[:strings.LastIndex(reqHost, ".s3")]
 		path = "/" + bucketName
-		path += u.Path
+		path += req.URL.Path
 		path = s3utils.EncodePath(path)
 		return
 	}
-	if strings.HasSuffix(u.Host, ".storage.googleapis.com") {
-		path = "/" + strings.TrimSuffix(u.Host, ".storage.googleapis.com")
-		path += u.Path
+	if strings.HasSuffix(reqHost, ".storage.googleapis.com") {
+		path = "/" + strings.TrimSuffix(reqHost, ".storage.googleapis.com")
+		path += req.URL.Path
 		path = s3utils.EncodePath(path)
 		return
 	}
-	path = s3utils.EncodePath(u.Path)
+	path = s3utils.EncodePath(req.URL.Path)
 	return
 }
 
@@ -85,7 +87,7 @@ func PreSignV2(req http.Request, accessKeyID, secretAccessKey string, expires in
 
 	query := req.URL.Query()
 	// Handle specially for Google Cloud Storage.
-	if strings.Contains(req.URL.Host, ".storage.googleapis.com") {
+	if strings.Contains(getHostAddr(&req), ".storage.googleapis.com") {
 		query.Set("GoogleAccessId", accessKeyID)
 	} else {
 		query.Set("AWSAccessKeyId", accessKeyID)
@@ -290,7 +292,7 @@ func writeCanonicalizedResource(buf *bytes.Buffer, req http.Request) {
 	// Save request URL.
 	requestURL := req.URL
 	// Get encoded URL path.
-	buf.WriteString(encodeURL2Path(requestURL))
+	buf.WriteString(encodeURL2Path(&req))
 	if requestURL.RawQuery != "" {
 		var n int
 		vals, _ := url.ParseQuery(requestURL.RawQuery)
