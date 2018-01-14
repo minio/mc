@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -974,7 +975,9 @@ func isAmazon(host string) bool {
 }
 
 func isAmazonChina(host string) bool {
-	return s3utils.IsAmazonChinaEndpoint(url.URL{Host: host})
+	amazonS3ChinaHost := regexp.MustCompile(`^s3\.(cn.*?)\.amazonaws\.com\.cn$`)
+	parts := amazonS3ChinaHost.FindStringSubmatch(host)
+	return len(parts) > 1
 }
 
 func isAmazonAccelerated(host string) bool {
