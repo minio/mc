@@ -1,5 +1,6 @@
 /*
- * Minio Go Library for Amazon S3 Compatible Cloud Storage (C) 2017 Minio, Inc.
+ * Minio Go Library for Amazon S3 Compatible Cloud Storage
+ * Copyright 2015-2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +58,15 @@ func (c Core) ListObjectsV2(bucketName, objectPrefix, continuationToken string, 
 // CopyObject - copies an object from source object to destination object on server side.
 func (c Core) CopyObject(sourceBucket, sourceObject, destBucket, destObject string, metadata map[string]string) (ObjectInfo, error) {
 	return c.copyObjectDo(context.Background(), sourceBucket, sourceObject, destBucket, destObject, metadata)
+}
+
+// CopyObjectPart - creates a part in a multipart upload by copying (a
+// part of) an existing object.
+func (c Core) CopyObjectPart(srcBucket, srcObject, destBucket, destObject string, uploadID string,
+	partID int, startOffset, length int64, metadata map[string]string) (p CompletePart, err error) {
+
+	return c.copyObjectPartDo(context.Background(), srcBucket, srcObject, destBucket, destObject, uploadID,
+		partID, startOffset, length, metadata)
 }
 
 // PutObject - Upload object. Uploads using single PUT call.
@@ -140,5 +150,5 @@ func (c Core) GetObject(bucketName, objectName string, opts GetObjectOptions) (i
 // StatObject is a lower level API implemented to support special
 // conditions matching etag, modtime on a request.
 func (c Core) StatObject(bucketName, objectName string, opts StatObjectOptions) (ObjectInfo, error) {
-	return c.statObject(bucketName, objectName, opts)
+	return c.statObject(context.Background(), bucketName, objectName, opts)
 }
