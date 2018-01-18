@@ -98,6 +98,18 @@ func regexMatch(pattern, path string) bool {
 	return matched
 }
 
+func getExitStatus(err error) int {
+	if err == nil {
+		return 0
+	}
+	if pe, ok := err.(*exec.ExitError); ok {
+		if es, ok := pe.ProcessState.Sys().(syscall.WaitStatus); ok {
+			return es.ExitStatus()
+		}
+	}
+	return 1
+}
+
 // execFind executes the input command line, additionally formats input
 // for the command line in accordance with subsititution arguments.
 func execFind(command string) {
@@ -105,11 +117,15 @@ func execFind(command string) {
 
 	cmd := exec.Command(commandArgs[0], commandArgs[1:]...)
 	var out bytes.Buffer
+	var stderr bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		console.Fatalln(err)
+		console.Print(console.Colorize("FindExecErr", stderr.String()))
+		// Return exit status of the command run
+		os.Exit(getExitStatus(err))
 	}
-	console.Print(out.String())
+	console.PrintC(out.String())
 }
 
 // watchFind - enables listening on the input path, listens for all file/object
