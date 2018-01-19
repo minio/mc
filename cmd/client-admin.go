@@ -108,21 +108,6 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 	}
 }
 
-// newAdminClientFromAlias gives a new admin client interface for matching
-// alias entry in the mc config file. If no matching host config entry
-// is found, fs client is returned.
-func newAdminClientFromAlias(alias string, urlStr string) (*madmin.AdminClient, *probe.Error) {
-	s3Config, err := buildS3Config(alias, urlStr)
-	if err != nil {
-		return nil, err
-	}
-	s3Client, err := s3AdminNew(s3Config)
-	if err != nil {
-		return nil, err.Trace(alias, urlStr)
-	}
-	return s3Client, nil
-}
-
 // newAdminClient gives a new client interface
 func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 	alias, urlStrFull, hostCfg, err := expandAlias(aliasedURL)
@@ -134,7 +119,15 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 	if hostCfg == nil && urlRgx.MatchString(aliasedURL) {
 		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
 	}
-	return newAdminClientFromAlias(alias, urlStrFull)
+	s3Config, err := buildS3Config(alias, urlStrFull, hostCfg)
+	if err != nil {
+		return nil, err.Trace(alias, urlStrFull)
+	}
+	s3Client, err := s3AdminNew(s3Config)
+	if err != nil {
+		return nil, err.Trace(alias, urlStrFull)
+	}
+	return s3Client, nil
 }
 
 // s3AdminNew returns an initialized minioAdmin structure. If debug is enabled,
