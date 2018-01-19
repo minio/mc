@@ -85,8 +85,8 @@ Fetch service status, replies disk space used, backend type and total disks offl
 |`backend.Type` | _BackendType_ | Type of backend used by the server currently only FS or Erasure. |
 |`backend.OnlineDisks`| _int_ | Total number of disks online (only applies to Erasure backend), is empty for FS. |
 |`backend.OfflineDisks` | _int_ | Total number of disks offline (only applies to Erasure backend), is empty for FS. |
-|`backend.ReadQuorum` | _int_ | Current total read quorum threshold before reads will be unavailable, is empty for FS. |
-|`backend.WriteQuorum` | _int_ | Current total write quorum threshold before writes will be unavailable, is empty for FS. |
+|`backend.StandardSCParity` | _int_ | Parity disks set for standard storage class, is empty for FS. |
+|`backend.RRSCParity` | _int_ | Parity disks set for reduced redundancy storage class, is empty for FS. |
 
 
  __Example__
@@ -273,9 +273,9 @@ If object is successfully healed returns nil, otherwise returns error indicating
 
 | Value | Description |
 |---|---|
-|`HealNone` | Object/Upload wasn't healed on any of the disks |
-|`HealPartial` | Object/Upload was healed on some of the disks needing heal |
-| `HealOK` | Object/Upload was healed on all the disks needing heal |
+|`HealNone` | Object wasn't healed on any of the disks |
+|`HealPartial` | Object was healed on some of the disks needing heal |
+| `HealOK` | Object was healed on all the disks needing heal |
 
 
 __Example__
