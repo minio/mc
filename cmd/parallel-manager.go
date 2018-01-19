@@ -24,7 +24,7 @@ import (
 
 const (
 	// Maximum number of parallel workers
-	maxParallelWorkers = 10
+	maxParallelWorkers = 32
 	// Monitor tick to decide to add new workers
 	monitorPeriod = 5 * time.Second
 	// jump
