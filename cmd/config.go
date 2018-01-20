@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -175,10 +176,63 @@ func mustGetHostConfig(alias string) *hostConfigV8 {
 	return hostCfg
 }
 
+// parse url usually obtained from env.
+func parseEnvURL(envURL string) (*url.URL, string, string, *probe.Error) {
+	u, e := url.Parse(envURL)
+	if e != nil {
+		return nil, "", "", probe.NewError(e).Trace(envURL)
+	}
+
+	var accessKey, secretKey string
+	// Check if username:password is provided in URL, with no
+	// access keys or secret we proceed and perform anonymous
+	// requests.
+	if u.User != nil {
+		accessKey = u.User.Username()
+		secretKey, _ = u.User.Password()
+	}
+
+	// Look for if URL has invalid values and return error.
+	if !((u.Scheme == "http" || u.Scheme == "https") &&
+		(u.Path == "/" || u.Path == "") && u.Opaque == "" &&
+		u.ForceQuery == false && u.RawQuery == "" && u.Fragment == "") {
+		return nil, "", "", errInvalidArgument().Trace(u.String())
+	}
+
+	// Now that we have validated the URL to be in expected style.
+	u.User = nil
+
+	return u, accessKey, secretKey, nil
+}
+
+const mcEnvHostsPrefix = "MC_HOSTS_"
+
+func expandAliasFromEnv(envURL string) (*hostConfigV8, *probe.Error) {
+	u, accessKey, secretKey, err := parseEnvURL(envURL)
+	if err != nil {
+		return nil, err.Trace(envURL)
+	}
+
+	return &hostConfigV8{
+		URL:       u.String(),
+		API:       "S3v4",
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+	}, nil
+}
+
 // expandAlias expands aliased URL if any match is found, returns as is otherwise.
 func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV8, err *probe.Error) {
 	// Extract alias from the URL.
 	alias, path := url2Alias(aliasedURL)
+
+	if envConfig, ok := os.LookupEnv(mcEnvHostsPrefix + alias); ok {
+		hostCfg, err = expandAliasFromEnv(envConfig)
+		if err != nil {
+			return "", "", nil, err.Trace(aliasedURL)
+		}
+		return alias, urlJoinPath(hostCfg.URL, path), hostCfg, nil
+	}
 
 	// Find the matching alias entry and expand the URL.
 	if hostCfg = mustGetHostConfig(alias); hostCfg != nil {

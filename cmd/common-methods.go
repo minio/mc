@@ -175,8 +175,12 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader)
 // newClientFromAlias gives a new client interface for matching
 // alias entry in the mc config file. If no matching host config entry
 // is found, fs client is returned.
-func newClientFromAlias(alias string, urlStr string) (Client, *probe.Error) {
-	s3Config, err := buildS3Config(alias, urlStr)
+func newClientFromAlias(alias, urlStr string) (Client, *probe.Error) {
+	alias, _, hostCfg, err := expandAlias(alias)
+	if err != nil {
+		return nil, err.Trace(alias, urlStr)
+	}
+	s3Config, err := buildS3Config(alias, urlStr, hostCfg)
 	if err != nil {
 		// No matching host config. So we treat it like a
 		// filesystem.
