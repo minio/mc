@@ -107,8 +107,8 @@ func (p *progressBar) SetTotal(total int64) *progressBar {
 }
 
 // cursorAnimate - returns a animated rune through read channel for every read.
-func cursorAnimate() <-chan rune {
-	cursorCh := make(chan rune)
+func cursorAnimate() <-chan string {
+	cursorCh := make(chan string)
 	var cursors string
 
 	switch runtime.GOOS {
@@ -128,7 +128,7 @@ func cursorAnimate() <-chan rune {
 	go func() {
 		for {
 			for _, cursor := range cursors {
-				cursorCh <- cursor
+				cursorCh <- string(cursor)
 			}
 		}
 	}()

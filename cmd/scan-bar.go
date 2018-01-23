@@ -48,7 +48,7 @@ func scanBarFactory() scanBarFunc {
 	// Cursor animate channel.
 	cursorCh := cursorAnimate()
 	return func(source string) {
-		scanPrefix := fmt.Sprintf("[%s] %s ", humanize.Comma(int64(fileCount)), string(<-cursorCh))
+		scanPrefix := fmt.Sprintf("[%s] %s ", humanize.Comma(int64(fileCount)), <-cursorCh)
 		source = fixateScanBar(source, globalTermWidth-len([]rune(scanPrefix)))
 		barText := scanPrefix + source
 		console.PrintC("\r" + barText + "\r")

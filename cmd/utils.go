@@ -118,3 +118,17 @@ func buildS3Config(alias, urlStr string, hostCfg *hostConfigV8) (*Config, *probe
 
 	return s3Config, nil
 }
+
+// lineTrunc - truncates a string to the given maximum length by
+// adding ellipsis in the middle
+func lineTrunc(content string, maxLen int) string {
+	runes := []rune(content)
+	rlen := len(runes)
+	if rlen <= maxLen {
+		return content
+	}
+	halfLen := maxLen / 2
+	fstPart := string(runes[0:halfLen])
+	sndPart := string(runes[rlen-halfLen:])
+	return fstPart + "…" + sndPart
+}
