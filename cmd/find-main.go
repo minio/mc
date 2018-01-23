@@ -214,6 +214,7 @@ type findContext struct {
 func mainFind(ctx *cli.Context) error {
 	// Additional command specific theme customization.
 	console.SetColor("Find", color.New(color.FgGreen, color.Bold))
+	console.SetColor("FindExecErr", color.New(color.FgRed, color.Italic, color.Bold))
 
 	checkFindSyntax(ctx)
 

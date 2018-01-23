@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
 )
@@ -386,7 +388,7 @@ func TestParseTime(t *testing.T) {
 	}
 }
 
-// Tests string substritution function.
+// Tests string substitution function.
 func TestStringReplace(t *testing.T) {
 	testCases := []struct {
 		str         string
@@ -462,6 +464,42 @@ func TestStringReplace(t *testing.T) {
 		gotStr := stringsReplace(testCase.str, testCase.content)
 		if gotStr != testCase.expectedStr {
 			t.Errorf("Test %d: Expected %s, got %s", i+1, testCase.expectedStr, gotStr)
+		}
+	}
+}
+
+// Tests exit status, getExitStatus() function
+func TestGetExitStatus(t *testing.T) {
+	testCases := []struct {
+		command            string
+		expectedExitStatus int
+	}{
+		// Tests "No such file or directory", exit status code 2
+		{
+			command:            "ls asdf",
+			expectedExitStatus: 2,
+		},
+		{
+			command:            "cp x x",
+			expectedExitStatus: 1,
+		},
+		// expectedExitStatus for "command not found" case is 127,
+		// but exec command cannot capture anything since a process
+		// for the command could not be started at all,
+		// so the expectedExitStatus is 1
+		{
+			command:            "asdf",
+			expectedExitStatus: 1,
+		},
+	}
+	for i, testCase := range testCases {
+		commandArgs := strings.Split(testCase.command, " ")
+		cmd := exec.Command(commandArgs[0], commandArgs[1:]...)
+		// Return exit status of the command run
+		exitStatus := getExitStatus(cmd.Run())
+		if exitStatus != testCase.expectedExitStatus {
+			t.Errorf("Test %d: Expected error status code for command \"%v\" is %v, got %v",
+				i+1, testCase.command, testCase.expectedExitStatus, exitStatus)
 		}
 	}
 }
