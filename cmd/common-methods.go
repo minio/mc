@@ -180,8 +180,8 @@ func newClientFromAlias(alias, urlStr string) (Client, *probe.Error) {
 	if err != nil {
 		return nil, err.Trace(alias, urlStr)
 	}
-	s3Config, err := buildS3Config(alias, urlStr, hostCfg)
-	if err != nil {
+
+	if hostCfg == nil {
 		// No matching host config. So we treat it like a
 		// filesystem.
 		fsClient, fsErr := fsNew(urlStr)
@@ -190,6 +190,8 @@ func newClientFromAlias(alias, urlStr string) (Client, *probe.Error) {
 		}
 		return fsClient, nil
 	}
+
+	s3Config := newS3Config(urlStr, hostCfg)
 
 	s3Client, err := s3New(s3Config)
 	if err != nil {

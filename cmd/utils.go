@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"crypto/tls"
-	"fmt"
 	"io"
 	"math/rand"
 	"os"
@@ -95,28 +94,27 @@ func splitStr(path, sep string, n int) []string {
 	return splits
 }
 
-// buildS3Config fetches config related to the specified alias
-// to create a new config structure
-func buildS3Config(alias, urlStr string, hostCfg *hostConfigV8) (*Config, *probe.Error) {
-	if hostCfg == nil {
-		return nil, probe.NewError(fmt.Errorf("The specified alias: %s not found", urlStr))
-	}
-
+// newS3Config simply creates a new Config struct using the passed
+// parameters.
+func newS3Config(urlStr string, hostCfg *hostConfigV8) *Config {
 	// We have a valid alias and hostConfig. We populate the
 	// credentials from the match found in the config file.
 	s3Config := new(Config)
 
-	s3Config.HostURL = urlStr
-	s3Config.AccessKey = hostCfg.AccessKey
-	s3Config.SecretKey = hostCfg.SecretKey
-	s3Config.Signature = hostCfg.API
 	s3Config.AppName = "mc"
 	s3Config.AppVersion = Version
 	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 	s3Config.Debug = globalDebug
 	s3Config.Insecure = globalInsecure
 
-	return s3Config, nil
+	s3Config.HostURL = urlStr
+	if hostCfg != nil {
+		s3Config.AccessKey = hostCfg.AccessKey
+		s3Config.SecretKey = hostCfg.SecretKey
+		s3Config.Signature = hostCfg.API
+	}
+
+	return s3Config
 }
 
 // lineTrunc - truncates a string to the given maximum length by
