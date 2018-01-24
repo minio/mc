@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"crypto/tls"
+	"fmt"
 	"hash/fnv"
 	"net"
 	"net/http"
@@ -119,10 +120,13 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 	if hostCfg == nil && urlRgx.MatchString(aliasedURL) {
 		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
 	}
-	s3Config, err := buildS3Config(alias, urlStrFull, hostCfg)
-	if err != nil {
-		return nil, err.Trace(alias, urlStrFull)
+
+	if hostCfg == nil {
+		return nil, probe.NewError(fmt.Errorf("The specified alias: %s not found", urlStrFull))
 	}
+
+	s3Config := newS3Config(urlStrFull, hostCfg)
+
 	s3Client, err := s3AdminNew(s3Config)
 	if err != nil {
 		return nil, err.Trace(alias, urlStrFull)

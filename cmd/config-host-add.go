@@ -123,27 +123,12 @@ func addHost(alias string, hostCfgV8 hostConfigV8) {
 	})
 }
 
-func newS3Config(args cli.Args) (*Config, *probe.Error) {
-	var (
-		url       = args.Get(0)
-		accessKey = args.Get(1)
-		secretKey = args.Get(2)
-		api       = args.Get(3)
-	)
-
-	// If api is provided we do not auto probe signature, this is
-	// required in situations when signature type is provided by the user.
-	if api != "" {
-		return &Config{
-			Insecure:  globalInsecure,
-			AccessKey: accessKey,
-			SecretKey: secretKey,
-			Signature: api,
-			HostURL:   url,
-		}, nil
-	}
-
+// probeS3Signature - auto probe S3 server signature: issue a Stat call
+// using v4 signature then v2 in case of failure.
+func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
+	// Test s3 connection for API auto probe
 	s3Config := &Config{
+		// S3 connection parameters
 		Insecure:  globalInsecure,
 		AccessKey: accessKey,
 		SecretKey: secretKey,
@@ -153,7 +138,7 @@ func newS3Config(args cli.Args) (*Config, *probe.Error) {
 
 	s3Client, err := s3New(s3Config)
 	if err != nil {
-		return nil, err.Trace(args...)
+		return "", err
 	}
 
 	if _, err = s3Client.Stat(false, false); err != nil {
@@ -165,21 +150,52 @@ func newS3Config(args cli.Args) (*Config, *probe.Error) {
 			s3Config.Signature = "s3v2"
 			s3Client, err = s3New(s3Config)
 			if err != nil {
-				return nil, err.Trace(args...)
+				return "", err
 			}
 			if _, err = s3Client.Stat(false, false); err != nil {
 				switch err.ToGoError().(type) {
 				case BucketDoesNotExist:
 					// Bucket doesn't exist, means signature probing worked with V2.
 				default:
-					return nil, err.Trace(args...)
+					return "", err
 				}
 			}
 		}
 	}
 
-	// Set the host url with original URL.
-	s3Config.HostURL = url
+	return s3Config.Signature, nil
+}
+
+// buildS3Config constructs an S3 Config and does
+// signature auto-probe when needed.
+func buildS3Config(args cli.Args) (*Config, *probe.Error) {
+	var (
+		url       = args.Get(0)
+		accessKey = args.Get(1)
+		secretKey = args.Get(2)
+		api       = args.Get(3)
+	)
+
+	s3Config := newS3Config(url, &hostConfigV8{
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+		URL:       url,
+	})
+
+	// If api is provided we do not auto probe signature, this is
+	// required in situations when signature type is provided by the user.
+	if api != "" {
+		s3Config.Signature = api
+		return s3Config, nil
+	}
+
+	// Probe S3 signature version
+	api, err := probeS3Signature(accessKey, secretKey, url)
+	if err != nil {
+		return nil, err.Trace(args...)
+	}
+
+	s3Config.Signature = api
 
 	// Success.
 	return s3Config, nil
@@ -190,7 +206,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 
 	console.SetColor("HostMessage", color.New(color.FgGreen))
 
-	s3Config, err := newS3Config(ctx.Args().Tail())
+	s3Config, err := buildS3Config(ctx.Args().Tail())
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials")
 
 	addHost(ctx.Args().Get(0), hostConfigV8{
