@@ -56,6 +56,7 @@ var (
 	globalDebug    = false // Debug flag set via command line
 	globalNoColor  = false // No Color flag set via command line
 	globalInsecure = false // Insecure flag set via command line
+
 	// WHEN YOU ADD NEXT GLOBAL FLAG, MAKE SURE TO ALSO UPDATE SESSION CODE AND CODE BELOW.
 )
 

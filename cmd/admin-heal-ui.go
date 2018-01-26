@@ -96,8 +96,6 @@ type uiData struct {
 	ForceStart     bool
 	HealOpts       *madmin.HealOpts
 	LastItem       *hri
-	Quiet          bool
-	JSON           bool
 
 	// Total time since heal start
 	HealDuration time.Duration
@@ -362,8 +360,7 @@ func (ui *uiData) updateUI(s *madmin.HealTaskStatus) (err error) {
 		humanize.Comma(ui.ObjectsHealed), totalObjects,
 		totalSize, totalTime)
 
-	yellow := color.New(color.FgYellow, color.Bold)
-	console.PrintfCustomColor(yellow, " %s", <-ui.CurChan)
+	console.Print(console.Colorize("HealUpdateUI", fmt.Sprintf(" %s", <-ui.CurChan)))
 	console.PrintC(fmt.Sprintf("  %s\n", scannedStr))
 	console.PrintC(fmt.Sprintf("    %s\n", healedStr))
 
@@ -397,9 +394,9 @@ func (ui *uiData) UpdateDisplay(s *madmin.HealTaskStatus) (err error) {
 
 	// Update display
 	switch {
-	case ui.JSON:
+	case globalJSON:
 		err = ui.printItemsJSON(s)
-	case ui.Quiet:
+	case globalQuiet:
 		err = ui.printItemsQuietly(s)
 	default:
 		err = ui.updateUI(s)
@@ -432,15 +429,15 @@ func (ui *uiData) DisplayAndFollowHealStatus() (err error) {
 		}
 
 		time.Sleep(time.Second)
-		if !ui.JSON && !ui.Quiet {
+		if !globalQuiet && !globalJSON {
 			console.RewindLines(8)
 		}
 	}
-	if ui.JSON {
+	if globalJSON {
 		ui.printStatsJSON(&res)
 		return nil
 	}
-	if ui.Quiet {
+	if globalQuiet {
 		ui.printStatsQuietly(&res)
 	}
 	return nil

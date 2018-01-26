@@ -45,6 +45,7 @@ var adminHealCmd = cli.Command{
 	Name:            "heal",
 	Usage:           "Start an object heal operation",
 	Action:          mainAdminHeal,
+	Before:          setGlobalsFromContext,
 	Flags:           append(adminHealFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
@@ -92,6 +93,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	console.SetColor("Heal", color.New(color.FgGreen, color.Bold))
+	console.SetColor("HealUpdateUI", color.New(color.FgYellow, color.Bold))
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -114,14 +116,12 @@ func mainAdminHeal(ctx *cli.Context) error {
 	errorIf(probe.NewError(herr), "Failed to start heal sequence.")
 
 	ui := uiData{
-		Bucket:      bucket,
-		Prefix:      prefix,
-		Client:      client,
-		ClientToken: healStart.ClientToken,
-		ForceStart:  forceStart,
-		HealOpts:    &opts,
-		Quiet:       ctx.Bool("quiet"),
-		JSON:        ctx.Bool("json"),
+		Bucket:                bucket,
+		Prefix:                prefix,
+		Client:                client,
+		ClientToken:           healStart.ClientToken,
+		ForceStart:            forceStart,
+		HealOpts:              &opts,
 		ObjectsByOnlineDrives: make(map[int]int64),
 		HealthCols:            make(map[hCol]int64),
 		CurChan:               cursorAnimate(),

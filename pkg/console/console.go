@@ -64,12 +64,6 @@ var (
 		return
 	}
 
-	// PrintfCustomColor - prints a formatted string in a custom color.
-	PrintfCustomColor = func(c *color.Color, format string, data ...interface{}) {
-		consolePrintf("Print", c, format, data...)
-		return
-	}
-
 	// Fatal print a error message and exit.
 	Fatal = func(data ...interface{}) {
 		consolePrint("Fatal", Theme["Fatal"], data...)
