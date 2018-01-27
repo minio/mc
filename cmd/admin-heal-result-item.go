@@ -32,7 +32,7 @@ func newHRI(i *madmin.HealResultItem) *hri {
 
 // getObjectHCCChange - returns before and after color change for
 // objects
-func (h hri) getObjectHCCChange() (b, a hCol, err error) {
+func (h hri) getObjectHCCChange() (b, a col, err error) {
 	parityShards := h.ParityBlocks
 	dataShards := h.DataBlocks
 
@@ -51,13 +51,13 @@ func (h hri) getObjectHCCChange() (b, a hCol, err error) {
 
 // getReplicatedFileHCCChange - fetches health color code for metadata
 // files that are replicated.
-func (h hri) getReplicatedFileHCCChange() (b, a hCol, err error) {
-	getColCode := func(numAvail int) (c hCol, err error) {
+func (h hri) getReplicatedFileHCCChange() (b, a col, err error) {
+	getColCode := func(numAvail int) (c col, err error) {
 		// calculate color code for replicated object similar
 		// to erasure coded objects
-		quorum := h.DiskCount/2 + 1
-		surplus := numAvail - quorum
-		parity := h.DiskCount - quorum
+		quorum := h.DiskCount/h.SetCount/2 + 1
+		surplus := numAvail/h.SetCount - quorum
+		parity := h.DiskCount/h.SetCount - quorum
 		c, err = getHColCode(surplus, parity)
 		return
 	}

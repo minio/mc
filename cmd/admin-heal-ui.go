@@ -34,33 +34,8 @@ const (
 	lineWidth = 80
 )
 
-// An alias of string to represent the health color code of an object
-type hCol string
-
-const (
-	hColGrey   hCol = "Grey"
-	hColRed         = "Red"
-	hColYellow      = "Yellow"
-	hColGreen       = "Green"
-)
-
-// getHPrintCol - map color code to color for printing
-func getHPrintCol(c hCol) *color.Color {
-	switch c {
-	case hColGrey:
-		return color.New(color.FgWhite, color.Bold)
-	case hColRed:
-		return color.New(color.FgRed, color.Bold)
-	case hColYellow:
-		return color.New(color.FgYellow, color.Bold)
-	case hColGreen:
-		return color.New(color.FgGreen, color.Bold)
-	}
-	return nil
-}
-
 var (
-	hColOrder = []hCol{hColRed, hColYellow, hColGreen}
+	hColOrder = []col{colRed, colYellow, colGreen}
 	hColTable = map[int][]int{
 		1: {0, -1, 1},
 		2: {0, 1, 2},
@@ -73,12 +48,12 @@ var (
 	}
 )
 
-func getHColCode(surplusShards, parityShards int) (c hCol, err error) {
+func getHColCode(surplusShards, parityShards int) (c col, err error) {
 	if parityShards < 1 || parityShards > 8 || surplusShards > parityShards {
 		return c, fmt.Errorf("Invalid parity shard count/surplus shard count given")
 	}
 	if surplusShards < 0 {
-		return hColGrey, err
+		return colGrey, err
 	}
 	colRow := hColTable[parityShards]
 	for index, val := range colRow {
@@ -115,7 +90,7 @@ type uiData struct {
 	ObjectsByOnlineDrives map[int]int64
 	// Map of health color code to number of objects with that
 	// health color code.
-	HealthCols map[hCol]int64
+	HealthCols map[col]int64
 
 	// channel to receive a prompt string to indicate activity on
 	// the terminal
@@ -147,7 +122,7 @@ func (ui *uiData) updateStats(i madmin.HealResultItem) error {
 
 	// Fetch health color after heal:
 	var err error
-	var afterCol hCol
+	var afterCol col
 	h := newHRI(&i)
 	switch h.Type {
 	case madmin.HealItemMetadata, madmin.HealItemBucket:
@@ -188,15 +163,15 @@ func (ui *uiData) getProgress() (oCount, objSize, duration string) {
 	return
 }
 
-func (ui *uiData) getPercentsNBars() (p map[hCol]float64, b map[hCol]string) {
+func (ui *uiData) getPercentsNBars() (p map[col]float64, b map[col]string) {
 	// barChar, emptyBarChar := "█", "░"
 	barChar, emptyBarChar := "█", " "
 	barLen := 12
 	sum := float64(ui.ItemsScanned)
-	cols := []hCol{hColGrey, hColRed, hColYellow, hColGreen}
+	cols := []col{colGrey, colRed, colYellow, colGreen}
 
-	p = make(map[hCol]float64, len(cols))
-	b = make(map[hCol]string, len(cols))
+	p = make(map[col]float64, len(cols))
+	b = make(map[col]string, len(cols))
 	var filledLen int
 	for _, col := range cols {
 		v := float64(ui.HealthCols[col])
@@ -215,17 +190,17 @@ func (ui *uiData) getPercentsNBars() (p map[hCol]float64, b map[hCol]string) {
 }
 
 func (ui *uiData) printItemsQuietly(s *madmin.HealTaskStatus) (err error) {
-	lpad := func(s hCol) string {
+	lpad := func(s col) string {
 		return fmt.Sprintf("%-6s", string(s))
 	}
-	rpad := func(s hCol) string {
+	rpad := func(s col) string {
 		return fmt.Sprintf("%6s", string(s))
 	}
-	printColStr := func(before, after hCol) {
+	printColStr := func(before, after col) {
 		console.PrintC("[" + lpad(before) + " -> " + rpad(after) + "] ")
 	}
 
-	var b, a hCol
+	var b, a col
 	for _, item := range s.Items {
 		h := newHRI(&item)
 		switch h.Type {
@@ -265,20 +240,33 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 		After  string `json:"after"`
 	}
 	type healRec struct {
-		Status string            `json:"status"`
-		Error  string            `json:"error,omitempty"`
-		Type   string            `json:"type"`
-		Name   string            `json:"name"`
-		Health change            `json:"health"`
-		Drives map[string]change `json:"drives"`
-		Size   int64             `json:"size"`
+		Status string `json:"status"`
+		Error  string `json:"error,omitempty"`
+		Type   string `json:"type"`
+		Name   string `json:"name"`
+		Before struct {
+			Color     string                 `json:"color"`
+			Offline   int                    `json:"offline"`
+			Online    int                    `json:"online"`
+			Missing   int                    `json:"missing"`
+			Corrupted int                    `json:"corrupted"`
+			Drives    []madmin.HealDriveInfo `json:"drives"`
+		} `json:"before"`
+		After struct {
+			Color     string                 `json:"color"`
+			Offline   int                    `json:"offline"`
+			Online    int                    `json:"online"`
+			Missing   int                    `json:"missing"`
+			Corrupted int                    `json:"corrupted"`
+			Drives    []madmin.HealDriveInfo `json:"drives"`
+		} `json:"after"`
+		Size int64 `json:"size"`
 	}
 	makeHR := func(h *hri) (r healRec, err error) {
 		r.Status = "success"
 		r.Type, r.Name = h.getHRTypeAndName()
-		r.Drives = make(map[string]change)
 
-		var b, a hCol
+		var b, a col
 		switch h.Type {
 		case madmin.HealItemMetadata, madmin.HealItemBucket:
 			b, a, err = h.getReplicatedFileHCCChange()
@@ -291,13 +279,14 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 		if err != nil {
 			return r, err
 		}
-		r.Health.Before = strings.ToLower(string(b))
-		r.Health.After = strings.ToLower(string(a))
-
-		for k := range h.DriveInfo.Before {
-			r.Drives[k] = change{h.DriveInfo.Before[k], h.DriveInfo.After[k]}
-		}
-
+		r.Before.Color = strings.ToLower(string(b))
+		r.After.Color = strings.ToLower(string(a))
+		r.Before.Online, r.After.Online = h.GetOnlineCounts()
+		r.Before.Missing, r.After.Missing = h.GetMissingCounts()
+		r.Before.Corrupted, r.After.Corrupted = h.GetCorruptedCounts()
+		r.Before.Offline, r.After.Offline = h.GetOfflineCounts()
+		r.Before.Drives = h.Before.Drives
+		r.After.Drives = h.After.Drives
 		return r, nil
 	}
 
@@ -364,10 +353,10 @@ func (ui *uiData) updateUI(s *madmin.HealTaskStatus) (err error) {
 	console.PrintC(fmt.Sprintf("  %s\n", scannedStr))
 	console.PrintC(fmt.Sprintf("    %s\n", healedStr))
 
-	dspOrder := []hCol{hColGreen, hColYellow, hColRed, hColGrey}
+	dspOrder := []col{colGreen, colYellow, colRed, colGrey}
 	printColors := []*color.Color{}
 	for _, c := range dspOrder {
-		printColors = append(printColors, getHPrintCol(c))
+		printColors = append(printColors, getPrintCol(c))
 	}
 	t := console.NewTable(printColors, []bool{false, true, true}, 4)
 

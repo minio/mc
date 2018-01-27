@@ -123,7 +123,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 		ForceStart:            forceStart,
 		HealOpts:              &opts,
 		ObjectsByOnlineDrives: make(map[int]int64),
-		HealthCols:            make(map[hCol]int64),
+		HealthCols:            make(map[col]int64),
 		CurChan:               cursorAnimate(),
 	}
 	errorIf(
