@@ -94,7 +94,7 @@ type ServerInfo struct {
 // infoMessage container to hold service status information.
 type infoMessage struct {
 	Status  string `json:"status"`
-	Service bool   `json:"service"`
+	Service string `json:"service"`
 	Addr    string `json:"address"`
 	Err     string `json:"error"`
 	*ServerInfo
@@ -109,7 +109,7 @@ func (u infoMessage) String() (msg string) {
 	dot := "●"
 
 	// When service is offline
-	if !u.Service {
+	if u.Service == "off" {
 		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), u.Addr)
 		msg += fmt.Sprintf("   Uptime : Server is %s", console.Colorize("InfoFail", "offline"))
 		return
@@ -204,7 +204,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 	}
 
 	if serviceOffline {
-		printMsg(infoMessage{Addr: aliasedURL, Service: false})
+		printMsg(infoMessage{Addr: aliasedURL, Service: "off"})
 		return nil
 	}
 
@@ -215,7 +215,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 		// Print the error if exists and jump to the next server
 		if serverInfo.Error != "" {
 			printMsg(infoMessage{
-				Service: true,
+				Service: "on",
 				Addr:    serverInfo.Addr,
 				Err:     serverInfo.Error,
 			})
@@ -241,7 +241,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 		}
 
 		printMsg(infoMessage{
-			Service: true,
+			Service: "on",
 			Addr:    serverInfo.Addr,
 			Err:     serverInfo.Error,
 			ServerInfo: &ServerInfo{

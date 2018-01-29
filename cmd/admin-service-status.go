@@ -56,7 +56,7 @@ EXAMPLES:
 // serviceStatusMessage container to hold service status information.
 type serviceStatusMessage struct {
 	Status  string        `json:"status"`
-	Service bool          `json:"service"`
+	Service string        `json:"service"`
 	Uptime  time.Duration `json:"uptime"`
 }
 
@@ -66,7 +66,7 @@ func (u serviceStatusMessage) String() (msg string) {
 		msg = console.Colorize("ServiceStatus", msg)
 	}()
 	// When service is offline
-	if !u.Service {
+	if u.Service == "off" {
 		msg = "The server is offline."
 		return
 	}
@@ -76,7 +76,13 @@ func (u serviceStatusMessage) String() (msg string) {
 
 // JSON jsonified service status Message message.
 func (u serviceStatusMessage) JSON() string {
-	u.Status = "success"
+	switch u.Service {
+	case "on":
+		u.Status = "success"
+	case "off":
+		u.Status = "failure"
+	}
+
 	statusJSONBytes, e := json.Marshal(u)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -120,7 +126,7 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 		}
 	}
 	if serviceOffline {
-		printMsg(serviceStatusMessage{Service: false})
+		printMsg(serviceStatusMessage{Service: "off"})
 		return nil
 	}
 
@@ -129,7 +135,7 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 
 	// Print the whole response
 	printMsg(serviceStatusMessage{
-		Service: true,
+		Service: "on",
 		Uptime:  st.Uptime,
 	})
 
