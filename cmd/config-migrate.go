@@ -43,6 +43,8 @@ func migrateConfig() {
 	migrateConfigV6ToV7()
 	// Migrate config V7 to V8
 	migrateConfigV7ToV8()
+	// Migrate config V8 to V9
+	migrateConfigV8ToV9()
 }
 
 // Migrate from config version 1.0 to 1.0.1. Populate example entries and save it back.
@@ -435,4 +437,43 @@ func migrateConfigV7ToV8() {
 	fatalIf(probe.NewError(e), "Unable to save config version `8`.")
 
 	console.Infof("Successfully migrated %s from version `7` to version `8`.\n", mustGetMcConfigPath())
+}
+
+// Migrate config version `8` to `9'. Add optional field virtual
+func migrateConfigV8ToV9() {
+	if !isMcConfigExists() {
+		return
+	}
+
+	mcCfgV8, e := quick.Load(mustGetMcConfigPath(), newConfigV8())
+	fatalIf(probe.NewError(e), "Unable to load mc config V8.")
+
+	if mcCfgV8.Version() != "8" {
+		return
+	}
+
+	cfgV9 := newConfigV9()
+	// We dropped alias support in v8. We only need to migrate host configs.
+	for host, hostCfgV8 := range mcCfgV8.Data().(*configV8).Hosts {
+		// Ignore 'player', 'play' and 'dl' aliases.
+		if host == "player" || host == "dl" || host == "play" {
+			continue
+		}
+		hostCfgV9 := hostConfigV9{}
+		hostCfgV9.URL = hostCfgV8.URL
+		hostCfgV9.AccessKey = hostCfgV8.AccessKey
+		hostCfgV9.SecretKey = hostCfgV8.SecretKey
+		hostCfgV9.API = hostCfgV8.API
+		hostCfgV9.Lookup = "auto"
+		cfgV9.Hosts[host] = hostCfgV9
+	}
+	// Load default settings.
+	cfgV9.loadDefaults()
+	mcNewCfgV9, e := quick.New(cfgV9)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `9`.")
+
+	e = mcNewCfgV9.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version `9`.")
+
+	console.Infof("Successfully migrated %s from version `8` to version `9`.\n", mustGetMcConfigPath())
 }

@@ -23,19 +23,30 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
+var hostAddFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "lookup",
+		Value: "auto",
+		Usage: "bucket lookup supported by the server. Valid options are `[dns,path,auto]`",
+	},
+	cli.StringFlag{
+		Name:  "api",
+		Usage: "API signature. Valid options are `[S3v4, S3v2]`",
+	},
+}
 var configHostAddCmd = cli.Command{
 	Name:            "add",
 	ShortName:       "a",
 	Usage:           "Add a new host to configuration file.",
 	Action:          mainConfigHostAdd,
 	Before:          setGlobalsFromContext,
-	Flags:           globalFlags,
+	Flags:           append(hostAddFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS URL ACCESS-KEY SECRET-KEY [API]
+  {{.HelpName}} ALIAS URL ACCESS-KEY SECRET-KEY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -57,8 +68,14 @@ EXAMPLES:
      providing the signature type.
      $ set +o history
      $ {{.HelpName}} mys3-iam https://s3.amazonaws.com \
-                 BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 s3v4
+                 BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api "s3v4"
      $ set -o history
+
+	4. Add S3 API compatible storage service under "myminio" alias, to use dns style bucket lookup. For security reasons turn off bash history momentarily.
+		 $ set +o history
+		 $ {{.HelpName}} myminio http://localhost:9000 \
+								minio minio123 --api "s3v4" --lookup "dns"
+		 $ set -o history
 
 `,
 }
@@ -76,8 +93,8 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 	url := args.Get(1)
 	accessKey := args.Get(2)
 	secretKey := args.Get(3)
-	api := args.Get(4)
-
+	api := ctx.String("api")
+	bucketLookup := ctx.String("lookup")
 	if !isValidAlias(alias) {
 		fatalIf(errInvalidAlias(alias), "Invalid alias")
 	}
@@ -100,26 +117,32 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 		fatalIf(errInvalidArgument().Trace(api),
 			"Unrecognized API signature. Valid options are `[S3v4, S3v2]`.")
 	}
+
+	if !isValidLookup(bucketLookup) {
+		fatalIf(errInvalidArgument().Trace(bucketLookup),
+			"Unrecognized bucket lookup. Valid options are `[dns,auto, path]`.")
+	}
 }
 
 // addHost - add a host config.
-func addHost(alias string, hostCfgV8 hostConfigV8) {
-	mcCfgV8, err := loadMcConfig()
+func addHost(alias string, hostCfgV9 hostConfigV9) {
+	mcCfgV9, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config `"+mustGetMcConfigPath()+"`.")
 
 	// Add new host.
-	mcCfgV8.Hosts[alias] = hostCfgV8
+	mcCfgV9.Hosts[alias] = hostCfgV9
 
-	err = saveMcConfig(mcCfgV8)
+	err = saveMcConfig(mcCfgV9)
 	fatalIf(err.Trace(alias), "Unable to update hosts in config version `"+mustGetMcConfigPath()+"`.")
 
 	printMsg(hostMessage{
 		op:        "add",
 		Alias:     alias,
-		URL:       hostCfgV8.URL,
-		AccessKey: hostCfgV8.AccessKey,
-		SecretKey: hostCfgV8.SecretKey,
-		API:       hostCfgV8.API,
+		URL:       hostCfgV9.URL,
+		AccessKey: hostCfgV9.AccessKey,
+		SecretKey: hostCfgV9.SecretKey,
+		API:       hostCfgV9.API,
+		Lookup:    hostCfgV9.Lookup,
 	})
 }
 
@@ -168,18 +191,13 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 
 // buildS3Config constructs an S3 Config and does
 // signature auto-probe when needed.
-func buildS3Config(args cli.Args) (*Config, *probe.Error) {
-	var (
-		url       = args.Get(0)
-		accessKey = args.Get(1)
-		secretKey = args.Get(2)
-		api       = args.Get(3)
-	)
+func buildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
 
-	s3Config := newS3Config(url, &hostConfigV8{
+	s3Config := newS3Config(url, &hostConfigV9{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
+		Lookup:    lookup,
 	})
 
 	// If api is provided we do not auto probe signature, this is
@@ -188,15 +206,13 @@ func buildS3Config(args cli.Args) (*Config, *probe.Error) {
 		s3Config.Signature = api
 		return s3Config, nil
 	}
-
 	// Probe S3 signature version
 	api, err := probeS3Signature(accessKey, secretKey, url)
 	if err != nil {
-		return nil, err.Trace(args...)
+		return nil, err.Trace(url, accessKey, secretKey, api, lookup)
 	}
 
 	s3Config.Signature = api
-
 	// Success.
 	return s3Config, nil
 }
@@ -205,15 +221,24 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	checkConfigHostAddSyntax(ctx)
 
 	console.SetColor("HostMessage", color.New(color.FgGreen))
+	var (
+		args      = ctx.Args()
+		url       = args.Get(1)
+		accessKey = args.Get(2)
+		secretKey = args.Get(3)
+		api       = ctx.String("api")
+		lookup    = ctx.String("lookup")
+	)
 
-	s3Config, err := buildS3Config(ctx.Args().Tail())
+	s3Config, err := buildS3Config(url, accessKey, secretKey, api, lookup)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials")
 
-	addHost(ctx.Args().Get(0), hostConfigV8{
+	addHost(ctx.Args().Get(0), hostConfigV9{
 		URL:       s3Config.HostURL,
 		AccessKey: s3Config.AccessKey,
 		SecretKey: s3Config.SecretKey,
 		API:       s3Config.Signature,
+		Lookup:    lookup,
 	}) // Add a host with specified credentials.
 	return nil
 }

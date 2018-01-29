@@ -22,7 +22,7 @@ import (
 )
 
 // Check if version of the config is valid
-func validateConfigVersion(config *configV8) (bool, string) {
+func validateConfigVersion(config *configV9) (bool, string) {
 	if config.Version != globalMCConfigVersion {
 		return false, fmt.Sprintf("Config version '%s' does not match mc config version '%s', please update your binary.\n",
 			config.Version, globalMCConfigVersion)
@@ -31,7 +31,7 @@ func validateConfigVersion(config *configV8) (bool, string) {
 }
 
 // Verifies the config file of the Minio Client
-func validateConfigFile(config *configV8) (bool, []string) {
+func validateConfigFile(config *configV9) (bool, []string) {
 	ok, err := validateConfigVersion(config)
 	var validationSuccessful = true
 	var errors []string
@@ -50,7 +50,7 @@ func validateConfigFile(config *configV8) (bool, []string) {
 	return validationSuccessful, errors
 }
 
-func validateConfigHost(host hostConfigV8) (bool, []string) {
+func validateConfigHost(host hostConfigV9) (bool, []string) {
 	var validationSuccessful = true
 	var hostErrors []string
 	if !isValidAPI(strings.ToLower(host.API)) {
