@@ -29,12 +29,13 @@ import (
 type differType int
 
 const (
-	differInNone   differType = iota // does not differ
-	differInSize                     // differs in size
-	differInTime                     // differs in time
-	differInType                     // only in source
-	differInFirst                    // only in target
-	differInSecond                   // differs in type, exfile/directory
+	differInNone    differType = iota // does not differ
+	differInSize                      // differs in size
+	differInSrcTime                   // differs in source time
+	differInTgtTime                   // differs in target time
+	differInType                      // only in source
+	differInFirst                     // only in target
+	differInSecond                    // differs in type, exfile/directory
 )
 
 func (d differType) String() string {
@@ -43,7 +44,7 @@ func (d differType) String() string {
 		return ""
 	case differInSize:
 		return "size"
-	case differInTime:
+	case differInSrcTime, differInTgtTime:
 		return "time"
 	case differInType:
 		return "type"
@@ -189,12 +190,24 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}
-				} else if srcTime.After(tgtTime) {
-					// Regular files differing in timestamp.
+				}
+				if srcTime.After(tgtTime) {
+					// Regular files differing in timestamp
+					// Source timestamp is newer.
 					diffCh <- diffMessage{
 						FirstURL:      srcCtnt.URL.String(),
 						SecondURL:     tgtCtnt.URL.String(),
-						Diff:          differInTime,
+						Diff:          differInSrcTime,
+						firstContent:  srcCtnt,
+						secondContent: tgtCtnt,
+					}
+				} else if tgtTime.After(srcTime) {
+					// Regular files differing in timestamp.
+					// Target timestamp is newer.
+					diffCh <- diffMessage{
+						FirstURL:      srcCtnt.URL.String(),
+						SecondURL:     tgtCtnt.URL.String(),
+						Diff:          differInTgtTime,
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}

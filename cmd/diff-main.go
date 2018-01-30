@@ -55,7 +55,7 @@ DESCRIPTION:
   Differences between source and destination are represented by mark notations with following meaning:
     > - indicates file should be copied.
     < - indicates file should be deleted.
-    ! - indicates file differs in size or type.
+    ! - indicates file differs in size or type (yellow), or modification time (cyan).
 
 EXAMPLES:
   1. Compare a local folder with a folder on Amazon S3 cloud storage.
@@ -90,7 +90,9 @@ func (d diffMessage) String() string {
 		msg = console.Colorize("DiffType", "! "+d.SecondURL)
 	case differInSize:
 		msg = console.Colorize("DiffSize", "! "+d.SecondURL)
-	case differInTime:
+	case differInSrcTime:
+		msg = console.Colorize("DiffTime", "! "+d.FirstURL)
+	case differInTgtTime:
 		msg = console.Colorize("DiffTime", "! "+d.SecondURL)
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
@@ -200,7 +202,7 @@ func mainDiff(ctx *cli.Context) error {
 	console.SetColor("DiffOnlyInSecond", color.New(color.FgGreen))
 	console.SetColor("DiffType", color.New(color.FgMagenta))
 	console.SetColor("DiffSize", color.New(color.FgYellow, color.Bold))
-	console.SetColor("DiffTime", color.New(color.FgYellow, color.Bold))
+	console.SetColor("DiffTime", color.New(color.FgCyan, color.Bold))
 
 	URLs := ctx.Args()
 	firstURL := URLs.Get(0)
