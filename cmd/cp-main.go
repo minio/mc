@@ -41,6 +41,14 @@ var (
 			Name:  "recursive, r",
 			Usage: "Copy recursively.",
 		},
+		cli.IntFlag{
+			Name:  "older-than",
+			Usage: "Copy objects older than N days",
+		},
+		cli.IntFlag{
+			Name:  "newer-than",
+			Usage: "Copy objects newer than N days",
+		},
 	}
 )
 
@@ -74,10 +82,16 @@ EXAMPLES:
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
       $ {{.HelpName}} --recursive s3\documents\2014\ C:\Backups\2014
 
-   5. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
+   5. Copy files older than 7 days from Minio cloud storage to Amazon S3 cloud storage.
+      $ {{.HelpName}} --older-than 7 play/mybucket/burningman2011/ s3/mybucket/
+
+   6. Copy files newer than 7 days from Minio cloud storage to a local path.
+      $ {{.HelpName}} --newer-than 7 play/mybucket/burningman2011/ ~/latest/
+
+   7. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
       $ {{.HelpName}} 本語 s3/andoria/
 
-   6. Copy a local folder with space separated characters to Amazon S3 cloud storage.
+   8. Copy a local folder with space separated characters to Amazon S3 cloud storage.
       $ {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
 
 `,
@@ -190,6 +204,9 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 	// Access recursive flag inside the session header.
 	isRecursive := session.Header.CommandBoolFlags["recursive"]
 
+	olderThan := session.Header.CommandIntFlags["older-than"]
+	newerThan := session.Header.CommandIntFlags["newer-than"]
+
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 
@@ -225,6 +242,17 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 				session.Delete()
 				fatalIf(probe.NewError(e), "Unable to prepare URL for copying. Error in JSON marshaling.")
 			}
+
+			// Skip objects older than --older-than parameter if specified
+			if olderThan > 0 && isOlder(cpURLs.SourceContent, olderThan) {
+				continue
+			}
+
+			// Skip objects newer than --newer-than parameter if specified
+			if newerThan > 0 && isNewer(cpURLs.SourceContent, newerThan) {
+				continue
+			}
+
 			fmt.Fprintln(dataFP, string(jsonData))
 			if !globalQuiet && !globalJSON {
 				scanBar(cpURLs.SourceContent.URL.String())
@@ -376,9 +404,15 @@ func mainCopy(ctx *cli.Context) error {
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
+	recursive := ctx.Bool("recursive")
+	olderThan := ctx.Int("older-than")
+	newerThan := ctx.Int("newer-than")
+
 	session := newSessionV8()
 	session.Header.CommandType = "cp"
-	session.Header.CommandBoolFlags["recursive"] = ctx.Bool("recursive")
+	session.Header.CommandBoolFlags["recursive"] = recursive
+	session.Header.CommandIntFlags["older-than"] = olderThan
+	session.Header.CommandIntFlags["newer-than"] = newerThan
 
 	var e error
 	if session.Header.RootPath, e = os.Getwd(); e != nil {

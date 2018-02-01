@@ -70,6 +70,14 @@ var (
 			Name:  "exclude",
 			Usage: "Exclude file/object that matches the passed file name pattern.",
 		},
+		cli.IntFlag{
+			Name:  "older-than",
+			Usage: "Select objects older than N days",
+		},
+		cli.IntFlag{
+			Name:  "newer-than",
+			Usage: "Select objects newer than N days",
+		},
 	}
 )
 
@@ -97,23 +105,32 @@ EXAMPLES:
    2. Mirror a local folder recursively to Amazon S3 cloud storage.
       $ {{.HelpName}} backup/ s3/archive
 
-   3. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
+   3. Only mirror files that are newer than 7 days to Amazon S3 cloud storage.
+      $ {{.HelpName}} --newer-than 7 backup/ s3/archive
+
+   4. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
       $ {{.HelpName}} s3\documents\2014\ C:\backup\2014
 
-   4. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--overwrite' to overwrite destination.
+   5. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--overwrite' to overwrite destination.
       $ {{.HelpName}} --overwrite s3/miniocloud miniocloud-backup
 
-   5. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
+   6. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
       files on Amazon S3 cloud storage.
       $ {{.HelpName}} --remove play/photos/2014 s3/backup-photos/2014
 
-   6. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
+   7. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
       new objects, uploads and removes extraneous files on Amazon S3 cloud storage.
       $ {{.HelpName}} --remove --watch /var/lib/backups play/backups
 
-   7. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
+   8. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
       Exclude all .* files and *.temp files when mirroring.
       $ {{.HelpName}} --exclude ".*" --exclude "*.temp" s3/test ~/test
+
+   9. Mirror objects newer than 10 days from bucket test to a local folder.
+      $ {{.HelpName}} --newer-than=10 s3/test ~/localfolder
+
+  10. Mirror a bucket older than 30 days from Amazon S3 bucket test to a local folder.
+      $ {{.HelpName}} --older-than=30 s3/test ~/test
 
 `,
 }
@@ -152,6 +169,7 @@ type mirrorJob struct {
 	targetURL string
 
 	isFake, isRemove, isOverwrite, isWatch bool
+	olderThan, newerThan                   int
 
 	excludeOptions []string
 }
@@ -193,7 +211,7 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 	targetWithAlias := filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path)
 
 	// Remove extraneous file on target.
-	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, mj.isFake, 0))
+	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, mj.isFake, 0, 0))
 	return sURLs.WithError(err)
 }
 
@@ -449,7 +467,18 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				}
 				continue
 			}
+
 			if sURLs.SourceContent != nil {
+				// Skip objects older than --older-than parameter if specified
+				if mj.olderThan > 0 && isOlder(sURLs.SourceContent, mj.olderThan) {
+					continue
+				}
+
+				// Skip objects newer than --newer-than parameter if specified
+				if mj.newerThan > 0 && isNewer(sURLs.SourceContent, mj.newerThan) {
+					continue
+				}
+
 				// copy
 				totalBytes += sURLs.SourceContent.Size
 			}
@@ -513,7 +542,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	return nil
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan int) *mirrorJob {
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
@@ -535,6 +564,8 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch 
 		isOverwrite:    isOverwrite,
 		isWatch:        isWatch,
 		excludeOptions: excludeOptions,
+		olderThan:      olderThan,
+		newerThan:      newerThan,
 
 		status:   status,
 		statusCh: make(chan URLs),
@@ -585,7 +616,9 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 		ctx.Bool("remove"),
 		isOverwrite,
 		ctx.Bool("watch"),
-		ctx.StringSlice("exclude"))
+		ctx.StringSlice("exclude"),
+		ctx.Int("older-than"),
+		ctx.Int("newer-than"))
 
 	srcClt, err := newClient(srcURL)
 	fatalIf(err, "Unable to initialize `"+srcURL+"`")

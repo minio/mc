@@ -63,7 +63,11 @@ var (
 		},
 		cli.IntFlag{
 			Name:  "older-than",
-			Usage: "Remove objects older than N days.",
+			Usage: "Remove objects older than N days",
+		},
+		cli.IntFlag{
+			Name:  "newer-than",
+			Usage: "Remove objects newer than N days",
 		},
 	}
 )
@@ -94,16 +98,19 @@ EXAMPLES:
    3. Remove all objects older than '90' days recursively from bucket 'jazz-songs' that match 'louis' prefix.
       $ {{.HelpName}} --recursive --older-than=90 s3/jazz-songs/louis/
 
-   4. Remove all objects read from STDIN.
+   4. Remove all objects newer than 7 days recursively from bucket 'pop-songs'
+      $ {{.HelpName}} --recursive --newer-than=7 s3/pop-songs/
+
+   5. Remove all objects read from STDIN.
       $ {{.HelpName}} --force --stdin
 
-   5. Remove all buckets and objects recursively from S3 host
+   6. Remove all buckets and objects recursively from S3 host
       $ {{.HelpName}} --recursive --dangerous s3
 
-   6. Remove all buckets and objects older than '90' days recursively from host
+   7. Remove all buckets and objects older than '90' days recursively from host
       $ {{.HelpName}} --recursive --dangerous --older-than=90 s3
 
-   7. Drop all incomplete uploads on 'jazz-songs' bucket.
+   8. Drop all incomplete uploads on 'jazz-songs' bucket.
       $ {{.HelpName}} --incomplete --recursive s3/jazz-songs/
 
 `,
@@ -166,7 +173,7 @@ func checkRmSyntax(ctx *cli.Context) {
 	}
 }
 
-func removeSingle(url string, isIncomplete bool, isFake bool, older int) error {
+func removeSingle(url string, isIncomplete bool, isFake bool, olderThan int, newerThan int) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -179,14 +186,15 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) error {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
-	if older > 0 {
-		// Check whether object is created older than given time.
-		now := UTCNow()
-		timeDiff := now.Sub(content.Time)
-		if timeDiff < (time.Duration(older) * Day) {
-			// time difference of info.Time with current time is less than older time.
-			return nil
-		}
+
+	// Skip objects older than older--than parameter if specified
+	if olderThan > 0 && isOlder(content, olderThan) {
+		return nil
+	}
+
+	// Skip objects older than older--than parameter if specified
+	if newerThan > 0 && isNewer(content, newerThan) {
+		return nil
 	}
 
 	printMsg(rmMessage{
@@ -215,7 +223,7 @@ func removeSingle(url string, isIncomplete bool, isFake bool, older int) error {
 	return nil
 }
 
-func removeRecursive(url string, isIncomplete bool, isFake bool, older int) error {
+func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan int, newerThan int) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -241,15 +249,16 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, older int) erro
 		}
 		urlString := content.URL.Path
 
-		if older > 0 {
-			// Check whether object is created older than given time.
-			now := UTCNow()
-			timeDiff := now.Sub(content.Time)
-			if timeDiff < (time.Duration(older) * Day) {
-				// time difference of info.Time with current time is less than older time.
-				continue
-			}
+		// Skip objects older than --older-than parameter if specified
+		if olderThan > 0 && isOlder(content, olderThan) {
+			continue
 		}
+
+		// Skip objects newer than --newer-than parameter if specified
+		if newerThan > 0 && isNewer(content, newerThan) {
+			continue
+		}
+
 		// list internally mimics recursive directory listing of object prefixes for s3 similar to FS.
 		// The rmMessage needs to be printed only for actual objects being deleted and not prefixes.
 		if !(content.Time.IsZero() && strings.HasSuffix(urlString, string(filepath.Separator))) {
@@ -307,7 +316,8 @@ func mainRm(ctx *cli.Context) error {
 	isRecursive := ctx.Bool("recursive")
 	isFake := ctx.Bool("fake")
 	isStdin := ctx.Bool("stdin")
-	older := ctx.Int("older-than")
+	olderThan := ctx.Int("older-than")
+	newerThan := ctx.Int("newer-than")
 
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
@@ -317,9 +327,9 @@ func mainRm(ctx *cli.Context) error {
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
 		if isRecursive {
-			err = removeRecursive(url, isIncomplete, isFake, older)
+			err = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan)
 		} else {
-			err = removeSingle(url, isIncomplete, isFake, older)
+			err = removeSingle(url, isIncomplete, isFake, olderThan, newerThan)
 		}
 
 		if rerr == nil {
@@ -335,9 +345,9 @@ func mainRm(ctx *cli.Context) error {
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive {
-			err = removeRecursive(url, isIncomplete, isFake, older)
+			err = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan)
 		} else {
-			err = removeSingle(url, isIncomplete, isFake, older)
+			err = removeSingle(url, isIncomplete, isFake, olderThan, newerThan)
 		}
 
 		if rerr == nil {
