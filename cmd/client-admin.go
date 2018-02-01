@@ -84,7 +84,6 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 				}).DialContext,
 				MaxIdleConns:          100,
 				IdleConnTimeout:       90 * time.Second,
-				ResponseHeaderTimeout: 5 * time.Minute,
 				TLSHandshakeTimeout:   10 * time.Second,
 				ExpectContinueTimeout: 1 * time.Second,
 				TLSClientConfig:       tlsConfig,
