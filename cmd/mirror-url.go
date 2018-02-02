@@ -64,9 +64,9 @@ func checkMirrorSyntax(ctx *cli.Context) {
 		fatalIf(errInvalidArgument().Trace(), "Invalid target arguments to mirror command.")
 	}
 
-	url := newClientURL(tgtURL)
-	if url.Host != "" {
-		if url.Path == string(url.Separator) {
+	clientURL := newClientURL(tgtURL)
+	if clientURL.Host != "" {
+		if clientURL.Path == string(clientURL.Separator) {
 			fatalIf(errInvalidArgument().Trace(tgtURL),
 				fmt.Sprintf("Target `%s` does not contain bucket name.", tgtURL))
 		}
@@ -114,8 +114,8 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 	// List both source and target, compare and return values through channel.
 	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
 		if diffMsg.Error != nil {
-			errorIf(diffMsg.Error, "Unable to mirror objects.")
-			// Ignore error and proceed to next object.
+			// Send all errors through the channel
+			URLsCh <- URLs{Error: diffMsg.Error}
 			continue
 		}
 

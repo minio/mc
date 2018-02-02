@@ -460,11 +460,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				return
 			}
 			if sURLs.Error != nil {
-				if strings.Contains(sURLs.Error.ToGoError().Error(), " is a folder.") {
-					mj.status.errorIf(sURLs.Error.Trace(), "Folder cannot be copied. Please use `...` suffix.")
-				} else {
-					mj.status.errorIf(sURLs.Error.Trace(), "Unable to prepare URL for copying.")
-				}
+				errCh <- sURLs.Error
 				continue
 			}
 
@@ -526,20 +522,35 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	// Start mirroring.
 	go mj.startMirror(ctx, cancelMirror, mirrorErrCh)
 
-	if err := <-mirrorErrCh; err != nil {
-		return err.Trace()
-	}
+	// Wait until all progress bar updates are actually shown and quit.
+	defer mj.stopStatus()
 
-	if mj.isWatch {
-		if err := <-watchErrCh; err != nil {
+	var err *probe.Error
+	var ok bool
+	for {
+		select {
+		case err, ok = <-mirrorErrCh:
+			if !ok || err == nil {
+				if mj.isWatch {
+					continue
+				}
+				return nil
+			}
+		case err, ok = <-watchErrCh:
+			if !ok || err == nil {
+				return nil
+			}
+		}
+		if err != nil {
+			switch err.ToGoError().(type) {
+			case BrokenSymlink, TooManyLevelsSymlink, PathNotFound,
+				PathInsufficientPermission, ObjectOnGlacier:
+				continue
+			}
 			return err.Trace()
 		}
+
 	}
-
-	// Wait until all progress bar updates are actually shown and quit.
-	mj.stopStatus()
-
-	return nil
 }
 
 func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan int) *mirrorJob {
