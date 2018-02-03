@@ -35,24 +35,24 @@ var globalFlags = []cli.Flag{
 		Usage: "Path to configuration folder.",
 	},
 	cli.BoolFlag{
-		Name:  "quiet, q",
-		Usage: "Disable progress bar display.",
-	},
-	cli.BoolFlag{
-		Name:  "no-color",
-		Usage: "Disable color theme.",
-	},
-	cli.BoolFlag{
-		Name:  "json",
-		Usage: "Enable JSON formatted output.",
-	},
-	cli.BoolFlag{
 		Name:  "debug",
 		Usage: "Enable debug output.",
 	},
 	cli.BoolFlag{
 		Name:  "insecure",
 		Usage: "Disable SSL certificate verification.",
+	},
+	cli.BoolFlag{
+		Name:  "json",
+		Usage: "Enable JSON formatted output.",
+	},
+	cli.BoolFlag{
+		Name:  "no-color",
+		Usage: "Disable color theme.",
+	},
+	cli.BoolFlag{
+		Name:  "quiet, q",
+		Usage: "Disable progress bar display.",
 	},
 }
 
