@@ -269,25 +269,25 @@ func checkUpdate(ctx *cli.Context) {
 
 func registerApp() *cli.App {
 	// Register all the commands (refer flags.go)
+	registerCmd(adminCmd)   // Manage Minio servers
+	registerCmd(catCmd)     // Display contents of a file.
+	registerCmd(configCmd)  // Configure minio client.
+	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
+	registerCmd(diffCmd)    // Computer differences between two files or folders.
+	registerCmd(eventsCmd)  // Add events cmd
+	registerCmd(findCmd)    // Find specific String patterns
 	registerCmd(lsCmd)      // List contents of a bucket.
 	registerCmd(mbCmd)      // Make a bucket.
-	registerCmd(catCmd)     // Display contents of a file.
-	registerCmd(pipeCmd)    // Write contents of stdin to a file.
-	registerCmd(shareCmd)   // Share documents via URL.
-	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
 	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
-	registerCmd(findCmd)    // Find specific String patterns
-	registerCmd(statCmd)    // Stat contents of a bucket/object
-	registerCmd(diffCmd)    // Computer differences between two files or folders.
-	registerCmd(rmCmd)      // Remove a file or bucket
-	registerCmd(eventsCmd)  // Add events cmd
-	registerCmd(watchCmd)   // Add watch cmd
+	registerCmd(pipeCmd)    // Write contents of stdin to a file.
 	registerCmd(policyCmd)  // Set policy permissions.
-	registerCmd(adminCmd)   // Manage Minio servers
+	registerCmd(rmCmd)      // Remove a file or bucket
 	registerCmd(sessionCmd) // Manage sessions for copy and mirror.
-	registerCmd(configCmd)  // Configure minio client.
+	registerCmd(shareCmd)   // Share documents via URL.
+	registerCmd(statCmd)    // Stat contents of a bucket/object
 	registerCmd(updateCmd)  // Check for new software updates.
 	registerCmd(versionCmd) // Print version.
+	registerCmd(watchCmd)   // Add watch cmd
 
 	cli.HelpFlag = cli.BoolFlag{
 		Name:  "help, h",
