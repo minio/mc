@@ -11,6 +11,7 @@ share    Generate URL for sharing.
 cp       Copy files and objects.
 mirror   Mirror buckets and folders.
 find     Finds files which match the given set of parameters.
+stat     Stat contents of objects and folders.
 diff     List objects with size difference or missing between two folders or buckets.
 rm       Remove files and objects.
 events   Manage object notifications.
@@ -248,7 +249,7 @@ Skip SSL certificate verification.
 | [**share** - Share access](#share)  |[**mirror** - Mirror buckets](#mirror)  | [**find** - Find files and objects](#find) |
 | [**diff** - Diff buckets](#diff) |[**policy** - Set public policy on bucket or prefix](#policy)  |[**session** - Manage saved sessions](#session) |
 | [**config** - Manage config file](#config)  | [**watch** - Watch for events](#watch)  | [**events** - Manage events on your buckets](#events)  |
-| [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  |   |
+| [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  | [**stat** - Stat contents of objects and folders](#stat) |
 
 
 ###  Command `ls` - List Objects
@@ -286,7 +287,7 @@ USAGE:
 FLAGS:
   --help, -h                       Show help.
   --region "us-east-1"		   Specify bucket region. Defaults to ‘us-east-1’.
-  
+
 ```
 
 *Example: Create a new bucket named "mybucket" on https://play.minio.io:9000.*
@@ -295,6 +296,14 @@ FLAGS:
 ```sh
 mc mb play/mybucket
 Bucket created successfully ‘play/mybucket’.
+```
+
+*Example: Create a new bucket named "mybucket" on https://s3.amazonaws.com.*
+
+
+```sh
+mc mb s3/mybucket --region=us-west-1
+Bucket created successfully ‘s3/mybucket’.
 ```
 
 <a name="cat"></a>
@@ -782,4 +791,50 @@ mc version
 Version: 2016-04-01T00:22:11Z
 Release-tag: RELEASE.2016-04-01T00-22-11Z
 Commit-id: 12adf3be326f5b6610cdd1438f72dfd861597fce
+```
+<a name="stat"></a>
+### Command `stat` - Stat contents of objects and folders
+`stat` command displays information on objects (with optional prefix) contained in the specified bucket on an object storage. On a filesystem, it behaves like `stat` command.
+
+```sh
+USAGE:
+   mc stat [FLAGS] TARGET
+
+FLAGS:
+  --help, -h                       Show help.
+  --recursive, -r                  Stat recursively.
+
+```
+
+*Example: Display information on a bucket named "mybucket" on https://play.minio.io:9000.*
+
+
+```sh
+mc stat play/mybucket
+Name      : mybucket/
+Date      : 2018-02-06 18:06:51 PST
+Size      : 0B
+Type      : folder
+```
+
+*Example: Display information on objects contained in the bucket named "mybucket" on https://play.minio.io:9000.*
+
+
+```sh
+mc stat -r play/mybucket
+Name      : mybucket/META/textfile
+Date      : 2018-02-06 18:17:38 PST
+Size      : 1024B
+ETag      : d41d8cd98f00b204e9800998ecf8427e
+Type      : file
+Metadata  :
+  Content-Type: application/octet-stream
+
+Name      : mybucket/emptyfile
+Date      : 2018-02-06 18:16:14 PST
+Size      : 100B
+ETag      : d41d8cd98f00b204e9800998ecf8427e
+Type      : file
+Metadata  :
+  Content-Type: application/octet-stream
 ```
