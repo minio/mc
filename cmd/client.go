@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
+	minio "github.com/minio/minio-go"
 )
 
 // DirOpt - list directory option.
@@ -98,4 +99,5 @@ type Config struct {
 	AppComments []string
 	Debug       bool
 	Insecure    bool
+	Lookup      minio.BucketLookupType
 }

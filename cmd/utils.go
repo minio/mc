@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/minio/minio-go"
+
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -96,7 +98,7 @@ func splitStr(path, sep string, n int) []string {
 
 // newS3Config simply creates a new Config struct using the passed
 // parameters.
-func newS3Config(urlStr string, hostCfg *hostConfigV8) *Config {
+func newS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 	// We have a valid alias and hostConfig. We populate the
 	// credentials from the match found in the config file.
 	s3Config := new(Config)
@@ -113,7 +115,7 @@ func newS3Config(urlStr string, hostCfg *hostConfigV8) *Config {
 		s3Config.SecretKey = hostCfg.SecretKey
 		s3Config.Signature = hostCfg.API
 	}
-
+	s3Config.Lookup = getLookupType(hostCfg.Lookup)
 	return s3Config
 }
 
@@ -141,4 +143,17 @@ func isOlder(c *clientContent, olderRef int) bool {
 func isNewer(c *clientContent, newerRef int) bool {
 	objectAge := UTCNow().Sub(c.Time)
 	return objectAge > (time.Duration(newerRef) * Day)
+}
+
+// getLookupType returns the minio.BucketLookupType for lookup
+// option entered on the command line
+func getLookupType(l string) minio.BucketLookupType {
+	l = strings.ToLower(l)
+	switch l {
+	case "dns":
+		return minio.BucketLookupDNS
+	case "path":
+		return minio.BucketLookupPath
+	}
+	return minio.BucketLookupAuto
 }

@@ -94,29 +94,29 @@ func mustGetMcConfigPath() string {
 	return path
 }
 
-// newMcConfig - initializes a new version '6' config.
-func newMcConfig() *configV8 {
-	cfg := newConfigV8()
+// newMcConfig - initializes a new version '9' config.
+func newMcConfig() *configV9 {
+	cfg := newConfigV9()
 	cfg.loadDefaults()
 	return cfg
 }
 
 // loadMcConfigCached - returns loadMcConfig with a closure for config cache.
-func loadMcConfigFactory() func() (*configV8, *probe.Error) {
+func loadMcConfigFactory() func() (*configV9, *probe.Error) {
 	// Load once and cache in a closure.
-	cfgCache, err := loadConfigV8()
+	cfgCache, err := loadConfigV9()
 
 	// loadMcConfig - reads configuration file and returns config.
-	return func() (*configV8, *probe.Error) {
+	return func() (*configV9, *probe.Error) {
 		return cfgCache, err
 	}
 }
 
 // loadMcConfig - returns configuration, initialized later.
-var loadMcConfig func() (*configV8, *probe.Error)
+var loadMcConfig func() (*configV9, *probe.Error)
 
 // saveMcConfig - saves configuration file and returns error if any.
-func saveMcConfig(config *configV8) *probe.Error {
+func saveMcConfig(config *configV9) *probe.Error {
 	if config == nil {
 		return errInvalidArgument().Trace()
 	}
@@ -127,7 +127,7 @@ func saveMcConfig(config *configV8) *probe.Error {
 	}
 
 	// Save the config.
-	if err := saveConfigV8(config); err != nil {
+	if err := saveConfigV9(config); err != nil {
 		return err.Trace(mustGetMcConfigPath())
 	}
 
@@ -154,7 +154,7 @@ func isValidAlias(alias string) bool {
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, signature type.
-func getHostConfig(alias string) (*hostConfigV8, *probe.Error) {
+func getHostConfig(alias string) (*hostConfigV9, *probe.Error) {
 	mcCfg, err := loadMcConfig()
 	if err != nil {
 		return nil, err.Trace(alias)
@@ -171,7 +171,7 @@ func getHostConfig(alias string) (*hostConfigV8, *probe.Error) {
 }
 
 // mustGetHostConfig retrieves host specific configuration such as access keys, signature type.
-func mustGetHostConfig(alias string) *hostConfigV8 {
+func mustGetHostConfig(alias string) *hostConfigV9 {
 	hostCfg, _ := getHostConfig(alias)
 	return hostCfg
 }
@@ -207,13 +207,13 @@ func parseEnvURL(envURL string) (*url.URL, string, string, *probe.Error) {
 
 const mcEnvHostsPrefix = "MC_HOSTS_"
 
-func expandAliasFromEnv(envURL string) (*hostConfigV8, *probe.Error) {
+func expandAliasFromEnv(envURL string) (*hostConfigV9, *probe.Error) {
 	u, accessKey, secretKey, err := parseEnvURL(envURL)
 	if err != nil {
 		return nil, err.Trace(envURL)
 	}
 
-	return &hostConfigV8{
+	return &hostConfigV9{
 		URL:       u.String(),
 		API:       "S3v4",
 		AccessKey: accessKey,
@@ -222,7 +222,7 @@ func expandAliasFromEnv(envURL string) (*hostConfigV8, *probe.Error) {
 }
 
 // expandAlias expands aliased URL if any match is found, returns as is otherwise.
-func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV8, err *probe.Error) {
+func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV9, err *probe.Error) {
 	// Extract alias from the URL.
 	alias, path := url2Alias(aliasedURL)
 
@@ -242,7 +242,7 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostC
 }
 
 // mustExpandAlias expands aliased URL if any match is found, returns as is otherwise.
-func mustExpandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV8) {
+func mustExpandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV9) {
 	alias, urlStr, hostCfg, _ = expandAlias(aliasedURL)
 	return alias, urlStr, hostCfg
 }

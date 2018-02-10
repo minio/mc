@@ -88,7 +88,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 
 		// Save if target supports virtual host style.
 		hostName := targetURL.Host
-		s3Clnt.virtualStyle = isVirtualHostStyle(hostName)
+		s3Clnt.virtualStyle = isVirtualHostStyle(hostName, config.Lookup)
 		isS3AcceleratedEndpoint := isAmazonAccelerated(hostName)
 
 		if s3Clnt.virtualStyle {
@@ -121,7 +121,14 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			}
 			// Not found. Instantiate a new minio
 			var e error
-			api, e = minio.NewWithCredentials(hostName, creds, useTLS, "")
+
+			options := minio.Options{
+				Creds:        creds,
+				Secure:       useTLS,
+				Region:       "",
+				BucketLookup: config.Lookup,
+			}
+			api, e = minio.NewWithOptions(hostName, &options)
 			if e != nil {
 				return nil, probe.NewError(e)
 			}
@@ -989,9 +996,17 @@ func isGoogle(host string) bool {
 }
 
 // Figure out if the URL is of 'virtual host' style.
-// Currently only supported hosts with virtual style
-// are Amazon S3 and Google Cloud Storage.
-func isVirtualHostStyle(host string) bool {
+// Use lookup from config to see if dns/path style look
+// up should be used. If it is set to "auto", use virtual
+// style for supported hosts such as Amazon S3 and Google
+// Cloud Storage. Otherwise, default to path style
+func isVirtualHostStyle(host string, lookup minio.BucketLookupType) bool {
+	if lookup == minio.BucketLookupDNS {
+		return true
+	}
+	if lookup == minio.BucketLookupPath {
+		return false
+	}
 	return isAmazon(host) && !isAmazonChina(host) || isGoogle(host) || isAmazonAccelerated(host)
 }
 

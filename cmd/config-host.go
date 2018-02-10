@@ -55,6 +55,7 @@ type hostMessage struct {
 	AccessKey   string `json:"accessKey,omitempty"`
 	SecretKey   string `json:"secretKey,omitempty"`
 	API         string `json:"api,omitempty"`
+	Lookup      string `json:"lookup,omitempty"`
 }
 
 // Print the config information of one alias, when prettyPrint flag
@@ -65,12 +66,14 @@ func (h hostMessage) String() string {
 	case "list":
 		urlFieldMaxLen, apiFieldMaxLen := -1, -1
 		accessFieldMaxLen, secretFieldMaxLen := -1, -1
+		lookupFieldMaxLen := -1
 		// Set cols width if prettyPrint flag is enabled
 		if h.prettyPrint {
 			urlFieldMaxLen = 30
 			accessFieldMaxLen = 20
 			secretFieldMaxLen = 40
 			apiFieldMaxLen = 5
+			lookupFieldMaxLen = 5
 		}
 
 		// Create a new pretty table with cols configuration
@@ -80,8 +83,9 @@ func (h hostMessage) String() string {
 			Field{"AccessKey", accessFieldMaxLen},
 			Field{"SecretKey", secretFieldMaxLen},
 			Field{"API", apiFieldMaxLen},
+			Field{"Lookup", lookupFieldMaxLen},
 		)
-		return t.buildRow(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API)
+		return t.buildRow(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, h.Lookup)
 	case "remove":
 		return console.Colorize("HostMessage", "Removed `"+h.Alias+"` successfully.")
 	case "add":
