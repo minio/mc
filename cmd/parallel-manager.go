@@ -46,7 +46,7 @@ type ParallelManager struct {
 	bandwidthPrev float64
 
 	// Current threads number
-	threadsNum uint64
+	threadsNum uint32
 
 	// Channel to receive tasks to run
 	queueCh chan func() URLs
@@ -59,14 +59,14 @@ type ParallelManager struct {
 // addWorker creates a new worker to process tasks
 func (p *ParallelManager) addWorker() {
 
-	if atomic.LoadUint64(&p.threadsNum) >= maxParallelWorkers {
+	if atomic.LoadUint32(&p.threadsNum) >= maxParallelWorkers {
 		// Number of maximum workers is reached, no need to
 		// to create a new one.
 		return
 	}
 
 	// Update number of threads
-	atomic.AddUint64(&p.threadsNum, 1)
+	atomic.AddUint32(&p.threadsNum, 1)
 
 	// Start a new worker
 	p.wg.Add(1)
