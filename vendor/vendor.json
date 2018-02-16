@@ -98,10 +98,10 @@
 			"revisionTime": "2017-10-28T03:50:25Z"
 		},
 		{
-			"checksumSHA1": "n3+/OaoRx2CGB9ltQhSInfuaS4g=",
+			"checksumSHA1": "vw2iLuyiXCNSAC9NLRZzvHi8Ii0=",
 			"path": "github.com/minio/minio/pkg/madmin",
-			"revision": "5cdcc73bd5c3b3461274e009f435f502988a09f0",
-			"revisionTime": "2018-01-25T13:54:00Z"
+			"revision": "fb96779a8a141e1012590841ef2cc7f0e4207eb5",
+			"revisionTime": "2018-02-16T01:45:57Z"
 		},
 		{
 			"checksumSHA1": "5r3V/rzpVqjJvzE/K5sR2LHEteM=",

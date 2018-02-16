@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016 Minio, Inc.
+ * Minio Client (C) 2016,2017,2018 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,6 +74,17 @@ type xlBackend struct {
 	Type         backendType `json:"backendType"`
 	OnlineDisks  int         `json:"onlineDisks"`
 	OfflineDisks int         `json:"offlineDisks"`
+	// Data disks for currently configured Standard storage class.
+	StandardSCData int `json:"standardSCData"`
+	// Parity disks for currently configured Standard storage class.
+	StandardSCParity int `json:"standardSCParity"`
+	// Data disks for currently configured Reduced Redundancy storage class.
+	RRSCData int `json:"rrSCData"`
+	// Parity disks for currently configured Reduced Redundancy storage class.
+	RRSCParity int `json:"rrSCParity"`
+
+	// List of all disk status.
+	Sets [][]madmin.DriveInfo `json:"sets"`
 }
 
 // backendStatus represents the overall information of all backend storage types
@@ -98,6 +109,31 @@ type infoMessage struct {
 	Addr    string `json:"address"`
 	Err     string `json:"error"`
 	*ServerInfo
+}
+
+func countOnlineDrives(drives []madmin.DriveInfo) int {
+	var i = 0
+	for _, drive := range drives {
+		if drive.State == madmin.DriveStateOk {
+			i++
+		}
+	}
+	return i
+}
+
+func countMissingDrives(drives []madmin.DriveInfo) int {
+	var i = 0
+	for _, drive := range drives {
+		switch drive.State {
+		case madmin.DriveStateOffline:
+			fallthrough
+		case madmin.DriveStateMissing:
+			fallthrough
+		case madmin.DriveStateCorrupt:
+			i++
+		}
+	}
+	return i
 }
 
 // String colorized service status message.
@@ -129,7 +165,8 @@ func (u infoMessage) String() (msg string) {
 	// Print server information
 
 	// Uptime
-	msg += fmt.Sprintf("   Uptime : %s since %s\n", console.Colorize("Info", "online"), humanize.Time(time.Now().UTC().Add(-u.ServerInfo.Properties.Uptime)))
+	msg += fmt.Sprintf("   Uptime : %s since %s\n", console.Colorize("Info", "online"),
+		humanize.Time(time.Now().UTC().Add(-u.ServerInfo.Properties.Uptime)))
 	// Version
 	msg += fmt.Sprintf("  Version : %s\n", u.ServerInfo.Properties.Version)
 	// Region
@@ -144,18 +181,18 @@ func (u infoMessage) String() (msg string) {
 	}
 	msg += fmt.Sprintf(" SQS ARNs : %s\n", sqsARNs)
 	// Incoming/outgoing
-	msg += fmt.Sprintf("  Network : Incoming %s, Outgoing %s\n",
+	msg += fmt.Sprintf("    Stats : Incoming %s, Outgoing %s\n",
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalInputBytes),
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalOutputBytes))
 	// Get storage information
-	msg += fmt.Sprintf("  Storage : Total %s, Free %s",
+	msg += fmt.Sprintf("  Storage : Total %s, Free %s\n",
 		humanize.IBytes(uint64(u.StorageInfo.Total)),
 		humanize.IBytes(uint64(u.StorageInfo.Free)),
 	)
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
-		msg += fmt.Sprintf(", Online Disks: %d, Offline Disks: %d", v.OnlineDisks, v.OfflineDisks)
+		msg += fmt.Sprintf("    Disks : %s, %s\n", console.Colorize("Info", v.OnlineDisks),
+			console.Colorize("InfoFail", v.OfflineDisks))
 	}
-
 	return
 }
 
@@ -180,6 +217,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 	checkAdminInfoSyntax(ctx)
 
 	console.SetColor("Info", color.New(color.FgGreen, color.Bold))
+	console.SetColor("InfoDegraded", color.New(color.FgYellow, color.Bold))
 	console.SetColor("InfoFail", color.New(color.FgRed, color.Bold))
 
 	// Get the alias parameter from cli
@@ -230,9 +268,14 @@ func mainAdminInfo(ctx *cli.Context) error {
 
 		if serverInfo.Data.StorageInfo.Backend.Type == madmin.Erasure {
 			storageInfo.Backend = xlBackend{
-				Type:         erasureType,
-				OnlineDisks:  serverInfo.Data.StorageInfo.Backend.OnlineDisks,
-				OfflineDisks: serverInfo.Data.StorageInfo.Backend.OfflineDisks,
+				Type:             erasureType,
+				OnlineDisks:      serverInfo.Data.StorageInfo.Backend.OnlineDisks,
+				OfflineDisks:     serverInfo.Data.StorageInfo.Backend.OfflineDisks,
+				StandardSCData:   serverInfo.Data.StorageInfo.Backend.StandardSCData,
+				StandardSCParity: serverInfo.Data.StorageInfo.Backend.StandardSCParity,
+				RRSCData:         serverInfo.Data.StorageInfo.Backend.RRSCData,
+				RRSCParity:       serverInfo.Data.StorageInfo.Backend.RRSCParity,
+				Sets:             serverInfo.Data.StorageInfo.Backend.Sets,
 			}
 		} else {
 			storageInfo.Backend = fsBackend{
