@@ -78,6 +78,8 @@ func (c Core) PutObject(bucket, object string, data io.Reader, size int64, md5Ba
 			opts.ContentEncoding = v
 		} else if strings.ToLower(k) == "content-disposition" {
 			opts.ContentDisposition = v
+		} else if strings.ToLower(k) == "content-language" {
+			opts.ContentLanguage = v
 		} else if strings.ToLower(k) == "content-type" {
 			opts.ContentType = v
 		} else if strings.ToLower(k) == "cache-control" {
