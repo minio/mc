@@ -1,5 +1,6 @@
 /*
- * Minio Go Library for Amazon S3 Compatible Cloud Storage (C) 2015 Minio, Inc.
+ * Minio Go Library for Amazon S3 Compatible Cloud Storage
+ * Copyright 2015-2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +25,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,28 +39,25 @@ const (
 )
 
 // Encode input URL path to URL encoded path.
-func encodeURL2Path(u *url.URL) (path string) {
-	// Encode URL path.
-	if isS3, _ := filepath.Match("*.s3*.amazonaws.com", u.Host); isS3 {
-		bucketName := u.Host[:strings.LastIndex(u.Host, ".s3")]
-		path = "/" + bucketName
-		path += u.Path
-		path = s3utils.EncodePath(path)
-		return
+func encodeURL2Path(req *http.Request, virtualHost bool) (path string) {
+	if virtualHost {
+		reqHost := getHostAddr(req)
+		dotPos := strings.Index(reqHost, ".")
+		if dotPos > -1 {
+			bucketName := reqHost[:dotPos]
+			path = "/" + bucketName
+			path += req.URL.Path
+			path = s3utils.EncodePath(path)
+			return
+		}
 	}
-	if strings.HasSuffix(u.Host, ".storage.googleapis.com") {
-		path = "/" + strings.TrimSuffix(u.Host, ".storage.googleapis.com")
-		path += u.Path
-		path = s3utils.EncodePath(path)
-		return
-	}
-	path = s3utils.EncodePath(u.Path)
+	path = s3utils.EncodePath(req.URL.Path)
 	return
 }
 
 // PreSignV2 - presign the request in following style.
 // https://${S3_BUCKET}.s3.amazonaws.com/${S3_OBJECT}?AWSAccessKeyId=${S3_ACCESS_KEY}&Expires=${TIMESTAMP}&Signature=${SIGNATURE}.
-func PreSignV2(req http.Request, accessKeyID, secretAccessKey string, expires int64) *http.Request {
+func PreSignV2(req http.Request, accessKeyID, secretAccessKey string, expires int64, virtualHost bool) *http.Request {
 	// Presign is not needed for anonymous credentials.
 	if accessKeyID == "" || secretAccessKey == "" {
 		return &req
@@ -76,7 +73,7 @@ func PreSignV2(req http.Request, accessKeyID, secretAccessKey string, expires in
 	}
 
 	// Get presigned string to sign.
-	stringToSign := preStringToSignV2(req)
+	stringToSign := preStringToSignV2(req, virtualHost)
 	hm := hmac.New(sha1.New, []byte(secretAccessKey))
 	hm.Write([]byte(stringToSign))
 
@@ -85,7 +82,7 @@ func PreSignV2(req http.Request, accessKeyID, secretAccessKey string, expires in
 
 	query := req.URL.Query()
 	// Handle specially for Google Cloud Storage.
-	if strings.Contains(req.URL.Host, ".storage.googleapis.com") {
+	if strings.Contains(getHostAddr(&req), ".storage.googleapis.com") {
 		query.Set("GoogleAccessId", accessKeyID)
 	} else {
 		query.Set("AWSAccessKeyId", accessKeyID)
@@ -130,7 +127,7 @@ func PostPresignSignatureV2(policyBase64, secretAccessKey string) string {
 // CanonicalizedProtocolHeaders = <described below>
 
 // SignV2 sign the request before Do() (AWS Signature Version 2).
-func SignV2(req http.Request, accessKeyID, secretAccessKey string) *http.Request {
+func SignV2(req http.Request, accessKeyID, secretAccessKey string, virtualHost bool) *http.Request {
 	// Signature calculation is not needed for anonymous credentials.
 	if accessKeyID == "" || secretAccessKey == "" {
 		return &req
@@ -145,7 +142,7 @@ func SignV2(req http.Request, accessKeyID, secretAccessKey string) *http.Request
 	}
 
 	// Calculate HMAC for secretAccessKey.
-	stringToSign := stringToSignV2(req)
+	stringToSign := stringToSignV2(req, virtualHost)
 	hm := hmac.New(sha1.New, []byte(secretAccessKey))
 	hm.Write([]byte(stringToSign))
 
@@ -170,14 +167,14 @@ func SignV2(req http.Request, accessKeyID, secretAccessKey string) *http.Request
 //	 Expires + "\n" +
 //	 CanonicalizedProtocolHeaders +
 //	 CanonicalizedResource;
-func preStringToSignV2(req http.Request) string {
+func preStringToSignV2(req http.Request, virtualHost bool) string {
 	buf := new(bytes.Buffer)
 	// Write standard headers.
 	writePreSignV2Headers(buf, req)
 	// Write canonicalized protocol headers if any.
 	writeCanonicalizedHeaders(buf, req)
 	// Write canonicalized Query resources if any.
-	writeCanonicalizedResource(buf, req)
+	writeCanonicalizedResource(buf, req, virtualHost)
 	return buf.String()
 }
 
@@ -197,14 +194,14 @@ func writePreSignV2Headers(buf *bytes.Buffer, req http.Request) {
 //	 Date + "\n" +
 //	 CanonicalizedProtocolHeaders +
 //	 CanonicalizedResource;
-func stringToSignV2(req http.Request) string {
+func stringToSignV2(req http.Request, virtualHost bool) string {
 	buf := new(bytes.Buffer)
 	// Write standard headers.
 	writeSignV2Headers(buf, req)
 	// Write canonicalized protocol headers if any.
 	writeCanonicalizedHeaders(buf, req)
 	// Write canonicalized Query resources if any.
-	writeCanonicalizedResource(buf, req)
+	writeCanonicalizedResource(buf, req, virtualHost)
 	return buf.String()
 }
 
@@ -286,11 +283,11 @@ var resourceList = []string{
 // CanonicalizedResource = [ "/" + Bucket ] +
 // 	  <HTTP-Request-URI, from the protocol name up to the query string> +
 // 	  [ sub-resource, if present. For example "?acl", "?location", "?logging", or "?torrent"];
-func writeCanonicalizedResource(buf *bytes.Buffer, req http.Request) {
+func writeCanonicalizedResource(buf *bytes.Buffer, req http.Request, virtualHost bool) {
 	// Save request URL.
 	requestURL := req.URL
 	// Get encoded URL path.
-	buf.WriteString(encodeURL2Path(requestURL))
+	buf.WriteString(encodeURL2Path(&req, virtualHost))
 	if requestURL.RawQuery != "" {
 		var n int
 		vals, _ := url.ParseQuery(requestURL.RawQuery)

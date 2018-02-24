@@ -38,6 +38,7 @@ type PutObjectOptions struct {
 	ContentType        string
 	ContentEncoding    string
 	ContentDisposition string
+	ContentLanguage    string
 	CacheControl       string
 	EncryptMaterials   encrypt.Materials
 	NumThreads         uint
@@ -70,6 +71,9 @@ func (opts PutObjectOptions) Header() (header http.Header) {
 	}
 	if opts.ContentDisposition != "" {
 		header["Content-Disposition"] = []string{opts.ContentDisposition}
+	}
+	if opts.ContentLanguage != "" {
+		header["Content-Language"] = []string{opts.ContentLanguage}
 	}
 	if opts.CacheControl != "" {
 		header["Cache-Control"] = []string{opts.CacheControl}

@@ -221,6 +221,7 @@ var supportedHeaders = []string{
 	"cache-control",
 	"content-encoding",
 	"content-disposition",
+	"content-language",
 	// Add more supported headers here.
 }
 
