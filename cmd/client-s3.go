@@ -581,14 +581,39 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		// Set content-type if not specified.
 		contentType = "application/octet-stream"
 	}
+
+	cacheControl, ok := metadata["Cache-Control"]
+	if ok {
+		delete(metadata, "Cache-Control")
+	}
+
+	contentEncoding, ok := metadata["Content-Encoding"]
+	if ok {
+		delete(metadata, "Content-Encoding")
+	}
+
+	contentDisposition, ok := metadata["Content-Disposition"]
+	if ok {
+		delete(metadata, "Content-Disposition")
+	}
+
+	contentLanguage, ok := metadata["Content-Language"]
+	if ok {
+		delete(metadata, "Content-Language")
+	}
+
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
 	opts := minio.PutObjectOptions{
-		UserMetadata: metadata,
-		Progress:     progress,
-		NumThreads:   defaultMultipartThreadsNum,
-		ContentType:  contentType,
+		UserMetadata:       metadata,
+		Progress:           progress,
+		NumThreads:         defaultMultipartThreadsNum,
+		ContentType:        contentType,
+		CacheControl:       cacheControl,
+		ContentDisposition: contentDisposition,
+		ContentEncoding:    contentEncoding,
+		ContentLanguage:    contentLanguage,
 	}
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {
