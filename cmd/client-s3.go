@@ -239,11 +239,17 @@ func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, su
 
 	switch fields[2] {
 	case "sns":
-		mb.AddTopic(nc)
+		if !mb.AddTopic(nc) {
+			return errInvalidArgument().Trace("Overlapping Topic configs")
+		}
 	case "sqs":
-		mb.AddQueue(nc)
+		if !mb.AddQueue(nc) {
+			return errInvalidArgument().Trace("Overlapping Queue configs")
+		}
 	case "lambda":
-		mb.AddLambda(nc)
+		if !mb.AddLambda(nc) {
+			return errInvalidArgument().Trace("Overlapping lambda configs")
+		}
 	default:
 		return errInvalidArgument().Trace(fields[2])
 	}
