@@ -289,6 +289,31 @@ function test_put_object_multipart()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+## Test mc cp command with storage-class flag set
+function test_put_object_with_storage_class()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --storage-class REDUCED_REDUNDANCY "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+## Test mc cp command with storage-class flag set to incorrect value
+function test_put_object_with_storage_class_error()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp --storage-class REDUCED "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function test_get_object()
 {
     show "${FUNCNAME[0]}"
@@ -423,6 +448,25 @@ function test_mirror_list_objects()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+## Tests mc mirror command with --storage-class flag set
+function test_mirror_list_objects_storage_class()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    bucket_name="mc-test-bucket-$RANDOM"
+    object_name="mc-test-object-$RANDOM"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror --storage-class REDUCED_REDUNDANCY "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
+
+    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}" | jq -r .key) >/dev/null 2>&1
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 ## Tests find command with --older set to 1day, should be empty.
 function test_find_empty() {
     show "${FUNCNAME[0]}"
@@ -539,6 +583,8 @@ function run_test()
 
     test_put_object
     test_put_object_error
+    test_put_object_with_storage_class
+    test_put_object_with_storage_class_error
     test_put_object_multipart
     test_get_object
     test_get_object_multipart
@@ -547,6 +593,7 @@ function run_test()
     test_presigned_get_object
     test_cat_object
     test_mirror_list_objects
+    test_mirror_list_objects_storage_class
     test_find
     test_find_empty
     if [ -z "$MINT_MODE" ]; then

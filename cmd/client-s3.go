@@ -608,6 +608,10 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		delete(metadata, "Content-Language")
 	}
 
+	storageClass, ok := metadata["X-Amz-Storage-Class"]
+	if ok {
+		delete(metadata, "X-Amz-Storage-Class")
+	}
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
@@ -620,6 +624,7 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		ContentDisposition: contentDisposition,
 		ContentEncoding:    contentEncoding,
 		ContentLanguage:    contentLanguage,
+		StorageClass:       strings.ToUpper(storageClass),
 	}
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {

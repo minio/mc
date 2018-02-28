@@ -49,6 +49,10 @@ var (
 			Name:  "newer-than",
 			Usage: "Copy objects newer than N days",
 		},
+		cli.StringFlag{
+			Name:  "storage-class, sc",
+			Usage: "Set storage class for object",
+		},
 	}
 )
 
@@ -317,6 +321,14 @@ func doCopySession(session *sessionV8) error {
 			// Save totalSize.
 			cpURLs.TotalSize = session.Header.TotalBytes
 
+			// Check and handle storage class if passed in command line args
+			if _, ok := session.Header.CommandStringFlags["storage-class"]; ok {
+				if cpURLs.TargetContent.Metadata == nil {
+					cpURLs.TargetContent.Metadata = make(map[string]string)
+				}
+				cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = session.Header.CommandStringFlags["storage-class"]
+			}
+
 			// Verify if previously copied, notify progress bar.
 			if isCopied(cpURLs.SourceContent.URL.String()) {
 				queueCh <- func() URLs {
@@ -407,12 +419,14 @@ func mainCopy(ctx *cli.Context) error {
 	recursive := ctx.Bool("recursive")
 	olderThan := ctx.Int("older-than")
 	newerThan := ctx.Int("newer-than")
+	storageClass := ctx.String("storage-class")
 
 	session := newSessionV8()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = recursive
 	session.Header.CommandIntFlags["older-than"] = olderThan
 	session.Header.CommandIntFlags["newer-than"] = newerThan
+	session.Header.CommandStringFlags["storage-class"] = storageClass
 
 	var e error
 	if session.Header.RootPath, e = os.Getwd(); e != nil {

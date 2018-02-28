@@ -164,6 +164,12 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
+		// Get metadata from target content as well
+		if urls.TargetContent.Metadata != nil {
+			for k, v := range urls.TargetContent.Metadata {
+				metadata[k] = v
+			}
+		}
 		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, metadata, progress)
 		if err != nil {
 			return urls.WithError(err.Trace(targetURL.String()))
