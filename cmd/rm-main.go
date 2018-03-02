@@ -69,6 +69,10 @@ var (
 			Name:  "newer-than",
 			Usage: "Remove objects newer than N days",
 		},
+		cli.StringFlag{
+			Name:  "encrypt-key",
+			Usage: "Encrypt object (using server-side encryption)",
+		},
 	}
 )
 
@@ -88,6 +92,10 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
+
 EXAMPLES:
    1. Remove a file.
       $ {{.HelpName}} 1999/old-backup.tgz
@@ -112,6 +120,9 @@ EXAMPLES:
 
    8. Drop all incomplete uploads on 'jazz-songs' bucket.
       $ {{.HelpName}} --incomplete --recursive s3/jazz-songs/
+
+   9. Remove an encrypted object from s3.
+      $ {{.HelpName}} --encrypt-key "s3/ferenginar/=32byteslongsecretkeymustbegiven1" s3/ferenginar/1999/old-backup.tgz
 
 `,
 }
@@ -173,7 +184,7 @@ func checkRmSyntax(ctx *cli.Context) {
 	}
 }
 
-func removeSingle(url string, isIncomplete bool, isFake bool, olderThan int, newerThan int) error {
+func removeSingle(url string, isIncomplete bool, isFake bool, olderThan int, newerThan int, encKeyDB map[string][]prefixSSEPair) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -181,7 +192,9 @@ func removeSingle(url string, isIncomplete bool, isFake bool, olderThan int, new
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 	isFetchMeta := true
-	content, pErr := clnt.Stat(isIncomplete, isFetchMeta)
+	alias, _ := url2Alias(url)
+	sseKey := getSSEKey(url, encKeyDB[alias])
+	content, pErr := clnt.Stat(isIncomplete, isFetchMeta, sseKey)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
@@ -223,7 +236,7 @@ func removeSingle(url string, isIncomplete bool, isFake bool, olderThan int, new
 	return nil
 }
 
-func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan int, newerThan int) error {
+func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan int, newerThan int, encKeyDB map[string][]prefixSSEPair) error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
@@ -318,7 +331,13 @@ func mainRm(ctx *cli.Context) error {
 	isStdin := ctx.Bool("stdin")
 	olderThan := ctx.Int("older-than")
 	newerThan := ctx.Int("newer-than")
+	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
+	if key := ctx.String("encrypt-key"); key != "" {
+		sseKeys = key
+	}
 
+	encKeyDB, perr := parseEncryptionKeys(sseKeys)
+	fatalIf(perr, "Unable to parse encryption keys")
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 
@@ -327,9 +346,9 @@ func mainRm(ctx *cli.Context) error {
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
 		if isRecursive {
-			err = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan)
+			err = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		} else {
-			err = removeSingle(url, isIncomplete, isFake, olderThan, newerThan)
+			err = removeSingle(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		}
 
 		if rerr == nil {
@@ -345,9 +364,9 @@ func mainRm(ctx *cli.Context) error {
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive {
-			err = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan)
+			err = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		} else {
-			err = removeSingle(url, isIncomplete, isFake, olderThan, newerThan)
+			err = removeSingle(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		}
 
 		if rerr == nil {

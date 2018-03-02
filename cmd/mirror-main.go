@@ -82,6 +82,10 @@ var (
 			Name:  "storage-class, sc",
 			Usage: "Set storage class for object",
 		},
+		cli.StringFlag{
+			Name:  "encrypt-key",
+			Usage: "Encrypt/Decrypt objects (using server-side encryption)",
+		},
 	}
 )
 
@@ -101,6 +105,9 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
 
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
@@ -135,6 +142,9 @@ EXAMPLES:
 
   10. Mirror a bucket older than 30 days from Amazon S3 bucket test to a local folder.
       $ {{.HelpName}} --older-than=30 s3/test ~/test
+	
+  11. Mirror server encrypted objects from Minio cloud storage to a bucket on Amazon S3 cloud storage 
+      $ {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive
 
 `,
 }
@@ -177,6 +187,7 @@ type mirrorJob struct {
 	storageClass                           string
 
 	excludeOptions []string
+	encKeyDB       map[string][]prefixSSEPair
 }
 
 // mirrorMessage container for file mirror messages
@@ -216,7 +227,7 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 	targetWithAlias := filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path)
 
 	// Remove extraneous file on target.
-	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, mj.isFake, 0, 0))
+	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, mj.isFake, 0, 0, sURLs.encKeyDB))
 	return sURLs.WithError(err)
 }
 
@@ -343,6 +354,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			// newClient needs the unexpanded  path, newCLientURL needs the expanded path
 			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
 			targetURL := newClientURL(expandedTargetPath)
+			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
+			srcSSEKey := getSSEKey(sourcePath, mj.encKeyDB[sourceAlias])
+			tgtSSEKey := getSSEKey(targetPath, mj.encKeyDB[targetAlias])
 
 			if event.Type == EventCreate {
 				// we are checking if a destination file exists now, and if we only
@@ -352,6 +366,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					SourceContent: &clientContent{URL: *sourceURL},
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
+					encKeyDB:      mj.encKeyDB,
+					SrcSSEKey:     srcSSEKey,
+					TgtSSEKey:     tgtSSEKey,
 				}
 				if event.Size == 0 {
 					sourceClient, err := newClient(aliasedPath)
@@ -360,7 +377,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						mj.statusCh <- mirrorURL.WithError(err)
 						continue
 					}
-					sourceContent, err := sourceClient.Stat(false, false)
+					sourceContent, err := sourceClient.Stat(false, false, srcSSEKey)
 					if err != nil {
 						// source doesn't exist anymore
 						mj.statusCh <- mirrorURL.WithError(err)
@@ -374,7 +391,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					}
 					shouldQueue := false
 					if !mj.isOverwrite {
-						_, err = targetClient.Stat(false, false)
+						_, err = targetClient.Stat(false, false, tgtSSEKey)
 						if err == nil {
 							continue
 						} // doesn't exist
@@ -397,7 +414,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						mj.statusCh <- mirrorURL.WithError(err)
 						return
 					}
-					_, err = targetClient.Stat(false, false)
+					_, err = targetClient.Stat(false, false, tgtSSEKey)
 					if err == nil {
 						continue
 					} // doesn't exist
@@ -417,6 +434,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					SourceContent: nil,
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
+					SrcSSEKey:     srcSSEKey,
+					TgtSSEKey:     tgtSSEKey,
+					encKeyDB:      mj.encKeyDB,
 				}
 				mirrorURL.TotalCount = mj.TotalObjects
 				mirrorURL.TotalSize = mj.TotalBytes
@@ -460,7 +480,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 
 	parallel, queueCh := newParallelManager(mj.statusCh, mj.status)
 
-	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, mj.excludeOptions)
+	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, mj.excludeOptions, mj.encKeyDB)
 
 	for {
 		select {
@@ -565,7 +585,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	}
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan int, storageClass string) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan int, storageClass string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
@@ -590,6 +610,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch 
 		olderThan:      olderThan,
 		newerThan:      newerThan,
 		storageClass:   storageClass,
+		encKeyDB:       encKeyDB,
 		status:         status,
 		statusCh:       make(chan URLs),
 		queueCh:        make(chan func() URLs),
@@ -625,7 +646,7 @@ func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 }
 
 // runMirror - mirrors all buckets to another S3 server
-func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
+func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	// This is kept for backward compatibility, `--force` means
 	// --overwrite.
 	isOverwrite := ctx.Bool("force")
@@ -642,7 +663,8 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 		ctx.StringSlice("exclude"),
 		ctx.Int("older-than"),
 		ctx.Int("newer-than"),
-		ctx.String("storage-class"))
+		ctx.String("storage-class"),
+		encKeyDB)
 
 	srcClt, err := newClient(srcURL)
 	fatalIf(err, "Unable to initialize `"+srcURL+"`")
@@ -669,7 +691,6 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 			}
 
 			sourceSuffix := strings.TrimPrefix(d.FirstURL, srcClt.GetURL().String())
-
 			newSrcURL := path.Join(srcURL, sourceSuffix)
 			newTgtURL := path.Join(dstURL, sourceSuffix)
 
@@ -728,8 +749,15 @@ func mainMirror(ctx *cli.Context) error {
 
 	srcURL := args[0]
 	tgtURL := args[1]
+	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
+	if key := ctx.String("encrypt-key"); key != "" {
+		sseKeys = key
+	}
 
-	if err := runMirror(srcURL, tgtURL, ctx); err != nil {
+	encKeyDB, err := parseEncryptionKeys(sseKeys)
+	fatalIf(err, "Unable to parse encryption keys")
+
+	if err := runMirror(srcURL, tgtURL, ctx, encKeyDB); err != nil {
 		errorIf(err.Trace(srcURL, tgtURL), "Unable to mirror")
 		return exitStatus(globalErrorExitStatus)
 	}

@@ -82,7 +82,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) (
 
 // SINGLE SOURCE - Type A: copy(f, f) -> copy(f, f)
 // prepareCopyURLsTypeA - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeA(sourceURL string, targetURL string) URLs {
+func prepareCopyURLsTypeA(sourceURL string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
@@ -103,22 +103,32 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string) URLs {
 	}
 
 	// All OK.. We can proceed. Type A
-	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, targetURL)
+	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, targetURL, encKeyDB)
 }
 
 // prepareCopyContentTypeA - makes CopyURLs content for copying.
-func makeCopyContentTypeA(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string) URLs {
+func makeCopyContentTypeA(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
+	targetContent := clientContent{URL: *newClientURL(targetURL)}
+
+	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceContent.URL.Path))
+	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetContent.URL.Path))
+
+	srcSSEKey := getSSEKey(sourcePath, encKeyDB[sourceAlias])
+	tgtSSEKey := getSSEKey(targetPath, encKeyDB[targetAlias])
+
 	return URLs{
 		SourceAlias:   sourceAlias,
 		SourceContent: sourceContent,
 		TargetAlias:   targetAlias,
-		TargetContent: &clientContent{URL: *newClientURL(targetURL)},
+		TargetContent: &targetContent,
+		SrcSSEKey:     srcSSEKey,
+		TgtSSEKey:     tgtSSEKey,
 	}
 }
 
 // SINGLE SOURCE - Type B: copy(f, d) -> copy(f, d/f) -> A
 // prepareCopyURLsTypeB - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeB(sourceURL string, targetURL string) URLs {
+func prepareCopyURLsTypeB(sourceURL string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
@@ -139,25 +149,24 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string) URLs {
 	}
 
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-	return makeCopyContentTypeB(sourceAlias, sourceContent, targetAlias, targetURL)
+	return makeCopyContentTypeB(sourceAlias, sourceContent, targetAlias, targetURL, encKeyDB)
 }
 
 // makeCopyContentTypeB - CopyURLs content for copying.
-func makeCopyContentTypeB(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string) URLs {
+func makeCopyContentTypeB(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
 	targetURLParse := newClientURL(targetURL)
 	targetURLParse.Path = filepath.ToSlash(filepath.Join(targetURLParse.Path, filepath.Base(sourceContent.URL.Path)))
-	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, targetURLParse.String())
+	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, targetURLParse.String(), encKeyDB)
 }
 
 // SINGLE SOURCE - Type C: copy(d1..., d2) -> []copy(d1/f, d1/d2/f) -> []A
 // prepareCopyRecursiveURLTypeC - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeC(sourceURL, targetURL string, isRecursive bool) <-chan URLs {
+func prepareCopyURLsTypeC(sourceURL, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
 	// Extract alias before fiddling with the clientURL.
 	sourceAlias, _, _ := mustExpandAlias(sourceURL)
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
-
 	copyURLsCh := make(chan URLs)
 	go func(sourceURL, targetURL string, copyURLsCh chan URLs) {
 		defer close(copyURLsCh)
@@ -182,14 +191,14 @@ func prepareCopyURLsTypeC(sourceURL, targetURL string, isRecursive bool) <-chan 
 			}
 
 			// All OK.. We can proceed. Type B: source is a file, target is a folder and exists.
-			copyURLsCh <- makeCopyContentTypeC(sourceAlias, sourceClient.GetURL(), sourceContent, targetAlias, targetURL)
+			copyURLsCh <- makeCopyContentTypeC(sourceAlias, sourceClient.GetURL(), sourceContent, targetAlias, targetURL, encKeyDB)
 		}
 	}(sourceURL, targetURL, copyURLsCh)
 	return copyURLsCh
 }
 
 // makeCopyContentTypeC - CopyURLs content for copying.
-func makeCopyContentTypeC(sourceAlias string, sourceURL clientURL, sourceContent *clientContent, targetAlias string, targetURL string) URLs {
+func makeCopyContentTypeC(sourceAlias string, sourceURL clientURL, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	newSourceURL := sourceContent.URL
 	pathSeparatorIndex := strings.LastIndex(sourceURL.Path, string(sourceURL.Separator))
 	newSourceSuffix := filepath.ToSlash(newSourceURL.Path)
@@ -198,17 +207,17 @@ func makeCopyContentTypeC(sourceAlias string, sourceURL clientURL, sourceContent
 		newSourceSuffix = strings.TrimPrefix(newSourceSuffix, sourcePrefix)
 	}
 	newTargetURL := urlJoinPath(targetURL, newSourceSuffix)
-	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, newTargetURL)
+	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, newTargetURL, encKeyDB)
 }
 
 // MULTI-SOURCE - Type D: copy([](f|d...), d) -> []B
 // prepareCopyURLsTypeE - prepares target and source clientURLs for copying.
-func prepareCopyURLsTypeD(sourceURLs []string, targetURL string, isRecursive bool) <-chan URLs {
+func prepareCopyURLsTypeD(sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
 	copyURLsCh := make(chan URLs)
 	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs) {
 		defer close(copyURLsCh)
 		for _, sourceURL := range sourceURLs {
-			for cpURLs := range prepareCopyURLsTypeC(sourceURL, targetURL, isRecursive) {
+			for cpURLs := range prepareCopyURLsTypeC(sourceURL, targetURL, isRecursive, encKeyDB) {
 				copyURLsCh <- cpURLs
 			}
 		}
@@ -217,30 +226,30 @@ func prepareCopyURLsTypeD(sourceURLs []string, targetURL string, isRecursive boo
 }
 
 // prepareCopyURLs - prepares target and source clientURLs for copying.
-func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool) <-chan URLs {
+func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
 	copyURLsCh := make(chan URLs)
-	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs) {
+	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs, encKeyDB map[string][]prefixSSEPair) {
 		defer close(copyURLsCh)
 		cpType, err := guessCopyURLType(sourceURLs, targetURL, isRecursive)
 		fatalIf(err.Trace(), "Unable to guess the type of copy operation.")
 
 		switch cpType {
 		case copyURLsTypeA:
-			copyURLsCh <- prepareCopyURLsTypeA(sourceURLs[0], targetURL)
+			copyURLsCh <- prepareCopyURLsTypeA(sourceURLs[0], targetURL, encKeyDB)
 		case copyURLsTypeB:
-			copyURLsCh <- prepareCopyURLsTypeB(sourceURLs[0], targetURL)
+			copyURLsCh <- prepareCopyURLsTypeB(sourceURLs[0], targetURL, encKeyDB)
 		case copyURLsTypeC:
-			for cURLs := range prepareCopyURLsTypeC(sourceURLs[0], targetURL, isRecursive) {
+			for cURLs := range prepareCopyURLsTypeC(sourceURLs[0], targetURL, isRecursive, encKeyDB) {
 				copyURLsCh <- cURLs
 			}
 		case copyURLsTypeD:
-			for cURLs := range prepareCopyURLsTypeD(sourceURLs, targetURL, isRecursive) {
+			for cURLs := range prepareCopyURLsTypeD(sourceURLs, targetURL, isRecursive, encKeyDB) {
 				copyURLsCh <- cURLs
 			}
 		default:
 			copyURLsCh <- URLs{Error: errInvalidArgument().Trace(sourceURLs...)}
 		}
-	}(sourceURLs, targetURL, copyURLsCh)
+	}(sourceURLs, targetURL, copyURLsCh, encKeyDB)
 
 	return copyURLsCh
 }

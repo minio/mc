@@ -317,12 +317,23 @@ USAGE:
 
 FLAGS:
   --help, -h                       Show help.
+  --encrypt-key value              Decrypt object (using server-side encryption)
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
 ```
 
 *Example: Display the contents of a text file `myobject.txt`*
 
 ```sh
 mc cat play/mybucket/myobject.txt
+Hello Minio!!
+```
+
+*Example: Display the contents of a server encrypted object `myencryptedobject.txt`*
+
+```sh
+mc cat --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myencryptedobject.txt
 Hello Minio!!
 ```
 <a name="pipe"></a>
@@ -334,7 +345,11 @@ USAGE:
    mc pipe [FLAGS] [TARGET]
 
 FLAGS:
-  --help, -h					Help of pipe.
+  --help, -h			Help of pipe.
+  --encrypt-key value           Encrypt object (using server-side encryption)
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:              List of comma delimited prefix=secret values
 ```
 
 *Example: Stream MySQL database dump to Amazon S3 directly.*
@@ -355,6 +370,10 @@ FLAGS:
   --recursive, -r                    Copy recursively.
   --storage-class value, -sc value   Set storage class for object.
   --help, -h                         Show help.
+  --encrypt-key value                Encrypt/Decrypt objects (using server-side encryption)
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
 ```
 
 *Example: Copy a text file to an object storage.*
@@ -371,6 +390,20 @@ mc cp --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
+*Example: Copy a server-side encrypted file to an object storage.*
+
+```sh
+mc cp --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1 , myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/myobject.txt myminio/documents/
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
+*Example: Perform key-rotation on a server-side encrypted object*
+
+```sh
+mc cp --encrypt-key 'myminio1/mybucket=32byteslongsecretkeymustgenerate , myminio2/mybucket/=32byteslongsecretkeymustgenerat1' myminio1/mybucket/encryptedobject myminio2/mybucket/encryptedobject
+encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+Notice that two different aliases myminio1 and myminio2 are used for the same endpoint to provide the old secretkey and the newly rotated key.
 <a name="rm"></a>
 ### Command `rm` - Remove Buckets and Objects
 Use `rm` command to remove file or bucket
@@ -388,12 +421,23 @@ FLAGS:
   --fake			   Perform a fake remove operation.
   --stdin			   Read object list from STDIN.
   --older-than value               Remove objects older than N days. (default: 0)
+  --encrypt-key value              Encrypt/Decrypt objects (using server-side encryption)
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
+
+
 ```
 
 *Example: Remove a single object.*
 
 ```sh
 mc rm play/mybucket/myobject.txt
+Removed ‘play/mybucket/myobject.txt’.
+```
+*Example: Remove an encrypted object.*
+
+```sh
+mc rm --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myobject.txt
 Removed ‘play/mybucket/myobject.txt’.
 ```
 
@@ -510,7 +554,11 @@ FLAGS:
   --watch, -w                         Watch and mirror for changes.
   --remove                            Remove extraneous file(s) on target.
   --storage-class value, --sc value   Set storage class for object.
-```
+  --encrypt-key value                 Encrypt/Decrypt objects (using server-side encryption)
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:                    List of comma delimited prefix=secret values
+``` 
 
 *Example: Mirror a local directory to 'mybucket' on https://play.minio.io:9000.*
 
@@ -813,7 +861,10 @@ USAGE:
 FLAGS:
   --help, -h                       Show help.
   --recursive, -r                  Stat recursively.
+  --encrypt-key value              Encrypt/Decrypt (using server-side encryption)
 
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
 ```
 
 *Example: Display information on a bucket named "mybucket" on https://play.minio.io:9000.*
@@ -825,6 +876,22 @@ Name      : mybucket/
 Date      : 2018-02-06 18:06:51 PST
 Size      : 0B
 Type      : folder
+```
+
+*Example: Display information on an encrypted object "myobject" in "mybucket" on https://play.minio.io:9000.*
+
+
+```sh
+mc stat play/mybucket/myobject --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1"
+Name      : myobject
+Date      : 2018-03-02 11:47:13 PST 
+Size      : 132B   
+ETag      : d03ba22cd78282b7aef705bf31b8cded 
+Type      : file 
+Metadata  :
+  Content-Type                                   : application/octet-stream 
+  X-Amz-Server-Side-Encryption-Customer-Key-Md5  : 4xSRdYsabg+s2nlsHKhgnw== 
+  X-Amz-Server-Side-Encryption-Customer-Algorithm: AES256 
 ```
 
 *Example: Display information on objects contained in the bucket named "mybucket" on https://play.minio.io:9000.*

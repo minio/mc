@@ -25,7 +25,12 @@ import (
 )
 
 var (
-	pipeFlags = []cli.Flag{}
+	pipeFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "encrypt-key",
+			Usage: "Encrypt object (using server-side encryption)",
+		},
+	}
 )
 
 // Display contents of a file.
@@ -44,6 +49,10 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
+
 EXAMPLES:
    1. Write contents of stdin to a file on local filesystem.
       $ {{.HelpName}} /tmp/hello-world.go
@@ -56,19 +65,25 @@ EXAMPLES:
 
    4. Stream MySQL database dump to Amazon S3 directly.
       $ mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/ferenginar/backups/accountsdb-oct-9-2015.sql
+
+   5. Stream an object to Amazon S3 cloud storage and encrypt on server.
+      $ {{.HelpName}} --encrypt-key "s3/ferenginar/=32byteslongsecretkeymustbegiven1" s3/ferenginar/klingon_opera_aktuh_maylotah.ogg
+
 `,
 }
 
-func pipe(targetURL string) *probe.Error {
+func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	if targetURL == "" {
 		// When no target is specified, pipe cat's stdin to stdout.
 		return catOut(os.Stdin, -1).Trace()
 	}
+	alias, _ := url2Alias(targetURL)
+	sseKey := getSSEKey(targetURL, encKeyDB[alias])
 
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time
 	// for local filesystem for example /proc files.
-	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1)
+	_, err := putTargetStreamWithURL(targetURL, os.Stdin, -1, sseKey)
 	// TODO: See if this check is necessary.
 	switch e := err.ToGoError().(type) {
 	case *os.PathError:
@@ -94,12 +109,19 @@ func mainPipe(ctx *cli.Context) error {
 	checkPipeSyntax(ctx)
 
 	if len(ctx.Args()) == 0 {
-		err := pipe("")
+		err := pipe("", nil)
 		fatalIf(err.Trace("stdout"), "Unable to write to one or more targets.")
 	} else {
 		// extract URLs.
 		URLs := ctx.Args()
-		err := pipe(URLs[0])
+		sseKeys := os.Getenv("MC_ENCRYPT_KEY")
+		if key := ctx.String("encrypt-key"); key != "" {
+			sseKeys = key
+		}
+
+		encKeyDB, err := parseEncryptionKeys(sseKeys)
+		fatalIf(err, "Unable to parse encryption keys")
+		err = pipe(URLs[0], encKeyDB)
 		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
 	}
 
