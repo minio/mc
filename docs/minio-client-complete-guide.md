@@ -352,16 +352,25 @@ USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
    
 FLAGS:
-  --help, -h                       Show help.
-  --recursive, -r		   Copy recursively.
+  --recursive, -r                    Copy recursively.
+  --storage-class value, -sc value   Set storage class for object.
+  --help, -h                         Show help.
 ```
 
-*Example: Copy a text file to to an object storage.*
+*Example: Copy a text file to an object storage.*
 
 ```sh
 mc cp myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
+
+*Example: Copy a text file to an object storage and assign storage-class `REDUCED_REDUNDANCY` to the uploaded object.*
+
+```sh
+mc cp --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
 <a name="rm"></a>
 ### Command `rm` - Remove Buckets and Objects
 Use `rm` command to remove file or bucket
@@ -495,12 +504,13 @@ USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --help, -h                       Show help.
-  --force			   Force overwrite of an existing target(s).
-  --fake			   Perform a fake mirror operation.
-  --watch, -w                      Watch and mirror for changes.
-  --remove			   Remove extraneous file(s) on target.
-``` 
+  --help, -h                          Show help.
+  --force                             Force overwrite of an existing target(s).
+  --fake                              Perform a fake mirror operation.
+  --watch, -w                         Watch and mirror for changes.
+  --remove                            Remove extraneous file(s) on target.
+  --storage-class value, --sc value   Set storage class for object.
+```
 
 *Example: Mirror a local directory to 'mybucket' on https://play.minio.io:9000.*
 

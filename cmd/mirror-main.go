@@ -78,6 +78,10 @@ var (
 			Name:  "newer-than",
 			Usage: "Select objects newer than N days",
 		},
+		cli.StringFlag{
+			Name:  "storage-class, sc",
+			Usage: "Set storage class for object",
+		},
 	}
 )
 
@@ -170,6 +174,7 @@ type mirrorJob struct {
 
 	isFake, isRemove, isOverwrite, isWatch bool
 	olderThan, newerThan                   int
+	storageClass                           string
 
 	excludeOptions []string
 }
@@ -236,6 +241,13 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 	length := sURLs.SourceContent.Size
 
 	mj.status.SetCaption(sourceURL.String() + ": ")
+
+	if mj.storageClass != "" {
+		if sURLs.TargetContent.Metadata == nil {
+			sURLs.TargetContent.Metadata = make(map[string]string)
+		}
+		sURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = mj.storageClass
+	}
 
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
@@ -553,7 +565,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	}
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan int) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan int, storageClass string) *mirrorJob {
 	// we'll define the status to use here,
 	// do we want the quiet status? or the progressbar
 	var status = NewProgressStatus()
@@ -577,12 +589,12 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch 
 		excludeOptions: excludeOptions,
 		olderThan:      olderThan,
 		newerThan:      newerThan,
-
-		status:   status,
-		statusCh: make(chan URLs),
-		queueCh:  make(chan func() URLs),
-		wgStatus: new(sync.WaitGroup),
-		watcher:  NewWatcher(UTCNow()),
+		storageClass:   storageClass,
+		status:         status,
+		statusCh:       make(chan URLs),
+		queueCh:        make(chan func() URLs),
+		wgStatus:       new(sync.WaitGroup),
+		watcher:        NewWatcher(UTCNow()),
 	}
 
 	return &mj
@@ -629,7 +641,8 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context) *probe.Error {
 		ctx.Bool("watch"),
 		ctx.StringSlice("exclude"),
 		ctx.Int("older-than"),
-		ctx.Int("newer-than"))
+		ctx.Int("newer-than"),
+		ctx.String("storage-class"))
 
 	srcClt, err := newClient(srcURL)
 	fatalIf(err, "Unable to initialize `"+srcURL+"`")
