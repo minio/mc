@@ -61,6 +61,7 @@ mc --help
 |GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
 
 ```sh
+wget https://dl.minio.io/client/mc/release/linux-amd64/mc
 chmod +x mc
 ./mc --help
 ```
