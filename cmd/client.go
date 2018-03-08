@@ -44,7 +44,7 @@ const defaultMultipartThreadsNum = 4
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat(isIncomplete, isFetchMeta bool) (content *clientContent, err *probe.Error)
+	Stat(isIncomplete, isFetchMeta bool, sseKey string) (content *clientContent, err *probe.Error)
 	List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent
 
 	// Bucket operations
@@ -56,11 +56,11 @@ type Client interface {
 	SetAccess(access string) *probe.Error
 
 	// I/O operations
-	Copy(source string, size int64, progress io.Reader) *probe.Error
+	Copy(source string, size int64, progress io.Reader, srcSSEKey, tgtSSEKey string) *probe.Error
 
 	// I/O operations with metadata.
-	Get() (reader io.Reader, err *probe.Error)
-	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (n int64, err *probe.Error)
+	Get(sseKey string) (reader io.Reader, err *probe.Error)
+	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sseKey string) (n int64, err *probe.Error)
 
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)

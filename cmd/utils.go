@@ -17,11 +17,16 @@
 package cmd
 
 import (
+	"crypto/md5"
 	"crypto/tls"
+	"encoding/base64"
+	"errors"
 	"io"
 	"math/rand"
 	"os"
+	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -156,4 +161,71 @@ func getLookupType(l string) minio.BucketLookupType {
 		return minio.BucketLookupPath
 	}
 	return minio.BucketLookupAuto
+}
+
+// sumMD5Base64 calculate md5sum for an input byte array, returns base64 encoded.
+func sumMD5Base64(data []byte) string {
+	hash := md5.New()
+	hash.Write(data)
+	return base64.StdEncoding.EncodeToString(hash.Sum(nil))
+}
+
+// struct representing object prefix and sse keys association.
+type prefixSSEPair struct {
+	prefix string
+	sseKey string
+}
+
+// parse list of comma separated alias/prefix=sse key values entered on command line and
+// construct a map of alias to prefix and sse pairs.
+func parseEncryptionKeys(ssekeys string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
+	encMap = make(map[string][]prefixSSEPair)
+	if ssekeys == "" {
+		return
+	}
+	fields := strings.Split(ssekeys, ",")
+	r := regexp.MustCompile("([^=\\s]+)=([^\\s]+)")
+	for _, field := range fields {
+		field = strings.TrimSpace(field)
+		matches := r.FindStringSubmatch(field)
+		if len(matches) != 3 {
+			return nil, probe.NewError(errors.New("sse-c prefix should be of the form prefix=key"))
+		}
+		key := matches[1]
+		value := matches[2]
+		alias, _ := url2Alias(key)
+		if len(value) != 32 {
+			return nil, probe.NewError(errors.New("sse-c key should be 32 bytes long"))
+		}
+		prefix := strings.TrimSpace(key)
+		if _, ok := encMap[alias]; !ok {
+			encMap[alias] = make([]prefixSSEPair, 0)
+		}
+		ps := prefixSSEPair{prefix: prefix, sseKey: value}
+		encMap[alias] = append(encMap[alias], ps)
+	}
+	// sort encryption keys in descending order of prefix length
+	for _, encKeys := range encMap {
+		sort.Sort(byPrefixLength(encKeys))
+	}
+	return
+}
+
+// byPrefixLength implements sort.Interface.
+type byPrefixLength []prefixSSEPair
+
+func (p byPrefixLength) Len() int { return len(p) }
+func (p byPrefixLength) Less(i, j int) bool {
+	return len(p[i].prefix) > len(p[j].prefix)
+}
+func (p byPrefixLength) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+
+// get SSE Key if object prefix matches with given resource.
+func getSSEKey(resource string, encKeys []prefixSSEPair) string {
+	for _, k := range encKeys {
+		if strings.HasPrefix(resource, k.prefix) {
+			return k.sseKey
+		}
+	}
+	return ""
 }

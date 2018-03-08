@@ -13,6 +13,7 @@ share    Generate URL for sharing.
 cp       Copy files and objects.
 mirror   Mirror buckets and folders.
 find     Finds files which match the given set of parameters.
+stat     Stat contents of objects and folders.
 diff     List objects with size difference or missing between two folders or buckets.
 rm       Remove files and objects.
 events   Manage object notifications.

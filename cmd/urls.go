@@ -26,6 +26,9 @@ type URLs struct {
 	TargetContent *clientContent
 	TotalCount    int64
 	TotalSize     int64
+	encKeyDB      map[string][]prefixSSEPair
+	SrcSSEKey     string
+	TgtSSEKey     string
 	Error         *probe.Error `json:"-"`
 }
 

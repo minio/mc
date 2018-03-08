@@ -315,7 +315,7 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 }
 
 // Put - create a new file with metadata.
-func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader) (int64, *probe.Error) {
+func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sseKey string) (int64, *probe.Error) {
 	return f.put(reader, size, nil, progress)
 }
 
@@ -368,7 +368,7 @@ func createFile(fpath string) (io.WriteCloser, error) {
 }
 
 // Copy - copy data from source to destination
-func (f *fsClient) Copy(source string, size int64, progress io.Reader) *probe.Error {
+func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSEKey, tgtSSEKey string) *probe.Error {
 	// Don't use f.Get() f.Put() directly. Instead use readFile and createFile
 	destination := f.PathURL.Path
 	if destination == source { // Cannot copy file into itself
@@ -434,7 +434,7 @@ func (f *fsClient) get() (io.Reader, *probe.Error) {
 }
 
 // Get returns reader and any additional metadata.
-func (f *fsClient) Get() (io.Reader, *probe.Error) {
+func (f *fsClient) Get(sseKey string) (io.Reader, *probe.Error) {
 	return f.get()
 }
 
@@ -968,7 +968,7 @@ func (f *fsClient) SetAccess(access string) *probe.Error {
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(isIncomplete, isFetchMeta bool) (content *clientContent, err *probe.Error) {
+func (f *fsClient) Stat(isIncomplete, isFetchMeta bool, sseKey string) (content *clientContent, err *probe.Error) {
 	st, err := f.fsStat(isIncomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())

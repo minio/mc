@@ -34,7 +34,12 @@ import (
 )
 
 var (
-	catFlags = []cli.Flag{}
+	catFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "encrypt-key",
+			Usage: "Decrypt object (using server-side encryption)",
+		},
+	}
 )
 
 // Display contents of a file.
@@ -53,6 +58,9 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:  List of comma delimited prefix=secret values
 EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
       $ {{.HelpName}} s3/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
@@ -62,7 +70,9 @@ EXAMPLES:
 
    3. Concatenate multiple files to one.
       $ {{.HelpName}} part.* > complete.img
-
+   
+   4. Stream a server encrypted object from Amazon S3 cloud storage to standard output.
+      $ {{.HelpName}} --encrypt-key 's3/ferenginar=32byteslongsecretkeymustbegiven1' s3/ferenginar/klingon_opera_aktuh_maylotah.ogg
 `,
 }
 
@@ -129,7 +139,7 @@ func checkCatSyntax(ctx *cli.Context) {
 }
 
 // catURL displays contents of a URL to stdout.
-func catURL(sourceURL string) *probe.Error {
+func catURL(sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	var reader io.Reader
 	size := int64(-1)
 	switch sourceURL {
@@ -146,7 +156,7 @@ func catURL(sourceURL string) *probe.Error {
 		if err == nil && client.GetURL().Type == objectStorage {
 			size = content.Size
 		}
-		if reader, err = getSourceStreamFromURL(sourceURL); err != nil {
+		if reader, err = getSourceStreamFromURL(sourceURL, encKeyDB); err != nil {
 			return err.Trace(sourceURL)
 		}
 	}
@@ -227,10 +237,16 @@ func mainCat(ctx *cli.Context) error {
 			}
 		}
 	}
+	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
+	if key := ctx.String("encrypt-key"); key != "" {
+		sseKeys = key
+	}
 
+	encKeyDB, err := parseEncryptionKeys(sseKeys)
+	fatalIf(err, "Unable to parse encryption keys")
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
-		fatalIf(catURL(url).Trace(url), "Unable to read from `"+url+"`.")
+		fatalIf(catURL(url, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")
 	}
 	return nil
 }

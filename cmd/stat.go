@@ -110,7 +110,7 @@ func parseStat(targetAlias string, c *clientContent) statMessage {
 }
 
 // doStat - list all entities inside a folder.
-func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string) error {
+func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string, encKeyDB map[string][]prefixSSEPair) error {
 
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
@@ -144,7 +144,7 @@ func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string) error 
 			continue
 		}
 		url := targetAlias + getKey(content)
-		_, stat, err := url2StatWithMetadata(url, true)
+		_, stat, err := url2StatWithMetadata(url, true, encKeyDB)
 		if err != nil {
 			stat = content
 		}

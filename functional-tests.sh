@@ -77,6 +77,8 @@ if [ "$ENABLE_HTTPS" != "1" ]; then
 fi
 
 SERVER_ALIAS="myminio"
+SERVER_ALIAS_TLS="myminio-ssl"
+
 BUCKET_NAME="mc-test-bucket-$RANDOM"
 WATCH_OUT_FILE="$WORK_DIR/watch.out-$RANDOM"
 
@@ -574,6 +576,203 @@ function test_config_host_add_error()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_put_object_with_sse()
+{
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven1"
+    # put encrypted object; then delete with correct secret key
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_put_object_with_sse_error()
+{
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven"
+    # put object with invalid encryption key; should fail
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_cat_object_with_sse()
+{
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven1"
+    # put encrypted object; then cat object correct secret key
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp  --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_cat_object_with_sse_error()
+{
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven1"
+    # put encrypted object; then cat object with no secret key
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp  --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd cat  "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_copy_object_with_sse()
+{
+    # test server side copy and remove operation - target is unencrypted while source is encrypted
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+    prefix="prefix"
+    object_name="mc-test-object-$RANDOM"
+
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}=32byteslongsecretkeymustbegiven1"
+    # create encrypted object on server
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
+    # now do a server side copy and store it unencrypted.
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    # cat the unencrypted destination object. should return data without any error
+    assert_success "$start_time" "${FUNCNAME[0]}" "${MC_CMD[@]}" cat "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
+    # mc rm on encrypted object without encryption key should fail
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
+    # mc rm on encrypted object with encryption key should pass
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
+    # mc rm on unencrypted destination object should pass
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm  "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_copy_object_with_sse2()
+{
+    # test server side copy and remove operation - target is encrypted with different key
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+    prefix="prefix"
+    object_name="mc-test-object-$RANDOM"
+
+    cli_flag1="${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}=32byteslongsecretkeymustbegiven1"
+    cli_flag2="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven2"
+
+    # create encrypted object on server
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
+    # now do a server side copy and store it eith different encryption key.
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1},${cli_flag2}"  "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    # cat the destination object with the new key. should return data without any error
+    assert_success "$start_time" "${FUNCNAME[0]}" "${MC_CMD[@]}" cat --encrypt-key "${cli_flag2}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
+    # mc rm on src object with first encryption key should pass
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag1}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
+    # mc rm on encrypted destination object  with second encryption key should pass
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm  --encrypt-key "${cli_flag2}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_sse_key_rotation()
+{
+    # test server side copy and remove operation - target is encrypted with different key
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+    prefix="prefix"
+    object_name="mc-test-object-$RANDOM"
+    old_key="32byteslongsecretkeymustbegiven1"
+    new_key="32byteslongsecretkeymustbegiven2"
+    cli_flag1="${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}=${old_key}"
+    cli_flag2="${SERVER_ALIAS_TLS}/${BUCKET_NAME}=${new_key}"
+
+    # create encrypted object on server
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
+    # now do a server side copy on same object and do a key rotation
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1}, ${cli_flag2}"  "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}"
+    # cat the object with the new key. should return data without any error
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat --encrypt-key "${cli_flag2}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
+    # mc rm on object with old key should fail
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag1}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    # mc rm on encrypted object with second encryption key should pass
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm  --encrypt-key "${cli_flag2}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_mirror_with_sse()
+{
+    # test if mirror operation works with encrypted objects
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    bucket_name="mc-test-bucket-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${bucket_name}=32byteslongsecretkeymustbegiven1"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror --encrypt-key "${cli_flag}" "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
+    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}" | jq -r .key) >/dev/null 2>&1
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
+    # remove recursively with correct encryption key
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${bucket_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_rm_object_with_sse()
+{
+    show "${FUNCNAME[0]}"
+
+    # test whether remove fails for encrypted object if secret key not provided.
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven1"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_get_object_with_sse()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven1"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_put_object_multipart_sse()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven1"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${FILE_65_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function run_test()
 {
     test_make_bucket
@@ -598,6 +797,20 @@ function run_test()
     test_find_empty
     if [ -z "$MINT_MODE" ]; then
         test_watch_object
+    fi
+
+    if [ "$ENABLE_HTTPS" == "1" ]; then
+        test_put_object_with_sse
+        test_put_object_with_sse_error
+        test_put_object_multipart_sse
+        test_get_object_with_sse
+        test_cat_object_with_sse
+        test_cat_object_with_sse_error
+        test_copy_object_with_sse
+        test_copy_object_with_sse2
+        test_sse_key_rotation
+        test_mirror_with_sse
+        test_rm_object_with_sse
     fi
 
     test_config_host_add
@@ -653,8 +866,9 @@ function __init__()
         echo "unable to get md5sum of $FILE_65_MB"
         exit 1
     fi
-
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host add "${SERVER_ALIAS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd config host add "${SERVER_ALIAS_TLS}" "$ENDPOINT" "$ACCESS_KEY" "$SECRET_KEY"
+
     set +e
 }
 
