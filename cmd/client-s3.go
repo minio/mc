@@ -19,7 +19,6 @@ package cmd
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"hash/fnv"
 	"io"
 	"net"
@@ -38,6 +37,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio-go"
 	"github.com/minio/minio-go/pkg/credentials"
+	"github.com/minio/minio-go/pkg/encrypt"
 	"github.com/minio/minio-go/pkg/policy"
 	"github.com/minio/minio-go/pkg/s3utils"
 )
@@ -511,9 +511,9 @@ func (c *s3Client) Get(sseKey string) (io.Reader, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	var opts minio.GetObjectOptions
 	if sseKey != "" {
-		key := minio.NewSSEInfo([]byte(sseKey), "AES256")
-		for k, v := range key.GetSSEHeaders() {
-			opts.Set(k, v)
+		key, err := encrypt.NewSSEC([]byte(sseKey))
+		if err == nil {
+			opts.ServerSideEncryption = key
 		}
 	}
 	reader, e := c.api.GetObject(bucket, object, opts)
@@ -545,22 +545,19 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSEKey
 	}
 
 	tokens := splitStr(source, string(c.targetURL.Separator), 3)
-
-	var srcKeyPtr, tgtKeyPtr *minio.SSEInfo
+	var srcKey, tgtKey encrypt.ServerSide
 	if srcSSEKey != "" {
-		srcKey := minio.NewSSEInfo([]byte(srcSSEKey), "AES256")
-		srcKeyPtr = &srcKey
+		srcKey, _ = encrypt.NewSSEC([]byte(srcSSEKey))
 	}
 	if tgtSSEKey != "" {
-		tgtKey := minio.NewSSEInfo([]byte(tgtSSEKey), "AES256")
-		tgtKeyPtr = &tgtKey
+		tgtKey, _ = encrypt.NewSSEC([]byte(tgtSSEKey))
 	}
 
 	// Source object
-	src := minio.NewSourceInfo(tokens[1], tokens[2], srcKeyPtr)
+	src := minio.NewSourceInfo(tokens[1], tokens[2], srcKey)
 
 	// Destination object
-	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, tgtKeyPtr, nil)
+	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, tgtKey, nil)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -630,24 +627,24 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	if ok {
 		delete(metadata, "X-Amz-Storage-Class")
 	}
+	var encryption encrypt.ServerSide
 	if sseKey != "" {
-		metadata["x-amz-server-side-encryption-customer-algorithm"] = "AES256"
-		metadata["x-amz-server-side-encryption-customer-key"] = base64.StdEncoding.EncodeToString([]byte(sseKey))
-		metadata["x-amz-server-side-encryption-customer-key-MD5"] = sumMD5Base64([]byte(sseKey))
+		encryption, _ = encrypt.NewSSEC([]byte(sseKey))
 	}
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
 	opts := minio.PutObjectOptions{
-		UserMetadata:       metadata,
-		Progress:           progress,
-		NumThreads:         defaultMultipartThreadsNum,
-		ContentType:        contentType,
-		CacheControl:       cacheControl,
-		ContentDisposition: contentDisposition,
-		ContentEncoding:    contentEncoding,
-		ContentLanguage:    contentLanguage,
-		StorageClass:       strings.ToUpper(storageClass),
+		UserMetadata:         metadata,
+		Progress:             progress,
+		NumThreads:           defaultMultipartThreadsNum,
+		ContentType:          contentType,
+		CacheControl:         cacheControl,
+		ContentDisposition:   contentDisposition,
+		ContentEncoding:      contentEncoding,
+		ContentLanguage:      contentLanguage,
+		StorageClass:         strings.ToUpper(storageClass),
+		ServerSideEncryption: encryption,
 	}
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {
@@ -940,9 +937,8 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sseKey string) (*clientC
 	}
 	opts := minio.StatObjectOptions{}
 	if sseKey != "" {
-		opts.Set("x-amz-server-side-encryption-customer-algorithm", "AES256")
-		opts.Set("x-amz-server-side-encryption-customer-key", base64.StdEncoding.EncodeToString([]byte(sseKey)))
-		opts.Set("x-amz-server-side-encryption-customer-key-MD5", sumMD5Base64([]byte(sseKey)))
+		key, _ := encrypt.NewSSEC([]byte(sseKey))
+		opts.ServerSideEncryption = key
 	}
 	for objectStat := range c.listObjectWrapper(bucket, object, nonRecursive, nil) {
 		if objectStat.Err != nil {

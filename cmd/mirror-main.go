@@ -754,7 +754,7 @@ func mainMirror(ctx *cli.Context) error {
 		sseKeys = key
 	}
 
-	encKeyDB, err := parseEncryptionKeys(sseKeys)
+	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
 	fatalIf(err, "Unable to parse encryption keys")
 
 	if err := runMirror(srcURL, tgtURL, ctx, encKeyDB); err != nil {

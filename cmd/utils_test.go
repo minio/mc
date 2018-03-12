@@ -16,7 +16,10 @@
 
 package cmd
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestParseURLEnv(t *testing.T) {
 	testCases := []struct {
@@ -74,6 +77,52 @@ func TestParseURLEnv(t *testing.T) {
 			if u.String() != testCase.expectedURL {
 				t.Errorf("Test %d: Expected %s, got %s", i+1, testCase.expectedURL, u.String())
 			}
+		}
+	}
+}
+
+func TestParseEncryptionKeys(t *testing.T) {
+	testCases := []struct {
+		encryptionKey  string
+		expectedEncMap map[string][]prefixSSEPair
+		success        bool
+	}{
+		{
+			encryptionKey:  "myminio1/test2=32byteslongsecretkeymustbegiven2",
+			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{prefix: "myminio1/test2", sseKey: "32byteslongsecretkeymustbegiven2"}}},
+			success:        true,
+		},
+		{
+			encryptionKey:  "myminio1/test2=32byteslongsecretkeymustbegiven",
+			expectedEncMap: nil,
+			success:        false,
+		},
+		{
+			encryptionKey:  "myminio1/test2=32byteslongsecretkey,ustbegiven1",
+			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{prefix: "myminio1/test2", sseKey: "32byteslongsecretkey,ustbegiven1"}}},
+			success:        true,
+		},
+		{
+			encryptionKey:  "myminio1/test2=32byteslongsecret   mustbegiven1",
+			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{prefix: "myminio1/test2", sseKey: "32byteslongsecret   mustbegiven1"}}},
+			success:        true,
+		},
+		{
+			encryptionKey:  "myminio1/test2=32byteslongsecretkeymustbegiven2,myminio1/test1/a=32byteslongsecretkeymustbegiven1",
+			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{prefix: "myminio1/test1/a", sseKey: "32byteslongsecretkeymustbegiven1"}, prefixSSEPair{prefix: "myminio1/test2", sseKey: "32byteslongsecretkeymustbegiven2"}}},
+			success:        true,
+		},
+	}
+	for i, testCase := range testCases {
+		encMap, err := parseEncryptionKeys(testCase.encryptionKey)
+		if err != nil && testCase.success {
+			t.Fatalf("Test %d: Expected success, got %s", i+1, err)
+		}
+		if err == nil && !testCase.success {
+			t.Fatalf("Test %d: Expected error, got success", i+1)
+		}
+		if testCase.success && !reflect.DeepEqual(encMap, testCase.expectedEncMap) {
+			t.Errorf("Test %d: Expected %s, got %s", i+1, testCase.expectedEncMap, encMap)
 		}
 	}
 }
