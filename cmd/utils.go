@@ -24,7 +24,6 @@ import (
 	"io"
 	"math/rand"
 	"os"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -176,39 +175,67 @@ type prefixSSEPair struct {
 	sseKey string
 }
 
-// parse list of comma separated alias/prefix=sse key values entered on command line and
-// construct a map of alias to prefix and sse pairs.
-func parseEncryptionKeys(ssekeys string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
-	encMap = make(map[string][]prefixSSEPair)
-	if ssekeys == "" {
+// parse and validate encryption keys entered on command line
+func parseAndValidateEncryptionKeys(sseKeys string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
+	if sseKeys == "" {
 		return
 	}
-	fields := strings.Split(ssekeys, ",")
-	r := regexp.MustCompile("([^=\\s]+)=([^\\s]+)")
-	for _, field := range fields {
-		field = strings.TrimSpace(field)
-		matches := r.FindStringSubmatch(field)
-		if len(matches) != 3 {
-			return nil, probe.NewError(errors.New("sse-c prefix should be of the form prefix=key"))
+	encMap, err = parseEncryptionKeys(sseKeys)
+	if err != nil {
+		return nil, err
+	}
+	for alias, ps := range encMap {
+		if hostCfg := mustGetHostConfig(alias); hostCfg == nil {
+			for _, p := range ps {
+				return nil, probe.NewError(errors.New("sse-c prefix " + p.prefix + " has invalid alias"))
+			}
 		}
-		key := matches[1]
-		value := matches[2]
-		alias, _ := url2Alias(key)
-		if len(value) != 32 {
+	}
+	return encMap, nil
+}
+
+// parse list of comma separated alias/prefix=sse key values entered on command line and
+// construct a map of alias to prefix and sse pairs.
+func parseEncryptionKeys(sseKeys string) (encMap map[string][]prefixSSEPair, err *probe.Error) {
+	encMap = make(map[string][]prefixSSEPair)
+	if sseKeys == "" {
+		return
+	}
+	prefix := ""
+	ssekey := ""
+	index := 0 // start index of prefix
+	vs := 0    // start index of sse-c key
+	sseKeyLen := 32
+	delim := 1
+	k := len(sseKeys)
+	for index < k {
+		e := strings.Index(sseKeys[index:], "=")
+		if e == -1 {
+			return nil, probe.NewError(errors.New("sse-c prefix should be of the form prefix1=key1,... "))
+		}
+		prefix = sseKeys[index : index+e]
+		alias, _ := url2Alias(prefix)
+		vs = e + 1 + index
+		if vs+32 > k {
 			return nil, probe.NewError(errors.New("sse-c key should be 32 bytes long"))
 		}
-		prefix := strings.TrimSpace(key)
+		ssekey = sseKeys[vs : vs+sseKeyLen]
+		if (vs+sseKeyLen < k) && sseKeys[vs+sseKeyLen] != ',' {
+			return nil, probe.NewError(errors.New("sse-c prefix=secret should be delimited by , and secret should be 32 bytes long"))
+		}
 		if _, ok := encMap[alias]; !ok {
 			encMap[alias] = make([]prefixSSEPair, 0)
 		}
-		ps := prefixSSEPair{prefix: prefix, sseKey: value}
+		ps := prefixSSEPair{prefix: prefix, sseKey: ssekey}
 		encMap[alias] = append(encMap[alias], ps)
+		// advance index sseKeyLen + delim bytes for the next key start
+		index = vs + sseKeyLen + delim
 	}
 	// sort encryption keys in descending order of prefix length
 	for _, encKeys := range encMap {
 		sort.Sort(byPrefixLength(encKeys))
 	}
-	return
+	return encMap, nil
 }
 
 // byPrefixLength implements sort.Interface.

@@ -125,7 +125,7 @@ func mainStat(ctx *cli.Context) error {
 		sseKeys = key
 	}
 
-	encKeyDB, err := parseEncryptionKeys(sseKeys)
+	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
 	fatalIf(err, "Unable to parse encryption keys")
 
 	var cErr error

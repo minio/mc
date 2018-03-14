@@ -225,13 +225,6 @@ var supportedHeaders = []string{
 	// Add more supported headers here.
 }
 
-// cseHeaders is list of client side encryption headers
-var cseHeaders = []string{
-	"X-Amz-Iv",
-	"X-Amz-Key",
-	"X-Amz-Matdesc",
-}
-
 // isStorageClassHeader returns true if the header is a supported storage class header
 func isStorageClassHeader(headerKey string) bool {
 	return strings.ToLower(amzStorageClass) == strings.ToLower(headerKey)
@@ -242,19 +235,6 @@ func isStandardHeader(headerKey string) bool {
 	key := strings.ToLower(headerKey)
 	for _, header := range supportedHeaders {
 		if strings.ToLower(header) == key {
-			return true
-		}
-	}
-	return false
-}
-
-// isCSEHeader returns true if header is a client side encryption header.
-func isCSEHeader(headerKey string) bool {
-	key := strings.ToLower(headerKey)
-	for _, h := range cseHeaders {
-		header := strings.ToLower(h)
-		if (header == key) ||
-			(("x-amz-meta-" + header) == key) {
 			return true
 		}
 	}

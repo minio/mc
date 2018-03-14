@@ -593,14 +593,14 @@ func GetPolicy(statements []Statement, bucketName string, prefix string) BucketP
 	return policy
 }
 
-// GetPolicies - returns a map of policies rules of given bucket name, prefix in given statements.
-func GetPolicies(statements []Statement, bucketName string) map[string]BucketPolicy {
+// GetPolicies - returns a map of policies of given bucket name, prefix in given statements.
+func GetPolicies(statements []Statement, bucketName, prefix string) map[string]BucketPolicy {
 	policyRules := map[string]BucketPolicy{}
 	objResources := set.NewStringSet()
 	// Search all resources related to objects policy
 	for _, s := range statements {
 		for r := range s.Resources {
-			if strings.HasPrefix(r, awsResourcePrefix+bucketName+"/") {
+			if strings.HasPrefix(r, awsResourcePrefix+bucketName+"/"+prefix) {
 				objResources.Add(r)
 			}
 		}

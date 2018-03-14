@@ -694,7 +694,7 @@ function test_sse_key_rotation()
     # create encrypted object on server
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
     # now do a server side copy on same object and do a key rotation
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1}, ${cli_flag2}"  "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag1},${cli_flag2}"  "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}"
     # cat the object with the new key. should return data without any error
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cat --encrypt-key "${cli_flag2}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}" > "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
