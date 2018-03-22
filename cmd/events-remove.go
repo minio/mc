@@ -66,7 +66,7 @@ func checkEventsRemoveSyntax(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
 	}
 	if len(ctx.Args()) == 1 && !ctx.Bool("force") {
-		fatalIf(probe.NewError(errors.New("")), "--force flag needs to be passed to remove all bucket notifications")
+		fatalIf(probe.NewError(errors.New("")), "--force flag needs to be passed to remove all bucket notifications.")
 	}
 }
 

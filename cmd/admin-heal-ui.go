@@ -297,7 +297,7 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 			return err
 		}
 		jsonBytes, err := json.Marshal(r)
-		fatalIf(probe.NewError(err), "Unable to marshal to JSON")
+		fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
 		console.Println(string(jsonBytes))
 	}
 	return nil
@@ -327,7 +327,7 @@ func (ui *uiData) printStatsJSON(s *madmin.HealTaskStatus) {
 	summary.ElapsedTime = int64(ui.HealDuration.Round(time.Second).Seconds())
 
 	jBytes, err := json.Marshal(summary)
-	fatalIf(probe.NewError(err), "Unable to marshal to JSON")
+	fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
 	console.Println(string(jBytes))
 }
 

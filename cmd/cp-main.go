@@ -222,7 +222,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 	newerThan := session.Header.CommandIntFlags["newer-than"]
 	encryptKeys := session.Header.CommandStringFlags["encrypt-key"]
 	encKeyDB, err := parseAndValidateEncryptionKeys(encryptKeys)
-	fatalIf(err, "Unable to parse encryption keys")
+	fatalIf(err, "Unable to parse encryption keys.")
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 

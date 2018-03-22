@@ -579,7 +579,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 				PathInsufficientPermission, ObjectOnGlacier:
 				continue
 			case deleteNotAllowedErr, overwriteNotAllowedErr:
-				errorIf(err, "Unable to perform a mirror action")
+				errorIf(err, "Unable to perform a mirror action.")
 				continue
 			}
 
@@ -671,13 +671,13 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		encKeyDB)
 
 	srcClt, err := newClient(srcURL)
-	fatalIf(err, "Unable to initialize `"+srcURL+"`")
+	fatalIf(err, "Unable to initialize `"+srcURL+"`.")
 
 	dstClt, err := newClient(dstURL)
-	fatalIf(err, "Unable to initialize `"+srcURL+"`")
+	fatalIf(err, "Unable to initialize `"+srcURL+"`.")
 
 	if ctx.Bool("a") && (srcClt.GetURL().Type != objectStorage || dstClt.GetURL().Type != objectStorage) {
-		fatalIf(errDummy(), "Synchronizing bucket policies is only possible when both source & target point to S3 servers")
+		fatalIf(errDummy(), "Synchronizing bucket policies is only possible when both source & target point to S3 servers.")
 	}
 
 	mirrorAllBuckets := (srcClt.GetURL().Type == objectStorage && srcClt.GetURL().Path == "/") ||
@@ -704,13 +704,13 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 			if d.Diff == differInFirst {
 				// Bucket only exists in the source, create the same bucket in the destination
 				if err := newDstClt.MakeBucket(ctx.String("region"), false); err != nil {
-					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`")
+					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`.")
 					continue
 				}
 				// Copy policy rules from source to dest if flag is activated
 				if ctx.Bool("a") {
 					if err := copyBucketPolicies(srcClt, dstClt, isOverwrite); err != nil {
-						errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`")
+						errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`.")
 					}
 				}
 			}
@@ -759,10 +759,10 @@ func mainMirror(ctx *cli.Context) error {
 	}
 
 	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
-	fatalIf(err, "Unable to parse encryption keys")
+	fatalIf(err, "Unable to parse encryption keys.")
 
 	if err := runMirror(srcURL, tgtURL, ctx, encKeyDB); err != nil {
-		errorIf(err.Trace(srcURL, tgtURL), "Unable to mirror")
+		errorIf(err.Trace(srcURL, tgtURL), "Unable to mirror.")
 		return exitStatus(globalErrorExitStatus)
 	}
 
