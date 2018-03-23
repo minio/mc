@@ -75,7 +75,7 @@ func mainAdminCreds(ctx *cli.Context) error {
 
 	// Change the credentials of the specified Minio server
 	e := client.SetCredentials(accessKey, secretKey)
-	fatalIf(probe.NewError(e), "Unable to set new credentials to '"+aliasedURL+"'")
+	fatalIf(probe.NewError(e), "Unable to set new credentials to '"+aliasedURL+"'.")
 
 	return nil
 }

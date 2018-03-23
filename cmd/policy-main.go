@@ -327,7 +327,7 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 
 			// Encode public URL
 			u, e := url.Parse(content.URL.String())
-			errorIf(probe.NewError(e), "Unable to parse url `"+content.URL.String()+"`")
+			errorIf(probe.NewError(e), "Unable to parse url `"+content.URL.String()+"`.")
 			publicURL := u.String()
 
 			// Construct the message to be displayed to the user

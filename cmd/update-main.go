@@ -134,7 +134,7 @@ func isDocker(cgroupFile string) (bool, *probe.Error) {
 // IsDocker - returns if the environment is docker or not.
 func IsDocker() bool {
 	found, err := isDocker("/proc/self/cgroup")
-	fatalIf(err.Trace("/proc/self/cgroup"), "Unable to validate if this is a docker container")
+	fatalIf(err.Trace("/proc/self/cgroup"), "Unable to validate if this is a docker container.")
 	return found
 }
 
@@ -278,7 +278,7 @@ func mainUpdate(ctx *cli.Context) {
 	console.SetColor("Update", color.New(color.FgGreen, color.Bold))
 
 	older, downloadURL, err := getUpdateInfo(10 * time.Second)
-	fatalIf(err.Trace(downloadURL), "Unable to fetch update info for mc")
+	fatalIf(err.Trace(downloadURL), "Unable to fetch update info for mc.")
 
 	if !globalQuiet {
 		printMsg(updateMessage{

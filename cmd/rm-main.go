@@ -337,7 +337,7 @@ func mainRm(ctx *cli.Context) error {
 	}
 
 	encKeyDB, perr := parseAndValidateEncryptionKeys(sseKeys)
-	fatalIf(perr, "Unable to parse encryption keys")
+	fatalIf(perr, "Unable to parse encryption keys.")
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 

@@ -243,7 +243,7 @@ func mainCat(ctx *cli.Context) error {
 	}
 
 	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
-	fatalIf(err, "Unable to parse encryption keys")
+	fatalIf(err, "Unable to parse encryption keys.")
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
 		fatalIf(catURL(url, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")

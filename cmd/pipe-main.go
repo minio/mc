@@ -120,7 +120,7 @@ func mainPipe(ctx *cli.Context) error {
 		}
 
 		encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
-		fatalIf(err, "Unable to parse encryption keys")
+		fatalIf(err, "Unable to parse encryption keys.")
 		err = pipe(URLs[0], encKeyDB)
 		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
 	}

@@ -137,7 +137,7 @@ func loadRootCAs() {
 	for _, caFile := range caFiles {
 		caCert, err := ioutil.ReadFile(caFile)
 		if err != nil {
-			fatalIf(probe.NewError(err), "Unable to load a CA file")
+			fatalIf(probe.NewError(err), "Unable to load a CA file.")
 		}
 		globalRootCAs.AppendCertsFromPEM(caCert)
 	}

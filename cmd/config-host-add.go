@@ -96,7 +96,7 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 	api := ctx.String("api")
 	bucketLookup := ctx.String("lookup")
 	if !isValidAlias(alias) {
-		fatalIf(errInvalidAlias(alias), "Invalid alias")
+		fatalIf(errInvalidAlias(alias), "Invalid alias.")
 	}
 
 	if !isValidHostURL(url) {
@@ -231,7 +231,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	)
 
 	s3Config, err := buildS3Config(url, accessKey, secretKey, api, lookup)
-	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials")
+	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
 
 	addHost(ctx.Args().Get(0), hostConfigV9{
 		URL:       s3Config.HostURL,

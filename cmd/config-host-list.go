@@ -134,7 +134,7 @@ func listHosts(alias string) {
 			})
 			return
 		}
-		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found")
+		fatalIf(errInvalidAliasedURL(alias), "No such alias `"+alias+"` found.")
 	}
 
 	var hosts []hostMessage
