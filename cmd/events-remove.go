@@ -113,7 +113,7 @@ func mainEventsRemove(ctx *cli.Context) error {
 	}
 
 	err = s3Client.RemoveNotificationConfig(arn)
-	fatalIf(err, "Cannot enable notification on the specified bucket.")
+	fatalIf(err, "Cannot disable notification on the specified bucket.")
 	printMsg(eventsRemoveMessage{ARN: arn})
 
 	return nil

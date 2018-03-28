@@ -122,7 +122,7 @@ func mainEventsList(ctx *cli.Context) error {
 	}
 
 	configs, err := s3Client.ListNotificationConfigs(arn)
-	fatalIf(err, "Cannot enable notification on the specified bucket.")
+	fatalIf(err, "Cannot list notifications on the specified bucket.")
 
 	for _, config := range configs {
 		printMsg(eventsListMessage{Events: config.Events,
