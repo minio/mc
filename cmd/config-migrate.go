@@ -453,12 +453,14 @@ func migrateConfigV8ToV9() {
 	}
 
 	cfgV9 := newConfigV9()
+	isEmpty := true
 	// We dropped alias support in v8. We only need to migrate host configs.
 	for host, hostCfgV8 := range mcCfgV8.Data().(*configV8).Hosts {
 		// Ignore 'player', 'play' and 'dl' aliases.
 		if host == "player" || host == "dl" || host == "play" {
 			continue
 		}
+		isEmpty = false
 		hostCfgV9 := hostConfigV9{}
 		hostCfgV9.URL = hostCfgV8.URL
 		hostCfgV9.AccessKey = hostCfgV8.AccessKey
@@ -467,8 +469,11 @@ func migrateConfigV8ToV9() {
 		hostCfgV9.Lookup = "auto"
 		cfgV9.Hosts[host] = hostCfgV9
 	}
-	// Load default settings.
-	cfgV9.loadDefaults()
+	if isEmpty {
+		// Load default settings.
+		cfgV9.loadDefaults()
+	}
+
 	mcNewCfgV9, e := quick.New(cfgV9)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `9`.")
 
