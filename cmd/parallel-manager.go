@@ -27,8 +27,6 @@ const (
 	maxParallelWorkers = 32
 	// Monitor tick to decide to add new workers
 	monitorPeriod = 5 * time.Second
-	// jump
-	jump = 1.20
 )
 
 // ParallelManager - helps manage parallel workers to run tasks
@@ -39,14 +37,8 @@ type ParallelManager struct {
 	// Synchronize workers
 	wg *sync.WaitGroup
 
-	// Total send bytes and current bandwidth
-	sentBytes     int64
-	sentBytesPrev int64
-	bandwidth     float64
-	bandwidthPrev float64
-
 	// Current threads number
-	threadsNum uint32
+	workersNum uint32
 
 	// Channel to receive tasks to run
 	queueCh chan func() URLs
@@ -59,14 +51,14 @@ type ParallelManager struct {
 // addWorker creates a new worker to process tasks
 func (p *ParallelManager) addWorker() {
 
-	if atomic.LoadUint32(&p.threadsNum) >= maxParallelWorkers {
+	if atomic.LoadUint32(&p.workersNum) >= maxParallelWorkers {
 		// Number of maximum workers is reached, no need to
 		// to create a new one.
 		return
 	}
 
 	// Update number of threads
-	atomic.AddUint32(&p.threadsNum, 1)
+	atomic.AddUint32(&p.workersNum, 1)
 
 	// Start a new worker
 	p.wg.Add(1)
@@ -95,27 +87,39 @@ func (p *ParallelManager) monitorProgress() {
 		// Nothing to monitor
 		return
 	}
+
 	go func() {
 		ticker := time.NewTicker(monitorPeriod)
 		defer ticker.Stop()
+
+		var prevSentBytes, maxBandwidth int64
+		var retry int
+
 		for {
 			select {
 			case <-p.stopMonitorCh:
 				// Ordered to quit immediately
 				return
 			case <-ticker.C:
-				// Get current monitor values
-				p.sentBytes = p.pb.Get()
-				p.bandwidth = float64(p.sentBytes - p.sentBytesPrev)
+				// Compute new bandwidth from counted sent bytes
+				sentBytes := p.pb.Get()
+				bandwidth := sentBytes - prevSentBytes
+				prevSentBytes = sentBytes
 
-				// Decide if we should add a new worker
-				if p.bandwidth > jump*p.bandwidthPrev {
-					p.addWorker()
+				if bandwidth <= maxBandwidth {
+					retry++
+					// We still want to add more workers
+					// until we are sure that it is not
+					// useful to add more of them.
+					if retry > 2 {
+						return
+					}
+				} else {
+					retry = 0
+					maxBandwidth = bandwidth
 				}
 
-				// Save monitor values
-				p.sentBytesPrev = p.sentBytes
-				p.bandwidthPrev = p.bandwidth
+				p.addWorker()
 			}
 		}
 	}()
@@ -127,12 +131,12 @@ func (p *ParallelManager) wait() {
 	close(p.stopMonitorCh)
 }
 
-// newParallelManager starts new workers waiting for executing copy/remove tasks
+// newParallelManager starts new workers waiting for executing tasks
 func newParallelManager(resultCh chan URLs, pb Progress) (*ParallelManager, chan func() URLs) {
 	p := &ParallelManager{
 		pb:            pb,
 		wg:            &sync.WaitGroup{},
-		threadsNum:    0,
+		workersNum:    0,
 		stopMonitorCh: make(chan struct{}),
 		queueCh:       make(chan func() URLs),
 		resultCh:      resultCh,
