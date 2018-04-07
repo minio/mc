@@ -22,23 +22,15 @@ import (
 	"testing"
 	"time"
 
-	"net/http/httptest"
-
 	"github.com/hashicorp/go-version"
-	"github.com/minio/cli"
 	. "gopkg.in/check.v1"
 )
-
-var customConfigDir string
 
 func Test(t *testing.T) { TestingT(t) }
 
 type TestSuite struct{}
 
 var _ = Suite(&TestSuite{})
-
-var server *httptest.Server
-var app *cli.App
 
 func (s *TestSuite) SetUpSuite(c *C) {
 }

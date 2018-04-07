@@ -34,15 +34,6 @@ func getCertsDir() (string, *probe.Error) {
 	return filepath.Join(p, globalMCCertsDir), nil
 }
 
-// mustGetCertsDir - return the full path of certs dir or empty string when an error occurs
-func mustGetCertsDir() string {
-	p, err := getCertsDir()
-	if err != nil {
-		return ""
-	}
-	return p
-}
-
 // isCertsDirExists - verify if certs directory exists.
 func isCertsDirExists() bool {
 	certsDir, err := getCertsDir()

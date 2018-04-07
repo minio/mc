@@ -1,4 +1,6 @@
-FROM alpine:3.5
+FROM alpine:3.7
+
+MAINTAINER Minio Inc <dev@minio.io>
 
 RUN \
     apk add --no-cache ca-certificates && \
