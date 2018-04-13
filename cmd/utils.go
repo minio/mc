@@ -17,9 +17,7 @@
 package cmd
 
 import (
-	"crypto/md5"
 	"crypto/tls"
-	"encoding/base64"
 	"errors"
 	"io"
 	"math/rand"
@@ -160,13 +158,6 @@ func getLookupType(l string) minio.BucketLookupType {
 		return minio.BucketLookupPath
 	}
 	return minio.BucketLookupAuto
-}
-
-// sumMD5Base64 calculate md5sum for an input byte array, returns base64 encoded.
-func sumMD5Base64(data []byte) string {
-	hash := md5.New()
-	hash.Write(data)
-	return base64.StdEncoding.EncodeToString(hash.Sum(nil))
 }
 
 // struct representing object prefix and sse keys association.

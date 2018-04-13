@@ -16,11 +16,6 @@
 
 package cmd
 
-import (
-	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/quick"
-)
-
 /////////////////// Config V1 ///////////////////
 type hostConfigV1 struct {
 	AccessKeyID     string
@@ -307,50 +302,6 @@ func (c *configV8) loadDefaults() {
 		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
 		API:       "S3v4",
 	})
-}
-
-// loadConfigV8 - loads a new config.
-func loadConfigV8() (*configV8, *probe.Error) {
-	cfgMutex.RLock()
-	defer cfgMutex.RUnlock()
-
-	if !isMcConfigExists() {
-		return nil, errInvalidArgument().Trace()
-	}
-
-	// Initialize a new config loader.
-	qc, e := quick.New(newConfigV8())
-	if e != nil {
-		return nil, probe.NewError(e)
-	}
-
-	// Load config at configPath, fails if config is not
-	// accessible, malformed or version missing.
-	if e = qc.Load(mustGetMcConfigPath()); e != nil {
-		return nil, probe.NewError(e)
-	}
-
-	cfgV8 := qc.Data().(*configV8)
-
-	// Success.
-	return cfgV8, nil
-}
-
-// saveConfigV8 - saves an updated config.
-func saveConfigV8(cfgV8 *configV8) *probe.Error {
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
-
-	qs, e := quick.New(cfgV8)
-	if e != nil {
-		return probe.NewError(e)
-	}
-
-	e = qs.Save(mustGetMcConfigPath())
-	if e != nil {
-		return probe.NewError(e).Trace(mustGetMcConfigPath())
-	}
-	return nil
 }
 
 /////////////////// Config V9 ///////////////////

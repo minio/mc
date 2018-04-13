@@ -111,31 +111,6 @@ type infoMessage struct {
 	*ServerInfo
 }
 
-func countOnlineDrives(drives []madmin.DriveInfo) int {
-	var i = 0
-	for _, drive := range drives {
-		if drive.State == madmin.DriveStateOk {
-			i++
-		}
-	}
-	return i
-}
-
-func countMissingDrives(drives []madmin.DriveInfo) int {
-	var i = 0
-	for _, drive := range drives {
-		switch drive.State {
-		case madmin.DriveStateOffline:
-			fallthrough
-		case madmin.DriveStateMissing:
-			fallthrough
-		case madmin.DriveStateCorrupt:
-			i++
-		}
-	}
-	return i
-}
-
 // String colorized service status message.
 func (u infoMessage) String() (msg string) {
 	defer func() {

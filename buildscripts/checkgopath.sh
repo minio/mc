@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Minio Client, (C) 2015, 2016, 2017 Minio, Inc.
+# Minio Client, (C) 2015, 2016, 2017, 2018 Minio, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,27 +15,20 @@
 # limitations under the License.
 #
 
-_init() {
-
-    shopt -s extglob
-
-    # Fetch real paths instead of symlinks before comparing them
-    PWD=$(env pwd -P)
-    GOPATH=$(cd "$(go env GOPATH)" ; env pwd -P)
-}
-
 main() {
-    echo "Checking if project is at ${GOPATH}"
-    for mc in $(echo ${GOPATH} | tr ':' ' '); do
-        if [ ! -d ${mc}/src/github.com/minio/mc ]; then
-            echo "Project not found in ${mc}, please follow instructions provided at https://github.com/minio/mc/blob/master/CONTRIBUTING.md#setup-your-mc-github-repository" \
-                && exit 1
-        fi
-        if [ "x${mc}/src/github.com/minio/mc" != "x${PWD}" ]; then
-            echo "Build outside of ${mc}, two source checkouts found. Exiting." && exit 1
+    gopath=$(go env GOPATH)
+    IFS=':' read -r -a paths <<< "$gopath"
+    for path in "${paths[@]}"; do
+        mcpath="$path/src/github.com/minio/mc"
+        if [ -d "$mcpath" ]; then
+            if [ "$mcpath" -ef "$PWD" ]; then
+               exit 0
+            fi
         fi
     done
+
+    echo "Project not found in ${gopath}. Follow instructions at https://github.com/minio/mc/blob/master/CONTRIBUTING.md#setup-your-mc-github-repository"
+    exit 1
 }
 
-_init && main
-
+main
