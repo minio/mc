@@ -479,6 +479,10 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 	var totalObjects int64
 
 	parallel, queueCh := newParallelManager(mj.statusCh, mj.status)
+	stopParallel := func() {
+		close(queueCh)
+		parallel.wait()
+	}
 
 	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, mj.excludeOptions, mj.encKeyDB)
 
@@ -486,8 +490,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 		select {
 		case sURLs, ok := <-URLsCh:
 			if !ok {
-				close(queueCh)
-				parallel.wait()
+				stopParallel()
 				errCh <- nil
 				return
 			}
@@ -531,6 +534,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				}
 			}
 		case <-mj.trapCh:
+			stopParallel()
 			cancelMirror()
 			errCh <- nil
 			return

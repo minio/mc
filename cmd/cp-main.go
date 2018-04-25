@@ -317,7 +317,11 @@ func doCopySession(session *sessionV8) error {
 
 	var statusCh = make(chan URLs)
 
-	p, queueCh := newParallelManager(statusCh, pg)
+	parallel, queueCh := newParallelManager(statusCh, pg)
+	stopParallel := func() {
+		close(queueCh)
+		parallel.wait()
+	}
 
 	go func() {
 		// Loop through all urls.
@@ -352,12 +356,7 @@ func doCopySession(session *sessionV8) error {
 			}
 		}
 
-		// URLs feeding finished
-		close(queueCh)
-
-		// Wait for all tasks to be finished
-		p.wait()
-
+		stopParallel()
 		close(statusCh)
 
 	}()
@@ -368,6 +367,7 @@ loop:
 	for {
 		select {
 		case <-trapCh:
+			stopParallel()
 			cancelCopy()
 			// Receive interrupt notification.
 			if !globalQuiet && !globalJSON {
