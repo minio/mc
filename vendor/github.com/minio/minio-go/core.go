@@ -21,8 +21,6 @@ import (
 	"context"
 	"io"
 	"strings"
-
-	"github.com/minio/minio-go/pkg/policy"
 )
 
 // Core - Inherits Client and adds new methods to expose the low level S3 APIs.
@@ -84,6 +82,8 @@ func (c Core) PutObject(bucket, object string, data io.Reader, size int64, md5Ba
 			opts.ContentType = v
 		} else if strings.ToLower(k) == "cache-control" {
 			opts.CacheControl = v
+		} else if strings.ToLower(k) == strings.ToLower(amzWebsiteRedirectLocation) {
+			opts.WebsiteRedirectLocation = v
 		} else {
 			m[k] = metadata[k]
 		}
@@ -127,12 +127,12 @@ func (c Core) AbortMultipartUpload(bucket, object, uploadID string) error {
 }
 
 // GetBucketPolicy - fetches bucket access policy for a given bucket.
-func (c Core) GetBucketPolicy(bucket string) (policy.BucketAccessPolicy, error) {
+func (c Core) GetBucketPolicy(bucket string) (string, error) {
 	return c.getBucketPolicy(bucket)
 }
 
 // PutBucketPolicy - applies a new bucket access policy for a given bucket.
-func (c Core) PutBucketPolicy(bucket string, bucketPolicy policy.BucketAccessPolicy) error {
+func (c Core) PutBucketPolicy(bucket, bucketPolicy string) error {
 	return c.putBucketPolicy(bucket, bucketPolicy)
 }
 
