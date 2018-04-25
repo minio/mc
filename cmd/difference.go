@@ -98,14 +98,12 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 
 			if !srcEOF && srcCtnt.Err != nil {
 				diffCh <- diffMessage{Error: srcCtnt.Err.Trace(sourceURL, targetURL)}
-				srcCtnt, srcOk = <-srcCh
-				continue
+				return
 			}
 
 			if !tgtEOF && tgtCtnt.Err != nil {
 				diffCh <- diffMessage{Error: tgtCtnt.Err.Trace(sourceURL, targetURL)}
-				tgtCtnt, tgtOk = <-tgtCh
-				continue
+				return
 			}
 
 			// If source doesn't have objects anymore, comparison becomes obvious

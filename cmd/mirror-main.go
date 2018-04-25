@@ -581,15 +581,14 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 			switch err.ToGoError().(type) {
 			case BrokenSymlink, TooManyLevelsSymlink, PathNotFound,
 				PathInsufficientPermission, ObjectOnGlacier:
+				errorIf(err, "Unable to perform a mirror action.")
 				continue
 			case deleteNotAllowedErr, overwriteNotAllowedErr:
 				errorIf(err, "Unable to perform a mirror action.")
 				continue
 			}
-
 			return err.Trace()
 		}
-
 	}
 }
 
