@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
+ * Minio Client (C) 2015, 2016, 2017, 2018 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"hash/fnv"
 	"io"
 	"net"
@@ -30,8 +31,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"io/ioutil"
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
@@ -537,7 +536,9 @@ func (c *s3Client) Get(sseKey string) (io.Reader, *probe.Error) {
 	return reader, nil
 }
 
-// Copy - copy object
+// Copy - copy object, uses server side copy API. Also uses an abstracted API
+// such that large file sizes will be copied in multipart manner on server
+// side.
 func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSEKey, tgtSSEKey string) *probe.Error {
 	dstBucket, dstObject := c.url2BucketAndObject()
 	if dstBucket == "" {
@@ -561,7 +562,8 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSEKey
 	if e != nil {
 		return probe.NewError(e)
 	}
-	if e = c.api.CopyObject(dst, src); e != nil {
+
+	if e = c.api.ComposeObjectWithProgress(dst, []minio.SourceInfo{src}, progress); e != nil {
 		errResponse := minio.ToErrorResponse(e)
 		if errResponse.Code == "AccessDenied" {
 			return probe.NewError(PathInsufficientPermission{
@@ -582,12 +584,6 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSEKey
 			return probe.NewError(ObjectMissing{})
 		}
 		return probe.NewError(e)
-	}
-	// Successful copy update progress bar if there is one.
-	if progress != nil {
-		if _, e := io.CopyN(ioutil.Discard, progress, size); e != nil {
-			return probe.NewError(e)
-		}
 	}
 	return nil
 }
@@ -833,10 +829,18 @@ func (c *s3Client) GetAccessRules() (map[string]string, *probe.Error) {
 		return map[string]string{}, probe.NewError(BucketNameEmpty{})
 	}
 	policies := map[string]string{}
-	policyRules, err := c.api.ListBucketPolicies(bucket, object)
-	if err != nil {
-		return nil, probe.NewError(err)
+	policyStr, e := c.api.GetBucketPolicy(bucket)
+	if e != nil {
+		return nil, probe.NewError(e)
 	}
+	if policyStr == "" {
+		return policies, nil
+	}
+	var p policy.BucketAccessPolicy
+	if e = json.Unmarshal([]byte(policyStr), &p); e != nil {
+		return nil, probe.NewError(e)
+	}
+	policyRules := policy.GetPolicies(p.Statements, bucket, object)
 	// Hide policy data structure at this level
 	for k, v := range policyRules {
 		policies[k] = string(v)
@@ -850,11 +854,18 @@ func (c *s3Client) GetAccess() (string, *probe.Error) {
 	if bucket == "" {
 		return "", probe.NewError(BucketNameEmpty{})
 	}
-	bucketPolicy, e := c.api.GetBucketPolicy(bucket, object)
+	policyStr, e := c.api.GetBucketPolicy(bucket)
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-	return string(bucketPolicy), nil
+	if policyStr == "" {
+		return string(policy.BucketPolicyNone), nil
+	}
+	var p policy.BucketAccessPolicy
+	if e = json.Unmarshal([]byte(policyStr), &p); e != nil {
+		return "", probe.NewError(e)
+	}
+	return string(policy.GetPolicy(p.Statements, bucket, object)), nil
 }
 
 // SetAccess set access policy permissions.
@@ -863,8 +874,28 @@ func (c *s3Client) SetAccess(bucketPolicy string) *probe.Error {
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
-	e := c.api.SetBucketPolicy(bucket, object, policy.BucketPolicy(bucketPolicy))
+	policyStr, e := c.api.GetBucketPolicy(bucket)
 	if e != nil {
+		return probe.NewError(e)
+	}
+	var p = policy.BucketAccessPolicy{Version: "2012-10-17"}
+	if policyStr != "" {
+		if e = json.Unmarshal([]byte(policyStr), &p); e != nil {
+			return probe.NewError(e)
+		}
+	}
+	p.Statements = policy.SetPolicy(p.Statements, policy.BucketPolicy(bucketPolicy), bucket, object)
+	if len(p.Statements) == 0 {
+		if e = c.api.SetBucketPolicy(bucket, ""); e != nil {
+			return probe.NewError(e)
+		}
+		return nil
+	}
+	policyB, e := json.Marshal(p)
+	if e != nil {
+		return probe.NewError(e)
+	}
+	if e = c.api.SetBucketPolicy(bucket, string(policyB)); e != nil {
 		return probe.NewError(e)
 	}
 	return nil

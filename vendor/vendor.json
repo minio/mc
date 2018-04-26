@@ -56,46 +56,46 @@
 			"revisionTime": "2015-10-24T22:24:27-07:00"
 		},
 		{
-			"checksumSHA1": "vel3vWCKiB8RYazJccM0wZOr5fg=",
+			"checksumSHA1": "13F07SOnQVP+S2UzpmcJL0HJ1r4=",
 			"path": "github.com/minio/minio-go",
-			"revision": "6807cf184b53db289809cb4a7e4bf17939d870c6",
-			"revisionTime": "2018-03-20T05:06:04Z"
+			"revision": "357b76680355ee4b8c459fb4092f1de20f10323f",
+			"revisionTime": "2018-04-24T19:06:20Z"
 		},
 		{
-			"checksumSHA1": "/Ly8Mgi802nx7zZiBq+H6p+ct8M=",
+			"checksumSHA1": "Qsj+6JPmJ8R5rFNQSHqRb8xAwOw=",
 			"path": "github.com/minio/minio-go/pkg/credentials",
-			"revision": "9127574e4039942f107fdd1882b8f727c8b40582",
-			"revisionTime": "2018-02-23T18:54:01Z"
+			"revision": "357b76680355ee4b8c459fb4092f1de20f10323f",
+			"revisionTime": "2018-04-24T19:06:20Z"
 		},
 		{
-			"checksumSHA1": "p21oRW905lv0UBfpAm5Vs6EBmB8=",
+			"checksumSHA1": "Md5pOKYfoKtrG7xNvs2FtiDPfDc=",
 			"path": "github.com/minio/minio-go/pkg/encrypt",
-			"revision": "bfac4536aea242ea4d05fb552d2a85f397a85369",
-			"revisionTime": "2018-03-12T23:14:54Z"
+			"revision": "357b76680355ee4b8c459fb4092f1de20f10323f",
+			"revisionTime": "2018-04-24T19:06:20Z"
 		},
 		{
 			"checksumSHA1": "Df4SG4ratsLn8yE9SkHcZiKhKRU=",
 			"path": "github.com/minio/minio-go/pkg/policy",
-			"revision": "bfac4536aea242ea4d05fb552d2a85f397a85369",
-			"revisionTime": "2018-03-12T23:14:54Z"
+			"revision": "357b76680355ee4b8c459fb4092f1de20f10323f",
+			"revisionTime": "2018-04-24T19:06:20Z"
 		},
 		{
 			"checksumSHA1": "bbWjcrOQsV57qK+BSsrNAsI+Q/o=",
 			"path": "github.com/minio/minio-go/pkg/s3signer",
-			"revision": "9127574e4039942f107fdd1882b8f727c8b40582",
-			"revisionTime": "2018-02-23T18:54:01Z"
+			"revision": "357b76680355ee4b8c459fb4092f1de20f10323f",
+			"revisionTime": "2018-04-24T19:06:20Z"
 		},
 		{
-			"checksumSHA1": "qftVikC9NYZ40HFUccTYg1p1M/Y=",
+			"checksumSHA1": "xrJThFwwkVrJdwd5iYFHqfx4wRY=",
 			"path": "github.com/minio/minio-go/pkg/s3utils",
-			"revision": "9127574e4039942f107fdd1882b8f727c8b40582",
-			"revisionTime": "2018-02-23T18:54:01Z"
+			"revision": "357b76680355ee4b8c459fb4092f1de20f10323f",
+			"revisionTime": "2018-04-24T19:06:20Z"
 		},
 		{
 			"checksumSHA1": "Wt8ej+rZXTdNBR9Xyw1eGo3Iq5o=",
 			"path": "github.com/minio/minio-go/pkg/set",
-			"revision": "9127574e4039942f107fdd1882b8f727c8b40582",
-			"revisionTime": "2018-02-23T18:54:01Z"
+			"revision": "357b76680355ee4b8c459fb4092f1de20f10323f",
+			"revisionTime": "2018-04-24T19:06:20Z"
 		},
 		{
 			"checksumSHA1": "vw2iLuyiXCNSAC9NLRZzvHi8Ii0=",
