@@ -148,7 +148,6 @@ mc ls play
 [2016-03-20 09:08:36 PDT]     0B s3git-test/
 ```
 
-
 Make a bucket
 `mb` command creates a new bucket on object storage.
 
