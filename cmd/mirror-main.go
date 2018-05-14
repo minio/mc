@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -337,13 +338,19 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					sourceURLFull = tmpSrcURL
 				}
 			}
+			eventPath := event.Path
 
-			sourceURL := newClientURL(event.Path)
-			aliasedPath := strings.Replace(event.Path, sourceURLFull, mj.sourceURL, -1)
+			if runtime.GOOS == "darwin" {
+				// Strip the prefixes in the event path. Happens in darwin OS only
+				eventPath = eventPath[strings.Index(eventPath, sourceURLFull):len(eventPath)]
+			}
 
-			// build target path, it is the relative of the event.Path with the sourceUrl
+			sourceURL := newClientURL(eventPath)
+			aliasedPath := strings.Replace(eventPath, sourceURLFull, mj.sourceURL, -1)
+
+			// build target path, it is the relative of the eventPath with the sourceUrl
 			// joined to the targetURL.
-			sourceSuffix := strings.TrimPrefix(event.Path, sourceURLFull)
+			sourceSuffix := strings.TrimPrefix(eventPath, sourceURLFull)
 			//Skip the object, if it matches the Exclude options provided
 			if matchExcludeOptions(mj.excludeOptions, sourceSuffix) {
 				continue
