@@ -149,7 +149,7 @@ mc ls play
 ```
 
 Make a bucket
-`mb` command creates a new bucket on object storage.
+`mb` command creates a new bucket.
 
 *Example:*
 ```sh
@@ -164,7 +164,6 @@ Copy Objects
 ```sh
 mc cp myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
-
 ```
 
 
