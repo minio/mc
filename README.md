@@ -147,6 +147,27 @@ mc ls play
 [2016-01-28 17:23:11 PST]     0B newbucket/
 [2016-03-20 09:08:36 PDT]     0B s3git-test/
 ```
+
+Make a bucket
+`mb` command creates a new bucket.
+
+*Example:*
+```sh
+mc mb play/mybucket
+Bucket created successfully `play/mybucket`.
+```
+
+Copy Objects
+`cp` command copies data from one or more sources to a target.
+
+*Example:*
+```sh
+mc cp myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
+
+
 <a name="everyday-use"></a>
 ## Everyday Use
 
