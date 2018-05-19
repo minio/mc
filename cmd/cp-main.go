@@ -315,50 +315,59 @@ func doCopySession(session *sessionV8) error {
 		pg = newAccounter(session.Header.TotalBytes)
 	}
 
+	var quitCh = make(chan struct{})
 	var statusCh = make(chan URLs)
 
 	parallel, queueCh := newParallelManager(statusCh, pg)
-	stopParallel := func() {
-		close(queueCh)
-		parallel.wait()
-	}
 
 	go func() {
-		// Loop through all urls.
-		for urlScanner.Scan() {
-			var cpURLs URLs
-			// Unmarshal copyURLs from each line.
-			json.Unmarshal([]byte(urlScanner.Text()), &cpURLs)
+		gracefulStop := func() {
+			close(queueCh)
+			parallel.wait()
+			close(statusCh)
+		}
 
-			// Save total count.
-			cpURLs.TotalCount = session.Header.TotalObjects
-
-			// Save totalSize.
-			cpURLs.TotalSize = session.Header.TotalBytes
-
-			// Check and handle storage class if passed in command line args
-			if _, ok := session.Header.CommandStringFlags["storage-class"]; ok {
-				if cpURLs.TargetContent.Metadata == nil {
-					cpURLs.TargetContent.Metadata = make(map[string]string)
+		for {
+			select {
+			case <-quitCh:
+				gracefulStop()
+				return
+			default:
+				if !urlScanner.Scan() {
+					// No more entries, quit immediately
+					gracefulStop()
+					return
 				}
-				cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = session.Header.CommandStringFlags["storage-class"]
-			}
+				var cpURLs URLs
+				// Unmarshal copyURLs from each line.
+				json.Unmarshal([]byte(urlScanner.Text()), &cpURLs)
 
-			// Verify if previously copied, notify progress bar.
-			if isCopied(cpURLs.SourceContent.URL.String()) {
-				queueCh <- func() URLs {
-					return doCopyFake(cpURLs, pg)
+				// Save total count.
+				cpURLs.TotalCount = session.Header.TotalObjects
+
+				// Save totalSize.
+				cpURLs.TotalSize = session.Header.TotalBytes
+
+				// Check and handle storage class if passed in command line args
+				if _, ok := session.Header.CommandStringFlags["storage-class"]; ok {
+					if cpURLs.TargetContent.Metadata == nil {
+						cpURLs.TargetContent.Metadata = make(map[string]string)
+					}
+					cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = session.Header.CommandStringFlags["storage-class"]
 				}
-			} else {
-				queueCh <- func() URLs {
-					return doCopy(ctx, cpURLs, pg)
+
+				// Verify if previously copied, notify progress bar.
+				if isCopied(cpURLs.SourceContent.URL.String()) {
+					queueCh <- func() URLs {
+						return doCopyFake(cpURLs, pg)
+					}
+				} else {
+					queueCh <- func() URLs {
+						return doCopy(ctx, cpURLs, pg)
+					}
 				}
 			}
 		}
-
-		stopParallel()
-		close(statusCh)
-
 	}()
 
 	var retErr error
@@ -367,7 +376,7 @@ loop:
 	for {
 		select {
 		case <-trapCh:
-			stopParallel()
+			quitCh <- struct{}{}
 			cancelCopy()
 			// Receive interrupt notification.
 			if !globalQuiet && !globalJSON {
