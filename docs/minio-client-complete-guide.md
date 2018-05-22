@@ -150,6 +150,18 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
+### Usage - Environment Configuration
+```sh
+MC_HOSTS_<alias> = https://<Access Key>:<Secret Key> @ <YOUR-S3-ENDPOINT> 
+```
+NOTE: This assumes the default API signature in the environment is utilized.
+
+### Example - Minio Cloud Storage
+Minio server displays URL, access and secret keys.
+```sh
+MC_HOSTS_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.minio.io:9000
+```
+
 ## 4. Test Your Setup
 `mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted Minio server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
