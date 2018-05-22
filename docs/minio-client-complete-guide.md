@@ -150,11 +150,11 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
-### Usage - Enviroment Configuration
+### Usage - Environment Configuration
 ```sh
 MC_HOSTS_<alias> = https://<Access Key>:<Secret Key> @ <YOUR-S3-ENDPOINT> 
 ```
-NOTE: This assumes the default API signature in the enviroment is utilized.
+NOTE: This assumes the default API signature in the environment is utilized.
 
 ### Example - Minio Cloud Storage
 Minio server displays URL, access and secret keys.
