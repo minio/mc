@@ -152,7 +152,7 @@ NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have
 
 ### Usage - Enviroment Configuration
 ```sh
-MC_HOSTS_<alias> = https://:<Access Key>:<Secret Key> @ <YOUR-S3-ENDPOINT> 
+MC_HOSTS_<alias> = https://<Access Key>:<Secret Key> @ <YOUR-S3-ENDPOINT> 
 ```
 NOTE: This assumes the default API signature in the enviroment is utilized.
 
