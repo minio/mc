@@ -98,10 +98,16 @@
 			"revisionTime": "2018-04-24T19:06:20Z"
 		},
 		{
-			"checksumSHA1": "vw2iLuyiXCNSAC9NLRZzvHi8Ii0=",
+			"checksumSHA1": "2wLbKKxHL9lwLPR7NU7zhSy305Q=",
 			"path": "github.com/minio/minio/pkg/madmin",
-			"revision": "fb96779a8a141e1012590841ef2cc7f0e4207eb5",
-			"revisionTime": "2018-02-16T01:45:57Z"
+			"revision": "092474d9f44d7c2e58ea3e7371372f6da19372eb",
+			"revisionTime": "2018-05-23T21:59:20Z"
+		},
+		{
+			"checksumSHA1": "flg07CqTxM9togozKRQiJugao4s=",
+			"path": "github.com/minio/minio/pkg/madmin/examples",
+			"revision": "7b274cb618deef62a8f5df2761f2d8431ed71ca7",
+			"revisionTime": "2018-05-22T01:58:01Z"
 		},
 		{
 			"checksumSHA1": "5r3V/rzpVqjJvzE/K5sR2LHEteM=",
