@@ -89,8 +89,7 @@ type xlBackend struct {
 
 // backendStatus represents the overall information of all backend storage types
 type backendStatus struct {
-	Total   int64       `json:"total"`
-	Free    int64       `json:"free"`
+	Used    uint64      `json:"used"`
 	Backend interface{} `json:"backend"`
 }
 
@@ -160,10 +159,7 @@ func (u infoMessage) String() (msg string) {
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalInputBytes),
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalOutputBytes))
 	// Get storage information
-	msg += fmt.Sprintf("  Storage : Total %s, Free %s\n",
-		humanize.IBytes(uint64(u.StorageInfo.Total)),
-		humanize.IBytes(uint64(u.StorageInfo.Free)),
-	)
+	msg += fmt.Sprintf("  Storage : Used %s\n", humanize.IBytes(u.StorageInfo.Used))
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
 		msg += fmt.Sprintf("    Disks : %s, %s\n", console.Colorize("Info", v.OnlineDisks),
 			console.Colorize("InfoFail", v.OfflineDisks))
@@ -237,8 +233,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 
 		// Construct the backend status
 		storageInfo := backendStatus{
-			Total: serverInfo.Data.StorageInfo.Total,
-			Free:  serverInfo.Data.StorageInfo.Free,
+			Used: serverInfo.Data.StorageInfo.Used,
 		}
 
 		if serverInfo.Data.StorageInfo.Backend.Type == madmin.Erasure {
