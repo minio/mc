@@ -32,6 +32,9 @@
 #
 ################################################################################
 
+# Force bytewise sorting for CLI tools
+LANG=C
+
 if [ -n "$MINT_MODE" ]; then
     if [ -z "${MINT_DATA_DIR+x}" ]; then
         echo "MINT_DATA_DIR not defined"
