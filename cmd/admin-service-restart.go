@@ -28,7 +28,7 @@ import (
 
 var adminServiceRestartCmd = cli.Command{
 	Name:   "restart",
-	Usage:  "Restart a minio server",
+	Usage:  "Restart Minio server",
 	Action: mainAdminServiceRestart,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
@@ -42,7 +42,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Restart a Minio server represented by its alias 'play'.
+    1. Restart Minio server represented by its alias 'play'.
        $ {{.HelpName}} play/
 
 `,

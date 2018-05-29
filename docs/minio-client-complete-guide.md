@@ -17,6 +17,7 @@ rm       Remove files and objects.
 events   Manage object notifications.
 watch    Watch for file and object events.
 policy   Manage anonymous access to objects.
+admin    Manage Minio servers
 session  Manage saved sessions for cp command.
 config   Manage mc configuration file.
 update   Check for a new software update.
@@ -115,7 +116,7 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
 ```
 
-Alias is simply a short name to you cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
+Alias is simply a short name to your cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
 
 ### Example - Minio Cloud Storage
 Minio server displays URL, access and secret keys.
@@ -220,7 +221,7 @@ mc --json ls play
 ```
 
 ### Option [--no-color]
-This option disables the color theme. It useful for dumb terminals.
+This option disables the color theme. It is useful for dumb terminals.
 
 ### Option [--quiet]
 Quiet option suppress chatty console output.
@@ -266,6 +267,7 @@ mc ls play
 [2016-03-28 21:53:49 IST]     0B guestbucket/
 [2016-04-08 20:58:18 IST]     0B mybucket/
 ```
+
 <a name="mb"></a>
 ### Command `mb` - Make a Bucket
 `mb` command creates a new bucket on an object storage. On a filesystem, it behaves like `mkdir -p` command. Bucket is equivalent of a drive or mount point in filesystems and should not be treated as folders. Minio does not place any limits on the number of buckets created per user.
@@ -298,7 +300,6 @@ Bucket created successfully ‘s3/mybucket’.
 ```
 
 <a name="cat"></a>
-
 ### Command `cat` - Concatenate Objects
 `cat` command concatenates contents of a file or object to another. You may also use it to simply display the contents to stdout
 
@@ -327,6 +328,7 @@ Hello Minio!!
 mc cat --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myencryptedobject.txt
 Hello Minio!!
 ```
+
 <a name="pipe"></a>
 ### Command `pipe` - Pipe to Object
 `pipe` command copies contents of stdin to a target. When no target is specified, it writes to stdout.
@@ -395,6 +397,7 @@ mc cp --encrypt-key 'myminio1/mybucket=32byteslongsecretkeymustgenerate , mymini
 encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 Notice that two different aliases myminio1 and myminio2 are used for the same endpoint to provide the old secretkey and the newly rotated key.
+
 <a name="rm"></a>
 ### Command `rm` - Remove Buckets and Objects
 Use `rm` command to remove file or bucket
@@ -730,6 +733,10 @@ Remove any bucket policy for *mybucket/myphotos/2020/* sub-directory.
 mc policy none play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 ```
+
+<a name="admin"></a>
+### Command `admin` - Manage Minio servers
+Please visit [here](./minio-admin-complete-guide.md) for a more comprehensive admin guide.
 
 <a name="session"></a>
 ### Command `session` - Manage Sessions
