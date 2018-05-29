@@ -70,15 +70,6 @@ chmod +x mc
 mc.exe --help
 ```
 
-### 快照版(GNU/Linux)
-您可以安装最新的`minio-client`[快照版](https://snapcraft.io)，并协助我们验证在master分支的最新修改，这是[所有支持的linux发行版](https://snapcraft.io/docs/core/install) ，以下命令可安装快照版：
-
-```sh
-sudo snap install minio-client --edge --devmode
-```
-
-当一个新的版本发布时，你都会自动更新。
-
 ### 通过源码安装
 通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从[minio-client](https://minio.io/downloads/#minio-client)下载官方版本。
 
@@ -182,7 +173,7 @@ alias find='mc find'
 ### 参数 [--debug]
 Debug参数开启控制台输出debug信息。
 
-*示例：输出`ls`命令的详细debug信息。* 
+*示例：输出`ls`命令的详细debug信息。*
 
 ```sh
 mc --debug ls play
@@ -277,7 +268,7 @@ mc ls play
 <a name="mb"></a>
 ### `mb`命令 - 创建存储桶
 `mb`命令在对象存储上创建一个新的存储桶。在文件系统，它就和`mkdir -p`命令是一样的。存储桶相当于文件系统中的磁盘或挂载点，不应视为文件夹。Minio对每个​​用户创建的存储桶数量没有限制。
-在Amazon S3上，每个帐户被限制为100个存储桶。有关更多信息，请参阅[S3上的存储桶限制和限制](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) 。   
+在Amazon S3上，每个帐户被限制为100个存储桶。有关更多信息，请参阅[S3上的存储桶限制和限制](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) 。
 
 ```sh
 用法：
@@ -286,7 +277,7 @@ mc ls play
 FLAGS:
   --help, -h                       显示帮助。
   --region "us-east-1"		   指定存储桶的region，默认是‘us-east-1’.
-  
+
 ```
 
 *示例：在https://play.minio.io:9000上创建一个名叫"mybucket"的存储桶。*
@@ -341,7 +332,7 @@ mysqldump -u root -p ******* accountsdb | mc pipe s3/ferenginar/backups/accounts
 ```sh
 用法：
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
-   
+
 FLAGS:
   --help, -h                       显示帮助。
   --recursive, -r		   递归拷贝。
@@ -402,7 +393,7 @@ mc rm --force --older-than=1 play/mybucket/oldsongs
 
 <a name="share"></a>
 ### `share`命令 - 共享
-`share`命令安全地授予上传或下载的权限。此访问只是临时的，与远程用户和应用程序共享也是安全的。如果你想授予永久访问权限，你可以看看`mc policy`命令。 
+`share`命令安全地授予上传或下载的权限。此访问只是临时的，与远程用户和应用程序共享也是安全的。如果你想授予永久访问权限，你可以看看`mc policy`命令。
 
 生成的网址中含有编码后的访问认证信息，任何企图篡改URL的行为都会使访问无效。想了解这种机制是如何工作的，请参考[Pre-Signed URL](http://docs.aws.amazon.com/AmazonS3/latest/dev/ShareObjectPreSignedURL.html)技术。
 
@@ -492,7 +483,7 @@ FLAGS:
   --fake			   模拟一个假的操作。
   --watch, -w                      监听改变并执行镜像操作。
   --remove			   删除目标上的外部的文件。
-``` 
+```
 
 *示例： 将一个本地文件夹镜像到https://play.minio.io:9000上的'mybucket'存储桶。*
 
@@ -644,7 +635,7 @@ PERMISSION:
 
 FLAGS:
   --help, -h                       显示帮助。
-```   
+```
 
 *示例： 显示当前匿名存储桶策略*
 
@@ -702,7 +693,7 @@ ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
 *示例： 恢复一个之前保存的会话*
 
 ```sh
-mc session resume IXWKjpQM 
+mc session resume IXWKjpQM
 ...assets.go: 1.68 KB / 1.68 KB  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 784 B/s 2s
 ```
 
@@ -715,7 +706,7 @@ Session ‘ApwAxSwa’ cleared successfully.
 
 <a name="config"></a>
 ### `config`命令 - 管理配置文件
-`config host`命令提供了一个方便地管理`~/.mc/config.json`配置文件中的主机信息的方式，你也可以用文本编辑器手动修改这个配置文件。 
+`config host`命令提供了一个方便地管理`~/.mc/config.json`配置文件中的主机信息的方式，你也可以用文本编辑器手动修改这个配置文件。
 
 ```sh
 用法：
@@ -774,9 +765,9 @@ FLAGS:
   --json       使用JSON格式输出。
   --help, -h   显示帮助。
 ```
- 
+
  *示例： 输出mc版本。*
- 
+
 ```sh
 mc version
 Version: 2016-04-01T00:22:11Z
