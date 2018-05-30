@@ -1,5 +1,5 @@
 # Minio客户端快速入门指南
-[![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io) [![Go Report Card](https://goreportcard.com/badge/minio/mc)](https://goreportcard.com/report/minio/mc) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/mc.svg?maxAge=604800)](https://hub.docker.com/r/minio/mc/) [![Snap Status](https://build.snapcraft.io/badge/minio/mc.svg)](https://build.snapcraft.io/user/minio/mc)
+[![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io) [![Go Report Card](https://goreportcard.com/badge/minio/mc)](https://goreportcard.com/report/minio/mc) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/mc.svg?maxAge=604800)](https://hub.docker.com/r/minio/mc/)
 
 Minio Client (mc)为ls，cat，cp，mirror，diff，find等UNIX命令提供了一种替代方案。它支持文件系统和兼容Amazon S3的云存储服务（AWS Signature v2和v4）。
 
@@ -74,15 +74,6 @@ chmod +x mc
 ```sh
 mc.exe --help
 ```
-
-### 快照
-您可以安装最新的`minio-client`[快照版](https://snapcraft.io)，并协助我们验证在master分支的最新修改，这是[所有支持的linux发行版](https://snapcraft.io/docs/core/install) ，以下命令可安装快照版：
-
-```sh
-sudo snap install minio-client --edge --devmode
-```
-
-当一个新的版本发布时，你都会自动更新。
 
 ## 通过源码安装
 通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从https://minio.io/downloads/#minio-client下载官方版本。

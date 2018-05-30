@@ -71,15 +71,6 @@ chmod +x mc
 mc.exe --help
 ```
 
-### Snap (GNU/Linux)
-You can install the latest `minio-client` [snap](https://snapcraft.io), and help testing the most recent changes of the master branch in [all the supported Linux distros](https://snapcraft.io/docs/core/install) with:
-
-```sh
-sudo snap install minio-client --edge --devmode
-```
-
-Every time a new version is pushed to the store, you will get it updated automatically.
-
 ### Install from Source
 Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://minio.io/downloads/#minio-client.
 
@@ -150,16 +141,14 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
-### Usage - Environment Configuration
+### Specify AccessKey and SecretKey through environment variables
 ```sh
-MC_HOSTS_<alias> = https://<Access Key>:<Secret Key> @ <YOUR-S3-ENDPOINT> 
+export MC_HOSTS_<alias> = https://<Access Key>:<Secret Key> @ <YOUR-S3-ENDPOINT>
 ```
-NOTE: This assumes the default API signature in the environment is utilized.
-
-### Example - Minio Cloud Storage
-Minio server displays URL, access and secret keys.
+Example:
 ```sh
-MC_HOSTS_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.minio.io:9000
+export MC_HOSTS_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.minio.io:9000
+mc ls myalias
 ```
 
 ## 4. Test Your Setup
@@ -193,9 +182,9 @@ alias find='mc find'
 ## 6. Global Options
 
 ### Option [--debug]
-Debug option enables debug output to console. 
+Debug option enables debug output to console.
 
-*Example: Display verbose debug output for `ls` command.* 
+*Example: Display verbose debug output for `ls` command.*
 
 ```sh
 mc --debug ls play
@@ -289,8 +278,8 @@ mc ls play
 ```
 <a name="mb"></a>
 ### Command `mb` - Make a Bucket
-`mb` command creates a new bucket on an object storage. On a filesystem, it behaves like `mkdir -p` command. Bucket is equivalent of a drive or mount point in filesystems and should not be treated as folders. Minio does not place any limits on the number of buckets created per user. 
-On Amazon S3, each account is limited to 100 buckets. Please refer to [Buckets Restrictions and Limitations on S3](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) for more information.  
+`mb` command creates a new bucket on an object storage. On a filesystem, it behaves like `mkdir -p` command. Bucket is equivalent of a drive or mount point in filesystems and should not be treated as folders. Minio does not place any limits on the number of buckets created per user.
+On Amazon S3, each account is limited to 100 buckets. Please refer to [Buckets Restrictions and Limitations on S3](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) for more information.
 
 ```sh
 USAGE:
@@ -377,7 +366,7 @@ mysqldump -u root -p ******* accountsdb | mc pipe s3/ferenginar/backups/accounts
 ```sh
 USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
-   
+
 FLAGS:
   --recursive, -r                    Copy recursively.
   --storage-class value, -sc value   Set storage class for object.
@@ -570,7 +559,7 @@ FLAGS:
 
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:                    List of comma delimited prefix=secret values
-``` 
+```
 
 *Example: Mirror a local directory to 'mybucket' on https://play.minio.io:9000.*
 
@@ -666,7 +655,7 @@ mc watch ~/Photos
 
 <a name="events"></a>
 ### Command `events` - Manage bucket event notification.
-``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. Minio configuration provides more details on how these services can be configured. 
+``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. Minio configuration provides more details on how these services can be configured.
 
 ```sh
 USAGE:
@@ -723,7 +712,7 @@ PERMISSION:
 
 FLAGS:
   --help, -h                       Show help.
-```   
+```
 
 *Example: Show current anonymous bucket policy*
 
@@ -781,7 +770,7 @@ ApwAxSwa -> [2016-04-08 01:49:19 IST] mirror miniodoc/ play/mybucket
 *Example: Resume a previously saved session.*
 
 ```sh
-mc session resume IXWKjpQM 
+mc session resume IXWKjpQM
 ...assets.go: 1.68 KB / 1.68 KB  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 784 B/s 2s
 ```
 
@@ -794,7 +783,7 @@ Session ‘ApwAxSwa’ cleared successfully.
 
 <a name="config"></a>
 ### Command `config` - Manage Config File
-`config host` command provides a convenient way to manage host entries in your config file `~/.mc/config.json`. It is also OK to edit the config file manually using a text editor.  
+`config host` command provides a convenient way to manage host entries in your config file `~/.mc/config.json`. It is also OK to edit the config file manually using a text editor.
 
 ```sh
 USAGE:
@@ -853,9 +842,9 @@ FLAGS:
   --json       Enable JSON formatted output.
   --help, -h   Show help.
 ```
- 
+
  *Example: Print version of mc.*
- 
+
 ```sh
 mc version
 Version: 2016-04-01T00:22:11Z
@@ -896,14 +885,14 @@ Type      : folder
 ```sh
 mc stat play/mybucket/myobject --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1"
 Name      : myobject
-Date      : 2018-03-02 11:47:13 PST 
-Size      : 132B   
-ETag      : d03ba22cd78282b7aef705bf31b8cded 
-Type      : file 
+Date      : 2018-03-02 11:47:13 PST
+Size      : 132B
+ETag      : d03ba22cd78282b7aef705bf31b8cded
+Type      : file
 Metadata  :
-  Content-Type                                   : application/octet-stream 
-  X-Amz-Server-Side-Encryption-Customer-Key-Md5  : 4xSRdYsabg+s2nlsHKhgnw== 
-  X-Amz-Server-Side-Encryption-Customer-Algorithm: AES256 
+  Content-Type                                   : application/octet-stream
+  X-Amz-Server-Side-Encryption-Customer-Key-Md5  : 4xSRdYsabg+s2nlsHKhgnw==
+  X-Amz-Server-Side-Encryption-Customer-Algorithm: AES256
 ```
 
 *Example: Display information on objects contained in the bucket named "mybucket" on https://play.minio.io:9000.*
