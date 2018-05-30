@@ -223,13 +223,6 @@ func getAliasedPath(ctx *findContext, path string) string {
 }
 
 func find(ctx *findContext, fileContent contentMessage) {
-	// Maxdepth can modify the filepath to end as a directory prefix
-	// to be consistent with the find behavior, we wont list directories
-	// so any paths which end with a separator are ignored.
-	if strings.HasSuffix(fileContent.Key, string(ctx.clnt.GetURL().Separator)) {
-		return
-	}
-
 	// Match the incoming content, didn't match return.
 	if !matchFind(ctx, fileContent) {
 		return
@@ -253,6 +246,8 @@ func doFind(ctx *findContext) error {
 	// for all I/O events until cancelled by user, if watch is not enabled
 	// following defer is a no-op.
 	defer watchFind(ctx)
+
+	var prevKeyName string
 
 	// iterate over all content which is within the given directory
 	for content := range ctx.clnt.List(true, false, DirNone) {
@@ -279,13 +274,30 @@ func doFind(ctx *findContext) error {
 			continue
 		}
 
-		// Executes all the find functionalities.
-		find(ctx, contentMessage{
-			Key:  getAliasedPath(ctx, content.URL.String()),
+		fileKeyName := getAliasedPath(ctx, content.URL.String())
+		fileContent := contentMessage{
+			Key:  fileKeyName,
 			Time: content.Time.Local(),
 			Size: content.Size,
-		})
+		}
 
+		// Match the incoming content, didn't match return.
+		if !matchFind(ctx, fileContent) || prevKeyName == fileKeyName {
+			continue
+		} // For all matching content
+
+		prevKeyName = fileKeyName
+
+		// proceed to either exec, format the output string.
+		if ctx.execCmd != "" {
+			execFind(stringsReplace(ctx.execCmd, fileContent))
+			continue
+		}
+		if ctx.printFmt != "" {
+			fileContent.Key = stringsReplace(ctx.printFmt, fileContent)
+		}
+
+		printMsg(findMessage{fileContent})
 	}
 
 	// Success, notice watch will execute in defer only if enabled and this call
