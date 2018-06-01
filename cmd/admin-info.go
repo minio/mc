@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016,2017,2018 Minio, Inc.
+ * Minio Client (C) 2016, 2017, 2018 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ var (
 
 var adminInfoCmd = cli.Command{
 	Name:   "info",
-	Usage:  "Get Minio server information",
+	Usage:  "Display Minio server information",
 	Action: mainAdminInfo,
 	Before: setGlobalsFromContext,
 	Flags:  append(adminInfoFlags, globalFlags...),
@@ -159,9 +159,9 @@ func (u infoMessage) String() (msg string) {
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalInputBytes),
 		humanize.IBytes(u.ServerInfo.ConnStats.TotalOutputBytes))
 	// Get storage information
-	msg += fmt.Sprintf("  Storage : Used %s\n", humanize.IBytes(u.StorageInfo.Used))
+	msg += fmt.Sprintf("  Storage : Used %s", humanize.IBytes(u.StorageInfo.Used))
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
-		msg += fmt.Sprintf("    Disks : %s, %s\n", console.Colorize("Info", v.OnlineDisks),
+		msg += fmt.Sprintf("\n    Disks : %s, %s\n", console.Colorize("Info", v.OnlineDisks),
 			console.Colorize("InfoFail", v.OfflineDisks))
 	}
 	return

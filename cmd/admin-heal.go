@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2017-2018 Minio, Inc.
+ * Minio Client (C) 2017, 2018 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ var adminHealFlags = []cli.Flag{
 
 var adminHealCmd = cli.Command{
 	Name:            "heal",
-	Usage:           "Start an object heal operation",
+	Usage:           "Heal disks, buckets and objects on Minio server",
 	Action:          mainAdminHeal,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminHealFlags, globalFlags...),

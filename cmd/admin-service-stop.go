@@ -28,7 +28,7 @@ import (
 
 var adminServiceStopCmd = cli.Command{
 	Name:   "stop",
-	Usage:  "Stop a minio server",
+	Usage:  "Stop Minio server",
 	Action: mainAdminServiceStop,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
@@ -42,7 +42,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Stop a Minio server represented by its alias 'play'.
+    1. Stop Minio server represented by its alias 'play'.
        $ {{.HelpName}} play/
 
 `,
