@@ -736,7 +736,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 
 <a name="admin"></a>
 ### Command `admin` - Manage Minio servers
-Please visit [here](./minio-admin-complete-guide.md) for a more comprehensive admin guide.
+Please visit [here](https://docs.minio.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
 
 <a name="session"></a>
 ### Command `session` - Manage Sessions
