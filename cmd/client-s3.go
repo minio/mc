@@ -719,14 +719,6 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 		for content := range contentCh {
 			// Convert content.URL.Path to objectName for objectsCh.
 			bucket, objectName := c.splitPath(content.URL.Path)
-			// Currently only supported hosts with virtual style
-			// are Amazon S3 and Google Cloud Storage.
-			// which also support objects with "/" as delimiter.
-			// Skip trimming "/" and let the server reply error
-			// if any.
-			if !c.virtualStyle {
-				objectName = strings.TrimSuffix(objectName, string(c.targetURL.Separator))
-			}
 			// Init cContentCh channel and objectsCh the first time.
 			if prevBucket == "" {
 				cContentCh = make(chan *clientContent)
@@ -931,16 +923,23 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sseKey string) (*clientC
 		return &bucketMetadata, nil
 	}
 
-	// Remove trailing slashes needed for the following ListObjects call.
-	// In addition, Stat() will be as smart as the client fs version and will
-	// facilitate the work of the upper layers
-	object = strings.TrimRight(object, string(c.targetURL.Separator))
+	// The following code tries to calculate if a given prefix/object does really exist
+	// using minio-go listing API. The following inputs are supported:
+	//     - /path/to/existing/object
+	//     - /path/to/existing_directory
+	//     - /path/to/existing_directory/
+	//     - /path/to/empty_directory
+	//     - /path/to/empty_directory/
+
 	nonRecursive := false
 	objectMetadata := &clientContent{}
 
+	// Prefix to pass to minio-go listing in order to fetch a given object/directory
+	prefix := strings.TrimRight(object, string(c.targetURL.Separator))
+
 	// If the request is for incomplete upload stat, handle it here.
 	if isIncomplete {
-		for objectMultipartInfo := range c.api.ListIncompleteUploads(bucket, object, nonRecursive, nil) {
+		for objectMultipartInfo := range c.api.ListIncompleteUploads(bucket, prefix, nonRecursive, nil) {
 			if objectMultipartInfo.Err != nil {
 				return nil, probe.NewError(objectMultipartInfo.Err)
 			}
@@ -966,12 +965,14 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sseKey string) (*clientC
 		}
 		return nil, probe.NewError(ObjectMissing{})
 	}
+
 	opts := minio.StatObjectOptions{}
 	if sseKey != "" {
 		key, _ := encrypt.NewSSEC([]byte(sseKey))
 		opts.ServerSideEncryption = key
 	}
-	for objectStat := range c.listObjectWrapper(bucket, object, nonRecursive, nil) {
+
+	for objectStat := range c.listObjectWrapper(bucket, prefix, nonRecursive, nil) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
@@ -1719,10 +1720,6 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
-				continue
-			}
-			// Ignore S3 empty directories
-			if object.Size == 0 && strings.HasSuffix(object.Key, "/") {
 				continue
 			}
 			content := &clientContent{}

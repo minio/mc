@@ -90,22 +90,16 @@ func parseContent(c *clientContent) contentMessage {
 
 // get content key
 func getKey(c *clientContent) string {
-	switch {
+	sep := "/"
+
 	// for windows make sure to print in 'windows' specific style.
-	case runtime.GOOS == "windows":
+	if runtime.GOOS == "windows" {
 		c.URL.Path = strings.Replace(c.URL.Path, "/", "\\", -1)
-		c.URL.Path = strings.TrimSuffix(c.URL.Path, "\\")
-	default:
-		c.URL.Path = strings.TrimSuffix(c.URL.Path, "/")
+		sep = "\\"
 	}
-	if c.Type.IsDir() {
-		switch {
-		// for windows make sure to print in 'windows' specific style.
-		case runtime.GOOS == "windows":
-			return fmt.Sprintf("%s\\", c.URL.Path)
-		default:
-			return fmt.Sprintf("%s/", c.URL.Path)
-		}
+
+	if c.Type.IsDir() && !strings.HasSuffix(c.URL.Path, sep) {
+		return fmt.Sprintf("%s%s", c.URL.Path, sep)
 	}
 	return c.URL.Path
 }
