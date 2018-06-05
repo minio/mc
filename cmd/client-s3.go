@@ -1428,21 +1428,12 @@ func (c *s3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *client
 }
 
 // Returns new path by joining path segments with URL path separator.
-func (c *s3Client) joinPath(segments ...string) string {
-	var retPath string
-	pathSep := string(c.targetURL.Separator)
-
-	for _, segment := range segments {
-		segment = strings.TrimPrefix(segment, pathSep)
-
-		if !strings.HasSuffix(retPath, pathSep) {
-			retPath += pathSep
-		}
-
-		retPath += segment
+func (c *s3Client) joinPath(bucket string, objects ...string) string {
+	p := string(c.targetURL.Separator) + bucket
+	for _, o := range objects {
+		p += string(c.targetURL.Separator) + o
 	}
-
-	return retPath
+	return p
 }
 
 // Convert objectInfo to clientContent
