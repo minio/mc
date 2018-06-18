@@ -89,7 +89,7 @@ pkg-list:
 # Builds minio and installs it to $GOPATH/bin.
 install: build
 	@echo "Installing mc binary to '$(GOPATH)/bin/mc'"
-	@cp $(PWD)/mc $(GOPATH)/bin/mc
+	@mkdir -p $(GOPATH)/bin && cp $(PWD)/mc $(GOPATH)/bin/mc
 	@echo "Installation successful. To learn more, try \"mc --help\"."
 
 clean:
