@@ -457,7 +457,7 @@ Removing `play/mybucket`.
 *Example: Remove all uploaded incomplete files for an object.*
 
 ```sh
-mc rm --incomplete --recursive --force play/mybucket/myobject.1gig
+mc rm --incomplete play/mybucket/myobject.1gig
 Removing `play/mybucket/myobject.1gig`.
 ```
 *Example: Remove object and output a message only if the object is created older than one day. Otherwise, the command stays quiet and nothing is printed out.*
