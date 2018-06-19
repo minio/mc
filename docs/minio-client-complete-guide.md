@@ -463,9 +463,10 @@ Removing `play/mybucket/myobject.1gig`.
 *Example: Remove object and output a message only if the object is created older than one day. Otherwise, the command stays quiet and nothing is printed out.*
 
 ```sh
-mc rm --force --older-than=1 play/mybucket/myobject.txt
-Removing `play/mybucket/myobject.txt`.
-
+mc rm -r --force --older-than=1 myminio/mybucket
+Removing `myminio/mybucket/dayOld1.txt`.
+Removing `myminio/mybucket/dayOld2.txt`.
+Removing `myminio/mybucket/dayOld3.txt`.
 ```
 
 <a name="share"></a>
