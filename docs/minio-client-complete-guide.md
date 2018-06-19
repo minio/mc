@@ -416,17 +416,18 @@ USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h                       Show help.
-  --recursive, -r	       	   Remove recursively.
-  --force			   Force a dangerous remove operation.
-  --prefix			   Remove objects matching this prefix.
-  --incomplete, -I		   Remove an incomplete upload(s).
-  --fake			   Perform a fake remove operation.
-  --stdin			   Read object list from STDIN.
-  --older-than value               Remove objects older than N days. (default: 0)
-  --encrypt-key value              Encrypt/Decrypt objects (using server-side encryption)
+  --help, -h            Show help.
+  --recursive, -r       Remove recursively.
+  --force               Force a dangerous remove operation.
+  --dangerous           Allow site-wide removal of buckets and objects.
+  --incomplete, -I      Remove an incomplete upload(s).
+  --fake                Perform a fake remove operation.
+  --stdin               Read object list from STDIN.
+  --older-than value    Remove objects older than N days. (default: 0)
+  --newer-than value    Remove objects newer than N days. (default: 0)
+  --encrypt-key value   Encrypt/Decrypt objects (using server-side encryption)
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
+    MC_ENCRYPT_KEY:     List of comma delimited prefix=secret values
 
 
 ```
@@ -435,34 +436,37 @@ ENVIRONMENT VARIABLES:
 
 ```sh
 mc rm play/mybucket/myobject.txt
-Removed ‘play/mybucket/myobject.txt’.
+Removing `play/mybucket/myobject.txt`.
 ```
 *Example: Remove an encrypted object.*
 
 ```sh
 mc rm --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myobject.txt
-Removed ‘play/mybucket/myobject.txt’.
+Removing `play/mybucket/myobject.txt`.
 ```
 
 *Example: Recursively remove a bucket and all its contents. Since this is a dangerous operation, you must explicitly pass `--force` option.*
 
 ```sh
-mc rm --recursive --force play/myobject
-Removed ‘play/myobject/newfile.txt’.
-Removed 'play/myobject/otherobject.txt’.
+mc rm --recursive --force play/mybucket
+Removing `play/mybucket/newfile.txt`.
+Removing `play/mybucket/otherobject.txt`.
+Removing `play/mybucket`.
 ```
 
-*Example: Remove all incompletely uploaded files from `mybucket`.*
+*Example: Remove all uploaded incomplete files for an object.*
 
 ```sh
-mc rm  --incomplete --recursive --force play/mybucket
-Removed ‘play/mybucket/mydvd.iso’.
-Removed 'play/mybucket/backup.tgz’.
+mc rm --incomplete play/mybucket/myobject.1gig
+Removing `play/mybucket/myobject.1gig`.
 ```
-*Example: Remove object only if its created older than one day.*
+*Example: Remove object and output a message only if the object is created older than one day. Otherwise, the command stays quiet and nothing is printed out.*
 
 ```sh
-mc rm --force --older-than=1 play/mybucket/oldsongs
+mc rm -r --force --older-than=1 myminio/mybucket
+Removing `myminio/mybucket/dayOld1.txt`.
+Removing `myminio/mybucket/dayOld2.txt`.
+Removing `myminio/mybucket/dayOld3.txt`.
 ```
 
 <a name="share"></a>
