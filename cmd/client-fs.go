@@ -212,21 +212,27 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 	// For filesystem this is a redundant information.
 
 	// Extract dir name.
-	objectDir, _ := filepath.Split(f.PathURL.Path)
-	objectPath := f.PathURL.Path
+	objectDir, objectName := filepath.Split(f.PathURL.Path)
 
-	avoidResumeUpload := isStreamFile(objectPath)
-	// Write to a temporary file "object.part.minio" before commit.
-	objectPartPath := objectPath + partSuffix
-	if avoidResumeUpload {
-		objectPartPath = objectPath
-	}
 	if objectDir != "" {
 		// Create any missing top level directories.
 		if e := os.MkdirAll(objectDir, 0777); e != nil {
 			err := f.toClientError(e, f.PathURL.Path)
 			return 0, err.Trace(f.PathURL.Path)
 		}
+
+		// Check if object name is empty, it must be an empty directory
+		if objectName == "" {
+			return 0, nil
+		}
+	}
+
+	objectPath := f.PathURL.Path
+	avoidResumeUpload := isStreamFile(objectPath)
+	// Write to a temporary file "object.part.minio" before commit.
+	objectPartPath := objectPath + partSuffix
+	if avoidResumeUpload {
+		objectPartPath = objectPath
 	}
 
 	// If exists, open in append mode. If not create it the part file.
