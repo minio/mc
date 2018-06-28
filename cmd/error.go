@@ -41,7 +41,7 @@ type errorMessage struct {
 }
 
 // fatalIf wrapper function which takes error and selectively prints stack frames if available on debug
-func fatalIf(err *probe.Error, msg string) {
+func fatalIf(err *probe.Error, msg string, data ...interface{}) {
 	if err == nil {
 		return
 	}
@@ -71,6 +71,7 @@ func fatalIf(err *probe.Error, msg string) {
 		console.Println(string(json))
 		console.Fatalln()
 	}
+	msg = fmt.Sprintf(msg, data...)
 	if !globalDebug {
 		console.Fatalln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
 	}
@@ -87,13 +88,13 @@ func exitStatus(status int) error {
 }
 
 // errorIf synonymous with fatalIf but doesn't exit on error != nil
-func errorIf(err *probe.Error, msg string) {
+func errorIf(err *probe.Error, msg string, data ...interface{}) {
 	if err == nil {
 		return
 	}
 	if globalJSON {
 		errorMsg := errorMessage{
-			Message: msg,
+			Message: fmt.Sprintf(msg, data...),
 			Type:    "error",
 			Cause: causeMessage{
 				Message: err.ToGoError().Error(),
@@ -117,6 +118,7 @@ func errorIf(err *probe.Error, msg string) {
 		console.Println(string(json))
 		return
 	}
+	msg = fmt.Sprintf(msg, data...)
 	if !globalDebug {
 		console.Errorln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
 		return

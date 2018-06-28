@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -795,9 +796,21 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 // MakeBucket - make a new bucket.
 func (c *s3Client) MakeBucket(region string, ignoreExisting bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+
 	if object != "" {
+		if strings.HasSuffix(object, "/") {
+			_, e := c.api.PutObject(bucket, object, bytes.NewReader([]byte("")), 0, minio.PutObjectOptions{})
+			if e != nil {
+				return probe.NewError(e)
+			}
+			return nil
+		}
 		return probe.NewError(BucketNameTopLevel{})
 	}
+
 	e := c.api.MakeBucket(bucket, region)
 	if e != nil {
 		// Ignore bucket already existing error when ignoreExisting flag is enabled
