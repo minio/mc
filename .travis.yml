@@ -13,16 +13,6 @@ matrix:
         - diff -au <(gofmt -d *.go) <(printf "")
         - diff -au <(gofmt -d cmd) <(printf "")
         - diff -au <(gofmt -d pkg) <(printf "")
-    - os: linux-ppc64le
-      env:
-        - ARCH=ppc64le
-      go: 1.10.1
-      script:
-        - make test
-        - make coverage
-        - diff -au <(gofmt -d *.go) <(printf "")
-        - diff -au <(gofmt -d cmd) <(printf "")
-        - diff -au <(gofmt -d pkg) <(printf "")
 
 after_success:
 - bash <(curl -s https://codecov.io/bash)
