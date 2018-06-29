@@ -96,7 +96,7 @@ func (e ObjectOnGlacier) Error() string {
 type BucketNameTopLevel struct{}
 
 func (e BucketNameTopLevel) Error() string {
-	return "Buckets can only be created at the top level."
+	return "Buckets or prefixes can only be created with `/` suffix."
 }
 
 // GenericFileError - generic file error.

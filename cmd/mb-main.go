@@ -115,8 +115,7 @@ func mainMakeBucket(ctx *cli.Context) error {
 	ignoreExisting := ctx.Bool("p")
 
 	var cErr error
-	for i := range ctx.Args() {
-		targetURL := ctx.Args().Get(i)
+	for _, targetURL := range ctx.Args() {
 		// Instantiate client for URL.
 		clnt, err := newClient(targetURL)
 		if err != nil {
@@ -128,7 +127,14 @@ func mainMakeBucket(ctx *cli.Context) error {
 		// Make bucket.
 		err = clnt.MakeBucket(region, ignoreExisting)
 		if err != nil {
-			errorIf(err.Trace(targetURL), "Unable to make bucket `"+targetURL+"`.")
+			switch err.ToGoError().(type) {
+			case BucketNameEmpty:
+				errorIf(err.Trace(targetURL), "Unable to make bucket, please use `mc mb %s/<your-bucket-name>`.", targetURL)
+			case BucketNameTopLevel:
+				errorIf(err.Trace(targetURL), "Unable to make prefix, please use `mc mb %s/`.", targetURL)
+			default:
+				errorIf(err.Trace(targetURL), "Unable to make bucket `"+targetURL+"`.")
+			}
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
