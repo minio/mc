@@ -989,7 +989,21 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sseKey string) (*clientC
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
-		if objectStat.Key == object {
+		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
+			objectMetadata.URL = *c.targetURL
+			objectMetadata.Type = os.ModeDir
+
+			if isFetchMeta {
+				stat, err := c.getObjectStat(bucket, object, opts)
+				if err != nil {
+					return nil, err
+				}
+				objectMetadata.ETag = stat.ETag
+				objectMetadata.Metadata = stat.Metadata
+				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
+			}
+			return objectMetadata, nil
+		} else if objectStat.Key == object {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Time = objectStat.LastModified
 			objectMetadata.Size = objectStat.Size
@@ -1002,22 +1016,6 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sseKey string) (*clientC
 				if err != nil {
 					return nil, err
 				}
-				objectMetadata.Metadata = stat.Metadata
-				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
-			}
-			return objectMetadata, nil
-		}
-
-		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
-			objectMetadata.URL = *c.targetURL
-			objectMetadata.Type = os.ModeDir
-
-			if isFetchMeta {
-				stat, err := c.getObjectStat(bucket, object, opts)
-				if err != nil {
-					return nil, err
-				}
-				objectMetadata.ETag = stat.ETag
 				objectMetadata.Metadata = stat.Metadata
 				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
 			}
