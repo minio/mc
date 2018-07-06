@@ -94,7 +94,7 @@ func (s *shareDBV1) Load(filename string) *probe.Error {
 	}
 
 	// Initialize and load using quick package.
-	qs, e := quick.New(newShareDBV1())
+	qs, e := quick.NewConfig(newShareDBV1(), nil)
 	if e != nil {
 		return probe.NewError(e).Trace(filename)
 	}
@@ -118,7 +118,7 @@ func (s *shareDBV1) Load(filename string) *probe.Error {
 // Persist share uploads to disk.
 func (s shareDBV1) save(filename string) *probe.Error {
 	// Initialize a new quick file.
-	qs, e := quick.New(s)
+	qs, e := quick.NewConfig(s, nil)
 	if e != nil {
 		return probe.NewError(e).Trace(filename)
 	}

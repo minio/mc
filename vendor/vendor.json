@@ -110,10 +110,10 @@
 			"revisionTime": "2018-05-22T01:58:01Z"
 		},
 		{
-			"checksumSHA1": "5r3V/rzpVqjJvzE/K5sR2LHEteM=",
+			"checksumSHA1": "c+s2pYNeuooOUl3tw+4+oNA0hl8=",
 			"path": "github.com/minio/minio/pkg/quick",
-			"revision": "0060549addd566b2ac568891efa1579be3024a97",
-			"revisionTime": "2016-08-14T22:47:51Z"
+			"revision": "cd152f404ad81a1fdabb94acd00f2b4225ff93c2",
+			"revisionTime": "2018-06-25T20:51:49Z"
 		},
 		{
 			"checksumSHA1": "O6ZN3stsUedljMyE04RWaQkuB2I=",

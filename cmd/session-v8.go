@@ -127,7 +127,7 @@ func loadSessionV8(sid string) (*sessionV8, *probe.Error) {
 	}
 
 	// Initialize session config loader.
-	qs, e := quick.New(s.Header)
+	qs, e := quick.NewConfig(s.Header, nil)
 	if e != nil {
 		return nil, probe.NewError(e).Trace(sid, s.Header.Version)
 	}
@@ -226,7 +226,7 @@ func (s *sessionV8) Save() *probe.Error {
 		s.DataFP.dirty = false
 	}
 
-	qs, e := quick.New(s.Header)
+	qs, e := quick.NewConfig(s.Header, nil)
 	if e != nil {
 		return probe.NewError(e).Trace(s.SessionID)
 	}
@@ -266,13 +266,13 @@ func (s sessionV8) restoreGlobals() {
 // IsModified - returns if in memory session header has changed from
 // its on disk value.
 func (s *sessionV8) isModified(sessionFile string) (bool, *probe.Error) {
-	qs, e := quick.New(s.Header)
+	qs, e := quick.NewConfig(s.Header, nil)
 	if e != nil {
 		return false, probe.NewError(e).Trace(s.SessionID)
 	}
 
 	var currentHeader = &sessionV8Header{}
-	currentQS, e := quick.Load(sessionFile, currentHeader)
+	currentQS, e := quick.LoadConfig(sessionFile, nil, currentHeader)
 	if e != nil {
 		// If session does not exist for the first, return modified to
 		// be true.
@@ -307,7 +307,7 @@ func (s *sessionV8) save() *probe.Error {
 	}
 	// Header is modified, we save it.
 	if modified {
-		qs, e := quick.New(s.Header)
+		qs, e := quick.NewConfig(s.Header, nil)
 		if e != nil {
 			return probe.NewError(e).Trace(s.SessionID)
 		}
