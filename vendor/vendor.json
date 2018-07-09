@@ -15,7 +15,6 @@
 			"revisionTime": "2018-06-22T17:58:04Z"
 		},
 		{
-<<<<<<< HEAD
 			"checksumSHA1": "mKIXx1kDwmVmdIpZ3pJtRBuUKso=",
 			"path": "github.com/coreos/etcd/pkg/pathutil",
 			"revision": "8f6348a97d483316c5039d6bbc2f66ba2c00e1d0",
@@ -46,8 +45,6 @@
 			"revisionTime": "2018-01-08T23:09:05Z"
 		},
 		{
-=======
->>>>>>> Adds missing dependencies
 			"path": "github.com/dustin/go-humanize",
 			"revision": "1c212aae1d02984808182b98b0da7a3e07e4c770",
 			"revisionTime": "2015-08-09T13:14:05-07:00"
