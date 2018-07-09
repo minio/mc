@@ -15,6 +15,12 @@
 			"revisionTime": "2018-06-22T17:58:04Z"
 		},
 		{
+			"checksumSHA1": "SCXhykntdCkvDe22S/RNButQ0C0=",
+			"path": "github.com/coreos/etcd/version",
+			"revision": "8f6348a97d483316c5039d6bbc2f66ba2c00e1d0",
+			"revisionTime": "2018-06-22T17:58:04Z"
+		},
+		{
 			"path": "github.com/dustin/go-humanize",
 			"revision": "1c212aae1d02984808182b98b0da7a3e07e4c770",
 			"revisionTime": "2015-08-09T13:14:05-07:00"
@@ -173,6 +179,12 @@
 			"path": "github.com/tidwall/gjson",
 			"revision": "f123b340873a0084cb27267eddd8ff615115fbff",
 			"revisionTime": "2018-06-21T18:09:58Z"
+		},
+		{
+			"checksumSHA1": "Tk+aXpWRuTQhURlO79bd7YogcU0=",
+			"path": "github.com/tidwall/match",
+			"revision": "1731857f09b1f38450e2c12409748407822dc6be",
+			"revisionTime": "2017-10-02T07:59:45Z"
 		},
 		{
 			"checksumSHA1": "a25Kbna+fLQPeKt0z+hcreYzXdU=",
