@@ -217,7 +217,6 @@
 			"revisionTime": "2018-06-21T18:09:58Z"
 		},
 		{
-<<<<<<< HEAD
 			"checksumSHA1": "Tk+aXpWRuTQhURlO79bd7YogcU0=",
 			"path": "github.com/tidwall/match",
 			"revision": "1731857f09b1f38450e2c12409748407822dc6be",
@@ -230,8 +229,6 @@
 			"revisionTime": "2018-06-28T10:27:55Z"
 		},
 		{
-=======
->>>>>>> Adds missing dependencies
 			"checksumSHA1": "a25Kbna+fLQPeKt0z+hcreYzXdU=",
 			"path": "golang.org/x/crypto/argon2",
 			"revision": "182114d582623c1caa54f73de9c7224e23a48487",
