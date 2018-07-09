@@ -9,6 +9,12 @@
 			"revisionTime": "2016-07-13T10:44:25Z"
 		},
 		{
+			"checksumSHA1": "APRJtya3c5FX3g4HTCNWGGeCcM8=",
+			"path": "github.com/coreos/etcd/client",
+			"revision": "8f6348a97d483316c5039d6bbc2f66ba2c00e1d0",
+			"revisionTime": "2018-06-22T17:58:04Z"
+		},
+		{
 			"path": "github.com/dustin/go-humanize",
 			"revision": "1c212aae1d02984808182b98b0da7a3e07e4c770",
 			"revisionTime": "2015-08-09T13:14:05-07:00"
@@ -163,6 +169,12 @@
 			"revisionTime": "2017-03-01T20:33:46Z"
 		},
 		{
+			"checksumSHA1": "d+4iuDj/qQ+2LiWEbQ+AWjxEJOc=",
+			"path": "github.com/tidwall/gjson",
+			"revision": "f123b340873a0084cb27267eddd8ff615115fbff",
+			"revisionTime": "2018-06-21T18:09:58Z"
+		},
+		{
 			"checksumSHA1": "a25Kbna+fLQPeKt0z+hcreYzXdU=",
 			"path": "golang.org/x/crypto/argon2",
 			"revision": "182114d582623c1caa54f73de9c7224e23a48487",
@@ -256,6 +268,12 @@
 			"path": "gopkg.in/check.v1",
 			"revision": "11d3bc7aa68e238947792f30573146a3231fc0f1",
 			"revisionTime": "2015-07-29T10:04:31+02:00"
+		},
+		{
+			"checksumSHA1": "8M268g2UwVggcsd8rycU8KPzGKY=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "1244d3ce02e3e1c16820ada0bae506b6c479f106",
+			"revisionTime": "2018-01-08T13:15:54Z"
 		}
 	],
 	"rootPath": "github.com/minio/mc"
