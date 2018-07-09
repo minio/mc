@@ -15,10 +15,34 @@
 			"revisionTime": "2018-06-22T17:58:04Z"
 		},
 		{
+			"checksumSHA1": "mKIXx1kDwmVmdIpZ3pJtRBuUKso=",
+			"path": "github.com/coreos/etcd/pkg/pathutil",
+			"revision": "8f6348a97d483316c5039d6bbc2f66ba2c00e1d0",
+			"revisionTime": "2018-06-22T17:58:04Z"
+		},
+		{
+			"checksumSHA1": "wAOmJuqYSwbVNGdofRaxF1jm1ak=",
+			"path": "github.com/coreos/etcd/pkg/srv",
+			"revision": "8f6348a97d483316c5039d6bbc2f66ba2c00e1d0",
+			"revisionTime": "2018-06-22T17:58:04Z"
+		},
+		{
+			"checksumSHA1": "KU44RoTf7eoYTiIJcPuP70wFNrk=",
+			"path": "github.com/coreos/etcd/pkg/types",
+			"revision": "8f6348a97d483316c5039d6bbc2f66ba2c00e1d0",
+			"revisionTime": "2018-06-22T17:58:04Z"
+		},
+		{
 			"checksumSHA1": "SCXhykntdCkvDe22S/RNButQ0C0=",
 			"path": "github.com/coreos/etcd/version",
 			"revision": "8f6348a97d483316c5039d6bbc2f66ba2c00e1d0",
 			"revisionTime": "2018-06-22T17:58:04Z"
+		},
+		{
+			"checksumSHA1": "97BsbXOiZ8+Kr+LIuZkQFtSj7H4=",
+			"path": "github.com/coreos/go-semver/semver",
+			"revision": "e214231b295a8ea9479f11b70b35d5acf3556d9b",
+			"revisionTime": "2018-01-08T23:09:05Z"
 		},
 		{
 			"path": "github.com/dustin/go-humanize",
@@ -185,6 +209,12 @@
 			"path": "github.com/tidwall/match",
 			"revision": "1731857f09b1f38450e2c12409748407822dc6be",
 			"revisionTime": "2017-10-02T07:59:45Z"
+		},
+		{
+			"checksumSHA1": "FvRJ/qkgQBxTMFKU1ynHGV5qGRc=",
+			"path": "github.com/ugorji/go/codec",
+			"revision": "7d51bbe6161dcb8f32a1252c27668ce36e3ef16b",
+			"revisionTime": "2018-06-28T10:27:55Z"
 		},
 		{
 			"checksumSHA1": "a25Kbna+fLQPeKt0z+hcreYzXdU=",
