@@ -35,6 +35,10 @@ var (
 			Name:  "incomplete, I",
 			Usage: "List incomplete uploads.",
 		},
+		cli.StringFlag{
+			Name:  "encrypt-key",
+			Usage: "Encrypt/Decrypt (using server-side encryption)",
+		},
 	}
 )
 
@@ -91,8 +95,12 @@ func checkListSyntax(ctx *cli.Context) {
 	URLs := ctx.Args()
 	isIncomplete := ctx.Bool("incomplete")
 
+	// Parse encryption keys per command.
+	encKeyDB, err := getEncKeys(ctx)
+	fatalIf(err, "Unable to parse encryption keys.")
+
 	for _, url := range URLs {
-		_, _, err := url2Stat(url)
+		_, _, err := url2Stat(url, false, encKeyDB)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			// Bucket name empty is a valid error for 'ls myminio',
 			// treat it as such.

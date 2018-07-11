@@ -50,10 +50,10 @@ const (
 
 // guessCopyURLType guesses the type of clientURL. This approach all allows prepareURL
 // functions to accurately report failure causes.
-func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) (copyURLsType, *probe.Error) {
+func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool, keys map[string][]prefixSSEPair) (copyURLsType, *probe.Error) {
 	if len(sourceURLs) == 1 { // 1 Source, 1 Target
 		sourceURL := sourceURLs[0]
-		_, sourceContent, err := url2Stat(sourceURL)
+		_, sourceContent, err := url2Stat(sourceURL, false, keys)
 		if err != nil {
 			return copyURLsTypeInvalid, err
 		}
@@ -65,7 +65,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) (
 		}
 
 		// If target is a folder, it is Type B.
-		if isAliasURLDir(targetURL) {
+		if isAliasURLDir(targetURL, keys) {
 			return copyURLsTypeB, nil
 		}
 		// else Type A.
@@ -73,7 +73,7 @@ func guessCopyURLType(sourceURLs []string, targetURL string, isRecursive bool) (
 	}
 
 	// Multiple source args and target is a folder. It is Type D.
-	if isAliasURLDir(targetURL) {
+	if isAliasURLDir(targetURL, keys) {
 		return copyURLsTypeD, nil
 	}
 
@@ -88,7 +88,7 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string, encKeyDB map[strin
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	_, sourceContent, err := url2Stat(sourceURL)
+	_, sourceContent, err := url2Stat(sourceURL, false, encKeyDB)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
 		return URLs{Error: err.Trace(sourceURL)}
@@ -134,7 +134,7 @@ func prepareCopyURLsTypeB(sourceURL string, targetURL string, encKeyDB map[strin
 	// Find alias and expanded clientURL.
 	targetAlias, targetURL, _ := mustExpandAlias(targetURL)
 
-	_, sourceContent, err := url2Stat(sourceURL)
+	_, sourceContent, err := url2Stat(sourceURL, false, encKeyDB)
 	if err != nil {
 		// Source does not exist or insufficient privileges.
 		return URLs{Error: err.Trace(sourceURL)}
@@ -230,7 +230,7 @@ func prepareCopyURLs(sourceURLs []string, targetURL string, isRecursive bool, en
 	copyURLsCh := make(chan URLs)
 	go func(sourceURLs []string, targetURL string, copyURLsCh chan URLs, encKeyDB map[string][]prefixSSEPair) {
 		defer close(copyURLsCh)
-		cpType, err := guessCopyURLType(sourceURLs, targetURL, isRecursive)
+		cpType, err := guessCopyURLType(sourceURLs, targetURL, isRecursive, encKeyDB)
 		fatalIf(err.Trace(), "Unable to guess the type of copy operation.")
 
 		switch cpType {

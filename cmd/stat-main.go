@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -75,7 +74,7 @@ EXAMPLES:
 }
 
 // checkStatSyntax - validate all the passed arguments
-func checkStatSyntax(ctx *cli.Context) {
+func checkStatSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	if !ctx.Args().Present() {
 		cli.ShowCommandHelpAndExit(ctx, "stat", 1) // last argument is exit code
 	}
@@ -89,8 +88,9 @@ func checkStatSyntax(ctx *cli.Context) {
 	// extract URLs.
 	URLs := ctx.Args()
 	isIncomplete := false
+
 	for _, url := range URLs {
-		_, _, err := url2Stat(url)
+		_, _, err := url2Stat(url, false, encKeyDB)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 		}
@@ -108,8 +108,12 @@ func mainStat(ctx *cli.Context) error {
 	console.SetColor("EncryptionHeaders", color.New(color.FgWhite))
 	console.SetColor("Metadata", color.New(color.FgWhite))
 
+	// Parse encryption keys per command.
+	encKeyDB, err := getEncKeys(ctx)
+	fatalIf(err, "Unable to parse encryption keys.")
+
 	// check 'stat' cli arguments.
-	checkStatSyntax(ctx)
+	checkStatSyntax(ctx, encKeyDB)
 
 	// Set command flags from context.
 	isRecursive := ctx.Bool("recursive")
@@ -119,14 +123,6 @@ func mainStat(ctx *cli.Context) error {
 	if !ctx.Args().Present() {
 		args = []string{"."}
 	}
-
-	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-	if key := ctx.String("encrypt-key"); key != "" {
-		sseKeys = key
-	}
-
-	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
-	fatalIf(err, "Unable to parse encryption keys.")
 
 	var cErr error
 	for _, targetURL := range args {

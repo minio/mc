@@ -23,7 +23,7 @@ import (
 	"github.com/minio/mc/pkg/console"
 )
 
-func checkCopySyntax(ctx *cli.Context) {
+func checkCopySyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	if len(ctx.Args()) < 2 {
 		cli.ShowCommandHelpAndExit(ctx, "cp", 1) // last argument is exit code.
 	}
@@ -38,10 +38,9 @@ func checkCopySyntax(ctx *cli.Context) {
 	tgtURL := URLs[len(URLs)-1]
 	isRecursive := ctx.Bool("recursive")
 
-	/****** Generic Invalid Rules *******/
 	// Verify if source(s) exists.
 	for _, srcURL := range srcURLs {
-		_, _, err := url2Stat(srcURL)
+		_, _, err := url2Stat(srcURL, false, encKeyDB)
 		if err != nil {
 			console.Fatalf("Unable to validate source %s\n", srcURL)
 		}
@@ -56,32 +55,33 @@ func checkCopySyntax(ctx *cli.Context) {
 	}
 
 	// Guess CopyURLsType based on source and target URLs.
-	copyURLsType, err := guessCopyURLType(srcURLs, tgtURL, isRecursive)
+	copyURLsType, err := guessCopyURLType(srcURLs, tgtURL, isRecursive, encKeyDB)
 	if err != nil {
 		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of copy operation.")
 	}
+
 	switch copyURLsType {
 	case copyURLsTypeA: // File -> File.
-		checkCopySyntaxTypeA(srcURLs, tgtURL)
+		checkCopySyntaxTypeA(srcURLs, tgtURL, encKeyDB)
 	case copyURLsTypeB: // File -> Folder.
-		checkCopySyntaxTypeB(srcURLs, tgtURL)
+		checkCopySyntaxTypeB(srcURLs, tgtURL, encKeyDB)
 	case copyURLsTypeC: // Folder... -> Folder.
-		checkCopySyntaxTypeC(srcURLs, tgtURL, isRecursive)
+		checkCopySyntaxTypeC(srcURLs, tgtURL, isRecursive, encKeyDB)
 	case copyURLsTypeD: // File1...FileN -> Folder.
-		checkCopySyntaxTypeD(srcURLs, tgtURL)
+		checkCopySyntaxTypeD(srcURLs, tgtURL, encKeyDB)
 	default:
 		fatalIf(errInvalidArgument().Trace(), "Unable to guess the type of copy operation.")
 	}
 }
 
 // checkCopySyntaxTypeA verifies if the source and target are valid file arguments.
-func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
+func checkCopySyntaxTypeA(srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair) {
 	// Check source.
 	if len(srcURLs) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 	}
 	srcURL := srcURLs[0]
-	_, srcContent, err := url2Stat(srcURL)
+	_, srcContent, err := url2Stat(srcURL, false, keys)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 	if !srcContent.Type.IsRegular() {
@@ -90,13 +90,13 @@ func checkCopySyntaxTypeA(srcURLs []string, tgtURL string) {
 }
 
 // checkCopySyntaxTypeB verifies if the source is a valid file and target is a valid folder.
-func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
+func checkCopySyntaxTypeB(srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair) {
 	// Check source.
 	if len(srcURLs) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 	}
 	srcURL := srcURLs[0]
-	_, srcContent, err := url2Stat(srcURL)
+	_, srcContent, err := url2Stat(srcURL, false, keys)
 	fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 
 	if !srcContent.Type.IsRegular() {
@@ -104,7 +104,7 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 	}
 
 	// Check target.
-	if _, tgtContent, err := url2Stat(tgtURL); err == nil {
+	if _, tgtContent, err := url2Stat(tgtURL, false, keys); err == nil {
 		if !tgtContent.Type.IsDir() {
 			fatalIf(errInvalidArgument().Trace(tgtURL), "Target `"+tgtURL+"` is not a folder.")
 		}
@@ -112,14 +112,14 @@ func checkCopySyntaxTypeB(srcURLs []string, tgtURL string) {
 }
 
 // checkCopySyntaxTypeC verifies if the source is a valid recursive dir and target is a valid folder.
-func checkCopySyntaxTypeC(srcURLs []string, tgtURL string, isRecursive bool) {
+func checkCopySyntaxTypeC(srcURLs []string, tgtURL string, isRecursive bool, keys map[string][]prefixSSEPair) {
 	// Check source.
 	if len(srcURLs) != 1 {
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 	}
 
 	srcURL := srcURLs[0]
-	_, srcContent, err := url2Stat(srcURL)
+	_, srcContent, err := url2Stat(srcURL, false, keys)
 	// incomplete uploads are not necessary for copy operation, no need to verify for them.
 	isIncomplete := false
 	if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
@@ -131,7 +131,7 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string, isRecursive bool) {
 	}
 
 	// Check target.
-	if _, tgtContent, err := url2Stat(tgtURL); err == nil {
+	if _, tgtContent, err := url2Stat(tgtURL, false, keys); err == nil {
 		if !tgtContent.Type.IsDir() {
 			fatalIf(errInvalidArgument().Trace(tgtURL), "Target `"+tgtURL+"` is not a folder.")
 		}
@@ -139,10 +139,10 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string, isRecursive bool) {
 }
 
 // checkCopySyntaxTypeD verifies if the source is a valid list of files and target is a valid folder.
-func checkCopySyntaxTypeD(srcURLs []string, tgtURL string) {
+func checkCopySyntaxTypeD(srcURLs []string, tgtURL string, keys map[string][]prefixSSEPair) {
 	// Source can be anything: file, dir, dir...
 	// Check target if it is a dir
-	if _, tgtContent, err := url2Stat(tgtURL); err == nil {
+	if _, tgtContent, err := url2Stat(tgtURL, false, keys); err == nil {
 		if !tgtContent.Type.IsDir() {
 			fatalIf(errInvalidArgument().Trace(tgtURL), "Target `"+tgtURL+"` is not a folder.")
 		}

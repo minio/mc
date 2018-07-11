@@ -144,7 +144,7 @@ func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string, encKey
 			continue
 		}
 		url := targetAlias + getKey(content)
-		_, stat, err := url2StatWithMetadata(url, true, encKeyDB)
+		_, stat, err := url2Stat(url, true, encKeyDB)
 		if err != nil {
 			stat = content
 		}

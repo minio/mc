@@ -105,9 +105,8 @@ EXAMPLES:
    8. Copy a local folder with space separated characters to Amazon S3 cloud storage.
       $ {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
 
-  10. Copy a folder with encrypted objects recursively from Amazon S3 to Minio cloud storage.
-      $ {{.HelpName}} --recursive --encrypt-key "s3/documents/a/b/c=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" 's3/documents/' myminio/documents/
-
+   9. Copy a folder with encrypted objects recursively from Amazon S3 to Minio cloud storage.
+      $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/ myminio/documents/
 `,
 }
 
@@ -223,6 +222,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 	encryptKeys := session.Header.CommandStringFlags["encrypt-key"]
 	encKeyDB, err := parseAndValidateEncryptionKeys(encryptKeys)
 	fatalIf(err, "Unable to parse encryption keys.")
+
 	// Create a session data file to store the processed URLs.
 	dataFP := session.NewDataWriter()
 
@@ -429,9 +429,12 @@ loop:
 
 // mainCopy is the entry point for cp command.
 func mainCopy(ctx *cli.Context) error {
+	// Parse encryption keys per command.
+	encKeyDB, err := getEncKeys(ctx)
+	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'copy' cli arguments.
-	checkCopySyntax(ctx)
+	checkCopySyntax(ctx, encKeyDB)
 
 	// Additional command speific theme customization.
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))

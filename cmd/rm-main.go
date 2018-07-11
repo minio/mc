@@ -146,19 +146,20 @@ func (r rmMessage) JSON() string {
 }
 
 // Validate command line arguments.
-func checkRmSyntax(ctx *cli.Context) {
+func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	// Set command flags from context.
 	isForce := ctx.Bool("force")
 	isRecursive := ctx.Bool("recursive")
 	isStdin := ctx.Bool("stdin")
 	isDangerous := ctx.Bool("dangerous")
 	isNamespaceRemoval := false
+
 	for _, url := range ctx.Args() {
 		// clean path for aliases like s3/.
 		//Note: UNC path using / works properly in go 1.9.2 even though it breaks the UNC specification.
 		url = filepath.ToSlash(filepath.Clean(url))
 		// namespace removal applies only for non FS. So filter out if passed url represents a directory
-		if !isAliasURLDir(url) {
+		if !isAliasURLDir(url, encKeyDB) {
 			_, path := url2Alias(url)
 			isNamespaceRemoval = (path == "")
 			break
@@ -320,9 +321,12 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan int, 
 
 // main for rm command.
 func mainRm(ctx *cli.Context) error {
+	// Parse encryption keys per command.
+	encKeyDB, err := getEncKeys(ctx)
+	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'rm' cli arguments.
-	checkRmSyntax(ctx)
+	checkRmSyntax(ctx, encKeyDB)
 
 	// rm specific flags.
 	isIncomplete := ctx.Bool("incomplete")
@@ -331,28 +335,22 @@ func mainRm(ctx *cli.Context) error {
 	isStdin := ctx.Bool("stdin")
 	olderThan := ctx.Int("older-than")
 	newerThan := ctx.Int("newer-than")
-	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-	if key := ctx.String("encrypt-key"); key != "" {
-		sseKeys = key
-	}
 
-	encKeyDB, perr := parseAndValidateEncryptionKeys(sseKeys)
-	fatalIf(perr, "Unable to parse encryption keys.")
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 
 	var rerr error
-	var err error
+	var e error
 	// Support multiple targets.
 	for _, url := range ctx.Args() {
 		if isRecursive {
-			err = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
+			e = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		} else {
-			err = removeSingle(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		}
 
 		if rerr == nil {
-			rerr = err
+			rerr = e
 		}
 	}
 
@@ -364,13 +362,13 @@ func mainRm(ctx *cli.Context) error {
 	for scanner.Scan() {
 		url := scanner.Text()
 		if isRecursive {
-			err = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
+			e = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		} else {
-			err = removeSingle(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		}
 
 		if rerr == nil {
-			rerr = err
+			rerr = e
 		}
 	}
 
