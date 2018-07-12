@@ -455,7 +455,7 @@ func (c Client) ComposeObjectWithProgress(dst DestinationInfo, srcs []SourceInfo
 	for i, src := range srcs {
 		h := src.Headers
 		if src.encryption != nil {
-			src.encryption.Marshal(h)
+			encrypt.SSECopy(src.encryption).Marshal(h)
 		}
 		// Add destination encryption headers
 		if dst.encryption != nil {
@@ -480,7 +480,7 @@ func (c Client) ComposeObjectWithProgress(dst DestinationInfo, srcs []SourceInfo
 				return err
 			}
 			if progress != nil {
-				io.CopyN(ioutil.Discard, progress, start+end-1)
+				io.CopyN(ioutil.Discard, progress, end-start+1)
 			}
 			objParts = append(objParts, complPart)
 			partIndex++

@@ -141,11 +141,11 @@ EXAMPLES:
    9. Mirror objects newer than 10 days from bucket test to a local folder.
       $ {{.HelpName}} --newer-than=10 s3/test ~/localfolder
 
-  10. Mirror a bucket older than 30 days from Amazon S3 bucket test to a local folder.
+  10. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
       $ {{.HelpName}} --older-than=30 s3/test ~/test
 	
   11. Mirror server encrypted objects from Minio cloud storage to a bucket on Amazon S3 cloud storage 
-      $ {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive
+      $ {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
 
 `,
 }
@@ -752,9 +752,12 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 
 // Main entry point for mirror command.
 func mainMirror(ctx *cli.Context) error {
+	// Parse encryption keys per command.
+	encKeyDB, err := getEncKeys(ctx)
+	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'mirror' cli arguments.
-	checkMirrorSyntax(ctx)
+	checkMirrorSyntax(ctx, encKeyDB)
 
 	// Additional command specific theme customization.
 	console.SetColor("Mirror", color.New(color.FgGreen, color.Bold))
@@ -763,13 +766,6 @@ func mainMirror(ctx *cli.Context) error {
 
 	srcURL := args[0]
 	tgtURL := args[1]
-	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-	if key := ctx.String("encrypt-key"); key != "" {
-		sseKeys = key
-	}
-
-	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
-	fatalIf(err, "Unable to parse encryption keys.")
 
 	if err := runMirror(srcURL, tgtURL, ctx, encKeyDB); err != nil {
 		errorIf(err.Trace(srcURL, tgtURL), "Unable to mirror.")

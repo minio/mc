@@ -19,21 +19,37 @@ package cmd
 import (
 	"context"
 	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 	"golang.org/x/net/lex/httplex"
 )
 
+// parse and return encryption key pairs per alias.
+func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
+	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
+	if key := ctx.String("encrypt-key"); key != "" {
+		sseKeys = key
+	}
+
+	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
+	if err != nil {
+		return nil, err.Trace(sseKeys)
+	}
+	return encKeyDB, nil
+}
+
 // Check if the passed URL represents a folder. It may or may not exist yet.
 // If it exists, we can easily check if it is a folder, if it doesn't exist,
 // we can guess if the url is a folder from how it looks.
-func isAliasURLDir(aliasURL string) bool {
+func isAliasURLDir(aliasURL string, keys map[string][]prefixSSEPair) bool {
 	// If the target url exists, check if it is a directory
 	// and return immediately.
-	_, targetContent, err := url2Stat(aliasURL)
+	_, targetContent, err := url2Stat(aliasURL, false, keys)
 	if err == nil {
 		return targetContent.Type.IsDir()
 	}

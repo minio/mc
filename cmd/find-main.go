@@ -158,7 +158,7 @@ EXAMPLES:
 }
 
 // checkFindSyntax - validate the passed arguments
-func checkFindSyntax(ctx *cli.Context) {
+func checkFindSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	args := ctx.Args()
 	if !args.Present() {
 		args = []string{"./"} // No args just default to present directory.
@@ -174,7 +174,7 @@ func checkFindSyntax(ctx *cli.Context) {
 
 	// Extract input URLs and validate.
 	for _, url := range args {
-		_, _, err := url2Stat(url)
+		_, _, err := url2Stat(url, false, encKeyDB)
 		if err != nil && !isURLPrefixExists(url, false) {
 			// Bucket name empty is a valid error for 'find myminio' unless we are using watch, treat it as such.
 			if _, ok := err.ToGoError().(BucketNameEmpty); ok && !ctx.Bool("watch") {
@@ -216,7 +216,11 @@ func mainFind(ctx *cli.Context) error {
 	console.SetColor("Find", color.New(color.FgGreen, color.Bold))
 	console.SetColor("FindExecErr", color.New(color.FgRed, color.Italic, color.Bold))
 
-	checkFindSyntax(ctx)
+	// Parse encryption keys per command.
+	encKeyDB, err := getEncKeys(ctx)
+	fatalIf(err, "Unable to parse encryption keys.")
+
+	checkFindSyntax(ctx, encKeyDB)
 
 	args := ctx.Args()
 	if !args.Present() {

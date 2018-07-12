@@ -31,7 +31,7 @@ import (
 //   mirror(d1..., d2) -> []mirror(d1/f, d2/d1/f)
 
 // checkMirrorSyntax(URLs []string)
-func checkMirrorSyntax(ctx *cli.Context) {
+func checkMirrorSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	if len(ctx.Args()) != 2 {
 		cli.ShowCommandHelpAndExit(ctx, "mirror", 1) // last argument is exit code.
 	}
@@ -49,7 +49,7 @@ func checkMirrorSyntax(ctx *cli.Context) {
 
 	/****** Generic rules *******/
 	if !ctx.Bool("watch") {
-		_, srcContent, err := url2Stat(srcURL)
+		_, srcContent, err := url2Stat(srcURL, false, encKeyDB)
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {

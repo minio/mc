@@ -152,7 +152,7 @@ func catURL(sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error 
 		// downloaded object is equal to the original one. FS files
 		// are ignored since some of them have zero size though they
 		// have contents like files under /proc.
-		client, content, err := url2Stat(sourceURL)
+		client, content, err := url2Stat(sourceURL, false, encKeyDB)
 		if err == nil && client.GetURL().Type == objectStorage {
 			size = content.Size
 		}
@@ -210,6 +210,9 @@ func catOut(r io.Reader, size int64) *probe.Error {
 
 // mainCat is the main entry point for cat command.
 func mainCat(ctx *cli.Context) error {
+	// Parse encryption keys per command.
+	encKeyDB, err := getEncKeys(ctx)
+	fatalIf(err, "Unable to parse encryption keys.")
 
 	// check 'cat' cli arguments.
 	checkCatSyntax(ctx)
@@ -237,16 +240,11 @@ func mainCat(ctx *cli.Context) error {
 			}
 		}
 	}
-	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-	if key := ctx.String("encrypt-key"); key != "" {
-		sseKeys = key
-	}
 
-	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
-	fatalIf(err, "Unable to parse encryption keys.")
 	// Convert arguments to URLs: expand alias, fix format.
 	for _, url := range args {
 		fatalIf(catURL(url, encKeyDB).Trace(url), "Unable to read from `"+url+"`.")
 	}
+
 	return nil
 }

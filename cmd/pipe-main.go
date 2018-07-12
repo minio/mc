@@ -104,23 +104,19 @@ func checkPipeSyntax(ctx *cli.Context) {
 
 // mainPipe is the main entry point for pipe command.
 func mainPipe(ctx *cli.Context) error {
+	// Parse encryption keys per command.
+	encKeyDB, err := getEncKeys(ctx)
+	fatalIf(err, "Unable to parse encryption keys.")
 
 	// validate pipe input arguments.
 	checkPipeSyntax(ctx)
 
 	if len(ctx.Args()) == 0 {
-		err := pipe("", nil)
+		err = pipe("", nil)
 		fatalIf(err.Trace("stdout"), "Unable to write to one or more targets.")
 	} else {
 		// extract URLs.
 		URLs := ctx.Args()
-		sseKeys := os.Getenv("MC_ENCRYPT_KEY")
-		if key := ctx.String("encrypt-key"); key != "" {
-			sseKeys = key
-		}
-
-		encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys)
-		fatalIf(err, "Unable to parse encryption keys.")
 		err = pipe(URLs[0], encKeyDB)
 		fatalIf(err.Trace(URLs[0]), "Unable to write to one or more targets.")
 	}
