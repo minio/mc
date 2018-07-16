@@ -52,7 +52,7 @@ func migrateConfigV1ToV101() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV1, e := quick.Load(mustGetMcConfigPath(), newConfigV1())
+	mcCfgV1, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV1())
 	fatalIf(probe.NewError(e), "Unable to load config version `1`.")
 
 	// If loaded config version does not match 1.0.0, we do nothing.
@@ -96,7 +96,7 @@ func migrateConfigV1ToV101() {
 	}
 
 	// Save the new config back to the disk.
-	mcCfgV101, e := quick.New(cfgV101)
+	mcCfgV101, e := quick.NewConfig(cfgV101, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `1.0.1`.")
 	e = mcCfgV101.Save(mustGetMcConfigPath())
 	fatalIf(probe.NewError(e), "Unable to save config version `1.0.1`.")
@@ -109,7 +109,7 @@ func migrateConfigV101ToV2() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV101, e := quick.Load(mustGetMcConfigPath(), newConfigV101())
+	mcCfgV101, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV101())
 	fatalIf(probe.NewError(e), "Unable to load config version `1.0.1`.")
 
 	// update to newer version
@@ -132,7 +132,7 @@ func migrateConfigV101ToV2() {
 		}
 	}
 
-	mcCfgV2, e := quick.New(cfgV2)
+	mcCfgV2, e := quick.NewConfig(cfgV2, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `2`.")
 
 	e = mcCfgV2.Save(mustGetMcConfigPath())
@@ -148,7 +148,7 @@ func migrateConfigV2ToV3() {
 		return
 	}
 
-	mcCfgV2, e := quick.Load(mustGetMcConfigPath(), newConfigV2())
+	mcCfgV2, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV2())
 	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
 
 	// update to newer version
@@ -172,7 +172,7 @@ func migrateConfigV2ToV3() {
 		}
 	}
 
-	mcNewCfgV3, e := quick.New(cfgV3)
+	mcNewCfgV3, e := quick.NewConfig(cfgV3, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `3`.")
 
 	e = mcNewCfgV3.Save(mustGetMcConfigPath())
@@ -187,7 +187,7 @@ func migrateConfigV3ToV4() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV3, e := quick.Load(mustGetMcConfigPath(), newConfigV3())
+	mcCfgV3, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV3())
 	fatalIf(probe.NewError(e), "Unable to load mc config V2.")
 
 	// update to newer version
@@ -211,7 +211,7 @@ func migrateConfigV3ToV4() {
 		}
 	}
 
-	mcNewCfgV4, e := quick.New(cfgV4)
+	mcNewCfgV4, e := quick.NewConfig(cfgV4, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `4`.")
 
 	e = mcNewCfgV4.Save(mustGetMcConfigPath())
@@ -226,7 +226,7 @@ func migrateConfigV4ToV5() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV4, e := quick.Load(mustGetMcConfigPath(), newConfigV4())
+	mcCfgV4, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV4())
 	fatalIf(probe.NewError(e), "Unable to load mc config V4.")
 
 	// update to newer version
@@ -246,7 +246,7 @@ func migrateConfigV4ToV5() {
 		}
 	}
 
-	mcNewCfgV5, e := quick.New(cfgV5)
+	mcNewCfgV5, e := quick.NewConfig(cfgV5, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `5`.")
 
 	e = mcNewCfgV5.Save(mustGetMcConfigPath())
@@ -261,7 +261,7 @@ func migrateConfigV5ToV6() {
 	if !isMcConfigExists() {
 		return
 	}
-	mcCfgV5, e := quick.Load(mustGetMcConfigPath(), newConfigV5())
+	mcCfgV5, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV5())
 	fatalIf(probe.NewError(e), "Unable to load mc config V5.")
 
 	// update to newer version
@@ -312,7 +312,7 @@ func migrateConfigV5ToV6() {
 		}
 	}
 
-	mcNewCfgV6, e := quick.New(cfgV6)
+	mcNewCfgV6, e := quick.NewConfig(cfgV6, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `6`.")
 
 	e = mcNewCfgV6.Save(mustGetMcConfigPath())
@@ -328,7 +328,7 @@ func migrateConfigV6ToV7() {
 		return
 	}
 
-	mcCfgV6, e := quick.Load(mustGetMcConfigPath(), newConfigV6())
+	mcCfgV6, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV6())
 	fatalIf(probe.NewError(e), "Unable to load mc config V6.")
 
 	if mcCfgV6.Version() != "6" {
@@ -391,7 +391,7 @@ func migrateConfigV6ToV7() {
 	}
 	// Load default settings.
 	cfgV7.loadDefaults()
-	mcNewCfgV7, e := quick.New(cfgV7)
+	mcNewCfgV7, e := quick.NewConfig(cfgV7, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `7`.")
 
 	e = mcNewCfgV7.Save(mustGetMcConfigPath())
@@ -407,7 +407,7 @@ func migrateConfigV7ToV8() {
 		return
 	}
 
-	mcCfgV7, e := quick.Load(mustGetMcConfigPath(), newConfigV7())
+	mcCfgV7, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV7())
 	fatalIf(probe.NewError(e), "Unable to load mc config V7.")
 
 	if mcCfgV7.Version() != "7" {
@@ -430,7 +430,7 @@ func migrateConfigV7ToV8() {
 	}
 	// Load default settings.
 	cfgV8.loadDefaults()
-	mcNewCfgV8, e := quick.New(cfgV8)
+	mcNewCfgV8, e := quick.NewConfig(cfgV8, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `8`.")
 
 	e = mcNewCfgV8.Save(mustGetMcConfigPath())
@@ -445,7 +445,7 @@ func migrateConfigV8ToV9() {
 		return
 	}
 
-	mcCfgV8, e := quick.Load(mustGetMcConfigPath(), newConfigV8())
+	mcCfgV8, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV8())
 	fatalIf(probe.NewError(e), "Unable to load mc config V8.")
 
 	if mcCfgV8.Version() != "8" {
@@ -474,7 +474,7 @@ func migrateConfigV8ToV9() {
 		cfgV9.loadDefaults()
 	}
 
-	mcNewCfgV9, e := quick.New(cfgV9)
+	mcNewCfgV9, e := quick.NewConfig(cfgV9, nil)
 	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `9`.")
 
 	e = mcNewCfgV9.Save(mustGetMcConfigPath())

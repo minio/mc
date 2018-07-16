@@ -70,7 +70,7 @@ func migrateSessionV7ToV8() {
 		// Add insecure flag to the new V8 header
 		sV8Header.GlobalBoolFlags["insecure"] = false
 
-		qs, e := quick.New(sV8Header)
+		qs, e := quick.NewConfig(sV8Header, nil)
 		fatalIf(probe.NewError(e).Trace(sid), "Unable to initialize quick config for session '8' header.")
 
 		e = qs.Save(sessionFile)
@@ -119,7 +119,7 @@ func migrateSessionV6ToV7() {
 		sV7Header.TotalBytes = sV6Header.TotalBytes
 		sV7Header.TotalObjects = sV6Header.TotalObjects
 
-		qs, e := quick.New(sV7Header)
+		qs, e := quick.NewConfig(sV7Header, nil)
 		fatalIf(probe.NewError(e).Trace(sid), "Unable to initialize quick config for session '7' header.")
 
 		e = qs.Save(sessionFile)

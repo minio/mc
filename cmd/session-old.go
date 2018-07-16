@@ -60,7 +60,7 @@ func loadSessionV6Header(sid string) (*sessionV6Header, *probe.Error) {
 
 	sV6Header := &sessionV6Header{}
 	sV6Header.Version = "6"
-	qs, e := quick.New(sV6Header)
+	qs, e := quick.NewConfig(sV6Header, nil)
 	if e != nil {
 		return nil, probe.NewError(e).Trace(sid, sV6Header.Version)
 	}
@@ -122,7 +122,7 @@ func loadSessionV7(sid string) (*sessionV7, *probe.Error) {
 	s.Header = &sessionV7Header{}
 	s.SessionID = sid
 	s.Header.Version = "7"
-	qs, e := quick.New(s.Header)
+	qs, e := quick.NewConfig(s.Header, nil)
 	if e != nil {
 		return nil, probe.NewError(e).Trace(sid, s.Header.Version)
 	}

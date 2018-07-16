@@ -119,7 +119,7 @@ func loadConfigV9() (*configV9, *probe.Error) {
 	}
 
 	// Initialize a new config loader.
-	qc, e := quick.New(newConfigV9())
+	qc, e := quick.NewConfig(newConfigV9(), nil)
 	if e != nil {
 		return nil, probe.NewError(e)
 	}
@@ -144,7 +144,7 @@ func saveConfigV9(cfgV9 *configV9) *probe.Error {
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 
-	qs, e := quick.New(cfgV9)
+	qs, e := quick.NewConfig(cfgV9, nil)
 	if e != nil {
 		return probe.NewError(e)
 	}
