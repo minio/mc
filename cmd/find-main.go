@@ -270,6 +270,7 @@ func mainFind(ctx *cli.Context) error {
 		namePattern:   ctx.String("name"),
 		pathPattern:   ctx.String("path"),
 		regexPattern:  ctx.String("regex"),
+		ignorePattern: ctx.String("ignore"),
 		olderThan:     olderThan,
 		newerThan:     newerThan,
 		largerSize:    largerSize,
