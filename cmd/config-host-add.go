@@ -156,7 +156,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		Signature: "s3v4",
-		HostURL:   urlJoinPath(url, "probe-bucket-sign"),
+		HostURL:   urlJoinPath(url, "probe-bucket-sign-"+newRandomID(32)),
 	}
 
 	s3Client, err := s3New(s3Config)
