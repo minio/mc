@@ -26,7 +26,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"golang.org/x/net/lex/httplex"
+	"golang.org/x/net/http/httpguts"
 )
 
 // parse and return encryption key pairs per alias.
@@ -110,8 +110,8 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sseKey string)
 			return nil, nil, err.Trace(alias, urlStr)
 		}
 		for k, v := range st.Metadata {
-			if httplex.ValidHeaderFieldName(k) &&
-				httplex.ValidHeaderFieldValue(v) {
+			if httpguts.ValidHeaderFieldName(k) &&
+				httpguts.ValidHeaderFieldValue(v) {
 				metadata[k] = v
 			}
 		}
