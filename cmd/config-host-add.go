@@ -17,6 +17,9 @@
 package cmd
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -149,6 +152,7 @@ func addHost(alias string, hostCfgV9 hostConfigV9) {
 // probeS3Signature - auto probe S3 server signature: issue a Stat call
 // using v4 signature then v2 in case of failure.
 func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
+	probeBucketName := randString(60, rand.NewSource(time.Now().UnixNano()), "probe-bucket-sign-")
 	// Test s3 connection for API auto probe
 	s3Config := &Config{
 		// S3 connection parameters
@@ -156,7 +160,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		Signature: "s3v4",
-		HostURL:   urlJoinPath(url, "probe-bucket-sign-"+newRandomID(32)),
+		HostURL:   urlJoinPath(url, probeBucketName),
 	}
 
 	s3Client, err := s3New(s3Config)
