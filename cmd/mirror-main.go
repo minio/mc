@@ -590,7 +590,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 				PathInsufficientPermission, ObjectOnGlacier:
 				errorIf(err, "Unable to perform a mirror action.")
 				continue
-			case deleteNotAllowedErr, overwriteNotAllowedErr:
+			case overwriteNotAllowedErr:
 				errorIf(err, "Unable to perform a mirror action.")
 				continue
 			}
