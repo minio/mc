@@ -103,13 +103,6 @@ var errOverWriteNotAllowed = func(URL string) *probe.Error {
 	return probe.NewError(overwriteNotAllowedErr(errors.New(msg)))
 }
 
-type deleteNotAllowedErr error
-
-var errDeleteNotAllowed = func(URL string) *probe.Error {
-	msg := "Delete not allowed for `" + URL + "`. Use `--remove` to override this behavior."
-	return probe.NewError(deleteNotAllowedErr(errors.New(msg)))
-}
-
 type sourceIsDirErr error
 
 var errSourceIsDir = func(URL string) *probe.Error {

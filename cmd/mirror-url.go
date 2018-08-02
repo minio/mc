@@ -178,10 +178,6 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 			}
 		case differInSecond:
 			if !isRemove && !isFake {
-				// Object removal not allowed if --remove is not set.
-				URLsCh <- URLs{
-					Error: errDeleteNotAllowed(diffMsg.SecondURL),
-				}
 				continue
 			}
 			URLsCh <- URLs{
