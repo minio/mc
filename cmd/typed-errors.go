@@ -116,10 +116,3 @@ var errSourceTargetSame = func(URL string) *probe.Error {
 	msg := "Source and target URL can not be same : " + URL
 	return probe.NewError(sourceTargetSameErr(errors.New(msg))).Untrace()
 }
-
-type bucketNotSpecifiedErr error
-
-var errBucketNotSpecified = func() *probe.Error {
-	msg := "This operation requires a " + "bucket to be specified."
-	return probe.NewError(bucketNotSpecifiedErr(errors.New(msg))).Untrace()
-}
