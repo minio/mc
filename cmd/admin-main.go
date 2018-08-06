@@ -34,7 +34,6 @@ var adminCmd = cli.Command{
 		adminInfoCmd,
 		adminCredsCmd,
 		adminConfigCmd,
-		adminLockCmd,
 		adminHealCmd,
 	},
 }
