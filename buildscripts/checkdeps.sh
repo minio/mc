@@ -89,11 +89,11 @@ check_minimum_version() {
 
 assert_is_supported_arch() {
     case "${ARCH}" in
-        x86_64 | amd64 | ppc64le | aarch64 | arm* )
+        x86_64 | amd64 | ppc64le | aarch64 | arm* | s390x )
             return
             ;;
         *)
-            echo "Arch '${ARCH}' is not supported. Supported Arch: [x86_64, amd64, ppc64le, aarch64, arm*]"
+            echo "Arch '${ARCH}' is not supported. Supported Arch: [x86_64, amd64, ppc64le, aarch64, arm*, s390x]"
             exit 1
     esac
 }
