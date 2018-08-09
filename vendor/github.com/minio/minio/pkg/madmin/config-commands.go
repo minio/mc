@@ -26,6 +26,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"github.com/minio/minio/pkg/quick"
 	"github.com/minio/sio"
@@ -147,4 +148,41 @@ func (adm *AdminClient) SetConfig(config io.Reader) (err error) {
 	}
 
 	return nil
+}
+
+// SetConfigKeys - set config keys supplied as config.json for the setup.
+func (adm *AdminClient) SetConfigKeys(params map[string]string) (r SetConfigResult, err error) {
+	if !adm.secure { // No TLS?
+		return r, fmt.Errorf("credentials/configuration cannot be updated over an insecure connection")
+	}
+
+	queryVals := make(url.Values)
+	for k, v := range params {
+		queryVals.Add(k, v)
+	}
+
+	reqData := requestData{
+		relPath:     "/v1/config-keys",
+		queryValues: queryVals,
+	}
+
+	// Execute PUT on /minio/admin/v1/config-keys to set config.
+	resp, err := adm.executeMethod("PUT", reqData)
+
+	defer closeResponse(resp)
+	if err != nil {
+		return r, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return r, httpRespToErrorResponse(resp)
+	}
+
+	jsonBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return r, err
+	}
+
+	err = json.Unmarshal(jsonBytes, &r)
+	return r, err
 }
