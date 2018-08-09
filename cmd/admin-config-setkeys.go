@@ -127,31 +127,17 @@ func mainAdminConfigSetKeys(ctx *cli.Context) error {
 		fatalIf(probe.NewError(errors.New(
 			"Usage: mc admin config setkeys alias key1=value1 [key2=value2 key3.key4=value4 ...]")), "1- Invalid number of arguments\n")
 	}
-	fmt.Println("allArgs.Tail: ", allArgs.Tail())
 
 	aliasedURL := allArgs.Get(0)
 	argsMap := make(map[string]string)
-	// args := []string{}
 	for _, arg := range allArgs.Tail() {
-		fmt.Println("arg: ", arg)
-		// argKeyVal := strings.Replace(arg, "=", " ", -1)
-		// args = append(args, strings.Split(arg, "=")[0])
-		// args = append(args, strings.Split(arg, "=")[1])
 		argSplit := strings.SplitN(arg, "=", 2)
-		fmt.Println("argSplit =", argSplit)
-		fmt.Println("Length argSplit =", len(argSplit))
 		if strings.Index(arg, "{") == -1 && len(argSplit)%2 == 1 {
 			fatalIf(probe.NewError(errors.New(
 				"Usage: mc admin config setkeys alias key1=value1 [key2=value2 key3.key4=value4 ...]")), "2- Invalid number of arguments\n")
 		}
 		argsMap[argSplit[0]] = argSplit[1]
 	}
-	fmt.Println("argsMap: ", argsMap)
-	lenArgs := len(argsMap)
-
-	fmt.Println("lenArgs: ", lenArgs)
-	fmt.Println("aliasedURL: ", aliasedURL)
-	fmt.Println("argsMap: ", argsMap)
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
