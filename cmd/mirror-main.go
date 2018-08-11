@@ -290,6 +290,7 @@ func (mj *mirrorJob) startStatus() {
 				if sURLs.SourceContent != nil {
 					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
 						fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+					os.Exit(1)
 				} else {
 					// When sURLs.SourceContent is nil, we know that we have an error related to removing
 					errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
