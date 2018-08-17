@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"bytes"
 	"net/http"
 	"net/http/httputil"
 	"regexp"
@@ -75,23 +74,7 @@ func (t traceV4) Response(resp *http.Response) (err error) {
 		resp.StatusCode != http.StatusNoContent {
 		respTrace, err = httputil.DumpResponse(resp, true)
 	} else {
-		// WORKAROUND for https://github.com/golang/go/issues/13942.
-		// httputil.DumpResponse does not print response headers for
-		// all successful calls which have response ContentLength set
-		// to zero. Keep this workaround until the above bug is fixed.
-		if resp.ContentLength == 0 {
-			var buffer bytes.Buffer
-			if err = resp.Header.Write(&buffer); err != nil {
-				return err
-			}
-			respTrace = buffer.Bytes()
-			respTrace = append(respTrace, []byte("\r\n")...)
-		} else {
-			respTrace, err = httputil.DumpResponse(resp, false)
-			if err != nil {
-				return err
-			}
-		}
+		respTrace, err = httputil.DumpResponse(resp, false)
 	}
 	if err == nil {
 		console.Debug(string(respTrace))
