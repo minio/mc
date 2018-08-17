@@ -18,14 +18,12 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminConfigSetCmd = cli.Command{
@@ -52,25 +50,12 @@ EXAMPLES:
 
 // configSetMessage container to hold locks information.
 type configSetMessage struct {
-	Status               string `json:"status"`
-	setConfigStatus      bool
-	SetConfigNodeSummary []madmin.NodeSummary `json:"nodesSummary"`
+	Status          string `json:"status"`
+	setConfigStatus bool
 }
 
 // String colorized service status message.
 func (u configSetMessage) String() (msg string) {
-	// For each node, print if set config was successful or not
-	for _, s := range u.SetConfigNodeSummary {
-		if s.ErrSet {
-			// An error occurred when setting the new config
-			msg += console.Colorize("SetConfigFailure",
-				fmt.Sprintf("Failed to apply the new configuration to `%s` (%s).", s.Name, s.ErrMsg))
-		} else {
-			msg += console.Colorize("SetConfigSuccess",
-				fmt.Sprintf("New configuration applied to `%s` successfully.", s.Name))
-		}
-		msg += "\n"
-	}
 	// Print the general set config status
 	if u.setConfigStatus {
 		msg += console.Colorize("SetConfigSuccess",
@@ -121,13 +106,11 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	// Call get config API
-	c, e := client.SetConfig(os.Stdin)
-	fatalIf(probe.NewError(e), "Cannot set server configuration file.")
+	fatalIf(probe.NewError(client.SetConfig(os.Stdin)), "Cannot set server configuration file.")
 
 	// Print set config result
 	printMsg(configSetMessage{
-		setConfigStatus:      c.Status,
-		SetConfigNodeSummary: c.NodeResults,
+		setConfigStatus: true,
 	})
 
 	return nil
