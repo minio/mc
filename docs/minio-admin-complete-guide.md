@@ -5,6 +5,8 @@ Minio Client (mc) provides `admin` sub-command to perform administrative tasks o
 ```sh
 service      Stop, restart or get the status of Minio servers
 info         Display Minio server information
+credentials  Change server access and secret keys
+config       Manage server configuration file
 heal         Heal disks, buckets and objects on Minio server
 ```
 
@@ -210,6 +212,8 @@ Skip SSL certificate verification.
 |:---|
 |[**service** - Start, stop or get the status of Minio server](#service) |
 |[**info** - Display Minio server information](#info) |
+|[**credentials** - Change server access and secret keys](#credentials) |
+|[**config** - Manage server configuration file](#config)|
 |[**heal** - Heal disks, buckets and objects on Minio server](#heal) |
 
 <a name="service"></a>
@@ -267,6 +271,55 @@ FLAGS:
  SQS ARNs : <none>
     Stats : Incoming 82GiB, Outgoing 28GiB
   Storage : Used 8.2GiB
+```
+
+<a name="credentials"></a>
+### Command `credentials` - Change server access and secret keys
+`credentials` command to set new credentials of a Minio server.
+
+```sh
+NAME:
+  mc admin credentials - Change server access and secret keys
+
+FLAGS:
+  --help, -h                       Show help.
+```
+
+*Example: Set new credentials of a Minio server represented by its alias 'myminio'.*
+
+```sh
+mc admin credentials myminio/ minio minio123
+```
+
+<a name="config"></a>
+### Command `config` - Manage server configuration
+`config` command to manage Minio server configuration.
+
+```sh
+NAME:
+  mc admin config - Manage configuration file
+
+USAGE:
+  mc admin config COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  get  Get config of a Minio server/cluster.
+  set  Set new config file to a Minio server/cluster.
+
+FLAGS:
+  --help, -h                       Show help.
+```
+
+*Example: Get server configuration of a Minio server/cluster.*
+
+```sh
+mc admin config get myminio > /tmp/my-serverconfig
+```
+
+*Example: Set server configuration of a Minio server/cluster.*
+
+```sh
+mc admin config set myminio < /tmp/my-serverconfig
 ```
 
 <a name="heal"></a>
