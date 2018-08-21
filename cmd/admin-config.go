@@ -16,7 +16,9 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"github.com/minio/cli"
+)
 
 var adminConfigCmd = cli.Command{
 	Name:   "config",

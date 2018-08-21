@@ -16,7 +16,9 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"github.com/minio/cli"
+)
 
 var (
 	adminFlags = []cli.Flag{}

@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2017 Minio, Inc.
+ * Minio Client (C) 2018 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Set a single Minio server/cluster configuration entry.
-     $ {{.HelpName}} myminio 
+     $ {{.HelpName}} myminio region=us-east-1
 
   2. Set two Minio server/cluster configuration entries.
      $ {{.HelpName}} myminio logger.console.enabled=true logger.http.minio_one.enabled=true
@@ -107,7 +107,7 @@ func (u configSetKeysMessage) JSON() string {
 // checkAdminConfigSetKeysSyntax - validate all the passed arguments
 func checkAdminConfigSetKeysSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "setkeys", 1) // last argument is exit code
 	}
 }
 
@@ -141,9 +141,9 @@ func mainAdminConfigSetKeys(ctx *cli.Context) error {
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Cannot get a configured admin client.")
 
-	// Call get config API
+	// Call set config API
 	c, e := client.SetConfigKeys(argsMap)
 	fatalIf(probe.NewError(e), "Cannot set server configuration file.")
 

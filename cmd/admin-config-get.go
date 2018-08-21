@@ -82,7 +82,7 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Cannot get a configured admin client.")
 
 	// Call get config API
 	c, e := client.GetConfig()
