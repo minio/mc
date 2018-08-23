@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"io"
+
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -42,23 +44,19 @@ type Status interface {
 	fatalIf(err *probe.Error, msg string)
 }
 
-// NewQuietStatus returns a quiet status object
-func NewQuietStatus() Status {
-	return &QuietStatus{
-		newAccounter(0),
-	}
-}
-
 // NewDummyStatus returns a dummy status object
-func NewDummyStatus() Status {
-	return &DummyStatus{}
+func NewDummyStatus(hook io.Reader) Status {
+	return &DummyStatus{hook}
 }
 
 // DummyStatus will not show anything.
-type DummyStatus struct{}
+type DummyStatus struct {
+	hook io.Reader
+}
 
 // Read implements the io.Reader interface
 func (ds *DummyStatus) Read(p []byte) (n int, err error) {
+	ds.hook.Read(p)
 	return len(p), nil
 }
 
@@ -114,13 +112,23 @@ func (ds *DummyStatus) fatalIf(err *probe.Error, msg string) {
 	fatalIf(err, msg)
 }
 
+// NewQuietStatus returns a quiet status object
+func NewQuietStatus(hook io.Reader) Status {
+	return &QuietStatus{
+		newAccounter(0),
+		hook,
+	}
+}
+
 // QuietStatus will only show the progress and summary
 type QuietStatus struct {
 	*accounter
+	hook io.Reader
 }
 
 // Read implements the io.Reader interface
 func (qs *QuietStatus) Read(p []byte) (n int, err error) {
+	qs.hook.Read(p)
 	return qs.accounter.Read(p)
 }
 
@@ -180,19 +188,22 @@ func (qs *QuietStatus) fatalIf(err *probe.Error, msg string) {
 }
 
 // NewProgressStatus returns a progress status object
-func NewProgressStatus() Status {
+func NewProgressStatus(hook io.Reader) Status {
 	return &ProgressStatus{
 		newProgressBar(0),
+		hook,
 	}
 }
 
 // ProgressStatus shows a progressbar
 type ProgressStatus struct {
 	*progressBar
+	hook io.Reader
 }
 
 // Read implements the io.Reader interface
 func (ps *ProgressStatus) Read(p []byte) (n int, err error) {
+	ps.hook.Read(p)
 	return ps.progressBar.Read(p)
 }
 

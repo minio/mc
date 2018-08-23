@@ -101,7 +101,7 @@ func (a *accounter) Stat() accountStat {
 	a.finishOnce.Do(func() {
 		close(a.isFinished)
 		acntStat.Total = a.Total
-		acntStat.Transferred = a.current
+		acntStat.Transferred = atomic.LoadInt64(&a.current)
 		acntStat.Speed = a.write(atomic.LoadInt64(&a.current))
 	})
 	return acntStat

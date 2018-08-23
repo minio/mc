@@ -318,7 +318,7 @@ func doCopySession(session *sessionV8) error {
 	var quitCh = make(chan struct{})
 	var statusCh = make(chan URLs)
 
-	parallel, queueCh := newParallelManager(statusCh, pg)
+	parallel, queueCh := newParallelManager(statusCh)
 
 	go func() {
 		gracefulStop := func() {

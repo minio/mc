@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,21 +25,25 @@ import (
 
 const (
 	// Maximum number of parallel workers
-	maxParallelWorkers = 32
+	maxParallelWorkers = 128
+
 	// Monitor tick to decide to add new workers
-	monitorPeriod = 5 * time.Second
+	monitorPeriod = 4 * time.Second
+
+	// Number of workers added per bandwidth monitoring.
+	defaultWorkerFactor = 2
 )
 
 // ParallelManager - helps manage parallel workers to run tasks
 type ParallelManager struct {
-	// pb shows current progress
-	pb Progress
-
 	// Synchronize workers
 	wg *sync.WaitGroup
 
 	// Current threads number
 	workersNum uint32
+
+	// Calculate sent bytes.
+	sentBytes int64
 
 	// Channel to receive tasks to run
 	queueCh chan func() URLs
@@ -50,7 +55,6 @@ type ParallelManager struct {
 
 // addWorker creates a new worker to process tasks
 func (p *ParallelManager) addWorker() {
-
 	if atomic.LoadUint32(&p.workersNum) >= maxParallelWorkers {
 		// Number of maximum workers is reached, no need to
 		// to create a new one.
@@ -78,16 +82,16 @@ func (p *ParallelManager) addWorker() {
 	}()
 }
 
+func (p *ParallelManager) Read(b []byte) (n int, err error) {
+	atomic.AddInt64(&p.sentBytes, int64(len(b)))
+	return len(b), nil
+}
+
 // monitorProgress monitors realtime transfer speed of data
 // and increases threads until it reaches a maximum number of
 // threads or notice there is no apparent enhancement of
 // transfer speed.
 func (p *ParallelManager) monitorProgress() {
-	if p.pb == nil {
-		// Nothing to monitor
-		return
-	}
-
 	go func() {
 		ticker := time.NewTicker(monitorPeriod)
 		defer ticker.Stop()
@@ -102,7 +106,7 @@ func (p *ParallelManager) monitorProgress() {
 				return
 			case <-ticker.C:
 				// Compute new bandwidth from counted sent bytes
-				sentBytes := p.pb.Get()
+				sentBytes := atomic.LoadInt64(&p.sentBytes)
 				bandwidth := sentBytes - prevSentBytes
 				prevSentBytes = sentBytes
 
@@ -119,7 +123,9 @@ func (p *ParallelManager) monitorProgress() {
 					maxBandwidth = bandwidth
 				}
 
-				p.addWorker()
+				for i := 0; i < defaultWorkerFactor; i++ {
+					p.addWorker()
+				}
 			}
 		}
 	}()
@@ -132,9 +138,8 @@ func (p *ParallelManager) wait() {
 }
 
 // newParallelManager starts new workers waiting for executing tasks
-func newParallelManager(resultCh chan URLs, pb Progress) (*ParallelManager, chan func() URLs) {
+func newParallelManager(resultCh chan URLs) (*ParallelManager, chan func() URLs) {
 	p := &ParallelManager{
-		pb:            pb,
 		wg:            &sync.WaitGroup{},
 		workersNum:    0,
 		stopMonitorCh: make(chan struct{}),
@@ -142,8 +147,10 @@ func newParallelManager(resultCh chan URLs, pb Progress) (*ParallelManager, chan
 		resultCh:      resultCh,
 	}
 
-	// Add at least one worker to execute the job
-	p.addWorker()
+	// Start with runtime.NumCPU().
+	for i := 0; i < runtime.NumCPU(); i++ {
+		p.addWorker()
+	}
 
 	// Start monitoring tasks progress
 	p.monitorProgress()
