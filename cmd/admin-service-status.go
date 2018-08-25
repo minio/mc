@@ -109,7 +109,7 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin client.")
+	fatalIf(err, errFailedAdminClient.Error())
 
 	// Fetch the service status of the specified Minio server
 	st, e := client.ServiceStatus()

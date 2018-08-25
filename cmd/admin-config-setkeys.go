@@ -39,7 +39,7 @@ var adminConfigSetKeysCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET [key1=value1 key2=value2 ...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -73,12 +73,11 @@ func (u configSetKeysMessage) String() (msg string) {
 		if s.ErrSet {
 			// An error occurred when setting the new config
 			msg += console.Colorize("SetKeysConfigFailure",
-				fmt.Sprintf("Failed to apply the new configuration to `%s` (%s).", s.Name, s.ErrMsg))
+				fmt.Sprintf("Failed to apply the new configuration to `%s` (%s).\n", s.Name, s.ErrMsg))
 		} else {
 			msg += console.Colorize("SetKeysConfigSuccess",
-				fmt.Sprintf("New configuration applied to `%s` successfully.", s.Name))
+				fmt.Sprintf("New configuration applied to `%s` successfully.\n", s.Name))
 		}
-		msg += "\n"
 	}
 	// Print the general set config status
 	if u.setKeysConfigStatus {
@@ -125,7 +124,7 @@ func mainAdminConfigSetKeys(ctx *cli.Context) error {
 	allArgs := ctx.Args()
 	if len(allArgs) < 2 {
 		fatalIf(probe.NewError(errors.New(
-			"Usage: mc admin config setkeys alias key1=value1 [key2=value2 key3.key4=value4 ...]")), "1- Invalid number of arguments\n")
+			"Usage: mc admin config setkeys alias key1=value1 [key2=value2 key3.key4=value4 ...]")), "Invalid number of arguments\n")
 	}
 
 	aliasedURL := allArgs.Get(0)
@@ -134,18 +133,18 @@ func mainAdminConfigSetKeys(ctx *cli.Context) error {
 		argSplit := strings.SplitN(arg, "=", 2)
 		if strings.Index(arg, "{") == -1 && len(argSplit)%2 == 1 {
 			fatalIf(probe.NewError(errors.New(
-				"Usage: mc admin config setkeys alias key1=value1 [key2=value2 key3.key4=value4 ...]")), "2- Invalid number of arguments\n")
+				"Usage: mc admin config setkeys alias key1=value1 [key2=value2 key3.key4=value4 ...]")), "Invalid number of arguments\n")
 		}
 		argsMap[argSplit[0]] = argSplit[1]
 	}
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin client.")
+	fatalIf(err, errFailedAdminClient.Error())
 
 	// Call set config API
 	c, e := client.SetConfigKeys(argsMap)
-	fatalIf(probe.NewError(e), "Cannot set server configuration file.")
+	fatalIf(probe.NewError(e), "Cannot set server configuration.")
 
 	// Print set config result
 	printMsg(configSetKeysMessage{
