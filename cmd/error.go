@@ -45,6 +45,10 @@ func fatalIf(err *probe.Error, msg string, data ...interface{}) {
 	if err == nil {
 		return
 	}
+	fatal(err, msg, data...)
+}
+
+func fatal(err *probe.Error, msg string, data ...interface{}) {
 	if globalJSON {
 		errorMsg := errorMessage{
 			Message: msg,
