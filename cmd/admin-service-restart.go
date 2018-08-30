@@ -87,7 +87,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, errFailedAdminClient.Error())
 
 	// Restart the specified Minio server
 	fatalIf(probe.NewError(client.ServiceSendAction(

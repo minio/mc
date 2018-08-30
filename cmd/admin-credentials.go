@@ -71,7 +71,7 @@ func mainAdminCreds(ctx *cli.Context) error {
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, errFailedAdminClient.Error())
 
 	// Change the credentials of the specified Minio server
 	e := client.SetCredentials(accessKey, secretKey)

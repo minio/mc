@@ -18,12 +18,16 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
+
+// Commoon error messages
+var errFailedAdminClient = errors.New("Cannot get a configured admin client.")
 
 // causeMessage container for golang error messages
 type causeMessage struct {

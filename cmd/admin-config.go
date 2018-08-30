@@ -16,7 +16,9 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"github.com/minio/cli"
+)
 
 var adminConfigCmd = cli.Command{
 	Name:   "config",
@@ -27,6 +29,7 @@ var adminConfigCmd = cli.Command{
 	Subcommands: []cli.Command{
 		adminConfigGetCmd,
 		adminConfigSetCmd,
+		adminConfigSetKeysCmd,
 	},
 	HideHelpCommand: true,
 }
@@ -35,5 +38,5 @@ var adminConfigCmd = cli.Command{
 func mainAdminConfig(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "get", "set" have their own main.
+	// Sub-commands like "get", "set", "setkeys" have their own main.
 }
