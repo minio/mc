@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -205,10 +206,50 @@ func parseEnvURL(envURL string) (*url.URL, string, string, *probe.Error) {
 	return u, accessKey, secretKey, nil
 }
 
+// parse url usually obtained from env.
+func parseEnvURLStr(envURL string) (*url.URL, string, string, *probe.Error) {
+	var envURLStr string
+	u, accessKey, secretKey, err := parseEnvURL(envURL)
+	if err != nil {
+		// url parsing can fail when accessKey/secretKey contains non url encoded values
+		// such as #. Strip accessKey/secretKey from envURL and parse again.
+		re := regexp.MustCompile("^(https?://)(.*?):(.*?)@(.*?)$")
+		res := re.FindAllStringSubmatch(envURL, -1)
+		// regex will return full match, scheme, accessKey, secretKey and endpoint:port as
+		// captured groups.
+		if len(res[0]) != 5 {
+			return nil, "", "", err
+		}
+		for k, v := range res[0] {
+			if k == 2 {
+				accessKey = fmt.Sprintf("%s", v)
+			}
+			if k == 3 {
+				secretKey = fmt.Sprintf("%s", v)
+			}
+			if k == 1 || k == 4 {
+				envURLStr = fmt.Sprintf("%s%s", envURLStr, v)
+			}
+		}
+		u, _, _, err = parseEnvURL(envURLStr)
+		if err != nil {
+			return nil, "", "", err
+		}
+	}
+	// Check if username:password is provided in URL, with no
+	// access keys or secret we proceed and perform anonymous
+	// requests.
+	if u.User != nil {
+		accessKey = u.User.Username()
+		secretKey, _ = u.User.Password()
+	}
+	return u, accessKey, secretKey, nil
+}
+
 const mcEnvHostsPrefix = "MC_HOSTS_"
 
 func expandAliasFromEnv(envURL string) (*hostConfigV9, *probe.Error) {
-	u, accessKey, secretKey, err := parseEnvURL(envURL)
+	u, accessKey, secretKey, err := parseEnvURLStr(envURL)
 	if err != nil {
 		return nil, err.Trace(envURL)
 	}
