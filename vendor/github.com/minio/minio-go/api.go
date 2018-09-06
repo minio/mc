@@ -455,22 +455,9 @@ func (c Client) dumpHTTP(req *http.Request, resp *http.Response) error {
 			return err
 		}
 	} else {
-		// WORKAROUND for https://github.com/golang/go/issues/13942.
-		// httputil.DumpResponse does not print response headers for
-		// all successful calls which have response ContentLength set
-		// to zero. Keep this workaround until the above bug is fixed.
-		if resp.ContentLength == 0 {
-			var buffer bytes.Buffer
-			if err = resp.Header.Write(&buffer); err != nil {
-				return err
-			}
-			respTrace = buffer.Bytes()
-			respTrace = append(respTrace, []byte("\r\n")...)
-		} else {
-			respTrace, err = httputil.DumpResponse(resp, false)
-			if err != nil {
-				return err
-			}
+		respTrace, err = httputil.DumpResponse(resp, false)
+		if err != nil {
+			return err
 		}
 	}
 
