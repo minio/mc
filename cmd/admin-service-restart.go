@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -48,18 +49,41 @@ EXAMPLES:
 `,
 }
 
-// serviceRestartMessage is container for make bucket success and failure messages.
-type serviceRestartMessage struct {
+// serviceRestartCommand is container for service restart command success and failure messages.
+type serviceRestartCommand struct {
 	Status    string `json:"status"`
 	ServerURL string `json:"serverURL"`
 }
 
-// String colorized make bucket message.
-func (s serviceRestartMessage) String() string {
-	return console.Colorize("ServiceRestart", "Restarted `"+s.ServerURL+"` successfully.")
+// String colorized service restart command message.
+func (s serviceRestartCommand) String() string {
+	return console.Colorize("ServiceRestart", "Restart command successfully sent to `"+s.ServerURL+"`.")
 }
 
-// JSON jsonified make bucket message.
+// JSON jsonified service restart command message.
+func (s serviceRestartCommand) JSON() string {
+	serviceRestartJSONBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(serviceRestartJSONBytes)
+}
+
+// serviceRestartMessage is container for service restart success and failure messages.
+type serviceRestartMessage struct {
+	Status    string `json:"status"`
+	ServerURL string `json:"serverURL"`
+	Err       error  `json:"error,omitempty"`
+}
+
+// String colorized service restart message.
+func (s serviceRestartMessage) String() string {
+	if s.Err == nil {
+		return console.Colorize("ServiceRestart", "Restarted `"+s.ServerURL+"` successfully.")
+	}
+	return console.Colorize("FailedServiceRestart", "Failed to restart `"+s.ServerURL+"`. error: "+s.Err.Error())
+}
+
+// JSON jsonified service restart message.
 func (s serviceRestartMessage) JSON() string {
 	serviceRestartJSONBytes, e := json.Marshal(s)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -81,6 +105,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 
 	// Set color.
 	console.SetColor("ServiceRestart", color.New(color.FgGreen, color.Bold))
+	console.SetColor("FailedServiceRestart", color.New(color.FgRed, color.Bold))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -94,6 +119,22 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 		madmin.ServiceActionValueRestart)), "Cannot restart server.")
 
 	// Success..
-	printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
+	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL})
+
+	// Max. time taken by the server to shutdown is 5 seconds.
+	// This can happen when there are lot of s3 requests pending when the server
+	// receives a restart command.
+	// Sleep for 6 seconds and then check if the server is online.
+	time.Sleep(6 * time.Second)
+
+	// Fetch the service status of the specified Minio server
+	_, e := client.ServiceStatus()
+
+	if e != nil {
+		printMsg(serviceRestartMessage{Status: "failure", Err: e, ServerURL: aliasedURL})
+	} else {
+		printMsg(serviceRestartMessage{Status: "success", ServerURL: aliasedURL})
+	}
+
 	return nil
 }
