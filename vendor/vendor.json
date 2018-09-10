@@ -235,10 +235,10 @@
 			"revisionTime": "2018-03-12T18:51:34Z"
 		},
 		{
-			"checksumSHA1": "ppPg0bIlBAVJy0Pn13BfBnkp9V4=",
+			"checksumSHA1": "ejjxT0+wDWWncfh0Rt3lSH4IbXQ=",
 			"path": "golang.org/x/crypto/blake2b",
-			"revision": "182114d582623c1caa54f73de9c7224e23a48487",
-			"revisionTime": "2018-03-12T18:51:34Z"
+			"revision": "0709b304e793a5edb4a2c0145f281ecdc20838a4",
+			"revisionTime": "2018-08-31T22:38:59Z"
 		},
 		{
 			"checksumSHA1": "XeVtoYW/XdZj+VJpmHmPKcqJO+o=",
