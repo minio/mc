@@ -96,11 +96,13 @@ var errInvalidTarget = func(URL string) *probe.Error {
 	return probe.NewError(invalidTargetErr(errors.New(msg))).Untrace()
 }
 
-type overwriteNotAllowedErr error
+type overwriteNotAllowedErr struct {
+	error
+}
 
 var errOverWriteNotAllowed = func(URL string) *probe.Error {
 	msg := "Overwrite not allowed for `" + URL + "`. Use `--overwrite` to override this behavior."
-	return probe.NewError(overwriteNotAllowedErr(errors.New(msg)))
+	return probe.NewError(overwriteNotAllowedErr{errors.New(msg)})
 }
 
 type sourceIsDirErr error
