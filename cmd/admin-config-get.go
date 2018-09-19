@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -48,7 +49,7 @@ EXAMPLES:
 // configGetMessage container to hold locks information.
 type configGetMessage struct {
 	Status string `json:"status"`
-	Config []byte `json:"config"`
+	Config string `json:"config"`
 }
 
 // String colorized service status message.
@@ -59,10 +60,11 @@ func (u configGetMessage) String() string {
 // JSON jsonified service status Message message.
 func (u configGetMessage) JSON() string {
 	u.Status = "success"
-	statusJSONBytes, e := json.Marshal(u)
+	statusJSONBytes, e := json.MarshalIndent(u, "", "\t")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
-	return string(statusJSONBytes)
+	// Remove \n and \t from u.Config which holds the config data
+	return strings.NewReplacer(`\n`, "", `\t`, "").Replace(string(statusJSONBytes))
 }
 
 // checkAdminConfigGetSyntax - validate all the passed arguments
@@ -89,7 +91,7 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e), "Cannot get server configuration file.")
 
 	// Print
-	printMsg(configGetMessage{Config: c})
+	printMsg(configGetMessage{Config: string(c)})
 
 	return nil
 }
