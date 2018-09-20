@@ -131,5 +131,5 @@ func mainAdminHeal(ctx *cli.Context) error {
 		"Unable to display follow heal status.",
 	)
 
-	return nil
+	return herr
 }
