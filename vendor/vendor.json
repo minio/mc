@@ -45,6 +45,12 @@
 			"revisionTime": "2018-01-08T23:09:05Z"
 		},
 		{
+			"checksumSHA1": "blOHP3HPYU+IeV6yWCalQuuM+zE=",
+			"path": "github.com/dgrijalva/jwt-go",
+			"revision": "3af4c746e1c248ee8491a3e0c6f7a9cd831e95f8",
+			"revisionTime": "2018-09-21T17:23:15Z"
+		},
+		{
 			"path": "github.com/dustin/go-humanize",
 			"revision": "1c212aae1d02984808182b98b0da7a3e07e4c770",
 			"revisionTime": "2015-08-09T13:14:05-07:00"
@@ -158,16 +164,40 @@
 			"revisionTime": "2018-09-25T09:12:15Z"
 		},
 		{
-			"checksumSHA1": "g8YlJVY8CHJy+N4pAF1522n/Yr8=",
+			"checksumSHA1": "vqWf9FPX+6SLfJCL66rLKKHVco8=",
+			"path": "github.com/minio/minio/pkg/auth",
+			"revision": "ce870466ff5db524e5f6c54b97eb0b26d9fcdf46",
+			"revisionTime": "2019-01-24T15:22:14Z"
+		},
+		{
+			"checksumSHA1": "uY4P8FoN5LsB1/ro6mv1twStP3k=",
+			"path": "github.com/minio/minio/pkg/cpu",
+			"revision": "ce870466ff5db524e5f6c54b97eb0b26d9fcdf46",
+			"revisionTime": "2019-01-24T15:22:14Z"
+		},
+		{
+			"checksumSHA1": "EELmZW4tgqdBTjjbxasCP/pfV6k=",
+			"path": "github.com/minio/minio/pkg/disk",
+			"revision": "ce870466ff5db524e5f6c54b97eb0b26d9fcdf46",
+			"revisionTime": "2019-01-24T15:22:14Z"
+		},
+		{
+			"checksumSHA1": "Qocnf0xycWqutHFLzxrG7vD1R70=",
 			"path": "github.com/minio/minio/pkg/madmin",
-			"revision": "86f6ca3cea734ba0bd320e8279e90c6025460b0f",
-			"revisionTime": "2018-10-27T02:40:32Z"
+			"revision": "ce870466ff5db524e5f6c54b97eb0b26d9fcdf46",
+			"revisionTime": "2019-01-24T15:22:14Z"
 		},
 		{
 			"checksumSHA1": "flg07CqTxM9togozKRQiJugao4s=",
 			"path": "github.com/minio/minio/pkg/madmin/examples",
 			"revision": "7b274cb618deef62a8f5df2761f2d8431ed71ca7",
 			"revisionTime": "2018-05-22T01:58:01Z"
+		},
+		{
+			"checksumSHA1": "qGGJQJ1AGA4yjLGGRVfKY3YWf3Q=",
+			"path": "github.com/minio/minio/pkg/mem",
+			"revision": "ce870466ff5db524e5f6c54b97eb0b26d9fcdf46",
+			"revisionTime": "2019-01-24T15:22:14Z"
 		},
 		{
 			"checksumSHA1": "Twe2beSe125vyX6Jx+q01YdOxyk=",
