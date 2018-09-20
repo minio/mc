@@ -52,6 +52,10 @@ var globalFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "insecure",
+		Usage: " (deprecated) Use self-signed instead",
+	},
+	cli.BoolFlag{
+		Name:  "self-signed",
 		Usage: "Disable SSL certificate verification.",
 	},
 }

@@ -80,7 +80,7 @@ func (t traceV4) Response(resp *http.Response) (err error) {
 		console.Debug(string(respTrace))
 	}
 
-	if globalInsecure && resp.TLS != nil {
+	if globalSelfSigned && resp.TLS != nil {
 		dumpTLSCertificates(resp.TLS)
 	}
 

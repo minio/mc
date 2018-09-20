@@ -203,7 +203,7 @@ Quiet option suppress chatty console output.
 ### Option [--config-folder]
 Use this option to set a custom config path.
 
-### Option [ --insecure]
+### Option [ --self-signed]
 Skip SSL certificate verification.
 
 ## 7. Commands

@@ -90,7 +90,7 @@ func (c clearSessionMessage) JSON() string {
 
 // forceClear - Remove a saved session.
 // Used if --force flag is applied.
-func forceClear(sid string, session *sessionV8) {
+func forceClear(sid string, session *sessionV9) {
 	if session != nil {
 		if err := session.Delete().Trace(sid); err == nil {
 			// Force unnecesseray removal successful.
@@ -113,7 +113,7 @@ func clearSession(sid string, isForce bool) {
 		toRemove = append(toRemove, sid)
 	}
 	for _, sid := range toRemove {
-		session, err := loadSessionV8(sid)
+		session, err := loadSessionV9(sid)
 		if !isForce {
 			fatalIf(err.Trace(sid), "Unable to load session `"+sid+"`. Use --force flag to remove obsolete session files.")
 

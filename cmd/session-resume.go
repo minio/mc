@@ -53,14 +53,14 @@ EXAMPLES:
 }
 
 // bySessionWhen is a type for sorting session metadata by time.
-type bySessionWhen []*sessionV8
+type bySessionWhen []*sessionV9
 
 func (b bySessionWhen) Len() int           { return len(b) }
 func (b bySessionWhen) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b bySessionWhen) Less(i, j int) bool { return b[i].Header.When.Before(b[j].Header.When) }
 
 // sessionExecute - run a given session.
-func sessionExecute(s *sessionV8) {
+func sessionExecute(s *sessionV9) {
 	switch s.Header.CommandType {
 	case "cp":
 		doCopySession(s)
@@ -122,7 +122,7 @@ func mainSessionResume(ctx *cli.Context) error {
 
 // resumeSession - Resumes a session specified by sessionID.
 func resumeSession(sessionID string) {
-	s, err := loadSessionV8(sessionID)
+	s, err := loadSessionV9(sessionID)
 	fatalIf(err.Trace(sessionID), "Unable to load session.")
 	// Restore the state of global variables from this previous session.
 	s.restoreGlobals()

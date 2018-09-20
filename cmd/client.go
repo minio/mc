@@ -98,6 +98,6 @@ type Config struct {
 	AppVersion  string
 	AppComments []string
 	Debug       bool
-	Insecure    bool
+	SelfSigned  bool
 	Lookup      minio.BucketLookupType
 }

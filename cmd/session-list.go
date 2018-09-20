@@ -48,9 +48,9 @@ EXAMPLES:
 
 // listSessions list all current sessions.
 func listSessions() *probe.Error {
-	var bySessions []*sessionV8
+	var bySessions []*sessionV9
 	for _, sid := range getSessionIDs() {
-		session, err := loadSessionV8(sid)
+		session, err := loadSessionV9(sid)
 		if err != nil {
 			continue // Skip 'broken' session during listing
 		}

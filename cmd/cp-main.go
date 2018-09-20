@@ -205,7 +205,7 @@ func doCopyFake(cpURLs URLs, pg Progress) URLs {
 }
 
 // doPrepareCopyURLs scans the source URL and prepares a list of objects for copying.
-func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy context.CancelFunc) {
+func doPrepareCopyURLs(session *sessionV9, trapCh <-chan bool, cancelCopy context.CancelFunc) {
 	// Separate source and target. 'cp' can take only one target,
 	// but any number of sources.
 	sourceURLs := session.Header.CommandArgs[:len(session.Header.CommandArgs)-1]
@@ -290,7 +290,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 	session.Save()
 }
 
-func doCopySession(session *sessionV8) error {
+func doCopySession(session *sessionV9) error {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
 	ctx, cancelCopy := context.WithCancel(context.Background())
@@ -458,7 +458,7 @@ func mainCopy(ctx *cli.Context) error {
 		sseKeys = key
 	}
 
-	session := newSessionV8()
+	session := newSessionV9()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = recursive
 	session.Header.CommandIntFlags["older-than"] = olderThan

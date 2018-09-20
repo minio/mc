@@ -147,3 +147,82 @@ func loadSessionV7(sid string) (*sessionV7, *probe.Error) {
 
 	return s, nil
 }
+
+// sessionV8Header for resumable sessions.
+type sessionV8Header struct {
+	Version            string            `json:"version"`
+	When               time.Time         `json:"time"`
+	RootPath           string            `json:"workingFolder"`
+	GlobalBoolFlags    map[string]bool   `json:"globalBoolFlags"`
+	GlobalIntFlags     map[string]int    `json:"globalIntFlags"`
+	GlobalStringFlags  map[string]string `json:"globalStringFlags"`
+	CommandType        string            `json:"commandType"`
+	CommandArgs        []string          `json:"cmdArgs"`
+	CommandBoolFlags   map[string]bool   `json:"cmdBoolFlags"`
+	CommandIntFlags    map[string]int    `json:"cmdIntFlags"`
+	CommandStringFlags map[string]string `json:"cmdStringFlags"`
+	LastCopied         string            `json:"lastCopied"`
+	LastRemoved        string            `json:"lastRemoved"`
+	TotalBytes         int64             `json:"totalBytes"`
+	TotalObjects       int64             `json:"totalObjects"`
+}
+
+// sessionV8 resumable session container.
+type sessionV8 struct {
+	Header    *sessionV8Header
+	SessionID string
+	mutex     *sync.Mutex
+	DataFP    *sessionDataFP
+	sigCh     bool
+}
+
+// loadSessionV8 - reads session file if exists and re-initiates internal variables
+func loadSessionV8(sid string) (*sessionV8, *probe.Error) {
+	if !isSessionDirExists() {
+		return nil, errInvalidArgument().Trace()
+	}
+	sessionFile, err := getSessionFile(sid)
+	if err != nil {
+		return nil, err.Trace(sid)
+	}
+
+	if _, e := os.Stat(sessionFile); e != nil {
+		return nil, probe.NewError(e)
+	}
+
+	// Initialize new session.
+	s := &sessionV8{
+		Header: &sessionV8Header{
+			Version: "8",
+		},
+		SessionID: sid,
+	}
+
+	// Initialize session config loader.
+	qs, e := quick.NewConfig(s.Header, nil)
+	if e != nil {
+		return nil, probe.NewError(e).Trace(sid, s.Header.Version)
+	}
+
+	if e = qs.Load(sessionFile); e != nil {
+		return nil, probe.NewError(e).Trace(sid, s.Header.Version)
+	}
+
+	sV8Header := qs.Data().(*sessionV8Header)
+
+	s.mutex = new(sync.Mutex)
+	s.Header = sV8Header
+
+	sessionDataFile, err := getSessionDataFile(s.SessionID)
+	if err != nil {
+		return nil, err.Trace(sid, s.Header.Version)
+	}
+
+	dataFile, e := os.Open(sessionDataFile)
+	if e != nil {
+		return nil, probe.NewError(e)
+	}
+	s.DataFP = &sessionDataFP{false, dataFile}
+
+	return s, nil
+}

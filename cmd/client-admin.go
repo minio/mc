@@ -72,7 +72,7 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 
 			// Keep TLS config.
 			tlsConfig := &tls.Config{RootCAs: globalRootCAs}
-			if config.Insecure {
+			if config.SelfSigned {
 				tlsConfig.InsecureSkipVerify = true
 			}
 

@@ -227,7 +227,7 @@ mc --json ls play
 ### 参数 [--config-folder]
 这个参数参数自定义的配置文件路径。
 
-### 参数 [ --insecure]
+### 参数 [ --self-signed]
 跳过SSL证书验证。
 
 ## 7. 命令

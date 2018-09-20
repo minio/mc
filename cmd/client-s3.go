@@ -136,7 +136,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 
 			// Keep TLS config.
 			tlsConfig := &tls.Config{RootCAs: globalRootCAs}
-			if config.Insecure {
+			if config.SelfSigned {
 				tlsConfig.InsecureSkipVerify = true
 			}
 

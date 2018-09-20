@@ -156,11 +156,11 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 	// Test s3 connection for API auto probe
 	s3Config := &Config{
 		// S3 connection parameters
-		Insecure:  globalInsecure,
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		Signature: "s3v4",
-		HostURL:   urlJoinPath(url, probeBucketName),
+		SelfSigned: globalSelfSigned,
+		AccessKey:  accessKey,
+		SecretKey:  secretKey,
+		Signature:  "s3v4",
+		HostURL:    urlJoinPath(url, probeBucketName),
 	}
 
 	s3Client, err := s3New(s3Config)

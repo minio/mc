@@ -25,6 +25,61 @@ import (
 	"github.com/minio/minio/pkg/quick"
 )
 
+// Migrates session header version '8' to '9'. The only
+// change was the to replace `insecure` global flag with `selfSigned`
+func migrateSessionV8ToV9() {
+	for _, sid := range getSessionIDs() {
+		sV8, err := loadSessionV8(sid)
+		if err != nil {
+			if os.IsNotExist(err.ToGoError()) {
+				continue
+			}
+			fatalIf(err.Trace(sid), "Unable to load version `8`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		}
+
+		// Close underlying session data file.
+		sV8.DataFP.Close()
+
+		sessionVersion, e := strconv.Atoi(sV8.Header.Version)
+		fatalIf(probe.NewError(e), "Unable to load version `8`. Migration failed please report this issue at https://github.com/minio/mc/issues.")
+		if sessionVersion > 8 { // It is new format.
+			continue
+		}
+
+		sessionFile, err := getSessionFile(sid)
+		fatalIf(err.Trace(sid), "Unable to get session file.")
+
+		// Initialize v9 header and migrate to new config.
+		sV9Header := &sessionV9Header{}
+		sV9Header.Version = globalSessionConfigVersion
+		sV9Header.When = sV8.Header.When
+		sV9Header.RootPath = sV8.Header.RootPath
+		sV9Header.GlobalBoolFlags = sV8.Header.GlobalBoolFlags
+		sV9Header.GlobalIntFlags = sV8.Header.GlobalIntFlags
+		sV9Header.GlobalStringFlags = sV8.Header.GlobalStringFlags
+		sV9Header.CommandType = sV8.Header.CommandType
+		sV9Header.CommandArgs = sV8.Header.CommandArgs
+		sV9Header.CommandBoolFlags = sV8.Header.CommandBoolFlags
+		sV9Header.CommandIntFlags = sV8.Header.CommandIntFlags
+		sV9Header.CommandStringFlags = sV8.Header.CommandStringFlags
+		sV9Header.LastCopied = sV8.Header.LastCopied
+		sV9Header.LastRemoved = sV8.Header.LastRemoved
+		sV9Header.TotalBytes = sV8.Header.TotalBytes
+		sV9Header.TotalObjects = int64(sV8.Header.TotalObjects)
+
+		// Add selfSigned flag to the new V9 header
+		sV9Header.GlobalBoolFlags["selfSigned"] = false
+
+		qs, e := quick.NewConfig(sV9Header, nil)
+		fatalIf(probe.NewError(e).Trace(sid), "Unable to initialize quick config for session '9' header.")
+
+		e = qs.Save(sessionFile)
+		fatalIf(probe.NewError(e).Trace(sid, sessionFile), "Unable to migrate session from '8' to '9'.")
+
+		console.Println("Successfully migrated `" + sessionFile + "` from version `" + sV8.Header.Version + "` to " + "`" + sV9Header.Version + "`.")
+	}
+}
+
 // Migrates session header version '7' to '8'. The only
 // change was the adding of insecure global flag
 func migrateSessionV7ToV8() {

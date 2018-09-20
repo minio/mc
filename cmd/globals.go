@@ -41,7 +41,7 @@ const (
 	// session config and shared urls related constants
 	globalSessionDir           = "session"
 	globalSharedURLsDataDir    = "share"
-	globalSessionConfigVersion = "8"
+	globalSessionConfigVersion = "9"
 
 	// Profile directory for dumping profiler outputs.
 	globalProfileDir = "profile"
@@ -51,11 +51,11 @@ const (
 )
 
 var (
-	globalQuiet    = false // Quiet flag set via command line
-	globalJSON     = false // Json flag set via command line
-	globalDebug    = false // Debug flag set via command line
-	globalNoColor  = false // No Color flag set via command line
-	globalInsecure = false // Insecure flag set via command line
+	globalQuiet      = false // Quiet flag set via command line
+	globalJSON       = false // Json flag set via command line
+	globalDebug      = false // Debug flag set via command line
+	globalNoColor    = false // No Color flag set via command line
+	globalSelfSigned = false // globalSelfSigned flag set via command line
 
 	// WHEN YOU ADD NEXT GLOBAL FLAG, MAKE SURE TO ALSO UPDATE SESSION CODE AND CODE BELOW.
 )
@@ -69,12 +69,12 @@ var (
 )
 
 // Set global states. NOTE: It is deliberately kept monolithic to ensure we dont miss out any flags.
-func setGlobals(quiet, debug, json, noColor, insecure bool) {
+func setGlobals(quiet, debug, json, noColor, selfSigned bool) {
 	globalQuiet = globalQuiet || quiet
 	globalDebug = globalDebug || debug
 	globalJSON = globalJSON || json
 	globalNoColor = globalNoColor || noColor
-	globalInsecure = globalInsecure || insecure
+	globalSelfSigned = globalSelfSigned || selfSigned
 
 	// Enable debug messages if requested.
 	if globalDebug {
@@ -93,7 +93,7 @@ func setGlobalsFromContext(ctx *cli.Context) error {
 	debug := ctx.IsSet("debug")
 	json := ctx.IsSet("json")
 	noColor := ctx.IsSet("no-color")
-	insecure := ctx.IsSet("insecure")
-	setGlobals(quiet, debug, json, noColor, insecure)
+	selfSigned := ctx.IsSet("insecure") || ctx.IsSet("self-signed")
+	setGlobals(quiet, debug, json, noColor, selfSigned)
 	return nil
 }

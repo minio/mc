@@ -134,7 +134,7 @@ func newS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 	s3Config.AppVersion = Version
 	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 	s3Config.Debug = globalDebug
-	s3Config.Insecure = globalInsecure
+	s3Config.SelfSigned = globalSelfSigned
 
 	s3Config.HostURL = urlStr
 	if hostCfg != nil {
