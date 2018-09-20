@@ -30,7 +30,7 @@ import (
 
 var adminConfigSetCmd = cli.Command{
 	Name:   "set",
-	Usage:  "Set Minio server/cluster configuration.",
+	Usage:  "Set new configuration for a Minio server/cluster.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigSet,
 	Flags:  globalFlags,
@@ -39,7 +39,8 @@ var adminConfigSetCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} TARGET [key[.key ...]=value]
-
+  Note:
+  Server needs to be restarted, "mc admin service restart TARGET", for the configuration changes to take effect.
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
@@ -50,7 +51,7 @@ EXAMPLES:
      $ {{.HelpName}} myminio region=us-east-1
 
   3. Set two Minio server/cluster configuration entries.
-     $ {{.HelpName}} myminio logger.console.enabled=true cache.expiry=24
+     $ {{.HelpName}} myminio logger.console.enabled=true cache.expiry=100
 
 `,
 }

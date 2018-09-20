@@ -27,7 +27,7 @@ import (
 
 var adminConfigGetCmd = cli.Command{
 	Name:   "get",
-	Usage:  "Get Minio server/cluster configuration information.",
+	Usage:  "Get configuration of a Minio server/cluster.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigGet,
 	Flags:  globalFlags,

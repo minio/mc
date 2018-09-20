@@ -6,7 +6,7 @@ Minio Client (mc) provides `admin` sub-command to perform administrative tasks o
 service      Stop, restart or get the status of Minio servers
 info         Display Minio server information
 credentials  Change server access and secret keys
-config       Manage server configuration file
+config       Manage server configuration file/parameters
 heal         Heal disks, buckets and objects on Minio server
 ```
 
@@ -213,7 +213,7 @@ Skip SSL certificate verification.
 |[**service** - Start, stop or get the status of Minio server](#service) |
 |[**info** - Display Minio server information](#info) |
 |[**credentials** - Change server access and secret keys](#credentials) |
-|[**config** - Manage server configuration file](#config)|
+|[**config** - Manage server configuration file/parameters](#config)|
 |[**heal** - Heal disks, buckets and objects on Minio server](#heal) |
 
 <a name="service"></a>
@@ -294,32 +294,47 @@ mc admin credentials myminio/ minio minio123
 <a name="config"></a>
 ### Command `config` - Manage server configuration
 `config` command to manage Minio server configuration.
+You must run `mc admin config restart <alias>` for the configuration changes to take effect.
 
 ```sh
 NAME:
-  mc admin config - Manage configuration file
+  mc admin config - Manage server configuration file/parameters
 
 USAGE:
   mc admin config COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  get  Get config of a Minio server/cluster.
-  set  Set new config file to a Minio server/cluster.
+  get  Get configuration of a Minio server/cluster.
+  set  Set new configuration for a Minio server/cluster.
+       Note: Server needs to be restarted, `mc admin service restart <alias>`, for the set configuration changes to take effect.
+)
 
 FLAGS:
   --help, -h                       Show help.
 ```
 
-*Example: Get server configuration of a Minio server/cluster.*
+*Example: Get complete server configuration parameters and save it in a file.*
 
 ```sh
 mc admin config get myminio > /tmp/my-serverconfig
 ```
 
-*Example: Set server configuration of a Minio server/cluster.*
+*Example: Set complete server configuration parameters by reading it from a file.*
 
 ```sh
 mc admin config set myminio < /tmp/my-serverconfig
+```
+
+*Example: Get multiple server configuration parameters.*
+
+```sh
+mc admin config set myminio region browser cache.expiry
+```
+
+*Example: Set multiple server configuration parameters.*
+
+```sh
+mc admin config set myminio region=us-east-1 browser=on cache.expiry=100
 ```
 
 <a name="heal"></a>
