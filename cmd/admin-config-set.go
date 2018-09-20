@@ -18,7 +18,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -28,7 +30,7 @@ import (
 
 var adminConfigSetCmd = cli.Command{
 	Name:   "set",
-	Usage:  "Set new config file to a Minio server/cluster.",
+	Usage:  "Set Minio server/cluster configuration.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigSet,
 	Flags:  globalFlags,
@@ -36,7 +38,7 @@ var adminConfigSetCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET [key[.key ...]=value]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -44,30 +46,35 @@ FLAGS:
 EXAMPLES:
   1. Set server configuration of a Minio server/cluster.
      $ cat myconfig | {{.HelpName}} myminio/
+  2. Set a single Minio server/cluster configuration entry.
+     $ {{.HelpName}} myminio region=us-east-1
+
+  3. Set two Minio server/cluster configuration entries.
+     $ {{.HelpName}} myminio logger.console.enabled=true cache.expiry=24
 
 `,
 }
 
-// configSetMessage container to hold locks information.
+// configSetMessage container to hold status
 type configSetMessage struct {
 	Status          string `json:"status"`
 	setConfigStatus bool
 }
 
-// String colorized service status message.
+// String colorizes config set messages
 func (u configSetMessage) String() (msg string) {
 	// Print the general set config status
 	if u.setConfigStatus {
 		msg += console.Colorize("SetConfigSuccess",
-			"Setting new Minio configuration file has been successful.\n")
+			"Successfully set Minio server configuration.\n")
 	} else {
 		msg += console.Colorize("SetConfigFailure",
-			"Setting new Minio configuration file has failed.\n")
+			"Failed to set Minio server configuration.\n")
 	}
 	return
 }
 
-// JSON jsonified service status Message message.
+// JSON jsonifies config SET message.
 func (u configSetMessage) JSON() string {
 	if u.setConfigStatus {
 		u.Status = "success"
@@ -81,37 +88,55 @@ func (u configSetMessage) JSON() string {
 }
 
 // checkAdminConfigSetSyntax - validate all the passed arguments
-func checkAdminConfigSetSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
+func checkAdminConfigSetSyntax(ctx *cli.Context) string {
+	if len(ctx.Args()) == 0 {
 		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
 	}
+	if len(ctx.Args()) == 1 {
+		return "fullSet"
+	}
+	// if 2 or more arguments are passed
+	return "partialSet"
 }
 
 // main config set function
 func mainAdminConfigSet(ctx *cli.Context) error {
+	// Initializations
+	aliasedURL := ctx.Args().Get(0)
+	isFullConfigSet := false
 
 	// Check command arguments
-	checkAdminConfigSetSyntax(ctx)
+	if checkAdminConfigSetSyntax(ctx) == "fullSet" {
+		isFullConfigSet = true
+	}
 
 	// Set color preference of command outputs
 	console.SetColor("SetConfigSuccess", color.New(color.FgGreen, color.Bold))
 	console.SetColor("SetConfigFailure", color.New(color.FgRed, color.Bold))
 
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
-
-	// Call get config API
-	fatalIf(probe.NewError(client.SetConfig(os.Stdin)), "Cannot set server configuration file.")
-
-	// Print set config result
-	printMsg(configSetMessage{
-		setConfigStatus: true,
-	})
+	if isFullConfigSet {
+		// Call set config API
+		fatalIf(probe.NewError(client.SetConfig(os.Stdin)), "Cannot set server configuration file.")
+		// Print set config result
+		printMsg(configSetMessage{setConfigStatus: true})
+	} else {
+		argsMap := make(map[string]string)
+		for _, arg := range ctx.Args().Tail() {
+			argSplit := strings.SplitN(arg, "=", 2)
+			if strings.Index(arg, "{") == -1 && len(argSplit)%2 == 1 {
+				fatalIf(probe.NewError(errors.New(
+					"Usage: mc admin config setkeys TARGET [key[.key ...]=value]")), "Invalid number of arguments\n")
+			}
+			argsMap[argSplit[0]] = argSplit[1]
+		}
+		// Call set config API
+		fatalIf(probe.NewError(client.SetConfigKeys(argsMap)), "Cannot set server configuration parameter(s).")
+		// Print set config result
+		printMsg(configSetMessage{setConfigStatus: true})
+	}
 
 	return nil
 }

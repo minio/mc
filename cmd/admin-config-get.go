@@ -22,11 +22,12 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/tidwall/gjson"
 )
 
 var adminConfigGetCmd = cli.Command{
 	Name:   "get",
-	Usage:  "Get config of a Minio server/cluster.",
+	Usage:  "Get Minio server/cluster configuration information.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigGet,
 	Flags:  globalFlags,
@@ -34,7 +35,7 @@ var adminConfigGetCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET [key[.key] ...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -42,22 +43,35 @@ FLAGS:
 EXAMPLES:
   1. Get server configuration of a Minio server/cluster.
      $ {{.HelpName}} play/
+  2. Get specific server configuration parameter(s) of a Minio server/cluster.
+     $ {{.HelpName}} play/ region logger.console.enabled
 
 `,
 }
 
-// configGetMessage container to hold locks information.
+// configGetMessage container to hold status
+// and Minio server config information
 type configGetMessage struct {
-	Status string `json:"status"`
-	Config string `json:"config"`
+	Status   string `json:"status"`
+	Config   string `json:"config"`
+	argsList []string
 }
 
-// String colorized service status message.
+// String returns config info as a string
 func (u configGetMessage) String() string {
-	return string(u.Config)
+	if len(u.argsList) == 0 {
+		return string(u.Config)
+	}
+	var str string
+	for _, key := range u.argsList {
+		val := gjson.Get(string(u.Config), key)
+		str += key + " = " + val.Raw + "\n"
+	}
+	return str
+
 }
 
-// JSON jsonified service status Message message.
+// JSON jsonifies configuration GET message.
 func (u configGetMessage) JSON() string {
 	u.Status = "success"
 	statusJSONBytes, e := json.MarshalIndent(u, "", "\t")
@@ -67,31 +81,43 @@ func (u configGetMessage) JSON() string {
 	return strings.NewReplacer(`\n`, "", `\t`, "").Replace(string(statusJSONBytes))
 }
 
-// checkAdminConfigGetSyntax - validate all the passed arguments
-func checkAdminConfigGetSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
+// checkAdminConfigGetSyntax - validates arguments
+func checkAdminConfigGetSyntax(ctx *cli.Context) string {
+	if len(ctx.Args()) == 0 {
 		cli.ShowCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
 	}
+	if len(ctx.Args()) == 1 {
+		return "fullGet"
+	}
+	// if 2 or more arguments are passed
+	return "partialGet"
 }
 
 func mainAdminConfigGet(ctx *cli.Context) error {
+	// Initializations
+	aliasedURL := ctx.Args().Get(0)
+	isFullConfigGet := false
 
-	checkAdminConfigGetSyntax(ctx)
-
-	// Get the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
+	// Check command arguments
+	if checkAdminConfigGetSyntax(ctx) == "fullGet" {
+		isFullConfigGet = true
+	}
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
-
-	// Call get config API
-	c, e := client.GetConfig()
-	fatalIf(probe.NewError(e), "Cannot get server configuration file.")
-
-	// Print
-	printMsg(configGetMessage{Config: string(c)})
-
+	if isFullConfigGet {
+		// Call get config API
+		c, e := client.GetConfig()
+		fatalIf(probe.NewError(e), "Cannot get server configuration file.")
+		printMsg(configGetMessage{Config: string(c)})
+	} else {
+		argsList := ctx.Args().Tail()
+		// Call get config keys API
+		c, e := client.GetConfigKeys(argsList)
+		fatalIf(probe.NewError(e), "Cannot get server configuration file.")
+		printMsg(configGetMessage{Config: string(c),
+			argsList: argsList})
+	}
 	return nil
 }
