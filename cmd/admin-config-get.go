@@ -60,11 +60,11 @@ type configGetMessage struct {
 // String returns config info as a string
 func (u configGetMessage) String() string {
 	if len(u.argsList) == 0 {
-		return string(u.Config)
+		return u.Config
 	}
 	var str string
 	for _, key := range u.argsList {
-		val := gjson.Get(string(u.Config), key)
+		val := gjson.Get(u.Config, key)
 		str += key + " = " + val.Raw + "\n"
 	}
 	return str
@@ -74,7 +74,7 @@ func (u configGetMessage) String() string {
 // JSON jsonifies configuration GET message.
 func (u configGetMessage) JSON() string {
 	u.Status = "success"
-	statusJSONBytes, e := json.MarshalIndent(u, "", "\t")
+	statusJSONBytes, e := json.Marshal(u)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	// Remove \n and \t from u.Config which holds the config data
@@ -82,40 +82,33 @@ func (u configGetMessage) JSON() string {
 }
 
 // checkAdminConfigGetSyntax - validates arguments
-func checkAdminConfigGetSyntax(ctx *cli.Context) string {
+func checkAdminConfigGetSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 {
 		cli.ShowCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
 	}
-	if len(ctx.Args()) == 1 {
-		return "fullGet"
-	}
-	// if 2 or more arguments are passed
-	return "partialGet"
 }
 
 func mainAdminConfigGet(ctx *cli.Context) error {
-	// Initializations
-	aliasedURL := ctx.Args().Get(0)
-	isFullConfigGet := false
-
 	// Check command arguments
-	if checkAdminConfigGetSyntax(ctx) == "fullGet" {
-		isFullConfigGet = true
-	}
+	checkAdminConfigGetSyntax(ctx)
 
 	// Create a new Minio Admin Client
-	client, err := newAdminClient(aliasedURL)
+	// First argument, ctx.Args().Get(0), is the Minio server alias
+	client, err := newAdminClient(ctx.Args().Get(0))
 	fatalIf(err, "Cannot get a configured admin connection.")
-	if isFullConfigGet {
+	// Check number of arguments. If 1, then the whole file or
+	// all configuration information will be the target. Otherwise,
+	// individual configuration parameter(s) will be manipulated.
+	if len(ctx.Args()) == 1 {
 		// Call get config API
 		c, e := client.GetConfig()
-		fatalIf(probe.NewError(e), "Cannot get server configuration file.")
+		fatalIf(probe.NewError(e), "Failed to get full configuration information.")
 		printMsg(configGetMessage{Config: string(c)})
 	} else {
 		argsList := ctx.Args().Tail()
 		// Call get config keys API
 		c, e := client.GetConfigKeys(argsList)
-		fatalIf(probe.NewError(e), "Cannot get server configuration file.")
+		fatalIf(probe.NewError(e), "Failed to get configuration parameters: "+strings.Join(argsList, ", ")+".")
 		printMsg(configGetMessage{Config: string(c),
 			argsList: argsList})
 	}
