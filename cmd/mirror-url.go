@@ -47,31 +47,35 @@ func checkMirrorSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 		errorIf(errInvalidArgument().Trace(URLs...), "`--force` is deprecated please use `--overwrite` instead for the same functionality.")
 	}
 
+	tgtClientURL := newClientURL(tgtURL)
+	if tgtClientURL.Host != "" {
+		if tgtClientURL.Path == string(tgtClientURL.Separator) {
+			fatalIf(errInvalidArgument().Trace(tgtURL),
+				fmt.Sprintf("Target `%s` does not contain bucket name.", tgtURL))
+		}
+	}
+
 	/****** Generic rules *******/
 	if !ctx.Bool("watch") {
-		_, srcContent, err := url2Stat(srcURL, false, encKeyDB)
+		c, srcContent, err := url2Stat(srcURL, false, encKeyDB)
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
 			errorIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
 		}
 
-		if err == nil && !srcContent.Type.IsDir() {
-			fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", srcURL))
+		if err == nil {
+			if !srcContent.Type.IsDir() {
+				fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", srcURL))
+			}
+
+			// Disallow mirroring a directory to itself
+			if isURLContains(srcURL, tgtURL, string(c.GetURL().Separator)) {
+				fatalIf(errInvalidArgument().Trace(), "Mirroring a folder into itself is not allowed.")
+			}
 		}
 	}
 
-	if len(tgtURL) == 0 && tgtURL == "" {
-		fatalIf(errInvalidArgument().Trace(), "Invalid target arguments to mirror command.")
-	}
-
-	clientURL := newClientURL(tgtURL)
-	if clientURL.Host != "" {
-		if clientURL.Path == string(clientURL.Separator) {
-			fatalIf(errInvalidArgument().Trace(tgtURL),
-				fmt.Sprintf("Target `%s` does not contain bucket name.", tgtURL))
-		}
-	}
 }
 
 func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
