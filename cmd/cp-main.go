@@ -384,15 +384,18 @@ func doCopySession(session *sessionV8) error {
 				} else {
 					queueCh <- func() URLs {
 						var doCopyResult = doCopy(ctx, cpURLs, pg)
-						if _, ok := session.Header.CommandBoolFlags["delete-transferred"]; ok {
+						if session.Header.CommandBoolFlags["delete-transferred"] {
 							sourceAlias := cpURLs.SourceAlias
 							sourceURL := cpURLs.SourceContent.URL
 							sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
+							fmt.Println("will delete")
 							err := os.Remove(sourcePath)
 							if err != nil {
 								fmt.Println("failed to delete " + sourcePath)
 								fmt.Println(err)
 							}
+						} else {
+							fmt.Println("no option")
 						}
 						return doCopyResult
 					}
