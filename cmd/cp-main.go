@@ -41,6 +41,10 @@ var (
 			Name:  "recursive, r",
 			Usage: "Copy recursively.",
 		},
+		cli.BoolFlag{
+			Name:  "delete-transferred, dt",
+			Usage: "Delete transferred",
+		},
 		cli.IntFlag{
 			Name:  "older-than",
 			Usage: "Copy objects older than N days",
@@ -107,6 +111,10 @@ EXAMPLES:
 
    9. Copy a folder with encrypted objects recursively from Amazon S3 to Minio cloud storage.
       $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/ myminio/documents/
+
+   10. Copy multiple local folders recursively to Minio cloud storage and delete transferred local files
+      $ {{.HelpName}} --recursive --delete-transferred backup/2014/ backup/2015/ play/archive/
+
 `,
 }
 
@@ -216,6 +224,8 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 
 	// Access recursive flag inside the session header.
 	isRecursive := session.Header.CommandBoolFlags["recursive"]
+
+	//isDeleteTransferred := session.Header.CommandBoolFlags["delete-transferred"]
 
 	olderThan := session.Header.CommandIntFlags["older-than"]
 	newerThan := session.Header.CommandIntFlags["newer-than"]
@@ -373,7 +383,18 @@ func doCopySession(session *sessionV8) error {
 					}
 				} else {
 					queueCh <- func() URLs {
-						return doCopy(ctx, cpURLs, pg)
+						var doCopyResult = doCopy(ctx, cpURLs, pg)
+						if _, ok := session.Header.CommandBoolFlags["delete-transferred"]; ok {
+							sourceAlias := cpURLs.SourceAlias
+							sourceURL := cpURLs.SourceContent.URL
+							sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
+							err := os.Remove(sourcePath)
+							if err != nil {
+								fmt.Println("failed to delete " + sourcePath)
+								fmt.Println(err)
+							}
+						}
+						return doCopyResult
 					}
 				}
 			}
@@ -450,6 +471,7 @@ func mainCopy(ctx *cli.Context) error {
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
 	recursive := ctx.Bool("recursive")
+	deleteTransferred := ctx.Bool("delete-transferred")
 	olderThan := ctx.Int("older-than")
 	newerThan := ctx.Int("newer-than")
 	storageClass := ctx.String("storage-class")
@@ -461,6 +483,7 @@ func mainCopy(ctx *cli.Context) error {
 	session := newSessionV8()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = recursive
+	session.Header.CommandBoolFlags["delete-transferred"] = deleteTransferred
 	session.Header.CommandIntFlags["older-than"] = olderThan
 	session.Header.CommandIntFlags["newer-than"] = newerThan
 	session.Header.CommandStringFlags["storage-class"] = storageClass
