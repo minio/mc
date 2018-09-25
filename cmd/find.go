@@ -243,7 +243,7 @@ func find(ctx *findContext, fileContent contentMessage) {
 // all the input parameters.
 func doFind(ctx *findContext) error {
 	// If watch is enabled we will wait on the prefix perpetually
-	// for all I/O events until cancelled by user, if watch is not enabled
+	// for all I/O events until canceled by user, if watch is not enabled
 	// following defer is a no-op.
 	defer watchFind(ctx)
 
@@ -301,7 +301,7 @@ func doFind(ctx *findContext) error {
 	}
 
 	// Success, notice watch will execute in defer only if enabled and this call
-	// will return after watch is cancelled.
+	// will return after watch is canceled.
 	return nil
 }
 

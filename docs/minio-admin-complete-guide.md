@@ -212,7 +212,9 @@ Skip SSL certificate verification.
 |:---|
 |[**service** - Start, stop or get the status of Minio server](#service) |
 |[**info** - Display Minio server information](#info) |
-|[**credentials** - Change server access and secret keys](#credentials) |
+|[**users** - Manage users](#users) |
+|[**policies** - Manage policies](#policies) |
+|[**credentials** - Change **admin** server access and secret keys](#credentials) |
 |[**config** - Manage server configuration file](#config)|
 |[**heal** - Heal disks, buckets and objects on Minio server](#heal) |
 
@@ -242,7 +244,7 @@ Uptime: 1 days 19 hours 57 minutes 39 seconds.
 
 *Example: Restart remote minio service.*
 
-NOTE: `restart` and `stop` sub-commands are disruptive operations for your Minio service, any on-going API operations will be forcibly cancelled. So, it should be used only under certain circumstances. Please use it with caution.
+NOTE: `restart` and `stop` sub-commands are disruptive operations for your Minio service, any on-going API operations will be forcibly canceled. So, it should be used only under certain circumstances. Please use it with caution.
 
 ```sh
 mc admin service restart play
@@ -264,6 +266,7 @@ FLAGS:
 *Example: Display Minio server information.*
 
 ```sh
+mc admin info play
 ●  play.minio.io:9000
    Uptime : online since 1 day ago
   Version : 2018-05-28T04:31:38Z
@@ -273,19 +276,105 @@ FLAGS:
   Storage : Used 8.2GiB
 ```
 
-<a name="credentials"></a>
-### Command `credentials` - Change server access and secret keys
-`credentials` command to set new credentials of a Minio server.
+<a name="policies"></a>
+### Command `policies` - Manage user policies
+`policies` command to add, remove, list policies on Minio server.
 
 ```sh
 NAME:
-  mc admin credentials - Change server access and secret keys
+  mc admin policies - Manage policies
+
+FLAGS:
+  --help, -h                       Show help.
+
+COMMANDS:
+  add      Add new policies
+  remove   Remove policies
+  list     List all policies
+```
+
+*Example: Add a new policy 'newpolicy' on Minio, with policy from /tmp/newpolicy.json.*
+
+```sh
+mc admin policies add myminio/ newpolicy /tmp/newpolicy.json
+```
+
+*Example: Remove policy 'newpolicy' on Minio.*
+
+```sh
+mc admin policies remove myminio/ newpolicy
+```
+
+*Example: List all policies on Minio.*
+
+```sh
+mc admin policies list --json myminio/
+{"status":"success","policy":"newpolicy"}
+```
+
+<a name="users"></a>
+### Command `users` - Manage regular users
+`users` command to add, remove, enable, disable, list users on Minio server.
+
+```sh
+NAME:
+  mc admin users - Manage regular users
+
+FLAGS:
+  --help, -h                       Show help.
+
+COMMANDS:
+  add      Add new users
+  disable  Disable users
+  enable   Enable users
+  remove   Remove users
+  list     List all users
+```
+
+*Example: Add a new user 'newuser' on Minio, with 'newpolicy' policy.*
+
+```sh
+mc admin users add myminio/ newuser newuser123 newpolicy
+```
+
+*Example: Disable a user 'newuser' on Minio.*
+
+```sh
+mc admin users disable myminio/ newuser
+```
+
+*Example: Enable a user 'newuser' on Minio.*
+
+```sh
+mc admin users enable myminio/ newuser
+```
+
+*Example: Remove user 'newuser' on Minio.*
+
+```sh
+mc admin users remove myminio/ newuser
+```
+
+*Example: List all users on Minio.*
+
+```sh
+mc admin users list --json myminio/
+{"status":"success","accessKey":"newuser","userStatus":"enabled"}
+```
+
+<a name="credentials"></a>
+### Command `credentials` - Change server **admin** access and secret keys
+`credentials` command to set new **admin** credentials of a Minio server.
+
+```sh
+NAME:
+  mc admin credentials - Change server **admin** access and secret keys
 
 FLAGS:
   --help, -h                       Show help.
 ```
 
-*Example: Set new credentials of a Minio server represented by its alias 'myminio'.*
+*Example: Set new admin credentials of a Minio server represented by its alias 'myminio'.*
 
 ```sh
 mc admin credentials myminio/ minio minio123

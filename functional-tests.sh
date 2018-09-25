@@ -17,7 +17,7 @@
 
 ################################################################################
 #
-# This script is usable by mc functional tests, mint tests and minio verfication
+# This script is usable by mc functional tests, mint tests and minio verification
 # tests.
 #
 # * As mc functional tests, just run this script.  It uses mc executable binary
