@@ -118,24 +118,38 @@ func checkCopySyntaxTypeC(srcURLs []string, tgtURL string, isRecursive bool, key
 		fatalIf(errInvalidArgument().Trace(), "Invalid number of source arguments.")
 	}
 
-	srcURL := srcURLs[0]
-	_, srcContent, err := url2Stat(srcURL, false, keys)
-	// incomplete uploads are not necessary for copy operation, no need to verify for them.
-	isIncomplete := false
-	if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
-		fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
-	}
-
-	if srcContent.Type.IsDir() && !isRecursive {
-		fatalIf(errInvalidArgument().Trace(srcURL), "To copy a folder requires --recursive flag.")
-	}
-
 	// Check target.
 	if _, tgtContent, err := url2Stat(tgtURL, false, keys); err == nil {
 		if !tgtContent.Type.IsDir() {
 			fatalIf(errInvalidArgument().Trace(tgtURL), "Target `"+tgtURL+"` is not a folder.")
 		}
 	}
+
+	for _, srcURL := range srcURLs {
+		c, srcContent, err := url2Stat(srcURL, false, keys)
+		// incomplete uploads are not necessary for copy operation, no need to verify for them.
+		isIncomplete := false
+		if err != nil {
+			if !isURLPrefixExists(srcURL, isIncomplete) {
+				fatalIf(err.Trace(srcURL), "Unable to stat source `"+srcURL+"`.")
+			}
+			// No more check here, continue to the next source url
+			continue
+		}
+
+		if srcContent.Type.IsDir() {
+			// Require --recursive flag if we are copying a directory
+			if !isRecursive {
+				fatalIf(errInvalidArgument().Trace(srcURL), "To copy a folder requires --recursive flag.")
+			}
+
+			// Check if we are going to copy a directory into itself
+			if isURLContains(srcURL, tgtURL, string(c.GetURL().Separator)) {
+				fatalIf(errInvalidArgument().Trace(), "Copying a folder into itself is not allowed.")
+			}
+		}
+	}
+
 }
 
 // checkCopySyntaxTypeD verifies if the source is a valid list of files and target is a valid folder.

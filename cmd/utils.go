@@ -272,3 +272,20 @@ func getSSEKey(resource string, encKeys []prefixSSEPair) string {
 	}
 	return ""
 }
+
+// Return true if target url is a part of a source url such as:
+// alias/bucket/ and alias/bucket/dir/, however
+func isURLContains(srcURL, tgtURL, sep string) bool {
+	// Add a separator to source url if not found
+	if !strings.HasSuffix(srcURL, sep) {
+		srcURL += sep
+	}
+	if !strings.HasSuffix(tgtURL, sep) {
+		tgtURL += sep
+	}
+	// Check if we are going to copy a directory into itself
+	if strings.HasPrefix(tgtURL, srcURL) {
+		return true
+	}
+	return false
+}
