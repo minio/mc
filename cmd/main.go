@@ -277,6 +277,7 @@ func registerApp() *cli.App {
 	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
 	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
 	registerCmd(findCmd)    // Find specific String patterns
+	registerCmd(selectCmd)  // Run select queries on a object or set of objects.
 	registerCmd(statCmd)    // Stat contents of a bucket/object
 	registerCmd(diffCmd)    // Computer differences between two files or folders.
 	registerCmd(rmCmd)      // Remove a file or bucket
