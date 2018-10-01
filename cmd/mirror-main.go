@@ -290,9 +290,11 @@ func (mj *mirrorJob) startStatus() {
 				// Print in new line and adjust to top so that we
 				// don't print over the ongoing progress bar.
 				if sURLs.SourceContent != nil {
-					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-						fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
-					os.Exit(1)
+					if !isErrIgnored(sURLs.Error) {
+						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+							fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+						os.Exit(1)
+					}
 				} else {
 					// When sURLs.SourceContent is nil, we know that we have an error related to removing
 					errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
