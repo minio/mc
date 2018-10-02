@@ -393,15 +393,13 @@ func (ui *uiData) UpdateDisplay(s *madmin.HealTaskStatus) (err error) {
 	return
 }
 
-func (ui *uiData) DisplayAndFollowHealStatus() (err error) {
-	var res madmin.HealTaskStatus
-
+func (ui *uiData) DisplayAndFollowHealStatus() (res madmin.HealTaskStatus, err error) {
 	firstIter := true
 	for {
 		_, res, err = ui.Client.Heal(ui.Bucket, ui.Prefix, *ui.HealOpts,
 			ui.ClientToken, ui.ForceStart)
 		if err != nil {
-			return err
+			return res, err
 		}
 
 		if firstIter {
@@ -413,7 +411,7 @@ func (ui *uiData) DisplayAndFollowHealStatus() (err error) {
 		}
 		err = ui.UpdateDisplay(&res)
 		if err != nil {
-			return err
+			return res, err
 		}
 
 		if res.Summary == "finished" {
@@ -429,10 +427,10 @@ func (ui *uiData) DisplayAndFollowHealStatus() (err error) {
 	}
 	if globalJSON {
 		ui.printStatsJSON(&res)
-		return nil
+		return res, nil
 	}
 	if globalQuiet {
 		ui.printStatsQuietly(&res)
 	}
-	return nil
+	return res, nil
 }
