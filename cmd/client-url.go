@@ -18,13 +18,13 @@ package cmd
 
 import (
 	"bytes"
-	"mime"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/mimedb"
 )
 
 // url client url structure
@@ -228,9 +228,6 @@ func isURLPrefixExists(urlPrefix string, incomplete bool) bool {
 // on failure just return 'application/octet-stream'.
 func guessURLContentType(urlStr string) string {
 	url := newClientURL(urlStr)
-	contentType := mime.TypeByExtension(filepath.Ext(url.Path))
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
+	contentType := mimedb.TypeByExtension(filepath.Ext(url.Path))
 	return contentType
 }
