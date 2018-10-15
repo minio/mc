@@ -143,6 +143,7 @@ func newS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 		s3Config.Signature = hostCfg.API
 	}
 	s3Config.Lookup = getLookupType(hostCfg.Lookup)
+	s3Config.Region = hostCfg.Region
 	return s3Config
 }
 

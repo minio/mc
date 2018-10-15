@@ -42,6 +42,7 @@ type hostConfigV9 struct {
 	SecretKey string `json:"secretKey"`
 	API       string `json:"api"`
 	Lookup    string `json:"lookup"`
+	Region    string `json:"region"`
 }
 
 // configV8 config version.

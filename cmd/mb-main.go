@@ -29,8 +29,8 @@ var (
 	mbFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "region",
-			Value: "us-east-1",
-			Usage: "Specify bucket region. Defaults to `us-east-1`.",
+			Value: "",
+			Usage: "Specify bucket region. Default is in configuration file.",
 		},
 		cli.BoolFlag{
 			Name:  "ignore-existing, p",

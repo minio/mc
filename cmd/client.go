@@ -96,6 +96,7 @@ type Config struct {
 	AccessKey   string
 	SecretKey   string
 	Signature   string
+	Region      string
 	HostURL     string
 	AppName     string
 	AppVersion  string

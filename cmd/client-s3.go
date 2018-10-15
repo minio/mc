@@ -128,7 +128,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			options := minio.Options{
 				Creds:        creds,
 				Secure:       useTLS,
-				Region:       "",
+				Region:       config.Region,
 				BucketLookup: config.Lookup,
 			}
 			api, e = minio.NewWithOptions(hostName, &options)
