@@ -3,10 +3,12 @@
 Minio Client (mc) provides `admin` sub-command to perform administrative tasks on your Minio deployments.
 
 ```sh
-service      Stop, restart or get the status of Minio servers
+service      Stop, restart or get status of Minio server
 info         Display Minio server information
-credentials  Change server access and secret keys
-config       Manage server configuration file
+users        Manage regular users
+policies     Manage canned policies
+credentials  Change Admin server access and secret keys
+config       Manage configuration file
 heal         Heal disks, buckets and objects on Minio server
 ```
 
