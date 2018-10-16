@@ -36,12 +36,12 @@ func main() {
 
 ```
 
-| Service operations         | Info operations  | Healing operations                    | Config operations         | Misc                                |
-|:----------------------------|:----------------------------|:--------------------------------------|:--------------------------|:------------------------------------|
-| [`ServiceStatus`](#ServiceStatus) | [`ServerInfo`](#ServerInfo) | [`Heal`](#Heal) | [`GetConfig`](#GetConfig) | [`SetCredentials`](#SetCredentials) |
-| [`ServiceSendAction`](#ServiceSendAction) | | | [`SetConfig`](#SetConfig) | |
-| | |            | [`GetConfigKeys`](#GetConfigKeys) |                                     |
-| | |            | [`SetConfigKeys`](#SetConfigKeys) |                                     |
+| Service operations         | Info operations  | Healing operations                    | Config operations        | IAM operations | Misc                                |
+|:----------------------------|:----------------------------|:--------------------------------------|:--------------------------|:------------------------------------|:------------------------------------|
+| [`ServiceStatus`](#ServiceStatus) | [`ServerInfo`](#ServerInfo) | [`Heal`](#Heal) | [`GetConfig`](#GetConfig) | [`AddUser`](#AddUser) | [`SetAdminCredentials`](#SetAdminCredentials) |
+| [`ServiceSendAction`](#ServiceSendAction) | | | [`SetConfig`](#SetConfig) | [`SetUserPolicy`](#SetUserPolicy) | [`StartProfiling`](#StartProfiling) |
+| | |            | [`GetConfigKeys`](#GetConfigKeys) | [`ListUsers`](#ListUsers) | [`DownloadProfilingData`](#DownloadProfilingData) |
+| | |            | [`SetConfigKeys`](#SetConfigKeys) | [`AddCannedPolicy`](#AddCannedPolicy) | |
 
 
 ## 1. Constructor
@@ -273,7 +273,7 @@ __Example__
 
 <a name="GetConfig"></a>
 ### GetConfig() ([]byte, error)
-Get config.json of a minio setup.
+Get current `config.json` of a Minio server.
 
 __Example__
 
@@ -295,37 +295,17 @@ __Example__
 
 
 <a name="SetConfig"></a>
-### SetConfig(config io.Reader) (SetConfigResult, error)
-Set config.json of a minio setup and restart setup for configuration
-change to take effect.
-
-
-| Param  | Type  | Description  |
-|---|---|---|
-|`st.Status`            | _bool_  | true if set-config succeeded, false otherwise. |
-|`st.NodeSummary.Name`  | _string_  | Network address of the node. |
-|`st.NodeSummary.ErrSet`   | _bool_ | Bool representation indicating if an error is encountered with the node.|
-|`st.NodeSummary.ErrMsg`   | _string_ | String representation of the error (if any) on the node.|
-
+### SetConfig(config io.Reader) error
+Set a new `config.json` for a Minio server.
 
 __Example__
 
 ``` go
     config := bytes.NewReader([]byte(`config.json contents go here`))
-    result, err := madmClnt.SetConfig(config)
-    if err != nil {
+    if err := madmClnt.SetConfig(config); err != nil {
         log.Fatalf("failed due to: %v", err)
     }
-
-    var buf bytes.Buffer
-    enc := json.NewEncoder(&buf)
-    enc.SetEscapeHTML(false)
-    enc.SetIndent("", "\t")
-    err = enc.Encode(result)
-    if err != nil {
-        log.Fatalln(err)
-    }
-    log.Println("SetConfig: ", string(buf.Bytes()))
+    log.Println("SetConfig was successful")
 ```
 
 <a name="GetConfigKeys"></a>
@@ -367,21 +347,128 @@ __Example__
     log.Println("New configuration successfully set")
 ```
 
+## 8. IAM operations
 
+<a name="AddCannedPolicy"></a>
+### AddCannedPolicy(policyName string, policy string) error
+Create a new canned policy on Minio server.
 
-## 8. Misc operations
+__Example__
 
-<a name="SetCredentials"></a>
-### SetCredentials() error
+```
+	policy := `{"Version": "2012-10-17","Statement": [{"Action": ["s3:GetObject"],"Effect": "Allow","Resource": ["arn:aws:s3:::my-bucketname/*"],"Sid": ""}]}`
+
+    if err = madmClnt.AddCannedPolicy("get-only", policy); err != nil {
+		log.Fatalln(err)
+	}
+```
+
+<a name="AddUser"></a>
+### AddUser(user string, secret string) error
+Add a new user on a Minio server.
+
+__Example__
+
+``` go
+	if err = madmClnt.AddUser("newuser", "newstrongpassword"); err != nil {
+		log.Fatalln(err)
+	}
+```
+
+<a name="SetUserPolicy"></a>
+### SetUserPolicy(user string, policyName string) error
+Enable a canned policy `get-only` for a given user on Minio server.
+
+__Example__
+
+``` go
+	if err = madmClnt.SetUserPolicy("newuser", "get-only"); err != nil {
+		log.Fatalln(err)
+	}
+```
+
+<a name="ListUsers"></a>
+### ListUsers() (map[string]UserInfo, error)
+Lists all users on Minio server.
+
+__Example__
+
+``` go
+	users, err := madmClnt.ListUsers(); 
+    if err != nil {
+		log.Fatalln(err)
+	}
+    for k, v := range users {
+        fmt.Printf("User %s Status %s\n", k, v.Status)
+    }
+```
+
+## 9. Misc operations
+
+<a name="SetAdminCredentials"></a>
+### SetAdminCredentials() error
 Set new credentials of a Minio setup.
 
 __Example__
 
 ``` go
-    err = madmClnt.SetCredentials("YOUR-NEW-ACCESSKEY", "YOUR-NEW-SECRETKEY")
+    err = madmClnt.SetAdminCredentials("YOUR-NEW-ACCESSKEY", "YOUR-NEW-SECRETKEY")
     if err != nil {
             log.Fatalln(err)
     }
     log.Println("New credentials successfully set.")
 
+```
+
+<a name="StartProfiling"></a>
+### StartProfiling(profiler string) error
+Ask all nodes to start profiling using the specified profiler mode
+
+__Example__
+
+``` go
+    startProfilingResults, err = madmClnt.StartProfiling("cpu")
+    if err != nil {
+            log.Fatalln(err)
+    }
+    for _, result := range startProfilingResults {
+        if !result.Success {
+            log.Printf("Unable to start profiling on node `%s`, reason = `%s`\n", result.NodeName, result.Error)
+        } else {
+            log.Printf("Profiling successfully started on node `%s`\n", result.NodeName)
+        }
+    }
+
+```
+
+<a name="DownloadProfilingData"></a>
+### DownloadProfilingData() ([]byte, error)
+Download profiling data of all nodes in a zip format.
+
+__Example__
+
+``` go
+    profilingData, err := madmClnt.DownloadProfilingData()
+    if err != nil {
+            log.Fatalln(err)
+    }
+
+    profilingFile, err := os.Create("/tmp/profiling-data.zip")
+    if err != nil {
+            log.Fatal(err)
+    }
+
+    if _, err := io.Copy(profilingFile, profilingData); err != nil {
+            log.Fatal(err)
+    }
+
+    if err := profilingFile.Close(); err != nil {
+            log.Fatal(err)
+    }
+
+    if err := profilingData.Close(); err != nil {
+            log.Fatal(err)
+    }
+
+    log.Println("Profiling data successfully downloaded.")
 ```

@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016, 2017 Minio, Inc.
+ * Minio Client (C) 2016, 2017, 2018 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ const credsCmdName = "credentials"
 
 var adminCredsCmd = cli.Command{
 	Name:   credsCmdName,
-	Usage:  "Change server access and secret keys",
+	Usage:  "Change Admin server access and secret keys",
 	Action: mainAdminCreds,
 	Flags:  append(adminCredsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
@@ -42,8 +42,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Set new credentials of a Minio server represented by its alias 'play'.
-       $ {{.HelpName}} play/ minio minio123
+    1. Set new **admin** credentials of a Minio server represented by its alias 'alias'.
+       $ {{.HelpName}} alias/ minio minio123
 
 `,
 }
@@ -74,7 +74,7 @@ func mainAdminCreds(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	// Change the credentials of the specified Minio server
-	e := client.SetCredentials(accessKey, secretKey)
+	e := client.SetAdminCredentials(accessKey, secretKey)
 	fatalIf(probe.NewError(e), "Unable to set new credentials to '"+aliasedURL+"'.")
 
 	return nil

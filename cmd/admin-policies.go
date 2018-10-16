@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016, 2017 Minio, Inc.
+ * Minio Client (C) 2018 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,31 +18,23 @@ package cmd
 
 import "github.com/minio/cli"
 
-var (
-	adminFlags = []cli.Flag{}
-)
-
-var adminCmd = cli.Command{
-	Name:            "admin",
-	Usage:           "Manage Minio servers",
-	Action:          mainAdmin,
-	HideHelpCommand: true,
-	Before:          setGlobalsFromContext,
-	Flags:           append(adminFlags, globalFlags...),
+var adminPoliciesCmd = cli.Command{
+	Name:   "policies",
+	Usage:  "Manage canned policies",
+	Action: mainAdminPolicies,
+	Before: setGlobalsFromContext,
+	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminServiceCmd,
-		adminInfoCmd,
-		adminUsersCmd,
-		adminPoliciesCmd,
-		adminCredsCmd,
-		adminConfigCmd,
-		adminHealCmd,
+		adminPoliciesAddCmd,
+		adminPoliciesRemoveCmd,
+		adminPoliciesListCmd,
 	},
+	HideHelpCommand: true,
 }
 
-// mainAdmin is the handle for "mc admin" command.
-func mainAdmin(ctx *cli.Context) error {
+// mainAdminPolicies is the handle for "mc admin config" command.
+func mainAdminPolicies(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "service", "heal", "lock" have their own main.
+	// Sub-commands like "get", "set" have their own main.
 }
