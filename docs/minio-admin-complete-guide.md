@@ -327,6 +327,7 @@ FLAGS:
 
 COMMANDS:
   add      Add new users
+  policy   Set policy for user
   disable  Disable users
   enable   Enable users
   remove   Remove users
@@ -337,6 +338,12 @@ COMMANDS:
 
 ```sh
 mc admin users add myminio/ newuser newuser123 newpolicy
+```
+
+*Example: Change policy for a user 'newuser' on Minio to 'writeonly' policy.*
+
+```sh
+mc admin users policy myminio/ newuser writeonly
 ```
 
 *Example: Disable a user 'newuser' on Minio.*

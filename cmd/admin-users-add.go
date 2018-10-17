@@ -38,7 +38,7 @@ USAGE:
   {{.HelpName}} TARGET USERNAME PASSWORD POLICYNAME
 
 POLICYNAME:
-  Name of the canned policies created on Minio server.
+  Name of the canned policy created on Minio server.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -81,6 +81,8 @@ func (u userMessage) String() string {
 			Field{"AccessKey", accessFieldMaxLen},
 			Field{"PolicyName", policyFieldMaxLen},
 		).buildRow(u.UserStatus, u.AccessKey, u.PolicyName)
+	case "policy":
+		return console.Colorize("UserMessage", "Set a policy `"+u.PolicyName+"` for user `"+u.AccessKey+"` successfully.")
 	case "remove":
 		return console.Colorize("UserMessage", "Removed user `"+u.AccessKey+"` successfully.")
 	case "disable":
