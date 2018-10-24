@@ -66,9 +66,10 @@ func TestValidSecretKeys(t *testing.T) {
 
 // Tests valid and invalid access keys.
 func TestValidAccessKeys(t *testing.T) {
-	equalAssert(isValidAccessKey("aaa"), false, t)
+	equalAssert(isValidAccessKey("aa"), false, t)
 
 	equalAssert(isValidAccessKey(""), true, t)
+	equalAssert(isValidAccessKey("adm"), true, t)
 	equalAssert(isValidAccessKey("admin"), true, t)
 	equalAssert(isValidAccessKey("$$%%%%%3333"), true, t)
 	equalAssert(isValidAccessKey("c67W2-r4MAyAYScRl"), true, t)
