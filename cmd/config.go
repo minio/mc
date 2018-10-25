@@ -174,6 +174,13 @@ func getHostConfig(alias string) (*hostConfigV9, *probe.Error) {
 // mustGetHostConfig retrieves host specific configuration such as access keys, signature type.
 func mustGetHostConfig(alias string) *hostConfigV9 {
 	hostCfg, _ := getHostConfig(alias)
+	// If alias is not found,
+	// look for it in the environment variable.
+	if hostCfg == nil {
+		if envConfig, ok := os.LookupEnv(mcEnvHostsPrefix + alias); ok {
+			hostCfg, _ = expandAliasFromEnv(envConfig)
+		}
+	}
 	return hostCfg
 }
 
