@@ -101,14 +101,15 @@ mc config host add minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqA
 ```
 
 ## 4. Test Your Setup
-`mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted Minio server for testing and development purposes.
 
 *Example:*
 
-Get Minio server information from https://play.minio.io:9000
+Get Minio server information for the configured alias `minio`
 
 ```sh
-●  play.minio.io:9000
+mc admin info minio
+
+●  192.168.1.51:9000
    Uptime : online since 1 day ago
   Version : 2018-05-28T04:31:38Z
    Region :
@@ -133,9 +134,9 @@ Debug option enables debug output to console.
 *Example: Display verbose debug output for `info` command.*
 
 ```sh
-mc admin --debug info play
+mc admin --debug info minio
 mc: <DEBUG> GET /minio/admin/v1/info HTTP/1.1
-Host: play.minio.io:9000
+Host: 192.168.1.51:9000
 User-Agent: Minio (linux; amd64) madmin-go/0.0.1 mc/2018-05-23T23:43:34Z
 Authorization: AWS4-HMAC-SHA256 Credential=**REDACTED**/20180530/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
 X-Amz-Content-Sha256: UNSIGNED-PAYLOAD
@@ -155,7 +156,7 @@ X-Xss-Protection: "1; mode=block"
 
 mc: <DEBUG> Response Time:  140.70112ms
 
-●  play.minio.io:9000
+●  192.168.1.51:9000
    Uptime : online since 1 day ago
   Version : 2018-05-28T04:31:38Z
    Region :
@@ -170,11 +171,11 @@ JSON option enables parseable output in JSON format.
 *Example: Minio server information.*
 
 ```sh
-mc admin --json info play
+mc admin --json info minio
 {
   "status": "success",
   "service": "on",
-  "address": "play.minio.io:9000",
+  "address": "192.168.1.51:9000",
   "error": "",
   "storage": {
     "used": 7979370172,
