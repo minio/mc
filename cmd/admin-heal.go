@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"path/filepath"
 
 	"github.com/fatih/color"
@@ -126,10 +127,11 @@ func mainAdminHeal(ctx *cli.Context) error {
 		HealthCols:            make(map[col]int64),
 		CurChan:               cursorAnimate(),
 	}
-	errorIf(
-		probe.NewError(ui.DisplayAndFollowHealStatus()),
-		"Unable to display follow heal status.",
-	)
-
-	return herr
+	res, e := ui.DisplayAndFollowHealStatus()
+	if e != nil {
+		data, _ := json.Marshal(res)
+		traceStr := string(data)
+		errorIf(probe.NewError(e).Trace(traceStr), "Unable to display heal status.")
+	}
+	return e
 }
