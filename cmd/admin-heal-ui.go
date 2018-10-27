@@ -18,9 +18,12 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -393,44 +396,58 @@ func (ui *uiData) UpdateDisplay(s *madmin.HealTaskStatus) (err error) {
 	return
 }
 
-func (ui *uiData) DisplayAndFollowHealStatus() (res madmin.HealTaskStatus, err error) {
+func (ui *uiData) healResumeMsg(aliasedURL string) string {
+	var flags string
+	if ui.HealOpts.Recursive {
+		flags += "--recursive "
+	}
+	if ui.HealOpts.DryRun {
+		flags += "--dry-run "
+	}
+	return fmt.Sprintf("Healing is backgrounded, to resume watching use `mc admin heal %s %s`", flags, aliasedURL)
+}
+
+func (ui *uiData) DisplayAndFollowHealStatus(aliasedURL string) (res madmin.HealTaskStatus, err error) {
+	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+	trapMsg := ui.healResumeMsg(aliasedURL)
+
 	firstIter := true
 	for {
-		_, res, err = ui.Client.Heal(ui.Bucket, ui.Prefix, *ui.HealOpts,
-			ui.ClientToken, ui.ForceStart)
-		if err != nil {
-			return res, err
-		}
-
-		if firstIter {
-			firstIter = false
-		} else {
-			if !globalQuiet && !globalJSON {
-				console.RewindLines(8)
+		select {
+		case <-trapCh:
+			return res, errors.New(trapMsg)
+		default:
+			_, res, err = ui.Client.Heal(ui.Bucket, ui.Prefix, *ui.HealOpts,
+				ui.ClientToken, ui.ForceStart, false)
+			if err != nil {
+				return res, err
 			}
-		}
-		err = ui.UpdateDisplay(&res)
-		if err != nil {
-			return res, err
-		}
+			if firstIter {
+				firstIter = false
+			} else {
+				if !globalQuiet && !globalJSON {
+					console.RewindLines(8)
+				}
+			}
+			err = ui.UpdateDisplay(&res)
+			if err != nil {
+				return res, err
+			}
 
-		if res.Summary == "finished" {
-			break
-		}
+			if res.Summary == "finished" {
+				if globalJSON {
+					ui.printStatsJSON(&res)
+				} else if globalQuiet {
+					ui.printStatsQuietly(&res)
+				}
+				return res, nil
+			}
 
-		if res.Summary == "stopped" {
-			fmt.Println("Heal had an error - ", res.FailureDetail)
-			break
-		}
+			if res.Summary == "stopped" {
+				return res, fmt.Errorf("Heal had an error - %s", res.FailureDetail)
+			}
 
-		time.Sleep(time.Second)
+			time.Sleep(time.Second)
+		}
 	}
-	if globalJSON {
-		ui.printStatsJSON(&res)
-		return res, nil
-	}
-	if globalQuiet {
-		ui.printStatsQuietly(&res)
-	}
-	return res, nil
 }

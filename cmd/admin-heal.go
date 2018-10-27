@@ -40,6 +40,10 @@ var adminHealFlags = []cli.Flag{
 		Name:  "force-start, f",
 		Usage: "Force start a new heal sequence",
 	},
+	cli.BoolFlag{
+		Name:  "force-stop, s",
+		Usage: "Force stop a running heal sequence",
+	},
 }
 
 var adminHealCmd = cli.Command{
@@ -83,6 +87,25 @@ func checkAdminHealSyntax(ctx *cli.Context) {
 	}
 }
 
+// stopHealMessage is container for stop heal success and failure messages.
+type stopHealMessage struct {
+	Status string `json:"status"`
+	Alias  string `json:"alias"`
+}
+
+// String colorized stop heal message.
+func (s stopHealMessage) String() string {
+	return console.Colorize("HealStopped", "Heal stopped successfully at `"+s.Alias+"`.")
+}
+
+// JSON jsonified stop heal message.
+func (s stopHealMessage) JSON() string {
+	stopHealJSONBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(stopHealJSONBytes)
+}
+
 // mainAdminHeal - the entry function of heal command
 func mainAdminHeal(ctx *cli.Context) error {
 
@@ -95,6 +118,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 
 	console.SetColor("Heal", color.New(color.FgGreen, color.Bold))
 	console.SetColor("HealUpdateUI", color.New(color.FgYellow, color.Bold))
+	console.SetColor("HealStopped", color.New(color.FgGreen, color.Bold))
 
 	// Create a new Minio Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -112,8 +136,17 @@ func mainAdminHeal(ctx *cli.Context) error {
 		Recursive: ctx.Bool("recursive"),
 		DryRun:    ctx.Bool("dry-run"),
 	}
+
 	forceStart := ctx.Bool("force-start")
-	healStart, _, herr := client.Heal(bucket, prefix, opts, "", forceStart)
+	forceStop := ctx.Bool("force-stop")
+	if forceStop {
+		_, _, herr := client.Heal(bucket, prefix, opts, "", forceStart, forceStop)
+		errorIf(probe.NewError(herr), "Failed to stop heal sequence.")
+		printMsg(stopHealMessage{Status: "success", Alias: aliasedURL})
+		return nil
+	}
+
+	healStart, _, herr := client.Heal(bucket, prefix, opts, "", forceStart, false)
 	errorIf(probe.NewError(herr), "Failed to start heal sequence.")
 
 	ui := uiData{
@@ -127,11 +160,16 @@ func mainAdminHeal(ctx *cli.Context) error {
 		HealthCols:            make(map[col]int64),
 		CurChan:               cursorAnimate(),
 	}
-	res, e := ui.DisplayAndFollowHealStatus()
+
+	res, e := ui.DisplayAndFollowHealStatus(aliasedURL)
 	if e != nil {
-		data, _ := json.Marshal(res)
-		traceStr := string(data)
-		errorIf(probe.NewError(e).Trace(traceStr), "Unable to display heal status.")
+		if res.FailureDetail != "" {
+			data, _ := json.Marshal(res)
+			traceStr := string(data)
+			errorIf(probe.NewError(e).Trace(aliasedURL, traceStr), "Unable to display heal status.")
+		} else {
+			errorIf(probe.NewError(e).Trace(aliasedURL), "Unable to display heal status.")
+		}
 	}
-	return e
+	return nil
 }
