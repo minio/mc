@@ -146,10 +146,10 @@
 			"revisionTime": "2018-05-22T01:58:01Z"
 		},
 		{
-			"checksumSHA1": "7zU5IsAQ/H8Utl5s5ihKfezh5Ws=",
+			"checksumSHA1": "Twe2beSe125vyX6Jx+q01YdOxyk=",
 			"path": "github.com/minio/minio/pkg/mimedb",
-			"revision": "335a547d7adb4bf9ac0054936dac8bb9edae9fb6",
-			"revisionTime": "2018-10-01T09:43:49Z"
+			"revision": "2a9c150b7055f48d8f947d3bb1ceb21250441653",
+			"revisionTime": "2018-10-31T19:09:26Z"
 		},
 		{
 			"checksumSHA1": "c+s2pYNeuooOUl3tw+4+oNA0hl8=",
