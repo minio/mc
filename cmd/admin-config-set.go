@@ -61,7 +61,7 @@ func (u configSetMessage) String() (msg string) {
 		msg += console.Colorize("SetConfigSuccess",
 			"Setting new Minio configuration file has been successful.\n")
 		msg += console.Colorize("SetConfigSuccess",
-			"Please restart your server with `mc admin restart`.\n")
+			"Please restart your server with `mc admin service restart`.\n")
 	} else {
 		msg += console.Colorize("SetConfigFailure",
 			"Setting new Minio configuration file has failed.\n")
