@@ -28,7 +28,7 @@ import (
 var adminProfilingStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "type",
-		Usage: "Profiler type, possible values are: `cpu`, `mem`, `block`, `mutex` and `trace`",
+		Usage: "Profiler type, possible values are 'cpu', 'mem', 'block', 'mutex' and 'trace'",
 		Value: "mem",
 	},
 }

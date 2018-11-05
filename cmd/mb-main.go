@@ -30,7 +30,7 @@ var (
 		cli.StringFlag{
 			Name:  "region",
 			Value: "us-east-1",
-			Usage: "Specify bucket region. Defaults to `us-east-1`.",
+			Usage: "Specify bucket region. Defaults to 'us-east-1'.",
 		},
 		cli.BoolFlag{
 			Name:  "ignore-existing, p",

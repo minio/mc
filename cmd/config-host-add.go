@@ -30,11 +30,11 @@ var hostAddFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "lookup",
 		Value: "auto",
-		Usage: "bucket lookup supported by the server. Valid options are `[dns,path,auto]`",
+		Usage: "bucket lookup supported by the server. Valid options are '[dns,path,auto]'",
 	},
 	cli.StringFlag{
 		Name:  "api",
-		Usage: "API signature. Valid options are `[S3v4, S3v2]`",
+		Usage: "API signature. Valid options are '[S3v4, S3v2]'",
 	},
 }
 var configHostAddCmd = cli.Command{
