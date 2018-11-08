@@ -35,7 +35,7 @@ var adminUsersAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET USERNAME PASSWORD POLICYNAME
+  {{.HelpName}} TARGET ACCESSKEY SECRETKEY POLICYNAME
 
 POLICYNAME:
   Name of the canned policy created on Minio server.
