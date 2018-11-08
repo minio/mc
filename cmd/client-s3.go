@@ -572,7 +572,7 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 }
 
 // Get - get object with metadata.
-func (c *s3Client) Get(sseKey string) (io.Reader, *probe.Error) {
+func (c *s3Client) Get(sseKey string) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	var opts minio.GetObjectOptions
 	if sseKey != "" {

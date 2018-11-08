@@ -422,7 +422,7 @@ func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSEKey
 }
 
 // get - get wrapper returning object reader.
-func (f *fsClient) get() (io.Reader, *probe.Error) {
+func (f *fsClient) get() (io.ReadCloser, *probe.Error) {
 	tmppath := f.PathURL.Path
 	// Golang strips trailing / if you clean(..) or
 	// EvalSymlinks(..). Adding '.' prevents it from doing so.
@@ -445,7 +445,7 @@ func (f *fsClient) get() (io.Reader, *probe.Error) {
 }
 
 // Get returns reader and any additional metadata.
-func (f *fsClient) Get(sseKey string) (io.Reader, *probe.Error) {
+func (f *fsClient) Get(sseKey string) (io.ReadCloser, *probe.Error) {
 	return f.get()
 }
 

@@ -83,7 +83,7 @@ func isAliasURLDir(aliasURL string, keys map[string][]prefixSSEPair) bool {
 }
 
 // getSourceStreamFromURL gets a reader from URL.
-func getSourceStreamFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.Reader, err *probe.Error) {
+func getSourceStreamFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser, err *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
 	if err != nil {
 		return nil, err.Trace(urlStr)
@@ -94,7 +94,7 @@ func getSourceStreamFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) 
 }
 
 // getSourceStream gets a reader from URL.
-func getSourceStream(alias string, urlStr string, fetchStat bool, sseKey string) (reader io.Reader, metadata map[string]string, err *probe.Error) {
+func getSourceStream(alias string, urlStr string, fetchStat bool, sseKey string) (reader io.ReadCloser, metadata map[string]string, err *probe.Error) {
 	sourceClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
@@ -180,6 +180,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
+		defer reader.Close()
 		// Get metadata from target content as well
 		if urls.TargetContent.Metadata != nil {
 			for k, v := range urls.TargetContent.Metadata {
