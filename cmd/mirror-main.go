@@ -230,7 +230,7 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 	targetWithAlias := filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path)
 
 	// Remove extraneous file/bucket on target.
-	err := probe.NewError(removeRecursive(targetWithAlias, isIncomplete, mj.isFake, 0, 0, sURLs.encKeyDB))
+	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, mj.isFake, 0, 0, sURLs.encKeyDB))
 	return sURLs.WithError(err)
 }
 
