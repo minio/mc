@@ -25,7 +25,7 @@ import (
 var configHostRemoveCmd = cli.Command{
 	Name:            "remove",
 	ShortName:       "rm",
-	Usage:           "Remove a host from configuration file.",
+	Usage:           "remove a host from configuration file",
 	Action:          mainConfigHostRemove,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,

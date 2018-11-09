@@ -29,17 +29,17 @@ import (
 // Print version.
 var versionCmd = cli.Command{
 	Name:   "version",
-	Usage:  "Print version info.",
+	Usage:  "show version info",
 	Action: mainVersion,
 	Before: setGlobalsFromContext,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "quiet, q",
-			Usage: "Suppress chatty console output.",
+			Usage: "suppress chatty console output",
 		},
 		cli.BoolFlag{
 			Name:  "json",
-			Usage: "Enable JSON formatted output.",
+			Usage: "enable JSON formatted output",
 		},
 	},
 	CustomHelpTemplate: `NAME:

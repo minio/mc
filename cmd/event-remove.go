@@ -27,20 +27,20 @@ import (
 )
 
 var (
-	eventsRemoveFlags = []cli.Flag{
+	eventRemoveFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "force",
-			Usage: "Force removing all bucket notifications",
+			Usage: "force removing all bucket notifications",
 		},
 	}
 )
 
-var eventsRemoveCmd = cli.Command{
+var eventRemoveCmd = cli.Command{
 	Name:   "remove",
-	Usage:  "Remove a bucket notification. With '--force' can remove all bucket notifications.",
-	Action: mainEventsRemove,
+	Usage:  "remove a bucket notification; '--force' removes all bucket notifications",
+	Action: mainEventRemove,
 	Before: setGlobalsFromContext,
-	Flags:  append(eventsRemoveFlags, globalFlags...),
+	Flags:  append(eventRemoveFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -60,8 +60,8 @@ EXAMPLES:
 `,
 }
 
-// checkEventsRemoveSyntax - validate all the passed arguments
-func checkEventsRemoveSyntax(ctx *cli.Context) {
+// checkEventRemoveSyntax - validate all the passed arguments
+func checkEventRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
 	}
@@ -70,29 +70,29 @@ func checkEventsRemoveSyntax(ctx *cli.Context) {
 	}
 }
 
-// eventsRemoveMessage container
-type eventsRemoveMessage struct {
+// eventRemoveMessage container
+type eventRemoveMessage struct {
 	ARN    string `json:"arn"`
 	Status string `json:"status"`
 }
 
 // JSON jsonified remove message.
-func (u eventsRemoveMessage) JSON() string {
+func (u eventRemoveMessage) JSON() string {
 	u.Status = "success"
-	eventsRemoveMessageJSONBytes, e := json.Marshal(u)
+	eventRemoveMessageJSONBytes, e := json.Marshal(u)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(eventsRemoveMessageJSONBytes)
+	return string(eventRemoveMessageJSONBytes)
 }
 
-func (u eventsRemoveMessage) String() string {
-	msg := console.Colorize("Events", "Successfully removed "+u.ARN)
+func (u eventRemoveMessage) String() string {
+	msg := console.Colorize("Event", "Successfully removed "+u.ARN)
 	return msg
 }
 
-func mainEventsRemove(ctx *cli.Context) error {
-	console.SetColor("Events", color.New(color.FgGreen, color.Bold))
+func mainEventRemove(ctx *cli.Context) error {
+	console.SetColor("Event", color.New(color.FgGreen, color.Bold))
 
-	checkEventsRemoveSyntax(ctx)
+	checkEventRemoveSyntax(ctx)
 
 	args := ctx.Args()
 	path := args.Get(0)
@@ -114,7 +114,7 @@ func mainEventsRemove(ctx *cli.Context) error {
 
 	err = s3Client.RemoveNotificationConfig(arn)
 	fatalIf(err, "Cannot disable notification on the specified bucket.")
-	printMsg(eventsRemoveMessage{ARN: arn})
+	printMsg(eventRemoveMessage{ARN: arn})
 
 	return nil
 }

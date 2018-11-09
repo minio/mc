@@ -29,7 +29,7 @@ var (
 	shareUploadFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "Recursively upload any object matching the prefix.",
+			Usage: "recursively upload any object matching the prefix",
 		},
 		shareFlagExpire,
 		shareFlagContentType,
@@ -39,7 +39,7 @@ var (
 // Share documents via URL.
 var shareUpload = cli.Command{
 	Name:   "upload",
-	Usage:  "Generate `curl` command to upload objects without requiring access/secret keys.",
+	Usage:  "generate `curl` command to upload objects without requiring access/secret keys",
 	Action: mainShareUpload,
 	Before: setGlobalsFromContext,
 	Flags:  append(shareUploadFlags, globalFlags...),

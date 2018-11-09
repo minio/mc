@@ -27,10 +27,10 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminProfilingStopCmd = cli.Command{
+var adminProfileStopCmd = cli.Command{
 	Name:            "stop",
-	Usage:           "Stop and download profiling data",
-	Action:          mainAdminProfilingStop,
+	Usage:           "stop and download profile data",
+	Action:          mainAdminProfileStop,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
 	HideHelpCommand: true,
@@ -44,21 +44,21 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    2. Download latest profiling data in the current directory
+    2. Download latest profile data in the current directory
        $ {{.HelpName}} myminio/
 `,
 }
 
-func checkAdminProfilingStopSyntax(ctx *cli.Context) {
+func checkAdminProfileStopSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "stop", 1) // last argument is exit code
 	}
 }
 
-// mainAdminProfilingStop - the entry function of profiling stop command
-func mainAdminProfilingStop(ctx *cli.Context) error {
+// mainAdminProfileStop - the entry function of profile stop command
+func mainAdminProfileStop(ctx *cli.Context) error {
 	// Check for command syntax
-	checkAdminProfilingStopSyntax(ctx)
+	checkAdminProfileStopSyntax(ctx)
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -71,36 +71,36 @@ func mainAdminProfilingStop(ctx *cli.Context) error {
 		return nil
 	}
 
-	// Create profiling zip file
-	tmpFile, e := ioutil.TempFile("", "mc-profiling-")
-	fatalIf(probe.NewError(e), "Unable to download profiling data.")
+	// Create profile zip file
+	tmpFile, e := ioutil.TempFile("", "mc-profile-")
+	fatalIf(probe.NewError(e), "Unable to download profile data.")
 
-	// Ask for profiling data, which will come compressed with zip format
+	// Ask for profile data, which will come compressed with zip format
 	zippedData, adminErr := client.DownloadProfilingData()
-	fatalIf(probe.NewError(adminErr), "Unable to download profiling data.")
+	fatalIf(probe.NewError(adminErr), "Unable to download profile data.")
 
 	// Copy zip content to target download file
 	_, e = io.Copy(tmpFile, zippedData)
-	fatalIf(probe.NewError(e), "Unable to download profiling data.")
+	fatalIf(probe.NewError(e), "Unable to download profile data.")
 
 	// Close everything
 	zippedData.Close()
 	tmpFile.Close()
 
-	downloadPath := "profiling.zip"
+	downloadPath := "profile.zip"
 
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
 		e = os.Rename(downloadPath, downloadPath+"."+time.Now().Format("2006-01-02T15:04:05.999999-07:00"))
-		fatalIf(probe.NewError(e), "Unable to create a backup of profiling.zip")
+		fatalIf(probe.NewError(e), "Unable to create a backup of profile.zip")
 	} else {
 		if !os.IsNotExist(e) {
-			fatal(probe.NewError(e), "Unable to download profiling data.")
+			fatal(probe.NewError(e), "Unable to download profile data.")
 		}
 	}
 
-	fatalIf(probe.NewError(os.Rename(tmpFile.Name(), downloadPath)), "Unable to download profiling data.")
+	fatalIf(probe.NewError(os.Rename(tmpFile.Name(), downloadPath)), "Unable to download profile data.")
 
-	console.Infof("Profiling data successfully downloaded as %s\n", downloadPath)
+	console.Infof("Profile data successfully downloaded as %s\n", downloadPath)
 	return nil
 }

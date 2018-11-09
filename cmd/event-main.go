@@ -19,25 +19,25 @@ package cmd
 import "github.com/minio/cli"
 
 var (
-	eventsFlags = []cli.Flag{}
+	eventFlags = []cli.Flag{}
 )
 
-var eventsCmd = cli.Command{
-	Name:            "events",
-	Usage:           "Manage object notifications.",
+var eventCmd = cli.Command{
+	Name:            "event",
+	Usage:           "configure object notifications",
 	HideHelpCommand: true,
-	Action:          mainEvents,
+	Action:          mainEvent,
 	Before:          setGlobalsFromContext,
-	Flags:           append(eventsFlags, globalFlags...),
+	Flags:           append(eventFlags, globalFlags...),
 	Subcommands: []cli.Command{
-		eventsAddCmd,
-		eventsRemoveCmd,
-		eventsListCmd,
+		eventAddCmd,
+		eventRemoveCmd,
+		eventListCmd,
 	},
 }
 
-// mainEvents is the handle for "mc events" command.
-func mainEvents(ctx *cli.Context) error {
+// mainEvent is the handle for "mc event" command.
+func mainEvent(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 	// Sub-commands like "add", "remove", "list" have their own main.

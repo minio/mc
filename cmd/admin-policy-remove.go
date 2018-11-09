@@ -23,43 +23,42 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminUsersListCmd = cli.Command{
-	Name:   "list",
-	Usage:  "List all users",
-	Action: mainAdminUsersList,
+var adminPolicyRemoveCmd = cli.Command{
+	Name:   "remove",
+	Usage:  "remove policy",
+	Action: mainAdminPolicyRemove,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET POLICYNAME
+
+POLICYNAME:
+  Name of the canned policy on Minio server.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. List all users on Minio server.
-     $ {{.HelpName}} myminio
+  1. Remove 'writeonly' policy on Minio server.
+     $ {{.HelpName}} myminio writeonly
 `,
 }
 
-// checkAdminUsersListSyntax - validate all the passed arguments
-func checkAdminUsersListSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+// checkAdminPolicyRemoveSyntax - validate all the passed arguments
+func checkAdminPolicyRemoveSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 2 {
+		cli.ShowCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
 	}
 }
 
-// mainAdminUsersList is the handle for "mc admin users list" command.
-func mainAdminUsersList(ctx *cli.Context) error {
-	checkAdminUsersListSyntax(ctx)
+// mainAdminPolicyRemove is the handle for "mc admin policy remove" command.
+func mainAdminPolicyRemove(ctx *cli.Context) error {
+	checkAdminPolicyRemoveSyntax(ctx)
 
-	// Additional command speific theme customization.
-	console.SetColor("UserMessage", color.New(color.FgGreen))
-	console.SetColor("AccessKey", color.New(color.FgBlue))
-	console.SetColor("PolicyName", color.New(color.FgYellow))
-	console.SetColor("UserStatus", color.New(color.FgCyan))
+	console.SetColor("PolicyMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -69,16 +68,12 @@ func mainAdminUsersList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	users, e := client.ListUsers()
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot list user")
+	fatalIf(probe.NewError(client.RemoveCannedPolicy(args.Get(1))).Trace(args...), "Cannot remove policy")
 
-	for k, v := range users {
-		printMsg(userMessage{
-			op:         "list",
-			AccessKey:  k,
-			PolicyName: v.PolicyName,
-			UserStatus: string(v.Status),
-		})
-	}
+	printMsg(userPolicyMessage{
+		op:     "remove",
+		Policy: args.Get(1),
+	})
+
 	return nil
 }

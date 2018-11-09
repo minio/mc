@@ -21,40 +21,42 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
-var adminUsersEnableCmd = cli.Command{
-	Name:   "enable",
-	Usage:  "Enable users",
-	Action: mainAdminUsersEnable,
+var adminUserPolicyCmd = cli.Command{
+	Name:   "policy",
+	Usage:  "set policy for user",
+	Action: mainAdminUserPolicy,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET USERNAME
+  {{.HelpName}} TARGET USERNAME POLICYNAME
+
+POLICYNAME:
+  Name of the canned policy created on Minio server.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable a disabled user 'newuser' for Minio server.
-     $ {{.HelpName}} myminio newuser
+  1. Set a policy 'writeonly' to 'foobar' on Minio server.
+     $ {{.HelpName}} myminio foobar writeonly
 `,
 }
 
-// checkAdminUsersEnableSyntax - validate all the passed arguments
-func checkAdminUsersEnableSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "enable", 1) // last argument is exit code
+// checkAdminUserPolicySyntax - validate all the passed arguments
+func checkAdminUserPolicySyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 3 {
+		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code
 	}
 }
 
-// mainAdminUsersEnable is the handle for "mc admin users enable" command.
-func mainAdminUsersEnable(ctx *cli.Context) error {
-	checkAdminUsersEnableSyntax(ctx)
+// mainAdminUserPolicy is the handle for "mc admin user policy" command.
+func mainAdminUserPolicy(ctx *cli.Context) error {
+	checkAdminUserPolicySyntax(ctx)
 
 	console.SetColor("UserMessage", color.New(color.FgGreen))
 
@@ -66,12 +68,13 @@ func mainAdminUsersEnable(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	e := client.SetUserStatus(args.Get(1), madmin.AccountEnabled)
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot enable user")
+	fatalIf(probe.NewError(client.SetUserPolicy(args.Get(1), args.Get(2))).Trace(args...), "Cannot set user policy for user")
 
 	printMsg(userMessage{
-		op:        "enable",
-		AccessKey: args.Get(1),
+		op:         "policy",
+		AccessKey:  args.Get(1),
+		PolicyName: args.Get(2),
+		UserStatus: "enabled",
 	})
 
 	return nil

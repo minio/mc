@@ -24,10 +24,10 @@ var (
 	sessionFlags = []cli.Flag{}
 )
 
-// Manage sessions for cp and mirror.
+// Resume interrupted operations.
 var sessionCmd = cli.Command{
 	Name:            "session",
-	Usage:           "Manage saved sessions for cp command.",
+	Usage:           "resume interrupted operations",
 	Action:          mainSession,
 	Flags:           append(sessionFlags, globalFlags...),
 	Before:          setGlobalsFromContext,

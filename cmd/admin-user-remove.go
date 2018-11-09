@@ -23,42 +23,39 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminPoliciesRemoveCmd = cli.Command{
+var adminUserRemoveCmd = cli.Command{
 	Name:   "remove",
-	Usage:  "Remove policies",
-	Action: mainAdminPoliciesRemove,
+	Usage:  "remove user",
+	Action: mainAdminUserRemove,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET POLICYNAME
-
-POLICYNAME:
-  Name of the canned policy on Minio server.
+  {{.HelpName}} TARGET USERNAME
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove a canned policy 'writeonly'.
-     $ {{.HelpName}} myminio writeonly
+  1. Remove a user 'foobar' on Minio server.
+     $ {{.HelpName}} myminio foobar
 `,
 }
 
-// checkAdminPoliciesRemoveSyntax - validate all the passed arguments
-func checkAdminPoliciesRemoveSyntax(ctx *cli.Context) {
+// checkAdminUserRemoveSyntax - validate all the passed arguments
+func checkAdminUserRemoveSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
 		cli.ShowCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
 	}
 }
 
-// mainAdminPoliciesRemove is the handle for "mc admin users add" command.
-func mainAdminPoliciesRemove(ctx *cli.Context) error {
-	checkAdminPoliciesRemoveSyntax(ctx)
+// mainAdminUserRemove is the handle for "mc admin user remove" command.
+func mainAdminUserRemove(ctx *cli.Context) error {
+	checkAdminUserRemoveSyntax(ctx)
 
-	console.SetColor("PolicyMessage", color.New(color.FgGreen))
+	console.SetColor("UserMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -68,11 +65,12 @@ func mainAdminPoliciesRemove(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	fatalIf(probe.NewError(client.RemoveCannedPolicy(args.Get(1))).Trace(args...), "Cannot remove policy")
+	e := client.RemoveUser(args.Get(1))
+	fatalIf(probe.NewError(e).Trace(args...), "Cannot remove new user")
 
-	printMsg(userPolicyMessage{
-		op:     "remove",
-		Policy: args.Get(1),
+	printMsg(userMessage{
+		op:        "remove",
+		AccessKey: args.Get(1),
 	})
 
 	return nil

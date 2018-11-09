@@ -28,20 +28,20 @@ import (
 var sessionClearFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "force",
-		Usage: "Force a dangerous clear operation.",
+		Usage: "force a dangerous clear operation.",
 	},
 }
 
 var sessionClear = cli.Command{
 	Name:            "clear",
-	Usage:           "Clear a previously saved session.",
+	Usage:           "clear interrupted session",
 	Action:          mainSessionClear,
 	Before:          setGlobalsFromContext,
 	Flags:           append(sessionClearFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
-  
+
 USAGE:
   {{.HelpName}} SESSION-ID|all
 

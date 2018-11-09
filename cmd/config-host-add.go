@@ -40,7 +40,7 @@ var hostAddFlags = []cli.Flag{
 var configHostAddCmd = cli.Command{
 	Name:            "add",
 	ShortName:       "a",
-	Usage:           "Add a new host to configuration file.",
+	Usage:           "add a new host to configuration file",
 	Action:          mainConfigHostAdd,
 	Before:          setGlobalsFromContext,
 	Flags:           append(hostAddFlags, globalFlags...),
@@ -49,7 +49,7 @@ var configHostAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} ALIAS URL ACCESS-KEY SECRET-KEY
+  {{.HelpName}} ALIAS URL ACCESSKEY SECRETKEY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

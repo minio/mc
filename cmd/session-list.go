@@ -27,7 +27,7 @@ import (
 
 var sessionList = cli.Command{
 	Name:   "list",
-	Usage:  "List all previously saved sessions.",
+	Usage:  "list all interrupted sessions",
 	Before: setGlobalsFromContext,
 	Action: mainSessionList,
 	Flags:  globalFlags,

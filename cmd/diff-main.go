@@ -32,10 +32,10 @@ var (
 	diffFlags = []cli.Flag{}
 )
 
-// Compute differences between two files or folders.
+// Compute differences in object name, size, and date between two buckets.
 var diffCmd = cli.Command{
 	Name:   "diff",
-	Usage:  "List differences in object name, size, and date between folders.",
+	Usage:  "list differences in object name, size, and date between two buckets",
 	Action: mainDiff,
 	Before: setGlobalsFromContext,
 	Flags:  append(diffFlags, globalFlags...),
@@ -50,7 +50,7 @@ FLAGS:
   {{end}}
 DESCRIPTION:
   Diff only calculates differences in object name, size and time.
-  It *DOES NOT* compare objects' contents. 
+  It *DOES NOT* compare objects' contents.
 
 LEGEND:
     > - object is only in source.

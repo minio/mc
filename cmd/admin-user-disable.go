@@ -24,10 +24,10 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
-var adminUsersDisableCmd = cli.Command{
+var adminUserDisableCmd = cli.Command{
 	Name:   "disable",
-	Usage:  "Disable users",
-	Action: mainAdminUsersDisable,
+	Usage:  "disable user",
+	Action: mainAdminUserDisable,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -40,21 +40,21 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Disable a user 'newuser' for Minio server.
-     $ {{.HelpName}} myminio newuser
+  1. Disable a user 'foobar' on Minio server.
+     $ {{.HelpName}} myminio foobar
 `,
 }
 
-// checkAdminUsersDisableSyntax - validate all the passed arguments
-func checkAdminUsersDisableSyntax(ctx *cli.Context) {
+// checkAdminUserDisableSyntax - validate all the passed arguments
+func checkAdminUserDisableSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
 		cli.ShowCommandHelpAndExit(ctx, "disable", 1) // last argument is exit code
 	}
 }
 
-// mainAdminUsersDisable is the handle for "mc admin users disable" command.
-func mainAdminUsersDisable(ctx *cli.Context) error {
-	checkAdminUsersDisableSyntax(ctx)
+// mainAdminUserDisable is the handle for "mc admin user disable" command.
+func mainAdminUserDisable(ctx *cli.Context) error {
+	checkAdminUserDisableSyntax(ctx)
 
 	console.SetColor("UserMessage", color.New(color.FgGreen))
 

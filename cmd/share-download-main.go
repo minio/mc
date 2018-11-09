@@ -28,7 +28,7 @@ var (
 	shareDownloadFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "Share all objects recursively.",
+			Usage: "share all objects recursively",
 		},
 		shareFlagExpire,
 	}
@@ -37,7 +37,7 @@ var (
 // Share documents via URL.
 var shareDownload = cli.Command{
 	Name:   "download",
-	Usage:  "Generate URLs for download access.",
+	Usage:  "generate URLs for download access",
 	Action: mainShareDownload,
 	Before: setGlobalsFromContext,
 	Flags:  append(shareDownloadFlags, globalFlags...),

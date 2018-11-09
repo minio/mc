@@ -26,10 +26,10 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminPoliciesAddCmd = cli.Command{
+var adminPolicyAddCmd = cli.Command{
 	Name:   "add",
-	Usage:  "Add new policies",
-	Action: mainAdminPoliciesAdd,
+	Usage:  "add new policy",
+	Action: mainAdminPolicyAdd,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -53,8 +53,8 @@ EXAMPLES:
  `,
 }
 
-// checkAdminPoliciesAddSyntax - validate all the passed arguments
-func checkAdminPoliciesAddSyntax(ctx *cli.Context) {
+// checkAdminPolicyAddSyntax - validate all the passed arguments
+func checkAdminPolicyAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 3 {
 		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
 	}
@@ -95,9 +95,9 @@ func (u userPolicyMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// mainAdminPoliciesAdd is the handle for "mc admin users add" command.
-func mainAdminPoliciesAdd(ctx *cli.Context) error {
-	checkAdminPoliciesAddSyntax(ctx)
+// mainAdminPolicyAdd is the handle for "mc admin policy add" command.
+func mainAdminPolicyAdd(ctx *cli.Context) error {
+	checkAdminPolicyAddSyntax(ctx)
 
 	console.SetColor("PolicyMessage", color.New(color.FgGreen))
 

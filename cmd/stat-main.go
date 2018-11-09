@@ -29,19 +29,19 @@ var (
 	statFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "Stat recursively.",
+			Usage: "stat all objects recursively",
 		},
 		cli.StringFlag{
 			Name:  "encrypt-key",
-			Usage: "Encrypt/Decrypt (using server-side encryption)",
+			Usage: "encrypt/decrypt (using server-side encryption)",
 		},
 	}
 )
 
-// stat files and folders.
+// show object metadata
 var statCmd = cli.Command{
 	Name:   "stat",
-	Usage:  "Stat contents of objects and folders.",
+	Usage:  "show object metadata",
 	Action: mainStat,
 	Before: setGlobalsFromContext,
 	Flags:  append(statFlags, globalFlags...),
@@ -67,7 +67,7 @@ EXAMPLES:
 
    3. Stat files recursively on a local filesystem on Microsoft Windows.
       $ {{.HelpName}} --recursive C:\Users\Worf\
-   
+
    4. Stat files which are encrypted on the server side
       $ {{.HelpName}} --encrypt-key "s3/ferenginar=32byteslongsecretkeymustbegiven1" s3/ferenginar/klingon_opera_aktuh_maylotah.ogg
 `,

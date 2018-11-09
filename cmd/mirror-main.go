@@ -39,53 +39,53 @@ var (
 	mirrorFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:   "force",
-			Usage:  "Force allows forced overwrite or removal of file(s) on target(s).",
+			Usage:  "force allows forced overwrite or removal of object(s) on target",
 			Hidden: true, // Hidden since this option is deprecated.
 		},
 		cli.BoolFlag{
 			Name:  "overwrite",
-			Usage: "Overwrite file(s) on target(s).",
+			Usage: "overwrite object(s) on target",
 		},
 		cli.BoolFlag{
 			Name:  "fake",
-			Usage: "Perform a fake mirror operation.",
+			Usage: "perform a fake mirror operation",
 		},
 		cli.BoolFlag{
 			Name:  "watch, w",
-			Usage: "Watch and mirror for changes.",
+			Usage: "watch and synchronize changes",
 		},
 		cli.BoolFlag{
 			Name:  "remove",
-			Usage: "Remove extraneous file(s) on target(s).",
+			Usage: "remove extraneous object(s) on target",
 		},
 		cli.StringFlag{
 			Name:  "region",
-			Usage: "Specify which region to select when creating new buckets.",
+			Usage: "specify region when creating new bucket(s) on target",
 			Value: "us-east-1",
 		},
 		cli.BoolFlag{
 			Name:  "a",
-			Usage: "Preserve bucket policies rules.",
+			Usage: "preserve bucket policy rules on target bucket(s)",
 		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
-			Usage: "Exclude file/object that matches the passed file name pattern.",
+			Usage: "exclude object(s) that match specified object name pattern",
 		},
 		cli.IntFlag{
 			Name:  "older-than",
-			Usage: "Select objects older than N days",
+			Usage: "filter object(s) older than N days",
 		},
 		cli.IntFlag{
 			Name:  "newer-than",
-			Usage: "Select objects newer than N days",
+			Usage: "filter object(s) newer than N days",
 		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",
-			Usage: "Set storage class for object",
+			Usage: "specify storage class for new object(s) on target",
 		},
 		cli.StringFlag{
 			Name:  "encrypt-key",
-			Usage: "Encrypt/Decrypt objects (using server-side encryption)",
+			Usage: "encrypt/decrypt object(s) using specified encryption key(s) for source and/or target aliases",
 		},
 	}
 )
@@ -93,7 +93,7 @@ var (
 //  Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
-	Usage:  "Mirror buckets and folders.",
+	Usage:  "synchronize object(s) to a remote site",
 	Action: mainMirror,
 	Before: setGlobalsFromContext,
 	Flags:  append(mirrorFlags, globalFlags...),

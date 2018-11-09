@@ -28,7 +28,7 @@ import (
 
 var adminServiceStopCmd = cli.Command{
 	Name:   "stop",
-	Usage:  "Stop Minio server",
+	Usage:  "stop minio server",
 	Action: mainAdminServiceStop,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,

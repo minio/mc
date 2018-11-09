@@ -25,20 +25,20 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
-var adminProfilingStartFlags = []cli.Flag{
+var adminProfileStartFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "type",
-		Usage: "Profiler type, possible values are 'cpu', 'mem', 'block', 'mutex' and 'trace'",
+		Usage: "start profiler type, possible values are 'cpu', 'mem', 'block', 'mutex' and 'trace'",
 		Value: "mem",
 	},
 }
 
-var adminProfilingStartCmd = cli.Command{
+var adminProfileStartCmd = cli.Command{
 	Name:            "start",
-	Usage:           "Start recording profiling data",
-	Action:          mainAdminProfilingStart,
+	Usage:           "start recording profile data",
+	Action:          mainAdminProfileStart,
 	Before:          setGlobalsFromContext,
-	Flags:           append(adminProfilingStartFlags, globalFlags...),
+	Flags:           append(adminProfileStartFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -50,13 +50,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Start CPU profiling
+    1. Start CPU profile
        $ {{.HelpName}} --type cpu myminio/
 
 `,
 }
 
-func checkAdminProfilingStartSyntax(ctx *cli.Context) {
+func checkAdminProfileStartSyntax(ctx *cli.Context) {
 	// Check flags combinations
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "start", 1) // last argument is exit code
@@ -84,10 +84,10 @@ func checkAdminProfilingStartSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainAdminProfilingStart - the entry function of profiling command
-func mainAdminProfilingStart(ctx *cli.Context) error {
+// mainAdminProfileStart - the entry function of profile command
+func mainAdminProfileStart(ctx *cli.Context) error {
 	// Check for command syntax
-	checkAdminProfilingStartSyntax(ctx)
+	checkAdminProfileStartSyntax(ctx)
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -102,10 +102,10 @@ func mainAdminProfilingStart(ctx *cli.Context) error {
 		return nil
 	}
 
-	// Start profiling
+	// Start profile
 	_, cmdErr := client.StartProfiling(madmin.ProfilerType(profilerType))
-	fatalIf(probe.NewError(cmdErr), "Unable to start profiling.")
+	fatalIf(probe.NewError(cmdErr), "Unable to start profile.")
 
-	console.Infoln("Profiling data successfully started.")
+	console.Infoln("Profile data successfully started.")
 	return nil
 }

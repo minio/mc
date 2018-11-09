@@ -25,10 +25,10 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminUsersAddCmd = cli.Command{
+var adminUserAddCmd = cli.Command{
 	Name:   "add",
-	Usage:  "Add new users",
-	Action: mainAdminUsersAdd,
+	Usage:  "add a new user",
+	Action: mainAdminUserAdd,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -38,21 +38,21 @@ USAGE:
   {{.HelpName}} TARGET ACCESSKEY SECRETKEY POLICYNAME
 
 POLICYNAME:
-  Name of the canned policy created on Minio server.
+  Name of the policy available on Minio server.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Add a new user 'newuser' to Minio server with canned policy 'writeonly'.
+  1. Add a new user 'foobar' to Minio server with policy 'writeonly'.
      $ set -o history
-     $ {{.HelpName}} myminio newuser newuser123 writeonly
+     $ {{.HelpName}} myminio foobar foo12345 writeonly
      $ set +o history
 `,
 }
 
-// checkAdminUsersAddSyntax - validate all the passed arguments
-func checkAdminUsersAddSyntax(ctx *cli.Context) {
+// checkAdminUserAddSyntax - validate all the passed arguments
+func checkAdminUserAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 4 {
 		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
 	}
@@ -103,9 +103,9 @@ func (u userMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
-// mainAdminUsersAdd is the handle for "mc admin users add" command.
-func mainAdminUsersAdd(ctx *cli.Context) error {
-	checkAdminUsersAddSyntax(ctx)
+// mainAdminUserAdd is the handle for "mc admin user add" command.
+func mainAdminUserAdd(ctx *cli.Context) error {
+	checkAdminUserAddSyntax(ctx)
 
 	console.SetColor("UserMessage", color.New(color.FgGreen))
 

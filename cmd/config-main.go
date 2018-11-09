@@ -35,7 +35,7 @@ var (
 
 var configCmd = cli.Command{
 	Name:            "config",
-	Usage:           "Manage mc configuration file.",
+	Usage:           "configure minio client",
 	Action:          mainConfig,
 	Before:          setGlobalsFromContext,
 	HideHelpCommand: true,

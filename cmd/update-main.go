@@ -37,17 +37,17 @@ import (
 // Check for new software updates.
 var updateCmd = cli.Command{
 	Name:   "update",
-	Usage:  "Check for a new software update.",
+	Usage:  "check for new software updates",
 	Action: mainUpdate,
 	Before: setGlobalsFromContext,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "quiet, q",
-			Usage: "Suppress chatty console output.",
+			Usage: "suppress chatty console output",
 		},
 		cli.BoolFlag{
 			Name:  "json",
-			Usage: "Enable JSON formatted output.",
+			Usage: "enable JSON formatted output",
 		},
 	},
 	CustomHelpTemplate: `Name:

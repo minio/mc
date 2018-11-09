@@ -28,29 +28,29 @@ import (
 )
 
 var (
-	selectFlags = []cli.Flag{
+	sqlFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "query, e",
-			Usage: "Select query expression.",
+			Usage: "sql query expression",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "Select query recursively.",
+			Usage: "sql query recursively",
 		},
 		cli.StringFlag{
 			Name:  "encrypt-key",
-			Usage: "Encrypt/Decrypt objects (using server-side encryption)",
+			Usage: "encrypt/decrypt objects (using server-side encryption)",
 		},
 	}
 )
 
 // Display contents of a file.
-var selectCmd = cli.Command{
-	Name:   "select",
-	Usage:  "Run select queries on objects.",
-	Action: mainSelect,
+var sqlCmd = cli.Command{
+	Name:   "sql",
+	Usage:  "run sql queries on objects",
+	Action: mainSQL,
 	Before: setGlobalsFromContext,
-	Flags:  append(selectFlags, globalFlags...),
+	Flags:  append(sqlFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -73,7 +73,7 @@ EXAMPLES:
 `,
 }
 
-func selectQl(targetURL, expression string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func sqlQl(targetURL, expression string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	alias, _, _, err := expandAlias(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -95,27 +95,27 @@ func selectQl(targetURL, expression string, encKeyDB map[string][]prefixSSEPair)
 	return probe.NewError(e)
 }
 
-// check select input arguments.
-func checkSelectSyntax(ctx *cli.Context) {
+// check sql input arguments.
+func checkSQLSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "select", 1) // last argument is exit code.
+		cli.ShowCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
 	}
 }
 
-// mainSelect is the main entry point for select command.
-func mainSelect(ctx *cli.Context) error {
+// mainSQL is the main entry point for sql command.
+func mainSQL(ctx *cli.Context) error {
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(ctx)
 	fatalIf(err, "Unable to parse encryption keys.")
 
-	// validate select input arguments.
-	checkSelectSyntax(ctx)
+	// validate sql input arguments.
+	checkSQLSyntax(ctx)
 
 	// extract URLs.
 	URLs := ctx.Args()
 	for _, url := range URLs {
 		if !isAliasURLDir(url, encKeyDB) {
-			errorIf(selectQl(url, ctx.String("query"), encKeyDB).Trace(url), "Unable to run select")
+			errorIf(sqlQl(url, ctx.String("query"), encKeyDB).Trace(url), "Unable to run sql")
 			continue
 		}
 		targetAlias, targetURL, _ := mustExpandAlias(url)
@@ -133,8 +133,8 @@ func mainSelect(ctx *cli.Context) error {
 			contentType := mimedb.TypeByExtension(filepath.Ext(content.URL.Path))
 			for _, cTypeSuffix := range supportedContentTypes {
 				if strings.Contains(contentType, cTypeSuffix) {
-					errorIf(selectQl(targetAlias+content.URL.Path, ctx.String("expression"),
-						encKeyDB).Trace(content.URL.String()), "Unable to run select")
+					errorIf(sqlQl(targetAlias+content.URL.Path, ctx.String("expression"),
+						encKeyDB).Trace(content.URL.String()), "Unable to run sql")
 				}
 			}
 		}

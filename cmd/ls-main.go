@@ -29,15 +29,15 @@ var (
 	lsFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "List recursively.",
+			Usage: "list recursively",
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
-			Usage: "List incomplete uploads.",
+			Usage: "list incomplete uploads",
 		},
 		cli.StringFlag{
 			Name:  "encrypt-key",
-			Usage: "Encrypt/Decrypt (using server-side encryption)",
+			Usage: "encrypt/decrypt (using server-side encryption)",
 		},
 	}
 )
@@ -45,7 +45,7 @@ var (
 // list files and folders.
 var lsCmd = cli.Command{
 	Name:   "ls",
-	Usage:  "List files and folders.",
+	Usage:  "list buckets and objects",
 	Action: mainList,
 	Before: setGlobalsFromContext,
 	Flags:  append(lsFlags, globalFlags...),
@@ -74,7 +74,7 @@ EXAMPLES:
    5. List files recursively on a local filesystem on Microsoft Windows.
       $ {{.HelpName}} --recursive C:\Users\Worf\
 
-   6. List incomplete (previously failed) uploads of objects on Amazon S3. 
+   6. List incomplete (previously failed) uploads of objects on Amazon S3.
       $ {{.HelpName}} --incomplete s3/mybucket
 
 `,

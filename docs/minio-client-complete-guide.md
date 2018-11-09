@@ -3,25 +3,26 @@
 Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```sh
-ls       List files and folders.
-mb       Make a bucket or a folder.
-cat      Display file and object contents.
-pipe     Redirect STDIN to an object or file or STDOUT.
-share    Generate URL for sharing.
-cp       Copy files and objects.
-mirror   Mirror buckets and folders.
-find     Finds files which match the given set of parameters.
-stat     Stat contents of objects and folders.
-diff     List objects with size difference or missing between two folders or buckets.
-rm       Remove files and objects.
-events   Manage object notifications.
-watch    Watch for file and object events.
-policy   Manage anonymous access to objects.
-admin    Manage Minio servers
-session  Manage saved sessions for cp command.
-config   Manage mc configuration file.
-update   Check for a new software update.
-version  Print version info.
+ls       list buckets and objects
+mb       make a bucket
+cat      display object contents
+pipe     stream STDIN to an object
+share    generate URL for temporary access to an object
+cp       copy objects
+mirror   synchronize objects to a remote site
+find     search for objects
+sql      run sql queries on objects
+stat     stat contents of objects
+diff     list differences in object name, size, and date between buckets
+rm       remove objects
+event    manage object notifications
+watch    watch for object events
+policy   manage anonymous access to objects
+admin    manage minio servers
+session  manage saved sessions for cp command
+config   manage mc configuration file
+update   check for a new software update
+version  print version info
 ```
 
 ## 1.  Download Minio Client
@@ -146,11 +147,13 @@ NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have
 ```sh
 export MC_HOSTS_<alias>=https://<Access Key>:<Secret Key>@<YOUR-S3-ENDPOINT>
 ```
+
 Example:
 ```sh
 export MC_HOSTS_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.minio.io:9000
-mc ls myalias 
-``` 
+mc ls myalias
+```
+
 ## 4. Test Your Setup
 `mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted Minio server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 

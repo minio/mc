@@ -54,7 +54,7 @@ GLOBAL FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 VERSION:
-  ` + Version +
+  ` + ReleaseTag +
 	`{{ "\n"}}{{range $key, $value := ExtraInfo}}
 {{$key}}:
   {{$value}}
@@ -186,24 +186,24 @@ func initMC() {
 		}
 	}
 
-	// Check if mc session folder exists.
+	// Check if mc session directory exists.
 	if !isSessionDirExists() {
-		fatalIf(createSessionDir().Trace(), "Unable to create session config folder.")
+		fatalIf(createSessionDir().Trace(), "Unable to create session config directory.")
 	}
 
-	// Check if mc share folder exists.
+	// Check if mc share directory exists.
 	if !isShareDirExists() {
 		initShareConfig()
 	}
 
 	// Check if certs dir exists
 	if !isCertsDirExists() {
-		fatalIf(createCertsDir().Trace(), "Unable to create `CAs` folder.")
+		fatalIf(createCertsDir().Trace(), "Unable to create `CAs` directory.")
 	}
 
 	// Check if CAs dir exists
 	if !isCAsDirExists() {
-		fatalIf(createCAsDir().Trace(), "Unable to create `CAs` folder.")
+		fatalIf(createCAsDir().Trace(), "Unable to create `CAs` directory.")
 	}
 
 	// Load all authority certificates present in CAs dir
@@ -214,8 +214,8 @@ func registerBefore(ctx *cli.Context) error {
 	// Check if mc was compiled using a supported version of Golang.
 	checkGoVersion()
 
-	// Set the config folder.
-	setMcConfigDir(ctx.GlobalString("config-folder"))
+	// Set the config directory.
+	setMcConfigDir(ctx.GlobalString("config-directory"))
 
 	// Migrate any old version of config / state files to newer format.
 	migrate()
@@ -277,11 +277,11 @@ func registerApp() *cli.App {
 	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
 	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
 	registerCmd(findCmd)    // Find specific String patterns
-	registerCmd(selectCmd)  // Run select queries on a object or set of objects.
+	registerCmd(sqlCmd)     // Run select queries on a object or set of objects.
 	registerCmd(statCmd)    // Stat contents of a bucket/object
-	registerCmd(diffCmd)    // Computer differences between two files or folders.
-	registerCmd(rmCmd)      // Remove a file or bucket
-	registerCmd(eventsCmd)  // Add events cmd
+	registerCmd(diffCmd)    // Computer differences between two objects or buckets.
+	registerCmd(rmCmd)      // Remove an object or bucket
+	registerCmd(eventCmd)   // Add event cmd
 	registerCmd(watchCmd)   // Add watch cmd
 	registerCmd(policyCmd)  // Set policy permissions.
 	registerCmd(adminCmd)   // Manage Minio servers
@@ -292,30 +292,29 @@ func registerApp() *cli.App {
 
 	cli.HelpFlag = cli.BoolFlag{
 		Name:  "help, h",
-		Usage: "Show help.",
+		Usage: "show help",
 	}
 
 	cli.BashCompletionFlag = cli.BoolFlag{
 		Name:   "compgen",
-		Usage:  "Enables bash-completion for all commands and subcommands.",
+		Usage:  "enables bash-completion for all commands and subcommands",
 		Hidden: true,
 	}
 
 	app := cli.NewApp()
 	app.Action = func(ctx *cli.Context) {
-		if strings.HasPrefix(Version, "RELEASE.") {
+		if strings.HasPrefix(ReleaseTag, "RELEASE.") {
 			// Check for new updates from dl.minio.io.
 			checkUpdate(ctx)
 		}
 		cli.ShowAppHelp(ctx)
 	}
 
-	app.HideVersion = true
 	app.HideHelpCommand = true
 	app.Usage = "Minio Client for cloud storage and filesystems."
 	app.Commands = commands
 	app.Author = "Minio.io"
-	app.Version = Version
+	app.Version = ReleaseTag
 	app.Flags = append(mcFlags, globalFlags...)
 	app.CustomAppHelpTemplate = mcHelpTemplate
 	app.CommandNotFound = commandNotFound // handler function declared above.

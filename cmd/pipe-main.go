@@ -28,7 +28,7 @@ var (
 	pipeFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "encrypt-key",
-			Usage: "Encrypt object (using server-side encryption)",
+			Usage: "encrypt object (using server-side encryption)",
 		},
 	}
 )
@@ -36,7 +36,7 @@ var (
 // Display contents of a file.
 var pipeCmd = cli.Command{
 	Name:   "pipe",
-	Usage:  "Redirect STDIN to an object or file or STDOUT.",
+	Usage:  "stream STDIN to an object",
 	Action: mainPipe,
 	Before: setGlobalsFromContext,
 	Flags:  append(pipeFlags, globalFlags...),

@@ -32,58 +32,58 @@ var (
 	findFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "exec",
-			Usage: "Spawn an external process for each matching object (see FORMAT)",
+			Usage: "spawn an external process for each matching object (see FORMAT)",
 		},
 		cli.StringFlag{
 			Name:  "ignore",
-			Usage: "Exclude objects matching the wildcard pattern",
+			Usage: "exclude objects matching the wildcard pattern",
 		},
 		cli.StringFlag{
 			Name:  "name",
-			Usage: "Find object names matching wildcard pattern",
+			Usage: "find object names matching wildcard pattern",
 		},
 		cli.StringFlag{
 			Name:  "newer",
-			Usage: "Match all objects newer than specified time in units (see UNITS)",
+			Usage: "match all objects newer than specified time in units (see UNITS)",
 		},
 		cli.StringFlag{
 			Name:  "older",
-			Usage: "Match all objects older than specified time in units (see UNITS)",
+			Usage: "match all objects older than specified time in units (see UNITS)",
 		},
 		cli.StringFlag{
 			Name:  "path",
-			Usage: "Match directory names matching wildcard pattern",
+			Usage: "match directory names matching wildcard pattern",
 		},
 		cli.StringFlag{
 			Name:  "print",
-			Usage: "Print in custom format to STDOUT (see FORMAT)",
+			Usage: "print in custom format to STDOUT (see FORMAT)",
 		},
 		cli.StringFlag{
 			Name:  "regex",
-			Usage: "Match directory and object name with PCRE regex pattern",
+			Usage: "match directory and object name with PCRE regex pattern",
 		},
 		cli.StringFlag{
 			Name:  "larger",
-			Usage: "Match all objects larger than specified size in units (see UNITS)",
+			Usage: "match all objects larger than specified size in units (see UNITS)",
 		},
 		cli.StringFlag{
 			Name:  "smaller",
-			Usage: "Match all objects smaller than specified size in units (see UNITS)",
+			Usage: "match all objects smaller than specified size in units (see UNITS)",
 		},
 		cli.UintFlag{
 			Name:  "maxdepth",
-			Usage: "Limit directory navigation to specified depth",
+			Usage: "limit directory navigation to specified depth",
 		},
 		cli.BoolFlag{
 			Name:  "watch",
-			Usage: "Monitor a specified path for newly created files and objects",
+			Usage: "monitor a specified path for newly created object(s)",
 		},
 	}
 )
 
 var findCmd = cli.Command{
 	Name:   "find",
-	Usage:  "Search for files and objects.",
+	Usage:  "search for objects",
 	Action: mainFind,
 	Before: setGlobalsFromContext,
 	Flags:  append(findFlags, globalFlags...),
@@ -115,8 +115,8 @@ FORMAT
       {}     --> Substitutes to full path.
       {base} --> Substitutes to basename of path.
       {dir}  --> Substitutes to dirname of the path.
-      {size} --> Substitutes to file size of the path.
-      {time} --> Substitutes to file modified time of the path.
+      {size} --> Substitutes to object size of the path.
+      {time} --> Substitutes to object modified time of the path.
 
    Keywords supported if target is object storage:
 
