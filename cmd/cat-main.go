@@ -140,7 +140,7 @@ func checkCatSyntax(ctx *cli.Context) {
 
 // catURL displays contents of a URL to stdout.
 func catURL(sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
-	var reader io.Reader
+	var reader io.ReadCloser
 	size := int64(-1)
 	switch sourceURL {
 	case "-":
@@ -159,6 +159,7 @@ func catURL(sourceURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error 
 		if reader, err = getSourceStreamFromURL(sourceURL, encKeyDB); err != nil {
 			return err.Trace(sourceURL)
 		}
+		defer reader.Close()
 	}
 	return catOut(reader, size).Trace(sourceURL)
 }
