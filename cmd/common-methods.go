@@ -24,9 +24,11 @@ import (
 	"regexp"
 	"strings"
 
+	"golang.org/x/net/http/httpguts"
+	"gopkg.in/h2non/filetype.v1"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"golang.org/x/net/http/httpguts"
 )
 
 // parse and return encryption key pairs per alias.
@@ -113,6 +115,29 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sseKey string)
 			if httpguts.ValidHeaderFieldName(k) &&
 				httpguts.ValidHeaderFieldValue(v) {
 				metadata[k] = v
+			}
+		}
+		// If our reader is a seeker try to detect content-type further.
+		if s, ok := reader.(io.ReadSeeker); ok {
+			// All unrecognized files have `application/octet-stream`
+			// So we continue our detection process.
+			if ctype := metadata["Content-Type"]; ctype == "application/octet-stream" {
+				// Read a chunk to decide between utf-8 text and binary
+				var buf [512]byte
+				n, _ := io.ReadFull(reader, buf[:])
+				kind, e := filetype.Match(buf[:n])
+				if e != nil {
+					return nil, nil, probe.NewError(e)
+				}
+				// rewind to output whole file
+				if _, e := s.Seek(0, io.SeekStart); e != nil {
+					return nil, nil, probe.NewError(e)
+				}
+				ctype = kind.MIME.Value
+				if ctype == "" {
+					ctype = "application/octet-stream"
+				}
+				metadata["Content-Type"] = ctype
 			}
 		}
 	}
