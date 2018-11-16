@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,12 +28,11 @@ import (
 	"strings"
 	"time"
 
-	"io/ioutil"
+	"github.com/rjeczalik/notify"
 
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/rjeczalik/notify"
 )
 
 // filesystem client
@@ -984,6 +984,7 @@ func (f *fsClient) Stat(isIncomplete, isFetchMeta bool, sseKey string) (content 
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
 	}
+
 	content = &clientContent{}
 	content.URL = *f.PathURL
 	content.Size = st.Size()
@@ -992,6 +993,7 @@ func (f *fsClient) Stat(isIncomplete, isFetchMeta bool, sseKey string) (content 
 	content.Metadata = map[string]string{
 		"Content-Type": guessURLContentType(f.PathURL.Path),
 	}
+
 	// isFetchMeta is true only in the case of mc stat command which lists any extended attributes
 	// present for this object.
 	if isFetchMeta {
