@@ -73,7 +73,7 @@ EXAMPLES:
 `,
 }
 
-func sqlQl(targetURL, expression string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 	alias, _, _, err := expandAlias(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -113,9 +113,10 @@ func mainSQL(ctx *cli.Context) error {
 
 	// extract URLs.
 	URLs := ctx.Args()
+	query := ctx.String("query")
 	for _, url := range URLs {
 		if !isAliasURLDir(url, encKeyDB) {
-			errorIf(sqlQl(url, ctx.String("query"), encKeyDB).Trace(url), "Unable to run sql")
+			errorIf(sqlSelect(url, query, encKeyDB).Trace(url), "Unable to run sql")
 			continue
 		}
 		targetAlias, targetURL, _ := mustExpandAlias(url)
@@ -133,7 +134,7 @@ func mainSQL(ctx *cli.Context) error {
 			contentType := mimedb.TypeByExtension(filepath.Ext(content.URL.Path))
 			for _, cTypeSuffix := range supportedContentTypes {
 				if strings.Contains(contentType, cTypeSuffix) {
-					errorIf(sqlQl(targetAlias+content.URL.Path, ctx.String("expression"),
+					errorIf(sqlSelect(targetAlias+content.URL.Path, query,
 						encKeyDB).Trace(content.URL.String()), "Unable to run sql")
 				}
 			}
