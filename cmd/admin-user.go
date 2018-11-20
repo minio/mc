@@ -16,25 +16,28 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var adminProfilingCmd = cli.Command{
-	Name:   "profiling",
-	Usage:  "Generate profiling data for debugging purposes",
-	Action: mainAdminProfiling,
+var adminUserCmd = cli.Command{
+	Name:   "user",
+	Usage:  "manage users",
+	Action: mainAdminUser,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminProfilingStartCmd,
-		adminProfilingStopCmd,
+		adminUserAddCmd,
+		adminUserPolicyCmd,
+		adminUserDisableCmd,
+		adminUserEnableCmd,
+		adminUserRemoveCmd,
+		adminUserListCmd,
 	},
 	HideHelpCommand: true,
 }
 
-// mainAdminProfiling is the handle for "mc admin profiling" command.
-func mainAdminProfiling(ctx *cli.Context) error {
+// mainAdminUser is the handle for "mc admin config" command.
+func mainAdminUser(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
+	// Sub-commands like "get", "set" have their own main.
 }

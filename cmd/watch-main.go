@@ -36,26 +36,26 @@ var (
 		cli.StringFlag{
 			Name:  "events",
 			Value: "put,delete,get",
-			Usage: "Filter specific types of events. Defaults to all events by default.",
+			Usage: "filter specific types of events; defaults to all events by default",
 		},
 		cli.StringFlag{
 			Name:  "prefix",
-			Usage: "Filter events for a prefix.",
+			Usage: "filter events for a prefix",
 		},
 		cli.StringFlag{
 			Name:  "suffix",
-			Usage: "Filter events for a suffix.",
+			Usage: "filter events for a suffix",
 		},
 		cli.BoolFlag{
 			Name:  "recursive",
-			Usage: "Recursively watch for events.",
+			Usage: "recursively watch for events",
 		},
 	}
 )
 
 var watchCmd = cli.Command{
 	Name:   "watch",
-	Usage:  "Watch for file and object events.",
+	Usage:  "listen for object notification events",
 	Action: mainWatch,
 	Before: setGlobalsFromContext,
 	Flags:  append(watchFlags, globalFlags...),

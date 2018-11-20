@@ -27,29 +27,29 @@ import (
 )
 
 var (
-	eventsAddFlags = []cli.Flag{
+	eventAddFlags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "events",
+			Name:  "event",
 			Value: "put,delete,get",
-			Usage: "Filter specific type of events. Defaults to all events.",
+			Usage: "filter specific type of event. Defaults to all event",
 		},
 		cli.StringFlag{
 			Name:  "prefix",
-			Usage: "Filter events associated to the specified prefix",
+			Usage: "filter event associated to the specified prefix",
 		},
 		cli.StringFlag{
 			Name:  "suffix",
-			Usage: "Filter events associated to the specified suffix",
+			Usage: "filter event associated to the specified suffix",
 		},
 	}
 )
 
-var eventsAddCmd = cli.Command{
+var eventAddCmd = cli.Command{
 	Name:   "add",
-	Usage:  "Add a new bucket notification.",
-	Action: mainEventsAdd,
+	Usage:  "add a new bucket notification",
+	Action: mainEventAdd,
 	Before: setGlobalsFromContext,
-	Flags:  append(eventsAddFlags, globalFlags...),
+	Flags:  append(eventAddFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -64,50 +64,50 @@ EXAMPLES:
      $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
 
    2. Enable bucket notification with filters parameters
-     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --events put,delete,get --prefix photos/ --suffix .jpg
+     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --event put,delete,get --prefix photos/ --suffix .jpg
 
 `,
 }
 
-// checkEventsAddSyntax - validate all the passed arguments
-func checkEventsAddSyntax(ctx *cli.Context) {
+// checkEventAddSyntax - validate all the passed arguments
+func checkEventAddSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
 		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
 	}
 }
 
-// eventsAddMessage container
-type eventsAddMessage struct {
+// eventAddMessage container
+type eventAddMessage struct {
 	ARN    string   `json:"arn"`
-	Events []string `json:"events"`
+	Event  []string `json:"event"`
 	Prefix string   `json:"prefix"`
 	Suffix string   `json:"suffix"`
 	Status string   `json:"status"`
 }
 
 // JSON jsonified update message.
-func (u eventsAddMessage) JSON() string {
+func (u eventAddMessage) JSON() string {
 	u.Status = "success"
-	eventsAddMessageJSONBytes, e := json.Marshal(u)
+	eventAddMessageJSONBytes, e := json.Marshal(u)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(eventsAddMessageJSONBytes)
+	return string(eventAddMessageJSONBytes)
 }
 
-func (u eventsAddMessage) String() string {
-	msg := console.Colorize("Events", "Successfully added "+u.ARN)
+func (u eventAddMessage) String() string {
+	msg := console.Colorize("Event", "Successfully added "+u.ARN)
 	return msg
 }
 
-func mainEventsAdd(ctx *cli.Context) error {
-	console.SetColor("Events", color.New(color.FgGreen, color.Bold))
+func mainEventAdd(ctx *cli.Context) error {
+	console.SetColor("Event", color.New(color.FgGreen, color.Bold))
 
-	checkEventsAddSyntax(ctx)
+	checkEventAddSyntax(ctx)
 
 	args := ctx.Args()
 	path := args[0]
 	arn := args[1]
 
-	events := strings.Split(ctx.String("events"), ",")
+	event := strings.Split(ctx.String("event"), ",")
 	prefix := ctx.String("prefix")
 	suffix := ctx.String("suffix")
 
@@ -121,11 +121,11 @@ func mainEventsAdd(ctx *cli.Context) error {
 		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
 
-	err = s3Client.AddNotificationConfig(arn, events, prefix, suffix)
+	err = s3Client.AddNotificationConfig(arn, event, prefix, suffix)
 	fatalIf(err, "Cannot enable notification on the specified bucket.")
-	printMsg(eventsAddMessage{
+	printMsg(eventAddMessage{
 		ARN:    arn,
-		Events: events,
+		Event:  event,
 		Prefix: prefix,
 		Suffix: suffix,
 	})

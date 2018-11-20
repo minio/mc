@@ -34,7 +34,7 @@ var (
 
 var adminServiceStatusCmd = cli.Command{
 	Name:   "status",
-	Usage:  "Get the status of Minio server",
+	Usage:  "get the status of minio server",
 	Action: mainAdminServiceStatus,
 	Before: setGlobalsFromContext,
 	Flags:  append(adminServiceStatusFlags, globalFlags...),

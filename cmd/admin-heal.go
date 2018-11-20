@@ -30,15 +30,15 @@ import (
 var adminHealFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "recursive, r",
-		Usage: "Heal recursively",
+		Usage: "heal recursively",
 	},
 	cli.BoolFlag{
 		Name:  "dry-run, n",
-		Usage: "Only inspect data, but do not mutate",
+		Usage: "only inspect data, but do not mutate",
 	},
 	cli.BoolFlag{
 		Name:  "force-start, f",
-		Usage: "Force start a new heal sequence",
+		Usage: "force start a new heal sequence",
 	},
 	cli.BoolFlag{
 		Name:  "force-stop, s",
@@ -48,7 +48,7 @@ var adminHealFlags = []cli.Flag{
 
 var adminHealCmd = cli.Command{
 	Name:            "heal",
-	Usage:           "Heal disks, buckets and objects on Minio server",
+	Usage:           "heal disks, buckets and objects on minio server",
 	Action:          mainAdminHeal,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminHealFlags, globalFlags...),

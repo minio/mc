@@ -23,46 +23,43 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminPoliciesListCmd = cli.Command{
+var adminUserListCmd = cli.Command{
 	Name:   "list",
-	Usage:  "List policies",
-	Action: mainAdminPoliciesList,
+	Usage:  "list all users",
+	Action: mainAdminUserList,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET POLICYNAME
-
-POLICYNAME:
-  Name of the canned policy on Minio server.
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. List all policies.
+  1. List all users on Minio server.
      $ {{.HelpName}} myminio
-
-  2. List only one policy.
-     $ {{.HelpName}} myminio writeonly
 `,
 }
 
-// checkAdminPoliciesListSyntax - validate all the passed arguments
-func checkAdminPoliciesListSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) < 1 || len(ctx.Args()) > 2 {
+// checkAdminUserListSyntax - validate all the passed arguments
+func checkAdminUserListSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
 	}
 }
 
-// mainAdminPoliciesList is the handle for "mc admin users add" command.
-func mainAdminPoliciesList(ctx *cli.Context) error {
-	checkAdminPoliciesListSyntax(ctx)
+// mainAdminUserList is the handle for "mc admin user list" command.
+func mainAdminUserList(ctx *cli.Context) error {
+	checkAdminUserListSyntax(ctx)
 
-	console.SetColor("PolicyMessage", color.New(color.FgGreen))
-	console.SetColor("Policy", color.New(color.FgBlue))
+	// Additional command speific theme customization.
+	console.SetColor("UserMessage", color.New(color.FgGreen))
+	console.SetColor("AccessKey", color.New(color.FgBlue))
+	console.SetColor("PolicyName", color.New(color.FgYellow))
+	console.SetColor("UserStatus", color.New(color.FgCyan))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -72,22 +69,16 @@ func mainAdminPoliciesList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	policies, e := client.ListCannedPolicies()
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot list policies")
+	users, e := client.ListUsers()
+	fatalIf(probe.NewError(e).Trace(args...), "Cannot list user")
 
-	if policyName := args.Get(1); policyName != "" {
-		printMsg(userPolicyMessage{
+	for k, v := range users {
+		printMsg(userMessage{
 			op:         "list",
-			Policy:     policyName,
-			PolicyJSON: policies[policyName],
+			AccessKey:  k,
+			PolicyName: v.PolicyName,
+			UserStatus: string(v.Status),
 		})
-	} else {
-		for k := range policies {
-			printMsg(userPolicyMessage{
-				op:     "list",
-				Policy: k,
-			})
-		}
 	}
 	return nil
 }

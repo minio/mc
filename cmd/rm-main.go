@@ -39,39 +39,39 @@ var (
 	rmFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "Remove recursively.",
+			Usage: "remove recursively",
 		},
 		cli.BoolFlag{
 			Name:  "force",
-			Usage: "Allow a recursive remove operation.",
+			Usage: "allow a recursive remove operation",
 		},
 		cli.BoolFlag{
 			Name:  "dangerous",
-			Usage: "Allow site-wide removal of buckets and objects.",
+			Usage: "allow site-wide removal of buckets and objects",
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
-			Usage: "Remove incomplete uploads.",
+			Usage: "remove incomplete uploads",
 		},
 		cli.BoolFlag{
 			Name:  "fake",
-			Usage: "Perform a fake remove operation.",
+			Usage: "perform a fake remove operation",
 		},
 		cli.BoolFlag{
 			Name:  "stdin",
-			Usage: "Read object names from STDIN.",
+			Usage: "read object names from STDIN",
 		},
 		cli.IntFlag{
 			Name:  "older-than",
-			Usage: "Remove objects older than N days",
+			Usage: "remove objects older than N days",
 		},
 		cli.IntFlag{
 			Name:  "newer-than",
-			Usage: "Remove objects newer than N days",
+			Usage: "remove objects newer than N days",
 		},
 		cli.StringFlag{
 			Name:  "encrypt-key",
-			Usage: "Encrypt object (using server-side encryption)",
+			Usage: "remove encrypted object (using server-side encryption)",
 		},
 	}
 )
@@ -79,7 +79,7 @@ var (
 // remove a file or folder.
 var rmCmd = cli.Command{
 	Name:   "rm",
-	Usage:  "Remove files and objects.",
+	Usage:  "remove objects",
 	Action: mainRm,
 	Before: setGlobalsFromContext,
 	Flags:  append(rmFlags, globalFlags...),

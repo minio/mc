@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2017 Minio, Inc.
+ * Minio Client (C) 2017, 2018 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var adminConfigCmd = cli.Command{
 	Name:   "config",
-	Usage:  "Manage configuration file",
+	Usage:  "manage configuration file",
 	Action: mainAdminConfig,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,

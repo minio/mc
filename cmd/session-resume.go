@@ -30,7 +30,7 @@ import (
 
 var sessionResume = cli.Command{
 	Name:   "resume",
-	Usage:  "Resume a previously saved session.",
+	Usage:  "resume interrupted session",
 	Action: mainSessionResume,
 	Flags:  globalFlags,
 	Before: setGlobalsFromContext,
@@ -41,13 +41,13 @@ USAGE:
   {{.HelpName}} SESSION-ID
 
 SESSION-ID:
-  SESSION - Session is your previously saved $SESSION-ID
+  SESSION - Session is your previously saved SESSION-ID
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Resume session. 
+  1. Resume session.
      $ {{.HelpName}} ygVIpSJs
 `,
 }

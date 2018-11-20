@@ -3,13 +3,13 @@
 Minio Client (mc) provides `admin` sub-command to perform administrative tasks on your Minio deployments.
 
 ```sh
-service      Stop, restart or get status of Minio server
-info         Display Minio server information
-users        Manage regular users
-policies     Manage canned policies
-credentials  Change Admin server access and secret keys
-config       Manage configuration file
-heal         Heal disks, buckets and objects on Minio server
+service      stop, restart or get status of minio server
+info         display minio server information
+user         manage users
+policy       manage canned policies
+credential   change admin server access and secret keys
+config       manage configuration file
+heal         heal disks, buckets and objects on minio server
 ```
 
 ## 1.  Download Minio Client
@@ -213,29 +213,29 @@ Skip SSL certificate verification.
 
 |   |
 |:---|
-|[**service** - Start, stop or get the status of Minio server](#service) |
-|[**info** - Display Minio server information](#info) |
-|[**users** - Manage users](#users) |
-|[**policies** - Manage policies](#policies) |
-|[**credentials** - Change **admin** server access and secret keys](#credentials) |
-|[**config** - Manage server configuration file](#config)|
-|[**heal** - Heal disks, buckets and objects on Minio server](#heal) |
+|[**service** - start, stop or get the status of minio server](#service) |
+|[**info** - display minio server information](#info) |
+|[**user** - manage users](#user) |
+|[**policy** - manage canned policies](#policy) |
+|[**credential** - change **admin** server access and secret keys](#credential) |
+|[**config** - manage server configuration file](#config)|
+|[**heal** - heal disks, buckets and objects on minio server](#heal) |
 
 <a name="service"></a>
-### Command `service` - Stop, restart or get status of Minio server
+### Command `service` - stop, restart or get status of minio server
 `service` command provides a way to restart, stop one or get the status of Minio servers (distributed cluster)
 
 ```sh
 NAME:
-  mc admin service - Stop, restart or get status of Minio server
+  mc admin service - stop, restart or get status of minio server
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 
 COMMANDS:
-  status   Get the status of Minio server
-  restart  Restart Minio server
-  stop     Stop Minio server
+  status   get the status of minio server
+  restart  restart minio server
+  stop     stop minio server
 ```
 
 *Example: Display service uptime for Minio server.*
@@ -260,10 +260,10 @@ Restarted `play` successfully.
 
 ```sh
 NAME:
-  mc admin info - Get Minio server information
+  mc admin info - get minio server information
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 ```
 
 *Example: Display Minio server information.*
@@ -279,20 +279,20 @@ mc admin info play
   Storage : Used 8.2GiB
 ```
 
-<a name="policies"></a>
-### Command `policies` - Manage user policies
-`policies` command to add, remove, list policies on Minio server.
+<a name="policy"></a>
+### Command `policy` - Manage canned policies
+`policy` command to add, remove, list policies on Minio server.
 
 ```sh
 NAME:
-  mc admin policies - Manage policies
+  mc admin policy - manage policies
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 
 COMMANDS:
-  add      Add new policies
-  remove   Remove policies
+  add      add new policy
+  remove   remove policy
   list     List all policies
 ```
 
@@ -315,79 +315,79 @@ mc admin policies list --json myminio/
 {"status":"success","policy":"newpolicy"}
 ```
 
-<a name="users"></a>
-### Command `users` - Manage regular users
-`users` command to add, remove, enable, disable, list users on Minio server.
+<a name="user"></a>
+### Command `user` - Manage users
+`user` command to add, remove, enable, disable, list users on minio server.
 
 ```sh
 NAME:
-  mc admin users - Manage regular users
+  mc admin user - manage users
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 
 COMMANDS:
-  add      Add new users
-  policy   Set policy for user
-  disable  Disable users
-  enable   Enable users
-  remove   Remove users
-  list     List all users
+  add      add new user
+  policy   set policy for user
+  disable  disable user
+  enable   enable user
+  remove   remove user
+  list     list all users
 ```
 
 *Example: Add a new user 'newuser' on Minio, with 'newpolicy' policy.*
 
 ```sh
-mc admin users add myminio/ newuser newuser123 newpolicy
+mc admin user add myminio/ newuser newuser123 newpolicy
 ```
 
 *Example: Change policy for a user 'newuser' on Minio to 'writeonly' policy.*
 
 ```sh
-mc admin users policy myminio/ newuser writeonly
+mc admin user policy myminio/ newuser writeonly
 ```
 
 *Example: Disable a user 'newuser' on Minio.*
 
 ```sh
-mc admin users disable myminio/ newuser
+mc admin user disable myminio/ newuser
 ```
 
 *Example: Enable a user 'newuser' on Minio.*
 
 ```sh
-mc admin users enable myminio/ newuser
+mc admin user enable myminio/ newuser
 ```
 
 *Example: Remove user 'newuser' on Minio.*
 
 ```sh
-mc admin users remove myminio/ newuser
+mc admin user remove myminio/ newuser
 ```
 
 *Example: List all users on Minio.*
 
 ```sh
-mc admin users list --json myminio/
+mc admin user list --json myminio/
 {"status":"success","accessKey":"newuser","userStatus":"enabled"}
 ```
 
-<a name="credentials"></a>
-### Command `credentials` - Change server **admin** access and secret keys
-`credentials` command to set new **admin** credentials of a Minio server.
+<a name="credential"></a>
+### Command `credential` - Change server **admin** access and secret keys
+`credential` command to set new **admin** credential of a Minio server.
 
 ```sh
 NAME:
-  mc admin credentials - Change server **admin** access and secret keys
+  mc admin credential - Change server **admin** access and secret keys
 
 FLAGS:
   --help, -h                       Show help.
 ```
 
-*Example: Set new admin credentials of a Minio server represented by its alias 'myminio'.*
+*Example: Set new admin credential of a Minio server represented by its alias 'myminio'.*
 
 ```sh
-mc admin credentials myminio/ minio minio123
+mc admin credential myminio/ minio minio123
 ```
 
 <a name="config"></a>
@@ -396,14 +396,14 @@ mc admin credentials myminio/ minio minio123
 
 ```sh
 NAME:
-  mc admin config - Manage configuration file
+  mc admin config - manage configuration file
 
 USAGE:
   mc admin config COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  get  Get config of a Minio server/cluster.
-  set  Set new config file to a Minio server/cluster.
+  get  get config of a Minio server/cluster.
+  set  set new config file to a Minio server/cluster.
 
 FLAGS:
   --help, -h                       Show help.
@@ -427,13 +427,13 @@ mc admin config set myminio < /tmp/my-serverconfig
 
 ```sh
 NAME:
-  mc admin heal - Heal disks, buckets and objects on Minio server
+  mc admin heal - heal disks, buckets and objects on Minio server
 
 FLAGS:
-  --recursive, -r                  Heal recursively
-  --dry-run, -n                    Only inspect data, but do not mutate
-  --force-start, -f                Force start a new heal sequence
-  --help, -h                       Show help.
+  --recursive, -r                  heal recursively
+  --dry-run, -n                    only inspect data, but do not mutate
+  --force-start, -f                force start a new heal sequence
+  --help, -h                       show help
 ```
 
 *Example: Heal Minio cluster after replacing a fresh disk, recursively heal all buckets and objects, where 'myminio' is the Minio server alias.*

@@ -29,7 +29,7 @@ import (
 
 var adminServiceRestartCmd = cli.Command{
 	Name:   "restart",
-	Usage:  "Restart Minio server",
+	Usage:  "restart minio server",
 	Action: mainAdminServiceRestart,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,

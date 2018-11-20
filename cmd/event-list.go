@@ -27,15 +27,15 @@ import (
 )
 
 var (
-	eventsListFlags = []cli.Flag{}
+	eventListFlags = []cli.Flag{}
 )
 
-var eventsListCmd = cli.Command{
+var eventListCmd = cli.Command{
 	Name:   "list",
-	Usage:  "List bucket notifications.",
-	Action: mainEventsList,
+	Usage:  "list bucket notifications",
+	Action: mainEventList,
 	Before: setGlobalsFromContext,
-	Flags:  append(eventsListFlags, globalFlags...),
+	Flags:  append(eventListFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -55,35 +55,35 @@ EXAMPLES:
 `,
 }
 
-// checkEventsListSyntax - validate all the passed arguments
-func checkEventsListSyntax(ctx *cli.Context) {
+// checkEventListSyntax - validate all the passed arguments
+func checkEventListSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 && len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
 	}
 }
 
-// eventsListMessage container
-type eventsListMessage struct {
+// eventListMessage container
+type eventListMessage struct {
 	Status string   `json:"status"`
 	ID     string   `json:"id"`
-	Events []string `json:"events"`
+	Event  []string `json:"event"`
 	Prefix string   `json:"prefix"`
 	Suffix string   `json:"suffix"`
 	Arn    string   `json:"arn"`
 }
 
-func (u eventsListMessage) JSON() string {
+func (u eventListMessage) JSON() string {
 	u.Status = "success"
-	eventsListMessageJSONBytes, e := json.Marshal(u)
+	eventListMessageJSONBytes, e := json.Marshal(u)
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(eventsListMessageJSONBytes)
+	return string(eventListMessageJSONBytes)
 }
 
-func (u eventsListMessage) String() string {
+func (u eventListMessage) String() string {
 	msg := console.Colorize("ARN", fmt.Sprintf("%s   ", u.Arn))
-	for i, event := range u.Events {
-		msg += console.Colorize("Events", event)
-		if i != len(u.Events)-1 {
+	for i, event := range u.Event {
+		msg += console.Colorize("Event", event)
+		if i != len(u.Event)-1 {
 			msg += ","
 		}
 	}
@@ -97,12 +97,12 @@ func (u eventsListMessage) String() string {
 	return msg
 }
 
-func mainEventsList(ctx *cli.Context) error {
+func mainEventList(ctx *cli.Context) error {
 	console.SetColor("ARN", color.New(color.FgGreen, color.Bold))
-	console.SetColor("Events", color.New(color.FgCyan, color.Bold))
+	console.SetColor("Event", color.New(color.FgCyan, color.Bold))
 	console.SetColor("Filter", color.New(color.Bold))
 
-	checkEventsListSyntax(ctx)
+	checkEventListSyntax(ctx)
 
 	args := ctx.Args()
 	path := args[0]
@@ -125,7 +125,8 @@ func mainEventsList(ctx *cli.Context) error {
 	fatalIf(err, "Cannot list notifications on the specified bucket.")
 
 	for _, config := range configs {
-		printMsg(eventsListMessage{Events: config.Events,
+		printMsg(eventListMessage{
+			Event:  config.Events,
 			Prefix: config.Prefix,
 			Suffix: config.Suffix,
 			Arn:    config.Arn,

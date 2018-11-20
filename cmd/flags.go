@@ -32,27 +32,27 @@ var globalFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "config-folder, C",
 		Value: mustGetMcConfigDir(),
-		Usage: "Path to configuration folder.",
+		Usage: "path to configuration folder",
 	},
 	cli.BoolFlag{
 		Name:  "quiet, q",
-		Usage: "Disable progress bar display.",
+		Usage: "disable progress bar display",
 	},
 	cli.BoolFlag{
 		Name:  "no-color",
-		Usage: "Disable color theme.",
+		Usage: "disable color theme",
 	},
 	cli.BoolFlag{
 		Name:  "json",
-		Usage: "Enable JSON formatted output.",
+		Usage: "enable JSON formatted output",
 	},
 	cli.BoolFlag{
 		Name:  "debug",
-		Usage: "Enable debug output.",
+		Usage: "enable debug output",
 	},
 	cli.BoolFlag{
 		Name:  "insecure",
-		Usage: "Disable SSL certificate verification.",
+		Usage: "disable SSL certificate verification",
 	},
 }
 

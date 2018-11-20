@@ -31,7 +31,7 @@ var (
 // Share documents via URL.
 var shareList = cli.Command{
 	Name:   "list",
-	Usage:  "List previously shared objects and folders.",
+	Usage:  "list previously shared objects",
 	Action: mainShareList,
 	Before: setGlobalsFromContext,
 	Flags:  append(shareListFlags, globalFlags...),

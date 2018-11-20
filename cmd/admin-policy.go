@@ -18,22 +18,22 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminPoliciesCmd = cli.Command{
-	Name:   "policies",
-	Usage:  "Manage canned policies",
-	Action: mainAdminPolicies,
+var adminPolicyCmd = cli.Command{
+	Name:   "policy",
+	Usage:  "manage canned policy",
+	Action: mainAdminPolicy,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminPoliciesAddCmd,
-		adminPoliciesRemoveCmd,
-		adminPoliciesListCmd,
+		adminPolicyAddCmd,
+		adminPolicyRemoveCmd,
+		adminPolicyListCmd,
 	},
 	HideHelpCommand: true,
 }
 
-// mainAdminPolicies is the handle for "mc admin config" command.
-func mainAdminPolicies(ctx *cli.Context) error {
+// mainAdminPolicy is the handle for "mc admin policy" command.
+func mainAdminPolicy(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
 	// Sub-commands like "get", "set" have their own main.

@@ -39,23 +39,23 @@ var (
 	cpFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "Copy recursively.",
+			Usage: "copy recursively",
 		},
 		cli.IntFlag{
 			Name:  "older-than",
-			Usage: "Copy objects older than N days",
+			Usage: "copy objects older than N days",
 		},
 		cli.IntFlag{
 			Name:  "newer-than",
-			Usage: "Copy objects newer than N days",
+			Usage: "copy objects newer than N days",
 		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",
-			Usage: "Set storage class for object",
+			Usage: "set storage class for object",
 		},
 		cli.StringFlag{
 			Name:  "encrypt-key",
-			Usage: "Encrypt/Decrypt objects (using server-side encryption)",
+			Usage: "encrypt/decrypt objects (using server-side encryption)",
 		},
 	}
 )
@@ -63,7 +63,7 @@ var (
 // Copy command.
 var cpCmd = cli.Command{
 	Name:   "cp",
-	Usage:  "Copy files and objects.",
+	Usage:  "copy objects",
 	Action: mainCopy,
 	Before: setGlobalsFromContext,
 	Flags:  append(cpFlags, globalFlags...),

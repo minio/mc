@@ -21,12 +21,13 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/madmin"
 )
 
-var adminUsersRemoveCmd = cli.Command{
-	Name:   "remove",
-	Usage:  "Remove users",
-	Action: mainAdminUsersRemove,
+var adminUserEnableCmd = cli.Command{
+	Name:   "enable",
+	Usage:  "enable user",
+	Action: mainAdminUserEnable,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
@@ -39,21 +40,21 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove a user 'newuser' from Minio server.
-     $ {{.HelpName}} myminio newuser
+  1. Enable a disabled user 'foobar' on Minio server.
+     $ {{.HelpName}} myminio foobar
 `,
 }
 
-// checkAdminUsersRemoveSyntax - validate all the passed arguments
-func checkAdminUsersRemoveSyntax(ctx *cli.Context) {
+// checkAdminUserEnableSyntax - validate all the passed arguments
+func checkAdminUserEnableSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "remove", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "enable", 1) // last argument is exit code
 	}
 }
 
-// mainAdminUsersRemove is the handle for "mc admin users remove" command.
-func mainAdminUsersRemove(ctx *cli.Context) error {
-	checkAdminUsersRemoveSyntax(ctx)
+// mainAdminUserEnable is the handle for "mc admin user enable" command.
+func mainAdminUserEnable(ctx *cli.Context) error {
+	checkAdminUserEnableSyntax(ctx)
 
 	console.SetColor("UserMessage", color.New(color.FgGreen))
 
@@ -65,11 +66,11 @@ func mainAdminUsersRemove(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	e := client.RemoveUser(args.Get(1))
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot remove new user")
+	e := client.SetUserStatus(args.Get(1), madmin.AccountEnabled)
+	fatalIf(probe.NewError(e).Trace(args...), "Cannot enable user")
 
 	printMsg(userMessage{
-		op:        "remove",
+		op:        "enable",
 		AccessKey: args.Get(1),
 	})
 

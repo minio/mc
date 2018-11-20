@@ -31,15 +31,15 @@ var (
 	policyFlags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "recursive, r",
-			Usage: "List recursively.",
+			Usage: "list recursively",
 		},
 	}
 )
 
-// Set public policy
+// Manage anonymous access to buckets and objects.
 var policyCmd = cli.Command{
 	Name:   "policy",
-	Usage:  "Manage anonymous access to objects.",
+	Usage:  "manage anonymous access to buckets and objects",
 	Action: mainPolicy,
 	Before: setGlobalsFromContext,
 	Flags:  append(policyFlags, globalFlags...),

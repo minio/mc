@@ -28,7 +28,7 @@ import (
 var configHostListCmd = cli.Command{
 	Name:            "list",
 	ShortName:       "ls",
-	Usage:           "Lists hosts in configuration file.",
+	Usage:           "list hosts in configuration file",
 	Action:          mainConfigHostList,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,

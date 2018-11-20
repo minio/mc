@@ -37,7 +37,7 @@ var (
 	catFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "encrypt-key",
-			Usage: "Decrypt object (using server-side encryption)",
+			Usage: "decrypt object (using server-side encryption)",
 		},
 	}
 )
@@ -45,7 +45,7 @@ var (
 // Display contents of a file.
 var catCmd = cli.Command{
 	Name:   "cat",
-	Usage:  "Display file and object contents.",
+	Usage:  "display object contents",
 	Action: mainCat,
 	Before: setGlobalsFromContext,
 	Flags:  append(catFlags, globalFlags...),
@@ -70,7 +70,7 @@ EXAMPLES:
 
    3. Concatenate multiple files to one.
       $ {{.HelpName}} part.* > complete.img
-   
+
    4. Stream a server encrypted object from Amazon S3 cloud storage to standard output.
       $ {{.HelpName}} --encrypt-key 's3/ferenginar=32byteslongsecretkeymustbegiven1' s3/ferenginar/klingon_opera_aktuh_maylotah.ogg
 `,

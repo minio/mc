@@ -25,24 +25,24 @@ var (
 	adminCredsFlags = []cli.Flag{}
 )
 
-const credsCmdName = "credentials"
+const credsCmdName = "credential"
 
 var adminCredsCmd = cli.Command{
 	Name:   credsCmdName,
-	Usage:  "Change Admin server access and secret keys",
+	Usage:  "change admin server access and secret keys",
 	Action: mainAdminCreds,
 	Flags:  append(adminCredsFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET ACCESS_KEY SECRET_KEY
+  {{.HelpName}} TARGET ACCESSKEY SECRETKEY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Set new **admin** credentials of a Minio server represented by its alias 'alias'.
+    1. Set new **admin** credential of a Minio server represented by its alias 'alias'.
        $ {{.HelpName}} alias/ minio minio123
 
 `,
@@ -64,7 +64,7 @@ func mainAdminCreds(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	// TODO: if accessKey and secretKey are not supplied we should
-	// display the existing credentials. This needs GetCredentials
+	// display the existing credential. This needs GetCredential
 	// support from Minio server.
 	aliasedURL := args.First()
 	accessKey, secretKey := args.Get(1), args.Get(2)
@@ -73,9 +73,9 @@ func mainAdminCreds(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	// Change the credentials of the specified Minio server
+	// Change the credential of the specified Minio server
 	e := client.SetAdminCredentials(accessKey, secretKey)
-	fatalIf(probe.NewError(e), "Unable to set new credentials to '"+aliasedURL+"'.")
+	fatalIf(probe.NewError(e), "Unable to set new credential to '"+aliasedURL+"'.")
 
 	return nil
 }
