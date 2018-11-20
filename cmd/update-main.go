@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
+ * Minio Cloud Storage, (C) 2015, 2016, 2017 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,33 +17,36 @@
 package cmd
 
 import (
-	"bytes"
+	"crypto"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/inconshreveable/go-update"
+	isatty "github.com/mattn/go-isatty"
 	"github.com/minio/cli"
-	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
+	_ "github.com/minio/sha256-simd" // Needed for sha256 hash verifier.
+	"github.com/segmentio/go-prompt"
 )
 
 // Check for new software updates.
 var updateCmd = cli.Command{
 	Name:   "update",
-	Usage:  "check for new software updates",
+	Usage:  "update mc to latest release",
 	Action: mainUpdate,
-	Before: setGlobalsFromContext,
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "quiet, q",
-			Usage: "suppress chatty console output",
+			Usage: "disable any update prompt message",
 		},
 		cli.BoolFlag{
 			Name:  "json",
@@ -51,198 +54,292 @@ var updateCmd = cli.Command{
 		},
 	},
 	CustomHelpTemplate: `Name:
-  {{.HelpName}} - {{.Usage}}
+   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}}{{if .VisibleFlags}} [FLAGS]{{end}}
+   {{.HelpName}}{{if .VisibleFlags}} [FLAGS]{{end}}
 {{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
+EXIT STATUS:
+   0 - you are already running the most recent version
+   1 - new update was applied successfully
+  -1 - error in getting update information
+
 EXAMPLES:
-   1. Check if there is a new update available:
-       $ {{.HelpName}}
+   1. Check and update mc:
+      $ {{.HelpName}}
 `,
 }
 
-// updateMessage container to hold update messages.
-type updateMessage struct {
-	Status    string `json:"status"`
-	Update    bool   `json:"update"`
-	Download  string `json:"downloadURL,omitempty"`
-	Version   string `json:"version"`
-	olderThan time.Duration
-}
+const (
+	mcReleaseTagTimeLayout = "2006-01-02T15-04-05Z"
+	mcOSARCH               = runtime.GOOS + "-" + runtime.GOARCH
+	mcReleaseURL           = "https://dl.minio.io/client/mc/release/" + mcOSARCH + "/"
+)
 
-// String colorized update message.
-func (u updateMessage) String() string {
-	if u.olderThan == time.Duration(0) {
-		return console.Colorize("Update", "You are already running the most recent version of `mc`.")
+var (
+	// Newer official download info URLs appear earlier below.
+	mcReleaseInfoURLs = []string{
+		mcReleaseURL + "mc.sha256sum",
+		mcReleaseURL + "mc.shasum",
 	}
-	return colorizeUpdateMessage(u.Download, u.olderThan)
-}
 
-// JSON jsonified update message.
-func (u updateMessage) JSON() string {
-	u.Status = "success"
-	u.Update = u.olderThan != time.Duration(0)
-	updateMessageJSONBytes, e := json.Marshal(u)
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	// For windows our files have .exe additionally.
+	mcReleaseWindowsInfoURLs = []string{
+		mcReleaseURL + "mc.exe.sha256sum",
+		mcReleaseURL + "mc.exe.shasum",
+	}
+)
 
-	return string(updateMessageJSONBytes)
-}
-
-const releaseTagTimeLayout = "2006-01-02T15-04-05Z"
-const mcReleaseURL = "https://dl.minio.io/client/mc/release/" + runtime.GOOS + "-" + runtime.GOARCH + "/"
-
-func getCurrentReleaseTime(mcVersion, mcBinaryPath string) (releaseTime time.Time, err *probe.Error) {
+// mcVersionToReleaseTime - parses a standard official release
+// mc version string.
+//
+// An official binary's version string is the release time formatted
+// with RFC3339 (in UTC) - e.g. `2017-09-29T19:16:56Z`
+func mcVersionToReleaseTime(version string) (releaseTime time.Time, err *probe.Error) {
 	var e error
-	if releaseTime, e = time.Parse(time.RFC3339, mcVersion); e == nil {
-		return releaseTime, probe.NewError(e)
-	}
-
-	mcBinaryPath, e = exec.LookPath(mcBinaryPath)
-	if e != nil {
-		return releaseTime, probe.NewError(e)
-	}
-
-	fi, e := os.Stat(mcBinaryPath)
-	if e != nil {
-		e = fmt.Errorf("Unable to get ModTime of %s. %s", mcBinaryPath, e)
-	} else {
-		releaseTime = fi.ModTime().UTC()
-	}
-
+	releaseTime, e = time.Parse(time.RFC3339, version)
 	return releaseTime, probe.NewError(e)
 }
 
-// GetCurrentReleaseTime - returns this process's release time.  If it is official minio version,
-// parsed version is returned else minio binary's mod time is returned.
-func GetCurrentReleaseTime() (releaseTime time.Time, err *probe.Error) {
-	return getCurrentReleaseTime(Version, os.Args[0])
+// releaseTimeToReleaseTag - converts a time to a string formatted as
+// an official mc release tag.
+//
+// An official mc release tag looks like:
+// `RELEASE.2017-09-29T19-16-56Z`
+func releaseTimeToReleaseTag(releaseTime time.Time) string {
+	return "RELEASE." + releaseTime.Format(mcReleaseTagTimeLayout)
 }
 
-func isDocker(cgroupFile string) (bool, *probe.Error) {
-	cgroup, e := ioutil.ReadFile(cgroupFile)
-	if os.IsNotExist(e) {
-		e = nil
+// releaseTagToReleaseTime - reverse of `releaseTimeToReleaseTag()`
+func releaseTagToReleaseTime(releaseTag string) (releaseTime time.Time, err *probe.Error) {
+	tagTimePart := strings.TrimPrefix(releaseTag, "RELEASE.")
+	if tagTimePart == releaseTag {
+		return releaseTime, probe.NewError(fmt.Errorf("%s is not a valid release tag", releaseTag))
+	}
+	var e error
+	releaseTime, e = time.Parse(mcReleaseTagTimeLayout, tagTimePart)
+	return releaseTime, probe.NewError(e)
+}
+
+// getModTime - get the file modification time of `path`
+func getModTime(path string) (t time.Time, err *probe.Error) {
+	var e error
+	path, e = filepath.EvalSymlinks(path)
+	if e != nil {
+		return t, probe.NewError(fmt.Errorf("Unable to get absolute path of %s. %s", path, e))
 	}
 
-	return bytes.Contains(cgroup, []byte("docker")), probe.NewError(e)
+	// Version is mc non-standard, we will use mc binary's
+	// ModTime as release time.
+	var fi os.FileInfo
+	fi, e = os.Stat(path)
+	if e != nil {
+		return t, probe.NewError(fmt.Errorf("Unable to get ModTime of %s. %s", path, e))
+	}
+
+	// Return the ModTime
+	return fi.ModTime().UTC(), nil
 }
 
-// IsDocker - returns if the environment is docker or not.
+// GetCurrentReleaseTime - returns this process's release time.  If it
+// is official mc version, parsed version is returned else mc
+// binary's mod time is returned.
+func GetCurrentReleaseTime() (releaseTime time.Time, err *probe.Error) {
+	if releaseTime, err = mcVersionToReleaseTime(Version); err == nil {
+		return releaseTime, nil
+	}
+
+	// Looks like version is mc non-standard, we use mc
+	// binary's ModTime as release time:
+	path, e := os.Executable()
+	if e != nil {
+		return releaseTime, probe.NewError(e)
+	}
+	return getModTime(path)
+}
+
+// IsDocker - returns if the environment mc is running in docker or
+// not. The check is a simple file existence check.
+//
+// https://github.com/moby/moby/blob/master/daemon/initlayer/setup_unix.go#L25
+//
+//     "/.dockerenv":      "file",
+//
 func IsDocker() bool {
-	found, err := isDocker("/proc/self/cgroup")
-	fatalIf(err.Trace("/proc/self/cgroup"), "Unable to validate if this is a docker container.")
-	return found
+	_, e := os.Stat("/.dockerenv")
+	if os.IsNotExist(e) {
+		return false
+	}
+
+	return e == nil
 }
 
-func isSourceBuild(mcVersion string) bool {
-	_, e := time.Parse(time.RFC3339, mcVersion)
-	return e != nil
+// IsDCOS returns true if mc is running in DCOS.
+func IsDCOS() bool {
+	// http://mesos.apache.org/documentation/latest/docker-containerizer/
+	// Mesos docker containerizer sets this value
+	return os.Getenv("MESOS_CONTAINER_NAME") != ""
 }
 
-// IsSourceBuild - returns if this binary is made from source or not.
+// IsKubernetes returns true if minio is running in kubernetes.
+func IsKubernetes() bool {
+	// Kubernetes env used to validate if we are
+	// indeed running inside a kubernetes pod
+	// is KUBERNETES_SERVICE_HOST but in future
+	// we might need to enhance this.
+	return os.Getenv("KUBERNETES_SERVICE_HOST") != ""
+}
+
+// IsSourceBuild - returns if this binary is a non-official build from
+// source code.
 func IsSourceBuild() bool {
-	return isSourceBuild(Version)
+	_, err := mcVersionToReleaseTime(Version)
+	return err != nil
 }
 
 // DO NOT CHANGE USER AGENT STYLE.
 // The style should be
-//   Minio (<OS>; <ARCH>[; docker][; source])  mc/<VERSION> mc/<RELEASE-TAG> mc/<COMMIT-ID>
 //
-// For any change here should be discussed by openning an issue at https://github.com/minio/mc/issues.
+//   mc (<OS>; <ARCH>[; dcos][; kubernetes][; docker][; source]) mc/<VERSION> mc/<RELEASE-TAG> mc/<COMMIT-ID>
+//
+// Any change here should be discussed by opening an issue at
+// https://github.com/minio/mc/issues.
 func getUserAgent() string {
-	userAgent := "Minio (" + runtime.GOOS + "; " + runtime.GOARCH
+
+	userAgentParts := []string{}
+	// Helper function to concisely append a pair of strings to a
+	// the user-agent slice.
+	uaAppend := func(p, q string) {
+		userAgentParts = append(userAgentParts, p, q)
+	}
+
+	uaAppend("mc (", runtime.GOOS)
+	uaAppend("; ", runtime.GOARCH)
+	if IsDCOS() {
+		uaAppend("; ", "dcos")
+	}
+	if IsKubernetes() {
+		uaAppend("; ", "kubernetes")
+	}
 	if IsDocker() {
-		userAgent += "; docker"
+		uaAppend("; ", "docker")
 	}
 	if IsSourceBuild() {
-		userAgent += "; source"
+		uaAppend("; ", "source")
 	}
-	userAgent += ") " + " mc/" + Version + " mc/" + ReleaseTag + " mc/" + CommitID
 
-	return userAgent
+	uaAppend(") mc/", Version)
+	uaAppend(" mc/", ReleaseTag)
+	uaAppend(" mc/", CommitID)
+
+	return strings.Join(userAgentParts, "")
 }
 
-func downloadReleaseData(releaseChecksumURL string, timeout time.Duration) (data string, err *probe.Error) {
+func downloadReleaseURL(releaseChecksumURL string, timeout time.Duration) (content string, err *probe.Error) {
 	req, e := http.NewRequest("GET", releaseChecksumURL, nil)
 	if e != nil {
-		return data, probe.NewError(e)
+		return content, probe.NewError(e)
 	}
 	req.Header.Set("User-Agent", getUserAgent())
 
 	client := &http.Client{
 		Timeout: timeout,
+		Transport: &http.Transport{
+			// need to close connection after usage.
+			DisableKeepAlives: true,
+		},
 	}
 
 	resp, e := client.Do(req)
-	if err != nil {
-		return data, probe.NewError(e)
+	if e != nil {
+		return content, probe.NewError(e)
 	}
 	if resp == nil {
-		return data, probe.NewError(fmt.Errorf("No response from server to download URL %s", releaseChecksumURL))
+		return content, probe.NewError(fmt.Errorf("No response from server to download URL %s", releaseChecksumURL))
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return data, probe.NewError(fmt.Errorf("Error downloading URL %s. Response: %v", releaseChecksumURL, resp.Status))
+		return content, probe.NewError(fmt.Errorf("Error downloading URL %s. Response: %v", releaseChecksumURL, resp.Status))
 	}
-
-	dataBytes, e := ioutil.ReadAll(resp.Body)
+	contentBytes, e := ioutil.ReadAll(resp.Body)
 	if e != nil {
-		return data, probe.NewError(fmt.Errorf("Error reading response. %s", e))
+		return content, probe.NewError(fmt.Errorf("Error reading response. %s", err))
 	}
 
-	data = string(dataBytes)
-	return data, nil
+	return string(contentBytes), nil
 }
 
-// DownloadReleaseData - downloads release data from minio official server.
+// DownloadReleaseData - downloads release data from mc official server.
 func DownloadReleaseData(timeout time.Duration) (data string, err *probe.Error) {
-	return downloadReleaseData(mcReleaseURL+"mc.sha256sum", timeout)
+	releaseURLs := mcReleaseInfoURLs
+	if runtime.GOOS == "windows" {
+		releaseURLs = mcReleaseWindowsInfoURLs
+	}
+	return func() (data string, err *probe.Error) {
+		for _, url := range releaseURLs {
+			data, err = downloadReleaseURL(url, timeout)
+			if err == nil {
+				return data, nil
+			}
+		}
+		return data, err.Trace(releaseURLs...)
+	}()
 }
 
-func parseReleaseData(data string) (releaseTime time.Time, err *probe.Error) {
+// parseReleaseData - parses release info file content fetched from
+// official mc download server.
+//
+// The expected format is a single line with two words like:
+//
+// fbe246edbd382902db9a4035df7dce8cb441357d mc.RELEASE.2016-10-07T01-16-39Z
+//
+// The second word must be `mc.` appended to a standard release tag.
+func parseReleaseData(data string) (sha256Hex string, releaseTime time.Time, err *probe.Error) {
 	fields := strings.Fields(data)
 	if len(fields) != 2 {
-		e := fmt.Errorf("Unknown release data `%s`", data)
-		return releaseTime, probe.NewError(e)
+		return sha256Hex, releaseTime, probe.NewError(fmt.Errorf("Unknown release data `%s`", data))
 	}
 
+	sha256Hex = fields[0]
 	releaseInfo := fields[1]
-	if fields = strings.Split(releaseInfo, "."); len(fields) != 3 {
-		e := fmt.Errorf("Unknown release information `%s`", releaseInfo)
-		return releaseTime, probe.NewError(e)
+
+	fields = strings.SplitN(releaseInfo, ".", 2)
+	if len(fields) != 2 {
+		return sha256Hex, releaseTime, probe.NewError(fmt.Errorf("Unknown release information `%s`", releaseInfo))
+	}
+	if fields[0] != "mc" {
+		return sha256Hex, releaseTime, probe.NewError(fmt.Errorf("Unknown release `%s`", releaseInfo))
 	}
 
-	if !(fields[0] == "mc" && fields[1] == "RELEASE") {
-		e := fmt.Errorf("Unknown release '%s'", releaseInfo)
-		return releaseTime, probe.NewError(e)
+	releaseTime, err = releaseTagToReleaseTime(fields[1])
+	if err != nil {
+		return sha256Hex, releaseTime, err.Trace(fields...)
 	}
 
-	var e error
-	releaseTime, e = time.Parse(releaseTagTimeLayout, fields[2])
-	if e != nil {
-		e = fmt.Errorf("Unknown release time format. %s", err)
-	}
-
-	return releaseTime, probe.NewError(e)
+	return sha256Hex, releaseTime, nil
 }
 
-func getLatestReleaseTime(timeout time.Duration) (releaseTime time.Time, err *probe.Error) {
+func getLatestReleaseTime(timeout time.Duration) (sha256Hex string, releaseTime time.Time, err *probe.Error) {
 	data, err := DownloadReleaseData(timeout)
 	if err != nil {
-		return releaseTime, err.Trace()
+		return sha256Hex, releaseTime, err.Trace()
 	}
+
 	return parseReleaseData(data)
 }
 
-func getDownloadURL() (downloadURL string) {
+func getDownloadURL(releaseTag string) (downloadURL string) {
+	// Check if we are docker environment, return docker update command
 	if IsDocker() {
-		return "docker pull minio/mc"
+		// Construct release tag name.
+		return fmt.Sprintf("docker pull minio/mc:%s", releaseTag)
 	}
 
+	// For binary only installations, we return link to the latest binary.
 	if runtime.GOOS == "windows" {
 		return mcReleaseURL + "mc.exe"
 	}
@@ -250,23 +347,113 @@ func getDownloadURL() (downloadURL string) {
 	return mcReleaseURL + "mc"
 }
 
-func getUpdateInfo(timeout time.Duration) (older time.Duration, downloadURL string, err *probe.Error) {
-	currentReleaseTime, err := GetCurrentReleaseTime()
+func getUpdateInfo(timeout time.Duration) (updateMsg string, sha256Hex string, currentReleaseTime, latestReleaseTime time.Time, err *probe.Error) {
+	currentReleaseTime, err = GetCurrentReleaseTime()
 	if err != nil {
-		return older, downloadURL, err.Trace()
+		return updateMsg, sha256Hex, currentReleaseTime, latestReleaseTime, err.Trace()
 	}
 
-	latestReleaseTime, err := getLatestReleaseTime(timeout)
+	sha256Hex, latestReleaseTime, err = getLatestReleaseTime(timeout)
 	if err != nil {
-		return older, downloadURL, err.Trace()
+		return updateMsg, sha256Hex, currentReleaseTime, latestReleaseTime, err.Trace()
 	}
 
+	var older time.Duration
+	var downloadURL string
 	if latestReleaseTime.After(currentReleaseTime) {
 		older = latestReleaseTime.Sub(currentReleaseTime)
-		downloadURL = getDownloadURL()
+		downloadURL = getDownloadURL(releaseTimeToReleaseTag(latestReleaseTime))
 	}
 
-	return older, downloadURL, nil
+	return prepareUpdateMessage(downloadURL, older), sha256Hex, currentReleaseTime, latestReleaseTime, nil
+}
+
+var (
+	// Check if we stderr, stdout are dumb terminals, we do not apply
+	// ansi coloring on dumb terminals.
+	isTerminal = func() bool {
+		return isatty.IsTerminal(os.Stdout.Fd()) && isatty.IsTerminal(os.Stderr.Fd())
+	}
+
+	colorCyanBold = func() func(a ...interface{}) string {
+		if isTerminal() {
+			color.New(color.FgCyan, color.Bold).SprintFunc()
+		}
+		return fmt.Sprint
+	}()
+
+	colorYellowBold = func() func(format string, a ...interface{}) string {
+		if isTerminal() {
+			return color.New(color.FgYellow, color.Bold).SprintfFunc()
+		}
+		return fmt.Sprintf
+	}()
+
+	colorGreenBold = func() func(format string, a ...interface{}) string {
+		if isTerminal() {
+			return color.New(color.FgGreen, color.Bold).SprintfFunc()
+		}
+		return fmt.Sprintf
+	}()
+)
+
+func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateStatusMsg string, err *probe.Error) {
+	if !ok {
+		updateStatusMsg = colorGreenBold("mc update to version RELEASE.%s canceled.",
+			latestReleaseTime.Format(mcReleaseTagTimeLayout))
+		return updateStatusMsg, nil
+	}
+	var sha256Sum []byte
+	var e error
+	sha256Sum, e = hex.DecodeString(sha256Hex)
+	if e != nil {
+		return updateStatusMsg, probe.NewError(e)
+	}
+
+	resp, e := http.Get(getDownloadURL(releaseTimeToReleaseTag(latestReleaseTime)))
+	if e != nil {
+		return updateStatusMsg, probe.NewError(e)
+	}
+	defer resp.Body.Close()
+
+	// FIXME: add support for gpg verification as well.
+	if e = update.Apply(resp.Body,
+		update.Options{
+			Hash:     crypto.SHA256,
+			Checksum: sha256Sum,
+		},
+	); e != nil {
+		return updateStatusMsg, probe.NewError(e)
+	}
+
+	return colorGreenBold("mc updated to version RELEASE.%s successfully.",
+		latestReleaseTime.Format(mcReleaseTagTimeLayout)), nil
+}
+
+func shouldUpdate(quiet bool, sha256Hex string, latestReleaseTime time.Time) (ok bool) {
+	ok = true
+	if !quiet {
+		ok = prompt.Confirm(colorGreenBold("Update to RELEASE.%s [%s]", latestReleaseTime.Format(mcReleaseTagTimeLayout), "yes"))
+	}
+	return ok
+}
+
+type updateMessage struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+// String colorized make bucket message.
+func (s updateMessage) String() string {
+	return s.Message
+}
+
+// JSON jsonified make bucket message.
+func (s updateMessage) JSON() string {
+	updateJSONBytes, e := json.Marshal(s)
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(updateJSONBytes)
 }
 
 func mainUpdate(ctx *cli.Context) {
@@ -274,17 +461,39 @@ func mainUpdate(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", -1)
 	}
 
-	// Additional command speific theme customization.
-	console.SetColor("Update", color.New(color.FgGreen, color.Bold))
+	quiet := ctx.Bool("quiet") || ctx.GlobalBool("quiet")
 
-	older, downloadURL, err := getUpdateInfo(10 * time.Second)
-	fatalIf(err.Trace(downloadURL), "Unable to fetch update info for mc.")
+	updateMsg, sha256Hex, _, latestReleaseTime, err := getUpdateInfo(10 * time.Second)
+	if err != nil {
+		errorIf(err, "Unable to update ‘mc’.")
+		os.Exit(-1)
+	}
 
-	if !globalQuiet {
+	// Nothing to update running the latest release.
+	color.New(color.FgGreen, color.Bold)
+	if updateMsg == "" {
 		printMsg(updateMessage{
-			olderThan: older,
-			Download:  downloadURL,
-			Version:   Version,
+			Status:  "success",
+			Message: colorGreenBold("You are already running the most recent version of ‘mc’."),
 		})
+		os.Exit(0)
+	}
+
+	printMsg(updateMessage{
+		Status:  "success",
+		Message: updateMsg,
+	})
+
+	// Avoid updating mc development, source builds.
+	if strings.Contains(updateMsg, mcReleaseURL) {
+		var updateStatusMsg string
+		var err *probe.Error
+		updateStatusMsg, err = doUpdate(sha256Hex, latestReleaseTime, shouldUpdate(quiet, sha256Hex, latestReleaseTime))
+		if err != nil {
+			errorIf(err, "Unable to update ‘mc’.")
+			os.Exit(-1)
+		}
+		printMsg(updateMessage{Status: "success", Message: updateStatusMsg})
+		os.Exit(1)
 	}
 }
