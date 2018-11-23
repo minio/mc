@@ -59,7 +59,6 @@ if [ -z "${SERVER_ENDPOINT+x}" ]; then
     ACCESS_KEY="Q3AM3UQ867SPQQA43P2F"
     SECRET_KEY="zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
     ENABLE_HTTPS=1
-    SERVER_REGION="us-east-1"
 fi
 
 WORK_DIR="$PWD"
@@ -69,8 +68,10 @@ if [ -z "$MINT_MODE" ]; then
     DATA_DIR="$WORK_DIR/data"
 fi
 
+FILE_0_B="$DATA_DIR/datafile-0-b"
 FILE_1_MB="$DATA_DIR/datafile-1-MB"
 FILE_65_MB="$DATA_DIR/datafile-65-MB"
+declare FILE_0_B_MD5SUM
 declare FILE_1_MB_MD5SUM
 declare FILE_65_MB_MD5SUM
 
@@ -290,6 +291,20 @@ function test_put_object_multipart()
     object_name="mc-test-object-$RANDOM"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_65_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
+function test_put_object_0byte()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${FILE_0_B}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_0_B_MD5SUM" "${object_name}.downloaded"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -785,6 +800,7 @@ function run_test()
 
     test_put_object
     test_put_object_error
+    test_put_object_0byte
     test_put_object_with_storage_class
     test_put_object_with_storage_class_error
     test_put_object_multipart
@@ -847,6 +863,10 @@ function __init__()
     mkdir -p "$MC_CONFIG_DIR"
     MC_CMD=( "${MC}" --config-folder "$MC_CONFIG_DIR" --quiet --no-color )
 
+    if [ ! -e "$FILE_0_B" ]; then
+        base64 /dev/urandom | head -c 0 >"$FILE_0_B"
+    fi
+
     if [ ! -e "$FILE_1_MB" ]; then
         base64 /dev/urandom | head -c 1048576 >"$FILE_1_MB"
     fi
@@ -857,6 +877,12 @@ function __init__()
 
     set -E
     set -o pipefail
+
+    FILE_0_B_MD5SUM="$(get_md5sum "$FILE_0_B")"
+    if [ $? -ne 0 ]; then
+        echo "unable to get md5sum of $FILE_0_B"
+        exit 1
+    fi
 
     FILE_1_MB_MD5SUM="$(get_md5sum "$FILE_1_MB")"
     if [ $? -ne 0 ]; then

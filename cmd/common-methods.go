@@ -125,19 +125,21 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sseKey string)
 				// Read a chunk to decide between utf-8 text and binary
 				var buf [512]byte
 				n, _ := io.ReadFull(reader, buf[:])
-				kind, e := filetype.Match(buf[:n])
-				if e != nil {
-					return nil, nil, probe.NewError(e)
+				if n > 0 {
+					kind, e := filetype.Match(buf[:n])
+					if e != nil {
+						return nil, nil, probe.NewError(e)
+					}
+					// rewind to output whole file
+					if _, e := s.Seek(0, io.SeekStart); e != nil {
+						return nil, nil, probe.NewError(e)
+					}
+					ctype = kind.MIME.Value
+					if ctype == "" {
+						ctype = "application/octet-stream"
+					}
+					metadata["Content-Type"] = ctype
 				}
-				// rewind to output whole file
-				if _, e := s.Seek(0, io.SeekStart); e != nil {
-					return nil, nil, probe.NewError(e)
-				}
-				ctype = kind.MIME.Value
-				if ctype == "" {
-					ctype = "application/octet-stream"
-				}
-				metadata["Content-Type"] = ctype
 			}
 		}
 	}
