@@ -41,13 +41,13 @@ var (
 			Name:  "recursive, r",
 			Usage: "copy recursively",
 		},
-		cli.IntFlag{
+		cli.StringFlag{
 			Name:  "older-than",
-			Usage: "copy object(s) older than N days",
+			Usage: "copy objects older than L days, M hours and N minutes",
 		},
-		cli.IntFlag{
+		cli.StringFlag{
 			Name:  "newer-than",
-			Usage: "copy object(s) newer than N days",
+			Usage: "copy objects newer than L days, M hours and N minutes",
 		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",
@@ -93,11 +93,11 @@ EXAMPLES:
    4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
       $ {{.HelpName}} --recursive s3\documents\2014\ C:\Backups\2014
 
-   5. Copy files older than 7 days from Minio cloud storage to Amazon S3 cloud storage.
-      $ {{.HelpName}} --older-than 7 play/mybucket/burningman2011/ s3/mybucket/
+   5. Copy files older than 7 days and 10 hours from Minio cloud storage to Amazon S3 cloud storage.
+      $ {{.HelpName}} --older-than 7d10h play/mybucket/burningman2011/ s3/mybucket/
 
-   6. Copy files newer than 7 days from Minio cloud storage to a local path.
-      $ {{.HelpName}} --newer-than 7 play/mybucket/burningman2011/ ~/latest/
+   6. Copy files newer than 7 days and 10 hours from Minio cloud storage to a local path.
+      $ {{.HelpName}} --newer-than 7d10h play/mybucket/burningman2011/ ~/latest/
 
    7. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
       $ {{.HelpName}} 本語 s3/andoria/
@@ -217,8 +217,8 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 	// Access recursive flag inside the session header.
 	isRecursive := session.Header.CommandBoolFlags["recursive"]
 
-	olderThan := session.Header.CommandIntFlags["older-than"]
-	newerThan := session.Header.CommandIntFlags["newer-than"]
+	olderThan := session.Header.CommandStringFlags["older-than"]
+	newerThan := session.Header.CommandStringFlags["newer-than"]
 	encryptKeys := session.Header.CommandStringFlags["encrypt-key"]
 	encrypt := session.Header.CommandStringFlags["encrypt"]
 	encKeyDB, err := parseAndValidateEncryptionKeys(encryptKeys, encrypt)
@@ -260,12 +260,12 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 			}
 
 			// Skip objects older than --older-than parameter if specified
-			if olderThan > 0 && isOlder(cpURLs.SourceContent, olderThan) {
+			if olderThan != "" && isOlder(cpURLs.SourceContent.Time, olderThan) {
 				continue
 			}
 
 			// Skip objects newer than --newer-than parameter if specified
-			if newerThan > 0 && isNewer(cpURLs.SourceContent, newerThan) {
+			if newerThan != "" && isNewer(cpURLs.SourceContent.Time, newerThan) {
 				continue
 			}
 
@@ -452,8 +452,8 @@ func mainCopy(ctx *cli.Context) error {
 	console.SetColor("Copy", color.New(color.FgGreen, color.Bold))
 
 	recursive := ctx.Bool("recursive")
-	olderThan := ctx.Int("older-than")
-	newerThan := ctx.Int("newer-than")
+	olderThan := ctx.String("older-than")
+	newerThan := ctx.String("newer-than")
 	storageClass := ctx.String("storage-class")
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := ctx.String("encrypt-key"); key != "" {
@@ -464,8 +464,8 @@ func mainCopy(ctx *cli.Context) error {
 	session := newSessionV8()
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = recursive
-	session.Header.CommandIntFlags["older-than"] = olderThan
-	session.Header.CommandIntFlags["newer-than"] = newerThan
+	session.Header.CommandStringFlags["older-than"] = olderThan
+	session.Header.CommandStringFlags["newer-than"] = newerThan
 	session.Header.CommandStringFlags["storage-class"] = storageClass
 	session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 	session.Header.CommandStringFlags["encrypt"] = sse
