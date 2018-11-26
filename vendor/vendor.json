@@ -71,6 +71,30 @@
 			"revisionTime": "2016-02-13T16:24:39-08:00"
 		},
 		{
+			"checksumSHA1": "K6exl2ouL7d8cR2i378EzZOdRVI=",
+			"path": "github.com/howeyc/gopass",
+			"revision": "bf9dde6d0d2c004a008c27aaee91170c786f6db8",
+			"revisionTime": "2017-01-09T16:22:49Z"
+		},
+		{
+			"checksumSHA1": "YjZiQ5N552dJ7GpJ2P4TTRu4PKI=",
+			"path": "github.com/inconshreveable/go-update",
+			"revision": "8152e7eb6ccf8679a64582a66b78519688d156ad",
+			"revisionTime": "2016-01-12T19:33:35Z"
+		},
+		{
+			"checksumSHA1": "LeFW+ad/zlj30+Z0O4wwnXrVUSQ=",
+			"path": "github.com/inconshreveable/go-update/internal/binarydist",
+			"revision": "8152e7eb6ccf8679a64582a66b78519688d156ad",
+			"revisionTime": "2016-01-12T19:33:35Z"
+		},
+		{
+			"checksumSHA1": "H63+DW/S2nASpHk59G1wEUZD1qk=",
+			"path": "github.com/inconshreveable/go-update/internal/osext",
+			"revision": "8152e7eb6ccf8679a64582a66b78519688d156ad",
+			"revisionTime": "2016-01-12T19:33:35Z"
+		},
+		{
 			"path": "github.com/mattn/go-colorable",
 			"revision": "9fdad7c47650b7d2e1da50644c1f4ba7f172f252",
 			"revisionTime": "2016-02-10T09:18:57+09:00"
@@ -215,6 +239,12 @@
 			"path": "github.com/rjeczalik/notify",
 			"revision": "0f065fa99b48b842c3fd3e2c8b194c6f2b69f6b8",
 			"revisionTime": "2018-08-27T19:31:19Z"
+		},
+		{
+			"checksumSHA1": "llmzhtIUy63V3Pl65RuEn18ck5g=",
+			"path": "github.com/segmentio/go-prompt",
+			"revision": "f0d19b6901ade831d5a3204edc0d6a7d6457fbb2",
+			"revisionTime": "2016-10-17T23:32:05Z"
 		},
 		{
 			"checksumSHA1": "d+4iuDj/qQ+2LiWEbQ+AWjxEJOc=",

@@ -256,13 +256,17 @@ func findClosestCommands(command string) []string {
 func checkUpdate(ctx *cli.Context) {
 	// Do not print update messages, if quiet flag is set.
 	if ctx.Bool("quiet") || ctx.GlobalBool("quiet") {
-		older, downloadURL, err := getUpdateInfo(1 * time.Second)
-		if err != nil {
-			// Its OK to ignore any errors during getUpdateInfo() here.
-			return
-		}
-		if older > time.Duration(0) {
-			console.Println(colorizeUpdateMessage(downloadURL, older))
+		// Its OK to ignore any errors during doUpdate() here.
+		if updateMsg, _, currentReleaseTime, latestReleaseTime, err := getUpdateInfo(2 * time.Second); err == nil {
+			printMsg(updateMessage{
+				Status:  "success",
+				Message: updateMsg,
+			})
+		} else {
+			printMsg(updateMessage{
+				Status:  "success",
+				Message: prepareUpdateMessage("Run `mc update`", latestReleaseTime.Sub(currentReleaseTime)),
+			})
 		}
 	}
 }
