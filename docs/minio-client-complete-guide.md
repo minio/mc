@@ -252,7 +252,7 @@ Skip SSL certificate verification.
 |[**cp** - Copy objects](#cp) | [**rm** - Remove objects](#rm)  | [**pipe** - Pipe to an object](#pipe) |
 | [**share** - Share access](#share)  |[**mirror** - Mirror buckets](#mirror)  | [**find** - Find files and objects](#find) |
 | [**diff** - Diff buckets](#diff) |[**policy** - Set public policy on bucket or prefix](#policy)  |[**session** - Manage saved sessions](#session) |
-| [**config** - Manage config file](#config)  | [**watch** - Watch for events](#watch)  | [**events** - Manage events on your buckets](#events)  |
+| [**config** - Manage config file](#config)  | [**watch** - Watch for events](#watch)  | [**event** - Manage events on your buckets](#event)  |
 | [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  | [**stat** - Stat contents of objects and folders](#stat) |
 
 
@@ -662,13 +662,13 @@ mc watch ~/Photos
 [2016-08-17T17:54:19.565Z] 7.5MiB ObjectCreated /home/minio/Downloads/tmp/8771468997_89b762d104_o.jpg
 ```
 
-<a name="events"></a>
-### Command `events` - Manage bucket event notification.
-``events`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. Minio configuration provides more details on how these services can be configured.
+<a name="event"></a>
+### Command `event` - Manage bucket event notification.
+``event`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. Minio configuration provides more details on how these services can be configured.
 
 ```sh
 USAGE:
-  mc events COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+  mc event COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
   add     Add a new bucket notification.
@@ -682,14 +682,14 @@ FLAGS:
 *Example: List all configured bucket notifications*
 
 ```sh
-mc events list play/andoria
+mc event list play/andoria
 MyTopic        arn:minio:sns:us-east-1:1:TestTopic    s3:ObjectCreated:*,s3:ObjectRemoved:*   suffix:.jpg
 ```
 
 *Example: Add a new 'sqs' notification resource only to notify on ObjectCreated event*
 
 ```sh
-mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --events put
+mc event add play/andoria arn:minio:sqs:us-east-1:1:your-queue --events put
 ```
 
 *Example: Add a new 'sqs' notification resource with filters*
@@ -697,13 +697,13 @@ mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --events put
 Add `prefix` and `suffix` filtering rules for `sqs` notification resource.
 
 ```sh
-mc events add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ --suffix .jpg
+mc event add play/andoria arn:minio:sqs:us-east-1:1:your-queue --prefix photos/ --suffix .jpg
 ```
 
 *Example: Remove a 'sqs' notification resource*
 
 ```sh
-mc events remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
+mc event remove play/andoria arn:minio:sqs:us-east-1:1:your-queue
 ```
 
 <a name="policy"></a>
