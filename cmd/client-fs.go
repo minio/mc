@@ -365,58 +365,19 @@ func readFile(fpath string) (io.ReadCloser, error) {
 	return fileData, nil
 }
 
-// createFile creates an empty file at the provided filepath
-// if one does not exist already.
-func createFile(fpath string) (io.WriteCloser, error) {
-	if e := os.MkdirAll(filepath.Dir(fpath), 0777); e != nil {
-		return nil, e
-	}
-	file, e := os.Create(fpath)
-	if e != nil {
-		return nil, e
-	}
-	return file, nil
-}
-
 // Copy - copy data from source to destination
 func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSEKey, tgtSSEKey string) *probe.Error {
-	// Don't use f.Get() f.Put() directly. Instead use readFile and createFile
 	destination := f.PathURL.Path
-	if destination == source { // Cannot copy file into itself
-		return probe.NewError(SameFile{
-			Source:      source,
-			Destination: destination,
-		})
-	}
 	rc, e := readFile(source)
 	if e != nil {
 		err := f.toClientError(e, destination)
 		return err.Trace(destination)
 	}
 	defer rc.Close()
-	wc, e := createFile(destination)
-	if e != nil {
-		err := f.toClientError(e, destination)
-		return err.Trace(destination)
-	}
-	defer wc.Close()
-	reader := hookreader.NewHook(rc, progress)
-	// Perform copy
-	n, _ := io.CopyN(wc, reader, size) // e == nil only if n != size
-	// Only check size related errors if size is positive
-	if size > 0 {
-		if n < size { // Unexpected early EOF
-			return probe.NewError(UnexpectedEOF{
-				TotalSize:    size,
-				TotalWritten: n,
-			})
-		}
-		if n > size { // Unexpected ExcessRead
-			return probe.NewError(UnexpectedExcessRead{
-				TotalSize:    size,
-				TotalWritten: n,
-			})
-		}
+
+	_, err := f.put(rc, size, map[string][]string{}, progress)
+	if err != nil {
+		return err.Trace(destination, source)
 	}
 	return nil
 }

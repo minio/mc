@@ -594,7 +594,7 @@ func (c *s3Client) Get(sseKey string) (io.ReadCloser, *probe.Error) {
 				Bucket: bucket,
 			})
 		}
-		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
+		if errResponse.Code == "NoSuchKey" {
 			return nil, probe.NewError(ObjectMissing{})
 		}
 		return nil, probe.NewError(e)
@@ -646,7 +646,7 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSEKey
 				Bucket: dstBucket,
 			})
 		}
-		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
+		if errResponse.Code == "NoSuchKey" {
 			return probe.NewError(ObjectMissing{})
 		}
 		return probe.NewError(e)
@@ -742,7 +742,7 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 				Bucket: bucket,
 			})
 		}
-		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
+		if errResponse.Code == "NoSuchKey" {
 			return n, probe.NewError(ObjectMissing{})
 		}
 		return n, probe.NewError(e)
@@ -1116,7 +1116,7 @@ func (c *s3Client) getObjectStat(bucket, object string, opts minio.StatObjectOpt
 				Bucket: bucket,
 			})
 		}
-		if errResponse.Code == "NoSuchKey" || errResponse.Code == "InvalidArgument" {
+		if errResponse.Code == "NoSuchKey" {
 			return nil, probe.NewError(ObjectMissing{})
 		}
 		return nil, probe.NewError(e)
