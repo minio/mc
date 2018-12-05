@@ -224,7 +224,7 @@ mc --json ls play
 ### 参数 [--quiet]
 这个参数关闭控制台日志输出。
 
-### 参数 [--config-folder]
+### 参数 [--config-dir]
 这个参数参数自定义的配置文件路径。
 
 ### 参数 [ --insecure]
