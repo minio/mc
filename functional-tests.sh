@@ -861,7 +861,7 @@ function __init__()
     fi
 
     mkdir -p "$MC_CONFIG_DIR"
-    MC_CMD=( "${MC}" --config-folder "$MC_CONFIG_DIR" --quiet --no-color )
+    MC_CMD=( "${MC}" --config-dir "$MC_CONFIG_DIR" --quiet --no-color )
 
     if [ ! -e "$FILE_0_B" ]; then
         base64 /dev/urandom | head -c 0 >"$FILE_0_B"

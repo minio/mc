@@ -215,7 +215,7 @@ func registerBefore(ctx *cli.Context) error {
 	checkGoVersion()
 
 	// Set the config directory.
-	setMcConfigDir(ctx.GlobalString("config-directory"))
+	setMcConfigDir(ctx.GlobalString("config-dir"))
 
 	// Migrate any old version of config / state files to newer format.
 	migrate()

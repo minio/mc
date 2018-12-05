@@ -203,7 +203,7 @@ This option disables the color theme. It is useful for dumb terminals.
 ### Option [--quiet]
 Quiet option suppress chatty console output.
 
-### Option [--config-folder]
+### Option [--config-dir]
 Use this option to set a custom config path.
 
 ### Option [ --insecure]

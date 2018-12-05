@@ -30,7 +30,7 @@ var commandsTree = trie.NewTrie()
 // Collection of mc flags currently supported
 var globalFlags = []cli.Flag{
 	cli.StringFlag{
-		Name:  "config-folder, C",
+		Name:  "config-dir, C",
 		Value: mustGetMcConfigDir(),
 		Usage: "path to configuration folder",
 	},
