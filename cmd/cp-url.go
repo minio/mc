@@ -97,10 +97,6 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string, encKeyDB map[strin
 		// Source is not a regular file
 		return URLs{Error: errInvalidSource(sourceURL).Trace(sourceURL)}
 	}
-	if sourceContent.URL.String() == targetURL {
-		// source and target can not be same
-		return URLs{Error: errSourceTargetSame(sourceURL).Trace(sourceURL)}
-	}
 
 	// All OK.. We can proceed. Type A
 	return makeCopyContentTypeA(sourceAlias, sourceContent, targetAlias, targetURL, encKeyDB)
