@@ -299,19 +299,19 @@ COMMANDS:
 *Example: Add a new policy 'newpolicy' on Minio, with policy from /tmp/newpolicy.json.*
 
 ```sh
-mc admin policies add myminio/ newpolicy /tmp/newpolicy.json
+mc admin policy add myminio/ newpolicy /tmp/newpolicy.json
 ```
 
 *Example: Remove policy 'newpolicy' on Minio.*
 
 ```sh
-mc admin policies remove myminio/ newpolicy
+mc admin policy remove myminio/ newpolicy
 ```
 
 *Example: List all policies on Minio.*
 
 ```sh
-mc admin policies list --json myminio/
+mc admin policy list --json myminio/
 {"status":"success","policy":"newpolicy"}
 ```
 
