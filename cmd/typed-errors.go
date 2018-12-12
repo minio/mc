@@ -111,3 +111,10 @@ var errSourceIsDir = func(URL string) *probe.Error {
 	msg := "Source `" + URL + "` is a folder."
 	return probe.NewError(sourceIsDirErr(errors.New(msg))).Untrace()
 }
+
+type conflictSSEErr error
+
+var errConflictSSE = func(sseServer, sseKeys string) *probe.Error {
+	err := fmt.Errorf("SSE alias '%s' overlaps with SSE-C aliases '%s'", sseServer, sseKeys)
+	return probe.NewError(conflictSSEErr(err)).Untrace()
+}

@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/minio/cli"
@@ -136,11 +135,6 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 			continue
 		}
 
-		sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceClnt.GetURL().Path))
-		srcSSEKey := getSSEKey(sourcePath, encKeyDB[sourceAlias])
-		targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetClnt.GetURL().Path))
-		tgtSSEKey := getSSEKey(targetPath, encKeyDB[targetAlias])
-
 		switch diffMsg.Diff {
 		case differInNone:
 			// No difference, continue.
@@ -163,8 +157,6 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 				SourceContent: sourceContent,
 				TargetAlias:   targetAlias,
 				TargetContent: targetContent,
-				SrcSSEKey:     srcSSEKey,
-				TgtSSEKey:     tgtSSEKey,
 			}
 		case differInFirst:
 			// Only in first, always copy.
@@ -177,8 +169,6 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 				SourceContent: sourceContent,
 				TargetAlias:   targetAlias,
 				TargetContent: targetContent,
-				SrcSSEKey:     srcSSEKey,
-				TgtSSEKey:     tgtSSEKey,
 			}
 		case differInSecond:
 			if !isRemove && !isFake {
@@ -187,7 +177,6 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 			URLsCh <- URLs{
 				TargetAlias:   targetAlias,
 				TargetContent: diffMsg.secondContent,
-				TgtSSEKey:     tgtSSEKey,
 			}
 		default:
 			URLsCh <- URLs{

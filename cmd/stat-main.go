@@ -31,10 +31,6 @@ var (
 			Name:  "recursive, r",
 			Usage: "stat all objects recursively",
 		},
-		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "encrypt/decrypt (using server-side encryption)",
-		},
 	}
 )
 
@@ -44,7 +40,7 @@ var statCmd = cli.Command{
 	Usage:  "show object metadata",
 	Action: mainStat,
 	Before: setGlobalsFromContext,
-	Flags:  append(statFlags, globalFlags...),
+	Flags:  append(append(statFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -54,7 +50,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
 
@@ -68,8 +63,8 @@ EXAMPLES:
    3. Stat files recursively on a local filesystem on Microsoft Windows.
       $ {{.HelpName}} --recursive C:\Users\Worf\
 
-   4. Stat files which are encrypted on the server side
-      $ {{.HelpName}} --encrypt-key "s3/ferenginar=32byteslongsecretkeymustbegiven1" s3/ferenginar/klingon_opera_aktuh_maylotah.ogg
+   4. Stat encrypted files on Amazon S3 cloud storage.
+      $ {{.HelpName}} --encrypt-key "s3/personal-docs/=32byteslongsecretkeymustbegiven1" s3/personal-docs/2018-account_report.docx
 `,
 }
 

@@ -27,8 +27,8 @@ import (
 var (
 	pipeFlags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "encrypt object (using server-side encryption)",
+			Name:  "encrypt",
+			Usage: "encrypt objects (using server-side encryption with server managed keys)",
 		},
 	}
 )
@@ -39,7 +39,7 @@ var pipeCmd = cli.Command{
 	Usage:  "stream STDIN to an object",
 	Action: mainPipe,
 	Before: setGlobalsFromContext,
-	Flags:  append(pipeFlags, globalFlags...),
+	Flags:  append(append(pipeFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -49,9 +49,9 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
+   MC_ENCRYPT:      list of comma delimited prefix values
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
    1. Write contents of stdin to a file on local filesystem.
@@ -61,14 +61,10 @@ EXAMPLES:
       $ {{.HelpName}} s3/personalbuck/meeting-notes.txt
 
    3. Copy an ISO image to an object on Amazon S3 cloud storage.
-      $ cat debian-8.2.iso | {{.HelpName}} s3/ferenginar/gnuos.iso
+      $ cat debian-8.2.iso | {{.HelpName}} s3/opensource-isos/gnuos.iso
 
    4. Stream MySQL database dump to Amazon S3 directly.
-      $ mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/ferenginar/backups/accountsdb-oct-9-2015.sql
-
-   5. Stream an object to Amazon S3 cloud storage and encrypt on server.
-      $ {{.HelpName}} --encrypt-key "s3/ferenginar/=32byteslongsecretkeymustbegiven1" s3/ferenginar/klingon_opera_aktuh_maylotah.ogg
-
+      $ mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/sql-backups/backups/accountsdb-oct-9-2015.sql
 `,
 }
 
@@ -78,7 +74,7 @@ func pipe(targetURL string, encKeyDB map[string][]prefixSSEPair) *probe.Error {
 		return catOut(os.Stdin, -1).Trace()
 	}
 	alias, _ := url2Alias(targetURL)
-	sseKey := getSSEKey(targetURL, encKeyDB[alias])
+	sseKey := getSSE(targetURL, encKeyDB[alias])
 
 	// Stream from stdin to multiple objects until EOF.
 	// Ignore size, since os.Stat() would not return proper size all the time

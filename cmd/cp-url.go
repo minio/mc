@@ -105,20 +105,11 @@ func prepareCopyURLsTypeA(sourceURL string, targetURL string, encKeyDB map[strin
 // prepareCopyContentTypeA - makes CopyURLs content for copying.
 func makeCopyContentTypeA(sourceAlias string, sourceContent *clientContent, targetAlias string, targetURL string, encKeyDB map[string][]prefixSSEPair) URLs {
 	targetContent := clientContent{URL: *newClientURL(targetURL)}
-
-	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceContent.URL.Path))
-	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetContent.URL.Path))
-
-	srcSSEKey := getSSEKey(sourcePath, encKeyDB[sourceAlias])
-	tgtSSEKey := getSSEKey(targetPath, encKeyDB[targetAlias])
-
 	return URLs{
 		SourceAlias:   sourceAlias,
 		SourceContent: sourceContent,
 		TargetAlias:   targetAlias,
 		TargetContent: &targetContent,
-		SrcSSEKey:     srcSSEKey,
-		TgtSSEKey:     tgtSSEKey,
 	}
 }
 

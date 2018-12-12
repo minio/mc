@@ -56,6 +56,14 @@ var globalFlags = []cli.Flag{
 	},
 }
 
+// Flags common across all I/O commands such as cp, mirror, stat, pipe etc.
+var ioFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "encrypt-key",
+		Usage: "encrypt/decrypt objects (using server-side encryption with customer provided keys)",
+	},
+}
+
 // registerCmd registers a cli command
 func registerCmd(cmd cli.Command) {
 	commands = append(commands, cmd)

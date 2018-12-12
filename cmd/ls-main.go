@@ -35,10 +35,6 @@ var (
 			Name:  "incomplete, I",
 			Usage: "list incomplete uploads",
 		},
-		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "encrypt/decrypt (using server-side encryption)",
-		},
 	}
 )
 
@@ -95,12 +91,8 @@ func checkListSyntax(ctx *cli.Context) {
 	URLs := ctx.Args()
 	isIncomplete := ctx.Bool("incomplete")
 
-	// Parse encryption keys per command.
-	encKeyDB, err := getEncKeys(ctx)
-	fatalIf(err, "Unable to parse encryption keys.")
-
 	for _, url := range URLs {
-		_, _, err := url2Stat(url, false, encKeyDB)
+		_, _, err := url2Stat(url, false, nil)
 		if err != nil && !isURLPrefixExists(url, isIncomplete) {
 			// Bucket name empty is a valid error for 'ls myminio',
 			// treat it as such.
@@ -140,7 +132,7 @@ func mainList(ctx *cli.Context) error {
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
 		var st *clientContent
-		if st, err = clnt.Stat(isIncomplete, false, ""); err != nil {
+		if st, err = clnt.Stat(isIncomplete, false, nil); err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
 			// For aliases like ``mc ls s3`` it's acceptable to receive BucketNameEmpty error.

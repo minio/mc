@@ -34,10 +34,6 @@ import (
 
 var (
 	headFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "decrypt object (using server-side encryption)",
-		},
 		cli.Int64Flag{
 			Name:  "n,lines",
 			Usage: "print the first 'n' lines",
@@ -52,7 +48,7 @@ var headCmd = cli.Command{
 	Usage:  "display first 'n' lines of an object",
 	Action: mainHead,
 	Before: setGlobalsFromContext,
-	Flags:  append(headFlags, globalFlags...),
+	Flags:  append(append(headFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 

@@ -37,10 +37,6 @@ var (
 			Name:  "recursive, r",
 			Usage: "sql query recursively",
 		},
-		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "encrypt/decrypt objects (using server-side encryption)",
-		},
 	}
 )
 
@@ -50,7 +46,7 @@ var sqlCmd = cli.Command{
 	Usage:  "run sql queries on objects",
 	Action: mainSQL,
 	Before: setGlobalsFromContext,
-	Flags:  append(sqlFlags, globalFlags...),
+	Flags:  append(append(sqlFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -67,7 +63,7 @@ EXAMPLES:
    2. Run a query on an object on minio account.
       $ {{.HelpName}} --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv
 
-   3. Run a query on an encrypted object with client provided keys.
+   3. Run a query on an encrypted object with customer provided keys.
       $ {{.HelpName}} --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
             --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio-encrypted.csv
 `,
@@ -84,7 +80,7 @@ func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair
 		return err.Trace(targetURL)
 	}
 
-	sseKey := getSSEKey(targetURL, encKeyDB[alias])
+	sseKey := getSSE(targetURL, encKeyDB[alias])
 	outputer, err := targetClnt.Select(expression, sseKey)
 	if err != nil {
 		return err.Trace(targetURL, expression)

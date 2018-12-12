@@ -394,7 +394,7 @@ var supportedContentTypes = []string{
 	"bzip2",
 }
 
-func (c *s3Client) Select(expression, sseKey string) (io.ReadCloser, *probe.Error) {
+func (c *s3Client) Select(expression string, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	origContentType := mimedb.TypeByExtension(filepath.Ext(strings.TrimSuffix(strings.TrimSuffix(object, ".gz"), ".bz2")))
 	contentType := mimedb.TypeByExtension(filepath.Ext(object))
@@ -412,9 +412,8 @@ func (c *s3Client) Select(expression, sseKey string) (io.ReadCloser, *probe.Erro
 			},
 		}
 		opts.OutputSerialization = minio.SelectObjectOutputSerialization{
-			CSV: &minio.CSVOutputOptions{
+			JSON: &minio.JSONOutputOptions{
 				RecordDelimiter: "\n",
-				FieldDelimiter:  ",",
 			},
 		}
 	} else if strings.Contains(origContentType, "json") {
@@ -425,17 +424,14 @@ func (c *s3Client) Select(expression, sseKey string) (io.ReadCloser, *probe.Erro
 			},
 		}
 		opts.OutputSerialization = minio.SelectObjectOutputSerialization{
-			JSON: &minio.JSONOutputOptions{
+			CSV: &minio.CSVOutputOptions{
 				RecordDelimiter: "\n",
+				FieldDelimiter:  ",",
 			},
 		}
 	}
-	if sseKey != "" {
-		key, err := encrypt.NewSSEC([]byte(sseKey))
-		if err == nil {
-			opts.ServerSideEncryption = key
-		}
-	}
+	// Set any encryption headers
+	opts.ServerSideEncryption = sse
 	if strings.Contains(contentType, "gzip") {
 		opts.InputSerialization.CompressionType = minio.SelectCompressionGZIP
 	} else if strings.Contains(contentType, "bzip") {
@@ -572,15 +568,10 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 }
 
 // Get - get object with metadata.
-func (c *s3Client) Get(sseKey string) (io.ReadCloser, *probe.Error) {
+func (c *s3Client) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
-	var opts minio.GetObjectOptions
-	if sseKey != "" {
-		key, err := encrypt.NewSSEC([]byte(sseKey))
-		if err == nil {
-			opts.ServerSideEncryption = key
-		}
-	}
+	opts := minio.GetObjectOptions{}
+	opts.ServerSideEncryption = sse
 	reader, e := c.api.GetObject(bucket, object, opts)
 	if e != nil {
 		errResponse := minio.ToErrorResponse(e)
@@ -605,26 +596,19 @@ func (c *s3Client) Get(sseKey string) (io.ReadCloser, *probe.Error) {
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
 // such that large file sizes will be copied in multipart manner on server
 // side.
-func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSEKey, tgtSSEKey string) *probe.Error {
+func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide) *probe.Error {
 	dstBucket, dstObject := c.url2BucketAndObject()
 	if dstBucket == "" {
 		return probe.NewError(BucketNameEmpty{})
 	}
 
 	tokens := splitStr(source, string(c.targetURL.Separator), 3)
-	var srcKey, tgtKey encrypt.ServerSide
-	if srcSSEKey != "" {
-		srcKey, _ = encrypt.NewSSEC([]byte(srcSSEKey))
-	}
-	if tgtSSEKey != "" {
-		tgtKey, _ = encrypt.NewSSEC([]byte(tgtSSEKey))
-	}
 
 	// Source object
-	src := minio.NewSourceInfo(tokens[1], tokens[2], srcKey)
+	src := minio.NewSourceInfo(tokens[1], tokens[2], srcSSE)
 
 	// Destination object
-	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, tgtKey, nil)
+	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, tgtSSE, nil)
 	if e != nil {
 		return probe.NewError(e)
 	}
@@ -655,7 +639,7 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSEKey
 }
 
 // Put - upload an object with custom metadata.
-func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sseKey string) (int64, *probe.Error) {
+func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	contentType, ok := metadata["Content-Type"]
 	if ok {
@@ -689,10 +673,6 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	if ok {
 		delete(metadata, "X-Amz-Storage-Class")
 	}
-	var encryption encrypt.ServerSide
-	if sseKey != "" {
-		encryption, _ = encrypt.NewSSEC([]byte(sseKey))
-	}
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
@@ -706,7 +686,7 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		ContentEncoding:      contentEncoding,
 		ContentLanguage:      contentLanguage,
 		StorageClass:         strings.ToUpper(storageClass),
-		ServerSideEncryption: encryption,
+		ServerSideEncryption: sse,
 	}
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {
@@ -990,7 +970,7 @@ func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, do
 }
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
-func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sseKey string) (*clientContent, *probe.Error) {
+func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) (*clientContent, *probe.Error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	bucket, object := c.url2BucketAndObject()
@@ -1055,10 +1035,7 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sseKey string) (*clientC
 	}
 
 	opts := minio.StatObjectOptions{}
-	if sseKey != "" {
-		key, _ := encrypt.NewSSEC([]byte(sseKey))
-		opts.ServerSideEncryption = key
-	}
+	opts.ServerSideEncryption = sse
 
 	for objectStat := range c.listObjectWrapper(bucket, prefix, nonRecursive, nil) {
 		if objectStat.Err != nil {
@@ -1483,7 +1460,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *client
 	} else if strings.HasSuffix(object, string(c.targetURL.Separator)) {
 		// Get stat of given object is a directory.
 		isIncomplete := true
-		content, perr := c.Stat(isIncomplete, false, "")
+		content, perr := c.Stat(isIncomplete, false, nil)
 		cContent = content
 		if perr != nil {
 			contentCh <- &clientContent{URL: *c.targetURL, Err: perr}
@@ -1628,7 +1605,7 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 		// Get stat of given object is a directory.
 		isIncomplete := false
 		isFetchMeta := false
-		content, perr := c.Stat(isIncomplete, isFetchMeta, "")
+		content, perr := c.Stat(isIncomplete, isFetchMeta, nil)
 		cContent = content
 		if perr != nil {
 			contentCh <- &clientContent{URL: *c.targetURL, Err: perr}

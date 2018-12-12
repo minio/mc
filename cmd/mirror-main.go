@@ -84,8 +84,8 @@ var (
 			Usage: "specify storage class for new object(s) on target",
 		},
 		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "encrypt/decrypt object(s) using specified encryption key(s) for source and/or target aliases",
+			Name:  "encrypt",
+			Usage: "encrypt/decrypt objects (using server-side encryption with server managed keys)",
 		},
 	}
 )
@@ -96,7 +96,7 @@ var mirrorCmd = cli.Command{
 	Usage:  "synchronize object(s) to a remote site",
 	Action: mainMirror,
 	Before: setGlobalsFromContext,
-	Flags:  append(mirrorFlags, globalFlags...),
+	Flags:  append(append(mirrorFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -106,9 +106,9 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
+   MC_ENCRYPT:      list of comma delimited prefixes
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
    1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
@@ -146,7 +146,6 @@ EXAMPLES:
 
   11. Mirror server encrypted objects from Minio cloud storage to a bucket on Amazon S3 cloud storage
       $ {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
-
 `,
 }
 
@@ -272,7 +271,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 		TotalCount: sURLs.TotalCount,
 		TotalSize:  sURLs.TotalSize,
 	})
-	return uploadSourceToTargetURL(ctx, sURLs, mj.status)
+	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB)
 }
 
 // Go routine to update progress status
@@ -366,8 +365,8 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
 			targetURL := newClientURL(expandedTargetPath)
 			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
-			srcSSEKey := getSSEKey(sourcePath, mj.encKeyDB[sourceAlias])
-			tgtSSEKey := getSSEKey(targetPath, mj.encKeyDB[targetAlias])
+			srcSSE := getSSE(sourcePath, mj.encKeyDB[sourceAlias])
+			tgtSSE := getSSE(targetPath, mj.encKeyDB[targetAlias])
 
 			if event.Type == EventCreate {
 				// we are checking if a destination file exists now, and if we only
@@ -378,8 +377,6 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
-					SrcSSEKey:     srcSSEKey,
-					TgtSSEKey:     tgtSSEKey,
 				}
 				if event.Size == 0 {
 					sourceClient, err := newClient(aliasedPath)
@@ -388,7 +385,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						mj.statusCh <- mirrorURL.WithError(err)
 						continue
 					}
-					sourceContent, err := sourceClient.Stat(false, false, srcSSEKey)
+					sourceContent, err := sourceClient.Stat(false, false, srcSSE)
 					if err != nil {
 						// source doesn't exist anymore
 						mj.statusCh <- mirrorURL.WithError(err)
@@ -402,7 +399,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					}
 					shouldQueue := false
 					if !mj.isOverwrite {
-						_, err = targetClient.Stat(false, false, tgtSSEKey)
+						_, err = targetClient.Stat(false, false, tgtSSE)
 						if err == nil {
 							continue
 						} // doesn't exist
@@ -425,7 +422,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						mj.statusCh <- mirrorURL.WithError(err)
 						return
 					}
-					_, err = targetClient.Stat(false, false, tgtSSEKey)
+					_, err = targetClient.Stat(false, false, tgtSSE)
 					if err == nil {
 						continue
 					} // doesn't exist
@@ -445,8 +442,6 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					SourceContent: nil,
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
-					SrcSSEKey:     srcSSEKey,
-					TgtSSEKey:     tgtSSEKey,
 					encKeyDB:      mj.encKeyDB,
 				}
 				mirrorURL.TotalCount = mj.TotalObjects

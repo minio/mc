@@ -19,6 +19,8 @@ package cmd
 import (
 	"reflect"
 	"testing"
+
+	"github.com/minio/minio-go/pkg/encrypt"
 )
 
 func TestParseURLEnv(t *testing.T) {
@@ -82,15 +84,34 @@ func TestParseURLEnv(t *testing.T) {
 }
 
 func TestParseEncryptionKeys(t *testing.T) {
+	sseKey1, err := encrypt.NewSSEC([]byte("32byteslongsecretkeymustbegiven2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sseKey2, err := encrypt.NewSSEC([]byte("32byteslongsecretkeymustbegiven1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sseSpaceKey1, err := encrypt.NewSSEC([]byte("32byteslongsecret   mustbegiven1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sseCommaKey1, err := encrypt.NewSSEC([]byte("32byteslongsecretkey,ustbegiven1"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	testCases := []struct {
 		encryptionKey  string
 		expectedEncMap map[string][]prefixSSEPair
 		success        bool
 	}{
 		{
-			encryptionKey:  "myminio1/test2=32byteslongsecretkeymustbegiven2",
-			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{prefix: "myminio1/test2", sseKey: "32byteslongsecretkeymustbegiven2"}}},
-			success:        true,
+			encryptionKey: "myminio1/test2=32byteslongsecretkeymustbegiven2",
+			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{
+				Prefix: "myminio1/test2",
+				SSE:    sseKey1,
+			}}},
+			success: true,
 		},
 		{
 			encryptionKey:  "myminio1/test2=32byteslongsecretkeymustbegiven",
@@ -98,19 +119,31 @@ func TestParseEncryptionKeys(t *testing.T) {
 			success:        false,
 		},
 		{
-			encryptionKey:  "myminio1/test2=32byteslongsecretkey,ustbegiven1",
-			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{prefix: "myminio1/test2", sseKey: "32byteslongsecretkey,ustbegiven1"}}},
-			success:        true,
+			encryptionKey: "myminio1/test2=32byteslongsecretkey,ustbegiven1",
+			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{
+				Prefix: "myminio1/test2",
+				SSE:    sseCommaKey1,
+			}}},
+			success: true,
 		},
 		{
-			encryptionKey:  "myminio1/test2=32byteslongsecret   mustbegiven1",
-			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{prefix: "myminio1/test2", sseKey: "32byteslongsecret   mustbegiven1"}}},
-			success:        true,
+			encryptionKey: "myminio1/test2=32byteslongsecret   mustbegiven1",
+			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{
+				Prefix: "myminio1/test2",
+				SSE:    sseSpaceKey1,
+			}}},
+			success: true,
 		},
 		{
-			encryptionKey:  "myminio1/test2=32byteslongsecretkeymustbegiven2,myminio1/test1/a=32byteslongsecretkeymustbegiven1",
-			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{prefix: "myminio1/test1/a", sseKey: "32byteslongsecretkeymustbegiven1"}, prefixSSEPair{prefix: "myminio1/test2", sseKey: "32byteslongsecretkeymustbegiven2"}}},
-			success:        true,
+			encryptionKey: "myminio1/test2=32byteslongsecretkeymustbegiven2,myminio1/test1/a=32byteslongsecretkeymustbegiven1",
+			expectedEncMap: map[string][]prefixSSEPair{"myminio1": []prefixSSEPair{prefixSSEPair{
+				Prefix: "myminio1/test1/a",
+				SSE:    sseKey2,
+			}, prefixSSEPair{
+				Prefix: "myminio1/test2",
+				SSE:    sseKey1,
+			}}},
+			success: true,
 		},
 	}
 	for i, testCase := range testCases {

@@ -177,9 +177,9 @@ func url2Stat(urlStr string, isFetchMeta bool, encKeyDB map[string][]prefixSSEPa
 		return nil, nil, err.Trace(urlStr)
 	}
 	alias, _ := url2Alias(urlStr)
-	sseKey := getSSEKey(urlStr, encKeyDB[alias])
+	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(false, isFetchMeta, sseKey)
+	content, err = client.Stat(false, isFetchMeta, sse)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}

@@ -168,7 +168,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 		return "", err
 	}
 
-	if _, err = s3Client.Stat(false, false, ""); err != nil {
+	if _, err = s3Client.Stat(false, false, nil); err != nil {
 		switch err.ToGoError().(type) {
 		case BucketDoesNotExist:
 			// Bucket doesn't exist, means signature probing worked V4.
@@ -179,7 +179,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 			if err != nil {
 				return "", err
 			}
-			if _, err = s3Client.Stat(false, false, ""); err != nil {
+			if _, err = s3Client.Stat(false, false, nil); err != nil {
 				switch err.ToGoError().(type) {
 				case BucketDoesNotExist:
 					// Bucket doesn't exist, means signature probing worked with V2.

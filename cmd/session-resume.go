@@ -63,7 +63,10 @@ func (b bySessionWhen) Less(i, j int) bool { return b[i].Header.When.Before(b[j]
 func sessionExecute(s *sessionV8) {
 	switch s.Header.CommandType {
 	case "cp":
-		doCopySession(s)
+		sseKeys := s.Header.CommandStringFlags["encrypt-key"]
+		sseServer := s.Header.CommandStringFlags["encrypt"]
+		encKeyDB, _ := parseAndValidateEncryptionKeys(sseKeys, sseServer)
+		doCopySession(s, encKeyDB)
 	}
 }
 
