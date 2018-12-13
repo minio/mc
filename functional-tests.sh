@@ -372,8 +372,16 @@ function test_presigned_post_policy_error()
     out=$("${MC_CMD[@]}" --json share upload "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}")
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to get presigned post policy and put object url"
 
+    # Support IPv6 address, IPv6 is specifed as [host]:9000 form, we should
+    # replace '['']' with their escaped values as '\[' '\]'.
+    #
+    # Without escaping '['']', 'sed' command interprets them as expressions
+    # which fails our requirement of replacing $endpoint/$bucket URLs in the
+    # subsequent operations.
+    endpoint=$(echo "$ENDPOINT" | sed 's|[][]|\\&|g')
+
     # Extract share field of json output, and append object name to the URL
-    upload=$(echo "$out" | jq -r .share | sed "s|<FILE>|$FILE_1_MB|g" | sed "s|curl|curl -sS|g" | sed "s|${ENDPOINT}/${BUCKET_NAME}/|${ENDPOINT}/${BUCKET_NAME}/${object_name}|g")
+    upload=$(echo "$out" | jq -r .share | sed "s|<FILE>|$FILE_1_MB|g" | sed "s|curl|curl -sS|g" | sed "s|${endpoint}/${BUCKET_NAME}/|${endpoint}/${BUCKET_NAME}/${object_name}|g")
 
     # In case of virtual host style URL path, the previous replace would have failed.
     # One of the following two commands will append the object name in that scenario.
