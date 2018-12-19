@@ -19,6 +19,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -75,11 +77,35 @@ func fatal(err *probe.Error, msg string, data ...interface{}) {
 		console.Println(string(json))
 		console.Fatalln()
 	}
+
 	msg = fmt.Sprintf(msg, data...)
+	errmsg := err.String()
 	if !globalDebug {
-		console.Fatalln(fmt.Sprintf("%s %s", msg, err.ToGoError()))
+		errmsg = err.ToGoError().Error()
 	}
-	console.Fatalln(fmt.Sprintf("%s %s", msg, err))
+
+	// Remove unnecessary leading spaces in generic/detailed error messages
+	msg = strings.TrimSpace(msg)
+	errmsg = strings.TrimSpace(errmsg)
+
+	// Add punctuations when needed
+	if len(errmsg) > 0 && len(msg) > 0 {
+		if msg[len(msg)-1] != ':' && msg[len(msg)-1] != '.' {
+			// The detailed error message starts with a capital letter,
+			// we should then add '.', otherwise add ':'.
+			if unicode.IsUpper(rune(errmsg[0])) {
+				msg += "."
+			} else {
+				msg += ":"
+			}
+		}
+		// Add '.' to the detail error if not found
+		if errmsg[len(errmsg)-1] != '.' {
+			errmsg += "."
+		}
+	}
+
+	console.Fatalln(fmt.Sprintf("%s %s", msg, errmsg))
 }
 
 // Exit coder wraps cli new exit error with a
