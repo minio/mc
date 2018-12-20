@@ -90,7 +90,7 @@ func (u userMessage) String() string {
 	case "enable":
 		return console.Colorize("UserMessage", "Enabled user `"+u.AccessKey+"` successfully.")
 	case "add":
-		return console.Colorize("UserMessage", "Added used `"+u.AccessKey+"` successfully.")
+		return console.Colorize("UserMessage", "Added user `"+u.AccessKey+"` successfully.")
 	}
 	return ""
 }
