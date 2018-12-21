@@ -624,7 +624,8 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent) {
 		for _, file := range files {
 			fi := file
 			if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
-				fi, e = os.Stat(filepath.Join(fpath, fi.Name()))
+				fp := filepath.Join(fpath, fi.Name())
+				fi, e = os.Stat(fp)
 				if os.IsPermission(e) {
 					contentCh <- &clientContent{
 						Err: probe.NewError(PathInsufficientPermission{Path: pathURL.Path}),
@@ -632,8 +633,12 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent) {
 					continue
 				}
 				if os.IsNotExist(e) {
+					// Lstat makes no attempt to follow the broken link.
+					_, e = os.Lstat(fp)
 					contentCh <- &clientContent{
-						Err: probe.NewError(BrokenSymlink{Path: file.Name()}),
+						URL:  pathURL,
+						Size: -1,
+						Err:  probe.NewError(e),
 					}
 					continue
 				}
@@ -810,10 +815,13 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent) {
 					}
 					return nil
 				}
-				// Ignore in-accessible broken symlinks.
 				if os.IsNotExist(e) {
+					// Lstat makes no attempt to follow the broken link.
+					_, e = os.Lstat(fp)
 					contentCh <- &clientContent{
-						Err: probe.NewError(BrokenSymlink{Path: fp}),
+						URL:  *newClientURL(fp),
+						Size: -1,
+						Err:  probe.NewError(e),
 					}
 					return nil
 				}
