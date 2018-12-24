@@ -84,6 +84,17 @@ func isAliasURLDir(aliasURL string, keys map[string][]prefixSSEPair) bool {
 	return strings.HasSuffix(pathURL, "/")
 }
 
+// getSourceStreamMetadataFromURL gets a reader from URL.
+func getSourceStreamMetadataFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser,
+	metadata map[string]string, err *probe.Error) {
+	alias, urlStrFull, _, err := expandAlias(urlStr)
+	if err != nil {
+		return nil, nil, err.Trace(urlStr)
+	}
+	sseKey := getSSEKey(urlStr, encKeyDB[alias])
+	return getSourceStream(alias, urlStrFull, true, sseKey)
+}
+
 // getSourceStreamFromURL gets a reader from URL.
 func getSourceStreamFromURL(urlStr string, encKeyDB map[string][]prefixSSEPair) (reader io.ReadCloser, err *probe.Error) {
 	alias, urlStrFull, _, err := expandAlias(urlStr)
@@ -105,7 +116,7 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sseKey string)
 	if err != nil {
 		return nil, nil, err.Trace(alias, urlStr)
 	}
-	metadata = map[string]string{}
+	metadata = make(map[string]string)
 	if fetchStat {
 		st, err := sourceClnt.Stat(false, true, sseKey)
 		if err != nil {
