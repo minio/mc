@@ -6,6 +6,7 @@ Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, c
 ls       list buckets and objects
 mb       make a bucket
 cat      display object contents
+head     display first 'n' lines of an object
 pipe     stream STDIN to an object
 share    generate URL for temporary access to an object
 cp       copy objects
@@ -254,6 +255,7 @@ Skip SSL certificate verification.
 | [**diff** - Diff buckets](#diff) |[**policy** - Set public policy on bucket or prefix](#policy)  |[**session** - Manage saved sessions](#session) |
 | [**config** - Manage config file](#config)  | [**watch** - Watch for events](#watch)  | [**event** - Manage events on your buckets](#event)  |
 | [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  | [**stat** - Stat contents of objects and folders](#stat) |
+| [**head** - Display first 'n' lines of an object](#head) | | |
 
 
 ###  Command `ls` - List Objects
@@ -339,6 +341,36 @@ Hello Minio!!
 ```sh
 mc cat --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myencryptedobject.txt
 Hello Minio!!
+```
+
+<a name="head"></a>
+### Command `head` - Display few lines of object
+`head` display first 'n' lines of an object
+
+```sh
+USAGE:
+   mc head [FLAGS] SOURCE [SOURCE...]
+
+FLAGS:
+  --help, -h                       Show help.
+  --encrypt-key value              decrypt object (using server-side encryption)
+  -n value, --lines value          print the first 'n' lines (default: 10)
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
+```
+
+*Example: Display the first line of a text file `myobject.txt`*
+
+```sh
+mc head -n 1 play/mybucket/myobject.txt
+Hello!!
+```
+
+*Example: Display the first line of a server encrypted object `myencryptedobject.txt`*
+
+```sh
+mc head -n 1 --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myencryptedobject.txt
+Hello!!
 ```
 
 <a name="pipe"></a>

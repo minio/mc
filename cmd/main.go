@@ -276,6 +276,7 @@ func registerApp() *cli.App {
 	registerCmd(lsCmd)      // List contents of a bucket.
 	registerCmd(mbCmd)      // Make a bucket.
 	registerCmd(catCmd)     // Display contents of a file.
+	registerCmd(headCmd)    // Display first parts of a file.
 	registerCmd(pipeCmd)    // Write contents of stdin to a file.
 	registerCmd(shareCmd)   // Share documents via URL.
 	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.

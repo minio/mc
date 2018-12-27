@@ -7,6 +7,7 @@ Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, c
 ls       list buckets and objects
 mb       make a bucket
 cat      display object contents
+head     display first 'n' lines of an object
 pipe     stream STDIN to an object
 share    generate URL for temporary access to an object
 cp       copy objects
