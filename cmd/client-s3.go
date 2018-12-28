@@ -773,8 +773,7 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 	errorCh := make(chan *probe.Error)
 
 	prevBucket := ""
-	// maintain cContentCh, objectsCh, statusCh for each bucket
-	var cContentCh chan *clientContent
+	// Maintain objectsCh, statusCh for each bucket
 	var objectsCh chan string
 	var statusCh <-chan minio.RemoveObjectError
 
@@ -785,9 +784,8 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 		for content := range contentCh {
 			// Convert content.URL.Path to objectName for objectsCh.
 			bucket, objectName := c.splitPath(content.URL.Path)
-			// Init cContentCh channel and objectsCh the first time.
+			// Init objectsCh the first time.
 			if prevBucket == "" {
-				cContentCh = make(chan *clientContent)
 				objectsCh = make(chan string)
 				prevBucket = bucket
 				if isIncomplete {
@@ -798,23 +796,20 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 			}
 
 			if prevBucket != bucket {
-				// Close cContentCh when bucket changes. Remove bucket if
-				// it qualifies.
-				close(cContentCh)
 				if objectsCh != nil {
 					close(objectsCh)
 				}
 				for removeStatus := range statusCh {
 					errorCh <- probe.NewError(removeStatus.Err)
 				}
+				// Remove bucket if it qualifies.
 				if isRemoveBucket && !isIncomplete {
 					if err := c.api.RemoveBucket(prevBucket); err != nil {
 						errorCh <- probe.NewError(err)
 					}
 				}
-				// re-init cContentCh and objectsCh for next bucket
+				// Re-init objectsCh for next bucket
 				isRemoveBucket = false
-				cContentCh = make(chan *clientContent)
 				objectsCh = make(chan string)
 				if isIncomplete {
 					statusCh = c.removeIncompleteObjects(bucket, objectsCh)
@@ -825,7 +820,18 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 			}
 
 			if objectName != "" {
-				objectsCh <- objectName
+				// Send object name once but continuously checks for pending
+				// errors in parallel, the reason is that minio-go RemoveObjects
+				// can block if there is any pending error not received yet.
+				sent := false
+				for !sent {
+					select {
+					case objectsCh <- objectName:
+						sent = true
+					case removeStatus := <-statusCh:
+						errorCh <- probe.NewError(removeStatus.Err)
+					}
+				}
 			} else {
 				// end of bucket - close the objectsCh
 				isRemoveBucket = true
@@ -835,14 +841,11 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 				objectsCh = nil
 			}
 		}
-		// close cContentCh and objectsCh at end of contentCh
-		if cContentCh != nil {
-			close(cContentCh)
-		}
+		// Close objectsCh at end of contentCh
 		if objectsCh != nil {
 			close(objectsCh)
 		}
-		// write remove objects status to errorCh
+		// Write remove objects status to errorCh
 		if statusCh != nil {
 			for removeStatus := range statusCh {
 				errorCh <- probe.NewError(removeStatus.Err)
