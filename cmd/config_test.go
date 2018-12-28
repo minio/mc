@@ -19,52 +19,53 @@ package cmd
 import "testing"
 
 // Tests valid host URL functionality.
-func TestparseEnvURLStr(t *testing.T) {
+func TestParseEnvURLStr(t *testing.T) {
 	testCases := []struct {
 		hostURL   string
 		accessKey string
 		secretKey string
-		url       string
+		hostname  string
+		port      string
 	}{
 		{
 			hostURL:   "https://minio:minio1#23@localhost:9000",
 			accessKey: "minio",
-			secretKey: "minio#123",
-			url:       "https://localhost:9000",
+			secretKey: "minio1#23",
+			hostname:  "localhost",
+			port:      "9000",
 		},
 		{
 			hostURL:   "https://minio:minio123@localhost:9000",
 			accessKey: "minio",
 			secretKey: "minio123",
-			url:       "https://localhost:9000",
-		},
-		{
-			hostURL:   "http://minio:minio1#23@localhost:9000",
-			accessKey: "minio",
-			secretKey: "minio#123",
-			url:       "http://localhost:9000",
+			hostname:  "localhost",
+			port:      "9000",
 		},
 		{
 			hostURL:   "https://localhost:9000",
 			accessKey: "",
 			secretKey: "",
-			url:       "https://localhost:9000",
+			hostname:  "localhost",
+			port:      "9000",
 		},
 	}
 
-	for _, testCase := range testCases {
+	for i, testCase := range testCases {
 		url, ak, sk, err := parseEnvURLStr(testCase.hostURL)
-		if testCase.accessKey != sk {
-			t.Fatalf("Expected %s, got %s", testCase.accessKey, ak)
+		if testCase.accessKey != ak {
+			t.Fatalf("Test %d: Expected %s, got %s", i+1, testCase.accessKey, ak)
 		}
 		if testCase.secretKey != sk {
-			t.Fatalf("Expected %s, got %s", testCase.secretKey, sk)
+			t.Fatalf("Test %d: Expected %s, got %s", i+1, testCase.secretKey, sk)
 		}
-		if testCase.url != url.Hostname() {
-			t.Fatalf("Expected %s, got %s", testCase.url, url.Hostname())
+		if testCase.hostname != url.Hostname() {
+			t.Fatalf("Test %d: Expected %s, got %s", i+1, testCase.hostname, url.Hostname())
+		}
+		if testCase.port != url.Port() {
+			t.Fatalf("Test %d: Expected %s, got %s", i+1, testCase.port, url.Port())
 		}
 		if err != nil {
-			t.Fatalf("Expected test to pass. Failed with err %s", err)
+			t.Fatalf("Test %d: Expected test to pass. Failed with err %s", i+1, err)
 		}
 	}
 }

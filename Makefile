@@ -23,8 +23,7 @@ verifiers: getdeps vet fmt lint cyclo deadcode spelling
 
 vet:
 	@echo "Running $@"
-	@go tool vet -atomic -bool -copylocks -nilfunc -printf -shadow -rangeloops -unreachable -unsafeptr -unusedresult cmd
-	@go tool vet -atomic -bool -copylocks -nilfunc -printf -shadow -rangeloops -unreachable -unsafeptr -unusedresult pkg
+	@go vet github.com/minio/mc/...
 
 fmt:
 	@echo "Running $@"
@@ -58,7 +57,7 @@ spelling:
 check: test
 test: verifiers build
 	@echo "Running unit tests"
-	@go test $(GOFLAGS) -tags kqueue ./...
+	@go test -tags kqueue ./...
 	@echo "Running functional tests"
 	@(env bash $(PWD)/functional-tests.sh)
 
@@ -69,7 +68,7 @@ coverage: build
 # Builds minio locally.
 build: checks
 	@echo "Building minio binary to './mc'"
-	@CGO_ENABLED=0 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
+	@GO_FLAGS="" CGO_ENABLED=0 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
 
 pkg-add:
 	@echo "Adding new package $(PKG)"
@@ -95,6 +94,7 @@ install: build
 clean:
 	@echo "Cleaning up all the generated files"
 	@find . -name '*.test' | xargs rm -fv
+	@find . -name '*~' | xargs rm -fv
 	@rm -rvf mc
 	@rm -rvf build
 	@rm -rvf release

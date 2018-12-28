@@ -1,26 +1,41 @@
-sudo: false
+go_import_path: github.com/minio/mc
+
 language: go
 
-os:
-- linux
+# this ensures PRs based on a local branch are not built twice
+# the downside is that a PR targeting a different branch is not built
+# but as a workaround you can add the branch to this list
+branches:
+  only:
+    - master
 
-env:
-- ARCH=x86_64
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      env:
+        - ARCH=x86_64
+      go: 1.11.4
+      script:
+        - diff -au <(gofmt -d *.go) <(printf "")
+        - diff -au <(gofmt -d cmd) <(printf "")
+        - diff -au <(gofmt -d pkg) <(printf "")
+        - for d in $(go list ./...); do go test -v -race "$d"; done
+        - make coverage        
+        - make test
+    - os: windows
+      env:
+        - ARCH=x86_64
+      go: 1.11.4
+      script:
+        - go build --ldflags="$(go run buildscripts/gen-ldflags.go)" -o %GOPATH%\bin\mc.exe
+        - for d in $(go list ./...); do go test -v -race "$d"; done
+        - bash buildscripts/go-coverage.sh
 
-go:
-- 1.10.4
-
-addons:
-  apt:
-    packages:
-      - devscripts
-
-script:
-  - make test GOFLAGS="-race"
-  - make coverage
-  - diff -au <(gofmt -d *.go) <(printf "")
-  - diff -au <(gofmt -d cmd) <(printf "")
-  - diff -au <(gofmt -d pkg) <(printf "")
+before_script:
+  # Add an IPv6 config - see the corresponding Travis issue
+  # https://github.com/travis-ci/travis-ci/issues/8361
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6'; fi
 
 after_success:
 - bash <(curl -s https://codecov.io/bash)
