@@ -1,19 +1,24 @@
-FROM golang:1.10.1-alpine3.7
+FROM golang:1.11.4-alpine3.7
 
-MAINTAINER Minio Inc <dev@minio.io>
+LABEL maintainer="Minio Inc <dev@minio.io>"
 
-ENV PATH $PATH:$GOPATH/bin
+ENV GOPATH /go
 ENV CGO_ENABLED 0
 
 WORKDIR /go/src/github.com/minio/
 
 RUN  \
-     apk add --no-cache ca-certificates && \
-     apk add --no-cache --virtual .build-deps git && \
-     echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
+     apk add --no-cache git && \
      go get -v -d github.com/minio/mc && \
      cd /go/src/github.com/minio/mc && \
-     go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)" && \
-     rm -rf /go/pkg /go/src /usr/local/go && apk del .build-deps
+     go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
+
+FROM alpine:3.7
+
+COPY --from=0 /go/bin/mc /usr/bin/mc
+
+RUN  \
+     apk add --no-cache ca-certificates && \
+     echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf
 
 ENTRYPOINT ["mc"]
