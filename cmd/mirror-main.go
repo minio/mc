@@ -222,15 +222,30 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 		return sURLs.WithError(nil)
 	}
 
-	// We are not removing incomplete uploads.
-	isIncomplete := false
-
 	// Construct proper path with alias.
 	targetWithAlias := filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path)
+	clnt, pErr := newClient(targetWithAlias)
+	if pErr != nil {
+		return sURLs.WithError(pErr)
+	}
 
-	// Remove extraneous file/bucket on target.
-	err := probe.NewError(removeSingle(targetWithAlias, isIncomplete, mj.isFake, 0, 0, sURLs.encKeyDB))
-	return sURLs.WithError(err)
+	contentCh := make(chan *clientContent, 1)
+	contentCh <- &clientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
+	close(contentCh)
+
+	errorCh := clnt.Remove(false, contentCh)
+	for pErr := range errorCh {
+		if pErr != nil {
+			switch pErr.ToGoError().(type) {
+			case PathInsufficientPermission:
+				// Ignore Permission error.
+				continue
+			}
+			return sURLs.WithError(pErr)
+		}
+	}
+
+	return sURLs.WithError(nil)
 }
 
 // doMirror - Mirror an object to multiple destination. URLs status contains a copy of sURLs and error if any.
