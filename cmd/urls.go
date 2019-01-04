@@ -16,7 +16,9 @@
 
 package cmd
 
-import "github.com/minio/mc/pkg/probe"
+import (
+	"github.com/minio/mc/pkg/probe"
+)
 
 // URLs contains source and target urls
 type URLs struct {
@@ -27,8 +29,6 @@ type URLs struct {
 	TotalCount    int64
 	TotalSize     int64
 	encKeyDB      map[string][]prefixSSEPair
-	SrcSSEKey     string
-	TgtSSEKey     string
 	Error         *probe.Error `json:"-"`
 }
 

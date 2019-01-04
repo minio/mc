@@ -69,10 +69,6 @@ var (
 			Name:  "newer-than",
 			Usage: "remove objects newer than N days",
 		},
-		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "remove encrypted object (using server-side encryption)",
-		},
 	}
 )
 
@@ -82,7 +78,7 @@ var rmCmd = cli.Command{
 	Usage:  "remove objects",
 	Action: mainRm,
 	Before: setGlobalsFromContext,
-	Flags:  append(rmFlags, globalFlags...),
+	Flags:  append(append(rmFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -92,7 +88,6 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
 
@@ -121,9 +116,8 @@ EXAMPLES:
    8. Drop all incomplete uploads on 'jazz-songs' bucket.
       $ {{.HelpName}} --incomplete --recursive s3/jazz-songs/
 
-   9. Remove an encrypted object from s3.
-      $ {{.HelpName}} --encrypt-key "s3/ferenginar/=32byteslongsecretkeymustbegiven1" s3/ferenginar/1999/old-backup.tgz
-
+   9. Remove an encrypted object from Amazon S3 cloud storage.
+      $ {{.HelpName}} --encrypt-key "s3/sql-backups/=32byteslongsecretkeymustbegiven1" s3/sql-backups/1999/old-backup.tgz
 `,
 }
 
@@ -194,7 +188,7 @@ func removeSingle(url string, isIncomplete bool, isFake bool, olderThan int, new
 	}
 	isFetchMeta := true
 	alias, _ := url2Alias(url)
-	sseKey := getSSEKey(url, encKeyDB[alias])
+	sseKey := getSSE(url, encKeyDB[alias])
 	content, pErr := clnt.Stat(isIncomplete, isFetchMeta, sseKey)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")

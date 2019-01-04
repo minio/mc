@@ -266,9 +266,9 @@ USAGE:
    mc ls [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h                       Show help.
-  --recursive, -r		   List recursively.
-  --incomplete, -I		   List incomplete uploads.
+  --recursive, -r               list recursively
+  --incomplete, -I              list incomplete uploads
+  --help, -h                    show help
 ```
 
 *Example: List all buckets on https://play.minio.io:9000.*
@@ -292,8 +292,9 @@ USAGE:
    mc mb [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --help, -h                       Show help.
-  --region "us-east-1"		   Specify bucket region. Defaults to ‘us-east-1’.
+  --region value                specify bucket region; defaults to 'us-east-1' (default: "us-east-1")
+  --ignore-existing, -p         ignore if bucket/directory already exists
+  --help, -h                    show help
 
 ```
 
@@ -322,11 +323,11 @@ USAGE:
    mc cat [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
-  --help, -h                       Show help.
-  --encrypt-key value              Decrypt object (using server-side encryption)
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY:                 list of comma delimited prefix=secret values
 ```
 
 *Example: Display the contents of a text file `myobject.txt`*
@@ -352,9 +353,10 @@ USAGE:
    mc head [FLAGS] SOURCE [SOURCE...]
 
 FLAGS:
-  --help, -h                       Show help.
-  --encrypt-key value              decrypt object (using server-side encryption)
-  -n value, --lines value          print the first 'n' lines (default: 10)
+  -n value, --lines value       print the first 'n' lines (default: 10)
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                    show help
+
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
 ```
@@ -382,17 +384,19 @@ USAGE:
    mc pipe [FLAGS] [TARGET]
 
 FLAGS:
-  --help, -h			Help of pipe.
-  --encrypt-key value           Encrypt object (using server-side encryption)
+  --encrypt value               encrypt objects (using server-side encryption with server managed keys)
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:              List of comma delimited prefix=secret values
+   MC_ENCRYPT:      list of comma delimited prefix values
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
 *Example: Stream MySQL database dump to Amazon S3 directly.*
 
 ```sh
-mysqldump -u root -p ******* accountsdb | mc pipe s3/ferenginar/backups/accountsdb-oct-9-2015.sql
+mysqldump -u root -p ******* accountsdb | mc pipe s3/sql-backups/backups/accountsdb-oct-9-2015.sql
 ```
 
 <a name="cp"></a>
@@ -404,13 +408,17 @@ USAGE:
    mc cp [FLAGS] SOURCE [SOURCE...] TARGET
 
 FLAGS:
-  --recursive, -r                    Copy recursively.
-  --storage-class value, -sc value   Set storage class for object.
-  --help, -h                         Show help.
-  --encrypt-key value                Encrypt/Decrypt objects (using server-side encryption)
+  --recursive, -r                    copy recursively
+  --older-than value                 copy object(s) older than N days (default: 0)
+  --newer-than value                 copy object(s) newer than N days (default: 0)
+  --storage-class value, --sc value  set storage class for new object(s) on target
+  --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
+  --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                         show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
+   MC_ENCRYPT:      list of comma delimited prefixes
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
 *Example: Copy a text file to an object storage.*
@@ -451,20 +459,19 @@ USAGE:
    mc rm [FLAGS] TARGET [TARGET ...]
 
 FLAGS:
-  --help, -h            Show help.
-  --recursive, -r       Remove recursively.
-  --force               Force a dangerous remove operation.
-  --dangerous           Allow site-wide removal of buckets and objects.
-  --incomplete, -I      Remove an incomplete upload(s).
-  --fake                Perform a fake remove operation.
-  --stdin               Read object list from STDIN.
-  --older-than value    Remove objects older than N days. (default: 0)
-  --newer-than value    Remove objects newer than N days. (default: 0)
-  --encrypt-key value   Encrypt/Decrypt objects (using server-side encryption)
+  --recursive, -r               remove recursively
+  --force                       allow a recursive remove operation
+  --dangerous                   allow site-wide removal of buckets and objects
+  --incomplete, -I              remove incomplete uploads
+  --fake                        perform a fake remove operation
+  --stdin                       read object names from STDIN
+  --older-than value            remove objects older than N days (default: 0)
+  --newer-than value            remove objects newer than N days (default: 0)
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                    show help
+
 ENVIRONMENT VARIABLES:
-    MC_ENCRYPT_KEY:     List of comma delimited prefix=secret values
-
-
+   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
 ```
 
 *Example: Remove a single object.*
@@ -515,12 +522,12 @@ USAGE:
    mc share [FLAGS] COMMAND
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 
 COMMANDS:
-   download	  Generate URLs for download access.
-   upload	  Generate ‘curl’ command to upload objects without requiring access/secret keys.
-   list		  List previously shared objects and folders.
+   download	  generate URLs for download access
+   upload	  generate ‘curl’ command to upload objects without requiring access/secret keys
+   list		  list previously shared objects and folders
 ```
 
 ### Sub-command `share download` - Share Download
@@ -531,9 +538,9 @@ USAGE:
    mc share download [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --help, -h                       Show help.
-  --recursive, -r		   Share all objects recursively.
-  --expire, -E "168h"		   Set expiry in NN[h|m|s].
+  --recursive, -r               share all objects recursively
+  --expire value, -E value      set expiry in NN[h|m|s] (default: "168h")
+  --help, -h                    show help
 ```
 
 *Example: Grant temporary access to an object with 4 hours expiry limit.*
@@ -555,9 +562,10 @@ USAGE:
    mc share upload [FLAGS] TARGET [TARGET...]
 
 FLAGS:
-  --help, -h                       Show help.
-  --recursive, -r   		   Recursively upload any object matching the prefix.
-  --expire, -E "168h"		   Set expiry in NN[h|m|s].
+  --recursive, -r                 recursively upload any object matching the prefix
+  --expire value, -E value        set expiry in NN[h|m|s] (default: "168h")
+  --content-type value, -T value  specify a content-type to allow
+  --help, -h                      show help
 ```
 
 *Example: Generate a `curl` command to enable upload access to `play/mybucket/myotherobject.txt`. User replaces `<FILE>` with the actual filename to upload*
@@ -590,16 +598,23 @@ USAGE:
    mc mirror [FLAGS] SOURCE TARGET
 
 FLAGS:
-  --help, -h                          Show help.
-  --force                             Force overwrite of an existing target(s).
-  --fake                              Perform a fake mirror operation.
-  --watch, -w                         Watch and mirror for changes.
-  --remove                            Remove extraneous file(s) on target.
-  --storage-class value, --sc value   Set storage class for object.
-  --encrypt-key value                 Encrypt/Decrypt objects (using server-side encryption)
+  --overwrite                        overwrite object(s) on target
+  --fake                             perform a fake mirror operation
+  --watch, -w                        watch and synchronize changes
+  --remove                           remove extraneous object(s) on target
+  --region value                     specify region when creating new bucket(s) on target (default: "us-east-1")
+  -a                                 preserve bucket policy rules on target bucket(s)
+  --exclude value                    exclude object(s) that match specified object name pattern
+  --older-than value                 filter object(s) older than N days (default: 0)
+  --newer-than value                 filter object(s) newer than N days (default: 0)
+  --storage-class value, --sc value  specify storage class for new object(s) on target
+  --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
+  --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                         show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:                    List of comma delimited prefix=secret values
+   MC_ENCRYPT:      list of comma delimited prefixes
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
 *Example: Mirror a local directory to 'mybucket' on https://play.minio.io:9000.*
@@ -625,11 +640,21 @@ USAGE:
   mc find PATH [FLAGS]
 
 FLAGS:
-  --help, -h                       Show help.
-  --exec value                     Spawn an external process for each matching object (see FORMAT)
-  --name value                     Find object names matching wildcard pattern.
+  --exec value                  spawn an external process for each matching object (see FORMAT)
+  --ignore value                exclude objects matching the wildcard pattern
+  --name value                  find object names matching wildcard pattern
+  --newer value                 match all objects newer than specified time in units (see UNITS)
+  --older value                 match all objects older than specified time in units (see UNITS)
+  --path value                  match directory names matching wildcard pattern
+  --print value                 print in custom format to STDOUT (see FORMAT)
+  --regex value                 match directory and object name with PCRE regex pattern
+  --larger value                match all objects larger than specified size in units (see UNITS)
+  --smaller value               match all objects smaller than specified size in units (see UNITS)
+  --maxdepth value              limit directory navigation to specified depth (default: 0)
+  --watch                       monitor a specified path for newly created object(s)
   ...
   ...
+  --help, -h                    show help
 ```
 
 *Example: Find all jpeg images from s3 bucket and copy to minio "play/bucket" bucket continuously.*
@@ -648,7 +673,7 @@ USAGE:
   mc diff [FLAGS] FIRST SECOND
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 ```
 
 *Example: Compare a local directory and a remote object storage.*
@@ -668,11 +693,11 @@ USAGE:
   mc watch [FLAGS] PATH
 
 FLAGS:
-  --events value                   Filter specific types of events. Defaults to all events by default. (default: "put,delete,get")
-  --prefix value                   Filter events for a prefix.
-  --suffix value                   Filter events for a suffix.
-  --recursive                      Recursively watch for events.
-  --help, -h                       Show help.
+  --events value                   filter specific types of events, defaults to all events (default: "put,delete,get")
+  --prefix value                   filter events for a prefix
+  --suffix value                   filter events for a suffix
+  --recursive                      recursively watch for events
+  --help, -h                       show help
 ```
 
 *Example: Watch for all events on object storage*
@@ -703,12 +728,12 @@ USAGE:
   mc event COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  add     Add a new bucket notification.
-  remove  Remove a bucket notification. With '--force' can remove all bucket notifications.
-  list    List bucket notifications.
+  add     add a new bucket notification
+  remove  remove a bucket notification. With '--force' can remove all bucket notifications
+  list    list bucket notifications
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 ```
 
 *Example: List all configured bucket notifications*
@@ -752,7 +777,7 @@ PERMISSION:
   Allowed policies are: [none, download, upload, public].
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 ```
 
 *Example: Show current anonymous bucket policy*
@@ -795,12 +820,12 @@ USAGE:
   mc session COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  list    List all previously saved sessions.
-  clear   Clear a previously saved session.
-  resume  Resume a previously saved session.
+  list    list all previously saved sessions
+  clear   clear a previously saved session
+  resume  resume a previously saved session
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 
 ```
 
@@ -835,12 +860,12 @@ USAGE:
   mc config host COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  add, a      Add a new host to configuration file.
-  remove, rm  Remove a host from configuration file.
-  list, ls    Lists hosts in configuration file.
+  add, a      add a new host to configuration file
+  remove, rm  remove a host from configuration file
+  list, ls    lists hosts in configuration file
 
 FLAGS:
-  --help, -h                       Show help.
+  --help, -h                       show help
 ```
 
 *Example: Manage Config File*
@@ -862,9 +887,9 @@ USAGE:
   mc update [FLAGS]
 
 FLAGS:
-  --quiet, -q  Suppress chatty console output.
-  --json       Enable JSON formatted output.
-  --help, -h   Show help.
+  --quiet, -q  suppress chatty console output
+  --json       enable JSON formatted output
+  --help, -h   show help
 ```
 
 *Example: Check for an update.*
@@ -883,9 +908,9 @@ USAGE:
   mc version [FLAGS]
 
 FLAGS:
-  --quiet, -q  Suppress chatty console output.
-  --json       Enable JSON formatted output.
-  --help, -h   Show help.
+  --quiet, -q  suppress chatty console output
+  --json       enable JSON formatted output
+  --help, -h   show help
 ```
 
  *Example: Print version of mc.*
@@ -905,12 +930,12 @@ USAGE:
    mc stat [FLAGS] TARGET
 
 FLAGS:
-  --help, -h                       Show help.
-  --recursive, -r                  Stat recursively.
-  --encrypt-key value              Encrypt/Decrypt (using server-side encryption)
+  --recursive, -r               stat all objects recursively
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
 ```
 
 *Example: Display information on a bucket named "mybucket" on https://play.minio.io:9000.*
@@ -941,7 +966,6 @@ Metadata  :
 ```
 
 *Example: Display information on objects contained in the bucket named "mybucket" on https://play.minio.io:9000.*
-
 
 ```sh
 mc stat -r play/mybucket

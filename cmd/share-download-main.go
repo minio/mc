@@ -127,7 +127,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 	// Channel which will receive objects whose URLs need to be shared
 	objectsCh := make(chan *clientContent)
 
-	content, err := clnt.Stat(isIncomplete, isFetchMeta, "")
+	content, err := clnt.Stat(isIncomplete, isFetchMeta, nil)
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}

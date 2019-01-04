@@ -43,19 +43,19 @@ var (
 		},
 		cli.IntFlag{
 			Name:  "older-than",
-			Usage: "copy objects older than N days",
+			Usage: "copy object(s) older than N days",
 		},
 		cli.IntFlag{
 			Name:  "newer-than",
-			Usage: "copy objects newer than N days",
+			Usage: "copy object(s) newer than N days",
 		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",
-			Usage: "set storage class for object",
+			Usage: "set storage class for new object(s) on target",
 		},
 		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "encrypt/decrypt objects (using server-side encryption)",
+			Name:  "encrypt",
+			Usage: "encrypt/decrypt objects (using server-side encryption with server managed keys)",
 		},
 	}
 )
@@ -66,7 +66,7 @@ var cpCmd = cli.Command{
 	Usage:  "copy objects",
 	Action: mainCopy,
 	Before: setGlobalsFromContext,
-	Flags:  append(cpFlags, globalFlags...),
+	Flags:  append(append(cpFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -76,9 +76,9 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
+   MC_ENCRYPT:      list of comma delimited prefixes
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
    1. Copy a list of objects from local file system to Amazon S3 cloud storage.
@@ -168,7 +168,7 @@ type ProgressReader interface {
 }
 
 // doCopy - Copy a singe file from source to destination
-func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader) URLs {
+func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader, encKeyDB map[string][]prefixSSEPair) URLs {
 	if cpURLs.Error != nil {
 		cpURLs.Error = cpURLs.Error.Trace()
 		return cpURLs
@@ -193,7 +193,7 @@ func doCopy(ctx context.Context, cpURLs URLs, pg ProgressReader) URLs {
 			TotalSize:  cpURLs.TotalSize,
 		})
 	}
-	return uploadSourceToTargetURL(ctx, cpURLs, pg)
+	return uploadSourceToTargetURL(ctx, cpURLs, pg, encKeyDB)
 }
 
 // doCopyFake - Perform a fake copy to update the progress bar appropriately.
@@ -220,7 +220,8 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 	olderThan := session.Header.CommandIntFlags["older-than"]
 	newerThan := session.Header.CommandIntFlags["newer-than"]
 	encryptKeys := session.Header.CommandStringFlags["encrypt-key"]
-	encKeyDB, err := parseAndValidateEncryptionKeys(encryptKeys)
+	encrypt := session.Header.CommandStringFlags["encrypt"]
+	encKeyDB, err := parseAndValidateEncryptionKeys(encryptKeys, encrypt)
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// Create a session data file to store the processed URLs.
@@ -290,7 +291,7 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 	session.Save()
 }
 
-func doCopySession(session *sessionV8) error {
+func doCopySession(session *sessionV8, encKeyDB map[string][]prefixSSEPair) error {
 	trapCh := signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
 	ctx, cancelCopy := context.WithCancel(context.Background())
@@ -373,7 +374,7 @@ func doCopySession(session *sessionV8) error {
 					}
 				} else {
 					queueCh <- func() URLs {
-						return doCopy(ctx, cpURLs, pg)
+						return doCopy(ctx, cpURLs, pg, encKeyDB)
 					}
 				}
 			}
@@ -457,6 +458,7 @@ func mainCopy(ctx *cli.Context) error {
 	if key := ctx.String("encrypt-key"); key != "" {
 		sseKeys = key
 	}
+	sse := ctx.String("encrypt")
 
 	session := newSessionV8()
 	session.Header.CommandType = "cp"
@@ -465,6 +467,7 @@ func mainCopy(ctx *cli.Context) error {
 	session.Header.CommandIntFlags["newer-than"] = newerThan
 	session.Header.CommandStringFlags["storage-class"] = storageClass
 	session.Header.CommandStringFlags["encrypt-key"] = sseKeys
+	session.Header.CommandStringFlags["encrypt"] = sse
 
 	var e error
 	if session.Header.RootPath, e = os.Getwd(); e != nil {
@@ -474,7 +477,7 @@ func mainCopy(ctx *cli.Context) error {
 
 	// extract URLs.
 	session.Header.CommandArgs = ctx.Args()
-	e = doCopySession(session)
+	e = doCopySession(session, encKeyDB)
 	session.Delete()
 
 	return e

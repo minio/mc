@@ -34,12 +34,10 @@ import (
 )
 
 var (
-	catFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "encrypt-key",
-			Usage: "decrypt object (using server-side encryption)",
-		},
-	}
+	// This is kept dummy for future purposes
+	// and also to add ioFlags and globalFlags
+	// in CLI registration.
+	catFlags = []cli.Flag{}
 )
 
 // Display contents of a file.
@@ -48,7 +46,7 @@ var catCmd = cli.Command{
 	Usage:  "display object contents",
 	Action: mainCat,
 	Before: setGlobalsFromContext,
-	Flags:  append(catFlags, globalFlags...),
+	Flags:  append(append(catFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -58,12 +56,12 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  List of comma delimited prefix=secret values
+
 EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
-      $ {{.HelpName}} s3/ferenginar/klingon_opera_aktuh_maylotah.ogg | mplayer -
+      $ {{.HelpName}} s3/mysql-backups/kubecon-mysql-operator.mpv | mplayer -
 
    2. Concatenate contents of file1.txt and stdin to standard output.
       $ {{.HelpName}} file1.txt - > file.txt
@@ -71,8 +69,8 @@ EXAMPLES:
    3. Concatenate multiple files to one.
       $ {{.HelpName}} part.* > complete.img
 
-   4. Stream a server encrypted object from Amazon S3 cloud storage to standard output.
-      $ {{.HelpName}} --encrypt-key 's3/ferenginar=32byteslongsecretkeymustbegiven1' s3/ferenginar/klingon_opera_aktuh_maylotah.ogg
+   4. Save an encrypted object from Amazon S3 cloud storage to a local file.
+      $ {{.HelpName}} --encrypt-key 's3/mysql-backups=32byteslongsecretkeymustbegiven1' s3/mysql-backups/backups-201810.gz > /mnt/data/recent.gz
 `,
 }
 

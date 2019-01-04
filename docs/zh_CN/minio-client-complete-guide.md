@@ -322,7 +322,7 @@ FLAGS:
 *示例： 将MySQL数据库dump文件输出到Amazon S3。*
 
 ```sh
-mysqldump -u root -p ******* accountsdb | mc pipe s3/ferenginar/backups/accountsdb-oct-9-2015.sql
+mysqldump -u root -p ******* accountsdb | mc pipe s3/sql-backups/backups/accountsdb-oct-9-2015.sql
 ```
 
 <a name="cp"></a>
