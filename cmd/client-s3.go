@@ -412,8 +412,9 @@ func (c *s3Client) Select(expression string, sse encrypt.ServerSide) (io.ReadClo
 			},
 		}
 		opts.OutputSerialization = minio.SelectObjectOutputSerialization{
-			JSON: &minio.JSONOutputOptions{
+			CSV: &minio.CSVOutputOptions{
 				RecordDelimiter: "\n",
+				FieldDelimiter:  ",",
 			},
 		}
 	} else if strings.Contains(origContentType, "json") {
@@ -424,9 +425,8 @@ func (c *s3Client) Select(expression string, sse encrypt.ServerSide) (io.ReadClo
 			},
 		}
 		opts.OutputSerialization = minio.SelectObjectOutputSerialization{
-			CSV: &minio.CSVOutputOptions{
+			JSON: &minio.JSONOutputOptions{
 				RecordDelimiter: "\n",
-				FieldDelimiter:  ",",
 			},
 		}
 	}
