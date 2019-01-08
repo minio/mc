@@ -111,11 +111,6 @@
 			"revisionTime": "2017-02-27T07:32:28Z"
 		},
 		{
-			"path": "github.com/minio/go-homedir",
-			"revision": "d682a8f0cf139663a984ff12528da460ca963de9",
-			"revisionTime": "2015-10-24T22:24:27-07:00"
-		},
-		{
 			"checksumSHA1": "3wJQ4abLFpfFuy1WbjG+EnCEg2s=",
 			"path": "github.com/minio/minio-go",
 			"revision": "5f40a0c780086b861984b18f638b4dca4f6897e2",

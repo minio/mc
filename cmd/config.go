@@ -24,8 +24,9 @@ import (
 	"regexp"
 	"runtime"
 
-	"github.com/minio/go-homedir"
 	"github.com/minio/mc/pkg/probe"
+
+	"github.com/mitchellh/go-homedir"
 )
 
 // mcCustomConfigDir contains the whole path to config dir. Only access via get/set functions.
