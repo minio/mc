@@ -74,7 +74,7 @@ type Client interface {
 	Watch(params watchParams) (*watchObject, *probe.Error)
 
 	// Delete operations
-	Remove(isIncomplete bool, contentCh <-chan *clientContent) (errorCh <-chan *probe.Error)
+	Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) (errorCh <-chan *probe.Error)
 
 	// GetURL returns back internal url
 	GetURL() clientURL
