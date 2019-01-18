@@ -918,9 +918,10 @@ func (f *fsClient) GetAccess() (access string, err *probe.Error) {
 }
 
 // SetAccess - set access policy permissions.
-func (f *fsClient) SetAccess(access string) *probe.Error {
+func (f *fsClient) SetAccess(access string, isJSON bool) *probe.Error {
 	// For windows this feature is not implemented.
-	if runtime.GOOS == "windows" {
+	// JSON policy for fs is not yet implemented.
+	if runtime.GOOS == "windows" || isJSON {
 		return probe.NewError(APINotImplemented{API: "SetAccess", APIType: "filesystem"})
 	}
 	st, err := f.fsStat(false)

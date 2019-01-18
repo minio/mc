@@ -770,11 +770,15 @@ Manage anonymous bucket policies to a bucket and its contents
 ```sh
 USAGE:
   mc policy [FLAGS] PERMISSION TARGET
+  mc policy [FLAGS] FILE TARGET
   mc policy [FLAGS] TARGET
   mc policy list [FLAGS] TARGET
 
 PERMISSION:
   Allowed policies are: [none, download, upload, public].
+
+FILE:
+  A valid S3 policy JSON filepath.
 
 FLAGS:
   --help, -h                       show help
@@ -796,6 +800,15 @@ Set anonymous bucket policy  for ``mybucket/myphotos/2020/`` sub-directory and i
 ```sh
 mc policy download play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
+```
+
+*Example : Set anonymous bucket policy from a JSON file*
+
+Configure bucket policy for ``mybucket`` with a policy JSON file.
+
+```sh
+mc policy /tmp/policy.json play/mybucket
+Access permission for `play/mybucket` is set from `/tmp/policy.json`
 ```
 
 *Example : Remove current anonymous bucket policy*

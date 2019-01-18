@@ -16,6 +16,8 @@
 
 package cmd
 
+import "path/filepath"
+
 // isValidAccessPERM - is provided access perm string supported.
 func (b accessPerms) isValidAccessPERM() bool {
 	switch b {
@@ -23,6 +25,10 @@ func (b accessPerms) isValidAccessPERM() bool {
 		return true
 	}
 	return false
+}
+
+func (b accessPerms) isValidAccessFile() bool {
+	return filepath.Ext(string(b)) == ".json"
 }
 
 // accessPerms - access level.
