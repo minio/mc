@@ -468,7 +468,7 @@ function test_mirror_list_objects()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
 
-    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}" | jq -r .key) >/dev/null 2>&1
+    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}/" | jq -r .key) >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
@@ -487,7 +487,7 @@ function test_mirror_list_objects_storage_class()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror --storage-class REDUCED_REDUNDANCY "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
 
-    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}" | jq -r .key) >/dev/null 2>&1
+    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}/" | jq -r .key) >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
@@ -745,7 +745,7 @@ function test_mirror_with_sse()
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror --encrypt-key "${cli_flag}" "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
-    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}" | jq -r .key) >/dev/null 2>&1
+    diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}/" | jq -r .key) >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
     # remove recursively with correct encryption key
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${bucket_name}"

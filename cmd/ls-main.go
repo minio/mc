@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * Minio Client (C) 2014-2019 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,26 +127,9 @@ func mainList(ctx *cli.Context) error {
 
 	var cErr error
 	for _, targetURL := range args {
-		var clnt Client
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
-		var st *clientContent
-		if st, err = clnt.Stat(isIncomplete, false, nil); err != nil {
-			switch err.ToGoError().(type) {
-			case BucketNameEmpty:
-			// For aliases like ``mc ls s3`` it's acceptable to receive BucketNameEmpty error.
-			// Nothing to do.
-			default:
-				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-			}
-		} else if st.Type.IsDir() {
-			if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
-				targetURL = targetURL + string(clnt.GetURL().Separator)
-			}
-			clnt, err = newClient(targetURL)
-			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-		}
 		if e := doList(clnt, isRecursive, isIncomplete); e != nil {
 			cErr = e
 		}
