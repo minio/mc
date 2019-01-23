@@ -130,6 +130,23 @@ func mainList(ctx *cli.Context) error {
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
+		var st *clientContent
+		if st, err = clnt.Stat(isIncomplete, false, nil); err != nil {
+			switch err.ToGoError().(type) {
+			case BucketNameEmpty:
+			// For aliases like ``mc ls s3`` it's acceptable to receive BucketNameEmpty error.
+			// Nothing to do.
+			default:
+				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
+			}
+		} else if st.Type.IsDir() {
+			if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
+				targetURL = targetURL + string(clnt.GetURL().Separator)
+			}
+			clnt, err = newClient(targetURL)
+			fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
+		}
+
 		if e := doList(clnt, isRecursive, isIncomplete); e != nil {
 			cErr = e
 		}
