@@ -130,6 +130,16 @@ func mainList(ctx *cli.Context) error {
 		clnt, err := newClient(targetURL)
 		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
 
+		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) {
+			var st *clientContent
+			st, err = clnt.Stat(isIncomplete, false, nil)
+			if err == nil && st.Type.IsDir() {
+				targetURL = targetURL + string(clnt.GetURL().Separator)
+				clnt, err = newClient(targetURL)
+				fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
+			}
+		}
+
 		if e := doList(clnt, isRecursive, isIncomplete); e != nil {
 			cErr = e
 		}
