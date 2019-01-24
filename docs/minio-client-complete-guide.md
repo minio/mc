@@ -255,7 +255,7 @@ Skip SSL certificate verification.
 | [**diff** - Diff buckets](#diff) |[**policy** - Set public policy on bucket or prefix](#policy)  |[**session** - Manage saved sessions](#session) |
 | [**config** - Manage config file](#config)  | [**watch** - Watch for events](#watch)  | [**event** - Manage events on your buckets](#event)  |
 | [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  | [**stat** - Stat contents of objects and folders](#stat) |
-| [**head** - Display first 'n' lines of an object](#head) | | |
+| [**head** - Display first 'n' lines of an object](#head) | [**sql** - Run sql queries on objects](#sql) | |
 
 
 ###  Command `ls` - List Objects
@@ -327,7 +327,7 @@ FLAGS:
   --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:                 list of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
 *Example: Display the contents of a text file `myobject.txt`*
@@ -344,6 +344,45 @@ mc cat --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybuc
 Hello Minio!!
 ```
 
+<a name="sql"></a>
+### Command `sql` - Run sql queries on objects
+`sql` run sql queries on objects.
+
+```sh
+USAGE:
+  mc sql [FLAGS] TARGET [TARGET...]
+
+FLAGS:
+  --query value, -e value       sql query expression
+  --recursive, -r               sql query recursively
+  --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --help, -h                    show help
+
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+```
+
+*Example: Select all columns on a set of objects recursively on AWS S3*
+
+```sh
+mc sql --recursive --query "select * from S3Object" s3/personalbucket/my-large-csvs/
+```
+
+*Example: Run an aggregation query on an object on minio*
+
+```sh
+mc sql --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv
+```
+
+*Example: Run an aggregation query on an encrypted object with customer provided keys*
+
+```sh
+mc sql --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
+    --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio-encrypted.csv
+```
+
+For more query examples refer to official AWS S3 documentation [here](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectSELECTContent.html#RESTObjectSELECTContent-responses-examples)
+
 <a name="head"></a>
 ### Command `head` - Display few lines of object
 `head` display first 'n' lines of an object
@@ -358,7 +397,7 @@ FLAGS:
   --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:                 List of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
 *Example: Display the first line of a text file `myobject.txt`*
@@ -471,7 +510,7 @@ FLAGS:
   --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
 *Example: Remove a single object.*
@@ -935,7 +974,7 @@ FLAGS:
   --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
 *Example: Display information on a bucket named "mybucket" on https://play.minio.io:9000.*

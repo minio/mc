@@ -56,11 +56,14 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+ENVIRONMENT VARIABLES:
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+
 EXAMPLES:
-   1. Run a query on a set of objects recursively on s3 account.
+   1. Run a query on a set of objects recursively on AWS S3.
       $ {{.HelpName}} --recursive --query "select * from S3Object" s3/personalbucket/my-large-csvs/
 
-   2. Run a query on an object on minio account.
+   2. Run a query on an object on Minio.
       $ {{.HelpName}} --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv
 
    3. Run a query on an encrypted object with customer provided keys.
