@@ -57,7 +57,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:  List of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
    1. Stream an object from Amazon S3 cloud storage to mplayer standard input.

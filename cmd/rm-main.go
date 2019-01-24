@@ -89,7 +89,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: List of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
 
 EXAMPLES:
    1. Remove a file.

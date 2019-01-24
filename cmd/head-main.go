@@ -59,7 +59,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:  List of comma delimited prefix=secret values
+   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 NOTE:
    '{{.HelpName}}' automatically decompresses 'gzip', 'bzip2' compressed objects.
