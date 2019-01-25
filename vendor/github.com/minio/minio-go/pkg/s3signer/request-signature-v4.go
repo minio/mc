@@ -151,7 +151,7 @@ func getCanonicalHeaders(req http.Request, ignoredHeaders map[string]bool) strin
 				if idx > 0 {
 					buf.WriteByte(',')
 				}
-				buf.WriteString(v)
+				buf.WriteString(signV4TrimAll(v))
 			}
 			buf.WriteByte('\n')
 		}

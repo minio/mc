@@ -21,6 +21,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"net/http"
+	"strings"
 )
 
 // unsignedPayload - value to be set to X-Amz-Content-Sha256 header when
@@ -46,4 +47,12 @@ func getHostAddr(req *http.Request) string {
 		return req.Host
 	}
 	return req.URL.Host
+}
+
+// Trim leading and trailing spaces and replace sequential spaces with one space, following Trimall()
+// in http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
+func signV4TrimAll(input string) string {
+	// Compress adjacent spaces (a space is determined by
+	// unicode.IsSpace() internally here) to one space and return
+	return strings.Join(strings.Fields(input), " ")
 }
