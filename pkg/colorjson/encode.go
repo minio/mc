@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-// Package json implements encoding and decoding of JSON as defined in
+// Package colorjson implements encoding and decoding of JSON as defined in
 // RFC 7159. The mapping between JSON and Go values is described
 // in the documentation for the Marshal and Unmarshal functions.
 //
 // See "JSON and Go" for an introduction to this package:
 // https://golang.org/doc/articles/json_and_go.html
-package json
+package colorjson
 
 import (
 	"bytes"
@@ -35,6 +35,8 @@ import (
 	"sync"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/minio/mc/pkg/console"
 )
 
 // Marshal returns the JSON encoding of v.
@@ -166,6 +168,9 @@ import (
 // handle them. Passing cyclic structures to Marshal will result in
 // an infinite recursion.
 //
+// This package is only meant for printable JSON output. DO NOT USE THIS
+// for passing around encoded json objects, as it mangles the original object
+//
 func Marshal(v interface{}) ([]byte, error) {
 	e := newEncodeState()
 
@@ -248,6 +253,8 @@ func (e *UnsupportedTypeError) Error() string {
 	return "json: unsupported type: " + e.Type.String()
 }
 
+// An UnsupportedValueError is returned by Marshal when attempting
+// to encode an unsupported value
 type UnsupportedValueError struct {
 	Value reflect.Value
 	Str   string
@@ -257,7 +264,7 @@ func (e *UnsupportedValueError) Error() string {
 	return "json: unsupported value: " + e.Str
 }
 
-// Before Go 1.2, an InvalidUTF8Error was returned by Marshal when
+// InvalidUTF8Error before Go 1.2, was returned by Marshal when
 // attempting to encode a string value with invalid UTF-8 sequences.
 // As of Go 1.2, Marshal instead coerces the string to valid UTF-8 by
 // replacing invalid bytes with the Unicode replacement rune U+FFFD.
@@ -271,6 +278,8 @@ func (e *InvalidUTF8Error) Error() string {
 	return "json: invalid UTF-8 in string: " + strconv.Quote(e.S)
 }
 
+// MarshalerError is returned by Marshal when an error
+// occurs during marshalling
 type MarshalerError struct {
 	Type reflect.Type
 	Err  error
@@ -449,17 +458,17 @@ func newTypeEncoder(t reflect.Type, allowAddr bool) encoderFunc {
 }
 
 func invalidValueEncoder(e *encodeState, v reflect.Value, _ encOpts) {
-	e.WriteString("null")
+	e.WriteString(console.Colorize(jsonNull, "null"))
 }
 
 func marshalerEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	m, ok := v.Interface().(Marshaler)
 	if !ok {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	b, err := m.MarshalJSON()
@@ -475,7 +484,7 @@ func marshalerEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 func addrMarshalerEncoder(e *encodeState, v reflect.Value, _ encOpts) {
 	va := v.Addr()
 	if va.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	m := va.Interface().(Marshaler)
@@ -491,7 +500,7 @@ func addrMarshalerEncoder(e *encodeState, v reflect.Value, _ encOpts) {
 
 func textMarshalerEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	m := v.Interface().(encoding.TextMarshaler)
@@ -505,7 +514,7 @@ func textMarshalerEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 func addrTextMarshalerEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 	va := v.Addr()
 	if va.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	m := va.Interface().(encoding.TextMarshaler)
@@ -521,9 +530,9 @@ func boolEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 		e.WriteByte('"')
 	}
 	if v.Bool() {
-		e.WriteString("true")
+		e.WriteString(console.Colorize(jsonBool, "true"))
 	} else {
-		e.WriteString("false")
+		e.WriteString(console.Colorize(jsonBool, "false"))
 	}
 	if opts.quoted {
 		e.WriteByte('"')
@@ -535,7 +544,7 @@ func intEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 	if opts.quoted {
 		e.WriteByte('"')
 	}
-	e.Write(b)
+	e.WriteString(console.Colorize(jsonNum, string(b)))
 	if opts.quoted {
 		e.WriteByte('"')
 	}
@@ -546,7 +555,7 @@ func uintEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 	if opts.quoted {
 		e.WriteByte('"')
 	}
-	e.Write(b)
+	e.WriteString(console.Colorize(jsonNum, string(b)))
 	if opts.quoted {
 		e.WriteByte('"')
 	}
@@ -587,7 +596,7 @@ func (bits floatEncoder) encode(e *encodeState, v reflect.Value, opts encOpts) {
 	if opts.quoted {
 		e.WriteByte('"')
 	}
-	e.Write(b)
+	e.WriteString(console.Colorize(jsonNum, string(b)))
 	if opts.quoted {
 		e.WriteByte('"')
 	}
@@ -609,23 +618,23 @@ func stringEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 		if !isValidNumber(numStr) {
 			e.error(fmt.Errorf("json: invalid number literal %q", numStr))
 		}
-		e.WriteString(numStr)
+		e.WriteString(console.Colorize(jsonString, numStr))
 		return
 	}
 	if opts.quoted {
-		sb, err := Marshal(v.String())
+		sb, err := Marshal(console.Colorize(jsonString, v.String()))
 		if err != nil {
 			e.error(err)
 		}
-		e.string(string(sb), opts.escapeHTML)
+		e.string(console.Colorize(jsonString, string(sb)), opts.escapeHTML)
 	} else {
-		e.string(v.String(), opts.escapeHTML)
+		e.string(console.Colorize(jsonString, v.String()), opts.escapeHTML)
 	}
 }
 
 func interfaceEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 	if v.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	e.reflectValue(v.Elem(), opts)
@@ -653,7 +662,7 @@ func (se *structEncoder) encode(e *encodeState, v reflect.Value, opts encOpts) {
 		} else {
 			e.WriteByte(',')
 		}
-		e.string(f.name, opts.escapeHTML)
+		e.string(console.Colorize(jsonKey, f.name), opts.escapeHTML)
 		e.WriteByte(':')
 		opts.quoted = f.quoted
 		se.fieldEncs[i](e, fv, opts)
@@ -679,7 +688,7 @@ type mapEncoder struct {
 
 func (me *mapEncoder) encode(e *encodeState, v reflect.Value, opts encOpts) {
 	if v.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	e.WriteByte('{')
@@ -699,7 +708,7 @@ func (me *mapEncoder) encode(e *encodeState, v reflect.Value, opts encOpts) {
 		if i > 0 {
 			e.WriteByte(',')
 		}
-		e.string(kv.s, opts.escapeHTML)
+		e.string(console.Colorize(jsonKey, kv.s), opts.escapeHTML)
 		e.WriteByte(':')
 		me.elemEnc(e, v.MapIndex(kv.v), opts)
 	}
@@ -722,7 +731,7 @@ func newMapEncoder(t reflect.Type) encoderFunc {
 
 func encodeByteSlice(e *encodeState, v reflect.Value, _ encOpts) {
 	if v.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	s := v.Bytes()
@@ -749,7 +758,7 @@ type sliceEncoder struct {
 
 func (se *sliceEncoder) encode(e *encodeState, v reflect.Value, opts encOpts) {
 	if v.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	se.arrayEnc(e, v, opts)
@@ -794,7 +803,7 @@ type ptrEncoder struct {
 
 func (pe *ptrEncoder) encode(e *encodeState, v reflect.Value, opts encOpts) {
 	if v.IsNil() {
-		e.WriteString("null")
+		e.WriteString(console.Colorize(jsonNull, "null"))
 		return
 	}
 	pe.elemEnc(e, v.Elem(), opts)
@@ -873,7 +882,7 @@ type reflectWithString struct {
 
 func (w *reflectWithString) resolve() error {
 	if w.v.Kind() == reflect.String {
-		w.s = w.v.String()
+		w.s = console.Colorize(jsonString, w.v.String())
 		return nil
 	}
 	if tm, ok := w.v.Interface().(encoding.TextMarshaler); ok {
@@ -883,10 +892,10 @@ func (w *reflectWithString) resolve() error {
 	}
 	switch w.v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		w.s = strconv.FormatInt(w.v.Int(), 10)
+		w.s = console.Colorize(jsonNum, strconv.FormatInt(w.v.Int(), 10))
 		return nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		w.s = strconv.FormatUint(w.v.Uint(), 10)
+		w.s = console.Colorize(jsonNum, strconv.FormatUint(w.v.Uint(), 10))
 		return nil
 	}
 	panic("unexpected map key type")
@@ -918,6 +927,8 @@ func (e *encodeState) string(s string, escapeHTML bool) {
 			case '\t':
 				e.WriteByte('\\')
 				e.WriteByte('t')
+			case '\x1b':
+				e.WriteByte('\x1b')
 			default:
 				// This encodes bytes < 0x20 except for \t, \n and \r.
 				// If escapeHTML is set, it also escapes <, >, and &

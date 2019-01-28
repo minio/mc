@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package json
+package colorjson
 
 // JSON value parser state machine.
 // Just about at the limit of what is reasonable to write by hand.
@@ -216,6 +216,9 @@ func stateBeginValue(s *scanner, c byte) int {
 	case 'n': // beginning of null
 		s.step = stateN
 		return scanBeginLiteral
+	case '\x1b':
+		s.step = stateBeginColorESC
+		return scanContinue
 	}
 	if '1' <= c && c <= '9' { // beginning of 1234.5
 		s.step = state1
@@ -262,6 +265,12 @@ func stateEndValue(s *scanner, c byte) int {
 	if c <= ' ' && isSpace(c) {
 		s.step = stateEndValue
 		return scanSkipSpace
+	}
+	if c == '[' || c == ';' || c == 'm' || c == '\x1b' {
+		return scanContinue
+	}
+	if '0' <= c && c <= '9' {
+		return scanContinue
 	}
 	ps := s.parseState[n-1]
 	switch ps {
@@ -318,6 +327,10 @@ func stateInString(s *scanner, c byte) int {
 		s.step = stateInStringEsc
 		return scanContinue
 	}
+	if c == '\x1b' {
+		s.step = stateInString
+		return scanContinue
+	}
 	if c < 0x20 {
 		return s.error(c, "in string literal")
 	}
@@ -333,8 +346,61 @@ func stateInStringEsc(s *scanner, c byte) int {
 	case 'u':
 		s.step = stateInStringEscU
 		return scanContinue
+	case '[':
+		s.step = stateInStringColorRest
+		return scanContinue
 	}
 	return s.error(c, "in string escape code")
+}
+
+// stateInStringColorFirst is the state after reading the beginning of a color representation
+// which is \x1b
+func stateBeginColorESC(s *scanner, c byte) int {
+	switch c {
+	case '[':
+		s.step = stateBeginColorRest
+		return scanContinue
+	}
+	return s.error(c, "in string color escape code")
+}
+
+// stateInStringColorSecond is the state after reading the second character of a color representation
+// which is \x1b[
+func stateBeginColorRest(s *scanner, c byte) int {
+	if c <= ' ' && isSpace(c) {
+		return scanSkipSpace
+	}
+	if '0' <= c && c <= '9' {
+		s.step = stateBeginColorRest
+		return scanContinue
+	}
+	switch c {
+	case ';':
+		s.step = stateBeginColorRest
+		return scanContinue
+	case 'm':
+		s.step = stateBeginValue
+		return scanContinue
+	}
+	return s.error(c, "in string color escape code")
+}
+
+// stateInStringColorFourth is the state after reading the fourth character of a color representation
+// which is \033[ until an 'm' is encountered
+func stateInStringColorRest(s *scanner, c byte) int {
+	if '0' <= c && c <= '9' {
+		s.step = stateInStringColorRest
+		return scanContinue
+	}
+	switch c {
+	case ';':
+		s.step = stateInStringColorRest
+		return scanContinue
+	case 'm':
+		s.step = stateInString
+		return scanContinue
+	}
+	return s.error(c, "in string color escape code")
 }
 
 // stateInStringEscU is the state after reading `"\u` during a quoted string.

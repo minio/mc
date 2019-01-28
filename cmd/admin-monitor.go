@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016, 2017 Minio, Inc.
+ * Minio Client (C) 2019 Minio, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
-	"github.com/minio/mc/pkg/json"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
 )
@@ -43,7 +43,7 @@ const (
 
 var adminMonitorCmd = cli.Command{
 	Name:            "monitor",
-	Usage:           "monitor cpu, mem statistics",
+	Usage:           "monitor cpu and mem statistics",
 	Action:          mainAdminMonitor,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminMonitorFlags, globalFlags...),
@@ -58,7 +58,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get server cpu, mem statistics of the 'play' server.
+  1. Get server cpu and mem statistics of the 'play' server.
        $ {{.HelpName}} play/
 `,
 }
