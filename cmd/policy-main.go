@@ -17,8 +17,12 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -48,12 +52,16 @@ var policyCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [FLAGS] PERMISSION TARGET
+  {{.HelpName}} [FLAGS] FILE TARGET
   {{.HelpName}} [FLAGS] TARGET
   {{.HelpName}} list [FLAGS] TARGET
 
 PERMISSION:
   Allowed policies are: [none, download, upload, public].
 {{if .VisibleFlags}}
+FILE:
+  A valid S3 policy JSON filepath.
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
@@ -70,13 +78,16 @@ EXAMPLES:
    4. Set a prefix to "public" on Amazon S3 cloud storage.
       $ {{.HelpName}} public s3/public-commons/images
 
-   5. Get bucket permissions.
+   5. Set a prefix to the policy file path on Amazon S3 cloud storage.
+      $ {{.HelpName}} /path/to/policy.json s3/public-commons/images
+
+   6. Get bucket permissions.
       $ {{.HelpName}} s3/shared
 
-   6. List policies set to a specified bucket.
+   7. List policies set to a specified bucket.
       $ {{.HelpName}} list s3/shared
 
-   7. List public object URLs recursively.
+   8. List public object URLs recursively.
       $ {{.HelpName}} --recursive links s3/shared/
 
 `,
@@ -117,6 +128,10 @@ func (s policyMessage) String() string {
 	if s.Operation == "get" {
 		return console.Colorize("Policy",
 			"Access permission for `"+s.Bucket+"`"+" is `"+string(s.Perms)+"`")
+	}
+	if s.Operation == "setJSON" {
+		return console.Colorize("Policy",
+			"Access permission for `"+s.Bucket+"`"+" is set from `"+string(s.Perms)+"`")
 	}
 	// nothing to print
 	return ""
@@ -182,7 +197,7 @@ func checkPolicySyntax(ctx *cli.Context) {
 		}
 
 	default:
-		if argsLength == 2 {
+		if argsLength == 2 && filepath.Ext(string(firstArg)) != ".json" {
 			fatalIf(errDummy().Trace(),
 				"Unrecognized permission `"+string(firstArg)+"`. Allowed values are [none, download, upload, public].")
 		}
@@ -212,7 +227,37 @@ func doSetAccess(targetURL string, targetPERMS accessPerms) *probe.Error {
 		return err.Trace(targetURL)
 	}
 	policy := accessPermToString(targetPERMS)
-	if err = clnt.SetAccess(policy); err != nil {
+	if err = clnt.SetAccess(policy, false); err != nil {
+		return err.Trace(targetURL, string(targetPERMS))
+	}
+	return nil
+}
+
+// doSetAccessJSON do set access JSON.
+func doSetAccessJSON(targetURL string, targetPERMS accessPerms) *probe.Error {
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return err.Trace(targetURL)
+	}
+	fileReader, e := os.Open(string(targetPERMS))
+	if e != nil {
+		fatalIf(probe.NewError(e).Trace(), "Unable to set policy for `"+targetURL+"`.")
+	}
+	defer fileReader.Close()
+
+	const maxJSONSize = 120 * 1024 // 120KiB
+	configBuf := make([]byte, maxJSONSize+1)
+
+	n, e := io.ReadFull(fileReader, configBuf)
+	if e == nil {
+		return probe.NewError(bytes.ErrTooLarge).Trace(targetURL)
+	}
+	if e != io.ErrUnexpectedEOF {
+		return probe.NewError(e).Trace(targetURL)
+	}
+
+	configBytes := configBuf[:n]
+	if err = clnt.SetAccess(string(configBytes), true); err != nil {
 		return err.Trace(targetURL, string(targetPERMS))
 	}
 	return nil
@@ -343,47 +388,37 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 
 // Run policy cmd to fetch set permission
 func runPolicyCmd(ctx *cli.Context) {
+	var operation string
+	var probeErr *probe.Error
 	perms := accessPerms(ctx.Args().First())
+	targetURL := ctx.Args().Last()
 	if perms.isValidAccessPERM() {
-		targetURL := ctx.Args().Last()
-		err := doSetAccess(targetURL, perms)
-		// Upon error exit.
-		if err != nil {
-			switch err.ToGoError().(type) {
-			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to set policy of a non S3 url `"+targetURL+"`.")
-			default:
-				fatalIf(err.Trace(targetURL, string(perms)),
-					"Unable to set policy `"+string(perms)+"` for `"+targetURL+"`.")
-
-			}
-		}
-
-		printMsg(policyMessage{
-			Status:    "success",
-			Operation: "set",
-			Bucket:    targetURL,
-			Perms:     perms,
-		})
+		probeErr = doSetAccess(targetURL, perms)
+		operation = "set"
+	} else if perms.isValidAccessFile() {
+		probeErr = doSetAccessJSON(targetURL, perms)
+		operation = "setJSON"
 	} else {
-		targetURL := ctx.Args().First()
-		perms, err := doGetAccess(targetURL)
-		if err != nil {
-			switch err.ToGoError().(type) {
-			case APINotImplemented:
-				fatalIf(err.Trace(), "Unable to get policy of a non S3 url `"+targetURL+"`.")
-			default:
-				fatalIf(err.Trace(targetURL), "Unable to get policy for `"+targetURL+"`.")
-			}
-		}
-
-		printMsg(policyMessage{
-			Status:    "success",
-			Operation: "get",
-			Bucket:    targetURL,
-			Perms:     perms,
-		})
+		targetURL = ctx.Args().First()
+		perms, probeErr = doGetAccess(targetURL)
+		operation = "get"
 	}
+	// Upon error exit.
+	if probeErr != nil {
+		switch probeErr.ToGoError().(type) {
+		case APINotImplemented:
+			fatalIf(probeErr.Trace(), "Unable to "+operation+" policy of a non S3 url `"+targetURL+"`.")
+		default:
+			fatalIf(probeErr.Trace(targetURL, string(perms)),
+				"Unable to "+operation+" policy `"+string(perms)+"` for `"+targetURL+"`.")
+		}
+	}
+	printMsg(policyMessage{
+		Status:    "success",
+		Operation: operation,
+		Bucket:    targetURL,
+		Perms:     perms,
+	})
 }
 
 func mainPolicy(ctx *cli.Context) error {

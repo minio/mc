@@ -943,10 +943,16 @@ func (c *s3Client) GetAccess() (string, *probe.Error) {
 }
 
 // SetAccess set access policy permissions.
-func (c *s3Client) SetAccess(bucketPolicy string) *probe.Error {
+func (c *s3Client) SetAccess(bucketPolicy string, isJSON bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
+	}
+	if isJSON {
+		if e := c.api.SetBucketPolicy(bucket, bucketPolicy); e != nil {
+			return probe.NewError(e)
+		}
+		return nil
 	}
 	policyStr, e := c.api.GetBucketPolicy(bucket)
 	if e != nil {

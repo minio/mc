@@ -665,7 +665,7 @@ func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 		// Set rule only if it doesn't exist in the target bucket
 		// or force flag is activated
 		if originalRule == "none" || isOverwrite {
-			err = dstClt.SetAccess(r)
+			err = dstClt.SetAccess(r, false)
 			if err != nil {
 				return err
 			}

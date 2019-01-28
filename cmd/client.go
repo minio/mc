@@ -54,7 +54,7 @@ type Client interface {
 	// Access policy operations.
 	GetAccess() (access string, error *probe.Error)
 	GetAccessRules() (policyRules map[string]string, error *probe.Error)
-	SetAccess(access string) *probe.Error
+	SetAccess(access string, isJSON bool) *probe.Error
 
 	// I/O operations
 	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide) *probe.Error

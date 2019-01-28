@@ -228,7 +228,7 @@ func (s *TestSuite) TestBucketACLFails(c *C) {
 
 	// On windows setting permissions is not supported.
 	if runtime.GOOS != "windows" {
-		err = fsClient.SetAccess("readonly")
+		err = fsClient.SetAccess("readonly", false)
 		c.Assert(err, IsNil)
 
 		_, err = fsClient.GetAccess()
