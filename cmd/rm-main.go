@@ -129,7 +129,7 @@ type rmMessage struct {
 
 // Colorized message for console printing.
 func (r rmMessage) String() string {
-	return console.Colorize("Remove", fmt.Sprintf("Removing `%s`.", r.Key))
+	return console.Colorize("Remove", fmt.Sprintf("Attempting to remove `%s`.", r.Key))
 }
 
 // JSON'ified message for scripting.
