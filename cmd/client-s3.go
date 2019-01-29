@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"hash/fnv"
 	"io"
 	"net"
@@ -59,6 +60,24 @@ const (
 
 	googleHostName            = "storage.googleapis.com"
 	serverEncryptionKeyPrefix = "x-amz-server-side-encryption"
+
+	defaultRecordDelimiter         = "\n"
+	defaultFieldDelimiter          = ","
+	defaultCSVQuoteCharacter       = "\""
+	defaultCSVQuoteEscapeCharacter = "\""
+	defaultCommentChar             = "#"
+)
+
+const (
+	recordDelimiterType       = "recorddelimiter"
+	fieldDelimiterType        = "fielddelimiter"
+	quoteCharacterType        = "quotechar"
+	quoteEscapeCharacterType  = "quoteescchar"
+	quoteFieldType            = "quotefield"
+	fileHeaderType            = "fileheader"
+	commentCharType           = "commentchar"
+	quotedRecordDelimiterType = "quotedrecorddelimiter"
+	typeJSONType              = "type"
 )
 
 // cseHeaders is list of client side encryption headers
@@ -410,7 +429,160 @@ var supportedContentTypes = []string{
 	"bzip2",
 }
 
-func (c *s3Client) Select(expression string, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
+// set the SelectObjectOutputSerialization struct using options passed in by client. If unspecified,
+// default S3 API specified defaults
+func selectObjectOutputOpts(selOpts SelectObjectOpts) minio.SelectObjectOutputSerialization {
+	var isOK bool
+	var recDelim, fldDelim, quoteChar, quoteEscChar, qf string
+	var quoteFields minio.CSVQuoteFields
+
+	o := minio.SelectObjectOutputSerialization{}
+	if _, ok := selOpts.OutputSerOpts["json"]; ok {
+		recDelim, isOK = selOpts.OutputSerOpts["json"][recordDelimiterType]
+		if !isOK {
+			recDelim = "\n"
+		}
+		o.JSON = &minio.JSONOutputOptions{RecordDelimiter: recDelim}
+	}
+	if _, ok := selOpts.OutputSerOpts["csv"]; ok {
+		recDelim, isOK = selOpts.OutputSerOpts["csv"][recordDelimiterType]
+		if !isOK {
+			recDelim = defaultRecordDelimiter
+		}
+		fldDelim, isOK = selOpts.OutputSerOpts["csv"][fieldDelimiterType]
+		if !isOK {
+			fldDelim = defaultFieldDelimiter
+		}
+		quoteChar, isOK = selOpts.OutputSerOpts["csv"][quoteCharacterType]
+		if !isOK {
+			quoteChar = defaultCSVQuoteCharacter
+		}
+
+		quoteEscChar, isOK = selOpts.OutputSerOpts["csv"][quoteEscapeCharacterType]
+		if !isOK {
+			quoteEscChar = defaultCSVQuoteEscapeCharacter
+		}
+		qf, isOK = selOpts.OutputSerOpts["csv"][quoteFieldType]
+		if !isOK {
+			quoteFields = minio.CSVQuoteFieldsAsNeeded
+		} else {
+			quoteFields = minio.CSVQuoteFields(qf)
+		}
+		o.CSV = &minio.CSVOutputOptions{RecordDelimiter: recDelim, FieldDelimiter: fldDelim, QuoteCharacter: quoteChar, QuoteEscapeCharacter: quoteEscChar, QuoteFields: quoteFields}
+	}
+	// default to CSV output if options left unspecified
+	if o.CSV == nil && o.JSON == nil {
+		o.CSV = &minio.CSVOutputOptions{RecordDelimiter: defaultRecordDelimiter, FieldDelimiter: defaultFieldDelimiter}
+	}
+	return o
+}
+
+// set the SelectObjectInputSerialization struct using options passed in by client. If unspecified,
+// default S3 API specified defaults
+func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.SelectObjectInputSerialization {
+	var isOK bool
+	var recDelim, fldDelim, quoteChar, quoteEscChar, fileHeader, commentChar, typ string
+
+	i := minio.SelectObjectInputSerialization{}
+	if _, ok := selOpts.InputSerOpts["parquet"]; ok {
+		i.Parquet = &minio.ParquetInputOptions{}
+	}
+	if _, ok := selOpts.InputSerOpts["json"]; ok {
+		typ, _ = selOpts.InputSerOpts["json"][typeJSONType]
+		i.JSON = &minio.JSONInputOptions{}
+		if typ != "" {
+			i.JSON.Type = minio.JSONType(typ)
+		}
+	}
+	if _, ok := selOpts.InputSerOpts["csv"]; ok {
+		recDelim, isOK = selOpts.InputSerOpts["csv"][recordDelimiterType]
+		if !isOK {
+			recDelim = defaultRecordDelimiter
+		}
+		fldDelim, isOK = selOpts.InputSerOpts["csv"][fieldDelimiterType]
+		if !isOK {
+			fldDelim = defaultFieldDelimiter
+		}
+		quoteChar, isOK = selOpts.InputSerOpts["csv"][quoteCharacterType]
+		fmt.Println("###", quoteChar, isOK, "?", selOpts.OutputSerOpts["csv"])
+		if !isOK {
+			quoteChar = defaultCSVQuoteCharacter
+		}
+
+		quoteEscChar, isOK = selOpts.OutputSerOpts["csv"][quoteEscapeCharacterType]
+		if !isOK {
+			quoteEscChar = defaultCSVQuoteEscapeCharacter
+		}
+		fileHeader, _ = selOpts.InputSerOpts["csv"][fileHeaderType]
+		fmt.Println(fileHeader, "?", selOpts.OutputSerOpts["csv"])
+		commentChar, isOK = selOpts.InputSerOpts["csv"][commentCharType]
+		if !isOK {
+			commentChar = defaultCommentChar
+		}
+		// needs to be added to minio-go
+		// qrd, isOK = selOpts.InputSerOpts["csv"][quotedRecordDelimiterType]
+		// if !isOK {
+		// 	qrd = false
+		// }
+		i.CSV = &minio.CSVInputOptions{
+			RecordDelimiter:      recDelim,
+			FieldDelimiter:       fldDelim,
+			QuoteCharacter:       quoteChar,
+			QuoteEscapeCharacter: quoteEscChar,
+			Comments:             commentChar,
+			FileHeaderInfo:       minio.CSVFileHeaderInfo(fileHeader),
+		}
+	}
+	ext := filepath.Ext(object)
+	if i.CSV == nil && i.JSON == nil && i.Parquet == nil {
+		if strings.Contains(ext, "csv") {
+			i.CSV = &minio.CSVInputOptions{
+				RecordDelimiter: defaultRecordDelimiter,
+				FieldDelimiter:  defaultFieldDelimiter,
+				FileHeaderInfo:  minio.CSVFileHeaderInfoUse,
+			}
+		}
+		if strings.Contains(ext, "parquet") {
+			i.Parquet = &minio.ParquetInputOptions{}
+		}
+		if strings.Contains(ext, "json") {
+			i.JSON = &minio.JSONInputOptions{Type: minio.JSONLinesType}
+		}
+	}
+	i.CompressionType = selectCompressionType(selOpts, object)
+	return i
+}
+
+// get client specified compression type or default compression type from file extension
+func selectCompressionType(selOpts SelectObjectOpts, object string) minio.SelectCompressionType {
+	ext := filepath.Ext(object)
+	origContentType := mimedb.TypeByExtension(filepath.Ext(strings.TrimSuffix(strings.TrimSuffix(object, ".gz"), ".bz2")))
+
+	contentType := mimedb.TypeByExtension(ext)
+
+	if selOpts.CompressionType != "" {
+		return selOpts.CompressionType
+	}
+	if strings.Contains(ext, "parquet") {
+		return minio.SelectCompressionNONE
+	}
+	if origContentType != "" {
+		if strings.Contains(origContentType, "csv") ||
+			strings.Contains(origContentType, "json") {
+			return minio.SelectCompressionNONE
+		}
+	}
+	if contentType != "" {
+		if strings.Contains(contentType, "gzip") {
+			return minio.SelectCompressionGZIP
+		} else if strings.Contains(contentType, "bzip") {
+			return minio.SelectCompressionBZIP
+		}
+	}
+	return minio.SelectCompressionNONE
+}
+
+func (c *s3Client) Select(expression string, sse encrypt.ServerSide, selOpts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
 	opts := minio.SelectObjectOptions{
 		Expression:     expression,
 		ExpressionType: minio.QueryExpressionTypeSQL,
@@ -419,54 +591,10 @@ func (c *s3Client) Select(expression string, sse encrypt.ServerSide) (io.ReadClo
 	}
 
 	bucket, object := c.url2BucketAndObject()
-	ext := filepath.Ext(object)
-	if strings.Contains(ext, "parquet") {
-		opts.InputSerialization = minio.SelectObjectInputSerialization{
-			CompressionType: minio.SelectCompressionNONE,
-			Parquet:         &minio.ParquetInputOptions{},
-		}
-		opts.OutputSerialization = minio.SelectObjectOutputSerialization{
-			JSON: &minio.JSONOutputOptions{
-				RecordDelimiter: "\n",
-			},
-		}
-	} else {
-		origContentType := mimedb.TypeByExtension(filepath.Ext(strings.TrimSuffix(strings.TrimSuffix(object, ".gz"), ".bz2")))
-		contentType := mimedb.TypeByExtension(ext)
-		if strings.Contains(origContentType, "csv") {
-			opts.InputSerialization = minio.SelectObjectInputSerialization{
-				CompressionType: minio.SelectCompressionNONE,
-				CSV: &minio.CSVInputOptions{
-					FileHeaderInfo:  minio.CSVFileHeaderInfoUse,
-					RecordDelimiter: "\n",
-					FieldDelimiter:  ",",
-				},
-			}
-			opts.OutputSerialization = minio.SelectObjectOutputSerialization{
-				CSV: &minio.CSVOutputOptions{
-					RecordDelimiter: "\n",
-					FieldDelimiter:  ",",
-				},
-			}
-		} else if strings.Contains(origContentType, "json") {
-			opts.InputSerialization = minio.SelectObjectInputSerialization{
-				CompressionType: minio.SelectCompressionNONE,
-				JSON: &minio.JSONInputOptions{
-					Type: minio.JSONLinesType,
-				},
-			}
-			opts.OutputSerialization = minio.SelectObjectOutputSerialization{
-				JSON: &minio.JSONOutputOptions{
-					RecordDelimiter: "\n",
-				},
-			}
-		}
-		if strings.Contains(contentType, "gzip") {
-			opts.InputSerialization.CompressionType = minio.SelectCompressionGZIP
-		} else if strings.Contains(contentType, "bzip") {
-			opts.InputSerialization.CompressionType = minio.SelectCompressionBZIP
-		}
-	}
+
+	opts.OutputSerialization = selectObjectOutputOpts(selOpts)
+	opts.InputSerialization = selectObjectInputOpts(selOpts, object)
+
 	reader, e := c.api.SelectObjectContent(context.Background(), bucket, object, opts)
 	if e != nil {
 		return nil, probe.NewError(e)

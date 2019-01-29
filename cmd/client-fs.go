@@ -97,7 +97,7 @@ func (f *fsClient) GetURL() clientURL {
 }
 
 // Select replies a stream of query results.
-func (f *fsClient) Select(expression string, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
+func (f *fsClient) Select(expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error) {
 	return nil, probe.NewError(APINotImplemented{})
 }
 

@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 
+	minio "github.com/minio/minio-go"
 	. "gopkg.in/check.v1"
 )
 
@@ -233,5 +234,30 @@ func (s *TestSuite) TestObjectOperations(c *C) {
 		_, err := io.Copy(&buffer, reader)
 		c.Assert(err, IsNil)
 		c.Assert(buffer.Bytes(), DeepEquals, object.data)
+	}
+}
+
+var testSelectCompressionTypeCases = []struct {
+	opts            SelectObjectOpts
+	object          string
+	compressionType minio.SelectCompressionType
+}{
+	{SelectObjectOpts{CompressionType: minio.SelectCompressionNONE}, "a.gzip", minio.SelectCompressionNONE},
+	{SelectObjectOpts{CompressionType: minio.SelectCompressionBZIP}, "a.gz", minio.SelectCompressionBZIP},
+	{SelectObjectOpts{}, "t.parquet", minio.SelectCompressionNONE},
+	{SelectObjectOpts{}, "x.csv.gz", minio.SelectCompressionNONE},
+	{SelectObjectOpts{}, "x.json.bz2", minio.SelectCompressionNONE},
+	{SelectObjectOpts{}, "b.gz", minio.SelectCompressionGZIP},
+	{SelectObjectOpts{}, "k.bzip", minio.SelectCompressionBZIP},
+	{SelectObjectOpts{}, "a.csv", minio.SelectCompressionNONE},
+	{SelectObjectOpts{}, "a.json", minio.SelectCompressionNONE},
+}
+
+// TestSelectCompressionType - tests compression type returned
+// by method
+func (s *TestSuite) TestSelectCompressionType(c *C) {
+	for _, test := range testSelectCompressionTypeCases {
+		cType := selectCompressionType(test.opts, test.object)
+		c.Assert(cType, DeepEquals, test.compressionType)
 	}
 }

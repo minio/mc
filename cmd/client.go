@@ -60,7 +60,7 @@ type Client interface {
 	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error
 
 	// Runs select expression on object storage on specific files.
-	Select(expression string, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error)
+	Select(expression string, sse encrypt.ServerSide, opts SelectObjectOpts) (io.ReadCloser, *probe.Error)
 
 	// I/O operations with metadata.
 	Get(sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
@@ -106,4 +106,11 @@ type Config struct {
 	Debug       bool
 	Insecure    bool
 	Lookup      minio.BucketLookupType
+}
+
+// SelectObjectOpts - opts entered for select API
+type SelectObjectOpts struct {
+	InputSerOpts    map[string]map[string]string
+	OutputSerOpts   map[string]map[string]string
+	CompressionType minio.SelectCompressionType
 }
