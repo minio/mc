@@ -64,28 +64,16 @@ type hostMessage struct {
 func (h hostMessage) String() string {
 	switch h.op {
 	case "list":
-		urlFieldMaxLen, apiFieldMaxLen := -1, -1
-		accessFieldMaxLen, secretFieldMaxLen := -1, -1
-		lookupFieldMaxLen := -1
-		// Set cols width if prettyPrint flag is enabled
-		if h.prettyPrint {
-			urlFieldMaxLen = 30
-			accessFieldMaxLen = 20
-			secretFieldMaxLen = 40
-			apiFieldMaxLen = 5
-			lookupFieldMaxLen = 5
-		}
-
 		// Create a new pretty table with cols configuration
-		t := newPrettyTable("  ",
-			Field{"Alias", -1},
-			Field{"URL", urlFieldMaxLen},
-			Field{"AccessKey", accessFieldMaxLen},
-			Field{"SecretKey", secretFieldMaxLen},
-			Field{"API", apiFieldMaxLen},
-			Field{"Lookup", lookupFieldMaxLen},
+		t := newPrettyRecord(2,
+			Row{"Alias", "Alias"},
+			Row{"URL", "URL"},
+			Row{"AccessKey", "AccessKey"},
+			Row{"SecretKey", "SecretKey"},
+			Row{"API", "API"},
+			Row{"Lookup", "Lookup"},
 		)
-		return t.buildRow(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, h.Lookup)
+		return t.buildRecord(h.Alias, h.URL, h.AccessKey, h.SecretKey, h.API, h.Lookup)
 	case "remove":
 		return console.Colorize("HostMessage", "Removed `"+h.Alias+"` successfully.")
 	case "add":
