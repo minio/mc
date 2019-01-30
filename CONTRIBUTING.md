@@ -20,20 +20,16 @@ $ mc --help
     - Push to the branch (git push origin my-new-feature)
     - Create new Pull Request
 
-* If you have additional dependencies for ``mc``, ``mc`` manages its dependencies using [govendor](https://github.com/kardianos/govendor)
+* If you have additional dependencies for ``mc``, ``mc`` manages its dependencies using `go mod`
     - Run `go get foo/bar`
     - Edit your code to import foo/bar
-    - Run `make pkg-add PKG=foo/bar` from top-level folder
-
-* If you have dependencies which needs to be removed from ``mc``
-    - Edit your code to not import foo/bar
-    - Run `make pkg-remove PKG=foo/bar` from top-level folder
+    - Run `GO111MODULE=on go mod vendor` from top-level folder
 
 * When you're ready to create a pull request, be sure to:
     - Have test cases for the new code. If you have questions about how to do it, please ask in your pull request.
     - Run `go fmt`
     - Squash your commits into a single commit. `git rebase -i`. It's okay to force update your pull request.
-    - Make sure `make build` completes.
+    - Make sure `make install` completes.
 
 * Read [Effective Go](https://github.com/golang/go/wiki/CodeReviewComments) article from Golang project
     - `mc` project is conformant with Golang style

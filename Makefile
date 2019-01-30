@@ -70,21 +70,6 @@ build: checks
 	@echo "Building minio binary to './mc'"
 	@GO_FLAGS="" CGO_ENABLED=0 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
 
-pkg-add:
-	@echo "Adding new package $(PKG)"
-	@${GOPATH}/bin/govendor add $(PKG)
-
-pkg-update:
-	@echo "Updating new package $(PKG)"
-	@${GOPATH}/bin/govendor update $(PKG)
-
-pkg-remove:
-	@echo "Remove new package $(PKG)"
-	@${GOPATH}/bin/govendor remove $(PKG)
-
-pkg-list:
-	@$(GOPATH)/bin/govendor list
-
 # Builds minio and installs it to $GOPATH/bin.
 install: build
 	@echo "Installing mc binary to '$(GOPATH)/bin/mc'"
