@@ -36,12 +36,12 @@ func main() {
 
 ```
 
-| Service operations         | Info operations  | Healing operations                    | Config operations        | IAM operations | Misc                                |
-|:----------------------------|:----------------------------|:--------------------------------------|:--------------------------|:------------------------------------|:------------------------------------|
-| [`ServiceStatus`](#ServiceStatus) | [`ServerInfo`](#ServerInfo) | [`Heal`](#Heal) | [`GetConfig`](#GetConfig) | [`AddUser`](#AddUser) | [`SetAdminCredentials`](#SetAdminCredentials) |
-| [`ServiceSendAction`](#ServiceSendAction) | | | [`SetConfig`](#SetConfig) | [`SetUserPolicy`](#SetUserPolicy) | [`StartProfiling`](#StartProfiling) |
-| | |            | [`GetConfigKeys`](#GetConfigKeys) | [`ListUsers`](#ListUsers) | [`DownloadProfilingData`](#DownloadProfilingData) |
-| | |            | [`SetConfigKeys`](#SetConfigKeys) | [`AddCannedPolicy`](#AddCannedPolicy) | |
+| Service operations         | Info operations  | Healing operations                    | Config operations        | Top operations        | IAM operations | Misc                                |
+|:----------------------------|:----------------------------|:--------------------------------------|:--------------------------|:--------------------------|:------------------------------------|:------------------------------------|
+| [`ServiceStatus`](#ServiceStatus) | [`ServerInfo`](#ServerInfo) | [`Heal`](#Heal) | [`GetConfig`](#GetConfig) | [`TopLocks`](#TopLocks) | [`AddUser`](#AddUser) | [`SetAdminCredentials`](#SetAdminCredentials) |
+| [`ServiceSendAction`](#ServiceSendAction) | [`ServerCPULoadInfo`](#ServerCPULoadInfo) | | [`SetConfig`](#SetConfig) | |  [`SetUserPolicy`](#SetUserPolicy) | [`StartProfiling`](#StartProfiling) |
+| |[`ServerMemUsageInfo`](#ServerMemUsageInfo) |            | [`GetConfigKeys`](#GetConfigKeys) | | [`ListUsers`](#ListUsers) | [`DownloadProfilingData`](#DownloadProfilingData) |
+| | |            | [`SetConfigKeys`](#SetConfigKeys) | | [`AddCannedPolicy`](#AddCannedPolicy) | |
 
 
 ## 1. Constructor
@@ -204,6 +204,57 @@ Fetches information for all cluster nodes, such as server properties, storage in
 
  ```
 
+<a name="ServerDrivesPerfInfo"></a>
+### ServerDrivesPerfInfo() ([]ServerDrivesPerfInfo, error)
+
+Fetches drive performance information for all cluster nodes. Returned value is in Bytes/s.
+
+| Param | Type | Description |
+|---|---|---|
+|`di.Addr` | _string_ | Address of the server the following information is retrieved from. |
+|`di.Error` | _string _ | Errors (if any) encountered while reaching this node |
+|`di.DrivesPerf` | _disk.Performance_ | Path of the drive mount on above server and read, write speed. |
+
+| Param | Type | Description |
+|---|---|---|
+|`disk.Performance.Path` | _string_ | Path of drive mount. |
+|`disk.Performance.Error` | _string_ | Error (if any) encountered while accessing this drive. |
+|`disk.Performance.WriteSpeed` | _float64_ | Write speed on above path in Bytes/s. |
+|`disk.Performance.ReadSpeed` | _float64_ | Read speed on above path in Bytes/s. |
+
+<a name="ServerCPULoadInfo"></a>
+### ServerCPULoadInfo() ([]ServerCPULoadInfo, error)
+
+Fetches CPU utilization for all cluster nodes. Returned value is in Bytes.
+
+| Param | Type | Description |
+|-------|------|-------------|
+|`cpui.Addr` | _string_ | Address of the server the following information  is retrieved from. |
+|`cpui.Error` | _string_ | Errors (if any) encountered while reaching this node |
+|`cpui.CPULoad` | _cpu.Load_ | The load on the CPU. |
+
+| Param | Type | Description |
+|-------|------|-------------|
+|`cpu.Load.Avg` | _string_ | The average utilization % of the CPU measured in a 200ms interval |
+|`cpu.Load.Min` | _string_ | The minimum utilization % of the CPU measured in a 200ms interval |
+|`cpu.Load.Max` | _string_ | The maximum utilization % of the CPU measured in a 200ms interval |
+|`cpu.Load.Error` | _string_ | Error (if any) encountered while accesing the CPU info |
+
+<a name="ServerMemUsageInfo"></a>
+### ServerMemUsageInfo() ([]ServerMemUsageInfo, error)
+
+Fetches Mem utilization for all cluster nodes. Returned value is in Bytes.
+
+| Param | Type | Description |
+|-------|------|-------------|
+|`memi.Addr` | _string_ | Address of the server the following information  is retrieved from. |
+|`memi.Error` | _string_ | Errors (if any) encountered while reaching this node |
+|`memi.MemUsage` | _mem.Usage_ | The utilitzation of Memory |
+
+| Param | Type | Description |
+|-------|------|-------------|
+|`mem.Usage.Mem` | _string_ | The total number of bytes obtained from the OS |
+|`mem.Usage.Error` | _string_ | Error (if any) encountered while accesing the CPU info |
 
 ## 6. Heal operations
 
@@ -348,7 +399,29 @@ __Example__
     log.Println("New configuration successfully set")
 ```
 
-## 8. IAM operations
+## 8. Top operations
+
+<a name="TopLocks"></a>
+### TopLocks() (LockEntries, error)
+Get the oldest locks from Minio server.
+
+__Example__
+
+``` go
+    locks, err := madmClnt.TopLocks()
+    if err != nil {
+        log.Fatalf("failed due to: %v", err)
+    }
+
+    out, err := json.Marshal(locks)
+    if err != nil {
+        log.Fatalf("Marshal failed due to: %v", err)
+    }
+
+    log.Println("TopLocks received successfully: ", string(out))
+```
+
+## 9. IAM operations
 
 <a name="AddCannedPolicy"></a>
 ### AddCannedPolicy(policyName string, policy string) error
@@ -404,7 +477,7 @@ __Example__
     }
 ```
 
-## 9. Misc operations
+## 10. Misc operations
 
 <a name="SetAdminCredentials"></a>
 ### SetAdminCredentials() error
