@@ -194,16 +194,41 @@ func putTargetStreamWithURL(urlStr string, reader io.Reader, size int64, sse enc
 }
 
 // copySourceToTargetURL copies to targetURL from source.
-func copySourceToTargetURL(alias string, urlStr string, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide) *probe.Error {
+func copySourceToTargetURL(alias string, urlStr string, source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
-	err = targetClnt.Copy(source, size, progress, srcSSE, tgtSSE)
+	err = targetClnt.Copy(source, size, progress, srcSSE, tgtSSE, metadata)
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
 	return nil
+}
+
+// createUserMetadata - returns a map of user defined function
+// by combining the usermetadata of object and  values passed by attr keyword
+func createUserMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs) (map[string]string, *probe.Error) {
+	metadata := make(map[string]string)
+	sourceClnt, err := newClientFromAlias(sourceAlias, sourceURLStr)
+	if err != nil {
+		return nil, err.Trace(sourceAlias, sourceURLStr)
+	}
+	st, err := sourceClnt.Stat(false, true, srcSSE)
+	if err != nil {
+		return nil, err.Trace(sourceAlias, sourceURLStr)
+	}
+	for k, v := range st.Metadata {
+		if httpguts.ValidHeaderFieldName(k) && strings.HasPrefix(k, "X-Amz-Meta-") &&
+			httpguts.ValidHeaderFieldValue(v) {
+			metadata[k] = v
+		}
+	}
+
+	for k, v := range urls.TargetContent.UserMetadata {
+		metadata[k] = v
+	}
+	return metadata, nil
 }
 
 // uploadSourceToTargetURL - uploads to targetURL from source.
@@ -224,8 +249,14 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 
 	// Optimize for server side copy if the host is same.
 	if sourceAlias == targetAlias {
+
+		metadata, err := createUserMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
+		if err != nil {
+			return urls.WithError(err.Trace(sourceURL.String()))
+		}
+
 		sourcePath := filepath.ToSlash(sourceURL.Path)
-		err := copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length, progress, srcSSE, tgtSSE)
+		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length, progress, srcSSE, tgtSSE, metadata)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
@@ -240,6 +271,12 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		// Get metadata from target content as well
 		if urls.TargetContent.Metadata != nil {
 			for k, v := range urls.TargetContent.Metadata {
+				metadata[k] = v
+			}
+		}
+		// Get userMetadata from target content as well
+		if urls.TargetContent.UserMetadata != nil {
+			for k, v := range urls.TargetContent.UserMetadata {
 				metadata[k] = v
 			}
 		}

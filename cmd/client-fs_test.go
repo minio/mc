@@ -360,6 +360,6 @@ func (s *TestSuite) TestCopy(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, int64(len(data)))
 
-	err = fsClientTarget.Copy(sourcePath, int64(len(data)), nil, nil, nil)
+	err = fsClientTarget.Copy(sourcePath, int64(len(data)), nil, nil, nil, nil)
 	c.Assert(err, IsNil)
 }

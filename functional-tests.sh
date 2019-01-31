@@ -334,6 +334,21 @@ function test_put_object_with_storage_class_error()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+## Test mc cp command with valid metadata string
+function test_put_object_with_metadata()
+{
+    show "${FUNCNAME[0]}"
+
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --attr key1=val1,key2=val2 "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    diff -bB <(echo "val1")  <("${MC_CMD[@]}"   --json stat "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"  |  jq -r '.metadata."X-Amz-Meta-Key1"')  >/dev/null 2>&1
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to put object with metadata"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    log_success "$start_time" "${FUNCNAME[0]}"
+
+}
+
 function test_get_object()
 {
     show "${FUNCNAME[0]}"
@@ -805,12 +820,12 @@ function run_test()
     test_make_bucket_error
 
     setup
-
     test_put_object
     test_put_object_error
     test_put_object_0byte
     test_put_object_with_storage_class
     test_put_object_with_storage_class_error
+    test_put_object_with_metadata
     test_put_object_multipart
     test_get_object
     test_get_object_multipart
