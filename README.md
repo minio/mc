@@ -117,7 +117,7 @@ Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](ht
 mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
-NOTE: As an IAM user on Amazon S3 you need to make sure user has full access to the buckets or set the following restricted policy for your IAM user
+**Note**: As an IAM user on Amazon S3 you need to make sure the user has full access to the buckets or set the following restricted policy for your IAM user
 
 ```json
 {
