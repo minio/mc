@@ -21,8 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/go-ini/ini"
 	homedir "github.com/mitchellh/go-homedir"
+	ini "gopkg.in/ini.v1"
 )
 
 // A FileAWSCredentials retrieves credentials from the current user's home

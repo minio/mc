@@ -53,19 +53,8 @@ type WebIdentityResult struct {
 
 // WebIdentityToken - web identity token with expiry.
 type WebIdentityToken struct {
-	token  string
-	expiry int
-}
-
-// Token - access token returned after authenticating web identity.
-func (c *WebIdentityToken) Token() string {
-	return c.token
-}
-
-// Expiry - expiry for the access token returned after authenticating
-// web identity.
-func (c *WebIdentityToken) Expiry() string {
-	return fmt.Sprintf("%d", c.expiry)
+	Token  string
+	Expiry int
 }
 
 // A STSWebIdentity retrieves credentials from Minio service, and keeps track if
@@ -115,8 +104,8 @@ func getWebIdentityCredentials(clnt *http.Client, endpoint string,
 
 	v := url.Values{}
 	v.Set("Action", "AssumeRoleWithWebIdentity")
-	v.Set("WebIdentityToken", idToken.Token())
-	v.Set("DurationSeconds", idToken.Expiry())
+	v.Set("WebIdentityToken", idToken.Token)
+	v.Set("DurationSeconds", fmt.Sprintf("%d", idToken.Expiry))
 	v.Set("Version", "2011-06-15")
 
 	u, err := url.Parse(endpoint)
