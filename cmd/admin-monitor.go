@@ -29,6 +29,7 @@ import (
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
+	xnet "github.com/minio/minio/pkg/net"
 )
 
 var (
@@ -72,6 +73,7 @@ type serverMonitorMessage struct {
 	Err      string                     `json:"error"`
 	CPULoad  *madmin.ServerCPULoadInfo  `json:"cpu,omitempty"`
 	MemUsage *madmin.ServerMemUsageInfo `json:"mem,omitempty"`
+	NetStats *madmin.ServerNetStatsInfo `json:"net, omitempty"`
 }
 
 func (s serverMonitorMessage) JSON() string {
@@ -100,11 +102,82 @@ func (s serverMonitorMessage) String() string {
 	msg += fmt.Sprintf("%s  %s    \n", console.Colorize(monitor, dot), s.Addr)
 	msg += "\n"
 
-	msg += fmt.Sprintf("%s        min        avg      max\n", console.Colorize(monitor, "   CPU"))
+	longest := 0
+
+	leftField := 0
+	midField := 0
+
 	for i := range s.CPULoad.Load {
-		msg += fmt.Sprintf("   current    %.2f%%      %.2f%%    %.2f%%\n", s.CPULoad.Load[i].Min, s.CPULoad.Load[i].Avg, s.CPULoad.Load[i].Max)
+		load := s.CPULoad.Load[i]
+		currLen := len(fmt.Sprintf("%.2f%% %.2f%% %.2f%%", load.Min, load.Avg, load.Max))
+		if currLen > longest {
+			longest = currLen
+			leftField = len(fmt.Sprintf("%.2f%%", load.Min))
+			midField = len(fmt.Sprintf("%.2f%%", load.Avg))
+		}
+
+		load = s.CPULoad.HistoricLoad[i]
+		currLen = len(fmt.Sprintf("%.2f%% %.2f%% %.2f%%", load.Min, load.Avg, load.Max))
+		if currLen > longest {
+			longest = currLen
+			leftField = len(fmt.Sprintf("%.2f%%", load.Min))
+			midField = len(fmt.Sprintf("%.2f%%", load.Avg))
+		}
+	}
+
+	min := "min"
+	avg := "avg"
+	max := "max"
+	if len(min) < leftField {
+		count := leftField - len(min)
+		for i := 0; i < count; i++ {
+			min = min + " "
+		}
+	}
+	if len(avg) < midField {
+		count := midField - len(avg)
+		for i := 0; i < count; i++ {
+			avg = avg + " "
+		}
+	}
+
+	msg += fmt.Sprintf("%s        %s    %s    %s\n", console.Colorize(monitor, "   CPU"), min, avg, max)
+	for i := range s.CPULoad.Load {
+		load := s.CPULoad.Load[i]
+		min := fmt.Sprintf("%.2f%%", load.Min)
+		avg := fmt.Sprintf("%.2f%%", load.Avg)
+		max := fmt.Sprintf("%.2f%%", load.Max)
+		if len(min) < leftField {
+			count := leftField - len(min)
+			for i := 0; i < count; i++ {
+				min = min + " "
+			}
+		}
+		if len(avg) < midField {
+			count := midField - len(avg)
+			for i := 0; i < count; i++ {
+				avg = avg + " "
+			}
+		}
+		msg += fmt.Sprintf("%s    %s    %s    %s\n", "   current", min, avg, max)
 		if len(s.CPULoad.HistoricLoad) > i {
-			msg += fmt.Sprintf("   historic   %.2f%%      %.2f%%    %.2f%%\n", s.CPULoad.HistoricLoad[i].Min, s.CPULoad.HistoricLoad[i].Avg, s.CPULoad.HistoricLoad[i].Max)
+			load := s.CPULoad.HistoricLoad[i]
+			min := fmt.Sprintf("%.2f%%", load.Min)
+			avg := fmt.Sprintf("%.2f%%", load.Avg)
+			max := fmt.Sprintf("%.2f%%", load.Max)
+			if len(min) < leftField {
+				count := leftField - len(min)
+				for i := 0; i < count; i++ {
+					min = min + " "
+				}
+			}
+			if len(avg) < midField {
+				count := midField - len(avg)
+				for i := 0; i < count; i++ {
+					avg = avg + " "
+				}
+			}
+			msg += fmt.Sprintf("%s   %s    %s    %s\n", "   historic", min, avg, max)
 		}
 		msg += "\n"
 	}
@@ -119,6 +192,76 @@ func (s serverMonitorMessage) String() string {
 		msg += "\n"
 	}
 
+	rx := 0
+
+	for i := range s.NetStats.CurrentStats {
+		tput := s.NetStats.CurrentStats[i]
+		rxLen := len(fmt.Sprintf("%s", humanize.IBytes(tput.TotalReceived)))
+		if rxLen > rx {
+			rx = rxLen
+		}
+
+		tput = s.NetStats.OneMinWindow[i]
+		rxLen = len(fmt.Sprintf("%s", humanize.IBytes(tput.TotalReceived)))
+		if rxLen > rx {
+			rx = rxLen
+		}
+
+		tput = s.NetStats.FiveMinWindow[i]
+		rxLen = len(fmt.Sprintf("%s", humanize.IBytes(tput.TotalReceived)))
+		if rxLen > rx {
+			rx = rxLen
+		}
+
+		tput = s.NetStats.FifteenMinWindow[i]
+		rxLen = len(fmt.Sprintf("%s", humanize.IBytes(tput.TotalReceived)))
+		if rxLen > rx {
+			rx = rxLen
+		}
+	}
+
+	rxString := "rx"
+	txString := "tx"
+	if len(rxString) < rx {
+		count := rx - len(rxString)
+		for i := 0; i < count; i++ {
+			rxString = rxString + " "
+		}
+	}
+
+	// Net section
+	msg += fmt.Sprintf("%s          %s    %s (internode only) \n", console.Colorize(monitor, "   NET"), rxString, txString)
+	for i := range s.NetStats.CurrentStats {
+		curr := s.NetStats.CurrentStats[i]
+		oneMin := s.NetStats.OneMinWindow[i]
+		fiveMin := s.NetStats.FiveMinWindow[i]
+		fifteenMin := s.NetStats.FifteenMinWindow[i]
+
+		msg += buildNetStats(curr, "current", rx)
+		msg += buildNetStats(oneMin, "1min   ", rx)
+		msg += buildNetStats(fiveMin, "5min   ", rx)
+		msg += buildNetStats(fifteenMin, "15min  ", rx)
+
+		msg = msg + "\n"
+	}
+
+	return msg
+}
+
+func buildNetStats(stat xnet.Stats, t string, rx int) string {
+	tput := stat
+
+	rxString := humanize.IBytes(tput.TotalReceived)
+	txString := humanize.IBytes(tput.TotalTransmitted)
+	if len(rxString) < rx {
+		count := rx - len(rxString)
+		for i := 0; i < count; i++ {
+			rxString = rxString + " "
+		}
+	}
+	msg := ""
+	msg += fmt.Sprintf("   %s      %s    %s\n", t, rxString, txString)
+
 	return msg
 }
 
@@ -126,7 +269,7 @@ func mainAdminMonitor(ctx *cli.Context) error {
 	checkAdminMonitorSyntax(ctx)
 
 	// set the console colors
-	console.SetColor(monitor, color.New(color.FgGreen, color.Bold))
+	console.SetColor(monitor, color.New(color.FgBlue, color.Bold))
 	console.SetColor(monitorDegraded, color.New(color.FgYellow, color.Bold))
 	console.SetColor(monitorFail, color.New(color.FgRed, color.Bold))
 
@@ -180,8 +323,16 @@ func mainAdminMonitor(ctx *cli.Context) error {
 	}
 	sort.Stable(&sortWrapper{memUsages: memUsages})
 
+	netStatss, e := client.ServerNetStatsInfo()
+	if err := processErr(e); err != nil {
+		// exit immediately if error encountered
+		return nil
+	}
+	sort.Stable(&sortWrapper{netStatss: netStatss})
+
 	for i, cpuLoad := range cpuLoads {
 		memUsage := memUsages[i]
+		netStats := netStatss[i]
 		if cpuLoad.Error != "" {
 			printMsg(serverMonitorMessage{
 				Service: "off",
@@ -198,12 +349,21 @@ func mainAdminMonitor(ctx *cli.Context) error {
 			})
 			continue
 		}
+		if netStats.Error != "" {
+			printMsg(serverMonitorMessage{
+				Service: "off",
+				Addr:    memUsage.Addr,
+				Err:     memUsage.Error,
+			})
+			continue
+		}
 
 		printMsg(serverMonitorMessage{
 			Service:  "on",
 			Addr:     cpuLoad.Addr,
 			CPULoad:  &cpuLoad,
 			MemUsage: &memUsage,
+			NetStats: &netStats,
 		})
 	}
 	return nil
@@ -212,13 +372,17 @@ func mainAdminMonitor(ctx *cli.Context) error {
 type sortWrapper struct {
 	cpuLoads  []madmin.ServerCPULoadInfo
 	memUsages []madmin.ServerMemUsageInfo
+	netStatss []madmin.ServerNetStatsInfo
 }
 
 func (s *sortWrapper) Len() int {
 	if s.cpuLoads != nil {
 		return len(s.cpuLoads)
 	}
-	return len(s.memUsages)
+	if s.memUsages != nil {
+		return len(s.memUsages)
+	}
+	return len(s.netStatss)
 }
 
 func (s *sortWrapper) Swap(i, j int) {
@@ -229,6 +393,9 @@ func (s *sortWrapper) Swap(i, j int) {
 	if s.memUsages != nil {
 		s.memUsages[i], s.memUsages[j] = s.memUsages[j], s.memUsages[i]
 	}
+	if s.netStatss != nil {
+		s.netStatss[i], s.netStatss[j] = s.netStatss[j], s.netStatss[i]
+	}
 }
 
 func (s *sortWrapper) Less(i, j int) bool {
@@ -238,8 +405,10 @@ func (s *sortWrapper) Less(i, j int) bool {
 	if s.memUsages != nil {
 		return strings.Compare(s.memUsages[i].Addr, s.memUsages[j].Addr) < 0
 	}
+	if s.netStatss != nil {
+		return strings.Compare(s.netStatss[i].Addr, s.netStatss[j].Addr) < 0
+	}
 	return false
-
 }
 
 // checkAdminMonitorSyntax - validate all the passed arguments
