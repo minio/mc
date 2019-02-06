@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var adminTopCmd = cli.Command{
 	Name:   "top",
-	Usage:  "command like top in linux",
+	Usage:  "provide top like statistics for MinIO",
 	Action: mainAdminTop,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,

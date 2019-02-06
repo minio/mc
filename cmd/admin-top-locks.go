@@ -30,7 +30,7 @@ import (
 
 var adminTopLocksCmd = cli.Command{
 	Name:   "locks",
-	Usage:  "Get list of oldest locks on a Minio server/cluster.",
+	Usage:  "Get a list of the 10 oldest locks on a MinIO cluster.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminTopLocks,
 	Flags:  globalFlags,
@@ -44,8 +44,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get oldest locks on a Minio server/cluster.
-     $ {{.HelpName}} play/
+  1. Get a list of the 10 oldest locks on a MinIO cluster.
+     $ {{.HelpName}} myminio/
 
 `,
 }
