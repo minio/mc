@@ -13,13 +13,13 @@ checks:
 	@(env bash $(PWD)/buildscripts/checkgopath.sh)
 
 getdeps:
+	@GO111MODULE=on
 	@echo "Installing golint" && go get -u golang.org/x/lint/golint
 	@echo "Installing gocyclo" && go get -u github.com/fzipp/gocyclo
-	@echo "Installing deadcode" && go get -u github.com/remyoudompheng/go-misc/deadcode
 	@echo "Installing misspell" && go get -u github.com/client9/misspell/cmd/misspell
 	@echo "Installing ineffassign" && go get -u github.com/gordonklaus/ineffassign
 
-verifiers: getdeps vet fmt lint cyclo deadcode spelling
+verifiers: getdeps vet fmt lint cyclo spelling
 
 vet:
 	@echo "Running $@"
@@ -43,10 +43,6 @@ cyclo:
 	@echo "Running $@"
 	@${GOPATH}/bin/gocyclo -over 100 cmd
 	@${GOPATH}/bin/gocyclo -over 100 pkg
-
-deadcode:
-	@echo "Running $@"
-	@${GOPATH}/bin/deadcode -test $(shell go list ./...)
 
 spelling:
 	@${GOPATH}/bin/misspell -error `find cmd/`

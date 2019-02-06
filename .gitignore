@@ -9,3 +9,4 @@ parts/
 prime/
 stage/
 mc
+.run*
