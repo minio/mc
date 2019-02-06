@@ -51,7 +51,7 @@ then use the [`mc config` command](#add-a-cloud-storage-service).
 Install mc packages using [Homebrew](http://brew.sh/)
 
 ```sh
-brew install minio/stable/mc
+brew install minio-mc
 mc --help
 ```
 
