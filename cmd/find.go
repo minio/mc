@@ -209,7 +209,7 @@ func getAliasedPath(ctx *findContext, path string) string {
 	prefixPath := ctx.clnt.GetURL().String()
 	var aliasedPath string
 	if ctx.targetAlias != "" {
-		aliasedPath = ctx.targetAlias + strings.TrimPrefix(path, ctx.targetFullURL)
+		aliasedPath = ctx.targetAlias + strings.TrimPrefix(path, strings.TrimSuffix(ctx.targetFullURL, separator))
 	} else {
 		aliasedPath = path
 		// look for prefix path, if found filter at that, Watch calls

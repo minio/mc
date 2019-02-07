@@ -41,6 +41,12 @@ func isValidSecretKey(secretKey string) bool {
 	return len(secretKey) >= secretKeyMinLen
 }
 
+// trimTrailingSeparator - Remove trailing separator.
+func trimTrailingSeparator(hostURL string) string {
+	separator := string(newClientURL(hostURL).Separator)
+	return strings.TrimSuffix(hostURL, separator)
+}
+
 // isValidHostURL - validate input host url.
 func isValidHostURL(hostURL string) (ok bool) {
 	if strings.TrimSpace(hostURL) != "" {
