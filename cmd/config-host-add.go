@@ -227,7 +227,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	console.SetColor("HostMessage", color.New(color.FgGreen))
 	var (
 		args      = ctx.Args()
-		url       = args.Get(1)
+		url       = trimTrailingSeparator(args.Get(1))
 		accessKey = args.Get(2)
 		secretKey = args.Get(3)
 		api       = ctx.String("api")
