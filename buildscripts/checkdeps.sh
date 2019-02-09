@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Minio Client, (C) 2015, 2016, 2017 Minio, Inc.
+# Minio Client, (C) 2015, 2016, 2017, 2018, 2019 Minio, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+# shellcheck source=buildscripts/build.env
+. "$(pwd)/buildscripts/build.env"
 
 _init() {
 
@@ -60,31 +63,6 @@ readlink() {
     PHYS_DIR=`pwd -P`
     RESULT=$PHYS_DIR/$TARGET_FILE
     echo $RESULT
-}
-
-## FIXME:
-## In OSX, 'sort -V' option does not exist, hence
-## we have our own version compare function.
-## Once OSX has the option, below function is good enough.
-##
-## check_minimum_version() {
-##     versions=($(echo -e "$1\n$2" | sort -V))
-##     return [ "$1" == "${versions[0]}" ]
-## }
-##
-check_minimum_version() {
-    IFS='.' read -r -a varray1 <<< "$1"
-    IFS='.' read -r -a varray2 <<< "$2"
-
-    for i in "${!varray1[@]}"; do
-        if [[ ${varray1[i]} -lt ${varray2[i]} ]]; then
-            return 0
-        elif [[ ${varray1[i]} -gt ${varray2[i]} ]]; then
-            return 1
-        fi
-    done
-
-    return 0
 }
 
 assert_is_supported_arch() {

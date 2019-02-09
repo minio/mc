@@ -42,6 +42,7 @@ import (
 	"github.com/minio/minio-go/pkg/policy"
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/pkg/mimedb"
+	"golang.org/x/net/http2"
 )
 
 // S3 client
@@ -131,18 +132,13 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				Region:       "",
 				BucketLookup: config.Lookup,
 			}
+
 			api, e = minio.NewWithOptions(hostName, &options)
 			if e != nil {
 				return nil, probe.NewError(e)
 			}
 
-			// Keep TLS config.
-			tlsConfig := &tls.Config{RootCAs: globalRootCAs}
-			if config.Insecure {
-				tlsConfig.InsecureSkipVerify = true
-			}
-
-			var transport http.RoundTripper = &http.Transport{
+			tr := &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 				DialContext: (&net.Dialer{
 					Timeout:   30 * time.Second,
@@ -153,7 +149,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				IdleConnTimeout:       90 * time.Second,
 				TLSHandshakeTimeout:   10 * time.Second,
 				ExpectContinueTimeout: 1 * time.Second,
-				TLSClientConfig:       tlsConfig,
 				// Set this value so that the underlying transport round-tripper
 				// doesn't try to auto decode the body of objects with
 				// content-encoding set to `gzip`.
@@ -163,16 +158,37 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 				DisableCompression: true,
 			}
 
+			if useTLS {
+				// Keep TLS config.
+				tlsConfig := &tls.Config{
+					RootCAs: globalRootCAs,
+					// Can't use SSLv3 because of POODLE and BEAST
+					// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+					// Can't use TLSv1.1 because of RC4 cipher usage
+					MinVersion: tls.VersionTLS12,
+				}
+				if config.Insecure {
+					tlsConfig.InsecureSkipVerify = true
+				}
+				tr.TLSClientConfig = tlsConfig
+
+				// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
+				// See https://github.com/golang/go/issues/14275
+				if e = http2.ConfigureTransport(tr); e != nil {
+					return nil, probe.NewError(e)
+				}
+			}
+
+			var transport http.RoundTripper = tr
 			if config.Debug {
 				if strings.EqualFold(config.Signature, "S3v4") {
 					transport = httptracer.GetNewTraceTransport(newTraceV4(), transport)
 				} else if strings.EqualFold(config.Signature, "S3v2") {
 					transport = httptracer.GetNewTraceTransport(newTraceV2(), transport)
 				}
-				// Set custom transport.
 			}
 
-			// Set custom transport.
+			// Set the new transport.
 			api.SetCustomTransport(transport)
 
 			// If Amazon Accelerated URL is requested enable it.

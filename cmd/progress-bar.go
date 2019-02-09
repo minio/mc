@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"errors"
 	"io"
 	"runtime"
 	"strings"
@@ -99,6 +100,20 @@ func (p *progressBar) SetCaption(caption string) *progressBar {
 func (p *progressBar) Set64(length int64) *progressBar {
 	p.ProgressBar = p.ProgressBar.Set64(length)
 	return p
+}
+
+func (p *progressBar) Seek(offset int64, whence int) (n int64, err error) {
+	switch whence {
+	case io.SeekStart:
+		p.ProgressBar = p.ProgressBar.Set64(offset)
+		return offset, nil
+	case io.SeekCurrent:
+		return p.ProgressBar.Add64(offset), nil
+	case io.SeekEnd:
+		p.ProgressBar.Set64(p.ProgressBar.Total - offset)
+		return p.ProgressBar.Total - offset, nil
+	}
+	return 0, errors.New("invalid argument")
 }
 
 func (p *progressBar) SetTotal(total int64) *progressBar {

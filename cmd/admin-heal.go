@@ -44,6 +44,10 @@ var adminHealFlags = []cli.Flag{
 		Name:  "force-stop, s",
 		Usage: "Force stop a running heal sequence",
 	},
+	cli.BoolFlag{
+		Name:  "remove",
+		Usage: "remove dangling objects in heal sequence",
+	},
 }
 
 var adminHealCmd = cli.Command{
@@ -133,6 +137,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	bucket, prefix := splits[1], splits[2]
 
 	opts := madmin.HealOpts{
+		Remove:    ctx.Bool("remove"),
 		Recursive: ctx.Bool("recursive"),
 		DryRun:    ctx.Bool("dry-run"),
 	}

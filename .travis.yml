@@ -15,21 +15,23 @@ matrix:
       dist: trusty
       env:
         - ARCH=x86_64
+        - GO111MODULE=on
       go: 1.11.4
       script:
         - diff -au <(gofmt -d *.go) <(printf "")
         - diff -au <(gofmt -d cmd) <(printf "")
         - diff -au <(gofmt -d pkg) <(printf "")
-        - for d in $(go list ./...); do go test -v -race "$d"; done
-        - make coverage        
-        - make test
+        - for d in $(go list ./...); do go test -v -mod=vendor -race "$d"; done
+        - make coverage
+        - make verifiers
     - os: windows
       env:
         - ARCH=x86_64
+        - GO111MODULE=on
       go: 1.11.4
       script:
         - go build --ldflags="$(go run buildscripts/gen-ldflags.go)" -o %GOPATH%\bin\mc.exe
-        - for d in $(go list ./...); do go test -v -race "$d"; done
+        - for d in $(go list ./...); do go test -v -mod=vendor -race "$d"; done
         - bash buildscripts/go-coverage.sh
 
 before_script:
