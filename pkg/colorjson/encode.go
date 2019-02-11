@@ -28,6 +28,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -36,6 +37,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/mattn/go-isatty"
 	"github.com/minio/mc/pkg/console"
 )
 
@@ -193,6 +195,9 @@ func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
 	b, err := Marshal(v)
 	if err != nil {
 		return nil, err
+	}
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return b, err
 	}
 	var buf bytes.Buffer
 	err = Indent(&buf, b, prefix, indent)
@@ -622,7 +627,7 @@ func stringEncoder(e *encodeState, v reflect.Value, opts encOpts) {
 		return
 	}
 	if opts.quoted {
-		sb, err := Marshal(console.Colorize(jsonString, v.String()))
+		sb, err := Marshal(v.String())
 		if err != nil {
 			e.error(err)
 		}
@@ -882,7 +887,7 @@ type reflectWithString struct {
 
 func (w *reflectWithString) resolve() error {
 	if w.v.Kind() == reflect.String {
-		w.s = console.Colorize(jsonString, w.v.String())
+		w.s = w.v.String()
 		return nil
 	}
 	if tm, ok := w.v.Interface().(encoding.TextMarshaler); ok {
@@ -892,10 +897,10 @@ func (w *reflectWithString) resolve() error {
 	}
 	switch w.v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		w.s = console.Colorize(jsonNum, strconv.FormatInt(w.v.Int(), 10))
+		w.s = strconv.FormatInt(w.v.Int(), 10)
 		return nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		w.s = console.Colorize(jsonNum, strconv.FormatUint(w.v.Uint(), 10))
+		w.s = strconv.FormatUint(w.v.Uint(), 10)
 		return nil
 	}
 	panic("unexpected map key type")

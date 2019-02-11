@@ -17,12 +17,12 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
@@ -90,7 +90,7 @@ func (u lockMessage) String() string {
 // JSON jsonified top oldest locks message.
 func (u lockMessage) JSON() string {
 	u.Status = "success"
-	statusJSONBytes, e := json.Marshal(u)
+	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(statusJSONBytes)
 }

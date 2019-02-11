@@ -17,12 +17,12 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -102,7 +102,7 @@ func (d diffMessage) String() string {
 // JSON jsonified diff message
 func (d diffMessage) JSON() string {
 	d.Status = "success"
-	diffJSONBytes, e := json.Marshal(d)
+	diffJSONBytes, e := json.MarshalIndent(d, "", " ")
 	fatalIf(probe.NewError(e),
 		"Unable to marshal diff message `"+d.FirstURL+"`, `"+d.SecondURL+"` and `"+string(d.Diff)+"`.")
 	return string(diffJSONBytes)

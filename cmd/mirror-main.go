@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -210,7 +210,7 @@ func (m mirrorMessage) String() string {
 // JSON jsonified mirror message
 func (m mirrorMessage) JSON() string {
 	m.Status = "success"
-	mirrorMessageBytes, e := json.Marshal(m)
+	mirrorMessageBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(mirrorMessageBytes)

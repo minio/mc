@@ -17,11 +17,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -88,7 +88,7 @@ type eventAddMessage struct {
 // JSON jsonified update message.
 func (u eventAddMessage) JSON() string {
 	u.Status = "success"
-	eventAddMessageJSONBytes, e := json.Marshal(u)
+	eventAddMessageJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(eventAddMessageJSONBytes)
 }

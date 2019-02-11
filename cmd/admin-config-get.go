@@ -17,10 +17,8 @@
 package cmd
 
 import (
-	"encoding/json"
-	"strings"
-
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -48,23 +46,25 @@ EXAMPLES:
 
 // configGetMessage container to hold locks information.
 type configGetMessage struct {
-	Status string `json:"status"`
-	Config string `json:"config"`
+	Status string                 `json:"status"`
+	Config map[string]interface{} `json:"config"`
 }
 
 // String colorized service status message.
 func (u configGetMessage) String() string {
-	return string(u.Config)
+	config, e := json.MarshalIndent(u.Config, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(config)
 }
 
 // JSON jsonified service status Message message.
 func (u configGetMessage) JSON() string {
 	u.Status = "success"
-	statusJSONBytes, e := json.MarshalIndent(u, "", "\t")
+	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
-	// Remove \n and \t from u.Config which holds the config data
-	return strings.NewReplacer(`\n`, "", `\t`, "").Replace(string(statusJSONBytes))
+	return string(statusJSONBytes)
 }
 
 // checkAdminConfigGetSyntax - validate all the passed arguments
@@ -90,8 +90,14 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	c, e := client.GetConfig()
 	fatalIf(probe.NewError(e), "Cannot get server configuration file.")
 
+	config := map[string]interface{}{}
+	e = json.Unmarshal(c, &config)
+	fatalIf(probe.NewError(e), "Cannot unmarshal server configuration file.")
+
 	// Print
-	printMsg(configGetMessage{Config: string(c)})
+	printMsg(configGetMessage{
+		Config: config,
+	})
 
 	return nil
 }

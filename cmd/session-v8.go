@@ -19,7 +19,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -28,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/quick"
@@ -98,7 +98,7 @@ func (s sessionV8) JSON() string {
 		CommandArgs: s.Header.CommandArgs,
 	}
 	sessionMsg.Status = "success"
-	sessionBytes, e := json.Marshal(sessionMsg)
+	sessionBytes, e := json.MarshalIndent(sessionMsg, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(sessionBytes)

@@ -17,11 +17,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
@@ -104,7 +104,7 @@ func (s stopHealMessage) String() string {
 
 // JSON jsonified stop heal message.
 func (s stopHealMessage) JSON() string {
-	stopHealJSONBytes, e := json.Marshal(s)
+	stopHealJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(stopHealJSONBytes)
@@ -169,7 +169,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	res, e := ui.DisplayAndFollowHealStatus(aliasedURL)
 	if e != nil {
 		if res.FailureDetail != "" {
-			data, _ := json.Marshal(res)
+			data, _ := json.MarshalIndent(res, "", " ")
 			traceStr := string(data)
 			errorIf(probe.NewError(e).Trace(aliasedURL, traceStr), "Unable to display heal status.")
 		} else {

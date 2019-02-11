@@ -17,12 +17,12 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"unicode"
 
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -64,13 +64,13 @@ func fatal(err *probe.Error, msg string, data ...interface{}) {
 		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
 		}
-		json, e := json.Marshal(struct {
+		json, e := json.MarshalIndent(struct {
 			Status string       `json:"status"`
 			Error  errorMessage `json:"error"`
 		}{
 			Status: "error",
 			Error:  errorMsg,
-		})
+		}, "", " ")
 		if e != nil {
 			console.Fatalln(probe.NewError(e))
 		}
@@ -135,13 +135,13 @@ func errorIf(err *probe.Error, msg string, data ...interface{}) {
 		if globalDebug {
 			errorMsg.CallTrace = err.CallTrace
 		}
-		json, e := json.Marshal(struct {
+		json, e := json.MarshalIndent(struct {
 			Status string       `json:"status"`
 			Error  errorMessage `json:"error"`
 		}{
 			Status: "error",
 			Error:  errorMsg,
-		})
+		}, "", " ")
 		if e != nil {
 			console.Fatalln(probe.NewError(e))
 		}

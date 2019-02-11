@@ -17,11 +17,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
@@ -62,7 +62,7 @@ func (s serviceRestartCommand) String() string {
 
 // JSON jsonified service restart command message.
 func (s serviceRestartCommand) JSON() string {
-	serviceRestartJSONBytes, e := json.Marshal(s)
+	serviceRestartJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(serviceRestartJSONBytes)
@@ -85,7 +85,7 @@ func (s serviceRestartMessage) String() string {
 
 // JSON jsonified service restart message.
 func (s serviceRestartMessage) JSON() string {
-	serviceRestartJSONBytes, e := json.Marshal(s)
+	serviceRestartJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(serviceRestartJSONBytes)

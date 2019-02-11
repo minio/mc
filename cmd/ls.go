@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -25,6 +24,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -60,7 +60,7 @@ func (c contentMessage) String() string {
 // JSON jsonified content message.
 func (c contentMessage) JSON() string {
 	c.Status = "success"
-	jsonMessageBytes, e := json.Marshal(c)
+	jsonMessageBytes, e := json.MarshalIndent(c, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)

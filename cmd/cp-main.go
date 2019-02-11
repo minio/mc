@@ -128,7 +128,7 @@ func (c copyMessage) String() string {
 // JSON jsonified copy message
 func (c copyMessage) JSON() string {
 	c.Status = "success"
-	copyMessageBytes, e := json.Marshal(c)
+	copyMessageBytes, e := json.MarshalIndent(c, "", " ")
 	fatalIf(probe.NewError(e), "Failed to marshal copy message.")
 
 	return string(copyMessageBytes)
@@ -347,7 +347,8 @@ func doCopySession(session *sessionV8, encKeyDB map[string][]prefixSSEPair) erro
 				}
 
 				var cpURLs URLs
-				// Unmarshal copyURLs from each line.
+				// Unmarshal copyURLs from each line. This expects each line to be
+				// an entire JSON object.
 				if e := json.Unmarshal([]byte(urlScanner.Text()), &cpURLs); e != nil {
 					errorIf(probe.NewError(e), "Unable to unmarshal %s", urlScanner.Text())
 					continue
@@ -431,7 +432,7 @@ loop:
 		}
 	} else {
 		if accntReader, ok := pg.(*accounter); ok {
-			console.Println(console.Colorize("Copy", accntReader.Stat().String()))
+			printMsg(accntReader.Stat())
 		}
 	}
 
