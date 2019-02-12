@@ -62,6 +62,7 @@ mc --help
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
 |GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
+||64-bit PPC|https://dl.minio.io/client/mc/release/linux-ppc64le/mc |
 
 ```sh
 wget https://dl.minio.io/client/mc/release/linux-amd64/mc
