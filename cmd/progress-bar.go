@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"errors"
-	"io"
 	"runtime"
 	"strings"
 	"time"
@@ -32,10 +30,6 @@ import (
 // progress extender.
 type progressBar struct {
 	*pb.ProgressBar
-	reader       io.Reader
-	readerLength int64
-	bytesRead    int64
-	isResume     bool
 }
 
 // newProgressBar - instantiate a progress bar.
@@ -102,18 +96,17 @@ func (p *progressBar) Set64(length int64) *progressBar {
 	return p
 }
 
-func (p *progressBar) Seek(offset int64, whence int) (n int64, err error) {
-	switch whence {
-	case io.SeekStart:
-		p.ProgressBar = p.ProgressBar.Set64(offset)
-		return offset, nil
-	case io.SeekCurrent:
-		return p.ProgressBar.Add64(offset), nil
-	case io.SeekEnd:
-		p.ProgressBar.Set64(p.ProgressBar.Total - offset)
-		return p.ProgressBar.Total - offset, nil
-	}
-	return 0, errors.New("invalid argument")
+func (p *progressBar) Read(buf []byte) (n int, err error) {
+	defer func() {
+		// After updating the internal progress bar, make sure that its
+		// current progress doesn't exceed the specified total progress
+		currentProgress := p.ProgressBar.Get()
+		if currentProgress > p.ProgressBar.Total {
+			p.ProgressBar.Set64(p.ProgressBar.Total)
+		}
+	}()
+
+	return p.ProgressBar.Read(buf)
 }
 
 func (p *progressBar) SetTotal(total int64) *progressBar {
