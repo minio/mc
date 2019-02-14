@@ -33,6 +33,8 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/words"
 	"github.com/pkg/profile"
+
+	completeinstall "github.com/posener/complete/cmd/install"
 )
 
 var (
@@ -62,6 +64,14 @@ VERSION:
 
 // Main starts mc application
 func Main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "mc", "-install", "-uninstall":
+			mainComplete()
+			return
+		}
+	}
+
 	// Enable profiling supported modes are [cpu, mem, block].
 	// ``MC_PROFILER`` supported options are [cpu, mem, block].
 	switch os.Getenv("MC_PROFILER") {
@@ -186,6 +196,9 @@ func initMC() {
 		}
 	}
 
+	// Install mc completion, ignore any error for now
+	_ = completeinstall.Install("mc")
+
 	// Check if mc session directory exists.
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session config directory.")
@@ -208,6 +221,7 @@ func initMC() {
 
 	// Load all authority certificates present in CAs dir
 	loadRootCAs()
+
 }
 
 func registerBefore(ctx *cli.Context) error {
@@ -271,29 +285,34 @@ func checkUpdate(ctx *cli.Context) {
 	}
 }
 
+var appCmds = []cli.Command{
+	lsCmd,
+	mbCmd,
+	catCmd,
+	headCmd,
+	pipeCmd,
+	shareCmd,
+	cpCmd,
+	mirrorCmd,
+	findCmd,
+	sqlCmd,
+	statCmd,
+	diffCmd,
+	rmCmd,
+	eventCmd,
+	watchCmd,
+	policyCmd,
+	adminCmd,
+	sessionCmd,
+	configCmd,
+	updateCmd,
+	versionCmd,
+}
+
 func registerApp() *cli.App {
-	// Register all the commands (refer flags.go)
-	registerCmd(lsCmd)      // List contents of a bucket.
-	registerCmd(mbCmd)      // Make a bucket.
-	registerCmd(catCmd)     // Display contents of a file.
-	registerCmd(headCmd)    // Display first parts of a file.
-	registerCmd(pipeCmd)    // Write contents of stdin to a file.
-	registerCmd(shareCmd)   // Share documents via URL.
-	registerCmd(cpCmd)      // Copy objects and files from multiple sources to single destination.
-	registerCmd(mirrorCmd)  // Mirror objects and files from single source to multiple destinations.
-	registerCmd(findCmd)    // Find specific String patterns
-	registerCmd(sqlCmd)     // Run select queries on a object or set of objects.
-	registerCmd(statCmd)    // Stat contents of a bucket/object
-	registerCmd(diffCmd)    // Computer differences between two objects or buckets.
-	registerCmd(rmCmd)      // Remove an object or bucket
-	registerCmd(eventCmd)   // Add event cmd
-	registerCmd(watchCmd)   // Add watch cmd
-	registerCmd(policyCmd)  // Set policy permissions.
-	registerCmd(adminCmd)   // Manage Minio servers
-	registerCmd(sessionCmd) // Manage sessions for copy and mirror.
-	registerCmd(configCmd)  // Configure minio client.
-	registerCmd(updateCmd)  // Check for new software updates.
-	registerCmd(versionCmd) // Print version.
+	for _, cmd := range appCmds {
+		registerCmd(cmd)
+	}
 
 	cli.HelpFlag = cli.BoolFlag{
 		Name:  "help, h",

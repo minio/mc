@@ -206,17 +206,13 @@ alias find='mc find'
 ```
 
 ### Shell autocompletion
-You may also download [`autocomplete/bash_autocomplete`](https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_autocomplete) into `/etc/bash_completion.d/` and rename it to `mc`. Don't forget to source the file to make it active on your current shell.
 
-```sh
-sudo wget https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_autocomplete -O /etc/bash_completion.d/mc
-source /etc/bash_completion.d/mc
-```
+In case you are using bash or zsh, the current shell will be automatically setup to use completion feature to suggest or auto-complete your mc commands.
 
 ```sh
 mc <TAB>
-admin    config   diff     ls       mirror   policy   session  update   watch
-cat      cp       event    mb       pipe     rm       share    version
+admin    config   diff     find     ls       mirror   policy   session  sql      update   watch
+cat      cp       event    head     mb       pipe     rm       share    stat     version
 ```
 
 ## Explore Further
