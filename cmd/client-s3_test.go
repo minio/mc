@@ -248,7 +248,7 @@ var testSelectCompressionTypeCases = []struct {
 	{SelectObjectOpts{}, "x.csv.gz", minio.SelectCompressionNONE},
 	{SelectObjectOpts{}, "x.json.bz2", minio.SelectCompressionNONE},
 	{SelectObjectOpts{}, "b.gz", minio.SelectCompressionGZIP},
-	{SelectObjectOpts{}, "k.bzip", minio.SelectCompressionBZIP},
+	{SelectObjectOpts{}, "k.bz2", minio.SelectCompressionBZIP},
 	{SelectObjectOpts{}, "a.csv", minio.SelectCompressionNONE},
 	{SelectObjectOpts{}, "a.json", minio.SelectCompressionNONE},
 }

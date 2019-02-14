@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"hash/fnv"
 	"io"
 	"net"
@@ -504,7 +503,6 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 			fldDelim = defaultFieldDelimiter
 		}
 		quoteChar, isOK = selOpts.InputSerOpts["csv"][quoteCharacterType]
-		fmt.Println("###", quoteChar, isOK, "?", selOpts.OutputSerOpts["csv"])
 		if !isOK {
 			quoteChar = defaultCSVQuoteCharacter
 		}
@@ -514,7 +512,6 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 			quoteEscChar = defaultCSVQuoteEscapeCharacter
 		}
 		fileHeader, _ = selOpts.InputSerOpts["csv"][fileHeaderType]
-		fmt.Println(fileHeader, "?", selOpts.OutputSerOpts["csv"])
 		commentChar, isOK = selOpts.InputSerOpts["csv"][commentCharType]
 		if !isOK {
 			commentChar = defaultCommentChar

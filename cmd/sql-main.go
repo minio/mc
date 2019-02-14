@@ -40,28 +40,24 @@ var (
 			Usage: "sql query recursively",
 		},
 		cli.StringFlag{
-			Name:  "icsv",
-			Usage: "input csv serialization option",
+			Name:  "csv-input",
+			Usage: "csv input serialization option",
 		},
 		cli.StringFlag{
-			Name:  "ijson",
-			Usage: "input json serialization option",
+			Name:  "json-input",
+			Usage: "json input serialization option",
 		},
 		cli.StringFlag{
-			Name:  "iparquet",
-			Usage: "input parquet serialization option",
-		},
-		cli.StringFlag{
-			Name:  "icompression",
+			Name:  "compression",
 			Usage: "input compression type",
 		},
 		cli.StringFlag{
-			Name:  "ocsv",
-			Usage: "output csv serialization option",
+			Name:  "csv-output",
+			Usage: "csv output serialization option",
 		},
 		cli.StringFlag{
-			Name:  "ojson",
-			Usage: "output json serialization option",
+			Name:  "json-output",
+			Usage: "json output serialization option",
 		},
 	}
 )
@@ -72,7 +68,7 @@ var sqlCmd = cli.Command{
 	Usage:  "run sql queries on objects",
 	Action: mainSQL,
 	Before: setGlobalsFromContext,
-	Flags:  getSQLFlags(), //append(append(sqlFlags, ioFlags...), globalFlags...),
+	Flags:  getSQLFlags(),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -86,14 +82,42 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 INPUT SERIALIZATION
-	--icsv, --ijson or --iparquet flag can be accepted to describe format of object being queried.
-	--icsv and --ijson accepts a string of format "key=value,..." for valid keys.
-
+	--csv-input or --json-input can be used to specify input data format. Format is specified by a string
+	with pattern "key=value,..." for valid key(s).
+	DATA FORMAT:
+	 csv: Use --csv-input flag
+				Valid keys:
+				RecordDelimiter (rd)
+				FieldDelimiter (fd)
+				QuoteChar (qc)
+				QuoteEscChar (qec)
+				FileHeader (fh)
+				Comments (cc)
+				QuotedRecordDelimiter (qrd)
+	 
+   json: Use --json-input flag
+				Valid keys:
+				Type 
+	 parquet: If object name ends in .parquet, this is automatically interpreted.
+	  
 OUTPUT SERIALIZATION
-	--ocsv or --ojson can be used to specify output format of data
-  
+	--csv-output or --json-output can be used to specify output data format. Format is specified by a string
+	with pattern "key=value,..." for valid key(s).
+	DATA FORMAT:
+	 csv: Use --csv-output flag
+				Valid keys:
+				RecordDelimiter (rd)
+				FieldDelimiter (fd)
+				QuoteChar (qc)
+				QuoteEscChar (qec)
+				QuoteFields (qf)
+	 
+    json: Use --json-output flag
+				Valid keys:
+				RecordDelimiter (rd) 
+	  
 COMPRESSION TYPE
-	 --ocompression can specify if the queried object is compressed.
+	 --compression specifies if the queried object is compressed.
 	 Valid values: NONE | GZIP | BZIP2
 
 EXAMPLES:
@@ -109,14 +133,14 @@ EXAMPLES:
 	 
    4. Run a query on an object on Minio in gzip format using ; as field delimiter,
       newline as record delimiter and file header to be used 
-      $ {{.HelpName}} --icompression GZIP --icsv "rd=\n,fh=USE,fd=;" \
+      $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
 		      --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv.gz
 	 
    5. Run a query on an object on Minio in gzip format using ; as field delimiter,
       newline as record delimiter and file header to be used 
-      $ {{.HelpName}} --icompression GZIP --icsv "rd=\n,fh=USE,fd=;" \ 
-		--ojson "rd=\n\n"	\
-		--query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv.gz
+      $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \ 
+               --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
+
 `,
 }
 
@@ -192,7 +216,7 @@ func parseKVArgs(is string) (map[string]string, *probe.Error) {
 }
 
 // returns a string with list of serialization options and abbreviation(s) if any
-func fmtString(validAbbr map[string]string) string {
+func fmtString(validAbbr map[string]string, validKeys []string) string {
 	var sb strings.Builder
 	i := 0
 	for k, v := range validAbbr {
@@ -200,6 +224,11 @@ func fmtString(validAbbr map[string]string) string {
 		i++
 		if i != len(validAbbr) {
 			sb.WriteString(",")
+		}
+	}
+	if len(sb.String()) == 0 {
+		for _, k := range validKeys {
+			sb.WriteString(fmt.Sprintf("%s ", k))
 		}
 	}
 	return sb.String()
@@ -233,7 +262,7 @@ func parseSerializationOpts(inp string, validKeys []string, validAbbrKeys map[st
 	}
 	for k := range ikv {
 		if !validKeyFn(k, validKeys) {
-			return nil, probe.NewError(errors.New("Options should be key-value pairs in the form key=value,... where key(s) can be one or more of " + fmtString(validAbbrKeys)))
+			return nil, probe.NewError(errors.New("Options should be key-value pairs in the form key=value,... where valid key(s) are " + fmtString(validAbbrKeys, validKeys)))
 		}
 	}
 	return ikv, nil
@@ -241,37 +270,32 @@ func parseSerializationOpts(inp string, validKeys []string, validAbbrKeys map[st
 
 // gets the input serialization opts from cli context and constructs a map of csv, json or parquet options
 func getInputSerializationOpts(ctx *cli.Context) map[string]map[string]string {
-	icsv := ctx.String("icsv")
-	ijson := ctx.String("ijson")
-	iparquet := ctx.String("iparquet")
+	icsv := ctx.String("csv-input")
+	ijson := ctx.String("json-input")
+	// iparquet := ctx.String("iparquet")
 	m := make(map[string]map[string]string)
 
-	isSet := (icsv != "")
-	if ijson != "" && isSet {
-		fatalIf(errInvalidArgument(), "Only one of --icsv, --ijson or --iparquet can be specified as input serialization option")
-	}
-	if !isSet {
-		isSet = (ijson != "")
-	}
-	if isSet && iparquet != "" {
-		fatalIf(errInvalidArgument(), "Only one of --icsv, --ijson or --iparquet can be specified as input serialization option")
+	csvType := (icsv != "")
+	jsonType := (ijson != "")
+	if csvType && jsonType {
+		fatalIf(errInvalidArgument(), "Only one of --csv-input or --json-input can be specified as input serialization option")
 	}
 
 	if icsv != "" {
 		kv, err := parseSerializationOpts(icsv, append(validCSVCommonKeys, validCSVInputKeys...), validCSVInputAbbrKeys)
-		fatalIf(err, "Invalid serialization option(s) specified for --icsv flag")
+		fatalIf(err, "Invalid serialization option(s) specified for --csv-input flag")
 
 		m["csv"] = kv
 	}
 	if ijson != "" {
 		kv, err := parseSerializationOpts(ijson, validJSONInputKeys, nil)
 
-		fatalIf(err, "Invalid serialization option(s) specified for --ijson flag")
+		fatalIf(err, "Invalid serialization option(s) specified for --json-input flag")
 		m["json"] = kv
 	}
-	if iparquet != "" {
-		m["parquet"] = map[string]string{}
-	}
+	// if iparquet != "" {
+	// 	m["parquet"] = map[string]string{}
+	// }
 	return m
 }
 
@@ -280,25 +304,29 @@ func getOutputSerializationOpts(ctx *cli.Context) (opts map[string]map[string]st
 	m := make(map[string]map[string]string)
 	var csvType, jsonType bool
 
-	ocsv := ctx.String("ocsv")
-	ojson := ctx.String("ojson")
-
+	ocsv := ctx.String("csv-output")
+	ojson := ctx.String("json-output")
 	csvType = (ocsv != "")
 	jsonType = (ojson != "")
 
 	if csvType && jsonType {
-		fatalIf(errInvalidArgument(), "Only one of --ocsv, or --ojson can be specified as output serialization option")
+		fatalIf(errInvalidArgument(), "Only one of --csv-output, or --json-output can be specified as output serialization option")
 	}
 
 	if ocsv != "" {
 		validKeys := append(validCSVCommonKeys, validJSONCSVCommonOutputKeys...)
 		kv, err := parseSerializationOpts(ocsv, append(validKeys, validCSVOutputKeys...), validCSVOutputAbbrKeys)
-		fatalIf(err, "Invalid value(s) specified for --ocsv flag")
+		fatalIf(err, "Invalid value(s) specified for --csv-output flag")
 		m["csv"] = kv
 	}
+	// default to JSON format if no output option is specified
+	if ojson == "" && ocsv == "" {
+		ojson = "rd=\n"
+	}
+
 	if ojson != "" {
 		kv, err := parseSerializationOpts(ojson, validJSONCSVCommonOutputKeys, validJSONOutputAbbrKeys)
-		fatalIf(err, "Invalid value(s) specified for --ojson flag")
+		fatalIf(err, "Invalid value(s) specified for --json-output flag")
 		m["json"] = kv
 	}
 	return m
@@ -335,6 +363,12 @@ func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair
 	_, e := io.Copy(os.Stdout, outputer)
 	return probe.NewError(e)
 }
+func validateOpts(selOpts SelectObjectOpts, url string) {
+	_, targetURL, _ := mustExpandAlias(url)
+	if strings.HasSuffix(targetURL, ".parquet") && (selOpts.InputSerOpts != nil || selOpts.OutputSerOpts != nil) {
+		fatalIf(errInvalidArgument(), "Input serialization flags --csv-input and --json-input cannot be used for object in .parquet format")
+	}
+}
 
 // check sql input arguments.
 func checkSQLSyntax(ctx *cli.Context) {
@@ -358,6 +392,7 @@ func mainSQL(ctx *cli.Context) error {
 
 	for _, url := range URLs {
 		if !isAliasURLDir(url, encKeyDB) {
+			validateOpts(selOpts, url)
 			errorIf(sqlSelect(url, query, encKeyDB, selOpts).Trace(url), "Unable to run sql")
 			continue
 		}

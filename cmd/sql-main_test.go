@@ -39,7 +39,6 @@ func TestParseKVArgs(t *testing.T) {
 	for _, test := range testParseKVArgsCases {
 		kvmap, err := parseKVArgs(test.inp)
 		gerr := err.ToGoError()
-		fmt.Println(gerr, kvmap)
 		if gerr != nil && gerr.Error() != test.errMsg {
 			t.Fatalf("Unexpected result for \"%s\", expected: |%s|  got: |%s|\n", test.inp, test.errMsg, gerr)
 		}
@@ -72,13 +71,13 @@ var testParseSerializationCases = []struct {
 		validCSVInputKeys,
 		validCSVInputAbbrKeys,
 		map[string]string{},
-		"Options should be key-value pairs in the form key=value,... where key(s) can be one or more of",
+		"Options should be key-value pairs in the form key=value,... where valid key(s) are ",
 	},
 	{"nokey=\n,fd=;,qc=\"",
 		validCSVInputKeys,
 		validCSVInputAbbrKeys,
 		map[string]string{},
-		"Options should be key-value pairs in the form key=value,... where key(s) can be one or more of",
+		"Options should be key-value pairs in the form key=value,... where valid key(s) are ",
 	},
 	{"rd=\n\n,fd=|,qc=\",qc='",
 		validCSVInputKeys,
@@ -95,14 +94,14 @@ var testParseSerializationCases = []struct {
 	{"recordDelimiter=\n\n,FieldDelimiter=|,QuoteChAR=\",fh=use,qrd=;",
 		append(validCSVCommonKeys, validCSVInputKeys...),
 		validCSVInputAbbrKeys,
-		map[string]string{"recorddelimiter": "\n\n", "fielddelimiter": "|", "quotechar": "\"", "quotedrecorddelimter": ";", "fileheader": "use"},
+		map[string]string{"recorddelimiter": "\n\n", "fielddelimiter": "|", "quotechar": "\"", "quotedrecorddelimiter": ";", "fileheader": "use"},
 		"<nil>",
 	},
 	{"recordDelimiter=\n\n,FieldDelimiter=|,QuoteChar=\",qf=;,qec='",
 		append(validCSVCommonKeys, validCSVOutputKeys...),
 		validCSVOutputAbbrKeys,
 		map[string]string{},
-		"Options should be key-value pairs in the form key=value,... where key(s) can be one or more of",
+		"Options should be key-value pairs in the form key=value,... where valid key(s) are ",
 	},
 	{"FieldDelimiter=|,QuoteChar=\",qf=;,qec='",
 		append(validCSVCommonKeys, validCSVOutputKeys...),
