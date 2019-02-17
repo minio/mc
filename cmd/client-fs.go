@@ -412,7 +412,7 @@ func (f *fsClient) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 }
 
 // Remove - remove entry read from clientContent channel.
-func (f *fsClient) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-chan *probe.Error {
+func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	// Goroutine reads from contentCh and removes the entry in content.

@@ -5,6 +5,7 @@ Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, c
 ```sh
 ls       list buckets and objects
 mb       make a bucket
+rb       remove a bucket
 cat      display object contents
 head     display first 'n' lines of an object
 pipe     stream STDIN to an object
@@ -250,12 +251,13 @@ Skip SSL certificate verification.
 |   |   | |
 |:---|:---|:---|
 |[**ls** - List buckets and objects](#ls)   |[**mb** - Make a bucket](#mb)  | [**cat** - Concatenate an object](#cat)  |
-|[**cp** - Copy objects](#cp) | [**rm** - Remove objects](#rm)  | [**pipe** - Pipe to an object](#pipe) |
-| [**share** - Share access](#share)  |[**mirror** - Mirror buckets](#mirror)  | [**find** - Find files and objects](#find) |
-| [**diff** - Diff buckets](#diff) |[**policy** - Set public policy on bucket or prefix](#policy)  |[**session** - Manage saved sessions](#session) |
-| [**config** - Manage config file](#config)  | [**watch** - Watch for events](#watch)  | [**event** - Manage events on your buckets](#event)  |
-| [**update** - Manage software updates](#update)  | [**version** - Show version](#version)  | [**stat** - Stat contents of objects and folders](#stat) |
-| [**head** - Display first 'n' lines of an object](#head) | [**sql** - Run sql queries on objects](#sql) | |
+|[**cp** - Copy objects](#cp) |[**rb** - Remove a bucket](#rb)  | [**pipe** - Pipe to an object](#pipe) |
+| [**share** - Share access](#share)  | [**rm** - Remove objects](#rm)   | [**find** - Find files and objects](#find) |
+| [**diff** - Diff buckets](#diff) |[**mirror** - Mirror buckets](#mirror)|[**session** - Manage saved sessions](#session) |
+| [**config** - Manage config file](#config)  | [**policy** - Set public policy on bucket or prefix](#policy)  | [**event** - Manage events on your buckets](#event)  |
+| [**update** - Manage software updates](#update)  |  [**watch** - Watch for events](#watch) | [**stat** - Stat contents of objects and folders](#stat) |
+| [**head** - Display first 'n' lines of an object](#head) | [**version** - Show version](#version) | |
+| | [**sql** - Run sql queries on objects](#sql) | |
 
 
 ###  Command `ls` - List Objects
@@ -312,6 +314,30 @@ Bucket created successfully ‘play/mybucket’.
 ```sh
 mc mb s3/mybucket --region=us-west-1
 Bucket created successfully ‘s3/mybucket’.
+```
+
+<a name="rb"></a>
+### Command `rb` - Remove a Bucket
+`rb` command removes a bucket and all its contents on an object storage. On a filesystem, it behaves like `rmdir` command.
+
+Note that when a bucket is removed all policies associated with the bucket will also be removed. If you would like to just
+empty the objects in a bucket use `rm` command
+
+```sh
+USAGE:
+   mc rb [FLAGS] TARGET [TARGET...]
+
+FLAGS:
+  --help, -h                    show help
+
+```
+
+*Example: Remove a bucket named "mybucket" on https://play.minio.io:9000.*
+
+
+```sh
+mc rb play/mybucket --recursive --force
+Bucket removed successfully ‘play/mybucket’.
 ```
 
 <a name="cat"></a>
@@ -490,8 +516,8 @@ encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 Notice that two different aliases myminio1 and myminio2 are used for the same endpoint to provide the old secretkey and the newly rotated key.
 
 <a name="rm"></a>
-### Command `rm` - Remove Buckets and Objects
-Use `rm` command to remove file or bucket
+### Command `rm` - Remove Objects
+Use `rm` command to remove file or object
 
 ```sh
 USAGE:
@@ -500,7 +526,7 @@ USAGE:
 FLAGS:
   --recursive, -r               remove recursively
   --force                       allow a recursive remove operation
-  --dangerous                   allow site-wide removal of buckets and objects
+  --dangerous                   allow site-wide removal of objects
   --incomplete, -I              remove incomplete uploads
   --fake                        perform a fake remove operation
   --stdin                       read object names from STDIN
@@ -526,13 +552,12 @@ mc rm --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybuck
 Removing `play/mybucket/myobject.txt`.
 ```
 
-*Example: Recursively remove a bucket and all its contents. Since this is a dangerous operation, you must explicitly pass `--force` option.*
+*Example: Recursively remove a bucket's contents. Since this is a dangerous operation, you must explicitly pass `--force` option.*
 
 ```sh
 mc rm --recursive --force play/mybucket
 Removing `play/mybucket/newfile.txt`.
 Removing `play/mybucket/otherobject.txt`.
-Removing `play/mybucket`.
 ```
 
 *Example: Remove all uploaded incomplete files for an object.*

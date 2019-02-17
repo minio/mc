@@ -36,7 +36,7 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go"
+	minio "github.com/minio/minio-go"
 	"github.com/minio/minio-go/pkg/credentials"
 	"github.com/minio/minio-go/pkg/encrypt"
 	"github.com/minio/minio-go/pkg/policy"
@@ -779,15 +779,13 @@ func (c *s3Client) removeIncompleteObjects(bucket string, objectsCh <-chan strin
 }
 
 // Remove - remove object or bucket(s).
-func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-chan *probe.Error {
+func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
 
 	prevBucket := ""
 	// Maintain objectsCh, statusCh for each bucket
 	var objectsCh chan string
 	var statusCh <-chan minio.RemoveObjectError
-
-	isRemoveBucket := false
 
 	go func() {
 		defer close(errorCh)
@@ -819,7 +817,6 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 					}
 				}
 				// Re-init objectsCh for next bucket
-				isRemoveBucket = false
 				objectsCh = make(chan string)
 				if isIncomplete {
 					statusCh = c.removeIncompleteObjects(bucket, objectsCh)
@@ -844,7 +841,6 @@ func (c *s3Client) Remove(isIncomplete bool, contentCh <-chan *clientContent) <-
 				}
 			} else {
 				// end of bucket - close the objectsCh
-				isRemoveBucket = true
 				if objectsCh != nil {
 					close(objectsCh)
 				}

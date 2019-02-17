@@ -288,6 +288,7 @@ func checkUpdate(ctx *cli.Context) {
 var appCmds = []cli.Command{
 	lsCmd,
 	mbCmd,
+	rbCmd,
 	catCmd,
 	headCmd,
 	pipeCmd,

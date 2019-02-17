@@ -47,7 +47,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "dangerous",
-			Usage: "allow site-wide removal of buckets and objects",
+			Usage: "allow site-wide removal of objects",
 		},
 		cli.BoolFlag{
 			Name:  "incomplete, I",
@@ -107,10 +107,10 @@ EXAMPLES:
    5. Remove all objects read from STDIN.
       $ {{.HelpName}} --force --stdin
 
-   6. Remove all buckets and objects recursively from S3 host
+   6. Remove all objects recursively from S3 host
       $ {{.HelpName}} --recursive --dangerous s3
 
-   7. Remove all buckets and objects older than '90' days recursively from host
+   7. Remove all objects older than '90' days recursively from host
       $ {{.HelpName}} --recursive --dangerous --older-than=90 s3
 
    8. Drop all incomplete uploads on 'jazz-songs' bucket.
@@ -168,14 +168,14 @@ func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	if (isRecursive || isStdin) && !isForce {
 		if isNamespaceRemoval {
 			fatalIf(errDummy().Trace(),
-				"This operation results in site-wide removal of buckets and objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
+				"This operation results in site-wide removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
 		}
 		fatalIf(errDummy().Trace(),
 			"Removal requires --force flag. This operation is *IRREVERSIBLE*. Please review carefully before performing this *DANGEROUS* operation.")
 	}
 	if (isRecursive || isStdin) && isNamespaceRemoval && !isDangerous {
 		fatalIf(errDummy().Trace(),
-			"This operation results in site-wide removal of buckets and objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
+			"This operation results in site-wide removal of objects. If you are really sure, retry this command with ‘--dangerous’ and ‘--force’ flags.")
 	}
 }
 
@@ -214,8 +214,8 @@ func removeSingle(url string, isIncomplete bool, isFake bool, olderThan int, new
 		contentCh := make(chan *clientContent, 1)
 		contentCh <- &clientContent{URL: *newClientURL(targetURL)}
 		close(contentCh)
-
-		errorCh := clnt.Remove(isIncomplete, contentCh)
+		isRemoveBucket := false
+		errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
 		for pErr := range errorCh {
 			if pErr != nil {
 				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
@@ -239,12 +239,12 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan int, 
 		return exitStatus(globalErrorExitStatus) // End of journey.
 	}
 	contentCh := make(chan *clientContent)
-	errorCh := clnt.Remove(isIncomplete, contentCh)
+	isRemoveBucket := false
 
-	isEmpty := true
+	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
+
 	isRecursive := true
-	for content := range clnt.List(isRecursive, isIncomplete, DirLast) {
-		isEmpty = false
+	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(url), "Failed to remove `"+url+"` recursively.")
 			switch content.Err.ToGoError().(type) {
@@ -306,10 +306,6 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan int, 
 		return exitStatus(globalErrorExitStatus)
 	}
 
-	// As clnt.List() returns empty, we just send dummy value to behave like non-recursive.
-	if isEmpty {
-		printMsg(rmMessage{Key: url})
-	}
 	return nil
 }
 
