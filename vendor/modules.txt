@@ -60,7 +60,7 @@ github.com/mattn/go-colorable
 github.com/mattn/go-isatty
 # github.com/minio/cli v0.0.0-20170227073228-b8ae5507c0ce
 github.com/minio/cli
-# github.com/minio/minio v0.0.0-20190206103305-fd4e15c11641
+# github.com/minio/minio v0.0.0-20190314200851-facbd653bad5
 github.com/minio/minio/pkg/madmin
 github.com/minio/minio/pkg/mimedb
 github.com/minio/minio/pkg/quick
