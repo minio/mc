@@ -70,7 +70,9 @@ func completeS3Path(s3Path string) (prediction []string) {
 }
 
 // s3Complete knows how to complete an mc s3 path
-type s3Complete struct{}
+type s3Complete struct {
+	deepLevel int
+}
 
 func (s3 s3Complete) Predict(a complete.Args) (prediction []string) {
 	defer func() {
@@ -96,6 +98,12 @@ func (s3 s3Complete) Predict(a complete.Args) (prediction []string) {
 			prediction = append(prediction, completeS3Path(prediction[0])...)
 		}
 	} else {
+		// Complete S3 path until the specified path deep level
+		if s3.deepLevel > 0 {
+			if strings.Count(arg, "/") >= s3.deepLevel {
+				return []string{arg}
+			}
+		}
 		// Predict S3 path
 		prediction = completeS3Path(arg)
 	}
@@ -137,6 +145,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/ls":     complete.PredictOr(s3Completer, fsCompleter),
 	"/cp":     complete.PredictOr(s3Completer, fsCompleter),
 	"/rm":     complete.PredictOr(s3Completer, fsCompleter),
+	"/rb":     complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
 	"/cat":    complete.PredictOr(s3Completer, fsCompleter),
 	"/head":   complete.PredictOr(s3Completer, fsCompleter),
 	"/diff":   complete.PredictOr(s3Completer, fsCompleter),
