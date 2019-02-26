@@ -382,11 +382,57 @@ USAGE:
 FLAGS:
   --query value, -e value       sql query expression
   --recursive, -r               sql query recursively
+  --csv-input value             csv input serialization option
+  --json-input value            json input serialization option
+  --compression value           input compression type
+  --csv-output value            csv output serialization option
+  --json-output value           json output serialization option
   --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
   --help, -h                    show help
 
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+
+INPUT SERIALIZATION
+  --csv-input or --json-input can be used to specify input data format. Format is 
+  specified by a string with pattern "key=value,..." for valid key(s).
+  
+  DATA FORMAT:
+    csv: Use --csv-input flag
+      Valid keys:
+        RecordDelimiter (rd)
+        FieldDelimiter (fd)
+        QuoteChar (qc)
+        QuoteEscChar (qec)
+        FileHeader (fh)
+        Comments (cc)
+        QuotedRecordDelimiter (qrd)
+	 
+    json: Use --json-input flag
+      Valid keys:
+        Type 
+    parquet: If object name ends in .parquet, this is automatically interpreted.
+	  
+OUTPUT SERIALIZATION
+  --csv-output or --json-output can be used to specify output data format. Format is
+  specified by a string with pattern "key=value,..." for valid key(s).
+  DATA FORMAT:
+    csv: Use --csv-output flag
+      Valid keys:
+        RecordDelimiter (rd)
+        FieldDelimiter (fd)
+        QuoteChar (qc)
+        QuoteEscChar (qec)
+        QuoteFields (qf)
+	 
+    json: Use --json-output flag
+      Valid keys:
+        RecordDelimiter (rd) 
+	  
+COMPRESSION TYPE
+    --compression specifies if the queried object is compressed.
+    Valid values: NONE | GZIP | BZIP2
+
 ```
 
 *Example: Select all columns on a set of objects recursively on AWS S3*

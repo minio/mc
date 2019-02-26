@@ -81,44 +81,8 @@ FLAGS:
 ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
-INPUT SERIALIZATION
-	--csv-input or --json-input can be used to specify input data format. Format is specified by a string
-	with pattern "key=value,..." for valid key(s).
-	DATA FORMAT:
-	 csv: Use --csv-input flag
-				Valid keys:
-				RecordDelimiter (rd)
-				FieldDelimiter (fd)
-				QuoteChar (qc)
-				QuoteEscChar (qec)
-				FileHeader (fh)
-				Comments (cc)
-				QuotedRecordDelimiter (qrd)
-	 
-   json: Use --json-input flag
-				Valid keys:
-				Type 
-	 parquet: If object name ends in .parquet, this is automatically interpreted.
-	  
-OUTPUT SERIALIZATION
-	--csv-output or --json-output can be used to specify output data format. Format is specified by a string
-	with pattern "key=value,..." for valid key(s).
-	DATA FORMAT:
-	 csv: Use --csv-output flag
-				Valid keys:
-				RecordDelimiter (rd)
-				FieldDelimiter (fd)
-				QuoteChar (qc)
-				QuoteEscChar (qec)
-				QuoteFields (qf)
-	 
-    json: Use --json-output flag
-				Valid keys:
-				RecordDelimiter (rd) 
-	  
-COMPRESSION TYPE
-	 --compression specifies if the queried object is compressed.
-	 Valid values: NONE | GZIP | BZIP2
+SERIALIZATION OPTIONS:
+  For query serialization options, refer to https://docs.minio.io/docs/minio-client-complete-guide#sql
 
 EXAMPLES:
    1. Run a query on a set of objects recursively on AWS S3.
@@ -156,17 +120,19 @@ func getSQLFlags() []cli.Flag {
 }
 
 // valid CSV and JSON keys for input/output serialization
-var validCSVCommonKeys = []string{"FieldDelimiter", "QuoteChar", "QuoteEscChar"}
-var validCSVInputKeys = []string{"Comments", "FileHeader", "QuotedRecordDelimiter", "RecordDelimiter"}
-var validCSVOutputKeys = []string{"QuoteFields"}
+var (
+	validCSVCommonKeys = []string{"FieldDelimiter", "QuoteChar", "QuoteEscChar"}
+	validCSVInputKeys  = []string{"Comments", "FileHeader", "QuotedRecordDelimiter", "RecordDelimiter"}
+	validCSVOutputKeys = []string{"QuoteFields"}
 
-var validJSONInputKeys = []string{"Type"}
-var validJSONCSVCommonOutputKeys = []string{"RecordDelimiter"}
+	validJSONInputKeys           = []string{"Type"}
+	validJSONCSVCommonOutputKeys = []string{"RecordDelimiter"}
 
-// mapping of abbreviation to long form name of CSV and JSON input/output serialization keys
-var validCSVInputAbbrKeys = map[string]string{"cc": "Comments", "fh": "FileHeader", "qrd": "QuotedRecordDelimiter", "rd": "RecordDelimiter", "fd": "FieldDelimiter", "qc": "QuoteChar", "qec": "QuoteEscChar"}
-var validCSVOutputAbbrKeys = map[string]string{"qf": "QuoteFields", "rd": "RecordDelimiter", "fd": "FieldDelimiter", "qc": "QuoteChar", "qec": "QuoteEscChar"}
-var validJSONOutputAbbrKeys = map[string]string{"rd": "RecordDelimiter"}
+	// mapping of abbreviation to long form name of CSV and JSON input/output serialization keys
+	validCSVInputAbbrKeys   = map[string]string{"cc": "Comments", "fh": "FileHeader", "qrd": "QuotedRecordDelimiter", "rd": "RecordDelimiter", "fd": "FieldDelimiter", "qc": "QuoteChar", "qec": "QuoteEscChar"}
+	validCSVOutputAbbrKeys  = map[string]string{"qf": "QuoteFields", "rd": "RecordDelimiter", "fd": "FieldDelimiter", "qc": "QuoteChar", "qec": "QuoteEscChar"}
+	validJSONOutputAbbrKeys = map[string]string{"rd": "RecordDelimiter"}
+)
 
 // parseKVArgs parses string of the form k=v delimited by ","
 // into a map of k-v pairs
@@ -363,6 +329,7 @@ func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair
 	_, e := io.Copy(os.Stdout, outputer)
 	return probe.NewError(e)
 }
+
 func validateOpts(selOpts SelectObjectOpts, url string) {
 	_, targetURL, _ := mustExpandAlias(url)
 	if strings.HasSuffix(targetURL, ".parquet") && (selOpts.InputSerOpts != nil || selOpts.OutputSerOpts != nil) {
