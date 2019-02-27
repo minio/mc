@@ -36,6 +36,7 @@ type statMessage struct {
 	Size              int64             `json:"size"`
 	ETag              string            `json:"etag"`
 	Type              string            `json:"type"`
+	Expires           time.Time         `json:"expires"`
 	EncryptionHeaders map[string]string `json:"encryption,omitempty"`
 	Metadata          map[string]string `json:"metadata"`
 }
@@ -51,7 +52,9 @@ func printStat(stat statMessage) {
 		console.Println(fmt.Sprintf("%-10s: %s ", "ETag", stat.ETag))
 	}
 	console.Println(fmt.Sprintf("%-10s: %s ", "Type", stat.Type))
-
+	if !stat.Expires.IsZero() {
+		console.Println(fmt.Sprintf("%-10s: %s ", "Expires", stat.Expires.Format(printDate)))
+	}
 	var maxKey = 0
 	for k := range stat.Metadata {
 		if len(k) > maxKey {
@@ -104,7 +107,7 @@ func parseStat(targetAlias string, c *clientContent) statMessage {
 	content.Metadata = c.Metadata
 	content.ETag = strings.TrimPrefix(c.ETag, "\"")
 	content.ETag = strings.TrimSuffix(content.ETag, "\"")
-
+	content.Expires = c.Expires
 	content.EncryptionHeaders = c.EncryptionHeaders
 	return content
 }
