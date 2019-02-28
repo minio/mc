@@ -1081,6 +1081,7 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) 
 				objectMetadata.ETag = stat.ETag
 				objectMetadata.Metadata = stat.Metadata
 				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
+				objectMetadata.Expires = stat.Expires
 			}
 			return objectMetadata, nil
 		} else if objectStat.Key == object {

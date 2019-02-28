@@ -7,7 +7,7 @@ require (
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	golang.org/x/crypto v0.0.0-20190128193316-c7b33c32a30b
-	golang.org/x/net v0.0.0-20190125091013-d26f9f9a57f3
+	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	golang.org/x/sys v0.0.0-20190124100055-b90733256f2e // indirect
 	golang.org/x/text v0.3.0 // indirect
 	gopkg.in/ini.v1 v1.41.0
