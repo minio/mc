@@ -430,10 +430,9 @@ var supportedContentTypes = []string{
 
 // set the SelectObjectOutputSerialization struct using options passed in by client. If unspecified,
 // default S3 API specified defaults
-func selectObjectOutputOpts(selOpts SelectObjectOpts) minio.SelectObjectOutputSerialization {
+func selectObjectOutputOpts(selOpts SelectObjectOpts, i minio.SelectObjectInputSerialization) minio.SelectObjectOutputSerialization {
 	var isOK bool
 	var recDelim, fldDelim, quoteChar, quoteEscChar, qf string
-	var quoteFields minio.CSVQuoteFields
 
 	o := minio.SelectObjectOutputSerialization{}
 	if _, ok := selOpts.OutputSerOpts["json"]; ok {
@@ -444,34 +443,32 @@ func selectObjectOutputOpts(selOpts SelectObjectOpts) minio.SelectObjectOutputSe
 		o.JSON = &minio.JSONOutputOptions{RecordDelimiter: recDelim}
 	}
 	if _, ok := selOpts.OutputSerOpts["csv"]; ok {
-		recDelim, isOK = selOpts.OutputSerOpts["csv"][recordDelimiterType]
-		if !isOK {
-			recDelim = defaultRecordDelimiter
-		}
-		fldDelim, isOK = selOpts.OutputSerOpts["csv"][fieldDelimiterType]
-		if !isOK {
-			fldDelim = defaultFieldDelimiter
-		}
-		quoteChar, isOK = selOpts.OutputSerOpts["csv"][quoteCharacterType]
-		if !isOK {
-			quoteChar = defaultCSVQuoteCharacter
+		o.CSV = &minio.CSVOutputOptions{RecordDelimiter: defaultRecordDelimiter, FieldDelimiter: defaultFieldDelimiter}
+		if recDelim, isOK = selOpts.OutputSerOpts["csv"][recordDelimiterType]; isOK {
+			o.CSV.RecordDelimiter = recDelim
 		}
 
-		quoteEscChar, isOK = selOpts.OutputSerOpts["csv"][quoteEscapeCharacterType]
-		if !isOK {
-			quoteEscChar = defaultCSVQuoteEscapeCharacter
+		if fldDelim, isOK = selOpts.OutputSerOpts["csv"][fieldDelimiterType]; isOK {
+			o.CSV.FieldDelimiter = fldDelim
 		}
-		qf, isOK = selOpts.OutputSerOpts["csv"][quoteFieldType]
-		if !isOK {
-			quoteFields = minio.CSVQuoteFieldsAsNeeded
-		} else {
-			quoteFields = minio.CSVQuoteFields(qf)
+		if quoteChar, isOK = selOpts.OutputSerOpts["csv"][quoteCharacterType]; isOK {
+			o.CSV.QuoteCharacter = quoteChar
 		}
-		o.CSV = &minio.CSVOutputOptions{RecordDelimiter: recDelim, FieldDelimiter: fldDelim, QuoteCharacter: quoteChar, QuoteEscapeCharacter: quoteEscChar, QuoteFields: quoteFields}
+
+		if quoteEscChar, isOK = selOpts.OutputSerOpts["csv"][quoteEscapeCharacterType]; isOK {
+			o.CSV.QuoteEscapeCharacter = quoteEscChar
+		}
+		if qf, isOK = selOpts.OutputSerOpts["csv"][quoteFieldType]; isOK {
+			o.CSV.QuoteFields = minio.CSVQuoteFields(qf)
+		}
 	}
 	// default to CSV output if options left unspecified
 	if o.CSV == nil && o.JSON == nil {
-		o.CSV = &minio.CSVOutputOptions{RecordDelimiter: defaultRecordDelimiter, FieldDelimiter: defaultFieldDelimiter}
+		if i.JSON != nil {
+			o.JSON = &minio.JSONOutputOptions{RecordDelimiter: "\n"}
+		} else {
+			o.CSV = &minio.CSVOutputOptions{RecordDelimiter: defaultRecordDelimiter, FieldDelimiter: defaultFieldDelimiter}
+		}
 	}
 	return o
 }
@@ -487,48 +484,35 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 		i.Parquet = &minio.ParquetInputOptions{}
 	}
 	if _, ok := selOpts.InputSerOpts["json"]; ok {
-		typ, _ = selOpts.InputSerOpts["json"][typeJSONType]
 		i.JSON = &minio.JSONInputOptions{}
-		if typ != "" {
+		if typ, _ = selOpts.InputSerOpts["json"][typeJSONType]; typ != "" {
 			i.JSON.Type = minio.JSONType(typ)
 		}
 	}
 	if _, ok := selOpts.InputSerOpts["csv"]; ok {
-		recDelim, isOK = selOpts.InputSerOpts["csv"][recordDelimiterType]
-		if !isOK {
-			recDelim = defaultRecordDelimiter
+		i.CSV = &minio.CSVInputOptions{RecordDelimiter: defaultRecordDelimiter}
+		if recDelim, isOK = selOpts.InputSerOpts["csv"][recordDelimiterType]; isOK {
+			i.CSV.RecordDelimiter = recDelim
 		}
-		fldDelim, isOK = selOpts.InputSerOpts["csv"][fieldDelimiterType]
-		if !isOK {
-			fldDelim = defaultFieldDelimiter
+		if fldDelim, isOK = selOpts.InputSerOpts["csv"][fieldDelimiterType]; isOK {
+			i.CSV.FieldDelimiter = fldDelim
 		}
-		quoteChar, isOK = selOpts.InputSerOpts["csv"][quoteCharacterType]
-		if !isOK {
-			quoteChar = defaultCSVQuoteCharacter
+		if quoteChar, isOK = selOpts.InputSerOpts["csv"][quoteCharacterType]; isOK {
+			i.CSV.QuoteCharacter = quoteChar
 		}
 
-		quoteEscChar, isOK = selOpts.OutputSerOpts["csv"][quoteEscapeCharacterType]
-		if !isOK {
-			quoteEscChar = defaultCSVQuoteEscapeCharacter
+		if quoteEscChar, isOK = selOpts.InputSerOpts["csv"][quoteEscapeCharacterType]; isOK {
+			i.CSV.QuoteEscapeCharacter = quoteEscChar
 		}
 		fileHeader, _ = selOpts.InputSerOpts["csv"][fileHeaderType]
-		commentChar, isOK = selOpts.InputSerOpts["csv"][commentCharType]
-		if !isOK {
-			commentChar = defaultCommentChar
+		i.CSV.FileHeaderInfo = minio.CSVFileHeaderInfo(fileHeader)
+		if commentChar, isOK = selOpts.InputSerOpts["csv"][commentCharType]; isOK {
+			i.CSV.Comments = commentChar
 		}
 		// needs to be added to minio-go
-		// qrd, isOK = selOpts.InputSerOpts["csv"][quotedRecordDelimiterType]
-		// if !isOK {
-		// 	qrd = false
+		// if qrd, isOK = selOpts.InputSerOpts["csv"][quotedRecordDelimiterType];isOK {
+		// 			i.CSV.QuotedRecordDelimiter = qrd
 		// }
-		i.CSV = &minio.CSVInputOptions{
-			RecordDelimiter:      recDelim,
-			FieldDelimiter:       fldDelim,
-			QuoteCharacter:       quoteChar,
-			QuoteEscapeCharacter: quoteEscChar,
-			Comments:             commentChar,
-			FileHeaderInfo:       minio.CSVFileHeaderInfo(fileHeader),
-		}
 	}
 	ext := filepath.Ext(object)
 	if i.CSV == nil && i.JSON == nil && i.Parquet == nil {
@@ -539,7 +523,7 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 				FileHeaderInfo:  minio.CSVFileHeaderInfoUse,
 			}
 		}
-		if strings.Contains(ext, "parquet") {
+		if strings.Contains(ext, "parquet") || strings.Contains(object, ".parquet") {
 			i.Parquet = &minio.ParquetInputOptions{}
 		}
 		if strings.Contains(ext, "json") {
@@ -560,7 +544,7 @@ func selectCompressionType(selOpts SelectObjectOpts, object string) minio.Select
 	if selOpts.CompressionType != "" {
 		return selOpts.CompressionType
 	}
-	if strings.Contains(ext, "parquet") {
+	if strings.Contains(ext, "parquet") || strings.Contains(object, ".parquet") {
 		return minio.SelectCompressionNONE
 	}
 	if origContentType != "" {
@@ -589,9 +573,8 @@ func (c *s3Client) Select(expression string, sse encrypt.ServerSide, selOpts Sel
 
 	bucket, object := c.url2BucketAndObject()
 
-	opts.OutputSerialization = selectObjectOutputOpts(selOpts)
 	opts.InputSerialization = selectObjectInputOpts(selOpts, object)
-
+	opts.OutputSerialization = selectObjectOutputOpts(selOpts, opts.InputSerialization)
 	reader, e := c.api.SelectObjectContent(context.Background(), bucket, object, opts)
 	if e != nil {
 		return nil, probe.NewError(e)

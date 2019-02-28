@@ -17,11 +17,16 @@
 package cmd
 
 import (
+	"bufio"
+	"compress/bzip2"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/minio/cli"
@@ -54,6 +59,10 @@ var (
 		cli.StringFlag{
 			Name:  "csv-output",
 			Usage: "csv output serialization option",
+		},
+		cli.StringFlag{
+			Name:  "csv-output-header",
+			Usage: "optional csv output header ",
 		},
 		cli.StringFlag{
 			Name:  "json-output",
@@ -103,7 +112,13 @@ EXAMPLES:
    5. Run a query on an object on Minio in gzip format using ; as field delimiter,
       newline as record delimiter and file header to be used 
       $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \ 
-               --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
+							 --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
+	
+   6. Run same query as in 5., but specify csv output headers. If --csv-output-headers is
+      specified as "", first row of csv is interpreted as header
+      $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
+                      --csv-output "rd=\n" --csv-output-header "device_id,uptime,lat,lon" \
+		       --query "select * from S3Object" myminio/iot-devices/data.csv
 
 `,
 }
@@ -238,11 +253,10 @@ func parseSerializationOpts(inp string, validKeys []string, validAbbrKeys map[st
 func getInputSerializationOpts(ctx *cli.Context) map[string]map[string]string {
 	icsv := ctx.String("csv-input")
 	ijson := ctx.String("json-input")
-	// iparquet := ctx.String("iparquet")
 	m := make(map[string]map[string]string)
 
-	csvType := (icsv != "")
-	jsonType := (ijson != "")
+	csvType := ctx.IsSet("csv-input")
+	jsonType := ctx.IsSet("json-input")
 	if csvType && jsonType {
 		fatalIf(errInvalidArgument(), "Only one of --csv-input or --json-input can be specified as input serialization option")
 	}
@@ -259,38 +273,35 @@ func getInputSerializationOpts(ctx *cli.Context) map[string]map[string]string {
 		fatalIf(err, "Invalid serialization option(s) specified for --json-input flag")
 		m["json"] = kv
 	}
-	// if iparquet != "" {
-	// 	m["parquet"] = map[string]string{}
-	// }
+
 	return m
 }
 
 // gets the output serialization opts from cli context and constructs a map of csv or json options
-func getOutputSerializationOpts(ctx *cli.Context) (opts map[string]map[string]string) {
+func getOutputSerializationOpts(ctx *cli.Context, csvHdrs []string) (opts map[string]map[string]string) {
 	m := make(map[string]map[string]string)
-	var csvType, jsonType bool
 
 	ocsv := ctx.String("csv-output")
 	ojson := ctx.String("json-output")
-	csvType = (ocsv != "")
-	jsonType = (ojson != "")
+	csvType := ctx.IsSet("csv-output")
+	jsonType := ctx.IsSet("json-output")
 
 	if csvType && jsonType {
 		fatalIf(errInvalidArgument(), "Only one of --csv-output, or --json-output can be specified as output serialization option")
 	}
 
-	if ocsv != "" {
+	if jsonType && len(csvHdrs) > 0 {
+		fatalIf(errInvalidArgument(), "--csv-output-header incompatible with --json-output option")
+	}
+
+	if csvType {
 		validKeys := append(validCSVCommonKeys, validJSONCSVCommonOutputKeys...)
 		kv, err := parseSerializationOpts(ocsv, append(validKeys, validCSVOutputKeys...), validCSVOutputAbbrKeys)
 		fatalIf(err, "Invalid value(s) specified for --csv-output flag")
 		m["csv"] = kv
 	}
-	// default to JSON format if no output option is specified
-	if ojson == "" && ocsv == "" {
-		ojson = "rd=\n"
-	}
 
-	if ojson != "" {
+	if jsonType {
 		kv, err := parseSerializationOpts(ojson, validJSONCSVCommonOutputKeys, validJSONOutputAbbrKeys)
 		fatalIf(err, "Invalid value(s) specified for --json-output flag")
 		m["json"] = kv
@@ -298,9 +309,69 @@ func getOutputSerializationOpts(ctx *cli.Context) (opts map[string]map[string]st
 	return m
 }
 
-func getSQLOpts(ctx *cli.Context) (s SelectObjectOpts) {
+// getCSVHeader fetches the first line of csv query object
+func getCSVHeader(sourceURL string, encKeyDB map[string][]prefixSSEPair) ([]string, *probe.Error) {
+	var r io.ReadCloser
+	switch sourceURL {
+	case "-":
+		r = os.Stdin
+	default:
+		var err *probe.Error
+		var metadata map[string]string
+		if r, metadata, err = getSourceStreamMetadataFromURL(sourceURL, encKeyDB); err != nil {
+			return nil, err.Trace(sourceURL)
+		}
+		ctype := metadata["Content-Type"]
+		if strings.Contains(ctype, "gzip") {
+			var e error
+			r, e = gzip.NewReader(r)
+			if e != nil {
+				return nil, probe.NewError(e)
+			}
+			defer r.Close()
+		} else if strings.Contains(ctype, "bzip") {
+			defer r.Close()
+			r = ioutil.NopCloser(bzip2.NewReader(r))
+		} else {
+			defer r.Close()
+		}
+	}
+	br := bufio.NewReader(r)
+	line, _, err := br.ReadLine()
+	if err != nil {
+		return nil, probe.NewError(err)
+	}
+	return strings.Split(string(line), ","), nil
+}
+
+// returns true if query is selectign all columns of the csv object
+func isSelectAll(query string) bool {
+	match, _ := regexp.MatchString("^\\s*?select\\s+?\\*\\s+?.*?$", query)
+	return match
+}
+
+// if csv-output-header is set to a comma delimited string use it, othjerwise attempt to get the header from
+// query object
+func getCSVOutputHeaders(ctx *cli.Context, url string, encKeyDB map[string][]prefixSSEPair, query string) (hdrs []string) {
+	if !ctx.IsSet("csv-output-header") {
+		return
+	}
+
+	hdrStr := ctx.String("csv-output-header")
+	if hdrStr == "" && isSelectAll(query) {
+		// attempt to get the first line of csv as header
+		if hdrs, err := getCSVHeader(url, encKeyDB); err == nil {
+			return hdrs
+		}
+	}
+	hdrs = strings.Split(hdrStr, ",")
+	return
+}
+
+// get the Select options for sql select API
+func getSQLOpts(ctx *cli.Context, csvHdrs []string) (s SelectObjectOpts) {
 	is := getInputSerializationOpts(ctx)
-	os := getOutputSerializationOpts(ctx)
+	os := getOutputSerializationOpts(ctx, csvHdrs)
 
 	return SelectObjectOpts{
 		InputSerOpts:  is,
@@ -308,7 +379,17 @@ func getSQLOpts(ctx *cli.Context) (s SelectObjectOpts) {
 	}
 }
 
-func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair, selOpts SelectObjectOpts) *probe.Error {
+func isCSVOrJSON(inOpts map[string]map[string]string) bool {
+	if _, ok := inOpts["csv"]; ok {
+		return true
+	}
+	if _, ok := inOpts["json"]; ok {
+		return true
+	}
+	return false
+}
+
+func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair, selOpts SelectObjectOpts, csvHdrs []string, writeHdr bool) *probe.Error {
 	alias, _, _, err := expandAlias(targetURL)
 	if err != nil {
 		return err.Trace(targetURL)
@@ -326,15 +407,28 @@ func sqlSelect(targetURL, expression string, encKeyDB map[string][]prefixSSEPair
 	}
 	defer outputer.Close()
 
+	// write csv header to stdout
+	if len(csvHdrs) > 0 && writeHdr {
+		fmt.Println(strings.Join(csvHdrs, ","))
+	}
 	_, e := io.Copy(os.Stdout, outputer)
 	return probe.NewError(e)
 }
 
 func validateOpts(selOpts SelectObjectOpts, url string) {
 	_, targetURL, _ := mustExpandAlias(url)
-	if strings.HasSuffix(targetURL, ".parquet") && (selOpts.InputSerOpts != nil || selOpts.OutputSerOpts != nil) {
+	if strings.HasSuffix(targetURL, ".parquet") && isCSVOrJSON(selOpts.InputSerOpts) {
 		fatalIf(errInvalidArgument(), "Input serialization flags --csv-input and --json-input cannot be used for object in .parquet format")
 	}
+}
+
+// validate args and optionally fetch the csv header of query object
+func getAndValidateArgs(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair, url string) (query string, csvHdrs []string, selOpts SelectObjectOpts) {
+	query = ctx.String("query")
+	csvHdrs = getCSVOutputHeaders(ctx, url, encKeyDB, query)
+	selOpts = getSQLOpts(ctx, csvHdrs)
+	validateOpts(selOpts, url)
+	return
 }
 
 // check sql input arguments.
@@ -346,6 +440,11 @@ func checkSQLSyntax(ctx *cli.Context) {
 
 // mainSQL is the main entry point for sql command.
 func mainSQL(ctx *cli.Context) error {
+	var (
+		csvHdrs []string
+		selOpts SelectObjectOpts
+		query   string
+	)
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(ctx)
 	fatalIf(err, "Unable to parse encryption keys.")
@@ -354,13 +453,14 @@ func mainSQL(ctx *cli.Context) error {
 	checkSQLSyntax(ctx)
 	// extract URLs.
 	URLs := ctx.Args()
-	query := ctx.String("query")
-	selOpts := getSQLOpts(ctx)
-
+	writeHdr := true
 	for _, url := range URLs {
 		if !isAliasURLDir(url, encKeyDB) {
-			validateOpts(selOpts, url)
-			errorIf(sqlSelect(url, query, encKeyDB, selOpts).Trace(url), "Unable to run sql")
+			if writeHdr {
+				query, csvHdrs, selOpts = getAndValidateArgs(ctx, encKeyDB, url)
+			}
+			errorIf(sqlSelect(url, query, encKeyDB, selOpts, csvHdrs, writeHdr).Trace(url), "Unable to run sql")
+			writeHdr = false
 			continue
 		}
 		targetAlias, targetURL, _ := mustExpandAlias(url)
@@ -375,12 +475,16 @@ func mainSQL(ctx *cli.Context) error {
 				errorIf(content.Err.Trace(url), "Unable to list on target `"+url+"`.")
 				continue
 			}
+			if writeHdr {
+				query, csvHdrs, selOpts = getAndValidateArgs(ctx, encKeyDB, targetAlias+content.URL.Path)
+			}
 			contentType := mimedb.TypeByExtension(filepath.Ext(content.URL.Path))
 			for _, cTypeSuffix := range supportedContentTypes {
 				if strings.Contains(contentType, cTypeSuffix) {
 					errorIf(sqlSelect(targetAlias+content.URL.Path, query,
-						encKeyDB, selOpts).Trace(content.URL.String()), "Unable to run sql")
+						encKeyDB, selOpts, csvHdrs, writeHdr).Trace(content.URL.String()), "Unable to run sql")
 				}
+				writeHdr = false
 			}
 		}
 	}
