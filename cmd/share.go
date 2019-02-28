@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -79,7 +79,7 @@ func (s shareMesssage) String() string {
 // JSON - JSONified message for scripting.
 func (s shareMesssage) JSON() string {
 	s.Status = "success"
-	shareMessageBytes, e := json.Marshal(s)
+	shareMessageBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Failed to marshal into JSON.")
 
 	// JSON encoding escapes ampersand into its unicode character

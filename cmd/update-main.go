@@ -19,7 +19,6 @@ package cmd
 import (
 	"crypto"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,6 +32,7 @@ import (
 	"github.com/inconshreveable/go-update"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	_ "github.com/minio/sha256-simd" // Needed for sha256 hash verifier.
 	"github.com/segmentio/go-prompt"
@@ -450,7 +450,7 @@ func (s updateMessage) String() string {
 
 // JSON jsonified make bucket message.
 func (s updateMessage) JSON() string {
-	updateJSONBytes, e := json.Marshal(s)
+	updateJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(updateJSONBytes)

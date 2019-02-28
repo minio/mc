@@ -17,11 +17,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -78,7 +78,7 @@ func (v versionMessage) String() string {
 // JSON'ified message for scripting.
 func (v versionMessage) JSON() string {
 	v.Status = "success"
-	msgBytes, e := json.Marshal(v)
+	msgBytes, e := json.MarshalIndent(v, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }

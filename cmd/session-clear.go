@@ -17,10 +17,9 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -82,7 +81,7 @@ func (c clearSessionMessage) String() string {
 
 // JSON jsonified clear session message.
 func (c clearSessionMessage) JSON() string {
-	clearSessionJSONBytes, e := json.Marshal(c)
+	clearSessionJSONBytes, e := json.MarshalIndent(c, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(clearSessionJSONBytes)

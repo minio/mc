@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -28,6 +27,7 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
@@ -299,7 +299,7 @@ func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
 		if err != nil {
 			return err
 		}
-		jsonBytes, err := json.Marshal(r)
+		jsonBytes, err := json.MarshalIndent(r, "", " ")
 		fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
 		console.Println(string(jsonBytes))
 	}
@@ -329,7 +329,7 @@ func (ui *uiData) printStatsJSON(s *madmin.HealTaskStatus) {
 	summary.Size = ui.BytesScanned
 	summary.ElapsedTime = int64(ui.HealDuration.Round(time.Second).Seconds())
 
-	jBytes, err := json.Marshal(summary)
+	jBytes, err := json.MarshalIndent(summary, "", " ")
 	fatalIf(probe.NewError(err), "Unable to marshal to JSON.")
 	console.Println(string(jBytes))
 }

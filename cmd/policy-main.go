@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/url"
 	"os"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -106,7 +106,7 @@ func (s policyRules) String() string {
 
 // JSON jsonified policy message.
 func (s policyRules) JSON() string {
-	policyJSONBytes, e := json.Marshal(s)
+	policyJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(policyJSONBytes)
 }
@@ -139,7 +139,7 @@ func (s policyMessage) String() string {
 
 // JSON jsonified policy message.
 func (s policyMessage) JSON() string {
-	policyJSONBytes, e := json.Marshal(s)
+	policyJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(policyJSONBytes)
@@ -158,7 +158,7 @@ func (s policyLinksMessage) String() string {
 
 // JSON jsonified policy message.
 func (s policyLinksMessage) JSON() string {
-	policyJSONBytes, e := json.Marshal(s)
+	policyJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(policyJSONBytes)

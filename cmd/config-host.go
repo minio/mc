@@ -17,9 +17,8 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -86,7 +85,7 @@ func (h hostMessage) String() string {
 // JSON jsonified host message
 func (h hostMessage) JSON() string {
 	h.Status = "success"
-	jsonMessageBytes, e := json.Marshal(h)
+	jsonMessageBytes, e := json.MarshalIndent(h, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(jsonMessageBytes)

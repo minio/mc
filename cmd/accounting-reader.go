@@ -17,12 +17,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/cheggaaa/pb"
+	"github.com/minio/mc/pkg/probe"
 )
 
 // accounter keeps tabs of ongoing data transfer information.
@@ -78,9 +80,18 @@ func (a *accounter) writer() {
 
 // accountStat cantainer for current stats captured.
 type accountStat struct {
-	Total       int64
-	Transferred int64
-	Speed       float64
+	Status      string  `json:"status"`
+	Total       int64   `json:"total"`
+	Transferred int64   `json:"transferred"`
+	Speed       float64 `json:"speed"`
+}
+
+func (c accountStat) JSON() string {
+	c.Status = "success"
+	accountMessageBytes, e := json.MarshalIndent(c, "", " ")
+	fatalIf(probe.NewError(e), "Failed to marshal account stat.")
+
+	return string(accountMessageBytes)
 }
 
 func (c accountStat) String() string {

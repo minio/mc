@@ -17,11 +17,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -79,7 +79,7 @@ type eventRemoveMessage struct {
 // JSON jsonified remove message.
 func (u eventRemoveMessage) JSON() string {
 	u.Status = "success"
-	eventRemoveMessageJSONBytes, e := json.Marshal(u)
+	eventRemoveMessageJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(eventRemoveMessageJSONBytes)
 }

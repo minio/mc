@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -134,7 +134,7 @@ func (r rmMessage) String() string {
 
 // JSON'ified message for scripting.
 func (r rmMessage) JSON() string {
-	msgBytes, e := json.Marshal(r)
+	msgBytes, e := json.MarshalIndent(r, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }

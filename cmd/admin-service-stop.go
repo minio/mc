@@ -17,10 +17,9 @@
 package cmd
 
 import (
-	"encoding/json"
-
 	"github.com/fatih/color"
 	"github.com/minio/cli"
+	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
@@ -61,7 +60,7 @@ func (s serviceStopMessage) String() string {
 
 // JSON jsonified make bucket message.
 func (s serviceStopMessage) JSON() string {
-	serviceStopJSONBytes, e := json.Marshal(s)
+	serviceStopJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(serviceStopJSONBytes)
