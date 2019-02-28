@@ -16,7 +16,7 @@ matrix:
       env:
         - ARCH=x86_64
         - GO111MODULE=on
-      go: 1.11.4
+      go: 1.11.5
       script:
         - diff -au <(gofmt -d *.go) <(printf "")
         - diff -au <(gofmt -d cmd) <(printf "")
@@ -28,7 +28,7 @@ matrix:
       env:
         - ARCH=x86_64
         - GO111MODULE=on
-      go: 1.11.4
+      go: 1.11.5
       script:
         - go build --ldflags="$(go run buildscripts/gen-ldflags.go)" -o %GOPATH%\bin\mc.exe
         - for d in $(go list ./...); do go test -v -mod=vendor -race "$d"; done

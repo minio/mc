@@ -1012,15 +1012,11 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) 
 	}
 
 	if object == "" {
-		exists, e := c.api.BucketExists(bucket)
-		if e != nil {
-			return nil, probe.NewError(e)
+		content, err := c.bucketStat(bucket)
+		if err != nil {
+			return nil, err.Trace(bucket)
 		}
-		if !exists {
-			return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
-		}
-		bucketMetadata := c.bucketStat()
-		return &bucketMetadata, nil
+		return content, nil
 	}
 
 	// The following code tries to calculate if a given prefix/object does really exist
@@ -1474,18 +1470,18 @@ func (c *s3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *client
 	var allBuckets bool
 	// List all buckets if bucket and object are empty.
 	if bucket == "" && object == "" {
-		var err error
+		var e error
 		allBuckets = true
-		buckets, err = c.api.ListBuckets()
-		if err != nil {
-			contentCh <- &clientContent{URL: *c.targetURL, Err: probe.NewError(err)}
+		buckets, e = c.api.ListBuckets()
+		if e != nil {
+			contentCh <- &clientContent{Err: probe.NewError(e)}
+			return
 		}
 	} else if object == "" {
 		// Get bucket stat if object is empty.
-		content := c.bucketStat()
-		cContent = &content
-		if content.Err != nil {
-			contentCh <- cContent
+		content, err := c.bucketStat(bucket)
+		if err != nil {
+			contentCh <- &clientContent{Err: err.Trace(bucket)}
 			return
 		}
 		buckets = append(buckets, minio.BucketInfo{Name: bucket, CreationDate: content.Time})
@@ -1495,7 +1491,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *client
 		content, perr := c.Stat(isIncomplete, false, nil)
 		cContent = content
 		if perr != nil {
-			contentCh <- &clientContent{URL: *c.targetURL, Err: perr}
+			contentCh <- &clientContent{Err: perr.Trace(bucket)}
 			return
 		}
 		buckets = append(buckets, minio.BucketInfo{Name: bucket, CreationDate: content.Time})
@@ -1553,21 +1549,15 @@ func (c *s3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 }
 
 // Returns bucket stat info of current bucket.
-func (c *s3Client) bucketStat() clientContent {
-	bucketName, _ := c.url2BucketAndObject()
-
-	buckets, err := c.api.ListBuckets()
-	if err != nil {
-		return clientContent{Err: probe.NewError(err)}
+func (c *s3Client) bucketStat(bucket string) (*clientContent, *probe.Error) {
+	exists, e := c.api.BucketExists(bucket)
+	if e != nil {
+		return nil, probe.NewError(e)
 	}
-
-	for _, bucket := range buckets {
-		if bucket.Name == bucketName {
-			return clientContent{URL: *c.targetURL, Time: bucket.CreationDate, Type: os.ModeDir}
-		}
+	if !exists {
+		return nil, probe.NewError(BucketDoesNotExist{Bucket: bucket})
 	}
-
-	return clientContent{Err: probe.NewError(BucketDoesNotExist{Bucket: bucketName})}
+	return &clientContent{URL: *c.targetURL, Time: time.Unix(0, 0), Type: os.ModeDir}, nil
 }
 
 // Recursively lists objects.
@@ -1618,18 +1608,18 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 	var allBuckets bool
 	// List all buckets if bucket and object are empty.
 	if bucket == "" && object == "" {
-		var err error
+		var e error
 		allBuckets = true
-		buckets, err = c.api.ListBuckets()
-		if err != nil {
-			contentCh <- &clientContent{URL: *c.targetURL, Err: probe.NewError(err)}
+		buckets, e = c.api.ListBuckets()
+		if e != nil {
+			contentCh <- &clientContent{Err: probe.NewError(e)}
+			return
 		}
 	} else if object == "" {
 		// Get bucket stat if object is empty.
-		content := c.bucketStat()
-		cContent = &content
-		if content.Err != nil {
-			contentCh <- cContent
+		content, err := c.bucketStat(bucket)
+		if err != nil {
+			contentCh <- &clientContent{Err: err.Trace(bucket)}
 			return
 		}
 		buckets = append(buckets, minio.BucketInfo{Name: bucket, CreationDate: content.Time})
@@ -1640,7 +1630,7 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 		content, perr := c.Stat(isIncomplete, isFetchMeta, nil)
 		cContent = content
 		if perr != nil {
-			contentCh <- &clientContent{URL: *c.targetURL, Err: perr}
+			contentCh <- &clientContent{Err: perr.Trace(bucket)}
 			return
 		}
 		buckets = append(buckets, minio.BucketInfo{Name: bucket, CreationDate: content.Time})
@@ -1692,23 +1682,12 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 			contentCh <- content
 		}
 	case b != "" && !strings.HasSuffix(c.targetURL.Path, string(c.targetURL.Separator)) && o == "":
-		buckets, e := c.api.ListBuckets()
-		if e != nil {
-			contentCh <- &clientContent{
-				Err: probe.NewError(e),
-			}
+		content, err := c.bucketStat(b)
+		if err != nil {
+			contentCh <- &clientContent{Err: err.Trace(b)}
+			return
 		}
-		for _, bucket := range buckets {
-			if bucket.Name == b {
-				content := &clientContent{}
-				content.URL = *c.targetURL
-				content.Size = 0
-				content.Time = bucket.CreationDate
-				content.Type = os.ModeDir
-				contentCh <- content
-				break
-			}
-		}
+		contentCh <- content
 	default:
 		isRecursive := false
 		for object := range c.listObjectWrapper(b, o, isRecursive, nil) {

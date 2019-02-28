@@ -14,7 +14,7 @@ checks:
 
 getdeps:
 	@GO111MODULE=on
-	@echo "Installing golint" && go get -u golang.org/x/lint/golint
+	@echo "Installing golint" && go get golang.org/x/lint/golint
 	@echo "Installing gocyclo" && go get -u github.com/fzipp/gocyclo
 	@echo "Installing misspell" && go get -u github.com/client9/misspell/cmd/misspell
 	@echo "Installing ineffassign" && go get -u github.com/gordonklaus/ineffassign
