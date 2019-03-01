@@ -12,6 +12,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/fatih/structs v0.0.0-20181010231757-878a968ab225 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/go-ini/ini v1.42.0 // indirect
 	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
@@ -29,7 +30,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/minio/cli v0.0.0-20170227073228-b8ae5507c0ce
 	github.com/minio/minio v0.0.0-20190206103305-fd4e15c11641
-	github.com/minio/minio-go v0.0.0-20190207005939-34f2b94c43ca
+	github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d
 	github.com/minio/sha256-simd v0.0.0-20190131020904-2d45a736cd16
 	github.com/minio/sio v0.0.0-20180327104954-6a41828a60f0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
@@ -55,7 +56,7 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1 // indirect
 	golang.org/x/crypto v0.0.0-20190131182504-b8fe1690c613
-	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006
+	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	golang.org/x/sys v0.0.0-20190204203706-41f3e6584952 // indirect
 	golang.org/x/text v0.3.0
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect

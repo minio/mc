@@ -88,6 +88,7 @@ type clientContent struct {
 	Type              os.FileMode
 	Metadata          map[string]string
 	ETag              string
+	Expires           time.Time
 	EncryptionHeaders map[string]string
 	Err               *probe.Error
 }

@@ -1081,6 +1081,7 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) 
 				objectMetadata.ETag = stat.ETag
 				objectMetadata.Metadata = stat.Metadata
 				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
+				objectMetadata.Expires = stat.Expires
 			}
 			return objectMetadata, nil
 		} else if objectStat.Key == object {
@@ -1090,6 +1091,7 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) 
 			objectMetadata.ETag = objectStat.ETag
 			objectMetadata.Type = os.FileMode(0664)
 			objectMetadata.Metadata = map[string]string{}
+			objectMetadata.Expires = objectStat.Expires
 			objectMetadata.EncryptionHeaders = map[string]string{}
 			if isFetchMeta {
 				stat, err := c.getObjectStat(bucket, object, opts)
@@ -1098,6 +1100,7 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) 
 				}
 				objectMetadata.Metadata = stat.Metadata
 				objectMetadata.EncryptionHeaders = stat.EncryptionHeaders
+				objectMetadata.Expires = stat.Expires
 			}
 			return objectMetadata, nil
 		}
@@ -1133,6 +1136,7 @@ func (c *s3Client) getObjectStat(bucket, object string, opts minio.StatObjectOpt
 	objectMetadata.Time = objectStat.LastModified
 	objectMetadata.Size = objectStat.Size
 	objectMetadata.ETag = objectStat.ETag
+	objectMetadata.Expires = objectStat.Expires
 	objectMetadata.Type = os.FileMode(0664)
 	objectMetadata.Metadata = map[string]string{}
 	objectMetadata.EncryptionHeaders = map[string]string{}
