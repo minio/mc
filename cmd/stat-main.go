@@ -121,12 +121,18 @@ func mainStat(ctx *cli.Context) error {
 
 	var cErr error
 	for _, targetURL := range args {
-		var clnt Client
-		clnt, err := newClient(targetURL)
-		fatalIf(err.Trace(targetURL), "Unable to initialize target `"+targetURL+"`.")
-
-		targetAlias, _, _ := mustExpandAlias(targetURL)
-		return doStat(clnt, isRecursive, targetAlias, targetURL, encKeyDB)
+		stats, err := statURL(targetURL, false, isRecursive, encKeyDB)
+		if err != nil {
+			fatalIf(err, "Unable to stat `"+targetURL+"`.")
+		}
+		for _, stat := range stats {
+			st := parseStat(stat)
+			if !globalJSON {
+				printStat(st)
+			} else {
+				console.Println(st.JSON())
+			}
+		}
 	}
 	return cErr
 
