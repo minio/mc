@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"hash/fnv"
 	"io"
 	"net"
@@ -33,7 +34,6 @@ import (
 	"sync"
 	"time"
 
-	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go"
@@ -983,7 +983,7 @@ func (c *s3Client) SetAccess(bucketPolicy string, isJSON bool) *probe.Error {
 		}
 		return nil
 	}
-	policyB, e := json.MarshalIndent(p, "", " ")
+	policyB, e := json.Marshal(p)
 	if e != nil {
 		return probe.NewError(e)
 	}
