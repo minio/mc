@@ -531,8 +531,8 @@ FLAGS:
   --incomplete, -I              remove incomplete uploads
   --fake                        perform a fake remove operation
   --stdin                       read object names from STDIN
-  --older-than value            remove objects older than N days (default: 0)
-  --newer-than value            remove objects newer than N days (default: 0)
+  --older-than value            remove objects older than L days, M hours and N minutes LNM[d|h|m]. (default: 0)
+  --newer-than value            remove objects newer than L days, M hours and N minutes LNM[d|h|m]. (default: 0)
   --encrypt-key value           encrypt/decrypt objects (using server-side encryption with customer provided keys)
   --help, -h                    show help
 
@@ -567,10 +567,10 @@ Removing `play/mybucket/otherobject.txt`.
 mc rm --incomplete play/mybucket/myobject.1gig
 Removing `play/mybucket/myobject.1gig`.
 ```
-*Example: Remove object and output a message only if the object is created older than one day. Otherwise, the command stays quiet and nothing is printed out.*
+*Example: Remove object and output a message only if the object is created older than 1 day, 2 hours and 30 minutes. Otherwise, the command stays quiet and nothing is printed out.*
 
 ```sh
-mc rm -r --force --older-than=1 myminio/mybucket
+mc rm -r --force --older-than 1d2h30m myminio/mybucket
 Removing `myminio/mybucket/dayOld1.txt`.
 Removing `myminio/mybucket/dayOld2.txt`.
 Removing `myminio/mybucket/dayOld3.txt`.
@@ -708,8 +708,8 @@ FLAGS:
   --exec value                  spawn an external process for each matching object (see FORMAT)
   --ignore value                exclude objects matching the wildcard pattern
   --name value                  find object names matching wildcard pattern
-  --newer value                 match all objects newer than specified time in units (see UNITS)
-  --older value                 match all objects older than specified time in units (see UNITS)
+  --newer value                 match all objects newer than specified time L days, M hours and N minutes
+  --older value                 match all objects older than specified time L days, M hours and N minutes
   --path value                  match directory names matching wildcard pattern
   --print value                 print in custom format to STDOUT (see FORMAT)
   --regex value                 match directory and object name with PCRE regex pattern

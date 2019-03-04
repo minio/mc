@@ -31,6 +31,7 @@ import (
 	"github.com/minio/minio-go/pkg/encrypt"
 
 	"github.com/minio/mc/pkg/console"
+	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"
 )
 
@@ -162,15 +163,27 @@ func lineTrunc(content string, maxLen int) string {
 }
 
 // isOlder returns true if the passed object is older than olderRef
-func isOlder(c *clientContent, olderRef int) bool {
-	objectAge := UTCNow().Sub(c.Time)
-	return objectAge < (time.Duration(olderRef) * Day)
+func isOlder(ti time.Time, olderRef string) bool {
+	objectAge := UTCNow().Sub(ti)
+	var e error
+	var olderThan time.Duration
+	if olderRef != "" {
+		olderThan, e = ioutils.ParseDurationTime(olderRef)
+		fatalIf(probe.NewError(e), "Unable to parse olderThan=`"+olderRef+"`.")
+	}
+	return objectAge < olderThan
 }
 
 // isNewer returns true if the passed object is newer than newerRef
-func isNewer(c *clientContent, newerRef int) bool {
-	objectAge := UTCNow().Sub(c.Time)
-	return objectAge > (time.Duration(newerRef) * Day)
+func isNewer(ti time.Time, newerRef string) bool {
+	objectAge := UTCNow().Sub(ti)
+	var e error
+	var newerThan time.Duration
+	if newerRef != "" {
+		newerThan, e = ioutils.ParseDurationTime(newerRef)
+		fatalIf(probe.NewError(e), "Unable to parse newerThan=`"+newerRef+"`.")
+	}
+	return objectAge >= newerThan
 }
 
 // getLookupType returns the minio.BucketLookupType for lookup

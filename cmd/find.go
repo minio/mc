@@ -396,11 +396,11 @@ func matchFind(ctx *findContext, fileContent contentMessage) (match bool) {
 	if match && ctx.regexPattern != "" {
 		match = regexMatch(ctx.regexPattern, path)
 	}
-	if match && !ctx.olderThan.IsZero() {
-		match = fileContent.Time.Before(ctx.olderThan)
+	if match && ctx.olderThan != "" {
+		match = !isOlder(fileContent.Time, ctx.olderThan)
 	}
-	if match && !ctx.newerThan.IsZero() {
-		match = fileContent.Time.After(ctx.newerThan) || fileContent.Time.Equal(ctx.newerThan)
+	if match && ctx.newerThan != "" {
+		match = !isNewer(fileContent.Time, ctx.newerThan)
 	}
 	if match && ctx.largerSize > 0 {
 		match = int64(ctx.largerSize) < fileContent.Size
@@ -409,43 +409,6 @@ func matchFind(ctx *findContext, fileContent contentMessage) (match bool) {
 		match = int64(ctx.smallerSize) > fileContent.Size
 	}
 	return match
-}
-
-// parseTime - parses input value into a corresponding time value in
-// time.Time by adding the input time duration to local UTC time.Now().
-func parseTime(duration string) (time.Time, *probe.Error) {
-	if duration == "" {
-		return time.Time{}, errInvalidArgument().Trace(duration)
-	}
-
-	conversion := map[string]int{
-		"d": 1,
-		"w": 7,
-		"m": 30,
-		"y": 365,
-	}
-
-	// Parse the incoming pattern if its exact number.
-	i, e := strconv.Atoi(duration)
-	if e != nil {
-		// If cant parse as regular string look for
-		// a conversion multiplier, either d,w,m,y.
-		p := duration[len(duration)-1:]
-		i, e = strconv.Atoi(duration[:len(duration)-1])
-		if e != nil {
-			// if we still cant parse, user input is invalid, return error.
-			return time.Time{}, probe.NewError(e)
-		}
-		i = i * conversion[strings.ToLower(p)]
-	}
-
-	now := UTCNow()
-
-	// Find all time in which the time in which the object was just created is after the current time
-	t := time.Date(now.Year(), now.Month(), now.Day()-i, now.Hour(), now.Minute(), 0, 0, time.UTC)
-
-	// if we reach this line, user has passed a valid alphanumeric string
-	return t, nil
 }
 
 // 7 days in seconds.

@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"strings"
-	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -43,12 +42,12 @@ var (
 			Usage: "find object names matching wildcard pattern",
 		},
 		cli.StringFlag{
-			Name:  "newer",
-			Usage: "match all objects newer than specified time in units (see UNITS)",
+			Name:  "newer-than",
+			Usage: "match all objects newer than L days, M hours and N minutes",
 		},
 		cli.StringFlag{
-			Name:  "older",
-			Usage: "match all objects older than specified time in units (see UNITS)",
+			Name:  "older-than",
+			Usage: "match all objects older than L days, M hours and N minutes",
 		},
 		cli.StringFlag{
 			Name:  "path",
@@ -103,10 +102,8 @@ UNITS
    units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
    also accepted. Without suffixes the unit is bytes.
 
-   --older, --newer flags accept the suffixes "d", "w", "m" and "y" to refer
-   to units of days, weeks, months and years respectively. With the standard
-   rate of conversion being 7 days in 1 week, 30 days in 1 month, and 365
-   days in one year.
+   --older-than, --newer-than flags accept the string for days, hours and minutes 
+   i.e. 1d2h30m states 1 day, 2 hours and 30 minutes.
 
 FORMAT
    Support string substitutions with special interpretations for following keywords.
@@ -147,9 +144,9 @@ EXAMPLES:
    08. Find all objects created in the last week under "s3/bucket".
        $ {{.HelpName}} s3/bucket --newer 1w
 
-   09. Find all objects which were created more than 6 months ago, and exclude the ones with ".jpg"
+   09. Find all objects which were created are older than 2 days, 5 hours and 10 minutes and exclude the ones with ".jpg"
        extension under "s3".
-       $ {{.HelpName}} s3 --older 6m --ignore "*.jpg"
+       $ {{.HelpName}} s3 --older-than 2d5h10m --ignore "*.jpg"
 
    10. List all objects up to 3 levels sub-directory deep under "s3/bucket".
        $ {{.HelpName}} s3/bucket --maxdepth 3
@@ -197,8 +194,8 @@ type findContext struct {
 	regexPattern  string
 	maxDepth      uint
 	printFmt      string
-	olderThan     time.Time
-	newerThan     time.Time
+	olderThan     string
+	newerThan     string
 	largerSize    uint64
 	smallerSize   uint64
 	watch         bool
@@ -232,15 +229,13 @@ func mainFind(ctx *cli.Context) error {
 	clnt, err := newClient(args[0])
 	fatalIf(err.Trace(args...), "Unable to initialize `"+args[0]+"`.")
 
-	var olderThan, newerThan time.Time
+	var olderThan, newerThan string
 
-	if ctx.String("older") != "" {
-		olderThan, err = parseTime(ctx.String("older"))
-		fatalIf(err.Trace(ctx.String("older")), "Unable to parse input time.")
+	if ctx.String("older-than") != "" {
+		olderThan = ctx.String("older-than")
 	}
-	if ctx.String("newer") != "" {
-		newerThan, err = parseTime(ctx.String("newer"))
-		fatalIf(err.Trace(ctx.String("newer")), "Unable to parse input time.")
+	if ctx.String("newer-than") != "" {
+		newerThan = ctx.String("newer-than")
 	}
 
 	// Use 'e' to indicate Go error, this is a convention followed in `mc`. For probe.Error we call it

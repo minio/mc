@@ -71,13 +71,13 @@ var (
 			Name:  "exclude",
 			Usage: "exclude object(s) that match specified object name pattern",
 		},
-		cli.IntFlag{
+		cli.StringFlag{
 			Name:  "older-than",
-			Usage: "filter object(s) older than N days",
+			Usage: "filter object(s) older than L days, M hours and N minutes",
 		},
-		cli.IntFlag{
+		cli.StringFlag{
 			Name:  "newer-than",
-			Usage: "filter object(s) newer than N days",
+			Usage: "filter object(s) newer than L days, M hours and N minutes",
 		},
 		cli.StringFlag{
 			Name:  "storage-class, sc",
@@ -117,8 +117,8 @@ EXAMPLES:
    2. Mirror a local folder recursively to Amazon S3 cloud storage.
       $ {{.HelpName}} backup/ s3/archive
 
-   3. Only mirror files that are newer than 7 days to Amazon S3 cloud storage.
-      $ {{.HelpName}} --newer-than 7 backup/ s3/archive
+   3. Only mirror files that are newer than 7 days, 10 hours and 30 minutes to Amazon S3 cloud storage.
+      $ {{.HelpName}} --newer-than "7d10h30m" backup/ s3/archive
 
    4. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
       $ {{.HelpName}} s3\documents\2014\ C:\backup\2014
@@ -139,10 +139,10 @@ EXAMPLES:
       $ {{.HelpName}} --exclude ".*" --exclude "*.temp" s3/test ~/test
 
    9. Mirror objects newer than 10 days from bucket test to a local folder.
-      $ {{.HelpName}} --newer-than=10 s3/test ~/localfolder
+      $ {{.HelpName}} --newer-than 10d s3/test ~/localfolder
 
   10. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
-      $ {{.HelpName}} --older-than=30 s3/test ~/test
+      $ {{.HelpName}} --older-than 30d s3/test ~/test
 
   11. Mirror server encrypted objects from Minio cloud storage to a bucket on Amazon S3 cloud storage
       $ {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
@@ -185,7 +185,7 @@ type mirrorJob struct {
 	targetURL string
 
 	isFake, isRemove, isOverwrite, isWatch bool
-	olderThan, newerThan                   int
+	olderThan, newerThan                   string
 	storageClass                           string
 
 	excludeOptions []string
@@ -522,16 +522,12 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 			}
 
 			if sURLs.SourceContent != nil {
-				// Skip objects older than --older-than parameter if specified
-				if mj.olderThan > 0 && isOlder(sURLs.SourceContent, mj.olderThan) {
+				if mj.olderThan != "" && isOlder(sURLs.SourceContent.Time, mj.olderThan) {
 					continue
 				}
-
-				// Skip objects newer than --newer-than parameter if specified
-				if mj.newerThan > 0 && isNewer(sURLs.SourceContent, mj.newerThan) {
+				if mj.newerThan != "" && isNewer(sURLs.SourceContent.Time, mj.newerThan) {
 					continue
 				}
-
 				// copy
 				totalBytes += sURLs.SourceContent.Size
 			}
@@ -614,7 +610,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	}
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan int, storageClass string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan string, storageClass string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
 	mj := mirrorJob{
 		trapCh: signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
 		m:      new(sync.Mutex),
@@ -691,8 +687,8 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		isOverwrite,
 		ctx.Bool("watch"),
 		ctx.StringSlice("exclude"),
-		ctx.Int("older-than"),
-		ctx.Int("newer-than"),
+		ctx.String("older-than"),
+		ctx.String("newer-than"),
 		ctx.String("storage-class"),
 		encKeyDB)
 
