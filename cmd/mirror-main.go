@@ -168,10 +168,6 @@ type mirrorJob struct {
 	// Hold operation status information
 	status Status
 
-	// waitgroup for status goroutine, waits till all status
-	// messages have been written and received
-	wgStatus *sync.WaitGroup
-
 	queueCh  chan func() URLs
 	parallel *ParallelManager
 
@@ -289,58 +285,50 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 	return uploadSourceToTargetURL(ctx, sURLs, mj.status, mj.encKeyDB)
 }
 
-// Go routine to update progress status
-func (mj *mirrorJob) startStatus() {
-	mj.wgStatus.Add(1)
+// Update progress status
+func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
+	// now we want to start the progress bar
+	mj.status.Start()
+	defer mj.status.Finish()
 
-	// wait for status messages on statusChan, show error messages
-	go func() {
-		// now we want to start the progress bar
-		mj.status.Start()
-		defer mj.wgStatus.Done()
-
-		for sURLs := range mj.statusCh {
-			if sURLs.Error != nil {
-				// Print in new line and adjust to top so that we
-				// don't print over the ongoing progress bar.
-				if sURLs.SourceContent != nil {
-					if !isErrIgnored(sURLs.Error) {
-						errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
-							fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
-					}
-				} else {
-					// When sURLs.SourceContent is nil, we know that we have an error related to removing
-					errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
-						fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
+	for sURLs := range mj.statusCh {
+		if sURLs.Error != nil {
+			switch {
+			case sURLs.SourceContent != nil:
+				if !isErrIgnored(sURLs.Error) {
+					errorIf(sURLs.Error.Trace(sURLs.SourceContent.URL.String()),
+						fmt.Sprintf("Failed to copy `%s`.", sURLs.SourceContent.URL.String()))
+					errDuringMirror = true
 				}
-			}
-
-			if sURLs.SourceContent != nil {
-			} else if sURLs.TargetContent != nil {
-				// Construct user facing message and path.
-				targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
-				size := sURLs.TargetContent.Size
-				mj.status.PrintMsg(rmMessage{Key: targetPath, Size: size})
+			case sURLs.TargetContent != nil:
+				// When sURLs.SourceContent is nil, we know that we have an error related to removing
+				errorIf(sURLs.Error.Trace(sURLs.TargetContent.URL.String()),
+					fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
+				errDuringMirror = true
+			default:
+				errorIf(sURLs.Error.Trace(), "Failed to perform mirroring action.")
+				errDuringMirror = true
 			}
 		}
-	}()
-}
 
-// Stop status go routine, further updates could lead to a crash
-func (mj *mirrorJob) stopStatus() {
-	close(mj.statusCh)
-	mj.wgStatus.Wait()
-	mj.status.Finish()
+		if sURLs.SourceContent != nil {
+		} else if sURLs.TargetContent != nil {
+			// Construct user facing message and path.
+			targetPath := filepath.ToSlash(filepath.Join(sURLs.TargetAlias, sURLs.TargetContent.URL.Path))
+			size := sURLs.TargetContent.Size
+			mj.status.PrintMsg(rmMessage{Key: targetPath, Size: size})
+		}
+	}
+
+	return
 }
 
 // this goroutine will watch for notifications, and add modified objects to the queue
-func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.CancelFunc, errCh chan<- *probe.Error) {
+func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.CancelFunc) {
 	for {
 		select {
 		case event, ok := <-mj.watcher.Events():
 			if !ok {
-				errCh <- nil
-				// channel closed
 				return
 			}
 
@@ -471,13 +459,11 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			switch err.ToGoError().(type) {
 			case APINotImplemented:
 				errorIf(err.Trace(), "Unable to Watch on source, ignoring.")
-				// Watch is perhaps not implemented, log and ignore the error.
-				err = nil
+				return
 			}
-			errCh <- err
+			mj.statusCh <- URLs{Error: err}
 			return
 		case <-mj.trapCh:
-			errCh <- nil
 			return
 		}
 	}
@@ -496,7 +482,7 @@ func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {
 }
 
 // Fetch urls that need to be mirrored
-func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.CancelFunc, errCh chan<- *probe.Error) {
+func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.CancelFunc) {
 	var totalBytes int64
 	var totalObjects int64
 
@@ -512,12 +498,11 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 		case sURLs, ok := <-URLsCh:
 			if !ok {
 				stopParallel()
-				errCh <- nil
 				return
 			}
 			if sURLs.Error != nil {
 				stopParallel()
-				errCh <- sURLs.Error
+				mj.statusCh <- sURLs
 				return
 			}
 
@@ -554,60 +539,39 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 		case <-mj.trapCh:
 			stopParallel()
 			cancelMirror()
-			errCh <- nil
 			return
 		}
 	}
 }
 
 // when using a struct for copying, we could save a lot of passing of variables
-func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc) *probe.Error {
-	// start the status go routine
-	mj.startStatus()
+func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc) bool {
 
-	watchErrCh := make(chan *probe.Error)
-	mirrorErrCh := make(chan *probe.Error)
+	var wg sync.WaitGroup
 
 	// Starts watcher loop for watching for new events.
 	if mj.isWatch {
-		go mj.watchMirror(ctx, cancelMirror, watchErrCh)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mj.watchMirror(ctx, cancelMirror)
+		}()
 	}
 
 	// Start mirroring.
-	go mj.startMirror(ctx, cancelMirror, mirrorErrCh)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mj.startMirror(ctx, cancelMirror)
+	}()
 
-	// Wait until all progress bar updates are actually shown and quit.
-	defer mj.stopStatus()
+	// Close statusCh when both watch & mirror quits
+	go func() {
+		wg.Wait()
+		close(mj.statusCh)
+	}()
 
-	var err *probe.Error
-	var ok bool
-	for {
-		select {
-		case err, ok = <-mirrorErrCh:
-			if !ok || err == nil {
-				if mj.isWatch {
-					continue
-				}
-				return nil
-			}
-		case err, ok = <-watchErrCh:
-			if !ok || err == nil {
-				return nil
-			}
-		}
-		if err != nil {
-			switch err.ToGoError().(type) {
-			case BrokenSymlink, TooManyLevelsSymlink, PathNotFound,
-				PathInsufficientPermission, ObjectOnGlacier:
-				errorIf(err, "Unable to perform a mirror action.")
-				continue
-			case overwriteNotAllowedErr:
-				errorIf(err, "Unable to perform a mirror action.")
-				continue
-			}
-			return err.Trace()
-		}
-	}
+	return mj.monitorMirrorStatus()
 }
 
 func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan string, storageClass string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
@@ -628,7 +592,6 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch 
 		storageClass:   storageClass,
 		encKeyDB:       encKeyDB,
 		statusCh:       make(chan URLs),
-		wgStatus:       new(sync.WaitGroup),
 		watcher:        NewWatcher(UTCNow()),
 	}
 
@@ -672,7 +635,7 @@ func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 }
 
 // runMirror - mirrors all buckets to another S3 server
-func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) *probe.Error {
+func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) bool {
 	// This is kept for backward compatibility, `--force` means
 	// --overwrite.
 	isOverwrite := ctx.Bool("force")
@@ -779,8 +742,7 @@ func mainMirror(ctx *cli.Context) error {
 	srcURL := args[0]
 	tgtURL := args[1]
 
-	if err := runMirror(srcURL, tgtURL, ctx, encKeyDB); err != nil {
-		errorIf(err.Trace(srcURL, tgtURL), "Unable to mirror.")
+	if errorDetected := runMirror(srcURL, tgtURL, ctx, encKeyDB); errorDetected {
 		return exitStatus(globalErrorExitStatus)
 	}
 
