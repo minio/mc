@@ -257,7 +257,7 @@ function setup()
 function teardown()
 {
     start_time=$(get_time)
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${BUCKET_NAME}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${BUCKET_NAME}"
 }
 
 function test_put_object()

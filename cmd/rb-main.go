@@ -94,12 +94,11 @@ func checkRbSyntax(ctx *cli.Context) {
 }
 
 // deletes a bucket and all its contents
-func deleteBucket(url string) error {
+func deleteBucket(url string) *probe.Error {
 	targetAlias, targetURL, _ := mustExpandAlias(url)
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
-		return exitStatus(globalErrorExitStatus) // End of journey.
+		return pErr
 	}
 	var isIncomplete bool
 	isRemoveBucket := true
@@ -108,14 +107,14 @@ func deleteBucket(url string) error {
 
 	for content := range clnt.List(true, false, DirLast) {
 		if content.Err != nil {
-			errorIf(content.Err.Trace(url), "Failed to remove `"+url+"`.")
 			switch content.Err.ToGoError().(type) {
 			case PathInsufficientPermission:
+				errorIf(content.Err.Trace(url), "Failed to remove `"+url+"`.")
 				// Ignore Permission error.
 				continue
 			}
 			close(contentCh)
-			return exitStatus(globalErrorExitStatus)
+			return content.Err
 		}
 		urlString := content.URL.Path
 
@@ -125,27 +124,31 @@ func deleteBucket(url string) error {
 			case contentCh <- content:
 				sent = true
 			case pErr := <-errorCh:
-				errorIf(pErr.Trace(urlString), "Failed to remove `"+urlString+"`.")
 				switch pErr.ToGoError().(type) {
 				case PathInsufficientPermission:
+					errorIf(pErr.Trace(urlString), "Failed to remove `"+urlString+"`.")
 					// Ignore Permission error.
 					continue
 				}
 				close(contentCh)
-				return exitStatus(globalErrorExitStatus)
+				return pErr
 			}
 		}
 	}
 
+	// Remove the given url since the user will always want to remove it.
+	contentCh <- &clientContent{URL: *newClientURL(targetURL)}
+
+	// Finish removing and print all the remaining errors
 	close(contentCh)
 	for pErr := range errorCh {
-		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		switch pErr.ToGoError().(type) {
 		case PathInsufficientPermission:
+			errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 			// Ignore Permission error.
 			continue
 		}
-		return exitStatus(globalErrorExitStatus)
+		return pErr
 	}
 	return nil
 }
@@ -182,6 +185,17 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			cErr = exitStatus(globalErrorExitStatus)
 			continue
 		}
+		_, err = clnt.Stat(false, false, nil)
+		if err != nil {
+			switch err.ToGoError().(type) {
+			case BucketNameEmpty:
+			default:
+				errorIf(err.Trace(targetURL), "Unable to validate target `"+targetURL+"`.")
+				cErr = exitStatus(globalErrorExitStatus)
+				continue
+
+			}
+		}
 		isEmpty := true
 		for range clnt.List(true, false, DirNone) {
 			isEmpty = false
@@ -202,7 +216,8 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			// Successfully removed a bucket.
 			printMsg(removeBucketMessage{Status: "success", Bucket: targetURL})
 		} else {
-			errorIf(probe.NewError(e), `"+targetURL+"`+"could not be removed.")
+			errorIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
+			cErr = exitStatus(globalErrorExitStatus)
 		}
 
 	}
