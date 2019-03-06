@@ -495,7 +495,7 @@ function test_mirror_list_objects_storage_class()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
-## Tests find command with --older set to 1day, should be empty.
+## Tests find command with --older-than set to 1day, should be empty.
 function test_find_empty() {
     show "${FUNCNAME[0]}"
 
@@ -504,8 +504,8 @@ function test_find_empty() {
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
 
-    # find --older 1 day should be empty, so we compare with empty string.
-    diff -bB <(echo "") <("${MC_CMD[@]}" --json find "${SERVER_ALIAS}/${bucket_name}" --older 1d | jq -r .key | sed "s/${SERVER_ALIAS}\/${bucket_name}\///g") >/dev/null 2>&1
+    # find --older-than 1 day should be empty, so we compare with empty string.
+    diff -bB <(echo "") <("${MC_CMD[@]}" --json find "${SERVER_ALIAS}/${bucket_name}" --older-than 1d | jq -r .key | sed "s/${SERVER_ALIAS}\/${bucket_name}\///g") >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
