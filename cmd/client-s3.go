@@ -792,6 +792,13 @@ func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 		for content := range contentCh {
 			// Convert content.URL.Path to objectName for objectsCh.
 			bucket, objectName := c.splitPath(content.URL.Path)
+
+			// We don't treat path when bucket is
+			// empty, just skip it when it happens.
+			if bucket == "" {
+				continue
+			}
+
 			// Init objectsCh the first time.
 			if prevBucket == "" {
 				objectsCh = make(chan string)
@@ -858,7 +865,7 @@ func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 			}
 		}
 		// Remove last bucket if it qualifies.
-		if isRemoveBucket && !isIncomplete {
+		if isRemoveBucket && prevBucket != "" && !isIncomplete {
 			if err := c.api.RemoveBucket(prevBucket); err != nil {
 				errorCh <- probe.NewError(err)
 			}
