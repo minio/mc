@@ -32,6 +32,10 @@ var (
 			Name:  "force",
 			Usage: "allow a recursive remove operation",
 		},
+		cli.BoolFlag{
+			Name:  "dangerous",
+			Usage: "allow site-wide removal of objects",
+		},
 	}
 )
 
@@ -62,7 +66,7 @@ EXAMPLES:
       $ {{.HelpName}} --force s3/jazz-songs
 
    4. Remove all buckets and objects recursively from S3 host
-      $ {{.HelpName}} --force s3
+      $ {{.HelpName}} --force --dangerous s3
 `,
 }
 
@@ -90,6 +94,19 @@ func checkRbSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
 		exitCode := 1
 		cli.ShowCommandHelpAndExit(ctx, "rb", exitCode)
+	}
+	// Set command flags from context.
+	isForce := ctx.Bool("force")
+	isDangerous := ctx.Bool("dangerous")
+
+	for _, url := range ctx.Args() {
+		if isNamespaceRemoval(url) {
+			if isForce && isDangerous {
+				continue
+			}
+			fatalIf(errDummy().Trace(),
+				"This operation results in **site-wide** removal of buckets. If you are really sure, retry this command with ‘--force’ and ‘--dangerous’ flags.")
+		}
 	}
 }
 
@@ -171,9 +188,9 @@ func isNamespaceRemoval(url string) bool {
 func mainRemoveBucket(ctx *cli.Context) error {
 	// check 'rb' cli arguments.
 	checkRbSyntax(ctx)
-	// Set command flags from context.
 	isForce := ctx.Bool("force")
-	// Additional command speific theme customization.
+
+	// Additional command specific theme customization.
 	console.SetColor("RemoveBucket", color.New(color.FgGreen, color.Bold))
 
 	var cErr error
@@ -202,14 +219,8 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			break
 		}
 		// For all recursive operations make sure to check for 'force' flag.
-		if !isForce {
-			if isNamespaceRemoval(targetURL) {
-				fatalIf(errDummy().Trace(),
-					"This operation results in **site-wide** removal of buckets. If you are really sure, retry this command with ‘--force’ flags.")
-			}
-			if !isEmpty {
-				fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
-			}
+		if !isForce && !isEmpty {
+			fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
 		}
 		e := deleteBucket(targetURL)
 		if e == nil {
