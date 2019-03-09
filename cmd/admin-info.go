@@ -19,6 +19,8 @@ package cmd
 import (
 	"fmt"
 	"net/url"
+	"sort"
+	"strings"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -120,49 +122,71 @@ func (u infoMessage) String() (msg string) {
 
 	// When service is offline
 	if u.Service == "off" {
-		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), u.Addr)
-		msg += fmt.Sprintf("   Uptime : Server is %s", console.Colorize("InfoFail", "offline"))
+		msg += fmt.Sprintf("%s  %s\n", dot, console.Colorize("PrintB", u.Addr))
+		msg += fmt.Sprintf("  Status : %s", console.Colorize("InfoFail", "offline"))
 		return
 	}
 
 	// Print error if any and exit
 	if u.Err != "" {
-		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), u.Addr)
-		msg += fmt.Sprintf("   Uptime : Server is %s\n", console.Colorize("InfoFail", "offline"))
-		msg += fmt.Sprintf("    Error : %s", u.Err)
+		msg += fmt.Sprintf("%s  %s\n", dot, console.Colorize("PrintB", u.Addr))
+		msg += fmt.Sprintf("   Status : %s\n", console.Colorize("InfoFail", "offline"))
+		e := u.Err
+		if strings.Trim(e, " ") == "rpc: retry error" {
+			e = "unreachable"
+		}
+		msg += fmt.Sprintf("    Error : %s", console.Colorize("InfoFail", e))
 		return
 	}
 
 	// Print server title
-	msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), u.Addr)
+	msg += fmt.Sprintf("%s  %s\n", dot, console.Colorize("PrintB", u.Addr))
 
-	// Print server information
+	// Status
+	msg += fmt.Sprintf("   Status : %s\n", console.Colorize("Info", "online"))
 
 	// Uptime
-	msg += fmt.Sprintf("   Uptime : %s since %s\n", console.Colorize("Info", "online"),
-		humanize.Time(time.Now().UTC().Add(-u.ServerInfo.Properties.Uptime)))
+	msg += fmt.Sprintf("   Uptime : %s\n", humanize.RelTime(time.Now(), time.Now().Add(-u.ServerInfo.Properties.Uptime), "", ""))
 	// Version
-	msg += fmt.Sprintf("  Version : %s\n", u.ServerInfo.Properties.Version)
+	version := u.ServerInfo.Properties.Version
+	if u.ServerInfo.Properties.Version == "DEVELOPMENT.GOGET" {
+		version = "<development>"
+	}
+	msg += fmt.Sprintf("  Version : %s\n", version)
 	// Region
-	msg += fmt.Sprintf("   Region : %s\n", u.ServerInfo.Properties.Region)
+	if u.ServerInfo.Properties.Region != "" {
+		msg += fmt.Sprintf("   Region : %s\n", u.ServerInfo.Properties.Region)
+	}
 	// ARNs
 	sqsARNs := ""
 	for _, v := range u.ServerInfo.Properties.SQSARN {
 		sqsARNs += fmt.Sprintf("%s ", v)
 	}
-	if sqsARNs == "" {
-		sqsARNs = "<none>"
+	if sqsARNs != "" {
+		msg += fmt.Sprintf(" SQS ARNs : %s\n", sqsARNs)
 	}
-	msg += fmt.Sprintf(" SQS ARNs : %s\n", sqsARNs)
+
 	// Incoming/outgoing
-	msg += fmt.Sprintf("    Stats : Incoming %s, Outgoing %s\n",
-		humanize.IBytes(u.ServerInfo.ConnStats.TotalInputBytes),
-		humanize.IBytes(u.ServerInfo.ConnStats.TotalOutputBytes))
-	// Get storage information
 	msg += fmt.Sprintf("  Storage : Used %s", humanize.IBytes(u.StorageInfo.Used))
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
-		msg += fmt.Sprintf("\n    Disks : %s, %s\n", console.Colorize("Info", v.OnlineDisks),
-			console.Colorize("InfoFail", v.OfflineDisks))
+		upBackends := 0
+		downBackends := 0
+		for _, s := range v.Sets {
+			for _, s := range s {
+				if strings.Contains(s.Endpoint, u.Addr) {
+					if s.State == "ok" {
+						upBackends++
+					} else {
+						downBackends++
+					}
+				}
+			}
+		}
+		upBackendsString := fmt.Sprintf("%d", upBackends)
+		if downBackends != 0 {
+			upBackendsString = console.Colorize("InfoFail", fmt.Sprintf("%d", upBackends))
+		}
+		msg += fmt.Sprintf("\n   Drives : %s/%d OK\n", upBackendsString, upBackends+downBackends)
 	}
 	return
 }
@@ -220,10 +244,11 @@ func mainAdminInfo(ctx *cli.Context) error {
 	// If the error is not nil and not unrecognizable, just print it and exit
 	fatalIf(probe.NewError(e), "Cannot get service status.")
 
+	infoMessages := []infoMessage{}
 	for _, serverInfo := range serversInfo {
 		// Print the error if exists and jump to the next server
 		if serverInfo.Error != "" {
-			printMsg(infoMessage{
+			infoMessages = append(infoMessages, infoMessage{
 				Service: "on",
 				Addr:    serverInfo.Addr,
 				Err:     serverInfo.Error,
@@ -253,7 +278,7 @@ func mainAdminInfo(ctx *cli.Context) error {
 			}
 		}
 
-		printMsg(infoMessage{
+		infoMessages = append(infoMessages, (infoMessage{
 			Service: "on",
 			Addr:    serverInfo.Addr,
 			Err:     serverInfo.Error,
@@ -262,9 +287,36 @@ func mainAdminInfo(ctx *cli.Context) error {
 				ConnStats:   serverInfo.Data.ConnStats,
 				Properties:  serverInfo.Data.Properties,
 			},
-		})
+		}))
 
 	}
 
+	sort.Stable(&sortInfoWrapper{infoMessages})
+	for _, s := range infoMessages {
+		printMsg(s)
+	}
+
 	return nil
+}
+
+type sortInfoWrapper struct {
+	infos []infoMessage
+}
+
+func (s *sortInfoWrapper) Len() int {
+	return len(s.infos)
+}
+
+func (s *sortInfoWrapper) Swap(i, j int) {
+	if s.infos != nil {
+		s.infos[i], s.infos[j] = s.infos[j], s.infos[i]
+	}
+}
+
+func (s *sortInfoWrapper) Less(i, j int) bool {
+	if s.infos != nil {
+		return s.infos[i].Addr < s.infos[j].Addr
+	}
+	return false
+
 }
