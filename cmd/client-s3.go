@@ -901,6 +901,10 @@ func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 			// Convert content.URL.Path to objectName for objectsCh.
 			bucket, objectName := c.splitPath(content.URL.Path)
 
+			if objectName == "" && !isRemoveBucket {
+				errorCh <- probe.NewError(ObjectMissing{})
+			}
+
 			// We don't treat path when bucket is
 			// empty, just skip it when it happens.
 			if bucket == "" {

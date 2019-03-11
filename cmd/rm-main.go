@@ -221,6 +221,8 @@ func removeSingle(url string, isIncomplete bool, isFake bool, olderThan, newerTh
 			if pErr != nil {
 				errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 				switch pErr.ToGoError().(type) {
+				case ObjectMissing:
+					continue
 				case PathInsufficientPermission:
 					// Ignore Permission error.
 					continue

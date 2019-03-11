@@ -191,3 +191,12 @@ type SameFile struct {
 func (e SameFile) Error() string {
 	return fmt.Sprintf("'%s' and '%s' are the same file", e.Source, e.Destination)
 }
+
+// ObjectNameEmptyInRemove - Object name is empty in remove
+type ObjectNameEmptyInRemove struct {
+	bucket string
+}
+
+func (e ObjectNameEmptyInRemove) Error() string {
+	return "rm expects an object name or ---recursive option to clean up the whole bucket content"
+}
