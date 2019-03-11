@@ -99,7 +99,7 @@ var errInvalidTarget = func(URL string) *probe.Error {
 type targetNotFoundErr error
 
 var errTargetNotFound = func(URL string) *probe.Error {
-	msg := "Target `" + URL + "` not found."
+	msg := "Target `" + URL + "` not found, `rm` expects an object name or ---recursive option to clean up the whole bucket content"
 	return probe.NewError(targetNotFoundErr(errors.New(msg))).Untrace()
 }
 

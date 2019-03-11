@@ -233,7 +233,7 @@ function test_make_bucket()
     start_time=$(get_time)
     bucket_name="mc-test-bucket-$RANDOM"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
