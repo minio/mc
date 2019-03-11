@@ -18,7 +18,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -78,7 +80,7 @@ type removeBucketMessage struct {
 
 // String colorized delete bucket message.
 func (s removeBucketMessage) String() string {
-	return console.Colorize("RemoveBucket", "Bucket removed successfully `"+s.Bucket+"`.")
+	return console.Colorize("RemoveBucket", fmt.Sprintf("Removed `%s` successfully.", s.Bucket))
 }
 
 // JSON jsonified remove bucket message.
@@ -151,10 +153,21 @@ func deleteBucket(url string) *probe.Error {
 				return pErr
 			}
 		}
+		// list internally mimics recursive directory listing of object prefixes for s3 similar to FS.
+		// The rmMessage needs to be printed only for actual buckets being deleted and not objects.
+		tgt := strings.TrimPrefix(urlString, string(filepath.Separator))
+		if !strings.Contains(tgt, string(filepath.Separator)) && tgt != targetAlias {
+			printMsg(removeBucketMessage{
+				Bucket: targetAlias + urlString, Status: "success",
+			})
+		}
 	}
 
 	// Remove the given url since the user will always want to remove it.
-	contentCh <- &clientContent{URL: *newClientURL(targetURL)}
+	alias, _ := url2Alias(targetURL)
+	if alias != "" {
+		contentCh <- &clientContent{URL: *newClientURL(targetURL)}
+	}
 
 	// Finish removing and print all the remaining errors
 	close(contentCh)
@@ -223,14 +236,7 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
 		}
 		e := deleteBucket(targetURL)
-		if e == nil {
-			// Successfully removed a bucket.
-			printMsg(removeBucketMessage{Status: "success", Bucket: targetURL})
-		} else {
-			errorIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
-			cErr = exitStatus(globalErrorExitStatus)
-		}
-
+		fatalIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
 	}
 	return cErr
 }
