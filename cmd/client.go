@@ -57,7 +57,7 @@ type Client interface {
 	SetAccess(access string, isJSON bool) *probe.Error
 
 	// I/O operations
-	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide) *probe.Error
+	Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error
 
 	// Runs select expression on object storage on specific files.
 	Select(expression string, sse encrypt.ServerSide) (io.ReadCloser, *probe.Error)
@@ -87,6 +87,7 @@ type clientContent struct {
 	Size              int64
 	Type              os.FileMode
 	Metadata          map[string]string
+	UserMetadata      map[string]string
 	ETag              string
 	Expires           time.Time
 	EncryptionHeaders map[string]string

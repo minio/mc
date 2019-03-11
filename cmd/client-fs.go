@@ -367,7 +367,7 @@ func readFile(fpath string) (io.ReadCloser, error) {
 }
 
 // Copy - copy data from source to destination
-func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide) *probe.Error {
+func (f *fsClient) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
 	destination := f.PathURL.Path
 	rc, e := readFile(source)
 	if e != nil {

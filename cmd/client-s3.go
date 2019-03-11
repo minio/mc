@@ -626,7 +626,7 @@ func (c *s3Client) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 // Copy - copy object, uses server side copy API. Also uses an abstracted API
 // such that large file sizes will be copied in multipart manner on server
 // side.
-func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide) *probe.Error {
+func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, tgtSSE encrypt.ServerSide, metadata map[string]string) *probe.Error {
 	dstBucket, dstObject := c.url2BucketAndObject()
 	if dstBucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -638,7 +638,7 @@ func (c *s3Client) Copy(source string, size int64, progress io.Reader, srcSSE, t
 	src := minio.NewSourceInfo(tokens[1], tokens[2], srcSSE)
 
 	// Destination object
-	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, tgtSSE, nil)
+	dst, e := minio.NewDestinationInfo(dstBucket, dstObject, tgtSSE, metadata)
 	if e != nil {
 		return probe.NewError(e)
 	}

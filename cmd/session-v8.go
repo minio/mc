@@ -50,6 +50,7 @@ type sessionV8Header struct {
 	LastRemoved        string            `json:"lastRemoved"`
 	TotalBytes         int64             `json:"totalBytes"`
 	TotalObjects       int64             `json:"totalObjects"`
+	UserMetaData       map[string]string `json:"metaData"`
 }
 
 // sessionMessage container for session messages
@@ -174,6 +175,7 @@ func newSessionV8() *sessionV8 {
 	s.Header.CommandBoolFlags = make(map[string]bool)
 	s.Header.CommandIntFlags = make(map[string]int)
 	s.Header.CommandStringFlags = make(map[string]string)
+	s.Header.UserMetaData = make(map[string]string)
 	s.Header.When = UTCNow()
 	s.mutex = new(sync.Mutex)
 	s.SessionID = newRandomID(8)

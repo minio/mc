@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -57,8 +58,15 @@ var (
 			Name:  "encrypt",
 			Usage: "encrypt/decrypt objects (using server-side encryption with server managed keys)",
 		},
+		cli.StringFlag{
+			Name:  "attr",
+			Usage: "add custom metadata for the object",
+		},
 	}
 )
+
+// ErrInvalidMetadata reflects invalid metadata format
+var ErrInvalidMetadata = errors.New("specified metadata should be of form key1=value1,key2=value2,... and so on")
 
 // Copy command.
 var cpCmd = cli.Command{
@@ -107,7 +115,14 @@ EXAMPLES:
 
    9. Copy a folder with encrypted objects recursively from Amazon S3 to Minio cloud storage.
       $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/ myminio/documents/
-`,
+
+  10. Copy a list of objects from local file system to Minio cloud storage with specified metadata.
+			$ {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
+			
+	11. Copy a folder recursively from Minio cloud storage to Amazon S3 cloud storage with specified metadata.
+			$ {{.HelpName}} --attr key1=value1,key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+
+ `,
 }
 
 // copyMessage container for file copy messages
@@ -368,6 +383,19 @@ func doCopySession(session *sessionV8, encKeyDB map[string][]prefixSSEPair) erro
 					cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = session.Header.CommandStringFlags["storage-class"]
 				}
 
+				//	metaMap, metaSet := session.Header.UserMetaData
+
+				// Check and handle metadata if passed in command line args
+
+				if len(session.Header.UserMetaData) != 0 {
+					if cpURLs.TargetContent.UserMetadata == nil {
+						cpURLs.TargetContent.UserMetadata = make(map[string]string)
+					}
+					for metaDataKey, metaDataVal := range session.Header.UserMetaData {
+						cpURLs.TargetContent.UserMetadata[metaDataKey] = metaDataVal
+					}
+				}
+
 				// Verify if previously copied, notify progress bar.
 				if isCopied(cpURLs.SourceContent.URL.String()) {
 					queueCh <- func() URLs {
@@ -439,11 +467,32 @@ loop:
 	return retErr
 }
 
+// validate the passed metadataString and populate the map
+func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
+	metaDataMap := make(map[string]string)
+	for _, metaData := range strings.Split(metadataString, ",") {
+		metaDataEntry := strings.Split(metaData, "=")
+		if len(metaDataEntry) == 2 {
+			metaDataMap[metaDataEntry[0]] = metaDataEntry[1]
+		} else {
+			return nil, probe.NewError(ErrInvalidMetadata)
+		}
+	}
+	return metaDataMap, nil
+}
+
 // mainCopy is the entry point for cp command.
 func mainCopy(ctx *cli.Context) error {
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(ctx)
 	fatalIf(err, "Unable to parse encryption keys.")
+
+	// Parse metadata.
+	userMetaMap := make(map[string]string)
+	if ctx.String("attr") != "" {
+		userMetaMap, err = getMetaDataEntry(ctx.String("attr"))
+		fatalIf(err, "Unable to parse attribute %v", ctx.String("attr"))
+	}
 
 	// check 'copy' cli arguments.
 	checkCopySyntax(ctx, encKeyDB)
@@ -469,6 +518,7 @@ func mainCopy(ctx *cli.Context) error {
 	session.Header.CommandStringFlags["storage-class"] = storageClass
 	session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 	session.Header.CommandStringFlags["encrypt"] = sse
+	session.Header.UserMetaData = userMetaMap
 
 	var e error
 	if session.Header.RootPath, e = os.Getwd(); e != nil {
