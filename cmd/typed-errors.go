@@ -96,6 +96,13 @@ var errInvalidTarget = func(URL string) *probe.Error {
 	return probe.NewError(invalidTargetErr(errors.New(msg))).Untrace()
 }
 
+type targetNotFoundErr error
+
+var errTargetNotFound = func(URL string) *probe.Error {
+	msg := "Target `" + URL + "` not found."
+	return probe.NewError(targetNotFoundErr(errors.New(msg))).Untrace()
+}
+
 type overwriteNotAllowedErr struct {
 	error
 }

@@ -40,7 +40,7 @@ func (s *TestSuite) TestParseStat(c *C) {
 			"play"},
 	}
 	for _, testCase := range testCases {
-		statMsg := parseStat(testCase.targetAlias, &testCase.content)
+		statMsg := parseStat(&testCase.content)
 		c.Assert(testCase.content.Metadata, DeepEquals, statMsg.Metadata)
 		c.Assert(testCase.content.EncryptionHeaders, DeepEquals, statMsg.EncryptionHeaders)
 		c.Assert(testCase.content.Size, Equals, statMsg.Size)

@@ -92,7 +92,7 @@ func (c statMessage) JSON() string {
 }
 
 // parseStat parses client Content container into statMessage struct.
-func parseStat(targetAlias string, c *clientContent) statMessage {
+func parseStat(c *clientContent) statMessage {
 	content := statMessage{}
 	content.Date = c.Time.Local()
 	// guess file type.
@@ -112,8 +112,16 @@ func parseStat(targetAlias string, c *clientContent) statMessage {
 	return content
 }
 
-// doStat - list all entities inside a folder.
-func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string, encKeyDB map[string][]prefixSSEPair) error {
+// statURL - simple or recursive listing
+func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*clientContent, *probe.Error) {
+	var stats []*clientContent
+	var clnt Client
+	clnt, err := newClient(targetURL)
+	if err != nil {
+		return nil, err
+	}
+
+	targetAlias, _, _ := mustExpandAlias(targetURL)
 
 	prefixPath := clnt.GetURL().Path
 	separator := string(clnt.GetURL().Separator)
@@ -121,7 +129,6 @@ func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string, encKey
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
 	var cErr error
-	isIncomplete := false
 	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
@@ -147,6 +154,11 @@ func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string, encKey
 			continue
 		}
 		url := targetAlias + getKey(content)
+
+		if !isRecursive && url != targetURL {
+			return nil, errTargetNotFound(targetURL)
+		}
+
 		_, stat, err := url2Stat(url, true, encKeyDB)
 		if err != nil {
 			stat = content
@@ -157,12 +169,8 @@ func doStat(clnt Client, isRecursive bool, targetAlias, targetURL string, encKey
 		// Trim prefix path from the content path.
 		contentURL = strings.TrimPrefix(contentURL, prefixPath)
 		stat.URL.Path = contentURL
-		st := parseStat(targetAlias, stat)
-		if !globalJSON {
-			printStat(st)
-		} else {
-			console.Println(st.JSON())
-		}
+		stats = append(stats, stat)
 	}
-	return cErr
+
+	return stats, probe.NewError(cErr)
 }

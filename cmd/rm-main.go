@@ -176,20 +176,19 @@ func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 }
 
 func removeSingle(url string, isIncomplete bool, isFake bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
-	targetAlias, targetURL, _ := mustExpandAlias(url)
-	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
-	if pErr != nil {
-		errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
-		return exitStatus(globalErrorExitStatus) // End of journey.
-	}
-	isFetchMeta := true
-	alias, _ := url2Alias(url)
-	sseKey := getSSE(url, encKeyDB[alias])
-	content, pErr := clnt.Stat(isIncomplete, isFetchMeta, sseKey)
+	isRecursive := false
+	contents, pErr := statURL(url, isIncomplete, isRecursive, encKeyDB)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
+
+	if len(contents) == 0 {
+		errorIf(errDummy().Trace(url), "Failed to remove `"+url+"`. Target object is not found")
+		return exitStatus(globalErrorExitStatus)
+	}
+
+	content := contents[0]
 
 	// Skip objects older than older--than parameter if specified
 	if olderThan != "" && isOlder(content.Time, olderThan) {
@@ -207,6 +206,13 @@ func removeSingle(url string, isIncomplete bool, isFake bool, olderThan, newerTh
 	})
 
 	if !isFake {
+		targetAlias, targetURL, _ := mustExpandAlias(url)
+		clnt, pErr := newClientFromAlias(targetAlias, targetURL)
+		if pErr != nil {
+			errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
+			return exitStatus(globalErrorExitStatus) // End of journey.
+		}
+
 		contentCh := make(chan *clientContent, 1)
 		contentCh <- &clientContent{URL: *newClientURL(targetURL)}
 		close(contentCh)
