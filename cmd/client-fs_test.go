@@ -231,7 +231,7 @@ func (s *TestSuite) TestBucketACLFails(c *C) {
 		err = fsClient.SetAccess("readonly", false)
 		c.Assert(err, IsNil)
 
-		_, err = fsClient.GetAccess()
+		_, _, err = fsClient.GetAccess()
 		c.Assert(err, IsNil)
 	}
 }

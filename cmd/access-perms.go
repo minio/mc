@@ -40,4 +40,5 @@ const (
 	accessDownload = accessPerms("download")
 	accessUpload   = accessPerms("upload")
 	accessPublic   = accessPerms("public")
+	accessCustom   = accessPerms("custom")
 )

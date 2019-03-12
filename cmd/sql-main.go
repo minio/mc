@@ -91,7 +91,7 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 SERIALIZATION OPTIONS:
-  For query serialization options, refer to https://docs.minio.io/docs/minio-client-complete-guide#sql
+   For query serialization options, refer to https://docs.minio.io/docs/minio-client-complete-guide#sql
 
 EXAMPLES:
    1. Run a query on a set of objects recursively on AWS S3.
