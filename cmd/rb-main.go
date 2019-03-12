@@ -18,7 +18,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -31,6 +33,10 @@ var (
 		cli.BoolFlag{
 			Name:  "force",
 			Usage: "allow a recursive remove operation",
+		},
+		cli.BoolFlag{
+			Name:  "dangerous",
+			Usage: "allow site-wide removal of objects",
 		},
 	}
 )
@@ -62,7 +68,7 @@ EXAMPLES:
       $ {{.HelpName}} --force s3/jazz-songs
 
    4. Remove all buckets and objects recursively from S3 host
-      $ {{.HelpName}} --force s3
+      $ {{.HelpName}} --force --dangerous s3
 `,
 }
 
@@ -74,7 +80,7 @@ type removeBucketMessage struct {
 
 // String colorized delete bucket message.
 func (s removeBucketMessage) String() string {
-	return console.Colorize("RemoveBucket", "Bucket removed successfully `"+s.Bucket+"`.")
+	return console.Colorize("RemoveBucket", fmt.Sprintf("Removed `%s` successfully.", s.Bucket))
 }
 
 // JSON jsonified remove bucket message.
@@ -90,6 +96,19 @@ func checkRbSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
 		exitCode := 1
 		cli.ShowCommandHelpAndExit(ctx, "rb", exitCode)
+	}
+	// Set command flags from context.
+	isForce := ctx.Bool("force")
+	isDangerous := ctx.Bool("dangerous")
+
+	for _, url := range ctx.Args() {
+		if isNamespaceRemoval(url) {
+			if isForce && isDangerous {
+				continue
+			}
+			fatalIf(errDummy().Trace(),
+				"This operation results in **site-wide** removal of buckets. If you are really sure, retry this command with ‘--force’ and ‘--dangerous’ flags.")
+		}
 	}
 }
 
@@ -134,10 +153,21 @@ func deleteBucket(url string) *probe.Error {
 				return pErr
 			}
 		}
+		// list internally mimics recursive directory listing of object prefixes for s3 similar to FS.
+		// The rmMessage needs to be printed only for actual buckets being deleted and not objects.
+		tgt := strings.TrimPrefix(urlString, string(filepath.Separator))
+		if !strings.Contains(tgt, string(filepath.Separator)) && tgt != targetAlias {
+			printMsg(removeBucketMessage{
+				Bucket: targetAlias + urlString, Status: "success",
+			})
+		}
 	}
 
 	// Remove the given url since the user will always want to remove it.
-	contentCh <- &clientContent{URL: *newClientURL(targetURL)}
+	alias, _ := url2Alias(targetURL)
+	if alias != "" {
+		contentCh <- &clientContent{URL: *newClientURL(targetURL)}
+	}
 
 	// Finish removing and print all the remaining errors
 	close(contentCh)
@@ -171,9 +201,9 @@ func isNamespaceRemoval(url string) bool {
 func mainRemoveBucket(ctx *cli.Context) error {
 	// check 'rb' cli arguments.
 	checkRbSyntax(ctx)
-	// Set command flags from context.
 	isForce := ctx.Bool("force")
-	// Additional command speific theme customization.
+
+	// Additional command specific theme customization.
 	console.SetColor("RemoveBucket", color.New(color.FgGreen, color.Bold))
 
 	var cErr error
@@ -202,24 +232,11 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			break
 		}
 		// For all recursive operations make sure to check for 'force' flag.
-		if !isForce {
-			if isNamespaceRemoval(targetURL) {
-				fatalIf(errDummy().Trace(),
-					"This operation results in **site-wide** removal of buckets. If you are really sure, retry this command with ‘--force’ flags.")
-			}
-			if !isEmpty {
-				fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
-			}
+		if !isForce && !isEmpty {
+			fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
 		}
 		e := deleteBucket(targetURL)
-		if e == nil {
-			// Successfully removed a bucket.
-			printMsg(removeBucketMessage{Status: "success", Bucket: targetURL})
-		} else {
-			errorIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
-			cErr = exitStatus(globalErrorExitStatus)
-		}
-
+		fatalIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
 	}
 	return cErr
 }
