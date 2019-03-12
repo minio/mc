@@ -90,19 +90,19 @@ type ParquetInputOptions struct{}
 type CSVInputOptions struct {
 	FileHeaderInfo       CSVFileHeaderInfo
 	RecordDelimiter      string
-	FieldDelimiter       string
-	QuoteCharacter       string
-	QuoteEscapeCharacter string
-	Comments             string
+	FieldDelimiter       string `xml:",omitempty"`
+	QuoteCharacter       string `xml:",omitempty"`
+	QuoteEscapeCharacter string `xml:",omitempty"`
+	Comments             string `xml:",omitempty"`
 }
 
 // CSVOutputOptions csv output specific options
 type CSVOutputOptions struct {
-	QuoteFields          CSVQuoteFields
+	QuoteFields          CSVQuoteFields `xml:",omitempty"`
 	RecordDelimiter      string
-	FieldDelimiter       string
-	QuoteCharacter       string
-	QuoteEscapeCharacter string
+	FieldDelimiter       string `xml:",omitempty"`
+	QuoteCharacter       string `xml:",omitempty"`
+	QuoteEscapeCharacter string `xml:",omitempty"`
 }
 
 // JSONInputOptions json input specific options

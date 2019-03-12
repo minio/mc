@@ -72,7 +72,7 @@ github.com/minio/minio/pkg/cpu
 github.com/minio/minio/pkg/disk
 github.com/minio/minio/pkg/mem
 github.com/minio/minio/pkg/safe
-# github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d
+# github.com/minio/minio-go v0.0.0-20190308013636-b32976861da0
 github.com/minio/minio-go
 github.com/minio/minio-go/pkg/credentials
 github.com/minio/minio-go/pkg/encrypt
