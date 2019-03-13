@@ -233,7 +233,7 @@ function test_make_bucket()
     start_time=$(get_time)
     bucket_name="mc-test-bucket-$RANDOM"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mb "${SERVER_ALIAS}/${bucket_name}"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -486,7 +486,7 @@ function test_mirror_list_objects()
     diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}/" | jq -r .key) >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -505,7 +505,7 @@ function test_mirror_list_objects_storage_class()
     diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}/" | jq -r .key) >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -523,7 +523,7 @@ function test_find_empty() {
     diff -bB <(echo "") <("${MC_CMD[@]}" --json find "${SERVER_ALIAS}/${bucket_name}" --older-than 1d | jq -r .key | sed "s/${SERVER_ALIAS}\/${bucket_name}\///g") >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -540,7 +540,7 @@ function test_find() {
     diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json find "${SERVER_ALIAS}/${bucket_name}/" | jq -r .key | sed "s/${SERVER_ALIAS}\/${bucket_name}\///g") >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
 
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive "${SERVER_ALIAS}/${bucket_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -586,6 +586,8 @@ function test_watch_object()
     fi
 
     kill "$watch_cmd_pid"
+
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -762,8 +764,8 @@ function test_mirror_with_sse()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd mirror --encrypt-key "${cli_flag}" "$DATA_DIR" "${SERVER_ALIAS}/${bucket_name}"
     diff -bB <(ls "$DATA_DIR") <("${MC_CMD[@]}" --json ls "${SERVER_ALIAS}/${bucket_name}/" | jq -r .key) >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "mirror and list differs"
-    # remove recursively with correct encryption key
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --force --recursive --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${bucket_name}"
+    # Remove the test bucket with its contents
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rb --force "${SERVER_ALIAS}/${bucket_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
