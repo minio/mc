@@ -26,6 +26,7 @@ var (
 		"Error":  color.New(color.FgYellow, color.Italic),
 		"Info":   color.New(color.FgGreen, color.Bold),
 		"Print":  color.New(),
+		"PrintB": color.New(color.FgBlue, color.Bold),
 		"PrintC": color.New(color.FgGreen, color.Bold),
 	}
 )
