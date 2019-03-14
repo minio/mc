@@ -148,12 +148,12 @@ NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have
 
 ### Specify host configuration through environment variable
 ```sh
-export MC_HOSTS_<alias>=https://<Access Key>:<Secret Key>@<YOUR-S3-ENDPOINT>
+export MC_HOST_<alias>=https://<Access Key>:<Secret Key>@<YOUR-S3-ENDPOINT>
 ```
 
 Example:
 ```sh
-export MC_HOSTS_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.minio.io:9000
+export MC_HOST_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.minio.io:9000
 mc ls myalias
 ```
 
