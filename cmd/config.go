@@ -178,7 +178,13 @@ func mustGetHostConfig(alias string) *hostConfigV9 {
 	// If alias is not found,
 	// look for it in the environment variable.
 	if hostCfg == nil {
-		if envConfig, ok := os.LookupEnv(mcEnvHostsPrefix + alias); ok {
+		if envConfig, ok := os.LookupEnv(mcEnvHostPrefix + alias); ok {
+			hostCfg, _ = expandAliasFromEnv(envConfig)
+		}
+	}
+	if hostCfg == nil {
+		if envConfig, ok := os.LookupEnv(mcEnvHostsDeprecatedPrefix + alias); ok {
+			errorIf(errInvalidArgument().Trace(mcEnvHostsDeprecatedPrefix+alias), "`MC_HOSTS_<alias>` environment variable is deprecated. Please use `MC_HOST_<alias>` instead for the same functionality.")
 			hostCfg, _ = expandAliasFromEnv(envConfig)
 		}
 	}
@@ -254,7 +260,8 @@ func parseEnvURLStr(envURL string) (*url.URL, string, string, *probe.Error) {
 	return u, accessKey, secretKey, nil
 }
 
-const mcEnvHostsPrefix = "MC_HOSTS_"
+const mcEnvHostPrefix = "MC_HOST_"
+const mcEnvHostsDeprecatedPrefix = "MC_HOSTS_"
 
 func expandAliasFromEnv(envURL string) (*hostConfigV9, *probe.Error) {
 	u, accessKey, secretKey, err := parseEnvURLStr(envURL)
@@ -275,7 +282,17 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostC
 	// Extract alias from the URL.
 	alias, path := url2Alias(aliasedURL)
 
-	if envConfig, ok := os.LookupEnv(mcEnvHostsPrefix + alias); ok {
+	var envConfig string
+	var ok bool
+
+	if envConfig, ok = os.LookupEnv(mcEnvHostPrefix + alias); !ok {
+		envConfig, ok = os.LookupEnv(mcEnvHostsDeprecatedPrefix + alias)
+		if ok {
+			errorIf(errInvalidArgument().Trace(mcEnvHostsDeprecatedPrefix+alias), "`MC_HOSTS_<alias>` environment variable is deprecated. Please use `MC_HOST_<alias>` instead for the same functionality.")
+		}
+	}
+
+	if ok {
 		hostCfg, err = expandAliasFromEnv(envConfig)
 		if err != nil {
 			return "", "", nil, err.Trace(aliasedURL)
