@@ -83,6 +83,8 @@ github.com/minio/cli v0.0.0-20170227073228-b8ae5507c0ce h1:cMutC6C4ElU0TVblNfXx6
 github.com/minio/cli v0.0.0-20170227073228-b8ae5507c0ce/go.mod h1:hLsWNQy2wIf3FKFnMlH69f4RdEyn8nbRA2shaulTjGY=
 github.com/minio/minio v0.0.0-20190206103305-fd4e15c11641 h1:iW6Ns9yJPCzd1v+AjznM2xY9JwH2tIaHEdM6rsG8YKE=
 github.com/minio/minio v0.0.0-20190206103305-fd4e15c11641/go.mod h1:lXcp05uxYaW99ebgI6ZKIGYU7tqZkM5xSsG0xRt4VIU=
+github.com/minio/minio v0.0.0-20190314200851-facbd653bad5 h1:KgnwbhlfiLuT3Rq0rYOgV8E5iamKT7y6j4CDnYl0Mc4=
+github.com/minio/minio v0.0.0-20190314200851-facbd653bad5/go.mod h1:lXcp05uxYaW99ebgI6ZKIGYU7tqZkM5xSsG0xRt4VIU=
 github.com/minio/minio-go v0.0.0-20190308013636-b32976861da0 h1:yHdN+v8UkkeKXBF7evFjHE9hvdrW6WhyT/S0W07YM48=
 github.com/minio/minio-go v0.0.0-20190308013636-b32976861da0/go.mod h1:/haSOWG8hQNx2+JOfLJ9GKp61EAmgPwRVw/Sac0NzaM=
 github.com/minio/sha256-simd v0.0.0-20190131020904-2d45a736cd16 h1:5W7KhL8HVF3XCFOweFD3BNESdnO8ewyYTFT2R+/b8FQ=

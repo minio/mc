@@ -28,7 +28,7 @@ require (
 	github.com/mattn/go-isatty v0.0.4
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/minio/cli v0.0.0-20170227073228-b8ae5507c0ce
-	github.com/minio/minio v0.0.0-20190206103305-fd4e15c11641
+	github.com/minio/minio v0.0.0-20190314200851-facbd653bad5
 	github.com/minio/minio-go v0.0.0-20190308013636-b32976861da0
 	github.com/minio/sha256-simd v0.0.0-20190131020904-2d45a736cd16
 	github.com/minio/sio v0.0.0-20180327104954-6a41828a60f0 // indirect

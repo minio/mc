@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -27,7 +28,17 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
+const (
+	scanNormalMode = "normal"
+	scanDeepMode   = "deep"
+)
+
 var adminHealFlags = []cli.Flag{
+	cli.StringFlag{
+		Name:  "scan",
+		Usage: "select the healing scan mode (normal/deep)",
+		Value: scanNormalMode,
+	},
 	cli.BoolFlag{
 		Name:  "recursive, r",
 		Usage: "heal recursively",
@@ -66,6 +77,11 @@ USAGE:
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
+
+SCAN MODES:
+   normal (default): Heal objects which are missing on one or more disks.
+   deep            : Heal objects which are missing on one or more disks. Also heal objects with silent data corruption.
+
 EXAMPLES:
     1. To format newly replaced disks in a Minio server with alias 'play'
        $ {{.HelpName}} play
@@ -89,6 +105,13 @@ func checkAdminHealSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
 	}
+
+	// Check for scan argument
+	scanArg := ctx.String("scan")
+	scanArg = strings.ToLower(scanArg)
+	if scanArg != scanNormalMode && scanArg != scanDeepMode {
+		cli.ShowCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
+	}
 }
 
 // stopHealMessage is container for stop heal success and failure messages.
@@ -108,6 +131,14 @@ func (s stopHealMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(stopHealJSONBytes)
+}
+
+func transformScanArg(scanArg string) madmin.HealScanMode {
+	switch scanArg {
+	case "deep":
+		return madmin.HealDeepScan
+	}
+	return madmin.HealNormalScan
 }
 
 // mainAdminHeal - the entry function of heal command
@@ -137,6 +168,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	bucket, prefix := splits[1], splits[2]
 
 	opts := madmin.HealOpts{
+		ScanMode:  transformScanArg(ctx.String("scan")),
 		Remove:    ctx.Bool("remove"),
 		Recursive: ctx.Bool("recursive"),
 		DryRun:    ctx.Bool("dry-run"),
