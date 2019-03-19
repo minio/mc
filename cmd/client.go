@@ -52,7 +52,7 @@ type Client interface {
 	MakeBucket(region string, ignoreExisting bool) *probe.Error
 
 	// Access policy operations.
-	GetAccess() (access string, error *probe.Error)
+	GetAccess() (access string, policyJSON string, error *probe.Error)
 	GetAccessRules() (policyRules map[string]string, error *probe.Error)
 	SetAccess(access string, isJSON bool) *probe.Error
 

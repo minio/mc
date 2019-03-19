@@ -618,7 +618,7 @@ func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 	}
 	// Set found rules to target bucket if permitted
 	for _, r := range rules {
-		originalRule, err := dstClt.GetAccess()
+		originalRule, _, err := dstClt.GetAccess()
 		if err != nil {
 			return err
 		}

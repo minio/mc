@@ -113,10 +113,11 @@ func (s policyRules) JSON() string {
 
 // policyMessage is container for policy command on bucket success and failure messages.
 type policyMessage struct {
-	Operation string      `json:"operation"`
-	Status    string      `json:"status"`
-	Bucket    string      `json:"bucket"`
-	Perms     accessPerms `json:"permission"`
+	Operation string                 `json:"operation"`
+	Status    string                 `json:"status"`
+	Bucket    string                 `json:"bucket"`
+	Perms     accessPerms            `json:"permission"`
+	Policy    map[string]interface{} `json:"policy,omitempty"`
 }
 
 // String colorized access message.
@@ -216,6 +217,8 @@ func accessPermToString(perm accessPerms) string {
 		policy = "writeonly"
 	case accessPublic:
 		policy = "readwrite"
+	case accessCustom:
+		policy = "custom"
 	}
 	return policy
 }
@@ -275,21 +278,23 @@ func stringToAccessPerm(perm string) accessPerms {
 		policy = accessUpload
 	case "readwrite":
 		policy = accessPublic
+	case "custom":
+		policy = accessCustom
 	}
 	return policy
 }
 
 // doGetAccess do get access.
-func doGetAccess(targetURL string) (perms accessPerms, err *probe.Error) {
+func doGetAccess(targetURL string) (perms accessPerms, policyStr string, err *probe.Error) {
 	clnt, err := newClient(targetURL)
 	if err != nil {
-		return "", err.Trace(targetURL)
+		return "", "", err.Trace(targetURL)
 	}
-	perm, err := clnt.GetAccess()
+	perm, policyJSON, err := clnt.GetAccess()
 	if err != nil {
-		return "", err.Trace(targetURL)
+		return "", "", err.Trace(targetURL)
 	}
-	return stringToAccessPerm(perm), nil
+	return stringToAccessPerm(perm), policyJSON, nil
 }
 
 // doGetAccessRules do get access rules.
@@ -388,7 +393,7 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 
 // Run policy cmd to fetch set permission
 func runPolicyCmd(ctx *cli.Context) {
-	var operation string
+	var operation, policyStr string
 	var probeErr *probe.Error
 	perms := accessPerms(ctx.Args().First())
 	targetURL := ctx.Args().Last()
@@ -400,7 +405,7 @@ func runPolicyCmd(ctx *cli.Context) {
 		operation = "setJSON"
 	} else {
 		targetURL = ctx.Args().First()
-		perms, probeErr = doGetAccess(targetURL)
+		perms, policyStr, probeErr = doGetAccess(targetURL)
 		operation = "get"
 	}
 	// Upon error exit.
@@ -413,11 +418,18 @@ func runPolicyCmd(ctx *cli.Context) {
 				"Unable to "+operation+" policy `"+string(perms)+"` for `"+targetURL+"`.")
 		}
 	}
+	policyJSON := map[string]interface{}{}
+	if policyStr != "" {
+		e := json.Unmarshal([]byte(policyStr), &policyJSON)
+		fatalIf(probe.NewError(e), "Cannot unmarshal custom policy file.")
+	}
+
 	printMsg(policyMessage{
 		Status:    "success",
 		Operation: operation,
 		Bucket:    targetURL,
 		Perms:     perms,
+		Policy:    policyJSON,
 	})
 }
 

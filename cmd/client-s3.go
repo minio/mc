@@ -1050,23 +1050,27 @@ func (c *s3Client) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // GetAccess get access policy permissions.
-func (c *s3Client) GetAccess() (string, *probe.Error) {
+func (c *s3Client) GetAccess() (string, string, *probe.Error) {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
-		return "", probe.NewError(BucketNameEmpty{})
+		return "", "", probe.NewError(BucketNameEmpty{})
 	}
 	policyStr, e := c.api.GetBucketPolicy(bucket)
 	if e != nil {
-		return "", probe.NewError(e)
+		return "", "", probe.NewError(e)
 	}
 	if policyStr == "" {
-		return string(policy.BucketPolicyNone), nil
+		return string(policy.BucketPolicyNone), policyStr, nil
 	}
 	var p policy.BucketAccessPolicy
 	if e = json.Unmarshal([]byte(policyStr), &p); e != nil {
-		return "", probe.NewError(e)
+		return "", "", probe.NewError(e)
 	}
-	return string(policy.GetPolicy(p.Statements, bucket, object)), nil
+	pType := string(policy.GetPolicy(p.Statements, bucket, object))
+	if pType == string(policy.BucketPolicyNone) && policyStr != "" {
+		pType = "custom"
+	}
+	return pType, policyStr, nil
 }
 
 // SetAccess set access policy permissions.

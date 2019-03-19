@@ -893,28 +893,28 @@ func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // GetAccess - get access policy permissions.
-func (f *fsClient) GetAccess() (access string, err *probe.Error) {
+func (f *fsClient) GetAccess() (access string, policyJSON string, err *probe.Error) {
 	// For windows this feature is not implemented.
 	if runtime.GOOS == "windows" {
-		return "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
+		return "", "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
 	}
 	st, err := f.fsStat(false)
 	if err != nil {
-		return "", err.Trace(f.PathURL.String())
+		return "", "", err.Trace(f.PathURL.String())
 	}
 	if !st.Mode().IsDir() {
-		return "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
+		return "", "", probe.NewError(APINotImplemented{API: "GetAccess", APIType: "filesystem"})
 	}
 	// Mask with os.ModePerm to get only inode permissions
 	switch st.Mode() & os.ModePerm {
 	case os.FileMode(0777):
-		return "readwrite", nil
+		return "readwrite", "", nil
 	case os.FileMode(0555):
-		return "readonly", nil
+		return "readonly", "", nil
 	case os.FileMode(0333):
-		return "writeonly", nil
+		return "writeonly", "", nil
 	}
-	return "none", nil
+	return "none", "", nil
 }
 
 // SetAccess - set access policy permissions.
