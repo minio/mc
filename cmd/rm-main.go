@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -246,7 +245,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan, newe
 	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
 
 	isRecursive := true
-	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
+	for content := range clnt.List(isRecursive, isIncomplete, DirLast) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(url), "Failed to remove `"+url+"` recursively.")
 			switch content.Err.ToGoError().(type) {
@@ -259,24 +258,23 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan, newe
 		}
 		urlString := content.URL.Path
 
-		// Skip objects older than --older-than parameter if specified
-		if olderThan != "" && isOlder(content.Time, olderThan) {
-			continue
+		if !content.Time.IsZero() {
+			// Skip objects older than --older-than parameter if specified
+			if olderThan != "" && isOlder(content.Time, olderThan) {
+				continue
+			}
+
+			// Skip objects newer than --newer-than parameter if specified
+			if newerThan != "" && isNewer(content.Time, newerThan) {
+				continue
+			}
 		}
 
-		// Skip objects newer than --newer-than parameter if specified
-		if newerThan != "" && isNewer(content.Time, newerThan) {
-			continue
-		}
+		printMsg(rmMessage{
+			Key:  targetAlias + urlString,
+			Size: content.Size,
+		})
 
-		// list internally mimics recursive directory listing of object prefixes for s3 similar to FS.
-		// The rmMessage needs to be printed only for actual objects being deleted and not prefixes.
-		if !(content.Time.IsZero() && strings.HasSuffix(urlString, string(filepath.Separator))) {
-			printMsg(rmMessage{
-				Key:  targetAlias + urlString,
-				Size: content.Size,
-			})
-		}
 		if !isFake {
 			sent := false
 			for !sent {
