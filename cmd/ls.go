@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
@@ -140,6 +140,8 @@ func doList(clnt Client, isRecursive, isIncomplete bool) error {
 		contentURL := filepath.ToSlash(content.URL.Path)
 		prefixPath = filepath.ToSlash(prefixPath)
 
+		// Trim prefix of current working dir
+		prefixPath = strings.TrimPrefix(prefixPath, "."+separator)
 		// Trim prefix path from the content path.
 		contentURL = strings.TrimPrefix(contentURL, prefixPath)
 		content.URL.Path = contentURL
