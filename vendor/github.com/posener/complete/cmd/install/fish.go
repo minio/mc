@@ -41,7 +41,7 @@ func (f fish) cmd(cmd, bin string) (string, error) {
 	params := struct{ Cmd, Bin string }{cmd, bin}
 	tmpl := template.Must(template.New("cmd").Parse(`
 function __complete_{{.Cmd}}
-    set -lx COMP_LINE (string join ' ' (commandline -o))
+    set -lx COMP_LINE (string join ' ' -- (commandline -o))
     test (commandline -ct) = ""
     and set COMP_LINE "$COMP_LINE "
     {{.Bin}}
