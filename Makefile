@@ -9,15 +9,12 @@ all: build
 checks:
 	@echo "Checking dependencies"
 	@(env bash $(PWD)/buildscripts/checkdeps.sh)
-	@echo "Checking for project in GOPATH"
-	@(env bash $(PWD)/buildscripts/checkgopath.sh)
 
 getdeps:
-	@GO111MODULE=on
 	@echo "Installing golint" && go get golang.org/x/lint/golint
-	@echo "Installing gocyclo" && go get -u github.com/fzipp/gocyclo
-	@echo "Installing misspell" && go get -u github.com/client9/misspell/cmd/misspell
-	@echo "Installing ineffassign" && go get -u github.com/gordonklaus/ineffassign
+	@echo "Installing gocyclo" && go get github.com/fzipp/gocyclo
+	@echo "Installing misspell" && go get github.com/client9/misspell/cmd/misspell
+	@echo "Installing ineffassign" && go get github.com/gordonklaus/ineffassign
 
 verifiers: getdeps vet fmt lint cyclo spelling
 
@@ -53,7 +50,7 @@ spelling:
 check: test
 test: verifiers build
 	@echo "Running unit tests"
-	@go test -tags kqueue ./...
+	@GO111MODULE=on CGO_ENABLED=0 go test -tags kqueue ./...
 	@echo "Running functional tests"
 	@(env bash $(PWD)/functional-tests.sh)
 
@@ -64,12 +61,12 @@ coverage: build
 # Builds minio locally.
 build: checks
 	@echo "Building minio binary to './mc'"
-	@GO_FLAGS="" CGO_ENABLED=0 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
+	@GO111MODULE=on GO_FLAGS="" CGO_ENABLED=0 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
 
 # Builds minio and installs it to $GOPATH/bin.
 install: build
 	@echo "Installing mc binary to '$(GOPATH)/bin/mc'"
-	@mkdir -p $(GOPATH)/bin && cp $(PWD)/mc $(GOPATH)/bin/mc
+	@mkdir -p $(GOPATH)/bin && cp -uf $(PWD)/mc $(GOPATH)/bin/mc
 	@echo "Installation successful. To learn more, try \"mc --help\"."
 
 clean:

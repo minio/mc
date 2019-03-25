@@ -307,8 +307,8 @@ func doGetAccessRules(targetURL string) (r map[string]string, err *probe.Error) 
 }
 
 // Run policy list command
-func runPolicyListCmd(ctx *cli.Context) {
-	targetURL := ctx.Args().Last()
+func runPolicyListCmd(args cli.Args) {
+	targetURL := args.First()
 	policies, err := doGetAccessRules(targetURL)
 	if err != nil {
 		switch err.ToGoError().(type) {
@@ -324,9 +324,9 @@ func runPolicyListCmd(ctx *cli.Context) {
 }
 
 // Run policy links command
-func runPolicyLinksCmd(ctx *cli.Context) {
+func runPolicyLinksCmd(args cli.Args, recursive bool) {
 	// Get alias/bucket/prefix argument
-	targetURL := ctx.Args().Last()
+	targetURL := args.First()
 
 	// Fetch all policies associated to the passed url
 	policies, err := doGetAccessRules(targetURL)
@@ -343,7 +343,7 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 	// construct new pathes to list public objects
 	alias, path := url2Alias(targetURL)
 
-	isRecursive := ctx.Bool("recursive")
+	isRecursive := recursive
 	isIncomplete := false
 
 	// Iterate over policy rules to fetch public urls, then search
@@ -392,11 +392,11 @@ func runPolicyLinksCmd(ctx *cli.Context) {
 }
 
 // Run policy cmd to fetch set permission
-func runPolicyCmd(ctx *cli.Context) {
+func runPolicyCmd(args cli.Args) {
 	var operation, policyStr string
 	var probeErr *probe.Error
-	perms := accessPerms(ctx.Args().First())
-	targetURL := ctx.Args().Last()
+	perms := accessPerms(args.Get(0))
+	targetURL := args.Get(1)
 	if perms.isValidAccessPERM() {
 		probeErr = doSetAccess(targetURL, perms)
 		operation = "set"
@@ -404,7 +404,7 @@ func runPolicyCmd(ctx *cli.Context) {
 		probeErr = doSetAccessJSON(targetURL, perms)
 		operation = "setJSON"
 	} else {
-		targetURL = ctx.Args().First()
+		targetURL = args.First()
 		perms, policyStr, probeErr = doGetAccess(targetURL)
 		operation = "get"
 	}
@@ -444,13 +444,13 @@ func mainPolicy(ctx *cli.Context) error {
 	switch ctx.Args().First() {
 	case "list":
 		// policy list alias/bucket/prefix
-		runPolicyListCmd(ctx)
+		runPolicyListCmd(ctx.Args().Tail())
 	case "links":
 		// policy links alias/bucket/prefix
-		runPolicyLinksCmd(ctx)
+		runPolicyLinksCmd(ctx.Args().Tail(), ctx.Bool("recursive"))
 	default:
 		// policy [download|upload|public|] alias/bucket/prefix
-		runPolicyCmd(ctx)
+		runPolicyCmd(ctx.Args())
 	}
 	return nil
 }

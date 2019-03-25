@@ -26,8 +26,10 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/pkg/xattr"
 	"github.com/rjeczalik/notify"
 
 	"github.com/minio/mc/pkg/hookreader"
@@ -60,6 +62,19 @@ func fsNew(path string) (Client, *probe.Error) {
 	return &fsClient{
 		PathURL: newClientURL(normalizePath(path)),
 	}, nil
+}
+
+func isNotSupported(err error) bool {
+	if err == nil {
+		return false
+	}
+	errno := err.(*xattr.Error)
+	if errno == nil {
+		return false
+	}
+
+	// check if filesystem supports extended attributes
+	return errno.Err == syscall.Errno(syscall.ENOTSUP) || errno.Err == syscall.Errno(syscall.EOPNOTSUPP)
 }
 
 // isIgnoredFile returns true if 'filename' is on the exclude list.
