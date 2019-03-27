@@ -23,7 +23,7 @@ $ mc --help
 * If you have additional dependencies for ``mc``, ``mc`` manages its dependencies using `go mod`
     - Run `go get foo/bar`
     - Edit your code to import foo/bar
-    - Run `GO111MODULE=on go mod vendor` from top-level folder
+    - Run `GO111MODULE=on go mod tidy` from top-level folder
 
 * When you're ready to create a pull request, be sure to:
     - Have test cases for the new code. If you have questions about how to do it, please ask in your pull request.

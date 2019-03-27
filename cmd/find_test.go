@@ -383,7 +383,7 @@ func TestStringReplace(t *testing.T) {
 		// Tests string replace {"size"} with quotes.
 		{
 			str:         `{"size"}`,
-			expectedStr: `"0B"`,
+			expectedStr: `"0 B"`,
 			content:     contentMessage{Size: 0},
 		},
 		// Tests string replace {"time"} with quotes.
@@ -397,7 +397,7 @@ func TestStringReplace(t *testing.T) {
 		// Tests string replace {size}
 		{
 			str:         `{size}`,
-			expectedStr: `1.0MiB`,
+			expectedStr: `1.0 MiB`,
 			content:     contentMessage{Size: 1024 * 1024},
 		},
 		// Tests string replace {time}

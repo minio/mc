@@ -83,12 +83,12 @@ func getXAttr(path, key string) (string, error) {
 // getAllXattrs returns the extended attributes for a file if supported
 // by the OS
 func getAllXattrs(path string) (map[string]string, error) {
-	if !xattr.Supported(path) {
-		return nil, nil
-	}
 	xMetadata := make(map[string]string)
 	list, e := xattr.List(path)
 	if e != nil {
+		if isNotSupported(e) {
+			return nil, nil
+		}
 		return nil, e
 	}
 	for _, key := range list {
@@ -98,6 +98,9 @@ func getAllXattrs(path string) (map[string]string, error) {
 		}
 		xMetadata[key], e = getXAttr(path, key)
 		if e != nil {
+			if isNotSupported(e) {
+				return nil, nil
+			}
 			return nil, e
 		}
 	}
