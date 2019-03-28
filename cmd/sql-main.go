@@ -103,17 +103,17 @@ EXAMPLES:
    3. Run a query on an encrypted object with customer provided keys.
       $ {{.HelpName}} --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
 		      --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
-	 
+
    4. Run a query on an object on Minio in gzip format using ; as field delimiter,
-      newline as record delimiter and file header to be used 
+      newline as record delimiter and file header to be used
       $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
 		      --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv.gz
-	 
+
    5. Run a query on an object on Minio in gzip format using ; as field delimiter,
-      newline as record delimiter and file header to be used 
-      $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \ 
+      newline as record delimiter and file header to be used
+      $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
 							 --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
-	
+
    6. Run same query as in 5., but specify csv output headers. If --csv-output-headers is
       specified as "", first row of csv is interpreted as header
       $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
