@@ -537,8 +537,6 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 // get client specified compression type or default compression type from file extension
 func selectCompressionType(selOpts SelectObjectOpts, object string) minio.SelectCompressionType {
 	ext := filepath.Ext(object)
-	origContentType := mimedb.TypeByExtension(filepath.Ext(strings.TrimSuffix(strings.TrimSuffix(object, ".gz"), ".bz2")))
-
 	contentType := mimedb.TypeByExtension(ext)
 
 	if selOpts.CompressionType != "" {
@@ -546,12 +544,6 @@ func selectCompressionType(selOpts SelectObjectOpts, object string) minio.Select
 	}
 	if strings.Contains(ext, "parquet") || strings.Contains(object, ".parquet") {
 		return minio.SelectCompressionNONE
-	}
-	if origContentType != "" {
-		if strings.Contains(origContentType, "csv") ||
-			strings.Contains(origContentType, "json") {
-			return minio.SelectCompressionNONE
-		}
 	}
 	if contentType != "" {
 		if strings.Contains(contentType, "gzip") {
