@@ -38,6 +38,14 @@ func newTraceV4() httptracer.HTTPTracer {
 func (t traceV4) Request(req *http.Request) (err error) {
 	origAuth := req.Header.Get("Authorization")
 
+	printTrace := func() error {
+		reqTrace, rerr := httputil.DumpRequestOut(req, false) // Only display header
+		if rerr == nil {
+			console.Debug(string(reqTrace))
+		}
+		return rerr
+	}
+
 	if strings.TrimSpace(origAuth) != "" {
 		// Authorization (S3 v4 signature) Format:
 		// Authorization: AWS4-HMAC-SHA256 Credential=AKIAJNACEGBGMXBHLEZA/20150524/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=bbfaa693c626021bcb5f911cd898a1a30206c1fad6bad1e0eb89e282173bd24c
@@ -53,14 +61,12 @@ func (t traceV4) Request(req *http.Request) (err error) {
 		// Set a temporary redacted auth
 		req.Header.Set("Authorization", newAuth)
 
-		var reqTrace []byte
-		reqTrace, err = httputil.DumpRequestOut(req, false) // Only display header
-		if err == nil {
-			console.Debug(string(reqTrace))
-		}
+		err = printTrace()
 
 		// Undo
 		req.Header.Set("Authorization", origAuth)
+	} else {
+		err = printTrace()
 	}
 	return err
 }
