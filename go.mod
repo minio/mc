@@ -15,7 +15,7 @@ require (
 	github.com/minio/cli v1.3.0
 	github.com/minio/minio v0.0.0-20190325204105-0250f7de678b
 	github.com/minio/minio-go v0.0.0-20190313212832-5d20267d970d
-	github.com/minio/sha256-simd v0.0.0-20190319235355-3557f3d43a12
+	github.com/minio/sha256-simd v0.0.0-20190328051042-05b4dd3047e5
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
