@@ -261,6 +261,8 @@ github.com/minio/parquet-go v0.0.0-20190318185229-9d767baf1679/go.mod h1:J+goXSu
 github.com/minio/sha256-simd v0.0.0-20190131020904-2d45a736cd16/go.mod h1:2FMWW+8GMoPweT6+pI63m9YE3Lmw4J71hV56Chs1E/U=
 github.com/minio/sha256-simd v0.0.0-20190319235355-3557f3d43a12 h1:qo0s1sES2s3yK6SwHBe30efVxujBftrxKa8yEFEEFjY=
 github.com/minio/sha256-simd v0.0.0-20190319235355-3557f3d43a12/go.mod h1:2FMWW+8GMoPweT6+pI63m9YE3Lmw4J71hV56Chs1E/U=
+github.com/minio/sha256-simd v0.0.0-20190328051042-05b4dd3047e5 h1:l16XLUUJ34wIz+RIvLhSwGvLvKyy+W598b135bJN6mg=
+github.com/minio/sha256-simd v0.0.0-20190328051042-05b4dd3047e5/go.mod h1:2FMWW+8GMoPweT6+pI63m9YE3Lmw4J71hV56Chs1E/U=
 github.com/minio/sio v0.0.0-20180327104954-6a41828a60f0 h1:ys4bbOlPvaUBlA0byjm6TqydsXZu614ZIUTfF+4MRY0=
 github.com/minio/sio v0.0.0-20180327104954-6a41828a60f0/go.mod h1:PDJGYr8GXjiOTIst0hQMOSK5FdXLwObr2cGbiMddDPc=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
