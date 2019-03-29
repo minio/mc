@@ -47,7 +47,7 @@ type contentMessage struct {
 // String colorized string message.
 func (c contentMessage) String() string {
 	message := console.Colorize("Time", fmt.Sprintf("[%s] ", c.Time.Format(printDate)))
-	message = message + console.Colorize("Size", fmt.Sprintf("%7s ", humanize.IBytes(uint64(c.Size))))
+	message = message + console.Colorize("Size", fmt.Sprintf("%7s ", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
 	message = func() string {
 		if c.Filetype == "folder" {
 			return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Key))
