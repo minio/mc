@@ -7,5 +7,9 @@ RUN \
     apk add --no-cache --virtual .build-deps curl && \
     curl https://dl.minio.io/client/mc/release/linux-amd64/mc > /usr/bin/mc && \
     chmod +x /usr/bin/mc && apk del .build-deps
+    
+RUN mkdir /.mc && chgrp -R 0 /.mc && chmod -R g=u /.mc
 
 ENTRYPOINT ["mc"]
+
+USER 1001
