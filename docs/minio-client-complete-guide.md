@@ -784,7 +784,18 @@ USAGE:
   mc diff [FLAGS] FIRST SECOND
 
 FLAGS:
-  --help, -h                       show help
+  --config-folder value, -C value  Path to configuration folder. (default: "/root/.mc")
+  --quiet, -q                      Disable progress bar display.
+  --no-color                       Disable color theme.
+  --json                           Enable JSON formatted output.
+  --debug                          Enable debug output.
+  --insecure                       Disable SSL certificate verification.
+  --help, -h                       Show help.
+  
+LEGEND:
+    > - object is only in source.
+    < - object is only in destination.
+    ! - newer object is in source.
 ```
 
 *Example: Compare a local directory and a remote object storage.*
@@ -793,6 +804,29 @@ FLAGS:
  mc diff localdir play/mybucket
 ‘localdir/notes.txt’ and ‘https://play.minio.io:9000/mybucket/notes.txt’ - only in first.
 ```
+
+### Option [--json]
+JSON option enables parseable output in JSON format.
+
+*Example: diff json ouput.*
+
+```sh
+mc diff minio1/diffbucket minio2/diffbucket --json
+{"status":"success","first":"","second":"http://127.0.0.1:9001/diffbucket/file1.png","diff":5}
+{"status":"success","first":http://127.0.0.1:9000/diffbucket/file2.png"","second":"","diff":4}
+{"status":"success","first":"http://127.0.0.1:9000/diffbucket/file3.png","second":"http://127.0.0.1:9001/diffbucket/file3.png","diff":2}
+{"status":"success","first":"http://127.0.0.1:9000/diffbucket/file4.png","second":"http://127.0.0.1:9001/diffbucket/file4.png","diff":1}
+```
+
+#### Diff values in json output
+|Constant| Value | Meaning |
+| ---------- | ---------- | -------- |
+|differInNone |0|Does not differ|
+|differInSize |1|Differs in size|
+|differInTime |2|Differs in time|
+|differInType |3|Differs in type exfile/directory|
+|differInFirst |4|Only in source (FIRST)|
+|differInSecond |5|Only in target (SECOND)|
 
 <a name="watch"></a>
 ### Command `watch` - Watch for files and object storage events.
