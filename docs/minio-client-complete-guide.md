@@ -808,7 +808,7 @@ LEGEND:
 ### Option [--json]
 JSON option enables parseable output in JSON format.
 
-*Example: diff json ouput.*
+*Example: diff json output.*
 
 ```sh
 mc diff minio1/diffbucket minio2/diffbucket --json
