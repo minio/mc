@@ -813,7 +813,7 @@ JSON option enables parseable output in JSON format.
 ```sh
 mc diff minio1/diffbucket minio2/diffbucket --json
 {"status":"success","first":"","second":"http://127.0.0.1:9001/diffbucket/file1.png","diff":5}
-{"status":"success","first":http://127.0.0.1:9000/diffbucket/file2.png"","second":"","diff":4}
+{"status":"success","first":"http://127.0.0.1:9000/diffbucket/file2.png","second":"","diff":4}
 {"status":"success","first":"http://127.0.0.1:9000/diffbucket/file3.png","second":"http://127.0.0.1:9001/diffbucket/file3.png","diff":2}
 {"status":"success","first":"http://127.0.0.1:9000/diffbucket/file4.png","second":"http://127.0.0.1:9001/diffbucket/file4.png","diff":1}
 ```
