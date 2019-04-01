@@ -32,9 +32,9 @@ const (
 	differInNone   differType = iota // does not differ
 	differInSize                     // differs in size
 	differInTime                     // differs in time
-	differInType                     // only in source
-	differInFirst                    // only in target
-	differInSecond                   // differs in type, exfile/directory
+	differInType                     // differs in type, exfile/directory
+	differInFirst                    // only in source (FIRST)
+	differInSecond                   // only in target (SECOND)
 )
 
 func (d differType) String() string {
