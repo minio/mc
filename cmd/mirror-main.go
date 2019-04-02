@@ -353,7 +353,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			}
 
 			sourceURL := newClientURL(eventPath)
-			aliasedPath := strings.Replace(eventPath, sourceURLFull, mj.sourceURL, -1)
+			// trim trailing slash from source url
+			sourceURLStr := strings.TrimSuffix(sourceURLFull, string(sourceURL.Separator))
+			aliasedPath := strings.Replace(eventPath, sourceURLStr, mj.sourceURL, -1)
 
 			// build target path, it is the relative of the eventPath with the sourceUrl
 			// joined to the targetURL.
