@@ -473,6 +473,10 @@ func selectObjectOutputOpts(selOpts SelectObjectOpts, i minio.SelectObjectInputS
 	return o
 }
 
+func trimCompressionFileExts(name string) string {
+	return strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(name, ".gz"), ".bz"), ".bz2")
+}
+
 // set the SelectObjectInputSerialization struct using options passed in by client. If unspecified,
 // default S3 API specified defaults
 func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.SelectObjectInputSerialization {
@@ -514,8 +518,8 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 		// 			i.CSV.QuotedRecordDelimiter = qrd
 		// }
 	}
-	ext := filepath.Ext(object)
 	if i.CSV == nil && i.JSON == nil && i.Parquet == nil {
+		ext := filepath.Ext(trimCompressionFileExts(object))
 		if strings.Contains(ext, "csv") {
 			i.CSV = &minio.CSVInputOptions{
 				RecordDelimiter: defaultRecordDelimiter,
