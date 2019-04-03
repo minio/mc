@@ -55,6 +55,33 @@ func checkAdminProfileStopSyntax(ctx *cli.Context) {
 	}
 }
 
+// moveFile - os.Rename cannot handle cross device renames, in our situation
+// it is possible that /tmp is mounted from a separate partition and current
+// working directory is a different partition. To allow all situations to
+// be handled appropriately use this function instead of os.Rename()
+func moveFile(sourcePath, destPath string) error {
+	inputFile, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+
+	outputFile, err := os.Create(destPath)
+	if err != nil {
+		inputFile.Close()
+		return err
+	}
+	defer outputFile.Close()
+
+	_, err = io.Copy(outputFile, inputFile)
+	inputFile.Close()
+	if err != nil {
+		return err
+	}
+
+	// The copy was successful, so now delete the original file
+	return os.Remove(sourcePath)
+}
+
 // mainAdminProfileStop - the entry function of profile stop command
 func mainAdminProfileStop(ctx *cli.Context) error {
 	// Check for command syntax
@@ -91,7 +118,7 @@ func mainAdminProfileStop(ctx *cli.Context) error {
 
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
-		e = os.Rename(downloadPath, downloadPath+"."+time.Now().Format("2006-01-02T15:04:05.999999-07:00"))
+		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format("2006-01-02T15:04:05.999999-07:00"))
 		fatalIf(probe.NewError(e), "Unable to create a backup of profile.zip")
 	} else {
 		if !os.IsNotExist(e) {
@@ -99,7 +126,7 @@ func mainAdminProfileStop(ctx *cli.Context) error {
 		}
 	}
 
-	fatalIf(probe.NewError(os.Rename(tmpFile.Name(), downloadPath)), "Unable to download profile data.")
+	fatalIf(probe.NewError(moveFile(tmpFile.Name(), downloadPath)), "Unable to download profile data.")
 
 	console.Infof("Profile data successfully downloaded as %s\n", downloadPath)
 	return nil
