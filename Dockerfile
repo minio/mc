@@ -1,19 +1,17 @@
-FROM golang:1.11.4-alpine3.7
+FROM golang:1.12-alpine
 
 LABEL maintainer="Minio Inc <dev@minio.io>"
 
 ENV GOPATH /go
 ENV CGO_ENABLED 0
-
-WORKDIR /go/src/github.com/minio/
+ENV GO111MODULE on
 
 RUN  \
      apk add --no-cache git && \
-     go get -v -d github.com/minio/mc && \
-     cd /go/src/github.com/minio/mc && \
+     git clone https://github.com/minio/mc && cd mc && \
      go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
 
-FROM alpine:3.7
+FROM alpine:3.9
 
 COPY --from=0 /go/bin/mc /usr/bin/mc
 
