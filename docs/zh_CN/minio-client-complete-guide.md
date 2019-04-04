@@ -1,6 +1,6 @@
-# Minio Client完全指南 [![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io)
+# MinIO Client完全指南 [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io)
 
-Minio Client (mc)为ls，cat，cp，mirror，diff，find等UNIX命令提供了一种替代方案。它支持文件系统和兼容Amazon S3的云存储服务（AWS Signature v2和v4）。
+MinIO Client (mc)为ls，cat，cp，mirror，diff，find等UNIX命令提供了一种替代方案。它支持文件系统和兼容Amazon S3的云存储服务（AWS Signature v2和v4）。
 
 ```sh
 ls       列出文件和文件夹。
@@ -22,7 +22,7 @@ update   检查软件更新。
 version  输出版本信息。
 ```
 
-## 1.  下载Minio Client
+## 1.  下载MinIO Client
 ### Docker稳定版
 ```
 docker pull minio/mc
@@ -35,7 +35,7 @@ docker pull minio/mc:edge
 docker run minio/mc:edge ls play
 ```
 
-**注意:** 上述示例默认使用Minio[演示环境](#test-your-setup)做演示，如果想用`mc`操作其它S3兼容的服务，采用下面的方式来启动容器：
+**注意:** 上述示例默认使用MinIO[演示环境](#test-your-setup)做演示，如果想用`mc`操作其它S3兼容的服务，采用下面的方式来启动容器：
 
 ```sh
 docker run -it --entrypoint=/bin/sh minio/mc
@@ -71,9 +71,9 @@ mc.exe --help
 ```
 
 ### 通过源码安装
-通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从[minio-client](https://minio.io/downloads/#minio-client)下载官方版本。
+通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从[minio-client](https://min.io/downloads/#minio-client)下载官方版本。
 
-如果您没有Golang环境，请按照 [如何安装Golang](https://docs.minio.io/docs/how-to-install-golang)。
+如果您没有Golang环境，请按照 [如何安装Golang](https://docs.min.io/docs/how-to-install-golang)。
 
 ```sh
 go get -d github.com/minio/mc
@@ -81,7 +81,7 @@ cd ${GOPATH}/src/github.com/minio/mc
 make
 ```
 
-## 2. 运行Minio Client
+## 2. 运行MinIO Client
 
 ### GNU/Linux
 
@@ -116,8 +116,8 @@ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY
 
 别名就是给你的云存储服务起了一个短点的外号。S3 endpoint,access key和secret key是你的云存储服务提供的。API签名是可选参数，默认情况下，它被设置为"S3v4"。
 
-### 示例-Minio云存储
-从Minio服务获得URL、access key和secret key。
+### 示例-MinIO云存储
+从MinIO服务获得URL、access key和secret key。
 
 
 ```sh
@@ -141,7 +141,7 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 注意：Google云存储只支持旧版签名版本V2，所以你需要选择S3v2。
 
 ## 4. 验证
-`mc`预先配置了云存储服务URL：[https://play.minio.io:9000](https://play.minio.io:9000)，别名“play”。它是一个用于研发和测试的Minio服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
+`mc`预先配置了云存储服务URL：[https://play.minio.io:9000](https://play.minio.io:9000)，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
 
 *示例:*
 
@@ -179,7 +179,7 @@ Debug参数开启控制台输出debug信息。
 mc --debug ls play
 mc: <DEBUG> GET / HTTP/1.1
 Host: play.minio.io:9000
-User-Agent: Minio (darwin; amd64) minio-go/1.0.1 mc/2016-04-01T00:22:11Z
+User-Agent: MinIO (darwin; amd64) minio-go/1.0.1 mc/2016-04-01T00:22:11Z
 Authorization: AWS4-HMAC-SHA256 Credential=**REDACTED**/20160408/us-east-1/s3/aws4_request, SignedHeaders=expect;host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
 Expect: 100-continue
 X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -191,7 +191,7 @@ Transfer-Encoding: chunked
 Accept-Ranges: bytes
 Content-Type: text/xml; charset=utf-8
 Date: Fri, 08 Apr 2016 14:54:55 GMT
-Server: Minio/DEVELOPMENT.2016-04-07T18-53-27Z (linux; amd64)
+Server: MinIO/DEVELOPMENT.2016-04-07T18-53-27Z (linux; amd64)
 Vary: Origin
 X-Amz-Request-Id: HP30I0W2U49BDBIO
 
@@ -208,7 +208,7 @@ mc: <DEBUG> Response Time:  1.220112837s
 ### 参数 [--json]
 JSON参数启用JSON格式的输出。
 
-*示例：列出Minio play服务的所有存储桶。*
+*示例：列出MinIO play服务的所有存储桶。*
 
 ```sh
 mc --json ls play
@@ -267,7 +267,7 @@ mc ls play
 ```
 <a name="mb"></a>
 ### `mb`命令 - 创建存储桶
-`mb`命令在对象存储上创建一个新的存储桶。在文件系统，它就和`mkdir -p`命令是一样的。存储桶相当于文件系统中的磁盘或挂载点，不应视为文件夹。Minio对每个​​用户创建的存储桶数量没有限制。
+`mb`命令在对象存储上创建一个新的存储桶。在文件系统，它就和`mkdir -p`命令是一样的。存储桶相当于文件系统中的磁盘或挂载点，不应视为文件夹。MinIO对每个​​用户创建的存储桶数量没有限制。
 在Amazon S3上，每个帐户被限制为100个存储桶。有关更多信息，请参阅[S3上的存储桶限制和限制](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) 。
 
 ```sh
@@ -305,7 +305,7 @@ FLAGS:
 
 ```sh
 mc cat play/mybucket/myobject.txt
-Hello Minio!!
+Hello MinIO!!
 ```
 <a name="pipe"></a>
 ### `pipe`命令 - Pipe到对象
@@ -578,7 +578,7 @@ mc watch ~/Photos
 
 <a name="events"></a>
 ### `events`命令 - 管理存储桶事件通知。
-``events``提供了一种方便的配置存储桶的各种类型事件通知的方式。Minio事件通知可以配置成使用 AMQP，Redis，ElasticSearch，NATS和PostgreSQL服务。Minio configuration提供了如何配置的更多细节。
+``events``提供了一种方便的配置存储桶的各种类型事件通知的方式。MinIO事件通知可以配置成使用 AMQP，Redis，ElasticSearch，NATS和PostgreSQL服务。MinIO configuration提供了如何配置的更多细节。
 
 ```sh
 用法：
@@ -723,7 +723,7 @@ FLAGS:
 
 *示例： 管理配置文件*
 
-添加Minio服务的access和secret key到配置文件，注意，shell的history特性可能会记录这些信息，从而带来安全隐患。在`bash` shell,使用`set -o`和`set +o`来关闭和开启history特性。
+添加MinIO服务的access和secret key到配置文件，注意，shell的history特性可能会记录这些信息，从而带来安全隐患。在`bash` shell,使用`set -o`和`set +o`来关闭和开启history特性。
 
 ```sh
 set +o history

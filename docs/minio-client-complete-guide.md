@@ -1,6 +1,6 @@
-# Minio Client Complete Guide [![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io)
+# MinIO Client Complete Guide [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io)
 
-Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
+MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```sh
 ls       list buckets and objects
@@ -27,7 +27,7 @@ update   check for a new software update
 version  print version info
 ```
 
-## 1.  Download Minio Client
+## 1.  Download MinIO Client
 ### Docker Stable
 ```
 docker pull minio/mc
@@ -40,7 +40,7 @@ docker pull minio/mc:edge
 docker run minio/mc:edge ls play
 ```
 
-**Note:** Above examples run `mc` against Minio [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
+**Note:** Above examples run `mc` against MinIO [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
 
 ```sh
 docker run -it --entrypoint=/bin/sh minio/mc
@@ -77,9 +77,9 @@ mc.exe --help
 ```
 
 ### Install from Source
-Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://minio.io/downloads/#minio-client.
+Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://min.io/downloads/#minio-client.
 
-If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
+If you do not have a working Golang environment, please follow [How to install Golang](https://docs.min.io/docs/how-to-install-golang).
 
 ```sh
 go get -d github.com/minio/mc
@@ -87,7 +87,7 @@ cd ${GOPATH}/src/github.com/minio/mc
 make
 ```
 
-## 2. Run Minio Client
+## 2. Run MinIO Client
 
 ### GNU/Linux
 
@@ -122,8 +122,8 @@ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY
 
 Alias is simply a short name to your cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
 
-### Example - Minio Cloud Storage
-Minio server displays URL, access and secret keys.
+### Example - MinIO Cloud Storage
+MinIO server displays URL, access and secret keys.
 
 
 ```sh
@@ -158,7 +158,7 @@ mc ls myalias
 ```
 
 ## 4. Test Your Setup
-`mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted Minio server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
+`mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
 *Example:*
 
@@ -196,7 +196,7 @@ Debug option enables debug output to console.
 mc --debug ls play
 mc: <DEBUG> GET / HTTP/1.1
 Host: play.minio.io:9000
-User-Agent: Minio (darwin; amd64) minio-go/1.0.1 mc/2016-04-01T00:22:11Z
+User-Agent: MinIO (darwin; amd64) minio-go/1.0.1 mc/2016-04-01T00:22:11Z
 Authorization: AWS4-HMAC-SHA256 Credential=**REDACTED**/20160408/us-east-1/s3/aws4_request, SignedHeaders=expect;host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
 Expect: 100-continue
 X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -208,7 +208,7 @@ Transfer-Encoding: chunked
 Accept-Ranges: bytes
 Content-Type: text/xml; charset=utf-8
 Date: Fri, 08 Apr 2016 14:54:55 GMT
-Server: Minio/DEVELOPMENT.2016-04-07T18-53-27Z (linux; amd64)
+Server: MinIO/DEVELOPMENT.2016-04-07T18-53-27Z (linux; amd64)
 Vary: Origin
 X-Amz-Request-Id: HP30I0W2U49BDBIO
 
@@ -225,7 +225,7 @@ mc: <DEBUG> Response Time:  1.220112837s
 ### Option [--json]
 JSON option enables parseable output in JSON format.
 
-*Example: List all buckets from Minio play service.*
+*Example: List all buckets from MinIO play service.*
 
 ```sh
 mc --json ls play
@@ -287,7 +287,7 @@ mc ls play
 
 <a name="mb"></a>
 ### Command `mb` - Make a Bucket
-`mb` command creates a new bucket on an object storage. On a filesystem, it behaves like `mkdir -p` command. Bucket is equivalent of a drive or mount point in filesystems and should not be treated as folders. Minio does not place any limits on the number of buckets created per user.
+`mb` command creates a new bucket on an object storage. On a filesystem, it behaves like `mkdir -p` command. Bucket is equivalent of a drive or mount point in filesystems and should not be treated as folders. MinIO does not place any limits on the number of buckets created per user.
 On Amazon S3, each account is limited to 100 buckets. Please refer to [Buckets Restrictions and Limitations on S3](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) for more information.
 
 ```sh
@@ -361,14 +361,14 @@ ENVIRONMENT VARIABLES:
 
 ```sh
 mc cat play/mybucket/myobject.txt
-Hello Minio!!
+Hello MinIO!!
 ```
 
 *Example: Display the contents of a server encrypted object `myencryptedobject.txt`*
 
 ```sh
 mc cat --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybucket/myencryptedobject.txt
-Hello Minio!!
+Hello MinIO!!
 ```
 
 <a name="sql"></a>
@@ -866,7 +866,7 @@ mc watch ~/Photos
 
 <a name="event"></a>
 ### Command `event` - Manage bucket event notification.
-``event`` provides a convenient way to configure various types of event notifications on a bucket. Minio event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. Minio configuration provides more details on how these services can be configured.
+``event`` provides a convenient way to configure various types of event notifications on a bucket. MinIO event notification can be configured to use AMQP, Redis, ElasticSearch, NATS and PostgreSQL services. MinIO configuration provides more details on how these services can be configured.
 
 ```sh
 USAGE:
@@ -966,8 +966,8 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 ```
 
 <a name="admin"></a>
-### Command `admin` - Manage Minio servers
-Please visit [here](https://docs.minio.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
+### Command `admin` - Manage MinIO servers
+Please visit [here](https://docs.min.io/docs/minio-admin-complete-guide) for a more comprehensive admin guide.
 
 <a name="session"></a>
 ### Command `session` - Manage Sessions
@@ -1028,7 +1028,7 @@ FLAGS:
 
 *Example: Manage Config File*
 
-Add Minio server access and secret keys to config file host entry. Note that, the history feature of your shell may record these keys and pose a security risk. On `bash` shell, use `set -o` and `set +o` to disable and enable history feature momentarily.
+Add MinIO server access and secret keys to config file host entry. Note that, the history feature of your shell may record these keys and pose a security risk. On `bash` shell, use `set -o` and `set +o` to disable and enable history feature momentarily.
 
 ```sh
 set +o history

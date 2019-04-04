@@ -1,7 +1,7 @@
-# Minio客户端快速入门指南
-[![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io) [![Go Report Card](https://goreportcard.com/badge/minio/mc)](https://goreportcard.com/report/minio/mc) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/mc.svg?maxAge=604800)](https://hub.docker.com/r/minio/mc/)
+# MinIO客户端快速入门指南
+[![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io) [![Go Report Card](https://goreportcard.com/badge/minio/mc)](https://goreportcard.com/report/minio/mc) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/mc.svg?maxAge=604800)](https://hub.docker.com/r/minio/mc/)
 
-Minio Client (mc)为ls，cat，cp，mirror，diff，find等UNIX命令提供了一种替代方案。它支持文件系统和兼容Amazon S3的云存储服务（AWS Signature v2和v4）。
+MinIO Client (mc)为ls，cat，cp，mirror，diff，find等UNIX命令提供了一种替代方案。它支持文件系统和兼容Amazon S3的云存储服务（AWS Signature v2和v4）。
 
 
 ```
@@ -37,7 +37,7 @@ docker pull minio/mc:edge
 docker run minio/mc:edge ls play
 ```
 
-**注意:** 上述示例默认使用Minio[演示环境](#test-your-setup)做演示，如果想用`mc`操作其它S3兼容的服务，采用下面的方式来启动容器：
+**注意:** 上述示例默认使用MinIO[演示环境](#test-your-setup)做演示，如果想用`mc`操作其它S3兼容的服务，采用下面的方式来启动容器：
 
 ```sh
 docker run -it --entrypoint=/bin/sh minio/mc
@@ -76,9 +76,9 @@ mc.exe --help
 ```
 
 ## 通过源码安装
-通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从https://minio.io/downloads/#minio-client下载官方版本。
+通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从https://min.io/downloads/#minio-client下载官方版本。
 
-如果您没有Golang环境，请参照[如何安装Golang](https://docs.minio.io/docs/how-to-install-golang)。
+如果您没有Golang环境，请参照[如何安装Golang](https://docs.min.io/docs/how-to-install-golang)。
 
 ```sh
 go get -d github.com/minio/mc
@@ -97,8 +97,8 @@ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY
 
 别名就是给你的云存储服务起了一个短点的外号。S3 endpoint,access key和secret key是你的云存储服务提供的。API签名是可选参数，默认情况下，它被设置为"S3v4"。
 
-### 示例-Minio云存储
-从Minio服务获得URL、access key和secret key。
+### 示例-MinIO云存储
+从MinIO服务获得URL、access key和secret key。
 
 ```sh
 mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
@@ -121,7 +121,7 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 注意：Google云存储只支持旧版签名版本V2，所以你需要选择S3v2。
 
 ## 验证
-`mc`预先配置了云存储服务URL：https://play.minio.io:9000，别名“play”。它是一个用于研发和测试的Minio服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
+`mc`预先配置了云存储服务URL：https://play.minio.io:9000，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
 
 *示例:*
 
@@ -165,9 +165,9 @@ cat      cp       events   mb       pipe     rm       share    version
 ```
 
 ## 了解更多
-- [Minio Client完全指南](https://docs.minio.io/docs/minio-client-complete-guide)
-- [Minio快速入门](https://docs.minio.io/docs/minio-quickstart-guide)
-- [Minio官方文档](https://docs.minio.io)
+- [MinIO Client完全指南](https://docs.min.io/docs/minio-client-complete-guide)
+- [MinIO快速入门](https://docs.min.io/docs/minio-quickstart-guide)
+- [MinIO官方文档](https://docs.min.io)
 
 ## 贡献
-请遵守Minio[贡献者指南](https://github.com/minio/mc/blob/master/docs/zh_CN/CONTRIBUTING.md)
+请遵守MinIO[贡献者指南](https://github.com/minio/mc/blob/master/docs/zh_CN/CONTRIBUTING.md)

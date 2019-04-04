@@ -1,6 +1,6 @@
-# Minio Admin Complete Guide [![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io)
+# MinIO Admin Complete Guide [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io)
 
-Minio Client (mc) provides `admin` sub-command to perform administrative tasks on your Minio deployments.
+MinIO Client (mc) provides `admin` sub-command to perform administrative tasks on your MinIO deployments.
 
 ```sh
 service      stop, restart or get status of minio server
@@ -12,7 +12,7 @@ config       manage configuration file
 heal         heal disks, buckets and objects on minio server
 ```
 
-## 1.  Download Minio Client
+## 1.  Download MinIO Client
 ### Docker Stable
 ```
 docker pull minio/mc
@@ -54,9 +54,9 @@ mc.exe --help
 ```
 
 ### Install from Source
-Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://minio.io/downloads/#minio-client.
+Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://min.io/downloads/#minio-client.
 
-If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
+If you do not have a working Golang environment, please follow [How to install Golang](https://docs.min.io/docs/how-to-install-golang).
 
 ```sh
 go get -d github.com/minio/mc
@@ -64,7 +64,7 @@ cd ${GOPATH}/src/github.com/minio/mc
 make
 ```
 
-## 2. Run Minio Client
+## 2. Run MinIO Client
 
 ### GNU/Linux
 
@@ -86,8 +86,8 @@ chmod 755 mc
 mc.exe --help
 ```
 
-## 3. Add a Minio Storage Service
-Minio server displays URL, access and secret keys.
+## 3. Add a MinIO Storage Service
+MinIO server displays URL, access and secret keys.
 
 #### Usage
 
@@ -95,7 +95,7 @@ Minio server displays URL, access and secret keys.
 mc config host add <ALIAS> <YOUR-MINIO-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY>
 ```
 
-Alias is simply a short name to your Minio service. Minio end-point, access and secret keys are supplied by your Minio service. Admin API uses "S3v4" signature and cannot be changed.
+Alias is simply a short name to your MinIO service. MinIO end-point, access and secret keys are supplied by your MinIO service. Admin API uses "S3v4" signature and cannot be changed.
 
 ```sh
 mc config host add minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
@@ -105,7 +105,7 @@ mc config host add minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqA
 
 *Example:*
 
-Get Minio server information for the configured alias `minio`
+Get MinIO server information for the configured alias `minio`
 
 ```sh
 mc admin info minio
@@ -138,7 +138,7 @@ Debug option enables debug output to console.
 mc admin --debug info minio
 mc: <DEBUG> GET /minio/admin/v1/info HTTP/1.1
 Host: 192.168.1.51:9000
-User-Agent: Minio (linux; amd64) madmin-go/0.0.1 mc/2018-05-23T23:43:34Z
+User-Agent: MinIO (linux; amd64) madmin-go/0.0.1 mc/2018-05-23T23:43:34Z
 Authorization: AWS4-HMAC-SHA256 Credential=**REDACTED**/20180530/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
 X-Amz-Content-Sha256: UNSIGNED-PAYLOAD
 X-Amz-Date: 20180530T001808Z
@@ -150,7 +150,7 @@ Accept-Ranges: bytes
 Content-Security-Policy: block-all-mixed-content
 Content-Type: application/json
 Date: Wed, 30 May 2018 00:18:08 GMT
-Server: Minio/DEVELOPMENT.2018-05-28T04-31-38Z (linux; amd64)
+Server: MinIO/DEVELOPMENT.2018-05-28T04-31-38Z (linux; amd64)
 Vary: Origin
 X-Amz-Request-Id: 1533440573A63034
 X-Xss-Protection: "1; mode=block"
@@ -169,7 +169,7 @@ mc: <DEBUG> Response Time:  140.70112ms
 ### Option [--json]
 JSON option enables parseable output in JSON format.
 
-*Example: Minio server information.*
+*Example: MinIO server information.*
 
 ```sh
 mc admin --json info minio
@@ -224,7 +224,7 @@ Skip SSL certificate verification.
 
 <a name="service"></a>
 ### Command `service` - stop, restart or get status of minio server
-`service` command provides a way to restart, stop one or get the status of Minio servers (distributed cluster)
+`service` command provides a way to restart, stop one or get the status of MinIO servers (distributed cluster)
 
 ```sh
 NAME:
@@ -239,7 +239,7 @@ COMMANDS:
   stop     stop minio server
 ```
 
-*Example: Display service uptime for Minio server.*
+*Example: Display service uptime for MinIO server.*
 
 ```sh
 mc admin service status play
@@ -248,7 +248,7 @@ Uptime: 1 days 19 hours 57 minutes 39 seconds.
 
 *Example: Restart remote minio service.*
 
-NOTE: `restart` and `stop` sub-commands are disruptive operations for your Minio service, any on-going API operations will be forcibly canceled. So, it should be used only under certain circumstances. Please use it with caution.
+NOTE: `restart` and `stop` sub-commands are disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only under certain circumstances. Please use it with caution.
 
 ```sh
 mc admin service restart play
@@ -256,8 +256,8 @@ Restarted `play` successfully.
 ```
 
 <a name="info"></a>
-### Command `info` - Display Minio server information
-`info` command displays server information of one or many Minio servers (under distributed cluster)
+### Command `info` - Display MinIO server information
+`info` command displays server information of one or many MinIO servers (under distributed cluster)
 
 ```sh
 NAME:
@@ -267,7 +267,7 @@ FLAGS:
   --help, -h                       show help
 ```
 
-*Example: Display Minio server information.*
+*Example: Display MinIO server information.*
 
 ```sh
 mc admin info play
@@ -282,7 +282,7 @@ mc admin info play
 
 <a name="policy"></a>
 ### Command `policy` - Manage canned policies
-`policy` command to add, remove, list policies on Minio server.
+`policy` command to add, remove, list policies on MinIO server.
 
 ```sh
 NAME:
@@ -297,19 +297,19 @@ COMMANDS:
   list     List all policies
 ```
 
-*Example: Add a new policy 'newpolicy' on Minio, with policy from /tmp/newpolicy.json.*
+*Example: Add a new policy 'newpolicy' on MinIO, with policy from /tmp/newpolicy.json.*
 
 ```sh
 mc admin policy add myminio/ newpolicy /tmp/newpolicy.json
 ```
 
-*Example: Remove policy 'newpolicy' on Minio.*
+*Example: Remove policy 'newpolicy' on MinIO.*
 
 ```sh
 mc admin policy remove myminio/ newpolicy
 ```
 
-*Example: List all policies on Minio.*
+*Example: List all policies on MinIO.*
 
 ```sh
 mc admin policy list --json myminio/
@@ -336,37 +336,37 @@ COMMANDS:
   list     list all users
 ```
 
-*Example: Add a new user 'newuser' on Minio, with 'newpolicy' policy.*
+*Example: Add a new user 'newuser' on MinIO, with 'newpolicy' policy.*
 
 ```sh
 mc admin user add myminio/ newuser newuser123 newpolicy
 ```
 
-*Example: Change policy for a user 'newuser' on Minio to 'writeonly' policy.*
+*Example: Change policy for a user 'newuser' on MinIO to 'writeonly' policy.*
 
 ```sh
 mc admin user policy myminio/ newuser writeonly
 ```
 
-*Example: Disable a user 'newuser' on Minio.*
+*Example: Disable a user 'newuser' on MinIO.*
 
 ```sh
 mc admin user disable myminio/ newuser
 ```
 
-*Example: Enable a user 'newuser' on Minio.*
+*Example: Enable a user 'newuser' on MinIO.*
 
 ```sh
 mc admin user enable myminio/ newuser
 ```
 
-*Example: Remove user 'newuser' on Minio.*
+*Example: Remove user 'newuser' on MinIO.*
 
 ```sh
 mc admin user remove myminio/ newuser
 ```
 
-*Example: List all users on Minio.*
+*Example: List all users on MinIO.*
 
 ```sh
 mc admin user list --json myminio/
@@ -375,7 +375,7 @@ mc admin user list --json myminio/
 
 <a name="credential"></a>
 ### Command `credential` - Change server **admin** access and secret keys
-`credential` command to set new **admin** credential of a Minio server.
+`credential` command to set new **admin** credential of a MinIO server.
 
 ```sh
 NAME:
@@ -385,7 +385,7 @@ FLAGS:
   --help, -h                       Show help.
 ```
 
-*Example: Set new admin credential of a Minio server represented by its alias 'myminio'.*
+*Example: Set new admin credential of a MinIO server represented by its alias 'myminio'.*
 
 ```sh
 mc admin credential myminio/ minio minio123
@@ -393,7 +393,7 @@ mc admin credential myminio/ minio minio123
 
 <a name="config"></a>
 ### Command `config` - Manage server configuration
-`config` command to manage Minio server configuration.
+`config` command to manage MinIO server configuration.
 
 ```sh
 NAME:
@@ -403,32 +403,32 @@ USAGE:
   mc admin config COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
 
 COMMANDS:
-  get  get config of a Minio server/cluster.
-  set  set new config file to a Minio server/cluster.
+  get  get config of a MinIO server/cluster.
+  set  set new config file to a MinIO server/cluster.
 
 FLAGS:
   --help, -h                       Show help.
 ```
 
-*Example: Get server configuration of a Minio server/cluster.*
+*Example: Get server configuration of a MinIO server/cluster.*
 
 ```sh
 mc admin config get myminio > /tmp/my-serverconfig
 ```
 
-*Example: Set server configuration of a Minio server/cluster.*
+*Example: Set server configuration of a MinIO server/cluster.*
 
 ```sh
 mc admin config set myminio < /tmp/my-serverconfig
 ```
 
 <a name="heal"></a>
-### Command `heal` - Heal disks, buckets and objects on Minio server
-`heal` command heals disks, missing buckets, objects on Minio server. NOTE: This command is only applicable for Minio erasure coded setup (standalone and distributed).
+### Command `heal` - Heal disks, buckets and objects on MinIO server
+`heal` command heals disks, missing buckets, objects on MinIO server. NOTE: This command is only applicable for MinIO erasure coded setup (standalone and distributed).
 
 ```sh
 NAME:
-  mc admin heal - heal disks, buckets and objects on Minio server
+  mc admin heal - heal disks, buckets and objects on MinIO server
 
 FLAGS:
   --recursive, -r                  heal recursively
@@ -437,19 +437,19 @@ FLAGS:
   --help, -h                       show help
 ```
 
-*Example: Heal Minio cluster after replacing a fresh disk, recursively heal all buckets and objects, where 'myminio' is the Minio server alias.*
+*Example: Heal MinIO cluster after replacing a fresh disk, recursively heal all buckets and objects, where 'myminio' is the MinIO server alias.*
 
 ```sh
 mc admin heal -r myminio
 ```
 
-*Example: Heal Minio cluster on a specific bucket recursively, where 'myminio' is the Minio server alias.*
+*Example: Heal MinIO cluster on a specific bucket recursively, where 'myminio' is the MinIO server alias.*
 
 ```sh
 mc admin heal -r myminio/mybucket
 ```
 
-*Example: Heal Minio cluster on a specific object prefix recursively, where 'myminio' is the Minio server alias.*
+*Example: Heal MinIO cluster on a specific object prefix recursively, where 'myminio' is the MinIO server alias.*
 
 ```sh
 mc admin heal -r myminio/mybucket/myobjectprefix
