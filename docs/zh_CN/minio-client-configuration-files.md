@@ -1,9 +1,9 @@
-# Minio Client配置文件指南 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# MinIO Client配置文件指南 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/minio/minio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-本文我们将详细介绍Minio Client的配置文件。
+本文我们将详细介绍MinIO Client的配置文件。
 
-## Minio Client配置目录
-Minio Client配置信息存储在``.mc``文件夹，它是用户home目录下的一个隐藏文件夹。
+## MinIO Client配置目录
+MinIO Client配置信息存储在``.mc``文件夹，它是用户home目录下的一个隐藏文件夹。
 
 **这就是配置文件夹的目录结构：**
 
@@ -21,7 +21,7 @@ tree ~/.mc
 ``session``目录保存所有不完整上传或镜像的元数据信息。你可以运行`mc session list``列出这些信息。
 
 #### ``config.json``
-config.json是Minio Client的配置文件，它在安装并启动Minio后生成。我们通过``mc config host``添加的所有凭证，endpoint信息都存储在这里。
+config.json是MinIO Client的配置文件，它在安装并启动MinIO后生成。我们通过``mc config host``添加的所有凭证，endpoint信息都存储在这里。
 
 ```sh
 cat config.json 
@@ -64,16 +64,16 @@ cat config.json
 
 ``version``代表的是这个文件的版本。
 
-``hosts``存储将被Minio Client使用的认证证书。
+``hosts``存储将被MinIO Client使用的认证证书。
 
 #### ``config.json.old``
 这个文件保存了以前的配置文件版本细节。
 
 #### ``share``目录
-``share``目录保存Minio Client ``mc share``命令使用的所有对象的上传和下载URL的元数据信息。
+``share``目录保存MinIO Client ``mc share``命令使用的所有对象的上传和下载URL的元数据信息。
 
 ## 了解更多
-* [Minio Client完全指南](https://docs.minio.io/docs/minio-client-complete-guide)
+* [MinIO Client完全指南](https://docs.min.io/docs/minio-client-complete-guide)
 
 
 

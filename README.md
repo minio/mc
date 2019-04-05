@@ -1,7 +1,7 @@
-# Minio Client Quickstart Guide
-[![Slack](https://slack.minio.io/slack?type=svg)](https://slack.minio.io) [![Go Report Card](https://goreportcard.com/badge/minio/mc)](https://goreportcard.com/report/minio/mc) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/mc.svg?maxAge=604800)](https://hub.docker.com/r/minio/mc/)
+# MinIO Client Quickstart Guide
+[![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io) [![Go Report Card](https://goreportcard.com/badge/minio/mc)](https://goreportcard.com/report/minio/mc) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/mc.svg?maxAge=604800)](https://hub.docker.com/r/minio/mc/)
 
-Minio Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff, find etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
+MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff, find etc. It supports filesystems and Amazon S3 compatible cloud storage service (AWS Signature v2 and v4).
 
 ```
 ls       list buckets and objects
@@ -41,7 +41,7 @@ docker pull minio/mc:edge
 docker run minio/mc:edge ls play
 ```
 
-**Note:** Above examples run `mc` against Minio [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
+**Note:** Above examples run `mc` against MinIO [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
 
 ```sh
 docker run -it --entrypoint=/bin/sh minio/mc
@@ -82,9 +82,9 @@ mc.exe --help
 ```
 
 ## Install from Source
-Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://minio.io/downloads/#minio-client.
+Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://min.io/download/#minio-client.
 
-If you do not have a working Golang environment, please follow [How to install Golang](https://docs.minio.io/docs/how-to-install-golang).
+If you do not have a working Golang environment, please follow [How to install Golang](https://docs.min.io/docs/how-to-install-golang).
 
 ```sh
 go get -d github.com/minio/mc
@@ -105,8 +105,8 @@ Alias is simply a short name to your cloud storage service. S3 end-point, access
 
 Lookup is an optional argument. It is used to indicate whether dns or path style url requests are supported by the server. It accepts "dns", "path" or "auto" as valid values. By default, it is set to "auto" and SDK automatically determines the type of url lookup to use.
 
-### Example - Minio Cloud Storage
-Minio server displays URL, access and secret keys.
+### Example - MinIO Cloud Storage
+MinIO server displays URL, access and secret keys.
 
 ```sh
 mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
@@ -156,7 +156,7 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
 ## Test Your Setup
-`mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted Minio server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
+`mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
 *Example:*
 
@@ -217,12 +217,12 @@ cat      cp       event    head     mb       pipe     rm       share    stat    
 ```
 
 ## Explore Further
-- [Minio Client Complete Guide](https://docs.minio.io/docs/minio-client-complete-guide)
-- [Minio Quickstart Guide](https://docs.minio.io/docs/minio-quickstart-guide)
-- [The Minio documentation website](https://docs.minio.io)
+- [MinIO Client Complete Guide](https://docs.min.io/docs/minio-client-complete-guide)
+- [MinIO Quickstart Guide](https://docs.min.io/docs/minio-quickstart-guide)
+- [The MinIO documentation website](https://docs.min.io)
 
-## Contribute to Minio Project
-Please follow Minio [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
+## Contribute to MinIO Project
+Please follow MinIO [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
 
 
 ## License
