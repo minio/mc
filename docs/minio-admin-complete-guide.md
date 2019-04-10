@@ -2,7 +2,7 @@
 
 MinIO Client (mc) provides `admin` sub-command to perform administrative tasks on your MinIO deployments.
 
-```sh
+```
 service      stop, restart or get status of minio server
 info         display minio server information
 user         manage users
@@ -10,6 +10,7 @@ policy       manage canned policies
 credential   change admin server access and secret keys
 config       manage configuration file
 heal         heal disks, buckets and objects on minio server
+top          provide top like statistics for MinIO
 ```
 
 ## 1.  Download MinIO Client
@@ -221,6 +222,7 @@ Skip SSL certificate verification.
 |[**credential** - change **admin** server access and secret keys](#credential) |
 |[**config** - manage server configuration file](#config)|
 |[**heal** - heal disks, buckets and objects on minio server](#heal) |
+|[**top** - provide top like statistics for MinIO](#top) |
 
 <a name="service"></a>
 ### Command `service` - stop, restart or get status of minio server
@@ -453,4 +455,26 @@ mc admin heal -r myminio/mybucket
 
 ```sh
 mc admin heal -r myminio/mybucket/myobjectprefix
+```
+
+<a name="top"></a>
+### Command `top` - provide top like statistics for MinIO
+NOTE: This command is only applicable for a distributed MinIO setup. It is not supported on single node and gateway deployments.
+
+```
+NAME:
+  mc admin top - provide top like statistics for MinIO
+
+FLAGS:
+  --help, -h                    show help
+
+COMMANDS:
+  locks  Get a list of the 10 oldest locks on a MinIO cluster.
+  
+```
+
+*Example: Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
+
+```sh
+mc admin top locks myminio
 ```
