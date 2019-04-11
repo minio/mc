@@ -21,7 +21,7 @@ rm       remove objects
 event    manage object notifications
 watch    watch for object events
 policy   manage anonymous access to objects
-admin    manage minio servers
+admin    manage MinIO servers
 session  manage saved sessions for cp command
 config   manage mc configuration file
 update   check for a new software update

@@ -3,13 +3,13 @@
 MinIO Client (mc) provides `admin` sub-command to perform administrative tasks on your MinIO deployments.
 
 ```
-service      stop, restart or get status of minio server
-info         display minio server information
+service      stop, restart or get status of MinIO server
+info         display MinIO server information
 user         manage users
 policy       manage canned policies
 credential   change admin server access and secret keys
 config       manage configuration file
-heal         heal disks, buckets and objects on minio server
+heal         heal disks, buckets and objects on MinIO server
 top          provide top like statistics for MinIO
 ```
 
@@ -215,30 +215,30 @@ Skip SSL certificate verification.
 
 |   |
 |:---|
-|[**service** - start, stop or get the status of minio server](#service) |
-|[**info** - display minio server information](#info) |
+|[**service** - start, stop or get the status of MinIO server](#service) |
+|[**info** - display MinIO server information](#info) |
 |[**user** - manage users](#user) |
 |[**policy** - manage canned policies](#policy) |
 |[**credential** - change **admin** server access and secret keys](#credential) |
 |[**config** - manage server configuration file](#config)|
-|[**heal** - heal disks, buckets and objects on minio server](#heal) |
+|[**heal** - heal disks, buckets and objects on MinIO server](#heal) |
 |[**top** - provide top like statistics for MinIO](#top) |
 
 <a name="service"></a>
-### Command `service` - stop, restart or get status of minio server
+### Command `service` - stop, restart or get status of MinIO server
 `service` command provides a way to restart, stop one or get the status of MinIO servers (distributed cluster)
 
 ```sh
 NAME:
-  mc admin service - stop, restart or get status of minio server
+  mc admin service - stop, restart or get status of MinIO server
 
 FLAGS:
   --help, -h                       show help
 
 COMMANDS:
-  status   get the status of minio server
-  restart  restart minio server
-  stop     stop minio server
+  status   get the status of MinIO server
+  restart  restart MinIO server
+  stop     stop MinIO server
 ```
 
 *Example: Display service uptime for MinIO server.*
@@ -248,7 +248,7 @@ mc admin service status play
 Uptime: 1 days 19 hours 57 minutes 39 seconds.
 ```
 
-*Example: Restart remote minio service.*
+*Example: Restart remote MinIO service.*
 
 NOTE: `restart` and `stop` sub-commands are disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only under certain circumstances. Please use it with caution.
 
@@ -263,7 +263,7 @@ Restarted `play` successfully.
 
 ```sh
 NAME:
-  mc admin info - get minio server information
+  mc admin info - get MinIO server information
 
 FLAGS:
   --help, -h                       show help
@@ -320,7 +320,7 @@ mc admin policy list --json myminio/
 
 <a name="user"></a>
 ### Command `user` - Manage users
-`user` command to add, remove, enable, disable, list users on minio server.
+`user` command to add, remove, enable, disable, list users on MinIO server.
 
 ```sh
 NAME:

@@ -38,7 +38,7 @@ var (
 
 var adminInfoCmd = cli.Command{
 	Name:   "info",
-	Usage:  "display minio server information",
+	Usage:  "display MinIO server information",
 	Action: mainAdminInfo,
 	Before: setGlobalsFromContext,
 	Flags:  append(adminInfoFlags, globalFlags...),

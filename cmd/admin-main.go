@@ -24,7 +24,7 @@ var (
 
 var adminCmd = cli.Command{
 	Name:            "admin",
-	Usage:           "manage minio servers",
+	Usage:           "manage MinIO servers",
 	Action:          mainAdmin,
 	HideHelpCommand: true,
 	Before:          setGlobalsFromContext,

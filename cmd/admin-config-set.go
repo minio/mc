@@ -28,7 +28,7 @@ import (
 
 var adminConfigSetCmd = cli.Command{
 	Name:   "set",
-	Usage:  "set new config file to a minio server/cluster.",
+	Usage:  "set new config file to a MinIO server/cluster.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigSet,
 	Flags:  globalFlags,

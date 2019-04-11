@@ -69,16 +69,16 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 EXAMPLES:
-   1. Watch new S3 operations on a minio server
+   1. Watch new S3 operations on a MinIO server
       $ {{.HelpName}} play/testbucket
 
-   2. Watch new events for a specific prefix "output/"  on minio server.
+   2. Watch new events for a specific prefix "output/"  on MinIO server.
       $ {{.HelpName}} --prefix "output/" play/testbucket
 
-   3. Watch new events for a specific suffix ".jpg" on minio server.
+   3. Watch new events for a specific suffix ".jpg" on MinIO server.
       $ {{.HelpName}} --suffix ".jpg" play/testbucket
 
-   4. Watch new events on a specific prefix and suffix on minio server.
+   4. Watch new events on a specific prefix and suffix on MinIO server.
       $ {{.HelpName}} --suffix ".jpg" --prefix "photos/" play/testbucket
 
    5. Watch for events on local directory.

@@ -164,7 +164,7 @@ func mainAdminMonitor(ctx *cli.Context) error {
 		}
 		return nil
 	}
-	// Fetch info of all CPU loads (all minio server instances)
+	// Fetch info of all CPU loads (all MinIO server instances)
 	cpuLoads, e := client.ServerCPULoadInfo()
 	if err := processErr(e); err != nil {
 		// exit immediately if error encountered

@@ -99,7 +99,7 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			// Set app info.
 			api.SetAppInfo(config.AppName, config.AppVersion)
 
-			// Cache the new minio client with hash of config as key.
+			// Cache the new MinIO Client with hash of config as key.
 			clientCache[confSum] = api
 		}
 

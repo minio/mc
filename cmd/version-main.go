@@ -52,7 +52,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 EXAMPLES:
-   1. Prints the minio client version:
+   1. Prints the MinIO Client version:
        $ {{.HelpName}}
 `,
 }

@@ -22,7 +22,7 @@
 #
 # * As mc functional tests, just run this script.  It uses mc executable binary
 #   in current working directory or in the path.  The tests uses play.min.io
-#   as minio server.
+#   as MinIO server.
 #
 # * For other, call this script with environment variables MINT_MODE,
 #   MINT_DATA_DIR, SERVER_ENDPOINT, ACCESS_KEY, SECRET_KEY and ENABLE_HTTPS. It

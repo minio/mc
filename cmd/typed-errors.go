@@ -62,7 +62,7 @@ var errInvalidAlias = func(alias string) *probe.Error {
 type invalidURLErr error
 
 var errInvalidURL = func(URL string) *probe.Error {
-	msg := "URL `" + URL + "` for minio client should be of the form scheme://host[:port]/ without resource component."
+	msg := "URL `" + URL + "` for MinIO Client should be of the form scheme://host[:port]/ without resource component."
 	return probe.NewError(invalidURLErr(errors.New(msg)))
 }
 

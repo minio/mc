@@ -18,7 +18,7 @@ package cmd
 
 import "github.com/minio/cli"
 
-//   Configure minio client
+//   Configure MinIO Client
 //
 //   ----
 //   NOTE: that the configure command only writes values to the config file.
@@ -35,7 +35,7 @@ var (
 
 var configCmd = cli.Command{
 	Name:            "config",
-	Usage:           "configure minio client",
+	Usage:           "configure MinIO client",
 	Action:          mainConfig,
 	Before:          setGlobalsFromContext,
 	HideHelpCommand: true,

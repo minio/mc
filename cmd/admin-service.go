@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var adminServiceCmd = cli.Command{
 	Name:            "service",
-	Usage:           "stop, restart or get status of minio server",
+	Usage:           "stop, restart or get status of MinIO server",
 	Action:          mainAdminService,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,
