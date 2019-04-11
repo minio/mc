@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015, 2016, 2017 Minio, Inc.
+ * MinIO Client (C) 2014, 2015, 2016, 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -329,14 +329,14 @@ func registerApp() *cli.App {
 	app := cli.NewApp()
 	app.Action = func(ctx *cli.Context) {
 		if strings.HasPrefix(ReleaseTag, "RELEASE.") {
-			// Check for new updates from dl.minio.io.
+			// Check for new updates from dl.min.io.
 			checkUpdate(ctx)
 		}
 		cli.ShowAppHelp(ctx)
 	}
 
 	app.HideHelpCommand = true
-	app.Usage = "Minio Client for cloud storage and filesystems."
+	app.Usage = "MinIO Client for cloud storage and filesystems."
 	app.Commands = commands
 	app.Author = "Minio.io"
 	app.Version = ReleaseTag

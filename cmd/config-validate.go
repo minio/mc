@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * MinIO Client (C) 2015 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ func validateConfigVersion(config *configV9) (bool, string) {
 	return true, ""
 }
 
-// Verifies the config file of the Minio Client
+// Verifies the config file of the MinIO Client
 func validateConfigFile(config *configV9) (bool, []string) {
 	ok, err := validateConfigVersion(config)
 	var validationSuccessful = true

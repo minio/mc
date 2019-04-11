@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016, 2017 Minio, Inc.
+ * MinIO Client (C) 2016, 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Check if the 'play' Minio server is online and show its uptime.
+    1. Check if the 'play' MinIO server is online and show its uptime.
        $ {{.HelpName}} play/
 `,
 }
@@ -107,11 +107,11 @@ func mainAdminServiceStatus(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	// Fetch the service status of the specified Minio server
+	// Fetch the service status of the specified MinIO server
 	st, e := client.ServiceStatus()
 
 	// Check the availability of the server: online or offline. A server is considered

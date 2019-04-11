@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015, 2016 Minio, Inc.
+ * MinIO Client (C) 2014, 2015, 2016 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,6 @@ func checkGoVersion() {
 
 	// Check for minimum version.
 	if !constraints.Check(curVersion) {
-		console.Fatalln(fmt.Sprintf("Please recompile Minio with Golang version %s.", minGoVersion))
+		console.Fatalln(fmt.Sprintf("Please recompile MinIO with Golang version %s.", minGoVersion))
 	}
 }

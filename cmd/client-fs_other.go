@@ -1,7 +1,7 @@
 // +build solaris openbsd
 
 /*
- * Minio Client (C) 2015, 2016, 2017 Minio, Inc.
+ * MinIO Client (C) 2015, 2016, 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this fs except in compliance with the License.

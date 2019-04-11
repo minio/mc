@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2017, 2018 Minio, Inc.
+ * MinIO Client (C) 2017, 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,10 +83,10 @@ SCAN MODES:
    deep            : Heal objects which are missing on one or more disks. Also heal objects with silent data corruption.
 
 EXAMPLES:
-    1. To format newly replaced disks in a Minio server with alias 'play'
+    1. To format newly replaced disks in a MinIO server with alias 'play'
        $ {{.HelpName}} play
 
-    2. Heal 'testbucket' in a Minio server with alias 'play'
+    2. Heal 'testbucket' in a MinIO server with alias 'play'
        $ {{.HelpName}} play/testbucket/
 
     3. Heal all objects under 'dir' prefix
@@ -155,7 +155,7 @@ func mainAdminHeal(ctx *cli.Context) error {
 	console.SetColor("HealUpdateUI", color.New(color.FgYellow, color.Bold))
 	console.SetColor("HealStopped", color.New(color.FgGreen, color.Bold))
 
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
 		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")

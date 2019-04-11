@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * MinIO Client (C) 2015 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ type clientURLType int
 
 // enum types
 const (
-	objectStorage = iota // Minio and S3 compatible cloud storage
+	objectStorage = iota // MinIO and S3 compatible cloud storage
 	fileSystem           // POSIX compatible file systems
 )
 

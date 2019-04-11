@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Minio Client, (C) 2015, 2016, 2017, 2018, 2019 Minio, Inc.
+# MinIO Client, (C) 2015, 2016, 2017, 2018, 2019 MinIO, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ assert_is_supported_os() {
 
 assert_check_golang_env() {
     if ! which go >/dev/null 2>&1; then
-        echo "Cannot find go binary in your PATH configuration, please refer to Go installation document at https://docs.minio.io/docs/how-to-install-golang"
+        echo "Cannot find go binary in your PATH configuration, please refer to Go installation document at https://docs.min.io/docs/how-to-install-golang"
         exit 1
     fi
 

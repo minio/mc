@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2017 Minio, Inc.
+ * MinIO Client (C) 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get server configuration of a Minio server/cluster.
+  1. Get server configuration of a MinIO server/cluster.
      $ {{.HelpName}} play/
 
 `,
@@ -82,7 +82,7 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 

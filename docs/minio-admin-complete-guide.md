@@ -37,8 +37,8 @@ mc --help
 ### Binary Download (GNU/Linux)
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
-|GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
-||64-bit PPC|https://dl.minio.io/client/mc/release/linux-ppc64le/mc |
+|GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
+||64-bit PPC|https://dl.min.io/client/mc/release/linux-ppc64le/mc |
 
 ```sh
 chmod +x mc
@@ -48,7 +48,7 @@ chmod +x mc
 ### Binary Download (Microsoft Windows)
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
-|Microsoft Windows|64-bit Intel|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
+|Microsoft Windows|64-bit Intel|https://dl.min.io/client/mc/release/windows-amd64/mc.exe |
 
 ```sh
 mc.exe --help
@@ -273,7 +273,7 @@ FLAGS:
 
 ```sh
 mc admin info play
-●  play.minio.io:9000
+●  play.min.io:9000
    Uptime : online since 1 day ago
   Version : 2018-05-28T04:31:38Z
    Region :

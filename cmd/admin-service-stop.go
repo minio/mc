@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2018 Minio, Inc.
+ * MinIO Client (C) 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Stop Minio server represented by its alias 'play'.
+    1. Stop MinIO server represented by its alias 'play'.
        $ {{.HelpName}} play/
 
 `,
@@ -88,7 +88,7 @@ func mainAdminServiceStop(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	// Stop the specified Minio server
+	// Stop the specified MinIO server
 	pErr := client.ServiceSendAction(madmin.ServiceActionValueStop)
 	fatalIf(probe.NewError(pErr), "Cannot stop server.")
 

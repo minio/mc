@@ -58,7 +58,7 @@ mc --help
 ### 下载二进制文件
 | 平台 | CPU架构 | URL |
 | ---------- | -------- |------|
-|GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
+|GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
 
 ```sh
 chmod +x mc
@@ -69,7 +69,7 @@ chmod +x mc
 ### 下载二进制文件
 | 平台 | CPU架构 | URL |
 | ---------- | -------- |------|
-|Microsoft Windows|64-bit Intel|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
+|Microsoft Windows|64-bit Intel|https://dl.min.io/client/mc/release/windows-amd64/mc.exe |
 
 ```sh
 mc.exe --help
@@ -121,11 +121,11 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 注意：Google云存储只支持旧版签名版本V2，所以你需要选择S3v2。
 
 ## 验证
-`mc`预先配置了云存储服务URL：https://play.minio.io:9000，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
+`mc`预先配置了云存储服务URL：https://play.min.io:9000，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
 
 *示例:*
 
-列出https://play.minio.io:9000上的所有存储桶。
+列出https://play.min.io:9000上的所有存储桶。
 
 ```sh
 mc ls play

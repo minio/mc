@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * MinIO Client (C) 2015 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ func (c *configV9) setHost(alias string, cfg hostConfigV9) {
 
 // load default values for missing entries.
 func (c *configV9) loadDefaults() {
-	// Minio server running locally.
+	// MinIO server running locally.
 	c.setHost("local", hostConfigV9{
 		URL:       "http://localhost:9000",
 		AccessKey: "",
@@ -94,9 +94,9 @@ func (c *configV9) loadDefaults() {
 		Lookup:    "dns",
 	})
 
-	// Minio anonymous server for demo.
+	// MinIO anonymous server for demo.
 	c.setHost("play", hostConfigV9{
-		URL:       "https://play.minio.io:9000",
+		URL:       "https://play.min.io:9000",
 		AccessKey: "Q3AM3UQ867SPQQA43P2F",
 		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
 		API:       "S3v4",

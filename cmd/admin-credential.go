@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016, 2017, 2018 Minio, Inc.
+ * MinIO Client (C) 2016, 2017, 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Set new **admin** credential of a Minio server represented by its alias 'alias'.
+    1. Set new **admin** credential of a MinIO server represented by its alias 'alias'.
        $ {{.HelpName}} alias/ minio minio123
 
 `,
@@ -65,15 +65,15 @@ func mainAdminCreds(ctx *cli.Context) error {
 	args := ctx.Args()
 	// TODO: if accessKey and secretKey are not supplied we should
 	// display the existing credential. This needs GetCredential
-	// support from Minio server.
+	// support from MinIO server.
 	aliasedURL := args.First()
 	accessKey, secretKey := args.Get(1), args.Get(2)
 
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	// Change the credential of the specified Minio server
+	// Change the credential of the specified MinIO server
 	e := client.SetAdminCredentials(accessKey, secretKey)
 	fatalIf(probe.NewError(e), "Unable to set new credential to '"+aliasedURL+"'.")
 
