@@ -441,7 +441,7 @@ COMPRESSION TYPE
 mc sql --recursive --query "select * from S3Object" s3/personalbucket/my-large-csvs/
 ```
 
-*Example: Run an aggregation query on an object on minio*
+*Example: Run an aggregation query on an object on MinIO*
 
 ```sh
 mc sql --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv
@@ -768,7 +768,7 @@ FLAGS:
   --help, -h                    show help
 ```
 
-*Example: Find all jpeg images from s3 bucket and copy to minio "play/bucket" bucket continuously.*
+*Example: Find all jpeg images from s3 bucket and copy to MinIO "play/bucket" bucket continuously.*
 ```sh
 mc find s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
 ```

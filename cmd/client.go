@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go"
+	"github.com/minio/minio-go"
 	"github.com/minio/minio-go/pkg/encrypt"
 )
 

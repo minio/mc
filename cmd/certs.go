@@ -96,7 +96,7 @@ func createCAsDir() *probe.Error {
 	return nil
 }
 
-// mustGetCAFiles - get the list of the CA certificates stored in minio config dir
+// mustGetCAFiles - get the list of the CA certificates stored in MinIO config dir
 func mustGetCAFiles() (caCerts []string) {
 	CAsDir := mustGetCAsDir()
 	caFiles, _ := ioutil.ReadDir(CAsDir)
@@ -115,7 +115,7 @@ func mustGetSystemCertPool() *x509.CertPool {
 	return pool
 }
 
-// loadRootCAs fetches CA files provided in minio config and adds them to globalRootCAs
+// loadRootCAs fetches CA files provided in MinIO config and adds them to globalRootCAs
 // Currently under Windows, there is no way to load system + user CAs at the same time
 func loadRootCAs() {
 	caFiles := mustGetCAFiles()

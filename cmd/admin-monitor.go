@@ -134,7 +134,7 @@ func mainAdminMonitor(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Create a new minio admin client
+	// Create a new MinIO admin client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 

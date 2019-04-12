@@ -43,7 +43,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
     1. Set new **admin** credential of a MinIO server represented by its alias 'alias'.
-       $ {{.HelpName}} alias/ minio minio123
+       $ {{.HelpName}} alias minio minio123
 
 `,
 }

@@ -63,7 +63,7 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var api *madmin.AdminClient
 		var found bool
 		if api, found = clientCache[confSum]; !found {
-			// Not found. Instantiate a new minio
+			// Not found. Instantiate a new MinIO
 			var e error
 			api, e = madmin.New(hostName, config.AccessKey, config.SecretKey, useTLS)
 			if e != nil {

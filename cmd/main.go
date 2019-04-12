@@ -338,7 +338,7 @@ func registerApp() *cli.App {
 	app.HideHelpCommand = true
 	app.Usage = "MinIO Client for cloud storage and filesystems."
 	app.Commands = commands
-	app.Author = "Minio.io"
+	app.Author = "MinIO, Inc."
 	app.Version = ReleaseTag
 	app.Flags = append(mcFlags, globalFlags...)
 	app.CustomAppHelpTemplate = mcHelpTemplate

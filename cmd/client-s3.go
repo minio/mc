@@ -141,7 +141,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
 			}
-			// Not found. Instantiate a new minio
+			// Not found. Instantiate a new MinIO
 			var e error
 
 			options := minio.Options{

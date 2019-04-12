@@ -184,7 +184,7 @@ func IsDCOS() bool {
 	return os.Getenv("MESOS_CONTAINER_NAME") != ""
 }
 
-// IsKubernetes returns true if minio is running in kubernetes.
+// IsKubernetes returns true if MinIO is running in kubernetes.
 func IsKubernetes() bool {
 	// Kubernetes env used to validate if we are
 	// indeed running inside a kubernetes pod

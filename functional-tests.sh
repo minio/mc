@@ -17,7 +17,7 @@
 
 ################################################################################
 #
-# This script is usable by mc functional tests, mint tests and minio verification
+# This script is usable by mc functional tests, mint tests and MinIO verification
 # tests.
 #
 # * As mc functional tests, just run this script.  It uses mc executable binary
@@ -26,7 +26,7 @@
 #
 # * For other, call this script with environment variables MINT_MODE,
 #   MINT_DATA_DIR, SERVER_ENDPOINT, ACCESS_KEY, SECRET_KEY and ENABLE_HTTPS. It
-#   uses mc executable binary in current working directory and uses given minio
+#   uses mc executable binary in current working directory and uses given MinIO
 #   server to run tests. MINT_MODE is set by mint to specify what category of
 #   tests to run.
 #
