@@ -45,6 +45,8 @@ func migrateConfig() {
 	migrateConfigV7ToV8()
 	// Migrate config V8 to V9
 	migrateConfigV8ToV9()
+	// Migrate config V9 to V10
+	migrateConfigV9ToV10()
 }
 
 // Migrate from config version 1.0 to 1.0.1. Populate example entries and save it back.
@@ -481,4 +483,49 @@ func migrateConfigV8ToV9() {
 	fatalIf(probe.NewError(e), "Unable to save config version `9`.")
 
 	console.Infof("Successfully migrated %s from version `8` to version `9`.\n", mustGetMcConfigPath())
+}
+
+func migrateConfigV9ToV10() {
+	if !isMcConfigExists() {
+		return
+	}
+
+	mcCfgV9, e := quick.LoadConfig(mustGetMcConfigPath(), nil, newConfigV9())
+	fatalIf(probe.NewError(e), "Unable to load mc config V9.")
+
+	if mcCfgV9.Version() != "9" {
+		return
+	}
+
+	cfgV10 := newConfigV10()
+	isEmpty := true
+	// Version 10 adds a SessionToken field to each host config to
+	// support reuse of temporary credentials. This field will be
+	// empty for hosts from previous version of config file.
+	for host, hostCfgV9 := range mcCfgV9.Data().(*configV9).Hosts {
+		// Ignore 'player', 'play' and 'dl' aliases.
+		if host == "player" || host == "dl" || host == "play" {
+			continue
+		}
+		isEmpty = false
+		hostCfgV10 := hostConfigV10{}
+		hostCfgV10.URL = hostCfgV9.URL
+		hostCfgV10.AccessKey = hostCfgV9.AccessKey
+		hostCfgV10.SecretKey = hostCfgV9.SecretKey
+		hostCfgV10.API = hostCfgV9.API
+		hostCfgV10.Lookup = "auto"
+		cfgV10.Hosts[host] = hostCfgV10
+	}
+	if isEmpty {
+		// Load default settings.
+		cfgV10.loadDefaults()
+	}
+
+	mcNewCfgV10, e := quick.NewConfig(cfgV10, nil)
+	fatalIf(probe.NewError(e), "Unable to initialize quick config for config version `10`.")
+
+	e = mcNewCfgV10.Save(mustGetMcConfigPath())
+	fatalIf(probe.NewError(e), "Unable to save config version `10`.")
+
+	console.Infof("Successfully migrated %s from version `9` to version `10`.\n", mustGetMcConfigPath())
 }

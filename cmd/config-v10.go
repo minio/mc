@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,50 +21,44 @@ import (
 	"github.com/minio/minio/pkg/quick"
 )
 
-const (
-	defaultAccessKey = "YOUR-ACCESS-KEY-HERE"
-	defaultSecretKey = "YOUR-SECRET-KEY-HERE"
-)
-
 var (
 	// set once during first load.
-	cacheCfgV9 *configV9
+	cacheCfgV10 *configV10
 )
 
-// hostConfig configuration of a host.
-type hostConfigV9 struct {
-	URL       string `json:"url"`
-	AccessKey string `json:"accessKey"`
-	SecretKey string `json:"secretKey"`
-	API       string `json:"api"`
-	Lookup    string `json:"lookup"`
+type hostConfigV10 struct {
+	URL          string `json:"url"`
+	AccessKey    string `json:"accessKey"`
+	SecretKey    string `json:"secretKey"`
+	API          string `json:"api"`
+	Lookup       string `json:"lookup"`
+	SessionToken string `json:"sessionToken"`
 }
 
-// configV8 config version.
-type configV9 struct {
-	Version string                  `json:"version"`
-	Hosts   map[string]hostConfigV9 `json:"hosts"`
+type configV10 struct {
+	Version string                   `json:"version"`
+	Hosts   map[string]hostConfigV10 `json:"hosts"`
 }
 
-// newConfigV9 - new config version.
-func newConfigV9() *configV9 {
-	cfg := new(configV9)
+// newConfigV10 - new config version.
+func newConfigV10() *configV10 {
+	cfg := new(configV10)
 	cfg.Version = globalMCConfigVersion
-	cfg.Hosts = make(map[string]hostConfigV9)
+	cfg.Hosts = make(map[string]hostConfigV10)
 	return cfg
 }
 
 // SetHost sets host config if not empty.
-func (c *configV9) setHost(alias string, cfg hostConfigV9) {
+func (c *configV10) setHost(alias string, cfg hostConfigV10) {
 	if _, ok := c.Hosts[alias]; !ok {
 		c.Hosts[alias] = cfg
 	}
 }
 
 // load default values for missing entries.
-func (c *configV9) loadDefaults() {
+func (c *configV10) loadDefaults() {
 	// MinIO server running locally.
-	c.setHost("local", hostConfigV9{
+	c.setHost("local", hostConfigV10{
 		URL:       "http://localhost:9000",
 		AccessKey: "",
 		SecretKey: "",
@@ -73,7 +67,7 @@ func (c *configV9) loadDefaults() {
 	})
 
 	// Amazon S3 cloud storage service.
-	c.setHost("s3", hostConfigV9{
+	c.setHost("s3", hostConfigV10{
 		URL:       "https://s3.amazonaws.com",
 		AccessKey: defaultAccessKey,
 		SecretKey: defaultSecretKey,
@@ -82,7 +76,7 @@ func (c *configV9) loadDefaults() {
 	})
 
 	// Google cloud storage service.
-	c.setHost("gcs", hostConfigV9{
+	c.setHost("gcs", hostConfigV10{
 		URL:       "https://storage.googleapis.com",
 		AccessKey: defaultAccessKey,
 		SecretKey: defaultSecretKey,
@@ -91,7 +85,7 @@ func (c *configV9) loadDefaults() {
 	})
 
 	// MinIO anonymous server for demo.
-	c.setHost("play", hostConfigV9{
+	c.setHost("play", hostConfigV10{
 		URL:       "https://play.min.io:9000",
 		AccessKey: "Q3AM3UQ867SPQQA43P2F",
 		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
@@ -100,14 +94,14 @@ func (c *configV9) loadDefaults() {
 	})
 }
 
-// loadConfigV9 - loads a new config.
-func loadConfigV9() (*configV9, *probe.Error) {
+// loadConfigV10 - loads a new config.
+func loadConfigV10() (*configV10, *probe.Error) {
 	cfgMutex.RLock()
 	defer cfgMutex.RUnlock()
 
 	// If already cached, return the cached value.
-	if cacheCfgV9 != nil {
-		return cacheCfgV9, nil
+	if cacheCfgV10 != nil {
+		return cacheCfgV10, nil
 	}
 
 	if !isMcConfigExists() {
@@ -115,7 +109,7 @@ func loadConfigV9() (*configV9, *probe.Error) {
 	}
 
 	// Initialize a new config loader.
-	qc, e := quick.NewConfig(newConfigV9(), nil)
+	qc, e := quick.NewConfig(newConfigV10(), nil)
 	if e != nil {
 		return nil, probe.NewError(e)
 	}
@@ -126,27 +120,26 @@ func loadConfigV9() (*configV9, *probe.Error) {
 		return nil, probe.NewError(e)
 	}
 
-	cfgV9 := qc.Data().(*configV9)
+	cfgV10 := qc.Data().(*configV10)
 
 	// Cache config.
-	cacheCfgV9 = cfgV9
+	cacheCfgV10 = cfgV10
 
 	// Success.
-	return cfgV9, nil
+	return cfgV10, nil
 }
 
-// saveConfigV8 - saves an updated config.
-func saveConfigV9(cfgV9 *configV9) *probe.Error {
+func saveConfigV10(cfgV10 *configV10) *probe.Error {
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 
-	qs, e := quick.NewConfig(cfgV9, nil)
+	qs, e := quick.NewConfig(cfgV10, nil)
 	if e != nil {
 		return probe.NewError(e)
 	}
 
 	// update the cache.
-	cacheCfgV9 = cfgV9
+	cacheCfgV10 = cfgV10
 
 	e = qs.Save(mustGetMcConfigPath())
 	if e != nil {

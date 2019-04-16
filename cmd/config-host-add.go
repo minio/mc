@@ -128,7 +128,7 @@ func checkConfigHostAddSyntax(ctx *cli.Context) {
 }
 
 // addHost - add a host config.
-func addHost(alias string, hostCfgV9 hostConfigV9) {
+func addHost(alias string, hostCfgV9 mcHostConfig) {
 	mcCfgV9, err := loadMcConfig()
 	fatalIf(err.Trace(globalMCConfigVersion), "Unable to load config `"+mustGetMcConfigPath()+"`.")
 
@@ -197,7 +197,7 @@ func probeS3Signature(accessKey, secretKey, url string) (string, *probe.Error) {
 // signature auto-probe when needed.
 func buildS3Config(url, accessKey, secretKey, api, lookup string) (*Config, *probe.Error) {
 
-	s3Config := newS3Config(url, &hostConfigV9{
+	s3Config := newS3Config(url, &mcHostConfig{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		URL:       url,
@@ -237,7 +237,7 @@ func mainConfigHostAdd(ctx *cli.Context) error {
 	s3Config, err := buildS3Config(url, accessKey, secretKey, api, lookup)
 	fatalIf(err.Trace(ctx.Args()...), "Unable to initialize new config from the provided credentials.")
 
-	addHost(ctx.Args().Get(0), hostConfigV9{
+	addHost(ctx.Args().Get(0), mcHostConfig{
 		URL:       s3Config.HostURL,
 		AccessKey: s3Config.AccessKey,
 		SecretKey: s3Config.SecretKey,

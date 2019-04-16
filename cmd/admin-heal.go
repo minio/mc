@@ -103,6 +103,7 @@ EXAMPLES:
 
 func checkAdminHealSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
+
 		cli.ShowCommandHelpAndExit(ctx, "heal", 1) // last argument is exit code
 	}
 

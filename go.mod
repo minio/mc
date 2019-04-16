@@ -12,18 +12,16 @@ require (
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
-	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-version v1.1.0
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
-	github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.1
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/minio/cli v1.20.0
+	github.com/minio/gokrb5/v7 v7.2.5
 	github.com/minio/minio v0.0.0-20190619212803-35c38e4bd893
-	github.com/minio/minio-go v0.0.0-20190327203652-5325257a208f // indirect
 	github.com/minio/minio-go/v6 v6.0.29
 	github.com/minio/sha256-simd v0.1.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -46,4 +44,9 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
 	gopkg.in/h2non/filetype.v1 v1.0.5
+)
+
+replace (
+	github.com/minio/minio => /home/aditya/Code/go/src/github.com/minio/minio
+	github.com/minio/minio-go/v6 => /home/aditya/Code/go/src/github.com/minio/minio-go
 )

@@ -42,6 +42,7 @@ var configCmd = cli.Command{
 	Flags:           append(configFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		configHostCmd,
+		configStsCmd,
 	},
 }
 

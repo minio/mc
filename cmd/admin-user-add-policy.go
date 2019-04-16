@@ -23,12 +23,21 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
+var (
+	userPolicyAddFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "sts-kerberos",
+			Usage: "Specifies that policy is for Kerberos STS user",
+		},
+	}
+)
+
 var adminUserPolicyCmd = cli.Command{
 	Name:   "policy",
 	Usage:  "set policy for user",
 	Action: mainAdminUserPolicy,
 	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+	Flags:  append(globalFlags, userPolicyAddFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -44,6 +53,9 @@ FLAGS:
 EXAMPLES:
   1. Set a policy 'writeonly' to 'foobar' on MinIO server.
      $ {{.HelpName}} myminio foobar writeonly
+  2. Set a policy 'writeonly' to Kerberos principal 'mojo-jojo@MOJO.REALM' on myminio.
+     $ {{.HelpName}} myminio --kerberos mojo-jojo@MOJO.REALM writeonly
+
 `,
 }
 
@@ -68,7 +80,11 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	fatalIf(probe.NewError(client.SetUserPolicy(args.Get(1), args.Get(2))).Trace(args...), "Cannot set user policy for user")
+	if ctx.Bool("sts-kerberos") {
+		fatalIf(probe.NewError(client.SetKrbUserPolicy(args.Get(1), args.Get(2))).Trace(args...), "Cannot set user policy for user")
+	} else {
+		fatalIf(probe.NewError(client.SetUserPolicy(args.Get(1), args.Get(2))).Trace(args...), "Cannot set user policy for user")
+	}
 
 	printMsg(userMessage{
 		op:         "policy",

@@ -42,8 +42,8 @@ type clientURLType int
 
 // enum types
 const (
-	objectStorage = iota // MinIO and S3 compatible cloud storage
-	fileSystem           // POSIX compatible file systems
+	objectStorage clientURLType = iota // MinIO and S3 compatible cloud storage
+	fileSystem                         // POSIX compatible file systems
 )
 
 // Maybe rawurl is of the form scheme:path. (Scheme must be [a-zA-Z][a-zA-Z0-9+-.]*)

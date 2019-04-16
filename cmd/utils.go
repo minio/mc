@@ -127,7 +127,7 @@ func splitStr(path, sep string, n int) []string {
 
 // newS3Config simply creates a new Config struct using the passed
 // parameters.
-func newS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
+func newS3Config(urlStr string, hostCfg *mcHostConfig) *Config {
 	// We have a valid alias and hostConfig. We populate the
 	// credentials from the match found in the config file.
 	s3Config := new(Config)
@@ -143,6 +143,7 @@ func newS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 		s3Config.AccessKey = hostCfg.AccessKey
 		s3Config.SecretKey = hostCfg.SecretKey
 		s3Config.Signature = hostCfg.API
+		s3Config.SessionToken = hostCfg.SessionToken
 	}
 	s3Config.Lookup = getLookupType(hostCfg.Lookup)
 	return s3Config

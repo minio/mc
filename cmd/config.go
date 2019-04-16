@@ -23,10 +23,18 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sync"
 
 	"github.com/minio/mc/pkg/probe"
-
 	"github.com/mitchellh/go-homedir"
+)
+
+type mcConfig = configV10
+type mcHostConfig = hostConfigV10
+
+var (
+	// All access to mc config file should be synchronized.
+	cfgMutex = &sync.RWMutex{}
 )
 
 // mcCustomConfigDir contains the whole path to config dir. Only access via get/set functions.
@@ -97,28 +105,28 @@ func mustGetMcConfigPath() string {
 }
 
 // newMcConfig - initializes a new version '9' config.
-func newMcConfig() *configV9 {
-	cfg := newConfigV9()
+func newMcConfig() *mcConfig {
+	cfg := newConfigV10()
 	cfg.loadDefaults()
 	return cfg
 }
 
 // loadMcConfigCached - returns loadMcConfig with a closure for config cache.
-func loadMcConfigFactory() func() (*configV9, *probe.Error) {
+func loadMcConfigFactory() func() (*mcConfig, *probe.Error) {
 	// Load once and cache in a closure.
-	cfgCache, err := loadConfigV9()
+	cfgCache, err := loadConfigV10()
 
 	// loadMcConfig - reads configuration file and returns config.
-	return func() (*configV9, *probe.Error) {
+	return func() (*mcConfig, *probe.Error) {
 		return cfgCache, err
 	}
 }
 
 // loadMcConfig - returns configuration, initialized later.
-var loadMcConfig func() (*configV9, *probe.Error)
+var loadMcConfig func() (*mcConfig, *probe.Error)
 
 // saveMcConfig - saves configuration file and returns error if any.
-func saveMcConfig(config *configV9) *probe.Error {
+func saveMcConfig(config *mcConfig) *probe.Error {
 	if config == nil {
 		return errInvalidArgument().Trace()
 	}
@@ -129,7 +137,7 @@ func saveMcConfig(config *configV9) *probe.Error {
 	}
 
 	// Save the config.
-	if err := saveConfigV9(config); err != nil {
+	if err := saveConfigV10(config); err != nil {
 		return err.Trace(mustGetMcConfigPath())
 	}
 
@@ -156,7 +164,7 @@ func isValidAlias(alias string) bool {
 }
 
 // getHostConfig retrieves host specific configuration such as access keys, signature type.
-func getHostConfig(alias string) (*hostConfigV9, *probe.Error) {
+func getHostConfig(alias string) (*mcHostConfig, *probe.Error) {
 	mcCfg, err := loadMcConfig()
 	if err != nil {
 		return nil, err.Trace(alias)
@@ -173,7 +181,7 @@ func getHostConfig(alias string) (*hostConfigV9, *probe.Error) {
 }
 
 // mustGetHostConfig retrieves host specific configuration such as access keys, signature type.
-func mustGetHostConfig(alias string) *hostConfigV9 {
+func mustGetHostConfig(alias string) *mcHostConfig {
 	hostCfg, _ := getHostConfig(alias)
 	// If alias is not found,
 	// look for it in the environment variable.
@@ -263,13 +271,13 @@ func parseEnvURLStr(envURL string) (*url.URL, string, string, *probe.Error) {
 const mcEnvHostPrefix = "MC_HOST_"
 const mcEnvHostsDeprecatedPrefix = "MC_HOSTS_"
 
-func expandAliasFromEnv(envURL string) (*hostConfigV9, *probe.Error) {
+func expandAliasFromEnv(envURL string) (*mcHostConfig, *probe.Error) {
 	u, accessKey, secretKey, err := parseEnvURLStr(envURL)
 	if err != nil {
 		return nil, err.Trace(envURL)
 	}
 
-	return &hostConfigV9{
+	return &mcHostConfig{
 		URL:       u.String(),
 		API:       "S3v4",
 		AccessKey: accessKey,
@@ -278,7 +286,7 @@ func expandAliasFromEnv(envURL string) (*hostConfigV9, *probe.Error) {
 }
 
 // expandAlias expands aliased URL if any match is found, returns as is otherwise.
-func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV9, err *probe.Error) {
+func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *mcHostConfig, err *probe.Error) {
 	// Extract alias from the URL.
 	alias, path := url2Alias(aliasedURL)
 
@@ -308,7 +316,7 @@ func expandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostC
 }
 
 // mustExpandAlias expands aliased URL if any match is found, returns as is otherwise.
-func mustExpandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *hostConfigV9) {
+func mustExpandAlias(aliasedURL string) (alias string, urlStr string, hostCfg *mcHostConfig) {
 	alias, urlStr, hostCfg, _ = expandAlias(aliasedURL)
 	return alias, urlStr, hostCfg
 }
