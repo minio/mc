@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * MinIO Client (C) 2015 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -401,7 +401,7 @@ func migrateConfigV6ToV7() {
 }
 
 // Migrate config version `7` to `8'. Remove hosts
-// 'play.minio.io:9002' and 'dl.minio.io:9000'.
+// 'play.min.io:9002' and 'dl.min.io:9000'.
 func migrateConfigV7ToV8() {
 	if !isMcConfigExists() {
 		return

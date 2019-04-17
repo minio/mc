@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015, 2016, 2017, 2018 Minio, Inc.
+ * MinIO Client (C) 2015, 2016, 2017, 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,7 +141,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			if strings.ToUpper(config.Signature) == "S3V2" {
 				creds = credentials.NewStaticV2(config.AccessKey, config.SecretKey, "")
 			}
-			// Not found. Instantiate a new minio
+			// Not found. Instantiate a new MinIO
 			var e error
 
 			options := minio.Options{
@@ -217,7 +217,7 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 			// Set app info.
 			api.SetAppInfo(config.AppName, config.AppVersion)
 
-			// Cache the new minio client with hash of config as key.
+			// Cache the new MinIO Client with hash of config as key.
 			clientCache[confSum] = api
 		}
 

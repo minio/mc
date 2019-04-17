@@ -20,7 +20,7 @@ rm       remove objects
 event    manage object notifications
 watch    watch for object events
 policy   manage anonymous access to objects
-admin    manage minio servers
+admin    manage MinIO servers
 session  manage saved sessions for cp command
 config   manage mc configuration file
 update   check for a new software update
@@ -59,8 +59,8 @@ mc --help
 ### Binary Download (GNU/Linux)
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
-|GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
-||64-bit PPC|https://dl.minio.io/client/mc/release/linux-ppc64le/mc |
+|GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
+||64-bit PPC|https://dl.min.io/client/mc/release/linux-ppc64le/mc |
 
 ```sh
 chmod +x mc
@@ -70,7 +70,7 @@ chmod +x mc
 ### Binary Download (Microsoft Windows)
 | Platform | Architecture | URL |
 | ---------- | -------- |------|
-|Microsoft Windows|64-bit Intel|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
+|Microsoft Windows|64-bit Intel|https://dl.min.io/client/mc/release/windows-amd64/mc.exe |
 
 ```sh
 mc.exe --help
@@ -153,16 +153,16 @@ export MC_HOST_<alias>=https://<Access Key>:<Secret Key>@<YOUR-S3-ENDPOINT>
 
 Example:
 ```sh
-export MC_HOST_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.minio.io:9000
+export MC_HOST_myalias=https://Q3AM3UQ867SPQQA43P2F:zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG@play.min.io:9000
 mc ls myalias
 ```
 
 ## 4. Test Your Setup
-`mc` is pre-configured with https://play.minio.io:9000, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
+`mc` is pre-configured with https://play.min.io:9000, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
 *Example:*
 
-List all buckets from https://play.minio.io:9000
+List all buckets from https://play.min.io:9000
 
 ```sh
 mc ls play
@@ -195,7 +195,7 @@ Debug option enables debug output to console.
 ```sh
 mc --debug ls play
 mc: <DEBUG> GET / HTTP/1.1
-Host: play.minio.io:9000
+Host: play.min.io:9000
 User-Agent: MinIO (darwin; amd64) minio-go/1.0.1 mc/2016-04-01T00:22:11Z
 Authorization: AWS4-HMAC-SHA256 Credential=**REDACTED**/20160408/us-east-1/s3/aws4_request, SignedHeaders=expect;host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
 Expect: 100-continue
@@ -274,7 +274,7 @@ FLAGS:
   --help, -h                    show help
 ```
 
-*Example: List all buckets on https://play.minio.io:9000.*
+*Example: List all buckets on https://play.min.io:9000.*
 
 ```sh
 mc ls play
@@ -301,7 +301,7 @@ FLAGS:
 
 ```
 
-*Example: Create a new bucket named "mybucket" on https://play.minio.io:9000.*
+*Example: Create a new bucket named "mybucket" on https://play.min.io:9000.*
 
 
 ```sh
@@ -333,7 +333,7 @@ FLAGS:
 
 ```
 
-*Example: Remove a bucket named "mybucket" on https://play.minio.io:9000.*
+*Example: Remove a bucket named "mybucket" on https://play.min.io:9000.*
 
 
 ```sh
@@ -441,7 +441,7 @@ COMPRESSION TYPE
 mc sql --recursive --query "select * from S3Object" s3/personalbucket/my-large-csvs/
 ```
 
-*Example: Run an aggregation query on an object on minio*
+*Example: Run an aggregation query on an object on MinIO*
 
 ```sh
 mc sql --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv
@@ -659,9 +659,9 @@ FLAGS:
 ```sh
 
 mc share download --expire 4h play/mybucket/myobject.txt
-URL: https://play.minio.io:9000/mybucket/myobject.txt
+URL: https://play.min.io:9000/mybucket/myobject.txt
 Expire: 0 days 4 hours 0 minutes 0 seconds
-Share: https://play.minio.io:9000/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
+Share: https://play.min.io:9000/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
 
 ```
 
@@ -683,9 +683,9 @@ FLAGS:
 
 ```sh
 mc share upload play/mybucket/myotherobject.txt
-URL: https://play.minio.io:9000/mybucket/myotherobject.txt
+URL: https://play.min.io:9000/mybucket/myotherobject.txt
 Expire: 7 days 0 hours 0 minutes 0 seconds
-Share: curl https://play.minio.io:9000/mybucket -F x-amz-date=20160408T182356Z -F x-amz-signature=de343934bd0ba38bda0903813b5738f23dde67b4065ea2ec2e4e52f6389e51e1 -F bucket=mybucket -F policy=eyJleHBpcmF0aW9uIjoiMjAxNi0wNC0xNVQxODoyMzo1NS4wMDdaIiwiY29uZGl0aW9ucyI6W1siZXEiLCIkYnVja2V0IiwibXlidWNrZXQiXSxbImVxIiwiJGtleSIsIm15b3RoZXJvYmplY3QudHh0Il0sWyJlcSIsIiR4LWFtei1kYXRlIiwiMjAxNjA0MDhUMTgyMzU2WiJdLFsiZXEiLCIkeC1hbXotYWxnb3JpdGhtIiwiQVdTNC1ITUFDLVNIQTI1NiJdLFsiZXEiLCIkeC1hbXotY3JlZGVudGlhbCIsIlEzQU0zVVE4NjdTUFFRQTQzUDJGLzIwMTYwNDA4L3VzLWVhc3QtMS9zMy9hd3M0X3JlcXVlc3QiXV19 -F x-amz-algorithm=AWS4-HMAC-SHA256 -F x-amz-credential=Q3AM3UQ867SPQQA43P2F/20160408/us-east-1/s3/aws4_request -F key=myotherobject.txt -F file=@<FILE>
+Share: curl https://play.min.io:9000/mybucket -F x-amz-date=20160408T182356Z -F x-amz-signature=de343934bd0ba38bda0903813b5738f23dde67b4065ea2ec2e4e52f6389e51e1 -F bucket=mybucket -F policy=eyJleHBpcmF0aW9uIjoiMjAxNi0wNC0xNVQxODoyMzo1NS4wMDdaIiwiY29uZGl0aW9ucyI6W1siZXEiLCIkYnVja2V0IiwibXlidWNrZXQiXSxbImVxIiwiJGtleSIsIm15b3RoZXJvYmplY3QudHh0Il0sWyJlcSIsIiR4LWFtei1kYXRlIiwiMjAxNjA0MDhUMTgyMzU2WiJdLFsiZXEiLCIkeC1hbXotYWxnb3JpdGhtIiwiQVdTNC1ITUFDLVNIQTI1NiJdLFsiZXEiLCIkeC1hbXotY3JlZGVudGlhbCIsIlEzQU0zVVE4NjdTUFFRQTQzUDJGLzIwMTYwNDA4L3VzLWVhc3QtMS9zMy9hd3M0X3JlcXVlc3QiXV19 -F x-amz-algorithm=AWS4-HMAC-SHA256 -F x-amz-credential=Q3AM3UQ867SPQQA43P2F/20160408/us-east-1/s3/aws4_request -F key=myotherobject.txt -F file=@<FILE>
 ```
 
 #### Sub-command `share list` - Share List
@@ -728,14 +728,14 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
-*Example: Mirror a local directory to 'mybucket' on https://play.minio.io:9000.*
+*Example: Mirror a local directory to 'mybucket' on https://play.min.io:9000.*
 
 ```sh
 mc mirror localdir/ play/mybucket
 localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 73 B/s 0
 ```
 
-*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.minio.io:9000.*
+*Example: Continuously watch for changes on a local directory and mirror the changes to 'mybucket' on https://play.min.io:9000.*
 
 ```sh
 mc mirror -w localdir play/mybucket
@@ -768,7 +768,7 @@ FLAGS:
   --help, -h                    show help
 ```
 
-*Example: Find all jpeg images from s3 bucket and copy to minio "play/bucket" bucket continuously.*
+*Example: Find all jpeg images from s3 bucket and copy to MinIO "play/bucket" bucket continuously.*
 ```sh
 mc find s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
 ```
@@ -802,7 +802,7 @@ LEGEND:
 
 ```sh
  mc diff localdir play/mybucket
-‘localdir/notes.txt’ and ‘https://play.minio.io:9000/mybucket/notes.txt’ - only in first.
+‘localdir/notes.txt’ and ‘https://play.min.io:9000/mybucket/notes.txt’ - only in first.
 ```
 
 ### Option [--json]
@@ -849,9 +849,9 @@ FLAGS:
 
 ```sh
 mc watch play/testbucket
-[2016-08-18T00:51:29.735Z] 2.7KiB ObjectCreated https://play.minio.io:9000/testbucket/CONTRIBUTING.md
-[2016-08-18T00:51:29.780Z]  1009B ObjectCreated https://play.minio.io:9000/testbucket/MAINTAINERS.md
-[2016-08-18T00:51:29.839Z] 6.9KiB ObjectCreated https://play.minio.io:9000/testbucket/README.md
+[2016-08-18T00:51:29.735Z] 2.7KiB ObjectCreated https://play.min.io:9000/testbucket/CONTRIBUTING.md
+[2016-08-18T00:51:29.780Z]  1009B ObjectCreated https://play.min.io:9000/testbucket/MAINTAINERS.md
+[2016-08-18T00:51:29.839Z] 6.9KiB ObjectCreated https://play.min.io:9000/testbucket/README.md
 ```
 
 *Example: Watch for all events on local directory*
@@ -940,7 +940,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 
 *Example : Set anonymous bucket policy to download only*
 
-Set anonymous bucket policy  for ``mybucket/myphotos/2020/`` sub-directory and its objects to ``download`` only. Now, objects under the sub-directory are publicly accessible. e.g ``mybucket/myphotos/2020/yourobjectname``is available at [https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname)
+Set anonymous bucket policy  for ``mybucket/myphotos/2020/`` sub-directory and its objects to ``download`` only. Now, objects under the sub-directory are publicly accessible. e.g ``mybucket/myphotos/2020/yourobjectname``is available at [https://play.min.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.min.io:9000/mybucket/myphotos/2020/yourobjectname)
 
 ```sh
 mc policy download play/mybucket/myphotos/2020/
@@ -1038,7 +1038,7 @@ set -o history
 
 <a name="update"></a>
 ### Command `update` - Software Updates
-Check for new software updates from [https://dl.minio.io](https://dl.minio.io). Experimental flag checks for unstable experimental releases primarily meant for testing purposes.
+Check for new software updates from [https://dl.min.io](https://dl.min.io). Experimental flag checks for unstable experimental releases primarily meant for testing purposes.
 
 ```sh
 USAGE:
@@ -1096,7 +1096,7 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 ```
 
-*Example: Display information on a bucket named "mybucket" on https://play.minio.io:9000.*
+*Example: Display information on a bucket named "mybucket" on https://play.min.io:9000.*
 
 
 ```sh
@@ -1107,7 +1107,7 @@ Size      : 0B
 Type      : folder
 ```
 
-*Example: Display information on an encrypted object "myobject" in "mybucket" on https://play.minio.io:9000.*
+*Example: Display information on an encrypted object "myobject" in "mybucket" on https://play.min.io:9000.*
 
 
 ```sh
@@ -1123,7 +1123,7 @@ Metadata  :
   X-Amz-Server-Side-Encryption-Customer-Algorithm: AES256
 ```
 
-*Example: Display information on objects contained in the bucket named "mybucket" on https://play.minio.io:9000.*
+*Example: Display information on objects contained in the bucket named "mybucket" on https://play.min.io:9000.*
 
 ```sh
 mc stat -r play/mybucket

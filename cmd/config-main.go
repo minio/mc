@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015 Minio, Inc.
+ * MinIO Client (C) 2014, 2015 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package cmd
 
 import "github.com/minio/cli"
 
-//   Configure minio client
+//   Configure MinIO Client
 //
 //   ----
 //   NOTE: that the configure command only writes values to the config file.
@@ -35,7 +35,7 @@ var (
 
 var configCmd = cli.Command{
 	Name:            "config",
-	Usage:           "configure minio client",
+	Usage:           "configure MinIO client",
 	Action:          mainConfig,
 	Before:          setGlobalsFromContext,
 	HideHelpCommand: true,

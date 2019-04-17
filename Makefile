@@ -46,7 +46,7 @@ spelling:
 	@${GOPATH}/bin/misspell -error `find pkg/`
 	@${GOPATH}/bin/misspell -error `find docs/`
 
-# Builds minio, runs the verifiers then runs the tests.
+# Builds MinIO, runs the verifiers then runs the tests.
 check: test
 test: verifiers build
 	@echo "Running unit tests"
@@ -55,15 +55,15 @@ test: verifiers build
 	@(env bash $(PWD)/functional-tests.sh)
 
 coverage: build
-	@echo "Running all coverage for minio"
+	@echo "Running all coverage for MinIO"
 	@(env bash $(PWD)/buildscripts/go-coverage.sh)
 
-# Builds minio locally.
+# Builds MinIO locally.
 build: checks
-	@echo "Building minio binary to './mc'"
+	@echo "Building MinIO binary to './mc'"
 	@GO111MODULE=on GO_FLAGS="" CGO_ENABLED=0 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/mc
 
-# Builds minio and installs it to $GOPATH/bin.
+# Builds MinIO and installs it to $GOPATH/bin.
 install: build
 	@echo "Installing mc binary to '$(GOPATH)/bin/mc'"
 	@mkdir -p $(GOPATH)/bin && cp -uf $(PWD)/mc $(GOPATH)/bin/mc

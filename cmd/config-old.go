@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * MinIO Client (C) 2015 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -184,7 +184,7 @@ func newConfigV7() *configV7 {
 }
 
 func (c *configV7) loadDefaults() {
-	// Minio server running locally.
+	// MinIO server running locally.
 	c.setHost("local", hostConfigV7{
 		URL:       "http://localhost:9000",
 		AccessKey: "",
@@ -208,25 +208,25 @@ func (c *configV7) loadDefaults() {
 		API:       "S3v2",
 	})
 
-	// Minio anonymous server for demo.
+	// MinIO anonymous server for demo.
 	c.setHost("play", hostConfigV7{
-		URL:       "https://play.minio.io:9000",
+		URL:       "https://play.min.io:9000",
 		AccessKey: "",
 		SecretKey: "",
 		API:       "S3v4",
 	})
 
-	// Minio demo server with public secret and access keys.
+	// MinIO demo server with public secret and access keys.
 	c.setHost("player", hostConfigV7{
-		URL:       "https://play.minio.io:9002",
+		URL:       "https://play.min.io:9002",
 		AccessKey: "Q3AM3UQ867SPQQA43P2F",
 		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
 		API:       "S3v4",
 	})
 
-	// Minio public download service.
+	// MinIO public download service.
 	c.setHost("dl", hostConfigV7{
-		URL:       "https://dl.minio.io:9000",
+		URL:       "https://dl.min.io:9000",
 		AccessKey: "",
 		SecretKey: "",
 		API:       "S3v4",
@@ -271,7 +271,7 @@ func (c *configV8) setHost(alias string, cfg hostConfigV8) {
 
 // load default values for missing entries.
 func (c *configV8) loadDefaults() {
-	// Minio server running locally.
+	// MinIO server running locally.
 	c.setHost("local", hostConfigV8{
 		URL:       "http://localhost:9000",
 		AccessKey: "",
@@ -295,9 +295,9 @@ func (c *configV8) loadDefaults() {
 		API:       "S3v2",
 	})
 
-	// Minio anonymous server for demo.
+	// MinIO anonymous server for demo.
 	c.setHost("play", hostConfigV8{
-		URL:       "https://play.minio.io:9000",
+		URL:       "https://play.min.io:9000",
 		AccessKey: "Q3AM3UQ867SPQQA43P2F",
 		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
 		API:       "S3v4",

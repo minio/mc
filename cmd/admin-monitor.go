@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2019 Minio, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ func mainAdminMonitor(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Create a new minio admin client
+	// Create a new MinIO admin client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
@@ -164,7 +164,7 @@ func mainAdminMonitor(ctx *cli.Context) error {
 		}
 		return nil
 	}
-	// Fetch info of all CPU loads (all minio server instances)
+	// Fetch info of all CPU loads (all MinIO server instances)
 	cpuLoads, e := client.ServerCPULoadInfo()
 	if err := processErr(e); err != nil {
 		// exit immediately if error encountered

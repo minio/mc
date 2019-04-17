@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2017 Minio, Inc.
+ * MinIO Client (C) 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 
 var adminConfigSetCmd = cli.Command{
 	Name:   "set",
-	Usage:  "set new config file to a minio server/cluster.",
+	Usage:  "set new config file to a MinIO server/cluster.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigSet,
 	Flags:  globalFlags,
@@ -42,7 +42,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Set server configuration of a Minio server/cluster.
+  1. Set server configuration of a MinIO server/cluster.
      $ cat myconfig | {{.HelpName}} myminio/
 
 `,
@@ -59,12 +59,12 @@ func (u configSetMessage) String() (msg string) {
 	// Print the general set config status
 	if u.setConfigStatus {
 		msg += console.Colorize("SetConfigSuccess",
-			"Setting new Minio configuration file has been successful.\n")
+			"Setting new MinIO configuration file has been successful.\n")
 		msg += console.Colorize("SetConfigSuccess",
 			"Please restart your server with `mc admin service restart`.\n")
 	} else {
 		msg += console.Colorize("SetConfigFailure",
-			"Setting new Minio configuration file has failed.\n")
+			"Setting new MinIO configuration file has failed.\n")
 	}
 	return
 }
@@ -103,7 +103,7 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 

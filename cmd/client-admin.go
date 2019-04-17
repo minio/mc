@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2017 Minio, Inc.
+ * MinIO Client (C) 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 		var api *madmin.AdminClient
 		var found bool
 		if api, found = clientCache[confSum]; !found {
-			// Not found. Instantiate a new minio
+			// Not found. Instantiate a new MinIO
 			var e error
 			api, e = madmin.New(hostName, config.AccessKey, config.SecretKey, useTLS)
 			if e != nil {
@@ -99,7 +99,7 @@ func newAdminFactory() func(config *Config) (*madmin.AdminClient, *probe.Error) 
 			// Set app info.
 			api.SetAppInfo(config.AppName, config.AppVersion)
 
-			// Cache the new minio client with hash of config as key.
+			// Cache the new MinIO Client with hash of config as key.
 			clientCache[confSum] = api
 		}
 

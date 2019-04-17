@@ -1,5 +1,5 @@
 /*
- * Minio Client, (C) 2015, 2016 Minio, Inc.
+ * MinIO Client, (C) 2015, 2016 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,7 +111,7 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
-   1. Mirror a bucket recursively from Minio cloud storage to a bucket on Amazon S3 cloud storage.
+   1. Mirror a bucket recursively from MinIO cloud storage to a bucket on Amazon S3 cloud storage.
       $ {{.HelpName}} play/photos/2014 s3/backup-photos
 
    2. Mirror a local folder recursively to Amazon S3 cloud storage.
@@ -126,11 +126,11 @@ EXAMPLES:
    5. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--overwrite' to overwrite destination.
       $ {{.HelpName}} --overwrite s3/miniocloud miniocloud-backup
 
-   6. Mirror a bucket from Minio cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
+   6. Mirror a bucket from MinIO cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
       files on Amazon S3 cloud storage.
       $ {{.HelpName}} --remove play/photos/2014 s3/backup-photos/2014
 
-   7. Continuously mirror a local folder recursively to Minio cloud storage. '--watch' continuously watches for
+   7. Continuously mirror a local folder recursively to MinIO cloud storage. '--watch' continuously watches for
       new objects, uploads and removes extraneous files on Amazon S3 cloud storage.
       $ {{.HelpName}} --remove --watch /var/lib/backups play/backups
 
@@ -144,7 +144,7 @@ EXAMPLES:
   10. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
       $ {{.HelpName}} --older-than 30d s3/test ~/test
 
-  11. Mirror server encrypted objects from Minio cloud storage to a bucket on Amazon S3 cloud storage
+  11. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage
       $ {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
 `,
 }

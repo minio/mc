@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2016, 2017, 2018 Minio, Inc.
+ * MinIO Client (C) 2016, 2017, 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var adminServiceCmd = cli.Command{
 	Name:            "service",
-	Usage:           "stop, restart or get status of minio server",
+	Usage:           "stop, restart or get status of MinIO server",
 	Action:          mainAdminService,
 	Before:          setGlobalsFromContext,
 	Flags:           globalFlags,

@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2015 Minio, Inc.
+ * MinIO Client (C) 2015 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ func fixConfigV6ForHosts() {
 		// If host entry does not contain "http(s)", introduce a new entry and delete the old one.
 		if host == "s3.amazonaws.com" || host == "storage.googleapis.com" ||
 			host == "localhost:9000" || host == "127.0.0.1:9000" ||
-			host == "play.minio.io:9000" || host == "dl.minio.io:9000" {
+			host == "play.min.io:9000" || host == "dl.min.io:9000" {
 			console.Infoln("Found broken host entries, replacing " + host + " with https://" + host + ".")
 			url.Host = host
 			url.Scheme = "https"

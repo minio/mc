@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2018 Minio, Inc.
+ * MinIO Client (C) 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ USAGE:
   {{.HelpName}} TARGET POLICYNAME POLICYFILE
 
 POLICYNAME:
-  Name of the canned policy on Minio server.
+  Name of the canned policy on MinIO server.
 
 POLICYFILE:
   Name of the policy file associated with the policy name.
@@ -108,7 +108,7 @@ func mainAdminPolicyAdd(ctx *cli.Context) error {
 	policy, e := ioutil.ReadFile(args.Get(2))
 	fatalIf(probe.NewError(e).Trace(args...), "Unable to get policy")
 
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 

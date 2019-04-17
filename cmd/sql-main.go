@@ -1,5 +1,5 @@
 /*
- * Minio Client, (C) 2018 Minio, Inc.
+ * MinIO Client, (C) 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 SERIALIZATION OPTIONS:
-   For query serialization options, refer to https://docs.minio.io/docs/minio-client-complete-guide#sql
+   For query serialization options, refer to https://docs.min.io/docs/minio-client-complete-guide#sql
 
 EXAMPLES:
    1. Run a query on a set of objects recursively on AWS S3.
@@ -104,12 +104,12 @@ EXAMPLES:
       $ {{.HelpName}} --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
 		      --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
 
-   4. Run a query on an object on Minio in gzip format using ; as field delimiter,
+   4. Run a query on an object on MinIO in gzip format using ; as field delimiter,
       newline as record delimiter and file header to be used
       $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
 		      --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv.gz
 
-   5. Run a query on an object on Minio in gzip format using ; as field delimiter,
+   5. Run a query on an object on MinIO in gzip format using ; as field delimiter,
       newline as record delimiter and file header to be used
       $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
 							 --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv

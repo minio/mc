@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2017 Minio, Inc.
+ * MinIO Client (C) 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,19 +32,19 @@ func TestParseURLEnv(t *testing.T) {
 		success        bool
 	}{
 		{
-			envURL:         "https://username:password@play.minio.io:9000/",
-			expectedURL:    "https://play.minio.io:9000/",
+			envURL:         "https://username:password@play.min.io:9000/",
+			expectedURL:    "https://play.min.io:9000/",
 			expectedAccess: "username",
 			expectedSecret: "password",
 			success:        true,
 		},
 		{
-			envURL:      "https://play.minio.io:9000/",
-			expectedURL: "https://play.minio.io:9000/",
+			envURL:      "https://play.min.io:9000/",
+			expectedURL: "https://play.min.io:9000/",
 			success:     true,
 		},
 		{
-			envURL:  "ftp://play.minio.io:9000/",
+			envURL:  "ftp://play.min.io:9000/",
 			success: false,
 		},
 		{
@@ -52,11 +52,11 @@ func TestParseURLEnv(t *testing.T) {
 			success: false,
 		},
 		{
-			envURL:  "https://play.minio.io:9000/path",
+			envURL:  "https://play.min.io:9000/path",
 			success: false,
 		},
 		{
-			envURL:  "https://play.minio.io:9000/?path=value",
+			envURL:  "https://play.min.io:9000/?path=value",
 			success: false,
 		},
 	}

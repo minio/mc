@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2014, 2015, 2018 Minio, Inc.
+ * MinIO Client (C) 2014, 2015, 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ var errInvalidAlias = func(alias string) *probe.Error {
 type invalidURLErr error
 
 var errInvalidURL = func(URL string) *probe.Error {
-	msg := "URL `" + URL + "` for minio client should be of the form scheme://host[:port]/ without resource component."
+	msg := "URL `" + URL + "` for MinIO Client should be of the form scheme://host[:port]/ without resource component."
 	return probe.NewError(invalidURLErr(errors.New(msg)))
 }
 

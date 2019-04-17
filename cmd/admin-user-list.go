@@ -1,5 +1,5 @@
 /*
- * Minio Client (C) 2018 Minio, Inc.
+ * MinIO Client (C) 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. List all users on Minio server.
+  1. List all users on MinIO server.
      $ {{.HelpName}} myminio
 `,
 }
@@ -65,7 +65,7 @@ func mainAdminUserList(ctx *cli.Context) error {
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 

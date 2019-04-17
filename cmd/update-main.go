@@ -1,5 +1,5 @@
 /*
- * Minio Cloud Storage, (C) 2015, 2016, 2017 Minio, Inc.
+ * MinIO Cloud Storage, (C) 2015, 2016, 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ EXAMPLES:
 const (
 	mcReleaseTagTimeLayout = "2006-01-02T15-04-05Z"
 	mcOSARCH               = runtime.GOOS + "-" + runtime.GOARCH
-	mcReleaseURL           = "https://dl.minio.io/client/mc/release/" + mcOSARCH + "/"
+	mcReleaseURL           = "https://dl.min.io/client/mc/release/" + mcOSARCH + "/"
 )
 
 var (
@@ -184,7 +184,7 @@ func IsDCOS() bool {
 	return os.Getenv("MESOS_CONTAINER_NAME") != ""
 }
 
-// IsKubernetes returns true if minio is running in kubernetes.
+// IsKubernetes returns true if MinIO is running in kubernetes.
 func IsKubernetes() bool {
 	// Kubernetes env used to validate if we are
 	// indeed running inside a kubernetes pod

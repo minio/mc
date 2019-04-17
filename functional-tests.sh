@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Minio Client (C) 2017 Minio, Inc.
+# MinIO Client (C) 2017 MinIO, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,16 +17,16 @@
 
 ################################################################################
 #
-# This script is usable by mc functional tests, mint tests and minio verification
+# This script is usable by mc functional tests, mint tests and MinIO verification
 # tests.
 #
 # * As mc functional tests, just run this script.  It uses mc executable binary
-#   in current working directory or in the path.  The tests uses play.minio.io
-#   as minio server.
+#   in current working directory or in the path.  The tests uses play.min.io
+#   as MinIO server.
 #
 # * For other, call this script with environment variables MINT_MODE,
 #   MINT_DATA_DIR, SERVER_ENDPOINT, ACCESS_KEY, SECRET_KEY and ENABLE_HTTPS. It
-#   uses mc executable binary in current working directory and uses given minio
+#   uses mc executable binary in current working directory and uses given MinIO
 #   server to run tests. MINT_MODE is set by mint to specify what category of
 #   tests to run.
 #
@@ -55,7 +55,7 @@ if [ -n "$MINT_MODE" ]; then
 fi
 
 if [ -z "${SERVER_ENDPOINT+x}" ]; then
-    SERVER_ENDPOINT="play.minio.io:9000"
+    SERVER_ENDPOINT="play.min.io:9000"
     ACCESS_KEY="Q3AM3UQ867SPQQA43P2F"
     SECRET_KEY="zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
     ENABLE_HTTPS=1

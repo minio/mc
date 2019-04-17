@@ -54,7 +54,7 @@ mc --help
 ### 下载二进制文件(GNU/Linux)
 | 平台 | CPU架构 | URL |
 | ---------- | -------- |------|
-|GNU/Linux|64-bit Intel|https://dl.minio.io/client/mc/release/linux-amd64/mc |
+|GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
 
 ```sh
 chmod +x mc
@@ -64,7 +64,7 @@ chmod +x mc
 ### 下载二进制文件(Microsoft Windows)
 | 平台 | CPU架构 | URL |
 | ---------- | -------- |------|
-|Microsoft Windows|64-bit Intel|https://dl.minio.io/client/mc/release/windows-amd64/mc.exe |
+|Microsoft Windows|64-bit Intel|https://dl.min.io/client/mc/release/windows-amd64/mc.exe |
 
 ```sh
 mc.exe --help
@@ -141,11 +141,11 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 注意：Google云存储只支持旧版签名版本V2，所以你需要选择S3v2。
 
 ## 4. 验证
-`mc`预先配置了云存储服务URL：[https://play.minio.io:9000](https://play.minio.io:9000)，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
+`mc`预先配置了云存储服务URL：[https://play.min.io:9000](https://play.min.io:9000)，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
 
 *示例:*
 
-列出[https://play.minio.io:9000](https://play.minio.io:9000)上的所有存储桶。
+列出[https://play.min.io:9000](https://play.min.io:9000)上的所有存储桶。
 
 ```sh
 mc ls play
@@ -178,7 +178,7 @@ Debug参数开启控制台输出debug信息。
 ```sh
 mc --debug ls play
 mc: <DEBUG> GET / HTTP/1.1
-Host: play.minio.io:9000
+Host: play.min.io:9000
 User-Agent: MinIO (darwin; amd64) minio-go/1.0.1 mc/2016-04-01T00:22:11Z
 Authorization: AWS4-HMAC-SHA256 Credential=**REDACTED**/20160408/us-east-1/s3/aws4_request, SignedHeaders=expect;host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
 Expect: 100-continue
@@ -255,7 +255,7 @@ FLAGS:
   --incomplete, -I		   列出未完整上传的对象。
 ```
 
-*示例： 列出所有https://play.minio.io:9000上的存储桶。*
+*示例： 列出所有https://play.min.io:9000上的存储桶。*
 
 ```sh
 mc ls play
@@ -280,7 +280,7 @@ FLAGS:
 
 ```
 
-*示例：在https://play.minio.io:9000上创建一个名叫"mybucket"的存储桶。*
+*示例：在https://play.min.io:9000上创建一个名叫"mybucket"的存储桶。*
 
 
 ```sh
@@ -428,9 +428,9 @@ FLAGS:
 ```sh
 
 mc share download --expire 4h play/mybucket/myobject.txt
-URL: https://play.minio.io:9000/mybucket/myobject.txt
+URL: https://play.min.io:9000/mybucket/myobject.txt
 Expire: 0 days 4 hours 0 minutes 0 seconds
-Share: https://play.minio.io:9000/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
+Share: https://play.min.io:9000/mybucket/myobject.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=Q3AM3UQ867SPQQA43P2F%2F20160408%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160408T182008Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=1527fc8f21a3a7e39ce3c456907a10b389125047adc552bcd86630b9d459b634
 
 ```
 
@@ -452,9 +452,9 @@ FLAGS:
 
 ```sh
 mc share upload play/mybucket/myotherobject.txt
-URL: https://play.minio.io:9000/mybucket/myotherobject.txt
+URL: https://play.min.io:9000/mybucket/myotherobject.txt
 Expire: 7 days 0 hours 0 minutes 0 seconds
-Share: curl https://play.minio.io:9000/mybucket -F x-amz-date=20160408T182356Z -F x-amz-signature=de343934bd0ba38bda0903813b5738f23dde67b4065ea2ec2e4e52f6389e51e1 -F bucket=mybucket -F policy=eyJleHBpcmF0aW9uIjoiMjAxNi0wNC0xNVQxODoyMzo1NS4wMDdaIiwiY29uZGl0aW9ucyI6W1siZXEiLCIkYnVja2V0IiwibXlidWNrZXQiXSxbImVxIiwiJGtleSIsIm15b3RoZXJvYmplY3QudHh0Il0sWyJlcSIsIiR4LWFtei1kYXRlIiwiMjAxNjA0MDhUMTgyMzU2WiJdLFsiZXEiLCIkeC1hbXotYWxnb3JpdGhtIiwiQVdTNC1ITUFDLVNIQTI1NiJdLFsiZXEiLCIkeC1hbXotY3JlZGVudGlhbCIsIlEzQU0zVVE4NjdTUFFRQTQzUDJGLzIwMTYwNDA4L3VzLWVhc3QtMS9zMy9hd3M0X3JlcXVlc3QiXV19 -F x-amz-algorithm=AWS4-HMAC-SHA256 -F x-amz-credential=Q3AM3UQ867SPQQA43P2F/20160408/us-east-1/s3/aws4_request -F key=myotherobject.txt -F file=@<FILE>
+Share: curl https://play.min.io:9000/mybucket -F x-amz-date=20160408T182356Z -F x-amz-signature=de343934bd0ba38bda0903813b5738f23dde67b4065ea2ec2e4e52f6389e51e1 -F bucket=mybucket -F policy=eyJleHBpcmF0aW9uIjoiMjAxNi0wNC0xNVQxODoyMzo1NS4wMDdaIiwiY29uZGl0aW9ucyI6W1siZXEiLCIkYnVja2V0IiwibXlidWNrZXQiXSxbImVxIiwiJGtleSIsIm15b3RoZXJvYmplY3QudHh0Il0sWyJlcSIsIiR4LWFtei1kYXRlIiwiMjAxNjA0MDhUMTgyMzU2WiJdLFsiZXEiLCIkeC1hbXotYWxnb3JpdGhtIiwiQVdTNC1ITUFDLVNIQTI1NiJdLFsiZXEiLCIkeC1hbXotY3JlZGVudGlhbCIsIlEzQU0zVVE4NjdTUFFRQTQzUDJGLzIwMTYwNDA4L3VzLWVhc3QtMS9zMy9hd3M0X3JlcXVlc3QiXV19 -F x-amz-algorithm=AWS4-HMAC-SHA256 -F x-amz-credential=Q3AM3UQ867SPQQA43P2F/20160408/us-east-1/s3/aws4_request -F key=myotherobject.txt -F file=@<FILE>
 ```
 
 #### 子命令`share list` - 列出之前的共享
@@ -485,14 +485,14 @@ FLAGS:
   --remove			   删除目标上的外部的文件。
 ```
 
-*示例： 将一个本地文件夹镜像到https://play.minio.io:9000上的'mybucket'存储桶。*
+*示例： 将一个本地文件夹镜像到https://play.min.io:9000上的'mybucket'存储桶。*
 
 ```sh
 mc mirror localdir/ play/mybucket
 localdir/b.txt:  40 B / 40 B  ┃▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓┃  100.00 % 73 B/s 0
 ```
 
-*示例： 持续监听本地文件夹修改并镜像到https://play.minio.io:9000上的'mybucket'存储桶。*
+*示例： 持续监听本地文件夹修改并镜像到https://play.min.io:9000上的'mybucket'存储桶。*
 
 ```sh
 mc mirror -w localdir play/mybucket
@@ -538,7 +538,7 @@ FLAGS:
 
 ```sh
  mc diff localdir play/mybucket
-‘localdir/notes.txt’ and ‘https://play.minio.io:9000/mybucket/notes.txt’ - only in first.
+‘localdir/notes.txt’ and ‘https://play.min.io:9000/mybucket/notes.txt’ - only in first.
 ```
 
 <a name="watch"></a>
@@ -561,9 +561,9 @@ FLAGS:
 
 ```sh
 mc watch play/testbucket
-[2016-08-18T00:51:29.735Z] 2.7KiB ObjectCreated https://play.minio.io:9000/testbucket/CONTRIBUTING.md
-[2016-08-18T00:51:29.780Z]  1009B ObjectCreated https://play.minio.io:9000/testbucket/MAINTAINERS.md
-[2016-08-18T00:51:29.839Z] 6.9KiB ObjectCreated https://play.minio.io:9000/testbucket/README.md
+[2016-08-18T00:51:29.735Z] 2.7KiB ObjectCreated https://play.min.io:9000/testbucket/CONTRIBUTING.md
+[2016-08-18T00:51:29.780Z]  1009B ObjectCreated https://play.min.io:9000/testbucket/MAINTAINERS.md
+[2016-08-18T00:51:29.839Z] 6.9KiB ObjectCreated https://play.min.io:9000/testbucket/README.md
 ```
 
 *示例： 监听本地文件夹的所有事件*
@@ -648,7 +648,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 
 *示例：设置可下载的匿名存储桶策略。*
 
-设置``mybucket/myphotos/2020/``子文件夹可匿名下载的策略。现在，这个文件夹下的对象可被公开访问。比如：``mybucket/myphotos/2020/yourobjectname``可通过这个URL [https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.minio.io:9000/mybucket/myphotos/2020/yourobjectname)访问。
+设置``mybucket/myphotos/2020/``子文件夹可匿名下载的策略。现在，这个文件夹下的对象可被公开访问。比如：``mybucket/myphotos/2020/yourobjectname``可通过这个URL [https://play.min.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.min.io:9000/mybucket/myphotos/2020/yourobjectname)访问。
 
 ```sh
 mc policy download play/mybucket/myphotos/2020/
@@ -733,7 +733,7 @@ set -o history
 
 <a name="update"></a>
 ### `update`命令 - 软件更新
-从[https://dl.minio.io](https://dl.minio.io)检查软件更新。Experimental标志会检查unstable实验性的版本，通常用作测试用途。
+从[https://dl.min.io](https://dl.min.io)检查软件更新。Experimental标志会检查unstable实验性的版本，通常用作测试用途。
 
 ```sh
 用法：
