@@ -155,7 +155,7 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 		}
 		url := targetAlias + getKey(content)
 
-		if !isRecursive && url != targetURL {
+		if !isRecursive && !strings.HasPrefix(url, targetURL) {
 			return nil, errTargetNotFound(targetURL)
 		}
 
