@@ -76,4 +76,3 @@ func TestParseEnvURLStrInvalid(t *testing.T) {
 		t.Fatalf("Expected failure")
 	}
 }
-
