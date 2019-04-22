@@ -39,7 +39,7 @@ func isErrIgnored(err *probe.Error) (ignored bool) {
 	// For all non critical errors we can continue for the remaining files.
 	switch err.ToGoError().(type) {
 	// Handle these specifically for filesystem related errors.
-	case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, PathInsufficientPermission:
+	case BrokenSymlink, TooManyLevelsSymlink, PathNotFound:
 		ignored = true
 	// Handle these specifically for object storage related errors.
 	case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists:
