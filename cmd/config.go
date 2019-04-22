@@ -231,7 +231,7 @@ func parseEnvURLStr(envURL string) (*url.URL, string, string, *probe.Error) {
 		res := re.FindAllStringSubmatch(envURL, -1)
 		// regex will return full match, scheme, accessKey, secretKey and endpoint:port as
 		// captured groups.
-		if len(res[0]) != 5 {
+		if res == nil || len(res[0]) != 5 {
 			return nil, "", "", err
 		}
 		for k, v := range res[0] {
