@@ -69,3 +69,11 @@ func TestParseEnvURLStr(t *testing.T) {
 		}
 	}
 }
+
+func TestParseEnvURLStrInvalid(t *testing.T) {
+	_, _, _, err := parseEnvURLStr("")
+	if err == nil {
+		t.Fatalf("Expected failure")
+	}
+}
+
