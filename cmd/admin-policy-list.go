@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -76,11 +77,15 @@ func mainAdminPolicyList(ctx *cli.Context) error {
 	fatalIf(probe.NewError(e).Trace(args...), "Cannot list policy")
 
 	if policyName := args.Get(1); policyName != "" {
-		printMsg(userPolicyMessage{
-			op:         "list",
-			Policy:     policyName,
-			PolicyJSON: policies[policyName],
-		})
+		if len(policies[policyName]) != 0 {
+			printMsg(userPolicyMessage{
+				op:         "list",
+				Policy:     policyName,
+				PolicyJSON: policies[policyName],
+			})
+		} else {
+			fatalIf(probe.NewError(fmt.Errorf("%s is not found", policyName)), "Cannot list the policy")
+		}
 	} else {
 		for k := range policies {
 			printMsg(userPolicyMessage{
