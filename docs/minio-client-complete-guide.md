@@ -964,9 +964,10 @@ Manage anonymous bucket policies to a bucket and its contents
 
 ```
 USAGE:
-  mc policy [FLAGS] PERMISSION TARGET
-  mc policy [FLAGS] FILE TARGET
-  mc policy [FLAGS] TARGET
+  mc policy [FLAGS] set PERMISSION TARGET
+  mc policy [FLAGS] set-json FILE TARGET
+  mc policy [FLAGS] get TARGET
+  mc policy [FLAGS] get-json TARGET
   mc policy list [FLAGS] TARGET
 
 PERMISSION:
@@ -983,17 +984,17 @@ FLAGS:
 
 Show current anonymous bucket policy for ``mybucket/myphotos/2020/`` sub-directory
 
-```
-mc policy play/mybucket/myphotos/2020/
+```sh
+mc policy get play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 ```
 
 *Example : Set anonymous bucket policy to download only*
 
-Set anonymous bucket policy  for ``mybucket/myphotos/2020/`` sub-directory and its objects to ``download`` only. Now, objects under the sub-directory are publicly accessible. e.g ``mybucket/myphotos/2020/yourobjectname``is available at [https://play.min.io/mybucket/myphotos/2020/yourobjectname](https://play.min.io/mybucket/myphotos/2020/yourobjectname)
+Set anonymous bucket policy for ``mybucket/myphotos/2020/`` sub-directory and its objects to ``download`` only. Now, objects under the sub-directory are publicly accessible. e.g ``mybucket/myphotos/2020/yourobjectname``is available at [https://play.min.io:9000/mybucket/myphotos/2020/yourobjectname](https://play.min.io:9000/mybucket/myphotos/2020/yourobjectname)
 
-```
-mc policy download play/mybucket/myphotos/2020/
+```sh
+mc policy set download play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 ```
 
@@ -1001,8 +1002,8 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 
 Configure bucket policy for ``mybucket`` with a policy JSON file.
 
-```
-mc policy /tmp/policy.json play/mybucket
+```sh
+mc policy set-json /tmp/policy.json play/mybucket
 Access permission for `play/mybucket` is set from `/tmp/policy.json`
 ```
 
@@ -1010,8 +1011,8 @@ Access permission for `play/mybucket` is set from `/tmp/policy.json`
 
 Remove any bucket policy for *mybucket/myphotos/2020/* sub-directory.
 
-```
-mc policy none play/mybucket/myphotos/2020/
+```sh
+mc policy set none play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 ```
 
