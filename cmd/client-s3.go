@@ -42,7 +42,6 @@ import (
 	"github.com/minio/minio-go/pkg/policy"
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/pkg/mimedb"
-	"golang.org/x/net/http2"
 )
 
 // S3 client
@@ -192,9 +191,12 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 
 				// Because we create a custom TLSClientConfig, we have to opt-in to HTTP/2.
 				// See https://github.com/golang/go/issues/14275
-				if e = http2.ConfigureTransport(tr); e != nil {
-					return nil, probe.NewError(e)
-				}
+				//
+				// TODO: Enable http2.0 when upstream issues related to HTTP/2 are fixed.
+				//
+				// if e = http2.ConfigureTransport(tr); e != nil {
+				// 	return nil, probe.NewError(e)
+				// }
 			}
 
 			var transport http.RoundTripper = tr
