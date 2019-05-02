@@ -174,17 +174,19 @@ func checkRmSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 	}
 }
 
-func removeSingle(url string, isIncomplete bool, isFake bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
+func removeSingle(url string, isIncomplete bool, isFake, isForce bool, olderThan, newerThan string, encKeyDB map[string][]prefixSSEPair) error {
 	isRecursive := false
 	contents, pErr := statURL(url, isIncomplete, isRecursive, encKeyDB)
 	if pErr != nil {
 		errorIf(pErr.Trace(url), "Failed to remove `"+url+"`.")
 		return exitStatus(globalErrorExitStatus)
 	}
-
 	if len(contents) == 0 {
-		errorIf(errDummy().Trace(url), "Failed to remove `"+url+"`. Target object is not found")
-		return exitStatus(globalErrorExitStatus)
+		if !isForce {
+			errorIf(errDummy().Trace(url), "Failed to remove `"+url+"`. Target object is not found")
+			return exitStatus(globalErrorExitStatus)
+		}
+		return nil
 	}
 
 	content := contents[0]
@@ -325,6 +327,7 @@ func mainRm(ctx *cli.Context) error {
 	isStdin := ctx.Bool("stdin")
 	olderThan := ctx.String("older-than")
 	newerThan := ctx.String("newer-than")
+	isForce := ctx.Bool("force")
 
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
@@ -336,7 +339,7 @@ func mainRm(ctx *cli.Context) error {
 		if isRecursive {
 			e = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		} else {
-			e = removeSingle(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, isIncomplete, isFake, isForce, olderThan, newerThan, encKeyDB)
 		}
 
 		if rerr == nil {
@@ -354,7 +357,7 @@ func mainRm(ctx *cli.Context) error {
 		if isRecursive {
 			e = removeRecursive(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
 		} else {
-			e = removeSingle(url, isIncomplete, isFake, olderThan, newerThan, encKeyDB)
+			e = removeSingle(url, isIncomplete, isFake, isForce, olderThan, newerThan, encKeyDB)
 		}
 
 		if rerr == nil {
