@@ -7,7 +7,6 @@ service      stop, restart or get status of MinIO server
 info         display MinIO server information
 user         manage users
 policy       manage canned policies
-credential   change admin server access and secret keys
 config       manage configuration file
 heal         heal disks, buckets and objects on MinIO server
 top          provide top like statistics for MinIO
@@ -219,7 +218,6 @@ Skip SSL certificate verification.
 |[**info** - display MinIO server information](#info) |
 |[**user** - manage users](#user) |
 |[**policy** - manage canned policies](#policy) |
-|[**credential** - change **admin** server access and secret keys](#credential) |
 |[**config** - manage server configuration file](#config)|
 |[**heal** - heal disks, buckets and objects on MinIO server](#heal) |
 |[**top** - provide top like statistics for MinIO](#top) |
@@ -373,24 +371,6 @@ mc admin user remove myminio/ newuser
 ```sh
 mc admin user list --json myminio/
 {"status":"success","accessKey":"newuser","userStatus":"enabled"}
-```
-
-<a name="credential"></a>
-### Command `credential` - Change server **admin** access and secret keys
-`credential` command to set new **admin** credential of a MinIO server.
-
-```sh
-NAME:
-  mc admin credential - Change server **admin** access and secret keys
-
-FLAGS:
-  --help, -h                       Show help.
-```
-
-*Example: Set new admin credential of a MinIO server represented by its alias 'myminio'.*
-
-```sh
-mc admin credential myminio/ minio minio123
 ```
 
 <a name="config"></a>
