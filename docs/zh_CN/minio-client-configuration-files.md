@@ -18,7 +18,7 @@ tree ~/.mc
 ### 文件和目录
 
 #### ``session``目录
-``session``目录保存所有不完整上传或镜像的元数据信息。你可以运行`mc session list``列出这些信息。
+``session``目录保存所有不完整上传或镜像的元数据信息。你可以运行``mc session list``来列出这些信息。
 
 #### ``config.json``
 config.json是MinIO Client的配置文件，它在安装并启动MinIO后生成。我们通过``mc config host``添加的所有凭证，endpoint信息都存储在这里。
@@ -67,10 +67,10 @@ cat config.json
 ``hosts``存储将被MinIO Client使用的认证证书。
 
 #### ``config.json.old``
-这个文件保存了以前的配置文件版本细节。
+这个文件保存了以前配置文件的版本细节。
 
 #### ``share``目录
-``share``目录保存MinIO Client ``mc share``命令使用的所有对象的上传和下载URL的元数据信息。
+``share``目录保存MinIO客户端（MinIO client）的``mc share``命令使用到的对象的所有上传和下载URL的元数据信息。
 
 ## 了解更多
 * [MinIO Client完全指南](https://docs.min.io/docs/minio-client-complete-guide)

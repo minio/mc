@@ -13,7 +13,7 @@ $ mc --help
 
 ``mc``欢迎各位有识之士的贡献。为了让大家配合的更默契，我们做出如下约定：
 
-* 尽情的fork项目并修改，我们鼓励pull request来讨论代码的修改。
+* 尽情地fork项目并修改，我们鼓励pull request来讨论代码的修改。
     - Fork项目
     - 创建你的特性分支(git checkout -b my-new-feature)
     - Commit你的修改(git commit -am 'Add some feature')
