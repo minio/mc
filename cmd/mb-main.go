@@ -69,6 +69,9 @@ EXAMPLES:
 
    6. Create multiple directories including its missing parents (behavior similar to 'mkdir -p').
       $ {{.HelpName}} /mnt/sdb/mydisk /mnt/sdc/mydisk /mnt/sdd/mydisk
+	  
+   7. Ignore if bucket/directory already exists.
+      $ {{.HelpName}} --ignore-existing myminio/mynewbucket
 
 `,
 }

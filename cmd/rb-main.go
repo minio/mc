@@ -235,8 +235,15 @@ func mainRemoveBucket(ctx *cli.Context) error {
 		if !isForce && !isEmpty {
 			fatalIf(errDummy().Trace(), "`"+targetURL+"` is not empty. Retry this command with ‘--force’ flag if you want to remove `"+targetURL+"` and all its contents")
 		}
+
 		e := deleteBucket(targetURL)
 		fatalIf(e.Trace(targetURL), "Failed to remove `"+targetURL+"`.")
+
+		if !isNamespaceRemoval(targetURL) {
+			printMsg(removeBucketMessage{
+				Bucket: targetURL, Status: "success",
+			})
+		}
 	}
 	return cErr
 }

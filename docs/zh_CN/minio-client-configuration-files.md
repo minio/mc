@@ -7,7 +7,7 @@ MinIO Client配置信息存储在``.mc``文件夹，它是用户home目录下的
 
 **这就是配置文件夹的目录结构：**
 
-```sh
+```
 tree ~/.mc
 /home/supernova/.mc
 ├── config.json
@@ -23,7 +23,7 @@ tree ~/.mc
 #### ``config.json``
 config.json是MinIO Client的配置文件，它在安装并启动MinIO后生成。我们通过``mc config host``添加的所有凭证，endpoint信息都存储在这里。
 
-```sh
+```
 cat config.json 
 {
 	"version": "8",

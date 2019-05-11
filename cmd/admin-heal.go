@@ -85,21 +85,29 @@ SCAN MODES:
    deep            : Heal objects which are missing on one or more disks. Also heal objects with silent data corruption.
 
 EXAMPLES:
-    1. To format newly replaced disks in a MinIO server with alias 'play'
-       $ {{.HelpName}} play
+    1. To format newly replaced disks in a MinIO server with alias 'myminio'
+       $ {{.HelpName}} myminio
 
-    2. Heal 'testbucket' in a MinIO server with alias 'play'
-       $ {{.HelpName}} play/testbucket/
+    2. Heal 'testbucket' in a MinIO server with alias 'myminio'
+       $ {{.HelpName}} myminio/testbucket/
 
     3. Heal all objects under 'dir' prefix
-       $ {{.HelpName}} --recursive play/testbucket/dir/
+       $ {{.HelpName}} --recursive myminio/testbucket/dir/
 
     4. Issue a dry-run heal operation to inspect objects health but not heal them
-       $ {{.HelpName}} --dry-run play
+       $ {{.HelpName}} --dry-run myminio
 
     5. Issue a dry-run heal operation to inspect objects health under 'dir' prefix
-       $ {{.HelpName}} --recursive --dry-run play/testbucket/dir/
+       $ {{.HelpName}} --recursive --dry-run myminio/testbucket/dir/
 
+    6. Force start a running heal sequence (meaning it will force kill the running heal sequence and start a new one)
+       $ {{.HelpName}} --force-start myminio/testbucket/dir/
+		
+    7. Force stop a running heal sequence (meaning it will force kill the running heal sequence)
+       $ {{.HelpName}} --force-stop myminio/testbucket/dir/
+		
+    8. Issue a dry-run heal operation to inspect objects health under 'dir' prefix
+       $ {{.HelpName}} --dry-run myminio/testbucket/dir/
 `,
 }
 
