@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017 MinIO, Inc.
+ * MinIO Client (C) 2017-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,6 +112,11 @@ func parseStat(c *clientContent) statMessage {
 	return content
 }
 
+// Return standardized URL to be used to compare later.
+func getStandardizedURL(targetURL string) string {
+	return filepath.FromSlash(targetURL)
+}
+
 // statURL - simple or recursive listing
 func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[string][]prefixSSEPair) ([]*clientContent, *probe.Error) {
 	var stats []*clientContent
@@ -154,8 +159,9 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 			continue
 		}
 		url := targetAlias + getKey(content)
+		standardizedURL := getStandardizedURL(targetURL)
 
-		if !isRecursive && !strings.HasPrefix(url, targetURL) {
+		if !isRecursive && !strings.HasPrefix(url, standardizedURL) {
 			return nil, errTargetNotFound(targetURL)
 		}
 
