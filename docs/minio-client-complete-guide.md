@@ -897,6 +897,7 @@ COMMANDS:
   list    list bucket notifications
 
 FLAGS:
+  --ignore-existing, -p            ignore if event already exists
   --help, -h                       show help
 ```
 
