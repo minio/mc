@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2016, 2017 MinIO, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,34 +19,24 @@ package cmd
 import "github.com/minio/cli"
 
 var (
-	adminFlags = []cli.Flag{}
+	adminSpeedTestFlags = []cli.Flag{}
 )
 
-var adminCmd = cli.Command{
-	Name:            "admin",
-	Usage:           "manage MinIO servers",
-	Action:          mainAdmin,
-	HideHelpCommand: true,
+var adminSpeedTestCmd = cli.Command{
+	Name:            "speedtest",
+	Usage:           "Test drive and network speeds in a MinIO setup",
+	Action:          mainAdminSpeedTest,
 	Before:          setGlobalsFromContext,
-	Flags:           append(adminFlags, globalFlags...),
+	Flags:           append(adminSpeedTestFlags, globalFlags...),
+	HideHelpCommand: true,
 	Subcommands: []cli.Command{
-		adminServiceCmd,
-		adminInfoCmd,
-		adminUserCmd,
-		adminPolicyCmd,
-		adminConfigCmd,
-		adminHealCmd,
-		adminProfileCmd,
-		adminTopCmd,
-		adminMonitorCmd,
-		adminTraceCmd,
-		adminSpeedTestCmd,
+		adminSpeedTestDriveCmd,
 	},
 }
 
-// mainAdmin is the handle for "mc admin" command.
-func mainAdmin(ctx *cli.Context) error {
+// mainAdminSpeedTest is the handle for "mc admin speedtest" command.
+func mainAdminSpeedTest(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "service", "heal", "top" have their own main.
+	// Sub commands like "drive", "net" have their own main.
 }
