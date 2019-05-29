@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go"
-	"github.com/minio/minio-go/pkg/encrypt"
+	"github.com/minio/minio-go/v6"
+	"github.com/minio/minio-go/v6/pkg/encrypt"
 )
 
 // DirOpt - list directory option.

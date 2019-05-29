@@ -36,11 +36,11 @@ import (
 
 	"github.com/minio/mc/pkg/httptracer"
 	"github.com/minio/mc/pkg/probe"
-	minio "github.com/minio/minio-go"
-	"github.com/minio/minio-go/pkg/credentials"
-	"github.com/minio/minio-go/pkg/encrypt"
-	"github.com/minio/minio-go/pkg/policy"
-	"github.com/minio/minio-go/pkg/s3utils"
+	minio "github.com/minio/minio-go/v6"
+	"github.com/minio/minio-go/v6/pkg/credentials"
+	"github.com/minio/minio-go/v6/pkg/encrypt"
+	"github.com/minio/minio-go/v6/pkg/policy"
+	"github.com/minio/minio-go/v6/pkg/s3utils"
 	"github.com/minio/minio/pkg/mimedb"
 )
 
