@@ -73,7 +73,7 @@ cat config.json
 ``share``目录保存MinIO客户端（MinIO client）的``mc share``命令使用到的对象的所有上传和下载URL的元数据信息。
 
 ## 了解更多
-* [MinIO Client完全指南](https://docs.min.io/docs/minio-client-complete-guide)
+* [MinIO Client完全指南](https://docs.min.io/cn/minio-client-complete-guide)
 
 
 

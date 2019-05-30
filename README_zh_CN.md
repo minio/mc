@@ -18,7 +18,7 @@ sql      对对象执行sql语句
 stat     对象的统计内容
 diff     列出两个文件夹或者存储桶的差异，如名字、大小和日期
 rm       删除文件和对象
-events   管理对象通知
+event    管理对象通知
 watch    监听文件和对象的事件
 policy   管理匿名对象访问
 admin    管理minio服务器
@@ -82,9 +82,9 @@ mc.exe --help
 ```
 
 ## 通过源码安装
-通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从https://min.io/download/#minio-client下载官方版本。
+通过源码安装仅适用于开发人员和高级用户。`mc update`命令不支持基于源码安装的更新通知。请从[https://min.io/download/#minio-client](https://min.io/download/#minio-client)下载官方版本。
 
-如果您没有可工作的Golang环境，请参照[如何安装Golang](https://docs.min.io/docs/how-to-install-golang)。
+如果您没有可工作的Golang环境，请参照[如何安装Golang](https://docs.min.io/cn/how-to-install-golang)。
 
 ```sh
 go get -d github.com/minio/mc
@@ -113,7 +113,7 @@ mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80
 ```
 
 ### 示例 - Amazon S3云存储
-参考[AWS Credentials指南](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)获取你的AccessKeyID和SecretAccessKey。
+参考[AWS Credentials指南](https://docs.aws.amazon.com/zh_cn/general/latest/gr/aws-security-credentials.html)获取你的AccessKeyID和SecretAccessKey。
 
 ```sh
 mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 
@@ -156,11 +156,11 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 注意：Google云存储只支持旧版签名版本V2，所以你需要选择S3v2。
 
 ## 验证你的设置
-`mc`预先配置了云存储服务URL：https://play.minio.io:9000，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以用“s3”或者你在开始设置的别名来替换“play”。
+`mc`预先配置了云存储服务[https://play.min.io:9000](https://play.min.io:9000) ，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以用“s3”或者你在开始设置的别名来替换“play”。
 
 *示例:*
 
-列出https://play.min.io:9000上的所有存储桶。
+列出[https://play.min.io:9000](https://play.min.io:9000)上的所有存储桶。
 
 ```sh
 mc ls play
@@ -216,12 +216,12 @@ cat      cp       event    head     mb       pipe     rm       share    stat    
 ```
 
 ## 了解更多
-- [MinIO Client完全指南](https://docs.min.io/docs/minio-client-complete-guide)
-- [MinIO快速入门](https://docs.min.io/docs/minio-quickstart-guide)
-- [MinIO官方文档](https://docs.min.io)
+- [MinIO Client完全指南](https://docs.min.io/cn/minio-client-complete-guide)
+- [MinIO快速入门](https://docs.min.io/cn/minio-quickstart-guide)
+- [MinIO官方文档](https://docs.min.io/cn)
 
 ## 为MinIO项目做贡献
-请参照MinIO[贡献指南](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
+请参照MinIO[贡献指南](https://github.com/minio/mc/blob/master/docs/zh_CN/CONTRIBUTING.md)
 
 ## 认证
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fminio%2Fmc.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fminio%2Fmc?ref=badge_large)

@@ -255,7 +255,7 @@ FLAGS:
   --incomplete, -I		   列出未完整上传的对象。
 ```
 
-*示例： 列出所有https://play.min.io:9000上的存储桶。*
+*示例： 列出所有[https://play.min.io:9000](https://play.min.io:9000)上的存储桶。*
 
 ```sh
 mc ls play
@@ -266,6 +266,7 @@ mc ls play
 [2016-04-08 20:58:18 IST]     0B mybucket/
 ```
 <a name="mb"></a>
+
 ### `mb`命令 - 创建存储桶
 `mb`命令在对象存储上创建一个新的存储桶。在文件系统，它就和`mkdir -p`命令是一样的。存储桶相当于文件系统中的磁盘或挂载点，不应视为文件夹。MinIO对每个​​用户创建的存储桶数量没有限制。
 在Amazon S3上，每个帐户被限制为100个存储桶。有关更多信息，请参阅[S3上的存储桶限制和限制](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) 。
@@ -280,7 +281,7 @@ FLAGS:
 
 ```
 
-*示例：在https://play.min.io:9000上创建一个名叫"mybucket"的存储桶。*
+*示例：在[https://play.min.io:9000](https://play.min.io:9000)上创建一个名叫"mybucket"的存储桶。*
 
 
 ```sh
@@ -485,7 +486,7 @@ FLAGS:
   --remove			   删除目标上的外部的文件。
 ```
 
-*示例： 将一个本地文件夹镜像到https://play.min.io:9000上的'mybucket'存储桶。*
+*示例： 将一个本地文件夹镜像到 [https://play.min.io:9000](https://play.min.io:9000)上的'mybucket'存储桶。*
 
 ```sh
 mc mirror localdir/ play/mybucket
@@ -732,6 +733,7 @@ set -o history
 ```
 
 <a name="update"></a>
+
 ### `update`命令 - 软件更新
 从[https://dl.min.io](https://dl.min.io)检查软件更新。Experimental标志会检查unstable实验性的版本，通常用作测试用途。
 

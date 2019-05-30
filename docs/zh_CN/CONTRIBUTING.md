@@ -30,7 +30,7 @@ $ mc --help
     - 在根目录运行`make pkg-remove PKG=foo/bar`
 
 * 如果你准备提起一个pull request请确保：
-    - 新写的代码有测试用例，如果你不知道咋弄，请在pull request中提出来。
+    - 新写的代码有测试用例，如果你不知道怎么弄，请在pull request中提出来。
     - 运行`go fmt`
     - 使用`git rebase -i`将你的多个commit合并成一个，你可以强制更新你的pull request。
     - 确保`make build`完成。
