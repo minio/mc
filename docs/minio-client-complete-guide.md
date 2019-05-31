@@ -117,8 +117,12 @@ To add one or more Amazon S3 compatible hosts, please follow the instructions be
 
 #### Usage
 
-```
-mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
+```sh
+1. Add host by passing access key, secret key in command.
+ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
+
+2. Add host by accepting access key, secret key through standard input
+   mc config host add <ALIAS> <YOUR-S3-ENDPOINT>
 ```
 
 Alias is simply a short name to your cloud storage service. S3 end-point, access and secret keys are supplied by your cloud storage provider. API signature is an optional argument. By default, it is set to "S3v4".
@@ -129,6 +133,17 @@ MinIO server displays URL, access and secret keys.
 
 ```
 mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 --api S3v4
+```
+
+```sh
+mc config host add minio http://192.168.1.51 --api S3v4
+```
+
+This prompts for details:
+
+```
+Enter Access Key : BKIKJAA5BMMU2RHO6IBB
+Enter Secret Key : V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
 ### Example - Amazon S3 Cloud Storage

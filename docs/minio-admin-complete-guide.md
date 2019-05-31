@@ -97,6 +97,19 @@ MinIO server displays URL, access and secret keys.
 
 #### Usage
 
+```sh
+mc config host add <ALIAS> <YOUR-MINIO-ENDPOINT>
+```
+
+This asks for access key and secret key which are supplied by your MinIo service.
+
+```sh
+Enter Access Key : BKIKJAA5BMMU2RHO6IBB
+Enter Secret Key : V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
+```
+
+Host can also be added by passing access key, secret key using prompt
+
 ```
 mc config host add <ALIAS> <YOUR-MINIO-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY>
 ```
@@ -419,7 +432,19 @@ COMMANDS:
 *Example: Add a new user 'newuser' on MinIO.*
 
 ```
-mc admin user add myminio/ newuser newuser123
+
+*Example: Add a new user 'testuser' on MinIO, using standard input.*
+
+```sh
+$ {{.HelpName}} myminio
+   Enter Access Key : testuser
+   Enter Secret Key : testuser123
+```
+
+*Example: Change policy for a user 'newuser' on MinIO to 'writeonly' policy.*
+
+```sh
+mc admin user policy myminio/ newuser writeonly
 ```
 
 *Example: Disable a user 'newuser' on MinIO.*

@@ -17,14 +17,18 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
+	"syscall"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var adminUserAddCmd = cli.Command{
@@ -50,15 +54,19 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Add a new user 'foobar' to MinIO server.
-     {{.DisableHistory}}
-     {{.Prompt}} {{.HelpName}} myminio foobar foo12345
-     {{.EnableHistory}}
+     $ set -o history
+     $ {{.HelpName}} myminio foobar foo12345
+     $ set +o history
+  2. Add a new user 'testuser' to MinIO server.
+     $ {{.HelpName}} myminio
+        Enter Access Key : testuser 
+        Enter Secret Key : testuser123
 `,
 }
 
 // checkAdminUserAddSyntax - validate all the passed arguments
 func checkAdminUserAddSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 3 {
+	if len(ctx.Args()) > 3 || len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
 	}
 }
@@ -115,6 +123,35 @@ func (u userMessage) JSON() string {
 	return string(jsonMessageBytes)
 }
 
+// fetchUserKeys - returns the access and secret key
+func fetchUserKeys(args cli.Args) (string, string) {
+	accessKey := ""
+	secretKey := ""
+	console.SetColor(cred, color.New(color.FgYellow, color.Italic))
+	reader := bufio.NewReader(os.Stdin)
+
+	switch numberOfArgs := len(args); {
+	case numberOfArgs == 1:
+		fmt.Printf("%s", console.Colorize(cred, "Enter Access Key : "))
+		value, _, _ := reader.ReadLine()
+		accessKey = string(value)
+		fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key : "))
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		secretKey = string(bytePassword)
+	case numberOfArgs == 2:
+		accessKey = args.Get(1)
+		fmt.Printf("%s", console.Colorize(cred, "Enter Secret Key : "))
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		secretKey = string(bytePassword)
+	default:
+		accessKey = args.Get(1)
+		secretKey = args.Get(2)
+	}
+	fmt.Printf("\n")
+
+	return accessKey, secretKey
+}
+
 // mainAdminUserAdd is the handle for "mc admin user add" command.
 func mainAdminUserAdd(ctx *cli.Context) error {
 	checkAdminUserAddSyntax(ctx)
@@ -124,17 +161,18 @@ func mainAdminUserAdd(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	accessKey, secretKey := fetchUserKeys(args)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	fatalIf(probe.NewError(client.AddUser(args.Get(1), args.Get(2))).Trace(args...), "Cannot add new user")
+	fatalIf(probe.NewError(client.AddUser(accessKey, secretKey)).Trace(args...), "Cannot add new user")
 
 	printMsg(userMessage{
 		op:         "add",
-		AccessKey:  args.Get(1),
-		SecretKey:  args.Get(2),
+		AccessKey:  accessKey,
+		SecretKey:  secretKey,
 		UserStatus: "enabled",
 	})
 

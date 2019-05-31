@@ -10,16 +10,17 @@ require (
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/mattn/go-colorable v0.1.1
 	github.com/mattn/go-isatty v0.0.7
-	github.com/minio/minio v0.0.0-20191001201215-ff5bf519522f
 	github.com/minio/cli v1.22.0
 	github.com/minio/minio v0.0.0-20190927193314-1c5b05c130fa
-	github.com/minio/minio-go/v6 v6.0.39
+	github.com/minio/minio-go/v6 v6.0.38
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
+	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.2-0.20190702141536-6ffe496ea953
 	github.com/rjeczalik/notify v0.9.2
+	golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
 	golang.org/x/text v0.3.2
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
