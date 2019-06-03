@@ -598,7 +598,6 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 			}
 		}
 	}
-	return
 }
 
 func (f *fsClient) listInRoutine(contentCh chan<- *clientContent) {

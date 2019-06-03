@@ -114,10 +114,6 @@ type infoMessage struct {
 
 // String colorized service status message.
 func (u infoMessage) String() (msg string) {
-	defer func() {
-		msg += "\n"
-	}()
-
 	dot := "●"
 
 	// When service is offline
@@ -171,9 +167,9 @@ func (u infoMessage) String() (msg string) {
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
 		upBackends := 0
 		downBackends := 0
-		for _, s := range v.Sets {
-			for _, s := range s {
-				if strings.Contains(s.Endpoint, u.Addr) {
+		for _, set := range v.Sets {
+			for _, s := range set {
+				if strings.Contains(s.Endpoint, u.Addr) || s.Endpoint[0] == '/' {
 					if s.State == "ok" {
 						upBackends++
 					} else {

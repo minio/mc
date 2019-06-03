@@ -59,23 +59,19 @@ const (
 	googleHostName            = "storage.googleapis.com"
 	serverEncryptionKeyPrefix = "x-amz-server-side-encryption"
 
-	defaultRecordDelimiter         = "\n"
-	defaultFieldDelimiter          = ","
-	defaultCSVQuoteCharacter       = "\""
-	defaultCSVQuoteEscapeCharacter = "\""
-	defaultCommentChar             = "#"
+	defaultRecordDelimiter = "\n"
+	defaultFieldDelimiter  = ","
 )
 
 const (
-	recordDelimiterType       = "recorddelimiter"
-	fieldDelimiterType        = "fielddelimiter"
-	quoteCharacterType        = "quotechar"
-	quoteEscapeCharacterType  = "quoteescchar"
-	quoteFieldType            = "quotefield"
-	fileHeaderType            = "fileheader"
-	commentCharType           = "commentchar"
-	quotedRecordDelimiterType = "quotedrecorddelimiter"
-	typeJSONType              = "type"
+	recordDelimiterType      = "recorddelimiter"
+	fieldDelimiterType       = "fielddelimiter"
+	quoteCharacterType       = "quotechar"
+	quoteEscapeCharacterType = "quoteescchar"
+	quoteFieldType           = "quotefield"
+	fileHeaderType           = "fileheader"
+	commentCharType          = "commentchar"
+	typeJSONType             = "type"
 )
 
 // cseHeaders is list of client side encryption headers
@@ -491,7 +487,7 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 	}
 	if _, ok := selOpts.InputSerOpts["json"]; ok {
 		i.JSON = &minio.JSONInputOptions{}
-		if typ, _ = selOpts.InputSerOpts["json"][typeJSONType]; typ != "" {
+		if typ = selOpts.InputSerOpts["json"][typeJSONType]; typ != "" {
 			i.JSON.Type = minio.JSONType(typ)
 		}
 	}
@@ -510,15 +506,11 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 		if quoteEscChar, isOK = selOpts.InputSerOpts["csv"][quoteEscapeCharacterType]; isOK {
 			i.CSV.QuoteEscapeCharacter = quoteEscChar
 		}
-		fileHeader, _ = selOpts.InputSerOpts["csv"][fileHeaderType]
+		fileHeader = selOpts.InputSerOpts["csv"][fileHeaderType]
 		i.CSV.FileHeaderInfo = minio.CSVFileHeaderInfo(fileHeader)
 		if commentChar, isOK = selOpts.InputSerOpts["csv"][commentCharType]; isOK {
 			i.CSV.Comments = commentChar
 		}
-		// needs to be added to minio-go
-		// if qrd, isOK = selOpts.InputSerOpts["csv"][quotedRecordDelimiterType];isOK {
-		// 			i.CSV.QuotedRecordDelimiter = qrd
-		// }
 	}
 	if i.CSV == nil && i.JSON == nil && i.Parquet == nil {
 		ext := filepath.Ext(trimCompressionFileExts(object))

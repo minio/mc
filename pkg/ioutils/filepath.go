@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package ioutils implements helper functions used in github.com/minio/mc
 package ioutils
 
 import (

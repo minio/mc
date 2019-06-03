@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package httptracer implements http tracing functionality
 package httptracer
 
 import (
@@ -34,14 +35,6 @@ type HTTPTracer interface {
 type RoundTripTrace struct {
 	Trace     HTTPTracer        // User provides callback methods
 	Transport http.RoundTripper // HTTP transport that needs to be intercepted
-}
-
-// CancelRequest implements functinality to cancel an underlying request.
-func (t RoundTripTrace) CancelRequest(req *http.Request) {
-	transport, ok := t.Transport.(*http.Transport)
-	if ok {
-		transport.CancelRequest(req)
-	}
 }
 
 // RoundTrip executes user provided request and response hooks for each HTTP call.

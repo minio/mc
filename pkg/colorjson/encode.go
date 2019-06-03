@@ -284,7 +284,7 @@ func (e *InvalidUTF8Error) Error() string {
 }
 
 // MarshalerError is returned by Marshal when an error
-// occurs during marshalling
+// occurs during marshaling
 type MarshalerError struct {
 	Type reflect.Type
 	Err  error
@@ -1105,8 +1105,7 @@ func typeFields(t reflect.Type) []field {
 	next := []field{{typ: t}}
 
 	// Count of queued names for current level and the next.
-	count := map[reflect.Type]int{}
-	nextCount := map[reflect.Type]int{}
+	var count, nextCount map[reflect.Type]int
 
 	// Types already visited at an earlier level.
 	visited := map[reflect.Type]bool{}

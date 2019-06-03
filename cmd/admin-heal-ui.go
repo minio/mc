@@ -238,10 +238,6 @@ func (ui *uiData) printStatsQuietly(s *madmin.HealTaskStatus) {
 }
 
 func (ui *uiData) printItemsJSON(s *madmin.HealTaskStatus) (err error) {
-	type change struct {
-		Before string `json:"before"`
-		After  string `json:"after"`
-	}
 	type healRec struct {
 		Status string `json:"status"`
 		Error  string `json:"error,omitempty"`
@@ -368,7 +364,7 @@ func (ui *uiData) updateUI(s *madmin.HealTaskStatus) (err error) {
 	for i := range cellText {
 		cellText[i] = []string{
 			string(dspOrder[i]),
-			fmt.Sprintf(humanize.Comma(ui.HealthCols[dspOrder[i]])),
+			fmt.Sprint(humanize.Comma(ui.HealthCols[dspOrder[i]])),
 			fmt.Sprintf("%5.1f%% %s", percentMap[dspOrder[i]], barMap[dspOrder[i]]),
 		}
 	}

@@ -60,16 +60,3 @@ func (m URLs) Equal(n URLs) bool {
 
 	return true
 }
-
-func (m URLs) isEmpty() bool {
-	if m.SourceContent == nil && m.TargetContent == nil && m.Error == nil {
-		return true
-	}
-	// If remove flag is set then sourceContent is usually nil.
-	if m.SourceContent != nil {
-		if m.SourceContent.Size == 0 && m.TargetContent == nil && m.Error == nil {
-			return true
-		}
-	}
-	return false
-}

@@ -158,9 +158,6 @@ type mirrorJob struct {
 	// to be initiated multiple times
 	m *sync.Mutex
 
-	// channel for errors
-	errorCh chan *probe.Error
-
 	// the global watcher object, which receives notifications of created
 	// and deleted files
 	watcher *Watcher
@@ -349,7 +346,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 
 			if runtime.GOOS == "darwin" {
 				// Strip the prefixes in the event path. Happens in darwin OS only
-				eventPath = eventPath[strings.Index(eventPath, sourceURLFull):len(eventPath)]
+				eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
 			}
 
 			sourceURL := newClientURL(eventPath)
@@ -469,14 +466,6 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			return
 		}
 	}
-}
-
-func (mj *mirrorJob) watchSourceURL(recursive bool) *probe.Error {
-	sourceClient, err := newClient(mj.sourceURL)
-	if err == nil {
-		return mj.watcher.Join(sourceClient, recursive)
-	} // Failed to initialize client.
-	return err
 }
 
 func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {

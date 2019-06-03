@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package console implements console printing helpers
 package console
 
 import (
@@ -43,82 +44,69 @@ var (
 	// Print prints a message.
 	Print = func(data ...interface{}) {
 		consolePrint("Print", Theme["Print"], data...)
-		return
 	}
 
 	// PrintC prints a message with color.
 	PrintC = func(data ...interface{}) {
 		consolePrint("PrintC", Theme["PrintC"], data...)
-		return
 	}
 
 	// Printf prints a formatted message.
 	Printf = func(format string, data ...interface{}) {
 		consolePrintf("Print", Theme["Print"], format, data...)
-		return
 	}
 
 	// Println prints a message with a newline.
 	Println = func(data ...interface{}) {
 		consolePrintln("Print", Theme["Print"], data...)
-		return
 	}
 
 	// Fatal print a error message and exit.
 	Fatal = func(data ...interface{}) {
 		consolePrint("Fatal", Theme["Fatal"], data...)
 		os.Exit(1)
-		return
 	}
 
 	// Fatalf print a error message with a format specified and exit.
 	Fatalf = func(format string, data ...interface{}) {
 		consolePrintf("Fatal", Theme["Fatal"], format, data...)
 		os.Exit(1)
-		return
 	}
 
 	// Fatalln print a error message with a new line and exit.
 	Fatalln = func(data ...interface{}) {
 		consolePrintln("Fatal", Theme["Fatal"], data...)
 		os.Exit(1)
-		return
 	}
 
 	// Error prints a error message.
 	Error = func(data ...interface{}) {
 		consolePrint("Error", Theme["Error"], data...)
-		return
 	}
 
 	// Errorf print a error message with a format specified.
 	Errorf = func(format string, data ...interface{}) {
 		consolePrintf("Error", Theme["Error"], format, data...)
-		return
 	}
 
 	// Errorln prints a error message with a new line.
 	Errorln = func(data ...interface{}) {
 		consolePrintln("Error", Theme["Error"], data...)
-		return
 	}
 
 	// Info prints a informational message.
 	Info = func(data ...interface{}) {
 		consolePrint("Info", Theme["Info"], data...)
-		return
 	}
 
 	// Infof prints a informational message in custom format.
 	Infof = func(format string, data ...interface{}) {
 		consolePrintf("Info", Theme["Info"], format, data...)
-		return
 	}
 
 	// Infoln prints a informational message with a new line.
 	Infoln = func(data ...interface{}) {
 		consolePrintln("Info", Theme["Info"], data...)
-		return
 	}
 
 	// Debug prints a debug message without a new line

@@ -68,7 +68,6 @@ type sessionV8 struct {
 	SessionID string
 	mutex     *sync.Mutex
 	DataFP    *sessionDataFP
-	sigCh     bool
 }
 
 // sessionDataFP data file pointer.
@@ -202,14 +201,14 @@ func (s sessionV8) HasData() bool {
 // NewDataReader provides reader interface to session data file.
 func (s *sessionV8) NewDataReader() io.Reader {
 	// DataFP is always intitialized, either via new or load functions.
-	s.DataFP.Seek(0, os.SEEK_SET)
+	s.DataFP.Seek(0, io.SeekStart)
 	return io.Reader(s.DataFP)
 }
 
 // NewDataReader provides writer interface to session data file.
 func (s *sessionV8) NewDataWriter() io.Writer {
 	// DataFP is always intitialized, either via new or load functions.
-	s.DataFP.Seek(0, os.SEEK_SET)
+	s.DataFP.Seek(0, io.SeekStart)
 	// when moving to file position 0 we want to truncate the file as well,
 	// otherwise we'll partly overwrite existing data
 	s.DataFP.Truncate(0)

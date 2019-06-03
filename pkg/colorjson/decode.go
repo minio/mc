@@ -546,13 +546,13 @@ func (d *decodeState) array(v reflect.Value) error {
 		}
 		// Otherwise it's invalid.
 		fallthrough
+	case reflect.Array:
+	case reflect.Slice:
+		break
 	default:
 		d.saveError(&UnmarshalTypeError{Value: "array", Type: v.Type(), Offset: int64(d.off)})
 		d.skip()
 		return nil
-	case reflect.Array:
-	case reflect.Slice:
-		break
 	}
 
 	i := 0
