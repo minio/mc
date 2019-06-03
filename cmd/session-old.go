@@ -101,7 +101,6 @@ type sessionV7 struct {
 	SessionID string
 	mutex     *sync.Mutex
 	DataFP    *sessionDataFP
-	sigCh     bool
 }
 
 // loadSessionV7 - reads session file if exists and re-initiates internal variables

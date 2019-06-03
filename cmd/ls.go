@@ -50,9 +50,9 @@ func (c contentMessage) String() string {
 	message = message + console.Colorize("Size", fmt.Sprintf("%7s ", strings.Join(strings.Fields(humanize.IBytes(uint64(c.Size))), "")))
 	message = func() string {
 		if c.Filetype == "folder" {
-			return message + console.Colorize("Dir", fmt.Sprintf("%s", c.Key))
+			return message + console.Colorize("Dir", c.Key)
 		}
-		return message + console.Colorize("File", fmt.Sprintf("%s", c.Key))
+		return message + console.Colorize("File", c.Key)
 	}()
 	return message
 }

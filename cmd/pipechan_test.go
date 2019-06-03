@@ -35,9 +35,7 @@ func testPipeChan(inputCh, outputCh chan notify.EventInfo, totalMsgs int) error 
 	go func() {
 		defer wg.Done()
 		for i := 0; i < totalMsgs; i++ {
-			select {
-			case inputCh <- msgCtnt:
-			}
+			inputCh <- msgCtnt
 		}
 		close(inputCh)
 	}()

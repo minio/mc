@@ -71,8 +71,7 @@ func isValidAPI(api string) (ok bool) {
 
 // isValidLookup - validates if bucket lookup is of valid type
 func isValidLookup(lookup string) (ok bool) {
-	l := strings.TrimSpace(lookup)
-	l = strings.ToLower(lookup)
+	l := strings.ToLower(strings.TrimSpace(lookup))
 	for _, v := range []string{"dns", "path", "auto"} {
 		if l == v {
 			return true

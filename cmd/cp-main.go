@@ -28,7 +28,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -147,26 +146,6 @@ func (c copyMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Failed to marshal copy message.")
 
 	return string(copyMessageBytes)
-}
-
-// copyStatMessage container for copy accounting message
-type copyStatMessage struct {
-	Total       int64
-	Transferred int64
-	Speed       float64
-}
-
-// copyStatMessage copy accounting message
-func (c copyStatMessage) String() string {
-	speedBox := pb.Format(int64(c.Speed)).To(pb.U_BYTES).String()
-	if speedBox == "" {
-		speedBox = "0 MB"
-	} else {
-		speedBox = speedBox + "/s"
-	}
-	message := fmt.Sprintf("Total: %s, Transferred: %s, Speed: %s", pb.Format(c.Total).To(pb.U_BYTES),
-		pb.Format(c.Transferred).To(pb.U_BYTES), speedBox)
-	return message
 }
 
 // Progress - an interface which describes current amount

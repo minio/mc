@@ -210,7 +210,7 @@ func parseEnvURL(envURL string) (*url.URL, string, string, *probe.Error) {
 	// Look for if URL has invalid values and return error.
 	if !((u.Scheme == "http" || u.Scheme == "https") &&
 		(u.Path == "/" || u.Path == "") && u.Opaque == "" &&
-		u.ForceQuery == false && u.RawQuery == "" && u.Fragment == "") {
+		!u.ForceQuery && u.RawQuery == "" && u.Fragment == "") {
 		return nil, "", "", errInvalidArgument().Trace(u.String())
 	}
 
@@ -236,10 +236,10 @@ func parseEnvURLStr(envURL string) (*url.URL, string, string, *probe.Error) {
 		}
 		for k, v := range res[0] {
 			if k == 2 {
-				accessKey = fmt.Sprintf("%s", v)
+				accessKey = v
 			}
 			if k == 3 {
-				secretKey = fmt.Sprintf("%s", v)
+				secretKey = v
 			}
 			if k == 1 || k == 4 {
 				envURLStr = fmt.Sprintf("%s%s", envURLStr, v)

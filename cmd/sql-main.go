@@ -222,7 +222,7 @@ func parseSerializationOpts(inp string, validKeys []string, validAbbrKeys map[st
 	}
 	validKeyFn := func(key string, validKeys []string) bool {
 		for _, name := range validKeys {
-			if strings.ToLower(name) == strings.ToLower(key) {
+			if strings.EqualFold(name, key) {
 				return true
 			}
 		}

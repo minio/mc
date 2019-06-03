@@ -23,9 +23,9 @@ type col string
 
 const (
 	colGrey   col = "Grey"
-	colRed        = "Red"
-	colYellow     = "Yellow"
-	colGreen      = "Green"
+	colRed    col = "Red"
+	colYellow col = "Yellow"
+	colGreen  col = "Green"
 )
 
 // getPrintCol - map color code to color for printing

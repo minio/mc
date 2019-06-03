@@ -124,7 +124,7 @@ func (u watchMessage) String() string {
 		msg += fmt.Sprintf("%6s ", "")
 	}
 	msg += console.Colorize("EventType", fmt.Sprintf("%s ", u.Event.Type))
-	msg += console.Colorize("ObjectName", fmt.Sprintf("%s", u.Event.Path))
+	msg += console.Colorize("ObjectName", u.Event.Path)
 	return msg
 }
 

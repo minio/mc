@@ -124,7 +124,6 @@ func clearSession(sid string, isForce bool) {
 		// Forced removal of a session.
 		forceClear(sid, session)
 	}
-	return
 }
 
 // checkSessionClearSyntax - Check syntax of 'session clear sid'.

@@ -63,9 +63,9 @@ VERSION:
 {{end}}`
 
 // Main starts mc application
-func Main() {
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
+func Main(args []string) {
+	if len(args) > 1 {
+		switch args[1] {
 		case "mc", "-install", "-uninstall":
 			mainComplete()
 			return
@@ -95,15 +95,13 @@ func Main() {
 		globalTermWidth = w
 	}
 
-	app := registerApp()
-	app.Before = registerBefore
-	app.ExtraInfo = func() map[string]string {
-		if globalDebug {
-			return getSystemData()
-		}
-		return make(map[string]string)
+	// Set the mc app name.
+	appName := filepath.Base(args[0])
+
+	// Run the app - exit on error.
+	if err := registerApp(appName).Run(args); err != nil {
+		os.Exit(1)
 	}
-	app.RunAndExitOnError()
 }
 
 // Function invoked when invalid command is passed.
@@ -310,7 +308,7 @@ var appCmds = []cli.Command{
 	versionCmd,
 }
 
-func registerApp() *cli.App {
+func registerApp(name string) *cli.App {
 	for _, cmd := range appCmds {
 		registerCmd(cmd)
 	}
@@ -327,12 +325,21 @@ func registerApp() *cli.App {
 	}
 
 	app := cli.NewApp()
+	app.Name = name
 	app.Action = func(ctx *cli.Context) {
 		if strings.HasPrefix(ReleaseTag, "RELEASE.") {
 			// Check for new updates from dl.min.io.
 			checkUpdate(ctx)
 		}
 		cli.ShowAppHelp(ctx)
+	}
+
+	app.Before = registerBefore
+	app.ExtraInfo = func() map[string]string {
+		if globalDebug {
+			return getSystemData()
+		}
+		return make(map[string]string)
 	}
 
 	app.HideHelpCommand = true
