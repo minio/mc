@@ -53,7 +53,6 @@ type s3Client struct {
 }
 
 const (
-	amazonHostName            = "s3.amazonaws.com"
 	amazonHostNameAccelerated = "s3-accelerate.amazonaws.com"
 
 	googleHostName            = "storage.googleapis.com"
@@ -109,11 +108,6 @@ func newFactory() func(config *Config) (Client, *probe.Error) {
 		isS3AcceleratedEndpoint := isAmazonAccelerated(hostName)
 
 		if s3Clnt.virtualStyle {
-			// If Amazon URL replace it with 's3.amazonaws.com'
-			if isAmazon(hostName) || isAmazonAccelerated(hostName) {
-				hostName = amazonHostName
-			}
-
 			// If Google URL replace it with 'storage.googleapis.com'
 			if isGoogle(hostName) {
 				hostName = googleHostName
