@@ -458,3 +458,41 @@ COMMANDS:
 ```sh
 mc admin top locks myminio
 ```
+
+<a name="trace"></a>
+### Command `trace` - Display Minio server http trace
+`trace` command displays server http trace of one or many Minio servers (under distributed cluster)
+
+```sh
+NAME:
+  mc admin trace - get minio server http trace
+
+FLAGS:
+  --help, -h                       show help
+```
+
+*Example: Display Minio server http trace.*
+
+```sh
+mc admin trace myminio
+172.16.238.1 [REQUEST (objectAPIHandlers).ListBucketsHandler-fm] [154828542.525557] [2019-01-23 23:17:05 +0000]
+172.16.238.1 GET /
+172.16.238.1 Host: 172.16.238.3:9000
+172.16.238.1 X-Amz-Date: 20190123T231705Z
+172.16.238.1 Authorization: AWS4-HMAC-SHA256 Credential=minio/20190123/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=8385097f264efaf1b71a9b56514b8166bb0a03af8552f83e2658f877776c46b3
+172.16.238.1 User-Agent: Minio (linux; amd64) minio-go/v6.0.8 mc/2019-01-23T23:15:38Z
+172.16.238.1 X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+172.16.238.1 
+172.16.238.1 <BODY>
+172.16.238.1 [RESPONSE] [154828542.525557] [2019-01-23 23:17:05 +0000]
+172.16.238.1 200 OK
+172.16.238.1 X-Amz-Request-Id: 157C9D641F42E547
+172.16.238.1 X-Minio-Deployment-Id: 5f20fd91-6880-455f-a26d-07804b6821ca
+172.16.238.1 X-Xss-Protection: 1; mode=block
+172.16.238.1 Accept-Ranges: bytes
+172.16.238.1 Content-Security-Policy: block-all-mixed-content
+172.16.238.1 Content-Type: application/xml
+172.16.238.1 Server: Minio/DEVELOPMENT.2019-01-23T23-14-14Z
+172.16.238.1 Vary: Origin
+...
+```
