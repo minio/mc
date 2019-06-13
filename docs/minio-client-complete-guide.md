@@ -566,7 +566,7 @@ Notice that two different aliases myminio1 and myminio2 are used for the same en
 *Example: Copy file and assign Cache-Control header for it*
 
 ```sh
-mc cp --attr Cache-Control=no-cache myscript.js scripts/
+mc cp --attr Cache-Control=no-cache myscript.js S3/scripts
 myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
