@@ -563,10 +563,10 @@ encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 ```
 Notice that two different aliases myminio1 and myminio2 are used for the same endpoint to provide the old secretkey and the newly rotated key.
 
-*Example: Copy file and assign Cache-Control header for it*
+*Example: Copy a javascript file to object storage and assign Cache-Control header to the uploaded object*
 
 ```sh
-mc cp --attr Cache-Control=no-cache myscript.js S3/scripts
+mc cp --attr Cache-Control=no-cache myscript.js play/mybucket
 myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
