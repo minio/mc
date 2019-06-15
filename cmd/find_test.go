@@ -29,61 +29,61 @@ func TestMatchFind(t *testing.T) {
 	// List of various contexts used in each tests,
 	// tests are run in the same order as this list.
 	var listFindContexts = []*findContext{
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			ignorePattern: "*.go",
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			namePattern: "console",
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			pathPattern: "*console*",
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			regexPattern: `^(\d+\.){3}\d+$`,
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			olderThan: "1d",
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			newerThan: "32000d",
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			largerSize: 1024 * 1024,
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			smallerSize: 1024,
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
 			ignorePattern: "*.txt",
 		},
-		&findContext{
+		{
 			clnt: &s3Client{
 				targetURL: &clientURL{},
 			},
