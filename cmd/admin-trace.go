@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -67,11 +66,10 @@ EXAMPLES:
  `,
 }
 
-const timeFormat = "15:04:05.000000000"
+const timeFormat = "15:04:05.00000"
 
 var (
-	funcNameRegex = regexp.MustCompile(`^.*?\\.([^\\-]*?)Handler\\-.*?$`)
-	colors        = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, color.FgGreen}
+	colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, color.FgGreen}
 )
 
 func checkAdminTraceSyntax(ctx *cli.Context) {
@@ -128,14 +126,14 @@ func mainAdminTrace(ctx *cli.Context) error {
 
 // Short trace record
 type shortTraceMsg struct {
-	NodeName   string
-	Time       time.Time
-	FuncName   string
-	Host       string
-	Path       string
-	Query      string
-	StatusCode int
-	StatusMsg  string
+	Host       string    `json:"host"`
+	Time       time.Time `json:"time"`
+	Client     string    `json:"client"`
+	FuncName   string    `json:"api"`
+	Path       string    `json:"path"`
+	Query      string    `json:"query"`
+	StatusCode int       `json:"statuscode"`
+	StatusMsg  string    `json:"statusmsg"`
 }
 
 type traceMessage struct {
@@ -159,37 +157,26 @@ type responseInfo struct {
 }
 
 type trace struct {
-	NodeName     string       `json:"nodename"`
-	FuncName     string       `json:"funcname"`
+	NodeName     string       `json:"host"`
+	FuncName     string       `json:"api"`
 	RequestInfo  requestInfo  `json:"request"`
 	ResponseInfo responseInfo `json:"response"`
-}
-
-// parse Operation name from function name
-func getOpName(fname string) (op string) {
-	res := funcNameRegex.FindStringSubmatch(fname)
-	op = fname
-	if len(res) == 2 {
-		op = res[1]
-	}
-	return
 }
 
 // return a struct with minimal trace info.
 func shortTrace(ti madmin.TraceInfo) shortTraceMsg {
 	s := shortTraceMsg{}
 	t := ti.Trace
-	s.NodeName = t.NodeName
 	s.Time = t.ReqInfo.Time
 	if host, ok := t.ReqInfo.Headers["Host"]; ok {
 		s.Host = strings.Join(host, "")
 	}
 	s.Path = t.ReqInfo.Path
 	s.Query = t.ReqInfo.RawQuery
-	s.FuncName = getOpName(t.FuncName)
+	s.FuncName = t.FuncName
 	s.StatusCode = t.RespInfo.StatusCode
 	s.StatusMsg = http.StatusText(t.RespInfo.StatusCode)
-
+	s.Client = t.ReqInfo.Client
 	return s
 }
 
@@ -206,7 +193,7 @@ func (s shortTraceMsg) String() string {
 	if s.Host != "" {
 		hostStr = colorizedNodeName(s.Host)
 	}
-	fmt.Fprintf(b, "%s %s ", s.Time.Format(timeFormat), console.Colorize("FuncName", s.FuncName))
+	fmt.Fprintf(b, "%s %s %s ", s.Time.Format(timeFormat), s.Client, console.Colorize("FuncName", s.FuncName))
 	fmt.Fprintf(b, "%s%s", hostStr, s.Path)
 
 	if s.Query != "" {
