@@ -155,6 +155,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/stat":   complete.PredictOr(s3Completer, fsCompleter),
 	"/watch":  complete.PredictOr(s3Completer, fsCompleter),
 	"/policy": complete.PredictOr(s3Completer, fsCompleter),
+	"/tree":   complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
 
 	"/mb":  aliasCompleter,
 	"/sql": s3Completer,

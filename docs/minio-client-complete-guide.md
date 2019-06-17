@@ -4,6 +4,7 @@ MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, c
 
 ```sh
 ls       list buckets and objects
+tree     list buckets and objects in a tree format
 mb       make a bucket
 rb       remove a bucket
 cat      display object contents
@@ -183,6 +184,7 @@ alias cat='mc cat'
 alias mkdir='mc mb'
 alias pipe='mc pipe'
 alias find='mc find'
+alias tree='mc tree'
 ```
 
 ## 6. Global Options
@@ -251,7 +253,7 @@ Skip SSL certificate verification.
 
 |   |   | |
 |:---|:---|:---|
-|[**ls** - List buckets and objects](#ls)   |[**mb** - Make a bucket](#mb)  | [**cat** - Concatenate an object](#cat)  |
+|[**ls** - List buckets and objects](#ls)   |[**tree** - List buckets and objects in a tree format](#tree)  |[**mb** - Make a bucket](#mb)  | [**cat** - Concatenate an object](#cat)  |
 |[**cp** - Copy objects](#cp) |[**rb** - Remove a bucket](#rb)  | [**pipe** - Pipe to an object](#pipe) |
 | [**share** - Share access](#share)  | [**rm** - Remove objects](#rm)   | [**find** - Find files and objects](#find) |
 | [**diff** - Diff buckets](#diff) |[**mirror** - Mirror buckets](#mirror)|[**session** - Manage saved sessions](#session) |
@@ -284,6 +286,34 @@ mc ls play
 [2016-03-28 21:53:49 IST]     0B guestbucket/
 [2016-04-08 20:58:18 IST]     0B mybucket/
 ```
+
+<a name="tree"></a>
+### Command `tree` - List buckets and directories in a tree format
+
+`tree` command lists buckets and directories in a tree format. Use `--files` flag to include files/objects in listing.
+
+```sh
+USAGE:
+   mc tree [FLAGS] TARGET [TARGET ...]
+
+FLAGS:
+  --help, -h                    show help
+  --files, -f                   include files in tree
+  --depth, -d                   set the maximum depth of the tree
+```
+
+_Example: List all buckets on play/test-bucket in a tree format._
+
+```sh
+mc tree play/test-bucket
+play/test-bucket/
+├─ dir_a
+├─ dir_b
+│  └─ dir_bb
+└─ dir_x
+   └─ dir_xx
+```
+
 
 <a name="mb"></a>
 ### Command `mb` - Make a Bucket
@@ -394,9 +424,9 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 INPUT SERIALIZATION
-  --csv-input or --json-input can be used to specify input data format. Format is 
+  --csv-input or --json-input can be used to specify input data format. Format is
   specified by a string with pattern "key=value,..." for valid key(s).
-  
+
   DATA FORMAT:
     csv: Use --csv-input flag
       Valid keys:
@@ -407,12 +437,12 @@ INPUT SERIALIZATION
         FileHeader (fh)
         Comments (cc)
         QuotedRecordDelimiter (qrd)
-	 
+
     json: Use --json-input flag
       Valid keys:
-        Type 
+        Type
     parquet: If object name ends in .parquet, this is automatically interpreted.
-	  
+
 OUTPUT SERIALIZATION
   --csv-output or --json-output can be used to specify output data format. Format is
   specified by a string with pattern "key=value,..." for valid key(s).
@@ -424,11 +454,11 @@ OUTPUT SERIALIZATION
         QuoteChar (qc)
         QuoteEscChar (qec)
         QuoteFields (qf)
-	 
+
     json: Use --json-output flag
       Valid keys:
-        RecordDelimiter (rd) 
-	  
+        RecordDelimiter (rd)
+
 COMPRESSION TYPE
     --compression specifies if the queried object is compressed.
     Valid values: NONE | GZIP | BZIP2
@@ -791,7 +821,7 @@ FLAGS:
   --debug                          Enable debug output.
   --insecure                       Disable SSL certificate verification.
   --help, -h                       Show help.
-  
+
 LEGEND:
     > - object is only in source.
     < - object is only in destination.
