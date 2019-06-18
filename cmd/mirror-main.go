@@ -52,7 +52,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "watch, w",
-			Usage: "watch and synchronize changes",
+			Usage: "watch and synchronize changes (DEPRECATED and enabled by default)",
 		},
 		cli.BoolFlag{
 			Name:  "remove",
@@ -93,7 +93,7 @@ var (
 //  Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
 	Name:   "mirror",
-	Usage:  "synchronize object(s) to a remote site",
+	Usage:  "continuously synchronize object(s) to a remote site",
 	Action: mainMirror,
 	Before: setGlobalsFromContext,
 	Flags:  append(append(mirrorFlags, ioFlags...), globalFlags...),
@@ -111,27 +111,28 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
-  01. Mirror a bucket recursively from MinIO cloud storage to a bucket on Amazon S3 cloud storage.
+  01. Continously mirror a bucket recursively from MinIO cloud storage to a bucket on Amazon S3 cloud storage.
       $ {{.HelpName}} play/photos/2014 s3/backup-photos
 
-  02. Mirror a local folder recursively to Amazon S3 cloud storage.
+  02. Continously mirror a local folder recursively to Amazon S3 cloud storage.
       $ {{.HelpName}} backup/ s3/archive
 
   03. Only mirror files that are newer than 7 days, 10 hours and 30 minutes to Amazon S3 cloud storage.
       $ {{.HelpName}} --newer-than "7d10h30m" backup/ s3/archive
 
-  04. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
+  04. Continously mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
       $ {{.HelpName}} s3\documents\2014\ C:\backup\2014
 
-  05. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--overwrite' to overwrite destination.
+  05. Continously mirror a bucket from aliased Amazon S3 cloud storage to a local folder use
+      '--overwrite' to overwrite destination.
       $ {{.HelpName}} --overwrite s3/miniocloud miniocloud-backup
 
-  06. Mirror a bucket from MinIO cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
-      files on Amazon S3 cloud storage.
+  06. Continously mirror a bucket from MinIO cloud storage to a bucket on Amazon S3 cloud storage
+      and remove any extraneous files on Amazon S3 cloud storage.
       $ {{.HelpName}} --remove play/photos/2014 s3/backup-photos/2014
 
-  07. Continuously mirror a local folder recursively to MinIO cloud storage. '--watch' continuously watches for
-      new objects, uploads and removes extraneous files on Amazon S3 cloud storage.
+  07. Continuously mirror a local folder recursively to MinIO cloud storage. '--watch' continuously
+      watches for new objects, uploads and removes extraneous files on Amazon S3 cloud storage.
       $ {{.HelpName}} --remove --watch /var/lib/backups play/backups
 
   08. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
@@ -140,12 +141,6 @@ EXAMPLES:
 
   09. Mirror objects newer than 10 days from bucket test to a local folder.
       $ {{.HelpName}} --newer-than 10d s3/test ~/localfolder
-
-  10. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
-      $ {{.HelpName}} --older-than 30d s3/test ~/test
-
-  11. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage
-      $ {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
 `,
 }
 
@@ -639,7 +634,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		ctx.Bool("fake"),
 		ctx.Bool("remove"),
 		isOverwrite,
-		ctx.Bool("watch"),
+		true,
 		ctx.StringSlice("exclude"),
 		ctx.String("older-than"),
 		ctx.String("newer-than"),
