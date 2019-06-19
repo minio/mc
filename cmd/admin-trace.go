@@ -41,7 +41,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "all, a",
-		Usage: "trace all traffic",
+		Usage: "trace all traffic (including internode traffic between MinIO servers)",
 	},
 }
 
@@ -53,24 +53,26 @@ var adminTraceCmd = cli.Command{
 	Flags:           append(adminTraceFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
-	 {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET
  
- USAGE:
-	 {{.HelpName}} [FLAGS] TARGET
- 
- FLAGS:
-	 {{range .VisibleFlags}}{{.}}
-	 {{end}}
- EXAMPLES:
-		 1. Show console trace for a Minio server with alias 'play'
-				$ {{.HelpName}} play -v -a
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Show console trace for a Minio server with alias 'play'
+     $ {{.HelpName}} play -v -a
  `,
 }
-var funcNameRegex = regexp.MustCompile(`^.*?\\.([^\\-]*?)Handler\\-.*?$`)
 
 const timeFormat = "15:04:05.000000000"
 
-var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, color.FgGreen}
+var (
+	funcNameRegex = regexp.MustCompile(`^.*?\\.([^\\-]*?)Handler\\-.*?$`)
+	colors        = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, color.FgGreen}
+)
 
 func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
@@ -139,6 +141,7 @@ type shortTraceMsg struct {
 type traceMessage struct {
 	madmin.TraceInfo
 }
+
 type requestInfo struct {
 	Time     time.Time         `json:"time"`
 	Method   string            `json:"method"`
@@ -147,12 +150,14 @@ type requestInfo struct {
 	Headers  map[string]string `json:"headers,omitempty"`
 	Body     string            `json:"body,omitempty"`
 }
+
 type responseInfo struct {
 	Time       time.Time         `json:"time"`
 	Headers    map[string]string `json:"headers,omitempty"`
 	Body       string            `json:"body,omitempty"`
 	StatusCode int               `json:"statuscode,omitempty"`
 }
+
 type trace struct {
 	NodeName     string       `json:"nodename"`
 	FuncName     string       `json:"funcname"`
@@ -187,25 +192,28 @@ func shortTrace(ti madmin.TraceInfo) shortTraceMsg {
 
 	return s
 }
+
 func (s shortTraceMsg) JSON() string {
 	traceJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(traceJSONBytes)
 }
+
 func (s shortTraceMsg) String() string {
 	var hostStr string
-	var b strings.Builder
+	var b = &strings.Builder{}
 
 	if s.Host != "" {
 		hostStr = colorizedNodeName(s.Host)
 	}
-	fmt.Fprintf(&b, "%s %s ", s.Time.Format(timeFormat), console.Colorize("FuncName", s.FuncName))
-	fmt.Fprintf(&b, "%s%s", hostStr, s.Path)
+	fmt.Fprintf(b, "%s %s ", s.Time.Format(timeFormat), console.Colorize("FuncName", s.FuncName))
+	fmt.Fprintf(b, "%s%s", hostStr, s.Path)
 
 	if s.Query != "" {
-		fmt.Fprintf(&b, "?%s", s.Query)
+		fmt.Fprintf(b, "?%s", s.Query)
 	}
-	fmt.Fprintf(&b, " %s", console.Colorize("ResponseStatus", fmt.Sprintf("\t%s %s", strconv.Itoa(s.StatusCode), s.StatusMsg)))
+	fmt.Fprintf(b, " %s", console.Colorize("ResponseStatus",
+		fmt.Sprintf("\t%s %s", strconv.Itoa(s.StatusCode), s.StatusMsg)))
 	return b.String()
 }
 
@@ -259,7 +267,7 @@ func (t traceMessage) JSON() string {
 
 func (t traceMessage) String() string {
 	var nodeNameStr string
-	var b strings.Builder
+	var b = &strings.Builder{}
 
 	trc := t.Trace
 	if trc.NodeName != "" {
@@ -268,32 +276,35 @@ func (t traceMessage) String() string {
 
 	ri := trc.ReqInfo
 	rs := trc.RespInfo
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[REQUEST %s] ", trc.FuncName)))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[REQUEST %s] ", trc.FuncName)))
 
-	fmt.Fprintf(&b, "[%s]\n", ri.Time.Format(timeFormat))
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Method", fmt.Sprintf("%s %s", ri.Method, ri.Path)))
+	fmt.Fprintf(b, "[%s]\n", ri.Time.Format(timeFormat))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Method", fmt.Sprintf("%s %s", ri.Method, ri.Path)))
 	if ri.RawQuery != "" {
-		fmt.Fprintf(&b, "?%s", ri.RawQuery)
+		fmt.Fprintf(b, "?%s", ri.RawQuery)
 	}
-	fmt.Fprint(&b, "\n")
+	fmt.Fprint(b, "\n")
 	host, ok := ri.Headers["Host"]
 	if ok {
 		delete(ri.Headers, "Host")
 	}
 	hostStr := strings.Join(host, "")
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Host", fmt.Sprintf("Host: %s\n", hostStr)))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Host", fmt.Sprintf("Host: %s\n", hostStr)))
 	for k, v := range ri.Headers {
-		fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("ReqHeaderKey", fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
+		fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("ReqHeaderKey",
+			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
 	}
 
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Response", fmt.Sprintf("[RESPONSE] ")))
-	fmt.Fprintf(&b, "[%s]\n", rs.Time.Format(timeFormat))
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("ResponseStatus", fmt.Sprintf("%d %s\n", rs.StatusCode, http.StatusText(rs.StatusCode))))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Response", fmt.Sprintf("[RESPONSE] ")))
+	fmt.Fprintf(b, "[%s]\n", rs.Time.Format(timeFormat))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("ResponseStatus",
+		fmt.Sprintf("%d %s\n", rs.StatusCode, http.StatusText(rs.StatusCode))))
 	for k, v := range rs.Headers {
-		fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("RespHeaderKey", fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
+		fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("RespHeaderKey",
+			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
 	}
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Body", string(rs.Body)))
-	fmt.Fprint(&b, nodeNameStr)
+	fmt.Fprintf(b, "%s%s\n", nodeNameStr, console.Colorize("Body", string(rs.Body)))
+	fmt.Fprint(b, nodeNameStr)
 	return b.String()
 }

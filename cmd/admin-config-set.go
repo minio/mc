@@ -44,7 +44,6 @@ FLAGS:
 EXAMPLES:
   1. Set server configuration of a MinIO server/cluster.
      $ cat myconfig | {{.HelpName}} myminio/
-
 `,
 }
 

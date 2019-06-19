@@ -4,7 +4,6 @@ go 1.12
 
 require (
 	github.com/cheggaaa/pb v1.0.28
-	github.com/coreos/bbolt v1.3.2 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
@@ -23,7 +22,7 @@ require (
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/minio/cli v1.20.0
-	github.com/minio/minio v0.0.0-20190611004433-002a205c9ce5
+	github.com/minio/minio v0.0.0-20190619212803-35c38e4bd893
 	github.com/minio/minio-go v0.0.0-20190327203652-5325257a208f // indirect
 	github.com/minio/minio-go/v6 v6.0.29
 	github.com/minio/sha256-simd v0.1.0
@@ -39,10 +38,9 @@ require (
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/ugorji/go v1.1.5-pre // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
-	go.etcd.io/bbolt v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
-	golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5
-	golang.org/x/net v0.0.0-20190603091049-60506f45cf65
+	golang.org/x/crypto v0.0.0-20190618222545-ea8f1a30c443
+	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b
 	golang.org/x/text v0.3.2
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
