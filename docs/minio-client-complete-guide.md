@@ -526,6 +526,7 @@ FLAGS:
   --storage-class value, --sc value  set storage class for new object(s) on target
   --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
   --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
+  --attr                             apply metadata to objects (format: KeyName1=string,KeyName2=string)
   --help, -h                         show help
 
 ENVIRONMENT VARIABLES:
@@ -561,6 +562,13 @@ mc cp --encrypt-key 'myminio1/mybucket=32byteslongsecretkeymustgenerate , mymini
 encryptedobject:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 Notice that two different aliases myminio1 and myminio2 are used for the same endpoint to provide the old secretkey and the newly rotated key.
+
+*Example: Copy a javascript file to object storage and assign Cache-Control header to the uploaded object*
+
+```sh
+mc cp --attr Cache-Control=no-cache myscript.js play/mybucket
+myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
 
 <a name="rm"></a>
 ### Command `rm` - Remove Objects
