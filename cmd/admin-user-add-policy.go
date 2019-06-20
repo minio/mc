@@ -54,7 +54,7 @@ EXAMPLES:
   1. Set a policy 'writeonly' to 'foobar' on MinIO server.
      $ {{.HelpName}} myminio foobar writeonly
   2. Set a policy 'writeonly' to Kerberos principal 'mojo-jojo@MOJO.REALM' on myminio.
-     $ {{.HelpName}} myminio --kerberos mojo-jojo@MOJO.REALM writeonly
+     $ {{.HelpName}} --sts-kerberos myminio mojo-jojo@MOJO.REALM writeonly
 
 `,
 }
