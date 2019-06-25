@@ -118,8 +118,9 @@ EXAMPLES:
 
 // Structured message depending on the type of console.
 type rmMessage struct {
-	Key  string `json:"key"`
-	Size int64  `json:"size"`
+	Status string `json:"status"`
+	Key    string `json:"key"`
+	Size   int64  `json:"size"`
 }
 
 // Colorized message for console printing.
@@ -129,6 +130,7 @@ func (r rmMessage) String() string {
 
 // JSON'ified message for scripting.
 func (r rmMessage) JSON() string {
+	r.Status = "success"
 	msgBytes, e := json.MarshalIndent(r, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)

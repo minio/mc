@@ -80,7 +80,7 @@ func (s shareMesssage) String() string {
 func (s shareMesssage) JSON() string {
 	s.Status = "success"
 	shareMessageBytes, e := json.MarshalIndent(s, "", " ")
-	fatalIf(probe.NewError(e), "Failed to marshal into JSON.")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	// JSON encoding escapes ampersand into its unicode character
 	// which is not usable directly for share and fails with cloud
