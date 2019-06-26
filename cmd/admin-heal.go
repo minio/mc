@@ -17,8 +17,10 @@
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -133,6 +135,30 @@ func (s stopHealMessage) JSON() string {
 	return string(stopHealJSONBytes)
 }
 
+// backgroundHealStatusMessage is container for stop heal success and failure messages.
+type backgroundHealStatusMessage struct {
+	Status   string `json:"status"`
+	HealInfo madmin.BgHealState
+}
+
+// String colorized to show background heal status message.
+func (s backgroundHealStatusMessage) String() string {
+	healPrettyMsg := console.Colorize("HealBackgroundTitle", "Background healing status:\n")
+	healPrettyMsg += fmt.Sprintf("  Total items scanned: %s\n",
+		console.Colorize("HealBackground", s.HealInfo.ScannedItemsCount))
+	healPrettyMsg += fmt.Sprintf("  Last background heal check: %s\n",
+		console.Colorize("HealBackground", timeDurationToHumanizedDuration(time.Since(s.HealInfo.LastHealActivity)).String()+" ago"))
+	return healPrettyMsg
+}
+
+// JSON jsonified stop heal message.
+func (s backgroundHealStatusMessage) JSON() string {
+	healJSONBytes, e := json.MarshalIndent(s, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+
+	return string(healJSONBytes)
+}
+
 func transformScanArg(scanArg string) madmin.HealScanMode {
 	switch scanArg {
 	case "deep":
@@ -152,6 +178,8 @@ func mainAdminHeal(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	console.SetColor("Heal", color.New(color.FgGreen, color.Bold))
+	console.SetColor("HealBackgroundTitle", color.New(color.FgGreen, color.Bold))
+	console.SetColor("HealBackground", color.New(color.Bold))
 	console.SetColor("HealUpdateUI", color.New(color.FgYellow, color.Bold))
 	console.SetColor("HealStopped", color.New(color.FgGreen, color.Bold))
 
@@ -167,6 +195,15 @@ func mainAdminHeal(ctx *cli.Context) error {
 	splits := splitStr(aliasedURL, "/", 3)
 	bucket, prefix := splits[1], splits[2]
 
+	// Return the background heal status when the user
+	// doesn't pass a bucket or --recursive flag.
+	if bucket == "" && !ctx.Bool("recursive") {
+		bgHealStatus, berr := client.BackgroundHealStatus()
+		fatalIf(probe.NewError(berr), "Failed to get the status of the background heal.")
+		printMsg(backgroundHealStatusMessage{Status: "success", HealInfo: bgHealStatus})
+		return nil
+	}
+
 	opts := madmin.HealOpts{
 		ScanMode:  transformScanArg(ctx.String("scan")),
 		Remove:    ctx.Bool("remove"),
@@ -178,13 +215,13 @@ func mainAdminHeal(ctx *cli.Context) error {
 	forceStop := ctx.Bool("force-stop")
 	if forceStop {
 		_, _, herr := client.Heal(bucket, prefix, opts, "", forceStart, forceStop)
-		errorIf(probe.NewError(herr), "Failed to stop heal sequence.")
+		fatalIf(probe.NewError(herr), "Failed to stop heal sequence.")
 		printMsg(stopHealMessage{Status: "success", Alias: aliasedURL})
 		return nil
 	}
 
 	healStart, _, herr := client.Heal(bucket, prefix, opts, "", forceStart, false)
-	errorIf(probe.NewError(herr), "Failed to start heal sequence.")
+	fatalIf(probe.NewError(herr), "Failed to start heal sequence.")
 
 	ui := uiData{
 		Bucket:                bucket,
@@ -203,9 +240,9 @@ func mainAdminHeal(ctx *cli.Context) error {
 		if res.FailureDetail != "" {
 			data, _ := json.MarshalIndent(res, "", " ")
 			traceStr := string(data)
-			errorIf(probe.NewError(e).Trace(aliasedURL, traceStr), "Unable to display heal status.")
+			fatalIf(probe.NewError(e).Trace(aliasedURL, traceStr), "Unable to display heal status.")
 		} else {
-			errorIf(probe.NewError(e).Trace(aliasedURL), "Unable to display heal status.")
+			fatalIf(probe.NewError(e).Trace(aliasedURL), "Unable to display heal status.")
 		}
 	}
 	return nil
