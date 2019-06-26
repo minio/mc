@@ -143,7 +143,7 @@ func (c copyMessage) String() string {
 func (c copyMessage) JSON() string {
 	c.Status = "success"
 	copyMessageBytes, e := json.MarshalIndent(c, "", " ")
-	fatalIf(probe.NewError(e), "Failed to marshal copy message.")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(copyMessageBytes)
 }

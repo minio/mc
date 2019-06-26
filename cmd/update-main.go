@@ -450,6 +450,7 @@ func (s updateMessage) String() string {
 
 // JSON jsonified make bucket message.
 func (s updateMessage) JSON() string {
+	s.Status = "success"
 	updateJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
