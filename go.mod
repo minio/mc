@@ -24,7 +24,7 @@ require (
 	github.com/minio/cli v1.20.0
 	github.com/minio/minio v0.0.0-20190626173654-be72609d1f8f
 	github.com/minio/minio-go v0.0.0-20190327203652-5325257a208f // indirect
-	github.com/minio/minio-go/v6 v6.0.29
+	github.com/minio/minio-go/v6 v6.0.31
 	github.com/minio/sha256-simd v0.1.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
