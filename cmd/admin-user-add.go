@@ -44,9 +44,9 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Add a new user 'foobar' to MinIO server with policy 'writeonly'.
-     $ set -o history
-     $ {{.HelpName}} myminio foobar foo12345 writeonly
      $ set +o history
+     $ {{.HelpName}} myminio foobar foo12345 writeonly
+     $ set -o history
 `,
 }
 

@@ -463,7 +463,9 @@ func mainUpdate(ctx *cli.Context) {
 	}
 
 	quiet := ctx.Bool("quiet") || ctx.GlobalBool("quiet")
-
+	if ctx.Bool("json") || ctx.GlobalBool("json") {
+		globalJSON = true
+	}
 	updateMsg, sha256Hex, _, latestReleaseTime, err := getUpdateInfo(10 * time.Second)
 	if err != nil {
 		errorIf(err, "Unable to update ‘mc’.")

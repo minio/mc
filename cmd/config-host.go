@@ -25,7 +25,7 @@ import (
 
 var configHostCmd = cli.Command{
 	Name:   "host",
-	Usage:  "list, modify and remove hosts in configuration file",
+	Usage:  "add, remove and list hosts in configuration file",
 	Action: mainConfigHost,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,

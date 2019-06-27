@@ -142,7 +142,7 @@ EXAMPLES:
        $ {{.HelpName}} s3 --larger 64MB --smaller 1GB --print {url}
 
    08. Find all objects created in the last week under "s3/bucket".
-       $ {{.HelpName}} s3/bucket --newer 1w
+       $ {{.HelpName}} s3/bucket --newer-than 7d
 
    09. Find all objects which were created are older than 2 days, 5 hours and 10 minutes and exclude the ones with ".jpg"
        extension under "s3".

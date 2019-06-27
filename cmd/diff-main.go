@@ -53,8 +53,8 @@ DESCRIPTION:
   It *DOES NOT* compare objects' contents.
 
 LEGEND:
-    > - object is only in source.
-    < - object is only in destination.
+    < - object is only in source.
+    > - object is only in destination.
     ! - newer object is in source.
 
 EXAMPLES:

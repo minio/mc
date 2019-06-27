@@ -39,7 +39,7 @@ docker run minio/mc:edge ls play
 
 **注意:** 上述示例默认使用MinIO[演示环境](#test-your-setup)做演示，如果想用`mc`操作其它S3兼容的服务，采用下面的方式来启动容器：
 
-```sh
+```
 docker run -it --entrypoint=/bin/sh minio/mc
 ```
 
@@ -49,7 +49,7 @@ docker run -it --entrypoint=/bin/sh minio/mc
 ### Homebrew
 使用[Homebrew](http://brew.sh/)安装mc。
 
-```sh
+```
 brew install minio/stable/mc
 mc --help
 ```
@@ -60,7 +60,7 @@ mc --help
 | ---------- | -------- |------|
 |GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
 
-```sh
+```
 chmod +x mc
 ./mc --help
 ```
@@ -71,7 +71,7 @@ chmod +x mc
 | ---------- | -------- |------|
 |Microsoft Windows|64-bit Intel|https://dl.min.io/client/mc/release/windows-amd64/mc.exe |
 
-```sh
+```
 mc.exe --help
 ```
 
@@ -80,7 +80,7 @@ mc.exe --help
 
 如果您没有Golang环境，请参照[如何安装Golang](https://docs.min.io/docs/how-to-install-golang)。
 
-```sh
+```
 go get -d github.com/minio/mc
 cd ${GOPATH}/src/github.com/minio/mc
 make
@@ -91,7 +91,7 @@ make
 
 添加一个或多个S3兼容的服务，请参考下面说明。`mc`将所有的配置信息都存储在``~/.mc/config.json``文件中。
 
-```sh
+```
 mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> <API-SIGNATURE>
 ```
 
@@ -100,21 +100,21 @@ mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY
 ### 示例-MinIO云存储
 从MinIO服务获得URL、access key和secret key。
 
-```sh
+```
 mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 ```
 
 ### 示例-Amazon S3云存储
 参考[AWS Credentials指南](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)获取你的AccessKeyID和SecretAccessKey。
 
-```sh
+```
 mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v4
 ```
 
 ### 示例-Google云存储
 参考[Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)获取你的AccessKeyID和SecretAccessKey。
 
-```sh
+```
 mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12 S3v2
 ```
 
@@ -127,7 +127,7 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 
 列出https://play.min.io:9000上的所有存储桶。
 
-```sh
+```
 mc ls play
 [2016-03-22 19:47:48 PDT]     0B my-bucketname/
 [2016-03-22 22:01:07 PDT]     0B mytestbucket/
@@ -141,7 +141,7 @@ mc ls play
 ### Shell别名
 你可以添加shell别名来覆盖默认的Unix工具命令。
 
-```sh
+```
 alias ls='mc ls'
 alias cp='mc cp'
 alias cat='mc cat'
@@ -153,12 +153,12 @@ alias find='mc find'
 ### Shell自动补全
 你也可以下载[`autocomplete/bash_autocomplete`](https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_autocomplete)到`/etc/bash_completion.d/`，然后将其重命名为`mc`。别忘了在这个文件运行source命令让其在你的当前shell上可用。
 
-```sh
+```
 sudo wget https://raw.githubusercontent.com/minio/mc/master/autocomplete/bash_autocomplete -O /etc/bash_completion.d/mc
 source /etc/bash_completion.d/mc
 ```
 
-```sh
+```
 mc <TAB>
 admin    config   diff     ls       mirror   policy   session  update   watch
 cat      cp       events   mb       pipe     rm       share    version
