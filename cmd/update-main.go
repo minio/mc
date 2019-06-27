@@ -462,10 +462,9 @@ func mainUpdate(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", -1)
 	}
 
-	quiet := ctx.Bool("quiet") || ctx.GlobalBool("quiet")
-	if ctx.Bool("json") || ctx.GlobalBool("json") {
-		globalJSON = true
-	}
+	globalQuiet = ctx.Bool("quiet") || ctx.GlobalBool("quiet")
+	globalJSON = ctx.Bool("json") || ctx.GlobalBool("json")
+
 	updateMsg, sha256Hex, _, latestReleaseTime, err := getUpdateInfo(10 * time.Second)
 	if err != nil {
 		errorIf(err, "Unable to update ‘mc’.")
@@ -489,9 +488,10 @@ func mainUpdate(ctx *cli.Context) {
 
 	// Avoid updating mc development, source builds.
 	if strings.Contains(updateMsg, mcReleaseURL) {
+		isUpdate := shouldUpdate(globalQuiet || globalJSON, sha256Hex, latestReleaseTime)
 		var updateStatusMsg string
 		var err *probe.Error
-		updateStatusMsg, err = doUpdate(sha256Hex, latestReleaseTime, shouldUpdate(quiet, sha256Hex, latestReleaseTime))
+		updateStatusMsg, err = doUpdate(sha256Hex, latestReleaseTime, isUpdate)
 		if err != nil {
 			errorIf(err, "Unable to update ‘mc’.")
 			os.Exit(-1)

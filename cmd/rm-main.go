@@ -89,9 +89,9 @@ ENVIRONMENT VARIABLES:
 EXAMPLES:
    1. Remove a file.
 	  $ {{.HelpName}} 1999/old-backup.tgz
-	  
+
    2. Perform a fake remove operation.
-	  $ {{.HelpName}} --fake 1999/old-backup.tgz	  
+	  $ {{.HelpName}} --fake 1999/old-backup.tgz
 
    3. Remove all objects recursively from bucket 'jazz-songs' matching the prefix 'louis'.
       $ {{.HelpName}} --recursive --force s3/jazz-songs/louis/
