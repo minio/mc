@@ -57,6 +57,7 @@ var globalFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "no-autocompletion",
 		Usage: "disable automatic install of mc auto-completion",
+		EnvVar: "MINIO_NO_AUTOCOMPLETE",
 	},
 }
 
