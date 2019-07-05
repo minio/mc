@@ -55,8 +55,8 @@ var globalFlags = []cli.Flag{
 		Usage: "disable SSL certificate verification",
 	},
 	cli.BoolFlag{
-		Name:  "no-autocompletion",
-		Usage: "disable automatic install of mc auto-completion",
+		Name:   "no-autocompletion",
+		Usage:  "disable automatic install of mc auto-completion",
 		EnvVar: "MINIO_NO_AUTOCOMPLETE",
 	},
 }
