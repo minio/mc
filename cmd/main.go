@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
@@ -33,6 +34,7 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/words"
 	"github.com/pkg/profile"
+	"golang.org/x/crypto/ssh/terminal"
 
 	completeinstall "github.com/posener/complete/cmd/install"
 )
@@ -194,9 +196,6 @@ func initMC() {
 		}
 	}
 
-	// Install mc completion, ignore any error for now
-	_ = completeinstall.Install("mc")
-
 	// Check if mc session directory exists.
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session config directory.")
@@ -222,6 +221,47 @@ func initMC() {
 
 }
 
+func installAutoCompletion(ctx *cli.Context) {
+	if ctx.Bool("no-autocompletion") || ctx.GlobalBool("no-autocompletion") {
+		return
+	}
+
+	if globalQuiet || globalJSON || !terminal.IsTerminal(int(os.Stdout.Fd())) {
+		return
+	}
+
+	if runtime.GOOS == "windows" {
+		return
+	}
+
+	if completeinstall.IsInstalled("mc") {
+		return
+	}
+
+	for {
+		fmt.Printf("Install mc auto-completion in your shell ? (y/n): ")
+		reader := bufio.NewReader(os.Stdin)
+		char, _, err := reader.ReadRune()
+		if err != nil {
+			continue
+		}
+
+		switch char {
+		case 'y', 'Y':
+			// Install mc completion, ignore any error for now
+			err := completeinstall.Install("mc")
+			if err != nil {
+				errorIf(probe.NewError(err), "Unable to install mc auto-completion.")
+			} else {
+				console.Infoln("Auto-completion installed! Kindly restart your shell to load it.")
+			}
+			fallthrough
+		case 'n', 'N':
+			return
+		}
+	}
+}
+
 func registerBefore(ctx *cli.Context) error {
 	// Check if mc was compiled using a supported version of Golang.
 	checkGoVersion()
@@ -240,6 +280,9 @@ func registerBefore(ctx *cli.Context) error {
 
 	// Check if config can be read.
 	checkConfig()
+
+	// Install shell completions
+	installAutoCompletion(ctx)
 
 	return nil
 }

@@ -29,7 +29,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
-	github.com/posener/complete v1.2.2-0.20190529084822-e1dacfd84468
+	github.com/posener/complete v1.2.2-0.20190702141536-6ffe496ea953
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
 	github.com/rjeczalik/notify v0.9.2
 	github.com/segmentio/go-prompt v1.2.1-0.20161017233205-f0d19b6901ad

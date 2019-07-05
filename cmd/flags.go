@@ -54,6 +54,10 @@ var globalFlags = []cli.Flag{
 		Name:  "insecure",
 		Usage: "disable SSL certificate verification",
 	},
+	cli.BoolFlag{
+		Name:  "no-autocompletion",
+		Usage: "disable automatic install of mc auto-completion",
+	},
 }
 
 // Flags common across all I/O commands such as cp, mirror, stat, pipe etc.
