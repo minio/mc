@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -122,7 +121,6 @@ func TestParseSerializationOpts(t *testing.T) {
 	for i, test := range testParseSerializationCases {
 		optsMap, err := parseSerializationOpts(test.inp, test.validKeys, test.validAbbrKeys)
 		gerr := err.ToGoError()
-		fmt.Println(i+1, optsMap, gerr)
 		if gerr != nil && gerr.Error() != test.errMsg {
 			// match partial error message
 			if !strings.Contains(gerr.Error(), test.errMsg) {

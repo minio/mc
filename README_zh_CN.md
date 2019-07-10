@@ -121,11 +121,11 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 注意：Google云存储只支持旧版签名版本V2，所以你需要选择S3v2。
 
 ## 验证
-`mc`预先配置了云存储服务URL：https://play.min.io:9000，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
+`mc`预先配置了云存储服务URL：https://play.min.io，别名“play”。它是一个用于研发和测试的MinIO服务。如果想测试Amazon S3,你可以将“play”替换为“s3”。
 
 *示例:*
 
-列出https://play.min.io:9000上的所有存储桶。
+列出https://play.min.io上的所有存储桶。
 
 ```
 mc ls play

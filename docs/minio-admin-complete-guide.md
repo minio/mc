@@ -271,7 +271,7 @@ FLAGS:
 
 ```
 mc admin info play
-●  play.min.io:9000
+●  play.min.io
    Uptime : online since 1 day ago
   Version : 2018-05-28T04:31:38Z
    Region :
