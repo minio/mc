@@ -156,11 +156,11 @@ mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
 ## Test Your Setup
-`mc` is pre-configured with https://play.min.io:9000, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
+`mc` is pre-configured with https://play.min.io, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
 *Example:*
 
-List all buckets from https://play.min.io:9000
+List all buckets from https://play.min.io
 
 ```
 mc ls play

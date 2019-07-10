@@ -96,7 +96,7 @@ func (c *configV9) loadDefaults() {
 
 	// MinIO anonymous server for demo.
 	c.setHost("play", hostConfigV9{
-		URL:       "https://play.min.io:9000",
+		URL:       "https://play.min.io",
 		AccessKey: "Q3AM3UQ867SPQQA43P2F",
 		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
 		API:       "S3v4",
