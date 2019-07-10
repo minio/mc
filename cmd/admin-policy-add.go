@@ -70,10 +70,9 @@ type userPolicyMessage struct {
 
 func (u userPolicyMessage) String() string {
 	switch u.op {
+	case "info":
+		return string(u.PolicyJSON)
 	case "list":
-		if len(u.PolicyJSON) > 0 {
-			return string(u.PolicyJSON)
-		}
 		policyFieldMaxLen := 20
 		// Create a new pretty table with cols configuration
 		return newPrettyTable("  ",

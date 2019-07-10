@@ -294,7 +294,8 @@ FLAGS:
 COMMANDS:
   add      add new policy
   remove   remove policy
-  list     List all policies
+  list     list all policies
+  info     show info on a policy
 ```
 
 *Example: Add a new policy 'newpolicy' on MinIO, with policy from /tmp/newpolicy.json.*
@@ -314,6 +315,12 @@ mc admin policy remove myminio/ newpolicy
 ```
 mc admin policy list --json myminio/
 {"status":"success","policy":"newpolicy"}
+```
+
+*Example: Show info on a policy*
+
+```
+mc admin policy info myminio/ writeonly
 ```
 
 <a name="user"></a>
@@ -453,7 +460,7 @@ FLAGS:
 
 COMMANDS:
   locks  Get a list of the 10 oldest locks on a MinIO cluster.
-  
+
 ```
 
 *Example: Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
@@ -485,7 +492,7 @@ mc admin trace myminio
 172.16.238.1 Authorization: AWS4-HMAC-SHA256 Credential=minio/20190123/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=8385097f264efaf1b71a9b56514b8166bb0a03af8552f83e2658f877776c46b3
 172.16.238.1 User-Agent: Minio (linux; amd64) minio-go/v6.0.8 mc/2019-01-23T23:15:38Z
 172.16.238.1 X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-172.16.238.1 
+172.16.238.1
 172.16.238.1 <BODY>
 172.16.238.1 [RESPONSE] [154828542.525557] [2019-01-23 23:17:05 +0000]
 172.16.238.1 200 OK
