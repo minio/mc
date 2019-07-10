@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2014, 2015, 2016, 2017 MinIO, Inc.
+ * MinIO Client (C) 2014-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"os"
@@ -34,7 +33,6 @@ import (
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/words"
 	"github.com/pkg/profile"
-	"golang.org/x/crypto/ssh/terminal"
 
 	completeinstall "github.com/posener/complete/cmd/install"
 )
@@ -57,6 +55,9 @@ COMMANDS:
 GLOBAL FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
+TIP:
+  Use '{{.Name}} --autocompletion' to enable shell autocompletion
+
 VERSION:
   ` + ReleaseTag +
 	`{{ "\n"}}{{range $key, $value := ExtraInfo}}
@@ -68,7 +69,7 @@ VERSION:
 func Main(args []string) {
 	if len(args) > 1 {
 		switch args[1] {
-		case "mc", "-install", "-uninstall":
+		case "mc", filepath.Base(args[0]):
 			mainComplete()
 			return
 		}
@@ -221,44 +222,22 @@ func initMC() {
 
 }
 
-func installAutoCompletion(ctx *cli.Context) {
-	if ctx.Bool("no-autocompletion") || ctx.GlobalBool("no-autocompletion") {
-		return
-	}
-
-	if globalQuiet || globalJSON || !terminal.IsTerminal(int(os.Stdout.Fd())) {
-		return
-	}
-
+func installAutoCompletion() {
 	if runtime.GOOS == "windows" {
+		console.Infoln("autocompletion feature is not available for this operating system")
 		return
 	}
 
-	if completeinstall.IsInstalled("mc") {
+	if completeinstall.IsInstalled(filepath.Base(os.Args[0])) || completeinstall.IsInstalled("mc") {
+		console.Infoln("autocompletion is already enabled in your '$SHELLRC'")
 		return
 	}
 
-	for {
-		fmt.Printf("Install mc auto-completion in your shell ? (y/n): ")
-		reader := bufio.NewReader(os.Stdin)
-		char, _, err := reader.ReadRune()
-		if err != nil {
-			continue
-		}
-
-		switch char {
-		case 'y', 'Y':
-			// Install mc completion, ignore any error for now
-			err := completeinstall.Install("mc")
-			if err != nil {
-				errorIf(probe.NewError(err), "Unable to install mc auto-completion.")
-			} else {
-				console.Infoln("Auto-completion installed! Kindly restart your shell to load it.")
-			}
-			fallthrough
-		case 'n', 'N':
-			return
-		}
+	err := completeinstall.Install(filepath.Base(os.Args[0]))
+	if err != nil {
+		fatalIf(probe.NewError(err), "Unable to install auto-completion.")
+	} else {
+		console.Infoln("enabled autocompletion in '$SHELLRC'. Please restart your shell.")
 	}
 }
 
@@ -280,9 +259,6 @@ func registerBefore(ctx *cli.Context) error {
 
 	// Check if config can be read.
 	checkConfig()
-
-	// Install shell completions
-	installAutoCompletion(ctx)
 
 	return nil
 }
@@ -361,12 +337,6 @@ func registerApp(name string) *cli.App {
 		Usage: "show help",
 	}
 
-	cli.BashCompletionFlag = cli.BoolFlag{
-		Name:   "compgen",
-		Usage:  "enables bash-completion for all commands and subcommands",
-		Hidden: true,
-	}
-
 	app := cli.NewApp()
 	app.Name = name
 	app.Action = func(ctx *cli.Context) {
@@ -374,6 +344,13 @@ func registerApp(name string) *cli.App {
 			// Check for new updates from dl.min.io.
 			checkUpdate(ctx)
 		}
+
+		if ctx.Bool("autocompletion") || ctx.GlobalBool("autocompletion") {
+			// Install shell completions
+			installAutoCompletion()
+			return
+		}
+
 		cli.ShowAppHelp(ctx)
 	}
 

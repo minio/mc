@@ -207,8 +207,7 @@ alias find='mc find'
 ```
 
 ### Shell autocompletion
-
-In case you are using bash or zsh, the current shell will be automatically setup to use completion feature to suggest or auto-complete your mc commands.
+In case you are using bash, zsh or fish. Shell completion is embedded by default in `mc`, to install auto-completion use `mc --autocompletion`. Restart the shell, mc will auto-complete commands as shown below.
 
 ```
 mc <TAB>
@@ -223,7 +222,6 @@ cat      cp       event    head     mb       pipe     rm       share    stat    
 
 ## Contribute to MinIO Project
 Please follow MinIO [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
-
 
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fminio%2Fmc.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fminio%2Fmc?ref=badge_large)
