@@ -46,7 +46,7 @@ docker run minio/mc:edge ls play
 docker run -it --entrypoint=/bin/sh minio/mc
 ```
 
-then use the [`mc config` command](#add-a-cloud-storage-service).
+then use the [`mc config` command](#3-add-a-cloud-storage-service).
 
 ### Homebrew (macOS)
 Install mc packages using [Homebrew](http://brew.sh/)
