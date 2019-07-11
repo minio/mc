@@ -181,9 +181,14 @@ func shortTrace(ti madmin.TraceInfo) shortTraceMsg {
 }
 
 func (s shortTraceMsg) JSON() string {
-	traceJSONBytes, e := json.MarshalIndent(s, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(traceJSONBytes)
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetIndent("", " ")
+	// Disable escaping special chars to display XML tags correctly
+	enc.SetEscapeHTML(false)
+
+	fatalIf(probe.NewError(enc.Encode(s)), "Unable to marshal into JSON.")
+	return buf.String()
 }
 
 func (s shortTraceMsg) String() string {
@@ -247,7 +252,8 @@ func (t traceMessage) JSON() string {
 	enc.SetIndent("", " ")
 	// Disable escaping special chars to display XML tags correctly
 	enc.SetEscapeHTML(false)
-	enc.Encode(trc)
+	fatalIf(probe.NewError(enc.Encode(trc)), "Unable to marshal into JSON.")
+
 	// strip off extra newline added by json encoder
 	return strings.TrimSuffix(buf.String(), "\n")
 }

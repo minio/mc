@@ -39,7 +39,12 @@ import (
 
 var (
 	// global flags for mc.
-	mcFlags = []cli.Flag{}
+	mcFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "autocompletion",
+			Usage: "install auto-completion for your shell",
+		},
+	}
 )
 
 // Help template for mc
