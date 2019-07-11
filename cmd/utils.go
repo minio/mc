@@ -22,6 +22,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -132,7 +133,7 @@ func newS3Config(urlStr string, hostCfg *hostConfigV9) *Config {
 	// credentials from the match found in the config file.
 	s3Config := new(Config)
 
-	s3Config.AppName = "mc"
+	s3Config.AppName = filepath.Base(os.Args[0])
 	s3Config.AppVersion = Version
 	s3Config.AppComments = []string{os.Args[0], runtime.GOOS, runtime.GOARCH}
 	s3Config.Debug = globalDebug

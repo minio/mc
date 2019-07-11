@@ -26,8 +26,6 @@ import (
 	"strings"
 	"syscall"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -111,7 +109,7 @@ func headOut(r io.Reader, nlines int64) *probe.Error {
 	// In case of a user showing the object content in a terminal,
 	// avoid printing control and other bad characters to avoid
 	// terminal session corruption
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+	if isTerminal() {
 		stdout = newPrettyStdout(os.Stdout)
 	} else {
 		stdout = os.Stdout
