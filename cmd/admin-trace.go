@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -66,7 +66,7 @@ EXAMPLES:
  `,
 }
 
-const timeFormat = "15:04:05.00000"
+const timeFormat = "15:04:05.000"
 
 var (
 	colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, color.FgGreen}
@@ -85,6 +85,8 @@ func mainAdminTrace(ctx *cli.Context) error {
 	verbose := ctx.Bool("verbose")
 	all := ctx.Bool("all")
 	aliasedURL := ctx.Args().Get(0)
+	console.SetColor("Stat", color.New(color.FgYellow))
+
 	console.SetColor("Request", color.New(color.FgCyan))
 	console.SetColor("Method", color.New(color.Bold, color.FgWhite))
 	console.SetColor("Host", color.New(color.Bold, color.FgGreen))
@@ -93,7 +95,8 @@ func mainAdminTrace(ctx *cli.Context) error {
 	console.SetColor("ReqHeaderKey", color.New(color.Bold, color.FgWhite))
 	console.SetColor("RespHeaderKey", color.New(color.Bold, color.FgCyan))
 	console.SetColor("HeaderValue", color.New(color.FgWhite))
-	console.SetColor("ResponseStatus", color.New(color.Bold, color.FgYellow))
+	console.SetColor("RespStatus", color.New(color.Bold, color.FgYellow))
+	console.SetColor("ErrStatus", color.New(color.Bold, color.FgRed))
 
 	console.SetColor("Response", color.New(color.FgGreen))
 	console.SetColor("Body", color.New(color.FgYellow))
@@ -129,6 +132,7 @@ type shortTraceMsg struct {
 	Host       string    `json:"host"`
 	Time       time.Time `json:"time"`
 	Client     string    `json:"client"`
+	CallStats  callStats `json:"callstats"`
 	FuncName   string    `json:"api"`
 	Path       string    `json:"path"`
 	Query      string    `json:"query"`
@@ -155,12 +159,18 @@ type responseInfo struct {
 	Body       string            `json:"body,omitempty"`
 	StatusCode int               `json:"statuscode,omitempty"`
 }
+type callStats struct {
+	Rx       int           `json:"rx"`
+	Tx       int           `json:"tx"`
+	Duration time.Duration `json:"duration"`
+}
 
 type trace struct {
 	NodeName     string       `json:"host"`
 	FuncName     string       `json:"api"`
 	RequestInfo  requestInfo  `json:"request"`
 	ResponseInfo responseInfo `json:"response"`
+	CallStats    callStats    `json:"callstats"`
 }
 
 // return a struct with minimal trace info.
@@ -177,6 +187,9 @@ func shortTrace(ti madmin.TraceInfo) shortTraceMsg {
 	s.StatusCode = t.RespInfo.StatusCode
 	s.StatusMsg = http.StatusText(t.RespInfo.StatusCode)
 	s.Client = t.ReqInfo.Client
+	s.CallStats.Duration = t.CallStats.Latency
+	s.CallStats.Rx = t.CallStats.InputBytes
+	s.CallStats.Tx = t.CallStats.OutputBytes
 	return s
 }
 
@@ -198,14 +211,19 @@ func (s shortTraceMsg) String() string {
 	if s.Host != "" {
 		hostStr = colorizedNodeName(s.Host)
 	}
-	fmt.Fprintf(b, "%s %s %s ", s.Time.Format(timeFormat), s.Client, console.Colorize("FuncName", s.FuncName))
+	fmt.Fprintf(b, "%s ", s.Time.Format(timeFormat))
+	statusStr := console.Colorize("RespStatus", fmt.Sprintf("%d %s", s.StatusCode, s.StatusMsg))
+	if s.StatusCode != http.StatusOK {
+		statusStr = console.Colorize("ErrStatus", fmt.Sprintf("%d %s", s.StatusCode, s.StatusMsg))
+	}
+	fmt.Fprintf(b, "[%s] %s ", statusStr, console.Colorize("FuncName", s.FuncName))
 	fmt.Fprintf(b, "%s%s", hostStr, s.Path)
 
 	if s.Query != "" {
-		fmt.Fprintf(b, "?%s", s.Query)
+		fmt.Fprintf(b, "?%s ", s.Query)
 	}
-	fmt.Fprintf(b, " %s", console.Colorize("ResponseStatus",
-		fmt.Sprintf("\t%s %s", strconv.Itoa(s.StatusCode), s.StatusMsg)))
+	fmt.Fprintf(b, " %s ", s.Client)
+	fmt.Fprintf(b, console.Colorize("Stat", fmt.Sprintf("%2s Rx:%s Tx:%s ", s.CallStats.Duration.Round(time.Microsecond), humanize.IBytes(uint64(s.CallStats.Rx)), humanize.IBytes(uint64(s.CallStats.Tx)))))
 	return b.String()
 }
 
@@ -246,6 +264,11 @@ func (t traceMessage) JSON() string {
 			Headers:    rspHdrs,
 			StatusCode: rs.StatusCode,
 		},
+		CallStats: callStats{
+			Duration: t.Trace.CallStats.Latency,
+			Rx:       t.Trace.CallStats.InputBytes,
+			Tx:       t.Trace.CallStats.OutputBytes,
+		},
 	}
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
@@ -270,8 +293,7 @@ func (t traceMessage) String() string {
 	ri := trc.ReqInfo
 	rs := trc.RespInfo
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[REQUEST %s] ", trc.FuncName)))
-
-	fmt.Fprintf(b, "[%s]\n", ri.Time.Format(timeFormat))
+	fmt.Fprintf(b, "%s\n", ri.Time.Format(timeFormat))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Method", fmt.Sprintf("%s %s", ri.Method, ri.Path)))
 	if ri.RawQuery != "" {
 		fmt.Fprintf(b, "?%s", ri.RawQuery)
@@ -290,9 +312,15 @@ func (t traceMessage) String() string {
 
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Response", fmt.Sprintf("[RESPONSE] ")))
-	fmt.Fprintf(b, "[%s]\n", rs.Time.Format(timeFormat))
-	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("ResponseStatus",
-		fmt.Sprintf("%d %s\n", rs.StatusCode, http.StatusText(rs.StatusCode))))
+	fmt.Fprintf(b, "[%s] ", rs.Time.Format(timeFormat))
+	fmt.Fprintf(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s Rx:%s Tx:%s ]\n", trc.CallStats.Latency.Round(time.Microsecond), humanize.IBytes(uint64(trc.CallStats.InputBytes)), humanize.IBytes(uint64(trc.CallStats.OutputBytes)))))
+
+	statusStr := console.Colorize("RespStatus", fmt.Sprintf("%d %s", rs.StatusCode, http.StatusText(rs.StatusCode)))
+	if rs.StatusCode != http.StatusOK {
+		statusStr = console.Colorize("ErrStatus", fmt.Sprintf("%d %s", rs.StatusCode, http.StatusText(rs.StatusCode)))
+	}
+	fmt.Fprintf(b, "%s%s\n", nodeNameStr, statusStr)
+
 	for k, v := range rs.Headers {
 		fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("RespHeaderKey",
 			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
