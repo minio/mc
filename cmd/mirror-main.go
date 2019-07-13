@@ -1,5 +1,5 @@
 /*
- * MinIO Client, (C) 2015, 2016 MinIO, Inc.
+ * MinIO Client, (C) 2015-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,34 +111,34 @@ ENVIRONMENT VARIABLES:
    MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
-   1. Mirror a bucket recursively from MinIO cloud storage to a bucket on Amazon S3 cloud storage.
+  01. Mirror a bucket recursively from MinIO cloud storage to a bucket on Amazon S3 cloud storage.
       $ {{.HelpName}} play/photos/2014 s3/backup-photos
 
-   2. Mirror a local folder recursively to Amazon S3 cloud storage.
+  02. Mirror a local folder recursively to Amazon S3 cloud storage.
       $ {{.HelpName}} backup/ s3/archive
 
-   3. Only mirror files that are newer than 7 days, 10 hours and 30 minutes to Amazon S3 cloud storage.
+  03. Only mirror files that are newer than 7 days, 10 hours and 30 minutes to Amazon S3 cloud storage.
       $ {{.HelpName}} --newer-than "7d10h30m" backup/ s3/archive
 
-   4. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
+  04. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
       $ {{.HelpName}} s3\documents\2014\ C:\backup\2014
 
-   5. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--overwrite' to overwrite destination.
+  05. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--overwrite' to overwrite destination.
       $ {{.HelpName}} --overwrite s3/miniocloud miniocloud-backup
 
-   6. Mirror a bucket from MinIO cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
+  06. Mirror a bucket from MinIO cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
       files on Amazon S3 cloud storage.
       $ {{.HelpName}} --remove play/photos/2014 s3/backup-photos/2014
 
-   7. Continuously mirror a local folder recursively to MinIO cloud storage. '--watch' continuously watches for
+  07. Continuously mirror a local folder recursively to MinIO cloud storage. '--watch' continuously watches for
       new objects, uploads and removes extraneous files on Amazon S3 cloud storage.
       $ {{.HelpName}} --remove --watch /var/lib/backups play/backups
 
-   8. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
+  08. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
       Exclude all .* files and *.temp files when mirroring.
       $ {{.HelpName}} --exclude ".*" --exclude "*.temp" s3/test ~/test
 
-   9. Mirror objects newer than 10 days from bucket test to a local folder.
+  09. Mirror objects newer than 10 days from bucket test to a local folder.
       $ {{.HelpName}} --newer-than 10d s3/test ~/localfolder
 
   10. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.

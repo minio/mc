@@ -58,17 +58,17 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 EXAMPLES:
-   1. Remove an empty bucket on Amazon S3 cloud storage
-      $ {{.HelpName}} s3/mybucket
+  1. Remove an empty bucket on Amazon S3 cloud storage
+     $ {{.HelpName}} s3/mybucket
 	 
-   2. Remove a directory hierarchy.
-      $ {{.HelpName}} /tmp/this/new/dir1
+  2. Remove a directory hierarchy.
+     $ {{.HelpName}} /tmp/this/new/dir1
 	 
-   3. Remove bucket 'jazz-songs' and all its contents
-      $ {{.HelpName}} --force s3/jazz-songs
+  3. Remove bucket 'jazz-songs' and all its contents
+     $ {{.HelpName}} --force s3/jazz-songs
 
-   4. Remove all buckets and objects recursively from S3 host
-      $ {{.HelpName}} --force --dangerous s3
+  4. Remove all buckets and objects recursively from S3 host
+     $ {{.HelpName}} --force --dangerous s3
 `,
 }
 

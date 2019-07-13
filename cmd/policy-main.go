@@ -1,5 +1,5 @@
 /*
- * MinIO Client, (C) 2015, 2016 MinIO, Inc.
+ * MinIO Client, (C) 2015-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,41 +55,40 @@ USAGE:
   {{.HelpName}} [FLAGS] FILE TARGET
   {{.HelpName}} [FLAGS] TARGET
   {{.HelpName}} list [FLAGS] TARGET
-
-PERMISSION:
-  Allowed policies are: [none, download, upload, public].
 {{if .VisibleFlags}}
-FILE:
-  A valid S3 policy JSON filepath.
-
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
+PERMISSION:
+  Allowed policies are: [none, download, upload, public].
+
+FILE:
+  A valid S3 policy JSON filepath.
+
 EXAMPLES:
-   1. Set bucket to "download" on Amazon S3 cloud storage.
-      $ {{.HelpName}} download s3/burningman2011
+  1. Set bucket to "download" on Amazon S3 cloud storage.
+     $ {{.HelpName}} download s3/burningman2011
 
-   2. Set bucket to "public" on Amazon S3 cloud storage.
-      $ {{.HelpName}} public s3/shared
+  2. Set bucket to "public" on Amazon S3 cloud storage.
+     $ {{.HelpName}} public s3/shared
 
-   3. Set bucket to "upload" on Amazon S3 cloud storage.
-      $ {{.HelpName}} upload s3/incoming
+  3. Set bucket to "upload" on Amazon S3 cloud storage.
+     $ {{.HelpName}} upload s3/incoming
 
-   4. Set a prefix to "public" on Amazon S3 cloud storage.
-      $ {{.HelpName}} public s3/public-commons/images
+  4. Set a prefix to "public" on Amazon S3 cloud storage.
+     $ {{.HelpName}} public s3/public-commons/images
 
-   5. Set a prefix to the policy file path on Amazon S3 cloud storage.
-      $ {{.HelpName}} /path/to/policy.json s3/public-commons/images
+  5. Set a prefix to the policy file path on Amazon S3 cloud storage.
+     $ {{.HelpName}} /path/to/policy.json s3/public-commons/images
 
-   6. Get bucket permissions.
-      $ {{.HelpName}} s3/shared
+  6. Get bucket permissions.
+     $ {{.HelpName}} s3/shared
 
-   7. List policies set to a specified bucket.
-      $ {{.HelpName}} list s3/shared
+  7. List policies set to a specified bucket.
+     $ {{.HelpName}} list s3/shared
 
-   8. List public object URLs recursively.
-      $ {{.HelpName}} --recursive links s3/shared/
-
+  8. List public object URLs recursively.
+     $ {{.HelpName}} --recursive links s3/shared/
 `,
 }
 

@@ -46,7 +46,6 @@ FLAGS:
 EXAMPLES:
   1. Get a list of the 10 oldest locks on a MinIO cluster.
      $ {{.HelpName}} myminio/
-
 `,
 }
 

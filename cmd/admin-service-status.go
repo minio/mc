@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2016, 2017 MinIO, Inc.
+ * MinIO Client (C) 2016-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,8 +48,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-    1. Check if the 'play' MinIO server is online and show its uptime.
-       $ {{.HelpName}} play/
+  1. Check if the 'play' MinIO server is online and show its uptime.
+     $ {{.HelpName}} play/
 `,
 }
 

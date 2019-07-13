@@ -51,12 +51,11 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Remove bucket notification associated to a specific arn
-     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
+  1. Remove bucket notification associated to a specific arn
+    $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
 
-   2. Remove all bucket notifications. --force flag is mandatory here
-     $ {{.HelpName}} myminio/mybucket --force
-
+  2. Remove all bucket notifications. --force flag is mandatory here
+    $ {{.HelpName}} myminio/mybucket --force
 `,
 }
 

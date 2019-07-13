@@ -84,37 +84,37 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
+  MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
 
 EXAMPLES:
-   1. Remove a file.
-	  $ {{.HelpName}} 1999/old-backup.tgz
+  01. Remove a file.
+      $ {{.HelpName}} 1999/old-backup.tgz
 
-   2. Perform a fake remove operation.
-	  $ {{.HelpName}} --fake 1999/old-backup.tgz
+  02. Perform a fake remove operation.
+      $ {{.HelpName}} --fake 1999/old-backup.tgz
 
-   3. Remove all objects recursively from bucket 'jazz-songs' matching the prefix 'louis'.
+  03. Remove all objects recursively from bucket 'jazz-songs' matching the prefix 'louis'.
       $ {{.HelpName}} --recursive --force s3/jazz-songs/louis/
 
-   4. Remove all objects older than '90' days recursively from bucket 'jazz-songs' matching the prefix 'louis'.
+  04. Remove all objects older than '90' days recursively from bucket 'jazz-songs' matching the prefix 'louis'.
       $ {{.HelpName}} --recursive --force --older-than 90d s3/jazz-songs/louis/
 
-   5. Remove all objects newer than 7 days and 10 hours recursively from bucket 'pop-songs'
+  05. Remove all objects newer than 7 days and 10 hours recursively from bucket 'pop-songs'
       $ {{.HelpName}} --recursive --force --newer-than 7d10h s3/pop-songs/
 
-   6. Remove all objects read from STDIN.
+  06. Remove all objects read from STDIN.
       $ {{.HelpName}} --force --stdin
 
-   7. Remove all objects recursively from Amazon S3 cloud storage.
+  07. Remove all objects recursively from Amazon S3 cloud storage.
       $ {{.HelpName}} --recursive --force --dangerous s3
 
-   8. Remove all buckets and objects older than '90' days recursively from host
+  08. Remove all buckets and objects older than '90' days recursively from host
       $ {{.HelpName}} --recursive --dangerous --force --older-than 90d s3
 
-   9. Drop all incomplete uploads on the bucket 'jazz-songs'.
+  09. Drop all incomplete uploads on the bucket 'jazz-songs'.
       $ {{.HelpName}} --incomplete --recursive --force s3/jazz-songs/
 
-   10. Remove an encrypted object from Amazon S3 cloud storage.
+  10. Remove an encrypted object from Amazon S3 cloud storage.
       $ {{.HelpName}} --encrypt-key "s3/sql-backups/=32byteslongsecretkeymustbegiven1" s3/sql-backups/1999/old-backup.tgz
 `,
 }

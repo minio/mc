@@ -59,7 +59,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Get server cpu and mem statistics of the 'play' server.
-       $ {{.HelpName}} play/
+     $ {{.HelpName}} play/
 `,
 }
 
