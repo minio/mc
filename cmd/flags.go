@@ -29,10 +29,6 @@ var commandsTree = trie.NewTrie()
 
 // Collection of mc flags currently supported
 var globalFlags = []cli.Flag{
-	cli.BoolFlag{
-		Name:  "autocompletion",
-		Usage: "install auto-completion for your shell",
-	},
 	cli.StringFlag{
 		Name:  "config-dir, C",
 		Value: mustGetMcConfigDir(),
