@@ -40,7 +40,6 @@ FLAGS:
 EXAMPLES:
   1. Get server configuration of a MinIO server/cluster.
      $ {{.HelpName}} play/
-
 `,
 }
 

@@ -63,13 +63,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 EXIT STATUS:
-   0 - you are already running the most recent version
-   1 - new update was applied successfully
-  -1 - error in getting update information
+  0 - you are already running the most recent version
+  1 - new update was applied successfully
+ -1 - error in getting update information
 
 EXAMPLES:
-   1. Check and update mc:
-      $ {{.HelpName}}
+  1. Check and update mc:
+     $ {{.HelpName}}
 `,
 }
 

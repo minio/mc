@@ -378,6 +378,8 @@ github.com/minio/cli v0.0.0-20170227073228-b8ae5507c0ce/go.mod h1:hLsWNQy2wIf3FK
 github.com/minio/cli v1.3.0/go.mod h1:hLsWNQy2wIf3FKFnMlH69f4RdEyn8nbRA2shaulTjGY=
 github.com/minio/cli v1.20.0 h1:OVNIt8Rg5+mpYb8siWT2gBV5hvUyFbRvBikC+Ytvf5A=
 github.com/minio/cli v1.20.0/go.mod h1:bYxnK0uS629N3Bq+AOZZ+6lwF77Sodk4+UL9vNuXhOY=
+github.com/minio/cli v1.21.0 h1:8gE8iZc0ONOhHy/T28tCsNew5f5VzWU558U9Myjfq50=
+github.com/minio/cli v1.21.0/go.mod h1:bYxnK0uS629N3Bq+AOZZ+6lwF77Sodk4+UL9vNuXhOY=
 github.com/minio/dsync v0.0.0-20190104003057-61c41ffdeea2/go.mod h1:eLQe3mXL0h02kNpPtBJiLr1fIEIJftgXRAjncjQbxJo=
 github.com/minio/dsync v1.0.0 h1:l6pQgUPBM41idlR0UOcpAP+EYim9MCwIAUh6sQQI1gk=
 github.com/minio/dsync v1.0.0/go.mod h1:eLQe3mXL0h02kNpPtBJiLr1fIEIJftgXRAjncjQbxJo=
@@ -395,8 +397,6 @@ github.com/minio/mc v0.0.0-20190529152718-f4bb0b8850cb/go.mod h1:GMIQKmYuGc7q10D
 github.com/minio/minio v0.0.0-20190206103305-fd4e15c11641/go.mod h1:lXcp05uxYaW99ebgI6ZKIGYU7tqZkM5xSsG0xRt4VIU=
 github.com/minio/minio v0.0.0-20190325204105-0250f7de678b/go.mod h1:6ODmvb06uOpNy0IM+3pJRTHaauOMpLJ51jLhipbcifI=
 github.com/minio/minio v0.0.0-20190510004154-ac3b59645e92/go.mod h1:yFbQSwuA61mB/SDurPvsaSydqDyJdfAlBYpMiEe1lz8=
-github.com/minio/minio v0.0.0-20190619212803-35c38e4bd893 h1:3vaOD8YTz5F6gp7BC66sDGN2Hj4x0lUxigG/rCSw0lo=
-github.com/minio/minio v0.0.0-20190619212803-35c38e4bd893/go.mod h1:E4YtMxTbDvy5kxqZYpHPJ427GowUH7GiQXIg68ctM8s=
 github.com/minio/minio v0.0.0-20190626173654-be72609d1f8f h1:MAaUl4XTytIdhQTaB4fI5FbclAUEKly+ELbVw1vN2tE=
 github.com/minio/minio v0.0.0-20190626173654-be72609d1f8f/go.mod h1:E4YtMxTbDvy5kxqZYpHPJ427GowUH7GiQXIg68ctM8s=
 github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d/go.mod h1:/haSOWG8hQNx2+JOfLJ9GKp61EAmgPwRVw/Sac0NzaM=
@@ -406,8 +406,8 @@ github.com/minio/minio-go v0.0.0-20190327203652-5325257a208f/go.mod h1:/haSOWG8h
 github.com/minio/minio-go/v6 v6.0.26/go.mod h1:vaNT59cWULS37E+E9zkuN/BVnKHyXtVGS+b04Boc66Y=
 github.com/minio/minio-go/v6 v6.0.29 h1:p4YPxK1beY13reFJjCE5QwCnXUMT9D5sV5wl0BSy5Xo=
 github.com/minio/minio-go/v6 v6.0.29/go.mod h1:vaNT59cWULS37E+E9zkuN/BVnKHyXtVGS+b04Boc66Y=
-github.com/minio/minio-go/v6 v6.0.31 h1:fq0BJ94l7KDv23xoVv3waKn+/A5/ybfhY3MzimaUNc0=
-github.com/minio/minio-go/v6 v6.0.31/go.mod h1:vaNT59cWULS37E+E9zkuN/BVnKHyXtVGS+b04Boc66Y=
+github.com/minio/minio-go/v6 v6.0.32 h1:Qjpp/8EoO/jT57q+bY8n2jymbxr7/WFxfy/E1t8rewM=
+github.com/minio/minio-go/v6 v6.0.32/go.mod h1:vaNT59cWULS37E+E9zkuN/BVnKHyXtVGS+b04Boc66Y=
 github.com/minio/parquet-go v0.0.0-20190318185229-9d767baf1679 h1:OMKaN/82sBHUZPvjYNBFituHExa1OGY63eACDGtetKs=
 github.com/minio/parquet-go v0.0.0-20190318185229-9d767baf1679/go.mod h1:J+goXSuzlte5imWMqb6cUWC/tbYYysUHctwmKXomYzM=
 github.com/minio/sha256-simd v0.0.0-20190131020904-2d45a736cd16/go.mod h1:2FMWW+8GMoPweT6+pI63m9YE3Lmw4J71hV56Chs1E/U=
@@ -501,8 +501,6 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndrE9hABlRI=
 github.com/posener/complete v1.2.1/go.mod h1:6gapUrK/U1TAN7ciCoNRIdVC5sbdBTUh1DKN0g6uH7E=
-github.com/posener/complete v1.2.2-0.20190529084822-e1dacfd84468 h1:u7MSvwu/HBo7+ySc1z2nkkuY07Mm52ugSJROgwumIYc=
-github.com/posener/complete v1.2.2-0.20190529084822-e1dacfd84468/go.mod h1:6gapUrK/U1TAN7ciCoNRIdVC5sbdBTUh1DKN0g6uH7E=
 github.com/posener/complete v1.2.2-0.20190702141536-6ffe496ea953 h1:oBvgW8IvwF278gJ3R4hH0gD3ZeJxjwBXVIScRR0dRc8=
 github.com/posener/complete v1.2.2-0.20190702141536-6ffe496ea953/go.mod h1:6gapUrK/U1TAN7ciCoNRIdVC5sbdBTUh1DKN0g6uH7E=
 github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35/go.mod h1:prYjPmNq4d1NPVmpShWobRqXY3q7Vp+80DqgxxUrUIA=

@@ -60,12 +60,11 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Enable bucket notification with a specific arn
-     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
+  1. Enable bucket notification with a specific arn
+    $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
 
-   2. Enable bucket notification with filters parameters
-     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --event put,delete,get --prefix photos/ --suffix .jpg
-
+  2. Enable bucket notification with filters parameters
+    $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --event put,delete,get --prefix photos/ --suffix .jpg
 `,
 }
 
