@@ -41,6 +41,10 @@ var (
 			Name:  "suffix",
 			Usage: "filter event associated to the specified suffix",
 		},
+		cli.BoolFlag{
+			Name:  "ignore-existing, p",
+			Usage: "ignore if event already exists",
+		},
 	}
 )
 
@@ -60,11 +64,14 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable bucket notification with a specific arn
-    $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
+   1. Enable bucket notification with a specific arn
+     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
 
-  2. Enable bucket notification with filters parameters
-    $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --event put,delete,get --prefix photos/ --suffix .jpg
+   2. Enable bucket notification with filters parameters
+     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --event put,delete,get --prefix photos/ --suffix .jpg
+   
+   3. Ignore duplicate bucket notification with -p flag
+     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue -p --event put,delete,get --prefix photos/ --suffix .jpg 	 
 `,
 }
 
@@ -105,6 +112,7 @@ func mainEventAdd(ctx *cli.Context) error {
 	args := ctx.Args()
 	path := args[0]
 	arn := args[1]
+	ignoreExisting := ctx.Bool("p")
 
 	event := strings.Split(ctx.String("event"), ",")
 	prefix := ctx.String("prefix")
@@ -120,7 +128,7 @@ func mainEventAdd(ctx *cli.Context) error {
 		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
 
-	err = s3Client.AddNotificationConfig(arn, event, prefix, suffix)
+	err = s3Client.AddNotificationConfig(arn, event, prefix, suffix, ignoreExisting)
 	fatalIf(err, "Cannot enable notification on the specified bucket.")
 	printMsg(eventAddMessage{
 		ARN:    arn,
