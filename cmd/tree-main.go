@@ -96,10 +96,10 @@ EXAMPLES:
       $ {{.HelpName}} s3\mybucket\
       
    4. List all buckets and objects in "mybucket" on Amazon S3 cloud storage in a tree format.
-      $ {{.HelpName}} -f myminio/mybucket/
+      $ {{.HelpName}} --files myminio/mybucket/
    
    5. Set the depth of the tree for listing.
-      $ {{.HelpName}} -d 2 myminio/mybucket/
+      $ {{.HelpName}} --depth 2 myminio/mybucket/
 
    6. List all the directories irrespective to the depth.
       $ {{.HelpName}} myminio/mybucket/
