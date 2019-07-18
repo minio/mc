@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2018 MinIO, Inc.
+ * MinIO Client (C) 2018-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import "github.com/minio/cli"
 
 var adminPolicyCmd = cli.Command{
 	Name:   "policy",
-	Usage:  "manage canned policy",
+	Usage:  "manage policies defined in the MinIO server",
 	Action: mainAdminPolicy,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
@@ -28,6 +28,7 @@ var adminPolicyCmd = cli.Command{
 		adminPolicyAddCmd,
 		adminPolicyRemoveCmd,
 		adminPolicyListCmd,
+		adminPolicyInfoCmd,
 	},
 	HideHelpCommand: true,
 }

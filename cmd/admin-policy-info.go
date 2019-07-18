@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2018-2019 MinIO, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,43 +17,48 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminPolicyListCmd = cli.Command{
-	Name:   "list",
-	Usage:  "list all policies",
-	Action: mainAdminPolicyList,
+var adminPolicyInfoCmd = cli.Command{
+	Name:   "info",
+	Usage:  "show info on a policy",
+	Action: mainAdminPolicyInfo,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET POLICYNAME
+
+POLICYNAME:
+  Name of the policy on the MinIO server.
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. List all policies on MinIO server.
-     $ {{.HelpName}} myminio
+  1. Show information on a given policy.
+     $ {{.HelpName}} myminio writeonly
 `,
 }
 
-// checkAdminPolicyListSyntax - validate all the passed arguments
-func checkAdminPolicyListSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
-		cli.ShowCommandHelpAndExit(ctx, "list", 1) // last argument is exit code
+// checkAdminPolicyInfoSyntax - validate all the passed arguments
+func checkAdminPolicyInfoSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 2 {
+		cli.ShowCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
 	}
 }
 
-// mainAdminPolicyList is the handle for "mc admin policy add" command.
-func mainAdminPolicyList(ctx *cli.Context) error {
-	checkAdminPolicyListSyntax(ctx)
+// mainAdminPolicyInfo is the handler for "mc admin policy info" command.
+func mainAdminPolicyInfo(ctx *cli.Context) error {
+	checkAdminPolicyInfoSyntax(ctx)
 
 	console.SetColor("PolicyMessage", color.New(color.FgGreen))
 	console.SetColor("Policy", color.New(color.FgBlue))
@@ -61,6 +66,7 @@ func mainAdminPolicyList(ctx *cli.Context) error {
 	// Get the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
+	policyName := args.Get(1)
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
@@ -69,11 +75,14 @@ func mainAdminPolicyList(ctx *cli.Context) error {
 	policies, e := client.ListCannedPolicies()
 	fatalIf(probe.NewError(e).Trace(args...), "Cannot list policy")
 
-	for k := range policies {
+	if len(policies[policyName]) != 0 {
 		printMsg(userPolicyMessage{
-			op:     "list",
-			Policy: k,
+			op:         "info",
+			Policy:     policyName,
+			PolicyJSON: policies[policyName],
 		})
+	} else {
+		fatalIf(probe.NewError(fmt.Errorf("%s is not found", policyName)), "Cannot list the policy")
 	}
 	return nil
 }
