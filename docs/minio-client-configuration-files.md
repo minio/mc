@@ -7,7 +7,7 @@ MinIO Client configurations are stored in file name ``.mc``.  It is a hidden fil
 
 **This how the structure of the directory looks like:**
 
-```sh
+```
 tree ~/.mc
 /home/supernova/.mc
 ├── config.json
@@ -23,7 +23,7 @@ tree ~/.mc
 #### ``config.json``
 config.json is the configuration file for MinIO Client, it gets generated after you install and start MinIO. All the credentials, endpoint information we add via ``mc config host`` are stored/modified here. 
 
-```sh
+```
 cat config.json 
 {
 	"version": "8",
@@ -47,7 +47,7 @@ cat config.json
 			"api": "S3v2"
 		},
 		"play": {
-			"url": "https://play.min.io:9000",
+			"url": "https://play.min.io",
 			"accessKey": "Q3AM3UQ867SPQQA43P2F",
 			"secretKey": "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
 			"api": "S3v4"

@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2015-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,13 +49,12 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 DESCRIPTION:
-  Diff only calculates differences in object name, size and time.
-  It *DOES NOT* compare objects' contents.
+  Diff only calculates differences in object name, size and time. It *DOES NOT* compare objects' contents.
 
 LEGEND:
-    > - object is only in source.
-    < - object is only in destination.
-    ! - newer object is in source.
+  < - object is only in source.
+  > - object is only in destination.
+  ! - newer object is in source.
 
 EXAMPLES:
   1. Compare a local folder with a folder on Amazon S3 cloud storage.

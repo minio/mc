@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017 MinIO, Inc.
+ * MinIO Client (C) 2017-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,61 +96,60 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 UNITS
-   --smaller, --larger flags accept human-readable case-insensitive number
-   suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
-   MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
-   units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
-   also accepted. Without suffixes the unit is bytes.
+  --smaller, --larger flags accept human-readable case-insensitive number
+  suffixes such as "k", "m", "g" and "t" referring to the metric units KB,
+  MB, GB and TB respectively. Adding an "i" to these prefixes, uses the IEC
+  units, so that "gi" refers to "gibibyte" or "GiB". A "b" at the end is
+  also accepted. Without suffixes the unit is bytes.
 
-   --older-than, --newer-than flags accept the string for days, hours and minutes 
-   i.e. 1d2h30m states 1 day, 2 hours and 30 minutes.
+  --older-than, --newer-than flags accept the string for days, hours and minutes 
+  i.e. 1d2h30m states 1 day, 2 hours and 30 minutes.
 
 FORMAT
-   Support string substitutions with special interpretations for following keywords.
-   Keywords supported if target is filesystem or object storage:
+  Support string substitutions with special interpretations for following keywords.
+  Keywords supported if target is filesystem or object storage:
 
-      {}     --> Substitutes to full path.
-      {base} --> Substitutes to basename of path.
-      {dir}  --> Substitutes to dirname of the path.
-      {size} --> Substitutes to object size of the path.
-      {time} --> Substitutes to object modified time of the path.
+     {}     --> Substitutes to full path.
+     {base} --> Substitutes to basename of path.
+     {dir}  --> Substitutes to dirname of the path.
+     {size} --> Substitutes to object size of the path.
+     {time} --> Substitutes to object modified time of the path.
 
-   Keywords supported if target is object storage:
+  Keywords supported if target is object storage:
 
-      {url} --> Substitutes to a shareable URL of the path.
+     {url} --> Substitutes to a shareable URL of the path.
 
 EXAMPLES:
-   01. Find all "foo.jpg" in all buckets under "s3" account.
-       $ {{.HelpName}} s3 --name "foo.jpg"
+  01. Find all "foo.jpg" in all buckets under "s3" account.
+      $ {{.HelpName}} s3 --name "foo.jpg"
 
-   02. Find all objects with ".txt" extension under "s3/mybucket".
-       $ {{.HelpName}} s3/mybucket --name "*.txt"
+  02. Find all objects with ".txt" extension under "s3/mybucket".
+      $ {{.HelpName}} s3/mybucket --name "*.txt"
 
-   03. Find only the object names without the directory component under "s3/mybucket".
-       $ {{.HelpName}} s3/mybucket --name "*" -print {base}
+  03. Find only the object names without the directory component under "s3/mybucket".
+      $ {{.HelpName}} s3/mybucket --name "*" -print {base}
 
-   04. Find all images with ".jpg" extension under "s3/photos", prefixed with "album".
-       $ {{.HelpName}} s3/photos --name "*.jpg" --path "*/album*/*"
+  04. Find all images with ".jpg" extension under "s3/photos", prefixed with "album".
+      $ {{.HelpName}} s3/photos --name "*.jpg" --path "*/album*/*"
 
-   05. Find all images with ".jpg", ".png", and ".gif" extensions, using regex under "s3/photos".
-       $ {{.HelpName}} s3/photos --regex "(?i)\.(jpg|png|gif)$"
+  05. Find all images with ".jpg", ".png", and ".gif" extensions, using regex under "s3/photos".
+      $ {{.HelpName}} s3/photos --regex "(?i)\.(jpg|png|gif)$"
 
-   06. Find all images with ".jpg" extension under "s3/bucket" and copy to "play/bucket" *continuously*.
-       $ {{.HelpName}} s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
+  06. Find all images with ".jpg" extension under "s3/bucket" and copy to "play/bucket" *continuously*.
+      $ {{.HelpName}} s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
 
-   07. Find and generate public URLs valid for 7 days, for all objects between 64 MB, and 1 GB in size under "s3" account.
-       $ {{.HelpName}} s3 --larger 64MB --smaller 1GB --print {url}
+  07. Find and generate public URLs valid for 7 days, for all objects between 64 MB, and 1 GB in size under "s3" account.
+      $ {{.HelpName}} s3 --larger 64MB --smaller 1GB --print {url}
 
-   08. Find all objects created in the last week under "s3/bucket".
-       $ {{.HelpName}} s3/bucket --newer 1w
+  08. Find all objects created in the last week under "s3/bucket".
+      $ {{.HelpName}} s3/bucket --newer-than 7d
 
-   09. Find all objects which were created are older than 2 days, 5 hours and 10 minutes and exclude the ones with ".jpg"
-       extension under "s3".
-       $ {{.HelpName}} s3 --older-than 2d5h10m --ignore "*.jpg"
+  09. Find all objects which were created are older than 2 days, 5 hours and 10 minutes and exclude the ones with ".jpg"
+      extension under "s3".
+      $ {{.HelpName}} s3 --older-than 2d5h10m --ignore "*.jpg"
 
-   10. List all objects up to 3 levels sub-directory deep under "s3/bucket".
-       $ {{.HelpName}} s3/bucket --maxdepth 3
-
+  10. List all objects up to 3 levels sub-directory deep under "s3/bucket".
+      $ {{.HelpName}} s3/bucket --maxdepth 3
 `,
 }
 

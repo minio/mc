@@ -55,24 +55,23 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. List buckets on Amazon S3 cloud storage.
-      $ {{.HelpName}} s3
+  1. List buckets on Amazon S3 cloud storage.
+     $ {{.HelpName}} s3
 
-   2. List buckets and all its contents from Amazon S3 cloud storage recursively.
-      $ {{.HelpName}} --recursive s3
+  2. List buckets and all its contents from Amazon S3 cloud storage recursively.
+     $ {{.HelpName}} --recursive s3
 
-   3. List all contents of mybucket on Amazon S3 cloud storage.
-      $ {{.HelpName}} s3/mybucket/
+  3. List all contents of mybucket on Amazon S3 cloud storage.
+     $ {{.HelpName}} s3/mybucket/
 
-   4. List all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
-      $ {{.HelpName}} s3\mybucket\
+  4. List all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
+     $ {{.HelpName}} s3\mybucket\
 
-   5. List files recursively on a local filesystem on Microsoft Windows.
-      $ {{.HelpName}} --recursive C:\Users\Worf\
+  5. List files recursively on a local filesystem on Microsoft Windows.
+     $ {{.HelpName}} --recursive C:\Users\Worf\
 
-   6. List incomplete (previously failed) uploads of objects on Amazon S3.
-      $ {{.HelpName}} --incomplete s3/mybucket
-
+  6. List incomplete (previously failed) uploads of objects on Amazon S3.
+     $ {{.HelpName}} --incomplete s3/mybucket
 `,
 }
 

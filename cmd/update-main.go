@@ -63,13 +63,13 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 EXIT STATUS:
-   0 - you are already running the most recent version
-   1 - new update was applied successfully
-  -1 - error in getting update information
+  0 - you are already running the most recent version
+  1 - new update was applied successfully
+ -1 - error in getting update information
 
 EXAMPLES:
-   1. Check and update mc:
-      $ {{.HelpName}}
+  1. Check and update mc:
+     $ {{.HelpName}}
 `,
 }
 
@@ -450,6 +450,7 @@ func (s updateMessage) String() string {
 
 // JSON jsonified make bucket message.
 func (s updateMessage) JSON() string {
+	s.Status = "success"
 	updateJSONBytes, e := json.MarshalIndent(s, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -461,7 +462,8 @@ func mainUpdate(ctx *cli.Context) {
 		cli.ShowCommandHelpAndExit(ctx, "update", -1)
 	}
 
-	quiet := ctx.Bool("quiet") || ctx.GlobalBool("quiet")
+	globalQuiet = ctx.Bool("quiet") || ctx.GlobalBool("quiet")
+	globalJSON = ctx.Bool("json") || ctx.GlobalBool("json")
 
 	updateMsg, sha256Hex, _, latestReleaseTime, err := getUpdateInfo(10 * time.Second)
 	if err != nil {
@@ -486,9 +488,10 @@ func mainUpdate(ctx *cli.Context) {
 
 	// Avoid updating mc development, source builds.
 	if strings.Contains(updateMsg, mcReleaseURL) {
+		isUpdate := shouldUpdate(globalQuiet || globalJSON, sha256Hex, latestReleaseTime)
 		var updateStatusMsg string
 		var err *probe.Error
-		updateStatusMsg, err = doUpdate(sha256Hex, latestReleaseTime, shouldUpdate(quiet, sha256Hex, latestReleaseTime))
+		updateStatusMsg, err = doUpdate(sha256Hex, latestReleaseTime, isUpdate)
 		if err != nil {
 			errorIf(err, "Unable to update ‘mc’.")
 			os.Exit(-1)

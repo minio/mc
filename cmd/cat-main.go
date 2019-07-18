@@ -27,8 +27,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
 )
@@ -52,25 +50,25 @@ var catCmd = cli.Command{
 
 USAGE:
   {{.HelpName}} [FLAGS] SOURCE [SOURCE...]
-
+{{if .VisibleFlags}}
 FLAGS:
   {{range .VisibleFlags}}{{.}}
-  {{end}}
+  {{end}}{{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
-   1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
-      $ {{.HelpName}} s3/mysql-backups/kubecon-mysql-operator.mpv | mplayer -
+  1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
+     $ {{.HelpName}} s3/mysql-backups/kubecon-mysql-operator.mpv | mplayer -
 
-   2. Concatenate contents of file1.txt and stdin to standard output.
-      $ {{.HelpName}} file1.txt - > file.txt
+  2. Concatenate contents of file1.txt and stdin to standard output.
+     $ {{.HelpName}} file1.txt - > file.txt
 
-   3. Concatenate multiple files to one.
-      $ {{.HelpName}} part.* > complete.img
+  3. Concatenate multiple files to one.
+     $ {{.HelpName}} part.* > complete.img
 
-   4. Save an encrypted object from Amazon S3 cloud storage to a local file.
-      $ {{.HelpName}} --encrypt-key 's3/mysql-backups=32byteslongsecretkeymustbegiven1' s3/mysql-backups/backups-201810.gz > /mnt/data/recent.gz
+  4. Save an encrypted object from Amazon S3 cloud storage to a local file.
+     $ {{.HelpName}} --encrypt-key 's3/mysql-backups=32byteslongsecretkeymustbegiven1' s3/mysql-backups/backups-201810.gz > /mnt/data/recent.gz
 `,
 }
 
@@ -173,7 +171,7 @@ func catOut(r io.Reader, size int64) *probe.Error {
 	// In case of a user showing the object content in a terminal,
 	// avoid printing control and other bad characters to avoid
 	// terminal session corruption
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+	if isTerminal() {
 		stdout = newPrettyStdout(os.Stdout)
 	} else {
 		stdout = os.Stdout

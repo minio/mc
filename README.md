@@ -43,7 +43,7 @@ docker run minio/mc:edge ls play
 
 **Note:** Above examples run `mc` against MinIO [_play_ environment](#test-your-setup) by default. To run `mc` against other S3 compatible servers, start the container this way:
 
-```sh
+```
 docker run -it --entrypoint=/bin/sh minio/mc
 ```
 
@@ -53,7 +53,7 @@ then use the [`mc config` command](#add-a-cloud-storage-service).
 ### Homebrew
 Install mc packages using [Homebrew](http://brew.sh/)
 
-```sh
+```
 brew install minio/stable/mc
 mc --help
 ```
@@ -65,7 +65,7 @@ mc --help
 |GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
 ||64-bit PPC|https://dl.min.io/client/mc/release/linux-ppc64le/mc |
 
-```sh
+```
 wget https://dl.min.io/client/mc/release/linux-amd64/mc
 chmod +x mc
 ./mc --help
@@ -77,7 +77,7 @@ chmod +x mc
 | ---------- | -------- |------|
 |Microsoft Windows|64-bit Intel|https://dl.min.io/client/mc/release/windows-amd64/mc.exe |
 
-```sh
+```
 mc.exe --help
 ```
 
@@ -86,7 +86,7 @@ Source installation is intended only for developers and advanced users. `mc upda
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://docs.min.io/docs/how-to-install-golang).
 
-```sh
+```
 go get -d github.com/minio/mc
 cd ${GOPATH}/src/github.com/minio/mc
 make
@@ -97,7 +97,7 @@ If you are planning to use `mc` only on POSIX compatible filesystems, you may sk
 
 To add one or more Amazon S3 compatible hosts, please follow the instructions below. `mc` stores all its configuration information in ``~/.mc/config.json`` file.
 
-```sh
+```
 mc config host add <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY> --api <API-SIGNATURE> --lookup <BUCKET-LOOKUP-TYPE>
 ```
 
@@ -108,14 +108,14 @@ Lookup is an optional argument. It is used to indicate whether dns or path style
 ### Example - MinIO Cloud Storage
 MinIO server displays URL, access and secret keys.
 
-```sh
+```
 mc config host add minio http://192.168.1.51 BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
 ### Example - Amazon S3 Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [AWS Credentials Guide](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html).
 
-```sh
+```
 mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
@@ -149,20 +149,20 @@ mc config host add s3 https://s3.amazonaws.com BKIKJAA5BMMU2RHO6IBB V7f1CwQqAcwo
 ### Example - Google Cloud Storage
 Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide](https://cloud.google.com/storage/docs/migrating?hl=en#keys)
 
-```sh
+```
 mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
 
 NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
 ## Test Your Setup
-`mc` is pre-configured with https://play.min.io:9000, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
+`mc` is pre-configured with https://play.min.io, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
 
 *Example:*
 
-List all buckets from https://play.min.io:9000
+List all buckets from https://play.min.io
 
-```sh
+```
 mc ls play
 [2016-03-22 19:47:48 PDT]     0B my-bucketname/
 [2016-03-22 22:01:07 PDT]     0B mytestbucket/
@@ -175,7 +175,7 @@ Make a bucket
 `mb` command creates a new bucket.
 
 *Example:*
-```sh
+```
 mc mb play/mybucket
 Bucket created successfully `play/mybucket`.
 ```
@@ -184,7 +184,7 @@ Copy Objects
 `cp` command copies data from one or more sources to a target.
 
 *Example:*
-```sh
+```
 mc cp myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
@@ -197,7 +197,7 @@ myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 ### Shell aliases
 You may add shell aliases to override your common Unix tools.
 
-```sh
+```
 alias ls='mc ls'
 alias cp='mc cp'
 alias cat='mc cat'
@@ -207,10 +207,9 @@ alias find='mc find'
 ```
 
 ### Shell autocompletion
+In case you are using bash, zsh or fish. Shell completion is embedded by default in `mc`, to install auto-completion use `mc --autocompletion`. Restart the shell, mc will auto-complete commands as shown below.
 
-In case you are using bash or zsh, the current shell will be automatically setup to use completion feature to suggest or auto-complete your mc commands.
-
-```sh
+```
 mc <TAB>
 admin    config   diff     find     ls       mirror   policy   session  sql      update   watch
 cat      cp       event    head     mb       pipe     rm       share    stat     version
@@ -223,7 +222,6 @@ cat      cp       event    head     mb       pipe     rm       share    stat    
 
 ## Contribute to MinIO Project
 Please follow MinIO [Contributor's Guide](https://github.com/minio/mc/blob/master/CONTRIBUTING.md)
-
 
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fminio%2Fmc.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fminio%2Fmc?ref=badge_large)

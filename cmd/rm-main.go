@@ -84,42 +84,46 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
+  MC_ENCRYPT_KEY: list of comma delimited prefix=secret values
 
 EXAMPLES:
-   1. Remove a file.
+  01. Remove a file.
       $ {{.HelpName}} 1999/old-backup.tgz
 
-   2. Remove all objects recursively from bucket 'jazz-songs' matching 'louis' prefix.
-      $ {{.HelpName}} --recursive s3/jazz-songs/louis/
+  02. Perform a fake remove operation.
+      $ {{.HelpName}} --fake 1999/old-backup.tgz
 
-   3. Remove all objects older than '90' days recursively from bucket 'jazz-songs' that match 'louis' prefix.
-      $ {{.HelpName}} --recursive --older-than 90d s3/jazz-songs/louis/
+  03. Remove all objects recursively from bucket 'jazz-songs' matching the prefix 'louis'.
+      $ {{.HelpName}} --recursive --force s3/jazz-songs/louis/
 
-   4. Remove all objects newer than 7 days and 10 hours recursively from bucket 'pop-songs'
-      $ {{.HelpName}} --recursive --newer-than 7d10h s3/pop-songs/
+  04. Remove all objects older than '90' days recursively from bucket 'jazz-songs' matching the prefix 'louis'.
+      $ {{.HelpName}} --recursive --force --older-than 90d s3/jazz-songs/louis/
 
-   5. Remove all objects read from STDIN.
+  05. Remove all objects newer than 7 days and 10 hours recursively from bucket 'pop-songs'
+      $ {{.HelpName}} --recursive --force --newer-than 7d10h s3/pop-songs/
+
+  06. Remove all objects read from STDIN.
       $ {{.HelpName}} --force --stdin
 
-   6. Remove all objects recursively from S3 host
-      $ {{.HelpName}} --recursive --dangerous s3
+  07. Remove all objects recursively from Amazon S3 cloud storage.
+      $ {{.HelpName}} --recursive --force --dangerous s3
 
-   7. Remove all buckets and objects older than '90' days recursively from host
-      $ {{.HelpName}} --recursive --dangerous --older-than 90d s3
+  08. Remove all buckets and objects older than '90' days recursively from host
+      $ {{.HelpName}} --recursive --dangerous --force --older-than 90d s3
 
-   8. Drop all incomplete uploads on 'jazz-songs' bucket.
-      $ {{.HelpName}} --incomplete --recursive s3/jazz-songs/
+  09. Drop all incomplete uploads on the bucket 'jazz-songs'.
+      $ {{.HelpName}} --incomplete --recursive --force s3/jazz-songs/
 
-   9. Remove an encrypted object from Amazon S3 cloud storage.
+  10. Remove an encrypted object from Amazon S3 cloud storage.
       $ {{.HelpName}} --encrypt-key "s3/sql-backups/=32byteslongsecretkeymustbegiven1" s3/sql-backups/1999/old-backup.tgz
 `,
 }
 
 // Structured message depending on the type of console.
 type rmMessage struct {
-	Key  string `json:"key"`
-	Size int64  `json:"size"`
+	Status string `json:"status"`
+	Key    string `json:"key"`
+	Size   int64  `json:"size"`
 }
 
 // Colorized message for console printing.
@@ -129,6 +133,7 @@ func (r rmMessage) String() string {
 
 // JSON'ified message for scripting.
 func (r rmMessage) JSON() string {
+	r.Status = "success"
 	msgBytes, e := json.MarshalIndent(r, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)

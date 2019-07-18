@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/fatih/color"
@@ -44,7 +45,6 @@ FLAGS:
 EXAMPLES:
   1. Set server configuration of a MinIO server/cluster.
      $ cat myconfig | {{.HelpName}} myminio/
-
 `,
 }
 
@@ -52,6 +52,7 @@ EXAMPLES:
 type configSetMessage struct {
 	Status          string `json:"status"`
 	setConfigStatus bool
+	targetAlias     string
 }
 
 // String colorized service status message.
@@ -60,8 +61,9 @@ func (u configSetMessage) String() (msg string) {
 	if u.setConfigStatus {
 		msg += console.Colorize("SetConfigSuccess",
 			"Setting new MinIO configuration file has been successful.\n")
+		suggestion := fmt.Sprintf("mc admin service restart %s", u.targetAlias)
 		msg += console.Colorize("SetConfigSuccess",
-			"Please restart your server with `mc admin service restart`.\n")
+			fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
 	} else {
 		msg += console.Colorize("SetConfigFailure",
 			"Setting new MinIO configuration file has failed.\n")
@@ -113,6 +115,7 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 	// Print set config result
 	printMsg(configSetMessage{
 		setConfigStatus: true,
+		targetAlias:     aliasedURL,
 	})
 
 	return nil

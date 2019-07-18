@@ -32,19 +32,19 @@ func TestParseURLEnv(t *testing.T) {
 		success        bool
 	}{
 		{
-			envURL:         "https://username:password@play.min.io:9000/",
-			expectedURL:    "https://play.min.io:9000/",
+			envURL:         "https://username:password@play.min.io/",
+			expectedURL:    "https://play.min.io/",
 			expectedAccess: "username",
 			expectedSecret: "password",
 			success:        true,
 		},
 		{
-			envURL:      "https://play.min.io:9000/",
-			expectedURL: "https://play.min.io:9000/",
+			envURL:      "https://play.min.io/",
+			expectedURL: "https://play.min.io/",
 			success:     true,
 		},
 		{
-			envURL:  "ftp://play.min.io:9000/",
+			envURL:  "ftp://play.min.io/",
 			success: false,
 		},
 		{
@@ -52,11 +52,11 @@ func TestParseURLEnv(t *testing.T) {
 			success: false,
 		},
 		{
-			envURL:  "https://play.min.io:9000/path",
+			envURL:  "https://play.min.io/path",
 			success: false,
 		},
 		{
-			envURL:  "https://play.min.io:9000/?path=value",
+			envURL:  "https://play.min.io/?path=value",
 			success: false,
 		},
 	}

@@ -19,6 +19,9 @@ package cmd
 
 import (
 	"crypto/x509"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
@@ -29,14 +32,17 @@ const (
 	minGoVersion = ">= 1.7.5" // mc requires at least Go v1.7.5
 )
 
+var (
+	globalMCConfigDir        = fmt.Sprintf(".%s/", filepath.Base(os.Args[0]))
+	globalMCConfigWindowsDir = fmt.Sprintf("%s\\", filepath.Base(os.Args[0]))
+)
+
 const (
 	globalMCConfigVersion = "9"
 
-	globalMCConfigDir        = ".mc/"
-	globalMCConfigWindowsDir = "mc\\"
-	globalMCConfigFile       = "config.json"
-	globalMCCertsDir         = "certs"
-	globalMCCAsDir           = "CAs"
+	globalMCConfigFile = "config.json"
+	globalMCCertsDir   = "certs"
+	globalMCCAsDir     = "CAs"
 
 	// session config and shared urls related constants
 	globalSessionDir           = "session"

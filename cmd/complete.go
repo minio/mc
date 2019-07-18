@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -255,6 +256,6 @@ func mainComplete() error {
 		GlobalFlags: complFlags,
 	}
 	// Answer to bash completion call
-	complete.New("mc", mcComplete).Run()
+	complete.New(filepath.Base(os.Args[0]), mcComplete).Run()
 	return nil
 }

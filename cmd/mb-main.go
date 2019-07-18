@@ -55,21 +55,23 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
 EXAMPLES:
-   1. Create a bucket on Amazon S3 cloud storage.
-      $ {{.HelpName}} s3/mynewbucket
+  1. Create a bucket on Amazon S3 cloud storage.
+     $ {{.HelpName}} s3/mynewbucket
 
-   2. Create a new bucket on Google Cloud Storage.
-      $ {{.HelpName}} gcs/miniocloud
+  2. Create a new bucket on Google Cloud Storage.
+     $ {{.HelpName}} gcs/miniocloud
 
-   4. Create a new bucket on Amazon S3 cloud storage in region 'us-west-2'.
-      $ {{.HelpName}} --region=us-west-2 s3/myregionbucket
+  3. Create a new bucket on Amazon S3 cloud storage in region 'us-west-2'.
+     $ {{.HelpName}} --region=us-west-2 s3/myregionbucket
 
-   5. Create a new directory including its missing parents (equivalent to 'mkdir -p').
-      $ {{.HelpName}} /tmp/this/new/dir1
+  4. Create a new directory including its missing parents (equivalent to 'mkdir -p').
+     $ {{.HelpName}} /tmp/this/new/dir1
 
-   6. Create multiple directories including its missing parents (behavior similar to 'mkdir -p').
-      $ {{.HelpName}} /mnt/sdb/mydisk /mnt/sdc/mydisk /mnt/sdd/mydisk
+  5. Create multiple directories including its missing parents (behavior similar to 'mkdir -p').
+     $ {{.HelpName}} /mnt/sdb/mydisk /mnt/sdc/mydisk /mnt/sdd/mydisk
 
+  6. Ignore if bucket/directory already exists.
+     $ {{.HelpName}} --ignore-existing myminio/mynewbucket
 `,
 }
 

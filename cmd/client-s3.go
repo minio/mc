@@ -230,7 +230,7 @@ func (c *s3Client) GetURL() clientURL {
 }
 
 // Add bucket notification
-func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, suffix string) *probe.Error {
+func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, suffix string, ignoreExisting bool) *probe.Error {
 	bucket, _ := c.url2BucketAndObject()
 	// Validate total fields in ARN.
 	fields := strings.Split(arn, ":")
@@ -286,6 +286,9 @@ func (c *s3Client) AddNotificationConfig(arn string, events []string, prefix, su
 
 	// Set the new bucket configuration
 	if err := c.api.SetBucketNotification(bucket, mb); err != nil {
+		if ignoreExisting && strings.Contains(err.Error(), "An object key name filtering rule defined with overlapping prefixes, overlapping suffixes, or overlapping combinations of prefixes and suffixes for the same event types") {
+			return nil
+		}
 		return probe.NewError(err)
 	}
 	return nil

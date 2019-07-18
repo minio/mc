@@ -53,8 +53,10 @@ FLAGS:
 EXAMPLES:
   1. Clear session.
      $ {{.HelpName}} ygVIpSJs
+
   2. Clear all sessions.
      $ {{.HelpName}} all
+
   3. Forcefully clear an obsolete session.
      $ {{.HelpName}} ygVIpSJs --force
 `,

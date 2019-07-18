@@ -24,7 +24,7 @@ import (
 )
 
 var adminUserPolicyCmd = cli.Command{
-	Name:   "policy",
+	Name:   "set-policy",
 	Usage:  "set policy for user",
 	Action: mainAdminUserPolicy,
 	Before: setGlobalsFromContext,

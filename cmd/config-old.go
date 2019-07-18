@@ -210,7 +210,7 @@ func (c *configV7) loadDefaults() {
 
 	// MinIO anonymous server for demo.
 	c.setHost("play", hostConfigV7{
-		URL:       "https://play.min.io:9000",
+		URL:       "https://play.min.io",
 		AccessKey: "",
 		SecretKey: "",
 		API:       "S3v4",
@@ -297,7 +297,7 @@ func (c *configV8) loadDefaults() {
 
 	// MinIO anonymous server for demo.
 	c.setHost("play", hostConfigV8{
-		URL:       "https://play.min.io:9000",
+		URL:       "https://play.min.io",
 		AccessKey: "Q3AM3UQ867SPQQA43P2F",
 		SecretKey: "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
 		API:       "S3v4",

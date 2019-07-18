@@ -1,6 +1,6 @@
 ### Setup your mc Github Repository
 Fork [mc upstream](https://github.com/minio/mc/fork) source repository to your own personal repository.
-```sh
+```
 $ mkdir -p $GOPATH/src/github.com/minio
 $ cd $GOPATH/src/github.com/minio
 $ git clone https://github.com/$USER_ID/mc

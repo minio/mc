@@ -6,6 +6,6 @@ Besides `mc` is a single static binary and can reside inside your application an
 
 Package managers are free to choose a different name if they like. One such solution [pointed out](https://github.com/minio/mc/issues/873#issuecomment-267583013) by one of our community members.
 
-```sh
+```
 mv ./mc ./mcli
 ```

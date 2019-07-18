@@ -1,5 +1,5 @@
 /*
- * MinIO Client, (C) 2018 MinIO, Inc.
+ * MinIO Client, (C) 2018-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,6 @@ import (
 	"os"
 	"strings"
 	"syscall"
-
-	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -59,17 +57,17 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 NOTE:
-   '{{.HelpName}}' automatically decompresses 'gzip', 'bzip2' compressed objects.
+  '{{.HelpName}}' automatically decompresses 'gzip', 'bzip2' compressed objects.
 
 EXAMPLES:
-   1. Display only first line from a 'gzip' compressed object on Amazon S3.
-      $ {{.HelpName}} -n 1 s3/csv-data/population.csv.gz
+  1. Display only first line from a 'gzip' compressed object on Amazon S3.
+     $ {{.HelpName}} -n 1 s3/csv-data/population.csv.gz
 
-   2. Display only first line from server encrypted object on Amazon S3.
-      $ {{.HelpName}} -n 1 --encrypt-key 's3/csv-data=32byteslongsecretkeymustbegiven1' s3/csv-data/population.csv
+  2. Display only first line from server encrypted object on Amazon S3.
+     $ {{.HelpName}} -n 1 --encrypt-key 's3/csv-data=32byteslongsecretkeymustbegiven1' s3/csv-data/population.csv
 `,
 }
 
@@ -111,7 +109,7 @@ func headOut(r io.Reader, nlines int64) *probe.Error {
 	// In case of a user showing the object content in a terminal,
 	// avoid printing control and other bad characters to avoid
 	// terminal session corruption
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+	if isTerminal() {
 		stdout = newPrettyStdout(os.Stdout)
 	} else {
 		stdout = os.Stdout

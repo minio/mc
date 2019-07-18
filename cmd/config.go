@@ -260,8 +260,10 @@ func parseEnvURLStr(envURL string) (*url.URL, string, string, *probe.Error) {
 	return u, accessKey, secretKey, nil
 }
 
-const mcEnvHostPrefix = "MC_HOST_"
-const mcEnvHostsDeprecatedPrefix = "MC_HOSTS_"
+const (
+	mcEnvHostPrefix            = "MC_HOST_"
+	mcEnvHostsDeprecatedPrefix = "MC_HOSTS_"
+)
 
 func expandAliasFromEnv(envURL string) (*hostConfigV9, *probe.Error) {
 	u, accessKey, secretKey, err := parseEnvURLStr(envURL)

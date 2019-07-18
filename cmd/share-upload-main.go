@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2014, 2015 MinIO, Inc.
+ * MinIO Client (C) 2014-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,27 +44,26 @@ var shareUpload = cli.Command{
 	Before: setGlobalsFromContext,
 	Flags:  append(shareUploadFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
-   {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
 
 USAGE:
-   {{.HelpName}} [FLAGS] TARGET [TARGET...]
+  {{.HelpName}} [FLAGS] TARGET [TARGET...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. Generate a curl command to allow upload access for a single object. Command expires in 7 days (default).
-      $ {{.HelpName}} s3/backup/2006-Mar-1/backup.tar.gz
+  1. Generate a curl command to allow upload access for a single object. Command expires in 7 days (default).
+     $ {{.HelpName}} s3/backup/2006-Mar-1/backup.tar.gz
 
-   2. Generate a curl command to allow upload access to a folder. Command expires in 120 hours.
-      $ {{.HelpName}} --expire=120h s3/backup/2007-Mar-2/
+  2. Generate a curl command to allow upload access to a folder. Command expires in 120 hours.
+     $ {{.HelpName}} --expire=120h s3/backup/2007-Mar-2/
 
-   3. Generate a curl command to allow upload access of only '.png' images to a folder. Command expires in 2 hours.
-      $ {{.HelpName}} --expire=2h --content-type=image/png s3/backup/2007-Mar-2/
+  3. Generate a curl command to allow upload access of only '.png' images to a folder. Command expires in 2 hours.
+     $ {{.HelpName}} --expire=2h --content-type=image/png s3/backup/2007-Mar-2/
 
-   4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup/'. Command expires in 2 hours.
-      $ {{.HelpName}} --recursive --expire=2h s3/backup/2007-Mar-2/backup/
-
+  4. Generate a curl command to allow upload access to any objects matching the key prefix 'backup/'. Command expires in 2 hours.
+     $ {{.HelpName}} --recursive --expire=2h s3/backup/2007-Mar-2/backup/
 `,
 }
 

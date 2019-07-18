@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -41,7 +40,7 @@ var adminTraceFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "all, a",
-		Usage: "trace all traffic",
+		Usage: "trace all traffic (including internode traffic between MinIO servers)",
 	},
 }
 
@@ -53,24 +52,25 @@ var adminTraceCmd = cli.Command{
 	Flags:           append(adminTraceFlags, globalFlags...),
 	HideHelpCommand: true,
 	CustomHelpTemplate: `NAME:
-	 {{.HelpName}} - {{.Usage}}
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} [FLAGS] TARGET
  
- USAGE:
-	 {{.HelpName}} [FLAGS] TARGET
- 
- FLAGS:
-	 {{range .VisibleFlags}}{{.}}
-	 {{end}}
- EXAMPLES:
-		 1. Show console trace for a Minio server with alias 'play'
-				$ {{.HelpName}} play -v -a
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Show console trace for a Minio server with alias 'play'
+     $ {{.HelpName}} play -v -a
  `,
 }
-var funcNameRegex = regexp.MustCompile(`^.*?\\.([^\\-]*?)Handler\\-.*?$`)
 
-const timeFormat = "15:04:05.000000000"
+const timeFormat = "15:04:05.00000"
 
-var colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, color.FgGreen}
+var (
+	colors = []color.Attribute{color.FgCyan, color.FgWhite, color.FgYellow, color.FgGreen}
+)
 
 func checkAdminTraceSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
@@ -126,19 +126,20 @@ func mainAdminTrace(ctx *cli.Context) error {
 
 // Short trace record
 type shortTraceMsg struct {
-	NodeName   string
-	Time       time.Time
-	FuncName   string
-	Host       string
-	Path       string
-	Query      string
-	StatusCode int
-	StatusMsg  string
+	Host       string    `json:"host"`
+	Time       time.Time `json:"time"`
+	Client     string    `json:"client"`
+	FuncName   string    `json:"api"`
+	Path       string    `json:"path"`
+	Query      string    `json:"query"`
+	StatusCode int       `json:"statuscode"`
+	StatusMsg  string    `json:"statusmsg"`
 }
 
 type traceMessage struct {
 	madmin.TraceInfo
 }
+
 type requestInfo struct {
 	Time     time.Time         `json:"time"`
 	Method   string            `json:"method"`
@@ -147,65 +148,64 @@ type requestInfo struct {
 	Headers  map[string]string `json:"headers,omitempty"`
 	Body     string            `json:"body,omitempty"`
 }
+
 type responseInfo struct {
 	Time       time.Time         `json:"time"`
 	Headers    map[string]string `json:"headers,omitempty"`
 	Body       string            `json:"body,omitempty"`
 	StatusCode int               `json:"statuscode,omitempty"`
 }
+
 type trace struct {
-	NodeName     string       `json:"nodename"`
-	FuncName     string       `json:"funcname"`
+	NodeName     string       `json:"host"`
+	FuncName     string       `json:"api"`
 	RequestInfo  requestInfo  `json:"request"`
 	ResponseInfo responseInfo `json:"response"`
-}
-
-// parse Operation name from function name
-func getOpName(fname string) (op string) {
-	res := funcNameRegex.FindStringSubmatch(fname)
-	op = fname
-	if len(res) == 2 {
-		op = res[1]
-	}
-	return
 }
 
 // return a struct with minimal trace info.
 func shortTrace(ti madmin.TraceInfo) shortTraceMsg {
 	s := shortTraceMsg{}
 	t := ti.Trace
-	s.NodeName = t.NodeName
 	s.Time = t.ReqInfo.Time
 	if host, ok := t.ReqInfo.Headers["Host"]; ok {
 		s.Host = strings.Join(host, "")
 	}
 	s.Path = t.ReqInfo.Path
 	s.Query = t.ReqInfo.RawQuery
-	s.FuncName = getOpName(t.FuncName)
+	s.FuncName = t.FuncName
 	s.StatusCode = t.RespInfo.StatusCode
 	s.StatusMsg = http.StatusText(t.RespInfo.StatusCode)
-
+	s.Client = t.ReqInfo.Client
 	return s
 }
+
 func (s shortTraceMsg) JSON() string {
-	traceJSONBytes, e := json.MarshalIndent(s, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(traceJSONBytes)
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetIndent("", " ")
+	// Disable escaping special chars to display XML tags correctly
+	enc.SetEscapeHTML(false)
+
+	fatalIf(probe.NewError(enc.Encode(s)), "Unable to marshal into JSON.")
+	return buf.String()
 }
+
 func (s shortTraceMsg) String() string {
 	var hostStr string
-	var b strings.Builder
+	var b = &strings.Builder{}
 
 	if s.Host != "" {
 		hostStr = colorizedNodeName(s.Host)
 	}
-	fmt.Fprintf(&b, "%s %s ", s.Time.Format(timeFormat), console.Colorize("FuncName", s.FuncName))
-	fmt.Fprintf(&b, "%s%s", hostStr, s.Path)
+	fmt.Fprintf(b, "%s %s %s ", s.Time.Format(timeFormat), s.Client, console.Colorize("FuncName", s.FuncName))
+	fmt.Fprintf(b, "%s%s", hostStr, s.Path)
 
 	if s.Query != "" {
-		fmt.Fprintf(&b, "?%s", s.Query)
+		fmt.Fprintf(b, "?%s", s.Query)
 	}
-	fmt.Fprintf(&b, " %s", console.Colorize("ResponseStatus", fmt.Sprintf("\t%s %s", strconv.Itoa(s.StatusCode), s.StatusMsg)))
+	fmt.Fprintf(b, " %s", console.Colorize("ResponseStatus",
+		fmt.Sprintf("\t%s %s", strconv.Itoa(s.StatusCode), s.StatusMsg)))
 	return b.String()
 }
 
@@ -252,14 +252,15 @@ func (t traceMessage) JSON() string {
 	enc.SetIndent("", " ")
 	// Disable escaping special chars to display XML tags correctly
 	enc.SetEscapeHTML(false)
-	enc.Encode(trc)
+	fatalIf(probe.NewError(enc.Encode(trc)), "Unable to marshal into JSON.")
+
 	// strip off extra newline added by json encoder
 	return strings.TrimSuffix(buf.String(), "\n")
 }
 
 func (t traceMessage) String() string {
 	var nodeNameStr string
-	var b strings.Builder
+	var b = &strings.Builder{}
 
 	trc := t.Trace
 	if trc.NodeName != "" {
@@ -268,32 +269,35 @@ func (t traceMessage) String() string {
 
 	ri := trc.ReqInfo
 	rs := trc.RespInfo
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[REQUEST %s] ", trc.FuncName)))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Request", fmt.Sprintf("[REQUEST %s] ", trc.FuncName)))
 
-	fmt.Fprintf(&b, "[%s]\n", ri.Time.Format(timeFormat))
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Method", fmt.Sprintf("%s %s", ri.Method, ri.Path)))
+	fmt.Fprintf(b, "[%s]\n", ri.Time.Format(timeFormat))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Method", fmt.Sprintf("%s %s", ri.Method, ri.Path)))
 	if ri.RawQuery != "" {
-		fmt.Fprintf(&b, "?%s", ri.RawQuery)
+		fmt.Fprintf(b, "?%s", ri.RawQuery)
 	}
-	fmt.Fprint(&b, "\n")
+	fmt.Fprint(b, "\n")
 	host, ok := ri.Headers["Host"]
 	if ok {
 		delete(ri.Headers, "Host")
 	}
 	hostStr := strings.Join(host, "")
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Host", fmt.Sprintf("Host: %s\n", hostStr)))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Host", fmt.Sprintf("Host: %s\n", hostStr)))
 	for k, v := range ri.Headers {
-		fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("ReqHeaderKey", fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
+		fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("ReqHeaderKey",
+			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
 	}
 
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Response", fmt.Sprintf("[RESPONSE] ")))
-	fmt.Fprintf(&b, "[%s]\n", rs.Time.Format(timeFormat))
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("ResponseStatus", fmt.Sprintf("%d %s\n", rs.StatusCode, http.StatusText(rs.StatusCode))))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Response", fmt.Sprintf("[RESPONSE] ")))
+	fmt.Fprintf(b, "[%s]\n", rs.Time.Format(timeFormat))
+	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("ResponseStatus",
+		fmt.Sprintf("%d %s\n", rs.StatusCode, http.StatusText(rs.StatusCode))))
 	for k, v := range rs.Headers {
-		fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("RespHeaderKey", fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
+		fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("RespHeaderKey",
+			fmt.Sprintf("%s: ", k))+console.Colorize("HeaderValue", fmt.Sprintf("%s\n", strings.Join(v, ""))))
 	}
-	fmt.Fprintf(&b, "%s%s", nodeNameStr, console.Colorize("Body", string(rs.Body)))
-	fmt.Fprint(&b, nodeNameStr)
+	fmt.Fprintf(b, "%s%s\n", nodeNameStr, console.Colorize("Body", string(rs.Body)))
+	fmt.Fprint(b, nodeNameStr)
 	return b.String()
 }

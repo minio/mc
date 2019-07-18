@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2014, 2015, 2016, 2017 MinIO, Inc.
+ * MinIO Client (C) 2014-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,12 @@ import (
 
 var (
 	// global flags for mc.
-	mcFlags = []cli.Flag{}
+	mcFlags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "autocompletion",
+			Usage: "install auto-completion for your shell",
+		},
+	}
 )
 
 // Help template for mc
@@ -55,6 +60,9 @@ COMMANDS:
 GLOBAL FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}{{end}}
+TIP:
+  Use '{{.Name}} --autocompletion' to enable shell autocompletion
+
 VERSION:
   ` + ReleaseTag +
 	`{{ "\n"}}{{range $key, $value := ExtraInfo}}
@@ -66,7 +74,7 @@ VERSION:
 func Main(args []string) {
 	if len(args) > 1 {
 		switch args[1] {
-		case "mc", "-install", "-uninstall":
+		case "mc", filepath.Base(args[0]):
 			mainComplete()
 			return
 		}
@@ -194,9 +202,6 @@ func initMC() {
 		}
 	}
 
-	// Install mc completion, ignore any error for now
-	_ = completeinstall.Install("mc")
-
 	// Check if mc session directory exists.
 	if !isSessionDirExists() {
 		fatalIf(createSessionDir().Trace(), "Unable to create session config directory.")
@@ -220,6 +225,25 @@ func initMC() {
 	// Load all authority certificates present in CAs dir
 	loadRootCAs()
 
+}
+
+func installAutoCompletion() {
+	if runtime.GOOS == "windows" {
+		console.Infoln("autocompletion feature is not available for this operating system")
+		return
+	}
+
+	if completeinstall.IsInstalled(filepath.Base(os.Args[0])) || completeinstall.IsInstalled("mc") {
+		console.Infoln("autocompletion is already enabled in your '$SHELLRC'")
+		return
+	}
+
+	err := completeinstall.Install(filepath.Base(os.Args[0]))
+	if err != nil {
+		fatalIf(probe.NewError(err), "Unable to install auto-completion.")
+	} else {
+		console.Infoln("enabled autocompletion in '$SHELLRC'. Please restart your shell.")
+	}
 }
 
 func registerBefore(ctx *cli.Context) error {
@@ -319,12 +343,6 @@ func registerApp(name string) *cli.App {
 		Usage: "show help",
 	}
 
-	cli.BashCompletionFlag = cli.BoolFlag{
-		Name:   "compgen",
-		Usage:  "enables bash-completion for all commands and subcommands",
-		Hidden: true,
-	}
-
 	app := cli.NewApp()
 	app.Name = name
 	app.Action = func(ctx *cli.Context) {
@@ -332,6 +350,13 @@ func registerApp(name string) *cli.App {
 			// Check for new updates from dl.min.io.
 			checkUpdate(ctx)
 		}
+
+		if ctx.Bool("autocompletion") || ctx.GlobalBool("autocompletion") {
+			// Install shell completions
+			installAutoCompletion()
+			return
+		}
+
 		cli.ShowAppHelp(ctx)
 	}
 

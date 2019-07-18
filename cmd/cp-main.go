@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2014, 2015 MinIO, Inc.
+ * MinIO Client (C) 2014-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,43 +84,45 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 ENVIRONMENT VARIABLES:
-   MC_ENCRYPT:      list of comma delimited prefixes
-   MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
+  MC_ENCRYPT:      list of comma delimited prefixes
+  MC_ENCRYPT_KEY:  list of comma delimited prefix=secret values
 
 EXAMPLES:
-   1. Copy a list of objects from local file system to Amazon S3 cloud storage.
+  01. Copy a list of objects from local file system to Amazon S3 cloud storage.
       $ {{.HelpName}} Music/*.ogg s3/jukebox/
 
-   2. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage.
+  02. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage.
       $ {{.HelpName}} --recursive play/mybucket/burningman2011/ s3/mybucket/
 
-   3. Copy multiple local folders recursively to MinIO cloud storage.
+  03. Copy multiple local folders recursively to MinIO cloud storage.
       $ {{.HelpName}} --recursive backup/2014/ backup/2015/ play/archive/
 
-   4. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
+  04. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
       $ {{.HelpName}} --recursive s3\documents\2014\ C:\Backups\2014
 
-   5. Copy files older than 7 days and 10 hours from MinIO cloud storage to Amazon S3 cloud storage.
+  05. Copy files older than 7 days and 10 hours from MinIO cloud storage to Amazon S3 cloud storage.
       $ {{.HelpName}} --older-than 7d10h play/mybucket/burningman2011/ s3/mybucket/
 
-   6. Copy files newer than 7 days and 10 hours from MinIO cloud storage to a local path.
+  06. Copy files newer than 7 days and 10 hours from MinIO cloud storage to a local path.
       $ {{.HelpName}} --newer-than 7d10h play/mybucket/burningman2011/ ~/latest/
 
-   7. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
+  07. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
       $ {{.HelpName}} 本語 s3/andoria/
 
-   8. Copy a local folder with space separated characters to Amazon S3 cloud storage.
+  08. Copy a local folder with space separated characters to Amazon S3 cloud storage.
       $ {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
 
-   9. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage.
+  09. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage.
       $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/ myminio/documents/
 
   10. Copy a list of objects from local file system to MinIO cloud storage with specified metadata.
-			$ {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
+      $ {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
 			
-	11. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
-			$ {{.HelpName}} --attr key1=value1,key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+  11. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
+      $ {{.HelpName}} --attr key1=value1,key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
 
+  12. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
+      $ {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
  `,
 }
 
@@ -143,7 +145,7 @@ func (c copyMessage) String() string {
 func (c copyMessage) JSON() string {
 	c.Status = "success"
 	copyMessageBytes, e := json.MarshalIndent(c, "", " ")
-	fatalIf(probe.NewError(e), "Failed to marshal copy message.")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(copyMessageBytes)
 }
