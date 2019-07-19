@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2016, 2017, 2018 MinIO, Inc.
+ * MinIO Client (C) 2016-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,40 +118,39 @@ func (u infoMessage) String() (msg string) {
 
 	// When service is offline
 	if u.Service == "off" {
-		msg += fmt.Sprintf("%s  %s\n", dot, console.Colorize("PrintB", u.Addr))
-		msg += fmt.Sprintf("  Status : %s", console.Colorize("InfoFail", "offline"))
+		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", u.Addr))
+		msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
 		return
 	}
 
 	// Print error if any and exit
 	if u.Err != "" {
-		msg += fmt.Sprintf("%s  %s\n", dot, console.Colorize("PrintB", u.Addr))
-		msg += fmt.Sprintf("   Status : %s\n", console.Colorize("InfoFail", "offline"))
+		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", u.Addr))
+		msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
 		e := u.Err
 		if strings.Trim(e, " ") == "rpc: retry error" {
 			e = "unreachable"
 		}
-		msg += fmt.Sprintf("    Error : %s", console.Colorize("InfoFail", e))
+		msg += fmt.Sprintf("    Error: %s", console.Colorize("InfoFail", e))
 		return
 	}
 
 	// Print server title
-	msg += fmt.Sprintf("%s  %s\n", dot, console.Colorize("PrintB", u.Addr))
-
-	// Status
-	msg += fmt.Sprintf("   Status : %s\n", console.Colorize("Info", "online"))
+	msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), console.Colorize("PrintB", u.Addr))
 
 	// Uptime
-	msg += fmt.Sprintf("   Uptime : %s\n", humanize.RelTime(time.Now(), time.Now().Add(-u.ServerInfo.Properties.Uptime), "", ""))
+	msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("Info",
+		humanize.RelTime(time.Now(), time.Now().Add(-u.ServerInfo.Properties.Uptime), "", "")))
+
 	// Version
 	version := u.ServerInfo.Properties.Version
 	if u.ServerInfo.Properties.Version == "DEVELOPMENT.GOGET" {
 		version = "<development>"
 	}
-	msg += fmt.Sprintf("  Version : %s\n", version)
+	msg += fmt.Sprintf("  Version: %s\n", version)
 	// Region
 	if u.ServerInfo.Properties.Region != "" {
-		msg += fmt.Sprintf("   Region : %s\n", u.ServerInfo.Properties.Region)
+		msg += fmt.Sprintf("   Region: %s\n", u.ServerInfo.Properties.Region)
 	}
 	// ARNs
 	sqsARNs := ""
@@ -159,11 +158,11 @@ func (u infoMessage) String() (msg string) {
 		sqsARNs += fmt.Sprintf("%s ", v)
 	}
 	if sqsARNs != "" {
-		msg += fmt.Sprintf(" SQS ARNs : %s\n", sqsARNs)
+		msg += fmt.Sprintf(" SQS ARNs: %s\n", sqsARNs)
 	}
 
 	// Incoming/outgoing
-	msg += fmt.Sprintf("  Storage : Used %s", humanize.IBytes(u.StorageInfo.Used))
+	msg += fmt.Sprintf("  Storage: Used %s", humanize.IBytes(u.StorageInfo.Used))
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
 		upBackends := 0
 		downBackends := 0
@@ -182,7 +181,8 @@ func (u infoMessage) String() (msg string) {
 		if downBackends != 0 {
 			upBackendsString = console.Colorize("InfoFail", fmt.Sprintf("%d", upBackends))
 		}
-		msg += fmt.Sprintf("\n   Drives : %s/%d OK\n", upBackendsString, upBackends+downBackends)
+		msg += fmt.Sprintf("\n   Drives: %s/%d %s\n", upBackendsString,
+			upBackends+downBackends, console.Colorize("Info", "OK"))
 	}
 	return
 }
