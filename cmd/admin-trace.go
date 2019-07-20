@@ -69,7 +69,7 @@ EXAMPLES:
 		$ {{.HelpName}} play -v -a
 
   2. Show trace only for failed requests for a Minio server with alias 'myminio'
-		$ {{.HelpName}} myminio -e
+		$ {{.HelpName}} myminio -v -e 
  `,
 }
 
