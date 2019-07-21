@@ -42,6 +42,10 @@ var adminTraceFlags = []cli.Flag{
 		Name:  "all, a",
 		Usage: "trace all traffic (including internode traffic between MinIO servers)",
 	},
+	cli.BoolFlag{
+		Name:  "errors, e",
+		Usage: "trace failed requests only",
+	},
 }
 
 var adminTraceCmd = cli.Command{
@@ -62,7 +66,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Show console trace for a Minio server with alias 'play'
-     $ {{.HelpName}} play -v -a
+		$ {{.HelpName}} play -v -a
+
+  2. Show trace only for failed requests for a Minio server with alias 'myminio'
+		$ {{.HelpName}} myminio -v -e 
  `,
 }
 
@@ -84,6 +91,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	checkAdminTraceSyntax(ctx)
 	verbose := ctx.Bool("verbose")
 	all := ctx.Bool("all")
+	errfltr := ctx.Bool("errors")
 	aliasedURL := ctx.Args().Get(0)
 	console.SetColor("Stat", color.New(color.FgYellow))
 
@@ -113,7 +121,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	defer close(doneCh)
 
 	// Start listening on all trace activity.
-	traceCh := client.Trace(all, doneCh)
+	traceCh := client.Trace(all, errfltr, doneCh)
 	for traceInfo := range traceCh {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Cannot listen to http trace")
