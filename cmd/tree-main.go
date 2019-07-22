@@ -66,6 +66,7 @@ var treeFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:  "depth, d",
 		Usage: "sets the depth threshold",
+		Value: -1,
 	},
 }
 
@@ -86,23 +87,20 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-   1. List all buckets on Amazon S3 cloud storage in a tree format..
-      $ {{.HelpName}} s3
+   1. List all buckets and directories on MinIO object storage server in tree format.
+      $ {{.HelpName}} myminio
 
-   2. List all buckets in "mybucket" on Amazon S3 cloud storage in a tree format.
-      $ {{.HelpName}} s3/mybucket/
+   2. List all directories in "mybucket" on MinIO object storage server in tree format.
+      $ {{.HelpName}} myminio/mybucket/
 
-   3. List all buckets in "mybucket" on Amazon S3 cloud storage hosted on Microsoft Windows in a tree format.
-      $ {{.HelpName}} s3\mybucket\
+   3. List all directories in "mybucket" on MinIO object storage server hosted on Microsoft Windows in tree format.
+      $ {{.HelpName}} myminio\mybucket\
 
-   4. List all buckets and objects in "mybucket" on Amazon S3 cloud storage in a tree format.
+   4. List all directories and objects in "mybucket" on MinIO object storage server in tree format.
       $ {{.HelpName}} --files myminio/mybucket/
 
-   5. Set the depth of the tree for listing.
+   5. List all directories upto depth level '2' in tree format.
       $ {{.HelpName}} --depth 2 myminio/mybucket/
-
-   6. List all the directories irrespective to the depth.
-      $ {{.HelpName}} myminio/mybucket/
 `,
 }
 
@@ -111,8 +109,8 @@ func checkTreeSyntax(ctx *cli.Context) {
 	args := ctx.Args()
 
 	if ctx.IsSet("depth") {
-		if ctx.Int("depth") <= 0 {
-			fatalIf(errInvalidArgument().Trace(args...), "depth should have a value greater than 0")
+		if ctx.Int("depth") < -1 || ctx.Int("depth") == 0 {
+			fatalIf(errInvalidArgument().Trace(args...), "please set a proper depth, for example: '--depth 1' to limit the tree output, default (-1) output displays everything")
 		}
 	}
 
@@ -263,10 +261,7 @@ func mainTree(ctx *cli.Context) error {
 	}
 
 	includeFiles := ctx.Bool("files")
-	depth := -1
-	if ctx.IsSet("depth") {
-		depth = ctx.Int("depth")
-	}
+	depth := ctx.Int("depth")
 
 	var cErr error
 	for _, targetURL := range args {
