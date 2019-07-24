@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017 MinIO, Inc.
+ * MinIO Client (C) 2017-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,12 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminConfigGetCmd = cli.Command{
@@ -38,23 +41,32 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get server configuration of a MinIO server/cluster.
-     {{.Prompt}} {{.HelpName}} play/
+  1. Get the current region setting on MinIO server.
+     {{.Prompt}} {{.HelpName}} play/ region
+     # US east region setting
+     name="us-east-1" state="on"
+
+  2. Get the current notification settings for MQTT target on MinIO server
+     {{.Prompt}} {{.HelpName}} myminio/ notify_mqtt
+     # Notification settings for MQTT broker
+     notify_mqtt broker="" password="" queue_dir="" queue_limit="0" reconnect_interval="0s" state="off" keep_alive_interval="0s" qos="0" topic="" username=""
+
+  3. Get the current compression settings on MinIO server
+     {{.Prompt}} {{.HelpName}} myminio/ compression
+     # Compression settings for csv and text files only
+     compression extensions=".txt,.csv" mime_types="text/*" state="on"
 `,
 }
 
 // configGetMessage container to hold locks information.
 type configGetMessage struct {
-	Status string                 `json:"status"`
-	Config map[string]interface{} `json:"config"`
+	Status string         `json:"status"`
+	Value  madmin.Targets `json:"value"`
 }
 
 // String colorized service status message.
 func (u configGetMessage) String() string {
-	config, e := json.MarshalIndent(u.Config, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-
-	return string(config)
+	return u.Value.String()
 }
 
 // JSON jsonified service status Message message.
@@ -68,7 +80,7 @@ func (u configGetMessage) JSON() string {
 
 // checkAdminConfigGetSyntax - validate all the passed arguments
 func checkAdminConfigGetSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
+	if !ctx.Args().Present() || len(ctx.Args()) > 2 {
 		cli.ShowCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
 	}
 }
@@ -86,16 +98,12 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
-	c, e := client.GetConfig()
-	fatalIf(probe.NewError(e), "Cannot get server configuration file.")
-
-	config := map[string]interface{}{}
-	e = json.Unmarshal(c, &config)
-	fatalIf(probe.NewError(e), "Cannot unmarshal server configuration file.")
+	buf, e := client.GetConfigKV(strings.Join(args.Tail(), " "))
+	fatalIf(probe.NewError(e), "Cannot get server '%s' config", args.Tail())
 
 	// Print
 	printMsg(configGetMessage{
-		Config: config,
+		Value: buf,
 	})
 
 	return nil
