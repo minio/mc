@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017-2019 MinIO, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,11 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminConfigSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set key to MinIO server/cluster.",
+var adminConfigDelCmd = cli.Command{
+	Name:   "del",
+	Usage:  "delete a key from MinIO server/cluster.",
 	Before: setGlobalsFromContext,
-	Action: mainAdminConfigSet,
+	Action: mainAdminConfigDel,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -45,37 +45,37 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable WORM mode on MinIO server.
-     $ {{.HelpName}} myminio/ worm state="on"
+  1. Remove MQTT notifcation target 'target1' on MinIO server.
+     $ {{.HelpName}} myminio/ notify_mqtt:target1
 `,
 }
 
-// configSetMessage container to hold locks information.
-type configSetMessage struct {
+// configDelMessage container to hold locks information.
+type configDelMessage struct {
 	Status          string `json:"status"`
-	setConfigStatus bool
+	delConfigStatus bool
 	targetAlias     string
 }
 
 // String colorized service status message.
-func (u configSetMessage) String() (msg string) {
+func (u configDelMessage) String() (msg string) {
 	// Print the general set config status
-	if u.setConfigStatus {
-		msg += console.Colorize("SetConfigSuccess",
-			"Setting new key has been successful.\n")
+	if u.delConfigStatus {
+		msg += console.Colorize("DelConfigSuccess",
+			"Deleting key has been successful.\n")
 		suggestion := fmt.Sprintf("mc admin service restart %s", u.targetAlias)
-		msg += console.Colorize("SetConfigSuccess",
+		msg += console.Colorize("DelConfigSuccess",
 			fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
 	} else {
-		msg += console.Colorize("SetConfigFailure",
-			"Setting new MinIO configuration file has failed.\n")
+		msg += console.Colorize("DelConfigFailure",
+			"Deleting new MinIO configuration file has failed.\n")
 	}
 	return
 }
 
 // JSON jsonified service status message.
-func (u configSetMessage) JSON() string {
-	if u.setConfigStatus {
+func (u configDelMessage) JSON() string {
+	if u.delConfigStatus {
 		u.Status = "success"
 	} else {
 		u.Status = "error"
@@ -86,22 +86,22 @@ func (u configSetMessage) JSON() string {
 	return string(statusJSONBytes)
 }
 
-// checkAdminConfigSetSyntax - validate all the passed arguments
-func checkAdminConfigSetSyntax(ctx *cli.Context) {
+// checkAdminConfigDelSyntax - validate all the passed arguments
+func checkAdminConfigDelSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "del", 1) // last argument is exit code
 	}
 }
 
 // main config set function
-func mainAdminConfigSet(ctx *cli.Context) error {
+func mainAdminConfigDel(ctx *cli.Context) error {
 
 	// Check command arguments
-	checkAdminConfigSetSyntax(ctx)
+	checkAdminConfigDelSyntax(ctx)
 
-	// Set color preference of command outputs
-	console.SetColor("SetConfigSuccess", color.New(color.FgGreen, color.Bold))
-	console.SetColor("SetConfigFailure", color.New(color.FgRed, color.Bold))
+	// Del color preference of command outputs
+	console.SetColor("DelConfigSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("DelConfigFailure", color.New(color.FgRed, color.Bold))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -111,19 +111,19 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	// Call set config API
+	// Call del config API
 	input := strings.Join(args.Tail(), " ")
 	if len(input) == 0 {
 		b, err := ioutil.ReadAll(os.Stdin)
 		fatalIf(probe.NewError(err), "Cannot set server configuration file.")
 		input = string(b)
 	}
-	fatalIf(probe.NewError(client.SetConfigKV(input)),
+	fatalIf(probe.NewError(client.DelConfigKV(input)),
 		"Cannot set server configuration file.")
 
 	// Print set config result
-	printMsg(configSetMessage{
-		setConfigStatus: true,
+	printMsg(configDelMessage{
+		delConfigStatus: true,
 		targetAlias:     aliasedURL,
 	})
 
