@@ -1,5 +1,7 @@
+// +build go1.12
+
 /*
- * MinIO Client (C) 2014, 2015, 2016 MinIO, Inc.
+ * MinIO Client (C) 2014-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
