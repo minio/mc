@@ -54,7 +54,7 @@ func checkAdminGroupRemoveSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainAdminGroupRemove is the handle for "mc admin remove remove" command.
+// mainAdminGroupRemove is the handle for "mc admin group remove" command.
 func mainAdminGroupRemove(ctx *cli.Context) error {
 	checkAdminGroupRemoveSyntax(ctx)
 
