@@ -44,7 +44,8 @@ type fsClient struct {
 }
 
 const (
-	partSuffix = ".part.minio"
+	partSuffix     = ".part.minio"
+	slashSeperator = "/"
 )
 
 var ( // GOOS specific ignore list.
@@ -426,6 +427,50 @@ func (f *fsClient) Get(sse encrypt.ServerSide) (io.ReadCloser, *probe.Error) {
 	return f.get()
 }
 
+// Check if the given error corresponds to ENOTEMPTY for unix
+// and ERROR_DIR_NOT_EMPTY for windows (directory not empty).
+func isSysErrNotEmpty(err error) bool {
+	if err == syscall.ENOTEMPTY {
+		return true
+	}
+	if pathErr, ok := err.(*os.PathError); ok {
+		if runtime.GOOS == "windows" {
+			if errno, _ok := pathErr.Err.(syscall.Errno); _ok && errno == 0x91 {
+				// ERROR_DIR_NOT_EMPTY
+				return true
+			}
+		}
+		if pathErr.Err == syscall.ENOTEMPTY {
+			return true
+		}
+	}
+	return false
+}
+
+// deleteFile deletes a file path if its empty. If it's successfully deleted,
+// it will recursively delete empty parent directories
+// until it finds one with files in it. Returns nil for a non-empty directory.
+func deleteFile(deletePath string) error {
+	// Attempt to remove path.
+	if err := os.Remove((deletePath)); err != nil {
+		if isSysErrNotEmpty(err) {
+			return nil
+		}
+		return err
+	}
+
+	// Trailing slash is removed when found to ensure
+	// slashpath.Dir() to work as intended.
+	parentPath := strings.TrimSuffix(deletePath, slashSeperator)
+	parentPath = path.Dir(parentPath)
+
+	if parentPath != "." {
+		return deleteFile(parentPath)
+	}
+
+	return nil
+}
+
 // Remove - remove entry read from clientContent channel.
 func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
@@ -440,7 +485,7 @@ func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 			if isIncomplete {
 				name += partSuffix
 			}
-			if err := os.Remove(name); err != nil {
+			if err := deleteFile(name); err != nil {
 				if os.IsPermission(err) {
 					// Ignore permission error.
 					errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
