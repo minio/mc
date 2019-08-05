@@ -51,7 +51,7 @@ func checkAdminGroupInfoSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainAdminGroupInfo is the handle for "mc admin remove remove" command.
+// mainAdminGroupInfo is the handle for "mc admin group info" command.
 func mainAdminGroupInfo(ctx *cli.Context) error {
 	checkAdminGroupInfoSyntax(ctx)
 
