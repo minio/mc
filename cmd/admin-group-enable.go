@@ -54,7 +54,7 @@ func checkAdminGroupEnableSyntax(ctx *cli.Context) {
 	}
 }
 
-// mainAdminGroupEnableDisable is the handle for "mc admin remove remove" command.
+// mainAdminGroupEnableDisable is the handle for "mc admin group enable|disable" command.
 func mainAdminGroupEnableDisable(ctx *cli.Context) error {
 	checkAdminGroupEnableSyntax(ctx)
 

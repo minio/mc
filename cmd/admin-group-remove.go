@@ -79,7 +79,7 @@ func mainAdminGroupRemove(ctx *cli.Context) error {
 	}
 
 	e := client.UpdateGroupMembers(gAddRemove)
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot remove new group")
+	fatalIf(probe.NewError(e).Trace(args...), "Could not perform remove operation")
 
 	printMsg(groupMessage{
 		op:        "remove",
