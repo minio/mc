@@ -82,14 +82,10 @@ mc.exe --help
 ```
 
 ## Install from Source
-Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://min.io/download/#minio-client.
+Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.12](https://golang.org/dl/#stable)
 
-If you do not have a working Golang environment, please follow [How to install Golang](https://docs.min.io/docs/how-to-install-golang).
-
-```
-go get -d github.com/minio/mc
-cd ${GOPATH}/src/github.com/minio/mc
-make
+```sh
+GOPROXY=https://proxy.golang.org GO111MODULE=on go get github.com/minio/mc
 ```
 
 ## Add a Cloud Storage Service
