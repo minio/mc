@@ -247,9 +247,6 @@ func installAutoCompletion() {
 }
 
 func registerBefore(ctx *cli.Context) error {
-	// Check if mc was compiled using a supported version of Golang.
-	checkGoVersion()
-
 	// Set the config directory.
 	setMcConfigDir(ctx.GlobalString("config-dir"))
 
