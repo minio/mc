@@ -18,9 +18,8 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
-
-	neturl "net/url"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
@@ -34,12 +33,8 @@ import (
 var (
 	duFlags = []cli.Flag{
 		cli.IntFlag{
-			Name:  "max-depth, d",
+			Name:  "depth, d",
 			Usage: "print the total for a folder prefix only if it is N or fewer levels below the command line argument",
-		},
-		cli.BoolFlag{
-			Name:  "human-readable, H",
-			Usage: "print sizes in human readable format (e.g., 1K 234M 2G)",
 		},
 	}
 )
@@ -67,8 +62,8 @@ EXAMPLES:
    1. Summarize disk usage of 'jazz-songs' bucket recursively.
       $ {{.HelpName}} s3/jazz-songs
 
-   2. Summarize disk usage of 'louis' prefix in 'jazz-songs' bucket recursively.
-      $ {{.HelpName}} -H s3/jazz-songs/louis/
+   2. Summarize disk usage of 'louis' prefix in 'jazz-songs' bucket upto two levels.
+      $ {{.HelpName}} --depth=2 s3/jazz-songs/louis/
 `,
 }
 
@@ -91,15 +86,15 @@ func (r duMessage) JSON() string {
 	return string(msgBytes)
 }
 
-func du(url string, isHumanReadable bool, maxDepth int, encKeyDB map[string][]prefixSSEPair) (int64, error) {
-	targetAlias, targetURL, _ := mustExpandAlias(url)
+func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, error) {
+	targetAlias, targetURL, _ := mustExpandAlias(urlStr)
 	if !strings.HasSuffix(targetURL, "/") {
 		targetURL += "/"
 	}
 
 	clnt, pErr := newClientFromAlias(targetAlias, targetURL)
 	if pErr != nil {
-		errorIf(pErr.Trace(url), "Failed to summarize disk usage `"+url+"`.")
+		errorIf(pErr.Trace(urlStr), "Failed to summarize disk usage `"+urlStr+"`.")
 		return 0, exitStatus(globalErrorExitStatus) // End of journey.
 	}
 
@@ -109,7 +104,7 @@ func du(url string, isHumanReadable bool, maxDepth int, encKeyDB map[string][]pr
 	size := int64(0)
 	for content := range contentCh {
 		if content.Err != nil {
-			errorIf(content.Err.Trace(url), "Failed to find disk usage of `"+url+"` recursively.")
+			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
 			return 0, exitStatus(globalErrorExitStatus)
 		}
 
@@ -118,7 +113,7 @@ func du(url string, isHumanReadable bool, maxDepth int, encKeyDB map[string][]pr
 		}
 
 		if content.Type.IsDir() {
-			depth := maxDepth
+			depth := depth
 			if depth > 0 {
 				depth--
 			}
@@ -127,7 +122,7 @@ func du(url string, isHumanReadable bool, maxDepth int, encKeyDB map[string][]pr
 			if targetAlias != "" {
 				subDirAlias = targetAlias + "/" + content.URL.Path
 			}
-			used, err := du(subDirAlias, isHumanReadable, depth, encKeyDB)
+			used, err := du(subDirAlias, depth, encKeyDB)
 			if err != nil {
 				return 0, err
 			}
@@ -137,22 +132,15 @@ func du(url string, isHumanReadable bool, maxDepth int, encKeyDB map[string][]pr
 		}
 	}
 
-	if maxDepth != 0 {
-		var sizeStr string
-		if isHumanReadable {
-			sizeStr = humanize.Bytes(uint64(size))
-		} else {
-			sizeStr = fmt.Sprintf("%d", size)
-		}
-
-		u, err := neturl.Parse(targetURL)
+	if depth != 0 {
+		u, err := url.Parse(targetURL)
 		if err != nil {
 			panic(err)
 		}
 
 		printMsg(duMessage{
 			Prefix: strings.Trim(u.Path, "/"),
-			Size:   sizeStr,
+			Size:   humanize.Bytes(uint64(size)),
 			Status: "success",
 		})
 	}
@@ -167,18 +155,17 @@ func mainDu(ctx *cli.Context) error {
 	fatalIf(err, "Unable to parse encryption keys.")
 
 	// du specific flags.
-	isHumanReadable := ctx.Bool("human-readable")
-	maxDepth := ctx.Int("max-depth")
-	if maxDepth == 0 {
-		maxDepth = -1
+	depth := ctx.Int("depth")
+	if depth == 0 {
+		depth = -1
 	}
 
 	// Set color.
 	console.SetColor("Remove", color.New(color.FgGreen, color.Bold))
 
 	var duErr error
-	for _, url := range ctx.Args() {
-		if _, err := du(url, isHumanReadable, maxDepth, encKeyDB); duErr == nil {
+	for _, urlStr := range ctx.Args() {
+		if _, err := du(urlStr, depth, encKeyDB); duErr == nil {
 			duErr = err
 		}
 	}
