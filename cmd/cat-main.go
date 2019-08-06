@@ -69,6 +69,10 @@ EXAMPLES:
 
   4. Save an encrypted object from Amazon S3 cloud storage to a local file.
      $ {{.HelpName}} --encrypt-key 's3/mysql-backups=32byteslongsecretkeymustbegiven1' s3/mysql-backups/backups-201810.gz > /mnt/data/recent.gz
+
+  5. Display the content of encrypted object. In case the encryption key contains non-printable character like tab, pass the
+     base64 encoded string as key.
+     $ {{.HelpName}} --encrypt-key "play/my-bucket/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  play/my-bucket/my-object
 `,
 }
 

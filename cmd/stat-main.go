@@ -65,6 +65,10 @@ EXAMPLES:
 
   4. Stat encrypted files on Amazon S3 cloud storage.
      $ {{.HelpName}} --encrypt-key "s3/personal-docs/=32byteslongsecretkeymustbegiven1" s3/personal-docs/2018-account_report.docx
+
+  5. Stat encrypted files on Amazon S3 cloud storage. In case the encryption key contains non-printable character like tab, pass the
+     base64 encoded string as key.
+     $ {{.HelpName}} --encrypt-key "s3/personal-document/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/personal-document/2019-account_report.docx
 `,
 }
 
