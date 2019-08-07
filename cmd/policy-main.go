@@ -66,29 +66,32 @@ FILE:
   A valid S3 policy JSON filepath.
 
 EXAMPLES:
-  1. Set bucket to "download" on Amazon S3 cloud storage.
-     $ {{.HelpName}} download s3/burningman2011
+   1. Set bucket to "download" on Amazon S3 cloud storage.
+      $ {{.HelpName}} set download s3/burningman2011
 
-  2. Set bucket to "public" on Amazon S3 cloud storage.
-     $ {{.HelpName}} public s3/shared
+   2. Set bucket to "public" on Amazon S3 cloud storage.
+      $ {{.HelpName}} set public s3/shared
 
-  3. Set bucket to "upload" on Amazon S3 cloud storage.
-     $ {{.HelpName}} upload s3/incoming
+   3. Set bucket to "upload" on Amazon S3 cloud storage.
+      $ {{.HelpName}} set upload s3/incoming
 
-  4. Set a prefix to "public" on Amazon S3 cloud storage.
-     $ {{.HelpName}} public s3/public-commons/images
+   4. Set policy to "public" for bucket with prefix on Amazon S3 cloud storage. 
+      $ {{.HelpName}} set public s3/public-commons/images
 
-  5. Set a prefix to the policy file path on Amazon S3 cloud storage.
-     $ {{.HelpName}} /path/to/policy.json s3/public-commons/images
+   5. Set a custom prefix based bucket policy on Amazon S3 cloud storage using a JSON file.
+      $ {{.HelpName}} set-json /path/to/policy.json s3/public-commons/images
 
-  6. Get bucket permissions.
-     $ {{.HelpName}} s3/shared
+   6. Get bucket permissions.
+      $ {{.HelpName}} get s3/shared
+	
+   7. Get bucket permissions in JSON format.
+      $ {{.HelpName}} get-json s3/shared
 
-  7. List policies set to a specified bucket.
-     $ {{.HelpName}} list s3/shared
+   8. List policies set to a specified bucket.
+      $ {{.HelpName}} list s3/shared
 
-  8. List public object URLs recursively.
-     $ {{.HelpName}} --recursive links s3/shared/
+   9. List public object URLs recursively.
+      $ {{.HelpName}} --recursive links s3/shared/
 `,
 }
 
@@ -129,9 +132,14 @@ func (s policyMessage) String() string {
 		return console.Colorize("Policy",
 			"Access permission for `"+s.Bucket+"`"+" is `"+string(s.Perms)+"`")
 	}
-	if s.Operation == "setJSON" {
+	if s.Operation == "set-json" {
 		return console.Colorize("Policy",
 			"Access permission for `"+s.Bucket+"`"+" is set from `"+string(s.Perms)+"`")
+	}
+	if s.Operation == "get-json" {
+		policy, e := json.MarshalIndent(s.Policy, "", " ")
+		fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+		return string(policy)
 	}
 	// nothing to print
 	return ""
@@ -168,7 +176,7 @@ func (s policyLinksMessage) JSON() string {
 func checkPolicySyntax(ctx *cli.Context) {
 	argsLength := len(ctx.Args())
 	// Always print a help message when we have extra arguments
-	if argsLength > 2 {
+	if argsLength > 3 {
 		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code.
 	}
 	// Always print a help message when no arguments specified
@@ -177,11 +185,36 @@ func checkPolicySyntax(ctx *cli.Context) {
 	}
 
 	firstArg := ctx.Args().Get(0)
+	secondArg := ctx.Args().Get(1)
 
 	// More syntax checking
 	switch accessPerms(firstArg) {
-	case accessNone, accessDownload, accessUpload, accessPublic:
-		// Always expect two arguments when a policy permission is provided
+	case "set":
+		// Always expect three arguments when setting a policy permission.
+		if argsLength != 3 {
+			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		}
+		if accessPerms(secondArg) != accessNone &&
+			accessPerms(secondArg) != accessDownload &&
+			accessPerms(secondArg) != accessUpload &&
+			accessPerms(secondArg) != accessPublic {
+			fatalIf(errDummy().Trace(),
+				"Unrecognized permission `"+string(secondArg)+"`. Allowed values are [none, download, upload, public].")
+		}
+
+	case "set-json":
+		// Always expect three arguments when setting a policy permission.
+		if argsLength != 3 {
+			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
+		}
+		// Validate the type of input file
+		if filepath.Ext(string(secondArg)) != ".json" {
+			fatalIf(errDummy().Trace(),
+				"Unrecognized policy file format `"+string(secondArg)+"`. Only json files are accepted.")
+		}
+
+	case "get", "get-json":
+		// get or get-json always expects two arguments
 		if argsLength != 2 {
 			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
 		}
@@ -195,12 +228,8 @@ func checkPolicySyntax(ctx *cli.Context) {
 		if argsLength != 2 {
 			cli.ShowCommandHelpAndExit(ctx, "policy", 1)
 		}
-
 	default:
-		if argsLength == 2 && filepath.Ext(string(firstArg)) != ".json" {
-			fatalIf(errDummy().Trace(),
-				"Unrecognized permission `"+string(firstArg)+"`. Allowed values are [none, download, upload, public].")
-		}
+		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
 	}
 }
 
@@ -394,18 +423,22 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 func runPolicyCmd(args cli.Args) {
 	var operation, policyStr string
 	var probeErr *probe.Error
-	perms := accessPerms(args.Get(0))
-	targetURL := args.Get(1)
+	perms := accessPerms(args.Get(1))
+	targetURL := args.Get(2)
 	if perms.isValidAccessPERM() {
 		probeErr = doSetAccess(targetURL, perms)
 		operation = "set"
 	} else if perms.isValidAccessFile() {
 		probeErr = doSetAccessJSON(targetURL, perms)
-		operation = "setJSON"
+		operation = "set-json"
 	} else {
-		targetURL = args.First()
-		perms, policyStr, probeErr = doGetAccess(targetURL)
+		targetURL = args.Get(1)
 		operation = "get"
+		if args.First() == "get-json" {
+			operation = "get-json"
+		}
+		perms, policyStr, probeErr = doGetAccess(targetURL)
+
 	}
 	// Upon error exit.
 	if probeErr != nil {
@@ -422,7 +455,6 @@ func runPolicyCmd(args cli.Args) {
 		e := json.Unmarshal([]byte(policyStr), &policyJSON)
 		fatalIf(probe.NewError(e), "Cannot unmarshal custom policy file.")
 	}
-
 	printMsg(policyMessage{
 		Status:    "success",
 		Operation: operation,
@@ -433,7 +465,6 @@ func runPolicyCmd(args cli.Args) {
 }
 
 func mainPolicy(ctx *cli.Context) error {
-
 	// check 'policy' cli arguments.
 	checkPolicySyntax(ctx)
 
@@ -441,6 +472,12 @@ func mainPolicy(ctx *cli.Context) error {
 	console.SetColor("Policy", color.New(color.FgGreen, color.Bold))
 
 	switch ctx.Args().First() {
+	case "set", "set-json", "get", "get-json":
+		// policy set [download|upload|public|none] alias/bucket/prefix
+		// policy set-json path-to-policy-json-file alias/bucket/prefix
+		// policy get alias/bucket/prefix
+		// policy get-json alias/bucket/prefix
+		runPolicyCmd(ctx.Args())
 	case "list":
 		// policy list alias/bucket/prefix
 		runPolicyListCmd(ctx.Args().Tail())
@@ -448,8 +485,8 @@ func mainPolicy(ctx *cli.Context) error {
 		// policy links alias/bucket/prefix
 		runPolicyLinksCmd(ctx.Args().Tail(), ctx.Bool("recursive"))
 	default:
-		// policy [download|upload|public|] alias/bucket/prefix
-		runPolicyCmd(ctx.Args())
+		// Shows command example and exit
+		cli.ShowCommandHelpAndExit(ctx, "policy", 1)
 	}
 	return nil
 }
