@@ -1,7 +1,5 @@
-// +build go1.12
-
 /*
- * MinIO Client (C) 2014-2019 MinIO, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +14,29 @@
  * limitations under the License.
  */
 
-/*
- * Below main package has canonical imports for 'go get' and 'go build'
- * to work with all other clones of github.com/minio/mc repository. For
- * more information refer https://golang.org/doc/go1.4#canonicalimports
- */
-
-package main // import "github.com/minio/mc"
+package cmd
 
 import (
-	"os"
-
-	mc "github.com/minio/mc/cmd"
+	"github.com/minio/cli"
 )
 
-func main() {
-	mc.Main(os.Args)
+var adminGroupDisableCmd = cli.Command{
+	Name:   "disable",
+	Usage:  "Disable a group",
+	Action: mainAdminGroupEnableDisable,
+	Before: setGlobalsFromContext,
+	Flags:  globalFlags,
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} TARGET GROUPNAME
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+EXAMPLES:
+  1. Disable group 'allcents':
+     $ {{.HelpName}} myminio allcents
+`,
 }

@@ -65,7 +65,7 @@ var (
 )
 
 // ErrInvalidMetadata reflects invalid metadata format
-var ErrInvalidMetadata = errors.New("specified metadata should be of form key1=value1,key2=value2,... and so on")
+var ErrInvalidMetadata = errors.New("specified metadata should be of form key1=value1;key2=value2;... and so on")
 
 // Copy command.
 var cpCmd = cli.Command{
@@ -119,7 +119,7 @@ EXAMPLES:
       $ {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
 			
   11. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
-      $ {{.HelpName}} --attr key1=value1,key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+      $ {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
 
   12. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
       $ {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
@@ -451,8 +451,8 @@ loop:
 // validate the passed metadataString and populate the map
 func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	metaDataMap := make(map[string]string)
-	for _, metaData := range strings.Split(metadataString, ",") {
-		metaDataEntry := strings.Split(metaData, "=")
+	for _, metaData := range strings.Split(metadataString, ";") {
+		metaDataEntry := strings.SplitN(metaData, "=", 2)
 		if len(metaDataEntry) == 2 {
 			metaDataMap[metaDataEntry[0]] = metaDataEntry[1]
 		} else {

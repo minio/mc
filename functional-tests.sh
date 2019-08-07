@@ -341,7 +341,7 @@ function test_put_object_with_metadata()
 
     start_time=$(get_time)
     object_name="mc-test-object-$RANDOM"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --attr key1=val1,key2=val2 "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --attr key1=val1\;key2=val2 "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
     diff -bB <(echo "val1")  <("${MC_CMD[@]}"   --json stat "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"  |  jq -r '.metadata."X-Amz-Meta-Key1"')  >/dev/null 2>&1
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to put object with metadata"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"

@@ -28,10 +28,6 @@ import (
 )
 
 // mc configuration related constants.
-const (
-	minGoVersion = ">= 1.7.5" // mc requires at least Go v1.7.5
-)
-
 var (
 	globalMCConfigDir        = fmt.Sprintf(".%s/", filepath.Base(os.Args[0]))
 	globalMCConfigWindowsDir = fmt.Sprintf("%s\\", filepath.Base(os.Args[0]))

@@ -23,6 +23,8 @@ function _build() {
     export GOOS=$os
     export GOARCH=$arch
     export GO111MODULE=on
+    export GOPROXY=https://proxy.golang.org
+    export CGO_ENABLED=0
     go build -tags kqueue -o /dev/null
 }
 

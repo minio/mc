@@ -28,12 +28,14 @@ func TestParseMetaData(t *testing.T) {
 		err    error
 		status bool
 	}{
-		// success scenerio
-		{"key1=value1,key2=value2", map[string]string{"key1": "value1", "key2": "value2"}, nil, true},
-		// using different delimitter, other than ',' between multiple meta data
-		{"key1=value1;key2=value2", nil, ErrInvalidMetadata, false},
+		// success scenerio using ; as delimitter
+		{"key1=value1;key2=value2", map[string]string{"key1": "value1", "key2": "value2"}, nil, true},
+		// success scenerio using ; as delimitter
+		{"key1=m1=m2,m3=m4;key2=value2", map[string]string{"key1": "m1=m2,m3=m4", "key2": "value2"}, nil, true},
+		// success scenerio using = more than once
+		{"Cache-Control=max-age=90000,min-fresh=9000;key1=value1;key2=value2", map[string]string{"Cache-Control": "max-age=90000,min-fresh=9000", "key1": "value1", "key2": "value2"}, nil, true},
 		// using different delimitter, other than '=' between key value
-		{"key1:value1,key2:value2", nil, ErrInvalidMetadata, false},
+		{"key1:value1;key2:value2", nil, ErrInvalidMetadata, false},
 		// using no delimitter
 		{"key1:value1:key2:value2", nil, ErrInvalidMetadata, false},
 	}

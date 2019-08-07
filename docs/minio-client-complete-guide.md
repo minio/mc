@@ -557,10 +557,9 @@ FLAGS:
   --older-than value                 copy object(s) older than N days (default: 0)
   --newer-than value                 copy object(s) newer than N days (default: 0)
   --storage-class value, --sc value  set storage class for new object(s) on target
-  --attr                             add custom metadata for the object
+  --attr                             add custom metadata for the object (format: KeyName1=string;KeyName2=string)
   --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
   --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
-  --attr                             apply metadata to objects (format: KeyName1=string,KeyName2=string)
   --help, -h                         show help
 
 ENVIRONMENT VARIABLES:
@@ -578,8 +577,14 @@ myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓�
 *Example: Copy a text file to an object storage with specified metadata.*
 
 ```
-mc cp --attr key1=value1,key2=value2 myobject.txt play/mybucket
+mc cp --attr key1=value1;key2=value2 myobject.txt play/mybucket
 myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
+*Example: Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.*
+```
+mc cp --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+https://play.minio.io:9000/mybucket/myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
 *Example: Copy a text file to an object storage and assign storage-class `REDUCED_REDUNDANCY` to the uploaded object.*
