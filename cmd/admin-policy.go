@@ -29,6 +29,7 @@ var adminPolicyCmd = cli.Command{
 		adminPolicyRemoveCmd,
 		adminPolicyListCmd,
 		adminPolicyInfoCmd,
+		adminPolicySetCmd,
 	},
 	HideHelpCommand: true,
 }

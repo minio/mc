@@ -26,7 +26,6 @@ var adminUserCmd = cli.Command{
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminUserAddCmd,
-		adminUserPolicyCmd,
 		adminUserDisableCmd,
 		adminUserEnableCmd,
 		adminUserRemoveCmd,
