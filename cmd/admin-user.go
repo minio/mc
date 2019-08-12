@@ -30,6 +30,7 @@ var adminUserCmd = cli.Command{
 		adminUserEnableCmd,
 		adminUserRemoveCmd,
 		adminUserListCmd,
+		adminUserInfoCmd,
 	},
 	HideHelpCommand: true,
 }

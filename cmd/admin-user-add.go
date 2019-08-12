@@ -17,6 +17,9 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -57,11 +60,12 @@ func checkAdminUserAddSyntax(ctx *cli.Context) {
 // userMessage container for content message structure
 type userMessage struct {
 	op         string
-	Status     string `json:"status"`
-	AccessKey  string `json:"accessKey,omitempty"`
-	SecretKey  string `json:"secretKey,omitempty"`
-	PolicyName string `json:"policyName,omitempty"`
-	UserStatus string `json:"userStatus,omitempty"`
+	Status     string   `json:"status"` // TODO: remove this?
+	AccessKey  string   `json:"accessKey,omitempty"`
+	SecretKey  string   `json:"secretKey,omitempty"`
+	PolicyName string   `json:"policyName,omitempty"`
+	UserStatus string   `json:"userStatus,omitempty"`
+	MemberOf   []string `json:"memberOf,omitempty"`
 }
 
 func (u userMessage) String() string {
@@ -77,6 +81,14 @@ func (u userMessage) String() string {
 			Field{"AccessKey", accessFieldMaxLen},
 			Field{"PolicyName", policyFieldMaxLen},
 		).buildRow(u.UserStatus, u.AccessKey, u.PolicyName)
+	case "info":
+		return console.Colorize("UserMessage", strings.Join(
+			[]string{
+				fmt.Sprintf("AccessKey: %s", u.AccessKey),
+				fmt.Sprintf("Status: %s", u.UserStatus),
+				fmt.Sprintf("PolicyName: %s", u.PolicyName),
+				fmt.Sprintf("MemberOf: %s", strings.Join(u.MemberOf, ",")),
+			}, "\n"))
 	case "remove":
 		return console.Colorize("UserMessage", "Removed user `"+u.AccessKey+"` successfully.")
 	case "disable":
