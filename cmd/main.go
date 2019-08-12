@@ -308,15 +308,17 @@ var appCmds = []cli.Command{
 	lsCmd,
 	mbCmd,
 	rbCmd,
+	cpCmd,
+	mirrorCmd,
 	catCmd,
 	headCmd,
 	pipeCmd,
 	shareCmd,
-	cpCmd,
-	mirrorCmd,
 	findCmd,
 	sqlCmd,
 	statCmd,
+	treeCmd,
+	duCmd,
 	diffCmd,
 	rmCmd,
 	eventCmd,
@@ -327,8 +329,6 @@ var appCmds = []cli.Command{
 	configCmd,
 	updateCmd,
 	versionCmd,
-	treeCmd,
-	duCmd,
 }
 
 func registerApp(name string) *cli.App {

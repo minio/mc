@@ -42,7 +42,7 @@ var (
 // Summarize disk usage.
 var duCmd = cli.Command{
 	Name:   "du",
-	Usage:  "Summarize disk usage folder prefixes recursively.",
+	Usage:  "summarize disk usage folder prefixes recursively",
 	Action: mainDu,
 	Before: setGlobalsFromContext,
 	Flags:  append(append(duFlags, ioFlags...), globalFlags...),
@@ -76,7 +76,8 @@ type duMessage struct {
 
 // Colorized message for console printing.
 func (r duMessage) String() string {
-	return console.Colorize("Du", fmt.Sprintf("%s\t%s", r.Size, r.Prefix))
+	return fmt.Sprintf("%s\t%s", console.Colorize("Size", r.Size),
+		console.Colorize("Prefix", r.Prefix))
 }
 
 // JSON'ified message for scripting.
@@ -140,7 +141,7 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 
 		printMsg(duMessage{
 			Prefix: strings.Trim(u.Path, "/"),
-			Size:   humanize.Bytes(uint64(size)),
+			Size:   strings.Join(strings.Fields(humanize.IBytes(uint64(size))), ""),
 			Status: "success",
 		})
 	}
@@ -150,6 +151,9 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 
 // main for du command.
 func mainDu(ctx *cli.Context) error {
+	console.SetColor("Prefix", color.New(color.FgCyan, color.Bold))
+	console.SetColor("Size", color.New(color.FgYellow))
+
 	// Parse encryption keys per command.
 	encKeyDB, err := getEncKeys(ctx)
 	fatalIf(err, "Unable to parse encryption keys.")
