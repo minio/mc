@@ -17,6 +17,9 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -34,25 +37,22 @@ var adminUserAddCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET ACCESSKEY SECRETKEY POLICYNAME
-
-POLICYNAME:
-  Name of the policy available on MinIO server.
+  {{.HelpName}} TARGET ACCESSKEY SECRETKEY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Add a new user 'foobar' to MinIO server with policy 'writeonly'.
+  1. Add a new user 'foobar' to MinIO server.
      $ set +o history
-     $ {{.HelpName}} myminio foobar foo12345 writeonly
+     $ {{.HelpName}} myminio foobar foo12345
      $ set -o history
 `,
 }
 
 // checkAdminUserAddSyntax - validate all the passed arguments
 func checkAdminUserAddSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 4 {
+	if len(ctx.Args()) != 3 {
 		cli.ShowCommandHelpAndExit(ctx, "add", 1) // last argument is exit code
 	}
 }
@@ -60,11 +60,12 @@ func checkAdminUserAddSyntax(ctx *cli.Context) {
 // userMessage container for content message structure
 type userMessage struct {
 	op         string
-	Status     string `json:"status"`
-	AccessKey  string `json:"accessKey,omitempty"`
-	SecretKey  string `json:"secretKey,omitempty"`
-	PolicyName string `json:"policyName,omitempty"`
-	UserStatus string `json:"userStatus,omitempty"`
+	Status     string   `json:"status"` // TODO: remove this?
+	AccessKey  string   `json:"accessKey,omitempty"`
+	SecretKey  string   `json:"secretKey,omitempty"`
+	PolicyName string   `json:"policyName,omitempty"`
+	UserStatus string   `json:"userStatus,omitempty"`
+	MemberOf   []string `json:"memberOf,omitempty"`
 }
 
 func (u userMessage) String() string {
@@ -80,8 +81,14 @@ func (u userMessage) String() string {
 			Field{"AccessKey", accessFieldMaxLen},
 			Field{"PolicyName", policyFieldMaxLen},
 		).buildRow(u.UserStatus, u.AccessKey, u.PolicyName)
-	case "policy":
-		return console.Colorize("UserMessage", "Set a policy `"+u.PolicyName+"` for user `"+u.AccessKey+"` successfully.")
+	case "info":
+		return console.Colorize("UserMessage", strings.Join(
+			[]string{
+				fmt.Sprintf("AccessKey: %s", u.AccessKey),
+				fmt.Sprintf("Status: %s", u.UserStatus),
+				fmt.Sprintf("PolicyName: %s", u.PolicyName),
+				fmt.Sprintf("MemberOf: %s", strings.Join(u.MemberOf, ",")),
+			}, "\n"))
 	case "remove":
 		return console.Colorize("UserMessage", "Removed user `"+u.AccessKey+"` successfully.")
 	case "disable":
@@ -117,8 +124,6 @@ func mainAdminUserAdd(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	fatalIf(probe.NewError(client.AddUser(args.Get(1), args.Get(2))).Trace(args...), "Cannot add new user")
-
-	fatalIf(probe.NewError(client.SetUserPolicy(args.Get(1), args.Get(3))).Trace(args...), "Cannot set user policy for new user")
 
 	printMsg(userMessage{
 		op:         "add",

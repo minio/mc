@@ -23,40 +23,37 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminUserPolicyCmd = cli.Command{
-	Name:   "set-policy",
-	Usage:  "set policy for user",
-	Action: mainAdminUserPolicy,
+var adminUserInfoCmd = cli.Command{
+	Name:   "info",
+	Usage:  "display info of a user",
+	Action: mainAdminUserInfo,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET USERNAME POLICYNAME
-
-POLICYNAME:
-  Name of the canned policy created on MinIO server.
+  {{.HelpName}} TARGET ACCESSKEY
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Set a policy 'writeonly' to 'foobar' on MinIO server.
-     $ {{.HelpName}} myminio foobar writeonly
+  1. Display the info of a user "foobar".
+     $ {{.HelpName}} myminio foobar foo12345
 `,
 }
 
-// checkAdminUserPolicySyntax - validate all the passed arguments
-func checkAdminUserPolicySyntax(ctx *cli.Context) {
-	if len(ctx.Args()) != 3 {
-		cli.ShowCommandHelpAndExit(ctx, "policy", 1) // last argument is exit code
+// checkAdminUserAddSyntax - validate all the passed arguments
+func checkAdminUserInfoSyntax(ctx *cli.Context) {
+	if len(ctx.Args()) != 2 {
+		cli.ShowCommandHelpAndExit(ctx, "info", 1) // last argument is exit code
 	}
 }
 
-// mainAdminUserPolicy is the handle for "mc admin user policy" command.
-func mainAdminUserPolicy(ctx *cli.Context) error {
-	checkAdminUserPolicySyntax(ctx)
+// mainAdminUserInfo is the handler for "mc admin user info" command.
+func mainAdminUserInfo(ctx *cli.Context) error {
+	checkAdminUserInfoSyntax(ctx)
 
 	console.SetColor("UserMessage", color.New(color.FgGreen))
 
@@ -68,13 +65,15 @@ func mainAdminUserPolicy(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Cannot get a configured admin connection.")
 
-	fatalIf(probe.NewError(client.SetUserPolicy(args.Get(1), args.Get(2))).Trace(args...), "Cannot set user policy for user")
+	user, e := client.GetUserInfo(args.Get(1))
+	fatalIf(probe.NewError(e).Trace(args...), "Cannot get user info")
 
 	printMsg(userMessage{
-		op:         "policy",
+		op:         "info",
 		AccessKey:  args.Get(1),
-		PolicyName: args.Get(2),
-		UserStatus: "enabled",
+		PolicyName: user.PolicyName,
+		UserStatus: string(user.Status),
+		MemberOf:   user.MemberOf,
 	})
 
 	return nil

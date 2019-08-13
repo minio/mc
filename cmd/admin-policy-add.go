@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"github.com/fatih/color"
@@ -62,10 +63,12 @@ func checkAdminPolicyAddSyntax(ctx *cli.Context) {
 
 // userPolicyMessage container for content message structure
 type userPolicyMessage struct {
-	op         string
-	Status     string `json:"status"`
-	Policy     string `json:"policy,omitempty"`
-	PolicyJSON []byte `json:"policyJSON,omitempty"`
+	op          string
+	Status      string `json:"status"`
+	Policy      string `json:"policy,omitempty"`
+	PolicyJSON  []byte `json:"policyJSON,omitempty"`
+	UserOrGroup string `json:"userOrGroup,omitempty"`
+	IsGroup     bool   `json:"isGroup"`
 }
 
 func (u userPolicyMessage) String() string {
@@ -82,6 +85,13 @@ func (u userPolicyMessage) String() string {
 		return console.Colorize("PolicyMessage", "Removed policy `"+u.Policy+"` successfully.")
 	case "add":
 		return console.Colorize("PolicyMessage", "Added policy `"+u.Policy+"` successfully.")
+	case "set":
+		fragment := "user"
+		if u.IsGroup {
+			fragment = "group"
+		}
+		return console.Colorize("PolicyMessage",
+			fmt.Sprintf("Policy %s is set on %s `%s`", u.Policy, fragment, u.UserOrGroup))
 	}
 	return ""
 }
