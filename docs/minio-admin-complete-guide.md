@@ -3,7 +3,8 @@
 MinIO Client (mc) provides `admin` sub-command to perform administrative tasks on your MinIO deployments.
 
 ```
-service      stop, restart or get status of MinIO server
+service      restart or stop all MinIO servers
+update       updates all MinIO servers
 info         display MinIO server information
 user         manage users
 policy       manage canned policies
@@ -180,7 +181,7 @@ mc: <DEBUG> Response Time:  140.70112ms
 
   MEM        usage
   current    602 MiB
-  historic   448 MiB  
+  historic   448 MiB
 ```
 
 ### Option [--json]
@@ -259,45 +260,53 @@ Skip SSL certificate verification.
 
 ## 7. Commands
 
-|   |
-|:---|
-|[**service** - start, stop or get the status of MinIO server](#service) |
-|[**info** - display MinIO server information](#info) |
-|[**user** - manage users](#user) |
-|[**group** - manage groups](#group) |
-|[**policy** - manage canned policies](#policy) |
-|[**config** - manage server configuration file](#config)|
-|[**heal** - heal disks, buckets and objects on MinIO server](#heal) |
-|[**top** - provide top like statistics for MinIO](#top) |
+|                                                                     |
+|:--------------------------------------------------------------------|
+| [**service** - restart and stop all MinIO servers](#service)        |
+| [**update** - updates all MinIO servers](#update)                   |
+| [**info** - display MinIO server information](#info)                |
+| [**user** - manage users](#user)                                    |
+| [**group** - manage groups](#group)                                 |
+| [**policy** - manage canned policies](#policy)                      |
+| [**config** - manage server configuration file](#config)            |
+| [**heal** - heal disks, buckets and objects on MinIO server](#heal) |
+| [**top** - provide top like statistics for MinIO](#top)             |
+
+<a name="update"></a>
+### Command `update` - updates all MinIO servers
+`update` command provides a way to update all MinIO servers in a cluster.
+
+> NOTE:
+> - An alias pointing to a distributed setup this command will automatically update all MinIO servers in the cluster.
+> - `update` is an disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only when you are planning MinIO upgrades for your deployment.
+
+*Example: Update all MinIO servers.*
+```
+mc admin update play
+Server `play` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEASE.2019-08-21T19-59-10Z
+```
 
 <a name="service"></a>
-### Command `service` - stop, restart or get status of MinIO server
-`service` command provides a way to restart, stop one or get the status of MinIO servers (distributed cluster)
+### Command `service` - restart and stop all MinIO servers
+`service` command provides a way to restart and stop all MinIO servers.
+
+> NOTE:
+> - An alias pointing to a distributed setup this command will automatically execute the same actions across all servers.
+> - `restart` and `stop` sub-commands are disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only under administrative circumstances. Please use it with caution.
 
 ```
 NAME:
-  mc admin service - stop, restart or get status of MinIO server
+  mc admin service - restart and stop all MinIO servers
 
 FLAGS:
   --help, -h                       show help
 
 COMMANDS:
-  status   get the status of MinIO server
-  restart  restart MinIO server
-  stop     stop MinIO server
+  restart  restart all MinIO servers
+  stop     stop all MinIO servers
 ```
 
-*Example: Display service uptime for MinIO server.*
-
-```
-mc admin service status play
-Uptime: 1 days 19 hours 57 minutes 39 seconds.
-```
-
-*Example: Restart remote MinIO service.*
-
-NOTE: `restart` and `stop` sub-commands are disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only under certain circumstances. Please use it with caution.
-
+*Example: Restart all MinIO servers.*
 ```
 mc admin service restart play
 Restarted `play` successfully.

@@ -22,7 +22,6 @@ import (
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminServiceStopCmd = cli.Command{
@@ -88,8 +87,7 @@ func mainAdminServiceStop(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	// Stop the specified MinIO server
-	pErr := client.ServiceSendAction(madmin.ServiceActionValueStop)
-	fatalIf(probe.NewError(pErr), "Cannot stop server.")
+	fatalIf(probe.NewError(client.ServiceStop()), "Unable to stop the server.")
 
 	// Success..
 	printMsg(serviceStopMessage{Status: "success", ServerURL: aliasedURL})

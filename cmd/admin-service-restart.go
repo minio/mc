@@ -24,12 +24,11 @@ import (
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminServiceRestartCmd = cli.Command{
 	Name:   "restart",
-	Usage:  "restart MinIO server",
+	Usage:  "restart all MinIO servers",
 	Action: mainAdminServiceRestart,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
@@ -114,8 +113,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	fatalIf(err, "Cannot get a configured admin connection.")
 
 	// Restart the specified MinIO server
-	fatalIf(probe.NewError(client.ServiceSendAction(
-		madmin.ServiceActionValueRestart)), "Cannot restart server.")
+	fatalIf(probe.NewError(client.ServiceRestart()), "Cannot restart the server.")
 
 	// Success..
 	printMsg(serviceRestartCommand{Status: "success", ServerURL: aliasedURL})
@@ -127,7 +125,7 @@ func mainAdminServiceRestart(ctx *cli.Context) error {
 	time.Sleep(6 * time.Second)
 
 	// Fetch the service status of the specified MinIO server
-	_, e := client.ServiceStatus()
+	_, e := client.ServerInfo()
 
 	if e != nil {
 		printMsg(serviceRestartMessage{Status: "failure", Err: e, ServerURL: aliasedURL})

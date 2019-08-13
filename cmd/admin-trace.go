@@ -121,7 +121,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	defer close(doneCh)
 
 	// Start listening on all trace activity.
-	traceCh := client.Trace(all, errfltr, doneCh)
+	traceCh := client.ServiceTrace(all, errfltr, doneCh)
 	for traceInfo := range traceCh {
 		if traceInfo.Err != nil {
 			fatalIf(probe.NewError(traceInfo.Err), "Cannot listen to http trace")
@@ -149,7 +149,7 @@ type shortTraceMsg struct {
 }
 
 type traceMessage struct {
-	madmin.TraceInfo
+	madmin.ServiceTraceInfo
 }
 
 type requestInfo struct {
@@ -182,7 +182,7 @@ type trace struct {
 }
 
 // return a struct with minimal trace info.
-func shortTrace(ti madmin.TraceInfo) shortTraceMsg {
+func shortTrace(ti madmin.ServiceTraceInfo) shortTraceMsg {
 	s := shortTraceMsg{}
 	t := ti.Trace
 	s.Time = t.ReqInfo.Time
