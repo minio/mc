@@ -19,7 +19,7 @@ require (
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/minio/cli v1.21.0
-	github.com/minio/minio v0.0.0-20190802212500-414a7eca839d
+	github.com/minio/minio v0.0.0-20190813204106-bf9b619d8656
 	github.com/minio/minio-go/v6 v6.0.32
 	github.com/minio/sha256-simd v0.1.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -44,5 +44,3 @@ require (
 )
 
 replace github.com/gorilla/rpc v1.2.0+incompatible => github.com/gorilla/rpc v1.2.0
-
-replace github.com/minio/minio => /home/aditya/Code/go/src/github.com/minio/minio
