@@ -119,9 +119,8 @@ func checkTreeSyntax(ctx *cli.Context) {
 	}
 
 	for _, url := range args {
-		if !isURLPrefixExists(url, false) {
-			fatalIf(probe.NewError(errors.New("See 'mc tree -h' for help")),
-				"'"+url+"' is not a valid 'alias[/bucket-name ...]'")
+		if _, _, err := url2Stat(url, false, nil); err != nil && !isURLPrefixExists(url, false) {
+			fatalIf(err.Trace(url), "Unable to tree `"+url+"`.")
 		}
 	}
 }
