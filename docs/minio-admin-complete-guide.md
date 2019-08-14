@@ -217,6 +217,7 @@ Skip SSL certificate verification.
 |[**service** - start, stop or get the status of MinIO server](#service) |
 |[**info** - display MinIO server information](#info) |
 |[**user** - manage users](#user) |
+|[**group** - manage groups](#group) |
 |[**policy** - manage canned policies](#policy) |
 |[**config** - manage server configuration file](#config)|
 |[**heal** - heal disks, buckets and objects on MinIO server](#heal) |
@@ -296,6 +297,7 @@ COMMANDS:
   remove   remove policy
   list     list all policies
   info     show info on a policy
+  set      set IAM policy on a user or group
 ```
 
 *Example: Add a new policy 'newpolicy' on MinIO, with policy from /tmp/newpolicy.json.*
@@ -323,6 +325,13 @@ mc admin policy list --json myminio/
 mc admin policy info myminio/ writeonly
 ```
 
+*Example: Set the policy on a user or group*
+
+```
+mc admin policy set myminio writeonly user=someuser
+mc admin policy set myminio writeonly group=somegroup
+```
+
 <a name="user"></a>
 ### Command `user` - Manage users
 `user` command to add, remove, enable, disable, list users on MinIO server.
@@ -336,23 +345,17 @@ FLAGS:
 
 COMMANDS:
   add      add new user
-  policy   set policy for user
   disable  disable user
   enable   enable user
   remove   remove user
   list     list all users
+  info     display info of a user
 ```
 
-*Example: Add a new user 'newuser' on MinIO, with 'newpolicy' policy.*
+*Example: Add a new user 'newuser' on MinIO.*
 
 ```
-mc admin user add myminio/ newuser newuser123 newpolicy
-```
-
-*Example: Change policy for a user 'newuser' on MinIO to 'writeonly' policy.*
-
-```
-mc admin user set-policy myminio/ newuser writeonly
+mc admin user add myminio/ newuser newuser123
 ```
 
 *Example: Disable a user 'newuser' on MinIO.*
@@ -378,6 +381,78 @@ mc admin user remove myminio/ newuser
 ```
 mc admin user list --json myminio/
 {"status":"success","accessKey":"newuser","userStatus":"enabled"}
+```
+
+*Example: Display info of a user*
+
+```
+mc admin user info myminio someuser
+```
+
+<a name="group"></a>
+### Command `group` - Manage groups
+`group` command to add, remove, info, list, enable, disable groups on MinIO server.
+
+```
+NAME:
+  mc admin group - manage groups
+
+USAGE:
+  mc admin group COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  add      add users to a new or existing group
+  remove   remove group or members from a group
+  info     display group info
+  list     display list of groups
+  enable   Enable a group
+  disable  Disable a group
+```
+
+*Example: Add a pair of users to a group 'somegroup' on MinIO.*
+
+Group is created if it does not exist.
+
+```
+mc admin group add myminio somegroup someuser1 someuser2
+```
+
+*Example: Remove a pair of users from a group 'somegroup' on MinIO.*
+
+```
+mc admin group remove myminio somegroup someuser1 someuser2
+```
+
+*Example: Remove a group 'somegroup' on MinIO.*
+
+Only works if the given group is empty.
+
+```
+mc admin group remove myminio somegroup
+```
+
+*Example: Get info on a group 'somegroup' on MinIO.*
+
+```
+mc admin group info myminio somegroup
+```
+
+*Example: List all groups on MinIO.*
+
+```
+mc admin group list myminio
+```
+
+*Example: Enable a group 'somegroup' on MinIO.*
+
+```
+mc admin group enable myminio somegroup
+```
+
+*Example: Disable a group 'somegroup' on MinIO.*
+
+```
+mc admin group disable myminio somegroup
 ```
 
 <a name="config"></a>

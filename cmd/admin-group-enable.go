@@ -44,13 +44,14 @@ FLAGS:
 EXAMPLES:
   1. Enable group 'allcents':
      $ {{.HelpName}} myminio allcents
+
 `,
 }
 
 // checkAdminGroupEnableSyntax - validate all the passed arguments
 func checkAdminGroupEnableSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		cli.ShowCommandHelpAndExit(ctx, "enable", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, ctx.Command.Name, 1) // last argument is exit code
 	}
 }
 
