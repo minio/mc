@@ -216,9 +216,9 @@ github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2z
 github.com/gorilla/mux v1.7.0 h1:tOSd0UKHQd6urX6ApfOn4XdBMY6Sh1MfxV3kmaazO+U=
 github.com/gorilla/mux v1.7.0/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/rpc v0.0.0-20160517062331-bd3317b8f670/go.mod h1:V4h9r+4sF5HnzqbwIez0fKSpANP0zlYd3qR7p36jkTQ=
-github.com/gorilla/rpc v1.2.0/go.mod h1:V4h9r+4sF5HnzqbwIez0fKSpANP0zlYd3qR7p36jkTQ=
 github.com/gorilla/rpc v1.2.0+incompatible h1:V3Dz9mWwCvHKm0N+mVM2A/hShV+hLUMUdzoyHQjr1NA=
 github.com/gorilla/rpc v1.2.0+incompatible/go.mod h1:V4h9r+4sF5HnzqbwIez0fKSpANP0zlYd3qR7p36jkTQ=
+github.com/gorilla/rpc v1.2.0/go.mod h1:V4h9r+4sF5HnzqbwIez0fKSpANP0zlYd3qR7p36jkTQ=
 github.com/gorilla/websocket v1.4.0 h1:WDFjx/TMzVgy9VdMMQi2K2Emtwi2QcUQsztZ/zLaH/Q=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gotestyourself/gotestyourself v2.2.0+incompatible/go.mod h1:zZKM6oeNM8k+FRljX1mnzVYeS8wiGgQyvST1/GafPbY=
@@ -410,6 +410,8 @@ github.com/minio/minio v0.0.0-20190325204105-0250f7de678b/go.mod h1:6ODmvb06uOpN
 github.com/minio/minio v0.0.0-20190510004154-ac3b59645e92/go.mod h1:yFbQSwuA61mB/SDurPvsaSydqDyJdfAlBYpMiEe1lz8=
 github.com/minio/minio v0.0.0-20190802212500-414a7eca839d h1:dO3pQKNF7LOykLYtri+dM+K3UKcxano7uPqiySBNRJU=
 github.com/minio/minio v0.0.0-20190802212500-414a7eca839d/go.mod h1:WKIs2ive12k4M0N0hytNGB+UbCo4wvzKNe+oa3WLYr4=
+github.com/minio/minio v0.0.0-20190813204106-bf9b619d8656 h1:BlC1/OsWCJo7UjbFBz+6obwWJZ5EjIbMPqbOJVugbxY=
+github.com/minio/minio v0.0.0-20190813204106-bf9b619d8656/go.mod h1:5NStPp3TsjmKqHyCtkJi/SZfTcsGgVUzt/dUeV9iOwA=
 github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d h1:gptD0/Hnam7h4Iq9D/33fscRpHfzOOUqUbH2nPw9HcU=
 github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d/go.mod h1:/haSOWG8hQNx2+JOfLJ9GKp61EAmgPwRVw/Sac0NzaM=
 github.com/minio/minio-go v0.0.0-20190313212832-5d20267d970d/go.mod h1:/haSOWG8hQNx2+JOfLJ9GKp61EAmgPwRVw/Sac0NzaM=
