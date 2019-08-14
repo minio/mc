@@ -157,6 +157,7 @@ var completeCmds = map[string]complete.Predictor{
 	"/watch":  complete.PredictOr(s3Completer, fsCompleter),
 	"/policy": complete.PredictOr(s3Completer, fsCompleter),
 	"/tree":   complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
+	"/du":     complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
 
 	"/mb":  aliasCompleter,
 	"/sql": s3Completer,
@@ -177,16 +178,25 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/profile/start": aliasCompleter,
 	"/admin/profile/stop":  aliasCompleter,
 
+	"/admin/policy/info":   aliasCompleter,
+	"/admin/policy/set":    aliasCompleter,
 	"/admin/policy/add":    aliasCompleter,
 	"/admin/policy/list":   aliasCompleter,
 	"/admin/policy/remove": aliasCompleter,
 
 	"/admin/user/add":     aliasCompleter,
-	"/admin/user/policy:": aliasCompleter,
 	"/admin/user/disable": aliasCompleter,
 	"/admin/user/enable":  aliasCompleter,
 	"/admin/user/list":    aliasCompleter,
 	"/admin/user/remove":  aliasCompleter,
+	"/admin/user/info":    aliasCompleter,
+
+	"/admin/group/add":     aliasCompleter,
+	"/admin/group/disable": aliasCompleter,
+	"/admin/group/enable":  aliasCompleter,
+	"/admin/group/list":    aliasCompleter,
+	"/admin/group/remove":  aliasCompleter,
+	"/admin/group/info":    aliasCompleter,
 
 	"/event/add":    aliasCompleter,
 	"/event/list":   aliasCompleter,
