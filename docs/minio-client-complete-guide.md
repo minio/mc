@@ -225,7 +225,7 @@ mc: <DEBUG> Response Time:  1.220112837s
 ```
 
 ### Option [--json]
-JSON option enables parseable output in JSON format.
+JSON option enables parseable output in [JSON lines](http://jsonlines.org/) format.
 
 *Example: List all buckets from MinIO play service.*
 
@@ -860,7 +860,7 @@ LEGEND:
 ```
 
 ### Option [--json]
-JSON option enables parseable output in JSON format.
+JSON option enables parseable output in [JSON lines](http://jsonlines.org/) format.
 
 *Example: diff json output.*
 
