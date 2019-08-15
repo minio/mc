@@ -167,7 +167,7 @@ mc: <DEBUG> Response Time:  140.70112ms
 ```
 
 ### Option [--json]
-JSON option enables parseable output in JSON format.
+JSON option enables parseable output in [JSON lines](http://jsonlines.org/) format.
 
 *Example: MinIO server information.*
 
