@@ -15,27 +15,23 @@ profile  generate profile data for debugging purposes
 top      provide top like statistics for MinIO
 trace    show http trace for minio server
 console  show console logs for MinIO server
-prometheus   provides prometheus config
+prometheus   manages prometheus config settings
 ```
 
-## 1. Download MinIO Client
-
+## 1.  Download MinIO Client
 ### Docker Stable
-
 ```
 docker pull minio/mc
 docker run minio/mc admin info server play
 ```
 
 ### Docker Edge
-
 ```
 docker pull minio/mc:edge
 docker run minio/mc:edge admin info server play
 ```
 
 ### Homebrew (macOS)
-
 Install mc packages using [Homebrew](http://brew.sh/)
 
 ```
@@ -44,11 +40,10 @@ mc --help
 ```
 
 ### Binary Download (GNU/Linux)
-
-| Platform  | Architecture | URL                                                  |
-| --------- | ------------ | ---------------------------------------------------- |
-| GNU/Linux | 64-bit Intel | https://dl.min.io/client/mc/release/linux-amd64/mc   |
-|           | 64-bit PPC   | https://dl.min.io/client/mc/release/linux-ppc64le/mc |
+| Platform | Architecture | URL |
+| ---------- | -------- |------|
+|GNU/Linux|64-bit Intel|https://dl.min.io/client/mc/release/linux-amd64/mc |
+||64-bit PPC|https://dl.min.io/client/mc/release/linux-ppc64le/mc |
 
 ```
 chmod +x mc
@@ -56,17 +51,15 @@ chmod +x mc
 ```
 
 ### Binary Download (Microsoft Windows)
-
-| Platform          | Architecture | URL                                                      |
-| ----------------- | ------------ | -------------------------------------------------------- |
-| Microsoft Windows | 64-bit Intel | https://dl.min.io/client/mc/release/windows-amd64/mc.exe |
+| Platform | Architecture | URL |
+| ---------- | -------- |------|
+|Microsoft Windows|64-bit Intel|https://dl.min.io/client/mc/release/windows-amd64/mc.exe |
 
 ```
 mc.exe --help
 ```
 
 ### Install from Source
-
 Source installation is intended only for developers and advanced users. `mc update` command does not support update notifications for source based installations. Please download official releases from https://min.io/download/#minio-client.
 
 If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install).
@@ -100,7 +93,6 @@ mc.exe --help
 ```
 
 ## 3. Add a MinIO Storage Service
-
 MinIO server displays URL, access and secret keys.
 
 #### Usage
@@ -117,7 +109,7 @@ mc config host add minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqA
 
 ## 4. Test Your Setup
 
-_Example:_
+*Example:*
 
 Get MinIO server information for the configured alias `minio`
 
@@ -142,7 +134,6 @@ mc admin info server minio
 ```
 
 ## 5. Everyday Use
-
 You may add shell aliases for info, healing.
 
 ```
@@ -153,10 +144,9 @@ alias mheal='mc admin heal'
 ## 6. Global Options
 
 ### Option [--debug]
-
 Debug option enables debug output to console.
 
-_Example: Display verbose debug output for `info` command._
+*Example: Display verbose debug output for `info` command.*
 
 ```
 mc admin --debug info server minio
@@ -199,10 +189,9 @@ mc: <DEBUG> Response Time:  140.70112ms
 ```
 
 ### Option [--json]
-
 JSON option enables parseable output in [JSON lines](http://jsonlines.org/) format.
 
-_Example: MinIO server information._
+*Example: MinIO server information.*
 
 ```
 mc admin --json info server minio
@@ -262,25 +251,21 @@ mc admin --json info server minio
 ```
 
 ### Option [--no-color]
-
 This option disables the color theme. It is useful for dumb terminals.
 
 ### Option [--quiet]
-
 Quiet option suppress chatty console output.
 
 ### Option [--config-dir]
-
 Use this option to set a custom config path.
 
 ### Option [ --insecure]
-
 Skip SSL certificate verification.
 
 ## 7. Commands
 
 |                                                                        |
-| :--------------------------------------------------------------------- |
+|:-----------------------------------------------------------------------|
 | [**service** - restart and stop all MinIO servers](#service)           |
 | [**update** - updates all MinIO servers](#update)                      |
 | [**info** - display MinIO server information](#info)                   |
@@ -293,34 +278,27 @@ Skip SSL certificate verification.
 | [**top** - provide top like statistics for MinIO](#top)                |
 | [**trace** - show http trace for MinIO server](#trace)                 |
 | [**console** - show console logs for MinIO server](#console)           |
-| [**prometheus** - provides prometheus config settings](#prometheus)    |
+| [**prometheus** - manages prometheus config settings](#prometheus)     |
 
 <a name="update"></a>
-
 ### Command `update` - updates all MinIO servers
-
 `update` command provides a way to update all MinIO servers in a cluster.
 
 > NOTE:
->
 > - An alias pointing to a distributed setup this command will automatically update all MinIO servers in the cluster.
 > - `update` is an disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only when you are planning MinIO upgrades for your deployment.
 
-_Example: Update all MinIO servers._
-
+*Example: Update all MinIO servers.*
 ```
 mc admin update play
 Server `play` updated successfully from RELEASE.2019-08-14T20-49-49Z to RELEASE.2019-08-21T19-59-10Z
 ```
 
 <a name="service"></a>
-
 ### Command `service` - restart and stop all MinIO servers
-
 `service` command provides a way to restart and stop all MinIO servers.
 
 > NOTE:
->
 > - An alias pointing to a distributed setup this command will automatically execute the same actions across all servers.
 > - `restart` and `stop` sub-commands are disruptive operations for your MinIO service, any on-going API operations will be forcibly canceled. So, it should be used only under administrative circumstances. Please use it with caution.
 
@@ -336,17 +314,14 @@ COMMANDS:
   stop     stop all MinIO servers
 ```
 
-_Example: Restart all MinIO servers._
-
+*Example: Restart all MinIO servers.*
 ```
 mc admin service restart play
 Restarted `play` successfully.
 ```
 
 <a name="info"></a>
-
 ### Command `info` - Display MinIO server information
-
 `info` command displays server information of one or many MinIO servers (under distributed cluster)
 
 ```
@@ -357,7 +332,7 @@ FLAGS:
   --help, -h                       show help
 ```
 
-_Example: Display MinIO server information._
+*Example: Display MinIO server information.*
 
 ```
 mc admin info play
@@ -371,9 +346,7 @@ mc admin info play
 ```
 
 <a name="policy"></a>
-
 ### Command `policy` - Manage canned policies
-
 `policy` command to add, remove, list policies on MinIO server.
 
 ```
@@ -391,32 +364,32 @@ COMMANDS:
   set      set IAM policy on a user or group
 ```
 
-_Example: Add a new policy 'newpolicy' on MinIO, with policy from /tmp/newpolicy.json._
+*Example: Add a new policy 'newpolicy' on MinIO, with policy from /tmp/newpolicy.json.*
 
 ```
 mc admin policy add myminio/ newpolicy /tmp/newpolicy.json
 ```
 
-_Example: Remove policy 'newpolicy' on MinIO._
+*Example: Remove policy 'newpolicy' on MinIO.*
 
 ```
 mc admin policy remove myminio/ newpolicy
 ```
 
-_Example: List all policies on MinIO._
+*Example: List all policies on MinIO.*
 
 ```
 mc admin policy list --json myminio/
 {"status":"success","policy":"newpolicy"}
 ```
 
-_Example: Show info on a policy_
+*Example: Show info on a policy*
 
 ```
 mc admin policy info myminio/ writeonly
 ```
 
-_Example: Set the policy on a user or group_
+*Example: Set the policy on a user or group*
 
 ```
 mc admin policy set myminio writeonly user=someuser
@@ -424,9 +397,7 @@ mc admin policy set myminio writeonly group=somegroup
 ```
 
 <a name="user"></a>
-
 ### Command `user` - Manage users
-
 `user` command to add, remove, enable, disable, list users on MinIO server.
 
 ```
@@ -445,47 +416,45 @@ COMMANDS:
   info     display info of a user
 ```
 
-_Example: Add a new user 'newuser' on MinIO._
+*Example: Add a new user 'newuser' on MinIO.*
 
 ```
 mc admin user add myminio/ newuser newuser123
 ```
 
-_Example: Disable a user 'newuser' on MinIO._
+*Example: Disable a user 'newuser' on MinIO.*
 
 ```
 mc admin user disable myminio/ newuser
 ```
 
-_Example: Enable a user 'newuser' on MinIO._
+*Example: Enable a user 'newuser' on MinIO.*
 
 ```
 mc admin user enable myminio/ newuser
 ```
 
-_Example: Remove user 'newuser' on MinIO._
+*Example: Remove user 'newuser' on MinIO.*
 
 ```
 mc admin user remove myminio/ newuser
 ```
 
-_Example: List all users on MinIO._
+*Example: List all users on MinIO.*
 
 ```
 mc admin user list --json myminio/
 {"status":"success","accessKey":"newuser","userStatus":"enabled"}
 ```
 
-_Example: Display info of a user_
+*Example: Display info of a user*
 
 ```
 mc admin user info myminio someuser
 ```
 
 <a name="group"></a>
-
 ### Command `group` - Manage groups
-
 `group` command to add, remove, info, list, enable, disable groups on MinIO server.
 
 ```
@@ -504,7 +473,7 @@ COMMANDS:
   disable  Disable a group
 ```
 
-_Example: Add a pair of users to a group 'somegroup' on MinIO._
+*Example: Add a pair of users to a group 'somegroup' on MinIO.*
 
 Group is created if it does not exist.
 
@@ -512,13 +481,13 @@ Group is created if it does not exist.
 mc admin group add myminio somegroup someuser1 someuser2
 ```
 
-_Example: Remove a pair of users from a group 'somegroup' on MinIO._
+*Example: Remove a pair of users from a group 'somegroup' on MinIO.*
 
 ```
 mc admin group remove myminio somegroup someuser1 someuser2
 ```
 
-_Example: Remove a group 'somegroup' on MinIO._
+*Example: Remove a group 'somegroup' on MinIO.*
 
 Only works if the given group is empty.
 
@@ -526,34 +495,32 @@ Only works if the given group is empty.
 mc admin group remove myminio somegroup
 ```
 
-_Example: Get info on a group 'somegroup' on MinIO._
+*Example: Get info on a group 'somegroup' on MinIO.*
 
 ```
 mc admin group info myminio somegroup
 ```
 
-_Example: List all groups on MinIO._
+*Example: List all groups on MinIO.*
 
 ```
 mc admin group list myminio
 ```
 
-_Example: Enable a group 'somegroup' on MinIO._
+*Example: Enable a group 'somegroup' on MinIO.*
 
 ```
 mc admin group enable myminio somegroup
 ```
 
-_Example: Disable a group 'somegroup' on MinIO._
+*Example: Disable a group 'somegroup' on MinIO.*
 
 ```
 mc admin group disable myminio somegroup
 ```
 
 <a name="config"></a>
-
 ### Command `config` - Manage server configuration
-
 `config` command to manage MinIO server configuration.
 
 ```
@@ -571,22 +538,20 @@ FLAGS:
   --help, -h                       Show help.
 ```
 
-_Example: Get server configuration of a MinIO server/cluster._
+*Example: Get server configuration of a MinIO server/cluster.*
 
 ```
 mc admin config get myminio > /tmp/my-serverconfig
 ```
 
-_Example: Set server configuration of a MinIO server/cluster._
+*Example: Set server configuration of a MinIO server/cluster.*
 
 ```
 mc admin config set myminio < /tmp/my-serverconfig
 ```
 
 <a name="heal"></a>
-
 ### Command `heal` - Heal disks, buckets and objects on MinIO server
-
 `heal` command heals disks, missing buckets, objects on MinIO server. NOTE: This command is only applicable for MinIO erasure coded setup (standalone and distributed).
 
 ```
@@ -603,26 +568,25 @@ FLAGS:
   --help, -h                       show help
 ```
 
-_Example: Heal MinIO cluster after replacing a fresh disk, recursively heal all buckets and objects, where 'myminio' is the MinIO server alias._
+*Example: Heal MinIO cluster after replacing a fresh disk, recursively heal all buckets and objects, where 'myminio' is the MinIO server alias.*
 
 ```
 mc admin heal -r myminio
 ```
 
-_Example: Heal MinIO cluster on a specific bucket recursively, where 'myminio' is the MinIO server alias._
+*Example: Heal MinIO cluster on a specific bucket recursively, where 'myminio' is the MinIO server alias.*
 
 ```
 mc admin heal -r myminio/mybucket
 ```
 
-_Example: Heal MinIO cluster on a specific object prefix recursively, where 'myminio' is the MinIO server alias._
+*Example: Heal MinIO cluster on a specific object prefix recursively, where 'myminio' is the MinIO server alias.*
 
 ```
 mc admin heal -r myminio/mybucket/myobjectprefix
 ```
 
 <a name="profile"></a>
-
 ### Command `profile` - generate profile data for debugging purposes
 
 ```
@@ -635,15 +599,12 @@ COMMANDS:
 ```
 
 Start CPU profiling
-
 ```
 mc admin profile start --type cpu myminio/
 ```
 
 <a name="top"></a>
-
 ### Command `top` - provide top like statistics for MinIO
-
 NOTE: This command is only applicable for a distributed MinIO setup. It is not supported on single node and gateway deployments.
 
 ```
@@ -654,16 +615,14 @@ COMMANDS:
   locks  Get a list of the 10 oldest locks on a MinIO cluster.
 ```
 
-_Example: Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias._
+*Example: Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
 
 ```
 mc admin top locks myminio
 ```
 
 <a name="trace"></a>
-
 ### Command `trace` - Show http trace for MinIO server
-
 `trace` command displays server http trace of one or all MinIO servers (under distributed cluster)
 
 ```sh
@@ -677,7 +636,7 @@ FLAGS:
   --help, -h                    show help
 ```
 
-_Example: Display MinIO server http trace._
+*Example: Display MinIO server http trace.*
 
 ```sh
 mc admin trace myminio
@@ -704,9 +663,7 @@ mc admin trace myminio
 ```
 
 <a name="console"></a>
-
 ### Command `console` - show console logs for MinIO server
-
 `console` command displays server logs of one or all MinIO servers (under distributed cluster)
 
 ```sh
@@ -718,7 +675,7 @@ FLAGS:
   --help, -h                    show help
 ```
 
-_Example: Display MinIO server http trace._
+*Example: Display MinIO server http trace.*
 
 ```sh
 mc admin console myminio
@@ -738,23 +695,26 @@ mc admin console myminio
 
 <a name="prometheus"></a>
 
-### Command `prometheus` - Provides prometheus config settings
+### Command `prometheus` - Manages prometheus config settings
 
-`--generate` flag generates the prometheus config (To be pasted in `prometheus.yml`)
+`generate` command generates the prometheus config (To be pasted in `prometheus.yml`)
 
 ```sh
 NAME:
-    mc admin prometheus - provides prometheus config
+  mc admin prometheus - manages prometheus config
 
-FLAGS:
-    --help, -h show help
-    --generate, generates the prometheus config
+USAGE:
+  mc admin prometheus COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  generate  generates prometheus config
+
 ```
 
 _Example: Generates prometheus config for an <alias>._
 
 ```sh
-mc admin prometheus --generate <alias>
+mc admin prometheus generate <alias>
 - job_name: minio-job
   bearer_token: <token>
   metrics_path: /minio/prometheus/metrics
