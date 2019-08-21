@@ -16,6 +16,7 @@ top      provide top like statistics for MinIO
 trace    show http trace for minio server
 console  show console logs for MinIO server
 prometheus   manages prometheus config settings
+speedtest speed test of MinIO servers
 ```
 
 ## 1.  Download MinIO Client
@@ -279,6 +280,7 @@ Skip SSL certificate verification.
 | [**trace** - show http trace for MinIO server](#trace)                 |
 | [**console** - show console logs for MinIO server](#console)           |
 | [**prometheus** - manages prometheus config settings](#prometheus)     |
+| [**speedtest** - speed test of MinIO servers](#speedtest)              |
 
 <a name="update"></a>
 ### Command `update` - updates all MinIO servers
@@ -721,4 +723,31 @@ mc admin prometheus generate <alias>
   scheme: http
   static_configs:
   - targets: ['localhost:9000']
+```
+
+<a name="speedtest"></a>
+### Command `speedtest` - Manage users
+`speedtest` command to net on MinIO server.
+
+```
+NAME:
+  mc admin speedtest - speed test of MinIO servers.
+
+USAGE:
+  mc admin speedtest COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  net  network performance of all cluster nodes
+
+FLAGS:
+  --help, -h                    show help
+```
+
+*Example: network performance of all cluster nodes.*
+
+```sh
+mc admin speedtest net myminio/
+
+server1 -> server2: 813 MiB/S
+server2 -> server1: 909 MiB/S
 ```

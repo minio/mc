@@ -43,6 +43,7 @@ var adminCmd = cli.Command{
 		adminTraceCmd,
 		adminConsoleCmd,
 		adminPrometheusCmd,
+		adminSpeedTestCmd,
 	},
 }
 
