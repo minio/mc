@@ -16,13 +16,13 @@ top          provide top like statistics for MinIO
 ### Docker Stable
 ```
 docker pull minio/mc
-docker run minio/mc admin info play
+docker run minio/mc admin info server play
 ```
 
 ### Docker Edge
 ```
 docker pull minio/mc:edge
-docker run minio/mc:edge admin info play
+docker run minio/mc:edge admin info server play
 ```
 
 ### Homebrew (macOS)
@@ -108,7 +108,7 @@ mc config host add minio http://192.168.1.51:9000 BKIKJAA5BMMU2RHO6IBB V7f1CwQqA
 Get MinIO server information for the configured alias `minio`
 
 ```
-mc admin info minio
+mc admin info server minio
 
 ●  192.168.1.51:9000
    Uptime : online since 1 day ago
@@ -117,6 +117,15 @@ mc admin info minio
  SQS ARNs : <none>
     Stats : Incoming 82GiB, Outgoing 28GiB
   Storage : Used 7.4GiB
+
+  CPU        min        avg      max
+  current    0.12%      0.14%    0.17%
+  historic   0.03%      1.27%    412.18%
+
+  MEM        usage
+  current    602 MiB
+  historic   448 MiB
+
 ```
 
 ## 5. Everyday Use
@@ -135,7 +144,7 @@ Debug option enables debug output to console.
 *Example: Display verbose debug output for `info` command.*
 
 ```
-mc admin --debug info minio
+mc admin --debug info server minio
 mc: <DEBUG> GET /minio/admin/v1/info HTTP/1.1
 Host: 192.168.1.51:9000
 User-Agent: MinIO (linux; amd64) madmin-go/0.0.1 mc/2018-05-23T23:43:34Z
@@ -164,6 +173,14 @@ mc: <DEBUG> Response Time:  140.70112ms
  SQS ARNs : <none>
     Stats : Incoming 82GiB, Outgoing 28GiB
   Storage : Used 7.4GiB
+
+  CPU        min        avg      max
+  current    0.12%      0.14%    0.17%
+  historic   0.03%      1.27%    412.18%
+
+  MEM        usage
+  current    602 MiB
+  historic   448 MiB  
 ```
 
 ### Option [--json]
@@ -172,7 +189,7 @@ JSON option enables parseable output in [JSON lines](http://jsonlines.org/) form
 *Example: MinIO server information.*
 
 ```
-mc admin --json info minio
+mc admin --json info server minio
 {
   "status": "success",
   "service": "on",
@@ -195,6 +212,36 @@ mc admin --json info minio
     "region": "",
     "sqsARN": []
   }
+  "cpu": {
+  "addr": "play.minio.io:9000",
+  "load": [
+   {
+    "avg": 0.11,
+    "max": 0.13,
+    "min": 0.09
+   }
+  ],
+  "historicLoad": [
+   {
+    "avg": 1.270331023187104,
+    "max": 412.18000000000006,
+    "min": 0.03
+   }
+  ]
+ },
+ "mem": {
+  "addr": "play.minio.io:9000",
+  "usage": [
+   {
+    "mem": 631800056
+   }
+  ],
+  "historicUsage": [
+   {
+    "mem": 469437357
+   }
+  ]
+ }
 }
 ```
 

@@ -39,7 +39,6 @@ var adminCmd = cli.Command{
 		adminHealCmd,
 		adminProfileCmd,
 		adminTopCmd,
-		adminMonitorCmd,
 		adminTraceCmd,
 	},
 }

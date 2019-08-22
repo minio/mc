@@ -17,22 +17,17 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
 	"strings"
 
-	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	"github.com/minio/minio/pkg/madmin"
-)
-
-var (
-	adminMonitorFlags = []cli.Flag{}
 )
 
 const (
@@ -41,14 +36,13 @@ const (
 	monitorFail     = "BoldRed"
 )
 
-var adminMonitorCmd = cli.Command{
-	Name:            "monitor",
-	Usage:           "monitor cpu and mem statistics",
-	Action:          mainAdminMonitor,
-	Before:          setGlobalsFromContext,
-	Flags:           append(adminMonitorFlags, globalFlags...),
-	HideHelpCommand: true,
-	CustomHelpTemplate: `Name:
+var adminInfoCPU = cli.Command{
+	Name:   "cpu",
+	Usage:  "display MinIO server cpu information",
+	Action: mainAdminCPUInfo,
+	Before: setGlobalsFromContext,
+	Flags:  globalFlags,
+	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
@@ -58,20 +52,20 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get server cpu and mem statistics of the 'play' server.
-     $ {{.HelpName}} play/
+  1. Get server CPU information of the 'play' MinIO server.
+	   $ {{.HelpName}} play/
+
 `,
 }
 
 // serverMonitorMessage holds service status info along with
 // cpu, mem, net and disk monitoristics
 type serverMonitorMessage struct {
-	Monitor  string                     `json:"status"`
-	Service  string                     `json:"service"`
-	Addr     string                     `json:"address"`
-	Err      string                     `json:"error"`
-	CPULoad  *madmin.ServerCPULoadInfo  `json:"cpu,omitempty"`
-	MemUsage *madmin.ServerMemUsageInfo `json:"mem,omitempty"`
+	Monitor string                    `json:"status"`
+	Service string                    `json:"service"`
+	Addr    string                    `json:"address"`
+	Err     string                    `json:"error"`
+	CPULoad *madmin.ServerCPULoadInfo `json:"cpu,omitempty"`
 }
 
 func (s serverMonitorMessage) JSON() string {
@@ -109,21 +103,11 @@ func (s serverMonitorMessage) String() string {
 		msg += "\n"
 	}
 
-	// Mem section
-	msg += fmt.Sprintf("%s        usage\n", console.Colorize(monitor, "   MEM"))
-	for i := range s.MemUsage.Usage {
-		msg += fmt.Sprintf("   current    %s\n", humanize.IBytes(s.MemUsage.Usage[i].Mem))
-		if len(s.MemUsage.HistoricUsage) > i {
-			msg += fmt.Sprintf("   historic   %s\n", humanize.IBytes(s.MemUsage.HistoricUsage[i].Mem))
-		}
-		msg += "\n"
-	}
-
 	return msg
 }
 
-func mainAdminMonitor(ctx *cli.Context) error {
-	checkAdminMonitorSyntax(ctx)
+func mainAdminCPUInfo(ctx *cli.Context) error {
+	checkAdminCPUInfoSyntax(ctx)
 
 	// set the console colors
 	console.SetColor(monitor, color.New(color.FgGreen, color.Bold))
@@ -171,17 +155,9 @@ func mainAdminMonitor(ctx *cli.Context) error {
 		return nil
 	}
 
-	sort.Stable(&sortWrapper{cpuLoads: cpuLoads})
+	sort.Stable(&sortCPUWrapper{cpuLoads: cpuLoads})
 
-	memUsages, e := client.ServerMemUsageInfo()
-	if err := processErr(e); err != nil {
-		// exit immediately if error encountered
-		return nil
-	}
-	sort.Stable(&sortWrapper{memUsages: memUsages})
-
-	for i, cpuLoad := range cpuLoads {
-		memUsage := memUsages[i]
+	for _, cpuLoad := range cpuLoads {
 		if cpuLoad.Error != "" {
 			printMsg(serverMonitorMessage{
 				Service: "off",
@@ -190,63 +166,44 @@ func mainAdminMonitor(ctx *cli.Context) error {
 			})
 			continue
 		}
-		if memUsage.Error != "" {
-			printMsg(serverMonitorMessage{
-				Service: "off",
-				Addr:    memUsage.Addr,
-				Err:     memUsage.Error,
-			})
-			continue
-		}
 
 		printMsg(serverMonitorMessage{
-			Service:  "on",
-			Addr:     cpuLoad.Addr,
-			CPULoad:  &cpuLoad,
-			MemUsage: &memUsage,
+			Service: "on",
+			Addr:    cpuLoad.Addr,
+			CPULoad: &cpuLoad,
 		})
 	}
 	return nil
 }
 
-type sortWrapper struct {
-	cpuLoads  []madmin.ServerCPULoadInfo
-	memUsages []madmin.ServerMemUsageInfo
+type sortCPUWrapper struct {
+	cpuLoads []madmin.ServerCPULoadInfo
 }
 
-func (s *sortWrapper) Len() int {
-	if s.cpuLoads != nil {
-		return len(s.cpuLoads)
-	}
-	return len(s.memUsages)
+func (s *sortCPUWrapper) Len() int {
+	return len(s.cpuLoads)
+
 }
 
-func (s *sortWrapper) Swap(i, j int) {
+func (s *sortCPUWrapper) Swap(i, j int) {
 	if s.cpuLoads != nil {
 		s.cpuLoads[i], s.cpuLoads[j] = s.cpuLoads[j], s.cpuLoads[i]
 		return
 	}
-	if s.memUsages != nil {
-		s.memUsages[i], s.memUsages[j] = s.memUsages[j], s.memUsages[i]
-	}
 }
 
-func (s *sortWrapper) Less(i, j int) bool {
+func (s *sortCPUWrapper) Less(i, j int) bool {
 	if s.cpuLoads != nil {
 		return strings.Compare(s.cpuLoads[i].Addr, s.cpuLoads[j].Addr) < 0
 	}
-	if s.memUsages != nil {
-		return strings.Compare(s.memUsages[i].Addr, s.memUsages[j].Addr) < 0
-	}
 	return false
-
 }
 
 // checkAdminMonitorSyntax - validate all the passed arguments
-func checkAdminMonitorSyntax(ctx *cli.Context) {
+func checkAdminCPUInfoSyntax(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
 
 		exit := globalErrorExitStatus
-		cli.ShowCommandHelpAndExit(ctx, "monitor", exit)
+		cli.ShowCommandHelpAndExit(ctx, "cpu", exit)
 	}
 }
