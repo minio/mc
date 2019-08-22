@@ -46,7 +46,7 @@ var (
 // Summarize disk usage.
 var duCmd = cli.Command{
 	Name:   "du",
-	Usage:  "summarize disk usage folder prefixes recursively",
+	Usage:  "summarize disk usage recursively",
 	Action: mainDu,
 	Before: setGlobalsFromContext,
 	Flags:  append(append(duFlags, ioFlags...), globalFlags...),
@@ -111,10 +111,17 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 	size := int64(0)
 	for content := range contentCh {
 		if content.Err != nil {
+			switch content.Err.ToGoError().(type) {
+			// handle this specifically for filesystem related errors.
+			case BrokenSymlink, TooManyLevelsSymlink, PathNotFound, ObjectOnGlacier:
+				continue
+			case PathInsufficientPermission:
+				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+				continue
+			}
 			errorIf(content.Err.Trace(urlStr), "Failed to find disk usage of `"+urlStr+"` recursively.")
 			return 0, exitStatus(globalErrorExitStatus)
 		}
-
 		if content.URL.String() == targetURL {
 			continue
 		}

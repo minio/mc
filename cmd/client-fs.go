@@ -683,6 +683,14 @@ func (f *fsClient) listPrefixes(prefix string, contentCh chan<- *clientContent) 
 					}
 					continue
 				}
+				if strings.Contains(e.Error(), "too many levels of symbolic links") {
+					contentCh <- &clientContent{
+						Err: probe.NewError(TooManyLevelsSymlink{
+							Path: pathURL.Path,
+						}),
+					}
+					continue
+				}
 				if e != nil {
 					contentCh <- &clientContent{
 						Err: probe.NewError(e),
@@ -771,8 +779,16 @@ func (f *fsClient) listInRoutine(contentCh chan<- *clientContent, isMetadata boo
 					continue
 				}
 				if e != nil {
-					contentCh <- &clientContent{
-						Err: probe.NewError(e),
+					if strings.Contains(e.Error(), "too many levels of symbolic links") {
+						contentCh <- &clientContent{
+							Err: probe.NewError(TooManyLevelsSymlink{
+								Path: pathURL.Path,
+							}),
+						}
+					} else {
+						contentCh <- &clientContent{
+							Err: probe.NewError(e),
+						}
 					}
 					continue
 				}
@@ -957,12 +973,12 @@ func (f *fsClient) listRecursiveInRoutine(contentCh chan *clientContent, isMetad
 					}
 					return nil
 				}
-				// Ignore symlink loops.
-				if strings.Contains(e.Error(), "too many levels of symbolic links") {
-					contentCh <- &clientContent{
-						Err: probe.NewError(TooManyLevelsSymlink{Path: fp}),
+				if e != nil {
+					if strings.Contains(e.Error(), "too many levels of symbolic links") {
+						contentCh <- &clientContent{
+							Err: probe.NewError(TooManyLevelsSymlink{Path: fp}),
+						}
 					}
-					return nil
 				}
 				return e
 			}
@@ -1182,6 +1198,9 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 		if os.IsPermission(e) {
 			return nil, probe.NewError(PathInsufficientPermission{Path: f.PathURL.Path})
 		}
+		if strings.Contains(e.Error(), "too many levels of symbolic links") {
+			return nil, probe.NewError(TooManyLevelsSymlink{Path: f.PathURL.Path})
+		}
 		err := f.toClientError(e, f.PathURL.Path)
 		return nil, err.Trace(fpath)
 	}
@@ -1193,6 +1212,9 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 		}
 		if os.IsNotExist(e) {
 			return nil, probe.NewError(PathNotFound{Path: f.PathURL.Path})
+		}
+		if strings.Contains(e.Error(), "too many levels of symbolic links") {
+			return nil, probe.NewError(TooManyLevelsSymlink{Path: f.PathURL.Path})
 		}
 		return nil, probe.NewError(e)
 	}
