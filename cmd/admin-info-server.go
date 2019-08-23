@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -87,7 +87,13 @@ type xlBackend struct {
 
 // backendStatus represents the overall information of all backend storage types
 type backendStatus struct {
-	Used    uint64      `json:"used"`
+	// Total used space per tenant.
+	Used uint64 `json:"used"`
+	// Total available space.
+	Available uint64 `json:"available"`
+	// Total disk space.
+	Total uint64 `json:"total"`
+	// Backend type.
 	Backend interface{} `json:"backend"`
 }
 
@@ -145,7 +151,7 @@ func (u infoMessage) String() (msg string) {
 	if u.ServerInfo.Properties.Version == "DEVELOPMENT.GOGET" {
 		version = "<development>"
 	}
-	msg += fmt.Sprintf("   Version: %s\n", version)
+	msg += fmt.Sprintf("  Version: %s\n", version)
 	// Region
 	if u.ServerInfo.Properties.Region != "" {
 		msg += fmt.Sprintf("   Region: %s\n", u.ServerInfo.Properties.Region)
@@ -160,7 +166,9 @@ func (u infoMessage) String() (msg string) {
 	}
 
 	// Incoming/outgoing
-	msg += fmt.Sprintf("   Storage: Used %s", humanize.IBytes(u.StorageInfo.Used))
+	msg += fmt.Sprintf("  Storage: Used %s, Free %s",
+		humanize.IBytes(u.StorageInfo.Used),
+		humanize.IBytes(u.StorageInfo.Available))
 	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
 		upBackends := 0
 		downBackends := 0
@@ -303,7 +311,9 @@ func mainAdminServerInfo(ctx *cli.Context) error {
 
 		// Construct the backend status
 		storageInfo := backendStatus{
-			Used: serverInfo.Data.StorageInfo.Used,
+			Used:      serverInfo.Data.StorageInfo.Used,
+			Available: serverInfo.Data.StorageInfo.Available,
+			Total:     serverInfo.Data.StorageInfo.Total,
 		}
 
 		if serverInfo.Data.StorageInfo.Backend.Type == madmin.Erasure {
