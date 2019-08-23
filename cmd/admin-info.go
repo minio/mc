@@ -91,7 +91,7 @@ type xlBackend struct {
 
 // backendStatus represents the overall information of all backend storage types
 type backendStatus struct {
-	// Total used spaced per tenant.
+	// Total used space per tenant.
 	Used uint64 `json:"used"`
 	// Total available space.
 	Available uint64 `json:"available"`
