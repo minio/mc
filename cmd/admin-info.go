@@ -28,6 +28,8 @@ var adminInfoCmd = cli.Command{
 		adminInfoServer,
 		adminInfoCPU,
 		adminInfoMem,
+		adminInfoVault,
+		adminInfoEtcd,
 	},
 	HideHelpCommand: true,
 }
