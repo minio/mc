@@ -31,6 +31,7 @@ var adminCmd = cli.Command{
 	Flags:           append(adminFlags, globalFlags...),
 	Subcommands: []cli.Command{
 		adminServiceCmd,
+		adminServerUpdateCmd,
 		adminInfoCmd,
 		adminUserCmd,
 		adminGroupCmd,
