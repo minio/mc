@@ -28,15 +28,15 @@ func TestParseMetaData(t *testing.T) {
 		err    error
 		status bool
 	}{
-		// success scenerio using ; as delimitter
+		// success scenario using ; as delimiter
 		{"key1=value1;key2=value2", map[string]string{"key1": "value1", "key2": "value2"}, nil, true},
-		// success scenerio using ; as delimitter
+		// success scenario using ; as delimiter
 		{"key1=m1=m2,m3=m4;key2=value2", map[string]string{"key1": "m1=m2,m3=m4", "key2": "value2"}, nil, true},
-		// success scenerio using = more than once
+		// success scenario using = more than once
 		{"Cache-Control=max-age=90000,min-fresh=9000;key1=value1;key2=value2", map[string]string{"Cache-Control": "max-age=90000,min-fresh=9000", "key1": "value1", "key2": "value2"}, nil, true},
-		// using different delimitter, other than '=' between key value
+		// using different delimiter, other than '=' between key value
 		{"key1:value1;key2:value2", nil, ErrInvalidMetadata, false},
-		// using no delimitter
+		// using no delimiter
 		{"key1:value1:key2:value2", nil, ErrInvalidMetadata, false},
 	}
 

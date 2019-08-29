@@ -403,6 +403,13 @@ mc cat --encrypt-key "play/mybucket=32byteslongsecretkeymustbegiven1" play/mybuc
 Hello MinIO!!
 ```
 
+*Example: Display the contents of a server encrypted object `myencryptedobject.txt`. Pass base64 encoded string if encryption key contains non-printable character like tab*
+
+```
+mc cat --encrypt-key "play/mybucket=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" play/mybucket/myencryptedobject.txt
+Hello MinIO!!
+```
+
 <a name="sql"></a>
 ### Command `sql` - Run sql queries on objects
 `sql` run sql queries on objects.

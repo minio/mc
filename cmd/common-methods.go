@@ -18,6 +18,8 @@ package cmd
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -32,6 +34,36 @@ import (
 	"github.com/minio/minio-go/v6/pkg/encrypt"
 )
 
+// decode if the key is encoded key and returns the key
+func getDecodedKey(sseKeys string) (key string, err *probe.Error) {
+	keyString := ""
+	for i, sse := range strings.Split(sseKeys, ",") {
+		if i > 0 {
+			keyString = keyString + ","
+		}
+		sseString, err := parseKey(sse)
+		if err != nil {
+			return "", err
+		}
+		keyString = keyString + sseString
+	}
+	return keyString, nil
+}
+
+// Validate the key
+func parseKey(sseKeys string) (sse string, err *probe.Error) {
+	encryptString := strings.SplitN(sseKeys, "=", 2)
+	secretValue := encryptString[1]
+	if len(secretValue) == 32 {
+		return sseKeys, nil
+	}
+	decodedString, e := base64.StdEncoding.DecodeString(secretValue)
+	if e != nil || len(decodedString) != 32 {
+		return "", probe.NewError(errors.New("Encryption key should be 32 bytes plain text key or 44 bytes base64 encoded key"))
+	}
+	return encryptString[0] + "=" + string(decodedString), nil
+}
+
 // parse and return encryption key pairs per alias.
 func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 	sseServer := os.Getenv("MC_ENCRYPT")
@@ -45,6 +77,13 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 			return nil, errConflictSSE(sseServer, keyPrefix).Trace(ctx.Args()...)
 		}
 		sseKeys = keyPrefix
+	}
+	var err *probe.Error
+	if sseKeys != "" {
+		sseKeys, err = getDecodedKey(sseKeys)
+		if err != nil {
+			return nil, err.Trace(sseKeys)
+		}
 	}
 
 	encKeyDB, err := parseAndValidateEncryptionKeys(sseKeys, sseServer)

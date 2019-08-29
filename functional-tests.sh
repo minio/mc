@@ -631,6 +631,18 @@ function test_put_object_with_sse()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+function test_put_object_with_encoded_sse()
+{
+    show "${FUNCNAME[0]}"
+    start_time=$(get_time)
+    object_name="mc-test-object-$RANDOM"
+    cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE="
+    # put encrypted object; then delete with correct secret key
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function test_put_object_with_sse_error()
 {
     show "${FUNCNAME[0]}"
@@ -845,6 +857,7 @@ function run_test()
 
     if [ "$ENABLE_HTTPS" == "1" ]; then
         test_put_object_with_sse
+        test_put_object_with_encoded_sse
         test_put_object_with_sse_error
         test_put_object_multipart_sse
         test_get_object_with_sse

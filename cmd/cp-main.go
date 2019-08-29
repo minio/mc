@@ -115,13 +115,17 @@ EXAMPLES:
   09. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage.
       $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/ myminio/documents/
 
-  10. Copy a list of objects from local file system to MinIO cloud storage with specified metadata.
+  10. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage. In case the encryption key contains non-printable character like tab, pass the
+      base64 encoded string as key.
+      $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=,myminio/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/documents/ myminio/documents/
+	  
+  11. Copy a list of objects from local file system to MinIO cloud storage with specified metadata.
       $ {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
 			
-  11. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
+  12. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
       $ {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
 
-  12. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
+  13. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
       $ {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
  `,
 }
@@ -488,6 +492,11 @@ func mainCopy(ctx *cli.Context) error {
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := ctx.String("encrypt-key"); key != "" {
 		sseKeys = key
+	}
+
+	if sseKeys != "" {
+		sseKeys, err = getDecodedKey(sseKeys)
+		fatalIf(err, "Unable to parse encryption keys.")
 	}
 	sse := ctx.String("encrypt")
 
