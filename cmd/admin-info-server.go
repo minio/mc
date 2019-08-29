@@ -174,11 +174,13 @@ func (u infoMessage) String() (msg string) {
 		downBackends := 0
 		for _, set := range v.Sets {
 			for _, s := range set {
-				if strings.Contains(s.Endpoint, u.Addr) || s.Endpoint[0] == '/' || s.Endpoint[0] == '.' {
-					if s.State == "ok" {
-						upBackends++
-					} else {
-						downBackends++
+				if len(s.Endpoint) > 0 {
+					if strings.Contains(s.Endpoint, u.Addr) || s.Endpoint[0] == '/' || s.Endpoint[0] == '.' {
+						if s.State == "ok" {
+							upBackends++
+						} else {
+							downBackends++
+						}
 					}
 				}
 			}
