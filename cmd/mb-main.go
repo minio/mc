@@ -35,6 +35,10 @@ var (
 			Name:  "ignore-existing, p",
 			Usage: "ignore if bucket/directory already exists",
 		},
+		cli.BoolFlag{
+			Name:  "with-lock, l",
+			Usage: "enable object lock",
+		},
 	}
 )
 
@@ -72,6 +76,9 @@ EXAMPLES:
 
   6. Ignore if bucket/directory already exists.
      {{.Prompt}} {{.HelpName}} --ignore-existing myminio/mynewbucket
+
+  7. Create a new bucket on Amazon S3 cloud storage in region 'us-west-2' with object lock enabled.
+     {{.Prompt}} {{.HelpName}} --with-lock --region=us-west-2 s3/myregionbucket
 `,
 }
 
@@ -114,6 +121,7 @@ func mainMakeBucket(ctx *cli.Context) error {
 	// Save region.
 	region := ctx.String("region")
 	ignoreExisting := ctx.Bool("p")
+	withLock := ctx.Bool("l")
 
 	var cErr error
 	for _, targetURL := range ctx.Args() {
@@ -126,7 +134,7 @@ func mainMakeBucket(ctx *cli.Context) error {
 		}
 
 		// Make bucket.
-		err = clnt.MakeBucket(region, ignoreExisting)
+		err = clnt.MakeBucket(region, ignoreExisting, withLock)
 		if err != nil {
 			switch err.ToGoError().(type) {
 			case BucketNameEmpty:
