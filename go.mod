@@ -8,7 +8,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/gopherjs/gopherjs v0.0.0-20190328170749-bb2674552d8f // indirect
-	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
@@ -19,10 +18,11 @@ require (
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/minio/cli v1.21.0
-	github.com/minio/minio v0.0.0-20190828220443-83d4c5763c3e
+	github.com/minio/minio v0.0.0-20190903181048-8a71b0ec5a72
 	github.com/minio/minio-go/v6 v6.0.32
 	github.com/minio/sha256-simd v0.1.0
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.2-0.20190702141536-6ffe496ea953
@@ -35,7 +35,7 @@ require (
 	github.com/ugorji/go v1.1.5-pre // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
-	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
+	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/text v0.3.2
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
@@ -44,3 +44,4 @@ require (
 )
 
 replace github.com/gorilla/rpc v1.2.0+incompatible => github.com/gorilla/rpc v1.2.0
+replace git.apache.org/thrift.git => github.com/apache/thrift v0.0.0-20180902110319-2566ecd5d999
