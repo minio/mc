@@ -15,6 +15,7 @@ profile  generate profile data for debugging purposes
 top      provide top like statistics for MinIO
 trace    show http trace for minio server
 console  show console logs for MinIO server
+kms      perform KMS management operations
 ```
 
 ## 1.  Download MinIO Client
@@ -690,4 +691,47 @@ mc admin console myminio
         3: cmd/notification.go:780:cmd.(*NotificationSys).refresh()
         2: cmd/notification.go:815:cmd.(*NotificationSys).Init()
         1: cmd/server-main.go:375:cmd.serverMain()
+```
+
+<a name="kms"></a>
+### Command `kms` - perform KMS management operations
+The `kms` command can be used to perform KMS management operations.
+
+```sh
+NAME:
+  mc admin kms - perform KMS management operations
+
+USAGE:
+  mc admin kms COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+```
+
+The `key` sub-command can be used to perform master key management operations.
+
+```sh
+NAME:
+  mc admin kms key - manage KMS keys
+
+USAGE:
+  mc admin kms key COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+```
+
+
+*Example: Display status information for the default master key*
+
+```sh
+mc admin kms key status play
+Key: my-minio-key
+ 	 • Encryption ✔
+ 	 • Update     ✔
+ 	 • Decryption ✔
+```
+
+*Example: Display status information for one particular master key*
+
+```sh
+mc admin kms key status play test-key-1
+Key: test-key-1
+ 	 • Encryption ✔
+ 	 • Update     ✔
+ 	 • Decryption ✔
 ```
