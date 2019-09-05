@@ -16,6 +16,7 @@ top         provide top like statistics for MinIO
 trace       show http trace for MinIO server
 console     show console logs for MinIO server
 prometheus  manages prometheus config
+kms         perform KMS management operations
 ```
 
 ## 1.  Download MinIO Client
@@ -728,4 +729,47 @@ mc admin prometheus generate <alias>
   scheme: http
   static_configs:
   - targets: ['localhost:9000']
+```
+
+<a name="kms"></a>
+
+### Command `kms` - perform KMS management operations
+
+The `kms` command can be used to perform KMS management operations.
+
+```sh
+NAME:
+  mc admin kms - perform KMS management operations
+
+USAGE:
+  mc admin kms COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+```
+
+The `key` sub-command can be used to perform master key management operations.
+
+```sh
+NAME:
+  mc admin kms key - manage KMS keys
+
+USAGE:
+  mc admin kms key COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+```
+
+
+*Example: Display status information for the default master key*
+
+```sh
+mc admin kms key status play
+Key: my-minio-key
+ 	 • Encryption ✔
+ 	 • Decryption ✔
+```
+
+*Example: Display status information for one particular master key*
+
+```sh
+mc admin kms key status play test-key-1
+Key: test-key-1
+ 	 • Encryption ✔
+ 	 • Decryption ✔
 ```
