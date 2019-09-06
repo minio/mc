@@ -49,8 +49,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Get server information of the 'play' MinIO server.
-	   $ {{.HelpName}} play/
-
+     $ {{.HelpName}} play/
 `,
 }
 

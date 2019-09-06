@@ -39,7 +39,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get info on group 'allcents':
+  1. Get info on group 'allcents'.
      $ {{.HelpName}} myminio allcents
 `,
 }

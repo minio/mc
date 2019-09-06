@@ -33,13 +33,13 @@ var adminGroupListCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET GROUPNAME
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. List groups:
+  1. List all groups.
      $ {{.HelpName}} myminio
 `,
 }

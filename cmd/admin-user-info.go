@@ -33,7 +33,7 @@ var adminUserInfoCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET ACCESSKEY
+  {{.HelpName}} TARGET USERNAME
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}

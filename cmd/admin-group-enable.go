@@ -42,9 +42,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable group 'allcents':
+  1. Enable group 'allcents'.
      $ {{.HelpName}} myminio allcents
-
 `,
 }
 

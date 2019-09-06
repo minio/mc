@@ -36,7 +36,7 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Disable group 'allcents':
+  1. Disable group 'allcents'.
      $ {{.HelpName}} myminio allcents
 `,
 }
