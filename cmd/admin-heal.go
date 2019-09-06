@@ -81,7 +81,7 @@ FLAGS:
   {{end}}
 SCAN MODES:
   normal (default): Heal objects which are missing on one or more disks.
-  deep            : Heal objects which are missing on one or more disks. Also heal objects with silent data corruption.
+  deep            : Heal objects which are missing or with silent data corruption on one or more disks.
 
 EXAMPLES:
   1. To format newly replaced disks in a MinIO server with alias 'myminio'

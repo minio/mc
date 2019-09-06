@@ -39,6 +39,12 @@ var adminUserAddCmd = cli.Command{
 USAGE:
   {{.HelpName}} TARGET ACCESSKEY SECRETKEY
 
+ACCESSKEY:
+  Also called as username.
+
+SECRETKEY:
+  Also called as password.
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}

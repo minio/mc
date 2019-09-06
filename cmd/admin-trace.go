@@ -50,7 +50,7 @@ var adminTraceFlags = []cli.Flag{
 
 var adminTraceCmd = cli.Command{
 	Name:            "trace",
-	Usage:           "show http trace for minio server",
+	Usage:           "show http trace for MinIO server",
 	Action:          mainAdminTrace,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminTraceFlags, globalFlags...),
@@ -65,12 +65,12 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Show console trace for a Minio server with alias 'play'
-		$ {{.HelpName}} play -v -a
+  1. Show console trace for a MinIO server with alias 'play'
+     $ {{.HelpName}} -v -a play
 
-  2. Show trace only for failed requests for a Minio server with alias 'myminio'
-		$ {{.HelpName}} myminio -v -e 
- `,
+  2. Show trace only for failed requests for a MinIO server with alias 'myminio'
+    $ {{.HelpName}} -v -e myminio
+`,
 }
 
 const timeFormat = "15:04:05.000"
@@ -111,7 +111,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	for _, c := range colors {
 		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c))
 	}
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
 		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
