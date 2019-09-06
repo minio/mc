@@ -83,6 +83,13 @@ func (l logMessage) JSON() string {
 	return string(logJSON)
 
 }
+func getLogTime(lt string) string {
+	tm, err := time.Parse(time.RFC3339Nano, lt)
+	if err != nil {
+		return lt
+	}
+	return tm.Format(logTimeFormat)
+}
 
 // String - return colorized loginfo as string.
 func (l logMessage) String() string {
@@ -105,11 +112,17 @@ func (l logMessage) String() string {
 		hostStr = fmt.Sprintf("%s ", colorizedNodeName(l.NodeName))
 	}
 	fmt.Fprintf(b, "\n%s %s", hostStr, console.Colorize("Api", apiString))
-	fmt.Fprintf(b, "\n%s Time: %s", hostStr, time.Now().Format(logTimeFormat))
+	fmt.Fprintf(b, "\n%s Time: %s", hostStr, getLogTime(l.Time))
 	fmt.Fprintf(b, "\n%s DeploymentID: %s", hostStr, l.DeploymentID)
-	fmt.Fprintf(b, "\n%s RequestID: %s", hostStr, l.RequestID)
-	fmt.Fprintf(b, "\n%s RemoteHost: %s", hostStr, l.RemoteHost)
-	fmt.Fprintf(b, "\n%s UserAgent: %s", hostStr, l.UserAgent)
+	if l.RequestID != "" {
+		fmt.Fprintf(b, "\n%s RequestID: %s", hostStr, l.RequestID)
+	}
+	if l.RemoteHost != "" {
+		fmt.Fprintf(b, "\n%s RemoteHost: %s", hostStr, l.RemoteHost)
+	}
+	if l.UserAgent != "" {
+		fmt.Fprintf(b, "\n%s UserAgent: %s", hostStr, l.UserAgent)
+	}
 	fmt.Fprintf(b, "\n%s Error: %s", hostStr, msg)
 
 	for key, value := range l.Trace.Variables {
@@ -121,8 +134,8 @@ func (l logMessage) String() string {
 		fmt.Fprintf(b, "\n%s %8v: %s", hostStr, traceLength-i, element)
 
 	}
-
-	return b.String()
+	logMsg := strings.TrimPrefix(b.String(), "\n")
+	return fmt.Sprintf("%s\n", logMsg)
 }
 
 // mainAdminConsole - the entry function of console command
