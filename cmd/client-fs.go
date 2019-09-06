@@ -489,6 +489,9 @@ func (f *fsClient) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 				if os.IsPermission(err) {
 					// Ignore permission error.
 					errorCh <- probe.NewError(PathInsufficientPermission{Path: content.URL.Path})
+				} else if os.IsNotExist(err) && isRemoveBucket {
+					// ignore PathNotFound for dir removal.
+					return
 				} else {
 					errorCh <- probe.NewError(err)
 					return
