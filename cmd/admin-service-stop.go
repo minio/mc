@@ -84,7 +84,7 @@ func mainAdminServiceStop(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Stop the specified MinIO server
 	fatalIf(probe.NewError(client.ServiceStop()), "Unable to stop the server.")

@@ -107,7 +107,7 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
 	fatalIf(probe.NewError(client.SetConfig(os.Stdin)), "Cannot set server configuration file.")
