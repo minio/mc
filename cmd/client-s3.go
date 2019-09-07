@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"hash/fnv"
 	"io"
 	"net"
@@ -884,6 +885,12 @@ func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 
 	go func() {
 		defer close(errorCh)
+		if isRemoveBucket {
+			if _, object := c.url2BucketAndObject(); object != "" {
+				errorCh <- probe.NewError(errors.New("cannot delete prefixes with `mc rb` command - Use `mc rm` instead"))
+				return
+			}
+		}
 		for content := range contentCh {
 			// Convert content.URL.Path to objectName for objectsCh.
 			bucket, objectName := c.splitPath(content.URL.Path)
