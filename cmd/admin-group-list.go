@@ -63,7 +63,7 @@ func mainAdminGroupList(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	gs, err1 := client.ListGroups()
 	fatalIf(probe.NewError(err1).Trace(args...), "Could not get group list")

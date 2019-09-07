@@ -67,7 +67,7 @@ func mainAdminGroupRemove(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	members := []string{}
 	for i := 2; i < ctx.NArg(); i++ {
