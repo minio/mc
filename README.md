@@ -85,7 +85,7 @@ mc.exe --help
 Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.12](https://golang.org/dl/#stable)
 
 ```sh
-GOPROXY=https://proxy.golang.org GO111MODULE=on go get github.com/minio/mc
+GO111MODULE=on go get github.com/minio/mc
 ```
 
 ## Add a Cloud Storage Service

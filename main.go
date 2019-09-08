@@ -1,4 +1,4 @@
-// +build go1.12
+// +build go1.13
 
 /*
  * MinIO Client (C) 2014-2019 MinIO, Inc.
