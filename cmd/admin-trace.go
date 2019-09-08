@@ -234,13 +234,13 @@ func (s shortTraceMsg) String() string {
 	fmt.Fprintf(b, " %s ", s.Client)
 	spaces := 15 - len(s.Client)
 	fmt.Fprintf(b, "%*s", spaces, " ")
-	fmt.Fprintf(b, console.Colorize("HeaderValue", fmt.Sprintf("  %2s", s.CallStats.Duration.Round(time.Microsecond))))
+	fmt.Fprint(b, console.Colorize("HeaderValue", fmt.Sprintf("  %2s", s.CallStats.Duration.Round(time.Microsecond))))
 	spaces = 12 - len(fmt.Sprintf("%2s", s.CallStats.Duration.Round(time.Microsecond)))
 	fmt.Fprintf(b, "%*s", spaces, " ")
-	fmt.Fprintf(b, console.Colorize("Stat", fmt.Sprintf(" 🠉 ")))
-	fmt.Fprintf(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Rx))))
-	fmt.Fprintf(b, console.Colorize("Stat", fmt.Sprintf("  🠋 ")))
-	fmt.Fprintf(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Tx))))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf(" 🠉 ")))
+	fmt.Fprint(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Rx))))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("  🠋 ")))
+	fmt.Fprint(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Tx))))
 
 	return b.String()
 }
