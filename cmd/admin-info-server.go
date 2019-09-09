@@ -99,20 +99,27 @@ type backendStatus struct {
 // ServerInfo holds the whole server information that will be
 // returned by ServerInfo API.
 type ServerInfo struct {
-	StorageInfo backendStatus             `json:"storage"`
-	ConnStats   madmin.ServerConnStats    `json:"network"`
-	Properties  madmin.ServerProperties   `json:"server"`
-	CPULoad     madmin.ServerCPULoadInfo  `json:"cpu,omitempty"`
-	MemUsage    madmin.ServerMemUsageInfo `json:"mem,omitempty"`
+	ConnStats  madmin.ServerConnStats    `json:"network"`
+	Properties madmin.ServerProperties   `json:"server"`
+	CPULoad    madmin.ServerCPULoadInfo  `json:"cpu,omitempty"`
+	MemUsage   madmin.ServerMemUsageInfo `json:"mem,omitempty"`
 }
 
 // infoMessage container to hold service status information.
 type infoMessage struct {
-	Status  string `json:"status"`
-	Service string `json:"service"`
-	Addr    string `json:"address"`
-	Err     string `json:"error"`
+	Status      string        `json:"status"`
+	Service     string        `json:"service"`
+	Addr        string        `json:"address"`
+	Err         string        `json:"error"`
+	StorageInfo backendStatus `json:"storage"`
 	*ServerInfo
+}
+
+func filterPerNode(addr string, m map[string]int) int {
+	if val, ok := m[addr]; ok {
+		return val
+	}
+	return -1
 }
 
 // String colorized service status message.
@@ -168,7 +175,7 @@ func (u infoMessage) String() (msg string) {
 	msg += fmt.Sprintf("  Storage: Used %s, Free %s",
 		humanize.IBytes(u.StorageInfo.Used),
 		humanize.IBytes(u.StorageInfo.Available))
-	if v, ok := u.ServerInfo.StorageInfo.Backend.(xlBackend); ok {
+	if v, ok := u.StorageInfo.Backend.(xlBackend); ok {
 		upBackends := 0
 		downBackends := 0
 		for _, set := range v.Sets {
@@ -278,6 +285,14 @@ func mainAdminServerInfo(ctx *cli.Context) error {
 		// exit immediately if error encountered
 		return nil
 	}
+
+	// Fetch storage info of all servers (cluster or single server)
+	storageInfo, e := client.StorageInfo()
+	if err := processErr(e); err != nil {
+		// exit immediately if error encountered
+		return nil
+	}
+
 	// Fetch info of all CPU loads (all MinIO server instances)
 	cpuLoads, e := client.ServerCPULoadInfo()
 
@@ -309,25 +324,29 @@ func mainAdminServerInfo(ctx *cli.Context) error {
 		}
 
 		// Construct the backend status
-		storageInfo := backendStatus{
-			Used:      serverInfo.Data.StorageInfo.Used,
-			Available: serverInfo.Data.StorageInfo.Available,
-			Total:     serverInfo.Data.StorageInfo.Total,
+		storageInfoStat := backendStatus{}
+
+		for index, mountPath := range storageInfo.MountPaths {
+			if strings.Contains(mountPath, serverInfo.Addr) || serverInfo.Addr[0] == '/' || serverInfo.Addr[0] == '.' {
+				storageInfoStat.Used += storageInfo.Used[index]
+				storageInfoStat.Available += storageInfo.Available[index]
+				storageInfoStat.Total += storageInfo.Total[index]
+			}
 		}
 
-		if serverInfo.Data.StorageInfo.Backend.Type == madmin.Erasure {
-			storageInfo.Backend = xlBackend{
+		if storageInfo.Backend.Type == madmin.Erasure {
+			storageInfoStat.Backend = xlBackend{
 				Type:             erasureType,
-				OnlineDisks:      serverInfo.Data.StorageInfo.Backend.OnlineDisks,
-				OfflineDisks:     serverInfo.Data.StorageInfo.Backend.OfflineDisks,
-				StandardSCData:   serverInfo.Data.StorageInfo.Backend.StandardSCData,
-				StandardSCParity: serverInfo.Data.StorageInfo.Backend.StandardSCParity,
-				RRSCData:         serverInfo.Data.StorageInfo.Backend.RRSCData,
-				RRSCParity:       serverInfo.Data.StorageInfo.Backend.RRSCParity,
-				Sets:             serverInfo.Data.StorageInfo.Backend.Sets,
+				OnlineDisks:      filterPerNode(serverInfo.Addr, storageInfo.Backend.OnlineDisks),
+				OfflineDisks:     filterPerNode(serverInfo.Addr, storageInfo.Backend.OfflineDisks),
+				StandardSCData:   storageInfo.Backend.StandardSCData,
+				StandardSCParity: storageInfo.Backend.StandardSCParity,
+				RRSCData:         storageInfo.Backend.RRSCData,
+				RRSCParity:       storageInfo.Backend.RRSCParity,
+				Sets:             storageInfo.Backend.Sets,
 			}
 		} else {
-			storageInfo.Backend = fsBackend{
+			storageInfoStat.Backend = fsBackend{
 				Type: fsType,
 			}
 		}
@@ -337,12 +356,12 @@ func mainAdminServerInfo(ctx *cli.Context) error {
 			Addr:    serverInfo.Addr,
 			Err:     serverInfo.Error,
 			ServerInfo: &ServerInfo{
-				StorageInfo: storageInfo,
-				ConnStats:   serverInfo.Data.ConnStats,
-				Properties:  serverInfo.Data.Properties,
-				CPULoad:     cpuLoad,
-				MemUsage:    memUsage,
+				ConnStats:  serverInfo.Data.ConnStats,
+				Properties: serverInfo.Data.Properties,
+				CPULoad:    cpuLoad,
+				MemUsage:   memUsage,
 			},
+			StorageInfo: storageInfoStat,
 		}))
 
 	}
