@@ -56,7 +56,7 @@ func checkMirrorSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 
 	/****** Generic rules *******/
 	if !ctx.Bool("watch") {
-		c, srcContent, err := url2Stat(srcURL, false, encKeyDB)
+		_, srcContent, err := url2Stat(srcURL, false, encKeyDB)
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {
@@ -66,11 +66,6 @@ func checkMirrorSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 		if err == nil {
 			if !srcContent.Type.IsDir() {
 				fatalIf(errInvalidArgument().Trace(srcContent.URL.String(), srcContent.Type.String()), fmt.Sprintf("Source `%s` is not a folder. Only folders are supported by mirror command.", srcURL))
-			}
-
-			// Disallow mirroring a directory to itself
-			if isURLContains(srcURL, tgtURL, string(c.GetURL().Separator)) {
-				fatalIf(errInvalidArgument().Trace(), "Mirroring a folder into itself is not allowed.")
 			}
 		}
 	}
@@ -86,7 +81,7 @@ func matchExcludeOptions(excludeOptions []string, srcSuffix string) bool {
 	return false
 }
 
-func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemove bool, excludeOptions []string, URLsCh chan<- URLs, encKeyDB map[string][]prefixSSEPair) {
+func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemove, isMetadata bool, excludeOptions []string, URLsCh chan<- URLs, encKeyDB map[string][]prefixSSEPair) {
 	// source and targets are always directories
 	sourceSeparator := string(newClientURL(sourceURL).Separator)
 	if !strings.HasSuffix(sourceURL, sourceSeparator) {
@@ -116,7 +111,7 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 	}
 
 	// List both source and target, compare and return values through channel.
-	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL) {
+	for diffMsg := range objectDifference(sourceClnt, targetClnt, sourceURL, targetURL, isMetadata) {
 		if diffMsg.Error != nil {
 			// Send all errors through the channel
 			URLsCh <- URLs{Error: diffMsg.Error}
@@ -140,7 +135,7 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 			// No difference, continue.
 		case differInType:
 			URLsCh <- URLs{Error: errInvalidTarget(diffMsg.SecondURL)}
-		case differInSize, differInTime:
+		case differInSize, differInTime, differInMetadata:
 			if !isOverwrite && !isFake {
 				// Size or time differs but --overwrite not set.
 				URLsCh <- URLs{Error: errOverWriteNotAllowed(diffMsg.SecondURL)}
@@ -187,8 +182,8 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 }
 
 // Prepares urls that need to be copied or removed based on requested options.
-func prepareMirrorURLs(sourceURL string, targetURL string, isFake, isOverwrite, isRemove bool, excludeOptions []string, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
+func prepareMirrorURLs(sourceURL string, targetURL string, isFake, isOverwrite, isRemove, isMetadata bool, excludeOptions []string, encKeyDB map[string][]prefixSSEPair) <-chan URLs {
 	URLsCh := make(chan URLs)
-	go deltaSourceTarget(sourceURL, targetURL, isFake, isOverwrite, isRemove, excludeOptions, URLsCh, encKeyDB)
+	go deltaSourceTarget(sourceURL, targetURL, isFake, isOverwrite, isRemove, isMetadata, excludeOptions, URLsCh, encKeyDB)
 	return URLsCh
 }

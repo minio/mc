@@ -29,12 +29,13 @@ import (
 type differType int
 
 const (
-	differInNone   differType = iota // does not differ
-	differInSize                     // differs in size
-	differInTime                     // differs in time
-	differInType                     // differs in type, exfile/directory
-	differInFirst                    // only in source (FIRST)
-	differInSecond                   // only in target (SECOND)
+	differInNone     differType = iota // does not differ
+	differInSize                       // differs in size
+	differInTime                       // differs in time
+	differInMetadata                   // differs in metadata
+	differInType                       // differs in type, exfile/directory
+	differInFirst                      // only in source (FIRST)
+	differInSecond                     // only in target (SECOND)
 )
 
 func (d differType) String() string {
@@ -45,6 +46,8 @@ func (d differType) String() string {
 		return "size"
 	case differInTime:
 		return "time"
+	case differInMetadata:
+		return "metadata"
 	case differInType:
 		return "type"
 	case differInFirst:
@@ -55,17 +58,17 @@ func (d differType) String() string {
 	return "unknown"
 }
 
-func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
-	return difference(sourceClnt, targetClnt, sourceURL, targetURL, true, false, DirNone)
+func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool) (diffCh chan diffMessage) {
+	return difference(sourceClnt, targetClnt, sourceURL, targetURL, isMetadata, true, false, DirNone)
 }
 
 func dirDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string) (diffCh chan diffMessage) {
-	return difference(sourceClnt, targetClnt, sourceURL, targetURL, false, true, DirFirst)
+	return difference(sourceClnt, targetClnt, sourceURL, targetURL, false, false, true, DirFirst)
 }
 
 // objectDifference function finds the difference between all objects
 // recursively in sorted order from source and target.
-func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
+func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool, isRecursive, returnSimilar bool, dirOpt DirOpt) (diffCh chan diffMessage) {
 	var (
 		srcEOF, tgtEOF       bool
 		srcOk, tgtOk         bool
@@ -193,6 +196,15 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isRe
 						FirstURL:      srcCtnt.URL.String(),
 						SecondURL:     tgtCtnt.URL.String(),
 						Diff:          differInTime,
+						firstContent:  srcCtnt,
+						secondContent: tgtCtnt,
+					}
+				} else if isMetadata {
+					// Regular files user requesting additional metadata to same file.
+					diffCh <- diffMessage{
+						FirstURL:      srcCtnt.URL.String(),
+						SecondURL:     tgtCtnt.URL.String(),
+						Diff:          differInMetadata,
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}
