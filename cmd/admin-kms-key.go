@@ -26,6 +26,7 @@ var adminKMSKeyCmd = cli.Command{
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
 		adminKMSKeyStatusCmd,
+		adminKMSListKeysCmd,
 	},
 	HideHelpCommand: true,
 }

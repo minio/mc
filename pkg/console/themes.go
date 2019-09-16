@@ -21,13 +21,15 @@ import "github.com/fatih/color"
 var (
 	// Theme contains default color mapping.
 	Theme = map[string]*color.Color{
-		"Debug":  color.New(color.FgWhite, color.Faint, color.Italic),
-		"Fatal":  color.New(color.FgRed, color.Italic, color.Bold),
-		"Error":  color.New(color.FgYellow, color.Italic),
-		"Info":   color.New(color.FgGreen, color.Bold),
-		"Print":  color.New(),
-		"PrintB": color.New(color.FgBlue, color.Bold),
-		"PrintC": color.New(color.FgGreen, color.Bold),
+		"Debug":     color.New(color.FgWhite, color.Faint, color.Italic),
+		"Fatal":     color.New(color.FgRed, color.Italic, color.Bold),
+		"Error":     color.New(color.FgYellow, color.Italic),
+		"Info":      color.New(color.FgGreen, color.Bold),
+		"Print":     color.New(),
+		"PrintB":    color.New(color.FgBlue, color.Bold),
+		"PrintC":    color.New(color.FgGreen, color.Bold),
+		"BoldWhite": color.New(color.FgWhite, color.Bold),
+		"Yellow":    color.New(color.FgYellow),
 	}
 )
 
