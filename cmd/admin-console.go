@@ -93,6 +93,21 @@ func getLogTime(lt string) string {
 
 // String - return colorized loginfo as string.
 func (l logMessage) String() string {
+	var hostStr string
+	var b = &strings.Builder{}
+
+	if l.NodeName != "" {
+		hostStr = fmt.Sprintf("%s ", colorizedNodeName(l.NodeName))
+	}
+	log := l.LogInfo
+	if log.ConsoleMsg != "" {
+		if strings.HasPrefix(log.ConsoleMsg, "\n") {
+			fmt.Fprintf(b, "%s\n", hostStr)
+			log.ConsoleMsg = strings.TrimPrefix(log.ConsoleMsg, "\n")
+		}
+		fmt.Fprintf(b, "%s %s", hostStr, log.ConsoleMsg)
+		return b.String()
+	}
 	traceLength := len(l.Trace.Source)
 
 	apiString := "API: " + l.API.Name + "("
@@ -105,12 +120,7 @@ func (l logMessage) String() string {
 	apiString += ")"
 
 	var msg = console.Colorize("LogMessage", l.Trace.Message)
-	var b = &strings.Builder{}
 
-	hostStr := ""
-	if l.NodeName != "" {
-		hostStr = fmt.Sprintf("%s ", colorizedNodeName(l.NodeName))
-	}
 	fmt.Fprintf(b, "\n%s %s", hostStr, console.Colorize("Api", apiString))
 	fmt.Fprintf(b, "\n%s Time: %s", hostStr, getLogTime(l.Time))
 	fmt.Fprintf(b, "\n%s DeploymentID: %s", hostStr, l.DeploymentID)
@@ -144,7 +154,9 @@ func mainAdminConsole(ctx *cli.Context) error {
 	checkAdminLogSyntax(ctx)
 	console.SetColor("LogMessage", color.New(color.Bold, color.FgRed))
 	console.SetColor("Api", color.New(color.Bold, color.FgWhite))
-
+	for _, c := range colors {
+		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c))
+	}
 	aliasedURL := ctx.Args().Get(0)
 	var node string
 	if len(ctx.Args()) > 1 {
