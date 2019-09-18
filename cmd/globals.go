@@ -19,19 +19,10 @@ package cmd
 
 import (
 	"crypto/x509"
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 )
 
-// mc configuration related constants.
-var (
-	globalMCConfigDir        = fmt.Sprintf(".%s/", filepath.Base(os.Args[0]))
-	globalMCConfigWindowsDir = fmt.Sprintf("%s\\", filepath.Base(os.Args[0]))
-)
 
 const (
 	globalMCConfigVersion = "9"

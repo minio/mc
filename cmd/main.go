@@ -105,7 +105,10 @@ func Main(args []string) {
 
 	// Set the mc app name.
 	appName := filepath.Base(args[0])
-
+	if runtime.GOOS == "windows" && strings.HasSuffix(strings.ToLower(appName), ".exe") {
+		// Trim ".exe" from Windows executable.
+		appName = appName[:strings.LastIndex(appName, ".")]
+	}
 	// Run the app - exit on error.
 	if err := registerApp(appName).Run(args); err != nil {
 		os.Exit(1)

@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/minio/mc/pkg/probe"
 
@@ -46,14 +47,22 @@ func getMcConfigDir() (string, *probe.Error) {
 	if e != nil {
 		return "", probe.NewError(e)
 	}
-	var configDir string
-	// For windows the path is slightly different
-	if runtime.GOOS == "windows" {
-		configDir = filepath.Join(homeDir, globalMCConfigWindowsDir)
-	} else {
-		configDir = filepath.Join(homeDir, globalMCConfigDir)
-	}
+	configDir := filepath.Join(homeDir, defaultMCConfigDir())
 	return configDir, nil
+}
+
+// Return default default mc config directory.
+// Generally you want to use getMcConfigDir which returns custom overrides.
+func defaultMCConfigDir() string {
+	if runtime.GOOS == "windows" {
+		// For windows the path is slightly different
+		cmd := filepath.Base(os.Args[0])
+		if strings.HasSuffix(strings.ToLower(cmd), ".exe") {
+			cmd = cmd[:strings.LastIndex(cmd, ".")]
+		}
+		return fmt.Sprintf("%s\\", cmd)
+	}
+	return fmt.Sprintf(".%s/", filepath.Base(os.Args[0]))
 }
 
 // mustGetMcConfigDir - construct MinIO Client config folder or fail
