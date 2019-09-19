@@ -246,7 +246,7 @@ func copySourceToTargetURL(alias string, urlStr string, source string, size int6
 }
 
 // createUserMetadata - returns a map of user defined function
-// by combining the usermetadata of object and  values passed by attr keyword
+// by combining the usermetadata of object and values passed by attr keyword
 func createUserMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs) (map[string]string, *probe.Error) {
 	metadata := make(map[string]string)
 	sourceClnt, err := newClientFromAlias(sourceAlias, sourceURLStr)
@@ -258,14 +258,15 @@ func createUserMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerS
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
 	for k, v := range st.Metadata {
-		if httpguts.ValidHeaderFieldName(k) && strings.HasPrefix(k, "X-Amz-Meta-") &&
-			httpguts.ValidHeaderFieldValue(v) {
+		if httpguts.ValidHeaderFieldName(k) && httpguts.ValidHeaderFieldValue(v) {
 			metadata[k] = v
 		}
 	}
 
 	for k, v := range urls.TargetContent.UserMetadata {
-		metadata[k] = v
+		if httpguts.ValidHeaderFieldName(k) && httpguts.ValidHeaderFieldValue(v) {
+			metadata[k] = v
+		}
 	}
 	return metadata, nil
 }
@@ -286,48 +287,45 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	srcSSE := getSSE(sourcePath, encKeyDB[sourceAlias])
 	tgtSSE := getSSE(targetPath, encKeyDB[targetAlias])
 
+	var err *probe.Error
+	var metadata map[string]string
+
 	// Optimize for server side copy if the host is same.
 	if sourceAlias == targetAlias {
-
-		metadata, err := createUserMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
+		metadata, err = createUserMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
 
 		sourcePath := filepath.ToSlash(sourceURL.Path)
 		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length, progress, srcSSE, tgtSSE, metadata)
-		if err != nil {
-			return urls.WithError(err.Trace(sourceURL.String()))
-		}
 	} else {
 
+		var reader io.ReadCloser
 		// Proceed with regular stream copy.
-		reader, metadata, err := getSourceStream(sourceAlias, sourceURL.String(), true, srcSSE)
+		reader, metadata, err = getSourceStream(sourceAlias, sourceURL.String(), true, srcSSE)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
 		defer reader.Close()
 		// Get metadata from target content as well
-		if urls.TargetContent.Metadata != nil {
-			for k, v := range urls.TargetContent.Metadata {
-				metadata[k] = v
-			}
+		for k, v := range urls.TargetContent.Metadata {
+			metadata[k] = v
 		}
 		// Get userMetadata from target content as well
-		if urls.TargetContent.UserMetadata != nil {
-			for k, v := range urls.TargetContent.UserMetadata {
-				metadata[k] = v
-			}
+		for k, v := range urls.TargetContent.UserMetadata {
+			metadata[k] = v
 		}
 		if srcSSE != nil {
 			delete(metadata, "X-Amz-Server-Side-Encryption-Customer-Algorithm")
 			delete(metadata, "X-Amz-Server-Side-Encryption-Customer-Key-Md5")
 		}
 		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, metadata, progress, tgtSSE)
-		if err != nil {
-			return urls.WithError(err.Trace(targetURL.String()))
-		}
 	}
+	if err != nil {
+		return urls.WithError(err.Trace(sourceURL.String()))
+	}
+
 	return urls.WithError(nil)
 }
 
