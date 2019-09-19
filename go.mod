@@ -11,14 +11,13 @@ require (
 	github.com/mattn/go-isatty v0.0.7
 	github.com/minio/cli v1.21.0
 	github.com/minio/minio v0.0.0-20190903181048-8a71b0ec5a72
-	github.com/minio/minio-go/v6 v6.0.32
+	github.com/minio/minio-go/v6 v6.0.36
 	github.com/minio/sha256-simd v0.1.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/profile v1.3.0
 	github.com/pkg/xattr v0.4.1
 	github.com/posener/complete v1.2.2-0.20190702141536-6ffe496ea953
 	github.com/rjeczalik/notify v0.9.2
-	github.com/segmentio/go-prompt v1.2.1-0.20161017233205-f0d19b6901ad
 	github.com/ugorji/go v1.1.5-pre // indirect
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/text v0.3.2

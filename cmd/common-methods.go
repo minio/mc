@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2015 MinIO, Inc.
+ * MinIO Client (C) 2015-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -245,9 +246,9 @@ func copySourceToTargetURL(alias string, urlStr string, source string, size int6
 	return nil
 }
 
-// createUserMetadata - returns a map of user defined function
+// getAllMetadata - returns a map of user defined function
 // by combining the usermetadata of object and values passed by attr keyword
-func createUserMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs) (map[string]string, *probe.Error) {
+func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs) (map[string]string, *probe.Error) {
 	metadata := make(map[string]string)
 	sourceClnt, err := newClientFromAlias(sourceAlias, sourceURLStr)
 	if err != nil {
@@ -268,6 +269,13 @@ func createUserMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerS
 			metadata[k] = v
 		}
 	}
+
+	for k := range metadata {
+		if strings.HasPrefix(http.CanonicalHeaderKey(k), "X-Amz-Server-Side-Encryption-") {
+			delete(metadata, k)
+		}
+	}
+
 	return metadata, nil
 }
 
@@ -292,7 +300,7 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 
 	// Optimize for server side copy if the host is same.
 	if sourceAlias == targetAlias {
-		metadata, err = createUserMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
+		metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
 		if err != nil {
 			return urls.WithError(err.Trace(sourceURL.String()))
 		}
@@ -316,9 +324,10 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		for k, v := range urls.TargetContent.UserMetadata {
 			metadata[k] = v
 		}
-		if srcSSE != nil {
-			delete(metadata, "X-Amz-Server-Side-Encryption-Customer-Algorithm")
-			delete(metadata, "X-Amz-Server-Side-Encryption-Customer-Key-Md5")
+		for k := range metadata {
+			if strings.HasPrefix(http.CanonicalHeaderKey(k), "X-Amz-Server-Side-Encryption-") {
+				delete(metadata, k)
+			}
 		}
 		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, metadata, progress, tgtSSE)
 	}
