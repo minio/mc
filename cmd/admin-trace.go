@@ -140,12 +140,12 @@ type shortTraceMsg struct {
 	Host       string    `json:"host"`
 	Time       time.Time `json:"time"`
 	Client     string    `json:"client"`
-	CallStats  callStats `json:"callstats"`
+	CallStats  callStats `json:"callStats"`
 	FuncName   string    `json:"api"`
 	Path       string    `json:"path"`
 	Query      string    `json:"query"`
-	StatusCode int       `json:"statuscode"`
-	StatusMsg  string    `json:"statusmsg"`
+	StatusCode int       `json:"statusCode"`
+	StatusMsg  string    `json:"statusMsg"`
 }
 
 type traceMessage struct {
@@ -156,7 +156,7 @@ type requestInfo struct {
 	Time     time.Time         `json:"time"`
 	Method   string            `json:"method"`
 	Path     string            `json:"path,omitempty"`
-	RawQuery string            `json:"rawquery,omitempty"`
+	RawQuery string            `json:"rawQuery,omitempty"`
 	Headers  map[string]string `json:"headers,omitempty"`
 	Body     string            `json:"body,omitempty"`
 }
@@ -165,12 +165,13 @@ type responseInfo struct {
 	Time       time.Time         `json:"time"`
 	Headers    map[string]string `json:"headers,omitempty"`
 	Body       string            `json:"body,omitempty"`
-	StatusCode int               `json:"statuscode,omitempty"`
+	StatusCode int               `json:"statusCode,omitempty"`
 }
 type callStats struct {
 	Rx       int           `json:"rx"`
 	Tx       int           `json:"tx"`
 	Duration time.Duration `json:"duration"`
+	Ttfb     time.Duration `json:"timeToFirstByte"`
 }
 
 type trace struct {
@@ -178,7 +179,7 @@ type trace struct {
 	FuncName     string       `json:"api"`
 	RequestInfo  requestInfo  `json:"request"`
 	ResponseInfo responseInfo `json:"response"`
-	CallStats    callStats    `json:"callstats"`
+	CallStats    callStats    `json:"callStats"`
 }
 
 // return a struct with minimal trace info.
@@ -286,6 +287,7 @@ func (t traceMessage) JSON() string {
 			Duration: t.Trace.CallStats.Latency,
 			Rx:       t.Trace.CallStats.InputBytes,
 			Tx:       t.Trace.CallStats.OutputBytes,
+			Ttfb:     t.Trace.CallStats.TimeToFirstByte,
 		},
 	}
 	buf := &bytes.Buffer{}
