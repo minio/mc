@@ -57,10 +57,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Show console logs for a MinIO server with alias 'play'
-     $ {{.HelpName}} play
+     {{.Prompt}} {{.HelpName}} play
 
   2. Show last 5 log entries for node 'node1' on MinIO server with alias 'cluster1'
-     $ {{.HelpName}} --limit 5 cluster1 node1
+     {{.Prompt}} {{.HelpName}} --limit 5 cluster1 node1
 `,
 }
 

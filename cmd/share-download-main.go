@@ -52,16 +52,16 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Share this object with 7 days default expiry.
-     $ {{.HelpName}} s3/backup/2006-Mar-1/backup.tar.gz
+     {{.Prompt}} {{.HelpName}} s3/backup/2006-Mar-1/backup.tar.gz
 
   2. Share this object with 10 minutes expiry.
-     $ {{.HelpName}} --expire=10m s3/backup/2006-Mar-1/backup.tar.gz
+     {{.Prompt}} {{.HelpName}} --expire=10m s3/backup/2006-Mar-1/backup.tar.gz
 
   3. Share all objects under this folder with 5 days expiry.
-     $ {{.HelpName}} --expire=120h s3/backup/2006-Mar-1/
+     {{.Prompt}} {{.HelpName}} --expire=120h s3/backup/2006-Mar-1/
 
   4. Share all objects under this bucket and all its folders and sub-folders with 5 days expiry.
-     $ {{.HelpName}} --recursive --expire=120h s3/backup/
+     {{.Prompt}} {{.HelpName}} --recursive --expire=120h s3/backup/
 `,
 }
 

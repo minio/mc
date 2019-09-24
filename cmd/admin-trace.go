@@ -66,10 +66,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Show console trace for a MinIO server with alias 'play'
-     $ {{.HelpName}} -v -a play
+     {{.Prompt}} {{.HelpName}} -v -a play
 
   2. Show trace only for failed requests for a MinIO server with alias 'myminio'
-    $ {{.HelpName}} -v -e myminio
+    {{.Prompt}} {{.HelpName}} -v -e myminio
 `,
 }
 

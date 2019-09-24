@@ -41,10 +41,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Remove members 'tencent' and 'fivecent' from group 'allcents'.
-     $ {{.HelpName}} myminio allcents tencent fivecent
+     {{.Prompt}} {{.HelpName}} myminio allcents tencent fivecent
 
   2. Remove group 'allcents'.
-     $ {{.HelpName}} myminio allcents
+     {{.Prompt}} {{.HelpName}} myminio allcents
 `,
 }
 

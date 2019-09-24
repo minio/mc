@@ -58,10 +58,10 @@ LEGEND:
 
 EXAMPLES:
   1. Compare a local folder with a folder on Amazon S3 cloud storage.
-     $ {{.HelpName}} ~/Photos s3/mybucket/Photos
+     {{.Prompt}} {{.HelpName}} ~/Photos s3/mybucket/Photos
 
   2. Compare two folders on a local filesystem.
-     $ {{.HelpName}} ~/Photos /Media/Backup/Photos
+     {{.Prompt}} {{.HelpName}} ~/Photos /Media/Backup/Photos
 `,
 }
 
