@@ -43,7 +43,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Enable group 'allcents':
-     $ {{.HelpName}} myminio allcents
+     {{.Prompt}} {{.HelpName}} myminio allcents
 `,
 }
 

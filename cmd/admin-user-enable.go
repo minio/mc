@@ -41,7 +41,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Enable a disabled user 'foobar' on MinIO server.
-     $ {{.HelpName}} myminio foobar
+     {{.Prompt}} {{.HelpName}} myminio foobar
 `,
 }
 

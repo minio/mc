@@ -49,7 +49,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Add a new canned policy 'writeonly'.
-     $ {{.HelpName}} myminio writeonly /tmp/writeonly.json
+     {{.Prompt}} {{.HelpName}} myminio writeonly /tmp/writeonly.json
  `,
 }
 

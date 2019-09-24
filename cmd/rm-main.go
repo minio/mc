@@ -88,34 +88,34 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
   01. Remove a file.
-      $ {{.HelpName}} 1999/old-backup.tgz
+      {{.Prompt}} {{.HelpName}} 1999/old-backup.tgz
 
   02. Perform a fake remove operation.
-      $ {{.HelpName}} --fake 1999/old-backup.tgz
+      {{.Prompt}} {{.HelpName}} --fake 1999/old-backup.tgz
 
   03. Remove all objects recursively from bucket 'jazz-songs' matching the prefix 'louis'.
-      $ {{.HelpName}} --recursive --force s3/jazz-songs/louis/
+      {{.Prompt}} {{.HelpName}} --recursive --force s3/jazz-songs/louis/
 
   04. Remove all objects older than '90' days recursively from bucket 'jazz-songs' matching the prefix 'louis'.
-      $ {{.HelpName}} --recursive --force --older-than 90d s3/jazz-songs/louis/
+      {{.Prompt}} {{.HelpName}} --recursive --force --older-than 90d s3/jazz-songs/louis/
 
   05. Remove all objects newer than 7 days and 10 hours recursively from bucket 'pop-songs'
-      $ {{.HelpName}} --recursive --force --newer-than 7d10h s3/pop-songs/
+      {{.Prompt}} {{.HelpName}} --recursive --force --newer-than 7d10h s3/pop-songs/
 
   06. Remove all objects read from STDIN.
-      $ {{.HelpName}} --force --stdin
+      {{.Prompt}} {{.HelpName}} --force --stdin
 
   07. Remove all objects recursively from Amazon S3 cloud storage.
-      $ {{.HelpName}} --recursive --force --dangerous s3
+      {{.Prompt}} {{.HelpName}} --recursive --force --dangerous s3
 
   08. Remove all buckets and objects older than '90' days recursively from host
-      $ {{.HelpName}} --recursive --dangerous --force --older-than 90d s3
+      {{.Prompt}} {{.HelpName}} --recursive --dangerous --force --older-than 90d s3
 
   09. Drop all incomplete uploads on the bucket 'jazz-songs'.
-      $ {{.HelpName}} --incomplete --recursive --force s3/jazz-songs/
+      {{.Prompt}} {{.HelpName}} --incomplete --recursive --force s3/jazz-songs/
 
   10. Remove an encrypted object from Amazon S3 cloud storage.
-      $ {{.HelpName}} --encrypt-key "s3/sql-backups/=32byteslongsecretkeymustbegiven1" s3/sql-backups/1999/old-backup.tgz
+      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/sql-backups/=32byteslongsecretkeymustbegiven1" s3/sql-backups/1999/old-backup.tgz
 `,
 }
 

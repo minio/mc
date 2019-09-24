@@ -44,10 +44,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. List all hosts.
-     $ {{.HelpName}}
+     {{.Prompt}} {{.HelpName}}
 
   2. List a specific host.
-     $ {{.HelpName}} s3
+     {{.Prompt}} {{.HelpName}} s3
 `,
 }
 

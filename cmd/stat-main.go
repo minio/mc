@@ -55,16 +55,16 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
   1. Stat all contents of mybucket on Amazon S3 cloud storage.
-     $ {{.HelpName}} s3/mybucket/
+     {{.Prompt}} {{.HelpName}} s3/mybucket/
 
   2. Stat all contents of mybucket on Amazon S3 cloud storage on Microsoft Windows.
-     $ {{.HelpName}} s3\mybucket\
+     {{.Prompt}} {{.HelpName}} s3\mybucket\
 
   3. Stat files recursively on a local filesystem on Microsoft Windows.
-     $ {{.HelpName}} --recursive C:\Users\Worf\
+     {{.Prompt}} {{.HelpName}} --recursive C:\Users\Worf\
 
   4. Stat encrypted files on Amazon S3 cloud storage.
-     $ {{.HelpName}} --encrypt-key "s3/personal-docs/=32byteslongsecretkeymustbegiven1" s3/personal-docs/2018-account_report.docx
+     {{.Prompt}} {{.HelpName}} --encrypt-key "s3/personal-docs/=32byteslongsecretkeymustbegiven1" s3/personal-docs/2018-account_report.docx
 `,
 }
 

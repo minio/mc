@@ -44,7 +44,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Restart MinIO server represented by its alias 'play'.
-     $ {{.HelpName}} play/
+     {{.Prompt}} {{.HelpName}} play/
 `,
 }
 

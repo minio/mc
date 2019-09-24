@@ -121,35 +121,35 @@ FORMAT
 
 EXAMPLES:
   01. Find all "foo.jpg" in all buckets under "s3" account.
-      $ {{.HelpName}} s3 --name "foo.jpg"
+      {{.Prompt}} {{.HelpName}} s3 --name "foo.jpg"
 
   02. Find all objects with ".txt" extension under "s3/mybucket".
-      $ {{.HelpName}} s3/mybucket --name "*.txt"
+      {{.Prompt}} {{.HelpName}} s3/mybucket --name "*.txt"
 
   03. Find only the object names without the directory component under "s3/mybucket".
-      $ {{.HelpName}} s3/mybucket --name "*" -print {base}
+      {{.Prompt}} {{.HelpName}} s3/mybucket --name "*" -print {base}
 
   04. Find all images with ".jpg" extension under "s3/photos", prefixed with "album".
-      $ {{.HelpName}} s3/photos --name "*.jpg" --path "*/album*/*"
+      {{.Prompt}} {{.HelpName}} s3/photos --name "*.jpg" --path "*/album*/*"
 
   05. Find all images with ".jpg", ".png", and ".gif" extensions, using regex under "s3/photos".
-      $ {{.HelpName}} s3/photos --regex "(?i)\.(jpg|png|gif)$"
+      {{.Prompt}} {{.HelpName}} s3/photos --regex "(?i)\.(jpg|png|gif)$"
 
   06. Find all images with ".jpg" extension under "s3/bucket" and copy to "play/bucket" *continuously*.
-      $ {{.HelpName}} s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
+      {{.Prompt}} {{.HelpName}} s3/bucket --name "*.jpg" --watch --exec "mc cp {} play/bucket"
 
   07. Find and generate public URLs valid for 7 days, for all objects between 64 MB, and 1 GB in size under "s3" account.
-      $ {{.HelpName}} s3 --larger 64MB --smaller 1GB --print {url}
+      {{.Prompt}} {{.HelpName}} s3 --larger 64MB --smaller 1GB --print {url}
 
   08. Find all objects created in the last week under "s3/bucket".
-      $ {{.HelpName}} s3/bucket --newer-than 7d
+      {{.Prompt}} {{.HelpName}} s3/bucket --newer-than 7d
 
   09. Find all objects which were created are older than 2 days, 5 hours and 10 minutes and exclude the ones with ".jpg"
       extension under "s3".
-      $ {{.HelpName}} s3 --older-than 2d5h10m --ignore "*.jpg"
+      {{.Prompt}} {{.HelpName}} s3 --older-than 2d5h10m --ignore "*.jpg"
 
   10. List all objects up to 3 levels sub-directory deep under "s3/bucket".
-      $ {{.HelpName}} s3/bucket --maxdepth 3
+      {{.Prompt}} {{.HelpName}} s3/bucket --maxdepth 3
 `,
 }
 

@@ -69,7 +69,7 @@ EXIT STATUS:
 
 EXAMPLES:
   1. Check and update mc:
-     $ {{.HelpName}}
+     {{.Prompt}} {{.HelpName}}
 `,
 }
 

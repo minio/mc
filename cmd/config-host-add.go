@@ -55,22 +55,29 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Add MinIO service under "myminio" alias. For security reasons turn off bash history momentarily.
+  1. Add MinIO service under "myminio" alias. For security reasons, turn off bash history momentarily.
      $ set +o history
      $ {{.HelpName}} myminio http://localhost:9000 minio minio123
      $ set -o history
 
-  2. Add MinIO service under "myminio" alias, to use dns style bucket lookup. For security reasons 
+  2. Add MinIO service under "myminio" alias, to use dns style bucket lookup. For security reasons, 
      turn off bash history momentarily.
      $ set +o history
      $ {{.HelpName}} myminio http://localhost:9000 minio minio123 --api "s3v4" --lookup "dns"
      $ set -o history
 
-  3. Add Amazon S3 storage service under "mys3" alias. For security reasons turn off bash history momentarily.
+  3. Add Amazon S3 storage service under "mys3" alias. For security reasons, turn off bash history momentarily.
      $ set +o history
      $ {{.HelpName}} mys3 https://s3.amazonaws.com \
                  BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
-     $ set -o history
+	 $ set -o history
+	 
+  4. On Windows, add MinIO service under "myminio" alias. For security reasons, disable Windows
+     history activity (go to "Settings/Privacy/Activity history") momentarily.
+     - Click and deselect "Store my activity on this device" and "Send my activity history to Microsoft"
+       check boxes to disable history activity.
+     C:\> {{.HelpName}} myminio http://localhost:9000 minio minio123 --api "s3v4" --lookup "dns"
+     - Click and select "Store my activity on this device" check box to enable history activity.
 `,
 }
 

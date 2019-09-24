@@ -43,7 +43,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Set a policy 'writeonly' to 'foobar' on MinIO server.
-     $ {{.HelpName}} myminio foobar writeonly
+     {{.Prompt}} {{.HelpName}} myminio foobar writeonly
 `,
 }
 

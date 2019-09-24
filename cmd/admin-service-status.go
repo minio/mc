@@ -49,7 +49,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Check if the 'play' MinIO server is online and show its uptime.
-     $ {{.HelpName}} play/
+     {{.Prompt}} {{.HelpName}} play/
 `,
 }
 

@@ -47,6 +47,14 @@ EXAMPLES:
      $ set +o history
      $ {{.HelpName}} myminio foobar foo12345 writeonly
      $ set -o history
+
+  2. On Windows, add a new user 'foobar' to MinIO server with policy 'writeonly'.
+     For security reasons, disable Windows history activity (go to
+     "Settings/Privacy/Activity history") momentarily.
+     - Click and deselect "Store my activity on this device" and "Send my activity
+     history to Microsoft" check boxes to disable history activity.
+     C:\> {{.HelpName}} myminio foobar foo12345 writeonly
+     - Click and select "Store my activity on this device" check box to enable history activity.
 `,
 }
 
