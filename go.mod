@@ -11,7 +11,7 @@ require (
 	github.com/mattn/go-colorable v0.1.1
 	github.com/mattn/go-isatty v0.0.7
 	github.com/minio/cli v1.21.0
-	github.com/minio/minio v0.0.0-20190903181048-8a71b0ec5a72
+	github.com/minio/minio v0.0.0-20190922180146-26985ac632b9
 	github.com/minio/minio-go/v6 v6.0.37
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mitchellh/go-homedir v1.1.0
