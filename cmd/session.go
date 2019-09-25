@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"strings"
@@ -135,4 +137,15 @@ func removeSessionDataFile(sid string) {
 		return
 	}
 	os.Remove(dataFile)
+}
+
+func getHash(prefix string, args []string) string {
+	hasher := sha256.New()
+	for _, arg := range args {
+		if _, err := hasher.Write([]byte(arg)); err != nil {
+			panic(err)
+		}
+	}
+
+	return prefix + "-" + hex.EncodeToString(hasher.Sum(nil))
 }
