@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2016, 2017 MinIO, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,37 +18,30 @@ package cmd
 
 import "github.com/minio/cli"
 
-var (
-	adminFlags = []cli.Flag{}
-)
-
-var adminCmd = cli.Command{
-	Name:            "admin",
-	Usage:           "manage MinIO servers",
-	Action:          mainAdmin,
-	HideHelpCommand: true,
+var adminPrometheusCmd = cli.Command{
+	Name:            "prometheus",
+	Usage:           "manages prometheus config",
+	Action:          mainAdminPrometheus,
 	Before:          setGlobalsFromContext,
-	Flags:           append(adminFlags, globalFlags...),
+	Flags:           globalFlags,
+	HideHelpCommand: true,
 	Subcommands: []cli.Command{
-		adminServiceCmd,
-		adminServerUpdateCmd,
-		adminInfoCmd,
-		adminUserCmd,
-		adminGroupCmd,
-		adminPolicyCmd,
-		adminConfigCmd,
-		adminHealCmd,
-		adminProfileCmd,
-		adminTopCmd,
-		adminTraceCmd,
-		adminConsoleCmd,
-		adminPrometheusCmd,
+		adminPrometheusGenerateCmd,
 	},
+	CustomHelpTemplate: `NAME:
+  {{.HelpName}} - {{.Usage}}
+
+USAGE:
+  {{.HelpName}} TARGET
+
+FLAGS:
+  {{range .VisibleFlags}}{{.}}
+  {{end}}
+`,
 }
 
-// mainAdmin is the handle for "mc admin" command.
-func mainAdmin(ctx *cli.Context) error {
+// mainAdminPrometheus is the handle for "mc admin prometheus" command.
+func mainAdminPrometheus(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "service", "heal", "top" have their own main.
 }

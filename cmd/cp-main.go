@@ -118,10 +118,10 @@ EXAMPLES:
   10. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage. In case the encryption key contains non-printable character like tab, pass the
       base64 encoded string as key.
       $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=,myminio/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/documents/ myminio/documents/
-	  
+
   11. Copy a list of objects from local file system to MinIO cloud storage with specified metadata.
       $ {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
-			
+
   12. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
       $ {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
 
@@ -360,22 +360,19 @@ func doCopySession(session *sessionV8, encKeyDB map[string][]prefixSSEPair) erro
 				// Save totalSize.
 				cpURLs.TotalSize = session.Header.TotalBytes
 
+				// Initialize target metadata.
+				cpURLs.TargetContent.Metadata = make(map[string]string)
+
+				// Initialize target user metadata.
+				cpURLs.TargetContent.UserMetadata = make(map[string]string)
+
 				// Check and handle storage class if passed in command line args
 				if _, ok := session.Header.CommandStringFlags["storage-class"]; ok {
-					if cpURLs.TargetContent.Metadata == nil {
-						cpURLs.TargetContent.Metadata = make(map[string]string)
-					}
 					cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = session.Header.CommandStringFlags["storage-class"]
 				}
 
-				//	metaMap, metaSet := session.Header.UserMetaData
-
 				// Check and handle metadata if passed in command line args
-
 				if len(session.Header.UserMetaData) != 0 {
-					if cpURLs.TargetContent.UserMetadata == nil {
-						cpURLs.TargetContent.UserMetadata = make(map[string]string)
-					}
 					for metaDataKey, metaDataVal := range session.Header.UserMetaData {
 						cpURLs.TargetContent.UserMetadata[metaDataKey] = metaDataVal
 					}

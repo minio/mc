@@ -678,7 +678,7 @@ function test_cat_object_with_sse_error()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
-function test_copy_object_with_sse()
+function test_copy_object_with_sse_rewrite()
 {
     # test server side copy and remove operation - target is unencrypted while source is encrypted
     show "${FUNCNAME[0]}"
@@ -696,17 +696,14 @@ function test_copy_object_with_sse()
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
-    # mc rm on encrypted object without encryption key should fail
-    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
-    # mc rm on encrypted object with encryption key should pass
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
-    # mc rm on unencrypted destination object should pass
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm  "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    # mc rm on with multi-object delete, deletes encrypted object without encryption key.
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
-function test_copy_object_with_sse2()
+function test_copy_object_with_sse_dest()
 {
     # test server side copy and remove operation - target is encrypted with different key
     show "${FUNCNAME[0]}"
@@ -728,7 +725,7 @@ function test_copy_object_with_sse2()
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
     # mc rm on src object with first encryption key should pass
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag1}" "${SERVER_ALIAS}/${BUCKET_NAME}/${prefix}/${object_name}"
-    # mc rm on encrypted destination object  with second encryption key should pass
+    # mc rm on encrypted destination object with second encryption key should pass
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm  --encrypt-key "${cli_flag2}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
@@ -755,10 +752,8 @@ function test_sse_key_rotation()
     assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to download object using 'mc cat'"
     assert_success "$start_time" "${FUNCNAME[0]}" check_md5sum "$FILE_1_MB_MD5SUM" "${object_name}.downloaded"
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${object_name}.downloaded"
-    # mc rm on object with old key should fail
-    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag1}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
-    # mc rm on encrypted object with second encryption key should pass
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm  --encrypt-key "${cli_flag2}" "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}"
+    # mc rm on encrypted object with succeed anyways, without encrypted keys.
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS_TLS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -792,8 +787,8 @@ function test_rm_object_with_sse()
     cli_flag="${SERVER_ALIAS}/${BUCKET_NAME}=32byteslongsecretkeymustbegiven1"
 
     assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp --encrypt-key "${cli_flag}" "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
-    assert_failure "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
-    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm --encrypt-key "${cli_flag}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    # rm will not fail even if the encryption keys are not provided, since mc rm uses multi-object delete.
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
 
     log_success "$start_time" "${FUNCNAME[0]}"
 }
@@ -863,8 +858,8 @@ function run_test()
         test_get_object_with_sse
         test_cat_object_with_sse
         test_cat_object_with_sse_error
-        test_copy_object_with_sse
-        test_copy_object_with_sse2
+        test_copy_object_with_sse_rewrite
+        test_copy_object_with_sse_dest
         test_sse_key_rotation
         test_mirror_with_sse
         test_rm_object_with_sse

@@ -15,6 +15,7 @@ profile  generate profile data for debugging purposes
 top      provide top like statistics for MinIO
 trace    show http trace for minio server
 console  show console logs for MinIO server
+prometheus   manages prometheus config settings
 ```
 
 ## 1.  Download MinIO Client
@@ -277,7 +278,7 @@ Skip SSL certificate verification.
 | [**top** - provide top like statistics for MinIO](#top)                |
 | [**trace** - show http trace for MinIO server](#trace)                 |
 | [**console** - show console logs for MinIO server](#console)           |
-
+| [**prometheus** - manages prometheus config settings](#prometheus)     |
 
 <a name="update"></a>
 ### Command `update` - updates all MinIO servers
@@ -690,4 +691,34 @@ mc admin console myminio
         3: cmd/notification.go:780:cmd.(*NotificationSys).refresh()
         2: cmd/notification.go:815:cmd.(*NotificationSys).Init()
         1: cmd/server-main.go:375:cmd.serverMain()
+```
+
+<a name="prometheus"></a>
+
+### Command `prometheus` - Manages prometheus config settings
+
+`generate` command generates the prometheus config (To be pasted in `prometheus.yml`)
+
+```sh
+NAME:
+  mc admin prometheus - manages prometheus config
+
+USAGE:
+  mc admin prometheus COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  generate  generates prometheus config
+
+```
+
+_Example: Generates prometheus config for an <alias>._
+
+```sh
+mc admin prometheus generate <alias>
+- job_name: minio-job
+  bearer_token: <token>
+  metrics_path: /minio/prometheus/metrics
+  scheme: http
+  static_configs:
+  - targets: ['localhost:9000']
 ```
