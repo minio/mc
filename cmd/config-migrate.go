@@ -45,8 +45,6 @@ func migrateConfig() {
 	migrateConfigV7ToV8()
 	// Migrate config V8 to V9
 	migrateConfigV8ToV9()
-	// Migrate config location on windows
-	fixConfigLocation()
 }
 
 // Migrate from config version 1.0 to 1.0.1. Populate example entries and save it back.

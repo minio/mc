@@ -29,6 +29,8 @@ import (
 )
 
 func fixConfig() {
+	// Migrate config location on windows
+	fixConfigLocation()
 	// Fix config V3
 	fixConfigV3()
 	// Fix config V6
