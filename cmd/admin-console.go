@@ -37,6 +37,11 @@ var adminConsoleFlags = []cli.Flag{
 		Usage: "show last n log entries",
 		Value: 10,
 	},
+	cli.StringFlag{
+		Name:  "type, t",
+		Usage: "list error logs by type. Valid options are '[minio, application, all]'",
+		Value: "all",
+	},
 }
 
 var adminConsoleCmd = cli.Command{
@@ -61,11 +66,14 @@ EXAMPLES:
 
   2. Show last 5 log entries for node 'node1' on MinIO server with alias 'cluster1'
      {{.Prompt}} {{.HelpName}} --limit 5 cluster1 node1
+
+  3. Show application error logs on MinIO server with alias 'play'
+     {{.Prompt}} {{.HelpName}} --type application play
 `,
 }
 
 func checkAdminLogSyntax(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 || len(ctx.Args()) > 2 {
+	if len(ctx.Args()) == 0 || len(ctx.Args()) > 3 {
 		cli.ShowCommandHelpAndExit(ctx, "console", 1) // last argument is exit code
 	}
 }
@@ -169,6 +177,11 @@ func mainAdminConsole(ctx *cli.Context) error {
 			fatalIf(errInvalidArgument().Trace(ctx.Args()...), "please set a proper limit, for example: '--limit 5' to display last 5 logs, omit this flag to display all available logs")
 		}
 	}
+	var logType string
+	logType = strings.ToLower(ctx.String("type"))
+	if logType != "minio" && logType != "application" && logType != "all" {
+		fatalIf(errInvalidArgument().Trace(ctx.Args()...), "Invalid value for --type flag. Valid options are [minio, application, all]")
+	}
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
@@ -179,7 +192,7 @@ func mainAdminConsole(ctx *cli.Context) error {
 	defer close(doneCh)
 
 	// Start listening on all console log activity.
-	logCh := client.GetLogs(node, limit, doneCh)
+	logCh := client.GetLogs(node, limit, logType, doneCh)
 	for logInfo := range logCh {
 		if logInfo.Err != nil {
 			fatalIf(probe.NewError(logInfo.Err), "Cannot listen to console logs")
