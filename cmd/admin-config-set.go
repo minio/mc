@@ -71,7 +71,7 @@ func (u configSetMessage) String() (msg string) {
 	return
 }
 
-// JSON jsonified service status Message message.
+// JSON jsonified service status message.
 func (u configSetMessage) JSON() string {
 	if u.setConfigStatus {
 		u.Status = "success"
