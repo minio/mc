@@ -55,16 +55,16 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
   1. Write contents of stdin to a file on local filesystem.
-     $ {{.HelpName}} /tmp/hello-world.go
+     {{.Prompt}} {{.HelpName}} /tmp/hello-world.go
 
   2. Write contents of stdin to an object on Amazon S3 cloud storage.
-     $ {{.HelpName}} s3/personalbuck/meeting-notes.txt
+     {{.Prompt}} {{.HelpName}} s3/personalbuck/meeting-notes.txt
 
   3. Copy an ISO image to an object on Amazon S3 cloud storage.
-     $ cat debian-8.2.iso | {{.HelpName}} s3/opensource-isos/gnuos.iso
+     {{.Prompt}} cat debian-8.2.iso | {{.HelpName}} s3/opensource-isos/gnuos.iso
 
   4. Stream MySQL database dump to Amazon S3 directly.
-     $ mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/sql-backups/backups/accountsdb-oct-9-2015.sql
+     {{.Prompt}} mysqldump -u root -p ******* accountsdb | {{.HelpName}} s3/sql-backups/backups/accountsdb-oct-9-2015.sql
 `,
 }
 

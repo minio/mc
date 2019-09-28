@@ -59,20 +59,20 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
   1. Stream an object from Amazon S3 cloud storage to mplayer standard input.
-     $ {{.HelpName}} s3/mysql-backups/kubecon-mysql-operator.mpv | mplayer -
+     {{.Prompt}} {{.HelpName}} s3/mysql-backups/kubecon-mysql-operator.mpv | mplayer -
 
   2. Concatenate contents of file1.txt and stdin to standard output.
-     $ {{.HelpName}} file1.txt - > file.txt
+     {{.Prompt}} {{.HelpName}} file1.txt - > file.txt
 
   3. Concatenate multiple files to one.
-     $ {{.HelpName}} part.* > complete.img
+     {{.Prompt}} {{.HelpName}} part.* > complete.img
 
   4. Save an encrypted object from Amazon S3 cloud storage to a local file.
-     $ {{.HelpName}} --encrypt-key 's3/mysql-backups=32byteslongsecretkeymustbegiven1' s3/mysql-backups/backups-201810.gz > /mnt/data/recent.gz
+     {{.Prompt}} {{.HelpName}} --encrypt-key 's3/mysql-backups=32byteslongsecretkeymustbegiven1' s3/mysql-backups/backups-201810.gz > /mnt/data/recent.gz
 
   5. Display the content of encrypted object. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
-     $ {{.HelpName}} --encrypt-key "play/my-bucket/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  play/my-bucket/my-object
+     {{.Prompt}} {{.HelpName}} --encrypt-key "play/my-bucket/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  play/my-bucket/my-object
 `,
 }
 

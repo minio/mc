@@ -43,10 +43,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Update MinIO server represented by its alias 'play'.
-     $ {{.HelpName}} play/
+     {{.Prompt}} {{.HelpName}} play/
 
   2. Update all MinIO servers in a distributed setup, represented by its alias 'mydist'.
-     $ {{.HelpName}} mydist/
+     {{.Prompt}} {{.HelpName}} mydist/
 `,
 }
 

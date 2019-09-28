@@ -56,21 +56,21 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Add MinIO service under "myminio" alias. For security reasons turn off bash history momentarily.
-     $ set +o history
-     $ {{.HelpName}} myminio http://localhost:9000 minio minio123
-     $ set -o history
+     {{.DisableHistory}}
+     {{.Prompt}} {{.HelpName}} myminio http://localhost:9000 minio minio123
+     {{.EnableHistory}}
 
   2. Add MinIO service under "myminio" alias, to use dns style bucket lookup. For security reasons 
      turn off bash history momentarily.
-     $ set +o history
-     $ {{.HelpName}} myminio http://localhost:9000 minio minio123 --api "s3v4" --lookup "dns"
-     $ set -o history
+     {{.DisableHistory}}
+     {{.Prompt}} {{.HelpName}} myminio http://localhost:9000 minio minio123 --api "s3v4" --lookup "dns"
+     {{.EnableHistory}}
 
   3. Add Amazon S3 storage service under "mys3" alias. For security reasons turn off bash history momentarily.
-     $ set +o history
-     $ {{.HelpName}} mys3 https://s3.amazonaws.com \
+     {{.DisableHistory}}
+     {{.Prompt}} {{.HelpName}} mys3 https://s3.amazonaws.com \
                  BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
-     $ set -o history
+     {{.EnableHistory}}
 `,
 }
 

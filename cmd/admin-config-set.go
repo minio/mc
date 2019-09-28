@@ -44,7 +44,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Set server configuration of a MinIO server/cluster.
-     $ cat myconfig | {{.HelpName}} myminio/
+     {{.Prompt}} cat myconfig | {{.HelpName}} myminio/
 `,
 }
 
@@ -71,7 +71,7 @@ func (u configSetMessage) String() (msg string) {
 	return
 }
 
-// JSON jsonified service status Message message.
+// JSON jsonified service status message.
 func (u configSetMessage) JSON() string {
 	if u.setConfigStatus {
 		u.Status = "success"

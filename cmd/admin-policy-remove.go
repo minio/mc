@@ -43,7 +43,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Remove 'writeonly' policy on MinIO server.
-     $ {{.HelpName}} myminio writeonly
+     {{.Prompt}} {{.HelpName}} myminio writeonly
 `,
 }
 

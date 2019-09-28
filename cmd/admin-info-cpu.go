@@ -53,7 +53,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Get server CPU information of the 'play' MinIO server.
-     $ {{.HelpName}} play/
+     {{.Prompt}} {{.HelpName}} play/
 `,
 }
 

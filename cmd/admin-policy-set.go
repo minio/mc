@@ -46,10 +46,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Set the "readwrite" policy for user "james".
-     $ {{.HelpName}} myminio readwrite user=james
+     {{.Prompt}} {{.HelpName}} myminio readwrite user=james
 
   2. Set the "readonly" policy for group "auditors".
-     $ {{.HelpName}} myminio readonly group=auditors
+     {{.Prompt}} {{.HelpName}} myminio readonly group=auditors
 `,
 }
 

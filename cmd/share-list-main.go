@@ -47,10 +47,10 @@ COMMAND:
 
 EXAMPLES:
   1. List previously shared downloads, that haven't expired yet.
-      $ {{.HelpName}} download
+      {{.Prompt}} {{.HelpName}} download
 
   2. List previously shared uploads, that haven't expired yet.
-      $ {{.HelpName}} upload
+      {{.Prompt}} {{.HelpName}} upload
 `,
 }
 
