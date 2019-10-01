@@ -40,7 +40,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. List all groups.
-     $ {{.HelpName}} myminio
+     {{.Prompt}} {{.HelpName}} myminio
 `,
 }
 

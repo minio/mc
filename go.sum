@@ -395,6 +395,8 @@ github.com/minio/cli v1.20.0 h1:OVNIt8Rg5+mpYb8siWT2gBV5hvUyFbRvBikC+Ytvf5A=
 github.com/minio/cli v1.20.0/go.mod h1:bYxnK0uS629N3Bq+AOZZ+6lwF77Sodk4+UL9vNuXhOY=
 github.com/minio/cli v1.21.0 h1:8gE8iZc0ONOhHy/T28tCsNew5f5VzWU558U9Myjfq50=
 github.com/minio/cli v1.21.0/go.mod h1:bYxnK0uS629N3Bq+AOZZ+6lwF77Sodk4+UL9vNuXhOY=
+github.com/minio/cli v1.22.0 h1:VTQm7lmXm3quxO917X3p+el1l0Ca5X3S4PM2ruUYO68=
+github.com/minio/cli v1.22.0/go.mod h1:bYxnK0uS629N3Bq+AOZZ+6lwF77Sodk4+UL9vNuXhOY=
 github.com/minio/dsync v0.0.0-20190104003057-61c41ffdeea2/go.mod h1:eLQe3mXL0h02kNpPtBJiLr1fIEIJftgXRAjncjQbxJo=
 github.com/minio/dsync v1.0.0 h1:l6pQgUPBM41idlR0UOcpAP+EYim9MCwIAUh6sQQI1gk=
 github.com/minio/dsync v1.0.0/go.mod h1:eLQe3mXL0h02kNpPtBJiLr1fIEIJftgXRAjncjQbxJo=
@@ -415,6 +417,7 @@ github.com/minio/lsync v1.0.1/go.mod h1:tCFzfo0dlvdGl70IT4IAK/5Wtgb0/BrTmo/jE8pA
 github.com/minio/mc v0.0.0-20190311071728-2e612b23d665/go.mod h1:7qLZXNjCD55DJ3iqe1uWoUh1MASRVd1M6wnqSdyhx7Y=
 github.com/minio/mc v0.0.0-20190401030144-a1355e50e2e8/go.mod h1:rnJByweU1h98rGmAcWcKen1sCAlekF38kbSrq6OLmAg=
 github.com/minio/mc v0.0.0-20190529152718-f4bb0b8850cb/go.mod h1:GMIQKmYuGc7q10DsJJO8peBXCTRx5itwIHheVo+bKso=
+github.com/minio/mc v0.0.0-20190908212443-54ee3a280031/go.mod h1:Uk010Mk1sFA0nHpppVSFXGGThXbZrhHje4XWhELP37U=
 github.com/minio/mc v0.0.0-20190924013003-643835013047/go.mod h1:/noLXTZkHPtHE7gvyL1J6GPeKkIe20AlFqfTWqRkapY=
 github.com/minio/minio v0.0.0-20190206103305-fd4e15c11641/go.mod h1:lXcp05uxYaW99ebgI6ZKIGYU7tqZkM5xSsG0xRt4VIU=
 github.com/minio/minio v0.0.0-20190325204105-0250f7de678b/go.mod h1:6ODmvb06uOpNy0IM+3pJRTHaauOMpLJ51jLhipbcifI=

@@ -88,19 +88,19 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. List all buckets and directories on MinIO object storage server in tree format.
-      $ {{.HelpName}} myminio
+      {{.Prompt}} {{.HelpName}} myminio
 
    2. List all directories in "mybucket" on MinIO object storage server in tree format.
-      $ {{.HelpName}} myminio/mybucket/
+      {{.Prompt}} {{.HelpName}} myminio/mybucket/
 
    3. List all directories in "mybucket" on MinIO object storage server hosted on Microsoft Windows in tree format.
-      $ {{.HelpName}} myminio\mybucket\
+      {{.Prompt}} {{.HelpName}} myminio\mybucket\
 
    4. List all directories and objects in "mybucket" on MinIO object storage server in tree format.
-      $ {{.HelpName}} --files myminio/mybucket/
+      {{.Prompt}} {{.HelpName}} --files myminio/mybucket/
 
    5. List all directories upto depth level '2' in tree format.
-      $ {{.HelpName}} --depth 2 myminio/mybucket/
+      {{.Prompt}} {{.HelpName}} --depth 2 myminio/mybucket/
 `,
 }
 

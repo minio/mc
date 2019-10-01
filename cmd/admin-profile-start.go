@@ -51,7 +51,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
     1. Start CPU profile
-       $ {{.HelpName}} --type cpu myminio/
+       {{.Prompt}} {{.HelpName}} --type cpu myminio/
 
 `,
 }

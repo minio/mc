@@ -40,7 +40,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. List all policies on MinIO server.
-     $ {{.HelpName}} myminio
+     {{.Prompt}} {{.HelpName}} myminio
 `,
 }
 

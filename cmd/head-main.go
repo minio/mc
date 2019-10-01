@@ -64,14 +64,14 @@ NOTE:
 
 EXAMPLES:
   1. Display only first line from a 'gzip' compressed object on Amazon S3.
-     $ {{.HelpName}} -n 1 s3/csv-data/population.csv.gz
+     {{.Prompt}} {{.HelpName}} -n 1 s3/csv-data/population.csv.gz
 
   2. Display only first line from server encrypted object on Amazon S3.
-     $ {{.HelpName}} -n 1 --encrypt-key 's3/csv-data=32byteslongsecretkeymustbegiven1' s3/csv-data/population.csv
+     {{.Prompt}} {{.HelpName}} -n 1 --encrypt-key 's3/csv-data=32byteslongsecretkeymustbegiven1' s3/csv-data/population.csv
 	 
   3. Display only first line from server encrypted object on Amazon S3. In case the encryption key contains non-printable character like tab, pass the
      base64 encoded string as key.
-     $ {{.HelpName}} --encrypt-key "s3/json-data=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  s3/json-data/population.json
+     {{.Prompt}} {{.HelpName}} --encrypt-key "s3/json-data=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE="  s3/json-data/population.json
 `,
 }
 

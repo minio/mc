@@ -45,7 +45,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Show information on a given policy.
-     $ {{.HelpName}} myminio writeonly
+     {{.Prompt}} {{.HelpName}} myminio writeonly
 `,
 }
 

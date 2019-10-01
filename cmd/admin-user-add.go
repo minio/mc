@@ -50,9 +50,9 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Add a new user 'foobar' to MinIO server.
-     $ set +o history
-     $ {{.HelpName}} myminio foobar foo12345
-     $ set -o history
+     {{.DisableHistory}}
+     {{.Prompt}} {{.HelpName}} myminio foobar foo12345
+     {{.EnableHistory}}
 `,
 }
 

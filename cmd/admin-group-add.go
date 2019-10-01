@@ -45,9 +45,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Add users 'fivecent' and 'tencent' to the group 'allcents':
-     $ set +o history
-     $ {{.HelpName}} myminio allcents fivecent tencent
-     $ set -o history
+     {{.Prompt}} {{.HelpName}} myminio allcents fivecent tencent
 `,
 }
 

@@ -48,7 +48,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Resume session.
-     $ {{.HelpName}} ygVIpSJs
+     {{.Prompt}} {{.HelpName}} ygVIpSJs
 `,
 }
 

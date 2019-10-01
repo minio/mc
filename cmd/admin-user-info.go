@@ -40,7 +40,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Display the info of a user "foobar".
-     $ {{.HelpName}} myminio foobar foo12345
+     {{.Prompt}} {{.HelpName}} myminio foobar
 `,
 }
 

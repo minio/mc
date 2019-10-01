@@ -40,7 +40,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Remove a user 'foobar' on MinIO server.
-     $ {{.HelpName}} myminio foobar
+     {{.Prompt}} {{.HelpName}} myminio foobar
 `,
 }
 
