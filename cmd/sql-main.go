@@ -39,6 +39,7 @@ var (
 		cli.StringFlag{
 			Name:  "query, e",
 			Usage: "sql query expression",
+			Value: "select * from s3object",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
@@ -102,23 +103,23 @@ EXAMPLES:
 
   3. Run a query on an encrypted object with customer provided keys.
      {{.Prompt}} {{.HelpName}} --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
-	      --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
+           --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
 
   4. Run a query on an object on MinIO in gzip format using ; as field delimiter,
      newline as record delimiter and file header to be used
      {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-	      --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv.gz
+           --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv.gz
 
   5. Run a query on an object on MinIO in gzip format using ; as field delimiter,
      newline as record delimiter and file header to be used
      {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-              --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
+           --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
 
   6. Run same query as in 5., but specify csv output headers. If --csv-output-headers is
      specified as "", first row of csv is interpreted as header
      {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-                     --csv-output "rd=\n" --csv-output-header "device_id,uptime,lat,lon" \
-                     --query "select * from S3Object" myminio/iot-devices/data.csv
+           --csv-output "rd=\n" --csv-output-header "device_id,uptime,lat,lon" \
+           --query "select * from S3Object" myminio/iot-devices/data.csv
 `,
 }
 
