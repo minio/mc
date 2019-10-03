@@ -11,7 +11,7 @@ RUN  \
      git clone https://github.com/minio/mc && cd mc && \
      go install -v -ldflags "$(go run buildscripts/gen-ldflags.go)"
 
-FROM alpine:3.9
+FROM alpine:3.10
 
 COPY --from=0 /go/bin/mc /usr/bin/mc
 
