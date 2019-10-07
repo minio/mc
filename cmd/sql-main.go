@@ -78,7 +78,7 @@ var sqlCmd = cli.Command{
 	Usage:  "run sql queries on objects",
 	Action: mainSQL,
 	Before: setGlobalsFromContext,
-	Flags:  getSQLFlags(),
+	Flags:  append(sqlFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -121,17 +121,6 @@ EXAMPLES:
            --csv-output "rd=\n" --csv-output-header "device_id,uptime,lat,lon" \
            --query "select * from S3Object" myminio/iot-devices/data.csv
 `,
-}
-
-// filter json from allowed flags for sql command
-func getSQLFlags() []cli.Flag {
-	flags := append(sqlFlags, ioFlags...)
-	for _, f := range globalFlags {
-		if f.GetName() != "json" {
-			flags = append(flags, f)
-		}
-	}
-	return flags
 }
 
 // valid CSV and JSON keys for input/output serialization
@@ -301,7 +290,7 @@ func getOutputSerializationOpts(ctx *cli.Context, csvHdrs []string) (opts map[st
 		m["csv"] = kv
 	}
 
-	if jsonType {
+	if jsonType || globalJSON {
 		kv, err := parseSerializationOpts(ojson, validJSONCSVCommonOutputKeys, validJSONOutputAbbrKeys)
 		fatalIf(err, "Invalid value(s) specified for --json-output flag")
 		m["json"] = kv
@@ -433,7 +422,7 @@ func getAndValidateArgs(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair, u
 
 // check sql input arguments.
 func checkSQLSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
+	if len(ctx.Args()) == 0 {
 		cli.ShowCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
 	}
 }

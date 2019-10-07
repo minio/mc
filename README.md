@@ -82,7 +82,7 @@ mc.exe --help
 ```
 
 ## Install from Source
-Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.12](https://golang.org/dl/#stable)
+Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.13](https://golang.org/dl/#stable)
 
 ```sh
 GO111MODULE=on go get github.com/minio/mc
@@ -148,8 +148,6 @@ Get your AccessKeyID and SecretAccessKey by following [Google Credentials Guide]
 ```
 mc config host add gcs  https://storage.googleapis.com BKIKJAA5BMMU2RHO6IBB V8f1CwQqAcwo80UEIJEjc5gVQUSSx5ohQ9GSrr12
 ```
-
-NOTE: Google Cloud Storage only supports Legacy Signature Version 2, so you have to pick - S3v2
 
 ## Test Your Setup
 `mc` is pre-configured with https://play.min.io, aliased as "play". It is a hosted MinIO server for testing and development purpose.  To test Amazon S3, simply replace "play" with "s3" or the alias you used at the time of setup.
