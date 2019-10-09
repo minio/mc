@@ -266,7 +266,7 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan, newe
 		urlString := content.URL.Path
 
 		if !content.Time.IsZero() {
-			// Skip objects older than --older-than parameter if specified
+			// Skip objects older than --older-than parameter, if specified
 			if olderThan != "" && isOlder(content.Time, olderThan) {
 				continue
 			}
@@ -275,6 +275,9 @@ func removeRecursive(url string, isIncomplete bool, isFake bool, olderThan, newe
 			if newerThan != "" && isNewer(content.Time, newerThan) {
 				continue
 			}
+		} else {
+			// Skip prefix levels.
+			continue
 		}
 
 		printMsg(rmMessage{
