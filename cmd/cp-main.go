@@ -89,44 +89,44 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
   01. Copy a list of objects from local file system to Amazon S3 cloud storage.
-      $ {{.HelpName}} Music/*.ogg s3/jukebox/
+      {{.Prompt}} {{.HelpName}} Music/*.ogg s3/jukebox/
 
   02. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage.
-      $ {{.HelpName}} --recursive play/mybucket/burningman2011/ s3/mybucket/
+      {{.Prompt}} {{.HelpName}} --recursive play/mybucket/burningman2011/ s3/mybucket/
 
   03. Copy multiple local folders recursively to MinIO cloud storage.
-      $ {{.HelpName}} --recursive backup/2014/ backup/2015/ play/archive/
+      {{.Prompt}} {{.HelpName}} --recursive backup/2014/ backup/2015/ play/archive/
 
   04. Copy a bucket recursively from aliased Amazon S3 cloud storage to local filesystem on Windows.
-      $ {{.HelpName}} --recursive s3\documents\2014\ C:\Backups\2014
+      {{.Prompt}} {{.HelpName}} --recursive s3\documents\2014\ C:\Backups\2014
 
   05. Copy files older than 7 days and 10 hours from MinIO cloud storage to Amazon S3 cloud storage.
-      $ {{.HelpName}} --older-than 7d10h play/mybucket/burningman2011/ s3/mybucket/
+      {{.Prompt}} {{.HelpName}} --older-than 7d10h play/mybucket/burningman2011/ s3/mybucket/
 
   06. Copy files newer than 7 days and 10 hours from MinIO cloud storage to a local path.
-      $ {{.HelpName}} --newer-than 7d10h play/mybucket/burningman2011/ ~/latest/
+      {{.Prompt}} {{.HelpName}} --newer-than 7d10h play/mybucket/burningman2011/ ~/latest/
 
   07. Copy an object with name containing unicode characters to Amazon S3 cloud storage.
-      $ {{.HelpName}} 本語 s3/andoria/
+      {{.Prompt}} {{.HelpName}} 本語 s3/andoria/
 
   08. Copy a local folder with space separated characters to Amazon S3 cloud storage.
-      $ {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
+      {{.Prompt}} {{.HelpName}} --recursive 'workdir/documents/May 2014/' s3/miniocloud
 
   09. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage.
-      $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/ myminio/documents/
+      {{.Prompt}} {{.HelpName}} --recursive --encrypt-key "s3/documents/=32byteslongsecretkeymustbegiven1,myminio/documents/=32byteslongsecretkeymustbegiven2" s3/documents/ myminio/documents/
 
   10. Copy a folder with encrypted objects recursively from Amazon S3 to MinIO cloud storage. In case the encryption key contains non-printable character like tab, pass the
       base64 encoded string as key.
-      $ {{.HelpName}} --recursive --encrypt-key "s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=,myminio/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/documents/ myminio/documents/
-	  
+      {{.Prompt}} {{.HelpName}} --recursive --encrypt-key "s3/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=,myminio/documents/=MzJieXRlc2xvbmdzZWNyZWFiY2RlZmcJZ2l2ZW5uMjE=" s3/documents/ myminio/documents/
+
   11. Copy a list of objects from local file system to MinIO cloud storage with specified metadata.
-      $ {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
-			
+      {{.Prompt}} {{.HelpName}} --attr key1=value1,key2=value2 Music/*.mp4 play/mybucket/
+
   12. Copy a folder recursively from MinIO cloud storage to Amazon S3 cloud storage with specified metadata.
-      $ {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
+      {{.Prompt}} {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000\;key1=value1\;key2=value2 --recursive play/mybucket/burningman2011/ s3/mybucket/
 
   13. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
-      $ {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
+      {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
  `,
 }
 
@@ -360,22 +360,19 @@ func doCopySession(session *sessionV8, encKeyDB map[string][]prefixSSEPair) erro
 				// Save totalSize.
 				cpURLs.TotalSize = session.Header.TotalBytes
 
+				// Initialize target metadata.
+				cpURLs.TargetContent.Metadata = make(map[string]string)
+
+				// Initialize target user metadata.
+				cpURLs.TargetContent.UserMetadata = make(map[string]string)
+
 				// Check and handle storage class if passed in command line args
 				if _, ok := session.Header.CommandStringFlags["storage-class"]; ok {
-					if cpURLs.TargetContent.Metadata == nil {
-						cpURLs.TargetContent.Metadata = make(map[string]string)
-					}
 					cpURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = session.Header.CommandStringFlags["storage-class"]
 				}
 
-				//	metaMap, metaSet := session.Header.UserMetaData
-
 				// Check and handle metadata if passed in command line args
-
 				if len(session.Header.UserMetaData) != 0 {
-					if cpURLs.TargetContent.UserMetadata == nil {
-						cpURLs.TargetContent.UserMetadata = make(map[string]string)
-					}
 					for metaDataKey, metaDataVal := range session.Header.UserMetaData {
 						cpURLs.TargetContent.UserMetadata[metaDataKey] = metaDataVal
 					}

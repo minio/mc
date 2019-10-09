@@ -41,6 +41,8 @@ var adminCmd = cli.Command{
 		adminProfileCmd,
 		adminTopCmd,
 		adminTraceCmd,
+		adminConsoleCmd,
+		adminPrometheusCmd,
 	},
 }
 

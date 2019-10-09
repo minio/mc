@@ -39,6 +39,7 @@ var (
 		cli.StringFlag{
 			Name:  "query, e",
 			Usage: "sql query expression",
+			Value: "select * from s3object",
 		},
 		cli.BoolFlag{
 			Name:  "recursive, r",
@@ -77,7 +78,7 @@ var sqlCmd = cli.Command{
 	Usage:  "run sql queries on objects",
 	Action: mainSQL,
 	Before: setGlobalsFromContext,
-	Flags:  getSQLFlags(),
+	Flags:  append(sqlFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -95,42 +96,31 @@ SERIALIZATION OPTIONS:
 
 EXAMPLES:
   1. Run a query on a set of objects recursively on AWS S3.
-     $ {{.HelpName}} --recursive --query "select * from S3Object" s3/personalbucket/my-large-csvs/
+     {{.Prompt}} {{.HelpName}} --recursive --query "select * from S3Object" s3/personalbucket/my-large-csvs/
 
-  2. Run a query on an object on Minio.
-     $ {{.HelpName}} --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv
+  2. Run a query on an object on MinIO.
+     {{.Prompt}} {{.HelpName}} --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv
 
   3. Run a query on an encrypted object with customer provided keys.
-     $ {{.HelpName}} --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
-	      --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
+     {{.Prompt}} {{.HelpName}} --encrypt-key "myminio/iot-devices=32byteslongsecretkeymustbegiven1" \
+           --query "select count(s.power) from S3Object s" myminio/iot-devices/power-ratio-encrypted.csv
 
   4. Run a query on an object on MinIO in gzip format using ; as field delimiter,
      newline as record delimiter and file header to be used
-     $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-	      --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv.gz
+     {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
+           --query "select count(s.power) from S3Object" myminio/iot-devices/power-ratio.csv.gz
 
   5. Run a query on an object on MinIO in gzip format using ; as field delimiter,
      newline as record delimiter and file header to be used
-     $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-              --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
+     {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
+           --json-output "rd=\n\n" --query "select * from S3Object" myminio/iot-devices/data.csv
 
   6. Run same query as in 5., but specify csv output headers. If --csv-output-headers is
      specified as "", first row of csv is interpreted as header
-     $ {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
-                     --csv-output "rd=\n" --csv-output-header "device_id,uptime,lat,lon" \
-                     --query "select * from S3Object" myminio/iot-devices/data.csv
+     {{.Prompt}} {{.HelpName}} --compression GZIP --csv-input "rd=\n,fh=USE,fd=;" \
+           --csv-output "rd=\n" --csv-output-header "device_id,uptime,lat,lon" \
+           --query "select * from S3Object" myminio/iot-devices/data.csv
 `,
-}
-
-// filter json from allowed flags for sql command
-func getSQLFlags() []cli.Flag {
-	flags := append(sqlFlags, ioFlags...)
-	for _, f := range globalFlags {
-		if f.GetName() != "json" {
-			flags = append(flags, f)
-		}
-	}
-	return flags
 }
 
 // valid CSV and JSON keys for input/output serialization
@@ -300,7 +290,7 @@ func getOutputSerializationOpts(ctx *cli.Context, csvHdrs []string) (opts map[st
 		m["csv"] = kv
 	}
 
-	if jsonType {
+	if jsonType || globalJSON {
 		kv, err := parseSerializationOpts(ojson, validJSONCSVCommonOutputKeys, validJSONOutputAbbrKeys)
 		fatalIf(err, "Invalid value(s) specified for --json-output flag")
 		m["json"] = kv
@@ -432,7 +422,7 @@ func getAndValidateArgs(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair, u
 
 // check sql input arguments.
 func checkSQLSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
+	if len(ctx.Args()) == 0 {
 		cli.ShowCommandHelpAndExit(ctx, "sql", 1) // last argument is exit code.
 	}
 }

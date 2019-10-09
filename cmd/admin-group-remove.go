@@ -34,16 +34,17 @@ var adminGroupRemoveCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET GROUPNAME [MEMBERS...]
+  {{.HelpName}} TARGET GROUPNAME [USERNAMES...]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove members 'tencent' and 'fivecent' from group 'allcents':
-     $ {{.HelpName}} myminio allcents tencent fivecent
-  2. Remove group 'allcents':
-     $ {{.HelpName}} myminio allcents
+  1. Remove members 'tencent' and 'fivecent' from group 'allcents'.
+     {{.Prompt}} {{.HelpName}} myminio allcents tencent fivecent
+
+  2. Remove group 'allcents'.
+     {{.Prompt}} {{.HelpName}} myminio allcents
 `,
 }
 
@@ -66,7 +67,7 @@ func mainAdminGroupRemove(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	members := []string{}
 	for i := 2; i < ctx.NArg(); i++ {

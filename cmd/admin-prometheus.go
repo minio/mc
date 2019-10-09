@@ -16,27 +16,32 @@
 
 package cmd
 
-import (
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
-var adminGroupDisableCmd = cli.Command{
-	Name:   "disable",
-	Usage:  "Disable a group",
-	Action: mainAdminGroupEnableDisable,
-	Before: setGlobalsFromContext,
-	Flags:  globalFlags,
+var adminPrometheusCmd = cli.Command{
+	Name:            "prometheus",
+	Usage:           "manages prometheus config",
+	Action:          mainAdminPrometheus,
+	Before:          setGlobalsFromContext,
+	Flags:           globalFlags,
+	HideHelpCommand: true,
+	Subcommands: []cli.Command{
+		adminPrometheusGenerateCmd,
+	},
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET GROUPNAME
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
-EXAMPLES:
-  1. Disable group 'allcents'.
-     {{.Prompt}} {{.HelpName}} myminio allcents
 `,
+}
+
+// mainAdminPrometheus is the handle for "mc admin prometheus" command.
+func mainAdminPrometheus(ctx *cli.Context) error {
+	cli.ShowCommandHelp(ctx, ctx.Args().First())
+	return nil
 }

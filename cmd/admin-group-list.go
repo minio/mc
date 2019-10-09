@@ -33,14 +33,14 @@ var adminGroupListCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET GROUPNAME
+  {{.HelpName}} TARGET
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. List groups:
-     $ {{.HelpName}} myminio
+  1. List all groups.
+     {{.Prompt}} {{.HelpName}} myminio
 `,
 }
 
@@ -63,7 +63,7 @@ func mainAdminGroupList(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	gs, err1 := client.ListGroups()
 	fatalIf(probe.NewError(err1).Trace(args...), "Could not get group list")

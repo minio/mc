@@ -43,10 +43,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Update MinIO server represented by its alias 'play'.
-     $ {{.HelpName}} play/
+     {{.Prompt}} {{.HelpName}} play/
 
   2. Update all MinIO servers in a distributed setup, represented by its alias 'mydist'.
-     $ {{.HelpName}} mydist/
+     {{.Prompt}} {{.HelpName}} mydist/
 `,
 }
 
@@ -97,7 +97,7 @@ func mainAdminServerUpdate(ctx *cli.Context) error {
 	aliasedURL := args.Get(0)
 
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	updateURL := args.Get(1)
 

@@ -58,10 +58,10 @@ LEGEND:
 
 EXAMPLES:
   1. Compare a local folder with a folder on Amazon S3 cloud storage.
-     $ {{.HelpName}} ~/Photos s3/mybucket/Photos
+     {{.Prompt}} {{.HelpName}} ~/Photos s3/mybucket/Photos
 
   2. Compare two folders on a local filesystem.
-     $ {{.HelpName}} ~/Photos /Media/Backup/Photos
+     {{.Prompt}} {{.HelpName}} ~/Photos /Media/Backup/Photos
 `,
 }
 
@@ -90,6 +90,8 @@ func (d diffMessage) String() string {
 		msg = console.Colorize("DiffSize", "! "+d.SecondURL)
 	case differInTime:
 		msg = console.Colorize("DiffTime", "! "+d.SecondURL)
+	case differInMetadata:
+		msg = console.Colorize("DiffMetadata", "! "+d.SecondURL)
 	default:
 		fatalIf(errDummy().Trace(d.FirstURL, d.SecondURL),
 			"Unhandled difference between `"+d.FirstURL+"` and `"+d.SecondURL+"`.")
@@ -174,7 +176,7 @@ func doDiffMain(firstURL, secondURL string) error {
 	}
 
 	// Diff first and second urls.
-	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL) {
+	for diffMsg := range objectDifference(firstClient, secondClient, firstURL, secondURL, false) {
 		if diffMsg.Error != nil {
 			errorIf(diffMsg.Error, "Unable to calculate objects difference.")
 			// Ignore error and proceed to next object.

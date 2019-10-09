@@ -33,14 +33,14 @@ var adminUserInfoCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET ACCESSKEY
+  {{.HelpName}} TARGET USERNAME
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Display the info of a user "foobar".
-     $ {{.HelpName}} myminio foobar foo12345
+     {{.Prompt}} {{.HelpName}} myminio foobar
 `,
 }
 
@@ -63,7 +63,7 @@ func mainAdminUserInfo(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	user, e := client.GetUserInfo(args.Get(1))
 	fatalIf(probe.NewError(e).Trace(args...), "Cannot get user info")

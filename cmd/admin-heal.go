@@ -81,32 +81,32 @@ FLAGS:
   {{end}}
 SCAN MODES:
   normal (default): Heal objects which are missing on one or more disks.
-  deep            : Heal objects which are missing on one or more disks. Also heal objects with silent data corruption.
+  deep            : Heal objects which are missing or with silent data corruption on one or more disks.
 
 EXAMPLES:
   1. To format newly replaced disks in a MinIO server with alias 'myminio'
-     $ {{.HelpName}} myminio
+     {{.Prompt}} {{.HelpName}} myminio
 
   2. Heal 'testbucket' in a MinIO server with alias 'myminio'
-     $ {{.HelpName}} myminio/testbucket/
+     {{.Prompt}} {{.HelpName}} myminio/testbucket/
 
   3. Heal all objects under 'dir' prefix
-     $ {{.HelpName}} --recursive myminio/testbucket/dir/
+     {{.Prompt}} {{.HelpName}} --recursive myminio/testbucket/dir/
 
   4. Issue a dry-run heal operation to inspect objects health but not heal them
-     $ {{.HelpName}} --dry-run myminio
+     {{.Prompt}} {{.HelpName}} --dry-run myminio
 
   5. Issue a dry-run heal operation to inspect objects health under 'dir' prefix
-     $ {{.HelpName}} --recursive --dry-run myminio/testbucket/dir/
+     {{.Prompt}} {{.HelpName}} --recursive --dry-run myminio/testbucket/dir/
 
   6. Force start a running heal sequence (meaning it will force kill the running heal sequence and start a new one)
-     $ {{.HelpName}} --force-start myminio/testbucket/dir/
+     {{.Prompt}} {{.HelpName}} --force-start myminio/testbucket/dir/
 		
   7. Force stop a running heal sequence (meaning it will force kill the running heal sequence)
-     $ {{.HelpName}} --force-stop myminio/testbucket/dir/
+     {{.Prompt}} {{.HelpName}} --force-stop myminio/testbucket/dir/
 		
   8. Issue a dry-run heal operation to inspect objects health under 'dir' prefix
-     $ {{.HelpName}} --dry-run myminio/testbucket/dir/
+     {{.Prompt}} {{.HelpName}} --dry-run myminio/testbucket/dir/
 `,
 }
 

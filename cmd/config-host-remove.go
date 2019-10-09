@@ -41,7 +41,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Remove "goodisk" from config.
-     $ {{.HelpName}} goodisk
+     {{.Prompt}} {{.HelpName}} goodisk
 
 `,
 }

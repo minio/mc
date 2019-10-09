@@ -40,7 +40,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Remove a user 'foobar' on MinIO server.
-     $ {{.HelpName}} myminio foobar
+     {{.Prompt}} {{.HelpName}} myminio foobar
 `,
 }
 
@@ -63,7 +63,7 @@ func mainAdminUserRemove(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	e := client.RemoveUser(args.Get(1))
 	fatalIf(probe.NewError(e).Trace(args...), "Cannot remove new user")

@@ -42,9 +42,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable group 'allcents':
-     $ {{.HelpName}} myminio allcents
-
+  1. Enable group 'allcents'.
+     {{.Prompt}} {{.HelpName}} myminio allcents
 `,
 }
 
@@ -67,7 +66,7 @@ func mainAdminGroupEnableDisable(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	group := args.Get(1)
 	var err1 error

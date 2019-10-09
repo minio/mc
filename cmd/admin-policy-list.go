@@ -40,7 +40,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. List all policies on MinIO server.
-     $ {{.HelpName}} myminio
+     {{.Prompt}} {{.HelpName}} myminio
 `,
 }
 
@@ -64,7 +64,7 @@ func mainAdminPolicyList(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	policies, e := client.ListCannedPolicies()
 	fatalIf(probe.NewError(e).Trace(args...), "Cannot list policy")

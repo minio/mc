@@ -39,8 +39,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get info on group 'allcents':
-     $ {{.HelpName}} myminio allcents
+  1. Get info on group 'allcents'.
+     {{.Prompt}} {{.HelpName}} myminio allcents
 `,
 }
 
@@ -63,7 +63,7 @@ func mainAdminGroupInfo(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	group := args.Get(1)
 	gd, err1 := client.GetGroupDescription(group)

@@ -121,7 +121,7 @@ func newAdminClient(aliasedURL string) (*madmin.AdminClient, *probe.Error) {
 	}
 
 	if hostCfg == nil {
-		return nil, probe.NewError(fmt.Errorf("The specified alias: %s not found", urlStrFull))
+		return nil, probe.NewError(fmt.Errorf("No valid configuration found for '%s' host alias", urlStrFull))
 	}
 
 	s3Config := newS3Config(urlStrFull, hostCfg)

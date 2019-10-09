@@ -50,7 +50,7 @@ var adminTraceFlags = []cli.Flag{
 
 var adminTraceCmd = cli.Command{
 	Name:            "trace",
-	Usage:           "show http trace for minio server",
+	Usage:           "show http trace for MinIO server",
 	Action:          mainAdminTrace,
 	Before:          setGlobalsFromContext,
 	Flags:           append(adminTraceFlags, globalFlags...),
@@ -65,12 +65,12 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Show console trace for a Minio server with alias 'play'
-		$ {{.HelpName}} play -v -a
+  1. Show console trace for a MinIO server with alias 'play'
+     {{.Prompt}} {{.HelpName}} -v -a play
 
-  2. Show trace only for failed requests for a Minio server with alias 'myminio'
-		$ {{.HelpName}} myminio -v -e 
- `,
+  2. Show trace only for failed requests for a MinIO server with alias 'myminio'
+    {{.Prompt}} {{.HelpName}} -v -e myminio
+`,
 }
 
 const timeFormat = "15:04:05.000"
@@ -111,7 +111,7 @@ func mainAdminTrace(ctx *cli.Context) error {
 	for _, c := range colors {
 		console.SetColor(fmt.Sprintf("Node%d", c), color.New(c))
 	}
-	// Create a new Minio Admin Client
+	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	if err != nil {
 		fatalIf(err.Trace(aliasedURL), "Cannot initialize admin client.")
@@ -140,12 +140,12 @@ type shortTraceMsg struct {
 	Host       string    `json:"host"`
 	Time       time.Time `json:"time"`
 	Client     string    `json:"client"`
-	CallStats  callStats `json:"callstats"`
+	CallStats  callStats `json:"callStats"`
 	FuncName   string    `json:"api"`
 	Path       string    `json:"path"`
 	Query      string    `json:"query"`
-	StatusCode int       `json:"statuscode"`
-	StatusMsg  string    `json:"statusmsg"`
+	StatusCode int       `json:"statusCode"`
+	StatusMsg  string    `json:"statusMsg"`
 }
 
 type traceMessage struct {
@@ -156,7 +156,7 @@ type requestInfo struct {
 	Time     time.Time         `json:"time"`
 	Method   string            `json:"method"`
 	Path     string            `json:"path,omitempty"`
-	RawQuery string            `json:"rawquery,omitempty"`
+	RawQuery string            `json:"rawQuery,omitempty"`
 	Headers  map[string]string `json:"headers,omitempty"`
 	Body     string            `json:"body,omitempty"`
 }
@@ -165,12 +165,13 @@ type responseInfo struct {
 	Time       time.Time         `json:"time"`
 	Headers    map[string]string `json:"headers,omitempty"`
 	Body       string            `json:"body,omitempty"`
-	StatusCode int               `json:"statuscode,omitempty"`
+	StatusCode int               `json:"statusCode,omitempty"`
 }
 type callStats struct {
 	Rx       int           `json:"rx"`
 	Tx       int           `json:"tx"`
 	Duration time.Duration `json:"duration"`
+	Ttfb     time.Duration `json:"timeToFirstByte"`
 }
 
 type trace struct {
@@ -178,7 +179,7 @@ type trace struct {
 	FuncName     string       `json:"api"`
 	RequestInfo  requestInfo  `json:"request"`
 	ResponseInfo responseInfo `json:"response"`
-	CallStats    callStats    `json:"callstats"`
+	CallStats    callStats    `json:"callStats"`
 }
 
 // return a struct with minimal trace info.
@@ -234,13 +235,13 @@ func (s shortTraceMsg) String() string {
 	fmt.Fprintf(b, " %s ", s.Client)
 	spaces := 15 - len(s.Client)
 	fmt.Fprintf(b, "%*s", spaces, " ")
-	fmt.Fprintf(b, console.Colorize("HeaderValue", fmt.Sprintf("  %2s", s.CallStats.Duration.Round(time.Microsecond))))
+	fmt.Fprint(b, console.Colorize("HeaderValue", fmt.Sprintf("  %2s", s.CallStats.Duration.Round(time.Microsecond))))
 	spaces = 12 - len(fmt.Sprintf("%2s", s.CallStats.Duration.Round(time.Microsecond)))
 	fmt.Fprintf(b, "%*s", spaces, " ")
-	fmt.Fprintf(b, console.Colorize("Stat", fmt.Sprintf(" 🠉 ")))
-	fmt.Fprintf(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Rx))))
-	fmt.Fprintf(b, console.Colorize("Stat", fmt.Sprintf("  🠋 ")))
-	fmt.Fprintf(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Tx))))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf(" 🠉 ")))
+	fmt.Fprint(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Rx))))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("  🠋 ")))
+	fmt.Fprint(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Tx))))
 
 	return b.String()
 }
@@ -286,6 +287,7 @@ func (t traceMessage) JSON() string {
 			Duration: t.Trace.CallStats.Latency,
 			Rx:       t.Trace.CallStats.InputBytes,
 			Tx:       t.Trace.CallStats.OutputBytes,
+			Ttfb:     t.Trace.CallStats.TimeToFirstByte,
 		},
 	}
 	buf := &bytes.Buffer{}

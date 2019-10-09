@@ -60,10 +60,10 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
    1. Summarize disk usage of 'jazz-songs' bucket recursively.
-      $ {{.HelpName}} s3/jazz-songs
+      {{.Prompt}} {{.HelpName}} s3/jazz-songs
 
    2. Summarize disk usage of 'louis' prefix in 'jazz-songs' bucket upto two levels.
-      $ {{.HelpName}} --depth=2 s3/jazz-songs/louis/
+      {{.Prompt}} {{.HelpName}} --depth=2 s3/jazz-songs/louis/
 `,
 }
 

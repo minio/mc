@@ -65,13 +65,13 @@ FLAGS:
   {{end}}
 EXAMPLES:
    1. Enable bucket notification with a specific arn
-     $ {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
+     {{.Prompt}} {{.HelpName}} myminio/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue
 
    2. Enable bucket notification with filters parameters
-     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --event put,delete,get --prefix photos/ --suffix .jpg
+     {{.Prompt}} {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue --event put,delete,get --prefix photos/ --suffix .jpg
    
    3. Ignore duplicate bucket notification with -p flag
-     $ {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue -p --event put,delete,get --prefix photos/ --suffix .jpg 	 
+     {{.Prompt}} {{.HelpName}} s3/mybucket arn:aws:sqs:us-west-2:444455556666:your-queue -p --event put,delete,get --prefix photos/ --suffix .jpg 	 
 `,
 }
 

@@ -67,31 +67,31 @@ FILE:
 
 EXAMPLES:
    1. Set bucket to "download" on Amazon S3 cloud storage.
-      $ {{.HelpName}} set download s3/burningman2011
+      {{.Prompt}} {{.HelpName}} set download s3/burningman2011
 
    2. Set bucket to "public" on Amazon S3 cloud storage.
-      $ {{.HelpName}} set public s3/shared
+      {{.Prompt}} {{.HelpName}} set public s3/shared
 
    3. Set bucket to "upload" on Amazon S3 cloud storage.
-      $ {{.HelpName}} set upload s3/incoming
+      {{.Prompt}} {{.HelpName}} set upload s3/incoming
 
    4. Set policy to "public" for bucket with prefix on Amazon S3 cloud storage. 
-      $ {{.HelpName}} set public s3/public-commons/images
+      {{.Prompt}} {{.HelpName}} set public s3/public-commons/images
 
    5. Set a custom prefix based bucket policy on Amazon S3 cloud storage using a JSON file.
-      $ {{.HelpName}} set-json /path/to/policy.json s3/public-commons/images
+      {{.Prompt}} {{.HelpName}} set-json /path/to/policy.json s3/public-commons/images
 
    6. Get bucket permissions.
-      $ {{.HelpName}} get s3/shared
+      {{.Prompt}} {{.HelpName}} get s3/shared
 	
    7. Get bucket permissions in JSON format.
-      $ {{.HelpName}} get-json s3/shared
+      {{.Prompt}} {{.HelpName}} get-json s3/shared
 
    8. List policies set to a specified bucket.
-      $ {{.HelpName}} list s3/shared
+      {{.Prompt}} {{.HelpName}} list s3/shared
 
    9. List public object URLs recursively.
-      $ {{.HelpName}} --recursive links s3/shared/
+      {{.Prompt}} {{.HelpName}} --recursive links s3/shared/
 `,
 }
 

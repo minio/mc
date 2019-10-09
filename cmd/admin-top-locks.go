@@ -45,7 +45,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Get a list of the 10 oldest locks on a MinIO cluster.
-     $ {{.HelpName}} myminio/
+     {{.Prompt}} {{.HelpName}} myminio/
 `,
 }
 
@@ -111,7 +111,7 @@ func mainAdminTopLocks(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call top locks API
 	entries, e := client.TopLocks()

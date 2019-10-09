@@ -45,7 +45,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
     2. Download latest profile data in the current directory
-       $ {{.HelpName}} myminio/
+       {{.Prompt}} {{.HelpName}} myminio/
 `,
 }
 

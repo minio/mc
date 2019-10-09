@@ -39,14 +39,20 @@ var adminUserAddCmd = cli.Command{
 USAGE:
   {{.HelpName}} TARGET ACCESSKEY SECRETKEY
 
+ACCESSKEY:
+  Also called as username.
+
+SECRETKEY:
+  Also called as password.
+
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
   1. Add a new user 'foobar' to MinIO server.
-     $ set +o history
-     $ {{.HelpName}} myminio foobar foo12345
-     $ set -o history
+     {{.DisableHistory}}
+     {{.Prompt}} {{.HelpName}} myminio foobar foo12345
+     {{.EnableHistory}}
 `,
 }
 
@@ -121,7 +127,7 @@ func mainAdminUserAdd(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	fatalIf(probe.NewError(client.AddUser(args.Get(1), args.Get(2))).Trace(args...), "Cannot add new user")
 

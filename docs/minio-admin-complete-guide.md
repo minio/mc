@@ -3,14 +3,19 @@
 MinIO Client (mc) provides `admin` sub-command to perform administrative tasks on your MinIO deployments.
 
 ```
-service      restart or stop all MinIO servers
-update       updates all MinIO servers
-info         display MinIO server information
-user         manage users
-policy       manage canned policies
-config       manage configuration file
-heal         heal disks, buckets and objects on MinIO server
-top          provide top like statistics for MinIO
+service  restart and stop all MinIO servers
+update   update all MinIO servers
+info     display MinIO server information
+user     manage users
+group    manage groups
+policy   manage policies defined in the MinIO server
+config   manage configuration file
+heal     heal disks, buckets and objects on MinIO server
+profile  generate profile data for debugging purposes
+top      provide top like statistics for MinIO
+trace    show http trace for minio server
+console  show console logs for MinIO server
+prometheus   manages prometheus config settings
 ```
 
 ## 1.  Download MinIO Client
@@ -126,7 +131,6 @@ mc admin info server minio
   MEM        usage
   current    602 MiB
   historic   448 MiB
-
 ```
 
 ## 5. Everyday Use
@@ -260,17 +264,21 @@ Skip SSL certificate verification.
 
 ## 7. Commands
 
-|                                                                     |
-|:--------------------------------------------------------------------|
-| [**service** - restart and stop all MinIO servers](#service)        |
-| [**update** - updates all MinIO servers](#update)                   |
-| [**info** - display MinIO server information](#info)                |
-| [**user** - manage users](#user)                                    |
-| [**group** - manage groups](#group)                                 |
-| [**policy** - manage canned policies](#policy)                      |
-| [**config** - manage server configuration file](#config)            |
-| [**heal** - heal disks, buckets and objects on MinIO server](#heal) |
-| [**top** - provide top like statistics for MinIO](#top)             |
+|                                                                        |
+|:-----------------------------------------------------------------------|
+| [**service** - restart and stop all MinIO servers](#service)           |
+| [**update** - updates all MinIO servers](#update)                      |
+| [**info** - display MinIO server information](#info)                   |
+| [**user** - manage users](#user)                                       |
+| [**group** - manage groups](#group)                                    |
+| [**policy** - manage canned policies](#policy)                         |
+| [**config** - manage server configuration file](#config)               |
+| [**heal** - heal disks, buckets and objects on MinIO server](#heal)    |
+| [**profile** - generate profile data for debugging purposes](#profile) |
+| [**top** - provide top like statistics for MinIO](#top)                |
+| [**trace** - show http trace for MinIO server](#trace)                 |
+| [**console** - show console logs for MinIO server](#console)           |
+| [**prometheus** - manages prometheus config settings](#prometheus)     |
 
 <a name="update"></a>
 ### Command `update` - updates all MinIO servers
@@ -578,6 +586,23 @@ mc admin heal -r myminio/mybucket
 mc admin heal -r myminio/mybucket/myobjectprefix
 ```
 
+<a name="profile"></a>
+### Command `profile` - generate profile data for debugging purposes
+
+```
+NAME:
+  mc admin profile - generate profile data for debugging purposes
+
+COMMANDS:
+  start  start recording profile data
+  stop   stop and download profile data
+```
+
+Start CPU profiling
+```
+mc admin profile start --type cpu myminio/
+```
+
 <a name="top"></a>
 ### Command `top` - provide top like statistics for MinIO
 NOTE: This command is only applicable for a distributed MinIO setup. It is not supported on single node and gateway deployments.
@@ -586,12 +611,8 @@ NOTE: This command is only applicable for a distributed MinIO setup. It is not s
 NAME:
   mc admin top - provide top like statistics for MinIO
 
-FLAGS:
-  --help, -h                    show help
-
 COMMANDS:
   locks  Get a list of the 10 oldest locks on a MinIO cluster.
-
 ```
 
 *Example: Get a list of the 10 oldest locks on a distributed MinIO cluster, where 'myminio' is the MinIO cluster alias.*
@@ -601,18 +622,21 @@ mc admin top locks myminio
 ```
 
 <a name="trace"></a>
-### Command `trace` - Display Minio server http trace
-`trace` command displays server http trace of one or many Minio servers (under distributed cluster)
+### Command `trace` - Show http trace for MinIO server
+`trace` command displays server http trace of one or all MinIO servers (under distributed cluster)
 
 ```sh
 NAME:
-  mc admin trace - get minio server http trace
+  mc admin trace - show http trace for MinIO server
 
 FLAGS:
-  --help, -h                       show help
+  --verbose, -v                 print verbose trace
+  --all, -a                     trace all traffic (including internode traffic between MinIO servers)
+  --errors, -e                  trace failed requests only
+  --help, -h                    show help
 ```
 
-*Example: Display Minio server http trace.*
+*Example: Display MinIO server http trace.*
 
 ```sh
 mc admin trace myminio
@@ -621,7 +645,7 @@ mc admin trace myminio
 172.16.238.1 Host: 172.16.238.3:9000
 172.16.238.1 X-Amz-Date: 20190123T231705Z
 172.16.238.1 Authorization: AWS4-HMAC-SHA256 Credential=minio/20190123/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=8385097f264efaf1b71a9b56514b8166bb0a03af8552f83e2658f877776c46b3
-172.16.238.1 User-Agent: Minio (linux; amd64) minio-go/v6.0.8 mc/2019-01-23T23:15:38Z
+172.16.238.1 User-Agent: MinIO (linux; amd64) minio-go/v6.0.8 mc/2019-01-23T23:15:38Z
 172.16.238.1 X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 172.16.238.1
 172.16.238.1 <BODY>
@@ -633,7 +657,68 @@ mc admin trace myminio
 172.16.238.1 Accept-Ranges: bytes
 172.16.238.1 Content-Security-Policy: block-all-mixed-content
 172.16.238.1 Content-Type: application/xml
-172.16.238.1 Server: Minio/DEVELOPMENT.2019-01-23T23-14-14Z
+172.16.238.1 Server: MinIO/RELEASE.2019-09-05T23-24-38Z
 172.16.238.1 Vary: Origin
 ...
+```
+
+<a name="console"></a>
+### Command `console` - show console logs for MinIO server
+`console` command displays server logs of one or all MinIO servers (under distributed cluster)
+
+```sh
+NAME:
+  mc admin console - show console logs for MinIO server
+
+FLAGS:
+  --limit value, -l value       show last n log entries (default: 10)
+  --help, -h                    show help
+```
+
+*Example: Display MinIO server http trace.*
+
+```sh
+mc admin console myminio
+
+ API: SYSTEM(bucket=images)
+ Time: 22:48:06 PDT 09/05/2019
+ DeploymentID: 6faeded5-5cf3-4133-8a37-07c5d500207c
+ RequestID: <none>
+ RemoteHost: <none>
+ UserAgent: <none>
+ Error: ARN 'arn:minio:sqs:us-east-1:1:webhook' not found
+        4: cmd/notification.go:1189:cmd.readNotificationConfig()
+        3: cmd/notification.go:780:cmd.(*NotificationSys).refresh()
+        2: cmd/notification.go:815:cmd.(*NotificationSys).Init()
+        1: cmd/server-main.go:375:cmd.serverMain()
+```
+
+<a name="prometheus"></a>
+
+### Command `prometheus` - Manages prometheus config settings
+
+`generate` command generates the prometheus config (To be pasted in `prometheus.yml`)
+
+```sh
+NAME:
+  mc admin prometheus - manages prometheus config
+
+USAGE:
+  mc admin prometheus COMMAND [COMMAND FLAGS | -h] [ARGUMENTS...]
+
+COMMANDS:
+  generate  generates prometheus config
+
+```
+
+_Example: Generates prometheus config for an <alias>._
+
+```sh
+mc admin prometheus generate <alias>
+- job_name: minio-job
+  bearer_token: <token>
+  metrics_path: /minio/prometheus/metrics
+  scheme: http
+  static_configs:
+  - targets: ['localhost:9000']
 ```

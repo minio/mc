@@ -39,7 +39,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Get server configuration of a MinIO server/cluster.
-     $ {{.HelpName}} play/
+     {{.Prompt}} {{.HelpName}} play/
 `,
 }
 
@@ -83,7 +83,7 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Cannot get a configured admin connection.")
+	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
 	c, e := client.GetConfig()

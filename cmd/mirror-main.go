@@ -87,6 +87,10 @@ var (
 			Name:  "encrypt",
 			Usage: "encrypt/decrypt objects (using server-side encryption with server managed keys)",
 		},
+		cli.StringFlag{
+			Name:  "attr",
+			Usage: "add custom metadata for all objects",
+		},
 	}
 )
 
@@ -112,44 +116,47 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
   01. Mirror a bucket recursively from MinIO cloud storage to a bucket on Amazon S3 cloud storage.
-      $ {{.HelpName}} play/photos/2014 s3/backup-photos
+      {{.Prompt}} {{.HelpName}} play/photos/2014 s3/backup-photos
 
   02. Mirror a local folder recursively to Amazon S3 cloud storage.
-      $ {{.HelpName}} backup/ s3/archive
+      {{.Prompt}} {{.HelpName}} backup/ s3/archive
 
   03. Only mirror files that are newer than 7 days, 10 hours and 30 minutes to Amazon S3 cloud storage.
-      $ {{.HelpName}} --newer-than "7d10h30m" backup/ s3/archive
+      {{.Prompt}} {{.HelpName}} --newer-than "7d10h30m" backup/ s3/archive
 
   04. Mirror a bucket from aliased Amazon S3 cloud storage to a folder on Windows.
-      $ {{.HelpName}} s3\documents\2014\ C:\backup\2014
+      {{.Prompt}} {{.HelpName}} s3\documents\2014\ C:\backup\2014
 
   05. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder use '--overwrite' to overwrite destination.
-      $ {{.HelpName}} --overwrite s3/miniocloud miniocloud-backup
+      {{.Prompt}} {{.HelpName}} --overwrite s3/miniocloud miniocloud-backup
 
   06. Mirror a bucket from MinIO cloud storage to a bucket on Amazon S3 cloud storage and remove any extraneous
       files on Amazon S3 cloud storage.
-      $ {{.HelpName}} --remove play/photos/2014 s3/backup-photos/2014
+      {{.Prompt}} {{.HelpName}} --remove play/photos/2014 s3/backup-photos/2014
 
   07. Continuously mirror a local folder recursively to MinIO cloud storage. '--watch' continuously watches for
       new objects, uploads and removes extraneous files on Amazon S3 cloud storage.
-      $ {{.HelpName}} --remove --watch /var/lib/backups play/backups
+      {{.Prompt}} {{.HelpName}} --remove --watch /var/lib/backups play/backups
 
   08. Mirror a bucket from aliased Amazon S3 cloud storage to a local folder.
       Exclude all .* files and *.temp files when mirroring.
-      $ {{.HelpName}} --exclude ".*" --exclude "*.temp" s3/test ~/test
+      {{.Prompt}} {{.HelpName}} --exclude ".*" --exclude "*.temp" s3/test ~/test
 
   09. Mirror objects newer than 10 days from bucket test to a local folder.
-      $ {{.HelpName}} --newer-than 10d s3/test ~/localfolder
+      {{.Prompt}} {{.HelpName}} --newer-than 10d s3/test ~/localfolder
 
   10. Mirror objects older than 30 days from Amazon S3 bucket test to a local folder.
-      $ {{.HelpName}} --older-than 30d s3/test ~/test
+      {{.Prompt}} {{.HelpName}} --older-than 30d s3/test ~/test
 
   11. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage
-      $ {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
+      {{.Prompt}} {{.HelpName}} --encrypt-key "minio/photos=32byteslongsecretkeymustbegiven1,s3/archive=32byteslongsecretkeymustbegiven2" minio/photos/ s3/archive/
 
   12. Mirror server encrypted objects from MinIO cloud storage to a bucket on Amazon S3 cloud storage. In case the encryption key contains
       non-printable character like tab, pass the base64 encoded string as key.
-      $ {{.HelpName}} --encrypt-key "s3/photos/=32byteslongsecretkeymustbegiven1,play/archive/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE=" s3/photos/ play/archive/
+      {{.Prompt}} {{.HelpName}} --encrypt-key "s3/photos/=32byteslongsecretkeymustbegiven1,play/archive/=MzJieXRlc2xvbmdzZWNyZXRrZQltdXN0YmVnaXZlbjE=" s3/photos/ play/archive/
+
+  13. Update 'Cache-Control' header on existing objects.
+      {{.Prompt}} {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000 myminio/video-files myminio/video-files
 `,
 }
 
@@ -184,6 +191,7 @@ type mirrorJob struct {
 	isFake, isRemove, isOverwrite, isWatch bool
 	olderThan, newerThan                   string
 	storageClass                           string
+	userMetadata                           map[string]string
 
 	excludeOptions []string
 	encKeyDB       map[string][]prefixSSEPair
@@ -267,12 +275,15 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 
 	mj.status.SetCaption(sourceURL.String() + ": ")
 
+	// Initialize target metadata.
+	sURLs.TargetContent.Metadata = make(map[string]string)
+
 	if mj.storageClass != "" {
-		if sURLs.TargetContent.Metadata == nil {
-			sURLs.TargetContent.Metadata = make(map[string]string)
-		}
 		sURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = mj.storageClass
 	}
+
+	// Initialize additional target user metadata.
+	sURLs.TargetContent.UserMetadata = mj.userMetadata
 
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 	targetPath := filepath.ToSlash(filepath.Join(targetAlias, targetURL.Path))
@@ -347,7 +358,6 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 				}
 			}
 			eventPath := event.Path
-
 			if runtime.GOOS == "darwin" {
 				// Strip the prefixes in the event path. Happens in darwin OS only
 				eventPath = eventPath[strings.Index(eventPath, sourceURLFull):]
@@ -486,7 +496,8 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 		mj.parallel.wait()
 	}
 
-	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, mj.excludeOptions, mj.encKeyDB)
+	isMetadata := len(mj.userMetadata) > 0
+	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, isMetadata, mj.excludeOptions, mj.encKeyDB)
 
 	for {
 		select {
@@ -569,7 +580,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	return mj.monitorMirrorStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan string, storageClass string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan string, storageClass string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
 	mj := mirrorJob{
 		trapCh: signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
 		m:      new(sync.Mutex),
@@ -585,6 +596,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch 
 		olderThan:      olderThan,
 		newerThan:      newerThan,
 		storageClass:   storageClass,
+		userMetadata:   userMetadata,
 		encKeyDB:       encKeyDB,
 		statusCh:       make(chan URLs),
 		watcher:        NewWatcher(UTCNow()),
@@ -638,6 +650,14 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		isOverwrite = ctx.Bool("overwrite")
 	}
 
+	// Parse metadata.
+	userMetaMap := make(map[string]string)
+	if ctx.String("attr") != "" {
+		var err *probe.Error
+		userMetaMap, err = getMetaDataEntry(ctx.String("attr"))
+		fatalIf(err, "Unable to parse attribute %v", ctx.String("attr"))
+	}
+
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL,
 		ctx.Bool("fake"),
@@ -648,6 +668,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		ctx.String("older-than"),
 		ctx.String("newer-than"),
 		ctx.String("storage-class"),
+		userMetaMap,
 		encKeyDB)
 
 	srcClt, err := newClient(srcURL)

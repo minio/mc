@@ -35,7 +35,6 @@ import (
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 	_ "github.com/minio/sha256-simd" // Needed for sha256 hash verifier.
-	"github.com/segmentio/go-prompt"
 )
 
 // Check for new software updates.
@@ -44,10 +43,6 @@ var updateCmd = cli.Command{
 	Usage:  "update mc to latest release",
 	Action: mainUpdate,
 	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "quiet, q",
-			Usage: "disable any update prompt message",
-		},
 		cli.BoolFlag{
 			Name:  "json",
 			Usage: "enable JSON formatted output",
@@ -69,7 +64,7 @@ EXIT STATUS:
 
 EXAMPLES:
   1. Check and update mc:
-     $ {{.HelpName}}
+     {{.Prompt}} {{.HelpName}}
 `,
 }
 
@@ -430,14 +425,6 @@ func doUpdate(sha256Hex string, latestReleaseTime time.Time, ok bool) (updateSta
 		latestReleaseTime.Format(mcReleaseTagTimeLayout)), nil
 }
 
-func shouldUpdate(quiet bool, sha256Hex string, latestReleaseTime time.Time) (ok bool) {
-	ok = true
-	if !quiet {
-		ok = prompt.Confirm(colorGreenBold("Update to RELEASE.%s [%s]", latestReleaseTime.Format(mcReleaseTagTimeLayout), "yes"))
-	}
-	return ok
-}
-
 type updateMessage struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
@@ -488,10 +475,9 @@ func mainUpdate(ctx *cli.Context) {
 
 	// Avoid updating mc development, source builds.
 	if strings.Contains(updateMsg, mcReleaseURL) {
-		isUpdate := shouldUpdate(globalQuiet || globalJSON, sha256Hex, latestReleaseTime)
 		var updateStatusMsg string
 		var err *probe.Error
-		updateStatusMsg, err = doUpdate(sha256Hex, latestReleaseTime, isUpdate)
+		updateStatusMsg, err = doUpdate(sha256Hex, latestReleaseTime, true)
 		if err != nil {
 			errorIf(err, "Unable to update ‘mc’.")
 			os.Exit(-1)
