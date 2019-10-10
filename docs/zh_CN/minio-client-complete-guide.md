@@ -651,7 +651,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is ‘none’
 设置``mybucket/myphotos/2020/``子文件夹可匿名下载的策略。现在，这个文件夹下的对象可被公开访问。比如：``mybucket/myphotos/2020/yourobjectname``可通过这个URL [https://play.min.io/mybucket/myphotos/2020/yourobjectname](https://play.min.io/mybucket/myphotos/2020/yourobjectname)访问。
 
 ```
-mc policy download play/mybucket/myphotos/2020/
+mc policy set download play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 ```
 
@@ -660,7 +660,7 @@ Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'download'
 删除所有*mybucket/myphotos/2020/*这个子文件夹下的匿名存储桶策略。
 
 ```
-mc policy none play/mybucket/myphotos/2020/
+mc policy set none play/mybucket/myphotos/2020/
 Access permission for ‘play/mybucket/myphotos/2020/’ is set to 'none'
 ```
 
