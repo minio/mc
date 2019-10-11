@@ -18,6 +18,9 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/minio/mc/pkg/console"
@@ -26,6 +29,8 @@ import (
 )
 
 func fixConfig() {
+	// Migrate config location on windows
+	fixConfigLocation()
 	// Fix config V3
 	fixConfigV3()
 	// Fix config V6
@@ -238,5 +243,47 @@ func fixConfigV6() {
 		e = newConf.Save(mustGetMcConfigPath())
 		fatalIf(probe.NewError(e).Trace(mustGetMcConfigPath()), "Unable to save newly fixed config path.")
 		console.Infof("Successfully fixed %s broken config for version `6`.\n", mustGetMcConfigPath())
+	}
+}
+
+// fixConfigLocation will resolve the possible duplicate location of Windows config files.
+// If there is duplicate configs, it will use the currently enabled config location and
+// move it to the 'normalized' location.
+// See https://github.com/minio/mc/pull/2898
+func fixConfigLocation() {
+	if runtime.GOOS != "windows" || mcCustomConfigDir != mustGetMcConfigDir() {
+		return
+	}
+	if !strings.HasSuffix(strings.ToLower(filepath.Base(os.Args[0])), ".exe") {
+		// Most likely scenario, command was called as 'mc'.
+		// If there is a config at legacyLoc+".exe", rename it.
+		legacyLoc := mcCustomConfigDir + ".exe"
+		unusedLoc := mcCustomConfigDir + ".unused"
+		_ = os.Rename(legacyLoc, unusedLoc)
+		return
+	}
+
+	// mc was called with '.exe';
+	// config can have changed location.
+	_, err := os.Stat(mcCustomConfigDir)
+	wantExists := !os.IsNotExist(err)
+
+	legFileName := mcCustomConfigDir + ".exe"
+	_, err = os.Stat(legFileName)
+	legExists := !os.IsNotExist(err)
+	switch {
+	case legExists && wantExists:
+		// Both exist and mc was called with legacy path (.exe)
+		// Rename the 'mc' config and move the legacy location one to where we want it.
+		backupdir := fmt.Sprintf("%s.unused\\", mcCustomConfigDir)
+		_ = os.RemoveAll(backupdir)
+		err := os.Rename(mcCustomConfigDir, backupdir)
+		fatalIf(probe.NewError(err), fmt.Sprintln("Renaming unused config", mcCustomConfigDir, "->", backupdir, "failed. Please rename/remove file."))
+		fallthrough
+	case !wantExists && legExists:
+		err := os.Rename(legFileName, mcCustomConfigDir)
+		fatalIf(probe.NewError(err), fmt.Sprintln("Migrating config location", legFileName, "->", mcCustomConfigDir, "failed. Please move config file."))
+	default:
+		// Legacy does not exist.
 	}
 }
