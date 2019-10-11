@@ -19,10 +19,10 @@ package cmd
 
 import (
 	"crypto/x509"
+
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 )
-
 
 const (
 	globalMCConfigVersion = "9"

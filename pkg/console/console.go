@@ -20,10 +20,9 @@ package console
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
-
-	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
