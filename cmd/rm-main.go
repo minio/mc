@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -217,6 +218,9 @@ func removeSingle(url string, isIncomplete bool, isFake, isForce bool, olderThan
 		if pErr != nil {
 			errorIf(pErr.Trace(url), "Invalid argument `"+url+"`.")
 			return exitStatus(globalErrorExitStatus) // End of journey.
+		}
+		if !strings.HasSuffix(targetURL, string(clnt.GetURL().Separator)) && content.Type.IsDir() {
+			targetURL = targetURL + string(clnt.GetURL().Separator)
 		}
 
 		contentCh := make(chan *clientContent, 1)
