@@ -61,6 +61,10 @@ var (
 			Name:  "attr",
 			Usage: "add custom metadata for the object",
 		},
+		cli.BoolFlag{
+			Name:  "continue, c",
+			Usage: "create or resume copy session.",
+		},
 	}
 )
 
@@ -127,6 +131,9 @@ EXAMPLES:
 
   13. Copy a text file to an object storage and assign REDUCED_REDUNDANCY storage-class to the uploaded object.
       {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
+
+  14. Copy a text file to an object storage and create or resume copy session.
+      $ {{.HelpName}} --recursive --continue myobject.txt play/mybucket
  `,
 }
 
@@ -431,7 +438,7 @@ loop:
 				// For critical errors we should exit. Session
 				// can be resumed after the user figures out
 				// the  problem.
-				session.CloseAndDie()
+				session.copyCloseAndDie(session.Header.CommandBoolFlags["session"])
 			}
 		}
 	}
@@ -497,7 +504,13 @@ func mainCopy(ctx *cli.Context) error {
 	}
 	sse := ctx.String("encrypt")
 
-	session := newSessionV8()
+	sessionID := getHash("cp", ctx.Args())
+	if ctx.Bool("continue") && isSessionExists(sessionID) {
+		resumeSession(sessionID)
+		return nil
+	}
+
+	session := newSessionV8(sessionID)
 	session.Header.CommandType = "cp"
 	session.Header.CommandBoolFlags["recursive"] = recursive
 	session.Header.CommandStringFlags["older-than"] = olderThan
@@ -505,6 +518,7 @@ func mainCopy(ctx *cli.Context) error {
 	session.Header.CommandStringFlags["storage-class"] = storageClass
 	session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 	session.Header.CommandStringFlags["encrypt"] = sse
+	session.Header.CommandBoolFlags["session"] = ctx.Bool("continue")
 	session.Header.UserMetaData = userMetaMap
 
 	var e error

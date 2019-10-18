@@ -35,9 +35,9 @@ func (s *TestSuite) TestSession(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(isSessionDirExists(), Equals, true)
 
-	session := newSessionV8()
+	session := newSessionV8(getHash("cp", []string{"mybucket", "myminio/mybucket"}))
 	c.Assert(session.Header.CommandArgs, IsNil)
-	c.Assert(len(session.SessionID), Equals, 8)
+	c.Assert(len(session.SessionID) >= 8, Equals, true)
 	_, e := os.Stat(session.DataFP.Name())
 	c.Assert(e, IsNil)
 

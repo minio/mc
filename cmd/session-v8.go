@@ -162,7 +162,7 @@ func loadSessionV8(sid string) (*sessionV8, *probe.Error) {
 }
 
 // newSessionV8 provides a new session.
-func newSessionV8() *sessionV8 {
+func newSessionV8(sessionID string) *sessionV8 {
 	s := &sessionV8{}
 	s.Header = &sessionV8Header{}
 	s.Header.Version = globalSessionConfigVersion
@@ -177,7 +177,7 @@ func newSessionV8() *sessionV8 {
 	s.Header.UserMetaData = make(map[string]string)
 	s.Header.When = UTCNow()
 	s.mutex = new(sync.Mutex)
-	s.SessionID = newRandomID(8)
+	s.SessionID = sessionID
 
 	sessionDataFile, err := getSessionDataFile(s.SessionID)
 	fatalIf(err.Trace(s.SessionID), "Unable to create session data file \""+sessionDataFile+"\".")
@@ -373,6 +373,18 @@ func (s *sessionV8) Delete() *probe.Error {
 func (s sessionV8) CloseAndDie() {
 	s.Close()
 	console.Fatalln("Session safely terminated. To resume session `mc session resume " + s.SessionID + "`")
+}
+
+func (s sessionV8) copyCloseAndDie(sessionFlag bool) {
+	if sessionFlag {
+		s.Close()
+		console.Fatalln("Command terminated safely. Run this command to resume copy again.")
+	} else {
+		s.mutex.Lock()
+		defer s.mutex.Unlock()
+
+		s.DataFP.Close() // ignore error.
+	}
 }
 
 // Create a factory function to simplify checking if
