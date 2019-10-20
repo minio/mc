@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017-2019 MinIO, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -29,45 +26,45 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminConfigSetCmd = cli.Command{
-	Name:   "set",
-	Usage:  "set key to MinIO server/cluster.",
+var adminConfigHistoryRestoreCmd = cli.Command{
+	Name:   "restore",
+	Usage:  "restore a history key value on MinIO server",
 	Before: setGlobalsFromContext,
-	Action: mainAdminConfigSet,
+	Action: mainAdminConfigHistoryRestore,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} TARGET
+  {{.HelpName}} TARGET RESTOREID
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable WORM mode on MinIO server.
-     $ {{.HelpName}} myminio/ worm state="on"
+  1. Restore 'restore-id' history key value on MinIO server.
+     $ {{.HelpName}} play/ <restore-id>
 `,
 }
 
-// configSetMessage container to hold locks information.
-type configSetMessage struct {
+// configHistoryRestoreMessage container to hold locks information.
+type configHistoryRestoreMessage struct {
 	Status      string `json:"status"`
-	targetAlias string
+	RestoreID   string `json:"restoreID"`
+	targetAlias string `json:"-"`
 }
 
 // String colorized service status message.
-func (u configSetMessage) String() (msg string) {
-	msg += console.Colorize("SetConfigSuccess",
-		"Setting new key has been successful.\n")
+func (u configHistoryRestoreMessage) String() (msg string) {
 	suggestion := fmt.Sprintf("mc admin service restart %s", u.targetAlias)
-	msg += console.Colorize("SetConfigSuccess",
+	msg += console.Colorize("ConfigHistoryRestoreMessage",
 		fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
-	return
+	msg += console.Colorize("ConfigHistoryRestoreMessage", "Restored "+u.RestoreID+" kv successfully.")
+	return msg
 }
 
-// JSON jsonified service status message.
-func (u configSetMessage) JSON() string {
+// JSON jsonified service status Message message.
+func (u configHistoryRestoreMessage) JSON() string {
 	u.Status = "success"
 	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -75,21 +72,18 @@ func (u configSetMessage) JSON() string {
 	return string(statusJSONBytes)
 }
 
-// checkAdminConfigSetSyntax - validate all the passed arguments
-func checkAdminConfigSetSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
+// checkAdminConfigHistoryRestoreSyntax - validate all the passed arguments
+func checkAdminConfigHistoryRestoreSyntax(ctx *cli.Context) {
+	if !ctx.Args().Present() || len(ctx.Args()) > 2 {
+		cli.ShowCommandHelpAndExit(ctx, "restore", 1) // last argument is exit code
 	}
 }
 
-// main config set function
-func mainAdminConfigSet(ctx *cli.Context) error {
+func mainAdminConfigHistoryRestore(ctx *cli.Context) error {
 
-	// Check command arguments
-	checkAdminConfigSetSyntax(ctx)
+	checkAdminConfigHistoryRestoreSyntax(ctx)
 
-	// Set color preference of command outputs
-	console.SetColor("SetConfigSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("ConfigHistoryRestoreMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -99,18 +93,12 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	// Call set config API
-	input := strings.Join(args.Tail(), " ")
-	if len(input) == 0 {
-		b, err := ioutil.ReadAll(os.Stdin)
-		fatalIf(probe.NewError(err), "Cannot set server configuration file.")
-		input = string(b)
-	}
-	fatalIf(probe.NewError(client.SetConfigKV(input)),
-		"Cannot set server configuration file.")
+	// Call get config API
+	fatalIf(probe.NewError(client.RestoreConfigHistoryKV(args.Get(1))), "Cannot restore server configuration.")
 
-	// Print set config result
-	printMsg(configSetMessage{
+	// Print
+	printMsg(configHistoryRestoreMessage{
+		RestoreID:   args.Get(1),
 		targetAlias: aliasedURL,
 	})
 
