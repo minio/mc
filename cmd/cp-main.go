@@ -63,7 +63,7 @@ var (
 		},
 		cli.BoolFlag{
 			Name:  "continue, c",
-			Usage: "create or resume copy session.",
+			Usage: "create or resume copy session",
 		},
 	}
 )
