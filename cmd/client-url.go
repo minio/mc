@@ -171,7 +171,7 @@ func urlJoinPath(url1, url2 string) string {
 }
 
 // url2Stat returns stat info for URL.
-func url2Stat(urlStr string, isFetchMeta bool, encKeyDB map[string][]prefixSSEPair) (client Client, content *clientContent, err *probe.Error) {
+func url2Stat(urlStr string, isFetchMeta, fileAttr bool, encKeyDB map[string][]prefixSSEPair) (client Client, content *clientContent, err *probe.Error) {
 	client, err = newClient(urlStr)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
@@ -179,7 +179,7 @@ func url2Stat(urlStr string, isFetchMeta bool, encKeyDB map[string][]prefixSSEPa
 	alias, _ := url2Alias(urlStr)
 	sse := getSSE(urlStr, encKeyDB[alias])
 
-	content, err = client.Stat(false, isFetchMeta, sse)
+	content, err = client.Stat(false, isFetchMeta, fileAttr, sse)
 	if err != nil {
 		return nil, nil, err.Trace(urlStr)
 	}

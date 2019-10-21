@@ -159,3 +159,48 @@ func TestParseEncryptionKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestParseAttribute(t *testing.T) {
+	metaDataCases := []struct {
+		input  string
+		output map[string]string
+		err    error
+		status bool
+	}{
+		// // When blank value is passed.
+		{"", nil, ErrInvalidFileSystemAttribute, false},
+		//  When space is passed.
+		{"  ", nil, ErrInvalidFileSystemAttribute, false},
+		// When / is passed.
+		{"/", nil, ErrInvalidFileSystemAttribute, false},
+		// When "atime:" is passed.
+		{"atime:/", nil, ErrInvalidFileSystemAttribute, false},
+		// When "atime:" is passed.
+		{"atime", map[string]string{"atime": ""}, nil, true},
+		//  When "atime:" is passed.
+		{"atime:", map[string]string{"atime": ""}, nil, true},
+		// Passing a valid value
+		{"atime:1/ctime:1/gid:1/gname:a/md:/mode:3/mtime:1/uid:1/uname:a", map[string]string{"atime": "1", "ctime": "1", "gid": "1", "gname": "a", "md": "", "mode": "3", "mtime": "1", "uid": "1", "uname": "a"}, nil, true},
+	}
+
+	for idx, testCase := range metaDataCases {
+		metaData, errMeta := parseAttribute(testCase.input)
+		if testCase.status == true {
+			if errMeta != nil {
+				t.Fatalf("Test %d: generated error not matching, expected = `%s`, found = `%s`", idx+1, testCase.err, errMeta)
+			}
+			if !reflect.DeepEqual(metaData, testCase.output) {
+				t.Fatalf("Test %d: generated Map not matching, expected = `%s`, found = `%s`", idx+1, testCase.input, metaData)
+			}
+		}
+		if testCase.status == false {
+			if !reflect.DeepEqual(metaData, testCase.output) {
+				t.Fatalf("Test %d: generated Map not matching, expected = `%s`, found = `%s`", idx+1, testCase.input, metaData)
+			}
+			if errMeta != testCase.err {
+				t.Fatalf("Test %d: generated error not matching, expected = `%s`, found = `%s`", idx+1, testCase.err, errMeta)
+			}
+		}
+
+	}
+}

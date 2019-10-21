@@ -1115,7 +1115,7 @@ func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, do
 }
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
-func (c *s3Client) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) (*clientContent, *probe.Error) {
+func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (*clientContent, *probe.Error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	bucket, object := c.url2BucketAndObject()
@@ -1605,7 +1605,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutineDirOpt(contentCh chan *client
 	} else if strings.HasSuffix(object, string(c.targetURL.Separator)) {
 		// Get stat of given object is a directory.
 		isIncomplete := true
-		content, perr := c.Stat(isIncomplete, false, nil)
+		content, perr := c.Stat(isIncomplete, false, false, nil)
 		cContent = content
 		if perr != nil {
 			contentCh <- &clientContent{Err: perr.Trace(bucket)}
@@ -1744,7 +1744,7 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 		// Get stat of given object is a directory.
 		isIncomplete := false
 		isFetchMeta := false
-		content, perr := c.Stat(isIncomplete, isFetchMeta, nil)
+		content, perr := c.Stat(isIncomplete, isFetchMeta, false, nil)
 		cContent = content
 		if perr != nil {
 			contentCh <- &clientContent{Err: perr.Trace(bucket)}

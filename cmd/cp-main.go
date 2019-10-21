@@ -65,6 +65,10 @@ var (
 			Name:  "continue, c",
 			Usage: "create or resume copy session",
 		},
+		cli.BoolFlag{
+			Name:  "preserve, a",
+			Usage: "preserve filesystem attributes (mode, ownership, timestamps)",
+		},
 	}
 )
 
@@ -133,8 +137,11 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
 
   14. Copy a text file to an object storage and create or resume copy session.
-      $ {{.HelpName}} --recursive --continue myobject.txt play/mybucket
- `,
+      {{.Prompt}} {{.HelpName}} --recursive --continue myobject.txt play/mybucket
+	  
+  15. Copy a text file to an object storage and preserve the file system attribute as metadata.
+      {{.Prompt}} {{.HelpName}} -a myobject.txt play/mybucket
+`,
 }
 
 // copyMessage container for file copy messages
@@ -385,6 +392,18 @@ func doCopySession(session *sessionV8, encKeyDB map[string][]prefixSSEPair) erro
 					}
 				}
 
+				// If one needs to store the file system information by passing -a flag
+				if preserve := (session.Header.CommandBoolFlags["preserve"]); preserve {
+					attrValue, pErr := getFileAttrMeta(cpURLs, encKeyDB)
+					if pErr != nil {
+						errorIf(pErr, "Unable to fetch file meta info for %s", urlScanner.Text())
+						continue
+					}
+
+					if attrValue != "" {
+						cpURLs.TargetContent.Metadata["mc-attrs"] = attrValue
+					}
+				}
 				// Verify if previously copied, notify progress bar.
 				if isCopied(cpURLs.SourceContent.URL.String()) {
 					queueCh <- func() URLs {
@@ -519,6 +538,10 @@ func mainCopy(ctx *cli.Context) error {
 	session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 	session.Header.CommandStringFlags["encrypt"] = sse
 	session.Header.CommandBoolFlags["session"] = ctx.Bool("continue")
+
+	if ctx.Bool("preserve") {
+		session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
+	}
 	session.Header.UserMetaData = userMetaMap
 
 	var e error

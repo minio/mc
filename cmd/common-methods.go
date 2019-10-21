@@ -101,7 +101,7 @@ func getEncKeys(ctx *cli.Context) (map[string][]prefixSSEPair, *probe.Error) {
 func isAliasURLDir(aliasURL string, keys map[string][]prefixSSEPair) bool {
 	// If the target url exists, check if it is a directory
 	// and return immediately.
-	_, targetContent, err := url2Stat(aliasURL, false, keys)
+	_, targetContent, err := url2Stat(aliasURL, false, false, keys)
 	if err == nil {
 		return targetContent.Type.IsDir()
 	}
@@ -168,7 +168,7 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.Se
 	}
 	metadata = make(map[string]string)
 	if fetchStat {
-		st, err := sourceClnt.Stat(false, true, sse)
+		st, err := sourceClnt.Stat(false, true, false, sse)
 		if err != nil {
 			return nil, nil, err.Trace(alias, urlStr)
 		}
@@ -254,7 +254,7 @@ func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide,
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
-	st, err := sourceClnt.Stat(false, true, srcSSE)
+	st, err := sourceClnt.Stat(false, true, false, srcSSE)
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
@@ -381,4 +381,32 @@ func newClient(aliasedURL string) (Client, *probe.Error) {
 		return nil, errInvalidAliasedURL(aliasedURL).Trace(aliasedURL)
 	}
 	return newClientFromAlias(alias, urlStrFull)
+}
+
+// Return the file attribute value present in metadata
+func getFileAttrMeta(sURLs URLs, encKeyDB map[string][]prefixSSEPair) (string, *probe.Error) {
+	sourceAlias := sURLs.SourceAlias
+	sourceURL := sURLs.SourceContent.URL
+	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sURLs.SourceContent.URL.Path))
+	srcSSE := getSSE(sourcePath, encKeyDB[sourceAlias])
+
+	statSourceURL := sURLs.SourceAlias + getKey(sURLs.SourceContent)
+	srcClt, err := newClient(statSourceURL)
+	if err != nil {
+		return "", err.Trace(sourceURL.String())
+	}
+
+	sourceMeta, err := srcClt.Stat(false, true, true, srcSSE)
+	if err != nil {
+		return "", err.Trace(sourceURL.String())
+	}
+	attrValue := ""
+	if sourceMeta.Metadata["X-Amz-Meta-Mc-Attrs"] != "" {
+		attrValue = sourceMeta.Metadata["X-Amz-Meta-Mc-Attrs"]
+	} else if sourceMeta.Metadata["X-Amz-Meta-S3cmd-Attrs"] != "" {
+		attrValue = sourceMeta.Metadata["X-Amz-Meta-S3cmd-Attrs"]
+	} else if sourceMeta.Metadata["mc-attrs"] != "" {
+		attrValue = sourceMeta.Metadata["mc-attrs"]
+	}
+	return attrValue, nil
 }

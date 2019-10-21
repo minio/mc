@@ -678,6 +678,17 @@ function test_cat_object_with_sse_error()
     log_success "$start_time" "${FUNCNAME[0]}"
 }
 
+# Test mc cp command with preserve file system attributes
+function test_copy_object_preserve_filesystem_attr()
+{
+    show "${FUNCNAME[0]}"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd cp -a "${FILE_1_MB}" "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    diff -bB <("${MC_CMD[@]}"   --json stat "${FILE_1_MB}"  |  jq -r '.metadata."mc-attrs"')  >/dev/null 2>&1 <("${MC_CMD[@]}"   --json stat "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"  |  jq -r '.metadata."X-Amz-Meta-Mc-Attrs"')  >/dev/null 2>&1
+    assert_success "$start_time" "${FUNCNAME[0]}" show_on_failure $? "unable to put object with file system attribute"
+    assert_success "$start_time" "${FUNCNAME[0]}" mc_cmd rm "${SERVER_ALIAS}/${BUCKET_NAME}/${object_name}"
+    log_success "$start_time" "${FUNCNAME[0]}"
+}
+
 function test_copy_object_with_sse_rewrite()
 {
     # test server side copy and remove operation - target is unencrypted while source is encrypted
@@ -844,6 +855,7 @@ function run_test()
     test_cat_object
     test_mirror_list_objects
     test_mirror_list_objects_storage_class
+    test_copy_object_preserve_filesystem_attr
     test_find
     test_find_empty
     if [ -z "$MINT_MODE" ]; then
