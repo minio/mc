@@ -133,7 +133,7 @@ EXAMPLES:
       {{.Prompt}} {{.HelpName}} --storage-class REDUCED_REDUNDANCY myobject.txt play/mybucket
 
   14. Copy a text file to an object storage and create or resume copy session.
-      $ {{.HelpName}} --recursive --continue myobject.txt play/mybucket
+      {{.Prompt}} {{.HelpName}} --recursive --continue myobject.txt play/mybucket
  `,
 }
 

@@ -17,18 +17,19 @@
 package cmd
 
 import (
-	"strings"
+	"encoding/base64"
+	"io/ioutil"
 
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminConfigGetCmd = cli.Command{
-	Name:   "get",
-	Usage:  "get config of a MinIO server/cluster",
+var adminConfigHelpCmd = cli.Command{
+	Name:   "help",
+	Usage:  "help returns help for each sub-system",
 	Before: setGlobalsFromContext,
-	Action: mainAdminConfigGet,
+	Action: mainAdminConfigHelp,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -40,55 +41,47 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Get the current region setting on MinIO server.
+  1. Return help for 'region' settings on MinIO server.
      {{.Prompt}} {{.HelpName}} play/ region
-     # US east region setting
-     name="us-east-1" state="on"
 
-  2. Get the current notification settings for MQTT target on MinIO server
-     {{.Prompt}} {{.HelpName}} myminio/ notify_mqtt
-     # Notification settings for MQTT broker
-     notify_mqtt broker="" password="" queue_dir="" queue_limit="0" reconnect_interval="0s" state="off" keep_alive_interval="0s" qos="0" topic="" username=""
-
-  3. Get the current compression settings on MinIO server
-     {{.Prompt}} {{.HelpName}} myminio/ compression
-     # Compression settings for csv and text files only
-     compression extensions=".txt,.csv" mime_types="text/*" state="on"
+  2. Return help for 'compression' settings, specifically 'extensions' key on MinIO server.
+     {{.Prompt}} {{.HelpName}} myminio/ compression extensions
 `,
 }
 
-// configGetMessage container to hold locks information.
-type configGetMessage struct {
+// configHelpMessage container to hold locks information.
+type configHelpMessage struct {
 	Status string `json:"status"`
 	Value  string `json:"value"`
 }
 
 // String colorized service status message.
-func (u configGetMessage) String() string {
+func (u configHelpMessage) String() string {
 	return u.Value
 }
 
 // JSON jsonified service status Message message.
-func (u configGetMessage) JSON() string {
+func (u configHelpMessage) JSON() string {
 	u.Status = "success"
+	u.Value = base64.StdEncoding.EncodeToString([]byte(u.Value))
 	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(statusJSONBytes)
 }
 
-// checkAdminConfigGetSyntax - validate all the passed arguments
-func checkAdminConfigGetSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
+// checkAdminConfigHelpSyntax - validate all the passed arguments
+func checkAdminConfigHelpSyntax(ctx *cli.Context) {
+	if !ctx.Args().Present() || len(ctx.Args()) > 3 {
+		cli.ShowCommandHelpAndExit(ctx, "help", 1) // last argument is exit code
 	}
 }
 
-func mainAdminConfigGet(ctx *cli.Context) error {
+func mainAdminConfigHelp(ctx *cli.Context) error {
 
-	checkAdminConfigGetSyntax(ctx)
+	checkAdminConfigHelpSyntax(ctx)
 
-	// Get the alias parameter from cli
+	// Help the alias parameter from cli
 	args := ctx.Args()
 	aliasedURL := args.Get(0)
 
@@ -97,11 +90,14 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
-	buf, e := client.GetConfigKV(strings.Join(args.Tail(), " "))
-	fatalIf(probe.NewError(e), "Cannot get server configuration file.")
+	hr, e := client.HelpConfigKV(args.Get(1), args.Get(2))
+	fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
+
+	buf, e := ioutil.ReadAll(hr)
+	fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
 
 	// Print
-	printMsg(configGetMessage{
+	printMsg(configHelpMessage{
 		Value: string(buf),
 	})
 

@@ -46,7 +46,10 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Enable WORM mode on MinIO server.
-     $ {{.HelpName}} myminio/ worm state="on"
+     {{.Prompt}} {{.HelpName}} myminio/ worm state="on"
+
+  2. Change region name for the MinIO server to 'us-west-1'.
+     {{.Prompt}} {{.HelpName}} myminio/ region name="us-west-1" state="on"
 `,
 }
 

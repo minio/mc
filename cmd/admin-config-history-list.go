@@ -45,7 +45,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. List all history entries sorted by set time.
-     $ {{.HelpName}} play/
+     {{.Prompt}} {{.HelpName}} play/
 `,
 }
 

@@ -43,7 +43,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Restore 'restore-id' history key value on MinIO server.
-     $ {{.HelpName}} play/ <restore-id>
+     {{.Prompt}} {{.HelpName}} play/ <restore-id>
 `,
 }
 
@@ -51,7 +51,7 @@ EXAMPLES:
 type configHistoryRestoreMessage struct {
 	Status      string `json:"status"`
 	RestoreID   string `json:"restoreID"`
-	targetAlias string `json:"-"`
+	targetAlias string
 }
 
 // String colorized service status message.

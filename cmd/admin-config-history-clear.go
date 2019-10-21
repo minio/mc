@@ -41,7 +41,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Clear a history key value on MinIO server.
-     $ {{.HelpName}} play/ <restore-id>
+     {{.Prompt}} {{.HelpName}} play/ <restore-id>
 `,
 }
 

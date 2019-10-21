@@ -46,7 +46,7 @@ FLAGS:
   {{end}}
 EXAMPLES:
   1. Remove MQTT notifcation target 'target1' on MinIO server.
-     $ {{.HelpName}} myminio/ notify_mqtt:target1
+     {{.Prompt}} {{.HelpName}} myminio/ notify_mqtt:target1
 `,
 }
 
