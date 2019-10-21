@@ -405,7 +405,7 @@ loop:
 	for {
 		select {
 		case <-trapCh:
-			quitCh <- struct{}{}
+			close(quitCh)
 			cancelCopy()
 			// Receive interrupt notification.
 			if !globalQuiet && !globalJSON {
