@@ -705,12 +705,13 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 			if d.Diff == differInFirst {
 				// Bucket only exists in the source, create the same bucket in the destination
 				if err := newDstClt.MakeBucket(ctx.String("region"), false); err != nil {
-					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`.")
+					errorIf(err, "Cannot create bucket in `"+newTgtURL+"`.")
 					continue
 				}
 				// Copy policy rules from source to dest if flag is activated
+				// and all buckets are mirrored.
 				if ctx.Bool("a") {
-					if err := copyBucketPolicies(srcClt, dstClt, isOverwrite); err != nil {
+					if err := copyBucketPolicies(newSrcClt, newDstClt, isOverwrite); err != nil {
 						errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`.")
 					}
 				}
@@ -722,6 +723,13 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 				if err := mj.watchURL(newSrcClt); err != nil {
 					mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 				}
+			}
+		}
+	} else {
+		// Copy policy rules from source to dest if flag is activated
+		if ctx.Bool("a") {
+			if err := copyBucketPolicies(srcClt, dstClt, isOverwrite); err != nil {
+				errorIf(err, "Cannot copy bucket policies to `"+dstClt.GetURL().String()+"`.")
 			}
 		}
 	}
