@@ -12,6 +12,7 @@ require (
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/mattn/go-colorable v0.1.1
 	github.com/mattn/go-isatty v0.0.7
+	github.com/mattn/go-runewidth v0.0.5 // indirect
 	github.com/minio/cli v1.22.0
 	github.com/minio/minio v0.0.0-20191023055913-ee4a6a823df5
 	github.com/minio/minio-go/v6 v6.0.39
@@ -32,3 +33,5 @@ require (
 )
 
 replace github.com/gorilla/rpc v1.2.0+incompatible => github.com/gorilla/rpc v1.2.0
+
+replace github.com/minio/minio => ../minio

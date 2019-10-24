@@ -59,13 +59,13 @@ EXAMPLES:
 
 // configGetMessage container to hold locks information.
 type configGetMessage struct {
-	Status string `json:"status"`
-	Value  string `json:"value"`
+	Status string          `json:"status"`
+	Value  json.RawMessage `json:"value"`
 }
 
 // String colorized service status message.
 func (u configGetMessage) String() string {
-	return u.Value
+	return string(u.Value)
 }
 
 // JSON jsonified service status Message message.
@@ -97,12 +97,12 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
-	buf, e := client.GetConfigKV(strings.Join(args.Tail(), " "))
+	buf, e := client.GetConfigKV(strings.Join(args.Tail(), " "), globalJSON, globalNoColor)
 	fatalIf(probe.NewError(e), "Cannot get server configuration file.")
 
 	// Print
 	printMsg(configGetMessage{
-		Value: string(buf),
+		Value: buf,
 	})
 
 	return nil

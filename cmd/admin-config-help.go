@@ -90,7 +90,7 @@ func mainAdminConfigHelp(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
-	hr, e := client.HelpConfigKV(args.Get(1), args.Get(2))
+	hr, e := client.HelpConfigKV(args.Get(1), args.Get(2), globalNoColor)
 	fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
 
 	buf, e := ioutil.ReadAll(hr)
