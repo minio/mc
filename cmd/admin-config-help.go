@@ -25,12 +25,19 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
+var helpFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "env",
+		Usage: "list all the env only help",
+	},
+}
+
 var adminConfigHelpCmd = cli.Command{
 	Name:   "help",
 	Usage:  "help returns help for each sub-system",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigHelp,
-	Flags:  globalFlags,
+	Flags:  append(append([]cli.Flag{}, globalFlags...), helpFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -90,7 +97,7 @@ func mainAdminConfigHelp(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	// Call get config API
-	hr, e := client.HelpConfigKV(args.Get(1), args.Get(2), globalNoColor)
+	hr, e := client.HelpConfigKV(args.Get(1), args.Get(2), ctx.IsSet("env"), globalNoColor)
 	fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
 
 	buf, e := ioutil.ReadAll(hr)
