@@ -238,9 +238,9 @@ func (s shortTraceMsg) String() string {
 	fmt.Fprint(b, console.Colorize("HeaderValue", fmt.Sprintf("  %2s", s.CallStats.Duration.Round(time.Microsecond))))
 	spaces = 12 - len(fmt.Sprintf("%2s", s.CallStats.Duration.Round(time.Microsecond)))
 	fmt.Fprintf(b, "%*s", spaces, " ")
-	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf(" 🠉 ")))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf(" ↑ ")))
 	fmt.Fprint(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Rx))))
-	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("  🠋 ")))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf(" ↓ ")))
 	fmt.Fprint(b, console.Colorize("HeaderValue", humanize.IBytes(uint64(s.CallStats.Tx))))
 
 	return b.String()
@@ -333,7 +333,7 @@ func (t traceMessage) String() string {
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Body", fmt.Sprintf("%s\n", string(ri.Body))))
 	fmt.Fprintf(b, "%s%s", nodeNameStr, console.Colorize("Response", fmt.Sprintf("[RESPONSE] ")))
 	fmt.Fprintf(b, "[%s] ", rs.Time.Format(timeFormat))
-	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s  🠉 %s  🠋 %s ]\n", trc.CallStats.Latency.Round(time.Microsecond), humanize.IBytes(uint64(trc.CallStats.InputBytes)), humanize.IBytes(uint64(trc.CallStats.OutputBytes)))))
+	fmt.Fprint(b, console.Colorize("Stat", fmt.Sprintf("[ Duration %2s  ↑ %s  ↓ %s ]\n", trc.CallStats.Latency.Round(time.Microsecond), humanize.IBytes(uint64(trc.CallStats.InputBytes)), humanize.IBytes(uint64(trc.CallStats.OutputBytes)))))
 
 	statusStr := console.Colorize("RespStatus", fmt.Sprintf("%d %s", rs.StatusCode, http.StatusText(rs.StatusCode)))
 	if rs.StatusCode != http.StatusOK {
