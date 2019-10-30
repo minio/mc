@@ -93,7 +93,7 @@ func checkShareDownloadSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEP
 	isRecursive := ctx.Bool("recursive")
 	if !isRecursive {
 		for _, url := range ctx.Args() {
-			_, _, err := url2Stat(url, false, encKeyDB)
+			_, _, err := url2Stat(url, false, false, encKeyDB)
 			if err != nil {
 				fatalIf(err.Trace(url), "Unable to stat `"+url+"`.")
 			}
@@ -126,7 +126,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 	// Channel which will receive objects whose URLs need to be shared
 	objectsCh := make(chan *clientContent)
 
-	content, err := clnt.Stat(isIncomplete, isFetchMeta, nil)
+	content, err := clnt.Stat(isIncomplete, isFetchMeta, false, nil)
 	if err != nil {
 		return err.Trace(clnt.GetURL().String())
 	}

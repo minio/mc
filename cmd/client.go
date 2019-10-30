@@ -45,7 +45,7 @@ const defaultMultipartThreadsNum = 4
 // Client - client interface
 type Client interface {
 	// Common operations
-	Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) (content *clientContent, err *probe.Error)
+	Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *clientContent, err *probe.Error)
 	List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent
 
 	// Bucket operations

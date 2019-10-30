@@ -562,6 +562,7 @@ FLAGS:
   --older-than value                 copy object(s) older than N days (default: 0)
   --newer-than value                 copy object(s) newer than N days (default: 0)
   --storage-class value, --sc value  set storage class for new object(s) on target
+  --preserve,-a                                 preserve file system attributes and bucket policy rules on target bucket(s)
   --attr                             add custom metadata for the object (format: KeyName1=string;KeyName2=string)
   --encrypt value                    encrypt/decrypt objects (using server-side encryption with server managed keys)
   --encrypt-key value                encrypt/decrypt objects (using server-side encryption with customer provided keys)
@@ -619,6 +620,13 @@ Notice that two different aliases myminio1 and myminio2 are used for the same en
 ```sh
 mc cp --attr Cache-Control=no-cache myscript.js play/mybucket
 myscript.js:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
+```
+
+*Example: Copy a text file to an object storage and preserve the filesyatem attributes.*
+
+```
+mc cp -a myobject.txt play/mybucket
+myobject.txt:    14 B / 14 B  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100.00 % 41 B/s 0
 ```
 
 <a name="rm"></a>
@@ -773,7 +781,7 @@ FLAGS:
   --watch, -w                        watch and synchronize changes
   --remove                           remove extraneous object(s) on target
   --region value                     specify region when creating new bucket(s) on target (default: "us-east-1")
-  -a                                 preserve bucket policy rules on target bucket(s)
+  --preserve, -a                     preserve file system attributes and bucket policy rules on target bucket(s)
   --exclude value                    exclude object(s) that match specified object name pattern
   --older-than value                 filter object(s) older than N days (default: 0)
   --newer-than value                 filter object(s) newer than N days (default: 0)

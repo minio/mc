@@ -64,8 +64,8 @@ var (
 			Value: "us-east-1",
 		},
 		cli.BoolFlag{
-			Name:  "a",
-			Usage: "preserve bucket policy rules on target bucket(s)",
+			Name:  "preserve, a",
+			Usage: "preserve file(s)/object(s) attributes and bucket policy rules on target bucket(s)",
 		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
@@ -157,6 +157,9 @@ EXAMPLES:
 
   13. Update 'Cache-Control' header on existing objects.
       {{.Prompt}} {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000 myminio/video-files myminio/video-files
+	  
+  14. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
+      {{.Prompt}} {{.HelpName}} -a backup/ s3/archive 	  
 `,
 }
 
@@ -188,10 +191,10 @@ type mirrorJob struct {
 	sourceURL string
 	targetURL string
 
-	isFake, isRemove, isOverwrite, isWatch bool
-	olderThan, newerThan                   string
-	storageClass                           string
-	userMetadata                           map[string]string
+	isFake, isRemove, isOverwrite, isWatch, isPreserve bool
+	olderThan, newerThan                               string
+	storageClass                                       string
+	userMetadata                                       map[string]string
 
 	excludeOptions []string
 	encKeyDB       map[string][]prefixSSEPair
@@ -280,6 +283,16 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 
 	if mj.storageClass != "" {
 		sURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = mj.storageClass
+	}
+
+	if mj.isPreserve {
+		attrValue, pErr := getFileAttrMeta(sURLs, mj.encKeyDB)
+		if pErr != nil {
+			return sURLs.WithError(pErr)
+		}
+		if attrValue != "" {
+			sURLs.TargetContent.Metadata["mc-attrs"] = attrValue
+		}
 	}
 
 	// Initialize additional target user metadata.
@@ -402,7 +415,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						mj.statusCh <- mirrorURL.WithError(err)
 						continue
 					}
-					sourceContent, err := sourceClient.Stat(false, false, srcSSE)
+					sourceContent, err := sourceClient.Stat(false, false, false, srcSSE)
 					if err != nil {
 						// source doesn't exist anymore
 						mj.statusCh <- mirrorURL.WithError(err)
@@ -416,7 +429,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					}
 					shouldQueue := false
 					if !mj.isOverwrite {
-						_, err = targetClient.Stat(false, false, tgtSSE)
+						_, err = targetClient.Stat(false, false, false, tgtSSE)
 						if err == nil {
 							continue
 						} // doesn't exist
@@ -439,7 +452,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						mj.statusCh <- mirrorURL.WithError(err)
 						return
 					}
-					_, err = targetClient.Stat(false, false, tgtSSE)
+					_, err = targetClient.Stat(false, false, false, tgtSSE)
 					if err == nil {
 						continue
 					} // doesn't exist
@@ -580,7 +593,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	return mj.monitorMirrorStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch bool, excludeOptions []string, olderThan, newerThan string, storageClass string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve bool, excludeOptions []string, olderThan, newerThan string, storageClass string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
 	mj := mirrorJob{
 		trapCh: signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
 		m:      new(sync.Mutex),
@@ -592,6 +605,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch 
 		isRemove:       isRemove,
 		isOverwrite:    isOverwrite,
 		isWatch:        isWatch,
+		isPreserve:     isPreserve,
 		excludeOptions: excludeOptions,
 		olderThan:      olderThan,
 		newerThan:      newerThan,
@@ -664,6 +678,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		ctx.Bool("remove"),
 		isOverwrite,
 		ctx.Bool("watch"),
+		ctx.Bool("a"),
 		ctx.StringSlice("exclude"),
 		ctx.String("older-than"),
 		ctx.String("newer-than"),
@@ -676,10 +691,6 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 
 	dstClt, err := newClient(dstURL)
 	fatalIf(err, "Unable to initialize `"+srcURL+"`.")
-
-	if ctx.Bool("a") && (srcClt.GetURL().Type != objectStorage || dstClt.GetURL().Type != objectStorage) {
-		fatalIf(errDummy(), "Synchronizing bucket policies is only possible when both source & target point to S3 servers.")
-	}
 
 	mirrorAllBuckets := (srcClt.GetURL().Type == objectStorage && srcClt.GetURL().Path == "/") ||
 		(dstClt.GetURL().Type == objectStorage && dstClt.GetURL().Path == "/")
@@ -709,8 +720,9 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 					continue
 				}
 				// Copy policy rules from source to dest if flag is activated
+				// and all buckets are mirrored.
 				if ctx.Bool("a") {
-					if err := copyBucketPolicies(srcClt, dstClt, isOverwrite); err != nil {
+					if err := copyBucketPolicies(newSrcClt, newDstClt, isOverwrite); err != nil {
 						errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`.")
 					}
 				}
@@ -722,6 +734,13 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 				if err := mj.watchURL(newSrcClt); err != nil {
 					mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 				}
+			}
+		}
+	} else {
+		// Copy policy rules from source to dest if flag is activated
+		if ctx.Bool("a") {
+			if err := copyBucketPolicies(srcClt, dstClt, isOverwrite); err != nil {
+				errorIf(err, "Cannot copy bucket policies to `"+dstClt.GetURL().String()+"`.")
 			}
 		}
 	}

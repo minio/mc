@@ -170,7 +170,7 @@ func checkFindSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 
 	// Extract input URLs and validate.
 	for _, url := range args {
-		_, _, err := url2Stat(url, false, encKeyDB)
+		_, _, err := url2Stat(url, false, false, encKeyDB)
 		if err != nil && !isURLPrefixExists(url, false) {
 			// Bucket name empty is a valid error for 'find myminio' unless we are using watch, treat it as such.
 			if _, ok := err.ToGoError().(BucketNameEmpty); ok && !ctx.Bool("watch") {

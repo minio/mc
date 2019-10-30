@@ -165,7 +165,7 @@ func statURL(targetURL string, isIncomplete, isRecursive bool, encKeyDB map[stri
 			return nil, errTargetNotFound(targetURL)
 		}
 
-		_, stat, err := url2Stat(url, true, encKeyDB)
+		_, stat, err := url2Stat(url, true, true, encKeyDB)
 		if err != nil {
 			stat = content
 		}

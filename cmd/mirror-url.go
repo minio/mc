@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/minio/cli"
@@ -54,9 +55,22 @@ func checkMirrorSyntax(ctx *cli.Context, encKeyDB map[string][]prefixSSEPair) {
 		}
 	}
 
+	_, expandedSourcePath, _ := mustExpandAlias(srcURL)
+	srcClient := newClientURL(expandedSourcePath)
+	_, expandedTargetPath, _ := mustExpandAlias(tgtURL)
+	destClient := newClientURL(expandedTargetPath)
+
+	// Mirror with preserve option on windows
+	// only works for object storage to object storage
+	if runtime.GOOS == "windows" && ctx.Bool("a") {
+		if srcClient.Type == fileSystem || destClient.Type == fileSystem {
+			errorIf(errInvalidArgument(), "Preserve functionality on windows support object storage to object storage transfer only.")
+		}
+	}
+
 	/****** Generic rules *******/
 	if !ctx.Bool("watch") {
-		_, srcContent, err := url2Stat(srcURL, false, encKeyDB)
+		_, srcContent, err := url2Stat(srcURL, false, false, encKeyDB)
 		// incomplete uploads are not necessary for copy operation, no need to verify for them.
 		isIncomplete := false
 		if err != nil && !isURLPrefixExists(srcURL, isIncomplete) {

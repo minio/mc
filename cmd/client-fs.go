@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -32,6 +33,7 @@ import (
 	"github.com/pkg/xattr"
 	"github.com/rjeczalik/notify"
 
+	"github.com/minio/mc/pkg/disk"
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"
@@ -338,12 +340,62 @@ func (f *fsClient) put(reader io.Reader, size int64, metadata map[string][]strin
 			err := f.toClientError(e, objectPath)
 			return totalWritten, err.Trace(objectPartPath, objectPath)
 		}
+
+		if len(metadata["mc-attrs"]) != 0 {
+			attr, err := parseAttribute(metadata["mc-attrs"][0])
+			if err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+
+			mode, err := strconv.ParseUint(attr["mode"], 10, 32)
+			if err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+			// Change the mode of file
+			if err := os.Chmod(objectPath, os.FileMode(mode)); err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+
+			uid, err := strconv.Atoi(attr["uid"])
+			if err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+
+			gid, err := strconv.Atoi(attr["gid"])
+			if err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+			// Change the owner
+			if err := os.Chown(objectPath, uid, gid); err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+
+			atime, err := strconv.ParseInt(attr["atime"], 10, 64)
+			if err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+
+			ctime, err := strconv.ParseInt(attr["ctime"], 10, 64)
+			if err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+			// Change the access, modify and change time
+			if err := os.Chtimes(objectPath, time.Unix(atime, 0), time.Unix(ctime, 0)); err != nil {
+				return totalWritten, probe.NewError(err)
+			}
+
+		}
 	}
 	return totalWritten, nil
 }
 
 // Put - create a new file with metadata.
 func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
+	if metadata["mc-attrs"] != "" {
+		meta := make(map[string][]string)
+		meta["mc-attrs"] = append(meta["mc-attrs"], metadata["mc-attrs"])
+		return f.put(reader, size, meta, progress)
+	}
 	return f.put(reader, size, nil, progress)
 }
 
@@ -1012,7 +1064,7 @@ func (f *fsClient) SetAccess(access string, isJSON bool) *probe.Error {
 }
 
 // Stat - get metadata from path.
-func (f *fsClient) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) (content *clientContent, err *probe.Error) {
+func (f *fsClient) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.ServerSide) (content *clientContent, err *probe.Error) {
 	st, err := f.fsStat(isIncomplete)
 	if err != nil {
 		return nil, err.Trace(f.PathURL.String())
@@ -1037,6 +1089,15 @@ func (f *fsClient) Stat(isIncomplete, isFetchMeta bool, sse encrypt.ServerSide) 
 		}
 		for k, v := range metaData {
 			content.Metadata[k] = v
+		}
+		// Populates meta data with file system attribute only in case of
+		// when preserve flag is passed.
+		if isPreserve {
+			fileAttr, err := disk.GetFileSystemAttrs(path)
+			if err != nil {
+				return content, nil
+			}
+			content.Metadata["mc-attrs"] = fileAttr
 		}
 	}
 

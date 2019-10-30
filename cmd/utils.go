@@ -318,3 +318,34 @@ func isURLContains(srcURL, tgtURL, sep string) bool {
 	}
 	return false
 }
+
+// ErrInvalidFileSystemAttribute reflects invalid fily system attribute
+var ErrInvalidFileSystemAttribute = errors.New("Error in parsing file system attribute")
+
+// Returns a map by parsing the value of X-Amz-Meta-Mc-Attrs/X-Amz-Meta-s3Cmd-Attrs
+func parseAttribute(attrs string) (map[string]string, error) {
+	var err error
+	attribute := make(map[string]string)
+	param := strings.Split(attrs, "/")
+	for _, val := range param {
+		attr := strings.TrimSpace(val)
+		if attr == "" {
+			err = ErrInvalidFileSystemAttribute
+		} else {
+			attrVal := strings.Split(attr, ":")
+			if len(attrVal) == 2 {
+				attribute[strings.TrimSpace(attrVal[0])] = strings.TrimSpace(attrVal[1])
+			} else if len(attrVal) == 1 {
+				attribute[attrVal[0]] = ""
+			} else {
+				err = ErrInvalidFileSystemAttribute
+			}
+		}
+	}
+
+	if err != nil {
+		return nil, ErrInvalidFileSystemAttribute
+	}
+
+	return attribute, nil
+}
