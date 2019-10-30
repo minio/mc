@@ -66,7 +66,7 @@ func mainAdminUserRemove(ctx *cli.Context) error {
 	fatalIf(err, "Unable to initialize admin connection.")
 
 	e := client.RemoveUser(args.Get(1))
-	fatalIf(probe.NewError(e).Trace(args...), "Cannot remove new user")
+	fatalIf(probe.NewError(e).Trace(args...), "Cannot remove %s", args.Get(1))
 
 	printMsg(userMessage{
 		op:        "remove",
