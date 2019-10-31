@@ -308,6 +308,12 @@ func mainAdminServerInfo(ctx *cli.Context) error {
 
 	infoMessages := []infoMessage{}
 
+	// Checks if the corresponding mountPath is found for the the given nodeAddr.
+	foundMatchingPath := func(mountPath, nodeAddr string) bool {
+		// NOTE: XL/FS mountpaths will have `/` as the first character denoting the absolute disk path.
+		return strings.Contains(mountPath, nodeAddr) || mountPath[0] == '/' || nodeAddr[0] == '/' || nodeAddr[0] == '.'
+	}
+
 	for i, serverInfo := range serversInfo {
 		cpuLoad := cpuLoads[i]
 		memUsage := memUsages[i]
@@ -327,7 +333,7 @@ func mainAdminServerInfo(ctx *cli.Context) error {
 		storageInfoStat := backendStatus{}
 
 		for index, mountPath := range storageInfo.MountPaths {
-			if strings.Contains(mountPath, serverInfo.Addr) || serverInfo.Addr[0] == '/' || serverInfo.Addr[0] == '.' {
+			if foundMatchingPath(mountPath, serverInfo.Addr) {
 				storageInfoStat.Used += storageInfo.Used[index]
 				storageInfoStat.Available += storageInfo.Available[index]
 				storageInfoStat.Total += storageInfo.Total[index]
