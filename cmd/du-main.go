@@ -70,13 +70,15 @@ EXAMPLES:
 // Structured message depending on the type of console.
 type duMessage struct {
 	Prefix string `json:"prefix"`
-	Size   string `json:"size"`
+	Size   int64  `json:"size"`
 	Status string `json:"status"`
 }
 
 // Colorized message for console printing.
 func (r duMessage) String() string {
-	return fmt.Sprintf("%s\t%s", console.Colorize("Size", r.Size),
+	humanSize := strings.Join(strings.Fields(humanize.IBytes(uint64(r.Size))), "")
+
+	return fmt.Sprintf("%s\t%s", console.Colorize("Size", humanSize),
 		console.Colorize("Prefix", r.Prefix))
 }
 
@@ -141,7 +143,7 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 
 		printMsg(duMessage{
 			Prefix: strings.Trim(u.Path, "/"),
-			Size:   strings.Join(strings.Fields(humanize.IBytes(uint64(size))), ""),
+			Size:   size,
 			Status: "success",
 		})
 	}
