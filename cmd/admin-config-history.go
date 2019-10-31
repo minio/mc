@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2017-2019 MinIO, Inc.
+ * MinIO Client (C) 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,25 +18,23 @@ package cmd
 
 import "github.com/minio/cli"
 
-var adminConfigCmd = cli.Command{
-	Name:   "config",
-	Usage:  "manage MinIO configuration",
-	Action: mainAdminConfig,
+var adminConfigHistoryCmd = cli.Command{
+	Name:   "history",
+	Usage:  "history restores, clears and lists any previous successful 'mc admin config set' key values.",
 	Before: setGlobalsFromContext,
+	Action: mainAdminConfigHistory,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminConfigSetCmd,
-		adminConfigGetCmd,
-		adminConfigDelCmd,
-		adminConfigHelpCmd,
-		adminConfigHistoryCmd,
+		adminConfigHistoryRestoreCmd,
+		adminConfigHistoryListCmd,
+		adminConfigHistoryClearCmd,
 	},
 	HideHelpCommand: true,
 }
 
-// mainAdminConfig is the handle for "mc admin config" command.
-func mainAdminConfig(ctx *cli.Context) error {
+// mainAdminConfigHistory is the handle for "mc admin config history" command.
+func mainAdminConfigHistory(ctx *cli.Context) error {
 	cli.ShowCommandHelp(ctx, ctx.Args().First())
 	return nil
-	// Sub-commands like "get", "set" have their own main.
+	// Sub-commands like "restore", "clear", "list" have their own main.
 }
