@@ -372,7 +372,7 @@ func mainAdminServerInfo(ctx *cli.Context) error {
 
 	}
 
-	sort.Stable(&sortInfoWrapper{infoMessages})
+	sort.Sort(&sortInfoWrapper{infoMessages})
 
 	for _, s := range infoMessages {
 		printMsg(s)

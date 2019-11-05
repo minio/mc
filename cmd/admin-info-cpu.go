@@ -154,7 +154,7 @@ func mainAdminCPUInfo(ctx *cli.Context) error {
 		return nil
 	}
 
-	sort.Stable(&sortCPUWrapper{cpuLoads: cpuLoads})
+	sort.Sort(&sortCPUWrapper{cpuLoads: cpuLoads})
 
 	for _, cpuLoad := range cpuLoads {
 		if cpuLoad.Error != "" {

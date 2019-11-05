@@ -17,8 +17,9 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
+	"text/tabwriter"
+	"text/template"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -28,12 +29,20 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 )
 
+var historyListFlags = []cli.Flag{
+	cli.IntFlag{
+		Name:  "count, n",
+		Usage: "list only 'n' lines of history output",
+		Value: 10,
+	},
+}
+
 var adminConfigHistoryListCmd = cli.Command{
 	Name:   "list",
 	Usage:  "list all previously set keys on MinIO server",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigHistoryList,
-	Flags:  globalFlags,
+	Flags:  append(append([]cli.Flag{}, globalFlags...), historyListFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -49,23 +58,38 @@ EXAMPLES:
 `,
 }
 
+// HistoryList template used by all sub-systems
+const HistoryList = `{{range .}}{{colorYellowBold "RestoreId:"}} {{colorYellowBold .RestoreID}}
+Date: {{.CreateTime}}
+
+{{.Targets}}
+
+{{end}}`
+
+// HistoryListTemplate - captures history list template
+var HistoryListTemplate = template.Must(template.New("history-list").Funcs(funcMap).Parse(HistoryList))
+
+type historyEntry struct {
+	RestoreID  string         `json:"restoreId"`
+	CreateTime string         `json:"createTime"`
+	Targets    madmin.Targets `json:"targets"`
+}
+
 // configHistoryListMessage container to hold locks information.
 type configHistoryListMessage struct {
-	Status  string                      `json:"status"`
-	Entries []madmin.ConfigHistoryEntry `json:"entries"`
+	Status  string         `json:"status"`
+	Entries []historyEntry `json:"entries"`
 }
 
 // String colorized service status message.
 func (u configHistoryListMessage) String() string {
-	var s []string
-	for _, g := range u.Entries {
-		message := console.Colorize("ConfigHistoryListMessageTime", fmt.Sprintf("[%s] ",
-			g.CreateTime.Format(printDate)))
-		message = message + console.Colorize("ConfigHistoryListMessageRestoreID", g.RestoreID)
-		s = append(s, message)
-	}
-	return strings.Join(s, "\n")
+	var s strings.Builder
+	w := tabwriter.NewWriter(&s, 1, 8, 2, ' ', 0)
+	e := HistoryListTemplate.Execute(w, u.Entries)
+	fatalIf(probe.NewError(e), "Cannot initialize template writer")
 
+	w.Flush()
+	return s.String()
 }
 
 // JSON jsonified service status Message message.
@@ -99,12 +123,22 @@ func mainAdminConfigHistoryList(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	chEntries, e := client.ListConfigHistoryKV()
+	chEntries, e := client.ListConfigHistoryKV(ctx.Int("count"))
 	fatalIf(probe.NewError(e), "Cannot list server history configuration.")
+
+	hentries := make([]historyEntry, len(chEntries))
+	for i, chEntry := range chEntries {
+		hentries[i] = historyEntry{
+			RestoreID:  chEntry.RestoreID,
+			CreateTime: chEntry.CreateTimeFormatted(),
+		}
+		hentries[i].Targets, e = madmin.ParseSubSysTarget([]byte(chEntry.Data))
+		fatalIf(probe.NewError(e), "Unable to parse invalid history entry.")
+	}
 
 	// Print
 	printMsg(configHistoryListMessage{
-		Entries: chEntries,
+		Entries: hentries,
 	})
 
 	return nil
