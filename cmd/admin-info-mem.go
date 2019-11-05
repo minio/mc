@@ -155,7 +155,7 @@ func mainAdminMemInfo(ctx *cli.Context) error {
 		// exit immediately if error encountered
 		return nil
 	}
-	sort.Stable(&sortMemWrapper{memUsages: memUsages})
+	sort.Sort(&sortMemWrapper{memUsages: memUsages})
 
 	for _, memUsage := range memUsages {
 

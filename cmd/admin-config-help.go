@@ -17,9 +17,11 @@
 package cmd
 
 import (
-	"encoding/base64"
-	"io/ioutil"
+	"strings"
+	"text/tabwriter"
+	"text/template"
 
+	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
@@ -31,6 +33,30 @@ var helpFlags = []cli.Flag{
 		Usage: "list all the env only help",
 	},
 }
+
+// Help template used by all sub-systems
+const Help = `{{colorBlueBold "Key"}}{{"\t"}}{{colorBlueBold "Description"}}
+{{colorYellowBold "----"}}{{"\t"}}{{colorYellowBold "----"}}
+{{range $key, $value := .}}{{colorCyanBold $key}}{{ "\t" }}{{$value}}
+{{end}}`
+
+// HelpEnv template used by all sub-systems
+const HelpEnv = `{{colorBlueBold "KeyEnv"}}{{"\t"}}{{colorBlueBold "Description"}}
+{{colorYellowBold "----"}}{{"\t"}}{{colorYellowBold "----"}}
+{{range $key, $value := .}}{{colorCyanBold $key}}{{ "\t" }}{{$value}}
+{{end}}`
+
+var funcMap = template.FuncMap{
+	"colorBlueBold":   color.New(color.FgBlue, color.Bold).SprintfFunc(),
+	"colorYellowBold": color.New(color.FgYellow, color.Bold).SprintfFunc(),
+	"colorCyanBold":   color.New(color.FgCyan, color.Bold).SprintFunc(),
+}
+
+// HelpTemplate - captures config help template
+var HelpTemplate = template.Must(template.New("config-help").Funcs(funcMap).Parse(Help))
+
+// HelpEnvTemplate - captures config help template
+var HelpEnvTemplate = template.Must(template.New("config-help-env").Funcs(funcMap).Parse(HelpEnv))
 
 var adminConfigHelpCmd = cli.Command{
 	Name:   "help",
@@ -58,19 +84,31 @@ EXAMPLES:
 
 // configHelpMessage container to hold locks information.
 type configHelpMessage struct {
-	Status string `json:"status"`
-	Value  string `json:"value"`
+	Status  string            `json:"status"`
+	Value   map[string]string `json:"help"`
+	envOnly bool
 }
 
 // String colorized service status message.
 func (u configHelpMessage) String() string {
-	return u.Value
+	var s strings.Builder
+	w := tabwriter.NewWriter(&s, 1, 8, 2, ' ', 0)
+	var e error
+	if !u.envOnly {
+		e = HelpTemplate.Execute(w, u.Value)
+	} else {
+		e = HelpEnvTemplate.Execute(w, u.Value)
+	}
+	fatalIf(probe.NewError(e), "Cannot initialize template writer")
+
+	w.Flush()
+
+	return s.String()
 }
 
 // JSON jsonified service status Message message.
 func (u configHelpMessage) JSON() string {
 	u.Status = "success"
-	u.Value = base64.StdEncoding.EncodeToString([]byte(u.Value))
 	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -100,12 +138,10 @@ func mainAdminConfigHelp(ctx *cli.Context) error {
 	hr, e := client.HelpConfigKV(args.Get(1), args.Get(2), ctx.IsSet("env"))
 	fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
 
-	buf, e := ioutil.ReadAll(hr)
-	fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
-
 	// Print
 	printMsg(configHelpMessage{
-		Value: string(buf),
+		Value:   hr,
+		envOnly: ctx.IsSet("env"),
 	})
 
 	return nil
