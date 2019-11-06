@@ -114,7 +114,7 @@ type ldapStatus struct {
 }
 
 type diskStruct struct {
-	Path            string `json:"path""`
+	Path            string `json:"path"`
 	State           string `json:"state"`
 	Model           string `json:"model"`
 	Totalspace      string `json:"totalspace"`
@@ -129,8 +129,9 @@ type diskStruct struct {
 
 type serverStruct struct {
 	Status    string                    `json:"status"`
+	Endpoint  string                    `json:"endpoint"`
 	Service   string                    `json:"service"`
-	Uptime    string                    `json:"uptime"`
+	Uptime    time.Duration             `json:"uptime"`
 	Version   string                    `json:"version"`
 	CommitID  string                    `json:"commitID"`
 	Disks     []diskStruct              `json:"disks"`
@@ -149,6 +150,7 @@ type contentStruct struct {
 
 // infoMessage container to hold service status information.
 type infoMessage struct {
+	Status       string        `json:"status"`
 	Service      string        `json:"service"`
 	Addr         string        `json:"address"`
 	Region       string        `json:"region"`
@@ -181,19 +183,19 @@ func (u infoMessage) String() (msg string) {
 	// When service is offline
 	if u.Service == "off" {
 		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", u.Addr))
-		msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
+		msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("InfoFail", "offline"))
 		return
 	}
 
 	// Print error if any and exit
 	if u.Err != "" {
 		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", u.Addr))
-		msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("InfoFail", "offline"))
+		msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("InfoFail", "offline"))
 		e := u.Err
 		if strings.Trim(e, " ") == "rpc: retry error" {
 			e = "unreachable"
 		}
-		msg += fmt.Sprintf("    Error: %s", console.Colorize("InfoFail", e))
+		msg += fmt.Sprintf("Error: %s", console.Colorize("InfoFail", e))
 		return
 	}
 
@@ -202,21 +204,21 @@ func (u infoMessage) String() (msg string) {
 
 	// Uptime
 	msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("Info",
-		humanize.RelTime(time.Now(), time.Now().Add(-u.ServerInfo.Properties.Uptime), "", "")))
+		humanize.RelTime(time.Now(), time.Now().Add(-u.ServersInfo[0].Uptime), "", "")))
 
-	// Version
-	version := u.ServersInfo.Version
-	if u.ServersInfo.Version == "DEVELOPMENT.GOGET" {
-		version = "<development>"
-	}
-	msg += fmt.Sprintf("Version: %s\n", version)
+	// // Version
+	// version := u.ServersInfo[0].Version
+	// if u.ServersInfo[0].Version == "DEVELOPMENT.GOGET" {
+	// 	version = "<development>"
+	// }
+	// msg += fmt.Sprintf("Version: %s\n", version)
 	// Region
-	if u.ServersInfo.Region != "" {
-		msg += fmt.Sprintf("Region: %s\n", u.ServersInfo.Region)
+	if u.Region != "" {
+		msg += fmt.Sprintf("Region: %s\n", u.Region)
 	}
 	// ARNs
 	sqsARNs := ""
-	for _, v := range u.ServerInfo.Properties.SQSARN {
+	for _, v := range u.SQSARN {
 		sqsARNs += fmt.Sprintf("%s ", v)
 	}
 	if sqsARNs != "" {
@@ -340,28 +342,28 @@ func mainAdminInfo(ctx *cli.Context) error {
 	// Add the following code when server side functions are created
 	//
 	// Fetch info on vault (all MinIO server instances)
-	vaultInfo, e := client.ServerVaultInfo()
+	// vaultInfo, e := client.ServerVaultInfo()
 	// if err := processErr(e); err != nil {
 	// 	// exit immediately if error encountered
 	// 	return nil
 	// }
 	//
 	// Fetch info on ldap (all MinIO server instances)
-	LdapInfo, e := client.ServerLdapInfo()
+	// LdapInfo, e := client.ServerLdapInfo()
 	// if err := processErr(e); err != nil {
 	// 	// exit immediately if error encountered
 	// 	return nil
 	// }
 	//
 	// Fetch info on content (bucket and objects) (all MinIO server instances)
-	contentInfo, e := client.ServerContentInfo()
+	// contentInfo, e := client.ServerContentInfo()
 	// if err := processErr(e); err != nil {
 	// 	// exit immediately if error encountered
 	// 	return nil
 	// }
 	//
 	// Fetch info on disks (all MinIO server instances)
-	disksInfo, e := client.ServerDisksInfo()
+	// disksInfo, e := client.ServerDisksInfo()
 	// if err := processErr(e); err != nil {
 	// 	// exit immediately if error encountered
 	// 	return nil
@@ -374,17 +376,20 @@ func mainAdminInfo(ctx *cli.Context) error {
 	// Construct server information
 	srvsInfo := []serverStruct{}
 
-	srvsInfo.State = serversInfo.Data.Properties.State
-	srvsInfo.Endpoint = serversInfo.Data.Properties.Endpoint
-	srvsInfo.Uptime = serversInfo.Data.Properties.Uptime
-	srvsInfo.Version = serversInfo.Data.Properties.Version
-	srvsInfo.CommitID = serversInfo.Data.Properties.CommitID
-
 	for i, serverInfo := range serversInfo {
 		// srvsInfo.Disks = disksInfo // needs to be defined on the server side, client.ServerDisksInfo()
-		srvsInfo.CPULoads = cpuLoads[i]
-		srvsInfo.MemUsages = memUsages[i]
-		srvsInfo.ConnStats = serverInfo.Data.ConnStats
+		// srvsInfo[i].Status = serversInfo[i].Data.Properties.???
+
+		// srvsInfo[i].Endpoint = serverInfo.Addr
+		srvInfo := serverStruct{}
+		srvInfo.Endpoint = serverInfo.Addr
+		srvInfo.Uptime = serverInfo.Data.Properties.Uptime
+		srvInfo.Version = serverInfo.Data.Properties.Version
+		srvInfo.CommitID = serverInfo.Data.Properties.CommitID
+		srvInfo.CPULoads = cpuLoads[i]
+		srvInfo.MemUsages = memUsages[i]
+		srvInfo.ConnStats = serverInfo.Data.ConnStats
+		srvsInfo = append(srvsInfo, srvInfo)
 
 		// Print the error if exists and jump to the next server
 		if serverInfo.Error != "" {
