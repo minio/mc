@@ -96,23 +96,74 @@ type backendStatus struct {
 	Backend interface{} `json:"backend"`
 }
 
-// ServerInfo holds the whole server information that will be
-// returned by ServerInfo API.
-type ServerInfo struct {
-	ConnStats  madmin.ServerConnStats    `json:"network"`
-	Properties madmin.ServerProperties   `json:"server"`
-	CPULoad    madmin.ServerCPULoadInfo  `json:"cpu,omitempty"`
-	MemUsage   madmin.ServerMemUsageInfo `json:"mem,omitempty"`
+type vaultStatus struct {
+	Service  string `json:"service"`
+	Endpoint string `json:"endpoint"`
+	Key      string `json:"key"`
+	Auth     string `json:"auth"`
+	API      struct {
+		Encrypt string `json:"encrypt"`
+		Decrypt string `json:"decrypt"`
+		Update  string `json:"update"`
+	} `json:"API"`
+}
+
+type ldapStatus struct {
+	Service  string `json:"service"`
+	Endpoint string `json:"endpoint"`
+}
+
+type diskStruct struct {
+	Path            string `json:"path""`
+	State           string `json:"state"`
+	Model           string `json:"model"`
+	Totalspace      string `json:"totalspace"`
+	Usedspace       string `json:"usedspace"`
+	UUID            string `json:"uuid"`
+	Readthroughput  string `json:"readthroughput"`
+	Writethroughput string `json:"writethroughput"`
+	Readlatency     string `json:"readlatency"`
+	Writelatency    string `json:"writelatency"`
+	Utilization     string `json:"utilization"`
+}
+
+type serverStruct struct {
+	Status    string                    `json:"status"`
+	Service   string                    `json:"service"`
+	Uptime    string                    `json:"uptime"`
+	Version   string                    `json:"version"`
+	CommitID  string                    `json:"commitID"`
+	Disks     []diskStruct              `json:"disks"`
+	CPULoads  madmin.ServerCPULoadInfo  `json:"cpu"`
+	MemUsages madmin.ServerMemUsageInfo `json:"mem"`
+	ConnStats madmin.ServerConnStats    `json:"ConnStats"`
+}
+
+type contentStruct struct {
+	Buckets int64 `json:"buckets"`
+	Objects struct {
+		Total int64 `json:"total"`
+		Size  int64 `json:"size"`
+	} `json:"objects"`
 }
 
 // infoMessage container to hold service status information.
 type infoMessage struct {
-	Status      string        `json:"status"`
-	Service     string        `json:"service"`
-	Addr        string        `json:"address"`
-	Err         string        `json:"error"`
-	StorageInfo backendStatus `json:"storage"`
-	*ServerInfo
+	Service      string        `json:"service"`
+	Addr         string        `json:"address"`
+	Region       string        `json:"region"`
+	SQSARN       []string      `json:"sqsARN"`
+	DeploymentID string        `json:"deploymentID"`
+	Err          string        `json:"error"`
+	VaultInfo    vaultStatus   `json:"server"`
+	LdapInfo     ldapStatus    `json:"ldap"`
+	StorageInfo  backendStatus `json:"backend"`
+	Buckets      int64         `json:"buckets"`
+	Objects      struct {
+		Total int64 `json:"total"`
+		Size  int64 `json:"size"`
+	}
+	ServersInfo []serverStruct `json:"servers"`
 }
 
 func filterPerNode(addr string, m map[string]int) int {
@@ -124,6 +175,7 @@ func filterPerNode(addr string, m map[string]int) int {
 
 // String colorized service status message.
 func (u infoMessage) String() (msg string) {
+	msg += "\n"
 	dot := "●"
 
 	// When service is offline
@@ -149,18 +201,18 @@ func (u infoMessage) String() (msg string) {
 	msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), console.Colorize("PrintB", u.Addr))
 
 	// Uptime
-	msg += fmt.Sprintf("   Uptime: %s\n", console.Colorize("Info",
+	msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("Info",
 		humanize.RelTime(time.Now(), time.Now().Add(-u.ServerInfo.Properties.Uptime), "", "")))
 
 	// Version
-	version := u.ServerInfo.Properties.Version
-	if u.ServerInfo.Properties.Version == "DEVELOPMENT.GOGET" {
+	version := u.ServersInfo.Version
+	if u.ServersInfo.Version == "DEVELOPMENT.GOGET" {
 		version = "<development>"
 	}
-	msg += fmt.Sprintf("  Version: %s\n", version)
+	msg += fmt.Sprintf("Version: %s\n", version)
 	// Region
-	if u.ServerInfo.Properties.Region != "" {
-		msg += fmt.Sprintf("   Region: %s\n", u.ServerInfo.Properties.Region)
+	if u.ServersInfo.Region != "" {
+		msg += fmt.Sprintf("Region: %s\n", u.ServersInfo.Region)
 	}
 	// ARNs
 	sqsARNs := ""
@@ -168,11 +220,11 @@ func (u infoMessage) String() (msg string) {
 		sqsARNs += fmt.Sprintf("%s ", v)
 	}
 	if sqsARNs != "" {
-		msg += fmt.Sprintf(" SQS ARNs: %s\n", sqsARNs)
+		msg += fmt.Sprintf("SQS ARNs: %s\n", sqsARNs)
 	}
 
 	// Incoming/outgoing
-	msg += fmt.Sprintf("  Storage: Used %s, Free %s",
+	msg += fmt.Sprintf("Storage: Used %s, Free %s\n",
 		humanize.IBytes(u.StorageInfo.Used),
 		humanize.IBytes(u.StorageInfo.Available))
 	if v, ok := u.StorageInfo.Backend.(xlBackend); ok {
@@ -193,30 +245,8 @@ func (u infoMessage) String() (msg string) {
 		if downBackends != 0 {
 			upBackendsString = console.Colorize("InfoFail", fmt.Sprintf("%d", upBackends))
 		}
-		msg += fmt.Sprintf("\n   Drives: %s/%d %s\n", upBackendsString,
+		msg += fmt.Sprintf("Drives: %s/%d %s\n", upBackendsString,
 			upBackends+downBackends, console.Colorize("Info", "OK"))
-		msg += "\n"
-
-		//CPU section
-		msg += fmt.Sprintf("%s        min        avg      max\n", console.Colorize("Info", "   CPU"))
-		for i := range u.CPULoad.Load {
-			msg += fmt.Sprintf("   current    %.2f%%      %.2f%%    %.2f%%\n", u.CPULoad.Load[i].Min, u.CPULoad.Load[i].Avg, u.CPULoad.Load[i].Max)
-			if len(u.CPULoad.HistoricLoad) > i {
-				msg += fmt.Sprintf("   historic   %.2f%%      %.2f%%    %.2f%%\n", u.CPULoad.HistoricLoad[i].Min, u.CPULoad.HistoricLoad[i].Avg, u.CPULoad.HistoricLoad[i].Max)
-			}
-			msg += "\n"
-		}
-
-		// Mem section
-		msg += fmt.Sprintf("%s        usage\n", console.Colorize("Info", "   MEM"))
-		for i := range u.MemUsage.Usage {
-			msg += fmt.Sprintf("   current    %s\n", humanize.IBytes(u.MemUsage.Usage[i].Mem))
-			if len(u.MemUsage.HistoricUsage) > i {
-				msg += fmt.Sprintf("   historic   %s\n", humanize.IBytes(u.MemUsage.HistoricUsage[i].Mem))
-			}
-			msg += "\n"
-		}
-
 	}
 	return
 }
@@ -224,7 +254,7 @@ func (u infoMessage) String() (msg string) {
 // JSON jsonified service status message.
 func (u infoMessage) JSON() string {
 	u.Status = "success"
-	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
+	statusJSONBytes, e := json.MarshalIndent(u, "", "    ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(statusJSONBytes)
@@ -307,11 +337,54 @@ func mainAdminInfo(ctx *cli.Context) error {
 		return nil
 	}
 
+	// Add the following code when server side functions are created
+	//
+	// Fetch info on vault (all MinIO server instances)
+	vaultInfo, e := client.ServerVaultInfo()
+	// if err := processErr(e); err != nil {
+	// 	// exit immediately if error encountered
+	// 	return nil
+	// }
+	//
+	// Fetch info on ldap (all MinIO server instances)
+	LdapInfo, e := client.ServerLdapInfo()
+	// if err := processErr(e); err != nil {
+	// 	// exit immediately if error encountered
+	// 	return nil
+	// }
+	//
+	// Fetch info on content (bucket and objects) (all MinIO server instances)
+	contentInfo, e := client.ServerContentInfo()
+	// if err := processErr(e); err != nil {
+	// 	// exit immediately if error encountered
+	// 	return nil
+	// }
+	//
+	// Fetch info on disks (all MinIO server instances)
+	disksInfo, e := client.ServerDisksInfo()
+	// if err := processErr(e); err != nil {
+	// 	// exit immediately if error encountered
+	// 	return nil
+	// }
+
+	// Construct the admin info structure that'll be displayed
+	// to the user
 	infoMessages := []infoMessage{}
 
+	// Construct server information
+	srvsInfo := []serverStruct{}
+
+	srvsInfo.State = serversInfo.Data.Properties.State
+	srvsInfo.Endpoint = serversInfo.Data.Properties.Endpoint
+	srvsInfo.Uptime = serversInfo.Data.Properties.Uptime
+	srvsInfo.Version = serversInfo.Data.Properties.Version
+	srvsInfo.CommitID = serversInfo.Data.Properties.CommitID
+
 	for i, serverInfo := range serversInfo {
-		cpuLoad := cpuLoads[i]
-		memUsage := memUsages[i]
+		// srvsInfo.Disks = disksInfo // needs to be defined on the server side, client.ServerDisksInfo()
+		srvsInfo.CPULoads = cpuLoads[i]
+		srvsInfo.MemUsages = memUsages[i]
+		srvsInfo.ConnStats = serverInfo.Data.ConnStats
 
 		// Print the error if exists and jump to the next server
 		if serverInfo.Error != "" {
@@ -352,23 +425,22 @@ func mainAdminInfo(ctx *cli.Context) error {
 			}
 		}
 
-		// var c madmin.ServerCPUHardwareInfo
 		infoMessages = append(infoMessages, (infoMessage{
-			Service: "on",
-			Addr:    serverInfo.Addr,
-			Err:     serverInfo.Error,
-			ServerInfo: &ServerInfo{
-				ConnStats:  serverInfo.Data.ConnStats,
-				Properties: serverInfo.Data.Properties,
-				CPULoad:    cpuLoad,
-				MemUsage:   memUsage,
-			},
+			Service:      "on",
+			Addr:         serverInfo.Addr,
+			Region:       serverInfo.Data.Properties.Region,
+			SQSARN:       serverInfo.Data.Properties.SQSARN,
+			DeploymentID: serverInfo.Data.Properties.DeploymentID,
+			Err:          serverInfo.Error,
+			// VaultInfo: vaultInfo, // needs to be defined on the server side, client.ServerVaultInfo()
+			// LdapInfo: ldapInfo,   // needs to be defined on the server side, client.ServerLdapInfo()
 			StorageInfo: storageInfoStat,
+			// ContentInfo: contentInfo,  // needs to be defined on the server side, client.ServerContentInfo()
+			ServersInfo: srvsInfo,
 		}))
 
 	}
 
-	fmt.Println("Length of slice ", len(infoMessages))
 	sort.Stable(&sortInfoWrapper{infoMessages})
 	for _, s := range infoMessages {
 		printMsg(s)
