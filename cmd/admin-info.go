@@ -63,37 +63,16 @@ const (
 
 // fsBackend contains specific FS storage information
 type fsBackend struct {
-	Type backendType `json:"backendType"`
+	Type backendType `json:"type"`
 }
 
 // xlBackend contains specific erasure storage information
 type xlBackend struct {
-	Type         backendType `json:"backendType"`
+	Type         backendType `json:"type"`
 	OnlineDisks  int         `json:"onlineDisks"`
 	OfflineDisks int         `json:"offlineDisks"`
-	// Data disks for currently configured Standard storage class.
-	StandardSCData int `json:"standardSCData"`
-	// Parity disks for currently configured Standard storage class.
-	StandardSCParity int `json:"standardSCParity"`
-	// Data disks for currently configured Reduced Redundancy storage class.
-	RRSCData int `json:"rrSCData"`
-	// Parity disks for currently configured Reduced Redundancy storage class.
-	RRSCParity int `json:"rrSCParity"`
-
 	// List of all disk status.
 	Sets [][]madmin.DriveInfo `json:"sets"`
-}
-
-// backendStatus represents the overall information of all backend storage types
-type backendStatus struct {
-	// Total used space per tenant.
-	Used uint64 `json:"used"`
-	// Total available space.
-	Available uint64 `json:"available"`
-	// Total disk space.
-	Total uint64 `json:"total"`
-	// Backend type.
-	Backend interface{} `json:"backend"`
 }
 
 type vaultStatus struct {
@@ -105,7 +84,7 @@ type vaultStatus struct {
 		Encrypt string `json:"encrypt"`
 		Decrypt string `json:"decrypt"`
 		Update  string `json:"update"`
-	} `json:"API"`
+	} `json:"api"`
 }
 
 type ldapStatus struct {
@@ -150,21 +129,21 @@ type contentStruct struct {
 
 // infoMessage container to hold service status information.
 type infoMessage struct {
-	Status       string        `json:"status"`
-	Service      string        `json:"service"`
-	Addr         string        `json:"address"`
-	Region       string        `json:"region"`
-	SQSARN       []string      `json:"sqsARN"`
-	DeploymentID string        `json:"deploymentID"`
-	Err          string        `json:"error"`
-	VaultInfo    vaultStatus   `json:"server"`
-	LdapInfo     ldapStatus    `json:"ldap"`
-	StorageInfo  backendStatus `json:"backend"`
-	Buckets      int64         `json:"buckets"`
+	Status       string   `json:"status"`
+	Service      string   `json:"service"`
+	Addr         string   `json:"address"`
+	Region       string   `json:"region"`
+	SQSARN       []string `json:"sqsARN"`
+	DeploymentID string   `json:"deploymentID"`
+	Buckets      int64    `json:"buckets"`
 	Objects      struct {
 		Total int64 `json:"total"`
 		Size  int64 `json:"size"`
 	}
+	Err         string         `json:"error"`
+	VaultInfo   vaultStatus    `json:"vault"`
+	LdapInfo    ldapStatus     `json:"ldap"`
+	StorageInfo interface{}    `json:"backend"`
 	ServersInfo []serverStruct `json:"servers"`
 }
 
@@ -206,16 +185,18 @@ func (u infoMessage) String() (msg string) {
 	msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("Info",
 		humanize.RelTime(time.Now(), time.Now().Add(-u.ServersInfo[0].Uptime), "", "")))
 
-	// // Version
-	// version := u.ServersInfo[0].Version
-	// if u.ServersInfo[0].Version == "DEVELOPMENT.GOGET" {
-	// 	version = "<development>"
-	// }
-	// msg += fmt.Sprintf("Version: %s\n", version)
+	// Version
+	version := u.ServersInfo[0].Version
+	if u.ServersInfo[0].Version == "DEVELOPMENT.GOGET" {
+		version = "<development>"
+	}
+	msg += fmt.Sprintf("Version: %s\n", version)
+
 	// Region
 	if u.Region != "" {
 		msg += fmt.Sprintf("Region: %s\n", u.Region)
 	}
+
 	// ARNs
 	sqsARNs := ""
 	for _, v := range u.SQSARN {
@@ -226,15 +207,12 @@ func (u infoMessage) String() (msg string) {
 	}
 
 	// Incoming/outgoing
-	msg += fmt.Sprintf("Storage: Used %s, Free %s\n",
-		humanize.IBytes(u.StorageInfo.Used),
-		humanize.IBytes(u.StorageInfo.Available))
-	if v, ok := u.StorageInfo.Backend.(xlBackend); ok {
+	if v, ok := u.StorageInfo.(xlBackend); ok {
 		upBackends := 0
 		downBackends := 0
 		for _, set := range v.Sets {
-			for _, s := range set {
-				if len(s.Endpoint) > 0 && (strings.Contains(s.Endpoint, u.Addr) || s.Endpoint[0] == '/' || s.Endpoint[0] == '.') {
+			for i, s := range set {
+				if len(s.Endpoint) > 0 && (strings.Contains(s.Endpoint, u.Addr) || s.Endpoint[i] == '/' || s.Endpoint[i] == '.') {
 					if s.State == "ok" {
 						upBackends++
 					} else {
@@ -339,36 +317,6 @@ func mainAdminInfo(ctx *cli.Context) error {
 		return nil
 	}
 
-	// Add the following code when server side functions are created
-	//
-	// Fetch info on vault (all MinIO server instances)
-	// vaultInfo, e := client.ServerVaultInfo()
-	// if err := processErr(e); err != nil {
-	// 	// exit immediately if error encountered
-	// 	return nil
-	// }
-	//
-	// Fetch info on ldap (all MinIO server instances)
-	// LdapInfo, e := client.ServerLdapInfo()
-	// if err := processErr(e); err != nil {
-	// 	// exit immediately if error encountered
-	// 	return nil
-	// }
-	//
-	// Fetch info on content (bucket and objects) (all MinIO server instances)
-	// contentInfo, e := client.ServerContentInfo()
-	// if err := processErr(e); err != nil {
-	// 	// exit immediately if error encountered
-	// 	return nil
-	// }
-	//
-	// Fetch info on disks (all MinIO server instances)
-	// disksInfo, e := client.ServerDisksInfo()
-	// if err := processErr(e); err != nil {
-	// 	// exit immediately if error encountered
-	// 	return nil
-	// }
-
 	// Construct the admin info structure that'll be displayed
 	// to the user
 	infoMessages := []infoMessage{}
@@ -377,10 +325,6 @@ func mainAdminInfo(ctx *cli.Context) error {
 	srvsInfo := []serverStruct{}
 
 	for i, serverInfo := range serversInfo {
-		// srvsInfo.Disks = disksInfo // needs to be defined on the server side, client.ServerDisksInfo()
-		// srvsInfo[i].Status = serversInfo[i].Data.Properties.???
-
-		// srvsInfo[i].Endpoint = serverInfo.Addr
 		srvInfo := serverStruct{}
 		srvInfo.Endpoint = serverInfo.Addr
 		srvInfo.Uptime = serverInfo.Data.Properties.Uptime
@@ -403,29 +347,17 @@ func mainAdminInfo(ctx *cli.Context) error {
 		}
 
 		// Construct the backend status
-		storageInfoStat := backendStatus{}
-
-		for index, mountPath := range storageInfo.MountPaths {
-			if strings.Contains(mountPath, serverInfo.Addr) || serverInfo.Addr[0] == '/' || serverInfo.Addr[0] == '.' {
-				storageInfoStat.Used += storageInfo.Used[index]
-				storageInfoStat.Available += storageInfo.Available[index]
-				storageInfoStat.Total += storageInfo.Total[index]
-			}
-		}
+		var storageInfoStat interface{}
 
 		if storageInfo.Backend.Type == madmin.Erasure {
-			storageInfoStat.Backend = xlBackend{
-				Type:             erasureType,
-				OnlineDisks:      filterPerNode(serverInfo.Addr, storageInfo.Backend.OnlineDisks),
-				OfflineDisks:     filterPerNode(serverInfo.Addr, storageInfo.Backend.OfflineDisks),
-				StandardSCData:   storageInfo.Backend.StandardSCData,
-				StandardSCParity: storageInfo.Backend.StandardSCParity,
-				RRSCData:         storageInfo.Backend.RRSCData,
-				RRSCParity:       storageInfo.Backend.RRSCParity,
-				Sets:             storageInfo.Backend.Sets,
+			storageInfoStat = xlBackend{
+				Type:         erasureType,
+				OnlineDisks:  filterPerNode(serverInfo.Addr, storageInfo.Backend.OnlineDisks),
+				OfflineDisks: filterPerNode(serverInfo.Addr, storageInfo.Backend.OfflineDisks),
+				Sets:         storageInfo.Backend.Sets,
 			}
 		} else {
-			storageInfoStat.Backend = fsBackend{
+			storageInfoStat = fsBackend{
 				Type: fsType,
 			}
 		}
@@ -437,11 +369,8 @@ func mainAdminInfo(ctx *cli.Context) error {
 			SQSARN:       serverInfo.Data.Properties.SQSARN,
 			DeploymentID: serverInfo.Data.Properties.DeploymentID,
 			Err:          serverInfo.Error,
-			// VaultInfo: vaultInfo, // needs to be defined on the server side, client.ServerVaultInfo()
-			// LdapInfo: ldapInfo,   // needs to be defined on the server side, client.ServerLdapInfo()
-			StorageInfo: storageInfoStat,
-			// ContentInfo: contentInfo,  // needs to be defined on the server side, client.ServerContentInfo()
-			ServersInfo: srvsInfo,
+			StorageInfo:  storageInfoStat,
+			ServersInfo:  srvsInfo,
 		}))
 
 	}
