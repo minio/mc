@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio-go/v6"
+	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
 )
 
@@ -49,7 +49,7 @@ type Client interface {
 	List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent
 
 	// Bucket operations
-	MakeBucket(region string, ignoreExisting bool) *probe.Error
+	MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error
 
 	// Access policy operations.
 	GetAccess() (access string, policyJSON string, error *probe.Error)

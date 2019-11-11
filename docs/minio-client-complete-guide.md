@@ -325,6 +325,7 @@ USAGE:
 FLAGS:
   --region value                specify bucket region; defaults to 'us-east-1' (default: "us-east-1")
   --ignore-existing, -p         ignore if bucket/directory already exists
+  --with-lock, -l               enable object lock
   --help, -h                    show help
 
 ```

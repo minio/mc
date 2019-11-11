@@ -977,7 +977,7 @@ func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *c
 }
 
 // MakeBucket - make a new bucket.
-func (c *s3Client) MakeBucket(region string, ignoreExisting bool) *probe.Error {
+func (c *s3Client) MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error {
 	bucket, object := c.url2BucketAndObject()
 	if bucket == "" {
 		return probe.NewError(BucketNameEmpty{})
@@ -1001,7 +1001,12 @@ func (c *s3Client) MakeBucket(region string, ignoreExisting bool) *probe.Error {
 		return probe.NewError(BucketNameTopLevel{})
 	}
 
-	e := c.api.MakeBucket(bucket, region)
+	var e error
+	if withLock {
+		e = c.api.MakeBucketWithObjectLock(bucket, region)
+	} else {
+		e = c.api.MakeBucket(bucket, region)
+	}
 	if e != nil {
 		// Ignore bucket already existing error when ignoreExisting flag is enabled
 		if ignoreExisting {
@@ -1958,4 +1963,28 @@ func (c *s3Client) ShareUpload(isRecursive bool, expires time.Duration, contentT
 		return "", nil, probe.NewError(e)
 	}
 	return u.String(), m, nil
+}
+
+// Set object lock configurataion of bucket.
+func (c *s3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+	bucket, _ := c.url2BucketAndObject()
+
+	err := c.api.SetBucketObjectLockConfig(bucket, mode, validity, unit)
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	return nil
+}
+
+// Get object lock configuration of bucket.
+func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
+	bucket, _ := c.url2BucketAndObject()
+
+	mode, validity, unit, err := c.api.GetBucketObjectLockConfig(bucket)
+	if err != nil {
+		return nil, nil, nil, probe.NewError(err)
+	}
+
+	return mode, validity, unit, nil
 }

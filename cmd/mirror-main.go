@@ -715,7 +715,7 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 
 			if d.Diff == differInFirst {
 				// Bucket only exists in the source, create the same bucket in the destination
-				if err := newDstClt.MakeBucket(ctx.String("region"), false); err != nil {
+				if err := newDstClt.MakeBucket(ctx.String("region"), false, false); err != nil {
 					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`.")
 					continue
 				}
