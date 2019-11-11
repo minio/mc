@@ -116,7 +116,7 @@ type serverStruct struct {
 	Disks     []diskStruct              `json:"disks"`
 	CPULoads  madmin.ServerCPULoadInfo  `json:"cpu"`
 	MemUsages madmin.ServerMemUsageInfo `json:"mem"`
-	ConnStats madmin.ServerConnStats    `json:"ConnStats"`
+	ConnStats madmin.ServerConnStats    `json:"connstats"`
 }
 
 type contentStruct struct {
