@@ -54,6 +54,10 @@ func getDecodedKey(sseKeys string) (key string, err *probe.Error) {
 // Validate the key
 func parseKey(sseKeys string) (sse string, err *probe.Error) {
 	encryptString := strings.SplitN(sseKeys, "=", 2)
+	if len(encryptString) < 2 {
+		return "", probe.NewError(errors.New("SSE-C prefix should be of the form prefix1=key1,... "))
+	}
+
 	secretValue := encryptString[1]
 	if len(secretValue) == 32 {
 		return sseKeys, nil
