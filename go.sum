@@ -362,6 +362,7 @@ github.com/klauspost/pgzip v1.2.1 h1:oIPZROsWuPHpOdMVWLuJZXwgjhrW8r1yEX8UqMyeNHM
 github.com/klauspost/pgzip v1.2.1/go.mod h1:Ch1tH69qFZu15pkjo5kYi6mth2Zzwzt50oCQKQE9RUs=
 github.com/klauspost/readahead v1.3.0 h1:ur57scQa1RS6oQgdq+6mylmP2u0iR1LFw1zy3Xwqacg=
 github.com/klauspost/readahead v1.3.0/go.mod h1:AH9juHzNH7xqdqFHrMRSHeH2Ps+vFf+kblDqzPFiLJg=
+github.com/klauspost/readahead v1.3.1 h1:QqXNYvm+VvqYcbrRT4LojUciM0XrznFRIDrbHiJtu/0=
 github.com/klauspost/readahead v1.3.1/go.mod h1:AH9juHzNH7xqdqFHrMRSHeH2Ps+vFf+kblDqzPFiLJg=
 github.com/klauspost/reedsolomon v0.0.0-20190210214925-2b210cf0866d/go.mod h1:CwCi+NUr9pqSVktrkN+Ondf06rkhYZ/pcNv7fu+8Un4=
 github.com/klauspost/reedsolomon v1.9.1/go.mod h1:CwCi+NUr9pqSVktrkN+Ondf06rkhYZ/pcNv7fu+8Un4=
@@ -439,8 +440,8 @@ github.com/minio/minio v0.0.0-20190510004154-ac3b59645e92/go.mod h1:yFbQSwuA61mB
 github.com/minio/minio v0.0.0-20190903181048-8a71b0ec5a72/go.mod h1:H8OUaOxwJIALXHlfMpk2ESvk81dW+F7tSnrZi7rln/k=
 github.com/minio/minio v0.0.0-20190927193314-1c5b05c130fa/go.mod h1:47wx8w7yKTFAPw/hbmYPL4prsPivh6QuUqjTykftGgg=
 github.com/minio/minio v0.0.0-20191001201215-ff5bf519522f/go.mod h1:+vpJpzImdz4NCQto3r6/vF/24jWeEs5i3lsDfRmEcl4=
-github.com/minio/minio v0.0.0-20191112111625-d97d53bddc9d h1:Np5dEibZKCoz0iQdvnsW7XQQWhTeDpxleaTi8OwyW3E=
-github.com/minio/minio v0.0.0-20191112111625-d97d53bddc9d/go.mod h1:s0lUXpQZzswpg1NL7uJoUU5IYPraEeRt2g75wV4qWOk=
+github.com/minio/minio v0.0.0-20191114013805-26a866a20245 h1:bPuo+8nLbUqM6+vqApJRahbaB7AJBJPrAHL0Wk2W2kQ=
+github.com/minio/minio v0.0.0-20191114013805-26a866a20245/go.mod h1:MTyZlY5WVEZ0v9GVgb3AnRhWxFESKsRL37Z0qWglzPA=
 github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d h1:gptD0/Hnam7h4Iq9D/33fscRpHfzOOUqUbH2nPw9HcU=
 github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d/go.mod h1:/haSOWG8hQNx2+JOfLJ9GKp61EAmgPwRVw/Sac0NzaM=
 github.com/minio/minio-go v0.0.0-20190313212832-5d20267d970d/go.mod h1:/haSOWG8hQNx2+JOfLJ9GKp61EAmgPwRVw/Sac0NzaM=
