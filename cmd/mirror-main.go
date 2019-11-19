@@ -18,14 +18,21 @@ package cmd
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/user"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -93,6 +100,18 @@ var (
 		},
 	}
 )
+
+type attrs struct {
+	Mode       uint32
+	UID        uint32
+	Gid        uint32
+	UName      string
+	GName      string
+	AccessTime time.Time
+	ModTime    time.Time
+	ChangeTime time.Time
+	Md5        string
+}
 
 //  Mirror folders recursively from a single source to many destinations
 var mirrorCmd = cli.Command{
@@ -655,6 +674,39 @@ func copyBucketPolicies(srcClt, dstClt Client, isOverwrite bool) *probe.Error {
 		}
 	}
 	return nil
+}
+
+func hashFileMD5(filePath string) (string, error) {
+	//Initialize variable returnMD5String now in case an error has to be returned
+	var returnMD5String string
+
+	//Open the passed argument and check for any error
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("Error")
+		return returnMD5String, err
+	}
+
+	//Tell the program to call the following function when the current function returns
+	defer file.Close()
+
+	//Open a new hash interface to write to
+	hash := md5.New()
+
+	//Copy the file in the hash interface and check for any error
+	if _, err := io.Copy(hash, file); err != nil {
+		return returnMD5String, err
+	}
+
+	//Get the 16 bytes hash
+	hashInBytes := hash.Sum(nil)[:16]
+
+	//Convert the bytes to a string
+	returnMD5String = hex.EncodeToString(hashInBytes)
+
+	fmt.Println("md5 returned: ", returnMD5String)
+	return returnMD5String, nil
+
 }
 
 // runMirror - mirrors all buckets to another S3 server

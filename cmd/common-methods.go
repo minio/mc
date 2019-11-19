@@ -18,8 +18,11 @@ package cmd
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -424,30 +427,34 @@ func newClient(aliasedURL string) (Client, *probe.Error) {
 	return newClientFromAlias(alias, urlStrFull)
 }
 
-// Return the file attribute value present in metadata
-func getFileAttrMeta(sURLs URLs, encKeyDB map[string][]prefixSSEPair) (string, *probe.Error) {
-	sourceAlias := sURLs.SourceAlias
-	sourceURL := sURLs.SourceContent.URL
-	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sURLs.SourceContent.URL.Path))
-	srcSSE := getSSE(sourcePath, encKeyDB[sourceAlias])
+//
+func hash_file_md5(filePath string) (string, error) {
+	//Initialize variable returnMD5String now in case an error has to be returned
+	var returnMD5String string
 
-	statSourceURL := sURLs.SourceAlias + getKey(sURLs.SourceContent)
-	srcClt, err := newClient(statSourceURL)
+	//Open the passed argument and check for any error
+	file, err := os.Open(filePath)
 	if err != nil {
-		return "", err.Trace(sourceURL.String())
+		return returnMD5String, err
 	}
 
-	sourceMeta, err := srcClt.Stat(false, true, true, srcSSE)
-	if err != nil {
-		return "", err.Trace(sourceURL.String())
+	//Tell the program to call the following function when the current function returns
+	defer file.Close()
+
+	//Open a new hash interface to write to
+	hash := md5.New()
+
+	//Copy the file in the hash interface and check for any error
+	if _, err := io.Copy(hash, file); err != nil {
+		return returnMD5String, err
 	}
-	attrValue := ""
-	if sourceMeta.Metadata["X-Amz-Meta-Mc-Attrs"] != "" {
-		attrValue = sourceMeta.Metadata["X-Amz-Meta-Mc-Attrs"]
-	} else if sourceMeta.Metadata["X-Amz-Meta-S3cmd-Attrs"] != "" {
-		attrValue = sourceMeta.Metadata["X-Amz-Meta-S3cmd-Attrs"]
-	} else if sourceMeta.Metadata["mc-attrs"] != "" {
-		attrValue = sourceMeta.Metadata["mc-attrs"]
-	}
-	return attrValue, nil
+
+	//Get the 16 bytes hash
+	hashInBytes := hash.Sum(nil)[:16]
+
+	//Convert the bytes to a string
+	returnMD5String = hex.EncodeToString(hashInBytes)
+
+	fmt.Println("md5 returned: ", returnMD5String)
+	return returnMD5String, nil
 }
