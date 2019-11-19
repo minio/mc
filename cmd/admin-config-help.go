@@ -17,75 +17,41 @@
 package cmd
 
 import (
+	"encoding/json"
 	"strings"
 	"text/tabwriter"
 	"text/template"
 
 	"github.com/fatih/color"
-	"github.com/minio/cli"
-	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/madmin"
 )
 
-var helpFlags = []cli.Flag{
-	cli.BoolFlag{
-		Name:  "env",
-		Usage: "list all the env only help",
-	},
-}
+// HelpTmpl template used by all sub-systems
+const HelpTmpl = `{{if ne .SubSys ""}}{{colorBlueBold "KEY:"}}
+{{if .MultipleTargets}}{{colorYellowBold .SubSys}}[:target]{{"\t"}}{{else}}{{colorYellowBold .SubSys}}{{"\t"}}{{end}}{{.Description}}
 
-// Help template used by all sub-systems
-const Help = `{{colorBlueBold "Key"}}{{"\t"}}{{colorBlueBold "Description"}}
-{{colorYellowBold "----"}}{{"\t"}}{{colorYellowBold "----"}}
-{{range $key, $value := .}}{{colorCyanBold $key}}{{ "\t" }}{{$value}}
-{{end}}`
-
-// HelpEnv template used by all sub-systems
-const HelpEnv = `{{colorBlueBold "KeyEnv"}}{{"\t"}}{{colorBlueBold "Description"}}
-{{colorYellowBold "----"}}{{"\t"}}{{colorYellowBold "----"}}
-{{range $key, $value := .}}{{colorCyanBold $key}}{{ "\t" }}{{$value}}
-{{end}}`
+{{colorBlueBold "ARGS:"}}{{range .KeysHelp}}
+{{if .Optional}}{{colorYellowBold .Key}}{{else}}{{colorRedBold .Key}}*{{end}}{{"\t"}}({{.Type}}){{"\t"}}{{.Description}}{{end}}{{else}}{{colorBlueBold "KEYS:"}}{{range .KeysHelp}}
+{{colorRedBold .Key}}*{{"\t"}}{{.Description}}{{end}}{{end}}`
 
 var funcMap = template.FuncMap{
 	"colorBlueBold":   color.New(color.FgBlue, color.Bold).SprintfFunc(),
 	"colorYellowBold": color.New(color.FgYellow, color.Bold).SprintfFunc(),
 	"colorCyanBold":   color.New(color.FgCyan, color.Bold).SprintFunc(),
+	"colorRedBold":    color.New(color.FgRed, color.Bold).SprintfFunc(),
 }
 
 // HelpTemplate - captures config help template
-var HelpTemplate = template.Must(template.New("config-help").Funcs(funcMap).Parse(Help))
+var HelpTemplate = template.Must(template.New("config-help").Funcs(funcMap).Parse(HelpTmpl))
 
 // HelpEnvTemplate - captures config help template
-var HelpEnvTemplate = template.Must(template.New("config-help-env").Funcs(funcMap).Parse(HelpEnv))
-
-var adminConfigHelpCmd = cli.Command{
-	Name:   "help",
-	Usage:  "show help for each sub-system and keys",
-	Before: setGlobalsFromContext,
-	Action: mainAdminConfigHelp,
-	Flags:  append(append([]cli.Flag{}, globalFlags...), helpFlags...),
-	CustomHelpTemplate: `NAME:
-  {{.HelpName}} - {{.Usage}}
-
-USAGE:
-  {{.HelpName}} TARGET
-
-FLAGS:
-  {{range .VisibleFlags}}{{.}}
-  {{end}}
-EXAMPLES:
-  1. Return help for 'region' settings on MinIO server.
-     {{.Prompt}} {{.HelpName}} play/ region
-
-  2. Return help for 'compression' settings, specifically 'extensions' key on MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio/ compression extensions
-`,
-}
+var HelpEnvTemplate = template.Must(template.New("config-help-env").Funcs(funcMap).Parse(HelpTmpl))
 
 // configHelpMessage container to hold locks information.
 type configHelpMessage struct {
-	Status  string            `json:"status"`
-	Value   map[string]string `json:"help"`
+	Status  string      `json:"status"`
+	Value   madmin.Help `json:"help"`
 	envOnly bool
 }
 
@@ -113,36 +79,4 @@ func (u configHelpMessage) JSON() string {
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
 	return string(statusJSONBytes)
-}
-
-// checkAdminConfigHelpSyntax - validate all the passed arguments
-func checkAdminConfigHelpSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() || len(ctx.Args()) > 3 {
-		cli.ShowCommandHelpAndExit(ctx, "help", 1) // last argument is exit code
-	}
-}
-
-func mainAdminConfigHelp(ctx *cli.Context) error {
-
-	checkAdminConfigHelpSyntax(ctx)
-
-	// Help the alias parameter from cli
-	args := ctx.Args()
-	aliasedURL := args.Get(0)
-
-	// Create a new MinIO Admin Client
-	client, err := newAdminClient(aliasedURL)
-	fatalIf(err, "Unable to initialize admin connection.")
-
-	// Call get config API
-	hr, e := client.HelpConfigKV(args.Get(1), args.Get(2), ctx.IsSet("env"))
-	fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
-
-	// Print
-	printMsg(configHelpMessage{
-		Value:   hr,
-		envOnly: ctx.IsSet("env"),
-	})
-
-	return nil
 }

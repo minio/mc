@@ -18,8 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -29,12 +27,19 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
+var adminConfigEnvFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "env",
+		Usage: "list all the env only help",
+	},
+}
+
 var adminConfigDelCmd = cli.Command{
 	Name:   "del",
 	Usage:  "delete a key from MinIO server/cluster.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigDel,
-	Flags:  globalFlags,
+	Flags:  append(adminConfigEnvFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -100,13 +105,22 @@ func mainAdminConfigDel(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
+	if len(ctx.Args()) == 1 {
+		// Call get config API
+		hr, e := client.HelpConfigKV("", "", ctx.IsSet("env"))
+		fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
+
+		// Print
+		printMsg(configHelpMessage{
+			Value:   hr,
+			envOnly: ctx.IsSet("env"),
+		})
+
+		return nil
+	}
+
 	// Call del config API
 	input := strings.Join(args.Tail(), " ")
-	if len(input) == 0 {
-		b, e := ioutil.ReadAll(os.Stdin)
-		fatalIf(probe.NewError(e), "Cannot read from the os.Stdin")
-		input = string(b)
-	}
 	fatalIf(probe.NewError(client.DelConfigKV(input)),
 		"Cannot delete '%s' on the server", input)
 

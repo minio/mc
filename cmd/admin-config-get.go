@@ -80,7 +80,7 @@ func (u configGetMessage) JSON() string {
 
 // checkAdminConfigGetSyntax - validate all the passed arguments
 func checkAdminConfigGetSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() || len(ctx.Args()) > 2 {
+	if !ctx.Args().Present() || len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "get", 1) // last argument is exit code
 	}
 }
@@ -96,6 +96,20 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 	// Create a new MinIO Admin Client
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
+
+	if len(ctx.Args()) == 1 {
+		// Call get config API
+		hr, e := client.HelpConfigKV("", "", false)
+		fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
+
+		// Print
+		printMsg(configHelpMessage{
+			Value:   hr,
+			envOnly: false,
+		})
+
+		return nil
+	}
 
 	// Call get config API
 	buf, e := client.GetConfigKV(strings.Join(args.Tail(), " "))
