@@ -80,7 +80,7 @@ var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "copy objects",
 	Action: mainCopy,
-	Before: setGlobalsFromContext,
+	Before: setGlobalsFromContext, 
 	Flags:  append(append(cpFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -230,6 +230,8 @@ func doPrepareCopyURLs(session *sessionV8, trapCh <-chan bool, cancelCopy contex
 
 	// Access recursive flag inside the session header.
 	isRecursive := session.Header.CommandBoolFlags["recursive"]
+
+	// isPreserveAll := session.Header.CommandBoolFlags["a"]
 
 	olderThan := session.Header.CommandStringFlags["older-than"]
 	newerThan := session.Header.CommandStringFlags["newer-than"]
@@ -489,6 +491,20 @@ func getMetaDataEntry(metadataString string) (map[string]string, *probe.Error) {
 	return metaDataMap, nil
 }
 
+// // validate the passed metadataString and populate the map
+// func getStatToPreserve() (map[string]string, *probe.Error) {
+// 	// Collect stat data to preserve all stats for the object
+// 	statDataMap := make(map[string]string)
+// 	statDataEntry := stat()
+// 	for _, statData := range strings.Split(, ";") {
+// 	statDataEntry := strings.SplitN(statData, "=", 2)
+// 	if len(statDataEntry) == 2 {
+// 		metaDataMap[statDataEntry[0]] = statDataEntry[1]
+// 	} else {
+// 		return nil, probe.NewError(ErrInvalidMetadata)
+// 	}
+// }
+
 // mainCopy is the entry point for cp command.
 func mainCopy(ctx *cli.Context) error {
 	// Parse encryption keys per command.
@@ -502,6 +518,14 @@ func mainCopy(ctx *cli.Context) error {
 		fatalIf(err, "Unable to parse attribute %v", ctx.String("attr"))
 	}
 
+	// Get stat info and populate "x-amz-meta-mc-attrs" if preserveAll
+	// flag, "-a", is provided
+	// statToPreserveMap := make(map[string]string)
+	if ctx.String("a") != "" {
+		// statToPreserveMap, err = getStatToPreserve()
+		fatalIf(err, "Unable to collect file stats to preserve")
+	}
+
 	// check 'copy' cli arguments.
 	checkCopySyntax(ctx, encKeyDB)
 
@@ -511,6 +535,7 @@ func mainCopy(ctx *cli.Context) error {
 	recursive := ctx.Bool("recursive")
 	olderThan := ctx.String("older-than")
 	newerThan := ctx.String("newer-than")
+	// preserveAll := ctx.Bool("a")
 	storageClass := ctx.String("storage-class")
 	sseKeys := os.Getenv("MC_ENCRYPT_KEY")
 	if key := ctx.String("encrypt-key"); key != "" {
@@ -537,11 +562,15 @@ func mainCopy(ctx *cli.Context) error {
 	session.Header.CommandStringFlags["storage-class"] = storageClass
 	session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 	session.Header.CommandStringFlags["encrypt"] = sse
+<<<<<<< Updated upstream
 	session.Header.CommandBoolFlags["session"] = ctx.Bool("continue")
 
 	if ctx.Bool("preserve") {
 		session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
 	}
+=======
+	// session.Header.CommandBoolFlags["a"] = preserveAll
+>>>>>>> Stashed changes
 	session.Header.UserMetaData = userMetaMap
 
 	var e error
