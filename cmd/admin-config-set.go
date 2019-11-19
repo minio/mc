@@ -18,8 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/fatih/color"
@@ -27,6 +25,7 @@ import (
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminConfigSetCmd = cli.Command{
@@ -34,7 +33,7 @@ var adminConfigSetCmd = cli.Command{
 	Usage:  "set key to MinIO server/cluster.",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigSet,
-	Flags:  globalFlags,
+	Flags:  append(adminConfigEnvFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -80,7 +79,7 @@ func (u configSetMessage) JSON() string {
 
 // checkAdminConfigSetSyntax - validate all the passed arguments
 func checkAdminConfigSetSyntax(ctx *cli.Context) {
-	if !ctx.Args().Present() {
+	if !ctx.Args().Present() && len(ctx.Args()) < 1 {
 		cli.ShowCommandHelpAndExit(ctx, "set", 1) // last argument is exit code
 	}
 }
@@ -102,13 +101,24 @@ func mainAdminConfigSet(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	// Call set config API
 	input := strings.Join(args.Tail(), " ")
-	if len(input) == 0 {
-		b, e := ioutil.ReadAll(os.Stdin)
-		fatalIf(probe.NewError(e), "Cannot read from the os.Stdin")
-		input = string(b)
+
+	if !strings.Contains(input, madmin.KvSeparator) {
+		// Call get config API
+		hr, e := client.HelpConfigKV(args.Get(1), args.Get(2), ctx.IsSet("env"))
+		fatalIf(probe.NewError(e), "Cannot get help for the sub-system")
+
+		// Print
+		printMsg(configHelpMessage{
+			Value:   hr,
+			envOnly: ctx.IsSet("env"),
+		})
+
+		return nil
+
 	}
+
+	// Call set config API
 	fatalIf(probe.NewError(client.SetConfigKV(input)),
 		"Cannot set '%s' to server", input)
 
