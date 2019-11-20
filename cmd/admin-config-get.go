@@ -43,18 +43,15 @@ FLAGS:
 EXAMPLES:
   1. Get the current region setting on MinIO server.
      {{.Prompt}} {{.HelpName}} play/ region
-     # US east region setting
-     name="us-east-1" state="on"
+     region name=us-east-1
 
-  2. Get the current notification settings for MQTT target on MinIO server
-     {{.Prompt}} {{.HelpName}} myminio/ notify_mqtt
-     # Notification settings for MQTT broker
-     notify_mqtt broker="" password="" queue_dir="" queue_limit="0" reconnect_interval="0s" state="off" keep_alive_interval="0s" qos="0" topic="" username=""
+  2. Get the current notification settings for Webhook target on MinIO server
+     {{.Prompt}} {{.HelpName}} myminio/ notify_webhook
+     notify_webhook endpoint="http://localhost:8080" auth_token= queue_limit=10000 queue_dir="/home/events"
 
   3. Get the current compression settings on MinIO server
      {{.Prompt}} {{.HelpName}} myminio/ compression
-     # Compression settings for csv and text files only
-     compression extensions=".txt,.csv" mime_types="text/*" state="on"
+     compression extensions=".txt,.csv" mime_types="text/*"
 `,
 }
 
