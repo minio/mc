@@ -37,6 +37,7 @@ import (
 	"github.com/minio/mc/pkg/hookreader"
 	"github.com/minio/mc/pkg/ioutils"
 	"github.com/minio/mc/pkg/probe"
+	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
 )
 
@@ -997,6 +998,16 @@ func (f *fsClient) MakeBucket(region string, ignoreExisting, withLock bool) *pro
 		return probe.NewError(e)
 	}
 	return nil
+}
+
+// Set object lock configuration of bucket.
+func (f *fsClient) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+	return probe.NewError(APINotImplemented{API: "SetObjectLockConfig", APIType: "filesystem"})
+}
+
+// Get object lock configuration of bucket.
+func (f *fsClient) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
+	return nil, nil, nil, probe.NewError(APINotImplemented{API: "GetObjectLockConfig", APIType: "filesystem"})
 }
 
 // GetAccessRules - unsupported API

@@ -72,6 +72,10 @@ const (
 	fileHeaderType           = "fileheader"
 	commentCharType          = "commentchar"
 	typeJSONType             = "type"
+	// AmzObjectLockMode sets object lock mode
+	AmzObjectLockMode = "X-Amz-Object-Lock-Mode"
+	// AmzObjectLockRetainUntilDate sets object lock retain until date
+	AmzObjectLockRetainUntilDate = "X-Amz-Object-Lock-Retain-Until-Date"
 )
 
 // cseHeaders is list of client side encryption headers
@@ -80,6 +84,8 @@ var cseHeaders = []string{
 	"X-Amz-Meta-X-Amz-Key",
 	"X-Amz-Meta-X-Amz-Matdesc",
 }
+
+var timeSentinel = time.Unix(0, 0).UTC()
 
 // newFactory encloses New function with client cache.
 func newFactory() func(config *Config) (Client, *probe.Error) {
@@ -799,6 +805,23 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	if ok {
 		delete(metadata, "X-Amz-Storage-Class")
 	}
+
+	lockModeStr, ok := metadata[AmzObjectLockMode]
+	lockMode := minio.RetentionMode("")
+	if ok {
+		lockMode = minio.RetentionMode(lockModeStr)
+		delete(metadata, AmzObjectLockMode)
+	}
+
+	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
+	retainUntilDate := timeSentinel
+	if ok {
+		delete(metadata, AmzObjectLockRetainUntilDate)
+		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
+			retainUntilDate = t.UTC()
+		}
+	}
+
 	if bucket == "" {
 		return 0, probe.NewError(BucketNameEmpty{})
 	}
@@ -813,6 +836,12 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		ContentLanguage:      contentLanguage,
 		StorageClass:         strings.ToUpper(storageClass),
 		ServerSideEncryption: sse,
+	}
+	if retainUntilDate != timeSentinel {
+		opts.RetainUntilDate = &retainUntilDate
+	}
+	if lockModeStr != "" {
+		opts.Mode = &lockMode
 	}
 	n, e := c.api.PutObjectWithContext(ctx, bucket, object, reader, size, opts)
 	if e != nil {

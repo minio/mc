@@ -50,6 +50,8 @@ type Client interface {
 
 	// Bucket operations
 	MakeBucket(region string, ignoreExisting, withLock bool) *probe.Error
+	SetObjectLockConfig(mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error
+	GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error)
 
 	// Access policy operations.
 	GetAccess() (access string, policyJSON string, error *probe.Error)
