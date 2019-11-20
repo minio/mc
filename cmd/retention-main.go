@@ -18,13 +18,10 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
@@ -54,55 +51,26 @@ EXAMPLES:
 `,
 }
 
-// Structured message depending on the type of console.
-type retentionCmdMessage struct {
-	Enabled  string               `json:"enabled"`
-	Mode     *minio.RetentionMode `json:"mode"`
-	Validity *string              `json:"validity"`
-	Status   string               `json:"status"`
-}
-
-// Colorized message for console printing.
-func (m retentionCmdMessage) String() string {
-	if m.Mode == nil {
-		return fmt.Sprintf("No mode is enabled")
-	}
-
-	return fmt.Sprintf("%s mode is enabled for %s", console.Colorize("Mode", *m.Mode), console.Colorize("Validity", *m.Validity))
-}
-
-// JSON'ified message for scripting.
-func (m retentionCmdMessage) JSON() string {
-	msgBytes, e := json.MarshalIndent(m, "", " ")
-	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
-	return string(msgBytes)
-}
-
-// doList - list all entities inside a folder.
+// setRetention - Set Retention for all objects within a given prefix.
 func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) error {
-	client, err := newClient(urlStr)
+	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
-	clnt, ok := client.(*s3Client)
-	if !ok {
-		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
-	}
-	prefixPath := clnt.GetURL().Path
-	separator := string(clnt.GetURL().Separator)
-	if !strings.HasSuffix(prefixPath, separator) {
-		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
-	}
 	var cErr error
-	for content := range clnt.List(true, false, DirNone) {
+	for content := range clnt.List(true, false, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
 		probeErr := clnt.PutObjectRetention(content.URL.Path, mode, validity, unit)
-		fatalIf(probeErr, "Cannot set object retention on %s.", content.URL.Path)
-		fmt.Println("success", content.URL.Path)
+		errorIf(probeErr, "Cannot set object retention on %s.", content.URL.Path)
+	}
+	if cErr == nil {
+		console.SetColor("Retention", color.New(color.FgCyan, color.Bold))
+		console.Colorize("Retention", urlStr)
+		console.Infof("Retention was successfully set for prefix %s\n", urlStr)
 	}
 	return cErr
 }
