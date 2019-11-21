@@ -33,13 +33,14 @@ const HelpTmpl = `{{if ne .SubSys ""}}{{colorBlueBold "KEY:"}}
 
 {{colorBlueBold "ARGS:"}}{{range .KeysHelp}}
 {{if .Optional}}{{colorYellowBold .Key}}{{else}}{{colorRedBold .Key}}*{{end}}{{"\t"}}({{.Type}}){{"\t"}}{{.Description}}{{end}}{{else}}{{colorBlueBold "KEYS:"}}{{range .KeysHelp}}
-{{colorRedBold .Key}}*{{"\t"}}{{.Description}}{{end}}{{end}}`
+{{colorGreenBold .Key}}{{"\t"}}{{.Description}}{{end}}{{end}}`
 
 var funcMap = template.FuncMap{
 	"colorBlueBold":   color.New(color.FgBlue, color.Bold).SprintfFunc(),
 	"colorYellowBold": color.New(color.FgYellow, color.Bold).SprintfFunc(),
 	"colorCyanBold":   color.New(color.FgCyan, color.Bold).SprintFunc(),
 	"colorRedBold":    color.New(color.FgRed, color.Bold).SprintfFunc(),
+	"colorGreenBold":  color.New(color.FgGreen, color.Bold).SprintfFunc(),
 }
 
 // HelpTemplate - captures config help template

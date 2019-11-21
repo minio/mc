@@ -44,11 +44,11 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Enable WORM mode on MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio/ worm state="on"
+  1. Enable webhook notification target for MinIO server.
+     {{.Prompt}} {{.HelpName}} myminio/ notify_webhook endpoint="http://localhost:8080/minio/events"
 
   2. Change region name for the MinIO server to 'us-west-1'.
-     {{.Prompt}} {{.HelpName}} myminio/ region name="us-west-1" state="on"
+     {{.Prompt}} {{.HelpName}} myminio/ region name=us-west-1
 `,
 }
 
