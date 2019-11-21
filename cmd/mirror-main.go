@@ -714,10 +714,23 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 			newDstClt, _ := newClient(newTgtURL)
 
 			if d.Diff == differInFirst {
+				withLock := false
+				mode, validity, unit, err := newSrcClt.GetObjectLockConfig()
+				if err == nil {
+					withLock = true
+				}
 				// Bucket only exists in the source, create the same bucket in the destination
-				if err := newDstClt.MakeBucket(ctx.String("region"), false, false); err != nil {
+				if err := newDstClt.MakeBucket(ctx.String("region"), false, withLock); err != nil {
 					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`.")
 					continue
+				}
+				// object lock configuration set on bucket
+				if mode != nil {
+					err := newDstClt.SetObjectLockConfig(mode, validity, unit)
+					if err != nil {
+						errorIf(err, "Cannot set object lock config in `"+newTgtURL+"`.")
+						continue
+					}
 				}
 				// Copy policy rules from source to dest if flag is activated
 				// and all buckets are mirrored.
@@ -741,6 +754,13 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		if ctx.Bool("a") {
 			if err := copyBucketPolicies(srcClt, dstClt, isOverwrite); err != nil {
 				errorIf(err, "Cannot copy bucket policies to `"+dstClt.GetURL().String()+"`.")
+			}
+		}
+		// object lock configuration set on bucket
+		if srcMode, srcValidity, srcUnit, srcErr := srcClt.GetObjectLockConfig(); srcMode != nil && srcErr == nil {
+			err := dstClt.SetObjectLockConfig(srcMode, srcValidity, srcUnit)
+			if err != nil {
+				errorIf(err, "Cannot set object lock config in `"+dstClt.GetURL().String()+"`.")
 			}
 		}
 	}
