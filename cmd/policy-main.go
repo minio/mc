@@ -394,7 +394,7 @@ func runPolicyLinksCmd(args cli.Args, recursive bool) {
 		clnt, err := newClient(newURL)
 		fatalIf(err.Trace(newURL), "Unable to initialize target `"+targetURL+"`.")
 		// Search for public objects
-		for content := range clnt.List(isRecursive, isIncomplete, DirFirst) {
+		for content := range clnt.List(isRecursive, isIncomplete, false, DirFirst) {
 			if content.Err != nil {
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue

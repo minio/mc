@@ -331,7 +331,7 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 					fmt.Sprintf("Failed to remove `%s`.", sURLs.TargetContent.URL.String()))
 				errDuringMirror = true
 			default:
-				errorIf(sURLs.Error.Trace(), "Failed to perform mirroring action.")
+				errorIf(sURLs.Error.Trace(), "Failed to perform mirroring.")
 				errDuringMirror = true
 			}
 		}
@@ -509,7 +509,7 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 		mj.parallel.wait()
 	}
 
-	isMetadata := len(mj.userMetadata) > 0
+	isMetadata := len(mj.userMetadata) > 0 || mj.isPreserve
 	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, isMetadata, mj.excludeOptions, mj.encKeyDB)
 
 	for {
@@ -672,6 +672,26 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		fatalIf(err, "Unable to parse attribute %v", ctx.String("attr"))
 	}
 
+	srcClt, err := newClient(srcURL)
+	fatalIf(err, "Unable to initialize `"+srcURL+"`.")
+
+	dstClt, err := newClient(dstURL)
+	fatalIf(err, "Unable to initialize `"+dstURL+"`.")
+
+	mirrorAllBuckets := (dstClt.GetURL().Type == objectStorage &&
+		dstClt.GetURL().Path == string(dstClt.GetURL().Separator)) &&
+		(srcClt.GetURL().Type == objectStorage &&
+			srcClt.GetURL().Path == string(srcClt.GetURL().Separator))
+
+	// Check if we are only trying to mirror one bucket from source.
+	if dstClt.GetURL().Type == objectStorage &&
+		dstClt.GetURL().Path == string(dstClt.GetURL().Separator) && !mirrorAllBuckets {
+		dstURL = urlJoinPath(dstURL, srcClt.GetURL().Path)
+
+		dstClt, err = newClient(dstURL)
+		fatalIf(err, "Unable to initialize `"+dstURL+"`.")
+	}
+
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL,
 		ctx.Bool("fake"),
@@ -686,20 +706,11 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		userMetaMap,
 		encKeyDB)
 
-	srcClt, err := newClient(srcURL)
-	fatalIf(err, "Unable to initialize `"+srcURL+"`.")
-
-	dstClt, err := newClient(dstURL)
-	fatalIf(err, "Unable to initialize `"+srcURL+"`.")
-
-	mirrorAllBuckets := (srcClt.GetURL().Type == objectStorage && srcClt.GetURL().Path == "/") ||
-		(dstClt.GetURL().Type == objectStorage && dstClt.GetURL().Path == "/")
-
 	if mirrorAllBuckets {
 		// Synchronize buckets using dirDifference function
 		for d := range dirDifference(srcClt, dstClt, srcURL, dstURL) {
 			if d.Error != nil {
-				mj.status.fatalIf(d.Error, fmt.Sprintf("Failed to start monitoring."))
+				mj.status.fatalIf(d.Error, "Failed to start mirroring.")
 			}
 			if d.Diff == differInSecond {
 				// Ignore buckets that only exist in target instance
@@ -721,24 +732,16 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 				}
 				// Bucket only exists in the source, create the same bucket in the destination
 				if err := newDstClt.MakeBucket(ctx.String("region"), false, withLock); err != nil {
-					errorIf(err, "Cannot created bucket in `"+newTgtURL+"`.")
+					errorIf(err, "Unable to create bucket at `"+newTgtURL+"`.")
 					continue
 				}
 				// object lock configuration set on bucket
 				if mode != nil {
-					err := newDstClt.SetObjectLockConfig(mode, validity, unit)
-					if err != nil {
-						errorIf(err, "Cannot set object lock config in `"+newTgtURL+"`.")
-						continue
-					}
+					errorIf(newDstClt.SetObjectLockConfig(mode, validity, unit),
+						"Unable to set object lock config in `"+newTgtURL+"`.")
 				}
-				// Copy policy rules from source to dest if flag is activated
-				// and all buckets are mirrored.
-				if ctx.Bool("a") {
-					if err := copyBucketPolicies(newSrcClt, newDstClt, isOverwrite); err != nil {
-						errorIf(err, "Cannot copy bucket policies to `"+newDstClt.GetURL().String()+"`.")
-					}
-				}
+				errorIf(copyBucketPolicies(newSrcClt, newDstClt, isOverwrite),
+					"Unable to copy bucket policies to `"+newDstClt.GetURL().String()+"`.")
 			}
 
 			if mj.isWatch {
@@ -750,19 +753,25 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 			}
 		}
 	} else {
-		// Copy policy rules from source to dest if flag is activated
-		if ctx.Bool("a") {
-			if err := copyBucketPolicies(srcClt, dstClt, isOverwrite); err != nil {
-				errorIf(err, "Cannot copy bucket policies to `"+dstClt.GetURL().String()+"`.")
-			}
+		withLock := false
+		mode, validity, unit, err := srcClt.GetObjectLockConfig()
+		if err == nil {
+			withLock = true
 		}
+
+		// Create bucket if it doesn't exist at destination.
+		// ignore if already exists.
+		fatalIf(dstClt.MakeBucket(ctx.String("region"), true, withLock),
+			"Unable to create bucket at `"+dstURL+"`.")
+
 		// object lock configuration set on bucket
-		if srcMode, srcValidity, srcUnit, srcErr := srcClt.GetObjectLockConfig(); srcMode != nil && srcErr == nil {
-			err := dstClt.SetObjectLockConfig(srcMode, srcValidity, srcUnit)
-			if err != nil {
-				errorIf(err, "Cannot set object lock config in `"+dstClt.GetURL().String()+"`.")
-			}
+		if mode != nil {
+			errorIf(dstClt.SetObjectLockConfig(mode, validity, unit),
+				"Unable to set object lock config in `"+dstURL+"`.")
 		}
+
+		errorIf(copyBucketPolicies(srcClt, dstClt, isOverwrite),
+			"Unable to copy bucket policies to `"+dstClt.GetURL().String()+"`.")
 	}
 
 	if !mirrorAllBuckets && mj.isWatch {

@@ -215,7 +215,7 @@ func doTree(url string, level int, leaf bool, branchString string, depth int, in
 		return nil
 	}
 
-	for content := range clnt.List(false, false, DirNone) {
+	for content := range clnt.List(false, false, false, DirNone) {
 
 		if !includeFiles && !content.Type.IsDir() {
 			continue

@@ -147,7 +147,7 @@ func doShareDownloadURL(targetURL string, isRecursive bool, expiry time.Duration
 		// Recursive mode: Share list of objects
 		go func() {
 			defer close(objectsCh)
-			for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
+			for content := range clnt.List(isRecursive, isIncomplete, false, DirNone) {
 				objectsCh <- content
 			}
 		}()

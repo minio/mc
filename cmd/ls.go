@@ -112,7 +112,7 @@ func doList(clnt Client, isRecursive, isIncomplete bool) error {
 		prefixPath = prefixPath[:strings.LastIndex(prefixPath, separator)+1]
 	}
 	var cErr error
-	for content := range clnt.List(isRecursive, isIncomplete, DirNone) {
+	for content := range clnt.List(isRecursive, isIncomplete, false, DirNone) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			// handle this specifically for filesystem related errors.

@@ -103,7 +103,7 @@ func du(urlStr string, depth int, encKeyDB map[string][]prefixSSEPair) (int64, e
 
 	isRecursive := false
 	isIncomplete := false
-	contentCh := clnt.List(isRecursive, isIncomplete, DirFirst)
+	contentCh := clnt.List(isRecursive, isIncomplete, false, DirFirst)
 	size := int64(0)
 	for content := range contentCh {
 		if content.Err != nil {

@@ -50,7 +50,7 @@ func completeS3Path(s3Path string) (prediction []string) {
 
 	// List dirPath content and only pick elements that corresponds
 	// to the path that we want to complete
-	for content := range clnt.List(false, false, DirFirst) {
+	for content := range clnt.List(false, false, false, DirFirst) {
 		completeS3Path := alias + getKey(content)
 		if content.Type.IsDir() {
 			if !strings.HasSuffix(completeS3Path, "/") {

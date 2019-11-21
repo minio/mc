@@ -250,6 +250,21 @@ func copySourceToTargetURL(alias string, urlStr string, source string, size int6
 	return nil
 }
 
+func filterMetadata(metadata map[string]string) map[string]string {
+	newMetadata := map[string]string{}
+	for k, v := range metadata {
+		if httpguts.ValidHeaderFieldName(k) && httpguts.ValidHeaderFieldValue(v) {
+			newMetadata[k] = v
+		}
+	}
+	for k := range metadata {
+		if strings.HasPrefix(http.CanonicalHeaderKey(k), "X-Amz-Server-Side-Encryption-") {
+			delete(newMetadata, k)
+		}
+	}
+	return newMetadata
+}
+
 // getAllMetadata - returns a map of user defined function
 // by combining the usermetadata of object and values passed by attr keyword
 func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide, urls URLs) (map[string]string, *probe.Error) {
@@ -262,25 +277,16 @@ func getAllMetadata(sourceAlias, sourceURLStr string, srcSSE encrypt.ServerSide,
 	if err != nil {
 		return nil, err.Trace(sourceAlias, sourceURLStr)
 	}
+
 	for k, v := range st.Metadata {
-		if httpguts.ValidHeaderFieldName(k) && httpguts.ValidHeaderFieldValue(v) {
-			metadata[k] = v
-		}
+		metadata[k] = v
 	}
 
 	for k, v := range urls.TargetContent.UserMetadata {
-		if httpguts.ValidHeaderFieldName(k) && httpguts.ValidHeaderFieldValue(v) {
-			metadata[k] = v
-		}
+		metadata[k] = v
 	}
 
-	for k := range metadata {
-		if strings.HasPrefix(http.CanonicalHeaderKey(k), "X-Amz-Server-Side-Encryption-") {
-			delete(metadata, k)
-		}
-	}
-
-	return metadata, nil
+	return filterMetadata(metadata), nil
 }
 
 // uploadSourceToTargetURL - uploads to targetURL from source.
@@ -300,17 +306,28 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	tgtSSE := getSSE(targetPath, encKeyDB[targetAlias])
 
 	var err *probe.Error
-	var metadata map[string]string
+	var metadata = map[string]string{}
 
 	// Optimize for server side copy if the host is same.
 	if sourceAlias == targetAlias {
-		metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
-		if err != nil {
-			return urls.WithError(err.Trace(sourceURL.String()))
+		for k, v := range urls.SourceContent.UserMetadata {
+			metadata[k] = v
+		}
+		for k, v := range urls.SourceContent.Metadata {
+			metadata[k] = v
+		}
+		// If no metadata populated already by the caller
+		// just do a Stat() to obtain the metadata.
+		if len(metadata) == 0 {
+			metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
+			if err != nil {
+				return urls.WithError(err.Trace(sourceURL.String()))
+			}
 		}
 
 		sourcePath := filepath.ToSlash(sourceURL.Path)
-		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length, progress, srcSSE, tgtSSE, metadata)
+		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length,
+			progress, srcSSE, tgtSSE, filterMetadata(metadata))
 	} else {
 
 		var reader io.ReadCloser
@@ -328,12 +345,8 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		for k, v := range urls.TargetContent.UserMetadata {
 			metadata[k] = v
 		}
-		for k := range metadata {
-			if strings.HasPrefix(http.CanonicalHeaderKey(k), "X-Amz-Server-Side-Encryption-") {
-				delete(metadata, k)
-			}
-		}
-		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, metadata, progress, tgtSSE)
+		_, err = putTargetStream(ctx, targetAlias, targetURL.String(), reader, length, filterMetadata(metadata),
+			progress, tgtSSE)
 	}
 	if err != nil {
 		return urls.WithError(err.Trace(sourceURL.String()))
