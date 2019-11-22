@@ -398,12 +398,13 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			srcSSE := getSSE(sourcePath, mj.encKeyDB[sourceAlias])
 			tgtSSE := getSSE(targetPath, mj.encKeyDB[targetAlias])
 
-			if event.Type == EventCreate {
+			if (event.Type == EventCreate) ||
+				(event.Type == EventCreatePutRetention) {
 				// we are checking if a destination file exists now, and if we only
 				// overwrite it when force is enabled.
 				mirrorURL := URLs{
 					SourceAlias:   sourceAlias,
-					SourceContent: &clientContent{URL: *sourceURL},
+					SourceContent: &clientContent{URL: *sourceURL, Retention: event.Type == EventCreatePutRetention},
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
@@ -430,7 +431,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					shouldQueue := false
 					if !mj.isOverwrite {
 						_, err = targetClient.Stat(false, false, false, tgtSSE)
-						if err == nil {
+						if err == nil || event.Type != EventCreatePutRetention {
 							continue
 						} // doesn't exist
 						shouldQueue = true
@@ -454,7 +455,11 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					}
 					_, err = targetClient.Stat(false, false, false, tgtSSE)
 					if err == nil {
-						continue
+						if event.Type == EventCreatePutRetention {
+							shouldQueue = true
+						} else {
+							continue
+						}
 					} // doesn't exist
 					shouldQueue = true
 				}

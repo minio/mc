@@ -211,6 +211,18 @@ func getSourceStream(alias string, urlStr string, fetchStat bool, sse encrypt.Se
 	return reader, metadata, nil
 }
 
+// putTargetRetention sets retention headers if any
+func putTargetRetention(ctx context.Context, alias string, urlStr string, metadata map[string]string) *probe.Error {
+	targetClnt, err := newClientFromAlias(alias, urlStr)
+	if err != nil {
+		return err.Trace(alias, urlStr)
+	}
+	if err := targetClnt.PutRetention(ctx, metadata); err != nil {
+		return err.Trace(alias, urlStr)
+	}
+	return nil
+}
+
 // putTargetStream writes to URL from Reader.
 func putTargetStream(ctx context.Context, alias string, urlStr string, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (int64, *probe.Error) {
 	targetClnt, err := newClientFromAlias(alias, urlStr)
@@ -298,7 +310,6 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 	targetAlias := urls.TargetAlias
 	targetURL := urls.TargetContent.URL
 	length := urls.SourceContent.Size
-
 	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, urls.SourceContent.URL.Path))
 	targetPath := filepath.ToSlash(filepath.Join(targetAlias, urls.TargetContent.URL.Path))
 
@@ -326,10 +337,23 @@ func uploadSourceToTargetURL(ctx context.Context, urls URLs, progress io.Reader,
 		}
 
 		sourcePath := filepath.ToSlash(sourceURL.Path)
+		if urls.SourceContent.Retention {
+			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
+			return urls.WithError(err.Trace(sourceURL.String()))
+		}
 		err = copySourceToTargetURL(targetAlias, targetURL.String(), sourcePath, length,
 			progress, srcSSE, tgtSSE, filterMetadata(metadata))
 	} else {
-
+		if len(metadata) == 0 {
+			metadata, err = getAllMetadata(sourceAlias, sourceURL.String(), srcSSE, urls)
+			if err != nil {
+				return urls.WithError(err.Trace(sourceURL.String()))
+			}
+		}
+		if urls.SourceContent.Retention {
+			err = putTargetRetention(ctx, targetAlias, targetURL.String(), metadata)
+			return urls.WithError(err.Trace(sourceURL.String()))
+		}
 		var reader io.ReadCloser
 		// Proceed with regular stream copy.
 		reader, metadata, err = getSourceStream(sourceAlias, sourceURL.String(), true, srcSSE)

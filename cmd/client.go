@@ -67,7 +67,7 @@ type Client interface {
 	// I/O operations with metadata.
 	Get(sse encrypt.ServerSide) (reader io.ReadCloser, err *probe.Error)
 	Put(ctx context.Context, reader io.Reader, size int64, metadata map[string]string, progress io.Reader, sse encrypt.ServerSide) (n int64, err *probe.Error)
-
+	PutRetention(ctx context.Context, metadata map[string]string) *probe.Error
 	// I/O operations with expiration
 	ShareDownload(expires time.Duration) (string, *probe.Error)
 	ShareUpload(bool, time.Duration, string) (string, map[string]string, *probe.Error)
@@ -93,6 +93,7 @@ type clientContent struct {
 	ETag              string
 	Expires           time.Time
 	EncryptionHeaders map[string]string
+	Retention         bool
 	Err               *probe.Error
 }
 

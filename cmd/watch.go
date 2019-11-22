@@ -29,6 +29,8 @@ type EventType string
 const (
 	// EventCreate notifies when a new object is created
 	EventCreate EventType = "ObjectCreated"
+	// EventCreatePutRetention notifies when a retention configuration is added to an object
+	EventCreatePutRetention EventType = "ObjectCreated:PutRetention"
 	// EventRemove notifies when a new object is deleted
 	EventRemove = "ObjectRemoved"
 	// EventAccessed notifies when an object is accessed.
@@ -167,7 +169,6 @@ func (w *Watcher) Join(client Client, recursive bool) *probe.Error {
 				if !ok {
 					return
 				}
-
 				w.eventInfoChan <- event
 			case err, ok := <-wo.Errors():
 				if !ok {

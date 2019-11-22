@@ -409,6 +409,13 @@ func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metada
 	return f.put(reader, size, nil, progress)
 }
 
+func (f *fsClient) PutRetention(ctx context.Context, metadata map[string]string) *probe.Error {
+	return probe.NewError(APINotImplemented{
+		API:     "PutRetention",
+		APIType: "filesystem",
+	})
+}
+
 // ShareDownload - share download not implemented for filesystem.
 func (f *fsClient) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
