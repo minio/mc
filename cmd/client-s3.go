@@ -652,16 +652,27 @@ func (c *s3Client) Watch(params watchParams) (*watchObject, *probe.Error) {
 				u := *c.targetURL
 				u.Path = path.Join(string(u.Separator), bucketName, key)
 				if strings.HasPrefix(record.EventName, "s3:ObjectCreated:") {
-					eventChan <- EventInfo{
-						Time:      record.EventTime,
-						Size:      record.S3.Object.Size,
-						Path:      u.String(),
-						Type:      EventCreate,
-						Host:      record.Source.Host,
-						Port:      record.Source.Port,
-						UserAgent: record.Source.UserAgent,
+					if strings.HasPrefix(record.EventName, "s3:ObjectCreated:PutRetention") {
+						eventChan <- EventInfo{
+							Time:      record.EventTime,
+							Size:      record.S3.Object.Size,
+							Path:      u.String(),
+							Type:      EventCreatePutRetention,
+							Host:      record.Source.Host,
+							Port:      record.Source.Port,
+							UserAgent: record.Source.UserAgent,
+						}
+					} else {
+						eventChan <- EventInfo{
+							Time:      record.EventTime,
+							Size:      record.S3.Object.Size,
+							Path:      u.String(),
+							Type:      EventCreate,
+							Host:      record.Source.Host,
+							Port:      record.Source.Port,
+							UserAgent: record.Source.UserAgent,
+						}
 					}
-
 				} else if strings.HasPrefix(record.EventName, "s3:ObjectRemoved:") {
 					eventChan <- EventInfo{
 						Time:      record.EventTime,
@@ -883,6 +894,58 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 		return n, probe.NewError(e)
 	}
 	return n, nil
+}
+func (c *s3Client) PutRetention(ctx context.Context, metadata map[string]string) *probe.Error {
+	bucket, object := c.url2BucketAndObject()
+
+	if bucket == "" {
+		return probe.NewError(BucketNameEmpty{})
+	}
+	lockModeStr, ok := metadata[AmzObjectLockMode]
+	lockMode := minio.RetentionMode("")
+	if ok {
+		lockMode = minio.RetentionMode(lockModeStr)
+		delete(metadata, AmzObjectLockMode)
+	}
+
+	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
+	retainUntilDate := timeSentinel
+	if ok {
+		delete(metadata, AmzObjectLockRetainUntilDate)
+		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
+			retainUntilDate = t.UTC()
+		}
+	}
+	opts := minio.PutObjectRetentionOptions{Mode: &lockMode, RetainUntilDate: &retainUntilDate, GovernanceBypass: false}
+	e := c.api.PutObjectRetention(bucket, object, opts)
+	if e != nil {
+		errResponse := minio.ToErrorResponse(e)
+		if errResponse.Code == "AccessDenied" {
+			return probe.NewError(PathInsufficientPermission{
+				Path: c.targetURL.String(),
+			})
+		}
+		if errResponse.Code == "MethodNotAllowed" {
+			return probe.NewError(ObjectAlreadyExists{
+				Object: object,
+			})
+		}
+		if errResponse.Code == "NoSuchBucket" {
+			return probe.NewError(BucketDoesNotExist{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "InvalidBucketName" {
+			return probe.NewError(BucketInvalid{
+				Bucket: bucket,
+			})
+		}
+		if errResponse.Code == "NoSuchKey" {
+			return probe.NewError(ObjectMissing{})
+		}
+		return probe.NewError(e)
+	}
+	return nil
 }
 
 // Remove incomplete uploads.
