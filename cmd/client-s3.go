@@ -1012,22 +1012,37 @@ func (c *s3Client) MakeBucket(region string, ignoreExisting, withLock bool) *pro
 		return probe.NewError(BucketNameEmpty{})
 	}
 	if object != "" {
-		if strings.HasSuffix(object, "/") {
-		retry:
-			if _, e := c.api.PutObject(bucket, object, bytes.NewReader([]byte("")), 0, minio.PutObjectOptions{}); e != nil {
-				switch minio.ToErrorResponse(e).Code {
-				case "NoSuchBucket":
-					e = c.api.MakeBucket(bucket, region)
-					if e != nil {
-						return probe.NewError(e)
-					}
-					goto retry
-				}
+		if !strings.HasSuffix(object, string(c.targetURL.Separator)) {
+			object = path.Dir(object)
+		}
+		if !strings.HasSuffix(object, string(c.targetURL.Separator)) {
+			return probe.NewError(BucketNameTopLevel{})
+		}
+		var retried bool
+		for {
+			_, e := c.api.PutObject(bucket, object,
+				bytes.NewReader([]byte("")), 0, minio.PutObjectOptions{})
+			if e == nil {
+				return nil
+			}
+			if retried {
 				return probe.NewError(e)
 			}
-			return nil
+			switch minio.ToErrorResponse(e).Code {
+			case "NoSuchBucket":
+				if withLock {
+					e = c.api.MakeBucketWithObjectLock(bucket, region)
+				} else {
+					e = c.api.MakeBucket(bucket, region)
+				}
+				if e != nil {
+					return probe.NewError(e)
+				}
+				retried = true
+				continue
+			}
+			return probe.NewError(e)
 		}
-		return probe.NewError(BucketNameTopLevel{})
 	}
 
 	var e error
@@ -1141,11 +1156,11 @@ func (c *s3Client) SetAccess(bucketPolicy string, isJSON bool) *probe.Error {
 }
 
 // listObjectWrapper - select ObjectList version depending on the target hostname
-func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, doneCh chan struct{}) <-chan minio.ObjectInfo {
-	if isAmazon(c.targetURL.Host) || isAmazonAccelerated(c.targetURL.Host) {
-		return c.api.ListObjectsV2(bucket, object, isRecursive, doneCh)
+func (c *s3Client) listObjectWrapper(bucket, object string, isRecursive bool, doneCh chan struct{}, metadata bool) <-chan minio.ObjectInfo {
+	if metadata {
+		return c.api.ListObjectsV2WithMetadata(bucket, object, isRecursive, doneCh)
 	}
-	return c.api.ListObjects(bucket, object, isRecursive, doneCh)
+	return c.api.ListObjectsV2(bucket, object, isRecursive, doneCh)
 }
 
 // Stat - send a 'HEAD' on a bucket or object to fetch its metadata.
@@ -1212,14 +1227,13 @@ func (c *s3Client) Stat(isIncomplete, isFetchMeta, isPreserve bool, sse encrypt.
 	opts := minio.StatObjectOptions{}
 	opts.ServerSideEncryption = sse
 
-	for objectStat := range c.listObjectWrapper(bucket, prefix, nonRecursive, nil) {
+	for objectStat := range c.listObjectWrapper(bucket, prefix, nonRecursive, nil, false) {
 		if objectStat.Err != nil {
 			return nil, probe.NewError(objectStat.Err)
 		}
 		if strings.HasSuffix(objectStat.Key, string(c.targetURL.Separator)) {
 			objectMetadata.URL = *c.targetURL
 			objectMetadata.Type = os.ModeDir
-
 			if isFetchMeta {
 				stat, err := c.getObjectStat(bucket, object, opts)
 				if err != nil {
@@ -1396,7 +1410,7 @@ func (c *s3Client) splitPath(path string) (bucketName, objectName string) {
 /// Bucket API operations.
 
 // List - list at delimited path, if not recursive.
-func (c *s3Client) List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *clientContent {
+func (c *s3Client) List(isRecursive, isIncomplete, isMetadata bool, showDir DirOpt) <-chan *clientContent {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -1414,12 +1428,12 @@ func (c *s3Client) List(isRecursive, isIncomplete bool, showDir DirOpt) <-chan *
 	} else {
 		if isRecursive {
 			if showDir == DirNone {
-				go c.listRecursiveInRoutine(contentCh)
+				go c.listRecursiveInRoutine(contentCh, isMetadata)
 			} else {
-				go c.listRecursiveInRoutineDirOpt(contentCh, showDir)
+				go c.listRecursiveInRoutineDirOpt(contentCh, showDir, isMetadata)
 			}
 		} else {
-			go c.listInRoutine(contentCh)
+			go c.listInRoutine(contentCh, isMetadata)
 		}
 	}
 
@@ -1562,7 +1576,7 @@ func (c *s3Client) objectMultipartInfo2ClientContent(bucket string, entry minio.
 	content.Size = entry.Size
 	content.Time = entry.Initiated
 
-	if strings.HasSuffix(entry.Key, "/") {
+	if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) {
 		content.Type = os.ModeDir
 	} else {
 		content.Type = os.ModeTemporary
@@ -1679,9 +1693,8 @@ func (c *s3Client) joinPath(bucket string, objects ...string) string {
 }
 
 // Convert objectInfo to clientContent
-func (c *s3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInfo) clientContent {
-
-	content := clientContent{}
+func (c *s3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInfo) *clientContent {
+	content := &clientContent{}
 	url := *c.targetURL
 	// Join bucket and incoming object key.
 	url.Path = c.joinPath(bucket, entry.Key)
@@ -1689,9 +1702,14 @@ func (c *s3Client) objectInfo2ClientContent(bucket string, entry minio.ObjectInf
 	content.Size = entry.Size
 	content.ETag = entry.ETag
 	content.Time = entry.LastModified
-
-	if strings.HasSuffix(entry.Key, "/") && entry.Size == 0 && entry.LastModified.IsZero() {
+	content.Expires = entry.Expires
+	content.UserMetadata = map[string]string{}
+	for k, v := range entry.UserMetadata {
+		content.UserMetadata[k] = v
+	}
+	if strings.HasSuffix(entry.Key, string(c.targetURL.Separator)) && entry.Size == 0 && entry.LastModified.IsZero() {
 		content.Type = os.ModeDir
+		content.Time = time.Now()
 	} else {
 		content.Type = os.FileMode(0664)
 	}
@@ -1712,14 +1730,14 @@ func (c *s3Client) bucketStat(bucket string) (*clientContent, *probe.Error) {
 }
 
 // Recursively lists objects.
-func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, dirOpt DirOpt) {
+func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, dirOpt DirOpt, metadata bool) {
 	defer close(contentCh)
 	// Closure function reads list objects and sends to contentCh. If a directory is found, it lists
 	// objects of the directory content recursively.
 	var listDir func(bucket, object string) bool
 	listDir = func(bucket, object string) (isStop bool) {
 		isRecursive := false
-		for entry := range c.listObjectWrapper(bucket, object, isRecursive, nil) {
+		for entry := range c.listObjectWrapper(bucket, object, isRecursive, nil, metadata) {
 			if entry.Err != nil {
 				url := *c.targetURL
 				url.Path = c.joinPath(bucket, object)
@@ -1737,16 +1755,16 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 			// Handle if object.Key is a directory.
 			if content.Type.IsDir() {
 				if dirOpt == DirFirst {
-					contentCh <- &content
+					contentCh <- content
 				}
 				if listDir(bucket, entry.Key) {
 					return true
 				}
 				if dirOpt == DirLast {
-					contentCh <- &content
+					contentCh <- content
 				}
 			} else {
-				contentCh <- &content
+				contentCh <- content
 			}
 		}
 		return false
@@ -1809,7 +1827,7 @@ func (c *s3Client) listRecursiveInRoutineDirOpt(contentCh chan *clientContent, d
 	}
 }
 
-func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
+func (c *s3Client) listInRoutine(contentCh chan *clientContent, metadata bool) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -1841,7 +1859,7 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 		contentCh <- content
 	default:
 		isRecursive := false
-		for object := range c.listObjectWrapper(b, o, isRecursive, nil) {
+		for object := range c.listObjectWrapper(b, o, isRecursive, nil, metadata) {
 			if object.Err != nil {
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
@@ -1854,24 +1872,7 @@ func (c *s3Client) listInRoutine(contentCh chan *clientContent) {
 				continue
 			}
 
-			content := &clientContent{}
-			url := *c.targetURL
-			// Join bucket and incoming object key.
-			url.Path = c.joinPath(b, object.Key)
-			switch {
-			case strings.HasSuffix(object.Key, string(c.targetURL.Separator)):
-				// We need to keep the trailing Separator, do not use filepath.Join().
-				content.URL = url
-				content.Time = time.Now()
-				content.Type = os.ModeDir
-			default:
-				content.URL = url
-				content.Size = object.Size
-				content.ETag = object.ETag
-				content.Time = object.LastModified
-				content.Type = os.FileMode(0664)
-			}
-			contentCh <- content
+			contentCh <- c.objectInfo2ClientContent(b, object)
 		}
 	}
 }
@@ -1889,7 +1890,7 @@ const (
 	s3StorageClassGlacier = "GLACIER"
 )
 
-func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
+func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent, metadata bool) {
 	defer close(contentCh)
 	// get bucket and object from URL.
 	b, o := c.url2BucketAndObject()
@@ -1904,7 +1905,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 		}
 		for _, bucket := range buckets {
 			isRecursive := true
-			for object := range c.listObjectWrapper(bucket.Name, o, isRecursive, nil) {
+			for object := range c.listObjectWrapper(bucket.Name, o, isRecursive, nil, metadata) {
 				// Return error if we encountered glacier object and continue.
 				if object.StorageClass == s3StorageClassGlacier {
 					contentCh <- &clientContent{
@@ -1931,7 +1932,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 		}
 	default:
 		isRecursive := true
-		for object := range c.listObjectWrapper(b, o, isRecursive, nil) {
+		for object := range c.listObjectWrapper(b, o, isRecursive, nil, metadata) {
 			if object.Err != nil {
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
@@ -1947,6 +1948,11 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent) {
 			content.ETag = object.ETag
 			content.Time = object.LastModified
 			content.Type = os.FileMode(0664)
+			content.Expires = object.Expires
+			content.UserMetadata = map[string]string{}
+			for k, v := range object.UserMetadata {
+				content.UserMetadata[k] = v
+			}
 			contentCh <- content
 		}
 	}

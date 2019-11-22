@@ -124,7 +124,7 @@ func deleteBucket(url string) *probe.Error {
 	contentCh := make(chan *clientContent)
 	errorCh := clnt.Remove(isIncomplete, isRemoveBucket, contentCh)
 
-	for content := range clnt.List(true, false, DirLast) {
+	for content := range clnt.List(true, false, false, DirLast) {
 		if content.Err != nil {
 			switch content.Err.ToGoError().(type) {
 			case PathInsufficientPermission:
@@ -227,7 +227,7 @@ func mainRemoveBucket(ctx *cli.Context) error {
 			}
 		}
 		isEmpty := true
-		for range clnt.List(true, false, DirNone) {
+		for range clnt.List(true, false, false, DirNone) {
 			isEmpty = false
 			break
 		}

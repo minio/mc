@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"reflect"
 	"strings"
 	"unicode/utf8"
 
@@ -78,10 +79,10 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMe
 
 	// Set default values for listing.
 	isIncomplete := false // we will not compare any incomplete objects.
-	srcCh := sourceClnt.List(isRecursive, isIncomplete, dirOpt)
-	tgtCh := targetClnt.List(isRecursive, isIncomplete, dirOpt)
+	srcCh := sourceClnt.List(isRecursive, isIncomplete, isMetadata, dirOpt)
+	tgtCh := targetClnt.List(isRecursive, isIncomplete, isMetadata, dirOpt)
 
-	diffCh = make(chan diffMessage, 1000)
+	diffCh = make(chan diffMessage, 10000)
 
 	go func() {
 
@@ -190,21 +191,24 @@ func difference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMe
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}
+				} else if isMetadata &&
+					!reflect.DeepEqual(srcCtnt.UserMetadata, tgtCtnt.UserMetadata) &&
+					!reflect.DeepEqual(srcCtnt.Metadata, tgtCtnt.Metadata) {
+
+					// Regular files user requesting additional metadata to same file.
+					diffCh <- diffMessage{
+						FirstURL:      srcCtnt.URL.String(),
+						SecondURL:     tgtCtnt.URL.String(),
+						Diff:          differInMetadata,
+						firstContent:  srcCtnt,
+						secondContent: tgtCtnt,
+					}
 				} else if srcTime.After(tgtTime) {
 					// Regular files differing in timestamp.
 					diffCh <- diffMessage{
 						FirstURL:      srcCtnt.URL.String(),
 						SecondURL:     tgtCtnt.URL.String(),
 						Diff:          differInTime,
-						firstContent:  srcCtnt,
-						secondContent: tgtCtnt,
-					}
-				} else if isMetadata {
-					// Regular files user requesting additional metadata to same file.
-					diffCh <- diffMessage{
-						FirstURL:      srcCtnt.URL.String(),
-						SecondURL:     tgtCtnt.URL.String(),
-						Diff:          differInMetadata,
 						firstContent:  srcCtnt,
 						secondContent: tgtCtnt,
 					}
