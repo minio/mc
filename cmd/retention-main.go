@@ -17,8 +17,11 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -37,7 +40,7 @@ var retentionCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET [GOVERNANCE | COMPLIANCE] [VALIDITY]
+  {{.HelpName}} [FLAGS] TARGET [governance | compliance] [VALIDITY]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -47,8 +50,32 @@ VALIDITY:
 
 EXAMPLES:
    1. Set object retention for objects in a given prefix
-     $ {{.HelpName}} myminio/mybucket/prefix GOVERNANCE 30d
+     $ {{.HelpName}} myminio/mybucket/prefix compliance 30d
 `,
+}
+
+// Structured message depending on the type of console.
+type retentionCmdMessage struct {
+	Mode     minio.RetentionMode `json:"mode"`
+	Validity *string             `json:"validity"`
+	URLPath  string              `json:"urlpath"`
+	Status   string              `json:"status"`
+	Err      error               `json:"error"`
+}
+
+// Colorized message for console printing.
+func (m retentionCmdMessage) String() string {
+	if m.Err != nil {
+		return console.Colorize("RetentionMessageFailure", "Cannot set object retention on `"+m.URLPath+"`."+m.Err.Error())
+	}
+	return ""
+}
+
+// JSON'ified message for scripting.
+func (m retentionCmdMessage) JSON() string {
+	msgBytes, e := json.MarshalIndent(m, "", " ")
+	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
+	return string(msgBytes)
 }
 
 // setRetention - Set Retention for all objects within a given prefix.
@@ -57,7 +84,22 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
+
+	validityStr := func() *string {
+		if validity == nil {
+			return nil
+		}
+
+		unitStr := "d"
+		if *unit == minio.Years {
+			unitStr = "y"
+		}
+		s := fmt.Sprint(*validity, unitStr)
+		return &s
+	}
+
 	var cErr error
+	errorsFound := false
 	for content := range clnt.List(true, false, false, DirNone) {
 		if content.Err != nil {
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
@@ -65,20 +107,41 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 			continue
 		}
 		probeErr := clnt.PutObjectRetention(content.URL.Path, mode, validity, unit)
-		errorIf(probeErr, "Cannot set object retention on %s.", content.URL.Path)
+		if probeErr != nil {
+			errorsFound = true
+			printMsg(retentionCmdMessage{
+				Mode:     *mode,
+				Validity: validityStr(),
+				Status:   "failure",
+				URLPath:  content.URL.Path,
+				Err:      probeErr.ToGoError(),
+			})
+		} else {
+			if globalJSON {
+				printMsg(retentionCmdMessage{
+					Mode:     *mode,
+					Validity: validityStr(),
+					Status:   "success",
+					URLPath:  content.URL.Path,
+				})
+			}
+		}
 	}
-	if cErr == nil {
-		console.SetColor("Retention", color.New(color.FgCyan, color.Bold))
-		console.Colorize("Retention", urlStr)
-		console.Infof("Retention was successfully set for prefix %s\n", urlStr)
+	if cErr == nil && !globalJSON {
+		if errorsFound {
+			console.Print(console.Colorize("RetentionPartialFailure", fmt.Sprintf("Errors found while setting retention on objects with prefix `%s`.\n", urlStr)))
+		} else {
+			console.Print(console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for prefix `%s`.\n", urlStr)))
+		}
 	}
 	return cErr
 }
 
 // main for retention command.
 func mainRetention(ctx *cli.Context) error {
-	console.SetColor("Mode", color.New(color.FgCyan, color.Bold))
-	console.SetColor("Validity", color.New(color.FgYellow))
+	console.SetColor("RetentionSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("RetentionPartialFailure", color.New(color.FgRed, color.Bold))
+	console.SetColor("RetentionMessageFailure", color.New(color.FgYellow))
 
 	// Parse encryption keys per command.
 	_, err := getEncKeys(ctx)
@@ -101,7 +164,7 @@ func mainRetention(ctx *cli.Context) error {
 			fatalIf(probe.NewError(errors.New("invalid argument")), "clear flag must be passed with target alone")
 		}
 
-		m := minio.RetentionMode(args[1])
+		m := minio.RetentionMode(strings.ToUpper(args[1]))
 		if !m.IsValid() {
 			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid retention mode '%v'", m)
 		}

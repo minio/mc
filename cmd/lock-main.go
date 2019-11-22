@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -48,7 +49,7 @@ var lockCmd = cli.Command{
   {{.HelpName}} - {{.Usage}}
 
 USAGE:
-  {{.HelpName}} [FLAGS] TARGET [GOVERNANCE | COMPLIANCE] [VALIDITY]
+  {{.HelpName}} [FLAGS] TARGET [governance | compliance] [VALIDITY]
 
 FLAGS:
   {{range .VisibleFlags}}{{.}}
@@ -58,7 +59,7 @@ VALIDITY:
 
 EXAMPLES:
    1. Set object lock configuration
-     $ {{.HelpName}} myminio/mybucket GOVERNANCE 30d
+     $ {{.HelpName}} myminio/mybucket compliance 30d
 
    2. Get object lock configuration
      $ {{.HelpName}} myminio/mybucket
@@ -164,7 +165,7 @@ func mainLock(ctx *cli.Context) error {
 			fatalIf(probe.NewError(errors.New("invalid argument")), "clear flag must be passed with target alone")
 		}
 
-		m := minio.RetentionMode(args[1])
+		m := minio.RetentionMode(strings.ToUpper(args[1]))
 		if !m.IsValid() {
 			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid retention mode '%v'", m)
 		}
