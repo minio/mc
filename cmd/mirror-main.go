@@ -394,6 +394,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			// newClient needs the unexpanded  path, newCLientURL needs the expanded path
 			targetAlias, expandedTargetPath, _ := mustExpandAlias(targetPath)
 			targetURL := newClientURL(expandedTargetPath)
+
 			sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sourceURL.Path))
 			srcSSE := getSSE(sourcePath, mj.encKeyDB[sourceAlias])
 			tgtSSE := getSSE(targetPath, mj.encKeyDB[targetAlias])
