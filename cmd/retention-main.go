@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -24,27 +25,17 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
 	minio "github.com/minio/minio-go/v6"
 )
 
-var (
-	lockFlags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "clear, c",
-			Usage: "clears previously stored object lock configuration",
-		},
-	}
-)
-
-var lockCmd = cli.Command{
-	Name:   "lock",
-	Usage:  "set and get object lock configuration",
-	Action: mainLock,
+var retentionCmd = cli.Command{
+	Name:   "retention",
+	Usage:  "set object retention for objects with a given prefix",
+	Action: mainRetention,
 	Before: setGlobalsFromContext,
-	Flags:  append(lockFlags, globalFlags...),
+	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
 
@@ -58,51 +49,40 @@ VALIDITY:
   This argument must be formatted like Nd or Ny where 'd' denotes days and 'y' denotes years e.g. 10d, 3y.
 
 EXAMPLES:
-   1. Set object lock configuration
-     $ {{.HelpName}} myminio/mybucket compliance 30d
-
-   2. Get object lock configuration
-     $ {{.HelpName}} myminio/mybucket
-
-   3. Clear object lock configuration
-     $ {{.HelpName}} --clear myminio/mybucket
+   1. Set object retention for objects in a given prefix
+     $ {{.HelpName}} myminio/mybucket/prefix compliance 30d
 `,
 }
 
 // Structured message depending on the type of console.
-type lockCmdMessage struct {
-	Enabled  string               `json:"enabled"`
-	Mode     *minio.RetentionMode `json:"mode"`
-	Validity *string              `json:"validity"`
-	Status   string               `json:"status"`
+type retentionCmdMessage struct {
+	Mode     minio.RetentionMode `json:"mode"`
+	Validity *string             `json:"validity"`
+	URLPath  string              `json:"urlpath"`
+	Status   string              `json:"status"`
+	Err      error               `json:"error"`
 }
 
 // Colorized message for console printing.
-func (m lockCmdMessage) String() string {
-	if m.Mode == nil {
-		return fmt.Sprintf("No mode is enabled")
+func (m retentionCmdMessage) String() string {
+	if m.Err != nil {
+		return console.Colorize("RetentionMessageFailure", "Cannot set object retention on `"+m.URLPath+"`."+m.Err.Error())
 	}
-
-	return fmt.Sprintf("%s mode is enabled for %s", console.Colorize("Mode", *m.Mode), console.Colorize("Validity", *m.Validity))
+	return ""
 }
 
 // JSON'ified message for scripting.
-func (m lockCmdMessage) JSON() string {
+func (m retentionCmdMessage) JSON() string {
 	msgBytes, e := json.MarshalIndent(m, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 	return string(msgBytes)
 }
 
-// lock - set/get object lock configuration.
-func lock(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, clearLock bool) error {
-	client, err := newClient(urlStr)
+// setRetention - Set Retention for all objects within a given prefix.
+func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) error {
+	clnt, err := newClient(urlStr)
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
-	}
-
-	s3Client, ok := client.(*s3Client)
-	if !ok {
-		fatalIf(errDummy().Trace(), "The provided url doesn't point to a S3 server.")
 	}
 
 	validityStr := func() *string {
@@ -118,28 +98,50 @@ func lock(urlStr string, mode *minio.RetentionMode, validity *uint, unit *minio.
 		return &s
 	}
 
-	if clearLock || mode != nil {
-		err = s3Client.SetObjectLockConfig(mode, validity, unit)
-		fatalIf(err, "Cannot enable object lock configuration on the specified bucket.")
-	} else {
-		mode, validity, unit, err = s3Client.GetObjectLockConfig()
-		fatalIf(err, "Cannot get object lock configuration on the specified bucket.")
+	var cErr error
+	errorsFound := false
+	for content := range clnt.List(true, false, false, DirNone) {
+		if content.Err != nil {
+			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
+			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
+			continue
+		}
+		probeErr := clnt.PutObjectRetention(content.URL.Path, mode, validity, unit)
+		if probeErr != nil {
+			errorsFound = true
+			printMsg(retentionCmdMessage{
+				Mode:     *mode,
+				Validity: validityStr(),
+				Status:   "failure",
+				URLPath:  content.URL.Path,
+				Err:      probeErr.ToGoError(),
+			})
+		} else {
+			if globalJSON {
+				printMsg(retentionCmdMessage{
+					Mode:     *mode,
+					Validity: validityStr(),
+					Status:   "success",
+					URLPath:  content.URL.Path,
+				})
+			}
+		}
 	}
-
-	printMsg(lockCmdMessage{
-		Enabled:  "Enabled",
-		Mode:     mode,
-		Validity: validityStr(),
-		Status:   "success",
-	})
-
-	return nil
+	if cErr == nil && !globalJSON {
+		if errorsFound {
+			console.Print(console.Colorize("RetentionPartialFailure", fmt.Sprintf("Errors found while setting retention on objects with prefix `%s`.\n", urlStr)))
+		} else {
+			console.Print(console.Colorize("RetentionSuccess", fmt.Sprintf("Object retention successfully set for prefix `%s`.\n", urlStr)))
+		}
+	}
+	return cErr
 }
 
-// main for lock command.
-func mainLock(ctx *cli.Context) error {
-	console.SetColor("Mode", color.New(color.FgCyan, color.Bold))
-	console.SetColor("Validity", color.New(color.FgYellow))
+// main for retention command.
+func mainRetention(ctx *cli.Context) error {
+	console.SetColor("RetentionSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("RetentionPartialFailure", color.New(color.FgRed, color.Bold))
+	console.SetColor("RetentionMessageFailure", color.New(color.FgYellow))
 
 	// Parse encryption keys per command.
 	_, err := getEncKeys(ctx)
@@ -156,9 +158,6 @@ func mainLock(ctx *cli.Context) error {
 	var unit *minio.ValidityUnit
 
 	switch l := len(args); l {
-	case 1:
-		urlStr = args[0]
-
 	case 3:
 		urlStr = args[0]
 		if clearLock {
@@ -194,8 +193,7 @@ func mainLock(ctx *cli.Context) error {
 			fatalIf(probe.NewError(errors.New("invalid argument")), "invalid validity format '%v'", args[2])
 		}
 	default:
-		cli.ShowCommandHelpAndExit(ctx, "lock", 1)
+		cli.ShowCommandHelpAndExit(ctx, "retention", 1)
 	}
-
-	return lock(urlStr, mode, validity, unit, clearLock)
+	return setRetention(urlStr, mode, validity, unit)
 }

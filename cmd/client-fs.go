@@ -1038,6 +1038,11 @@ func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 	})
 }
 
+// Set object retention for a given object.
+func (f *fsClient) PutObjectRetention(path string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+	return probe.NewError(APINotImplemented{API: "PutObjectRetention", APIType: "filesystem"})
+}
+
 // GetAccess - get access policy permissions.
 func (f *fsClient) GetAccess() (access string, policyJSON string, err *probe.Error) {
 	// For windows this feature is not implemented.

@@ -323,6 +323,7 @@ var appCmds = []cli.Command{
 	treeCmd,
 	duCmd,
 	lockCmd,
+	retentionCmd,
 	diffCmd,
 	rmCmd,
 	eventCmd,

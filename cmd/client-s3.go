@@ -2075,6 +2075,35 @@ func (c *s3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint
 	return nil
 }
 
+// Set object retention for a given object.
+func (c *s3Client) PutObjectRetention(path string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+	bucket, object := c.splitPath(path)
+	t := UTCNow()
+	if *unit == minio.Years {
+		t = t.AddDate(int(*validity), 0, 0)
+	} else {
+		t = t.AddDate(0, 0, int(*validity))
+	}
+	timeStr := t.Format(time.RFC3339)
+
+	t1, e := time.Parse(
+		time.RFC3339,
+		timeStr)
+	if e != nil {
+		return probe.NewError(e)
+	}
+	opts := minio.PutObjectRetentionOptions{
+		RetainUntilDate: &t1,
+		Mode:            mode,
+	}
+	err := c.api.PutObjectRetention(bucket, object, opts)
+	if err != nil {
+		return probe.NewError(err)
+	}
+
+	return nil
+}
+
 // Get object lock configuration of bucket.
 func (c *s3Client) GetObjectLockConfig() (mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit, perr *probe.Error) {
 	bucket, _ := c.url2BucketAndObject()
