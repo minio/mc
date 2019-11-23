@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"io"
+	"sync/atomic"
 
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
@@ -26,6 +27,10 @@ import (
 // Status implements a interface that can be used in quit mode or with progressbar.
 type Status interface {
 	Println(data ...interface{})
+	AddCounts(int64)
+	SetCounts(int64)
+	GetCounts() int64
+
 	Add(int64) Status
 	Get() int64
 	Start()
@@ -44,92 +49,40 @@ type Status interface {
 	fatalIf(err *probe.Error, msg string)
 }
 
-// NewDummyStatus returns a dummy status object
-func NewDummyStatus(hook io.Reader) Status {
-	return &DummyStatus{hook}
-}
-
-// DummyStatus will not show anything.
-type DummyStatus struct {
-	hook io.Reader
-}
-
-// Read implements the io.Reader interface
-func (ds *DummyStatus) Read(p []byte) (n int, err error) {
-	ds.hook.Read(p)
-	return len(p), nil
-}
-
-// Get implements Progress interface
-func (ds *DummyStatus) Get() int64 {
-	return 0
-}
-
-// SetTotal sets the total of the progressbar, ignored for quietstatus
-func (ds *DummyStatus) SetTotal(v int64) Status {
-	return ds
-}
-
-// SetCaption sets the caption of the progressbar, ignored for quietstatus
-func (ds *DummyStatus) SetCaption(s string) {}
-
-// Total returns the total number of bytes
-func (ds *DummyStatus) Total() int64 {
-	return 0
-}
-
-// Add bytes to current number of bytes
-func (ds *DummyStatus) Add(v int64) Status {
-	return ds
-}
-
-// Println prints line, ignored for quietstatus
-func (ds *DummyStatus) Println(data ...interface{}) {}
-
-// PrintMsg prints message
-func (ds *DummyStatus) PrintMsg(msg message) {
-	if !globalJSON {
-		console.Println(msg.String())
-	} else {
-		console.Println(msg.JSON())
-	}
-}
-
-// Start is ignored for quietstatus
-func (ds *DummyStatus) Start() {}
-
-// Finish displays the accounting summary
-func (ds *DummyStatus) Finish() {}
-
-// Update is ignored for quietstatus
-func (ds *DummyStatus) Update() {}
-
-func (ds *DummyStatus) errorIf(err *probe.Error, msg string) {
-	errorIf(err, msg)
-}
-
-func (ds *DummyStatus) fatalIf(err *probe.Error, msg string) {
-	fatalIf(err, msg)
-}
-
 // NewQuietStatus returns a quiet status object
 func NewQuietStatus(hook io.Reader) Status {
 	return &QuietStatus{
-		newAccounter(0),
-		hook,
+		accounter: newAccounter(0),
+		hook:      hook,
 	}
 }
 
 // QuietStatus will only show the progress and summary
 type QuietStatus struct {
 	*accounter
-	hook io.Reader
+	hook   io.Reader
+	counts int64
 }
 
 // Read implements the io.Reader interface
 func (qs *QuietStatus) Read(p []byte) (n int, err error) {
 	qs.hook.Read(p)
 	return qs.accounter.Read(p)
+}
+
+// SetCounts sets number of files uploaded
+func (qs *QuietStatus) SetCounts(v int64) {
+	atomic.StoreInt64(&qs.counts, v)
+}
+
+// GetCounts returns number of files uploaded
+func (qs *QuietStatus) GetCounts() int64 {
+	return atomic.LoadInt64(&qs.counts)
+}
+
+// AddCounts adds 'v' number of files uploaded.
+func (qs *QuietStatus) AddCounts(v int64) {
+	atomic.AddInt64(&qs.counts, v)
 }
 
 // SetTotal sets the total of the progressbar, ignored for quietstatus
@@ -140,6 +93,11 @@ func (qs *QuietStatus) SetTotal(v int64) Status {
 
 // SetCaption sets the caption of the progressbar, ignored for quietstatus
 func (qs *QuietStatus) SetCaption(s string) {
+}
+
+// Get returns the current number of bytes
+func (qs *QuietStatus) Get() int64 {
+	return qs.accounter.Get()
 }
 
 // Total returns the total number of bytes
@@ -159,11 +117,7 @@ func (qs *QuietStatus) Println(data ...interface{}) {
 
 // PrintMsg prints message
 func (qs *QuietStatus) PrintMsg(msg message) {
-	if !globalJSON {
-		console.Println(msg.String())
-	} else {
-		console.Println(msg.JSON())
-	}
+	printMsg(msg)
 }
 
 // Start is ignored for quietstatus
@@ -172,7 +126,7 @@ func (qs *QuietStatus) Start() {
 
 // Finish displays the accounting summary
 func (qs *QuietStatus) Finish() {
-	console.Println(console.Colorize("Mirror", qs.accounter.Stat().String()))
+	printMsg(qs.accounter.Stat())
 }
 
 // Update is ignored for quietstatus
@@ -190,15 +144,16 @@ func (qs *QuietStatus) fatalIf(err *probe.Error, msg string) {
 // NewProgressStatus returns a progress status object
 func NewProgressStatus(hook io.Reader) Status {
 	return &ProgressStatus{
-		newProgressBar(0),
-		hook,
+		progressBar: newProgressBar(0),
+		hook:        hook,
 	}
 }
 
 // ProgressStatus shows a progressbar
 type ProgressStatus struct {
 	*progressBar
-	hook io.Reader
+	hook   io.Reader
+	counts int64
 }
 
 // Read implements the io.Reader interface
@@ -210,6 +165,26 @@ func (ps *ProgressStatus) Read(p []byte) (n int, err error) {
 // SetCaption sets the caption of the progressbar
 func (ps *ProgressStatus) SetCaption(s string) {
 	ps.progressBar.SetCaption(s)
+}
+
+// SetCounts sets number of files uploaded
+func (ps *ProgressStatus) SetCounts(v int64) {
+	atomic.StoreInt64(&ps.counts, v)
+}
+
+// GetCounts returns number of files uploaded
+func (ps *ProgressStatus) GetCounts() int64 {
+	return atomic.LoadInt64(&ps.counts)
+}
+
+// AddCounts adds 'v' number of files uploaded.
+func (ps *ProgressStatus) AddCounts(v int64) {
+	atomic.AddInt64(&ps.counts, v)
+}
+
+// Get returns the current number of bytes
+func (ps *ProgressStatus) Get() int64 {
+	return ps.progressBar.Get()
 }
 
 // Total returns the total number of bytes

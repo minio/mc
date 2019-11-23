@@ -437,10 +437,12 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						shouldQueue = true
 					}
 					if shouldQueue || mj.isOverwrite {
-						mirrorURL.TotalCount = mj.TotalObjects
-						mirrorURL.TotalSize = mj.TotalBytes
-						// adjust total, because we want to show progress of the item still queued to be copied.
-						mj.status.SetTotal(mj.status.Total() + sourceContent.Size).Update()
+						// adjust total, because we want to show progress of
+						// the item still queued to be copied.
+						mj.status.SetTotal(mj.status.Get() + sourceContent.Size).Update()
+						mj.status.AddCounts(1)
+						mirrorURL.TotalSize = mj.status.Get()
+						mirrorURL.TotalCount = mj.status.GetCounts()
 						mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
 					}
 					continue
@@ -465,10 +467,12 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 				}
 				if shouldQueue || mj.isOverwrite {
 					mirrorURL.SourceContent.Size = event.Size
-					mirrorURL.TotalCount = mj.TotalObjects
-					mirrorURL.TotalSize = mj.TotalBytes
-					// adjust total, because we want to show progress of the itemj stiil queued to be copied.
-					mj.status.SetTotal(mj.status.Total() + event.Size).Update()
+					// adjust total, because we want to show progress
+					// of the itemj stiil queued to be copied.
+					mj.status.SetTotal(mj.status.Get() + mirrorURL.SourceContent.Size).Update()
+					mj.status.AddCounts(1)
+					mirrorURL.TotalSize = mj.status.Get()
+					mirrorURL.TotalCount = mj.status.GetCounts()
 					mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
 				}
 			} else if event.Type == EventRemove {
@@ -479,8 +483,8 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					TargetContent: &clientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
 				}
-				mirrorURL.TotalCount = mj.TotalObjects
-				mirrorURL.TotalSize = mj.TotalBytes
+				mirrorURL.TotalCount = mj.status.GetCounts()
+				mirrorURL.TotalSize = mj.status.Get()
 				if mirrorURL.TargetContent != nil && mj.isRemove {
 					mj.statusCh <- mj.doRemove(mirrorURL)
 				}
@@ -506,9 +510,6 @@ func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {
 
 // Fetch urls that need to be mirrored
 func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.CancelFunc) {
-	var totalBytes int64
-	var totalObjects int64
-
 	stopParallel := func() {
 		close(mj.queueCh)
 		mj.parallel.wait()
@@ -537,19 +538,15 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				if mj.newerThan != "" && isNewer(sURLs.SourceContent.Time, mj.newerThan) {
 					continue
 				}
-				// copy
-				totalBytes += sURLs.SourceContent.Size
 			}
 
-			totalObjects++
-			mj.TotalBytes = totalBytes
-			mj.TotalObjects = totalObjects
-			mj.status.SetTotal(totalBytes)
+			mj.status.AddCounts(1)
+			mj.status.Add(sURLs.SourceContent.Size)
 
 			// Save total count.
-			sURLs.TotalCount = mj.TotalObjects
+			sURLs.TotalCount = mj.status.GetCounts()
 			// Save totalSize.
-			sURLs.TotalSize = mj.TotalBytes
+			sURLs.TotalSize = mj.status.Get()
 
 			if sURLs.SourceContent != nil {
 				mj.queueCh <- func() URLs {
@@ -629,7 +626,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 	if globalQuiet {
 		status = NewQuietStatus(mj.parallel)
 	} else if globalJSON {
-		status = NewDummyStatus(mj.parallel)
+		status = NewQuietStatus(mj.parallel)
 	}
 	mj.status = status
 
