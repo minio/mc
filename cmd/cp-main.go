@@ -80,7 +80,7 @@ var cpCmd = cli.Command{
 	Name:   "cp",
 	Usage:  "copy objects",
 	Action: mainCopy,
-	Before: setGlobalsFromContext, 
+	Before: setGlobalsFromContext,
 	Flags:  append(append(cpFlags, ioFlags...), globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -562,15 +562,11 @@ func mainCopy(ctx *cli.Context) error {
 	session.Header.CommandStringFlags["storage-class"] = storageClass
 	session.Header.CommandStringFlags["encrypt-key"] = sseKeys
 	session.Header.CommandStringFlags["encrypt"] = sse
-<<<<<<< Updated upstream
 	session.Header.CommandBoolFlags["session"] = ctx.Bool("continue")
 
 	if ctx.Bool("preserve") {
 		session.Header.CommandBoolFlags["preserve"] = ctx.Bool("preserve")
 	}
-=======
-	// session.Header.CommandBoolFlags["a"] = preserveAll
->>>>>>> Stashed changes
 	session.Header.UserMetaData = userMetaMap
 
 	var e error

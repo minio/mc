@@ -51,8 +51,9 @@ var HelpEnvTemplate = template.Must(template.New("config-help-env").Funcs(funcMa
 
 // configHelpMessage container to hold locks information.
 type configHelpMessage struct {
-	Status  string      `json:"status"`
-	Value   madmin.Help `json:"help"`
+	Status  string `json:"status"`
+	Value   madmin.AccountStatus
+	Help    madmin.Help `json:"help"`
 	envOnly bool
 }
 

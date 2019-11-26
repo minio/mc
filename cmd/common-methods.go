@@ -427,6 +427,34 @@ func newClient(aliasedURL string) (Client, *probe.Error) {
 	return newClientFromAlias(alias, urlStrFull)
 }
 
+// Return the file attribute value present in metadata
+func getFileAttrMeta(sURLs URLs, encKeyDB map[string][]prefixSSEPair) (string, *probe.Error) {
+	sourceAlias := sURLs.SourceAlias
+	sourceURL := sURLs.SourceContent.URL
+	sourcePath := filepath.ToSlash(filepath.Join(sourceAlias, sURLs.SourceContent.URL.Path))
+	srcSSE := getSSE(sourcePath, encKeyDB[sourceAlias])
+
+	statSourceURL := sURLs.SourceAlias + getKey(sURLs.SourceContent)
+	srcClt, err := newClient(statSourceURL)
+	if err != nil {
+		return "", err.Trace(sourceURL.String())
+	}
+
+	sourceMeta, err := srcClt.Stat(false, true, true, srcSSE)
+	if err != nil {
+		return "", err.Trace(sourceURL.String())
+	}
+	attrValue := ""
+	if sourceMeta.Metadata["X-Amz-Meta-Mc-Attrs"] != "" {
+		attrValue = sourceMeta.Metadata["X-Amz-Meta-Mc-Attrs"]
+	} else if sourceMeta.Metadata["X-Amz-Meta-S3cmd-Attrs"] != "" {
+		attrValue = sourceMeta.Metadata["X-Amz-Meta-S3cmd-Attrs"]
+	} else if sourceMeta.Metadata["mc-attrs"] != "" {
+		attrValue = sourceMeta.Metadata["mc-attrs"]
+	}
+	return attrValue, nil
+}
+
 //
 func hash_file_md5(filePath string) (string, error) {
 	//Initialize variable returnMD5String now in case an error has to be returned
