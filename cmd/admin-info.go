@@ -19,11 +19,7 @@ package cmd
 import (
 	"fmt"
 	"net/url"
-	"sort"
-	"strings"
-	"time"
 
-	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -53,105 +49,160 @@ EXAMPLES:
 `,
 }
 
-// backendType - indicates the type of backend storage
-type backendType string
+// // backendType - indicates the type of backend storage
+// type backendType string
 
-const (
-	fsType      = backendType("FS")
-	erasureType = backendType("Erasure")
-)
+// const (
+// 	fsType      = backendType("FS")
+// 	erasureType = backendType("Erasure")
+// )
 
-// fsBackend contains specific FS storage information
-type fsBackend struct {
-	Type backendType `json:"type"`
-}
+// // fsBackend contains specific FS storage information
+// type fsBackend struct {
+// 	Type backendType `json:"type"`
+// }
 
-// xlBackend contains specific erasure storage information
-type xlBackend struct {
-	Type         backendType `json:"type"`
-	OnlineDisks  int         `json:"onlineDisks"`
-	OfflineDisks int         `json:"offlineDisks"`
-	// List of all disk status.
-	Sets [][]madmin.DriveInfo `json:"sets"`
-}
+// // xlBackend contains specific erasure storage information
+// type xlBackend struct {
+// 	Type             backendType         `json:"type"`
+// 	OnlineDisks      madmin.BackendDisks `json:"onlineDisks"`      // Online disks during server startup.
+// 	OfflineDisks     madmin.BackendDisks `json:"offlineDisks"`     // Offline disks during server startup.
+// 	StandardSCData   int                 `json:"standarSCData"`    // Data disks for currently configured Standard storage class.
+// 	StandardSCParity int                 `json:"standardSCParity"` // Parity disks for currently configured Standard storage class.
+// 	RRSCData         int                 `json:"rrSCData"`         // Data disks for currently configured Reduced Redundancy storage class.
+// 	RRSCParity       int                 `json:"rrSCParity"`       // Parity disks for currently configured Reduced Redundancy storage class.
+// }
 
-type vaultStatus struct {
-	Service  string `json:"service"`
-	Endpoint string `json:"endpoint"`
-	Key      string `json:"key"`
-	Auth     string `json:"auth"`
-	API      struct {
-		Encrypt string `json:"encrypt"`
-		Decrypt string `json:"decrypt"`
-		Update  string `json:"update"`
-	} `json:"api"`
-}
+// // Vault - Fetches the Vault status
+// // type Vault struct {
+// // 	Status  madmin.Status `json:"status"`
+// // 	Encrypt string `json:"encrypt"`
+// // 	Decrypt string `json:"decrypt"`
+// // 	Update  string `json:"update"`
+// // }
+// var Vault madmin.Vault
 
-type ldapStatus struct {
-	Service  string `json:"service"`
-	Endpoint string `json:"endpoint"`
-}
+// // Ldap contains status
+// type Ldap struct {
+// 	Status string `json:"status"`
+// }
 
-type diskStruct struct {
-	Path            string `json:"path"`
-	State           string `json:"state"`
-	Model           string `json:"model"`
-	Totalspace      string `json:"totalspace"`
-	Usedspace       string `json:"usedspace"`
-	UUID            string `json:"uuid"`
-	Readthroughput  string `json:"readthroughput"`
-	Writethroughput string `json:"writethroughput"`
-	Readlatency     string `json:"readlatency"`
-	Writelatency    string `json:"writelatency"`
-	Utilization     string `json:"utilization"`
-}
+// // Logger contains logger status
+// type Logger struct {
+// 	Status string `json:"status"`
+// }
 
-type serverStruct struct {
-	Status    string                    `json:"status"`
-	Endpoint  string                    `json:"endpoint"`
-	Service   string                    `json:"service"`
-	Uptime    time.Duration             `json:"uptime"`
-	Version   string                    `json:"version"`
-	CommitID  string                    `json:"commitID"`
-	Disks     []diskStruct              `json:"disks"`
-	CPULoads  madmin.ServerCPULoadInfo  `json:"cpu"`
-	MemUsages madmin.ServerMemUsageInfo `json:"mem"`
-	ConnStats madmin.ServerConnStats    `json:"connstats"`
-}
+// // Audit contains audit logger status
+// type Audit struct {
+// 	Status string `json:"status"`
+// }
 
-type contentStruct struct {
-	Buckets int64 `json:"buckets"`
-	Objects struct {
-		Total int64 `json:"total"`
-		Size  int64 `json:"size"`
-	} `json:"objects"`
-}
+// // Notifications contains notification target info
+// type Notifications struct {
+// 	AMQP []Status `json:"amqp"`
+// }
 
-// infoMessage container to hold service status information.
+// // WebhookTarget Contains  Webhook info
+// type WebhookTarget struct {
+// 	Status string `json:"status"`
+// }
+
+// type diskStruct struct {
+// 	Path            string `json:"path"`
+// 	State           string `json:"state"`
+// 	UUID            string `json:"uuid"`
+// 	Model           string `json:"model"`
+// 	Totalspace      string `json:"totalspace"`
+// 	Usedspace       string `json:"usedspace"`
+// 	Readthroughput  string `json:"readthroughput"`
+// 	Writethroughput string `json:"writethroughput"`
+// 	Readlatency     string `json:"readlatency"`
+// 	Writelatency    string `json:"writelatency"`
+// 	Utilization     string `json:"utilization"`
+// }
+
+// type serverStruct struct {
+// 	State    string                 `json:"state"`
+// 	Endpoint string                 `json:"endpoint"`
+// 	Uptime   time.Duration          `json:"uptime"`
+// 	Version  string                 `json:"version"`
+// 	CommitID string                 `json:"commitID"`
+// 	Network  madmin.ServerConnStats `json:"network"`
+// 	Disks    []diskStruct           `json:"disks"`
+// }
+
+// var storageInfoStat interface{}
+
+// // infoMessage container to hold service status information.
+// type infoMessage struct {
+// 	Mode         string   `json:"Mode"`
+// 	Domain       []string `json:"domain"`
+// 	Region       string   `json:"region"`
+// 	SQSARN       []string `json:"sqsARN"`
+// 	DeploymentID string   `json:"deploymentID"`
+// 	Buckets      struct {
+// 		Count int `json: "count"`
+// 	} `json:"buckets"`
+// 	Objects struct {
+// 		Count int `json:"count`
+// 	} `json:"objects"`
+// 	Usage struct {
+// 		Size int64 `json:"size"`
+// 	} `json:"usage"`
+// 	Services struct {
+// 		Vault         Vault         `json:"vault"`
+// 		Ldap          Ldap          `json:"ldap"`
+// 		Logger        []Logger      `json:"logger"`
+// 		Audit         []Audit       `json:"audit"`
+// 		Notifications Notifications `json:"notifications"`
+// 	} `json:"services"`
+// 	// // Construct the backend status
+// 	// if storageInfo.Backend.Type == madmin.Erasure {
+// 	// 	storageInfoStat = xlBackend{
+// 	// 		Type:         erasureType,
+// 	// 		OnlineDisks:  filterPerNode(serverInfo.Addr, storageInfo.Backend.OnlineDisks),
+// 	// 		OfflineDisks: filterPerNode(serverInfo.Addr, storageInfo.Backend.OfflineDisks),
+// 	// 		Sets:         storageInfo.Backend.Sets,
+// 	// 	}
+// 	// } else {
+// 	// 	storageInfoStat = fsBackend{
+// 	// 		Type: fsType,
+// 	// 	}
+// 	// }
+// 	Servers []serverStruct
+// }
+
+// func filterPerNode(addr string, m map[string]int) int {
+// 	if val, ok := m[addr]; ok {
+// 		return val
+// 	}
+// 	return -1
+// }
+
+// InfoMessage container to hold server admin related information.
 type infoMessage struct {
-	Status       string   `json:"status"`
-	Service      string   `json:"service"`
-	Addr         string   `json:"address"`
+	Mode         string   `json:"mode"`
+	Domain       []string `json:"domain"`
 	Region       string   `json:"region"`
 	SQSARN       []string `json:"sqsARN"`
 	DeploymentID string   `json:"deploymentID"`
-	Buckets      int64    `json:"buckets"`
-	Objects      struct {
-		Total int64 `json:"total"`
-		Size  int64 `json:"size"`
-	}
-	Err         string         `json:"error"`
-	VaultInfo   vaultStatus    `json:"vault"`
-	LdapInfo    ldapStatus     `json:"ldap"`
-	StorageInfo interface{}    `json:"backend"`
-	ServersInfo []serverStruct `json:"servers"`
-}
-
-func filterPerNode(addr string, m map[string]int) int {
-	if val, ok := m[addr]; ok {
-		return val
-	}
-	return -1
+	Buckets      struct {
+		Count int `json:"count"`
+	} `json:"buckets"`
+	Objects struct {
+		Count int `json:"count"`
+	} `json:"objects"`
+	Usage struct {
+		Size int `json:"size"`
+	} `json:"usage"`
+	Services struct {
+		Vault         madmin.Vault         `json:"vault"`
+		Ldap          madmin.Ldap          `json:"ldap"`
+		Logger        []madmin.Logger      `json:"logger"`
+		Audit         []madmin.Audit       `json:"audit"`
+		Notifications madmin.Notifications `json:"notifications"`
+	} `json:"services"`
+	Backend madmin.BackendInfo `json:"backend"`
 }
 
 // String colorized service status message.
@@ -159,38 +210,38 @@ func (u infoMessage) String() (msg string) {
 	msg += "\n"
 	dot := "●"
 
-	// When service is offline
-	if u.Service == "off" {
-		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", u.Addr))
+	// When MinIO server is offline ("Mode" field)
+	if u.Mode == "offline" {
+		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", u.Domain))
 		msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("InfoFail", "offline"))
 		return
 	}
 
-	// Print error if any and exit
-	if u.Err != "" {
-		msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", u.Addr))
-		msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("InfoFail", "offline"))
-		e := u.Err
-		if strings.Trim(e, " ") == "rpc: retry error" {
-			e = "unreachable"
-		}
-		msg += fmt.Sprintf("Error: %s", console.Colorize("InfoFail", e))
-		return
-	}
+	// // Print error if any and exit
+	// if u.Err != "" {
+	// 	msg += fmt.Sprintf("%s  %s\n", console.Colorize("InfoFail", dot), console.Colorize("PrintB", u.Addr))
+	// 	msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("InfoFail", "offline"))
+	// 	e := u.Err
+	// 	if strings.Trim(e, " ") == "rpc: retry error" {
+	// 		e = "unreachable"
+	// 	}
+	// 	msg += fmt.Sprintf("Error: %s", console.Colorize("InfoFail", e))
+	// 	return
+	// }
 
 	// Print server title
-	msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), console.Colorize("PrintB", u.Addr))
+	msg += fmt.Sprintf("%s  %s\n", console.Colorize("Info", dot), console.Colorize("PrintB", u.Domain))
 
-	// Uptime
-	msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("Info",
-		humanize.RelTime(time.Now(), time.Now().Add(-u.ServersInfo[0].Uptime), "", "")))
+	// Uptime (this is per server)
+	// msg += fmt.Sprintf("Uptime: %s\n", console.Colorize("Info",
+	// 	humanize.RelTime(time.Now(), time.Now().Add(-u.ServersInfo[0].Uptime), "", "")))
 
-	// Version
-	version := u.ServersInfo[0].Version
-	if u.ServersInfo[0].Version == "DEVELOPMENT.GOGET" {
-		version = "<development>"
-	}
-	msg += fmt.Sprintf("Version: %s\n", version)
+	// // Version (this is per server)
+	// version := u.ServersInfo[0].Version
+	// if u.ServersInfo[0].Version == "DEVELOPMENT.GOGET" {
+	// 	version = "<development>"
+	// }
+	// msg += fmt.Sprintf("Version: %s\n", version)
 
 	// Region
 	if u.Region != "" {
@@ -206,34 +257,34 @@ func (u infoMessage) String() (msg string) {
 		msg += fmt.Sprintf("SQS ARNs: %s\n", sqsARNs)
 	}
 
-	// Incoming/outgoing
-	if v, ok := u.StorageInfo.(xlBackend); ok {
-		upBackends := 0
-		downBackends := 0
-		for _, set := range v.Sets {
-			for i, s := range set {
-				if len(s.Endpoint) > 0 && (strings.Contains(s.Endpoint, u.Addr) || s.Endpoint[i] == '/' || s.Endpoint[i] == '.') {
-					if s.State == "ok" {
-						upBackends++
-					} else {
-						downBackends++
-					}
-				}
-			}
-		}
-		upBackendsString := fmt.Sprintf("%d", upBackends)
-		if downBackends != 0 {
-			upBackendsString = console.Colorize("InfoFail", fmt.Sprintf("%d", upBackends))
-		}
-		msg += fmt.Sprintf("Drives: %s/%d %s\n", upBackendsString,
-			upBackends+downBackends, console.Colorize("Info", "OK"))
-	}
+	// // Incoming/outgoing
+	// if v, ok := u.StorageInfo.(xlBackend); ok {
+	// 	upBackends := 0
+	// 	downBackends := 0
+	// 	for _, set := range v.Sets {
+	// 		for i, s := range set {
+	// 			if len(s.Endpoint) > 0 && (strings.Contains(s.Endpoint, u.Addr) || s.Endpoint[i] == '/' || s.Endpoint[i] == '.') {
+	// 				if s.State == "ok" {
+	// 					upBackends++
+	// 				} else {
+	// 					downBackends++
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	upBackendsString := fmt.Sprintf("%d", upBackends)
+	// 	if downBackends != 0 {
+	// 		upBackendsString = console.Colorize("InfoFail", fmt.Sprintf("%d", upBackends))
+	// 	}
+	// 	msg += fmt.Sprintf("Drives: %s/%d %s\n", upBackendsString,
+	// 		upBackends+downBackends, console.Colorize("Info", "OK"))
+	// }
 	return
 }
 
 // JSON jsonified service status message.
 func (u infoMessage) JSON() string {
-	u.Status = "success"
+	// u.Status = "success"
 	statusJSONBytes, e := json.MarshalIndent(u, "", "    ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
 
@@ -262,25 +313,25 @@ func mainAdminInfo(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	printOfflineErrorMessage := func(err error) {
-		errMsg := ""
-		if err != nil {
-			errMsg = err.Error()
-		}
-		printMsg(infoMessage{
-			Addr:    aliasedURL,
-			Service: "off",
-			Err:     errMsg,
-		})
-	}
+	// printOfflineErrorMessage := func(err error) {
+	// 	errMsg := ""
+	// 	if err != nil {
+	// 		errMsg = err.Error()
+	// 	}
+	// 	printMsg(infoMessage{
+	// 		Addr:    aliasedURL,
+	// 		Service: "off",
+	// 		Err:     errMsg,
+	// 	})
+	// }
 
 	processErr := func(e error) error {
 		switch e.(type) {
 		case *json.SyntaxError:
-			printOfflineErrorMessage(e)
+			println("Error:", e)
 			return e
 		case *url.Error:
-			printOfflineErrorMessage(e)
+			println("Error:", e)
 			return e
 		default:
 			// If the error is not nil and unrecognized, just print it and exit
@@ -289,117 +340,118 @@ func mainAdminInfo(ctx *cli.Context) error {
 		return nil
 	}
 
-	// Fetch info of all servers (cluster or single server)
-	serversInfo, e := client.ServerInfo()
+	// infoMessage, err = client.
+	// 	// Fetch info of all servers (cluster or single server)
+	infoMessage, e := client.ServerAdminInfo()
 	if err := processErr(e); err != nil {
 		// exit immediately if error encountered
 		return nil
 	}
 
-	// Fetch storage info of all servers (cluster or single server)
-	storageInfo, e := client.StorageInfo()
-	if err := processErr(e); err != nil {
-		// exit immediately if error encountered
-		return nil
-	}
+	// 	// Fetch storage info of all servers (cluster or single server)
+	// 	storageInfo, e := client.StorageInfo()
+	// 	if err := processErr(e); err != nil {
+	// 		// exit immediately if error encountered
+	// 		return nil
+	// 	}
 
-	// Fetch info of all CPU loads (all MinIO server instances)
-	cpuLoads, e := client.ServerCPULoadInfo()
-	if err := processErr(e); err != nil {
-		// exit immediately if error encountered
-		return nil
-	}
+	// 	// Fetch info of all CPU loads (all MinIO server instances)
+	// 	cpuLoads, e := client.ServerCPULoadInfo()
+	// 	if err := processErr(e); err != nil {
+	// 		// exit immediately if error encountered
+	// 		return nil
+	// 	}
 
-	// Fetch info on memory usage (all MinIO server instances)
-	memUsages, e := client.ServerMemUsageInfo()
-	if err := processErr(e); err != nil {
-		// exit immediately if error encountered
-		return nil
-	}
+	// 	// Fetch info on memory usage (all MinIO server instances)
+	// 	memUsages, e := client.ServerMemUsageInfo()
+	// 	if err := processErr(e); err != nil {
+	// 		// exit immediately if error encountered
+	// 		return nil
+	// 	}
 
-	// Construct the admin info structure that'll be displayed
-	// to the user
-	infoMessages := []infoMessage{}
+	// 	// Construct the admin info structure that'll be displayed
+	// 	// to the user
+	// 	infoMessages := []infoMessage{}
 
-	// Construct server information
-	srvsInfo := []serverStruct{}
+	// 	// Construct server information
+	// 	srvsInfo := []serverStruct{}
 
-	for i, serverInfo := range serversInfo {
-		srvInfo := serverStruct{}
-		srvInfo.Endpoint = serverInfo.Addr
-		srvInfo.Uptime = serverInfo.Data.Properties.Uptime
-		srvInfo.Version = serverInfo.Data.Properties.Version
-		srvInfo.CommitID = serverInfo.Data.Properties.CommitID
-		srvInfo.CPULoads = cpuLoads[i]
-		srvInfo.MemUsages = memUsages[i]
-		srvInfo.ConnStats = serverInfo.Data.ConnStats
-		srvsInfo = append(srvsInfo, srvInfo)
+	// 	for i, serverInfo := range serversInfo {
+	// 		srvInfo := serverStruct{}
+	// 		srvInfo.Endpoint = serverInfo.Addr
+	// 		srvInfo.Uptime = serverInfo.Data.Properties.Uptime
+	// 		srvInfo.Version = serverInfo.Data.Properties.Version
+	// 		srvInfo.CommitID = serverInfo.Data.Properties.CommitID
+	// 		srvInfo.CPULoads = cpuLoads[i]
+	// 		srvInfo.MemUsages = memUsages[i]
+	// 		srvInfo.ConnStats = serverInfo.Data.ConnStats
+	// 		srvsInfo = append(srvsInfo, srvInfo)
 
-		// Print the error if exists and jump to the next server
-		if serverInfo.Error != "" {
+	// 		// Print the error if exists and jump to the next server
+	// 		if serverInfo.Error != "" {
 
-			infoMessages = append(infoMessages, infoMessage{
-				Service: "on",
-				Addr:    serverInfo.Addr,
-				Err:     serverInfo.Error,
-			})
-			continue
-		}
+	// 			infoMessages = append(infoMessages, infoMessage{
+	// 				Service: "on",
+	// 				Addr:    serverInfo.Addr,
+	// 				Err:     serverInfo.Error,
+	// 			})
+	// 			continue
+	// 		}
 
-		// Construct the backend status
-		var storageInfoStat interface{}
+	// 		// Construct the backend status
+	// 		var storageInfoStat interface{}
 
-		if storageInfo.Backend.Type == madmin.Erasure {
-			storageInfoStat = xlBackend{
-				Type:         erasureType,
-				OnlineDisks:  filterPerNode(serverInfo.Addr, storageInfo.Backend.OnlineDisks),
-				OfflineDisks: filterPerNode(serverInfo.Addr, storageInfo.Backend.OfflineDisks),
-				Sets:         storageInfo.Backend.Sets,
-			}
-		} else {
-			storageInfoStat = fsBackend{
-				Type: fsType,
-			}
-		}
+	// 		if storageInfo.Backend.Type == madmin.Erasure {
+	// 			storageInfoStat = xlBackend{
+	// 				Type:         erasureType,
+	// 				OnlineDisks:  filterPerNode(serverInfo.Addr, storageInfo.Backend.OnlineDisks),
+	// 				OfflineDisks: filterPerNode(serverInfo.Addr, storageInfo.Backend.OfflineDisks),
+	// 				Sets:         storageInfo.Backend.Sets,
+	// 			}
+	// 		} else {
+	// 			storageInfoStat = fsBackend{
+	// 				Type: fsType,
+	// 			}
+	// 		}
 
-		infoMessages = append(infoMessages, (infoMessage{
-			Service:      "on",
-			Addr:         serverInfo.Addr,
-			Region:       serverInfo.Data.Properties.Region,
-			SQSARN:       serverInfo.Data.Properties.SQSARN,
-			DeploymentID: serverInfo.Data.Properties.DeploymentID,
-			Err:          serverInfo.Error,
-			StorageInfo:  storageInfoStat,
-			ServersInfo:  srvsInfo,
-		}))
+	// 		infoMessages = append(infoMessages, infoMessage{
+	// 			Service:      "on",
+	// 			Addr:         serverInfo.Addr,
+	// 			Region:       serverInfo.Data.Properties.Region,
+	// 			SQSARN:       serverInfo.Data.Properties.SQSARN,
+	// 			DeploymentID: serverInfo.Data.Properties.DeploymentID,
+	// 			Err:          serverInfo.Error,
+	// 			StorageInfo:  storageInfoStat,
+	// 			ServersInfo:  srvsInfo,
+	// 		})
 
-	}
+	// 	}
 
-	sort.Stable(&sortInfoWrapper{infoMessages})
-	for _, s := range infoMessages {
-		printMsg(s)
-	}
+	// sort.Stable(&sortInfoWrapper{infoMessage})
+	// for _, s := range infoMessage {
+	printMsg(infoMessage)
+	// 	}
 	return nil
 }
 
-type sortInfoWrapper struct {
-	infos []infoMessage
-}
+// type sortInfoWrapper struct {
+// 	infos []infoMessage
+// }
 
-func (s *sortInfoWrapper) Len() int {
-	return len(s.infos)
-}
+// func (s *sortInfoWrapper) Len() int {
+// 	return len(s.infos)
+// }
 
-func (s *sortInfoWrapper) Swap(i, j int) {
-	if s.infos != nil {
-		s.infos[i], s.infos[j] = s.infos[j], s.infos[i]
-	}
-}
+// func (s *sortInfoWrapper) Swap(i, j int) {
+// 	if s.infos != nil {
+// 		s.infos[i], s.infos[j] = s.infos[j], s.infos[i]
+// 	}
+// }
 
-func (s *sortInfoWrapper) Less(i, j int) bool {
-	if s.infos != nil {
-		return s.infos[i].Addr < s.infos[j].Addr
-	}
-	return false
+// func (s *sortInfoWrapper) Less(i, j int) bool {
+// 	if s.infos != nil {
+// 		return s.infos[i].Addr < s.infos[j].Addr
+// 	}
+// 	return false
 
-}
+// }
