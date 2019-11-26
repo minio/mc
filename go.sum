@@ -435,6 +435,7 @@ github.com/minio/mc v0.0.0-20190401030144-a1355e50e2e8/go.mod h1:rnJByweU1h98rGm
 github.com/minio/mc v0.0.0-20190529152718-f4bb0b8850cb/go.mod h1:GMIQKmYuGc7q10DsJJO8peBXCTRx5itwIHheVo+bKso=
 github.com/minio/mc v0.0.0-20190924013003-643835013047/go.mod h1:/noLXTZkHPtHE7gvyL1J6GPeKkIe20AlFqfTWqRkapY=
 github.com/minio/mc v0.0.0-20191012041914-735aa139b19c/go.mod h1:lICQemBmNHr4lmgmkhWvksOUpyw9Ad+mi2EWMXHXw0U=
+github.com/minio/mc v0.0.0-20191125125701-cf6defe0252f/go.mod h1:lr3g8eHnuUnoajJRNYvFotVrIIb32YjwMMiAdmI504I=
 github.com/minio/minio v0.0.0-20190206103305-fd4e15c11641/go.mod h1:lXcp05uxYaW99ebgI6ZKIGYU7tqZkM5xSsG0xRt4VIU=
 github.com/minio/minio v0.0.0-20190325204105-0250f7de678b/go.mod h1:6ODmvb06uOpNy0IM+3pJRTHaauOMpLJ51jLhipbcifI=
 github.com/minio/minio v0.0.0-20190510004154-ac3b59645e92/go.mod h1:yFbQSwuA61mB/SDurPvsaSydqDyJdfAlBYpMiEe1lz8=
