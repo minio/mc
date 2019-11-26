@@ -112,7 +112,7 @@ func mainAdminConfigDel(ctx *cli.Context) error {
 
 		// Print
 		printMsg(configHelpMessage{
-			Value:   hr,
+			Help:    hr,
 			envOnly: ctx.IsSet("env"),
 		})
 

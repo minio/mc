@@ -101,7 +101,7 @@ func mainAdminConfigGet(ctx *cli.Context) error {
 
 		// Print
 		printMsg(configHelpMessage{
-			Value:   hr,
+			Help:    hr,
 			envOnly: false,
 		})
 
