@@ -28,6 +28,8 @@ var adminConfigCmd = cli.Command{
 		adminConfigSetCmd,
 		adminConfigGetCmd,
 		adminConfigDelCmd,
+		adminConfigImportCmd,
+		adminConfigExportCmd,
 		adminConfigHistoryCmd,
 	},
 	HideHelpCommand: true,
