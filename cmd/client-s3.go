@@ -895,58 +895,6 @@ func (c *s3Client) Put(ctx context.Context, reader io.Reader, size int64, metada
 	}
 	return n, nil
 }
-func (c *s3Client) PutRetention(ctx context.Context, metadata map[string]string) *probe.Error {
-	bucket, object := c.url2BucketAndObject()
-
-	if bucket == "" {
-		return probe.NewError(BucketNameEmpty{})
-	}
-	lockModeStr, ok := metadata[AmzObjectLockMode]
-	lockMode := minio.RetentionMode("")
-	if ok {
-		lockMode = minio.RetentionMode(lockModeStr)
-		delete(metadata, AmzObjectLockMode)
-	}
-
-	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
-	retainUntilDate := timeSentinel
-	if ok {
-		delete(metadata, AmzObjectLockRetainUntilDate)
-		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
-			retainUntilDate = t.UTC()
-		}
-	}
-	opts := minio.PutObjectRetentionOptions{Mode: &lockMode, RetainUntilDate: &retainUntilDate, GovernanceBypass: false}
-	e := c.api.PutObjectRetention(bucket, object, opts)
-	if e != nil {
-		errResponse := minio.ToErrorResponse(e)
-		if errResponse.Code == "AccessDenied" {
-			return probe.NewError(PathInsufficientPermission{
-				Path: c.targetURL.String(),
-			})
-		}
-		if errResponse.Code == "MethodNotAllowed" {
-			return probe.NewError(ObjectAlreadyExists{
-				Object: object,
-			})
-		}
-		if errResponse.Code == "NoSuchBucket" {
-			return probe.NewError(BucketDoesNotExist{
-				Bucket: bucket,
-			})
-		}
-		if errResponse.Code == "InvalidBucketName" {
-			return probe.NewError(BucketInvalid{
-				Bucket: bucket,
-			})
-		}
-		if errResponse.Code == "NoSuchKey" {
-			return probe.NewError(ObjectMissing{})
-		}
-		return probe.NewError(e)
-	}
-	return nil
-}
 
 // Remove incomplete uploads.
 func (c *s3Client) removeIncompleteObjects(bucket string, objectsCh <-chan string) <-chan minio.RemoveObjectError {
@@ -2076,24 +2024,11 @@ func (c *s3Client) SetObjectLockConfig(mode *minio.RetentionMode, validity *uint
 }
 
 // Set object retention for a given object.
-func (c *s3Client) PutObjectRetention(path string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
-	bucket, object := c.splitPath(path)
-	t := UTCNow()
-	if *unit == minio.Years {
-		t = t.AddDate(int(*validity), 0, 0)
-	} else {
-		t = t.AddDate(0, 0, int(*validity))
-	}
-	timeStr := t.Format(time.RFC3339)
+func (c *s3Client) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error {
+	bucket, object := c.url2BucketAndObject()
 
-	t1, e := time.Parse(
-		time.RFC3339,
-		timeStr)
-	if e != nil {
-		return probe.NewError(e)
-	}
 	opts := minio.PutObjectRetentionOptions{
-		RetainUntilDate: &t1,
+		RetainUntilDate: retainUntilDate,
 		Mode:            mode,
 	}
 	err := c.api.PutObjectRetention(bucket, object, opts)

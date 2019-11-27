@@ -26,12 +26,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"golang.org/x/net/http/httpguts"
 	"gopkg.in/h2non/filetype.v1"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	minio "github.com/minio/minio-go/v6"
 	"github.com/minio/minio-go/v6/pkg/encrypt"
 )
 
@@ -217,7 +219,22 @@ func putTargetRetention(ctx context.Context, alias string, urlStr string, metada
 	if err != nil {
 		return err.Trace(alias, urlStr)
 	}
-	if err := targetClnt.PutRetention(ctx, metadata); err != nil {
+	lockModeStr, ok := metadata[AmzObjectLockMode]
+	lockMode := minio.RetentionMode("")
+	if ok {
+		lockMode = minio.RetentionMode(lockModeStr)
+		delete(metadata, AmzObjectLockMode)
+	}
+
+	retainUntilDateStr, ok := metadata[AmzObjectLockRetainUntilDate]
+	retainUntilDate := timeSentinel
+	if ok {
+		delete(metadata, AmzObjectLockRetainUntilDate)
+		if t, e := time.Parse(time.RFC3339, retainUntilDateStr); e == nil {
+			retainUntilDate = t.UTC()
+		}
+	}
+	if err := targetClnt.PutObjectRetention(&lockMode, &retainUntilDate); err != nil {
 		return err.Trace(alias, urlStr)
 	}
 	return nil

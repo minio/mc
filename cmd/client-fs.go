@@ -409,13 +409,6 @@ func (f *fsClient) Put(ctx context.Context, reader io.Reader, size int64, metada
 	return f.put(reader, size, nil, progress)
 }
 
-func (f *fsClient) PutRetention(ctx context.Context, metadata map[string]string) *probe.Error {
-	return probe.NewError(APINotImplemented{
-		API:     "PutRetention",
-		APIType: "filesystem",
-	})
-}
-
 // ShareDownload - share download not implemented for filesystem.
 func (f *fsClient) ShareDownload(expires time.Duration) (string, *probe.Error) {
 	return "", probe.NewError(APINotImplemented{
@@ -1039,7 +1032,7 @@ func (f *fsClient) GetAccessRules() (map[string]string, *probe.Error) {
 }
 
 // Set object retention for a given object.
-func (f *fsClient) PutObjectRetention(path string, mode *minio.RetentionMode, validity *uint, unit *minio.ValidityUnit) *probe.Error {
+func (f *fsClient) PutObjectRetention(mode *minio.RetentionMode, retainUntilDate *time.Time) *probe.Error {
 	return probe.NewError(APINotImplemented{API: "PutObjectRetention", APIType: "filesystem"})
 }
 

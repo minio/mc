@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -84,7 +85,27 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 	if err != nil {
 		fatalIf(err.Trace(), "Cannot parse the provided url.")
 	}
+	alias, _, _ := mustExpandAlias(urlStr)
+	retainUntilDate := func() (time.Time, error) {
+		if validity == nil {
+			return timeSentinel, fmt.Errorf("invalid validity '%v'", validity)
+		}
+		t := UTCNow()
+		if *unit == minio.Years {
+			t = t.AddDate(int(*validity), 0, 0)
+		} else {
+			t = t.AddDate(0, 0, int(*validity))
+		}
+		timeStr := t.Format(time.RFC3339)
 
+		t1, e := time.Parse(
+			time.RFC3339,
+			timeStr)
+		if e != nil {
+			return timeSentinel, e
+		}
+		return t1, nil
+	}
 	validityStr := func() *string {
 		if validity == nil {
 			return nil
@@ -106,7 +127,17 @@ func setRetention(urlStr string, mode *minio.RetentionMode, validity *uint, unit
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
-		probeErr := clnt.PutObjectRetention(content.URL.Path, mode, validity, unit)
+		retainUntil, err := retainUntilDate()
+		if err != nil {
+			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid retention date")
+			continue
+		}
+		newClnt, perr := newClientFromAlias(alias, content.URL.String())
+		if perr != nil {
+			errorIf(content.Err.Trace(clnt.GetURL().String()), "Invalid URL")
+			continue
+		}
+		probeErr := newClnt.PutObjectRetention(mode, &retainUntil)
 		if probeErr != nil {
 			errorsFound = true
 			printMsg(retentionCmdMessage{
