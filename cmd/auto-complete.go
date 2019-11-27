@@ -33,6 +33,28 @@ func (fs fsComplete) Predict(a complete.Args) (prediction []string) {
 	return complete.PredictFiles("*").Predict(a)
 }
 
+func completeAdminConfigKeys(aliasPath string, keyPrefix string) (prediction []string) {
+	// Convert alias/bucket/incompl to alias/bucket/ to list its contents
+	parentDirPath := filepath.Dir(aliasPath) + "/"
+	clnt, err := newAdminClient(parentDirPath)
+	if err != nil {
+		return nil
+	}
+
+	h, e := clnt.HelpConfigKV("", "", false)
+	if e != nil {
+		return nil
+	}
+
+	for _, hkv := range h.KeysHelp {
+		if strings.HasPrefix(hkv.Key, keyPrefix) {
+			prediction = append(prediction, hkv.Key)
+		}
+	}
+
+	return prediction
+}
+
 // Complete S3 path. If the prediction result is only one directory,
 // then recursively scans it. This is needed to satisfy posener/complete
 // (look at posener/complete.PredictFiles)
@@ -51,14 +73,14 @@ func completeS3Path(s3Path string) (prediction []string) {
 	// List dirPath content and only pick elements that corresponds
 	// to the path that we want to complete
 	for content := range clnt.List(false, false, false, DirFirst) {
-		completeS3Path := alias + getKey(content)
+		cmplS3Path := alias + getKey(content)
 		if content.Type.IsDir() {
-			if !strings.HasSuffix(completeS3Path, "/") {
-				completeS3Path += "/"
+			if !strings.HasSuffix(cmplS3Path, "/") {
+				cmplS3Path += "/"
 			}
 		}
-		if strings.HasPrefix(completeS3Path, s3Path) {
-			prediction = append(prediction, completeS3Path)
+		if strings.HasPrefix(cmplS3Path, s3Path) {
+			prediction = append(prediction, cmplS3Path)
 		}
 	}
 
@@ -67,6 +89,43 @@ func completeS3Path(s3Path string) (prediction []string) {
 		prediction = append(prediction, completeS3Path(prediction[0])...)
 	}
 
+	return
+}
+
+type adminConfigComplete struct{}
+
+func (adm adminConfigComplete) Predict(a complete.Args) (prediction []string) {
+	defer func() {
+		sort.Strings(prediction)
+	}()
+
+	loadMcConfig = loadMcConfigFactory()
+	conf, err := loadMcConfig()
+	if err != nil {
+		return
+	}
+
+	// We have already predicted the keys, we are done.
+	if len(a.Completed) == 3 {
+		return
+	}
+
+	arg := a.Last
+	lastArg := a.LastCompleted
+	if _, ok := conf.Hosts[filepath.Clean(a.LastCompleted)]; !ok {
+		if strings.IndexByte(arg, '/') == -1 {
+			// Only predict alias since '/' is not found
+			for alias := range conf.Hosts {
+				if strings.HasPrefix(alias, arg) {
+					prediction = append(prediction, alias+"/")
+				}
+			}
+		} else {
+			prediction = completeAdminConfigKeys(arg, "")
+		}
+	} else {
+		prediction = completeAdminConfigKeys(lastArg, arg)
+	}
 	return
 }
 
@@ -136,6 +195,7 @@ func (al aliasComplete) Predict(a complete.Args) (prediction []string) {
 	return
 }
 
+var adminConfigCompleter = adminConfigComplete{}
 var s3Completer = s3Complete{}
 var aliasCompleter = aliasComplete{}
 var fsCompleter = fsComplete{}
@@ -143,37 +203,60 @@ var fsCompleter = fsComplete{}
 // The list of all commands supported by mc with their mapping
 // with their bash completer function
 var completeCmds = map[string]complete.Predictor{
-	"/ls":     complete.PredictOr(s3Completer, fsCompleter),
-	"/cp":     complete.PredictOr(s3Completer, fsCompleter),
-	"/rm":     complete.PredictOr(s3Completer, fsCompleter),
-	"/rb":     complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
-	"/cat":    complete.PredictOr(s3Completer, fsCompleter),
-	"/head":   complete.PredictOr(s3Completer, fsCompleter),
-	"/diff":   complete.PredictOr(s3Completer, fsCompleter),
-	"/find":   complete.PredictOr(s3Completer, fsCompleter),
-	"/mirror": complete.PredictOr(s3Completer, fsCompleter),
-	"/pipe":   complete.PredictOr(s3Completer, fsCompleter),
-	"/stat":   complete.PredictOr(s3Completer, fsCompleter),
-	"/watch":  complete.PredictOr(s3Completer, fsCompleter),
-	"/policy": complete.PredictOr(s3Completer, fsCompleter),
-	"/tree":   complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
-	"/du":     complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
+	// S3 API level commands
+	"/ls":        complete.PredictOr(s3Completer, fsCompleter),
+	"/cp":        complete.PredictOr(s3Completer, fsCompleter),
+	"/rm":        complete.PredictOr(s3Completer, fsCompleter),
+	"/rb":        complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
+	"/cat":       complete.PredictOr(s3Completer, fsCompleter),
+	"/head":      complete.PredictOr(s3Completer, fsCompleter),
+	"/diff":      complete.PredictOr(s3Completer, fsCompleter),
+	"/find":      complete.PredictOr(s3Completer, fsCompleter),
+	"/mirror":    complete.PredictOr(s3Completer, fsCompleter),
+	"/pipe":      complete.PredictOr(s3Completer, fsCompleter),
+	"/stat":      complete.PredictOr(s3Completer, fsCompleter),
+	"/watch":     complete.PredictOr(s3Completer, fsCompleter),
+	"/policy":    complete.PredictOr(s3Completer, fsCompleter),
+	"/tree":      complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
+	"/du":        complete.PredictOr(s3Complete{deepLevel: 2}, fsCompleter),
+	"/retention": s3Completer,
+	"/sql":       s3Completer,
+	"/lock":      complete.PredictOr(s3Complete{deepLevel: 2}),
+	"/mb":        aliasCompleter,
 
-	"/mb":  aliasCompleter,
-	"/sql": s3Completer,
+	"/event/add":    aliasCompleter,
+	"/event/list":   aliasCompleter,
+	"/event/remove": aliasCompleter,
 
-	"/admin/info":       aliasCompleter,
-	"/admin/heal":       s3Completer,
-	"/admin/credential": aliasCompleter,
+	"/share/download": s3Completer,
+	"/share/list":     nil,
+	"/share/upload":   s3Completer,
 
-	"/admin/config/get": aliasCompleter,
-	"/admin/config/set": aliasCompleter,
+	// Admin API commands MinIO only.
+	"/admin/heal": s3Completer,
 
-	"/admin/service/status":  aliasCompleter,
-	"/admin/service/restart": aliasCompleter,
+	"/admin/info/server": aliasCompleter,
+	"/admin/info/cpu":    aliasCompleter,
+	"/admin/info/mem":    aliasCompleter,
+
+	"/admin/config/get":             adminConfigCompleter,
+	"/admin/config/set":             adminConfigCompleter,
+	"/admin/config/del":             adminConfigCompleter,
+	"/admin/config/import":          aliasCompleter,
+	"/admin/config/export":          aliasCompleter,
+	"/admin/config/history/restore": aliasCompleter,
+	"/admin/config/history/list":    aliasCompleter,
+	"/admin/config/history/clear":   aliasCompleter,
+
+	"/admin/trace":     aliasCompleter,
+	"/admin/console":   aliasCompleter,
+	"/admin/update":    aliasCompleter,
+	"/admin/top/locks": aliasCompleter,
+
 	"/admin/service/stop":    aliasCompleter,
+	"/admin/service/restart": aliasCompleter,
 
-	"/admin/trace": aliasCompleter,
+	"/admin/prometheus/generate": aliasCompleter,
 
 	"/admin/profile/start": aliasCompleter,
 	"/admin/profile/stop":  aliasCompleter,
@@ -198,17 +281,9 @@ var completeCmds = map[string]complete.Predictor{
 	"/admin/group/remove":  aliasCompleter,
 	"/admin/group/info":    aliasCompleter,
 
-	"/event/add":    aliasCompleter,
-	"/event/list":   aliasCompleter,
-	"/event/remove": aliasCompleter,
-
 	"/session/clear":  nil,
 	"/session/list":   nil,
 	"/session/resume": nil,
-
-	"/share/download": nil,
-	"/share/list":     nil,
-	"/share/upload":   nil,
 
 	"/config/host/add":    nil,
 	"/config/host/list":   aliasCompleter,
