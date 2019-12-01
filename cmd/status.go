@@ -87,7 +87,7 @@ func (qs *QuietStatus) AddCounts(v int64) {
 
 // SetTotal sets the total of the progressbar, ignored for quietstatus
 func (qs *QuietStatus) SetTotal(v int64) Status {
-	qs.accounter.Total = v
+	qs.accounter.Set(v)
 	return qs
 }
 
@@ -102,7 +102,7 @@ func (qs *QuietStatus) Get() int64 {
 
 // Total returns the total number of bytes
 func (qs *QuietStatus) Total() int64 {
-	return qs.accounter.Total
+	return qs.accounter.Get()
 }
 
 // Add bytes to current number of bytes
@@ -189,12 +189,12 @@ func (ps *ProgressStatus) Get() int64 {
 
 // Total returns the total number of bytes
 func (ps *ProgressStatus) Total() int64 {
-	return ps.progressBar.Total
+	return ps.progressBar.Get()
 }
 
 // SetTotal sets the total of the progressbar
 func (ps *ProgressStatus) SetTotal(v int64) Status {
-	ps.progressBar.Total = v
+	ps.progressBar.SetTotal(v)
 	return ps
 }
 

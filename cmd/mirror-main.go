@@ -267,6 +267,7 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 	// and accounting readers under relevant conditions.
 	if mj.isFake {
 		mj.status.Add(sURLs.SourceContent.Size)
+		mj.status.Update()
 		return sURLs.WithError(nil)
 	}
 
@@ -440,7 +441,8 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					if shouldQueue || mj.isOverwrite {
 						// adjust total, because we want to show progress of
 						// the item still queued to be copied.
-						mj.status.SetTotal(mj.status.Get() + sourceContent.Size).Update()
+						mj.status.Add(sourceContent.Size)
+						mj.status.SetTotal(mj.status.Get()).Update()
 						mj.status.AddCounts(1)
 						mirrorURL.TotalSize = mj.status.Get()
 						mirrorURL.TotalCount = mj.status.GetCounts()
@@ -470,7 +472,8 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					mirrorURL.SourceContent.Size = event.Size
 					// adjust total, because we want to show progress
 					// of the itemj stiil queued to be copied.
-					mj.status.SetTotal(mj.status.Get() + mirrorURL.SourceContent.Size).Update()
+					mj.status.Add(mirrorURL.SourceContent.Size)
+					mj.status.SetTotal(mj.status.Get()).Update()
 					mj.status.AddCounts(1)
 					mirrorURL.TotalSize = mj.status.Get()
 					mirrorURL.TotalCount = mj.status.GetCounts()
@@ -541,8 +544,9 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				}
 			}
 
-			mj.status.AddCounts(1)
 			mj.status.Add(sURLs.SourceContent.Size)
+			mj.status.SetTotal(mj.status.Get()).Update()
+			mj.status.AddCounts(1)
 
 			// Save total count.
 			sURLs.TotalCount = mj.status.GetCounts()
