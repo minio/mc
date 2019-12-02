@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
@@ -53,7 +54,24 @@ type configExportMessage struct {
 
 // String colorized service status message.
 func (u configExportMessage) String() string {
-	return u.Value.String()
+	var s strings.Builder
+	count := u.Value.Count()
+	// Print all "on" states entries
+	for _, targetKV := range u.Value {
+		kv := targetKV.KVS
+		count--
+		if kv.Get(madmin.StateKey) == madmin.StateOff {
+			s.WriteString(madmin.KvComment)
+			s.WriteString(madmin.KvSpaceSeparator)
+		}
+		s.WriteString(targetKV.SubSystem)
+		s.WriteString(madmin.KvSpaceSeparator)
+		s.WriteString(kv.String())
+		if len(u.Value) > 1 && count > 0 {
+			s.WriteString(madmin.KvNewline)
+		}
+	}
+	return s.String()
 }
 
 // JSON jsonified service status Message message.
