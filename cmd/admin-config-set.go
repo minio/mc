@@ -30,7 +30,7 @@ import (
 
 var adminConfigSetCmd = cli.Command{
 	Name:   "set",
-	Usage:  "set key to MinIO server/cluster.",
+	Usage:  "interactively set a config key parameters",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigSet,
 	Flags:  append(adminConfigEnvFlags, globalFlags...),

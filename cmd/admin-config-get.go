@@ -27,7 +27,7 @@ import (
 
 var adminConfigGetCmd = cli.Command{
 	Name:   "get",
-	Usage:  "get config of a MinIO server/cluster",
+	Usage:  "interactively retrieve a config key parameters",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigGet,
 	Flags:  globalFlags,

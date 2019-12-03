@@ -18,16 +18,14 @@ package cmd
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var adminConfigExportCmd = cli.Command{
 	Name:   "export",
-	Usage:  "export config of a MinIO server/cluster",
+	Usage:  "export all config keys to STDOUT",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigExport,
 	Flags:  globalFlags,
@@ -48,30 +46,13 @@ EXAMPLES:
 
 // configExportMessage container to hold locks information.
 type configExportMessage struct {
-	Status string         `json:"status"`
-	Value  madmin.Targets `json:"value"`
+	Status string `json:"status"`
+	Value  []byte `json:"value"`
 }
 
 // String colorized service status message.
 func (u configExportMessage) String() string {
-	var s strings.Builder
-	count := u.Value.Count()
-	// Print all "on" states entries
-	for _, targetKV := range u.Value {
-		kv := targetKV.KVS
-		count--
-		if kv.Get(madmin.StateKey) == madmin.StateOff {
-			s.WriteString(madmin.KvComment)
-			s.WriteString(madmin.KvSpaceSeparator)
-		}
-		s.WriteString(targetKV.SubSystem)
-		s.WriteString(madmin.KvSpaceSeparator)
-		s.WriteString(kv.String())
-		if len(u.Value) > 1 && count > 0 {
-			s.WriteString(madmin.KvNewline)
-		}
-	}
-	return s.String()
+	return string(u.Value)
 }
 
 // JSON jsonified service status Message message.
@@ -106,12 +87,9 @@ func mainAdminConfigExport(ctx *cli.Context) error {
 	buf, e := client.GetConfig()
 	fatalIf(probe.NewError(e), "Cannot get server config")
 
-	tgts, e := madmin.ParseSubSysTarget(buf)
-	fatalIf(probe.NewError(e), "Cannot get server config")
-
 	// Print
 	printMsg(configExportMessage{
-		Value: tgts,
+		Value: buf,
 	})
 
 	return nil

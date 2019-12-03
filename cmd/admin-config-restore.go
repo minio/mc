@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/fatih/color"
 	"github.com/minio/cli"
 	json "github.com/minio/mc/pkg/colorjson"
@@ -24,11 +26,11 @@ import (
 	"github.com/minio/mc/pkg/probe"
 )
 
-var adminConfigHistoryClearCmd = cli.Command{
-	Name:   "clear",
-	Usage:  "clear a history key value on MinIO server",
+var adminConfigRestoreCmd = cli.Command{
+	Name:   "restore",
+	Usage:  "rollback back changes to a specific config history",
 	Before: setGlobalsFromContext,
-	Action: mainAdminConfigHistoryClear,
+	Action: mainAdminConfigRestore,
 	Flags:  globalFlags,
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -40,27 +42,29 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Clear a history key value on MinIO server.
+  1. Restore 'restore-id' history key value on MinIO server.
      {{.Prompt}} {{.HelpName}} play/ <restore-id>
 `,
 }
 
-// configHistoryClearMessage container to hold locks information.
-type configHistoryClearMessage struct {
-	Status    string `json:"status"`
-	RestoreID string `json:"restoreID"`
+// configRestoreMessage container to hold locks information.
+type configRestoreMessage struct {
+	Status      string `json:"status"`
+	RestoreID   string `json:"restoreID"`
+	targetAlias string
 }
 
 // String colorized service status message.
-func (u configHistoryClearMessage) String() string {
-	if u.RestoreID == "all" {
-		return console.Colorize("ConfigHistoryClearMessage", "Cleared all keys successfully.")
-	}
-	return console.Colorize("ConfigHistoryClearMessage", "Cleared "+u.RestoreID+" successfully.")
+func (u configRestoreMessage) String() (msg string) {
+	suggestion := fmt.Sprintf("mc admin service restart %s", u.targetAlias)
+	msg += console.Colorize("ConfigRestoreMessage",
+		fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
+	msg += console.Colorize("ConfigRestoreMessage", "Restored "+u.RestoreID+" kv successfully.")
+	return msg
 }
 
 // JSON jsonified service status Message message.
-func (u configHistoryClearMessage) JSON() string {
+func (u configRestoreMessage) JSON() string {
 	u.Status = "success"
 	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -68,18 +72,18 @@ func (u configHistoryClearMessage) JSON() string {
 	return string(statusJSONBytes)
 }
 
-// checkAdminConfigHistoryClearSyntax - validate all the passed arguments
-func checkAdminConfigHistoryClearSyntax(ctx *cli.Context) {
+// checkAdminConfigRestoreSyntax - validate all the passed arguments
+func checkAdminConfigRestoreSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() || len(ctx.Args()) > 2 {
-		cli.ShowCommandHelpAndExit(ctx, "clear", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "restore", 1) // last argument is exit code
 	}
 }
 
-func mainAdminConfigHistoryClear(ctx *cli.Context) error {
+func mainAdminConfigRestore(ctx *cli.Context) error {
 
-	checkAdminConfigHistoryClearSyntax(ctx)
+	checkAdminConfigRestoreSyntax(ctx)
 
-	console.SetColor("ConfigHistoryClearMessage", color.New(color.FgGreen))
+	console.SetColor("ConfigRestoreMessage", color.New(color.FgGreen))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -89,11 +93,13 @@ func mainAdminConfigHistoryClear(ctx *cli.Context) error {
 	client, err := newAdminClient(aliasedURL)
 	fatalIf(err, "Unable to initialize admin connection.")
 
-	fatalIf(probe.NewError(client.ClearConfigHistoryKV(args.Get(1))), "Cannot clear server configuration.")
+	// Call get config API
+	fatalIf(probe.NewError(client.RestoreConfigHistoryKV(args.Get(1))), "Cannot restore server configuration.")
 
 	// Print
-	printMsg(configHistoryClearMessage{
-		RestoreID: args.Get(1),
+	printMsg(configRestoreMessage{
+		RestoreID:   args.Get(1),
+		targetAlias: aliasedURL,
 	})
 
 	return nil
