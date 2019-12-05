@@ -26,7 +26,6 @@ import (
 	json "github.com/minio/mc/pkg/colorjson"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/mc/pkg/probe"
-	"github.com/minio/minio/pkg/madmin"
 )
 
 var historyListFlags = []cli.Flag{
@@ -74,9 +73,9 @@ Date: {{.CreateTime}}
 var HistoryTemplate = template.Must(template.New("history-list").Funcs(funcMap).Parse(History))
 
 type historyEntry struct {
-	RestoreID  string         `json:"restoreId"`
-	CreateTime string         `json:"createTime"`
-	Targets    madmin.Targets `json:"targets"`
+	RestoreID  string `json:"restoreId"`
+	CreateTime string `json:"createTime"`
+	Targets    string `json:"targets"`
 }
 
 // configHistoryMessage container to hold locks information.
@@ -144,8 +143,7 @@ func mainAdminConfigHistory(ctx *cli.Context) error {
 			RestoreID:  chEntry.RestoreID,
 			CreateTime: chEntry.CreateTimeFormatted(),
 		}
-		hentries[i].Targets, e = madmin.ParseSubSysTarget([]byte(chEntry.Data))
-		fatalIf(probe.NewError(e), "Unable to parse invalid history entry.")
+		hentries[i].Targets = chEntry.Data
 	}
 
 	// Print
