@@ -20,17 +20,18 @@ import "github.com/minio/cli"
 
 var adminConfigCmd = cli.Command{
 	Name:   "config",
-	Usage:  "manage MinIO configuration",
+	Usage:  "manage MinIO server configuration",
 	Action: mainAdminConfig,
 	Before: setGlobalsFromContext,
 	Flags:  globalFlags,
 	Subcommands: []cli.Command{
-		adminConfigSetCmd,
 		adminConfigGetCmd,
-		adminConfigDelCmd,
-		adminConfigImportCmd,
-		adminConfigExportCmd,
+		adminConfigSetCmd,
+		adminConfigResetCmd,
 		adminConfigHistoryCmd,
+		adminConfigRestoreCmd,
+		adminConfigExportCmd,
+		adminConfigImportCmd,
 	},
 	HideHelpCommand: true,
 }

@@ -29,7 +29,7 @@ import (
 
 var adminConfigImportCmd = cli.Command{
 	Name:   "import",
-	Usage:  "import a config to MinIO server/cluster",
+	Usage:  "import multiple config keys from STDIN",
 	Before: setGlobalsFromContext,
 	Action: mainAdminConfigImport,
 	Flags:  globalFlags,

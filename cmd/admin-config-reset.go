@@ -34,11 +34,11 @@ var adminConfigEnvFlags = []cli.Flag{
 	},
 }
 
-var adminConfigDelCmd = cli.Command{
-	Name:   "del",
-	Usage:  "delete a key from MinIO server/cluster.",
+var adminConfigResetCmd = cli.Command{
+	Name:   "reset",
+	Usage:  "interactively reset a config key parameters",
 	Before: setGlobalsFromContext,
-	Action: mainAdminConfigDel,
+	Action: mainAdminConfigReset,
 	Flags:  append(adminConfigEnvFlags, globalFlags...),
 	CustomHelpTemplate: `NAME:
   {{.HelpName}} - {{.Usage}}
@@ -55,24 +55,24 @@ EXAMPLES:
 `,
 }
 
-// configDelMessage container to hold locks information.
-type configDelMessage struct {
+// configResetMessage container to hold locks information.
+type configResetMessage struct {
 	Status      string `json:"status"`
 	targetAlias string
 }
 
 // String colorized service status message.
-func (u configDelMessage) String() (msg string) {
-	msg += console.Colorize("DelConfigSuccess",
-		"Deleting key has been successful.\n")
+func (u configResetMessage) String() (msg string) {
+	msg += console.Colorize("ResetConfigSuccess",
+		"Reseteting key has been successful.\n")
 	suggestion := fmt.Sprintf("mc admin service restart %s", u.targetAlias)
-	msg += console.Colorize("DelConfigSuccess",
+	msg += console.Colorize("ResetConfigSuccess",
 		fmt.Sprintf("Please restart your server with `%s`.\n", suggestion))
 	return
 }
 
 // JSON jsonified service status message.
-func (u configDelMessage) JSON() string {
+func (u configResetMessage) JSON() string {
 	u.Status = "success"
 	statusJSONBytes, e := json.MarshalIndent(u, "", " ")
 	fatalIf(probe.NewError(e), "Unable to marshal into JSON.")
@@ -80,22 +80,22 @@ func (u configDelMessage) JSON() string {
 	return string(statusJSONBytes)
 }
 
-// checkAdminConfigDelSyntax - validate all the passed arguments
-func checkAdminConfigDelSyntax(ctx *cli.Context) {
+// checkAdminConfigResetSyntax - validate all the passed arguments
+func checkAdminConfigResetSyntax(ctx *cli.Context) {
 	if !ctx.Args().Present() {
-		cli.ShowCommandHelpAndExit(ctx, "del", 1) // last argument is exit code
+		cli.ShowCommandHelpAndExit(ctx, "reset", 1) // last argument is exit code
 	}
 }
 
 // main config set function
-func mainAdminConfigDel(ctx *cli.Context) error {
+func mainAdminConfigReset(ctx *cli.Context) error {
 
 	// Check command arguments
-	checkAdminConfigDelSyntax(ctx)
+	checkAdminConfigResetSyntax(ctx)
 
-	// Del color preference of command outputs
-	console.SetColor("DelConfigSuccess", color.New(color.FgGreen, color.Bold))
-	console.SetColor("DelConfigFailure", color.New(color.FgRed, color.Bold))
+	// Reset color preference of command outputs
+	console.SetColor("ResetConfigSuccess", color.New(color.FgGreen, color.Bold))
+	console.SetColor("ResetConfigFailure", color.New(color.FgRed, color.Bold))
 
 	// Get the alias parameter from cli
 	args := ctx.Args()
@@ -119,13 +119,13 @@ func mainAdminConfigDel(ctx *cli.Context) error {
 		return nil
 	}
 
-	// Call del config API
+	// Call reset config API
 	input := strings.Join(args.Tail(), " ")
 	fatalIf(probe.NewError(client.DelConfigKV(input)),
-		"Cannot delete '%s' on the server", input)
+		"Cannot reset '%s' on the server", input)
 
 	// Print set config result
-	printMsg(configDelMessage{
+	printMsg(configResetMessage{
 		targetAlias: aliasedURL,
 	})
 
