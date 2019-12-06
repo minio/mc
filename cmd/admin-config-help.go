@@ -29,7 +29,7 @@ import (
 
 // HelpTmpl template used by all sub-systems
 const HelpTmpl = `{{if ne .SubSys ""}}{{colorBlueBold "KEY:"}}
-{{if .MultipleTargets}}{{colorYellowBold .SubSys}}[:target]{{"\t"}}{{else}}{{colorYellowBold .SubSys}}{{"\t"}}{{end}}{{.Description}}
+{{if .MultipleTargets}}{{colorYellowBold .SubSys}}[:name]{{"\t"}}{{else}}{{colorYellowBold .SubSys}}{{"\t"}}{{end}}{{.Description}}
 
 {{colorBlueBold "ARGS:"}}{{range .KeysHelp}}
 {{if .Optional}}{{colorYellowBold .Key}}{{else}}{{colorRedBold .Key}}*{{end}}{{"\t"}}({{.Type}}){{"\t"}}{{.Description}}{{end}}{{else}}{{colorBlueBold "KEYS:"}}{{range .KeysHelp}}

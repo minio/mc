@@ -50,8 +50,8 @@ FLAGS:
   {{range .VisibleFlags}}{{.}}
   {{end}}
 EXAMPLES:
-  1. Remove MQTT notifcation target 'target1' on MinIO server.
-     {{.Prompt}} {{.HelpName}} myminio/ notify_mqtt:target1
+  1. Reset MQTT notifcation target 'name1' settings to default values.
+     {{.Prompt}} {{.HelpName}} myminio/ notify_mqtt:name1
 `,
 }
 
