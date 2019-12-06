@@ -441,8 +441,8 @@ github.com/minio/minio v0.0.0-20190510004154-ac3b59645e92/go.mod h1:yFbQSwuA61mB
 github.com/minio/minio v0.0.0-20190903181048-8a71b0ec5a72/go.mod h1:H8OUaOxwJIALXHlfMpk2ESvk81dW+F7tSnrZi7rln/k=
 github.com/minio/minio v0.0.0-20190927193314-1c5b05c130fa/go.mod h1:47wx8w7yKTFAPw/hbmYPL4prsPivh6QuUqjTykftGgg=
 github.com/minio/minio v0.0.0-20191001201215-ff5bf519522f/go.mod h1:+vpJpzImdz4NCQto3r6/vF/24jWeEs5i3lsDfRmEcl4=
-github.com/minio/minio v0.0.0-20191204233237-c9940d8c3f1f h1:0Gm4h5JyOTpOfA8RRWdmE5ZGwCVp/TynsCdSt1BF1Mc=
-github.com/minio/minio v0.0.0-20191204233237-c9940d8c3f1f/go.mod h1:3bY3lz9Uby83qOp5RsnPu4JJwiskVK088E7F4CRSdxI=
+github.com/minio/minio v0.0.0-20191205124742-d8e3de0cae46 h1:6Oyny/iVD88fCrp3g4WbBjQJRdnzPZZO8aYI8tdONkY=
+github.com/minio/minio v0.0.0-20191205124742-d8e3de0cae46/go.mod h1:3bY3lz9Uby83qOp5RsnPu4JJwiskVK088E7F4CRSdxI=
 github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d h1:gptD0/Hnam7h4Iq9D/33fscRpHfzOOUqUbH2nPw9HcU=
 github.com/minio/minio-go v0.0.0-20190227180923-59af836a7e6d/go.mod h1:/haSOWG8hQNx2+JOfLJ9GKp61EAmgPwRVw/Sac0NzaM=
 github.com/minio/minio-go v0.0.0-20190313212832-5d20267d970d/go.mod h1:/haSOWG8hQNx2+JOfLJ9GKp61EAmgPwRVw/Sac0NzaM=
