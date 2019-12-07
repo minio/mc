@@ -157,9 +157,9 @@ EXAMPLES:
 
   13. Update 'Cache-Control' header on existing objects.
       {{.Prompt}} {{.HelpName}} --attr Cache-Control=max-age=90000,min-fresh=9000 myminio/video-files myminio/video-files
-	  
+
   14. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
-      {{.Prompt}} {{.HelpName}} -a backup/ s3/archive 	  
+      {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
 `,
 }
 
@@ -266,7 +266,9 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 	//s For a fake mirror make sure we update respective progress bars
 	// and accounting readers under relevant conditions.
 	if mj.isFake {
-		mj.status.Add(sURLs.SourceContent.Size)
+		if sURLs.SourceContent != nil {
+			mj.status.Add(sURLs.SourceContent.Size)
+		}
 		mj.status.Update()
 		return sURLs.WithError(nil)
 	}
@@ -544,7 +546,9 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				}
 			}
 
-			mj.status.Add(sURLs.SourceContent.Size)
+			if sURLs.SourceContent != nil {
+				mj.status.Add(sURLs.SourceContent.Size)
+			}
 			mj.status.SetTotal(mj.status.Get()).Update()
 			mj.status.AddCounts(1)
 
