@@ -530,9 +530,8 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				return
 			}
 			if sURLs.Error != nil {
-				stopParallel()
 				mj.statusCh <- sURLs
-				return
+				continue
 			}
 
 			if sURLs.SourceContent != nil {
