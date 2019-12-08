@@ -266,11 +266,11 @@ func doFind(ctx *findContext) error {
 			case PathInsufficientPermission:
 				errorIf(content.Err.Trace(ctx.clnt.GetURL().String()), "Unable to list folder.")
 				continue
-			case ObjectOnGlacier:
-				errorIf(content.Err.Trace(ctx.clnt.GetURL().String()), "")
-				continue
 			}
 			fatalIf(content.Err.Trace(ctx.clnt.GetURL().String()), "Unable to list folder.")
+			continue
+		}
+		if content.StorageClass == s3StorageClassGlacier {
 			continue
 		}
 

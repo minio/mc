@@ -90,6 +90,7 @@ type clientContent struct {
 	Time              time.Time
 	Size              int64
 	Type              os.FileMode
+	StorageClass      string
 	Metadata          map[string]string
 	UserMetadata      map[string]string
 	ETag              string

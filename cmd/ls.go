@@ -128,14 +128,16 @@ func doList(clnt Client, isRecursive, isIncomplete bool) error {
 			case PathInsufficientPermission:
 				errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 				continue
-			case ObjectOnGlacier:
-				errorIf(content.Err.Trace(clnt.GetURL().String()), "")
-				continue
 			}
 			errorIf(content.Err.Trace(clnt.GetURL().String()), "Unable to list folder.")
 			cErr = exitStatus(globalErrorExitStatus) // Set the exit status.
 			continue
 		}
+
+		if content.StorageClass == s3StorageClassGlacier {
+			continue
+		}
+
 		// Convert any os specific delimiters to "/".
 		contentURL := filepath.ToSlash(content.URL.Path)
 		prefixPath = filepath.ToSlash(prefixPath)
