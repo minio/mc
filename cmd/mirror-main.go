@@ -67,6 +67,10 @@ var (
 			Name:  "preserve, a",
 			Usage: "preserve file(s)/object(s) attributes and bucket policy rules on target bucket(s)",
 		},
+		cli.StringFlag{
+			Name:  "multi-master",
+			Usage: "tag for multi master mode",
+		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
 			Usage: "exclude object(s) that match specified object name pattern",
@@ -163,6 +167,8 @@ EXAMPLES:
 `,
 }
 
+const uaMirrorAppName = "mc-mirror"
+
 type mirrorJob struct {
 
 	// the channel to trap SIGKILL signals
@@ -198,6 +204,9 @@ type mirrorJob struct {
 
 	excludeOptions []string
 	encKeyDB       map[string][]prefixSSEPair
+
+	multiMasterEnable bool
+	multiMasterSTag   string
 }
 
 // mirrorMessage container for file mirror messages
@@ -236,7 +245,7 @@ func (mj *mirrorJob) doRemove(sURLs URLs) URLs {
 	if pErr != nil {
 		return sURLs.WithError(pErr)
 	}
-
+	clnt.AddUserAgent(uaMirrorAppName, Version)
 	contentCh := make(chan *clientContent, 1)
 	contentCh <- &clientContent{URL: *newClientURL(sURLs.TargetContent.URL.Path)}
 	close(contentCh)
@@ -286,6 +295,19 @@ func (mj *mirrorJob) doMirror(ctx context.Context, cancelMirror context.CancelFu
 
 	if mj.storageClass != "" {
 		sURLs.TargetContent.Metadata["X-Amz-Storage-Class"] = mj.storageClass
+	}
+
+	// Set multiMasterETagKey for the target.
+	if sURLs.SourceContent.UserMetadata[multiMasterETagKey] != "" {
+		sURLs.TargetContent.Metadata[multiMasterETagKey] = sURLs.SourceContent.UserMetadata[multiMasterETagKey]
+	} else {
+		sURLs.TargetContent.Metadata[multiMasterETagKey] = sURLs.SourceContent.ETag
+	}
+
+	if sURLs.SourceContent.UserMetadata[multiMasterSTagKey] != "" {
+		sURLs.TargetContent.Metadata[multiMasterSTagKey] = sURLs.SourceContent.UserMetadata[multiMasterSTagKey]
+	} else {
+		sURLs.TargetContent.Metadata[multiMasterSTagKey] = mj.multiMasterSTag
 	}
 
 	if mj.isPreserve {
@@ -404,8 +426,6 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 
 			if (event.Type == EventCreate) ||
 				(event.Type == EventCreatePutRetention) {
-				// we are checking if a destination file exists now, and if we only
-				// overwrite it when force is enabled.
 				mirrorURL := URLs{
 					SourceAlias:   sourceAlias,
 					SourceContent: &clientContent{URL: *sourceURL, Retention: event.Type == EventCreatePutRetention},
@@ -413,19 +433,27 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					TargetContent: &clientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
 				}
+				sourceClient, err := newClient(aliasedPath)
+				if err != nil {
+					// cannot create sourceclient
+					mj.statusCh <- mirrorURL.WithError(err)
+					continue
+				}
+				// we are checking if a destination file exists now, and if we only
+				// overwrite it when force is enabled.
+				sourceContent, err := sourceClient.Stat(false, true, false, srcSSE)
+				if err != nil {
+					// source doesn't exist anymore
+					mj.statusCh <- mirrorURL.WithError(err)
+					continue
+				}
+				if sourceContent.Metadata[multiMasterETagKey] != "" {
+					// If source has multiMasterETagKey, it means that the object was uplooaded by "mc mirror"
+					// hence ignore the event to avoid copying it.
+					continue
+				}
+				mirrorURL.SourceContent = sourceContent
 				if event.Size == 0 {
-					sourceClient, err := newClient(aliasedPath)
-					if err != nil {
-						// cannot create sourceclient
-						mj.statusCh <- mirrorURL.WithError(err)
-						continue
-					}
-					sourceContent, err := sourceClient.Stat(false, false, false, srcSSE)
-					if err != nil {
-						// source doesn't exist anymore
-						mj.statusCh <- mirrorURL.WithError(err)
-						continue
-					}
 					targetClient, err := newClient(targetPath)
 					if err != nil {
 						// cannot create targetclient
@@ -440,7 +468,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 						} // doesn't exist
 						shouldQueue = true
 					}
-					if shouldQueue || mj.isOverwrite {
+					if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
 						// adjust total, because we want to show progress of
 						// the item still queued to be copied.
 						mj.status.Add(sourceContent.Size)
@@ -453,7 +481,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					continue
 				}
 				shouldQueue := false
-				if !mj.isOverwrite {
+				if !mj.isOverwrite && !mj.multiMasterEnable {
 					targetClient, err := newClient(targetPath)
 					if err != nil {
 						// cannot create targetclient
@@ -470,7 +498,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					} // doesn't exist
 					shouldQueue = true
 				}
-				if shouldQueue || mj.isOverwrite {
+				if shouldQueue || mj.isOverwrite || mj.multiMasterEnable {
 					mirrorURL.SourceContent.Size = event.Size
 					// adjust total, because we want to show progress
 					// of the itemj stiil queued to be copied.
@@ -482,6 +510,9 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					mj.statusCh <- mj.doMirror(ctx, cancelMirror, mirrorURL)
 				}
 			} else if event.Type == EventRemove {
+				if strings.Contains(event.UserAgent, uaMirrorAppName) {
+					continue
+				}
 				mirrorURL := URLs{
 					SourceAlias:   sourceAlias,
 					SourceContent: nil,
@@ -491,7 +522,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 				}
 				mirrorURL.TotalCount = mj.status.GetCounts()
 				mirrorURL.TotalSize = mj.status.Get()
-				if mirrorURL.TargetContent != nil && mj.isRemove {
+				if mirrorURL.TargetContent != nil && (mj.isRemove || mj.multiMasterEnable) {
 					mj.statusCh <- mj.doRemove(mirrorURL)
 				}
 			}
@@ -603,7 +634,10 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	return mj.monitorMirrorStatus()
 }
 
-func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve bool, excludeOptions []string, olderThan, newerThan string, storageClass string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
+func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch, isPreserve, multiMasterEnable bool, excludeOptions []string, olderThan, newerThan string, storageClass string, multiMasterSTag string, userMetadata map[string]string, encKeyDB map[string][]prefixSSEPair) *mirrorJob {
+	if multiMasterEnable {
+		isPreserve = true
+	}
 	mj := mirrorJob{
 		trapCh: signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
 		m:      new(sync.Mutex),
@@ -611,19 +645,21 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 		sourceURL: srcURL,
 		targetURL: dstURL,
 
-		isFake:         isFake,
-		isRemove:       isRemove,
-		isOverwrite:    isOverwrite,
-		isWatch:        isWatch,
-		isPreserve:     isPreserve,
-		excludeOptions: excludeOptions,
-		olderThan:      olderThan,
-		newerThan:      newerThan,
-		storageClass:   storageClass,
-		userMetadata:   userMetadata,
-		encKeyDB:       encKeyDB,
-		statusCh:       make(chan URLs),
-		watcher:        NewWatcher(UTCNow()),
+		isFake:            isFake,
+		isRemove:          isRemove,
+		isOverwrite:       isOverwrite,
+		isWatch:           isWatch,
+		isPreserve:        isPreserve,
+		excludeOptions:    excludeOptions,
+		olderThan:         olderThan,
+		newerThan:         newerThan,
+		storageClass:      storageClass,
+		userMetadata:      userMetadata,
+		encKeyDB:          encKeyDB,
+		statusCh:          make(chan URLs),
+		watcher:           NewWatcher(UTCNow()),
+		multiMasterEnable: multiMasterEnable,
+		multiMasterSTag:   multiMasterSTag,
 	}
 
 	mj.parallel, mj.queueCh = newParallelManager(mj.statusCh)
@@ -702,6 +738,9 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		fatalIf(err, "Unable to initialize `"+dstURL+"`.")
 	}
 
+	multiMasterSTag := ctx.String("multi-master")
+	multiMasterEnable := multiMasterSTag != ""
+
 	// Create a new mirror job and execute it
 	mj := newMirrorJob(srcURL, dstURL,
 		ctx.Bool("fake"),
@@ -709,10 +748,12 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		isOverwrite,
 		ctx.Bool("watch"),
 		ctx.Bool("a"),
+		multiMasterEnable,
 		ctx.StringSlice("exclude"),
 		ctx.String("older-than"),
 		ctx.String("newer-than"),
 		ctx.String("storage-class"),
+		multiMasterSTag,
 		userMetaMap,
 		encKeyDB)
 
