@@ -1186,3 +1186,6 @@ func (f *fsClient) fsStat(isIncomplete bool) (os.FileInfo, *probe.Error) {
 	}
 	return st, nil
 }
+
+func (f *fsClient) AddUserAgent(app, version string) {
+}

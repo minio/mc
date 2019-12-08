@@ -82,6 +82,8 @@ type Client interface {
 
 	// GetURL returns back internal url
 	GetURL() clientURL
+
+	AddUserAgent(app, version string)
 }
 
 // Content container for content metadata

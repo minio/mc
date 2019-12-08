@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -34,6 +33,7 @@ type differType int
 
 const (
 	differInNone     differType = iota // does not differ
+	differInETag                       // differs in ETag
 	differInSize                       // differs in size
 	differInMetadata                   // differs in metadata
 	differInType                       // differs in type, exfile/directory
@@ -57,6 +57,43 @@ func (d differType) String() string {
 		return "only-in-second"
 	}
 	return "unknown"
+}
+
+const multiMasterETagKey = "X-Amz-Meta-Mm-Etag"
+const multiMasterSTagKey = "X-Amz-Meta-Mm-Stag"
+
+func eTagMatch(src, tgt *clientContent) bool {
+	if tgt.UserMetadata[multiMasterETagKey] != "" {
+		if tgt.UserMetadata[multiMasterETagKey] == src.UserMetadata[multiMasterETagKey] || tgt.UserMetadata[multiMasterETagKey] == src.ETag {
+			return true
+		}
+	}
+	if src.UserMetadata[multiMasterETagKey] != "" {
+		if src.UserMetadata[multiMasterETagKey] == tgt.UserMetadata[multiMasterETagKey] || src.UserMetadata[multiMasterETagKey] == tgt.ETag {
+			return true
+		}
+	}
+	return src.ETag == tgt.ETag
+}
+
+func metadataEqual(m1, m2 map[string]string) bool {
+	for k, v := range m1 {
+		if k == multiMasterETagKey || k == multiMasterSTagKey {
+			continue
+		}
+		if m2[k] != v {
+			return false
+		}
+	}
+	for k, v := range m2 {
+		if k == multiMasterETagKey || k == multiMasterSTagKey {
+			continue
+		}
+		if m1[k] != v {
+			return false
+		}
+	}
+	return true
 }
 
 func objectDifference(sourceClnt, targetClnt Client, sourceURL, targetURL string, isMetadata bool) (diffCh chan diffMessage) {
@@ -168,7 +205,21 @@ func differenceInternal(sourceClnt, targetClnt Client, sourceURL, targetURL stri
 				}
 				continue
 			}
-			if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
+			if eTagMatch(srcCtnt, tgtCtnt) {
+				// If ETag matches, only thing that can differ is metadata.
+				if isMetadata &&
+					!metadataEqual(srcCtnt.UserMetadata, tgtCtnt.UserMetadata) &&
+					!metadataEqual(srcCtnt.Metadata, tgtCtnt.Metadata) {
+					// Regular files user requesting additional metadata to same file.
+					diffCh <- diffMessage{
+						FirstURL:      srcCtnt.URL.String(),
+						SecondURL:     tgtCtnt.URL.String(),
+						Diff:          differInMetadata,
+						firstContent:  srcCtnt,
+						secondContent: tgtCtnt,
+					}
+				}
+			} else if (srcType.IsRegular() && tgtType.IsRegular()) && srcSize != tgtSize {
 				// Regular files differing in size.
 				diffCh <- diffMessage{
 					FirstURL:      srcCtnt.URL.String(),
@@ -178,8 +229,8 @@ func differenceInternal(sourceClnt, targetClnt Client, sourceURL, targetURL stri
 					secondContent: tgtCtnt,
 				}
 			} else if isMetadata &&
-				!reflect.DeepEqual(srcCtnt.UserMetadata, tgtCtnt.UserMetadata) &&
-				!reflect.DeepEqual(srcCtnt.Metadata, tgtCtnt.Metadata) {
+				!metadataEqual(srcCtnt.UserMetadata, tgtCtnt.UserMetadata) &&
+				!metadataEqual(srcCtnt.Metadata, tgtCtnt.Metadata) {
 
 				// Regular files user requesting additional metadata to same file.
 				diffCh <- diffMessage{
