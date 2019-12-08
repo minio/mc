@@ -129,7 +129,7 @@ func deltaSourceTarget(sourceURL, targetURL string, isFake, isOverwrite, isRemov
 		if diffMsg.Error != nil {
 			// Send all errors through the channel
 			URLsCh <- URLs{Error: diffMsg.Error}
-			return
+			continue
 		}
 
 		srcSuffix := strings.TrimPrefix(diffMsg.FirstURL, sourceURL)
