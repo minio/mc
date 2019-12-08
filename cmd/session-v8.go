@@ -253,17 +253,6 @@ func (s *sessionV8) setGlobals() {
 	s.Header.GlobalBoolFlags["insecure"] = globalInsecure
 }
 
-// RestoreGlobals restores the state of global variables.
-// Used by resumeSession.
-func (s sessionV8) restoreGlobals() {
-	quiet := s.Header.GlobalBoolFlags["quiet"]
-	debug := s.Header.GlobalBoolFlags["debug"]
-	json := s.Header.GlobalBoolFlags["json"]
-	noColor := s.Header.GlobalBoolFlags["noColor"]
-	insecure := s.Header.GlobalBoolFlags["insecure"]
-	setGlobals(quiet, debug, json, noColor, insecure)
-}
-
 // IsModified - returns if in memory session header has changed from
 // its on disk value.
 func (s *sessionV8) isModified(sessionFile string) (bool, *probe.Error) {
@@ -372,7 +361,7 @@ func (s *sessionV8) Delete() *probe.Error {
 // Close a session and exit.
 func (s sessionV8) CloseAndDie() {
 	s.Close()
-	console.Fatalln("Session safely terminated. To resume session `mc session resume " + s.SessionID + "`")
+	console.Fatalln("Session safely terminated. Run the same command to resume copy again.")
 }
 
 func (s sessionV8) copyCloseAndDie(sessionFlag bool) {
