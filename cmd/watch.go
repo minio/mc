@@ -81,6 +81,9 @@ func (w *watchObject) Errors() chan *probe.Error {
 
 // Close the watcher, will stop all goroutines
 func (w *watchObject) Close() {
+	// Cleanup
+	close(w.eventInfoChan)
+	close(w.errorChan)
 	close(w.doneChan)
 }
 

@@ -1,5 +1,5 @@
 /*
- * MinIO Client (C) 2016 MinIO, Inc.
+ * MinIO Client (C) 2016-2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,10 @@ EXAMPLES:
   4. Watch new events on a specific prefix and suffix on MinIO server.
      {{.Prompt}} {{.HelpName}} --suffix ".jpg" --prefix "photos/" play/testbucket
 
-  5. Watch for events on local directory.
+  5. Site level watch (except new buckets created after running this command)
+     {{.Prompt}} {{.HelpName}} play/
+
+  6. Watch for events on local directory.
      {{.Prompt}} {{.HelpName}} /usr/share
 `,
 }
