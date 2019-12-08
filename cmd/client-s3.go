@@ -1497,7 +1497,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *clientContent) {
 					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
-					continue
+					return
 				}
 				content := &clientContent{}
 				url := *c.targetURL
@@ -1525,7 +1525,7 @@ func (c *s3Client) listIncompleteInRoutine(contentCh chan *clientContent) {
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
-				continue
+				return
 			}
 			content := &clientContent{}
 			url := *c.targetURL
@@ -1568,7 +1568,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientConten
 					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
-					continue
+					return
 				}
 				url := *c.targetURL
 				url.Path = c.joinPath(bucket.Name, object.Key)
@@ -1587,7 +1587,7 @@ func (c *s3Client) listIncompleteRecursiveInRoutine(contentCh chan *clientConten
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
-				continue
+				return
 			}
 			url := *c.targetURL
 			// Join bucket and incoming object key.
@@ -1943,23 +1943,17 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent, metadat
 		for _, bucket := range buckets {
 			isRecursive := true
 			for object := range c.listObjectWrapper(bucket.Name, o, isRecursive, nil, metadata) {
-				// Return error if we encountered glacier object and continue.
-				if object.StorageClass == s3StorageClassGlacier {
-					contentCh <- &clientContent{
-						Err: probe.NewError(ObjectOnGlacier{object.Key}),
-					}
-					continue
-				}
 				if object.Err != nil {
 					contentCh <- &clientContent{
 						Err: probe.NewError(object.Err),
 					}
-					continue
+					return
 				}
 				content := &clientContent{}
 				objectURL := *c.targetURL
 				objectURL.Path = c.joinPath(bucket.Name, object.Key)
 				content.URL = objectURL
+				content.StorageClass = object.StorageClass
 				content.Size = object.Size
 				content.ETag = object.ETag
 				content.Time = object.LastModified
@@ -1974,7 +1968,7 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent, metadat
 				contentCh <- &clientContent{
 					Err: probe.NewError(object.Err),
 				}
-				continue
+				return
 			}
 			content := &clientContent{}
 			url := *c.targetURL

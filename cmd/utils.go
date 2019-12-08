@@ -45,7 +45,7 @@ func isErrIgnored(err *probe.Error) (ignored bool) {
 	// Handle these specifically for object storage related errors.
 	case BucketNameEmpty, ObjectMissing, ObjectAlreadyExists:
 		ignored = true
-	case ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid, ObjectOnGlacier:
+	case ObjectAlreadyExistsAsDirectory, BucketDoesNotExist, BucketInvalid:
 		ignored = true
 	default:
 		ignored = false
