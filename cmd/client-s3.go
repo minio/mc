@@ -940,6 +940,10 @@ func (c *s3Client) removeIncompleteObjects(bucket string, objectsCh <-chan strin
 	return removeObjectErrorCh
 }
 
+func (c *s3Client) AddUserAgent(app string, version string) {
+	c.api.SetAppInfo(app, version)
+}
+
 // Remove - remove object or bucket(s).
 func (c *s3Client) Remove(isIncomplete, isRemoveBucket bool, contentCh <-chan *clientContent) <-chan *probe.Error {
 	errorCh := make(chan *probe.Error)
@@ -1958,6 +1962,11 @@ func (c *s3Client) listRecursiveInRoutine(contentCh chan *clientContent, metadat
 				content.ETag = object.ETag
 				content.Time = object.LastModified
 				content.Type = os.FileMode(0664)
+				content.Expires = object.Expires
+				content.UserMetadata = map[string]string{}
+				for k, v := range object.UserMetadata {
+					content.UserMetadata[k] = v
+				}
 				contentCh <- content
 			}
 		}
