@@ -783,6 +783,10 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		// Synchronize buckets using dirDifference function
 		for d := range dirDifference(srcClt, dstClt, srcURL, dstURL) {
 			if d.Error != nil {
+				if mj.multiMasterEnable {
+					errorIf(d.Error, "Failed to start mirroring.")
+					return true
+				}
 				mj.status.fatalIf(d.Error, "Failed to start mirroring.")
 			}
 			if d.Diff == differInSecond {
@@ -821,6 +825,10 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 				// monitor mode will watch the source folders for changes,
 				// and queue them for copying.
 				if err := mj.watchURL(newSrcClt); err != nil {
+					if mj.multiMasterEnable {
+						errorIf(err, fmt.Sprintf("Failed to start monitoring."))
+						return true
+					}
 					mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 				}
 			}
@@ -834,23 +842,41 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 
 		// Create bucket if it doesn't exist at destination.
 		// ignore if already exists.
-		fatalIf(dstClt.MakeBucket(ctx.String("region"), true, withLock),
-			"Unable to create bucket at `"+dstURL+"`.")
+		if mj.multiMasterEnable {
+			err = dstClt.MakeBucket(ctx.String("region"), true, withLock)
+			errorIf(err, "Unable to create bucket at `"+dstURL+"`.")
+			if err != nil {
+				return true
+			}
+		} else {
+			mj.status.fatalIf(dstClt.MakeBucket(ctx.String("region"), true, withLock),
+				"Unable to create bucket at `"+dstURL+"`.")
+		}
 
 		// object lock configuration set on bucket
 		if mode != nil {
-			errorIf(dstClt.SetObjectLockConfig(mode, validity, unit),
-				"Unable to set object lock config in `"+dstURL+"`.")
+			err = dstClt.SetObjectLockConfig(mode, validity, unit)
+			errorIf(err, "Unable to set object lock config in `"+dstURL+"`.")
+			if err != nil && mj.multiMasterEnable {
+				return true
+			}
 		}
 
-		errorIf(copyBucketPolicies(srcClt, dstClt, isOverwrite),
-			"Unable to copy bucket policies to `"+dstClt.GetURL().String()+"`.")
+		err = copyBucketPolicies(srcClt, dstClt, isOverwrite)
+		errorIf(err, "Unable to copy bucket policies to `"+dstClt.GetURL().String()+"`.")
+		if err != nil && mj.multiMasterEnable {
+			return true
+		}
 	}
 
 	if !mirrorAllBuckets && mj.isWatch {
 		// monitor mode will watch the source folders for changes,
 		// and queue them for copying.
 		if err := mj.watchURL(srcClt); err != nil {
+			if mj.multiMasterEnable {
+				errorIf(err, fmt.Sprintf("Failed to start monitoring."))
+				return true
+			}
 			mj.status.fatalIf(err, fmt.Sprintf("Failed to start monitoring."))
 		}
 	}
