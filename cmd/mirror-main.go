@@ -70,7 +70,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:  "multi-master",
-			Usage: "tag for multi master mode",
+			Usage: `multi-master multi-site setup, "value" is the site tag for the multi-master deployment`,
 		},
 		cli.StringSliceFlag{
 			Name:  "exclude",
@@ -166,8 +166,9 @@ EXAMPLES:
   14. Mirror a local folder recursively to Amazon S3 cloud storage and preserve all local file attributes.
       {{.Prompt}} {{.HelpName}} -a backup/ s3/archive
 
-  15. Mirror from one site to another in a multi-master setup.
-      {{.Prompt}} {{.HelpName}} --watch --multi-master SITETAG site1/ site2/
+  15. Cross mirror between sites in a multi-master deployment.
+      Site-A: {{.Prompt}} {{.HelpName}} --watch --multi-master splunk-smartstore1 siteA siteB
+      Site-B: {{.Prompt}} {{.HelpName}} --watch --multi-master splunk-smartstore1 siteB siteA
 `,
 }
 
