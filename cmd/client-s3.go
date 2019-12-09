@@ -532,7 +532,9 @@ func selectObjectInputOpts(selOpts SelectObjectOpts, object string) minio.Select
 			i.JSON = &minio.JSONInputOptions{Type: minio.JSONLinesType}
 		}
 	}
-	i.CompressionType = selectCompressionType(selOpts, object)
+	if i.CompressionType == "" {
+		i.CompressionType = selectCompressionType(selOpts, object)
+	}
 	return i
 }
 
