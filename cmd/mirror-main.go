@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -558,12 +559,7 @@ func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {
 }
 
 // Fetch urls that need to be mirrored
-func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.CancelFunc) {
-	stopParallel := func() {
-		close(mj.queueCh)
-		mj.parallel.wait()
-	}
-
+func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.CancelFunc, stopParallel func()) {
 	isMetadata := len(mj.userMetadata) > 0 || mj.isPreserve
 	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, isMetadata, mj.excludeOptions, mj.encKeyDB)
 
@@ -571,7 +567,9 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 		select {
 		case sURLs, ok := <-URLsCh:
 			if !ok {
-				stopParallel()
+				if stopParallel != nil {
+					stopParallel()
+				}
 				return
 			}
 			if sURLs.Error != nil {
@@ -609,11 +607,15 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 				}
 			}
 		case <-mj.trapCh:
-			stopParallel()
+			if stopParallel != nil {
+				stopParallel()
+			}
 			cancelMirror()
 			return
 		case <-mj.stopCh:
-			stopParallel()
+			if stopParallel != nil {
+				stopParallel()
+			}
 			cancelMirror()
 			return
 		}
@@ -638,8 +640,40 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		mj.startMirror(ctx, cancelMirror)
+		stopParallel := func() {
+			close(mj.queueCh)
+			mj.parallel.wait()
+		}
+		mj.startMirror(ctx, cancelMirror, stopParallel)
 	}()
+
+	// TODO: Remove this code when we fix
+	// and make ListenBucketNotification more
+	// performant.
+	if mj.multiMasterEnable {
+		// In multi-master mode make sure to
+		// continuously run startMirror periodically.
+		go func() {
+			// List source and target every 5secs
+			ticker := time.NewTicker(time.Second * 5)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-mj.trapCh:
+					cancelMirror()
+					return
+				case <-mj.stopCh:
+					cancelMirror()
+					return
+				case <-ticker.C:
+					// Start with random sleep time, so as to avoid
+					// "synchronous checks" between servers
+					time.Sleep(time.Duration(rand.Float64() * float64(time.Second*5)))
+					mj.startMirror(ctx, cancelMirror, nil)
+				}
+			}
+		}()
+	}
 
 	// Close statusCh when both watch & mirror quits
 	go func() {
