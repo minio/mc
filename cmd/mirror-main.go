@@ -178,6 +178,7 @@ type mirrorJob struct {
 
 	// the channel to trap SIGKILL signals
 	trapCh <-chan bool
+	stopCh chan struct{}
 
 	// mutex for shutdown, this prevents the shutdown
 	// to be initiated multiple times
@@ -364,6 +365,10 @@ func (mj *mirrorJob) monitorMirrorStatus() (errDuringMirror bool) {
 				errorIf(sURLs.Error.Trace(), "Failed to perform mirroring.")
 				errDuringMirror = true
 			}
+			if mj.multiMasterEnable {
+				close(mj.stopCh)
+				break
+			}
 		}
 
 		if sURLs.SourceContent != nil {
@@ -542,6 +547,8 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			return
 		case <-mj.trapCh:
 			return
+		case <-mj.stopCh:
+			return
 		}
 	}
 }
@@ -605,6 +612,10 @@ func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.Cance
 			stopParallel()
 			cancelMirror()
 			return
+		case <-mj.stopCh:
+			stopParallel()
+			cancelMirror()
+			return
 		}
 	}
 }
@@ -645,6 +656,7 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 	}
 	mj := mirrorJob{
 		trapCh: signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
+		stopCh: make(chan struct{}),
 		m:      new(sync.Mutex),
 
 		sourceURL: srcURL,
@@ -867,7 +879,7 @@ func mainMirror(ctx *cli.Context) error {
 	srcURL := args[0]
 	tgtURL := args[1]
 
-	if ctx.Bool("watch") {
+	if ctx.String("multi-master") != "" {
 		for {
 			runMirror(srcURL, tgtURL, ctx, encKeyDB)
 			time.Sleep(time.Second * 2)
