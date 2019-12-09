@@ -26,6 +26,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -760,6 +761,11 @@ func runMirror(srcURL, dstURL string, ctx *cli.Context, encKeyDB map[string][]pr
 		userMetaMap,
 		encKeyDB)
 
+	go func() {
+		<-mj.trapCh
+		os.Exit(globalErrorExitStatus)
+	}()
+
 	if mirrorAllBuckets {
 		// Synchronize buckets using dirDifference function
 		for d := range dirDifference(srcClt, dstClt, srcURL, dstURL) {
@@ -859,6 +865,13 @@ func mainMirror(ctx *cli.Context) error {
 
 	srcURL := args[0]
 	tgtURL := args[1]
+
+	if ctx.Bool("watch") {
+		for {
+			runMirror(srcURL, tgtURL, ctx, encKeyDB)
+			time.Sleep(time.Second * 2)
+		}
+	}
 
 	if errorDetected := runMirror(srcURL, tgtURL, ctx, encKeyDB); errorDetected {
 		return exitStatus(globalErrorExitStatus)
