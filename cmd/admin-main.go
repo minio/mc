@@ -16,7 +16,11 @@
 
 package cmd
 
-import "github.com/minio/cli"
+import (
+	"runtime"
+
+	"github.com/minio/cli"
+)
 
 var (
 	adminFlags = []cli.Flag{}
@@ -45,6 +49,15 @@ var adminCmd = cli.Command{
 		adminPrometheusCmd,
 	},
 }
+
+func getTimeStampSeperator() string {
+	if runtime.GOOS == "windows" {
+		return "-"
+	}
+	return ":"
+}
+
+var timeStampSeperator string = getTimeStampSeperator()
 
 // mainAdmin is the handle for "mc admin" command.
 func mainAdmin(ctx *cli.Context) error {
