@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/minio/cli"
@@ -118,7 +119,12 @@ func mainAdminProfileStop(ctx *cli.Context) error {
 
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
-		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format("2006-01-02T15:04:05.999999-07:00"))
+		timeStampSeperator := ":"
+		if runtime.GOOS == "windows" {
+			timeStampSeperator = "-"
+		}
+		dtTmFormat := "2006-01-02T15" + timeStampSeperator + "04" + timeStampSeperator + "05.999999-07" + timeStampSeperator + "00"
+		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dtTmFormat))
 		fatalIf(probe.NewError(e), "Unable to create a backup of profile.zip")
 	} else {
 		if !os.IsNotExist(e) {
