@@ -16,11 +16,7 @@
 
 package cmd
 
-import (
-	"runtime"
-
-	"github.com/minio/cli"
-)
+import "github.com/minio/cli"
 
 var (
 	adminFlags = []cli.Flag{}
@@ -50,14 +46,9 @@ var adminCmd = cli.Command{
 	},
 }
 
-func getTimeStampSeperator() string {
-	if runtime.GOOS == "windows" {
-		return "-"
-	}
-	return ":"
-}
-
-var timeStampSeperator string = getTimeStampSeperator()
+const dateValueSeparator string = "-"
+const timeStampSeparator string = "-"
+const dateTimeFormatFilename string = "2006" + dateValueSeparator + "01" + dateValueSeparator + "02" + "T" + "15" + timeStampSeparator + "04" + timeStampSeparator + "05.999999-07" + timeStampSeparator + "00"
 
 // mainAdmin is the handle for "mc admin" command.
 func mainAdmin(ctx *cli.Context) error {

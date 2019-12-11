@@ -118,8 +118,7 @@ func mainAdminProfileStop(ctx *cli.Context) error {
 
 	fi, e := os.Stat(downloadPath)
 	if e == nil && !fi.IsDir() {
-		dtTmFormat := "2006-01-02T15" + timeStampSeperator + "04" + timeStampSeperator + "05.999999-07" + timeStampSeperator + "00"
-		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dtTmFormat))
+		e = moveFile(downloadPath, downloadPath+"."+time.Now().Format(dateTimeFormatFilename))
 		fatalIf(probe.NewError(e), "Unable to create a backup of profile.zip")
 	} else {
 		if !os.IsNotExist(e) {
