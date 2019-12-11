@@ -31,6 +31,7 @@ import (
 
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/probe"
+	"github.com/minio/minio-go/v6"
 	"github.com/minio/minio/pkg/mimedb"
 )
 
@@ -363,8 +364,9 @@ func getSQLOpts(ctx *cli.Context, csvHdrs []string) (s SelectObjectOpts) {
 	os := getOutputSerializationOpts(ctx, csvHdrs)
 
 	return SelectObjectOpts{
-		InputSerOpts:  is,
-		OutputSerOpts: os,
+		InputSerOpts:    is,
+		OutputSerOpts:   os,
+		CompressionType: minio.SelectCompressionType(ctx.String("compression")),
 	}
 }
 
