@@ -176,14 +176,13 @@ EXAMPLES:
 const uaMirrorAppName = "mc-mirror"
 
 type mirrorJob struct {
-
 	// the channel to trap SIGKILL signals
 	trapCh <-chan bool
 	stopCh chan struct{}
 
 	// mutex for shutdown, this prevents the shutdown
 	// to be initiated multiple times
-	m *sync.Mutex
+	m sync.Mutex
 
 	// the global watcher object, which receives notifications of created
 	// and deleted files
@@ -204,10 +203,11 @@ type mirrorJob struct {
 	sourceURL string
 	targetURL string
 
-	isFake, isRemove, isOverwrite, isWatch, isPreserve bool
-	olderThan, newerThan                               string
-	storageClass                                       string
-	userMetadata                                       map[string]string
+	isFake, isRemove, isOverwrite bool
+	isWatch, isPreserve           bool
+	olderThan, newerThan          string
+	storageClass                  string
+	userMetadata                  map[string]string
 
 	excludeOptions []string
 	encKeyDB       map[string][]prefixSSEPair
@@ -561,6 +561,10 @@ func (mj *mirrorJob) watchURL(sourceClient Client) *probe.Error {
 
 // Fetch urls that need to be mirrored
 func (mj *mirrorJob) startMirror(ctx context.Context, cancelMirror context.CancelFunc, stopParallel func()) {
+	// Do not run multiple startMirror's
+	mj.m.Lock()
+	defer mj.m.Unlock()
+
 	isMetadata := len(mj.userMetadata) > 0 || mj.isPreserve
 	URLsCh := prepareMirrorURLs(mj.sourceURL, mj.targetURL, mj.isFake, mj.isOverwrite, mj.isRemove, isMetadata, mj.excludeOptions, mj.encKeyDB)
 
@@ -645,6 +649,7 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 			close(mj.queueCh)
 			mj.parallel.wait()
 		}
+		// startMirror locks and blocks itself.
 		mj.startMirror(ctx, cancelMirror, stopParallel)
 	}()
 
@@ -669,7 +674,10 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 				case <-ticker.C:
 					// Start with random sleep time, so as to avoid
 					// "synchronous checks" between servers
-					time.Sleep(time.Duration(rand.Float64() * float64(time.Second*5)))
+					r := rand.New(rand.NewSource(time.Now().Unix()))
+					time.Sleep(time.Duration(r.Float64() * float64(time.Second*5)))
+					// startMirror blocks if there is already
+					// another mirror running.
 					mj.startMirror(ctx, cancelMirror, nil)
 				}
 			}
@@ -692,7 +700,6 @@ func newMirrorJob(srcURL, dstURL string, isFake, isRemove, isOverwrite, isWatch,
 	mj := mirrorJob{
 		trapCh: signalTrap(os.Interrupt, syscall.SIGTERM, syscall.SIGKILL),
 		stopCh: make(chan struct{}),
-		m:      new(sync.Mutex),
 
 		sourceURL: srcURL,
 		targetURL: dstURL,
