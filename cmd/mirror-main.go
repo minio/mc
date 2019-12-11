@@ -463,6 +463,7 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 					// hence ignore the event to avoid copying it.
 					continue
 				}
+				sourceContent.Retention = event.Type == EventCreatePutRetention
 				mirrorURL.SourceContent = sourceContent
 				if event.Size == 0 {
 					targetClient, err := newClient(targetPath)
