@@ -19,7 +19,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -438,8 +437,11 @@ func (mj *mirrorJob) watchMirror(ctx context.Context, cancelMirror context.Cance
 			if (event.Type == EventCreate) ||
 				(event.Type == EventCreatePutRetention) {
 				mirrorURL := URLs{
-					SourceAlias:   sourceAlias,
-					SourceContent: &clientContent{URL: *sourceURL, Retention: event.Type == EventCreatePutRetention},
+					SourceAlias: sourceAlias,
+					SourceContent: &clientContent{
+						URL:       *sourceURL,
+						Retention: event.Type == EventCreatePutRetention,
+					},
 					TargetAlias:   targetAlias,
 					TargetContent: &clientContent{URL: *targetURL},
 					encKeyDB:      mj.encKeyDB,
@@ -652,37 +654,6 @@ func (mj *mirrorJob) mirror(ctx context.Context, cancelMirror context.CancelFunc
 		// startMirror locks and blocks itself.
 		mj.startMirror(ctx, cancelMirror, stopParallel)
 	}()
-
-	// TODO: Remove this code when we fix
-	// and make ListenBucketNotification more
-	// performant.
-	if mj.multiMasterEnable {
-		// In multi-master mode make sure to
-		// continuously run startMirror periodically.
-		go func() {
-			// List source and target every 5secs
-			ticker := time.NewTicker(time.Second * 5)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-mj.trapCh:
-					cancelMirror()
-					return
-				case <-mj.stopCh:
-					cancelMirror()
-					return
-				case <-ticker.C:
-					// Start with random sleep time, so as to avoid
-					// "synchronous checks" between servers
-					r := rand.New(rand.NewSource(time.Now().Unix()))
-					time.Sleep(time.Duration(r.Float64() * float64(time.Second*5)))
-					// startMirror blocks if there is already
-					// another mirror running.
-					mj.startMirror(ctx, cancelMirror, nil)
-				}
-			}
-		}()
-	}
 
 	// Close statusCh when both watch & mirror quits
 	go func() {

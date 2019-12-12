@@ -7,6 +7,9 @@ GOOS := $(shell go env GOOS)
 
 BUILD_LDFLAGS := '$(LDFLAGS)'
 
+VERSION ?= $(shell git describe --tags)
+TAG ?= "minio/mc:$(VERSION)"
+
 all: build
 
 checks:
@@ -27,6 +30,9 @@ crosscompile:
 	@(env bash $(PWD)/buildscripts/cross-compile.sh)
 
 verifiers: getdeps vet fmt lint staticcheck spelling
+
+docker: build
+	@docker build -t $(TAG) . -f Dockerfile.dev
 
 vet:
 	@echo "Running $@"
